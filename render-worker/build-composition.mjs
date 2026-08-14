@@ -60,7 +60,18 @@ export function buildComposition(plan, opts = {}) {
   // (scène éditoriale crème, la vidéo disparaît) et BANDEAU (carte posée sur la vidéo).
   const isFull = (s) => s.layout === 'full' || (!s.layout && FULL_TYPES.includes(s.type))
   const isBanner = (s) => s.layout === 'banner' || s.type === 'banner'
-  const allSlides = (plan.slides || []).filter((s) => s && typeof s.start === 'number')
+  // Une animation retirée de la banque est bannie pour TOUS les styles : un vieux
+  // plan qui la porte encore perd l'anim, et la scène disparaît si c'était sa
+  // seule matière — jamais de carte vide à la place (même garde que la dérivation).
+  const allSlides = (plan.slides || [])
+    .filter((s) => s && typeof s.start === 'number')
+    .flatMap((s) => {
+      if (!s.anim || ANIMS.includes(s.anim)) return [s]
+      const substance = s.screen || s.title || s.text || s.value
+        || (Array.isArray(s.items) && s.items.length)
+      console.log(`▶ « ${s.anim} » n'est plus dans la banque → ${substance ? 'animation retirée, le contenu reste' : 'scène écartée'} (${s.start}s)`)
+      return substance ? [{ ...s, anim: '' }] : []
+    })
   const withIds = (list, p) => list.map((s, i) => ({
     ...s,
     id: p + i,
@@ -151,6 +162,76 @@ export function buildComposition(plan, opts = {}) {
   // sous-titre — or ici le mot EST le contenu (Axel : « la photo cache les
   // sous-titres, on ne voit pas le CTA »). La carte standard se pose au-dessus de
   // la bande du mot : image ET texte restent lisibles.
+
+  // ── CADENCE DU MOT-À-MOT (Axel, 14/08) : « des animations / photos / vidéos
+  // toutes les 3 secondes max […] genre 50/50 mais faut que ça soit fluide ».
+  // On mesure ce qui est déjà posé (scènes animées, motifs, images) ; chaque
+  // creux visuel de plus de ~3 s se remplit, dans cet ordre :
+  //   1. un beat du chef encore libre, ancré sur SON mot (le visuel EST le mot) ;
+  //   2. une image/vidéo de l'utilisateur en re-parution, en alternant carte
+  //      (le mot reste) et plein centre (le visuel coupe le mot) — le 50/50.
+  // Rien d'inventé : que ses médias et les animations que le chef a justifiées.
+  if (wordMode) {
+    const normW = (x) => String(x || '').toLowerCase().normalize('NFD')
+      .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+    const capsW = (plan.captions || []).filter((c) => String(c.text || '').trim())
+    const ctaZone = ((plan.sections || []).filter((x) => x.role === 'cta' || x.role === 'outro')
+      .sort((a, b) => b.start - a.start)[0] || {}).start ?? (D - 5)
+    // beats du chef : anim en banque, pas déjà à l'écran, mot retrouvé dans l'audio
+    const posees = new Set(slides.map((sl) => sl.anim).filter(Boolean))
+    const beatsLibres = []
+    for (const b of (plan.beats || [])) {
+      const a = String(b.anim || '')
+      const k = normW(b.word)
+      if (!ANIMS.includes(a) || posees.has(a) || k.length < 3) continue
+      const c = capsW.find((c2) => normW(c2.text).startsWith(k))
+      if (!c || c.start > ctaZone - 1.4) continue
+      beatsLibres.push({ t: r2(c.start), anim: a, value: b.value ? String(b.value) : '' })
+      posees.add(a)
+    }
+    // les creux : entre la fin du hook (~2,2 s) et l'entrée du CTA
+    const vis = [
+      ...slides.filter((sl) => sl.anim || sl.motif).map((sl) => [sl.start, r2(sl.end ?? sl.start + 2)]),
+      ...rawBroll.map((b) => [b.start, b.end]),
+    ].sort((x, y) => x[0] - y[0])
+    const creux = []
+    let curseur = Math.min(2.2, D)
+    for (const [a, b] of vis) { if (a - curseur > 3.2) creux.push([curseur, a]); curseur = Math.max(curseur, b) }
+    if (ctaZone - curseur > 3.2) creux.push([curseur, ctaZone])
+    let flip = 0, mIdx = 0, nBeats = 0, nMedias = 0
+    const assetsIds = [...new Set(rawBroll.map((b) => b.assetId))]
+    for (const [a, b] of creux) {
+      for (let t = a + 0.9; t + 1.4 < b; t += 3.0) {
+        const beat = beatsLibres.find((x) => x.t >= t - 0.4 && x.t + 1.4 < b)
+        if (beat) {
+          beatsLibres.splice(beatsLibres.indexOf(beat), 1)
+          const fin = r2(Math.min(b - 0.1, beat.t + 2.2))
+          slides.push({ type: 'card', anim: beat.anim, start: r2(beat.t), end: fin,
+            items: beat.value ? [{ t: 0, text: beat.value }] : [] })
+          plan.sfx = [...(plan.sfx || []), { kind: 'mo-pop-3', t: r2(beat.t + 0.1), vol: 0.5 }]
+          t = beat.t; nBeats++
+          continue
+        }
+        if (!assetsIds.length) continue
+        const fin = r2(Math.min(b - 0.1, t + 2.2))
+        if (fin - t < 1.2) continue
+        const idxB = rawBroll.length
+        rawBroll.push({ assetId: assetsIds[mIdx % assetsIds.length], start: r2(t), end: fin })
+        if (flip % 2 === 1) heroIds.add(idxB)      // une fois sur deux : plein centre, le visuel coupe le mot
+        plan.sfx = [...(plan.sfx || []), { kind: flip % 2 ? 'mo-swipe-2' : 'mo-pop-2', t: r2(t), vol: 0.5 }]
+        flip++; mIdx++; nMedias++
+      }
+    }
+    if (nBeats || nMedias) console.log(`▶ cadence mot-à-mot : ${nBeats} beat(s) du chef + ${nMedias} re-parution(s) média posés dans les creux`)
+    // le SON du geste #91 : la souris glisse sur l'écran puis CLIQUE la zone —
+    // le bruitage rend le clic réel (les tweens du curseur sont dans anim-pack)
+    for (const sl of slides) {
+      if (sl.anim !== 'screen') continue
+      plan.sfx = [...(plan.sfx || []),
+        { kind: 'mo-swipe-1', t: r2(sl.start + 0.45), vol: 0.4 },
+        { kind: 'mo-tap-1', t: r2(sl.start + 0.98), vol: 0.6 }]
+    }
+  }
   const brolls = rawBroll.map((b, i) => ({
     hero: heroIds.has(i),
     id: 'broll' + i,

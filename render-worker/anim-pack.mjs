@@ -864,8 +864,20 @@ export function animHtml(name, s, W, H, vs) {
       const mkBox = (bx, by, bw, bh2, n) => (bw > 0 && bh2 > 0)
         ? `<span class="an-3dbox" id="${id}bx${n}" style="left:${((bx - bw / 2) * 100).toFixed(2)}%;top:${((by - bh2 / 2) * 100).toFixed(2)}%;width:${(bw * 100).toFixed(2)}%;height:${(bh2 * 100).toFixed(2)}%;border-color:${P.acc}"></span>`
         : ''
-      const b1 = mkBox(typeof s.boxX === 'number' ? s.boxX : 0, typeof s.boxY === 'number' ? s.boxY : 0, s.boxW || 0, s.boxH || 0, 1)
-      const b2 = mkBox(typeof s.boxX2 === 'number' ? s.boxX2 : 0, typeof s.boxY2 === 'number' ? s.boxY2 : 0, s.boxW2 || 0, s.boxH2 || 0, 2)
+      // MOT-A-MOT : plus de bordure orange (Axel, 14/08 : « oublie les bordures
+      // oranges, on met le clic et la souris avec un zoom a la place »). Le
+      // geste #91 : le curseur glisse jusqu'a la zone, clique (ondulation), et
+      // c'est le ZOOM camera — deja present — qui montre ou on est. Les autres
+      // styles gardent leur cadre. Les tweens du curseur sont emis dans tous
+      // les cas : GSAP ignore les cibles absentes, ils ne jouent qu'ici.
+      const enWord = vs === 'word'
+      const b1 = enWord ? '' : mkBox(typeof s.boxX === 'number' ? s.boxX : 0, typeof s.boxY === 'number' ? s.boxY : 0, s.boxW || 0, s.boxH || 0, 1)
+      const b2 = enWord ? '' : mkBox(typeof s.boxX2 === 'number' ? s.boxX2 : 0, typeof s.boxY2 === 'number' ? s.boxY2 : 0, s.boxW2 || 0, s.boxH2 || 0, 2)
+      const curSz = Math.round(h * 0.065)
+      const cur = (enWord && (s.boxW || 0) > 0)
+        ? `<span class="an-curw" id="${id}rp" style="left:${((s.boxX || 0.5) * 100).toFixed(2)}%;top:${((s.boxY || 0.5) * 100).toFixed(2)}%;width:${curSz}px;height:${curSz}px;margin:-${Math.round(curSz / 2)}px 0 0 -${Math.round(curSz / 2)}px;border:3px solid ${P.acc};opacity:0"></span>
+           <span class="an-curw" id="${id}cur" style="left:${((s.boxX || 0.5) * 100).toFixed(2)}%;top:${((s.boxY || 0.5) * 100).toFixed(2)}%;width:${curSz}px;height:${curSz}px;border:0;opacity:0"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block;filter:drop-shadow(0 2px 5px rgba(0,0,0,.45))"><path d="M5 3l14 8-6.2 1.7L9.4 19z" fill="#FFFFFF" stroke="#111111" stroke-width="1.4" stroke-linejoin="round"/></svg></span>`
+        : ''
       // Axel : « non non toujours sur du blanc ». La reference servait a montrer la
       // PERSPECTIVE voulue, pas a changer le fond : on garde donc le fond clair du
       // mot-a-mot et on ne retient que l'inclinaison franche et la profondeur.
@@ -876,7 +888,7 @@ export function animHtml(name, s, W, H, vs) {
       return `<div class="an-stage" id="${id}rm">
         <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${wide ? Math.round(H * 0.30 - h / 2) : Math.round(f.y + (f.h - h) / 2)}px;width:${w}px;height:${h}px">
           <div class="an-3di">
-            <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}${tz}</div>
+            <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}${cur}${tz}</div>
           </div>
         </div>
       </div>`
@@ -3394,17 +3406,19 @@ export function animJs(name, s, r2) {
       ${s.screenText ? `
       // LE TEXTE S'ECRIT DANS LE CHAMP pendant qu'il le dit. Le curseur clignote
       // en pas discrets (pas de repeat -1 : le rendu doit rester deterministe).
-      tl.fromTo('#${id}tp', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, ${r2(t0 + 0.5)});
+      tl.fromTo('#${id}tp', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, ${r2(t0 + 0.9)});
       (function(){
         var full = ${JSON.stringify(String(s.screenText))};
-        var n = ${String(s.screenText).length}, T = ${r2(Math.max(0.9, Math.min(dur - 1.4, String(s.screenText).length * 0.045)))};
+        var n = ${String(s.screenText).length}, T = ${r2(Math.max(0.9, Math.min(dur - 1.7, String(s.screenText).length * 0.045)))};
+        // la frappe demarre APRES le clic du curseur (t0+1.0) : on clique le
+        // champ, PUIS on tape — l'ordre du vrai geste
         for (var i = 1; i <= n; i++) {
-          tl.set('#${id}tt', { textContent: full.slice(0, i) }, ${r2(t0 + 0.6)} + (i / n) * T);
+          tl.set('#${id}tt', { textContent: full.slice(0, i) }, ${r2(t0 + 1.05)} + (i / n) * T);
         }
       })();
       for (var cb = 0; cb < 8; cb++) {
         tl.set('#${id}car', {}, 0);
-        tl.to('#${id}sc .an-3dcar', { opacity: cb % 2 ? 1 : 0.15, duration: 0.01 }, ${r2(t0 + 0.6)} + cb * 0.28);
+        tl.to('#${id}sc .an-3dcar', { opacity: cb % 2 ? 1 : 0.15, duration: 0.01 }, ${r2(t0 + 1.05)} + cb * 0.28);
       }` : ''}
       // inclinaison FRANCHE et tenue : la reference garde l'ecran de biais du debut
       // a la fin, elle ne le redresse jamais. On derive lentement au lieu de revenir
@@ -3412,7 +3426,12 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}sc', { rotationY: -30, rotationX: 10, rotationZ: -2, scale: 0.88, autoAlpha: 0 }, { rotationY: -22, rotationX: 6, rotationZ: -1.5, scale: 1, autoAlpha: 1, duration: 0.55, ease: 'power3.out' }, ${t0});
       tl.to('#${id}sc', { rotationY: -17, rotationX: 4, duration: ${r2(Math.max(0.8, dur - 0.6))}, ease: 'sine.inOut' }, ${r2(t0 + 0.55)});
       tl.fromTo('#${id}z', { scale: 1, xPercent: 0, yPercent: 0 }, { scale: ${zs}, xPercent: ${tx}, yPercent: ${ty}, duration: ${r2(Math.max(0.55, (has2 ? panAt - t0 : dur - 0.55)))}, ease: 'power2.inOut' }, ${r2(t0 + 0.25)});
-      tl.fromTo('#${id}bx1', { autoAlpha: 0, scale: 1.6 }, { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.5)});` +
+      tl.fromTo('#${id}bx1', { autoAlpha: 0, scale: 1.6 }, { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.5)});
+      // #91 mot-a-mot : la souris ARRIVE sur la zone, CLIQUE (l'ondulation),
+      // et la camera zoome — cibles absentes hors mode word, GSAP les ignore.
+      tl.fromTo('#${id}cur', { x: 150, y: 190, autoAlpha: 0 }, { x: 0, y: 0, autoAlpha: 1, duration: 0.5, ease: 'power2.out' }, ${r2(t0 + 0.4)});
+      tl.to('#${id}cur', { scale: 0.82, duration: 0.09, yoyo: true, repeat: 1, ease: 'power1.inOut', transformOrigin: '20% 12%' }, ${r2(t0 + 0.92)});
+      tl.fromTo('#${id}rp', { scale: 0.3, autoAlpha: 0.75 }, { scale: 2.6, autoAlpha: 0, duration: 0.5, ease: 'power2.out' }, ${r2(t0 + 0.98)});` +
       (has2 ? `
       tl.to('#${id}z', { scale: ${zs2}, xPercent: ${tx2}, yPercent: ${ty2}, duration: ${panDur}, ease: 'power2.inOut' }, ${panAt});
       tl.to('#${id}bx1', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${panAt});
@@ -4281,6 +4300,10 @@ export function animCss(W, H) {
       .an-3dbox { position: absolute; border: 3px solid;
         box-shadow: 0 0 0 4000px rgba(0,0,0,.55), 0 0 24px 2px currentColor; border-radius: 6px;
         box-shadow: 0 0 0 4000px rgba(0,0,0,.42); will-change: transform, opacity; }
+      /* #91 mot-a-mot : le curseur et son ondulation de clic (a la place des
+         bordures orange) — poses au centre de la zone, ils zooment AVEC l'ecran */
+      .an-curw { position: absolute; z-index: 6; border-radius: 50%; box-sizing: border-box;
+        will-change: transform, opacity; pointer-events: none; }
       .an-3dz img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .an-lg { position: absolute; display: flex; align-items: center; justify-content: center; }
       .an-lg img { max-width: 82%; max-height: 82%; display: block; will-change: transform, opacity; }

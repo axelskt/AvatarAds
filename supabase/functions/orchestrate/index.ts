@@ -212,25 +212,23 @@ const TUTO_FILE: Record<string, string> = new Proxy(
 const ANIMS = [
   'screen', 'result', 'phone', 'split', 'avatar', 'faceless', 'voice', 'cut',
   'type', 'logo', 'tools', 'copy', 'connect', 'sign', 'post', 'upload',
-  'countup', 'clock', 'calendar', 'grow', 'engage', 'daypart', 'blankfill', 'easyup',
-  'easydown', 'lowcost', 'twopaths', 'network', 'rocket', 'funnel', 'bars2', 'idea',
-  'steps', 'flow', 'orbit', 'list', 'target', 'search', 'compare', 'swap',
-  'toggle', 'check', 'quality', 'podium', 'star', 'speed', 'deadline', 'crowd',
-  'viral', 'scrollstop', 'abtest', 'roi', 'free', 'plan', 'layers', 'badge',
-  'trend', 'template', 'record', 'dropzone', 'render', 'crop', 'silence', 'chat',
-  'dashboard', 'translate', 'bgswap', 'hook', 'export', 'checklist', 'library', 'queue',
-  'notif', 'comments', 'timeline', 'results', 'profile', 'invoice', 'settings', 'versus',
-  'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking', 'form', 'donut',
-  'map', 'mixer', 'review', 'upgrade', 'storyboard', 'discount', 'music', 'bio',
-  'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag', 'schedule', 'pin',
-  'qr', 'wizard', 'product', 'cart', 'delivery', 'sizes', 'candles', 'portfolio',
-  'order', 'pnl', 'mrr', 'churn', 'onboarding', 'integrations', 'property', 'menu',
-  'weight', 'quote', 'liquid', 'magnet', 'explode', 'iceberg', 'tunnel', 'thermometer',
-  'script', 'clapper', 'retakes', 'transition', 'zoompunch', 'speedramp', 'substyle', 'trendsound',
-  'algorithm', 'loop', 'cv', 'framing', 'focus', 'clipping', 'lighting', 'retake',
-  'caption', 'preview', 'spike', 'brandeal', 'mediakit', 'inventory', 'stoploss', 'orderbook',
-  'deploy', 'uptime', 'leads', 'comment', 'share', 'views', 'linkbio', 'salesphone',
-  'oneclick', 'tsunami', 'gaugefill', 'lineup'
+  'countup', 'engage', 'daypart', 'blankfill', 'easyup', 'easydown', 'lowcost', 'network',
+  'rocket', 'funnel', 'idea', 'flow', 'orbit', 'list', 'search', 'compare',
+  'swap', 'quality', 'podium', 'star', 'speed', 'deadline', 'crowd', 'viral',
+  'scrollstop', 'abtest', 'roi', 'plan', 'layers', 'badge', 'trend', 'template',
+  'record', 'dropzone', 'render', 'crop', 'silence', 'chat', 'dashboard', 'translate',
+  'bgswap', 'export', 'checklist', 'library', 'queue', 'notif', 'comments', 'timeline',
+  'results', 'profile', 'invoice', 'settings', 'thumb', 'leaderboard', 'pay', 'sales',
+  'folder', 'booking', 'form', 'donut', 'map', 'mixer', 'review', 'upgrade',
+  'storyboard', 'discount', 'music', 'bio', 'keyword', 'automation', 'carousel', 'poll',
+  'story', 'hashtag', 'schedule', 'pin', 'qr', 'wizard', 'product', 'cart',
+  'delivery', 'sizes', 'candles', 'portfolio', 'order', 'pnl', 'mrr', 'churn',
+  'onboarding', 'integrations', 'property', 'menu', 'weight', 'quote', 'liquid', 'magnet',
+  'explode', 'iceberg', 'tunnel', 'thermometer', 'script', 'clapper', 'retakes', 'transition',
+  'zoompunch', 'speedramp', 'substyle', 'trendsound', 'algorithm', 'loop', 'cv', 'framing',
+  'focus', 'clipping', 'lighting', 'retake', 'caption', 'preview', 'spike', 'brandeal',
+  'mediakit', 'inventory', 'stoploss', 'orderbook', 'deploy', 'uptime', 'leads', 'comment',
+  'share', 'views', 'linkbio', 'salesphone', 'oneclick', 'tsunami', 'gaugefill', 'lineup'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -466,31 +464,22 @@ const ANIM_CATALOGUE = `
     post     — PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes ».
     upload   — une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer. « importe ton fichier », « televerse », « depose ton audio », « envoie ta video », « charge ton image ».
     countup  — UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans "value" et l'unite dans "unit". « ca fait X euros », « X millions », « X abonnes », « on est a X ».
-    clock    — la rapidite, le temps gagne, « en 30 secondes », « en 2 minutes ».
-    calendar — une grille qui se remplit : publier regulierement, tous les jours, la constance. « tous les jours », « chaque semaine », « poste regulierement », « la constance », « ton planning ».
-    grow     — une croissance, des vues qui montent, un resultat qui progresse. « ca progresse », « ca augmente », « ca grimpe », « les resultats montent », « la croissance ».
     engage   — DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow.
     daypart  — une journee ou seul un petit creneau de deux heures est colore : « une a deux heures par jour », « peu de temps », « quelques heures ».
     blankfill— une page blanche qui se remplit de resultats : partir de rien, « zero competence », « tu pars de zero », « aucune experience ».
     easyup   — une courbe verte qui monte doucement, sans a-coup : la facilite, « c'est simple », « facile pour un debutant », « sans difficulte », « ca monte tout seul ». Axes gradues, aire verte, un point qui grimpe le long du trace.
     easydown — une courbe ROUGE qui descend doucement : ce qui baisse, s'effondre ou coute de moins en moins. « ca chute », « ca baisse », « de moins en moins cher », « les couts s'ecroulent », « ca degringole ». Axes gradues, aire rouge, un point qui glisse vers le bas.
     lowcost  — peu d'argent a mettre au depart, un cout qui baisse, un investissement faible. « peu d'investissement », « ca coute presque rien », « sans mise de depart ».
-    twopaths — deux chemins : une personne prend l'un, la foule prend l'autre. L'absence de concurrence, le contre-pied, « personne ne le fait », « aucune concurrence », « tout le monde va la-bas sauf toi ».
     network  — un reseau, une connexion, une communaute, des gens relies. « ta communaute », « ton audience », « les gens », « ton reseau », « tes abonnes ».
     rocket   — un lancement, un decollage, ce qui explose, devenir viral. « ca decolle », « le lancement », « ca explose », « ca part en fleche », « je lance ».
     funnel   — un entonnoir : beaucoup entrent, peu ressortent. « le tunnel », « peu ressortent », « le taux de conversion », « sur cent personnes », « il en reste ».
-    bars2    — deux colonnes comparees : le avant/apres chiffre. « avant apres », « la difference », « d un cote et de l autre », « compare les deux chiffres ».
     idea     — une idee, une astuce, une methode, un declic, « le secret c'est... ».
-    steps    — 1, 2, 3 : une methode, « il te suffit de », les etapes.
     flow     — A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z ».
     orbit    — un centre et des satellites : tout part d'un seul outil. « tout part de la », « un seul outil », « le centre », « autour de ».
     list     — une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options ».
-    target   — un objectif, une cible, quelque chose de precis, « exactement ».
     search   — chercher, analyser, trouver, reperer. « je cherche », « analyse », « trouve », « repere », « regarde ce qui marche », « la recherche ».
     compare  — un avant/apres, deux options opposees, « au lieu de ». Deux visages ou deux ecrans cote a cote, l'un barre, l'autre valide.
     swap     — une chose remplacee par une autre : « au lieu de », « a la place de », remplacer.
-    toggle   — un interrupteur qui s'allume : activer, « en un clic », ca se met en marche.
-    check    — c'est valide, c'est fait, ca marche, c'est simple, c'est inclus. « c est fait », « c est bon », « ca marche », « c est inclus », « rien de plus simple », « valide ».
     quality  — LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut.
     podium   — UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde ».
     star     — CINQ ETOILES qui se remplissent une a une. « ils adorent », « 5 etoiles », « les meilleurs avis ».
@@ -501,7 +490,6 @@ const ANIM_CATALOGUE = `
     scrollstop— UN TELEPHONE qui defile PUIS SE FIGE net, pouce a l'appui. « ils arretent de scroller », « accrocher en 2 secondes ».
     abtest   — DEUX VARIANTES A ET B, l'une est encadree comme gagnante. « on teste deux versions », « celle qui marche le mieux ».
     roi      — CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 ».
-    free     — UNE ETIQUETTE PRIX BARRE QUI TOMBE A ZERO : l'ancien prix se barre, GRATUIT claque a sa place. « c'est gratuit », « offert », « je te le donne ». Mets l'ancien prix dans items[0].text (« 97 € ») si il l'annonce.
     plan     — TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan ».
     layers   — DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus ».
     badge    — UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie ».
@@ -516,7 +504,6 @@ const ANIM_CATALOGUE = `
     dashboard— UN TABLEAU DE BORD : les tuiles se posent et la courbe se trace. « tes stats », « ton tableau de bord », « tu suis tes resultats ».
     translate— UNE PHRASE FRANCAISE QUI BASCULE EN ANGLAIS, deux cartes FR puis EN. « dans une autre langue », « traduit », « a l'international ».
     bgswap   — LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage ».
-    hook     — LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche ». Mets la duree entendue dans items[0].text (« 3s »).
     export   — UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges ».
     checklist— UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter ».
     library  — UNE GRILLE DE VIGNETTES avec leurs titres, l'une d'elles ressort. « ta bibliotheque », « tous tes rushs », « ce que tu as deja ».
@@ -528,7 +515,6 @@ const ANIM_CATALOGUE = `
     profile  — UN PROFIL SOCIAL : photo, compteur d'abonnes qui grimpe, grille de posts. « ton compte », « tes abonnes », « ta page ». Mets le nombre d'abonnes entendu dans items[0].text (« +12K »).
     invoice  — UNE FACTURE dont les lignes s'inscrivent et le total tombe. « la facture », « ce que ca coute », « le devis ». Mets le total entendu dans items[0].text.
     settings — UN PANNEAU DE REGLAGES dont les interrupteurs basculent un par un. « tu regles », « les parametres », « tu actives ce que tu veux ».
-    versus   — DEUX COLONNES FACE A FACE, croix d'un cote, coches de l'autre. « eux et toi », « la difference », « au lieu de faire ca ».
     thumb    — UNE MINIATURE DE VIDEO avec sa duree, son titre et son compteur de vues. « la miniature », « cette video a fait X vues ». items[0].text = le nombre de vues, items[1].text = la duree.
     leaderboard— UN CLASSEMENT dont TA ligne remonte a la premiere place. « passer devant », « etre premier », « depasser les autres ».
     pay      — UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses ». Mets le montant entendu dans items[0].text.
@@ -1230,7 +1216,7 @@ const ANIM_LEX: [string, string][] = [
   // champ de mot de passe sur « visage » parce que « jamais » pointait vers lock.
   // Le CHOIX revient au chef d'orchestre, qui comprend le sens ; ce lexique ne
   // sert plus qu'a combler un trou quand un mot est sans ambiguite.
-  ['liste', 'list'], ['catalogue', 'list'], ['bibliotheque', 'list'], ['modele', 'list'], ['script', 'list'], ['choix', 'list'], ['croiss', 'grow'], ['augment', 'grow'], ['monte', 'grow'], ['progress', 'grow'], ['hausse', 'grow'], ['scale', 'grow'], ['resultat', 'grow'], ['courbe', 'grow'], ['vues', 'grow'], ['abonne', 'grow'], ['temps', 'clock'], ['minute', 'clock'], ['heure', 'clock'], ['seconde', 'clock'], ['rapid', 'clock'], ['vite', 'clock'], ['chrono', 'clock'], ['avant', 'compare'], ['apres', 'compare'], ['difference', 'compare'], ['versus', 'compare'], ['compar', 'compare'], ['contraire', 'compare'], ['tiktok', 'phone'], ['insta', 'phone'], ['reels', 'phone'], ['shorts', 'phone'], ['telephone', 'phone'], ['vertical', 'phone'], ['feed', 'phone'], ['ecri', 'type'], ['redig', 'type'], ['texte', 'type'], ['tape', 'type'], ['genere', 'type'], ['sous-titre', 'type'], ['soustitre', 'type'], ['argent', 'money'], ['euro', 'money'], ['dollar', 'money'], ['revenu', 'money'], ['gagn', 'money'], ['paie', 'money'], ['prix', 'money'], ['cash', 'money'], ['million', 'money'], ['mille', 'money'], ['gratuit', 'money'], ['cout', 'money'], ['tarif', 'money'], ['budget', 'money'], ['idee', 'idea'], ['astuce', 'idea'], ['solution', 'idea'], ['secret', 'idea'], ['methode', 'idea'], ['truc', 'idea'], ['comprend', 'idea'], ['cible', 'target'], ['objectif', 'target'], ['precis', 'target'], ['but', 'target'], ['exact', 'target'], ['pile', 'target'], ['secur', 'lock'], ['protege', 'lock'], ['prive', 'lock'], ['verrou', 'lock'], ['acces', 'lock'], ['cle', 'lock'], ['debloqu', 'lock'], ['cherch', 'search'], ['trouv', 'search'], ['analys', 'search'], ['decouvr', 'search'], ['repere', 'search'], ['detect', 'search'], ['lance', 'rocket'], ['decoll', 'rocket'], ['demarr', 'rocket'], ['boost', 'rocket'], ['explos', 'rocket'], ['viral', 'rocket'], ['propuls', 'rocket'], ['reseau', 'network'], ['connect', 'network'], ['communaut', 'network'], ['partage', 'network'], ['relie', 'network'], ['ensemble', 'network'], ['valide', 'check'], ['reussi', 'check'], ['fait', 'check'], ['termine', 'check'], ['fini', 'check'], ['marche', 'check'], ['parfait', 'check'], ['simple', 'check'], ['facile', 'check'], ['inclus', 'check'], ['video', 'phone'], ['clip', 'phone'], ['short', 'phone'], ['post', 'phone'], ['publi', 'phone'], ['contenu', 'phone'], ['compte', 'network'], ['abonne', 'network'], ['follow', 'network'], ['public', 'network'], ['monde', 'network'], ['client', 'network'], ['outil', 'idea'], ['app', 'idea'], ['logiciel', 'idea'], ['plateforme', 'idea'], ['system', 'idea'], ['fonctionn', 'idea'], ['creer', 'type'], ['produi', 'type'], ['constru', 'type'], ['prompt', 'type'], ['test', 'search'], ['essai', 'search'], ['essaie', 'search'], ['regarde', 'search'], ['jour', 'clock'], ['semaine', 'clock'], ['mois', 'clock'], ['annee', 'clock'], ['premier', 'target'], ['meilleur', 'target'], ['top', 'target'], ['numero', 'target'], ['unique', 'target'], ['nouveau', 'rocket'], ['commence', 'rocket'], ['grandi', 'rocket'], ['plusieurs', 'list'], ['options', 'list'], ['different', 'list'], ['double', 'grow'], ['triple', 'grow'], ['econom', 'clock'], ['gagne', 'clock'], ['perd', 'clock'], ['libre', 'clock'], ['dispo', 'clock'], ['24', 'clock'], ['illimit', 'grow'], ['autant', 'grow'], ['volume', 'grow'], ['masse', 'grow'], ['serie', 'grow'], ['chaine', 'grow'], ['personnalis', 'idea'], ['adapt', 'idea'], ['sur-mesure', 'idea'], ['choisi', 'idea'], ['controle', 'idea'], ['libert', 'idea'], ['qualite', 'target'], ['pro', 'target'], ['net', 'target'], ['propre', 'target'], ['impec', 'target'], ['4k', 'target'], ['auto', 'check'], ['clic', 'check'], ['instant', 'check'], ['immediat', 'check'], ['anonym', 'lock'], ['discret', 'lock'], ['cache', 'lock'], ['partout', 'network'], ['toutes', 'network'], ['multi', 'network'], ['plateformes', 'network'], ['audience', 'network'], ['essaye', 'search'], ['decouvre', 'search'], ['compare', 'search'], ['choisis', 'search'], ['viral', 'rocket'],
+  ['liste', 'list'], ['catalogue', 'list'], ['bibliotheque', 'list'], ['modele', 'list'], ['script', 'list'], ['choix', 'list'], ['croiss', 'easyup'], ['augment', 'easyup'], ['progress', 'easyup'], ['hausse', 'easyup'], ['scale', 'easyup'], ['resultat', 'results'], ['courbe', 'easyup'], ['rapid', 'speed'], ['vite', 'speed'], ['chrono', 'speed'], ['avant', 'compare'], ['apres', 'compare'], ['difference', 'compare'], ['versus', 'compare'], ['compar', 'compare'], ['contraire', 'compare'], ['tiktok', 'phone'], ['insta', 'phone'], ['reels', 'phone'], ['shorts', 'phone'], ['telephone', 'phone'], ['vertical', 'phone'], ['feed', 'phone'], ['ecri', 'type'], ['redig', 'type'], ['texte', 'type'], ['tape', 'type'], ['genere', 'type'], ['sous-titre', 'type'], ['soustitre', 'type'], ['idee', 'idea'], ['astuce', 'idea'], ['solution', 'idea'], ['secret', 'idea'], ['methode', 'idea'], ['truc', 'idea'], ['comprend', 'idea'], ['cle', 'copy'], ['cherch', 'search'], ['trouv', 'search'], ['analys', 'search'], ['decouvr', 'search'], ['repere', 'search'], ['detect', 'search'], ['lance', 'rocket'], ['decoll', 'rocket'], ['demarr', 'rocket'], ['boost', 'rocket'], ['explos', 'rocket'], ['viral', 'rocket'], ['propuls', 'rocket'], ['reseau', 'network'], ['connect', 'network'], ['communaut', 'network'], ['partage', 'network'], ['relie', 'network'], ['ensemble', 'network'], ['simple', 'easyup'], ['facile', 'easyup'], ['video', 'phone'], ['clip', 'phone'], ['short', 'phone'], ['post', 'phone'], ['publi', 'phone'], ['contenu', 'phone'], ['compte', 'network'], ['abonne', 'network'], ['follow', 'network'], ['public', 'network'], ['monde', 'network'], ['client', 'network'], ['outil', 'idea'], ['app', 'idea'], ['logiciel', 'idea'], ['plateforme', 'idea'], ['system', 'idea'], ['fonctionn', 'idea'], ['creer', 'type'], ['produi', 'type'], ['constru', 'type'], ['prompt', 'type'], ['test', 'search'], ['essai', 'search'], ['essaie', 'search'], ['regarde', 'search'], ['premier', 'podium'], ['meilleur', 'podium'], ['top', 'podium'], ['numero', 'podium'], ['unique', 'podium'], ['nouveau', 'rocket'], ['commence', 'rocket'], ['grandi', 'rocket'], ['plusieurs', 'list'], ['options', 'list'], ['different', 'list'], ['personnalis', 'idea'], ['adapt', 'idea'], ['sur-mesure', 'idea'], ['choisi', 'idea'], ['controle', 'idea'], ['libert', 'idea'], ['qualite', 'quality'], ['pro', 'quality'], ['net', 'quality'], ['propre', 'quality'], ['impec', 'quality'], ['4k', 'quality'], ['auto', 'oneclick'], ['clic', 'oneclick'], ['instant', 'oneclick'], ['immediat', 'oneclick'], ['partout', 'network'], ['toutes', 'network'], ['multi', 'network'], ['plateformes', 'network'], ['audience', 'network'], ['essaye', 'search'], ['decouvre', 'search'], ['compare', 'search'], ['choisis', 'search'], ['viral', 'rocket'],
   ['perce', 'rocket'], ['exploser', 'rocket'], ['carton', 'rocket'], ['succes', 'rocket'],
   // QUINZE ANIMATIONS N'AVAIENT AUCUNE ENTREE : avatar, faceless, split, voice,
   // swipe, views, engage, calendar, upload, stack, swap, cut, steps, toggle, logo.
@@ -1240,158 +1226,145 @@ const ANIM_LEX: [string, string][] = [
   ['visage', 'faceless'], ['anonym', 'faceless'], ['camera', 'faceless'], ['filmer', 'faceless'], ['montrer', 'faceless'],
   ['split', 'split'], ['gameplay', 'split'], ['ecran', 'split'], ['cote', 'split'],
   ['voix', 'voice'], ['clon', 'voice'], ['audio', 'voice'], ['parle', 'voice'], ['micro', 'voice'], ['son', 'voice'],
-  ['scroll', 'swipe'], ['defil', 'swipe'], ['fil', 'swipe'],
-  ['vue', 'views'], ['portee', 'views'], ['personnes', 'views'], ['millier', 'views'],
+  ['scroll', 'phone'], ['defil', 'phone'], ['fil', 'phone'], ['vue', 'views'], ['portee', 'views'], ['personnes', 'views'], ['millier', 'views'],
   ['commentaire', 'engage'], ['like', 'engage'], ['reaction', 'engage'], ['engagement', 'engage'], ['aiment', 'engage'],
-  ['regulier', 'calendar'], ['quotidien', 'calendar'], ['planning', 'calendar'], ['constan', 'calendar'],
-  ['publi', 'upload'], ['poste', 'upload'], ['ligne', 'upload'], ['envoi', 'upload'], ['diffus', 'upload'],
-  ['dizaine', 'stack'], ['batch', 'stack'], ['quantite', 'stack'], ['enchain', 'stack'],
+  ['regulier', 'schedule'], ['quotidien', 'schedule'], ['planning', 'schedule'], ['constan', 'schedule'], ['publi', 'upload'], ['poste', 'upload'], ['ligne', 'upload'], ['envoi', 'upload'], ['diffus', 'upload'],
   ['remplace', 'swap'], ['lieu', 'swap'], ['place', 'swap'], ['change', 'swap'], ['switch', 'swap'],
   ['montage', 'cut'], ['coupe', 'cut'], ['edit', 'cut'], ['decoup', 'cut'], ['monte', 'cut'],
-  ['etape', 'steps'], ['suffit', 'steps'], ['ensuite', 'steps'], ['process', 'steps'], ['tuto', 'steps'],
-  ['active', 'toggle'], ['bouton', 'toggle'], ['allume', 'toggle'], ['branch', 'toggle'], ['parametr', 'toggle'],
-  // <<< ANIM-LEX:AUTO — genere par render-worker/sync-anim-bank.mjs depuis les
+  ['active', 'oneclick'], ['bouton', 'oneclick'], ['allume', 'oneclick'], ['branch', 'connect'], ['parametr', 'settings'], // <<< ANIM-LEX:AUTO — genere par render-worker/sync-anim-bank.mjs depuis les
   // phrases « … » des descriptions de la banque. Ne pas editer a la main : pour
   // qu une animation reponde a un mot, ajoute la phrase dans SA description —
   // le modele la lit aussi, les deux restent donc d accord. Les entrees
   // ci-dessus sont ecrites a la main et gardent la priorite (premier match). >>>
   ['1080p', 'quality'], ['1500', 'brandeal'], ['340k', 'spike'], ['abonne', 'countup'], ['abonne', 'network'],
   ['abonne', 'profile'], ['abonne', 'mrr'], ['accele', 'speedramp'], ['access', 'oneclick'],
-  ['accroc', 'scrollstop'], ['accroc', 'hook'], ['achete', 'order'], ['achete', 'orderbook'], ['action', 'clapper'],
+  ['accroc', 'scrollstop'], ['achete', 'order'], ['achete', 'orderbook'], ['action', 'clapper'],
   ['active', 'settings'], ['adoren', 'star'], ['agenda', 'booking'], ['aimant', 'magnet'], ['ajoute', 'layers'],
   ['ajoute', 'cart'], ['algo', 'algorithm'], ['analys', 'search'], ['apercu', 'preview'], ['appara', 'type'],
-  ['appart', 'property'], ['appuie', 'record'], ['apres', 'bars2'], ['arrete', 'scrollstop'], ['arrete', 'notif'],
-  ['arrive', 'tsunami'], ['articl', 'product'], ['attent', 'queue'], ['attire', 'magnet'], ['aucune', 'blankfill'],
-  ['aucune', 'twopaths'], ['aucune', 'oneclick'], ['audien', 'network'], ['audien', 'crowd'], ['audio', 'upload'],
-  ['audio', 'dropzone'], ['augmen', 'grow'], ['automa', 'automation'], ['autour', 'orbit'], ['avant', 'bars2'],
-  ['avant', 'deadline'], ['avant', 'algorithm'], ['avant', 'preview'], ['avatar', 'avatar'], ['avis', 'star'],
-  ['avis', 'review'], ['avis', 'poll'], ['baisse', 'easydown'], ['baisse', 'music'], ['barre', 'discount'],
-  ['bascul', 'transition'], ['benefi', 'gaugefill'], ['biblio', 'library'], ['blancs', 'cut'], ['blancs', 'silence'],
-  ['bonne', 'retakes'], ['bons', 'tools'], ['bons', 'hashtag'], ['bord', 'dashboard'], ['bord', 'liquid'],
-  ['boucle', 'loop'], ['bougie', 'candles'], ['bout', 'tunnel'], ['cache', 'iceberg'], ['cadrag', 'framing'],
-  ['cadrer', 'framing'], ['calcul', 'render'], ['camera', 'faceless'], ['candid', 'cv'], ['carnet', 'orderbook'],
-  ['carrou', 'carousel'], ['carte', 'menu'], ['celui', 'cv'], ['cent', 'funnel'], ['cent', 'donut'],
-  ['cent', 'discount'], ['centre', 'orbit'], ['certif', 'badge'], ['change', 'bgswap'], ['change', 'salesphone'],
-  ['charge', 'upload'], ['chart', 'candles'], ['chauff', 'thermometer'], ['cher', 'easydown'], ['cherch', 'search'],
-  ['cherch', 'results'], ['cherch', 'hashtag'], ['chez', 'logo'], ['chiffr', 'bars2'], ['choisi', 'plan'],
-  ['choisi', 'substyle'], ['churn', 'churn'], ['chute', 'easydown'], ['cinqua', 'discount'], ['cles', 'hashtag'],
-  ['clic', 'post'], ['clic', 'toggle'], ['clic', 'oneclick'], ['client', 'donut'], ['client', 'map'],
+  ['appart', 'property'], ['appuie', 'record'], ['arrete', 'scrollstop'], ['arrete', 'notif'], ['arrive', 'tsunami'],
+  ['articl', 'product'], ['attent', 'queue'], ['attire', 'magnet'], ['aucune', 'blankfill'], ['aucune', 'oneclick'],
+  ['audien', 'network'], ['audien', 'crowd'], ['audio', 'upload'], ['audio', 'dropzone'], ['automa', 'automation'],
+  ['autour', 'orbit'], ['avant', 'deadline'], ['avant', 'algorithm'], ['avant', 'preview'], ['avatar', 'avatar'],
+  ['avis', 'star'], ['avis', 'review'], ['avis', 'poll'], ['baisse', 'easydown'], ['baisse', 'music'],
+  ['barre', 'discount'], ['bascul', 'transition'], ['benefi', 'gaugefill'], ['biblio', 'library'], ['blancs', 'cut'],
+  ['blancs', 'silence'], ['bonne', 'retakes'], ['bons', 'tools'], ['bons', 'hashtag'], ['bord', 'dashboard'],
+  ['bord', 'liquid'], ['boucle', 'loop'], ['bougie', 'candles'], ['bout', 'tunnel'], ['cache', 'iceberg'],
+  ['cadrag', 'framing'], ['cadrer', 'framing'], ['calcul', 'render'], ['camera', 'faceless'], ['candid', 'cv'],
+  ['carnet', 'orderbook'], ['carrou', 'carousel'], ['carte', 'menu'], ['celui', 'cv'], ['cent', 'funnel'],
+  ['cent', 'donut'], ['cent', 'discount'], ['centre', 'orbit'], ['certif', 'badge'], ['change', 'bgswap'],
+  ['change', 'salesphone'], ['charge', 'upload'], ['chart', 'candles'], ['chauff', 'thermometer'],
+  ['cher', 'easydown'], ['cherch', 'search'], ['cherch', 'results'], ['cherch', 'hashtag'], ['chez', 'logo'],
+  ['choisi', 'plan'], ['choisi', 'substyle'], ['churn', 'churn'], ['chute', 'easydown'], ['cinqua', 'discount'],
+  ['cles', 'hashtag'], ['clic', 'post'], ['clic', 'oneclick'], ['client', 'donut'], ['client', 'map'],
   ['clique', 'screen'], ['clique', 'bio'], ['clique', 'linkbio'], ['clone', 'voice'], ['code', 'qr'],
   ['colis', 'delivery'], ['colori', 'sizes'], ['comman', 'sales'], ['comman', 'cart'], ['comman', 'salesphone'],
   ['commen', 'comments'], ['commen', 'keyword'], ['commen', 'pin'], ['commen', 'comment'], ['commun', 'connect'],
-  ['commun', 'network'], ['compar', 'bars2'], ['compat', 'integrations'], ['compet', 'blankfill'],
-  ['compet', 'oneclick'], ['compte', 'post'], ['compte', 'profile'], ['compte', 'zoompunch'], ['concur', 'twopaths'],
-  ['connai', 'oneclick'], ['connec', 'connect'], ['connec', 'integrations'], ['consta', 'calendar'],
-  ['contac', 'brandeal'], ['contra', 'sign'], ['contre', 'stoploss'], ['conver', 'funnel'], ['copie', 'copy'],
-  ['copies', 'copy'], ['cote', 'split'], ['cote', 'bars2'], ['couche', 'layers'], ['coup', 'spike'],
-  ['coupe', 'stoploss'], ['courbe', 'weight'], ['coute', 'lowcost'], ['coute', 'invoice'], ['couts', 'easydown'],
-  ['crache', 'clipping'], ['croiss', 'grow'], ['date', 'deadline'], ['deal', 'sign'], ['debut', 'pnl'],
+  ['commun', 'network'], ['compat', 'integrations'], ['compet', 'blankfill'], ['compet', 'oneclick'],
+  ['compte', 'post'], ['compte', 'profile'], ['compte', 'zoompunch'], ['connai', 'oneclick'], ['connec', 'connect'],
+  ['connec', 'integrations'], ['contac', 'brandeal'], ['contra', 'sign'], ['contre', 'stoploss'],
+  ['conver', 'funnel'], ['copie', 'copy'], ['copies', 'copy'], ['cote', 'split'], ['couche', 'layers'],
+  ['coup', 'spike'], ['coupe', 'stoploss'], ['courbe', 'weight'], ['coute', 'lowcost'], ['coute', 'invoice'],
+  ['couts', 'easydown'], ['crache', 'clipping'], ['date', 'deadline'], ['deal', 'sign'], ['debut', 'pnl'],
   ['debuta', 'easyup'], ['debuta', 'oneclick'], ['decoll', 'rocket'], ['decor', 'bgswap'], ['decort', 'explode'],
   ['defile', 'carousel'], ['degrin', 'easydown'], ['demand', 'chat'], ['demand', 'poll'], ['depart', 'lowcost'],
   ['depass', 'leaderboard'], ['deploi', 'deploy'], ['depose', 'upload'], ['depose', 'dropzone'], ['depuis', 'pnl'],
   ['dernie', 'tunnel'], ['derush', 'silence'], ['desabo', 'churn'], ['descen', 'weight'], ['descri', 'caption'],
   ['dessus', 'layers'], ['dessus', 'zoompunch'], ['detail', 'explode'], ['detail', 'zoompunch'],
-  ['detour', 'bgswap'], ['deux', 'split'], ['deux', 'daypart'], ['deux', 'bars2'], ['deux', 'abtest'],
-  ['deux', 'clapper'], ['deuxie', 'retake'], ['devant', 'podium'], ['devant', 'leaderboard'], ['devien', 'viral'],
-  ['devien', 'magnet'], ['devis', 'invoice'], ['devis', 'quote'], ['differ', 'bars2'], ['differ', 'versus'],
-  ['diffic', 'easyup'], ['dire', 'script'], ['disent', 'review'], ['dispo', 'uptime'], ['donne', 'result'],
-  ['donne', 'flow'], ['donne', 'free'], ['dors', 'salesphone'], ['dossie', 'folder'], ['droite', 'screen'],
-  ['droite', 'tunnel'], ['dupliq', 'template'], ['eclair', 'lighting'], ['ecris', 'chat'], ['ecris', 'keyword'],
-  ['ecris', 'script'], ['ecris', 'caption'], ['ecris', 'comment'], ['ecrit', 'type'], ['ecrive', 'engage'],
-  ['ecroul', 'easydown'], ['elite', 'upgrade'], ['empile', 'layers'], ['emport', 'tsunami'], ['encais', 'pay'],
-  ['enchai', 'transition'], ['enleve', 'cut'], ['enleve', 'silence'], ['enregi', 'voice'], ['enregi', 'record'],
-  ['enregi', 'share'], ['ensemb', 'split'], ['entre', 'connect'], ['envoie', 'upload'], ['envoie', 'mediakit'],
-  ['epingl', 'pin'], ['etape', 'wizard'], ['etapes', 'wizard'], ['etapes', 'onboarding'], ['etoile', 'star'],
-  ['euros', 'countup'], ['exacte', 'target'], ['experi', 'blankfill'], ['explos', 'rocket'],
-  ['explos', 'thermometer'], ['explos', 'spike'], ['export', 'export'], ['facile', 'easyup'], ['factur', 'invoice'],
-  ['fais', 'flow'], ['fais', 'carousel'], ['fais', 'focus'], ['faite', 'connect'], ['fichie', 'upload'],
-  ['fichie', 'folder'], ['file', 'queue'], ['fleche', 'rocket'], ['flou', 'focus'], ['fois', 'template'],
-  ['fond', 'bgswap'], ['fond', 'queue'], ['fond', 'music'], ['format', 'template'], ['format', 'crop'],
-  ['formul', 'plan'], ['formul', 'form'], ['fort', 'clipping'], ['garant', 'badge'], ['garde', 'retakes'],
-  ['gardes', 'gaugefill'], ['genere', 'type'], ['genere', 'render'], ['gens', 'network'], ['gens', 'comments'],
-  ['gens', 'preview'], ['glisse', 'dropzone'], ['graphi', 'candles'], ['gratui', 'free'], ['grimpe', 'grow'],
-  ['gros', 'iceberg'], ['grossi', 'leads'], ['guider', 'wizard'], ['hashta', 'hashtag'], ['hashta', 'caption'],
-  ['haut', 'screen'], ['haut', 'split'], ['haut', 'pin'], ['heures', 'daypart'], ['hook', 'hook'],
-  ['image', 'upload'], ['image', 'focus'], ['import', 'upload'], ['import', 'dropzone'], ['inclus', 'check'],
+  ['detour', 'bgswap'], ['deux', 'split'], ['deux', 'daypart'], ['deux', 'abtest'], ['deux', 'clapper'],
+  ['deuxie', 'retake'], ['devant', 'podium'], ['devant', 'leaderboard'], ['devien', 'viral'], ['devien', 'magnet'],
+  ['devis', 'invoice'], ['devis', 'quote'], ['diffic', 'easyup'], ['dire', 'script'], ['disent', 'review'],
+  ['dispo', 'uptime'], ['donne', 'result'], ['donne', 'flow'], ['dors', 'salesphone'], ['dossie', 'folder'],
+  ['droite', 'screen'], ['droite', 'tunnel'], ['dupliq', 'template'], ['eclair', 'lighting'], ['ecris', 'chat'],
+  ['ecris', 'keyword'], ['ecris', 'script'], ['ecris', 'caption'], ['ecris', 'comment'], ['ecrit', 'type'],
+  ['ecrive', 'engage'], ['ecroul', 'easydown'], ['elite', 'upgrade'], ['empile', 'layers'], ['emport', 'tsunami'],
+  ['encais', 'pay'], ['enchai', 'transition'], ['enleve', 'cut'], ['enleve', 'silence'], ['enregi', 'voice'],
+  ['enregi', 'record'], ['enregi', 'share'], ['ensemb', 'split'], ['entre', 'connect'], ['envoie', 'upload'],
+  ['envoie', 'mediakit'], ['epingl', 'pin'], ['etape', 'wizard'], ['etapes', 'wizard'], ['etapes', 'onboarding'],
+  ['etoile', 'star'], ['euros', 'countup'], ['experi', 'blankfill'], ['explos', 'rocket'], ['explos', 'thermometer'],
+  ['explos', 'spike'], ['export', 'export'], ['facile', 'easyup'], ['factur', 'invoice'], ['fais', 'flow'],
+  ['fais', 'carousel'], ['fais', 'focus'], ['faite', 'connect'], ['fichie', 'upload'], ['fichie', 'folder'],
+  ['file', 'queue'], ['fleche', 'rocket'], ['flou', 'focus'], ['fois', 'template'], ['fond', 'bgswap'],
+  ['fond', 'queue'], ['fond', 'music'], ['format', 'template'], ['format', 'crop'], ['formul', 'plan'],
+  ['formul', 'form'], ['fort', 'clipping'], ['garant', 'badge'], ['garde', 'retakes'], ['gardes', 'gaugefill'],
+  ['genere', 'type'], ['genere', 'render'], ['gens', 'network'], ['gens', 'comments'], ['gens', 'preview'],
+  ['glisse', 'dropzone'], ['graphi', 'candles'], ['gros', 'iceberg'], ['grossi', 'leads'], ['guider', 'wizard'],
+  ['hashta', 'hashtag'], ['hashta', 'caption'], ['haut', 'screen'], ['haut', 'split'], ['haut', 'pin'],
+  ['heures', 'daypart'], ['image', 'upload'], ['image', 'focus'], ['import', 'upload'], ['import', 'dropzone'],
   ['inclus', 'checklist'], ['inscri', 'leads'], ['integr', 'connect'], ['integr', 'integrations'],
   ['integr', 'gaugefill'], ['intern', 'translate'], ['invest', 'lowcost'], ['invest', 'roi'], ['jour', 'daypart'],
-  ['jour', 'sales'], ['jours', 'calendar'], ['jours', 'deadline'], ['jusqu', 'liquid'], ['kilos', 'weight'],
-  ['laisse', 'render'], ['laisse', 'form'], ['laisse', 'wizard'], ['lance', 'rocket'], ['lancem', 'rocket'],
-  ['langue', 'translate'], ['leads', 'leads'], ['leur', 'form'], ['leur', 'poll'], ['leurs', 'review'],
-  ['lien', 'copy'], ['lien', 'bio'], ['lien', 'linkbio'], ['lieu', 'compare'], ['lieu', 'swap'], ['lieu', 'versus'],
-  ['ligne', 'tunnel'], ['ligne', 'deploy'], ['like', 'share'], ['limite', 'deadline'], ['liste', 'leads'],
-  ['livrai', 'delivery'], ['locati', 'property'], ['lumier', 'tunnel'], ['lumier', 'lighting'], ['mail', 'form'],
-  ['main', 'onboarding'], ['marche', 'search'], ['marche', 'check'], ['marche', 'podium'], ['marche', 'abtest'],
-  ['marche', 'trendsound'], ['maree', 'tsunami'], ['marque', 'logo'], ['marque', 'brandeal'], ['marque', 'mediakit'],
-  ['match', 'engage'], ['media', 'mediakit'], ['meille', 'quality'], ['meille', 'podium'], ['meille', 'star'],
-  ['mensue', 'mrr'], ['menu', 'menu'], ['messag', 'engage'], ['mets', 'roi'], ['mets', 'property'],
-  ['mets', 'share'], ['mettre', 'linkbio'], ['micro', 'voice'], ['mieux', 'abtest'], ['mieux', 'trend'],
-  ['milieu', 'plan'], ['millie', 'crowd'], ['millio', 'countup'], ['millio', 'views'], ['miniat', 'thumb'],
-  ['minute', 'clock'], ['mise', 'lowcost'], ['mise', 'focus'], ['mise', 'deploy'], ['mixage', 'mixer'],
-  ['modele', 'list'], ['modele', 'template'], ['moitie', 'donut'], ['moment', 'speedramp'], ['moment', 'trendsound'],
-  ['monde', 'twopaths'], ['monde', 'podium'], ['monde', 'crowd'], ['monde', 'map'], ['montag', 'layers'],
+  ['jour', 'sales'], ['jours', 'deadline'], ['jusqu', 'liquid'], ['kilos', 'weight'], ['laisse', 'render'],
+  ['laisse', 'form'], ['laisse', 'wizard'], ['lance', 'rocket'], ['lancem', 'rocket'], ['langue', 'translate'],
+  ['leads', 'leads'], ['leur', 'form'], ['leur', 'poll'], ['leurs', 'review'], ['lien', 'copy'], ['lien', 'bio'],
+  ['lien', 'linkbio'], ['lieu', 'compare'], ['lieu', 'swap'], ['ligne', 'tunnel'], ['ligne', 'deploy'],
+  ['like', 'share'], ['limite', 'deadline'], ['liste', 'leads'], ['livrai', 'delivery'], ['locati', 'property'],
+  ['lumier', 'tunnel'], ['lumier', 'lighting'], ['mail', 'form'], ['main', 'onboarding'], ['marche', 'search'],
+  ['marche', 'podium'], ['marche', 'abtest'], ['marche', 'trendsound'], ['maree', 'tsunami'], ['marque', 'logo'],
+  ['marque', 'brandeal'], ['marque', 'mediakit'], ['match', 'engage'], ['media', 'mediakit'], ['meille', 'quality'],
+  ['meille', 'podium'], ['meille', 'star'], ['mensue', 'mrr'], ['menu', 'menu'], ['messag', 'engage'],
+  ['mets', 'roi'], ['mets', 'property'], ['mets', 'share'], ['mettre', 'linkbio'], ['micro', 'voice'],
+  ['mieux', 'abtest'], ['mieux', 'trend'], ['milieu', 'plan'], ['millie', 'crowd'], ['millio', 'countup'],
+  ['millio', 'views'], ['miniat', 'thumb'], ['mise', 'lowcost'], ['mise', 'focus'], ['mise', 'deploy'],
+  ['mixage', 'mixer'], ['modele', 'list'], ['modele', 'template'], ['moitie', 'donut'], ['moment', 'speedramp'],
+  ['moment', 'trendsound'], ['monde', 'podium'], ['monde', 'crowd'], ['monde', 'map'], ['montag', 'layers'],
   ['montag', 'timeline'], ['monte', 'easyup'], ['monte', 'trend'], ['monte', 'timeline'], ['monte', 'candles'],
-  ['monte', 'thermometer'], ['monten', 'grow'], ['monten', 'views'], ['montes', 'upgrade'], ['montre', 'faceless'],
+  ['monte', 'thermometer'], ['monten', 'views'], ['montes', 'upgrade'], ['montre', 'faceless'],
   ['moteur', 'clapper'], ['mots', 'hashtag'], ['moyen', 'cart'], ['musiqu', 'music'], ['nette', 'focus'],
   ['niveau', 'mixer'], ['niveau', 'thermometer'], ['noir', 'lighting'], ['notifi', 'notif'], ['numero', 'podium'],
-  ['occupe', 'automation'], ['offert', 'free'], ['offre', 'plan'], ['onboar', 'onboarding'], ['onglet', 'screen'],
-  ['option', 'list'], ['ordre', 'order'], ['outil', 'orbit'], ['outils', 'tools'], ['page', 'profile'],
-  ['paieme', 'pay'], ['paient', 'sign'], ['paient', 'pay'], ['paient', 'brandeal'], ['panier', 'cart'],
-  ['panne', 'uptime'], ['parame', 'settings'], ['parle', 'voice'], ['pars', 'blankfill'], ['pars', 'template'],
-  ['part', 'rocket'], ['part', 'orbit'], ['part', 'delivery'], ['part', 'algorithm'], ['part', 'stoploss'],
-  ['partag', 'viral'], ['partag', 'share'], ['parten', 'brandeal'], ['partie', 'iceberg'], ['partou', 'post'],
-  ['partou', 'map'], ['passe', 'phone'], ['passe', 'crop'], ['passe', 'pay'], ['passe', 'order'],
-  ['passer', 'leaderboard'], ['passes', 'upgrade'], ['pays', 'map'], ['pendan', 'render'], ['pendan', 'queue'],
-  ['pendan', 'salesphone'], ['perd', 'churn'], ['perdu', 'weight'], ['perfor', 'pnl'], ['person', 'faceless'],
-  ['person', 'twopaths'], ['person', 'funnel'], ['person', 'crowd'], ['perte', 'stoploss'], ['peut', 'salesphone'],
-  ['piece', 'explode'], ['place', 'swap'], ['plan', 'plan'], ['plan', 'upgrade'], ['plan', 'storyboard'],
-  ['planif', 'schedule'], ['planni', 'calendar'], ['plat', 'menu'], ['platef', 'logo'], ['plusie', 'sizes'],
-  ['point', 'focus'], ['portef', 'portfolio'], ['positi', 'portfolio'], ['positi', 'order'], ['poste', 'calendar'],
-  ['poster', 'post'], ['poster', 'preview'], ['postes', 'story'], ['pousse', 'algorithm'], ['premie', 'avatar'],
-  ['premie', 'hook'], ['premie', 'leaderboard'], ['premie', 'onboarding'], ['prend', 'booking'], ['prends', 'order'],
-  ['prends', 'cv'], ['presqu', 'lowcost'], ['pressi', 'thermometer'], ['presta', 'quote'], ['prevu', 'schedule'],
-  ['prise', 'record'], ['prise', 'onboarding'], ['prise', 'clapper'], ['prise', 'retakes'], ['prise', 'retake'],
-  ['prix', 'discount'], ['prix', 'menu'], ['prod', 'deploy'], ['produi', 'product'], ['progra', 'schedule'],
-  ['progre', 'grow'], ['promo', 'discount'], ['publie', 'post'], ['qualit', 'quality'], ['quelqu', 'daypart'],
+  ['occupe', 'automation'], ['offre', 'plan'], ['onboar', 'onboarding'], ['onglet', 'screen'], ['option', 'list'],
+  ['ordre', 'order'], ['outil', 'orbit'], ['outils', 'tools'], ['page', 'profile'], ['paieme', 'pay'],
+  ['paient', 'sign'], ['paient', 'pay'], ['paient', 'brandeal'], ['panier', 'cart'], ['panne', 'uptime'],
+  ['parame', 'settings'], ['parle', 'voice'], ['pars', 'blankfill'], ['pars', 'template'], ['part', 'rocket'],
+  ['part', 'orbit'], ['part', 'delivery'], ['part', 'algorithm'], ['part', 'stoploss'], ['partag', 'viral'],
+  ['partag', 'share'], ['parten', 'brandeal'], ['partie', 'iceberg'], ['partou', 'post'], ['partou', 'map'],
+  ['passe', 'phone'], ['passe', 'crop'], ['passe', 'pay'], ['passe', 'order'], ['passer', 'leaderboard'],
+  ['passes', 'upgrade'], ['pays', 'map'], ['pendan', 'render'], ['pendan', 'queue'], ['pendan', 'salesphone'],
+  ['perd', 'churn'], ['perdu', 'weight'], ['perfor', 'pnl'], ['person', 'faceless'], ['person', 'funnel'],
+  ['person', 'crowd'], ['perte', 'stoploss'], ['peut', 'salesphone'], ['piece', 'explode'], ['place', 'swap'],
+  ['plan', 'plan'], ['plan', 'upgrade'], ['plan', 'storyboard'], ['planif', 'schedule'], ['plat', 'menu'],
+  ['platef', 'logo'], ['plusie', 'sizes'], ['point', 'focus'], ['portef', 'portfolio'], ['positi', 'portfolio'],
+  ['positi', 'order'], ['poster', 'post'], ['poster', 'preview'], ['postes', 'story'], ['pousse', 'algorithm'],
+  ['premie', 'avatar'], ['premie', 'leaderboard'], ['premie', 'onboarding'], ['prend', 'booking'],
+  ['prends', 'order'], ['prends', 'cv'], ['presqu', 'lowcost'], ['pressi', 'thermometer'], ['presta', 'quote'],
+  ['prevu', 'schedule'], ['prise', 'record'], ['prise', 'onboarding'], ['prise', 'clapper'], ['prise', 'retakes'],
+  ['prise', 'retake'], ['prix', 'discount'], ['prix', 'menu'], ['prod', 'deploy'], ['produi', 'product'],
+  ['progra', 'schedule'], ['promo', 'discount'], ['publie', 'post'], ['qualit', 'quality'], ['quelqu', 'daypart'],
   ['quelqu', 'speed'], ['quelqu', 'share'], ['rajout', 'checklist'], ['ralent', 'speedramp'], ['range', 'folder'],
   ['rapide', 'speed'], ['rappor', 'flow'], ['rappor', 'salesphone'], ['rate', 'retake'], ['reagis', 'comments'],
   ['rebouc', 'loop'], ['recadr', 'crop'], ['recent', 'framing'], ['recher', 'search'], ['recoiv', 'delivery'],
   ['recomm', 'inventory'], ['recrut', 'cv'], ['recupe', 'copy'], ['recupe', 'roi'], ['recupe', 'export'],
   ['recurr', 'mrr'], ['redige', 'type'], ['refais', 'retake'], ['refait', 'retakes'], ['regard', 'search'],
   ['regard', 'comments'], ['regard', 'zoompunch'], ['regard', 'loop'], ['regle', 'mixer'], ['regles', 'settings'],
-  ['reguli', 'calendar'], ['relie', 'connect'], ['rempli', 'booking'], ['rempli', 'form'], ['rempli', 'liquid'],
-  ['rendem', 'pnl'], ['rendez', 'booking'], ['rends', 'screen'], ['repart', 'donut'], ['repere', 'search'],
-  ['replay', 'loop'], ['repond', 'engage'], ['repond', 'comments'], ['reseau', 'post'], ['reseau', 'network'],
-  ['reserv', 'booking'], ['reserv', 'liquid'], ['ressor', 'funnel'], ['reste', 'funnel'], ['reste', 'deadline'],
-  ['result', 'grow'], ['result', 'dashboard'], ['result', 'results'], ['result', 'weight'], ['retour', 'roi'],
-  ['revenu', 'mrr'], ['ruptur', 'inventory'], ['rushs', 'library'], ['sait', 'faceless'], ['sature', 'clipping'],
-  ['sauf', 'twopaths'], ['sauten', 'silence'], ['scanne', 'qr'], ['scenar', 'storyboard'], ['screen', 'split'],
-  ['script', 'type'], ['script', 'list'], ['script', 'script'], ['scroll', 'phone'], ['scroll', 'scrollstop'],
-  ['second', 'clock'], ['second', 'speed'], ['second', 'scrollstop'], ['second', 'hook'], ['secret', 'idea'],
-  ['select', 'screen'], ['semain', 'calendar'], ['semain', 'schedule'], ['seul', 'easyup'], ['seul', 'orbit'],
-  ['seul', 'viral'], ['seul', 'automation'], ['seul', 'algorithm'], ['seul', 'oneclick'], ['signen', 'sign'],
-  ['signen', 'quote'], ['silenc', 'silence'], ['simple', 'easyup'], ['simple', 'check'], ['site', 'logo'],
-  ['slide', 'carousel'], ['sondag', 'poll'], ['sonner', 'notif'], ['sous', 'music'], ['sous', 'substyle'],
-  ['split', 'split'], ['spread', 'orderbook'], ['stack', 'tools'], ['stats', 'dashboard'], ['stats', 'mediakit'],
-  ['stock', 'inventory'], ['stop', 'stoploss'], ['storie', 'story'], ['story', 'story'], ['struct', 'storyboard'],
-  ['style', 'substyle'], ['suffit', 'steps'], ['suis', 'dashboard'], ['suis', 'inventory'], ['suivan', 'phone'],
-  ['superi', 'upgrade'], ['swipen', 'phone'], ['system', 'automation'], ['tablea', 'dashboard'], ['taille', 'sizes'],
-  ['tape', 'keyword'], ['tape', 'comment'], ['tapes', 'results'], ['taux', 'funnel'], ['telech', 'export'],
-  ['televe', 'upload'], ['temoig', 'review'], ['temps', 'split'], ['temps', 'daypart'], ['temps', 'queue'],
-  ['temps', 'uptime'], ['tendan', 'trend'], ['tendan', 'trendsound'], ['teste', 'abtest'], ['texte', 'type'],
-  ['texte', 'script'], ['tiktok', 'phone'], ['tiktok', 'crop'], ['titres', 'substyle'], ['token', 'copy'],
-  ['tomben', 'notif'], ['tomben', 'sales'], ['tomben', 'salesphone'], ['tools', 'connect'], ['tourne', 'render'],
-  ['tourne', 'queue'], ['tourne', 'automation'], ['tourne', 'clapper'], ['tourne', 'lighting'], ['tourne', 'uptime'],
-  ['tradui', 'translate'], ['transi', 'transition'], ['travai', 'iceberg'], ['traver', 'tunnel'], ['trois', 'plan'],
-  ['trois', 'wizard'], ['trouve', 'search'], ['trouve', 'results'], ['tunnel', 'funnel'], ['typo', 'substyle'],
-  ['ultra', 'speed'], ['vague', 'tsunami'], ['valide', 'check'], ['valide', 'badge'], ['vaut', 'portfolio'],
-  ['vend', 'salesphone'], ['vendeu', 'orderbook'], ['vendre', 'deadline'], ['vends', 'product'], ['ventes', 'sales'],
-  ['verifi', 'badge'], ['versio', 'abtest'], ['versio', 'upgrade'], ['veux', 'chat'], ['veux', 'settings'],
-  ['video', 'upload'], ['video', 'dropzone'], ['video', 'export'], ['video', 'timeline'], ['video', 'thumb'],
-  ['video', 'storyboard'], ['vienne', 'magnet'], ['viral', 'viral'], ['visage', 'faceless'], ['vitess', 'speed'],
-  ['voient', 'preview'], ['voila', 'result'], ['vois', 'iceberg'], ['voix', 'voice'], ['voix', 'record'],
-  ['voix', 'music'], ['votent', 'poll'], ['vraie', 'tsunami'], ['vues', 'thumb'], ['vues', 'views'],
-  ['zero', 'blankfill'], ['zoom', 'zoompunch'],
+  ['relie', 'connect'], ['rempli', 'booking'], ['rempli', 'form'], ['rempli', 'liquid'], ['rendem', 'pnl'],
+  ['rendez', 'booking'], ['rends', 'screen'], ['repart', 'donut'], ['repere', 'search'], ['replay', 'loop'],
+  ['repond', 'engage'], ['repond', 'comments'], ['reseau', 'post'], ['reseau', 'network'], ['reserv', 'booking'],
+  ['reserv', 'liquid'], ['ressor', 'funnel'], ['reste', 'funnel'], ['reste', 'deadline'], ['result', 'dashboard'],
+  ['result', 'results'], ['result', 'weight'], ['retour', 'roi'], ['revenu', 'mrr'], ['ruptur', 'inventory'],
+  ['rushs', 'library'], ['sait', 'faceless'], ['sature', 'clipping'], ['sauten', 'silence'], ['scanne', 'qr'],
+  ['scenar', 'storyboard'], ['screen', 'split'], ['script', 'type'], ['script', 'list'], ['script', 'script'],
+  ['scroll', 'phone'], ['scroll', 'scrollstop'], ['second', 'speed'], ['second', 'scrollstop'], ['secret', 'idea'],
+  ['select', 'screen'], ['semain', 'schedule'], ['seul', 'easyup'], ['seul', 'orbit'], ['seul', 'viral'],
+  ['seul', 'automation'], ['seul', 'algorithm'], ['seul', 'oneclick'], ['signen', 'sign'], ['signen', 'quote'],
+  ['silenc', 'silence'], ['simple', 'easyup'], ['site', 'logo'], ['slide', 'carousel'], ['sondag', 'poll'],
+  ['sonner', 'notif'], ['sous', 'music'], ['sous', 'substyle'], ['split', 'split'], ['spread', 'orderbook'],
+  ['stack', 'tools'], ['stats', 'dashboard'], ['stats', 'mediakit'], ['stock', 'inventory'], ['stop', 'stoploss'],
+  ['storie', 'story'], ['story', 'story'], ['struct', 'storyboard'], ['style', 'substyle'], ['suis', 'dashboard'],
+  ['suis', 'inventory'], ['suivan', 'phone'], ['superi', 'upgrade'], ['swipen', 'phone'], ['system', 'automation'],
+  ['tablea', 'dashboard'], ['taille', 'sizes'], ['tape', 'keyword'], ['tape', 'comment'], ['tapes', 'results'],
+  ['taux', 'funnel'], ['telech', 'export'], ['televe', 'upload'], ['temoig', 'review'], ['temps', 'split'],
+  ['temps', 'daypart'], ['temps', 'queue'], ['temps', 'uptime'], ['tendan', 'trend'], ['tendan', 'trendsound'],
+  ['teste', 'abtest'], ['texte', 'type'], ['texte', 'script'], ['tiktok', 'phone'], ['tiktok', 'crop'],
+  ['titres', 'substyle'], ['token', 'copy'], ['tomben', 'notif'], ['tomben', 'sales'], ['tomben', 'salesphone'],
+  ['tools', 'connect'], ['tourne', 'render'], ['tourne', 'queue'], ['tourne', 'automation'], ['tourne', 'clapper'],
+  ['tourne', 'lighting'], ['tourne', 'uptime'], ['tradui', 'translate'], ['transi', 'transition'],
+  ['travai', 'iceberg'], ['traver', 'tunnel'], ['trois', 'plan'], ['trois', 'wizard'], ['trouve', 'search'],
+  ['trouve', 'results'], ['tunnel', 'funnel'], ['typo', 'substyle'], ['ultra', 'speed'], ['vague', 'tsunami'],
+  ['valide', 'badge'], ['vaut', 'portfolio'], ['vend', 'salesphone'], ['vendeu', 'orderbook'],
+  ['vendre', 'deadline'], ['vends', 'product'], ['ventes', 'sales'], ['verifi', 'badge'], ['versio', 'abtest'],
+  ['versio', 'upgrade'], ['veux', 'chat'], ['veux', 'settings'], ['video', 'upload'], ['video', 'dropzone'],
+  ['video', 'export'], ['video', 'timeline'], ['video', 'thumb'], ['video', 'storyboard'], ['vienne', 'magnet'],
+  ['viral', 'viral'], ['visage', 'faceless'], ['vitess', 'speed'], ['voient', 'preview'], ['voila', 'result'],
+  ['vois', 'iceberg'], ['voix', 'voice'], ['voix', 'record'], ['voix', 'music'], ['votent', 'poll'],
+  ['vraie', 'tsunami'], ['vues', 'thumb'], ['vues', 'views'], ['zero', 'blankfill'], ['zoom', 'zoompunch'],
     // <<< /ANIM-LEX:AUTO >>>
 ]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
@@ -1404,7 +1377,10 @@ function emojiForWord(w: string): string {
 function animForWord(w: string): string {
   const k = norm(w)
   if (k.length < 3 || STOP_FILL.has(k)) return ''
-  for (const [stem, an] of ANIM_LEX) if (k.startsWith(stem)) return an
+  // garde : une entrée du lexique qui pointe vers un nom absent de la banque
+  // (bannie ou renommée) est ignorée — sinon le remplisseur croit poser une
+  // animation que le moteur jettera, et l'écran reste nu à ce moment-là.
+  for (const [stem, an] of ANIM_LEX) if (k.startsWith(stem) && ANIMS.includes(an)) return an
   return ''
 }
 
@@ -1849,16 +1825,16 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
       light_bulb: 'idea', brain: 'idea', thinking_face: 'idea', crystal_ball: 'idea',
       memo: 'type', open_book: 'list', books: 'list', bookmark_tabs: 'list', puzzle_piece: 'list',
       rocket: 'rocket', fire: 'rocket', high_voltage: 'rocket', party_popper: 'engage',
-      alarm_clock: 'clock', stopwatch: 'clock', hourglass_done: 'clock', calendar: 'calendar',
-      spiral_calendar: 'calendar', locked: 'lock', unlocked: 'lock', key: 'lock',
-      magnifying_glass_tilted_left: 'search', direct_hit: 'target', bullseye: 'target',
-      trophy: 'target', crown: 'target', hundred_points: 'check', check_mark_button: 'check',
+      calendar: 'schedule',
+      spiral_calendar: 'schedule', key: 'copy',
+      magnifying_glass_tilted_left: 'search',
+      trophy: 'podium', crown: 'podium',
       cross_mark: 'swap', link: 'network', handshake: 'network', speech_balloon: 'engage',
       red_heart: 'engage', growing_heart: 'engage', megaphone: 'upload', loudspeaker: 'upload',
       package: 'upload', envelope: 'upload', shopping_cart: 'stack', gift: 'money',
       microphone: 'voice', studio_microphone: 'voice', headphone: 'voice', musical_note: 'voice',
-      speaker_high_volume: 'voice', gear: 'toggle', hammer_and_wrench: 'toggle', wrench: 'toggle',
-      magic_wand: 'toggle', sparkles: 'toggle', recycling_symbol: 'swap', scissors: 'cut',
+      speaker_high_volume: 'voice', gear: 'settings', hammer_and_wrench: 'settings', wrench: 'settings',
+      magic_wand: 'result', sparkles: 'result', recycling_symbol: 'swap', scissors: 'cut',
     }
     // PLUS AUCUN EMOJI DANS LE PLAN FINAL. Axel : « oublie les emoji, focus
     // animations avec pas ou tres peu de texte ». Ce qui a survecu a la passe
@@ -1868,7 +1844,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     for (const sl of slides) {
       if (!sl.emoji) continue
       const a = EMO2ANIM[sl.emoji]
-      if (!sl.anim && a && !usedAnims.has(a)) { sl.anim = a; usedAnims.add(a); emoConv++ }
+      if (!sl.anim && a && ANIMS.includes(a) && !usedAnims.has(a)) { sl.anim = a; usedAnims.add(a); emoConv++ }
       else emoDrop++
       sl.emoji = ''
     }
@@ -1881,7 +1857,8 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
     for (const b of plan.beats || []) {
       const k = norm(String(b.word || ''))
       const raw = String(b.anim || '')
-      const a = ANIMS.includes(raw) ? raw : (EMO2ANIM[raw] || '')
+      const viaEmo = EMO2ANIM[raw] || ''
+      const a = ANIMS.includes(raw) ? raw : (ANIMS.includes(viaEmo) ? viaEmo : '')
       if (k.length >= 3 && a && !beatMap.has(k)) beatMap.set(k, { anim: a, value: String(b.value || '').trim() })
       else if (raw && !a) beatBad.push(`${b.word}|${raw}`)
     }

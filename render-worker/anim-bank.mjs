@@ -18,6 +18,13 @@
 // peu ressortent »), pas ce qu'elle signifie en abstrait.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── BANNIES DÉFINITIVEMENT (Axel, 14/08/26) — ne JAMAIS les remettre ─────────
+// target, clock, check, versus, hook, calendar, free, steps, twopaths, bars2,
+// grow, toggle : des icônes-sur-fond qui ne montrent rien (« si ça tient sur une
+// image fixe, ça n'entre pas dans la banque »). Retirées d'ICI et non d'une liste
+// de filtrage, pour que le ban vaille pour TOUS les styles (dynamic, apple, word…).
+// Leurs templates dorment encore dans anim-pack.mjs mais sont inatteignables :
+// chaque moteur vérifie l'appartenance à ANIMS avant de rendre.
 export const BANK = [
   // ── le produit, l'écran, le résultat ──
   { name: 'screen',  desc: "une capture de SON application, cadrée et zoomée sur l'element qu'il nomme, avec un curseur qui clique. Uniquement s'il explique COMMENT FAIRE dans son outil. « tu vas dans », « clique sur », « tu selectionnes », « rends-toi dans l onglet », « en haut a droite »." },
@@ -42,38 +49,27 @@ export const BANK = [
   // ── l'argent ──
   { name: 'countup', desc: "UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans \"value\" et l'unite dans \"unit\". « ca fait X euros », « X millions », « X abonnes », « on est a X »." },
 
-  // ── le temps ──
-  { name: 'clock',   desc: "la rapidite, le temps gagne, « en 30 secondes », « en 2 minutes »." },
-  { name: 'calendar', desc: "une grille qui se remplit : publier regulierement, tous les jours, la constance. « tous les jours », « chaque semaine », « poste regulierement », « la constance », « ton planning »." },
-
   // ── la croissance, l'audience ──
-  { name: 'grow',    desc: "une croissance, des vues qui montent, un resultat qui progresse. « ca progresse », « ca augmente », « ca grimpe », « les resultats montent », « la croissance »." },
   { name: 'engage',  desc: "DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow." },
   { name: 'daypart', desc: "une journee ou seul un petit creneau de deux heures est colore : « une a deux heures par jour », « peu de temps », « quelques heures »." },
   { name: 'blankfill', desc: "une page blanche qui se remplit de resultats : partir de rien, « zero competence », « tu pars de zero », « aucune experience »." },
   { name: 'easyup', desc: "une courbe verte qui monte doucement, sans a-coup : la facilite, « c'est simple », « facile pour un debutant », « sans difficulte », « ca monte tout seul ». Axes gradues, aire verte, un point qui grimpe le long du trace." },
   { name: 'easydown', desc: "une courbe ROUGE qui descend doucement : ce qui baisse, s'effondre ou coute de moins en moins. « ca chute », « ca baisse », « de moins en moins cher », « les couts s'ecroulent », « ca degringole ». Axes gradues, aire rouge, un point qui glisse vers le bas." },
   { name: 'lowcost', desc: "peu d'argent a mettre au depart, un cout qui baisse, un investissement faible. « peu d'investissement », « ca coute presque rien », « sans mise de depart »." },
-  { name: 'twopaths', desc: "deux chemins : une personne prend l'un, la foule prend l'autre. L'absence de concurrence, le contre-pied, « personne ne le fait », « aucune concurrence », « tout le monde va la-bas sauf toi »." },
   { name: 'network', desc: "un reseau, une connexion, une communaute, des gens relies. « ta communaute », « ton audience », « les gens », « ton reseau », « tes abonnes »." },
   { name: 'rocket',  desc: "un lancement, un decollage, ce qui explose, devenir viral. « ca decolle », « le lancement », « ca explose », « ca part en fleche », « je lance »." },
   { name: 'funnel',  desc: "un entonnoir : beaucoup entrent, peu ressortent. « le tunnel », « peu ressortent », « le taux de conversion », « sur cent personnes », « il en reste »." },
-  { name: 'bars2',   desc: "deux colonnes comparees : le avant/apres chiffre. « avant apres », « la difference », « d un cote et de l autre », « compare les deux chiffres »." },
 
   // ── la logique, la methode ──
   { name: 'idea',    desc: "une idee, une astuce, une methode, un declic, « le secret c'est... »." },
-  { name: 'steps',   desc: "1, 2, 3 : une methode, « il te suffit de », les etapes." },
   { name: 'flow',    desc: "A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z »." },
   { name: 'orbit',   desc: "un centre et des satellites : tout part d'un seul outil. « tout part de la », « un seul outil », « le centre », « autour de »." },
   { name: 'list',    desc: "une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options »." },
-  { name: 'target',  desc: "un objectif, une cible, quelque chose de precis, « exactement »." },
   { name: 'search',  desc: "chercher, analyser, trouver, reperer. « je cherche », « analyse », « trouve », « repere », « regarde ce qui marche », « la recherche »." },
 
   // ── l'opposition, le changement d'etat ──
   { name: 'compare', desc: "un avant/apres, deux options opposees, « au lieu de ». Deux visages ou deux ecrans cote a cote, l'un barre, l'autre valide." },
   { name: 'swap',    desc: "une chose remplacee par une autre : « au lieu de », « a la place de », remplacer." },
-  { name: 'toggle',  desc: "un interrupteur qui s'allume : activer, « en un clic », ca se met en marche." },
-  { name: 'check',   desc: "c'est valide, c'est fait, ca marche, c'est simple, c'est inclus. « c est fait », « c est bon », « ca marche », « c est inclus », « rien de plus simple », « valide »." },
   // ── PAQUET 1 (#157) — la qualité, le temps, la diffusion ──
   { name: 'quality', desc: "LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut." },
   { name: 'podium',  desc: "UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde »." },
@@ -87,7 +83,6 @@ export const BANK = [
 
   // ── PAQUET 2 (#157) — l'argent, l'outil, la methode ──
   { name: 'roi',     desc: "CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 »." },
-  { name: 'free',    desc: "UNE ETIQUETTE PRIX BARRE QUI TOMBE A ZERO : l'ancien prix se barre, GRATUIT claque a sa place. « c'est gratuit », « offert », « je te le donne ». Mets l'ancien prix dans items[0].text (« 97 € ») si il l'annonce." },
   { name: 'plan',    desc: "TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan »." },
   { name: 'layers',  desc: "DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus »." },
   { name: 'badge',   desc: "UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie »." },
@@ -108,7 +103,6 @@ export const BANK = [
   { name: 'dashboard', desc: "UN TABLEAU DE BORD : les tuiles se posent et la courbe se trace. « tes stats », « ton tableau de bord », « tu suis tes resultats »." },
   { name: 'translate', desc: "UNE PHRASE FRANCAISE QUI BASCULE EN ANGLAIS, deux cartes FR puis EN. « dans une autre langue », « traduit », « a l'international »." },
   { name: 'bgswap', desc: "LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage »." },
-  { name: 'hook',    desc: "LE DEBUT D'UNE TIMELINE QUI S'ALLUME avec la mention 3s. « les 3 premieres secondes », « ton hook », « l'accroche ». Mets la duree entendue dans items[0].text (« 3s »)." },
   { name: 'export',  desc: "UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges »." },
   { name: 'checklist', desc: "UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter »." },
 
@@ -127,7 +121,6 @@ export const BANK = [
   { name: 'profile', desc: "UN PROFIL SOCIAL : photo, compteur d'abonnes qui grimpe, grille de posts. « ton compte », « tes abonnes », « ta page ». Mets le nombre d'abonnes entendu dans items[0].text (« +12K »)." },
   { name: 'invoice', desc: "UNE FACTURE dont les lignes s'inscrivent et le total tombe. « la facture », « ce que ca coute », « le devis ». Mets le total entendu dans items[0].text." },
   { name: 'settings', desc: "UN PANNEAU DE REGLAGES dont les interrupteurs basculent un par un. « tu regles », « les parametres », « tu actives ce que tu veux »." },
-  { name: 'versus',  desc: "DEUX COLONNES FACE A FACE, croix d'un cote, coches de l'autre. « eux et toi », « la difference », « au lieu de faire ca »." },
   { name: 'thumb',   desc: "UNE MINIATURE DE VIDEO avec sa duree, son titre et son compteur de vues. « la miniature », « cette video a fait X vues ». items[0].text = le nombre de vues, items[1].text = la duree." },
   { name: 'leaderboard', desc: "UN CLASSEMENT dont TA ligne remonte a la premiere place. « passer devant », « etre premier », « depasser les autres »." },
   { name: 'pay',     desc: "UN PAIEMENT QUI PASSE : le recapitulatif, la carte, le bouton, la coche verte. « ils paient », « le paiement passe », « tu encaisses ». Mets le montant entendu dans items[0].text." },

@@ -758,13 +758,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         Images IA
       </div>
-      <div class="nav-i" onclick="nav('recorder',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
-        Enregistreur
-      </div>
-      <div class="nav-i" onclick="nav('audioclean',this)">
+      <!-- « Audio » = Nettoyage audio + Enregistreur fusionnés (maquette Claude
+           Design d'Axel, 14/08) — un seul onglet, la bascule vit DANS la vue. -->
+      <div class="nav-i" id="navAudio" onclick="nav('audioclean',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg>
-        Nettoyage audio
+        Audio
       </div>
     </div>
     <div class="nav-g" style="margin-top:14px">
@@ -774,7 +772,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         Express
       </div>
       <div class="nav-i" onclick="nav('motion',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.9 5.9l2 2M16.1 16.1l2 2M18.1 5.9l-2 2M7.9 16.1l-2 2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11c-1.5 0-2.5.5-3 2"/><path d="M4 6a2 2 0 0 0-2 2v4a5 5 0 0 0 5 5 8 8 0 0 1 5 2 8 8 0 0 1 5-2 5 5 0 0 0 5-5V8a2 2 0 0 0-2-2h-3a8 8 0 0 0-5 2 8 8 0 0 0-5-2z"/><path d="M6 11c1.5 0 2.5.5 3 2"/></svg>
         Motion Control
       </div>
       <div class="nav-i" onclick="nav('montage',this)">
@@ -3157,6 +3155,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     <div class="view" id="v-recorder">
       <div class="lib-view" style="width:100%;max-width:820px;margin:0 auto;padding-top:30px">
 
+        <!-- bascule Audio : les deux modules partagent l'onglet « Audio » -->
+        <div style="display:flex;justify-content:center;margin-bottom:24px">
+          <div class="seg">
+            <button type="button" onclick="nav('audioclean',document.getElementById('navAudio'))">Nettoyage audio</button>
+            <button type="button" class="on">Enregistreur</button>
+          </div>
+        </div>
+
         <div style="margin-bottom:26px">
           <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.2"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Enregistreur vocal</h2>
           <p class="muted" style="margin-top:8px;font-size:14.5px">Enregistre ta voix, supprime les silences, remplace des passages</p>
@@ -3269,6 +3275,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
       <!-- ─────────── phase « idle » : le formulaire ─────────── -->
       <div id="acPhaseIdle" class="lib-view" style="width:100%;max-width:680px;margin:0 auto;padding-top:30px">
+
+        <!-- bascule Audio : les deux modules partagent l'onglet « Audio » -->
+        <div style="display:flex;justify-content:center;margin-bottom:24px">
+          <div class="seg">
+            <button type="button" class="on">Nettoyage audio</button>
+            <button type="button" onclick="nav('recorder',document.getElementById('navAudio'))">Enregistreur</button>
+          </div>
+        </div>
 
         <div class="center" style="margin-bottom:18px">
           <h1 class="display" style="font-size:30px;font-weight:800">Nettoyage audio</h1>
@@ -32533,9 +32547,11 @@ function edBandDrag(ov,track,e,mode){
 <script>
 (function(){
   var GRID='<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
-  var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',recorder:'Enregist.',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
-  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',recorder:'Enregistreur',audioclean:'Nettoyage audio',affiliation:'Parrainage',cartoon:'Cartoon IA',montage:'Montage IA',publish:'Publier'};
-  var CUSTOMIZABLE=['generator','imagegen','express','studio','library','recorder','audioclean','affiliation','cartoon'];
+  // « recorder » n'est plus un outil à part : fusionné dans « Audio » (audioclean),
+  // le filtre de tabs() purge tout seul les barres sauvegardées qui le listaient.
+  var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
+  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',audioclean:'Audio',affiliation:'Parrainage',cartoon:'Cartoon IA',montage:'Montage IA',publish:'Publier'};
+  var CUSTOMIZABLE=['generator','imagegen','express','studio','library','audioclean','affiliation','cartoon'];
   var DEFAULT=['generator','imagegen','express','studio','library'];
   var current='generator', moreOpen=false;
 
@@ -32583,8 +32599,8 @@ function edBandDrag(ov,track,e,mode){
     var t=tabs();
     var tools=[
       ['generator','Avatar IA en 5 étapes'],['express','Vidéo en 1 prompt · Veo'],['cartoon','Mascotte animée'],
-      ['studio','Montage type CapCut'],['imagegen','Visuels 4K'],['recorder','Clone ta voix'],
-      ['audioclean','Supprime les silences'],['library','Tes vidéos'],['affiliation','Gagne 30% à vie'],['__setup','Réglages & API']
+      ['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
+      ['audioclean','Nettoyage + enregistreur'],['library','Tes vidéos'],['affiliation','Gagne 30% à vie'],['__setup','Réglages & API']
     ];
     var h='<h2 class="display" style="font-size:24px;font-weight:800;margin-bottom:16px">Tous les outils</h2>';
     h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
