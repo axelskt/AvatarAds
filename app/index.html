@@ -1969,7 +1969,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- ROGNAGE -->
             <div class="fld" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Rognage (clic pour activer, puis glisse sur le preview)</div>
+              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Rognage</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <button id="crop-btn-av" onclick="toggleCropMode('avatar')" class="btn btn-ghost btn-sm">Rogner avatar</button>
                 <button id="crop-btn-gp" onclick="toggleCropMode('gameplay')" class="btn btn-ghost btn-sm">Rogner le clip</button>
@@ -3112,7 +3112,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <button id="imgRefBtnComposer" class="col" onclick="document.getElementById('imgRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=(_imgMode==='correct'?'var(--accent-line)':'var(--border-2)')" ondrop="_imgOnRefDrop(event)" style="position:relative;overflow:hidden;gap:6px;width:120px;flex:0 0 auto;border-radius:14px;padding:12px 8px;border:1px solid var(--border-2);background:var(--panel-1);cursor:pointer;align-items:center;justify-content:center;text-align:center;transition:border-color .15s">
                 <input type="file" id="imgRefInput" accept="image/*" multiple style="display:none" onchange="_imgOnRefInput(this)">
                 <img id="imgRefPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000">
-                <span id="imgRefCount" style="display:none;position:absolute;top:6px;right:6px;z-index:2;background:var(--accent);color:#1A0A02;font-weight:800;font-size:10px;padding:2px 7px;border-radius:999px;font-family:var(--mono)">1/3</span>
+                <span id="imgRefCount" style="display:none;position:absolute;top:6px;right:6px;z-index:2;background:var(--accent);color:#1A0A02;font-weight:800;font-size:10px;padding:2px 7px;border-radius:999px;font-family:var(--mono)">1/4</span>
                 <span id="imgRefFace" class="col" style="align-items:center;gap:6px">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                   <span id="imgRefTitle" style="font-weight:700;font-size:12px;color:var(--text)">Image de référence</span>
@@ -3123,6 +3123,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
               <!-- Prompt + suggestions + generate -->
               <div class="col grow" style="gap:12px">
+                <div id="imgRefStrip" class="row" style="display:none;gap:10px;flex-wrap:wrap;padding-top:4px"></div>
                 <div style="position:relative;flex:1">
                   <textarea id="imgPrompt" maxlength="1000" class="field" style="height:100%;min-height:104px;resize:none;padding-right:124px;font-size:15.5px;line-height:1.5" placeholder="Décris l'image que tu veux générer…" oninput="_imgUpdateCharCount(this)"></textarea>
                   <button onclick="enhanceImagePrompt()" id="imgEnhanceBtn" class="btn btn-sm row gap6" style="position:absolute;right:10px;top:10px;padding:8px 13px;font-size:12.5px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:600">
@@ -4045,7 +4046,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div>
                 <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
                 <textarea id="mtBrief" class="field mt-brief-ta" rows="4" oninput="_mt.brief=this.value" placeholder="Décris ce que la vidéo doit dire ou montrer. Ex : présentation de mon app, ton punchy, CTA « lien en bio », montre le logo au début."></textarea>
-                <div class="faint" style="font-size:11.5px;margin-top:8px">Jusqu'à 8 images/clips, placés au meilleur moment selon ton brief.</div>
               </div>
 
               <!-- ⚙️ PARAMÈTRES AVANCÉS — ouvre la modale (contient désormais « Ton site ») -->
@@ -8619,7 +8619,8 @@ let _imgSelectedFormatId   = 'portrait';
 let _imgSelectedCount      = 1;
 let _imgSelectedModel      = 'gptimage'; // gptimage (gpt-image-1, le meilleur — évolution de DALL·E 3)
 let _imgRefFile            = null;       // 1ʳᵉ image de référence (compat)
-let _imgRefFiles           = [];         // jusqu'à 3 images de référence (multi-ref gpt-image)
+let _imgRefFiles           = [];         // jusqu'à 4 images de référence (multi-ref gpt-image)
+let _imgRefUrls            = [];         // dataURLs alignées sur _imgRefFiles (vignettes du composer)
 let _imgRefDataUrl         = null;
 let _imgRemoveBg           = false;      // suppression de fond auto
 
@@ -8647,12 +8648,13 @@ function _imgPickModel(id){
 
 function _imgSetRef(file){
   if(!file || !file.type.startsWith('image/')){ toast('Choisis une image'); return; }
-  if(_imgRefFiles.length>=3){ toast('Maximum 3 images de référence'); return; }
+  if(_imgRefFiles.length>=4){ toast('Maximum 4 images de référence'); return; }
   _imgRefFiles.push(file);
   _imgRefFile = _imgRefFiles[0];
   const isFirst = _imgRefFiles.length===1;
   const rd = new FileReader();
   rd.onload = e => {
+    _imgRefUrls.push(e.target.result);
     if(isFirst){
       _imgRefDataUrl = e.target.result;
       const th = document.getElementById('imgRefThumb'); if(th) th.src = _imgRefDataUrl;
@@ -8661,23 +8663,46 @@ function _imgSetRef(file){
     const z = document.getElementById('imgRefZone'); if(z) z.style.display = 'none';
     const b = document.getElementById('imgRefBadge'); if(b) b.style.display = 'flex';
     _imgSyncRefCount();
+    _imgRenderRefStrip();
   };
   rd.readAsDataURL(file);
 }
 function _imgClearRef(){
-  _imgRefFile = null; _imgRefDataUrl = null; _imgRefFiles = [];
+  _imgRefFile = null; _imgRefDataUrl = null; _imgRefFiles = []; _imgRefUrls = [];
   const z = document.getElementById('imgRefZone'); if(z) z.style.display = 'flex';
   const b = document.getElementById('imgRefBadge'); if(b) b.style.display = 'none';
   const inp = document.getElementById('imgRefInput'); if(inp) inp.value = '';
   _imgSyncRefCount();
+  _imgRenderRefStrip();
 }
-// Badge compteur (1/3, 2/3, 3/3) sur le bouton image de référence
+// Badge compteur (1/4 … 4/4) sur le bouton image de référence
 function _imgSyncRefCount(){
   const n=_imgRefFiles.length;
   const b=document.getElementById('imgRefCount');
-  if(b){ b.style.display = n>1 ? 'block' : 'none'; b.textContent = n+'/3'; }
+  if(b){ b.style.display = n>1 ? 'block' : 'none'; b.textContent = n+'/4'; }
   const t=document.getElementById('imgRefTitle');
   if(t) t.textContent = n>1 ? n+' images de référence' : (_imgMode==='correct'?'Image à corriger':'Image de référence');
+}
+// ── Vignettes des références AU-DESSUS du prompt, chacune avec sa croix ──────
+// Axel (13/08) : « quand on met une image elle s'affiche au-dessus de la zone
+// de texte avec une croix ». Chaque vignette se retire indépendamment.
+function _imgRenderRefStrip(){
+  const s=document.getElementById('imgRefStrip'); if(!s) return;
+  if(!_imgRefUrls.length){ s.style.display='none'; s.innerHTML=''; return; }
+  s.style.display='flex';
+  s.innerHTML=_imgRefUrls.map((u,i)=>`<div style="position:relative;flex:0 0 auto">
+    <img src="${u}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid var(--border-2);display:block">
+    <span onclick="_imgRemoveRef(${i})" style="position:absolute;top:-6px;right:-6px;width:19px;height:19px;border-radius:50%;background:rgba(10,10,14,.85);border:1px solid var(--border-2);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+  </div>`).join('');
+}
+function _imgRemoveRef(i){
+  _imgRefFiles.splice(i,1); _imgRefUrls.splice(i,1);
+  if(!_imgRefFiles.length){ if(typeof _imgClearRefZone==='function') _imgClearRefZone(); else _imgClearRef(); return; }
+  _imgRefFile=_imgRefFiles[0]; _imgRefDataUrl=_imgRefUrls[0];
+  const th=document.getElementById('imgRefThumb'); if(th) th.src=_imgRefDataUrl;
+  const p=document.getElementById('imgRefPreview'); if(p && p.style.display!=='none') p.src=_imgRefDataUrl;
+  _imgSyncRefCount();
+  _imgRenderRefStrip();
 }
 
 // ── Mode Génération / Correction (img2img) ──
@@ -9636,6 +9661,7 @@ async function _imgUpscaleHD(btn){
   if(!(await spendCreditsFor(CREDIT_COSTS.imgUpscale4K, 'upscale 4K'))) return;
   _imgPrevSrc = img.src; // mémorise avant HD pour pouvoir revenir en arrière
   const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.75';
+  if(!window._img4kBtnHtml) window._img4kBtnHtml = orig;   // pour réarmer le bouton sur une nouvelle image
   btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Restauration 4K… (~30s)';
   try{
     const session=(await sb.auth.getSession()).data.session;
@@ -9689,10 +9715,22 @@ async function _imgUpscaleHD(btn){
     try{ await creditsFlowRefund('la restauration 4K a échoué'); }catch(_){}
     toast(''+(e.message||e));
   }
-  finally{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
+  finally{
+    if(_imgIsHD){
+      // Une image déjà passée en 4K ne se re-upscale pas : le bouton se FIGE —
+      // sinon on ne sait plus si c'est fait (Axel, 13/08 : « une fois l'image
+      // 4K, il faut que le 4K s'enlève, sinon ça porte à confusion »).
+      btn.disabled=true; btn.style.opacity='.55';
+      btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Déjà en 4K';
+    } else { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
+  }
 }
 function _imgShowSingle(url, size){
   _imgProgStop();
+  // nouvelle image → elle n'est PAS en 4K : le bouton « Restaurer (4K) » se réarme
+  _imgIsHD=false;
+  { const ub=document.getElementById('imgUpscaleBtn');
+    if(ub && window._img4kBtnHtml){ ub.disabled=false; ub.style.opacity='1'; ub.innerHTML=window._img4kBtnHtml; } }
   { const a=document.getElementById('imgActions'); if(a) a.style.display=''; }  // boutons réaffichés quand l'image est prête
   { const z=document.getElementById('imgZone'); if(z) z.style.minHeight='200px'; }  // reset la hauteur de la boîte
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
@@ -16049,12 +16087,17 @@ function _majRecap(){
   const q = (typeof _composeQuality!=='undefined' && _composeQuality>=1080) ? '1080p' : '720p';
   txt('recapExport', q);
 
-  // même calcul que le débit : lipsync à la seconde + supplément 1080p
+  // même calcul que le débit : lipsync à la seconde + supplément 1080p.
+  // ⚠ AVATAR = VIDÉO (bypass Hedra) : aucun lipsync à générer → 0 cr/s de
+  // lipsync (Axel, 13/08 : « j'ai mis une vidéo à la place de l'avatar et il
+  // me dit 10 crédits alors qu'il n'y a aucun lipsync à faire »).
   const dur   = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
-  const base  = aAvatar ? CREDIT_COSTS.avatarPerSec * dur : 0;
+  const bypassVid = !!window._bypassHedraOn;
+  const base  = (aAvatar && !bypassVid) ? CREDIT_COSTS.avatarPerSec * dur : 0;
   const surHD = q === '1080p' ? Math.ceil(dur * CREDIT_COSTS.hd1080PerSec) : 0;
   const total = Math.max(1, Math.round(base + surHD));
-  txt('recapCout', total + ' crédit' + (total > 1 ? 's' : '') + ' vidéo');
+  txt('recapCout', total + ' crédit' + (total > 1 ? 's' : '') + ' vidéo' + (bypassVid ? ' (vidéo avatar : lipsync déjà fait, non facturé)' : ''));
+  if(bypassVid) txt('recapAvatar', 'Vidéo avatar importée');
 }
 
 function goToStep(n){
@@ -17283,6 +17326,7 @@ let _previewUsingCleanAudio = false; // true quand on joue l'audio nettoyé (sil
 async function togglePreviewPlay(){
   stopPreviewAnim();
   if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
+  try{ if(window._genPrevMusic){ window._genPrevMusic.pause(); window._genPrevMusic=null; } }catch(_){}
   previewPlaying = !previewPlaying;
   const btn = document.getElementById('previewPlayBtn');
   if(previewPlaying){
@@ -17324,12 +17368,24 @@ async function togglePreviewPlay(){
       if(sel && sel.src){ sel.currentTime=0; sel.play().catch(()=>{}); activeAudio=sel; }
     }
     previewAudio = activeAudio;
+    // ── LA MUSIQUE DE FOND S'ENTEND DANS L'APERÇU (Axel, 13/08 : « quand je
+    // mets une musique je dois pouvoir l'entendre dans le preview ») — elle
+    // joue en parallèle de la voix, au volume du slider, comme au rendu final.
+    const _mSrc = (typeof _genMusicSrc==='function') ? _genMusicSrc(window._genMusic) : (window._genMusic && window._genMusic.url) || '';
+    if(activeAudio && _mSrc){
+      const mA = new Audio(_mSrc);
+      mA.volume = (window._genMusic && typeof window._genMusic.volume==='number') ? window._genMusic.volume : 0.35;
+      mA.loop = true;
+      mA.play().catch(()=>{});
+      window._genPrevMusic = mA;
+    }
     // Quand l'audio se termine → tout stopper
     if(activeAudio){
       activeAudio.onended = () => {
         previewPlaying = false;
         stopPreviewAnim();
         if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
+        try{ if(window._genPrevMusic){ window._genPrevMusic.pause(); window._genPrevMusic=null; } }catch(_){}
         const b = document.getElementById('previewPlayBtn');
         if(b){ b.textContent='▶ Aperçu animé'; b.style.borderColor='var(--border2)'; b.style.color='var(--text2)'; }
       };
@@ -24241,6 +24297,7 @@ function _expSetEngine(e){
 window._MC_BACKEND_READY = true;   // Motion Control LIVE pour tous (Kling 2.6 via fal-proxy dans _mcGenerate) — flag informatif, non testé ailleurs
 window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
+window._mcCamFollow=false; window._mcKeepVidBg=false; window._mcFormat='9:16';
 function _mcPick(input, which){ const f=input.files&&input.files[0]; if(f) _mcLoad(f,which); }
 function _mcDrop(e, which){ e.preventDefault(); if(e.currentTarget) e.currentTarget.style.borderColor='var(--border-2)'; const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) _mcLoad(f,which); }
 function _mcLoad(f, which){
@@ -24270,6 +24327,9 @@ function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.s
 function _mcSetTier(t){ window._mcTier=t; window._mcQuality = (t==='pro'?'1080':'720'); _mcRenderAdv(); _mcUpdateCost(); }
 function _mcSetQual(v){ window._mcQuality=v; _mcRenderAdv(); _mcUpdateCost(); }
 function _mcSetRender(r){ window._mcRender=r; _mcRenderAdv(); _mcUpdateCost(); }
+function _mcSetFormat(f){ window._mcFormat=f; _mcRenderAdv(); }
+function _mcToggleCam(){ window._mcCamFollow=!window._mcCamFollow; _mcRenderAdv(); }
+function _mcToggleVidBg(){ window._mcKeepVidBg=!window._mcKeepVidBg; _mcRenderAdv(); }
 // Standard 720p = 2 cr/s ; Standard 1080p = 3 cr/s (Kling 720p + upscale Topaz) ;
 // Pro 1080p natif = 4 cr/s.
 function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='1080' ? 3 : 2); }
@@ -24309,6 +24369,18 @@ function _mcRenderAdv(){
     </div>
     <span class="label" style="display:block;margin-bottom:8px">Instructions · optionnel</span>
     <textarea id="mcPromptTa" oninput="window._mcPrompt=this.value" class="field" style="min-height:96px;resize:vertical;margin-bottom:18px" placeholder="Ex : garde le regard caméra, ambiance studio, démarche assurée…"></textarea>
+    <span class="label" style="display:block;margin-bottom:8px">Format</span>
+    <div class="seg" style="width:100%;margin-bottom:16px">
+      ${[['9:16',9,16],['1:1',12,12],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'9:16')===f;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px" onclick="_mcSetFormat('${f}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>${f}</button>`;}).join('')}
+    </div>
+    <span class="label" style="display:block;margin-bottom:8px">Options</span>
+    ${[['_mcToggleCam','Suivi de la caméra','La caméra suit la tête et les mouvements du personnage',!!window._mcCamFollow],
+       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Ne remplace que la personne — le décor de ta vidéo de référence reste',!!window._mcKeepVidBg]]
+      .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
+        <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
+        <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
+      </button>`).join('')}
+    <div style="height:8px"></div>
     <span class="label" style="display:block;margin-bottom:8px">Forfait de rendu</span>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
       ${tierCard('standard','Standard','720p natif · rapide')}
@@ -24396,6 +24468,34 @@ async function _mcDownload(){
     toast('Vidéo enregistrée ✓');
   }catch(e){ console.warn('mc download:', e); toast('Téléchargement direct bloqué — j\'ouvre la vidéo, fais « Enregistrer sous »'); try{ window.open(url,'_blank'); }catch(_){} }
 }
+/* ── Motion Control — préparation de l'image personnage ──────────────────────
+   Recadre (cover) au format choisi (9:16 / 1:1 / 16:9) et PLAFONNE à 2560 px :
+   fal/Kling refuse au-delà de 3850 px (« image_too_large »). C'était le vrai
+   coupable du « délai dépassé » du 13/08 : photo 3392×5056 → Kling échoue en
+   ~10 s et l'erreur (422 sur le résultat) n'était jamais lue. Recadrage biaisé
+   vers le HAUT : les visages vivent en haut du cadre. Jamais d'upscale. */
+async function _mcPrepChar(b64){
+  const img=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('image personnage illisible')); im.src=b64; });
+  const F=String(window._mcFormat||'9:16'); const [rw,rh]=F==='1:1'?[1,1]:F==='16:9'?[16,9]:[9,16];
+  const W=img.naturalWidth||1, H=img.naturalHeight||1, ratio=rw/rh;
+  let cw=W, ch=Math.round(W/ratio); if(ch>H){ ch=H; cw=Math.round(H*ratio); }
+  const sx=Math.round((W-cw)/2), sy=Math.min(Math.round((H-ch)/2), Math.round(H*0.08));
+  const k=Math.min(1, 2560/Math.max(cw,ch));
+  const outW=Math.max(2,Math.round(cw*k)), outH=Math.max(2,Math.round(ch*k));
+  const cv=document.createElement('canvas'); cv.width=outW; cv.height=outH;
+  cv.getContext('2d').drawImage(img, sx, sy, cw, ch, 0, 0, outW, outH);
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.92));
+  if(!blob) throw new Error('préparation de l\'image impossible');
+  return blob;
+}
+/* La VRAIE erreur Kling, en français — au lieu du « délai dépassé » menteur. */
+function _mcFalErr(rd, status){
+  const d=Array.isArray(rd?.detail)?rd.detail[0]:rd?.detail;
+  const type=String(d?.type||''); const msg=String(d?.msg||(typeof d==='string'?d:'')||rd?.error||'');
+  if(/image_too_large/i.test(type||msg)) return 'Image du personnage trop grande pour Kling (max 3850 px) — réessaie, elle sera réduite automatiquement';
+  if(/risk|policy|moderat|sensitive|celebrit/i.test(type+' '+msg)) return 'Kling a refusé le contenu (modération) — essaie une autre photo ou une autre vidéo';
+  return 'Kling a refusé la génération'+(msg?' : '+msg.slice(0,140):' (HTTP '+status+')');
+}
 /* ── Motion Control — génération réelle (Kling 2.6 via fal-proxy) ── */
 async function _mcGenerate(){
   if(!window._mcRefB64){ toast('Insère une vidéo de référence'); return; }
@@ -24419,8 +24519,9 @@ async function _mcGenerate(){
     const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
     const base=user.id+'/mc-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
     const vPath=base+'.mp4', iPath=base+'.jpg';
+    const charBlob=await _mcPrepChar(window._mcCharB64);   // recadre format + ≤2560 px (Kling refuse >3850)
     const uv=await sb.storage.from('render-media').upload(vPath, b64ToBlob(window._mcRefB64), { contentType:'video/mp4', upsert:true });
-    const ui=await sb.storage.from('render-media').upload(iPath, b64ToBlob(window._mcCharB64), { contentType:'image/jpeg', upsert:true });
+    const ui=await sb.storage.from('render-media').upload(iPath, charBlob, { contentType:'image/jpeg', upsert:true });
     if(uv.error||ui.error) throw new Error('upload : '+((uv.error||ui.error).message));
     const sv=await sb.storage.from('render-media').createSignedUrl(vPath, 3600);
     const si=await sb.storage.from('render-media').createSignedUrl(iPath, 3600);
@@ -24443,8 +24544,17 @@ async function _mcGenerate(){
     // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
     // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
     const _mcMotion = window._mcPrompt || 'The character reproduces the exact motion and gestures of the reference video, natural, same framing';
-    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit. Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
-    const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId) });
+    // « Suivi de la caméra » et « garder le fond de la vidéo » n'existent pas en
+    // paramètres Kling (schéma fal : image/video/prompt/orientation/son) — ils
+    // se pilotent par le PROMPT. Le fond par défaut reste celui de l'IMAGE.
+    const _mcBgTxt = window._mcKeepVidBg
+      ? ' Keep the EXACT same background, scene and environment as the REFERENCE VIDEO: only replace the person with the provided character — everything behind them stays identical to the original video.'
+      : ' Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
+    const _mcCamTxt = window._mcCamFollow
+      ? ' The camera smoothly tracks and follows the character\'s head and movements (dynamic tracking shot).'
+      : '';
+    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcBgTxt + _mcCamTxt;
+    const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId) });
     if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
     const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
     const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
@@ -24456,7 +24566,17 @@ async function _mcGenerate(){
       const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
       _mcProg('Génération en cours…', Math.min(88, 22+i*2));
       if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
-      if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); out=rd?.video?.url||rd?.video_url||''; break; }
+      if(s==='COMPLETED'){
+        // « COMPLETED » veut dire « traité », PAS « réussi » : quand Kling échoue
+        // (image trop grande, modération…), le résultat renvoie un 422 avec la
+        // vraie raison. L'ignorer laissait `out` vide → « Délai dépassé » menteur
+        // au bout de 10 s (mesuré le 13/08, image 3392×5056 refusée).
+        const rr=await fGet(reP); const rd=await rr.json().catch(()=>({}));
+        if(!rr.ok) throw new Error(_mcFalErr(rd, rr.status));
+        out=rd?.video?.url||rd?.video_url||'';
+        if(!out) throw new Error(_mcFalErr(rd, rr.status));
+        break;
+      }
       throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
     }
     if(!out) throw new Error('Délai dépassé (>6 min)');
