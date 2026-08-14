@@ -167,7 +167,11 @@ const LIAISONS = new Set([
 // 2 animations, elles sont nulles et montrent rien ». twopaths (2 pilules),
 // bars2 et grow (histogrammes abstraits) → refusées. Leur créneau revient au
 // visage ou à un vrai visuel. (Une vraie viz d'argent = #44, chiffre + courbe.)
-const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free', 'steps', 'twopaths', 'bars2', 'grow'])
+// + 14/08 : toggle (l'interrupteur, vu dans le rendu mot-à-mot). Depuis ce jour
+// les refusées sont aussi RETIRÉES DE LA BANQUE (anim-bank.mjs) — le vrai ban,
+// valable pour tous les styles. Cette liste ne sert plus qu'à purger les VIEUX
+// plans qui portent encore ces noms (garde en fin de dérivation).
+const REFUSEES = new Set(['target', 'clock', 'check', 'versus', 'hook', 'calendar', 'free', 'steps', 'twopaths', 'bars2', 'grow', 'toggle'])
 export const ANIMS = ANIMS_BRUT.filter((a) => !REFUSEES.has(a))
 import { spotOf, spotForWords, zoneNamed, zoneDite, MENU_ZONES } from './screen-spots.mjs'
 
@@ -332,10 +336,10 @@ export const VOICE_ANIMS = [
   { w: ['claude', 'chatgpt', 'demander', 'demande', 'prompt'],                           anim: 'chat' },
   { w: ['image', 'images', 'video', 'videos', 'montage', 'montages'],                    anim: 'lineup' },
   { w: ['idee', 'idees', 'creatif', 'inspiration'],                                     anim: 'idea' },
-  { w: ['cible', 'objectif', 'but', 'resultat', 'resultats'],                           anim: 'target' },
-  // Les deux animations decrites par Axel, cablees sur SES mots.
+  // (`target` et `twopaths` sont bannies ET hors banque depuis le 14/08 : leurs
+  // entrées sont parties avec ; « résultats » garde un visuel via `results`.)
+  { w: ['resultat', 'resultats'],                                                       anim: 'results' },
   { w: ['investissement', 'investir', 'mise', 'depart', 'capital'],                     anim: 'lowcost' },
-  { w: ['concurrence', 'concurrent', 'concurrents', 'personne'],                        anim: 'twopaths' },
   // ── PAQUET 12 (#147) — les quatre scenes qu'il a decrites et validees ──
   // Elles passent AVANT les tables generiques ci-dessus quand les mots
   // coincident : c'est sa description qui a le dernier mot sur ses phrases.
@@ -1702,7 +1706,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
     }
 
-    const guided = (plan.tuto || []).length >= 2
+    // ⚠ ≥ 1, pas ≥ 2 : le seuil à deux étapes faisait disparaître le tuto entier
+    // quand le chef n'en proposait qu'une — c'est comme ça que la visite guidée
+    // Express a manqué à la v10 (une seule étape 02-express, sautée en silence).
+    // Une étape seule reste une vraie scène : l'écran, le cadre, la frappe.
+    const guided = (plan.tuto || []).length >= 1
     let placedScreens = 0
     if (guided) {
       for (const sl of srv) if (sl.anim === 'screen') consumedByPlan.add(sl)   // les siennes cèdent la place
@@ -2897,21 +2905,56 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // ── 3 · CTA final : si aucun punch serveur ne COUVRE la fin, on le synthétise
   // depuis le dernier « commente/écris X » — le moteur y greffe la barre de
   // commentaire et sa frappe tout seul
-  const hasEndPunch = (plan.slides || []).some((s) => s.type === 'punch' && (s.end || 0) > D - 3)
+  // Un CTA posé par le CHEF garde la priorité : un `punch` de fin, mais aussi ses
+  // animations de commentaire (`keyword`/`comment`/`share`) quand elles portent le
+  // mot. En v9 mon punch synthétique ÉCRASAIT le `comment ["IA"]` du chef — le
+  // sien connaissait déjà le bon mot, le mien le re-devinait.
+  const CTA_ANIMS = new Set(['keyword', 'comment', 'share'])
+  const hasEndPunch = (plan.slides || []).some((s) => (s.end || 0) > D - 3
+    && (s.type === 'punch'
+      || (CTA_ANIMS.has(String(s.anim)) && (s.items || []).some((it) => String(it.text || '').trim()))))
   if (!hasEndPunch) {
-    let last = null, fi = 0
-    for (;;) {
-      // « commande » : Scribe transcrit souvent « commente » ainsi — sans ça le
-      // CTA final n'était pas détecté du tout (« le CTA pas ouf », Axel)
-      const c = findAny(words, ['commente', 'commentes', 'ecris', 'écris', 'commande', 'commandes'], fi)
+    // TOUS les déclencheurs des 10 dernières secondes, du dernier au premier :
+    // le premier qui passe la validation gagne. Avant, seul le DERNIER était
+    // essayé, et sans validation : sur la v10, Scribe avait transcrit
+    // « commente » en « COMMENT » (hors liste) → le code retombait sur
+    // « écris » de « écris des prompts simples » → « Écris « DES » » à l'écran.
+    const cands = []
+    for (let fi = 0; ;) {
+      // « commande »/« comment » : deux transcriptions fréquentes de « commente »
+      const c = findAny(words, ['commente', 'commentes', 'commenter', 'commentez', 'comment',
+        'ecris', 'écris', 'commande', 'commandes', 'tape', 'tapes', 'tapez'], fi)
       if (!c) break
-      last = c; fi = c.i + 1
+      if (c.start > D - 10) cands.push(c)
+      fi = c.i + 1
     }
-    if (last && last.start > D - 10) {
-      const w = words[last.i + 1]
-      const kw = ctaWord(w ? String(w.text).replace(/[«»".,!?]/g, '').trim() : '')
-      if (kw && kw.length <= 14) {
-        const verb = norm(words[last.i].text).startsWith('ecris') ? 'Écris' : 'Commente'
+    // LE MOT-CLÉ N'EST JAMAIS UN MOT-OUTIL : on saute l'article (« commente LE
+    // mot »), et « des » ne peut plus finir en géant à l'écran.
+    const CTA_SKIP = new Set(['des', 'un', 'une', 'le', 'la', 'les', 'de', 'du', 'en',
+      'ton', 'ta', 'tes', 'mon', 'ma', 'mes', 'moi', 'nous', 'vous', 'ce', 'cette', 'ces'])
+    // …et le CTA doit être un VRAI appel au spectateur : soit le verbe est
+    // « commente(r) »/« commande », soit la suite promet une livraison (« et je
+    // te l'envoie », « pour le recevoir »). « écris des prompts simples » est
+    // une consigne d'app, pas un CTA — sans ce filtre elle en devenait un.
+    const LIVRAISON = /envoi|envoie|recois|recevoir|reponds|repond|message|dm\b|prive|lien|bio\b|commentaire|methode|acces/
+    let last = null, kw = ''
+    for (const c of cands.reverse()) {
+      let ki = c.i + 1
+      while (ki < words.length && CTA_SKIP.has(norm(String(words[ki].text).replace(/[«»".,!?]/g, '')))) ki++
+      if (ki - c.i > 2) continue                          // plus d'un mot-outil sauté : pas un CTA
+      const w2 = words[ki]
+      const k2 = ctaWord(w2 ? String(w2.text).replace(/[«»".,!?]/g, '').trim() : '')
+      if (!k2 || k2.length > 14 || CTA_SKIP.has(norm(k2))) continue
+      const trig = norm(c.text)
+      const estCommente = /^comment(e|es|er|ez)$/.test(trig) || /^commande/.test(trig)
+      const suite = words.slice(ki, ki + 8).map((x) => norm(x.text)).join(' ')
+      if (!estCommente && !LIVRAISON.test(suite)) continue
+      last = c; kw = k2; break
+    }
+    if (last) {
+      {
+        // `verb` ne sert plus qu'à la carte punch (cas domaine prononcé)
+        const verb = /^(ecris|tape)/.test(norm(words[last.i].text)) ? 'Écris' : 'Commente'
         // LE MOT À COMMENTER EST TOUJOURS EN CAPITALES. C'est une consigne qu'on
         // donne au spectateur : elle doit se lire d'un coup d'œil et se recopier
         // sans hésiter sur la casse (Axel : « faut que ça soit toujours en
@@ -2940,10 +2983,22 @@ export function deriveDynamicSlides(plan, opts = {}) {
           // le point du domaine (« avatarads.fr » → « avataradsfr »)
           .map((w2) => String(w2.text).trim().replace(/^[«"']+|[«»"',!?]+$|\.$/g, ''))
           .find((t) => /^[\w-]+\.(fr|com|io|net|co|app|ai|shop|store|org)$/i.test(t))
-        out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
-          ...(dom ? { site: dom.toLowerCase() } : {}),
-          items: [{ text: `${verb} « ${KW} »`, t: r2(Math.max(a + 0.3, last.start)) }],
-          start: r2(a), end: r2(D - 0.1) })
+        // #113 · L'ANIMATION DU CTA, PAS UNE CARTE DE TEXTE. Axel : « change
+        // l'animation du CTA… on en a d'autres meilleures ». Sans adresse
+        // prononcée on pose `keyword` — le champ de commentaire où LE MOT se
+        // tape lettre à lettre puis la réponse part en DM : exactement
+        // « commente IA et je te l'envoie ». Avec une adresse, la carte punch
+        // reste : elle seule sait poser le logo + le domaine à l'écran.
+        if (dom) {
+          out.push({ type: 'punch', cta: true, layout: 'full', eyebrow: 'Pour finir', title: '',
+            site: dom.toLowerCase(),
+            items: [{ text: `${verb} « ${KW} »`, t: r2(Math.max(a + 0.3, last.start)) }],
+            start: r2(a), end: r2(D - 0.1) })
+        } else {
+          out.push({ anim: 'keyword', cta: true,
+            items: [{ text: KW, t: r2(Math.max(a + 0.25, last.start)) }],
+            start: r2(a), end: r2(D - 0.1) })
+        }
         claim(a, D)
       }
     }
@@ -3426,8 +3481,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // checklist, un chiffre). On lui retire seulement son animation interdite et
     // on la laisse redevenir un panneau de texte ; si elle est vide, les règles
     // qui suivent l'écarteront comme n'importe quelle scène creuse.
-    if (sl.anim && REFUSEES.has(String(sl.anim))) {
-      console.log(`▶ « ${sl.anim} » est bannie (REFUSEES) → animation retirée à ${r2(sl.start)}s${hasContent(sl) ? ', le contenu reste' : ', scène vide'}`)
+    // Depuis le 14/08 le ban se fait EN BANQUE : tout nom hors banque (banni ou
+    // fantôme comme `money`/`swipe`, jamais déclarés) est traité pareil. Seules
+    // les pseudo-scènes internes de la dérivation (ui, media, sujet) échappent
+    // au contrôle — le chef ne les émet jamais, c'est nous qui les posons.
+    const nomAnim = String(sl.anim || '')
+    if (nomAnim && !['ui', 'media', 'sujet'].includes(nomAnim)
+      && (REFUSEES.has(nomAnim) || !ANIMS.includes(nomAnim))) {
+      console.log(`▶ « ${nomAnim} » ${REFUSEES.has(nomAnim) ? 'est bannie (REFUSEES)' : "n'est pas en banque"} → animation retirée à ${r2(sl.start)}s${hasContent(sl) ? ', le contenu reste' : ', scène vide'}`)
       sl = { ...sl, anim: '' }
     }
     if (sl.anim && !RENDERABLE.has(sl.anim) && !hasContent(sl)) {

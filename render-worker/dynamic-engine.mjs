@@ -484,6 +484,8 @@ export function buildDynamicComposition(plan, opts = {}) {
       inner += `<div id="${id}g${k}" style="position:absolute;left:${Math.round(bx - sz / 2)}px;top:${Math.round(by - sz / 2)}px;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${blobs[k]}${tone === DARK ? 'CC' : ''} 0%,transparent 62%);"></div>`
       pjs += `\n  tl.fromTo('#${id}g${k}',{x:${ph(k) * 40},y:${ph(k) * 30},scale:1},{x:${-ph(k) * 60 - 30},y:${ph(k) * -70 + 20},scale:1.12,duration:${r2(dur + PUSH + 0.3)},ease:'sine.inOut'},${t0});`
     }
+    // marqueur « fond seul » : tout ce qui précède est le décor, pas du contenu
+    const innerFond = inner.length
 
     // — contenu par type
     if (p.kind === 'typo') {
@@ -1051,6 +1053,17 @@ export function buildDynamicComposition(plan, opts = {}) {
     // On n'éclaircit pas la capture — ce serait la trahir. On change ce qu'il y
     // a autour.
     const fondPanneau = p.kind === 'screen' && !isApple(plan) ? '#F2F1EE' : tone.bg
+    // FILET « JAMAIS UN PANNEAU NU » (Axel, 14/08 : les blancs à dégradé du
+    // 3e screen, « supprime définitivement ces transitions »). Si AUCUN contenu
+    // ne s'est posé — uiScene inconnue, animHtml vide (screen sans capture,
+    // logo sans fichier, result sans média)… — le panneau ne reste pas un fond
+    // à halos pendant toute sa fenêtre : le VISAGE la prend, plein cadre, zoom
+    // lent (règle : un trou se remplit par le visage, jamais par un écran vide).
+    if (inner.length === innerFond) {
+      console.log(`▶ panneau ${i} (${p.kind}) sans contenu → visage plein cadre (${p.t0}s → ${p.t1}s)`)
+      inner += `<div id="${id}avf" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(avatarStill)}') center 38%/cover"></div>`
+      pjs += `\n  tl.fromTo('#${id}avf',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
+    }
     html += `\n  <div id="${id}" class="pnl" style="z-index:${i + 1};background:${fondPanneau};${i > 0 ? 'opacity:0' : ''}"><div class="pin" id="${id}in">${inner}</div></div>`
 
     // — poussée : direction alternée, l'entrant arrive légèrement flouté par sa

@@ -93,12 +93,14 @@ export function wordFontSize(text, W, H) {
   const words = String(text || '').trim().split(/\s+/).filter(Boolean)
   const longest = Math.max(3, ...words.map((w) => w.length))
   const lines = Math.max(1, Math.ceil(words.length / (words.length > 4 ? 2 : 1)))
-  // ~0.55em par glyphe en Inter semibold ; le filet WORD_FIT_JS rattrape les cas
-  // limites une fois la police vraiment chargée.
+  // ~0.60em par glyphe en Anton CAPITALES (14/08 : la police du mot) ; le filet
+  // WORD_FIT_JS rattrape les cas limites une fois la police vraiment chargée.
+  // Plafond relevé (0.028 → 0.034 de H) : Anton est condensée, elle encaisse
+  // plus gros sans déborder — c'est ça qui rend le mot « accrocheur ».
   // borné à la largeur centrée sûre : au-delà, le mot passe sous la colonne like/partage
-  const byWidth = (W * SAFE_CENTERED_W) / (0.55 * longest)
-  const byHeight = (H * 0.20) / (1.2 * lines)
-  return Math.round(Math.max(H * 0.016, Math.min(H * 0.028, Math.min(byWidth, byHeight))))
+  const byWidth = (W * SAFE_CENTERED_W) / (0.60 * longest)
+  const byHeight = (H * 0.20) / (1.15 * lines)
+  return Math.round(Math.max(H * 0.018, Math.min(H * 0.034, Math.min(byWidth, byHeight))))
 }
 
 // ── CSS ───────────────────────────────────────────────────────────────────
@@ -365,13 +367,16 @@ function wordCss(W, H, fz) {
       .vs-word .ctablk { left: ${Math.round(W * SAFE.left)}px; right: ${Math.round(W * SAFE.right)}px;
         top: ${Math.round(H * 0.30)}px; height: ${Math.round(H * 0.40)}px; z-index: 7;
         display: flex; align-items: center; justify-content: center; text-align: center; }
-      .vs-word .ctablk span { font-family: ${SANS}; font-weight: 700; color: ${WORD_INK};
-        font-size: ${Math.round(H * 0.042)}px; line-height: 1.22; letter-spacing: -.025em;
-        display: block; max-width: 100%; }
+      /* LA POLICE DU MOT (Axel, 14/08 : « change la police, mets une police
+         + accrocheuse ») : Anton en capitales — la typo condensée des mot-à-mot
+         TikTok, qui SLAMME là où Inter 600 restait un texte de paragraphe. */
+      .vs-word .ctablk span { font-family: 'Anton', ${SANS}; font-weight: 400; color: ${WORD_INK};
+        font-size: ${Math.round(H * 0.046)}px; line-height: 1.18; letter-spacing: .012em;
+        text-transform: uppercase; display: block; max-width: 100%; }
       /* chaque mot du CTA est un élément à part : il apparaît sur sa syllabe et reste */
       .vs-word .ctablk span i { font-style: normal; display: inline-block; will-change: transform, opacity; }
-      .vs-word .cap span { font-family: ${SANS}; font-weight: 600; text-transform: none;
-        letter-spacing: -.02em; line-height: 1.15; display: block; max-width: 100%; overflow: hidden; }
+      .vs-word .cap span { font-family: 'Anton', ${SANS}; font-weight: 400; text-transform: uppercase;
+        letter-spacing: .012em; line-height: 1.08; display: block; max-width: 100%; overflow: hidden; }
 
       /* les formes : elles illustrent la section, sans un mot de plus */
       .wm { position: absolute; left: 0; right: 0; z-index: 3; }

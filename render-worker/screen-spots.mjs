@@ -200,7 +200,21 @@ export const spotForWords = (screen, words, opts) => {
 /** Ce que la voix dit retrouve-t-il un mot du libellé de CETTE zone ? */
 export const zoneDite = (z, words) => zoneScore(z, elargir(words.map(norm).filter((w) => w.length >= 3))) > 0
 
-export const zoneNamed = (screen, name) => box(zonesOf(screen).find((z) => z.name === name))
+// Le harvest tronque les noms de zone à 40 caractères, mais le chef d'orchestre
+// reconstruit parfois le slug ENTIER depuis le libellé lu à l'écran
+// (« …-dit-a-voix-haute » demandé, « …-dit-a » en banque) : la zone existait,
+// le tuto partait quand même en « zone inconnue » — c'est ça qui a fait
+// disparaître la visite guidée Express de la v10. On tolère donc le match par
+// préfixe (≥12 caractères, dans les deux sens), l'exact restant prioritaire.
+export const zoneNamed = (screen, name) => {
+  const zs = zonesOf(screen)
+  const exact = zs.find((z) => z.name === name)
+  if (exact) return box(exact)
+  const n = String(name || '')
+  if (n.length < 12) return box(undefined)
+  return box(zs.find((z) => z.name.length >= 12
+    && (n.startsWith(z.name) || z.name.startsWith(n))))
+}
 
 /** Toutes les zones d'un écran, pour l'Éditeur (correction manuelle, #159). */
 export const zonesFor = (screen) => zonesOf(screen).slice()
