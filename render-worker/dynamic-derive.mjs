@@ -395,6 +395,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // chaque fenêtre du plan ; toute fenêtre créée par la dérivation portera
   // `clip: -1` (« aucun clip ne m'appartient » → photo d'avatar en repli).
   ;(plan.avatarSegments || []).forEach((w, i) => { if (w.clip == null) w.clip = i })
+  // ── LA MATIÈRE LIPSYNC PAR CLIP ────────────────────────────────────────────
+  // Bornes D'ORIGINE de chaque fenêtre à clip (le worker les a déjà bornées à
+  // la durée réelle du clip Hedra) : c'est la matière disponible. Toute fenêtre
+  // remaniée doit rester DEDANS — au-delà, le recoupage gelait la dernière
+  // image (+6 s de tpad) : le « il se fige à chaque fin » d'Axel (15/08).
+  const MATIERE = {}
+  ;(plan.avatarSegments || []).forEach((w) => {
+    if (Number.isInteger(w.clip) && w.clip >= 0 && !(w.clip in MATIERE)) {
+      MATIERE[w.clip] = { s: r2(w.start || 0), e: r2(w.end ?? w.start ?? 0) }
+    }
+  })
   // le worker sait s'il a des clips lipsync sous la main ; le moteur (appel de
   // repli depuis dynamic-engine) le déduit de ses propres options.
   const hasClips = opts.hasClips ?? Object.keys(opts.avatarClips || {}).length > 0
@@ -417,10 +428,15 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // au-delà on garde la photo : un visage gelé en plein mot est pire).
   const clipPourFenetre = (a, b) => {
     if (!hasClips) return null
+    // même début (±0,3 s) : le clip dit exactement ces mots depuis son début
     const s = fenetresSources.find((w) => Math.abs((w.start || 0) - a) <= 0.3 && b > w.start + 0.4)
-    if (!s) return null
-    if (b > s.end + 2.5) return null
-    return s
+    if (s && b <= s.end + 2.5) return { clip: s.clip, from: 0, finMax: r2(s.end) }
+    // 15/08 : fenêtre DANS la matière d'un clip → la TRANCHE exacte (clipFrom).
+    // Les lèvres disent leurs mots où que la fenêtre commence — avant, ces
+    // fenêtres retombaient en photo figée (« l'avatar se fige sans lipsync »).
+    const t = fenetresSources.find((w) => a >= (w.start || 0) - 0.02 && a < (w.end || 0) - 1.0)
+    if (t) return { clip: t.clip, from: r2(Math.max(0, a - (t.start || 0))), finMax: r2(t.end) }
+    return null
   }
   const words = (plan.captions || [])
     .filter((c) => String(c.text || '').trim())
@@ -1008,8 +1024,17 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // REPREND au lieu de figer la photo (Axel 07/08, « à 13 s le lipsync
       // manque » — même mécanique ici que pour les adresses de §0b).
       const src = clipPourFenetre(a, b)
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: a, end: b, adresse: true, clip: src ? src.clip : -1 })
-      claim(a, b); nb++
+      // sans matière lipsync et avec la voix qui parle : pas de photo figée —
+      // la fenêtre saute, les scènes voisines s'étirent (règle du 15/08)
+      if (!src && words.some((x) => x.start < b - 0.15 && x.end > a + 0.15)) {
+        console.log(`▶ suppression ${a}→${b}s : la voix parle sans matière lipsync → pas de visage figé`)
+        continue
+      }
+      const bb = src ? r2(Math.min(b, src.finMax)) : b
+      if (bb - a < 0.6) continue
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: a, end: bb, adresse: true,
+        clip: src ? src.clip : -1, ...(src && src.from ? { clipFrom: src.from } : {}) })
+      claim(a, bb); nb++
     }
     if (nu || nb) console.log(`▶ choix utilisateur : ${nu} remplacement(s) posé(s) · ${nb} suppression(s) rendue(s) au visage`)
   }
@@ -1522,9 +1547,18 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // l'adresse le REPREND. Si le début ne coïncide pas, on garde la photo —
       // des lèvres qui disent d'autres mots seraient pires qu'une image fixe.
       const src = clipPourFenetre(r2(a), r2(b))
-      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(b), adresse: true, clip: src ? src.clip : -1 })
-      if (src) console.log(`▶ adresse directe ${r2(a)}→${r2(b)}s : elle reprend le clip lipsync av${src.clip} (même début, mêmes mots)`)
-      claim(a, b); n2++
+      // sans matière lipsync : pas de photo figée pendant que la voix parle —
+      // l'adresse saute, les scènes voisines s'étirent (vu à 25,1 s de la v12)
+      if (!src) {
+        console.log(`▶ adresse ${r2(a)}→${r2(b)}s : la voix parle sans matière lipsync → pas de visage figé, les voisins s'étirent`)
+        continue
+      }
+      const bAd = r2(Math.min(b, src.finMax))
+      if (bAd - a < 0.6) continue
+      ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: bAd, adresse: true,
+        clip: src.clip, ...(src.from ? { clipFrom: src.from } : {}) })
+      console.log(`▶ adresse directe ${r2(a)}→${bAd}s : elle reprend le clip lipsync av${src.clip}${src.from ? ` (repris à ${src.from}s dedans)` : ' (même début, mêmes mots)'}`)
+      claim(a, bAd); n2++
     }
     if (n2) console.log(`▶ ${n2} adresse(s) directe(s) : le visage reprend l'écran`)
   }
@@ -3065,6 +3099,21 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // d'images attendu/capturé d'HyperFrames (voir dvid dans le moteur). Les
       // deux sont réglés à la racine : la fenêtre courte reprend sa place —
       // l'avatar parle dans les creux entre les animations, comme demandé.
+      // ── LA FENÊTRE RESTE DANS SA MATIÈRE (Axel, 15/08 : « à chaque fin il
+      // se fige ») : au-delà de la matière restante du clip, le recoupage ne
+      // montrait plus que l'image gelée du tpad. On borne la fin — et jamais de
+      // départ AVANT la matière (les lèvres seraient en avance sur la voix).
+      const mat = Number.isInteger(w.clip) && w.clip >= 0 ? MATIERE[w.clip] : null
+      if (mat) {
+        if (a < mat.s - 0.02) a = mat.s
+        const from0 = (Number(w.clipFrom) || 0) + Math.max(0, a - r2(w.start || 0))
+        const reste = r2((mat.e - mat.s) - from0)
+        if (b > a + reste) {
+          console.log(`▶ fenêtre avatar av${w.clip} bornée à ${r2(a + Math.max(0, reste))}s — la matière du clip s'arrête là`)
+          b = r2(a + Math.max(0, reste))
+        }
+        if (b - a < 1.5) continue
+      }
       clamped.push({ ...w, start: a, end: b,
         ...(glisse ? { clipFrom: r2((Number(w.clipFrom) || 0) + a - (w.start || 0)) } : {}) })
       if (glisse) console.log(`▶ fenêtre avatar av${w.clip} décalée à ${a}s → le clip reprend à ${r2(a - (w.start || 0))}s dedans (lèvres synchrones)`)
@@ -3327,19 +3376,26 @@ export function deriveDynamicSlides(plan, opts = {}) {
           { start: r2(a), end: r2(d), comble: true, clip: adopte.clip, clipFrom: r2(Math.max(0, a - adopte.start)) })
         console.log(`▶ trou ${r2(a)}→${r2(d)}s : le clip av${adopte.clip} reprend la parole (repris à ${r2(Math.max(0, a - adopte.start))}s dedans)`)
       } else if (adopte && adopte.start > a + 0.05 && d - adopte.start >= 0.55 && adopte.start - a >= 0.3) {
-        // le clip commence AU MILIEU du trou : photo jusqu'à son début (même
-        // visage, continuité assurée), puis le clip parle — c'est le cas du
-        // trou de 38,06 s, où av3 démarre à 39,12 s
-        // La v4 mettait la PHOTO en attendant le clip — et Axel a lu la photo
-        // figée comme un bug : « à 38 s le lipsync n'est pas fait sur
-        // l'avatar ». Un visage à l'écran DOIT parler : la fenêtre devient UNE
-        // SEULE scène à générer (clip 'G*') ; le worker paie une fois chez
-        // Hedra, le cache par contenu garde pour toutes les relances.
-        const gid = 'G' + (plan._prochainG = (plan._prochainG || 0) + 1, plan._prochainG - 1)
+        // le clip commence AU MILIEU du trou. L'ancien code posait un clip
+        // « G* à générer »… que PERSONNE ne générait (le worker n'a jamais eu
+        // ce chemin) : la fenêtre retombait en photo figée — exactement ce
+        // qu'Axel signale (« l'avatar se fige sans le lipsync »). On ne prend
+        // désormais QUE la part couverte par la matière : le clip parle depuis
+        // son début, et l'avant du trou revient aux scènes voisines.
         ;(plan.avatarSegments = plan.avatarSegments || []).push(
-          { start: r2(a), end: r2(d), comble: true, clip: gid })
-        console.log(`▶ trou ${r2(a)}→${r2(d)}s : clip lipsync À GÉNÉRER (${gid}) — un visage à l'écran doit parler`)
+          { start: r2(adopte.start), end: r2(d), comble: true, clip: adopte.clip, clipFrom: 0 })
+        console.log(`▶ trou ${r2(a)}→${r2(d)}s : seul ${r2(adopte.start)}→${r2(d)}s a de la matière — le clip av${adopte.clip} y parle, l'avant revient aux voisins`)
       } else {
+        // AUCUNE matière lipsync ne couvre ce trou. Si la VOIX y parle, une
+        // photo figée est un bug aux yeux d'Axel (vu à 6 s et 9 s de la v12 :
+        // « l'avatar se fige sans le lipsync ») → on NE POSE RIEN : les scènes
+        // voisines s'étirent (le moteur rend les panneaux contigus), aucun
+        // visage muet à l'écran. Silence → la photo est vraie (il écoute).
+        const parle = words.some((x) => x.start < d - 0.15 && x.end > a + 0.15)
+        if (hasClips && parle) {
+          console.log(`▶ trou ${r2(a)}→${r2(d)}s : la voix parle sans matière lipsync → pas de visage figé, les voisins s'étirent`)
+          continue
+        }
         ;(plan.avatarSegments = plan.avatarSegments || []).push({ start: r2(a), end: r2(d), comble: true, clip: -1 })
       }
       claim(a, d); n++
