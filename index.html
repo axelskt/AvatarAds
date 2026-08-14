@@ -583,14 +583,6 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div></div>
       <!-- soustitres -->
       <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres-720.webp" alt="Sous-titres animés" width="720" height="720" loading="lazy" decoding="async"></div></div>
-      <!-- voix -->
-      <div class="feat-mock" data-feat="voix" style="padding:8px"><div class="feat-demo">
-        <div class="col" style="align-items:center;gap:20px;width:80%;max-width:380px">
-          <div style="width:66px;height:66px;border-radius:18px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></div>
-          <div class="row" style="gap:3px;align-items:center;height:42px" id="voiceBars"></div>
-          <span class="pill" style="background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:700;font-size:13px">Clonée en 30 s</span>
-        </div>
-      </div></div>
       <!-- montage IA : avant/après vidéo (boucles muettes lancées ensemble à l'apparition) -->
       <div class="feat-mock" data-feat="montage" style="padding:20px"><div class="feat-demo">
         <div class="row" id="mtDemoRow" style="gap:10px;position:relative;justify-content:center;width:100%;max-width:380px">
@@ -624,10 +616,6 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <!-- editeur -->
       <!-- 🎬 À REMPLACER par la vidéo quand Axel l'envoie : <video src="assets/lp/lipsync-montage.mp4" poster="assets/lp/lipsync.jpg" muted loop playsinline …> -->
       <div class="feat-mock" data-feat="editeur" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-editeur-720.webp" alt="Éditeur vidéo" width="720" height="720" loading="lazy" decoding="async"></div></div>
-      <!-- library -->
-      <div class="feat-mock" data-feat="library" style="padding:8px"><div class="feat-demo">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:80%;max-width:360px" id="libGrid"></div>
-      </div></div>
     </div>
     <div class="col" style="padding:44px 40px;justify-content:center;gap:16px">
       <h3 class="display" id="featTitle" style="font-size:30px;font-weight:700;line-height:1.08"></h3>
@@ -739,7 +727,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="center" style="margin-bottom:8px">
         <div class="eyebrow">Comment ça marche</div>
         <h2 class="display" style="font-size:clamp(32px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.03">
-          De l'idée à la vidéo virale<br><span class="accent">en 5 étapes</span>
+          De l'idée à la vidéo virale<br><span class="accent">en 4 étapes</span>
         </h2>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;margin-top:24px">
@@ -756,7 +744,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="center" style="margin-bottom:34px">
     <div class="eyebrow">Comment ça marche</div>
     <h2 class="display" style="font-size:30px;font-weight:800;margin-top:14px;line-height:1.03">
-      De l'idée à la vidéo virale<br><span class="accent">en 5 étapes</span>
+      De l'idée à la vidéo virale<br><span class="accent">en 4 étapes</span>
     </h2>
   </div>
   <div class="col" style="gap:30px" id="stackMobileList"></div>
@@ -1030,10 +1018,8 @@ var FEAT_TABS=[
   { id:"montage", tab:"Montage IA", t:"Ta vidéo brute devient un montage viral", d:"L'IA écoute ta vidéo et la monte de A à Z." },
   { id:"split", tab:"Split-screen", t:"Le format qui scotche jusqu'au bout", d:"Entièrement personnalisable. La rétention qui fait exploser tes vues." },
   { id:"soustitres", tab:"Sous-titres", t:"Le détail qui retient le scroll", d:"Augmente de 200% le taux de rétention sur tes vidéos." },
-  { id:"voix", tab:"Clonage de voix", t:"Ta voix, sans jamais l'enregistrer", d:"30 secondes suffisent pour cloner ta voix. Publie chaque jour sans ouvrir le micro." },
   { id:"audio", tab:"Nettoyage audio", t:"Un rythme punchy, zéro blanc", d:"Les silences coupés automatiquement pour garder le dynamisme sur tes vidéos et ton audience captive." },
-  { id:"editeur", tab:"Éditeur", t:"Le dernier mot te revient", d:"Timeline multi-pistes, calques, musique, effets. Le contrôle total sans quitter AvatarAds." },
-  { id:"library", tab:"Bibliothèque", t:"Toutes tes vidéos, au même endroit", d:"Retrouve, réutilise et republie chaque création." }
+  { id:"editeur", tab:"Éditeur", t:"Le dernier mot te revient", d:"Timeline multi-pistes, calques, musique, effets. Le contrôle total sans quitter AvatarAds." }
 ];
 (function(){
   var tabsEl=document.getElementById('featTabs');
@@ -1043,21 +1029,10 @@ var FEAT_TABS=[
     b.onclick=function(){ setFeat(x.id,b); };
     tabsEl.appendChild(b);
   });
-  // mock: voix bars
-  var vb=document.getElementById('voiceBars');
-  for(var i=0;i<32;i++){ var d=document.createElement('div'); var a=Math.abs(Math.sin(i*0.7));
-    d.style.cssText='width:4px;border-radius:3px;height:'+(20+a*70)+'%;background:var(--accent);opacity:'+(0.5+a*0.5); vb.appendChild(d); }
   // mock: audio bars
   [[70,12,8,60,10,9,80,8,12,55,9,7,68],'audioBarsBefore',[70,60,80,55,68,74,62,78],'audioBarsAfter'].forEach(function(_,__){});
   [70,12,8,60,10,9,80,8,12,55,9,7,68].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:'+(h<20?'var(--surface-3)':'var(--text-3)'); document.getElementById('audioBarsBefore').appendChild(d); });
   [70,60,80,55,68,74,62,78].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:var(--accent)'; document.getElementById('audioBarsAfter').appendChild(d); });
-  // mock: library grid
-  [18,265,150,40,200,330].forEach(function(h){
-    var d=document.createElement('div');
-    d.style.cssText='aspect-ratio:9/16;border-radius:10px;position:relative;overflow:hidden;border:1px solid var(--border-2);background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 8px,transparent 8px 16px),linear-gradient(180deg,oklch(0.4 0.1 '+h+'),oklch(0.2 0.05 '+h+'))';
-    d.innerHTML='<div style="position:absolute;inset:0;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,.8)"><path d="M7 4l13 8-13 8z"/></svg></div>';
-    document.getElementById('libGrid').appendChild(d);
-  });
   setFeat('claude', tabsEl.children[0]);
 })();
 function setFeat(id, btn){
@@ -1110,11 +1085,10 @@ function tstToggle(open){
 
 /* ══════════ Comment ça marche — card-stack au scroll ══════════ */
 var STEPS=[
-  { n:"01", src:"assets/lp/step-01.jpg", t:"Décris ton idée", d:"Écris ton concept ou colle ton script. L'IA structure hook, développement et CTA.", ic:'<path d="M4 7V5h16v2M9 19h6M12 5v14"/>' },
-  { n:"02", src:"assets/lp/step-02.jpg", t:"Choisis ton avatar", d:"Un avatar IA faceless ou le tien. Il parlera à ta place, face caméra.", ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
-  { n:"03", src:"assets/lp/step-03.jpg", t:"Clone ta voix", d:"30 secondes suffisent. Ou choisis une voix premium ElevenLabs / Gemini.", ic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>' },
-  { n:"04", src:"assets/lp/step-04.jpg", t:"Style & sous-titres", d:"Format 9:16, sous-titres animés, split-screen, musique — calibrés pour percer.", ic:'<path d="M4 7V5h16v2M9 19h6M12 5v14"/>' },
-  { n:"05", src:"assets/lp/step-05.jpg", t:"Génère & publie", d:"Ta vidéo prête en 2 minutes. Télécharge ou publie directement sur tes réseaux.", ic:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" fill="currentColor" stroke="none"/>' }
+  { n:"01", src:"assets/lp/step-02.jpg", t:"Crée et importe ton avatar", d:"Ta photo ou ta vidéo existante — ton avatar parle à ta place, face caméra.", ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
+  { n:"02", src:"assets/lp/step-03.jpg", t:"Ajoute ton audio", d:"Importe ta voix off ou enregistre-la. Le son est nettoyé automatiquement.", ic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>' },
+  { n:"03", src:"assets/lp/step-04.jpg", t:"Style & sous-titres", d:"Format 9:16, sous-titres animés, split-screen, musique — calibrés pour percer.", ic:'<path d="M4 7V5h16v2M9 19h6M12 5v14"/>' },
+  { n:"04", src:"assets/lp/step-05.jpg", t:"Génère & publie", d:"Ta vidéo prête en 2 minutes. Télécharge ou publie directement sur tes réseaux.", ic:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" fill="currentColor" stroke="none"/>' }
 ];
 var V='#7C5CFF';
 (function(){
@@ -1126,14 +1100,14 @@ var V='#7C5CFF';
     tx.style.cssText='transition:opacity .4s,transform .4s;position:'+(i===0?'relative':'absolute')+';top:0;opacity:'+(i===0?1:0)+';transform:'+(i===0?'none':'translateY(12px)')+';pointer-events:'+(i===0?'auto':'none')+';max-width:460px';
     var dots='';
     for(var j=0;j<STEPS.length;j++){ dots+='<span class="stk-dot" data-j="'+j+'" style="width:'+(j===i?26:8)+'px;height:8px;border-radius:999px;background:'+(j===i?V:'var(--surface-3)')+';transition:.3s;display:inline-block;margin-right:8px"></span>'; }
-    tx.innerHTML='<span class="mono" style="font-size:13px;color:'+V+';font-weight:700">'+s.n+' / 05</span>'
+    tx.innerHTML='<span class="mono" style="font-size:13px;color:'+V+';font-weight:700">'+s.n+' / 04</span>'
       +'<h3 class="display" style="font-size:34px;font-weight:800;margin-top:10px;line-height:1.05">'+s.t+'</h3>'
       +'<p class="muted" style="font-size:17px;line-height:1.55;margin-top:16px">'+s.d+'</p>'
       +'<div style="margin-top:26px">'+dots+'</div>';
     texts.appendChild(tx);
     var c=document.createElement('div');
     c.className='stack-card'; c.style.zIndex=i+1; c.style.opacity=i===0?1:0;
-    c.innerHTML='<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 05</span></div>';
+    c.innerHTML='<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 04</span></div>';
     cards.appendChild(c);
   });
   // mobile
@@ -1145,7 +1119,7 @@ var V='#7C5CFF';
       +'<div><span class="mono" style="font-size:11px;color:'+V+';font-weight:600">'+s.n+'</span>'
       +'<h3 class="display" style="font-size:20px;font-weight:700">'+s.t+'</h3></div></div>'
       +'<p class="muted" style="font-size:14.5px;line-height:1.55;margin-bottom:14px">'+s.d+'</p>'
-      +'<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 05</span></div>';
+      +'<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 04</span></div>';
     ml.appendChild(d);
   });
 })();
