@@ -617,8 +617,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         try { srcDur = parseFloat(ffprobe(join(proj, src), 'format=duration')) || 0 } catch (_) {}
         const fromSafe = srcDur > 0.4 ? Math.min(from, srcDur - 0.3) : from
         try {
+          // tpad court (1,2 s, le temps d'une poussée) : le +6 s gelait le visage
+          // sur toute fin de fenêtre plus longue que sa matière — depuis le 15/08
+          // la dérivation borne les fenêtres à la matière (MATIERE), le gel long
+          // n'a plus de raison d'exister, et un résidu ≤1,2 s reste discret.
           execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(fromSafe), '-i', join(proj, src),
-            '-an', '-vf', `tpad=stop_mode=clone:stop_duration=6,fps=${FPS}`,
+            '-an', '-vf', `tpad=stop_mode=clone:stop_duration=1.2,fps=${FPS}`,
             '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', '-g', String(FPS), join(proj, out)])
           // garde-fou : si malgré tout le fichier n'a pas de frame, on repli sur
           // le clip source entier (jamais 0 frame qui casse le rendu complet)

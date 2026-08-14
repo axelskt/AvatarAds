@@ -1263,11 +1263,56 @@ export function buildDynamicComposition(plan, opts = {}) {
       }
       const enc = g.sombre ? encre : '#17171C'
       const accW = g.sombre ? '#FF8A5B' : '#E8500A'
+      // #124 (réf ssstik 1786369405912, Axel 15/08 : « qu'ils bougent tout le
+      // temps, différentes tailles selon l'importance ») : chaque mot POPE à
+      // l'instant où il est dit — un accent claque plus gros et le RESTE
+      // (hiérarchie visible), un mot courant pope sec. L'entrée du groupe
+      // change une fois sur trois pour que deux pastilles ne se ressemblent pas.
       g.mots.forEach((w, k) => {
-        js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k + 1})', { color: '${accW}' }, ${r2(w.start)});`
+        const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
+        const fort = ACCFORTS.has(normAcc(w.text))
+        js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:${fort ? 1.6 : 1.24},yPercent:${fort ? 12 : 6}},{autoAlpha:1,scale:${fort ? 1.14 : 1},yPercent:0,duration:${fort ? 0.16 : 0.11},ease:'back.out(2.2)',transformOrigin:'50% 85%'},${r2(w.start)});`
+        js += `\n  tl.set(${sel}, { color: '${accW}' }, ${r2(w.start)});`
         if (k) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
       })
-      js += `\n  tl.fromTo('#dp${i}', { autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${a});`
+      const entree = i % 3 === 0
+        ? `{ autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }`
+        : i % 3 === 1
+          ? `{ autoAlpha: 0, y: -10, filter: 'blur(5px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.22, ease: 'power3.out', transformOrigin: '50% 0%' }`
+          : `{ autoAlpha: 0, x: ${i % 2 ? 16 : -16}, rotation: ${i % 2 ? 1.4 : -1.4} }, { autoAlpha: 1, x: 0, rotation: 0, duration: 0.2, ease: 'power2.out', transformOrigin: '50% 100%' }`
+      js += `\n  tl.fromTo('#dp${i}', ${entree}, ${a});`
+    }
+    // ── LES MOTS GÉANTS (réf : « BREAKS », « BE YOU? ») ────────────────────
+    // Un ACCENT long hors hook devient un plan à lui seul : le mot énorme en
+    // Archivo Black au tiers haut, une entrée différente à chaque apparition.
+    // Jamais deux en moins de 2,5 s, huit max — c'est un accent, pas un régime.
+    // Les panneaux typo gardent l'exclusivité de leurs mots (jamais deux fois
+    // le même mot à l'écran au même instant).
+    {
+      const geants = []
+      let dernier = -9
+      for (const g of grp) {
+        if (g.hook) continue
+        for (const w of g.mots) {
+          if (geants.length >= 8) break
+          const t = r2(w.start)
+          const txt = normAcc(w.text)
+          if (!ACCFORTS.has(txt) || txt.length < 5 || t - dernier < 2.5) continue
+          const pan = panels.find((p) => t >= p.t0 && t < p.t1)
+          if (pan && pan.kind === 'typo') continue
+          geants.push({ t, mot: String(w.text).replace(/[.,!?;:«»()"']/g, ''), i: geants.length })
+          dernier = t
+        }
+      }
+      capHtml += geants.map((gw) => `\n      <div class="clip gwcap" id="gw${gw.i}" data-start="${r2(Math.max(0, gw.t - 0.05))}" data-duration="0.95" data-track-index="16"><span class="gw-in" id="gwi${gw.i}">${esc(gw.mot.toUpperCase())}</span></div>`).join('')
+      for (const gw of geants) {
+        const e = gw.i % 3
+        if (e === 0) js += `\n  tl.fromTo('#gwi${gw.i}',{scale:2.1,autoAlpha:0,filter:'blur(10px)'},{scale:1,autoAlpha:1,filter:'blur(0px)',duration:0.22,ease:'power3.out',transformOrigin:'50% 50%'},${gw.t});`
+        else if (e === 1) js += `\n  tl.fromTo('#gwi${gw.i}',{yPercent:55,autoAlpha:0,rotation:-2.5},{yPercent:0,autoAlpha:1,rotation:0,duration:0.24,ease:'back.out(1.8)',transformOrigin:'50% 100%'},${gw.t});`
+        else js += `\n  tl.fromTo('#gwi${gw.i}',{letterSpacing:'0.45em',autoAlpha:0,scale:0.82},{letterSpacing:'0.02em',autoAlpha:1,scale:1,duration:0.26,ease:'power2.out',transformOrigin:'50% 50%'},${gw.t});`
+        js += `\n  tl.to('#gwi${gw.i}',{autoAlpha:0,scale:1.06,duration:0.16,ease:'power1.in'},${r2(gw.t + 0.74)});`
+      }
+      if (geants.length) console.log(`▶ ${geants.length} mot(s) géant(s) (sous-titres animés, réf ssstik)`)
     }
     console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
   }
@@ -1371,6 +1416,14 @@ export function buildDynamicComposition(plan, opts = {}) {
      assume sa présence, et laisse le mot prononcé ressortir vraiment. */
   .dyncap { position:absolute; left:0; width:${W}px; text-align:center;
     z-index:60; pointer-events:none; }
+  /* #124 · mots géants (réf ssstik) : l'accent devient un plan à lui seul */
+  .gwcap { position:absolute; left:0; width:${W}px; top:${Math.round(H * 0.335)}px;
+    text-align:center; z-index:65; pointer-events:none; }
+  .gw-in { display:inline-block; max-width:94%; font-family:'Archivo Black',sans-serif;
+    font-size:${Math.round(H * 0.082)}px; line-height:1.02; color:#FFFFFF;
+    letter-spacing:.02em; text-transform:uppercase;
+    text-shadow:0 5px 28px rgba(0,0,0,.55), 0 2px 7px rgba(0,0,0,.5);
+    will-change:transform,opacity,filter; }
   .dc-p { display:inline-block; max-width:${Math.round(W * 0.84)}px;
     padding:${Math.round(H * 0.014)}px ${Math.round(H * 0.024)}px ${Math.round(H * 0.017)}px;
     border-radius:${Math.round(H * 0.019)}px;
