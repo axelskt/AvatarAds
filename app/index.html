@@ -19331,22 +19331,24 @@ function updateGpCrop(){
   vid.style.maxWidth = 'none';
   vid.style.maxHeight = 'none';
   vid.style.objectFit = 'cover';
-  if(h === 100 && w === 100 && tx === 0 && ty === 0){
-    // Centrage parfait par défaut
+  if(h === 100 && w === 100){
+    // À 100 % le clip fait la taille de sa zone split : on coulisse le CONTENU
+    // (object-position), pas la boîte — même fix que l'avatar (13/08).
     vid.style.width = '100%';
     vid.style.height = '100%';
     vid.style.top = '0';
     vid.style.left = '0';
     vid.style.transform = 'none';
+    vid.style.objectPosition = (tx === 0 && ty === 0) ? '50% 50%' : `calc(50% + ${tx}px) calc(50% + ${ty}px)`;
   } else {
     vid.style.width = w + '%';
     vid.style.height = h + '%';
     vid.style.top = '50%';
     vid.style.left = '50%';
     vid.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+    vid.style.objectPosition = '50% 50%';
   }
   vid.style.transformOrigin = 'center center';
-  vid.style.objectPosition = '50% 50%';
 }
 
 function updateAvatarCrop(){
@@ -19360,21 +19362,28 @@ function updateAvatarCrop(){
     el.style.maxWidth  = 'none';
     el.style.maxHeight = 'none';
     el.style.objectFit = 'cover';
-    if(h === 100 && w === 100 && tx === 0 && ty === 0){
+    if(h === 100 && w === 100){
+      // ── SPLIT : REPOSITIONNER = GLISSER LA PHOTO DANS LE CADRE ──────────────
+      // À 100 %, l'élément fait EXACTEMENT la taille de sa zone : le translater
+      // déplaçait toute la boîte et révélait du noir — en split (zone courte,
+      // cover très rogné) le drag semblait « ne pas marcher » (Axel, 13/08 :
+      // « je peux pas repositionner l'image en split screen »). On déplace donc
+      // le CONTENU via object-position : le cadre reste plein, la photo coulisse.
       el.style.width     = '100%';
       el.style.height    = '100%';
       el.style.top       = '0';
       el.style.left      = '0';
       el.style.transform = 'none';
+      el.style.objectPosition = (tx === 0 && ty === 0) ? 'center top' : `calc(50% + ${tx}px) calc(50% + ${ty}px)`;
     } else {
       el.style.width     = w + '%';
       el.style.height    = h + '%';
       el.style.top       = '50%';
       el.style.left      = '50%';
       el.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+      el.style.objectPosition  = 'center top';
     }
     el.style.transformOrigin = 'center center';
-    el.style.objectPosition  = 'center top';
   }
 
   _applyCrop(document.getElementById('previewAvImg'));
@@ -24298,6 +24307,22 @@ window._MC_BACKEND_READY = true;   // Motion Control LIVE pour tous (Kling 2.6 v
 window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
 window._mcCamFollow=false; window._mcKeepVidBg=false; window._mcFormat='9:16';
+// ── RESET COMPLET après une génération réussie (Axel, 13/08 : « à chaque fois
+// qu'on a fini, ça ne se réinitialise pas complètement ») : le formulaire
+// repart à zéro DERRIÈRE la modale de résultat — la vidéo reste téléchargeable
+// (_mcLastUrl n'est pas touché), mais la prochaine visite est propre.
+function _mcResetAll(){
+  window._mcRefB64=null; window._mcCharB64=null; window._mcBgB64=null; window._mcPrompt='';
+  window._mcRefDur=0; window._mcCamFollow=false; window._mcKeepVidBg=false; window._mcFormat='9:16';
+  for (const [pv,dz] of [['mcRefPrev','mcRefDrop'],['mcCharPrev','mcCharDrop']]){
+    const v=document.getElementById(pv); if(v){ try{ v.pause&&v.pause(); v.removeAttribute('src'); }catch(_){ } v.style.display='none'; }
+    const z=document.getElementById(dz); if(z) [...z.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display=''; });
+  }
+  const s=document.getElementById('mcRefSub'); if(s) s.textContent='le mouvement à reproduire';
+  ['mcRefInput','mcCharInput','mcBgInput'].forEach(id=>{ const i=document.getElementById(id); if(i) i.value=''; });
+  const ta=document.getElementById('mcPromptTa'); if(ta) ta.value='';
+  if(typeof _mcUpdateCost==='function') _mcUpdateCost();
+}
 function _mcPick(input, which){ const f=input.files&&input.files[0]; if(f) _mcLoad(f,which); }
 function _mcDrop(e, which){ e.preventDefault(); if(e.currentTarget) e.currentTarget.style.borderColor='var(--border-2)'; const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) _mcLoad(f,which); }
 function _mcLoad(f, which){
@@ -24451,6 +24476,8 @@ function _mcShowResult(url, render){
     +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
     +'<div class="row" style="gap:10px"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button><button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
   m.style.display='flex';
+  // génération terminée → le formulaire repart à zéro derrière la modale
+  try{ _mcResetAll(); }catch(_){}
 }
 // #34 · le « télécharger » DOIT enregistrer le fichier. Un <a download> sur une
 // URL fal cross-origin (v3b.fal.media) est IGNORÉ par Safari → il OUVRE la vidéo
