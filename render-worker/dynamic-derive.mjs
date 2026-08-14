@@ -1105,8 +1105,23 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // l'image de la fille. On aligne donc le matching du nom sur celui des anims
     // (§2b) : égalité, OU le mot dit commence par le mot du nom (≥5 lettres), OU
     // l'inverse — jamais une sous-chaîne libre (le piège « IA » dans « SasIA »).
-    const matchNom = (mots, nw) => mots.some((m) =>
-      nw === m || (m.length >= 5 && nw.startsWith(m)) || (nw.length >= 5 && m.startsWith(nw)))
+    // …ET MÊME DERRIÈRE UNE ÉLISION (14/08) : « d'influenceuses » se normalise en
+    // « dinfluenceuses » — le d' collé faisait rater la 1re mention (10,3 s) et la
+    // photo partait s'ancrer sur « influenceuse » à 14,3 s, en plein mur. On essaie
+    // donc AUSSI la forme sans la consonne d'élision (d/l/j/m/n/s/t/c + voyelle).
+    const matchNom = (mots, nw) => {
+      const sansElision = /^[dljmnstc][aeiouy]/.test(nw) ? nw.slice(1) : ''
+      return mots.some((m) => [nw, sansElision].some((f) => f &&
+        (f === m || (m.length >= 5 && f.startsWith(m)) || (f.length >= 5 && m.startsWith(f)))))
+    }
+    // ⚠ DÉCOUPER AVANT DE NORMALISER (14/08) : norm() mange AUSSI les espaces et
+    // tirets — norm('influenceuse-ia-femme-brune') donnait UN token géant
+    // « influenceuseiafemmebrune », que seul le singulier exact « influenceuse »
+    // matchait par préfixe. La photo s'ancrait donc à 14,3 s (en plein mur) au
+    // lieu de 10,3 s « d'influenceuses ». On découpe le nom d'abord, on
+    // normalise chaque morceau ensuite.
+    const motsDuNom = (id) => String(id || '').split(/[^a-zA-Z0-9À-ſ]+/)
+      .map((x) => norm(x)).filter((x) => x.length > 3)
     // ── UN MÉDIA FOURNI EST TOUJOURS PLACÉ. LE CHEF CHOISIT L'INSTANT ─────────
     // Règle d'Axel (02/08) : « les médias que l'user envoie doivent être placés
     // à 100 %, le chef d'orchestre choisit juste le moment le plus propice ».
@@ -1120,14 +1135,20 @@ export function deriveDynamicSlides(plan, opts = {}) {
       for (const id of Object.keys(files)) {
         if (auPlan.has(id)) continue
         // Son NOM dit ce qu'il montre : c'est aussi ce qui indique QUAND.
-        const mots = norm(id).split(/[^a-z0-9]+/).filter((x) => x.length > 3)
+        const mots = motsDuNom(id)
         let quand = null
         if (/hook|intro|debut/.test(norm(id))) {
           quand = [0.4, Math.min(4.2, D)]                 // le hook : dès l'ouverture
         } else {
-          // le premier moment où la voix prononce un des mots de son nom
-          const w = words.find((x) => matchNom(mots, norm(x.text)))
-          if (w) quand = [r2(Math.max(0, w.start - LEAD)), r2(Math.min(D, w.start + 2.8))]
+          // le premier moment où la voix prononce un des mots de son nom — de
+          // préférence HORS accroche (≥ 5 s) : ancré dans le hook, le média se
+          // rend en médaillon minuscule alors que sa mention décrite plus loin
+          // lui donne le plein cadre (la brune sur « d'influenceuses », 10,3 s).
+          const w = words.find((x) => (x.start || 0) >= 5 && matchNom(mots, norm(x.text)))
+            || words.find((x) => matchNom(mots, norm(x.text)))
+          // +2,3 s et pas plus : à +2,8 la fenêtre avalait le créneau de la
+          // capture suivante (« génère une photo » à 12,64 s, écran Images IA).
+          if (w) quand = [r2(Math.max(0, w.start - LEAD)), r2(Math.min(D, w.start + 2.3))]
         }
         if (!quand || quand[1] - quand[0] < 1.2) continue
         ;(plan.broll = plan.broll || []).push({ start: quand[0], end: quand[1], assetId: id, __force: true })
@@ -1154,7 +1175,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const files2 = opts.assetFiles || {}
       for (const b of plan.broll || []) {
         if (!files2[b.assetId] || b.hook || b.__force) continue
-        const mots = norm(b.assetId).split(/[^a-z0-9]+/).filter((x) => x.length > 3)
+        const mots = motsDuNom(b.assetId)
         if (!mots.length) continue
         const prem = (plan.captions || []).find((w) => matchNom(mots, norm(String(w.text || ''))))
         if (!prem) continue
@@ -1190,7 +1211,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       for (const b of plan.broll || []) {
         if (!files[b.assetId] || b.hook || b.__force) continue
         if ((b.start || 0) >= 5) continue                 // déjà hors accroche → il se rendra en moyen tel quel
-        const mots = norm(b.assetId).split(/[^a-z0-9]+/).filter((x) => x.length > 3)
+        const mots = motsDuNom(b.assetId)
         if (!mots.length) continue
         const tard = caps.find((w) => (w.start || 0) >= 5 && matchNom(mots, norm(String(w.text || ''))))
         if (!tard) continue
@@ -1228,6 +1249,31 @@ export function deriveDynamicSlides(plan, opts = {}) {
         console.log(`▶ média avancé sur « ${cue.text} » : ${r2(b.start)}s → ${na}s (la voix le désigne)`)
         b.start = na
         if (b.end < na + 1.4) b.end = r2(na + 1.4)
+      }
+    }
+    // ── UN MÉDIA NOMMÉ PAR LA VOIX A DROIT À SON PANNEAU (chef-proof) ─────────
+    // Le chef change d'avis d'un run à l'autre : sur v7 il a mis les 7 médias en
+    // MÉDAILLON → plus de brune plein cadre sur « influenceuses IA » (10,3 s), et
+    // la vidéo « danser » repêchée en couche sur un écran à 21 s au lieu de plein
+    // cadre sur son mot (20,06 s). Garantie de dérivation : le média HÉROS
+    // (influenceus|brune|hero) et toute VIDÉO nommée obtiennent une entrée broll
+    // sur leur 1re mention ≥ 5 s s'ils n'en ont pas déjà une hors accroche —
+    // quoi que le chef ait décidé.
+    {
+      const estVid2 = (id) => /\.(mp4|mov|webm|m4v)$/i.test(String(files[id] || ''))
+      for (const id of Object.keys(files)) {
+        if (id === 'avatar' || /^avatar-\d+$/.test(id)) continue
+        const hero = /influenceus|brune|hero/i.test(id)
+        if (!hero && !estVid2(id)) continue
+        if ((plan.broll || []).some((b) => b.assetId === id && (b.start || 0) >= 4.5)) continue
+        const mots = motsDuNom(id)
+        if (!mots.length) continue
+        const w = (plan.captions || []).find((c) => (c.start || 0) >= 5 && matchNom(mots, norm(String(c.text || ''))))
+        if (!w) continue
+        const a2 = r2(Math.max(5, (w.start || 0) - LEAD))
+        const e2 = r2(Math.min(D, a2 + (estVid2(id) ? 1.6 : 2.9)))
+        ;(plan.broll = plan.broll || []).push({ assetId: id, start: a2, end: e2 })
+        console.log(`▶ média « ${id} » : panneau garanti sur « ${w.text} » (${a2}→${e2}s) — le chef l'avait laissé sans place`)
       }
     }
     const brut = (plan.broll || []).slice().sort((a, c) => (a.start || 0) - (c.start || 0))
@@ -1483,6 +1529,14 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // compteur de genre 120 secondes ». On convertit donc la durée parlée en
   // SECONDES : c'est l'unité qui rend la vitesse tangible (120 impressionne,
   // 2 non).
+  // C'est LE chemin canonique du chrono (le bloc « N secondes → chrono » d'en
+  // aval a été fusionné ici) : il rend le CAMEMBERT redessiné par Axel
+  // (ui:'timer' — disque orange qui suit l'aiguille, « 30 » + « sec »), jamais
+  // le vieux compteur nu. Et quand le nombre est dit DANS l'accroche (« en
+  // trente secondes top chrono »), on COUPE le hook pile sur lui : l'avatar
+  // ouvre, puis cède au chrono calé sur la phrase — sinon la fenêtre visage
+  // (au-dessus des panneaux) le couvrait et le chrono surgissait en retard,
+  // le « décalé » pointé par Axel sur v6 ET v7.
   {
     const UNITES = { seconde: 1, secondes: 1, minute: 60, minutes: 60, heure: 3600, heures: 3600 }
     for (let i = 1; i < words.length; i++) {
@@ -1493,11 +1547,29 @@ export function deriveDynamicSlides(plan, opts = {}) {
       const sec = n * u
       if (sec < 5 || sec > 86400) continue          // ni une pincée, ni une éternité
       const a = r2(Math.max(0, words[i - 1].start - LEAD))
-      const b = r2(Math.min(D, words[i].end + 1.5))
+      // fin de la fenêtre : on avale la suite contiguë (« top chrono », trou
+      // ≤ 0,35 s) et on S'ARRÊTE à la ponctuation de fin de phrase.
+      let k = i, finPhrase = words[i].end || a
+      while (words[k + 1] && !/[.!?]$/.test(String(words[k].text || ''))
+        && (words[k + 1].start - (words[k].end || 0)) <= 0.35
+        && words[k + 1].start < words[i - 1].start + 2.2) { k++; finPhrase = words[k].end || finPhrase }
+      const b = r2(Math.min(D, finPhrase + 0.7))
       if (b - a < 1.25) continue
-      if (add({ anim: 'countup', value: String(sec), unit: 'SECONDES',
-        items: [{ t: 0, text: String(sec) }] }, a, b)) {
-        console.log(`▶ « ${words[i - 1].text} ${words[i].text} » → compteur ${sec} SECONDES (${a}s)`)
+      // le nombre tombe dans la fenêtre du hook → on coupe le hook pile là
+      // (bornes réelles = hookWin, PAS seulement plan.hook.end : v7 avait
+      // hook.end=2,9 mais une fenêtre visage 0→3,93 qui couvrait le chrono).
+      const finFenetreHook = Math.max((plan.hook && plan.hook.end) || 0, hookWin ? hookWin.end : 0)
+      if (words[i - 1].start < finFenetreHook && a >= 1.3) {
+        if (plan.hook && plan.hook.end > a) plan.hook.end = a
+        const seg0c = (plan.avatarSegments || []).find((w) => (w.start || 0) < 0.6)
+        if (seg0c && (seg0c.end || 0) > a) seg0c.end = a
+        if (hookWin && hookWin.end > a) hookWin.end = a
+        const hkT = taken.find((w) => w[0] < 0.3 && w[1] > 1.2)
+        if (hkT && hkT[1] > a) hkT[1] = a
+        console.log(`▶ hook coupé sur « ${words[i - 1].text} » à ${a}s → le chrono joue en synchro`)
+      }
+      if (add({ anim: 'ui', ui: 'timer', value: String(sec), unit: 'SECONDES' }, a, b)) {
+        console.log(`▶ « ${words[i - 1].text} ${words[i].text} » → chrono ${sec} SECONDES (${a}→${b}s)`)
       }
     }
   }
@@ -2251,49 +2323,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // ignore) mais ils ne PASSENT PLUS DEVANT : `add()` refuse toute fenêtre déjà
   // réservée ci-dessus.
 
-  // ── LE CHRONO « N SECONDES » COUPE LE HOOK ET JOUE EN SYNCHRO ─────────────
-  // Axel (12/08) : « couper le hook sur trente ». « en trente secondes top
-  // chrono » est la PUNCHLINE du hook — c'est le chronomètre qu'il faut voir
-  // pile là, pas l'avatar qui la couvre. Piège mesuré : le mot-nombre tombe
-  // DANS le hook (réservé en §0, fin ~3,5 s, valeur choisie par Claude donc
-  // variable) → la fenêtre du timer [trente−lead … chrono] chevauchait le hook,
-  // et `add()` la rejetait ou la repoussait après. Résultat : le « 30 sec »
-  // décalé de ~2 s. La règle : quand le nombre est dans le hook, on COUPE le
-  // hook pile sur lui — l'avatar ouvre (« …je vais te montrer »), puis cède au
-  // chrono qui se remplit sur toute la phrase, calé au mot. On réserve ici,
-  // AVANT le remplissage visage (§2), pour que le chrono gagne son créneau.
-  for (let j = 0; j < words.length && words[j].start < 6; j++) {
-    const v = numOf(words[j].text)
-    const nx = words[j + 1] ? norm(words[j + 1].text) : ''
-    if (!(v > 0 && v <= 120 && (nx.startsWith('second') || nx.startsWith('minute')))) continue
-    const t0 = r2(Math.max(0, words[j].start - LEAD))
-    // fin de la phrase chrono : on avale « top chrono » (mots contigus, trou ≤ 0,35 s)
-    // et on S'ARRÊTE à la ponctuation de fin — sinon « chrono. La plupart des
-    // gens… » entrait dans la fenêtre et le chrono débordait sur l'idée suivante.
-    let k = j + 1, finPhrase = words[j + 1] ? (words[j + 1].end || t0) : t0
-    while (words[k + 1] && !/[.!?]$/.test(String(words[k].text || ''))
-      && (words[k + 1].start - (words[k].end || 0)) <= 0.35
-      && words[k + 1].start < words[j].start + 2.2) { k++; finPhrase = words[k].end || finPhrase }
-    const e = r2(Math.min(D, finPhrase + 0.7))
-    // le mot-nombre est DANS le hook → on coupe le hook pile là (on ne coupe que
-    // s'il reste une vraie ouverture ≥ 1,3 s ; le clip hook se re-génère plus court).
-    const finHook = (plan.hook && plan.hook.end) || 0
-    if (words[j].start < finHook && t0 >= 1.3) {
-      if (plan.hook) plan.hook.end = t0
-      const seg0 = (plan.avatarSegments || []).find((w) => (w.start || 0) < 0.6)
-      if (seg0 && (seg0.end || 0) > t0) seg0.end = t0
-      // ⚠ les BORNES finales de la fenêtre hook viennent de `hookWin` (§0), pas
-      // de seg0 : sans ce rognage, §3b la re-posait 0→fin de phrase et l'avatar
-      // (au-dessus des panneaux) recouvrait le chrono — le « sliver » de v6.
-      if (hookWin && hookWin.end > t0) hookWin.end = t0
-      const hk = taken.find((w) => w[0] < 0.3 && w[1] > 1.2)
-      if (hk && hk[1] > t0) hk[1] = t0
-      console.log(`▶ hook coupé sur « ${words[j].text} » à ${t0}s → le chrono ${v} joue en synchro`)
-    }
-    if (add({ anim: 'ui', ui: 'timer', value: String(v), unit: nx.startsWith('minute') ? 'MINUTES' : 'SECONDES' }, t0, e))
-      console.log(`▶ chrono ${v} ${nx.startsWith('minute') ? 'MINUTES' : 'SECONDES'} : ${t0}→${e}s`)
-    break
-  }
+  // (le chrono « N secondes » vit en §0a-ter : camembert ui:'timer' + coupe du
+  //  hook sur le mot-nombre — fusionné là-bas pour qu'un seul chemin existe ;
+  //  avant la fusion, l'ancien compteur nu de §0a-ter réservait la fenêtre en
+  //  premier et ce bloc-ci ne se posait jamais — le « 27 SECONDES » plat de v7.)
 
   // « avec cette qualité-là » → la photo témoin plein écran (montrer le résultat au hook)
   {
