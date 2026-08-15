@@ -246,6 +246,65 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 // client en fait ensuite n'est pas dans la spec, c'est son affaire.
 // On ne peut pas embarquer le fichier : un montage pèse 20 Mo, impensable en
 // base64 dans un résultat d'outil. Le lien, lui, coûte trois lignes.
+// ── MCP APPS · LE VIEWER MÉDIA (#79) ────────────────────────────────────────
+// claude.ai pré-charge ce template via resources/read (l'URI déclarée dans
+// _meta.ui.resourceUri) puis l'affiche en iframe et lui pousse le résultat de
+// l'outil par postMessage (`ui-lifecycle-iframe-render-data`). Le média vient
+// de structuredContent { url, kind, name } — avec repli sur le texte du
+// résultat si un hôte ne transmet que le contenu brut.
+const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
+  html,body{margin:0;background:transparent}
+  .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
+    background:#fff;color:#1a1a1a;max-width:560px}
+  .aa-m{width:100%;display:block;background:#000;max-height:74vh;object-fit:contain}
+  .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
+    border-top:1px solid rgba(128,128,128,.22)}
+  .aa-n{font-size:12.5px;font-weight:600;opacity:.9}
+  .aa-a{font-size:13px;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:10px;line-height:1;white-space:nowrap}
+  .aa-dl{background:#FF5A1F;color:#fff}
+  .aa-op{background:rgba(128,128,128,.16);color:inherit}
+  @media (prefers-color-scheme:dark){
+    .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
+    .aa-b{border-top-color:rgba(255,255,255,.12)}
+    .aa-op{background:rgba(255,255,255,.14)}
+  }
+</style></head><body>
+<div class="aa-c" id="c" style="display:none"><div id="m"></div>
+<div class="aa-b"><span class="aa-n" id="n"></span><span style="flex:1"></span>
+<a class="aa-a aa-dl" id="dl" download>Télécharger</a>
+<a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
+<script>
+function aaShow(rd){
+  try{
+    var out = (rd && (rd.toolOutput || rd.toolResult)) || {};
+    var sc = out.structuredContent || out;
+    var url = sc.url || '', kind = sc.kind || '', name = sc.name || '';
+    if(!url && out.content){ for (var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\s)\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
+    if(!url) return;
+    var v = kind==='video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
+    document.getElementById('m').innerHTML = v
+      ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
+      : '<a href="'+url+'" target="_blank" rel="noopener"><img src="'+url+'" alt="" class="aa-m"/></a>';
+    document.getElementById('n').textContent = name || (v ? 'Vidéo' : 'Image');
+    document.getElementById('dl').href = url;
+    document.getElementById('op').href = url;
+    document.getElementById('c').style.display = 'block';
+  }catch(e){}
+}
+window.addEventListener('message', function(e){
+  var d = e.data || {};
+  if(d.type === 'ui-lifecycle-iframe-render-data' && d.payload) aaShow(d.payload.renderData);
+});
+window.parent.postMessage({ type: 'ui-lifecycle-iframe-ready' }, '*');
+</script></body></html>`
+
+const UI_RESOURCES = ['image.png', 'video.mp4', 'avatar.mp4', 'montage.mp4'].map((n) => ({
+  uri: `ui://avatarads/${n}`,
+  name: `Viewer ${n}`,
+  mimeType: 'text/html;profile=mcp-app',
+}))
+
 const carteHtml = (url: string, nom: string, mime: string) => {
   const video = mime.startsWith('video')
   // Contrastes : la premiere version posait un libelle a 65 % d'opacite et un
@@ -330,7 +389,8 @@ const toolMedia = async (url: string, nom: string, mime: string, texte: string, 
     ? `\n\nAffiche l'aperçu dans ta réponse en écrivant exactement :\n![aperçu](${apercuUrl})\n[▶ Voir la vidéo](${url})`
     : ''
   contenu.push({ type: 'text', text: texte + consigne })
-  return { content: contenu }
+  return { content: contenu,
+    structuredContent: { url, kind: estVideo ? 'video' : 'audio', name: nom } }
 }
 
 // ── Définition des outils ──
@@ -697,7 +757,8 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     }
     const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
 URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}` }
-    return { content: vignette ? [vignette, widget, texte] : [widget, texte] }
+    return { content: vignette ? [vignette, widget, texte] : [widget, texte],
+      structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
   return toolText(
@@ -1991,7 +2052,7 @@ serve(async (req) => {
       const supported = ['2025-06-18', '2025-03-26', '2024-11-05']
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
-        capabilities: { tools: { listChanged: false } },
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
         // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
         // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
         serverInfo: {
@@ -2011,7 +2072,14 @@ serve(async (req) => {
     }
     if (method === 'ping') return rpcResult(id, {})
     if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(isUnlimited(profile), ctx.requireConfirm) })
-    if (method === 'resources/list') return rpcResult(id, { resources: [] })
+    if (method === 'resources/list') return rpcResult(id, { resources: UI_RESOURCES })
+    if (method === 'resources/read') {
+      const uri = String(params?.uri || '')
+      if (uri.startsWith('ui://avatarads/')) {
+        return rpcResult(id, { contents: [{ uri, mimeType: 'text/html;profile=mcp-app', text: UI_VIEWER_HTML }] })
+      }
+      return rpcError(id, -32002, 'Ressource inconnue : ' + uri)
+    }
     if (method === 'prompts/list') return rpcResult(id, { prompts: [] })
     if (method === 'tools/call') {
       const name = String(params.name || '')
