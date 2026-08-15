@@ -523,6 +523,18 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         try { const g = await genererFenetresG(plan, proj, jobDir, avatarClips); if (g) console.log(`▶ ${g} fenêtre(s) générée(s) après dérivation`) }
         catch (e) { console.warn('fenêtres G :', e.message) }
       }
+      // #136 · CADRAGE FACE-AWARE DU SPLIT (Axel 15/08 : « l'avatar est beaucoup
+      // trop bas, mets-le beaucoup plus haut, dans la safe zone au centre ») :
+      // la position du visage varie d'un clip à l'autre — un biais fixe coupe le
+      // crâne sur l'un et noie le visage sur l'autre. Même détection que le
+      // Motion Control (#120) : une frame, gpt-4o, une box → object-position.
+      for (const w of (plan.avatarSegments || [])) {
+        if (!w.split) continue
+        try {
+          const p = await cadrageVisageSplit(w, proj, avatarClips)
+          if (p != null) { w.faceP = p; console.log(`▶ #136 : visage du split calé (object-position ${Math.round(p * 100)}%)`) }
+        } catch (e) { console.warn('cadrage face-aware :', e.message) }
+      }
       // ── ROTATION DES VISAGES SUR LES FENÊTRES-PHOTO (#84) ────────────────────
       // Chaque fenêtre qui montrera la PHOTO (pas un clip lipsync généré) pioche
       // l'image suivante du pool — le hook prend la 1re, la fenêtre d'après la
@@ -1231,6 +1243,52 @@ function trancherFenetres(plan) {
 // trou de 38 s : la photo figée « lisait comme un bug » — Axel). Elle la marque
 // clip:'G0' ; on la génère ici, APRÈS dérivation, même quand les clips du job
 // sont fournis — même cache par contenu que le reste : payé UNE fois.
+
+// #136 · position verticale du crop (0..1) pour la moitié basse du split : on
+// détecte le visage sur UNE frame (clip lipsync sinon photo) et on vise le
+// cadrage standard — centre du visage à 32 % de la bande visible (la même
+// règle que le cadrage auto du Motion Control). null = détection impossible,
+// le moteur garde son biais par défaut.
+async function cadrageVisageSplit(w, proj, avatarClips) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  const clipRel = Number.isInteger(w.clip) && w.clip >= 0 ? avatarClips['av' + w.clip] : null
+  let src = clipRel && existsSync(join(proj, clipRel)) ? join(proj, clipRel) : null
+  const isVid = !!src
+  if (!src) {
+    const ph = String(w.photo || '')
+    src = ph && existsSync(join(proj, ph)) ? join(proj, ph)
+      : existsSync(join(proj, 'avatar.png')) ? join(proj, 'avatar.png') : null
+  }
+  if (!src) return null
+  const frame = join(proj, '_split-face.jpg')
+  execFileSync('ffmpeg', isVid
+    ? ['-v', 'error', '-y', '-ss', '0.6', '-i', src, '-frames:v', '1', '-vf', 'scale=560:-2', frame]
+    : ['-v', 'error', '-y', '-i', src, '-frames:v', '1', '-vf', 'scale=560:-2', frame])
+  const dims = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
+    '-show_entries', 'stream=width,height', '-of', 'csv=p=0', src]).toString().trim().split(',').map(Number)
+  const [vw, vh] = dims.length >= 2 && dims[0] > 0 ? dims : [1080, 1920]
+  const b64 = 'data:image/jpeg;base64,' + readFileSync(frame).toString('base64')
+  try { rmSync(frame, { force: true }) } catch (_) {}
+  const body = { model: 'gpt-4o', max_tokens: 80, temperature: 0, messages: [{ role: 'user', content: [
+    { type: 'text', text: 'Give ONLY a compact JSON object with keys x, y, w, h = the bounding box of the MAIN person face and head as fractions from 0 to 1 (x,y = top-left corner, w,h = width and height). Example: {"x":0.42,"y":0.30,"w":0.16,"h":0.20}. If there is no clear human face, output {"none":true}. Output JSON only, no other text.' },
+    { type: 'image_url', image_url: { url: b64 } } ] }] }
+  const r = await fetch(url + '/functions/v1/openai-proxy?path=' + encodeURIComponent('/v1/chat/completions'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key },
+    body: JSON.stringify(body) })
+  if (!r.ok) return null
+  const d = await r.json().catch(() => ({}))
+  const m = String(d?.choices?.[0]?.message?.content || '').match(/\{[\s\S]*\}/)
+  if (!m) return null
+  const j = JSON.parse(m[0])
+  if (j.none || typeof j.y !== 'number' || typeof j.h !== 'number') return null
+  // bande visible = cover de la source dans une moitié 1080×960
+  const bandFrac = Math.min(1, (vw / vh) / (1080 / 960))
+  if (bandFrac >= 0.999) return null
+  const fy = Math.max(0, Math.min(1, j.y + j.h / 2))
+  return Math.max(0, Math.min(1, (fy - 0.32 * bandFrac) / (1 - bandFrac)))
+}
+
 async function genererFenetresG(plan, proj, jobDir, avatarClips) {
   const fen = (plan.avatarSegments || []).filter((w) => /^G\d+$/.test(String(w.clip)))
   if (!fen.length) return 0

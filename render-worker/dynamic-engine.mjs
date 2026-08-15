@@ -86,7 +86,7 @@ function buildPanels(plan, D) {
       .map((s) => ({ kind: 'content', t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
-      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil } })),
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil, faceP: s.faceP } })),
   ].sort((a, b) => a.t0 - b.t0)
 
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
@@ -734,11 +734,14 @@ export function buildDynamicComposition(plan, opts = {}) {
         // clip — lui reste calé sur SES mots, la photo porte l'attente
         const cAt = r2(Math.max(liveT0, p.slide.clipAt ?? liveT0))
         const cEnd = r2(Math.min(D, (p.slide.clipUntil ?? t1) + 0.45))
+        // face-aware (#136) : le worker a détecté le visage → object-position
+        // exact ; sans détection, 5 % (de l'air au-dessus de la tête)
+        const fp = p.slide.faceP != null ? Math.round(Math.max(0, Math.min(1, p.slide.faceP)) * 100) : 5
         const still = String(p.slide.photo || '') || avatarStill
         const botEl = src
-          ? `<div id="${id}avp" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% 5%/cover"></div>
-        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% 5%"></video>`
-          : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% 5%/cover"></div></div>`
+          ? `<div id="${id}avp" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% ${fp}%/cover"></div>
+        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
+          : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% ${fp}%/cover"></div></div>`
         inner += topEl + botEl
           + `<div style="position:absolute;left:0;top:${HH - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
         // entrées en ciseaux : le haut glisse d'en haut, le bas d'en bas
