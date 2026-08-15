@@ -835,7 +835,12 @@ export function buildComposition(plan, opts = {}) {
       tl.to('#zoomInner', { scale: 1, duration: ${down}, ease: 'power2.inOut' }, ${r2(t + up + hold)});`
   }).join('')
 
-  const brollJs = brolls.map((b) => (b.hero ? `
+  const brollJs = brolls.map((b) => ((wordMode && hasWordHook && b.start < hookCapEndW) ? `
+      tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power1.out' }, ${b.start});
+      tl.fromTo('#${b.id} .broll-card', { y: ${Math.round(H * 0.1)}, scale: 0.86, autoAlpha: 0 },
+        { y: 0, scale: 1, autoAlpha: 1, duration: 0.3, ease: 'power4.out' }, ${b.start});
+      tl.to('#${b.id} .broll-card img', { scale: 1.2, duration: ${r2(Math.max(0.5, b.dur - 0.34))}, ease: 'none', transformOrigin: '50% 18%' }, ${r2(b.start + 0.3)});
+      tl.to('#${b.id}', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(b.start + b.dur - 0.22)});` : b.hero ? `
       tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'power1.out' }, ${b.start});
       tl.fromTo('#${b.id} .broll-card', { y: ${Math.round(H * 0.16)}, scale: 0.82, autoAlpha: 0 },
         { y: 0, scale: 1, autoAlpha: 1, duration: 0.28, ease: 'power4.out' }, ${b.start});
@@ -1062,13 +1067,16 @@ export function buildComposition(plan, opts = {}) {
         text-shadow: 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62),
           0 ${Math.round(H * 0.0012)}px ${Math.round(H * 0.004)}px rgba(0,0,0,.5);
         will-change: transform, opacity; }
-      .whk-w.acc { color: #FFFFFF;
+      .whk-w.acc { color: #FFFFFF; font-size: 1.2em;
         text-shadow: 0 0 ${Math.round(H * 0.009)}px rgba(255,40,60,1), 0 0 ${Math.round(H * 0.024)}px rgba(255,16,44,1),
           0 0 ${Math.round(H * 0.05)}px rgba(235,0,40,.9), 0 0 ${Math.round(H * 0.09)}px rgba(210,0,38,.62),
           0 0 ${Math.round(H * 0.13)}px rgba(185,0,34,.4); }
       /* la photo du hook vit EN HAUT, réduite — les mots ne la touchent jamais */
-      .broll.hkm { align-items: flex-start; padding-top: ${Math.round(H * 0.055)}px; background: transparent; }
-      .broll.hkm .broll-card, .broll.hkm .broll-card img { max-height: ${Math.round(H * 0.42)}px; }
+      /* !important : le style word reformate les cartes médias (50/50) avec plus
+         de spécificité — sans lui la photo du hook redescendait sur les mots */
+      .broll.hkm { align-items: flex-start !important; padding-top: ${Math.round(H * 0.03)}px !important; background: transparent; }
+      .broll.hkm .broll-card { max-height: ${Math.round(H * 0.48)}px !important; overflow: hidden; }
+      .broll.hkm .broll-card img { max-height: ${Math.round(H * 0.48)}px !important; will-change: transform; }
 
       /* Sous-titres Punch : un mot, énorme, blanc (ou orange accent), gros contour noir */
       .cap {
