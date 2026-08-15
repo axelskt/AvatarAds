@@ -447,7 +447,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête. Si toujours en cours, rappelle cet outil ~20 secondes plus tard.",
+      description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
         properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_image.' } },
@@ -740,11 +740,12 @@ async function attendreJob(jobId: string, userId: string, kind: string) {
 // Un « en cours » ne doit JAMAIS pouvoir se lire comme une panne : c'est
 // exactement l'erreur commise par le client le 30/07/2026. On le dit en toutes
 // lettres dans la réponse, parce que c'est le modèle en face qui décide.
-const enCours = (etat: string, outil: string, delai: string) =>
+const enCours = (etat: string, outil: string, _delai: string) =>
   toolText(`⏳ ${etat}
 CE N'EST PAS UNE ERREUR : le serveur répond normalement, le travail tourne encore.
-Attends ${delai}, puis rappelle ${outil} avec le même job_id. N'annonce jamais une panne
-tant que le statut n'est pas explicitement « échoué ».`)
+Rappelle ${outil} avec le même job_id IMMÉDIATEMENT, sans attendre : le serveur
+retient chaque vérification ~20 secondes de son côté (long-poll), c'est lui qui
+fait l'attente. N'annonce jamais une panne tant que le statut n'est pas « échoué ».`)
 
 async function runCheckImage(profile: Record<string, unknown>, args: Record<string, unknown>) {
   const jobId = String(args.job_id || '').trim()
