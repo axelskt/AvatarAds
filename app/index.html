@@ -24760,19 +24760,41 @@ async function _mcGenerate(){
    moyen fiable — Kling reproduit le décor de l'IMAGE, jamais celui du prompt. */
 function _mcFrameFromVideo(b64){
   return new Promise((res, rej)=>{
+    // ⚠ Fiabilité (bug fond MC du 15/08) : une <video> HORS du DOM ne décode pas
+    // toujours et `onseeked` ne se déclenche pas sur certaines vidéos iPhone →
+    // la promesse restait pendante et le fond n'était jamais appliqué. On ATTACHE
+    // la vidéo (invisible) au DOM, et on DESSINE dès qu'une frame est prête —
+    // sur seeked OU sur un repli chronométré — au lieu d'attendre onseeked seul.
     const v=document.createElement('video');
-    v.muted=true; v.playsInline=true; v.preload='auto'; v.src=b64;
-    const ko=setTimeout(()=>rej(new Error('frame vidéo : délai')), 12000);
-    v.onerror=()=>{ clearTimeout(ko); rej(new Error('vidéo illisible')); };
-    v.onloadeddata=()=>{ try{ v.currentTime=Math.min(0.6,(v.duration||2)*0.15); }catch(e){ clearTimeout(ko); rej(e); } };
-    v.onseeked=()=>{
+    v.muted=true; v.playsInline=true; v.preload='auto'; v.crossOrigin='anonymous';
+    v.setAttribute('muted',''); v.setAttribute('playsinline','');
+    v.style.cssText='position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+    document.body.appendChild(v);
+    let done=false;
+    const fin=()=>{ try{ v.pause(); }catch(_){} try{ v.remove(); }catch(_){} };
+    const draw=()=>{
+      if(done) return;
+      if(!v.videoWidth){ return; }               // pas encore de frame décodée
+      done=true; clearTimeout(ko);
       try{
         const cv=document.createElement('canvas');
-        cv.width=v.videoWidth||720; cv.height=v.videoHeight||1280;
-        cv.getContext('2d').drawImage(v,0,0);
-        clearTimeout(ko); res(cv.toDataURL('image/jpeg',0.92));
-      }catch(e){ clearTimeout(ko); rej(e); }
+        cv.width=v.videoWidth; cv.height=v.videoHeight;
+        cv.getContext('2d').drawImage(v,0,0,cv.width,cv.height);
+        const url=cv.toDataURL('image/jpeg',0.92); fin();
+        (url && url.length>2000) ? res(url) : rej(new Error('frame vide'));
+      }catch(e){ fin(); rej(e); }
     };
+    const ko=setTimeout(()=>{ if(!done){ done=true; fin(); rej(new Error('frame vidéo : délai')); } }, 12000);
+    v.onerror=()=>{ if(!done){ done=true; clearTimeout(ko); fin(); rej(new Error('vidéo illisible')); } };
+    v.onseeked=draw;
+    v.onloadeddata=()=>{
+      // tente un seek court ; si onseeked ne vient pas (iPhone), le repli dessine
+      try{ v.currentTime=Math.min(0.6,(v.duration||2)*0.12); }catch(_){ }
+      setTimeout(draw, 400); setTimeout(draw, 1200);
+    };
+    v.src=b64;
+    // certains navigateurs n'émettent loadeddata qu'après un play() muet
+    v.play().catch(()=>{});
   });
 }
 /* ── Fond : détoure le perso (fal birefnet Portrait) + l'incruste sur le fond ── */
