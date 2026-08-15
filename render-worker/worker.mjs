@@ -351,8 +351,11 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
           // cadence est un multiple entier de la source, il n'y a plus rien à
           // inventer. (60 serait PIRE que 30 : 25→60 donne 60 tenues de 2 et
           // 40 de 3, soit 40 % d'irrégularité contre 20 %.)
+          // même marge tpad que la découpe : le moteur fait jouer le clip +0,45 s
+          // pendant la poussée du panneau suivant — sans réserve, le garde
+          // HyperFrames refuse (« captured 104 of expected 112 frames »)
           execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', join(avatarDir, f),
-            '-vf', `scale='min(1080,iw)':-2,fps=${FPS}`, '-an',
+            '-vf', `scale='min(1080,iw)':-2,tpad=stop_mode=clone:stop_duration=1.2,fps=${FPS}`, '-an',
             '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', String(FPS),
             '-movflags', '+faststart', join(proj, 'media', id + '.mp4')])
           avatarClips[id] = 'media/' + id + '.mp4'
