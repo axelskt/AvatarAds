@@ -273,7 +273,7 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
     .aa-op{background:rgba(255,255,255,.14)}
   }
 </style></head><body>
-<div class="aa-c" id="c" style="display:none"><div id="m"></div>
+<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div>
 <div class="aa-b"><span class="aa-n" id="n"></span><span style="flex:1"></span>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
 <a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
@@ -295,7 +295,7 @@ function aaShow(out){
     document.getElementById('n').textContent = name || (v ? 'Vidéo' : 'Image');
     document.getElementById('dl').href = url;
     document.getElementById('op').href = url;
-    document.getElementById('c').style.display = 'block';
+    document.getElementById('m').style.padding = '0';
   }catch(e){}
 }
 function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
@@ -2089,6 +2089,7 @@ serve(async (req) => {
   const id = 'id' in msg ? msg.id : undefined
   const method = String(msg.method || '')
   const params = (msg.params || {}) as Record<string, unknown>
+  console.log('[mcp]', method || '(sans méthode)', '· id:', String(id), '· ua:', (req.headers.get('user-agent') || '?').slice(0, 40), keyErr ? '· keyErr' : '')
 
   // Notifications (pas d'id) → accusé de réception sans corps
   if (id === undefined) return new Response(null, { status: 202, headers: cors })
@@ -2160,6 +2161,7 @@ serve(async (req) => {
       else return rpcError(id, -32602, `Outil inconnu : ${name}`)
       return rpcResult(id, out)
     }
+    console.log('[mcp] méthode non supportée :', method)
     return rpcError(id, -32601, `Méthode non supportée : ${method}`)
   } catch (e) {
     console.error('mcp error:', e)
