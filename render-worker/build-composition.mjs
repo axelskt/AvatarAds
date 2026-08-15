@@ -205,7 +205,9 @@ export function buildComposition(plan, opts = {}) {
           slides.push({ type: 'card', anim: 'screen', start, end, screen: String(w.screen),
             screenText: String(w.screenText || ''),
             screenZoom: w.screenZoom, screenX: w.screenX, screenY: w.screenY,
-            boxX: w.boxX, boxY: w.boxY, boxW: w.boxW, boxH: w.boxH, items: [] })
+            screenZoom2: w.screenZoom2, screenX2: w.screenX2, screenY2: w.screenY2,
+            boxX: w.boxX, boxY: w.boxY, boxW: w.boxW, boxH: w.boxH,
+            boxX2: w.boxX2, boxY2: w.boxY2, boxW2: w.boxW2, boxH2: w.boxH2, items: [] })
         } else if (w.kind === 'ui') {
           // les scènes vectorielles du moteur dynamique (timer, navigateur+LP…)
           // jouent aussi sur la page blanche — même contrat { html, js, sfx }

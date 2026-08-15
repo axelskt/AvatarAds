@@ -711,7 +711,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // le visage qui affleure — jamais un noir (le « blink » sombre de v11)
         const bot = (src
           ? `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>
-             <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+             <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
           : `<div id="${id}av" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>`)
         inner += bot
         const cw = Math.round(W * 0.64), ch = Math.round(cw * 9 / 16)
@@ -754,7 +754,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // …et la PHOTO reste posée dessous : un clip qui s'éteint un souffle
         // avant la fin de la poussée laisse le visage, jamais un noir.
         inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(String(p.slide.photo || '') || avatarStill)}') center 38%/cover"></div>
-          <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+          <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
       } else {
         // UNE PHOTO PAR FENÊTRE, PAS UNE POUR TOUTE LA VIDÉO. Axel : « 2 avatars
         // principaux différents ». Le hook et le CTA sont deux moments distincts ;
@@ -1283,9 +1283,14 @@ export function buildDynamicComposition(plan, opts = {}) {
       // clair (médias, alternance impaire), le blanc se lavait (vu à 23 s de la
       // v14). Même règle de tone que le compositeur de panneaux ; en apple tous
       // les panneaux sont clairs, la règle d'origine reste.
-      const panClair = pan && pan.kind !== 'avclip'
+      // v17b (Axel : « pas fan des sous-titres noirs, on voit rien ») : un panneau
+      // « clair » qui porte une CAPTURE d'app est en réalité sombre à l'endroit du
+      // texte (l'UI AvatarAds est noire) — l'encre reste blanche sur les écrans.
+      const surEcran = pan && pan.slide
+        && (pan.slide.screen || pan.slide.anim === 'screen' || pan.slide.anim === 'ui')
+      const panClair = !surEcran && pan && pan.kind !== 'avclip'
         && (pan.kind === 'media' || pan.kind === 'medias' || panels.indexOf(pan) % 2 === 1)
-      g.sombre = ap ? (!pan || pan.kind === 'avclip') : !panClair
+      g.sombre = ap ? (!pan || pan.kind === 'avclip' || surEcran) : !panClair
       // l'ancre est celle de la PHRASE (v17) : tous les groupes d'une même phrase
       // s'accumulent au même endroit — c'est la phrase suivante qui se déplace.
       // Un panneau au-dessus → ancres basses seulement ; visage plein cadre → tout.
