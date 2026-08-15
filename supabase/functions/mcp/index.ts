@@ -464,17 +464,15 @@ const carteHtml = (url: string, nom: string, mime: string) => {
 // cf. anthropics/claude-ai-mcp#238 — on contourne, on ne re-creuse pas).
 // La vidéo n'a pas de bloc MCP : sa VIGNETTE (mcp_jobs.preview_url, 640 px)
 // joue ce rôle, et le fil affiche vignette-image + lien cliquable vers le MP4.
-const toolMedia = async (url: string, nom: string, mime: string, texte: string, apercuUrl?: string): Promise<ToolContent> => {
-  const contenu: Array<Record<string, unknown>> = []
+const toolMedia = async (url: string, nom: string, mime: string, texte: string, _apercuUrl?: string): Promise<ToolContent> => {
+  // ⚠ Comme check_image : PAS de bloc image/vignette — texte + structuredContent
+  // seulement, sinon claude.ai n'ouvre jamais le widget (pattern du serveur MCP
+  // Apps de référence). Le widget lit structuredContent.url et joue la vidéo.
   const estVideo = mime.startsWith('video/')
-  const vignette = apercuUrl ? await blocImage(apercuUrl) : null
-  if (vignette) contenu.push(vignette)
-  contenu.push({ type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom })
   const consigne = estVideo
-    ? `\n\nDonne l'URL en lien cliquable [▶ Voir la vidéo](${url}). Ne tente PAS de l'afficher en markdown ni dans un artifact (le bac à sable bloque les URL externes).`
+    ? `\n\nDonne l'URL en lien cliquable [▶ Voir la vidéo](${url}). N'affiche PAS la vidéo en markdown ni en artifact (le bac à sable bloque les URL externes) — la carte + le lien suffisent.`
     : ''
-  contenu.push({ type: 'text', text: texte + consigne })
-  return { content: contenu,
+  return { content: [{ type: 'text', text: texte + consigne }],
     structuredContent: { url, kind: estVideo ? 'video' : 'audio', name: nom } }
 }
 
@@ -832,11 +830,14 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     // TOUJOURS dans la carte de l'outil, comme chez les intégrations concurrentes.
     // (Le markdown ![image](url externe) ne rend PAS dans claude.ai — on a
     // arrêté de le demander : c'était lu comme « l'image arrive en lien ».)
-    const vignette = await blocImage(String(job.preview_url || job.result_url))
-    const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
-URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}
-Ne tente PAS d'afficher l'image en markdown ni dans un artifact (le bac à sable bloque les URL externes) — le lien cliquable suffit.` }
-    return { content: vignette ? [vignette, texte] : [texte],
+    // ⚠ PAS de bloc `type:image` ici : le serveur MCP Apps de référence renvoie
+    // UNIQUEMENT texte + structuredContent (+ _meta.ui). Un bloc image court-
+    // circuite claude.ai (il l'affiche replié et ne rend JAMAIS le widget → carte
+    // qui ne s'ouvre pas, constat 16/08). Le widget lit structuredContent.url.
+    const texte = { type: 'text', text: `✅ Image prête ! Elle s'affiche dans la carte ci-dessus.
+Lien pleine résolution (donne-le en lien cliquable) : ${job.result_url}
+N'affiche PAS l'image en markdown ni en artifact (le bac à sable bloque les URL externes) — la carte + le lien suffisent.` }
+    return { content: [texte],
       structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
