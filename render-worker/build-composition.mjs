@@ -471,6 +471,35 @@ export function buildComposition(plan, opts = {}) {
   }
   const hasCta = wordMode && ctaWords.length >= 3
 
+  // ── HOOK MOT-À-MOT v2 (Axel, 15/08 : « le hook ne retient pas assez
+  // l'attention — reprends l'écriture du hook d'anim', plusieurs mots comme au
+  // CTA, une animation de bas en haut pour chaque mot, une transition sur le
+  // mot important, des bruitages ») : pendant l'accroche les mots s'ACCUMULENT
+  // en Anton dégradé or (la palette hk1 validée), chaque mot MONTE depuis le
+  // bas à son instant, les mots forts claquent plus gros en dégradé rouge avec
+  // un pop — et tout le bloc s'efface d'un souffle à la fin du hook.
+  // le bloc court jusqu'à la FIN DE LA PHRASE du hook, pas jusqu'au hook.end du
+  // chef (3,5 s coupait « secondes top chrono. » en plein vol)
+  let hookCapEndW = r2(plan.hook?.end ?? Math.min(4, D))
+  for (const c of (plan.captions || [])) {
+    const t = String(c.text || '').trim()
+    if (!t || c.start < hookCapEndW - 0.05) continue
+    if (c.start > hookCapEndW + 1.6) break
+    hookCapEndW = r2(Math.max(hookCapEndW, c.end))
+    if (/[.!?]$/.test(t)) break
+  }
+  const hookWords = wordMode
+    ? (plan.captions || []).filter((c) => String(c.text || '').trim() && c.start < hookCapEndW)
+      .map((c, i) => ({ id: 'whk' + i, text: String(c.text).trim(), t: r2(c.start), accent: !!c.accent }))
+    : []
+  const hasWordHook = hookWords.length >= 3
+  if (hasWordHook) {
+    for (const w of hookWords) {
+      if (w.accent) plan.sfx = [...(plan.sfx || []), { kind: 'mo-pop-2', t: w.t, vol: 0.55 }]
+    }
+    plan.sfx = [...(plan.sfx || []), { kind: 'mo-whoosh-1', t: r2(Math.max(0, hookCapEndW - 0.22)), vol: 0.45 }]
+  }
+
   // ── sous-titres Punch : top par mot selon le mode actif à son timestamp ──
   const subSize = Math.round(H * 0.052)
   const subStroke = Math.max(4, Math.round(subSize * 0.16))
@@ -525,6 +554,8 @@ export function buildComposition(plan, opts = {}) {
     .filter((c) => !inEmoji(r2(c.start) + 0.05))
     // les mots du CTA sont remplacés par la phrase entière
     .filter((c) => !(hasCta && c.start >= ctaStart))
+    // …et ceux du hook par le bloc accumulé façon hk15 (hook mot-à-mot v2)
+    .filter((c) => !(hasWordHook && c.start < hookCapEndW))
 
 
   // anti-doublon : un BANDEAU qui recouvre le hook affiche deja la meme phrase en plus gros
@@ -567,6 +598,31 @@ export function buildComposition(plan, opts = {}) {
       <div class="clip" id="hook" data-start="${hook.start}" data-duration="${hook.dur}" data-track-index="4">
         <div class="hook-box">${esc(hook.text)}</div>
       </div>` : ''
+
+  // le hook se lit PHRASE PAR PHRASE (19 mots d'un bloc débordaient sur le
+  // chrono) : chaque phrase s'accumule puis cède la place à la suivante
+  const whkPhr = []
+  {
+    let cur = []
+    for (const w of hookWords) {
+      cur.push(w)
+      if (/[.!?,]$/.test(w.text) && cur.length >= 3) { whkPhr.push(cur); cur = [] }
+    }
+    if (cur.length) { if (cur.length < 3 && whkPhr.length) whkPhr[whkPhr.length - 1].push(...cur); else whkPhr.push(cur) }
+  }
+  const whkHtml = hasWordHook ? whkPhr.map((ph, k) => {
+    const a = r2(Math.max(0, ph[0].t - 0.05))
+    const b = r2(k + 1 < whkPhr.length ? whkPhr[k + 1][0].t - 0.04 : hookCapEndW)
+    return `
+      <div class="clip whk" data-start="${a}" data-duration="${r2(Math.max(0.3, b - a))}" data-track-index="7"><span class="whk-in" id="whkIn${k}">${ph.map((w) => `<i class="whk-w${w.accent ? ' acc' : ''}" id="${w.id}">${esc(w.text)}</i>`).join(' ')}</span></div>`
+  }).join('') : ''
+  const whkJs = hasWordHook ? whkPhr.map((ph, k) => {
+    const b = r2(k + 1 < whkPhr.length ? whkPhr[k + 1][0].t - 0.04 : hookCapEndW)
+    return ph.map((w) => (w.accent ? `
+      tl.fromTo('#${w.id}', { yPercent: 84, autoAlpha: 0, scale: 1.55 }, { yPercent: 0, autoAlpha: 1, scale: 1.06, duration: 0.24, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${w.t});` : `
+      tl.fromTo('#${w.id}', { yPercent: 70, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.2, ease: 'power3.out', transformOrigin: '50% 100%' }, ${w.t});`)).join('') + `
+      tl.to('#whkIn${k}', { autoAlpha: 0, y: -30, duration: 0.18, ease: 'power2.in' }, ${r2(Math.max(0.2, b - 0.2))});`
+  }).join('') : ''
 
   // scènes UI du script mot-à-mot : un clip plein cadre par scène, fondu aux bornes,
   // JS isolé (une erreur dans une scène ne casse pas la timeline — même règle que les anims)
@@ -990,6 +1046,22 @@ export function buildComposition(plan, opts = {}) {
         border-radius: ${Math.round(H * 0.007)}px; box-shadow: 0 10px 34px rgba(0,0,0,.45);
       }
 
+      /* HOOK MOT-À-MOT v2 : accumulation Anton, dégradé or hk1, accents rouges */
+      .whk { left: 5%; right: 5%; top: 0; height: ${H}px; display: flex; align-items: flex-end;
+        justify-content: center; padding-bottom: ${Math.round(H * 0.20)}px; z-index: 6; pointer-events: none; }
+      .whk-in { text-align: center; font-family: 'Anton', 'Arial Black', sans-serif; font-weight: 400;
+        text-transform: uppercase; font-size: ${Math.round(H * 0.047)}px; line-height: 1.06;
+        letter-spacing: .012em; max-width: 100%; }
+      .whk-w { display: inline-block; opacity: 0; padding: 0 ${Math.round(W * 0.004)}px;
+        background: linear-gradient(180deg, #F6CE67 4%, #E5A233 52%, #C77F14 96%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        filter: drop-shadow(0 ${Math.round(H * 0.0022)}px ${Math.round(H * 0.006)}px rgba(0,0,0,.30));
+        will-change: transform, opacity; }
+      .whk-w.acc { font-size: 1.42em;
+        background: linear-gradient(180deg, #FF6A57 6%, #EF2A1D 48%, #9E120B 94%);
+        -webkit-background-clip: text; background-clip: text;
+        filter: drop-shadow(0 ${Math.round(H * 0.0026)}px ${Math.round(H * 0.008)}px rgba(158,18,11,.35)); }
+
       /* Sous-titres Punch : un mot, énorme, blanc (ou orange accent), gros contour noir */
       .cap {
         left: 4%; right: 4%;
@@ -1047,6 +1119,7 @@ ${slidesHtml}
 ${fullHtml}
 ${bannersHtml}
 ${hookHtml}
+${whkHtml}
 ${capsHtml}${emojiHtml}${hasCta ? `
       <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${ctaWords.map((w) => `<i id="${w.id}"${w.accent ? ` style="color:${WORD_ACCENT}"` : ''}>${esc(w.text)}</i>`).join(' ')}</span></div>` : ''}
 ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
@@ -1067,6 +1140,7 @@ ${slidesJs}
 ${fullJs}
 ${bannersJs}
 ${hookJs}
+${whkJs}
 ${capsJs}${hasCta ? `
 ${ctaWords.map((w) => `
       tl.set('#${w.id}', { autoAlpha: 0 }, 0);

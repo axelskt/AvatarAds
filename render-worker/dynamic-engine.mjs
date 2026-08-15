@@ -715,9 +715,9 @@ export function buildDynamicComposition(plan, opts = {}) {
           : `<div id="${id}spt" style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;background:url('${esc(sp.src)}') 50% 30%/cover"></div>`
         const still = String(p.slide.photo || '') || avatarStill
         const botEl = src
-          ? `<div style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% 25%/cover"></div>
-        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% 25%"></video>`
-          : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% 25%/cover"></div></div>`
+          ? `<div style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% 12%/cover"></div>
+        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% 12%"></video>`
+          : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% 12%/cover"></div></div>`
         inner += topEl + botEl
           + `<div style="position:absolute;left:0;top:${HH - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
         // entrées en ciseaux : le haut glisse d'en haut, le bas d'en bas
