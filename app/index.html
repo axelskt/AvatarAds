@@ -8574,6 +8574,7 @@ function _imgQualityCap(){
   if(['pro','byok'].includes(p)) return 'medium';
   return 'low'; // Starter : low uniquement
 }
+function _imgGptQuality(){ const q = _imgEffectiveQuality(); return q === 'high' ? 'medium' : q; }
 function _imgEffectiveQuality(){
   const cap = _imgQualityCap();
   let q = _imgQuality || _imgQualityForPlan(); // défaut selon plan (Starter → low)
@@ -8953,7 +8954,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
     fd.append('prompt', prompt);
     fd.append('n', '1');
     fd.append('size', gptSize);
-    fd.append('quality', _imgEffectiveQuality()); // qualité pilotée par le slider
+    fd.append('quality', _imgGptQuality()); // qualité pilotée par le slider (4K → medium, l'upscale Nano fait le reste)
     fd.append('moderation', 'low'); // filtre moins restrictif (contenu influenceur)
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
       method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
@@ -9421,7 +9422,7 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgEffectiveQuality(), moderation: 'low' })
+      body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgGptQuality(), moderation: 'low' })
     });
     const data = await res.json();
     if(data.error){
@@ -9842,12 +9843,12 @@ async function generateImage(){
       let url;
       const _is4K = (_imgEffectiveQuality() === 'high');
       if(_is4K){
-        // 4K = gpt-image-2 en HIGH puis upscale Nano Banana Pro (Axel 15/08 :
-        // « gpt-image-2 c'est le mieux, et ensuite upscale directement avec
-        // Nano Banana Pro »). gpt compose mieux ; Nano ajoute la vraie texture
-        // et monte en 4K. Si OpenAI refuse (filtre) → Nano direct, comme avant.
+        // 4K = gpt-image-2 en MEDIUM puis upscale Nano Banana Pro (Axel 15/08 :
+        // « mid et high sont similaires, on avait comparé, le mid coûte 10×
+        // moins »). gpt compose ; Nano ajoute la texture et monte en 4K.
+        // Si OpenAI refuse (filtre) → Nano direct, comme avant.
         try {
-          _imgProgStart('gpt-image-2 (high)…');
+          _imgProgStart('gpt-image-2…');
           url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
           try {
             _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
@@ -9899,7 +9900,7 @@ async function generateImage(){
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('Image générée' + (_is4K ? ' — gpt-image-2 high + upscale 4K' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('Image générée' + (_is4K ? ' — gpt-image-2 + upscale 4K' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
