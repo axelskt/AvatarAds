@@ -385,8 +385,8 @@ const toolMedia = async (url: string, nom: string, mime: string, texte: string, 
     },
   })
   contenu.push({ type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom })
-  const consigne = vignette && estVideo
-    ? `\n\nAffiche l'aperçu dans ta réponse en écrivant exactement :\n![aperçu](${apercuUrl})\n[▶ Voir la vidéo](${url})`
+  const consigne = estVideo
+    ? `\n\nPour la montrer EN GRAND directement dans la conversation, crée un artifact HTML minimal avec un lecteur : <video src="${url}" controls playsinline style="width:100%;border-radius:12px"></video> et un lien de téléchargement en dessous.${vignette ? `\nSinon, affiche au minimum l'aperçu dans ta réponse : ![aperçu](${apercuUrl}) suivi de [▶ Voir la vidéo](${url})` : ''}`
     : ''
   contenu.push({ type: 'text', text: texte + consigne })
   return { content: contenu,
@@ -756,7 +756,8 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
       },
     }
     const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
-URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}` }
+URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}
+Pour la montrer EN GRAND directement dans la conversation, crée un artifact HTML minimal qui affiche cette image en pleine largeur, par exemple : <img src="${job.result_url}" style="width:100%;border-radius:12px"/> avec un lien de téléchargement en dessous.` }
     return { content: vignette ? [vignette, widget, texte] : [widget, texte],
       structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
   }
