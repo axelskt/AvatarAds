@@ -1049,18 +1049,18 @@ export function buildComposition(plan, opts = {}) {
       /* HOOK MOT-À-MOT v2 : accumulation Anton, dégradé or hk1, accents rouges */
       .whk { left: 5%; right: 5%; top: 0; height: ${H}px; display: flex; align-items: flex-end;
         justify-content: center; padding-bottom: ${Math.round(H * 0.20)}px; z-index: 6; pointer-events: none; }
-      .whk-in { text-align: center; font-family: 'Anton', 'Arial Black', sans-serif; font-weight: 400;
-        text-transform: uppercase; font-size: ${Math.round(H * 0.047)}px; line-height: 1.06;
+      .whk-in { text-align: center; font-family: 'Montserrat', 'Anton', 'Arial Black', sans-serif; font-weight: 900;
+        text-transform: uppercase; font-size: ${Math.round(H * 0.044)}px; line-height: 1.14;
         letter-spacing: .012em; max-width: 100%; }
-      .whk-w { display: inline-block; opacity: 0; padding: 0 ${Math.round(W * 0.004)}px;
-        background: linear-gradient(180deg, #F6CE67 4%, #E5A233 52%, #C77F14 96%);
-        -webkit-background-clip: text; background-clip: text; color: transparent;
-        filter: drop-shadow(0 ${Math.round(H * 0.0022)}px ${Math.round(H * 0.006)}px rgba(0,0,0,.30));
+      /* v3 (Axel : « la police est à moitié coupée, essaie l'autre style ») :
+         hk7 — blanc massif à GROS contour noir, mots forts JAUNES. Aucun
+         background-clip, donc aucun glyphe rogné, lisible sur la page blanche. */
+      .whk-w { display: inline-block; opacity: 0; padding: 0.04em ${Math.round(W * 0.005)}px;
+        color: #FFFFFF; -webkit-text-stroke: ${Math.max(4, Math.round(H * 0.0052))}px #0E0E0E;
+        paint-order: stroke fill;
+        text-shadow: 0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.009)}px rgba(0,0,0,.4);
         will-change: transform, opacity; }
-      .whk-w.acc { font-size: 1.42em;
-        background: linear-gradient(180deg, #FF6A57 6%, #EF2A1D 48%, #9E120B 94%);
-        -webkit-background-clip: text; background-clip: text;
-        filter: drop-shadow(0 ${Math.round(H * 0.0026)}px ${Math.round(H * 0.008)}px rgba(158,18,11,.35)); }
+      .whk-w.acc { font-size: 1.42em; color: #FFD400; }
 
       /* Sous-titres Punch : un mot, énorme, blanc (ou orange accent), gros contour noir */
       .cap {
