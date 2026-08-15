@@ -1063,6 +1063,43 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // phrase suivante, et aucune animation ne pouvait s'y poser puisque la
   // fenêtre était déjà prise. Le visage garde l'ouverture — sa règle tient —
   // mais il la garde le temps d'une ouverture.
+  // ── §0-SPLIT (#136, Axel 15/08) : LES SPLITS EXPLICITES DE L'UTILISATEUR ──
+  // « Détails du montage » et l'Éditeur écrivent plan.splits = [{start, end,
+  // assetId}] : avatar TOUJOURS en bas, le média au-dessus, safe zone gérée par
+  // le moteur. Un choix explicite passe devant tout — même règle que ses médias.
+  // Le clip lipsync de la fenêtre chevauchée est hérité (lèvres synchrones via
+  // clipFrom) ; sans matière, la photo en zoom lent tient le bas.
+  if (Array.isArray(plan.splits) && plan.splits.length) {
+    const gardes = []
+    for (const sp of plan.splits) {
+      const a = r2(Math.max(0, Number(sp.start) || 0))
+      const b = r2(Math.min(D, Number(sp.end) || 0))
+      if (!(b - a >= 1.2) || !sp.assetId) continue
+      // le clip de la fenêtre du plan qui couvre ce split (s'il existe) : on
+      // hérite son indice + le décalage de départ, la matière borne la fin
+      const cover = (plan.avatarSegments || []).find((w) => Number.isInteger(w.clip) && w.clip >= 0
+        && (w.start || 0) <= a + 0.3 && (w.end || 0) >= a + 0.8)
+      const seg = { start: a, end: b, format: 'portrait', split: { assetId: String(sp.assetId) },
+        clip: cover ? cover.clip : -1, __clipLocked: true }
+      if (cover) {
+        const from0 = r2((Number(cover.clipFrom) || 0) + Math.max(0, a - (cover.start || 0)))
+        if (from0 > 0.02) seg.clipFrom = from0
+        const mat = MATIERE[cover.clip]
+        if (mat) seg.end = r2(Math.min(seg.end, a + ((mat.e - mat.s) - from0)))
+        // la fenêtre d'origine cède la place au split (même matière, autre cadre)
+        cover.__splitte = true
+      }
+      if (seg.end - seg.start < 1.2) continue
+      claim(seg.start, seg.end)
+      gardes.push(seg)
+      console.log(`▶ split screen utilisateur : ${seg.start}→${seg.end}s — « ${sp.assetId} » en haut, avatar en bas${seg.clip >= 0 ? ` (clip av${seg.clip})` : ' (photo)'}`)
+    }
+    if (gardes.length) {
+      plan.avatarSegments = [...(plan.avatarSegments || []).filter((w) => !w.__splitte), ...gardes]
+        .sort((x, y) => (x.start || 0) - (y.start || 0))
+    }
+  }
+
   const HOOK_MAX = 4.2
   let hookWin = null
   {
