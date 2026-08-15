@@ -2012,7 +2012,10 @@ const OAUTH_BASE = 'https://avatarads-mcp.netlify.app'
 // actuel, aucune régression). Renommer = ajouter le domaine ici + DNS + Netlify.
 const OAUTH_HOSTS = ['avatarads-mcp.netlify.app', 'mcp.avatarads.fr', 'avatarads-mcp.fr']
 function oauthBase(req: Request): string {
-  const fwd = (req.headers.get('x-forwarded-host') || req.headers.get('host') || '')
+  // Supabase (Deno Deploy) STRIPPE `x-forwarded-host` — mesuré le 15/08. La
+  // fonction edge Netlify pose donc AUSSI `x-mcp-connect-host` (custom → survit) ;
+  // on le lit en priorité, avec repli sur x-forwarded-host puis host.
+  const fwd = (req.headers.get('x-mcp-connect-host') || req.headers.get('x-forwarded-host') || req.headers.get('host') || '')
     .split(',')[0].trim().toLowerCase()
   return OAUTH_HOSTS.includes(fwd) ? 'https://' + fwd : OAUTH_BASE
 }
