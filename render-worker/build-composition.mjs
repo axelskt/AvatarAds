@@ -15,6 +15,7 @@ import {
 } from './visual-styles.mjs'
 import { ANIMS, animHtml, animJs, animCss } from './anim-pack.mjs'
 import { buildDynamicComposition } from './dynamic-engine.mjs'
+import { uiScene } from './ui-scenes.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -158,6 +159,9 @@ export function buildComposition(plan, opts = {}) {
   // grande, en montant depuis le bas — puis disparait. Ca casse le rythme d'une page
   // blanche ou tout se ressemble. On prend les deux visuels les plus longs, espaces.
   const heroIds = new Set()
+  // scènes UI du script mot-à-mot (timer, navigateur, grille, photo qui vole) —
+  // remplies par le bloc wordScript ci-dessous, rendues comme des clips pleins cadre
+  const wordUi = []
   // « moments forts » desactives en mode word : l'image plein centre recouvrait le
   // sous-titre — or ici le mot EST le contenu (Axel : « la photo cache les
   // sous-titres, on ne voit pas le CTA »). La carte standard se pose au-dessus de
@@ -174,6 +178,99 @@ export function buildComposition(plan, opts = {}) {
       .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
     const capsW = (plan.captions || []).filter((c) => String(c.text || '').trim())
     const LEAD_W = 0.32
+    // ── SCRIPT A→Z (Axel, 15/08 : « de 4,5 s à 6,3 je veux ça, à 7,2 jusqu'à
+    // 9,1 ça, puis enchaîne l'animation de ça ») : quand le brief arrive
+    // seconde par seconde (plan.wordScript), il REMPLACE toute la génération
+    // automatique — médias, animations, écrans, scènes UI, aux fenêtres
+    // exactes. Les temps du script sont FINAUX (le LEAD y est déjà compté).
+    const wordScript = Array.isArray(plan.wordScript)
+      ? plan.wordScript.filter((w) => w && typeof w.start === 'number' && (w.end ?? 0) > w.start)
+      : []
+    if (wordScript.length) {
+      slides.length = 0
+      rawBroll.length = 0
+      let nUi = 0
+      for (const w of wordScript) {
+        const start = r2(w.start), end = r2(w.end)
+        if (w.kind === 'media' && assetFiles[w.asset]) {
+          const idx = rawBroll.length
+          rawBroll.push({ assetId: w.asset, start, end })
+          if (w.hero) heroIds.add(idx)
+          plan.sfx = [...(plan.sfx || []), { kind: w.hero ? 'mo-swipe-2' : 'mo-pop-2', t: start, vol: 0.5 }]
+        } else if (w.kind === 'anim' && ANIMS.includes(w.anim)) {
+          slides.push({ type: 'card', anim: w.anim, start, end,
+            items: w.value ? [{ t: start, text: String(w.value) }] : [] })
+          plan.sfx = [...(plan.sfx || []), { kind: 'mo-pop-3', t: r2(start + 0.1), vol: 0.5 }]
+        } else if (w.kind === 'screen' && w.screen) {
+          slides.push({ type: 'card', anim: 'screen', start, end, screen: String(w.screen),
+            screenText: String(w.screenText || ''),
+            screenZoom: w.screenZoom, screenX: w.screenX, screenY: w.screenY,
+            boxX: w.boxX, boxY: w.boxY, boxW: w.boxW, boxH: w.boxH, items: [] })
+        } else if (w.kind === 'ui') {
+          // les scènes vectorielles du moteur dynamique (timer, navigateur+LP…)
+          // jouent aussi sur la page blanche — même contrat { html, js, sfx }
+          const id = 'wu' + (nUi++)
+          const sc = uiScene(String(w.ui), id, start, end,
+            { dark: false, ink: '#141418', mute: '#8A8A93' }, w)
+          if (sc) {
+            wordUi.push({ id, start, dur: r2(end - start), html: sc.html, js: sc.js })
+            for (const f of sc.sfx || []) plan.sfx = [...(plan.sfx || []), f]
+            for (const k of sc.keyboard || []) plan.keyboard = [...(plan.keyboard || []), k]
+          }
+        } else if (w.kind === 'grid') {
+          // « genre 6 alignées, 3 en haut et 3 en bas » — la grille de SES photos
+          const files = (w.assets || []).map((a) => assetFiles[a]).filter(Boolean).slice(0, 6)
+          if (files.length >= 2) {
+            const id = 'wu' + (nUi++)
+            const cols = 3
+            const gx = Math.round(W * 0.045)
+            const gw = Math.round((W * 0.9 - gx * (cols - 1)) / cols)
+            const gh = Math.round(gw * 1.32)
+            const gy = Math.round(H * 0.115)
+            const html = files.map((f, k) => {
+              const cx = Math.round(W * 0.05 + (k % cols) * (gw + gx))
+              const cy = Math.round(gy + Math.floor(k / cols) * (gh + gx))
+              return `<div id="${id}g${k}" style="position:absolute;left:${cx}px;top:${cy}px;width:${gw}px;height:${gh}px;border-radius:${Math.round(W * 0.022)}px;overflow:hidden;box-shadow:0 ${Math.round(H * 0.012)}px ${Math.round(H * 0.03)}px rgba(13,13,18,.22);opacity:0"><img src="${esc(f)}" style="width:100%;height:100%;object-fit:cover"/></div>`
+            }).join('')
+            const js = files.map((f, k) => `
+  tl.fromTo('#${id}g${k}',{scale:0.6,autoAlpha:0,y:40},{scale:1,autoAlpha:1,y:0,duration:0.3,ease:'back.out(1.9)'},${r2(start + 0.08 + k * 0.11)});
+  tl.to('#${id}g${k}',{y:${k % 2 ? -10 : -16},duration:${r2(Math.max(0.4, end - start - 0.5))},ease:'none'},${r2(start + 0.38 + k * 0.11)});`).join('')
+            wordUi.push({ id, start, dur: r2(end - start), html, js })
+            plan.sfx = [...(plan.sfx || []),
+              { kind: 'mo-pop-2', t: r2(start + 0.1), vol: 0.55 },
+              { kind: 'mo-pop-1', t: r2(start + 0.45), vol: 0.4 }]
+          }
+        } else if (w.kind === 'fly' && w.screen && assetFiles[w.asset]) {
+          // « une photo de l'influenceuse en animation qui va dans Ajoute tes
+          // images » : la capture s'installe, la photo pop puis VOLE dans la zone
+          const id = 'wu' + (nUi++)
+          const SW = 1000, SX = 40, SY = Math.round(H * 0.30)
+          const SH = Math.round(SW * (1800 / 2880))   // captures harvest 2880×1800
+          const zx = w.zoneX ?? 0.5, zy = w.zoneY ?? 0.5
+          const zw = w.zoneW ?? 0.2, zh = w.zoneH ?? 0.2
+          const zpx = SX + zx * SW, zpy = SY + zy * SH
+          const pw = Math.round(W * 0.42), ph = Math.round(pw * 1.4)
+          const p0x = Math.round((W - pw) / 2), p0y = Math.round(H * 0.50)
+          const tFly = r2(start + 0.75)
+          const html = `
+      <div id="${id}scr" style="position:absolute;left:${SX}px;top:${SY}px;width:${SW}px;height:${SH}px;border-radius:26px;overflow:hidden;box-shadow:0 40px 110px rgba(13,13,18,.30);opacity:0"><img src="tuto/${esc(w.screen)}.png" style="position:absolute;left:0;top:0;width:100%;height:auto"/></div>
+      <span id="${id}ring" style="position:absolute;left:${Math.round(zpx - zw * SW / 2)}px;top:${Math.round(zpy - zh * SH / 2)}px;width:${Math.round(zw * SW)}px;height:${Math.round(zh * SH)}px;border:5px solid #FF5A36;border-radius:18px;opacity:0"></span>
+      <div id="${id}ph" style="position:absolute;left:${p0x}px;top:${p0y}px;width:${pw}px;height:${ph}px;border-radius:22px;overflow:hidden;box-shadow:0 34px 90px rgba(13,13,18,.35);opacity:0"><img src="${esc(assetFiles[w.asset])}" style="width:100%;height:100%;object-fit:cover"/></div>`
+          const js = `
+  tl.fromTo('#${id}scr',{y:120,autoAlpha:0},{y:0,autoAlpha:1,duration:0.4,ease:'power3.out'},${start});
+  tl.fromTo('#${id}ph',{scale:0.7,autoAlpha:0,y:60},{scale:1,autoAlpha:1,y:0,duration:0.32,ease:'back.out(1.8)'},${r2(start + 0.18)});
+  tl.to('#${id}ph',{x:${Math.round(zpx - (p0x + pw / 2))},y:${Math.round(zpy - (p0y + ph / 2))},scale:${r2(Math.min((zw * SW) / pw, (zh * SH) / ph) * 0.92)},duration:0.55,ease:'power2.inOut'},${tFly});
+  tl.fromTo('#${id}ring',{scale:0.85,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.22,ease:'back.out(2)'},${r2(tFly + 0.42)});
+  tl.to('#${id}ring',{autoAlpha:0,duration:0.2},${r2(end - 0.32)});`
+          wordUi.push({ id, start, dur: r2(end - start), html, js })
+          plan.sfx = [...(plan.sfx || []),
+            { kind: 'mo-swipe-1', t: tFly, vol: 0.5 },
+            { kind: 'mo-tap-1', t: r2(tFly + 0.5), vol: 0.6 }]
+        }
+      }
+      console.log(`▶ mot-à-mot SCRIPTÉ : ${wordScript.length} fenêtres (${rawBroll.length} médias, ${slides.filter((s) => s.anim === 'screen').length} écrans, ${slides.filter((s) => s.anim !== 'screen').length} anims, ${wordUi.length} scènes UI)`)
+    }
+    if (!wordScript.length) {
     for (const b of rawBroll) b.start = r2(Math.max(0, b.start - LEAD_W))
     for (const sl of slides) {
       if (sl.anim === 'screen') sl.start = r2(Math.max(0, sl.start - LEAD_W))
@@ -273,6 +370,7 @@ export function buildComposition(plan, opts = {}) {
           && c2.start >= sl.start - 0.6 && c2.start <= (sl.end ?? sl.start + 3)))
       if (tu) { sl.screenText = String(tu.text); console.log(`▶ mot-à-mot : frappe « ${tu.text} » raccrochée à ${sl.screen} (${sl.start}s)`) }
     }
+    }   // fin du mode automatique (sans wordScript)
     // le SON du geste #91 : la souris glisse sur l'écran puis CLIQUE la zone,
     // et la frappe dans le champ S'ENTEND (fenêtre clavier calée sur le typing
     // du pack : départ t0+1,05, durée bornée comme lui).
@@ -467,6 +565,16 @@ export function buildComposition(plan, opts = {}) {
       <div class="clip" id="hook" data-start="${hook.start}" data-duration="${hook.dur}" data-track-index="4">
         <div class="hook-box">${esc(hook.text)}</div>
       </div>` : ''
+
+  // scènes UI du script mot-à-mot : un clip plein cadre par scène, fondu aux bornes,
+  // JS isolé (une erreur dans une scène ne casse pas la timeline — même règle que les anims)
+  const wordUiHtml = wordUi.map((u) => `
+      <div class="clip wui" id="${u.id}" data-start="${u.start}" data-duration="${u.dur}" data-track-index="12">${u.html}</div>`).join('')
+  const wordUiJs = wordUi.map((u) => `
+      tl.fromTo('#${u.id}',{autoAlpha:0},{autoAlpha:1,duration:0.16,ease:'power1.out'},${u.start});
+      tl.to('#${u.id}',{autoAlpha:0,duration:0.18,ease:'power1.in'},${r2(u.start + u.dur - 0.2)});
+      try {${u.js}
+      } catch (e) { console.error('scène ${u.id} ignorée:', e && e.message) }`).join('')
 
   // ── #68 « RAW vs EDITED » : LES SOUS-TITRES DU HOOK SONT PLUS GROS ─────────
   // (Axel, 07/08, réf TikTok @tians028 : « ils jouent sur les sous-titres en
@@ -866,6 +974,11 @@ export function buildComposition(plan, opts = {}) {
       /* transition de section : flash lumineux plein écran (au-dessus de tout) */
       #flash { inset: 0; z-index: 9; background: #fff; pointer-events: none; }
 
+      /* scènes UI du script mot-à-mot (timer, navigateur, grille, vol de photo) */
+      .wui { inset: 0; z-index: 4; }
+      .wui .disp { font-family: 'Archivo Black', 'Arial Black', sans-serif; font-weight: 400; letter-spacing: -.01em; }
+      .wui .stack { position: absolute; left: 0; right: 0; top: 30%; display: flex; flex-direction: column; align-items: center; }
+
       /* Hook : badge jaune en haut, passages full écran (safe zone) */
       #hook { left: 6%; right: 6%; top: 13.5%; display: flex; justify-content: center; z-index: 7; }
       .hook-box {
@@ -927,6 +1040,7 @@ ${avatarSegs.map((a) => `            <video id="${a.id}" class="clip avatar-seg"
         </div>
       </div>
 ${brollHtml}
+${wordUiHtml}
 ${slidesHtml}
 ${fullHtml}
 ${bannersHtml}
@@ -946,6 +1060,7 @@ ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
 ${layoutJs}
 ${zoomJs}
 ${brollJs}
+${wordUiJs}
 ${slidesJs}
 ${fullJs}
 ${bannersJs}
