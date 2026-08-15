@@ -257,7 +257,7 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
     background:#fff;color:#1a1a1a;max-width:560px}
-  .aa-m{width:100%;display:block;background:#000;max-height:74vh;object-fit:contain}
+  .aa-m{width:100%;display:block;background:#000;max-height:640px;object-fit:contain}
   .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
     border-top:1px solid rgba(128,128,128,.22)}
   .aa-n{font-size:12.5px;font-weight:600;opacity:.9}
@@ -306,6 +306,20 @@ function aaLikely(p){ return p && (p.structuredContent || (p.content && p.conten
 // Sans résultat après 6 s : afficher ce que l'hôte a réellement envoyé (lisible sur un screenshot)
 setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent =
   'AvatarAds — en attente du résultat… (reçu : ' + (aaSeen.join(', ') || 'rien') + ')'; }catch(e){} } }, 6000);
+// ── Sizing (spec MCP Apps) : l'iframe annonce sa hauteur, l'hôte la déplie.
+// Sans ça, claude.ai laisse la hauteur par défaut : l'image restait une bande.
+var aaH = 0;
+function aaSize(){
+  try{
+    var h = Math.ceil(document.getElementById('c').getBoundingClientRect().height);
+    if(!h || h === aaH) return;
+    aaH = h;
+    window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/size-changed', params:{ height: h } }, '*');
+  }catch(e){}
+}
+try{ new ResizeObserver(aaSize).observe(document.getElementById('c')); }catch(e){}
+window.addEventListener('load', aaSize);
+setInterval(aaSize, 800);
 function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
 window.addEventListener('message', function(e){
   var d = e.data || {};
