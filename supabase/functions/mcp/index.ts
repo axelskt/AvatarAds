@@ -1984,6 +1984,18 @@ ${logTxt}`)
 // /oauth/approve avec le JWT → code → claude.ai l'échange sur /token (PKCE)
 // → jeton Bearer aat_… accepté par la porte MCP comme une clé.
 const OAUTH_BASE = 'https://avatarads-mcp.netlify.app'
+// Domaines par lesquels on accepte de se faire appeler comme serveur MCP. Le
+// domaine OAuth SUIT celui de connexion : claude.ai exige que la métadonnée
+// (resource / issuer / endpoints) soit sur le MÊME host que le connecteur —
+// sinon « autorisation impossible ». Netlify (proxy) transmet le host d'origine
+// en `x-forwarded-host`. Host inconnu → repli sur le netlify (comportement
+// actuel, aucune régression). Renommer = ajouter le domaine ici + DNS + Netlify.
+const OAUTH_HOSTS = ['avatarads-mcp.netlify.app', 'mcp.avatarads.fr', 'avatarads-mcp.fr']
+function oauthBase(req: Request): string {
+  const fwd = (req.headers.get('x-forwarded-host') || req.headers.get('host') || '')
+    .split(',')[0].trim().toLowerCase()
+  return OAUTH_HOSTS.includes(fwd) ? 'https://' + fwd : OAUTH_BASE
+}
 const TOKEN_TTL_MS = 30 * 24 * 3600 * 1000       // 30 jours ; refresh sans limite
 const CODE_TTL_MS = 10 * 60 * 1000
 
@@ -1998,11 +2010,11 @@ async function sha256b64url(s: string): Promise<string> {
   return b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))
 }
 
-const DOC_AS = () => ({
-  issuer: OAUTH_BASE,
-  authorization_endpoint: `${OAUTH_BASE}/authorize`,
-  token_endpoint: `${OAUTH_BASE}/token`,
-  registration_endpoint: `${OAUTH_BASE}/register`,
+const DOC_AS = (base: string) => ({
+  issuer: base,
+  authorization_endpoint: `${base}/authorize`,
+  token_endpoint: `${base}/token`,
+  registration_endpoint: `${base}/register`,
   response_types_supported: ['code'],
   grant_types_supported: ['authorization_code', 'refresh_token'],
   code_challenge_methods_supported: ['S256'],
@@ -2017,12 +2029,13 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
   // ── découverte ──
   if (p1 === '.well-known') {
     const doc = segs[2] || ''
+    const base = oauthBase(req)
     if (doc === 'oauth-protected-resource') {
-      return json(200, { resource: OAUTH_BASE, authorization_servers: [OAUTH_BASE],
+      return json(200, { resource: base, authorization_servers: [base],
         scopes_supported: ['avatarads'], bearer_methods_supported: ['header'] })
     }
     if (doc === 'oauth-authorization-server' || doc === 'openid-configuration') {
-      return json(200, DOC_AS())
+      return json(200, DOC_AS(base))
     }
     return json(404, { error: 'not_found' })
   }
@@ -2275,12 +2288,12 @@ serve(async (req) => {
     if (!tok) {
       return new Response(JSON.stringify({ error: 'invalid_token' }), { status: 401, headers: { ...cors,
         'Content-Type': 'application/json',
-        'WWW-Authenticate': `Bearer resource_metadata="${OAUTH_BASE}/.well-known/oauth-protected-resource", error="invalid_token"` } })
+        'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource", error="invalid_token"` } })
     }
     if (new Date(String(tok.expires_at)).getTime() < Date.now()) {
       return new Response(JSON.stringify({ error: 'invalid_token', error_description: 'expiré' }), { status: 401, headers: { ...cors,
         'Content-Type': 'application/json',
-        'WWW-Authenticate': `Bearer resource_metadata="${OAUTH_BASE}/.well-known/oauth-protected-resource", error="invalid_token"` } })
+        'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource", error="invalid_token"` } })
     }
     bg((async () => { await svc.from('mcp_oauth_tokens').update({ last_used_at: new Date().toISOString() }).eq('token_hash', tok.token_hash) })())
     keyRow = { id: null, user_id: tok.user_id, require_confirm: false }
@@ -2290,7 +2303,7 @@ serve(async (req) => {
     // jamais ici : la clé est dans le chemin.)
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
       'Content-Type': 'application/json',
-      'WWW-Authenticate': `Bearer resource_metadata="${OAUTH_BASE}/.well-known/oauth-protected-resource"` } })
+      'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource"` } })
   } else {
     const { data } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
       .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
