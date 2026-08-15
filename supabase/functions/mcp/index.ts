@@ -144,7 +144,7 @@ async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, conte
 // résultat d'outil. On fabrique donc une vignette ~640 px à la génération, une
 // seule fois, et c'est elle qu'on renvoie. Si la vignette échoue, on retombe
 // simplement sur le lien : jamais de génération perdue pour une miniature.
-const APERCU_LARGEUR = 768
+const APERCU_LARGEUR = 1080   // vignette rendue en grand dans le fil claude.ai → nette (Axel « non pixélisé »)
 async function fabriquerApercu(bytes: Uint8Array): Promise<Uint8Array | null> {
   try {
     // 1.3.0 : la 1.2.17 plantait une fois sur deux sur les PNG gpt-image
@@ -152,7 +152,7 @@ async function fabriquerApercu(bytes: Uint8Array): Promise<Uint8Array | null> {
     const { Image } = await import('https://deno.land/x/imagescript@1.3.0/mod.ts')
     const img = await Image.decode(bytes)
     if (img.width > APERCU_LARGEUR) img.resize(APERCU_LARGEUR, Image.RESIZE_AUTO)
-    return await img.encodeJPEG(78)
+    return await img.encodeJPEG(82)
   } catch (e) {
     console.error('apercu:', (e as Error)?.message || e)
     return null
@@ -510,7 +510,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      _meta: { ui: { resourceUri: 'ui://avatarads/image.png' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -520,7 +519,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
-      _meta: { ui: { resourceUri: 'ui://avatarads/video.mp4' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -546,7 +544,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
-      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.mp4' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -615,7 +612,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
-      _meta: { ui: { resourceUri: 'ui://avatarads/montage.mp4' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',

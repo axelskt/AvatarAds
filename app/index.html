@@ -24709,11 +24709,13 @@ async function _mcGenerate(){
     const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
     const reP = sd.response_url ? sd.response_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId;
     let out='';
-    for(let i=0;i<90;i++){
+    // Kling Pro 1080p (motion-control 15 s) peut dépasser 6 min sur la file fal
+    // (timeout menteur du 15/08, job Lamine→Mia jamais fini en 6 min) → 11 min.
+    for(let i=0;i<165;i++){
       await new Promise(r=>setTimeout(r,4000));
       const pr=await fGet(stP); if(!pr.ok) continue;
       const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
-      _mcProg('Génération en cours…', Math.min(88, 22+i*2));
+      _mcProg(i>75?'Génération en cours… (Kling est chargé, ça arrive)':'Génération en cours…', Math.min(88, 22+i*2));
       if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
       if(s==='COMPLETED'){
         // « COMPLETED » veut dire « traité », PAS « réussi » : quand Kling échoue
@@ -24728,7 +24730,7 @@ async function _mcGenerate(){
       }
       throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
     }
-    if(!out) throw new Error('Délai dépassé (>6 min)');
+    if(!out) throw new Error('Délai dépassé (>11 min) — Kling saturé, réessaie dans un moment');
     // Débit au succès (jamais avant). Standard=2 cr/s (720p), Pro=4 cr/s (1080p natif).
     // Le +1 cr/s du 1080p Standard n'est facturé QUE si l'upscale Topaz réussit.
     const baseRate = tier==='pro' ? 4 : 2;
