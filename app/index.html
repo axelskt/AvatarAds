@@ -8787,6 +8787,12 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
 // le bouton où la texture réelle compte le plus. Nano Banana garde identité/pose/décor,
 // ajoute le vrai grain ET monte en 4K. Repli gpt-image si Google échoue → le bouton
 // marche toujours. Le toast dit quel moteur a tourné, pour diagnostiquer d'un coup d'œil.
+// #high-chain · une URL (distante ou data:) → dataURL, pour l'img2img Nano
+async function _imgToDataUrl(u){
+  if(/^data:/.test(u)) return u;
+  const b = await (await fetch(u)).blob();
+  return await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(b); });
+}
 async function _imgMakeRealistic(btn){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const _plan = (currentMember?.plan || 'free').toLowerCase();
@@ -9836,25 +9842,41 @@ async function generateImage(){
       let url;
       const _is4K = (_imgEffectiveQuality() === 'high');
       if(_is4K){
-        // 4K = Nano Banana Pro EN DIRECT (demande d'Axel). C'est le meilleur moteur,
-        // il évite le filtre OpenAI, et les 5 cr du 4K couvrent son coût (~0,22 €).
+        // 4K = gpt-image-2 en HIGH puis upscale Nano Banana Pro (Axel 15/08 :
+        // « gpt-image-2 c'est le mieux, et ensuite upscale directement avec
+        // Nano Banana Pro »). gpt compose mieux ; Nano ajoute la vraie texture
+        // et monte en 4K. Si OpenAI refuse (filtre) → Nano direct, comme avant.
         try {
-          const _refUrl = _imgRefDataUrl || await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
-          const _asp = _NB_FMT_ASPECT[size] || '9:16';
-          _imgProgStart('Nano Banana Pro (4K)… (~30s)');
-          url = await _nbEdit(token, _refUrl, editPrompt, _asp, '4K');
-        } catch(_nbErr){
-          const _m = String((_nbErr && _nbErr.message) || _nbErr);
-          if(/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_m)){
-            await creditsFlowRefund('Nano Banana Pro a refusé');
-            _imgProgStop(); overlay.style.display='none';
-            btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
-            const r=document.getElementById('imgResult'); if(r) r.style.display='none';
-            _imgIdleShow(false);
-            const bad=document.getElementById('imgBothRefused'); if(bad){ bad.style.display='block'; try{ bad.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }
-            return;
+          _imgProgStart('gpt-image-2 (high)…');
+          url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
+          try {
+            _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
+            url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K');
+          } catch(_upErr){
+            // l'image gpt reste : on ne jette jamais un bon résultat pour un upscale raté
+            console.warn('upscale Nano après gpt high indispo :', _upErr);
           }
-          throw _nbErr;
+        } catch(_edErr){
+          const _m = String((_edErr && _edErr.message) || _edErr);
+          if(!/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_m)) throw _edErr;
+          // filtre OpenAI → Nano Banana Pro en direct (l'ancien chemin 4K)
+          try {
+            const _refUrl = _imgRefDataUrl || await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
+            _imgProgStart('Nano Banana Pro (4K)… (~30s)');
+            url = await _nbEdit(token, _refUrl, editPrompt, _NB_FMT_ASPECT[size] || '9:16', '4K');
+          } catch(_nbErr){
+            const _m2 = String((_nbErr && _nbErr.message) || _nbErr);
+            if(/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_m2)){
+              await creditsFlowRefund('Les deux moteurs ont refusé');
+              _imgProgStop(); overlay.style.display='none';
+              btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
+              const r=document.getElementById('imgResult'); if(r) r.style.display='none';
+              _imgIdleShow(false);
+              const bad=document.getElementById('imgBothRefused'); if(bad){ bad.style.display='block'; try{ bad.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }
+              return;
+            }
+            throw _nbErr;
+          }
         }
       } else {
         // Standard / Premium = gpt-image. Sur refus OpenAI → on propose le repli Nano (5 cr).
@@ -9877,7 +9899,7 @@ async function generateImage(){
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('Image générée' + (_is4K ? ' via Nano Banana Pro (4K)' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('Image générée' + (_is4K ? ' — gpt-image-2 high + upscale 4K' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
@@ -9890,7 +9912,14 @@ async function generateImage(){
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
       _imgProgStart('Génération en cours…');
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours…';
-      const url = await _imgGenerateOne(token, enhancedPrompt, size, style);
+      let url = await _imgGenerateOne(token, enhancedPrompt, size, style);
+      if(_imgEffectiveQuality() === 'high'){
+        // 4K = gpt high puis upscale Nano (Axel 15/08) — l'image gpt reste si Nano échoue
+        try {
+          _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
+          url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K');
+        } catch(_upErr){ console.warn('upscale Nano après gpt high indispo :', _upErr); }
+      }
       _imgMonthIncrement();
       _imgShowSingle(url, size);
       _imgSaveHistory(url, _imgSelectedStyleLabel, size);
