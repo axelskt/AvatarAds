@@ -86,7 +86,7 @@ function buildPanels(plan, D) {
       .map((s) => ({ kind: 'content', t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
-      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split } })),
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil } })),
   ].sort((a, b) => a.t0 - b.t0)
 
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
@@ -707,23 +707,45 @@ export function buildDynamicComposition(plan, opts = {}) {
       // En bas : le clip lipsync s'il y a matière, sinon la photo en zoom lent.
       const spSrc = p.slide.split
         && (p.slide.split.src || (opts.assetFiles || {})[p.slide.split.assetId])
-      if (spSrc) {
-        const sp = { src: spSrc, isVid: /\.(mp4|mov|webm|m4v)(\?|$)/i.test(spSrc) }
+      const spSlide = p.slide.split && p.slide.split.slide
+      if (spSrc || spSlide) {
         const HH = Math.round(H / 2)
-        const topEl = sp.isVid
-          ? `<video id="${id}spt" class="clip" src="${esc(sp.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="10" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;object-fit:cover;object-position:50% 30%"></video>`
-          : `<div id="${id}spt" style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;background:url('${esc(sp.src)}') 50% 30%/cover"></div>`
+        let topEl = ''
+        if (spSrc) {
+          const sp = { src: spSrc, isVid: /\.(mp4|mov|webm|m4v)(\?|$)/i.test(spSrc) }
+          topEl = sp.isVid
+            ? `<video id="${id}spt" class="clip" src="${esc(sp.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="10" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;object-fit:cover;object-position:50% 30%"></video>`
+            : `<div id="${id}spt" style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;background:url('${esc(sp.src)}') 50% 30%/cover"></div>`
+        } else {
+          // ANIMATION au-dessus (A/B d'Axel : « mieux quand y'a une animation en
+          // haut plutôt [qu'un média] ») : le pack joue dans la moitié haute,
+          // réduit — ses temps sont absolus, donc seek-safe comme partout
+          const sa0 = r2(Math.max(liveT0, spSlide.start || liveT0))
+          const sa = { ...spSlide, id: id + 'sa', start: sa0,
+            dur: Math.max(0.8, r2(Math.min(t1, spSlide.end || t1) - sa0)) }
+          const sah = animHtml(spSlide.anim, sa, W, H, ap ? 'apple' : tone.dark ? 'dynamic' : 'word')
+          topEl = `<div id="${id}spt" style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;overflow:hidden;background:${tone.dark ? '#101014' : '#F5F3EE'}">
+          <div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;transform:translateY(-${Math.round(H * 0.06)}px) scale(0.85);transform-origin:50% 31%">${sah}</div></div>`
+          if (sah) pjs += animJs(spSlide.anim, sa, r2)
+        }
+        // cadrage du bas (A/B d'Axel) : « visage entier + cou » — 5 % laisse de
+        // l'air au-dessus de la tête au lieu de la rogner sous le séparateur ;
+        // clipAt : la fenêtre étendue par le split auto démarre avant la voix du
+        // clip — lui reste calé sur SES mots, la photo porte l'attente
+        const cAt = r2(Math.max(liveT0, p.slide.clipAt ?? liveT0))
+        const cEnd = r2(Math.min(D, (p.slide.clipUntil ?? t1) + 0.45))
         const still = String(p.slide.photo || '') || avatarStill
         const botEl = src
-          ? `<div style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% 12%/cover"></div>
-        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% 12%"></video>`
-          : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% 12%/cover"></div></div>`
+          ? `<div id="${id}avp" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% 5%/cover"></div>
+        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% 5%"></video>`
+          : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% 5%/cover"></div></div>`
         inner += topEl + botEl
           + `<div style="position:absolute;left:0;top:${HH - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
         // entrées en ciseaux : le haut glisse d'en haut, le bas d'en bas
         pjs += `\n  tl.fromTo('#${id}spt',{yPercent:-8,autoAlpha:0},{yPercent:0,autoAlpha:1,duration:0.38,ease:'power3.out'},${r2(liveT0 + 0.02)});`
         pjs += `\n  tl.fromTo('#${id}av${src ? '' : 'w'}',{yPercent:8,autoAlpha:0},{yPercent:0,autoAlpha:1,duration:0.38,ease:'power3.out'},${r2(liveT0 + 0.02)});`
         if (!src) pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
+        else if (cEnd < t1 - 0.3) pjs += `\n  tl.fromTo('#${id}avp',{scale:1},{scale:1.06,duration:${r2(Math.max(0.5, t1 - cEnd))},ease:'none',transformOrigin:'50% 20%'},${cEnd});`
         sfxAdd.push({ kind: 'mo-swipe-2', t: r2(liveT0 + 0.05), vol: 0.5 })
       } else if (duo) {
         // HOOK v3 (Axel, 09/08, réf @tians028) : « la vidéo AvatarAds×Claude
