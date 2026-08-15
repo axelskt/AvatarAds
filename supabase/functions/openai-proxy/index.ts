@@ -38,18 +38,35 @@ serve(async (req: Request) => {
     })
   }
 
+  // ── LE RENDER-WORKER AUSSI (#136) : détection de visage au rendu. Même porte
+  // que hedra-proxy — la passerelle a DÉJÀ vérifié la signature (verify_jwt),
+  // on ne fait que lire le rôle déclaré ; un jeton service_role ne se forge pas
+  // sans le secret du projet. (Ne PAS comparer à SUPABASE_SERVICE_ROLE_KEY :
+  // mesuré le 03/08 côté hedra-proxy, les valeurs divergent → 401 silencieux.)
+  const roleDuJeton = (() => {
+    try {
+      const p = token.split('.')[1]
+      if (!p) return ''
+      const b = p.replace(/-/g, '+').replace(/_/g, '/')
+      return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '')
+    } catch { return '' }
+  })()
+  const estLeMoteur = roleDuJeton === 'service_role'
+
   const supabaseUrl    = Deno.env.get('SUPABASE_URL') ?? ''
   const supabaseAnon   = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
   const supabase = createClient(supabaseUrl, supabaseAnon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   })
 
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — session invalide ou expirée' }), {
-      status: 401,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+  if (!estLeMoteur) {
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized — session invalide ou expirée' }), {
+        status: 401,
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
   }
 
   // ── Clé OpenAI depuis les secrets Supabase ──

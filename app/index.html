@@ -4575,7 +4575,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <button onclick="edPickFromLibrary()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Choisir dans la bibliothèque</button>
               <button onclick="edReset()" class="btn-quiet btn-sm" style="width:100%;color:var(--accent-2);display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;background:none;box-shadow:none;outline:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 019-9 9 9 0 016.7 3M21 12a9 9 0 01-9 9 9 9 0 01-6.7-3M21 3v5h-5M3 21v-5h5"/></svg> Recommencer</button>
               <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
+              <button onclick="document.getElementById('edSplitIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:12px;border-color:rgba(34,211,238,.35);color:#22D3EE"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="8" rx="2"/><rect x="4" y="13" width="16" height="8" rx="2"/><circle cx="12" cy="16.5" r="1.6"/><path d="M9 20c.6-1.2 1.7-1.9 3-1.9s2.4.7 3 1.9"/></svg> Split screen</button>
               <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
+              <input type="file" id="edSplitIn" accept="image/*,video/*" style="display:none" onchange="edAddSplit(this.files[0]);this.value=''">
             </div>
 
             <!-- CLIPS -->
@@ -30159,7 +30161,14 @@ function edDrawLoop(){
   const _cr=edCoverRect(_vw,_vh,_ed.dispW/_ed.dispH);
   const _gt=edGlobalNow();
   const _zr=_edZoomSrc(_cr,_gt); // #70 · zoom punch-in (preview)
-  try{ ctx.clearRect(0,0,_ed.dispW,_ed.dispH); ctx.drawImage(v, _zr.sx,_zr.sy,_zr.sw,_zr.sh, 0,0,_ed.dispW,_ed.dispH); }catch(e){}
+  const _sp=_edSplitAt(_gt); // #136 · split : la base descend en moitié basse
+  try{ ctx.clearRect(0,0,_ed.dispW,_ed.dispH);
+    if(_sp){ ctx.fillStyle='#0b0b0e'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH);
+      const _hb=_ed.dispH/2, _scr=edCoverRect(_vw,_vh,_ed.dispW/_hb);
+      const _sfy=(_vh-_scr.sh)*((_sp._faceP!=null)?_sp._faceP:0.1);
+      ctx.drawImage(v, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, _hb, _ed.dispW, _hb);
+      ctx.fillStyle='#0D0D12'; ctx.fillRect(0,_hb-2,_ed.dispW,4);
+    } else { ctx.drawImage(v, _zr.sx,_zr.sy,_zr.sw,_zr.sh, 0,0,_ed.dispW,_ed.dispH); } }catch(e){}
   _edDrawSubsAIPreview(_gt); // 🎼 sous-titres Montage IA (canvas superposé, au-dessus du b-roll)
   const _fa=_edFlashAlpha(_gt); // #111 · flash de transition de section (preview)
   if(_fa>0.01){ try{ ctx.fillStyle='rgba(255,255,255,'+_fa.toFixed(3)+')'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH); }catch(e){} }
@@ -30355,6 +30364,52 @@ function edAddImage(file){
   img.src=url;
 }
 
+// ── #136 · SPLIT SCREEN : ta vidéo passe en moitié BASSE (visage entier, safe
+// zone), le média choisi occupe la moitié HAUTE pendant la fenêtre de la zone.
+// C'est un overlay verrouillé (_split) : fenêtre réglable sur la piste des
+// éléments comme n'importe quel autre, position fixe à l'écran.
+function edAddSplit(file){
+  if(!_ed||!file) return; edSnap();
+  const url=URL.createObjectURL(file);
+  const gt=edGlobalNow(), end=Math.min(edTotalDur(), gt+3);
+  if(end-gt<0.5){ toast('Trop proche de la fin — recule la tête de lecture'); return; }
+  const fin=(img,vid)=>{
+    const ov={ id:'ov'+Date.now(), type:'image', img, url, _split:true,
+      x:0, y:0, w:_ed.dispW, h:_ed.dispH/2, crop:{t:0,r:0,b:0,l:0}, start:gt, end };
+    if(vid) ov.vid=vid;
+    _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
+    if(typeof edRenderOvTrack==='function') edRenderOvTrack();
+    toast('Split screen ajouté — ta vidéo passe en bas, le média en haut');
+    // cadrage face-aware de la moitié basse (même détection que Motion Control) :
+    // le visage vise le haut de la moitié basse, jamais coupé ni noyé en bas
+    try{
+      const v=_ed.video, c=document.createElement('canvas');
+      const cw2=Math.min(560, v.videoWidth||560);
+      c.width=cw2; c.height=Math.max(2, Math.round(cw2*(v.videoHeight||16)/(v.videoWidth||9)));
+      c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+      if(typeof _detectFaceBox==='function') _detectFaceBox(c.toDataURL('image/jpeg',0.85)).then(box=>{
+        if(!box) return;
+        const vw=v.videoWidth||1080, vh=v.videoHeight||1920;
+        const bandFrac=Math.min(1,(vw/vh)/(_ed.dispW/(_ed.dispH/2)));
+        if(bandFrac>=0.999) return;
+        ov._faceP=Math.max(0,Math.min(1,((box.y+box.h/2)-0.32*bandFrac)/(1-bandFrac)));
+      }).catch(()=>{});
+    }catch(_){}
+  };
+  if(file.type.startsWith('video/')){
+    const v=document.createElement('video'); v.src=url; v.muted=true; v.playsInline=true; v.preload='auto';
+    v.onloadeddata=()=>fin(null,v); v.onerror=()=>toast('Vidéo illisible');
+  } else {
+    const img=new Image(); img.onload=()=>fin(img,null); img.onerror=()=>toast('Image illisible'); img.src=url;
+  }
+}
+// le split actif à l'instant gt (null sinon)
+function _edSplitAt(gt){
+  if(!_ed) return null;
+  for(const o of _ed.overlays){ if(o._split && (o.start==null||gt>=o.start) && (o.end==null||gt<=o.end)) return o; }
+  return null;
+}
+
 function edBuildOverlayEl(ov){
   const stage=document.getElementById('edStage');
   const el=document.createElement('div'); el.className='ed-ov'; el.dataset.id=ov.id;
@@ -30363,11 +30418,11 @@ function edBuildOverlayEl(ov){
   else { el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
     // #111 · b-roll vidéo : le MÊME élément <video> sert au preview (DOM) et à l'export (drawImage)
     const im=ov.vid||document.createElement('img'); if(!ov.vid) im.src=ov.url;
-    im.style.cssText='width:100%;height:100%;display:block;object-fit:fill;pointer-events:none'; el.appendChild(im); }
+    im.style.cssText='width:100%;height:100%;display:block;object-fit:'+(ov._split?'cover':'fill')+';object-position:50% 30%;pointer-events:none'; el.appendChild(im); }
   stage.appendChild(el); ov._el=el;
 
   const mk=(name,css,cur)=>{ const h=document.createElement('div'); h.className='ed-ov-rh'; h.dataset.h=name; h.style.cssText='position:absolute;width:15px;height:15px;background:var(--accent);border:2px solid #fff;border-radius:50%;z-index:6;display:none;cursor:'+cur+';'+css; el.appendChild(h); };
-  if(ov.type==='image'){
+  if(ov.type==='image' && !ov._split){
     mk('br','right:-8px;bottom:-8px','nwse-resize'); mk('bl','left:-8px;bottom:-8px','nesw-resize');
     mk('tr','right:-8px;top:-8px','nesw-resize'); mk('tl','left:-8px;top:-8px','nwse-resize');
     ['t','r','b','l'].forEach(side=>{
@@ -30380,7 +30435,7 @@ function edBuildOverlayEl(ov){
       ch.addEventListener('pointerup',()=>{ ch._d=false; });
     });
     el.addEventListener('dblclick',e=>{ e.stopPropagation(); ov._cropMode=!ov._cropMode; edSelect(ov.id); toast(ov._cropMode?'✂️ Mode rognage — glisse les poignées cyan':'✓ Rognage terminé'); });
-  } else {
+  } else if(ov.type!=='image'){
     mk('br','right:-8px;bottom:-8px','nwse-resize');
     el.addEventListener('dblclick',e=>{ e.stopPropagation(); edEditText(ov); });
   }
@@ -30389,13 +30444,14 @@ function edBuildOverlayEl(ov){
   bar.style.cssText='position:absolute;top:-30px;right:-2px;display:none;gap:4px;z-index:9';
   const _mkBar=(txt,title,fn)=>{ const b=document.createElement('button'); b.innerHTML=txt; b.title=title; b.style.cssText='width:28px;height:25px;border-radius:7px;background:rgba(10,10,12,.92);border:1px solid var(--border2);color:#fff;font-size:13px;cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center'; b.addEventListener('pointerdown',e=>e.stopPropagation()); b.onclick=(e)=>{ e.stopPropagation(); fn(); }; return b; };
   if(ov.type==='text') bar.appendChild(_mkBar('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>','Éditer le texte',()=>edEditText(ov)));
-  else bar.appendChild(_mkBar('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg>','Rogner',()=>{ ov._cropMode=!ov._cropMode; edSelect(ov.id); }));
+  else if(!ov._split) bar.appendChild(_mkBar('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg>','Rogner',()=>{ ov._cropMode=!ov._cropMode; edSelect(ov.id); }));
   bar.appendChild(_mkBar('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg>','Supprimer',()=>{ edSnap(); edDeleteSelected(); }));
   el.appendChild(bar);
   edStyleOverlay(ov);
 
   let mode=null,sx,sy,ox,oy,ow,oh;
   const start=(e,m)=>{ if(ov._editing) return; e.stopPropagation();
+    if(ov._split){ edSelect(ov.id); return; }   // #136 · position fixe : on sélectionne, on ne déplace pas
     const now=Date.now();
     if(m==='move' && el._lastDown && now-el._lastDown<330){ el._lastDown=0; if(ov.type==='text'){ edEditText(ov); } else { ov._cropMode=!ov._cropMode; edSelect(ov.id); } return; }
     el._lastDown=now;
@@ -31789,18 +31845,31 @@ async function edExport(){
     function renderFrame(curV, gTime){
       cx.fillStyle='#000'; cx.fillRect(0,0,expW,expH);
       const _evw=curV.videoWidth||_ed.vw||9, _evh=curV.videoHeight||_ed.vh||16;
+      const _esp=_edSplitAt(gTime); // #136 · split : la base descend en moitié basse
+      if(_esp){
+        const _hb=expH/2, _scr=edCoverRect(_evw,_evh,expW/_hb);
+        const _sfy=(_evh-_scr.sh)*((_esp._faceP!=null)?_esp._faceP:0.1);
+        try{ cx.drawImage(curV, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, _hb, expW, _hb); }catch(e){}
+        cx.fillStyle='#0D0D12'; cx.fillRect(0,_hb-3,expW,6);
+      } else {
       const _ecr=edCoverRect(_evw,_evh,expW/expH);
       const _ezr=_edZoomSrc(_ecr, gTime); // #70 · zoom punch-in (export)
       try{ cx.drawImage(curV, _ezr.sx,_ezr.sy,_ezr.sw,_ezr.sh, 0,0,expW,expH); }catch(e){}
+      }
       for(const ov of _ed.overlays){
         if(ov.start!=null && (gTime<ov.start||gTime>ov.end)) continue;
         if(ov.type==='image'){
           if(ov.vid) _edSyncOvVid(ov, gTime, true); // #111 · export : le clip b-roll tourne en vrai
           const srcEl=(ov.vid && ov.vid.readyState>=2)?ov.vid:ov.img;
-          const c=ov.crop||{t:0,r:0,b:0,l:0};
           const iw=(srcEl.videoWidth||srcEl.naturalWidth)||1, ih=(srcEl.videoHeight||srcEl.naturalHeight)||1;
+          if(ov._split){ // #136 · cover-crop biaisé vers le haut : les visages du média restent cadrés
+            const cr3=edCoverRect(iw,ih,ov.w/ov.h);
+            try{ cx.drawImage(srcEl, cr3.sx, cr3.sy*0.6, cr3.sw, cr3.sh, ov.x*f, ov.y*f, ov.w*f, ov.h*f); }catch(e){}
+          } else {
+          const c=ov.crop||{t:0,r:0,b:0,l:0};
           const sx=iw*c.l/100, sy=ih*c.t/100, sw=iw*(1-(c.l+c.r)/100), sh=ih*(1-(c.t+c.b)/100);
           try{ cx.drawImage(srcEl, sx,sy,sw,sh, ov.x*f, ov.y*f, ov.w*f, ov.h*f); }catch(e){}
+          }
         } else {
           const fs=ov.size*f; cx.save();
           cx.font=(ov.bold?'800 ':'600 ')+fs+'px "Bricolage Grotesque",sans-serif';
