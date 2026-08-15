@@ -585,6 +585,15 @@ export function buildComposition(plan, opts = {}) {
     dur: hookDur,
   } : null
 
+  // la PREMIÈRE image du hook arrive TOUT DE SUITE (Axel 15/08 : « c'est
+  // surtout à l'écran que la première image doit arriver rapidement ») : sa
+  // fenêtre s'ouvre dès 0,35 s même si son mot tombe plus tard — l'attente
+  // sur fond nu coûte le swipe, l'anticipation ne coûte rien
+  if (wordMode && hasWordHook) {
+    const b0 = brolls.filter((b) => !b.isVid && b.start < hookCapEndW).sort((x, y) => x.start - y.start)[0]
+    if (b0 && b0.start > 0.45) { b0.dur = r2(b0.dur + (b0.start - 0.35)); b0.start = 0.35 }
+  }
+
   // clip vidéo b-roll : classe "clip" + data-start/duration → le moteur le seek
   // frame par frame (il joue depuis son début pendant sa fenêtre, comme #base)
   const brollHtml = brolls.map((b) => `
@@ -611,17 +620,22 @@ export function buildComposition(plan, opts = {}) {
     if (cur.length) { if (cur.length < 3 && whkPhr.length) whkPhr[whkPhr.length - 1].push(...cur); else whkPhr.push(cur) }
   }
   const whkHtml = hasWordHook ? whkPhr.map((ph, k) => {
-    const a = r2(Math.max(0, ph[0].t - 0.05))
+    // frame 0 = matière (Axel 15/08 : « la 1ère seconde y'a un écran blanc,
+    // ça joue beaucoup sur le hook ») : la phrase 1 existe dès 0
+    const a = k === 0 ? 0 : r2(Math.max(0, ph[0].t - 0.05))
     const b = r2(k + 1 < whkPhr.length ? whkPhr[k + 1][0].t - 0.04 : hookCapEndW)
     return `
       <div class="clip whk" data-start="${a}" data-duration="${r2(Math.max(0.3, b - a))}" data-track-index="7"><span class="whk-in" id="whkIn${k}">${ph.map((w) => `<i class="whk-w" id="${w.id}">${esc(w.text)}</i>`).join(' ')}</span></div>`
   }).join('') : ''
   const whkJs = hasWordHook ? whkPhr.map((ph, k) => {
     const b = r2(k + 1 < whkPhr.length ? whkPhr[k + 1][0].t - 0.04 : hookCapEndW)
-    return ph.map((w) => (w.accent ? `
-      tl.fromTo('#${w.id}', { yPercent: 84, autoAlpha: 0, scale: 1.3 }, { yPercent: 0, autoAlpha: 1, scale: 1, duration: 0.2, ease: 'back.out(1.8)', transformOrigin: '50% 100%' }, ${w.t});
-      tl.set('#${w.id}', { attr: { class: 'whk-w acc' } }, ${r2(w.t + 0.06)});` : `
-      tl.fromTo('#${w.id}', { yPercent: 70, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.2, ease: 'power3.out', transformOrigin: '50% 100%' }, ${w.t});`)).join('') + `
+    return ph.map((w, wi) => {
+      const tw = k === 0 && wi === 0 ? 0.03 : w.t
+      return (w.accent ? `
+      tl.fromTo('#${w.id}', { yPercent: 84, autoAlpha: 0, scale: 1.3 }, { yPercent: 0, autoAlpha: 1, scale: 1, duration: 0.2, ease: 'back.out(1.8)', transformOrigin: '50% 100%' }, ${tw});
+      tl.set('#${w.id}', { attr: { class: 'whk-w acc' } }, ${r2(tw + 0.06)});` : `
+      tl.fromTo('#${w.id}', { yPercent: 70, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.2, ease: 'power3.out', transformOrigin: '50% 100%' }, ${tw});`)
+    }).join('') + `
       tl.to('#whkIn${k}', { autoAlpha: 0, y: -30, duration: 0.18, ease: 'power2.in' }, ${r2(Math.max(0.2, b - 0.2))});`
   }).join('') : ''
 
