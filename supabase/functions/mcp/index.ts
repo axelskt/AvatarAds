@@ -399,16 +399,6 @@ const toolMedia = async (url: string, nom: string, mime: string, texte: string, 
   const estVideo = mime.startsWith('video/')
   const vignette = apercuUrl ? await blocImage(apercuUrl) : null
   if (vignette) contenu.push(vignette)
-  contenu.push({
-    type: 'resource',
-    resource: {
-      uri: `ui://avatarads/${nom.replace(/[^a-z0-9.]/gi, '-')}`,
-      // le profil est OBLIGATOIRE pour que claude.ai rende l'iframe (spec MCP
-      // Apps) — en `text/html` nu le bloc était ignoré en silence
-      mimeType: 'text/html;profile=mcp-app',
-      text: carteHtml(url, nom, mime),
-    },
-  })
   contenu.push({ type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom })
   const consigne = estVideo
     ? `\n\nDonne l'URL en lien cliquable [▶ Voir la vidéo](${url}). Ne tente PAS de l'afficher en markdown ni dans un artifact (le bac à sable bloque les URL externes).`
@@ -768,18 +758,10 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     // (Le markdown ![image](url externe) ne rend PAS dans claude.ai — on a
     // arrêté de le demander : c'était lu comme « l'image arrive en lien ».)
     const vignette = await blocImage(String(job.preview_url || job.result_url))
-    const widget = {
-      type: 'resource',
-      resource: {
-        uri: 'ui://avatarads/image.png',
-        mimeType: 'text/html;profile=mcp-app',
-        text: carteHtml(String(job.result_url), 'image.png', 'image/png'),
-      },
-    }
     const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
 URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}
 Ne tente PAS d'afficher l'image en markdown ni dans un artifact (le bac à sable bloque les URL externes) — le lien cliquable suffit.` }
-    return { content: vignette ? [vignette, widget, texte] : [widget, texte],
+    return { content: vignette ? [vignette, texte] : [texte],
       structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
