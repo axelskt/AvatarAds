@@ -256,9 +256,12 @@ const carteHtml = (url: string, nom: string, mime: string) => {
   // apercu. Sans ca le lecteur reste un rectangle noir tant qu'on n'a pas
   // appuye sur play — Axel : « pareil pour pas que le lecteur soit un
   // rectangle noir ». Aucune extraction serveur, aucun fichier en plus.
+  const image = mime.startsWith('image')
   const media = video
     ? `<video src="${url}#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>`
-    : `<audio src="${url}" controls preload="metadata" class="aa-m" style="height:44px"></audio>`
+    : image
+      ? `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="" class="aa-m" style="object-fit:contain;background:#111"/></a>`
+      : `<audio src="${url}" controls preload="metadata" class="aa-m" style="height:44px"></audio>`
   return `<style>
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
@@ -316,7 +319,9 @@ const toolMedia = async (url: string, nom: string, mime: string, texte: string, 
     type: 'resource',
     resource: {
       uri: `ui://avatarads/${nom.replace(/[^a-z0-9.]/gi, '-')}`,
-      mimeType: 'text/html',
+      // le profil est OBLIGATOIRE pour que claude.ai rende l'iframe (spec MCP
+      // Apps) — en `text/html` nu le bloc était ignoré en silence
+      mimeType: 'text/html;profile=mcp-app',
       text: carteHtml(url, nom, mime),
     },
   })
@@ -367,6 +372,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.png' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête. Si toujours en cours, rappelle cet outil ~20 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -376,6 +382,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/video.mp4' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -401,6 +408,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.mp4' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -469,6 +477,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
+      _meta: { ui: { resourceUri: 'ui://avatarads/montage.mp4' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -678,9 +687,17 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     // (Le markdown ![image](url externe) ne rend PAS dans claude.ai — on a
     // arrêté de le demander : c'était lu comme « l'image arrive en lien ».)
     const vignette = await blocImage(String(job.preview_url || job.result_url))
+    const widget = {
+      type: 'resource',
+      resource: {
+        uri: 'ui://avatarads/image.png',
+        mimeType: 'text/html;profile=mcp-app',
+        text: carteHtml(String(job.result_url), 'image.png', 'image/png'),
+      },
+    }
     const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
 URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}` }
-    return vignette ? { content: [vignette, texte] } : { content: [texte] }
+    return { content: vignette ? [widget, vignette, texte] : [widget, texte] }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
   return toolText(
