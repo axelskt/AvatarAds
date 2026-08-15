@@ -447,6 +447,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.png' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -456,6 +457,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/video.mp4' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -481,6 +483,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.mp4' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -549,6 +552,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
+      _meta: { ui: { resourceUri: 'ui://avatarads/montage.mp4' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -1925,6 +1929,190 @@ async function runAdminFindUser(profile: Record<string, unknown>, args: Record<s
 ${logTxt}`)
 }
 
+// ═══ OAUTH (RFC 8414 / 7591 / 7636) — le connecteur « Se connecter avec ═══
+// AvatarAds » (15/08). Pourquoi : Bloom et Alexya rendent leurs widgets
+// interactifs dans claude.ai en connecteurs persos, et leur seul différentiel
+// structurel est l'OAuth — hypothèse : le rendu des iframes est réservé aux
+// connecteurs authentifiés. Bonus immédiat : plus de clé à coller, et la
+// régénération de clé ne casse plus rien.
+// Le flux : claude.ai reçoit un 401 sur l'URL nue → lit les .well-known →
+// s'enregistre (/register) → envoie l'utilisateur sur /authorize → on redirige
+// vers l'app (déjà connectée) qui demande le consentement → l'app appelle
+// /oauth/approve avec le JWT → code → claude.ai l'échange sur /token (PKCE)
+// → jeton Bearer aat_… accepté par la porte MCP comme une clé.
+const OAUTH_BASE = 'https://avatarads-mcp.netlify.app'
+const TOKEN_TTL_MS = 30 * 24 * 3600 * 1000       // 30 jours ; refresh sans limite
+const CODE_TTL_MS = 10 * 60 * 1000
+
+const hexAleatoire = (n: number) => {
+  const b = new Uint8Array(n)
+  crypto.getRandomValues(b)
+  return Array.from(b).map((x) => x.toString(16).padStart(2, '0')).join('')
+}
+const b64url = (buf: ArrayBuffer) =>
+  btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+async function sha256b64url(s: string): Promise<string> {
+  return b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))
+}
+
+const DOC_AS = () => ({
+  issuer: OAUTH_BASE,
+  authorization_endpoint: `${OAUTH_BASE}/authorize`,
+  token_endpoint: `${OAUTH_BASE}/token`,
+  registration_endpoint: `${OAUTH_BASE}/register`,
+  response_types_supported: ['code'],
+  grant_types_supported: ['authorization_code', 'refresh_token'],
+  code_challenge_methods_supported: ['S256'],
+  token_endpoint_auth_methods_supported: ['none'],
+  scopes_supported: ['avatarads'],
+})
+
+// Toutes les routes OAuth ; renvoie null si la requête n'en est pas une.
+async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Response | null> {
+  const p1 = segs[1] || ''
+
+  // ── découverte ──
+  if (p1 === '.well-known') {
+    const doc = segs[2] || ''
+    if (doc === 'oauth-protected-resource') {
+      return json(200, { resource: OAUTH_BASE, authorization_servers: [OAUTH_BASE],
+        scopes_supported: ['avatarads'], bearer_methods_supported: ['header'] })
+    }
+    if (doc === 'oauth-authorization-server' || doc === 'openid-configuration') {
+      return json(200, DOC_AS())
+    }
+    return json(404, { error: 'not_found' })
+  }
+
+  // ── enregistrement dynamique du client (RFC 7591) ──
+  if (p1 === 'register' && req.method === 'POST') {
+    let body: Record<string, unknown>
+    try { body = await req.json() } catch { return json(400, { error: 'invalid_client_metadata' }) }
+    const uris = Array.isArray(body.redirect_uris) ? body.redirect_uris.map(String).slice(0, 8) : []
+    if (!uris.length || uris.some((u) => !/^https:\/\//.test(u))) {
+      return json(400, { error: 'invalid_redirect_uri' })
+    }
+    const { data: client, error } = await svc.from('mcp_oauth_clients')
+      .insert({ client_name: String(body.client_name || 'client'), redirect_uris: uris })
+      .select('client_id').single()
+    if (error || !client) return json(500, { error: 'server_error' })
+    return json(201, {
+      client_id: String(client.client_id),
+      client_name: String(body.client_name || 'client'),
+      redirect_uris: uris,
+      token_endpoint_auth_method: 'none',
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+    })
+  }
+
+  // ── autorisation : on délègue le consentement à l'app (déjà connectée) ──
+  if (p1 === 'authorize' && (req.method === 'GET' || req.method === 'POST')) {
+    const q = url.searchParams
+    const clientId = String(q.get('client_id') || '')
+    const redirectUri = String(q.get('redirect_uri') || '')
+    const challenge = String(q.get('code_challenge') || '')
+    const method = String(q.get('code_challenge_method') || 'S256')
+    if (!clientId || !redirectUri || !challenge || method !== 'S256') {
+      return json(400, { error: 'invalid_request', error_description: 'client_id, redirect_uri, code_challenge (S256) requis' })
+    }
+    const { data: client } = await svc.from('mcp_oauth_clients')
+      .select('client_id, redirect_uris').eq('client_id', clientId).maybeSingle()
+    if (!client) return json(400, { error: 'invalid_client' })
+    const uris = (client.redirect_uris as string[]) || []
+    if (!uris.includes(redirectUri)) return json(400, { error: 'invalid_redirect_uri' })
+    const relai = btoa(JSON.stringify({
+      client_id: clientId, redirect_uri: redirectUri, state: String(q.get('state') || ''),
+      code_challenge: challenge, scope: String(q.get('scope') || 'avatarads'),
+    })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    return new Response(null, { status: 302, headers: { ...cors, Location: `${APP_URL}?mcp_oauth=${relai}` } })
+  }
+
+  // ── consentement approuvé par l'app (JWT utilisateur) → code ──
+  if (p1 === 'oauth' && segs[2] === 'approve' && req.method === 'POST') {
+    const jwt = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
+    if (!jwt) return json(401, { error: 'unauthorized' })
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: `Bearer ${jwt}` } } })
+    const { data: { user }, error } = await userClient.auth.getUser()
+    if (error || !user) return json(401, { error: 'unauthorized' })
+    let body: Record<string, unknown>
+    try { body = await req.json() } catch { return json(400, { error: 'bad_request' }) }
+    const clientId = String(body.client_id || ''), redirectUri = String(body.redirect_uri || '')
+    const challenge = String(body.code_challenge || ''), state = String(body.state || '')
+    const { data: client } = await svc.from('mcp_oauth_clients')
+      .select('client_id, redirect_uris').eq('client_id', clientId).maybeSingle()
+    if (!client || !((client.redirect_uris as string[]) || []).includes(redirectUri) || !challenge) {
+      return json(400, { error: 'invalid_request' })
+    }
+    const code = 'aac_' + hexAleatoire(24)
+    const { error: insErr } = await svc.from('mcp_oauth_codes').insert({
+      code_hash: await hashKey(code), client_id: clientId, user_id: user.id,
+      redirect_uri: redirectUri, code_challenge: challenge,
+      expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
+    })
+    if (insErr) return json(500, { error: 'server_error' })
+    const sep = redirectUri.includes('?') ? '&' : '?'
+    return json(200, { redirect_url: `${redirectUri}${sep}code=${encodeURIComponent(code)}${state ? `&state=${encodeURIComponent(state)}` : ''}` })
+  }
+
+  // ── échange du code contre le jeton (PKCE) + refresh ──
+  if (p1 === 'token' && req.method === 'POST') {
+    const ct = req.headers.get('content-type') || ''
+    let form: URLSearchParams
+    if (ct.includes('application/json')) {
+      const j = await req.json().catch(() => ({}))
+      form = new URLSearchParams(Object.entries(j).map(([k, v]) => [k, String(v)]))
+    } else {
+      form = new URLSearchParams(await req.text())
+    }
+    const grant = form.get('grant_type') || ''
+
+    if (grant === 'authorization_code') {
+      const code = form.get('code') || '', verifier = form.get('code_verifier') || ''
+      const redirectUri = form.get('redirect_uri') || ''
+      if (!code || !verifier) return json(400, { error: 'invalid_request' })
+      const { data: row } = await svc.from('mcp_oauth_codes').select('*')
+        .eq('code_hash', await hashKey(code)).maybeSingle()
+      if (!row) return json(400, { error: 'invalid_grant' })
+      await svc.from('mcp_oauth_codes').delete().eq('code_hash', await hashKey(code))
+      if (new Date(String(row.expires_at)).getTime() < Date.now()) return json(400, { error: 'invalid_grant', error_description: 'code expiré' })
+      if (redirectUri && redirectUri !== row.redirect_uri) return json(400, { error: 'invalid_grant' })
+      if (await sha256b64url(verifier) !== String(row.code_challenge)) return json(400, { error: 'invalid_grant', error_description: 'PKCE' })
+      const access = 'aat_' + hexAleatoire(24), refresh = 'aar_' + hexAleatoire(24)
+      const { error: insErr } = await svc.from('mcp_oauth_tokens').insert({
+        token_hash: await hashKey(access), refresh_hash: await hashKey(refresh),
+        client_id: row.client_id, user_id: row.user_id,
+        expires_at: new Date(Date.now() + TOKEN_TTL_MS).toISOString(),
+      })
+      if (insErr) return json(500, { error: 'server_error' })
+      return json(200, { access_token: access, token_type: 'Bearer',
+        expires_in: Math.floor(TOKEN_TTL_MS / 1000), refresh_token: refresh, scope: 'avatarads' })
+    }
+
+    if (grant === 'refresh_token') {
+      const refresh = form.get('refresh_token') || ''
+      if (!refresh) return json(400, { error: 'invalid_request' })
+      const { data: row } = await svc.from('mcp_oauth_tokens').select('*')
+        .eq('refresh_hash', await hashKey(refresh)).maybeSingle()
+      if (!row) return json(400, { error: 'invalid_grant' })
+      const access = 'aat_' + hexAleatoire(24), refresh2 = 'aar_' + hexAleatoire(24)
+      await svc.from('mcp_oauth_tokens').delete().eq('token_hash', row.token_hash)
+      const { error: insErr } = await svc.from('mcp_oauth_tokens').insert({
+        token_hash: await hashKey(access), refresh_hash: await hashKey(refresh2),
+        client_id: row.client_id, user_id: row.user_id,
+        expires_at: new Date(Date.now() + TOKEN_TTL_MS).toISOString(),
+      })
+      if (insErr) return json(500, { error: 'server_error' })
+      return json(200, { access_token: access, token_type: 'Bearer',
+        expires_in: Math.floor(TOKEN_TTL_MS / 1000), refresh_token: refresh2, scope: 'avatarads' })
+    }
+
+    return json(400, { error: 'unsupported_grant_type' })
+  }
+
+  return null
+}
+
 // ── Gestion de la clé personnelle (appelée par l'app avec le JWT utilisateur) ──
 async function handleKeyManagement(req: Request): Promise<Response> {
   const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
@@ -1980,13 +2168,9 @@ serve(async (req) => {
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
     return await handleKeyManagement(req)
   }
-  // Sonde OAuth de claude.ai (Dynamic Client Registration) : un 200 avec du
-  // JSON-RPC dedans lui faisait croire à un serveur OAuth cassé (« Impossible
-  // de s'inscrire auprès du service de connexion »). 404 franc = pas d'OAuth,
-  // le client continue en mode sans authentification (la clé est dans l'URL).
-  if (segs[1] === 'register' || segs[segs.length - 1] === 'register') {
-    return json(404, { error: 'no_oauth_here' })
-  }
+  // Routes OAuth (.well-known, register, authorize, oauth/approve, token)
+  const repOAuth = await handleOAuth(req, url, segs)
+  if (repOAuth) return repOAuth
 
   // ── Découverte OAuth : on répond 404, PAS 405 ──
   // Les connecteurs claude.ai sondent /.well-known/oauth-* avant de parler MCP.
@@ -2034,15 +2218,36 @@ serve(async (req) => {
   let keyErr: string | null = null
   // deno-lint-ignore no-explicit-any
   let keyRow: any = null
-  if (!key || !key.startsWith('aa_')) {
-    keyErr = 'Clé AvatarAds manquante dans l’URL du connecteur — génère-la dans Mon compte sur ' + APP_URL
+  // ── jeton OAuth (aat_…) : équivalent d'une clé, mappé au compte ──
+  if (bearer.startsWith('aat_')) {
+    const { data: tok } = await svc.from('mcp_oauth_tokens').select('token_hash, user_id, expires_at')
+      .eq('token_hash', await hashKey(bearer)).maybeSingle()
+    if (!tok) {
+      return new Response(JSON.stringify({ error: 'invalid_token' }), { status: 401, headers: { ...cors,
+        'Content-Type': 'application/json',
+        'WWW-Authenticate': `Bearer resource_metadata="${OAUTH_BASE}/.well-known/oauth-protected-resource", error="invalid_token"` } })
+    }
+    if (new Date(String(tok.expires_at)).getTime() < Date.now()) {
+      return new Response(JSON.stringify({ error: 'invalid_token', error_description: 'expiré' }), { status: 401, headers: { ...cors,
+        'Content-Type': 'application/json',
+        'WWW-Authenticate': `Bearer resource_metadata="${OAUTH_BASE}/.well-known/oauth-protected-resource", error="invalid_token"` } })
+    }
+    bg((async () => { await svc.from('mcp_oauth_tokens').update({ last_used_at: new Date().toISOString() }).eq('token_hash', tok.token_hash) })())
+    keyRow = { id: null, user_id: tok.user_id, require_confirm: false }
+  } else if (!key || !key.startsWith('aa_')) {
+    // AUCUN identifiant : 401 + WWW-Authenticate → claude.ai découvre l'OAuth
+    // et lance « Se connecter avec AvatarAds ». (Les URLs à clé ne passent
+    // jamais ici : la clé est dans le chemin.)
+    return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
+      'Content-Type': 'application/json',
+      'WWW-Authenticate': `Bearer resource_metadata="${OAUTH_BASE}/.well-known/oauth-protected-resource"` } })
   } else {
     const { data } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
       .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
     keyRow = data
     if (!keyRow) keyErr = 'Clé AvatarAds invalide ou révoquée. Va dans Mon compte sur ' + APP_URL + ', copie l’URL de la clé ACTUELLE et remplace l’URL de ce connecteur (ne régénère pas : ça révoque la clé partout ailleurs).'
   }
-  if (keyRow) bg((async () => { await svc.from('mcp_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRow.id) })())
+  if (keyRow && keyRow.id) bg((async () => { await svc.from('mcp_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRow.id) })())
 
   // deno-lint-ignore no-explicit-any
   let profile: any = null
