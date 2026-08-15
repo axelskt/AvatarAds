@@ -1177,7 +1177,27 @@ export function buildDynamicComposition(plan, opts = {}) {
     }
     const fs = Math.round(H * 0.036)
     const bas = Math.round(H * (1 - SAFE.bottom) - fs * 2.1)
-    const encre = '#FFFFFF'                       // sur pastille sombre, toujours blanc
+    // ── LE MODÈLE RÉF (ssstik 1786369405912, analysé image par image le 15/08) :
+    // les mots s'ACCUMULENT au fil de la voix et RESTENT, les connecteurs sont
+    // petits, les mots forts énormes (la hiérarchie = la TAILLE, pas la couleur,
+    // tout est blanc), et la POSITION change à chaque groupe — jamais une barre
+    // de sous-titres fixe. Sur un plan visage, le texte ose monter à mi-cadre.
+    const ancLow = [
+      { top: bas, cls: '' },
+      { top: Math.round(H * 0.585), cls: ' dc-al' },
+      { top: Math.round(H * 0.66), cls: ' dc-ar' },
+      { top: Math.round(H * 0.705), cls: '' },
+    ]
+    const ancFace = [...ancLow,
+      { top: Math.round(H * 0.40), cls: ' dc-al' },
+      { top: Math.round(H * 0.345), cls: ' dc-ar' },
+    ]
+    // les mots-outils, en petit (0,6 em) — c'est le contraste qui fait la réf
+    const STOPW = new Set(['le', 'la', 'les', 'un', 'une', 'des', 'de', 'du', 'et', 'ou', 'a',
+      'au', 'aux', 'en', 'ne', 'pas', 'que', 'qui', 'se', 'sa', 'son', 'ses', 'ta', 'ton', 'tes',
+      'ma', 'mon', 'mes', 'ce', 'cette', 'cest', 'est', 'sont', 'vais', 'vas', 'va', 'tu', 'je',
+      'il', 'elle', 'on', 'avec', 'pour', 'dans', 'sur', 'par', 'mais', 'si', 'te', 'me', 'y', 'ici'])
+    const OFFS = [0, -0.12, 0.16, 0.06, -0.07, 0.2]   // marches d'escalier de la réf
     // DEUX GROUPES NE SE CHEVAUCHENT JAMAIS. Avec une marge avant ET après, deux
     // blocs restaient affichés en même temps et les phrases se superposaient,
     // illisibles (« que|ton|audio »). Chaque groupe s'arrête où le suivant
@@ -1254,10 +1274,21 @@ export function buildDynamicComposition(plan, opts = {}) {
       const panClair = pan && pan.kind !== 'avclip'
         && (pan.kind === 'media' || pan.kind === 'medias' || panels.indexOf(pan) % 2 === 1)
       g.sombre = ap ? (!pan || pan.kind === 'avclip') : !panClair
-      const dedans = g.mots.map((w, k) =>
-        `<span class="dc-w${ACCFORTS.has(normAcc(w.text)) ? ' acc' : ''}" data-t="${r2(w.start)}">${esc(w.text)}</span>`).join(' ')
-      return `<div class="clip dyncap" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
-        style="top:${g.hook ? hautHook : bas}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
+      // l'ancre du groupe : cycle bas de cadre sous un panneau, cadre entier sur
+      // un visage plein cadre — deux groupes consécutifs ne se posent jamais au
+      // même endroit (c'est le « ça bouge tout le temps » de la réf)
+      const pool = pan ? ancLow : ancFace
+      const an = g.hook ? null : pool[i % pool.length]
+      g.mode = i % 4
+      const dedans = g.mots.map((w, k) => {
+        const bare = normAcc(w.text)
+        const cls = ACCFORTS.has(bare) ? ' acc' : (STOPW.has(bare) ? ' sm' : '')
+        // l'escalier de la réf ne touche PAS au hook (hk15 validé tel quel)
+        const off = g.hook ? '' : ` style="vertical-align:${OFFS[(i + k) % OFFS.length]}em"`
+        return `<span class="dc-w${cls}" data-t="${r2(w.start)}"${off}>${esc(w.text)}</span>`
+      }).join(' ')
+      return `<div class="clip dyncap${g.hook ? '' : an.cls}" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
+        style="top:${g.hook ? hautHook : an.top}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
     // ── COLLECTE DES MOTS GÉANTS (avant la boucle JS : un mot promu géant ne
     // reçoit NI pop NI couleur dans son groupe — le géant le REMPLACE) ────────
@@ -1301,27 +1332,21 @@ export function buildDynamicComposition(plan, opts = {}) {
         })
         continue
       }
-      const enc = g.sombre ? encre : '#17171C'
-      const accW = g.sombre ? '#FF8A5B' : '#E8500A'
-      // #124 (réf ssstik 1786369405912, Axel 15/08 : « qu'ils bougent tout le
-      // temps, différentes tailles selon l'importance ») : chaque mot POPE à
-      // l'instant où il est dit — un accent claque plus gros et le RESTE
-      // (hiérarchie visible), un mot courant pope sec. L'entrée du groupe
-      // change une fois sur trois pour que deux pastilles ne se ressemblent pas.
+      // #124 v2 (réf ssstik, analysée frame par frame) : les mots s'accumulent à
+      // leur instant et RESTENT — tout blanc, la hiérarchie est dans la TAILLE
+      // (sm 0,6 em / normal / acc 1,78 em). L'ENTRÉE change à chaque groupe
+      // (pop, montée, défloutage, tampon) — jamais deux groupes pareils, et pas
+      // de mouvement du conteneur : c'est l'apparition des mots qui anime.
+      const m = g.mode ?? 0
       g.mots.forEach((w, k) => {
         if (supprimes.has(i + ':' + k)) return   // promu en mot géant : il vit là-bas
         const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
         const fort = ACCFORTS.has(normAcc(w.text))
-        js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:${fort ? 1.6 : 1.24},yPercent:${fort ? 12 : 6}},{autoAlpha:1,scale:${fort ? 1.14 : 1},yPercent:0,duration:${fort ? 0.16 : 0.11},ease:'back.out(2.2)',transformOrigin:'50% 85%'},${r2(w.start)});`
-        js += `\n  tl.set(${sel}, { color: '${accW}' }, ${r2(w.start)});`
-        if (k && !supprimes.has(i + ':' + (k - 1))) js += `\n  tl.set('#dc${i} .dc-w:nth-child(${k})', { color: '${enc}' }, ${r2(w.start)});`
+        if (m === 0) js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:${fort ? 1.55 : 1.3}},{autoAlpha:1,scale:1,duration:0.12,ease:'back.out(2.2)',transformOrigin:'50% 80%'},${r2(w.start)});`
+        else if (m === 1) js += `\n  tl.fromTo(${sel},{autoAlpha:0,yPercent:46},{autoAlpha:1,yPercent:0,duration:0.14,ease:'power3.out',transformOrigin:'50% 100%'},${r2(w.start)});`
+        else if (m === 2) js += `\n  tl.fromTo(${sel},{autoAlpha:0,filter:'blur(7px)',scale:1.07},{autoAlpha:1,filter:'blur(0px)',scale:1,duration:0.16,ease:'power2.out'},${r2(w.start)});`
+        else js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:0.55,rotation:${k % 2 ? 4 : -4}},{autoAlpha:1,scale:1,rotation:0,duration:0.13,ease:'back.out(3)',transformOrigin:'50% 60%'},${r2(w.start)});`
       })
-      const entree = i % 3 === 0
-        ? `{ autoAlpha: 0, y: 12, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)', transformOrigin: '50% 100%' }`
-        : i % 3 === 1
-          ? `{ autoAlpha: 0, y: -10, filter: 'blur(5px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.22, ease: 'power3.out', transformOrigin: '50% 0%' }`
-          : `{ autoAlpha: 0, x: ${i % 2 ? 16 : -16}, rotation: ${i % 2 ? 1.4 : -1.4} }, { autoAlpha: 1, x: 0, rotation: 0, duration: 0.2, ease: 'power2.out', transformOrigin: '50% 100%' }`
-      js += `\n  tl.fromTo('#dp${i}', ${entree}, ${a});`
     }
     // ── LES MOTS GÉANTS (réf : « BREAKS », « BE YOU? ») ────────────────────
     // Un ACCENT long hors hook devient un plan à lui seul : le mot énorme en
@@ -1442,7 +1467,10 @@ export function buildDynamicComposition(plan, opts = {}) {
      il se noyait. Une pastille pleine se pose sur n'importe quel arrière-plan,
      assume sa présence, et laisse le mot prononcé ressortir vraiment. */
   .dyncap { position:absolute; left:0; width:${W}px; text-align:center;
-    z-index:60; pointer-events:none; }
+    z-index:60; pointer-events:none; box-sizing:border-box; }
+  /* l'ancre change à chaque groupe (réf) : gauche / droite / centre */
+  .dyncap.dc-al { text-align:left; padding-left:${Math.round(W * 0.09)}px; }
+  .dyncap.dc-ar { text-align:right; padding-right:${Math.round(W * 0.09)}px; }
   /* #124 · mots géants (réf ssstik) : l'accent devient un plan à lui seul */
   .gwcap { position:absolute; left:0; width:${W}px; top:${Math.round(H * 0.335)}px;
     text-align:center; z-index:65; pointer-events:none; }
@@ -1457,13 +1485,17 @@ export function buildDynamicComposition(plan, opts = {}) {
      l'accent en couleur et plus gros. */
   .dc-p { display:inline-block; max-width:${Math.round(W * 0.86)}px;
     background:transparent; box-shadow:none; padding:0;
-    font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.022em;
-    font-size:${Math.round(H * 0.038)}px; line-height:1.22; color:#FFFFFF;
+    font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.024em;
+    font-size:${Math.round(H * 0.040)}px; line-height:1.06; color:#FFFFFF;
     text-shadow:0 ${Math.round(H * 0.0016)}px ${Math.round(H * 0.004)}px rgba(0,0,0,.55),
       0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.02)}px rgba(0,0,0,.45);
     text-wrap:balance; }
-  /* l'ACCENT du corps : plus gros, il reste — la hiérarchie se voit (réf) */
-  .dc-p:not(.dc-hook) .dc-w.acc { font-size:1.32em; font-weight:900; }
+  /* chaque mot naît invisible et pope à SON instant (accumulation, réf) */
+  .dc-p:not(.dc-hook) .dc-w { display:inline-block; opacity:0; will-change:transform,opacity; }
+  /* la hiérarchie de la réf est dans la TAILLE, tout reste blanc :
+     connecteurs 0,6 em · mots normaux 1 em · mots forts 1,78 em */
+  .dc-p:not(.dc-hook) .dc-w.sm { font-size:.6em; font-weight:700; letter-spacing:-.01em; }
+  .dc-p:not(.dc-hook) .dc-w.acc { font-size:1.78em; font-weight:900; letter-spacing:-.035em; }
   /* sur un panneau CLAIR : encre sombre, ombre claire discrète */
   .dc-clair { background:transparent; color:#17171C;
     text-shadow:0 ${Math.round(H * 0.0014)}px ${Math.round(H * 0.005)}px rgba(255,255,255,.6),

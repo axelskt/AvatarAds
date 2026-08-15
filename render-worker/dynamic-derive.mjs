@@ -1628,7 +1628,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
       while (words[k + 1] && !/[.!?]$/.test(String(words[k].text || ''))
         && (words[k + 1].start - (words[k].end || 0)) <= 0.35
         && words[k + 1].start < words[i - 1].start + 2.2) { k++; finPhrase = words[k].end || finPhrase }
-      const b = r2(Math.min(D, finPhrase + 0.7))
+      // +0,35 s et pas +0,7 : « switch sur l'avatar une fois que j'ai dit top
+      // chrono » (Axel, 15/08) — le chrono ne survit pas à sa phrase.
+      const b = r2(Math.min(D, finPhrase + 0.35))
       if (b - a < 1.25) continue
       // le nombre tombe dans la fenêtre du hook → on coupe le hook pile là
       // (bornes réelles = hookWin, PAS seulement plan.hook.end : v7 avait
@@ -1645,6 +1647,11 @@ export function deriveDynamicSlides(plan, opts = {}) {
       }
       if (add({ anim: 'ui', ui: 'timer', value: String(sec), unit: 'SECONDES' }, a, b)) {
         console.log(`▶ « ${words[i - 1].text} ${words[i].text} » → chrono ${sec} SECONDES (${a}→${b}s)`)
+        // …et la fin de phrase rend l'écran au VISAGE (Axel : « switch sur
+        // l'avatar une fois que j'ai dit top chrono ») : une respiration photo
+        // juste après le chrono, que §3b bornera contre la scène suivante.
+        plan.avatarSegments = [...(plan.avatarSegments || []),
+          { start: b, end: r2(Math.min(D, b + 2.6)), format: 'portrait' }]
       }
     }
   }
@@ -2392,8 +2399,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
           if (add(pose, ra, rb) || (rb > rbPlan && add(pose, ra, rbPlan))) consumedByPlan.add(rival)
           continue
         }
-        // une carte titrée qui porte AUSSI une animation : le titre saute, l'anim reste
-        if (add({ ...sl, title: '', text: '', items: [], ...(NEEDS[an] || {}) }, a, b)) {
+        // une carte titrée qui porte AUSSI une animation : le titre saute, l'anim
+        // reste. ⚠ Ne vider les items QUE s'il y avait un titre/texte : pour une
+        // slide d'anim nue, items[0].text EST la valeur de l'animation (le
+        // « +10 000 € » de spike partait à la poubelle et le 340K par défaut
+        // s'affichait — un chiffre jamais prononcé, interdit).
+        if (add({ ...sl, title: '', text: '',
+          items: (sl.title || sl.text) ? [] : (sl.items || []), ...(NEEDS[an] || {}) }, a, b)) {
           consumedByPlan.add(sl); placedAnim++
         }
       }

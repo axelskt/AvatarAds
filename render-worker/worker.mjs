@@ -639,6 +639,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // une animation peut avoir besoin d'images (le visage du comparatif fake/réel,
     // le logo dans « les bons outils ») : elles le déclarent dans `assets`
     for (const sl of plan.slides || []) for (const a of sl.assets || []) wantedScreens.add(a)
+    // le SCRIPT mot-à-mot référence ses propres captures (écrans, vol de photo),
+    // et sa scène navigateur charge la LP — aucune n'est dans plan.slides
+    for (const w of plan.wordScript || []) {
+      if (w && w.screen) wantedScreens.add(String(w.screen))
+      if (w && w.kind === 'ui' && w.ui === 'browser') wantedScreens.add(String(w.screen || 'site-home'))
+    }
     // #149 · fenêtres avatar SANS clips lipsync → la photo avatar sert de fallback
     if ((plan.avatarSegments || []).length && !existsSync(join(jobDir, 'avatar'))) wantedScreens.add('hook-qualite')
     // LES IMAGES QU'UNE ANIMATION CHARGE ELLE-MÊME. `tools` et `connect` écrivent
