@@ -292,43 +292,57 @@ function aaShow(out){
     aaOk = true;
     var v = kind==='video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
     document.getElementById('m').innerHTML = v
-      ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
-      : '<a href="'+url+'" target="_blank" rel="noopener"><img src="'+url+'" alt="" class="aa-m"/></a>';
+      ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m" onloadeddata="aaKick()"></video>'
+      : '<a href="'+url+'" target="_blank" rel="noopener"><img src="'+url+'" alt="" class="aa-m" onload="aaKick()"/></a>';
     document.getElementById('n').textContent = name || (v ? 'Vidéo' : 'Image');
     document.getElementById('dl').href = url;
     document.getElementById('op').href = url;
     document.getElementById('m').style.padding = '0';
     document.getElementById('b').style.display = 'flex';
+    aaKick();
   }catch(e){}
 }
 // Ressemble à un CallToolResult ? (secours : certains hôtes varient le nom de la méthode)
 function aaLikely(p){ return p && (p.structuredContent || (p.content && p.content.length)); }
-// Sans résultat après 6 s : afficher ce que l'hôte a réellement envoyé (lisible sur un screenshot)
-setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent =
-  'AvatarAds — en attente du résultat… (reçu : ' + (aaSeen.join(', ') || 'rien') + ')'; }catch(e){} } }, 6000);
-// ── Sizing (spec MCP Apps) : l'iframe annonce sa hauteur, l'hôte la déplie.
-// Sans ça, claude.ai laisse la hauteur par défaut : l'image restait une bande.
-var aaH = 0;
-function aaSize(){
-  try{
-    var h = Math.ceil(document.getElementById('c').getBoundingClientRect().height);
-    if(!h || h === aaH) return;
-    aaH = h;
-    window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/size-changed', params:{ height: h } }, '*');
-  }catch(e){}
-}
-try{ new ResizeObserver(aaSize).observe(document.getElementById('c')); }catch(e){}
-window.addEventListener('load', aaSize);
-setInterval(aaSize, 800);
 function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
+// ── Sizing : COPIE du SDK officiel (App.setupSizeChangedNotifications). On force
+// html en height:max-content pour lire la VRAIE hauteur du contenu — sinon
+// l'iframe bride la mesure et l'image reste une bande (bug des 2 tests d'Axel).
+// Largeur = innerWidth (mesurer via fit-content casse le scroll horizontal).
+// ⚠ Le host IGNORE size-changed tant qu'il n'a pas reçu initialized (SDK
+// strict → sinon « iframe cachée en permanence », cf claude-ai-mcp#61/#149) :
+// on ne mesure donc qu'APRÈS aaFinalize().
+var aaReady=false, aaFinal=false, aaLW=0, aaLH=0, aaSched=false;
+function aaMeasure(){
+  if(aaSched) return; aaSched=true;
+  requestAnimationFrame(function(){
+    aaSched=false; if(!aaReady) return;
+    var html=document.documentElement, oh=html.style.height;
+    html.style.height='max-content';
+    var h=Math.ceil(html.getBoundingClientRect().height);
+    html.style.height=oh;
+    var w=Math.ceil(window.innerWidth);
+    if(w!==aaLW||h!==aaLH){ aaLW=w; aaLH=h;
+      window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/size-changed', params:{ width:w, height:h } }, '*'); }
+  });
+}
+function aaKick(){ aaMeasure(); }
+// Handshake terminé → on envoie initialized PUIS on active le report de taille
+// (observe html ET body, comme le SDK). Idempotent : réponse d'init OU timeout.
+function aaFinalize(){
+  if(aaFinal) return; aaFinal=true;
+  try{ window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/initialized', params:{} }, '*'); }catch(e){}
+  aaReady=true;
+  try{ var ro=new ResizeObserver(aaMeasure); ro.observe(document.documentElement); ro.observe(document.body); }catch(e){}
+  aaMeasure(); setTimeout(aaMeasure,300); setTimeout(aaMeasure,1500);
+}
 window.addEventListener('message', function(e){
   var d = e.data || {};
   try{ aaSeen.push(d.method || d.type || (d.id !== undefined ? 'rep#'+d.id : 'msg')); }catch(_){ }
-  // réponse à ui/initialize → on signale initialized, on applique le thème
+  // réponse à ui/initialize → thème + éventuel résultat porté par l'init, PUIS finalize
   if (d.jsonrpc === '2.0' && d.id === 1 && d.result) {
-    try{ if(d.result.hostContext && d.result.hostContext.theme) aaTheme(d.result.hostContext.theme); }catch(_){ }
-    try{ var ti = d.result.hostContext && d.result.hostContext.toolInfo; if(ti && ti.result) aaShow(ti.result); }catch(_){ }
-    window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/initialized', params:{} }, '*');
+    try{ var hc = d.result.hostContext || {}; if(hc.theme) aaTheme(hc.theme); if(hc.toolInfo && hc.toolInfo.result) aaShow(hc.toolInfo.result); }catch(_){ }
+    aaFinalize();
     return;
   }
   // notifications : la méthode officielle d'abord, sinon tout params en forme de CallToolResult
@@ -344,9 +358,15 @@ window.addEventListener('message', function(e){
   }
 });
 window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:{
-  capabilities:{}, clientInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
-  protocolVersion:'2026-01-26', appCapabilities:{ availableDisplayModes:['inline'] } } }, '*');
+  appCapabilities:{}, appInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
+  protocolVersion:'2026-01-26' } }, '*');
 window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
+// Repli : si le host ne répond pas à l'init (builds claude.ai variables), on
+// finalise quand même après 1,2 s — sinon l'iframe reste cachée pour toujours.
+setTimeout(aaFinalize, 1200);
+// Sans résultat après 6 s : afficher ce que l'hôte a réellement envoyé (screenshot lisible).
+setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent =
+  'AvatarAds — en attente du résultat… (reçu : ' + (aaSeen.join(', ') || 'rien') + ')'; }catch(e){} } }, 6000);
 </script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
