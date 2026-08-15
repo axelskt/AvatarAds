@@ -178,7 +178,91 @@ function loudnessOf(file) {
 // visages hauts, hors de la zone de légende/boutons TikTok. L'audio vient de
 // l'original (la voix qui a piloté le mouvement). input 0 = base.mp4 (original),
 // input 1 = assets/motion.mp4. mode 'split-top' = motion en haut, sinon original.
-function composeMotionSplit(jobDir, outPath, plan) {
+// #138 · Suivi du visage dans le temps : n vignettes d'une vidéo → gpt-4o (UNE
+// requête) → [{t, cy}] avec cy = centre vertical du visage (fraction 0-1).
+// null si indisponible (pas d'env, pas de visage, extraction ratée) → le crop
+// fixe reprend la main.
+async function suivreVisage(src) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key || !existsSync(src)) return null
+  let dur = 0
+  try {
+    dur = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration',
+      '-of', 'csv=p=0', src]).toString().trim()) || 0
+  } catch (_) { return null }
+  if (dur < 0.8) return null
+  const n = Math.max(3, Math.min(10, Math.ceil(dur / 1.5)))
+  const times = Array.from({ length: n }, (_, i) => +(0.2 + (dur - 0.5) * i / (n - 1)).toFixed(2))
+  const content = [{ type: 'text', text: `These are ${n} frames sampled in chronological order from one vertical video. For EACH frame i (0-based, same order), give the vertical center of the MAIN person's face (their head) as a fraction of the frame height from 0 (top) to 1 (bottom). Reply ONLY a JSON array like [{"i":0,"cy":0.31},{"i":1,"cy":0.35}] with exactly ${n} items — use "cy":null when no clear face is visible in that frame.` }]
+  const tmps = []
+  try {
+    for (let i = 0; i < n; i++) {
+      const f = join(dirname(src), `_fs${i}-${Date.now() % 1e6}.jpg`)
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(times[i]), '-i', src,
+        '-frames:v', '1', '-vf', 'scale=300:-2', f])
+      content.push({ type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + readFileSync(f).toString('base64') } })
+      tmps.push(f)
+    }
+    const body = { model: 'gpt-4o', max_tokens: 400, temperature: 0, messages: [{ role: 'user', content }] }
+    const r = await fetch(url + '/functions/v1/openai-proxy?path=' + encodeURIComponent('/v1/chat/completions'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key },
+      body: JSON.stringify(body) })
+    if (!r.ok) return null
+    const d = await r.json().catch(() => ({}))
+    const m = String(d?.choices?.[0]?.message?.content || '').match(/\[[\s\S]*\]/)
+    if (!m) return null
+    const arr = JSON.parse(m[0])
+    const cys = times.map((_, i) => {
+      const it = Array.isArray(arr) ? arr.find((a) => a && a.i === i) : null
+      const v = it && typeof it.cy === 'number' ? it.cy : null
+      return v != null && v > 0 && v < 1 ? v : null
+    })
+    if (!cys.some((v) => v != null)) return null
+    // combler les trous par le voisin le plus proche, puis lisser (moyenne sur 3)
+    for (let i = 0; i < n; i++) {
+      if (cys[i] == null) {
+        let l = i - 1; while (l >= 0 && cys[l] == null) l--
+        let r2 = i + 1; while (r2 < n && cys[r2] == null) r2++
+        cys[i] = cys[l >= 0 ? l : r2] ?? 0.34
+      }
+    }
+    const liss = cys.map((_, i) => {
+      const v = [cys[i - 1], cys[i], cys[i + 1]].filter((x) => x != null)
+      return v.reduce((a, b) => a + b, 0) / v.length
+    })
+    return times.map((t, i) => ({ t, cy: +liss[i].toFixed(3) }))
+  } catch (e) {
+    console.warn('suivi visage :', e?.message || e)
+    return null
+  } finally {
+    for (const f of tmps) { try { rmSync(f, { force: true }) } catch (_) {} }
+  }
+}
+
+// Expression de pan 1080×960 : crop vertical qui SUIT le visage (cible : visage
+// à 40 % de la bande), interpolation linéaire entre échantillons. Sans suivi →
+// crop fixe historique (30 % du surplus).
+// ⚠ ffmpeg 8 : dans un filter_complex, une expression à virgules ne passe QUE
+// via les options NOMMÉES (crop=w=…:y=…) avec les virgules échappées `\,` —
+// les quotes simples et la forme positionnelle cassent le parseur de graphe
+// (« No such filter: '' »), vérifié empiriquement le 15/08.
+function exprPanSplit(samples) {
+  if (!samples || samples.length < 2) {
+    return 'scale=1080:960:force_original_aspect_ratio=increase,crop=w=1080:h=960:x=(iw-1080)/2:y=(ih-960)*0.3,setsar=1'
+  }
+  const seg = [`lt(t\\,${samples[0].t})*${samples[0].cy}`]
+  for (let i = 0; i < samples.length - 1; i++) {
+    const a = samples[i], b = samples[i + 1]
+    const pente = ((b.cy - a.cy) / (b.t - a.t)).toFixed(5)
+    seg.push(`gte(t\\,${a.t})*lt(t\\,${b.t})*(${a.cy}+${pente}*(t-${a.t}))`)
+  }
+  const fin = samples[samples.length - 1]
+  seg.push(`gte(t\\,${fin.t})*${fin.cy}`)
+  const y = `max(0\\,min((${seg.join('+')})*ih-384\\,ih-960))`
+  return `scale=1080:960:force_original_aspect_ratio=increase,crop=w=1080:h=960:x=(iw-1080)/2:y=${y},setsar=1`
+}
+
+async function composeMotionSplit(jobDir, outPath, plan) {
   const orig0 = join(jobDir, 'base.mp4')
   const motion = join(jobDir, 'assets', 'motion.mp4')
   if (!existsSync(motion)) throw new Error('clip motion manquant (assets/motion.mp4)')
@@ -197,10 +281,15 @@ function composeMotionSplit(jobDir, outPath, plan) {
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', orig], { stdio: 'pipe' })
   }
   const mode = plan.mode === 'split-top' ? 'split-top' : 'split-bottom'
-  const pan = 'scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960:(iw-1080)/2:(ih-960)*0.3,setsar=1'
+  // #138 · visages centrés sur TOUTE la durée : un pan suiveur PAR SOURCE
+  let sO = null, sM = null
+  try { [sO, sM] = await Promise.all([suivreVisage(orig0), suivreVisage(motion)]) }
+  catch (e) { console.warn('suivi visages :', e?.message || e) }
+  console.log(`motion-split : suivi visage orig=${sO ? sO.length + ' pts' : 'non'} · motion=${sM ? sM.length + ' pts' : 'non'}`)
+  const panParInput = [exprPanSplit(sO), exprPanSplit(sM)]   // input 0 = orig, 1 = motion
   const top = mode === 'split-top' ? 1 : 0   // split-top → motion (input 1) en haut
   const bot = mode === 'split-top' ? 0 : 1
-  const fc = `[${top}:v]${pan}[t];[${bot}:v]${pan}[b];[t][b]vstack=inputs=2[v]`
+  const fc = `[${top}:v]${panParInput[top]}[t];[${bot}:v]${panParInput[bot]}[b];[t][b]vstack=inputs=2[v]`
   try {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ignore_unknown', '-i', orig, '-i', motion,
       '-filter_complex', fc, '-map', '[v]', '-map', '0:a?',
@@ -219,7 +308,7 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
   const plan = JSON.parse(readFileSync(join(jobDir, 'plan.json'), 'utf8'))
 
   // Motion Control (#34) : composition légère original + motion, pas de montage.
-  if (plan.__compose === 'motion-split') { composeMotionSplit(jobDir, outPath, plan); return }
+  if (plan.__compose === 'motion-split') { await composeMotionSplit(jobDir, outPath, plan); return }
 
   const basePath = join(jobDir, 'base.mp4')
   if (!existsSync(basePath)) throw new Error('base.mp4 manquant dans ' + jobDir)
