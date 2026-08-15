@@ -274,7 +274,7 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   }
 </style></head><body>
 <div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div>
-<div class="aa-b"><span class="aa-n" id="n"></span><span style="flex:1"></span>
+<div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
 <a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
 <script>
@@ -282,12 +282,14 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 // iframe → ui/initialize (requête) → host répond → iframe → ui/notifications/
 // initialized → le host pousse ui/notifications/tool-result (structuredContent).
 // L'ancien dialecte mcp-ui (ui-lifecycle-*) reste écouté en secours.
+var aaOk = false, aaSeen = [];
 function aaShow(out){
   try{
     var sc = (out && (out.structuredContent || out)) || {};
     var url = sc.url || '', kind = sc.kind || '', name = sc.name || '';
     if(!url && out && out.content){ for (var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\s)\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
     if(!url) return;
+    aaOk = true;
     var v = kind==='video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
     document.getElementById('m').innerHTML = v
       ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
@@ -296,21 +298,30 @@ function aaShow(out){
     document.getElementById('dl').href = url;
     document.getElementById('op').href = url;
     document.getElementById('m').style.padding = '0';
+    document.getElementById('b').style.display = 'flex';
   }catch(e){}
 }
+// Ressemble à un CallToolResult ? (secours : certains hôtes varient le nom de la méthode)
+function aaLikely(p){ return p && (p.structuredContent || (p.content && p.content.length)); }
+// Sans résultat après 6 s : afficher ce que l'hôte a réellement envoyé (lisible sur un screenshot)
+setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent =
+  'AvatarAds — en attente du résultat… (reçu : ' + (aaSeen.join(', ') || 'rien') + ')'; }catch(e){} } }, 6000);
 function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
 window.addEventListener('message', function(e){
   var d = e.data || {};
+  try{ aaSeen.push(d.method || d.type || (d.id !== undefined ? 'rep#'+d.id : 'msg')); }catch(_){ }
   // réponse à ui/initialize → on signale initialized, on applique le thème
   if (d.jsonrpc === '2.0' && d.id === 1 && d.result) {
     try{ if(d.result.hostContext && d.result.hostContext.theme) aaTheme(d.result.hostContext.theme); }catch(_){ }
+    try{ var ti = d.result.hostContext && d.result.hostContext.toolInfo; if(ti && ti.result) aaShow(ti.result); }catch(_){ }
     window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/initialized', params:{} }, '*');
     return;
   }
-  // notifications officielles
+  // notifications : la méthode officielle d'abord, sinon tout params en forme de CallToolResult
   if (d.jsonrpc === '2.0' && d.method && d.id === undefined) {
     if (d.method === 'ui/notifications/tool-result') aaShow(d.params || {});
     else if (d.method === 'ui/notifications/host-context-changed' && d.params && d.params.theme) aaTheme(d.params.theme);
+    else if (aaLikely(d.params)) aaShow(d.params);
     return;
   }
   // dialecte mcp-ui (secours)
@@ -324,10 +335,28 @@ window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:
 window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
 </script></body></html>`
 
+// CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
+// chargement des images/vidéos externes dans l'iframe → carte vide (constaté
+// au test OAuth du 15/08). L'origin Supabase sert tous les médias (mcp-media
+// public + render-media signé), avatarads.fr sert les logos.
+const UI_META = {
+  ui: {
+    csp: {
+      connectDomains: [] as string[],
+      resourceDomains: [
+        (Deno.env.get('SUPABASE_URL') || 'https://guvwgiejzkiodghywpwj.supabase.co').replace(/\/$/, ''),
+        'https://avatarads.fr',
+      ],
+    },
+    prefersBorder: true,
+  },
+}
+
 const UI_RESOURCES = ['image.png', 'video.mp4', 'avatar.mp4', 'montage.mp4'].map((n) => ({
   uri: `ui://avatarads/${n}`,
   name: `Viewer ${n}`,
   mimeType: 'text/html;profile=mcp-app',
+  _meta: UI_META,
 }))
 
 const carteHtml = (url: string, nom: string, mime: string) => {
@@ -2096,7 +2125,14 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
         .eq('refresh_hash', await hashKey(refresh)).maybeSingle()
       if (!row) return json(400, { error: 'invalid_grant' })
       const access = 'aat_' + hexAleatoire(24), refresh2 = 'aar_' + hexAleatoire(24)
-      await svc.from('mcp_oauth_tokens').delete().eq('token_hash', row.token_hash)
+      // Rotation DOUCE : l'ancien access reste valable 10 min (une autre session
+      // claude.ai peut encore l'avoir en main — un delete sec la mettait en 401
+      // « Problème de connexion »). L'ancien refresh, lui, meurt tout de suite
+      // (écrasé par un hash jamais distribué, la colonne est NOT NULL + unique).
+      await svc.from('mcp_oauth_tokens').update({
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        refresh_hash: await hashKey('dead_' + hexAleatoire(24)),
+      }).eq('token_hash', row.token_hash)
       const { error: insErr } = await svc.from('mcp_oauth_tokens').insert({
         token_hash: await hashKey(access), refresh_hash: await hashKey(refresh2),
         client_id: row.client_id, user_id: row.user_id,
@@ -2309,7 +2345,7 @@ serve(async (req) => {
     if (method === 'resources/read') {
       const uri = String(params?.uri || '')
       if (uri.startsWith('ui://avatarads/')) {
-        return rpcResult(id, { contents: [{ uri, mimeType: 'text/html;profile=mcp-app', text: UI_VIEWER_HTML }] })
+        return rpcResult(id, { contents: [{ uri, mimeType: 'text/html;profile=mcp-app', text: UI_VIEWER_HTML, _meta: UI_META }] })
       }
       return rpcError(id, -32002, 'Ressource inconnue : ' + uri)
     }
