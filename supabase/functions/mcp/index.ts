@@ -264,6 +264,9 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   .aa-a{font-size:13px;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:10px;line-height:1;white-space:nowrap}
   .aa-dl{background:#FF5A1F;color:#fff}
   .aa-op{background:rgba(128,128,128,.16);color:inherit}
+  [data-theme=dark] .aa-c,html.dark .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
+  [data-theme=dark] .aa-b,html.dark .aa-b{border-top-color:rgba(255,255,255,.12)}
+  [data-theme=dark] .aa-op,html.dark .aa-op{background:rgba(255,255,255,.14)}
   @media (prefers-color-scheme:dark){
     .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
     .aa-b{border-top-color:rgba(255,255,255,.12)}
@@ -275,12 +278,15 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
 <a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
 <script>
-function aaShow(rd){
+// ── Protocole OFFICIEL MCP Apps (SEP-1865) : JSON-RPC 2.0 sur postMessage ──
+// iframe → ui/initialize (requête) → host répond → iframe → ui/notifications/
+// initialized → le host pousse ui/notifications/tool-result (structuredContent).
+// L'ancien dialecte mcp-ui (ui-lifecycle-*) reste écouté en secours.
+function aaShow(out){
   try{
-    var out = (rd && (rd.toolOutput || rd.toolResult)) || {};
-    var sc = out.structuredContent || out;
+    var sc = (out && (out.structuredContent || out)) || {};
     var url = sc.url || '', kind = sc.kind || '', name = sc.name || '';
-    if(!url && out.content){ for (var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\s)\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
+    if(!url && out && out.content){ for (var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\s)\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
     if(!url) return;
     var v = kind==='video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
     document.getElementById('m').innerHTML = v
@@ -292,11 +298,30 @@ function aaShow(rd){
     document.getElementById('c').style.display = 'block';
   }catch(e){}
 }
+function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
 window.addEventListener('message', function(e){
   var d = e.data || {};
-  if(d.type === 'ui-lifecycle-iframe-render-data' && d.payload) aaShow(d.payload.renderData);
+  // réponse à ui/initialize → on signale initialized, on applique le thème
+  if (d.jsonrpc === '2.0' && d.id === 1 && d.result) {
+    try{ if(d.result.hostContext && d.result.hostContext.theme) aaTheme(d.result.hostContext.theme); }catch(_){ }
+    window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/initialized', params:{} }, '*');
+    return;
+  }
+  // notifications officielles
+  if (d.jsonrpc === '2.0' && d.method && d.id === undefined) {
+    if (d.method === 'ui/notifications/tool-result') aaShow(d.params || {});
+    else if (d.method === 'ui/notifications/host-context-changed' && d.params && d.params.theme) aaTheme(d.params.theme);
+    return;
+  }
+  // dialecte mcp-ui (secours)
+  if (d.type === 'ui-lifecycle-iframe-render-data' && d.payload && d.payload.renderData) {
+    var rd = d.payload.renderData; aaShow(rd.toolOutput || rd.toolResult || rd);
+  }
 });
-window.parent.postMessage({ type: 'ui-lifecycle-iframe-ready' }, '*');
+window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:{
+  capabilities:{}, clientInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
+  protocolVersion:'2026-01-26', appCapabilities:{ availableDisplayModes:['inline'] } } }, '*');
+window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
 </script></body></html>`
 
 const UI_RESOURCES = ['image.png', 'video.mp4', 'avatar.mp4', 'montage.mp4'].map((n) => ({
@@ -386,7 +411,7 @@ const toolMedia = async (url: string, nom: string, mime: string, texte: string, 
   })
   contenu.push({ type: 'resource_link', uri: url, name: nom, mimeType: mime, description: nom })
   const consigne = estVideo
-    ? `\n\nPour la montrer EN GRAND directement dans la conversation, crée un artifact HTML minimal avec un lecteur : <video src="${url}" controls playsinline style="width:100%;border-radius:12px"></video> et un lien de téléchargement en dessous.${vignette ? `\nSinon, affiche au minimum l'aperçu dans ta réponse : ![aperçu](${apercuUrl}) suivi de [▶ Voir la vidéo](${url})` : ''}`
+    ? `\n\nDonne l'URL en lien cliquable [▶ Voir la vidéo](${url}). Ne tente PAS de l'afficher en markdown ni dans un artifact (le bac à sable bloque les URL externes).`
     : ''
   contenu.push({ type: 'text', text: texte + consigne })
   return { content: contenu,
@@ -757,7 +782,7 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     }
     const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
 URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}
-Pour la montrer EN GRAND directement dans la conversation, crée un artifact HTML minimal qui affiche cette image en pleine largeur, par exemple : <img src="${job.result_url}" style="width:100%;border-radius:12px"/> avec un lien de téléchargement en dessous.` }
+Ne tente PAS d'afficher l'image en markdown ni dans un artifact (le bac à sable bloque les URL externes) — le lien cliquable suffit.` }
     return { content: vignette ? [vignette, widget, texte] : [widget, texte],
       structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
   }
