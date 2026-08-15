@@ -357,10 +357,17 @@ window.addEventListener('message', function(e){
     var rd = d.payload.renderData; aaShow(rd.toolOutput || rd.toolResult || rd);
   }
 });
+// init : on renvoie les DEUX dialectes de champs (l'ancien capabilities/clientInfo
+// + le SDK appCapabilities/appInfo) et surtout availableDisplayModes:['inline']
+// — c'est ce qui manquait dans ma réécriture et qui a rendu la carte VIDE (à
+// 22h24 la version AVEC ce champ affichait bien l'image, en bande).
 window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:{
-  appCapabilities:{}, appInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
+  capabilities:{}, clientInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
+  appCapabilities:{ availableDisplayModes:['inline'] },
+  appInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
   protocolVersion:'2026-01-26' } }, '*');
 window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
+setInterval(aaMeasure, 1000);   // nudge de taille périodique (no-op tant que pas prêt)
 // Repli : si le host ne répond pas à l'init (builds claude.ai variables), on
 // finalise quand même après 1,2 s — sinon l'iframe reste cachée pour toujours.
 setTimeout(aaFinalize, 1200);
@@ -510,6 +517,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.png' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -519,6 +527,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/video.mp4' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -544,6 +553,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.mp4' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -612,6 +622,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
+      _meta: { ui: { resourceUri: 'ui://avatarads/montage.mp4' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
