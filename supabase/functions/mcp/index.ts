@@ -509,12 +509,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      _meta: {
-        'openai/toolInvocation/invoking': "Génération de l'image…",
-        'openai/toolInvocation/invoked': 'Image prête',
-        'ui/resourceUri': 'ui://avatarads/image.png',
-        ui: { resourceUri: 'ui://avatarads/image.png' },
-      },
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.png' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -524,12 +519,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
-      _meta: {
-        'openai/toolInvocation/invoking': 'Génération de la vidéo…',
-        'openai/toolInvocation/invoked': 'Vidéo prête',
-        'ui/resourceUri': 'ui://avatarads/video.mp4',
-        ui: { resourceUri: 'ui://avatarads/video.mp4' },
-      },
+      _meta: { ui: { resourceUri: 'ui://avatarads/video.mp4' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -555,12 +545,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
-      _meta: {
-        'openai/toolInvocation/invoking': 'Génération de la vidéo avatar…',
-        'openai/toolInvocation/invoked': 'Vidéo avatar prête',
-        'ui/resourceUri': 'ui://avatarads/avatar.mp4',
-        ui: { resourceUri: 'ui://avatarads/avatar.mp4' },
-      },
+      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.mp4' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -629,12 +614,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
-      _meta: {
-        'openai/toolInvocation/invoking': 'Rendu du montage…',
-        'openai/toolInvocation/invoked': 'Montage prêt',
-        'ui/resourceUri': 'ui://avatarads/montage.mp4',
-        ui: { resourceUri: 'ui://avatarads/montage.mp4' },
-      },
+      _meta: { ui: { resourceUri: 'ui://avatarads/montage.mp4' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
