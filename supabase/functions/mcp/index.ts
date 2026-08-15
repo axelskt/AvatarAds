@@ -697,7 +697,7 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     }
     const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est affiché ci-dessus dans le résultat de l'outil.
 URL pleine résolution (donne-la en lien cliquable) : ${job.result_url}` }
-    return { content: vignette ? [widget, vignette, texte] : [widget, texte] }
+    return { content: vignette ? [vignette, widget, texte] : [widget, texte] }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
   return toolText(
