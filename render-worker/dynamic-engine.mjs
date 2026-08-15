@@ -1197,7 +1197,19 @@ export function buildDynamicComposition(plan, opts = {}) {
       'au', 'aux', 'en', 'ne', 'pas', 'que', 'qui', 'se', 'sa', 'son', 'ses', 'ta', 'ton', 'tes',
       'ma', 'mon', 'mes', 'ce', 'cette', 'cest', 'est', 'sont', 'vais', 'vas', 'va', 'tu', 'je',
       'il', 'elle', 'on', 'avec', 'pour', 'dans', 'sur', 'par', 'mais', 'si', 'te', 'me', 'y', 'ici'])
-    const OFFS = [0, -0.12, 0.16, 0.06, -0.07, 0.2]   // marches d'escalier de la réf
+    const OFFS = [0, -0.08, 0.12, 0.04, -0.05, 0.15]   // marches d'escalier, adoucies (v17)
+    // ── v17 (Axel : « ils popent de partout avec aucune cohérence ») : l'ancre ne
+    // change plus à chaque groupe de 3 mots mais à chaque PHRASE — dans la réf,
+    // une phrase s'accumule AU MÊME ENDROIT, c'est la phrase suivante qui bouge.
+    {
+      let sIdx = 0
+      let prev = null
+      for (const g of grp) {
+        if (prev && /[.!?]$/.test(String(prev.mots[prev.mots.length - 1].text || ''))) sIdx++
+        g.sIdx = sIdx
+        prev = g
+      }
+    }
     // DEUX GROUPES NE SE CHEVAUCHENT JAMAIS. Avec une marge avant ET après, deux
     // blocs restaient affichés en même temps et les phrases se superposaient,
     // illisibles (« que|ton|audio »). Chaque groupe s'arrête où le suivant
@@ -1274,12 +1286,14 @@ export function buildDynamicComposition(plan, opts = {}) {
       const panClair = pan && pan.kind !== 'avclip'
         && (pan.kind === 'media' || pan.kind === 'medias' || panels.indexOf(pan) % 2 === 1)
       g.sombre = ap ? (!pan || pan.kind === 'avclip') : !panClair
-      // l'ancre du groupe : cycle bas de cadre sous un panneau, cadre entier sur
-      // un visage plein cadre — deux groupes consécutifs ne se posent jamais au
-      // même endroit (c'est le « ça bouge tout le temps » de la réf)
+      // l'ancre est celle de la PHRASE (v17) : tous les groupes d'une même phrase
+      // s'accumulent au même endroit — c'est la phrase suivante qui se déplace.
+      // Un panneau au-dessus → ancres basses seulement ; visage plein cadre → tout.
       const pool = pan ? ancLow : ancFace
-      const an = g.hook ? null : pool[i % pool.length]
-      g.mode = i % 4
+      const an = g.hook ? null : pool[(g.sIdx ?? 0) % pool.length]
+      // l'entrée varie par groupe ET par phrase (6 modes, jamais deux pareilles
+      // d'affilée) — « c'est tout le temps la même animation » (Axel, v16)
+      g.mode = ((g.sIdx ?? 0) * 2 + i) % 6
       const dedans = g.mots.map((w, k) => {
         const bare = normAcc(w.text)
         const cls = ACCFORTS.has(bare) ? ' acc' : (STOPW.has(bare) ? ' sm' : '')
@@ -1290,27 +1304,12 @@ export function buildDynamicComposition(plan, opts = {}) {
       return `<div class="clip dyncap${g.hook ? '' : an.cls}" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
         style="top:${g.hook ? hautHook : an.top}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
-    // ── COLLECTE DES MOTS GÉANTS (avant la boucle JS : un mot promu géant ne
-    // reçoit NI pop NI couleur dans son groupe — le géant le REMPLACE) ────────
-    const geantsPre = []
+    // ── v17 : PLUS DE MOTS GÉANTS SÉPARÉS (Axel : « le "dizaines" ne doit pas
+    // être au milieu de l'écran mais à la suite de "de milliers" », « "trente"
+    // je ne le veux pas ici ») — l'accent vit DANS le flux de sa phrase, en
+    // 1,78 em ; c'est la hiérarchie de taille qui fait l'emphase, pas un plan
+    // à part. `supprimes` reste (vide) pour la boucle d'entrées.
     const supprimes = new Set()
-    {
-      let dernierG = -9
-      grp.forEach((g, gi) => {
-        if (g.hook) return
-        g.mots.forEach((w, k) => {
-          if (geantsPre.length >= 8) return
-          const t = r2(w.start)
-          const txt = normAcc(w.text)
-          if (!ACCFORTS.has(txt) || txt.length < 5 || t - dernierG < 2.5) return
-          const pan = panels.find((p) => t >= p.t0 && t < p.t1)
-          if (pan && pan.kind === 'typo') return
-          geantsPre.push({ t, mot: String(w.text).replace(/[.,!?;:«»()"']/g, ''), i: geantsPre.length })
-          supprimes.add(gi + ':' + k)
-          dernierG = t
-        })
-      })
-    }
     // le mot en cours passe en accent — écrit image par image, pas d'onUpdate
     for (const [i, g] of grp.entries()) {
       const a = g.a
@@ -1339,34 +1338,18 @@ export function buildDynamicComposition(plan, opts = {}) {
       // de mouvement du conteneur : c'est l'apparition des mots qui anime.
       const m = g.mode ?? 0
       g.mots.forEach((w, k) => {
-        if (supprimes.has(i + ':' + k)) return   // promu en mot géant : il vit là-bas
+        if (supprimes.has(i + ':' + k)) return
         const sel = `'#dc${i} .dc-w:nth-child(${k + 1})'`
         const fort = ACCFORTS.has(normAcc(w.text))
         if (m === 0) js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:${fort ? 1.55 : 1.3}},{autoAlpha:1,scale:1,duration:0.12,ease:'back.out(2.2)',transformOrigin:'50% 80%'},${r2(w.start)});`
         else if (m === 1) js += `\n  tl.fromTo(${sel},{autoAlpha:0,yPercent:46},{autoAlpha:1,yPercent:0,duration:0.14,ease:'power3.out',transformOrigin:'50% 100%'},${r2(w.start)});`
         else if (m === 2) js += `\n  tl.fromTo(${sel},{autoAlpha:0,filter:'blur(7px)',scale:1.07},{autoAlpha:1,filter:'blur(0px)',scale:1,duration:0.16,ease:'power2.out'},${r2(w.start)});`
-        else js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:0.55,rotation:${k % 2 ? 4 : -4}},{autoAlpha:1,scale:1,rotation:0,duration:0.13,ease:'back.out(3)',transformOrigin:'50% 60%'},${r2(w.start)});`
+        else if (m === 3) js += `\n  tl.fromTo(${sel},{autoAlpha:0,scale:0.55,rotation:${k % 2 ? 4 : -4}},{autoAlpha:1,scale:1,rotation:0,duration:0.13,ease:'back.out(3)',transformOrigin:'50% 60%'},${r2(w.start)});`
+        else if (m === 4) js += `\n  tl.fromTo(${sel},{autoAlpha:0,x:${k % 2 ? 26 : -26},skewX:${k % 2 ? -8 : 8}},{autoAlpha:1,x:0,skewX:0,duration:0.15,ease:'power3.out'},${r2(w.start)});`
+        else js += `\n  tl.fromTo(${sel},{autoAlpha:0,yPercent:-34,scaleY:1.3},{autoAlpha:1,yPercent:0,scaleY:1,duration:0.14,ease:'back.out(1.9)',transformOrigin:'50% 0%'},${r2(w.start)});`
       })
     }
-    // ── LES MOTS GÉANTS (réf : « BREAKS », « BE YOU? ») ────────────────────
-    // Un ACCENT long hors hook devient un plan à lui seul : le mot énorme en
-    // Archivo Black au tiers haut, une entrée différente à chaque apparition.
-    // Jamais deux en moins de 2,5 s, huit max — c'est un accent, pas un régime.
-    // Les panneaux typo gardent l'exclusivité de leurs mots (jamais deux fois
-    // le même mot à l'écran au même instant).
-    {
-      const geants = geantsPre
-      capHtml += geants.map((gw) => `\n      <div class="clip gwcap" id="gw${gw.i}" data-start="${r2(Math.max(0, gw.t - 0.05))}" data-duration="0.95" data-track-index="16"><span class="gw-in" id="gwi${gw.i}">${esc(gw.mot.toUpperCase())}</span></div>`).join('')
-      for (const gw of geants) {
-        const e = gw.i % 3
-        if (e === 0) js += `\n  tl.fromTo('#gwi${gw.i}',{scale:2.1,autoAlpha:0,filter:'blur(10px)'},{scale:1,autoAlpha:1,filter:'blur(0px)',duration:0.22,ease:'power3.out',transformOrigin:'50% 50%'},${gw.t});`
-        else if (e === 1) js += `\n  tl.fromTo('#gwi${gw.i}',{yPercent:55,autoAlpha:0,rotation:-2.5},{yPercent:0,autoAlpha:1,rotation:0,duration:0.24,ease:'back.out(1.8)',transformOrigin:'50% 100%'},${gw.t});`
-        else js += `\n  tl.fromTo('#gwi${gw.i}',{letterSpacing:'0.45em',autoAlpha:0,scale:0.82},{letterSpacing:'0.02em',autoAlpha:1,scale:1,duration:0.26,ease:'power2.out',transformOrigin:'50% 50%'},${gw.t});`
-        js += `\n  tl.to('#gwi${gw.i}',{autoAlpha:0,scale:1.06,duration:0.16,ease:'power1.in'},${r2(gw.t + 0.74)});`
-      }
-      if (geants.length) console.log(`▶ ${geants.length} mot(s) géant(s) (sous-titres animés, réf ssstik)`)
-    }
-    console.log(`▶ sous-titres : ${grp.length} groupes de mots`)
+    console.log(`▶ sous-titres : ${grp.length} groupes de mots (ancres par phrase, sans mots géants — v17)`)
   }
 
   // ── LE TITRE DU HOOK, AU-DESSUS DE LA TÊTE (réf makeugc_ai, Axel 13/08) ─────

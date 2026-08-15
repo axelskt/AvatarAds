@@ -1648,9 +1648,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (add({ anim: 'ui', ui: 'timer', value: String(sec), unit: 'SECONDES' }, a, b)) {
         console.log(`▶ « ${words[i - 1].text} ${words[i].text} » → chrono ${sec} SECONDES (${a}→${b}s)`)
         // …et la fin de phrase rend l'écran au VISAGE (Axel : « switch sur
-        // l'avatar une fois que j'ai dit top chrono ») : une respiration photo
-        // juste après le chrono, que §3b bornera contre la scène suivante.
-        plan.avatarSegments = [...(plan.avatarSegments || []),
+        // l'avatar une fois que j'ai dit top chrono ») : une respiration juste
+        // après le chrono, que §3b bornera contre la scène suivante. Si le plan
+        // a DÉJÀ une fenêtre visage à cet endroit (avec son clip lipsync), on
+        // ne la double pas — la sienne porte la matière, la nôtre serait muette.
+        const dejaLa = (plan.avatarSegments || []).some((w) => Math.abs((w.start || 0) - b) < 0.8)
+        if (!dejaLa) plan.avatarSegments = [...(plan.avatarSegments || []),
           { start: b, end: r2(Math.min(D, b + 2.6)), format: 'portrait' }]
       }
     }
