@@ -519,7 +519,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      _meta: { ui: { resourceUri: 'ui://avatarads/image.png' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -529,7 +528,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
-      _meta: { ui: { resourceUri: 'ui://avatarads/video.mp4' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -555,7 +553,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
-      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.mp4' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -624,7 +621,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
-      _meta: { ui: { resourceUri: 'ui://avatarads/montage.mp4' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -2395,7 +2391,11 @@ serve(async (req) => {
       const supported = ['2025-06-18', '2025-03-26', '2024-11-05']
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
-        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
+        // Plus de capability `resources` : on n'est plus un connecteur « app à
+        // widget » (qui repliait la carte quand claude.ai tentait de rendre le
+        // widget), mais un connecteur d'outils SIMPLE comme Pixa/AI Box/Imagine
+        // — ils renvoient juste un bloc image que claude.ai affiche inline.
+        capabilities: { tools: { listChanged: false } },
         // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
         // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
         serverInfo: {
