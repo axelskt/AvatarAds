@@ -1754,5 +1754,14 @@ if (localDir) {
   renderJob(resolve(localDir), out, { draft: !!flag('--draft') })
     .catch((e) => { console.error('✗', e.message); process.exit(1) })
 } else {
+  // ── KEEP-WARM DU CONNECTEUR MCP ───────────────────────────────────────────
+  // « Impossible de joindre AvatarAds » sur les premières requêtes après une
+  // période calme : le démarrage à froid de l'edge function dépasse le timeout
+  // du client claude.ai, puis tout marche. Le worker tourne 24/7 sur Railway —
+  // un GET discret toutes les 4 minutes garde l'isolate chaud (la route GET
+  // répond sans clé, quasi gratuite).
+  if (process.env.SUPABASE_URL) {
+    setInterval(() => { fetch(process.env.SUPABASE_URL + '/functions/v1/mcp').catch(() => {}) }, 240000)
+  }
   pollLoop()
 }
