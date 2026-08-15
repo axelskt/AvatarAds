@@ -3225,7 +3225,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
   }
 
   const avCovered = (plan.avatarSegments || []).reduce((n, w) => n + (w.end - w.start), 0)
-  if (avCovered < D * 0.18) {
+  // #136 (Axel 15/08) : « 3 fois en moyenne l'avatar dans la vidéo » — la porte
+  // s'ouvre aussi quand il manque des APPARITIONS, pas seulement du temps
+  if (avCovered < D * 0.18 || (plan.avatarSegments || []).length < 3) {
     const busy = [...out.map((s) => [s.start, s.end]), ...(plan.avatarSegments || []).map((w) => [w.start, w.end])]
       .sort((a, b) => a[0] - b[0])
     const freeGaps = []
@@ -3513,6 +3515,71 @@ export function deriveDynamicSlides(plan, opts = {}) {
     }
     const last = chain[chain.length - 1]
     if (last && D - (last.end || 0) > 0 && D - (last.end || 0) < 1.2) last.end = r2(D)
+  }
+
+  // ── 3b-ter · LE VISAGE REVIENT AU MOINS 3 FOIS (#136, Axel 15/08) ─────────
+  // « faut toujours que y'ait 3 fois en moyenne l'avatar dans la vidéo pour que
+  // ce soit dynamique et vivant ». Les trous sont déjà comblés (§3b-bis) ; s'il
+  // manque encore des visages, les plus LONGUES animations abstraites cèdent
+  // leur FIN — leur phrase a eu son moment, la respiration reprend l'écran.
+  if (!noFace && D >= 14) {
+    const abstraite2 = (s) => !s.screen && !s.assetId && !s.src && !s.user &&
+      !s.overlayMedia && !s.ui && String(s.anim) !== 'media' && s.type !== 'punch' && !s.cta &&
+      String(s.anim) !== 'photowall' && !(s.photos || []).length
+    const cands = out.filter((s) => abstraite2(s) && (s.end - s.start) >= 2.6)
+      .sort((a, b) => (b.end - b.start) - (a.end - a.start))
+    for (const s of cands) {
+      if ((plan.avatarSegments || []).length >= 3) break
+      // espacé des visages existants : deux respirations collées n'en font qu'une
+      if ((plan.avatarSegments || []).some((w) => s.end > (w.start || 0) - 4 && s.end < (w.end || 0) + 4)) continue
+      const cut = r2(Math.max(s.start + 1.4, s.end - 1.8))
+      if (s.end - cut < 1.2) continue
+      const k = taken.findIndex((tk) => Math.abs(tk[1] - s.end) < 0.08 && tk[0] <= s.start + 0.08)
+      if (k >= 0) taken[k][1] = cut
+      const w = { start: cut, end: s.end, clip: -1 }
+      s.end = cut
+      if (Array.isArray(s.items)) s.items = s.items.filter((it) => !(it.t > cut - 0.25))
+      plan.avatarSegments = [...(plan.avatarSegments || []), w].sort((x, y) => x.start - y.start)
+      claim(w.start, w.end)
+      console.log(`▶ #136 : visage ${plan.avatarSegments.length}/3 — « ${s.anim || s.title || '—'} » cède sa fin ${w.start}→${w.end}s`)
+    }
+  }
+
+  // ── 3c · UN SPLIT AUTO PAR VIDÉO (#136) : avatar en bas + ANIMATION en haut ─
+  // Axel : « on peut rajouter le split 1 fois avec avatar en bas et une
+  // animation au-dessus » — et son A/B : « mieux quand y'a une animation en haut
+  // plutôt [qu'un média] ». On fusionne une animation déjà posée (donc justifiée
+  // par ses mots) avec la fenêtre visage qui la SUIT : un seul panneau coupé en
+  // deux. Le clip lipsync reste calé sur SA voix (clipAt) — jamais un visage qui
+  // parle en avance ; la photo porte le bas jusqu'à lui.
+  if (!Array.isArray(plan.splits) || !plan.splits.length) {
+    const abstraite3 = (s) => s.anim && !s.screen && !s.assetId && !s.src && !s.user &&
+      !s.overlayMedia && !s.ui && String(s.anim) !== 'media' && s.type !== 'punch' && !s.cta
+    for (const w of (plan.avatarSegments || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))) {
+      if (w.split || w.duo || w.adresse || (w.start || 0) < 2.5 || (w.end - w.start) < 1.8) continue
+      // sens 1 : l'anim DÉBOUCHE sur le visage → elle monte en haut, à ses temps
+      const av = out.find((s2) => abstraite3(s2) && Math.abs((s2.end || 0) - w.start) <= 0.4
+        && (s2.end - s2.start) >= 1.2 && (w.end - s2.start) <= 9 && (w.end || 0) <= D - 2)
+      // sens 2 : le visage débouche sur l'anim → le panneau du haut s'ouvre un
+      // souffle avant ses mots (précédent : la visite guidée ouvre AVANT le mot)
+      const ap2 = av ? null : out.find((s2) => abstraite3(s2) && Math.abs((s2.start || 0) - w.end) <= 0.4
+        && (s2.end - s2.start) >= 1.2 && (s2.end - w.start) <= 9 && (s2.end || 0) <= D - 0.4)
+      const s = av || ap2
+      if (!s) continue
+      out.splice(out.indexOf(s), 1)
+      // son créneau reste réservé dans `taken` : le split l'occupe désormais
+      if (av) {
+        w.clipAt = w.start
+        w.start = r2(s.start)
+        w.split = { slide: { ...s } }
+      } else {
+        w.clipUntil = w.end          // la matière lipsync s'arrête là — après,
+        w.end = r2(s.end)            // la photo porte le bas (jamais de figé,
+        w.split = { slide: { ...s, start: r2(w.start + 0.5) } }   // jamais de frame guard)
+      }
+      console.log(`▶ #136 : split auto ${w.start}→${w.end}s — « ${s.anim} » en haut, avatar en bas${av ? ` (clip calé à ${w.clipAt}s)` : ''}`)
+      break
+    }
   }
 
   // ── 4 · fusion : le serveur s'écarte des scènes dérivées, pas l'inverse ──
