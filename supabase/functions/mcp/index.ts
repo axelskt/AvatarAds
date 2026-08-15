@@ -840,8 +840,9 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     // fait disparaître). L'affichage auto façon Bloom/Alexya reste hors de portée
     // pour un connecteur non listé — piste = soumission au directory Anthropic.
     const vignette = await blocImage(String(job.preview_url || job.result_url))
+    const lien = `https://mcp.avatarads.fr/i/${job.id}`   // lien de marque court (302 → l'image)
     const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est dans la carte de l'outil (déplie « </> » si besoin).
-Lien pleine résolution (donne-le en lien cliquable) : ${job.result_url}
+Lien de téléchargement (donne-le en lien cliquable) : ${lien}
 N'affiche PAS l'image en markdown ni en artifact (le bac à sable bloque les URL externes) — le lien cliquable suffit.` }
     return { content: vignette ? [vignette, texte] : [texte],
       structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
@@ -1037,7 +1038,7 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'video').maybeSingle()
   if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
-  if (job.status === 'done') return toolMedia(String(job.result_url), 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nURL : ${job.result_url}`, String(job.preview_url || '') || undefined)
+  if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // Poll Google jusqu'à ~40 s dans cet appel, puis on rend la main à Claude
@@ -1221,7 +1222,7 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'avatar').maybeSingle()
   if (!job) return toolErr('Job avatar introuvable sur ce compte.')
-  if (job.status === 'done') return toolMedia(String(job.result_url), 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nURL : ${job.result_url}`, String(job.preview_url || '') || undefined)
+  if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
   // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
@@ -1789,7 +1790,7 @@ async function runCheckMontage(profile: Record<string, unknown>, args: Record<st
   // décrire le plan.
   if (job.status === 'done') {
     const lien = job.op_name ? `\nPour ajuster une scène, une transition ou un bruitage : ${lienDetails(String(job.op_name))}` : ''
-    return toolMedia(String(job.result_url), 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nURL : ${job.result_url}${lien}`, String(job.preview_url || '') || undefined)
+    { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'montage.mp4', 'video/mp4', `✅ Montage prêt !\nLien : ${dl}${lien}`, String(job.preview_url || '') || undefined) }
   }
   if (job.status === 'failed') return toolErr(`Rendu échoué : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
@@ -2262,7 +2263,17 @@ async function handleKeyManagement(req: Request): Promise<Response> {
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
   const url = new URL(req.url)
-  const segs = url.pathname.split('/').filter(Boolean) // ['mcp', '<clé>' | 'key']
+  const segs = url.pathname.split('/').filter(Boolean) // ['mcp', '<clé>' | 'key' | 'i']
+
+  // Lien de téléchargement de MARQUE : mcp.avatarads.fr/i/<jobId> → 302 vers le
+  // média. L'URL storage est déjà publique (bucket mcp-media public) : on ne fait
+  // qu'un raccourci propre à la place du long lien supabase brut. Aucune auth.
+  if (segs[1] === 'i' && segs[2]) {
+    const { data: j } = await svc.from('mcp_jobs').select('result_url').eq('id', segs[2]).maybeSingle()
+    const dest = j?.result_url ? String(j.result_url) : ''
+    if (dest) return new Response(null, { status: 302, headers: { ...cors, Location: dest, 'Cache-Control': 'public, max-age=3600' } })
+    return new Response('Média introuvable', { status: 404, headers: cors })
+  }
 
   if (segs[1] === 'key') {
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
