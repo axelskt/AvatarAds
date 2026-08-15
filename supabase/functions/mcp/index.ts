@@ -249,9 +249,93 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 // ── MCP APPS · LE VIEWER MÉDIA (#79) ────────────────────────────────────────
 // claude.ai pré-charge ce template via resources/read (l'URI déclarée dans
 // _meta.ui.resourceUri) puis l'affiche en iframe et lui pousse le résultat de
-// l'outil par postMessage (`ui-lifecycle-iframe-render-data`). Le média vient
-// de structuredContent { url, kind, name } — avec repli sur le texte du
-// résultat si un hôte ne transmet que le contenu brut.
+// l'outil par postMessage. Le média vient de structuredContent { url, kind, name }.
+//
+// ⚠⚠ LEÇON PLETOR (16/08) — apprise en inspectant api.pletor.ai/mcp, un connecteur
+// PUBLIC qui MARCHE dans claude.ai : le JS du widget NE PEUT PAS être inline. La
+// sandbox du host applique un CSP strict (pas de 'unsafe-inline' sur script-src)
+// → notre <script> inline n'a JAMAIS tourné, le handshake ne partait pas, la carte
+// restait vide. Pletor sert son JS depuis un domaine autorisé (leur API) et
+// déclare `domain` + `ui/resourceUri` à plat. On fait pareil : JS servi à
+// WIDGET_ORIGIN/widget.js, chargé en <script type=module src>.
+const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
+// Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
+const UI_WIDGET_JS = `
+var aaOk=false, aaSeen=[];
+function aaShow(out){
+  try{
+    var sc=(out&&(out.structuredContent||out))||{};
+    var url=sc.url||'', kind=sc.kind||'', name=sc.name||'';
+    if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
+    if(!url) return;
+    aaOk=true;
+    var v=kind==='video'||/\\.(mp4|mov|webm|m4v)(\\?|#|$)/i.test(url);
+    var m=document.getElementById('m');
+    m.innerHTML = v
+      ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
+      : '<a href="'+url+'" target="_blank" rel="noopener"><img src="'+url+'" alt="" class="aa-m"/></a>';
+    var media=m.querySelector('video,img');
+    if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
+    document.getElementById('n').textContent=name||(v?'Vidéo':'Image');
+    document.getElementById('dl').href=url;
+    document.getElementById('op').href=url;
+    m.style.padding='0';
+    document.getElementById('b').style.display='flex';
+    aaKick();
+  }catch(e){}
+}
+function aaLikely(p){ return p&&(p.structuredContent||(p.content&&p.content.length)); }
+function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
+var aaReady=false, aaFinal=false, aaLW=0, aaLH=0, aaSched=false;
+function aaMeasure(){
+  if(aaSched) return; aaSched=true;
+  requestAnimationFrame(function(){
+    aaSched=false; if(!aaReady) return;
+    var html=document.documentElement, oh=html.style.height;
+    html.style.height='max-content';
+    var h=Math.ceil(html.getBoundingClientRect().height);
+    html.style.height=oh;
+    var w=Math.ceil(window.innerWidth);
+    if(w!==aaLW||h!==aaLH){ aaLW=w; aaLH=h;
+      window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/size-changed', params:{ width:w, height:h } }, '*'); }
+  });
+}
+function aaKick(){ aaMeasure(); }
+function aaFinalize(){
+  if(aaFinal) return; aaFinal=true;
+  try{ window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/initialized', params:{} }, '*'); }catch(e){}
+  aaReady=true;
+  try{ var ro=new ResizeObserver(aaMeasure); ro.observe(document.documentElement); ro.observe(document.body); }catch(e){}
+  aaMeasure(); setTimeout(aaMeasure,300); setTimeout(aaMeasure,1500);
+}
+window.addEventListener('message', function(e){
+  var d=e.data||{};
+  try{ aaSeen.push(d.method||d.type||(d.id!==undefined?'rep#'+d.id:'msg')); }catch(_){ }
+  if(d.jsonrpc==='2.0'&&d.id===1&&d.result){
+    try{ var hc=d.result.hostContext||{}; if(hc.theme) aaTheme(hc.theme); if(hc.toolInfo&&hc.toolInfo.result) aaShow(hc.toolInfo.result); }catch(_){ }
+    aaFinalize(); return;
+  }
+  if(d.jsonrpc==='2.0'&&d.method&&d.id===undefined){
+    if(d.method==='ui/notifications/tool-result') aaShow(d.params||{});
+    else if(d.method==='ui/notifications/host-context-changed'&&d.params&&d.params.theme) aaTheme(d.params.theme);
+    else if(aaLikely(d.params)) aaShow(d.params);
+    return;
+  }
+  if(d.type==='ui-lifecycle-iframe-render-data'&&d.payload&&d.payload.renderData){
+    var rd=d.payload.renderData; aaShow(rd.toolOutput||rd.toolResult||rd);
+  }
+});
+window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:{
+  capabilities:{}, clientInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
+  appCapabilities:{ availableDisplayModes:['inline'] },
+  appInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
+  protocolVersion:'2026-01-26' } }, '*');
+window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
+setInterval(aaMeasure, 1000);
+setTimeout(aaFinalize, 1200);
+setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent='AvatarAds — en attente du résultat… (reçu : '+(aaSeen.join(', ')||'rien')+')'; }catch(e){} } }, 6000);
+`
+
 const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   html,body{margin:0;background:transparent}
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -277,118 +361,24 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 <div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
 <a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
-<script>
-// ── Protocole OFFICIEL MCP Apps (SEP-1865) : JSON-RPC 2.0 sur postMessage ──
-// iframe → ui/initialize (requête) → host répond → iframe → ui/notifications/
-// initialized → le host pousse ui/notifications/tool-result (structuredContent).
-// L'ancien dialecte mcp-ui (ui-lifecycle-*) reste écouté en secours.
-var aaOk = false, aaSeen = [];
-function aaShow(out){
-  try{
-    var sc = (out && (out.structuredContent || out)) || {};
-    var url = sc.url || '', kind = sc.kind || '', name = sc.name || '';
-    if(!url && out && out.content){ for (var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\s)\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-    if(!url) return;
-    aaOk = true;
-    var v = kind==='video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(url);
-    document.getElementById('m').innerHTML = v
-      ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m" onloadeddata="aaKick()"></video>'
-      : '<a href="'+url+'" target="_blank" rel="noopener"><img src="'+url+'" alt="" class="aa-m" onload="aaKick()"/></a>';
-    document.getElementById('n').textContent = name || (v ? 'Vidéo' : 'Image');
-    document.getElementById('dl').href = url;
-    document.getElementById('op').href = url;
-    document.getElementById('m').style.padding = '0';
-    document.getElementById('b').style.display = 'flex';
-    aaKick();
-  }catch(e){}
-}
-// Ressemble à un CallToolResult ? (secours : certains hôtes varient le nom de la méthode)
-function aaLikely(p){ return p && (p.structuredContent || (p.content && p.content.length)); }
-function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
-// ── Sizing : COPIE du SDK officiel (App.setupSizeChangedNotifications). On force
-// html en height:max-content pour lire la VRAIE hauteur du contenu — sinon
-// l'iframe bride la mesure et l'image reste une bande (bug des 2 tests d'Axel).
-// Largeur = innerWidth (mesurer via fit-content casse le scroll horizontal).
-// ⚠ Le host IGNORE size-changed tant qu'il n'a pas reçu initialized (SDK
-// strict → sinon « iframe cachée en permanence », cf claude-ai-mcp#61/#149) :
-// on ne mesure donc qu'APRÈS aaFinalize().
-var aaReady=false, aaFinal=false, aaLW=0, aaLH=0, aaSched=false;
-function aaMeasure(){
-  if(aaSched) return; aaSched=true;
-  requestAnimationFrame(function(){
-    aaSched=false; if(!aaReady) return;
-    var html=document.documentElement, oh=html.style.height;
-    html.style.height='max-content';
-    var h=Math.ceil(html.getBoundingClientRect().height);
-    html.style.height=oh;
-    var w=Math.ceil(window.innerWidth);
-    if(w!==aaLW||h!==aaLH){ aaLW=w; aaLH=h;
-      window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/size-changed', params:{ width:w, height:h } }, '*'); }
-  });
-}
-function aaKick(){ aaMeasure(); }
-// Handshake terminé → on envoie initialized PUIS on active le report de taille
-// (observe html ET body, comme le SDK). Idempotent : réponse d'init OU timeout.
-function aaFinalize(){
-  if(aaFinal) return; aaFinal=true;
-  try{ window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/initialized', params:{} }, '*'); }catch(e){}
-  aaReady=true;
-  try{ var ro=new ResizeObserver(aaMeasure); ro.observe(document.documentElement); ro.observe(document.body); }catch(e){}
-  aaMeasure(); setTimeout(aaMeasure,300); setTimeout(aaMeasure,1500);
-}
-window.addEventListener('message', function(e){
-  var d = e.data || {};
-  try{ aaSeen.push(d.method || d.type || (d.id !== undefined ? 'rep#'+d.id : 'msg')); }catch(_){ }
-  // réponse à ui/initialize → thème + éventuel résultat porté par l'init, PUIS finalize
-  if (d.jsonrpc === '2.0' && d.id === 1 && d.result) {
-    try{ var hc = d.result.hostContext || {}; if(hc.theme) aaTheme(hc.theme); if(hc.toolInfo && hc.toolInfo.result) aaShow(hc.toolInfo.result); }catch(_){ }
-    aaFinalize();
-    return;
-  }
-  // notifications : la méthode officielle d'abord, sinon tout params en forme de CallToolResult
-  if (d.jsonrpc === '2.0' && d.method && d.id === undefined) {
-    if (d.method === 'ui/notifications/tool-result') aaShow(d.params || {});
-    else if (d.method === 'ui/notifications/host-context-changed' && d.params && d.params.theme) aaTheme(d.params.theme);
-    else if (aaLikely(d.params)) aaShow(d.params);
-    return;
-  }
-  // dialecte mcp-ui (secours)
-  if (d.type === 'ui-lifecycle-iframe-render-data' && d.payload && d.payload.renderData) {
-    var rd = d.payload.renderData; aaShow(rd.toolOutput || rd.toolResult || rd);
-  }
-});
-// init : on renvoie les DEUX dialectes de champs (l'ancien capabilities/clientInfo
-// + le SDK appCapabilities/appInfo) et surtout availableDisplayModes:['inline']
-// — c'est ce qui manquait dans ma réécriture et qui a rendu la carte VIDE (à
-// 22h24 la version AVEC ce champ affichait bien l'image, en bande).
-window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:{
-  capabilities:{}, clientInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
-  appCapabilities:{ availableDisplayModes:['inline'] },
-  appInfo:{ name:'AvatarAds Media Viewer', version:'1.0.0' },
-  protocolVersion:'2026-01-26' } }, '*');
-window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
-setInterval(aaMeasure, 1000);   // nudge de taille périodique (no-op tant que pas prêt)
-// Repli : si le host ne répond pas à l'init (builds claude.ai variables), on
-// finalise quand même après 1,2 s — sinon l'iframe reste cachée pour toujours.
-setTimeout(aaFinalize, 1200);
-// Sans résultat après 6 s : afficher ce que l'hôte a réellement envoyé (screenshot lisible).
-setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent =
-  'AvatarAds — en attente du résultat… (reçu : ' + (aaSeen.join(', ') || 'rien') + ')'; }catch(e){} } }, 6000);
-</script></body></html>`
+<script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
 // chargement des images/vidéos externes dans l'iframe → carte vide (constaté
 // au test OAuth du 15/08). L'origin Supabase sert tous les médias (mcp-media
 // public + render-media signé), avatarads.fr sert les logos.
+const SUPA_ORIGIN = (Deno.env.get('SUPABASE_URL') || 'https://guvwgiejzkiodghywpwj.supabase.co').replace(/\/$/, '')
+// _meta.ui de la RESSOURCE — calqué sur Pletor : `domain` = origine du sandbox
+// (là où vit le widget.js) ; `resourceDomains` DOIT inclure ce domaine (sinon le
+// <script src> est bloqué) + l'origine des médias.
 const UI_META = {
   ui: {
     csp: {
-      connectDomains: [] as string[],
-      resourceDomains: [
-        (Deno.env.get('SUPABASE_URL') || 'https://guvwgiejzkiodghywpwj.supabase.co').replace(/\/$/, ''),
-        'https://avatarads.fr',
-      ],
+      connectDomains: [WIDGET_ORIGIN, SUPA_ORIGIN],
+      resourceDomains: [WIDGET_ORIGIN, SUPA_ORIGIN, 'https://avatarads.fr'],
+      baseUriDomains: [WIDGET_ORIGIN],
     },
+    domain: WIDGET_ORIGIN,
     prefersBorder: true,
   },
 }
@@ -519,6 +509,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
+      _meta: {
+        'openai/toolInvocation/invoking': "Génération de l'image…",
+        'openai/toolInvocation/invoked': 'Image prête',
+        'ui/resourceUri': 'ui://avatarads/image.png',
+        ui: { resourceUri: 'ui://avatarads/image.png' },
+      },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -528,6 +524,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
+      _meta: {
+        'openai/toolInvocation/invoking': 'Génération de la vidéo…',
+        'openai/toolInvocation/invoked': 'Vidéo prête',
+        'ui/resourceUri': 'ui://avatarads/video.mp4',
+        ui: { resourceUri: 'ui://avatarads/video.mp4' },
+      },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -553,6 +555,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
+      _meta: {
+        'openai/toolInvocation/invoking': 'Génération de la vidéo avatar…',
+        'openai/toolInvocation/invoked': 'Vidéo avatar prête',
+        'ui/resourceUri': 'ui://avatarads/avatar.mp4',
+        ui: { resourceUri: 'ui://avatarads/avatar.mp4' },
+      },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -621,6 +629,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
+      _meta: {
+        'openai/toolInvocation/invoking': 'Rendu du montage…',
+        'openai/toolInvocation/invoked': 'Montage prêt',
+        'ui/resourceUri': 'ui://avatarads/montage.mp4',
+        ui: { resourceUri: 'ui://avatarads/montage.mp4' },
+      },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -830,17 +844,14 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     // TOUJOURS dans la carte de l'outil, comme chez les intégrations concurrentes.
     // (Le markdown ![image](url externe) ne rend PAS dans claude.ai — on a
     // arrêté de le demander : c'était lu comme « l'image arrive en lien ».)
-    // Bilan 16/08 : claude.ai NE rend PAS notre widget MCP App (jamais de fetch du
-    // viewer, quoi qu'on déclare). Le seul rendu fiable = le bloc `type:image`
-    // natif, visible en dépliant la carte. On le REMET (le retirer avait tout
-    // fait disparaître). L'affichage auto façon Bloom/Alexya reste hors de portée
-    // pour un connecteur non listé — piste = soumission au directory Anthropic.
-    const vignette = await blocImage(String(job.preview_url || job.result_url))
+    // 16/08 — approche PLETOR : le widget (JS servi en externe) rend l'image
+    // depuis structuredContent ; PAS de bloc type:image (qui court-circuitait le
+    // widget). Repli : le texte porte le lien cliquable si le widget ne rend pas.
     const lien = `https://mcp.avatarads.fr/i/${job.id}`   // lien de marque court (302 → l'image)
-    const texte = { type: 'text', text: `✅ Image prête ! L'aperçu est dans la carte de l'outil (déplie « </> » si besoin).
+    const texte = { type: 'text', text: `✅ Image prête ! Elle s'affiche dans la carte ci-dessus.
 Lien de téléchargement (donne-le en lien cliquable) : ${lien}
-N'affiche PAS l'image en markdown ni en artifact (le bac à sable bloque les URL externes) — le lien cliquable suffit.` }
-    return { content: vignette ? [vignette, texte] : [texte],
+N'affiche PAS l'image en markdown ni en artifact (le bac à sable bloque les URL externes).` }
+    return { content: [texte],
       structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
@@ -2271,6 +2282,14 @@ serve(async (req) => {
     return new Response('Média introuvable', { status: 404, headers: cors })
   }
 
+  // JS du widget MCP App, servi hors sandbox (comme Pletor sert le sien depuis
+  // son API) : c'est CE fichier que l'iframe charge en <script src>, car le CSP
+  // de la sandbox bloque tout JS inline.
+  if (segs[1] === 'widget.js') {
+    return new Response(UI_WIDGET_JS, { headers: { ...cors,
+      'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=300' } })
+  }
+
   if (segs[1] === 'key') {
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
     return await handleKeyManagement(req)
@@ -2391,11 +2410,7 @@ serve(async (req) => {
       const supported = ['2025-06-18', '2025-03-26', '2024-11-05']
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
-        // Plus de capability `resources` : on n'est plus un connecteur « app à
-        // widget » (qui repliait la carte quand claude.ai tentait de rendre le
-        // widget), mais un connecteur d'outils SIMPLE comme Pixa/AI Box/Imagine
-        // — ils renvoient juste un bloc image que claude.ai affiche inline.
-        capabilities: { tools: { listChanged: false } },
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
         // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
         // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
         serverInfo: {
