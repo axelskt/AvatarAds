@@ -2039,27 +2039,41 @@ serve(async (req) => {
   // et aucun client ne part en OAuth.
   const bearer = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
   const key = segs[1] || url.searchParams.get('key') || (bearer.startsWith('aa_') ? bearer : '')
+  // ── UNE CLÉ MORTE NE BLOQUE PLUS LA CONNEXION (Axel, 15/08) ────────────────
+  // Quand initialize échouait sur clé révoquée, claude.ai affichait
+  // « Impossible de joindre » → l'utilisateur régénérait → ce qui révoquait la
+  // clé de ses AUTRES connecteurs → boucle infernale. Désormais initialize,
+  // tools/list et resources répondent TOUJOURS (rien de sensible dedans), et
+  // l'erreur claire tombe à l'APPEL d'outil, avec la marche à suivre.
+  let keyErr: string | null = null
+  // deno-lint-ignore no-explicit-any
+  let keyRow: any = null
   if (!key || !key.startsWith('aa_')) {
-    return json(200, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds manquante — génère-la dans Mon compte sur ' + APP_URL } })
+    keyErr = 'Clé AvatarAds manquante dans l’URL du connecteur — génère-la dans Mon compte sur ' + APP_URL
+  } else {
+    const { data } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
+      .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
+    keyRow = data
+    if (!keyRow) keyErr = 'Clé AvatarAds invalide ou révoquée. Va dans Mon compte sur ' + APP_URL + ', copie l’URL de la clé ACTUELLE et remplace l’URL de ce connecteur (ne régénère pas : ça révoque la clé partout ailleurs).'
   }
-  const { data: keyRow } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
-    .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
-  if (!keyRow) {
-    return json(200, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Clé AvatarAds invalide ou révoquée — génère-en une nouvelle dans Mon compte sur ' + APP_URL } })
-  }
-  bg((async () => { await svc.from('mcp_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRow.id) })())
+  if (keyRow) bg((async () => { await svc.from('mcp_keys').update({ last_used_at: new Date().toISOString() }).eq('id', keyRow.id) })())
 
-  const { data: profile } = await svc.from('profiles').select(
-    'id, email, first_name, plan, credits_remaining, is_owner',
-  ).eq('id', keyRow.user_id).maybeSingle()
-  if (!profile) return json(200, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Compte introuvable.' } })
+  // deno-lint-ignore no-explicit-any
+  let profile: any = null
+  if (keyRow) {
+    const { data } = await svc.from('profiles').select(
+      'id, email, first_name, plan, credits_remaining, is_owner',
+    ).eq('id', keyRow.user_id).maybeSingle()
+    profile = data
+    if (!profile) keyErr = 'Compte introuvable.'
+  }
 
   // Accès réservé Pro/Élite (clé créée puis plan rétrogradé → on bloque à l'usage aussi)
-  const planKey = String(profile.plan || '').toLowerCase()
-  const planAllowed = isUnlimited(profile) || ALLOWED_PLANS.includes(planKey)
+  const planKey = String(profile?.plan || '').toLowerCase()
+  const planAllowed = profile ? (isUnlimited(profile) || ALLOWED_PLANS.includes(planKey)) : false
   const ctx: ToolCtx = {
-    requireConfirm: keyRow.require_confirm !== false,
-    dailyCap: isUnlimited(profile) ? null : (DAILY_CAPS[planKey] ?? 100),
+    requireConfirm: keyRow ? keyRow.require_confirm !== false : true,
+    dailyCap: profile && isUnlimited(profile) ? null : (DAILY_CAPS[planKey] ?? 100),
   }
 
   let msg: Record<string, unknown>
@@ -2097,7 +2111,7 @@ serve(async (req) => {
       })
     }
     if (method === 'ping') return rpcResult(id, {})
-    if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(isUnlimited(profile), ctx.requireConfirm) })
+    if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm) })
     if (method === 'resources/list') return rpcResult(id, { resources: UI_RESOURCES })
     if (method === 'resources/read') {
       const uri = String(params?.uri || '')
@@ -2108,6 +2122,9 @@ serve(async (req) => {
     }
     if (method === 'prompts/list') return rpcResult(id, { prompts: [] })
     if (method === 'tools/call') {
+      if (keyErr || !profile) {
+        return rpcResult(id, { content: [{ type: 'text', text: keyErr || 'Compte introuvable.' }], isError: true })
+      }
       const name = String(params.name || '')
       const args = (params.arguments || {}) as Record<string, unknown>
       if (!planAllowed) {
