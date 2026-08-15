@@ -1075,8 +1075,8 @@ export function buildComposition(plan, opts = {}) {
       /* !important : le style word reformate les cartes médias (50/50) avec plus
          de spécificité — sans lui la photo du hook redescendait sur les mots */
       .broll.hkm { align-items: flex-start !important; padding-top: ${Math.round(H * 0.03)}px !important; background: transparent; }
-      .broll.hkm .broll-card { max-height: ${Math.round(H * 0.48)}px !important; overflow: hidden; }
-      .broll.hkm .broll-card img { max-height: ${Math.round(H * 0.48)}px !important; will-change: transform; }
+      .broll.hkm .broll-card { max-height: ${Math.round(H * 0.62)}px !important; overflow: hidden; }
+      .broll.hkm .broll-card img { max-height: ${Math.round(H * 0.62)}px !important; will-change: transform; }
 
       /* Sous-titres Punch : un mot, énorme, blanc (ou orange accent), gros contour noir */
       .cap {
