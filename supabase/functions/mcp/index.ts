@@ -2001,6 +2001,13 @@ serve(async (req) => {
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
     return await handleKeyManagement(req)
   }
+  // Sonde OAuth de claude.ai (Dynamic Client Registration) : un 200 avec du
+  // JSON-RPC dedans lui faisait croire à un serveur OAuth cassé (« Impossible
+  // de s'inscrire auprès du service de connexion »). 404 franc = pas d'OAuth,
+  // le client continue en mode sans authentification (la clé est dans l'URL).
+  if (segs[1] === 'register' || segs[segs.length - 1] === 'register') {
+    return json(404, { error: 'no_oauth_here' })
+  }
 
   // ── Découverte OAuth : on répond 404, PAS 405 ──
   // Les connecteurs claude.ai sondent /.well-known/oauth-* avant de parler MCP.
@@ -2113,6 +2120,7 @@ serve(async (req) => {
     if (method === 'ping') return rpcResult(id, {})
     if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm) })
     if (method === 'resources/list') return rpcResult(id, { resources: UI_RESOURCES })
+    if (method === 'resources/templates/list') return rpcResult(id, { resourceTemplates: [] })
     if (method === 'resources/read') {
       const uri = String(params?.uri || '')
       if (uri.startsWith('ui://avatarads/')) {
