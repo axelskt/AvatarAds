@@ -588,7 +588,7 @@ export function buildComposition(plan, opts = {}) {
   // clip vidéo b-roll : classe "clip" + data-start/duration → le moteur le seek
   // frame par frame (il joue depuis son début pendant sa fenêtre, comme #base)
   const brollHtml = brolls.map((b) => `
-      <div class="clip broll${b.hero ? ' hero' : ''}" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
+      <div class="clip broll${b.hero ? ' hero' : ''}${wordMode && hasWordHook && b.start < hookCapEndW ? ' hkm' : ''}" id="${b.id}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3">
         <div class="broll-card">${b.isVid
           ? `<video id="${b.id}v" class="clip" src="${esc(b.src)}" data-start="${b.start}" data-duration="${b.dur}" data-track-index="3" muted playsinline></video>`
           : `<img src="${esc(b.src)}" alt="" />`}</div>
@@ -614,12 +614,13 @@ export function buildComposition(plan, opts = {}) {
     const a = r2(Math.max(0, ph[0].t - 0.05))
     const b = r2(k + 1 < whkPhr.length ? whkPhr[k + 1][0].t - 0.04 : hookCapEndW)
     return `
-      <div class="clip whk" data-start="${a}" data-duration="${r2(Math.max(0.3, b - a))}" data-track-index="7"><span class="whk-in" id="whkIn${k}">${ph.map((w) => `<i class="whk-w${w.accent ? ' acc' : ''}" id="${w.id}">${esc(w.text)}</i>`).join(' ')}</span></div>`
+      <div class="clip whk" data-start="${a}" data-duration="${r2(Math.max(0.3, b - a))}" data-track-index="7"><span class="whk-in" id="whkIn${k}">${ph.map((w) => `<i class="whk-w" id="${w.id}">${esc(w.text)}</i>`).join(' ')}</span></div>`
   }).join('') : ''
   const whkJs = hasWordHook ? whkPhr.map((ph, k) => {
     const b = r2(k + 1 < whkPhr.length ? whkPhr[k + 1][0].t - 0.04 : hookCapEndW)
     return ph.map((w) => (w.accent ? `
-      tl.fromTo('#${w.id}', { yPercent: 84, autoAlpha: 0, scale: 1.55 }, { yPercent: 0, autoAlpha: 1, scale: 1.06, duration: 0.24, ease: 'back.out(2)', transformOrigin: '50% 100%' }, ${w.t});` : `
+      tl.fromTo('#${w.id}', { yPercent: 84, autoAlpha: 0, scale: 1.3 }, { yPercent: 0, autoAlpha: 1, scale: 1, duration: 0.2, ease: 'back.out(1.8)', transformOrigin: '50% 100%' }, ${w.t});
+      tl.set('#${w.id}', { attr: { class: 'whk-w acc' } }, ${r2(w.t + 0.06)});` : `
       tl.fromTo('#${w.id}', { yPercent: 70, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.2, ease: 'power3.out', transformOrigin: '50% 100%' }, ${w.t});`)).join('') + `
       tl.to('#whkIn${k}', { autoAlpha: 0, y: -30, duration: 0.18, ease: 'power2.in' }, ${r2(Math.max(0.2, b - 0.2))});`
   }).join('') : ''
@@ -1048,19 +1049,26 @@ export function buildComposition(plan, opts = {}) {
 
       /* HOOK MOT-À-MOT v2 : accumulation Anton, dégradé or hk1, accents rouges */
       .whk { left: 5%; right: 5%; top: 0; height: ${H}px; display: flex; align-items: flex-end;
-        justify-content: center; padding-bottom: ${Math.round(H * 0.20)}px; z-index: 6; pointer-events: none; }
-      .whk-in { text-align: center; font-family: 'Montserrat', 'Anton', 'Arial Black', sans-serif; font-weight: 900;
-        text-transform: uppercase; font-size: ${Math.round(H * 0.044)}px; line-height: 1.14;
+        justify-content: center; padding-bottom: ${Math.round(H * 0.235)}px; z-index: 6; pointer-events: none; }
+      .whk-in { text-align: center; font-family: 'Anton', 'Arial Black', sans-serif; font-weight: 400;
+        text-transform: uppercase; font-size: ${Math.round(H * 0.05)}px; line-height: 1.08;
         letter-spacing: .012em; max-width: 100%; }
-      /* v3 (Axel : « la police est à moitié coupée, essaie l'autre style ») :
-         hk7 — blanc massif à GROS contour noir, mots forts JAUNES. Aucun
-         background-clip, donc aucun glyphe rogné, lisible sur la page blanche. */
-      .whk-w { display: inline-block; opacity: 0; padding: 0.04em ${Math.round(W * 0.005)}px;
-        color: #FFFFFF; -webkit-text-stroke: ${Math.max(4, Math.round(H * 0.0052))}px #0E0E0E;
-        paint-order: stroke fill;
-        text-shadow: 0 ${Math.round(H * 0.0035)}px ${Math.round(H * 0.009)}px rgba(0,0,0,.4);
+      /* v4 (Axel, capture hk15 : « non je veux comme ça ») : le hook néon du
+         dynamic porté tel quel — BLANC à ombre franche (tient sur la page
+         blanche), le mot fort s'ALLUME en rouge flou juste après son arrivée,
+         MÊME taille (c'est le néon qui fait l'emphase, pas la taille). */
+      .whk-w { display: inline-block; opacity: 0; padding: 0.04em ${Math.round(W * 0.004)}px;
+        color: #FFFFFF;
+        text-shadow: 0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.012)}px rgba(0,0,0,.62),
+          0 ${Math.round(H * 0.0012)}px ${Math.round(H * 0.004)}px rgba(0,0,0,.5);
         will-change: transform, opacity; }
-      .whk-w.acc { font-size: 1.42em; color: #FFD400; }
+      .whk-w.acc { color: #FFFFFF;
+        text-shadow: 0 0 ${Math.round(H * 0.009)}px rgba(255,40,60,1), 0 0 ${Math.round(H * 0.024)}px rgba(255,16,44,1),
+          0 0 ${Math.round(H * 0.05)}px rgba(235,0,40,.9), 0 0 ${Math.round(H * 0.09)}px rgba(210,0,38,.62),
+          0 0 ${Math.round(H * 0.13)}px rgba(185,0,34,.4); }
+      /* la photo du hook vit EN HAUT, réduite — les mots ne la touchent jamais */
+      .broll.hkm { align-items: flex-start; padding-top: ${Math.round(H * 0.055)}px; background: transparent; }
+      .broll.hkm .broll-card, .broll.hkm .broll-card img { max-height: ${Math.round(H * 0.42)}px; }
 
       /* Sous-titres Punch : un mot, énorme, blanc (ou orange accent), gros contour noir */
       .cap {
