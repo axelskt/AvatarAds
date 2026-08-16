@@ -271,16 +271,15 @@ function aaShow(out){
     aaOk=true;
     var v=kind==='video'||/\\.(mp4|mov|webm|m4v)(\\?|#|$)/i.test(url);
     var m=document.getElementById('m');
+    // Pas de boutons Télécharger/Ouvrir : le bac à sable de l'iframe claude.ai bloque
+    // download + target=_blank (popups). Le téléchargement se fait par le lien de la
+    // conversation (mcp.avatarads.fr/i/<id>), hors sandbox → lui marche.
     m.innerHTML = v
       ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
-      : '<a href="'+url+'" target="_blank" rel="noopener"><img src="'+url+'" alt="" class="aa-m"/></a>';
+      : '<img src="'+url+'" alt="'+(name||'')+'" class="aa-m"/>';
     var media=m.querySelector('video,img');
     if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
-    document.getElementById('n').textContent=name||(v?'Vidéo':'Image');
-    document.getElementById('dl').href=url;
-    document.getElementById('op').href=url;
     m.style.padding='0';
-    document.getElementById('b').style.display='flex';
     aaKick();
   }catch(e){}
 }
@@ -368,10 +367,7 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
     .aa-op{background:rgba(255,255,255,.14)}
   }
 </style></head><body>
-<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div>
-<div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
-<a class="aa-a aa-dl" id="dl" download>Télécharger</a>
-<a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
+<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div></div>
 <script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
@@ -504,13 +500,13 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'generate_image',
-      description: `Génère une image IA (moteur AvatarAds, gpt-image) et retourne son URL publique. Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. La qualité high peut prendre 1 à 2 minutes.`,
+      description: `Génère une image IA (moteur AvatarAds, gpt-image) et retourne son URL publique. Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. ⚠️ Qualité par défaut = TOUJOURS 'standard' (${IMG_COST.standard} cr, ~45 s). N'utilise 'high' (${IMG_COST.high} cr, 1 à 2 min) QUE si l'utilisateur le demande explicitement.`,
       inputSchema: {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: "Description détaillée de l'image (sujet, style, lumière, cadrage…). Français ou anglais." },
           format: { type: 'string', enum: ['portrait', 'square', 'landscape'], description: 'portrait 9:16 (défaut, idéal TikTok/Reels), square 1:1, landscape 16:9' },
-          quality: { type: 'string', enum: ['standard', 'high'], description: `standard (défaut, ${IMG_COST.standard} crédits) ou high (${IMG_COST.high} crédits, plus détaillée)` },
+          quality: { type: 'string', enum: ['standard', 'high'], description: `'standard' = DÉFAUT OBLIGATOIRE (${IMG_COST.standard} crédits). N'utilise 'high' (${IMG_COST.high} crédits) QUE si l'utilisateur écrit explicitement « haute qualité »/« high »/« 4K ». NE choisis PAS 'high' parce que le prompt dit « détaillé », « réaliste » ou « ultra » — ça décrit l'image voulue, pas la qualité du moteur.` },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['prompt'],
@@ -817,8 +813,8 @@ Un « ⏳ en cours » n'est jamais une panne — l'image arrive.`)
 // C'est exactement le 502 vu par Axel le 16/08. On tient donc SOUS 8 s : 5 s de
 // hold → réponse garantie, puis le client rappelle check_* (le wording ci-dessous
 // lui interdit d'annoncer une panne). 20 s = « Thread killed » Supabase (à éviter).
-const ATTENTE_MAX_MS = 5000   // < 8 s : la réponse part toujours avant la coupure du relais claude.ai
-const ATTENTE_PAS_MS = 1000   // pas de sondage court → réponse nette à ~5 s
+const ATTENTE_MAX_MS = 6000   // < 8 s (coupure claude.ai) mais aussi HAUT que possible : chaque
+const ATTENTE_PAS_MS = 1000   // check_image = 1 CARTE dans la conversation → tenir plus longtemps = moins de cartes
 
 async function attendreJob(jobId: string, userId: string, kind: string) {
   const limite = Date.now() + ATTENTE_MAX_MS
