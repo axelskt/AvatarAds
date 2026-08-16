@@ -2499,7 +2499,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button id="composeBtn" onclick="composeVideo(this)" style="flex:1.7;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
                 <button onclick="nav('library')" style="flex:1;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Bibliothèque</button>
               </div>
-              <button onclick="genOpenMontageIA()" style="width:100%;margin-top:8px;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);border:1px solid rgba(255,143,94,.6);border-radius:12px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 18px rgba(255,107,53,.25);transition:filter .15s" onmouseover="this.style.filter='brightness(1.07)'" onmouseout="this.style.filter=''"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Montage IA <span style="font-weight:600;font-size:12px;opacity:.78">— zooms, b-roll, musique &amp; sous-titres posés automatiquement</span></button>
+              <button onclick="genOpenMontageIA()" style="width:100%;margin-top:8px;padding:13px;background:#141414;border:1.5px solid rgba(255,107,53,.75);border-radius:12px;color:#FF6B35;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#1c1310'" onmouseout="this.style.background='#141414'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Envoyer vers Montage IA</button>
               <div id="composeProgressWrap" style="display:none;margin-top:8px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                   <span id="composeProgressStage">Composition en cours…</span><span id="composeProgressPct">0%</span>
@@ -21745,7 +21745,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   let _audioBlobToEncode = results.audioBlob;
   // Debug persistant dans la barre de progression (reste visible)
   // Badge debug audio — fixe, résiste aux setStage() qui écrasent composeProgressStage
-  const _ab = document.getElementById('audioBadge');
+  const _ab = null; // DEBUG AUDIO retiré (Axel 16/08) — badge masqué, tous les _dbg() deviennent no-op
   if(_ab){ _ab.innerHTML = 'DEBUG AUDIO<br>'; _ab.style.display = 'block'; }
   const _dbg = (msg) => { if(!_ab) return; _ab.innerHTML += msg + '<br>'; };
   _dbg('1. audioBlob: ' + (_audioBlobToEncode ? Math.round(_audioBlobToEncode.size/1024)+'KB' : 'NULL ✗'));
@@ -22518,22 +22518,27 @@ function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvas
   const srcW = src.videoWidth || src.naturalWidth || 0;
   const srcH = src.videoHeight || src.naturalHeight || 0;
   if(!srcW || !srcH) return;
-  // Conversion pixel espace phone (393×852) → pixels canvas
-  const px = canvasW / 393, py = canvasH / 852;
-  // Taille de l'élément affiché (zoom% de la zone)
-  const dw = zone.w * (zoomW / 100);
-  const dh = zone.h * (zoomH / 100);
-  // Centre de la zone + offset crop
-  const cx = zone.x + zone.w / 2 + cropX * px;
-  const cy = zone.y + zone.h / 2 + cropY * py;
-  const dx = cx - dw / 2, dy = cy - dh / 2;
-  // Cover-fit source dans (dw × dh)
-  const scale = Math.max(dw / srcW, dh / srcH);
-  const srcCW = dw / scale, srcCH = dh / scale;
-  const srcX  = (srcW - srcCW) / 2, srcY = (srcH - srcCH) / 2;
+  // #recadrage (16/08) : le décalage crop doit déplacer la FENÊTRE SOURCE, pas le
+  // rectangle de DESTINATION. Avant, à 100 % de zoom la destination faisait pile la
+  // taille de la zone → tout offset la faisait sortir de la zone et laissait une
+  // BANDE NOIRE (le fillRect en dessous). On réplique object-fit:cover +
+  // object-position du preview : destination = zone pleine, la fenêtre source
+  // coulisse et reste BORNÉE dans l'image → couverture garantie, jamais de noir.
+  const zW = (zoomW || 100) / 100, zH = (zoomH || 100) / 100;
+  const cover = Math.max(zone.w / srcW, zone.h / srcH);   // remplit la zone (cover)
+  const srcCW = Math.min(srcW, (zone.w / cover) / zW);    // fenêtre source (zoom = + petite)
+  const srcCH = Math.min(srcH, (zone.h / cover) / zH);
+  // cropX/Y sont en px espace-phone (393 large). En px source : ×(canvasW/393)/(cover·zoom).
+  // cropY>0 (glisser vers le bas) révèle le HAUT de la source → srcY diminue.
+  const offX = cropX * (canvasW / 393) / (cover * zW);
+  const offY = cropY * (canvasW / 393) / (cover * zH);
+  let srcX = (srcW - srcCW) / 2 - offX;
+  let srcY = (srcH - srcCH) / 2 - offY;
+  srcX = Math.max(0, Math.min(srcW - srcCW, srcX));       // borné DANS l'image → aucune bande noire
+  srcY = Math.max(0, Math.min(srcH - srcCH, srcY));
   ctx.save();
   ctx.beginPath(); ctx.rect(zone.x, zone.y, zone.w, zone.h); ctx.clip();
-  ctx.drawImage(src, srcX, srcY, srcCW, srcCH, dx, dy, dw, dh);
+  ctx.drawImage(src, srcX, srcY, srcCW, srcCH, zone.x, zone.y, zone.w, zone.h);
   ctx.restore();
 }
 
