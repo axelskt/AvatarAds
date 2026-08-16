@@ -357,7 +357,6 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
     .aa-op{background:rgba(255,255,255,.14)}
   }
 </style></head><body>
-<script type="module">window.skybridge = { hostType: "mcp-app", serverUrl: "${WIDGET_ORIGIN}" };</script>
 <div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div>
 <div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
@@ -369,18 +368,24 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 // au test OAuth du 15/08). L'origin Supabase sert tous les médias (mcp-media
 // public + render-media signé), avatarads.fr sert les logos.
 const SUPA_ORIGIN = (Deno.env.get('SUPABASE_URL') || 'https://guvwgiejzkiodghywpwj.supabase.co').replace(/\/$/, '')
-// _meta.ui de la RESSOURCE — calqué sur Pletor : `domain` = origine du sandbox
-// (là où vit le widget.js) ; `resourceDomains` DOIT inclure ce domaine (sinon le
-// <script src> est bloqué) + l'origine des médias.
+// _meta.ui de la RESSOURCE — RÉDUIT à la forme officielle (video-resource-server).
+// ⚠⚠ LA VRAIE CAUSE du « problème d'affichage » (trouvée le 16/08 dans le SDK
+// officiel, src/spec.types.ts L704) : le champ `domain` est « Dedicated origin for
+// view sandbox », dont « the format and validation rules are determined by each
+// host » — claude.ai attend `{hash}.claudemcpcontent.com`, PAS un domaine à nous.
+// Notre `domain: mcp.avatarads.fr` faisait échouer le sandbox de l'iframe →
+// « problème d'affichage » → tempête de reconnexions. OMIS → claude.ai utilise son
+// origine de sandbox par défaut (par conversation). On ne fait AUCUN appel CORS
+// depuis l'iframe (juste un <img>), donc pas besoin de domaine stable.
+// `csp.resourceDomains` reste OBLIGATOIRE : sans lui l'<img> Supabase est bloqué
+// (« Empty or omitted → no network resources »). Le JS est INLINE (pas de <script
+// src>), donc WIDGET_ORIGIN n'a plus à y figurer.
 const UI_META = {
   ui: {
     csp: {
-      connectDomains: [WIDGET_ORIGIN, SUPA_ORIGIN],
-      resourceDomains: [WIDGET_ORIGIN, SUPA_ORIGIN, 'https://avatarads.fr'],
-      baseUriDomains: [WIDGET_ORIGIN],
+      connectDomains: [SUPA_ORIGIN],
+      resourceDomains: [SUPA_ORIGIN, 'https://avatarads.fr'],
     },
-    domain: WIDGET_ORIGIN,
-    prefersBorder: true,
   },
 }
 
@@ -510,6 +515,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -519,6 +525,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/video.html' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -544,6 +551,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.html' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -612,6 +620,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
+      _meta: { ui: { resourceUri: 'ui://avatarads/montage.html' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -2388,14 +2397,13 @@ serve(async (req) => {
       const supported = ['2025-06-18', '2025-03-26', '2024-11-05']
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
-        // 16/08 02h30 : capability `resources` RETIRÉE + plus de _meta.ui sur les
-        // outils. Le widget se faisait fetcher (resources/read via URI .html) mais
-        // ÉCHOUAIT au rendu (« problème d'affichage ») → claude.ai reconnectait en
-        // boucle (dizaines d'initialize parallèles) → la fonction se noyait et la
-        // GÉNÉRATION cassait (« impossible de joindre »). On revient au connecteur
-        // d'outils simple, STABLE : image visible en dépliant la carte. Widget =
-        // chantier à froid (le fetch marche, reste à faire rendre l'iframe).
-        capabilities: { tools: { listChanged: false } },
+        // 16/08 (matin) : widget RÉ-ACTIVÉ après avoir trouvé la vraie cause du
+        // « problème d'affichage » = le champ `_meta.ui.domain` (origine de sandbox
+        // au format host-spécifique, cf. UI_META). Retiré → l'iframe rend. La
+        // capability `resources` + `_meta.ui.resourceUri` sur les check_* signalent
+        // à claude.ai que ces outils ont une UI ; il fetch resources/read (URIs
+        // .html) et rend le widget inline.
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
         // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
         // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
         serverInfo: {
