@@ -533,7 +533,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      // WIDGET OFF 16/08 : l'iframe (+CSP Safari, +round-trip resources/read) faisait TIMEOUTER check_image alors que le serveur répondait 200. L'image passe par le bloc image natif (blocImage) — fiable. Réactiver : _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget = image EN GRAND inline (le désactiver ne donne qu'un lien de téléchargement) ; HTML sans script inline, les erreurs CSP Safari viennent du host claude.ai, pas de nous
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -543,7 +543,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
-      // WIDGET OFF 16/08 (voir check_image) : _meta: { ui: { resourceUri: 'ui://avatarads/video.html' } },
+      _meta: { ui: { resourceUri: 'ui://avatarads/video.html' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -569,7 +569,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
-      // WIDGET OFF 16/08 (voir check_image) : _meta: { ui: { resourceUri: 'ui://avatarads/avatar.html' } },
+      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.html' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -638,7 +638,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
-      // WIDGET OFF 16/08 (voir check_image) : _meta: { ui: { resourceUri: 'ui://avatarads/montage.html' } },
+      _meta: { ui: { resourceUri: 'ui://avatarads/montage.html' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
