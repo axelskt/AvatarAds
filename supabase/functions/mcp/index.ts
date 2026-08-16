@@ -295,7 +295,7 @@ function aaMeasure(){
     html.style.height='max-content';
     var h=Math.ceil(html.getBoundingClientRect().height);
     html.style.height=oh;
-    var w=Math.ceil(window.innerWidth);
+    var cc=document.getElementById('c'); var w=Math.ceil(cc?cc.getBoundingClientRect().width:window.innerWidth);
     if(w!==aaLW||h!==aaLH){ aaLW=w; aaLH=h;
       window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/size-changed', params:{ width:w, height:h } }, '*'); }
   });
@@ -340,8 +340,9 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   html,body{margin:0;background:transparent}
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
-    background:#fff;color:#1a1a1a;max-width:560px}
-  .aa-m{width:100%;display:block;background:#000;max-height:640px;object-fit:contain}
+    background:#fff;color:#1a1a1a;display:inline-block;max-width:100%}
+  #m a{display:block;font-size:0}
+  .aa-m{display:block;max-width:100%;max-height:600px;width:auto;height:auto;background:#000}
   .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
     border-top:1px solid rgba(128,128,128,.22)}
   .aa-n{font-size:12.5px;font-weight:600;opacity:.9}
