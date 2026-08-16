@@ -261,7 +261,7 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
 // Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
 const UI_WIDGET_JS = `
-var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0;
+var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='';
 // Requête vers l'HÔTE (claude.ai) — protocole MCP Apps : télécharger un fichier
 // (ui/download-file), ouvrir un lien (ui/open-link), ou envoyer un message au chat
 // (ui/message = régénérer). Le sandbox bloque download+popups DIRECTS depuis l'iframe,
@@ -271,15 +271,21 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'' };
+  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'' };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
   var dl=document.getElementById('dl'), op=document.getElementById('op'), rg=document.getElementById('rg');
   var v=aaKindNow==='video';
-  if(dl) dl.onclick=function(){ aaSend('ui/download-file', { contents:[{ type:'resource_link', uri:aaUrlNow, name:(aaNameNow||'avatarads')+(v?'.mp4':'.png'), mimeType:(v?'video/mp4':'image/png') }] }); };
+  // Télécharger : claude.ai N'honore PAS ui/download-file, mais honore ui/open-link
+  // (testé par Axel). On ouvre donc l'URL avec ?download=<nom> → Supabase renvoie
+  // Content-Disposition:attachment → le navigateur télécharge au lieu d'afficher.
+  if(dl) dl.onclick=function(){ var fn=(aaNameNow||'avatarads')+(v?'.mp4':'.png'); var u=aaUrlNow+(aaUrlNow.indexOf('?')<0?'?':'&')+'download='+encodeURIComponent(fn); aaSend('ui/open-link', { url:u }); };
   if(op) op.onclick=function(){ aaSend('ui/open-link', { url:aaUrlNow }); };
-  if(rg) rg.onclick=function(){ rg.disabled=true; setTimeout(function(){ rg.disabled=false; }, 4000); aaSend('ui/message', { role:'user', content:[{ type:'text', text:'Regénère cette image (même prompt, nouvelle variation).' }] }); };
+  // Regénérer : le widget ne peut PAS appeler l'outil (spec MCP Apps) → il envoie un
+  // message au chat (claude.ai le met dans la barre + avertissement = sa sécurité, on
+  // n'y peut rien). On inclut le prompt pour lever l'ambiguïté avec plusieurs images.
+  if(rg) rg.onclick=function(){ rg.disabled=true; setTimeout(function(){ rg.disabled=false; }, 4000); var p=aaPrompt?(' : « '+aaPrompt.slice(0,160)+(aaPrompt.length>160?'…':'')+' »'):''; aaSend('ui/message', { role:'user', content:[{ type:'text', text:'Regénère une nouvelle variation de cette image'+p+'.' }] }); };
 }
 function aaMedia(url, kind, name){
   aaOk=true; aaUrlNow=url; aaNameNow=(name||'').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
@@ -311,6 +317,7 @@ function aaStartPoll(u){
 function aaShow(out){
   try{
     var d=aaUrlFrom(out);
+    if(d.prompt) aaPrompt=d.prompt;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
