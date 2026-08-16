@@ -510,7 +510,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/image.html', ui: { resourceUri: 'ui://avatarads/image.html' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -520,7 +519,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/video.html', ui: { resourceUri: 'ui://avatarads/video.html' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -546,7 +544,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/avatar.html', ui: { resourceUri: 'ui://avatarads/avatar.html' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -615,7 +612,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/montage.html', ui: { resourceUri: 'ui://avatarads/montage.html' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -788,8 +784,8 @@ Un « ⏳ en cours » n'est jamais une panne — l'image arrive.`)
 // facturées ce jour-là qu'il n'a jamais vues. On ne peut pas compter sur la
 // patience du client : check_* attend ici jusqu'à ATTENTE_MAX_MS que le job
 // bascule, en restant sous la coupure ~28 s du relais Netlify.
-const ATTENTE_MAX_MS = 20000
-const ATTENTE_PAS_MS = 1500
+const ATTENTE_MAX_MS = 9000   // 16/08 : 20 s se faisait TUER par le timeout Supabase (« Thread killed »)
+const ATTENTE_PAS_MS = 1500   // → « serveur n'a pas répondu ». 9 s = sous la limite, le client rappelle.
 
 async function attendreJob(jobId: string, userId: string, kind: string) {
   const limite = Date.now() + ATTENTE_MAX_MS
@@ -2392,7 +2388,14 @@ serve(async (req) => {
       const supported = ['2025-06-18', '2025-03-26', '2024-11-05']
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
-        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
+        // 16/08 02h30 : capability `resources` RETIRÉE + plus de _meta.ui sur les
+        // outils. Le widget se faisait fetcher (resources/read via URI .html) mais
+        // ÉCHOUAIT au rendu (« problème d'affichage ») → claude.ai reconnectait en
+        // boucle (dizaines d'initialize parallèles) → la fonction se noyait et la
+        // GÉNÉRATION cassait (« impossible de joindre »). On revient au connecteur
+        // d'outils simple, STABLE : image visible en dépliant la carte. Widget =
+        // chantier à froid (le fetch marche, reste à faire rendre l'iframe).
+        capabilities: { tools: { listChanged: false } },
         // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
         // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
         serverInfo: {
