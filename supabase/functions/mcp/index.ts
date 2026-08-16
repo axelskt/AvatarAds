@@ -811,8 +811,14 @@ Un « ⏳ en cours » n'est jamais une panne — l'image arrive.`)
 // facturées ce jour-là qu'il n'a jamais vues. On ne peut pas compter sur la
 // patience du client : check_* attend ici jusqu'à ATTENTE_MAX_MS que le job
 // bascule, en restant sous la coupure ~28 s du relais Netlify.
-const ATTENTE_MAX_MS = 9000   // 16/08 : 20 s se faisait TUER par le timeout Supabase (« Thread killed »)
-const ATTENTE_PAS_MS = 1500   // → « serveur n'a pas répondu ». 9 s = sous la limite, le client rappelle.
+// 16/08 (2e passe) : le relais côté claude.ai COUPE la requête à ~8 s. Si on
+// retient la réponse 9 s, le client voit un 502 (« le serveur ne répond pas »)
+// AVANT qu'on réponde — alors que notre fonction, elle, loggue bien un 200 à 9 s.
+// C'est exactement le 502 vu par Axel le 16/08. On tient donc SOUS 8 s : 5 s de
+// hold → réponse garantie, puis le client rappelle check_* (le wording ci-dessous
+// lui interdit d'annoncer une panne). 20 s = « Thread killed » Supabase (à éviter).
+const ATTENTE_MAX_MS = 5000   // < 8 s : la réponse part toujours avant la coupure du relais claude.ai
+const ATTENTE_PAS_MS = 1000   // pas de sondage court → réponse nette à ~5 s
 
 async function attendreJob(jobId: string, userId: string, kind: string) {
   const limite = Date.now() + ATTENTE_MAX_MS
