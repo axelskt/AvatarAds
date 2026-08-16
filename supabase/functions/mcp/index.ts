@@ -361,7 +361,7 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 <div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
 <a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
-<script type="module">${UI_WIDGET_JS}</script></body></html>`
+<script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
 // chargement des images/vidéos externes dans l'iframe → carte vide (constaté
@@ -377,14 +377,21 @@ const SUPA_ORIGIN = (Deno.env.get('SUPABASE_URL') || 'https://guvwgiejzkiodghywp
 // « problème d'affichage » → tempête de reconnexions. OMIS → claude.ai utilise son
 // origine de sandbox par défaut (par conversation). On ne fait AUCUN appel CORS
 // depuis l'iframe (juste un <img>), donc pas besoin de domaine stable.
-// `csp.resourceDomains` reste OBLIGATOIRE : sans lui l'<img> Supabase est bloqué
-// (« Empty or omitted → no network resources »). Le JS est INLINE (pas de <script
-// src>), donc WIDGET_ORIGIN n'a plus à y figurer.
+// ★★★★★ VRAIE CAUSE FINALE (16/08 14h — console DevTools d'Axel) : le CSP du
+// widget côté claude.ai BLOQUE le JS INLINE — « Refused to execute a script because
+// its hash, its nonce, or 'unsafe-inline' does not appear in the script-src
+// directive ». Donc `<script>${JS}</script>` inline ne tourne JAMAIS → handshake mort
+// → rendu échoue → tempête. (Mon mock local mettait `'unsafe-inline'` → il passait à
+// tort.) FIX = servir le JS en EXTERNE `<script src=WIDGET_ORIGIN/widget.js>` + mettre
+// WIDGET_ORIGIN dans `resourceDomains` (→ mappe sur CSP `script-src`). C'est exactement
+// le mécanisme de Pletor. `resourceDomains` reste OBLIGATOIRE aussi pour l'<img>
+// Supabase (« omitted → no network resources »). PAS de `domain` (format host-
+// spécifique, cassait le sandbox).
 const UI_META = {
   ui: {
     csp: {
-      connectDomains: [SUPA_ORIGIN],
-      resourceDomains: [SUPA_ORIGIN, 'https://avatarads.fr'],
+      connectDomains: [SUPA_ORIGIN, WIDGET_ORIGIN],
+      resourceDomains: [WIDGET_ORIGIN, SUPA_ORIGIN, 'https://avatarads.fr'],
     },
   },
 }
@@ -515,6 +522,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -524,6 +532,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/video.html' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -549,6 +558,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.html' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -617,6 +627,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
+      _meta: { ui: { resourceUri: 'ui://avatarads/montage.html' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -2393,16 +2404,12 @@ serve(async (req) => {
       const supported = ['2025-06-18', '2025-03-26', '2024-11-05']
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
-        // 16/08 (matin) : widget RE-DÉSACTIVÉ. Le retrait de `_meta.ui.domain`
-        // (format host-spécifique) N'A PAS suffi : claude.ai échoue TOUJOURS à rendre
-        // l'iframe → tempête de reconnexions → « Impossible de joindre » sur les vraies
-        // générations + plus de carte `</>`. Impossible de voir l'erreur réelle de
-        // l'iframe à distance. RETOUR au connecteur d'outils simple, STABLE : l'image
-        // s'affiche en dépliant `</>`, aucune tempête. Pour reprendre le widget il faut
-        // la console DevTools de l'iframe côté claude.ai (l'erreur exacte), sinon
-        // passer par le directory Anthropic. _meta.ui retiré des 4 check_* + resources
-        // hors capabilities. UI_META/UI_VIEWER_HTML restent (prêts pour un test propre).
-        capabilities: { tools: { listChanged: false } },
+        // 16/08 14h : widget RÉ-ACTIVÉ avec le VRAI fix — la console d'Axel a montré
+        // que claude.ai BLOQUE le JS inline (CSP script-src sans 'unsafe-inline'). Le
+        // JS passe maintenant en EXTERNE (/widget.js, WIDGET_ORIGIN dans resourceDomains
+        // → script-src). capability `resources` + `_meta.ui.resourceUri` (.html) sur les
+        // check_* → claude.ai fetch resources/read + rend le widget inline.
+        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
         // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
         // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
         serverInfo: {
