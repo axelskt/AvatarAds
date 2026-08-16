@@ -21874,7 +21874,43 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
           _audioSampleRate = _audioPCMBuf.sampleRate;
           _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
           _dbg('2. PCM: ' + Math.round(_audioPCMBuf.duration) + 's ✓');
-        } catch(e){ console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; _dbg('2. PCM FAIL: ' + e.message + ' ✗'); }
+        } catch(e){
+          console.warn('Audio PCM decode failed:', e); _audioPCMBuf = null; _dbg('2. PCM FAIL: ' + e.message + ' → fallback lecture');
+          // #fix no-son (16/08) : decodeAudioData échoue souvent sur un CONTENEUR VIDÉO
+          // (MOV/MP4 iPhone) → « Decoding failed » → vidéo muette. Fallback pur-web fiable
+          // (Safari bloque ffmpeg.wasm) : rejouer la vidéo, RÉ-ENREGISTRER sa piste audio
+          // via MediaRecorder (webm/opus, décodable à coup sûr), puis re-décoder en PCM.
+          try {
+            const _vurl = hedraObjUrl
+              || (window._bypassHedraFile ? URL.createObjectURL(window._bypassHedraFile) : null)
+              || (mp4AudioFile ? URL.createObjectURL(mp4AudioFile) : null);
+            if(_vurl){
+              const _wb = await new Promise((res, rej) => {
+                const v = document.createElement('video');
+                v.src = _vurl; v.muted = false; v.volume = 1; v.preload = 'auto'; v.playsInline = true;
+                v.onerror = () => rej(new Error('chargement vidéo'));
+                v.onloadedmetadata = () => { try {
+                  const ac = new (window.AudioContext || window.webkitAudioContext)();
+                  const src = ac.createMediaElementSource(v);
+                  const dst = ac.createMediaStreamDestination();
+                  src.connect(dst); // vers l'enregistreur SEULEMENT (pas les enceintes)
+                  const rec = new MediaRecorder(dst.stream); const ch = [];
+                  rec.ondataavailable = e => { if(e.data && e.data.size) ch.push(e.data); };
+                  rec.onstop = async () => { try{ await ac.close(); }catch(_){ } res(new Blob(ch, { type:'audio/webm' })); };
+                  rec.start(); v.play();
+                  v.onended = () => { try{ rec.stop(); }catch(_){ } };
+                  setTimeout(() => { if(rec.state === 'recording'){ try{ v.pause(); rec.stop(); }catch(_){ } } }, Math.min(120000, (v.duration + 2) * 1000));
+                } catch(err){ rej(err); } };
+              });
+              const _c2 = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+              _audioPCMBuf = await _c2.decodeAudioData(await _wb.arrayBuffer());
+              await _c2.close();
+              _audioSampleRate = _audioPCMBuf.sampleRate;
+              _audioNumCh      = Math.min(_audioPCMBuf.numberOfChannels, 2);
+              _dbg('2b. PCM via lecture: ' + Math.round(_audioPCMBuf.duration) + 's ✓');
+            }
+          } catch(e2){ console.warn('fallback lecture audio KO:', e2); _audioPCMBuf = null; _dbg('2b. fallback KO ✗'); }
+        }
 
         // Étape 2 : trouver un codec AudioEncoder supporté (AAC puis Opus en fallback)
         if(_audioPCMBuf){
