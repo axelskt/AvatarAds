@@ -515,7 +515,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -525,7 +524,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
-      _meta: { ui: { resourceUri: 'ui://avatarads/video.html' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -551,7 +549,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
-      _meta: { ui: { resourceUri: 'ui://avatarads/avatar.html' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -620,7 +617,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
-      _meta: { ui: { resourceUri: 'ui://avatarads/montage.html' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
@@ -2397,13 +2393,16 @@ serve(async (req) => {
       const supported = ['2025-06-18', '2025-03-26', '2024-11-05']
       return rpcResult(id, {
         protocolVersion: supported.includes(requested) ? requested : '2025-06-18',
-        // 16/08 (matin) : widget RÉ-ACTIVÉ après avoir trouvé la vraie cause du
-        // « problème d'affichage » = le champ `_meta.ui.domain` (origine de sandbox
-        // au format host-spécifique, cf. UI_META). Retiré → l'iframe rend. La
-        // capability `resources` + `_meta.ui.resourceUri` sur les check_* signalent
-        // à claude.ai que ces outils ont une UI ; il fetch resources/read (URIs
-        // .html) et rend le widget inline.
-        capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
+        // 16/08 (matin) : widget RE-DÉSACTIVÉ. Le retrait de `_meta.ui.domain`
+        // (format host-spécifique) N'A PAS suffi : claude.ai échoue TOUJOURS à rendre
+        // l'iframe → tempête de reconnexions → « Impossible de joindre » sur les vraies
+        // générations + plus de carte `</>`. Impossible de voir l'erreur réelle de
+        // l'iframe à distance. RETOUR au connecteur d'outils simple, STABLE : l'image
+        // s'affiche en dépliant `</>`, aucune tempête. Pour reprendre le widget il faut
+        // la console DevTools de l'iframe côté claude.ai (l'erreur exacte), sinon
+        // passer par le directory Anthropic. _meta.ui retiré des 4 check_* + resources
+        // hors capabilities. UI_META/UI_VIEWER_HTML restent (prêts pour un test propre).
+        capabilities: { tools: { listChanged: false } },
         // `title`, `websiteUrl` et `icons` : ce que les clients MCP affichent
         // dans leur liste de connecteurs (logo + nom lisible au lieu d'un « A »)
         serverInfo: {
