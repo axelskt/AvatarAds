@@ -2114,10 +2114,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div style="display:flex;align-items:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
-            <div id="phoneWrapper" style="position:relative;width:310px;height:551px;flex-shrink:0;overflow:hidden">
+            <div id="phoneWrapper" style="position:relative;width:378px;height:672px;flex-shrink:0;overflow:hidden">
             <!-- phoneMockup en 9:16 EXACT (393×699 = aspect 1080/1920) pour que le recadrage du preview
-                 corresponde PILE au rendu (Axel 16/08). Avant : 393×852 (19.5:9) → preview plus haut que la sortie. -->
-            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:699px;border-radius:70px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.7888);transform-origin:top left">
+                 corresponde PILE au rendu (Axel 16/08). Avant : 393×852 (19.5:9) → preview plus haut que la sortie.
+                 Agrandi (378×672 affiché, scale 0.9618) à la demande d'Axel. -->
+            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:699px;border-radius:70px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.9618);transform-origin:top left">
               <!-- Dynamic Island iPhone 17 -->
               <div style="position:absolute;top:25px;left:50%;transform:translateX(-50%);width:125px;height:37px;background:#000;border-radius:20px;z-index:99;box-shadow:0 0 0 2.5px rgba(255,255,255,0.07)"></div>
 
@@ -17255,7 +17256,7 @@ function setFormat(fmt){
   cfg.format = fmt;
   // display size → native iPhone logical resolution
   const dims = {
-    vertical:  {dw:310,dh:551,nw:393,nh:699},   // 9:16 EXACT (= sortie 1080×1920) — WYSIWYG recadrage
+    vertical:  {dw:378,dh:672,nw:393,nh:699},   // 9:16 EXACT (= sortie 1080×1920) — WYSIWYG recadrage, agrandi
     square:    {dw:404,dh:404,nw:572,nh:572},
     landscape: {dw:440,dh:248,nw:679,nh:382}
   };
@@ -23715,7 +23716,7 @@ function _saveGeneratorState(){
         subColors: { ...subColors },
         selSubStyle, selAnim, animEnabled, splitEnabled,
         phoneW: w ? w.offsetWidth  : 310,
-        phoneH: w ? w.offsetHeight : 551,
+        phoneH: w ? w.offsetHeight : 672,
         psv: 2,
       }));
     } catch(e){}
