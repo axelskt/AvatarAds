@@ -261,7 +261,7 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
 // Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
 const UI_WIDGET_JS = `
-var aaOk=false, aaSeen=[];
+var aaOk=false, aaSeen=[], aaHugW=0;
 function aaShow(out){
   try{
     var sc=(out&&(out.structuredContent||out))||{};
@@ -295,12 +295,22 @@ function aaMeasure(){
     html.style.height='max-content';
     var h=Math.ceil(html.getBoundingClientRect().height);
     html.style.height=oh;
-    var cc=document.getElementById('c'); var w=Math.ceil(cc?cc.getBoundingClientRect().width:window.innerWidth);
+    // largeur = celle du média (aaHugW, calculée depuis ses dimensions réelles → jamais 0) ;
+    // avant que le média soit chargé, on retombe sur le viewport (avec plancher). JAMAIS ~0
+    // (sinon iframe à 0 → image « disparue » → tempête → 502).
+    var w = aaHugW > 0 ? aaHugW : Math.max(200, Math.ceil(window.innerWidth || 360));
     if(w!==aaLW||h!==aaLH){ aaLW=w; aaLH=h;
       window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/size-changed', params:{ width:w, height:h } }, '*'); }
   });
 }
-function aaKick(){ aaMeasure(); }
+function aaKick(){
+  // hug par les DIMENSIONS DE L'IMAGE (réelles, jamais 0 → pas d'effondrement) : on cale
+  // l'iframe pile sur la largeur d'affichage du média (hauteur max 620), donc aucune bande.
+  try{ var _e=document.querySelector('#m video,#m img');
+    if(_e){ var _nw=_e.videoWidth||_e.naturalWidth||0, _nh=_e.videoHeight||_e.naturalHeight||0;
+      if(_nw>0&&_nh>0){ var _dh=Math.min(_nh,620); aaHugW=Math.max(240,Math.min(680,Math.round(_nw*_dh/_nh))); } } }catch(e){}
+  aaMeasure();
+}
 function aaFinalize(){
   if(aaFinal) return; aaFinal=true;
   try{ window.parent.postMessage({ jsonrpc:'2.0', method:'ui/notifications/initialized', params:{} }, '*'); }catch(e){}
@@ -340,9 +350,9 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   html,body{margin:0;background:transparent}
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
-    background:#fff;color:#1a1a1a;display:inline-block;max-width:100%}
+    background:#fff;color:#1a1a1a;width:100%;box-sizing:border-box}
   #m a{display:block;font-size:0}
-  .aa-m{display:block;max-width:100%;max-height:600px;width:auto;height:auto;background:#000}
+  .aa-m{display:block;width:100%;max-height:620px;object-fit:contain;background:#000}
   .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
     border-top:1px solid rgba(128,128,128,.22)}
   .aa-n{font-size:12.5px;font-weight:600;opacity:.9}
@@ -2282,7 +2292,7 @@ serve(async (req) => {
   // de la sandbox bloque tout JS inline.
   if (segs[1] === 'widget.js') {
     return new Response(UI_WIDGET_JS, { headers: { ...cors,
-      'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=300' } })
+      'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } })
   }
 
   if (segs[1] === 'key') {
