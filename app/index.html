@@ -847,8 +847,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div class="step" id="st-2" onclick="goToStep(2)" style="cursor:pointer"><div class="step-n">2</div>Voix</div>
           <div class="step-line"></div>
           <div class="step" id="st-3" onclick="goToStep(3)" style="cursor:pointer"><div class="step-n">3</div>Style</div>
-          <div class="step-line"></div>
-          <div class="step" id="st-4" onclick="goToStep(4)" style="cursor:pointer"><div class="step-n">4</div>Générer</div>
+          <div class="step-line" style="display:none"></div>
+          <div class="step" id="st-4" onclick="goToStep(4)" style="cursor:pointer;display:none"><div class="step-n">4</div>Générer</div>
         </div>
 
         <div class="gen-form">
@@ -5757,7 +5757,7 @@ const K = { gpt: '', el: '', hedra: '' };
 // Proxies Supabase — appellent les APIs avec les clés stockées en secrets
 
 // ── STATE ──
-let step = 1, totalSteps = 4;
+let step = 1, totalSteps = 3;   // #16/08 : écran Récapitulatif (ex-étape 4) supprimé → l'étape 3 (Style) génère direct
 let pendingTranscript = '';
 let userBizName = localStorage.getItem('aa_bizname') || '';
 function setBizName(val){
@@ -10837,7 +10837,15 @@ function nav(id,el){
   if(id==='audioclean') initAudioCleanView();
   if(id==='publish')    initPublishView();
   if(id==='studio')     initStudio();
-  if(id==='generator'){ setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); } }
+  if(id==='generator'){
+    // #reset brouillon (Axel 16/08) : revenir sur le Générateur après une génération
+    // TERMINÉE repart proprement à l'ÉTAPE 1 (plus coincé sur l'écran « Ta vidéo est prête »).
+    if(step>=4 || (typeof results!=='undefined' && results && results.hedraUrl)){
+      results = { script:'', audioBlob:null, hedraUrl:'' };
+      step = 1; if(typeof updateSteps==='function') updateSteps();
+    }
+    setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); }
+  }
   if(window._mNavSync) _mNavSync(id);
 }
 function refreshYoutubeView(){
@@ -11107,7 +11115,7 @@ function updateSteps(){
   var _stepTitles=['Qui parle ?','Sa voix','Le style','Génère ta vidéo'];
   var _eyb=document.getElementById('genStepEyebrow');
   var _ttl=document.getElementById('genStepTitle');
-  if(_eyb) _eyb.textContent=(window.innerWidth<=768?'Étape ':'Générateur · Étape ')+Math.min(step,4)+'/4';
+  if(_eyb) _eyb.textContent=(window.innerWidth<=768?'Étape ':'Générateur · Étape ')+Math.min(step,3)+'/3';
   if(_ttl) _ttl.textContent=_stepTitles[Math.min(step,4)-1]||'';
   // Mobile : petite marge sous le bouton uniquement à la première étape
   var _gf=document.getElementById('genFooter');
@@ -11140,11 +11148,11 @@ function updateSteps(){
   const btn=document.getElementById('mainBtn');
   const back=document.getElementById('backBtn');
   back.style.display=step>1?'block':'none';
-  const _stepLbl=document.getElementById('footerStepLbl'); if(_stepLbl) _stepLbl.textContent='Étape '+Math.min(step,4)+' / 4';
+  const _stepLbl=document.getElementById('footerStepLbl'); if(_stepLbl) _stepLbl.textContent='Étape '+Math.min(step,3)+' / 3';
   if(typeof _aaInitSliders==='function') setTimeout(_aaInitSliders, 0);
   btn.style.display='block';
   btn.onclick=handleMainBtn;
-  if(step<4) btn.textContent='Continuer →';
+  if(step<3) btn.textContent='Continuer →';
   else btn.textContent='Générer la vidéo';
   // Masquer la zone résultat si on revient dans le form + restaurer le layout 2 colonnes
   document.getElementById('v-generator').classList.remove('gen-generating');
@@ -16195,12 +16203,12 @@ function goToStep(n){
   if(typeof _updateGenTtsSilenceUI==='function') _updateGenTtsSilenceUI();
 }
 
-function handleMainBtn(){ if(step<4) nextStep(); else if(step===4) startGeneration(); }
+function handleMainBtn(){ if(step<3) nextStep(); else startGeneration(); } // étape 3 = dernière → génère (plus de récap)
 function nextStep(){
-  if(step<4){
+  if(step<3){
     step++;
     updateSteps();
-    // Si on arrive à l'étape 4 (Style) et qu'un transcript est en attente, le charger
+    // Arrivée sur Style (étape 3) : charger un transcript en attente s'il y en a un
     if(step===3 && pendingTranscript && pendingTranscript.trim()){
       populateWordEditor(pendingTranscript);
     }
