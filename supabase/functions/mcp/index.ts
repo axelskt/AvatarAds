@@ -271,15 +271,28 @@ function aaShow(out){
     aaOk=true;
     var v=kind==='video'||/\\.(mp4|mov|webm|m4v)(\\?|#|$)/i.test(url);
     var m=document.getElementById('m');
-    // Pas de boutons Télécharger/Ouvrir : le bac à sable de l'iframe claude.ai bloque
-    // download + target=_blank (popups). Le téléchargement se fait par le lien de la
-    // conversation (mcp.avatarads.fr/i/<id>), hors sandbox → lui marche.
     m.innerHTML = v
       ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
       : '<img src="'+url+'" alt="'+(name||'')+'" class="aa-m"/>';
     var media=m.querySelector('video,img');
     if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
+    document.getElementById('n').textContent=name||(v?'Vidéo':'Image');
+    // Téléchargement via BLOB : le <a download> DIRECT échoue en cross-origin (le
+    // navigateur ignore download et NAVIGUE → bloqué par le sandbox → le bouton « ne
+    // marchait pas »). On fetch le média (connectDomains autorise supabase), on fabrique
+    // un blob same-origin, et LÀ download marche (comme le bouton d'Alexya).
+    var dl=document.getElementById('dl');
+    dl.onclick=function(){
+      var lbl=dl.textContent; dl.textContent='…'; dl.disabled=true;
+      fetch(url).then(function(r){return r.blob();}).then(function(bl){
+        var a=document.createElement('a'), bu=URL.createObjectURL(bl);
+        a.href=bu; a.download=(name?name.replace(/[^a-z0-9]+/gi,'-').toLowerCase():'avatarads')+(v?'.mp4':'.png');
+        document.body.appendChild(a); a.click();
+        setTimeout(function(){ URL.revokeObjectURL(bu); a.remove(); dl.textContent=lbl; dl.disabled=false; }, 1500);
+      }).catch(function(){ dl.textContent='Réessaie'; dl.disabled=false; setTimeout(function(){dl.textContent=lbl;},1800); });
+    };
     m.style.padding='0';
+    document.getElementById('b').style.display='flex';
     aaKick();
   }catch(e){}
 }
@@ -367,7 +380,9 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
     .aa-op{background:rgba(255,255,255,.14)}
   }
 </style></head><body>
-<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div></div>
+<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div>
+<div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
+<button class="aa-a aa-dl" id="dl" type="button" style="border:none;cursor:pointer">Télécharger</button></div></div>
 <script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
@@ -732,6 +747,15 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
   const sizeMap: Record<string, string> = { portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' }
   const size = sizeMap[format]
   const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
+
+  // ⚠️ HIGH = plus cher + long → on DEMANDE TOUJOURS confirmation à l'utilisateur d'abord.
+  // Standard passe direct (pas de friction). Règle voulue par Axel.
+  if (quality === 'high' && args.confirm !== true) {
+    return toolText(`⚠️ Qualité HIGH = ${IMG_COST.high} crédits et 1 à 2 minutes (vs ${IMG_COST.standard} cr et ~45 s en standard).
+NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment la qualité HIGH ou préfère STANDARD.
+• S'il confirme HIGH → rappelle generate_image avec quality:"high" ET confirm:true.
+• Sinon → quality:"standard".`)
+  }
 
   const userId = String(profile.id)
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
