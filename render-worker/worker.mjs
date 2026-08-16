@@ -246,10 +246,22 @@ async function suivreVisage(src) {
 // via les options NOMMÉES (crop=w=…:y=…) avec les virgules échappées `\,` —
 // les quotes simples et la forme positionnelle cassent le parseur de graphe
 // (« No such filter: '' »), vérifié empiriquement le 15/08.
-function exprPanSplit(samples) {
-  if (!samples || samples.length < 2) {
-    return 'scale=1080:960:force_original_aspect_ratio=increase,crop=w=1080:h=960:x=(iw-1080)/2:y=(ih-960)*0.3,setsar=1'
+// Panneau d'un split : remplit 1080×H (cover). `manual` (réglage utilisateur MC)
+// impose une position verticale `pan` 0..1 (0=haut, 1=bas) + un `zoom` ≥1 ; sinon
+// `samples` (suivi visage) fait un pan suiveur ; sinon cadrage fixe haut-biaisé.
+function exprPanSplit(H, samples, manual) {
+  H = Math.round(H / 2) * 2
+  if (manual) {
+    const z = Math.max(1, Math.min(3, Number(manual.zoom) || 1))
+    const p = Math.min(1, Math.max(0, manual.pan != null ? Number(manual.pan) : 0.5))
+    const sw = Math.round(1080 * z / 2) * 2
+    const sh = Math.round(H * z / 2) * 2
+    return `scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=w=1080:h=${H}:x=(iw-1080)/2:y=max(0\\,min((ih-${H})*${p.toFixed(4)}\\,ih-${H})),setsar=1`
   }
+  if (!samples || samples.length < 2) {
+    return `scale=1080:${H}:force_original_aspect_ratio=increase,crop=w=1080:h=${H}:x=(iw-1080)/2:y=max(0\\,min((ih-${H})*0.3\\,ih-${H})),setsar=1`
+  }
+  const anchor = Math.round(H * 0.4)
   const seg = [`lt(t\\,${samples[0].t})*${samples[0].cy}`]
   for (let i = 0; i < samples.length - 1; i++) {
     const a = samples[i], b = samples[i + 1]
@@ -258,8 +270,16 @@ function exprPanSplit(samples) {
   }
   const fin = samples[samples.length - 1]
   seg.push(`gte(t\\,${fin.t})*${fin.cy}`)
-  const y = `max(0\\,min((${seg.join('+')})*ih-384\\,ih-960))`
-  return `scale=1080:960:force_original_aspect_ratio=increase,crop=w=1080:h=960:x=(iw-1080)/2:y=${y},setsar=1`
+  const y = `max(0\\,min((${seg.join('+')})*ih-${anchor}\\,ih-${H}))`
+  return `scale=1080:${H}:force_original_aspect_ratio=increase,crop=w=1080:h=${H}:x=(iw-1080)/2:y=${y},setsar=1`
+}
+
+// Réglage manuel MC ou null (→ suivi auto). pan 0.5 + zoom 1 = défauts ⇒ null.
+function _manOrNull(pan, zoom) {
+  const hasPan = pan != null && Math.abs(Number(pan) - 0.5) > 0.01
+  const hasZoom = zoom != null && Number(zoom) > 1.01
+  if (!hasPan && !hasZoom) return null
+  return { pan: pan != null ? Number(pan) : 0.5, zoom: zoom != null ? Number(zoom) : 1 }
 }
 
 async function composeMotionSplit(jobDir, outPath, plan) {
@@ -281,15 +301,31 @@ async function composeMotionSplit(jobDir, outPath, plan) {
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', orig], { stdio: 'pipe' })
   }
   const mode = plan.mode === 'split-top' ? 'split-top' : 'split-bottom'
-  // #138 · visages centrés sur TOUTE la durée : un pan suiveur PAR SOURCE
-  let sO = null, sM = null
-  try { [sO, sM] = await Promise.all([suivreVisage(orig0), suivreVisage(motion)]) }
-  catch (e) { console.warn('suivi visages :', e?.message || e) }
-  console.log(`motion-split : suivi visage orig=${sO ? sO.length + ' pts' : 'non'} · motion=${sM ? sM.length + ' pts' : 'non'}`)
-  const panParInput = [exprPanSplit(sO), exprPanSplit(sM)]   // input 0 = orig, 1 = motion
+  // #MC réglages (Axel 16/08) : part du haut ajustable + recadrage manuel par
+  // POSITION (position verticale + zoom). Défauts (50/50, pan .5, zoom 1) ⇒ suivi
+  // visage auto conservé (#138). vstack accepte des hauteurs de panneau différentes.
+  const rTop = Math.min(0.8, Math.max(0.2, Number(plan.ratioTop) || 0.5))
+  const Htop = Math.max(320, Math.min(1600, Math.round(1920 * rTop / 2) * 2))
+  const Hbot = 1920 - Htop
+  const manTop = _manOrNull(plan.panTop, plan.zoomTop)
+  const manBot = _manOrNull(plan.panBot, plan.zoomBot)
   const top = mode === 'split-top' ? 1 : 0   // split-top → motion (input 1) en haut
   const bot = mode === 'split-top' ? 0 : 1
-  const fc = `[${top}:v]${panParInput[top]}[t];[${bot}:v]${panParInput[bot]}[b];[t][b]vstack=inputs=2[v]`
+  // suivi visage seulement pour les positions SANS réglage manuel (économie gpt-4o)
+  let sO = null, sM = null
+  const needO = (top === 0 && !manTop) || (bot === 0 && !manBot)
+  const needM = (top === 1 && !manTop) || (bot === 1 && !manBot)
+  try {
+    const [a, b] = await Promise.all([
+      needO ? suivreVisage(orig0) : Promise.resolve(null),
+      needM ? suivreVisage(motion) : Promise.resolve(null),
+    ])
+    sO = a; sM = b
+  } catch (e) { console.warn('suivi visages :', e?.message || e) }
+  const exprTop = exprPanSplit(Htop, top === 0 ? sO : sM, manTop)
+  const exprBot = exprPanSplit(Hbot, bot === 0 ? sO : sM, manBot)
+  console.log(`motion-split : mode=${mode} haut=${(rTop * 100) | 0}% manTop=${!!manTop} manBot=${!!manBot}`)
+  const fc = `[${top}:v]${exprTop}[t];[${bot}:v]${exprBot}[b];[t][b]vstack=inputs=2[v]`
   try {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ignore_unknown', '-i', orig, '-i', motion,
       '-filter_complex', fc, '-map', '[v]', '-map', '0:a?',
