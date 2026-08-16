@@ -261,7 +261,7 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
 // Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
 const UI_WIDGET_JS = `
-var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='';
+var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='', aaJobId='', aaFormat='portrait';
 // Requête vers l'HÔTE (claude.ai) — protocole MCP Apps : télécharger un fichier
 // (ui/download-file), ouvrir un lien (ui/open-link), ou envoyer un message au chat
 // (ui/message = régénérer). Le sandbox bloque download+popups DIRECTS depuis l'iframe,
@@ -271,21 +271,26 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'' };
+  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'' };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
   var dl=document.getElementById('dl'), op=document.getElementById('op'), rg=document.getElementById('rg');
   var v=aaKindNow==='video';
-  // Télécharger : claude.ai N'honore PAS ui/download-file, mais honore ui/open-link
-  // (testé par Axel). On ouvre donc l'URL avec ?download=<nom> → Supabase renvoie
-  // Content-Disposition:attachment → le navigateur télécharge au lieu d'afficher.
-  if(dl) dl.onclick=function(){ var fn=(aaNameNow||'avatarads')+(v?'.mp4':'.png'); var u=aaUrlNow+(aaUrlNow.indexOf('?')<0?'?':'&')+'download='+encodeURIComponent(fn); aaSend('ui/open-link', { url:u }); };
-  if(op) op.onclick=function(){ aaSend('ui/open-link', { url:aaUrlNow }); };
-  // Regénérer : le widget ne peut PAS appeler l'outil (spec MCP Apps) → il envoie un
-  // message au chat (claude.ai le met dans la barre + avertissement = sa sécurité, on
-  // n'y peut rien). On inclut le prompt pour lever l'ambiguïté avec plusieurs images.
-  if(rg) rg.onclick=function(){ rg.disabled=true; setTimeout(function(){ rg.disabled=false; }, 4000); var p=aaPrompt?(' : « '+aaPrompt.slice(0,160)+(aaPrompt.length>160?'…':'')+' »'):''; aaSend('ui/message', { role:'user', content:[{ type:'text', text:'Regénère une nouvelle variation de cette image'+p+'.' }] }); };
+  // Télécharger : claude.ai N'honore PAS ui/download-file, mais honore ui/open-link.
+  // On ouvre l'URL avec ?download=<nom> → Supabase renvoie Content-Disposition:attachment.
+  if(dl){ dl.disabled=false; dl.onclick=function(){ var fn=(aaNameNow||'avatarads')+(v?'.mp4':'.png'); var u=aaUrlNow+(aaUrlNow.indexOf('?')<0?'?':'&')+'download='+encodeURIComponent(fn); aaSend('ui/open-link', { url:u }); }; }
+  if(op){ op.disabled=false; op.onclick=function(){ aaSend('ui/open-link', { url:aaUrlNow }); }; }
+  // Regénérer EN UN CLIC : le widget tape /regenerate (job_id = capacité) → PAS de chat,
+  // pas d'avertissement. La MÊME carte repart en mode progression → nouvelle image.
+  if(rg){ rg.disabled=false; rg.textContent='↻ Regénérer'; rg.onclick=function(){
+    if(!aaJobId||!aaPrompt){ return; }
+    var lbl='↻ Regénérer'; rg.disabled=true; rg.textContent='↻ …';
+    fetch('https://mcp.avatarads.fr/regenerate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, prompt:aaPrompt, format:aaFormat||'portrait' }) })
+      .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(x){ if(x.ok&&x.j&&x.j.statusUrl){ aaJobId=x.j.job_id||aaJobId; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); } else { var er=(x.j&&x.j.error)||''; rg.textContent=er==='daily_cap'?'Plafond 24 h':(er==='no_credits'||er==='credits')?'Crédits épuisés':'Échec'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2400); } })
+      .catch(function(){ rg.textContent='Réessaie'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2200); });
+  }; }
 }
 function aaMedia(url, kind, name){
   aaOk=true; aaUrlNow=url; aaNameNow=(name||'').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
@@ -309,6 +314,7 @@ function aaPollStatus(u){
 }
 function aaStartPoll(u){
   aaStart=Date.now();
+  var b=document.getElementById('b'); if(b) b.style.display='none';
   var m=document.getElementById('m');
   m.innerHTML='<div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
   aaSetPct(6); aaKick(); aaPollStatus(u);
@@ -318,6 +324,8 @@ function aaShow(out){
   try{
     var d=aaUrlFrom(out);
     if(d.prompt) aaPrompt=d.prompt;
+    if(d.job_id) aaJobId=d.job_id;
+    if(d.format) aaFormat=d.format;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
@@ -848,7 +856,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
 
   return {
     content: [{ type: 'text', text: `🎨 Génération lancée (${quality}, ${format}, −${cost} crédits). L'image s'affiche DANS LA CARTE ci-dessous : une barre de progression puis l'image (~45 s), avec les boutons Regénérer / Ouvrir / Télécharger. NE rappelle PAS check_image — le widget suit la génération et affiche l'image tout seul. Dis juste à l'utilisateur que l'image apparaît dans la carte.` }],
-    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt },
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt, format },
   }
 }
 
@@ -2353,6 +2361,62 @@ serve(async (req) => {
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
     return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: j.status === 'done' ? j.result_url : null, progress, error: j.error || null }),
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
+  }
+
+  // Regénérer EN UN CLIC depuis le widget (la spec MCP Apps interdit au widget
+  // d'appeler un outil ; ui/message passe par la barre). Ici le widget tape cet
+  // endpoint : le job_id d'origine = CAPACITÉ → user_id. Mêmes garde-fous que
+  // l'outil (plan Pro/Élite, plafond 24 h, crédits) + fraîcheur ≤12 h (un job_id
+  // fuité ne peut pas être rejoué indéfiniment). Toujours STANDARD (3 cr).
+  if (segs[1] === 'regenerate' && req.method === 'POST') {
+    const body = await req.json().catch(() => ({})) as Record<string, unknown>
+    const origId = String(body.job || '')
+    const prompt = String(body.prompt || '').trim()
+    const format = ['portrait', 'square', 'landscape'].includes(String(body.format)) ? String(body.format) : 'portrait'
+    if (!/^[0-9a-f-]{36}$/i.test(origId) || !prompt) return json(400, { error: 'bad_request' })
+    const { data: orig } = await svc.from('mcp_jobs').select('user_id, created_at').eq('id', origId).maybeSingle()
+    if (!orig) return json(404, { error: 'not_found' })
+    if (Date.now() - new Date(String(orig.created_at)).getTime() > 12 * 3600 * 1000) return json(403, { error: 'expired' })
+    const userId = String(orig.user_id)
+    const { data: profile } = await svc.from('profiles').select('*').eq('id', userId).maybeSingle()
+    if (!profile) return json(404, { error: 'no_profile' })
+    if (!isUnlimited(profile) && !['pro', 'elite'].includes(String(profile.plan || '').toLowerCase())) return json(403, { error: 'plan' })
+    const cost = IMG_COST.standard
+    if (!isUnlimited(profile)) {
+      const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
+      const spent = await mcpSpentToday(userId)
+      if (spent + cost > cap) return json(429, { error: 'daily_cap' })
+      if ((Number(profile.credits_remaining) || 0) < cost) return json(402, { error: 'no_credits' })
+    }
+    const bal = await spendCredits(userId, cost)
+    if (bal === null || bal === -1) return json(402, { error: 'credits' })
+    const size = ({ portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
+    const { data: job, error: jErr } = await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'image', status: 'running', credits_cost: cost }).select('id').single()
+    if (jErr || !job) { await refundCredits(userId, cost); return json(500, { error: 'job' }) }
+    bg((async () => {
+      let lastErr = 'Erreur génération'
+      try {
+        for (const model of GPT_IMG_MODELS) {
+          const res = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, prompt, n: 1, size, quality: 'medium', moderation: 'low' }),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (data.error) { lastErr = data.error.message || 'Erreur génération'; if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue; break }
+          const b64 = data.data?.[0]?.b64_json
+          if (!b64) { lastErr = 'Aucune image retournée'; continue }
+          const brut = b64ToBytes(b64)
+          const url = await uploadMedia(userId, brut, 'png', 'image/png')
+          let apercu: string | null = null
+          try { const petit = await fabriquerApercu(brut); if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg') } catch (_) { /* vignette = confort */ }
+          await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id)
+          return
+        }
+      } catch (e) { lastErr = String((e as Error)?.message || e) }
+      await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
+      await refundCredits(userId, cost)
+    })())
+    return json(200, { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}` })
   }
 
   // JS du widget MCP App, servi hors sandbox (comme Pletor sert le sien depuis
