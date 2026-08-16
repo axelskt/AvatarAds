@@ -24560,8 +24560,10 @@ function _mcShowResult(url, render, fullUrl){
     window._mcSavedUrl=url;
     (async()=>{ try{ const r=await fetch(url); if(r.ok){ await _libAutoSaveVideo(await r.blob(), 'Motion Control', ['Motion Control','9:16'], '🎬', 'MOTION'); } }catch(e){ console.warn('mc autosave:', e); } })();
   }
-  m.innerHTML='<div class="col" style="gap:14px;align-items:center;max-width:420px;width:100%"><video src="'+url+'" controls autoplay playsinline style="max-height:70vh;width:100%;border-radius:16px;background:#000;box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
+  const isSplit = (render && render!=='full');
+  m.innerHTML='<div class="col" style="gap:12px;align-items:center;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:6px 2px"><video src="'+url+'" controls autoplay playsinline style="max-height:'+(isSplit?'46vh':'70vh')+';width:100%;border-radius:16px;background:#000;box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
     +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
+    +(isSplit?_mcReframePanel(render):'')
     +'<div class="row" style="gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button>'
     +(window._mcLastFullUrl?'<button class="btn btn-ghost" onclick="_mcDownload(window._mcLastFullUrl)">Version plein écran</button>':'')
     +'<button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
@@ -24882,14 +24884,24 @@ async function _mcUpscaleTopaz(videoUrl, H){
   throw new Error('Topaz : délai dépassé');
 }
 /* ── Split original + motion → render-worker (vstack 9:16, safe zone) ── */
+// #MC réglages (16/08) : la 1re compo (depuis _mcGenerate) upload le clip motion +
+// mémorise le contexte, puis _mcRunSplit compose. Les ajustements « à la fin »
+// (part du haut, recadrage/zoom par clip) rappellent _mcRunSplit avec le MÊME
+// contexte — c'est du ffmpeg seul, on ne re-paye JAMAIS Kling.
 async function _mcComposeSplit({ origPath, motionUrl, dur, mode }){
-  const H=await getAuthHeader();
   const mPath = origPath.replace(/\.mp4$/,'') + '-motion.mp4';
   const mb = await (await fetch(motionUrl)).blob();
   const um = await sb.storage.from('render-media').upload(mPath, mb, { contentType:'video/mp4', upsert:true });
   if(um.error) throw new Error('upload motion : '+um.error.message);
+  window._mcSplitCtx = { origPath, mPath, dur: Math.max(1,dur) };
+  return _mcRunSplit({ mode });   // 1re compo : défauts (50/50, cadrage auto visage)
+}
+async function _mcRunSplit(reframe){
+  const ctx = window._mcSplitCtx; if(!ctx) throw new Error('contexte split perdu — relance la génération');
+  const H=await getAuthHeader();
   const post=(b)=>fetch(RENDERJOB_FN,{ method:'POST', headers:{...H,'Content-Type':'application/json'}, body:JSON.stringify(b) });
-  const rj = await post({ action:'create', plan:{ duration: Math.max(1,dur), __compose:'motion-split', mode }, input_video: origPath, assets:[{ id:'motion', path:mPath, kind:'video' }] });
+  const plan = Object.assign({ duration: ctx.dur, __compose:'motion-split' }, reframe||{});
+  const rj = await post({ action:'create', plan, input_video: ctx.origPath, assets:[{ id:'motion', path:ctx.mPath, kind:'video' }] });
   const rd = await rj.json().catch(()=>({}));
   if(!rj.ok || !rd.ok || !rd.job_id) throw new Error(rd.error||('render-job '+rj.status));
   for(let i=0;i<90;i++){
@@ -24901,6 +24913,47 @@ async function _mcComposeSplit({ origPath, motionUrl, dur, mode }){
     if(pd.status==='failed') throw new Error(pd.error||'composition échouée');
   }
   throw new Error('composition trop longue');
+}
+// Panneau « recadrage du split » (résultat MC uniquement en split, pas en 9:16)
+window._mcReframe = null;
+function _mcRf(k, v, labelId){ if(!window._mcReframe) return; window._mcReframe[k]=+v; const e=document.getElementById(labelId); if(e) e.textContent=v; }
+function _mcSwapPositions(){ const r=window._mcReframe; if(!r) return;
+  r.mode = (r.mode==='split-top') ? 'split-bottom' : 'split-top';
+  [r.posTop,r.posBot]=[r.posBot,r.posTop]; [r.zoomTop,r.zoomBot]=[r.zoomBot,r.zoomTop];
+  _mcApplyReframe(); }
+async function _mcApplyReframe(){
+  const r=window._mcReframe; if(!r) return;
+  const btn=document.getElementById('mcApplyBtn'); const t0=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='Composition… (~10 s)'; }
+  try{
+    const plan={ mode:r.mode, ratioTop:(r.ratioTop||50)/100,
+      panTop:(r.posTop||50)/100, zoomTop:(r.zoomTop||100)/100,
+      panBot:(r.posBot||50)/100, zoomBot:(r.zoomBot||100)/100 };
+    const url=await _mcRunSplit(plan);
+    const v=document.querySelector('#mcResModal video'); if(v){ v.src=url; try{ v.load(); v.play(); }catch(_){ } }
+    window._mcLastUrl=url; window._mcSavedUrl=null; _mcProgHide();
+    if(typeof toast==='function') toast('Cadrage appliqué');
+  }catch(e){ _mcProgHide(); if(typeof toast==='function') toast('Cadrage : '+(e.message||e)); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=t0||'Appliquer le cadrage'; } }
+}
+function _mcReframePanel(render){
+  window._mcReframe = { mode: render, ratioTop:50, posTop:50, zoomTop:100, posBot:50, zoomBot:100 };
+  const sld=(k,min,max,val,lblId,step)=>'<input type="range" min="'+min+'" max="'+max+'" value="'+val+'" step="'+(step||1)+'" oninput="_mcRf(\''+k+'\',this.value,\''+lblId+'\')" style="width:100%;accent-color:#FF6B35">';
+  const row=(label,ctrl)=>'<div style="margin:6px 0"><div style="font-size:11px;font-family:var(--mono);color:var(--text-3);margin-bottom:3px">'+label+'</div>'+ctrl+'</div>';
+  const sep='<div style="height:1px;background:var(--border);margin:9px 0"></div>';
+  return '<div style="width:100%;border:1px solid var(--border);border-radius:12px;padding:12px 13px;background:var(--panel-1);box-sizing:border-box">'
+    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;margin-bottom:6px;opacity:.85">RECADRAGE DU SPLIT</div>'
+    + row('Part du haut · <b id="mcRfRatioV" style="color:#FF6B35">50</b> %', sld('ratioTop',20,80,50,'mcRfRatioV',5))
+    + sep
+    + row('Clip du haut · position <b id="mcRfPosTopV" style="color:#FF6B35">50</b>', sld('posTop',0,100,50,'mcRfPosTopV'))
+    + row('Clip du haut · zoom <b id="mcRfZoomTopV" style="color:#FF6B35">100</b> %', sld('zoomTop',100,250,100,'mcRfZoomTopV'))
+    + sep
+    + row('Clip du bas · position <b id="mcRfPosBotV" style="color:#FF6B35">50</b>', sld('posBot',0,100,50,'mcRfPosBotV'))
+    + row('Clip du bas · zoom <b id="mcRfZoomBotV" style="color:#FF6B35">100</b> %', sld('zoomBot',100,250,100,'mcRfZoomBotV'))
+    + '<div class="row" style="gap:8px;margin-top:11px"><button class="btn btn-ghost" style="flex:1" onclick="_mcSwapPositions()">Inverser haut/bas</button>'
+    + '<button id="mcApplyBtn" class="btn btn-primary" style="flex:1.5" onclick="_mcApplyReframe()">Appliquer le cadrage</button></div>'
+    + '<div style="font-size:10px;color:var(--text-3);text-align:center;margin-top:8px;opacity:.7">Sans re-payer la génération — recompo instantanée</div>'
+    + '</div>';
 }
 
 // ── Voix ──
