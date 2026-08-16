@@ -78,6 +78,18 @@ const falFetch = (path: string, init?: RequestInit) =>
   fetch(`${FAL_QUEUE}/${path}`, { ...init, headers: { Authorization: `Key ${FAL_KEY}`, ...(init?.headers || {}) } })
 const GPT_IMG_MODELS  = ['gpt-image-2', 'gpt-image-1']
 const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']
+// Réalisme « UGC / makeugc » — MÊME bloc que le module Images IA de l'app
+// (_IMG_REALISM_SUFFIX). Ajouté AUTOMATIQUEMENT à toute image de PERSONNE générée via
+// le MCP → rendu photo Instagram réelle, plus de « random IA ». Leçon clé : le bloc
+// porte le détail ET les INTERDITS (jamais lisser/plastifier/filtre beauté) — c'est
+// l'interdit qui tue l'effet « peau de cire ». JAMAIS sur un produit (packshot).
+const IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter.'
+const RE_PERSONNE = /\b(femmes?|filles?|hommes?|gar[çc]ons?|meufs?|nanas?|influenceu\w*|mannequins?|mod[eè]les?|models?|selfies?|portraits?|personnes?|gens|visages?|humains?|humans?|women|woman|man|men|girls?|boys?|guys?|ladies|lady|people|persons?|faces?|influencers?|creators?|avatars?|ugc)\b/i
+// N'augmente QUE si le prompt parle d'une personne (sinon on casserait un packshot produit).
+function augmenterPortrait(prompt: string): string {
+  if (!RE_PERSONNE.test(prompt)) return prompt
+  return prompt.slice(0, 3990 - IMG_REALISM_SUFFIX.length) + IMG_REALISM_SUFFIX
+}
 // Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
 const ALLOWED_PLANS   = ['pro', 'elite']
 const DAILY_CAPS: Record<string, number> = { pro: 100, elite: 200 }
@@ -829,7 +841,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
         const res = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
           headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
+          body: JSON.stringify({ model, prompt: augmenterPortrait(prompt), n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
         })
         const data = await res.json().catch(() => ({}))
         if (data.error) {
@@ -2399,7 +2411,7 @@ serve(async (req) => {
         for (const model of GPT_IMG_MODELS) {
           const res = await fetch('https://api.openai.com/v1/images/generations', {
             method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, prompt, n: 1, size, quality: 'medium', moderation: 'low' }),
+            body: JSON.stringify({ model, prompt: augmenterPortrait(prompt), n: 1, size, quality: 'medium', moderation: 'low' }),
           })
           const data = await res.json().catch(() => ({}))
           if (data.error) { lastErr = data.error.message || 'Erreur génération'; if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue; break }
