@@ -261,39 +261,58 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
 // Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
 const UI_WIDGET_JS = `
-var aaOk=false, aaSeen=[], aaHugW=0;
+var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0;
+// Requête vers l'HÔTE (claude.ai) — protocole MCP Apps : télécharger un fichier
+// (ui/download-file), ouvrir un lien (ui/open-link), ou envoyer un message au chat
+// (ui/message = régénérer). Le sandbox bloque download+popups DIRECTS depuis l'iframe,
+// mais l'HÔTE peut les faire → c'est le mécanisme des boutons d'Alexya.
+function aaSend(method, params){ try{ window.parent.postMessage({ jsonrpc:'2.0', id:(++aaId), method:method, params:params }, '*'); }catch(e){} }
+function aaUrlFrom(out){
+  var sc=(out&&(out.structuredContent||out))||{};
+  var url=sc.url||'';
+  if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
+  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'' };
+}
+function aaBtns(){
+  var b=document.getElementById('b'); if(b) b.style.display='flex';
+  var dl=document.getElementById('dl'), op=document.getElementById('op'), rg=document.getElementById('rg');
+  var v=aaKindNow==='video';
+  if(dl) dl.onclick=function(){ aaSend('ui/download-file', { contents:[{ type:'resource_link', uri:aaUrlNow, name:(aaNameNow||'avatarads')+(v?'.mp4':'.png'), mimeType:(v?'video/mp4':'image/png') }] }); };
+  if(op) op.onclick=function(){ aaSend('ui/open-link', { url:aaUrlNow }); };
+  if(rg) rg.onclick=function(){ rg.disabled=true; setTimeout(function(){ rg.disabled=false; }, 4000); aaSend('ui/message', { role:'user', content:[{ type:'text', text:'Regénère cette image (même prompt, nouvelle variation).' }] }); };
+}
+function aaMedia(url, kind, name){
+  aaOk=true; aaUrlNow=url; aaNameNow=(name||'').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  var v=kind==='video'||/\\.(mp4|mov|webm|m4v)(\\?|#|$)/i.test(url); aaKindNow=v?'video':'image';
+  var m=document.getElementById('m');
+  m.innerHTML = v
+    ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
+    : '<img src="'+url+'" alt="" class="aa-m"/>';
+  var media=m.querySelector('video,img');
+  if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
+  m.style.padding='0'; aaBtns(); aaKick();
+}
+function aaSetPct(p){ if(p>aaPct) aaPct=p; var pb=document.getElementById('pb'); if(pb) pb.style.width=aaPct+'%'; }
+function aaPollStatus(u){
+  fetch(u, { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+    if(!j) return;
+    if(typeof j.progress==='number') aaSetPct(j.progress);
+    if(j.status==='done' && j.url){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaMedia(j.url, j.kind||'image', ''); }, 350); return; }
+    if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent='Échec de la génération — réessaie.'; }
+  }).catch(function(){});
+}
+function aaStartPoll(u){
+  aaStart=Date.now();
+  var m=document.getElementById('m');
+  m.innerHTML='<div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
+  aaSetPct(6); aaKick(); aaPollStatus(u);
+  aaPollT=setInterval(function(){ if(Date.now()-aaStart>240000){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } return; } aaPollStatus(u); }, 2500);
+}
 function aaShow(out){
   try{
-    var sc=(out&&(out.structuredContent||out))||{};
-    var url=sc.url||'', kind=sc.kind||'', name=sc.name||'';
-    if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-    if(!url) return;
-    aaOk=true;
-    var v=kind==='video'||/\\.(mp4|mov|webm|m4v)(\\?|#|$)/i.test(url);
-    var m=document.getElementById('m');
-    m.innerHTML = v
-      ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
-      : '<img src="'+url+'" alt="'+(name||'')+'" class="aa-m"/>';
-    var media=m.querySelector('video,img');
-    if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
-    document.getElementById('n').textContent=name||(v?'Vidéo':'Image');
-    // Téléchargement via BLOB : le <a download> DIRECT échoue en cross-origin (le
-    // navigateur ignore download et NAVIGUE → bloqué par le sandbox → le bouton « ne
-    // marchait pas »). On fetch le média (connectDomains autorise supabase), on fabrique
-    // un blob same-origin, et LÀ download marche (comme le bouton d'Alexya).
-    var dl=document.getElementById('dl');
-    dl.onclick=function(){
-      var lbl=dl.textContent; dl.textContent='…'; dl.disabled=true;
-      fetch(url).then(function(r){return r.blob();}).then(function(bl){
-        var a=document.createElement('a'), bu=URL.createObjectURL(bl);
-        a.href=bu; a.download=(name?name.replace(/[^a-z0-9]+/gi,'-').toLowerCase():'avatarads')+(v?'.mp4':'.png');
-        document.body.appendChild(a); a.click();
-        setTimeout(function(){ URL.revokeObjectURL(bu); a.remove(); dl.textContent=lbl; dl.disabled=false; }, 1500);
-      }).catch(function(){ dl.textContent='Réessaie'; dl.disabled=false; setTimeout(function(){dl.textContent=lbl;},1800); });
-    };
-    m.style.padding='0';
-    document.getElementById('b').style.display='flex';
-    aaKick();
+    var d=aaUrlFrom(out);
+    if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
+    if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
 }
 function aaLikely(p){ return p&&(p.structuredContent||(p.content&&p.content.length)); }
@@ -355,7 +374,7 @@ window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:
 window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
 setInterval(aaMeasure, 1000);
 setTimeout(aaFinalize, 1200);
-setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent='AvatarAds — génération en cours…'; }catch(e){} } }, 6000);
+setTimeout(function(){ if(!aaOk && !aaPollT){ try{ document.getElementById('m').textContent='AvatarAds — génération en cours…'; }catch(e){} } }, 6000);
 `
 
 const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -370,19 +389,22 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   .aa-n{font-size:12.5px;font-weight:600;opacity:.9}
   .aa-a{font-size:13px;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:10px;line-height:1;white-space:nowrap}
   .aa-dl{background:#FF5A1F;color:#fff}
-  .aa-op{background:rgba(128,128,128,.16);color:inherit}
+  .aa-op,.aa-rg{background:rgba(128,128,128,.16);color:inherit}
+  .aa-a:disabled{opacity:.55;cursor:default}
+  .aa-pt{font-size:12.5px;opacity:.85;margin-bottom:2px}
+  .aa-pw{height:6px;background:rgba(128,128,128,.22);border-radius:6px;overflow:hidden;margin:12px 0 2px}
+  .aa-pb{height:100%;width:5%;background:#FF5A1F;border-radius:6px;transition:width .6s ease}
   [data-theme=dark] .aa-c,html.dark .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
   [data-theme=dark] .aa-b,html.dark .aa-b{border-top-color:rgba(255,255,255,.12)}
-  [data-theme=dark] .aa-op,html.dark .aa-op{background:rgba(255,255,255,.14)}
+  [data-theme=dark] .aa-op,html.dark .aa-op,[data-theme=dark] .aa-rg,html.dark .aa-rg{background:rgba(255,255,255,.14)}
   @media (prefers-color-scheme:dark){
     .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
     .aa-b{border-top-color:rgba(255,255,255,.12)}
-    .aa-op{background:rgba(255,255,255,.14)}
+    .aa-op,.aa-rg{background:rgba(255,255,255,.14)}
   }
 </style></head><body>
-<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div>
-<div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
-<button class="aa-a aa-dl" id="dl" type="button" style="border:none;cursor:pointer">Télécharger</button></div></div>
+<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement…</div>
+<div class="aa-b" id="b" style="display:none"><button class="aa-a aa-rg" id="rg" type="button" style="border:none;cursor:pointer">↻ Regénérer</button><span style="flex:1"></span><button class="aa-a aa-op" id="op" type="button" style="border:none;cursor:pointer">Ouvrir</button><button class="aa-a aa-dl" id="dl" type="button" style="border:none;cursor:pointer">Télécharger</button></div></div>
 <script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
@@ -526,6 +548,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         },
         required: ['prompt'],
       },
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget = 1 SEULE carte : barre de progression → image + boutons (le widget SONDE statusUrl lui-même, plus de spam check_image)
     },
     {
       name: 'generate_video',
@@ -545,7 +568,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'check_image',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget = image EN GRAND inline (le désactiver ne donne qu'un lien de téléchargement) ; HTML sans script inline, les erreurs CSP Safari viennent du host claude.ai, pas de nous
-      description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
+      description: "⚠️ NORMALEMENT INUTILE : après generate_image, l'image s'affiche TOUTE SEULE dans la carte (widget + barre de progression), tu n'as RIEN à faire. N'appelle check_image QUE si l'utilisateur redemande explicitement le statut. (Sinon : retourne l'URL de l'image quand prête ; long-poll côté serveur.)",
       inputSchema: {
         type: 'object',
         properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_image.' } },
@@ -816,12 +839,10 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
     await refundCredits(userId, cost)   // échec → on rend les crédits
   })())
 
-  return toolText(
-    `🎨 Génération d'image lancée ! (${quality}, ${format}, −${cost} crédits)
-job_id : ${job.id}
-La génération prend 45 à 60 secondes. Appelle check_image avec ce job_id : cet outil
-attend tout seul côté serveur, donc rappelle-le simplement jusqu'à obtenir l'URL.
-Un « ⏳ en cours » n'est jamais une panne — l'image arrive.`)
+  return {
+    content: [{ type: 'text', text: `🎨 Génération lancée (${quality}, ${format}, −${cost} crédits). L'image s'affiche DANS LA CARTE ci-dessous : une barre de progression puis l'image (~45 s), avec les boutons Regénérer / Ouvrir / Télécharger. NE rappelle PAS check_image — le widget suit la génération et affiche l'image tout seul. Dis juste à l'utilisateur que l'image apparaît dans la carte.` }],
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt },
+  }
 }
 
 // ── ON ATTEND CÔTÉ SERVEUR, PAS CÔTÉ CLIENT ────────────────────────────────
@@ -2311,6 +2332,20 @@ serve(async (req) => {
     const dest = j?.result_url ? String(j.result_url) : ''
     if (dest) return new Response(null, { status: 302, headers: { ...cors, Location: dest, 'Cache-Control': 'public, max-age=3600' } })
     return new Response('Média introuvable', { status: 404, headers: cors })
+  }
+
+  // Statut d'un job, SONDÉ PAR LE WIDGET lui-même → une seule carte avec barre de
+  // progression, plus de spam check_image. UUID = capacité (rien de sensible : l'URL
+  // du média est déjà publique). CORS ACAO:* via json(). Progress = estimation temps.
+  if (segs[1] === 'status' && segs[2]) {
+    const { data: j } = await svc.from('mcp_jobs').select('status, kind, result_url, created_at, error').eq('id', segs[2]).maybeSingle()
+    if (!j) return json(404, { status: 'unknown' })
+    const elapsed = Date.now() - new Date(String(j.created_at)).getTime()
+    const attendu = String(j.kind) === 'image' ? 50000 : 130000
+    const done = j.status === 'done' || j.status === 'failed'
+    const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
+    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: j.status === 'done' ? j.result_url : null, progress, error: j.error || null }),
+      { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
   }
 
   // JS du widget MCP App, servi hors sandbox (comme Pletor sert le sien depuis
