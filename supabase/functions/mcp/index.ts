@@ -362,7 +362,7 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 <div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
 <a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
-<script type="module">import("${WIDGET_ORIGIN}/widget.js");</script></body></html>`
+<script type="module">${UI_WIDGET_JS}</script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
 // chargement des images/vidéos externes dans l'iframe → carte vide (constaté
