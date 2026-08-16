@@ -21312,7 +21312,9 @@ function _restoreSession(){
 
     // ── Variables d'état ──
     if(saved.script)   results.script   = saved.script;
-    if(saved.hedraUrl) results.hedraUrl = saved.hedraUrl;
+    // #reset brouillon (Axel 16/08) : au refresh/reconnexion on NE restaure PAS la vidéo
+    // terminée (elle est déjà rangée dans la Bibliothèque via l'auto-save) — on repart
+    // sur une nouvelle vidéo à l'étape 1, en gardant TOUS les réglages ci-dessous.
     if(saved.whisperWordTimestamps?.length) whisperWordTimestamps = saved.whisperWordTimestamps;
     if(saved.wordGroups?.length){ _wordGroups = saved.wordGroups; _renderGroupEditor(); }
     if(saved.silenceKeepSegs?.length) silenceKeepSegs = saved.silenceKeepSegs;
@@ -21334,11 +21336,10 @@ function _restoreSession(){
 
     // ── Affichage ──
     if(saved.hedraUrl){
-      step = 5;
-      _showResultArea();
-      const ageSec = Math.round((Date.now() - (saved.ts||0)) / 1000);
-      const ageStr = ageSec < 60 ? ageSec+'s' : Math.round(ageSec/60)+'min';
-      toast('Session restaurée (' + ageStr + ') — vidéo, timings et réglages récupérés');
+      // vidéo terminée dans la session précédente → on NE l'affiche PLUS au boot :
+      // on repart proprement à l'étape 1 (réglages gardés). La vidéo reste en Bibliothèque.
+      step = 1;
+      toast('Réglages restaurés — nouvelle vidéo (l\'ancienne est dans ta Bibliothèque)');
     } else if(saved.script || saved.fields?.script){
       toast('Brouillon restauré — ' + (saved.fields?.script||saved.script).slice(0,40) + '…');
     }
