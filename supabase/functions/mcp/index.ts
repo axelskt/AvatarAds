@@ -357,11 +357,12 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
     .aa-op{background:rgba(255,255,255,.14)}
   }
 </style></head><body>
+<script type="module">window.skybridge = { hostType: "mcp-app", serverUrl: "${WIDGET_ORIGIN}" };</script>
 <div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement du média…</div>
 <div class="aa-b" id="b" style="display:none"><span class="aa-n" id="n"></span><span style="flex:1"></span>
 <a class="aa-a aa-dl" id="dl" download>Télécharger</a>
 <a class="aa-a aa-op" id="op" target="_blank" rel="noopener">Ouvrir</a></div></div>
-<script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
+<script type="module">import("${WIDGET_ORIGIN}/widget.js");</script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
 // chargement des images/vidéos externes dans l'iframe → carte vide (constaté
@@ -383,7 +384,7 @@ const UI_META = {
   },
 }
 
-const UI_RESOURCES = ['image.png', 'video.mp4', 'avatar.mp4', 'montage.mp4'].map((n) => ({
+const UI_RESOURCES = ['image.html', 'video.html', 'avatar.html', 'montage.html'].map((n) => ({
   uri: `ui://avatarads/${n}`,
   name: `Viewer ${n}`,
   mimeType: 'text/html;profile=mcp-app',
@@ -509,7 +510,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_image',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/image.png', ui: { resourceUri: 'ui://avatarads/image.png' } },
+      _meta: { 'ui/resourceUri': 'ui://avatarads/image.html', ui: { resourceUri: 'ui://avatarads/image.html' } },
       description: "Vérifie l'état d'une image lancée avec generate_image et retourne son URL quand elle est prête (le serveur retient la réponse ~20 s : long-poll). Si toujours en cours, rappelle immédiatement, sans attendre.",
       inputSchema: {
         type: 'object',
@@ -519,7 +520,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_video',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/video.mp4', ui: { resourceUri: 'ui://avatarads/video.mp4' } },
+      _meta: { 'ui/resourceUri': 'ui://avatarads/video.html', ui: { resourceUri: 'ui://avatarads/video.html' } },
       description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -545,7 +546,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_avatar_video',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/avatar.mp4', ui: { resourceUri: 'ui://avatarads/avatar.mp4' } },
+      _meta: { 'ui/resourceUri': 'ui://avatarads/avatar.html', ui: { resourceUri: 'ui://avatarads/avatar.html' } },
       description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
       inputSchema: {
         type: 'object',
@@ -614,7 +615,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'check_montage',
-      _meta: { 'ui/resourceUri': 'ui://avatarads/montage.mp4', ui: { resourceUri: 'ui://avatarads/montage.mp4' } },
+      _meta: { 'ui/resourceUri': 'ui://avatarads/montage.html', ui: { resourceUri: 'ui://avatarads/montage.html' } },
       description: "Vérifie l'état d'un Montage IA lancé avec montage_ia (ou render_montage_plan) et retourne l'URL du MP4 final quand il est prêt. Si toujours en cours, rappelle cet outil ~1 minute plus tard.",
       inputSchema: {
         type: 'object',
