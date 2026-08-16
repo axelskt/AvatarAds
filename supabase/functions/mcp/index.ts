@@ -333,7 +333,7 @@ window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:
 window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
 setInterval(aaMeasure, 1000);
 setTimeout(aaFinalize, 1200);
-setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent='AvatarAds — en attente du résultat… (reçu : '+(aaSeen.join(', ')||'rien')+')'; }catch(e){} } }, 6000);
+setTimeout(function(){ if(!aaOk){ try{ document.getElementById('m').textContent='AvatarAds — génération en cours…'; }catch(e){} } }, 6000);
 `
 
 const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
