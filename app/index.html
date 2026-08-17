@@ -2127,11 +2127,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div style="display:flex;align-items:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
-            <div id="phoneWrapper" style="position:relative;width:268px;height:476px;flex-shrink:0;overflow:hidden">
+            <div id="phoneWrapper" style="position:relative;width:378px;height:672px;flex-shrink:0;overflow:hidden">
             <!-- phoneMockup en 9:16 EXACT (393×699 = aspect 1080/1920) pour que le recadrage du preview
                  corresponde PILE au rendu (Axel 16/08). Avant : 393×852 (19.5:9) → preview plus haut que la sortie.
                  Agrandi (378×672 affiché, scale 0.9618) à la demande d'Axel. -->
-            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:699px;border-radius:70px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.6819);transform-origin:top left">
+            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:699px;border-radius:70px;border:14px solid #1c1c1e;overflow:hidden;background:#000;box-shadow:0 0 0 2px #333,0 24px 60px rgba(0,0,0,.9);transform:scale(0.9618);transform-origin:top left">
               <!-- Notch (maquette .phone-notch : 86×24, top 10) — sous le chrome (z-index bas) pour ne pas couvrir les onglets -->
               <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:86px;height:24px;background:#000;border-radius:14px;z-index:6"></div>
 
@@ -17279,7 +17279,7 @@ function setFormat(fmt){
   cfg.format = fmt;
   // display size → native iPhone logical resolution
   const dims = {
-    vertical:  {dw:268,dh:476,nw:393,nh:699},   // 9:16 EXACT (= sortie 1080×1920) — WYSIWYG recadrage · taille maquette Claude Design (268 large)
+    vertical:  {dw:378,dh:672,nw:393,nh:699},   // 9:16 EXACT (= sortie 1080×1920) — WYSIWYG recadrage · taille agrandie (378 large = ref Axel, restaurée après e4bd308)
     square:    {dw:404,dh:404,nw:572,nh:572},
     landscape: {dw:440,dh:248,nw:679,nh:382}
   };
@@ -23872,7 +23872,7 @@ function _saveGeneratorState(){
         selSubStyle, selAnim, animEnabled, splitEnabled,
         phoneW: w ? w.offsetWidth  : 310,
         phoneH: w ? w.offsetHeight : 672,
-        psv: 2,
+        psv: 3,
       }));
     } catch(e){}
   }, 400);
@@ -23940,7 +23940,7 @@ function _restoreGeneratorState(){
     // ── Split ──
     if(s.splitEnabled !== undefined) splitEnabled = s.splitEnabled;
 
-    // ── Taille preview phone ── (psv:2 → ignore les anciennes tailles par défaut sauvegardées)
+    // ── Taille preview phone ── (psv:3 → ignore les anciennes tailles sauvegardées, dont le 268 réduit)
     if(s.phoneW && s.phoneH && s.psv === 2){
       const wEl=document.getElementById('phoneWrapper');
       const ph=document.getElementById('phoneMockup');
@@ -23950,7 +23950,7 @@ function _restoreGeneratorState(){
         ph.style.transform='scale('+(s.phoneW/nativeW).toFixed(4)+')';
       }
       const lbl=document.getElementById('previewSizeLabel');
-      if(lbl) lbl.textContent=s.phoneW+' × '+s.phoneH;
+      if(lbl){ var _arR=s.phoneW/s.phoneH; lbl.textContent=_arR<0.72?'1080 × 1920 · 9:16':_arR>1.3?'1920 × 1080 · 16:9':'1080 × 1080 · 1:1'; }
     }
 
     updateSubPreview(); updateLivePreview();
@@ -24318,7 +24318,7 @@ function onResize(e){
   const nativeW = parseFloat(ph.style.width) || 393;
   ph.style.transform = 'scale('+(newW/nativeW).toFixed(4)+')';
   const lbl = document.getElementById('previewSizeLabel');
-  if(lbl) lbl.textContent = newW + ' × ' + newH;
+  if(lbl){ var _arO=newW/newH; lbl.textContent=_arO<0.72?'1080 × 1920 · 9:16':_arO>1.3?'1920 × 1080 · 16:9':'1080 × 1080 · 1:1'; }
 }
 function stopResize(){
   resizing = false;
