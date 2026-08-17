@@ -95,23 +95,32 @@ serve(async (req: Request) => {
 
   const userPlan = estLeMoteur ? 'developer' : (profile?.plan || 'free').toLowerCase()
 
+  // ── API v3 (développeur) vs ancienne API (web-app/public) ──
+  // Un `?path` qui commence par /v3 bascule sur api.hedra.com + auth « Key … » + clé dev
+  // HEDRA_V3_KEY. Tout le reste garde l'ancien passe-plat (web-app/public + X-API-Key +
+  // HEDRA_API_KEY) → migration incrémentale, on ne casse rien.
+  const url0      = new URL(req.url)
+  const hedraPath0 = url0.searchParams.get('path') ?? '/'
+  const isV3      = hedraPath0.startsWith('/v3')
+
   // ── Clé Hedra : user BYOK ou plateforme ──
   const userKey    = req.headers.get('x-user-hedra-key') ?? ''
   const platformKey = Deno.env.get('HEDRA_API_KEY') ?? ''
+  const v3Key      = Deno.env.get('HEDRA_V3_KEY') ?? ''
 
-  // Si l'utilisateur est sur le plan BYOK, il DOIT fournir sa propre clé
-  // Il ne doit PAS utiliser la clé plateforme
-  if (userPlan === 'byok' && !userKey) {
+  // Le plan BYOK n'exige une clé perso que sur l'ANCIENNE API. La v3 tourne sur la clé dev
+  // plateforme (Seedance = dev-only ; aucun user BYOK ne l'atteint).
+  if (!isV3 && userPlan === 'byok' && !userKey) {
     return new Response(JSON.stringify({ error: 'Plan BYOK : configure ta clé Hedra dans Connexions → Clé API Hedra' }), {
       status: 403,
       headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   }
 
-  // Sélection de la clé : BYOK user key prioritaire, sinon clé plateforme (plans payants)
-  const hedraKey = userKey || platformKey
+  // Sélection de la clé : BYOK user key prioritaire, sinon clé plateforme (dev key en v3)
+  const hedraKey = isV3 ? (userKey || v3Key) : (userKey || platformKey)
   if (!hedraKey) {
-    return new Response(JSON.stringify({ error: 'Aucune clé Hedra configurée' }), {
+    return new Response(JSON.stringify({ error: isV3 ? 'Clé Hedra v3 manquante (HEDRA_V3_KEY)' : 'Aucune clé Hedra configurée' }), {
       status: 402,
       headers: { ...CORS, 'Content-Type': 'application/json' },
     })
@@ -121,6 +130,8 @@ serve(async (req: Request) => {
     const url       = new URL(req.url)
     const hedraPath = url.searchParams.get('path') ?? '/'
     const ct        = req.headers.get('content-type') ?? ''
+    const base      = isV3 ? 'https://api.hedra.com' : HEDRA_BASE
+    const authHeaders: Record<string, string> = isV3 ? { Authorization: `Key ${hedraKey}` } : { 'X-API-Key': hedraKey }
 
     let hedraRes: Response
 
@@ -131,26 +142,23 @@ serve(async (req: Request) => {
       for (const [key, value] of incoming.entries()) {
         outgoing.append(key, value)
       }
-      hedraRes = await fetch(`${HEDRA_BASE}${hedraPath}`, {
+      hedraRes = await fetch(`${base}${hedraPath}`, {
         method: 'POST',
-        headers: { 'X-API-Key': hedraKey },
+        headers: authHeaders,
         body: outgoing,
       })
     } else if (req.method === 'GET') {
       // ── Polling ou récupération asset ──
-      hedraRes = await fetch(`${HEDRA_BASE}${hedraPath}`, {
+      hedraRes = await fetch(`${base}${hedraPath}`, {
         method: 'GET',
-        headers: { 'X-API-Key': hedraKey },
+        headers: authHeaders,
       })
     } else {
       // ── JSON (POST génération, etc.) ──
       const rawBody = await req.text()
-      hedraRes = await fetch(`${HEDRA_BASE}${hedraPath}`, {
+      hedraRes = await fetch(`${base}${hedraPath}`, {
         method: req.method,
-        headers: {
-          'X-API-Key': hedraKey,
-          'Content-Type': 'application/json',
-        },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: rawBody,
       })
     }

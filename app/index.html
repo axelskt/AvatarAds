@@ -25460,55 +25460,37 @@ async function _expTrimVideo(blob, sec){
   return new Blob([data.buffer], { type:'video/mp4' });
 }
 async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, onStep, refImgs){
-  const modelId = await _expSeedanceModel();   // « Seedance 2.0 Fast » (Higgsfield), pas le résolveur Cartoon
-  // upload une image base64 → asset Hedra, renvoie l'id
-  const up1 = async (b64, mime, name) => {
-    const bin = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
-    const blob = new Blob([bin], { type: mime||'image/png' });
-    const cr = await _hedraFetch('/assets','POST',{ type:'image', name:(name||'ref')+'.png' });
-    if(!cr.ok) throw new Error('Hedra asset '+cr.status+' — '+(await cr.text()).slice(0,100));
-    const a = await cr.json(); if(!a.id) throw new Error('Hedra : pas d\'ID asset');
-    const fd = new FormData(); fd.append('file', blob, (name||'ref')+'.png');
-    const u = await _hedraFetch('/assets/'+a.id+'/upload','POST',fd,true);
-    if(!u.ok) throw new Error('Hedra upload image '+u.status);
-    return a.id;
-  };
-  const startId = await up1(imgB64, imgMime, 'express');
-  // Références NATIVES (mode reference du modèle, ≤9 images) — le vrai truc Higgsfield.
-  let referenceIds = [];
+  // ── API Hedra v3 : /v3/files (upload gratuit) → /v3/models/seedance-20 (submit {input}) → /v3/jobs (poll) ──
+  // Références NATIVES = input.images (1..9). C'est LE champ (l'ancien reference_ids était ignoré en
+  // silence → seule l'image de départ comptait, d'où la voiture inventée). Cf. mémoire hedra-api-v3.
+  if(onStep) onStep('Envoi de l\'image de départ…');
+  const start_image = await _hedraV3Upload(imgB64, imgMime, 'start.png');
+  const images = [];
   if(Array.isArray(refImgs) && refImgs.length){
     if(onStep) onStep('Envoi de tes '+Math.min(refImgs.length,9)+' références…');
-    for(const ri of refImgs.slice(0,9)){ try{ const id = await up1(ri.b64, ri.mime, 'ref'); if(id) referenceIds.push(id); }catch(e){ console.warn('[seedance ref]', e); } }
-  }
-  if(onStep) onStep('Seedance génère…');
-  // 720p (Higgsfield « Enhanced Fast »). start_keyframe = frame de départ ; reference_ids = réfs natives
-  // (⚠ nom du champ à CONFIRMER : si Hedra le rejette, l'erreur donnera le vrai nom → repli start_frame).
-  const gvi = { text_prompt:animPrompt, aspect_ratio:aspect, resolution:'720p', duration_ms:durMs };
-  const body = { type:'video', ai_model_id:modelId, start_keyframe_id:startId, generated_video_inputs:gvi };
-  if(referenceIds.length){ body.reference_ids = referenceIds; }
-  let genRes = await _hedraFetch('/generations','POST', body);
-  // Repli : si Hedra REFUSE le champ reference_ids (nom pas encore confirmé), on relance SANS —
-  // la vidéo se fait quand même depuis la frame de départ, et on log l'erreur pour connaître le vrai champ.
-  if(!genRes.ok && body.reference_ids){
-    const _errTxt = (await genRes.text()).slice(0,300);
-    console.warn('[seedance] reference_ids refusé par Hedra ('+genRes.status+') → '+_errTxt+'\n→ relance sans références. Donne-moi ce message pour le vrai nom du champ.');
-    delete body.reference_ids;
-    genRes = await _hedraFetch('/generations','POST', body);
-  }
-  if(!genRes.ok) throw new Error('Seedance '+genRes.status+' — '+(await genRes.text()).slice(0,140));
-  const gen = await genRes.json(); const genId = gen.id||gen.generation_id; if(!genId) throw new Error('Seedance : pas d\'ID de génération');
-  for(let i=0;i<72;i++){
-    await new Promise(r=>setTimeout(r,5000));
-    const pr = await _hedraFetch('/generations/'+genId+'/status','GET'); if(!pr.ok) continue;
-    const pd = await pr.json(); const st=(pd.status||pd.state||'').toLowerCase();
-    if(st==='error'||st==='failed') throw new Error('Seedance a échoué — '+(pd.error||pd.error_message||'?'));
-    if(st==='complete'||st==='completed'||st==='succeeded'){
-      const url = pd.url||pd.download_url||pd.video_url||pd.streaming_url||''; if(!url) throw new Error('Seedance : pas d\'URL vidéo');
-      const vr = await fetch(url); if(!vr.ok) throw new Error('Téléchargement Seedance '+vr.status);
-      return new Blob([await vr.blob()], { type:'video/mp4' });
+    for(const ri of refImgs.slice(0,9)){
+      try{ images.push(await _hedraV3Upload(ri.b64, ri.mime, 'ref.png')); }
+      catch(e){ console.warn('[seedance v3 ref]', e); }
     }
   }
-  throw new Error('Seedance : délai dépassé (~6 min)');
+  if(onStep) onStep('Seedance génère…');
+  // duration_ms : Seedance n'accepte que les paliers 4000..15000 → snap au plus proche.
+  const DUR=[4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000];
+  const dms = DUR.reduce((a,b)=> Math.abs(b-durMs)<Math.abs(a-durMs)?b:a, 4000);
+  const input = {
+    prompt: animPrompt,
+    aspect_ratio: aspect,          // 9:16 ou 16:9
+    resolution: '720p',            // Higgsfield « Enhanced Fast »
+    duration_ms: dms,
+    quality: 'fast',               // fast ⇒ 480p/720p uniquement
+    generate_audio: false,         // vidéo muette (l'user pose sa voix) — true = audio natif Seedance
+    start_image
+  };
+  if(images.length) input.images = images;   // ← champ référence natif v3
+  const jobId = await _hedraV3Submit('seedance-20', input);
+  const out   = await _hedraV3Poll(jobId, null, 90);
+  const vr = await fetch(out.url); if(!vr.ok) throw new Error('Téléchargement Seedance '+vr.status);
+  return new Blob([await vr.blob()], { type: out.content_type||'video/mp4' });
 }
 async function _expCreateSeedance(prompt){
   const btn=document.getElementById('expGenBtn');
@@ -27586,6 +27568,47 @@ async function _hedraFetch(path, method, body, isForm){
   if(body && isForm){ opts.body = body; }
   else if(body){ opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
   return fetch(PROXY + '?path=' + encodeURIComponent(path), opts);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API Hedra v3 (développeur) — passe par hedra-proxy avec un ?path=/v3/… (mode v3
+// automatique côté proxy : base api.hedra.com + auth « Key HEDRA_V3_KEY »).
+// Flux universel : /v3/files (upload, gratuit) → /v3/models/<slug> (submit {input})
+// → /v3/jobs/<id>/status (poll) → /v3/jobs/<id> (outputs[].url). Cf. mémoire hedra-api-v3.
+// ─────────────────────────────────────────────────────────────────────────────
+async function _hedraV3Upload(b64, mime, name){
+  const bin  = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+  const blob = new Blob([bin], { type: mime||'image/png' });
+  const fd = new FormData(); fd.append('file', blob, name || 'file');
+  const r = await _hedraFetch('/v3/files', 'POST', fd, true);
+  if(!r.ok) throw new Error('Upload Hedra v3 '+r.status+' — '+(await r.text()).slice(0,140));
+  const j = await r.json(); if(!j || !j.url) throw new Error('Upload Hedra v3 : pas d\'url');
+  return { source:'url', url:j.url };   // forme attendue dans input.<media>
+}
+async function _hedraV3Submit(slug, input){
+  const r = await _hedraFetch('/v3/models/'+slug, 'POST', { input });
+  if(!r.ok) throw new Error('Hedra '+slug+' '+r.status+' — '+(await r.text()).slice(0,220));
+  const j = await r.json(); const id = j.job_id || j.id;
+  if(!id) throw new Error('Hedra : pas de job_id');
+  return id;
+}
+async function _hedraV3Poll(jobId, onProgress, maxTries){
+  for(let i=0;i<(maxTries||90);i++){
+    await new Promise(r=>setTimeout(r,4000));
+    const pr = await _hedraFetch('/v3/jobs/'+jobId+'/status', 'GET'); if(!pr.ok) continue;
+    const pd = await pr.json(); const st=(pd.status||'').toUpperCase();
+    if(onProgress && typeof pd.progress==='number') onProgress(pd.progress);
+    if(st==='FAILED'){ const em=(pd.error&&(pd.error.message||pd.error))||''; throw new Error('Hedra a échoué'+(em?(' — '+em):'')); }
+    if(st==='COMPLETED'){
+      const rr = await _hedraFetch('/v3/jobs/'+jobId, 'GET');
+      if(!rr.ok) throw new Error('Hedra résultat '+rr.status);
+      const rd = await rr.json();
+      const out = (rd.outputs||[]).find(o=>o && o.url) || (rd.outputs||[])[0];
+      if(!out || !out.url) throw new Error('Hedra : pas d\'URL de sortie');
+      return out;   // { url, asset_id, content_type, width, height, duration_ms, … }
+    }
+  }
+  throw new Error('Hedra : délai dépassé');
 }
 
 // ── Résout dynamiquement l'id du modèle Seedance sur le compte Hedra (mis en cache) ──
