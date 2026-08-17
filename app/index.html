@@ -25459,7 +25459,7 @@ async function _expTrimVideo(blob, sec){
   return new Blob([data.buffer], { type:'video/mp4' });
 }
 async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, onStep){
-  const modelId = await _cartoonResolveSeedanceModel();
+  const modelId = await _expSeedanceModel();   // « Seedance 2.0 Fast » (Higgsfield), pas le résolveur Cartoon
   const bin = Uint8Array.from(atob(imgB64), c=>c.charCodeAt(0));
   const blob = new Blob([bin], { type: imgMime||'image/png' });
   const createImg = await _hedraFetch('/assets','POST',{ type:'image', name:'express.png' });
@@ -27588,6 +27588,26 @@ async function _cartoonResolveSeedanceModel(){
   if(!m || !m.id) throw new Error('Modèle Seedance introuvable sur ton compte Hedra — lance listHedraModels() dans la console');
   window._seedanceModelId = m.id;
   console.log('🎬 Seedance modèle résolu :', m.name, '→', m.id);
+  return m.id;
+}
+
+// Résolveur DÉDIÉ Express : « Seedance 2.0 Fast » = LE modèle Higgsfield (« Enhanced Fast » :
+// 720p, mode référence natif ≤9 images, moins cher : 24 vs 30 cr/s Hedra). Sinon 2.0 → autre
+// Seedance 2.x. Ignore les id null (2.5 pas provisionné sur le compte, cf. probeSeedance 18/08).
+// Séparé du résolveur Cartoon pour ne pas casser ses rendus.
+async function _expSeedanceModel(){
+  if(window._expSeedanceModelId) return window._expSeedanceModelId;
+  const r = await _hedraFetch('/models','GET');
+  if(!r.ok) throw new Error('Liste des modèles Hedra inaccessible ('+r.status+')');
+  const data = await r.json().catch(()=>null);
+  const all = Array.isArray(data) ? data : (data && (data.models||data.data) || []);
+  const ok = x => x && x.id && /seedance/i.test(x.name||'');   // id non-null = provisionné
+  const m = all.find(x=>ok(x) && /2\.?0\s*fast/i.test(x.name||''))
+         || all.find(x=>ok(x) && /2\.?0(?!\s*mini)/i.test(x.name||''))
+         || all.find(x=>ok(x) && /seedance/i.test(x.name||''));
+  if(!m) throw new Error('Modèle Seedance introuvable — lance probeSeedance() dans la console');
+  window._expSeedanceModelId = m.id;
+  console.log('🎬 Express Seedance :', m.name, '→', m.id);
   return m.id;
 }
 
