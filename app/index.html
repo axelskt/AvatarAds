@@ -1312,6 +1312,19 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
             </div>
 
+            <!-- ══ A/B MOTEUR VIDÉO — Veo natif (voix incluse) vs Hedra + ElevenLabs ══ -->
+            <div id="genEngineSel" style="margin:0 0 16px">
+              <div style="font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:7px;display:flex;align-items:center;gap:6px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>
+                Moteur vidéo
+              </div>
+              <div class="seg">
+                <button id="genEngBtnVeo" type="button" onclick="_genSetEngine('veo')" style="flex:1">Veo natif · voix incluse</button>
+                <button id="genEngBtnHedra" class="on" type="button" onclick="_genSetEngine('hedra')" style="flex:1">Hedra · voix ElevenLabs</button>
+              </div>
+              <div id="genEngineHint" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:6px">Voix ElevenLabs synthétique + lipsync Hedra (l'ancien moteur). Bascule sur Veo pour la voix native.</div>
+            </div>
+
             <!-- MODE VOIX SELECTOR — contrôle segmenté (réf. spec) -->
             <div class="seg" style="display:none" data-note="selecteur Clone/Preset vs Audio MP4 retire le 04/08 : la voix de synthese est abandonnee, il ne reste qu une source">
               <button id="voiceModeBtnClone" class="on" onclick="selectVoiceMode('clone')" style="flex:1">Clone / Preset</button>
@@ -10856,7 +10869,7 @@ function nav(id,el){
       results = { script:'', audioBlob:null, hedraUrl:'' };
       step = 1; if(typeof updateSteps==='function') updateSteps();
     }
-    setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); }
+    setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); } if(typeof _genSetEngine==='function') _genSetEngine(window._genEngine||'veo');
   }
   if(window._mNavSync) _mNavSync(id);
 }
@@ -20185,28 +20198,40 @@ async function startGeneration(){
     } catch(e){ console.warn('Plan revalidation failed:', e); }
   }
 
+  // ── A/B MOTEUR : Veo natif (voix + lipsync inclus) vs Hedra+ElevenLabs. Veo ne prend QUE le
+  // chemin « script → avatar parlant » : avatar requis, et pas gameplay/mp4/bypass (qui restent
+  // sur Hedra car ils portent la VRAIE voix de l'user). Sélecteur = window._genEngine ('veo' déf.).
+  const _genAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
+  const _genSyntheticVoice = !(window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled) || window.mp4AudioFile || voiceMode==='gameplay');
+  const _useVeo = (window._genEngine !== 'hedra') && _genAvatarSel && _genSyntheticVoice;
+
   // ── Débit crédits : lipsync 1 cr/s UNIQUEMENT si un avatar est sélectionné (mode
   // « audio sur gameplay » = 0 cr de lipsync) + 0,5 cr/s si voix ElevenLabs ──
   if(currentMember && !guestMode){
-    const durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
-    const _usesEl = !(window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled) || window.mp4AudioFile);
-    const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
-    const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0) + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
-    // #122 · ouvre le flux AVANT tout débit. L'appel était à l'intérieur du test
-    // `_rate > 0` : avec un gameplay et un MP3 importé, le tarif de base est nul
-    // et le supplément 1080p se serait greffé sur la liste d'opérations de la
-    // génération PRÉCÉDENTE — donc remboursé au mauvais moment en cas d'échec.
-    creditsFlowBegin();
-    if(_rate > 0){
-      const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
-      if(!ok) return;
-    }
-    // 📐 1080p facturé à la seconde (720p gratuit) — même durée que la vidéo,
-    // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
-    if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080){
-      const surcout = Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec);
-      // Si le surcoût 1080p ne passe pas, l'avatar déjà débité doit repartir (sinon perte). #122
-      if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))){ try{ await creditsFlowRefund('crédits insuffisants pour le 1080p'); }catch(_){} return; }
+    creditsFlowBegin();   // #122 · ouvre le flux AVANT tout débit (Veo comme Hedra → remboursable)
+    if(_useVeo){
+      // Veo natif = tarif Express (1,5 cr/s Standard), sur la durée ESTIMÉE du script (4/6/8 s),
+      // débité AVANT l'appel Veo, remboursé par creditsFlowRefund si la génération échoue.
+      const _vTxt = ((document.getElementById('f-hook')?.value||'')+' '+(document.getElementById('f-script')?.value||'')+' '+(document.getElementById('f-cta')?.value||'')).trim();
+      const _vRaw = Math.max(4, Math.ceil(_vTxt.length/14));
+      const _vDur = _vRaw<=4?4:(_vRaw<=6?6:8);
+      if(!(await spendCreditsFor(Math.round(_vDur * CREDIT_COSTS.expressLitePerSec), 'avatar Veo natif'))) return;
+    } else {
+      const durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
+      const _usesEl = !(window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled) || window.mp4AudioFile);
+      const _hasAvatarSel = _genAvatarSel;
+      const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0) + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
+      if(_rate > 0){
+        const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
+        if(!ok) return;
+      }
+      // 📐 1080p facturé à la seconde (720p gratuit) — même durée que la vidéo,
+      // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
+      if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080){
+        const surcout = Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec);
+        // Si le surcoût 1080p ne passe pas, l'avatar déjà débité doit repartir (sinon perte). #122
+        if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))){ try{ await creditsFlowRefund('crédits insuffisants pour le 1080p'); }catch(_){} return; }
+      }
     }
   }
 
@@ -20281,6 +20306,9 @@ async function startGeneration(){
     else populateWordEditor(finalScript);
   } else if(voiceMode === 'gameplay'){
     audioBlob = await extractGameplayAudio();
+  } else if(_useVeo){
+    // ── Veo natif : PAS de TTS ElevenLabs — Veo écrit la voix + le lipsync à l'étape vidéo. ──
+    populateWordEditor(finalScript);
   } else {
     // ElevenLabs via proxy Supabase
     audioBlob = await callElevenLabs(finalScript);
@@ -20321,7 +20349,24 @@ async function startGeneration(){
     return;
   }
 
-  if(window._bypassHedraOn && window._bypassHedraUrl){
+  if(_useVeo){
+    // ── A/B MOTEUR VEO NATIF : avatar (image) + script → Veo parle + lipsync (voix incluse) ──
+    // Débit déjà passé plus haut (tarif Express). Remboursé si la génération échoue.
+    try{
+      const _avSrc = selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim();
+      hedraUrl = await _genVeoTalking(_avSrc, finalScript, { format: (typeof cfg!=='undefined' && cfg) ? cfg.format : 'portrait' });
+      if(!hedraUrl){ window._lastHedraError = 'La génération Veo n\'a rien renvoyé — réessaie.'; await creditsFlowRefund('la génération Veo a échoué'); }
+      else creditsFlowDone();
+    }catch(_veoErr){
+      console.error('Veo natif:', _veoErr);
+      window._lastHedraError = 'Veo : ' + (_veoErr.message||_veoErr);
+      toast('Veo : ' + (_veoErr.message||_veoErr));
+      await creditsFlowRefund('la génération Veo a échoué');
+      hedraUrl = '';
+    }
+    setStep('gp3','done');
+
+  } else if(window._bypassHedraOn && window._bypassHedraUrl){
     // ── MODE BYPASS : vidéo existante, 0 crédit — vérifier quota ──
     if(_bypassLimit() <= 0){
       toast('Cette fonctionnalité n\'est pas disponible sur ton plan');
@@ -20422,7 +20467,9 @@ async function startGeneration(){
   _saveLibrary();
 
   // ── Auto-composer et télécharger dès que Hedra a la vidéo ──
-  if(hedraUrl){
+  // (Veo natif porte DÉJÀ sa voix + son lipsync : pas de re-composition, sinon on risque de
+  //  réécraser sa piste audio native. On montre le rendu Veo brut → A/B propre vs Hedra.)
+  if(hedraUrl && !_useVeo){
     const compBtn = document.getElementById('composeBtn');
     await composeVideo(compBtn);
   }
@@ -20459,6 +20506,24 @@ Style: authentique, comme un vrai témoignage, direct, sans fioritures.`}
 
 // ── VOICE MODE ──
 let voiceMode = 'elevenlabs';
+
+// ── A/B MOTEUR VIDÉO (Générateur) : 'veo' = Veo natif (voix + lipsync inclus, 1,5 cr/s) ·
+// 'hedra' = ancien moteur (voix ElevenLabs + lipsync Hedra). Défaut = 'hedra' → PROD INCHANGÉE
+// pendant l'A/B ; Axel bascule sur 'veo' pour comparer, puis on flippe le défaut quand validé. ──
+window._genEngine = 'hedra';
+function _genSetEngine(e){
+  window._genEngine = (e === 'hedra') ? 'hedra' : 'veo';
+  const bv=document.getElementById('genEngBtnVeo'), bh=document.getElementById('genEngBtnHedra');
+  const hint=document.getElementById('genEngineHint'), el=document.getElementById('voice-el-sections');
+  if(bv) bv.classList.toggle('on', window._genEngine==='veo');
+  if(bh) bh.classList.toggle('on', window._genEngine==='hedra');
+  // Veo = voix native → le sélecteur de voix ElevenLabs n'a plus de sens : on le masque.
+  // (En 'gameplay'/'mp4' l'orchestrateur repasse de toute façon sur Hedra, quel que soit ce toggle.)
+  if(el && voiceMode!=='gameplay') el.style.display = (window._genEngine==='hedra') ? 'block' : 'none';
+  if(hint) hint.textContent = (window._genEngine==='veo')
+    ? 'Veo écrit la voix + le lipsync en un coup (1,5 cr/s). Un avatar est requis.'
+    : 'Voix ElevenLabs synthétique + lipsync Hedra (l\'ancien moteur).';
+}
 
 function toggleGameplayAudio(){
   // PRO/Elite only
@@ -20835,6 +20900,61 @@ async function callHedra(audioBlob){
     console.error('Hedra error:', e);
     return '';
   }
+}
+
+// ── A/B VEO NATIF (Générateur) : avatar (image) + script → Veo parle + lipsync, exactement
+// comme l'Express/MCP. Réutilise le moteur Veo (_cartoonProxyFetch / _veoAwaitOp / _veoDownloadUri).
+// NE TOUCHE PAS au chemin Hedra. Retourne une URL blob jouable (ou '' si échec).
+async function _genVeoTalking(avatarSrc, script, opts){
+  opts = opts || {};
+  const fmt = (opts.format === 'square') ? '1:1' : (opts.format === '16:9' ? '16:9' : '9:16');
+  if(!avatarSrc) throw new Error('avatar requis pour Veo natif');
+  // 1) image de l'avatar → base64 (URL distante, blob local, ou File)
+  let imgB64='', imgMime='image/jpeg';
+  try{
+    const blob = (avatarSrc instanceof Blob) ? avatarSrc : await (await fetch(avatarSrc)).blob();
+    imgMime = blob.type || 'image/jpeg';
+    imgB64 = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=()=>rej(new Error('lecture image')); fr.onload=()=>res(String(fr.result).replace(/^data:[^;]+;base64,/,'')); fr.readAsDataURL(blob); });
+  }catch(e){ throw new Error('image avatar illisible'); }
+  // 2) la réplique DANS le prompt → Veo la PARLE (voix native) + lip-sync
+  const vp = 'A person looking directly at the camera and speaking naturally to the viewer, saying out loud: "'
+    + String(script||'').replace(/[`"]/g,"'").slice(0,700)
+    + '". Accurate natural lip-sync matching every word, clear audible human voice, warm authentic UGC delivery, subtle expressive facial expressions and small natural head movements, believable lighting, static background.';
+  // 3) durée estimée du script (4/6/8) + extensions Élite si long — comme l'Express
+  const _plan=(currentMember?.plan||'free').toLowerCase(); const _elite=['elite','developer'].includes(_plan);
+  const _raw = Math.max(4, Math.ceil(String(script||'').length/14));
+  let _dur = _raw<=4?4:(_raw<=6?6:8), _extCount=0;
+  if(_raw>8 && _elite){ _extCount=Math.min(3, Math.ceil((_raw-8)/7)); _dur=8; }
+  const _res='720p';
+  const model='veo-3.1-lite-generate-preview'; // Veo Standard (A/B — Pro viendra ensuite)
+  const body=(withAudio)=>JSON.stringify({ instances:[{ prompt:vp, image:{ bytesBase64Encoded:imgB64, mimeType:imgMime } }], parameters:Object.assign({ durationSeconds:_dur, sampleCount:1, aspectRatio:fmt, resolution:_res }, withAudio?{generateAudio:true}:{}) });
+  // progression → barre gp3 existante
+  const bar=document.getElementById('hedraProgressBar'), fill=document.getElementById('hedraProgressFill'), pctEl=document.getElementById('hedraProgressPct');
+  if(bar) bar.style.display='block'; let _p=6; const _setP=(v)=>{ _p=Math.max(_p,v); if(fill)fill.style.width=_p+'%'; if(pctEl)pctEl.textContent=Math.round(_p)+'%'; };
+  _setP(10); toast('Veo génère ton avatar parlant… (~1 à 3 min)');
+  // lancement : on tente AVEC audio natif ; si le modèle refuse generateAudio, on relance sans
+  let start = await _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning',{ method:'POST', body:body(true) });
+  if(!start.ok){ const e=await start.clone().json().catch(()=>({})); if(/generateAudio|generate_audio|audio/i.test(e?.error?.message||'')) start = await _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning',{ method:'POST', body:body(false) }); }
+  if(!start.ok){ const e=await start.json().catch(()=>({})); throw new Error(e?.error?.message||('HTTP '+start.status)); }
+  const { name:opName } = await start.json(); if(!opName) throw new Error('Opération Veo introuvable');
+  _setP(35);
+  const first = await _veoAwaitOp(opName); if(first.err) throw new Error(first.err);
+  let vB64=first.b64, vUri=first.uri; _setP(60);
+  for(let x=0;x<_extCount;x++){
+    const ref = vUri ? { uri:vUri } : { bytesBase64Encoded:vB64, mimeType:'video/mp4' };
+    const extBody=(wa)=>JSON.stringify({ instances:[{ prompt:vp, video:ref }], parameters:Object.assign({ sampleCount:1, aspectRatio:fmt, resolution:_res }, wa?{generateAudio:true}:{}) });
+    let ext=await _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning',{ method:'POST', body:extBody(true) });
+    if(!ext.ok){ const eX=await ext.clone().json().catch(()=>({})); if(/audio/i.test(eX?.error?.message||'')) ext=await _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning',{ method:'POST', body:extBody(false) }); }
+    if(!ext.ok) break; const { name:extOp }=await ext.json(); if(!extOp) break;
+    const r=await _veoAwaitOp(extOp); if(r.err) break; vB64=r.b64; vUri=r.uri; _setP(60+(x+1)*10);
+  }
+  _setP(92);
+  let blob;
+  if(vB64){ const bytes=Uint8Array.from(atob(vB64),c=>c.charCodeAt(0)); blob=new Blob([bytes],{type:'video/mp4'}); }
+  else blob=await _veoDownloadUri(vUri);
+  if(!blob) throw new Error('vidéo Veo introuvable');
+  _setP(100); if(bar) bar.style.display='none';
+  return URL.createObjectURL(blob);
 }
 
 function showResults(){
