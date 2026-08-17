@@ -25458,20 +25458,42 @@ async function _expTrimVideo(blob, sec){
   try{ ff.FS('unlink','sd-in.mp4'); ff.FS('unlink','sd-out.mp4'); }catch(_){}
   return new Blob([data.buffer], { type:'video/mp4' });
 }
-async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, onStep){
+async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, onStep, refImgs){
   const modelId = await _expSeedanceModel();   // « Seedance 2.0 Fast » (Higgsfield), pas le résolveur Cartoon
-  const bin = Uint8Array.from(atob(imgB64), c=>c.charCodeAt(0));
-  const blob = new Blob([bin], { type: imgMime||'image/png' });
-  const createImg = await _hedraFetch('/assets','POST',{ type:'image', name:'express.png' });
-  if(!createImg.ok) throw new Error('Hedra asset '+createImg.status+' — '+(await createImg.text()).slice(0,100));
-  const imgAsset = await createImg.json(); if(!imgAsset.id) throw new Error('Hedra : pas d\'ID asset');
-  const fd = new FormData(); fd.append('file', blob, 'express.png');
-  const up = await _hedraFetch('/assets/'+imgAsset.id+'/upload','POST',fd,true);
-  if(!up.ok) throw new Error('Hedra upload image '+up.status);
+  // upload une image base64 → asset Hedra, renvoie l'id
+  const up1 = async (b64, mime, name) => {
+    const bin = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+    const blob = new Blob([bin], { type: mime||'image/png' });
+    const cr = await _hedraFetch('/assets','POST',{ type:'image', name:(name||'ref')+'.png' });
+    if(!cr.ok) throw new Error('Hedra asset '+cr.status+' — '+(await cr.text()).slice(0,100));
+    const a = await cr.json(); if(!a.id) throw new Error('Hedra : pas d\'ID asset');
+    const fd = new FormData(); fd.append('file', blob, (name||'ref')+'.png');
+    const u = await _hedraFetch('/assets/'+a.id+'/upload','POST',fd,true);
+    if(!u.ok) throw new Error('Hedra upload image '+u.status);
+    return a.id;
+  };
+  const startId = await up1(imgB64, imgMime, 'express');
+  // Références NATIVES (mode reference du modèle, ≤9 images) — le vrai truc Higgsfield.
+  let referenceIds = [];
+  if(Array.isArray(refImgs) && refImgs.length){
+    if(onStep) onStep('Envoi de tes '+Math.min(refImgs.length,9)+' références…');
+    for(const ri of refImgs.slice(0,9)){ try{ const id = await up1(ri.b64, ri.mime, 'ref'); if(id) referenceIds.push(id); }catch(e){ console.warn('[seedance ref]', e); } }
+  }
   if(onStep) onStep('Seedance génère…');
-  // 720p (comme Higgsfield « Enhanced Fast ») : c'est là que Seedance 2.0 est le plus propre ;
-  // le 1080p standard n'était pas les mêmes conditions que Higgsfield (Axel 17/08).
-  const genRes = await _hedraFetch('/generations','POST',{ type:'video', ai_model_id:modelId, start_keyframe_id:imgAsset.id, generated_video_inputs:{ text_prompt:animPrompt, aspect_ratio:aspect, resolution:'720p', duration_ms:durMs } });
+  // 720p (Higgsfield « Enhanced Fast »). start_keyframe = frame de départ ; reference_ids = réfs natives
+  // (⚠ nom du champ à CONFIRMER : si Hedra le rejette, l'erreur donnera le vrai nom → repli start_frame).
+  const gvi = { text_prompt:animPrompt, aspect_ratio:aspect, resolution:'720p', duration_ms:durMs };
+  const body = { type:'video', ai_model_id:modelId, start_keyframe_id:startId, generated_video_inputs:gvi };
+  if(referenceIds.length){ body.reference_ids = referenceIds; }
+  let genRes = await _hedraFetch('/generations','POST', body);
+  // Repli : si Hedra REFUSE le champ reference_ids (nom pas encore confirmé), on relance SANS —
+  // la vidéo se fait quand même depuis la frame de départ, et on log l'erreur pour connaître le vrai champ.
+  if(!genRes.ok && body.reference_ids){
+    const _errTxt = (await genRes.text()).slice(0,300);
+    console.warn('[seedance] reference_ids refusé par Hedra ('+genRes.status+') → '+_errTxt+'\n→ relance sans références. Donne-moi ce message pour le vrai nom du champ.');
+    delete body.reference_ids;
+    genRes = await _hedraFetch('/generations','POST', body);
+  }
   if(!genRes.ok) throw new Error('Seedance '+genRes.status+' — '+(await genRes.text()).slice(0,140));
   const gen = await genRes.json(); const genId = gen.id||gen.generation_id; if(!genId) throw new Error('Seedance : pas d\'ID de génération');
   for(let i=0;i<72;i++){
@@ -25501,18 +25523,10 @@ async function _expCreateSeedance(prompt){
     const session=(await sb.auth.getSession()).data.session; const token=session?.access_token||SUPABASE_KEY;
     const styleMeta=EXP_STYLES.find(s=>s.id===window._expStyle)||EXP_STYLES[0];
     let imgB64=window._expImgB64, imgMime=window._expImgMime||'image/png';
-    // Plusieurs références → TOUTES prises en compte : fusion en une frame de départ.
-    if((window._expImgs||[]).length > 1){
-      setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
-      try{
-        const _cSize = window._expFormat==='16:9' ? '1536x1024' : '1024x1536';
-        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize);
-        if(_composed){
-          if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
-          else { const _b=await (await fetch(_composed)).blob(); imgMime=_b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(_b);}); }
-        }
-      }catch(e){ console.warn('compose refs (Seedance) échouée, 1re image gardée:', e); }
-    }
+    // Seedance = RÉFÉRENCES NATIVES (mode reference, ≤9 images — le vrai truc Higgsfield) : on passe
+    // les VRAIES photos en références (pas la fusion gpt-image qui recrée le visage), imgs[0] = frame
+    // de départ. La fusion gpt-image ne sert plus qu'au chemin Veo (mono-image).
+    const _sdRefs = (window._expImgs||[]).slice(0,9).map(im=>({ b64:im.b64, mime:im.mime||'image/png' }));
     if(!imgB64){
       setP(8,'Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
@@ -25527,7 +25541,7 @@ async function _expCreateSeedance(prompt){
     const _directed = await _expDirector(prompt);   // prompt structuré (SUBJECT→…→CONTINUITY), repli si échec
     const animPrompt = (_directed ? _directed : (prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_expSelfieCue())) + _EXP_IDLOCK;
     setP(25,'Seedance 2.0 génère… (1 à 3 min)');
-    let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t));
+    let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t), _sdRefs);
     if(reqSec < genSec){ try{ setP(92,'Découpe à '+reqSec+' s…'); blob = await _expTrimVideo(blob, reqSec); }catch(e){ console.warn('trim:',e); } }
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidBlob=blob; window._expVidUrl=URL.createObjectURL(blob);
