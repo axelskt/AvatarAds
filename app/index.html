@@ -27505,7 +27505,11 @@ async function _cartoonResolveSeedanceModel(){
   if(!r.ok) throw new Error('Liste des modèles Hedra inaccessible ('+r.status+')');
   const data = await r.json().catch(()=>null);
   const all = Array.isArray(data) ? data : (data?.models || data?.data || []);
-  const m = all.find(x=>/seedance/i.test(x.name||'') && /2\.?0|(^|[^\d])2([^\d.]|$)/.test(x.name||''))
+  // Seedance 2.5 EN PRIORITÉ (meilleur identité/réalisme + audio natif, cf. Higgsfield) →
+  // sinon 2.0 → sinon 1.5 Pro → sinon n'importe quel Seedance. Fallback = 2.0 si 2.5 absent
+  // du compte (aucun risque). Cache partagé avec le module Cartoon.
+  const m = all.find(x=>/seedance/i.test(x.name||'') && /2\.?5/.test(x.name||''))
+         || all.find(x=>/seedance/i.test(x.name||'') && /2\.?0|(^|[^\d])2([^\d.]|$)/.test(x.name||''))
          || all.find(x=>/seedance/i.test(x.name||'') && /1\.5/.test(x.name||'') && /pro/i.test(x.name||''))
          || all.find(x=>/seedance/i.test(x.name||''));
   if(!m || !m.id) throw new Error('Modèle Seedance introuvable sur ton compte Hedra — lance listHedraModels() dans la console');
