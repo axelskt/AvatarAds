@@ -3565,6 +3565,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="expFormatRow" class="row" style="gap:8px"></div>
         </div>
 
+        <!-- ②b MODÈLE (Veo Standard / Veo Pro) — Pro réservé Pro/Élite -->
+        <div class="exp-section" style="margin-bottom:0">
+          <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Modèle</div>
+          <div id="expModelRow" class="row" style="gap:8px"></div>
+        </div>
+
         <!-- ③ DURÉE (slider 3→30s) -->
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title">⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">5 s</span></div>
@@ -24323,6 +24329,34 @@ const EXP_STYLES = [
 const EXP_FORMATS = [ {v:'9:16',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 18h0"/></svg>',name:'Portrait',ratio:'9:16'}, {v:'16:9',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',name:'Paysage',ratio:'16:9'} ];
 const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 
+// ②b MODÈLE Veo : Standard (Lite) ou Pro (Fast, meilleure qualité). Pro réservé Pro/Élite ;
+// Starter = Standard seul. Défaut : Élite → Pro, sinon Standard. Le tarif suit (via _expCostCredits).
+const EXP_MODELS = [
+  { v:'standard', name:'Veo Standard', sub:'Rapide · éco' },
+  { v:'pro',      name:'Veo Pro',      sub:'Qualité max' },
+];
+function _expModelAllowed(v){
+  if(v==='pro') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+  return true; // Standard pour tous
+}
+function _expRenderModels(){
+  const row=document.getElementById('expModelRow'); if(!row) return;
+  const plan=(currentMember?.plan||'free').toLowerCase();
+  if(!window._expVeoModel) window._expVeoModel = ['elite','developer'].includes(plan) ? 'pro' : 'standard';
+  if(window._expVeoModel==='pro' && !_expModelAllowed('pro')) window._expVeoModel='standard'; // plan rétrogradé
+  row.innerHTML = EXP_MODELS.map(m=>{
+    const on=m.v===window._expVeoModel, locked=!_expModelAllowed(m.v);
+    const lock=locked?' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>':'';
+    return `<div onclick="_expPickModel('${m.v}')" class="exp-card${on?' on':''}" style="flex:1;padding:13px 12px;text-align:center;${locked?'opacity:.5;':''}">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">${m.name}${lock}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">${m.sub}</div></div>`;
+  }).join('');
+}
+function _expPickModel(v){
+  if(!_expModelAllowed(v)){ toast('Veo Pro est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
+  window._expVeoModel=v; initExpress();
+}
+
 function initExpress(){
   // Style grid
   const sg = document.getElementById('expStyleGrid');
@@ -24367,6 +24401,7 @@ function initExpress(){
         <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
   }
+  _expRenderModels();
   _expRenderVoices();
   _expSyncSubToggle();
   _expUpdateGenCaption();
@@ -24377,8 +24412,8 @@ function initExpress(){
 // Coût crédits Express = SOURCE UNIQUE (bouton Générer ET débit expressCreate) :
 // 720p → Lite 1,5 cr/s (Starter/Pro) · Fast 3 cr/s (Élite) ; 1080p → +1 cr/s. Arrondi.
 function _expCostCredits(){
-  const isElite=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
-  const rate=isElite ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
+  const pro=window._expVeoModel==='pro'; // modèle CHOISI (défaut Standard), plus l'auto-plan
+  const rate=pro ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
   const mult=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1; // 1080p = ×2 du 720p
   return Math.round((parseInt(window._expDur)||4) * rate * mult);
 }
@@ -25376,8 +25411,10 @@ async function expressCreate(){
       )
     });
     // ── Modèle Veo selon le plan : Élite → 3.1 Fast (meilleur), autres → 3.1 Lite ──
-    const _isEliteVeo = ['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
-    let _veoModel = _isEliteVeo ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-lite-generate-preview';
+    // Modèle = le CHOIX de l'utilisateur (sélecteur Standard/Pro), plus l'auto-plan.
+    // Garde-fou : si Pro sélectionné mais plan insuffisant, on retombe sur Standard.
+    const _proAllowed = ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+    let _veoModel = (window._expVeoModel==='pro' && _proAllowed) ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-lite-generate-preview';
     const _startVeo = (model, withAudio) => _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning', {
       method:'POST', body: JSON.stringify(_veoBody(withAudio))
     });
