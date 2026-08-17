@@ -3671,8 +3671,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <span class="exp-wpg-chip" onclick="_expQuick('Un personnage cartoon 3D mignon explique une astuce, animation fluide style Pixar, fond coloré')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg> Cartoon</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un coach fitness montre un exercice, mouvement dynamique, salle de sport lumineuse')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg> Fitness</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Présentation produit, gros plan élégant, lumière douce, rotation lente du produit')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 7h12l1 13H5zM9 10V6a3 3 0 016 0v4"/></svg> Produit</span>
-                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:272px;font-size:18.5px;padding:21px 34px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>Générer la vidéo
+                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:272px;font-size:18.5px;padding:14px 34px;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>
+                  <span style="display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.12">Générer la vidéo<span id="expGenCost" style="font-size:12px;font-weight:700;letter-spacing:.01em;opacity:.72">4 crédits</span></span>
                 </button>
               </div>
             </div>
@@ -24376,6 +24377,16 @@ function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
   const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,'')||'720p';
   if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||4} s`; }
+  // Coût DYNAMIQUE dans le bouton Générer — mot pour mot ce que débite expressCreate :
+  // Veo Lite 1 cr/s (Starter/Pro) · Veo Fast 3 cr/s (Élite). Rafraîchi à chaque
+  // changement de durée/plan (initExpress rappelle cette fonction).
+  const cb=document.getElementById('expGenCost');
+  if(cb){
+    const isElite=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+    const rate=isElite ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1);
+    const n=(parseInt(window._expDur)||4)*rate;
+    cb.textContent = n + (n>1?' crédits':' crédit');
+  }
 }
 // L'écran d'accueil RÉSUME les réglages en direct (07/08, patron d'Images IA) :
 // une ligne mono « 9:16 · 4 s · 720p · Voix native (Veo) », comme imgIdleMeta.
