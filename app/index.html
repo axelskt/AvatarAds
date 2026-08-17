@@ -3549,7 +3549,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt</div></div>
             <div id="expEngSeedanceRail" onclick="_expSetEngine('seedance')" class="exp-card" style="padding:13px 14px">
               <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div>
-              <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt (Hedra)</div></div>
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">image → vidéo · audio natif · via l'API Hedra</div></div>
           </div>
         </div>
 
@@ -3565,14 +3565,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div id="expFormatRow" class="row" style="gap:8px"></div>
         </div>
 
-        <!-- ②b MODÈLE (Veo Standard / Veo Pro) — Pro réservé Pro/Élite -->
-        <div class="exp-section" style="margin-bottom:0">
+        <!-- ②b MODÈLE (Veo Standard / Veo Pro) — Pro réservé Pro/Élite ; masqué en mode Seedance -->
+        <div class="exp-section" id="expModeleSection" style="margin-bottom:0">
           <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Modèle</div>
           <div id="expModelRow" class="row" style="gap:8px"></div>
         </div>
 
-        <!-- ③ DURÉE (slider 3→30s) -->
-        <div class="exp-section" style="margin-bottom:0">
+        <!-- ③ DURÉE (slider 3→30s) — Veo ; masqué en mode Seedance (durée dédiée dans la scène) -->
+        <div class="exp-section" id="expDureeSection" style="margin-bottom:0">
           <div class="exp-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
             <span>⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">Auto</span></span>
             <span id="expDurAutoTog" onclick="_expToggleDurAuto()" title="Cale la durée sur ton texte parlé" style="cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:3px 10px;border-radius:8px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2)">AUTO</span>
@@ -3583,8 +3583,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">3 s</span><span class="faint mono" style="font-size:9px">30 s</span></div>
         </div>
 
-        <!-- ③b QUALITÉ -->
-        <div class="exp-section" style="margin-bottom:0">
+        <!-- ③b QUALITÉ — Veo ; masqué en mode Seedance (1080p natif) -->
+        <div class="exp-section" id="expQualiteSection" style="margin-bottom:0">
           <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/></svg> Qualité</div>
           <div id="expQualRow" class="row" style="gap:8px"></div>
         </div>
@@ -3652,6 +3652,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <button onclick="expressReset()" class="btn btn-ghost btn-sm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Nouvelle vidéo</button>
         </div>
 
+        <!-- Vignettes des images de référence — dans la zone SOMBRE, juste au-dessus du trait
+             du composer (Axel 17/08 : « tu les mets dans la partie noire juste au-dessus du trait »). -->
+        <div id="expImgThumbs" style="display:none;gap:10px;flex-wrap:wrap;align-items:center;padding:0 28px 14px"></div>
+
         <!-- Composer (style Remakeit) -->
         <div style="border-top:1px solid var(--border);padding:18px 28px 24px;background:var(--surface)">
           <div class="row" style="gap:16px;align-items:stretch">
@@ -3673,7 +3677,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
-              <div id="expImgThumbs" style="display:none;gap:9px;flex-wrap:wrap;align-items:center"></div>
               <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:150px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" oninput="_expApplyAutoDur()" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
                 <span class="exp-wpg-chip on" onclick="_expEnhance()" style="font-weight:700">✦ Améliorer</span>
@@ -24452,11 +24455,17 @@ function _expHeroSync(){
   const line=document.getElementById('expHeroLine');
   if(!line) return;
   const st=(EXP_STYLES.find(s=>s.id===window._expStyle)||{}).label||'Réaliste';
-  const vx=(EXP_VOICES.find(v=>v.id===window._expVoice)||{}).name||'Voix native (Veo)';
   const n=(window._expImgs||[]).length;
+  const imgTxt = n? (n>1? n+' images':'1 image') : null;
+  // Mode Seedance (dev) : sa propre durée, 1080p natif, audio natif — pas les libellés Veo.
+  if(window._expEngine==='seedance' && typeof _expIsDev==='function' && _expIsDev()){
+    const sd=Math.max(2,Math.min(10,parseInt(window._expSeedanceDur)||5));
+    line.textContent = [ (window._expFormat||'9:16'), sd+' s', '1080p', st, 'Seedance · audio natif', imgTxt ].filter(Boolean).join(' · ');
+    return;
+  }
+  const vx=(EXP_VOICES.find(v=>v.id===window._expVoice)||{}).name||'Voix native (Veo)';
   line.textContent = [ (window._expFormat||'9:16'), (window._expDur||4)+' s',
-    (window._expQuality||'720p'), st, vx, n? (n>1? n+' images':'1 image') : null ]
-    .filter(Boolean).join(' · ');
+    (window._expQuality||'720p'), st, vx, imgTxt ].filter(Boolean).join(' · ');
 }
 // Durées possibles : Veo 3.1 = 4/6/8 s par génération ; Élite débloque 15/22/29 s (extensions de scène +7 s)
 function _expDurAllowed(){
@@ -24521,6 +24530,11 @@ function _expSetEngine(e){
   if(rSd)  rSd.classList.toggle('on', e==='seedance');
   // durée Seedance visible uniquement en mode seedance
   const sdDur=document.getElementById('expSeedanceDurRow'); if(sdDur) sdDur.style.display = (e==='seedance') ? 'flex' : 'none';
+  // Seedance masque les réglages 100% Veo : Modèle (Veo Standard/Veo Pro), Durée slider, Qualité —
+  // Seedance a SA durée (dans la scène) et sort en 1080p natif (Axel 17/08).
+  const sd = (e==='seedance');
+  ['expModeleSection','expDureeSection','expQualiteSection'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = sd ? 'none' : ''; });
+  if(typeof _expHeroSync==='function') _expHeroSync();
 }
 
 /* ── Motion Control — état + uploads ── */
@@ -25218,7 +25232,7 @@ function _expEnhance(){
 
 // ── Image optionnelle ──
 window._expImgs = window._expImgs || [];  // images multiples (max EXP_MAX_IMGS)
-const EXP_MAX_IMGS = 4;
+const EXP_MAX_IMGS = 8;   // Axel 17/08 : jusqu'à 8 images de référence (avatar · produit · perso)
 function _expOnImgDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border2)'; [...(e.dataTransfer?.files||[])].forEach(_expLoadImg); }
 function _expOnImgInput(input){ [...(input?.files||[])].forEach(_expLoadImg); if(input) input.value=''; }
 function _expLoadImg(file){
@@ -25298,12 +25312,16 @@ function _expRenderImgs(){
   const imgs=window._expImgs||[];
   if(typeof _expHeroSync==='function') _expHeroSync();
   const p=document.getElementById('expImgPreview'), d=document.getElementById('expImgDrop'), cnt=document.getElementById('expImgCount');
-  if(imgs.length){ if(p){ p.src=imgs[0].url; p.style.display='block'; } if(d) d.style.borderColor='var(--orange)'; if(cnt){ cnt.style.display=imgs.length>1?'block':'none'; cnt.textContent=imgs.length+'/'+EXP_MAX_IMGS; } }
-  else { if(p){ p.style.display='none'; p.src=''; } if(d) d.style.borderColor='var(--border2)'; if(cnt) cnt.style.display='none'; }
+  // Le bouton « Ajoute tes images » reste un bouton d'ajout (il ne se transforme plus en aperçu
+  // plein cadre) : les images vivent en vignettes dans la zone sombre, juste au-dessus du
+  // composer — comme Images IA (Axel 17/08). Le badge N/8 indique combien sont attachées.
+  if(p){ p.style.display='none'; p.src=''; }
+  if(d) d.style.borderColor = imgs.length ? 'var(--orange)' : 'var(--border2)';
+  if(cnt){ cnt.style.display = imgs.length ? 'block' : 'none'; cnt.textContent = imgs.length+'/'+EXP_MAX_IMGS; }
   const wrap=document.getElementById('expImgThumbs'); if(!wrap) return;
   if(!imgs.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   wrap.style.display='flex';
-  wrap.innerHTML=imgs.map((im,i)=>`<div style="position:relative;width:50px;height:50px;border-radius:10px;overflow:hidden;border:1px solid var(--border2);flex:0 0 auto"><img src="${im.url}" style="width:100%;height:100%;object-fit:cover"><button onclick="event.stopPropagation();_expRemoveImg(${i})" title="Retirer" style="position:absolute;top:-7px;right:-7px;width:19px;height:19px;border-radius:50%;background:#15151a;border:1px solid var(--border2);color:#fff;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">×</button></div>`).join('');
+  wrap.innerHTML=imgs.map((im,i)=>`<div style="position:relative;width:60px;height:60px;flex:0 0 auto"><img src="${im.url}" style="width:60px;height:60px;object-fit:cover;border-radius:16px;border:1px solid var(--border2);display:block"><span onclick="event.stopPropagation();_expRemoveImg(${i})" title="Retirer" style="position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(15,15,20,.92);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>`).join('');
 }
 
 // ── Génération principale ──
@@ -25313,6 +25331,7 @@ function _expSetSeedanceDur(sec, el){
   window._expSeedanceDur = sec;
   document.querySelectorAll('.exp-sd-dur').forEach(b=>{ b.style.border='1px solid var(--border2)'; b.style.background='var(--bg3)'; b.style.color='var(--text3)'; });
   if(el){ el.style.border='1px solid var(--accent)'; el.style.background='var(--accent-soft)'; el.style.color='var(--text)'; }
+  if(typeof _expHeroSync==='function') _expHeroSync();
 }
 // coupe une vidéo à `sec` secondes (Seedance ne descend pas sous 4 s) via ffmpeg.wasm
 async function _expTrimVideo(blob, sec){
