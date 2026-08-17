@@ -41,7 +41,8 @@ const ELEVEN_API_KEY = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
 
 const APP_URL         = 'https://avatarads.fr/app/'
 const IMG_COST        = { standard: 3, high: 5 }
-const VIDEO_COST_SEC  = 1.5 // Veo 3.1 Lite 720p = 0,05 $/s API (audio inclus), aligné sur l'app Express
+const VIDEO_COST_SEC  = 1.5 // Veo 3.1 Lite 720p (« Veo Standard ») = 0,05 $/s API (audio inclus)
+const VIDEO_COST_SEC_PRO = 3 // Veo 3.1 Fast (« Veo Pro », qualité max) = 0,10 $/s API — modèle au choix
 // ── Générateur (avatar parlant) via Claude : mêmes briques que l'app ──
 const HEDRA_BASE      = 'https://api.hedra.com/web-app/public'
 const HEDRA_MODEL_ID  = '26f0fc66-152b-40ab-abed-76c43df99bc8' // Hedra Avatar (swap 10/08, même modèle que l'app). Character-3 = d1dd37a3-e39a-4854-a298-6510289f9cf2
@@ -634,15 +635,14 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'generate_avatar_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_avatar_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) : voix IA ElevenLabs + lipsync Hedra Character-3 à partir d'un script et optionnellement d'une photo d'avatar. Coût : ${AVATAR_COST_SEC} crédit/seconde (durée estimée depuis le script, max ${AVATAR_MAX_SEC} s), débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_avatar_video. Elle sort SANS sous-titres : pour sous-titres et effets, ouvrir dans l'app.`,
+      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) — une personne regarde la caméra et DIT le script, VOIX NATIVE Veo 3.1 (audio + lip-sync natifs, plus d'ElevenLabs). Optionnellement à partir d'une photo d'avatar. Coût : Veo Standard ${VIDEO_COST_SEC} cr/s · Veo Pro ${VIDEO_COST_SEC_PRO} cr/s (durée estimée depuis le script, 4/6/8 s max par génération), débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre puis lecteur) — n'appelle PAS check_avatar_video.`,
       inputSchema: {
         type: 'object',
         properties: {
-          script: { type: 'string', description: `Le texte que l'avatar va dire (français ou anglais). ~${CHARS_PER_SEC} caractères ≈ 1 seconde de vidéo.` },
-          avatar_image_url: { type: 'string', description: "URL publique de la photo de l'avatar (optionnel) — ex. une image générée avec generate_image. Sans photo, Hedra invente une personne réaliste." },
-          voice: { type: 'string', enum: ['homme', 'femme'], description: 'Voix preset : homme (Daniel, posé) ou femme (Charlotte, chaleureuse). Défaut : homme.' },
-          voice_id: { type: 'string', description: "ID de voix ElevenLabs précis (optionnel, prioritaire sur voice) — ex. une voix clonée du compte." },
-          aspect_ratio: { type: 'string', enum: ['9:16', '1:1'], description: '9:16 vertical (défaut) ou 1:1 carré.' },
+          script: { type: 'string', description: `Le texte que l'avatar va DIRE (français ou anglais), parlé en voix native Veo. ~${CHARS_PER_SEC} caractères ≈ 1 s de vidéo. Max ~${8 * CHARS_PER_SEC} caractères (≈ 8 s, limite d'une génération Veo).` },
+          avatar_image_url: { type: 'string', description: "URL publique de la photo de l'avatar (optionnel) — ex. une image générée avec generate_image. Sans photo, Veo invente une personne réaliste." },
+          model: { type: 'string', enum: ['standard', 'pro'], description: `Modèle Veo : 'standard' (défaut, ${VIDEO_COST_SEC} cr/s) ou 'pro' (meilleure qualité, ${VIDEO_COST_SEC_PRO} cr/s).` },
+          aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['script'],
@@ -803,7 +803,7 @@ async function runGetAccount(profile: Record<string, unknown>): Promise<ToolCont
 - Plan : ${profile.plan || 'free'}
 - Crédits restants : ${credits}
 
-Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · vidéo avatar parlant ${AVATAR_COST_SEC} crédit/s (max ${AVATAR_MAX_SEC} s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
+Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · avatar parlant (voix native Veo) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
@@ -1239,24 +1239,28 @@ async function hedraUploadAsset(type: 'audio' | 'image', name: string, bytes: Ui
 }
 
 async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
-  if (!HEDRA_API_KEY || !ELEVEN_API_KEY) return toolErr('Génération avatar indisponible (configuration serveur incomplète).')
+  if (!GOOGLE_AI_KEY) return toolErr('Génération avatar indisponible (configuration serveur incomplète).')
   const script = String(args.script || '').trim()
   if (!script) return toolErr('Le paramètre "script" est requis.')
-  const maxChars = AVATAR_MAX_SEC * CHARS_PER_SEC
+  // VOIX NATIVE Veo : la réplique va dans le prompt, Veo la PARLE + lipsync (plus d'ElevenLabs).
+  // Une génération Veo = 8 s max → on cape le script à ~8 s de parole.
+  const maxChars = 8 * CHARS_PER_SEC
   if (script.length > maxChars) {
-    return toolErr(`Script trop long (${script.length} caractères) : maximum ~${maxChars} caractères (≈ ${AVATAR_MAX_SEC} s de vidéo). Raccourcis le script.`)
+    return toolErr(`Script trop long (${script.length} caractères) : max ~${maxChars} (≈ 8 s, limite d'une génération Veo). Raccourcis, ou fais plusieurs clips.`)
   }
-  const estSec = Math.min(AVATAR_MAX_SEC, Math.max(3, Math.ceil(script.length / CHARS_PER_SEC)))
-  const cost = Math.ceil(estSec * AVATAR_COST_SEC)
-  const aspect = args.aspect_ratio === '1:1' ? '1:1' : '9:16'
-  const voiceId = String(args.voice_id || '').trim() || MCP_VOICES[String(args.voice || 'homme')] || MCP_VOICES.homme
+  const raw = Math.ceil(script.length / CHARS_PER_SEC)
+  const duration = raw <= 4 ? 4 : raw <= 6 ? 6 : 8   // durées Veo : 4/6/8 s
+  const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
+  const isPro = args.model === 'pro'                 // « Veo Pro » (Fast) sinon « Veo Standard » (Lite)
+  const rate = isPro ? VIDEO_COST_SEC_PRO : VIDEO_COST_SEC
+  const cost = Math.round(duration * rate)
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
-    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (~${estSec} s × ${AVATAR_COST_SEC}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${rate}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
   const gate = await preSpendGate(profile, ctx, args, cost,
-    `vidéo avatar parlant ~${estSec} s (${aspect}${args.avatar_image_url ? ', avec photo' : ''}, voix ${args.voice_id ? 'personnalisée' : (args.voice || 'homme')})`,
+    `avatar parlant ${duration} s (${aspect}, Veo ${isPro ? 'Pro' : 'Standard'}${args.avatar_image_url ? ', avec photo' : ''})`,
     'generate_avatar_video')
   if (gate) return gate
 
@@ -1278,10 +1282,10 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
-  // Job créé TOUT DE SUITE (sans op_name) → réponse à Claude en <1 s ; /status attend
-  // que la tâche de fond pose `op_name` (barre de progression en attendant).
+  // Job kind 'video' : l'avatar est du Veo désormais → /status l'avance via advanceVideoJob.
+  // Rendu à Claude en <1 s (op_name posé par la tâche de fond, barre en attendant).
   const { data: job, error: jobErr } = await svc.from('mcp_jobs')
-    .insert({ user_id: userId, kind: 'avatar', status: 'running', credits_cost: cost }).select('id').single()
+    .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: cost }).select('id').single()
   if (jobErr || !job) {
     await refundCredits(userId, cost)
     return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
@@ -1289,60 +1293,42 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
 
   bg((async () => {
     try {
-      // 0) Photo d'avatar optionnelle (download lourd → ici, hors de la requête)
-      let imgFile: { bytes: Uint8Array; contentType: string } | null = null
+      // Photo optionnelle → recadrée au format (Veo garde sinon le ratio de l'image)
+      let image: { bytesBase64Encoded: string; mimeType: string } | null = null
       if (avatarUrl) {
         const got = await fetchUserFile(avatarUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (avatar_image_url)")
         if (typeof got === 'string') throw new Error(got)
-        imgFile = got
+        let buf = got.bytes, mime = got.contentType
+        try { const rf = await reframeToAspect(buf, aspect); buf = rf.bytes; mime = rf.mimeType } catch (_) { /* recadrage best-effort */ }
+        let bin = ''
+        for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768))
+        image = { bytesBase64Encoded: btoa(bin), mimeType: mime }
       }
-      // 1) Voix ElevenLabs (mêmes réglages que l'app)
-      const tts = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-        method: 'POST',
-        headers: { 'xi-api-key': ELEVEN_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: script, model_id: 'eleven_multilingual_v2',
-          voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
-        }),
+      // La réplique va DANS le prompt → Veo la PARLE (voix native) + lip-sync (plus d'ElevenLabs/Hedra).
+      const vp = `A person looking directly at the camera and speaking naturally to the viewer, saying out loud: "${script.replace(/[\`"]/g, "'")}". Accurate natural lip-sync matching every word, clear audible human voice, warm authentic UGC delivery, subtle expressive facial expressions and small natural head movements, believable lighting, static background.`
+      const mkBody = (withAudio: boolean) => JSON.stringify({
+        instances: [{ prompt: vp, ...(image ? { image } : {}) }],
+        parameters: { durationSeconds: duration, sampleCount: 1, aspectRatio: aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
       })
-      if (!tts.ok) {
-        const err = await tts.text().catch(() => '')
-        throw new Error(`voix ElevenLabs ${tts.status}${/voice/i.test(err) ? ' (voice_id introuvable ?)' : ''}`)
+      // Modèle : Pro → Fast (repli Lite si indispo), Standard → Lite.
+      const models = isPro ? ['veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'] : ['veo-3.1-lite-generate-preview']
+      let opName = ''
+      let lastErr = 'Erreur au lancement'
+      outer: for (const model of models) {
+        for (const withAudio of [true, false]) {   // audio D'ABORD (c'est la VOIX), repli sans si Veo refuse
+          const res = await veoFetch(`/v1beta/models/${model}:predictLongRunning`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: mkBody(withAudio),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (res.ok && data.name) { opName = data.name; break outer }
+          lastErr = data?.error?.message || `HTTP ${res.status}`
+          if (withAudio && /generateAudio|generate_audio|audio/i.test(lastErr)) continue
+          if (/model|not found|does not exist|unsupported|permission/i.test(lastErr)) continue outer
+          break outer
+        }
       }
-      const audioBytes = new Uint8Array(await tts.arrayBuffer())
-      // 2) Assets Hedra (audio obligatoire, image optionnelle)
-      const audioId = await hedraUploadAsset('audio', 'voice.mp3', audioBytes, 'audio/mpeg')
-      if (!audioId) throw new Error('upload audio vers Hedra échoué')
-      let imageId: string | null = null
-      if (imgFile) {
-        imageId = await hedraUploadAsset('image', 'avatar.jpg', imgFile.bytes, imgFile.contentType)
-        if (!imageId) throw new Error("upload de la photo d'avatar vers Hedra échoué")
-      }
-      // 3) Lancer la génération (même payload que l'app)
-      const genBody: Record<string, unknown> = {
-        type: 'video',
-        ai_model_id: HEDRA_MODEL_ID,
-        audio_id: audioId,
-        generated_video_inputs: {
-          text_prompt: 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
-          aspect_ratio: aspect,
-          character_orientation: 'video',
-          // 1080p natif : Character-3 le rend sans surcoût (7 crédits Hedra par seconde
-          // quelle que soit la définition, grille du 27/07/2026).
-          resolution: '1080p',
-        },
-      }
-      if (imageId) genBody.start_keyframe_id = imageId
-      const genRes = await hedraFetch('/generations', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(genBody),
-      })
-      if (!genRes.ok) {
-        const err = await genRes.text().catch(() => '')
-        throw new Error(`lancement Hedra ${genRes.status}${err ? ' — ' + err.slice(0, 120) : ''}`)
-      }
-      const gen = await genRes.json().catch(() => ({}))
-      if (!gen.id) throw new Error('Hedra n\'a pas retourné d\'ID de génération')
-      await svc.from('mcp_jobs').update({ op_name: String(gen.id), updated_at: new Date().toISOString() }).eq('id', job.id)
+      if (!opName) throw new Error(lastErr)
+      await svc.from('mcp_jobs').update({ op_name: opName, updated_at: new Date().toISOString() }).eq('id', job.id)
     } catch (e) {
       await svc.from('mcp_jobs').update({ status: 'failed', error: String((e as Error)?.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
       await refundCredits(userId, cost)   // échec au lancement → on rend les crédits
@@ -1350,8 +1336,8 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
   })())
 
   return {
-    content: [{ type: 'text', text: `🎬 Vidéo avatar lancée (~${estSec} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 2 à 5 min), avec le bouton Télécharger. NE rappelle PAS check_avatar_video — le widget suit tout seul. Dis à l'utilisateur que la vidéo apparaît dans la carte, et qu'elle sort sans sous-titres (pour sous-titres/effets/montage : ${APP_URL}).` }],
-    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', prompt: script, format: aspect === '1:1' ? 'square' : 'portrait' },
+    content: [{ type: 'text', text: `🎬 Avatar parlant lancé (${duration} s, ${aspect}, voix native Veo ${isPro ? 'Pro' : 'Standard'}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE : barre de progression puis la vidéo (compte 1 à 3 min), avec Télécharger. NE rappelle PAS check_avatar_video — le widget suit tout seul.` }],
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', prompt: script, format: aspect === '16:9' ? 'landscape' : 'portrait' },
   }
 }
 
