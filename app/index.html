@@ -6127,8 +6127,9 @@ const CREDIT_COSTS = {
   montageRender: 4,       // 🎬 rendu final serveur du Montage IA (MP4 monté par le worker)
   avatarPerSec: 1,        // lipsync Hedra Character-3 (import MP3 : la voix est gratuite)
   voiceElPerSec: 0.5,     // voix ElevenLabs (clone/preset), en plus du lipsync
-  expressLitePerSec: 1,   // Veo 3.1 Lite (Starter/Pro)
-  expressFastPerSec: 3,   // Veo 3.1 Fast (Élite)
+  expressLitePerSec: 1.5, // Veo 3.1 Lite 720p (Starter/Pro) — 0,05 $/s API (audio inclus), marge ~66% Pro
+  expressFastPerSec: 3,   // Veo 3.1 Fast 720p (Élite) — 0,10 $/s API (audio inclus)
+  express1080Extra: 1,    // supplément 1080p par seconde (coût API : Lite +0,03 $/s, Fast +0,02 $/s)
   imgLow: 1, imgMedium: 3, imgHigh: 5,
   // 🔍 Passe 4K Nano Banana Pro sur une image déjà générée (Élite). Coût Google
   // 0,24 $ ≈ 0,22 € : même dépense qu'une image imgHigh, donc même prix — et
@@ -24373,20 +24374,21 @@ function initExpress(){
   if(typeof _expInitSeedanceDev==='function') _expInitSeedanceDev();  // carte Seedance si compte dev
   if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine==='motion' ? 'veo' : (window._expEngine||'veo'));
 }
+// Coût crédits Express = SOURCE UNIQUE (bouton Générer ET débit expressCreate) :
+// 720p → Lite 1,5 cr/s (Starter/Pro) · Fast 3 cr/s (Élite) ; 1080p → +1 cr/s. Arrondi.
+function _expCostCredits(){
+  const isElite=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+  const rate=isElite ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
+  const extra=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Extra||1) : 0;
+  return Math.round((parseInt(window._expDur)||4) * (rate + extra));
+}
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
   const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,'')||'720p';
   if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||4} s`; }
-  // Coût DYNAMIQUE dans le bouton Générer — mot pour mot ce que débite expressCreate :
-  // Veo Lite 1 cr/s (Starter/Pro) · Veo Fast 3 cr/s (Élite). Rafraîchi à chaque
-  // changement de durée/plan (initExpress rappelle cette fonction).
+  // Coût DYNAMIQUE dans le bouton Générer — SOURCE UNIQUE _expCostCredits (= débit réel).
   const cb=document.getElementById('expGenCost');
-  if(cb){
-    const isElite=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
-    const rate=isElite ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1);
-    const n=(parseInt(window._expDur)||4)*rate;
-    cb.textContent = n + (n>1?' crédits':' crédit');
-  }
+  if(cb){ const n=_expCostCredits(); cb.textContent = n + (n>1?' crédits':' crédit'); }
 }
 // L'écran d'accueil RÉSUME les réglages en direct (07/08, patron d'Images IA) :
 // une ligne mono « 9:16 · 4 s · 720p · Voix native (Veo) », comme imgIdleMeta.
@@ -25312,13 +25314,9 @@ async function expressCreate(){
     toast('La 1080p est réservée au plan Pro et +');
     showPaywall(); return;
   }
-  // ── Débit crédits à la durée réelle : Veo Lite 1 cr/s (Starter/Pro) · Veo Fast 3 cr/s (Élite) ──
-  {
-    const _isEliteCr = ['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
-    const _durCr = parseInt(window._expDur)||6;
-    const _rate = _isEliteCr ? CREDIT_COSTS.expressFastPerSec : CREDIT_COSTS.expressLitePerSec;
-    if(!(await spendCreditsFor(_durCr * _rate, 'express'))) return;
-  }
+  // ── Débit = SOURCE UNIQUE _expCostCredits (720p Lite 1,5 · Fast 3 · +1 en 1080p) ──
+  // Exactement la valeur affichée dans le badge du bouton Générer.
+  if(!(await spendCreditsFor(_expCostCredits(), 'express'))) return;
 
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
