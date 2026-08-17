@@ -25418,7 +25418,7 @@ async function _expDirector(userPrompt){
       : 'ultra realistic real phone footage, natural skin with visible pores and texture, NO plastic or waxy skin, NO airbrush, NO cinematic gloss, NO AI look.';
     const sys = 'You are a senior AI-video prompt director for an image-to-video model (Seedance / Veo). Turn a short user idea into ONE dense, production-ready video prompt.\n'
       + 'RULES:\n'
-      + '- Output ONE single paragraph in English, no headers, no lists, ~90-130 words, ready to feed the model.\n'
+      + '- Output in English, ready to feed the model: normally ONE dense paragraph (~90-130 words); BUT if the user describes a transition/cut/multi-scene, output a COMPACT TIMELINE (a few lines with time ranges) instead.\n'
       + '- Weave these in order into prose: SUBJECT, ACTION, ENVIRONMENT, CAMERA, LIGHTING, STYLE, MOTION, PHYSICS, CONTINUITY.\n'
       + '- SUBJECT: describe the person/product exactly as in the reference image(s); demand the EXACT same face, identity, hair and skin, and for any product the exact shape, branding, colors and proportions.'
       + (nRefs>1 ? ' There are '+nRefs+' reference images (subjects/products) — feature them together coherently in one scene.' : '') + '\n'
@@ -25427,7 +25427,8 @@ async function _expDirector(userPrompt){
       + '- MOTION & PHYSICS: natural, believable, real-world physics, smooth realistic human movement.\n'
       + '- CONTINUITY: the person and product stay photographically identical from the first frame to the last; never morph, swap, distort, age or beautify.\n'
       + '- Keep the user’s idea and scene; do NOT invent a different subject or setting. If the user gives a spoken line in quotes, keep it VERBATIM for lip-sync.\n'
-      + 'Output ONLY the final prompt paragraph, nothing else.';
+      + '- TRANSITIONS/TIMELINE: if the user describes a transition, a cut, a finger snap, a zoom/dezoom, or a multi-scene sequence, PRESERVE it and output an explicit compact TIMELINE with time ranges and beats (e.g. "0.0–1.4s: tight close-up then dezoom to a wide shot; ~1.4s: she clearly snaps her fingers CENTERED in frame → fast seamless match cut; 1.4–4.0s: new location, slow push-in to a close-up"). Keep every beat and the scene order, make the snap/gesture clearly VISIBLE and CENTERED, describe each camera move, and shift the lighting on the cut. NEVER collapse a multi-scene or transition prompt into a single static scene.\n'
+      + 'Output ONLY the final prompt (one paragraph, or a compact timeline if there is a transition), nothing else.';
     const body = { model:'gpt-4o', max_tokens:340, temperature:0.6, messages:[
       { role:'system', content: sys },
       { role:'user', content: 'USER IDEA:\n'+userPrompt.trim()+'\n\nReference images provided: '+nRefs }
