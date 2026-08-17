@@ -25337,7 +25337,10 @@ async function _expComposeRefs(token, prompt, gptSize){
   const toBlob=(durl)=>{ const m=/^data:([^;]+);base64,(.+)$/.exec(durl||''); if(!m) return null; const bin=atob(m[2]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:m[1]||'image/png'}); };
   const files = imgs.map((im,i)=>{ const b=toBlob(im.url); return b? new File([b],'ref'+(i+1)+'.png',{type:b.type||'image/png'}) : null; }).filter(Boolean);
   if(files.length < 2) return null;
-  const composePrompt = 'Merge ALL of these reference images into ONE single, coherent, photorealistic vertical image (the first frame of a video). Keep every subject and product faithful to its reference — same face and identity for any person, same design, label and colors for any product. Arrange them naturally together for this scene: ' + (prompt || 'a natural realistic scene') + '. A single unified scene with consistent lighting and perspective. NO collage, NO split-screen, NO side-by-side panels, NO grid, NO text, NO watermark, NO borders.';
+  // Les réfs servent d'ANCRE D'IDENTITÉ (visage/produit), la SCÈNE vient du PROMPT (pas du
+  // décor des photos) : sinon 4 photos « dans une voiture » écrasent un prompt « supermarché »
+  // (bug vu le 17/08). On rend l'IMAGE D'OUVERTURE de la scène décrite.
+  const composePrompt = 'Use the people and products shown in the reference images ONLY as appearance/identity references — keep each person\'s EXACT face, hair, skin tone and features, and each product\'s exact design, label and colors. Create ONE photorealistic vertical image showing the OPENING first frame of this scene: ' + (prompt || 'a natural realistic scene') + '. Put them into the STARTING environment and situation described in that text, EVEN IF it differs from the backgrounds in the reference photos; if the text mentions a transition, a cut, or a later/second location, show ONLY the very beginning (the first location). One single unified realistic scene, consistent lighting and perspective. NO collage, NO split-screen, NO side-by-side panels, NO grid, NO text, NO watermark, NO borders.';
   for(const model of _GPT_IMG_MODELS){
     try{
       const fd=new FormData();
@@ -25357,6 +25360,11 @@ async function _expComposeRefs(token, prompt, gptSize){
   }
   return null;
 }
+
+// Clause d'identité ajoutée à TOUT prompt image→vidéo (Veo + Seedance) : les modèles
+// dérivent le visage pendant le mouvement (surtout sur un changement de scène / match cut) —
+// retour Axel 17/08 « ça déforme la fille ». Réduit la dérive (ne l'annule pas sur un match cut).
+const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTIRE video — same face, hairstyle, skin tone, eye color and facial features, photographically identical to the first frame; the identity must never morph, swap, distort, age, beautify or change, and the hands must stay natural; same person from the first frame to the last.';
 
 // ── Génération principale ──
 /* ══ SEEDANCE 2.0 via Hedra (dev-only) — même interface que Veo, moteur différent ══ */
@@ -25439,7 +25447,7 @@ async function _expCreateSeedance(prompt){
     const reqSec = Math.max(2, Math.min(10, parseInt(window._expSeedanceDur)||5));
     const genSec = Math.max(4, reqSec);   // Seedance 2.0 = 4 s mini
     const aspect = window._expFormat==='16:9' ? '16:9' : '9:16';
-    const animPrompt = prompt+', '+styleMeta.prompt+', smooth fluid motion, cinematic';
+    const animPrompt = prompt+', '+styleMeta.prompt+', smooth fluid motion, cinematic'+_EXP_IDLOCK;
     setP(25,'Seedance 2.0 génère… (1 à 3 min)');
     let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t));
     if(reqSec < genSec){ try{ setP(92,'Découpe à '+reqSec+' s…'); blob = await _expTrimVideo(blob, reqSec); }catch(e){ console.warn('trim:',e); } }
@@ -25522,7 +25530,8 @@ async function expressCreate(){
     setP(Math.max(p,28),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Génération de la vidéo…');
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
     let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic'
-      + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '');
+      + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '')
+      + _EXP_IDLOCK;
     // ── Contraintes Veo 3.1 : 4/6/8 s par génération ; 1080p uniquement en 8 s ──
     // Durées longues (15/22/29 s) = extensions de scène +7 s, réservées Élite.
     const _planNow=(currentMember?.plan||'free').toLowerCase();
