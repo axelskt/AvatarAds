@@ -296,14 +296,15 @@ function aaBtns(){
   if(dl){ dl.disabled=false; dl.onclick=function(){ var fn=(aaNameNow||'avatarads')+(v?'.mp4':'.png'); var base=aaJobId?('https://mcp.avatarads.fr/i/'+aaJobId):aaUrlNow; var u=base+(base.indexOf('?')<0?'?':'&')+'download='+encodeURIComponent(fn); aaSend('ui/open-link', { url:u }); }; }
   // Regénérer EN UN CLIC : le widget tape /regenerate (job_id = capacité) → PAS de chat,
   // pas d'avertissement. La MÊME carte repart en mode progression → nouvelle image.
-  if(rg){ rg.disabled=false; rg.textContent='↻ Regénérer'; rg.onclick=function(){
+  // ⚠ /regenerate est IMAGE-ONLY → sur une VIDÉO on cache le bouton (pas de re-gen vidéo).
+  if(rg){ if(v){ rg.style.display='none'; } else { rg.style.display=''; rg.disabled=false; rg.textContent='↻ Regénérer'; rg.onclick=function(){
     if(!aaJobId||!aaPrompt){ return; }
     var lbl='↻ Regénérer'; rg.disabled=true; rg.textContent='↻ …';
     fetch('https://mcp.avatarads.fr/regenerate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, prompt:aaPrompt, format:aaFormat||'portrait' }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){ if(x.ok&&x.j&&x.j.statusUrl){ aaJobId=x.j.job_id||aaJobId; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); } else { var er=(x.j&&x.j.error)||''; rg.textContent=er==='daily_cap'?'Plafond 24 h':(er==='no_credits'||er==='credits')?'Crédits épuisés':'Échec'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2400); } })
       .catch(function(){ rg.textContent='Réessaie'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2200); });
-  }; }
+  }; } }
 }
 function aaMedia(url, kind, name){
   aaOk=true; aaUrlNow=url; aaNameNow=(name||'').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
@@ -580,7 +581,8 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'generate_video',
-      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (Veo 3.1, audio et dialogues inclus) à partir d'un prompt et optionnellement d'une image de départ. Coût : ${VIDEO_COST_SEC} crédit/seconde, débité au lancement (remboursé si échec). Retourne un job_id — appelle ensuite check_video pour récupérer la vidéo (compte 1 à 3 minutes).`,
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_video (donc plus de « Impossible de joindre » via le proxy)
+      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (Veo 3.1, audio et dialogues inclus) à partir d'un prompt et optionnellement d'une image de départ. Coût : ${VIDEO_COST_SEC} crédit/seconde, débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -606,7 +608,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'check_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/video.html' } },
-      description: "Vérifie l'état d'une génération vidéo lancée avec generate_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
+      description: "⚠️ NORMALEMENT INUTILE : après generate_video, la vidéo s'affiche TOUTE SEULE dans la carte (widget + barre de progression), tu n'as RIEN à faire. N'appelle check_video QUE si l'utilisateur redemande explicitement le statut. (Sinon : retourne l'URL du MP4 quand prête.)",
       inputSchema: {
         type: 'object',
         properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_video.' } },
@@ -615,7 +617,8 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'generate_avatar_video',
-      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) : voix IA ElevenLabs + lipsync Hedra Character-3 à partir d'un script et optionnellement d'une photo d'avatar. Coût : ${AVATAR_COST_SEC} crédit/seconde (durée estimée depuis le script, max ${AVATAR_MAX_SEC} s), débité au lancement (remboursé si échec). Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes). La vidéo sort SANS sous-titres : pour les sous-titres et effets, ouvrir la vidéo dans l'app.`,
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_avatar_video (donc plus de « Impossible de joindre » via le proxy)
+      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) : voix IA ElevenLabs + lipsync Hedra Character-3 à partir d'un script et optionnellement d'une photo d'avatar. Coût : ${AVATAR_COST_SEC} crédit/seconde (durée estimée depuis le script, max ${AVATAR_MAX_SEC} s), débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_avatar_video. Elle sort SANS sous-titres : pour sous-titres et effets, ouvrir dans l'app.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -632,7 +635,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'check_avatar_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/avatar.html' } },
-      description: "Vérifie l'état d'une vidéo avatar lancée avec generate_avatar_video et retourne l'URL du MP4 quand elle est prête. Si toujours en cours, rappelle cet outil ~30 secondes plus tard.",
+      description: "⚠️ NORMALEMENT INUTILE : après generate_avatar_video, la vidéo s'affiche TOUTE SEULE dans la carte (widget + barre de progression), tu n'as RIEN à faire. N'appelle check_avatar_video QUE si l'utilisateur redemande explicitement le statut. (Sinon : retourne l'URL du MP4 quand prête.)",
       inputSchema: {
         type: 'object',
         properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_avatar_video.' } },
@@ -1112,10 +1115,10 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
     await refundCredits(userId, cost)
     return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
   }
-  return toolText(
-    `🎬 Génération vidéo lancée ! (${duration} s, ${aspect}, −${cost} crédits)
-job_id : ${job.id}
-Appelle check_video avec ce job_id dans environ 1 minute (la génération prend 1 à 3 minutes).`)
+  return {
+    content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', prompt, format: aspect === '16:9' ? 'landscape' : 'portrait' },
+  }
 }
 
 async function runCheckVideo(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
@@ -1292,11 +1295,10 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
       .insert({ user_id: userId, kind: 'avatar', op_name: String(gen.id), credits_cost: cost }).select('id').single()
     if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
     launched = true
-    return toolText(
-      `🎬 Vidéo avatar lancée ! (~${estSec} s, ${aspect}, −${cost} crédits)
-job_id : ${job.id}
-Appelle check_avatar_video avec ce job_id dans environ 1 minute (la génération prend 2 à 5 minutes).
-💡 La vidéo sort sans sous-titres : pour sous-titres, effets et montage, ouvre-la dans ${APP_URL}`)
+    return {
+      content: [{ type: 'text', text: `🎬 Vidéo avatar lancée (~${estSec} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 2 à 5 min), avec le bouton Télécharger. NE rappelle PAS check_avatar_video — le widget suit tout seul. Dis à l'utilisateur que la vidéo apparaît dans la carte, et qu'elle sort sans sous-titres (pour sous-titres/effets/montage : ${APP_URL}).` }],
+      structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', prompt: script, format: aspect === '1:1' ? 'square' : 'portrait' },
+    }
   } finally {
     if (!launched) await refundCredits(userId, cost)
   }
@@ -1382,6 +1384,67 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   return url
     ? toolMedia(url, 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nURL : ${url}\n💡 Pour ajouter sous-titres et effets : ${APP_URL}`)
     : toolText('⏳ Presque prête — rappelle check_avatar_video dans quelques secondes.')
+}
+
+// ── AVANCE « UN CRAN » d'un job vidéo/avatar, appelé par GET /status à chaque sonde du
+// WIDGET (~2,5 s). UN SEUL check fournisseur (pas de boucle 40 s) + livraison si prêt →
+// la barre de progression ET l'affichage inline marchent SANS que Claude appelle check_*
+// → fin des « Impossible de joindre AvatarAds » (le proxy connecteur tombait sur les
+// check_*). Idempotent : deliverVideo claim atomiquement, failAndRefund ne rembourse
+// qu'une fois. N'émet JAMAIS d'exception (on retentera au prochain poll).
+async function advanceVideoJob(job: Record<string, unknown>): Promise<void> {
+  try {
+    const userId = String(job.user_id)
+    const res = await veoFetch(`/v1beta/${job.op_name}`, { method: 'GET' })
+    if (!res.ok) return
+    const data = await res.json().catch(() => ({})) as Record<string, unknown>
+    if (!data.done) return
+    if (data.error) { await failAndRefund(userId, job, (data.error as { message?: string })?.message || 'Génération refusée par Google'); return }
+    const { b64, uri } = extractVideo(data)
+    const bytes = await fetchVideoBytes(b64, uri)
+    if (!bytes) { await failAndRefund(userId, job, 'video_missing'); return }
+    await deliverVideo(userId, job, bytes)
+  } catch { /* on retente au prochain poll */ }
+}
+
+async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
+  try {
+    const userId = String(job.user_id)
+    // OmniHuman (fal) : op_name préfixé « fal: »
+    if (String(job.op_name || '').startsWith('fal:')) {
+      const reqId = String(job.op_name).slice(4)
+      let st = await falFetch(`${FAL_OMNI_APP}/requests/${reqId}/status`)
+      if (!st.ok) st = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}/status`)
+      if (!st.ok) return
+      const sd = await st.json().catch(() => ({})) as Record<string, unknown>
+      const s = String(sd.status || '').toUpperCase()
+      if (s === 'IN_QUEUE' || s === 'IN_PROGRESS' || !s) return
+      if (s !== 'COMPLETED') { await failAndRefund(userId, job, `fal ${s}`); return }
+      let rr = await falFetch(`${FAL_OMNI_APP}/requests/${reqId}`)
+      if (!rr.ok) rr = await falFetch(`${FAL_OMNI_PATH}/requests/${reqId}`)
+      const rd = (rr.ok ? await rr.json().catch(() => ({})) : {}) as Record<string, unknown>
+      const vu = (rd?.video as { url?: string })?.url || (rd?.video_url as string) || ''
+      if (!vu) { await failAndRefund(userId, job, 'video_missing'); return }
+      const vres = await fetch(vu).catch(() => null)
+      if (!vres || !vres.ok) return
+      await deliverVideo(userId, job, new Uint8Array(await vres.arrayBuffer()))
+      return
+    }
+    // Hedra Character-3
+    const res = await hedraFetch(`/generations/${job.op_name}/status`, { method: 'GET' })
+    if (!res.ok) return
+    const d = await res.json().catch(() => ({})) as Record<string, unknown>
+    const status = String(d.status || d.state || '').toLowerCase()
+    if (['queued', 'processing', 'finalizing', 'pending'].includes(status) || !status) return
+    if (!['complete', 'completed', 'succeeded'].includes(status)) {
+      await failAndRefund(userId, job, String(d.error || d.error_message || `statut ${status}`)); return
+    }
+    const videoUrl = String(d.url || d.download_url || d.video_url || d.streaming_url || '')
+    if (!videoUrl) { await failAndRefund(userId, job, 'video_missing'); return }
+    const vRes = await fetch(videoUrl).catch(() => null)
+    if (!vRes || !vRes.ok) return
+    await deliverVideo(userId, job, new Uint8Array(await vRes.arrayBuffer()))
+  } catch { /* on retente au prochain poll */ }
 }
 
 // ── Nettoyage audio (ElevenLabs Voice Isolator) ──
@@ -2372,10 +2435,21 @@ serve(async (req) => {
   // progression, plus de spam check_image. UUID = capacité (rien de sensible : l'URL
   // du média est déjà publique). CORS ACAO:* via json(). Progress = estimation temps.
   if (segs[1] === 'status' && segs[2]) {
-    const { data: j } = await svc.from('mcp_jobs').select('status, kind, result_url, created_at, error').eq('id', segs[2]).maybeSingle()
+    const r0 = await svc.from('mcp_jobs').select('*').eq('id', segs[2]).maybeSingle()
+    let j = r0.data as Record<string, unknown> | null
     if (!j) return json(404, { status: 'unknown' })
+    // Le WIDGET pilote la génération vidéo : à chaque sonde, on avance le job d'un cran
+    // (1 check fournisseur + livraison si prêt). Ainsi la barre + l'affichage inline
+    // marchent SANS que Claude appelle check_* → plus de « Impossible de joindre » (proxy).
+    // Images : op_name null (livrées par la tâche de fond) → jamais avancées ici.
+    if (j.status !== 'done' && j.status !== 'failed' && j.op_name) {
+      if (j.kind === 'video') await advanceVideoJob(j)
+      else if (j.kind === 'avatar') await advanceAvatarJob(j)
+      const { data: j2 } = await svc.from('mcp_jobs').select('status, kind, result_url, created_at, error').eq('id', segs[2]).maybeSingle()
+      if (j2) j = { ...j, ...j2 }
+    }
     const elapsed = Date.now() - new Date(String(j.created_at)).getTime()
-    const attendu = String(j.kind) === 'image' ? 50000 : 130000
+    const attendu = j.kind === 'image' ? 50000 : j.kind === 'avatar' ? 200000 : 130000
     const done = j.status === 'done' || j.status === 'failed'
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
     return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: j.status === 'done' ? j.result_url : null, progress, error: j.error || null }),
@@ -2444,6 +2518,17 @@ serve(async (req) => {
   if (segs[1] === 'widget.js') {
     return new Response(UI_WIDGET_JS, { headers: { ...cors,
       'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } })
+  }
+
+  // Icône du connecteur en PLEIN BORD (fond sombre jusqu'aux coins). La favicon.svg
+  // et le PNG du site ont les COINS TRANSPARENTS → claude.ai laissait transparaître son
+  // fond blanc aux angles de l'avatar (arrondi par l'hôte). Ici le carré est PLEIN → une
+  // fois arrondi par claude, coins nets, plus de blanc. Servie par la fonction (aucun
+  // redeploy du site) et pointée par serverInfo.icons.
+  if (segs[1] === 'icon.svg') {
+    return new Response(
+      '<svg viewBox="0 0 36 36" width="36" height="36" xmlns="http://www.w3.org/2000/svg"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="white" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg>',
+      { headers: { ...cors, 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } })
   }
 
   if (segs[1] === 'key') {
@@ -2580,8 +2665,10 @@ serve(async (req) => {
           version: '1.4.1',
           websiteUrl: 'https://avatarads.fr',
           icons: [
-            { src: 'https://avatarads.fr/favicon.svg', mimeType: 'image/svg+xml' },
-            { src: 'https://avatarads.fr/assets/avatarads-logo.png', mimeType: 'image/png', sizes: ['512x512'] },
+            // Icône PLEIN BORD servie par la fonction (coins sombres jusqu'au bord) : la
+            // favicon.svg/PNG du site ont les coins TRANSPARENTS → claude affichait son fond
+            // blanc aux angles de l'avatar. Voir la route /icon.svg.
+            { src: 'https://mcp.avatarads.fr/icon.svg', mimeType: 'image/svg+xml', sizes: ['any'] },
           ],
         },
         instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. " + (ctx.requireConfirm
