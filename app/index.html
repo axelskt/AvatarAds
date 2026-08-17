@@ -24523,6 +24523,9 @@ function _expSetEngine(e){
 /* ── Motion Control — état + uploads ── */
 window._MC_BACKEND_READY = true;   // Motion Control LIVE pour tous (Kling 2.6 via fal-proxy dans _mcGenerate) — flag informatif, non testé ailleurs
 window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
+// Version Kling — 'v2.6' pour tous ; 'v3' (Kling 3.0) réservé au compte DEV (test only, cf. _aaIsDev).
+window._mcKlingVer='v2.6';
+function _mcSetKlingVer(v){ window._mcKlingVer = (v==='v3' && _aaIsDev()) ? 'v3' : 'v2.6'; try{ _mcSaveOpts&&_mcSaveOpts(); }catch(_){} _mcRenderAdv(); }
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
 window._mcCamFollow=false; window._mcKeepVidBg=false; window._mcFormat='9:16';
 window._mcAutoFrame=true;   // cadrage auto du visage — ON par défaut (Axel, 14/08)
@@ -24531,13 +24534,14 @@ window._mcBgClean=true;     // fond fourni : effacer la personne dessus (par ima
 // enregistrée et remise la prochaine fois — sauf arrière-plan et instruction »).
 function _mcSaveOpts(){ try{ localStorage.setItem('aa_mc_opts', JSON.stringify({
   tier:window._mcTier, quality:window._mcQuality, render:window._mcRender, format:window._mcFormat,
-  cam:!!window._mcCamFollow, keepVidBg:!!window._mcKeepVidBg, autoFrame:window._mcAutoFrame!==false })); }catch(_){ } }
+  cam:!!window._mcCamFollow, keepVidBg:!!window._mcKeepVidBg, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer })); }catch(_){ } }
 function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts')||'null'); if(!o) return;
   if(o.tier==='pro'||o.tier==='standard') window._mcTier=o.tier;
   if(o.quality==='720'||o.quality==='1080') window._mcQuality=o.quality;
   if(['full','split-bottom','split-top'].includes(o.render)) window._mcRender=o.render;
   if(['9:16','1:1','16:9'].includes(o.format)) window._mcFormat=o.format;
-  window._mcCamFollow=!!o.cam; window._mcKeepVidBg=!!o.keepVidBg; window._mcAutoFrame=true; }catch(_){ } } // cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
+  window._mcCamFollow=!!o.cam; window._mcKeepVidBg=!!o.keepVidBg; window._mcAutoFrame=true;
+  window._mcKlingVer=(o.klingVer==='v3')?'v3':'v2.6'; }catch(_){ } } // cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
 _mcLoadOpts();
 // ── RESET COMPLET après une génération réussie (Axel, 13/08 : « à chaque fois
 // qu'on a fini, ça ne se réinitialise pas complètement ») : le formulaire
@@ -24651,6 +24655,15 @@ function _mcRenderAdv(){
       ${tierCard('standard','Standard','720p natif · rapide')}
       ${tierCard('pro','Pro','1080p natif inclus')}
     </div>
+    ${_aaIsDev()?`
+    <div style="margin-bottom:16px;padding:12px 14px;border-radius:12px;border:1px dashed var(--accent-2);background:var(--panel-1)">
+      <span class="label" style="display:flex;align-items:center;gap:7px;margin-bottom:8px">Moteur Kling <span class="mono" style="font-size:9px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.06em">DEV ONLY</span></span>
+      <div class="seg" style="width:100%">
+        <button class="${(window._mcKlingVer||'v2.6')!=='v3'?'on':''}" style="flex:1" onclick="_mcSetKlingVer('v2.6')">Kling 2.6</button>
+        <button class="${window._mcKlingVer==='v3'?'on':''}" style="flex:1" onclick="_mcSetKlingVer('v3')">Kling 3.0</button>
+      </div>
+      <p class="faint" style="font-size:11px;margin:8px 0 0">Version du modèle de transfert de mouvement. Visible et utilisable uniquement sur le compte développeur (test).</p>
+    </div>`:''}
     <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
     <div class="seg" style="width:100%;margin-bottom:6px">
       <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
@@ -24848,8 +24861,10 @@ async function _mcGenerate(){
         if(sc?.data?.signedUrl) charUrl = sc.data.signedUrl; else throw new Error(uc.error?.message||'lien signé');
       }catch(e){ console.error('fond:',e); toast("Fond non appliqué — perso sur son décor d'origine"); }
     }
-    _mcProg('Transfert du mouvement (Kling 2.6)…', 18);
-    const model='/fal-ai/kling-video/v2.6/'+(tier==='pro'?'pro':'standard')+'/motion-control';
+    // Version Kling : 'v3' (Kling 3.0) UNIQUEMENT pour le compte dev ; tous les autres restent en v2.6.
+    const _mcVer = (window._mcKlingVer==='v3' && _aaIsDev()) ? 'v3' : 'v2.6';
+    _mcProg('Transfert du mouvement (Kling '+_mcVer.replace('v','')+')…', 18);
+    const model='/fal-ai/kling-video/'+_mcVer+'/'+(tier==='pro'?'pro':'standard')+'/motion-control';
     // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
     // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
     const _mcMotion = window._mcPrompt || 'The character reproduces the exact motion and gestures of the reference video, natural, same framing';
