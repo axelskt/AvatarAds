@@ -3573,12 +3573,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div class="exp-section" id="expDureeSection" style="margin-bottom:0">
           <div class="exp-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
             <span>⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">Auto</span></span>
-            <span id="expDurAutoTog" onclick="_expToggleDurAuto()" title="Cale la durée sur ton texte parlé" style="cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:3px 10px;border-radius:8px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2)">AUTO</span>
           </div>
-          <input id="expDurSlider" class="exp-slider" type="range" min="0" max="5" step="1" value="0" oninput="_expSetDur(_expDurAllowed()[+this.value]);_aaSliderFill(this)" style="width:100%">
+          <!-- Position 0 = AUTO (le système/Veo cale la durée sur ton texte) — défaut ; 1..6 = 4/6/8/15/22/29 s (Axel 17/08) -->
+          <input id="expDurSlider" class="exp-slider" type="range" min="0" max="6" step="1" value="0" oninput="_expDurSlide(+this.value)" style="width:100%">
           <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px">Texte long pour un clip → débit rapide. Pour du long au rythme naturel : Montage IA.</div>
           <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> +8 s (extensions de scène) réservé au plan Élite</div>
-          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">3 s</span><span class="faint mono" style="font-size:9px">30 s</span></div>
+          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">Auto</span><span class="faint mono" style="font-size:9px">29 s</span></div>
         </div>
 
         <!-- ③b QUALITÉ — Veo ; masqué en mode Seedance (1080p natif) -->
@@ -24405,13 +24405,12 @@ function initExpress(){
   if(ds){
     if(window._expDurAuto) window._expDur=_expEstimateDur().dur; // Auto : recale sur le texte
     const _da=_expDurAllowed();
-    ds.min=0; ds.max=_da.length-1; ds.step=1; // crans discrets : chaque pas = une durée Veo (4/6/8/15/22/29)
-    ds.value = Math.max(0, _da.indexOf(parseInt(window._expDur)||4));
+    // Position 0 = AUTO (défaut) ; 1..N = durées Veo (4/6/8/15/22/29). Slider TOUJOURS utilisable.
+    ds.min=0; ds.max=_da.length; ds.step=1;
+    ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||4)+1);
     const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=(window._expDurAuto?'Auto · ':'')+(window._expDur||4)+' s';
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
-    ds.style.opacity=window._expDurAuto?'.4':'1'; ds.style.pointerEvents=window._expDurAuto?'none':'auto';
-    const _at=document.getElementById('expDurAutoTog');
-    if(_at){ const _on=window._expDurAuto; _at.style.background=_on?'var(--accent-soft)':'transparent'; _at.style.color=_on?'var(--accent-2)':'var(--text-3)'; _at.style.borderColor=_on?'var(--accent-line)':'var(--border2)'; }
+    ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(window._expDurAuto && _expEstimateDur().over)?'block':'none';
     _aaSliderFill(ds);
   }
@@ -24496,6 +24495,13 @@ function _expEstimateDur(){
 }
 function _expApplyAutoDur(){ if(!window._expDurAuto) return; window._expDur=_expEstimateDur().dur; initExpress(); }
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
+// Slider durée : position 0 = AUTO (le système / Veo cale la durée sur le texte parlé, défaut) ;
+// 1..N = durées Veo manuelles (4/6/8/15/22/29). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
+function _expDurSlide(v){
+  const a=_expDurAllowed();
+  if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }
+  else { _expSetDur(a[Math.min(v, a.length)-1]); }   // _expSetDur passe _expDurAuto à false
+}
 function _expSetDur(v){
   window._expDurAuto=false; // l'utilisateur reprend la main → sort du mode Auto
   const a=_expDurAllowed(); let d=parseInt(v)||6;
@@ -25370,6 +25376,14 @@ async function _expComposeRefs(token, prompt, gptSize){
 // dérivent le visage pendant le mouvement (surtout sur un changement de scène / match cut) —
 // retour Axel 17/08 « ça déforme la fille ». Réduit la dérive (ne l'annule pas sur un match cut).
 const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTIRE video — same face, hairstyle, skin tone, eye color and facial features, photographically identical to the first frame; the identity must never morph, swap, distort, age, beautify or change, and the hands must stay natural; same person from the first frame to the last.';
+// Effet SELFIE (Axel 17/08) : sur les styles réalistes (Réaliste / UGC), la vidéo doit ressembler
+// à un vrai selfie tenu à bout de bras — léger tremblement / micro-jitter de caméra + la caméra
+// qui suit le visage. Ça vend le réel. (Pas pour Hedra avatar — c'est un autre chemin.)
+function _expSelfieCue(){
+  return (window._expStyle==='realiste' || window._expStyle==='ugc')
+    ? ', filmed as a handheld selfie held at arm’s length on a phone front camera, natural subtle camera shake and micro-jitter, the camera gently follows and stays locked on the person’s face, authentic amateur selfie feel, slightly imperfect framing'
+    : '';
+}
 
 // ── Génération principale ──
 /* ══ SEEDANCE 2.0 via Hedra (dev-only) — même interface que Veo, moteur différent ══ */
@@ -25452,7 +25466,7 @@ async function _expCreateSeedance(prompt){
     const reqSec = Math.max(2, Math.min(10, parseInt(window._expSeedanceDur)||5));
     const genSec = Math.max(4, reqSec);   // Seedance 2.0 = 4 s mini
     const aspect = window._expFormat==='16:9' ? '16:9' : '9:16';
-    const animPrompt = prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_EXP_IDLOCK;
+    const animPrompt = prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_expSelfieCue()+_EXP_IDLOCK;
     setP(25,'Seedance 2.0 génère… (1 à 3 min)');
     let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t));
     if(reqSec < genSec){ try{ setP(92,'Découpe à '+reqSec+' s…'); blob = await _expTrimVideo(blob, reqSec); }catch(e){ console.warn('trim:',e); } }
@@ -25536,7 +25550,7 @@ async function expressCreate(){
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
     let animPrompt = prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'
       + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '')
-      + _EXP_IDLOCK;
+      + _expSelfieCue() + _EXP_IDLOCK;
     // ── Contraintes Veo 3.1 : 4/6/8 s par génération ; 1080p uniquement en 8 s ──
     // Durées longues (15/22/29 s) = extensions de scène +7 s, réservées Élite.
     const _planNow=(currentMember?.plan||'free').toLowerCase();
