@@ -20627,6 +20627,20 @@ window.listHedraModels = async function(){
   return all;
 };
 
+// SONDE le schéma d'entrée du modèle Seedance (réfs natives ? champ image[] ?) —
+// lance window.probeSeedance() dans la console (F12) sur avatarads.fr, puis copie-colle la sortie.
+window.probeSeedance = async function(){
+  const g = async p => { try{ const r = await _hedraFetch(p, 'GET'); return { status:r.status, body: await r.json().catch(()=>null) }; }catch(e){ return { status:'ERR', body:String(e&&e.message||e) }; } };
+  const models = await g('/models');
+  const all = Array.isArray(models.body) ? models.body : (models.body && (models.body.models || models.body.data) || []);
+  const sd = (all||[]).filter(m => /seedance/i.test(m.name||''));
+  console.log('%c=== SEEDANCE sur ton compte Hedra ('+sd.length+') ===','font-weight:bold;color:#ff6b35');
+  sd.forEach(m => console.log('MODEL « '+m.name+' » ('+m.id+') →\n'+JSON.stringify(m,null,2)));
+  for(const m of sd){ const d = await g('/models/'+m.id); console.log('DÉTAIL /models/'+m.id+' ('+d.status+') →\n'+JSON.stringify(d.body,null,2)); }
+  console.log('%c👉 Copie-moi TOUT ce qui parle de reference / image / input / schema.','font-weight:bold;color:#4ade80');
+  return sd;
+};
+
 
 async function callHedra(audioBlob){
   // Hedra API — via proxy Supabase Edge Function (clé HEDRA_API_KEY côté serveur)
