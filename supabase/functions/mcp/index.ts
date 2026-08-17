@@ -150,6 +150,22 @@ async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, conte
   return `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}`
 }
 
+// ── FILET : ranger la création dans la BIBLIOTHÈQUE du compte ────────────────
+// Une génération MCP n'apparaît PAS dans l'app (elle vit dans mcp-media public, l'app lit
+// render-media privé + library_items). Or quand le proxy claude.ai mange la réponse, la carte
+// ne s'affiche jamais : le client croit avoir tout perdu. On dépose donc une COPIE dans sa
+// Bibliothèque (bucket render-media/<uid>/lib + ligne library_items, EXACTEMENT le format de
+// l'app) → il retrouve TOUJOURS sa vidéo/image dans son compte, indépendamment de claude.ai.
+// Best-effort absolu : jamais un throw ici ne doit empêcher la livraison.
+async function saveToLibrary(userId: string, bytes: Uint8Array, ext: string, mime: string, kind: string, name: string, thumb?: string): Promise<void> {
+  try {
+    const path = `${userId}/lib/mcp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const { error } = await svc.storage.from('render-media').upload(path, bytes, { contentType: mime, upsert: true })
+    if (error) return
+    await svc.from('library_items').insert({ user_id: userId, kind, name, tags: [], storage_path: path, ...(thumb ? { thumb } : {}) })
+  } catch (_) { /* la Bibliothèque est un filet, jamais un bloquant */ }
+}
+
 // ── L'IMAGE DOIT S'AFFICHER DANS CLAUDE, PAS ÊTRE UN LIEN ───────────────────
 // Axel : « les vidéos et images ne s'affichent pas dans Claude ». Le protocole
 // MCP sait renvoyer un bloc `image` en base64, que le client rend en vignette —
@@ -263,7 +279,7 @@ Montre ce devis à l'utilisateur et attends son accord explicite, puis rappelle 
 const rpcResult = (id: unknown, result: unknown) => json(200, { jsonrpc: '2.0', id, result })
 const rpcError = (id: unknown, code: number, message: string) =>
   json(200, { jsonrpc: '2.0', id, error: { code, message } })
-type ToolContent = { content: Array<Record<string, unknown>>; isError?: boolean }
+type ToolContent = { content: Array<Record<string, unknown>>; isError?: boolean; structuredContent?: Record<string, unknown> }
 const toolText = (t: string): ToolContent => ({ content: [{ type: 'text', text: t }] })
 const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t }], isError: true })
 
@@ -625,11 +641,10 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'check_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/video.html' } },
-      description: "⚠️ NORMALEMENT INUTILE : après generate_video, la vidéo s'affiche TOUTE SEULE dans la carte (widget + barre de progression), tu n'as RIEN à faire. N'appelle check_video QUE si l'utilisateur redemande explicitement le statut. (Sinon : retourne l'URL du MP4 quand prête.)",
+      description: "Statut/affichage d'une vidéo Express. NORMALEMENT INUTILE : après generate_video la vidéo s'affiche TOUTE SEULE dans la carte. Deux cas d'appel : (1) l'utilisateur redemande le statut → passe le job_id ; (2) generate_video a renvoyé une erreur de connexion (« Impossible de joindre ») → appelle-le SANS job_id, ça récupère et affiche la dernière vidéo (ne relance PAS generate, ça débiterait 2 fois).",
       inputSchema: {
         type: 'object',
-        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_video.' } },
-        required: ['job_id'],
+        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_video. OMETS-le pour récupérer la dernière vidéo du compte (après une erreur de connexion).' } },
       },
     },
     {
@@ -651,11 +666,10 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'check_avatar_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/avatar.html' } },
-      description: "⚠️ NORMALEMENT INUTILE : après generate_avatar_video, la vidéo s'affiche TOUTE SEULE dans la carte (widget + barre de progression), tu n'as RIEN à faire. N'appelle check_avatar_video QUE si l'utilisateur redemande explicitement le statut. (Sinon : retourne l'URL du MP4 quand prête.)",
+      description: "Statut/affichage d'une vidéo avatar parlant. NORMALEMENT INUTILE : après generate_avatar_video la vidéo s'affiche TOUTE SEULE dans la carte. Deux cas d'appel : (1) l'utilisateur redemande le statut → passe le job_id ; (2) generate_avatar_video a renvoyé une erreur de connexion (« Impossible de joindre ») → appelle-le SANS job_id, ça récupère et affiche la dernière vidéo (ne relance PAS generate, ça débiterait 2 fois).",
       inputSchema: {
         type: 'object',
-        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_avatar_video.' } },
-        required: ['job_id'],
+        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_avatar_video. OMETS-le pour récupérer la dernière vidéo du compte (après une erreur de connexion).' } },
       },
     },
     {
@@ -879,6 +893,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
           if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg')
         } catch (_) { /* la vignette est un confort, jamais un bloquant */ }
         await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id)
+        await saveToLibrary(userId, brut, 'png', 'image/png', 'image', 'Image IA', apercu || url)  // filet Bibliothèque (thumb = aperçu public)
         return
       }
     } catch (e) { lastErr = String((e as Error)?.message || e) }
@@ -1010,6 +1025,7 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
   }
   const url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4')
   await svc.from('mcp_jobs').update({ result_url: url, updated_at: new Date().toISOString() }).eq('id', job.id)
+  await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Vidéo AvatarAds')  // filet Bibliothèque
   return url
 }
 
@@ -1182,10 +1198,26 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   }
 }
 
+// Dernière vidéo du compte (≤ 20 min) rendue en CARTE : le widget la sonde/affiche via /status.
+// Sert de RÉCUPÉRATION quand la réponse de generate a été mangée par le proxy (le modèle n'a
+// jamais reçu le job_id) → il rappelle check_video/check_avatar_video SANS argument. PAS de
+// long-poll ici (une réponse lente est justement ce que le proxy coupe) : on rend la carte, vite.
+async function latestVideoCard(userId: string): Promise<ToolContent> {
+  const { data: j } = await svc.from('mcp_jobs').select('*')
+    .eq('user_id', userId).eq('kind', 'video')
+    .gt('created_at', new Date(Date.now() - 20 * 60_000).toISOString())
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (!j) return toolErr('Aucune génération vidéo récente à afficher sur ce compte. Relance la génération.')
+  if (j.status === 'done' && j.result_url) { const dl = `https://mcp.avatarads.fr/i/${j.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(j.preview_url || '') || undefined) }
+  if (j.status === 'failed') return toolErr(`Génération échouée : ${j.error || 'erreur inconnue'} (crédits remboursés).`)
+  return { content: [{ type: 'text', text: `⏳ Ta vidéo se génère — elle s'affiche dans la carte ci-dessous (compte 1 à 3 min). Lien dès qu'elle est prête : https://mcp.avatarads.fr/i/${j.id}` }],
+    structuredContent: { job_id: j.id, statusUrl: `https://mcp.avatarads.fr/status/${j.id}`, kind: 'video', format: 'portrait' } }
+}
 async function runCheckVideo(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
   const jobId = String(args.job_id || '').trim()
-  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
   const userId = String(profile.id)
+  // Appel SANS job_id (récupération après « Impossible de joindre ») → dernière vidéo, en carte.
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return await latestVideoCard(userId)
   const { data: job } = await svc.from('mcp_jobs').select('*')
     .eq('id', jobId).eq('user_id', userId).eq('kind', 'video').maybeSingle()
   if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
@@ -1378,13 +1410,19 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
 
 async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
   const jobId = String(args.job_id || '').trim()
-  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
   const userId = String(profile.id)
+  // Appel SANS job_id (récupération après « Impossible de joindre ») → dernière vidéo, en carte.
+  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return await latestVideoCard(userId)
+  // ⚠ plus de filtre kind='avatar' : l'avatar parlant est désormais du Veo natif = kind 'video'
+  // (le filtre 'avatar' renvoyait TOUJOURS « introuvable »). On matche par id + compte.
   const { data: job } = await svc.from('mcp_jobs').select('*')
-    .eq('id', jobId).eq('user_id', userId).eq('kind', 'avatar').maybeSingle()
-  if (!job) return toolErr('Job avatar introuvable sur ce compte.')
+    .eq('id', jobId).eq('user_id', userId).maybeSingle()
+  if (!job) return toolErr('Job introuvable sur ce compte.')
   if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'avatar.mp4', 'video/mp4', `✅ Vidéo avatar prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
+  // Avatar Veo natif (kind 'video', op_name = opération Veo) → MÊME vérif que l'Express.
+  // (les branches fal/Hedra ci-dessous ne concernent plus que d'éventuels jobs 'avatar' hérités.)
+  if (job.kind === 'video') return await runCheckVideo(profile, { job_id: job.id })
 
   // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
   if (String(job.op_name || '').startsWith('fal:')) {
@@ -2748,7 +2786,7 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon.svg', mimeType: 'image/svg+xml', sizes: ['any'] },
           ],
         },
-        instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. " + (ctx.requireConfirm
+        instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })
