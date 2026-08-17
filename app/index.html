@@ -24485,9 +24485,14 @@ function _expEstimateDur(){
   const p=(document.getElementById('expPrompt')?.value||'');
   const m=p.match(/[«"“”]([^«»"“”]{3,})[»"“”]/);
   const spoken=(m?m[1]:p).replace(/\s+/g,' ').trim();
-  const secs=Math.max(4, Math.ceil(spoken.length/14));
-  const dur = secs<=4?4 : secs<=6?6 : 8; // capé 8 s (un clip) pour l'instant
-  return { dur, over: secs>8 };
+  const secs=Math.max(4, Math.ceil(spoken.length/14));   // ~14 caractères / seconde parlée
+  // AUTO = la durée qu'il FAUT selon le texte, calée sur le cran autorisé juste au-dessus.
+  // Hors Élite : Veo cape à 8 s / clip. Élite / dev : extensions jusqu'à 29 s (au-delà = Montage IA).
+  const plan=(currentMember?.plan||'free').toLowerCase();
+  const elite=['elite','developer'].includes(plan) || !!currentMember?.is_owner;
+  const ladder = elite ? [4,6,8,15,22,29] : [4,6,8];
+  const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
+  return { dur, over: secs>ladder[ladder.length-1] };
 }
 function _expApplyAutoDur(){ if(!window._expDurAuto) return; window._expDur=_expEstimateDur().dur; initExpress(); }
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
