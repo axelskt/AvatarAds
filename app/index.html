@@ -3573,8 +3573,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
         <!-- ③ DURÉE (slider 3→30s) -->
         <div class="exp-section" style="margin-bottom:0">
-          <div class="exp-section-title">⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">5 s</span></div>
+          <div class="exp-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span>⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">Auto</span></span>
+            <span id="expDurAutoTog" onclick="_expToggleDurAuto()" title="Cale la durée sur ton texte parlé" style="cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:3px 10px;border-radius:8px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2)">AUTO</span>
+          </div>
           <input id="expDurSlider" class="exp-slider" type="range" min="0" max="5" step="1" value="0" oninput="_expSetDur(_expDurAllowed()[+this.value]);_aaSliderFill(this)" style="width:100%">
+          <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px">Texte long pour un clip → débit rapide. Pour du long au rythme naturel : Montage IA.</div>
           <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> +8 s (extensions de scène) réservé au plan Élite</div>
           <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">3 s</span><span class="faint mono" style="font-size:9px">30 s</span></div>
         </div>
@@ -3670,7 +3674,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
               <div id="expImgThumbs" style="display:none;gap:9px;flex-wrap:wrap;align-items:center"></div>
-              <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:150px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+              <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:150px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" oninput="_expApplyAutoDur()" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
                 <span class="exp-wpg-chip on" onclick="_expEnhance()" style="font-weight:700">✦ Améliorer</span>
                 <span class="exp-wpg-chip" onclick="_expQuick('Un créateur de contenu parle face caméra avec énergie, gestes expressifs, fond de studio moderne')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg> Face caméra</span>
@@ -24381,11 +24385,16 @@ function initExpress(){
   // Durée (slider) — 4/6/8 s pour tous ; Élite : jusqu'à 29 s via extensions de scène (8+7+7+7)
   const ds = document.getElementById('expDurSlider');
   if(ds){
+    if(window._expDurAuto) window._expDur=_expEstimateDur().dur; // Auto : recale sur le texte
     const _da=_expDurAllowed();
     ds.min=0; ds.max=_da.length-1; ds.step=1; // crans discrets : chaque pas = une durée Veo (4/6/8/15/22/29)
     ds.value = Math.max(0, _da.indexOf(parseInt(window._expDur)||4));
-    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=(window._expDur||4)+' s';
+    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=(window._expDurAuto?'Auto · ':'')+(window._expDur||4)+' s';
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
+    ds.style.opacity=window._expDurAuto?'.4':'1'; ds.style.pointerEvents=window._expDurAuto?'none':'auto';
+    const _at=document.getElementById('expDurAutoTog');
+    if(_at){ const _on=window._expDurAuto; _at.style.background=_on?'var(--accent-soft)':'transparent'; _at.style.color=_on?'var(--accent-2)':'var(--text-3)'; _at.style.borderColor=_on?'var(--accent-line)':'var(--border2)'; }
+    const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(window._expDurAuto && _expEstimateDur().over)?'block':'none';
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
@@ -24442,7 +24451,24 @@ function _expDurAllowed(){
   // Visibles pour tous — les durées >8 s (extensions de scène Élite) sont vérifiées au moment de générer
   return [4,6,8,15,22,29];
 }
+// ── DURÉE AUTO (défaut) : cale la durée sur la longueur du texte PARLÉ du prompt ──
+// Veo débite TOUT le dialogue dans le clip → texte trop long pour la durée = ça « rushe ».
+// Auto lit le texte entre guillemets (sinon tout le prompt), ~14 car/s, et choisit la durée
+// qui laisse un débit NATUREL. Capé à 8 s (un seul clip) tant que le découpage multi-
+// extensions n'est pas livré ; au-delà, un hint prévient (→ Montage IA pour du long propre).
+window._expDurAuto = (window._expDurAuto !== false);
+function _expEstimateDur(){
+  const p=(document.getElementById('expPrompt')?.value||'');
+  const m=p.match(/[«"“”]([^«»"“”]{3,})[»"“”]/);
+  const spoken=(m?m[1]:p).replace(/\s+/g,' ').trim();
+  const secs=Math.max(4, Math.ceil(spoken.length/14));
+  const dur = secs<=4?4 : secs<=6?6 : 8; // capé 8 s (un clip) pour l'instant
+  return { dur, over: secs>8 };
+}
+function _expApplyAutoDur(){ if(!window._expDurAuto) return; window._expDur=_expEstimateDur().dur; initExpress(); }
+function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
 function _expSetDur(v){
+  window._expDurAuto=false; // l'utilisateur reprend la main → sort du mode Auto
   const a=_expDurAllowed(); let d=parseInt(v)||6;
   d = a.reduce((best,x)=>Math.abs(x-d)<Math.abs(best-d)?x:best, a[0]); // snap sur la valeur permise la plus proche
   window._expDur=d;
