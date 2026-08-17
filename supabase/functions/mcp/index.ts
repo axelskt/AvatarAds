@@ -287,12 +287,13 @@ function aaUrlFrom(out){
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
-  var dl=document.getElementById('dl'), op=document.getElementById('op'), rg=document.getElementById('rg');
+  var dl=document.getElementById('dl'), rg=document.getElementById('rg');
   var v=aaKindNow==='video';
   // Télécharger : claude.ai N'honore PAS ui/download-file, mais honore ui/open-link.
-  // On ouvre l'URL avec ?download=<nom> → Supabase renvoie Content-Disposition:attachment.
-  if(dl){ dl.disabled=false; dl.onclick=function(){ var fn=(aaNameNow||'avatarads')+(v?'.mp4':'.png'); var u=aaUrlNow+(aaUrlNow.indexOf('?')<0?'?':'&')+'download='+encodeURIComponent(fn); aaSend('ui/open-link', { url:u }); }; }
-  if(op){ op.disabled=false; op.onclick=function(){ aaSend('ui/open-link', { url:aaUrlNow }); }; }
+  // Lien de MARQUE mcp.avatarads.fr/i/<jobId>?download=<nom> (302 → média + Content-
+  // Disposition:attachment) au lieu de l'URL Supabase brute dans la modale « Ouvrir le lien ».
+  // Repli aaUrlNow (déjà en /i/ pour les vidéos) s'il n'y a pas de job_id.
+  if(dl){ dl.disabled=false; dl.onclick=function(){ var fn=(aaNameNow||'avatarads')+(v?'.mp4':'.png'); var base=aaJobId?('https://mcp.avatarads.fr/i/'+aaJobId):aaUrlNow; var u=base+(base.indexOf('?')<0?'?':'&')+'download='+encodeURIComponent(fn); aaSend('ui/open-link', { url:u }); }; }
   // Regénérer EN UN CLIC : le widget tape /regenerate (job_id = capacité) → PAS de chat,
   // pas d'avertissement. La MÊME carte repart en mode progression → nouvelle image.
   if(rg){ rg.disabled=false; rg.textContent='↻ Regénérer'; rg.onclick=function(){
@@ -405,33 +406,33 @@ setTimeout(function(){ if(!aaOk && !aaPollT){ try{ document.getElementById('m').
 `
 
 const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
-  html,body{margin:0;background:transparent}
+  /* ⚠ ANGLES BLANCS : claude.ai peint un fond BLANC derrière l'iframe → il transparaissait
+     aux 4 coins arrondis de la carte (fond transparent). Fix = html/body OPAQUES et de la
+     MÊME couleur que la carte (thème-aware) → les coins montrent la couleur de la carte,
+     plus le blanc de l'hôte. Palette en variables : clair par défaut, sombre via
+     [data-theme=dark] (posé par aaTheme) ET la préférence OS (garde :not([data-theme=light])). */
+  :root{--aa-bg:#fff;--aa-fg:#1a1a1a;--aa-line:rgba(128,128,128,.28);--aa-btn:rgba(128,128,128,.16)}
+  :root[data-theme=dark]{--aa-bg:#1f1f1f;--aa-fg:#ededed;--aa-line:rgba(255,255,255,.16);--aa-btn:rgba(255,255,255,.14)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--aa-bg:#1f1f1f;--aa-fg:#ededed;--aa-line:rgba(255,255,255,.16);--aa-btn:rgba(255,255,255,.14)}}
+  html,body{margin:0;background:var(--aa-bg);color:var(--aa-fg)}
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
-    background:#fff;color:#1a1a1a;width:100%;box-sizing:border-box}
+    border:1px solid var(--aa-line);border-radius:16px;overflow:hidden;
+    background:var(--aa-bg);color:var(--aa-fg);width:100%;box-sizing:border-box}
   #m a{display:block;font-size:0}
   .aa-m{display:block;width:100%;max-height:620px;object-fit:contain;background:#000}
   .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
-    border-top:1px solid rgba(128,128,128,.22)}
+    border-top:1px solid var(--aa-line)}
   .aa-n{font-size:12.5px;font-weight:600;opacity:.9}
   .aa-a{font-size:13px;font-weight:700;text-decoration:none;padding:9px 16px;border-radius:10px;line-height:1;white-space:nowrap}
   .aa-dl{background:#FF5A1F;color:#fff}
-  .aa-op,.aa-rg{background:rgba(128,128,128,.16);color:inherit}
+  .aa-rg{background:var(--aa-btn);color:inherit}
   .aa-a:disabled{opacity:.55;cursor:default}
   .aa-pt{font-size:12.5px;opacity:.85;margin-bottom:2px}
   .aa-pw{height:6px;background:rgba(128,128,128,.22);border-radius:6px;overflow:hidden;margin:12px 0 2px}
   .aa-pb{height:100%;width:5%;background:#FF5A1F;border-radius:6px;transition:width .6s ease}
-  [data-theme=dark] .aa-c,html.dark .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
-  [data-theme=dark] .aa-b,html.dark .aa-b{border-top-color:rgba(255,255,255,.12)}
-  [data-theme=dark] .aa-op,html.dark .aa-op,[data-theme=dark] .aa-rg,html.dark .aa-rg{background:rgba(255,255,255,.14)}
-  @media (prefers-color-scheme:dark){
-    .aa-c{background:#1f1f1f;color:#ededed;border-color:rgba(255,255,255,.16)}
-    .aa-b{border-top-color:rgba(255,255,255,.12)}
-    .aa-op,.aa-rg{background:rgba(255,255,255,.14)}
-  }
 </style></head><body>
 <div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement…</div>
-<div class="aa-b" id="b" style="display:none"><button class="aa-a aa-rg" id="rg" type="button" style="border:none;cursor:pointer">↻ Regénérer</button><span style="flex:1"></span><button class="aa-a aa-op" id="op" type="button" style="border:none;cursor:pointer">Ouvrir</button><button class="aa-a aa-dl" id="dl" type="button" style="border:none;cursor:pointer">Télécharger</button></div></div>
+<div class="aa-b" id="b" style="display:none"><button class="aa-a aa-rg" id="rg" type="button" style="border:none;cursor:pointer">↻ Regénérer</button><span style="flex:1"></span><button class="aa-a aa-dl" id="dl" type="button" style="border:none;cursor:pointer">Télécharger</button></div></div>
 <script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
 
 // CSP du widget : sans `resourceDomains`, la sandbox de l'hôte bloque le
@@ -2356,8 +2357,14 @@ serve(async (req) => {
   // qu'un raccourci propre à la place du long lien supabase brut. Aucune auth.
   if (segs[1] === 'i' && segs[2]) {
     const { data: j } = await svc.from('mcp_jobs').select('result_url').eq('id', segs[2]).maybeSingle()
-    const dest = j?.result_url ? String(j.result_url) : ''
-    if (dest) return new Response(null, { status: 302, headers: { ...cors, Location: dest, 'Cache-Control': 'public, max-age=3600' } })
+    let dest = j?.result_url ? String(j.result_url) : ''
+    if (dest) {
+      // ?download=<nom> forwardé sur l'URL storage → Content-Disposition:attachment
+      // (le navigateur télécharge au lieu d'ouvrir) = le bouton Télécharger du widget.
+      const dl = new URL(req.url).searchParams.get('download')
+      if (dl) dest += (dest.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(dl)
+      return new Response(null, { status: 302, headers: { ...cors, Location: dest, 'Cache-Control': dl ? 'no-store' : 'public, max-age=3600' } })
+    }
     return new Response('Média introuvable', { status: 404, headers: cors })
   }
 
