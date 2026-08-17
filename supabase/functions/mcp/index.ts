@@ -41,7 +41,7 @@ const ELEVEN_API_KEY = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
 
 const APP_URL         = 'https://avatarads.fr/app/'
 const IMG_COST        = { standard: 3, high: 5 }
-const VIDEO_COST_SEC  = 1 // Veo 3.1 Lite = tarif Express Lite
+const VIDEO_COST_SEC  = 1.5 // Veo 3.1 Lite 720p = 0,05 $/s API (audio inclus), aligné sur l'app Express
 // ── Générateur (avatar parlant) via Claude : mêmes briques que l'app ──
 const HEDRA_BASE      = 'https://api.hedra.com/web-app/public'
 const HEDRA_MODEL_ID  = '26f0fc66-152b-40ab-abed-76c43df99bc8' // Hedra Avatar (swap 10/08, même modèle que l'app). Character-3 = d1dd37a3-e39a-4854-a298-6510289f9cf2
@@ -169,6 +169,22 @@ async function fabriquerApercu(bytes: Uint8Array): Promise<Uint8Array | null> {
     console.error('apercu:', (e as Error)?.message || e)
     return null
   }
+}
+// Recadre une image AU RATIO cible (9:16 ou 16:9) par recadrage CENTRÉ. ⚠ Veo IGNORE
+// `aspectRatio` quand on lui fournit une image de départ : il garde le ratio de l'IMAGE.
+// Une photo 2:3 (ex. 1024×1536) sort donc en 2:3 et pas en 9:16. On recadre l'image
+// AVANT de l'envoyer → la vidéo sort au bon format. Tolérance ±3 % (on ne touche pas si
+// c'est déjà bon). Ne jette jamais vers l'appelant (try/catch côté bg).
+async function reframeToAspect(bytes: Uint8Array, aspect: string): Promise<{ bytes: Uint8Array; mimeType: string }> {
+  const target = aspect === '16:9' ? 16 / 9 : 9 / 16
+  const img = await Image.decode(bytes)
+  const cur = img.width / img.height
+  if (Math.abs(cur - target) / target <= 0.03) return { bytes, mimeType: 'image/png' }
+  let cw = img.width, ch = img.height, cx = 0, cy = 0
+  if (cur > target) { cw = Math.round(img.height * target); cx = Math.round((img.width - cw) / 2) }
+  else { ch = Math.round(img.width / target); cy = Math.round((img.height - ch) / 2) }
+  const cropped = img.crop(cx, cy, cw, ch)
+  return { bytes: await cropped.encode(), mimeType: 'image/png' }
 }
 // Un résultat d'outil ne doit pas dépasser ~1,5 Mo : au-delà, les clients
 // tronquent ou refusent. Mais « trop gros » ne doit plus JAMAIS vouloir dire
@@ -1051,7 +1067,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
   const duration = Math.min(10, Math.max(4, Number(args.duration_seconds) || 8))
   const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
-  const cost = duration * VIDEO_COST_SEC
+  const cost = Math.round(duration * VIDEO_COST_SEC) // 1,5 cr/s → arrondi (durées impaires)
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
@@ -1096,11 +1112,14 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
         if (!r || !r.ok) throw new Error("téléchargement de l'image de départ impossible")
         const ct = (r.headers.get('content-type') || '').split(';')[0]
         if (!/^image\/(png|jpe?g|webp)$/.test(ct)) throw new Error('image_url doit pointer vers une image PNG, JPEG ou WebP')
-        const buf = new Uint8Array(await r.arrayBuffer())
+        let buf = new Uint8Array(await r.arrayBuffer())
         if (buf.length > 10_000_000) throw new Error('image de départ trop lourde (10 Mo max)')
+        // Recadre l'image AU FORMAT demandé (sinon Veo garde le ratio de l'image → pas de 9:16)
+        let mime = ct
+        try { const rf = await reframeToAspect(buf, aspect); buf = rf.bytes; mime = rf.mimeType } catch (_) { /* recadrage best-effort : sinon image telle quelle */ }
         let bin = ''
         for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768))
-        image = { bytesBase64Encoded: btoa(bin), mimeType: ct }
+        image = { bytesBase64Encoded: btoa(bin), mimeType: mime }
       }
       const mkBody = (withAudio: boolean) => JSON.stringify({
         instances: [{ prompt, ...(image ? { image } : {}) }],
