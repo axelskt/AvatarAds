@@ -24343,7 +24343,7 @@ const _EXP_VOICE_ICON = {
 };
 
 const EXP_STYLES = [
-  { id:'realiste', label:'Réaliste',   sub:'avatar réel',  prompt:'ultra realistic, cinematic lighting, real human, photorealistic' },
+  { id:'realiste', label:'Réaliste',   sub:'avatar réel',  prompt:'ultra realistic real photograph of a real person, authentic natural lighting, real human skin with visible pores and fine natural texture, candid smartphone photo, sharp and in focus, NOT cinematic, no plastic or waxy skin, no airbrush, no AI look' },
   { id:'cartoon',  label:'Cartoon 3D', sub:'style Pixar',  prompt:'cute 3D Pixar-style cartoon character, vibrant colors, soft lighting' },
   { id:'ugc',      label:'UGC réel',   sub:'selfie authentique', prompt:'authentic UGC selfie style, handheld phone camera, natural daylight, casual realistic' },
   { id:'studio',   label:'Studio',     sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
@@ -25340,7 +25340,7 @@ async function _expComposeRefs(token, prompt, gptSize){
   // Les réfs servent d'ANCRE D'IDENTITÉ (visage/produit), la SCÈNE vient du PROMPT (pas du
   // décor des photos) : sinon 4 photos « dans une voiture » écrasent un prompt « supermarché »
   // (bug vu le 17/08). On rend l'IMAGE D'OUVERTURE de la scène décrite.
-  const composePrompt = 'Use the people and products shown in the reference images ONLY as appearance/identity references — keep each person\'s EXACT face, hair, skin tone and features, and each product\'s exact design, label and colors. Create ONE photorealistic vertical image showing the OPENING first frame of this scene: ' + (prompt || 'a natural realistic scene') + '. Put them into the STARTING environment and situation described in that text, EVEN IF it differs from the backgrounds in the reference photos; if the text mentions a transition, a cut, or a later/second location, show ONLY the very beginning (the first location). One single unified realistic scene, consistent lighting and perspective. NO collage, NO split-screen, NO side-by-side panels, NO grid, NO text, NO watermark, NO borders.';
+  const composePrompt = 'Use the people and products shown in the reference images ONLY as appearance/identity references — keep each person\'s EXACT face, hair, skin tone and features, and each product\'s exact design, label and colors. Create ONE photorealistic vertical image showing the OPENING first frame of this scene: ' + (prompt || 'a natural realistic scene') + '. Put them into the STARTING environment and situation described in that text, EVEN IF it differs from the backgrounds in the reference photos; if the text mentions a transition, a cut, or a later/second location, show ONLY the very beginning (the first location). One single unified realistic scene, consistent lighting and perspective. It must look like a REAL candid smartphone photo: real human skin with natural texture and visible pores, authentic natural lighting, sharp and in focus; NO plastic or waxy skin, NO airbrush, NO beauty filter, NO cinematic gloss, NO AI look. NO collage, NO split-screen, NO side-by-side panels, NO grid, NO text, NO watermark, NO borders.';
   for(const model of _GPT_IMG_MODELS){
     try{
       const fd=new FormData();
@@ -25447,7 +25447,7 @@ async function _expCreateSeedance(prompt){
     const reqSec = Math.max(2, Math.min(10, parseInt(window._expSeedanceDur)||5));
     const genSec = Math.max(4, reqSec);   // Seedance 2.0 = 4 s mini
     const aspect = window._expFormat==='16:9' ? '16:9' : '9:16';
-    const animPrompt = prompt+', '+styleMeta.prompt+', smooth fluid motion, cinematic'+_EXP_IDLOCK;
+    const animPrompt = prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_EXP_IDLOCK;
     setP(25,'Seedance 2.0 génère… (1 à 3 min)');
     let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t));
     if(reqSec < genSec){ try{ setP(92,'Découpe à '+reqSec+' s…'); blob = await _expTrimVideo(blob, reqSec); }catch(e){ console.warn('trim:',e); } }
@@ -25529,7 +25529,7 @@ async function expressCreate(){
     // 2) Animation image→vidéo via Veo 3.1 Fast
     setP(Math.max(p,28),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Génération de la vidéo…');
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
-    let animPrompt = prompt + ', ' + styleMeta.prompt + ', smooth fluid motion, cinematic'
+    let animPrompt = prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'
       + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '')
       + _EXP_IDLOCK;
     // ── Contraintes Veo 3.1 : 4/6/8 s par génération ; 1080p uniquement en 8 s ──
