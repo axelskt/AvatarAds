@@ -3102,7 +3102,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <button id="imgRefBtnComposer" class="col" onclick="document.getElementById('imgRefInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor=(_imgMode==='correct'?'var(--accent-line)':'var(--border-2)')" ondrop="_imgOnRefDrop(event)" style="position:relative;overflow:hidden;gap:6px;width:120px;flex:0 0 auto;border-radius:14px;padding:12px 8px;border:1px solid var(--border-2);background:var(--panel-1);cursor:pointer;align-items:center;justify-content:center;text-align:center;transition:border-color .15s">
                 <input type="file" id="imgRefInput" accept="image/*" multiple style="display:none" onchange="_imgOnRefInput(this)">
                 <img id="imgRefPreview" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000">
-                <span id="imgRefCount" style="display:none;position:absolute;top:6px;right:6px;z-index:2;background:var(--accent);color:#1A0A02;font-weight:800;font-size:10px;padding:2px 7px;border-radius:999px;font-family:var(--mono)">1/4</span>
+                <span id="imgRefCount" style="display:none;position:absolute;top:6px;right:6px;z-index:2;background:var(--accent);color:#1A0A02;font-weight:800;font-size:10px;padding:2px 7px;border-radius:999px;font-family:var(--mono)">1/5</span>
                 <span id="imgRefFace" class="col" style="align-items:center;gap:6px">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                   <span id="imgRefTitle" style="font-weight:700;font-size:12px;color:var(--text)">Image de référence</span>
@@ -8630,7 +8630,7 @@ let _imgSelectedFormatId   = 'portrait';
 let _imgSelectedCount      = 1;
 let _imgSelectedModel      = 'gptimage'; // gptimage (gpt-image-1, le meilleur — évolution de DALL·E 3)
 let _imgRefFile            = null;       // 1ʳᵉ image de référence (compat)
-let _imgRefFiles           = [];         // jusqu'à 4 images de référence (multi-ref gpt-image)
+let _imgRefFiles           = [];         // jusqu'à 5 images de référence (multi-ref gpt-image)
 let _imgRefUrls            = [];         // dataURLs alignées sur _imgRefFiles (vignettes du composer)
 let _imgRefDataUrl         = null;
 let _imgRemoveBg           = false;      // suppression de fond auto
@@ -8659,7 +8659,7 @@ function _imgPickModel(id){
 
 function _imgSetRef(file){
   if(!file || !file.type.startsWith('image/')){ toast('Choisis une image'); return; }
-  if(_imgRefFiles.length>=4){ toast('Maximum 4 images de référence'); return; }
+  if(_imgRefFiles.length>=5){ toast('Maximum 5 images de référence'); return; }
   _imgRefFiles.push(file);
   _imgRefFile = _imgRefFiles[0];
   const isFirst = _imgRefFiles.length===1;
@@ -8686,11 +8686,11 @@ function _imgClearRef(){
   _imgSyncRefCount();
   _imgRenderRefStrip();
 }
-// Badge compteur (1/4 … 4/4) sur le bouton image de référence
+// Badge compteur (1/5 … 5/5) sur le bouton image de référence
 function _imgSyncRefCount(){
   const n=_imgRefFiles.length;
   const b=document.getElementById('imgRefCount');
-  if(b){ b.style.display = n>1 ? 'block' : 'none'; b.textContent = n+'/4'; }
+  if(b){ b.style.display = n>=1 ? 'block' : 'none'; b.textContent = n+'/'+_IMG_REF_MAX; }
   const t=document.getElementById('imgRefTitle');
   if(t) t.textContent = n>1 ? n+' images de référence' : (_imgMode==='correct'?'Image à corriger':'Image de référence');
 }
@@ -8701,9 +8701,9 @@ function _imgRenderRefStrip(){
   const s=document.getElementById('imgRefStrip'); if(!s) return;
   if(!_imgRefUrls.length){ s.style.display='none'; s.innerHTML=''; return; }
   s.style.display='flex';
-  s.innerHTML=_imgRefUrls.map((u,i)=>`<div style="position:relative;flex:0 0 auto">
-    <img src="${u}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid var(--border-2);display:block">
-    <span onclick="_imgRemoveRef(${i})" style="position:absolute;top:-6px;right:-6px;width:19px;height:19px;border-radius:50%;background:rgba(10,10,14,.85);border:1px solid var(--border-2);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+  s.innerHTML=_imgRefUrls.map((u,i)=>`<div style="position:relative;flex:0 0 auto;width:60px;height:60px">
+    <img src="${u}" style="width:60px;height:60px;object-fit:cover;border-radius:16px;border:1px solid var(--border-2);display:block">
+    <span onclick="_imgRemoveRef(${i})" title="Retirer" style="position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(15,15,20,.92);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
   </div>`).join('');
 }
 function _imgRemoveRef(i){
@@ -8924,7 +8924,7 @@ async function _imgEditThis(){
   try{
     const blob=await (await fetch(img.src)).blob();
     const file=new File([blob],'image.png',{type:blob.type||'image/png'});
-    _imgRefFiles=[]; _imgRefFile=null; // « Modifier cette image » remplace les références en place
+    _imgRefFiles=[]; _imgRefFile=null; _imgRefUrls=[]; // « Modifier cette image » remplace les références en place
     _imgLoadRef(file);
     _imgSetMode('correct');
     const pr=document.getElementById('imgPrompt'); if(pr){ pr.value=''; pr.focus(); }
@@ -8934,21 +8934,24 @@ async function _imgEditThis(){
 }
 function _imgOnRefDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border-2)'; [...(e.dataTransfer?.files||[])].forEach(f=>_imgLoadRef(f)); }
 function _imgOnRefInput(input){ [...(input?.files||[])].forEach(f=>_imgLoadRef(f)); if(input) input.value=''; }
+const _IMG_REF_MAX = 5; // jusqu'à 5 images de référence (Axel 17/08)
 function _imgLoadRef(file){
   if(!file || !file.type.startsWith('image/')){ toast('Choisis une image'); return; }
-  if(_imgRefFiles.length>=3){ toast('Maximum 3 images de référence'); return; }
+  if(_imgRefFiles.length>=_IMG_REF_MAX){ toast('Maximum '+_IMG_REF_MAX+' images de référence'); return; }
   _imgRefFiles.push(file);
   _imgRefFile = _imgRefFiles[0];
   const isFirst = _imgRefFiles.length===1;
   const r=new FileReader();
   r.onload=()=>{
-    if(isFirst){ _imgRefDataUrl=String(r.result); const p=document.getElementById('imgRefPreview'); if(p){ p.src=_imgRefDataUrl; p.style.display='block'; } }
-    const d=document.getElementById('imgRefDrop'); if(d) d.style.borderColor='var(--orange)';
-    const c=document.getElementById('imgRefClear'); if(c) c.style.display='block';
-    const face=document.getElementById('imgRefFace'); if(face) face.style.display='none';
-    const rb=document.getElementById('imgRefBtnComposer'); if(rb){ rb.style.borderColor='var(--accent)'; rb.style.background='#000'; }
+    _imgRefUrls.push(String(r.result));               // aligné sur _imgRefFiles → alimente les vignettes
+    if(isFirst) _imgRefDataUrl=String(r.result);
+    // Le bouton reste un bouton « ajouter » (jamais transformé en aperçu plein cadre) :
+    // les images s'affichent en petites vignettes AU-DESSUS du prompt, chacune avec sa
+    // croix (retour Axel 17/08 : « les images se mettent au-dessus en petit »).
+    const rb=document.getElementById('imgRefBtnComposer'); if(rb){ const corr=_imgMode==='correct'; rb.style.borderColor='var(--accent)'; rb.style.background = corr?'var(--accent-soft)':'var(--panel-1)'; }
     _imgSyncRefCount();
-    toast('Image '+_imgRefFiles.length+'/3 chargée');
+    _imgRenderRefStrip();
+    toast('Image '+_imgRefFiles.length+'/'+_IMG_REF_MAX+' chargée');
   };
   r.readAsDataURL(file);
 }
@@ -8956,8 +8959,8 @@ function _imgLoadRef(file){
 // Édition d'image via gpt-image-1 /v1/images/edits (multipart)
 async function _imgEditOne(token, prompt, refFile, gptSize){
   let lastErr = 'Erreur correction';
-  // Jusqu'à 3 images de référence (gpt-image accepte image[] en multipart)
-  const _refFiles = (_imgRefFiles && _imgRefFiles.length) ? _imgRefFiles.slice(0,3) : [refFile];
+  // Jusqu'à 5 images de référence (gpt-image accepte image[] en multipart)
+  const _refFiles = (_imgRefFiles && _imgRefFiles.length) ? _imgRefFiles.slice(0,5) : [refFile];
   for(const model of _GPT_IMG_MODELS){
     const fd = new FormData();
     fd.append('model', model);
