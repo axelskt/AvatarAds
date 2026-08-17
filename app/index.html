@@ -20766,7 +20766,7 @@ async function callHedra(audioBlob){
       ai_model_id: MODEL_ID,
       audio_id: audioId,
       generated_video_inputs: {
-        text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, static background, no camera movement, background objects completely still, no scene motion',
+        text_prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
         aspect_ratio: aspectRatio,
         character_orientation: 'video',
         // ── LE CHOIX DE L'UTILISATEUR ARRIVE ENFIN JUSQU'ICI ─────────────────
@@ -25399,6 +25399,47 @@ function _expSelfieCue(){
     : '';
 }
 
+// ── DIRECTEUR DE PROMPT (Axel 17/08, inspiré Higgsfield) ──────────────────────────────
+// L'avantage n'est pas « j'ai Seedance » mais « mon système SAIT s'en servir ». On ne transmet
+// PLUS le prompt brut de l'user : un LLM le transforme en prompt vidéo structuré
+// SUBJECT → ACTION → ENVIRONMENT → CAMERA → LIGHTING → STYLE → MOTION → PHYSICS → CONTINUITY,
+// avec conservation stricte des références (visage/produit) + selfie tenu à bout de bras.
+// Renvoie null si l'appel échoue → repli sur l'ancien montage de prompt.
+async function _expDirector(userPrompt){
+  try{
+    if(!userPrompt || !userPrompt.trim()) return null;
+    const Hh = (typeof getAuthHeader==='function') ? await getAuthHeader() : {};
+    const styleId = window._expStyle||'realiste';
+    const styleLabel = (EXP_STYLES.find(s=>s.id===styleId)||{}).label || 'Réaliste';
+    const nRefs = (window._expImgs||[]).length;
+    const vertical = (window._expFormat!=='16:9');
+    const styleLine = styleId==='cartoon' ? 'cute polished 3D Pixar-style cartoon, vibrant.'
+      : styleId==='studio' ? 'premium studio product shot, clean elegant lighting.'
+      : 'ultra realistic real phone footage, natural skin with visible pores and texture, NO plastic or waxy skin, NO airbrush, NO cinematic gloss, NO AI look.';
+    const sys = 'You are a senior AI-video prompt director for an image-to-video model (Seedance / Veo). Turn a short user idea into ONE dense, production-ready video prompt.\n'
+      + 'RULES:\n'
+      + '- Output ONE single paragraph in English, no headers, no lists, ~90-130 words, ready to feed the model.\n'
+      + '- Weave these in order into prose: SUBJECT, ACTION, ENVIRONMENT, CAMERA, LIGHTING, STYLE, MOTION, PHYSICS, CONTINUITY.\n'
+      + '- SUBJECT: describe the person/product exactly as in the reference image(s); demand the EXACT same face, identity, hair and skin, and for any product the exact shape, branding, colors and proportions.'
+      + (nRefs>1 ? ' There are '+nRefs+' reference images (subjects/products) — feature them together coherently in one scene.' : '') + '\n'
+      + '- CAMERA: authentic handheld selfie held at arm’s length on a phone front camera, subtle natural camera shake and micro-jitter, eye-level, the camera gently follows the subject’s face. ' + (vertical?'Vertical 9:16.':'Landscape 16:9.') + '\n'
+      + '- STYLE ("'+styleLabel+'"): '+styleLine+'\n'
+      + '- MOTION & PHYSICS: natural, believable, real-world physics, smooth realistic human movement.\n'
+      + '- CONTINUITY: the person and product stay photographically identical from the first frame to the last; never morph, swap, distort, age or beautify.\n'
+      + '- Keep the user’s idea and scene; do NOT invent a different subject or setting. If the user gives a spoken line in quotes, keep it VERBATIM for lip-sync.\n'
+      + 'Output ONLY the final prompt paragraph, nothing else.';
+    const body = { model:'gpt-4o', max_tokens:340, temperature:0.6, messages:[
+      { role:'system', content: sys },
+      { role:'user', content: 'USER IDEA:\n'+userPrompt.trim()+'\n\nReference images provided: '+nRefs }
+    ]};
+    const r = await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path='+encodeURIComponent('/v1/chat/completions'), { method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body: JSON.stringify(body) });
+    if(!r.ok) return null;
+    const d = await r.json().catch(()=>null);
+    const out = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+    return (out && out.trim().length>20) ? out.trim() : null;
+  }catch(e){ console.warn('[expDirector]', e); return null; }
+}
+
 // ── Génération principale ──
 /* ══ SEEDANCE 2.0 via Hedra (dev-only) — même interface que Veo, moteur différent ══ */
 window._expSeedanceDur = window._expSeedanceDur || 5;   // durée voulue en s (2→10)
@@ -25428,7 +25469,9 @@ async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, 
   const up = await _hedraFetch('/assets/'+imgAsset.id+'/upload','POST',fd,true);
   if(!up.ok) throw new Error('Hedra upload image '+up.status);
   if(onStep) onStep('Seedance génère…');
-  const genRes = await _hedraFetch('/generations','POST',{ type:'video', ai_model_id:modelId, start_keyframe_id:imgAsset.id, generated_video_inputs:{ text_prompt:animPrompt, aspect_ratio:aspect, resolution:'1080p', duration_ms:durMs } });
+  // 720p (comme Higgsfield « Enhanced Fast ») : c'est là que Seedance 2.0 est le plus propre ;
+  // le 1080p standard n'était pas les mêmes conditions que Higgsfield (Axel 17/08).
+  const genRes = await _hedraFetch('/generations','POST',{ type:'video', ai_model_id:modelId, start_keyframe_id:imgAsset.id, generated_video_inputs:{ text_prompt:animPrompt, aspect_ratio:aspect, resolution:'720p', duration_ms:durMs } });
   if(!genRes.ok) throw new Error('Seedance '+genRes.status+' — '+(await genRes.text()).slice(0,140));
   const gen = await genRes.json(); const genId = gen.id||gen.generation_id; if(!genId) throw new Error('Seedance : pas d\'ID de génération');
   for(let i=0;i<72;i++){
@@ -25480,7 +25523,9 @@ async function _expCreateSeedance(prompt){
     const reqSec = Math.max(2, Math.min(10, parseInt(window._expSeedanceDur)||5));
     const genSec = Math.max(4, reqSec);   // Seedance 2.0 = 4 s mini
     const aspect = window._expFormat==='16:9' ? '16:9' : '9:16';
-    const animPrompt = prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_expSelfieCue()+_EXP_IDLOCK;
+    setP(Math.max(p,20),'Direction du prompt…');
+    const _directed = await _expDirector(prompt);   // prompt structuré (SUBJECT→…→CONTINUITY), repli si échec
+    const animPrompt = (_directed ? _directed : (prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_expSelfieCue())) + _EXP_IDLOCK;
     setP(25,'Seedance 2.0 génère… (1 à 3 min)');
     let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t));
     if(reqSec < genSec){ try{ setP(92,'Découpe à '+reqSec+' s…'); blob = await _expTrimVideo(blob, reqSec); }catch(e){ console.warn('trim:',e); } }
@@ -25561,10 +25606,12 @@ async function expressCreate(){
 
     // 2) Animation image→vidéo via Veo 3.1 Fast
     setP(Math.max(p,28),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Génération de la vidéo…');
-    // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native)
-    let animPrompt = prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'
+    // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native).
+    // Direction du prompt (structuré) d'abord, repli sur l'ancien montage si l'appel échoue.
+    const _directed = await _expDirector(prompt);
+    let animPrompt = (_directed ? _directed : (prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
       + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '')
-      + _expSelfieCue() + _EXP_IDLOCK;
+      + _EXP_IDLOCK;
     // ── Contraintes Veo 3.1 : 4/6/8 s par génération ; 1080p uniquement en 8 s ──
     // Durées longues (15/22/29 s) = extensions de scène +7 s, réservées Élite.
     const _planNow=(currentMember?.plan||'free').toLowerCase();
@@ -27533,11 +27580,9 @@ async function _cartoonResolveSeedanceModel(){
   if(!r.ok) throw new Error('Liste des modèles Hedra inaccessible ('+r.status+')');
   const data = await r.json().catch(()=>null);
   const all = Array.isArray(data) ? data : (data?.models || data?.data || []);
-  // Seedance 2.5 EN PRIORITÉ (meilleur identité/réalisme + audio natif, cf. Higgsfield) →
-  // sinon 2.0 → sinon 1.5 Pro → sinon n'importe quel Seedance. Fallback = 2.0 si 2.5 absent
-  // du compte (aucun risque). Cache partagé avec le module Cartoon.
-  const m = all.find(x=>/seedance/i.test(x.name||'') && /2\.?5/.test(x.name||''))
-         || all.find(x=>/seedance/i.test(x.name||'') && /2\.?0|(^|[^\d])2([^\d.]|$)/.test(x.name||''))
+  // On RESTE sur Seedance 2.0 (Axel 17/08 : « oublie la 2.5 »). Hedra n'expose de toute
+  // façon que la 2.0 (la 2.5 = fal). 2.0 → sinon 1.5 Pro → sinon n'importe quel Seedance.
+  const m = all.find(x=>/seedance/i.test(x.name||'') && /2\.?0|(^|[^\d])2([^\d.]|$)/.test(x.name||''))
          || all.find(x=>/seedance/i.test(x.name||'') && /1\.5/.test(x.name||'') && /pro/i.test(x.name||''))
          || all.find(x=>/seedance/i.test(x.name||''));
   if(!m || !m.id) throw new Error('Modèle Seedance introuvable sur ton compte Hedra — lance listHedraModels() dans la console');
