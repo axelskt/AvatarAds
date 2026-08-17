@@ -2114,11 +2114,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div style="display:flex;align-items:center;justify-content:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
-            <div id="phoneWrapper" style="position:relative;width:268px;height:556px;flex-shrink:0">
+            <div id="phoneWrapper" style="position:relative;width:320px;height:664px;flex-shrink:0">
             <!-- phoneMockup en 9:16 EXACT (393×699 = aspect 1080/1920) pour que le recadrage du preview
                  corresponde PILE au rendu (Axel 16/08). Avant : 393×852 (19.5:9) → preview plus haut que la sortie.
                  Agrandi (378×672 affiché, scale 0.9618) à la demande d'Axel. -->
-            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:268px;height:556px;border-radius:38px;border:1px solid #2a2730;overflow:hidden;background:#000;box-shadow:0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow);transform:none;transform-origin:top left">
+            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:268px;height:556px;border-radius:38px;border:1px solid #2a2730;overflow:hidden;background:#000;box-shadow:0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow);transform:scale(1.194);transform-origin:top left">
               <!-- Notch (maquette .phone-notch : 86×24, top 10) — sous le chrome (z-index bas) pour ne pas couvrir les onglets -->
               <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:86px;height:24px;background:#000;border-radius:14px;z-index:6"></div>
 
@@ -2128,7 +2128,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:.55;color:#fff;pointer-events:none;text-align:center">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
-                    <span id="previewAvName" style="font-size:10px;font-weight:500;font-family:var(--mono);letter-spacing:.5px">avatar · avatarads.fr</span>
+                    <span id="previewAvName" style="font-size:10px;font-weight:500;font-family:var(--mono);letter-spacing:.5px">avatarads.fr</span>
                   </div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                   <video id="clipPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1"></video>
@@ -3545,11 +3545,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Moteur <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div>
           <div id="expMoteurRailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div id="expEngVeoRail" onclick="_expSetEngine('veo')" class="exp-card on" style="padding:13px 14px">
-              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Veo 3.1</div>
-              <div style="font-size:11px;color:var(--text3);margin-top:3px">génère depuis un prompt</div></div>
+              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Veo 3.1</div></div>
             <div id="expEngSeedanceRail" onclick="_expSetEngine('seedance')" class="exp-card" style="padding:13px 14px">
-              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div>
-              <div style="font-size:11px;color:var(--text3);margin-top:3px">image → vidéo · audio natif · via l'API Hedra</div></div>
+              <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div></div>
           </div>
         </div>
 
@@ -3678,13 +3676,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
               <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:150px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" oninput="_expApplyAutoDur()" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-              <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-                <span class="exp-wpg-chip on" onclick="_expEnhance()" style="font-weight:700">✦ Améliorer</span>
-                <span class="exp-wpg-chip" onclick="_expQuick('Un créateur de contenu parle face caméra avec énergie, gestes expressifs, fond de studio moderne')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg> Face caméra</span>
-                <span class="exp-wpg-chip" onclick="_expQuick('Un personnage cartoon 3D mignon explique une astuce, animation fluide style Pixar, fond coloré')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg> Cartoon</span>
-                <span class="exp-wpg-chip" onclick="_expQuick('Un coach fitness montre un exercice, mouvement dynamique, salle de sport lumineuse')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg> Fitness</span>
-                <span class="exp-wpg-chip" onclick="_expQuick('Présentation produit, gros plan élégant, lumière douce, rotation lente du produit')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 7h12l1 13H5zM9 10V6a3 3 0 016 0v4"/></svg> Produit</span>
-                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="margin-left:auto;min-width:272px;font-size:18.5px;padding:14px 34px;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
+              <!-- Presets (Améliorer / Face caméra / Cartoon / Fitness / Produit) retirés — Axel 17/08 -->
+              <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+                <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="min-width:272px;font-size:18.5px;padding:14px 34px;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>
                   <span style="display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.12">Générer la vidéo<span id="expGenCost" style="font-size:12px;font-weight:700;letter-spacing:.01em;opacity:.72">4 crédits</span></span>
                 </button>
@@ -8834,13 +8828,16 @@ async function _imgMakeRealistic(btn){
     _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
     _imgProgStart('Amélioration 4K… (~30s)');
-    let url, engine='Nano Banana Pro';
+    let url, engine='Clarity';
+    // ⚠ ZOOM 4K CORRIGÉ (Axel 17/08) : Clarity Upscaler agrandit ×4 SUR PLACE (cadrage et
+    // proportions EXACTS conservés) + ajoute du détail réel. On NE passe plus par Nano Banana
+    // Pro qui RE-CADRAIT et zoomait sur le visage. Repli gpt-image edit (édition en place).
     try{
-      url = await _nbEdit(token, dataUrl, _IMG_REALISM_EDIT, aspect, '4K');
+      url = await _falClarityUpscale(dataUrl);
+      if(!url) throw new Error('Clarity : aucune image');
     }catch(e){
-      // Repli gpt-image : moins réaliste, mais on ne laisse jamais l'user sans rien.
       engine='gpt-image';
-      console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
+      console.warn('Clarity indispo (améliorer 4K), repli gpt-image :', e);
       const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
       url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024');
     }
@@ -9702,14 +9699,20 @@ async function _imgUpscaleHD(btn){
       const resp=await fetch(src); const blob=await resp.blob();
       src = await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);});
     }
-    let finalUrl = null, engine = 'Nano Banana Pro';
+    let finalUrl = null, engine = 'Clarity';
+    // ⚠ ZOOM 4K CORRIGÉ (Axel 17/08) : on N'utilise PLUS Nano Banana Pro ici. En génératif,
+    // Nano RE-FABRIQUE l'image et RE-CADRE (zoom sur le visage, la personne sort du cadre).
+    // Clarity Upscaler agrandit ×4 SUR PLACE : proportions et cadrage EXACTS conservés, tout
+    // en ajoutant du détail réel (pores, cheveux…). C'est un upscaler, pas un générateur → il
+    // ne peut PAS recadrer. Chemin principal = fal Clarity ; repli = Clarity Replicate.
     try{
-      finalUrl = await _nbRefine4K(token, src, _nbAspect(img.naturalWidth, img.naturalHeight));
+      finalUrl = await _falClarityUpscale(src);
+      if(!finalUrl) throw new Error('Clarity (fal) : aucune image');
+      // URL fal temporaire → data URL pour la persistance bibliothèque
+      try{ const rC=await fetch(finalUrl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
     }catch(e){
-      // Repli sur Clarity : moins de détail restauré, mais on ne laisse pas l'user sans rien.
-      // Le toast dira « (Clarity) » → on sait tout de suite si le chemin principal a raté.
-      engine = 'Clarity';
-      console.warn('Nano Banana Pro indisponible, repli Clarity :', e);
+      engine = 'Clarity (Replicate)';
+      console.warn('Clarity fal indisponible, repli Replicate :', e);
       const base=SUPABASE_URL+'/functions/v1/replicate-proxy';
       const post=async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
       let d=await post({ image: src, scale_factor:2 });
@@ -17272,7 +17275,7 @@ function setFormat(fmt){
   cfg.format = fmt;
   // display size → native iPhone logical resolution
   const dims = {
-    vertical:  {dw:268,dh:556,nw:268,nh:556,br:38},   // maquette Claude Design gen-phone.jsx : .phone = 268×556 DIRECT (scale 1), radius 38 ; le chrome interne est déjà aux px de la maquette
+    vertical:  {dw:320,dh:664,nw:268,nh:556,br:38},   // maquette Claude Design gen-phone.jsx : chrome dessiné en 268×556, AGRANDI à 320×664 via scale=dw/nw (Axel 17/08 : « agrandis-le, y'a de la marge ») — tout scale ensemble (chrome inclus)
     square:    {dw:404,dh:404,nw:572,nh:572},
     landscape: {dw:440,dh:248,nw:679,nh:382}
   };
@@ -19670,7 +19673,7 @@ function updateLivePreview(){
   document.querySelectorAll('.js-handle').forEach(el => el.textContent = '@' + _handle);
   document.querySelectorAll('.js-name').forEach(el => el.textContent = _handle);
   const avNameEl = document.getElementById('previewAvName');
-  if(avNameEl) avNameEl.textContent = 'avatar · ' + _displayName;   // format subtil comme la maquette (screen 2)
+  if(avNameEl) avNameEl.textContent = 'avatarads.fr';   // Axel 17/08 : juste « avatarads.fr », plus de préfixe « avatar · »
 
   // Auto-save state
   _saveGeneratorState();
@@ -23765,9 +23768,9 @@ function _saveGeneratorState(){
         cfg: { ...cfg },
         subColors: { ...subColors },
         selSubStyle, selAnim, animEnabled, splitEnabled,
-        phoneW: w ? w.offsetWidth  : 310,
-        phoneH: w ? w.offsetHeight : 672,
-        psv: 5,
+        phoneW: w ? w.offsetWidth  : 320,
+        phoneH: w ? w.offsetHeight : 664,
+        psv: 6,
       }));
     } catch(e){}
   }, 400);
@@ -23835,8 +23838,8 @@ function _restoreGeneratorState(){
     // ── Split ──
     if(s.splitEnabled !== undefined) splitEnabled = s.splitEnabled;
 
-    // ── Taille preview phone ── (psv:5 → ignore les tailles sauvegardées (330, 378, 268×476…))
-    if(s.phoneW && s.phoneH && s.psv === 5){
+    // ── Taille preview phone ── (psv:6 → ignore les tailles sauvegardées (330, 378, 268×556…) ; défaut 320×664)
+    if(s.phoneW && s.phoneH && s.psv === 6){
       const wEl=document.getElementById('phoneWrapper');
       const ph=document.getElementById('phoneMockup');
       if(wEl){ wEl.style.width=s.phoneW+'px'; wEl.style.height=s.phoneH+'px'; }
@@ -25324,6 +25327,37 @@ function _expRenderImgs(){
   wrap.innerHTML=imgs.map((im,i)=>`<div style="position:relative;width:60px;height:60px;flex:0 0 auto"><img src="${im.url}" style="width:60px;height:60px;object-fit:cover;border-radius:16px;border:1px solid var(--border2);display:block"><span onclick="event.stopPropagation();_expRemoveImg(${i})" title="Retirer" style="position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(15,15,20,.92);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>`).join('');
 }
 
+// ── Compose TOUTES les images de référence en UNE frame de départ ──
+// Veo ET Seedance sont image→vidéo (UNE image de départ). Pour que les 8 références soient
+// vraiment prises en compte (Axel 17/08), on les fusionne d'abord via gpt-image edit multi-images
+// (avatar + produit + perso → une scène cohérente) → cette image sert de frame de départ.
+async function _expComposeRefs(token, prompt, gptSize){
+  const imgs = window._expImgs || [];
+  if(imgs.length < 2) return null;   // 0 ou 1 image → rien à composer
+  const toBlob=(durl)=>{ const m=/^data:([^;]+);base64,(.+)$/.exec(durl||''); if(!m) return null; const bin=atob(m[2]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:m[1]||'image/png'}); };
+  const files = imgs.map((im,i)=>{ const b=toBlob(im.url); return b? new File([b],'ref'+(i+1)+'.png',{type:b.type||'image/png'}) : null; }).filter(Boolean);
+  if(files.length < 2) return null;
+  const composePrompt = 'Merge ALL of these reference images into ONE single, coherent, photorealistic vertical image (the first frame of a video). Keep every subject and product faithful to its reference — same face and identity for any person, same design, label and colors for any product. Arrange them naturally together for this scene: ' + (prompt || 'a natural realistic scene') + '. A single unified scene with consistent lighting and perspective. NO collage, NO split-screen, NO side-by-side panels, NO grid, NO text, NO watermark, NO borders.';
+  for(const model of _GPT_IMG_MODELS){
+    try{
+      const fd=new FormData();
+      fd.append('model', model);
+      files.forEach((f)=>fd.append('image[]', f, f.name));
+      fd.append('prompt', composePrompt);
+      fd.append('n','1');
+      fd.append('size', gptSize);
+      fd.append('quality', (typeof _imgGptQuality==='function'? _imgGptQuality() : 'medium'));
+      fd.append('moderation','low');
+      const res=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/edits', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
+      const data=await res.json().catch(()=>({}));
+      const b64=data && data.data && data.data[0] && data.data[0].b64_json; if(b64) return 'data:image/png;base64,'+b64;
+      const url=data && data.data && data.data[0] && data.data[0].url; if(url) return url;
+      if(data && data.error) console.warn('[express compose]', model, (data.error.message||data.error));
+    }catch(e){ console.warn('[express compose]', model, e); }
+  }
+  return null;
+}
+
 // ── Génération principale ──
 /* ══ SEEDANCE 2.0 via Hedra (dev-only) — même interface que Veo, moteur différent ══ */
 window._expSeedanceDur = window._expSeedanceDur || 5;   // durée voulue en s (2→10)
@@ -25383,6 +25417,18 @@ async function _expCreateSeedance(prompt){
     const session=(await sb.auth.getSession()).data.session; const token=session?.access_token||SUPABASE_KEY;
     const styleMeta=EXP_STYLES.find(s=>s.id===window._expStyle)||EXP_STYLES[0];
     let imgB64=window._expImgB64, imgMime=window._expImgMime||'image/png';
+    // Plusieurs références → TOUTES prises en compte : fusion en une frame de départ.
+    if((window._expImgs||[]).length > 1){
+      setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
+      try{
+        const _cSize = window._expFormat==='16:9' ? '1536x1024' : '1024x1536';
+        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize);
+        if(_composed){
+          if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
+          else { const _b=await (await fetch(_composed)).blob(); imgMime=_b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(_b);}); }
+        }
+      }catch(e){ console.warn('compose refs (Seedance) échouée, 1re image gardée:', e); }
+    }
     if(!imgB64){
       setP(8,'Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
@@ -25449,6 +25495,18 @@ async function expressCreate(){
 
     // 1) Image de départ : fournie, sinon générée via GPT Image
     let imgB64=window._expImgB64, imgMime=window._expImgMime||'image/png';
+    // Plusieurs références → TOUTES prises en compte : on les fusionne en une frame de départ.
+    if((window._expImgs||[]).length > 1){
+      setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
+      try{
+        const _cSize = window._expFormat==='16:9' ? '1536x1024' : '1024x1536';
+        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize);
+        if(_composed){
+          if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
+          else { const _b=await (await fetch(_composed)).blob(); imgMime=_b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(_b);}); }
+        }
+      }catch(e){ console.warn('compose refs (Veo) échouée, 1re image gardée:', e); }
+    }
     if(!imgB64){
       setP(8,'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg> Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
