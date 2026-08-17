@@ -1060,23 +1060,16 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url ? ', avec image de départ' : ''})`, 'generate_video')
   if (gate) return gate
 
-  // Image de départ optionnelle
-  let image: { bytesBase64Encoded: string; mimeType: string } | null = null
-  if (args.image_url) {
-    const u = String(args.image_url)
+  // Validation SYNCHRONE et RAPIDE de l'URL image (format + SSRF). Le TÉLÉCHARGEMENT
+  // lourd (≈2,7 Mo + base64) part en tâche de fond AVEC le lancement Veo — sinon la
+  // requête tient 5-10 s et le relais connecteur (coupure ~8 s) rend « Impossible de
+  // joindre AvatarAds », alors que la vidéo se génère quand même (crédits débités).
+  const imageUrl = args.image_url ? String(args.image_url) : ''
+  if (imageUrl) {
     let parsed: URL | null = null
-    try { parsed = new URL(u) } catch { /* invalide */ }
+    try { parsed = new URL(imageUrl) } catch { /* invalide */ }
     if (!parsed || !/^https?:$/.test(parsed.protocol)) return toolErr('image_url doit être une URL http(s) publique.')
     if (isBlockedHost(parsed.hostname)) return toolErr('image_url doit pointer vers une image publique (adresse interne refusée).')
-    const r = await fetch(u).catch(() => null)
-    if (!r || !r.ok) return toolErr("Impossible de télécharger l'image de départ (image_url).")
-    const ct = (r.headers.get('content-type') || '').split(';')[0]
-    if (!/^image\/(png|jpe?g|webp)$/.test(ct)) return toolErr('image_url doit pointer vers une image PNG, JPEG ou WebP.')
-    const buf = new Uint8Array(await r.arrayBuffer())
-    if (buf.length > 10_000_000) return toolErr('Image de départ trop lourde (10 Mo max).')
-    let bin = ''
-    for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768))
-    image = { bytesBase64Encoded: btoa(bin), mimeType: ct }
   }
 
   // Débit au lancement : le coût Veo est engagé dès le start (remboursé si échec)
@@ -1084,37 +1077,59 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${VIDEO_COST_SEC}). Recharge sur ${APP_URL}`)
 
-  const mkBody = (withAudio: boolean) => JSON.stringify({
-    instances: [{ prompt, ...(image ? { image } : {}) }],
-    parameters: { durationSeconds: duration, sampleCount: 1, aspectRatio: aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
-  })
-  let opName = ''
-  let lastErr = 'Erreur au lancement'
-  outer: for (const model of VEO_MODELS) {
-    // Certains modèles Veo refusent generateAudio → on retente sans (même fallback que l'app)
-    for (const withAudio of [true, false]) {
-      const res = await veoFetch(`/v1beta/models/${model}:predictLongRunning`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: mkBody(withAudio),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data.name) { opName = data.name; break outer }
-      lastErr = data?.error?.message || `HTTP ${res.status}`
-      if (withAudio && /generateAudio|generate_audio|audio/i.test(lastErr)) continue
-      if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue outer
-      break outer
-    }
-  }
-  if (!opName) {
-    await refundCredits(userId, cost)
-    return toolErr(`Lancement vidéo échoué (crédits remboursés) : ${lastErr}`)
-  }
-
+  // Job créé TOUT DE SUITE (sans op_name) → on rend la main à Claude en <1 s. Le
+  // téléchargement de l'image + le lancement Veo se font en tâche de fond ; /status
+  // n'avancera le job qu'une fois `op_name` posé (barre de progression en attendant).
   const { data: job, error } = await svc.from('mcp_jobs')
-    .insert({ user_id: userId, kind: 'video', op_name: opName, credits_cost: cost }).select('id').single()
+    .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: cost }).select('id').single()
   if (error || !job) {
     await refundCredits(userId, cost)
     return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
   }
+
+  bg((async () => {
+    try {
+      // Image de départ optionnelle — TÉLÉCHARGEMENT lourd, hors de la requête
+      let image: { bytesBase64Encoded: string; mimeType: string } | null = null
+      if (imageUrl) {
+        const r = await fetch(imageUrl).catch(() => null)
+        if (!r || !r.ok) throw new Error("téléchargement de l'image de départ impossible")
+        const ct = (r.headers.get('content-type') || '').split(';')[0]
+        if (!/^image\/(png|jpe?g|webp)$/.test(ct)) throw new Error('image_url doit pointer vers une image PNG, JPEG ou WebP')
+        const buf = new Uint8Array(await r.arrayBuffer())
+        if (buf.length > 10_000_000) throw new Error('image de départ trop lourde (10 Mo max)')
+        let bin = ''
+        for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768))
+        image = { bytesBase64Encoded: btoa(bin), mimeType: ct }
+      }
+      const mkBody = (withAudio: boolean) => JSON.stringify({
+        instances: [{ prompt, ...(image ? { image } : {}) }],
+        parameters: { durationSeconds: duration, sampleCount: 1, aspectRatio: aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
+      })
+      let opName = ''
+      let lastErr = 'Erreur au lancement'
+      outer: for (const model of VEO_MODELS) {
+        // Certains modèles Veo refusent generateAudio → on retente sans (même fallback que l'app)
+        for (const withAudio of [true, false]) {
+          const res = await veoFetch(`/v1beta/models/${model}:predictLongRunning`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: mkBody(withAudio),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (res.ok && data.name) { opName = data.name; break outer }
+          lastErr = data?.error?.message || `HTTP ${res.status}`
+          if (withAudio && /generateAudio|generate_audio|audio/i.test(lastErr)) continue
+          if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue outer
+          break outer
+        }
+      }
+      if (!opName) throw new Error(lastErr)
+      await svc.from('mcp_jobs').update({ op_name: opName, updated_at: new Date().toISOString() }).eq('id', job.id)
+    } catch (e) {
+      await svc.from('mcp_jobs').update({ status: 'failed', error: String((e as Error)?.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
+      await refundCredits(userId, cost)   // échec au lancement → on rend les crédits
+    }
+  })())
+
   return {
     content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
     structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', prompt, format: aspect === '16:9' ? 'landscape' : 'portrait' },
@@ -1226,81 +1241,98 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
     'generate_avatar_video')
   if (gate) return gate
 
-  // Photo d'avatar optionnelle — téléchargée AVANT le débit
-  let imgFile: { bytes: Uint8Array; contentType: string } | null = null
-  if (args.avatar_image_url) {
-    const got = await fetchUserFile(String(args.avatar_image_url), 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (avatar_image_url)")
-    if (typeof got === 'string') return toolErr(got)
-    imgFile = got
+  // Photo d'avatar : validation d'URL RAPIDE seulement. Tout le lourd (download photo,
+  // TTS ElevenLabs, uploads Hedra, lancement) tenait 8-15 s en synchrone → le relais
+  // connecteur coupait à ~8 s → « Impossible de joindre AvatarAds » à chaque fois, alors
+  // que la vidéo se lançait quand même (crédits débités). On rend un job_id en <1 s et on
+  // pousse toute la chaîne en tâche de fond.
+  const avatarUrl = args.avatar_image_url ? String(args.avatar_image_url) : ''
+  if (avatarUrl) {
+    let parsed: URL | null = null
+    try { parsed = new URL(avatarUrl) } catch { /* invalide */ }
+    if (!parsed || !/^https?:$/.test(parsed.protocol)) return toolErr('avatar_image_url doit être une URL http(s) publique.')
+    if (isBlockedHost(parsed.hostname)) return toolErr('avatar_image_url doit pointer vers une image publique (adresse interne refusée).')
   }
 
-  // Débit au lancement (remboursé si échec avant la création du job)
+  // Débit au lancement (remboursé si échec dans la tâche de fond)
   const bal = await spendCredits(userId, cost)
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
-  let launched = false
-  try {
-    // 1) Voix ElevenLabs (mêmes réglages que l'app)
-    const tts = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-      method: 'POST',
-      headers: { 'xi-api-key': ELEVEN_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: script, model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
-      }),
-    })
-    if (!tts.ok) {
-      const err = await tts.text().catch(() => '')
-      return toolErr(`Voix échouée (ElevenLabs ${tts.status})${/voice/i.test(err) ? ' — voice_id introuvable ?' : ''} — crédits remboursés.`)
-    }
-    const audioBytes = new Uint8Array(await tts.arrayBuffer())
+  // Job créé TOUT DE SUITE (sans op_name) → réponse à Claude en <1 s ; /status attend
+  // que la tâche de fond pose `op_name` (barre de progression en attendant).
+  const { data: job, error: jobErr } = await svc.from('mcp_jobs')
+    .insert({ user_id: userId, kind: 'avatar', status: 'running', credits_cost: cost }).select('id').single()
+  if (jobErr || !job) {
+    await refundCredits(userId, cost)
+    return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
+  }
 
-    // 2) Assets Hedra (audio obligatoire, image optionnelle)
-    const audioId = await hedraUploadAsset('audio', 'voice.mp3', audioBytes, 'audio/mpeg')
-    if (!audioId) return toolErr('Upload audio vers Hedra échoué — crédits remboursés, réessaie.')
-    let imageId: string | null = null
-    if (imgFile) {
-      imageId = await hedraUploadAsset('image', 'avatar.jpg', imgFile.bytes, imgFile.contentType)
-      if (!imageId) return toolErr("Upload de la photo d'avatar vers Hedra échoué — crédits remboursés, réessaie.")
+  bg((async () => {
+    try {
+      // 0) Photo d'avatar optionnelle (download lourd → ici, hors de la requête)
+      let imgFile: { bytes: Uint8Array; contentType: string } | null = null
+      if (avatarUrl) {
+        const got = await fetchUserFile(avatarUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (avatar_image_url)")
+        if (typeof got === 'string') throw new Error(got)
+        imgFile = got
+      }
+      // 1) Voix ElevenLabs (mêmes réglages que l'app)
+      const tts = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: 'POST',
+        headers: { 'xi-api-key': ELEVEN_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: script, model_id: 'eleven_multilingual_v2',
+          voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
+        }),
+      })
+      if (!tts.ok) {
+        const err = await tts.text().catch(() => '')
+        throw new Error(`voix ElevenLabs ${tts.status}${/voice/i.test(err) ? ' (voice_id introuvable ?)' : ''}`)
+      }
+      const audioBytes = new Uint8Array(await tts.arrayBuffer())
+      // 2) Assets Hedra (audio obligatoire, image optionnelle)
+      const audioId = await hedraUploadAsset('audio', 'voice.mp3', audioBytes, 'audio/mpeg')
+      if (!audioId) throw new Error('upload audio vers Hedra échoué')
+      let imageId: string | null = null
+      if (imgFile) {
+        imageId = await hedraUploadAsset('image', 'avatar.jpg', imgFile.bytes, imgFile.contentType)
+        if (!imageId) throw new Error("upload de la photo d'avatar vers Hedra échoué")
+      }
+      // 3) Lancer la génération (même payload que l'app)
+      const genBody: Record<string, unknown> = {
+        type: 'video',
+        ai_model_id: HEDRA_MODEL_ID,
+        audio_id: audioId,
+        generated_video_inputs: {
+          text_prompt: 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
+          aspect_ratio: aspect,
+          character_orientation: 'video',
+          // 1080p natif : Character-3 le rend sans surcoût (7 crédits Hedra par seconde
+          // quelle que soit la définition, grille du 27/07/2026).
+          resolution: '1080p',
+        },
+      }
+      if (imageId) genBody.start_keyframe_id = imageId
+      const genRes = await hedraFetch('/generations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(genBody),
+      })
+      if (!genRes.ok) {
+        const err = await genRes.text().catch(() => '')
+        throw new Error(`lancement Hedra ${genRes.status}${err ? ' — ' + err.slice(0, 120) : ''}`)
+      }
+      const gen = await genRes.json().catch(() => ({}))
+      if (!gen.id) throw new Error('Hedra n\'a pas retourné d\'ID de génération')
+      await svc.from('mcp_jobs').update({ op_name: String(gen.id), updated_at: new Date().toISOString() }).eq('id', job.id)
+    } catch (e) {
+      await svc.from('mcp_jobs').update({ status: 'failed', error: String((e as Error)?.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
+      await refundCredits(userId, cost)   // échec au lancement → on rend les crédits
     }
+  })())
 
-    // 3) Lancer la génération (même payload que l'app)
-    const genBody: Record<string, unknown> = {
-      type: 'video',
-      ai_model_id: HEDRA_MODEL_ID,
-      audio_id: audioId,
-      generated_video_inputs: {
-        text_prompt: 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
-        aspect_ratio: aspect,
-        character_orientation: 'video',
-        // 1080p natif : Character-3 le rend sans surcoût (7 crédits Hedra par
-        // seconde quelle que soit la définition, grille du 27/07/2026). Le 720p
-        // était arbitraire — il bridait toutes les vidéos avatar du produit.
-        resolution: '1080p',
-      },
-    }
-    if (imageId) genBody.start_keyframe_id = imageId
-    const genRes = await hedraFetch('/generations', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(genBody),
-    })
-    if (!genRes.ok) {
-      const err = await genRes.text().catch(() => '')
-      return toolErr(`Lancement Hedra échoué (${genRes.status}${err ? ' — ' + err.slice(0, 120) : ''}) — crédits remboursés.`)
-    }
-    const gen = await genRes.json().catch(() => ({}))
-    if (!gen.id) return toolErr('Hedra n\'a pas retourné d\'ID de génération — crédits remboursés.')
-
-    const { data: job, error } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'avatar', op_name: String(gen.id), credits_cost: cost }).select('id').single()
-    if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
-    launched = true
-    return {
-      content: [{ type: 'text', text: `🎬 Vidéo avatar lancée (~${estSec} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 2 à 5 min), avec le bouton Télécharger. NE rappelle PAS check_avatar_video — le widget suit tout seul. Dis à l'utilisateur que la vidéo apparaît dans la carte, et qu'elle sort sans sous-titres (pour sous-titres/effets/montage : ${APP_URL}).` }],
-      structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', prompt: script, format: aspect === '1:1' ? 'square' : 'portrait' },
-    }
-  } finally {
-    if (!launched) await refundCredits(userId, cost)
+  return {
+    content: [{ type: 'text', text: `🎬 Vidéo avatar lancée (~${estSec} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 2 à 5 min), avec le bouton Télécharger. NE rappelle PAS check_avatar_video — le widget suit tout seul. Dis à l'utilisateur que la vidéo apparaît dans la carte, et qu'elle sort sans sous-titres (pour sous-titres/effets/montage : ${APP_URL}).` }],
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', prompt: script, format: aspect === '1:1' ? 'square' : 'portrait' },
   }
 }
 
