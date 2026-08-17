@@ -1061,6 +1061,33 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
   }
 }
 
+// RÉCONCILIATION GLOBALE (tous les users) — lancée par le KEEP-WARM (GET /mcp du worker Railway
+// toutes les 4 min), donc INDÉPENDANTE du proxy connecteur ET du widget. Corrige les 2 pannes du
+// 17/08 : (1) vidéos générées mais JAMAIS livrées car le widget n'a pas pu sonder /status (réponse
+// mangée par le proxy) ; (2) tâches de fond mortes avant de poser op_name (crédits jamais rendus).
+async function reconcileAllStale(): Promise<void> {
+  try {
+    // 1) LIVRAISON : tout job vidéo/avatar avec op_name → advance (livre si le fournisseur a fini,
+    //    laisse « running » sinon, ne rembourse QUE sur erreur fournisseur). Sûr à répéter.
+    const { data: live } = await svc.from('mcp_jobs').select('*')
+      .eq('status', 'running').not('op_name', 'is', null).in('kind', ['video', 'avatar']).limit(40)
+    for (const job of live || []) {
+      try { if (job.kind === 'avatar') await advanceAvatarJob(job); else await advanceVideoJob(job) } catch { /* retry au prochain ping */ }
+    }
+    // 2) ABANDON : jobs SANS op_name bloqués >8 min (tâche de fond morte avant le lancement) → rembourse.
+    const deadIso = new Date(Date.now() - 8 * 60_000).toISOString()
+    const { data: dead } = await svc.from('mcp_jobs').select('*')
+      .eq('status', 'running').is('op_name', null).lt('created_at', deadIso).neq('kind', 'montage').limit(30)
+    for (const job of dead || []) await failAndRefund(String(job.user_id), job, 'tâche interrompue (timeout)')
+    // 3) ABANDON : jobs AVEC op_name toujours « running » >20 min (fournisseur perdu) → rembourse.
+    const staleIso = new Date(Date.now() - 20 * 60_000).toISOString()
+    const { data: stale } = await svc.from('mcp_jobs').select('*')
+      .eq('status', 'running').not('op_name', 'is', null).lt('created_at', staleIso).in('kind', ['video', 'avatar', 'image']).limit(30)
+    for (const job of stale || []) await failAndRefund(String(job.user_id), job, 'timeout')
+  } catch (e) { console.error('reconcileAllStale:', (e as Error)?.message || e) }
+}
+let _lastReconcile = 0
+
 async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!GOOGLE_AI_KEY) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
@@ -1108,7 +1135,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
       // Image de départ optionnelle — TÉLÉCHARGEMENT lourd, hors de la requête
       let image: { bytesBase64Encoded: string; mimeType: string } | null = null
       if (imageUrl) {
-        const r = await fetch(imageUrl).catch(() => null)
+        const r = await fetchTO(imageUrl, 20_000)
         if (!r || !r.ok) throw new Error("téléchargement de l'image de départ impossible")
         const ct = (r.headers.get('content-type') || '').split(';')[0]
         if (!/^image\/(png|jpe?g|webp)$/.test(ct)) throw new Error('image_url doit pointer vers une image PNG, JPEG ou WebP')
@@ -1208,13 +1235,21 @@ async function hedraFetch(path: string, init?: RequestInit): Promise<Response> {
 
 // Télécharge un fichier fourni par l'utilisateur (SSRF + taille + type vérifiés).
 // Retourne les octets ou un message d'erreur (string).
+// fetch avec TIMEOUT (AbortController). ⚠ Sans ça, un hébergeur lent/bloqué (ex. une photo
+// hébergée par Claude sur un host temporaire) fait HANGER le fetch → la tâche de fond meurt
+// sans poser op_name → job « running » à vie + crédits perdus (bug avatar du 17/08). 20 s = on
+// abandonne proprement, la tâche jette, on rembourse.
+async function fetchTO(url: string, ms = 20_000, init?: RequestInit): Promise<Response | null> {
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms)
+  try { return await fetch(url, { ...init, signal: ac.signal }) } catch { return null } finally { clearTimeout(t) }
+}
 async function fetchUserFile(rawUrl: string, maxBytes: number, ctRegex: RegExp, label: string):
   Promise<{ bytes: Uint8Array; contentType: string } | string> {
   let parsed: URL | null = null
   try { parsed = new URL(rawUrl) } catch { /* invalide */ }
   if (!parsed || !/^https?:$/.test(parsed.protocol)) return `${label} doit être une URL http(s) publique.`
   if (isBlockedHost(parsed.hostname)) return `${label} doit pointer vers un fichier public (adresse interne refusée).`
-  const r = await fetch(rawUrl).catch(() => null)
+  const r = await fetchTO(rawUrl, 20_000)
   if (!r || !r.ok) return `Impossible de télécharger ${label}.`
   const ct = (r.headers.get('content-type') || '').split(';')[0].trim()
   if (!ctRegex.test(ct)) return `${label} : type de fichier non supporté (${ct || 'inconnu'}).`
@@ -2592,6 +2627,11 @@ serve(async (req) => {
   // sans état), mais on répond 200 avec un flux vide plutôt qu'un 405 : côté
   // claude.ai, un 405 fait apparaître le connecteur comme injoignable.
   if (req.method === 'GET') {
+    // Keep-warm (worker Railway, GET toutes les 4 min) → réconciliation globale des jobs vidéo,
+    // INDÉPENDANTE du proxy connecteur/widget. Throttle 2 min pour ne pas la lancer sur chaque
+    // sonde SSE de claude. Date.now() est OK ici (fonction edge normale, pas un script workflow).
+    const _now = Date.now()
+    if (_now - _lastReconcile > 120_000) { _lastReconcile = _now; bg(reconcileAllStale()) }
     return new Response(': ok\n\n', {
       status: 200,
       headers: { ...cors, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
