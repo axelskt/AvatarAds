@@ -20185,13 +20185,20 @@ async function startGeneration(){
     } catch(e){ console.warn('Plan revalidation failed:', e); }
   }
 
+  // ── ElevenLabs RETIRÉ : la voix vient UNIQUEMENT de l'audio importé (ou gameplay / vidéo
+  // existante). Sans source audio, pas de lipsync possible → retour à l'étape Voix, rien n'est débité. ──
+  const _hasAudioSource = window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled && mp4AudioFile) || window.mp4AudioFile || voiceMode === 'gameplay';
+  if(!_hasAudioSource){
+    toast('Ajoute ton audio à l\'étape Voix — c\'est ta voix qui fait parler l\'avatar');
+    step = 3; updateSteps(); return;
+  }
+
   // ── Débit crédits : lipsync 1 cr/s UNIQUEMENT si un avatar est sélectionné (mode
-  // « audio sur gameplay » = 0 cr de lipsync) + 0,5 cr/s si voix ElevenLabs ──
+  // « audio sur gameplay » = 0 cr de lipsync). Plus de supplément voix : ElevenLabs retiré. ──
   if(currentMember && !guestMode){
     const durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
-    const _usesEl = !(window._bypassHedraOn || (typeof mp4AudioEnabled !== 'undefined' && mp4AudioEnabled) || window.mp4AudioFile);
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
-    const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0) + (_usesEl ? CREDIT_COSTS.voiceElPerSec : 0);
+    const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0);
     // #122 · ouvre le flux AVANT tout débit. L'appel était à l'intérieur du test
     // `_rate > 0` : avec un gameplay et un MP3 importé, le tarif de base est nul
     // et le supplément 1080p se serait greffé sur la liste d'opérations de la
@@ -20282,9 +20289,11 @@ async function startGeneration(){
   } else if(voiceMode === 'gameplay'){
     audioBlob = await extractGameplayAudio();
   } else {
-    // ElevenLabs via proxy Supabase
-    audioBlob = await callElevenLabs(finalScript);
-    if(audioBlob) populateWordEditor(finalScript);
+    // ElevenLabs RETIRÉ — on ne synthétise plus de voix. Sans audio importé il n'y a pas d'audio
+    // (le garde plus haut a déjà renvoyé l'user à l'étape Voix). On garde juste le script pour les
+    // sous-titres.
+    audioBlob = null;
+    populateWordEditor(finalScript);
   }
   setStep('gp2','done');
 
