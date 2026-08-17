@@ -6129,7 +6129,7 @@ const CREDIT_COSTS = {
   voiceElPerSec: 0.5,     // voix ElevenLabs (clone/preset), en plus du lipsync
   expressLitePerSec: 1.5, // Veo 3.1 Lite 720p (Starter/Pro) — 0,05 $/s API (audio inclus), marge ~66% Pro
   expressFastPerSec: 3,   // Veo 3.1 Fast 720p (Élite) — 0,10 $/s API (audio inclus)
-  express1080Extra: 1,    // supplément 1080p par seconde (coût API : Lite +0,03 $/s, Fast +0,02 $/s)
+  express1080Mult: 2,     // 1080p = ×2 du 720p (Std 1,5→3 cr/s · Pro 3→6 cr/s) — coût API réel +0,02-0,03 $/s
   imgLow: 1, imgMedium: 3, imgHigh: 5,
   // 🔍 Passe 4K Nano Banana Pro sur une image déjà générée (Élite). Coût Google
   // 0,24 $ ≈ 0,22 € : même dépense qu'une image imgHigh, donc même prix — et
@@ -24379,8 +24379,8 @@ function initExpress(){
 function _expCostCredits(){
   const isElite=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
   const rate=isElite ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
-  const extra=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Extra||1) : 0;
-  return Math.round((parseInt(window._expDur)||4) * (rate + extra));
+  const mult=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1; // 1080p = ×2 du 720p
+  return Math.round((parseInt(window._expDur)||4) * rate * mult);
 }
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
