@@ -396,7 +396,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
   /* zoom de l'onde : 22px se rate au doigt */
   #acZoomPanL,#acZoomOut,#acZoomIn,#acZoomPanR{width:30px !important;height:30px !important}
 }
-.gen-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 75% 45% at 50% 8%,rgba(255,107,53,0.22) 0%,rgba(255,107,53,0.06) 32%,transparent 60%);pointer-events:none}
+.gen-right::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,107,53,0.07) 0%,transparent 55%);pointer-events:none}
 .gen-right::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;opacity:.5}
 .preview-area{display:flex;flex-direction:column;align-items:center;gap:16px}
 .preview-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase}
@@ -2114,11 +2114,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div style="display:flex;align-items:center;justify-content:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
-            <div id="phoneWrapper" style="position:relative;width:330px;height:587px;flex-shrink:0;overflow:hidden">
+            <div id="phoneWrapper" style="position:relative;width:268px;height:556px;flex-shrink:0">
             <!-- phoneMockup en 9:16 EXACT (393×699 = aspect 1080/1920) pour que le recadrage du preview
                  corresponde PILE au rendu (Axel 16/08). Avant : 393×852 (19.5:9) → preview plus haut que la sortie.
                  Agrandi (378×672 affiché, scale 0.9618) à la demande d'Axel. -->
-            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:393px;height:699px;border-radius:60px;border:9px solid #141414;overflow:hidden;background:#000;box-shadow:0 0 0 1px #2b2b2e,0 24px 60px rgba(0,0,0,.9);transform:scale(0.8397);transform-origin:top left">
+            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:268px;height:556px;border-radius:38px;border:1px solid #2a2730;overflow:hidden;background:#000;box-shadow:0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow);transform:none;transform-origin:top left">
               <!-- Notch (maquette .phone-notch : 86×24, top 10) — sous le chrome (z-index bas) pour ne pas couvrir les onglets -->
               <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:86px;height:24px;background:#000;border-radius:14px;z-index:6"></div>
 
@@ -2126,9 +2126,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
                 <div id="avZone" style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 26px),linear-gradient(180deg,oklch(0.32 0.07 18),oklch(0.16 0.04 18));display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Glisse pour recadrer</span></div>
-                  <div id="previewAvEmoji" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;opacity:.5;color:#fff;pointer-events:none;text-align:center">
-                    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
-                    <span id="previewAvName" style="font-size:13.5px;font-weight:500;font-family:var(--mono);letter-spacing:.5px;opacity:.85">avatar · avatarads.fr</span>
+                  <div id="previewAvEmoji" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:.55;color:#fff;pointer-events:none;text-align:center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+                    <span id="previewAvName" style="font-size:10px;font-weight:500;font-family:var(--mono);letter-spacing:.5px">avatar · avatarads.fr</span>
                   </div>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                   <video id="clipPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1"></video>
@@ -17266,7 +17266,7 @@ function setFormat(fmt){
   cfg.format = fmt;
   // display size → native iPhone logical resolution
   const dims = {
-    vertical:  {dw:330,dh:587,nw:393,nh:699},   // 9:16 EXACT (= sortie 1080×1920) — WYSIWYG recadrage · taille cible screen 1/3 (330 large : ni trop gros ni trop petit)
+    vertical:  {dw:268,dh:556,nw:268,nh:556,br:38},   // maquette Claude Design gen-phone.jsx : .phone = 268×556 DIRECT (scale 1), radius 38 ; le chrome interne est déjà aux px de la maquette
     square:    {dw:404,dh:404,nw:572,nh:572},
     landscape: {dw:440,dh:248,nw:679,nh:382}
   };
@@ -17278,7 +17278,7 @@ function setFormat(fmt){
   if(ph){
     ph.style.width = d.nw+'px'; ph.style.height = d.nh+'px';
     ph.style.transform = 'scale('+scale.toFixed(4)+')';
-    ph.style.borderRadius = Math.round(70 * d.nw/393)+'px';
+    ph.style.borderRadius = (d.br || Math.round(70 * d.nw/393))+'px';
   }
   const lbl = document.getElementById('previewSizeLabel');
   if(lbl){
@@ -23761,7 +23761,7 @@ function _saveGeneratorState(){
         selSubStyle, selAnim, animEnabled, splitEnabled,
         phoneW: w ? w.offsetWidth  : 310,
         phoneH: w ? w.offsetHeight : 672,
-        psv: 4,
+        psv: 5,
       }));
     } catch(e){}
   }, 400);
@@ -23829,8 +23829,8 @@ function _restoreGeneratorState(){
     // ── Split ──
     if(s.splitEnabled !== undefined) splitEnabled = s.splitEnabled;
 
-    // ── Taille preview phone ── (psv:4 → ignore les anciennes tailles sauvegardées : 268, 378…)
-    if(s.phoneW && s.phoneH && s.psv === 4){
+    // ── Taille preview phone ── (psv:5 → ignore les tailles sauvegardées (330, 378, 268×476…))
+    if(s.phoneW && s.phoneH && s.psv === 5){
       const wEl=document.getElementById('phoneWrapper');
       const ph=document.getElementById('phoneMockup');
       if(wEl){ wEl.style.width=s.phoneW+'px'; wEl.style.height=s.phoneH+'px'; }
