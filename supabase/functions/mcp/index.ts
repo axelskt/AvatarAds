@@ -650,12 +650,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'generate_avatar_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_avatar_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) — une personne regarde la caméra et DIT le script, VOIX NATIVE Veo 3.1 (audio + lip-sync natifs, plus d'ElevenLabs). Optionnellement à partir d'une photo d'avatar. Coût : Veo Standard ${VIDEO_COST_SEC} cr/s · Veo Pro ${VIDEO_COST_SEC_PRO} cr/s (durée estimée depuis le script, 4/6/8 s max par génération), débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre puis lecteur) — n'appelle PAS check_avatar_video.`,
+      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) — un avatar regarde la caméra et DIT le script, VOIX NATIVE Veo 3.1 (audio + lip-sync natifs, plus d'ElevenLabs). Conçu pour un avatar SYNTHÉTIQUE : sans photo, Veo invente une personne réaliste ; pour un look précis (âge, genre, décor), crée d'abord l'avatar avec generate_image puis passe son URL en avatar_image_url — tu gardes ainsi le même visage sur toute une série. N'anime PAS la photo d'une personne réelle sans son consentement. Coût : Veo Standard ${VIDEO_COST_SEC} cr/s · Veo Pro ${VIDEO_COST_SEC_PRO} cr/s (durée estimée depuis le script, 4/6/8 s max par génération), débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre puis lecteur) — n'appelle PAS check_avatar_video.`,
       inputSchema: {
         type: 'object',
         properties: {
           script: { type: 'string', description: `Le texte que l'avatar va DIRE (français ou anglais), parlé en voix native Veo. ~${CHARS_PER_SEC} caractères ≈ 1 s de vidéo. Max ~${8 * CHARS_PER_SEC} caractères (≈ 8 s, limite d'une génération Veo).` },
-          avatar_image_url: { type: 'string', description: "URL publique de la photo de l'avatar (optionnel) — ex. une image générée avec generate_image. Sans photo, Veo invente une personne réaliste." },
+          avatar_image_url: { type: 'string', description: "URL d'un avatar SYNTHÉTIQUE (idéalement généré via generate_image) ou d'un visage dont l'utilisateur détient les droits — PAS la photo d'une vraie personne non consentante. Sans photo, Veo invente une personne réaliste." },
           model: { type: 'string', enum: ['standard', 'pro'], description: `Modèle Veo : 'standard' (défaut, ${VIDEO_COST_SEC} cr/s) ou 'pro' (meilleure qualité, ${VIDEO_COST_SEC_PRO} cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
@@ -1606,6 +1606,7 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
     if (typeof cleaned === 'string') return toolErr(`Nettoyage échoué (${cleaned}) — crédits remboursés.`)
     const url = await uploadMedia(userId, cleaned, 'mp3', 'audio/mpeg')
     await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'audio_clean', status: 'done', credits_cost: cost, result_url: url })
+    await saveToLibrary(userId, cleaned, 'mp3', 'audio/mpeg', 'audio', 'Audio nettoyé')  // filet Bibliothèque (onglet Audio)
     delivered = true
     const balTxt = isUnlimited(profile) ? '∞' : String(bal)
     return toolMedia(url, 'audio-nettoye.wav', 'audio/wav', `✅ Audio nettoyé (voix isolée, bruit supprimé) !\nURL : ${url}\n−${cost} crédit${cost > 1 ? 's' : ''} · solde : ${balTxt}`)
@@ -2613,6 +2614,7 @@ serve(async (req) => {
           let apercu: string | null = null
           try { const petit = await fabriquerApercu(brut); if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg') } catch (_) { /* vignette = confort */ }
           await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id)
+          await saveToLibrary(userId, brut, 'png', 'image/png', 'image', 'Image IA', apercu || url)  // filet Bibliothèque (regénération)
           return
         }
       } catch (e) { lastErr = String((e as Error)?.message || e) }
