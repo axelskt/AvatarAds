@@ -27556,13 +27556,13 @@ async function _hedraV3UploadBlob(blob, name){
 async function _imgShrinkForUpload(src, mime){
   let blob = (src instanceof Blob) ? src : await (await fetch('data:'+(mime||'image/png')+';base64,'+src)).blob();
   try{
-    if(blob.size <= 2000000) return blob;   // déjà léger → tel quel
+    if(blob.size <= 25000000) return blob;   // < 25 Mo → INTACTE (on ne compresse QUE près de la limite Hedra 30 Mo)
     const bmp = await createImageBitmap(blob);
-    const MAX = 2560, scale = Math.min(1, MAX/Math.max(bmp.width, bmp.height));
+    const MAX = 3072, scale = Math.min(1, MAX/Math.max(bmp.width, bmp.height));
     const w = Math.max(1, Math.round(bmp.width*scale)), h = Math.max(1, Math.round(bmp.height*scale));
     const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
     cv.getContext('2d').drawImage(bmp, 0, 0, w, h);
-    const out = await new Promise(res=> cv.toBlob(b=>res(b), 'image/jpeg', 0.92));
+    const out = await new Promise(res=> cv.toBlob(b=>res(b), 'image/jpeg', 0.95));
     return (out && out.size < blob.size) ? out : blob;
   }catch(e){ console.warn('shrink img:', e); return blob; }
 }
