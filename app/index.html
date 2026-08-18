@@ -8720,6 +8720,7 @@ function _imgRemoveRef(i){
 
 // ── Mode Génération / Correction (img2img) ──
 let _imgMode = 'generate';
+let _imgCorrectSel = -1;   // #143 · preset de correction sélectionné (-1 = aucun) ; la génération ne part qu'au bouton
 // Prompt back-end détaillé pour la planche de référence personnage (façon fiche ALEX).
 const _IMG_REF_SHEET_PROMPT = 'Create a professional CHARACTER REFERENCE SHEET (model sheet / turnaround) of the person in the provided image. CRITICAL — IDENTITY LOCK: the person in the provided image is the ONE and ONLY ground-truth identity. EVERY face on the whole sheet must be the EXACT SAME individual, photographically identical to the reference — same face shape and bone structure, same nose, same eye shape and eye color, same eyebrows, same lips, same jawline, same hairline and same hairstyle, same skin tone, same age. Treat it as the same real person photographed several times in one studio session, NOT lookalikes or siblings. NO identity drift, NO age change, NO different faces, NO younger/older versions, NO variation of facial features between panels — the face must be consistent and recognisable as the same person in every single panel. Clean light-beige studio background, minimalist editorial layout with thin separating lines and small uppercase labels. IMPORTANT LAYOUT: this is ONE single TALL portrait sheet, a DENSE professional model sheet of 16 to 20 panels arranged in FOUR compact rows and filled edge-to-edge — it MUST always contain AT LEAST 15 distinct panels; NEVER produce only 3-4 large photos, NEVER leave large empty areas. Compose EXACTLY like this: ROW 1 — three THREE-QUARTER-LENGTH turnaround shots in the same outfit and the same calm relaxed pose: FACE (front), PROFIL (side), DOS (back), each framed TIGHT from the head down to just below the knees so the face is large and sharp (NOT a tiny distant figure); the front-facing face especially must be perfect — symmetrical, correct anatomy, well-defined eyes looking straight ahead, natural eyebrows, relaxed CLOSED mouth (calm, never mid-speech, never open, never melted or distorted). ROW 2 — four head-and-shoulders PORTRAITS side by side (front, three-quarter, side profile, back of the head), next to a MODEL REFERENCE info card (name, taille, poids, corpulence, yeux, cheveux, âge, ethnicité, nationalité) and a small labelled COLOR PALETTE. ROW 3 — one LARGE hero face portrait, a cluster of extreme CLOSE-UPS (one eye, the nose, the mouth, the lips, one ear, the neck) and one full-body standing shot. ROW 4 — a bottom strip of CLOSE-UPS of the HANDS (three to four hand shots showing fingers) and the legs/feet. Every panel shows the SAME identical person. Photorealistic, natural realistic skin with visible pores and fine texture, coherent soft studio lighting, high detail, sharp and in focus, no blur. Every face — even the small/distant ones in the full-body panels — MUST have correct, undistorted, symmetrical eyes and a well-formed natural mouth; never render melted, asymmetric, malformed or blurry eyes, mouths or teeth. It must look like a real professional model reference sheet with ONE consistent identity throughout.';
 
@@ -8745,13 +8746,42 @@ function _imgCorrectOther(){
 function _imgRenderCorrectPresets(){
   const g=document.getElementById('imgCorrectPresetsGrid'); if(!g) return;
   g.innerHTML=_IMG_CORRECT_PRESETS.map((p,i)=>{
-    const onclick = p.action ? `${p.action}()` : `_imgRunCorrection(${i}, this)`;
-    const border  = p.action ? '1px dashed var(--border-2)' : '1px solid var(--border)';
-    return `<button onclick="${onclick}" class="row gap8" style="padding:11px 12px;border-radius:11px;text-align:left;border:${border};background:var(--panel-1);transition:.15s" onmouseenter="this.style.borderColor='var(--accent-line)'" onmouseleave="this.style.borderColor='${p.action?'var(--border-2)':'var(--border)'}'">`+
+    const sel = (_imgCorrectSel===i);
+    const border = sel ? '2px solid var(--accent)' : (p.action ? '1px dashed var(--border-2)' : '1px solid var(--border)');
+    const bg = sel ? 'var(--accent-soft)' : 'var(--panel-1)';
+    return `<button onclick="_imgSelectCorrection(${i})" class="row gap8" style="padding:11px 12px;border-radius:11px;text-align:left;border:${border};background:${bg};transition:.15s" onmouseenter="if(_imgCorrectSel!==${i})this.style.borderColor='var(--accent-line)'" onmouseleave="if(_imgCorrectSel!==${i})this.style.borderColor='${p.action?'var(--border-2)':'var(--border)'}'">`+
       _imgIco(p.ic,15,'var(--accent-2)')+`<span style="font-weight:600;font-size:11.5px;line-height:1.15;color:var(--text)">${p.label}</span></button>`;
   }).join('');
 }
 function _imgApplyCorrectPreset(enc){ const pr=document.getElementById('imgPrompt'); if(pr){ pr.value=decodeURIComponent(enc); pr.focus(); } }
+// #143 · Un preset se SÉLECTIONNE (highlight) ; la génération ne part qu'au clic sur « Générer l'image ».
+function _imgSelectCorrection(idx){
+  const p=_IMG_CORRECT_PRESETS[idx]; if(!p) return;
+  _imgCorrectSel = (_imgCorrectSel===idx ? -1 : idx);   // re-clic = désélection
+  _imgRenderCorrectPresets();
+  _imgToggleFaceZone(_imgCorrectSel>=0 && !!p.swap);     // faceswap : 2e zone (visage) ; sinon cachée
+  const pr=document.getElementById('imgPrompt');
+  if(_imgCorrectSel<0) return;
+  if(p.action==='_imgCorrectOther'){ if(pr){ pr.value=''; pr.focus(); } toast('Décris ta correction dans le champ, puis « Générer l\'image »'); return; }
+  if(p.swap){ toast('Charge le visage à appliquer, puis « Générer l\'image »'); return; }
+  if(p.needs){ if(pr){ pr.focus(); } toast('Précise : '+(p.hint||'ta demande')+', puis « Générer l\'image »'); }
+}
+// Lance la correction SÉLECTIONNÉE — appelée par « Générer l'image » en mode correction.
+function _imgRunSelectedCorrection(){
+  if(!_imgRefFile){ toast('Importe d\'abord l\'image à corriger'); const inp=document.getElementById('imgRefInput'); if(inp) inp.click(); return; }
+  if(_imgCorrectSel==null || _imgCorrectSel<0){ toast('Choisis une correction au-dessus'); return; }
+  const p=_IMG_CORRECT_PRESETS[_imgCorrectSel];
+  const btn=document.getElementById('imgGenBtn');
+  if(p.swap){ if(typeof _imgRunFaceSwap==='function') _imgRunFaceSwap(btn); return; }
+  if(p.action==='_imgCorrectOther'){
+    const pr=document.getElementById('imgPrompt'); const extra=(pr&&pr.value?pr.value.trim():'');
+    if(!extra){ if(pr){ pr.focus(); } toast('Décris ta correction dans le champ'); return; }
+    _imgDoEdit(extra, btn, 'Correction…', 'Correction'); return;
+  }
+  _imgRunCorrection(_imgCorrectSel, btn);
+}
+// Placeholder (défini avec le faceswap) : ne casse rien si le faceswap n'est pas encore branché.
+function _imgToggleFaceZone(on){ const z=document.getElementById('imgFaceZone'); if(z) z.style.display = on?'':'none'; }
 
 // ── « Rendre réaliste » en 1 clic (img2img) : garde la personne/pose/décor, ajoute la micro-texture réelle ──
 // LE DÉTAIL EST DEMANDÉ, ET LA RETOUCHE EST INTERDITE — LES DEUX.
@@ -8896,7 +8926,7 @@ function _imgSetMode(m){
   showFlex('imgCorrectPresetsSection', corr);// corrections rapides (correction only) — carte extensible
   showFlex('imgStyleSection', !corr);        // style visuel (génération only) — carte extensible
   show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
-  if(corr){ _imgRenderCorrectPresets(); _imgSyncRealCost(); }
+  if(corr){ _imgCorrectSel=-1; _imgRenderCorrectPresets(); _imgToggleFaceZone(false); _imgSyncRealCost(); }
   else _imgSyncGenBtn();  // onglet Génération : coût dynamique sur « Générer l'image »
   _imgInitSuggestions();
   // Composer : bouton image de référence — bordure/label selon le mode
@@ -9816,6 +9846,7 @@ function _imgShowSingle(url, size){
 }
 
 async function generateImage(){
+  if(_imgMode==='correct'){ _imgRunSelectedCorrection(); return; }   // #143 · en correction, le bouton lance la correction SÉLECTIONNÉE (les presets ne lancent plus au clic)
   const prompt = document.getElementById('imgPrompt').value.trim();
   if(!prompt){ toast('Écris une description d\'image d\'abord'); return; }
   // ── Paywall plan gratuit : prompt prêt → on débloque la génération via un plan ──
