@@ -9649,13 +9649,13 @@ async function _falClarityUpscale(imageDataUrl){
   const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
   const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
   const model='/fal-ai/clarity-upscaler';
-  const sub=await fPost(model,{ image_url:imageDataUrl, prompt:'ultra realistic close-up real photo of a face, natural skin with visible pores and fine peach fuzz, detailed eyes with sharp iris, individual hair strands, sharp, photorealistic, no plastic, no smoothing, no airbrush', upscale_factor:4, creativity:0.35, resemblance:0.8, num_inference_steps:20 });
+  const sub=await fPost(model,{ image_url:imageDataUrl, prompt:'RAW unedited real photograph, hyper-detailed authentic human skin with clearly visible pores and real micro-texture, fine peach-fuzz / vellus hair on cheeks and jaw, natural skin-tone variation and tiny imperfections, a sharp fibrous iris, individual eyelashes and hair strands, crisp fabric weave, natural film grain. It must stay matte and real — absolutely NO smoothing, NO airbrush, NO plastic, waxy or glossy skin, NO beauty filter, NO CGI.', negative_prompt:'plastic skin, waxy skin, airbrushed, over-smoothed, glossy, shiny, CGI, 3d render, beauty filter, doll, blurry, soft focus, oversaturated', upscale_factor:4, creativity:0.3, resemblance:0.9, num_inference_steps:36 });
   if(!sub.ok) return null;
   const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
   if(!url && (sd.status_url||sd.request_id)){
     const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
     const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
-    for(let i=0;i<50 && !url;i++){ await new Promise(r=>setTimeout(r,2500)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||null; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ return null; } }
+    for(let i=0;i<50 && !url;i++){ await new Promise(r=>setTimeout(r,2500)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||null; if(!url){ console.warn('[clarity] COMPLETED sans image — échec (souvent modération ou image d\'entrée trop lourde) :', JSON.stringify(rd).slice(0,220)); return null; } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ return null; } }
   }
   return url||null;
 }
