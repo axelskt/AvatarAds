@@ -24604,7 +24604,7 @@ function _mcRenderAdv(){
       ${[['9:16',9,16],['1:1',12,12],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'9:16')===f;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px" onclick="_mcSetFormat('${f}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>${f}</button>`;}).join('')}
     </div>
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
-    ${[['_mcToggleCam','Suivi de la caméra','La caméra suit la tête et les mouvements du personnage',!!window._mcCamFollow],
+    ${[['_mcToggleCam','Caméra portée (réaliste)','Léger tremblement organique qui suit les mouvements — comme un selfie filmé à la main',!!window._mcCamFollow],
        ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Ne remplace que la personne, garde le décor',!!window._mcKeepVidBg]]
       .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
         <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
@@ -24845,7 +24845,7 @@ async function _mcGenerate(){
       ? ' Keep the EXACT same background, scene and environment as the REFERENCE VIDEO: only replace the person with the provided character — everything behind them stays identical to the original video.'
       : ' Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
     const _mcCamTxt = window._mcCamFollow
-      ? ' The camera smoothly tracks and follows the character\'s head and movements (dynamic tracking shot).'
+      ? ' Handheld camera held at arm\'s length, with subtle organic shake, micro-jitter and natural breathing motion that reacts to the character\'s movements — a realistic hand-held selfie feel, slightly unstable and alive, NOT a locked tripod nor a smooth gimbal.'
       : '';
     const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcBgTxt + _mcCamTxt;
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
