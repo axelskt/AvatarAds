@@ -1324,12 +1324,12 @@ async function hedraV3Upload(buf, mime, nom) {
   // Hedra v3 = max 30 Mo/image ; une photo HD en PNG (sans perte) dépasse. On la réduit via
   // ffmpeg en JPEG ≤2560px (assez pour 720p/1080p). Compteur = pas de collision entre scènes // //
   // parallèles (PARALLELE=4).
-  if (String(mime).startsWith('image/') && buf.length > 2000000) {
+  if (String(mime).startsWith('image/') && buf.length > 25000000) {
     try {
       const tin = join(tmpdir(), 'hup-' + process.pid + '-' + (_hupSeq++) + '.png')
       const tout = tin + '.jpg'
       writeFileSync(tin, buf)
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', tin, '-vf', "scale='min(2560,iw)':-2", '-q:v', '3', tout])
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', tin, '-vf', "scale='min(3072,iw)':-2", '-q:v', '2', tout])
       buf = readFileSync(tout); mime = 'image/jpeg'
       try { rmSync(tin, { force: true }); rmSync(tout, { force: true }) } catch (_) {}
     } catch (e) { console.warn('shrink image worker:', e.message) }
