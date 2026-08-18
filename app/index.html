@@ -25369,8 +25369,9 @@ async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, 
   // ── API Hedra v3 : /v3/files (upload gratuit) → /v3/models/seedance-20 (submit {input}) → /v3/jobs (poll) ──
   // Références NATIVES = input.images (1..9). C'est LE champ (l'ancien reference_ids était ignoré en
   // silence → seule l'image de départ comptait, d'où la voiture inventée). Cf. mémoire hedra-api-v3.
-  if(onStep) onStep('Envoi de l\'image de départ…');
-  const start_image = await _hedraV3Upload(imgB64, imgMime, 'start.png');
+  // ⚠ Seedance v3 : mode RÉFÉRENCE (input.images) OU mode image→vidéo (input.start_image) —
+  // MUTUELLEMENT EXCLUSIFS (Hedra refuse les deux). Avec des réfs → mode référence (tes VRAIES
+  // photos réellement utilisées, le vrai truc « Higgsfield »). Sans réf → image→vidéo depuis la frame générée.
   const images = [];
   if(Array.isArray(refImgs) && refImgs.length){
     if(onStep) onStep('Envoi de tes '+Math.min(refImgs.length,9)+' références…');
@@ -25389,10 +25390,14 @@ async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, 
     resolution: '720p',            // Higgsfield « Enhanced Fast »
     duration_ms: dms,
     quality: 'fast',               // fast ⇒ 480p/720p uniquement
-    generate_audio: true,          // audio natif Seedance (comme Veo — Axel 18/08)
-    start_image
+    generate_audio: true           // audio natif Seedance (comme Veo — Axel 18/08)
   };
-  if(images.length) input.images = images;   // ← champ référence natif v3
+  if(images.length){
+    input.images = images;                                                    // mode référence (≤9 photos)
+  } else {
+    if(onStep) onStep('Envoi de l\'image de départ…');
+    input.start_image = await _hedraV3Upload(imgB64, imgMime, 'start.png');   // mode image→vidéo
+  }
   const jobId = await _hedraV3Submit('seedance-20', input);
   const out   = await _hedraV3Poll(jobId, null, 90);
   const vr = await fetch(out.url); if(!vr.ok) throw new Error('Téléchargement Seedance '+vr.status);
