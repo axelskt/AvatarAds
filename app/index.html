@@ -2951,6 +2951,27 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <span class="label" style="margin:0">Corrections rapides</span>
             </div>
             <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+            <!-- #144 · Faceswap : 2 zones (image d'origine → visage à appliquer) + flèche -->
+            <div id="imgFaceZone" style="display:none;margin-top:12px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);background:var(--panel-1);display:flex;align-items:center;justify-content:center;position:relative">
+                  <img id="imgFaceOrig" style="width:100%;height:100%;object-fit:cover;display:none">
+                  <span id="imgFaceOrigPh" class="faint" style="font-size:10px;text-align:center;padding:8px;line-height:1.3">Image à corriger<br>(charge-la en haut)</span>
+                </div>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                <div onclick="document.getElementById('imgFaceInput').click()" style="flex:1;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px dashed var(--accent-line);background:var(--accent-soft);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative">
+                  <input type="file" id="imgFaceInput" accept="image/*" style="display:none" onchange="_imgFacePick(this)">
+                  <img id="imgFaceSrc" style="width:100%;height:100%;object-fit:cover;display:none;position:absolute;inset:0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                  <span class="faint" style="font-size:10px;text-align:center;padding:0 6px;position:relative">Visage à appliquer</span>
+                </div>
+              </div>
+              <div class="row" style="gap:6px;margin-top:9px;justify-content:center;align-items:center">
+                <span class="faint" style="font-size:10.5px">Genre :</span>
+                <button id="imgFaceGF" onclick="_imgFaceGenderSet('female')" class="on" style="padding:5px 13px;border-radius:9px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--text);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">Femme</button>
+                <button id="imgFaceGM" onclick="_imgFaceGenderSet('male')" style="padding:5px 13px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">Homme</button>
+              </div>
+            </div>
             <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;padding:11px 14px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);border-radius:var(--r);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               <span style="display:flex;flex-direction:column;line-height:1.25;text-align:left">
@@ -8725,8 +8746,7 @@ let _imgCorrectSel = -1;   // #143 · preset de correction sélectionné (-1 = a
 const _IMG_REF_SHEET_PROMPT = 'Create a professional CHARACTER REFERENCE SHEET (model sheet / turnaround) of the person in the provided image. CRITICAL — IDENTITY LOCK: the person in the provided image is the ONE and ONLY ground-truth identity. EVERY face on the whole sheet must be the EXACT SAME individual, photographically identical to the reference — same face shape and bone structure, same nose, same eye shape and eye color, same eyebrows, same lips, same jawline, same hairline and same hairstyle, same skin tone, same age. Treat it as the same real person photographed several times in one studio session, NOT lookalikes or siblings. NO identity drift, NO age change, NO different faces, NO younger/older versions, NO variation of facial features between panels — the face must be consistent and recognisable as the same person in every single panel. Clean light-beige studio background, minimalist editorial layout with thin separating lines and small uppercase labels. IMPORTANT LAYOUT: this is ONE single TALL portrait sheet, a DENSE professional model sheet of 16 to 20 panels arranged in FOUR compact rows and filled edge-to-edge — it MUST always contain AT LEAST 15 distinct panels; NEVER produce only 3-4 large photos, NEVER leave large empty areas. Compose EXACTLY like this: ROW 1 — three THREE-QUARTER-LENGTH turnaround shots in the same outfit and the same calm relaxed pose: FACE (front), PROFIL (side), DOS (back), each framed TIGHT from the head down to just below the knees so the face is large and sharp (NOT a tiny distant figure); the front-facing face especially must be perfect — symmetrical, correct anatomy, well-defined eyes looking straight ahead, natural eyebrows, relaxed CLOSED mouth (calm, never mid-speech, never open, never melted or distorted). ROW 2 — four head-and-shoulders PORTRAITS side by side (front, three-quarter, side profile, back of the head), next to a MODEL REFERENCE info card (name, taille, poids, corpulence, yeux, cheveux, âge, ethnicité, nationalité) and a small labelled COLOR PALETTE. ROW 3 — one LARGE hero face portrait, a cluster of extreme CLOSE-UPS (one eye, the nose, the mouth, the lips, one ear, the neck) and one full-body standing shot. ROW 4 — a bottom strip of CLOSE-UPS of the HANDS (three to four hand shots showing fingers) and the legs/feet. Every panel shows the SAME identical person. Photorealistic, natural realistic skin with visible pores and fine texture, coherent soft studio lighting, high detail, sharp and in focus, no blur. Every face — even the small/distant ones in the full-body panels — MUST have correct, undistorted, symmetrical eyes and a well-formed natural mouth; never render melted, asymmetric, malformed or blurry eyes, mouths or teeth. It must look like a real professional model reference sheet with ONE consistent identity throughout.';
 
 const _IMG_CORRECT_PRESETS = [
-  { ic:'eraser', label:'Supprimer un objet', needs:true, hint:'quel objet retirer', spin:'Suppression…',
-    back:'Remove the unwanted object/element (described by the user) cleanly from the image and realistically reconstruct the background behind it. Keep everything else identical: same person, same face, same pose, same lighting and same style. Seamless result, no trace or ghost of the removed object.' },
+  { ic:'wand', label:'Changer le visage', swap:true, spin:'Faceswap…' },
   { ic:'cards', label:'Créer un référence sheet', spin:'Planche perso… (~30s)', fmt:'1024x1792',
     back:_IMG_REF_SHEET_PROMPT },
   { ic:'crop', label:'Modifier le format', spin:'Recadrage…',
@@ -8780,8 +8800,50 @@ function _imgRunSelectedCorrection(){
   }
   _imgRunCorrection(_imgCorrectSel, btn);
 }
-// Placeholder (défini avec le faceswap) : ne casse rien si le faceswap n'est pas encore branché.
-function _imgToggleFaceZone(on){ const z=document.getElementById('imgFaceZone'); if(z) z.style.display = on?'':'none'; }
+// ── #144 · Faceswap (Correction → « Changer le visage ») via easel-ai/advanced-face-swap (fal-proxy) ──
+let _imgFaceFile = null, _imgFaceGenderVal = 'female';
+function _imgToggleFaceZone(on){
+  const z=document.getElementById('imgFaceZone'); if(z) z.style.display = on?'':'none';
+  if(on){ const o=document.getElementById('imgFaceOrig'), ph=document.getElementById('imgFaceOrigPh');
+    if(o){ if(_imgRefFile){ try{ o.src=URL.createObjectURL(_imgRefFile); o.style.display=''; if(ph) ph.style.display='none'; }catch(_){} } else { o.style.display='none'; if(ph) ph.style.display=''; } } }
+}
+function _imgFacePick(input){ const f=input.files&&input.files[0]; if(!f) return; _imgFaceFile=f; const im=document.getElementById('imgFaceSrc'); if(im){ im.src=URL.createObjectURL(f); im.style.display=''; } toast('Visage chargé — clique « Générer l\'image »'); }
+function _imgFaceGenderSet(g){ _imgFaceGenderVal=g; const gf=document.getElementById('imgFaceGF'), gm=document.getElementById('imgFaceGM'); const on='2px solid var(--accent)', off='1px solid var(--border)'; if(gf){ gf.style.border=g==='female'?on:off; gf.style.background=g==='female'?'var(--accent-soft)':'var(--panel-1)'; gf.style.color=g==='female'?'var(--text)':'var(--text-2)'; } if(gm){ gm.style.border=g==='male'?on:off; gm.style.background=g==='male'?'var(--accent-soft)':'var(--panel-1)'; gm.style.color=g==='male'?'var(--text)':'var(--text-2)'; } }
+async function _imgFileToDataUrl(file, maxPx){ const url=URL.createObjectURL(file); try{ const im=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; }); const k=Math.min(1,(maxPx||1024)/Math.max(im.naturalWidth,im.naturalHeight)); const w=Math.max(2,Math.round(im.naturalWidth*k)), h=Math.max(2,Math.round(im.naturalHeight*k)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); return cv.toDataURL('image/jpeg',0.9); } finally { URL.revokeObjectURL(url); } }
+async function _imgRunFaceSwap(btn){
+  if(!_imgRefFile){ toast('Charge l\'image à corriger (en haut)'); return; }
+  if(!_imgFaceFile){ toast('Charge le visage à appliquer'); const fi=document.getElementById('imgFaceInput'); if(fi) fi.click(); return; }
+  if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
+  creditsFlowBegin();
+  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()), 'faceswap'))) return;
+  const orig=btn?btn.innerHTML:null, overlay=document.getElementById('imgLoadingOverlay');
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Faceswap…'; }
+  const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti');
+  try{
+    if(multiWrap) multiWrap.style.display='none'; if(singleWrap) singleWrap.style.display='block';
+    const o=document.getElementById('imgOutput'); if(o) o.style.display='none'; if(typeof _imgIdleShow==='function') _imgIdleShow(false);
+    if(overlay) overlay.style.display='flex'; if(typeof _imgProgStart==='function') _imgProgStart('Faceswap…');
+    const Hh=await getAuthHeader(); const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+    const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
+    const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
+    const target=await _imgFileToDataUrl(_imgRefFile,1152), face=await _imgFileToDataUrl(_imgFaceFile,896);
+    const model='/easel-ai/advanced-face-swap';
+    const sub=await fPost(model,{ face_image_0:face, gender_0:_imgFaceGenderVal, target_image:target, workflow_type:'user_hair', upscale:true });
+    if(!sub.ok) throw new Error('Faceswap '+sub.status+' '+(await sub.text()).slice(0,120));
+    const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
+    if(!url && (sd.status_url||sd.request_id)){
+      const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
+      const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
+      for(let i=0;i<70 && !url;i++){ await new Promise(r=>setTimeout(r,3000)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||null; if(!url){ console.warn('[faceswap] COMPLETED sans image :', JSON.stringify(rd).slice(0,220)); throw new Error('Faceswap refusé (visage non détecté ou contenu bloqué) — essaie une autre photo'); } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ throw new Error('Faceswap : '+(pd.error?String(pd.error).slice(0,80):s)); } }
+    }
+    if(!url) throw new Error('Faceswap : délai dépassé, réessaie dans un moment');
+    let dataUrl=url; try{ const rC=await fetch(url); const bC=await rC.blob(); dataUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
+    if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
+    _imgShowSingle(dataUrl, _imgSelectedFormat); _imgSaveHistory(dataUrl,'Faceswap',_imgSelectedFormat); if(typeof _imgRenderHistory==='function') _imgRenderHistory();
+    toast('Visage changé');
+  }catch(e){ console.error('faceswap:',e); try{ await creditsFlowRefund(); }catch(_){} toast(''+((e&&e.message)||e)); }
+  finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
+}
 
 // ── « Rendre réaliste » en 1 clic (img2img) : garde la personne/pose/décor, ajoute la micro-texture réelle ──
 // LE DÉTAIL EST DEMANDÉ, ET LA RETOUCHE EST INTERDITE — LES DEUX.
