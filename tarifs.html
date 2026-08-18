@@ -209,7 +209,7 @@ function _quotaBox(pl, tier){
     +'<span style="font-weight:700;font-size:15px">crédits / mois</span>'
     +(bonus?'<span style="margin-left:auto;display:flex;gap:7px;align-items:baseline;white-space:nowrap"><span class="display" style="font-size:27px;font-weight:800;color:var(--green)">'+bonus+'</span><span style="font-weight:700;font-size:15px">offerts</span></span>':'')
     +'</div>'
-    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>jusqu\'à '+videos+' vidéos / mois</span><span style="color:var(--accent)">*</span></b></div>'
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>jusqu\'à '+videos+' vidéos / mois</span><sup style="font-size:.55em;color:var(--text-3);font-weight:400;margin-left:1px">*</sup></b></div>'
     +'<div class="mono muted" style="font-size:11.5px;margin-top:5px;opacity:.72">≈ <span'+(violet?' id="lpEliteSec"':'')+'>'+perDay+'</span> par jour</div>';
   if(violet){
     var idx=eliteSlider, pct=idx/(ELITE_TIERS.length-1)*100, marks='';
