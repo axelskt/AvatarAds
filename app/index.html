@@ -3653,6 +3653,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- Vignettes des images de référence — dans la zone SOMBRE, juste au-dessus du trait
              du composer (Axel 17/08 : « tu les mets dans la partie noire juste au-dessus du trait »). -->
         <div id="expImgThumbs" style="display:none;gap:10px;flex-wrap:wrap;align-items:center;padding:0 28px 14px"></div>
+        <!-- Toggle « transitions » (dev only, ≥2 images) : enchaîne les images en clips start→end -->
+        <div id="expTransRow" style="display:none;align-items:center;gap:10px;padding:0 28px 14px"></div>
 
         <!-- Composer (style Remakeit) -->
         <div style="border-top:1px solid var(--border);padding:18px 28px 24px;background:var(--surface)">
@@ -25238,10 +25240,22 @@ function _expRenderImgs(){
   if(p){ p.style.display='none'; p.src=''; }
   if(d) d.style.borderColor = imgs.length ? 'var(--orange)' : 'var(--border2)';
   if(cnt){ cnt.style.display = imgs.length ? 'block' : 'none'; cnt.textContent = imgs.length+'/'+EXP_MAX_IMGS; }
+  const _trHide=()=>{ const t=document.getElementById('expTransRow'); if(t){ t.style.display='none'; t.innerHTML=''; } };
   const wrap=document.getElementById('expImgThumbs'); if(!wrap) return;
-  if(!imgs.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  if(!imgs.length){ wrap.style.display='none'; wrap.innerHTML=''; _trHide(); return; }
   wrap.style.display='flex';
   wrap.innerHTML=imgs.map((im,i)=>`<div style="position:relative;width:60px;height:60px;flex:0 0 auto"><img src="${im.url}" style="width:60px;height:60px;object-fit:cover;border-radius:16px;border:1px solid var(--border2);display:block"><span onclick="event.stopPropagation();_expRemoveImg(${i})" title="Retirer" style="position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(15,15,20,.92);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>`).join('');
+  // Toggle « transitions » (dev only, ≥2 images) : enchaîne les images en clips start→end
+  const tr=document.getElementById('expTransRow');
+  if(tr){
+    const dev=(typeof _expIsDev==='function') && _expIsDev();
+    if(dev && imgs.length>=2){
+      const on=!!window._expTransitions;
+      tr.style.display='flex';
+      tr.innerHTML='<span onclick="_expToggleTrans()" role="switch" style="width:40px;height:23px;border-radius:20px;background:'+(on?'var(--orange)':'var(--border2)')+';position:relative;cursor:pointer;transition:.15s;flex:0 0 auto"><span style="position:absolute;top:2px;left:'+(on?'19px':'2px')+';width:19px;height:19px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></span>'
+        +'<span onclick="_expToggleTrans()" style="font-size:12.5px;color:var(--text2);cursor:pointer;user-select:none">Enchaîner les images en <b style="color:var(--text)">transitions</b> (image → image, '+(imgs.length-1)+' clip'+((imgs.length-1)>1?'s':'')+') · dev</span>';
+    } else { tr.style.display='none'; tr.innerHTML=''; }
+  }
 }
 
 // ── Compose TOUTES les images de référence en UNE frame de départ ──
@@ -25375,7 +25389,7 @@ async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, 
     resolution: '720p',            // Higgsfield « Enhanced Fast »
     duration_ms: dms,
     quality: 'fast',               // fast ⇒ 480p/720p uniquement
-    generate_audio: false,         // vidéo muette (l'user pose sa voix) — true = audio natif Seedance
+    generate_audio: true,          // audio natif Seedance (comme Veo — Axel 18/08)
     start_image
   };
   if(images.length) input.images = images;   // ← champ référence natif v3
@@ -25384,6 +25398,45 @@ async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, 
   const vr = await fetch(out.url); if(!vr.ok) throw new Error('Téléchargement Seedance '+vr.status);
   return new Blob([await vr.blob()], { type: out.content_type||'video/mp4' });
 }
+// Toggle dev « enchaîner les images en transitions » (rendu dans _expRenderImgs)
+function _expToggleTrans(){ window._expTransitions = !window._expTransitions; if(typeof _expRenderImgs==='function') _expRenderImgs(); }
+
+// ── TRANSITIONS Seedance (dev) : enchaîne les images en clips start_image → end_image, puis colle ──
+// Seedance n'a qu'UN start + UN end → pour passer par N photos exactes on génère N-1 clips (paires
+// consécutives) et on les recolle avec ffmpeg. Vidéo muette (match-cut visuel — l'user pose sa musique).
+async function _expSeedanceTransitions(imgs, prompt, onStep){
+  const aspect = window._expFormat==='16:9' ? '16:9' : '9:16';
+  const uploaded = new Map();
+  const upAt = async (i) => { if(!uploaded.has(i)) uploaded.set(i, await _hedraV3Upload(imgs[i].b64, imgs[i].mime||'image/png', 'k'+i+'.png')); return uploaded.get(i); };
+  const clips = [];
+  for(let i=0; i<imgs.length-1; i++){
+    if(onStep) onStep('Transition '+(i+1)+'/'+(imgs.length-1)+'…');
+    const start_image = await upAt(i);
+    const end_image   = await upAt(i+1);
+    const input = {
+      prompt: (prompt || 'smooth realistic cinematic transition') + ', seamless natural motion between the two frames, realistic UGC look, believable physics, NOT an AI render',
+      aspect_ratio: aspect, resolution: '720p', duration_ms: 4000, quality: 'fast',
+      generate_audio: false, start_image, end_image
+    };
+    const jobId = await _hedraV3Submit('seedance-20', input);
+    const out   = await _hedraV3Poll(jobId, null, 90);
+    const ab    = await (await fetch(out.url)).arrayBuffer();
+    clips.push(new Uint8Array(ab));
+  }
+  if(clips.length === 1) return new Blob([clips[0]], { type:'video/mp4' });
+  // Collage via ffmpeg.wasm (ré-encodage → robuste aux petits écarts de paramètres entre clips)
+  if(onStep) onStep('Assemblage des transitions…');
+  await _loadFFmpeg(); const ff=_ffmpegInst;
+  const names=[]; clips.forEach((c,i)=>{ const n='tr'+i+'.mp4'; ff.FS('writeFile', n, c); names.push(n); });
+  const args=[]; names.forEach(n=>{ args.push('-i', n); });
+  const filt = names.map((_,i)=>'['+i+':v:0]').join('') + 'concat=n='+names.length+':v=1:a=0[v]';
+  args.push('-filter_complex', filt, '-map', '[v]', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'trans-out.mp4');
+  await ff.run(...args);
+  const data=ff.FS('readFile','trans-out.mp4');
+  names.forEach(n=>{ try{ ff.FS('unlink', n); }catch(_){} }); try{ ff.FS('unlink','trans-out.mp4'); }catch(_){}
+  return new Blob([data.buffer], { type:'video/mp4' });
+}
+
 async function _expCreateSeedance(prompt){
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
@@ -25402,6 +25455,21 @@ async function _expCreateSeedance(prompt){
     // les VRAIES photos en références (pas la fusion gpt-image qui recrée le visage), imgs[0] = frame
     // de départ. La fusion gpt-image ne sert plus qu'au chemin Veo (mono-image).
     const _sdRefs = (window._expImgs||[]).slice(0,9).map(im=>({ b64:im.b64, mime:im.mime||'image/png' }));
+    // ── MODE TRANSITIONS (dev) : enchaîne les images en clips start→end (ton match-cut 4 images) ──
+    // rien ne génère sans validation du coût (générations réelles $ sur le wallet Hedra dev).
+    if(window._expTransitions && _expIsDev() && (window._expImgs||[]).length>=2){
+      const _imgs=(window._expImgs||[]); const _n=_imgs.length-1;
+      if(!confirm('Générer '+_n+' clip'+(_n>1?'s':'')+' de transition Seedance (≈ '+(0.86*_n).toFixed(2)+' $, muet) ?\n\nEnchaîne : '+_imgs.map((_,i)=>'image '+(i+1)).join(' → ')+'.')) throw new Error('__abort');
+      setP(20,'Direction du prompt…');
+      const _dir = await _expDirector(prompt);
+      let blob = await _expSeedanceTransitions(_imgs, (_dir||prompt||''), (t)=>setP(Math.max(p,45),t));
+      if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
+      window._expVidBlob=blob; window._expVidUrl=URL.createObjectURL(blob);
+      if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
+      if(acts) acts.style.display='flex';
+      setP(100,'✓ Transitions prêtes'); toast('Vidéo transitions générée');
+      return;
+    }
     if(!imgB64){
       setP(8,'Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
