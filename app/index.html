@@ -25390,9 +25390,9 @@ async function _expSeedanceGenerate(animPrompt, imgB64, imgMime, durMs, aspect, 
   const input = {
     prompt: animPrompt,
     aspect_ratio: aspect,          // 9:16 ou 16:9
-    resolution: '720p',            // Higgsfield « Enhanced Fast »
+    resolution: '1080p',           // 1080p par défaut (Axel 18/08 : dev-only, qualité > coût, plus de 720p)
     duration_ms: dms,
-    quality: 'fast',               // fast ⇒ 480p/720p uniquement
+    quality: 'standard',           // 1080p ⇒ quality 'standard' OBLIGATOIRE (fast = 480p/720p uniquement)
     generate_audio: true           // audio natif Seedance (comme Veo — Axel 18/08)
   };
   if(images.length){
@@ -25423,7 +25423,7 @@ async function _expSeedanceTransitions(imgs, prompt, onStep){
     const end_image   = await upAt(i+1);
     const input = {
       prompt: (prompt || 'smooth realistic cinematic transition') + ', seamless natural motion between the two frames, realistic UGC look, believable physics, NOT an AI render',
-      aspect_ratio: aspect, resolution: '720p', duration_ms: 4000, quality: 'fast',
+      aspect_ratio: aspect, resolution: '1080p', duration_ms: 4000, quality: 'standard',
       generate_audio: false, start_image, end_image
     };
     const jobId = await _hedraV3Submit('seedance-20', input);
