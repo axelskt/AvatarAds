@@ -1319,7 +1319,21 @@ async function hedraProxy(chemin, init = {}) {
 // ── API Hedra v3 (dev) via le proxy : /v3/files → /v3/models/<slug> → /v3/jobs ──
 // Le lipsync du worker tourne sur Hedra AVATAR (validé Axel 10/08). Tout média = {source,url}.
 const HEDRA_SLUG = process.env.HEDRA_SLUG || 'hedra-avatar'
+let _hupSeq = 0
 async function hedraV3Upload(buf, mime, nom) {
+  // Hedra v3 = max 30 Mo/image ; une photo HD en PNG (sans perte) dépasse. On la réduit via
+  // ffmpeg en JPEG ≤2560px (assez pour 720p/1080p). Compteur = pas de collision entre scènes // //
+  // parallèles (PARALLELE=4).
+  if (String(mime).startsWith('image/') && buf.length > 2000000) {
+    try {
+      const tin = join(tmpdir(), 'hup-' + process.pid + '-' + (_hupSeq++) + '.png')
+      const tout = tin + '.jpg'
+      writeFileSync(tin, buf)
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', tin, '-vf', "scale='min(2560,iw)':-2", '-q:v', '3', tout])
+      buf = readFileSync(tout); mime = 'image/jpeg'
+      try { rmSync(tin, { force: true }); rmSync(tout, { force: true }) } catch (_) {}
+    } catch (e) { console.warn('shrink image worker:', e.message) }
+  }
   const fd = new FormData()
   fd.append('file', new Blob([buf], { type: mime }), nom)
   const r = await hedraProxy('/v3/files', { method: 'POST', body: fd })
