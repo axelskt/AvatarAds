@@ -1316,18 +1316,43 @@ async function hedraProxy(chemin, init = {}) {
   })
 }
 
-async function hedraAsset(type, nom, buf, mime) {
-  const r1 = await hedraProxy('/assets', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: nom, type }),
-  })
-  if (!r1.ok) return null
-  const a = await r1.json().catch(() => ({}))
-  if (!a.id) return null
+// ── API Hedra v3 (dev) via le proxy : /v3/files → /v3/models/<slug> → /v3/jobs ──
+// Le lipsync du worker tourne sur Hedra AVATAR (validé Axel 10/08). Tout média = {source,url}.
+const HEDRA_SLUG = process.env.HEDRA_SLUG || 'hedra-avatar'
+async function hedraV3Upload(buf, mime, nom) {
   const fd = new FormData()
   fd.append('file', new Blob([buf], { type: mime }), nom)
-  const r2 = await hedraProxy(`/assets/${a.id}/upload`, { method: 'POST', body: fd })
-  return r2.ok ? a.id : null
+  const r = await hedraProxy('/v3/files', { method: 'POST', body: fd })
+  if (!r.ok) return null
+  const j = await r.json().catch(() => ({}))
+  return j && j.url ? { source: 'url', url: j.url } : null
+}
+async function hedraV3Submit(slug, input) {
+  const r = await hedraProxy('/v3/models/' + slug, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input }),
+  })
+  if (!r.ok) { try { console.warn('hedra v3 submit', r.status, (await r.text()).slice(0, 160)) } catch (_) {} return null }
+  const j = await r.json().catch(() => ({}))
+  return j.job_id || j.id || null
+}
+async function hedraV3Poll(jobId, maxTries = 90) {
+  for (let k = 0; k < maxTries; k++) {
+    await new Promise((r) => setTimeout(r, 4000))
+    const st = await hedraProxy('/v3/jobs/' + jobId + '/status', { method: 'GET' })
+    if (!st.ok) continue
+    const d = await st.json().catch(() => ({}))
+    const s = String(d.status || '').toUpperCase()
+    if (s === 'FAILED') return null
+    if (s === 'COMPLETED') {
+      const rr = await hedraProxy('/v3/jobs/' + jobId, { method: 'GET' })
+      if (!rr.ok) return null
+      const rd = await rr.json().catch(() => ({}))
+      const out = (rd.outputs || []).find((o) => o && o.url) || (rd.outputs || [])[0]
+      return out && out.url ? out.url : null
+    }
+  }
+  return null
 }
 
 // ── UNE FENÊTRE TROP LONGUE SE DÉCOUPE AVANT D'ÊTRE ENVOYÉE ─────────────────
@@ -1421,7 +1446,7 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
   const voix = existsSync(join(jobDir, 'voice.wav')) ? join(jobDir, 'voice.wav') : join(jobDir, 'base.mp4')
   if (!existsSync(voix)) return 0
   const photo = readFileSync(join(proj, 'media', 'avatar.png'))
-  let imageId = null, faits = 0
+  let startImg = null, faits = 0
   for (const w of fen) {
     // Hedra refuse sous 3,24 s : on étire l'audio vers la droite, le clip sera
     // recoupé à la fenêtre de toute façon (freeze-pad au recoupage)
@@ -1432,38 +1457,21 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
         '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
     } catch (e) { console.warn(`fenêtre ${w.clip} : découpe impossible`); continue }
     const audioBuf = readFileSync(mp3)
-    const cle = cleLipsync(photo, audioBuf, '9:16', HEDRA_MODEL_ID)
+    const cle = cleLipsync(photo, audioBuf, '9:16', HEDRA_SLUG)
     const out = join(proj, 'media', 'av' + w.clip + '.mp4')
     let clip = await cacheLire(cle)
     if (clip) console.log(`♻︎ fenêtre ${w.clip} : ${r2(w.start)}→${r2(w.end)}s reprise du cache — ${Math.round(dur * HEDRA_CR_SEC)} crédits économisés`)
     else {
-      if (!imageId) imageId = await hedraAsset('image', 'avatar.png', photo, 'image/png')
-      if (!imageId) { console.warn('fenêtres G : upload de la photo refusé'); break }
-      const audioId = await hedraAsset('audio', `voice-${w.clip}.mp3`, audioBuf, 'audio/mpeg')
-      if (!audioId) { console.warn(`fenêtre ${w.clip} : upload audio refusé`); continue }
-      const gen = await hedraProxy('/generations', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'video', ai_model_id: HEDRA_MODEL_ID, audio_id: audioId, start_keyframe_id: imageId,
-          generated_video_inputs: {
-            text_prompt: 'A charismatic person speaking straight to camera, highly expressive and animated UGC influencer style — big natural smiles, raised eyebrows, visible enthusiasm and emotion, lively dynamic facial expressions, natural head tilts and movement, expressive hand gestures while speaking, high energy confident delivery, engaging and magnetic, direct eye contact, precise accurate lip-sync with mouth movements exactly matching the audio',
-            aspect_ratio: '9:16', character_orientation: 'video', resolution: '1080p',
-          },
-        }),
+      if (!startImg) startImg = await hedraV3Upload(photo, 'image/png', 'avatar.png')
+      if (!startImg) { console.warn('fenêtres G : upload de la photo refusé'); break }
+      const audioUp = await hedraV3Upload(audioBuf, 'audio/mpeg', `voice-${w.clip}.mp3`)
+      if (!audioUp) { console.warn(`fenêtre ${w.clip} : upload audio refusé`); continue }
+      const jobId = await hedraV3Submit(HEDRA_SLUG, {
+        prompt: 'A charismatic person speaking straight to camera, highly expressive and animated UGC influencer style — big natural smiles, raised eyebrows, visible enthusiasm and emotion, lively dynamic facial expressions, natural head tilts and movement, expressive hand gestures while speaking, high energy confident delivery, engaging and magnetic, direct eye contact, precise accurate lip-sync with mouth movements exactly matching the audio',
+        aspect_ratio: '9:16', resolution: '1080p', start_image: startImg, audio: audioUp,
       })
-      if (!gen.ok) { console.warn(`fenêtre ${w.clip} : Hedra ${gen.status}`); continue }
-      const g = await gen.json().catch(() => ({}))
-      if (!g.id) { console.warn(`fenêtre ${w.clip} : pas d'identifiant`); continue }
-      let url = ''
-      for (let k = 0; k < 90; k++) {
-        await new Promise((r) => setTimeout(r, 4000))
-        const st = await hedraProxy(`/generations/${g.id}/status`, { method: 'GET' })
-        if (!st.ok) continue
-        const d2 = await st.json().catch(() => ({}))
-        const s = String(d2.status || '').toLowerCase()
-        if (s === 'complete' || s === 'completed' || s === 'succeeded') { url = d2.url || d2.video_url || d2.output_url || ''; break }
-        if (s === 'error' || s === 'failed') { console.warn(`fenêtre ${w.clip} : ${d2.error || 'échec Hedra'}`); break }
-      }
+      if (!jobId) { console.warn(`fenêtre ${w.clip} : Hedra submit refusé`); continue }
+      const url = await hedraV3Poll(jobId)
       if (!url) { console.warn(`fenêtre ${w.clip} : pas de vidéo`); continue }
       const res = await fetch(url)
       if (!res.ok) { console.warn(`fenêtre ${w.clip} : téléchargement ${res.status}`); continue }
@@ -1508,22 +1516,22 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   if (!existsSync(voix)) return 0
 
   const photoDefaut = readFileSync(join(proj, 'media', 'avatar.png'))
-  const imageIdDefaut = await hedraAsset('image', 'avatar.png', photoDefaut, 'image/png')
-  if (!imageIdDefaut) { console.warn('lipsync : upload de la photo refusé'); return 0 }
+  const imgDefaut = await hedraV3Upload(photoDefaut, 'image/png', 'avatar.png')
+  if (!imgDefaut) { console.warn('lipsync : upload de la photo refusé'); return 0 }
   // #84 · ROTATION DANS LE LIPSYNC : chaque fenêtre parle sur SON image (w.photo,
   // posée avant l'appel). Upload-cachée par chemin → 3 visages = 3 uploads, pas
   // un par scène. Sans w.photo (ou fichier absent) : la photo par défaut.
-  const idParPhoto = new Map()
+  const imgParPhoto = new Map()
   const photoDe = async (w) => {
     const rel = String(w.photo || '')
     const abs = rel ? join(proj, rel) : ''
-    if (!abs || !existsSync(abs)) return { buf: photoDefaut, id: imageIdDefaut }
-    if (!idParPhoto.has(rel)) {
+    if (!abs || !existsSync(abs)) return { buf: photoDefaut, img: imgDefaut }
+    if (!imgParPhoto.has(rel)) {
       const buf = readFileSync(abs)
-      const id = await hedraAsset('image', rel.split('/').pop(), buf, 'image/png')
-      idParPhoto.set(rel, id ? { buf, id } : { buf: photoDefaut, id: imageIdDefaut })
+      const img = await hedraV3Upload(buf, 'image/png', rel.split('/').pop())
+      imgParPhoto.set(rel, img ? { buf, img } : { buf: photoDefaut, img: imgDefaut })
     }
-    return idParPhoto.get(rel)
+    return imgParPhoto.get(rel)
   }
 
   // ── LES OCTETS BRUTS D'HEDRA NE VONT JAMAIS DIRECTEMENT AU RENDU ──────────
@@ -1601,7 +1609,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   async function uneScene(w, i) {
     // #84 · l'image de CETTE fenêtre (rotation) — la clé de cache et le keyframe
     // Hedra en découlent : chaque visage parle sur la bonne photo.
-    const { buf: photo, id: imageId } = await photoDe(w)
+    const { buf: photo, img: startImg } = await photoDe(w)
     // ── HEDRA REFUSE EN DESSOUS DE 3,24 s ────────────────────────────────────
     // Contrainte mesurée et documentée. On étire la tranche vers la DROITE si
     // la vidéo le permet : le clip sera de toute façon recoupé à la fenêtre.
@@ -1618,7 +1626,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // la clé peut être calculée. Un hit rend la scène instantanée ET gratuite.
     const ratio = String(w.format) === 'paysage' ? '16:9' : '9:16'
     const audioBuf = readFileSync(mp3)
-    const cle = cleLipsync(photo, audioBuf, ratio, HEDRA_MODEL_ID)
+    const cle = cleLipsync(photo, audioBuf, ratio, HEDRA_SLUG)
     const cout = Math.round(dur * HEDRA_CR_SEC)
     const dejaPaye = await cacheLire(cle)
     if (dejaPaye) {
@@ -1630,36 +1638,17 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       return true
     }
 
-    const audioId = await hedraAsset('audio', `voice${i}.mp3`, audioBuf, 'audio/mpeg')
-    if (!audioId) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
+    const audioUp = await hedraV3Upload(audioBuf, 'audio/mpeg', `voice${i}.mp3`)
+    if (!audioUp) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
 
-    const gen = await hedraProxy('/generations', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'video', ai_model_id: HEDRA_MODEL_ID, audio_id: audioId,
-        start_keyframe_id: imageId,
-        generated_video_inputs: {
-          text_prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio',
-          aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
-          character_orientation: 'video', resolution: '1080p',
-        },
-      }),
+    const jobId = await hedraV3Submit(HEDRA_SLUG, {
+      prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio',
+      aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
+      resolution: '1080p', start_image: startImg, audio: audioUp,
     })
-    if (!gen.ok) { console.warn(`lipsync scène ${i} : Hedra ${gen.status}`); return false }
-    const g = await gen.json().catch(() => ({}))
-    if (!g.id) { console.warn(`lipsync scène ${i} : pas d'identifiant`); return false }
-
-    // polling — Character-3 rend en 1 à 3 min pour une scène courte
-    let url = ''
-    for (let k = 0; k < 90; k++) {
-      await new Promise((r) => setTimeout(r, 4000))
-      const st = await hedraProxy(`/generations/${g.id}/status`, { method: 'GET' })
-      if (!st.ok) continue
-      const d = await st.json().catch(() => ({}))
-      const s = String(d.status || '').toLowerCase()
-      if (s === 'complete' || s === 'completed' || s === 'succeeded') { url = d.url || d.video_url || d.output_url || ''; break }
-      if (s === 'error' || s === 'failed') { console.warn(`lipsync scène ${i} : ${d.error || 'échec Hedra'}`); break }
-    }
+    if (!jobId) { console.warn(`lipsync scène ${i} : Hedra submit refusé`); return false }
+    // polling — Avatar rend en 1 à 3 min pour une scène courte
+    const url = await hedraV3Poll(jobId)
     if (!url) { console.warn(`lipsync scène ${i} : pas de vidéo`); return false }
 
     const res = await fetch(url)

@@ -12524,41 +12524,14 @@ async function _mtAvatarInFormat(idx, target){
 
 // génère UNE scène avatar Hedra (lipsync d'un extrait audio sur la photo) → Blob mp4
 async function _mtHedraScene(imageFile, audioWav, format, modelId, role){
-  const PROXY=SUPABASE_URL+'/functions/v1/hedra-proxy';
-  const authHdr=await getAuthHeader();
-  const byok=window._userHedraKey ? {'x-user-hedra-key':window._userHedraKey}:{};
-  const H={...authHdr,...byok};
-  const hPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-  const hUp  =(p,fd)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{...H},body:fd});
-  const hGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
-  // 1) asset audio
-  const ca=await hPost('/assets',{type:'audio',name:'seg.wav'}); if(!ca.ok) throw new Error('Hedra audio '+ca.status);
-  const aId=(await ca.json()).id; const afd=new FormData(); afd.append('file', audioWav,'seg.wav');
-  const au=await hUp('/assets/'+aId+'/upload', afd); if(!au.ok) throw new Error('Hedra upload audio '+au.status);
-  // 2) asset image (photo au bon format)
-  const ci=await hPost('/assets',{type:'image',name:'face.png'}); if(!ci.ok) throw new Error('Hedra image '+ci.status);
-  const iId=(await ci.json()).id; const ifd=new FormData(); ifd.append('file', imageFile, imageFile.name||'face.png');
-  const iu=await hUp('/assets/'+iId+'/upload', ifd); if(!iu.ok) throw new Error('Hedra upload image '+iu.status);
-  // 3) génération (aspect_ratio par format)
+  // API Hedra v3 : /v3/files (image + audio) → /v3/models/<slug> → /v3/jobs (poll)
+  const startImg = await _hedraV3UploadBlob(imageFile, imageFile.name||'face.png');
+  const audioUp  = await _hedraV3UploadBlob(audioWav, 'seg.wav');
   const ar = format==='paysage' ? '16:9' : '9:16';
-  const g=await hPost('/generations',{ type:'video', ai_model_id:modelId, audio_id:aId, start_keyframe_id:iId,
-    generated_video_inputs:{ text_prompt:_mtMotionPrompt('hedra', role), aspect_ratio:ar, character_orientation:'video', resolution:'1080p' } });
-  if(!g.ok){ const t=await g.text(); throw new Error('Hedra génération '+g.status+' '+t.slice(0,80)); }
-  const gId=(await g.json()).id; if(!gId) throw new Error('Hedra : pas d\'id de génération');
-  // 4) polling (jusqu'à 6 min)
-  for(let i=0;i<72;i++){
-    await wait(5000);
-    const pr=await hGet('/generations/'+gId+'/status'); if(!pr.ok) continue;
-    const pd=await pr.json(); const s=(pd.status||pd.state||'').toLowerCase();
-    if(['queued','processing','finalizing'].includes(s)) continue;
-    if(['complete','completed','succeeded'].includes(s)){
-      const url=pd.url||pd.download_url||pd.video_url||pd.streaming_url||'';
-      if(url) return await (await fetch(url)).blob();
-      throw new Error('Hedra : URL de scène introuvable');
-    }
-    if(['failed','error','cancelled'].includes(s)) throw new Error('Scène Hedra échouée'+(pd.error_message?' : '+String(pd.error_message).slice(0,60):''));
-  }
-  throw new Error('Timeout Hedra sur une scène (>6 min)');
+  const input = { prompt:_mtMotionPrompt('hedra', role), aspect_ratio:ar, resolution:'1080p', start_image:startImg, audio:audioUp };
+  const jobId = await _hedraV3Submit(_hedraSlug(modelId), input);
+  const out   = await _hedraV3Poll(jobId, null, 72);
+  return await (await fetch(out.url)).blob();
 }
 
 // #121 · OmniHuman 1.5 passe par fal.ai (PLUS par Hedra) : fal sort du 1080p natif là où
@@ -20706,161 +20679,80 @@ async function callHedra(audioBlob){
   }
 
   try {
-    // ── 1. Créer l'asset audio (POST /assets) ──
-    // Déterminer l'extension correcte selon le type MIME réel
+    // ── API Hedra v3 : upload audio + image de départ → submit hedra-<slug> → poll ──
+    // ⚠ En v3, start_image est OBLIGATOIRE (la v2 tolérait l'audio seul). Le Générateur
+    // a toujours un avatar (Avatar / Vidéo existante), donc on l'exige et on le dit clairement.
     const audioExt = (audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav'
                    : (audioBlob.type === 'audio/ogg' || audioBlob.type === 'audio/opus')  ? 'ogg'
-                   : 'mp3'; // mp3 par défaut (ElevenLabs, WAV extrait par _audioBufferToWavBlob → wav)
-    const audioFname = 'voice.' + audioExt;
-    const createAudioRes = await hPost('/assets', { type: 'audio', name: audioFname });
-    if(!createAudioRes.ok){ const _c=createAudioRes.status; window._lastHedraError='Erreur serveur Hedra ('+_c+') — réessaie dans quelques secondes'; toast('Hedra create asset ' + _c); return ''; }
-    const audioAsset = await createAudioRes.json();
-    const audioId = audioAsset.id;
-    if(!audioId){ window._lastHedraError='Hedra n\'a pas retourné d\'ID asset audio'; toast('Hedra : pas d\'asset ID audio'); return ''; }
+                   : 'mp3';
+    const audioUp = await _hedraV3UploadBlob(audioBlob, 'voice.' + audioExt);
 
-    // ── 2. Uploader le fichier audio (POST /assets/{id}/upload) ──
-    const audioFd = new FormData();
-    audioFd.append('file', audioBlob, audioFname);
-    const uploadRes = await hUpload('/assets/' + audioId + '/upload', audioFd);
-    if(!uploadRes.ok){ window._lastHedraError='Erreur upload audio ('+uploadRes.status+') — vérifie ta connexion'; toast('Hedra upload audio ' + uploadRes.status); return ''; }
-
-    // ── 3. Avatar image (optionnel) ──
-    let imageId = null;
+    // Image de départ (avatar) — URL distante puis fichier local
+    let startImg = null;
     const avatarImgUrl = (document.getElementById('f-avatarimg')||{}).value?.trim() || '';
     if(avatarImgUrl){
-      try{
-        const imgBlob = await fetch(avatarImgUrl).then(r=>r.blob());
-        const createImgRes = await hPost('/assets', { type: 'image', name: 'avatar.jpg' });
-        if(createImgRes.ok){
-          const imgAsset = await createImgRes.json();
-          if(imgAsset.id){
-            const imgFd = new FormData();
-            imgFd.append('file', imgBlob, 'avatar.jpg');
-            const imgUp = await hUpload('/assets/' + imgAsset.id + '/upload', imgFd);
-            if(imgUp.ok) imageId = imgAsset.id;
-          }
-        }
-      }catch(e){ console.warn('Image avatar skip:', e); }
+      try{ const imgBlob = await fetch(avatarImgUrl).then(r=>r.blob()); startImg = await _hedraV3UploadBlob(imgBlob, 'avatar.jpg'); }
+      catch(e){ console.warn('Image avatar (url) skip:', e); }
     }
-    // Utilise aussi selAvatar.localFile si pas d'URL distante
-    if(!imageId && selAvatar && selAvatar.localFile){
-      try{
-        const createImgRes = await hPost('/assets', { type: 'image', name: 'avatar.jpg' });
-        if(createImgRes.ok){
-          const imgAsset = await createImgRes.json();
-          if(imgAsset.id){
-            const imgFd = new FormData();
-            imgFd.append('file', selAvatar.localFile, 'avatar.jpg');
-            const imgUp = await hUpload('/assets/' + imgAsset.id + '/upload', imgFd);
-            if(imgUp.ok) imageId = imgAsset.id;
-          }
-        }
-      }catch(e){ console.warn('Avatar localFile upload skip:', e); }
+    if(!startImg && selAvatar && selAvatar.localFile){
+      try{ startImg = await _hedraV3UploadBlob(selAvatar.localFile, 'avatar.jpg'); }
+      catch(e){ console.warn('Avatar localFile upload skip:', e); }
     }
-
-    // ── 4. Générer la vidéo (POST /generations) ──
-    const aspectRatio = cfg.format === 'square' ? '1:1' : '9:16';
-    const durationMs  = parseInt(document.getElementById('f-hedra-duration')?.value || '30000');
-    const genBody = {
-      type: 'video',
-      ai_model_id: MODEL_ID,
-      audio_id: audioId,
-      generated_video_inputs: {
-        text_prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
-        aspect_ratio: aspectRatio,
-        character_orientation: 'video',
-        // ── LE CHOIX DE L'UTILISATEUR ARRIVE ENFIN JUSQU'ICI ─────────────────
-        // Cette ligne était figée à '1080p'. Le sélecteur « Qualité » ne réglait
-        // que l'encodeur WebCodecs du navigateur : on facturait un ré-encodage
-        // local (qui ne coûte rien) pendant qu'on payait le 1080p chez Hedra sur
-        // TOUTES les vidéos, y compris celles exportées en 720p. Maintenant que
-        // la résolution voyage jusqu'au fournisseur, « Économique » économise
-        // pour de vrai et le supplément 1080p correspond à une dépense.
-        resolution: (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? '1080p' : '720p'
-      }
-    };
-    if(imageId) genBody.start_keyframe_id = imageId;
-
-    const genRes = await hPost('/generations', genBody);
-    if(!genRes.ok){
-      const err = await genRes.text();
-      window._lastHedraError = 'Hedra erreur ' + genRes.status + (err ? ' — ' + err.slice(0,100) : '') + '. Réessaie ou vérifie tes crédits Hedra.';
-      toast('Hedra génération erreur ' + genRes.status + ' — ' + err.slice(0,80));
-      console.error('Hedra generate:', err);
+    if(!startImg){
+      window._lastHedraError = 'Ajoute une image d\'avatar — obligatoire pour le lipsync (Hedra v3).';
+      toast('Ajoute une image d\'avatar pour générer la vidéo');
       return '';
     }
-    const genData = await genRes.json();
-    const genId = genData.id;
-    if(!genId){ window._lastHedraError='Hedra n\'a pas retourné d\'ID de génération'; toast('Hedra : pas de génération ID'); return ''; }
+
+    // ── Génération (POST /v3/models/<slug>) ──
+    const aspectRatio = cfg.format === 'square' ? '1:1' : '9:16';
+    const resolution  = (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? '1080p' : '720p';
+    const input = {
+      prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
+      aspect_ratio: aspectRatio,
+      resolution,
+      start_image: startImg,
+      audio: audioUp
+    };
+    let jobId;
+    try { jobId = await _hedraV3Submit(_hedraSlug(MODEL_ID), input); }
+    catch(err){
+      window._lastHedraError = 'Hedra erreur — ' + (err&&err.message||err) + '. Réessaie ou vérifie ton solde Hedra.';
+      toast('Hedra : ' + (err&&err.message||err));
+      console.error('Hedra generate v3:', err);
+      return '';
+    }
     toast('Hedra génère ta vidéo… (~2 min)');
 
-    // ── 5. Polling (GET /generations/{id}/status) ──
+    // ── Polling (GET /v3/jobs/<id>/status → /v3/jobs/<id>) ──
     const gpIcon = document.getElementById('gp3')?.querySelector('.gp-icon');
     const hedraBar = document.getElementById('hedraProgressBar');
     const hedraBarFill = document.getElementById('hedraProgressFill');
     const hedraBarPct = document.getElementById('hedraProgressPct');
     if(hedraBar) hedraBar.style.display = 'block';
-    for(let i = 0; i < 72; i++){
-      await wait(5000);
-      const pollRes = await hGet('/generations/' + genId + '/status');
-      if(!pollRes.ok) continue;
-      const pollData = await pollRes.json();
-      const status = (pollData.status || pollData.state || '').toLowerCase();
-      const prog = Math.round((pollData.progress || 0) * 100);
-      if(gpIcon) gpIcon.textContent = prog > 0 ? prog + '%' : '…';
-      if(hedraBarFill) hedraBarFill.style.width = prog + '%';
-      if(hedraBarPct) hedraBarPct.textContent = prog + '%';
-
-      // finalizing = almost done, keep polling
-      if(status === 'finalizing' || status === 'processing' || status === 'queued') continue;
-
-      if(status === 'complete' || status === 'completed' || status === 'succeeded'){
-        if(hedraBar) hedraBar.style.display = 'none';
-        // URL is directly in the status response — no need to fetch /assets
-        const videoUrl = pollData.url || pollData.download_url || pollData.video_url || pollData.streaming_url || '';
-        if(videoUrl){
-          // ── Pré-fetcher le blob immédiatement pour éviter expiration URL + CORS au téléchargement ──
-          try {
-            if(gpIcon) gpIcon.textContent = '';
-            const vRes = await fetch(videoUrl);
-            if(vRes.ok){
-              const vBlob = await vRes.blob();
-              const localUrl = URL.createObjectURL(vBlob);
-              if(hedraBar) hedraBar.style.display = 'none';
-              await _incrementVideosUsed(); // ✅ Incrémenter quota après succès
-              return localUrl; // blob:// local → jamais d'expiration ni CORS
-            }
-          } catch(e){ console.warn('Pre-fetch blob failed, using remote URL:', e); }
-          if(hedraBar) hedraBar.style.display = 'none';
-          await _incrementVideosUsed(); // ✅ Incrémenter quota après succès
-          return videoUrl;
-        }
-        // Fallback: try fetching the asset if provided
-        const assetId = pollData.asset_id;
-        if(assetId){
-          try{
-            const assetRes = await hGet('/assets/' + assetId);
-            if(assetRes.ok){
-              const assetData = await assetRes.json();
-              return assetData.url || assetData.download_url || assetData.presigned_url || '';
-            }
-          }catch(e){ console.warn('Asset fetch fallback failed:', e); }
-        }
-        toast('Hedra : vidéo générée mais URL introuvable');
-        return '';
-      }
-      if(status === 'failed' || status === 'error' || status === 'cancelled'){
-        if(hedraBar) hedraBar.style.display = 'none';
-        const reason = pollData.error_message || pollData.error || pollData.message || '';
-        window._lastHedraError = 'Génération Hedra échouée' + (reason ? ' : ' + reason.slice(0,100) : '') + '. Vérifie tes crédits ou réessaie.';
-        toast('Hedra génération échouée' + (reason ? ' : ' + reason.slice(0,60) : ''));
-        return '';
-      }
+    let out;
+    try {
+      out = await _hedraV3Poll(jobId, (p)=>{
+        const prog = Math.round((p||0)*100);
+        if(gpIcon) gpIcon.textContent = prog > 0 ? prog + '%' : '…';
+        if(hedraBarFill) hedraBarFill.style.width = prog + '%';
+        if(hedraBarPct) hedraBarPct.textContent = prog + '%';
+      }, 90);
+    } catch(err){
+      if(hedraBar) hedraBar.style.display = 'none';
+      window._lastHedraError = 'Génération Hedra échouée : ' + (err&&err.message||err) + '. Vérifie ton solde ou réessaie.';
+      toast('Hedra génération échouée : ' + String(err&&err.message||err).slice(0,60));
+      return '';
     }
     if(hedraBar) hedraBar.style.display = 'none';
-    window._lastHedraError = 'Timeout : Hedra a pris plus de 6 min. Réessaie ou vérifie app.hedra.com.';
-    toast('Hedra timeout (6 min) — vérifie app.hedra.com');
-    return '';
+    if(gpIcon) gpIcon.textContent = '';
+    // Pré-fetch du blob (évite expiration URL + CORS au téléchargement)
+    try {
+      const vRes = await fetch(out.url);
+      if(vRes.ok){ const vBlob = await vRes.blob(); const localUrl = URL.createObjectURL(vBlob); await _incrementVideosUsed(); return localUrl; }
+    } catch(e){ console.warn('Pre-fetch blob failed, using remote URL:', e); }
+    await _incrementVideosUsed();
+    return out.url;
   } catch(e){
     window._lastHedraError = 'Erreur réseau : ' + (e.message || e);
     toast('Hedra erreur : ' + (e.message || e));
@@ -27576,14 +27468,23 @@ async function _hedraFetch(path, method, body, isForm){
 // Flux universel : /v3/files (upload, gratuit) → /v3/models/<slug> (submit {input})
 // → /v3/jobs/<id>/status (poll) → /v3/jobs/<id> (outputs[].url). Cf. mémoire hedra-api-v3.
 // ─────────────────────────────────────────────────────────────────────────────
-async function _hedraV3Upload(b64, mime, name){
-  const bin  = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
-  const blob = new Blob([bin], { type: mime||'image/png' });
+async function _hedraV3UploadBlob(blob, name){
   const fd = new FormData(); fd.append('file', blob, name || 'file');
   const r = await _hedraFetch('/v3/files', 'POST', fd, true);
   if(!r.ok) throw new Error('Upload Hedra v3 '+r.status+' — '+(await r.text()).slice(0,140));
   const j = await r.json(); if(!j || !j.url) throw new Error('Upload Hedra v3 : pas d\'url');
   return { source:'url', url:j.url };   // forme attendue dans input.<media>
+}
+async function _hedraV3Upload(b64, mime, name){
+  const bin = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+  return _hedraV3UploadBlob(new Blob([bin], { type: mime||'image/png' }), name);
+}
+// UUID modèle (ancienne API) → slug v3 (lipsync). Char-3 = défaut Générateur ; Avatar = worker.
+function _hedraSlug(modelId){
+  return ({
+    'd1dd37a3-e39a-4854-a298-6510289f9cf2':'hedra-character-3',
+    '26f0fc66-152b-40ab-abed-76c43df99bc8':'hedra-avatar',
+  })[modelId] || 'hedra-character-3';
 }
 async function _hedraV3Submit(slug, input){
   const r = await _hedraFetch('/v3/models/'+slug, 'POST', { input });
@@ -27652,57 +27553,26 @@ async function _expSeedanceModel(){
 // ── Génère une vidéo cartoon avec Seedance 1.5 Pro via Hedra (image→vidéo) ──
 async function _cartoonSeedanceGenerate(animPrompt, progTxt){
   if(progTxt) progTxt.textContent = 'Seedance : préparation…';
-  const modelId = await _cartoonResolveSeedanceModel();
-
-  // 1. Upload de l'image perso (Imagen 4) comme asset Hedra
-  const imgBytes = Uint8Array.from(atob(window._cartoonImgB64), c=>c.charCodeAt(0));
-  const imgBlob  = new Blob([imgBytes], { type:'image/png' });
-  const createImg = await _hedraFetch('/assets', 'POST', { type:'image', name:'cartoon.png' });
-  if(!createImg.ok){ const e=await createImg.text(); throw new Error('Hedra asset image '+createImg.status+' — '+e.slice(0,100)); }
-  const imgAsset = await createImg.json();
-  if(!imgAsset.id) throw new Error('Hedra : pas d\'ID asset image');
-  const fd = new FormData(); fd.append('file', imgBlob, 'cartoon.png');
-  const up = await _hedraFetch('/assets/'+imgAsset.id+'/upload', 'POST', fd, true);
-  if(!up.ok){ const e=await up.text(); throw new Error('Hedra upload image '+up.status+' — '+e.slice(0,100)); }
-
-  // 2. Lancer la génération
+  // API Hedra v3 : /v3/files (image perso Imagen 4) → /v3/models/seedance-20 → /v3/jobs (poll)
+  const start_image = await _hedraV3Upload(window._cartoonImgB64, 'image/png', 'cartoon.png');
   if(progTxt) progTxt.textContent = 'Seedance génère…';
-  const genBody = {
-    type: 'video',
-    ai_model_id: modelId,
-    start_keyframe_id: imgAsset.id,
-    generated_video_inputs: {
-      text_prompt: animPrompt,
-      aspect_ratio: '9:16',
-      resolution: '1080p',
-      duration_ms: (window._cartoonSeedanceDur || 5000)
-    }
+  const DUR=[4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000];
+  const want = window._cartoonSeedanceDur || 5000;
+  const dms = DUR.reduce((a,b)=> Math.abs(b-want)<Math.abs(a-want)?b:a, 5000);
+  const input = {
+    prompt: animPrompt,
+    aspect_ratio: '9:16',
+    resolution: '1080p',       // 1080p ⇒ quality 'standard' (fast = 480p/720p uniquement)
+    duration_ms: dms,
+    quality: 'standard',
+    generate_audio: false,
+    start_image
   };
-  const genRes = await _hedraFetch('/generations', 'POST', genBody);
-  if(!genRes.ok){ const e=await genRes.text(); throw new Error('Seedance '+genRes.status+' — '+e.slice(0,140)); }
-  const gen = await genRes.json();
-  const genId = gen.id || gen.generation_id;
-  if(!genId) throw new Error('Seedance : pas d\'ID de génération');
-
-  // 3. Polling
-  for(let i=0; i<72; i++){
-    await new Promise(r=>setTimeout(r,5000));
-    const pr = await _hedraFetch('/generations/'+genId+'/status', 'GET');
-    if(!pr.ok) continue;
-    const pd = await pr.json();
-    const st = (pd.status || pd.state || '').toLowerCase();
-    if(st==='error' || st==='failed') throw new Error('Seedance a échoué — '+(pd.error || pd.error_message || 'raison inconnue'));
-    if(st==='complete' || st==='completed' || st==='succeeded'){
-      const url = pd.url || pd.download_url || pd.video_url || pd.streaming_url || '';
-      if(!url) throw new Error('Seedance : pas d\'URL vidéo dans la réponse');
-      const vr = await fetch(url);
-      if(!vr.ok) throw new Error('Téléchargement vidéo Seedance échoué ('+vr.status+')');
-      const vb = await vr.blob();
-      return new Blob([vb], { type:'video/mp4' });
-    }
-    // queued / processing / finalizing → continue
-  }
-  throw new Error('Seedance : délai dépassé (~6 min)');
+  const jobId = await _hedraV3Submit('seedance-20', input);
+  const out   = await _hedraV3Poll(jobId, null, 90);
+  const vr = await fetch(out.url);
+  if(!vr.ok) throw new Error('Téléchargement vidéo Seedance échoué ('+vr.status+')');
+  return new Blob([await vr.blob()], { type: out.content_type||'video/mp4' });
 }
 
 // ── Cartoon subtitle config ──────────────────────────────────────────
