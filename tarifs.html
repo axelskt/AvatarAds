@@ -123,7 +123,10 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="pill" style="background:rgba(40,199,149,.14);border-color:rgba(40,199,149,.35);color:var(--green);font-weight:700;font-size:12px">-25%</div>
   </div>
   <div id="pricing-grid" class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;max-width:1180px;margin:0 auto"></div>
-  <div class="row" style="justify-content:center;gap:22px;margin-top:40px;flex-wrap:wrap">
+  <div style="max-width:1180px;margin:16px auto 0;text-align:center;font-size:12px;color:var(--text-3);line-height:1.5;padding:0 20px">
+    <span style="color:var(--accent)">*</span> Estimation moyenne avec le <b style="color:var(--text-2)">Montage&nbsp;IA</b>, qui contient plusieurs plans par vidéo. Le nombre réel dépend de la durée de tes vidéos.
+  </div>
+  <div class="row" style="justify-content:center;gap:22px;margin-top:28px;flex-wrap:wrap">
     <span class="faint mono" style="font-size:12px">✓ Paiement sécurisé Whop</span>
     <span class="faint mono" style="font-size:12px">↻ Annulation à tout moment</span>
   </div>
@@ -196,7 +199,8 @@ function _quotaBox(pl, tier){
   var bg = violet ? 'rgba(154,124,255,.07)' : 'var(--panel-1)';
   var av    = tier ? tier.credits : pl.credits;
   var equiv = tier ? (tier.credits + ' secondes de vidéo') : pl.equiv;
-  var videos = Math.round(av/8/10)*10;   // ~8 crédits/vidéo, arrondi à la dizaine → on VEND des vidéos
+  var _bn = violet ? 75 : (parseInt(pl.bonus)||0);   // crédits offerts (1er mois)
+  var videos = Math.round((av+_bn)/8/10)*10;   // ~8 crédits/vidéo, arrondi à la dizaine → on VEND des vidéos
   var _pd = videos/30, perDay = _pd.toFixed(1).replace('.',',')+' '+(_pd<2?'contenu':'contenus');   // ≈ X,X contenu(s)/jour
   var bonus = violet ? '+75' : (pl.bonus || '');
   var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
@@ -205,7 +209,7 @@ function _quotaBox(pl, tier){
     +'<span style="font-weight:700;font-size:15px">crédits / mois</span>'
     +(bonus?'<span style="margin-left:auto;display:flex;gap:7px;align-items:baseline;white-space:nowrap"><span class="display" style="font-size:27px;font-weight:800;color:var(--green)">'+bonus+'</span><span style="font-weight:700;font-size:15px">offerts</span></span>':'')
     +'</div>'
-    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>jusqu\'à '+videos+' vidéos / mois</span></b></div>'
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>jusqu\'à '+videos+' vidéos / mois</span><span style="color:var(--accent)">*</span></b></div>'
     +'<div class="mono muted" style="font-size:11.5px;margin-top:5px;opacity:.72">≈ <span'+(violet?' id="lpEliteSec"':'')+'>'+perDay+'</span> par jour</div>';
   if(violet){
     var idx=eliteSlider, pct=idx/(ELITE_TIERS.length-1)*100, marks='';
@@ -267,7 +271,7 @@ function setEliteSlider(idx){
   var tier=ELITE_TIERS[idx]; if(!tier) return;
   var pct=idx/(ELITE_TIERS.length-1)*100;
   var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.credits;
-  var _v=Math.round(tier.credits/8/10)*10; var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent='jusqu\'à '+_v+' vidéos / mois';
+  var _v=Math.round((tier.credits+75)/8/10)*10; var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent='jusqu\'à '+_v+' vidéos / mois';
   var sec=document.getElementById('lpEliteSec'); if(sec){ var _pd2=_v/30; sec.textContent=_pd2.toFixed(1).replace('.',',')+' '+(_pd2<2?'contenu':'contenus'); }
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
