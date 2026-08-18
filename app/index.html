@@ -24761,8 +24761,18 @@ function _mcFalErr(rd, status){
   const d=Array.isArray(rd?.detail)?rd.detail[0]:rd?.detail;
   const type=String(d?.type||''); const msg=String(d?.msg||(typeof d==='string'?d:'')||rd?.error||'');
   if(/image_too_large/i.test(type||msg)) return 'Image du personnage trop grande pour Kling (max 3850 px) — réessaie, elle sera réduite automatiquement';
-  if(/risk|policy|moderat|sensitive|celebrit/i.test(type+' '+msg)) return 'Kling a refusé le contenu (modération) — essaie une autre photo ou une autre vidéo';
+  if(/risk|policy|moderat|sensitive|celebrit|content check|flagged|could not be processed/i.test(type+' '+msg)) return 'Kling a refusé ce contenu (modération) — un élément de ta photo ou de ta vidéo a été signalé. Essaie une autre image/vidéo';
   return 'Kling a refusé la génération'+(msg?' : '+msg.slice(0,140):' (HTTP '+status+')');
+}
+/* Le job a-t-il été bloqué par le content checker de Kling (content_policy_violation) ?
+   Kling 3.0 (v3) déclenche souvent un FAUX positif sur du contenu UGC normal (visage,
+   peau…) là où 2.6 passe — d'où le repli auto v3→2.6 dans _mcGenerate. */
+function _mcIsModeration(rd){
+  try{
+    const d=Array.isArray(rd?.detail)?rd.detail[0]:rd?.detail;
+    const s=(String(d?.type||'')+' '+String(d?.msg||(typeof d==='string'?d:'')||rd?.error||'')).toLowerCase();
+    return /policy|moderat|content check|flagged|could not be processed|sensitive|risk/.test(s);
+  }catch(_){ return false; }
 }
 /* ── Motion Control — génération réelle (Kling 2.6 via fal-proxy) ── */
 async function _mcGenerate(){
@@ -24823,9 +24833,8 @@ async function _mcGenerate(){
       }catch(e){ console.error('fond:',e); toast("Fond non appliqué — perso sur son décor d'origine"); }
     }
     // Version Kling : 'v3' (Kling 3.0) UNIQUEMENT pour le compte dev ; tous les autres restent en v2.6.
-    const _mcVer = (window._mcKlingVer==='v3' && _aaIsDev()) ? 'v3' : 'v2.6';
+    let _mcVer = (window._mcKlingVer==='v3' && _aaIsDev()) ? 'v3' : 'v2.6';
     _mcProg('Transfert du mouvement (Kling '+_mcVer.replace('v','')+')…', 18);
-    const model='/fal-ai/kling-video/'+_mcVer+'/'+(tier==='pro'?'pro':'standard')+'/motion-control';
     // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
     // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
     const _mcMotion = window._mcPrompt || 'The character reproduces the exact motion and gestures of the reference video, natural, same framing';
@@ -24839,34 +24848,53 @@ async function _mcGenerate(){
       ? ' The camera smoothly tracks and follows the character\'s head and movements (dynamic tracking shot).'
       : '';
     const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcBgTxt + _mcCamTxt;
-    const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId) });
-    if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
-    const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
-    const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
-    const reP = sd.response_url ? sd.response_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId;
-    let out='';
-    // Kling Pro 1080p (motion-control 15 s) peut dépasser 6 min sur la file fal
-    // (timeout menteur du 15/08, job Lamine→Mia jamais fini en 6 min) → 11 min.
-    for(let i=0;i<165;i++){
-      await new Promise(r=>setTimeout(r,4000));
-      const pr=await fGet(stP); if(!pr.ok) continue;
-      const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
-      _mcProg(i>75?'Génération en cours… (Kling est chargé, ça arrive)':'Génération en cours…', Math.min(88, 22+i*2));
-      if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
-      if(s==='COMPLETED'){
-        // « COMPLETED » veut dire « traité », PAS « réussi » : quand Kling échoue
-        // (image trop grande, modération…), le résultat renvoie un 422 avec la
-        // vraie raison. L'ignorer laissait `out` vide → « Délai dépassé » menteur
-        // au bout de 10 s (mesuré le 13/08, image 3392×5056 refusée).
-        const rr=await fGet(reP); const rd=await rr.json().catch(()=>({}));
-        if(!rr.ok) throw new Error(_mcFalErr(rd, rr.status));
-        out=rd?.video?.url||rd?.video_url||'';
-        if(!out) throw new Error(_mcFalErr(rd, rr.status));
-        break;
+    // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
+    // (marquée ._moderation quand le content checker a bloqué → repli possible).
+    const runKling = async (ver) => {
+      const model='/fal-ai/kling-video/'+ver+'/'+(tier==='pro'?'pro':'standard')+'/motion-control';
+      const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId) });
+      if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
+      const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
+      const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
+      const reP = sd.response_url ? sd.response_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId;
+      // Kling Pro 1080p (motion-control 15 s) peut dépasser 6 min sur la file fal
+      // (timeout menteur du 15/08, job Lamine→Mia jamais fini en 6 min) → 11 min.
+      for(let i=0;i<165;i++){
+        await new Promise(r=>setTimeout(r,4000));
+        const pr=await fGet(stP); if(!pr.ok) continue;
+        const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+        _mcProg(i>75?'Génération en cours… (Kling est chargé, ça arrive)':'Génération en cours…', Math.min(88, 22+i*2));
+        if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
+        if(s==='COMPLETED'){
+          // « COMPLETED » veut dire « traité », PAS « réussi » : quand Kling échoue
+          // (image trop grande, modération…), le résultat renvoie un 422 avec la
+          // vraie raison. L'ignorer laissait `out` vide → « Délai dépassé » menteur
+          // au bout de 10 s (mesuré le 13/08, image 3392×5056 refusée).
+          const rr=await fGet(reP); const rd=await rr.json().catch(()=>({}));
+          if(!rr.ok){ const er=new Error(_mcFalErr(rd, rr.status)); er._moderation=_mcIsModeration(rd); throw er; }
+          const u=rd?.video?.url||rd?.video_url||'';
+          if(!u){ const er=new Error(_mcFalErr(rd, rr.status)); er._moderation=_mcIsModeration(rd); throw er; }
+          return u;
+        }
+        throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
       }
-      throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
+      throw new Error('Délai dépassé (>11 min) — Kling saturé, réessaie dans un moment');
+    };
+    let out='';
+    try{ out=await runKling(_mcVer); }
+    catch(e){
+      // Kling 3.0 (v3) a un content checker BIEN plus strict que 2.6 : sur du
+      // contenu UGC normal (un visage, de la peau…) il renvoie souvent un FAUX
+      // positif content_policy_violation — après ~5 min. On retombe alors UNE fois
+      // sur 2.6 (moteur éprouvé, checker permissif) pour livrer quand même. Un job
+      // fal échoué n'est pas facturé → seul le succès 2.6 débite.
+      if(_mcVer==='v3' && e && e._moderation){
+        toast('Kling 3.0 a jugé ce contenu sensible — reprise automatique en Kling 2.6');
+        _mcProg('Reprise en Kling 2.6…', 20);
+        _mcVer='v2.6';
+        out=await runKling('v2.6');
+      } else throw e;
     }
-    if(!out) throw new Error('Délai dépassé (>11 min) — Kling saturé, réessaie dans un moment');
     // Débit au succès (jamais avant). Standard=2 cr/s (720p), Pro=4 cr/s (1080p natif).
     // Le +1 cr/s du 1080p Standard n'est facturé QUE si l'upscale Topaz réussit.
     const baseRate = tier==='pro' ? 4 : 2;
