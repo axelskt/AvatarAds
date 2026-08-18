@@ -12527,7 +12527,7 @@ async function _mtAvatarInFormat(idx, target){
 // génère UNE scène avatar Hedra (lipsync d'un extrait audio sur la photo) → Blob mp4
 async function _mtHedraScene(imageFile, audioWav, format, modelId, role){
   // API Hedra v3 : /v3/files (image + audio) → /v3/models/<slug> → /v3/jobs (poll)
-  const startImg = await _hedraV3UploadBlob(imageFile, imageFile.name||'face.png');
+  const startImg = await _hedraV3UploadBlob(await _imgShrinkForUpload(imageFile,'image/jpeg'), imageFile.name||'face.png');
   const audioUp  = await _hedraV3UploadBlob(audioWav, 'seg.wav');
   const ar = format==='paysage' ? '16:9' : '9:16';
   const input = { prompt:_mtMotionPrompt('hedra', role), aspect_ratio:ar, resolution:'1080p', start_image:startImg, audio:audioUp };
@@ -20693,11 +20693,11 @@ async function callHedra(audioBlob){
     let startImg = null;
     const avatarImgUrl = (document.getElementById('f-avatarimg')||{}).value?.trim() || '';
     if(avatarImgUrl){
-      try{ const imgBlob = await fetch(avatarImgUrl).then(r=>r.blob()); startImg = await _hedraV3UploadBlob(imgBlob, 'avatar.jpg'); }
+      try{ const imgBlob = await fetch(avatarImgUrl).then(r=>r.blob()); startImg = await _hedraV3UploadBlob(await _imgShrinkForUpload(imgBlob,'image/jpeg'), 'avatar.jpg'); }
       catch(e){ console.warn('Image avatar (url) skip:', e); }
     }
     if(!startImg && selAvatar && selAvatar.localFile){
-      try{ startImg = await _hedraV3UploadBlob(selAvatar.localFile, 'avatar.jpg'); }
+      try{ startImg = await _hedraV3UploadBlob(await _imgShrinkForUpload(selAvatar.localFile,'image/jpeg'), 'avatar.jpg'); }
       catch(e){ console.warn('Avatar localFile upload skip:', e); }
     }
     if(!startImg){
@@ -27543,9 +27543,24 @@ async function _hedraV3UploadBlob(blob, name){
   const j = await r.json(); if(!j || !j.url) throw new Error('Upload Hedra v3 : pas d\'url');
   return { source:'url', url:j.url };   // forme attendue dans input.<media>
 }
+// Hedra v3 = max 30 Mo/image ; une photo HD en PNG (sans perte) dépasse vite. On la ramène
+// en JPEG ≤ 2560 px (assez pour 720p/1080p, très en-dessous de la limite). src = Blob | base64.
+async function _imgShrinkForUpload(src, mime){
+  let blob = (src instanceof Blob) ? src : await (await fetch('data:'+(mime||'image/png')+';base64,'+src)).blob();
+  try{
+    if(blob.size <= 2000000) return blob;   // déjà léger → tel quel
+    const bmp = await createImageBitmap(blob);
+    const MAX = 2560, scale = Math.min(1, MAX/Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width*scale)), h = Math.max(1, Math.round(bmp.height*scale));
+    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    const out = await new Promise(res=> cv.toBlob(b=>res(b), 'image/jpeg', 0.92));
+    return (out && out.size < blob.size) ? out : blob;
+  }catch(e){ console.warn('shrink img:', e); return blob; }
+}
 async function _hedraV3Upload(b64, mime, name){
-  const bin = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
-  return _hedraV3UploadBlob(new Blob([bin], { type: mime||'image/png' }), name);
+  const blob = await _imgShrinkForUpload(b64, mime);   // b64 = toujours une IMAGE ici
+  return _hedraV3UploadBlob(blob, name);
 }
 // UUID modèle (ancienne API) → slug v3 (lipsync). Char-3 = défaut Générateur ; Avatar = worker.
 function _hedraSlug(modelId){
