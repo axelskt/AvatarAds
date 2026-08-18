@@ -180,11 +180,11 @@ const PLANS=[
   { id:'starter', name:'STARTER', tagline:'Pour démarrer sans se ruiner.',
     price:'29,99', annual:'20,83', accent:'var(--text)',
     credits:150, equiv:'150 secondes de vidéo', extra:'Images/Vidéo Standard', bonus:'+25', note:'sans engagement',
-    listHead:'INCLUS :', feats:['Avatar IA lip-sync','Générateur d\'images IA','Prompt → vidéo virale','Sous-titres animés','Éditeur vidéo + <b style="color:var(--accent)">Montage IA</b><span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">NOUVEAU</span>'] },
+    listHead:'INCLUS :', feats:['Avatar IA lip-sync','Nettoyage Audio','Images/Vidéo Standard','Sous-titres animés','Éditeur vidéo + <b style="color:var(--accent)">Montage IA</b><span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">NOUVEAU</span>'] },
   { id:'pro', name:'PRO', tagline:'Pour les créateurs qui veulent scaler.',
     price:'49,99', annual:'37,50', strike:'64,99', annualStrike:'48,75', accent:'var(--accent)', popular:true,
     credits:550, equiv:'550 secondes de vidéo', extra:'Images/Vidéo Premium', bonus:'+50', note:'soit 1,67€/jour',
-    listHead:'TOUT STARTER, PLUS :', feats:['AvatarAds × Claude<span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">EXCLU</span>','Suppression des silences avancée','Qualité Premium images & vidéos','Sous-titres synchronisés à l\'audio','Voice Design ElevenLabs'] },
+    listHead:'TOUT STARTER, PLUS :', feats:['AvatarAds × Claude<span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">EXCLU</span>','Montage IA Avancé','Qualité Premium images & vidéos','Sous-titres synchronisés à l\'audio','Motion Control Pro'] },
   { id:'elite', name:'ELITE ✦', tagline:'Le maximum pour les plus ambitieux.',
     accent:'var(--violet)',
     note:'paiement mensuel · sans engagement',
@@ -196,7 +196,7 @@ function _quotaBox(pl, tier){
   var bg = violet ? 'rgba(154,124,255,.07)' : 'var(--panel-1)';
   var av    = tier ? tier.credits : pl.credits;
   var equiv = tier ? (tier.credits + ' secondes de vidéo') : pl.equiv;
-  var extra = tier ? 'Images/Vidéo 4K · Express Fast' : pl.extra;
+  var videos = Math.round(av/5);   // ~5 s facturés (lipsync) par vidéo de 15-20 s → on VEND des vidéos
   var bonus = violet ? '+75' : (pl.bonus || '');
   var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
     +'<div class="row" style="gap:9px;align-items:baseline;flex-wrap:wrap">'
@@ -204,13 +204,13 @@ function _quotaBox(pl, tier){
     +'<span style="font-weight:700;font-size:15px">crédits / mois</span>'
     +(bonus?'<span style="margin-left:auto;display:flex;gap:7px;align-items:baseline;white-space:nowrap"><span class="display" style="font-size:27px;font-weight:800;color:var(--green)">'+bonus+'</span><span style="font-weight:700;font-size:15px">offerts</span></span>':'')
     +'</div>'
-    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px">≈ <b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>'+equiv+'</span></b></div>'
-    +'<div class="mono muted" style="font-size:12.5px;margin-top:5px">+ <span'+(violet?' id="lpEliteImg"':'')+'>'+extra+'</span></div>';
+    +'<div class="mono muted" style="font-size:12.5px;margin-top:10px">≈ <b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>'+videos+' vidéos</span></b></div>'
+    +'<div class="mono muted" style="font-size:11.5px;margin-top:5px;opacity:.72">≈ <span'+(violet?' id="lpEliteSec"':'')+'>'+equiv+'</span></div>';
   if(violet){
     var idx=eliteSlider, pct=idx/(ELITE_TIERS.length-1)*100, marks='';
     for(var t=0;t<ELITE_TIERS.length;t++){
       var act=t===idx;
-      marks+='<button id="lpEliteMark'+t+'" onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+ELITE_TIERS[t].avatars+'</button>';
+      marks+='<button id="lpEliteMark'+t+'" onclick="setEliteSlider('+t+')" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:'+(act?'var(--violet)':'var(--text-3)')+';font-weight:'+(act?'700':'400')+'">'+Math.round(ELITE_TIERS[t].credits/5)+'</button>';
     }
     h+='<input id="lpEliteRange" type="range" min="0" max="'+(ELITE_TIERS.length-1)+'" step="1" value="'+idx+'" oninput="setEliteSlider(+this.value)" class="elite-range" style="width:100%;margin-top:12px;background:linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)">'
       +'<div style="display:flex;justify-content:space-between;margin-top:6px">'+marks+'</div>';
@@ -266,8 +266,8 @@ function setEliteSlider(idx){
   var tier=ELITE_TIERS[idx]; if(!tier) return;
   var pct=idx/(ELITE_TIERS.length-1)*100;
   var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.credits;
-  var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent=tier.credits+' secondes de vidéo';
-  var img=document.getElementById('lpEliteImg'); if(img) img.textContent='Images/Vidéo 4K · Express Fast';
+  var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent=Math.round(tier.credits/5)+' vidéos';
+  var sec=document.getElementById('lpEliteSec'); if(sec) sec.textContent=tier.credits+' secondes de vidéo';
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
