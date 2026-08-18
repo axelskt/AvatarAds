@@ -23088,6 +23088,28 @@ function _libSendImageToCartoon(imgUrl){
 }
 
 // ── Chargement des thumbnails vidéo + waveforms audio en arrière-plan ──
+// Télécharge un média de la bibliothèque (audio ou vidéo) — local (IDB) OU serveur
+// (Storage signé). Fetch → blob → a[download] : force le nom et marche cross-origin.
+async function _libDownloadMedia(ri, kind){
+  const entry = library[ri];
+  if(!entry){ toast('Média introuvable'); return; }
+  try{
+    let srcUrl = null;
+    if(kind==='audio'){
+      if(entry.idbKey){ try{ const e=await _idbLoad(entry.idbKey); if(e && e.blob) srcUrl=URL.createObjectURL(e.blob); }catch(_){} }
+      if(!srcUrl && entry.srvPath && typeof sb!=='undefined'){ try{ const s=await sb.storage.from('render-media').createSignedUrl(entry.srvPath, 3600); srcUrl=s.data && s.data.signedUrl; }catch(_){} }
+    } else {
+      srcUrl = await _libVideoUrl(entry);
+    }
+    if(!srcUrl){ toast('Média introuvable'); return; }
+    toast('Téléchargement…');
+    const r = await fetch(srcUrl); const blob = await r.blob();
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=u; a.download = 'avatarads-'+(kind==='audio'?'audio.mp3':'video.mp4');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(u); }catch(_){} if(String(srcUrl).startsWith('blob:')){ try{ URL.revokeObjectURL(srcUrl); }catch(_){} } }, 4000);
+  }catch(e){ console.error('lib download:', e); toast('Téléchargement impossible'); }
+}
 async function _loadLibThumbnails(){
   // 1. Thumbnails vidéo — premier frame via canvas (local IDB OU serveur signé)
   const thumbEls = document.querySelectorAll('[data-lib-vid]');
@@ -23105,6 +23127,7 @@ async function _loadLibThumbnails(){
         vid.src = url; vid.muted = true; vid.preload = 'metadata'; vid.playsInline = true;
         const _cleanup = () => { if(isBlob){ try{ URL.revokeObjectURL(url); }catch(_){} } };
         vid.onloadeddata = () => {
+          try{ const dEl=document.getElementById('lib-dur-'+ri); if(dEl && vid.duration && isFinite(vid.duration)){ const s=Math.round(vid.duration); dEl.textContent = s>=60 ? (Math.floor(s/60)+':'+String(s%60).padStart(2,'0')) : (s+'s'); } }catch(_){}
           vid.currentTime = 0.5;
           vid.onseeked = () => {
             try {
@@ -23281,7 +23304,7 @@ function renderLibrary(){
       return `<div class="vid-card">
         <div class="vid-thumb" style="background:${v.bg};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
           <canvas id="lib-wave-${ri}" data-lib-audio-idb="${v.idbKey||''}" width="160" height="60" style="position:absolute;inset:0;width:100%;height:100%;opacity:.7;z-index:1"></canvas>
-          <div class="lib-emoji" style="font-size:36px;z-index:2;position:relative">${v.emo}</div>
+          <div class="lib-emoji" style="z-index:2;position:relative;color:var(--text2);opacity:.9"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 9v6"/></svg></div>
           <div class="vid-overlay" style="z-index:3"></div>
           <div class="vid-badge" style="z-index:4">${v.style}</div>
           <div style="z-index:5">${_delBtn('lib', ri)}</div>
@@ -23292,8 +23315,7 @@ function renderLibrary(){
           <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
           <div style="display:flex;gap:5px;margin-top:7px">
             <button id="libAudioPlay_${ri}" onclick="event.stopPropagation();_libPlayAudio(${ri},this)" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
-            <button onclick="event.stopPropagation();recPlayLibraryAudio(${ri})" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'">→ Générateur</button>
-            <button onclick="event.stopPropagation();_libSendAudioToExpress(${ri})" title="Envoyer vers Express" style="padding:7px 8px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.18)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
+            <button onclick="event.stopPropagation();_libDownloadMedia(${ri},'audio')" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
           </div>
         </div>
       </div>`;
@@ -23314,12 +23336,11 @@ function renderLibrary(){
       <div class="vid-meta">
         <div class="vid-title">${v.name || 'Sans titre'}</div>
         <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}</div>
-        <div class="vid-status"><div class="sdot ok"></div><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Prêt</span></div>
+        <div class="vid-status"><span id="lib-dur-${ri}" style="font-size:10px;font-family:var(--mono);color:var(--text3)"></span></div>
         ${_hasVid ? `
         <div style="display:flex;gap:5px;margin-top:7px">
           <button onclick="event.stopPropagation();_libPreviewVideo(${ri})" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
-          <button onclick="recomposeFromLibrary(${ri})" style="flex:1;padding:7px 4px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Utiliser</button>
-          <button onclick="event.stopPropagation();_libSendVideoToExpress(${ri})" title="Envoyer vers Express" style="padding:7px 8px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:8px;color:var(--orange2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.18)'" onmouseout="this.style.background='rgba(255,107,53,0.08)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
+          <button onclick="event.stopPropagation();_libDownloadMedia(${ri},'video')" style="flex:1;padding:7px 4px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
         </div>` : ''}
       </div>
     </div>`;
