@@ -24604,7 +24604,7 @@ function _mcRenderAdv(){
       ${[['9:16',9,16],['1:1',12,12],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'9:16')===f;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px" onclick="_mcSetFormat('${f}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>${f}</button>`;}).join('')}
     </div>
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
-    ${[['_mcToggleCam','Caméra portée (réaliste)','Léger tremblement organique qui suit les mouvements — comme un selfie filmé à la main',!!window._mcCamFollow],
+    ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow],
        ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Ne remplace que la personne, garde le décor',!!window._mcKeepVidBg]]
       .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
         <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
@@ -24761,7 +24761,7 @@ function _mcFalErr(rd, status){
   const d=Array.isArray(rd?.detail)?rd.detail[0]:rd?.detail;
   const type=String(d?.type||''); const msg=String(d?.msg||(typeof d==='string'?d:'')||rd?.error||'');
   if(/image_too_large/i.test(type||msg)) return 'Image du personnage trop grande pour Kling (max 3850 px) — réessaie, elle sera réduite automatiquement';
-  if(/risk|policy|moderat|sensitive|celebrit|content check|flagged|could not be processed/i.test(type+' '+msg)) return 'Kling a refusé ce contenu (modération) — un élément de ta photo ou de ta vidéo a été signalé. Essaie une autre image/vidéo';
+  if(/risk|policy|moderat|sensitive|celebrit|content check|flagged|could not be processed/i.test(type+' '+msg)) return 'Kling a refusé ce contenu (modération) — souvent un élément du décor (poster, logo, marque, personnage). Essaie une photo à fond neutre, ou l\'option Arrière-plan pour remplacer le décor.';
   return 'Kling a refusé la génération'+(msg?' : '+msg.slice(0,140):' (HTTP '+status+')');
 }
 /* Le job a-t-il été bloqué par le content checker de Kling (content_policy_violation) ?
