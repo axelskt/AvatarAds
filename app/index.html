@@ -8961,11 +8961,30 @@ function _imgLoadRef(file){
   r.readAsDataURL(file);
 }
 
+// Normalise une image (File/Blob) en PNG RGBA propre ≤2048px via canvas — gpt-image /edits
+// refuse les HEIC (photos iPhone), certains WEBP et les modes exotiques (« Invalid image file or mode »).
+async function _imgToCleanPng(src, name){
+  const bmp = await createImageBitmap(src);
+  const MAX = 2048, scale = Math.min(1, MAX/Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width*scale)), h = Math.max(1, Math.round(bmp.height*scale));
+  const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+  cv.getContext('2d').drawImage(bmp, 0, 0, w, h);
+  const blob = await new Promise(res=> cv.toBlob(res, 'image/png'));
+  return new File([blob], name||'ref.png', { type:'image/png' });
+}
 // Édition d'image via gpt-image-1 /v1/images/edits (multipart)
 async function _imgEditOne(token, prompt, refFile, gptSize){
   let lastErr = 'Erreur correction';
-  // Jusqu'à 5 images de référence (gpt-image accepte image[] en multipart)
-  const _refFiles = (_imgRefFiles && _imgRefFiles.length) ? _imgRefFiles.slice(0,5) : [refFile];
+  // Jusqu'à 5 images de référence (gpt-image accepte image[] en multipart).
+  // ⚠ On NORMALISE chaque réf en PNG propre avant l'envoi (sinon un HEIC/WEBP → 400 « Invalid image file »).
+  const _srcFiles = (_imgRefFiles && _imgRefFiles.length) ? _imgRefFiles.slice(0,5) : [refFile];
+  const _refFiles = [];
+  for(let i=0;i<_srcFiles.length;i++){
+    if(!_srcFiles[i]) continue;
+    try{ _refFiles.push(await _imgToCleanPng(_srcFiles[i], 'ref'+(i+1)+'.png')); }
+    catch(e){ console.warn('[imgEdit] normalisation réf '+(i+1)+' échouée → envoi brut', e); _refFiles.push(_srcFiles[i]); }
+  }
+  if(!_refFiles.length && refFile) _refFiles.push(refFile);
   for(const model of _GPT_IMG_MODELS){
     const fd = new FormData();
     fd.append('model', model);
@@ -25269,8 +25288,14 @@ async function _expComposeRefs(token, prompt, gptSize){
   const imgs = window._expImgs || [];
   if(imgs.length < 2) return null;   // 0 ou 1 image → rien à composer
   const toBlob=(durl)=>{ const m=/^data:([^;]+);base64,(.+)$/.exec(durl||''); if(!m) return null; const bin=atob(m[2]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:m[1]||'image/png'}); };
-  const files = imgs.map((im,i)=>{ const b=toBlob(im.url); return b? new File([b],'ref'+(i+1)+'.png',{type:b.type||'image/png'}) : null; }).filter(Boolean);
-  if(files.length < 2) return null;
+  const _rawFiles = imgs.map((im,i)=>{ const b=toBlob(im.url); return b? new File([b],'ref'+(i+1)+'.png',{type:b.type||'image/png'}) : null; }).filter(Boolean);
+  if(_rawFiles.length < 2) return null;
+  // Normalise chaque réf en PNG propre (comme Images IA) → évite le 400 « Invalid image file » sur HEIC/WEBP
+  const files = [];
+  for(let i=0;i<_rawFiles.length;i++){
+    try{ files.push(await _imgToCleanPng(_rawFiles[i], 'ref'+(i+1)+'.png')); }
+    catch(e){ console.warn('[express compose] normalisation réf '+(i+1)+' échouée', e); files.push(_rawFiles[i]); }
+  }
   // Les réfs servent d'ANCRE D'IDENTITÉ (visage/produit), la SCÈNE vient du PROMPT (pas du
   // décor des photos) : sinon 4 photos « dans une voiture » écrasent un prompt « supermarché »
   // (bug vu le 17/08). On rend l'IMAGE D'OUVERTURE de la scène décrite.
