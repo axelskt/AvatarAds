@@ -2954,9 +2954,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- #144 · Faceswap : 2 zones (image d'origine → visage à appliquer) + flèche -->
             <div id="imgFaceZone" style="display:none;margin-top:12px">
               <div style="display:flex;align-items:center;gap:8px">
-                <div style="flex:1;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px solid var(--border-2);background:var(--panel-1);display:flex;align-items:center;justify-content:center;position:relative">
-                  <img id="imgFaceOrig" style="width:100%;height:100%;object-fit:cover;display:none">
-                  <span id="imgFaceOrigPh" class="faint" style="font-size:10px;text-align:center;padding:8px;line-height:1.3">Image à corriger<br>(charge-la en haut)</span>
+                <div onclick="document.getElementById('imgRefInput').click()" style="flex:1;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px dashed var(--border-2);background:var(--panel-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;position:relative">
+                  <img id="imgFaceOrig" style="width:100%;height:100%;object-fit:cover;display:none;position:absolute;inset:0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <span id="imgFaceOrigPh" class="faint" style="font-size:10px;text-align:center;padding:0 6px;line-height:1.3;position:relative">Image à corriger</span>
                 </div>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 <div onclick="document.getElementById('imgFaceInput').click()" style="flex:1;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px dashed var(--accent-line);background:var(--accent-soft);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative">
@@ -2966,11 +2967,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <span class="faint" style="font-size:10px;text-align:center;padding:0 6px;position:relative">Visage à appliquer</span>
                 </div>
               </div>
-              <div class="row" style="gap:6px;margin-top:9px;justify-content:center;align-items:center">
-                <span class="faint" style="font-size:10.5px">Genre :</span>
-                <button id="imgFaceGF" onclick="_imgFaceGenderSet('female')" class="on" style="padding:5px 13px;border-radius:9px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--text);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">Femme</button>
-                <button id="imgFaceGM" onclick="_imgFaceGenderSet('male')" style="padding:5px 13px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">Homme</button>
-              </div>
+              <div class="faint" style="font-size:10px;text-align:center;margin-top:8px">Le décor et le corps d'origine sont gardés — seul le visage change.</div>
             </div>
             <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;padding:11px 14px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);border-radius:var(--r);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
@@ -8561,7 +8558,7 @@ const _IMG_FORMATS = [
 
 // Booster réalisme « dermatologique » — appliqué aux styles réalistes (Photo, UGC) pour un rendu HUMAIN/NATUREL, surtout pas « IA »
 // = combinaison des 2 prompts d'Axel : paragraphe "photographe commercial" (physique de l'image) + liste de garde-fous anti-look IA
-const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detailed and sharp, tons of fine detail everywhere, natural realistic lighting with believable shadows and highlights. Real human skin with visible pores, fine texture, natural translucency and subtle imperfections — never plastic, waxy, airbrushed or over-smoothed. Detailed hair strands, natural eyebrows and eyelashes, detailed iris, natural lip texture. The whole scene and background are richly detailed and mostly in focus, with only a mild natural depth of field (no heavy background blur, no artificial bokeh). True-to-life colors and dynamic range. It must look like a genuine real photograph captured with a good camera, absolutely NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty-filter smoothing, no plastic skin, no exaggerated HDR, no oversaturation, no obvious AI artifacts.';
+const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detailed and sharp, tons of fine detail everywhere, natural realistic lighting with believable shadows and highlights. Real human skin with visible pores, fine texture, natural translucency and subtle imperfections — never plastic, waxy, airbrushed or over-smoothed. Detailed hair strands, natural eyebrows and eyelashes, detailed iris, natural lip texture. The whole scene and background are richly detailed and mostly in focus, with only a mild natural depth of field (no heavy background blur, no artificial bokeh). True-to-life colors and dynamic range. It must look like a genuine real photograph captured with a good camera, absolutely NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty-filter smoothing, no plastic skin, no exaggerated HDR, no oversaturation, no obvious AI artifacts. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
 // Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
@@ -8583,7 +8580,7 @@ function _imgErrText(err, fallback){
 const _GPT_IMG_MODELS = ['gpt-image-2', 'gpt-image-1'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
-const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter.';
+const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
   const p = (currentMember?.plan || 'free').toLowerCase();
@@ -8807,8 +8804,25 @@ function _imgToggleFaceZone(on){
   if(on){ const o=document.getElementById('imgFaceOrig'), ph=document.getElementById('imgFaceOrigPh');
     if(o){ if(_imgRefFile){ try{ o.src=URL.createObjectURL(_imgRefFile); o.style.display=''; if(ph) ph.style.display='none'; }catch(_){} } else { o.style.display='none'; if(ph) ph.style.display=''; } } }
 }
-function _imgFacePick(input){ const f=input.files&&input.files[0]; if(!f) return; _imgFaceFile=f; const im=document.getElementById('imgFaceSrc'); if(im){ im.src=URL.createObjectURL(f); im.style.display=''; } toast('Visage chargé — clique « Générer l\'image »'); }
-function _imgFaceGenderSet(g){ _imgFaceGenderVal=g; const gf=document.getElementById('imgFaceGF'), gm=document.getElementById('imgFaceGM'); const on='2px solid var(--accent)', off='1px solid var(--border)'; if(gf){ gf.style.border=g==='female'?on:off; gf.style.background=g==='female'?'var(--accent-soft)':'var(--panel-1)'; gf.style.color=g==='female'?'var(--text)':'var(--text-2)'; } if(gm){ gm.style.border=g==='male'?on:off; gm.style.background=g==='male'?'var(--accent-soft)':'var(--panel-1)'; gm.style.color=g==='male'?'var(--text)':'var(--text-2)'; } }
+function _imgFacePick(input){
+  const f=input.files&&input.files[0]; if(!f) return; _imgFaceFile=f;
+  const im=document.getElementById('imgFaceSrc'); if(im){ im.src=URL.createObjectURL(f); im.style.display=''; }
+  // easel exige un genre ; on le DÉTECTE (l'user n'a rien à choisir). Défaut prudent : female.
+  _imgFaceGenderVal='female';
+  try{ const rd=new FileReader(); rd.onload=()=>{ _imgDetectGender(String(rd.result)).then(g=>{ if(g) _imgFaceGenderVal=g; }).catch(()=>{}); }; rd.readAsDataURL(f); }catch(_){}
+  toast('Visage chargé — clique « Générer l\'image »');
+}
+// Détecte le genre apparent du visage (paramètre requis par easel) — non bloquant, défaut female.
+async function _imgDetectGender(dataUrl){
+  try{
+    let small=dataUrl; try{ const im0=await _loadImgEl(dataUrl); const mx=512; const rr=Math.min(1,mx/Math.max(im0.naturalWidth,im0.naturalHeight)); const c0=document.createElement('canvas'); c0.width=Math.max(1,Math.round(im0.naturalWidth*rr)); c0.height=Math.max(1,Math.round(im0.naturalHeight*rr)); c0.getContext('2d').drawImage(im0,0,0,c0.width,c0.height); small=c0.toDataURL('image/jpeg',0.8); }catch(_){}
+    const Hh=await getAuthHeader();
+    const body={ model:'gpt-4o', max_tokens:4, temperature:0, messages:[{ role:'user', content:[ { type:'text', text:'One word only — "male" or "female" — the apparent gender presentation of the main face (for a faceswap model). If unsure, reply "female".' }, { type:'image_url', image_url:{ url:small } } ] }] };
+    const r=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path='+encodeURIComponent('/v1/chat/completions'),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(body) });
+    if(!r.ok) return null; const d=await r.json(); const t=((d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'').toLowerCase();
+    return (/male/.test(t) && !/female/.test(t)) ? 'male' : 'female';
+  }catch(_){ return null; }
+}
 async function _imgFileToDataUrl(file, maxPx){ const url=URL.createObjectURL(file); try{ const im=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; }); const k=Math.min(1,(maxPx||1024)/Math.max(im.naturalWidth,im.naturalHeight)); const w=Math.max(2,Math.round(im.naturalWidth*k)), h=Math.max(2,Math.round(im.naturalHeight*k)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); return cv.toDataURL('image/jpeg',0.9); } finally { URL.revokeObjectURL(url); } }
 async function _imgRunFaceSwap(btn){
   if(!_imgRefFile){ toast('Charge l\'image à corriger (en haut)'); return; }
@@ -9048,6 +9062,7 @@ function _imgLoadRef(file){
     const rb=document.getElementById('imgRefBtnComposer'); if(rb){ const corr=_imgMode==='correct'; rb.style.borderColor='var(--accent)'; rb.style.background = corr?'var(--accent-soft)':'var(--panel-1)'; }
     _imgSyncRefCount();
     _imgRenderRefStrip();
+    try{ const fz=document.getElementById('imgFaceZone'); if(fz && fz.style.display!=='none') _imgToggleFaceZone(true); }catch(_){}   // #144 · rafraîchit l'aperçu « image d'origine » du faceswap
     toast('Image '+_imgRefFiles.length+'/'+_IMG_REF_MAX+' chargée');
   };
   r.readAsDataURL(file);
