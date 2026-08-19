@@ -3026,7 +3026,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <div id="imgFaceSrcPh" class="col" style="align-items:center;gap:3px;position:relative"><span style="font-weight:700;font-size:15px;color:var(--text)">Visage à appliquer</span><span class="faint" style="font-size:12px">le visage voulu</span></div>
                 </div>
               </div>
-              <button id="imgFaceSwapBtn" onclick="_imgRunFaceSwap(this)" style="width:100%;padding:16px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:14px;color:#fff;font-family:var(--font);font-size:15.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Faire le faceswap <span style="opacity:.85;font-size:12.5px;font-weight:700">· 3 cr</span></button>
+              <button id="imgFaceSwapBtn" onclick="_imgRunFaceSwap(this)" style="width:100%;padding:16px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:14px;color:#fff;font-family:var(--font);font-size:15.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Faire le faceswap <span style="opacity:.85;font-size:12.5px;font-weight:700">· 5 cr</span></button>
             </div>
 
         <!-- RÉSULTAT -->
@@ -8844,7 +8844,7 @@ async function _imgRunFaceSwap(btn){
   if(!_imgFaceFile){ toast('Charge le visage à appliquer'); const fi=document.getElementById('imgFaceInput'); if(fi) fi.click(); return; }
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   creditsFlowBegin();
-  if(!(await spendCreditsFor(3, 'faceswap'))) return;   // #144 · faceswap = 3 crédits fixes
+  if(!(await spendCreditsFor(5, 'faceswap'))) return;   // #144 · faceswap = 5 crédits fixes (Nano Banana Pro, coûteux)
   const orig=btn?btn.innerHTML:null, overlay=document.getElementById('imgLoadingOverlay'); let _fsTimer=null;
   if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Faceswap…'; }
   const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti');
@@ -9748,7 +9748,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
 async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
   const mt=/^data:([^;]+);base64,(.+)$/.exec(targetDataUrl||''); const mf=/^data:([^;]+);base64,(.+)$/.exec(faceDataUrl||'');
   if(!mt||!mf) throw new Error('Images illisibles pour le faceswap');
-  const prompt="You are given TWO images. In the FIRST image, replace the person's ENTIRE HEAD (face AND hair) with the head of the person from the SECOND image — as if you cut off the first person's head and put the second person's head in its place. Keep the FIRST image's body, clothing, pose, background, lighting, colors and framing EXACTLY unchanged. Blend the neck and skin tone seamlessly. Photorealistic, keep the exact same identity (face + hairstyle) as the SECOND image. Output only the edited image.";
+  const prompt="You are given TWO images. In the FIRST image, replace the person's ENTIRE HEAD (face AND hair) with the head of the person from the SECOND image — as if you cut off the first person's head and put the second person's head in its place. CRITICAL: keep the FIRST image's body, clothing, hands, pose, background, framing and camera perspective EXACTLY unchanged and pixel-identical. Blend the neck and skin tone seamlessly, and match the FIRST image's lighting direction, color grading, white balance and grain so the new head looks genuinely photographed in that scene. Keep the EXACT same identity as the SECOND image — same face, features, expression and hairstyle — do NOT beautify, slim or alter them. Photorealistic, high detail, natural real skin texture (no plastic, no smoothing, no airbrush), correct proportions, no distortion, no duplicated limbs, no extra artifacts. Output only the final edited image.";
   const path='/v1beta/models/'+_NB_MODEL+':generateContent';
   const body={ contents:[{ role:'user', parts:[ {text:prompt}, {inline_data:{mime_type:mt[1],data:mt[2]}}, {inline_data:{mime_type:mf[1],data:mf[2]}} ]}], generationConfig:{ responseModalities:['TEXT','IMAGE'] } };
   const res=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{ method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body) });
