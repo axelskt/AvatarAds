@@ -9797,8 +9797,17 @@ async function _falClarityUpscale(imageDataUrl){
   const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
   const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
   const model='/fal-ai/clarity-upscaler';
-  const sub=await fPost(model,{ image_url:imageDataUrl, prompt:'RAW unedited real photograph, hyper-detailed authentic human skin with clearly visible pores and real micro-texture, fine peach-fuzz / vellus hair on cheeks and jaw, natural skin-tone variation and tiny imperfections, a sharp fibrous iris, individual eyelashes and hair strands, crisp fabric weave, natural film grain. It must stay matte and real — absolutely NO smoothing, NO airbrush, NO plastic, waxy or glossy skin, NO beauty filter, NO CGI.', negative_prompt:'plastic skin, waxy skin, airbrushed, over-smoothed, glossy, shiny, CGI, 3d render, beauty filter, doll, blurry, soft focus, oversaturated', upscale_factor:4, creativity:0.3, resemblance:0.9, num_inference_steps:36 });
-  if(!sub.ok) return null;
+  // Borne entrée + facteur : Clarity refuse (422) une sortie trop grande. On plafonne
+  // l'ENTRÉE à 2048 px (data-URL léger) et on calcule le facteur pour une SORTIE ≤ 4096 px.
+  let src=imageDataUrl, factor=4;
+  try{
+    const im=await _loadImgEl(imageDataUrl);
+    let w=im.naturalWidth||1024, h=im.naturalHeight||1024;
+    if(Math.max(w,h)>2048){ const r=2048/Math.max(w,h); const cw=Math.round(w*r), ch=Math.round(h*r); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); src=cv.toDataURL('image/jpeg',0.92); w=cw; h=ch; }
+    factor=Math.max(1, Math.min(4, Math.floor(4096/Math.max(w,h))));
+  }catch(_){ }
+  const sub=await fPost(model,{ image_url:src, prompt:'RAW unedited real photograph, hyper-detailed authentic human skin with clearly visible pores and real micro-texture, fine peach-fuzz / vellus hair on cheeks and jaw, natural skin-tone variation and tiny imperfections, a sharp fibrous iris, individual eyelashes and hair strands, crisp fabric weave, natural film grain. It must stay matte and real — absolutely NO smoothing, NO airbrush, NO plastic, waxy or glossy skin, NO beauty filter, NO CGI.', negative_prompt:'plastic skin, waxy skin, airbrushed, over-smoothed, glossy, shiny, CGI, 3d render, beauty filter, doll, blurry, soft focus, oversaturated', upscale_factor:factor, creativity:0.3, resemblance:0.9, num_inference_steps:36 });
+  if(!sub.ok){ const _b=(await sub.text().catch(()=>'')); console.error('[clarity] fal '+sub.status+' (facteur '+factor+') : '+_b.slice(0,200)); return null; }
   const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
   if(!url && (sd.status_url||sd.request_id)){
     const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
