@@ -24811,7 +24811,7 @@ function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='10
 function _mcUpdateCost(){
   const el=document.getElementById('mcCostTxt'); if(!el) return;
   const dur=Math.ceil(window._mcRefDur||0), rate=_mcRate();
-  if(!dur){ el.innerHTML='<span style="opacity:.6">Ajoute une vidéo de référence pour voir le coût</span>'; return; }
+  if(!dur){ el.innerHTML=''; return; }
   const c=rate*dur;
   const tierLbl = window._mcTier==='pro' ? 'Pro · 1080p natif' : (window._mcQuality==='1080' ? 'Standard · 720p→1080p' : 'Standard · 720p');
   el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">· '+rate+' cr/s × '+dur+' s · '+tierLbl+'</span>';
