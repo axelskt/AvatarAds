@@ -8858,14 +8858,14 @@ async function _imgRunFaceSwap(btn){
     const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
     const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
     const target=await _imgFileToDataUrl(_imgRefFile,1152), face=await _imgFileToDataUrl(_imgFaceFile,896);
-    const model='/fal-ai/face-swap';   // #144 · inswapper ~12 s (easel dépassait 3,5 min) ; garde décor + corps, swap juste le visage
-    const sub=await fPost(model,{ base_image_url:target, swap_image_url:face });
+    const model='/easel-ai/advanced-face-swap';   // #144 · HEAD swap (visage + cheveux de la source via user_hair) ; l'inswapper rapide gardait les cheveux d'origine
+    const sub=await fPost(model,{ face_image_0:face, gender_0:_imgFaceGenderVal, target_image:target, workflow_type:'user_hair', upscale:false });
     if(!sub.ok) throw new Error('Faceswap '+sub.status+' '+(await sub.text()).slice(0,120));
     const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
     if(!url && (sd.status_url||sd.request_id)){
       const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
       const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
-      for(let i=0;i<90 && !url;i++){ await new Promise(r=>setTimeout(r,3000)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||(rd.output&&rd.output.url)||(typeof rd.image==='string'?rd.image:null)||null; if(!url){ console.warn('[faceswap] COMPLETED sans image :', JSON.stringify(rd).slice(0,220)); throw new Error('Faceswap refusé (visage non détecté ou contenu bloqué) — essaie une autre photo'); } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ throw new Error('Faceswap : '+(pd.error?String(pd.error).slice(0,80):s)); } }
+      for(let i=0;i<120 && !url;i++){ await new Promise(r=>setTimeout(r,3000)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||(rd.output&&rd.output.url)||(typeof rd.image==='string'?rd.image:null)||null; if(!url){ console.warn('[faceswap] COMPLETED sans image :', JSON.stringify(rd).slice(0,220)); throw new Error('Faceswap refusé (visage non détecté ou contenu bloqué) — essaie une autre photo'); } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ throw new Error('Faceswap : '+(pd.error?String(pd.error).slice(0,80):s)); } }
     }
     if(!url) throw new Error('Faceswap : délai dépassé, réessaie dans un moment');
     let dataUrl=url; try{ const rC=await fetch(url); const bC=await rC.blob(); dataUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
