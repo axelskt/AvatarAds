@@ -8854,21 +8854,9 @@ async function _imgRunFaceSwap(btn){
     if(overlay) overlay.style.display='flex'; if(typeof _imgProgStart==='function') _imgProgStart('Faceswap…');
     { const ff=document.getElementById('imgFaceFull'); if(ff) ff.style.display='none'; }   // l'écran de chargement remplace les 2 zones
     { const _t0=Date.now(); _fsTimer=setInterval(()=>{ const l=document.getElementById('imgProgLabel'); if(l){ const s=Math.round((Date.now()-_t0)/1000); l.textContent='Faceswap… '+(s>=60?(Math.floor(s/60)+':'+String(s%60).padStart(2,'0')):(s+'s')); } }, 1000); }   // timer min:sec
-    const Hh=await getAuthHeader(); const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
-    const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
-    const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
-    const target=await _imgFileToDataUrl(_imgRefFile,1152), face=await _imgFileToDataUrl(_imgFaceFile,896);
-    const model='/easel-ai/advanced-face-swap';   // #144 · HEAD swap (visage + cheveux de la source via user_hair) ; l'inswapper rapide gardait les cheveux d'origine
-    const sub=await fPost(model,{ face_image_0:face, gender_0:_imgFaceGenderVal, target_image:target, workflow_type:'user_hair', upscale:false });
-    if(!sub.ok) throw new Error('Faceswap '+sub.status+' '+(await sub.text()).slice(0,120));
-    const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
-    if(!url && (sd.status_url||sd.request_id)){
-      const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
-      const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
-      for(let i=0;i<120 && !url;i++){ await new Promise(r=>setTimeout(r,3000)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||(rd.output&&rd.output.url)||(typeof rd.image==='string'?rd.image:null)||null; if(!url){ console.warn('[faceswap] COMPLETED sans image :', JSON.stringify(rd).slice(0,220)); throw new Error('Faceswap refusé (visage non détecté ou contenu bloqué) — essaie une autre photo'); } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ throw new Error('Faceswap : '+(pd.error?String(pd.error).slice(0,80):s)); } }
-    }
-    if(!url) throw new Error('Faceswap : délai dépassé, réessaie dans un moment');
-    let dataUrl=url; try{ const rC=await fetch(url); const bC=await rC.blob(); dataUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
+    const target=await _imgFileToDataUrl(_imgRefFile,1152), face=await _imgFileToDataUrl(_imgFaceFile,1024);
+    const _fsSess=(await sb.auth.getSession()).data.session; const _fsTok=(_fsSess&&_fsSess.access_token)||SUPABASE_KEY;
+    const dataUrl=await _nbHeadSwap(_fsTok, target, face);   // #144 · head swap Nano Banana Pro (~40 s) : remplace la tête ENTIÈRE (visage + cheveux) en gardant corps + décor
     if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
     _imgShowSingle(dataUrl, _imgSelectedFormat); _imgSaveHistory(dataUrl,'Faceswap',_imgSelectedFormat); if(typeof _imgRenderHistory==='function') _imgRenderHistory();
     toast('Visage changé');
@@ -9752,6 +9740,23 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
     throw new Error('Nano Banana Pro a refusé cette image (aucune image renvoyée' + (_br ? ' · '+_br : '') + ')');
   }
   return 'data:image/jpeg;base64,' + b64;
+}
+// #144 · Head swap (Correction → « Changer le visage ») : remplace la tête ENTIÈRE (visage +
+// cheveux) de la 1re image par celle de la 2e, en gardant corps + décor. Nano Banana Pro,
+// édition multi-référence fidèle (~40 s) — validé bien meilleur qu'un inswapper fal (easel
+// restait bloqué en file >6 min ; l'inswapper rapide gardait les cheveux d'origine).
+async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
+  const mt=/^data:([^;]+);base64,(.+)$/.exec(targetDataUrl||''); const mf=/^data:([^;]+);base64,(.+)$/.exec(faceDataUrl||'');
+  if(!mt||!mf) throw new Error('Images illisibles pour le faceswap');
+  const prompt="You are given TWO images. In the FIRST image, replace the person's ENTIRE HEAD (face AND hair) with the head of the person from the SECOND image — as if you cut off the first person's head and put the second person's head in its place. Keep the FIRST image's body, clothing, pose, background, lighting, colors and framing EXACTLY unchanged. Blend the neck and skin tone seamlessly. Photorealistic, keep the exact same identity (face + hairstyle) as the SECOND image. Output only the edited image.";
+  const path='/v1beta/models/'+_NB_MODEL+':generateContent';
+  const body={ contents:[{ role:'user', parts:[ {text:prompt}, {inline_data:{mime_type:mt[1],data:mt[2]}}, {inline_data:{mime_type:mf[1],data:mf[2]}} ]}], generationConfig:{ responseModalities:['TEXT','IMAGE'] } };
+  const res=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{ method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const d=await res.json().catch(()=>({}));
+  if(d&&d.error) throw new Error(d.error.message||String(d.error));
+  const b64=_nbExtractImage(d);
+  if(!b64){ const _br=(d&&d.promptFeedback&&d.promptFeedback.blockReason)||(d&&d.candidates&&d.candidates[0]&&d.candidates[0].finishReason)||''; throw new Error('Faceswap refusé — Nano Banana n\'a pas renvoyé d\'image'+(_br?' ('+_br+')':'')+'. Essaie d\'autres photos.'); }
+  return 'data:image/jpeg;base64,'+b64;
 }
 // Restauration 4K (bouton « Restaurer les détails ») — prompt figé, taille max.
 async function _nbRefine4K(token, dataUrl, aspect){
