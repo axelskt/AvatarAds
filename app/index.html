@@ -2956,18 +2956,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="display:flex;align-items:center;gap:8px">
                 <div onclick="document.getElementById('imgRefInput').click()" style="flex:1;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px dashed var(--border-2);background:var(--panel-1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;position:relative">
                   <img id="imgFaceOrig" style="width:100%;height:100%;object-fit:cover;display:none;position:absolute;inset:0">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <svg id="imgFaceOrigIc" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                   <span id="imgFaceOrigPh" class="faint" style="font-size:10px;text-align:center;padding:0 6px;line-height:1.3;position:relative">Image à corriger</span>
                 </div>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 <div onclick="document.getElementById('imgFaceInput').click()" style="flex:1;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px dashed var(--accent-line);background:var(--accent-soft);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative">
                   <input type="file" id="imgFaceInput" accept="image/*" style="display:none" onchange="_imgFacePick(this)">
                   <img id="imgFaceSrc" style="width:100%;height:100%;object-fit:cover;display:none;position:absolute;inset:0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-                  <span class="faint" style="font-size:10px;text-align:center;padding:0 6px;position:relative">Visage à appliquer</span>
+                  <svg id="imgFaceSrcIc" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                  <span id="imgFaceSrcPh" class="faint" style="font-size:10px;text-align:center;padding:0 6px;position:relative">Visage à appliquer</span>
                 </div>
               </div>
-              <div class="faint" style="font-size:10px;text-align:center;margin-top:8px">Le décor et le corps d'origine sont gardés — seul le visage change.</div>
+              <button id="imgFaceSwapBtn" onclick="_imgRunFaceSwap(this)" style="width:100%;margin-top:11px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#fff;font-family:var(--font);font-size:13.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Faire le faceswap</button>
             </div>
             <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;padding:11px 14px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);border-radius:var(--r);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
@@ -3113,7 +3113,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div><!-- /imgCanvas -->
 
           <!-- ═══════════ COMPOSER (docké en bas) ═══════════ -->
-          <div style="border-top:1px solid var(--border);background:var(--bg-grad);padding:16px 22px">
+          <div id="imgComposerDock" style="border-top:1px solid var(--border);background:var(--bg-grad);padding:16px 22px">
             <div class="row" style="gap:14px;align-items:stretch">
 
               <!-- Image de référence / à corriger -->
@@ -8801,16 +8801,22 @@ function _imgRunSelectedCorrection(){
 let _imgFaceFile = null, _imgFaceGenderVal = 'female';
 function _imgToggleFaceZone(on){
   const z=document.getElementById('imgFaceZone'); if(z) z.style.display = on?'':'none';
-  if(on){ const o=document.getElementById('imgFaceOrig'), ph=document.getElementById('imgFaceOrigPh');
-    if(o){ if(_imgRefFile){ try{ o.src=URL.createObjectURL(_imgRefFile); o.style.display=''; if(ph) ph.style.display='none'; }catch(_){} } else { o.style.display='none'; if(ph) ph.style.display=''; } } }
+  // Faceswap = panneau autonome : on masque le composer du bas (prompt + image), qui ferait doublon.
+  const dock=document.getElementById('imgComposerDock'); if(dock) dock.style.display = on?'none':'';
+  if(on){
+    const o=document.getElementById('imgFaceOrig'), ph=document.getElementById('imgFaceOrigPh'), ic=document.getElementById('imgFaceOrigIc');
+    if(_imgRefFile){ try{ if(o){ o.src=URL.createObjectURL(_imgRefFile); o.style.display=''; } if(ph) ph.style.display='none'; if(ic) ic.style.display='none'; }catch(_){} }
+    else { if(o) o.style.display='none'; if(ph) ph.style.display=''; if(ic) ic.style.display=''; }
+  }
 }
 function _imgFacePick(input){
   const f=input.files&&input.files[0]; if(!f) return; _imgFaceFile=f;
   const im=document.getElementById('imgFaceSrc'); if(im){ im.src=URL.createObjectURL(f); im.style.display=''; }
+  { const ic=document.getElementById('imgFaceSrcIc'), ph=document.getElementById('imgFaceSrcPh'); if(ic) ic.style.display='none'; if(ph) ph.style.display='none'; }
   // easel exige un genre ; on le DÉTECTE (l'user n'a rien à choisir). Défaut prudent : female.
   _imgFaceGenderVal='female';
   try{ const rd=new FileReader(); rd.onload=()=>{ _imgDetectGender(String(rd.result)).then(g=>{ if(g) _imgFaceGenderVal=g; }).catch(()=>{}); }; rd.readAsDataURL(f); }catch(_){}
-  toast('Visage chargé — clique « Générer l\'image »');
+  toast('Visage chargé — clique « Faire le faceswap »');
 }
 // Détecte le genre apparent du visage (paramètre requis par easel) — non bloquant, défaut female.
 async function _imgDetectGender(dataUrl){
@@ -9002,7 +9008,8 @@ function _imgSetMode(m){
   showFlex('imgCorrectPresetsSection', corr);// corrections rapides (correction only) — carte extensible
   showFlex('imgStyleSection', !corr);        // style visuel (génération only) — carte extensible
   show('imgCountSection', !corr);            // nombre d'images masqué en correction (1 seule)
-  if(corr){ _imgCorrectSel=-1; _imgRenderCorrectPresets(); _imgToggleFaceZone(false); _imgSyncRealCost(); }
+  _imgCorrectSel=-1; _imgToggleFaceZone(false);   // #144 · reset faceswap dans TOUS les modes (le composer réapparaît en Génération)
+  if(corr){ _imgRenderCorrectPresets(); _imgSyncRealCost(); }
   else _imgSyncGenBtn();  // onglet Génération : coût dynamique sur « Générer l'image »
   _imgInitSuggestions();
   // Composer : bouton image de référence — bordure/label selon le mode
@@ -9363,6 +9370,21 @@ async function _imgSaveToLibrary(btn){
   finally { if(btn){ btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = orig; } }
 }
 
+// #145 · Auto-save d'une image par URL (utilisé par la génération MULTI : chaque variation
+// va sur le compte comme la génération simple). Même logique que _imgSaveToLibrary mais sur une URL.
+async function _imgAutoSaveUrl(url, size, styleLabel){
+  if(!url) return;
+  try{
+    let fullBlob=null; try{ fullBlob=await (await fetch(url)).blob(); }catch(_){}
+    const id='i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const idbKey='img_'+id;
+    if(fullBlob){ try{ await _idbSave(idbKey, new File([fullBlob], id+'.png', {type:fullBlob.type||'image/png'})); }catch(_){} }
+    const hist=JSON.parse(localStorage.getItem('imgHistory')||'[]');
+    hist.unshift({ id, idbKey: fullBlob?idbKey:null, url, styleLabel: styleLabel||'Image', size, ts:Date.now(), fav:false });
+    localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60)));
+    if(fullBlob && typeof _libPersistServer==='function'){ _libPersistServer(hist[0], fullBlob, { kind:'image', thumb:url, onSaved:(sid,spath)=>{ try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){} }}); }
+  }catch(e){ console.warn('[multi] autosave:', e); }
+}
 // Résout l'URL pleine résolution d'une entrée image (IndexedDB si dispo, sinon serveur signé, sinon miniature).
 async function _libGetFullImg(idbKey, fallback, srvPath){
   if(idbKey){
@@ -10105,7 +10127,7 @@ async function generateImage(){
           const url = await _imgGenerateOne(token, enhancedPrompt, size, style);
           urls.push(url);
           _imgMonthIncrement();
-          _imgSaveHistory(url, _imgSelectedStyleLabel, size);
+          _imgAutoSaveUrl(url, size, _imgSelectedStyleLabel);   // #145 · auto-save compte (chaque variation multi)
           // Remplir le slot
           const slot = document.getElementById('_imgMultiSlot'+i);
           if(slot){
