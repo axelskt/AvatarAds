@@ -8852,13 +8852,14 @@ async function _imgRunFaceSwap(btn){
     if(multiWrap) multiWrap.style.display='none'; if(singleWrap) singleWrap.style.display='block';
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none'; if(typeof _imgIdleShow==='function') _imgIdleShow(false);
     if(overlay) overlay.style.display='flex'; if(typeof _imgProgStart==='function') _imgProgStart('Faceswap…');
-    { const _t0=Date.now(); _fsTimer=setInterval(()=>{ const l=document.getElementById('imgProgLabel'); if(l) l.textContent='Faceswap… '+Math.round((Date.now()-_t0)/1000)+'s'; }, 1000); }   // timer visible pendant l'attente
+    { const ff=document.getElementById('imgFaceFull'); if(ff) ff.style.display='none'; }   // l'écran de chargement remplace les 2 zones
+    { const _t0=Date.now(); _fsTimer=setInterval(()=>{ const l=document.getElementById('imgProgLabel'); if(l){ const s=Math.round((Date.now()-_t0)/1000); l.textContent='Faceswap… '+(s>=60?(Math.floor(s/60)+':'+String(s%60).padStart(2,'0')):(s+'s')); } }, 1000); }   // timer min:sec
     const Hh=await getAuthHeader(); const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
     const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
     const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
     const target=await _imgFileToDataUrl(_imgRefFile,1152), face=await _imgFileToDataUrl(_imgFaceFile,896);
-    const model='/easel-ai/advanced-face-swap';
-    const sub=await fPost(model,{ face_image_0:face, gender_0:_imgFaceGenderVal, target_image:target, workflow_type:'user_hair', upscale:false });   // #144 · upscale:true rendait easel trop lent (>3,5 min → timeout) ; l'upscale se fait après via « Améliorer en 4K »
+    const model='/fal-ai/face-swap';   // #144 · inswapper ~12 s (easel dépassait 3,5 min) ; garde décor + corps, swap juste le visage
+    const sub=await fPost(model,{ base_image_url:target, swap_image_url:face });
     if(!sub.ok) throw new Error('Faceswap '+sub.status+' '+(await sub.text()).slice(0,120));
     const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
     if(!url && (sd.status_url||sd.request_id)){
@@ -8871,7 +8872,7 @@ async function _imgRunFaceSwap(btn){
     if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
     _imgShowSingle(dataUrl, _imgSelectedFormat); _imgSaveHistory(dataUrl,'Faceswap',_imgSelectedFormat); if(typeof _imgRenderHistory==='function') _imgRenderHistory();
     toast('Visage changé');
-  }catch(e){ console.error('faceswap:',e); try{ await creditsFlowRefund(); }catch(_){} toast(''+((e&&e.message)||e)); }
+  }catch(e){ console.error('faceswap:',e); try{ await creditsFlowRefund(); }catch(_){} try{ _imgToggleFaceZone(true); }catch(_){} toast(''+((e&&e.message)||e)); }
   finally{ if(_fsTimer) clearInterval(_fsTimer); if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
