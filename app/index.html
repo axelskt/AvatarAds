@@ -3060,7 +3060,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div id="imgActions" style="padding:16px 18px">
               <!-- 05/08 : « Restaurer les détails » passe en CONTOURS orange (Axel) —
                    le bouton plein orange, c'est « Télécharger » ci-dessous. -->
-              <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="width:100%;margin-bottom:10px;padding:12px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Restaurer les détails (4K)<span style="font-size:8px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);padding:2px 7px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.5px">ÉLITE · 5 CR</span></button>
+              <div style="display:flex;gap:8px;margin-bottom:10px">
+                <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="flex:1;min-width:0;padding:12px 10px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Détails du visage<span style="font-size:7.5px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);padding:2px 6px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.4px">CLARITY · 5&nbsp;CR</span></button>
+                <button onclick="_imgUpscaleNano(this)" id="imgNanoBtn" style="flex:1;min-width:0;padding:12px 10px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>Améliorer en 4K<span style="font-size:7.5px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);padding:2px 6px;border-radius:20px;font-family:var(--mono);font-weight:800;letter-spacing:.4px">NANO · 5&nbsp;CR</span></button>
+              </div>
               <button onclick="_imgRevertHD(this)" id="imgRevertBtn" style="display:none;width:100%;margin-bottom:10px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>Revenir à l'ancienne version</button>
               <!-- 05/08 : « Modifier cette image », « Utiliser en avatar » et le
                    crayon « Nouveau prompt » sont RETIRÉS (Axel) — le mode
@@ -9298,6 +9301,8 @@ function _imgNewPrompt(){
   _imgIsHD=false; _imgPrevSrc=null;
   { const ub=document.getElementById('imgUpscaleBtn');
     if(ub && window._img4kBtnHtml){ ub.disabled=false; ub.style.opacity='1'; ub.innerHTML=window._img4kBtnHtml; } }
+  { const nb=document.getElementById('imgNanoBtn');
+    if(nb && window._imgNanoBtnHtml){ nb.disabled=false; nb.style.opacity='1'; nb.innerHTML=window._imgNanoBtnHtml; } }
   { const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; }
   _imgIdleShow(true); _imgUpdateIdleMeta();
   document.getElementById('imgPrompt').focus();
@@ -9939,6 +9944,41 @@ async function _imgUpscaleHD(btn){
     } else { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
   }
 }
+// « Améliorer en 4K » (Nano Banana Pro) — bouton distinct de « Détails du visage » (Clarity).
+// Régénère en 4K (plus de détail créatif) — peut recadrer, contrairement à Clarity.
+async function _imgUpscaleNano(btn){
+  const plan=(currentMember?.plan||'free').toLowerCase();
+  if(!['elite','developer'].includes(plan)){ toast('Le 4K est réservé au plan Élite'); openUpgradeModal(); return; }
+  const img=document.getElementById('imgOutput');
+  if(!img||!img.src){ toast('Génère une image d\'abord'); return; }
+  creditsFlowBegin();
+  if(!(await spendCreditsFor(CREDIT_COSTS.imgUpscale4K, '4K Nano'))) return;
+  _imgPrevSrc = img.src;
+  const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.75';
+  if(!window._imgNanoBtnHtml) window._imgNanoBtnHtml = orig;
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> 4K Nano… (~30s)';
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const token=session?.access_token || SUPABASE_KEY;
+    let src = img.src;
+    if(!/^data:/.test(src)){ const resp=await fetch(src); const blob=await resp.blob(); src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }
+    let aspect='1:1'; try{ const im=await _loadImgEl(src); aspect = im.naturalWidth>im.naturalHeight ? '16:9' : (im.naturalWidth<im.naturalHeight ? '9:16' : '1:1'); }catch(_){}
+    const finalUrl = await _nbRefine4K(token, src, aspect);
+    if(!finalUrl) throw new Error('Nano Banana : aucune image');
+    img.src=finalUrl; _imgIsHD=true;
+    try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
+    const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
+    creditsFlowDone();
+    toast('Amélioré en 4K — Nano Banana Pro');
+  }catch(e){
+    try{ await creditsFlowRefund('le 4K Nano a échoué'); }catch(_){}
+    toast(''+(e.message||e));
+  }
+  finally{
+    if(_imgIsHD){ btn.disabled=true; btn.style.opacity='.55'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Déjà en 4K'; }
+    else { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
+  }
+}
 function _imgShowSingle(url, size){
   _imgProgStop();
   { const ff=document.getElementById('imgFaceFull'); if(ff) ff.style.display='none'; }   // #144 · le résultat remplace le plein écran faceswap
@@ -9946,13 +9986,15 @@ function _imgShowSingle(url, size){
   _imgIsHD=false;
   { const ub=document.getElementById('imgUpscaleBtn');
     if(ub && window._img4kBtnHtml){ ub.disabled=false; ub.style.opacity='1'; ub.innerHTML=window._img4kBtnHtml; } }
+  { const nb=document.getElementById('imgNanoBtn');
+    if(nb && window._imgNanoBtnHtml){ nb.disabled=false; nb.style.opacity='1'; nb.innerHTML=window._imgNanoBtnHtml; } }
   { const a=document.getElementById('imgActions'); if(a) a.style.display=''; }  // boutons réaffichés quand l'image est prête
   { const z=document.getElementById('imgZone'); if(z) z.style.minHeight='200px'; }  // reset la hauteur de la boîte
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
   // « Restaurer les détails (4K) » = upscaler des résultats de GÉNÉRATION uniquement.
   // En Correction, « Améliorer en 4K » fait déjà le même travail → on masque le doublon.
-  const up=document.getElementById('imgUpscaleBtn'); if(up) up.style.display = (_imgMode==='correct') ? 'none' : '';
+  const up=document.getElementById('imgUpscaleBtn'); if(up&&up.parentNode) up.parentNode.style.display = (_imgMode==='correct') ? 'none' : '';
   const resultWrap = document.getElementById('imgResult');
   resultWrap.style.display = 'block';
   _imgIdleShow(false);
