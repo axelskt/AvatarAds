@@ -25099,7 +25099,7 @@ async function _mcGenerate(){
     const runKling = async (ver) => {
       const model='/fal-ai/kling-video/'+ver+'/'+(tier==='pro'?'pro':'standard')+'/motion-control';
       const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId) });
-      if(!sub.ok) throw new Error('Kling '+sub.status+' '+(await sub.text()).slice(0,140));
+      if(!sub.ok){ const _t=(await sub.text().catch(()=>'')); throw new Error(sub.status===402 ? 'Service vidéo momentanément indisponible — réessaie dans quelques minutes' : ('Kling '+sub.status+' '+_t.slice(0,140))); }
       const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
       const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
       const reP = sd.response_url ? sd.response_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId;
@@ -25239,20 +25239,33 @@ async function _mcApplyBg(charUrl, bgB64, H){
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const post=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
   const get =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
-  const sub=await post('/fal-ai/birefnet/v2',{ image_url:charUrl, model:'Portrait', refine_foreground:true });
-  if(!sub.ok) throw new Error('birefnet '+sub.status);
-  const sd=await sub.json().catch(()=>({}));
-  let cut = sd?.image?.url || sd?.images?.[0]?.url || '';
-  if(!cut){
-    const stP=(sd.status_url||'').replace('https://queue.fal.run',''), reP=(sd.response_url||'').replace('https://queue.fal.run','');
-    for(let i=0;i<30 && !cut;i++){
-      await new Promise(r=>setTimeout(r,2000));
-      const pr=await get(stP); const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
-      if(s==='COMPLETED'){ const rr=await get(reP); const rd=await rr.json().catch(()=>({})); cut=rd?.image?.url||rd?.images?.[0]?.url||''; }
-      else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS') throw new Error('birefnet '+s);
-    }
+  // Détourage du perso — plusieurs modèles fal en repli. birefnet/v2 est parfois
+  // « gated » côté fal (402 même avec du solde) → repli sur rembg puis birefnet v1.
+  const CUTOUT=[
+    { p:'/fal-ai/birefnet/v2', b:{ image_url:charUrl, model:'Portrait', refine_foreground:true } },
+    { p:'/fal-ai/imageutils/rembg', b:{ image_url:charUrl } },
+    { p:'/fal-ai/birefnet', b:{ image_url:charUrl } },
+  ];
+  let cut='', lastErr='';
+  for(const m of CUTOUT){
+    try{
+      const sub=await post(m.p, m.b);
+      if(!sub.ok){ lastErr=m.p.split('/').pop()+' HTTP '+sub.status+' '+(await sub.text().catch(()=>'')).slice(0,100); continue; }
+      const sd=await sub.json().catch(()=>({}));
+      cut = sd?.image?.url || sd?.images?.[0]?.url || '';
+      if(!cut){
+        const stP=(sd.status_url||'').replace('https://queue.fal.run',''), reP=(sd.response_url||'').replace('https://queue.fal.run','');
+        if(stP) for(let i=0;i<30 && !cut;i++){
+          await new Promise(r=>setTimeout(r,2000));
+          const pr=await get(stP); const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+          if(s==='COMPLETED'){ const rr=await get(reP); const rd=await rr.json().catch(()=>({})); cut=rd?.image?.url||rd?.images?.[0]?.url||''; }
+          else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ lastErr=m.p.split('/').pop()+' '+s; break; }
+        }
+      }
+      if(cut) break;
+    }catch(e){ lastErr=m.p.split('/').pop()+' : '+((e&&e.message)||e); }
   }
-  if(!cut) throw new Error('détourage indisponible');
+  if(!cut) throw new Error('détourage indisponible ('+(lastErr||'aucun modèle')+')');
   const loadImg=(src)=>new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>rej(new Error('image')); im.src=src; });
   const [cutImg,bgImg]=await Promise.all([loadImg(cut), loadImg(bgB64)]);
   const W=cutImg.naturalWidth||1024, Hh=cutImg.naturalHeight||1536;
