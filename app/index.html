@@ -3062,7 +3062,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <!-- 05/08 : « Modifier cette image », « Utiliser en avatar » et le
                    crayon « Nouveau prompt » sont RETIRÉS (Axel) — le mode
                    Correction reste accessible par l'onglet Corriger. -->
-              <button onclick="_imgSaveToLibrary(this)" id="imgSaveLibBtn" style="width:100%;margin-bottom:10px;padding:12px;background:var(--surface-2);border:1.5px solid var(--border-2);border-radius:11px;color:var(--text);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Enregistrer dans la bibliothèque</button>
+              <div id="imgSaveLibBtn" class="faint" style="width:100%;margin-bottom:10px;padding:9px;text-align:center;font-size:11px;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Enregistré automatiquement sur ton compte</div>
               <!-- 05/08 : « Télécharger » devient LE bouton principal — plein
                    orange, pleine largeur (Axel). -->
               <a id="imgDownloadBtn" href="#" download="avatarads-image.png" onclick="_imgDownload(event)" style="display:inline-flex;width:100%;box-sizing:border-box;align-items:center;justify-content:center;gap:7px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;text-decoration:none;transition:all .2s;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 10px 24px -12px var(--accent-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
@@ -9322,9 +9322,12 @@ function _imgMakeThumb(imgEl, maxDim, q){
 
 // Enregistrement MANUEL dans la Bibliothèque : image pleine résolution → IndexedDB (quota large),
 // miniature + métadonnées → localStorage (index synchrone). Fiable même pour des images 4K.
+let _imgLastSavedSrc = '';
 async function _imgSaveToLibrary(btn){
   const img = document.getElementById('imgOutput');
-  if(!img || !img.src || img.src === window.location.href){ toast('Génère une image d\'abord'); return; }
+  if(!img || !img.src || img.src === window.location.href){ if(btn) toast('Génère une image d\'abord'); return; }
+  if(!btn && img.src === _imgLastSavedSrc) return;   // #145 · auto-save : jamais deux fois la même image
+  _imgLastSavedSrc = img.src;
   const orig = btn ? btn.innerHTML : null;
   if(btn){ btn.disabled = true; btn.style.opacity = '.7'; btn.innerHTML = 'Enregistrement…'; }
   try {
@@ -9350,7 +9353,7 @@ async function _imgSaveToLibrary(btn){
       size: _imgSelectedFormat, ts: Date.now(), fav: false
     });
     localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60)));
-    toast('Enregistré dans la bibliothèque');
+    if(btn) toast('Enregistré dans la bibliothèque');
     if(fullBlob && typeof _libPersistServer==='function'){   // #65 · image côté compte (Storage + row + thumb)
       _libPersistServer(hist[0], fullBlob, { kind:'image', thumb, onSaved:(sid,spath)=>{
         try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){}
@@ -9909,6 +9912,7 @@ function _imgShowSingle(url, size){
   img.style.display = 'block';
   img.src = url;
   document.getElementById('imgDownloadBtn').href = url;
+  setTimeout(()=>{ try{ _imgSaveToLibrary(null); }catch(_){} }, 500);   // #145 · auto-enregistrement sur le compte (plus de bouton manuel)
   const badges = document.getElementById('imgBadges');
   if(badges){
     badges.innerHTML = '';
