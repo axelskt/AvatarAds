@@ -11115,6 +11115,9 @@ function _showResultArea(){
   document.getElementById('genStatusCard').style.display = 'none';
   if(results.hedraUrl){
     document.getElementById('hedraVideo').src = results.hedraUrl;
+    // #145 · auto-enregistrement sur le compte (une seule fois par vidéo)
+    if(results.hedraUrl !== window._genLastSavedUrl){ window._genLastSavedUrl = results.hedraUrl;
+      (async()=>{ try{ const r=await fetch(results.hedraUrl); if(r.ok && typeof _libAutoSaveVideo==='function') await _libAutoSaveVideo(await r.blob(), 'Avatar '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}), ['Générateur','9:16'], '🎬', 'AVATAR'); }catch(e){ console.warn('gen autosave:', e); } })(); }
     // Ligne "Format · durée · plateforme" sous le titre "Ta vidéo est prête"
     const _meta = document.getElementById('genReadyMeta');
     if(_meta){
@@ -32674,6 +32677,7 @@ async function edExport(){
     rec.stop(); await done;
     const isMp4=mime.indexOf('mp4')>=0;
     const blob=new Blob(chunks,{type:isMp4?'video/mp4':'video/webm'});
+    try{ if(typeof _libAutoSaveVideo==='function') _libAutoSaveVideo(blob, 'Montage '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}), ['Éditeur','9:16'], '🎬', 'EDIT'); }catch(_){}   // #145 · auto-enregistrement sur le compte
     const ext=isMp4?'mp4':'webm';
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download='avatarads-edit-'+Date.now()+'.'+ext; a.click();
