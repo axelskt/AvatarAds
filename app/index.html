@@ -31849,14 +31849,16 @@ function edDeleteContext(){
     if(st.type==='music'){ edRemoveMusicSeg(st.idx||0); return; }
     if(st.type==='sfx'){ edSelectTrack(null); edRemoveSfx(st.id); return; }
     if(st.type==='audio'){
-      // #1 (11/08) · la bande Audio EST la voix du clip → « Supprimer » la coupe
-      // (voix vidéo à 0). On peut la rétablir via le curseur « Voix vidéo ».
+      // #1 · la bande Audio EST la voix du clip → « Supprimer » la coupe VRAIMENT
+      // (mute + gain 0 sur toutes les vidéos), réversible via le curseur « Voix vidéo ».
       edSnap();
+      _ed.videoMuted=true;
       if(typeof edSetVideoVol==='function') edSetVideoVol(0);
+      try{ (_ed.clips||[]).forEach(c=>{ if(c.video){ c.video.muted=true; c.video.volume=0; } }); if(_ed.video){ _ed.video.muted=true; _ed.video.volume=0; } }catch(_){}
       const sl=document.querySelector('input[oninput*="edSetVideoVol"]'); if(sl){ sl.value=0; if(typeof edRangeFill==='function') edRangeFill(sl); }
       const lbl=document.getElementById('edVoiceVolLbl'); if(lbl) lbl.textContent='0%';
-      edSelectTrack(null);
-      toast('Audio du clip coupé — remonte « Voix vidéo » pour le rétablir');
+      edSelectTrack(null); if(typeof edRenderClipAudioTrack==='function') edRenderClipAudioTrack();
+      toast('Audio retiré — le clip est muet (remonte « Voix vidéo » pour le rétablir)');
       return;
     }
     edSelectTrack(null); return;
@@ -32820,7 +32822,7 @@ function edRemoveMusic(silent){
   edRenderMusicTrack();
 }
 function edSetMusicVol(v){ if(!_ed) return; _ed.musicVol=v/100; if(_ed.audio&&_ed.audio.mGain) _ed.audio.mGain.gain.value=_ed.musicVol; else if(_ed.music) _ed.music.volume=_ed.musicVol; }
-function edSetVideoVol(v){ if(!_ed) return; _ed.vol=v/100; if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=_ed.vol; else if(_ed.video) _ed.video.volume=_ed.vol; }
+function edSetVideoVol(v){ if(!_ed) return; _ed.vol=v/100; if(v>0){ _ed.videoMuted=false; try{ (_ed.clips||[]).forEach(c=>{ if(c.video) c.video.muted=false; }); if(_ed.video) _ed.video.muted=false; }catch(_){} } if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=_ed.vol; else if(_ed.video) _ed.video.volume=_ed.vol; }
 
 /* ---------- font / style / crop ---------- */
 function edSetFont(f){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; ov.font=f; edStyleOverlay(ov); }
