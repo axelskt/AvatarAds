@@ -24851,7 +24851,7 @@ function _mcRenderAdv(){
     </div>
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
     ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow],
-       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Ne remplace que la personne, garde le décor',!!window._mcKeepVidBg]]
+       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine (fond fixe)','Ne remplace que la personne — pour une vidéo à décor immobile',!!window._mcKeepVidBg]]
       .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
         <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
         <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
