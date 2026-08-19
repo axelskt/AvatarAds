@@ -8825,7 +8825,7 @@ function _imgFacePick(input){
   // easel exige un genre ; on le DÉTECTE (l'user n'a rien à choisir). Défaut prudent : female.
   _imgFaceGenderVal='female';
   try{ const rd=new FileReader(); rd.onload=()=>{ _imgDetectGender(String(rd.result)).then(g=>{ if(g) _imgFaceGenderVal=g; }).catch(()=>{}); }; rd.readAsDataURL(f); }catch(_){}
-  toast('Visage chargé — clique « Faire le faceswap »');
+  toast('Visage à appliquer chargé');
 }
 // Détecte le genre apparent du visage (paramètre requis par easel) — non bloquant, défaut female.
 async function _imgDetectGender(dataUrl){
@@ -9079,8 +9079,9 @@ function _imgLoadRef(file){
     const rb=document.getElementById('imgRefBtnComposer'); if(rb){ const corr=_imgMode==='correct'; rb.style.borderColor='var(--accent)'; rb.style.background = corr?'var(--accent-soft)':'var(--panel-1)'; }
     _imgSyncRefCount();
     _imgRenderRefStrip();
-    try{ const fz=document.getElementById('imgFaceZone'); if(fz && fz.style.display!=='none') _imgToggleFaceZone(true); }catch(_){}   // #144 · rafraîchit l'aperçu « image d'origine » du faceswap
-    toast('Image '+_imgRefFiles.length+'/'+_IMG_REF_MAX+' chargée');
+    const _fzOn=document.getElementById('imgFaceFull');
+    if(_fzOn && _fzOn.style.display!=='none'){ _imgToggleFaceZone(true); toast('Image à corriger chargée'); }   // #144 · faceswap plein écran : affiche l'aperçu à gauche + toast dédié
+    else toast('Image '+_imgRefFiles.length+'/'+_IMG_REF_MAX+' chargée');
   };
   r.readAsDataURL(file);
 }
