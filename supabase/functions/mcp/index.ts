@@ -31,7 +31,7 @@ const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
 // requête ne l'atteint jamais.
 // On distribue donc l'adresse du relais (mcp-proxy/), servi depuis un domaine
 // où l'on maîtrise /.well-known/* et où il répond 404 = « pas d'OAuth ».
-const MCP_PUBLIC_BASE = Deno.env.get('MCP_PUBLIC_BASE') || 'https://avatarads-mcp.netlify.app'
+const MCP_PUBLIC_BASE = 'https://mcp.avatarads.fr'   // 20/08 : domaine de marque (ex avatarads-mcp.netlify.app, toujours accepté)
 const SERVICE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON_KEY       = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? ''
@@ -306,7 +306,7 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
 // Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
 const UI_WIDGET_JS = `
-var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='', aaJobId='', aaFormat='portrait';
+var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='', aaJobId='', aaFormat='portrait', aaRef='', aaRaw=false;
 // Requête vers l'HÔTE (claude.ai) — protocole MCP Apps : télécharger un fichier
 // (ui/download-file), ouvrir un lien (ui/open-link), ou envoyer un message au chat
 // (ui/message = régénérer). Le sandbox bloque download+popups DIRECTS depuis l'iframe,
@@ -316,7 +316,7 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'' };
+  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -333,7 +333,7 @@ function aaBtns(){
   if(rg){ if(v){ rg.style.display='none'; } else { rg.style.display=''; rg.disabled=false; rg.textContent='↻ Regénérer'; rg.onclick=function(){
     if(!aaJobId||!aaPrompt){ return; }
     var lbl='↻ Regénérer'; rg.disabled=true; rg.textContent='↻ …';
-    fetch('https://mcp.avatarads.fr/regenerate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, prompt:aaPrompt, format:aaFormat||'portrait' }) })
+    fetch('https://mcp.avatarads.fr/regenerate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, prompt:aaPrompt, format:aaFormat||'portrait', ref:aaRef||'', raw:!!aaRaw }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
       .then(function(x){ if(x.ok&&x.j&&x.j.statusUrl){ aaJobId=x.j.job_id||aaJobId; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); } else { var er=(x.j&&x.j.error)||''; rg.textContent=er==='daily_cap'?'Plafond 24 h':(er==='no_credits'||er==='credits')?'Crédits épuisés':'Échec'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2400); } })
       .catch(function(){ rg.textContent='Réessaie'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2200); });
@@ -373,6 +373,7 @@ function aaShow(out){
     if(d.prompt) aaPrompt=d.prompt;
     if(d.job_id) aaJobId=d.job_id;
     if(d.format) aaFormat=d.format;
+    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
@@ -453,7 +454,8 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
     border:1px solid var(--aa-line);border-radius:16px;overflow:hidden;
     background:var(--aa-bg);color:var(--aa-fg);width:100%;box-sizing:border-box}
   #m a{display:block;font-size:0}
-  .aa-m{display:block;width:100%;max-height:620px;object-fit:contain;background:#000}
+  #m{text-align:center;background:var(--aa-bg)}
+  .aa-m{display:block;width:auto;max-width:100%;height:auto;max-height:760px;margin:0 auto;object-fit:contain;background:var(--aa-bg)}
   .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
     border-top:1px solid var(--aa-line)}
   .aa-n{font-size:12.5px;font-weight:600;opacity:.9}
@@ -523,13 +525,13 @@ const carteHtml = (url: string, nom: string, mime: string) => {
   const media = video
     ? `<video src="${url}#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>`
     : image
-      ? `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="" class="aa-m" style="object-fit:contain;background:#111"/></a>`
+      ? `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="" class="aa-m" style="object-fit:contain"/></a>`
       : `<audio src="${url}" controls preload="metadata" class="aa-m" style="height:44px"></audio>`
   return `<style>
   .aa-c{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     border:1px solid rgba(128,128,128,.28);border-radius:16px;overflow:hidden;
     background:#fff;color:#1a1a1a;max-width:520px}
-  .aa-m{width:100%;display:block;background:#000;max-height:66vh}
+  .aa-m{width:auto;max-width:100%;height:auto;display:block;margin:0 auto;background:var(--aa-bg);max-height:70vh}
   .aa-b{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap;
     border-top:1px solid rgba(128,128,128,.22)}
   .aa-n{font-size:12.5px;font-weight:600;opacity:.9;font-variant-numeric:tabular-nums}
@@ -599,11 +601,18 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'generate_image',
-      description: `Génère une image IA (moteur AvatarAds, gpt-image) et retourne son URL publique. Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. ⚠️ Qualité par défaut = TOUJOURS 'standard' (${IMG_COST.standard} cr, ~45 s). N'utilise 'high' (${IMG_COST.high} cr, 1 à 2 min) QUE si l'utilisateur le demande explicitement.`,
+      description: `Génère une image IA (moteur AvatarAds, gpt-image) : visuel libre, STATIC AD (pub produit avec titre, bénéfices, marque) ou photo UGC (personne qui tient le produit). Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. ⚠️ Qualité par défaut = TOUJOURS 'standard'. ⚠️ FIDÉLITÉ PRODUIT : tu NE vois PAS les pixels d'une image jointe au chat — pour que le produit soit reproduit À L'IDENTIQUE (forme, étiquette, logo, couleurs), passe son URL publique dans reference_image_url (URL du site/Shopify, ou photo déposée par l'utilisateur sur avatarads.fr/app → Connecter Claude → « Photo produit pour Claude », visible ensuite via list_media sous le nom ref-…). Sans URL, préviens en une phrase que le produit sera approximatif et propose le dépôt.`,
       inputSchema: {
         type: 'object',
         properties: {
-          prompt: { type: 'string', description: "Description détaillée de l'image (sujet, style, lumière, cadrage…). Français ou anglais." },
+          prompt: { type: 'string', description: "Description de l'image (sujet, ambiance, lumière, cadrage…). Pour kind='static_ad', décris le produit, la couleur dominante et l'ambiance — les TEXTES vont dans headline/subheadline/bullets/brand/cta." },
+          kind: { type: 'string', enum: ['free', 'static_ad', 'ugc'], description: "'static_ad' = publicité statique produit (titre + sous-titre + 3 bénéfices avec icônes + marque, police géométrique type Montserrat, produit en héros) · 'ugc' = photo selfie/UGC réaliste d'une personne avec le produit · 'free' (défaut) = prompt libre." },
+          reference_image_url: { type: 'string', description: "URL http(s) publique de la PHOTO DU PRODUIT (ou du visage) à reproduire à l'identique — PNG/JPEG/WebP ≤ 10 Mo. Indispensable pour une static ad ou un UGC fidèles au vrai produit." },
+          headline: { type: 'string', description: "static_ad : titre accrocheur, FRANÇAIS, 2 à 6 mots (ex. « LE GOÛT DU BIEN-ÊTRE »)." },
+          subheadline: { type: 'string', description: "static_ad : sous-titre d'une ligne (ex. « Kombucha bio aux fruits rouges. Naturellement fermenté. »)." },
+          bullets: { type: 'array', items: { type: 'string' }, description: "static_ad : 3 bénéfices courts (2 à 4 mots chacun), chacun aura une icône." },
+          brand: { type: 'string', description: "static_ad : nom de la marque, tel qu'écrit sur le produit." },
+          cta: { type: 'string', description: "static_ad : accroche finale courte (ex. « Pétillant. Sain. Délicieux. »)." },
           format: { type: 'string', enum: ['portrait', 'square', 'landscape'], description: 'portrait 9:16 (défaut, idéal TikTok/Reels), square 1:1, landscape 16:9' },
           quality: { type: 'string', enum: ['standard', 'high'], description: `'standard' = DÉFAUT OBLIGATOIRE (${IMG_COST.standard} crédits). N'utilise 'high' (${IMG_COST.high} crédits) QUE si l'utilisateur écrit explicitement « haute qualité »/« high »/« 4K ». NE choisis PAS 'high' parce que le prompt dit « détaillé », « réaliste » ou « ultra » — ça décrit l'image voulue, pas la qualité du moteur.` },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
@@ -765,7 +774,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'list_media',
-      description: 'Liste les derniers médias (images et vidéos) générés via Claude sur ce compte, avec leurs URLs publiques.',
+      description: "Liste les derniers médias du compte côté Claude : images/vidéos générées ET les PHOTOS PRODUIT déposées par l'utilisateur (fichiers nommés ref-…, à passer dans reference_image_url de generate_image). Avec leurs URLs publiques.",
       inputSchema: { type: 'object', properties: {} },
     },
   ]
@@ -821,6 +830,81 @@ Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
+// ── Génération : texte → image (images/generations) OU référence → image FIDÈLE (images/edits) ──
+// Avec une référence, gpt-image travaille en ÉDITION avec input_fidelity:'high' : le produit /
+// visage fourni est conservé à l'identique (forme, étiquette, logo, typo, couleurs). C'est ce qui
+// manquait le 20/08 : Claude décrivait le produit en mots → une bouteille « générique ».
+async function genererImage(prompt: string, size: string, quality: 'standard' | 'high', ref?: { bytes: Uint8Array; contentType: string } | null): Promise<{ bytes: Uint8Array } | { error: string }> {
+  let lastErr = 'Erreur génération'
+  for (const model of GPT_IMG_MODELS) {
+    try {
+      let data: Record<string, any> = {}
+      if (ref) {
+        const ext = /png/.test(ref.contentType) ? 'png' : /webp/.test(ref.contentType) ? 'webp' : 'jpg'
+        const build = (fidelity: boolean) => {
+          const fd = new FormData()
+          fd.append('model', model); fd.append('prompt', prompt); fd.append('n', '1'); fd.append('size', size)
+          fd.append('quality', quality === 'high' ? 'high' : 'medium')
+          if (fidelity) fd.append('input_fidelity', 'high')
+          fd.append('image', new Blob([ref.bytes as unknown as BlobPart], { type: ref.contentType }), 'reference.' + ext)
+          return fd
+        }
+        let res = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, body: build(true) })
+        data = await res.json().catch(() => ({}))
+        if (data.error && /input_fidelity/i.test(String(data.error.message || ''))) {   // modèle sans ce paramètre → sans
+          res = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, body: build(false) })
+          data = await res.json().catch(() => ({}))
+        }
+      } else {
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
+        })
+        data = await res.json().catch(() => ({}))
+      }
+      if (data.error) { lastErr = data.error.message || 'Erreur génération'; if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue; return { error: lastErr } }
+      const b64 = data.data?.[0]?.b64_json
+      if (!b64) { lastErr = 'Aucune image retournée'; continue }
+      return { bytes: b64ToBytes(b64) }
+    } catch (e) { lastErr = String((e as Error)?.message || e) }
+  }
+  return { error: lastErr }
+}
+// Le prompt FINAL selon le genre demandé. static_ad = direction artistique d'une vraie pub
+// (maquette de réf. 20/08 : titre géant, sous-titre, 3 bénéfices avec icônes, marque en bas,
+// produit en héros) ; ugc = selfie réaliste ; free = prompt de l'utilisateur.
+const TXT = (v: unknown) => String(v || '').replace(/["\n]+/g, ' ').trim()
+function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): string {
+  const kind = String(args.kind || 'free')
+  const base = TXT(args.prompt)
+  const refTxt = avecRef
+    ? ' Use the EXACT product/subject from the reference image: identical shape, label, logo, typography, colours, materials and proportions — do NOT redesign, rename, recolour or alter it in any way; only re-light and re-compose it.'
+    : ''
+  if (kind === 'static_ad') {
+    const bullets = Array.isArray(args.bullets) ? (args.bullets as unknown[]).map(TXT).filter(Boolean).slice(0, 4) : []
+    const headline = TXT(args.headline), sub = TXT(args.subheadline), brand = TXT(args.brand), cta = TXT(args.cta)
+    return [
+      'Professional static advertisement for social media (premium brand creative).',
+      'ALL on-image text is in FRENCH and must be spelled EXACTLY as given below — no other text anywhere.',
+      headline ? `HEADLINE at the top, very large, bold uppercase geometric sans-serif (Montserrat ExtraBold style), max 2 lines, with ONE key word highlighted in the brand accent colour: "${headline}".` : 'A short bold French headline at the top (Montserrat ExtraBold style, uppercase).',
+      sub ? `Under it a smaller sub-headline in a regular weight: "${sub}".` : '',
+      bullets.length ? `Then ${bullets.length} benefit lines stacked vertically, each preceded by a thin circular line icon that illustrates it: ${bullets.map((b) => `"${b}"`).join(', ')}.` : 'Then 3 short benefit lines, each with a thin circular line icon.',
+      `At the bottom: ${brand ? `the brand lockup "${brand}"` : 'the brand name'}${cta ? ` and the tagline "${cta}"` : ''}, small and elegant.`,
+      'PRODUCT: the product is the HERO of the composition, large, on the right or centre, photorealistic with studio lighting, soft reflections and a subtle glow, with a few floating ingredients/droplets matching its flavour or purpose.' + refTxt,
+      base ? `Art direction: ${base}.` : '',
+      'STYLE: clean premium layout, one dominant brand colour palette derived from the product, generous margins, perfectly legible crisp text, balanced hierarchy, no spelling mistakes, no watermark, no fake interface, no extra logos.',
+    ].filter(Boolean).join(' ')
+  }
+  if (kind === 'ugc') {
+    return augmenterPortrait(`Candid UGC selfie-style photo: a real-looking person naturally holding and showing the product to the camera, casual everyday setting, authentic smartphone look. ${base}.` + refTxt)
+  }
+  return augmenterPortrait(base + refTxt)
+}
+// Consigne de RÉPONSE pour Claude après une génération (Axel, 20/08 : « juste l'image + une
+// proposition de script, pas de pavé »). Répétée dans chaque résultat : c'est le modèle en
+// face qui décide, et les `instructions` seules ne suffisaient pas.
+const CONSIGNE_REPONSE = `RÉPONSE À ÉCRIRE MAINTENANT (règle stricte, en français) : UNE phrase courte du type « Ton visuel arrive dans la carte ci-dessus. », puis « Script proposé : » suivi de 2 à 3 phrases maximum (accroche + bénéfice + appel à l'action) utilisables en légende ou voix-off. RIEN D'AUTRE : pas de liste d'options, pas de variantes, pas de questions, pas de récapitulatif du prompt, pas d'explications techniques.`
+
 async function runGenerateImage(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!OPENAI_API_KEY) return toolErr('Génération indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
@@ -845,8 +929,18 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
-  const gate = await preSpendGate(profile, ctx, args, cost, `image ${quality} (${format})`, 'generate_image')
+  const kind = ['free', 'static_ad', 'ugc'].includes(String(args.kind)) ? String(args.kind) : 'free'
+  const gate = await preSpendGate(profile, ctx, args, cost, `image ${quality} (${format}${kind !== 'free' ? ', ' + kind : ''}${args.reference_image_url ? ', avec photo de référence' : ''})`, 'generate_image')
   if (gate) return gate
+  // Photo de référence (produit / visage) : téléchargée AVANT de débiter — une URL morte ne coûte rien.
+  let ref: { bytes: Uint8Array; contentType: string } | null = null
+  const refUrl = String(args.reference_image_url || '').trim()
+  if (refUrl) {
+    const got = await fetchUserFile(refUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, 'la photo de référence (reference_image_url)')
+    if (typeof got === 'string') return toolErr(got + " Donne une URL publique directe de l'image (ou dépose la photo sur avatarads.fr/app → Connecter Claude → « Photo produit pour Claude »).")
+    ref = got
+  }
+  const promptFinal = composerPromptImage({ ...args, prompt }, !!ref)
 
   // Débit AVANT génération (comme la vidéo) : jamais d'image livrée sans débit réel.
   // Si la génération échoue ensuite, le finally rembourse.
@@ -871,21 +965,9 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   bg((async () => {
     let lastErr = 'Erreur génération'
     try {
-      for (const model of GPT_IMG_MODELS) {
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model, prompt: augmenterPortrait(prompt), n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
-        })
-        const data = await res.json().catch(() => ({}))
-        if (data.error) {
-          lastErr = data.error.message || 'Erreur génération'
-          if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue
-          break
-        }
-        const b64 = data.data?.[0]?.b64_json
-        if (!b64) { lastErr = 'Aucune image retournée'; continue }
-        const brut = b64ToBytes(b64)
+      const out = await genererImage(promptFinal, size, quality, ref)
+      if ('bytes' in out) {
+        const brut = out.bytes
         const url = await uploadMedia(userId, brut, 'png', 'image/png')
         let apercu: string | null = null
         try {
@@ -893,17 +975,19 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
           if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg')
         } catch (_) { /* la vignette est un confort, jamais un bloquant */ }
         await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id)
-        await saveToLibrary(userId, brut, 'png', 'image/png', 'image', 'Image IA', apercu || url)  // filet Bibliothèque (thumb = aperçu public)
+        await saveToLibrary(userId, brut, 'png', 'image/png', 'image', kind === 'static_ad' ? 'Static ad' : 'Image IA', apercu || url)  // filet Bibliothèque (thumb = aperçu public)
         return
       }
+      lastErr = out.error
     } catch (e) { lastErr = String((e as Error)?.message || e) }
     await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
     await refundCredits(userId, cost)   // échec → on rend les crédits
   })())
 
   return {
-    content: [{ type: 'text', text: `🎨 Génération lancée (${quality}, ${format}, −${cost} crédits). L'image s'affiche DANS LA CARTE ci-dessous : une barre de progression puis l'image (~45 s), avec les boutons Regénérer / Ouvrir / Télécharger. NE rappelle PAS check_image — le widget suit la génération et affiche l'image tout seul. Dis juste à l'utilisateur que l'image apparaît dans la carte.` }],
-    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt, format },
+    content: [{ type: 'text', text: `🎨 Génération lancée (${quality}, ${format}${kind !== 'free' ? ', ' + kind : ''}${ref ? ', produit de référence conservé' : ''}, −${cost} crédits). L'image s'affiche DANS LA CARTE : barre de progression puis image (~45 s), boutons Regénérer / Télécharger. NE rappelle PAS check_image.\n${CONSIGNE_REPONSE}` }],
+    // prompt FINAL + référence + genre transmis au widget → « Regénérer » refait la MÊME chose (même produit)
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt: promptFinal, format, ref: refUrl || '', raw: true },
   }
 }
 
@@ -2279,7 +2363,7 @@ ${logTxt}`)
 // vers l'app (déjà connectée) qui demande le consentement → l'app appelle
 // /oauth/approve avec le JWT → code → claude.ai l'échange sur /token (PKCE)
 // → jeton Bearer aat_… accepté par la porte MCP comme une clé.
-const OAUTH_BASE = 'https://avatarads-mcp.netlify.app'
+const OAUTH_BASE = 'https://mcp.avatarads.fr'
 // Domaines par lesquels on accepte de se faire appeler comme serveur MCP. Le
 // domaine OAuth SUIT celui de connexion : claude.ai exige que la métadonnée
 // (resource / issuer / endpoints) soit sur le MÊME host que le connecteur —
@@ -2577,6 +2661,8 @@ serve(async (req) => {
     const origId = String(body.job || '')
     const prompt = String(body.prompt || '').trim()
     const format = ['portrait', 'square', 'landscape'].includes(String(body.format)) ? String(body.format) : 'portrait'
+    const refUrl = String(body.ref || '').trim()
+    const raw = body.raw === true || body.raw === 'true'   // prompt déjà composé par generate_image → ne pas le ré-augmenter
     if (!/^[0-9a-f-]{36}$/i.test(origId) || !prompt) return json(400, { error: 'bad_request' })
     const { data: orig } = await svc.from('mcp_jobs').select('user_id, created_at').eq('id', origId).maybeSingle()
     if (!orig) return json(404, { error: 'not_found' })
@@ -2600,16 +2686,11 @@ serve(async (req) => {
     bg((async () => {
       let lastErr = 'Erreur génération'
       try {
-        for (const model of GPT_IMG_MODELS) {
-          const res = await fetch('https://api.openai.com/v1/images/generations', {
-            method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, prompt: augmenterPortrait(prompt), n: 1, size, quality: 'medium', moderation: 'low' }),
-          })
-          const data = await res.json().catch(() => ({}))
-          if (data.error) { lastErr = data.error.message || 'Erreur génération'; if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue; break }
-          const b64 = data.data?.[0]?.b64_json
-          if (!b64) { lastErr = 'Aucune image retournée'; continue }
-          const brut = b64ToBytes(b64)
+        let ref: { bytes: Uint8Array; contentType: string } | null = null
+        if (refUrl) { const got = await fetchUserFile(refUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, 'la photo de référence'); if (typeof got !== 'string') ref = got }
+        const out = await genererImage(raw ? prompt : augmenterPortrait(prompt), size, 'standard', ref)
+        if ('bytes' in out) {
+          const brut = out.bytes
           const url = await uploadMedia(userId, brut, 'png', 'image/png')
           let apercu: string | null = null
           try { const petit = await fabriquerApercu(brut); if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg') } catch (_) { /* vignette = confort */ }
@@ -2617,6 +2698,7 @@ serve(async (req) => {
           await saveToLibrary(userId, brut, 'png', 'image/png', 'image', 'Image IA', apercu || url)  // filet Bibliothèque (regénération)
           return
         }
+        lastErr = out.error
       } catch (e) { lastErr = String((e as Error)?.message || e) }
       await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
       await refundCredits(userId, cost)
@@ -2646,6 +2728,27 @@ serve(async (req) => {
   if (segs[1] === 'key') {
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
     return await handleKeyManagement(req)
+  }
+  // Photo PRODUIT pour Claude (20/08) : claude.ai ne transmet pas les images jointes aux outils →
+  // l'utilisateur la dépose ici (app, JWT) ; on la range dans mcp-media/<uid>/ref-<stamp>.<ext>
+  // (public) → URL à donner à Claude, et list_media la retrouve (nom ref-…).
+  if (segs[1] === 'ref' && req.method === 'POST') {
+    const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
+    if (!token) return json(401, { error: 'unauthorized' })
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: `Bearer ${token}` } } })
+    const { data: { user }, error } = await userClient.auth.getUser()
+    if (error || !user) return json(401, { error: 'unauthorized' })
+    let body: Record<string, unknown>
+    try { body = await req.json() } catch { return json(400, { error: 'bad_request' }) }
+    const m = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
+    if (!m) return json(400, { error: 'bad_image' })
+    const bytes = b64ToBytes(m[3])
+    if (bytes.length > 10_000_000) return json(413, { error: 'too_large' })
+    const ext = m[2] === 'png' ? 'png' : m[2] === 'webp' ? 'webp' : 'jpg'
+    const path = `${user.id}/ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
+    const { error: upErr } = await svc.storage.from('mcp-media').upload(path, bytes, { contentType: m[1] })
+    if (upErr) return json(500, { error: 'upload' })
+    return json(200, { ok: true, url: `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}` })
   }
   // Routes OAuth (.well-known, register, authorize, oauth/approve, token)
   const repOAuth = await handleOAuth(req, url, segs)
@@ -2788,7 +2891,7 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon.svg', mimeType: 'image/svg+xml', sizes: ['any'] },
           ],
         },
-        instructions: "Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
+        instructions: "STYLE DE RÉPONSE (règle absolue) : court. Après toute génération : UNE phrase (le visuel est dans la carte) + « Script proposé : » avec 2 à 3 phrases max — jamais de listes d'options, de variantes, de questions en rafale ni de pavés. PHOTO PRODUIT : tu ne lis PAS les pixels d'une image jointe au chat ; pour reproduire le vrai produit à l'identique, il faut son URL dans reference_image_url (URL publique, ou photo déposée sur avatarads.fr/app → Connecter Claude → « Photo produit pour Claude », retrouvée via list_media sous le nom ref-…). Si l'utilisateur joint une image sans URL, dis-le en une phrase et propose le dépôt avant de générer une version approximative. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })
