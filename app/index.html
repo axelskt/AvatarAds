@@ -14,7 +14,8 @@
 <meta property="og:image" content="https://avatarads.fr/og-image.png">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="shortcut icon" href="/favicon.svg">
-<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -11303,15 +11304,12 @@ function _genPrevMusic(id){
   const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return;
   if(window._genPrevId===id && window._genPrevAudio && !window._genPrevAudio.paused){ window._genPrevAudio.pause(); _genPrevIcon(id,false); window._genPrevId=null; return; }
   _genStopPrev();
-  // Le volume d'écoute EST celui du slider (il bouge en direct, cf. _genSetMusicVol) et la voix de
-  // référence joue par-dessus à 100 % : on entend le VRAI équilibre voix/musique du rendu (Axel, 20/08).
+  // Un seul son à la fois (Axel, 21/08) : si l'« Aperçu animé » tourne (voix + sa musique), on le coupe.
+  try{ if(typeof previewPlaying!=='undefined' && previewPlaying && typeof togglePreviewPlay==='function') togglePreviewPlay(); }catch(_){}
+  // JUSTE la musique, au volume du slider (qui bouge en direct, cf. _genSetMusicVol).
   const a=new Audio(_genMusicSrc(m)); a.loop=true; a.volume=Math.max(0,Math.min(1,(window._genMusic&&window._genMusic.volume!=null)?window._genMusic.volume:0.35)); window._genPrevAudio=a; window._genPrevId=id;
   a.onended=()=>{ _genPrevIcon(id,false); if(window._genPrevId===id) window._genPrevId=null; };
   a.play().then(()=>_genPrevIcon(id,true)).catch(()=>{});
-  try{
-    const vsrc = _genPrevVoiceSrc();
-    if(vsrc){ const v=new Audio(vsrc); v.volume=1; window._genPrevVoice=v; v.onended=()=>{ if(window._genPrevVoice===v) window._genPrevVoice=null; }; v.play().catch(()=>{}); }
-  }catch(_){}
 }
 // Voix de référence pour l'écoute du mix : audio généré > audio du MP4 > échantillon de la voix choisie.
 function _genPrevVoiceSrc(){
@@ -17680,7 +17678,8 @@ let _previewUsingCleanAudio = false; // true quand on joue l'audio nettoyé (sil
 async function togglePreviewPlay(){
   stopPreviewAnim();
   if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
-  try{ if(window._genPrevMusic){ window._genPrevMusic.pause(); window._genPrevMusic=null; } }catch(_){}
+  try{ if(window._genPreviewMusicEl){ window._genPreviewMusicEl.pause(); window._genPreviewMusicEl=null; } }catch(_){}
+  if(typeof _genStopPrev==='function') _genStopPrev();   // l'écoute du menu Musique s'arrête aussi : un seul son à la fois
   previewPlaying = !previewPlaying;
   const btn = document.getElementById('previewPlayBtn');
   if(previewPlaying){
@@ -17731,7 +17730,7 @@ async function togglePreviewPlay(){
       mA.volume = (window._genMusic && typeof window._genMusic.volume==='number') ? window._genMusic.volume : 0.35;
       mA.loop = true;
       mA.play().catch(()=>{});
-      window._genPrevMusic = mA;
+      window._genPreviewMusicEl = mA;   // (ex window._genPrevMusic : écrasait la FONCTION _genPrevMusic du menu → boutons play morts + 2 musiques en même temps)
     }
     // Quand l'audio se termine → tout stopper
     if(activeAudio){
@@ -17739,7 +17738,7 @@ async function togglePreviewPlay(){
         previewPlaying = false;
         stopPreviewAnim();
         if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
-        try{ if(window._genPrevMusic){ window._genPrevMusic.pause(); window._genPrevMusic=null; } }catch(_){}
+        try{ if(window._genPreviewMusicEl){ window._genPreviewMusicEl.pause(); window._genPreviewMusicEl=null; } }catch(_){}
         const b = document.getElementById('previewPlayBtn');
         if(b){ b.textContent='▶ Aperçu animé'; b.style.borderColor='var(--border2)'; b.style.color='var(--text2)'; }
       };
@@ -24881,7 +24880,7 @@ function _mcLoad(f, which){
       window._mcRefB64=b64;
       const v=document.getElementById('mcRefPrev'), dz=document.getElementById('mcRefDrop');
       if(v){ v.src=b64; v.style.display='block';
-        v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'+((window._mcRefDur||0)>_MC_MAX_REF_S+0.5?' · coupée à '+_MC_MAX_REF_S+' s (max Kling)':''); if((window._mcRefDur||0)>_MC_MAX_REF_S+0.5) toast('Kling accepte 30 s max — seules les 30 premières secondes seront reproduites'); _mcUpdateCost(); };
+        v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; window._mcRefW=v.videoWidth||0; window._mcRefH=v.videoHeight||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'+((window._mcRefDur||0)>_MC_MAX_REF_S+0.5?' · coupée à '+_MC_MAX_REF_S+' s (max Kling)':''); if((window._mcRefDur||0)>_MC_MAX_REF_S+0.5) toast('Kling accepte 30 s max — seules les 30 premières secondes seront reproduites'); _mcUpdateCost(); };
       }
       if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
     } else if(which==='char'){
@@ -24915,19 +24914,53 @@ function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='10
 // 20/08 : vidéo TikTok > 30 s). On coupe donc aux 30 premières secondes AVANT l'envoi.
 const _MC_MAX_REF_S = 30;
 function _mcRefDurEff(){ return Math.min(_MC_MAX_REF_S, Math.ceil(window._mcRefDur||0)); }
-// Coupe la vidéo de référence à `maxSec` sans ré-encodage (ffmpeg.wasm, -c copy : rapide).
-async function _mcTrimRefBlob(b64, maxSec){
+// Sonde la vidéo de référence SANS la décoder : codec (fourcc dans le moov) + conteneur. Safari lit
+// le HEVC (vidéos iPhone « haute efficacité ») sans broncher, Kling NON → 422 « unsupported » en ~10 s.
+function _mcProbeRef(b64){
+  const out={ hevc:false, h264:false, webm:false, mp4:false };
+  try{
+    const data=String(b64).split(',')[1]||''; const bin=atob(data.slice(0, 4_000_000));   // ~3 Mo suffisent (moov en tête ou fin → on sonde aussi la fin)
+    const tail=atob(data.slice(Math.max(0, data.length-2_000_000)));
+    const hay=bin+'\u0000'+tail;
+    out.webm = bin.charCodeAt(0)===0x1A && bin.charCodeAt(1)===0x45 && bin.charCodeAt(2)===0xDF && bin.charCodeAt(3)===0xA3;
+    out.mp4  = bin.indexOf('ftyp')>=0;
+    out.hevc = /hvc1|hev1|dvh1|dvhe/.test(hay);
+    out.h264 = /avc1|avc3/.test(hay);
+  }catch(_){}
+  return out;
+}
+// Normalise la référence AVANT l'envoi à Kling : coupe à 30 s, ré-encode en H.264 si HEVC/WebM,
+// ramène les dimensions dans 340–3850 px (doc fal : image ET vidéo 340–3850, ratio 0,4–2,5).
+// Sans ré-encodage quand tout est déjà bon (-c copy = instantané). Repli : fichier intact.
+async function _mcNormalizeRef(b64){
   const toBlob=(x)=>{ const [meta,data]=String(x).split(','); const mime=(meta.match(/:(.*?);/)||[])[1]||'video/mp4'; const bin=atob(data); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); };
   const src=toBlob(b64);
+  const dur=window._mcRefDur||0, w=window._mcRefW||0, h=window._mcRefH||0;
+  const probe=_mcProbeRef(b64);
+  const tooLong = dur > _MC_MAX_REF_S+0.5;
+  const badCodec = probe.hevc || probe.webm || (!probe.h264 && !probe.mp4);
+  const mn=Math.min(w,h), mx=Math.max(w,h);
+  const badSize = (w&&h) && (mn<340 || mx>3850);
+  if(!tooLong && !badCodec && !badSize) return { blob:src, note:'' };
   try{
     await _loadFFmpeg(); const ff=_ffmpegInst;
     await ff.FS('writeFile','mcref_in.mp4', await window._ffFetchFile(src));
-    await ff.run('-i','mcref_in.mp4','-t',String(maxSec),'-c','copy','-movflags','+faststart','mcref_out.mp4');
+    const args=['-i','mcref_in.mp4'];
+    if(tooLong) args.push('-t', String(_MC_MAX_REF_S));
+    if(badCodec || badSize){
+      // dimensions cibles : ≥720 de petit côté si trop petit, ≤1920 de grand côté si trop grand, paires
+      let sw=w||720, sh=h||1280; let k=1;
+      if(mn<340) k=720/mn; else if(mx>1920) k=1920/mx;
+      sw=Math.round(sw*k/2)*2; sh=Math.round(sh*k/2)*2;
+      args.push('-vf','scale='+sw+':'+sh+',format=yuv420p','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k');
+    } else { args.push('-c','copy'); }
+    args.push('-movflags','+faststart','mcref_out.mp4');
+    await ff.run(...args);
     const data=await ff.FS('readFile','mcref_out.mp4');
     try{ await ff.FS('unlink','mcref_in.mp4'); await ff.FS('unlink','mcref_out.mp4'); }catch(_){}
-    if(data && data.length>1000) return new Blob([data.buffer],{type:'video/mp4'});
-  }catch(e){ console.warn('[mc] coupe 30 s :', e); }
-  return src;   // repli : fichier intact (Kling tranchera)
+    if(data && data.length>1000) return { blob:new Blob([data.buffer],{type:'video/mp4'}), note:(badCodec?'ré-encodée en H.264':'')+(badSize?' · redimensionnée':'')+(tooLong?' · coupée à 30 s':'') };
+  }catch(e){ console.warn('[mc] normalisation réf :', e); }
+  return { blob:src, note:'' };   // repli : fichier intact (Kling tranchera, l'erreur réelle remonte)
 }
 // jour au choix du forfait/qualité et quand la vidéo réf est chargée.
 function _mcUpdateCost(){
@@ -25117,7 +25150,10 @@ async function _mcPrepChar(b64){
       }
     }catch(e){ console.warn('[mc] cadrage auto indisponible :', e); }
   }
-  const k=Math.min(1, 2560/Math.max(cw,ch));
+  // Kling : image 340–3850 px de côté. ≤2560 (marge), et ≥400 sur le petit côté (on agrandit une
+  // petite image plutôt que de la voir refusée « unsupported » en 10 s).
+  let k=Math.min(1, 2560/Math.max(cw,ch));
+  if(Math.min(cw,ch)*k < 400) k=400/Math.min(cw,ch);
   const outW=Math.max(2,Math.round(cw*k)), outH=Math.max(2,Math.round(ch*k));
   const cv=document.createElement('canvas'); cv.width=outW; cv.height=outH;
   cv.getContext('2d').drawImage(img, sx, sy, cw, ch, 0, 0, outW, outH);
@@ -25132,7 +25168,8 @@ function _mcFalErr(rd, status){
   try{ console.error('[mc] fal '+status+' : '+JSON.stringify(rd).slice(0,600)); }catch(_){}   // détail brut → panneau d'erreurs dev
   if(/image_too_large/i.test(type||msg)) return 'Image du personnage trop grande pour Kling (max 3850 px) — réessaie, elle sera réduite automatiquement';
   if(/duration|too long|too short|seconds/i.test(type+' '+msg)) return 'Durée de la vidéo de référence refusée par Kling (3 à 30 s) : '+msg.slice(0,120);
-  if(/unsupported|not supported|invalid (video|image|file)|format|codec|resolution/i.test(type+' '+msg)) return 'Fichier non supporté par Kling (format, résolution ou codec) — réexporte en MP4 H.264 1080p : '+msg.slice(0,120);
+  if(/hevc|h\.?265|codec/i.test(type+' '+msg)) return 'Codec vidéo refusé par Kling (HEVC/H.265) — réexporte en MP4 H.264 : '+msg.slice(0,120);
+  if(/unsupported|not supported|invalid (video|image|file)|format|resolution|dimension|too small|too large/i.test(type+' '+msg)) return 'Fichier non supporté par Kling (format, dimensions 340–3850 px, ratio 0,4–2,5) : '+msg.slice(0,120);
   if(/risk|policy|moderat|sensitive|celebrit|content check|flagged|could not be processed/i.test(type+' '+msg)) return 'Kling a refusé ce contenu (modération) — souvent un élément du décor (poster, logo, marque, personnage). Essaie une photo à fond neutre, ou l\'option Arrière-plan pour remplacer le décor.';
   return 'Kling a refusé la génération'+(msg?' : '+msg.slice(0,140):' (HTTP '+status+')');
 }
@@ -25171,8 +25208,10 @@ async function _mcGenerate(){
     const base=user.id+'/mc-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
     const vPath=base+'.mp4', iPath=base+'.jpg';
     const charBlob=await _mcPrepChar(window._mcCharB64);   // recadre format + ≤2560 px (Kling refuse >3850)
-    let refBlob = b64ToBlob(window._mcRefB64);
-    if((window._mcRefDur||0) > _MC_MAX_REF_S+0.5){ _mcProg('Coupe aux 30 premières secondes…', 7); refBlob = await _mcTrimRefBlob(window._mcRefB64, _MC_MAX_REF_S); }
+    _mcProg('Vérification de la vidéo de référence…', 7);
+    const norm = await _mcNormalizeRef(window._mcRefB64);   // HEVC→H.264, 340–3850 px, ≤30 s
+    if(norm.note){ toast('Vidéo de référence '+norm.note.replace(/^ · /,'')); console.warn('[mc] réf normalisée :', norm.note); }
+    const refBlob = norm.blob;
     const uv=await sb.storage.from('render-media').upload(vPath, refBlob, { contentType:'video/mp4', upsert:true });
     const ui=await sb.storage.from('render-media').upload(iPath, charBlob, { contentType:'image/jpeg', upsert:true });
     if(uv.error||ui.error) throw new Error('upload : '+((uv.error||ui.error).message));
@@ -30994,16 +31033,19 @@ function _edUpdateBlackHint(){
   if(show && !h){
     h=document.createElement('div'); h.id='edBlackHint';
     h.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:none';
-    h.innerHTML='<div style="width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></div>'
-      +'<div class="display" style="font-size:17px;font-weight:700;color:var(--text)">Écran noir</div>'
-      +'<div class="mono faint" style="font-size:11px;letter-spacing:.06em">MP4 · MOV · WEBM · 9:16 recommandé</div>'
-      +'<div class="row gap10" style="pointer-events:auto;margin-top:4px">'
-      +'<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();document.getElementById(\'edFileIn\').click()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Importer une vidéo</button>'
-      +'<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();edPickFromLibrary()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Bibliothèque</button>'
-      +'</div>';
+    // Axel (21/08) : RIEN à l'écran au départ — juste le bouton d'import.
+    h.innerHTML='<button class="btn btn-primary" style="pointer-events:auto;padding:13px 22px" onclick="event.stopPropagation();document.getElementById(\'edFileIn\').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Importer une vidéo</button>';
     pz.appendChild(h);
   }
   if(h) h.style.display = show ? 'flex' : 'none';
+  // Projet tout noir = timeline VIDE à l'œil : pas de bande Visuel (ni poignées), pas d'audio, pas de
+  // rail « Écran noir » — le noir n'existe que comme support technique.
+  const vide=_edAllBlack();
+  const tl=document.getElementById('edTl'); if(tl){ tl.style.opacity = vide ? '0' : ''; tl.style.pointerEvents = vide ? 'none' : ''; }   // opacity : les poignées forcent leur propre visibility
+  const ct=document.getElementById('edClipsTrack'); if(ct && vide) ct.style.display='none';
+  const at=document.getElementById('edClipAudioTrack'); if(at && vide){ at.style.display='none'; at.innerHTML=''; }
+  const ah=document.getElementById('edClipAudioHint'); if(ah) ah.style.display = vide ? 'none' : '';
+  const ce=document.getElementById('edClipsEmpty'); if(ce && vide) ce.style.display='none';
 }
 // Remplace le clip idx par `nc` en conservant texte/images/musique/sons/zooms (snapshot → undo possible).
 function _edReplaceClip(idx, nc){
@@ -31727,7 +31769,7 @@ async function _edRenderTlStrip(){
   const sig=(c._black?'black':(c.url||''))+'|'+(+c.trimA).toFixed(2)+'|'+(+c.trimB).toFixed(2);
   if(st.dataset.sig===sig) return;
   st.dataset.sig=sig;
-  if(c._black){ st.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#141418 0 8px,#0c0c0f 8px 16px)"><span class="mono" style="font-size:10px;color:var(--text-3);letter-spacing:.08em">ÉCRAN NOIR</span></div>'; return; }
+  if(c._black){ st.innerHTML=''; return; }
   try{
     const thumbs=await _edExtractThumbs(c, 10);
     if(!st.isConnected||st.dataset.sig!==sig) return;
@@ -32076,6 +32118,7 @@ function edRenderTracks(){ edRenderRuler(); edRenderClipsTrack(); edRenderClipAu
    trims que la piste Visuel). Calcul paresseux : les pics d'un fichier ne se
    décodent qu'une fois (c._peaks), le rendu revient tout seul quand c'est prêt. */
 function edRenderClipAudioTrack(){
+  if(typeof _edAllBlack==='function' && _edAllBlack()){ const t0=document.getElementById('edClipAudioTrack'); if(t0){ t0.style.display='none'; t0.innerHTML=''; } const h0=document.getElementById('edClipAudioHint'); if(h0) h0.style.display='none'; return; }
   const tr=document.getElementById('edClipAudioTrack'); const hint=document.getElementById('edClipAudioHint'); if(!tr||!_ed||!_ed.clips||!_ed.clips.length){ if(tr){tr.style.display='none';tr.innerHTML='';} if(hint) hint.style.display='block'; return; }
   if(hint) hint.style.display='none';
   tr.style.display='block';
@@ -33183,9 +33226,12 @@ function edRenderClips(){
   edSyncToClip();
   wrap.innerHTML='';
   const total=_ed.clips.reduce((s,c)=>s+Math.max(0,(c.trimB-c.trimA)),0);
-  if(tot) tot.textContent='· '+_ed.clips.length+' clip'+(_ed.clips.length>1?'s':'')+' · '+edFmt(total);
-  if(empty) empty.style.display=(_ed.clips.length>1)?'none':'block';
+  const _vide0 = (typeof _edAllBlack==='function') && _edAllBlack();
+  if(tot) tot.textContent= _vide0 ? '' : ('· '+_ed.clips.length+' clip'+(_ed.clips.length>1?'s':'')+' · '+edFmt(total));
+  if(empty) empty.style.display=(_ed.clips.length>1 || _vide0)?'none':'block';
+  const _toutNoir = (typeof _edAllBlack==='function') && _edAllBlack();
   _ed.clips.forEach((c,idx)=>{
+    if(_toutNoir) return;   // projet vide : rien dans le rail
     const main=idx===0, active=idx===_ed.activeIdx;
     const row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid '+(active?'var(--accent)':'var(--border2)')+';background:'+(active?'var(--accent-soft)':'var(--bg3)');
