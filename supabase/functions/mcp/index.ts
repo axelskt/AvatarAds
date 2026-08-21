@@ -601,7 +601,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'generate_image',
-      description: `Génère une image IA (moteur AvatarAds, gpt-image) : visuel libre, STATIC AD (pub produit avec titre, bénéfices, marque) ou photo UGC (personne qui tient le produit). Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. ⚠️ Qualité par défaut = TOUJOURS 'standard'. ⚠️ FIDÉLITÉ PRODUIT : tu NE vois PAS les pixels d'une image jointe au chat — pour que le produit soit reproduit À L'IDENTIQUE (forme, étiquette, logo, couleurs), passe son URL publique dans reference_image_url (URL du site/Shopify, ou photo déposée par l'utilisateur sur avatarads.fr/app → Connecter Claude → « Photo produit pour Claude », visible ensuite via list_media sous le nom ref-…). Sans URL, préviens en une phrase que le produit sera approximatif et propose le dépôt.`,
+      description: `Génère une image IA (moteur AvatarAds, gpt-image) : visuel libre, STATIC AD (pub produit avec titre, bénéfices, marque) ou photo UGC (personne qui tient le produit). Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. ⚠️ Qualité par défaut = TOUJOURS 'standard'. ⚠️ FIDÉLITÉ PRODUIT : une image jointe au chat ne peut pas être transmise à cet outil — pour que le produit soit reproduit À L'IDENTIQUE (forme, étiquette, logo, couleurs), passe l'URL publique de sa photo dans reference_image_url (page produit / Shopify / lien direct vers l'image, ou une image déjà générée listée par list_media). Sans URL, décris le produit avec précision (forme, couleurs, texte de l'étiquette) et dis en une phrase qu'une URL de la photo donnerait un rendu identique.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -774,7 +774,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'list_media',
-      description: "Liste les derniers médias du compte côté Claude : images/vidéos générées ET les PHOTOS PRODUIT déposées par l'utilisateur (fichiers nommés ref-…, à passer dans reference_image_url de generate_image). Avec leurs URLs publiques.",
+      description: "Liste les derniers médias générés via Claude sur ce compte (images, vidéos) avec leurs URLs publiques — une image listée peut servir de reference_image_url à generate_image.",
       inputSchema: { type: 'object', properties: {} },
     },
   ]
@@ -937,7 +937,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   const refUrl = String(args.reference_image_url || '').trim()
   if (refUrl) {
     const got = await fetchUserFile(refUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, 'la photo de référence (reference_image_url)')
-    if (typeof got === 'string') return toolErr(got + " Donne une URL publique directe de l'image (ou dépose la photo sur avatarads.fr/app → Connecter Claude → « Photo produit pour Claude »).")
+    if (typeof got === 'string') return toolErr(got + " Donne une URL publique DIRECTE de l'image (qui se termine par .jpg/.png/.webp, ou le lien image d'une page produit).")
     ref = got
   }
   const promptFinal = composerPromptImage({ ...args, prompt }, !!ref)
@@ -2901,7 +2901,7 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon-256.png', mimeType: 'image/png', sizes: ['256x256'] },
           ],
         },
-        instructions: "STYLE DE RÉPONSE (règle absolue) : court. Après toute génération : UNE phrase (le visuel est dans la carte) + « Script proposé : » avec 2 à 3 phrases max — jamais de listes d'options, de variantes, de questions en rafale ni de pavés. PHOTO PRODUIT : tu ne lis PAS les pixels d'une image jointe au chat ; pour reproduire le vrai produit à l'identique, il faut son URL dans reference_image_url (URL publique, ou photo déposée sur avatarads.fr/app → Connecter Claude → « Photo produit pour Claude », retrouvée via list_media sous le nom ref-…). Si l'utilisateur joint une image sans URL, dis-le en une phrase et propose le dépôt avant de générer une version approximative. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
+        instructions: "STYLE DE RÉPONSE (règle absolue) : court. Après toute génération : UNE phrase (le visuel est dans la carte) + « Script proposé : » avec 2 à 3 phrases max — jamais de listes d'options, de variantes, de questions en rafale ni de pavés. PHOTO PRODUIT : une image jointe au chat ne peut pas être transmise aux outils ; pour reproduire le vrai produit à l'identique, il faut l'URL publique de sa photo dans reference_image_url (page produit, Shopify, lien direct). Sans URL : décris le produit très précisément (forme, couleurs, texte exact de l'étiquette) et mentionne en une phrase qu'une URL donnerait un rendu identique — ne pose pas dix questions. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })

@@ -1005,7 +1005,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <input type="text" id="f-cta" placeholder="Le CTA apparaîtra ici" oninput="updatePreview()" style="margin-top:10px;font-size:13px;padding:12px 14px;border-radius:10px">
             </div>
             <!-- RESET TOTAL — uniquement ici (1er onglet Produit), visible -->
-            <button onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (script, avatar, voix, gameplay, vidéo).'))resetAll();" style="width:100%;margin-top:14px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:none;border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:all .2s" onmouseover="this.style.color='#ff4757'" onmouseout="this.style.color='var(--text3)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>Réinitialiser totalement</button>
+            <button onclick="if(confirm('Réinitialiser totalement ? Script, avatar, voix et clips seront effacés — tes réglages (style, sous-titres, split, qualité) sont conservés.'))resetAll();" style="width:100%;margin-top:14px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:none;border-radius:10px;color:var(--text3);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:all .2s" onmouseover="this.style.color='#ff4757'" onmouseout="this.style.color='var(--text3)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>Réinitialiser totalement</button>
           </div>
 </div>
 
@@ -1036,7 +1036,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div id="avLibGrid2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px"></div>
                 <button type="button" class="btn btn-ghost" style="width:100%" onclick="openAvatarModal()">Voir les 49 avatars →</button>
               </div>
-              <button type="button" class="btn btn-quiet btn-sm" style="width:100%;margin-top:22px" onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (avatar, voix, split, style).'))resetAll()">Réinitialiser totalement</button>
+              <button type="button" class="btn btn-quiet btn-sm" style="width:100%;margin-top:22px" onclick="if(confirm('Réinitialiser totalement ? Script, avatar, voix et clips seront effacés — tes réglages (style, sous-titres, split, qualité) sont conservés.'))resetAll()">Réinitialiser totalement</button>
             </div>
 
             <div id="fs1Legacy" style="display:none">
@@ -1267,7 +1267,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- Présent sur la maquette, en bas de l'étape. Il vivait jusqu'ici
                  dans l'ancienne étape Produit, donc masqué avec elle. -->
             <button type="button" data-reset-total="1"
-              onclick="if(confirm('Réinitialiser totalement ? Tout sera effacé (avatar, voix, split, style).')) resetAll()"
+              onclick="if(confirm('Réinitialiser totalement ? Script, avatar, voix et clips seront effacés — tes réglages (style, sous-titres, split, qualité) sont conservés.')) resetAll()"
               style="width:100%;margin-top:18px;padding:12px;background:none;border:none;color:var(--text-3);font-family:var(--font);font-size:13.5px;cursor:pointer;transition:color .15s"
               onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'">Réinitialiser totalement</button>
           </div>
@@ -4523,6 +4523,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                         <div id="edTlHandleR" style="position:absolute;top:3px;bottom:3px;right:0;width:9px;background:var(--accent);cursor:ew-resize;border-radius:4px;z-index:3"></div>
                       </div>
                       <div id="edClipsTrack" style="display:none;position:absolute;left:0;right:0;top:5px;bottom:5px;gap:3px"></div>
+                      <span id="edVisualHint" class="faint mono" style="display:none;position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px;pointer-events:none">Glisse un clip vidéo ici</span>
                       <!-- les ANIMATIONS vivent sur la piste Visuel (retour Axel 08/08) -->
                       <div id="edZoomTrack" style="display:none;position:absolute;left:0;right:0;top:5px;bottom:5px;z-index:4"></div>
                     </div>
@@ -4532,7 +4533,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#3B82F6;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Audio</span></div>
                     <div style="position:relative;flex:1;height:100%;padding:6px 0;box-sizing:border-box">
                       <div id="edClipAudioTrack" style="display:none;position:absolute;left:0;right:0;top:6px;bottom:6px"></div>
-                      <span id="edClipAudioHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">L'audio de ta vidéo apparaît ici</span>
+                      <span id="edClipAudioHint" class="faint mono" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:10px">Glisse ton audio ici</span>
                     </div>
                   </div>
                   <!-- MUSIQUE (ajoutée par-dessus) -->
@@ -4608,10 +4609,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="edMusicLoaded" style="display:none;margin-bottom:14px">
                 <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span id="edMusicName" class="mono" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;color:var(--accent-2)"></span><button onclick="edRemoveMusic()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:13px;padding:2px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
                 <div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="mono faint" style="font-size:11px">Musique</span><span id="edMusicVolLbl" class="mono accent" style="font-size:11px">70%</span></div>
-                <input type="range" min="0" max="100" value="70" class="ed-range" oninput="edSetMusicVol(+this.value);document.getElementById('edMusicVolLbl').textContent=this.value+'%'">
+                <input type="range" min="0" max="200" value="70" class="ed-range" oninput="edSetMusicVol(+this.value);document.getElementById('edMusicVolLbl').textContent=this.value+'%'">
               </div>
               <div class="row" style="justify-content:space-between;margin:0 0 6px"><span class="mono faint row gap6" style="font-size:11px;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Voix vidéo</span><span id="edVoiceVolLbl" class="mono accent" style="font-size:11px">100%</span></div>
-              <input type="range" min="0" max="100" value="100" class="ed-range" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%';edRangeFill(this)">
+              <input type="range" min="0" max="200" value="100" class="ed-range" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%';edRangeFill(this)">
               <div class="label" style="margin:14px 0 10px;font-size:10.5px">Effets sonores — ajoutés au curseur</div>
               <div style="display:grid;grid-template-columns:1fr;gap:8px">
                 <button onclick="edOpenBank('sfx')" class="ed-bankbtn" style="border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.09);color:#22D3EE"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Bruitages <span style="opacity:.7">(52)</span></button>
@@ -21401,6 +21402,7 @@ async function _restoreFilesFromIDB(){
 
 function _saveSession(){
   if(window._resetting) return; // reset total en cours → ne pas ré-écrire la session
+  try{ if(typeof _saveGeneratorState==='function') _saveGeneratorState(); }catch(_){}   // les préférences suivent chaque changement
   try {
     const state = _buildSessionState();
     localStorage.setItem('avatarads_session', JSON.stringify(state));
@@ -21591,7 +21593,9 @@ function resetAll(){
   window._resetting = true;                         // neutralise les sauvegardes auto pendant le reset
   try { clearTimeout(_saveStateTimer); } catch(e){}
   try { sessionStorage.setItem('aa_full_reset','1'); } catch(e){} // au reboot : ne rien restaurer + purger IDB
-  ['avatarads_session','avatarads_tapSync','avatarads_lastHedra','aa_gen_state','aa_bypass_resume','aa_mp4audio_on']
+  // aa_gen_state (préférences : toggles, sous-titres, split, qualité, voix…) est CONSERVÉ volontairement :
+  // une nouvelle vidéo repart avec les derniers réglages (Axel, 21/08). Seul le contenu est effacé.
+  ['avatarads_session','avatarads_tapSync','avatarads_lastHedra','aa_bypass_resume']
     .forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
   // Purge TOUS les clips avant de recharger (et re-purge au boot par sécurité).
   let _reloaded = false;
@@ -23996,10 +24000,21 @@ function _saveGeneratorState(){
   _saveStateTimer = setTimeout(() => {
     try {
       const w = document.getElementById('phoneWrapper');
+      // PRÉFÉRENCES (pas le contenu) : ce que l'utilisateur coche/règle doit se retrouver tel quel à la
+      // prochaine vidéo, même après « Réinitialiser totalement » (Axel, 21/08). Le contenu (script, avatar,
+      // clips, voix générée) vit dans avatarads_session / IndexedDB et, lui, se remet à zéro.
       localStorage.setItem('aa_gen_state', JSON.stringify({
         cfg: { ...cfg },
         subColors: { ...subColors },
         selSubStyle, selAnim, animEnabled, splitEnabled,
+        splitSwapped: (typeof splitSwapped!=='undefined') ? splitSwapped : undefined,
+        subtitlesEnabled: (typeof subtitlesEnabled!=='undefined') ? subtitlesEnabled : undefined,
+        voiceMode: (typeof voiceMode!=='undefined') ? voiceMode : undefined,
+        selVoiceId: (typeof selVoiceId!=='undefined') ? selVoiceId : undefined,
+        currentPlatform: (typeof currentPlatform!=='undefined') ? currentPlatform : undefined,
+        composeQuality: (typeof _qualiteChoisie!=='undefined' && _qualiteChoisie) ? _composeQuality : undefined,
+        duration: document.getElementById('f-duration')?.value || undefined,
+        mp4AudioEnabled: (typeof mp4AudioEnabled!=='undefined') ? mp4AudioEnabled : undefined,
         phoneW: w ? w.offsetWidth  : 320,
         phoneH: w ? w.offsetHeight : 664,
         psv: 6,
@@ -24069,6 +24084,20 @@ function _restoreGeneratorState(){
 
     // ── Split ──
     if(s.splitEnabled !== undefined) splitEnabled = s.splitEnabled;
+    if(s.splitSwapped !== undefined && typeof splitSwapped!=='undefined') splitSwapped = s.splitSwapped;
+    // ── Autres réglages mémorisés (21/08) ──
+    try{
+      if(s.subtitlesEnabled !== undefined && typeof subtitlesEnabled!=='undefined') subtitlesEnabled = s.subtitlesEnabled;
+      if(s.voiceMode && typeof voiceMode!=='undefined') voiceMode = s.voiceMode;
+      if(s.selVoiceId !== undefined && typeof selVoiceId!=='undefined') selVoiceId = s.selVoiceId;
+      if(s.currentPlatform && typeof currentPlatform!=='undefined') currentPlatform = s.currentPlatform;
+      if(s.duration){ const d=document.getElementById('f-duration'); if(d){ d.value=s.duration; const l=document.getElementById('f-duration-lbl'); if(l) l.textContent=s.duration+' s'; if(typeof _aaSliderFill==='function') _aaSliderFill(d); } }
+      if(s.composeQuality && typeof _composeQuality!=='undefined'){
+        _composeQuality = s.composeQuality; _qualiteChoisie = true;   // sans toast (setQuality en afficherait un)
+        document.querySelectorAll('.qual-btn').forEach(b=>{ const bq=parseInt(b.dataset.q||'0'); if(bq===_composeQuality){ b.style.background='var(--accent-soft)'; b.style.border='2px solid var(--accent)'; b.style.color='var(--text)'; } else { b.style.background='var(--surface)'; b.style.border='1px solid var(--border)'; b.style.color='var(--text)'; } });
+      }
+      if(typeof _syncUIFromState==='function') setTimeout(()=>{ try{ _syncUIFromState(); }catch(_){} }, 0);
+    }catch(_){}
 
     // ── Taille preview phone ── (psv:6 → ignore les tailles sauvegardées (330, 378, 268×556…) ; défaut 320×664)
     if(s.phoneW && s.phoneH && s.psv === 6){
@@ -25261,12 +25290,22 @@ async function _mcGenerate(){
     const _mcCamTxt = window._mcCamFollow
       ? ' Handheld camera held at arm\'s length, with subtle organic shake, micro-jitter and natural breathing motion that reacts to the character\'s movements — a realistic hand-held selfie feel, slightly unstable and alive, NOT a locked tripod nor a smooth gimbal.'
       : '';
-    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcBgTxt + _mcCamTxt;
+    // Qualité/réalisme (Axel, 21/08) : Kling suit surtout la vidéo + l'image, mais le prompt pèse sur la
+    // texture de peau, la lumière et les mains — on le dit court et précis (≤2500 car. au total).
+    const _mcRealTxt = ' Photorealistic UGC quality: real skin texture with pores and subtle imperfections (never plastic or airbrushed), natural hair and fabric detail, correct hands and fingers, consistent lighting and shadows across the whole clip, sharp 4K detail, no warping, no flicker.';
+    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcBgTxt + _mcCamTxt + _mcRealTxt;
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
     // (marquée ._moderation quand le content checker a bloqué → repli possible).
     const runKling = async (ver) => {
       const model='/fal-ai/kling-video/'+ver+'/'+(tier==='pro'?'pro':'standard')+'/motion-control';
-      const sub=await fPost(model, { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId) });
+      const body={ image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId).slice(0,2400) };
+      // Kling 3.0 : « elements » = liaison d'identité FACIALE (doc fal : « enhances facial identity
+      // preservation », 1 élément, orientation 'video' uniquement) → visage plus fidèle = meilleure qualité perçue.
+      let sub;
+      if(ver==='v3'){
+        sub=await fPost(model, { ...body, elements:[{ frontal_image_url:charUrl, reference_image_urls:[charUrl] }] });
+        if(!sub.ok && (sub.status===400||sub.status===422)){ console.warn('[mc] elements refusés, renvoi sans'); sub=await fPost(model, body); }
+      } else sub=await fPost(model, body);
       if(!sub.ok){ const _t=(await sub.text().catch(()=>'')); throw new Error(sub.status===402 ? 'Service vidéo momentanément indisponible — réessaie dans quelques minutes' : ('Kling '+sub.status+' '+_t.slice(0,140))); }
       const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
       const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
@@ -31044,7 +31083,9 @@ function _edUpdateBlackHint(){
   const tl=document.getElementById('edTl'); if(tl){ tl.style.opacity = vide ? '0' : ''; tl.style.pointerEvents = vide ? 'none' : ''; }   // opacity : les poignées forcent leur propre visibility
   const ct=document.getElementById('edClipsTrack'); if(ct && vide) ct.style.display='none';
   const at=document.getElementById('edClipAudioTrack'); if(at && vide){ at.style.display='none'; at.innerHTML=''; }
-  const ah=document.getElementById('edClipAudioHint'); if(ah) ah.style.display = vide ? 'none' : '';
+  const ah=document.getElementById('edClipAudioHint'); if(ah && vide){ ah.textContent='Glisse ton audio ici'; ah.style.display='block'; }
+  const vh=document.getElementById('edVisualHint'); if(vh) vh.style.display = vide ? 'block' : 'none';
+  _edBindTrackDrops();
   const ce=document.getElementById('edClipsEmpty'); if(ce && vide) ce.style.display='none';
 }
 // Remplace le clip idx par `nc` en conservant texte/images/musique/sons/zooms (snapshot → undo possible).
@@ -31840,6 +31881,7 @@ function edRenderMusicTrack(){
     const L=Math.max(0,(s.start/total)*100), W=Math.max(0.6,((end-s.start)/total)*100);
     const on=_ed.selTrack&&_ed.selTrack.type==='music'&&_ed.selTrack.idx===i;
     html+='<div data-mseg="'+i+'" title="Clique pour sélectionner · Suppr pour supprimer · Séparer pour couper au curseur" style="position:absolute;top:0;bottom:0;left:'+L+'%;width:'+W+'%;border-radius:6px;overflow:hidden;background:rgba(77,171,247,.14);border:1.5px solid '+(on?'var(--accent)':'rgba(77,171,247,.5)')+';cursor:pointer'+(on?';box-shadow:0 0 0 1.5px var(--accent),0 0 14px var(--accent-glow)':'')+'">'
+      +_edGainOverlay(_ed.musicVol!=null?_ed.musicVol:0.7, 'rgba(40,199,149,.22)')
       +'<canvas data-mwave="'+i+'" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>'
       +(i===0?'<div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;font-family:var(--mono);color:#cfe9ff;text-shadow:0 1px 3px rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;max-width:68%;text-overflow:ellipsis;pointer-events:none;display:inline-flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'+((_ed.musicName||'Musique'))+'</div>':'')
       +'<button data-mx="'+i+'" title="'+(segs.length>1?'Retirer ce segment':'Retirer la musique')+'" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:22px;height:22px;background:rgba(10,10,12,.7);border:1px solid var(--border2);border-radius:6px;color:#ff8a8a;cursor:pointer;line-height:1;z-index:2;display:grid;place-items:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
@@ -31857,8 +31899,10 @@ function edRenderMusicTrack(){
   });
   // clic sur un segment = SÉLECTION (pas un déplacement de tête de lecture)
   mt.querySelectorAll('[data-mseg]').forEach(el=>{
-    el.addEventListener('pointerdown',e=>{ if(e.target.closest('[data-mx]')) return; e.stopPropagation(); edSelectTrack({type:'music', idx:+el.dataset.mseg}); });
+    // clic = SÉLECTION ; glisser verticalement = VOLUME de la musique (CapCut)
+    _edBindGainDrag(el, 'music', ()=>edSelectTrack({type:'music', idx:+el.dataset.mseg}));
   });
+  _edSyncGainUI('music');
   mt.querySelectorAll('[data-mx]').forEach(b=>{
     b.onclick=e=>{ e.stopPropagation(); edRemoveMusicSeg(+b.dataset.mx); };
     b.onpointerdown=e=>e.stopPropagation();
@@ -32117,8 +32161,22 @@ function edRenderTracks(){ edRenderRuler(); edRenderClipsTrack(); edRenderClipAu
    la piste montre la forme d'onde réelle, recollée segment par segment (mêmes
    trims que la piste Visuel). Calcul paresseux : les pics d'un fichier ne se
    décodent qu'une fois (c._peaks), le rendu revient tout seul quand c'est prêt. */
+// Dépôt direct sur les pistes : vidéo → piste Visuel, audio → piste Audio/Musique (bande son).
+function _edBindTrackDrops(){
+  const rows={ edTl:'video', edClipAudioTrack:'audio', edMusicTrack:'audio' };
+  const zone=(id)=>{ const el=document.getElementById(id); return el ? el.parentElement : null; };
+  Object.keys(rows).forEach(id=>{
+    const z=zone(id); if(!z || z._dropBound) return; z._dropBound=true;
+    z.addEventListener('dragover',e=>{ e.preventDefault(); z.style.outline='2px dashed var(--accent)'; z.style.outlineOffset='-2px'; });
+    z.addEventListener('dragleave',()=>{ z.style.outline='none'; });
+    z.addEventListener('drop',e=>{ e.preventDefault(); z.style.outline='none'; const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(!f) return;
+      if(rows[id]==='video' && f.type.startsWith('video/')) edRouteFile(f);
+      else if(rows[id]==='audio' && f.type.startsWith('audio/')) edAddMusic(f);
+      else toast(rows[id]==='video' ? 'Glisse une vidéo sur cette piste' : 'Glisse un fichier audio sur cette piste'); });
+  });
+}
 function edRenderClipAudioTrack(){
-  if(typeof _edAllBlack==='function' && _edAllBlack()){ const t0=document.getElementById('edClipAudioTrack'); if(t0){ t0.style.display='none'; t0.innerHTML=''; } const h0=document.getElementById('edClipAudioHint'); if(h0) h0.style.display='none'; return; }
+  if(typeof _edAllBlack==='function' && _edAllBlack()){ const t0=document.getElementById('edClipAudioTrack'); if(t0){ t0.style.display='none'; t0.innerHTML=''; } const h0=document.getElementById('edClipAudioHint'); if(h0){ h0.textContent='Glisse ton audio ici'; h0.style.display='block'; } return; }
   const tr=document.getElementById('edClipAudioTrack'); const hint=document.getElementById('edClipAudioHint'); if(!tr||!_ed||!_ed.clips||!_ed.clips.length){ if(tr){tr.style.display='none';tr.innerHTML='';} if(hint) hint.style.display='block'; return; }
   if(hint) hint.style.display='none';
   tr.style.display='block';
@@ -32139,14 +32197,21 @@ function edRenderClipAudioTrack(){
   // #8 · plus de pill « Voix vidéo » incrustée — la bande reste nue, le label de piste suffit
   const on=_ed.selTrack&&_ed.selTrack.type==='audio';
   const sig=buckets.length+':'+total.toFixed(2)+':'+(manque?'p':'ok')+':'+(on?'sel':'');
+  // Audio SUPPRIMÉ (Suppr sur la bande) : la bande disparaît → « clip sans audio ». Remonter « Voix
+  // vidéo » ou ⌘Z la ramène. (Axel, 21/08 : « le supprimer donne un clip sans audio »)
+  if(_ed.videoMuted){ tr.style.display='none'; tr.innerHTML=''; tr.dataset.sig=''; if(hint){ hint.textContent='Audio supprimé — remonte « Voix vidéo » ou ⌘Z pour le rétablir'; hint.style.display='block'; } return; }
+  if(hint) hint.textContent='Glisse ton audio ici';
   if(tr.dataset.sig!==sig||!tr.firstChild){
-    tr.innerHTML='<div style="position:relative;height:100%;border-radius:6px;overflow:hidden;background:rgba(59,130,246,.12);border:1.5px solid '+(on?'var(--accent)':'rgba(59,130,246,.45)')+(on?';box-shadow:0 0 0 1.5px var(--accent),0 0 14px var(--accent-glow)':'')+'">'
+    tr.innerHTML='<div style="position:relative;height:100%;border-radius:6px;overflow:hidden;background:rgba(59,130,246,.10);border:1.5px solid '+(on?'var(--accent)':'rgba(59,130,246,.45)')+(on?';box-shadow:0 0 0 1.5px var(--accent),0 0 14px var(--accent-glow)':'')+'">'
+      +_edGainOverlay(_ed.vol!=null?_ed.vol:1, 'rgba(59,130,246,.22)')
       +'<canvas id="edClipAudioWave" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas></div>';
     tr.dataset.sig=sig;
   }
-  // #5 · clic sur la bande Audio = SÉLECTION (pas un déplacement de tête de lecture)
-  tr.onpointerdown=e=>{ e.stopPropagation(); edSelectTrack({type:'audio'}); };
+  // clic = SÉLECTION ; glisser verticalement = VOLUME (CapCut)
+  _edBindGainDrag(tr.firstChild, 'audio', ()=>edSelectTrack({type:'audio'}));
+  tr.onpointerdown=null;
   _edDrawWave('edClipAudioWave', buckets, 'rgba(130,180,255,.8)');
+  _edSyncGainUI('audio');
 }
 let _edZoom=1;
 function edZoom(d){
@@ -32262,7 +32327,8 @@ function edStateCopy(){
     sfx:(_ed.sfx||[]).map(s=>({...s})),
     musicSegs:_ed.musicSegs?_ed.musicSegs.map(s=>({...s})):null, musicAuto:_ed.musicAuto!==false,
     zooms:(_ed.zooms||[]).map(z=>({...z})), selZoom:_ed.selZoom,
-    subsAI:_ed.subsAI ? { enabled:_ed.subsAI.enabled, style:_ed.subsAI.style, softCase:!!_ed.subsAI.softCase, words:_ed.subsAI.words.map(w=>({...w})) } : null };
+    subsAI:_ed.subsAI ? { enabled:_ed.subsAI.enabled, style:_ed.subsAI.style, softCase:!!_ed.subsAI.softCase, words:_ed.subsAI.words.map(w=>({...w})) } : null,
+    vol:_ed.vol, videoMuted:!!_ed.videoMuted, musicVol:_ed.musicVol };
 }
 function edSnap(){ if(!_ed) return; _ed._redo=[]; _ed._hist=_ed._hist||[]; _ed._hist.push(edStateCopy()); if(_ed._hist.length>40) _ed._hist.shift(); }
 function edRestoreState(st){
@@ -32278,6 +32344,8 @@ function edRestoreState(st){
   _ed.zooms=(st.zooms||[]).map(z=>({...z})); _ed.selZoom=st.selZoom||null;
   _ed.subsAI=st.subsAI ? { enabled:st.subsAI.enabled, style:st.subsAI.style, softCase:!!st.subsAI.softCase, words:(st.subsAI.words||[]).map(w=>({...w})) } : null;
   _ed.sel=null;
+  if(st.vol!=null){ _ed.videoMuted=!!st.videoMuted; if(_ed.videoMuted){ _ed.vol=0; try{ (_ed.clips||[]).forEach(c=>{ if(c.video){ c.video.muted=true; } }); }catch(_){} if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=0; } else { edSetVideoVol(st.vol*100); } }
+  if(st.musicVol!=null) edSetMusicVol(st.musicVol*100);
   _ed.overlays.forEach(o=>edBuildOverlayEl(o));
   edResizeCanvas(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
   edRefreshTimeline(); edRenderClips(); edRenderOvTrack(); edHideProps();
@@ -33157,8 +33225,42 @@ function edRemoveMusic(silent){
   if(!silent){ const e1=document.getElementById('edMusicEmpty'),e2=document.getElementById('edMusicLoaded'); if(e1)e1.style.display='block'; if(e2)e2.style.display='none'; }
   edRenderMusicTrack();
 }
-function edSetMusicVol(v){ if(!_ed) return; _ed.musicVol=v/100; if(_ed.audio&&_ed.audio.mGain) _ed.audio.mGain.gain.value=_ed.musicVol; else if(_ed.music) _ed.music.volume=_ed.musicVol; }
-function edSetVideoVol(v){ if(!_ed) return; _ed.vol=v/100; if(v>0){ _ed.videoMuted=false; try{ (_ed.clips||[]).forEach(c=>{ if(c.video) c.video.muted=false; }); if(_ed.video) _ed.video.muted=false; }catch(_){} } if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=_ed.vol; else if(_ed.video) _ed.video.volume=_ed.vol; }
+function edSetMusicVol(v){ if(!_ed) return; _ed.musicVol=Math.max(0,Math.min(2,v/100)); if(_ed.audio&&_ed.audio.mGain) _ed.audio.mGain.gain.value=_ed.musicVol; else if(_ed.music) _ed.music.volume=Math.min(1,_ed.musicVol); _edSyncGainUI('music'); }
+function edSetVideoVol(v){ if(!_ed) return; const _wasMuted=!!_ed.videoMuted; _ed.vol=Math.max(0,Math.min(2,v/100)); if(v>0){ _ed.videoMuted=false; if(_wasMuted && typeof edRenderClipAudioTrack==='function') setTimeout(edRenderClipAudioTrack,0); try{ (_ed.clips||[]).forEach(c=>{ if(c.video) c.video.muted=false; }); if(_ed.video) _ed.video.muted=false; }catch(_){} }
+  if(_ed.vol>1 && !_ed.audio && _ed.video && !_ed.video._black){ try{ edEnsureAudioGraph(); }catch(_){} }   // >100 % = amplification WebAudio, l'élément seul plafonne à 1
+  if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=_ed.vol; else if(_ed.video){ try{ _ed.video.volume=Math.min(1,_ed.vol); }catch(_){} }
+  _edSyncGainUI('audio'); }
+// ── Volume DANS la bande (CapCut) : remplissage = gain (0 → vide, 100 % → moitié, 200 % → plein) ;
+//    glisser verticalement dans le rectangle règle le son, un clic simple sélectionne comme avant. ──
+function _edGainOverlay(gain, color){
+  const h=Math.max(0,Math.min(100,(gain/2)*100));
+  return '<div class="ed-gain" style="position:absolute;left:0;right:0;bottom:0;height:'+h.toFixed(1)+'%;background:'+color+';pointer-events:none;transition:height .06s"></div>'
+       +'<div class="ed-gain-line" style="position:absolute;left:0;right:0;bottom:'+h.toFixed(1)+'%;height:2px;background:rgba(255,255,255,.55);pointer-events:none;transition:bottom .06s"></div>'
+       +'<div class="ed-gain-lbl" style="position:absolute;right:34px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;font-family:var(--mono);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);pointer-events:none;opacity:0;transition:opacity .15s">'+Math.round(gain*100)+'%</div>';
+}
+function _edSyncGainUI(kind){
+  const gain = kind==='music' ? (_ed?_ed.musicVol:0.7) : (_ed?(_ed.videoMuted?0:_ed.vol):1);
+  const roots = kind==='music' ? document.querySelectorAll('#edMusicTrack [data-mseg]') : [document.querySelector('#edClipAudioTrack > div')].filter(Boolean);
+  roots.forEach(r=>{ const h=Math.max(0,Math.min(100,(gain/2)*100)); const f=r.querySelector('.ed-gain'); if(f) f.style.height=h.toFixed(1)+'%'; const l=r.querySelector('.ed-gain-line'); if(l) l.style.bottom=h.toFixed(1)+'%'; const t=r.querySelector('.ed-gain-lbl'); if(t) t.textContent=Math.round(gain*100)+'%'; });
+  // sliders du panneau
+  if(kind==='music'){ const sl=document.querySelector('input[oninput*="edSetMusicVol"]'); if(sl && document.activeElement!==sl){ sl.value=Math.round(gain*100); const lb=document.getElementById('edMusicVolLbl'); if(lb) lb.textContent=Math.round(gain*100)+'%'; } }
+  else { const sl=document.querySelector('input[oninput*="edSetVideoVol"]'); if(sl && document.activeElement!==sl){ sl.value=Math.round(gain*100); if(typeof edRangeFill==='function') edRangeFill(sl); const lb=document.getElementById('edVoiceVolLbl'); if(lb) lb.textContent=Math.round(gain*100)+'%'; } }
+}
+// Glisser vertical = volume ; clic = onSelect (sélection). `el` = le rectangle de la bande.
+function _edBindGainDrag(el, kind, onSelect){
+  if(!el) return;
+  el.style.touchAction='none';
+  el.onpointerdown=(e)=>{
+    if(e.target.closest('[data-mx]')) return;
+    e.stopPropagation();
+    const y0=e.clientY, rect=el.getBoundingClientRect(); let dragging=false, snapped=false;
+    const lbl=el.querySelector('.ed-gain-lbl');
+    const apply=(ev)=>{ const y=Math.max(rect.top, Math.min(rect.bottom, ev.clientY)); let g=2*(1-(y-rect.top)/Math.max(1,rect.height)); if(Math.abs(g-1)<0.06) g=1; if(g<0.04) g=0; g=Math.round(g*100)/100; if(kind==='music') edSetMusicVol(g*100); else edSetVideoVol(g*100); };
+    const move=(ev)=>{ if(!dragging && Math.abs(ev.clientY-y0)>4){ dragging=true; if(!snapped){ snapped=true; try{ edSnap(); }catch(_){} } if(lbl) lbl.style.opacity='1'; } if(dragging) apply(ev); };
+    const up=(ev)=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up); if(lbl) lbl.style.opacity='0'; if(!dragging && typeof onSelect==='function') onSelect(ev); else if(dragging){ const g=kind==='music'?_ed.musicVol:_ed.vol; toast((kind==='music'?'Musique ':'Audio ')+Math.round(g*100)+' %'); } };
+    window.addEventListener('pointermove',move); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
+  };
+}
 
 /* ---------- font / style / crop ---------- */
 function edSetFont(f){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; ov.font=f; edStyleOverlay(ov); }
@@ -34208,7 +34310,6 @@ window.mPreviewClose=function(){
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
               Relier à Claude
             </button>
-            <p class="faint" style="font-size:11px;line-height:1.5;margin:10px 0 0">Le bouton copie l'adresse et ouvre Claude → Connecteurs. Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.</p>
 
             <!-- alternative : connexion par clé (ancienne méthode), repliée -->
             <details id="mcpKeyAlt" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
@@ -34275,31 +34376,6 @@ window.mPreviewClose=function(){
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               Commencer
             </a>
-          </div>
-        </div>
-
-        <!-- photo produit pour Claude (20/08) : claude.ai ne transmet pas les images jointes aux outils →
-             on la dépose ici, Claude la retrouve (list_media, ref-…) ou reçoit l'URL. -->
-        <div class="card" style="width:100%;max-width:680px;margin:22px auto 0;padding:20px 22px">
-          <div class="row gap10" style="align-items:center;margin-bottom:8px">
-            <span style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
-            <span style="font-weight:700;font-size:15px">Photo produit pour Claude</span>
-          </div>
-          <p class="faint" style="font-size:13px;line-height:1.55;margin:0 0 14px">Claude ne voit pas les photos jointes dans le chat. Dépose ici la photo de ton produit : Claude la reproduit <b style="color:var(--text-2)">à l'identique</b> dans tes static ads et visuels UGC — dis-lui simplement « utilise ma dernière photo produit ».</p>
-          <input type="file" id="mcpRefIn" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="mcpRefUpload(this.files[0]);this.value=''">
-          <div id="mcpRefDrop" onclick="document.getElementById('mcpRefIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';mcpRefUpload(event.dataTransfer.files[0])" class="row gap12" style="align-items:center;justify-content:center;padding:18px;border:1px dashed var(--border-2);border-radius:12px;cursor:pointer;background:var(--panel-1)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v10M8 9l4-4 4 4M5 19h14"/></svg>
-            <span id="mcpRefLbl" style="font-size:13.5px;font-weight:600">Glisse la photo du produit (PNG · JPG · WebP)</span>
-          </div>
-          <div id="mcpRefDone" style="display:none;margin-top:12px">
-            <div class="row gap10" style="align-items:center">
-              <img id="mcpRefThumb" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;border:1px solid var(--border-2);flex:0 0 auto">
-              <div class="row card" style="flex:1;min-width:0;padding:8px 10px;gap:8px;align-items:center;background:var(--panel-1)">
-                <input type="text" id="mcpRefUrl" readonly onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:11px;border:none;background:none;color:var(--text-2);text-overflow:ellipsis;padding:0">
-                <button class="btn btn-sm" onclick="mcpRefCopy()" style="flex:0 0 auto;padding:7px 11px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></button>
-              </div>
-            </div>
-            <p class="faint" style="font-size:11px;line-height:1.5;margin:8px 0 0">Photo envoyée. Dans Claude : « Crée une static ad de ma dernière photo produit » — ou colle cette URL dans ta demande.</p>
           </div>
         </div>
 
