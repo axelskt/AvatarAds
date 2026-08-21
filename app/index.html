@@ -806,10 +806,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
-      <div class="nav-i" id="navConnexions" onclick="openSetup()" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
-        Connexions
-      </div>
+      <!-- (BYOK « Connexions » retiré le 21/08 — abandonné ; to-do : offre membres formation via code promo) -->
       <div class="nav-i" onclick="openAccountSettings()" style="color:var(--text2)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
         Mon compte
@@ -5130,9 +5127,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
   </div>
   <div onclick="nav('library',null)" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;padding:4px 16px">
     <span style="font-size:20px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>Biblio
-  </div>
-  <div onclick="openSetup()" style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;padding:4px 16px">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Connexions
   </div>
 </div>
 
@@ -34118,7 +34112,7 @@ function edBandDrag(ov,track,e,mode){
     var tools=[
       ['generator','Avatar IA en 5 étapes'],['express','Vidéo en 1 prompt · Veo'],['motion','Ton avatar copie une vidéo'],
       ['cartoon','Mascotte animée'],['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
-      ['audioclean','Nettoyage + enregistreur'],['library','Tes vidéos'],['affiliation','Gagne 30% à vie'],['__setup','Réglages & API']
+      ['audioclean','Nettoyage + enregistreur'],['library','Tes vidéos'],['affiliation','Gagne 30% à vie']
     ];
     var h='<h2 class="display" style="font-size:24px;font-weight:800;margin-bottom:16px">Tous les outils</h2>';
     h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
