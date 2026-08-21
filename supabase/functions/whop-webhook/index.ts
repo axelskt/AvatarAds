@@ -30,6 +30,37 @@ const SUB_MAP: Record<string, { plan: string; credits: number }> = {
 // 🌞 Promo de l'été : bonus offert UNE FOIS, au premier abonnement du compte
 const FIRST_SUB_BONUS: Record<string, number> = { starter: 25, pro: 50, elite: 75 }
 
+// ── PARRAINAGE (21/08) : 30 % de chaque paiement d'un filleul → gains du parrain ──
+// Prix affichés (centimes) par plan Whop, utilisés si le payload ne porte pas le montant payé.
+const PLAN_PRICE_CENTS: Record<string, number> = {
+  plan_YKcdyPT6RRQSi: 2999, plan_g4BVtDmk6hgjQ: 4999, plan_w8lh5zpEJFOQR: 8999, plan_pZmWh1dVdmIWT: 15899, plan_63PGeG3MesbJR: 22499,
+  plan_cNydK89X39PLE: 24999, plan_P7WIywSa6YrxT: 44999, plan_OvRwm5CW3xcNh: 79999, plan_uWTkJDl1GvxNR: 143988, plan_x2kDWR6ur2W5E: 189588,
+  plan_w0DMfzGzEdmYF: 999, plan_xgsRkGzvSgUkf: 1999, plan_EVUzCdQ1H1EdL: 4999,
+}
+const REFERRAL_RATE = 0.30
+async function creditReferral(sb: any, referredId: string, referredEmail: string, planId: string, data: any, label: string) {
+  try {
+    const { data: prof } = await sb.from('profiles').select('referred_by').eq('id', referredId).maybeSingle()
+    const code = String(prof?.referred_by || '').trim()
+    if (!code) return
+    const { data: referrerId } = await sb.rpc('referrer_id_from_code', { p_code: code })
+    if (!referrerId || referrerId === referredId) return
+    // montant payé : payload Whop (final_amount / amount / total, en unités) sinon le prix du plan
+    const raw = Number(data?.final_amount ?? data?.amount ?? data?.total ?? data?.subtotal ?? NaN)
+    const amountCents = Number.isFinite(raw) && raw > 0 ? Math.round(raw * 100) : (PLAN_PRICE_CENTS[planId] ?? 0)
+    if (!amountCents) { console.log(`ℹ️ parrainage : montant inconnu pour ${planId}, pas de commission`); return }
+    const commission = Math.round(amountCents * REFERRAL_RATE)
+    const day = new Date().toISOString().slice(0, 10)
+    const { error } = await sb.from('referral_earnings').insert({
+      referrer_id: referrerId, referred_id: referredId, referred_email: referredEmail, plan_id: planId, label,
+      amount_cents: amountCents, commission_cents: commission, currency: 'EUR',
+      dedupe_key: `${referredId}:${planId}:${day}`,   // une commission par paiement (activation + payment.succeeded = même jour)
+    })
+    if (error) { if (String(error.code) === '23505') console.log('↩️ parrainage : commission déjà comptée aujourd\'hui'); else console.error('⚠️ parrainage :', error.message); return }
+    console.log(`💶 Parrainage : +${(commission / 100).toFixed(2)} € pour ${referrerId} (${label} ${planId}, filleul ${referredEmail})`)
+  } catch (e) { console.error('⚠️ parrainage :', e) }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // PACKS one-shot → AJOUTE des crédits (ne touche pas au plan)
 // ─────────────────────────────────────────────────────────────────
@@ -235,6 +266,7 @@ serve(async (req) => {
           first_sub_bonus_used: true,
         }).eq('id', profile.id)
         if (error) { console.error('❌ Update profil:', error); return new Response('DB error', { status: 500 }) }
+        await creditReferral(sb, profile.id, email, planId, data, 'abonnement')
         console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''})`)
         await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: sub.credits + bonus + keep })
       } else {
@@ -255,6 +287,7 @@ serve(async (req) => {
         }).eq('id', profile.id)
         if (error) { console.error('❌ Crédit pack:', error); return new Response('DB error', { status: 500 }) }
         console.log(`✅ Pack crédité pour ${email}: +${pack.credits || 0} crédits, +${pack.imgCredits || 0} images`)
+        await creditReferral(sb, profile.id, email, planId, data, 'pack')
       } else {
         // Pack payé sans compte → stocké en attente (cumulatif, plan inchangé)
         const { data: pa } = await sb.from('pending_activations').select('plan, credits, img_credits').eq('email', email).maybeSingle()
@@ -318,6 +351,7 @@ serve(async (req) => {
         whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
       console.log(`🔄 Renouvellement pour ${email}: ${sub.plan} (${sub.credits} crédits remis${keep ? ` +${keep} achetés reportés` : ''})`)
+      await creditReferral(sb, profile.id, email, planId, data, 'renouvellement')
     }
   }
 

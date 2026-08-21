@@ -1,0 +1,4 @@
+-- Parrainage en argent (21/08/2026) — appliquée via MCP apply_migration `referral_earnings_payouts`.
+-- Tables referral_earnings / referral_payouts (RLS lecture propriétaire), RPC referrer_id_from_code (service),
+-- get_referral_summary(), request_referral_payout(), mark_referral_payout_paid() (owner).
+-- Voir le dashboard Supabase → Database → Migrations pour le SQL exact.

@@ -316,7 +316,7 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw };
+  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -375,8 +375,64 @@ function aaShow(out){
     if(d.format) aaFormat=d.format;
     if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
+    if(d.pending){ aaAskPhoto(); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
+}
+// ── PHOTO DU PRODUIT DANS LA CARTE (21/08) : claude.ai ne transmet pas les images jointes aux outils →
+//    l'utilisateur la dépose ICI (glisser / choisir / coller), le widget l'envoie à /start qui lance la
+//    génération avec le produit à l'identique, dans la MÊME carte. « Sans photo » = génération libre. ──
+function aaAskPhoto(){
+  aaOk=true; if(aaPollT){ clearInterval(aaPollT); aaPollT=null; }
+  var b=document.getElementById('b'); if(b) b.style.display='none';
+  var m=document.getElementById('m'); m.style.padding='0';
+  m.innerHTML='<div id="dz" style="margin:12px;padding:20px 16px;text-align:center;border:1.5px dashed var(--aa-line);border-radius:12px;transition:border-color .15s">'
+    +'<div style="font-size:14.5px;font-weight:700;margin-bottom:4px">Dépose la photo de ton produit</div>'
+    +'<div style="font-size:12px;opacity:.72;margin-bottom:14px">Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — elle sera reproduite à l\'identique</div>'
+    +'<input type="file" id="fi" accept="image/png,image/jpeg,image/webp" style="display:none">'
+    +'<button class="aa-a aa-dl" id="pick" type="button" style="border:none;cursor:pointer">Choisir une photo</button>'
+    +'<button class="aa-a aa-rg" id="skip" type="button" style="border:none;cursor:pointer;margin-left:8px">Sans photo</button>'
+    +'<div id="pe" style="font-size:12px;margin-top:10px;min-height:16px;opacity:.85"></div></div>';
+  var dz=document.getElementById('dz'), fi=document.getElementById('fi');
+  document.getElementById('pick').onclick=function(){ try{ fi.click(); }catch(e){ var pe=document.getElementById('pe'); if(pe) pe.textContent='Glisse la photo directement dans la carte.'; } };
+  fi.onchange=function(){ if(fi.files&&fi.files[0]) aaSendPhoto(fi.files[0]); };
+  dz.addEventListener('dragover',function(e){ e.preventDefault(); dz.style.borderColor='#FF5A1F'; });
+  dz.addEventListener('dragleave',function(){ dz.style.borderColor=''; });
+  dz.addEventListener('drop',function(e){ e.preventDefault(); dz.style.borderColor=''; var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) aaSendPhoto(f); });
+  document.addEventListener('paste',function(e){ var it=e.clipboardData&&e.clipboardData.items; if(!it) return; for(var i=0;i<it.length;i++){ if(it[i].type&&it[i].type.indexOf('image/')===0){ var f=it[i].getAsFile(); if(f){ aaSendPhoto(f); break; } } } });
+  document.getElementById('skip').onclick=function(){ aaStartJob(''); };
+  aaHugW=Math.max(320, Math.min(560, Math.ceil(window.innerWidth||420))); aaMeasure();
+}
+function aaSendPhoto(file){
+  var pe=document.getElementById('pe'); if(pe) pe.textContent='Préparation de la photo…';
+  if(!file||!/^image\/(png|jpe?g|webp)$/.test(file.type||'')){ if(pe) pe.textContent='PNG, JPG ou WebP uniquement.'; return; }
+  var fr=new FileReader();
+  fr.onload=function(){
+    var img=new Image();
+    img.onload=function(){
+      var k=Math.min(1, 2048/Math.max(img.naturalWidth||1, img.naturalHeight||1));
+      var cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round((img.naturalWidth||1)*k)); cv.height=Math.max(1,Math.round((img.naturalHeight||1)*k));
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      var out=cv.toDataURL(file.type==='image/png'?'image/png':'image/jpeg', 0.92);
+      aaStartJob(out);
+    };
+    img.onerror=function(){ if(pe) pe.textContent='Image illisible — essaie un PNG ou un JPG.'; };
+    img.src=fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+function aaStartJob(dataUrl){
+  var pe=document.getElementById('pe'); if(pe) pe.textContent=dataUrl?'Envoi de la photo…':'Lancement…';
+  var pk=document.getElementById('pick'), sk=document.getElementById('skip'); if(pk) pk.disabled=true; if(sk) sk.disabled=true;
+  fetch('https://mcp.avatarads.fr/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, data_url:dataUrl||'', skip:!dataUrl }) })
+    .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+    .then(function(x){
+      if(x.ok&&x.j&&x.j.statusUrl){ if(x.j.ref) aaRef=x.j.ref; if(x.j.prompt) aaPrompt=x.j.prompt; aaRaw=true; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); return; }
+      var er=(x.j&&x.j.error)||'';
+      if(pe) pe.textContent = er==='daily_cap'?'Plafond 24 h atteint':(er==='no_credits'||er==='credits')?'Crédits épuisés — recharge sur avatarads.fr':er==='expired'?'Carte expirée — redemande à Claude':er==='not_pending'?'Déjà lancé':er==='plan'?'Réservé aux plans Pro et Élite':'Échec ('+(er||'réseau')+') — réessaie';
+      if(pk) pk.disabled=false; if(sk) sk.disabled=false;
+    })
+    .catch(function(){ if(pe) pe.textContent='Réseau indisponible — réessaie.'; if(pk) pk.disabled=false; if(sk) sk.disabled=false; });
 }
 function aaLikely(p){ return p&&(p.structuredContent||(p.content&&p.content.length)); }
 function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
@@ -601,13 +657,14 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'generate_image',
-      description: `Génère une image IA (moteur AvatarAds, gpt-image) : visuel libre, STATIC AD (pub produit avec titre, bénéfices, marque) ou photo UGC (personne qui tient le produit). Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. ⚠️ Qualité par défaut = TOUJOURS 'standard'. ⚠️ FIDÉLITÉ PRODUIT : une image jointe au chat ne peut pas être transmise à cet outil — pour que le produit soit reproduit À L'IDENTIQUE (forme, étiquette, logo, couleurs), passe l'URL publique de sa photo dans reference_image_url (page produit / Shopify / lien direct vers l'image, ou une image déjà générée listée par list_media). Sans URL, décris le produit avec précision (forme, couleurs, texte de l'étiquette) et dis en une phrase qu'une URL de la photo donnerait un rendu identique.`,
+      description: `Génère une image IA (moteur AvatarAds, gpt-image) : visuel libre, STATIC AD (pub produit avec titre, bénéfices, marque) ou photo UGC (personne qui tient le produit). Coût : ${IMG_COST.standard} crédits en qualité standard, ${IMG_COST.high} en high. ⚠️ Qualité par défaut = TOUJOURS 'standard'. 📷 PHOTO DU PRODUIT : une image jointe au chat ne peut pas être transmise à cet outil. Pour kind 'static_ad' ou 'ugc' SANS reference_image_url, la CARTE demande elle-même la photo à l'utilisateur (dépôt direct dans la carte, ou bouton « Sans photo ») et lance la génération avec le produit À L'IDENTIQUE — appelle donc l'outil directement, sans demander d'URL. Si tu as une URL publique de la photo (page produit, Shopify, image de list_media), passe-la dans reference_image_url. no_reference:true UNIQUEMENT si l'utilisateur dit explicitement ne pas avoir de photo / vouloir un produit inventé.`,
       inputSchema: {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: "Description de l'image (sujet, ambiance, lumière, cadrage…). Pour kind='static_ad', décris le produit, la couleur dominante et l'ambiance — les TEXTES vont dans headline/subheadline/bullets/brand/cta." },
           kind: { type: 'string', enum: ['free', 'static_ad', 'ugc'], description: "'static_ad' = publicité statique produit (titre + sous-titre + 3 bénéfices avec icônes + marque, police géométrique type Montserrat, produit en héros) · 'ugc' = photo selfie/UGC réaliste d'une personne avec le produit · 'free' (défaut) = prompt libre." },
-          reference_image_url: { type: 'string', description: "URL http(s) publique de la PHOTO DU PRODUIT (ou du visage) à reproduire à l'identique — PNG/JPEG/WebP ≤ 10 Mo. Indispensable pour une static ad ou un UGC fidèles au vrai produit." },
+          reference_image_url: { type: 'string', description: "URL http(s) publique de la PHOTO DU PRODUIT (ou du visage) à reproduire à l'identique — PNG/JPEG/WebP ≤ 10 Mo. Sans URL, la carte la demande à l'utilisateur." },
+          no_reference: { type: 'boolean', description: "true = générer directement SANS photo du produit (l'utilisateur n'en a pas ou veut un produit inventé). Sinon la carte demande la photo." },
           headline: { type: 'string', description: "static_ad : titre accrocheur, FRANÇAIS, 2 à 6 mots (ex. « LE GOÛT DU BIEN-ÊTRE »)." },
           subheadline: { type: 'string', description: "static_ad : sous-titre d'une ligne (ex. « Kombucha bio aux fruits rouges. Naturellement fermenté. »)." },
           bullets: { type: 'array', items: { type: 'string' }, description: "static_ad : 3 bénéfices courts (2 à 4 mots chacun), chacun aura une icône." },
@@ -941,6 +998,18 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
     ref = got
   }
   const promptFinal = composerPromptImage({ ...args, prompt }, !!ref)
+  // Pas de photo fournie pour une static ad / un UGC → la CARTE la demande à l'utilisateur (dépôt direct
+  // dans l'iframe du widget, ou « Sans photo »). Rien n'est débité avant le lancement (/start).
+  if (!ref && (kind === 'static_ad' || kind === 'ugc') && args.no_reference !== true) {
+    const { data: pj, error: pjErr } = await svc.from('mcp_jobs')
+      .insert({ user_id: userId, kind: 'image', status: 'pending', credits_cost: cost, params: { args: { ...args, prompt }, format, quality, kind } })
+      .select('id').single()
+    if (pjErr || !pj) return toolErr('Erreur serveur (carte photo) — réessaie.')
+    return {
+      content: [{ type: 'text', text: `📷 La carte ci-dessus DEMANDE LA PHOTO DU PRODUIT à l'utilisateur (il la dépose directement dans la carte, ou clique « Sans photo ») — le visuel se génère ensuite tout seul dans la même carte, avec le produit reproduit à l'identique. Aucun crédit débité pour l'instant.\nRÉPONSE À ÉCRIRE MAINTENANT (règle stricte) : UNE seule phrase — « Dépose la photo de ton produit dans la carte ci-dessus (ou clique Sans photo), je m'occupe du reste. » Rien d'autre, n'appelle aucun outil.` }],
+      structuredContent: { job_id: pj.id, statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'image', pending: true, prompt: promptFinal, format, raw: true },
+    }
+  }
 
   // Débit AVANT génération (comme la vidéo) : jamais d'image livrée sans débit réel.
   // Si la génération échoue ensuite, le finally rembourse.
@@ -2646,12 +2715,84 @@ serve(async (req) => {
       const { data: j2 } = await svc.from('mcp_jobs').select('status, kind, result_url, created_at, error').eq('id', segs[2]).maybeSingle()
       if (j2) j = { ...j, ...j2 }
     }
+    if (j.status === 'pending') return new Response(JSON.stringify({ status: 'pending', kind: j.kind, url: null, progress: 0, error: null }), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
     const elapsed = Date.now() - new Date(String(j.created_at)).getTime()
     const attendu = j.kind === 'image' ? 50000 : j.kind === 'avatar' ? 200000 : 130000
     const done = j.status === 'done' || j.status === 'failed'
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
     return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: j.status === 'done' ? j.result_url : null, progress, error: j.error || null }),
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
+  }
+
+  // Lancer un job IMAGE « en attente de la photo produit » depuis la carte : {job, data_url} (photo déposée
+  // dans la carte → mcp-media/<uid>/ref-…) ou {job, skip:true}. Capacité = job_id (status pending, ≤2 h),
+  // passage pending→running ATOMIQUE (un seul lancement), mêmes garde-fous que /regenerate.
+  if (segs[1] === 'start' && req.method === 'POST') {
+    const body = await req.json().catch(() => ({})) as Record<string, unknown>
+    const jobId = String(body.job || '')
+    if (!/^[0-9a-f-]{36}$/i.test(jobId)) return json(400, { error: 'bad_request' })
+    const { data: pj } = await svc.from('mcp_jobs').select('*').eq('id', jobId).maybeSingle()
+    if (!pj) return json(404, { error: 'not_found' })
+    if (pj.status !== 'pending') return json(409, { error: 'not_pending' })
+    if (Date.now() - new Date(String(pj.created_at)).getTime() > 2 * 3600 * 1000) return json(403, { error: 'expired' })
+    const params = (pj.params || {}) as Record<string, unknown>
+    const pArgs = (params.args || {}) as Record<string, unknown>
+    const format = ['portrait', 'square', 'landscape'].includes(String(params.format)) ? String(params.format) : 'portrait'
+    const quality: 'standard' | 'high' = params.quality === 'high' ? 'high' : 'standard'
+    const kind = String(params.kind || 'free')
+    const userId = String(pj.user_id)
+    const { data: profile } = await svc.from('profiles').select('*').eq('id', userId).maybeSingle()
+    if (!profile) return json(404, { error: 'no_profile' })
+    if (!isUnlimited(profile) && !['pro', 'elite'].includes(String(profile.plan || '').toLowerCase())) return json(403, { error: 'plan' })
+    const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
+    if (!isUnlimited(profile)) {
+      const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
+      const spent = await mcpSpentToday(userId)
+      if (spent + cost > cap) return json(429, { error: 'daily_cap' })
+      if ((Number(profile.credits_remaining) || 0) < cost) return json(402, { error: 'no_credits' })
+    }
+    // photo déposée dans la carte → mcp-media public (ref-…) → référence de l'édition
+    let ref: { bytes: Uint8Array; contentType: string } | null = null
+    let refUrl = ''
+    if (!body.skip) {
+      const m = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
+      if (!m) return json(400, { error: 'bad_image' })
+      const bytes = b64ToBytes(m[3])
+      if (bytes.length > 10_000_000) return json(413, { error: 'too_large' })
+      const ext = m[2] === 'png' ? 'png' : m[2] === 'webp' ? 'webp' : 'jpg'
+      const path = `${userId}/ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
+      const { error: upErr } = await svc.storage.from('mcp-media').upload(path, bytes, { contentType: m[1] })
+      if (upErr) return json(500, { error: 'upload' })
+      refUrl = `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}`
+      ref = { bytes, contentType: m[1] }
+    }
+    // pending → running, atomique (deux clics = un seul lancement)
+    const { data: took } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: cost, updated_at: new Date().toISOString() })
+      .eq('id', jobId).eq('status', 'pending').select('id')
+    if (!took || !took.length) return json(409, { error: 'not_pending' })
+    const bal = await spendCredits(userId, cost)
+    if (bal === null || bal === -1) { await svc.from('mcp_jobs').update({ status: 'failed', error: 'crédits' }).eq('id', jobId); return json(402, { error: 'credits' }) }
+    const size = ({ portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
+    const promptFinal = composerPromptImage(pArgs, !!ref)
+    bg((async () => {
+      let lastErr = 'Erreur génération'
+      try {
+        const out = await genererImage(promptFinal, size, quality, ref)
+        if ('bytes' in out) {
+          const brut = out.bytes
+          const url = await uploadMedia(userId, brut, 'png', 'image/png')
+          let apercu: string | null = null
+          try { const petit = await fabriquerApercu(brut); if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg') } catch (_) { /* vignette = confort */ }
+          await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', jobId)
+          await saveToLibrary(userId, brut, 'png', 'image/png', 'image', kind === 'static_ad' ? 'Static ad' : 'Image IA', apercu || url)
+          return
+        }
+        lastErr = out.error
+      } catch (e) { lastErr = String((e as Error)?.message || e) }
+      await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', jobId)
+      await refundCredits(userId, cost)
+    })())
+    return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}`, ref: refUrl, prompt: promptFinal })
   }
 
   // Regénérer EN UN CLIC depuis le widget (la spec MCP Apps interdit au widget
@@ -2726,7 +2867,7 @@ serve(async (req) => {
   // chercher la favicon du DOMAINE — ici le catch-all MCP répondait un flux text/event-stream, d'où le
   // repli sur la favicon du site (coins transparents → angles blancs dans Claude, Axel 21/08).
   if (segs.length === 2 && /^(favicon\.(ico|png)|apple-touch-icon(-precomposed)?\.png|icon-(\d+)\.png)$/.test(segs[1])) {
-    return new Response(b64ToBytes(ICON_PNG_B64), { headers: { ...cors, 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } })
+    return new Response(b64ToBytes(ICON_PNG_B64) as unknown as BodyInit, { headers: { ...cors, 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } })
   }
   if (segs[1] === 'icon.svg' || segs[1] === 'favicon.svg') {
     return new Response(
@@ -2901,7 +3042,7 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon-256.png', mimeType: 'image/png', sizes: ['256x256'] },
           ],
         },
-        instructions: "STYLE DE RÉPONSE (règle absolue) : court. Après toute génération : UNE phrase (le visuel est dans la carte) + « Script proposé : » avec 2 à 3 phrases max — jamais de listes d'options, de variantes, de questions en rafale ni de pavés. PHOTO PRODUIT : une image jointe au chat ne peut pas être transmise aux outils ; pour reproduire le vrai produit à l'identique, il faut l'URL publique de sa photo dans reference_image_url (page produit, Shopify, lien direct). Sans URL : décris le produit très précisément (forme, couleurs, texte exact de l'étiquette) et mentionne en une phrase qu'une URL donnerait un rendu identique — ne pose pas dix questions. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
+        instructions: "STYLE DE RÉPONSE (règle absolue) : court. Après toute génération : UNE phrase (le visuel est dans la carte) + « Script proposé : » avec 2 à 3 phrases max — jamais de listes d'options, de variantes, de questions en rafale ni de pavés. PHOTO PRODUIT : une image jointe au chat ne t'est pas transmise par les outils — ce n'est PAS un problème : pour une static ad ou un UGC, appelle generate_image (kind static_ad/ugc) SANS URL, la carte demande la photo à l'utilisateur et génère avec le produit à l'identique ; si tu disposes d'une URL publique de la photo (page produit, Shopify, list_media), passe-la dans reference_image_url. Ne demande jamais d'URL à l'utilisateur, ne pose pas de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })
