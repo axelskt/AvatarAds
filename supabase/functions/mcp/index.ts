@@ -388,7 +388,7 @@ function aaAskPhoto(){
   var m=document.getElementById('m'); m.style.padding='0';
   m.innerHTML='<div id="dz" style="margin:12px;padding:20px 16px;text-align:center;border:1.5px dashed var(--aa-line);border-radius:12px;transition:border-color .15s">'
     +'<div style="font-size:14.5px;font-weight:700;margin-bottom:4px">Dépose la photo de ton produit</div>'
-    +'<div style="font-size:12px;opacity:.72;margin-bottom:14px">Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — elle sera reproduite à l\'identique</div>'
+    +'<div style="font-size:12px;opacity:.72;margin-bottom:14px">Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — elle sera reproduite à l\\'identique</div>'
     +'<input type="file" id="fi" accept="image/png,image/jpeg,image/webp" style="display:none">'
     +'<button class="aa-a aa-dl" id="pick" type="button" style="border:none;cursor:pointer">Choisir une photo</button>'
     +'<button class="aa-a aa-rg" id="skip" type="button" style="border:none;cursor:pointer;margin-left:8px">Sans photo</button>'
@@ -405,14 +405,14 @@ function aaAskPhoto(){
   var pl=document.getElementById('pl'), go=document.getElementById('go');
   if(aaProductUrl){ pl.value=aaProductUrl; var _pe=document.getElementById('pe'); if(_pe) _pe.textContent='Lecture de la page produit…'; aaStartJob('', aaProductUrl); }
   var _go2=null;
-  var sendLink=function(){ var v=(pl.value||'').trim(); if(!/^https?:\/\//i.test(v)){ var pe=document.getElementById('pe'); if(pe) pe.textContent='Colle un lien complet (https://…)'; return; } aaStartJob('', v); };
+  var sendLink=function(){ var v=(pl.value||'').trim(); if(!(new RegExp('^https?://','i')).test(v)){ var pe=document.getElementById('pe'); if(pe) pe.textContent='Colle un lien complet (https://…)'; return; } aaStartJob('', v); };
   go.onclick=sendLink; pl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendLink(); } });
   pl.addEventListener('paste',function(e){ e.stopPropagation(); });   // coller un lien ≠ coller une image
   aaHugW=Math.max(320, Math.min(560, Math.ceil(window.innerWidth||420))); aaMeasure();
 }
 function aaSendPhoto(file){
   var pe=document.getElementById('pe'); if(pe) pe.textContent='Préparation de la photo…';
-  if(!file||!/^image\/(png|jpe?g|webp)$/.test(file.type||'')){ if(pe) pe.textContent='PNG, JPG ou WebP uniquement.'; return; }
+  if(!file||!(new RegExp('^image/(png|jpe?g|webp)$')).test(file.type||'')){ if(pe) pe.textContent='PNG, JPG ou WebP uniquement.'; return; }
   var fr=new FileReader();
   fr.onload=function(){
     var img=new Image();
@@ -436,7 +436,7 @@ function aaStartJob(dataUrl, link){
     .then(function(x){
       if(x.ok&&x.j&&x.j.statusUrl){ if(x.j.ref) aaRef=x.j.ref; if(x.j.prompt) aaPrompt=x.j.prompt; aaRaw=true; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); return; }
       var er=(x.j&&x.j.error)||'';
-      if(pe) pe.textContent = er==='daily_cap'?'Plafond 24 h atteint':(er==='no_credits'||er==='credits')?'Crédits épuisés — recharge sur avatarads.fr':er==='expired'?'Carte expirée — redemande à Claude':er==='not_pending'?'Déjà lancé':er==='plan'?'Réservé aux plans Pro et Élite':er==='no_image_in_link'?'Photo non récupérable depuis ce lien (site protégé) — dépose-la ci-dessus, ou colle le lien DIRECT de l'image':'Échec ('+(er||'réseau')+') — réessaie';
+      if(pe) pe.textContent = er==='daily_cap'?'Plafond 24 h atteint':(er==='no_credits'||er==='credits')?'Crédits épuisés — recharge sur avatarads.fr':er==='expired'?'Carte expirée — redemande à Claude':er==='not_pending'?'Déjà lancé':er==='plan'?'Réservé aux plans Pro et Élite':er==='no_image_in_link'?'Photo non récupérable depuis ce lien (site protégé) — dépose-la ci-dessus, ou colle le lien DIRECT de l\\'image':'Échec ('+(er||'réseau')+') — réessaie';
       if(pk) pk.disabled=false; if(sk) sk.disabled=false;
     })
     .catch(function(){ if(pe) pe.textContent='Réseau indisponible — réessaie.'; if(pk) pk.disabled=false; if(sk) sk.disabled=false; });
