@@ -2833,8 +2833,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             </div>
           </div>
           <div class="row gap12" style="margin-top:16px;align-items:center;flex-wrap:wrap">
-            <button id="affPayoutBtn" class="btn btn-primary" onclick="affOpenPayout()" disabled style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg> Demander un virement</button>
-            <span id="affPayoutNote" class="faint mono" style="font-size:11px;line-height:1.5">Virement le 1er du mois · minimum 50 € · 30 % de chaque paiement de tes filleuls, à vie</span>
+            <button id="affPayoutBtn" class="btn btn-primary" onclick="affOpenPayout()" style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg> Demander un virement</button>
           </div>
         </div>
 
@@ -2869,7 +2868,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="faint" style="font-size:13px;margin-top:2px">/mois</div>
             <div class="muted" id="affCalcYearly" style="font-size:15px;margin-top:8px">1 368€ par an</div>
           </div>
-          <p class="center faint mono" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;line-height:1.6">Calcul basé sur 30% · mix Starter/Pro/Elite · prix moyen 38€/mois · récurrent à vie</p>
         </div>
 
       </div>
@@ -8467,26 +8465,28 @@ async function affRefreshSummary(){
     const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
     set('affStatRefs', data.signups||0); set('affStatPaying', data.paying||0);
     set('affStatEarnings', _eur(data.earned_cents)); set('affStatAvail', _eur(data.available_cents));
-    const btn=document.getElementById('affPayoutBtn'); const note=document.getElementById('affPayoutNote');
-    const min=data.min_payout_cents||5000;
-    if(btn) btn.disabled = !( (data.available_cents||0) >= min && !(data.pending_cents>0) );
-    if(note){
-      if(data.pending_cents>0) note.textContent='Demande en cours : '+_eur(data.pending_cents)+' — virement le 1er du mois';
-      else if((data.available_cents||0) < min) note.textContent='Virement le 1er du mois · minimum 50 € · 30 % de chaque paiement de tes filleuls, à vie';
-      else note.textContent='Tu peux demander jusqu\'à '+_eur(data.available_cents)+' · virement le 1er du mois';
-    }
+    const btn=document.getElementById('affPayoutBtn');
+    if(btn){ btn.disabled=false; btn.textContent=''; btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg> '+(data.pending_cents>0 ? 'Virement en cours · '+_eur(data.pending_cents) : 'Demander un virement'); }
   }catch(e){
     // repli : le compteur seul
     sb.rpc('get_referral_count').then(({data})=>{ const el=document.getElementById('affStatRefs'); if(el) el.textContent=data||0; });
   }
 }
 function affOpenPayout(){
-  const s=window._affSummary; if(!s){ toast('Chargement des gains…'); affRefreshSummary(); return; }
+  const s=window._affSummary || { available_cents:0, pending_cents:0, min_payout_cents:5000 };
   const m=document.getElementById('affPayoutModal'); if(!m) return;
-  document.getElementById('affPayoutAvail').textContent=_eur(s.available_cents);
+  const min=s.min_payout_cents||5000, avail=s.available_cents||0;
+  document.getElementById('affPayoutAvail').textContent=_eur(avail);
   const em=document.getElementById('affPayEmail'); if(em && !em.value) em.value=(currentMember&&currentMember.email)||'';
-  const am=document.getElementById('affPayAmount'); if(am){ am.max=(s.available_cents/100).toFixed(2); am.value=(s.available_cents/100).toFixed(2); }
+  const am=document.getElementById('affPayAmount'); if(am){ am.max=(avail/100).toFixed(2); am.value=(Math.max(avail,0)/100).toFixed(2); }
+  const sub=document.getElementById('affPaySubmit');
+  if(sub){
+    if(s.pending_cents>0){ sub.disabled=true; sub.textContent='Une demande est déjà en cours ('+_eur(s.pending_cents)+')'; }
+    else if(avail<min){ sub.disabled=true; sub.textContent='Minimum 50 € — il te manque '+_eur(min-avail); }
+    else { sub.disabled=false; sub.textContent='Envoyer la demande'; }
+  }
   m.style.display='grid';
+  if(!window._affSummary) affRefreshSummary();
 }
 function affClosePayout(){ const m=document.getElementById('affPayoutModal'); if(m) m.style.display='none'; }
 async function affSubmitPayout(){
@@ -24998,7 +24998,7 @@ function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='10
 // 3 s min. Au-delà, fal répond 422 « duration not supported » ~10 s après la soumission (vu le
 // 20/08 : vidéo TikTok > 30 s). On coupe donc aux 30 premières secondes AVANT l'envoi.
 const _MC_MAX_REF_S = 30;
-function _mcRefDurEff(){ return Math.min(_MC_MAX_REF_S, Math.ceil(window._mcRefDur||0)); }
+function _mcRefDurEff(){ const d=window._mcRefDur||0; const eff = (d>0 && d<3.3) ? 3.6 : d; return Math.min(_MC_MAX_REF_S, Math.ceil(eff)); }
 // Sonde la vidéo de référence SANS la décoder : codec (fourcc dans le moov) + conteneur. Safari lit
 // le HEVC (vidéos iPhone « haute efficacité ») sans broncher, Kling NON → 422 « unsupported » en ~10 s.
 function _mcProbeRef(b64){
@@ -25023,27 +25023,34 @@ async function _mcNormalizeRef(b64){
   const dur=window._mcRefDur||0, w=window._mcRefW||0, h=window._mcRefH||0;
   const probe=_mcProbeRef(b64);
   const tooLong = dur > _MC_MAX_REF_S+0.5;
+  // Kling exige STRICTEMENT ≥ 3 s (« Video duration can not less than 3s » sur un clip de 2,97 s, 21/08) :
+  // sous 3,3 s on prolonge la dernière image (tpad) + silence jusqu'à 3,6 s plutôt que de refuser.
+  const tooShort = dur > 0 && dur < 3.3;
+  const padSec = tooShort ? Math.max(0.4, 3.6 - dur) : 0;
   const badCodec = probe.hevc || probe.webm || (!probe.h264 && !probe.mp4);
   const mn=Math.min(w,h), mx=Math.max(w,h);
   const badSize = (w&&h) && (mn<340 || mx>3850);
-  if(!tooLong && !badCodec && !badSize) return { blob:src, note:'' };
+  if(!tooLong && !tooShort && !badCodec && !badSize) return { blob:src, note:'' };
   try{
     await _loadFFmpeg(); const ff=_ffmpegInst;
     await ff.FS('writeFile','mcref_in.mp4', await window._ffFetchFile(src));
     const args=['-i','mcref_in.mp4'];
     if(tooLong) args.push('-t', String(_MC_MAX_REF_S));
-    if(badCodec || badSize){
+    if(badCodec || badSize || tooShort){
       // dimensions cibles : ≥720 de petit côté si trop petit, ≤1920 de grand côté si trop grand, paires
       let sw=w||720, sh=h||1280; let k=1;
       if(mn<340) k=720/mn; else if(mx>1920) k=1920/mx;
       sw=Math.round(sw*k/2)*2; sh=Math.round(sh*k/2)*2;
-      args.push('-vf','scale='+sw+':'+sh+',format=yuv420p','-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k');
+      const vf='scale='+sw+':'+sh+',format=yuv420p'+(tooShort?(',tpad=stop_mode=clone:stop_duration='+padSec.toFixed(2)):'');
+      args.push('-vf',vf);
+      if(tooShort) args.push('-af','apad=pad_dur='+padSec.toFixed(2));
+      args.push('-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k');
     } else { args.push('-c','copy'); }
     args.push('-movflags','+faststart','mcref_out.mp4');
     await ff.run(...args);
     const data=await ff.FS('readFile','mcref_out.mp4');
     try{ await ff.FS('unlink','mcref_in.mp4'); await ff.FS('unlink','mcref_out.mp4'); }catch(_){}
-    if(data && data.length>1000) return { blob:new Blob([data.buffer],{type:'video/mp4'}), note:(badCodec?'ré-encodée en H.264':'')+(badSize?' · redimensionnée':'')+(tooLong?' · coupée à 30 s':'') };
+    if(data && data.length>1000) return { blob:new Blob([data.buffer],{type:'video/mp4'}), note:(badCodec?'ré-encodée en H.264':'')+(badSize?' · redimensionnée':'')+(tooLong?' · coupée à 30 s':'')+(tooShort?' · prolongée à 3,6 s (Kling : 3 s minimum)':'') };
   }catch(e){ console.warn('[mc] normalisation réf :', e); }
   return { blob:src, note:'' };   // repli : fichier intact (Kling tranchera, l'erreur réelle remonte)
 }
@@ -25279,7 +25286,7 @@ async function _mcGenerate(){
   }
   const rate=_mcRate(), dur=_mcRefDurEff();
   if(!dur){ toast('Vidéo de référence illisible — réessaie'); return; }
-  if((window._mcRefDur||0) < 2.9){ toast('Vidéo de référence trop courte — Kling demande 3 s minimum'); return; }
+  if((window._mcRefDur||0) < 1){ toast('Vidéo de référence trop courte (1 s minimum) — en dessous de 3 s elle sera prolongée automatiquement'); return; }
   const cost=rate*dur;
   const b64ToBlob=(b64)=>{ const [meta,data]=String(b64).split(','); const mime=(meta.match(/:(.*?);/)||[])[1]||'application/octet-stream'; const bin=atob(data); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); };
   try{
