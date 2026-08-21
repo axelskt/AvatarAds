@@ -1885,11 +1885,15 @@ if (localDir) {
   // ── KEEP-WARM DU CONNECTEUR MCP ───────────────────────────────────────────
   // « Impossible de joindre AvatarAds » sur les premières requêtes après une
   // période calme : le démarrage à froid de l'edge function dépasse le timeout
-  // du client claude.ai, puis tout marche. Le worker tourne 24/7 sur Railway —
-  // un GET discret toutes les 4 minutes garde l'isolate chaud (la route GET
-  // répond sans clé, quasi gratuite).
+  // du client claude.ai (constaté : la requête tombe sur un isolate booté à
+  // l'instant, répond en ~1,9 s côté serveur mais claude.ai a déjà lâché). Toutes
+  // les 4 min ne suffisait pas (les isolates recyclent entre deux bursts). Le
+  // worker tourne 24/7 sur Railway → on garde un PETIT POOL chaud : 3 GET
+  // concurrents (route sans clé, quasi gratuite) toutes les 45 s, + un au démarrage.
   if (process.env.SUPABASE_URL) {
-    setInterval(() => { fetch(process.env.SUPABASE_URL + '/functions/v1/mcp').catch(() => {}) }, 240000)
+    const warm = () => { for (let i = 0; i < 3; i++) fetch(process.env.SUPABASE_URL + '/functions/v1/mcp').catch(() => {}) }
+    setInterval(warm, 45000)
+    warm()
   }
   pollLoop()
 }
