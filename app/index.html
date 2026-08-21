@@ -5971,7 +5971,8 @@ const _isPrivateMode = (() => {
 // encore, on le DIT au lieu de faire semblant.
 function _saveLibrary(){
   const cible = _isPrivateMode ? sessionStorage : localStorage;
-  const ecrire = () => cible.setItem('aa_library', JSON.stringify(library));
+  // les URL signées (_srv*) expirent en 1 h : on ne les écrit JAMAIS sur disque (sinon 400 au rechargement)
+  const ecrire = () => cible.setItem('aa_library', JSON.stringify(library, (k,v)=> (k==='_srvUrl'||k==='_srvExp') ? undefined : v));
   try { ecrire(); return true }
   catch (e) {
     console.warn('bibliothèque : écriture refusée —', e && e.name, '· on fait de la place');
@@ -6078,9 +6079,14 @@ async function _libLoadServer(){
     if(!user) return;
     const { data, error } = await sb.from('library_items').select('*').order('created_at',{ascending:false}).limit(300);
     if(error || !data) return;
+    // La liste locale est partagée par tous les comptes du navigateur : ce qui appartient à un AUTRE
+    // compte (srvPath d'un autre uid) n'a rien à faire ici — ses URL signées répondaient 400.
+    const pfx = user.id + '/'; let evinces=0;
+    for(let i=library.length-1;i>=0;i--){ const e=library[i]; if(e && e.srvPath && !String(e.srvPath).startsWith(pfx)){ library.splice(i,1); evinces++; } }
     const haveSrv = new Set(library.map(e=>e.srvId).filter(Boolean));   // vidéos + audios (library[])
-    let added=0;
+    let added=evinces;
     let imgHist=[]; try{ imgHist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); }catch(_){}
+    { const b=imgHist.length; imgHist=imgHist.filter(e=>!(e && e.srvPath && !String(e.srvPath).startsWith(pfx))); if(imgHist.length!==b){ try{ localStorage.setItem('imgHistory', JSON.stringify(imgHist)); }catch(_){} } }
     const haveImgSrv = new Set(imgHist.map(e=>e.srvId).filter(Boolean));
     let imgAdded=0;
     for(const row of data){
@@ -6107,8 +6113,8 @@ async function _libLoadServer(){
 // résout l'URL jouable d'une entrée : signée (serveur) OU blob (IndexedDB local)
 async function _libVideoUrl(entry){
   if(!entry) return '';
-  if(entry._srvUrl) return entry._srvUrl;
-  if(entry.srvPath && typeof sb!=='undefined'){ try{ const s=await sb.storage.from('render-media').createSignedUrl(entry.srvPath, 3600); if(s.data && s.data.signedUrl){ entry._srvUrl=s.data.signedUrl; return s.data.signedUrl; } }catch(_){} }
+  if(entry._srvUrl && entry._srvExp && Date.now() < entry._srvExp) return entry._srvUrl;
+  if(entry.srvPath && typeof sb!=='undefined'){ try{ const s=await sb.storage.from('render-media').createSignedUrl(entry.srvPath, 3600); if(s.data && s.data.signedUrl){ entry._srvUrl=s.data.signedUrl; entry._srvExp=Date.now()+50*60*1000; return s.data.signedUrl; } }catch(_){} }
   if(entry.hedraIdbKey){ try{ const e=await _idbLoad(entry.hedraIdbKey); if(e && e.blob) return URL.createObjectURL(e.blob); }catch(_){} }
   return entry.hedraUrl||'';
 }
@@ -8403,7 +8409,7 @@ async function testKey(k){
 // ── NAV ──
 // ══ AFFILIATION ══
 function _affCode(userId){ return userId.replace(/-/g,'').substring(0,10).toUpperCase(); }
-function _affLink(code){ return 'https://avatarads.iamanager.fr/?ref=' + code; }
+function _affLink(code){ return 'https://avatarads.fr/?ref=' + code; }   // (ex avatarads.iamanager.fr : domaine mort)
 
 function initAffiliation(){
   if(!currentMember) return;
@@ -8420,7 +8426,7 @@ function initAffiliation(){
   };
   sb.rpc('get_referral_count').then(({data, error})=>{
     if(!error && (data || data===0)){ _setRefs(data); return; }
-    sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by', currentMember.id).then(({count})=>_setRefs(count));
+    sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by', _affCode(currentMember.id)).then(({count})=>_setRefs(count));   // referred_by stocke le CODE, pas l'uuid
   });
   // Init calculateur
   affUpdateCalc(10);
@@ -10951,6 +10957,7 @@ async function recConfirmSaveToLibrary(){
       script:  '',
       hedraUrl:'',
       idbKey,
+      ts:      Date.now(),
       date:    new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
     });
     _saveLibrary();
@@ -20652,7 +20659,7 @@ async function startGeneration(){
     emo:selAvatar.emo, name:document.getElementById('f-product')?.value||'Vidéo',
     tags:[cfg.format, document.getElementById('f-duration').value],
     status:'done', style:selSubStyle.toUpperCase(), bg:randBg(),
-    script:finalScript, hedraUrl, hedraIdbKey, audioIdbKey,
+    script:finalScript, hedraUrl, hedraIdbKey, audioIdbKey, ts: Date.now(),
     date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
   });
   _saveLibrary();
@@ -23486,7 +23493,7 @@ function renderLibrary(){
         _src: 'img', _idx: i, fav: !!img.fav,
         type:'image', emo:'🖼️', name:'Image IA', tags:['image', img.styleLabel||'DALL-E'],
         style:'IMAGE', bg:'linear-gradient(135deg,rgba(77,171,247,0.2),rgba(77,171,247,0.05))',
-        imgUrl: img.url, idbKey: img.idbKey || null,
+        imgUrl: img.url, idbKey: img.idbKey || null, ts: img.ts||0,
         date: img.ts ? new Date(img.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : ''
       }));
     } catch(e){}
@@ -23503,8 +23510,11 @@ function renderLibrary(){
 
   // Onglet Favoris : ne garder que les favoris
   if(_libActiveTab === 'fav') items = items.filter(it => it.fav);
-  // Favoris toujours en premier (tri stable)
-  items.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+  // Favoris toujours en premier, puis du plus récent au plus ancien (images et vidéos MÉLANGÉES par
+  // date — avant, toutes les images passaient devant toutes les vidéos : un Motion Control du jour
+  // finissait sous des images de la veille et semblait « absent »).
+  const _libTs = (v)=>{ if(v.ts) return v.ts; const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v.date||''); return m ? new Date(+m[3],+m[2]-1,+m[1]).getTime() : 0; };
+  items.sort((a,b)=>((b.fav?1:0)-(a.fav?1:0)) || (_libTs(b)-_libTs(a)));
 
   // Update count
   const countEl = document.getElementById('libCount');
@@ -23747,7 +23757,7 @@ async function importHedraToLibrary(file){
       emo: '🎬', name,
       tags: ['short', '—'],
       status: 'done', style: 'IMPORT', bg: randBg(),
-      script: '', hedraUrl: '', hedraIdbKey: idbKey,
+      script: '', hedraUrl: '', hedraIdbKey: idbKey, ts: Date.now(),
       date: new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
     });
     const garde = _saveLibrary();
@@ -24178,6 +24188,13 @@ function toast(msg){
   document.getElementById('toastMsg').textContent=msg;
   el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),3000);
+  // Compte dev : un toast d'ERREUR est aussi posé dans le panneau persistant (croix pour fermer) —
+  // 3 s ne suffisent pas pour lire « Kling a refusé… : <raison> » (Axel, 20/08).
+  try{ if(typeof _aaIsDev==='function' && _aaIsDev() && _toastLooksLikeError(msg)) _devErr('TOAST · '+msg); }catch(_){}
+}
+function _toastLooksLikeError(m){
+  m=String(m||'');
+  return /erreur|échou|echou|refus|impossible|indispon|invalid|expir|introuvable|non support|pas support|illisible|trop (grand|long|court|lourd)|limite|interdit|bloqu|panne|timeout|délai dépassé|manquant|\b(4\d\d|5\d\d)\b|kling|fal |hedra|nano banana .*(refus|échou)|aucun(e)? (image|vidéo|résultat)/i.test(m) && !/réussi|terminé|ajouté|enregistr|copié|envoyé/i.test(m);
 }
 
 // ── Panneau d'erreurs DEV (empilées, persistantes, fermables) — compte développeur uniquement ──
@@ -24844,7 +24861,7 @@ function _mcLoad(f, which){
       window._mcRefB64=b64;
       const v=document.getElementById('mcRefPrev'), dz=document.getElementById('mcRefDrop');
       if(v){ v.src=b64; v.style.display='block';
-        v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'; _mcUpdateCost(); };
+        v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'+((window._mcRefDur||0)>_MC_MAX_REF_S+0.5?' · coupée à '+_MC_MAX_REF_S+' s (max Kling)':''); if((window._mcRefDur||0)>_MC_MAX_REF_S+0.5) toast('Kling accepte 30 s max — seules les 30 premières secondes seront reproduites'); _mcUpdateCost(); };
       }
       if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
     } else if(which==='char'){
@@ -24873,19 +24890,39 @@ function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcR
 function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='1080' ? 3 : 2); }
 // #34 · coût dynamique À CÔTÉ du bouton « Générer le mouvement » (pas seulement
 // dans les réglages avancés) : rate × durée de la vidéo de référence. Se met à
+// Kling motion-control (fal, v2.6 et v3) : vidéo de référence de 30 s MAX (orientation 'video'),
+// 3 s min. Au-delà, fal répond 422 « duration not supported » ~10 s après la soumission (vu le
+// 20/08 : vidéo TikTok > 30 s). On coupe donc aux 30 premières secondes AVANT l'envoi.
+const _MC_MAX_REF_S = 30;
+function _mcRefDurEff(){ return Math.min(_MC_MAX_REF_S, Math.ceil(window._mcRefDur||0)); }
+// Coupe la vidéo de référence à `maxSec` sans ré-encodage (ffmpeg.wasm, -c copy : rapide).
+async function _mcTrimRefBlob(b64, maxSec){
+  const toBlob=(x)=>{ const [meta,data]=String(x).split(','); const mime=(meta.match(/:(.*?);/)||[])[1]||'video/mp4'; const bin=atob(data); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); };
+  const src=toBlob(b64);
+  try{
+    await _loadFFmpeg(); const ff=_ffmpegInst;
+    await ff.FS('writeFile','mcref_in.mp4', await window._ffFetchFile(src));
+    await ff.run('-i','mcref_in.mp4','-t',String(maxSec),'-c','copy','-movflags','+faststart','mcref_out.mp4');
+    const data=await ff.FS('readFile','mcref_out.mp4');
+    try{ await ff.FS('unlink','mcref_in.mp4'); await ff.FS('unlink','mcref_out.mp4'); }catch(_){}
+    if(data && data.length>1000) return new Blob([data.buffer],{type:'video/mp4'});
+  }catch(e){ console.warn('[mc] coupe 30 s :', e); }
+  return src;   // repli : fichier intact (Kling tranchera)
+}
 // jour au choix du forfait/qualité et quand la vidéo réf est chargée.
 function _mcUpdateCost(){
   const el=document.getElementById('mcCostTxt'); if(!el) return;
-  const dur=Math.ceil(window._mcRefDur||0), rate=_mcRate();
+  const dur=_mcRefDurEff(), rate=_mcRate();
   if(!dur){ el.innerHTML=''; return; }
   const c=rate*dur;
   const tierLbl = window._mcTier==='pro' ? 'Pro · 1080p natif' : (window._mcQuality==='1080' ? 'Standard · 720p→1080p' : 'Standard · 720p');
-  el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">· '+rate+' cr/s × '+dur+' s · '+tierLbl+'</span>';
+  const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max Kling)</span>' : '';
+  el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">· '+rate+' cr/s × '+dur+' s · '+tierLbl+coupe+'</span>';
 }
 function _mcRenderAdv(){
   const card=document.getElementById('mcAdvCard'); if(!card) return;
   const tier=window._mcTier, q=window._mcQuality, rnd=window._mcRender, rate=_mcRate();
-  const dur=Math.round(window._mcRefDur||0);
+  const dur=_mcRefDurEff();
   const totalTxt = dur>0 ? `${rate} cr/s × ${dur}s = ${rate*dur} crédits` : `${rate} crédits / seconde`;
   const modes=[['full','Plein écran','Motion seul'],['split-bottom','Original en haut','original ↑ · motion ↓'],['split-top','Original en bas','motion ↑ · original ↓']];
   const diag=(id)=> id==='full' ? '<div style="flex:1;background:var(--accent);opacity:.5"></div>'
@@ -25072,7 +25109,10 @@ async function _mcPrepChar(b64){
 function _mcFalErr(rd, status){
   const d=Array.isArray(rd?.detail)?rd.detail[0]:rd?.detail;
   const type=String(d?.type||''); const msg=String(d?.msg||(typeof d==='string'?d:'')||rd?.error||'');
+  try{ console.error('[mc] fal '+status+' : '+JSON.stringify(rd).slice(0,600)); }catch(_){}   // détail brut → panneau d'erreurs dev
   if(/image_too_large/i.test(type||msg)) return 'Image du personnage trop grande pour Kling (max 3850 px) — réessaie, elle sera réduite automatiquement';
+  if(/duration|too long|too short|seconds/i.test(type+' '+msg)) return 'Durée de la vidéo de référence refusée par Kling (3 à 30 s) : '+msg.slice(0,120);
+  if(/unsupported|not supported|invalid (video|image|file)|format|codec|resolution/i.test(type+' '+msg)) return 'Fichier non supporté par Kling (format, résolution ou codec) — réexporte en MP4 H.264 1080p : '+msg.slice(0,120);
   if(/risk|policy|moderat|sensitive|celebrit|content check|flagged|could not be processed/i.test(type+' '+msg)) return 'Kling a refusé ce contenu (modération) — souvent un élément du décor (poster, logo, marque, personnage). Essaie une photo à fond neutre, ou l\'option Arrière-plan pour remplacer le décor.';
   return 'Kling a refusé la génération'+(msg?' : '+msg.slice(0,140):' (HTTP '+status+')');
 }
@@ -25095,8 +25135,9 @@ async function _mcGenerate(){
   if((tier==='pro'||q==='1080') && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
     toast('Le 1080p / forfait Pro est réservé au plan Pro et +'); if(typeof showPaywall==='function') showPaywall(); return;
   }
-  const rate=_mcRate(), dur=Math.ceil(window._mcRefDur||0);
+  const rate=_mcRate(), dur=_mcRefDurEff();
   if(!dur){ toast('Vidéo de référence illisible — réessaie'); return; }
+  if((window._mcRefDur||0) < 2.9){ toast('Vidéo de référence trop courte — Kling demande 3 s minimum'); return; }
   const cost=rate*dur;
   const b64ToBlob=(b64)=>{ const [meta,data]=String(b64).split(','); const mime=(meta.match(/:(.*?);/)||[])[1]||'application/octet-stream'; const bin=atob(data); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); };
   try{
@@ -25110,7 +25151,9 @@ async function _mcGenerate(){
     const base=user.id+'/mc-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
     const vPath=base+'.mp4', iPath=base+'.jpg';
     const charBlob=await _mcPrepChar(window._mcCharB64);   // recadre format + ≤2560 px (Kling refuse >3850)
-    const uv=await sb.storage.from('render-media').upload(vPath, b64ToBlob(window._mcRefB64), { contentType:'video/mp4', upsert:true });
+    let refBlob = b64ToBlob(window._mcRefB64);
+    if((window._mcRefDur||0) > _MC_MAX_REF_S+0.5){ _mcProg('Coupe aux 30 premières secondes…', 7); refBlob = await _mcTrimRefBlob(window._mcRefB64, _MC_MAX_REF_S); }
+    const uv=await sb.storage.from('render-media').upload(vPath, refBlob, { contentType:'video/mp4', upsert:true });
     const ui=await sb.storage.from('render-media').upload(iPath, charBlob, { contentType:'image/jpeg', upsert:true });
     if(uv.error||ui.error) throw new Error('upload : '+((uv.error||ui.error).message));
     const sv=await sb.storage.from('render-media').createSignedUrl(vPath, 3600);
