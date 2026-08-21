@@ -2814,20 +2814,31 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
         </div>
 
-        <!-- STATS FILLEULS -->
+        <!-- GAINS DE PARRAINAGE (21/08) : 30 % de chaque paiement d'un filleul, virement manuel le 1er du mois -->
         <div class="card" style="padding:22px;margin-bottom:18px">
-          <div class="label" style="margin-bottom:16px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 20V4M4 20h16M8 16v-4M13 16V8M18 16v-7"/></svg> Tes statistiques</div>
-          <div class="row gap16" style="align-items:stretch">
-            <div class="card center" style="padding:20px 16px;flex:1;background:var(--panel-1)">
-              <div class="display" style="font-size:30px;font-weight:800" id="affStatRefs">—</div>
+          <div class="label" style="margin-bottom:16px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Tes gains</div>
+          <div class="row gap12" style="align-items:stretch;flex-wrap:wrap">
+            <div class="card center" style="padding:18px 14px;flex:1;min-width:130px;background:var(--panel-1)">
+              <div class="display" style="font-size:28px;font-weight:800" id="affStatRefs">—</div>
               <div class="faint mono" style="font-size:11px;margin-top:6px">Filleuls inscrits</div>
             </div>
-            <div class="card center" style="padding:20px 16px;flex:1;background:var(--panel-1)">
-              <div class="display accent" style="font-size:30px;font-weight:800" id="affStatEarnings">—</div>
-              <div class="faint mono" style="font-size:11px;margin-top:6px">Gains estimés</div>
+            <div class="card center" style="padding:18px 14px;flex:1;min-width:130px;background:var(--panel-1)">
+              <div class="display" style="font-size:28px;font-weight:800" id="affStatPaying">—</div>
+              <div class="faint mono" style="font-size:11px;margin-top:6px">Filleuls payants</div>
+            </div>
+            <div class="card center" style="padding:18px 14px;flex:1;min-width:130px;background:var(--panel-1)">
+              <div class="display" style="font-size:28px;font-weight:800" id="affStatEarnings">—</div>
+              <div class="faint mono" style="font-size:11px;margin-top:6px">Total gagné</div>
+            </div>
+            <div class="card center" style="padding:18px 14px;flex:1;min-width:130px;background:var(--accent-soft);border-color:var(--accent-line)">
+              <div class="display accent" style="font-size:28px;font-weight:800" id="affStatAvail">—</div>
+              <div class="faint mono" style="font-size:11px;margin-top:6px">Disponible</div>
             </div>
           </div>
-          <p class="faint mono" style="margin-top:14px;font-size:11px;line-height:1.5">Les conversions sont calculées une fois Stripe connecté · Paiement le 1er du mois via virement</p>
+          <div class="row gap12" style="margin-top:16px;align-items:center;flex-wrap:wrap">
+            <button id="affPayoutBtn" class="btn btn-primary" onclick="affOpenPayout()" disabled style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg> Demander un virement</button>
+            <span id="affPayoutNote" class="faint mono" style="font-size:11px;line-height:1.5">Virement le 1er du mois · minimum 50 € · 30 % de chaque paiement de tes filleuls, à vie</span>
+          </div>
         </div>
 
         <!-- COMMENT ÇA MARCHE -->
@@ -8446,14 +8457,65 @@ function initAffiliation(){
     const earn = document.getElementById('affStatEarnings');
     if(earn) earn.textContent = '—';
   };
-  sb.rpc('get_referral_count').then(({data, error})=>{
-    if(!error && (data || data===0)){ _setRefs(data); return; }
-    sb.from('profiles').select('id',{count:'exact',head:true}).eq('referred_by', _affCode(currentMember.id)).then(({count})=>_setRefs(count));   // referred_by stocke le CODE, pas l'uuid
-  });
+  // Gains réels (21/08) : referral_earnings (30 % des paiements des filleuls) − virements payés/en attente
+  affRefreshSummary();
   // Init calculateur
   affUpdateCalc(10);
 }
 
+const _eur = (c)=> (Math.round(c||0)/100).toLocaleString('fr-FR',{minimumFractionDigits:2, maximumFractionDigits:2})+' €';
+window._affSummary = null;
+async function affRefreshSummary(){
+  try{
+    const { data, error } = await sb.rpc('get_referral_summary');
+    if(error || !data) throw error || new Error('no data');
+    window._affSummary = data;
+    const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+    set('affStatRefs', data.signups||0); set('affStatPaying', data.paying||0);
+    set('affStatEarnings', _eur(data.earned_cents)); set('affStatAvail', _eur(data.available_cents));
+    const btn=document.getElementById('affPayoutBtn'); const note=document.getElementById('affPayoutNote');
+    const min=data.min_payout_cents||5000;
+    if(btn) btn.disabled = !( (data.available_cents||0) >= min && !(data.pending_cents>0) );
+    if(note){
+      if(data.pending_cents>0) note.textContent='Demande en cours : '+_eur(data.pending_cents)+' — virement le 1er du mois';
+      else if((data.available_cents||0) < min) note.textContent='Virement le 1er du mois · minimum 50 € · 30 % de chaque paiement de tes filleuls, à vie';
+      else note.textContent='Tu peux demander jusqu\'à '+_eur(data.available_cents)+' · virement le 1er du mois';
+    }
+  }catch(e){
+    // repli : le compteur seul
+    sb.rpc('get_referral_count').then(({data})=>{ const el=document.getElementById('affStatRefs'); if(el) el.textContent=data||0; });
+  }
+}
+function affOpenPayout(){
+  const s=window._affSummary; if(!s){ toast('Chargement des gains…'); affRefreshSummary(); return; }
+  const m=document.getElementById('affPayoutModal'); if(!m) return;
+  document.getElementById('affPayoutAvail').textContent=_eur(s.available_cents);
+  const em=document.getElementById('affPayEmail'); if(em && !em.value) em.value=(currentMember&&currentMember.email)||'';
+  const am=document.getElementById('affPayAmount'); if(am){ am.max=(s.available_cents/100).toFixed(2); am.value=(s.available_cents/100).toFixed(2); }
+  m.style.display='grid';
+}
+function affClosePayout(){ const m=document.getElementById('affPayoutModal'); if(m) m.style.display='none'; }
+async function affSubmitPayout(){
+  const email=(document.getElementById('affPayEmail').value||'').trim();
+  const holder=(document.getElementById('affPayHolder').value||'').trim();
+  const iban=(document.getElementById('affPayIban').value||'').trim();
+  const amount=Math.round(parseFloat(document.getElementById('affPayAmount').value||'0')*100);
+  if(!email || !iban || !amount){ toast('Renseigne e-mail, IBAN et montant'); return; }
+  const btn=document.getElementById('affPaySubmit'); btn.disabled=true; const lbl=btn.textContent; btn.textContent='Envoi…';
+  try{
+    const { data, error } = await sb.rpc('request_referral_payout', { p_amount_cents: amount, p_email: email, p_iban: iban, p_holder: holder });
+    if(error) throw error;
+    if(!data || !data.ok){
+      const msgs={ below_min:'Minimum 50 €', above_available:'Montant supérieur à ton solde disponible', bad_iban:'IBAN invalide', bad_email:'E-mail invalide', pending_exists:'Une demande est déjà en cours' };
+      toast(msgs[data&&data.error]||'Demande refusée'); return;
+    }
+    // notification (même canal que les suggestions) — Axel paie à la main le 1er du mois
+    try{ await fetch(BUG_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'payout', date:new Date().toLocaleString('fr-FR'), user:(currentMember&&currentMember.email)||'', title:'💶 Demande de virement parrainage — '+(amount/100).toFixed(2)+' €', description:'Montant : '+(amount/100).toFixed(2)+' €\nTitulaire : '+holder+'\nIBAN : '+iban+'\nE-mail : '+email+'\nID demande : '+data.id }) }); }catch(_){}
+    affClosePayout(); toast('Demande envoyée — virement le 1er du mois');
+    affRefreshSummary();
+  }catch(e){ toast('Erreur : '+(e.message||e)); }
+  finally{ btn.disabled=false; btn.textContent=lbl; }
+}
 function affUpdateCalc(val){
   val = parseInt(val) || 0;
   // Prix moyen pondéré : 70% Starter (29,99€) + 25% Pro (49,99€) + 5% Élite (89,99€)
@@ -25292,7 +25354,7 @@ async function _mcGenerate(){
       : '';
     // Qualité/réalisme (Axel, 21/08) : Kling suit surtout la vidéo + l'image, mais le prompt pèse sur la
     // texture de peau, la lumière et les mains — on le dit court et précis (≤2500 car. au total).
-    const _mcRealTxt = ' Photorealistic UGC quality: real skin texture with pores and subtle imperfections (never plastic or airbrushed), natural hair and fabric detail, correct hands and fingers, consistent lighting and shadows across the whole clip, sharp 4K detail, no warping, no flicker.';
+    const _mcRealTxt = ' Photorealistic UGC quality: keep REAL skin — visible pores, fine facial peach fuzz, natural body hair, a few blackheads and small blemishes, freckles and moles exactly where they are, the natural hairline with baby hairs, uneven skin tone and slight shine; never plastic, smoothed or airbrushed. Natural hair strands and fabric detail, correct hands and fingers, consistent lighting and shadows across the whole clip, sharp 4K detail, no warping, no flicker.';
     const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcBgTxt + _mcCamTxt + _mcRealTxt;
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
     // (marquée ._moderation quand le content checker a bloqué → repli possible).
@@ -34390,6 +34452,22 @@ window.mPreviewClose=function(){
       </div>
     </div>
 
+
+    <!-- 💶 Demande de virement parrainage (21/08) -->
+    <div id="affPayoutModal" onclick="if(event.target===this)affClosePayout()" style="display:none;position:fixed;inset:0;z-index:9600;background:rgba(5,5,7,.72);backdrop-filter:blur(6px);place-items:center;padding:24px">
+      <div class="card" style="width:100%;max-width:460px;padding:24px 22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+          <h3 class="display" style="font-size:21px;font-weight:700;margin:0">Demander un virement</h3>
+          <button class="btn btn-quiet" onclick="affClosePayout()" style="border:none;background:none;cursor:pointer;padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <p class="faint" style="font-size:13px;line-height:1.5;margin:0 0 16px">Virement SEPA effectué à la main le <b style="color:var(--text-2)">1er du mois</b>. Disponible : <b id="affPayoutAvail" style="color:var(--accent-2)">—</b>.</p>
+        <div style="margin-bottom:12px"><div class="label">E-mail de contact</div><input id="affPayEmail" class="field" type="email" placeholder="toi@exemple.fr"></div>
+        <div style="margin-bottom:12px"><div class="label">Titulaire du compte</div><input id="affPayHolder" class="field" type="text" placeholder="Prénom Nom"></div>
+        <div style="margin-bottom:12px"><div class="label">IBAN</div><input id="affPayIban" class="field mono" type="text" placeholder="FR76 1234 5678 9012 3456 7890 123" autocomplete="off" spellcheck="false"></div>
+        <div style="margin-bottom:18px"><div class="label">Montant (€)</div><input id="affPayAmount" class="field mono" type="number" min="50" step="0.01" placeholder="50.00"><div class="faint mono" style="font-size:10.5px;margin-top:6px">Minimum 50 € · maximum ton solde disponible</div></div>
+        <button id="affPaySubmit" class="btn btn-primary" onclick="affSubmitPayout()" style="width:100%">Envoyer la demande</button>
+      </div>
+    </div>
     <!-- ⚙️ Modale « Paramètres avancés » — maquette montage-handoff, reprise au pixel -->
     <div id="mzAdvModal" onclick="if(event.target===this)mzAdvClose()" style="display:none;position:fixed;inset:0;z-index:9890;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
       <div class="card" style="width:100%;max-width:600px;max-height:84vh;overflow-y:auto;padding:26px 22px 22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
