@@ -8196,6 +8196,42 @@ async function mcpKeyCreate(regen){
   _mcpState('B');
   toast('Clé créée — copie l\'URL !');
 }
+// ── OAuth (20/08) : l'adresse de marque suffit, Claude fait le reste ──
+const MCP_OAUTH_URL = 'https://mcp.avatarads.fr';
+function mcpOauthCopy(){
+  navigator.clipboard.writeText(MCP_OAUTH_URL).then(()=>toast('Adresse copiée — colle-la dans Claude → Connecteurs'))
+    .catch(()=>{ const i=document.getElementById('mcpOauthUrl'); if(i){ i.select(); document.execCommand('copy'); } toast('Adresse copiée'); });
+}
+function mcpOauthConnect(){
+  try{ navigator.clipboard.writeText(MCP_OAUTH_URL).catch(()=>{}); }catch(_){}
+  toast('Adresse copiée — dans Claude : Ajouter un connecteur personnalisé → coller → Se connecter');
+  window.open('https://claude.ai/customize/connectors?modal=add-custom-connector', '_blank', 'noopener');
+}
+// ── Photo produit pour Claude : dépôt → mcp-media (public) → URL ──
+async function mcpRefUpload(file){
+  if(!file || !/^image\/(png|jpe?g|webp)$/.test(file.type)){ toast('PNG, JPG ou WebP uniquement'); return; }
+  const lbl=document.getElementById('mcpRefLbl'); if(lbl) lbl.textContent='Envoi…';
+  try{
+    // ≤ 2048 px : assez pour une référence, léger à transmettre (limite serveur 10 Mo)
+    const dataUrl = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(file); });
+    const im = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl; });
+    let out=dataUrl;
+    if(Math.max(im.naturalWidth, im.naturalHeight) > 2048 || file.size > 4_000_000){
+      const r=Math.min(1, 2048/Math.max(im.naturalWidth, im.naturalHeight)); const cv=document.createElement('canvas'); cv.width=Math.round(im.naturalWidth*r); cv.height=Math.round(im.naturalHeight*r);
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height); out=cv.toDataURL(file.type==='image/png'?'image/png':'image/jpeg', 0.92);
+    }
+    const H=await getAuthHeader();
+    const r=await fetch(SUPABASE_URL+'/functions/v1/mcp/ref',{ method:'POST', headers:{ 'Content-Type':'application/json', ...H }, body:JSON.stringify({ data_url: out }) });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok || !j.url) throw new Error(j.error==='plan_required' ? 'Réservé aux plans Pro et Élite' : ('envoi impossible ('+(j.error||r.status)+')'));
+    const d=document.getElementById('mcpRefDone'); if(d) d.style.display='block';
+    const u=document.getElementById('mcpRefUrl'); if(u) u.value=j.url;
+    const t=document.getElementById('mcpRefThumb'); if(t) t.src=out;
+    if(lbl) lbl.textContent='Envoyer une autre photo';
+    toast('Photo produit envoyée — Claude peut l\'utiliser');
+  }catch(e){ if(lbl) lbl.textContent='Glisse la photo du produit (PNG · JPG · WebP)'; toast('Photo produit : '+(e.message||e)); }
+}
+function mcpRefCopy(){ const u=document.getElementById('mcpRefUrl'); if(!u||!u.value) return; navigator.clipboard.writeText(u.value).then(()=>toast('URL copiée')).catch(()=>{ u.select(); document.execCommand('copy'); toast('URL copiée'); }); }
 function mcpKeyCopy(){
   const inp = document.getElementById('mcpKeyUrl');
   if(!inp || !inp.value) return;
@@ -34110,15 +34146,29 @@ window.mPreviewClose=function(){
         <!-- 3 étapes -->
         <div id="mcpSteps" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch">
 
-          <!-- ① clé -->
+          <!-- ① relier (OAuth : plus de clé à coller — 20/08) -->
           <div class="card" style="padding:24px;display:flex;flex-direction:column">
             <div class="row gap10" style="align-items:center;margin-bottom:14px">
-              <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Copie ta clé</span>
+              <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Relie ton compte</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Ta clé connecteur personnelle. Tu la colleras dans Claude à l'étape 2.</p>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
+            <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:18px">
+              <input type="text" id="mcpOauthUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
+              <button class="btn btn-sm" onclick="mcpOauthCopy()" title="Copier" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+              </button>
+            </div>
+            <button class="btn btn-primary" onclick="mcpOauthConnect()" style="width:100%;margin-top:12px;cursor:pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+              Relier à Claude
+            </button>
+            <p class="faint" style="font-size:11px;line-height:1.5;margin:10px 0 0">Le bouton copie l'adresse et ouvre Claude → Connecteurs. Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.</p>
 
+            <!-- alternative : connexion par clé (ancienne méthode), repliée -->
+            <details id="mcpKeyAlt" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+              <summary class="faint" style="font-size:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>Alternative : connexion par clé (URL secrète)</summary>
             <!-- état A — pas encore de clé (ou plan insuffisant) -->
-            <div id="mcpNoKey" style="margin-top:18px">
+            <div id="mcpNoKey" style="margin-top:14px">
               <p id="mcpLockNote" class="faint" style="display:none;font-size:11px;line-height:1.5;margin:0 0 10px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.</p>
               <button id="mcpKeyCreateBtn" class="btn btn-primary" onclick="mcpKeyCreate()" style="width:100%;cursor:pointer">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
@@ -34154,14 +34204,15 @@ window.mPreviewClose=function(){
                 <button id="mcpKeyRevokeBtn" class="btn btn-quiet btn-sm" onclick="mcpKeyRevoke()" style="font-size:12px;color:#FF6B6B;margin-left:auto;padding:0;background:none;border:none;cursor:pointer">Révoquer</button>
               </div>
             </div>
+            </details>
           </div>
 
-          <!-- ② ouvrir claude -->
+          <!-- ② autoriser -->
           <div class="card" style="padding:24px;display:flex;flex-direction:column">
             <div class="row gap10" style="align-items:center;margin-bottom:14px">
-              <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Ouvre les Connecteurs</span>
+              <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Dans Claude → Paramètres → Connecteurs, clique « Ajouter un connecteur personnalisé », nomme-le <b style="color:var(--text-2)">AvatarAds</b> et colle l'URL.</p>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Clique « Se connecter » sur le connecteur : Claude t'envoie sur AvatarAds, tu vérifies que c'est bien ton compte et tu cliques <b style="color:var(--text-2)">Autoriser</b>. C'est tout — la connexion reste active 30 jours et se renouvelle seule.</p>
             <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:18px;text-decoration:none">
               Ouvrir Claude → Connecteurs
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -34178,6 +34229,31 @@ window.mPreviewClose=function(){
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               Commencer
             </a>
+          </div>
+        </div>
+
+        <!-- photo produit pour Claude (20/08) : claude.ai ne transmet pas les images jointes aux outils →
+             on la dépose ici, Claude la retrouve (list_media, ref-…) ou reçoit l'URL. -->
+        <div class="card" style="width:100%;max-width:680px;margin:22px auto 0;padding:20px 22px">
+          <div class="row gap10" style="align-items:center;margin-bottom:8px">
+            <span style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+            <span style="font-weight:700;font-size:15px">Photo produit pour Claude</span>
+          </div>
+          <p class="faint" style="font-size:13px;line-height:1.55;margin:0 0 14px">Claude ne voit pas les photos jointes dans le chat. Dépose ici la photo de ton produit : Claude la reproduit <b style="color:var(--text-2)">à l'identique</b> dans tes static ads et visuels UGC — dis-lui simplement « utilise ma dernière photo produit ».</p>
+          <input type="file" id="mcpRefIn" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="mcpRefUpload(this.files[0]);this.value=''">
+          <div id="mcpRefDrop" onclick="document.getElementById('mcpRefIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';mcpRefUpload(event.dataTransfer.files[0])" class="row gap12" style="align-items:center;justify-content:center;padding:18px;border:1px dashed var(--border-2);border-radius:12px;cursor:pointer;background:var(--panel-1)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v10M8 9l4-4 4 4M5 19h14"/></svg>
+            <span id="mcpRefLbl" style="font-size:13.5px;font-weight:600">Glisse la photo du produit (PNG · JPG · WebP)</span>
+          </div>
+          <div id="mcpRefDone" style="display:none;margin-top:12px">
+            <div class="row gap10" style="align-items:center">
+              <img id="mcpRefThumb" alt="" style="width:46px;height:46px;border-radius:8px;object-fit:cover;border:1px solid var(--border-2);flex:0 0 auto">
+              <div class="row card" style="flex:1;min-width:0;padding:8px 10px;gap:8px;align-items:center;background:var(--panel-1)">
+                <input type="text" id="mcpRefUrl" readonly onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:11px;border:none;background:none;color:var(--text-2);text-overflow:ellipsis;padding:0">
+                <button class="btn btn-sm" onclick="mcpRefCopy()" style="flex:0 0 auto;padding:7px 11px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></button>
+              </div>
+            </div>
+            <p class="faint" style="font-size:11px;line-height:1.5;margin:8px 0 0">Photo envoyée. Dans Claude : « Crée une static ad de ma dernière photo produit » — ou colle cette URL dans ta demande.</p>
           </div>
         </div>
 
