@@ -25353,7 +25353,10 @@ async function _mcGenerate(){
     // Qualité/réalisme (Axel, 21/08) : Kling suit surtout la vidéo + l'image, mais le prompt pèse sur la
     // texture de peau, la lumière et les mains — on le dit court et précis (≤2500 car. au total).
     const _mcRealTxt = ' Photorealistic UGC quality: keep REAL skin — visible pores, fine facial peach fuzz, natural body hair, a few blackheads and small blemishes, freckles and moles exactly where they are, the natural hairline with baby hairs, uneven skin tone and slight shine; never plastic, smoothed or airbrushed. Natural hair strands and fabric detail, correct hands and fingers, consistent lighting and shadows across the whole clip, sharp 4K detail, no warping, no flicker.';
-    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcBgTxt + _mcCamTxt + _mcRealTxt;
+    // SAFE ZONE (Axel, 22/08) : le visage doit rester au MILIEU de l'écran, jamais rogné ni
+    // poussé sur un bord — placé tôt (juste après l'identité) pour survivre au slice(0,2400).
+    const _mcSafeTxt = ' FRAMING / SAFE ZONE (very important): keep the character\'s face and body CENTERED and fully inside the frame at all times — the face stays around the middle of the screen, never drifts to the edges, is never cropped, cut off or pushed out of frame, with comfortable margins on every side so the face is never hidden behind on-screen UI and nothing important is lost.';
+    const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcSafeTxt + _mcBgTxt + _mcCamTxt + _mcRealTxt;
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
     // (marquée ._moderation quand le content checker a bloqué → repli possible).
     const runKling = async (ver) => {
