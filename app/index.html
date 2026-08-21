@@ -4446,26 +4446,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
     <!-- ══ ÉDITEUR / STUDIO (BETA) ══ -->
     <div class="view" id="v-studio">
-      <!-- IMPORT (état vide, centré) -->
-      <div id="edEmpty" class="scroll-y" style="flex:1;min-height:0;padding:32px 40px 90px">
-        <div style="max-width:900px;margin:0 auto">
-          <div class="row gap10" style="align-items:center;margin-bottom:6px">
-            <h2 class="display row gap10" style="font-size:28px;font-weight:700;align-items:center;line-height:1.1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>Éditeur vidéo</h2>
-            <span class="tag-beta" style="align-self:center">BETA</span>
-          </div>
-          <p class="muted" style="margin-bottom:28px;font-size:14.5px">Coupe, réorganise, ajoute texte, images, sons et musique — puis exporte ta vidéo verticale.</p>
-          <div onclick="document.getElementById('edFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';edLoadFile(event.dataTransfer.files[0])" class="ed-drop" style="flex-direction:column;gap:18px;padding:90px 20px;border-radius:22px;cursor:pointer;transition:.18s">
-            <div style="width:74px;height:74px;border-radius:20px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></div>
-            <div class="display" style="font-size:24px;font-weight:700;color:var(--text)">Glisse ta vidéo ici</div>
-            <div class="mono faint" style="font-size:12px;letter-spacing:.08em">MP4 · MOV · WEBM · 9:16 recommandé</div>
-            <div class="row gap12" style="margin-top:6px;flex-wrap:wrap;justify-content:center">
-              <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('edFileIn').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Parcourir</button>
-              <button class="btn btn-ghost" onclick="event.stopPropagation();edPickFromLibrary()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Bibliothèque</button>
-            </div>
-          </div>
-          <input type="file" id="edFileIn" accept="video/*" style="display:none" onchange="edLoadFile(this.files[0]);this.value=''">
-        </div>
-      </div>
+      <!-- B5 (20/08) : plus de page d'accueil — l'Éditeur s'ouvre sur un écran noir (cf. edNewProject).
+           On garde juste l'input fichier (déclenché par l'invite sur l'aperçu et le panneau). -->
+      <div id="edEmpty" style="display:none"></div>
+      <input type="file" id="edFileIn" accept="video/*" style="display:none" onchange="edLoadFile(this.files[0]);this.value=''">
 
       <!-- EDITOR (3 zones plein écran) -->
       <div id="edMain" style="display:none;flex:1;min-height:0">
@@ -30928,10 +30912,109 @@ let _ed = null;
 let _edQuality = 1080;
 
 function initStudio(){
-  if(!_ed){
-    const m=document.getElementById('edMain'); if(m) m.style.display='none';
-    const e=document.getElementById('edEmpty'); if(e) e.style.display='flex';
+  // B5 (Axel, 20/08) : plus de page d'accueil « Glisse ta vidéo ici » — l'Éditeur s'ouvre directement
+  // sur l'interface, avec un ÉCRAN NOIR (clip noir de 10 s) ; l'import se fait depuis l'aperçu ou le panneau.
+  const e=document.getElementById('edEmpty'); if(e) e.style.display='none';
+  if(!_ed){ try{ edNewProject(); }catch(err){ console.error('edNewProject', err); } }
+  else { const m=document.getElementById('edMain'); if(m) m.style.display='flex'; }
+  _edUpdateBlackHint();
+}
+/* ── CLIP NOIR (B4/B5) — une « vidéo » virtuelle : même surface que l'élément <video> utilisé par
+   l'Éditeur (currentTime/play/pause/paused/muted/volume/videoWidth…), mais rien à dessiner :
+   drawImage échoue (try/catch partout) → le canvas reste noir. Sert (1) au projet vide et
+   (2) quand on SUPPRIME le clip vidéo : l'espace devient noir, texte/musique/sons restent. ── */
+function _edBlackVideo(dur, vw, vh){
+  const o={ _black:true, _t:0, _playing:false, _last:0, duration:dur, videoWidth:vw, videoHeight:vh, muted:true, volume:1,
+    playsInline:true, preload:'auto', readyState:4, ended:false, src:'', onseeked:null, onloadeddata:null, onerror:null, style:{},
+    play(){ this._last=performance.now(); this._playing=true; return Promise.resolve(); },
+    pause(){ void this.currentTime; this._playing=false; },
+    load(){}, addEventListener(){}, removeEventListener(){}, captureStream:undefined,
+    getBoundingClientRect(){ return {left:0,top:0,width:0,height:0}; } };
+  Object.defineProperty(o,'currentTime',{
+    get(){ if(this._playing){ const now=performance.now(); this._t=Math.min(this.duration, this._t+(now-this._last)/1000); this._last=now; if(this._t>=this.duration){ this._playing=false; } } return this._t; },
+    set(v){ this._t=Math.max(0,Math.min(this.duration, +v||0)); this._last=performance.now(); const me=this; setTimeout(()=>{ try{ me.onseeked&&me.onseeked(); }catch(_){} },0); } });
+  Object.defineProperty(o,'paused',{ get(){ return !this._playing; } });
+  return o;
+}
+function _edBlackClip(dur, vw, vh){
+  dur=Math.max(0.5, +dur||10); vw=vw||1080; vh=vh||1920;
+  return { _black:true, file:null, url:'', video:_edBlackVideo(dur,vw,vh), dur, vw, vh, trimA:0, trimB:dur, deletes:[], hue:0 };
+}
+function _edAllBlack(){ return !!(_ed && _ed.clips && _ed.clips.length && _ed.clips.every(c=>c && c._black)); }
+// Projet vide : un clip noir 9:16 de 10 s — tout le reste de l'Éditeur fonctionne dessus.
+function edNewProject(){
+  const clip0=_edBlackClip(10, 1080, 1920);
+  _ed={ clips:[clip0], activeIdx:0,
+        file:null,url:'',video:clip0.video, dur:clip0.dur, vw:clip0.vw, vh:clip0.vh, trimA:0, trimB:clip0.dur, deletes:[], overlays:[], sfx:[], zooms:[], selZoom:null, _zoomDefDur:1.2, _zoomDefScale:1.4, sel:null, selTrack:null,
+        playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, musicDur:0, musicSegs:null, musicAuto:true, audio:null };
+  edSetup();
+}
+// Invite « Importer une vidéo » posée SUR l'aperçu tant que le projet n'a que du noir.
+function _edUpdateBlackHint(){
+  const pz=document.getElementById('edPreviewZone'); if(!pz) return;
+  let h=document.getElementById('edBlackHint');
+  // visible seulement sur un projet VRAIMENT vide (écran noir sans texte/image/musique) — sinon elle recouvrirait le travail en cours
+  const show=_edAllBlack() && !(_ed.overlays&&_ed.overlays.length) && !_ed.music;
+  if(show && !h){
+    h=document.createElement('div'); h.id='edBlackHint';
+    h.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:none';
+    h.innerHTML='<div style="width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></div>'
+      +'<div class="display" style="font-size:17px;font-weight:700;color:var(--text)">Écran noir</div>'
+      +'<div class="mono faint" style="font-size:11px;letter-spacing:.06em">MP4 · MOV · WEBM · 9:16 recommandé</div>'
+      +'<div class="row gap10" style="pointer-events:auto;margin-top:4px">'
+      +'<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();document.getElementById(\'edFileIn\').click()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Importer une vidéo</button>'
+      +'<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();edPickFromLibrary()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Bibliothèque</button>'
+      +'</div>';
+    pz.appendChild(h);
   }
+  if(h) h.style.display = show ? 'flex' : 'none';
+}
+// Remplace le clip idx par `nc` en conservant texte/images/musique/sons/zooms (snapshot → undo possible).
+function _edReplaceClip(idx, nc){
+  if(!_ed||!_ed.clips||!_ed.clips[idx]) return;
+  edSnap();
+  const old=_ed.clips[idx];
+  try{ if(old.video) old.video.pause(); }catch(_){}
+  _ed.clips[idx]=nc;
+  const st=edStateCopy(); st.activeIdx=idx;
+  edRestoreState(st);
+  if(old._black && !nc._black){
+    try{ _edFormat=edNearestFormat((nc.vw||9)/(nc.vh||16)); edSyncFormatButtons(); edUpdateOutputLabel(); edResizeCanvas(); }catch(_){}
+    _edGraphAttachMain();
+  }
+  if(typeof edRenderClipAudioTrack==='function') edRenderClipAudioTrack();
+  if(typeof edRenderClipsTrack==='function') edRenderClipsTrack();
+  edUpdateTime(); _edUpdateBlackHint();
+}
+// Le clip idx devient NOIR sur la même durée (B4) — l'espace reste, le reste du montage aussi.
+function _edBlackOut(idx){
+  if(!_ed||!_ed.clips||!_ed.clips[idx]) return;
+  const c=_ed.clips[idx]; if(c._black){ toast('Cet espace est déjà un écran noir'); return; }
+  try{ if(typeof edPause==='function') edPause(); }catch(_){}
+  const span=Math.max(0.5, (c.trimB-c.trimA)||c.dur||5);
+  const nc=_edBlackClip(span, c.vw||1080, c.vh||1920);
+  _edReplaceClip(idx, nc);
+  try{ URL.revokeObjectURL(c.url); }catch(_){}
+  toast('Clip supprimé — écran noir sur '+edFmt(span)+' (⌘Z pour annuler)');
+}
+// Graphe audio créé sur un projet noir : la vraie vidéo s'y branche quand elle arrive.
+function _edGraphAttachMain(){
+  try{
+    if(!_ed||!_ed.audio||_ed.audio.vEl||!_ed.video||_ed.video._black) return;
+    const ac=_ed.audio.ac; const vSrc=ac.createMediaElementSource(_ed.video); const vGain=ac.createGain(); vGain.gain.value=_ed.vol;
+    vSrc.connect(vGain); vGain.connect(ac.destination); vGain.connect(_ed.audio.dest);
+    _ed.audio.vSrc=vSrc; _ed.audio.vGain=vGain; _ed.audio.vEl=_ed.video;
+  }catch(e){ console.warn('audio graph attach', e); }
+}
+// Projet noir + musique : l'écran noir s'allonge à la durée de la musique (sinon elle serait coupée à 10 s).
+function _edAutoExtendBlack(){
+  try{
+    if(!_edAllBlack()||!_ed.musicDur) return;
+    const c=_ed.clips[_ed.activeIdx||0]; const want=Math.min(600, Math.ceil(_ed.musicDur*10)/10);
+    if(want<=c.dur+0.05) return;
+    c.dur=want; c.trimB=want; c.video.duration=want; _ed.dur=want; _ed.trimB=want;
+    edRefreshTimeline(); edRenderClips(); edRenderOvTrack(); edRenderMusicTrack();
+  }catch(_){}
 }
 function edFmt(t){ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(t%60); return m+':'+String(s).padStart(2,'0'); }
 // Format précis avec millièmes de seconde (m:ss.mmm) — pour le curseur/playhead
@@ -30993,7 +31076,7 @@ function edPickFromLibrary(){
   }catch(e){} });
 }
 
-function edLoadFile(file){
+function edLoadFile(file, onDone){
   if(!file || !file.type.startsWith('video/')){ toast('Choisis un fichier vidéo'); return; }
   const url=URL.createObjectURL(file);
   const video=document.createElement('video');
@@ -31001,10 +31084,17 @@ function edLoadFile(file){
   video.onloadedmetadata=()=>{
     const _dur=video.duration||0, _vw=video.videoWidth||720, _vh=video.videoHeight||1280;
     const clip0={ file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[] };
+    if(_ed && _edAllBlack()){   // projet vide / écran noir → la vidéo prend la place du noir
+      _edReplaceClip(_ed.activeIdx||0, clip0);
+      try{ _ed.video.currentTime=_ed.trimA; }catch(_){}
+      if(typeof onDone==='function') onDone();
+      return;
+    }
     _ed={ clips:[clip0], activeIdx:0,
           file,url,video, dur:_dur, vw:_vw, vh:_vh, trimA:0, trimB:_dur, deletes:[], overlays:[], sfx:[], zooms:[], selZoom:null, _zoomDefDur:1.2, _zoomDefScale:1.4, sel:null, selTrack:null,
           playing:false, raf:0, dispW:0, dispH:0, scale:1, delPending:null, ctx:null, vol:1, musicVol:0.7, music:null, musicUrl:null, musicDur:0, musicSegs:null, musicAuto:true, audio:null };
     edSetup();
+    if(typeof onDone==='function') onDone();
   };
   video.onerror=()=>toast('Impossible de lire cette vidéo');
 }
@@ -31061,6 +31151,7 @@ function edSetup(){
   edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop(); edRenderClips();
   if(!window._edKeysBound){ window._edKeysBound=true; document.addEventListener('keydown', edKeyHandler); }
   cancelAnimationFrame(_ed.raf); edDrawLoop(); edUpdateTime();
+  _edUpdateBlackHint();
 }
 /* ---------- clips: durée totale, temps global, sync, sélection ---------- */
 function edTotalDur(){ if(!_ed||!_ed.clips) return (_ed?_ed.dur:0)||0; return _ed.clips.reduce((s,c)=>s+Math.max(0,(c.trimB-c.trimA)),0); }
@@ -31561,6 +31652,7 @@ async function _edFillStrip(strip, clip){
   }catch(e){}
 }
 function _edExtractThumbs(clip, count){
+  if(!clip || clip._black || !clip.url) return Promise.resolve([]);   // écran noir : rien à extraire
   // cache PAR NOMBRE demandé : la carte (1 vignette) et la pellicule (10) se
   // partageaient la même entrée — le premier arrivé imposait son compte
   clip._thumbs=clip._thumbs&&!Array.isArray(clip._thumbs)?clip._thumbs:{};
@@ -31596,9 +31688,10 @@ function _edExtractThumbs(clip, count){
 async function _edRenderTlStrip(){
   const st=document.getElementById('edTlStrip'); if(!st||!_ed||!_ed.clips||!_ed.clips.length) { if(st) st.innerHTML=''; return; }
   const c=_ed.clips[_ed.activeIdx||0]||_ed.clips[0];
-  const sig=(c.url||'')+'|'+(+c.trimA).toFixed(2)+'|'+(+c.trimB).toFixed(2);
+  const sig=(c._black?'black':(c.url||''))+'|'+(+c.trimA).toFixed(2)+'|'+(+c.trimB).toFixed(2);
   if(st.dataset.sig===sig) return;
   st.dataset.sig=sig;
+  if(c._black){ st.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#141418 0 8px,#0c0c0f 8px 16px)"><span class="mono" style="font-size:10px;color:var(--text-3);letter-spacing:.08em">ÉCRAN NOIR</span></div>'; return; }
   try{
     const thumbs=await _edExtractThumbs(c, 10);
     if(!st.isConnected||st.dataset.sig!==sig) return;
@@ -31997,7 +32090,7 @@ function edSplitClip(){
   const c=_ed.clips[_ed.activeIdx]; const t=(_ed.video?_ed.video.currentTime:0);
   if(t<=c.trimA+0.2 || t>=c.trimB-0.2){ toast('Place le curseur au milieu du clip pour le couper'); return; }
   edSnap();
-  const right={ file:c.file, url:c.url, video:c.video, dur:c.dur, vw:c.vw, vh:c.vh, trimA:t, trimB:c.trimB, deletes:[] };
+  const right={ file:c.file, url:c.url, video:c.video, dur:c.dur, vw:c.vw, vh:c.vh, trimA:t, trimB:c.trimB, deletes:[], _black:!!c._black };
   c.trimB=t; _ed.trimB=t;
   _ed.clips.splice(_ed.activeIdx+1,0,right);
   edRefreshTimeline(); edRenderClips(); toast('Clip coupé en deux');
@@ -32025,21 +32118,18 @@ function edDeleteContext(){
     edSelectTrack(null); return;
   }
   // #1 (11/08) · le CLIP VISUEL sélectionné se supprime (clip unique → on vide l'éditeur)
+  // B4 (Axel, 20/08) · supprimer le clip VISUEL sélectionné = ÉCRAN NOIR sur sa durée (jamais bloqué,
+  // jamais de remise à zéro) : clip principal comme clip ajouté. ⌘Z rétablit la vidéo.
   if(_ed.selVisual){
     if(_ed.activeIdx>0){ edRemoveClip(_ed.activeIdx); return; }
-    if(_ed.clips && _ed.clips.length>1){ toast('Le clip principal ne peut pas être supprimé — clique un autre clip puis Suppr'); return; }
-    try{ if(typeof edPause==='function') edPause(); }catch(_){}
-    _ed=null;
-    const m=document.getElementById('edMain'); if(m) m.style.display='none';
-    const e=document.getElementById('edEmpty'); if(e) e.style.display='flex';
-    toast('Clip supprimé — glisse une nouvelle vidéo');
+    _edBlackOut(_ed.activeIdx||0);
     return;
   }
   if(_ed.sel){ edSnap(); edDeleteSelected(); return; }
   if(_ed.selZoom){ edRemoveZoom(_ed.selZoom); return; }
   if(_ed.activeIdx>0){ edRemoveClip(_ed.activeIdx); return; }
-  if(_ed.clips && _ed.clips.length>1){ toast('Le clip principal ne peut pas être supprimé — clique un autre clip (🎞) puis Suppr'); return; }
-  toast('Sélectionne un texte/image, un zoom ou un clip ajouté à supprimer');
+  if(_ed.clips && _ed.clips.length && !_ed.clips[0]._black){ _edBlackOut(0); return; }
+  toast('Sélectionne un texte/image, un zoom ou un clip à supprimer');
 }
 /* ---------- #5/#7 · sélection d'éléments de piste (musique / audio / effet) ---------- */
 // _ed.selTrack = {type:'music', idx} | {type:'audio'} | {type:'sfx', id} — exclusif de la
@@ -32252,11 +32342,13 @@ async function edExtractTimelineAudio(onStatus){
   for(let idx=0; idx<_ed.clips.length; idx++){
     const c=_ed.clips[idx];
     if(onStatus) onStatus('<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 14v-3a9 9 0 0118 0v3"/><rect x="2" y="14" width="4.5" height="7" rx="2"/><rect x="17.5" y="14" width="4.5" height="7" rx="2"/></svg> Extraction audio… clip '+(idx+1)+'/'+_ed.clips.length);
-    let ab;
-    if(c.file && c.file.arrayBuffer) ab = await c.file.arrayBuffer();
+    let ab=null;
+    if(c._black || (!c.file && !c.url)) ab = null;          // écran noir → silence
+    else if(c.file && c.file.arrayBuffer) ab = await c.file.arrayBuffer();
     else ab = await (await fetch(c.url)).arrayBuffer();
     let mono;
     try {
+      if(!ab) throw new Error('silence');
       const ac=new AC(); let decoded;
       try { decoded = await ac.decodeAudioData(ab.slice(0)); } finally { try{ac.close();}catch(_){} }
       const len=Math.max(1, Math.ceil(decoded.duration*16000));
@@ -32725,8 +32817,8 @@ function edReset(){
 async function edExportAudio(){
   if(!_ed || !_ed.clips || !_ed.clips.length){ toast('Charge une vidéo d\'abord'); return; }
   const c = _ed.clips[_ed.activeIdx] || _ed.clips[0];
-  const src = c.file || c.url;
-  if(!src){ toast('Aucune source audio'); return; }
+  const src = c._black ? null : (c.file || c.url);
+  if(!src){ toast('Aucune source audio — importe une vidéo'); return; }
   const btn=document.getElementById('edExportAudioBtn'); const lbl=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.textContent='Extraction…'; }
   try{
@@ -32804,8 +32896,8 @@ async function edExport(){
       edEnsureAudioGraph();
       if(_ed.audio){
         for(const c of (_ed.clips||[])){
-          if(c.video===_ed.audio.vEl) continue; // déjà branché comme source principale
-          if(!c._srcNode){ try{ c._srcNode=_ed.audio.ac.createMediaElementSource(c.video); const g=_ed.audio.ac.createGain(); c._srcNode.connect(g); g.connect(_ed.audio.ac.destination); g.connect(_ed.audio.dest); }catch(e){} }
+          if(c._black || c.video===_ed.audio.vEl) continue; // noir : rien à brancher ; principal : déjà branché
+          if(!c._srcNode){ try{ c._srcNode=_ed.audio.ac.createMediaElementSource(c.video); const g=_ed.audio.ac.createGain(); g.gain.value=(_ed.videoMuted?0:(_ed.vol!=null?_ed.vol:1)); c._srcNode.connect(g); g.connect(_ed.audio.ac.destination); g.connect(_ed.audio.dest); }catch(e){} }
         }
         if(_ed.audio.ac.state==='suspended'){ try{ await _ed.audio.ac.resume(); }catch(e){} }
       }
@@ -32936,8 +33028,12 @@ function edEnsureAudioGraph(){
   if(!_ed||_ed.audio) return _ed&&_ed.audio;
   try{
     const AC=window.AudioContext||window.webkitAudioContext; const ac=new AC();
-    const vSrc=ac.createMediaElementSource(_ed.video); const vGain=ac.createGain(); vGain.gain.value=_ed.vol;
     const dest=ac.createMediaStreamDestination();
+    if(_ed.video && _ed.video._black){   // écran noir : pas de voix à brancher (le sera à l'import, cf. _edGraphAttachMain)
+      _ed.audio={ac,vSrc:null,vGain:null,dest,mSrc:null,mGain:null,vEl:null};
+      return _ed.audio;
+    }
+    const vSrc=ac.createMediaElementSource(_ed.video); const vGain=ac.createGain(); vGain.gain.value=_ed.vol;
     vSrc.connect(vGain); vGain.connect(ac.destination); vGain.connect(dest);
     _ed.audio={ac,vSrc,vGain,dest,mSrc:null,mGain:null,vEl:_ed.video};
   }catch(e){ console.warn('audio graph',e); _ed.audio=null; }
@@ -32960,7 +33056,7 @@ function edAddMusic(file){
   _ed.music=a; _ed.musicUrl=url; _ed.musicName=file.name; _ed.musicPeaks=null;
   // #4 · durée du fichier connue → le segment auto se cale sur min(durée clips, durée musique)
   _ed.musicDur=0; _ed.musicSegs=null; _ed.musicAuto=true;
-  a.onloadedmetadata=()=>{ if(_ed&&_ed.music===a){ _ed.musicDur=a.duration||0; edRenderMusicTrack(); } };
+  a.onloadedmetadata=()=>{ if(_ed&&_ed.music===a){ _ed.musicDur=a.duration||0; _edAutoExtendBlack(); edRenderMusicTrack(); } };
   _edComputePeaks(file).then(p=>{ if(_ed&&_ed.music){ _ed.musicPeaks=p; edRenderMusicTrack(); } });
   edEnsureAudioGraph();
   if(_ed.audio){ try{ const mSrc=_ed.audio.ac.createMediaElementSource(a); const mGain=_ed.audio.ac.createGain(); mGain.gain.value=_ed.musicVol; mSrc.connect(mGain); mGain.connect(_ed.audio.ac.destination); mGain.connect(_ed.audio.dest); _ed.audio.mSrc=mSrc; _ed.audio.mGain=mGain; }catch(e){ a.volume=_ed.musicVol; } }
@@ -33008,7 +33104,15 @@ function edRouteFile(f){
 /* ---------- clips multiples (concaténation) ---------- */
 const _edClipBtnCss='flex:0 0 auto;width:24px;height:24px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;line-height:1;padding:0';
 function edAddClips(files){
-  if(!_ed||!files) return; edSnap();
+  if(!_ed||!files) return;
+  // Projet encore tout noir : la 1re vidéo REMPLACE l'écran noir, les suivantes s'enchaînent derrière.
+  if(_edAllBlack()){
+    const arr=[...files].filter(f=>f && f.type && f.type.startsWith('video/'));
+    if(!arr.length) return;
+    edLoadFile(arr[0], ()=>{ if(arr.length>1) edAddClips(arr.slice(1)); });
+    return;
+  }
+  edSnap();
   let added=0;
   [...files].forEach(f=>{
     if(!f.type || !f.type.startsWith('video/')) return;
@@ -33053,14 +33157,15 @@ function edRenderClips(){
     // (audio importé) reçoit une icône de musique, pas un carré noir
     const thumb=document.createElement('div');
     thumb.style.cssText='width:36px;height:36px;border-radius:8px;flex:0 0 auto;border:1px solid var(--border2);background:repeating-linear-gradient(135deg,oklch(.4 .09 '+(c.hue||18)+') 0 7px,oklch(.28 .07 '+(c.hue||18)+') 7px 14px);background-size:cover;background-position:center';
-    if(c.isAudio||c.vw===0){
+    if(c._black){ thumb.style.background='#000'; }
+    else if(c.isAudio||c.vw===0){
       thumb.style.background='var(--bg3)'; thumb.style.display='grid'; thumb.style.placeItems='center';
       thumb.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#28C795" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
     } else {
       try{ _edExtractThumbs(c,1).then(t=>{ if(t&&t[0]) thumb.style.background='#000 url('+t[0]+') center/cover'; }).catch(()=>{}); }catch(e){}
     }
     const star=document.createElement('span'); star.style.cssText='flex:0 0 auto;display:grid;place-items:center'; star.innerHTML=main?'<svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB020" stroke="none"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>':'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>';
-    const name=document.createElement('span'); name.style.cssText='font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600'; name.textContent=(main?'Clip principal':'Clip '+(idx+1))+(active?' • édition':'');
+    const name=document.createElement('span'); name.style.cssText='font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600'; name.textContent=(c._black?'Écran noir':(main?'Clip principal':'Clip '+(idx+1)))+(active?' • édition':'');
     const dur=document.createElement('span'); dur.className='faint mono'; dur.style.cssText='font-size:10px;flex:0 0 auto'; dur.textContent=edFmt(Math.max(0,c.trimB-c.trimA));
     row.appendChild(thumb); row.appendChild(star); row.appendChild(name); row.appendChild(dur);
     row.onclick=()=>edSelectClip(idx);
@@ -33074,6 +33179,7 @@ function edRenderClips(){
     wrap.appendChild(row);
   });
   _edRenderTlStrip();
+  if(typeof _edUpdateBlackHint==='function') _edUpdateBlackHint();
 }
 
 /* ---------- overlay time-range track ---------- */
