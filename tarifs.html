@@ -181,7 +181,7 @@ const ELITE_TIERS=[
 ];
 const PLANS=[
   { id:'starter', name:'STARTER', tagline:'Pour démarrer sans se ruiner.',
-    price:'29,99', annual:'20,83', accent:'var(--text)',
+    price:'29,99', annual:'20,83', annualStrike:'29,99', accent:'var(--text)',
     credits:150, equiv:'150 secondes de vidéo', extra:'Images/Vidéo Standard', bonus:'+25', note:'sans engagement',
     listHead:'INCLUS :', feats:['Avatar IA lip-sync','Nettoyage Audio','Images/Vidéo Standard','Sous-titres animés','Éditeur vidéo + <b style="color:var(--accent)">Montage IA</b><span style="float:right;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:4px;padding:1px 5px;margin-top:1px">NOUVEAU</span>'] },
   { id:'pro', name:'PRO', tagline:'Pour les créateurs qui veulent scaler.',
@@ -242,7 +242,7 @@ function renderPricing(){
     var pl=PLANS[i], pop=!!pl.popular, elite=pl.id==='elite';
     var tier=elite?ELITE_TIERS[eliteSlider]:null;
     var price=tier?(isAnnual?tier.annual:tier.price):(isAnnual?pl.annual:pl.price);
-    var strike=pl.strike?(isAnnual?pl.annualStrike:pl.strike):'';
+    var strike = isAnnual ? (tier ? tier.price : (pl.annualStrike||'')) : (pl.strike||'');   // annuel : on barre le prix mensuel
     var note='soit '+perDay(price)+'\u20ac/jour'+(isAnnual?' \u00b7 facturé annuellement':'')+' \u00b7 sans engagement';
     var checkoutId=tier?tier.checkoutId:pl.id;
     var checkoutUrl=(CHECKOUT[checkoutId]&&CHECKOUT[checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/';
@@ -267,7 +267,9 @@ function renderPricing(){
       +'<p class="muted" style="margin-top:9px;font-size:14.5px;line-height:1.45;min-height:42px">'+pl.tagline+'</p>'
       +_quotaBox(pl,tier)
       +'<div class="row" style="align-items:baseline;gap:5px;flex-wrap:wrap">'
-      +(strike?'<span class="faint" style="font-size:20px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:4px">'+strike+'€</span>':'')
+      +(elite
+          ? '<span id="lpEliteStrike" class="faint" style="font-size:20px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:4px;'+(strike?'':'display:none')+'">'+(strike?strike+'€':'')+'</span>'
+          : (strike?'<span class="faint" style="font-size:20px;font-weight:700;text-decoration:line-through;opacity:.45;margin-right:4px">'+strike+'€</span>':''))
       +'<span'+(elite?' id="lpElitePrice"':'')+' class="display" style="font-size:42px;font-weight:800">'+price+'€</span>'
       +'<span class="faint" style="font-size:15px">/mois</span></div>'
       +'<div'+(elite?' id="lpEliteNote"':'')+' class="mono" style="font-size:11.5px;margin-top:6px;color:'+(isAnnual?'var(--green)':'var(--text-3)')+'">'+note+'</div>'
@@ -287,6 +289,7 @@ function setEliteSlider(idx){
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
+  var strk=document.getElementById('lpEliteStrike'); if(strk){ if(isAnnual){ strk.textContent=tier.price+'\u20ac'; strk.style.display=''; } else strk.style.display='none'; }
   var note=document.getElementById('lpEliteNote'); if(note) note.textContent='soit '+perDay(isAnnual?tier.annual:tier.price)+'\u20ac/jour'+(isAnnual?' \u00b7 facturé annuellement':'')+' \u00b7 sans engagement';
   var cta=document.getElementById('lpEliteCta'); if(cta){ cta.href=(CHECKOUT[tier.checkoutId]&&CHECKOUT[tier.checkoutId][isAnnual?'a':'m'])||'https://whop.com/avatarads/'; }
 }
