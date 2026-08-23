@@ -754,6 +754,17 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         //     à 40 s) — le visage porte le CTA.
         const lastW = segs2[segs2.length - 1]
         if (lastW) plan.slides = (plan.slides || []).filter((sl) => !(sl.start > lastW.start + 0.5 && sl.end >= lastW.end - 0.5 && !sl.__slamGrid))
+        // LA DERNIÈRE FENÊTRE VA JUSQU'AU BOUT : le moteur tient le visage jusqu'à la fin de
+        // la vidéo (contiguïté), mais le lipsync n'était généré que sur la fenêtre notée
+        // (37→38,8 s) → visage FIGÉ sur le dernier mot. Si rien ne suit, la fenêtre = D.
+        {
+          const D = r2(Number(plan.duration) || 0)
+          const ord = (plan.avatarSegments || []).slice().sort((a, b) => a.start - b.start)
+          const last = ord[ord.length - 1]
+          if (D && last && !(plan.slides || []).some((sl) => sl.start >= last.end - 0.2 && sl.end > last.end + 0.3) && D - last.end > 0.3 && D - last.end < 8) {
+            console.log(`▶ slam : dernière fenêtre avatar étendue ${last.end}→${D}s (rien ne la suit)`); last.end = D
+          }
+        }
         // (00) LE NAVIGATEUR N'ARRIVE PAS TROP TÔT : la dérive l'ouvre dès le début de la phrase
         //      (« Et pour faire ça de la bonne manière, tu vas te rendre sur avatarads.fr » → 2,5 s
         //      avant l'adresse) et écrase l'animation d'avant (`tools` réduit à 1,3 s). La frappe
@@ -1905,7 +1916,23 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   // ⚠ l'indice DOIT être celui du tableau plan.avatarSegments : le moteur mappe
   // les clips par `av${indexDuTableau}` (dynamic-engine). Nommer par l'indice
   // FILTRÉ décalait les clips d'une fenêtre dès qu'une était écartée.
-  const file = (plan.avatarSegments || []).map((w, i) => ({ w, i })).filter((t) => (t.w.end - t.w.start) >= 1 && !t.w.noLipsync)
+  const file0 = (plan.avatarSegments || []).map((w, i) => ({ w, i })).filter((t) => (t.w.end - t.w.start) >= 1 && !t.w.noLipsync)
+  // ── DES FENÊTRES QUI SE SUIVENT SUR LE MÊME VISAGE = UN SEUL CLIP (Axel 23/08) ──
+  // Hook plein cadre → split → plein cadre : trois fenêtres collées (2,3→6,3→9,9→13,3 s)
+  // sur la même photo. Générées séparément, chacune REPART de la pose de la photo :
+  // trois redémarrages visibles. Une seule génération couvrant la suite, découpée
+  // ensuite par fenêtre, garde le mouvement continu — même coût (Hedra facture la
+  // seconde), un seul upload, et un seul clip au cache. Plafond : LIPSYNC_MAX + 2.
+  const file = []
+  for (const t of file0.slice().sort((a, b) => a.w.start - b.w.start)) {
+    const g = file[file.length - 1]
+    if (g && t.w.start - g.w.end < 0.15 && String(t.w.photo || '') === String(g.w.photo || '')
+      && String(t.w.format || 'portrait') === String(g.w.format || 'portrait')
+      && (t.w.end - g.w.start) <= LIPSYNC_MAX + 2) {
+      g.parts.push(t); g.w = { ...g.w, end: t.w.end }
+    } else file.push({ w: { ...t.w }, i: t.i, parts: [t] })
+  }
+  for (const g of file) if (g.parts.length > 1) console.log(`▶ lipsync : fenêtres ${g.parts.map((x) => x.i).join('+')} (${r2(g.w.start)}→${r2(g.w.end)}s) générées en UN clip continu`)
   const equipes = Array.from({ length: Math.min(PARALLELE, file.length) }, async () => {
     for (;;) {
       const t = file.shift()
@@ -1924,7 +1951,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       // pause : un visage FIGÉ pendant que les autres parlent se voit tout de
       // suite, surtout sur le HOOK qui ouvre la vidéo.
       for (let essai = 1; essai <= 3 && !ok; essai++) {
-        try { ok = await uneScene(t.w, t.i) } catch (e) { pourquoi = e.message }
+        try { ok = await uneScene(t.w, t.i, t.parts) } catch (e) { pourquoi = e.message }
         if (!ok && essai < 3) {
           console.warn(`↻ lipsync scène ${t.i} (${r2(t.w.start)}→${r2(t.w.end)}s, ${t.w.format || 'portrait'}) : essai ${essai}/3 manqué${pourquoi ? ' — ' + pourquoi : ''}, on retente`)
           await new Promise((r) => setTimeout(r, 4000))
@@ -1935,12 +1962,33 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       // retrouve. Sans ça, une fenêtre créée par la dérivation (clip:-1 : trou,
       // adresse) cherchait `av-1` → visage FIGÉ (Axel : « pas de lipsync à 4-6 s
       // ni à 40 s »).
-      if (ok) { t.w.clip = t.i; faits++; console.log(`✓ lipsync scène ${t.i} : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})`) }
+      if (ok) { for (const pt of t.parts) { pt.w.clip = pt.i; faits++ }; console.log(`✓ lipsync scène ${t.parts.map((x) => x.i).join('+')} : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})`) }
       else console.warn(`✗ lipsync scène ${t.i} ABANDONNÉE : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})${pourquoi ? ' — ' + pourquoi : ''} → la photo restera figée sur cette fenêtre`)
     }
   })
 
-  async function uneScene(w, i) {
+  // ── EXPRESSION ET MAINS (Axel 23/08 : « de l'expression sur son visage, et qu'il parle
+  //    avec les mains ») : en slam (ou plan.lipsyncExpressif) le prompt demande un jeu de
+  //    visage vivant et des gestes — clé de cache distincte des clips sobres.
+  const expressif = plan.lipsyncExpressif === true || (plan.lipsyncExpressif !== false && plan.slideStyle === 'slam')
+  const PROMPT_SOBRE = 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio'
+  const PROMPT_EXPRESSIF = 'A charismatic person speaking straight to camera, highly expressive and animated UGC influencer style — big natural smiles, raised eyebrows, visible enthusiasm and emotion, lively dynamic facial expressions, natural head tilts and movement, expressive hand gestures while speaking, high energy confident delivery, engaging and magnetic, direct eye contact, precise accurate lip-sync with mouth movements exactly matching the audio'
+  if (expressif) console.log('▶ lipsync : prompt EXPRESSIF (visage vivant + gestes des mains)')
+  // découpe d'un clip de GROUPE en un clip par fenêtre (décalage = début de la fenêtre
+  // dans le groupe ; +0,3 s de matière, le moteur coupe au panneau)
+  function decouperParties(groupClip, w, parts) {
+    for (const pt of parts) {
+      const out = join(proj, 'media', `av${pt.i}.mp4`)
+      if (parts.length === 1) { if (groupClip !== out) copyFileSync(groupClip, out) }
+      else {
+        const from = Math.max(0, pt.w.start - w.start), d = (pt.w.end - pt.w.start) + 0.3
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(r2(from)), '-t', String(r2(d)), '-i', groupClip, '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', String(FPS), '-movflags', '+faststart', out])
+      }
+      normaliserClipAvatar(`av${pt.i}.mp4`)
+      avatarClips['av' + pt.i] = 'media/av' + pt.i + '.mp4'
+    }
+  }
+  async function uneScene(w, i, parts = [{ w, i }]) {
     // #84 · l'image de CETTE fenêtre (rotation) — la clé de cache et le keyframe
     // Hedra en découlent : chaque visage parle sur la bonne photo.
     const { buf: photo, img: startImg } = await photoDe(w)
@@ -1960,13 +2008,13 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // la clé peut être calculée. Un hit rend la scène instantanée ET gratuite.
     const ratio = String(w.format) === 'paysage' ? '16:9' : '9:16'
     const audioBuf = readFileSync(mp3)
-    const cle = cleLipsync(photo, audioBuf, ratio, HEDRA_SLUG)
+    const cle = cleLipsync(photo, audioBuf, ratio, HEDRA_SLUG, expressif ? 'expressif' : '')
     const cout = Math.round(dur * HEDRA_CR_SEC)
     const dejaPaye = await cacheLire(cle)
     if (dejaPaye) {
-      writeFileSync(join(proj, 'media', `av${i}.mp4`), dejaPaye)
-      normaliserClipAvatar(`av${i}.mp4`)
-      avatarClips['av' + i] = 'media/av' + i + '.mp4'
+      const grp = join(proj, 'media', `grp${i}.mp4`)
+      writeFileSync(grp, dejaPaye)
+      decouperParties(grp, w, parts)
       economie += cout
       console.log(`♻︎ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s repris du cache — ${cout} crédits économisés`)
       return true
@@ -1976,7 +2024,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     if (!audioUp) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
 
     const jobId = await hedraV3Submit(HEDRA_SLUG, {
-      prompt: 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio',
+      prompt: expressif ? PROMPT_EXPRESSIF : PROMPT_SOBRE,
       aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
       resolution: '1080p', start_image: startImg, audio: audioUp,
     })
@@ -1987,14 +2035,13 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
 
     const res = await fetch(url)
     if (!res.ok) { console.warn(`lipsync scène ${i} : téléchargement ${res.status}`); return false }
-    const out = join(proj, 'media', `av${i}.mp4`)
+    const grp = join(proj, 'media', `grp${i}.mp4`)
     const clip = Buffer.from(await res.arrayBuffer())
-    writeFileSync(out, clip)
+    writeFileSync(grp, clip)
     // Payé une fois : on range les octets BRUTS au cache AVANT de normaliser —
     // la normalisation dépend du fps de rendu, le cache doit rester neutre.
     await cacheEcrire(cle, clip, dur)
-    normaliserClipAvatar(`av${i}.mp4`)
-    avatarClips['av' + i] = 'media/av' + i + '.mp4'
+    decouperParties(grp, w, parts)
     depense += cout
     console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'}) — ${cout} crédits`)
     return true
