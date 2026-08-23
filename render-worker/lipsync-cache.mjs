@@ -32,10 +32,12 @@ const CACHE_BUCKET = 'render-media'
 
 // Le modèle est un PARAMÈTRE : changer de modèle Hedra doit invalider le cache
 // (mêmes entrées, autre rendu), et le module n'a pas à savoir lequel tourne.
-export function cleLipsync(photo, audio, ratio, modele) {
+export function cleLipsync(photo, audio, ratio, modele, variante = '') {
+  // `variante` : un rendu EXPRESSIF (prompt gestes/expressions) n'est pas le même clip
+  // qu'un rendu sobre — la clé le distingue ; vide = clé historique, caches intacts.
   return createHash('sha256')
     .update(photo).update(audio)
-    .update(`|${ratio}|${modele}|1080p`)
+    .update(`|${ratio}|${modele}|1080p${variante ? '|' + variante : ''}`)
     .digest('hex')
 }
 

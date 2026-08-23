@@ -224,7 +224,10 @@ serve(async (req) => {
       .eq('plan', 'free').eq('email_optout', false)
       .is('whop_member_id', null)
       .or('bought_credits.is.null,bought_credits.eq.0')
-      .gte('created_at', from).lte('created_at', to)
+      // 23/08 : la séquence se cale sur drip_anchor (= created_at par défaut). Remettre
+      // drip_anchor à now() REDÉMARRE la série pour un compte — c'est ce qui a rattrapé
+      // les 13 comptes privés de drip pendant la panne du cron (09→23/08).
+      .gte('drip_anchor', from).lte('drip_anchor', to)
       .limit(MAX_SENDS)
     for (const u of users ?? []) {
       if (sent >= MAX_SENDS) break
