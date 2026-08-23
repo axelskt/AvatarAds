@@ -5527,7 +5527,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="font-size:22px;font-weight:800;color:var(--violet)"><span id="sheetEliteAvatars">1100</span></span><span style="font-size:13.5px;font-weight:600">crédits / mois</span><span style="margin-left:auto;display:flex;gap:6px;align-items:baseline;white-space:nowrap"><span style="font-size:22px;font-weight:800;color:#22c55e">+75</span><span style="font-size:13.5px;font-weight:600">offerts</span></span></div>
             <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">
               <span style="font-size:13px;color:var(--text-2);font-weight:700">jusqu'à <b id="sheetEliteVideos" style="color:var(--text-2)">150</b> vidéos / mois<sup style="color:var(--text-3);font-size:.55em">*</sup></span>
-              <span style="font-size:12px;color:var(--text-3)">≈ <span id="sheetEliteDay">5 contenus par jour</span></span>
+              <span style="font-size:12px;color:var(--text-3)">≈ <span id="sheetEliteDay">4 à 6 contenus par jour</span></span>
             </div>
           </div>
           <div>
@@ -7280,7 +7280,9 @@ const SHEET_ELITE_TIERS = [
   { avatars:60, credits:2200, videos:120, images:100, checkoutKey:'elite60', m:'158,99€', a:'119,99€', ms:'soit 5,30€/jour · sans engagement', as:'468€ économisés · soit 4,00€/jour', save:'468' },
   { avatars:90, credits:3300, videos:180, images:150, checkoutKey:'elite90', m:'224,99€', a:'157,99€', ms:'soit 7,50€/jour · sans engagement', as:'804€ économisés · soit 5,27€/jour', save:'804' },
 ];
-function _pdLine(videos){  // ≈ contenus/jour, plancher→plafond ('9 à 10'), basé sur le mois boosté
+function _pdLine(videos, credits){  // ≈ contenus/jour (mois boosté). Élite : plages fixées par palier (Axel 23/08)
+  var ELITE_PD={1100:'4 à 6',2200:'8 à 12',3300:'12 à 18'};
+  if(ELITE_PD[credits]) return ELITE_PD[credits]+' contenus par jour';
   var pd=videos/30, lo=Math.floor(pd), hi=Math.ceil(pd);
   return (lo===hi?lo:lo+' à '+hi)+' contenus par jour';
 }
@@ -7315,7 +7317,7 @@ function setSheetEliteTier(idx){
   if(avEl)     avEl.textContent     = tier.credits;   // crédits/mois du palier
   if(vidEl)    vidEl.textContent    = Math.round((tier.credits+75)/8/10)*10;   // jusqu'à X vidéos/mois (~8 cr/vidéo, arrondi dizaine, +75 offerts)
   var dayEl2 = document.getElementById('sheetEliteDay');
-  if(dayEl2){ dayEl2.textContent=_pdLine(Math.round((tier.credits+75)/8/10)*10); }   // ≈ X,X contenu(s)/jour
+  if(dayEl2){ dayEl2.textContent=_pdLine(Math.round((tier.credits+75)/8/10)*10, tier.credits); }   // ≈ X,X contenu(s)/jour
   if(btnEl)    btnEl.setAttribute('onclick','sheetCheckout(\'elite\')');
 }
 function sheetCheckout(plan){
