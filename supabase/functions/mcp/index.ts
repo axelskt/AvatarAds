@@ -784,6 +784,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
           avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Aucun crédit en plus." },
           lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (Hedra Character-3) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte ~1,5 crédit par seconde de visage. Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
+          lipsync_model: { type: 'string', enum: ['hedra', 'omnihuman', 'mix'], description: "Optionnel, 'hedra' par défaut (économique). 'omnihuman' = OmniHuman 1.5 : plan plus large, les deux mains visibles, cheveux sans effet plastique, 50 i/s — ~5 crédits par seconde de visage. 'mix' = OmniHuman sur le PREMIER passage avatar (le hook, là où l'attention se joue) puis Hedra sur les suivants : le meilleur rapport qualité/prix. Ne s'applique que si lipsync est activé." },
           media: {
             type: 'array', maxItems: 7,
             description: "Optionnel — jusqu'à 7 images/vidéos de l'utilisateur à placer dans le montage. Le chef d'orchestre les pose au moment que leur NOM décrit (nomme-les par ce qu'elles montrent : « resultat-image-ia-femme-lunettes.png », « demo-produit.mp4 »).",
@@ -2227,6 +2228,10 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       // crédits : mieux vaut deux chemins qu'un qui échoue sans le dire.
       const veutLipsync = args.lipsync === true || /\[LIPSYNC\]/i.test(brief)
       if (veutLipsync) (plan as Record<string, unknown>).__lipsync = true
+      // modèle du lipsync (23/08) : hedra (défaut) | omnihuman | mix — param OU marqueur de brief
+      // ([OMNI] / [MIX]), pour les mêmes raisons de schéma en cache que [LIPSYNC].
+      const modeleLip = String(args.lipsync_model || (/\[MIX\]/i.test(brief) ? 'mix' : /\[OMNI\]/i.test(brief) ? 'omnihuman' : 'hedra')).toLowerCase()
+      if (veutLipsync && modeleLip !== 'hedra') { (plan as Record<string, unknown>).lipsyncModel = modeleLip; console.log(`▶ lipsync : modèle ${modeleLip}`) }
       console.log(`▶ lipsync demandé : ${veutLipsync} (param ${args.lipsync}, brief ${/\[LIPSYNC\]/i.test(brief)})`)
 
       // ── SOUS-TITRES HOOK UNIQUEMENT (Axel 12/08 : « garde ceux du hook juste ») ─

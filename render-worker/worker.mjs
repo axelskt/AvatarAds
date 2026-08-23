@@ -1718,6 +1718,72 @@ async function hedraV3Poll(jobId, maxTries = 90) {
   return null
 }
 
+// ── OMNIHUMAN 1.5 (ByteDance via fal) DANS LE LIPSYNC SERVEUR (Axel 23/08) ──────
+// Sélecteur plan.lipsyncModel : 'hedra' (défaut, 5× moins cher) | 'omnihuman' | 'mix'
+// (Omni sur le PREMIER groupe continu — le hook, là où l'attention se joue — Hedra
+// ensuite). fal veut des URL publiques : la photo (JPEG ≤ 5 Mo, sinon file_too_large)
+// et l'audio passent par render-media (URL signées 1 h), et la file fal s'interroge sur
+// l'espace du FOURNISSEUR (/fal-ai/bytedance/requests/<id>), pas sur le chemin du modèle.
+const OMNI_PATH = '/fal-ai/bytedance/omnihuman/v1.5'
+const OMNI_QUEUE = '/fal-ai/bytedance'
+const OMNI_CR_SEC = 5                        // tarif public (app : « Omni · 5 cr/s »)
+const PROMPT_OMNI = 'A person talking directly to camera in a candid selfie video, natural and authentic. Precise lip-sync: the mouth shapes match every syllable and pause of the audio exactly, clear articulation, visible teeth and tongue when the sounds call for it. Expressive, lively face: genuine smiles, raised eyebrows, emotion in the eyes, natural blinks and small head movements. Natural hand gestures that illustrate what is said, hands anatomically correct with five fingers. Keep the framing close to the original photo, static background, no camera movement.'
+async function falProxy(path, init = {}) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  return fetch(`${url}/functions/v1/fal-proxy?path=${encodeURIComponent(path)}`, {
+    ...init, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key, ...(init.headers || {}) } })
+}
+async function storageDepotSigne(chemin, buf, mime) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const up = await fetch(`${url}/storage/v1/object/render-media/${chemin}`, { method: 'POST', headers: { Authorization: 'Bearer ' + key, apikey: key, 'Content-Type': mime, 'x-upsert': 'true' }, body: buf })
+  if (!up.ok) throw new Error(`dépôt ${chemin} : HTTP ${up.status}`)
+  const sg = await fetch(`${url}/storage/v1/object/sign/render-media/${chemin}`, { method: 'POST', headers: { Authorization: 'Bearer ' + key, apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 3600 }) })
+  const d = await sg.json().catch(() => ({}))
+  if (!d.signedURL) throw new Error(`URL signée ${chemin} indisponible`)
+  return `${url}/storage/v1${d.signedURL}`
+}
+// photo → JPEG ≤ 5 Mo (fal refuse au-delà ; un PNG HD pèse 8 Mo)
+function jpegPourFal(buf, tmpDir) {
+  const src = join(tmpDir, `fal-src-${Date.now()}.png`), out = src.replace(/\.png$/, '.jpg')
+  writeFileSync(src, buf)
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-frames:v', '1', '-q:v', '2', out])
+  const j = readFileSync(out); try { rmSync(src); rmSync(out) } catch (_) {}
+  return j
+}
+async function omniGenerer(photoBuf, audioBuf, prompt, tmpDir, tag) {
+  const jpg = jpegPourFal(photoBuf, tmpDir)
+  const base = `omni-tmp/${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  const imageUrl = await storageDepotSigne(base + '.jpg', jpg, 'image/jpeg')
+  const audioUrl = await storageDepotSigne(base + '.mp3', audioBuf, 'audio/mpeg')
+  // crochet de TEST (jamais en prod) : LIPSYNC_TEST_REQ=<request_id fal déjà terminé> → on ne
+  // soumet rien (0 $), on rejoue le poll/téléchargement/cache/compositing sur ce clip.
+  if (process.env.LIPSYNC_TEST_REQ) { console.log(`▶ Omni : TEST — requête ${process.env.LIPSYNC_TEST_REQ} réutilisée, rien soumis`); return omniPoll(process.env.LIPSYNC_TEST_REQ) }
+  const sub = await falProxy(OMNI_PATH, { method: 'POST', body: JSON.stringify({ image_url: imageUrl, audio_url: audioUrl, resolution: '1080p', prompt }) })
+  if (!sub.ok) throw new Error(`Omni submit HTTP ${sub.status} ${(await sub.text()).slice(0, 120)}`)
+  const sd = await sub.json().catch(() => ({}))
+  const reqId = sd.request_id || sd.requestId
+  if (!reqId) throw new Error('Omni : pas de request_id')
+  return omniPoll(reqId)
+}
+async function omniPoll(reqId, maxTries = 90) {
+  for (let k = 0; k < maxTries; k++) {
+    await new Promise((r) => setTimeout(r, 5000))
+    const st = await falProxy(`${OMNI_QUEUE}/requests/${reqId}/status`, { method: 'GET' })
+    if (!st.ok) continue
+    const d = await st.json().catch(() => ({}))
+    const s = String(d.status || '').toUpperCase()
+    if (s === 'IN_QUEUE' || s === 'IN_PROGRESS') continue
+    if (s !== 'COMPLETED') throw new Error(`Omni ${s}${d.error ? ' : ' + String(d.error).slice(0, 80) : ''}`)
+    const rr = await falProxy(`${OMNI_QUEUE}/requests/${reqId}`, { method: 'GET' })
+    const rd = await rr.json().catch(() => ({}))
+    const url = rd?.video?.url || rd?.video_url
+    // une requête COMPLETED peut porter une ERREUR (file_too_large…) : on la remonte telle quelle
+    if (!url) throw new Error('Omni : ' + (rd?.detail ? JSON.stringify(rd.detail).slice(0, 140) : 'URL de vidéo introuvable'))
+    return url
+  }
+  throw new Error('Omni : timeout (> 7 min)')
+}
+
 // ── UNE FENÊTRE TROP LONGUE SE DÉCOUPE AVANT D'ÊTRE ENVOYÉE ─────────────────
 // Mesuré le 03/08 sur un montage de 50 s : le chef d'orchestre n'avait proposé
 // QU'UNE fenêtre avatar, de 0 à 50,4 s. Deux conséquences, toutes les deux
@@ -1974,13 +2040,22 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   const lookFilm = plan.lookFilm === true || (plan.lookFilm !== false && plan.slideStyle === 'slam')
   const FILM_VF = 'eq=contrast=1.05:saturation=0.92:gamma=0.99,unsharp=3:3:0.35:3:3:0,noise=c0s=6:c0f=t+u,vignette=angle=PI/5.2'
   if (lookFilm) console.log('▶ avatar : look film (grain + étalonnage)')
-  function normaliserClipAvatar(nom) {
+  // 25 → 50 i/s par INTERPOLATION (mouvement compensé) plutôt que par doublage de frames :
+  // la bouche et les mains gagnent en fluidité. ~10× temps réel en CPU → défaut pour Omni
+  // (on a payé la qualité), opt-in pour Hedra via plan.fluide50 (true = tous, false = aucun).
+  const fluide = (modele) => plan.fluide50 === true || (plan.fluide50 !== false && modele === 'omnihuman')
+  function normaliserClipAvatar(nom, modele = 'hedra') {
     const fini = join(proj, 'media', nom)
     const brut = join(proj, 'media', nom.replace(/\.mp4$/, '-brut.mp4'))
     try {
       renameSync(fini, brut)
+      let srcFps = 0
+      try { const [a, b] = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', brut]).toString().trim().split('/').map(Number); srcFps = b ? a / b : a } catch (_) {}
+      const cadence = fluide(modele) && srcFps > 0 && srcFps < FPS - 5
+        ? `minterpolate=fps=${FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1` : `fps=${FPS}`
+      if (cadence.startsWith('minterpolate')) console.log(`▶ ${nom} : ${Math.round(srcFps)} → ${FPS} i/s par interpolation`)
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', brut,
-        '-vf', `scale='min(1080,iw)':-2,fps=${FPS}${lookFilm ? ',' + FILM_VF : ''}`, '-an',
+        '-vf', `scale='min(1080,iw)':-2,${cadence}${lookFilm ? ',' + FILM_VF : ''}`, '-an',
         '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', String(FPS),
         '-movflags', '+faststart', fini])
       rmSync(brut)
@@ -2003,7 +2078,8 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   // ⚠ l'indice DOIT être celui du tableau plan.avatarSegments : le moteur mappe
   // les clips par `av${indexDuTableau}` (dynamic-engine). Nommer par l'indice
   // FILTRÉ décalait les clips d'une fenêtre dès qu'une était écartée.
-  const file0 = (plan.avatarSegments || []).map((w, i) => ({ w, i })).filter((t) => (t.w.end - t.w.start) >= 1 && !t.w.noLipsync)
+  let file0 = (plan.avatarSegments || []).map((w, i) => ({ w, i })).filter((t) => (t.w.end - t.w.start) >= 1 && !t.w.noLipsync)
+  if (process.env.LIPSYNC_TEST_REQ) { file0 = file0.slice().sort((a, b) => a.w.start - b.w.start).slice(0, 1); console.log('▶ lipsync : TEST — première fenêtre seulement') }
   // ── DES FENÊTRES QUI SE SUIVENT SUR LE MÊME VISAGE = UN SEUL CLIP (Axel 23/08) ──
   // Hook plein cadre → split → plein cadre : trois fenêtres collées (2,3→6,3→9,9→13,3 s)
   // sur la même photo. Générées séparément, chacune REPART de la pose de la photo :
@@ -2020,6 +2096,15 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     } else file.push({ w: { ...t.w }, i: t.i, parts: [t] })
   }
   for (const g of file) if (g.parts.length > 1) console.log(`▶ lipsync : fenêtres ${g.parts.map((x) => x.i).join('+')} (${r2(g.w.start)}→${r2(g.w.end)}s) générées en UN clip continu`)
+  // modèle d'un groupe : surcharge de fenêtre > plan ; 'mix' = Omni sur le PREMIER groupe
+  // continu (le hook), Hedra sur les autres
+  const modeleDe = (g, idx) => {
+    const m = String(g.parts[0].w.lipsyncModel || plan.lipsyncModel || 'hedra').toLowerCase()
+    if (m === 'mix') return idx === 0 ? 'omnihuman' : 'hedra'
+    return m === 'omnihuman' || m === 'omni' ? 'omnihuman' : 'hedra'
+  }
+  const file0idx = new Map(file.map((g, k) => [g, k]))
+  console.log(`▶ lipsync : modèle ${String(plan.lipsyncModel || 'hedra')} → ${file.map((g, k) => `${g.parts.map((x) => x.i).join('+')}=${modeleDe(g, k)}`).join(' · ')}`)
   const equipes = Array.from({ length: Math.min(PARALLELE, file.length) }, async () => {
     for (;;) {
       const t = file.shift()
@@ -2038,7 +2123,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       // pause : un visage FIGÉ pendant que les autres parlent se voit tout de
       // suite, surtout sur le HOOK qui ouvre la vidéo.
       for (let essai = 1; essai <= 3 && !ok; essai++) {
-        try { ok = await uneScene(t.w, t.i, t.parts) } catch (e) { pourquoi = e.message }
+        try { ok = await uneScene(t.w, t.i, t.parts, modeleDe(t, file0idx.get(t))) } catch (e) { pourquoi = e.message }
         if (!ok && essai < 3) {
           console.warn(`↻ lipsync scène ${t.i} (${r2(t.w.start)}→${r2(t.w.end)}s, ${t.w.format || 'portrait'}) : essai ${essai}/3 manqué${pourquoi ? ' — ' + pourquoi : ''}, on retente`)
           await new Promise((r) => setTimeout(r, 4000))
@@ -2066,7 +2151,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   if (expressif) console.log('▶ lipsync : prompt EXPRESSIF (visage vivant + gestes des mains)')
   // découpe d'un clip de GROUPE en un clip par fenêtre (décalage = début de la fenêtre
   // dans le groupe ; +0,3 s de matière, le moteur coupe au panneau)
-  function decouperParties(groupClip, w, parts) {
+  function decouperParties(groupClip, w, parts, modele = 'hedra') {
     for (const pt of parts) {
       const out = join(proj, 'media', `av${pt.i}.mp4`)
       if (parts.length === 1) { if (groupClip !== out) copyFileSync(groupClip, out) }
@@ -2074,14 +2159,16 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
         const from = Math.max(0, pt.w.start - w.start), d = (pt.w.end - pt.w.start) + 0.3
         execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(r2(from)), '-t', String(r2(d)), '-i', groupClip, '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', String(FPS), '-movflags', '+faststart', out])
       }
-      normaliserClipAvatar(`av${pt.i}.mp4`)
+      normaliserClipAvatar(`av${pt.i}.mp4`, modele)
       avatarClips['av' + pt.i] = 'media/av' + pt.i + '.mp4'
     }
   }
-  async function uneScene(w, i, parts = [{ w, i }]) {
+
+  async function uneScene(w, i, parts = [{ w, i }], modele = 'hedra') {
     // #84 · l'image de CETTE fenêtre (rotation) — la clé de cache et le keyframe
     // Hedra en découlent : chaque visage parle sur la bonne photo.
     const { buf: photo, img: startImg } = await photoDe(w)
+    const omni = modele === 'omnihuman'
     // ── HEDRA REFUSE EN DESSOUS DE 3,24 s ────────────────────────────────────
     // Contrainte mesurée et documentée. On étire la tranche vers la DROITE si
     // la vidéo le permet : le clip sera de toute façon recoupé à la fenêtre.
@@ -2098,29 +2185,34 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // la clé peut être calculée. Un hit rend la scène instantanée ET gratuite.
     const ratio = String(w.format) === 'paysage' ? '16:9' : '9:16'
     const audioBuf = readFileSync(mp3)
-    const cle = cleLipsync(photo, audioBuf, ratio, HEDRA_SLUG, expressif ? 'expressif' : '')
-    const cout = Math.round(dur * HEDRA_CR_SEC)
+    const cle = cleLipsync(photo, audioBuf, ratio, omni ? 'omnihuman-1.5' : HEDRA_SLUG, omni ? '' : expressif ? 'expressif' : '')
+    const cout = Math.round(dur * (omni ? OMNI_CR_SEC : HEDRA_CR_SEC))
     const dejaPaye = await cacheLire(cle)
     if (dejaPaye) {
       const grp = join(proj, 'media', `grp${i}.mp4`)
       writeFileSync(grp, dejaPaye)
-      decouperParties(grp, w, parts)
+      decouperParties(grp, w, parts, modele)
       economie += cout
       console.log(`♻︎ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s repris du cache — ${cout} crédits économisés`)
       return true
     }
 
-    const audioUp = await hedraV3Upload(audioBuf, 'audio/mpeg', `voice${i}.mp3`)
-    if (!audioUp) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
-
-    const jobId = await hedraV3Submit(HEDRA_SLUG, {
-      prompt: expressif ? PROMPT_EXPRESSIF : PROMPT_SOBRE,
-      aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
-      resolution: '1080p', start_image: startImg, audio: audioUp,
-    })
-    if (!jobId) { console.warn(`lipsync scène ${i} : Hedra submit refusé`); return false }
-    // polling — Avatar rend en 1 à 3 min pour une scène courte
-    const url = await hedraV3Poll(jobId)
+    let url = null
+    if (omni) {
+      // OmniHuman : photo recadrée (même ratio de sortie) en JPEG + audio → fal
+      url = await omniGenerer(photo, audioBuf, String(plan.lipsyncPrompt || PROMPT_OMNI), join(proj, 'media'), `s${i}`)
+    } else {
+      const audioUp = await hedraV3Upload(audioBuf, 'audio/mpeg', `voice${i}.mp3`)
+      if (!audioUp) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
+      const jobId = await hedraV3Submit(HEDRA_SLUG, {
+        prompt: expressif ? PROMPT_EXPRESSIF : PROMPT_SOBRE,
+        aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
+        resolution: '1080p', start_image: startImg, audio: audioUp,
+      })
+      if (!jobId) { console.warn(`lipsync scène ${i} : Hedra submit refusé`); return false }
+      // polling — Avatar rend en 1 à 3 min pour une scène courte
+      url = await hedraV3Poll(jobId)
+    }
     if (!url) { console.warn(`lipsync scène ${i} : pas de vidéo`); return false }
 
     const res = await fetch(url)
@@ -2131,15 +2223,15 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // Payé une fois : on range les octets BRUTS au cache AVANT de normaliser —
     // la normalisation dépend du fps de rendu, le cache doit rester neutre.
     await cacheEcrire(cle, clip, dur)
-    decouperParties(grp, w, parts)
+    decouperParties(grp, w, parts, modele)
     depense += cout
-    console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'}) — ${cout} crédits`)
+    console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'}, ${modele}) — ${cout} crédits`)
     return true
   }
 
   console.log(`▶ lipsync : ${segs.length} scène(s) lancée(s) en parallèle (${PARALLELE} à la fois)`)
   await Promise.all(equipes)
-  console.log(`▶ lipsync : ${depense} crédit(s) Hedra dépensé(s)${economie ? `, ${economie} économisé(s) par le cache` : ''}`)
+  console.log(`▶ lipsync : ${depense} crédit(s) dépensé(s)${economie ? `, ${economie} économisé(s) par le cache` : ''}`)
 
   // ── LE CLIP DOIT COUVRIR SON PANNEAU (#149) ──────────────────────────────────
   // dynamic-engine rend chaque clip avatar JUSQU'AU panneau suivant (contiguïté),
