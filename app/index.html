@@ -9729,6 +9729,8 @@ let _imgPrevSrc=null, _imgIsHD=false;
 function _imgRevertHD(){
   const img=document.getElementById('imgOutput');
   if(!img||!_imgPrevSrc){ return; }
+  img.style.height=''; img.style.objectFit='';                     // on revient au cadre naturel de l'image d'origine
+  { const z=document.getElementById('imgZone'); if(z) z.style.height=''; }
   img.src=_imgPrevSrc;
   try{ document.getElementById('imgDownloadBtn').href=_imgPrevSrc; }catch(e){}
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none';
@@ -10034,6 +10036,40 @@ async function _imgUpscaleHD(btn){
 }
 // « Améliorer en 4K » (Nano Banana Pro) — bouton distinct de « Détails du visage » (Clarity).
 // Régénère en 4K (plus de détail créatif) — peut recadrer, contrairement à Clarity.
+// ── Chargement d'un upscale (4K Nano / Détails du visage) : overlay % + arc + timer,
+//    cadre FIGÉ à la hauteur de l'image d'avant (pas de zoom au retour). (Axel 23/08)
+let _imgUpTimer=null, _imgUpT0=0;
+function _imgUpscaleLoadStart(label){
+  const img=document.getElementById('imgOutput'), z=document.getElementById('imgZone');
+  // figer la hauteur ACTUELLE du cadre : l'image 4K (ratio/poids différent) ne fera plus sauter la box
+  if(z && img && img.offsetHeight>40){ z.style.height = img.offsetHeight+'px'; z.style.minHeight='0'; }
+  { const a=document.getElementById('imgActions'); if(a) a.style.display='none'; }
+  const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='flex';
+  if(img) img.style.opacity='.18';                              // l'image reste en fond, l'overlay dessus
+  const l=document.getElementById('imgProgLabel');
+  _imgUpT0=Date.now(); clearInterval(_imgUpTimer);
+  const tick=()=>{ const sec=Math.floor((Date.now()-_imgUpT0)/1000); if(l) l.textContent=label+' · '+sec+' s'; };
+  tick(); _imgUpTimer=setInterval(tick,1000);
+  _imgSetProg(1); clearInterval(_imgProgTimer);
+  _imgProgTimer=setInterval(()=>{ if(_imgProgVal<97) _imgSetProg(_imgProgVal + Math.max(0.25,(97-_imgProgVal)*0.035)); }, 400);
+}
+function _imgUpscaleLoadStop(ok){
+  clearInterval(_imgUpTimer); _imgUpTimer=null; clearInterval(_imgProgTimer); _imgProgTimer=null;
+  if(ok) _imgSetProg(100);
+  const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
+  const img=document.getElementById('imgOutput'); if(img) img.style.opacity='1';
+  { const a=document.getElementById('imgActions'); if(a) a.style.display=''; }
+}
+// pose la nouvelle image 4K SANS zoom : contain dans le cadre figé, puis on relâche proprement
+function _imgSwapNoZoom(img, url){
+  return new Promise((res)=>{
+    const z=document.getElementById('imgZone');
+    const im=new Image(); im.onload=()=>{
+      img.style.objectFit='contain'; if(z){ img.style.height=z.style.height; }  // même cadre qu'avant → zéro saut
+      img.src=url; res(true);
+    }; im.onerror=()=>{ img.src=url; res(false); }; im.src=url;
+  });
+}
 async function _imgUpscaleNano(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(!['elite','developer'].includes(plan)){ toast('Le 4K est réservé au plan Élite'); openUpgradeModal(); return; }
@@ -10042,9 +10078,9 @@ async function _imgUpscaleNano(btn){
   creditsFlowBegin();
   if(!(await spendCreditsFor(CREDIT_COSTS.imgUpscale4K, '4K Nano'))) return;
   _imgPrevSrc = img.src;
-  const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.75';
+  const orig=btn.innerHTML; btn.disabled=true;                 // le bouton GARDE son design (plus de innerHTML remplacé)
   if(!window._imgNanoBtnHtml) window._imgNanoBtnHtml = orig;
-  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> 4K Nano… (~30s)';
+  _imgUpscaleLoadStart('4K en cours');
   try{
     const session=(await sb.auth.getSession()).data.session;
     const token=session?.access_token || SUPABASE_KEY;
@@ -10053,7 +10089,7 @@ async function _imgUpscaleNano(btn){
     let aspect='1:1'; try{ const im=await _loadImgEl(src); aspect = im.naturalWidth>im.naturalHeight ? '16:9' : (im.naturalWidth<im.naturalHeight ? '9:16' : '1:1'); }catch(_){}
     const finalUrl = await _nbRefine4K(token, src, aspect);
     if(!finalUrl) throw new Error('Nano Banana : aucune image');
-    img.src=finalUrl; _imgIsHD=true;
+    await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true;       // même cadrage, pas de zoom
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
@@ -10063,6 +10099,7 @@ async function _imgUpscaleNano(btn){
     toast(''+(e.message||e));
   }
   finally{
+    _imgUpscaleLoadStop(_imgIsHD);
     if(_imgIsHD){ btn.disabled=true; btn.style.opacity='.55'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Déjà en 4K'; }
     else { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
   }
@@ -10077,7 +10114,8 @@ function _imgShowSingle(url, size){
   { const nb=document.getElementById('imgNanoBtn');
     if(nb && window._imgNanoBtnHtml){ nb.disabled=false; nb.style.opacity='1'; nb.innerHTML=window._imgNanoBtnHtml; } }
   { const a=document.getElementById('imgActions'); if(a) a.style.display=''; }  // boutons réaffichés quand l'image est prête
-  { const z=document.getElementById('imgZone'); if(z) z.style.minHeight='200px'; }  // reset la hauteur de la boîte
+  { const z=document.getElementById('imgZone'); if(z){ z.style.minHeight='200px'; z.style.height=''; } }  // reset la boîte (+ relâche le cadre figé par un upscale)
+  { const o=document.getElementById('imgOutput'); if(o){ o.style.height=''; o.style.objectFit=''; o.style.opacity='1'; } }
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
   // « Restaurer les détails (4K) » = upscaler des résultats de GÉNÉRATION uniquement.
