@@ -12864,6 +12864,20 @@ async function _mtHedraScene(imageFile, audioWav, format, modelId, role){
 // la photo et le segment audio dans render-media (privé) et on lui donne des liens signés
 // valables 1 h. La clé fal reste dans les secrets Supabase, jamais dans le navigateur.
 const FAL_OMNI = '/fal-ai/bytedance/omnihuman/v1.5';
+// ⚠ Les URL de statut/résultat de la file fal vivent sur l'ESPACE DU FOURNISSEUR
+// (/fal-ai/bytedance/requests/<id>…), pas sur le chemin du modèle : interroger
+// /fal-ai/bytedance/omnihuman/v1.5/requests/… répond 405 à chaque poll → « Timeout
+// OmniHuman » systématique (mesuré 23/08 : c'est pour ça qu'Omni n'a jamais abouti).
+const FAL_OMNI_Q = '/fal-ai/bytedance';
+// fal refuse une image > 5 Mo (file_too_large) : un PNG HD part en JPEG 92 %.
+async function _falImageSous5Mo(file){
+  if(file.size < 4.5*1024*1024 && /jpe?g$/i.test(file.type||'')) return file;
+  const bmp = await createImageBitmap(file);
+  const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+  c.getContext('2d').drawImage(bmp, 0, 0);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  return new File([blob], (file.name||'avatar').replace(/\.[a-z0-9]+$/i,'') + '.jpg', { type:'image/jpeg' });
+}
 async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const H=await getAuthHeader();
@@ -12872,6 +12886,7 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
 
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) throw new Error('Session expirée');
+  imageFile = await _falImageSous5Mo(imageFile);
   const base=user.id+'/omni-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
   const imgPath=base+(/\.jpe?g$/i.test(imageFile.name||'') ? '.jpg' : '.png'), audPath=base+'.wav';
   const upI=await sb.storage.from('render-media').upload(imgPath, imageFile, { contentType:imageFile.type||'image/png', upsert:true });
@@ -12898,11 +12913,11 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
   // polling (jusqu'à 6 min) — la file fal renvoie IN_QUEUE / IN_PROGRESS / COMPLETED
   for(let i=0;i<72;i++){
     await wait(5000);
-    const pr=await fGet(FAL_OMNI+'/requests/'+reqId+'/status'); if(!pr.ok) continue;
+    const pr=await fGet(FAL_OMNI_Q+'/requests/'+reqId+'/status'); if(!pr.ok) continue;
     const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
     if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
     if(s==='COMPLETED'){
-      const rr=await fGet(FAL_OMNI+'/requests/'+reqId);
+      const rr=await fGet(FAL_OMNI_Q+'/requests/'+reqId);
       if(!rr.ok) throw new Error('OmniHuman résultat '+rr.status);
       const rd=await rr.json().catch(()=>({}));
       const url=rd?.video?.url||rd?.video_url||'';

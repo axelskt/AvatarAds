@@ -1907,7 +1907,32 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   const voix = existsSync(join(jobDir, 'voice.wav')) ? join(jobDir, 'voice.wav') : join(jobDir, 'base.mp4')
   if (!existsSync(voix)) return 0
 
-  const photoDefaut = readFileSync(join(proj, 'media', 'avatar.png'))
+  // ── LA PHOTO PART AU RATIO DE SORTIE (Axel 23/08, mesuré) ──────────────────────
+  // Hedra IGNORE aspect_ratio et rend au ratio de la photo : TOM en 2:3 → clip 1084×1624,
+  // agrandi de 18 % au compositing plein cadre (1080×1920) = mollesse gratuite. On recadre
+  // donc la photo au ratio demandé (9:16 portrait, 16:9 paysage) AVANT l'envoi — centré,
+  // sans rien déformer — et Hedra sort du 1080×1920 natif. Le recadrage est mis en cache
+  // par (photo, ratio) ; la clé du cache lipsync porte la photo recadrée.
+  const cadres = new Map()
+  function cadrerPourHedra(absPath, ratio) {
+    const k = absPath + '|' + ratio
+    if (cadres.has(k)) return cadres.get(k)
+    let buf = readFileSync(absPath)
+    try {
+      const [iw, ih] = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', absPath]).toString().trim().split(',').map(Number)
+      const cible = ratio === '16:9' ? 16 / 9 : 9 / 16
+      if (iw > 0 && ih > 0 && Math.abs(iw / ih - cible) > 0.02) {
+        const out = absPath.replace(/\.[a-z0-9]+$/i, '') + (ratio === '16:9' ? '-169' : '-916') + '.png'
+        const crop = iw / ih > cible ? `crop=ih*${cible.toFixed(5)}:ih` : `crop=iw:iw/${cible.toFixed(5)}`
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', absPath, '-vf', crop, '-frames:v', '1', out])
+        buf = readFileSync(out)
+        console.log(`▶ lipsync : photo ${absPath.split('/').pop()} recadrée en ${ratio} (${iw}×${ih} → sortie Hedra native)`)
+      }
+    } catch (e) { console.warn('recadrage photo Hedra :', e.message) }
+    cadres.set(k, buf)
+    return buf
+  }
+  const photoDefaut = cadrerPourHedra(join(proj, 'media', 'avatar.png'), '9:16')
   const imgDefaut = await hedraV3Upload(photoDefaut, 'image/png', 'avatar.png')
   if (!imgDefaut) { console.warn('lipsync : upload de la photo refusé'); return 0 }
   // #84 · ROTATION DANS LE LIPSYNC : chaque fenêtre parle sur SON image (w.photo,
@@ -1915,15 +1940,22 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   // un par scène. Sans w.photo (ou fichier absent) : la photo par défaut.
   const imgParPhoto = new Map()
   const photoDe = async (w) => {
+    const ratio = String(w.format) === 'paysage' ? '16:9' : '9:16'
     const rel = String(w.photo || '')
     const abs = rel ? join(proj, rel) : ''
-    if (!abs || !existsSync(abs)) return { buf: photoDefaut, img: imgDefaut }
-    if (!imgParPhoto.has(rel)) {
-      const buf = readFileSync(abs)
-      const img = await hedraV3Upload(buf, 'image/png', rel.split('/').pop())
-      imgParPhoto.set(rel, img ? { buf, img } : { buf: photoDefaut, img: imgDefaut })
+    if (!abs || !existsSync(abs)) {
+      if (ratio === '9:16') return { buf: photoDefaut, img: imgDefaut }
+      const k0 = 'media/avatar.png|' + ratio
+      if (!imgParPhoto.has(k0)) { const buf = cadrerPourHedra(join(proj, 'media', 'avatar.png'), ratio); const img = await hedraV3Upload(buf, 'image/png', 'avatar-169.png'); imgParPhoto.set(k0, img ? { buf, img } : { buf: photoDefaut, img: imgDefaut }) }
+      return imgParPhoto.get(k0)
     }
-    return imgParPhoto.get(rel)
+    const k = rel + '|' + ratio
+    if (!imgParPhoto.has(k)) {
+      const buf = cadrerPourHedra(abs, ratio)
+      const img = await hedraV3Upload(buf, 'image/png', rel.split('/').pop())
+      imgParPhoto.set(k, img ? { buf, img } : { buf: photoDefaut, img: imgDefaut })
+    }
+    return imgParPhoto.get(k)
   }
 
   // ── LES OCTETS BRUTS D'HEDRA NE VONT JAMAIS DIRECTEMENT AU RENDU ──────────
@@ -1934,13 +1966,21 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   // Railway (« captured 0 of expected N frames », l'entrée du clip disparaît
   // de l'extraction — 4 rendus perdus le 08/08 avant de trouver ça). Même
   // moulinette pour tout le monde : mêmes réglages que le chargeur jobDir.
+  // ── LOOK « FILM » SUR L'AVATAR (Axel 23/08 : grain + étalonnage) ───────────────
+  // Un clip IA sort lisse et un peu lavé : un contraste légèrement relevé, une
+  // saturation à peine retenue, un grain luma TEMPOREL fin (jamais de neige), une
+  // vignette douce et une pointe de netteté lui rendent une texture de capteur — et
+  // l'unifient avec les cartes. Défaut en slam ; plan.lookFilm true/false force.
+  const lookFilm = plan.lookFilm === true || (plan.lookFilm !== false && plan.slideStyle === 'slam')
+  const FILM_VF = 'eq=contrast=1.05:saturation=0.92:gamma=0.99,unsharp=3:3:0.35:3:3:0,noise=c0s=6:c0f=t+u,vignette=angle=PI/5.2'
+  if (lookFilm) console.log('▶ avatar : look film (grain + étalonnage)')
   function normaliserClipAvatar(nom) {
     const fini = join(proj, 'media', nom)
     const brut = join(proj, 'media', nom.replace(/\.mp4$/, '-brut.mp4'))
     try {
       renameSync(fini, brut)
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', brut,
-        '-vf', `scale='min(1080,iw)':-2,fps=${FPS}`, '-an',
+        '-vf', `scale='min(1080,iw)':-2,fps=${FPS}${lookFilm ? ',' + FILM_VF : ''}`, '-an',
         '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-g', String(FPS),
         '-movflags', '+faststart', fini])
       rmSync(brut)

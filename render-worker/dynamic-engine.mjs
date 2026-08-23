@@ -479,17 +479,20 @@ function screenContent(id, s, tone, liveT0, t1, W) {
 function camOrganique(selD, selJ, t0, t1, seed, amp = 1) {
   let a = ((seed + 1) * 2654435761) >>> 0
   const rnd = () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
-  let js = `\n  tl.set('${selD}',{scale:1.04,x:0,y:0,rotation:0,transformOrigin:'50% 45%'},${r2(t0)});`
+  // v2 (Axel : « je ne vois pas le micro-tremblement ») : ±2 px sur un téléphone = rien.
+  // Dérive ±30 px / ±1,4° (segments 1,2-2,0 s), tremblement ±4 px (0,18-0,3 s) et une
+  // RESPIRATION de zoom (1.06 ↔ 1.09) : le cadre vit visiblement, sans jamais sauter.
+  let js = `\n  tl.set('${selD}',{scale:1.07,x:0,y:0,rotation:0,transformOrigin:'50% 45%'},${r2(t0)});`
   let t = t0
   while (t < t1 - 0.2) {
-    const d = r2(Math.min(1.6 + rnd() * 1.0, t1 - t))
-    js += `\n  tl.to('${selD}',{x:${r2((rnd() - 0.5) * 20 * amp)},y:${r2((rnd() - 0.5) * 16 * amp)},rotation:${r2((rnd() - 0.5) * 1.0 * amp)},duration:${d},ease:'sine.inOut'},${r2(t)});`
+    const d = r2(Math.min(1.2 + rnd() * 0.8, t1 - t))
+    js += `\n  tl.to('${selD}',{x:${r2((rnd() - 0.5) * 60 * amp)},y:${r2((rnd() - 0.5) * 44 * amp)},rotation:${r2((rnd() - 0.5) * 2.8 * amp)},scale:${r2(1.06 + rnd() * 0.03)},duration:${d},ease:'sine.inOut'},${r2(t)});`
     t = r2(t + d)
   }
   t = t0 + 0.05
   while (t < t1 - 0.1) {
-    const d = r2(Math.min(0.26 + rnd() * 0.14, t1 - t))
-    js += `\n  tl.to('${selJ}',{x:${r2((rnd() - 0.5) * 5 * amp)},y:${r2((rnd() - 0.5) * 4 * amp)},duration:${d},ease:'sine.inOut'},${r2(t)});`
+    const d = r2(Math.min(0.18 + rnd() * 0.12, t1 - t))
+    js += `\n  tl.to('${selJ}',{x:${r2((rnd() - 0.5) * 8 * amp)},y:${r2((rnd() - 0.5) * 7 * amp)},duration:${d},ease:'sine.inOut'},${r2(t)});`
     t = r2(t + d)
   }
   return js
