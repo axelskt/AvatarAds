@@ -9963,9 +9963,9 @@ async function _imgUpscaleHD(btn){
   creditsFlowBegin();
   if(!(await spendCreditsFor(CREDIT_COSTS.imgClarity, 'clarity'))) return;
   _imgPrevSrc = img.src; // mémorise avant HD pour pouvoir revenir en arrière
-  const orig=btn.innerHTML; btn.disabled=true; btn.style.opacity='.75';
+  const orig=btn.innerHTML; btn.disabled=true;               // le bouton GARDE son design (Axel 23/08)
   if(!window._img4kBtnHtml) window._img4kBtnHtml = orig;   // pour réarmer le bouton sur une nouvelle image
-  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Restauration 4K… (~30s)';
+  _imgUpscaleLoadStart('Détails du visage en cours');
   try{
     const session=(await sb.auth.getSession()).data.session;
     const token=session?.access_token || SUPABASE_KEY;
@@ -10014,7 +10014,7 @@ async function _imgUpscaleHD(btn){
       const withFace=await _faceUpscalePass(finalUrl);
       if(withFace && withFace!==finalUrl){ finalUrl=withFace; engine+=' + visage'; }
     }catch(_){}
-    img.src=finalUrl; _imgIsHD=true;
+    await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true;       // même cadrage, pas de zoom
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
@@ -10025,6 +10025,7 @@ async function _imgUpscaleHD(btn){
     toast(''+(e.message||e));
   }
   finally{
+    _imgUpscaleLoadStop(_imgIsHD);
     if(_imgIsHD){
       // Une image déjà passée en 4K ne se re-upscale pas : le bouton se FIGE —
       // sinon on ne sait plus si c'est fait (Axel, 13/08 : « une fois l'image
