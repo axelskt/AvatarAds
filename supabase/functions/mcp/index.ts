@@ -775,7 +775,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'montage_ia',
-      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (Hedra ~1,5 cr/s, OmniHuman 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {

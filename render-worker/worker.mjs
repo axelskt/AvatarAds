@@ -339,7 +339,10 @@ async function composeMotionSplit(jobDir, outPath, plan) {
   console.log(`✅ motion-split (${mode}) → ${outPath}`)
 }
 
-export async function renderJob(jobDir, outPath, { draft = false } = {}) {
+// utilisateur du rendu en cours (null en --local / tests) — lu par la facturation du lipsync
+let RENDER_USER = null
+export async function renderJob(jobDir, outPath, { draft = false, userId = null } = {}) {
+  RENDER_USER = userId || null
   const t0 = Date.now()
   const plan = JSON.parse(readFileSync(join(jobDir, 'plan.json'), 'utf8'))
 
@@ -1726,7 +1729,37 @@ async function hedraV3Poll(jobId, maxTries = 90) {
 // l'espace du FOURNISSEUR (/fal-ai/bytedance/requests/<id>), pas sur le chemin du modèle.
 const OMNI_PATH = '/fal-ai/bytedance/omnihuman/v1.5'
 const OMNI_QUEUE = '/fal-ai/bytedance'
-const OMNI_CR_SEC = 5                        // tarif public (app : « Omni · 5 cr/s »)
+// Hedra expose le MÊME modèle au MÊME prix (16 ¢/s, 720p ou 1080p), avec le contrat de
+// Hedra Avatar (prompt/aspect_ratio/resolution/start_image/audio) : une seule facture, un
+// seul proxy, pas de fichier temporaire. On passe par Hedra d'abord ; fal reste le secours
+// (chemin validé le 23/08) si Hedra refuse — ou si plan.omniVia === 'fal'.
+const HEDRA_OMNI_SLUG = process.env.HEDRA_OMNI_SLUG || 'omnihuman-15'
+// ── FACTURATION DU LIPSYNC (23/08) ─────────────────────────────────────────────────
+// Le montage MCP ne débitait AUCUNE seconde de visage (8 cr plan+rendu seulement) alors
+// que Hedra coûte ~0,063 $/s et Omni 0,16 $/s. Débit ICI, au moment exact de la
+// génération : secondes réelles, jamais sur un cache hit, remboursé si la scène échoue.
+// RPC service `mcp_spend_credits` (SECURITY DEFINER) — le worker est côté serveur.
+const LIPSYNC_CR_SEC = { hedra: 1.5, omnihuman: 5 }   // barème MCP (« ~1,5 cr/s ») · app (« Omni 5 cr/s »)
+async function rpcCredits(nom, n) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const r = await fetch(`${url}/rest/v1/rpc/${nom}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key }, body: JSON.stringify({ p_user: RENDER_USER, p_secs: n }) })
+  if (!r.ok) return null
+  return r.json().catch(() => null)
+}
+async function debiterLipsync(secs, modele) {
+  const n = Math.ceil(secs * (LIPSYNC_CR_SEC[modele] || LIPSYNC_CR_SEC.hedra))
+  if (!RENDER_USER) return { ok: true, n, local: true }            // --local / tests : rien à débiter
+  const bal = await rpcCredits('mcp_spend_credits', n)
+  if (bal === null) return { ok: false, n, pourquoi: 'débit impossible (RPC)' }
+  if (bal === -1) return { ok: false, n, pourquoi: `crédits insuffisants (${n} cr pour ${r2(secs)} s de ${modele})` }
+  return { ok: true, n }
+}
+async function rembourserLipsync(n) { if (RENDER_USER && n > 0) await rpcCredits('mcp_refund_credits', n).catch(() => {}) }
+async function storageSupprimer(chemins) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  try { await fetch(`${url}/storage/v1/object/render-media`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key }, body: JSON.stringify({ prefixes: chemins }) }) } catch (_) {}
+}
+const OMNI_CR_SEC = LIPSYNC_CR_SEC.omnihuman
 const PROMPT_OMNI = 'A person talking directly to camera in a candid selfie video, natural and authentic. Precise lip-sync: the mouth shapes match every syllable and pause of the audio exactly, clear articulation, visible teeth and tongue when the sounds call for it. Expressive, lively face: genuine smiles, raised eyebrows, emotion in the eyes, natural blinks and small head movements. Natural hand gestures that illustrate what is said, hands anatomically correct with five fingers. Keep the framing close to the original photo, static background, no camera movement.'
 async function falProxy(path, init = {}) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -1750,20 +1783,41 @@ function jpegPourFal(buf, tmpDir) {
   const j = readFileSync(out); try { rmSync(src); rmSync(out) } catch (_) {}
   return j
 }
-async function omniGenerer(photoBuf, audioBuf, prompt, tmpDir, tag) {
+// Omni par fal : fichiers temporaires déposés puis SUPPRIMÉS une fois le clip récupéré
+async function omniViaFal(photoBuf, audioBuf, prompt, tmpDir, tag) {
   const jpg = jpegPourFal(photoBuf, tmpDir)
   const base = `omni-tmp/${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-  const imageUrl = await storageDepotSigne(base + '.jpg', jpg, 'image/jpeg')
-  const audioUrl = await storageDepotSigne(base + '.mp3', audioBuf, 'audio/mpeg')
-  // crochet de TEST (jamais en prod) : LIPSYNC_TEST_REQ=<request_id fal déjà terminé> → on ne
-  // soumet rien (0 $), on rejoue le poll/téléchargement/cache/compositing sur ce clip.
-  if (process.env.LIPSYNC_TEST_REQ) { console.log(`▶ Omni : TEST — requête ${process.env.LIPSYNC_TEST_REQ} réutilisée, rien soumis`); return omniPoll(process.env.LIPSYNC_TEST_REQ) }
-  const sub = await falProxy(OMNI_PATH, { method: 'POST', body: JSON.stringify({ image_url: imageUrl, audio_url: audioUrl, resolution: '1080p', prompt }) })
-  if (!sub.ok) throw new Error(`Omni submit HTTP ${sub.status} ${(await sub.text()).slice(0, 120)}`)
-  const sd = await sub.json().catch(() => ({}))
-  const reqId = sd.request_id || sd.requestId
-  if (!reqId) throw new Error('Omni : pas de request_id')
-  return omniPoll(reqId)
+  const fichiers = [base + '.jpg', base + '.wav']
+  const imageUrl = await storageDepotSigne(fichiers[0], jpg, 'image/jpeg')
+  const audioUrl = await storageDepotSigne(fichiers[1], audioBuf, 'audio/wav')
+  try {
+    // crochet de TEST (jamais en prod) : LIPSYNC_TEST_REQ=<request_id fal déjà terminé> → on ne
+    // soumet rien (0 $), on rejoue le poll/téléchargement/cache/compositing sur ce clip.
+    if (process.env.LIPSYNC_TEST_REQ) { console.log(`▶ Omni : TEST — requête ${process.env.LIPSYNC_TEST_REQ} réutilisée, rien soumis`); return await omniPoll(process.env.LIPSYNC_TEST_REQ) }
+    const sub = await falProxy(OMNI_PATH, { method: 'POST', body: JSON.stringify({ image_url: imageUrl, audio_url: audioUrl, resolution: '1080p', prompt }) })
+    if (!sub.ok) throw new Error(`Omni (fal) submit HTTP ${sub.status} ${(await sub.text()).slice(0, 120)}`)
+    const sd = await sub.json().catch(() => ({}))
+    const reqId = sd.request_id || sd.requestId
+    if (!reqId) throw new Error('Omni (fal) : pas de request_id')
+    return await omniPoll(reqId)
+  } finally { await storageSupprimer(fichiers) }
+}
+// Omni par Hedra (même contrat que Hedra Avatar) ; fal en secours
+async function omniGenerer(photoBuf, audioBuf, prompt, tmpDir, tag, hedraImg, ratio) {
+  if (String(process.env.LIPSYNC_TEST_REQ || '')) return omniViaFal(photoBuf, audioBuf, prompt, tmpDir, tag)
+  if (hedraImg && tmpDir && !/^fal$/i.test(String(process.env.OMNI_VIA || ''))) {
+    try {
+      const audioUp = await hedraV3Upload(audioBuf, 'audio/wav', `${tag}.wav`)
+      if (!audioUp) throw new Error('upload audio refusé')
+      const jobId = await hedraV3Submit(HEDRA_OMNI_SLUG, { prompt, aspect_ratio: ratio, resolution: '1080p', start_image: hedraImg, audio: audioUp })
+      if (!jobId) throw new Error('submit refusé')
+      const url = await hedraV3Poll(jobId, 110)
+      if (!url) throw new Error('pas de vidéo')
+      console.log(`▶ Omni : généré chez Hedra (${HEDRA_OMNI_SLUG})`)
+      return url
+    } catch (e) { console.warn(`▶ Omni chez Hedra a échoué (${e.message}) → secours fal`) }
+  }
+  return omniViaFal(photoBuf, audioBuf, prompt, tmpDir, tag)
 }
 async function omniPoll(reqId, maxTries = 90) {
   for (let k = 0; k < maxTries; k++) {
@@ -2178,6 +2232,9 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(w.start), '-t', String(dur),
         '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
     } catch (e) { console.warn(`lipsync scène ${i} : découpe impossible`); return false }
+    // Omni reçoit du WAV (format validé chez fal et Hedra) — la clé de cache reste sur le mp3
+    let wavBuf = null
+    if (omni) { const wav = join(proj, `ls${i}.wav`); execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', mp3, '-ac', '1', '-ar', '44100', wav]); wavBuf = readFileSync(wav) }
 
     // ── LE CACHE PASSE AVANT LA CAISSE ──────────────────────────────────────
     // Découper l'audio est gratuit et local ; c'est seulement APRÈS qu'on sait
@@ -2197,10 +2254,15 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       return true
     }
 
+    // ── DÉBIT AVANT L'APPEL FOURNISSEUR (jamais sur un cache hit, remboursé si échec) ──
+    const facture = await debiterLipsync(dur, modele)
+    if (!facture.ok) { console.warn(`✗ lipsync scène ${i} : ${facture.pourquoi} → la photo reste`); return false }
+    if (!facture.local) console.log(`▶ lipsync scène ${i} : ${facture.n} crédit(s) débités (${modele}, ${r2(dur)} s)`)
     let url = null
+    try {
     if (omni) {
-      // OmniHuman : photo recadrée (même ratio de sortie) en JPEG + audio → fal
-      url = await omniGenerer(photo, audioBuf, String(plan.lipsyncPrompt || PROMPT_OMNI), join(proj, 'media'), `s${i}`)
+      // OmniHuman : photo recadrée (même ratio de sortie) → Hedra (secours fal)
+      url = await omniGenerer(photo, wavBuf || audioBuf, String(plan.lipsyncPrompt || PROMPT_OMNI), join(proj, 'media'), `s${i}`, startImg, ratio)
     } else {
       const audioUp = await hedraV3Upload(audioBuf, 'audio/mpeg', `voice${i}.mp3`)
       if (!audioUp) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
@@ -2213,10 +2275,11 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       // polling — Avatar rend en 1 à 3 min pour une scène courte
       url = await hedraV3Poll(jobId)
     }
-    if (!url) { console.warn(`lipsync scène ${i} : pas de vidéo`); return false }
+    } catch (e) { await rembourserLipsync(facture.local ? 0 : facture.n); throw e }
+    if (!url) { await rembourserLipsync(facture.local ? 0 : facture.n); console.warn(`lipsync scène ${i} : pas de vidéo (crédits remboursés)`); return false }
 
     const res = await fetch(url)
-    if (!res.ok) { console.warn(`lipsync scène ${i} : téléchargement ${res.status}`); return false }
+    if (!res.ok) { await rembourserLipsync(facture.local ? 0 : facture.n); console.warn(`lipsync scène ${i} : téléchargement ${res.status} (crédits remboursés)`); return false }
     const grp = join(proj, 'media', `grp${i}.mp4`)
     const clip = Buffer.from(await res.arrayBuffer())
     writeFileSync(grp, clip)
@@ -2346,7 +2409,7 @@ async function pollLoop() {
         }
 
         const out = join(jobDir, 'final.mp4')
-        await renderJob(jobDir, out)
+        await renderJob(jobDir, out, { userId: job.user_id || null })
 
         // ── LE STOCKAGE PLAFONNE À 50 Mo ────────────────────────────────────
         // Un montage de 65 s en qualité haute pèse 46 à 48 Mo — on frôlait la
