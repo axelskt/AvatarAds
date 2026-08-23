@@ -193,6 +193,13 @@ const PLANS=[
     note:'paiement mensuel · sans engagement',
     listHead:'TOUT PRO, PLUS :', feats:['Génération vidéo prioritaire','Export vidéo + image 4K','Bibliothèque de clips illimitée','Coût par crédit le plus bas','Support prioritaire + accès anticipé'] },
 ];
+// ≈ contenus/jour : Starter (<1/j) = 'tous les N jours' ; sinon plancher→plafond 'X à Y'
+// (Pro 2,7→'2 à 3', Élite selon le slider 5 / 9 à 10 / 14). Basé sur le mois boosté.
+function _pdLine(videos, id){
+  if(id==='starter') return '1 contenu tous les 2 jours';
+  var pd=videos/30, lo=Math.floor(pd), hi=Math.ceil(pd);
+  return (lo===hi?lo:lo+' à '+hi)+' contenus par jour';
+}
 function _quotaBox(pl, tier){
   var violet = pl.id==='elite';
   var bd = violet ? 'rgba(154,124,255,.35)' : 'var(--border-2)';
@@ -201,7 +208,7 @@ function _quotaBox(pl, tier){
   var equiv = tier ? (tier.credits + ' secondes de vidéo') : pl.equiv;
   var _bn = violet ? 75 : (parseInt(pl.bonus)||0);   // crédits offerts (1er mois)
   var videos = Math.round((av+_bn)/8/10)*10;   // ~8 crédits/vidéo, arrondi à la dizaine → on VEND des vidéos
-  var _pd = videos/30, perDay = _pd.toFixed(1).replace('.',',')+' '+(_pd<2?'contenu':'contenus');   // ≈ X,X contenu(s)/jour
+  var perDay = _pdLine(videos, pl.id);   // ≈ 1 contenu tous les 2 jours (Starter) / N à M contenus par jour
   var bonus = violet ? '+75' : (pl.bonus || '');
   var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
     +'<div class="row" style="gap:9px;align-items:baseline;flex-wrap:wrap">'
@@ -210,7 +217,7 @@ function _quotaBox(pl, tier){
     +(bonus?'<span style="margin-left:auto;display:flex;gap:7px;align-items:baseline;white-space:nowrap"><span class="display" style="font-size:27px;font-weight:800;color:var(--green)">'+bonus+'</span><span style="font-weight:700;font-size:15px">offerts</span></span>':'')
     +'</div>'
     +'<div class="mono muted" style="font-size:12.5px;margin-top:10px"><b style="color:var(--text)"><span'+(violet?' id="lpEliteVid"':'')+'>jusqu\'à '+videos+' vidéos / mois</span><sup style="font-size:.55em;color:var(--text-3);font-weight:400;margin-left:1px">*</sup></b></div>'
-    +'<div class="mono muted" style="font-size:11.5px;margin-top:5px;opacity:.72">≈ <span'+(violet?' id="lpEliteSec"':'')+'>'+perDay+'</span> par jour</div>';
+    +'<div class="mono muted" style="font-size:11.5px;margin-top:5px;opacity:.72">≈ <span'+(violet?' id="lpEliteSec"':'')+'>'+perDay+'</span></div>';
   if(violet){
     var idx=eliteSlider, pct=idx/(ELITE_TIERS.length-1)*100, marks='';
     for(var t=0;t<ELITE_TIERS.length;t++){
@@ -272,7 +279,7 @@ function setEliteSlider(idx){
   var pct=idx/(ELITE_TIERS.length-1)*100;
   var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.credits;
   var _v=Math.round((tier.credits+75)/8/10)*10; var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent='jusqu\'à '+_v+' vidéos / mois';
-  var sec=document.getElementById('lpEliteSec'); if(sec){ var _pd2=_v/30; sec.textContent=_pd2.toFixed(1).replace('.',',')+' '+(_pd2<2?'contenu':'contenus'); }
+  var sec=document.getElementById('lpEliteSec'); if(sec){ sec.textContent=_pdLine(_v,'elite'); }
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
