@@ -195,8 +195,12 @@ const PLANS=[
 ];
 // ≈ contenus/jour : Starter (<1/j) = 'tous les N jours' ; sinon plancher→plafond 'X à Y'
 // (Pro 2,7→'2 à 3', Élite selon le slider 5 / 9 à 10 / 14). Basé sur le mois boosté.
-function _pdLine(videos, id){
+function _pdLine(videos, id, credits){
   if(id==='starter') return '1 contenu tous les 2 jours';
+  // Élite : plages fixées par palier (Axel 23/08) — 'contenus' incluant les images (moins
+  // chères), donc légitimement au-dessus du ÷8 'vidéos' du titre. Socle ~9,5→6,3 cr/contenu.
+  var ELITE_PD={1100:'4 à 6',2200:'8 à 12',3300:'12 à 18'};
+  if(id==='elite' && ELITE_PD[credits]) return ELITE_PD[credits]+' contenus par jour';
   var pd=videos/30, lo=Math.floor(pd), hi=Math.ceil(pd);
   return (lo===hi?lo:lo+' à '+hi)+' contenus par jour';
 }
@@ -208,7 +212,7 @@ function _quotaBox(pl, tier){
   var equiv = tier ? (tier.credits + ' secondes de vidéo') : pl.equiv;
   var _bn = violet ? 75 : (parseInt(pl.bonus)||0);   // crédits offerts (1er mois)
   var videos = Math.round((av+_bn)/8/10)*10;   // ~8 crédits/vidéo, arrondi à la dizaine → on VEND des vidéos
-  var perDay = _pdLine(videos, pl.id);   // ≈ 1 contenu tous les 2 jours (Starter) / N à M contenus par jour
+  var perDay = _pdLine(videos, pl.id, av);   // ≈ 1 contenu tous les 2 jours (Starter) / plage Élite / N à M
   var bonus = violet ? '+75' : (pl.bonus || '');
   var h = '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 16px;margin:18px 0 20px">'
     +'<div class="row" style="gap:9px;align-items:baseline;flex-wrap:wrap">'
@@ -279,7 +283,7 @@ function setEliteSlider(idx){
   var pct=idx/(ELITE_TIERS.length-1)*100;
   var av=document.getElementById('lpEliteAv'); if(av) av.textContent=tier.credits;
   var _v=Math.round((tier.credits+75)/8/10)*10; var vid=document.getElementById('lpEliteVid'); if(vid) vid.textContent='jusqu\'à '+_v+' vidéos / mois';
-  var sec=document.getElementById('lpEliteSec'); if(sec){ sec.textContent=_pdLine(_v,'elite'); }
+  var sec=document.getElementById('lpEliteSec'); if(sec){ sec.textContent=_pdLine(_v,'elite',tier.credits); }
   var rng=document.getElementById('lpEliteRange'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.background='linear-gradient(90deg,var(--violet) '+pct+'%,var(--surface-3) '+pct+'%)'; }
   for(var t=0;t<ELITE_TIERS.length;t++){ var mk=document.getElementById('lpEliteMark'+t); if(mk){ var a=t===idx; mk.style.color=a?'var(--violet)':'var(--text-3)'; mk.style.fontWeight=a?'700':'400'; } }
   var price=document.getElementById('lpElitePrice'); if(price) price.textContent=(isAnnual?tier.annual:tier.price)+'€';
