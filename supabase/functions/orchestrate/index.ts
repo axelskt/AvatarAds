@@ -691,6 +691,30 @@ REGLES
   return out
 }
 
+// ── STYLE « SLAM » : LE BRIEF SECONDE PAR SECONDE (validé avec Axel le 22/08/2026) ──
+// Ce que le chef doit produire quand l'utilisateur choisit le style slam — les règles
+// viennent de 5 vidéos de référence analysées image par image et de 9 itérations
+// validées une à une. Elles ne se négocient pas ; le worker les fait respecter aussi.
+const SLAM_BRIEF = (assets: { id: string; kind: string }[]) => {
+  const vids = assets.filter((a) => a.kind === 'video').map((a) => a.id)
+  const imgs = assets.filter((a) => a.kind !== 'video').map((a) => a.id)
+  const n = vids.length + imgs.length
+  return `STYLE SLAM — BRIEF SECONDE PAR SECONDE (prioritaire sur les regles generales ci-dessus quand elles se contredisent).
+Tu ecris le plan comme un monteur qui decide, seconde par seconde, ce qu'on VOIT — et chaque plan est JUSTIFIE par le mot prononce a cet instant. Une carte qui ne montre pas ce qui est dit n'existe pas.
+
+1. L'AVATAR : 4 apparitions MAXIMUM sur toute la video (3 plein cadre + 1 split), JAMAIS en continu. Plein cadre = hook (0 -> fin de la 1re phrase), le moment ou la voix parle du RESULTAT (« ton avatar », « ta video ») et le CTA final. Le split (visage en bas, carte animee en haut) sert a UNE explication-cle, de preference juste apres le hook. Deux fenetres avatar qui se suivent gardent le MEME visage. Tout le reste = cartes animees plein cadre.
+
+2. LE HOOK (0 -> ~2,5 s) : si l'utilisateur a fourni au moins 6 medias, la PREMIERE slide est OBLIGATOIREMENT une GRILLE 3x3 de ses medias (videos ET images melangees, alternees) : anim "photowall", motif "3x3", start 0, end ~2.3, items = jusqu'a 9 lignes "assetId" (le texte de l'item = l'id de l'asset, rien d'autre). ${n >= 6 ? `ICI : ${n} medias -> la grille est OBLIGATOIRE, items dans cet ordre alterne : ${[...Array(Math.min(9, n))].map((_, k) => (k % 2 === 0 ? vids[Math.floor(k / 2)] : imgs[Math.floor(k / 2)]) || vids[k] || imgs[k]).filter(Boolean).join(', ')}.` : `Ici : seulement ${n} media(s) -> pas de grille, ouvre sur l'avatar plein cadre.`} Pendant la grille, AUCUNE autre slide. Puis l'avatar plein cadre reprend jusqu'a la fin de la phrase du hook.
+
+3. LES ETAPES DANS L'APP (« va sur X », « clique sur Y », « ecris ton prompt ») = VISITE GUIDEE (champ tuto), jamais une animation abstraite : l'ecran reel, le clic, la frappe DANS le champ de texte (jamais sur un onglet). Le mot qui nomme l'etape est l'ancre.
+
+4. LES CHIFFRES (« 5 000 € », « des millions de vues ») = anim "countup" avec OBLIGATOIREMENT title (ex "DES MILLIONS DE VUES") et meta "valeur|unite" (ex "1000000|DE VUES" — un nombre sans espace ni point, l'unite en capitales). Les RESEAUX (« poster », « publier », « les reseaux ») = anim "post" avec title "POSTE SUR LES RESEAUX" et items = 3 lignes "assetId" (trois medias de l'utilisateur : ses vrais rendus partent vers TikTok / Instagram / YouTube) — ${n >= 3 ? `ici par ex : ${[vids[0], imgs[0], vids[1] || imgs[1]].filter(Boolean).join(', ')}` : 'sans media fourni, items vide'}. Un comparatif (« fake vs reel », « avant/apres ») = anim "compare" avec un visage (meta photo = un id d'asset image) — jamais deux rectangles vides.
+
+5. RYTHME : un plan toutes les 2,5 a 4 s, ZERO trou (a chaque seconde quelque chose est a l'ecran), pas de plan de plus de 6 s sauf une visite guidee a plusieurs clics. Toute carte porte un title (2-4 mots, capitales) et, quand c'est une etape, un eyebrow (« ETAPE 1 », « LE PROBLEME », « RESULTAT »).
+
+6. SOUS-TITRES : accents = les 10-15 mots FORTS (chiffres, noms de produits, verbes d'action, benefices) — le moteur les colore ; ne marque jamais un mot-outil.`
+}
+
 async function claudePlan(
   duration: number,
   words: Word[],
@@ -701,6 +725,7 @@ async function claudePlan(
   musicAlready: boolean,
   brief: string,
   memory: string,
+  style = '',
 ): Promise<{ plan: Plan; usage: unknown }> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -1110,6 +1135,7 @@ ${brief}
 Sers-t'en pour : choisir quoi illustrer en priorite, le ton, l'ordre des idees, et le CTA. Les mots du brief sont autorises a l'ecran meme s'ils ne sont pas prononces mot pour mot (c'est lui qui te les donne). Mais tu n'inventes toujours RIEN au-dela : ni chiffre, ni promesse, ni fonctionnalite qui ne soit ni dans le brief, ni dans l'audio, ni dans le contexte produit.`,
     })
   }
+  if (style === 'slam') content.push({ type: 'text', text: SLAM_BRIEF(assets) })
   content.push({
     type: 'text',
     text: `Duree totale : ${duration.toFixed(2)}s. Langue : ${lang}. ${assets.length} image(s) utilisateur : ${assets.map((a) => a.id).join(', ') || 'aucune'}.
@@ -2409,13 +2435,15 @@ async function relireTranscription(words: Word[], contexte: string, cle: string)
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': cle, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: CLAUDE_MODEL, max_tokens: 4000, output_config: { effort: 'low' },
-        system: `Tu relis une transcription automatique en français. Tu corriges UNIQUEMENT l'orthographe :
+        model: CLAUDE_MODEL, max_tokens: 4000, output_config: { effort: 'medium' },
+        system: `Tu relis une transcription automatique en français, mot à mot. Tu corriges :
 — les apostrophes d'élision que le transcripteur avale (« dinvestissement » → « d'investissement », « lIA » → « l'IA », « jai » → « j'ai »)
-— les noms propres et noms de marque mal entendus
-— les majuscules des noms propres
+— les noms propres et noms de marque mal entendus, et leurs majuscules
+— les MOTS MAL ENTENDUS : un homophone ou un mot proche qui ne colle pas au sens de la phrase. Exemples vus : « commande site » quand il demande un commentaire → « commente site » ; « photo riel » → « photo réel » ; « une fois ton concret » → « une fois ton compte_créé » ; « avataria » → « AvatarAds ». Tu tranches avec le SENS de la phrase et le contexte (une vidéo de créateur : « commente X et je t'envoie… », « crée ton compte », « génère ton avatar »).
 
-INTERDIT : reformuler, ajouter, supprimer, fusionner ou séparer des mots. Le nombre de mots doit être EXACTEMENT le même, dans le MÊME ordre. La ponctuation de fin de mot se garde telle quelle.
+Quand une correction remplace UN mot par DEUX (« concret » → « compte créé »), relie-les par un underscore : « compte_créé ». Jamais d'espace ajouté.
+
+INTERDIT : reformuler, ajouter, supprimer, fusionner ou séparer des mots. Le nombre de mots doit être EXACTEMENT le même, dans le MÊME ordre. La ponctuation de fin de mot se garde telle quelle. Si tu hésites sur un mot, garde-le tel quel.
 
 ${contexte ? 'Noms propres et marques de cette personne, à écrire exactement ainsi :\n' + contexte.slice(0, 600) : ''}
 
@@ -2433,8 +2461,11 @@ Réponds avec le texte corrigé, et rien d'autre.`,
     }
     const exemples: string[] = []
     const out = words.map((w, i) => {
-      if (mots[i] !== w.text && exemples.length < 4) exemples.push(`« ${w.text} » → « ${mots[i]} »`)
-      return { ...w, text: mots[i] }
+      // « compte_créé » = deux mots rendus pour un seul entendu : un seul sous-titre
+      // (mêmes timings), l'underscore redevient un espace à l'affichage.
+      const t = mots[i].replace(/_/g, ' ')
+      if (t !== w.text && exemples.length < 4) exemples.push(`« ${w.text} » → « ${t} »`)
+      return { ...w, text: t }
     })
     const changes = words.reduce((n, w, i) => n + (mots[i] !== w.text ? 1 : 0), 0)
     console.log(changes ? `▶ relecture : ${changes} mot(s) corrigé(s) — ${exemples.join(', ')}`
@@ -2537,7 +2568,7 @@ serve(async (req: Request) => {
     if (!duration) return json({ error: 'Champ "duration" manquant' }, 400)
 
     const script = String(form.get('script') || '').trim().slice(0, 4000) || null
-    let options: { lang?: string; filters?: string } = {}
+    let options: { lang?: string; filters?: string; style?: string; vstyle?: string } = {}
     try { options = JSON.parse(String(form.get('options') || '{}')) } catch (_) { /* défauts */ }
     const lang = (options.lang || 'fr').slice(0, 5)
     // carte blanche au chef d'orchestre : ne desactive QUE les filtres de gout
@@ -2622,7 +2653,8 @@ serve(async (req: Request) => {
     )
 
     // 4. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
-    const { plan: rawPlan, usage } = await claudePlan(duration, motsRelus, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text)
+    const style = String(options.style || options.vstyle || '').toLowerCase().slice(0, 20)
+    const { plan: rawPlan, usage } = await claudePlan(duration, motsRelus, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text, style)
 
     // 5. bornes/cohérence côté serveur — la mémoire compte comme du fourni :
     // ses vrais noms de produit/features ont le droit d'apparaître à l'écran.

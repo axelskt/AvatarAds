@@ -50,6 +50,20 @@ const AP_A  = { bg: '#F2F2F7', ink: '#1D1D1F', mute: '#6E6E73', dark: false }
 const AP_B  = { bg: '#FFFFFF', ink: '#1D1D1F', mute: '#86868B', dark: false }
 const isApple = (plan) => plan.slideStyle === 'apple'
 
+// ── SLAM ─────────────────────────────────────────────────────────────────────
+// Style UNIQUE synthétisé des 5 réfs (22/08 : cinématique VSL + hustle jaune-noir
+// + premium captions). CE moteur, habillé SOMBRE et MOODY, avec un ACCENT punchy
+// qui claque sur le mot-clé des sous-titres (le « slam » d'Axel vit DANS la bande,
+// jamais un mot géant qui la redouble — cf. typoContent). Dark-only, toujours 9:16.
+const SLAM_A   = { bg: '#0A0A0F', ink: '#FFFFFF', mute: '#9A9AA5', dark: true }
+const SLAM_B   = { bg: '#121019', ink: '#FFFFFF', mute: '#9A9AA5', dark: true }
+const SLAM_ACC = '#FFDD4A'
+const isSlam   = (plan) => plan.slideStyle === 'slam'
+// Safe zone réseaux pour les SOUS-TITRES (règle dure appliquée au DOM, cf. script de fin) :
+// rien sous 65 % de la hauteur, rien hors des 80 % centrés.
+const SAFE_SUB_BOTTOM = 0.62
+const SAFE_SUB_SIDE   = 0.10
+
 // halos du fond : la « respiration » des références — de GROS dégradés radiaux
 // qui dérivent lentement. Déterministes (position/phase par index de panneau).
 const BLOBS = {
@@ -59,6 +73,9 @@ const BLOBS = {
   // ils tachent un fond blanc au lieu de le faire respirer.
   ap_a:  ['#D7E6FF', '#E4DAFF', '#FFDCE8'],
   ap_b:  ['#DCEBFF', '#FFE2D5', '#E2F0FF'],
+  // slam : halos sombres et moody (aubergine / brun chaud / bleu nuit) — la lueur
+  // reste discrète, l'énergie vient de l'accent jaune sur la typo, pas du fond.
+  slam:  ['#3A2460', '#4A1E28', '#14305A'],   // plus saturés : le fond doit VIVRE (Axel 22/08)
 }
 
 const CHAR_W = 0.66
@@ -88,6 +105,20 @@ function buildPanels(plan, D) {
     ...(plan.avatarSegments || [])
       .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil, faceP: s.faceP } })),
   ].sort((a, b) => a.t0 - b.t0)
+
+  // ── RÈGLE : DEUX FENÊTRES AVATAR QUI SE SUIVENT = LE MÊME VISAGE/DÉCOR ────────
+  // Axel (22/08) : « à 3 s le hook, à 4-5 s le split — ça fait bizarre si l'avatar
+  // change de décor ». Quand une fenêtre avatar en suit une autre à moins de 0,6 s
+  // (enchaînement direct, plein cadre → split ou l'inverse), elle HÉRITE de la photo
+  // de la précédente : pas de changement de décor sans plan entre les deux.
+  {
+    let prev = null
+    for (const a of anims) {
+      if (a.kind !== 'avclip') { prev = null; continue }
+      if (prev && a.t0 - prev.t1 < 0.6 && prev.slide.photo && !a.slide.__keepPhoto) a.slide.photo = prev.slide.photo
+      prev = a
+    }
+  }
 
   const inAnim = (t) => anims.some((a) => t >= a.t0 - 0.06 && t < a.t1 - 0.06)
   const free = words.filter((w) => !inAnim(w.start))
@@ -120,7 +151,13 @@ function buildPanels(plan, D) {
   // respire (animations, visage). Le mode dynamic garde ses slams — c'est lui.
   const panels = [
     ...anims.map((a) => ({ kind: a.kind, t0: a.t0, t1: a.t1, slide: a.slide })),
-    ...(isApple(plan) ? [] : phrases
+    // apple : aucun panneau typo. dynamic ET slam : oui — en slam c'est LA carte
+    // typo cinétique (gros mot plein cadre, réf) qui remplace la bande pendant sa
+    // fenêtre (pas de doublon : le sous-titre est masqué dessous, cf. capHtml).
+    // `plan.splitPersistant` (réf @sophiene.ia) : le visage tient le bas de l'écran
+    // TOUTE la vidéo, les fenêtres avatar couvrent la timeline → aucun panneau typo
+    // plein cadre ne doit venir couper le visage ; l'emphase reste dans la bande.
+    ...((isApple(plan) || plan.splitPersistant) ? [] : phrases
       .filter((ws) => ws.some((w) => w.accent || w.text.length >= 11))
       .map((ws) => ({ kind: 'typo', t0: r2(Math.max(0, ws[0].start - 0.12)), t1: r2(ws[ws.length - 1].end + 0.3), words: ws }))),
   ].sort((a, b) => a.t0 - b.t0)
@@ -174,7 +211,7 @@ function buildPanels(plan, D) {
 // ── 2 · CONTENU D'UN PANNEAU TYPO : une seule déclaration ───────────────────
 // Accent présent → LE mot en slam (et rien d'autre, ou 2 mots de contexte au-
 // dessus). Pas d'accent → la phrase courte se TAPE au centre, caret orange.
-function typoContent(id, p, tone, liveT0, avecSubs) {
+function typoContent(id, p, tone, liveT0, avecSubs, slam, accCol) {
   // ── LE SLAM RÉPÉTAIT LA BANDE DE SOUS-TITRES ─────────────────────────────
   // Axel, 03/08 : « il met toujours le texte comme ça, faut bannir ça » — un
   // mot en très gros au centre, pendant que la bande écrivait le même mot en
@@ -189,7 +226,10 @@ function typoContent(id, p, tone, liveT0, avecSubs) {
   // On rend donc la scène vide quand les sous-titres tournent : la règle
   // « jamais de panneau typo nu » qui suit s'en charge, la fenêtre revient au
   // visage ou à la scène voisine.
-  if (avecSubs) return { html: '', js: '', sfx: [] }
+  // EXCEPTION slam : ici le gros mot EST une carte typo cinétique (réf) qui
+  // REMPLACE la bande sur sa fenêtre — pas de doublon, capHtml masque le
+  // sous-titre dessous. Donc on rend même quand les sous-titres tournent.
+  if (avecSubs && !slam) return { html: '', js: '', sfx: [] }
   const ws = p.words
   // Mots que la voix porte déjà et qui ne VEULENT RIEN DIRE à l'écran — Axel :
   // « "sélectionner" écrit en sous-titres ne sert à rien », « "finir
@@ -225,7 +265,7 @@ function typoContent(id, p, tone, liveT0, avecSubs) {
   const tAt = Math.max(liveT0, acc.start)
   const html = `<div class="stack">
       ${before ? `<div id="${id}b4" style="font-size:54px;font-weight:600;color:${tone.mute};opacity:0">${esc(before)}</div>` : ''}
-      <div class="disp" id="${id}acc" style="font-size:${fz}px;color:${tone.ink};opacity:0;white-space:nowrap">${esc(acc.text)}</div>
+      <div class="disp" id="${id}acc" style="font-size:${slam ? Math.round(fz * 1.12) : fz}px;color:${slam ? accCol : tone.ink};opacity:0;white-space:nowrap">${esc(acc.text)}</div>
     </div>`
   let js = ''
   // le petit mot gris n'arrive jamais SEUL plus de 0,9 s avant le slam (écran
@@ -269,6 +309,17 @@ function screenContent(id, s, tone, liveT0, t1, W) {
   const K = src.w && src.w > cw ? src.w / cw : 1     // combien de fois la capture dépasse le cadre
   const iw = Math.round(cw * K), ih = Math.round(ch * K)
   const steps = (s.steps || []).filter((st) => st && st.spot).sort((a, b) => a.t - b.t)
+  // ── DEUX ÉTAPES NE SE MARCHENT PAS DESSUS ───────────────────────────────────
+  // Mesuré (Cartoon 15, 23/08) : « le format » à 23,92 s puis « décrire » à 24,27 s —
+  // deux voyages de caméra sur le même calque à 0,35 s d'écart ; GSAP laisse gagner
+  // le premier, la frappe s'écrit HORS CHAMP (invisible) et Axel voit 9:16 → Générer.
+  // Une étape attend donc au moins 0,9 s après la précédente (1,45 s quand celle-ci
+  // tape du texte : il faut le voir s'écrire), quitte à suivre la voix avec un peu de
+  // retard — dans une visite guidée, voir le geste vaut mieux que le tenir à la seconde.
+  for (let k = 1; k < steps.length; k++) {
+    const mini = steps[k - 1].type ? 1.45 : 0.9
+    if (steps[k].t < steps[k - 1].t + mini) steps[k].t = r2(Math.min(t1 - 0.5, steps[k - 1].t + mini))
+  }
 
   // — cadrage d'une étape : ON ZOOME SUR L'ÉLÉMENT.
   //   Axel : « dommage qu'à chaque fois ce ne soit pas un zoom plutôt sur la zone
@@ -449,6 +500,14 @@ export function buildDynamicComposition(plan, opts = {}) {
 
   let html = ''
   let js = ''
+  // ── PISTES VIDÉO UNIQUES ────────────────────────────────────────────────────
+  // HyperFrames refuse deux clips qui se chevauchent sur la MÊME piste (« overlapping
+  // clips on the same track »). Les pistes 0-19 gardent leur rôle historique (9 = visage,
+  // 12 = mur, 13 = réseaux…) ; dès qu'un panneau pose PLUSIEURS vidéos simultanées
+  // (grille 3×3, trois rendus qui partent vers les réseaux), chacune prend une piste
+  // neuve à partir de 20 — jamais deux médias en même temps sur le même index.
+  let _trackSeq = 20
+  const nextTrack = () => _trackSeq++
   const sfxAdd = []
   const kbAdd = []
   let lastWhoosh = 0, whooshFlip = false
@@ -472,6 +531,8 @@ export function buildDynamicComposition(plan, opts = {}) {
   })()
 
   const ap = isApple(plan)
+  const slam = isSlam(plan)
+  const accCol = slam ? SLAM_ACC : ACC   // couleur du mot-clé (sous-titres) + accent d'anim
   panels.forEach((p, i) => {
     // apple garde l'alternance (c'est elle qui donne le rythme d'un panneau à
     // l'autre) mais entre deux CLAIRS : gris iOS puis blanc.
@@ -479,9 +540,9 @@ export function buildDynamicComposition(plan, opts = {}) {
     // « la vidéo posée, qui ne prend pas tout l'écran, avec un fond blanc
     // derrière ». Sur un panneau sombre la carte se fondait dans le fond.
     const media = p.kind === 'media' || p.kind === 'medias'
-    const tone = media ? (ap ? AP_B : LIGHT) : ap ? (i % 2 === 0 ? AP_A : AP_B) : (i % 2 === 0 ? DARK : LIGHT)
-    const blobs = media ? (ap ? BLOBS.ap_b : BLOBS.light)
-      : ap ? (i % 2 === 0 ? BLOBS.ap_a : BLOBS.ap_b) : (i % 2 === 0 ? BLOBS.dark : BLOBS.light)
+    const tone = media ? (ap ? AP_B : slam ? SLAM_B : LIGHT) : ap ? (i % 2 === 0 ? AP_A : AP_B) : slam ? (i % 2 === 0 ? SLAM_A : SLAM_B) : (i % 2 === 0 ? DARK : LIGHT)
+    const blobs = media ? (ap ? BLOBS.ap_b : slam ? BLOBS.slam : BLOBS.light)
+      : ap ? (i % 2 === 0 ? BLOBS.ap_a : BLOBS.ap_b) : slam ? BLOBS.slam : (i % 2 === 0 ? BLOBS.dark : BLOBS.light)
     const id = 'pn' + i
     const t0 = p.t0, t1 = p.t1, dur = r2(t1 - t0)
     const liveT0 = i === 0 ? 0.05 : r2(t0 + 0.12)
@@ -494,15 +555,38 @@ export function buildDynamicComposition(plan, opts = {}) {
       const bx = [W * 0.15, W * 0.85, W * 0.5][k] + ph(k) * 60
       const by = [H * 0.22, H * 0.55, H * 0.9][k] + ph(k) * 90
       const sz = [1500, 1300, 1600][k]
-      inner += `<div id="${id}g${k}" style="position:absolute;left:${Math.round(bx - sz / 2)}px;top:${Math.round(by - sz / 2)}px;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${blobs[k]}${tone === DARK ? 'CC' : ''} 0%,transparent 62%);"></div>`
+      inner += `<div id="${id}g${k}" style="position:absolute;left:${Math.round(bx - sz / 2)}px;top:${Math.round(by - sz / 2)}px;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${blobs[k]}${tone.dark ? 'CC' : ''} 0%,transparent 62%);"></div>`
       pjs += `\n  tl.fromTo('#${id}g${k}',{x:${ph(k) * 40},y:${ph(k) * 30},scale:1},{x:${-ph(k) * 60 - 30},y:${ph(k) * -70 + 20},scale:1.12,duration:${r2(dur + PUSH + 0.3)},ease:'sine.inOut'},${t0});`
+    }
+    // ── FOND ANIMÉ slam (Axel 22/08 : « anime le fond plutôt qu'un fond sobre ») ──
+    // Réf @sophiene.ia : un papier pointillé qui respire sous les cartes. Ici :
+    // une grille fine (lignes 1 px) qui GLISSE lentement en diagonale + un vignettage
+    // doux qui concentre l'œil au centre ; les halos dérivent avec plus d'amplitude.
+    if (slam) {
+      const gp = Math.round(W * 0.052)
+      inner += `<div id="${id}grid" style="position:absolute;left:-${gp * 2}px;top:-${gp * 2}px;width:${W + gp * 4}px;height:${H + gp * 4}px;opacity:.13;` +
+        `background-image:linear-gradient(rgba(255,255,255,.55) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.55) 1px,transparent 1px);` +
+        `background-size:${gp}px ${gp}px;mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,transparent 78%);-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,transparent 78%)"></div>`
+      inner += `<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,transparent 48%,rgba(0,0,0,.55) 100%)"></div>`
+      // particules : 14 points lumineux qui montent lentement (positions déterministes par index)
+      let dots = ''
+      for (let q = 0; q < 14; q++) {
+        const dx = Math.round(((i * 37 + q * 71) % 100) / 100 * W), dy = Math.round(((i * 53 + q * 97) % 100) / 100 * H)
+        const ds = 3 + ((i + q) % 3) * 2
+        dots += `<div class="${id}dot" style="position:absolute;left:${dx}px;top:${dy}px;width:${ds}px;height:${ds}px;border-radius:50%;background:${accCol};opacity:${(0.25 + ((q * 7) % 5) * 0.1).toFixed(2)};box-shadow:0 0 ${ds * 3}px ${accCol}"></div>`
+      }
+      inner += `<div id="${id}dots" style="position:absolute;inset:0;pointer-events:none">${dots}</div>`
+      const bgD = r2(Math.max(2, dur + PUSH + 0.3))
+      pjs += `\n  tl.fromTo('#${id}grid',{x:0,y:0},{x:${gp * 2},y:${gp * 2},duration:${bgD},ease:'none'},${t0});`
+      pjs += `\n  tl.fromTo('#${id}dots',{y:${Math.round(H * 0.06)}},{y:${-Math.round(H * 0.08)},duration:${bgD},ease:'none'},${t0});`
+      for (let k = 0; k < 3; k++) pjs += `\n  tl.to('#${id}g${k}',{scale:1.3,rotation:${(k % 2 ? -1 : 1) * 14},x:${(k - 1) * 90},duration:${bgD},ease:'sine.inOut'},${t0});`
     }
     // marqueur « fond seul » : tout ce qui précède est le décor, pas du contenu
     const innerFond = inner.length
 
     // — contenu par type
     if (p.kind === 'typo') {
-      const c = typoContent(id, p, tone, liveT0, subsActifs)
+      const c = typoContent(id, p, tone, liveT0, subsActifs, slam, accCol)
       inner += c.html; pjs += c.js; sfxAdd.push(...c.sfx)
 
     } else if (p.kind === 'ui') {
@@ -536,6 +620,36 @@ export function buildDynamicComposition(plan, opts = {}) {
       // réduire — « 100 » garde exactement ses 330 px.
       const nCar = Math.max(1, String(val).length) * 1.28   // +séparateurs de milliers
       const fzN = Math.min(330, Math.round((W * 0.72) / (nCar * 0.78)))
+      if (slam) {
+        // ── COMPTEUR slam (Axel 22/08 : « 1000000 DE VUES c'est pas beau, mets des
+        // points ») : chiffre JAUNE avec séparateurs (1.000.000), un « + » qui claque
+        // à l'arrivée, libellé Anton, barre de progression qui se remplit dessous,
+        // halo qui pulse — le nombre devient un ÉVÉNEMENT, pas un texte.
+        const fmt = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+        const nCarS = (String(val).length + Math.floor((String(val).length - 1) / 3) + 1) * 1.02
+        const fzS = Math.min(300, Math.round((W * 0.84) / (nCarS * 0.56)))
+        const rise = r2(Math.min(1.3, dur - 0.5))
+        const barW = Math.round(W * 0.46)
+        inner += `<div class="stack" style="gap:${Math.round(H * 0.012)}px">
+          <div id="${id}halo" style="position:absolute;left:${Math.round(W / 2 - 520)}px;top:${Math.round(H / 2 - 520)}px;width:1040px;height:1040px;border-radius:50%;background:radial-gradient(circle,${accCol}33 0%,transparent 60%);opacity:0"></div>
+          <div style="position:relative;white-space:nowrap;line-height:1">
+            <span class="disp" id="${id}n" style="font-size:${fzS}px;color:${accCol};letter-spacing:.01em;text-shadow:0 ${Math.round(H * 0.004)}px ${Math.round(H * 0.03)}px ${accCol}55;opacity:0">0</span><span class="disp" id="${id}p" style="font-size:${Math.round(fzS * 0.72)}px;color:#FFFFFF;vertical-align:top;margin-left:${Math.round(fzS * 0.06)}px;opacity:0">+</span>
+          </div>
+          <div id="${id}u" style="font-family:'Anton','Archivo Black',sans-serif;font-size:${Math.round(H * 0.034)}px;letter-spacing:.14em;text-transform:uppercase;color:#FFFFFF;opacity:0">${esc(s.unit || '')}</div>
+          <div style="width:${barW}px;height:${Math.round(H * 0.006)}px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:${Math.round(H * 0.01)}px"><div id="${id}bar" style="width:100%;height:100%;background:${accCol};transform:scaleX(0);transform-origin:0 50%"></div></div>
+        </div>`
+        pjs += `
+  var ${id}v = { n: 0 };
+  tl.fromTo('#${id}halo',{scale:0.6,opacity:0},{scale:1,opacity:1,duration:${rise},ease:'power2.out'},${liveT0});
+  tl.fromTo('#${id}n',{scale:0.7,opacity:0,filter:'blur(10px)'},{scale:1,opacity:1,filter:'blur(0px)',duration:0.38,ease:'power3.out'},${liveT0});
+  tl.to(${id}v,{n:${val},duration:${rise},ease:'power3.out',onUpdate:function(){var el=document.getElementById('${id}n');if(el)el.textContent=(${fmt.toString()})(${id}v.n);}},${liveT0});
+  tl.fromTo('#${id}bar',{scaleX:0},{scaleX:1,duration:${rise},ease:'power3.out'},${liveT0});
+  tl.fromTo('#${id}u',{y:26,opacity:0},{y:0,opacity:1,duration:0.34,ease:'circ.out'},${r2(liveT0 + 0.3)});
+  tl.fromTo('#${id}p',{scale:2.2,opacity:0},{scale:1,opacity:1,duration:0.28,ease:'back.out(2.5)'},${r2(liveT0 + rise)});
+  tl.fromTo('#${id}n',{scale:1},{scale:1.08,duration:0.14,yoyo:true,repeat:1,ease:'power2.inOut'},${r2(liveT0 + rise)});
+  tl.to('#${id}halo',{scale:1.15,opacity:0.7,duration:${r2(Math.max(0.3, dur - rise - 0.2))},ease:'sine.inOut'},${r2(liveT0 + rise)});`
+        sfxAdd.push({ kind: 'mo-riser-1', t: r2(liveT0), vol: 0.45 }, { kind: 'mo-impact-2', t: r2(liveT0 + rise), vol: 0.6 })
+      } else {
       inner += `<div class="stack">
         <div class="disp" id="${id}n" style="font-size:${fzN}px;color:${tone.ink};opacity:0">0</div>
         <div id="${id}u" style="font-family:'JetBrains Mono',monospace;font-size:44px;letter-spacing:.3em;color:${ACC};opacity:0">${esc(s.unit || '')}</div></div>`
@@ -545,6 +659,7 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.to(${id}v,{n:${val},duration:${r2(Math.min(1.2, dur - 0.6))},ease:'power2.out',onUpdate:function(){var el=document.getElementById('${id}n');if(el)el.textContent=String(Math.round(${id}v.n));}},${liveT0});
   tl.fromTo('#${id}u',{y:50,opacity:0},{y:0,opacity:1,duration:0.34,ease:'circ.out'},${r2(liveT0 + 0.4)});
   tl.to('#${id}n',{scale:1.18,duration:${r2(Math.max(0.3, dur - 1.4))},ease:'none'},${r2(liveT0 + Math.min(1.2, dur - 0.6))});`
+      }
 
     } else if (p.kind === 'logo') {
       const s = p.slide, mark = s.title || 'avatarads.fr'
@@ -639,14 +754,26 @@ export function buildDynamicComposition(plan, opts = {}) {
       // qui se pose en cascade avec un déclic d'obturateur. On MONTRE l'abondance :
       // « des dizaines de photos » ne se dit pas en texte, ça se voit.
       const its = (p.slide.items || []).filter((it) => it && it.src)
+      let _pwv = 0
       const mk = (src, x, y, w, h, rad) => {
         const vid = /\.(mp4|mov|webm|m4v)$/i.test(String(src || ''))
         const body = vid
-          ? `<video class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="12" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+          ? `<video id="${id}pwv${_pwv++}" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="${nextTrack()}" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
           : `<img src="${esc(src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
         return { x, y, w, h, rad, body }
       }
       const cells = []
+      if (slam || p.slide.grid === '3x3') {
+        // GRILLE 3×3 (Axel 22/08 : « vidéos/photos en mode colonne de 3 sur 3 ») :
+        // 9 cases portrait égales, vidéos ET photos mélangées, qui popent en cascade
+        // — puis un ZOOM lent sur toute la grille pour la dynamique.
+        const gap = 16, gw = Math.round((W * 0.92 - gap * 2) / 3), gh = Math.round(gw * 1.5)
+        const x0 = Math.round((W - (gw * 3 + gap * 2)) / 2), gy0 = Math.round(H * 0.5 - (gh * 3 + gap * 2) / 2)
+        its.slice(0, 9).forEach((it, k) => {
+          const col = k % 3, row = Math.floor(k / 3)
+          cells.push(mk(it.src, x0 + col * (gw + gap), gy0 + row * (gh + gap), gw, gh, 22))
+        })
+      } else {
       const hero = its[0]
       if (hero) cells.push({ ...mk(hero.src, Math.round((W - 540) / 2), 92, 540, 675, 30), hero: true })
       const gw = 319, gh = 319, gap = 18, x0 = Math.round((W - (gw * 3 + gap * 2)) / 2), gy0 = 796
@@ -654,13 +781,22 @@ export function buildDynamicComposition(plan, opts = {}) {
         const col = k % 3, row = Math.floor(k / 3)
         cells.push(mk(it.src, x0 + col * (gw + gap), gy0 + row * (gh + gap), gw, gh, 20))
       })
+      }
+      const grid3 = slam || p.slide.grid === '3x3'
+      if (grid3) inner += `<div id="${id}pwz" style="position:absolute;inset:0;transform-origin:50% 50%">`
       cells.forEach((c, k) => {
         const cid = id + 'pw' + k
         inner += `<div class="an-p" id="${cid}" style="left:${c.x}px;top:${c.y}px;width:${c.w}px;height:${c.h}px;border-radius:${c.rad}px;overflow:hidden;box-shadow:0 30px 70px -20px rgba(0,0,0,.4),0 0 0 1px rgba(0,0,0,.06)">${c.body}</div>`
-        const t = c.hero ? liveT0 : r2(liveT0 + 0.34 + (k - 1) * 0.09)
+        const t = grid3 ? r2(liveT0 + 0.05 + k * 0.08) : c.hero ? liveT0 : r2(liveT0 + 0.34 + (k - 1) * 0.09)
         pjs += `\n  tl.fromTo('#${cid}',{yPercent:12,scale:${c.hero ? 0.92 : 0.8},autoAlpha:0},{yPercent:0,scale:1,autoAlpha:1,duration:${c.hero ? 0.42 : 0.3},ease:'back.out(1.6)',transformOrigin:'50% 50%'},${t});`
-        sfxAdd.push({ kind: 'camera-shutter', t: r2(t + 0.02), vol: c.hero ? 0.6 : 0.4 })
+        sfxAdd.push({ kind: 'camera-shutter', t: r2(t + 0.02), vol: c.hero ? 0.6 : (grid3 ? 0.3 : 0.4) })
       })
+      if (grid3) {
+        inner += `</div>`
+        // zoom lent sur la grille entière une fois posée — « beaucoup plus de zoom »
+        const zAt = r2(liveT0 + 0.05 + Math.min(9, cells.length) * 0.08 + 0.2)
+        pjs += `\n  tl.fromTo('#${id}pwz',{scale:1},{scale:1.18,duration:${r2(Math.max(0.6, t1 - zAt))},ease:'power1.inOut'},${zAt});`
+      }
 
     } else if (p.kind === 'media') {
       // LE MÉDIA DE L'UTILISATEUR, POSÉ SUR LA PAGE. Ce style n'en affichait
@@ -723,10 +859,26 @@ export function buildDynamicComposition(plan, opts = {}) {
           const sa0 = r2(Math.max(liveT0, spSlide.start || liveT0))
           const sa = { ...spSlide, id: id + 'sa', start: sa0,
             dur: Math.max(0.8, r2(Math.min(t1, spSlide.end || t1) - sa0)) }
-          const sah = animHtml(spSlide.anim, sa, W, H, ap ? 'apple' : tone.dark ? 'dynamic' : 'word')
+          const sah = animHtml(spSlide.anim, sa, W, H, ap ? 'apple' : slam ? 'slam' : tone.dark ? 'dynamic' : 'word')
+          // ── EN-TÊTE + TITRE DU PANNEAU HAUT (réf @sophiene.ia) ───────────────
+          // La réf affiche sur chaque carte un en-tête de section (pastille +
+          // libellé) et un TITRE lisible ; notre pack réduit à 85 % perdait ses
+          // mots. `spSlide.eyebrow` = pastille (ex. « ÉTAPE 1 »), `spSlide.title`
+          // = titre ; posés au-dessus de l'anim, dans la safe zone haute.
+          const spEyebrow = String(spSlide.eyebrow || '').trim()
+          const spTitle = String(spSlide.title || '').trim()
+          const spInk = tone.dark ? '#FFFFFF' : '#141418'
+          const spAcc = slam ? SLAM_ACC : ACC
+          const spHead = (spEyebrow || spTitle) ? `
+          <div id="${id}sph" style="position:absolute;left:0;top:${Math.round(H * 0.085)}px;width:${W}px;text-align:center;z-index:5;opacity:0">
+            ${spEyebrow ? `<div style="display:inline-block;background:${spAcc};color:#141418;font-family:'Inter',sans-serif;font-weight:900;font-size:${Math.round(H * 0.017)}px;letter-spacing:.08em;text-transform:uppercase;padding:${Math.round(H * 0.005)}px ${Math.round(W * 0.018)}px;border-radius:999px;margin-bottom:${Math.round(H * 0.008)}px">${esc(spEyebrow)}</div>` : ''}
+            ${spTitle ? `<div style="font-family:'Anton','Archivo Black',sans-serif;font-size:${Math.round(H * 0.036)}px;line-height:1;letter-spacing:.01em;text-transform:uppercase;color:${spInk};text-shadow:0 2px 12px rgba(0,0,0,.35);padding:0 ${Math.round(W * 0.06)}px">${esc(spTitle)}</div>` : ''}
+          </div>` : ''
           topEl = `<div id="${id}spt" style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;overflow:hidden;background:${tone.dark ? '#101014' : '#F5F3EE'}">
-          <div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;transform:translateY(-${Math.round(H * 0.06)}px) scale(0.85);transform-origin:50% 31%">${sah}</div></div>`
+          ${spHead}
+          <div style="position:absolute;left:0;top:${spHead ? Math.round(H * 0.07) : 0}px;width:${W}px;height:${H}px;transform:translateY(-${Math.round(H * 0.06)}px) scale(${spHead ? 0.72 : 0.85});transform-origin:50% 31%">${sah}</div></div>`
           if (sah) pjs += animJs(spSlide.anim, sa, r2)
+          if (spHead) pjs += `\n  tl.fromTo('#${id}sph',{y:-18,opacity:0},{y:0,opacity:1,duration:0.36,ease:'power3.out'},${r2(liveT0 + 0.08)});`
         }
         // cadrage du bas (A/B d'Axel) : « visage entier + cou » — 5 % laisse de
         // l'air au-dessus de la tête au lieu de la rogner sous le séparateur ;
@@ -735,12 +887,14 @@ export function buildDynamicComposition(plan, opts = {}) {
         const cAt = r2(Math.max(liveT0, p.slide.clipAt ?? liveT0))
         const cEnd = r2(Math.min(D, (p.slide.clipUntil ?? t1) + 0.45))
         // face-aware (#136) : le worker a détecté le visage → object-position
-        // exact ; sans détection, 5 % (de l'air au-dessus de la tête)
-        const fp = p.slide.faceP != null ? Math.round(Math.max(0, Math.min(1, p.slide.faceP)) * 100) : 5
+        // exact ; sans détection, 48 % — calibré sur les portraits 2:3 du pool (Axel
+        // 23/08) : 5 % poussait le visage en bas de cadre, 56 % coupait les cheveux ;
+        // à 48 % le haut des cheveux TOUCHE le séparateur, le visage est entier.
+        const fp = p.slide.faceP != null ? Math.round(Math.max(0, Math.min(1, p.slide.faceP)) * 100) : 48
         const still = String(p.slide.photo || '') || avatarStill
         const botEl = src
           ? `<div id="${id}avp" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% ${fp}%/cover"></div>
-        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
+        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
           : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% ${fp}%/cover"></div></div>`
         inner += topEl + botEl
           + `<div style="position:absolute;left:0;top:${HH - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
@@ -761,7 +915,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // le visage qui affleure — jamais un noir (le « blink » sombre de v11)
         const bot = (src
           ? `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>
-             <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+             <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
           : `<div id="${id}av" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>`)
         inner += bot
         const cw = Math.round(W * 0.64), ch = Math.round(cw * 9 / 16)
@@ -804,7 +958,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // …et la PHOTO reste posée dessous : un clip qui s'éteint un souffle
         // avant la fin de la poussée laisse le visage, jamais un noir.
         inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(String(p.slide.photo || '') || avatarStill)}') center 38%/cover"></div>
-          <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="9" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+          <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
       } else {
         // UNE PHOTO PAR FENÊTRE, PAS UNE POUR TOUTE LA VIDÉO. Axel : « 2 avatars
         // principaux différents ». Le hook et le CTA sont deux moments distincts ;
@@ -952,11 +1106,22 @@ export function buildDynamicComposition(plan, opts = {}) {
       // du job fait une vraie miniature — c'est SA vidéo qu'on regarde monter.
       const s = { ...p.slide, id, start: liveT0, dur: Math.max(0.8, t1 - liveT0),
         logoFile: p.slide.logoFile || (['views', 'linkbio', 'bio', 'post'].includes(p.kind) ? avatarStill : '') }
-      const ah = animHtml(p.kind, s, W, H, ap ? 'apple' : tone.dark ? 'dynamic' : 'word')
+      const ah = animHtml(p.kind, s, W, H, ap ? 'apple' : slam ? 'slam' : tone.dark ? 'dynamic' : 'word')
       if (ah) {
         // frame() du pack vise le haut (au-dessus des sous-titres du mode
         // classique) : ici pas de sous-titres → on recentre et on grossit
-        inner += `<div style="position:absolute;inset:0;transform:translateY(${Math.round(H * 0.17)}px) scale(1.22);transform-origin:50% 38%">${ah}</div>`
+        // slam : les sous-titres SONT là (zone 56-68 %) → l'anim reste plus HAUTE et un
+        // peu plus petite pour ne jamais les chevaucher (Axel : « plusieurs milliers » sur la carte)
+        // `post` (réseaux) : Axel la trouve parfaite mais « zoome un peu plus » — 1.32 reste dans
+        // la safe zone (3 tuiles = 57 % de W × 1.32 = 75 % < 80 % utile, centrées).
+        // `post` (réseaux) en slam : ENCORE plus gros (×1.55) et REDESCENDU — les logos
+        // touchaient le haut de l'écran (hors safe zone haute ~12 %). Ancre de zoom au
+        // centre du bloc + translation vers le bas : les tuiles tombent vers 20 % de H,
+        // les rendus vers 50 %, la bande sous-titres (≤ 62 %) reste libre.
+        const isPost = p.kind === 'post' && slam
+        const packScale = slam ? (isPost ? 1.55 : 1.1) : 1.22
+        const packY = isPost ? Math.round(H * 0.14) : Math.round(H * (slam ? 0.05 : 0.17))
+        inner += `<div style="position:absolute;inset:0;transform:translateY(${packY}px) scale(${packScale});transform-origin:50% ${isPost ? '30%' : '38%'}">${ah}</div>`
         pjs += animJs(p.kind, s, r2)
         // SON = ACTION, aussi pour les animations : elles arrivaient en SILENCE
         // (« y'a même plus de bruitage », Axel). Chacune sonne comme ce qu'elle
@@ -1122,7 +1287,9 @@ export function buildDynamicComposition(plan, opts = {}) {
     //
     // On n'éclaircit pas la capture — ce serait la trahir. On change ce qu'il y
     // a autour.
-    const fondPanneau = p.kind === 'screen' && !isApple(plan) ? '#F2F1EE' : tone.bg
+    // slam : les captures vivent sur le fond SOMBRE du style (le halo clair faisait
+    // flotter l'écran au milieu d'une tache blanche — « pas fluide », Axel 23/08)
+    const fondPanneau = p.kind === 'screen' && !isApple(plan) && !isSlam(plan) ? '#F2F1EE' : tone.bg
     // FILET « JAMAIS UN PANNEAU NU » (Axel, 14/08 : les blancs à dégradé du
     // 3e screen, « supprime définitivement ces transitions »). Si AUCUN contenu
     // ne s'est posé — uiScene inconnue, animHtml vide (screen sans capture,
@@ -1135,6 +1302,16 @@ export function buildDynamicComposition(plan, opts = {}) {
       pjs += `\n  tl.fromTo('#${id}avf',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
     }
     html += `\n  <div id="${id}" class="pnl" style="z-index:${i + 1};background:${fondPanneau};${i > 0 ? 'opacity:0' : ''}"><div class="pin" id="${id}in">${inner}</div></div>`
+    // ── ZOOM DYNAMIQUE slam (Axel 22/08 : « beaucoup + de zoom pour rendre
+    // dynamique ») : chaque panneau illustré respire — zoom lent IN sur les
+    // panneaux pairs, OUT sur les impairs (transform-origin légèrement décalé
+    // pour un mouvement de caméra, pas un simple agrandissement). Les fenêtres
+    // visage (avclip) et le mur de photos ont déjà leur zoom.
+    if (slam && p.kind !== 'avclip' && p.kind !== 'photowall' && inner.length > innerFond) {
+      const zin = i % 2 === 0
+      const ox = 50 + ((i * 7) % 3 - 1) * 8, oy = 34 + ((i * 5) % 3 - 1) * 5   // ancre haute : le zoom ne pousse rien sur les sous-titres
+      pjs += `\n  tl.fromTo('#${id}in',{scale:${zin ? 1 : 1.14}},{scale:${zin ? 1.14 : 1},duration:${r2(Math.max(0.8, t1 - liveT0 + 0.3))},ease:'sine.inOut',transformOrigin:'${ox}% ${oy}%'},${liveT0});`
+    }
 
     // — poussée : direction alternée, l'entrant arrive légèrement flouté par sa
     //   vitesse et se pose ; whoosh SEULEMENT sur les panneaux illustrés, en
@@ -1232,13 +1409,26 @@ export function buildDynamicComposition(plan, opts = {}) {
     // petits, les mots forts énormes (la hiérarchie = la TAILLE, pas la couleur,
     // tout est blanc), et la POSITION change à chaque groupe — jamais une barre
     // de sous-titres fixe. Sur un plan visage, le texte ose monter à mi-cadre.
-    const ancLow = [
+    // SAFE ZONE RÉSEAUX (Axel 22/08 : « des fois on ne voit même pas les sous-titres,
+    // cachés sur les différents réseaux ») : TikTok masque le rail DROIT (~20 %) et
+    // le bas (légende/boutons ~22 %), Reels le bas ~25 %. En slam : plus d'ancre
+    // collée à droite ni sous 68 % de la hauteur, tout reste CENTRÉ dans la zone
+    // sûre (cf. SAFE dans visual-styles). Les autres styles gardent la réf.
+    const ancLow = slam ? [
+      { top: Math.round(H * 0.56), cls: '' },
+      { top: Math.round(H * 0.60), cls: '' },
+      { top: Math.round(H * 0.53), cls: '' },
+      { top: Math.round(H * 0.62), cls: '' },
+    ] : [
       { top: bas, cls: '' },
       { top: Math.round(H * 0.585), cls: ' dc-al' },
       { top: Math.round(H * 0.66), cls: ' dc-ar' },
       { top: Math.round(H * 0.705), cls: '' },
     ]
-    const ancFace = [...ancLow,
+    const ancFace = slam ? [...ancLow,
+      { top: Math.round(H * 0.42), cls: '' },
+      { top: Math.round(H * 0.36), cls: '' },
+    ] : [...ancLow,
       { top: Math.round(H * 0.40), cls: ' dc-al' },
       { top: Math.round(H * 0.345), cls: ' dc-ar' },
     ]
@@ -1300,7 +1490,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     // l'accroche, la pastille disparaît : texte NU, énorme, en capitales, avec
     // un halo — posé au tiers bas, sur le visage plein cadre.
     const hookFin = r2(plan.hook?.end ?? Math.min(4, D))
-    const hautHook = Math.round(H * 0.60)
+    const hautHook = Math.round(H * (slam ? 0.15 : 0.60))   // slam : au-dessus de la tête (jamais sur la bouche)
     // 5 palettes de sous-titres hook — `plan.hookStyle` 1..5. hk1 (or + rouge,
     // la réf validée) est le défaut ; hk2..hk5 sont les variantes couleur.
     const hs = Math.min(15, Math.max(1, Number(plan.hookStyle) || 15))
@@ -1318,6 +1508,18 @@ export function buildDynamicComposition(plan, opts = {}) {
       const avant = grp.length
       for (let i = grp.length - 1; i >= 0; i--) { if (grp[i].a >= hookFin) grp.splice(i, 1) }
       console.log(`▶ sous-titres hook uniquement : ${grp.length}/${avant} groupe(s) gardé(s)`)
+    }
+    // slam : la CARTE TYPO cinétique (gros mot plein cadre) REMPLACE la bande sur
+    // sa fenêtre — on retire les groupes de sous-titres qui tombent dessous, sinon
+    // le même mot s'écrit deux fois (le doublon qu'Axel bannit).
+    if (slam) {
+      const typoWins = panels.filter((p) => p.kind === 'typo')
+      const avantS = grp.length
+      for (let k = grp.length - 1; k >= 0; k--) {
+        const mid = (grp[k].a + grp[k].b) / 2
+        if (typoWins.some((p) => mid >= p.t0 - 0.1 && mid < p.t1 - 0.1)) grp.splice(k, 1)
+      }
+      if (grp.length < avantS) console.log(`▶ slam : ${avantS - grp.length} groupe(s) sous-titre masqué(s) sous une carte typo`)
     }
     capHtml = grp.map((g, i) => {
       const a = g.a
@@ -1340,11 +1542,27 @@ export function buildDynamicComposition(plan, opts = {}) {
         && (pan.slide.screen || pan.slide.anim === 'screen' || pan.slide.anim === 'ui')
       const panClair = !surEcran && pan && pan.kind !== 'avclip'
         && (pan.kind === 'media' || pan.kind === 'medias' || panels.indexOf(pan) % 2 === 1)
-      g.sombre = ap ? (!pan || pan.kind === 'avclip' || surEcran) : !panClair
+      g.sombre = slam ? true : ap ? (!pan || pan.kind === 'avclip' || surEcran) : !panClair
       // l'ancre est celle de la PHRASE (v17) : tous les groupes d'une même phrase
       // s'accumulent au même endroit — c'est la phrase suivante qui se déplace.
       // Un panneau au-dessus → ancres basses seulement ; visage plein cadre → tout.
-      const pool = pan ? ancLow : ancFace
+      // ── RÈGLE « JAMAIS SUR LE VISAGE NI SUR L'ANIMATION » (Axel 22/08) ─────────
+      // Le sous-titre peut bouger dans la safe zone, mais pas sur la bouche de
+      // l'avatar ni sur le cœur d'une animation. Mesuré sur les rendus : visage
+      // plein cadre = peau de ~27 % à 98 % de H (bouche ~45 %) ; split = visage du
+      // bas dès ~57 %. Donc en slam :
+      //   · visage PLEIN CADRE → BAS, sur le tee-shirt (~70 % de H) : sous le menton,
+      //     jamais sur la bouche (Axel 23/08 : « pas sur le visage, plutôt en bas sur le tee-shirt »).
+      //     14-22 % « au-dessus de la tête » tombait en fait sur le front (cadrage center 38 %).
+      //   · SPLIT → dans la bande entre les deux moitiés (≈ 44-48 %), au-dessus du visage
+      //   · carte/écran → bande standard (53-62 %), sous le contenu du pack
+      const isFace = pan && pan.kind === 'avclip'
+      const isSplit = isFace && pan.slide && pan.slide.split
+      const pool = slam
+        ? (isSplit ? [{ top: Math.round(H * 0.445), cls: '' }, { top: Math.round(H * 0.465), cls: '' }]
+          : isFace ? [{ top: Math.round(H * 0.70), cls: '' }, { top: Math.round(H * 0.73), cls: '' }, { top: Math.round(H * 0.715), cls: '' }]
+          : ancLow)
+        : (pan ? ancLow : ancFace)
       const an = g.hook ? null : pool[(g.sIdx ?? 0) % pool.length]
       // l'entrée varie par groupe ET par phrase (6 modes, jamais deux pareilles
       // d'affilée) — « c'est tout le temps la même animation » (Axel, v16)
@@ -1356,7 +1574,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         const off = g.hook ? '' : ` style="vertical-align:${OFFS[(i + k) % OFFS.length]}em"`
         return `<span class="dc-w${cls}" data-t="${r2(w.start)}"${off}>${esc(w.text)}</span>`
       }).join(' ')
-      return `<div class="clip dyncap${g.hook ? '' : an.cls}" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"
+      return `<div class="clip dyncap${g.hook ? '' : an.cls}" id="dc${i}" data-start="${a}" data-duration="${r2(Math.max(0.2, b - a))}" data-track-index="14"${slam && isFace && !isSplit ? ' data-face="1"' : ''}
         style="top:${g.hook ? hautHook : an.top}px"><span class="dc-p${g.hook ? ` dc-hook hk${hs}` : (g.sombre ? '' : ' dc-clair')}" id="dp${i}">${dedans}</span></div>`
     }).join('\n')
     // ── v17 : PLUS DE MOTS GÉANTS SÉPARÉS (Axel : « le "dizaines" ne doit pas
@@ -1418,7 +1636,9 @@ export function buildDynamicComposition(plan, opts = {}) {
   {
     const tTitre = String((plan.hook && plan.hook.text) || '').trim()
     const finH = r2((plan.hook && plan.hook.end) || 0)
-    if (tTitre && finH >= 1) {
+    // slam : pas de titre par-dessus le hook — la grille 3×3 + les sous-titres rouges du hook
+    // SONT l'accroche ; un 3e texte au même endroit se marchait dessus (vu sur le rendu e2e).
+    if (tTitre && finH >= 1 && !slam) {
       // ⚠ CONTRAT HYPERFRAMES : « the framework alone controls .clip visibility »
       // — un tween autoAlpha sur la RACINE .clip se bat avec le framework et le
       // titre n'apparaît jamais (mesuré sur v7 : construit, logué, invisible).
@@ -1490,13 +1710,14 @@ export function buildDynamicComposition(plan, opts = {}) {
      polices embarquées que les autres styles chargent déjà. Les sous-titres du
      hook n'avaient jamais leur vraie graisse. */
   ${fontFaceCss()}
-  body { margin:0; width:${W}px; height:${H}px; overflow:hidden; background:${ap ? AP_A.bg : DARK.bg}; font-family:'Inter',sans-serif; }
+  body { margin:0; width:${W}px; height:${H}px; overflow:hidden; background:${slam ? SLAM_A.bg : ap ? AP_A.bg : DARK.bg}; font-family:'Inter',sans-serif; }
   .pnl { position:absolute; top:0; left:0; width:${W}px; height:${H}px; overflow:hidden; }
   ${animCss(W, H)}
   .pin { position:absolute; inset:0; }
   /* le mot affiché : Archivo Black tape fort, c'est l'identité du dynamique.
      Apple n'écrit jamais aussi gras — SF Pro Display, donc Inter 800 très serré. */
   .disp { font-family:${ap ? `'Inter',sans-serif; font-weight:800; letter-spacing:-.035em`
+    : slam ? `'Anton','Archivo Black',sans-serif; letter-spacing:.006em`
     : `'Archivo Black',sans-serif; letter-spacing:-.01em`}; }
   .stack { position:absolute; left:0; right:0; top:0; bottom:0; display:flex; flex-direction:column;
            justify-content:center; align-items:center; gap:34px; padding:0 70px; box-sizing:border-box; }
@@ -1521,7 +1742,7 @@ export function buildDynamicComposition(plan, opts = {}) {
      prends la vidéo comme modèle ») : PLUS DE PILULE. Le modèle docu — texte
      blanc très gras posé À MÊME l'image, ombre portée douce, casse naturelle,
      l'accent en couleur et plus gros. */
-  .dc-p { display:inline-block; max-width:${Math.round(W * 0.86)}px;
+  .dc-p { display:inline-block; max-width:${Math.round(W * (slam ? 0.72 : 0.86))}px;
     background:transparent; box-shadow:none; padding:0;
     font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-.024em;
     font-size:${Math.round(H * 0.040)}px; line-height:1.06; color:#FFFFFF;
@@ -1533,7 +1754,10 @@ export function buildDynamicComposition(plan, opts = {}) {
   /* la hiérarchie de la réf est dans la TAILLE, tout reste blanc :
      connecteurs 0,6 em · mots normaux 1 em · mots forts 1,78 em */
   .dc-p:not(.dc-hook) .dc-w.sm { font-size:.6em; font-weight:700; letter-spacing:-.01em; }
-  .dc-p:not(.dc-hook) .dc-w.acc { font-size:1.78em; font-weight:900; letter-spacing:-.035em; }
+  /* (B) le MOT-CLÉ prend la couleur d'accent (réfs : le mot fort ressort en couleur,
+     pas juste plus gros). Marche sur panneau sombre ET clair. Slam = jaune + un poil
+     plus grand pour le « slam ». */
+  .dc-p:not(.dc-hook) .dc-w.acc { font-size:${slam ? '1.7em' : '1.78em'}; font-weight:900; letter-spacing:-.035em; color:${accCol}; }
   /* sur un panneau CLAIR : encre sombre, ombre claire discrète */
   .dc-clair { background:transparent; color:#17171C;
     text-shadow:0 ${Math.round(H * 0.0014)}px ${Math.round(H * 0.005)}px rgba(255,255,255,.6),
@@ -1694,6 +1918,26 @@ ${hookTitleHtml}
 window.__timelines = window.__timelines || {};
 const tl = gsap.timeline({ paused: true });
 ${js}
+// ── RÈGLE SAFE ZONE DES SOUS-TITRES (Axel 22/08 : « mets une règle ») ──────────
+// Quel que soit le texte (un mot fort en 1,7 em peut déborder sous son ancre), AUCUN
+// bloc de sous-titre ne doit finir sous ${Math.round(SAFE_SUB_BOTTOM * 100)} % de la hauteur (légende + boutons
+// TikTok/Reels) ni sortir des ${Math.round((1 - 2 * SAFE_SUB_SIDE) * 100)} % centrés (rail droit). Mesuré sur le DOM
+// rendu, AVANT la première capture, une fois pour toutes → déterministe et seek-safe.
+(function(){
+  var H = ${H}, W = ${W}, maxBottom = H * ${SAFE_SUB_BOTTOM}, side = W * ${SAFE_SUB_SIDE};
+  var blocs = document.querySelectorAll('.dyncap');
+  for (var b = 0; b < blocs.length; b++) {
+    var el = blocs[b], p = el.querySelector('.dc-p'); if (!p) continue;
+    // rendre visible le temps de la mesure (les mots naissent en opacity 0, pas display none)
+    var r = p.getBoundingClientRect();
+    var top = parseFloat(el.style.top || '0');
+    var bottom = top + r.height;
+    var mb = el.getAttribute('data-face') ? H * 0.80 : maxBottom;   // sur un visage plein cadre le texte va sur le tee-shirt
+    if (bottom > mb) el.style.top = Math.max(H * 0.12, mb - r.height) + 'px';
+    if (top < H * 0.12) el.style.top = Math.round(H * 0.12) + 'px';   // safe zone HAUTE (horloge + onglets)
+    if (r.left < side || r.right > W - side) { el.style.textAlign = 'center'; el.style.paddingLeft = '0'; el.style.paddingRight = '0'; }
+  }
+})();
 window.__timelines['main'] = tl;
 </script>
 </body>

@@ -8,6 +8,13 @@ name: Email drip (relances Resend)
 # spammait des e-mails « Run failed ». On retire le déclencheur planifié — le
 # workflow ne part plus tout seul ; il reste lançable à la main si un jour on
 # réactive le drip (la fonction email-drip devra alors être redéployée).
+#
+# 23/08/2026 — LE DRIP TOURNE DE NOUVEAU, MAIS PLUS D'ICI. Conséquence de #64 :
+# 10 comptes créés du 11 au 22/08 n'ont reçu AUCUN e-mail. Le planificateur est
+# désormais INTERNE à Supabase (migration `email_drip_internal_cron` : pg_cron
+# toutes les heures à la minute 7 → pg_net → email-drip, clé dans Vault
+# `email_drip_cron_key`). CRON_SECRET a été régénéré côté Supabase : le secret
+# GitHub `CRON_SECRET` est PÉRIMÉ — ce workflow ne doit pas être relancé tel quel.
 on:
   workflow_dispatch: {}
 

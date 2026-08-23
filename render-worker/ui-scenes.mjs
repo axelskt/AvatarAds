@@ -242,7 +242,8 @@ export const UI_SCENES = {
     const url = String(s.url || 'avatarads.fr')
     const file = s.screen ? 'tuto/' + s.screen + '.png' : ''
     const W = 1000, H = 690, X = (1080 - W) / 2, Y = 560
-    const tType = t0 + 0.35, tGo = r2(tType + 0.09 * url.length + 0.2)
+    const tps = s.typeSpeed || 0.09
+    const tType = t0 + 0.35, tGo = r2(tType + tps * url.length + 0.2)
     // cible du zoom final : le bouton « Commencer » en haut à droite du site
     // cible calée sur la NOUVELLE LP (capture 2880×1800) : « Se connecter » +
     // « Commencer » sont sur la rangée du haut, à y≈0,04. L'ancien 0,146 zoomait
@@ -258,12 +259,13 @@ export const UI_SCENES = {
           </span>
         </div>
         <div id="${id}vp" style="position:absolute;left:0;top:96px;width:${W}px;height:${H - 96}px;overflow:hidden;background:${tone.dark ? '#0E0E13' : '#fff'}">
+          ${s.preview ? `<img src="${file}" style="position:absolute;left:0;top:0;width:${W}px;height:auto;opacity:.22;filter:blur(6px)" />` : ''}
           <img id="${id}pg" src="${file}" style="position:absolute;left:0;top:0;width:${W}px;height:auto;opacity:0" />
         </div>
       </div>`
     let js = `
   tl.fromTo('#${id}win',{y:220,scale:0.94,opacity:0},{y:0,scale:1,opacity:1,duration:0.5,ease:'power3.out'},${r2(t0)});` +
-      url.split('').map((c, i) => `\n  tl.set('#${id}u${i}',{display:'inline'},${r2(tType + 0.09 * i)});`).join('') + `
+      url.split('').map((c, i) => `\n  tl.set('#${id}u${i}',{display:'inline'},${r2(tType + tps * i)});`).join('') + `
   tl.fromTo('#${id}pg',{opacity:0,y:60},{opacity:1,y:0,duration:0.42,ease:'power3.out'},${tGo});`
     // la page glisse doucement puis la caméra PLONGE sur le bouton — c'est la
     // transition vers la suite (« un zoom sur le bouton plutôt », Axel)
@@ -276,10 +278,33 @@ export const UI_SCENES = {
     const vpH = H - 96
     const tx = r2(W / 2 - zx * W * zf)
     const ty = r2(vpH / 2 - zy * imgH * zf)
+    // le zoom dure 0,9 s (pas jusqu'à la fin du panneau) : ensuite la caméra est posée
+    // et le CURSEUR vient CLIQUER le bouton (s.clickAt, sinon juste après le zoom) —
+    // Axel (22/08) : « le zoom sur Commencer revient une deuxième fois » → tout se
+    // passe DANS cette scène, plus besoin d'enchaîner une scène screen pour le clic.
+    const zD = r2(Math.min(0.9, Math.max(0.5, t1 - tZoom - 0.3)))
+    const tClick = r2(s.clickAt ? Math.max(tZoom + zD + 0.1, s.clickAt) : Math.min(t1 - 0.35, tZoom + zD + 0.35))
     js += `
   tl.to('#${id}win',{y:-16,duration:${r2(Math.max(0.4, tZoom - tGo))},ease:'none'},${r2(tGo + 0.3)});
-  tl.fromTo('#${id}pg',{scale:1,x:0,y:0,transformOrigin:'0 0'},{scale:${zf},x:${tx},y:${ty},duration:${r2(Math.max(0.5, t1 - tZoom))},ease:'power2.inOut'},${tZoom});`
-    return { html, js, sfx: [{ kind: 'mo-pop-1', t: tGo, vol: 0.45 }], keyboard: [{ t: r2(tType), dur: r2(tGo - tType) }] }
+  tl.fromTo('#${id}pg',{scale:1,x:0,y:0,transformOrigin:'0 0'},{scale:${zf},x:${tx},y:${ty},duration:${zD},ease:'power2.inOut'},${tZoom});`
+    const sfx = [{ kind: 'mo-pop-1', t: tGo, vol: 0.45 }]
+    if (s.click !== false && tClick < t1 - 0.2) {
+      // curseur + onde de clic, posés DANS le viewport (le bouton est au centre après le zoom)
+      const cx = Math.round(W / 2), cy = Math.round(96 + vpH / 2)
+      const cur = `<div id="${id}cu" style="position:absolute;left:${cx + 160}px;top:${cy + 180}px;width:44px;height:56px;z-index:9;opacity:0;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))"><svg viewBox="0 0 24 30" width="44" height="56"><path d="M4 2l14 12-6 1 4 9-3 1.4-4-9-5 4z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg></div>` +
+        `<div id="${id}rp" style="position:absolute;left:${cx - 40}px;top:${cy - 40}px;width:80px;height:80px;border-radius:50%;border:4px solid ${ACC};opacity:0;z-index:8"></div>`
+      // on les insère DANS la fenêtre (après le viewport) pour qu'ils suivent la carte
+      js += `
+  tl.to('#${id}cu',{opacity:1,duration:0.2},${r2(tClick - 0.55)});
+  tl.to('#${id}cu',{x:-160,y:-180,duration:0.5,ease:'power2.inOut'},${r2(tClick - 0.55)});
+  tl.to('#${id}cu',{scale:0.82,duration:0.09,ease:'power2.in',transformOrigin:'0 0'},${tClick});
+  tl.to('#${id}cu',{scale:1,duration:0.16,ease:'back.out(3)',transformOrigin:'0 0'},${r2(tClick + 0.09)});
+  tl.fromTo('#${id}rp',{scale:0.3,opacity:0.6},{scale:2.4,opacity:0,duration:0.5,ease:'power2.out',transformOrigin:'50% 50%'},${tClick});
+  tl.to('#${id}pg',{scale:${r2(zf * 1.06)},duration:0.18,yoyo:true,repeat:1,ease:'sine.inOut',transformOrigin:'0 0'},${tClick});`
+      sfx.push({ kind: 'mo-tap-1', t: tClick, vol: 0.8 })
+      return { html: html.replace(/<\/div>`?$/, '') + cur + '</div>', js, sfx, keyboard: [{ t: r2(tType), dur: r2(tGo - tType) }] }
+    }
+    return { html, js, sfx, keyboard: [{ t: r2(tType), dur: r2(tGo - tType) }] }
   },
 
   // ── « des millions de vues » : les compteurs sociaux qui s'emballent ────────

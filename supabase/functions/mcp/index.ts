@@ -961,7 +961,9 @@ function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): s
     ].filter(Boolean).join(' ')
   }
   if (kind === 'ugc') {
-    return augmenterPortrait(`Candid UGC selfie-style photo: a real-looking person naturally holding and showing the product to the camera, casual everyday setting, authentic smartphone look. ${base}.` + refTxt)
+    // « L'avatar imparfait » (réf hugomatias) : le réalisme UGC vient de l'IMPERFECTION de la
+    // capture, pas d'un beau portrait — photo iPhone, cadrage imparfait, lumière non contrôlée.
+    return augmenterPortrait(`Candid UGC selfie-style photo shot on an iPhone front camera: a real-looking person naturally holding and showing the product to the camera, casual everyday home setting. Deliberately IMPERFECT amateur capture that reads as a genuine unstaged phone selfie a friend would send — casually off-center and slightly tilted framing (not a composed studio portrait), uncontrolled real indoor lighting with mixed ambient sources and ordinary phone auto-exposure, plain lived-in everyday background. ${base}.` + refTxt)
   }
   return augmenterPortrait(base + refTxt)
 }
@@ -1299,23 +1301,26 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
     if (isBlockedHost(parsed.hostname)) return toolErr('image_url doit pointer vers une image publique (adresse interne refusée).')
   }
 
-  // Débit au lancement : le coût Veo est engagé dès le start (remboursé si échec)
-  const bal = await spendCredits(userId, cost)
-  if (bal === null) return toolErr('Erreur crédits — réessaie.')
-  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${VIDEO_COST_SEC}). Recharge sur ${APP_URL}`)
-
-  // Job créé TOUT DE SUITE (sans op_name) → on rend la main à Claude en <1 s. Le
-  // téléchargement de l'image + le lancement Veo se font en tâche de fond ; /status
-  // n'avancera le job qu'une fois `op_name` posé (barre de progression en attendant).
+  // Job créé TOUT DE SUITE, AVANT même le débit → réponse à Claude en un SEUL aller-retour
+  // DB (l'insert). Sur un isolate FROID (Supabase en démarre plusieurs, le keep-warm n'en
+  // garde qu'un chaud), empiler débit + insert + téléchargement dépassait la coupure ~8 s du
+  // relais claude.ai (« Erreur de connexion ») ET, coupé avant l'insert, ne laissait AUCUN
+  // job à récupérer. Débit atomique + image + lancement Veo passent en tâche de fond ;
+  // /status n'avance le job qu'une fois `op_name` posé (barre de progression en attendant).
   const { data: job, error } = await svc.from('mcp_jobs')
     .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: cost }).select('id').single()
-  if (error || !job) {
-    await refundCredits(userId, cost)
-    return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
-  }
+  if (error || !job) return toolErr('Erreur serveur au suivi du job — réessaie.')
 
   bg((async () => {
     try {
+      // Débit atomique au lancement (remboursé si échec plus bas). Le pré-contrôle de solde
+      // plus haut a déjà écarté « pas assez de crédits » ; ici on sécurise la course entre
+      // appels simultanés. Échec du débit → job en échec, SANS remboursement (rien débité).
+      const bal = await spendCredits(userId, cost)
+      if (bal === null || bal === -1) {
+        await svc.from('mcp_jobs').update({ status: 'failed', error: bal === -1 ? 'Crédits insuffisants' : 'Erreur crédits', updated_at: new Date().toISOString() }).eq('id', job.id)
+        return
+      }
       // Image de départ optionnelle — TÉLÉCHARGEMENT lourd, hors de la requête
       let image: { bytesBase64Encoded: string; mimeType: string } | null = null
       if (imageUrl) {
@@ -1392,37 +1397,26 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
 
-  // Poll Google jusqu'à ~40 s dans cet appel, puis on rend la main à Claude
-  let done: Record<string, unknown> | null = null
-  let opErr = ''
-  for (let i = 0; i < 9; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 5000))
-    const res = await veoFetch(`/v1beta/${job.op_name}`, { method: 'GET' })
-    if (!res.ok) continue
-    const data = await res.json().catch(() => ({}))
-    if (data.done) {
-      if (data.error) opErr = data.error.message || 'Génération refusée par Google'
-      else done = data
-      break
-    }
+  // ⚠ JAMAIS de boucle de poll ici : le relais claude.ai COUPE la requête à ~8 s
+  // (l'ancienne boucle 9×5 s = 40 s garantissait « le serveur ne répond pas »). On
+  // fait UN SEUL passage — advanceVideoJob : un unique GET Veo puis, si prête, livraison
+  // (deliverVideo, claim atomique anti-double-upload) — puis on relit le job. Le suivi
+  // continu est assuré par le widget de la carte, qui sonde /status (→ advanceVideoJob).
+  await advanceVideoJob(job)
+  const { data: j2 } = await svc.from('mcp_jobs').select('*')
+    .eq('id', job.id).eq('user_id', userId).maybeSingle()
+  const cur = (j2 || job) as Record<string, unknown>
+  if (cur.status === 'done' && cur.result_url) {
+    const dl = `https://mcp.avatarads.fr/i/${cur.id}`
+    return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(cur.preview_url || '') || undefined)
   }
-  if (opErr) {
-    await failAndRefund(userId, job, opErr) // idempotent : rembourse une seule fois
-    return toolErr(`Génération échouée : ${opErr}. Les ${job.credits_cost} crédits ont été remboursés.`)
+  if (cur.status === 'failed') return toolErr(`Génération échouée : ${cur.error || 'erreur inconnue'} (crédits remboursés).`)
+  // Toujours en cours → on rend une CARTE (structuredContent) : le widget reprend le
+  // suivi via /status et affiche la vidéo tout seul, sans nouvel appel d'outil.
+  return {
+    content: [{ type: 'text', text: `⏳ Ta vidéo se génère — elle s'affiche dans la carte ci-dessous (compte 1 à 3 min). Lien dès qu'elle est prête : https://mcp.avatarads.fr/i/${cur.id}` }],
+    structuredContent: { job_id: cur.id, statusUrl: `https://mcp.avatarads.fr/status/${cur.id}`, kind: 'video', format: 'portrait' },
   }
-  if (!done) return enCours('Génération vidéo en cours (elle prend 1 à 3 minutes).', 'check_video', '30 secondes')
-
-  // Vidéo terminée : base64 direct ou URI à télécharger (mêmes chemins de réponse que l'app)
-  const { b64, uri } = extractVideo(done)
-  const bytes = await fetchVideoBytes(b64, uri)
-  if (!bytes) {
-    await failAndRefund(userId, job, 'video_missing')
-    return toolErr('Vidéo terminée mais introuvable dans la réponse — crédits remboursés, relance generate_video.')
-  }
-  const url = await deliverVideo(userId, job, bytes) // claim atomique : pas de double upload
-  return url
-    ? toolMedia(url, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nURL : ${url}`)
-    : toolText('⏳ Presque prête — rappelle check_video dans quelques secondes.')
 }
 
 // ── Générateur avatar parlant (ElevenLabs → Hedra) ──
@@ -1572,22 +1566,23 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
     if (isBlockedHost(parsed.hostname)) return toolErr('avatar_image_url doit pointer vers une image publique (adresse interne refusée).')
   }
 
-  // Débit au lancement (remboursé si échec dans la tâche de fond)
-  const bal = await spendCredits(userId, cost)
-  if (bal === null) return toolErr('Erreur crédits — réessaie.')
-  if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
-
   // Job kind 'video' : l'avatar est du Veo désormais → /status l'avance via advanceVideoJob.
-  // Rendu à Claude en <1 s (op_name posé par la tâche de fond, barre en attendant).
+  // Inséré AVANT le débit → réponse à Claude en un SEUL aller-retour DB (résiste au cold-start
+  // qui, empilant débit + insert + téléchargement, dépassait la coupure ~8 s du relais claude.ai
+  // et ne laissait aucun job à récupérer). Débit + image + Veo passent en tâche de fond.
   const { data: job, error: jobErr } = await svc.from('mcp_jobs')
     .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: cost }).select('id').single()
-  if (jobErr || !job) {
-    await refundCredits(userId, cost)
-    return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
-  }
+  if (jobErr || !job) return toolErr('Erreur serveur au suivi du job — réessaie.')
 
   bg((async () => {
     try {
+      // Débit atomique au lancement (remboursé si échec plus bas ; pré-contrôle de solde déjà
+      // fait plus haut). Échec du débit → job en échec, SANS remboursement (rien débité).
+      const bal = await spendCredits(userId, cost)
+      if (bal === null || bal === -1) {
+        await svc.from('mcp_jobs').update({ status: 'failed', error: bal === -1 ? 'Crédits insuffisants' : 'Erreur crédits', updated_at: new Date().toISOString() }).eq('id', job.id)
+        return
+      }
       // Photo optionnelle → recadrée au format (Veo garde sinon le ratio de l'image)
       let image: { bytesBase64Encoded: string; mimeType: string } | null = null
       if (avatarUrl) {
@@ -3122,7 +3117,7 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon-256.png?v=2', mimeType: 'image/png', sizes: ['256x256'] },
           ],
         },
-        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION : si generate_video ou generate_avatar_video renvoie une erreur de connexion (« Impossible de joindre AvatarAds »), la génération a en réalité DÉMARRÉ et les crédits sont débités — ne relance JAMAIS generate (ça débiterait une 2ᵉ fois). Appelle check_video (Express) ou check_avatar_video (avatar) SANS aucun argument : ça récupère et affiche la dernière vidéo du compte. " + (ctx.requireConfirm
+        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION AUTOMATIQUE (TRÈS IMPORTANT) : « Impossible de joindre AvatarAds » / erreur de connexion sur generate_video ou generate_avatar_video NE VEUT PAS DIRE échec — la génération a bien DÉMARRÉ, les crédits sont débités, c'est juste le relais claude.ai qui a lâché la réponse du lancement (le serveur, lui, répond en ~2 s). Dans CE cas tu DOIS, dans le MÊME tour et SANS RIEN DEMANDER à l'utilisateur (n'écris PAS « la vidéo se génère », ne demande PAS « veux-tu que je vérifie », n'attends PAS qu'il te relance), rappeler IMMÉDIATEMENT check_video (Express) ou check_avatar_video (avatar) SANS aucun argument — c'est CE rappel qui fait apparaître la carte avec la barre de progression puis la vidéo. Si elle n'est pas encore prête, re-rappelle check_video (toujours SANS argument) au bout de ~20 s, jusqu'à ce que la carte s'affiche. Ne relance JAMAIS generate (2ᵉ débit)." + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })

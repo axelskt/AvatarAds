@@ -611,12 +611,32 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       plan.avatarSegments = []
     }
 
+    // ── CORRECTION LEXICALE DES SOUS-TITRES (fautes de transcription Whisper FR) ──
+    // Corrigé AVANT la dérivation : la visite guidée et les accents retombent alors
+    // sur les bons mots (« Photo Réel » était transcrit « Photo Riel » → l'étape
+    // photo-reel-realiste était introuvable et sautait ; Axel 23/08). On ne touche
+    // qu'aux termes MÉTIER sans ambiguïté — jamais un mot français courant.
+    {
+      const FIX = [
+        [/\bRielle\b/g, 'Réelle'], [/\brielle\b/g, 'réelle'],
+        [/\bRiel\b/g, 'Réel'], [/\briel\b/g, 'réel'],
+        [/\bavatar ?ads\b/gi, 'AvatarAds'], [/\bhedra\b/gi, 'Hedra'],
+        [/\bveo\b/gi, 'Veo'], [/\bseedance\b/gi, 'Seedance'],
+      ]
+      let n = 0
+      for (const c of plan.captions || []) {
+        const av = String(c.text || '')
+        for (const [re, to] of FIX) c.text = String(c.text || '').replace(re, to)
+        if (c.text !== av) n++
+      }
+      if (n) console.log(`▶ ${n} sous-titre(s) corrigé(s) (lexique métier)`)
+    }
     // ⚠️ dériver AVANT de lister les captures : la dérivation #148 ajoute des scènes
     // ui avec screen:'site-home' & co — sans ça leurs images ne sont jamais copiées
     // (l'engine re-saute la dérivation quand les scènes ui existent déjà)
     // apple partage le moteur du dynamique (cf. build-composition) : il partage
     // donc aussi sa dérivation, pas celle des styles posés sur une base.
-    if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple') {
+    if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple' || plan.slideStyle === 'slam') {
       // assetFiles : sans lui la dérivation ne voit pas les médias de l'utilisateur
       // ── LA TRANSCRIPTION ÉCRIT CE QU'ELLE ENTEND, PAS CE QUI S'ÉCRIT ──
       // Scribe rend « Sasia » pour « SaaS IA ». Le mot part tel quel dans les
@@ -642,6 +662,251 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       try { deriveDynamicSlides(plan, { assetFiles, assetDims, noFace, hasClips: Object.keys(avatarClips).length > 0 }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
       // #24 · et maintenant il RELIT sa copie, sur le montage réel
       try { await passeDeFinition(plan) } catch (e) { console.warn('finitions:', e.message) }
+      // ── PASSE SLAM : ce que le chef produit pour ce style, traduit pour le moteur ──
+      // (validé avec Axel le 22/08). La dérive classique ne résout pas les médias de
+      // l'utilisateur ; on le fait ici pour les animations qui en portent.
+      if (plan.slideStyle === 'slam') {
+        // le chef écrit l'id de l'asset dans `text` (grammaire en lignes), parfois en MAJUSCULES
+        const byId = {}; for (const k of Object.keys(assetFiles)) byId[k.toLowerCase()] = assetFiles[k]
+        const src = (it) => (it && it.src) || byId[String((it && (it.assetId || it.text)) || '').trim().toLowerCase()] || ''
+        let grilles = 0, medias = 0
+        // LA GRILLE 3×3 AU HOOK EST IMPOSÉE dès 6 médias (le chef l'oublie une fois sur deux,
+        // Axel la veut à chaque fois) : vidéos et images alternées, 0 → 2,3 s, avant tout.
+        const ids = Object.keys(assetFiles)
+        const vids = ids.filter((k) => /\.(mp4|mov|webm|m4v)$/i.test(assetFiles[k])), imgs = ids.filter((k) => !vids.includes(k))
+        if (ids.length >= 6 && !(plan.slides || []).some((sl) => sl.anim === 'photowall' && sl.start < 1)) {
+          const ordre = []
+          for (let k = 0; ordre.length < Math.min(9, ids.length) && k < 9; k++) { const pick = (k % 2 === 0 ? vids : imgs).shift() || vids.shift() || imgs.shift(); if (pick) ordre.push(pick) }
+          const hookEnd = r2(Math.min(2.3, (plan.avatarSegments || [])[0]?.end || 2.3))
+          plan.slides = (plan.slides || []).filter((sl) => !(sl.start < hookEnd - 0.2 && sl.anim !== 'screen'))
+          plan.slides.unshift({ anim: 'photowall', grid: '3x3', start: 0, end: hookEnd, items: ordre.map((k) => ({ assetId: k, src: assetFiles[k] })), count: ordre.length, __slamGrid: true })
+          const w0 = (plan.avatarSegments || []).slice().sort((a, b) => a.start - b.start)[0]
+          if (w0 && w0.start < hookEnd) w0.start = hookEnd   // l'avatar reprend après la grille
+          console.log(`▶ slam : grille 3×3 imposée au hook (0→${hookEnd}s, ${ordre.length} médias)`)
+        }
+        for (const sl of plan.slides || []) {
+          if (sl.anim === 'photowall' || sl.anim === 'post' || sl.anim === 'medias') {
+            const items = (sl.items || []).map((it) => ({ ...it, src: src(it) })).filter((it) => it.src)
+            medias += items.length
+            sl.items = items
+            if (sl.anim === 'photowall') { if (String(sl.motif || '').includes('3x3') || items.length >= 9) sl.grid = '3x3'; grilles++ }
+            if (sl.anim === 'post') sl.items = items.slice(0, 3)
+          }
+          // un compteur SANS title est « décoratif » pour la dérive classique (réancré) → on le verrouille
+          if (sl.anim === 'countup' && !sl.title) sl.title = String(sl.unit || sl.value || 'COMPTEUR').toUpperCase()
+        }
+        // règles avatar slam : 4 apparitions max (3 plein cadre + 1 split) ; au-delà on garde
+        // le hook, le dernier (CTA) et les 2 plus longs entre les deux.
+        const segs = (plan.avatarSegments || []).slice().sort((a, b) => a.start - b.start)
+        if (segs.length > 4) {
+          const first = segs[0], last = segs[segs.length - 1]
+          const mid = segs.slice(1, -1).sort((a, b) => (b.end - b.start) - (a.end - a.start)).slice(0, 2)
+          plan.avatarSegments = [first, ...mid, last].sort((a, b) => a.start - b.start)
+          console.log(`▶ slam : ${segs.length} fenêtres avatar → 4 gardées (hook, 2 plus longues, CTA)`)
+        }
+        // LE SPLIT (1 seul) : la fenêtre avatar qui suit le hook devient « visage en bas +
+        // carte en haut » avec l'animation qui la chevauche ou la suit à < 0,5 s. La carte
+        // monte dans le split et disparaît du flux (sinon elle jouerait deux fois).
+        const segs2 = (plan.avatarSegments || []).slice().sort((a, b) => a.start - b.start)
+        const cand = segs2.find((w, k) => k > 0 && !w.split && (w.end - w.start) >= 2.5)
+        if (cand) {
+          // une anim à ITEMS (lineup, checklist, list…) sans items rend VIDE → inéligible au split
+          const AVEC_ITEMS = new Set(['lineup', 'checklist', 'list', 'medias', 'photowall', 'carousel', 'podium'])
+          const ok = (sl) => sl.anim && sl.anim !== 'screen' && sl.anim !== 'ui' && sl.anim !== 'photowall' && sl.anim !== 'result'
+            && !(AVEC_ITEMS.has(sl.anim) && !(sl.items || []).length)
+          const anim = (plan.slides || []).find((sl) => ok(sl) && sl.start < cand.end - 0.3 && sl.end > cand.start + 0.3)
+            || (plan.slides || []).find((sl) => ok(sl) && Math.abs(sl.start - cand.end) < 0.5)
+          if (anim) {
+            cand.split = { slide: { ...anim, eyebrow: anim.eyebrow || '', title: anim.title || '' } }
+            cand.end = r2(Math.max(cand.end, anim.end))
+            plan.slides = plan.slides.filter((sl) => sl !== anim)
+            console.log(`▶ slam : split « ${anim.anim} » sur la fenêtre avatar ${r2(cand.start)}→${r2(cand.end)}s`)
+          }
+        }
+        // deux fenêtres avatar consécutives = même photo (même visage, même décor)
+        segs2.forEach((w, k) => { if (k > 0 && w.start - segs2[k - 1].end < 0.6 && segs2[k - 1].photo) w.photo = segs2[k - 1].photo })
+        // UN SPLIT NE DURE PAS PLUS QUE SA CARTE (Axel : « LEUR SECRET qui reste vide ») : la
+        // dérive étirait la fenêtre (6,3→13,3 s) alors que l'anim du haut finit à 9,6 s → 4 s
+        // d'en-tête sur du vide. On borne la fenêtre à la fin de la carte (+0,3 s) ; le reste
+        // du créneau retourne au flux (cartes plein cadre / trous comblés plus bas).
+        for (const w of plan.avatarSegments || []) {
+          const sl = w.split && w.split.slide
+          if (!sl || !sl.end) continue
+          const finCarte = r2(Math.min(w.end, Math.max(sl.end, sl.start + 2.2) + 0.3))
+          if (w.end - finCarte > 0.8) { console.log(`▶ slam : split borné à sa carte (${w.end}→${finCarte}s, « ${sl.anim} »)`); w.end = finCarte; if (w.clipUntil && w.clipUntil > finCarte) w.clipUntil = finCarte }
+        }
+        // LE CTA = L'ORATEUR (Axel : « le CTA montre la photo de l'avatar… ») : la dernière
+        // fenêtre reprend la photo du HOOK (même visage qui ouvre et ferme), jamais une image
+        // du pool qui tombe là par rotation.
+        {
+          const ord = (plan.avatarSegments || []).slice().sort((a, b) => a.start - b.start)
+          if (ord.length >= 2) { const last = ord[ord.length - 1]; last.photo = ord[0].photo || 'media/avatar.png'; last.__cta = true }
+        }
+        // (2) en slam tout est PORTRAIT 9:16 : un format « paysage » du chef (avatar pendant une
+        //     slide) n'a pas de sens ici — le visage est plein cadre ou en split, jamais en 16:9.
+        for (const w of plan.avatarSegments || []) if (w.format === 'paysage') w.format = 'portrait'
+        // (3) l'anim « result » (mockup téléphone du résultat) prend la photo avatar par défaut →
+        //     on lui donne un média de l'utilisateur (une image) : le résultat, c'est SA création.
+        const firstImg = Object.keys(assetFiles).find((k) => !/\.(mp4|mov|webm|m4v)$/i.test(assetFiles[k]))
+        for (const sl of plan.slides || []) if (sl.anim === 'result' && !sl.userFile && !sl.src && firstImg) { sl.userFile = assetFiles[firstImg]; sl.src = assetFiles[firstImg]; sl.assetId = firstImg }
+        // (4) le DERNIER plan est l'avatar (CTA) : une carte qui démarre après le début de la
+        //     dernière fenêtre avatar et finit à la fin de la vidéo est retirée (« script » vide vu
+        //     à 40 s) — le visage porte le CTA.
+        const lastW = segs2[segs2.length - 1]
+        if (lastW) plan.slides = (plan.slides || []).filter((sl) => !(sl.start > lastW.start + 0.5 && sl.end >= lastW.end - 0.5 && !sl.__slamGrid))
+        // (00) LE NAVIGATEUR N'ARRIVE PAS TROP TÔT : la dérive l'ouvre dès le début de la phrase
+        //      (« Et pour faire ça de la bonne manière, tu vas te rendre sur avatarads.fr » → 2,5 s
+        //      avant l'adresse) et écrase l'animation d'avant (`tools` réduit à 1,3 s). La frappe
+        //      dure ~1,6 s : ouvrir 1,9 s avant le mot suffit pour que la LP arrive pile dessus.
+        //      Le temps rendu revient au plan précédent (slide ou fenêtre visage).
+        for (const sl of plan.slides || []) {
+          if (sl.anim !== 'ui' || sl.ui !== 'browser') continue
+          const url = (plan.captions || []).find((c) => c.start > sl.start && c.start < sl.end && /avatarads|\.(fr|com|io|ai)\b/i.test(String(c.text)))
+          if (!url) continue
+          const nv = r2(url.start - 1.9)
+          if (nv - sl.start < 0.5) continue
+          const avant = sl.start
+          const prevS = (plan.slides || []).find((x) => x !== sl && Math.abs(x.end - avant) < 0.12)
+          const prevW = (plan.avatarSegments || []).find((w) => Math.abs(w.end - avant) < 0.12)
+          if (prevS) prevS.end = r2(nv - 0.02); else if (prevW && !prevW.split) prevW.end = r2(nv - 0.02)
+          sl.start = nv
+          console.log(`▶ slam : navigateur ouvert à ${nv}s au lieu de ${avant}s (1,9 s avant « ${url.text} ») — ${prevS ? `« ${prevS.anim} »` : prevW ? 'le visage' : 'rien'} garde ${r2(nv - avant)}s de plus`)
+        }
+        // (0) LA VISITE GUIDÉE NE S'INTERROMPT PAS PAR UNE ANIMATION ABSTRAITE (Axel 23/08 :
+        //     « pourquoi il montre un contrat alors qu'on est sur la visite guidée ? »). Entre le
+        //     premier écran (navigateur) et le dernier écran du tuto, seules les scènes CONCRÈTES
+        //     vivent : captures, médias de l'utilisateur, résultat, compteur. Tout le reste (scène
+        //     du mot, `form`, `sign`…) dégage — le trou est comblé juste après par l'écran précédent.
+        {
+          const slides = plan.slides || []
+          const isTour = (sl) => sl.anim === 'ui' || (sl.anim === 'screen' && sl.screen)
+          const tour = slides.filter(isTour).sort((a, b) => a.start - b.start)
+          if (tour.length >= 2) {
+            const t0 = tour[0].start, t1 = tour[tour.length - 1].end
+            const concret = (sl) => isTour(sl) || sl.assetId || sl.src || sl.userFile
+              || ['photowall', 'media', 'medias', 'result', 'countup'].includes(String(sl.anim))
+              || (sl.items || []).some((it) => it && it.src)
+            const jetes = slides.filter((sl) => sl.start >= t0 - 0.05 && sl.end <= t1 + 0.05 && !concret(sl))
+            if (jetes.length) {
+              plan.slides = slides.filter((sl) => !jetes.includes(sl))
+              console.log(`▶ slam : visite guidée ${r2(t0)}→${r2(t1)}s — ${jetes.map((x) => `« ${x.anim} » à ${x.start}s`).join(', ')} retirée(s) (pas d'animation abstraite au milieu des écrans)`)
+            }
+          }
+        }
+        // (1) ZÉRO TROU : tout vide de plus de 0,8 s entre deux plans (slides + fenêtres avatar)
+        //     est comblé en ÉTIRANT le plan précédent (une carte qui tient = mieux qu'un fond nu).
+        {
+          const occ = [...(plan.slides || []).map((sl) => ({ o: sl, a: sl.start, b: sl.end })),
+                       ...(plan.avatarSegments || []).map((w) => ({ o: w, a: w.start, b: w.end }))].sort((x, y) => x.a - y.a)
+          let fin = 0, bouches = 0
+          for (const it of occ) {
+            if (it.a - fin > 0.8 && fin > 0) {
+              const prev = occ.find((x) => x.b === fin)
+              // un SPLIT ne s'étire pas (sa carte finirait avant lui → en-tête sur du vide,
+              // « LEUR SECRET qui reste vide ») : le trou après un split devient une fenêtre
+              // VISAGE plein cadre (même photo), qui a toujours du contenu.
+              if (prev && prev.o.split) {
+                const w = { start: r2(fin), end: r2(it.a - 0.05), clip: -1, photo: prev.o.photo, __trou: true }
+                ;(plan.avatarSegments = plan.avatarSegments || []).push(w); bouches++
+              } else if (prev) { prev.o.end = r2(it.a - 0.05); prev.b = prev.o.end; bouches++ }
+            }
+            fin = Math.max(fin, it.b)
+          }
+          if (bouches) console.log(`▶ slam : ${bouches} trou(s) comblé(s) en étirant le plan précédent`)
+        }
+        // (1b) LE NAVIGATEUR CLIQUE « COMMENCER » QUAND IL LE DIT : s'il a été étiré sur la phrase
+        //      « cliquer sur Commencer », le zoom et le clic se calent sur le mot (sinon la scène
+        //      zoome 1,2 s avant sa fin, loin de la voix). LEAD 0,35 s : le cadre précède le mot.
+        for (const sl of plan.slides || []) {
+          if (sl.anim !== 'ui' || sl.ui !== 'browser' || sl.zoomAt) continue
+          const mot = (plan.captions || []).find((c) => c.start > sl.start + 1.5 && c.start < sl.end - 0.4
+            && /^(commencer|commence|inscri|connect|connexion|compte)/i.test(String(c.text).replace(/[«»"']/g, '')))
+          if (!mot) continue
+          sl.zoomAt = r2(Math.max(sl.start + 1.9, mot.start - 0.35)); sl.clickAt = r2(Math.min(sl.end - 0.35, mot.start + 0.45))
+          console.log(`▶ slam : navigateur — zoom ${sl.zoomAt}s + clic ${sl.clickAt}s sur « ${mot.text} »`)
+        }
+        // (5) ACCENTS : le chef n'en marque que ~10 ; le jaune doit claquer sur TOUS les mots
+        //     forts (Axel : « le jaune n'y est pas »). On complète avec les mots-clés du script :
+        //     noms propres / URL, chiffres, mots ≥ 7 lettres hors mots-outils — plafonné à 22.
+        {
+          const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.,!?;:«»()"']/g, '')
+          const STOP = new Set(['vraiment', 'ensuite', 'maintenant', 'plusieurs', 'quelque', 'quelques', 'beaucoup', 'toujours', 'pendant', 'comment', 'pourquoi', 'parce', 'simplement', 'justement', 'également', 'egalement', 'aujourd', 'certains', 'certaines', 'personne', 'personnes', 'manière', 'maniere', 'exactement', 'complètement', 'completement', 'tellement', 'seulement', 'finalement'])
+          const have = new Set((plan.accents || []).map(norm))
+          const extra = []
+          for (const c of plan.captions || []) {
+            const raw = String(c.text || '').trim(), n = norm(raw)
+            if (!n || have.has(n)) continue
+            const fort = /\d/.test(n) || /\.(fr|com|ai|io)$/.test(n) || (/^[A-ZÀ-Ý]/.test(raw) && n.length >= 4 && !/^(bon|mais|et|tu|pour|ceux|ils|ça|ca|si|on|la|le|les|une|un|des|de|du|ce|cette|ces|au|aux|en|je|te|se|ne|il|elle|nous|vous)$/.test(n)) || (n.length >= 7 && !STOP.has(n) && !/(ment|ent|ont|ais|ait|aient|ions|iez)$/.test(n))
+            if (fort) { have.add(n); extra.push(raw) }
+          }
+          if (extra.length) { plan.accents = [...(plan.accents || []), ...extra].slice(0, 22); console.log(`▶ slam : ${extra.length} accent(s) ajouté(s) → ${plan.accents.length} mots forts`) }
+        }
+        // (1) COUNTUP SANS VALEUR : le chef a mis « DE VUES » dans center et rien dans value →
+        //     « 0+ ». On déduit le nombre des mots dits autour (« millions » → 1 000 000,
+        //     « milliers » → 1 000, un chiffre prononcé → lui) et on garantit 2 s d'écran.
+        for (const sl of plan.slides || []) {
+          if (sl.anim !== 'countup') continue
+          const hasNum = /\d/.test(String(sl.value || '') + String(sl.center || ''))
+          if (!hasNum) {
+            const around = (plan.captions || []).filter((c) => c.start >= sl.start - 2.5 && c.start <= sl.end + 1.5).map((c) => String(c.text).toLowerCase()).join(' ')
+            const m = around.match(/(\d[\d\s.]*)/)
+            sl.value = m ? m[1].replace(/[\s.]/g, '') : /million/.test(around) ? '1000000' : /millier/.test(around) ? '1000' : /cent/.test(around) ? '100' : '10'
+            if (!sl.unit) sl.unit = String(sl.center || sl.title || '').replace(/DES MILLIONS|MILLIONS|MILLIERS/i, '').trim() || 'VUES'
+            sl.center = ''
+          }
+          if (sl.end - sl.start < 2) sl.end = r2(sl.start + 2)
+        }
+        // (hook) AVATAR PLEIN CADRE GARANTI après la grille : la dérive recoupe les fenêtres
+        //        à sa manière et a avalé celle du hook (2,3→6 s → rien). Règle slam : la 1re
+        //        fenêtre avatar couvre la fin de la grille → la fin de la 1re phrase (≥ 1,2 s).
+        {
+          const segsH = (plan.avatarSegments || []).slice().sort((a, b) => a.start - b.start)
+          const grid = (plan.slides || []).find((sl) => sl.anim === 'photowall' && sl.start < 1)
+          const gEnd = grid ? grid.end : 0
+          const finPhrase = (() => { const c = (plan.captions || []).find((x) => x.start > gEnd + 1.0 && /[.!?]$/.test(String(x.text))); return c ? r2(c.end + 0.15) : r2(gEnd + 2.5) })()
+          const first = segsH[0]
+          if (!first || first.start > gEnd + 0.8 || first.end < gEnd + 1.2) {
+            const w = { start: gEnd, end: Math.min(finPhrase, gEnd + 4.5), clip: -1, photo: first && first.photo, __slamHook: true }
+            // la dérive a pu poser une anim sur ce créneau → elle recule
+            for (const sl of plan.slides || []) if (sl !== grid && sl.start < w.end - 0.2 && sl.end > w.start + 0.2 && sl.anim !== 'screen') sl.start = r2(Math.max(sl.start, w.end))
+            plan.slides = (plan.slides || []).filter((sl) => sl.end - sl.start > 0.4)
+            plan.avatarSegments = [w, ...(plan.avatarSegments || []).filter((x) => x !== first || x.start >= w.end)].sort((a, b) => a.start - b.start)
+            console.log(`▶ slam : hook avatar plein cadre rétabli ${w.start}→${w.end}s (après la grille)`)
+          }
+        }
+        // (millions) la dérive remplace notre countup par ses « views » (compteurs sociaux à
+        //           chiffres inventés : 61 450) — en slam le chiffre affiché est celui qui est DIT.
+        for (const sl of plan.slides || []) {
+          if (sl.anim !== 'views') continue
+          const around = (plan.captions || []).filter((c) => c.start >= sl.start - 2 && c.start <= sl.end + 1.5).map((c) => String(c.text).toLowerCase()).join(' ')
+          if (/million|millier|\d/.test(around)) {
+            const m = around.match(/(\d[\d\s.]*)/)
+            Object.assign(sl, { anim: 'countup', title: /million/.test(around) ? 'DES MILLIONS DE VUES' : 'LE RÉSULTAT', value: m ? m[1].replace(/[\s.]/g, '') : /million/.test(around) ? '1000000' : '1000', unit: /vue/.test(around) ? 'DE VUES' : '', items: [], center: '' })
+            if (sl.end - sl.start < 2) sl.end = r2(sl.start + 2)
+            console.log(`▶ slam : « views » → countup ${sl.value} (le chiffre DIT)`)
+          }
+        }
+        // (result) après la dérive, le mockup « résultat » doit montrer UN MÉDIA DE L'UTILISATEUR
+        //          (pas la capture 99-resultat) : c'est SA création qu'on voit.
+        for (const sl of plan.slides || []) if (sl.anim === 'result' && firstImg) { sl.userFile = assetFiles[firstImg]; sl.src = assetFiles[firstImg]; sl.screen = '' }
+        // …et AUCUNE image de DÉMO du worker (lena / hook-qualite / 99-resultat) ne s'affiche dans un
+        // montage utilisateur : la dérive pose « la photo de Léna » sur « ton premier avatar » —
+        // en slam c'est SA création qu'on montre (1re image fournie), sinon la scène saute.
+        const DEMO = /^(lena|hook-qualite|99-resultat)$/
+        plan.slides = (plan.slides || []).filter((sl) => {
+          const demo = DEMO.test(String(sl.screen || '')) || (sl.assets || []).some((a) => DEMO.test(String(a)))
+          if (!demo) return true
+          if (!firstImg) { console.log(`▶ slam : scène démo « ${sl.screen || (sl.assets || [])[0]} » retirée (aucune image utilisateur)`); return false }
+          Object.assign(sl, { anim: 'result', ui: undefined, screen: '', assets: [], userFile: assetFiles[firstImg], src: assetFiles[firstImg], assetId: firstImg })
+          console.log(`▶ slam : scène démo → résultat avec l'image de l'utilisateur (${firstImg})`)
+          return true
+        })
+        // (hook) la slide « hook » du chef chevauche la grille → elle saute (la grille + les
+        //        sous-titres rouges SONT le hook), sinon « panneau sans contenu → visage ».
+        plan.slides = (plan.slides || []).filter((sl) => !(sl.anim === 'hook' || sl.type === 'hook'))
+        plan.splitPersistant = true   // pas de carte typo plein cadre : l'emphase vit dans la bande
+        if (grilles || medias) console.log(`▶ slam : ${grilles} grille(s), ${medias} média(s) résolus`)
+      }
       // fenêtres 'G*' : un clip que la dérivation VEUT mais qu'aucun existant ne
       // couvre (« la photo figée lit comme un bug ») — généré ici, cache compris
       if (avatarPhoto) {
@@ -670,6 +935,12 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
         const wins = (plan.avatarSegments || []).filter(montrePhoto)
           .sort((a, b) => (a.start || 0) - (b.start || 0))
         wins.forEach((w, k) => { w.photo = avatarPool[k % avatarPool.length] })
+        // slam : le CTA (dernière fenêtre) garde le visage du HOOK, et deux fenêtres qui se
+        // suivent gardent la même photo — la rotation ne passe pas devant ces deux règles.
+        if (plan.slideStyle === 'slam' && wins.length >= 2) {
+          wins[wins.length - 1].photo = wins[0].photo
+          wins.forEach((w, k) => { if (k > 0 && w.start - wins[k - 1].end < 0.6) w.photo = wins[k - 1].photo })
+        }
         if (wins.length) console.log(`▶ rotation avatar : ${wins.length} fenêtre(s)-photo sur ${avatarPool.length} visage(s)`)
       }
       // #84 · LIPSYNC ICI, APRÈS QUE LA DÉRIVATION A TRANCHÉ. Chaque fenêtre
@@ -686,6 +957,18 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
     // affiché = mot prononcé, animation ancrée sur le mot qui la justifie.
     else { try { deriveClassicSlides(plan) } catch (e) { console.warn('dérivation classique:', e.message) } }
+
+    // ── LIPSYNC POUR SLAM (et tout style hors dynamic/apple) ─────────────────────
+    // La génération Hedra ne dépend PAS de la dérivation : seulement des fenêtres
+    // `avatarSegments`, de `avatar.png` et de `__lipsync`. Le bloc lipsync du gate
+    // dynamic/apple ne tourne donc pas pour slam — on le rappelle ici. Chaque
+    // fenêtre parle sur SA photo (rotation déjà posée dans le plan) ; celles
+    // marquées `noLipsync` (résultat, voix d'un autre genre) restent figées.
+    if (plan.slideStyle !== 'dynamic' && plan.slideStyle !== 'apple' && plan.slideStyle !== 'slam'
+        && plan.__lipsync && avatarPhoto && !Object.keys(avatarClips).length) {
+      try { const n = await genererLipsync(plan, proj, jobDir, avatarClips); if (n) console.log(`▶ lipsync : ${n} scène(s) générée(s) chez Hedra (${plan.slideStyle})`) }
+      catch (e) { console.warn('lipsync:', e.message) }
+    }
 
     // ── PAS DE CLIP LIPSYNC ? ON DÉCOUPE SA PROPRE VIDÉO ───────────────────────
     // Sans clips, le moteur affichait `tuto/hook-qualite.png` — une photo de démo
@@ -795,6 +1078,17 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
     // qui le crée, pour qu'une nouvelle animation à image ne le reperde pas.
     const ANIM_IMAGES = { tools: ['logo-avatarads', 'logo-claude'], connect: ['logo-avatarads', 'logo-claude'] }
     for (const sl of plan.slides || []) for (const n of ANIM_IMAGES[sl.anim] || []) wantedScreens.add(n)
+    // LES SLIDES DE SPLIT (avatarSegments[].split.slide) vivent HORS plan.slides : leurs
+    // `screen` / `assets` / `photo` (ex. compare avec un visage) n'étaient jamais copiés →
+    // carte vide (deux rectangles) à l'écran. Même collecte que pour plan.slides.
+    for (const w of plan.avatarSegments || []) {
+      const sl = w && w.split && w.split.slide
+      if (!sl) continue
+      if (sl.screen) wantedScreens.add(String(sl.screen))
+      if (sl.photo) wantedScreens.add(String(sl.photo))
+      for (const a of sl.assets || []) wantedScreens.add(String(a))
+      for (const n of ANIM_IMAGES[sl.anim] || []) wantedScreens.add(n)
+    }
     if (wantedScreens.size) {
       mkdirSync(join(proj, 'tuto'), { recursive: true })
       for (const name of wantedScreens) {
@@ -866,6 +1160,10 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       if (fonds.length) console.log(`▶ sous-couche : ${fonds.length} trou(s) tapissé(s) par sa vidéo — ${fonds.map((f) => `${f.start}→${f.end}s`).join(', ')}`)
       else console.log('▶ sous-couche : aucun trou à combler, tout est déjà couvert')
     }
+    // PLAN_DUMP=<fichier> : écrit le plan FINAL (après dérivation + finitions + passes de
+    // style) — c'est lui qu'on rend, pas celui du chef. Indispensable pour comprendre
+    // « pourquoi ce visuel à 14 s » sans relire 3 000 lignes de dérivation.
+    if (process.env.PLAN_DUMP) { try { writeFileSync(process.env.PLAN_DUMP, JSON.stringify(plan, null, 1)) } catch {} }
     writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, fonds, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
 
     // LES BRUITAGES DE « DÉTAILS DU MONTAGE » ONT LE DERNIER MOT. L'utilisateur
@@ -1277,6 +1575,28 @@ async function passeDeFinition(plan) {
     // le remplaçant doit passer le MÊME garde-fou que toutes les autres
     const motif = EXIGE_FINITION[c.anim]
     const phrase = dit(s.start, s.end)
+    // ── LE VISUEL EST LE MOT : UNE ANIMATION QUE LA VOIX NOMME NE SE REMPLACE PAS ──
+    // Mesuré (Cartoon 15, 23/08) : « ils ont appris à utiliser les bons OUTILS » →
+    // la passe a remplacé `tools` (les logos) par `quality` (une carte 4K) — Axel :
+    // « l'animation ne correspond pas ». Si la phrase contient le mot même de
+    // l'animation en place, elle est juste : on la garde.
+    const JUSTIFIE = { tools: /outil|stack|logiciel/i, connect: /connect|reli|branch|intégr|integr/i,
+      sign: /contrat|sign|deal/i, post: /post|publi|réseau|reseau/i, upload: /upload|ajout|import|glisse/i,
+      rocket: /lanc|décoll|decoll|boost/i, chat: /message|discut|chat|écri|ecri/i, countup: /million|millier|\d/,
+      compare: /avant|après|apres|versus|contre|fake|faux|vrai/i, checklist: /étape|etape|liste|check/i,
+      quality: /qualité|qualite|4k|net|flou/i, speed: /vite|rapide|seconde|minute/i, views: /vue|vues|million/i }
+    if (JUSTIFIE[s.anim] && JUSTIFIE[s.anim].test(phrase)) {
+      console.log(`\u25b6 finition refusée : « ${s.anim} » à ${s.start}s est justifiée par le mot (« ${phrase.slice(0, 34)} »)`)
+      continue
+    }
+    // ── UNE FINITION NE PEUT PAS INVENTER UNE CAPTURE ─────────────────────────
+    // `screen` / `ui` / `result` exigent un fichier que la passe n'a pas : le
+    // remplaçant serait jeté en §4 (« aucune capture à montrer ») ou rendrait un
+    // cadre générique — le « contrat » vu en pleine visite guidée.
+    if (['screen', 'ui', 'result', 'photowall', 'media', 'medias'].includes(String(c.anim))) {
+      console.log(`\u25b6 finition refusée : « ${c.anim} » à ${s.start}s exige une capture ou un média que la passe n'a pas`)
+      continue
+    }
     if (motif && !motif.test(phrase)) {
       console.log(`\u25b6 finition refusée : « ${c.anim} » à ${s.start}s — « ${phrase.slice(0, 34)} » ne parle pas de ça`)
       continue
@@ -1585,7 +1905,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   // ⚠ l'indice DOIT être celui du tableau plan.avatarSegments : le moteur mappe
   // les clips par `av${indexDuTableau}` (dynamic-engine). Nommer par l'indice
   // FILTRÉ décalait les clips d'une fenêtre dès qu'une était écartée.
-  const file = (plan.avatarSegments || []).map((w, i) => ({ w, i })).filter((t) => (t.w.end - t.w.start) >= 1)
+  const file = (plan.avatarSegments || []).map((w, i) => ({ w, i })).filter((t) => (t.w.end - t.w.start) >= 1 && !t.w.noLipsync)
   const equipes = Array.from({ length: Math.min(PARALLELE, file.length) }, async () => {
     for (;;) {
       const t = file.shift()
@@ -1810,8 +2130,12 @@ async function pollLoop() {
         // #2 (Axel 11/08) : jusqu'à 40 s = PLEINE qualité (crf 18, AUCUN ré-encodage),
         // plafond relevé à 48 Mo (2 Mo de marge sous la limite Supabase Free de 50 Mo).
         // Au-delà de 40 s → 44 Mo comme avant, ré-encodage au débit qui rentre.
+        // 23/08 — PLAN PRO : la limite du projet est passée à 500 Mo (config storage
+        // `fileSizeLimit`, réglée via l'API de management). Plus AUCUN montage n'est
+        // dégradé : pleine qualité quelle que soit la durée, le ré-encodage ne reste
+        // qu'en filet de sécurité sous le nouveau plafond (480 Mo).
         const durF = (() => { try { return parseFloat(ffprobe(out, 'format=duration')) || 60 } catch (_) { return 60 } })()
-        const MAX_UP = (durF <= 40 ? 48 : 44) * 1024 * 1024
+        const MAX_UP = 480 * 1024 * 1024
         let outFinal = out
         if (statSync(out).size > MAX_UP) {
           const dur = durF
