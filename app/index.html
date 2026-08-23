@@ -9857,7 +9857,21 @@ async function _nbRefine4K(token, dataUrl, aspect){
   return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K');
 }
 // Correspondance format app → aspect ratio Nano Banana.
-const _NB_FMT_ASPECT = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
+// ⚠ les clés sont les formats d'AFFICHAGE, mais les images RÉELLES font 1024×1536 (2:3) et
+//   1536×1024 (3:2) — pas 9:16 / 16:9. Demander 9:16 forçait Nano à recadrer (zoom visage).
+const _NB_FMT_ASPECT = { '1024x1792':'2:3', '1792x1024':'3:2', '1024x1024':'1:1' };
+// ── LE RATIO ENVOYÉ À NANO DOIT ÊTRE CELUI DE L'IMAGE (Axel 23/08) ─────────────────
+// Nos portraits gpt-image font 1024×1536 = 2:3, mais on demandait « 9:16 » à Nano Banana :
+// pour tenir ce ratio il DEVAIT perdre 16 % de largeur → il recadrait et, génératif, zoomait
+// sur le visage (« horrible, plus en 9:16 »). C'était NOUS qui provoquions le zoom.
+// On mappe donc les dimensions réelles sur le ratio Gemini supporté le plus proche.
+const _NB_RATIOS = [['1:1',1],['4:5',0.8],['3:4',0.75],['2:3',2/3],['9:16',9/16],['5:4',1.25],['4:3',4/3],['3:2',1.5],['16:9',16/9],['21:9',21/9]];
+function _nbAspectFor(w,h){
+  if(!w||!h) return '1:1';
+  const r=w/h; let best='1:1', d=1e9;
+  for(const [k,v] of _NB_RATIOS){ const e=Math.abs(Math.log(r/v)); if(e<d){ d=e; best=k; } }
+  return best;
+}
 
 /* ── #81 · PASSE VISAGE CIBLÉE (dev-only) ─────────────────────────────────────
    Sur un plan large, le petit visage manque de détail (budget pixels). On le
@@ -10091,7 +10105,9 @@ async function _imgFramingMatches(origUrl, newUrl){
     // corrélation de Pearson des miniatures (même cadrage ≈ >0,85 ; zoom/recadrage ≈ <0,7)
     let ma=0,mb=0,n=a.g.length; for(let i=0;i<n;i++){ ma+=a.g[i]; mb+=b.g[i]; } ma/=n; mb/=n;
     let num=0,da=0,db=0; for(let i=0;i<n;i++){ const x=a.g[i]-ma, y=b.g[i]-mb; num+=x*y; da+=x*x; db+=y*y; }
-    const r=num/Math.sqrt(da*db||1);
+    // image sans relief (aplat, test) → la corrélation n'a pas de sens : on ne juge que le ratio
+    if(da<1e-6 || db<1e-6) return { ok:true, why:'ratio ok (pas de texture à comparer)' };
+    const r=num/Math.sqrt(da*db);
     return { ok: r>=0.80, why:'corr '+r.toFixed(2) };
   }catch(e){ return { ok:true, why:'check impossible' }; }   // en cas de doute technique on ne bloque pas
 }
@@ -10111,7 +10127,7 @@ async function _imgUpscaleNano(btn){
     const token=session?.access_token || SUPABASE_KEY;
     let src = img.src;
     if(!/^data:/.test(src)){ const resp=await fetch(src); const blob=await resp.blob(); src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }
-    let aspect='1:1'; try{ const im=await _loadImgEl(src); aspect = im.naturalWidth>im.naturalHeight ? '16:9' : (im.naturalWidth<im.naturalHeight ? '9:16' : '1:1'); }catch(_){}
+    let aspect='1:1'; try{ const im=await _loadImgEl(src); aspect = _nbAspectFor(im.naturalWidth, im.naturalHeight); }catch(_){}   // ratio RÉEL (2:3 pour nos portraits), pas un 9:16 forcé
     let finalUrl = await _nbRefine4K(token, src, aspect);
     if(!finalUrl) throw new Error('Nano Banana : aucune image');
     let engine='Nano Banana Pro';
