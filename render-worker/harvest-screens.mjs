@@ -187,6 +187,11 @@ const main = async () => {
       try { await cdp.eval(s.open) } catch (e) { console.warn(`  ${s.slug} : ${e.message}`); continue }
       await new Promise((r) => setTimeout(r, 700))      // ouverture + animations
 
+      // le toast « Bienvenue <prénom> · Plan <x> » posé par enterApp() (3 s) tombait
+      // dans la capture (Axel, 22/08 : « je ne veux pas voir le bienvenue axel plan
+      // elite ») → masqué juste avant la prise de vue, ainsi que tout toast en cours.
+      try { await cdp.eval(`(()=>{ const t=document.getElementById('toastEl'); if(t){ t.classList.remove('show'); t.style.display='none' } return 'ok' })()`) } catch (_) { /* pas de toast */ }
+      await new Promise((r) => setTimeout(r, 120))
       const h = await cdp.eval(`__harvest(${JSON.stringify(s.slug)})`)
       const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
       writeFileSync(join(OUT, s.slug + '.png'), Buffer.from(shot.data, 'base64'))

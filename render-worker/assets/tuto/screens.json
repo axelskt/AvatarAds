@@ -66,24 +66,24 @@
     "h": 0.0456
    },
    {
-    "name": "enregistreur",
-    "label": "Enregistreur",
+    "name": "audio",
+    "label": "Audio",
     "x": 0.0772,
     "y": 0.2706,
     "w": 0.1419,
     "h": 0.0456
    },
    {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
+    "name": "express",
+    "label": "Express",
     "x": 0.0772,
-    "y": 0.3183,
+    "y": 0.3739,
     "w": 0.1419,
     "h": 0.0456
    },
    {
-    "name": "express",
-    "label": "Express",
+    "name": "motion-control",
+    "label": "Motion Control",
     "x": 0.0772,
     "y": 0.4217,
     "w": 0.1419,
@@ -138,8 +138,8 @@
     "h": 0.0456
    },
    {
-    "name": "report-bug",
-    "label": "Report bug",
+    "name": "suggestions",
+    "label": "Suggestions",
     "x": 0.0772,
     "y": 0.9683,
     "w": 0.1419,
@@ -170,8 +170,8 @@
     "h": 0.0872
    },
    {
-    "name": "pixar-3d-toy-story",
-    "label": "Pixar 3D · Toy Story",
+    "name": "static-ads-pub-produit",
+    "label": "Static ads · pub produit",
     "x": 0.3023,
     "y": 0.3119,
     "w": 0.0803,
@@ -382,24 +382,24 @@
     "h": 0.0456
    },
    {
-    "name": "enregistreur",
-    "label": "Enregistreur",
+    "name": "audio",
+    "label": "Audio",
     "x": 0.0772,
     "y": 0.2706,
     "w": 0.1419,
     "h": 0.0456
    },
    {
-    "name": "nettoyage-audio",
-    "label": "Nettoyage audio",
+    "name": "express",
+    "label": "Express",
     "x": 0.0772,
-    "y": 0.3183,
+    "y": 0.3739,
     "w": 0.1419,
     "h": 0.0456
    },
    {
-    "name": "express",
-    "label": "Express",
+    "name": "motion-control",
+    "label": "Motion Control",
     "x": 0.0772,
     "y": 0.4217,
     "w": 0.1419,
@@ -454,42 +454,34 @@
     "h": 0.0456
    },
    {
-    "name": "report-bug",
-    "label": "Report bug",
+    "name": "suggestions",
+    "label": "Suggestions",
     "x": 0.0772,
     "y": 0.9683,
     "w": 0.1419,
     "h": 0.0456
    },
    {
-    "name": "veo-3-1-genere-depuis-un-prompt",
-    "label": "Veo 3.1 · génère depuis un prompt",
-    "x": 0.2609,
-    "y": 0.2478,
-    "w": 0.1681,
-    "h": 0.0687
+    "name": "veo-3-1",
+    "label": "Veo 3.1",
+    "x": 0.2177,
+    "y": 0.2477,
+    "w": 0.0816,
+    "h": 0.0684
    },
    {
-    "name": "seedance-2-0-dev-genere-depuis-un-prompt",
-    "label": "Seedance 2.0 DEV · génère depuis un prompt (Hedra)",
-    "x": 0.2609,
-    "y": 0.3254,
-    "w": 0.1681,
-    "h": 0.0687
-   },
-   {
-    "name": "motion-control-transfere-un-mouvement",
-    "label": "Motion Control · transfère un mouvement",
-    "x": 0.2609,
-    "y": 0.4029,
-    "w": 0.1681,
-    "h": 0.0687
+    "name": "seedance-2-0-dev",
+    "label": "Seedance 2.0 DEV",
+    "x": 0.3042,
+    "y": 0.2477,
+    "w": 0.0816,
+    "h": 0.0684
    },
    {
     "name": "realiste-avatar-reel",
     "label": "Réaliste · avatar réel",
     "x": 0.2177,
-    "y": 0.5519,
+    "y": 0.3966,
     "w": 0.0816,
     "h": 0.0693
    },
@@ -497,7 +489,7 @@
     "name": "cartoon-3d-style-pixar",
     "label": "Cartoon 3D · style Pixar",
     "x": 0.3042,
-    "y": 0.5519,
+    "y": 0.3966,
     "w": 0.0816,
     "h": 0.0693
    },
@@ -505,7 +497,7 @@
     "name": "ugc-reel-selfie-authentique",
     "label": "UGC réel · selfie authentique",
     "x": 0.2177,
-    "y": 0.6301,
+    "y": 0.4748,
     "w": 0.0816,
     "h": 0.0693
    },
@@ -513,7 +505,7 @@
     "name": "studio-produit-pub",
     "label": "Studio · produit/pub",
     "x": 0.3042,
-    "y": 0.6301,
+    "y": 0.4748,
     "w": 0.0816,
     "h": 0.0693
    },
@@ -521,7 +513,7 @@
     "name": "portrait-9-16",
     "label": "Portrait · 9:16",
     "x": 0.2177,
-    "y": 0.7766,
+    "y": 0.6213,
     "w": 0.0816,
     "h": 0.0636
    },
@@ -529,17 +521,33 @@
     "name": "paysage-16-9",
     "label": "Paysage · 16:9",
     "x": 0.3042,
-    "y": 0.7766,
+    "y": 0.6213,
     "w": 0.0816,
     "h": 0.0636
+   },
+   {
+    "name": "veo-standard-rapide-eco",
+    "label": "Veo Standard · Rapide · éco",
+    "x": 0.2177,
+    "y": 0.7675,
+    "w": 0.0816,
+    "h": 0.0689
+   },
+   {
+    "name": "veo-pro-qualite-max",
+    "label": "Veo Pro · Qualité max",
+    "x": 0.3042,
+    "y": 0.7675,
+    "w": 0.0816,
+    "h": 0.0689
    },
    {
     "name": "ajoute-tes-images-avatar-produit-perso",
     "label": "Ajoute tes images · avatar · produit · perso",
     "x": 0.4506,
-    "y": 0.7856,
+    "y": 0.8094,
     "w": 0.1313,
-    "h": 0.2178
+    "h": 0.1702
    },
    {
     "name": "importer-depuis-la-bibliotheque",
@@ -553,57 +561,17 @@
     "name": "decris-ta-video-et-ce-que-le-perso-dit-a",
     "label": "Décris ta vidéo ET ce que le perso dit à voix haute (lip-syn",
     "x": 0.7544,
-    "y": 0.76,
+    "y": 0.8076,
     "w": 0.4562,
     "h": 0.1667
    },
    {
-    "name": "ameliorer",
-    "label": "✦ Améliorer",
-    "x": 0.5553,
-    "y": 0.8711,
-    "w": 0.0581,
-    "h": 0.0333
-   },
-   {
-    "name": "face-camera",
-    "label": "Face caméra",
-    "x": 0.6248,
-    "y": 0.8711,
-    "w": 0.0709,
-    "h": 0.0333
-   },
-   {
-    "name": "cartoon",
-    "label": "Cartoon",
-    "x": 0.6929,
-    "y": 0.8711,
-    "w": 0.0555,
-    "h": 0.0333
-   },
-   {
-    "name": "fitness",
-    "label": "Fitness",
-    "x": 0.7514,
-    "y": 0.8711,
-    "w": 0.0515,
-    "h": 0.0333
-   },
-   {
-    "name": "produit",
-    "label": "Produit",
-    "x": 0.8082,
-    "y": 0.8711,
-    "w": 0.052,
-    "h": 0.0333
-   },
-   {
-    "name": "generer-la-video",
-    "label": "Générer la vidéo",
+    "name": "generer-la-video-12-credits",
+    "label": "Générer la vidéo · 12 crédits",
     "x": 0.8975,
-    "y": 0.935,
+    "y": 0.9377,
     "w": 0.17,
-    "h": 0.0767
+    "h": 0.0713
    }
   ]
  },

@@ -362,7 +362,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
   // apple partage ce moteur (cf. build-composition) : sans lui ouvrir la porte
   // ici, il recevait le plan BRUT — 19 panneaux au lieu de 14, captures non
   // pilotées, animations non ancrées. La peau était claire, la matière non.
-  if (plan.slideStyle !== 'dynamic' && plan.slideStyle !== 'apple') return
+  // slam partage le moteur ET la dérivation du dynamique (visite guidée : navigateur, clics,
+  // frappe — sans elle, les écrans du chef sortaient sans un seul clic, « horrible », Axel 22/08)
+  if (plan.slideStyle !== 'dynamic' && plan.slideStyle !== 'apple' && plan.slideStyle !== 'slam') return
   // ── UN BÉGAIEMENT NE S'ÉCRIT PAS DEUX FOIS ──────────────────────────────────
   // La transcription garde les répétitions de la voix : « il te reste plus qu'à,
   // qu'à demander » sort DEUX légendes « qu'à » collées (Axel, Cartoon 20, 27 s :
@@ -1922,6 +1924,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
         for (let j = from; j < words.length; j++) {
           const n = norm(words[j].text)
           if (n.length >= 5 && (n.startsWith(tk) || tk.startsWith(n))) return { start: words[j].start, end: words[j].end, i: j }
+          // le mot DIT peut être plus court que le mot du plan (« Photo Réel » dit, « réelle »
+          // écrit par le chef) : 4 lettres suffisent quand elles ouvrent un mot du plan d'au
+          // moins 6 — sinon l'étape « Photo Réel » de la visite Images IA n'existait jamais.
+          if (n.length === 4 && tk.length >= 6 && tk.startsWith(n)) return { start: words[j].start, end: words[j].end, i: j }
         }
         return null
       }
@@ -2064,9 +2070,20 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // « ouvre Mon compte » à la visite guidée.
         if (hit && !t.at && motsNav.has(hit.i)) {
           const apres = findAny(words, [w], hit.i + 1) || like(w, hit.i + 1)
-          if (apres) {
+          // L'OCCURRENCE SUIVANTE NE DOIT PAS SAUTER PAR-DESSUS LES ÉTAPES D'APRÈS. Sur le
+          // Cartoon 15 (22/08), « avatarads.fr » (17 s, navigation) renvoyait à… 28 s, le CTA
+          // (« commande site ») : l'étape partait APRÈS Images IA et Express, et comme le
+          // curseur ne recule jamais, tout le parcours s'est mélangé (Axel : « horrible »).
+          // Si le mot d'une étape SUIVANTE se trouve avant cette occurrence, c'est que
+          // l'étape est déjà jouée par le navigateur → on la jette, l'ordre est sauf.
+          const suivantes = tuto.slice(tuto.indexOf(t) + 1, tuto.indexOf(t) + 3).map((x) => String(x.word || ''))
+          const prochaine = suivantes.map((sw) => findSeq(words, sw, hit.i + 1) || findAny(words, [sw], hit.i + 1) || like(sw, hit.i + 1)).filter(Boolean).sort((a, b) => a.start - b.start)[0]
+          if (apres && !(prochaine && prochaine.start < apres.start)) {
             console.log(`▶ visite guidée : « ${w} » à ${r2(hit.start)}s appartient à la navigation → on prend celui de ${r2(apres.start)}s`)
             hit = apres
+          } else {
+            jetees.push(`${t.screen}/${t.zone} : « ${w} » est déjà joué par le navigateur (l'occurrence suivante sauterait les étapes d'après)`)
+            continue
           }
         }
         // ── UN ÉCRAN D'APP NE S'ANCRE PAS SUR UNE PHRASE D'ARGENT ──────────────

@@ -22,7 +22,7 @@
 //     n'importe quel utilisateur, sans qu'on ait rien à déclarer.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, openSync, readSync, closeSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -227,7 +227,23 @@ export const zonesFor = (screen) => zonesOf(screen).slice()
  * donc agrandie comme un bitmap — d'où le flou qu'Axel a vu sur les zooms,
  * alors que la capture d'origine, elle, est nette.
  */
+// La taille NATIVE de la capture décide du facteur K du moteur (image posée à sa
+// résolution puis réduite → zoom net). `screens.json` ne porte pas toujours w/h :
+// sans eux K=1, la capture 3200 px était posée sur 980 px puis zoomée ×4 → flou
+// blanc sur « Images IA » / « Express » (vu le 22/08). Repli : lire l'en-tête PNG
+// (IHDR : largeur/hauteur aux octets 16-24), mis en cache.
+const _sizeCache = {}
+const pngSize = (screen) => {
+  if (_sizeCache[screen]) return _sizeCache[screen]
+  try {
+    const f = join(dirname(FILE), screen + '.png')
+    if (!existsSync(f)) return (_sizeCache[screen] = { w: 0, h: 0 })
+    const fd = openSync(f, 'r'); const b = Buffer.alloc(24); readSync(fd, b, 0, 24, 0); closeSync(fd)
+    return (_sizeCache[screen] = { w: b.readUInt32BE(16), h: b.readUInt32BE(20) })
+  } catch { return (_sizeCache[screen] = { w: 0, h: 0 }) }
+}
 export const screenSize = (screen) => {
   const s = SCREENS[screen] || {}
-  return { w: s.w || 0, h: s.h || 0 }
+  if (s.w && s.h) return { w: s.w, h: s.h }
+  return pngSize(String(screen || ''))
 }

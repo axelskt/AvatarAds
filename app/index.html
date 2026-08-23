@@ -6138,9 +6138,9 @@ function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 // Plafond de l'envoi vers Supabase Storage. Ce n'est PAS une limite du bucket
 // `render-media` (il n'en a aucune) : c'est le réglage global du projet, et sur le
 // plan Free il est FIXE à 50 Mo — non modifiable, seul le passage en Pro l'ouvre
-// (jusqu'à 500 Go). Le message d'erreur ne doit donc pas suggérer de le changer :
-// sur ce plan, la seule action possible est un export plus léger.
-const PUB_MAX_MO = 50;
+// (jusqu'à 500 Go). 23/08 : projet passé en Pro, limite réglée à 500 Mo (API de
+// management, `fileSizeLimit`). Ce chiffre doit rester ≤ à celui du projet.
+const PUB_MAX_MO = 500;
 
 const CREDIT_COSTS = {
   // 4 et non 2 : le rendu serveur ne rejoue pas le plan à l'identique, c'est lui
@@ -11601,6 +11601,7 @@ const MZ_VSTYLE = [
 
   ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte',true],
   ['dynamic','Dynamique','motion design continu',['#101014','#FF5A36'],'Motion design continu type pub de studio : AUCUNE video source a l\'ecran, panneaux clair/sombre alternes par section, typographie GEANTE sur les mots cles (4-5x la taille des mots de liaison), transitions qui poussent (jamais de fondu), tout bouge en continu — objectif 95% du temps anime. Les images utilisateur et captures d\'ecran s\'integrent dans le flux comme des cartes qui traversent.',true],
+  ['slam','Slam','sombre, Anton, accent jaune',['#0A0A0F','#FFDD4A'],'Style viral sombre (ref @sophiene.ia / hustle) : fond noir anime (grille + halos), gros mots Anton, mot-cle jaune dans les sous-titres, avatar 4 fois max (3 plein cadre + 1 split), grille 3x3 de tes medias au hook, visite guidee de l\'app sur les etapes, vrais rendus qui partent vers les reseaux, compteur 1.000.000+'],
   ['word','Mot par mot','page blanche, aucun clip',['#FFFFFF','#FF5A36'],'Page blanche du debut a la fin : la VIDEO source ne s\'affiche jamais, le sous-titre est le seul texte (un mot au centre). Comme il n\'y a aucune video a l\'ecran, les IMAGES de l\'utilisateur sont le visuel principal : place-les GENEREUSEMENT (2.5 a 4s chacune, reutilise la meme image plusieurs fois si tu en manques) — sans elles l\'ecran reste blanc. Les formes animees ne comblent que ce qui reste. Pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
   ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],'',true],   // remplacé bientôt par un nouveau style
 ];
@@ -13097,7 +13098,7 @@ async function _mtSegmentedGenerate(){
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
     const script=(document.getElementById('mtScript')?.value||'').trim();
     if(script) fd.append('script', script);
-    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar:true }));
+    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar:true, style:((_mt.adv||{}).vstyle||'auto') }));
     const site=(document.getElementById('mtSite')?.value||'').trim() || (localStorage.getItem('aa_user_site')||'');
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
@@ -32783,7 +32784,7 @@ function edAiApply(plan, toSource){
 
   const wantSubs=true; // l'IA renvoie captions=[] si la vidéo a déjà des sous-titres incrustés
   const caps=(plan.captions||[]).map(c=>({ text:String(c.text||''), start:remap(c.start), end:Math.max(remap(c.start)+0.1, remap(c.end)), accent:!!c.accent })).filter(c=>c.text);
-  const _softCase = ['apple','editorial','word','dynamic'].includes((_mt.adv||{}).vstyle);
+  const _softCase = ['apple','editorial','word','dynamic','slam'].includes((_mt.adv||{}).vstyle);
   _ed.subsAI = (wantSubs && caps.length) ? { enabled:true, style:'punch', softCase:_softCase, words:caps } : null;
 
   // 🎵 musique de fond choisie par l'IA (volume ducké sous la voix)

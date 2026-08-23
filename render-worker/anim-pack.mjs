@@ -42,7 +42,7 @@ export function animPalette(vs) {
   // « aucun style résolu » tombait dans le cas sombre : encre blanche sur fond
   // crème, animation strictement invisible à l'écran. Le défaut doit donc être
   // CLAIR, et seuls les deux fonds sombres font exception.
-  const light = vs !== 'glass' && vs !== 'dynamic'
+  const light = vs !== 'glass' && vs !== 'dynamic' && vs !== 'slam'
   return {
     ink: light ? '#111111' : '#FFFFFF',
     soft: light ? 'rgba(17,17,17,.10)' : 'rgba(255,255,255,.14)',
@@ -51,7 +51,7 @@ export function animPalette(vs) {
     // TOUTES les captures d'application le sont : deux animations sur trois
     // viraient au bleu à côté d'un cadre de sélection orange. La signature Apple
     // vient des fonds clairs, des dégradés et de la typo, pas de son bleu.
-    acc: vs === 'apple' ? '#FF5A36' : vs === 'editorial' ? '#111111' : WORD_SHAPES[0],
+    acc: vs === 'apple' ? '#FF5A36' : vs === 'slam' ? '#FFDD4A' : vs === 'editorial' ? '#111111' : WORD_SHAPES[0],
     acc2: vs === 'apple' ? '#6E6E73' : WORD_SHAPES[1],
   }
 }
@@ -548,23 +548,47 @@ export function animHtml(name, s, W, H, vs) {
       // chacune valide. Avant : des bulles de commentaire — « aucun rapport ».
       const td = Math.round(f.w * 0.19), gap = Math.round(td * 0.36)
       const tot = td * 3 + gap * 2, x0 = Math.round((f.w - tot) / 2)
+      // LES VRAIS LOGOS (Axel 22/08 : « mets les vrais logos tiktok instagram et youtube ») :
+      // TikTok = la note avec son double décalage cyan/rouge, Instagram = l'objectif
+      // (cercle + anneau + point) sur le dégradé officiel, YouTube = le bouton rouge arrondi
+      // avec le triangle blanc.
       const glyph = [
-        // note de musique · appareil photo · lecture
-        '<path d="M9 18.2a2.6 2.6 0 102.6 2.6V7.4l6.4-1.6v9.1a2.6 2.6 0 102.6 2.6V2.5L9 4.9z" fill="#fff"/>',
-        '<rect x="3.6" y="5.4" width="16.8" height="13.6" rx="4.2" fill="none" stroke="#fff" stroke-width="2.1"/><circle cx="12" cy="12.2" r="3.5" fill="none" stroke="#fff" stroke-width="2.1"/>',
-        '<path d="M9.4 7.6l8 4.6-8 4.6z" fill="#fff"/>',
+        '<g transform="translate(1.2 0)"><path d="M13.5 2h3.2c.2 1.9 1.3 3.3 3.3 3.6v3.2c-1.3 0-2.4-.4-3.4-1v6.6c0 3.1-2.5 5.6-5.6 5.6S5.4 17.5 5.4 14.4s2.5-5.6 5.6-5.6c.3 0 .6 0 .9.1v3.3c-.3-.1-.6-.2-.9-.2-1.3 0-2.4 1.1-2.4 2.4s1.1 2.4 2.4 2.4 2.5-1.1 2.5-2.4V2z" fill="#69C9D0" transform="translate(-.9 .6)"/><path d="M13.5 2h3.2c.2 1.9 1.3 3.3 3.3 3.6v3.2c-1.3 0-2.4-.4-3.4-1v6.6c0 3.1-2.5 5.6-5.6 5.6S5.4 17.5 5.4 14.4s2.5-5.6 5.6-5.6c.3 0 .6 0 .9.1v3.3c-.3-.1-.6-.2-.9-.2-1.3 0-2.4 1.1-2.4 2.4s1.1 2.4 2.4 2.4 2.5-1.1 2.5-2.4V2z" fill="#EE1D52" transform="translate(.9 -.6)"/><path d="M13.5 2h3.2c.2 1.9 1.3 3.3 3.3 3.6v3.2c-1.3 0-2.4-.4-3.4-1v6.6c0 3.1-2.5 5.6-5.6 5.6S5.4 17.5 5.4 14.4s2.5-5.6 5.6-5.6c.3 0 .6 0 .9.1v3.3c-.3-.1-.6-.2-.9-.2-1.3 0-2.4 1.1-2.4 2.4s1.1 2.4 2.4 2.4 2.5-1.1 2.5-2.4V2z" fill="#fff"/></g>',
+        '<rect x="3" y="3" width="18" height="18" rx="5.2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.25" fill="#fff"/>',
+        '<path d="M9.8 8.2v7.6l6.6-3.8z" fill="#fff"/>',
       ]
-      const bg = ['#0E0E13', 'linear-gradient(135deg,#F9A03F,#E1306C 55%,#833AB4)', '#E62117']
+      const bg = ['#010101', 'linear-gradient(45deg,#F9CE34 0%,#EE2A7B 50%,#6228D7 100%)', '#FF0000']
       let h = ''
       for (let k = 0; k < 3; k++) {
-        h += `<div class="an-p an-pt" id="${id}p${k}" style="left:${x0 + k * (td + gap)}px;top:0;width:${td}px;height:${td}px;border-radius:${Math.round(td * 0.28)}px;background:${bg[k]};display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(0,0,0,.4)">
-          <svg viewBox="0 0 24 24" width="52%" height="52%">${glyph[k]}</svg>
+        h += `<div class="an-p an-pt" id="${id}p${k}" style="left:${x0 + k * (td + gap)}px;top:0;width:${td}px;height:${td}px;border-radius:${Math.round(td * 0.28)}px;background:${k === 2 ? '#FFFFFF' : bg[k]};display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(0,0,0,.4)">
+          ${k === 2 ? `<span style="position:absolute;left:14%;top:24%;width:72%;height:52%;border-radius:${Math.round(td * 0.13)}px;background:#FF0000"></span>` : ''}
+          <svg viewBox="0 0 24 24" width="${k === 2 ? '46%' : '52%'}" height="${k === 2 ? '46%' : '52%'}" style="position:relative">${glyph[k]}</svg>
           <span id="${id}k${k}" style="position:absolute;right:${-Math.round(td * 0.1)}px;bottom:${-Math.round(td * 0.1)}px;width:${Math.round(td * 0.42)}px;height:${Math.round(td * 0.42)}px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;opacity:0">
             <svg viewBox="0 0 24 24" width="62%" height="62%"><path d="M5 12.6l4.4 4.4L19 7.4" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>`
       }
       const vw = Math.round(f.w * 0.24), vh = Math.round(vw * 1.62)
-      h += `<div class="an-p" id="${id}vd" style="left:${Math.round((f.w - vw) / 2)}px;top:${f.h - vh}px;width:${vw}px;height:${vh}px;border-radius:${Math.round(vw * 0.13)}px;background:linear-gradient(160deg,${P.acc},#7A3BFF);box-shadow:0 26px 60px rgba(0,0,0,.45)">
-        <span style="position:absolute;left:50%;top:50%;margin:-${Math.round(vw * 0.11)}px 0 0 -${Math.round(vw * 0.09)}px;width:0;height:0;border-left:${Math.round(vw * 0.24)}px solid rgba(255,255,255,.92);border-top:${Math.round(vw * 0.14)}px solid transparent;border-bottom:${Math.round(vw * 0.14)}px solid transparent"></span></div>`
+      // LA VIDÉO QUI PART = LES VRAIS RENDUS de l'utilisateur (Axel 22/08 : « à la place
+      // de l'image avec le bouton play, l'image rendue à chaque fois »). `s.items[].src`
+      // (photo ou vidéo) : 1 média → il part au centre ; 3 médias → un par réseau.
+      const medias = (s.items || []).map((it) => it && it.src).filter(Boolean).slice(0, 3)
+      let _pmv = 0
+      // trois rendus SIMULTANÉS → trois pistes (40, 41, 42) : HyperFrames refuse deux clips
+      // qui se chevauchent sur la même piste. 40+ = réservé aux médias des animations.
+      const mediaEl = (src) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(String(src))
+        ? `<video id="${id}pmv${_pmv}" class="clip" src="${src}" data-start="${s.start}" data-duration="${Math.max(0.5, (s.dur || 2)).toFixed(2)}" data-track-index="${40 + (_pmv++)}" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+        : `<img src="${src}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+      if (medias.length >= 3) {
+        // trois rendus, alignés sous les trois réseaux — chacun monte vers le sien
+        const mw = Math.round(td * 0.92), mh = Math.round(mw * 1.62)
+        for (let k = 0; k < 3; k++) {
+          h += `<div class="an-p" id="${id}vd${k}" style="left:${x0 + k * (td + gap) + Math.round((td - mw) / 2)}px;top:${f.h - mh}px;width:${mw}px;height:${mh}px;border-radius:${Math.round(mw * 0.13)}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">${mediaEl(medias[k])}</div>`
+        }
+        // compat : l'id ${id}vd (animé par animJs) pointe sur le média du milieu
+        h = h.replace(`id="${id}vd1"`, `id="${id}vd"`)
+        return box(h)
+      }
+      h += `<div class="an-p" id="${id}vd" style="left:${Math.round((f.w - vw) / 2)}px;top:${f.h - vh}px;width:${vw}px;height:${vh}px;border-radius:${Math.round(vw * 0.13)}px;overflow:hidden;background:linear-gradient(160deg,${P.acc},#7A3BFF);box-shadow:0 26px 60px rgba(0,0,0,.45)">
+        ${medias[0] ? mediaEl(medias[0]) : `<span style="position:absolute;left:50%;top:50%;margin:-${Math.round(vw * 0.11)}px 0 0 -${Math.round(vw * 0.09)}px;width:0;height:0;border-left:${Math.round(vw * 0.24)}px solid rgba(255,255,255,.92);border-top:${Math.round(vw * 0.14)}px solid transparent;border-bottom:${Math.round(vw * 0.14)}px solid transparent"></span>`}</div>`
       return box(h)
     }
     case 'type': {
@@ -3141,7 +3165,10 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}t1', { xPercent: -60, rotation: -10, autoAlpha: 0 }, { xPercent: 0, rotation: 0, autoAlpha: 1, duration: 0.42, ease: 'back.out(1.7)', transformOrigin: '50% 50%' }, ${t0});
       tl.fromTo('#${id}t2', { xPercent: 60, rotation: 10, autoAlpha: 0 }, { xPercent: 0, rotation: 0, autoAlpha: 1, duration: 0.42, ease: 'back.out(1.7)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.16)});
       tl.fromTo(['#${id}pl', '#${id}pv'], { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.26, ease: 'back.out(3)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.52)});
-      tl.to(['#${id}t1', '#${id}t2'], { scale: 1.06, duration: ${r2(Math.max(0.5, dur - 0.9))}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.72)});`
+      tl.to('#${id}t1', { y: -14, rotation: -3, duration: 0.9, yoyo: true, repeat: ${Math.max(1, Math.ceil((dur - 0.9) / 0.9))}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.72)});
+      tl.to('#${id}t2', { y: 14, rotation: 3, duration: 0.9, yoyo: true, repeat: ${Math.max(1, Math.ceil((dur - 0.9) / 0.9))}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.72)});
+      tl.to(['#${id}pl', '#${id}pv'], { scale: 1.25, duration: 0.45, yoyo: true, repeat: ${Math.max(1, Math.ceil((dur - 0.9) / 0.45))}, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 0.8)});
+      tl.to('#${id}an', { scale: 1.1, duration: ${r2(Math.max(0.5, dur - 0.8))}, ease: 'none', transformOrigin: '50% 50%' }, ${r2(t0 + 0.8)});`
     case 'quality':
       // la ligne balaie, le net remplace le flou
       return inOut + `
@@ -3270,8 +3297,8 @@ export function animJs(name, s, r2) {
       // la vidéo monte vers les plateformes, chacune valide à son tour
       return inOut + `
       tl.fromTo('#${id}an .an-pt', { y: -30, scale: 0.7, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.3, stagger: 0.09, ease: 'back.out(2)', transformOrigin: '50% 50%' }, ${t0});
-      tl.fromTo('#${id}vd', { yPercent: 45, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, ease: 'power3.out' }, ${r2(t0 + 0.16)});
-      tl.to('#${id}vd', { yPercent: -118, scale: 0.3, autoAlpha: 0, duration: 0.52, ease: 'power2.in', transformOrigin: '50% 0%' }, ${r2(t0 + 0.56)});
+      tl.fromTo(['#${id}vd0', '#${id}vd', '#${id}vd2'], { yPercent: 45, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.34, stagger: 0.08, ease: 'power3.out' }, ${r2(t0 + 0.16)});
+      tl.to(['#${id}vd0', '#${id}vd', '#${id}vd2'], { yPercent: -118, scale: 0.3, autoAlpha: 0, duration: 0.52, stagger: 0.12, ease: 'power2.in', transformOrigin: '50% 0%' }, ${r2(t0 + 0.62)});
       tl.fromTo(['#${id}k0', '#${id}k1', '#${id}k2'], { scale: 0.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.24, stagger: 0.15, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + 1.0)});
       tl.to('#${id}an .an-pt', { scale: 1.12, duration: 0.18, stagger: 0.15, yoyo: true, repeat: 1, ease: 'sine.inOut', transformOrigin: '50% 50%' }, ${r2(t0 + 1.0)});`
     case 'type':
