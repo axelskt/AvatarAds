@@ -4045,7 +4045,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                       <span class="mt-qual-badge">Économique</span>
                       <span class="mt-qual-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
                       <div class="mt-qual-t">Character 3</div>
-                      <div class="mt-qual-sub">1 cr/s</div>
+                      <div class="mt-qual-sub">2 cr/s</div>
                     </div>
                     <div id="mtModelOmni" onclick="mtSetLipModel('omnihuman')" class="mt-qual">
                       <span class="mt-qual-badge accent">Meilleure qualité</span>
@@ -5176,7 +5176,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></div>
               <div>
                 <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:#4dabf7">+40 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 40 s d'avatar ou 40 images</div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 20 s d'avatar ou 40 images</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -5195,7 +5195,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.15.43-2.3 1-3a2.5 2.5 0 002.5 2.5z"/></svg></div>
               <div>
                 <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:var(--orange)">+90 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 4 avatars de 20 s</div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 2 avatars de 20 s</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -5213,7 +5213,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/></svg></div>
               <div>
                 <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+250 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 12 avatars de 20 s · 0,20€/crédit</div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 6 avatars de 20 s · 0,20€/crédit</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -6134,7 +6134,7 @@ const PLAN_QUOTAS = {
 function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 
 // ── CRÉDITS UNIFIÉS (#79) — barème validé le 11/07/2026 ──
-// 1 crédit = 1 s d'avatar lipsync (voix ElevenLabs incluse) = 1 s d'Express Lite = 1 image low
+// 1 crédit = 1 image low ; 2 crédits = 1 s d'avatar lipsync (+0,5 voix ElevenLabs) ; 1,5 = 1 s d'Express Lite (barème 23/08)
 // Plafond de l'envoi vers Supabase Storage. Ce n'est PAS une limite du bucket
 // `render-media` (il n'en a aucune) : c'est le réglage global du projet, et sur le
 // plan Free il est FIXE à 50 Mo — non modifiable, seul le passage en Pro l'ouvre
@@ -6149,7 +6149,7 @@ const CREDIT_COSTS = {
   // relance BON MARCHÉ face aux 8 du chef d'orchestre : corriger ne coûte pas
   // une nouvelle analyse (ni Claude, ni transcription).
   montageRender: 4,       // 🎬 rendu final serveur du Montage IA (MP4 monté par le worker)
-  avatarPerSec: 1,        // lipsync Hedra Character-3 (import MP3 : la voix est gratuite)
+  avatarPerSec: 2,        // lipsync Hedra (1080p = 0,063 $/s fournisseur ; 1 cr/s mettait les Élite à perte — Axel 23/08 : 2 cr/s partout)
   voiceElPerSec: 0.5,     // voix ElevenLabs (clone/preset), en plus du lipsync
   expressLitePerSec: 1.5, // Veo 3.1 Lite 720p (Starter/Pro) — 0,05 $/s API (audio inclus), marge ~66% Pro
   expressFastPerSec: 3,   // Veo 3.1 Fast 720p (Élite) — 0,10 $/s API (audio inclus)
@@ -6170,7 +6170,7 @@ const CREDIT_COSTS = {
   // appel Claude — 20 000 tokens d'entrée : prompt système, 6 à 8 images de la
   // vidéo, transcript, mémoire de marque). À 8, la marge tient même sur le
   // crédit le moins cher (Élite90, 0,068 €) : 0,55 € encaissés, ×4. Les tarifs
-  // lipsync à la seconde ne bougent pas (avatarPerSec 1, omniPerSec 5).
+  // lipsync à la seconde : avatarPerSec 2 (depuis le 23/08, coût 1080p), omniPerSec 5.
   montageIA: 8,           // 🎼 chef d'orchestre : transcription Scribe + plan Claude (#108)
   // 📐 QUALITÉ DE GÉNÉRATION — le 1080p se paie à la seconde (720p gratuit).
   // Avant le 03/08 c'était +2 crédits forfaitaires, et surtout ce bouton ne
@@ -12285,7 +12285,7 @@ async function mtSetMp3(f){
     toast('Audio chargé (nettoyage auto indisponible)');
   }
 }
-// 🧑 avatar optionnel : il parle le MP3 en lipsync (pipeline Hedra du Générateur, 1 cr/s)
+// 🧑 avatar optionnel : il parle le MP3 en lipsync (pipeline Hedra du Générateur, 2 cr/s)
 // #84 · PLUSIEURS visages = ROTATION : à chaque fois que l'avatar réapparaît
 // (hook, respiration, CTA…), le montage prend l'image SUIVANTE du pool, jamais
 // deux fois la même d'affilée. Une seule photo = comportement d'avant.
@@ -12351,11 +12351,11 @@ function mtSetLipModel(m){
 }
 // estimation affichée dès que l'audio est ajouté (durée réelle du MP3) : l'IA ne lipsync
 // que les scènes clés (~30% de la durée), le reste = habillage hyperframes 1 cr/s
-// pricing À LA SECONDE (Axel) : base montage 8 cr + lipsync (1 cr/s Character 3, 5 cr/s Omni)
+// pricing À LA SECONDE (Axel) : base montage 8 cr + lipsync (2 cr/s Character 3 depuis le 23/08, 5 cr/s Omni)
 // La base passe de 6 à 8 crédits (coût mesuré ~0,13 € d'API, dont 0,11 € pour Claude).
 // La RELANCE d'un rendu, elle, reste bon marché (montageRender) : elle ne rappelle ni
 // Claude ni la transcription — corriger ne doit jamais coûter une nouvelle analyse.
-// Les tarifs lipsync eux NE BOUGENT PAS (1 et 5 cr/s), comme convenu.
+// Tarifs lipsync : 2 cr/s Character 3 (aligné sur le coût 1080p le 23/08) et 5 cr/s Omni.
 // sur les scènes avatar (~30% de la durée), le reste habillé en hyperframes (1 cr/s)
 function _mtUpdateCost(){
   const b=document.getElementById('mtGoLbl'); if(!b) return;
@@ -12373,8 +12373,8 @@ function _mtUpdateCost(){
     const hi=Math.min(10, Math.max(lo+2, Math.round(dur*0.42))); // au pire : plusieurs scènes
     const cost=(sec)=>Math.ceil(CREDIT_COSTS.montageIA + sec*rate + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
     const cLo=cost(lo), cHi=cost(hi);
-    // à 1 cr/s (Character 3) l'avatar coûte le même prix que l'habillage : le total ne
-    // bouge pas selon le nombre de scènes → un seul chiffre, pas une fausse fourchette
+    // si le lipsync coûte le même prix que l'habillage, le total ne bouge pas selon le nombre
+    // de scènes → un seul chiffre ; sinon (2 cr/s) une vraie fourchette
     b.textContent = 'Créer ma vidéo — '+(cLo===cHi ? cLo+' crédits' : cLo+' à '+cHi+' crédits');
     if(note){
       note.style.display='';
