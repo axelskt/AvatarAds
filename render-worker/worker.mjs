@@ -932,8 +932,9 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
       for (const w of (plan.avatarSegments || [])) {
         if (!w.split) continue
         try {
-          const p = await cadrageVisageSplit(w, proj, avatarClips)
+          const p = await cadrageVisageSplit(w, proj, avatarClips, plan.slideStyle === 'slam' ? 'cheveux' : 'centre')
           if (p != null) { w.faceP = p; console.log(`▶ #136 : visage du split calé (object-position ${Math.round(p * 100)}%)`) }
+          else console.log(`▶ #136 : visage du split NON détecté (${r2(w.start)}→${r2(w.end)}s) → biais par défaut`)
         } catch (e) { console.warn('cadrage face-aware :', e.message) }
       }
       // ── ROTATION DES VISAGES SUR LES FENÊTRES-PHOTO (#84) ────────────────────
@@ -1744,7 +1745,7 @@ function trancherFenetres(plan) {
 // cadrage standard — centre du visage à 32 % de la bande visible (la même
 // règle que le cadrage auto du Motion Control). null = détection impossible,
 // le moteur garde son biais par défaut.
-async function cadrageVisageSplit(w, proj, avatarClips) {
+async function cadrageVisageSplit(w, proj, avatarClips, regle = 'centre') {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return null
   const clipRel = Number.isInteger(w.clip) && w.clip >= 0 ? avatarClips['av' + w.clip] : null
@@ -1752,7 +1753,10 @@ async function cadrageVisageSplit(w, proj, avatarClips) {
   const isVid = !!src
   if (!src) {
     const ph = String(w.photo || '')
+    // la photo par défaut vit dans media/ (pool à une seule image : la rotation ne pose
+    // pas w.photo, et `proj/avatar.png` n'existe pas → la détection rendait null en silence)
     src = ph && existsSync(join(proj, ph)) ? join(proj, ph)
+      : existsSync(join(proj, 'media', 'avatar.png')) ? join(proj, 'media', 'avatar.png')
       : existsSync(join(proj, 'avatar.png')) ? join(proj, 'avatar.png') : null
   }
   if (!src) return null
@@ -1780,6 +1784,9 @@ async function cadrageVisageSplit(w, proj, avatarClips) {
   // bande visible = cover de la source dans une moitié 1080×960
   const bandFrac = Math.min(1, (vw / vh) / (1080 / 960))
   if (bandFrac >= 0.999) return null
+  // slam (Axel 23/08 : « il faut que les cheveux touchent et arrivent au séparateur ») :
+  // le HAUT de la tête affleure le bord haut de la bande — 1 % d'air, jamais de crâne coupé.
+  if (regle === 'cheveux') return Math.max(0, Math.min(1, (Math.max(0, j.y - 0.01)) / (1 - bandFrac)))
   const fy = Math.max(0, Math.min(1, j.y + j.h / 2))
   return Math.max(0, Math.min(1, (fy - 0.32 * bandFrac) / (1 - bandFrac)))
 }
@@ -1962,7 +1969,10 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       // retrouve. Sans ça, une fenêtre créée par la dérivation (clip:-1 : trou,
       // adresse) cherchait `av-1` → visage FIGÉ (Axel : « pas de lipsync à 4-6 s
       // ni à 40 s »).
-      if (ok) { for (const pt of t.parts) { pt.w.clip = pt.i; faits++ }; console.log(`✓ lipsync scène ${t.parts.map((x) => x.i).join('+')} : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})`) }
+      // le clip généré ici commence PILE au début de la fenêtre : un `clipAt`/`clipUntil`
+      // hérité de la dérivation (calé sur un clip d'origine qui n'existe pas) laissait la
+      // PHOTO figée jusqu'à 9,58 s dans le split (Axel 23/08 : « le lipsync du split n'est pas fait »)
+      if (ok) { for (const pt of t.parts) { pt.w.clip = pt.i; delete pt.w.clipAt; delete pt.w.clipUntil; pt.w.clipFrom = 0; faits++ }; console.log(`✓ lipsync scène ${t.parts.map((x) => x.i).join('+')} : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})`) }
       else console.warn(`✗ lipsync scène ${t.i} ABANDONNÉE : ${r2(t.w.start)}→${r2(t.w.end)}s (${t.w.format || 'portrait'})${pourquoi ? ' — ' + pourquoi : ''} → la photo restera figée sur cette fenêtre`)
     }
   })
