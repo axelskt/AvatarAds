@@ -1755,6 +1755,16 @@ async function debiterLipsync(secs, modele) {
   return { ok: true, n }
 }
 async function rembourserLipsync(n) { if (RENDER_USER && n > 0) await rpcCredits('mcp_refund_credits', n).catch(() => {}) }
+// MIX (Omni+Hedra) = compte dev/owner seulement pour le moment (Axel 23/08). Local (pas de user) = dev = autorisé.
+async function estOwner(userId) {
+  if (!userId) return true
+  try {
+    const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const r = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=is_owner`, { headers: { Authorization: 'Bearer ' + key, apikey: key } })
+    const d = await r.json().catch(() => [])
+    return Array.isArray(d) && d[0] && d[0].is_owner === true
+  } catch (_) { return false }
+}
 async function storageSupprimer(chemins) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
   try { await fetch(`${url}/storage/v1/object/render-media`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key }, body: JSON.stringify({ prefixes: chemins }) }) } catch (_) {}
@@ -2013,6 +2023,10 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   trancherFenetres(plan)
   const segs = (plan.avatarSegments || []).filter((w) => (w.end - w.start) >= 1)
   if (!segs.length) return 0
+  // MIX réservé au compte dev/owner pour le moment : sinon on retombe sur Hedra (le défaut).
+  if (String(plan.lipsyncModel || '').toLowerCase() === 'mix' && !(await estOwner(RENDER_USER))) {
+    console.log('▶ lipsync : mode mix réservé au compte dev → repli hedra'); plan.lipsyncModel = 'hedra'
+  }
   // #84 · répartir les visages du pool sur les scènes (rotation) : chaque fenêtre
   // parle sur une image TOM différente. On lit le pool sur le disque (media/
   // avatar.png + avatar-1.png…) pour ne pas dépendre de l'ordre d'appel.

@@ -2230,7 +2230,9 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       if (veutLipsync) (plan as Record<string, unknown>).__lipsync = true
       // modèle du lipsync (23/08) : hedra (défaut) | omnihuman | mix — param OU marqueur de brief
       // ([OMNI] / [MIX]), pour les mêmes raisons de schéma en cache que [LIPSYNC].
-      const modeleLip = String(args.lipsync_model || (/\[MIX\]/i.test(brief) ? 'mix' : /\[OMNI\]/i.test(brief) ? 'omnihuman' : 'hedra')).toLowerCase()
+      let modeleLip = String(args.lipsync_model || (/\[MIX\]/i.test(brief) ? 'mix' : /\[OMNI\]/i.test(brief) ? 'omnihuman' : 'hedra')).toLowerCase()
+      // MIX (Omni au hook + Hedra ensuite) = compte DEV/owner UNIQUEMENT pour le moment (Axel 23/08).
+      if (modeleLip === 'mix' && profile.is_owner !== true) { modeleLip = 'hedra'; console.log('▶ lipsync : mode mix réservé au compte dev → repli hedra') }
       if (veutLipsync && modeleLip !== 'hedra') { (plan as Record<string, unknown>).lipsyncModel = modeleLip; console.log(`▶ lipsync : modèle ${modeleLip}`) }
       console.log(`▶ lipsync demandé : ${veutLipsync} (param ${args.lipsync}, brief ${/\[LIPSYNC\]/i.test(brief)})`)
 
