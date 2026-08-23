@@ -46,7 +46,7 @@ const VIDEO_COST_SEC_PRO = 3 // Veo 3.1 Fast (« Veo Pro », qualité max) = 0,1
 // ── Générateur (avatar parlant) via Claude : mêmes briques que l'app ──
 const HEDRA_BASE      = 'https://api.hedra.com/web-app/public'
 const HEDRA_MODEL_ID  = '26f0fc66-152b-40ab-abed-76c43df99bc8' // Hedra Avatar (swap 10/08, même modèle que l'app). Character-3 = d1dd37a3-e39a-4854-a298-6510289f9cf2
-const AVATAR_COST_SEC = 1.5 // 1 cr/s lipsync + 0,5 cr/s voix ElevenLabs (barème app)
+const AVATAR_COST_SEC = 2.5 // 2 cr/s lipsync Hedra (1080p, barème 23/08) + 0,5 cr/s voix ElevenLabs
 const AVATAR_MAX_SEC  = 60
 const CHARS_PER_SEC   = 14  // débit de parole FR moyen pour estimer la durée depuis le script
 // Voix presets (mêmes IDs ElevenLabs que l'app)
@@ -775,7 +775,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'montage_ia',
-      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (Hedra ~1,5 cr/s, OmniHuman 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (Hedra 2 cr/s, OmniHuman 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -783,7 +783,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : nettoie la voix (isolation, bruit de fond supprimé) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — repasser un fichier propre à l'isolation ne l'améliore pas." },
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
           avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Aucun crédit en plus." },
-          lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (Hedra Character-3) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte ~1,5 crédit par seconde de visage. Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
+          lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (Hedra Character-3) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte 2 crédits par seconde de visage (débités à la génération). Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
           lipsync_model: { type: 'string', enum: ['hedra', 'omnihuman', 'mix'], description: "Optionnel, 'hedra' par défaut (économique). 'omnihuman' = OmniHuman 1.5 : plan plus large, les deux mains visibles, cheveux sans effet plastique, 50 i/s — ~5 crédits par seconde de visage. 'mix' = OmniHuman sur le PREMIER passage avatar (le hook, là où l'attention se joue) puis Hedra sur les suivants : le meilleur rapport qualité/prix. Ne s'applique que si lipsync est activé." },
           media: {
             type: 'array', maxItems: 7,

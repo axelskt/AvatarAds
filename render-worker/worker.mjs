@@ -1739,7 +1739,7 @@ const HEDRA_OMNI_SLUG = process.env.HEDRA_OMNI_SLUG || 'omnihuman-15'
 // que Hedra coûte ~0,063 $/s et Omni 0,16 $/s. Débit ICI, au moment exact de la
 // génération : secondes réelles, jamais sur un cache hit, remboursé si la scène échoue.
 // RPC service `mcp_spend_credits` (SECURITY DEFINER) — le worker est côté serveur.
-const LIPSYNC_CR_SEC = { hedra: 1.5, omnihuman: 5 }   // barème MCP (« ~1,5 cr/s ») · app (« Omni 5 cr/s »)
+const LIPSYNC_CR_SEC = { hedra: 2, omnihuman: 5 }     // barème 23/08 : Hedra 2 cr/s (coût 1080p 0,063 $/s), Omni 5 cr/s
 async function rpcCredits(nom, n) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
   const r = await fetch(`${url}/rest/v1/rpc/${nom}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key }, body: JSON.stringify({ p_user: RENDER_USER, p_secs: n }) })
