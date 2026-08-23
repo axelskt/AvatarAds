@@ -10031,7 +10031,7 @@ async function _imgUpscaleHD(btn){
       // sinon on ne sait plus si c'est fait (Axel, 13/08 : « une fois l'image
       // 4K, il faut que le 4K s'enlève, sinon ça porte à confusion »).
       btn.disabled=true; btn.style.opacity='.55';
-      btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Déjà en 4K';
+      btn.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Déjà en 4K</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">fait</span>';
     } else { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
   }
 }
@@ -10071,6 +10071,30 @@ function _imgSwapNoZoom(img, url){
     }; im.onerror=()=>{ img.src=url; res(false); }; im.src=url;
   });
 }
+// ── VERROU DE CADRAGE 4K (Axel 23/08 : « horrible, ce n'est même plus en 9:16, toujours ce zoom ») ──
+// Nano Banana Pro est GÉNÉRATIF : malgré « framing STRICTLY UNCHANGED », il re-fabrique l'image et
+// peut zoomer sur le visage / changer le ratio. Le prompt ne suffit pas (cf. skill images-ia).
+// On COMPARE donc structurellement le résultat à l'original (ratio + corrélation d'une miniature
+// 32×32 en gris). Si le cadrage a bougé → on JETTE la sortie Nano et on agrandit avec Clarity ×4
+// (non génératif : proportions et cadrage EXACTS, il ne peut pas recadrer). Jamais de zoom livré.
+async function _imgThumbGray(url, n){
+  const im=await _loadImgEl(url); const c=document.createElement('canvas'); c.width=n; c.height=n;
+  const x=c.getContext('2d'); x.drawImage(im,0,0,n,n); const d=x.getImageData(0,0,n,n).data; const out=new Float32Array(n*n);
+  for(let i=0;i<n*n;i++){ out[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114); }
+  return { g:out, w:im.naturalWidth, h:im.naturalHeight };
+}
+async function _imgFramingMatches(origUrl, newUrl){
+  try{
+    const a=await _imgThumbGray(origUrl,32), b=await _imgThumbGray(newUrl,32);
+    const ra=a.w/a.h, rb=b.w/b.h;
+    if(Math.abs(ra-rb)/ra > 0.04) return { ok:false, why:'ratio '+ra.toFixed(3)+'→'+rb.toFixed(3) };
+    // corrélation de Pearson des miniatures (même cadrage ≈ >0,85 ; zoom/recadrage ≈ <0,7)
+    let ma=0,mb=0,n=a.g.length; for(let i=0;i<n;i++){ ma+=a.g[i]; mb+=b.g[i]; } ma/=n; mb/=n;
+    let num=0,da=0,db=0; for(let i=0;i<n;i++){ const x=a.g[i]-ma, y=b.g[i]-mb; num+=x*y; da+=x*x; db+=y*y; }
+    const r=num/Math.sqrt(da*db||1);
+    return { ok: r>=0.80, why:'corr '+r.toFixed(2) };
+  }catch(e){ return { ok:true, why:'check impossible' }; }   // en cas de doute technique on ne bloque pas
+}
 async function _imgUpscaleNano(btn){
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(!['elite','developer'].includes(plan)){ toast('Le 4K est réservé au plan Élite'); openUpgradeModal(); return; }
@@ -10088,20 +10112,30 @@ async function _imgUpscaleNano(btn){
     let src = img.src;
     if(!/^data:/.test(src)){ const resp=await fetch(src); const blob=await resp.blob(); src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }
     let aspect='1:1'; try{ const im=await _loadImgEl(src); aspect = im.naturalWidth>im.naturalHeight ? '16:9' : (im.naturalWidth<im.naturalHeight ? '9:16' : '1:1'); }catch(_){}
-    const finalUrl = await _nbRefine4K(token, src, aspect);
+    let finalUrl = await _nbRefine4K(token, src, aspect);
     if(!finalUrl) throw new Error('Nano Banana : aucune image');
+    let engine='Nano Banana Pro';
+    // Nano a-t-il recadré / zoomé ? → on refuse et on agrandit SUR PLACE avec Clarity (non génératif)
+    const chk=await _imgFramingMatches(src, finalUrl);
+    if(!chk.ok){
+      console.warn('[4K] Nano a changé le cadrage ('+chk.why+') → repli Clarity ×4 (cadrage exact)');
+      { const l=document.getElementById('imgProgLabel'); if(l) l.textContent='4K en cours · cadrage exact…'; }
+      const cl=await _falClarityUpscale(src);
+      if(cl){ try{ const rC=await fetch(cl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){ finalUrl=cl; } engine='Clarity (cadrage conservé)'; }
+      else throw new Error('4K : Nano a recadré l\'image et Clarity est indisponible — crédit remboursé');
+    }
     await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true;       // même cadrage, pas de zoom
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
-    toast('Amélioré en 4K — Nano Banana Pro');
+    toast('Amélioré en 4K — '+engine);
   }catch(e){
     try{ await creditsFlowRefund('le 4K Nano a échoué'); }catch(_){}
     toast(''+(e.message||e));
   }
   finally{
     _imgUpscaleLoadStop(_imgIsHD);
-    if(_imgIsHD){ btn.disabled=true; btn.style.opacity='.55'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Déjà en 4K'; }
+    if(_imgIsHD){ btn.disabled=true; btn.style.opacity='.55'; btn.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Déjà en 4K</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">fait</span>'; }
     else { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
   }
 }
