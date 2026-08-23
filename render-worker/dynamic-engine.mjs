@@ -103,7 +103,7 @@ function buildPanels(plan, D) {
       .map((s) => ({ kind: 'content', t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
-      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil, faceP: s.faceP } })),
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil, faceP: s.faceP, selfie: s.selfie } })),
   ].sort((a, b) => a.t0 - b.t0)
 
   // ── RÈGLE : DEUX FENÊTRES AVATAR QUI SE SUIVENT = LE MÊME VISAGE/DÉCOR ────────
@@ -464,6 +464,35 @@ function screenContent(id, s, tone, liveT0, t1, W) {
   tl.fromTo('#${id}ci',{scale:1,x:0,y:0},{scale:${z},x:${tx},y:${ty},duration:${r2(Math.max(0.5, dur * 0.65))},ease:'power2.inOut'},${r2(liveT0 + 0.35)});
   tl.to('#${id}cw',{y:-20,duration:${r2(Math.max(0.4, dur - 0.5))},ease:'none'},${r2(liveT0 + 0.5)});`
   return { html, js, sfx: [{ kind: 'mo-swipe-1', t: r2(liveT0 + 0.1), vol: 0.5 }] }
+}
+
+// ── CAMÉRA RÉALISTE (Axel 23/08 : « léger tremblement organique qui suit les mouvements,
+//    sur l'avatar quand c'est en position selfie ») ──────────────────────────────────
+// Un téléphone tenu à bout de bras ne tient jamais parfaitement : une DÉRIVE lente
+// (le bras qui respire, périodes 1,6-2,6 s) + un MICRO-TREMBLEMENT (0,26-0,4 s, ±2 px)
+// qui, combinés, suivent les mouvements du sujet sans jamais sauter. Deux calques :
+// la dérive sur `selD` (x/y/rotation + base scale 1.04 : les bords restent couverts),
+// le tremblement sur `selJ`. Tout est posé sur la timeline (seek-safe), et le
+// générateur pseudo-aléatoire est SEMÉ (mulberry32) : deux rendus donnent le même
+// mouvement. Un plan trépied (bureau, micro) n'en reçoit pas : selfie seulement,
+// sauf plan.cameraOrganique === true (partout) / false (jamais).
+function camOrganique(selD, selJ, t0, t1, seed, amp = 1) {
+  let a = ((seed + 1) * 2654435761) >>> 0
+  const rnd = () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+  let js = `\n  tl.set('${selD}',{scale:1.04,x:0,y:0,rotation:0,transformOrigin:'50% 45%'},${r2(t0)});`
+  let t = t0
+  while (t < t1 - 0.2) {
+    const d = r2(Math.min(1.6 + rnd() * 1.0, t1 - t))
+    js += `\n  tl.to('${selD}',{x:${r2((rnd() - 0.5) * 20 * amp)},y:${r2((rnd() - 0.5) * 16 * amp)},rotation:${r2((rnd() - 0.5) * 1.0 * amp)},duration:${d},ease:'sine.inOut'},${r2(t)});`
+    t = r2(t + d)
+  }
+  t = t0 + 0.05
+  while (t < t1 - 0.1) {
+    const d = r2(Math.min(0.26 + rnd() * 0.14, t1 - t))
+    js += `\n  tl.to('${selJ}',{x:${r2((rnd() - 0.5) * 5 * amp)},y:${r2((rnd() - 0.5) * 4 * amp)},duration:${d},ease:'sine.inOut'},${r2(t)});`
+    t = r2(t + d)
+  }
+  return js
 }
 
 // ── 3 · GÉNÉRATION ──────────────────────────────────────────────────────────
@@ -836,6 +865,10 @@ export function buildDynamicComposition(plan, opts = {}) {
       // ont un visuel de visage », le panneau tient l'écran sans texte
       const src = (opts.avatarClips || {})['av' + p.slide.i]
       const duo = p.slide.duo
+      // caméra organique : selfie détecté (worker) ou forcée par le plan
+      const camOn = plan.cameraOrganique === true || (plan.cameraOrganique !== false && !!p.slide.selfie)
+      const camOpen = camOn ? `<div id="${id}cam" style="position:absolute;inset:0"><div id="${id}camj" style="position:absolute;inset:0">` : ''
+      const camClose = camOn ? '</div></div>' : ''
       // ── SPLIT SCREEN (#136, Axel 15/08) : « toujours l'avatar en bas et le
       // clip au-dessus, attention à la safe zone ». Deux moitiés 1080×960 en
       // cover-crop biaisé vers le HAUT (même règle que composeMotionSplit :
@@ -893,11 +926,14 @@ export function buildDynamicComposition(plan, opts = {}) {
         const fp = p.slide.faceP != null ? Math.round(Math.max(0, Math.min(1, p.slide.faceP)) * 100) : 48
         const still = String(p.slide.photo || '') || avatarStill
         const botEl = src
-          ? `<div id="${id}avp" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% ${fp}%/cover"></div>
-        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
+          ? (camOn ? `<div style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}cam" style="position:absolute;inset:0"><div id="${id}camj" style="position:absolute;inset:0">` : '')
+            + `<div id="${id}avp" style="position:absolute;left:0;top:${camOn ? 0 : HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% ${fp}%/cover"></div>
+        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:${camOn ? 0 : HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
+            + (camOn ? '</div></div></div>' : '')
           : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% ${fp}%/cover"></div></div>`
         inner += topEl + botEl
           + `<div style="position:absolute;left:0;top:${HH - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
+        if (camOn && src) pjs += camOrganique(`#${id}cam`, `#${id}camj`, liveT0, t1, p.slide.i, 0.7)
         // entrées en ciseaux : le haut glisse d'en haut, le bas d'en bas
         pjs += `\n  tl.fromTo('#${id}spt',{yPercent:-8,autoAlpha:0},{yPercent:0,autoAlpha:1,duration:0.38,ease:'power3.out'},${r2(liveT0 + 0.02)});`
         pjs += `\n  tl.fromTo('#${id}av${src ? '' : 'w'}',{yPercent:8,autoAlpha:0},{yPercent:0,autoAlpha:1,duration:0.38,ease:'power3.out'},${r2(liveT0 + 0.02)});`
@@ -957,16 +993,18 @@ export function buildDynamicComposition(plan, opts = {}) {
         // Hedra (mcp/index.ts) ; ici on rend l'image telle qu'il l'a composée.
         // …et la PHOTO reste posée dessous : un clip qui s'éteint un souffle
         // avant la fin de la poussée laisse le visage, jamais un noir.
-        inner += `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(String(p.slide.photo || '') || avatarStill)}') center 38%/cover"></div>
-          <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
+        inner += camOpen + `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(String(p.slide.photo || '') || avatarStill)}') center 38%/cover"></div>
+          <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>` + camClose
+        if (camOn) pjs += camOrganique(`#${id}cam`, `#${id}camj`, liveT0, t1, p.slide.i)
       } else {
         // UNE PHOTO PAR FENÊTRE, PAS UNE POUR TOUTE LA VIDÉO. Axel : « 2 avatars
         // principaux différents ». Le hook et le CTA sont deux moments distincts ;
         // le même visage figé aux deux bouts donne l'impression d'un seul plan
         // recollé. `photo` sur le segment prime, `avatarStill` reste le défaut.
         const still = String(p.slide.photo || '') || avatarStill
-        inner += `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') center/cover"></div>`
+        inner += camOpen + `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') center/cover"></div>` + camClose
         pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
+        if (camOn) pjs += camOrganique(`#${id}cam`, `#${id}camj`, liveT0, t1, p.slide.i, 0.8)
       }
 
       // ── #68 « RAW vs EDITED » : LE HOOK BOUGE (Axel, 07/08) ────────────────

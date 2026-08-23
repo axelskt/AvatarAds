@@ -937,6 +937,23 @@ export async function renderJob(jobDir, outPath, { draft = false } = {}) {
           else console.log(`▶ #136 : visage du split NON détecté (${r2(w.start)}→${r2(w.end)}s) → biais par défaut`)
         } catch (e) { console.warn('cadrage face-aware :', e.message) }
       }
+      // ── CAMÉRA RÉALISTE : SELFIE OU PAS ? (Axel 23/08) ────────────────────────
+      // Une photo tenue à bout de bras reçoit la caméra organique du moteur (dérive +
+      // micro-tremblement) ; un plan trépied (bureau, micro) non. Une question à la
+      // vision par photo, pas par fenêtre — puis chaque fenêtre hérite de sa photo.
+      if (plan.cameraOrganique !== false) {
+        const verdicts = new Map()
+        for (const w of (plan.avatarSegments || [])) {
+          const rel = String(w.photo || 'media/avatar.png')
+          if (!verdicts.has(rel)) {
+            let v = false
+            try { v = await estSelfie(join(proj, rel)) } catch (e) { console.warn('selfie ? :', e.message) }
+            verdicts.set(rel, v)
+            console.log(`▶ caméra : ${rel.split('/').pop()} = ${v ? 'SELFIE → caméra organique' : 'plan posé → caméra fixe'}`)
+          }
+          if (verdicts.get(rel)) w.selfie = true
+        }
+      }
       // ── ROTATION DES VISAGES SUR LES FENÊTRES-PHOTO (#84) ────────────────────
       // Chaque fenêtre qui montrera la PHOTO (pas un clip lipsync généré) pioche
       // l'image suivante du pool — le hook prend la 1re, la fenêtre d'après la
@@ -1789,6 +1806,29 @@ async function cadrageVisageSplit(w, proj, avatarClips, regle = 'centre') {
   if (regle === 'cheveux') return Math.max(0, Math.min(1, (Math.max(0, j.y - 0.01)) / (1 - bandFrac)))
   const fy = Math.max(0, Math.min(1, j.y + j.h / 2))
   return Math.max(0, Math.min(1, (fy - 0.32 * bandFrac) / (1 - bandFrac)))
+}
+
+// « Est-ce un selfie ? » — gpt-4o (openai-proxy), une vignette 560 px, réponse JSON.
+// Dans le doute (proxy KO, réponse illisible) : NON — une caméra fixe ne gêne jamais,
+// un tremblement sur un plan trépied se voit.
+async function estSelfie(photoAbs) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key || !existsSync(photoAbs)) return false
+  const frame = photoAbs.replace(/\.[a-z0-9]+$/i, '') + '_selfie.jpg'
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', photoAbs, '-frames:v', '1', '-vf', 'scale=560:-2', frame])
+  const b64 = 'data:image/jpeg;base64,' + readFileSync(frame).toString('base64')
+  try { rmSync(frame, { force: true }) } catch (_) {}
+  const body = { model: 'gpt-4o', max_tokens: 40, temperature: 0, messages: [{ role: 'user', content: [
+    { type: 'text', text: 'Is this photo a SELFIE — taken by the subject themselves with a phone held at arm\'s length (close-up, slightly low or high angle, arm or shoulder reaching toward the camera)? Answer ONLY a compact JSON object {"selfie": true} or {"selfie": false}.' },
+    { type: 'image_url', image_url: { url: b64 } } ] }] }
+  const r = await fetch(url + '/functions/v1/openai-proxy?path=' + encodeURIComponent('/v1/chat/completions'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key },
+    body: JSON.stringify(body) })
+  if (!r.ok) return false
+  const d = await r.json().catch(() => ({}))
+  const m = String(d?.choices?.[0]?.message?.content || '').match(/\{[\s\S]*\}/)
+  if (!m) return false
+  try { return JSON.parse(m[0]).selfie === true } catch (_) { return false }
 }
 
 async function genererFenetresG(plan, proj, jobDir, avatarClips) {
