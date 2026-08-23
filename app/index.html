@@ -10082,7 +10082,9 @@ function _imgShowSingle(url, size){
   const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
   // « Restaurer les détails (4K) » = upscaler des résultats de GÉNÉRATION uniquement.
   // En Correction, « Améliorer en 4K » fait déjà le même travail → on masque le doublon.
-  const up=document.getElementById('imgUpscaleBtn'); if(up&&up.parentNode) up.parentNode.style.display = (_imgMode==='correct') ? 'none' : '';
+  // ⚠ le parent des 2 boutons est un `display:flex` INLINE : remettre `''` le repassait en
+  //   block → les boutons « Détails du visage » / « Améliorer en 4K » s'EMPILAIENT (Axel 23/08).
+  const up=document.getElementById('imgUpscaleBtn'); if(up&&up.parentNode) up.parentNode.style.display = (_imgMode==='correct') ? 'none' : 'flex';
   const resultWrap = document.getElementById('imgResult');
   resultWrap.style.display = 'block';
   _imgIdleShow(false);
