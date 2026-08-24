@@ -14982,14 +14982,25 @@ function _mdAnimPrevHtml(name, desc, big){
       +'<div style="position:absolute;left:14%;right:14%;bottom:6%;height:'+(big?7:5)+'px;border-radius:4px;background:var(--accent)"></div>'
     +'</div></div>';
 }
+// aperçu de transition (Détails du montage) : VRAI dessin animé (_edPaintTrans) sur
+// deux panneaux A/B — fini le point blanc générique. Types alignés sur le moteur.
 function _mdTransPrevHtml(name, ratio){
-  const f=String(name).split(' ')[0];
-  const anim={ Coupe:'mdaFlash 1.4s steps(2,end) infinite', Fondu:'mdaFade 2s ease-in-out infinite',
-    Balayage:'mdaSlide 1.4s cubic-bezier(.4,.9,.2,1) infinite', Flash:'mdaFlash 1.4s ease-out infinite' }[f]||'mdaFade 2s ease-in-out infinite';
+  const map={ 'Coupe nette':'', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Mask Glitch':'maskglitch' };
+  const ty=map[name]||'';
+  setTimeout(function(){ try{ _mdStartTransPrev(); }catch(e){} },30);
   return '<div style="position:relative;width:100%;height:100%;aspect-ratio:'+(ratio||'16 / 10')+';border-radius:8px;overflow:hidden;background:#0b0a10;border:1px solid var(--border)">'
-    +'<div style="position:absolute;inset:0;background:linear-gradient(135deg,#1b3a5c,#0d1420)"></div>'
-    +'<div style="position:absolute;inset:0;animation:'+anim+';background:linear-gradient(135deg,#5c1b46,#2a0f20)"></div>'
-    +'<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:26%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.85)"></div></div>';
+    +'<canvas class="mdtprev" data-tt="'+ty+'" width="200" height="356" style="width:100%;height:100%;display:block"></canvas>'
+    +(ty?'':'<span class="mono" style="position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:12px">Coupe nette</span>')+'</div>';
+}
+function _mdStartTransPrev(){ try{ cancelAnimationFrame(window._mdtpRAF); }catch(e){} window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev); }
+function _mdAnimTransPrev(){
+  const cvs=document.querySelectorAll('canvas.mdtprev'); if(!cvs.length) return;
+  if(!window._mdtpA){ const mk=(c1,c2,lab)=>{ const o=document.createElement('canvas'); o.width=200; o.height=356; o.videoWidth=200; o.videoHeight=356; const x=o.getContext('2d'); const g=x.createLinearGradient(0,0,200,356); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,200,356); x.fillStyle='rgba(255,255,255,.82)'; x.font='bold 74px system-ui'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(lab,100,178); return o; };
+    window._mdtpA=mk('#2a4a7a','#0d1420','A'); window._mdtpB=mk('#7a2a4a','#20101a','B'); }
+  const A=window._mdtpA, B=window._mdtpB, now=(performance.now?performance.now():Date.now()), p=(now/1600)%1, srB={sx:0,sy:0,sw:B.width,sh:B.height};
+  cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H); cx.drawImage(B,0,0,W,H);
+    if(ty){ const prevV=(ty==='linewipe'||ty==='fondu')?A:null; try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} } });
+  window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev);
 }
 function _mdTextPrevHtml(name, ratio){
   const f=String(name);
@@ -31563,6 +31574,9 @@ function _edPaintTrans(cx,W,H,p,type,curV,sr,prevV){
     if(prevV){ const pr=cover(prevV); cx.save(); cx.beginPath(); cx.rect(lineX,0,Math.max(0,W-lineX),H); cx.clip();
       try{ cx.drawImage(prevV,pr.sx,pr.sy,pr.sw,pr.sh,0,0,W,H);}catch(e){} cx.restore(); }
     cx.save(); cx.fillStyle='rgba(255,255,255,0.28)'; cx.fillRect(lineX-Math.max(4,W*0.03),0,Math.max(3,W*0.02),H); cx.fillRect(lineX+Math.max(1,W*0.008),0,Math.max(3,W*0.02),H); cx.fillStyle='rgba(255,255,255,0.97)'; cx.fillRect(lineX-2,0,4,H); cx.restore(); }
+  else if(type==='maskglitch'){ const a=Math.sin(Math.min(1,p)*Math.PI); // aperçu Montage IA : lueur blanche (silhouette) + glitch ; le vrai détourage est côté worker
+    cx.save(); const r=cx.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,W*0.62); r.addColorStop(0,'rgba(232,246,255,'+(0.92*a)+')'); r.addColorStop(0.5,'rgba(160,210,255,'+(0.4*a)+')'); r.addColorStop(1,'rgba(160,210,255,0)'); cx.fillStyle=r; cx.fillRect(0,0,W,H); cx.restore();
+    cx.save(); const fl=(Math.floor(p*11)%2===0)?1:0.4; cx.globalCompositeOperation='screen'; cx.globalAlpha=0.32*fl; for(let y=0;y<H;y+=Math.max(10,H/38)){ cx.fillStyle='#00ffee'; cx.fillRect(0,y,W,Math.max(2,H/300)); cx.fillStyle='#ff0080'; cx.fillRect(0,y+H/46,W,Math.max(2,H/300)); } cx.restore(); }
 }
 function edDrawTrans(cx,W,H,gTime,curV,sr){ if(!_ed) return;
   for(const s of (_ed.sfx||[])){ if(!s.trans) continue;
