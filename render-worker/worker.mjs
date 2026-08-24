@@ -2426,7 +2426,7 @@ async function pollLoop() {
       // plan:{__batchBlank:true}}). Idempotent — upsert dans le bucket public.
       if (job.plan && job.plan.__batchBlank) {
         try {
-          await batchBlankPreviews({ list: job.plan.anims || null, draft: job.plan.draft !== false })
+          await batchBlankPreviews({ list: job.plan.anims || null, draft: job.plan.draft !== false, style: job.plan.style || 'auto', prefix: job.plan.prefix || 'blank' })
           await sb.from('render_jobs').update({ status: 'done', updated_at: new Date().toISOString() }).eq('id', job.id)
           console.log('✓ batch anims blanches terminé')
         } catch (e) {
@@ -2578,10 +2578,12 @@ const BLANK_ANIMS = [
   'tools', 'connect', 'copy',
 ]
 
-async function batchBlankPreviews({ list = null, draft = true } = {}) {
+async function batchBlankPreviews({ list = null, draft = true, style = 'auto', prefix = 'blank' } = {}) {
   const SUPA = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!SUPA || !KEY) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants — impossible de pousser les aperçus')
   if (!Array.isArray(list) || !list.length) list = BLANK_ANIMS
+  // `style` : 'auto' = fond clair (legacy) ; 'slam' = fond SOMBRE à carreaux (façon
+  // Cartoon 15). `prefix` range chaque variante dans son dossier du bucket public.
 
   // fond de base commun : noir 1080×1920 muet 1,8 s (la scène plein-cadre le couvre).
   const baseSrc = join(tmpdir(), 'aa-blank-base.mp4')
@@ -2599,9 +2601,9 @@ async function batchBlankPreviews({ list = null, draft = true } = {}) {
       copyFileSync(baseSrc, join(job, 'base.mp4'))
       // plan minimal : UNE scène plein-cadre = l'anim, en mode blanc.
       writeFileSync(join(job, 'plan.json'), JSON.stringify({
-        slideStyle: 'auto', duration: 1.8,
+        slideStyle: style, duration: 1.8,
         slides: [{ id: 'a0', anim, layout: 'full', start: 0, end: 1.8, _blank: true, items: [] }],
-        sections: [], captions: [], beats: [], broll: [], avatarSegments: [], tuto: [], sfx: [],
+        sections: [{ start: 0, end: 1.8 }], captions: [], beats: [], broll: [], avatarSegments: [], tuto: [], sfx: [],
       }))
       const out1080 = join(job, 'out.mp4')
       console.log(`▶ anim blanche « ${anim} »…`)
@@ -2622,10 +2624,10 @@ async function batchBlankPreviews({ list = null, draft = true } = {}) {
         })
         if (!r.ok) throw new Error(`upload ${path} → HTTP ${r.status} ${await r.text().catch(() => '')}`)
       }
-      await push(readFileSync(out540), `blank/${anim}.mp4`, 'video/mp4')
+      await push(readFileSync(out540), `${prefix}/${anim}.mp4`, 'video/mp4')
       // le poster est un CONFORT (affiche avant lecture) — jamais fatal : un échec
       // dessus ne doit pas faire rater l'anim (le .mp4 est déjà en place)
-      if (existsSync(poster)) { try { await push(readFileSync(poster), `blank/${anim}.jpg`, 'image/jpeg') } catch (pe) { console.warn(`  poster ${anim} ignoré : ${pe.message}`) } }
+      if (existsSync(poster)) { try { await push(readFileSync(poster), `${prefix}/${anim}.jpg`, 'image/jpeg') } catch (pe) { console.warn(`  poster ${anim} ignoré : ${pe.message}`) } }
       done.push(anim)
       console.log(`  ✓ ${anim} poussée`)
     } catch (e) {
@@ -2637,13 +2639,13 @@ async function batchBlankPreviews({ list = null, draft = true } = {}) {
   }
   // manifeste : la liste des anims qui ONT une version blanche (l'éditeur la lit).
   try {
-    await fetch(`${SUPA}/storage/v1/object/anim-previews/blank/index.json`, {
+    await fetch(`${SUPA}/storage/v1/object/anim-previews/${prefix}/index.json`, {
       method: 'POST', headers: { Authorization: 'Bearer ' + KEY, apikey: KEY, 'Content-Type': 'application/json', 'x-upsert': 'true' },
       body: JSON.stringify(done),
     })
-  } catch (e) { console.error('manifeste blank/index.json :', e.message) }
-  console.log(`\n═══ ${done.length}/${list.length} anims blanches poussées${failed.length ? ` · échecs : ${failed.join(', ')}` : ''}`)
-  console.log(`Public : ${SUPA}/storage/v1/object/public/anim-previews/blank/<nom>.mp4`)
+  } catch (e) { console.error(`manifeste ${prefix}/index.json :`, e.message) }
+  console.log(`\n═══ ${done.length}/${list.length} anims « ${prefix} » poussées${failed.length ? ` · échecs : ${failed.join(', ')}` : ''}`)
+  console.log(`Public : ${SUPA}/storage/v1/object/public/anim-previews/${prefix}/<nom>.mp4`)
 }
 
 // ── entrée ──
@@ -2653,7 +2655,9 @@ if (flag('--batch-blank') != null) {
   let list = null
   if (typeof only === 'string') list = [only]
   else if (typeof override === 'string') list = override.split(',').map((s) => s.trim()).filter(Boolean)
-  batchBlankPreviews({ list, draft: flag('--draft') != null ? !!flag('--draft') : true })
+  const style = typeof flag('--style') === 'string' ? flag('--style') : 'auto'
+  const prefix = typeof flag('--prefix') === 'string' ? flag('--prefix') : (style === 'slam' ? 'blank-dark' : 'blank')
+  batchBlankPreviews({ list, draft: flag('--draft') != null ? !!flag('--draft') : true, style, prefix })
     .then(() => process.exit(0))
     .catch((e) => { console.error('✗', e.message); process.exit(1) })
 } else if (localDir) {
