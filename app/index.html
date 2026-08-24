@@ -15357,8 +15357,10 @@ function _mdAskItemsOpen(sc){
   const nSlots=_MD_TEXT_SLOTS[anim]||4;
   let base=(sc.userItems&&sc.userItems.length)?sc.userItems:_mdWordsIn(sc.a,sc.b);
   base=base.slice(0,nSlots);
-  _md.askItems={ sceneId:sc.id, anim:anim,
-    fields:(base.length?base:[{t:Math.round((sc.a+0.3)*100)/100,text:''}]) };
+  // rien à pré-remplir → autant de champs VIDES que l'anim a de slots (retour Axel :
+  // « un menu avec le nombre de champs selon l'animation »)
+  if(!base.length){ const span=Math.max(0.1,sc.b-sc.a); base=[]; for(let i=0;i<nSlots;i++) base.push({t:Math.round((sc.a+span*(i+0.5)/nSlots)*100)/100,text:''}); }
+  _md.askItems={ sceneId:sc.id, anim:anim, fields:base };
   _mdRenderModals();
 }
 function _mdAskItemsHtml(){
@@ -15620,6 +15622,9 @@ function _mdBankPick(label){
       const bk=(_md.bank||[]).find(x=>x.name===label);
       _md.scenes.push({id,a,b,n:'animation',t:label,d:bk?String(bk.desc).split(/[.«]/)[0].trim().toLowerCase().slice(0,60):'',w:'',items:[],added:true});
       _md.scenes.sort((x,y)=>x.a-y.a); _md.sel=id;
+      // #éditable (retour Axel) · si l'anim a des champs (texte/média) → menu de remplissage TOUT DE
+      // SUITE à l'ajout, avec le NOMBRE de champs propre à l'animation (_MD_TEXT_SLOTS).
+      if(_MD_TEXT_ANIMS.has(label)){ const _sc=_md.scenes.find(x=>x.id===id); _md.bankModal=null; _mdRender(); if(_sc) _mdAskItemsOpen(_sc); return; }
     } else if(bm.kind==='sfx'){
       _md.marks.sfx.push({id:'sfx-add'+Date.now(), t:bm.at, n:label, added:true});
     } else if(bm.kind==='trans'){
@@ -15749,7 +15754,7 @@ function _mdAnimOv(){
   let o=document.getElementById('mdAnimOv');
   if(!o && _md && _md.vidEl && _md.vidEl.parentNode){
     o=document.createElement('video'); o.id='mdAnimOv';
-    o.muted=true; o.loop=true; o.playsInline=true; o.setAttribute('playsinline','');
+    o.muted=true; o.loop=false; o.playsInline=true; o.setAttribute('playsinline',''); // #noloop : l'anim ne tourne plus à l'infini
     o.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;'
       +'background:#08070a;display:none;pointer-events:none;z-index:3';
     _md.vidEl.parentNode.appendChild(o);
@@ -15762,13 +15767,22 @@ function _mdPeindreAnim(t){
   const sc=(_md.scenes||[]).find(x=>!x.del && t>=x.a && t<x.b && x.n==='animation' && x.t);
   const nom=sc ? String(sc.t).trim() : '';
   const dispo=nom && window._mdPrevSet && window._mdPrevSet.has(nom);
-  if(!dispo){ if(o.style.display!=='none'){ o.style.display='none'; try{ o.pause(); }catch(_){} o.removeAttribute('src'); } return; }
+  if(!dispo){ if(o.style.display!=='none'){ o.style.display='none'; try{ o.pause(); }catch(_){} o.removeAttribute('src'); o.removeAttribute('data-anim'); } return; }
   const src=(window._mdPrevBlob&&window._mdPrevBlob[nom])||('anim-previews/'+nom+'.mp4');
-  if(o.getAttribute('data-anim')!==nom){
-    o.setAttribute('data-anim',nom); o.src=src;
-    try{ o.currentTime=0; o.play().catch(()=>{}); }catch(_){}
-  }
+  if(o.getAttribute('data-anim')!==nom){ o.setAttribute('data-anim',nom); o.src=src; }
   if(o.style.display==='none') o.style.display='';
+  // #joue+noloop · l'anim est calée sur la timeline (position dans sa fenêtre), joue une fois,
+  // puis FIGE sa dernière image (plus de boucle infinie). Scrub = image correspondante.
+  const playing=!!_md.playing, local=t-sc.a, dur=o.duration, has=isFinite(dur)&&dur>0.2;
+  if(has && local>=dur){ if(!o.paused){ try{o.pause();}catch(_){} } try{ if(Math.abs(o.currentTime-(dur-0.05))>0.15) o.currentTime=dur-0.05; }catch(_){} return; }
+  const lt = has ? Math.min(Math.max(0,local), dur-0.05) : Math.max(0,local);
+  if(playing){
+    if(o.paused){ try{ o.currentTime=lt; }catch(_){} o.play().catch(()=>{}); }
+    else if(Math.abs(o.currentTime-lt)>0.6){ try{ o.currentTime=lt; }catch(_){} }
+  } else {
+    if(!o.paused){ try{ o.pause(); }catch(_){} }
+    try{ if(Math.abs(o.currentTime-lt)>0.08) o.currentTime=lt; }catch(_){}
+  }
 }
 
 function _mdStatsHtml(){
@@ -16114,12 +16128,21 @@ function _mdBuildRegenPlan(){
   // de chaque marque sur la section dont le début correspond (match par le temps ;
   // tr{i} ⟷ sections[i+1]). Vide = 'Coupe nette' = pas d'overlay.
   if(Array.isArray(plan.sections)){
+    // frontières de section = début de chaque section sauf la 1re (le moteur ne COUPE qu'aux débuts)
+    const bounds=plan.sections.map((s,i)=>({i,t:Number(s.start)||0})).filter(x=>x.i>0);
     for(const m of _md.marks.trans){
       if(m.zoomPos) continue;
-      const mi=/^tr(\d+)$/.exec(String(m.id));   // tr{i} ⟷ sections[i+1] ; marques ajoutées (tr-add) ignorées (pas de section)
-      if(!mi) continue;
-      const si=parseInt(mi[1],10)+1;
-      if(plan.sections[si]) plan.sections[si].transition = m.del?'':String(m.transition||'');
+      const mi=/^tr(\d+)$/.exec(String(m.id));   // tr{i} ⟷ sections[i+1] (frontière d'origine)
+      if(mi){
+        const si=parseInt(mi[1],10)+1;
+        if(plan.sections[si]) plan.sections[si].transition = m.del?'':String(m.transition||'');
+      } else if(/^tr-add/.test(String(m.id)) && !m.del && bounds.length){
+        // #transition AJOUTÉE · avant, les tr-add étaient IGNORÉES → « transition ne marche pas ».
+        // On colle la transition à la frontière de section la plus proche (là où il y a une vraie coupe).
+        let best=bounds[0], bd=Math.abs(bounds[0].t-m.t);
+        for(const b of bounds){ const d=Math.abs(b.t-m.t); if(d<bd){ bd=d; best=b; } }
+        if(bd<=2.2 && plan.sections[best.i]) plan.sections[best.i].transition=String(m.transition||'');
+      }
     }
   }
   // les « Zoom sur un point » deviennent des zooms punch du plan
