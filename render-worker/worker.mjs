@@ -2623,7 +2623,9 @@ async function batchBlankPreviews({ list = null, draft = true } = {}) {
         if (!r.ok) throw new Error(`upload ${path} → HTTP ${r.status} ${await r.text().catch(() => '')}`)
       }
       await push(readFileSync(out540), `blank/${anim}.mp4`, 'video/mp4')
-      if (existsSync(poster)) await push(readFileSync(poster), `blank/${anim}.jpg`, 'image/jpeg')
+      // le poster est un CONFORT (affiche avant lecture) — jamais fatal : un échec
+      // dessus ne doit pas faire rater l'anim (le .mp4 est déjà en place)
+      if (existsSync(poster)) { try { await push(readFileSync(poster), `blank/${anim}.jpg`, 'image/jpeg') } catch (pe) { console.warn(`  poster ${anim} ignoré : ${pe.message}`) } }
       done.push(anim)
       console.log(`  ✓ ${anim} poussée`)
     } catch (e) {
