@@ -14644,7 +14644,10 @@ function _mdClavier(e){
 if(!window._mdClavierPose){ window._mdClavierPose=true; document.addEventListener('keydown', _mdClavier); }
 
 function _mdTrackDown(ev){
-  if(_md.pop){ _md.pop=null; _mdRenderPop(); return; }
+  // #curseur · un clic sur la bande DÉPLACE toujours le curseur instantanément. Avant, si un
+  // popover était ouvert, le 1er clic ne faisait que le fermer (rien ne bougeait) → « il faut
+  // double-cliquer ». On ferme le popover ET on continue à se positionner.
+  if(_md.pop){ _md.pop=null; _mdRenderPop(); }
   _mdPause();
   const host=document.getElementById('mdTrack'); if(!host) return;
   const r=host.getBoundingClientRect();
