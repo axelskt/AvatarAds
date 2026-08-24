@@ -1171,6 +1171,15 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // pré-découpé par ffmpeg à son timecode, exactement comme les fenêtres
     // avatar le sont depuis le début : mécanisme éprouvé, aucun décalage
     // possible, et le moteur n'a qu'à poser un clip qui joue depuis son début.
+
+    // Transitions de section (film burn / glitch) RÉSERVÉES AU COMPTE DEV/OWNER
+    // pour la phase de test (Axel 24/08) — sinon toutes les coupes retombent sur
+    // le flash (comportement historique). Même garde-fou que le MIX lipsync.
+    if ((plan.sections || []).some((s) => s && s.transition) && !(await estOwner(RENDER_USER))) {
+      for (const s of plan.sections) s.transition = ''
+      console.log('▶ transitions de section : compte non-owner → flash (feature en test dev)')
+    }
+
     const fonds = []
     if (baseAUneImage && existsSync(join(proj, 'media', 'base.mp4'))) {
       // Deux passes. La première ne sert qu'à MESURER : on construit la
