@@ -882,8 +882,9 @@ export function buildComposition(plan, opts = {}) {
   const flashJs = secBounds.map((t) => {
     const ty = transAt(t), t0 = r2(Math.max(0, t - 0.04))
     if (ty === 'filmburn') return `
-      tl.fromTo('#burn', { autoAlpha: 0, scale: 1.42, transformOrigin: '60% 40%' }, { autoAlpha: 1, scale: 1.06, duration: 0.18, ease: 'power2.in' }, ${r2(Math.max(0, t - 0.16))});
-      tl.to('#burn', { autoAlpha: 0, scale: 0.84, duration: 0.32, ease: 'power2.out' }, ${r2(t + 0.02)});`
+      tl.to('#burn', { autoAlpha: 1, duration: 0.08 }, ${r2(Math.max(0, t - 0.18))});
+      tl.fromTo('#burn', { x: ${-Math.round(W * 1.8)} }, { x: ${Math.round(W * 1.05)}, duration: 0.52, ease: 'power1.inOut' }, ${r2(Math.max(0, t - 0.18))});
+      tl.to('#burn', { autoAlpha: 0, duration: 0.12 }, ${r2(t + 0.22)});`
     if (ty === 'glitch') return `
       tl.fromTo('#glitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.9, y: -26, duration: 0.05, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${t0});
       tl.fromTo('#glitch2', { autoAlpha: 0, x: 0 }, { autoAlpha: 0.7, x: 24, duration: 0.045, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${r2(Math.max(0, t - 0.02))});
@@ -1070,11 +1071,10 @@ export function buildComposition(plan, opts = {}) {
 
       /* transitions de section (au-dessus de tout) : flash / film burn / glitch */
       #flash { inset: 0; z-index: 9; background: #fff; pointer-events: none; }
-      #burn { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
+      #burn { top: 0; bottom: 0; left: 0; width: ${Math.round(W * 1.8)}px; z-index: 9; pointer-events: none; mix-blend-mode: screen;
         background:
-          radial-gradient(56% 46% at 60% 40%, rgba(255,255,250,1) 0%, rgba(255,228,168,1) 22%, rgba(255,150,60,.95) 44%, rgba(255,88,24,.55) 64%, transparent 80%),
-          linear-gradient(112deg, transparent 24%, rgba(255,192,112,.6) 46%, rgba(255,150,70,.32) 58%, transparent 74%),
-          linear-gradient(0deg, rgba(255,138,58,.3), rgba(255,138,58,.3)); }
+          linear-gradient(102deg, transparent 0%, rgba(255,176,86,.30) 16%, rgba(255,150,60,.85) 30%, rgba(255,240,196,1) 42%, rgba(255,150,60,.85) 54%, rgba(255,120,40,.4) 68%, transparent 84%),
+          repeating-linear-gradient(99deg, transparent 0 46px, rgba(255,214,150,.14) 46px 52px, transparent 52px 104px); }
       #glitch { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
         background: repeating-linear-gradient(0deg, rgba(0,255,238,.55) 0 3px, transparent 3px 10px, rgba(255,0,128,.55) 10px 13px, transparent 13px 26px); }
       #glitch2 { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
