@@ -31529,6 +31529,51 @@ function edDeleteRight(){
   edRefreshTimeline(); edRenderClips(); toast('Après le curseur supprimé');
 }
 
+// ── TRANSITIONS ENTRE CLIPS (Éditeur) — dessinées sur le canvas aux coupures.
+// Avant : la « banque transitions » ne posait qu'un son. Maintenant chaque clip
+// porte `clip.trans` (transition d'entrée) et on DESSINE l'effet à sa frontière,
+// dans l'aperçu (edDrawLoop) ET l'export (renderFrame). Types : flash · filmburn
+// (balayage) · glitch · whip (flou horizontal) · linewipe (révèle avant/après au trait).
+function _edClipBounds(){
+  const out=[]; let g=0; const cl=(_ed&&_ed.clips)||[];
+  for(let i=0;i<cl.length;i++){ const c=cl[i]; if(i>0 && c.trans && c.trans!=='cut' && c.trans!=='') out.push({ t:g, type:String(c.trans), i }); g+=Math.max(0,c.trimB-c.trimA); }
+  return out;
+}
+const _ED_TRANS_DUR=0.42;
+function edDrawTrans(cx,W,H,gTime,curV,sr){
+  if(!_ed) return;
+  for(const b of _edClipBounds()){
+    const p=(gTime-(b.t-0.06))/_ED_TRANS_DUR; if(p<0||p>1) continue;
+    if(b.type==='flash'){
+      const a=(p<0.28?p/0.28:(1-(p-0.28)/0.72))*0.72;
+      cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,a)); cx.fillStyle='#fff'; cx.fillRect(0,0,W,H); cx.restore();
+    } else if(b.type==='filmburn'){
+      cx.save(); cx.globalCompositeOperation='screen'; const x=(-1.8+2.9*p)*W;
+      const g2=cx.createLinearGradient(x,0,x+W*1.8,0);
+      g2.addColorStop(0,'rgba(255,176,86,0)'); g2.addColorStop(0.30,'rgba(255,150,60,0.85)'); g2.addColorStop(0.45,'rgba(255,240,196,1)'); g2.addColorStop(0.60,'rgba(255,150,60,0.85)'); g2.addColorStop(1,'rgba(255,120,40,0)');
+      cx.fillStyle=g2; cx.fillRect(0,0,W,H); cx.restore();
+    } else if(b.type==='glitch'){
+      cx.save(); const fl=(Math.floor(p*11)%2===0)?1:0.42; cx.globalCompositeOperation='screen'; cx.globalAlpha=0.5*fl;
+      for(let y=0;y<H;y+=26){ cx.fillStyle='#00ffee'; cx.fillRect(0,y,W,3); cx.fillStyle='#ff0080'; cx.fillRect(0,y+10,W,3); }
+      cx.globalCompositeOperation='source-over'; cx.globalAlpha=1;
+      if(curV&&sr){ for(let k=0;k<4;k++){ const yy=((k*167+Math.floor(p*420))%Math.max(1,H-40)); const off=((k%2)?1:-1)*22*fl;
+        try{ cx.drawImage(curV, sr.sx, sr.sy+(yy/H)*sr.sh, sr.sw, (34/H)*sr.sh, off, yy, W, 34);}catch(e){} } }
+      cx.restore();
+    } else if(b.type==='whip'){
+      if(curV&&sr){ cx.save(); const inten=Math.sin(Math.min(1,p)*Math.PI); cx.globalAlpha=0.15;
+        for(let k=-6;k<=6;k++){ if(!k) continue; try{ cx.drawImage(curV, sr.sx,sr.sy,sr.sw,sr.sh, k*11*inten,0,W,H);}catch(e){} }
+        cx.restore(); }
+    } else if(b.type==='linewipe'){
+      const prev=(_ed.clips[b.i-1]||{}).video; const lineX=W*Math.min(1,Math.max(0,p));
+      if(prev){ const pr=edCoverRect(prev.videoWidth||9,prev.videoHeight||16,W/H);
+        cx.save(); cx.beginPath(); cx.rect(lineX,0,Math.max(0,W-lineX),H); cx.clip();
+        try{ cx.drawImage(prev, pr.sx,pr.sy,pr.sw,pr.sh, 0,0,W,H);}catch(e){} cx.restore(); }
+      cx.save(); cx.fillStyle='rgba(255,255,255,0.28)'; cx.fillRect(lineX-9,0,7,H); cx.fillRect(lineX+3,0,7,H);
+      cx.fillStyle='rgba(255,255,255,0.97)'; cx.fillRect(lineX-2,0,4,H); cx.restore();
+    }
+  }
+}
+
 function edDrawLoop(){
   if(!_ed) return;
   const v=_ed.video, ctx=_ed.ctx;
@@ -31547,6 +31592,7 @@ function edDrawLoop(){
   _edDrawSubsAIPreview(_gt); // 🎼 sous-titres Montage IA (canvas superposé, au-dessus du b-roll)
   const _fa=_edFlashAlpha(_gt); // #111 · flash de transition de section (preview)
   if(_fa>0.01){ try{ ctx.fillStyle='rgba(255,255,255,'+_fa.toFixed(3)+')'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH); }catch(e){} }
+  try{ edDrawTrans(ctx, _ed.dispW, _ed.dispH, _gt, v, _cr); }catch(e){}   // transitions entre clips (aperçu)
   for(const o of _ed.overlays){
     if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; }
     if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
@@ -33297,6 +33343,7 @@ async function edExport(){
       _edDrawSubsAI(cx, gTime, expW, expH); // 🎼 sous-titres Montage IA (export)
       const fa=_edFlashAlpha(gTime); // #111 · flash de transition de section (export)
       if(fa>0.01){ cx.fillStyle='rgba(255,255,255,'+fa.toFixed(3)+')'; cx.fillRect(0,0,expW,expH); }
+      try{ const _tsr=edCoverRect(curV.videoWidth||_ed.vw||9, curV.videoHeight||_ed.vh||16, expW/expH); edDrawTrans(cx, expW, expH, gTime, curV, _tsr); }catch(e){}
     }
 
     // Segments : chaque clip avec SON trim (clip principal + clips ajoutés), dans l'ordre
@@ -33633,7 +33680,7 @@ function edBandDrag(ov,track,e,mode){
     "pop","ed-pop-1","mo-pop-1","mo-pop-2","mo-pop-3",
     "ding","message-tone","success","iphone-charging","magic","timer","heartbeat","mac-typing","robot","hu","fahh","mo-outro-1"]; // 52 fichiers réels
   const sfxLabel=function(s){ return String(s).replace(/-/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}); };
-  const ED_TRANS=["Cut net","Fondu enchaîné","Whip pan","Zoom transition","Glitch"];         // 5
+  const ED_TRANS=["Cut net","Flash","Film Burn","Glitch RGB","Whip pan","Trait avant/après"];  // vraies transitions dessinées (canvas)
   // Banque partagée (3 originales + 4 virales) — voir AA_MUSIC près de _MD_SFX_BANK
   const ED_MUSIC = (typeof AA_MUSIC !== 'undefined' ? AA_MUSIC : (window.AA_MUSIC || []));
   window.ED_ANIMS=ED_ANIMS; window.ED_SFX=ED_SFX; window.ED_TRANS=ED_TRANS;
@@ -33768,8 +33815,21 @@ function edBandDrag(ov,track,e,mode){
     const k=bank.kind;
     if(k==='sfx'){ edAddSfxAtPlayhead(label); relabelLastSfx(sfxLabel(label)); }
     else if(k==='anim'){ if(typeof edAddZoomAtPlayhead==='function') edAddZoomAtPlayhead(); toast('Animation « '+label+' » ajoutée'); }
-    else { edAddSfxAtPlayhead('mo-whoosh-1'); relabelLastSfx(label); toast('Transition « '+label+' » ajoutée'); }
+    else { edSetClipTrans(label); }
     closeBank();
+  }
+  function edSetClipTrans(label){
+    // VRAIE transition entre clips : on pose le type sur le clip de la coupure la
+    // plus proche du curseur (i>=1). Le dessin se fait dans edDrawTrans (aperçu+export).
+    const MAP={ 'Cut net':'', 'Flash':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Trait avant/après':'linewipe' };
+    const type=(MAP[label]!==undefined)?MAP[label]:'';
+    const cl=(_ed&&_ed.clips)||[];
+    if(cl.length<2){ toast('Ajoute au moins 2 clips pour poser une transition'); return; }
+    const ct=cursorT(); let best=1, bd=1e9, g=0;
+    for(let i=0;i<cl.length;i++){ if(i>0){ const d=Math.abs(g-ct); if(d<bd){ bd=d; best=i; } } g+=Math.max(0,cl[i].trimB-cl[i].trimA); }
+    cl[best].trans=type;
+    toast(type?('Transition « '+label+' » posée sur la coupure '+best):'Transition retirée (coupure '+best+')');
+    try{ if(typeof edRenderClips==='function') edRenderClips(); if(typeof edRenderClipsTrack==='function') edRenderClipsTrack(); }catch(e){}
   }
   function renderBank(){
     const ov=document.getElementById('edBankModal'); if(!ov||!bank) return;
