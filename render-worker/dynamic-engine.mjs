@@ -1745,13 +1745,14 @@ export function buildDynamicComposition(plan, opts = {}) {
   // transitions ne s'appliquaient qu'aux styles legacy. Flash (défaut) · Film Burn
   // (balayage de lumière) · Glitch RGB. Même contrat que build-composition.
   const _secByStart = new Map((plan.sections || []).map((s) => [r2(s.start), s]))
-  const _TRANS_OK = new Set(['flash', 'filmburn', 'glitch'])
+  const _maskSil = opts.maskSil || ''   // silhouette blanche de l'avatar (détourée par le worker) pour le Mask Glitch ; vide = repli glitch
+  const _TRANS_OK = new Set(['flash', 'filmburn', 'glitch', 'maskglitch'])
   // OPT-IN STRICT : le moteur dynamique n'ajoute un overlay QUE si la section le
   // demande EXPLICITEMENT (flash/filmburn/glitch). Vide/inconnu = RIEN — le moteur
   // garde ses propres transitions de panneaux. ⇒ un montage sans transition choisie
   // (ou non-owner, transition retirée par le gate worker) est STRICTEMENT INCHANGÉ.
   const _secBounds = [...new Set((plan.sections || []).filter((s) => s && _TRANS_OK.has(String(s.transition || '').toLowerCase())).map((s) => r2(s.start)).filter((t) => t > 0.05 && t < D - 0.05))].sort((a, b) => a - b)
-  const _transAt = (t) => String(_secByStart.get(r2(t))?.transition || '').toLowerCase()
+  const _transAt = (t) => { let ty = String(_secByStart.get(r2(t))?.transition || '').toLowerCase(); if (ty === 'maskglitch' && !_maskSil) ty = 'glitch'; return ty }
   const _BURNW = Math.round(W * 1.8)
   const _transJs = _secBounds.map((t) => {
     const ty = _transAt(t), t0 = r2(Math.max(0, t - 0.04))
@@ -1763,6 +1764,14 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.fromTo('#tGlitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.9, y: -26, duration: 0.05, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${t0});
   tl.fromTo('#tGlitch2', { autoAlpha: 0, x: 0 }, { autoAlpha: 0.7, x: 24, duration: 0.045, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${r2(Math.max(0, t - 0.02))});
   tl.set(['#tGlitch','#tGlitch2'], { autoAlpha: 0 }, ${r2(t + 0.24)});`
+    if (ty === 'maskglitch') return `
+  tl.to('#tMaskSil', { autoAlpha: 1, duration: 0.10, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.14))});
+  tl.to('#tMaskSil', { scale: 1.04, duration: 0.16, ease: 'power1.out' }, ${r2(Math.max(0, t - 0.10))});
+  tl.fromTo('#tMaskBeam', { autoAlpha: 0, scaleX: 0.12 }, { autoAlpha: 1, scaleX: 1.5, duration: 0.14, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.02))});
+  tl.fromTo('#tGlitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.8, y: -20, duration: 0.045, repeat: 3, yoyo: true, ease: 'steps(1)' }, ${t});
+  tl.to('#tMaskSil', { autoAlpha: 0, scale: 1.14, duration: 0.20, ease: 'power2.in' }, ${r2(t + 0.04)});
+  tl.to('#tMaskBeam', { autoAlpha: 0, scaleX: 2.2, duration: 0.22, ease: 'power2.in' }, ${r2(t + 0.08)});
+  tl.set(['#tGlitch'], { autoAlpha: 0 }, ${r2(t + 0.20)});`
     return `
   tl.fromTo('#tFlash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${t0});
   tl.to('#tFlash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`
@@ -1771,10 +1780,14 @@ export function buildDynamicComposition(plan, opts = {}) {
 <div id="tFlash" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:#fff"></div>
 <div id="tBurn" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="width:${_BURNW}px;background:linear-gradient(102deg,transparent 0%,rgba(255,176,86,.30) 16%,rgba(255,150,60,.85) 30%,rgba(255,240,196,1) 42%,rgba(255,150,60,.85) 54%,rgba(255,120,40,.4) 68%,transparent 84%),repeating-linear-gradient(99deg,transparent 0 46px,rgba(255,214,150,.14) 46px 52px,transparent 52px 104px)"></div>
 <div id="tGlitch" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:repeating-linear-gradient(0deg,rgba(0,255,238,.55) 0 3px,transparent 3px 10px,rgba(255,0,128,.55) 10px 13px,transparent 13px 26px)"></div>
-<div id="tGlitch2" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:linear-gradient(90deg,transparent 0 18%,rgba(0,255,238,.5) 18% 34%,transparent 34% 55%,rgba(255,0,120,.5) 55% 72%,transparent 72%)"></div>` : ''
+<div id="tGlitch2" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:linear-gradient(90deg,transparent 0 18%,rgba(0,255,238,.5) 18% 34%,transparent 34% 55%,rgba(255,0,120,.5) 55% 72%,transparent 72%)"></div>${_maskSil ? `
+<div id="tMaskSil" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="z-index:61;background:center/cover no-repeat url('${_maskSil}');filter:drop-shadow(0 0 26px rgba(180,230,255,.9)) drop-shadow(0 0 60px rgba(120,200,255,.6))"></div>
+<div id="tMaskBeam" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="z-index:61;left:50%;width:300px;margin-left:-150px;mix-blend-mode:screen;background:linear-gradient(90deg,transparent,rgba(190,235,255,.6) 34%,rgba(255,255,255,1) 50%,rgba(190,235,255,.6) 66%,transparent)"></div>` : ''}` : ''
   const _transInit = _secBounds.length ? `
-  tl.set(['#tFlash','#tBurn','#tGlitch','#tGlitch2'], { autoAlpha: 0 }, 0);
-  tl.set('#tBurn', { x: ${-_BURNW} }, 0);${_transJs}` : ''
+  tl.set(['#tFlash','#tBurn','#tGlitch','#tGlitch2'${_maskSil ? `,'#tMaskSil','#tMaskBeam'` : ''}], { autoAlpha: 0 }, 0);
+  tl.set('#tBurn', { x: ${-_BURNW} }, 0);${_maskSil ? `
+  tl.set('#tMaskSil', { scale: 1 }, 0);
+  tl.set('#tMaskBeam', { scaleX: 0.12 }, 0);` : ''}${_transJs}` : ''
 
   return `<!DOCTYPE html>
 <html lang="fr">

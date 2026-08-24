@@ -1205,7 +1205,26 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // style) — c'est lui qu'on rend, pas celui du chef. Indispensable pour comprendre
     // « pourquoi ce visuel à 14 s » sans relire 3 000 lignes de dérivation.
     if (process.env.PLAN_DUMP) { try { writeFileSync(process.env.PLAN_DUMP, JSON.stringify(plan, null, 1)) } catch {} }
-    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, fonds, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
+
+    // ── Mask Glitch : silhouette blanche de l'avatar, détourée par le worker. Si une
+    // section demande 'maskglitch' ET qu'on a une photo d'avatar, on la détoure
+    // (hyperframes remove-background) et on la teinte en blanc (alpha conservé) → le
+    // moteur l'illumine à la frontière puis révèle le plan suivant. Échec (binaire
+    // absent, modèle non téléchargé…) = maskSil vide → repli glitch RGB (moteur).
+    let maskSil = ''
+    try {
+      const wantsMask = (plan.sections || []).some((s) => s && String(s.transition || '').toLowerCase() === 'maskglitch')
+      const avatarPng = join(proj, 'media', 'avatar.png')
+      if (wantsMask && existsSync(avatarPng)) {
+        const cut = join(proj, 'media', '_masksil_cut.png')
+        execFileSync(HF_BIN, ['remove-background', avatarPng, '-o', cut], { stdio: 'ignore', timeout: 180000 })
+        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', cut, '-vf', 'format=rgba,lutrgb=r=255:g=255:b=255', join(proj, 'media', 'masksil.png')])
+        maskSil = 'media/masksil.png'
+        console.log('▶ Mask Glitch : silhouette avatar détourée (media/masksil.png)')
+      }
+    } catch (e) { console.warn('Mask Glitch : détourage impossible →', String(e && e.message || e).slice(0, 120), '(repli glitch)') }
+
+    writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, fonds, maskSil, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
 
     // LES BRUITAGES DE « DÉTAILS DU MONTAGE » ONT LE DERNIER MOT. L'utilisateur
     // a construit cette liste en ÉCOUTANT le rendu précédent (supprimé, déplacé,
