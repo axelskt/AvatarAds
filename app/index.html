@@ -13908,7 +13908,12 @@ function _mdSfxFam(n){
   if(/heartbeat|timer|charging/.test(n)) return 'Ambiance';
   return 'Pop';
 }
-const _MD_TRANS_BANK = ['Coupe nette','Fondu enchaîné','Balayage rapide','Flash blanc','Zoom sur un point'];
+// Transitions de section CINÉMATIQUES, choisies PAR SECTION (le moteur lit
+// plan.sections[i].transition). 'Coupe nette' = pas d'overlay (le moteur garde
+// ses propres transitions de panneaux). Aligné sur ce que le render sait faire.
+const _MD_TRANS_BANK = ['Coupe nette','Flash blanc','Film Burn','Glitch RGB','Mask Glitch'];
+const _MD_TRANS_MAP = { 'Coupe nette':'', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Mask Glitch':'maskglitch' };
+const _mdTransLabel = (v) => ({ flash:'Flash blanc', filmburn:'Film Burn', glitch:'Glitch RGB', maskglitch:'Mask Glitch' }[String(v||'').toLowerCase()] || 'Coupe nette');
 // les animations qui ÉCRIVENT le texte de leurs items à l'écran (détectées en
 // rendant animHtml avec un marqueur) : pour celles-là on demande à l'utilisateur
 // quoi écrire, pré-rempli avec les mots de l'audio (retour Axel 01/08 « y'a
@@ -14020,7 +14025,7 @@ function _mdBuildMarks(){
   const sfx = (P.sfx||[]).map((x,i)=>({ id:'sfx'+i, t:Number(x.t)||0, n:String(x.kind||'pop'), vol:(typeof x.vol==='number'?x.vol:null) }));
   // transitions = les frontières de sections (le flash de section du moteur)
   const secs = (P.sections||[]);
-  const trans = secs.slice(1).map((s,i)=>({ id:'tr'+i, t:Number(s.start)||0, n:String(P.transitions||'coupe nette')==='cut'?'coupe nette':String(P.transitions) }));
+  const trans = secs.slice(1).map((s,i)=>({ id:'tr'+i, t:Number(s.start)||0, n:_mdTransLabel(s.transition), transition:String(s.transition||'') }));
   // sous-titres = les phrases (groupes de captions coupés à la ponctuation forte)
   const texte = [];
   let cur = [];
@@ -15575,10 +15580,11 @@ function _mdBankPick(label){
   if(bm.mark){
     const k=_mdMarkKind(bm.mark);
     if(k==='trans'){
-      // une transition changée s'applique au style GLOBAL (le moteur n'a qu'un
-      // réglage) — on marque celle-ci et on retient le choix pour la régé
-      _md.derived.transitions = label==='Fondu enchaîné'?'fade':label==='Balayage rapide'?'swipe':label==='Flash blanc'?'flash':'cut';
-      _md.marks.trans=_md.marks.trans.map(x=>Object.assign({},x,{n:label.toLowerCase(),mod:x.id===bm.mark?true:x.mod}));
+      // transition CINÉMATIQUE PAR-SECTION : le type est posé sur CETTE marque,
+      // reporté sur sa section (match par le temps) au moment de la régé. Fini le
+      // réglage global — chaque frontière a sa propre transition.
+      const tv=_MD_TRANS_MAP[label]||'';
+      _md.marks.trans=_md.marks.trans.map(x=>x.id===bm.mark?Object.assign({},x,{n:label,transition:tv,mod:true}):x);
     } else {
       _md.marks[k]=_md.marks[k].map(x=>x.id===bm.mark?Object.assign({},x,{n:label,mod:true}):x);
     }
@@ -15592,8 +15598,8 @@ function _mdBankPick(label){
     } else if(bm.kind==='sfx'){
       _md.marks.sfx.push({id:'sfx-add'+Date.now(), t:bm.at, n:label, added:true});
     } else if(bm.kind==='trans'){
-      _md.derived.transitions = label==='Fondu enchaîné'?'fade':label==='Balayage rapide'?'swipe':label==='Flash blanc'?'flash':'cut';
-      _md.marks.trans.push({id:'tr-add'+Date.now(), t:bm.at, n:label.toLowerCase(), added:true});
+      const tv=_MD_TRANS_MAP[label]||'';
+      _md.marks.trans.push({id:'tr-add'+Date.now(), t:bm.at, n:label, transition:tv, added:true});
     }
   }
   _md.bankModal=null; _mdRender();
@@ -16078,10 +16084,19 @@ function _mdBuildRegenPlan(){
   // bruitages : la liste finale de l'écran REMPLACE celle du moteur (patch worker userSfx)
   if(_md.marks.sfx.some(x=>x.del||x.mod||x.added||x.moved))
     plan.userSfx=_md.marks.sfx.filter(x=>!x.del).map(x=>Object.assign({t:_mdR2(x.t),kind:x.n},x.vol!=null?{vol:x.vol}:{},x.dur?{dur:x.dur}:{}));
-  // transitions : réglage global du moteur
-  const trAll=_md.marks.trans.filter(x=>!x.zoomPos);
-  if(trAll.some(x=>x.mod||x.added)) plan.transitions=_md.derived.transitions;
-  else if(trAll.length&&trAll.every(x=>x.del)) plan.transitions='cut';
+  // transitions de section CINÉMATIQUES, PAR SECTION (Flash/Film Burn/Glitch RGB/
+  // Mask Glitch) — le moteur lit plan.sections[i].transition. On reporte le choix
+  // de chaque marque sur la section dont le début correspond (match par le temps ;
+  // tr{i} ⟷ sections[i+1]). Vide = 'Coupe nette' = pas d'overlay.
+  if(Array.isArray(plan.sections)){
+    for(const m of _md.marks.trans){
+      if(m.zoomPos) continue;
+      const mi=/^tr(\d+)$/.exec(String(m.id));   // tr{i} ⟷ sections[i+1] ; marques ajoutées (tr-add) ignorées (pas de section)
+      if(!mi) continue;
+      const si=parseInt(mi[1],10)+1;
+      if(plan.sections[si]) plan.sections[si].transition = m.del?'':String(m.transition||'');
+    }
+  }
   // les « Zoom sur un point » deviennent des zooms punch du plan
   for(const z of _md.marks.trans){
     if(!z.zoomPos||z.del) continue;
