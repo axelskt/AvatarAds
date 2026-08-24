@@ -870,9 +870,28 @@ export function buildComposition(plan, opts = {}) {
   const hookJs = hook ? `
       tl.fromTo('#hook .hook-box', { scale: 1.25, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(2.2)' }, ${r2(hook.start + 0.05)});` : ''
 
-  const flashJs = secBounds.map((t) => `
-      tl.fromTo('#flash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.04))});
-      tl.to('#flash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`).join('')
+  // Type de transition par frontière : choisi par le chef d'orchestre via
+  // `section.transition` ('flash' | 'filmburn' | 'glitch'). Défaut = 'flash'
+  // → comportement historique inchangé si le chef ne dit rien.
+  const secByStart = new Map((plan.sections || []).map((s) => [r2(s.start), s]))
+  const TRANS_OK = new Set(['flash', 'filmburn', 'glitch'])
+  const transAt = (t) => {
+    const s = secByStart.get(r2(t)); const ty = s && String(s.transition || '').toLowerCase()
+    return TRANS_OK.has(ty) ? ty : 'flash'
+  }
+  const flashJs = secBounds.map((t) => {
+    const ty = transAt(t), t0 = r2(Math.max(0, t - 0.04))
+    if (ty === 'filmburn') return `
+      tl.fromTo('#burn', { autoAlpha: 0, scale: 1.42, transformOrigin: '60% 40%' }, { autoAlpha: 1, scale: 1.06, duration: 0.18, ease: 'power2.in' }, ${r2(Math.max(0, t - 0.16))});
+      tl.to('#burn', { autoAlpha: 0, scale: 0.84, duration: 0.32, ease: 'power2.out' }, ${r2(t + 0.02)});`
+    if (ty === 'glitch') return `
+      tl.fromTo('#glitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.9, y: -26, duration: 0.05, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${t0});
+      tl.fromTo('#glitch2', { autoAlpha: 0, x: 0 }, { autoAlpha: 0.7, x: 24, duration: 0.045, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${r2(Math.max(0, t - 0.02))});
+      tl.set(['#glitch','#glitch2'], { autoAlpha: 0 }, ${r2(t + 0.24)});`
+    return `
+      tl.fromTo('#flash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${t0});
+      tl.to('#flash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`
+  }).join('')
 
   // #119 · scènes avatar : visibles (au-dessus du gameplay) seulement sur leur fenêtre,
   // fondu court aux bornes (les coupures entre scènes tombent hors slides → invisibles)
@@ -1049,8 +1068,17 @@ export function buildComposition(plan, opts = {}) {
          dans le flux de la carte, pas en absolu comme les autres clips */
       .broll-card video { position: relative; }
 
-      /* transition de section : flash lumineux plein écran (au-dessus de tout) */
+      /* transitions de section (au-dessus de tout) : flash / film burn / glitch */
       #flash { inset: 0; z-index: 9; background: #fff; pointer-events: none; }
+      #burn { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
+        background:
+          radial-gradient(56% 46% at 60% 40%, rgba(255,255,250,1) 0%, rgba(255,228,168,1) 22%, rgba(255,150,60,.95) 44%, rgba(255,88,24,.55) 64%, transparent 80%),
+          linear-gradient(112deg, transparent 24%, rgba(255,192,112,.6) 46%, rgba(255,150,70,.32) 58%, transparent 74%),
+          linear-gradient(0deg, rgba(255,138,58,.3), rgba(255,138,58,.3)); }
+      #glitch { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
+        background: repeating-linear-gradient(0deg, rgba(0,255,238,.55) 0 3px, transparent 3px 10px, rgba(255,0,128,.55) 10px 13px, transparent 13px 26px); }
+      #glitch2 { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
+        background: linear-gradient(90deg, transparent 0 18%, rgba(0,255,238,.5) 18% 34%, transparent 34% 55%, rgba(255,0,120,.5) 55% 72%, transparent 72%); }
 
       /* scènes UI du script mot-à-mot (timer, navigateur, grille, vol de photo) */
       .wui { inset: 0; z-index: 4; }
@@ -1153,6 +1181,9 @@ ${whkHtml}
 ${capsHtml}${emojiHtml}${hasCta ? `
       <div class="clip ctablk" id="ctablk" data-start="${ctaStart}" data-duration="${r2(D - ctaStart)}" data-track-index="6"><span>${ctaWords.map((w) => `<i id="${w.id}"${w.accent ? ` style="color:${WORD_ACCENT}"` : ''}>${esc(w.text)}</i>`).join(' ')}</span></div>` : ''}
 ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+      <div id="burn" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+      <div id="glitch" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+      <div id="glitch2" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
 ` : ''}    </div>
 
     <script>
@@ -1160,7 +1191,7 @@ ${wordMode ? WORD_FIT_JS + '\n' : ''}      window.__timelines = window.__timelin
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
-` : ''}${secBounds.length ? `      tl.set('#flash', { autoAlpha: 0 }, 0);
+` : ''}${secBounds.length ? `      tl.set(['#flash', '#burn', '#glitch', '#glitch2'], { autoAlpha: 0 }, 0);
 ` : ''}${avatarSegs.map((a) => `      tl.set('#${a.id}', { autoAlpha: 0 }, 0);`).join('\n')}
 ${layoutJs}
 ${zoomJs}
