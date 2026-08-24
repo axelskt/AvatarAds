@@ -14113,8 +14113,12 @@ async function _mdOpen(jobId){
     const d = await r.json().catch(()=>({}));
     if(!d.ok || d.status!=='done') throw new Error(d.error||'montage introuvable');
     let derived=null;
-    if(d.derived_url){ try{ derived = await (await fetch(d.derived_url)).json(); }catch(_){} }
-    if(!derived) derived = d.plan;
+    // le dérivé est rangé dans render-media (staging JETABLE) : sur un vieux montage
+    // il est purgé → l'URL signée renvoie un corps d'erreur (JSON truthy SANS slides).
+    // On ne l'accepte donc QUE s'il a bien des slides, sinon on retombe sur le plan
+    // stocké en base (render_jobs.plan, qui LUI garde toujours ses slides).
+    if(d.derived_url){ try{ const dj = await (await fetch(d.derived_url)).json(); if(dj && Array.isArray(dj.slides)) derived = dj; }catch(_){} }
+    if((!derived || !Array.isArray(derived.slides)) && d.plan && Array.isArray(d.plan.slides)) derived = d.plan;
     if(!derived || !Array.isArray(derived.slides)) throw new Error('plan illisible');
     let bank=[]; try{ bank = await (await fetch('anim-bank.json?v='+Date.now())).json(); }catch(_){}
     // manifeste des aperçus RÉELS d'animations (rendus par le moteur)
