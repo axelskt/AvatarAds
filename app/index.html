@@ -4473,7 +4473,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- transport + barre d'outils (style maquette) -->
             <div class="col" style="flex:0 0 auto;align-items:center;gap:11px;padding:4px 16px 12px;background:var(--bg)">
               <div class="row gap12" style="align-items:center">
-                <button id="edPlayBtn" onclick="edTogglePlay()" class="btn btn-ghost" style="padding:9px 20px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4l13 8-13 8z"/></svg><span id="edPlayLbl">Lire</span></button>
+                <button id="edPlayBtn" onclick="edTogglePlay()" class="btn btn-ghost" style="padding:9px 20px"><svg id="edPlayIco" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4l13 8-13 8z"/></svg><span id="edPlayLbl">Lire</span></button>
                 <span id="edTime" class="mono faint" style="font-size:13px">0:00 / 0:00</span>
                 <span style="width:1px;height:22px;background:var(--border)"></span>
                 <div class="row gap6" style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:10px;padding:4px">
@@ -4516,7 +4516,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                     <div id="edRuler" style="position:relative;flex:1;height:100%"></div>
                   </div>
                   <!-- ÉLÉMENTS (texte · image · split) — au-dessus du visuel -->
-                  <div class="row" style="height:40px;border-top:1px solid var(--border2)">
+                  <div id="edOvRow" class="row" style="height:40px;border-top:1px solid var(--border2)">
                     <div class="row gap8" style="width:100px;flex:0 0 auto;padding:0 12px;align-items:center;border-right:1px solid var(--border2)"><span style="width:7px;height:7px;border-radius:2px;background:#A855F7;flex:0 0 auto"></span><span class="mono" style="font-size:10.5px;color:var(--text-2)">Éléments</span></div>
                     <div style="position:relative;flex:1;height:100%;padding:6px 0;box-sizing:border-box">
                       <div id="edOvTrack" style="display:none;position:absolute;left:0;right:0;top:6px;bottom:6px"></div>
@@ -31715,19 +31715,49 @@ function edAdvanceClip(idx){
   if(_ed.playing){ try{ _ed.video.play(); }catch(e){} }
 }
 // supprimer le contenu avant / après le curseur (rogne le clip actif)
+// #suppr · « ça ne supprime pas complètement » (Axel) : rogner la vidéo ne suffit
+// pas — les CALQUES (animations, split, textes) et les BRUITAGES posés au-delà de
+// la coupe restaient dans la timeline. On les retire (et on les décale pour une
+// suppression AVANT). Temps GLOBAL, multi-clip géré.
+function _edTrimAfter(gt){
+  if(!_ed) return;
+  (_ed.overlays||[]).slice().forEach(o=>{
+    if(o.start>=gt-0.02){ if(o._el){try{o._el.remove();}catch(e){}} const i=_ed.overlays.indexOf(o); if(i>=0)_ed.overlays.splice(i,1); }
+    else if(o.end>gt){ o.end=gt; }
+  });
+  _ed.sfx=(_ed.sfx||[]).filter(s=>s.t<gt-0.02);
+}
+function _edTrimBefore(clipStart, removed){
+  if(!_ed||removed<=0) return;
+  const a=clipStart, b=clipStart+removed;  // intervalle supprimé, en temps global
+  (_ed.overlays||[]).slice().forEach(o=>{
+    if(o.end<=a) return;                                            // avant la zone : intact
+    if(o.start>=b){ o.start-=removed; o.end-=removed; return; }     // après : décalé
+    if(o.start<a && o.end>b){ o.end-=removed; return; }             // englobe : rogné
+    if(o._el){try{o._el.remove();}catch(e){}} const i=_ed.overlays.indexOf(o); if(i>=0)_ed.overlays.splice(i,1); // chevauche : retiré
+  });
+  _ed.sfx=(_ed.sfx||[]).filter(s=>s.t<a-0.02||s.t>=b-0.02).map(s=> s.t>=b ? Object.assign({},s,{t:Math.max(0,s.t-removed)}) : s);
+}
+function _edAfterCut(){ edRefreshTimeline(); edRenderClips();
+  if(typeof edRenderOvTrack==='function') edRenderOvTrack();
+  if(typeof edRenderLayers==='function') edRenderLayers();
+  if(typeof edShowProps==='function' && _ed && !_ed.sel) try{edHideProps();}catch(e){} }
 function edDeleteLeft(){
   if(!_ed) return; const t=_ed.video.currentTime;
   if(t<=_ed.trimA+0.1 || t>=_ed.trimB-0.1){ toast('Place le curseur dans le clip'); return; }
-  edSnap(); _ed.trimA=t; edSyncToClip(); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
-  edRefreshTimeline(); edRenderClips(); toast('Avant le curseur supprimé');
+  const clipStart=(typeof edClipGlobalStart==='function')?edClipGlobalStart(_ed.activeIdx):0;
+  const removed=t-_ed.trimA;
+  edSnap(); _ed.trimA=t; edSyncToClip(); _edTrimBefore(clipStart, removed); try{_ed.video.currentTime=_ed.trimA;}catch(e){}
+  _edAfterCut(); toast('Avant le curseur supprimé');
 }
 function edDeleteRight(){
   if(!_ed) return; const t=_ed.video.currentTime;
   if(t<=_ed.trimA+0.1 || t>=_ed.trimB-0.1){ toast('Place le curseur dans le clip'); return; }
-  edSnap(); _ed.trimB=t; edSyncToClip();
+  const gt=edGlobalNow();
+  edSnap(); _ed.trimB=t; edSyncToClip(); _edTrimAfter(gt);
   // #58 · rester sur le point de coupe (le curseur), ne PAS sauter au début du clip
   try{_ed.video.currentTime=Math.max(_ed.trimA, _ed.trimB-0.05);}catch(e){}
-  edRefreshTimeline(); edRenderClips(); toast('Après le curseur supprimé');
+  _edAfterCut(); toast('Après le curseur supprimé');
 }
 
 // ── TRANSITIONS ENTRE CLIPS (Éditeur) — dessinées sur le canvas aux coupures.
@@ -31837,6 +31867,12 @@ function edDrawLoop(){
 }
 
 function edTogglePlay(){ if(!_ed) return; _ed.playing?edPause():edPlay(); }
+// #pause · l'icône suit l'état : triangle ▶ à l'arrêt, deux barres ⏸ en lecture
+function _edPlayIcon(playing){
+  const ico=document.getElementById('edPlayIco'), lbl=document.getElementById('edPlayLbl');
+  if(ico) ico.innerHTML = playing ? '<path d="M7 4h4v16H7z"/><path d="M13 4h4v16h-4z"/>' : '<path d="M7 4l13 8-13 8z"/>';
+  if(lbl) lbl.textContent = playing ? 'Pause' : 'Lire';
+}
 function edPlay(){
   if(!_ed) return;
   let t=_ed.video.currentTime;
@@ -31845,12 +31881,12 @@ function edPlay(){
   _ed.video.currentTime=t;
   if(_ed.audio&&_ed.audio.ac.state==='suspended'){ try{_ed.audio.ac.resume();}catch(e){} }
   _edMusicSync(edGlobalNow(), true); // musique calée sur le temps GLOBAL, segments compris
-  _ed.video.play().then(()=>{ _ed.playing=true; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Pause'; }).catch(()=>{});
+  _ed.video.play().then(()=>{ _ed.playing=true; _edPlayIcon(true); }).catch(()=>{});
 }
 function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}}
   // #pause · silence IMMÉDIAT même via WebAudio (le buffer du contexte peut traîner ~qq ms) : gain à 0
   if(_ed.audio&&_ed.audio.mGain){ try{ const g=_ed.audio.mGain.gain, t=_ed.audio.ac.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(0,t); }catch(e){} }
-  _ed.playing=false; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Lire'; }
+  _ed.playing=false; _edPlayIcon(false); }
 
 function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed){ const tot=edTotalDur(); el.textContent=edFmtMs(Math.min(edGlobalNow(),tot))+' / '+edFmtMs(tot); } }
 function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const total=edTotalDur()||1; const frac=Math.max(0,Math.min(1,edGlobalNow()/total)); ph.style.left=(100+frac*tl.clientWidth)+'px'; }
@@ -31996,8 +32032,13 @@ function edDeleteFlow(btn){
 /* ---------- overlays ---------- */
 function edAddText(){
   if(!_ed) return; edSnap();
-  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', font:'var(--display)', style:'box', bold:true, start:0, end:edTotalDur() };
-  _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
+  // #texte · 3 s par défaut AU CURSEUR (avant : toute la timeline). Les calques
+  // s'empilent sur des lignes séparées quand ils se chevauchent (cf. edRenderOvTrack).
+  const tot=edTotalDur(), gt=edGlobalNow();
+  let start=Math.max(0,Math.min(tot-0.5,gt)), end=Math.min(tot,start+3);
+  if(end-start<0.6){ start=Math.max(0,tot-3); end=tot; }
+  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', font:'var(--display)', style:'box', bold:true, start:start, end:end };
+  _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
 }
 function edAddImage(file){
   if(!_ed||!file) return;
@@ -34011,12 +34052,22 @@ function edRenderClips(){
 // comme les bruitages. Clic = sélectionner (ouvre les réglages), glisse = déplacer,
 // bords = durée, Suppr = retirer. Avant : rien ne s'affichait (piste absente du DOM).
 function edRenderOvTrack(){
-  const tr=document.getElementById('edOvTrack'); const hint=document.getElementById('edOvTrackHint'); if(!tr||!_ed) return;
+  const tr=document.getElementById('edOvTrack'); const hint=document.getElementById('edOvTrackHint'); const row=document.getElementById('edOvRow'); if(!tr||!_ed) return;
   tr.innerHTML='';
   const ovs=_ed.overlays||[];
-  if(!ovs.length){ tr.style.display='none'; if(hint) hint.style.display='block'; return; }
+  if(!ovs.length){ tr.style.display='none'; if(hint) hint.style.display='block'; if(row) row.style.height='40px'; return; }
   tr.style.display='block'; if(hint) hint.style.display='none';
   const total=edTotalDur()||1;
+  // #lanes · anti-chevauchement : chaque calque se pose sur la 1re LIGNE libre à son
+  // instant ; s'il n'y en a pas, une ligne « Éléments 2/3… » s'ajoute (la piste grandit).
+  const sorted=ovs.slice().sort((a,b)=>((a.start||0)-(b.start||0))||((a.end||0)-(b.end||0)));
+  const laneEnds=[];
+  sorted.forEach(o=>{ if(o.start==null) o.start=0; if(o.end==null) o.end=total;
+    let ln=-1; for(let i=0;i<laneEnds.length;i++){ if(o.start>=laneEnds[i]-0.02){ ln=i; break; } }
+    if(ln<0){ ln=laneEnds.length; laneEnds.push(0); } laneEnds[ln]=o.end; o._lane=ln; });
+  const nLanes=Math.max(1,laneEnds.length);
+  if(row) row.style.height=(12+nLanes*24)+'px';   // la piste grandit d'une ligne à chaque étage
+  const laneUnit=100/nLanes;
   ovs.forEach(ov=>{
     if(ov.start==null) ov.start=0; if(ov.end==null) ov.end=total;
     const leftPct=Math.min(99,Math.max(0,(ov.start/total)*100));
@@ -34026,7 +34077,8 @@ function edRenderOvTrack(){
     const cB=isTxt?'77,171,247':(isSplit?'34,211,238':(isAnim?'255,143,94':'168,85,247'));
     const cTx=isTxt?'#cfe6ff':(isSplit?'#c4f2fb':(isAnim?'#ffd9c2':'#e6d4ff'));
     const chip=document.createElement('div');
-    chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:46px;display:flex;align-items:center;gap:4px;padding:0 6px;border-radius:5px;background:rgba('+cB+','+(on?'.42':'.24')+');border:1.5px solid '+(on?'#fff':'rgba('+cB+',.65)')+';color:'+cTx+';font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(on?2:1)+';cursor:grab;touch-action:none'+(on?';box-shadow:0 0 0 1.5px rgba('+cB+',.9),0 0 12px rgba('+cB+',.5)':'');
+    const topPct=(ov._lane||0)*laneUnit;
+    chip.style.cssText='position:absolute;top:calc('+topPct+'% + 2px);height:calc('+laneUnit+'% - 4px);left:'+leftPct+'%;width:'+wPct+'%;min-width:46px;display:flex;align-items:center;gap:4px;padding:0 6px;border-radius:5px;background:rgba('+cB+','+(on?'.42':'.24')+');border:1.5px solid '+(on?'#fff':'rgba('+cB+',.65)')+';color:'+cTx+';font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(on?2:1)+';cursor:grab;touch-action:none'+(on?';box-shadow:0 0 0 1.5px rgba('+cB+',.9),0 0 12px rgba('+cB+',.5)':'');
     chip.title='Clique = sélectionner · glisse = déplacer · tire les bords = durée · Suppr = retirer';
     const tag=isTxt?'T':(isSplit?(ov._anim?'✦':'⬒'):(isAnim?'✦':'IMG'));
     const lbl=isTxt?(ov.text||'Texte'):(isSplit?(ov._splitEmpty?'Split (vide)':(ov._anim?(ov.animName||'Anim'):'Split')):(isAnim?(ov.animName||'Animation'):'Image'));
@@ -34120,15 +34172,27 @@ function edBandDrag(ov,track,e,mode){
     return 'anim-previews/'+nm+'.jpg';
   };
   var _edAnimSrc=window._edAnimSrc, _edAnimPoster=window._edAnimPoster;
+  // ── ANIMS MASQUÉES DANS L'ÉDITEUR ────────────────────────────────────────
+  // Retour Axel : dans l'éditeur, les anims qui montrent AvatarAds / l'app / un
+  // écran figé « ne servent à rien » — on ne peut pas les modifier. On les cache
+  // donc de la banque de l'ÉDITEUR (le Montage IA, lui, les garde : là elles ont
+  // un sens, il les personnalise via son contexte). Ne JAMAIS masquer une anim
+  // « à contenu » (les 51 blanches) : celles-là sont justement remplissables.
+  const ED_ANIM_HIDE = new Set([
+    'logo','screen','phone','avatar','faceless','voice','bio',           // marque / démo / avatar-outil
+    'dashboard','menu','integrations','oneclick','settings','library',   // écrans de l'app
+    'queue','render','export','record','dropzone','notif','comments',    // workflow interne
+    'comment','chat','result'
+  ]);
   function ensureAnimBank(){
     if(window._edAnimsReal) return Promise.resolve(window._edAnimsReal);
     // charge en parallèle le manifeste des anims blanches (échec silencieux : on
     // retombe alors sur les aperçus normaux — l'éditeur reste fonctionnel)
     if(!window._edBlankSet){ fetch(window._ED_BLANK_BASE+'index.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(a){ window._edBlankSet=new Set(a||[]); }).catch(function(){ window._edBlankSet=new Set(); }); }
     return fetch('anim-previews/index.json').then(function(r){return r.json();}).then(function(names){
-      window._edAnimsReal=names;
-      window._mdPrevSet=window._mdPrevSet||new Set(names);
-      return names;
+      window._mdPrevSet=window._mdPrevSet||new Set(names);          // Montage IA : banque COMPLÈTE
+      window._edAnimsReal=names.filter(function(n){ return !ED_ANIM_HIDE.has(n); });  // Éditeur : triée
+      return window._edAnimsReal;
     }).catch(function(){ window._edAnimsReal=[]; return []; });
   }
   function metaFor(kind){ return {anim:{t:"Animations",items:(window._edAnimsReal&&window._edAnimsReal.length?window._edAnimsReal:ED_ANIMS),c:"var(--accent)",ico:IC.sparkle},
@@ -34151,7 +34215,7 @@ function edBandDrag(ov,track,e,mode){
       // <button> imbriqué FERME le bouton parent au parsing (HTML) → clics perdus. Un <span> joue le rôle.
       return '<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,rgba(34,211,238,.10),rgba(0,0,0,.5))">'
         +'<span role="button" tabindex="0" data-sfxplay onclick="event.stopPropagation();(function(b){var a=new Audio(\'sfx/'+String(item).replace(/[^a-z0-9-]/gi,'')+'.mp3\');a.volume=.9;var p=a.play();if(p&&p.catch)p.catch(function(){});b.style.background=\'#22D3EE33\';setTimeout(function(){b.style.background=\'transparent\'},350)})(this)" title="Écouter" style="width:'+(big?62:30)+'px;height:'+(big?62:30)+'px;border-radius:50%;display:grid;place-items:center;border:1.5px solid #22D3EE;background:transparent;color:#22D3EE;cursor:pointer">'
-        +'<svg width="'+(big?22:11)+'" height="'+(big?22:11)+'" viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M7 4l13 8-13 8z"/></svg></span></div>';
+        +'<svg width="'+(big?22:11)+'" height="'+(big?22:11)+'" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path fill="none" d="M15.5 8.5a5 5 0 010 7M18.5 6a9 9 0 010 12"/></svg></span></div>';
     }
     // transitions : VRAI mini-aperçu ANIMÉ sur ta footage (canvas + _edPaintTrans en boucle)
     const ty=(typeof _ED_TRANS_MAP!=='undefined'?_ED_TRANS_MAP[item]:'')||'';
