@@ -2418,6 +2418,25 @@ async function pollLoop() {
       if (!claimed || !claimed.length) continue
 
       jobEnCours = job.id
+
+      // ── DÉCLENCHEUR « ANIMS BLANCHES » ────────────────────────────────────
+      // Un job dont le plan porte __batchBlank ne rend pas un montage : il
+      // (re)génère les aperçus d'anims blanches pour l'éditeur, puis se marque
+      // terminé. Inséré à la main (SQL : render_jobs {status:'queued',
+      // plan:{__batchBlank:true}}). Idempotent — upsert dans le bucket public.
+      if (job.plan && job.plan.__batchBlank) {
+        try {
+          await batchBlankPreviews({ list: job.plan.anims || null, draft: job.plan.draft !== false })
+          await sb.from('render_jobs').update({ status: 'done', updated_at: new Date().toISOString() }).eq('id', job.id)
+          console.log('✓ batch anims blanches terminé')
+        } catch (e) {
+          console.error('✗ batch anims blanches :', e.message)
+          await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
+        }
+        jobEnCours = null
+        continue
+      }
+
       const trace = ouvrirTrace()
       const tDebut = Date.now()
       console.log('▶ job', job.id)
@@ -2533,9 +2552,109 @@ async function pollLoop() {
   }
 }
 
+// ══ BATCH « ANIMS BLANCHES » POUR L'ÉDITEUR ═══════════════════════════════════
+// L'éditeur pose des animations que l'utilisateur remplit LUI-MÊME : il lui faut
+// donc les mêmes anims que le Montage IA mais SANS le texte/logo d'exemple (« Un »,
+// « Deux », les logos codés). On rend ici chaque anim « à personnaliser » en mode
+// _blank (cf. anim-pack.mjs : txt()/imgSlot() renvoient vide) sur le MÊME fond de
+// scène plein-cadre que les aperçus normaux, puis on la range dans le bucket PUBLIC
+// `anim-previews/blank/<nom>.mp4` (l'éditeur, statique, la lit sans clé).
+//
+// Déclenché à la main : `node render-worker/worker.mjs --batch-blank`
+//   --only <nom>       une seule anim (test)
+//   --anims a,b,c      liste explicite
+//   --draft            rendu rapide 30 fps (défaut : draft, ces aperçus n'ont pas
+//                      besoin du 50 fps ; c'est du muet 540×960 comme les aperçus)
+// Rien à faire côté Axel une fois lancé : ça rend + ça pousse tout seul.
+const BLANK_ANIMS = [
+  // les 48 anims « à contenu » du Montage IA (texte que l'utilisateur remplace)
+  'type', 'upload', 'funnel', 'flow', 'quality', 'free', 'trend', 'hook', 'profile',
+  'invoice', 'thumb', 'pay', 'sales', 'upgrade', 'discount', 'keyword', 'product',
+  'cart', 'portfolio', 'pnl', 'mrr', 'churn', 'onboarding', 'property', 'weight',
+  'quote', 'script', 'trendsound', 'loop', 'clipping', 'retake', 'preview', 'spike',
+  'brandeal', 'mediakit', 'inventory', 'stoploss', 'orderbook', 'deploy', 'uptime',
+  'leads', 'share', 'views', 'linkbio', 'salesphone', 'gaugefill', 'lineup', 'daypart',
+  // + les anims à IMAGES (logos personnalisables via imgSlot)
+  'tools', 'connect', 'copy',
+]
+
+async function batchBlankPreviews({ list = null, draft = true } = {}) {
+  const SUPA = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!SUPA || !KEY) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants — impossible de pousser les aperçus')
+  if (!Array.isArray(list) || !list.length) list = BLANK_ANIMS
+
+  // fond de base commun : noir 1080×1920 muet 1,8 s (la scène plein-cadre le couvre).
+  const baseSrc = join(tmpdir(), 'aa-blank-base.mp4')
+  execFileSync('ffmpeg', ['-v', 'error', '-y',
+    '-f', 'lavfi', '-i', 'color=c=black:s=1080x1920:r=30',
+    '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+    '-t', '1.8', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
+    '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', baseSrc])
+
+  const done = []
+  const failed = []
+  for (const anim of list) {
+    const job = mkdtempSync(join(tmpdir(), 'aa-blank-'))
+    try {
+      copyFileSync(baseSrc, join(job, 'base.mp4'))
+      // plan minimal : UNE scène plein-cadre = l'anim, en mode blanc.
+      writeFileSync(join(job, 'plan.json'), JSON.stringify({
+        slideStyle: 'auto', duration: 1.8,
+        slides: [{ id: 'a0', anim, layout: 'full', start: 0, end: 1.8, _blank: true, items: [] }],
+        sections: [], captions: [], beats: [], broll: [], avatarSegments: [], tuto: [], sfx: [],
+      }))
+      const out1080 = join(job, 'out.mp4')
+      console.log(`▶ anim blanche « ${anim} »…`)
+      await renderJob(job, out1080, { draft, userId: null })
+      // aperçu final : 540×960, muet, faststart (même format que anim-previews/).
+      const out540 = join(job, 'blank.mp4')
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', out1080,
+        '-vf', 'scale=540:960:flags=lanczos', '-an', '-c:v', 'libx264',
+        '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p',
+        '-movflags', '+faststart', out540])
+      // poster (dernière frame stabilisée) pour l'affiche avant lecture
+      const poster = join(job, 'blank.jpg')
+      try { execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '1.6', '-i', out540, '-vframes', '1', '-q:v', '4', poster]) } catch (_) { /* poster optionnel */ }
+      // upload bucket PUBLIC anim-previews/blank/<nom>.mp4 (+ .jpg)
+      const push = async (buf, path, mime) => {
+        const r = await fetch(`${SUPA}/storage/v1/object/anim-previews/${path}`, {
+          method: 'POST', headers: { Authorization: 'Bearer ' + KEY, apikey: KEY, 'Content-Type': mime, 'x-upsert': 'true' }, body: buf,
+        })
+        if (!r.ok) throw new Error(`upload ${path} → HTTP ${r.status} ${await r.text().catch(() => '')}`)
+      }
+      await push(readFileSync(out540), `blank/${anim}.mp4`, 'video/mp4')
+      if (existsSync(poster)) await push(readFileSync(poster), `blank/${anim}.jpg`, 'image/jpeg')
+      done.push(anim)
+      console.log(`  ✓ ${anim} poussée`)
+    } catch (e) {
+      failed.push(anim)
+      console.error(`  ✗ ${anim} : ${e.message}`)
+    } finally {
+      try { rmSync(job, { recursive: true, force: true }) } catch (_) { /* nettoyage */ }
+    }
+  }
+  // manifeste : la liste des anims qui ONT une version blanche (l'éditeur la lit).
+  try {
+    await fetch(`${SUPA}/storage/v1/object/anim-previews/blank/index.json`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + KEY, apikey: KEY, 'Content-Type': 'application/json', 'x-upsert': 'true' },
+      body: JSON.stringify(done),
+    })
+  } catch (e) { console.error('manifeste blank/index.json :', e.message) }
+  console.log(`\n═══ ${done.length}/${list.length} anims blanches poussées${failed.length ? ` · échecs : ${failed.join(', ')}` : ''}`)
+  console.log(`Public : ${SUPA}/storage/v1/object/public/anim-previews/blank/<nom>.mp4`)
+}
+
 // ── entrée ──
 const localDir = flag('--local')
-if (localDir) {
+if (flag('--batch-blank') != null) {
+  const only = flag('--only'), override = flag('--anims')
+  let list = null
+  if (typeof only === 'string') list = [only]
+  else if (typeof override === 'string') list = override.split(',').map((s) => s.trim()).filter(Boolean)
+  batchBlankPreviews({ list, draft: flag('--draft') != null ? !!flag('--draft') : true })
+    .then(() => process.exit(0))
+    .catch((e) => { console.error('✗', e.message); process.exit(1) })
+} else if (localDir) {
   const out = resolve(flag('--output') || 'final.mp4')
   renderJob(resolve(localDir), out, { draft: !!flag('--draft') })
     .catch((e) => { console.error('✗', e.message); process.exit(1) })

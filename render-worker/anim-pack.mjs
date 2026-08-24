@@ -119,6 +119,16 @@ export function animHtml(name, s, W, H, vs) {
   // texte d'exemple, pour que l'utilisateur pose SON contenu par-dessus. Aucun impact sur les
   // montages normaux (s._blank n'est jamais posé par la dérivation).
   const txt = (i, def) => esc(s._blank ? '' : ((raw[i] || '').trim() || def))
+  // #blank/#perso · fente IMAGE : jumelle de txt() pour un <img>. En mode blanc →
+  // boîte vide (l'utilisateur pose son logo dans l'éditeur). Sinon l'image PERSO
+  // (items[i].src, posée par le menu image du Montage IA) si fournie, à défaut
+  // l'image de repli codée. `fit` = object-fit ('cover' par défaut, 'contain' pour un logo).
+  const imgSlot = (i, hardSrc, fit) => {
+    if (s._blank) return ''
+    const it = (s.items || [])[i]
+    const custom = it && (it.src || it.image || it.url)
+    return `<img src="${custom || hardSrc}" style="width:100%;height:100%;object-fit:${fit || 'cover'};display:block"/>`
+  }
   // Dégradé de marque : l'accent EST la couleur, le dégradé n'est qu'un voile.
   // `acc2` vaut le bleu du set « word » hors style apple — les cartes pleines
   // partaient donc en orange → BLEU, à côté d'une interface entièrement orange.
@@ -245,9 +255,9 @@ export function animHtml(name, s, W, H, vs) {
       const r = Math.round(td * 0.24)
       return box(`
         <div class="an-p" id="${id}t1" style="left:${x0}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
-          <img src="tuto/logo-avatarads.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
+          ${imgSlot(0, 'tuto/logo-avatarads.png', 'cover')}</div>
         <div class="an-p" id="${id}t2" style="left:${x0 + td + gap}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
-          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
+          ${imgSlot(1, 'tuto/logo-claude.png', 'cover')}</div>
         <span id="${id}pl" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.round(gap * 0.5)}px;height:${Math.max(4, Math.round(gap * 0.09))}px;margin-left:${-Math.round(gap * 0.25)}px;margin-top:${-Math.round(gap * 0.045)}px;border-radius:99px;background:${P.ink};opacity:0"></span>
         <span id="${id}pv" style="position:absolute;left:${x0 + td + Math.round(gap / 2)}px;top:${y0 + Math.round(td / 2)}px;width:${Math.max(4, Math.round(gap * 0.09))}px;height:${Math.round(gap * 0.5)}px;margin-left:${-Math.round(gap * 0.045)}px;margin-top:${-Math.round(gap * 0.25)}px;border-radius:99px;background:${P.ink};opacity:0"></span>`)
     }
@@ -523,7 +533,7 @@ export function animHtml(name, s, W, H, vs) {
         <span id="${id}cp" style="position:absolute;left:50%;top:${py}px;margin-left:${-Math.round(kw * 0.16)}px;width:${Math.round(kw * 0.32)}px;height:${ph}px;border-radius:99px;background:#22C55E;display:flex;align-items:center;justify-content:center;gap:${Math.round(ph * 0.22)}px;color:#fff;font-family:'Archivo Black',sans-serif;font-size:${Math.round(ph * 0.38)}px;opacity:0">
           <svg width="${Math.round(ph * 0.4)}" height="${Math.round(ph * 0.4)}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6l5 5 10-11"/></svg>COPIÉ</span>
         <div class="an-p" id="${id}cl" style="left:${Math.round((f.w - td) / 2)}px;top:${ty}px;width:${td}px;height:${td}px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 26px 60px rgba(0,0,0,.45));opacity:0">
-          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>`)
+          ${imgSlot(0, 'tuto/logo-claude.png', 'contain')}</div>`)
     }
     case 'connect': {
       // « CLAUDE EST CONNECTÉ À AVATARADS » : les DEUX VRAIS logos et la prise
@@ -539,9 +549,9 @@ export function animHtml(name, s, W, H, vs) {
       const cx = x0 + td + Math.round(gap / 2), cy = y0 + Math.round(td / 2)
       return box(`
         <div class="an-p" id="${id}c1" style="left:${x0}px;top:${y0}px;width:${td}px;height:${td}px;border-radius:${r}px;overflow:hidden;box-shadow:0 26px 60px rgba(0,0,0,.45)">
-          <img src="tuto/logo-avatarads.png" style="width:100%;height:100%;object-fit:cover;display:block"/></div>
+          ${imgSlot(0, 'tuto/logo-avatarads.png', 'cover')}</div>
         <div class="an-p" id="${id}c2" style="left:${x0 + td + gap}px;top:${y0}px;width:${td}px;height:${td}px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 26px 60px rgba(0,0,0,.45))">
-          <img src="tuto/logo-claude.png" style="width:100%;height:100%;object-fit:contain;display:block"/></div>
+          ${imgSlot(1, 'tuto/logo-claude.png', 'contain')}</div>
         <span id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${gap}px;height:${Math.max(6, Math.round(td * 0.055))}px;margin-left:${-Math.round(gap / 2)}px;margin-top:${-Math.round(td * 0.0275)}px;border-radius:99px;background:${P.ink};transform-origin:50% 50%"></span>
         <span id="${id}ck" style="position:absolute;left:${cx}px;top:${cy}px;width:${Math.round(td * 0.32)}px;height:${Math.round(td * 0.32)}px;margin-left:${-Math.round(td * 0.16)}px;margin-top:${-Math.round(td * 0.16)}px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;opacity:0;box-shadow:0 12px 34px rgba(34,197,94,.5)">
           <svg width="58%" height="58%" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6l5 5 10-11"/></svg></span>`)
