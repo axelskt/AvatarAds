@@ -4500,7 +4500,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- TIMELINE multi-piste étiquetée (design Claude — CapCut style) -->
             <div style="flex:0 0 auto;border-top:1px solid var(--border);background:var(--bg-grad)">
               <div class="row" style="justify-content:space-between;align-items:center;padding:8px 16px">
-                <span class="faint mono" style="font-size:10.5px">Timeline · <span id="edTlDurLbl">0:00</span> · glisse les bandes pour ajuster</span>
+                <span class="faint mono" style="font-size:10.5px">Timeline · <span id="edTlDurLbl">0:00</span></span>
                 <div class="row gap8" style="align-items:center">
                   <button onclick="edZoom(-1)" class="btn btn-ghost btn-sm" style="padding:4px 10px" title="Dézoomer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg></button>
                   <span id="edZoomLbl" class="faint mono" style="font-size:11px;width:42px;text-align:center">100%</span>
@@ -4611,7 +4611,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="card" style="padding:16px;margin-bottom:14px">
               <div class="label" style="margin:0 0 10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Clips <span id="edClipsTotal" class="faint mono" style="font-size:10px;font-weight:400"></span></div>
               <div id="edClips" class="col" style="gap:8px"></div>
-              <div id="edClipsEmpty" class="faint" style="font-size:11.5px;line-height:1.5">Clip principal seul. <b style="color:var(--text-2)">Glisse une vidéo sur l'aperçu</b> pour la coller à la suite — vidéo &gt; 10s à l'export.</div>
+              <div id="edClipsEmpty" class="faint" style="display:none"></div>
               <input type="file" id="edClipIn" accept="video/*" multiple style="display:none" onchange="edAddClips(this.files);this.value=''">
             </div>
 
@@ -4626,7 +4626,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <div class="row" style="justify-content:space-between;margin:0 0 6px"><span class="mono faint row gap6" style="font-size:11px;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>Voix vidéo</span><span id="edVoiceVolLbl" class="mono accent" style="font-size:11px">100%</span></div>
               <input type="range" min="0" max="200" value="100" class="ed-range" oninput="edSetVideoVol(+this.value);document.getElementById('edVoiceVolLbl').textContent=this.value+'%';edRangeFill(this)">
-              <div class="label" style="margin:14px 0 10px;font-size:10.5px">Effets sonores — ajoutés au curseur</div>
+              <div class="label" style="margin:14px 0 10px;font-size:10.5px">Effets sonores</div>
               <div style="display:grid;grid-template-columns:1fr;gap:8px">
                 <button onclick="edOpenBank('sfx')" class="ed-bankbtn" style="border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.09);color:#22D3EE"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Bruitages <span style="opacity:.7">(52)</span></button>
                 <button onclick="edOpenBank('anim')" class="ed-bankbtn" style="border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Animations <span style="opacity:.7">(164)</span></button>
@@ -4645,7 +4645,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <!-- FORMAT & QUALITÉ -->
             <div class="card" style="padding:16px;margin-bottom:14px">
               <div class="label" style="margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg>Format &amp; qualité</div>
-              <div class="faint mono" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Format (ratio)</div>
               <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
                 <button id="edFmt916" onclick="edSetFormat('9:16',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:2px solid var(--accent);background:var(--accent-soft);cursor:pointer;display:flex;flex-direction:column"><span style="width:14px;height:22px;border-radius:3px;border:2px solid var(--accent-2)"></span><span style="font-size:12px;font-weight:700">9:16</span><span class="faint" style="font-size:9.5px">TikTok</span></button>
                 <button id="edFmt45" onclick="edSetFormat('4:5',this)" class="col" style="padding:12px 6px;border-radius:11px;gap:7px;align-items:center;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column"><span style="width:15px;height:19px;border-radius:3px;border:2px solid var(--text-3)"></span><span style="font-size:12px;font-weight:700;color:var(--text-2)">4:5</span><span class="faint" style="font-size:9.5px">Feed</span></button>
@@ -4658,17 +4657,16 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button id="edQ1080" onclick="edSetQ(1080,this)" class="on">1080p ✓</button>
                 <button id="edQ1440" onclick="edSetQ(1440,this)">2K</button>
               </div>
-              <div class="row gap8 faint" style="font-size:11.5px;align-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><span id="edOutputLabel">Sortie : 9:16 · 1080p · H.264</span></div>
             </div>
 
             <!-- EXPORT -->
             <div class="card" style="padding:16px">
               <div class="label" style="margin-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Export</div>
+              <button id="edExportAudioBtn" onclick="edExportAudio()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Exporter l'audio (WAV)</button>
               <button id="edExportBtn" onclick="edExport()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 8px 22px -12px var(--accent-glow)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exporter MP4</button>
               <button id="edSrvExportBtn" onclick="edServerExport()" style="display:none;width:100%;margin-top:8px;padding:12px;background:var(--bg4);border:1px solid rgba(255,212,0,.5);border-radius:11px;color:#FFD400;font-weight:800;font-family:var(--font);font-size:12.5px;cursor:pointer;align-items:center;justify-content:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/><path d="M10 9l5 2-5 2z"/></svg>Rendu final serveur (split + slides) — 4 crédits</button>
               <div id="edSrvExportStatus" style="display:none;margin-top:7px;font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;line-height:1.5"></div>
               <div class="center faint mono" id="edExportCaption" style="font-size:11px;margin-top:9px">9/16 · 1080p · H.264</div>
-              <button id="edExportAudioBtn" onclick="edExportAudio()" class="btn btn-ghost btn-sm" style="width:100%;margin-top:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Exporter l'audio (WAV)</button>
               <div id="edExportStatus" class="faint mono" style="font-size:11px;margin-top:10px;display:none;line-height:1.5"></div>
             </div>
           </div>
@@ -31921,7 +31919,12 @@ function edRefreshTimeline(){
   // FICHIER du clip actif, pas de la timeline globale — superposée aux segments
   // elle dessinait des poignées et des zones « fantômes » à côté des vrais
   // clips (le trou orange vu par Axel après séparer + suppr. après).
-  const multi=(_ed.clips&&_ed.clips.length>1);
+  // #suppr-total · un clip unique DÉJÀ ROGNÉ (via Suppr avant/après) s'affiche COLLABÉ
+  // comme un multi-clip (la partie coupée DISPARAÎT) au lieu d'être noircie par un voile
+  // — retour Axel « ça doit supprimer la partie foncée totalement ». Pendant qu'on tire
+  // une poignée on garde la bande pleine (sinon la poignée saute sous la main).
+  const _trimmed1=(_ed.clips&&_ed.clips.length===1&&!_ed._trimDragging&&((_ed.trimA||0)>0.02||(_ed.trimB!=null&&_ed.trimB<_ed.dur-0.02)));
+  const multi=(_ed.clips&&_ed.clips.length>1)||_trimmed1;
   tl.style.visibility=multi?'hidden':'visible';
   const px=t=>(t/_ed.dur)*w;
   document.getElementById('edTlTrimL').style.width=px(_ed.trimA)+'px';
@@ -31944,8 +31947,8 @@ function edBindTimeline(){
   const hL=document.getElementById('edTlHandleL'), hR=document.getElementById('edTlHandleR');
   let drag=null;
   const xToT=(clientX)=>{ const r=tl.getBoundingClientRect(); let x=Math.max(0,Math.min(r.width,clientX-r.left)); return (x/r.width)*_ed.dur; };
-  hL.addEventListener('pointerdown',e=>{ e.stopPropagation(); edSnap(); drag='L'; try{hL.setPointerCapture(e.pointerId);}catch(_){} });
-  hR.addEventListener('pointerdown',e=>{ e.stopPropagation(); edSnap(); drag='R'; try{hR.setPointerCapture(e.pointerId);}catch(_){} });
+  hL.addEventListener('pointerdown',e=>{ e.stopPropagation(); edSnap(); drag='L'; if(_ed)_ed._trimDragging=true; try{hL.setPointerCapture(e.pointerId);}catch(_){} });
+  hR.addEventListener('pointerdown',e=>{ e.stopPropagation(); edSnap(); drag='R'; if(_ed)_ed._trimDragging=true; try{hR.setPointerCapture(e.pointerId);}catch(_){} });
   window.addEventListener('pointermove',e=>{
     if(!drag||!_ed) return;
     const t=xToT(e.clientX);
@@ -31954,7 +31957,7 @@ function edBindTimeline(){
     _ed.video.currentTime=drag==='L'?_ed.trimA:_ed.trimB;
     edRefreshTimeline();
   });
-  window.addEventListener('pointerup',()=>{ drag=null; });
+  window.addEventListener('pointerup',()=>{ if(drag){ drag=null; if(_ed){ _ed._trimDragging=false; edRefreshTimeline(); } } });
   tl.addEventListener('click',e=>{
     if(!_ed) return;
     const t=xToT(e.clientX);
@@ -32417,7 +32420,10 @@ function edRenderRuler(){
 function edRenderClipsTrack(){
   const tr=document.getElementById('edClipsTrack'); if(!tr||!_ed||!_ed.clips) return;
   tr.innerHTML='';
-  if(_ed.clips.length<=1){ tr.style.display='none'; return; }
+  try{ edSyncToClip(); }catch(_){}
+  // clip unique rogné → on le montre collabé (cf. edRefreshTimeline #suppr-total)
+  const _t1=(_ed.clips.length===1&&!_ed._trimDragging&&((_ed.trimA||0)>0.02||(_ed.trimB!=null&&_ed.trimB<_ed.dur-0.02)));
+  if(!_ed.clips.length || (_ed.clips.length<=1 && !_t1)){ tr.style.display='none'; return; }
   tr.style.display='flex';
   _ed.clips.forEach((c,idx)=>{
     const len=Math.max(0.1,c.trimB-c.trimA); const active=idx===_ed.activeIdx;
