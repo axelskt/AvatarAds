@@ -13930,6 +13930,10 @@ const _mdTransLabel = (v) => ({ fondu:'Fondu enchaîné', flash:'Flash blanc', f
 // combien de textes chaque animation AFFICHE réellement (mesuré au marqueur)
 const _MD_TEXT_SLOTS = {"type":1,"upload":1,"daypart":1,"funnel":3,"flow":3,"quality":1,"free":1,"trend":1,"hook":1,"profile":1,"invoice":1,"thumb":2,"pay":1,"sales":3,"upgrade":1,"discount":3,"keyword":1,"product":1,"cart":1,"portfolio":2,"pnl":1,"mrr":1,"churn":1,"onboarding":1,"property":1,"weight":1,"quote":1,"script":1,"trendsound":1,"loop":1,"clipping":1,"retake":2,"preview":1,"spike":1,"brandeal":1,"mediakit":3,"inventory":1,"stoploss":1,"orderbook":1,"deploy":1,"uptime":1,"leads":1,"share":1,"views":1,"linkbio":2,"salesphone":4,"gaugefill":4,"lineup":4};
 const _MD_TEXT_ANIMS = new Set(['type','upload','funnel','flow','quality','free','trend','hook','profile','invoice','thumb','pay','sales','upgrade','discount','keyword','product','cart','portfolio','pnl','mrr','churn','onboarding','property','weight','quote','script','trendsound','loop','clipping','retake','preview','spike','brandeal','mediakit','inventory','stoploss','orderbook','deploy','uptime','leads','share','views','linkbio','salesphone','gaugefill','lineup','daypart']);
+// Anims à IMAGES : au lieu d'un texte, l'utilisateur pose SES logos/visuels. Le
+// moteur les lit via items[i].src (anim-pack imgSlot). Nombre de fentes par anim.
+const _MD_IMG_SLOTS = {"tools":2,"connect":2,"copy":1};
+const _MD_IMG_ANIMS = new Set(['tools','connect','copy']);
 // les mots FORTS prononcés dans une fenêtre (miroir du remplissage du worker)
 function _mdWordsIn(a,b){
   const caps=(_md.derived.captions||[]).filter(c=>c.start>=a-0.05&&c.start<b);
@@ -13983,7 +13987,7 @@ function _mdIsMob(){ return window.innerWidth <= 768; }
 // TOUTE modification passe en ROUGE (retour Axel 01/08) : on voit d'un coup
 // d'œil ce qui a changé dans la bande
 const _MD_RED='#FF4757';
-function _mdSceneMod(s){ return !!(s.repl||s.replM||s.replT||s.added||s.moved||s.resized||s.userItems); }
+function _mdSceneMod(s){ return !!(s.repl||s.replM||s.replT||s.added||s.moved||s.resized||s.userItems||s.userImages); }
 function _mdSceneColor(s){ return _mdSceneMod(s)?_MD_RED:(_MD_NATURE[s.n]||_MD_NATURE.carte).color; }
 
 // ── DONNÉES RÉELLES depuis le plan DÉRIVÉ ────────────────────────────────────
@@ -14059,7 +14063,7 @@ function _mdUndo(){ if(!_md.past.length) return; _md.future.push(_mdSnap()); con
 function _mdRedo(){ if(!_md.future.length) return; _md.past.push(_mdSnap()); const s=_md.future.pop(); _md.scenes=s.scenes; _md.marks=s.marks; if(s.splits) _md.splits=s.splits; _mdRender(); }
 function _mdMarkKind(id){ id=String(id); return id.indexOf('sfx')===0?'sfx':id.indexOf('tr')===0?'trans':id.indexOf('tx')===0?'texte':null; }
 function _mdNMods(){
-  const sc = _md.scenes.filter(s=>s.repl||s.replM||s.replT||s.del||s.added||s.moved||s.resized||(s.userItems&&s.userItems.length)).length;
+  const sc = _md.scenes.filter(s=>s.repl||s.replM||s.replT||s.del||s.added||s.moved||s.resized||(s.userItems&&s.userItems.length)||(s.userImages&&s.userImages.length)).length;
   const mk = ['sfx','trans','texte'].reduce((n,k)=>n+_md.marks[k].filter(x=>x.del||x.mod||x.added||x.moved||x.resized).length,0);
   const sp = ((_md.splits||[]).filter(s=>s.added).length);   // #136 · un split AJOUTÉ est une modification (sinon Régénérer restait grisé → « le split ne marche pas »)
   return sc+mk+sp;
@@ -14992,7 +14996,7 @@ function _mdCardHtml(s, i, compact){
 }
 function _mdCardDel(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id); if(s){ s.del=true; s.repl=null; } _mdRender(); }
 function _mdCardUndo(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id);
-  if(s){ if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); delete _md.addedMedia[id]; } else { s.del=false; s.repl=null; s.replM=null; s.replT=null; s.userItems=null; delete _md.addedMedia[id]; } } _mdRender(); }
+  if(s){ if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); delete _md.addedMedia[id]; } else { s.del=false; s.repl=null; s.replM=null; s.replT=null; s.userItems=null; s.userImages=null; delete _md.addedMedia[id]; } } _mdRender(); }
 // ── APERÇUS (animation / transition / texte / bruitage) ─────────────────────
 function _mdAnimPrevHtml(name, desc, big){
   // la VRAIE animation en aperçu (retour Axel) : chaque anim de la banque a été
@@ -15146,6 +15150,7 @@ function _mdSwipeDecide(yes){
       if(s){ s.repl=item.k; s.del=false; s.replM=null; s.replT=null; }
       _md.swipe=null; _mdRender();
       if(s && _MD_TEXT_ANIMS.has(item.k)) _mdAskItemsOpen(s);
+      else if(s && _MD_IMG_ANIMS.has(item.k)) _mdAskImagesOpen(s);
       else toast('« '+item.k+' » remplace « '+sw.scene.t+' »');
     } else { sw.i=Math.min(sw.list.length-1,sw.i+1);
       _mdSwapBody(_mdSwipeHtml(),'mdSwBody'); }
@@ -15418,6 +15423,70 @@ function _mdAskItemsOk(){
   // se placer sur la scène pour VOIR tout de suite ton texte en pastilles sur l'aperçu
   if(sc){ try{ _mdSeek(Math.min(sc.a+0.05, _md.dur-0.05)); }catch(_){} }
 }
+// ── MENU IMAGES (anims à logos : tools / connect / copy) ────────────────────
+// Même esprit que le menu texte, mais l'utilisateur pose SES images. Chaque fente
+// = un <img> de l'anim ; on upload dans le bucket PUBLIC mcp-media (URL stable que
+// le worker va chercher au rendu) et on range l'URL dans sc.userImages[i].src.
+function _mdAskImagesOpen(sc){
+  const anim=sc.repl||sc.t;
+  const nSlots=_MD_IMG_SLOTS[anim]||2;
+  const base=[]; const span=Math.max(0.1,sc.b-sc.a);
+  for(let i=0;i<nSlots;i++){ const prev=(sc.userImages&&sc.userImages[i])||{};
+    base.push({ t:prev.t!=null?prev.t:Math.round((sc.a+span*(i+0.5)/nSlots)*100)/100, src:prev.src||'' }); }
+  _md.askImages={ sceneId:sc.id, anim:anim, slots:base };
+  _mdRenderModals();
+}
+function _mdAskImagesHtml(){
+  const ai=_md.askImages; if(!ai) return '';
+  return '<div onclick="_md.askImages=null;_mdRenderModals()" style="position:fixed;inset:0;z-index:6750;background:rgba(6,6,9,.8);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px">'
+    +'<div onclick="event.stopPropagation()" style="width:min(420px,94vw);background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:18px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)">'
+      +'<div class="row" style="gap:9px;align-items:center;margin-bottom:6px">'+_mdIco('spark',15,'var(--accent)')
+        +'<span style="font-weight:700;font-size:14.5px">Tes images pour cette animation</span>'
+        +'<span class="mono faint" style="font-size:10px;margin-left:auto">'+_mdEsc(ai.anim)+'</span></div>'
+      +'<p class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:12px">Pose ton logo ou ton visuel dans chaque case — il remplacera l\'exemple.</p>'
+      +'<div class="row" style="gap:10px;flex-wrap:wrap;justify-content:center">'
+      +ai.slots.map((sl,i)=>'<button onclick="_mdPickAnimImage('+i+')" id="mdAiImg'+i+'" style="width:110px;height:110px;flex:0 0 auto;border-radius:14px;border:1px'+(sl.src?' solid var(--accent)':' dashed var(--border-2)')+';background:'+(sl.src?'#000 center/cover url('+sl.src+')':'var(--panel-1)')+';display:grid;place-items:center;cursor:pointer;color:var(--text-3);overflow:hidden">'
+        +(sl.src?'':'<div style="text-align:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><div style="font-size:10px;margin-top:4px">Image '+(i+1)+'</div></div>')
+        +'</button>').join('')
+      +'</div>'
+      +'<div class="row" style="gap:10px;margin-top:14px">'
+        +'<button onclick="_md.askImages=null;_mdRenderModals();_mdRender()" class="btn btn-ghost" style="flex:0 0 auto">Garder tel quel</button>'
+        +'<button onclick="_mdAskImagesOk()" class="btn btn-primary" style="flex:1;font-weight:800">Valider</button></div>'
+    +'</div></div>';
+}
+async function _mdUploadAnimImage(file){
+  if(typeof sb==='undefined') throw new Error('storage indisponible');
+  const uid=(typeof currentMember!=='undefined'&&currentMember&&currentMember.id)?currentMember.id:'anon';
+  const ext=((file.name||'img').split('.').pop()||'png').toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
+  const path=uid+'/anim-img/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
+  const up=await sb.storage.from('mcp-media').upload(path, file, { contentType:file.type||'image/png', upsert:true });
+  if(up.error) throw new Error(up.error.message);
+  return SUPABASE_URL+'/storage/v1/object/public/mcp-media/'+path;
+}
+function _mdPickAnimImage(i){
+  const ai=_md.askImages; if(!ai) return;
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    const btn=document.getElementById('mdAiImg'+i); if(btn){ btn.style.opacity='.5'; btn.style.pointerEvents='none'; }
+    try{ const url=await _mdUploadAnimImage(f); ai.slots[i].src=url; _mdRenderModals(); }
+    catch(e){ toast('Image refusée : '+e.message); if(btn){ btn.style.opacity=''; btn.style.pointerEvents=''; } } };
+  inp.click();
+}
+function _mdAskImagesOk(){
+  const ai=_md.askImages; if(!ai) return;
+  const sc=_md.scenes.find(x=>x.id===ai.sceneId);
+  if(sc) sc.userImages=ai.slots.map(sl=>({ t:sl.t, src:sl.src||'' }));
+  _md.askImages=null; _md._ovKey=null; _mdRender();
+  if(sc){ try{ _mdSeek(Math.min(sc.a+0.05, _md.dur-0.05)); }catch(_){} }
+}
+// items du plan : texte (userItems) ET images (userImages.src) fusionnés par fente.
+function _mdSceneItems(s){
+  const out=[];
+  if(s.userItems&&s.userItems.length) s.userItems.forEach(x=>out.push({t:x.t,text:x.text,label:'',value:''}));
+  if(s.userImages&&s.userImages.length) s.userImages.forEach((x,i)=>{ if(!x||!x.src) return; if(out[i]) out[i].src=x.src; else out[i]={t:(x.t!=null?x.t:0),src:x.src}; });
+  for(let i=0;i<out.length;i++) if(!out[i]) out[i]={t:0,text:''};
+  return out.length?{items:out}:{};
+}
 function _mdSwDown(ev){
   const card=document.getElementById('mdSwCard'); if(!card) return;
   card.setPointerCapture(ev.pointerId);
@@ -15623,6 +15692,7 @@ function _mdBankPick(label){
     if(sc){ sc.repl=label; sc.del=false; sc.replM=null; sc.replT=null; }
     _md.bankModal=null;
     if(sc && _MD_TEXT_ANIMS.has(label)){ _mdRender(); _mdAskItemsOpen(sc); }
+    else if(sc && _MD_IMG_ANIMS.has(label)){ _mdRender(); _mdAskImagesOpen(sc); }
     else { _mdRender(); toast('« '+label+' » remplace la scène'); }
     return;
   }
@@ -15648,6 +15718,7 @@ function _mdBankPick(label){
       // #éditable (retour Axel) · si l'anim a des champs (texte/média) → menu de remplissage TOUT DE
       // SUITE à l'ajout, avec le NOMBRE de champs propre à l'animation (_MD_TEXT_SLOTS).
       if(_MD_TEXT_ANIMS.has(label)){ const _sc=_md.scenes.find(x=>x.id===id); _md.bankModal=null; _mdRender(); if(_sc) _mdAskItemsOpen(_sc); return; }
+      if(_MD_IMG_ANIMS.has(label)){ const _sc=_md.scenes.find(x=>x.id===id); _md.bankModal=null; _mdRender(); if(_sc) _mdAskImagesOpen(_sc); return; }
     } else if(bm.kind==='sfx'){
       _md.marks.sfx.push({id:'sfx-add'+Date.now(), t:bm.at, n:label, added:true});
     } else if(bm.kind==='trans'){
@@ -16037,6 +16108,7 @@ function _mdRenderModals(keepFocus){
   if(_md.askText) h+=_mdAskTextHtml();
   if(_md.swipe) h+=_mdSwipeHtml();
   if(_md.askItems) h+=_mdAskItemsHtml();
+  if(_md.askImages) h+=_mdAskImagesHtml();
   if(_md.zoomPick) h+=_mdZoomPickHtml();
   if(_md.place) h+=_mdPlaceHtml();
   if(_md.splitPick) h+=_mdSplitPickHtml();
@@ -16093,8 +16165,7 @@ function _mdBuildRegenPlan(){
     const src=(s.srcIdx!=null&&D.slides)?D.slides[s.srcIdx]:null;
     if(s.del){ userBans.push({start:_mdR2(s.a),end:_mdR2(s.b)}); continue; }
     if(s.added){
-      if(s.n==='animation') userSlides.push(Object.assign({start:_mdR2(s.a),end:_mdR2(s.b),anim:s.t},
-        (s.userItems&&s.userItems.length)?{items:s.userItems.map(x=>({t:x.t,text:x.text,label:'',value:''}))}:{}));
+      if(s.n==='animation') userSlides.push(Object.assign({start:_mdR2(s.a),end:_mdR2(s.b),anim:s.t}, _mdSceneItems(s)));
       else if(s.n==='carte') userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.userText||s.t).replace(/^«\s?|\s?»$/g,'')});
       // media ajouté : uploadé dans _mdRegen puis poussé dans broll
       continue;
@@ -16110,7 +16181,7 @@ function _mdBuildRegenPlan(){
     if(s.repl){
       const base=src?Object.assign({},src):{};
       delete base.userFile; delete base.src;   // chemins locaux du worker : jamais renvoyés
-      const it=(s.userItems&&s.userItems.length)?{items:s.userItems.map(x=>({t:x.t,text:x.text,label:'',value:''}))}:{};
+      const it=_mdSceneItems(s);
       userSlides.push(Object.assign(base,{anim:s.repl,start:_mdR2(s.a),end:_mdR2(s.b)},it));
       if((s.moved||s.resized)&&src&&(Math.abs((Number(src.start)||0)-s.a)>0.2||Math.abs((Number(src.end)||0)-s.b)>0.2))
         userBans.push({start:_mdR2(src.start),end:_mdR2(Number(src.end)||src.start+(s.b-s.a))});
@@ -31990,7 +32061,7 @@ function _edFillSplit(ov, media){
 function edAddAnimToSplit(name){
   if(!_ed){ toast('Charge d\'abord une vidéo'); return; }
   const nm=String(name||'').replace(/[^a-z0-9_-]/gi,'');
-  const url=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+  const url=(typeof window._edAnimSrc==='function')?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4'));
   const gt=edGlobalNow();
   const vid=document.createElement('video'); vid.src=url; vid.muted=true; vid.playsInline=true; vid.loop=false; vid.preload='auto';
   let slot = _ed._splitFillTarget ? (_ed.overlays||[]).find(o=>o.id===_ed._splitFillTarget && o._split && o._splitEmpty) : null;
@@ -34029,8 +34100,27 @@ function edBandDrag(ov,track,e,mode){
   };
   // LES VRAIES ANIMATIONS : la même banque que le Montage IA — les previews
   // MP4 rendus par le moteur lui-même (anim-previews/<nom>.mp4 + manifeste).
+  // ── ANIMS BLANCHES (éditeur seulement) ──────────────────────────────────
+  // Dans l'ÉDITEUR, les anims « à contenu » (texte/logo) se posent SANS leur
+  // exemple, pour que l'utilisateur écrive le sien par-dessus. Ces versions
+  // blanches vivent dans le bucket public anim-previews/blank/ (rendues par le
+  // worker, cf. --batch-blank). Le Montage IA, lui, garde les aperçus normaux
+  // (il personnalise via son menu). `blank/index.json` liste celles qui existent.
+  window._ED_BLANK_BASE = SUPABASE_URL + '/storage/v1/object/public/anim-previews/blank/';
+  window._edAnimSrc = function(nm){
+    if(window._edBlankSet && window._edBlankSet.has(nm)) return window._ED_BLANK_BASE+nm+'.mp4';
+    return (window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+  };
+  window._edAnimPoster = function(nm){
+    if(window._edBlankSet && window._edBlankSet.has(nm)) return window._ED_BLANK_BASE+nm+'.jpg';
+    return 'anim-previews/'+nm+'.jpg';
+  };
+  var _edAnimSrc=window._edAnimSrc, _edAnimPoster=window._edAnimPoster;
   function ensureAnimBank(){
     if(window._edAnimsReal) return Promise.resolve(window._edAnimsReal);
+    // charge en parallèle le manifeste des anims blanches (échec silencieux : on
+    // retombe alors sur les aperçus normaux — l'éditeur reste fonctionnel)
+    if(!window._edBlankSet){ fetch(window._ED_BLANK_BASE+'index.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(a){ window._edBlankSet=new Set(a||[]); }).catch(function(){ window._edBlankSet=new Set(); }); }
     return fetch('anim-previews/index.json').then(function(r){return r.json();}).then(function(names){
       window._edAnimsReal=names;
       window._mdPrevSet=window._mdPrevSet||new Set(names);
@@ -34045,10 +34135,10 @@ function edBandDrag(ov,track,e,mode){
     if(kind==='anim'){
       const nm=String(item).replace(/[^a-z0-9_-]/gi,'');
       if(window._mdPrevSet&&window._mdPrevSet.has(nm)){
-        const src=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+        const src=_edAnimSrc(nm);
         // poster JPG = image visible tout de suite ; la lecture réelle est (re)lancée en JS
         // après rendu (muted/playsinline posés par innerHTML pas toujours appliqués — WebKit)
-        return '<video data-edprev src="'+src+'" poster="anim-previews/'+nm+'.jpg" muted loop playsinline '+(big?'autoplay preload="auto"':'preload="none"')+' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>';
+        return '<video data-edprev src="'+src+'" poster="'+_edAnimPoster(nm)+'" muted loop playsinline '+(big?'autoplay preload="auto"':'preload="none"')+' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>';
       }
       return '<div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--accent)">'+S(IC.sparkle,big?44:26)+'</div>';
     }
