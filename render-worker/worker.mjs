@@ -2641,11 +2641,25 @@ async function batchBlankPreviews({ list = null, draft = true, style = 'auto', p
       try { rmSync(job, { recursive: true, force: true }) } catch (_) { /* nettoyage */ }
     }
   }
-  // manifeste : la liste des anims qui ONT une version blanche (l'éditeur la lit).
+  // manifeste : la liste des anims qui ONT une version dans ce dossier. On la
+  // construit depuis le CONTENU RÉEL du bucket (pas seulement ce run) → un
+  // re-rendu partiel n'efface plus les autres.
+  let manifest = done
+  try {
+    const lr = await fetch(`${SUPA}/storage/v1/object/list/anim-previews`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + KEY, apikey: KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: `${prefix}/`, limit: 1000 }),
+    })
+    if (lr.ok) {
+      const objs = await lr.json()
+      const names = (Array.isArray(objs) ? objs : []).map((o) => o && o.name).filter((n) => n && n.endsWith('.mp4')).map((n) => n.replace(/\.mp4$/, ''))
+      if (names.length) manifest = [...new Set([...names, ...done])]
+    }
+  } catch (_) { /* liste optionnelle : on retombe sur `done` */ }
   try {
     await fetch(`${SUPA}/storage/v1/object/anim-previews/${prefix}/index.json`, {
       method: 'POST', headers: { Authorization: 'Bearer ' + KEY, apikey: KEY, 'Content-Type': 'application/json', 'x-upsert': 'true' },
-      body: JSON.stringify(done),
+      body: JSON.stringify(manifest),
     })
   } catch (e) { console.error(`manifeste ${prefix}/index.json :`, e.message) }
   console.log(`\n═══ ${done.length}/${list.length} anims « ${prefix} » poussées${failed.length ? ` · échecs : ${failed.join(', ')}` : ''}`)
