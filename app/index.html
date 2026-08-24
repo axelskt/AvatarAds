@@ -14214,6 +14214,14 @@ function _mdTick(){
       v.style.transform='scale('+k.toFixed(3)+')';
     } else if(v.style.transform){ v.style.transform=''; v.style.transformOrigin=''; }
   }
+  // #transition-preview · flash + libellé quand la tête passe une transition — avant, elles
+  // ne se VOYAIENT jamais dans l'aperçu (retour Axel), elles n'apparaissaient qu'au rendu.
+  try{
+    const _t0=_md.time;
+    const _trf=_md.marks.trans.find(x=>!x.del&&x.transition&&!x.zoomPos&&Math.abs(_t0-x.t)<0.22);
+    const _fl=document.getElementById('mdTransFlash'), _fll=document.getElementById('mdTransLbl');
+    if(_fl){ if(_trf){ const _pr=Math.max(0,1-Math.abs(_t0-_trf.t)/0.22); _fl.style.opacity=(_pr*0.9).toFixed(2); if(_fll){ _fll.textContent=_trf.n||'Transition'; _fll.style.opacity=_pr>0.12?'1':'0'; } } else { _fl.style.opacity='0'; if(_fll) _fll.style.opacity='0'; } }
+  }catch(_){}
   const t=_md.time, dur=_md.dur;
   try{ _mdPeindreAnim(t); }catch(_){ /* l'aperçu ne casse jamais la lecture */ }
   // curseurs + temps
@@ -14343,7 +14351,7 @@ function _mdPaintClipInfo(){
         if(ed.del){
           h=(_md.avatarStill?'<img src="'+_md.avatarStill+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
             :'<div style="position:absolute;inset:0;background:linear-gradient(160deg,#1c1a22,#0d0c10)"></div>')
-            +badge('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> lipsync à la régénération');
+            +badge('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> ton avatar · clip réutilisé (0 cr)');
         } else if(ed.replM||(ed.added&&ed.n==='media'&&ed._mURL)){
           const pos=(ed.replM&&ed.replM.pos)||ed.pos||{x:.5,y:.5,w:.62};
           const isLayer=(ed.replM&&ed.replM.layer)||ed.layer;
@@ -14733,12 +14741,17 @@ function _mdRenderPop(){
       +'<span class="mono faint" style="font-size:9.5px;margin-left:auto">'+_mdT(it.t)+'</span>'
       +'<button onclick="_md.pop=null;_mdRenderPop()" title="Fermer" style="padding:3px 5px;border-radius:6px;color:var(--text-3);background:transparent;flex:0 0 auto;display:grid;place-items:center;cursor:pointer">'
         +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="transform:'+(_md.pop.side==='up'?'rotate(180deg)':'none')+'"><path d="M6 9l6 6 6-6"/></svg></button></div>'
+    +(it.k==='sfx' ? '<div class="row" style="gap:7px;align-items:center;padding:2px 9px 8px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7"/></svg><input type="range" min="0" max="200" value="'+_mdSfxVolOf(it.id)+'" oninput="_mdSfxVol(\''+it.id+'\',+this.value)" style="flex:1;accent-color:'+_MD_CYAN+'"><span id="mdSfxVolLbl_'+it.id+'" class="mono faint" style="font-size:9.5px;width:34px;text-align:right;flex:0 0 auto">'+_mdSfxVolOf(it.id)+'%</span></div>' : '')
     +acts.map(a=>'<button onclick="_mdPopAct(\''+a[1]+'\')" class="row" style="width:100%;gap:8px;align-items:center;padding:8px 9px;border-radius:8px;text-align:left;font-size:12.5px;font-weight:600;color:'+(a[1]==='del'?'#ff6b7a':'var(--text)')+';background:transparent;cursor:pointer" '
       +'onmouseenter="this.style.background=\''+(a[1]==='del'?'rgba(255,71,87,.12)':'var(--surface-3)')+'\'" onmouseleave="this.style.background=\'transparent\'">'
       +(a[1]==='repl'?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg>':a[1]==='dur'?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>':'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M6 6l12 12M18 6L6 18"/></svg>')+' '+a[0]+'</button>').join('')
     +'</div>';
   _mdPaintProximity();
 }
+// #bruitage-volume · volume d'un bruitage (retour Axel) : x.vol = multiplicateur ffmpeg
+// (défaut worker SFX_VOL=0.85). Le curseur affiche un % OÙ 100 % = défaut.
+function _mdSfxVolOf(id){ const m=(_md.marks.sfx||[]).find(x=>x.id===id); const v=(m&&m.vol!=null)?m.vol:0.85; return Math.round(v/0.85*100); }
+function _mdSfxVol(id,pct){ const m=(_md.marks.sfx||[]).find(x=>x.id===id); if(!m) return; m.vol=Math.round((pct/100)*0.85*100)/100; m.mod=true; const lbl=document.getElementById('mdSfxVolLbl_'+id); if(lbl) lbl.textContent=pct+'%'; }
 function _mdPopAct(act){
   const it=_md.pop&&_md.pop.item; _md.pop=null; _mdRenderPop();
   if(!it) return;
@@ -15782,7 +15795,10 @@ function _mdAskTextOk(){
     _md.scenes.push({id,a,b,n:'carte',t:label,d:ask.style.toLowerCase(),w:'',items:[],added:true,userText:txt||ask.style});
     _md.scenes.sort((x,y)=>x.a-y.a); _md.sel=id;
   }
-  _md.askText=null; _mdRender();
+  // #texte-affiche · on SE PLACE sur le texte + on force le repaint, sinon la tête de
+  // lecture restait ailleurs et « le texte ne s'affichait pas » (retour Axel).
+  _md.askText=null; _md._ovKey=null; _mdRender();
+  try{ _mdSeek(Math.min((ask.at||0)+0.05, _md.dur-0.05)); }catch(_){}
 }
 // ── ÉCRAN RACINE (recopie du composant MontageDetails) ──────────────────────
 const _mdR2 = (x) => Math.round((Number(x)||0)*100)/100;
@@ -15994,6 +16010,8 @@ function _mdRender(){
             +'<div id="mdVidSlot" style="position:absolute;inset:0"></div>'
             +'<div id="mdClipOver" style="position:absolute;inset:0;display:none;background:#08070a;z-index:1"></div>'
             +'<div id="mdClipHalo" style="position:absolute;inset:0;opacity:.45;pointer-events:none;z-index:1"></div>'
+            +'<div id="mdTransFlash" style="position:absolute;inset:0;opacity:0;pointer-events:none;z-index:3;background:#fff;mix-blend-mode:screen"></div>'
+            +'<div id="mdTransLbl" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none;z-index:4;padding:3px 10px;border-radius:99px;background:rgba(154,124,255,.92);color:#fff;font-family:var(--mono);font-size:9.5px;font-weight:700;white-space:nowrap;transition:opacity .1s"></div>'
             +'<button onclick="_mdTogglePlay()" style="position:absolute;inset:0;display:grid;place-items:center;z-index:2">'
               +'<span id="mdPlayA" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center"></span>'
             +'</button>'
