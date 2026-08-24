@@ -1076,12 +1076,19 @@ export function deriveDynamicSlides(plan, opts = {}) {
     for (const sp of plan.splits) {
       const a = r2(Math.max(0, Number(sp.start) || 0))
       const b = r2(Math.min(D, Number(sp.end) || 0))
-      if (!(b - a >= 1.2) || !sp.assetId) continue
+      // #split-anim (Axel 25/08) : le split peut porter un MÉDIA (assetId) OU une
+      // ANIMATION (anim) au-dessus. `invert` = avatar en HAUT, contenu en bas.
+      if (!(b - a >= 1.2) || (!sp.assetId && !sp.anim)) continue
       // le clip de la fenêtre du plan qui couvre ce split (s'il existe) : on
       // hérite son indice + le décalage de départ, la matière borne la fin
       const cover = (plan.avatarSegments || []).find((w) => Number.isInteger(w.clip) && w.clip >= 0
         && (w.start || 0) <= a + 0.3 && (w.end || 0) >= a + 0.8)
-      const seg = { start: a, end: b, format: 'portrait', split: { assetId: String(sp.assetId) },
+      const spContent = sp.anim
+        ? { slide: { anim: String(sp.anim), start: a, end: b } }
+        : { assetId: String(sp.assetId) }
+      if (sp.invert) spContent.invert = true
+      if (Number(sp.ratio) > 0.15 && Number(sp.ratio) < 0.85) spContent.ratio = Number(sp.ratio)
+      const seg = { start: a, end: b, format: 'portrait', split: spContent,
         clip: cover ? cover.clip : -1, __clipLocked: true }
       if (cover) {
         const from0 = r2((Number(cover.clipFrom) || 0) + Math.max(0, a - (cover.start || 0)))

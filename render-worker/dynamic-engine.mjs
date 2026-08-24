@@ -881,13 +881,22 @@ export function buildDynamicComposition(plan, opts = {}) {
         && (p.slide.split.src || (opts.assetFiles || {})[p.slide.split.assetId])
       const spSlide = p.slide.split && p.slide.split.slide
       if (spSrc || spSlide) {
-        const HH = Math.round(H / 2)
+        // #split-ratio (Axel 25/08) : HH = hauteur du CONTENU en haut (média/anim).
+        // ratio réglable (défaut 50 %). L'avatar occupe le reste, en bas.
+        const _spR = (p.slide.split.ratio && p.slide.split.ratio > 0.15 && p.slide.split.ratio < 0.85) ? p.slide.split.ratio : 0.5
+        const HH = Math.round(H * _spR)
+        // #split-invert (Axel 25/08) : par défaut CONTENU en haut / AVATAR en bas ;
+        // `invert` échange les deux. cTop/aTop = haut de chaque zone, cH/aH = hauteurs.
+        const _inv = !!p.slide.split.invert
+        const cTop = _inv ? (H - HH) : 0, aTop = _inv ? 0 : HH
+        const cH = HH, aH = H - HH
+        const divY = _inv ? (H - HH) : HH
         let topEl = ''
         if (spSrc) {
           const sp = { src: spSrc, isVid: /\.(mp4|mov|webm|m4v)(\?|$)/i.test(spSrc) }
           topEl = sp.isVid
-            ? `<video id="${id}spt" class="clip" src="${esc(sp.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="10" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;object-fit:cover;object-position:50% 30%"></video>`
-            : `<div id="${id}spt" style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;background:url('${esc(sp.src)}') 50% 30%/cover"></div>`
+            ? `<video id="${id}spt" class="clip" src="${esc(sp.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="10" muted playsinline style="position:absolute;left:0;top:${cTop}px;width:${W}px;height:${cH}px;object-fit:cover;object-position:50% 30%"></video>`
+            : `<div id="${id}spt" style="position:absolute;left:0;top:${cTop}px;width:${W}px;height:${cH}px;background:url('${esc(sp.src)}') 50% 30%/cover"></div>`
         } else {
           // ANIMATION au-dessus (A/B d'Axel : « mieux quand y'a une animation en
           // haut plutôt [qu'un média] ») : le pack joue dans la moitié haute,
@@ -910,7 +919,7 @@ export function buildDynamicComposition(plan, opts = {}) {
             ${spEyebrow ? `<div style="display:inline-block;background:${spAcc};color:#141418;font-family:'Inter',sans-serif;font-weight:900;font-size:${Math.round(H * 0.017)}px;letter-spacing:.08em;text-transform:uppercase;padding:${Math.round(H * 0.005)}px ${Math.round(W * 0.018)}px;border-radius:999px;margin-bottom:${Math.round(H * 0.008)}px">${esc(spEyebrow)}</div>` : ''}
             ${spTitle ? `<div style="font-family:'Anton','Archivo Black',sans-serif;font-size:${Math.round(H * 0.036)}px;line-height:1;letter-spacing:.01em;text-transform:uppercase;color:${spInk};text-shadow:0 2px 12px rgba(0,0,0,.35);padding:0 ${Math.round(W * 0.06)}px">${esc(spTitle)}</div>` : ''}
           </div>` : ''
-          topEl = `<div id="${id}spt" style="position:absolute;left:0;top:0;width:${W}px;height:${HH}px;overflow:hidden;background:${tone.dark ? '#101014' : '#F5F3EE'}">
+          topEl = `<div id="${id}spt" style="position:absolute;left:0;top:${cTop}px;width:${W}px;height:${cH}px;overflow:hidden;background:${tone.dark ? '#101014' : '#F5F3EE'}">
           ${spHead}
           <div style="position:absolute;left:0;top:${spHead ? Math.round(H * 0.07) : 0}px;width:${W}px;height:${H}px;transform:translateY(-${Math.round(H * 0.06)}px) scale(${spHead ? 0.72 : 0.85});transform-origin:50% 31%">${sah}</div></div>`
           if (sah) pjs += animJs(spSlide.anim, sa, r2)
@@ -929,13 +938,13 @@ export function buildDynamicComposition(plan, opts = {}) {
         const fp = p.slide.faceP != null ? Math.round(Math.max(0, Math.min(1, p.slide.faceP)) * 100) : 48
         const still = String(p.slide.photo || '') || avatarStill
         const botEl = src
-          ? (camOn ? `<div style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}cam" style="position:absolute;inset:0"><div id="${id}camj" style="position:absolute;inset:0">` : '')
-            + `<div id="${id}avp" style="position:absolute;left:0;top:${camOn ? 0 : HH}px;width:${W}px;height:${H - HH}px;background:url('${esc(still)}') 50% ${fp}%/cover"></div>
-        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:${camOn ? 0 : HH}px;width:${W}px;height:${H - HH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
+          ? (camOn ? `<div style="position:absolute;left:0;top:${aTop}px;width:${W}px;height:${aH}px;overflow:hidden"><div id="${id}cam" style="position:absolute;inset:0"><div id="${id}camj" style="position:absolute;inset:0">` : '')
+            + `<div id="${id}avp" style="position:absolute;left:0;top:${camOn ? 0 : aTop}px;width:${W}px;height:${aH}px;background:url('${esc(still)}') 50% ${fp}%/cover"></div>
+        <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:${camOn ? 0 : aTop}px;width:${W}px;height:${aH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
             + (camOn ? '</div></div></div>' : '')
-          : `<div id="${id}avw" style="position:absolute;left:0;top:${HH}px;width:${W}px;height:${H - HH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% ${fp}%/cover"></div></div>`
+          : `<div id="${id}avw" style="position:absolute;left:0;top:${aTop}px;width:${W}px;height:${aH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% ${fp}%/cover"></div></div>`
         inner += topEl + botEl
-          + `<div style="position:absolute;left:0;top:${HH - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
+          + `<div style="position:absolute;left:0;top:${divY - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
         if (camOn && src) pjs += camOrganique(`#${id}cam`, `#${id}camj`, liveT0, t1, p.slide.i, 0.7)
         // entrées en ciseaux : le haut glisse d'en haut, le bas d'en bas
         pjs += `\n  tl.fromTo('#${id}spt',{yPercent:-8,autoAlpha:0},{yPercent:0,autoAlpha:1,duration:0.38,ease:'power3.out'},${r2(liveT0 + 0.02)});`
