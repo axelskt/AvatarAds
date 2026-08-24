@@ -13984,7 +13984,7 @@ function _mdIsMob(){ return window.innerWidth <= 768; }
 // d'œil ce qui a changé dans la bande
 const _MD_RED='#FF4757';
 function _mdSceneMod(s){ return !!(s.repl||s.replM||s.replT||s.added||s.moved||s.resized||s.userItems); }
-function _mdSceneColor(s){ return _mdSceneMod(s)?_MD_RED:_MD_NATURE[s.n].color; }
+function _mdSceneColor(s){ return _mdSceneMod(s)?_MD_RED:(_MD_NATURE[s.n]||_MD_NATURE.carte).color; }
 
 // ── DONNÉES RÉELLES depuis le plan DÉRIVÉ ────────────────────────────────────
 function _mdBuildScenes(){
@@ -14053,15 +14053,16 @@ function _mdBuildMarks(){
 }
 
 // historique : instantanés {scenes, marks} — annuler/rétablir
-function _mdSnap(){ return JSON.parse(JSON.stringify({ scenes:_md.scenes, marks:_md.marks })); }
+function _mdSnap(){ return JSON.parse(JSON.stringify({ scenes:_md.scenes, marks:_md.marks, splits:_md.splits||[] })); }
 function _mdCommit(){ _md.past.push(_mdSnap()); _md.future=[]; }
-function _mdUndo(){ if(!_md.past.length) return; _md.future.push(_mdSnap()); const s=_md.past.pop(); _md.scenes=s.scenes; _md.marks=s.marks; _mdRender(); }
-function _mdRedo(){ if(!_md.future.length) return; _md.past.push(_mdSnap()); const s=_md.future.pop(); _md.scenes=s.scenes; _md.marks=s.marks; _mdRender(); }
+function _mdUndo(){ if(!_md.past.length) return; _md.future.push(_mdSnap()); const s=_md.past.pop(); _md.scenes=s.scenes; _md.marks=s.marks; if(s.splits) _md.splits=s.splits; _mdRender(); }
+function _mdRedo(){ if(!_md.future.length) return; _md.past.push(_mdSnap()); const s=_md.future.pop(); _md.scenes=s.scenes; _md.marks=s.marks; if(s.splits) _md.splits=s.splits; _mdRender(); }
 function _mdMarkKind(id){ id=String(id); return id.indexOf('sfx')===0?'sfx':id.indexOf('tr')===0?'trans':id.indexOf('tx')===0?'texte':null; }
 function _mdNMods(){
-  const sc = _md.scenes.filter(s=>s.repl||s.replM||s.replT||s.del||s.added||s.moved||s.resized).length;
+  const sc = _md.scenes.filter(s=>s.repl||s.replM||s.replT||s.del||s.added||s.moved||s.resized||(s.userItems&&s.userItems.length)).length;
   const mk = ['sfx','trans','texte'].reduce((n,k)=>n+_md.marks[k].filter(x=>x.del||x.mod||x.added||x.moved||x.resized).length,0);
-  return sc+mk;
+  const sp = ((_md.splits||[]).filter(s=>s.added).length);   // #136 · un split AJOUTÉ est une modification (sinon Régénérer restait grisé → « le split ne marche pas »)
+  return sc+mk+sp;
 }
 function _mdDevis(){
   return { lip:0, video:(typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS.montageRender)||4 };
@@ -14243,7 +14244,23 @@ function _mdSelect(id, scroll){
   if(!_md) return; _md.sel=id; _mdPaintSel();
   if(scroll){ const c=document.getElementById('mdC'+id); if(c) c.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 }
-function _mdPick(id){ const s=_md.scenes.find(x=>x.id===id); if(!s) return; _mdPause(); _mdSeek(Math.min(s.a+0.05,_md.dur-0.05)); _mdSelect(id,true); }
+function _mdPick(id, ev){
+  const s=_md.scenes.find(x=>x.id===id); if(!s) return;
+  _mdPause();
+  // carte de la liste (pas d'event) → comportement historique : saute à la scène
+  if(!ev){ _mdSeek(Math.min(s.a+0.05,_md.dur-0.05)); _mdSelect(id,true); return; }
+  // clic sur la BANDE : 1er clic = SÉLECTIONNE (le curseur ne bouge pas) ; 2e clic (bande déjà
+  // active) = place le curseur à l'endroit EXACT cliqué (retour Axel).
+  if(_md.pop){ _md.pop=null; _mdRenderPop(); }
+  if(_md.sel!==id){ _mdSelect(id,true); return; }
+  let t=s.a+0.05;
+  const host=document.getElementById('mdTrack');
+  if(host){ const r=host.getBoundingClientRect();
+    t=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width))*_md.dur;
+    t=Math.max(s.a, Math.min(s.b-0.001, t)); }
+  _mdSeek(Math.min(t,_md.dur-0.05));
+  _mdSelect(id,true);
+}
 function _mdPaintSel(){
   // les poignées d'étirement suivent la sélection SANS re-render complet
   document.querySelectorAll('#mdOv [data-grip]').forEach(g=>g.remove());
@@ -14295,7 +14312,8 @@ function _mdPaintClipInfo(){
       });
       if(freed) ed={id:'gap'+freed.id, del:true, a:freed.b, b:freed.b};
     }
-    const key=ed?(ed.id+'·'+(ed.repl||'')+(ed.del?'D':'')+(ed.replM?'M':'')+(ed.replT?'T':'')+(ed.added?'A':'')+(_md.avatarStill?'S':'')):'';
+    const uiSig=(ed&&ed.userItems&&ed.userItems.length)?('·U'+ed.userItems.map(u=>String(u.text||'')).join('|')):'';
+    const key=ed?(ed.id+'·'+(ed.repl||'')+(ed.del?'D':'')+(ed.replM?'M':'')+(ed.replT?'T':'')+(ed.added?'A':'')+(_md.avatarStill?'S':'')+uiSig):'';
     if(key!==_md._ovKey){
       _md._ovKey=key;
       if(!ed){ over.style.opacity='0'; setTimeout(()=>{ if(!_md._ovKey){ over.style.display='none'; over.innerHTML=''; } },200); }
@@ -14327,10 +14345,13 @@ function _mdPaintClipInfo(){
             +badge('après régénération');
         } else {
           const nm=String(ed.repl||ed.t).replace(/[^a-z0-9_-]/gi,'');
+          const _ui=(ed.userItems||[]).map(u=>String(u.text||'').trim()).filter(Boolean);
           h=(window._mdPrevSet&&window._mdPrevSet.has(nm)
             ?'<video src="'+((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4'))+'" muted autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
             :'<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:13px">'+_mdEsc(ed.repl||ed.t)+'</span></div>')
-            +badge('✦ '+_mdEsc(ed.repl||ed.t)+' · après régénération');
+            // #éditable · le MP4 d'aperçu est pré-cuit ('Un' figé) → on affiche TON texte en pastilles par-dessus (le vrai remplacement se fait à la régénération)
+            +(_ui.length?('<div style="position:absolute;left:8px;right:8px;top:8px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center;z-index:4;pointer-events:none">'+_ui.map(t=>'<span style="padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);color:#fff;font-weight:800;font-size:12px">'+_mdEsc(t)+'</span>').join('')+'</div>'):'')
+            +badge(_ui.length?('✦ '+_mdEsc(ed.repl||ed.t)+' · ton texte ci-dessus, posé à la régénération'):('✦ '+_mdEsc(ed.repl||ed.t)+' · après régénération'));
         }
         over.innerHTML=h; over.style.display='block';
         over.style.opacity='0'; requestAnimationFrame(()=>{ over.style.opacity='1'; });
@@ -14482,7 +14503,7 @@ function _mdBandHtml(){
       +'style="position:absolute;top:0;bottom:0;'+(side==='a'?'left:0':'right:0')+';width:9px;cursor:ew-resize;touch-action:none;z-index:3;display:grid;place-items:center">'
       +'<span style="width:3px;height:60%;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></span></div>';
     const col=_mdSceneColor(s);
-    return '<div id="mdB'+s.id+'" onpointerdown="event.stopPropagation();_mdPick(\''+s.id+'\')" title="'+_mdEsc(meta.label+' · '+_mdT(s.a))+'" '
+    return '<div id="mdB'+s.id+'" onpointerdown="event.stopPropagation();_mdPick(\''+s.id+'\',event)" title="'+_mdEsc(meta.label+' · '+_mdT(s.a))+'" '
       +'style="position:absolute;left:'+(s.a/dur*100)+'%;width:'+((s.b-s.a)/dur*100)+'%;top:2px;bottom:2px;min-width:5px;border-radius:6px;overflow:hidden;transition:opacity .18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
       +'background:'+(s.del?'var(--surface-2)':'color-mix(in srgb, '+col+' 18%, var(--panel-1))')+';'
       +'border:1px solid color-mix(in srgb, '+col+' 28%, transparent)">'
@@ -14933,7 +14954,7 @@ function _mdZStemDown(ev, btn){
 
 // ── CARTE DE SCÈNE + LISTE ───────────────────────────────────────────────────
 function _mdCardHtml(s, i, compact){
-  const meta=_MD_NATURE[s.n], on=_md.sel===s.id, changed=s.repl||s.replM||s.replT||s.del;
+  const meta=_MD_NATURE[s.n]||_MD_NATURE.carte, on=_md.sel===s.id, changed=s.repl||s.replM||s.replT||s.del;
   const mob=_mdIsMob();
   const title = s.n==='animation'
     ? '<span class="faint" style="font-size:12px">Animation</span> <span class="mono" style="font-size:13px;font-weight:600;color:'+(s.del?'var(--text-3)':'var(--text)')+';text-decoration:'+(s.del?'line-through':'none')+'">'+_mdEsc(s.repl||s.t)+'</span>'
@@ -15393,7 +15414,9 @@ function _mdAskItemsOk(){
   const sc=_md.scenes.find(x=>x.id===ai.sceneId);
   if(sc) sc.userItems=ai.fields.map((f,i)=>{ const inp=document.getElementById('mdAiF'+i);
     return { t:f.t, text:(inp?inp.value:f.text).trim() }; });
-  _md.askItems=null; _mdRender();
+  _md.askItems=null; _md._ovKey=null; _mdRender();
+  // se placer sur la scène pour VOIR tout de suite ton texte en pastilles sur l'aperçu
+  if(sc){ try{ _mdSeek(Math.min(sc.a+0.05, _md.dur-0.05)); }catch(_){} }
 }
 function _mdSwDown(ev){
   const card=document.getElementById('mdSwCard'); if(!card) return;
@@ -15867,6 +15890,10 @@ function _mdRender(){
       +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="'+(x[0]?'var(--accent-2)':'var(--text-3)')+'" stroke-width="2.4" stroke-linecap="round" style="flex:0 0 auto;transform:'+(x[0]?'rotate(180deg)':'none')+';transition:.2s"><path d="M6 9l6 6 6-6"/></svg>'
       +'<span class="col" style="line-height:1.3;min-width:0"><span style="font-size:13.5px;font-weight:700;color:'+(x[0]?'var(--accent-2)':'var(--text)')+'">'+x[2]+'</span>'
       +'<span class="faint" style="font-size:11px">'+x[3]+'</span></span></button>').join('');
+  // #ordre · le menu « Dans l'ordre » est calculé À PART et gardé : si _mdOrderHtml jetait
+  // (une scène à la nature inattendue), tout le _mdRender avortait → « le menu ne s'ouvre pas ».
+  let _orderHtml='';
+  if(_md.order){ try{ _orderHtml=_mdOrderHtml(); }catch(e){ _orderHtml='<div class="faint" style="padding:14px;text-align:center">Liste indisponible</div>'; } }
   ov.innerHTML=''
     +'<div class="row" style="flex:0 0 auto;padding:'+(mob?'12px 14px':'14px 26px')+';justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--bg-grad)">'
       +'<div class="col" style="line-height:1.3;min-width:0">'
@@ -15905,7 +15932,7 @@ function _mdRender(){
         // dépliage 1 — détail de la bande
         +(_md.detail?'<div id="mdDetail" class="rise"><div id="mdCloseWrap"></div></div>':'')
         // dépliage 2 — dans l'ordre
-        +(_md.order?_mdOrderHtml():'')
+        +_orderHtml
       +'</div>'
     +'</div>'
     +_mdFootHtml()
@@ -15995,7 +16022,7 @@ function _mdSplitPickHtml(){
 function _mdSplitAdd(assetId){
   _mdCommit();
   const at=(_md.splitPick&&_md.splitPick.at)||_md.time;
-  (_md.splits=_md.splits||[]).push({ start:_mdR2(at), end:_mdR2(Math.min(_md.dur-0.1, at+3)), assetId:String(assetId) });
+  (_md.splits=_md.splits||[]).push({ start:_mdR2(at), end:_mdR2(Math.min(_md.dur-0.1, at+3)), assetId:String(assetId), added:true });
   _md.splitPick=null; _md.scenes=_mdBuildScenes(); _mdRender(); _mdRenderModals();
   if(typeof toast==='function') toast('Split screen posé — avatar en bas, « '+assetId+' » au-dessus');
 }
@@ -31535,6 +31562,7 @@ function edResizeCanvas(){
   canvas.width=Math.round(_ed.dispW*_dpr); canvas.height=Math.round(_ed.dispH*_dpr);
   canvas.style.width=_ed.dispW+'px'; canvas.style.height=_ed.dispH+'px';
   _ed.ctx=canvas.getContext('2d'); _ed.ctx.setTransform(_dpr,0,0,_dpr,0,0); _ed.ctx.imageSmoothingQuality='high';
+  if(_ed.overlays) _ed.overlays.forEach(o=>{ if(o._split) try{ _edApplySplitBox(o); }catch(_){} }); // #split-controls · les bandes suivent le redimensionnement
 }
 function edSetup(){
   const stage=document.getElementById('edStage');
@@ -31699,17 +31727,18 @@ function edDrawLoop(){
   const _sp=_edSplitAt(_gt); // #136 · split : la base descend en moitié basse
   try{ ctx.clearRect(0,0,_ed.dispW,_ed.dispH);
     if(_sp){ ctx.fillStyle='#0b0b0e'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH);
-      const _hb=_ed.dispH/2, _scr=edCoverRect(_vw,_vh,_ed.dispW/_hb);
+      const B=_edSplitBands(_sp,_ed.dispH);
+      const _scr=edCoverRect(_vw,_vh,_ed.dispW/Math.max(1,B.videoH));
       const _sfy=(_vh-_scr.sh)*((_sp._faceP!=null)?_sp._faceP:0.1);
-      ctx.drawImage(v, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, _hb, _ed.dispW, _hb);
-      ctx.fillStyle='#0D0D12'; ctx.fillRect(0,_hb-2,_ed.dispW,4);
+      ctx.drawImage(v, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, B.videoY, _ed.dispW, B.videoH);
+      const _divY=B.inv?B.videoH:B.mediaH; ctx.fillStyle='#0D0D12'; ctx.fillRect(0,_divY-2,_ed.dispW,4);
     } else { ctx.drawImage(v, _zr.sx,_zr.sy,_zr.sw,_zr.sh, 0,0,_ed.dispW,_ed.dispH); } }catch(e){}
   _edDrawSubsAIPreview(_gt); // 🎼 sous-titres Montage IA (canvas superposé, au-dessus du b-roll)
   const _fa=_edFlashAlpha(_gt); // #111 · flash de transition de section (preview)
   if(_fa>0.01){ try{ ctx.fillStyle='rgba(255,255,255,'+_fa.toFixed(3)+')'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH); }catch(e){} }
   try{ edDrawTrans(ctx, _ed.dispW, _ed.dispH, _gt, v, _cr); }catch(e){}   // transitions entre clips (aperçu)
   for(const o of _ed.overlays){
-    if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; }
+    if(o._el){ const vis=(o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end); o._el.style.visibility=vis?'visible':'hidden'; } // #split · visible SEULEMENT dans sa fenêtre (avant : la sélection le forçait plein écran sur toute la vidéo)
     if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
   }
   if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.trans) continue; if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
@@ -32014,6 +32043,33 @@ function _edSplitAt(gt){
   for(const o of _ed.overlays){ if(o._split && (o.start==null||gt>=o.start) && (o.end==null||gt<=o.end)) return o; }
   return null;
 }
+// #split-controls · bandes du split : part MÉDIA (haut par défaut) + part VIDÉO, ratio réglable + inversion
+function _edSplitBands(ov,H){
+  const r=Math.max(0.15,Math.min(0.85,(ov&&ov._splitRatio!=null)?ov._splitRatio:0.5)); // part du MÉDIA
+  const inv=!!(ov&&ov._splitInvert);
+  const mediaH=Math.round(H*r), videoH=H-mediaH;
+  return inv ? {mediaY:videoH,mediaH,videoY:0,videoH,inv:true}
+             : {mediaY:0,mediaH,videoY:mediaH,videoH,inv:false};
+}
+// garde la boîte média (coord. affichage) + l'élément DOM alignés sur ratio/inversion
+function _edApplySplitBox(ov){
+  if(!ov||!ov._split||!_ed) return;
+  const B=_edSplitBands(ov,_ed.dispH);
+  ov.x=0; ov.y=B.mediaY; ov.w=_ed.dispW; ov.h=B.mediaH;
+  if(ov._el){ ov._el.style.left='0px'; ov._el.style.top=ov.y+'px'; ov._el.style.width=ov.w+'px'; ov._el.style.height=ov.h+'px'; }
+  if(!ov._splitEmpty) _edStyleSplitMedia(ov);
+}
+// recadrage (pan/zoom) du média du split en preview — DOIT refléter la formule d'export (section D)
+function _edStyleSplitMedia(ov){
+  if(!ov||!ov._el) return; const im=ov._el.querySelector('img,video'); if(!im) return;
+  ov._el.style.overflow='hidden';
+  const rf=ov._mediaRF;
+  im.style.objectFit='cover'; im.style.width='100%'; im.style.height='100%';
+  if(rf){ const ox=(rf.ox==null?0.5:rf.ox), oy=(rf.oy==null?0.5:rf.oy), z=Math.max(1,rf.z||1);
+    im.style.objectPosition=(ox*100).toFixed(2)+'% '+(oy*100).toFixed(2)+'%';
+    im.style.transform='scale('+z+')'; im.style.transformOrigin=(ox*100).toFixed(2)+'% '+(oy*100).toFixed(2)+'%';
+  } else { im.style.objectPosition=(ov._anim?'50% 50%':'50% 30%'); im.style.transform=''; im.style.transformOrigin=''; }
+}
 
 function edBuildOverlayEl(ov){
   const stage=document.getElementById('edStage');
@@ -32041,6 +32097,20 @@ function edBuildOverlayEl(ov){
     const im=ov.vid||document.createElement('img'); if(!ov.vid) im.src=ov.url;
     im.style.cssText='width:100%;height:100%;display:block;object-fit:'+((ov._split||ov._anim)?'cover':'fill')+';object-position:'+(ov._anim?'50% 50%':'50% 30%')+';pointer-events:none'; el.appendChild(im); }
   stage.appendChild(el); ov._el=el;
+  // #split-controls · recadrer UNIQUEMENT le média du split (mode « Recadrer l'animation ») : glisse = pan, molette = zoom
+  if(ov._split && !ov._splitEmpty){ _edStyleSplitMedia(ov);
+    el.addEventListener('pointerdown',(e)=>{ if(!ov._mediaReframe) return; e.stopPropagation();
+      const rf=ov._mediaRF||(ov._mediaRF={ox:0.5,oy:(ov._anim?0.5:0.3),z:1});
+      const ox0=rf.ox,oy0=rf.oy,px=e.clientX,py=e.clientY, z=Math.max(1,rf.z||1);
+      const mv=(ev)=>{ rf.ox=Math.max(0,Math.min(1, ox0-(ev.clientX-px)/Math.max(1,ov.w)/z));
+                       rf.oy=Math.max(0,Math.min(1, oy0-(ev.clientY-py)/Math.max(1,ov.h)/z)); _edStyleSplitMedia(ov); };
+      const up=()=>{ window.removeEventListener('pointermove',mv,true); window.removeEventListener('pointerup',up,true); };
+      window.addEventListener('pointermove',mv,true); window.addEventListener('pointerup',up,true);
+    }, true);
+    el.addEventListener('wheel',(e)=>{ if(!ov._mediaReframe) return; e.stopPropagation(); e.preventDefault();
+      const rf=ov._mediaRF||(ov._mediaRF={ox:0.5,oy:(ov._anim?0.5:0.3),z:1});
+      rf.z=Math.max(1,Math.min(4, +((rf.z||1)*(e.deltaY<0?1.08:1/1.08)).toFixed(3))); _edStyleSplitMedia(ov);
+    }, {passive:false}); }
 
   const mk=(name,css,cur)=>{ const h=document.createElement('div'); h.className='ed-ov-rh'; h.dataset.h=name; h.style.cssText='position:absolute;width:15px;height:15px;background:var(--accent);border:2px solid #fff;border-radius:50%;z-index:6;display:none;cursor:'+cur+';'+css; el.appendChild(h); };
   if(ov.type==='image' && !ov._split){
@@ -32119,6 +32189,7 @@ function edStyleOverlay(ov){
     el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
     const im=el.querySelector('img,video'); const c=ov.crop||{t:0,r:0,b:0,l:0};
     if(im) im.style.clipPath='inset('+c.t+'% '+c.r+'% '+c.b+'% '+c.l+'%)';
+    if(ov._split && !ov._splitEmpty) _edStyleSplitMedia(ov); // #split-controls · réapplique le recadrage média
   }
   const onSel=_ed.sel===ov.id;
   el.style.outline=onSel?'2px solid var(--accent)':'1px dashed rgba(255,255,255,.45)';
@@ -32128,7 +32199,11 @@ function edStyleOverlay(ov){
   const _bar=el.querySelector('.ed-ov-bar'); if(_bar) _bar.style.display=(onSel&&!ov._editing)?'flex':'none';
 }
 
-function edSelect(id){ if(_ed.selTrack) edSelectTrack(null); if(typeof _edClearVisualSel==='function') _edClearVisualSel(); _ed.sel=id; _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
+function edSelect(id){ if(_ed.selTrack) edSelectTrack(null); if(typeof _edClearVisualSel==='function') _edClearVisualSel(); _ed.sel=id;
+  // #split · le calque n'est visible que dans sa fenêtre → en le sélectionnant on amène le curseur
+  // dessus (sinon on ne le verrait pas pour l'éditer).
+  try{ const _ov=_ed.overlays.find(o=>o.id===id); if(_ov&&_ov.start!=null){ const gt=edGlobalNow(); if(gt<_ov.start||gt>_ov.end){ edScrubTo(Math.min(_ov.start+0.05, edTotalDur()-0.01)); } } }catch(_){}
+  _ed.overlays.forEach(o=>{ if(o.id!==id) o._cropMode=false; }); _ed.overlays.forEach(edStyleOverlay); edShowProps(); edRenderLayers(); edRenderOvTrack(); }
 function edHideProps(){ if(!_ed) return; _ed.sel=null; _ed.overlays.forEach(o=>o._cropMode=false); const p=document.getElementById('edProps'); if(p) p.style.display='none'; if(window.edToolsToggle) edToolsToggle(true); edRenderTextMenu(null); _ed.overlays.forEach(edStyleOverlay); edRenderLayers(); edRenderOvTrack(); }
 function edRenderTextMenu(ov){
   const m=document.getElementById('edTextMenu'); if(!m) return;
@@ -32156,10 +32231,17 @@ function edShowProps(){
   if(typeof edRenderTextMenu==='function') edRenderTextMenu(null);
   if(!ov){ p.style.display='none'; if(window.edToolsToggle) edToolsToggle(true); return; }
   p.style.display='block'; if(window.edToolsToggle) edToolsToggle(false);
-  const t=document.getElementById('edPropsTitle'); if(t) t.textContent=ov.type==='text'?'Texte':'Image';
+  const t=document.getElementById('edPropsTitle'); if(t) t.textContent=ov._split?(ov._anim?'Split · animation':'Split screen'):(ov.type==='text'?'Texte':'Image');
   if(window.edFillProps) edFillProps(ov);
 }
 function edSetProp(k,v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; ov[k]=v; edStyleOverlay(ov); edRenderLayers(); }
+// #split-controls + calques · ordre z (l'ordre du tableau = ordre de dessin ; fin = au-dessus)
+function _edReorderStageDom(){ const stage=document.getElementById('edStage'); if(!stage) return; (_ed.overlays||[]).forEach(o=>{ if(o._el) stage.appendChild(o._el); }); }
+function edMoveLayer(id,dir){ const a=_ed.overlays; const i=a.findIndex(o=>o.id===id); if(i<0) return; const j=i+dir; if(j<0||j>=a.length) return; edSnap(); const t=a[i]; a[i]=a[j]; a[j]=t; _edReorderStageDom(); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); }
+function edSetSplitRatio(pct){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._split) return; ov._splitRatio=Math.max(0.15,Math.min(0.85,pct/100)); _edApplySplitBox(ov); const l=document.getElementById('edSplitRatioLbl'); if(l) l.textContent=pct+'%'; }
+function edToggleSplitInvert(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._split) return; edSnap(); ov._splitInvert=!ov._splitInvert; _edApplySplitBox(ov); edShowProps(); }
+function edToggleMediaReframe(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._split) return; ov._mediaReframe=!ov._mediaReframe; if(ov._el){ ov._el.style.cursor=ov._mediaReframe?'grab':''; ov._el.style.touchAction=ov._mediaReframe?'none':''; } edShowProps(); if(typeof toast==='function') toast(ov._mediaReframe?'Recadrage animation : glisse · molette':'Cadrage figé'); }
+function edResetMediaRF(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; edSnap(); ov._mediaRF=null; _edStyleSplitMedia(ov); }
 function edSetCrop(k,v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov.crop) return; ov.crop[k]=v; edStyleOverlay(ov); }
 function edSetImgW(v){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||ov.type!=='image') return; const ar=ov.w/ov.h; ov.w=v; ov.h=v/ar; edStyleOverlay(ov); }
 function edApplyTextPreset(name){
@@ -32772,7 +32854,7 @@ function edRemoveMusicSeg(idx){
 function edStateCopy(){
   return { activeIdx:_ed.activeIdx,
     clips:_ed.clips.map(c=>({...c})),
-    overlays:_ed.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; return n; }),
+    overlays:_ed.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; if(o._mediaRF) n._mediaRF={...o._mediaRF}; n._el=null; return n; }),
     sfx:(_ed.sfx||[]).map(s=>({...s})),
     musicSegs:_ed.musicSegs?_ed.musicSegs.map(s=>({...s})):null, musicAuto:_ed.musicAuto!==false,
     zooms:(_ed.zooms||[]).map(z=>({...z})), selZoom:_ed.selZoom,
@@ -32787,7 +32869,7 @@ function edRestoreState(st){
   _ed.activeIdx=Math.max(0,Math.min(st.activeIdx,_ed.clips.length-1));
   const ac=_ed.clips[_ed.activeIdx];
   _ed.video=ac.video;_ed.url=ac.url;_ed.file=ac.file;_ed.dur=ac.dur;_ed.vw=ac.vw;_ed.vh=ac.vh;_ed.trimA=ac.trimA;_ed.trimB=ac.trimB;_ed.deletes=ac.deletes;
-  _ed.overlays=st.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; n._el=null; n._editing=false; n._cropMode=false; return n; });
+  _ed.overlays=st.overlays.map(o=>{ const n={...o}; if(o.crop) n.crop={...o.crop}; if(o._mediaRF) n._mediaRF={...o._mediaRF}; n._el=null; n._editing=false; n._cropMode=false; return n; });
   _ed.sfx=(st.sfx||[]).map(s=>({...s}));
   _ed.musicSegs=st.musicSegs?st.musicSegs.map(s=>({...s})):null; _ed.musicAuto=st.musicAuto!==false; _ed.selTrack=null;
   _ed.zooms=(st.zooms||[]).map(z=>({...z})); _ed.selZoom=st.selZoom||null;
@@ -33498,6 +33580,9 @@ async function edExport(){
           if(c._black || c.video===_ed.audio.vEl) continue; // noir : rien à brancher ; principal : déjà branché
           if(!c._srcNode){ try{ c._srcNode=_ed.audio.ac.createMediaElementSource(c.video); const g=_ed.audio.ac.createGain(); g.gain.value=(_ed.videoMuted?0:(_ed.vol!=null?_ed.vol:1)); c._srcNode.connect(g); g.connect(_ed.audio.ac.destination); g.connect(_ed.audio.dest); }catch(e){} }
         }
+        // #FPS · la musique n'est plus branchée en preview → on la branche ICI (export only) pour la capter dans le fichier.
+        // On met l'élément à volume PLEIN et on laisse mGain porter le niveau (sinon double atténuation a.volume×mGain).
+        if(_ed.music && !_ed.audio.mSrc){ try{ try{ _ed.music.volume=1; }catch(_){} const mSrc=_ed.audio.ac.createMediaElementSource(_ed.music); const mGain=_ed.audio.ac.createGain(); mGain.gain.value=(_ed.musicVol!=null?_ed.musicVol:0.7); mSrc.connect(mGain); mGain.connect(_ed.audio.ac.destination); mGain.connect(_ed.audio.dest); _ed.audio.mSrc=mSrc; _ed.audio.mGain=mGain; }catch(e){} }
         if(_ed.audio.ac.state==='suspended'){ try{ await _ed.audio.ac.resume(); }catch(e){} }
       }
     }
@@ -33514,10 +33599,11 @@ async function edExport(){
       const _evw=curV.videoWidth||_ed.vw||9, _evh=curV.videoHeight||_ed.vh||16;
       const _esp=_edSplitAt(gTime); // #136 · split : la base descend en moitié basse
       if(_esp){
-        const _hb=expH/2, _scr=edCoverRect(_evw,_evh,expW/_hb);
+        const B=_edSplitBands(_esp,expH);
+        const _scr=edCoverRect(_evw,_evh,expW/Math.max(1,B.videoH));
         const _sfy=(_evh-_scr.sh)*((_esp._faceP!=null)?_esp._faceP:0.1);
-        try{ cx.drawImage(curV, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, _hb, expW, _hb); }catch(e){}
-        cx.fillStyle='#0D0D12'; cx.fillRect(0,_hb-3,expW,6);
+        try{ cx.drawImage(curV, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, B.videoY, expW, B.videoH); }catch(e){}
+        const _divY=B.inv?B.videoH:B.mediaH; cx.fillStyle='#0D0D12'; cx.fillRect(0,_divY-3,expW,6);
       } else {
       const _ecr=edCoverRect(_evw,_evh,expW/expH);
       const _ercl=(_ed.clips||[]).find(c=>c.video===curV); // le clip rendu → SON recadrage
@@ -33531,9 +33617,13 @@ async function edExport(){
           if(ov.vid) _edSyncOvVid(ov, gTime, true); // #111 · export : le clip b-roll tourne en vrai
           const srcEl=(ov.vid && ov.vid.readyState>=2)?ov.vid:ov.img;
           const iw=(srcEl.videoWidth||srcEl.naturalWidth)||1, ih=(srcEl.videoHeight||srcEl.naturalHeight)||1;
-          if(ov._split){ // #136 · cover-crop biaisé vers le haut : les visages du média restent cadrés
-            const cr3=edCoverRect(iw,ih,ov.w/ov.h);
-            try{ cx.drawImage(srcEl, cr3.sx, cr3.sy*0.6, cr3.sw, cr3.sh, ov.x*f, ov.y*f, ov.w*f, ov.h*f); }catch(e){}
+          if(ov._split){ // #split-controls · bande média calculée à la résolution d'export (ratio/inversion) + recadrage _mediaRF
+            const B=_edSplitBands(ov,expH); const dx=0, dy=B.mediaY, dw=expW, dh=B.mediaH;
+            const cr3=edCoverRect(iw,ih,dw/Math.max(1,dh)); const rf=ov._mediaRF;
+            if(rf){ const z=Math.max(1,rf.z||1), sw=cr3.sw/z, sh=cr3.sh/z;
+              const sx=(iw-sw)*(rf.ox==null?0.5:rf.ox), sy=(ih-sh)*(rf.oy==null?0.5:rf.oy);
+              try{ cx.drawImage(srcEl, sx,sy,sw,sh, dx,dy,dw,dh); }catch(e){}
+            } else { try{ cx.drawImage(srcEl, cr3.sx, cr3.sy*0.6, cr3.sw, cr3.sh, dx,dy,dw,dh); }catch(e){} }
           } else {
           const c=ov.crop||{t:0,r:0,b:0,l:0};
           const sx=iw*c.l/100, sy=ih*c.t/100, sw=iw*(1-(c.l+c.r)/100), sh=ih*(1-(c.t+c.b)/100);
@@ -33660,9 +33750,11 @@ function edAddMusic(file){
   _ed.musicDur=0; _ed.musicSegs=null; _ed.musicAuto=true;
   a.onloadedmetadata=()=>{ if(_ed&&_ed.music===a){ _ed.musicDur=a.duration||0; _edAutoExtendBlack(); edRenderMusicTrack(); } };
   _edComputePeaks(file).then(p=>{ if(_ed&&_ed.music){ _ed.musicPeaks=p; edRenderMusicTrack(); } });
-  edEnsureAudioGraph();
-  if(_ed.audio){ try{ const mSrc=_ed.audio.ac.createMediaElementSource(a); const mGain=_ed.audio.ac.createGain(); mGain.gain.value=_ed.musicVol; mSrc.connect(mGain); mGain.connect(_ed.audio.ac.destination); mGain.connect(_ed.audio.dest); _ed.audio.mSrc=mSrc; _ed.audio.mGain=mGain; }catch(e){ a.volume=_ed.musicVol; } }
-  else { a.volume=_ed.musicVol; }
+  // #FPS · PAS de WebAudio en preview : createMediaElementSource(_ed.video) sort la vidéo du
+  // chemin GPU accéléré → chaque drawImage devient un readback GPU = chute de fps / quasi-crash.
+  // La musique joue via l'élément <audio> en preview ; le graphe WebAudio est construit UNIQUEMENT
+  // à l'export (edExport) pour capter musique + voix + SFX dans le fichier.
+  a.volume=Math.min(1, _ed.musicVol!=null?_ed.musicVol:0.7);
   document.getElementById('edMusicEmpty').style.display='none';
   document.getElementById('edMusicLoaded').style.display='block';
   document.getElementById('edMusicName').textContent=file.name;
@@ -33682,7 +33774,10 @@ function edRemoveMusic(silent){
 }
 function edSetMusicVol(v){ if(!_ed) return; _ed.musicVol=Math.max(0,Math.min(2,v/100)); if(_ed.audio&&_ed.audio.mGain) _ed.audio.mGain.gain.value=_ed.musicVol; else if(_ed.music) _ed.music.volume=Math.min(1,_ed.musicVol); _edSyncGainUI('music'); }
 function edSetVideoVol(v){ if(!_ed) return; const _wasMuted=!!_ed.videoMuted; _ed.vol=Math.max(0,Math.min(2,v/100)); if(v>0){ _ed.videoMuted=false; if(_wasMuted && typeof edRenderClipAudioTrack==='function') setTimeout(edRenderClipAudioTrack,0); try{ (_ed.clips||[]).forEach(c=>{ if(c.video) c.video.muted=false; }); if(_ed.video) _ed.video.muted=false; }catch(_){} }
-  if(_ed.vol>1 && !_ed.audio && _ed.video && !_ed.video._black){ try{ edEnsureAudioGraph(); }catch(_){} }   // >100 % = amplification WebAudio, l'élément seul plafonne à 1
+  // #FPS · en preview on NE construit PAS le graphe WebAudio (il tue le drawImage de la vidéo).
+  // L'amplification >100 % de la voix se fait à l'export (edExport bâtit le graphe). En preview la
+  // voix plafonne à 100 % via l'élément — acceptable.
+  if(_ed.exporting && _ed.vol>1 && !_ed.audio && _ed.video && !_ed.video._black){ try{ edEnsureAudioGraph(); }catch(_){} }
   if(_ed.audio&&_ed.audio.vGain) _ed.audio.vGain.gain.value=_ed.vol; else if(_ed.video){ try{ _ed.video.volume=Math.min(1,_ed.vol); }catch(_){} }
   _edSyncGainUI('audio'); }
 // ── Volume DANS la bande (CapCut) : remplissage = gain (0 → vide, 100 % → moitié, 200 % → plein) ;
@@ -33998,6 +34093,16 @@ function edBandDrag(ov,track,e,mode){
         +'</div>'
         +'<div class="ed-seg" style="width:100%;margin-bottom:16px">'+STYLES_ED.map(s=>'<button class="'+(((ov.style||'box')===s[0])?'on':'')+'" onclick="edSetStyle(\''+s[0]+'\')">'+s[1]+'</button>').join('')+'</div>'
         +'<div class="row gap12" style="align-items:center"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>';
+    } else if(ov._split && !ov._splitEmpty){
+      // #split-controls · réglages du split : taille du média (donc de la vidéo en bas), inversion, recadrage de l'anim
+      const r=Math.round(((ov._splitRatio!=null?ov._splitRatio:0.5))*100);
+      body.innerHTML=
+        '<div class="row gap12" style="align-items:center;margin-bottom:12px"><span class="mono faint" style="font-size:11px;width:74px">'+(ov._splitInvert?'Vidéo':'Média')+' en haut</span>'
+          +'<input type="range" class="ed-range" min="20" max="80" value="'+r+'" oninput="edSetSplitRatio(+this.value)"><span class="mono accent" id="edSplitRatioLbl" style="font-size:12px;width:38px;text-align:right">'+r+'%</span></div>'
+        +'<button onclick="edToggleSplitInvert()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg> Inverser haut / bas</button>'
+        +'<button onclick="edToggleMediaReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(ov._mediaReframe?'var(--accent-line)':'var(--border)')+';background:'+(ov._mediaReframe?'var(--accent-soft)':'')+';color:'+(ov._mediaReframe?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer l\'animation</button>'
+        +'<button onclick="edResetMediaRF()" class="btn btn-quiet btn-sm" style="width:100%">Réinitialiser le cadrage</button>'
+        +'<p class="faint" style="font-size:11.5px;margin-top:10px">Le média est en '+(ov._splitInvert?'bas':'haut')+', ta vidéo en '+(ov._splitInvert?'haut':'bas')+'. Active « Recadrer l\'animation » puis glisse / molette sur le média.</p>';
     } else {
       const maxw=Math.round(((_ed&&_ed.dispW)||400)*1.3);
       body.innerHTML=
@@ -34011,14 +34116,19 @@ function edBandDrag(ov,track,e,mode){
     wrap.innerHTML='';
     if(!_ed.overlays.length){ if(empty) empty.style.display='block'; return; }
     if(empty) empty.style.display='none';
-    _ed.overlays.forEach(ov=>{ const on=_ed.sel===ov.id; const isTxt=ov.type==='text';
-      const row=document.createElement('div'); row.className='row gap10';
+    _ed.overlays.forEach((ov,idx)=>{ const on=_ed.sel===ov.id; const isTxt=ov.type==='text', isSplit=!!ov._split;
+      const tag=isTxt?'T':(isSplit?'⬒':'IMG'); const lbl=isTxt?(ov.text||'texte'):(isSplit?(ov._anim?(ov.animName||'Animation'):'Split screen'):'Image');
+      const row=document.createElement('div'); row.className='row gap8';
       row.style.cssText='padding:9px 11px;border-radius:10px;cursor:pointer;border:1px solid '+(on?(isTxt?'var(--accent)':'var(--violet)'):'var(--border)')+';background:'+(on?(isTxt?'var(--accent-soft)':'rgba(154,124,255,.1)'):'var(--surface)');
-      row.innerHTML='<span class="mono" style="font-size:10px;font-weight:700;color:'+(isTxt?'var(--accent-2)':'var(--violet)')+'">'+(isTxt?'T':'IMG')+'</span>'
-        +'<span style="font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(isTxt?(ov.text||'texte'):'Image')+'</span>'
-        +'<span class="mono faint" style="font-size:10px">'+fmtT(ov.start||0)+'–'+fmtT(ov.end||0)+'</span>'
-        +'<button class="ed-mini" data-del="1" style="width:24px;height:24px;color:#FF6B6B"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+      row.innerHTML='<span class="mono" style="font-size:10px;font-weight:700;color:'+(isTxt?'var(--accent-2)':'var(--violet)')+';flex:0 0 auto">'+tag+'</span>'
+        +'<span style="font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lbl+'</span>'
+        +'<span class="mono faint" style="font-size:10px;flex:0 0 auto">'+fmtT(ov.start||0)+'–'+fmtT(ov.end||0)+'</span>'
+        +'<button class="ed-mini" data-up="1" title="Vers l\'avant (au-dessus)" style="width:22px;height:22px;'+(idx>=_ed.overlays.length-1?'opacity:.3;pointer-events:none':'')+'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>'
+        +'<button class="ed-mini" data-down="1" title="Vers l\'arrière (en dessous)" style="width:22px;height:22px;'+(idx<=0?'opacity:.3;pointer-events:none':'')+'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>'
+        +'<button class="ed-mini" data-del="1" style="width:22px;height:22px;color:#FF6B6B"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
       row.onclick=()=>{ if(typeof edSelect==='function') edSelect(ov.id); };
+      const ub=row.querySelector('[data-up]'); if(ub) ub.onclick=(e)=>{ e.stopPropagation(); edMoveLayer(ov.id,+1); };
+      const dn=row.querySelector('[data-down]'); if(dn) dn.onclick=(e)=>{ e.stopPropagation(); edMoveLayer(ov.id,-1); };
       const db=row.querySelector('[data-del]'); if(db) db.onclick=(e)=>{ e.stopPropagation(); const i=_ed.overlays.findIndex(o=>o.id===ov.id); if(i<0) return; if(ov._el) ov._el.remove(); _ed.overlays.splice(i,1); if(_ed.sel===ov.id){ if(typeof edHideProps==='function') edHideProps(); } if(typeof edRenderLayers==='function') edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); };
       wrap.appendChild(row);
     });
