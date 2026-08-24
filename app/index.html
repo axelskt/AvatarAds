@@ -13934,6 +13934,11 @@ const _MD_TEXT_ANIMS = new Set(['type','upload','funnel','flow','quality','free'
 // moteur les lit via items[i].src (anim-pack imgSlot). Nombre de fentes par anim.
 const _MD_IMG_SLOTS = {"tools":2,"connect":2,"copy":1};
 const _MD_IMG_ANIMS = new Set(['tools','connect','copy']);
+// Anims RETIRÉES DE PARTOUT (Montage IA banque/swipe + éditeur) — retours Axel 25/08 :
+// hors-sujet ou buguées (free/hook rendaient noir). Le moteur les ignore aussi (retirées
+// de la banque de rendu + resync). tools/connect/search, eux, ne sont masqués QUE de
+// l'éditeur (ils gardent un sens au Montage IA) → cf. ED_ANIM_HIDE.
+window.AA_ANIM_HIDE = new Set(['countup','clock','grow','target','compare','swap','toggle','badge','template','translate','discount','pin','qr','wizard','portfolio','property','transition','loop','clipping','retake','preview','inventory','deploy','free','hook']);
 // les mots FORTS prononcés dans une fenêtre (miroir du remplissage du worker)
 function _mdWordsIn(a,b){
   const caps=(_md.derived.captions||[]).filter(c=>c.start>=a-0.05&&c.start<b);
@@ -15131,7 +15136,7 @@ function _mdSuggest(scene){
   const norm=(s)=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const cur=(_md.bank||[]).find(b=>b.name===scene.t);
   const ctx=new Set(norm(scene.w+' '+(cur?cur.desc:'')+' '+scene.d).split(/[^a-z0-9]+/).filter(w=>w.length>=4));
-  return (_md.bank||[]).filter(b=>b.name!==scene.t)
+  return (_md.bank||[]).filter(b=>b.name!==scene.t && !(window.AA_ANIM_HIDE&&window.AA_ANIM_HIDE.has(b.name)))
     .map(b=>{ const toks=norm(b.desc).split(/[^a-z0-9]+/); let sc=0;
       for(const t of new Set(toks)) if(t.length>=4&&ctx.has(t)) sc++; return {k:b.name,d:String(b.desc).split(/[.«:]/)[0].trim().slice(0,90),sc}; })
     // pertinentes d'abord, mais ALÉATOIRE à score égal — l'ordre change à
@@ -15509,7 +15514,7 @@ function _mdSwDown(ev){
 }
 // ── BANQUES (Ajouter / changer un bruitage, une transition, un texte) ───────
 function _mdBankDef(kind){
-  if(kind==='animation') return { title:"Banque d'animations", ico:'spark', c:'var(--accent)', items:(_md.bank||[]).map(b=>b.name) };
+  if(kind==='animation') return { title:"Banque d'animations", ico:'spark', c:'var(--accent)', items:(_md.bank||[]).map(b=>b.name).filter(n=>!(window.AA_ANIM_HIDE&&window.AA_ANIM_HIDE.has(n))) };
   if(kind==='sfx') return { title:'Banque de bruitages', ico:'wave', c:_MD_CYAN, items:_MD_SFX_BANK.slice() };
   if(kind==='trans') return { title:'Transitions', ico:'trans', c:'var(--violet)', items:_MD_TRANS_BANK.slice() };
   return { title:'Sous-titre / accroche', ico:'card', c:'var(--blue)', items:_MD_TEXT_BANK.slice() };
@@ -34196,7 +34201,9 @@ function edBandDrag(ov,track,e,mode){
     'logo','screen','phone','avatar','faceless','voice','bio',           // marque / démo / avatar-outil
     'dashboard','menu','integrations','oneclick','settings','library',   // écrans de l'app
     'queue','render','export','record','dropzone','notif','comments',    // workflow interne
-    'comment','chat','result'
+    'comment','chat','result',
+    'tools','connect','search',                                          // Axel 25/08 : hors éditeur (gardés au Montage IA)
+    ...(window.AA_ANIM_HIDE || [])                                       // + tout ce qui est retiré DE PARTOUT
   ]);
   function ensureAnimBank(){
     if(window._edAnimsReal) return Promise.resolve(window._edAnimsReal);

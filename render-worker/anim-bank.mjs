@@ -47,7 +47,6 @@ export const BANK = [
   { name: 'upload',  desc: "une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer. « importe ton fichier », « televerse », « depose ton audio », « envoie ta video », « charge ton image »." },
 
   // ── l'argent ──
-  { name: 'countup', desc: "UN CHIFFRE QUI DEFILE de 0 jusqu'a sa valeur, en tres gros. Pour un montant, un nombre de vues, un pourcentage qu'il ANNONCE. Mets le nombre dans \"value\" et l'unite dans \"unit\". « ca fait X euros », « X millions », « X abonnes », « on est a X »." },
 
   // ── la croissance, l'audience ──
   { name: 'engage',  desc: "DES COEURS ET DES MESSAGES QUI MONTENT sur un fil de discussion. RESERVE au relationnel : « il te repond », « les messages », « ton match », « les DM », « ils t'ecrivent ». Pas pour de l'engagement chiffre — pour ca, prends countup ou grow." },
@@ -68,8 +67,6 @@ export const BANK = [
   { name: 'search',  desc: "chercher, analyser, trouver, reperer. « je cherche », « analyse », « trouve », « repere », « regarde ce qui marche », « la recherche »." },
 
   // ── l'opposition, le changement d'etat ──
-  { name: 'compare', desc: "un avant/apres, deux options opposees, « au lieu de ». Deux visages ou deux ecrans cote a cote, l'un barre, l'autre valide." },
-  { name: 'swap',    desc: "une chose remplacee par une autre : « au lieu de », « a la place de », remplacer." },
   // ── PAQUET 1 (#157) — la qualité, le temps, la diffusion ──
   { name: 'quality', desc: "LA MEME IMAGE FLOUE PUIS NETTE, une ligne qui balaie, et LA MENTION DE QUALITE qui se pose sur la moitie nette. « la meilleure qualite », « c'est net », « en 4K ». Mets la mention entendue dans items[0].text (« 4K », « 1080p », « HD ») — sinon 4K par defaut." },
   { name: 'podium',  desc: "UN PODIUM a trois marches, la premiere monte en tete. « le meilleur du marche », « numero un », « devant tout le monde »." },
@@ -85,9 +82,7 @@ export const BANK = [
   { name: 'roi',     desc: "CE QUI ENTRE ET CE QUI SORT : 1 EUR d'un cote, 5 EUR de l'autre, relies par une fleche. « ton retour sur investissement », « tu mets 1 tu recuperes 5 »." },
   { name: 'plan',    desc: "TROIS CARTES DE PRIX, celle du milieu ressort. « il y a trois formules », « l'offre du milieu », « choisis ton plan »." },
   { name: 'layers',  desc: "DES CALQUES qui se posent les uns sur les autres. « on empile les couches », « le montage », « on ajoute par-dessus »." },
-  { name: 'badge',   desc: "UN SCEAU qui se pose avec sa coche. « c'est certifie », « valide », « garanti », « verifie »." },
   { name: 'trend',   desc: "UNE COURBE QUI GRIMPE avec une grande fleche qui suit sa pente, et le produit de la personne pose au sommet. « ca monte », « la tendance », « de mieux en mieux ». Mets ce qui monte dans items[0].text (« +240 % »)." },
-  { name: 'template', desc: "UN GABARIT qui se duplique en deux copies. « pars d'un modele », « duplique », « le meme format a chaque fois »." },
   { name: 'record',  desc: "LE BOUTON D'ENREGISTREMENT qui pulse au-dessus d'une onde vivante. « tu enregistres ta voix », « appuie sur rec », « ta prise de son »." },
 
   // ── PAQUET 3 (#157) — le geste, pas l'icone ──
@@ -101,7 +96,6 @@ export const BANK = [
   { name: 'silence', desc: "UNE ONDE AUDIO DONT LE SILENCE DISPARAIT ET QUI SE RECOLLE. « on enleve les blancs », « les silences sautent », « le derush »." },
   { name: 'chat',    desc: "UNE CONVERSATION : la question part, la reponse de l'IA s'ecrit dessous. « tu lui demandes », « tu ecris ce que tu veux », « tu lui dis »." },
   { name: 'dashboard', desc: "UN TABLEAU DE BORD : les tuiles se posent et la courbe se trace. « tes stats », « ton tableau de bord », « tu suis tes resultats »." },
-  { name: 'translate', desc: "UNE PHRASE FRANCAISE QUI BASCULE EN ANGLAIS, deux cartes FR puis EN. « dans une autre langue », « traduit », « a l'international »." },
   { name: 'bgswap', desc: "LE DECOR QUI SE REMPLACE DERRIERE LA PERSONNE, la personne ne bouge pas. « tu changes le fond », « un autre decor », « le detourage »." },
   { name: 'export',  desc: "UN CLIP QUI DESCEND EN FICHIER MP4 PRET. « tu recuperes ta video », « tu l'exportes », « tu la telecharges »." },
   { name: 'checklist', desc: "UNE LISTE DONT LES LIGNES SE COCHENT UNE PAR UNE. « tout est inclus », « tu as tout », « rien a rajouter »." },
@@ -136,7 +130,6 @@ export const BANK = [
   { name: 'review',  desc: "UNE CARTE D'AVIS : photo, nom, cinq etoiles qui se remplissent, le temoignage. « leurs avis », « ils temoignent », « ce qu'ils en disent »." },
   { name: 'upgrade', desc: "UNE CARTE QUI PASSE EN PRO et debloque ses options une par une. « tu passes en Pro », « tu montes de plan », « la version superieure ». Mets le nom du plan entendu dans items[0].text (« PRO », « ELITE »)." },
   { name: 'storyboard', desc: "DES PLANS NUMEROTES qui se posent en sequence, avec leur legende. « plan par plan », « le scenario », « la structure de la video »." },
-  { name: 'discount', desc: "UN PRIX QUI SE BARRE et le nouveau qui tombe avec sa pastille. « moins cinquante pour cent », « le prix barre », « en promo ». items[0].text = l'ancien prix, items[1].text = le nouveau, items[2].text = la remise." },
   { name: 'music',   desc: "DEUX PISTES : la voix, et la musique dont le volume passe DESSOUS. « la musique de fond », « je baisse la musique », « sous la voix »." },
   { name: 'bio',     desc: "UN PROFIL, LE LIEN EN BIO qu'on tape, et la page qui monte. « le lien en bio », « clique sur le lien », « c'est dans ma bio »." },
 
@@ -148,9 +141,6 @@ export const BANK = [
   { name: 'story',   desc: "DES STORIES : les anneaux en haut, la barre qui se remplit. « en story », « tu postes en story », « les stories »." },
   { name: 'hashtag', desc: "UNE LISTE DE HASHTAGS avec leur nombre de publications. « les hashtags », « les bons mots-cles », « ce qui est cherche »." },
   { name: 'schedule', desc: "UN CALENDRIER dont les creneaux se remplissent de publications. « c'est programme », « tu planifies ta semaine », « tout est prevu »." },
-  { name: 'pin',     desc: "UN COMMENTAIRE QUI REMONTE EN HAUT avec sa punaise. « le commentaire epingle », « je l'epingle », « en haut des commentaires »." },
-  { name: 'qr',      desc: "UN QR CODE qu'un trait balaie, et la page qui s'ouvre a cote. « scanne le code », « le QR code », « tu scannes et t'y es »." },
-  { name: 'wizard',  desc: "UN ASSISTANT EN TROIS ETAPES : la barre avance, les pastilles s'allument. « en trois etapes », « tu te laisses guider », « etape par etape »." },
 
   // ── PAQUET 7 (#157) — LES DOMAINES D'ACTIVITE ──
   // La banque ne parlait que creation de contenu. Ses utilisateurs vendent des
@@ -161,14 +151,12 @@ export const BANK = [
   { name: 'delivery', desc: "E-COMMERCE — UN SUIVI DE LIVRAISON : le colis avance, les etapes se cochent. « la livraison », « le colis part », « ils recoivent en 48 h »." },
   { name: 'sizes',   desc: "E-COMMERCE — LES DECLINAISONS : les tailles et les couleurs, celles qu'on choisit s'encadrent. « toutes les tailles », « plusieurs coloris »." },
   { name: 'candles', desc: "TRADING — DES BOUGIES JAPONAISES qui se dessinent une a une, vertes et rouges. « le graphique », « la bougie », « ca monte sur le chart »." },
-  { name: 'portfolio', desc: "TRADING — UN PORTEFEUILLE : la valeur totale, la variation, les lignes d'actifs. « mon portefeuille », « mes positions », « ce que ca vaut ». items[0].text = le montant, items[1].text = la variation." },
   { name: 'order',   desc: "TRADING — PASSER UN ORDRE : achat ou vente, le prix, la quantite, valider. « je passe un ordre », « j'achete », « je prends position »." },
   { name: 'pnl',     desc: "TRADING — LA COURBE DE PERFORMANCE qui se trace avec son pourcentage. « le rendement », « la performance », « depuis le debut ». Mets le pourcentage entendu dans items[0].text (« +41 % »)." },
   { name: 'mrr',     desc: "SAAS — LE REVENU RECURRENT : le montant, et les mois qui montent en barres. « le MRR », « l'abonnement mensuel », « le revenu recurrent ». Mets le montant entendu dans items[0].text (« 3 200€ »)." },
   { name: 'churn',   desc: "SAAS — LA RETENTION qui fuit : les barres se vident, le pourcentage en rouge. « le churn », « ils se desabonnent », « on en perd ». Mets le pourcentage entendu dans items[0].text (« -22 % »)." },
   { name: 'onboarding', desc: "SAAS — L'ACTIVATION : les taches se cochent, le pourcentage monte. « l'onboarding », « la prise en main », « les premieres etapes ». Mets le pourcentage entendu dans items[0].text (« 90 % »)." },
   { name: 'integrations', desc: "SAAS — DES OUTILS QUI SE BRANCHENT sur un coeur central. « les integrations », « ca se connecte a tout », « compatible avec »." },
-  { name: 'property', desc: "IMMOBILIER — UNE ANNONCE : la photo, le prix, les pieces et les metres carres. « ce bien », « l'appartement », « je le mets en location ». Mets le prix entendu dans items[0].text." },
   { name: 'menu',    desc: "RESTAURATION — UNE CARTE : les plats, leurs prix, celui qu'on choisit. « la carte », « le menu », « ce plat-la », « les prix »." },
 
   // ── PAQUET 8 (#157) — la suite des domaines ──
@@ -205,28 +193,21 @@ export const BANK = [
   { name: 'script',  desc: "UN SCRIPT dont les lignes s'ecrivent et dont une phrase se surligne. « le script », « ce que tu vas dire », « j'ecris le texte ». Mets la duree entendue dans items[0].text (« 0:42 »)." },
   { name: 'clapper', desc: "UN CLAP DE CINEMA rempli qui claque. « moteur », « on tourne », « prise deux », « action »." },
   { name: 'retakes', desc: "TROIS PRISES NUMEROTEES, les ratees se barrent, la bonne s'encadre. « on la refait », « la bonne prise », « je garde celle-la »." },
-  { name: 'transition', desc: "UN PLAN QUI EN BALAIE UN AUTRE, ligne lumineuse au passage. « et la ca bascule », « la transition », « on enchaine »." },
   { name: 'zoompunch', desc: "LE CADRE QUI SE RESSERRE d'un coup sur un detail qui grossit. « regarde bien ca », « zoom la-dessus », « le detail qui compte »." },
   { name: 'speedramp', desc: "UNE TIMELINE avec sa zone ralentie et sa zone acceleree. « la tu ralentis », « en accelere », « le ralenti sur ce moment »." },
   { name: 'substyle', desc: "TROIS STYLES DE SOUS-TITRES cote a cote, celui qu'on retient s'encadre. « le style de sous-titres », « tu choisis la typo »." },
   { name: 'trendsound', desc: "UN SON TENDANCE : sa forme d'onde, sa courbe d'usage, son compteur. « le son du moment », « le son qui marche », « la tendance ». Mets le nombre de videos entendu dans items[0].text." },
   { name: 'algorithm', desc: "UNE VIDEO QUI SE PROPAGE dans une grille d'ecrans autour d'elle. « l'algo te pousse », « ca part tout seul », « il te met en avant »." },
-  { name: 'loop',    desc: "LA LECTURE QUI REPART sans coupure, la fleche circulaire tourne. « ils la regardent en boucle », « ca reboucle », « le replay ». Mets le nombre de fois entendu dans items[0].text (« ×7 »)." },
   { name: 'cv',      desc: "RECRUTEMENT — DES CANDIDATURES, celle qu'on retient ressort avec sa coche. « les candidatures », « je recrute », « celui-la je le prends »." },
   { name: 'framing', desc: "TOURNAGE — LE CADRE QUI SE RESSERRE sur le sujet, la grille des tiers apparait. « bien te cadrer », « le cadrage », « recentre-toi »." },
   { name: 'focus',   desc: "TOURNAGE — L'IMAGE FLOUE QUI DEVIENT NETTE d'un coup. « fais la mise au point », « c'est flou », « une image nette »." },
-  { name: 'clipping', desc: "TOURNAGE — L'ONDE QUI TAPE LE PLAFOND ET ROUGIT, puis redescend sous la ligne. « ton son sature », « c'est trop fort », « ca crache »." },
   { name: 'lighting', desc: "TOURNAGE — LA LUMIERE QUI SE POSE sur le visage, l'ombre recule. « eclaire-toi », « la lumiere », « ne tourne pas dans le noir »." },
-  { name: 'retake',  desc: "TOURNAGE — LA PRISE RATEE BARREE QUI PART et la suivante qui arrive. « je la refais », « deuxieme prise », « rate ». Mets le numero entendu dans items[0].text (« PRISE 4 »)." },
   { name: 'caption', desc: "PUBLICATION — LA DESCRIPTION ET LES HASHTAGS QUI S'ECRIVENT sous la video avant de poster. « la description », « les hashtags », « ce que tu ecris »." },
-  { name: 'preview', desc: "PUBLICATION — LE RENDU FINAL QUI S'AFFICHE DANS LE FIL, tel qu'il sera vu. « avant de poster », « l'apercu », « ce que les gens voient »." },
   { name: 'spike',   desc: "ANALYSE — LA COURBE PLATE QUI DECOLLE D'UN COUP avec son chiffre. « ca a explose », « le pic », « d'un coup ». Mets le chiffre entendu dans items[0].text (« 340K »)." },
   { name: 'brandeal', desc: "CREATEUR — UNE MARQUE QUI PROPOSE UN PARTENARIAT, le montant arrive dans le message. « une marque m'a contacte », « un partenariat », « ils me paient ». Mets le montant entendu dans items[0].text (« 1500 € »)." },
   { name: 'mediakit', desc: "CREATEUR — LA FICHE STATS QUI SE COMPOSE, trois chiffres qui se posent. « mon media-kit », « mes stats », « ce que j'envoie aux marques ». Mets les trois valeurs entendues dans items[0..2].text (« 84K ; 2,1 M ; 7,4 % »)." },
-  { name: 'inventory', desc: "E-COM — LE STOCK QUI DESCEND jusqu'a l'alerte, puis se reapprovisionne. « je suis en rupture », « le stock », « je recommande »." },
   { name: 'stoploss', desc: "TRADING — LA BOUGIE QUI TOUCHE LA LIGNE et la position qui se ferme. « mon stop », « je coupe la perte », « ca part contre moi »." },
   { name: 'orderbook', desc: "TRADING — LE CARNET D'ORDRES QUI SE REMPLIT des deux cotes, l'ecart se resserre. « le carnet », « acheteurs et vendeurs », « le spread »." },
-  { name: 'deploy',  desc: "SAAS — LES ETAPES QUI DEFILENT jusqu'au badge EN LIGNE. « je deploie », « la mise en ligne », « c'est en prod »." },
   { name: 'uptime',  desc: "SAAS — LA LIGNE DE DISPONIBILITE qui se remplit jour apres jour. « jamais de panne », « la dispo », « ca tourne tout le temps ». Mets le taux entendu dans items[0].text (« 99,98 % »)." },
   { name: 'leads',   desc: "SAAS — LES PROSPECTS QUI TOMBENT UN A UN dans la liste, le compteur monte. « les leads », « les inscrits », « ma liste grossit ». Mets le nombre entendu dans items[0].text (« 312 »)." },
   { name: 'comment', desc: "LE CLAVIER DU TELEPHONE et le mot qui se TAPE touche par touche dans le champ de commentaire. « ecris-moi en commentaire », « tape ce mot », « dis-le moi en commentaire ». Mets LE MOT a taper dans items[0].text — les touches s'enfoncent en meme temps que les lettres." },
