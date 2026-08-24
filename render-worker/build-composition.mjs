@@ -874,9 +874,11 @@ export function buildComposition(plan, opts = {}) {
   // `section.transition` ('flash' | 'filmburn' | 'glitch'). Défaut = 'flash'
   // → comportement historique inchangé si le chef ne dit rien.
   const secByStart = new Map((plan.sections || []).map((s) => [r2(s.start), s]))
-  const TRANS_OK = new Set(['flash', 'filmburn', 'glitch'])
+  const maskSil = opts.maskSil || ''   // silhouette blanche de l'avatar (worker) pour le Mask Glitch ; vide = repli glitch
+  const TRANS_OK = new Set(['flash', 'filmburn', 'glitch', 'maskglitch'])
   const transAt = (t) => {
-    const s = secByStart.get(r2(t)); const ty = s && String(s.transition || '').toLowerCase()
+    const s = secByStart.get(r2(t)); let ty = s && String(s.transition || '').toLowerCase()
+    if (ty === 'maskglitch' && !maskSil) ty = 'glitch'
     return TRANS_OK.has(ty) ? ty : 'flash'
   }
   const flashJs = secBounds.map((t) => {
@@ -889,6 +891,14 @@ export function buildComposition(plan, opts = {}) {
       tl.fromTo('#glitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.9, y: -26, duration: 0.05, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${t0});
       tl.fromTo('#glitch2', { autoAlpha: 0, x: 0 }, { autoAlpha: 0.7, x: 24, duration: 0.045, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${r2(Math.max(0, t - 0.02))});
       tl.set(['#glitch','#glitch2'], { autoAlpha: 0 }, ${r2(t + 0.24)});`
+    if (ty === 'maskglitch') return `
+      tl.to('#maskSil', { autoAlpha: 1, duration: 0.10, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.14))});
+      tl.to('#maskSil', { scale: 1.04, duration: 0.16, ease: 'power1.out' }, ${r2(Math.max(0, t - 0.10))});
+      tl.fromTo('#maskBeam', { autoAlpha: 0, scaleX: 0.12 }, { autoAlpha: 1, scaleX: 1.5, duration: 0.14, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.02))});
+      tl.fromTo('#glitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.8, y: -20, duration: 0.045, repeat: 3, yoyo: true, ease: 'steps(1)' }, ${t});
+      tl.to('#maskSil', { autoAlpha: 0, scale: 1.14, duration: 0.20, ease: 'power2.in' }, ${r2(t + 0.04)});
+      tl.to('#maskBeam', { autoAlpha: 0, scaleX: 2.2, duration: 0.22, ease: 'power2.in' }, ${r2(t + 0.08)});
+      tl.set(['#glitch'], { autoAlpha: 0 }, ${r2(t + 0.20)});`
     return `
       tl.fromTo('#flash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${t0});
       tl.to('#flash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`
@@ -1079,6 +1089,10 @@ export function buildComposition(plan, opts = {}) {
         background: repeating-linear-gradient(0deg, rgba(0,255,238,.55) 0 3px, transparent 3px 10px, rgba(255,0,128,.55) 10px 13px, transparent 13px 26px); }
       #glitch2 { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
         background: linear-gradient(90deg, transparent 0 18%, rgba(0,255,238,.5) 18% 34%, transparent 34% 55%, rgba(255,0,120,.5) 55% 72%, transparent 72%); }
+      #maskSil { inset: 0; z-index: 10; pointer-events: none; background-size: cover; background-position: center; background-repeat: no-repeat;
+        filter: drop-shadow(0 0 26px rgba(180,230,255,.9)) drop-shadow(0 0 60px rgba(120,200,255,.6)); }
+      #maskBeam { top: 0; bottom: 0; left: 50%; width: 300px; margin-left: -150px; z-index: 10; pointer-events: none; mix-blend-mode: screen;
+        background: linear-gradient(90deg, transparent, rgba(190,235,255,.6) 34%, rgba(255,255,255,1) 50%, rgba(190,235,255,.6) 66%, transparent); }
 
       /* scènes UI du script mot-à-mot (timer, navigateur, grille, vol de photo) */
       .wui { inset: 0; z-index: 4; }
@@ -1184,15 +1198,19 @@ ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-dur
       <div id="burn" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
       <div id="glitch" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
       <div id="glitch2" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
-` : ''}    </div>
+${maskSil ? `      <div id="maskSil" class="clip" data-start="0" data-duration="${D}" data-track-index="8" style="background-image:url('${maskSil}')"></div>
+      <div id="maskBeam" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+` : ''}` : ''}    </div>
 
     <script>
 ${wordMode ? WORD_FIT_JS + '\n' : ''}      window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
-` : ''}${secBounds.length ? `      tl.set(['#flash', '#burn', '#glitch', '#glitch2'], { autoAlpha: 0 }, 0);
-` : ''}${avatarSegs.map((a) => `      tl.set('#${a.id}', { autoAlpha: 0 }, 0);`).join('\n')}
+` : ''}${secBounds.length ? `      tl.set(['#flash', '#burn', '#glitch', '#glitch2'${maskSil ? `, '#maskSil', '#maskBeam'` : ''}], { autoAlpha: 0 }, 0);
+${maskSil ? `      tl.set('#maskSil', { scale: 1 }, 0);
+      tl.set('#maskBeam', { scaleX: 0.12 }, 0);
+` : ''}` : ''}${avatarSegs.map((a) => `      tl.set('#${a.id}', { autoAlpha: 0 }, 0);`).join('\n')}
 ${layoutJs}
 ${zoomJs}
 ${brollJs}
