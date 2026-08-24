@@ -246,7 +246,7 @@ const PLAN_SCHEMA = {
   properties: {
     // LIGNES COMPACTES "champ|champ|…" — le format exact est decrit dans le prompt
     // et re-etale en objets par expandPlan() juste apres la reponse.
-    sections: { type: 'array', items: { type: 'string' } },        // "role|start|end|label"
+    sections: { type: 'array', items: { type: 'string' } },        // "role|start|end|label|transition"
     zooms: { type: 'array', items: { type: 'string' } },           // "t|dur|scale|cx|cy"
     broll: { type: 'array', items: { type: 'string' } },           // "assetId|start|end|fonctionnalite"
     beats: { type: 'array', items: { type: 'string' } },           // "mot|animation|valeur" — les mots forts (valeur optionnelle)
@@ -299,7 +299,7 @@ function expandPlan(raw: any): Plan {
   const arr = (v: unknown) => (Array.isArray(v) ? v : [])
   const [hookText, hookStart, hookEnd] = cut(raw.hook, 3)
   return {
-    sections: arr(raw.sections).map((l) => { const [role, a, b, label] = cut(l, 4); return { role, start: num(a), end: num(b), label } }),
+    sections: arr(raw.sections).map((l) => { const [role, a, b, label, tr] = cut(l, 5); return { role, start: num(a), end: num(b), label, transition: ['flash', 'filmburn', 'glitch'].includes(String(tr || '').toLowerCase()) ? String(tr).toLowerCase() : '' } }),
     zooms: arr(raw.zooms).map((l) => { const [t, dur, scale, cx, cy] = cut(l, 5); return { t: num(t), dur: num(dur), scale: num(scale), cx: num(cx), cy: num(cy) } }),
     broll: arr(raw.broll).map((l) => { const [assetId, a, b, feature] = cut(l, 4); return { assetId, start: num(a), end: num(b), feature } }),
     beats: arr(raw.beats).map((l) => { const [word, anim, value] = cut(l, 3); return { word, anim, value } }),
@@ -328,7 +328,7 @@ function expandPlan(raw: any): Plan {
 }
 
 type Plan = {
-  sections: { role: string; start: number; end: number; label: string }[]
+  sections: { role: string; start: number; end: number; label: string; transition?: string }[]
   zooms: { t: number; dur: number; scale: number; cx: number; cy: number; reason?: string }[]
   broll: { assetId: string; start: number; end: number; feature?: string; reason?: string }[]
   beats?: { word: string; anim: string; value?: string }[]
@@ -736,7 +736,7 @@ async function claudePlan(
 
   const styleBlock = `
 FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non des objets : un schema tout en objets imbriques fait exploser la grammaire du mode strict et l'API refuse alors TOUT appel. Respecte l'ordre des champs a la lettre, separateur "|", aucun espace autour :
-  sections[]       : "role|start|end|label"            ex "hook|0|3.2|l'accroche"
+  sections[]       : "role|start|end|label|transition"  ex "hook|0|3.2|l'accroche|flash"  (transition = la coupe au DEBUT de la section, optionnelle, voir SECTIONS)
   zooms[]          : "t|dur|scale|cx|cy"               ex "4.10|0.9|1.22|0.50|0.34"
   broll[]          : "assetId|start|end|fonctionnalite"  ex "img1|6.20|8.40|split screen"
   beats[]          : "mot|animation|valeur"             ex "viral|rocket|" · "kilos|weight|-10 kg" · "abonnes|profile|+3K"
@@ -765,6 +765,7 @@ Les autres champs de slides restent des champs normaux : type, layout, motif, st
 
 VALEURS AUTORISEES (le schema ne les contraint plus — un enum de schema fait exploser la grammaire du mode strict — donc RESPECTE-LES a la lettre, tout le reste est jete par le serveur) :
   sections[].role : hook | benefice | preuve | cta | outro
+  sections[].transition (optionnel, coupe au DEBUT de la section) : flash (defaut, punchy/neutre) | filmburn (fuite de lumiere chaude, cinematique/pose/premium) | glitch (numerique, tech/energique). Choisis selon le TON du passage ; laisse vide (=flash) si tu hesites. La 1re section (hook) n'a pas de transition d'entree.
   slides[].type   : flow | checklist | compare | stat | card | nodes | loop | bars | kpi | timer | versus | punch | banner
   slides[].layout : split | full | banner
   slides[].motif  : "" | chain | tiles | versus | bars | ring | cloud | halftone | grid
