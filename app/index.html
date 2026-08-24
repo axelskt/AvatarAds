@@ -4601,7 +4601,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div class="faint mono" style="font-size:10.5px">vidéos · images · audio</div>
               </div>
               <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
-              <button onclick="document.getElementById('edSplitIn').click()" class="btn btn-ghost" style="width:100%;margin-bottom:12px;border-color:rgba(34,211,238,.35);color:#22D3EE"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="8" rx="2"/><rect x="4" y="13" width="16" height="8" rx="2"/><circle cx="12" cy="16.5" r="1.6"/><path d="M9 20c.6-1.2 1.7-1.9 3-1.9s2.4.7 3 1.9"/></svg> Split screen</button>
+              <button onclick="edSplitStart()" class="btn btn-ghost" style="width:100%;margin-bottom:12px;border-color:rgba(34,211,238,.35);color:#22D3EE"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="8" rx="2"/><rect x="4" y="13" width="16" height="8" rx="2"/><circle cx="12" cy="16.5" r="1.6"/><path d="M9 20c.6-1.2 1.7-1.9 3-1.9s2.4.7 3 1.9"/></svg> Split screen</button>
               <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
               <input type="file" id="edSplitIn" accept="image/*,video/*" style="display:none" onchange="edAddSplit(this.files[0]);this.value=''">
             </div>
@@ -31713,7 +31713,10 @@ function edPlay(){
   _edMusicSync(edGlobalNow(), true); // musique calée sur le temps GLOBAL, segments compris
   _ed.video.play().then(()=>{ _ed.playing=true; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Pause'; }).catch(()=>{});
 }
-function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}} _ed.playing=false; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Lire'; }
+function edPause(){ if(!_ed) return; _ed.video.pause(); if(_ed.music){try{_ed.music.pause();}catch(e){}}
+  // #pause · silence IMMÉDIAT même via WebAudio (le buffer du contexte peut traîner ~qq ms) : gain à 0
+  if(_ed.audio&&_ed.audio.mGain){ try{ const g=_ed.audio.mGain.gain, t=_ed.audio.ac.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(0,t); }catch(e){} }
+  _ed.playing=false; const b=document.getElementById('edPlayLbl'); if(b) b.textContent='Lire'; }
 
 function edUpdateTime(){ const el=document.getElementById('edTime'); if(el&&_ed){ const tot=edTotalDur(); el.textContent=edFmtMs(Math.min(edGlobalNow(),tot))+' / '+edFmtMs(tot); } }
 function edUpdatePlayhead(){ if(!_ed) return; const tl=document.getElementById('edTl'); const ph=document.getElementById('edTlPlayhead'); if(!tl||!ph) return; const total=edTotalDur()||1; const frac=Math.max(0,Math.min(1,edGlobalNow()/total)); ph.style.left=(100+frac*tl.clientWidth)+'px'; }
@@ -31879,51 +31882,98 @@ function edAddImage(file){
 // #anim · une animation de la banque = un B-ROLL VIDÉO plein cadre posé au curseur, visible
 // dans la piste « Éléments » (déplaçable / redimensionnable / rognable) et joué EN BOUCLE sur
 // sa fenêtre — preview ET export. Avant, choisir une animation ne faisait qu'un zoom générique.
-function edAddAnimOverlay(name){
-  if(!_ed) return; edSnap();
+// #anim/#split · une animation N'EST PLUS un plein cadre (les previews ont un fond clair → ça
+// blanchissait tout l'écran). On COMPOSE : l'anim/média va dans la moitié HAUTE d'un SPLIT, la
+// vidéo de l'utilisateur en bas. Le split peut être créé VIDE puis rempli (anim ou média).
+function _edSplitFaceAware(ov){
+  // cadrage face-aware de la moitié BASSE (même détection que Motion Control) : le visage vise
+  // le haut de la moitié basse, jamais coupé ni noyé en bas.
+  try{
+    const v=_ed.video, c=document.createElement('canvas');
+    const cw2=Math.min(560, v.videoWidth||560);
+    c.width=cw2; c.height=Math.max(2, Math.round(cw2*(v.videoHeight||16)/(v.videoWidth||9)));
+    c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+    if(typeof _detectFaceBox==='function') _detectFaceBox(c.toDataURL('image/jpeg',0.85)).then(box=>{
+      if(!box) return;
+      const vw=v.videoWidth||1080, vh=v.videoHeight||1920;
+      const bandFrac=Math.min(1,(vw/vh)/(_ed.dispW/(_ed.dispH/2)));
+      if(bandFrac>=0.999) return;
+      ov._faceP=Math.max(0,Math.min(1,((box.y+box.h/2)-0.32*bandFrac)/(1-bandFrac)));
+    }).catch(()=>{});
+  }catch(_){}
+}
+// crée un SPLIT VIDE au curseur (vidéo en bas, emplacement haut à remplir). Aucun fichier requis.
+function edSplitStart(){
+  if(!_ed){ toast('Charge d\'abord une vidéo'); return; }
+  const gt=edGlobalNow(), end=Math.min(edTotalDur(), gt+3);
+  if(end-gt<0.5){ toast('Trop proche de la fin — recule la tête de lecture'); return; }
+  const ex=(_ed.overlays||[]).find(o=>o._split && o._splitEmpty && gt>=o.start && gt<=o.end);
+  if(ex){ edSelect(ex.id); toast('Split déjà là — clique le haut pour le remplir'); return; }
+  edSnap();
+  const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,5), type:'image', _split:true, _splitEmpty:true,
+    x:0, y:0, w:_ed.dispW, h:_ed.dispH/2, crop:{t:0,r:0,b:0,l:0}, start:gt, end };
+  _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
+  _edSplitFaceAware(ov);
+  toast('Split créé — clique le haut pour y mettre une animation ou un média');
+}
+// remplit la moitié haute d'un split avec un média (image / vidéo / animation)
+function _edFillSplit(ov, media){
+  if(!ov||!_ed) return; edSnap();
+  ov._splitEmpty=false;
+  ov.vid = media.vid || null; ov.img = media.img || null;
+  ov.url = media.url || ov.url; ov.animName = media.animName || null; ov._anim = !!media.animName; ov._noLoop = !!media.animName;
+  if(ov._el){ ov._el.remove(); ov._el=null; }
+  edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
+  toast(media.animName ? ('Animation « '+media.animName+' » dans le split') : 'Média ajouté au split');
+}
+// une animation de la banque → remplit un split vide (cible du placeholder ou sous le curseur),
+// sinon en crée un neuf avec l'anim en haut. Plus JAMAIS de plein cadre blanc.
+function edAddAnimToSplit(name){
+  if(!_ed){ toast('Charge d\'abord une vidéo'); return; }
   const nm=String(name||'').replace(/[^a-z0-9_-]/gi,'');
   const url=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
   const gt=edGlobalNow();
-  const vid=document.createElement('video'); vid.src=url; vid.muted=true; vid.playsInline=true; vid.loop=true; vid.preload='auto';
-  const ov={ id:'ov'+Date.now(), type:'image', _anim:true, animName:(name||'Animation'), vid, url,
-             x:0, y:0, w:_ed.dispW, h:_ed.dispH, crop:{t:0,r:0,b:0,l:0}, start:gt, end:Math.min(edTotalDur(), gt+2) };
-  // durée réelle de l'anim connue → cale la fenêtre dessus (les previews font ~1,8 s)
-  vid.onloadedmetadata=()=>{ if(_ed && _ed.overlays.indexOf(ov)>=0){ const d=(isFinite(vid.duration)&&vid.duration>0.3)?vid.duration:2; ov.end=Math.min(edTotalDur(), ov.start+d); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); } };
+  const vid=document.createElement('video'); vid.src=url; vid.muted=true; vid.playsInline=true; vid.loop=false; vid.preload='auto';
+  let slot = _ed._splitFillTarget ? (_ed.overlays||[]).find(o=>o.id===_ed._splitFillTarget && o._split && o._splitEmpty) : null;
+  if(!slot) slot=(_ed.overlays||[]).find(o=>o._split && o._splitEmpty && gt>=o.start && gt<=o.end);
+  _ed._splitFillTarget=null;
+  if(slot){ vid.onloadeddata=()=>_edFillSplit(slot,{vid,url,animName:name}); vid.onerror=()=>toast('Animation illisible'); return; }
+  const end=Math.min(edTotalDur(), gt+3);
+  if(end-gt<0.5){ toast('Trop proche de la fin — recule la tête de lecture'); return; }
+  edSnap();
+  const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,5), type:'image', _split:true, _anim:true, _noLoop:true, animName:name, vid, url,
+    x:0, y:0, w:_ed.dispW, h:_ed.dispH/2, crop:{t:0,r:0,b:0,l:0}, start:gt, end };
+  // la fenêtre se cale sur la durée RÉELLE de l'anim → elle joue une fois puis se fige (pas de boucle infinie)
+  vid.onloadedmetadata=()=>{ if(_ed && (_ed.overlays||[]).indexOf(ov)>=0){ const d=(isFinite(vid.duration)&&vid.duration>0.3)?vid.duration:2.5; ov.end=Math.min(edTotalDur(), ov.start+d); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); } };
   _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
-  toast('Animation « '+name+' » ajoutée — piste Éléments (glisse/étire la pastille)');
+  _edSplitFaceAware(ov);
+  toast('Animation « '+name+' » en haut du split — ta vidéo passe en bas');
 }
+// garde-fou : ancien nom encore appelé ailleurs → route vers la nouvelle logique split
+function edAddAnimOverlay(name){ return edAddAnimToSplit(name); }
 
 // ── #136 · SPLIT SCREEN : ta vidéo passe en moitié BASSE (visage entier, safe
 // zone), le média choisi occupe la moitié HAUTE pendant la fenêtre de la zone.
 // C'est un overlay verrouillé (_split) : fenêtre réglable sur la piste des
 // éléments comme n'importe quel autre, position fixe à l'écran.
 function edAddSplit(file){
-  if(!_ed||!file) return; edSnap();
+  if(!_ed||!file) return;
   const url=URL.createObjectURL(file);
-  const gt=edGlobalNow(), end=Math.min(edTotalDur(), gt+3);
-  if(end-gt<0.5){ toast('Trop proche de la fin — recule la tête de lecture'); return; }
+  const gt=edGlobalNow();
+  let slot = _ed._splitFillTarget ? (_ed.overlays||[]).find(o=>o.id===_ed._splitFillTarget && o._split && o._splitEmpty) : null;
+  if(!slot) slot=(_ed.overlays||[]).find(o=>o._split && o._splitEmpty && gt>=o.start && gt<=o.end);
+  _ed._splitFillTarget=null;
   const fin=(img,vid)=>{
-    const ov={ id:'ov'+Date.now(), type:'image', img, url, _split:true,
+    if(slot){ _edFillSplit(slot,{img,vid,url}); return; }   // remplit le haut d'un split vide
+    const end=Math.min(edTotalDur(), gt+3);
+    if(end-gt<0.5){ toast('Trop proche de la fin — recule la tête de lecture'); return; }
+    edSnap();
+    const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,5), type:'image', img, url, _split:true,
       x:0, y:0, w:_ed.dispW, h:_ed.dispH/2, crop:{t:0,r:0,b:0,l:0}, start:gt, end };
     if(vid) ov.vid=vid;
-    _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers();
-    if(typeof edRenderOvTrack==='function') edRenderOvTrack();
+    _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
+    _edSplitFaceAware(ov);
     toast('Split screen ajouté — ta vidéo passe en bas, le média en haut');
-    // cadrage face-aware de la moitié basse (même détection que Motion Control) :
-    // le visage vise le haut de la moitié basse, jamais coupé ni noyé en bas
-    try{
-      const v=_ed.video, c=document.createElement('canvas');
-      const cw2=Math.min(560, v.videoWidth||560);
-      c.width=cw2; c.height=Math.max(2, Math.round(cw2*(v.videoHeight||16)/(v.videoWidth||9)));
-      c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-      if(typeof _detectFaceBox==='function') _detectFaceBox(c.toDataURL('image/jpeg',0.85)).then(box=>{
-        if(!box) return;
-        const vw=v.videoWidth||1080, vh=v.videoHeight||1920;
-        const bandFrac=Math.min(1,(vw/vh)/(_ed.dispW/(_ed.dispH/2)));
-        if(bandFrac>=0.999) return;
-        ov._faceP=Math.max(0,Math.min(1,((box.y+box.h/2)-0.32*bandFrac)/(1-bandFrac)));
-      }).catch(()=>{});
-    }catch(_){}
   };
   if(file.type.startsWith('video/')){
     const v=document.createElement('video'); v.src=url; v.muted=true; v.playsInline=true; v.preload='auto';
@@ -31944,6 +31994,22 @@ function edBuildOverlayEl(ov){
   const el=document.createElement('div'); el.className='ed-ov'; el.dataset.id=ov.id;
   el.style.cssText='position:absolute;cursor:move;box-sizing:border-box;left:'+ov.x+'px;top:'+ov.y+'px;';
   if(ov.type==='text'){ el.style.width=ov.w+'px'; el.innerHTML='<div class="ed-ov-txt"></div>'; }
+  else if(ov._split && ov._splitEmpty){
+    // emplacement HAUT d'un split VIDE : à remplir par une animation ou un média (aucun fichier requis pour créer le split)
+    el.style.width=ov.w+'px'; el.style.height=ov.h+'px'; el.style.cursor='pointer';
+    el.innerHTML='<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;box-sizing:border-box;border:2px dashed rgba(34,211,238,.6);border-radius:12px;background:rgba(18,24,28,.55);color:#8fe6f4;font-family:var(--mono);font-size:11px;text-align:center;padding:6px">'
+      +'<span style="opacity:.9">Haut du split — à remplir</span>'
+      +'<div style="display:flex;gap:7px">'
+      +'<button data-fill="anim" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer">✦ Animation</button>'
+      +'<button data-fill="media" style="background:rgba(34,211,238,.14);border:1px solid rgba(34,211,238,.45);color:#8fe6f4;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer">Importer</button>'
+      +'</div></div>';
+    stage.appendChild(el); ov._el=el;
+    const aB=el.querySelector('[data-fill="anim"]'), mB=el.querySelector('[data-fill="media"]');
+    if(aB) aB.onclick=(e)=>{ e.stopPropagation(); _ed._splitFillTarget=ov.id; if(typeof edOpenBank==='function') edOpenBank('anim'); };
+    if(mB) mB.onclick=(e)=>{ e.stopPropagation(); _ed._splitFillTarget=ov.id; const inp=document.getElementById('edSplitIn'); if(inp) inp.click(); };
+    el.addEventListener('pointerdown',(e)=>{ if(e.target.closest&&e.target.closest('button')) return; edSelect(ov.id); });
+    return;
+  }
   else { el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
     // #111 · b-roll vidéo : le MÊME élément <video> sert au preview (DOM) et à l'export (drawImage)
     const im=ov.vid||document.createElement('img'); if(!ov.vid) im.src=ov.url;
@@ -32207,8 +32273,18 @@ function _edMusicSync(gt, playing){
   if(mt!=null && _ed.musicDur && mt>=_ed.musicDur) mt=null; // au-delà du fichier
   if(mt==null){ if(!m.paused){ try{ m.pause(); }catch(e){} } return; }
   if(playing){
-    if(m.paused){ try{ m.currentTime=mt; const p=m.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
-    else if(Math.abs(m.currentTime-mt)>0.35){ try{ m.currentTime=mt; }catch(e){} }
+    if(m.paused){
+      // (re)démarrage : on cale une fois, on rétablit le gain (la pause l'avait coupé) et on LAISSE courir
+      try{ m.currentTime=mt; const p=m.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
+      if(_ed.audio&&_ed.audio.mGain){ try{ _ed.audio.mGain.gain.setValueAtTime(_ed.musicVol!=null?_ed.musicVol:0.7, _ed.audio.ac.currentTime); }catch(e){} }
+      _ed._musicCorrAt=gt;
+    } else {
+      // #fluide · en lecture on NE recale PAS en continu : le rAF vidéo peut retarder, la musique
+      // (horloge temps-réel) prenait de l'avance → recalage arrière = « coupures tout le temps ».
+      // On ne corrige QUE les gros décalages (saut de segment, gros lag) et pas plus d'1×/1,5 s.
+      const drift=Math.abs(m.currentTime-mt);
+      if(drift>0.9 && (gt-(_ed._musicCorrAt==null?-9:_ed._musicCorrAt))>1.5){ try{ m.currentTime=mt; }catch(e){} _ed._musicCorrAt=gt; }
+    }
   } else { try{ m.currentTime=mt; }catch(e){} }
 }
 function edRenderMusicTrack(){
@@ -32996,7 +33072,10 @@ function _edSyncOvVid(o, gt, playing){
   const on = gt>=(o.start||0)-0.05 && gt<=((o.end==null?1e9:o.end)+0.05);
   if(!on){ if(!v.paused){ try{ v.pause(); }catch(_){} } if(v.currentTime>0.01){ try{ v.currentTime=0; }catch(_){} } return; }
   const dur=v.duration, raw=Math.max(0, gt-(o.start||0));
-  const lt=(isFinite(dur)&&dur>0.3) ? raw%dur : raw;
+  const _hasDur=isFinite(dur)&&dur>0.3;
+  // #noloop · une animation ne se REJOUE PAS à l'infini : passé sa durée, on fige la dernière image
+  if(o._noLoop && _hasDur && raw>=dur){ if(!v.paused){ try{v.pause();}catch(_){} } try{ if(Math.abs(v.currentTime-(dur-0.05))>0.12) v.currentTime=dur-0.05; }catch(_){} return; }
+  const lt = o._noLoop ? (_hasDur?Math.min(raw, dur-0.05):raw) : (_hasDur ? raw%dur : raw);
   if(playing){
     if(v.paused){ try{ v.currentTime=lt; }catch(_){} v.play().catch(()=>{}); }
     else if(Math.abs(v.currentTime-lt)>0.4){ try{ v.currentTime=lt; }catch(_){} }
@@ -33739,8 +33818,8 @@ function edRenderOvTrack(){
     const chip=document.createElement('div');
     chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:46px;display:flex;align-items:center;gap:4px;padding:0 6px;border-radius:5px;background:rgba('+cB+','+(on?'.42':'.24')+');border:1.5px solid '+(on?'#fff':'rgba('+cB+',.65)')+';color:'+cTx+';font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(on?2:1)+';cursor:grab;touch-action:none'+(on?';box-shadow:0 0 0 1.5px rgba('+cB+',.9),0 0 12px rgba('+cB+',.5)':'');
     chip.title='Clique = sélectionner · glisse = déplacer · tire les bords = durée · Suppr = retirer';
-    const tag=isTxt?'T':(isSplit?'⬒':(isAnim?'✦':'IMG'));
-    const lbl=isTxt?(ov.text||'Texte'):(isSplit?'Split':(isAnim?(ov.animName||'Animation'):'Image'));
+    const tag=isTxt?'T':(isSplit?(ov._anim?'✦':'⬒'):(isAnim?'✦':'IMG'));
+    const lbl=isTxt?(ov.text||'Texte'):(isSplit?(ov._splitEmpty?'Split (vide)':(ov._anim?(ov.animName||'Anim'):'Split')):(isAnim?(ov.animName||'Animation'):'Image'));
     chip.innerHTML='<span style="font-weight:800;opacity:.85;flex:0 0 auto;pointer-events:none">'+tag+'</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;pointer-events:none">'+lbl+'</span>';
     const eL=document.createElement('span'); eL.dataset.e='l'; eL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:5px 0 0 5px;z-index:2';
     const eR=document.createElement('span'); eR.dataset.e='r'; eR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:0 5px 5px 0;z-index:2';
