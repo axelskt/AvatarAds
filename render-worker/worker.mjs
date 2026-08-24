@@ -2599,10 +2599,14 @@ async function batchBlankPreviews({ list = null, draft = true, style = 'auto', p
     const job = mkdtempSync(join(tmpdir(), 'aa-blank-'))
     try {
       copyFileSync(baseSrc, join(job, 'base.mp4'))
-      // plan minimal : UNE scène plein-cadre = l'anim, en mode blanc.
+      // plan minimal : UNE scène plein-cadre = l'anim, en mode blanc. La variante
+      // « dark » reste sur le moteur LEGACY (auto) — qui SAIT rendre une anim
+      // plein-cadre isolée (le moteur dynamique la rend noire) — et pose _blankDark :
+      // contenu clair + fond sombre à carreaux (.fslide.blankdark).
+      const dark = style === 'dark' || style === 'slam'
       writeFileSync(join(job, 'plan.json'), JSON.stringify({
-        slideStyle: style, duration: 1.8,
-        slides: [{ id: 'a0', anim, layout: 'full', start: 0, end: 1.8, _blank: true, items: [] }],
+        slideStyle: 'auto', duration: 1.8,
+        slides: [{ id: 'a0', anim, layout: 'full', start: 0, end: 1.8, _blank: true, _blankDark: dark, items: [] }],
         sections: [{ start: 0, end: 1.8 }], captions: [], beats: [], broll: [], avatarSegments: [], tuto: [], sfx: [],
       }))
       const out1080 = join(job, 'out.mp4')

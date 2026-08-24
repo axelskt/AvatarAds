@@ -42,6 +42,12 @@ export function scenePackCss(W, H) {
       .fslide { inset: 0; background:
         radial-gradient(${Math.round(W * 1.1)}px ${Math.round(H * 0.47)}px at 50% 18%, #FCFBF3 0%, ${CREAM} 60%, #F0EDDD 100%);
         z-index: 7; will-change: opacity; color: ${INK}; }
+      /* #blankDark · fond SOMBRE à carreaux (façon Cartoon 15) — aperçus d'anims de l'éditeur */
+      .fslide.blankdark { color: #FFFFFF; background:
+        radial-gradient(${Math.round(W * 0.9)}px ${Math.round(H * 0.4)}px at 50% 34%, rgba(124,60,237,.42) 0%, rgba(124,60,237,0) 66%),
+        repeating-linear-gradient(0deg, rgba(168,130,255,.10) 0 1.5px, transparent 1.5px ${Math.round(W / 12)}px),
+        repeating-linear-gradient(90deg, rgba(168,130,255,.10) 0 1.5px, transparent 1.5px ${Math.round(W / 12)}px),
+        linear-gradient(180deg, #150a26 0%, #0b0714 100%); }
       .fs-spec { position: absolute; border-radius: 50%; background: rgba(194,72,58,.16); }
       .fs-hd { position: absolute; left: 60px; right: 60px; top: ${Math.round(H * 0.062)}px; text-align: center; }
       .fs-eye { font: 700 ${Math.round(H * 0.0156)}px/1 "JetBrains Mono", ui-monospace, monospace;

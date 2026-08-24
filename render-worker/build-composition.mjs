@@ -681,7 +681,7 @@ export function buildComposition(plan, opts = {}) {
   const animFull = (s) => ANIMS.includes(s.anim)
   const withFiles = (s) => ({ ...s, logoFile, screenFile: s.screen ? 'tuto/' + s.screen + '.png' : '' })
   const fullHtml = fullDefs.map((s) => `
-      <div class="clip fslide" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="10">${
+      <div class="clip fslide${s._blankDark ? ' blankdark' : ''}" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="10">${
     animFull(s) ? animHtml(s.anim, withFiles(s), W, H, vs) : fullSlideHtml(s, W, H, vs)}</div>`).join('')
   const bannersHtml = bannerDefs.map((s) => `
       <div class="clip fbanner" id="${s.id}" data-start="${s.start}" data-duration="${s.dur}" data-track-index="11">${bannerHtml(s, vs)}</div>`).join('')
