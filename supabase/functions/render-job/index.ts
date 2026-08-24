@@ -91,9 +91,12 @@ serve(async (req: Request) => {
 
     if (body.action === 'last') {
       // le dernier montage TERMINÉ du compte — l'entrée dev « Détails montage »
-      // ouvre l'écran de révision dessus sans relancer un rendu
+      // ouvre l'écran de révision dessus sans relancer un rendu.
+      // On IGNORE les jobs techniques (batch d'aperçus d'anims, plan.__batchBlank) :
+      // ils n'ont pas de slides → « plan illisible » sur le dernier montage.
       const { data: job } = await service.from('render_jobs')
         .select('id').eq('user_id', user.id).eq('status', 'done')
+        .is('plan->__batchBlank', null)
         .order('created_at', { ascending: false }).limit(1).maybeSingle()
       return json({ ok: true, job_id: job?.id ?? null })
     }
