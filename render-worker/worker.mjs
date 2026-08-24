@@ -1175,10 +1175,10 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // Transitions de section (film burn / glitch) RÉSERVÉES AU COMPTE DEV/OWNER
     // pour la phase de test (Axel 24/08) — sinon toutes les coupes retombent sur
     // le flash (comportement historique). Même garde-fou que le MIX lipsync.
-    if ((plan.sections || []).some((s) => s && s.transition) && !(await estOwner(RENDER_USER))) {
-      for (const s of plan.sections) s.transition = ''
-      console.log('▶ transitions de section : compte non-owner → flash (feature en test dev)')
-    }
+    // Transitions de section : OUVERTES À TOUS (validées par Axel le 24/08 —
+    // Flash / Film Burn / Glitch RGB / Mask Glitch). Le gate owner de la phase de
+    // test a été retiré : `section.transition` s'applique désormais pour tout le monde
+    // (opt-in — n'affecte que les sections qui en demandent une explicitement).
 
     const fonds = []
     if (baseAUneImage && existsSync(join(proj, 'media', 'base.mp4'))) {
