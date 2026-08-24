@@ -31679,7 +31679,30 @@ function edSetup(){
   _edFormat = edNearestFormat((_ed.vw||9)/(_ed.vh||16)); edSyncFormatButtons(); edUpdateOutputLabel();
   edResizeCanvas();
   [...stage.querySelectorAll('.ed-ov')].forEach(el=>el.remove());
-  stage.onpointerdown=(e)=>{ if(e.target===canvas){ if(_ed.sel){ edHideProps(); } else { edTogglePlay(); } } };
+  // #recadre-direct (retour Axel) : GLISSER sur la vidéo = recadrer (pan) ; un simple
+  // CLIC = play/pause. Molette = zoom. Plus besoin d'activer un mode — ça marche direct.
+  stage.onpointerdown=(e)=>{
+    if(_ed&&_ed.reframeMode) return;                 // l'ancien mode « Recadrer le visuel » a son propre handler
+    if(e.target!==canvas) return;                    // les calques (texte/split) ont leurs poignées
+    const sx=e.clientX, sy=e.clientY; let moved=false;
+    const rf=(typeof _edClipRF==='function')?_edClipRF():null;
+    const ox0=rf?(rf.ox==null?0.5:rf.ox):0.5, oy0=rf?(rf.oy==null?0.5:rf.oy):0.5;
+    const mv=(ev)=>{ const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      if(!moved && (Math.abs(dx)>4||Math.abs(dy)>4)){ moved=true; try{edSnap();}catch(_){}
+        try{ const h=document.getElementById('edReframeHint'); if(h) h.style.display='flex'; }catch(_){}
+        stage.style.cursor='grabbing'; }
+      if(moved && rf){ rf.ox=Math.max(0,Math.min(1, ox0-(dx/Math.max(1,_ed.dispW))/Math.max(1,rf.z||1)));
+        rf.oy=Math.max(0,Math.min(1, oy0-(dy/Math.max(1,_ed.dispH))/Math.max(1,rf.z||1))); } };
+    const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); stage.style.cursor='';
+      if(!moved){ if(_ed.sel){ edHideProps(); } else { edTogglePlay(); } } };
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+  };
+  // molette sur la vidéo = zoom du cadrage (hors mode recadrage explicite qui a le sien)
+  if(!stage._rfWheel){ stage._rfWheel=true; stage.addEventListener('wheel',(e)=>{
+    if(!_ed||_ed.reframeMode) return; if(e.target!==canvas) return;
+    const rf=(typeof _edClipRF==='function')?_edClipRF():null; if(!rf) return;
+    e.preventDefault(); rf.z=Math.max(1,Math.min(4,+((rf.z||1)*(e.deltaY<0?1.08:1/1.08)).toFixed(3)));
+  },{passive:false}); }
   // Clic AUTOUR de l'aperçu (zone vide) → ferme le menu / désélectionne
   const pz=document.getElementById('edPreviewZone');
   if(pz && !pz._deselBound){ pz._deselBound=true;
@@ -31865,8 +31888,12 @@ function edDrawLoop(){
   try{ ctx.clearRect(0,0,_ed.dispW,_ed.dispH);
     if(_sp){ ctx.fillStyle='#0b0b0e'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH);
       const B=_edSplitBands(_sp,_ed.dispH);
-      const _scr=edCoverRect(_vw,_vh,_ed.dispW/Math.max(1,B.videoH));
-      const _sfy=(_vh-_scr.sh)*((_sp._faceP!=null)?_sp._faceP:0.1);
+      const _scr0=edCoverRect(_vw,_vh,_ed.dispW/Math.max(1,B.videoH));
+      // #recadre-split · si l'utilisateur a recadré son visuel, on l'applique aussi en split
+      const _rf0=(typeof _edClipRF==='function')?_edClipRF():null;
+      const _hasRF=_rf0&&(((_rf0.z||1)>1.001)||Math.abs((_rf0.ox==null?0.5:_rf0.ox)-0.5)>0.001||Math.abs((_rf0.oy==null?0.5:_rf0.oy)-0.5)>0.001);
+      const _scr=_hasRF?_edReframeSrc(_scr0,_vw,_vh):_scr0;
+      const _sfy=_hasRF?_scr.sy:(_vh-_scr.sh)*((_sp._faceP!=null)?_sp._faceP:0.1);
       ctx.drawImage(v, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, B.videoY, _ed.dispW, B.videoH);
       const _divY=B.inv?B.videoH:B.mediaH; ctx.fillStyle='#0D0D12'; ctx.fillRect(0,_divY-2,_ed.dispW,4);
     } else { ctx.drawImage(v, _zr.sx,_zr.sy,_zr.sw,_zr.sh, 0,0,_ed.dispW,_ed.dispH); } }catch(e){}
@@ -32140,6 +32167,16 @@ function edAddAnimToSplit(name){
   if(!_ed){ toast('Charge d\'abord une vidéo'); return; }
   const nm=String(name||'').replace(/[^a-z0-9_-]/gi,'');
   const url=(typeof window._edAnimSrc==='function')?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4'));
+  // #changer-anim (retour Axel) · « Changer l'animation » d'un split DÉJÀ rempli → on
+  // remplace l'anim en place (le split reste, on ne le recrée pas).
+  if(_ed._splitReplace){
+    const tgt=(_ed.overlays||[]).find(o=>o.id===_ed._splitReplace && o._split);
+    _ed._splitReplace=null; _ed._splitFillTarget=null;
+    if(tgt){ edSnap(); tgt.animName=name; tgt.url=url; tgt._bgStyle='light';
+      if(tgt.vid){ try{tgt.vid.pause();}catch(e){} tgt.vid.src=url; try{tgt.vid.load();}catch(e){} }
+      const im=tgt._el&&tgt._el.querySelector('video,img'); if(im&&im.tagName==='VIDEO'){ im.src=url; try{im.load();}catch(e){} }
+      try{ _edStyleSplitMedia(tgt); }catch(e){} edSelect(tgt.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); toast('Animation changée'); return; }
+  }
   const gt=edGlobalNow();
   const vid=document.createElement('video'); vid.src=url; vid.muted=true; vid.playsInline=true; vid.loop=false; vid.preload='auto';
   let slot = _ed._splitFillTarget ? (_ed.overlays||[]).find(o=>o.id===_ed._splitFillTarget && o._split && o._splitEmpty) : null;
@@ -32339,6 +32376,7 @@ function edStyleOverlay(ov){
     const fam=ov.font||'var(--display)'; const styl=ov.style||'box';
     let deco='';
     if(styl==='box') deco='padding:5px 12px;background:'+(ov.bgColor||'rgba(0,0,0,.55)')+';border-radius:9px;';
+    else if(styl==='snap') deco='display:block;width:100%;box-sizing:border-box;padding:8px 14px;background:'+(ov.bgColor||'rgba(0,0,0,.42)')+';border-radius:3px;'; // #snapchat · barre noire translucide pleine largeur
     else if(styl==='shadow') deco='text-shadow:0 2px 7px rgba(0,0,0,.85);';
     else if(styl==='outline') deco='-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 1px 2px rgba(0,0,0,.6);';
     t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+ov.size+'px;line-height:1.12;color:'+ov.color+';text-align:center;word-break:break-word;outline:none;'+deco+(ov._editing?'cursor:text;':'');
@@ -32349,7 +32387,9 @@ function edStyleOverlay(ov){
     if(ov._split && !ov._splitEmpty) _edStyleSplitMedia(ov); // #split-controls · réapplique le recadrage média
   }
   const onSel=_ed.sel===ov.id;
-  el.style.outline=onSel?'2px solid var(--accent)':'1px dashed rgba(255,255,255,.45)';
+  // #texte-sans-pointillé (retour Axel) : pas de cadre pointillé autour d'un texte non
+  // sélectionné (le texte se voit tout seul) ; les autres calques le gardent pour se repérer.
+  el.style.outline=onSel?'2px solid var(--accent)':(ov.type==='text'?'none':'1px dashed rgba(255,255,255,.45)');
   el.style.outlineOffset='1px';
   el.querySelectorAll('.ed-ov-rh').forEach(h=>{ h.style.display=(onSel&&!ov._cropMode)?'block':'none'; });
   el.querySelectorAll('.ed-crop-h').forEach(h=>{ h.style.display=(onSel&&ov._cropMode)?'block':'none'; });
@@ -32367,7 +32407,7 @@ function edRenderTextMenu(ov){
   if(!ov||ov.type!=='text'){ m.style.display='none'; m.innerHTML=''; return; }
   m.style.display='block';
   const fonts=[['var(--display)','Bricolage'],['var(--font)','Hanken'],['Impact','Impact'],['Georgia','Georgia'],['"Courier New"','Mono']];
-  const styles=[['box','Fond'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
+  const styles=[['box','Fond'],['snap','Snapchat'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
   const subs=[['hormozi','Hormozi','#FFE500'],['white','Blanc','#ffffff'],['mrbeast','MrBeast','#FFD000'],['tiktok','TikTok','#ffffff'],['neon','Néon','#39FF14'],['red','Rouge','#FF3B3B']];
   m.innerHTML=
     '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="label" style="margin:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Texte</div><button onclick="edDeleteSelected()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M9 7V4h6v3"/></svg> Supprimer</button></div>'+
@@ -33775,8 +33815,11 @@ async function edExport(){
       const _esp=_edSplitAt(gTime); // #136 · split : la base descend en moitié basse
       if(_esp){
         const B=_edSplitBands(_esp,expH);
-        const _scr=edCoverRect(_evw,_evh,expW/Math.max(1,B.videoH));
-        const _sfy=(_evh-_scr.sh)*((_esp._faceP!=null)?_esp._faceP:0.1);
+        const _scr0=edCoverRect(_evw,_evh,expW/Math.max(1,B.videoH));
+        const _erf=(typeof _edClipRF==='function')?_edClipRF():null;
+        const _ehasRF=_erf&&(((_erf.z||1)>1.001)||Math.abs((_erf.ox==null?0.5:_erf.ox)-0.5)>0.001||Math.abs((_erf.oy==null?0.5:_erf.oy)-0.5)>0.001);
+        const _scr=_ehasRF?_edReframeSrc(_scr0,_evw,_evh):_scr0;
+        const _sfy=_ehasRF?_scr.sy:(_evh-_scr.sh)*((_esp._faceP!=null)?_esp._faceP:0.1);
         try{ cx.drawImage(curV, _scr.sx, _sfy, _scr.sw, _scr.sh, 0, B.videoY, expW, B.videoH); }catch(e){}
         const _divY=B.inv?B.videoH:B.mediaH; cx.fillStyle='#0D0D12'; cx.fillRect(0,_divY-3,expW,6);
       } else {
@@ -33817,10 +33860,12 @@ async function edExport(){
           for(const wd of words){ const test=line?line+' '+wd:wd; if(cx.measureText(test).width>maxW && line){ lines.push(line); line=wd; } else line=test; }
           if(line) lines.push(line);
           const lh=fs*1.18;
+          // #snapchat · une SEULE barre noire translucide pleine largeur derrière tout le texte
+          if((ov.style)==='snap'){ const pad=fs*0.34; cx.fillStyle=ov.bgColor||'rgba(0,0,0,.42)'; cx.fillRect(ov.x*f, cy-pad*0.6, ov.w*f, lines.length*lh+pad*0.9); }
           lines.forEach((ln,i)=>{
             const ly=cy+i*lh;
             if((ov.style||'box')==='box'){ const tw=cx.measureText(ln).width, pad=fs*0.28; cx.fillStyle=ov.bgColor||'rgba(0,0,0,.55)'; cx.fillRect(cxc-tw/2-pad, ly-pad*0.35, tw+pad*2, lh*0.96); }
-            else { cx.shadowColor='rgba(0,0,0,.85)'; cx.shadowBlur=fs*0.18; cx.shadowOffsetY=fs*0.06; }
+            else if((ov.style)!=='snap'){ cx.shadowColor='rgba(0,0,0,.85)'; cx.shadowBlur=fs*0.18; cx.shadowOffsetY=fs*0.06; }
             cx.fillStyle=ov.color||'#fff'; cx.fillText(ln,cxc,ly); cx.shadowColor='transparent';
           });
           cx.restore();
@@ -34302,7 +34347,7 @@ function edBandDrag(ov,track,e,mode){
   const _obsRange=new MutationObserver(function(){ document.querySelectorAll('.ed-range:not([data-fill])').forEach(function(r){ r.dataset.fill='1'; edRangeFill(r); }); });
   _obsRange.observe(document.body,{childList:true,subtree:true});
   const FONTS_ED=[['var(--display)','Bricolage'],['var(--font)','Hanken'],['Impact','Impact'],['Georgia','Georgia'],['"Courier New"','Mono']];
-  const STYLES_ED=[['box','Fond'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
+  const STYLES_ED=[['box','Fond'],['snap','Snapchat'],['shadow','Ombre'],['outline','Contour'],['none','Aucun']];
   const SUBS_ED=[['hormozi','Hormozi','#FFE500'],['white','Blanc','#ffffff'],['mrbeast','MrBeast','#FFD000'],['tiktok','TikTok','#ffffff'],['neon','Néon','#39FF14'],['red','Rouge','#FF3B3B']];
   window.edFillProps=function(ov){
     const body=document.getElementById('edPropsBody'); if(!body||!ov) return;
@@ -34327,27 +34372,21 @@ function edBandDrag(ov,track,e,mode){
         +'<button onclick="edToggleSplitInvert()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg> Inverser haut / bas</button>'
         +'<button onclick="edToggleMediaReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(ov._mediaReframe?'var(--accent-line)':'var(--border)')+';background:'+(ov._mediaReframe?'var(--accent-soft)':'')+';color:'+(ov._mediaReframe?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer l\'animation</button>'
         +'<button onclick="edResetMediaRF()" class="btn btn-quiet btn-sm" style="width:100%">Réinitialiser le cadrage</button>'
+        +(ov._anim ? '<button onclick="_ed._splitFillTarget=\''+ov.id+'\';_ed._splitReplace=\''+ov.id+'\';if(typeof edOpenBank===\'function\')edOpenBank(\'anim\')" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Changer l\'animation</button>' : '')
         +(ov._anim ? (function(){
+          // #fond-animé (retour Axel) : les couleurs pleines « ne servent à rien » →
+          // on ne garde que la bascule Clair / Fond animé (grille + couleurs, façon Cartoon 15).
           var nm=String(ov.animName||'').replace(/[^a-z0-9_-]/gi,'');
-          var hasDark=!!(window._edBlankDarkSet && window._edBlankDarkSet.has(nm));
+          if(!(window._edBlankDarkSet && window._edBlankDarkSet.has(nm))) return '';
           var isDark=ov._bgStyle==='dark';
           var selCss='background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700';
           var offCss='background:var(--surface);border:1px solid var(--border);color:var(--text-2)';
-          var h='<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">'
-            +'<span class="mono faint" style="font-size:11px;display:block;margin-bottom:8px">Fond de l\'animation</span>';
-          if(hasDark){ h+='<div class="row gap6" style="margin-bottom:10px">'
+          return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">'
+            +'<span class="mono faint" style="font-size:11px;display:block;margin-bottom:8px">Fond de l\'animation</span>'
+            +'<div class="row gap6">'
             +'<button onclick="edSetAnimBgVariant(\'light\')" class="btn btn-sm" style="flex:1;'+(!isDark?selCss:offCss)+'">Clair</button>'
-            +'<button onclick="edSetAnimBgVariant(\'dark\')" class="btn btn-sm" style="flex:1;'+(isDark?selCss:offCss)+'">Carreaux sombre</button></div>'; }
-          if(!isDark){ h+='<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span class="mono faint" style="font-size:10.5px">Couleur du fond</span>'
-            +(ov._animBg?'<button onclick="edClearAnimBg()" class="mono" style="font-size:10px;color:var(--text-3);background:none;border:none;cursor:pointer;text-decoration:underline">fond d\'origine</button>':'')+'</div>'
-            +'<div class="row gap8" style="flex-wrap:wrap;align-items:center">'
-            +['#0B0B0E','#111827','#1D3A8A','#3B0764','#7C2D12','#0F5132','#FF6B35'].map(function(c){return '<button onclick="edSetAnimBg(\''+c+'\')" title="'+c+'" style="width:26px;height:26px;border-radius:7px;border:2px solid '+(((ov._animBg||'').toLowerCase()===c.toLowerCase())?'#fff':'var(--border)')+';background:'+c+';cursor:pointer"></button>';}).join('')
-            +'<label class="row gap6" style="padding:5px 9px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:11.5px;align-items:center"><input type="color" value="'+(ov._animBg||'#111827')+'" oninput="edSetAnimBg(this.value)" style="width:18px;height:18px;border:none;background:none;padding:0"> Autre</label>'
-            +'</div><p class="faint" style="font-size:11px;margin-top:8px">Remplace le fond clair de l\'anim par cette couleur (le contenu reste visible).</p>'; }
-          else { h+='<p class="faint" style="font-size:11px;margin-top:2px">Fond violet à carreaux (façon Cartoon 15) — le contenu de l\'anim reste clair.</p>'; }
-          return h+'</div>';
-        })() : '')
-        +'<p class="faint" style="font-size:11.5px;margin-top:10px">Le média est en '+(ov._splitInvert?'bas':'haut')+', ta vidéo en '+(ov._splitInvert?'haut':'bas')+'. Active « Recadrer l\'animation » puis glisse / molette sur le média.</p>';
+            +'<button onclick="edSetAnimBgVariant(\'dark\')" class="btn btn-sm" style="flex:1;'+(isDark?selCss:offCss)+'">Fond animé</button></div></div>';
+        })() : '');
     } else {
       const maxw=Math.round(((_ed&&_ed.dispW)||400)*1.3);
       body.innerHTML=
