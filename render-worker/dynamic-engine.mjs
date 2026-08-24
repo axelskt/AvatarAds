@@ -1740,6 +1740,42 @@ export function buildDynamicComposition(plan, opts = {}) {
     .map((f) => `<video class="clip" src="${esc(f.src)}" data-start="${r2(f.start)}" data-duration="${r2((f.end ?? f.start) - f.start)}" data-track-index="0" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`)
     .join('\n')
 
+  // ── Transitions de section (overlays) — PORTÉ du legacy vers le moteur dynamique
+  // (slam/dynamic/apple). Sans ça, `section.transition` était ignoré ici : les
+  // transitions ne s'appliquaient qu'aux styles legacy. Flash (défaut) · Film Burn
+  // (balayage de lumière) · Glitch RGB. Même contrat que build-composition.
+  const _secByStart = new Map((plan.sections || []).map((s) => [r2(s.start), s]))
+  const _TRANS_OK = new Set(['flash', 'filmburn', 'glitch'])
+  // OPT-IN STRICT : le moteur dynamique n'ajoute un overlay QUE si la section le
+  // demande EXPLICITEMENT (flash/filmburn/glitch). Vide/inconnu = RIEN — le moteur
+  // garde ses propres transitions de panneaux. ⇒ un montage sans transition choisie
+  // (ou non-owner, transition retirée par le gate worker) est STRICTEMENT INCHANGÉ.
+  const _secBounds = [...new Set((plan.sections || []).filter((s) => s && _TRANS_OK.has(String(s.transition || '').toLowerCase())).map((s) => r2(s.start)).filter((t) => t > 0.05 && t < D - 0.05))].sort((a, b) => a - b)
+  const _transAt = (t) => String(_secByStart.get(r2(t))?.transition || '').toLowerCase()
+  const _BURNW = Math.round(W * 1.8)
+  const _transJs = _secBounds.map((t) => {
+    const ty = _transAt(t), t0 = r2(Math.max(0, t - 0.04))
+    if (ty === 'filmburn') return `
+  tl.to('#tBurn', { autoAlpha: 1, duration: 0.08 }, ${r2(Math.max(0, t - 0.18))});
+  tl.fromTo('#tBurn', { x: ${-_BURNW} }, { x: ${Math.round(W * 1.05)}, duration: 0.52, ease: 'power1.inOut' }, ${r2(Math.max(0, t - 0.18))});
+  tl.to('#tBurn', { autoAlpha: 0, duration: 0.12 }, ${r2(t + 0.22)});`
+    if (ty === 'glitch') return `
+  tl.fromTo('#tGlitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.9, y: -26, duration: 0.05, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${t0});
+  tl.fromTo('#tGlitch2', { autoAlpha: 0, x: 0 }, { autoAlpha: 0.7, x: 24, duration: 0.045, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${r2(Math.max(0, t - 0.02))});
+  tl.set(['#tGlitch','#tGlitch2'], { autoAlpha: 0 }, ${r2(t + 0.24)});`
+    return `
+  tl.fromTo('#tFlash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${t0});
+  tl.to('#tFlash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`
+  }).join('')
+  const _transHtml = _secBounds.length ? `
+<div id="tFlash" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:#fff"></div>
+<div id="tBurn" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="width:${_BURNW}px;background:linear-gradient(102deg,transparent 0%,rgba(255,176,86,.30) 16%,rgba(255,150,60,.85) 30%,rgba(255,240,196,1) 42%,rgba(255,150,60,.85) 54%,rgba(255,120,40,.4) 68%,transparent 84%),repeating-linear-gradient(99deg,transparent 0 46px,rgba(255,214,150,.14) 46px 52px,transparent 52px 104px)"></div>
+<div id="tGlitch" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:repeating-linear-gradient(0deg,rgba(0,255,238,.55) 0 3px,transparent 3px 10px,rgba(255,0,128,.55) 10px 13px,transparent 13px 26px)"></div>
+<div id="tGlitch2" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:linear-gradient(90deg,transparent 0 18%,rgba(0,255,238,.5) 18% 34%,transparent 34% 55%,rgba(255,0,120,.5) 55% 72%,transparent 72%)"></div>` : ''
+  const _transInit = _secBounds.length ? `
+  tl.set(['#tFlash','#tBurn','#tGlitch','#tGlitch2'], { autoAlpha: 0 }, 0);
+  tl.set('#tBurn', { x: ${-_BURNW} }, 0);${_transJs}` : ''
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1755,6 +1791,8 @@ export function buildDynamicComposition(plan, opts = {}) {
   .pnl { position:absolute; top:0; left:0; width:${W}px; height:${H}px; overflow:hidden; }
   ${animCss(W, H)}
   .pin { position:absolute; inset:0; }
+  .tovl { position:absolute; top:0; left:0; width:${W}px; height:${H}px; pointer-events:none; opacity:0; z-index:60; }
+  #tBurn, #tGlitch, #tGlitch2 { mix-blend-mode:screen; }
   /* le mot affiché : Archivo Black tape fort, c'est l'identité du dynamique.
      Apple n'écrit jamais aussi gras — SF Pro Display, donc Inter 800 très serré. */
   .disp { font-family:${ap ? `'Inter',sans-serif; font-weight:800; letter-spacing:-.035em`
@@ -1953,12 +1991,12 @@ export function buildDynamicComposition(plan, opts = {}) {
 <body>
 <div id="root" data-composition-id="main" data-width="${W}" data-height="${H}" data-start="0" data-duration="${D}">${sousCouche}${html}
 ${capHtml}
-${hookTitleHtml}
+${hookTitleHtml}${_transHtml}
 </div>
 <script>
 window.__timelines = window.__timelines || {};
 const tl = gsap.timeline({ paused: true });
-${js}
+${js}${_transInit}
 // ── RÈGLE SAFE ZONE DES SOUS-TITRES (Axel 22/08 : « mets une règle ») ──────────
 // Quel que soit le texte (un mot fort en 1,7 em peut déborder sous son ancre), AUCUN
 // bloc de sous-titre ne doit finir sous ${Math.round(SAFE_SUB_BOTTOM * 100)} % de la hauteur (légende + boutons
