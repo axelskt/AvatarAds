@@ -4465,6 +4465,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="edZoomWrap" style="display:grid;place-items:center;transition:transform .15s">
               <div id="edStage" style="position:relative;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--border2);touch-action:none;box-shadow:0 30px 70px -30px rgba(0,0,0,.9)">
                 <canvas id="edCanvas" style="display:block" onclick="if(typeof edZoomStageClick==='function')edZoomStageClick(event)"></canvas>
+                <div id="edReframeHint" style="display:none;position:absolute;left:8px;right:8px;bottom:8px;z-index:15;background:rgba(10,10,12,.82);border:1px solid var(--border2);border-radius:9px;padding:7px 10px;color:#fff;font-size:11px;font-family:var(--mono);align-items:center;gap:8px"><span style="flex:1">Recadrage — glisse pour déplacer · molette pour zoomer</span><button onclick="event.stopPropagation();edReframeReset()" style="background:rgba(255,255,255,.12);border:1px solid var(--border2);color:#fff;border-radius:6px;padding:3px 8px;font-size:10px;cursor:pointer;flex:0 0 auto">Réinitialiser</button></div>
               </div>
               </div>
               <div id="edTextMenu" class="card" style="display:none;padding:13px;position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:20;max-width:94%;box-shadow:0 18px 40px -12px rgba(0,0,0,.7)"></div>
@@ -4478,6 +4479,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div class="row gap6" style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:10px;padding:4px">
                   <button class="ed-mini" onclick="edPreviewZoom(-1)" title="Zoom arrière"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg></button>
                   <button class="ed-mini" onclick="edPreviewZoom(1)" title="Zoom avant"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg></button>
+                  <span style="width:1px;background:var(--border);margin:4px 2px"></span>
+                  <button id="edReframeBtn" class="ed-mini" onclick="edToggleReframe()" title="Recadrer : glisse la vidéo dans l'aperçu, molette pour zoomer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg></button>
                   <span style="width:1px;background:var(--border);margin:4px 2px"></span>
                   <button class="ed-mini" onclick="edToggleFullscreen()" title="Plein écran (F)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5M21 8V3h-5M16 21h5v-5M3 16v5h5"/></svg></button>
                 </div>
@@ -31450,6 +31453,51 @@ function _edZoomSrc(cr, gt){
   const nsw=cr.sw/z, nsh=cr.sh/z;
   return { sx:cr.sx+(cr.sw-nsw)*cx, sy:cr.sy+(cr.sh-nsh)*cy, sw:nsw, sh:nsh };
 }
+/* ---------- #recadre · reframe DANS l'aperçu (pan + zoom du cadrage, par clip) ---------- */
+// clip._reframe = {ox,oy,z} : point focal (0..1) + zoom (≥1). Appliqué au cover-rect de base
+// en preview ET à l'export. Par défaut {0.5,0.5,1} = cadrage centré actuel (aucun effet).
+function _edClipRF(){ if(!_ed||!_ed.clips) return null; const c=_ed.clips[_ed.activeIdx||0]; if(!c) return null; if(!c._reframe) c._reframe={ox:0.5,oy:0.5,z:1}; return c._reframe; }
+function _edReframeSrc(cr, vw, vh, rfArg){
+  // rfArg fourni (export multi-clip) = le recadrage DU clip rendu ; sinon = clip actif (preview)
+  const rf = (rfArg!==undefined) ? rfArg : (function(){ const c=_ed&&_ed.clips&&_ed.clips[_ed.activeIdx||0]; return c&&c._reframe; })();
+  if(!rf || ((rf.z||1)<=1.001 && Math.abs((rf.ox==null?0.5:rf.ox)-0.5)<0.001 && Math.abs((rf.oy==null?0.5:rf.oy)-0.5)<0.001)) return cr;
+  const z=Math.max(1, rf.z||1); const sw=cr.sw/z, sh=cr.sh/z;
+  let sx=vw*(rf.ox==null?0.5:rf.ox) - sw/2, sy=vh*(rf.oy==null?0.5:rf.oy) - sh/2;
+  sx=Math.max(0, Math.min(vw-sw, sx)); sy=Math.max(0, Math.min(vh-sh, sy));
+  return { sx, sy, sw, sh };
+}
+function edToggleReframe(){
+  if(!_ed){ toast('Charge d\'abord une vidéo'); return; }
+  _ed.reframeMode=!_ed.reframeMode;
+  const stage=document.getElementById('edStage'); if(stage) stage.style.cursor=_ed.reframeMode?'grab':'';
+  const btn=document.getElementById('edReframeBtn'); if(btn){ btn.style.background=_ed.reframeMode?'var(--accent-soft)':''; btn.style.color=_ed.reframeMode?'var(--accent-2)':''; }
+  const hint=document.getElementById('edReframeHint'); if(hint) hint.style.display=_ed.reframeMode?'flex':'none';
+  if(_ed.reframeMode){ _edClipRF(); if(_ed.sel) edHideProps(); toast('Recadrage : glisse pour déplacer · molette pour zoomer'); }
+}
+function edReframeReset(){ if(!_ed||!_ed.clips) return; const c=_ed.clips[_ed.activeIdx||0]; if(c){ edSnap(); c._reframe={ox:0.5,oy:0.5,z:1}; toast('Cadrage réinitialisé'); } }
+function _edBindReframe(){
+  const stage=document.getElementById('edStage'); if(!stage||stage._rfBound) return; stage._rfBound=true;
+  // capture: on préempte le play/pause du stage quand le mode recadrage est actif
+  stage.addEventListener('pointerdown',(e)=>{
+    if(!_ed||!_ed.reframeMode) return;
+    if(e.target.closest('.ed-ov')||e.target.closest('#edReframeHint')) return;
+    e.stopPropagation(); e.preventDefault();
+    const rf=_edClipRF(); if(!rf) return; edSnap();
+    const px=e.clientX, py=e.clientY, ox0=(rf.ox==null?0.5:rf.ox), oy0=(rf.oy==null?0.5:rf.oy);
+    stage.style.cursor='grabbing';
+    const mv=(ev)=>{ const dx=ev.clientX-px, dy=ev.clientY-py;
+      rf.ox=Math.max(0,Math.min(1, ox0 - (dx/Math.max(1,_ed.dispW))/Math.max(1,rf.z||1)));
+      rf.oy=Math.max(0,Math.min(1, oy0 - (dy/Math.max(1,_ed.dispH))/Math.max(1,rf.z||1))); };
+    const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); if(stage) stage.style.cursor='grab'; };
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+  }, true);
+  stage.addEventListener('wheel',(e)=>{
+    if(!_ed||!_ed.reframeMode) return;
+    e.stopPropagation(); e.preventDefault();
+    const rf=_edClipRF(); if(!rf) return;
+    rf.z=Math.max(1, Math.min(4, +((rf.z||1)*(e.deltaY<0?1.08:1/1.08)).toFixed(3)));
+  }, {passive:false, capture:true});
+}
 function edResizeCanvas(){
   const stage=document.getElementById('edStage');
   const canvas=document.getElementById('edCanvas');
@@ -31478,7 +31526,7 @@ function edSetup(){
   }
   _ed.video.currentTime=_ed.trimA;
   edResetZoom();
-  edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop(); edRenderClips();
+  edRefreshTimeline(); edRenderLayers(); edHideProps(); edBindTimeline(); edRenderOvTrack(); edBindStageDrop(); _edBindReframe(); edRenderClips();
   if(!window._edKeysBound){ window._edKeysBound=true; document.addEventListener('keydown', edKeyHandler); }
   cancelAnimationFrame(_ed.raf); edDrawLoop(); edUpdateTime();
   _edUpdateBlackHint();
@@ -31620,7 +31668,8 @@ function edDrawLoop(){
   const _vw=v.videoWidth||_ed.vw||9, _vh=v.videoHeight||_ed.vh||16;
   const _cr=edCoverRect(_vw,_vh,_ed.dispW/_ed.dispH);
   const _gt=edGlobalNow();
-  const _zr=_edZoomSrc(_cr,_gt); // #70 · zoom punch-in (preview)
+  const _rf=_edReframeSrc(_cr,_vw,_vh); // #recadre · pan/zoom du cadrage (par clip)
+  const _zr=_edZoomSrc(_rf,_gt); // #70 · zoom punch-in (preview) — au-dessus du recadrage
   const _sp=_edSplitAt(_gt); // #136 · split : la base descend en moitié basse
   try{ ctx.clearRect(0,0,_ed.dispW,_ed.dispH);
     if(_sp){ ctx.fillStyle='#0b0b0e'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH);
@@ -31827,6 +31876,22 @@ function edAddImage(file){
   };
   img.src=url;
 }
+// #anim · une animation de la banque = un B-ROLL VIDÉO plein cadre posé au curseur, visible
+// dans la piste « Éléments » (déplaçable / redimensionnable / rognable) et joué EN BOUCLE sur
+// sa fenêtre — preview ET export. Avant, choisir une animation ne faisait qu'un zoom générique.
+function edAddAnimOverlay(name){
+  if(!_ed) return; edSnap();
+  const nm=String(name||'').replace(/[^a-z0-9_-]/gi,'');
+  const url=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+  const gt=edGlobalNow();
+  const vid=document.createElement('video'); vid.src=url; vid.muted=true; vid.playsInline=true; vid.loop=true; vid.preload='auto';
+  const ov={ id:'ov'+Date.now(), type:'image', _anim:true, animName:(name||'Animation'), vid, url,
+             x:0, y:0, w:_ed.dispW, h:_ed.dispH, crop:{t:0,r:0,b:0,l:0}, start:gt, end:Math.min(edTotalDur(), gt+2) };
+  // durée réelle de l'anim connue → cale la fenêtre dessus (les previews font ~1,8 s)
+  vid.onloadedmetadata=()=>{ if(_ed && _ed.overlays.indexOf(ov)>=0){ const d=(isFinite(vid.duration)&&vid.duration>0.3)?vid.duration:2; ov.end=Math.min(edTotalDur(), ov.start+d); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); } };
+  _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
+  toast('Animation « '+name+' » ajoutée — piste Éléments (glisse/étire la pastille)');
+}
 
 // ── #136 · SPLIT SCREEN : ta vidéo passe en moitié BASSE (visage entier, safe
 // zone), le média choisi occupe la moitié HAUTE pendant la fenêtre de la zone.
@@ -31882,7 +31947,7 @@ function edBuildOverlayEl(ov){
   else { el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
     // #111 · b-roll vidéo : le MÊME élément <video> sert au preview (DOM) et à l'export (drawImage)
     const im=ov.vid||document.createElement('img'); if(!ov.vid) im.src=ov.url;
-    im.style.cssText='width:100%;height:100%;display:block;object-fit:'+(ov._split?'cover':'fill')+';object-position:50% 30%;pointer-events:none'; el.appendChild(im); }
+    im.style.cssText='width:100%;height:100%;display:block;object-fit:'+((ov._split||ov._anim)?'cover':'fill')+';object-position:'+(ov._anim?'50% 50%':'50% 30%')+';pointer-events:none'; el.appendChild(im); }
   stage.appendChild(el); ov._el=el;
 
   const mk=(name,css,cur)=>{ const h=document.createElement('div'); h.className='ed-ov-rh'; h.dataset.h=name; h.style.cssText='position:absolute;width:15px;height:15px;background:var(--accent);border:2px solid #fff;border-radius:50%;z-index:6;display:none;cursor:'+cur+';'+css; el.appendChild(h); };
@@ -32386,6 +32451,7 @@ function edSetZoomDur(v){ if(!_ed) return; const d=Math.max(0.4,Math.min(3,v/10)
 function edSetZoomInt(v){ if(!_ed) return; const s=Math.max(1.1,Math.min(2,v/100)); _ed._zoomDefScale=s; const z=_edSelZoomObj(); if(z){ z.scale=s; edRenderZoomTrack(); } const il=document.getElementById('edZoomIntLbl'); if(il) il.textContent='×'+s.toFixed(2); }
 // clic sur l'aperçu → place le point de zoom du zoom sélectionné (0..1 du cadre)
 function edZoomStageClick(e){
+  if(_ed&&_ed.reframeMode) return; // en recadrage, le clic sert au pan (pas au point de zoom)
   const z=_edSelZoomObj(); if(!z) return; const canvas=document.getElementById('edCanvas'); if(!canvas) return;
   const r=canvas.getBoundingClientRect(); if(!r.width||!r.height) return;
   z.cx=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
@@ -33349,7 +33415,9 @@ async function edExport(){
         cx.fillStyle='#0D0D12'; cx.fillRect(0,_hb-3,expW,6);
       } else {
       const _ecr=edCoverRect(_evw,_evh,expW/expH);
-      const _ezr=_edZoomSrc(_ecr, gTime); // #70 · zoom punch-in (export)
+      const _ercl=(_ed.clips||[]).find(c=>c.video===curV); // le clip rendu → SON recadrage
+      const _erf=_edReframeSrc(_ecr,_evw,_evh, _ercl?_ercl._reframe:null); // #recadre (export, par clip)
+      const _ezr=_edZoomSrc(_erf, gTime); // #70 · zoom punch-in (export)
       try{ cx.drawImage(curV, _ezr.sx,_ezr.sy,_ezr.sw,_ezr.sh, 0,0,expW,expH); }catch(e){}
       }
       for(const ov of _ed.overlays){
@@ -33665,14 +33733,14 @@ function edRenderOvTrack(){
     const leftPct=Math.min(99,Math.max(0,(ov.start/total)*100));
     const wPct=Math.max(0,Math.min(100-leftPct,((ov.end-ov.start)/total)*100));
     const on=_ed.sel===ov.id;
-    const isTxt=ov.type==='text', isSplit=!!ov._split;
-    const cB=isTxt?'77,171,247':(isSplit?'34,211,238':'168,85,247');
-    const cTx=isTxt?'#cfe6ff':(isSplit?'#c4f2fb':'#e6d4ff');
+    const isTxt=ov.type==='text', isSplit=!!ov._split, isAnim=!!ov._anim;
+    const cB=isTxt?'77,171,247':(isSplit?'34,211,238':(isAnim?'255,143,94':'168,85,247'));
+    const cTx=isTxt?'#cfe6ff':(isSplit?'#c4f2fb':(isAnim?'#ffd9c2':'#e6d4ff'));
     const chip=document.createElement('div');
     chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:46px;display:flex;align-items:center;gap:4px;padding:0 6px;border-radius:5px;background:rgba('+cB+','+(on?'.42':'.24')+');border:1.5px solid '+(on?'#fff':'rgba('+cB+',.65)')+';color:'+cTx+';font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(on?2:1)+';cursor:grab;touch-action:none'+(on?';box-shadow:0 0 0 1.5px rgba('+cB+',.9),0 0 12px rgba('+cB+',.5)':'');
     chip.title='Clique = sélectionner · glisse = déplacer · tire les bords = durée · Suppr = retirer';
-    const tag=isTxt?'T':(isSplit?'⬒':'IMG');
-    const lbl=isTxt?(ov.text||'Texte'):(isSplit?'Split':'Image');
+    const tag=isTxt?'T':(isSplit?'⬒':(isAnim?'✦':'IMG'));
+    const lbl=isTxt?(ov.text||'Texte'):(isSplit?'Split':(isAnim?(ov.animName||'Animation'):'Image'));
     chip.innerHTML='<span style="font-weight:800;opacity:.85;flex:0 0 auto;pointer-events:none">'+tag+'</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;pointer-events:none">'+lbl+'</span>';
     const eL=document.createElement('span'); eL.dataset.e='l'; eL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:5px 0 0 5px;z-index:2';
     const eR=document.createElement('span'); eR.dataset.e='r'; eR.style.cssText='position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,255,255,.5);border-radius:0 5px 5px 0;z-index:2';
@@ -33863,7 +33931,7 @@ function edBandDrag(ov,track,e,mode){
   function bankInsert(label){
     const k=bank.kind;
     if(k==='sfx'){ edAddSfxAtPlayhead(label); relabelLastSfx(sfxLabel(label)); }
-    else if(k==='anim'){ if(typeof edAddZoomAtPlayhead==='function') edAddZoomAtPlayhead(); toast('Animation « '+label+' » ajoutée'); }
+    else if(k==='anim'){ if(typeof edAddAnimOverlay==='function') edAddAnimOverlay(label); else if(typeof edAddZoomAtPlayhead==='function'){ edAddZoomAtPlayhead(); toast('Animation « '+label+' » ajoutée'); } }
     else { edSetClipTrans(label); }
     closeBank();
   }
