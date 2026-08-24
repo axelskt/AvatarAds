@@ -31534,45 +31534,62 @@ function edDeleteRight(){
 // porte `clip.trans` (transition d'entrée) et on DESSINE l'effet à sa frontière,
 // dans l'aperçu (edDrawLoop) ET l'export (renderFrame). Types : flash · filmburn
 // (balayage) · glitch · whip (flou horizontal) · linewipe (révèle avant/après au trait).
-function _edClipBounds(){
-  const out=[]; let g=0; const cl=(_ed&&_ed.clips)||[];
-  for(let i=0;i<cl.length;i++){ const c=cl[i]; if(i>0 && c.trans && c.trans!=='cut' && c.trans!=='') out.push({ t:g, type:String(c.trans), i }); g+=Math.max(0,c.trimB-c.trimA); }
-  return out;
+const _ED_TRANS_DUR=0.5;
+const _ED_TRANS_MAP={ 'Cut net':'', 'Fondu enchaîné':'fondu', 'Flash':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Trait avant/après':'linewipe' };
+const _ED_TRANS_LABEL={ fondu:'Fondu', flash:'Flash', filmburn:'Film Burn', glitch:'Glitch', whip:'Whip', zoom:'Zoom', linewipe:'Trait' };
+function _edClipAt(t){ let g=0; const cl=(_ed&&_ed.clips)||[];
+  for(let i=0;i<cl.length;i++){ const d=Math.max(0,cl[i].trimB-cl[i].trimA); if(t<g+d-0.001||i===cl.length-1) return {i,start:g,end:g+d}; g+=d; } return {i:0,start:0,end:0}; }
+// dessin d'UNE transition à la progression p (0→1). Partagé aperçu (edDrawLoop) /
+// export (renderFrame) / mini-aperçu de la banque. Résolution-agnostique.
+function _edPaintTrans(cx,W,H,p,type,curV,sr,prevV){
+  if(p<0||p>1||!type) return;
+  const cover=(v)=>edCoverRect(v.videoWidth||v.naturalWidth||9, v.videoHeight||v.naturalHeight||16, W/H);
+  if(type==='flash'){ const a=(p<0.28?p/0.28:(1-(p-0.28)/0.72))*0.8; cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,a)); cx.fillStyle='#fff'; cx.fillRect(0,0,W,H); cx.restore(); }
+  else if(type==='fondu'){ if(prevV){ const pr=cover(prevV); cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,1-p)); try{ cx.drawImage(prevV,pr.sx,pr.sy,pr.sw,pr.sh,0,0,W,H);}catch(e){} cx.restore(); } else { cx.save(); cx.globalAlpha=Math.sin(p*Math.PI)*0.55; cx.fillStyle='#000'; cx.fillRect(0,0,W,H); cx.restore(); } }
+  else if(type==='filmburn'){ cx.save(); cx.globalCompositeOperation='screen'; const x=(-1.8+2.9*p)*W;
+    const g2=cx.createLinearGradient(x,0,x+W*1.8,0); g2.addColorStop(0,'rgba(255,176,86,0)'); g2.addColorStop(0.30,'rgba(255,150,60,0.85)'); g2.addColorStop(0.45,'rgba(255,240,196,1)'); g2.addColorStop(0.60,'rgba(255,150,60,0.85)'); g2.addColorStop(1,'rgba(255,120,40,0)');
+    cx.fillStyle=g2; cx.fillRect(0,0,W,H); cx.restore(); }
+  else if(type==='glitch'){ cx.save(); const fl=(Math.floor(p*11)%2===0)?1:0.42; const band=Math.max(2,H/300); cx.globalCompositeOperation='screen'; cx.globalAlpha=0.5*fl;
+    for(let y=0;y<H;y+=Math.max(10,H/38)){ cx.fillStyle='#00ffee'; cx.fillRect(0,y,W,band); cx.fillStyle='#ff0080'; cx.fillRect(0,y+H/46,W,band); }
+    cx.globalCompositeOperation='source-over'; cx.globalAlpha=1;
+    if(curV&&sr){ const sh=Math.max(20,H/14); for(let k=0;k<4;k++){ const yy=((k*167+Math.floor(p*420))%Math.max(1,H-sh)); const off=((k%2)?1:-1)*(W*0.05)*fl;
+      try{ cx.drawImage(curV, sr.sx, sr.sy+(yy/H)*sr.sh, sr.sw, (sh/H)*sr.sh, off, yy, W, sh);}catch(e){} } } cx.restore(); }
+  else if(type==='whip'){ if(curV&&sr){ cx.save(); const inten=Math.sin(Math.min(1,p)*Math.PI); cx.globalAlpha=0.15;
+    for(let k=-6;k<=6;k++){ if(!k) continue; try{ cx.drawImage(curV, sr.sx,sr.sy,sr.sw,sr.sh, k*(W*0.045)*inten,0,W,H);}catch(e){} } cx.restore(); } }
+  else if(type==='zoom'){ if(curV&&sr){ const z=Math.sin(Math.min(1,p)*Math.PI), s=1+0.9*z, cw=sr.sw/s, ch=sr.sh/s;
+    cx.save(); cx.globalAlpha=0.7*z; try{ cx.drawImage(curV, sr.sx+(sr.sw-cw)/2, sr.sy+(sr.sh-ch)/2, cw, ch, 0,0,W,H);}catch(e){} cx.restore();
+    cx.save(); cx.globalAlpha=0.22*z; cx.fillStyle='#fff'; cx.fillRect(0,0,W,H); cx.restore(); } }
+  else if(type==='linewipe'){ const lineX=W*Math.min(1,Math.max(0,p));
+    if(prevV){ const pr=cover(prevV); cx.save(); cx.beginPath(); cx.rect(lineX,0,Math.max(0,W-lineX),H); cx.clip();
+      try{ cx.drawImage(prevV,pr.sx,pr.sy,pr.sw,pr.sh,0,0,W,H);}catch(e){} cx.restore(); }
+    cx.save(); cx.fillStyle='rgba(255,255,255,0.28)'; cx.fillRect(lineX-Math.max(4,W*0.03),0,Math.max(3,W*0.02),H); cx.fillRect(lineX+Math.max(1,W*0.008),0,Math.max(3,W*0.02),H); cx.fillStyle='rgba(255,255,255,0.97)'; cx.fillRect(lineX-2,0,4,H); cx.restore(); }
 }
-const _ED_TRANS_DUR=0.42;
-function edDrawTrans(cx,W,H,gTime,curV,sr){
-  if(!_ed) return;
-  for(const b of _edClipBounds()){
-    const p=(gTime-(b.t-0.06))/_ED_TRANS_DUR; if(p<0||p>1) continue;
-    if(b.type==='flash'){
-      const a=(p<0.28?p/0.28:(1-(p-0.28)/0.72))*0.72;
-      cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,a)); cx.fillStyle='#fff'; cx.fillRect(0,0,W,H); cx.restore();
-    } else if(b.type==='filmburn'){
-      cx.save(); cx.globalCompositeOperation='screen'; const x=(-1.8+2.9*p)*W;
-      const g2=cx.createLinearGradient(x,0,x+W*1.8,0);
-      g2.addColorStop(0,'rgba(255,176,86,0)'); g2.addColorStop(0.30,'rgba(255,150,60,0.85)'); g2.addColorStop(0.45,'rgba(255,240,196,1)'); g2.addColorStop(0.60,'rgba(255,150,60,0.85)'); g2.addColorStop(1,'rgba(255,120,40,0)');
-      cx.fillStyle=g2; cx.fillRect(0,0,W,H); cx.restore();
-    } else if(b.type==='glitch'){
-      cx.save(); const fl=(Math.floor(p*11)%2===0)?1:0.42; cx.globalCompositeOperation='screen'; cx.globalAlpha=0.5*fl;
-      for(let y=0;y<H;y+=26){ cx.fillStyle='#00ffee'; cx.fillRect(0,y,W,3); cx.fillStyle='#ff0080'; cx.fillRect(0,y+10,W,3); }
-      cx.globalCompositeOperation='source-over'; cx.globalAlpha=1;
-      if(curV&&sr){ for(let k=0;k<4;k++){ const yy=((k*167+Math.floor(p*420))%Math.max(1,H-40)); const off=((k%2)?1:-1)*22*fl;
-        try{ cx.drawImage(curV, sr.sx, sr.sy+(yy/H)*sr.sh, sr.sw, (34/H)*sr.sh, off, yy, W, 34);}catch(e){} } }
-      cx.restore();
-    } else if(b.type==='whip'){
-      if(curV&&sr){ cx.save(); const inten=Math.sin(Math.min(1,p)*Math.PI); cx.globalAlpha=0.15;
-        for(let k=-6;k<=6;k++){ if(!k) continue; try{ cx.drawImage(curV, sr.sx,sr.sy,sr.sw,sr.sh, k*11*inten,0,W,H);}catch(e){} }
-        cx.restore(); }
-    } else if(b.type==='linewipe'){
-      const prev=(_ed.clips[b.i-1]||{}).video; const lineX=W*Math.min(1,Math.max(0,p));
-      if(prev){ const pr=edCoverRect(prev.videoWidth||9,prev.videoHeight||16,W/H);
-        cx.save(); cx.beginPath(); cx.rect(lineX,0,Math.max(0,W-lineX),H); cx.clip();
-        try{ cx.drawImage(prev, pr.sx,pr.sy,pr.sw,pr.sh, 0,0,W,H);}catch(e){} cx.restore(); }
-      cx.save(); cx.fillStyle='rgba(255,255,255,0.28)'; cx.fillRect(lineX-9,0,7,H); cx.fillRect(lineX+3,0,7,H);
-      cx.fillStyle='rgba(255,255,255,0.97)'; cx.fillRect(lineX-2,0,4,H); cx.restore();
-    }
+function edDrawTrans(cx,W,H,gTime,curV,sr){ if(!_ed) return;
+  for(const s of (_ed.sfx||[])){ if(!s.trans) continue;
+    const dur=Math.max(0.15,s.len||_ED_TRANS_DUR); const p=(gTime-s.t)/dur; if(p<0||p>1) continue;
+    let prevV=null;
+    if(s.trans==='linewipe'||s.trans==='fondu'){ const at=_edClipAt(s.t); prevV=(at.i>0)?(_ed.clips[at.i-1]||{}).video:null; }
+    _edPaintTrans(cx,W,H,p,s.trans,curV,sr,prevV);
   }
 }
+
+// mini-aperçu animé de la banque de transitions : dessine l'effet EN BOUCLE sur TA
+// footage (clip A → B) via _edPaintTrans (le vrai dessin). Tourne tant que des
+// canvas .edtprev existent (s'arrête quand la banque se ferme).
+function _edPrevBg(cx,W,H,lab){ const g=cx.createLinearGradient(0,0,W,H); g.addColorStop(0,'#26324a'); g.addColorStop(1,'#141a26'); cx.fillStyle=g; cx.fillRect(0,0,W,H); cx.fillStyle='rgba(255,255,255,.42)'; cx.font='bold '+Math.round(H*0.16)+'px system-ui'; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText(lab,W/2,H/2); }
+function edAnimTransPreviews(){
+  const cvs=document.querySelectorAll('canvas.edtprev'); if(!cvs.length) return;
+  const cl=(_ed&&_ed.clips)||[]; const vB=(cl[1]||cl[0]||{}).video, vA=(cl[0]||{}).video;
+  const now=(typeof performance!=='undefined'?performance.now():Date.now()); const p=(now/1600)%1;
+  cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H);
+    let sr=null, hasFoot=!!(vB&&(vB.videoWidth||vB.naturalWidth));
+    if(hasFoot){ sr=edCoverRect(vB.videoWidth||vB.naturalWidth, vB.videoHeight||vB.naturalHeight, W/H); try{ cx.drawImage(vB,sr.sx,sr.sy,sr.sw,sr.sh,0,0,W,H); }catch(e){ hasFoot=false; } }
+    if(!hasFoot){ _edPrevBg(cx,W,H,'B'); }
+    if(ty){ const prevV=(ty==='linewipe'||ty==='fondu')?(vA||vB):null; _edPaintTrans(cx,W,H,p,ty, hasFoot?vB:null, sr, prevV); }
+  });
+  window._edPrevRAF=requestAnimationFrame(edAnimTransPreviews);
+}
+function _edStartTransPreviews(){ try{ cancelAnimationFrame(window._edPrevRAF); }catch(e){} window._edPrevRAF=requestAnimationFrame(edAnimTransPreviews); }
 
 function edDrawLoop(){
   if(!_ed) return;
@@ -31597,7 +31614,7 @@ function edDrawLoop(){
     if(o._el){ const vis=(_ed.sel===o.id)||((o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end)); o._el.style.visibility=vis?'visible':'hidden'; }
     if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
   }
-  if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
+  if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.trans) continue; if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
   _ed._gtPrev=_gt;
   // #4 · la musique suit ses segments et S'ARRÊTE à la fin des clips (pas au-delà)
   if(_ed.playing && !_ed.exporting && _ed.music) _edMusicSync(_gt, true);
@@ -32293,7 +32310,8 @@ function edRenderSfxTrack(){
     const wPct=Math.max(0,Math.min(100-leftPct,(s.len/total)*100));
     const on=_ed.selTrack&&_ed.selTrack.type==='sfx'&&_ed.selTrack.id===s.id; // #5 · sélection
     const chip=document.createElement('div');
-    chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:48px;display:flex;align-items:center;gap:3px;padding:0 4px;border-radius:5px;background:rgba(255,170,40,'+(on?'.34':'.22')+');border:1.5px solid '+(on?'var(--accent)':'rgba(255,170,40,.6)')+';color:#ffcb6b;font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(on?2:1)+';cursor:grab;touch-action:none'+(on?';box-shadow:0 0 0 1.5px var(--accent),0 0 12px var(--accent-glow)':'');
+    const isT=!!s.trans, cB=isT?'150,120,255':'255,170,40', cTx=isT?'#cbbcff':'#ffcb6b', cBd=isT?(on?'#9b7bff':'rgba(150,120,255,.6)'):(on?'var(--accent)':'rgba(255,170,40,.6)');
+    chip.style.cssText='position:absolute;top:2px;bottom:2px;left:'+leftPct+'%;width:'+wPct+'%;min-width:48px;display:flex;align-items:center;gap:3px;padding:0 4px;border-radius:5px;background:rgba('+cB+','+(on?'.34':'.22')+');border:1.5px solid '+cBd+';color:'+cTx+';font-size:9px;font-weight:700;font-family:var(--mono);white-space:nowrap;overflow:hidden;z-index:'+(on?2:1)+';cursor:grab;touch-action:none'+(on?';box-shadow:0 0 0 1.5px '+(isT?'#9b7bff':'var(--accent)')+',0 0 12px var(--accent-glow)':'');
     chip.title='Clique pour sélectionner (Suppr pour retirer) · glisse pour déplacer · tire les bords pour ajuster';
     chip.innerHTML='<span style="pointer-events:none;overflow:hidden;text-overflow:ellipsis">'+s.label+'</span>';
     const hL=document.createElement('span'); hL.dataset.h='l'; hL.title='Ajuster le début'; hL.style.cssText='position:absolute;left:0;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(255,200,90,.55);border-radius:5px 0 0 5px;z-index:2';
@@ -33372,7 +33390,7 @@ async function edExport(){
           let t=cur.currentTime;
           for(const d of (seg.deletes||[])){ if(t>=d.a-0.02 && t<d.b){ cur.currentTime=d.b; t=d.b; break; } }
           const gTime=doneSpan+Math.max(0,t-seg.a);
-          for(const s of (_ed.sfx||[])){ if(!_sfxFired.has(s.id) && gTime>=s.t){ _sfxFired.add(s.id); if(_ed.audio){ try{ _edBlip(_ed.audio.ac,[_ed.audio.ac.destination,_ed.audio.dest],s.type); }catch(e){} } } }
+          for(const s of (_ed.sfx||[])){ if(s.trans){ _sfxFired.add(s.id); continue; } if(!_sfxFired.has(s.id) && gTime>=s.t){ _sfxFired.add(s.id); if(_ed.audio){ try{ _edBlip(_ed.audio.ac,[_ed.audio.ac.destination,_ed.audio.dest],s.type); }catch(e){} } } }
           if(_ed.music) _edMusicSync(gTime, true); // #4 · export : musique bornée aux segments/à la durée totale
           renderFrame(cur, gTime);
           edProgSet(Math.min(99,Math.max(0,(gTime/totalSpan)*100)));
@@ -33680,7 +33698,7 @@ function edBandDrag(ov,track,e,mode){
     "pop","ed-pop-1","mo-pop-1","mo-pop-2","mo-pop-3",
     "ding","message-tone","success","iphone-charging","magic","timer","heartbeat","mac-typing","robot","hu","fahh","mo-outro-1"]; // 52 fichiers réels
   const sfxLabel=function(s){ return String(s).replace(/-/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}); };
-  const ED_TRANS=["Cut net","Flash","Film Burn","Glitch RGB","Whip pan","Trait avant/après"];  // vraies transitions dessinées (canvas)
+  const ED_TRANS=["Cut net","Fondu enchaîné","Flash","Film Burn","Glitch RGB","Whip pan","Zoom","Trait avant/après"];  // vraies transitions dessinées (canvas)
   // Banque partagée (3 originales + 4 virales) — voir AA_MUSIC près de _MD_SFX_BANK
   const ED_MUSIC = (typeof AA_MUSIC !== 'undefined' ? AA_MUSIC : (window.AA_MUSIC || []));
   window.ED_ANIMS=ED_ANIMS; window.ED_SFX=ED_SFX; window.ED_TRANS=ED_TRANS;
@@ -33728,12 +33746,12 @@ function edBandDrag(ov,track,e,mode){
         +'<span role="button" tabindex="0" data-sfxplay onclick="event.stopPropagation();(function(b){var a=new Audio(\'sfx/'+String(item).replace(/[^a-z0-9-]/gi,'')+'.mp3\');a.volume=.9;var p=a.play();if(p&&p.catch)p.catch(function(){});b.style.background=\'#22D3EE33\';setTimeout(function(){b.style.background=\'transparent\'},350)})(this)" title="Écouter" style="width:'+(big?62:30)+'px;height:'+(big?62:30)+'px;border-radius:50%;display:grid;place-items:center;border:1.5px solid #22D3EE;background:transparent;color:#22D3EE;cursor:pointer">'
         +'<svg width="'+(big?22:11)+'" height="'+(big?22:11)+'" viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M7 4l13 8-13 8z"/></svg></span></div>';
     }
-    // transitions : mini-démo animée (deux panneaux)
-    const demo={'Cut net':'edtCut','Fondu enchaîné':'edtFade','Whip pan':'edtWhip','Zoom transition':'edtZoom','Glitch':'edtGlitch'}[item]||'edtFade';
-    return '<div style="position:absolute;inset:0;overflow:hidden;background:#17171C">'
-      +'<div style="position:absolute;inset:0;background:linear-gradient(150deg,#2b2530,#17131c)"></div>'
-      +'<div class="'+demo+'" style="position:absolute;inset:0;background:linear-gradient(150deg,var(--accent),#8a3a12)"></div>'
-      +'<span class="mono" style="position:absolute;left:0;right:0;top:46%;text-align:center;color:#fff;font-size:'+(big?13:10)+'px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.8)">A → B</span></div>';
+    // transitions : VRAI mini-aperçu ANIMÉ sur ta footage (canvas + _edPaintTrans en boucle)
+    const ty=(typeof _ED_TRANS_MAP!=='undefined'?_ED_TRANS_MAP[item]:'')||'';
+    const W2=big?220:64, H2=big?391:114;
+    setTimeout(function(){ try{ _edStartTransPreviews(); }catch(e){} },30);
+    return '<canvas class="edtprev" data-tt="'+ty+'" width="'+W2+'" height="'+H2+'" style="position:absolute;inset:0;width:100%;height:100%;background:#0d0d12;border-radius:inherit"></canvas>'
+      +(ty?'':'<span class="mono" style="position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:'+(big?14:10)+'px;pointer-events:none">Coupe nette</span>');
   }
   (function(){ const st=document.createElement('style'); st.textContent=
     '@keyframes edtCutK{0%,45%{opacity:1}50%,95%{opacity:0}100%{opacity:1}}.edtCut{animation:edtCutK 1.6s steps(1) infinite}'
@@ -33819,17 +33837,17 @@ function edBandDrag(ov,track,e,mode){
     closeBank();
   }
   function edSetClipTrans(label){
-    // VRAIE transition entre clips : on pose le type sur le clip de la coupure la
-    // plus proche du curseur (i>=1). Le dessin se fait dans edDrawTrans (aperçu+export).
-    const MAP={ 'Cut net':'', 'Flash':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Trait avant/après':'linewipe' };
-    const type=(MAP[label]!==undefined)?MAP[label]:'';
-    const cl=(_ed&&_ed.clips)||[];
-    if(cl.length<2){ toast('Ajoute au moins 2 clips pour poser une transition'); return; }
-    const ct=cursorT(); let best=1, bd=1e9, g=0;
-    for(let i=0;i<cl.length;i++){ if(i>0){ const d=Math.abs(g-ct); if(d<bd){ bd=d; best=i; } } g+=Math.max(0,cl[i].trimB-cl[i].trimA); }
-    cl[best].trans=type;
-    toast(type?('Transition « '+label+' » posée sur la coupure '+best):'Transition retirée (coupure '+best+')');
-    try{ if(typeof edRenderClips==='function') edRenderClips(); if(typeof edRenderClipsTrack==='function') edRenderClipsTrack(); }catch(e){}
+    // La transition devient un EFFET posé au curseur, comme un bruitage : chip
+    // draggable dans la piste Effets, dessiné à sa position (aperçu + export).
+    const type=_ED_TRANS_MAP[label];
+    if(type===undefined) return;
+    if(!type){ toast('Cut net — aucune transition'); return; }
+    const t=cursorT();
+    try{ edSnap&&edSnap(); }catch(e){}
+    _ed.sfx=_ed.sfx||[];
+    _ed.sfx.push({ id:'tr'+Date.now()+Math.random().toString(36).slice(2,6), t:Math.max(0,t), len:_ED_TRANS_DUR, trans:type, label:'⇥ '+(_ED_TRANS_LABEL[type]||label) });
+    try{ edRenderSfxTrack&&edRenderSfxTrack(); }catch(e){}
+    toast('Transition « '+label+' » posée au curseur — glisse la pastille pour la placer');
   }
   function renderBank(){
     const ov=document.getElementById('edBankModal'); if(!ov||!bank) return;
