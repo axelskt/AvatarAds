@@ -13911,9 +13911,9 @@ function _mdSfxFam(n){
 // Transitions de section CINÉMATIQUES, choisies PAR SECTION (le moteur lit
 // plan.sections[i].transition). 'Coupe nette' = pas d'overlay (le moteur garde
 // ses propres transitions de panneaux). Aligné sur ce que le render sait faire.
-const _MD_TRANS_BANK = ['Coupe nette','Flash blanc','Film Burn','Glitch RGB','Mask Glitch'];
-const _MD_TRANS_MAP = { 'Coupe nette':'', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Mask Glitch':'maskglitch' };
-const _mdTransLabel = (v) => ({ flash:'Flash blanc', filmburn:'Film Burn', glitch:'Glitch RGB', maskglitch:'Mask Glitch' }[String(v||'').toLowerCase()] || 'Coupe nette');
+const _MD_TRANS_BANK = ['Coupe nette','Fondu enchaîné','Flash blanc','Film Burn','Glitch RGB','Whip pan','Zoom','Mask Glitch'];
+const _MD_TRANS_MAP = { 'Coupe nette':'', 'Fondu enchaîné':'fondu', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Mask Glitch':'maskglitch' };
+const _mdTransLabel = (v) => ({ fondu:'Fondu enchaîné', flash:'Flash blanc', filmburn:'Film Burn', glitch:'Glitch RGB', whip:'Whip pan', zoom:'Zoom', maskglitch:'Mask Glitch' }[String(v||'').toLowerCase()] || 'Coupe nette');
 // les animations qui ÉCRIVENT le texte de leurs items à l'écran (détectées en
 // rendant animHtml avec un marqueur) : pour celles-là on demande à l'utilisateur
 // quoi écrire, pré-rempli avec les mots de l'audio (retour Axel 01/08 « y'a
@@ -14985,7 +14985,7 @@ function _mdAnimPrevHtml(name, desc, big){
 // aperçu de transition (Détails du montage) : VRAI dessin animé (_edPaintTrans) sur
 // deux panneaux A/B — fini le point blanc générique. Types alignés sur le moteur.
 function _mdTransPrevHtml(name, ratio){
-  const map={ 'Coupe nette':'', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Mask Glitch':'maskglitch' };
+  const map={ 'Coupe nette':'', 'Fondu enchaîné':'fondu', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Mask Glitch':'maskglitch' };
   const ty=map[name]||'';
   setTimeout(function(){ try{ _mdStartTransPrev(); }catch(e){} },30);
   return '<div style="position:relative;width:100%;height:100%;aspect-ratio:'+(ratio||'16 / 10')+';border-radius:8px;overflow:hidden;background:#0b0a10;border:1px solid var(--border)">'
@@ -14995,8 +14995,10 @@ function _mdTransPrevHtml(name, ratio){
 function _mdStartTransPrev(){ try{ cancelAnimationFrame(window._mdtpRAF); }catch(e){} window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev); }
 function _mdAnimTransPrev(){
   const cvs=document.querySelectorAll('canvas.mdtprev'); if(!cvs.length) return;
-  if(!window._mdtpA){ const mk=(c1,c2,lab)=>{ const o=document.createElement('canvas'); o.width=200; o.height=356; o.videoWidth=200; o.videoHeight=356; const x=o.getContext('2d'); const g=x.createLinearGradient(0,0,200,356); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,200,356); x.fillStyle='rgba(255,255,255,.82)'; x.font='bold 74px system-ui'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(lab,100,178); return o; };
-    window._mdtpA=mk('#2a4a7a','#0d1420','A'); window._mdtpB=mk('#7a2a4a','#20101a','B'); }
+  if(!window._mdtpA){ const mk=(c1,c2)=>{ const o=document.createElement('canvas'); o.width=200; o.height=356; o.videoWidth=200; o.videoHeight=356; const x=o.getContext('2d'); const g=x.createLinearGradient(0,0,200,356); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,200,356);
+      // léger grain/dégradé pour que l'effet soit lisible, sans lettre
+      const rg=x.createRadialGradient(100,150,10,100,150,180); rg.addColorStop(0,'rgba(255,255,255,.10)'); rg.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=rg; x.fillRect(0,0,200,356); return o; };
+    window._mdtpA=mk('#2a4a7a','#0d1420'); window._mdtpB=mk('#7a2a4a','#20101a'); }
   const A=window._mdtpA, B=window._mdtpB, now=(performance.now?performance.now():Date.now()), p=(now/1600)%1, srB={sx:0,sy:0,sw:B.width,sh:B.height};
   cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H); cx.drawImage(B,0,0,W,H);
     if(ty){ const prevV=(ty==='linewipe'||ty==='fondu')?A:null; try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} } });
