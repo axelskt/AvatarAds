@@ -115,7 +115,10 @@ export function animHtml(name, s, W, H, vs) {
   // quand le chef d'orchestre n'a rien passé. `esc()` protège le HTML : ce texte
   // vient du modèle, il ne doit jamais pouvoir injecter de balise.
   const raw = (s.items || []).map((it) => String(it && it.text != null ? it.text : ''))
-  const txt = (i, def) => esc((raw[i] || '').trim() || def)
+  // #blank · mode « anim vide » (éditeur AvatarAds) : on rend la STRUCTURE de l'anim sans le
+  // texte d'exemple, pour que l'utilisateur pose SON contenu par-dessus. Aucun impact sur les
+  // montages normaux (s._blank n'est jamais posé par la dérivation).
+  const txt = (i, def) => esc(s._blank ? '' : ((raw[i] || '').trim() || def))
   // Dégradé de marque : l'accent EST la couleur, le dégradé n'est qu'un voile.
   // `acc2` vaut le bleu du set « word » hors style apple — les cartes pleines
   // partaient donc en orange → BLEU, à côté d'une interface entièrement orange.
