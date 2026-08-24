@@ -1027,7 +1027,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="avPaneVideo" style="display:none">
                 <div id="avVideoZone" onclick="document.getElementById('avVideoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){_avVideoPick(f)}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta vidéo avatar ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — vidéo Hedra ou autre avatar</div><button type="button" onclick="event.stopPropagation();document.getElementById('avVideoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
                 <button type="button" onclick="openLibVideoPicker()" class="btn btn-ghost" style="width:100%;margin-top:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Choisir dans la bibliothèque</button>
-                <div class="row" style="padding:11px 14px;gap:10px;align-items:center;margin-top:12px;border:1px solid rgba(40,199,149,.3);background:rgba(40,199,149,.07);border-radius:var(--r-lg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span style="font-size:12.5px" id="avVideoQuota">Aucun crédit avatar consommé · 70 re-compositions restantes ce mois</span></div>
               </div>
               <div id="avPaneLib" style="display:none">
                 <div id="avLibGrid2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px"></div>
@@ -2616,7 +2615,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div class="ph" style="align-items:flex-start">
           <div>
             <h2 class="display row gap12" style="font-size:28px;font-weight:700;align-items:center;line-height:1.2"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Bibliothèque</h2>
-            <div class="muted" style="margin-top:6px;font-size:14px">Toutes tes vidéos générées · réutilise dans le Générateur ou Express, ou supprime</div>
+            <div class="muted" style="margin-top:6px;font-size:14px">Toutes tes vidéos générées</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
             <button onclick="document.getElementById('libImportInput').click()" style="width:auto;padding:9px 16px;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px" onmouseover="this.style.borderColor='var(--border-2)';this.style.background='var(--surface-2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)';this.style.color='var(--text2)'" title="Importer une vidéo Hedra déjà générée pour la re-composer avec des sous-titres">
@@ -3570,9 +3569,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <div class="exp-section" id="expMoteurSection" style="margin-bottom:0;display:none">
           <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Moteur <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div>
           <div id="expMoteurRailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div id="expEngVeoRail" onclick="_expSetEngine('veo')" class="exp-card on" style="padding:13px 14px">
+            <div id="expEngVeoRail" onclick="_expSetEngine('veo')" class="exp-card on" style="padding:14px;text-align:center;display:flex;align-items:center;justify-content:center">
               <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Veo 3.1</div></div>
-            <div id="expEngSeedanceRail" onclick="_expSetEngine('seedance')" class="exp-card" style="padding:13px 14px">
+            <div id="expEngSeedanceRail" onclick="_expSetEngine('seedance')" class="exp-card" style="padding:14px;text-align:center;display:flex;align-items:center;justify-content:center">
               <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.2">Seedance 2.0 <span class="mono" style="font-size:9px;color:var(--accent-2)">DEV</span></div></div>
           </div>
         </div>
@@ -9505,8 +9504,13 @@ async function _libImgAction(action, idx){
   const u = await _libGetFullImg(e.idbKey, e.url, e.srvPath);
   if(action === 'open'){ window.open(u, '_blank'); }
   else if(action === 'download'){
-    const a = document.createElement('a'); a.href = u; a.download = 'avatarads-image.png';
-    document.body.appendChild(a); a.click(); a.remove();
+    // #dl · télécharger DIRECT (pas de redirection) : sur une URL distante, l'attribut
+    // download est ignoré (cross-origin) → le navigateur ouvrait l'image. On passe par un blob.
+    try{
+      const resp = await fetch(u); const blob = await resp.blob(); const bu = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = bu; a.download = 'avatarads-image.png';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(bu), 3000);
+    }catch(_){ const a = document.createElement('a'); a.href = u; a.download = 'avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }
   }
   else if(action === 'cartoon'){ _libSendImageToCartoon(u); }
 }
@@ -23930,8 +23934,8 @@ function renderLibrary(){
       const ri = v._realIdx;
       return `<div class="vid-card">
         <div class="vid-thumb" style="background:${v.bg};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
-          <canvas id="lib-wave-${ri}" data-lib-audio-idb="${v.idbKey||''}" width="160" height="60" style="position:absolute;inset:0;width:100%;height:100%;opacity:.7;z-index:1"></canvas>
-          <div class="lib-emoji" style="z-index:2;position:relative;color:var(--text2);opacity:.9"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 9v6"/></svg></div>
+          <!-- #audio-icone · la waveform étirée (160×60 → plein cadre) pixélisait ; on garde juste l'icône propre et centrée (retour Axel « screen 6 parfait ») -->
+          <div class="lib-emoji" style="z-index:2;position:relative;color:var(--text2);opacity:.85"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 9v6"/></svg></div>
           <div class="vid-overlay" style="z-index:3"></div>
           <div class="vid-badge" style="z-index:4">${v.style}</div>
           <div style="z-index:5">${_delBtn('lib', ri)}</div>
@@ -23968,7 +23972,7 @@ function renderLibrary(){
         <div style="display:flex;gap:5px;margin-top:7px">
           <button onclick="event.stopPropagation();_libPreviewVideo(${ri})" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
           <button onclick="event.stopPropagation();_libDownloadMedia(${ri},'video')" style="flex:1;padding:7px 4px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
-        </div>` : ''}
+        </div>` : `<div class="row" style="gap:6px;align-items:center;margin-top:7px;padding:6px 8px;border-radius:8px;border:1px solid var(--border2);background:var(--bg4);color:var(--text3);font-size:10.5px;font-family:var(--mono)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg> Indisponible — supprime-la (croix)</div>`}
       </div>
     </div>`;
   }).join('');
@@ -25034,9 +25038,8 @@ function initExpress(){
   if(sg){
     sg.innerHTML = EXP_STYLES.map(s=>{
       const on = s.id===window._expStyle;
-      return `<div onclick="_expPickStyle('${s.id}')" class="exp-card${on?' on':''}" data-exp-style="${s.id}" style="padding:13px 14px">
-        <div style="font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2">${s.label}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">${s.sub}</div></div>`;
+      return `<div onclick="_expPickStyle('${s.id}')" class="exp-card${on?' on':''}" data-exp-style="${s.id}" style="padding:15px 14px;text-align:center;display:flex;align-items:center;justify-content:center">
+        <div style="font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2">${s.label}</div></div>`;
     }).join('');
   }
   // Format
@@ -25943,7 +25946,7 @@ function _expRenderVoices(){
       const bg = on ? 'rgba(255,107,53,.08)' : 'var(--bg3)';
       const row = `<div onclick="_expPickVoice('${v.id}')" class="exp-voice-row" style="display:flex;align-items:center;gap:11px;padding:13px 14px;border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s;border:${border};background:${bg}">
         <span style="flex-shrink:0;color:${iconColor};display:flex">${_EXP_VOICE_ICON[v.id]||''}</span>
-        <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:var(--text);line-height:1.2">${v.name || 'Sans titre'}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${v.desc}</div></div>
+        <div style="flex:1;min-width:0;text-align:center"><div style="font-size:13.5px;font-weight:700;color:var(--text);line-height:1.2">${v.name || 'Sans titre'}</div></div>
         <span style="flex-shrink:0;display:flex">${right}</span>
       </div>`;
       // Bandeau « Recommandé » au-dessus de la voix native Veo
