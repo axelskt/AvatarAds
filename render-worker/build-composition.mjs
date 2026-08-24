@@ -417,10 +417,12 @@ export function buildComposition(plan, opts = {}) {
     if (avatarSegs.some((a) => a.format === 'paysage' && a.start < s.end && a.end > s.start)) s.wide = true
   }
 
-  // ── transitions entre sections (#111) : flash lumineux bref sur les frontières
-  // internes — sauf celles déjà marquées par une entrée/sortie de split (le morph
-  // de la zone vidéo est la transition à ces endroits-là) ──
-  const secBounds = [...new Set((plan.sections || []).slice(1).map((s) => r2(s.start)))]
+  // ── transitions entre sections : OPT-IN STRICT (aligné sur le moteur dynamique) ──
+  // On n'ajoute un overlay QUE si la section demande EXPLICITEMENT un type valide
+  // (section.transition). Vide = 'Coupe nette' = RIEN. Avant : la legacy flashait
+  // CHAQUE frontière (même Coupe nette) et mappait fondu/whip/zoom → flash.
+  const _TRANS_TYPES = new Set(['flash', 'filmburn', 'glitch', 'maskglitch', 'fondu', 'whip', 'zoom'])
+  const secBounds = [...new Set((plan.sections || []).filter((s) => s && _TRANS_TYPES.has(String(s.transition || '').toLowerCase())).map((s) => r2(s.start)))]
     .filter((t) => t > 0.5 && t < D - 0.5)
     .filter((t) => !periods.some((p) => Math.abs(t - p.start) < 0.5 || Math.abs(t - p.end) < 0.5))
 
@@ -875,14 +877,25 @@ export function buildComposition(plan, opts = {}) {
   // → comportement historique inchangé si le chef ne dit rien.
   const secByStart = new Map((plan.sections || []).map((s) => [r2(s.start), s]))
   const maskSil = opts.maskSil || ''   // silhouette blanche de l'avatar (worker) pour le Mask Glitch ; vide = repli glitch
-  const TRANS_OK = new Set(['flash', 'filmburn', 'glitch', 'maskglitch'])
+  const TRANS_OK = _TRANS_TYPES
+  const _BURNW = Math.round(W * 1.8)
   const transAt = (t) => {
     const s = secByStart.get(r2(t)); let ty = s && String(s.transition || '').toLowerCase()
     if (ty === 'maskglitch' && !maskSil) ty = 'glitch'
-    return TRANS_OK.has(ty) ? ty : 'flash'
+    return TRANS_OK.has(ty) ? ty : ''   // vide = pas de transition (secBounds est déjà opt-in)
   }
   const flashJs = secBounds.map((t) => {
     const ty = transAt(t), t0 = r2(Math.max(0, t - 0.04))
+    if (ty === 'fondu') return `
+      tl.to('#fondu', { autoAlpha: 0.62, duration: 0.16, ease: 'power2.in' }, ${r2(Math.max(0, t - 0.16))});
+      tl.to('#fondu', { autoAlpha: 0, duration: 0.22, ease: 'power2.out' }, ${r2(t + 0.02)});`
+    if (ty === 'whip') return `
+      tl.to('#whip', { autoAlpha: 1, duration: 0.04 }, ${r2(Math.max(0, t - 0.10))});
+      tl.fromTo('#whip', { x: ${-Math.round(W * 1.1)} }, { x: ${Math.round(W * 1.1)}, duration: 0.26, ease: 'power2.inOut' }, ${r2(Math.max(0, t - 0.10))});
+      tl.to('#whip', { autoAlpha: 0, duration: 0.08 }, ${r2(t + 0.14)});`
+    if (ty === 'zoom') return `
+      tl.fromTo('#zoomT', { autoAlpha: 0, scale: 0.3 }, { autoAlpha: 0.8, scale: 1.5, duration: 0.16, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.08))});
+      tl.to('#zoomT', { autoAlpha: 0, scale: 2.2, duration: 0.22, ease: 'power2.in' }, ${r2(t + 0.08)});`
     if (ty === 'filmburn') return `
       tl.to('#burn', { autoAlpha: 1, duration: 0.08 }, ${r2(Math.max(0, t - 0.18))});
       tl.fromTo('#burn', { x: ${-Math.round(W * 1.8)} }, { x: ${Math.round(W * 1.05)}, duration: 0.52, ease: 'power1.inOut' }, ${r2(Math.max(0, t - 0.18))});
@@ -1093,6 +1106,11 @@ export function buildComposition(plan, opts = {}) {
         filter: drop-shadow(0 0 26px rgba(180,230,255,.9)) drop-shadow(0 0 60px rgba(120,200,255,.6)); }
       #maskBeam { top: 0; bottom: 0; left: 50%; width: 300px; margin-left: -150px; z-index: 10; pointer-events: none; mix-blend-mode: screen;
         background: linear-gradient(90deg, transparent, rgba(190,235,255,.6) 34%, rgba(255,255,255,1) 50%, rgba(190,235,255,.6) 66%, transparent); }
+      #fondu { inset: 0; z-index: 9; pointer-events: none; background: #000; }
+      #whip { top: 0; bottom: 0; left: 0; width: ${Math.round(W * 0.7)}px; z-index: 9; pointer-events: none; filter: blur(7px);
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,.55) 42%, rgba(255,255,255,.85) 50%, rgba(255,255,255,.55) 58%, transparent); }
+      #zoomT { inset: 0; z-index: 9; pointer-events: none; mix-blend-mode: screen;
+        background: radial-gradient(circle at 50% 42%, rgba(255,255,255,.9), rgba(255,255,255,.3) 30%, transparent 60%); }
 
       /* scènes UI du script mot-à-mot (timer, navigateur, grille, vol de photo) */
       .wui { inset: 0; z-index: 4; }
@@ -1198,6 +1216,9 @@ ${secBounds.length ? `      <div id="flash" class="clip" data-start="0" data-dur
       <div id="burn" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
       <div id="glitch" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
       <div id="glitch2" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+      <div id="fondu" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+      <div id="whip" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
+      <div id="zoomT" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
 ${maskSil ? `      <div id="maskSil" class="clip" data-start="0" data-duration="${D}" data-track-index="8" style="background-image:url('${maskSil}')"></div>
       <div id="maskBeam" class="clip" data-start="0" data-duration="${D}" data-track-index="8"></div>
 ` : ''}` : ''}    </div>
@@ -1207,7 +1228,9 @@ ${wordMode ? WORD_FIT_JS + '\n' : ''}      window.__timelines = window.__timelin
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
-` : ''}${secBounds.length ? `      tl.set(['#flash', '#burn', '#glitch', '#glitch2'${maskSil ? `, '#maskSil', '#maskBeam'` : ''}], { autoAlpha: 0 }, 0);
+` : ''}${secBounds.length ? `      tl.set(['#flash', '#burn', '#glitch', '#glitch2', '#fondu', '#whip', '#zoomT'${maskSil ? `, '#maskSil', '#maskBeam'` : ''}], { autoAlpha: 0 }, 0);
+      tl.set('#whip', { x: ${-Math.round(W * 1.1)} }, 0);
+      tl.set('#zoomT', { scale: 0.3 }, 0);
 ${maskSil ? `      tl.set('#maskSil', { scale: 1 }, 0);
       tl.set('#maskBeam', { scaleX: 0.12 }, 0);
 ` : ''}` : ''}${avatarSegs.map((a) => `      tl.set('#${a.id}', { autoAlpha: 0 }, 0);`).join('\n')}
