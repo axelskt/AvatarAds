@@ -101,7 +101,9 @@ export const lineupKind = (texte, k) => {
 }
 
 export function animHtml(name, s, W, H, vs) {
-  const P = animPalette(vs)
+  // #blankDark · aperçu « fond sombre à carreaux » (éditeur) : contenu CLAIR (encre
+  // blanche) pour ressortir sur le fond violet foncé posé par la scène (.fslide.blankdark).
+  const P = animPalette(s && s._blankDark ? 'glass' : vs)
   const f = frame(W, H)
   const id = s.id
   const box = (inner) => `<div class="an" id="${id}an" style="left:${f.x}px;top:${f.y}px;width:${f.w}px;height:${f.h}px">${inner}</div>`
