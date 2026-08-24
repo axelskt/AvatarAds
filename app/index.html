@@ -4602,6 +4602,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
               <button onclick="edSplitStart()" class="btn btn-ghost" style="width:100%;margin-bottom:12px;border-color:rgba(34,211,238,.35);color:#22D3EE"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="8" rx="2"/><rect x="4" y="13" width="16" height="8" rx="2"/><circle cx="12" cy="16.5" r="1.6"/><path d="M9 20c.6-1.2 1.7-1.9 3-1.9s2.4.7 3 1.9"/></svg> Split screen</button>
+              <!-- #recadre-visuel · bouton explicite (le petit crop de l'aperçu n'était pas repérable) : reframe pan/zoom de la vidéo -->
+              <button id="edReframeVisBtn" onclick="edToggleReframe()" class="btn btn-ghost" style="width:100%;margin-bottom:12px;border-color:rgba(255,143,94,.4);color:#FF8F5E"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer le visuel</button>
               <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
               <input type="file" id="edSplitIn" accept="image/*,video/*" style="display:none" onchange="edAddSplit(this.files[0]);this.value=''">
             </div>
@@ -31608,8 +31610,9 @@ function edToggleReframe(){
   _ed.reframeMode=!_ed.reframeMode;
   const stage=document.getElementById('edStage'); if(stage) stage.style.cursor=_ed.reframeMode?'grab':'';
   const btn=document.getElementById('edReframeBtn'); if(btn){ btn.style.background=_ed.reframeMode?'var(--accent-soft)':''; btn.style.color=_ed.reframeMode?'var(--accent-2)':''; }
+  const vbtn=document.getElementById('edReframeVisBtn'); if(vbtn){ vbtn.style.background=_ed.reframeMode?'rgba(255,143,94,.16)':''; vbtn.style.borderColor=_ed.reframeMode?'#FF8F5E':'rgba(255,143,94,.4)'; }
   const hint=document.getElementById('edReframeHint'); if(hint) hint.style.display=_ed.reframeMode?'flex':'none';
-  if(_ed.reframeMode){ _edClipRF(); if(_ed.sel) edHideProps(); toast('Recadrage : glisse pour déplacer · molette pour zoomer'); }
+  if(_ed.reframeMode){ _edClipRF(); if(_ed.sel) edHideProps(); toast('Recadre la vidéo : glisse pour déplacer · molette pour zoomer'); }
 }
 function edReframeReset(){ if(!_ed||!_ed.clips) return; const c=_ed.clips[_ed.activeIdx||0]; if(c){ edSnap(); c._reframe={ox:0.5,oy:0.5,z:1}; toast('Cadrage réinitialisé'); } }
 function _edBindReframe(){
