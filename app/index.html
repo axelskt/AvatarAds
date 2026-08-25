@@ -15160,37 +15160,22 @@ function _mdAnimPrevHtml(name, desc, big){
 // aperçu de transition (Détails du montage) : VRAI dessin animé (_edPaintTrans) sur
 // deux panneaux A/B — fini le point blanc générique. Types alignés sur le moteur.
 function _mdTransPrevHtml(name, ratio){
-  const map={ 'Coupe nette':'', 'Fondu enchaîné':'fondu', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Mask Glitch':'maskglitch', 'Trait avant/après':'linewipe' };
+  const map={ 'Coupe nette':'', 'Fondu enchaîné':'fondu', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Mask Glitch':'maskglitch' };
   const ty=map[name]||'';
   setTimeout(function(){ try{ _mdStartTransPrev(); }catch(e){} },30);
-  // #trait-avant-après (Axel « je n'ai pas le trait avant/après ») : l'aperçu montre EXPLICITEMENT
-  // le clip AVANT → l'effet → le clip APRÈS, avec un libellé de phase, pas juste une carte figée.
   return '<div style="position:relative;width:100%;height:100%;aspect-ratio:'+(ratio||'16 / 10')+';border-radius:8px;overflow:hidden;background:#0b0a10;border:1px solid var(--border)">'
     +'<canvas class="mdtprev" data-tt="'+ty+'" width="200" height="356" style="width:100%;height:100%;display:block"></canvas>'
-    +'<span class="mdtprev-lbl mono" style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);color:#fff;font-size:10px;letter-spacing:.06em;pointer-events:none">avant</span>'
     +(ty?'':'<span class="mono" style="position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:12px">Coupe nette</span>')+'</div>';
 }
 function _mdStartTransPrev(){ try{ cancelAnimationFrame(window._mdtpRAF); }catch(e){} window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev); }
 function _mdAnimTransPrev(){
   const cvs=document.querySelectorAll('canvas.mdtprev'); if(!cvs.length) return;
-  if(!window._mdtpA){ const mk=(c1,c2,lab)=>{ const o=document.createElement('canvas'); o.width=200; o.height=356; o.videoWidth=200; o.videoHeight=356; const x=o.getContext('2d'); const g=x.createLinearGradient(0,0,200,356); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,200,356);
-      const rg=x.createRadialGradient(100,150,10,100,150,180); rg.addColorStop(0,'rgba(255,255,255,.12)'); rg.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=rg; x.fillRect(0,0,200,356);
-      // gros chiffre AVANT=1 / APRÈS=2 → les deux clips sont visuellement distincts, la transition se lit
-      x.fillStyle='rgba(255,255,255,.9)'; x.font='900 120px system-ui'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(lab,100,178); return o; };
-    window._mdtpA=mk('#2a4a7a','#0d1420','1'); window._mdtpB=mk('#7a2a4a','#20101a','2'); }
-  const A=window._mdtpA, B=window._mdtpB, srB={sx:0,sy:0,sw:B.width,sh:B.height};
-  // cadence LISIBLE : tient sur AVANT (0,55 s) → joue la transition (0,7 s) → tient sur APRÈS (0,55 s) → boucle
-  const now=(performance.now?performance.now():Date.now()), CYC=1800, ph=(now%CYC)/CYC;
-  let p, phase; if(ph<0.30){ p=0; phase='avant'; } else if(ph<0.70){ p=(ph-0.30)/0.40; phase='pendant'; } else { p=1; phase='après'; }
-  cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H);
-    // avant → clip 1 (A) ; après → clip 2 (B) ; pendant → base = clip 2 (B) et _edPaintTrans révèle A→B
-    // (miroir du jumeau éditeur edAnimTransPreviews : la base est TOUJOURS B, A n'est qu'un CALQUE qui s'efface).
-    if(!ty){ cx.drawImage(phase==='avant'?A:B,0,0,W,H); }
-    else if(phase==='avant'){ cx.drawImage(A,0,0,W,H); }
-    else if(phase==='après'){ cx.drawImage(B,0,0,W,H); }
-    else { cx.drawImage(B,0,0,W,H); const prevV=(ty==='linewipe'||ty==='fondu')?A:null; try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} }
-    const lbl=cv.parentNode&&cv.parentNode.querySelector('.mdtprev-lbl');
-    if(lbl){ lbl.textContent=phase==='pendant'?(_ED_TRANS_LABEL&&_ED_TRANS_LABEL[ty]||'transition'):phase; } });
+  if(!window._mdtpA){ const mk=(c1,c2)=>{ const o=document.createElement('canvas'); o.width=200; o.height=356; o.videoWidth=200; o.videoHeight=356; const x=o.getContext('2d'); const g=x.createLinearGradient(0,0,200,356); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,200,356);
+      const rg=x.createRadialGradient(100,150,10,100,150,180); rg.addColorStop(0,'rgba(255,255,255,.10)'); rg.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=rg; x.fillRect(0,0,200,356); return o; };
+    window._mdtpA=mk('#2a4a7a','#0d1420'); window._mdtpB=mk('#7a2a4a','#20101a'); }
+  const A=window._mdtpA, B=window._mdtpB, now=(performance.now?performance.now():Date.now()), p=(now/1600)%1, srB={sx:0,sy:0,sw:B.width,sh:B.height};
+  cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H); cx.drawImage(B,0,0,W,H);
+    if(ty){ const prevV=(ty==='linewipe'||ty==='fondu')?A:null; try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} } });
   window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev);
 }
 // style d'une CARTE DE TEXTE — clé = nom du template (détection par sous-chaîne, comme la
@@ -16157,13 +16142,11 @@ function _mdPlayTransPreview(t, typeArg){
     else if(type==='maskglitch'){ bg='radial-gradient(circle at 50% 42%, rgba(232,246,255,.9), rgba(160,210,255,0) 62%)'; blend='screen'; peak=0.85; vidAnim='mdVidGlitch'; }
     fl.style.background=bg; fl.style.mixBlendMode=blend; fl.style.setProperty('--mdtp', String(peak));
     fl.style.animation='none'; void fl.offsetWidth;   // reflow → redémarre l'anim
-    // #transition-boucle (Axel « fondu toujours rien ») : on BOUCLE l'effet ~9 s (au lieu d'un one-shot
-    // ~0,6 s qui se ratait pendant la fermeture de la modale) → impossible à manquer.
-    fl.style.animation='mdTransPulse '+DUR.toFixed(2)+'s ease 0s infinite both';
+    fl.style.animation='mdTransPulse '+DUR.toFixed(2)+'s ease both';
     if(fll){ fll.textContent=_mdTransLabel(type); fll.style.opacity='1'; }
-    if(v && vidAnim){ v.style.animation='none'; void v.offsetWidth; v.style.animation=vidAnim+' '+DUR.toFixed(2)+'s ease 0s infinite both'; }
+    if(v && vidAnim){ v.style.animation='none'; void v.offsetWidth; v.style.animation=vidAnim+' '+DUR.toFixed(2)+'s ease both'; }
     _md._transPrevTO=setTimeout(()=>{ try{ const f=document.getElementById('mdTransFlash'); if(f){ f.style.animation=''; f.style.opacity='0'; f.style.background='#fff'; f.style.mixBlendMode='screen'; }
-      const l=document.getElementById('mdTransLbl'); if(l) l.style.opacity='0'; const vv=_mdVid(); if(vv){ vv.style.animation=''; vv.style.filter=''; vv.style.transform=''; } }catch(_){} }, 9000);
+      const l=document.getElementById('mdTransLbl'); if(l) l.style.opacity='0'; const vv=_mdVid(); if(vv){ vv.style.animation=''; vv.style.filter=''; vv.style.transform=''; } }catch(_){} }, Math.round(DUR*1000)+120);
   }catch(_){}
 }
 // #texte-sur-vidéo (Axel 25/08 : « le texte doit être lu en priorité, jamais sur fond blanc ») :
@@ -31945,6 +31928,7 @@ function edPickFromLibrary(){
 
 function edLoadFile(file, onDone){
   if(!file || !file.type.startsWith('video/')){ toast('Choisis un fichier vidéo'); return; }
+  try{ _edEnsureBlankSet(); }catch(_){}   // #un-baké · précharge les anims SANS texte dès l'ouverture de l'éditeur
   const url=URL.createObjectURL(file);
   const video=document.createElement('video');
   video.src=url; video.playsInline=true; video.preload='auto';
@@ -32238,18 +32222,29 @@ function _edPlayTransPreview(t, type){
     if(_ed.playing) edPause();
     edScrubTo(t);   // fige la tête sur la frame de la transition
     let prevV=null;
-    if(type==='linewipe'||type==='fondu'){ const at=(typeof _edClipAt==='function')?_edClipAt(t):{i:0}; prevV=(at.i>0)?(_ed.clips[at.i-1]||{}).video:null; }
+    const isDiss=(type==='linewipe'||type==='fondu');
+    if(isDiss){ const at=(typeof _edClipAt==='function')?_edClipAt(t):{i:0}; prevV=(at.i>0)?(_ed.clips[at.i-1]||{}).video:null; }
     const _s=(_ed.sfx||[]).find(x=>x.trans&&Math.abs((x.t||0)-t)<0.06); const _len=Math.max(0.6,(_s&&_s.len)||_ED_TRANS_DUR);
-    // #transition-boucle (Axel « fondu toujours rien ») : le one-shot ~0,9 s se ratait à l'œil (il jouait
-    // pendant que la modale se fermait). On BOUCLE l'effet ~9 s (cycle + petite pause) → impossible à manquer.
-    _ed._transPrev={ t0:performance.now(), type:String(type||''), prevV:prevV, len:_len, until:performance.now()+9000 };   // edDrawLoop l'anime en boucle
+    // #fondu-vrai (Axel « sur l'éditeur ça marche pas ») : sur UN SEUL clip, un « fondu enchaîné » ne peut pas
+    // être un noir (rien à croiser). On GÈLE la frame de départ et on la DISSOUT dans la vidéo qui CONTINUE
+    // → vrai fondu. Il faut LIRE la vidéo pendant l'aperçu (un gel sur une vidéo à l'arrêt = image identique = rien).
+    let once=false;
+    if(isDiss && !prevV){ try{ const v=_ed.video; const fz=document.createElement('canvas'); fz.width=v.videoWidth||640; fz.height=v.videoHeight||360; if(fz.width>2){ fz.getContext('2d').drawImage(v,0,0,fz.width,fz.height); fz.videoWidth=fz.width; fz.videoHeight=fz.height; prevV=fz; once=true; } }catch(_){} }
+    _ed._transPrev={ t0:performance.now(), type:String(type||''), prevV:prevV, len:_len, until:performance.now()+9000, once:once };
+    if(once){ try{ _ed.video.muted=true; const _p=_ed.video.play(); if(_p&&_p.catch)_p.catch(()=>{}); }catch(_){} }   // lit la vidéo → la dissolution se voit
   }catch(_){}
 }
 function edDrawTrans(cx,W,H,gTime,curV,sr){ if(!_ed) return;
   for(const s of (_ed.sfx||[])){ if(!s.trans) continue;
-    const dur=Math.max(0.15,s.len||_ED_TRANS_DUR); const p=(gTime-s.t)/dur; if(p<0||p>1) continue;
+    const dur=Math.max(0.15,s.len||_ED_TRANS_DUR); const p=(gTime-s.t)/dur;
+    if(p<0){ if(s._freeze) s._freeze=null; continue; }   // avant la coupe : oublie le gel
+    if(p>1) continue;
     let prevV=null;
-    if(s.trans==='linewipe'||s.trans==='fondu'){ const at=_edClipAt(s.t); prevV=(at.i>0)?(_ed.clips[at.i-1]||{}).video:null; }
+    if(s.trans==='linewipe'||s.trans==='fondu'){ const at=_edClipAt(s.t); prevV=(at.i>0)?(_ed.clips[at.i-1]||{}).video:null;
+      if(!prevV){ // UN clip : gèle la frame de départ, dissous-la dans la vidéo qui joue = vrai fondu (pas un noir)
+        if(!s._freeze && curV){ try{ const fz=document.createElement('canvas'); fz.width=curV.videoWidth||640; fz.height=curV.videoHeight||360; if(fz.width>2){ fz.getContext('2d').drawImage(curV,0,0,fz.width,fz.height); fz.videoWidth=fz.width; fz.videoHeight=fz.height; s._freeze=fz; } }catch(_){} }
+        prevV=s._freeze||null;
+      } else if(s._freeze){ s._freeze=null; } }
     _edPaintTrans(cx,W,H,p,s.trans,curV,sr,prevV);
   }
 }
@@ -32299,10 +32294,17 @@ function edDrawLoop(){
   try{ edDrawTrans(ctx, _ed.dispW, _ed.dispH, _gt, v, _cr); }catch(e){}   // transitions entre clips (aperçu)
   // #transition-preview déterministe + BOUCLE (Axel : « fondu ne fait rien ») : anime l'effet 0→1→0 EN BOUCLE
   // (durée + pause) pendant ~9 s pour qu'on le voie à coup sûr, puis s'arrête. La <video> reste figée dessous.
-  if(_ed._transPrev){ const _tp=_ed._transPrev; const _dur=(_tp.len||0.9)*1000, _gap=460, _cyc=_dur+_gap;
-    const _el=performance.now()-_tp.t0, _inc=_el%_cyc;
-    if(_inc<_dur){ const p=_inc/_dur; try{ _edPaintTrans(ctx, _ed.dispW, _ed.dispH, p, _tp.type, v, _cr, _tp.prevV); }catch(e){} }
-    if(performance.now()>(_tp.until||0)) _ed._transPrev=null; }
+  if(_ed._transPrev){ const _tp=_ed._transPrev;
+    if(_tp.once){ // fondu enchaîné sur 1 clip : lecture + dissolution du gel → UN passage puis pause
+      const p=Math.min(1,(performance.now()-_tp.t0)/((_tp.len||0.9)*1000));
+      try{ _edPaintTrans(ctx, _ed.dispW, _ed.dispH, p, _tp.type, v, _cr, _tp.prevV); }catch(e){}
+      if(p>=1){ _ed._transPrev=null; try{ if(!_ed.playing) _ed.video.pause(); }catch(e){} }
+    } else {
+      const _dur=(_tp.len||0.9)*1000, _gap=460, _cyc=_dur+_gap;
+      const _el=performance.now()-_tp.t0, _inc=_el%_cyc;
+      if(_inc<_dur){ const p=_inc/_dur; try{ _edPaintTrans(ctx, _ed.dispW, _ed.dispH, p, _tp.type, v, _cr, _tp.prevV); }catch(e){} }
+      if(performance.now()>(_tp.until||0)) _ed._transPrev=null;
+    } }
   for(const o of _ed.overlays){
     if(o._el){ const vis=(o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end); o._el.style.visibility=vis?'visible':'hidden'; } // #split · visible SEULEMENT dans sa fenêtre (avant : la sélection le forçait plein écran sur toute la vidéo)
     if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
@@ -32566,11 +32568,34 @@ function _edFillSplit(ov, media){
   edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
   toast(media.animName ? ('Animation « '+media.animName+' » dans le split') : 'Média ajouté au split');
 }
+// #un-baké (Axel « le UN reste malgré que je change le texte ») : l'éditeur DOIT utiliser les anims SANS
+// texte (bucket blank/) pour que l'utilisateur pose SON propre texte par-dessus. La liste blank était chargée
+// TROP TARD (à l'ouverture de la banque) → une anim posée vite gardait la version avec « UN » cuit. On la
+// précharge dès l'ouverture de l'éditeur, ET on re-résout les anims déjà posées dès qu'elle arrive.
+function _edEnsureBlankSet(){
+  if(window._edBlankSet) return Promise.resolve(window._edBlankSet);
+  if(window._edBlankSetP) return window._edBlankSetP;
+  const base=window._ED_BLANK_BASE||((typeof SUPABASE_URL!=='undefined'?SUPABASE_URL:'')+'/storage/v1/object/public/anim-previews/blank/');
+  window._edBlankSetP=fetch(base+'index.json',{cache:'no-store'}).then(function(r){return r.json();})
+    .then(function(a){ window._edBlankSet=new Set(a||[]); try{ _edReblankAnims(); }catch(_){} return window._edBlankSet; })
+    .catch(function(){ window._edBlankSet=new Set(); return window._edBlankSet; });
+  return window._edBlankSetP;
+}
+function _edReblankAnims(){
+  if(!_ed||!_ed.overlays||!window._edBlankSet||!window._ED_BLANK_BASE) return;
+  _ed.overlays.forEach(function(ov){ if(!(ov._anim&&ov.animName&&ov._bgStyle!=='dark')) return;
+    const nm=String(ov.animName).replace(/[^a-z0-9_-]/gi,''); if(!window._edBlankSet.has(nm)) return;
+    const burl=window._ED_BLANK_BASE+nm+'.mp4'; if(ov.url===burl) return; ov.url=burl;
+    if(ov.vid){ try{ov.vid.pause();}catch(e){} ov.vid.src=burl; try{ov.vid.load();}catch(e){} }
+    const im=ov._el&&ov._el.querySelector('video,img'); if(im&&im.tagName==='VIDEO'){ im.src=burl; try{im.load();}catch(e){} }
+  });
+}
 // une animation de la banque → remplit un split vide (cible du placeholder ou sous le curseur),
 // sinon en crée un neuf avec l'anim en haut. Plus JAMAIS de plein cadre blanc.
 function edAddAnimToSplit(name){
   if(!_ed){ toast('Charge d\'abord une vidéo'); return; }
   const nm=String(name||'').replace(/[^a-z0-9_-]/gi,'');
+  try{ _edEnsureBlankSet(); }catch(_){}   // charge la liste blank et re-résout quand prête (évite le « UN » cuit)
   const url=(typeof window._edAnimSrc==='function')?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4'));
   // #changer-anim (retour Axel) · « Changer l'animation » d'un split DÉJÀ rempli → on
   // remplace l'anim en place (le split reste, on ne le recrée pas).
@@ -32657,16 +32682,18 @@ function _edApplySplitBox(ov){
 // #fond-animé (Axel « impossible d'animer l'arrière-plan ? même avec les grilles ? ») : des fonds ANIMÉS
 // (grille qui défile, dégradé qui balaie, aurora) dispo pour N'IMPORTE QUELLE anim — pas besoin d'une
 // variante « carreaux » cuite. Le fond animé est en CSS (immunisé RAF) derrière l'anim en blend multiply.
+// couleurs VIVES (Axel « le fond animé manque de couleur, faut qu'on voie mieux ») : bases saturées
+// (le blend multiply garde le contenu foncé de l'anim lisible, mais fait bien ressortir la teinte).
 const _ED_ANIMBG = {
-  grille: { base:'#E7DFFF', css:'repeating-linear-gradient(0deg,rgba(124,92,255,.22) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,rgba(124,92,255,.22) 0 1px,transparent 1px 22px),linear-gradient(135deg,#ECE6FF,#D8CCFF)', size:'22px 22px,22px 22px,100% 100%', anim:'edBgGrid 3.4s linear infinite', line:'rgba(124,92,255,.5)' },
-  degrade:{ base:'#F2E7FF', css:'linear-gradient(120deg,#FFE0CE,#E9D8FF,#CFE3FF,#FFE0CE)', size:'300% 300%', anim:'edBgSweep 7s ease infinite', line:null },
-  aurora: { base:'#E7F0FF', css:'radial-gradient(60% 60% at 30% 30%,rgba(124,92,255,.38),transparent 60%),radial-gradient(52% 52% at 74% 66%,rgba(255,120,80,.30),transparent 60%),linear-gradient(135deg,#EAF0FF,#F6E9FF)', size:'200% 200%,200% 200%,100% 100%', anim:'edBgAurora 9s ease-in-out infinite', line:null }
+  grille: { base:'#B9A2FF', css:'repeating-linear-gradient(0deg,rgba(96,56,255,.7) 0 2px,transparent 2px 22px),repeating-linear-gradient(90deg,rgba(96,56,255,.7) 0 2px,transparent 2px 22px),linear-gradient(135deg,#CDB8FF,#9E7CFF)', size:'22px 22px,22px 22px,100% 100%', anim:'edBgGrid 3.4s linear infinite', line:'rgba(80,40,235,.92)' },
+  degrade:{ base:'#FF8FC0', css:'linear-gradient(120deg,#FF9E6B,#FF6FB0,#7FB4FF,#B983FF,#FF9E6B)', size:'320% 320%', anim:'edBgSweep 6.5s ease infinite', line:null },
+  aurora: { base:'#D9B6FF', css:'radial-gradient(60% 60% at 28% 30%,rgba(124,52,255,.72),transparent 62%),radial-gradient(55% 55% at 76% 64%,rgba(255,88,58,.62),transparent 62%),radial-gradient(52% 52% at 50% 92%,rgba(40,168,255,.6),transparent 60%),linear-gradient(135deg,#E7D2FF,#FFDDEC)', size:'200% 200%,200% 200%,200% 200%,100% 100%', anim:'edBgAurora 8.5s ease-in-out infinite', line:null }
 };
 function _edEnsureAnimBgCss(){ if(document.getElementById('edAnimBgCss')) return;
   const s=document.createElement('style'); s.id='edAnimBgCss';
   s.textContent='@keyframes edBgGrid{to{background-position:22px 22px,22px 22px,0 0}}'
     +'@keyframes edBgSweep{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}'
-    +'@keyframes edBgAurora{0%{background-position:0% 0%,100% 100%,0 0}50%{background-position:100% 50%,0% 50%,0 0}100%{background-position:0% 0%,100% 100%,0 0}}';
+    +'@keyframes edBgAurora{0%{background-position:0% 0%,100% 100%,50% 100%,0 0}50%{background-position:100% 50%,0% 50%,50% 0%,0 0}100%{background-position:0% 0%,100% 100%,50% 100%,0 0}}';
   document.head.appendChild(s); }
 function edSetAnimFx(fx){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim) return; edSnap();
   if(ov._bgStyle==='dark') edSetAnimBgVariant('light');
@@ -32860,7 +32887,7 @@ function edRenderTextMenu(ov){
       '<label class="row gap4" style="font-size:11px;cursor:pointer;align-items:center"><input type="checkbox" '+(ov.bold?'checked':'')+' onchange="edSetProp(\'bold\',this.checked)"> Gras</label>'+
     '</div>'+
     '<div class="row gap6" style="margin-bottom:8px;flex-wrap:wrap">'+styles.map(s=>{const on=(ov.style||'box')===s[0];return '<button onclick="edSetStyle(\''+s[0]+'\')" class="btn btn-sm" style="border:1px solid '+(on?'var(--accent)':'var(--border2)')+';background:'+(on?'var(--accent-soft)':'transparent')+';color:var(--text);font-size:11px;padding:4px 9px">'+s[1]+'</button>';}).join('')+'</div>'+
-    '<div class="row gap8" style="align-items:center"><span class="faint mono" style="font-size:10px;min-width:34px">Taille</span><input type="range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value)" style="flex:1"></div>';
+    '<div class="row gap8" style="align-items:center"><span class="faint mono" style="font-size:10px;min-width:34px">Taille</span><input type="range" min="10" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value)" style="flex:1"></div>';
 }
 function edShowProps(){
   if(!_ed) return;
@@ -34807,8 +34834,9 @@ function edBandDrag(ov,track,e,mode){
           +'<label class="row gap8" style="padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;align-items:center"><input type="color" value="'+(ov.bgColor||'#000000')+'" oninput="edSetProp(\'bgColor\',this.value);edSetProp(\'style\',\'box\')" style="width:20px;height:20px;border:none;background:none;padding:0"> Fond</label>'
           +'<button onclick="edSetProp(\'bold\','+(ov.bold?'false':'true')+');edShowProps()" style="padding:9px 13px;border-radius:10px;font-weight:800;border:1px solid '+(ov.bold?'var(--accent-line)':'var(--border)')+';background:'+(ov.bold?'var(--accent-soft)':'var(--surface)')+';color:'+(ov.bold?'var(--accent-2)':'var(--text)')+';cursor:pointer">B</button>'
         +'</div>'
-        +'<div class="ed-seg" style="width:100%;margin-bottom:16px;flex-wrap:wrap;gap:4px">'+STYLES_ED.map(s=>'<button class="'+(((ov.style||'box')===s[0])?'on':'')+'" onclick="edSetStyle(\''+s[0]+'\')">'+s[1]+'</button>').join('')+'</div>'
-        +'<div class="row gap12" style="align-items:center"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>';
+        // #séparation (Axel « met une séparation pour bien qu'on distingue ») : chaque style = une pastille bordée distincte
+        +'<div class="row" style="width:100%;margin-bottom:16px;flex-wrap:wrap;gap:6px">'+STYLES_ED.map(s=>{var on=((ov.style||'box')===s[0]);return '<button onclick="edSetStyle(\''+s[0]+'\')" style="flex:1 1 28%;min-width:82px;padding:9px 6px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid '+(on?'var(--accent-line)':'var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--surface)')+';color:'+(on?'var(--accent-2)':'var(--text-2)')+'">'+s[1]+'</button>';}).join('')+'</div>'
+        +'<div class="row gap12" style="align-items:center"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="10" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>';
     } else if(ov._split && !ov._splitEmpty){
       // #split-controls · réglages du split : taille du média (donc de la vidéo en bas), inversion, recadrage de l'anim
       const r=Math.round(((ov._splitRatio!=null?ov._splitRatio:0.5))*100);
