@@ -4601,8 +4601,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               </div>
               <input type="file" id="edImportIn" accept="video/*,image/*,audio/*" multiple style="display:none" onchange="[...this.files].forEach(f=>edRouteFile(f));this.value=''">
               <button onclick="edSplitStart()" class="btn btn-ghost" style="width:100%;margin-bottom:12px;border-color:rgba(34,211,238,.35);color:#22D3EE"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="8" rx="2"/><rect x="4" y="13" width="16" height="8" rx="2"/><circle cx="12" cy="16.5" r="1.6"/><path d="M9 20c.6-1.2 1.7-1.9 3-1.9s2.4.7 3 1.9"/></svg> Split screen</button>
-              <!-- #recadre-visuel · bouton explicite (le petit crop de l'aperçu n'était pas repérable) : reframe pan/zoom de la vidéo -->
-              <button id="edReframeVisBtn" onclick="edToggleReframe()" class="btn btn-ghost" style="width:100%;margin-bottom:12px;border-color:rgba(255,143,94,.4);color:#FF8F5E"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer le visuel</button>
+              <!-- #recadre-visuel · le recadrage se fait en GLISSANT direct sur l'aperçu (le bouton en plein écran ne servait à rien — Axel 25/08). Reste dans le menu du split pour le visuel du bas. -->
               <input type="file" id="edImgIn" accept="image/*" style="display:none" onchange="edAddImage(this.files[0]);this.value=''">
               <input type="file" id="edSplitIn" accept="image/*,video/*" style="display:none" onchange="edAddSplit(this.files[0]);this.value=''">
             </div>
@@ -14182,10 +14181,10 @@ function _mdAvatarStillMake(){
 
 // ── LECTURE : la vraie vidéo pilote le temps ─────────────────────────────────
 function _mdVid(){ return document.getElementById('mdVid'); }
-function _mdPause(){ const v=_mdVid(); if(v) v.pause(); if(_md) _md.playing=false; _mdPlayBtns(); }
+function _mdPause(){ const v=_mdVid(); if(v) v.pause(); if(_md) _md.playing=false; _mdPlayBtns(); try{ _mdPaintSplit(_md.time); }catch(_){} }
 function _mdTogglePlay(){ const v=_mdVid(); if(!v||!_md) return;
   if(v.paused){ v.play().catch(()=>{}); _md.playing=true; } else { v.pause(); _md.playing=false; }
-  _mdPlayBtns(); }
+  _mdPlayBtns(); try{ _mdPaintSplit(_md.time); }catch(_){} }   // #split · l'avatar/anim du split suivent play/pause
 function _mdPlayBtns(){
   for(const id of ['mdPlayA','mdPlayB']){ const b=document.getElementById(id); if(!b) continue;
     const svg = _md&&_md.playing
@@ -14260,6 +14259,7 @@ function _mdTick(){
     if(_md.detail) _mdPaintCloseUp();
     _mdPaintClipInfo();
     try{ _mdPaintSplit(t); }catch(_){}   // #split-preview · montre le split dans l'aperçu
+    try{ _mdPaintText(t); }catch(_){}    // #texte-sur-vidéo · le texte ajouté par-dessus tout
   }
 }
 function _mdRaf(){ if(!_md || !_md.playing) return; _mdTick(); _mdSfxLive(); requestAnimationFrame(_mdRaf); }
@@ -14338,7 +14338,10 @@ function _mdPaintClipInfo(){
   const over=document.getElementById('mdClipOver');
   if(over){
     const t=_md.time;
-    let ed=_md.scenes.find(x=>t>=x.a&&t<x.b&&(x.del||x.repl||x.replM||x.replT||x.added));
+    // #texte-sur-vidéo (Axel 25/08) : le TEXTE ajouté/remplacé est géré par _mdPaintText (calque du
+    // DESSUS, sur la vidéo, jamais un fond blanc) — on l'exclut donc d'ici.
+    const _isTxt=(x)=> !!(x.replT || (x.added && x.n==='carte'));
+    let ed=_md.scenes.find(x=>t>=x.a&&t<x.b&&!_isTxt(x)&&(x.del||x.repl||x.replM||x.added));
     // un trou créé par une RÉDUCTION, sans rien dedans → l'avatar reprend
     if(!ed){
       const freed=_md.scenes.find(x=>{
@@ -15943,29 +15946,44 @@ function _mdPeindreAnim(t){
 function _mdPaintSplit(t){
   const ov=document.getElementById('mdSplitOv'); if(!ov) return;
   const sp=(_md.splits||[]).find(s=>!s.del && t>=(Number(s.start)||0) && t<(Number(s.end)||0));
-  if(!sp){ if(ov.style.display!=='none'){ ov.style.display='none'; ov.innerHTML=''; ov._k=''; try{ const vv=ov.querySelector('video'); if(vv) vv.pause(); }catch(_){} } return; }
+  if(!sp){ if(ov.style.display!=='none'){ ov.style.display='none'; ov.innerHTML=''; ov._k=''; try{ ov.querySelectorAll('video').forEach(v=>v.pause()); }catch(_){} } return; }
   const r=(Number(sp.ratio)>0.15&&Number(sp.ratio)<0.85)?Number(sp.ratio):0.5, inv=!!sp.invert;
   const nm=sp.anim?String(sp.anim).replace(/[^a-z0-9_-]/gi,''):'';
-  const k=(sp.anim?('a:'+nm):('m:'+(sp.assetId||'')))+'|'+r.toFixed(2)+'|'+(inv?'I':'')+'|'+(_md.avatarStill?'A':'');
-  if(k===ov._k) return; ov._k=k;
-  const animSrc=nm?((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')):'';
-  const mb=(sp.assetId&&_md.splitBlobs&&_md.splitBlobs[sp.assetId])||null;
-  const cover='width:100%;height:100%;object-fit:cover';
-  const contentHtml = sp.anim
-    ? '<video src="'+animSrc+'" muted loop autoplay playsinline style="'+cover+'"></video>'
-    : (mb ? (mb.isVid?'<video src="'+mb.url+'" muted loop autoplay playsinline style="'+cover+'"></video>':'<img src="'+mb.url+'" style="'+cover+'">')
-          : '<div style="width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:11px;opacity:.8">ton média</span></div>');
-  const avatarHtml = _md.avatarStill
-    ? '<img src="'+_md.avatarStill+'" style="'+cover+'">'
-    : '<div style="width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(160deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:11px;opacity:.7">ton avatar</span></div>';
-  const topH=Math.round(r*100), botH=100-topH;
-  const topEl='<div style="position:absolute;left:0;right:0;top:0;height:'+(inv?botH:topH)+'%;overflow:hidden">'+(inv?avatarHtml:contentHtml)+'</div>';
-  const botEl='<div style="position:absolute;left:0;right:0;bottom:0;height:'+(inv?topH:botH)+'%;overflow:hidden">'+(inv?contentHtml:avatarHtml)+'</div>';
-  ov.innerHTML=topEl+botEl
-    +'<div style="position:absolute;left:0;right:0;top:'+(inv?botH:topH)+'%;height:3px;transform:translateY(-1.5px);background:#0D0D12;z-index:2"></div>'
-    +'<div style="position:absolute;left:8px;bottom:8px;padding:4px 9px;border-radius:8px;background:rgba(0,0,0,.66);backdrop-filter:blur(6px);z-index:3"><span class="mono" style="font-size:9px;color:#fff">split · '+(sp.anim?_mdEsc(sp.anim):'ton média')+' + avatar</span></div>';
-  ov.style.display='block';
-  try{ const v=ov.querySelector('video'); if(v){ const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(_){}
+  const k=(sp.anim?('a:'+nm):('m:'+(sp.assetId||'')))+'|'+r.toFixed(2)+'|'+(inv?'I':'');
+  if(k!==ov._k){ ov._k=k;
+    const animSrc=nm?((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')):'';
+    const mb=(sp.assetId&&_md.splitBlobs&&_md.splitBlobs[sp.assetId])||null;
+    const cover='width:100%;height:100%;object-fit:cover';
+    // #split-avatar-live (Axel 25/08) : l'avatar est la VRAIE vidéo (source), pas un still figé → il CONTINUE
+    const avSrc=(_md.job&&(_md.job.source_url||_md.job.url))||'';
+    const avatarHtml = avSrc
+      ? '<video data-avv src="'+avSrc+'" muted playsinline preload="auto" style="'+cover+';object-position:50% 20%"></video>'
+      : (_md.avatarStill?'<img src="'+_md.avatarStill+'" style="'+cover+'">':'<div style="'+cover+';background:linear-gradient(160deg,#1c1a22,#0d0c10)"></div>');
+    // anim/média EN HAUT : pas de loop (elle se joue UNE fois puis fige), synchronisée à la lecture
+    const contentHtml = sp.anim
+      ? '<video data-anv src="'+animSrc+'" muted playsinline preload="auto" style="'+cover+'"></video>'
+      : (mb ? (mb.isVid?'<video data-anv src="'+mb.url+'" muted playsinline style="'+cover+'"></video>':'<img src="'+mb.url+'" style="'+cover+'">')
+            : '<div style="'+cover+';display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:11px;opacity:.8">ton média</span></div>');
+    const topH=Math.round(r*100), botH=100-topH;
+    const topEl='<div style="position:absolute;left:0;right:0;top:0;height:'+(inv?botH:topH)+'%;overflow:hidden">'+(inv?avatarHtml:contentHtml)+'</div>';
+    const botEl='<div style="position:absolute;left:0;right:0;bottom:0;height:'+(inv?topH:botH)+'%;overflow:hidden">'+(inv?contentHtml:avatarHtml)+'</div>';
+    ov.innerHTML=topEl+botEl
+      +'<div style="position:absolute;left:0;right:0;top:'+(inv?botH:topH)+'%;height:3px;transform:translateY(-1.5px);background:#0D0D12;z-index:2"></div>'
+      +'<div style="position:absolute;left:8px;bottom:8px;padding:4px 9px;border-radius:8px;background:rgba(0,0,0,.66);backdrop-filter:blur(6px);z-index:3"><span class="mono" style="font-size:9px;color:#fff">split · '+(sp.anim?_mdEsc(sp.anim):'ton média')+' + avatar</span></div>';
+    ov.style.display='block';
+  }
+  // ── SYNCHRO LECTURE (à chaque frame) ─────────────────────────────────────
+  const playing=!!_md.playing;
+  const av=ov.querySelector('[data-avv]');
+  if(av){ try{ if(isFinite(av.duration)&&Math.abs((av.currentTime||0)-t)>0.34) av.currentTime=Math.min(t,(av.duration||t)-0.03);
+    if(playing){ if(av.paused){ const p=av.play(); if(p&&p.catch)p.catch(()=>{}); } } else if(!av.paused) av.pause(); }catch(_){} }
+  const an=ov.querySelector('[data-anv]');
+  if(an){ try{ const local=t-(Number(sp.start)||0), d=an.duration;
+    if(isFinite(d)&&d>0.2&&local>=d){ if(!an.paused) an.pause(); if(Math.abs((an.currentTime||0)-(d-0.05))>0.15) an.currentTime=d-0.05; }
+    else { const lt=(isFinite(d)&&d>0.2)?Math.min(Math.max(0,local),d-0.05):Math.max(0,local);
+      if(playing){ if(an.paused){ an.currentTime=lt; const p=an.play(); if(p&&p.catch)p.catch(()=>{}); } else if(Math.abs(an.currentTime-lt)>0.6) an.currentTime=lt; }
+      else { if(!an.paused) an.pause(); if(Math.abs((an.currentTime||0)-lt)>0.08) an.currentTime=lt; } }
+  }catch(_){} }
 }
 // #transition-preview · effet propre à CHAQUE type appliqué au calque flash + à la vidéo (pr = 0..1)
 function _mdApplyTransFx(type, pr, fl, v){
@@ -15999,6 +16017,17 @@ function _mdPlayTransPreview(t){
     _md._transPrevRAF=requestAnimationFrame(step);
     clearTimeout(_md._transPrevTO); _md._transPrevTO=setTimeout(()=>{ if(_md&&_md._transPrev) stop(); }, 1600); // filet
   }catch(_){}
+}
+// #texte-sur-vidéo (Axel 25/08 : « le texte doit être lu en priorité, jamais sur fond blanc ») :
+// le texte ajouté/remplacé se pose EN HAUT de tout (au-dessus du split), sur la vidéo, en légende.
+function _mdPaintText(t){
+  const ov=document.getElementById('mdTextOv'); if(!ov) return;
+  const sc=(_md.scenes||[]).find(x=>!x.del && t>=x.a && t<x.b && (x.replT || (x.added && x.n==='carte')));
+  if(!sc){ if(ov.style.display!=='none'){ ov.style.display='none'; ov.innerHTML=''; ov._k=''; } return; }
+  const txt = sc.replT ? String(sc.replT.text||'') : String(sc.userText || sc.t || '').replace(/^«\s?|\s?»$/g,'');
+  const k=sc.id+'|'+txt; if(k===ov._k) return; ov._k=k;
+  ov.innerHTML='<div style="max-width:100%;text-align:center"><span style="display:inline-block;padding:8px 15px;border-radius:11px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);color:#fff;font-weight:800;font-size:16.5px;line-height:1.25;text-shadow:0 2px 8px rgba(0,0,0,.55)">'+_mdEsc(txt)+'</span></div>';
+  ov.style.display='block';
 }
 function _mdStatsHtml(){
   const mob=_mdIsMob();
@@ -16109,6 +16138,7 @@ function _mdRender(){
               +'<span id="mdPlayA" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center"></span>'
             +'</button>'
             +'<div id="mdClipPill" style="position:absolute;left:8px;right:8px;bottom:8px;padding:6px 9px;border-radius:9px;background:rgba(0,0,0,.62);backdrop-filter:blur(6px);z-index:3;display:none"></div>'
+            +'<div id="mdTextOv" style="position:absolute;left:0;right:0;bottom:0;padding:0 14px 34px;display:none;z-index:6;pointer-events:none"></div>'
           +'</div>'
         +'</div>'
         // la bande
@@ -16218,7 +16248,9 @@ function _mdSplitPickHtml(){
     +'</div>';
   // ── TON MÉDIA : IMPORTER directement + les médias déjà dans le montage ──
   const importBtn='<button onclick="_mdSplitImportMedia()" class="row" style="width:100%;gap:9px;align-items:center;justify-content:center;padding:12px;border-radius:11px;border:1px dashed var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-weight:800;font-size:12.5px;cursor:pointer;margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg> Importer un média</button>';
-  const assets=((_md.job&&_md.job.assets)||[]).filter(a=>a&&a.id&&a.id.indexOf('avatar')!==0);
+  // #split-media (Axel 25/08 : « je veux voir QUE importer un média ») : on n'affiche que TES imports
+  // (les assets du montage venaient « de nulle part » pour l'utilisateur).
+  const assets=((_md.job&&_md.job.assets)||[]).filter(a=>a&&a.id&&a._local);
   const mediaRows=assets.length?assets.map(a=>{
     const bl=(_md.splitBlobs&&_md.splitBlobs[a.id])||null;
     const p=bl?bl.url:String(a.path||''); const vid=bl?bl.isVid:(a.kind==='video'||/\.(mp4|mov|webm|m4v)$/i.test(p));
@@ -16254,11 +16286,22 @@ function _mdSplitAdd(assetId){
 function _mdSplitAddAnim(anim){
   _mdCommit();
   const at=(_md.splitPick&&_md.splitPick.at)||_md.time;
-  const ri=_md.splitPick&&_md.splitPick.replaceIdx;
-  if(ri!=null && (_md.splits||[])[ri]){ const o=_md.splits[ri]; _md.splits[ri]={ start:o.start, end:o.end, anim:String(anim), added:true, _mod:true, ratio:o.ratio!=null?o.ratio:0.5, invert:!!o.invert }; }
-  else (_md.splits=_md.splits||[]).push({ start:_mdR2(at), end:_mdR2(Math.min(_md.dur-0.1, at+3)), anim:String(anim), added:true, ratio:0.5 });
+  const ri=_md.splitPick&&_md.splitPick.replaceIdx; let idx;
+  if(ri!=null && (_md.splits||[])[ri]){ const o=_md.splits[ri]; _md.splits[ri]={ start:o.start, end:o.end, anim:String(anim), added:true, _mod:true, ratio:o.ratio!=null?o.ratio:0.5, invert:!!o.invert }; idx=ri; }
+  else { (_md.splits=_md.splits||[]).push({ start:_mdR2(at), end:_mdR2(Math.min(_md.dur-0.1, at+3)), anim:String(anim), added:true, ratio:0.5 }); idx=_md.splits.length-1; }
   _md.splitPick=null; _md.scenes=_mdBuildScenes(); _mdRender(); _mdRenderModals();
+  _mdSplitFitAnimDur(idx, String(anim));   // #split-durée (Axel) : la fenêtre dure l'anim COMPLÈTE → une seule lecture
   if(typeof toast==='function') toast('Split screen — anim « '+anim+' » en haut');
+}
+// cale la fin du split sur la durée réelle de l'animation (chargée en métadonnée) → elle se joue une fois
+function _mdSplitFitAnimDur(idx, anim){
+  try{
+    const nm=String(anim).replace(/[^a-z0-9_-]/gi,'');
+    const src=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+    const v=document.createElement('video'); v.preload='metadata'; v.muted=true; v.src=src;
+    v.addEventListener('loadedmetadata',()=>{ try{ const d=v.duration; const sp=(_md.splits||[])[idx];
+      if(sp&&!sp.del&&isFinite(d)&&d>0.3){ sp.end=_mdR2(Math.min(_md.dur-0.05,(Number(sp.start)||0)+d)); _md.scenes=_mdBuildScenes(); _mdRender(); } }catch(_){} v.src=''; });
+  }catch(_){}
 }
 // #split-import (Axel 25/08 : « ça doit proposer d'importer directement ») : le picker « Ton média »
 // importe TON fichier ici et maintenant (image/vidéo) → aperçu immédiat (blob) + upload au rendu.
@@ -31992,7 +32035,7 @@ function _edPaintTrans(cx,W,H,p,type,curV,sr,prevV){
   if(type==='flash'){ const a=(p<0.28?p/0.28:(1-(p-0.28)/0.72))*0.8; cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,a)); cx.fillStyle='#fff'; cx.fillRect(0,0,W,H); cx.restore(); }
   else if(type==='cut'){ // coupe nette : un noir bref et crisp qui PONCTUE la coupe (sinon invisible sur un seul clip)
     const a=p<0.18?(1-p/0.18):0; if(a>0){ cx.save(); cx.globalAlpha=a; cx.fillStyle='#000'; cx.fillRect(0,0,W,H); cx.restore(); } }
-  else if(type==='fondu'){ if(prevV){ const pr=cover(prevV); cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,1-p)); try{ cx.drawImage(prevV,pr.sx,pr.sy,pr.sw,pr.sh,0,0,W,H);}catch(e){} cx.restore(); } else { cx.save(); cx.globalAlpha=Math.sin(p*Math.PI)*0.55; cx.fillStyle='#000'; cx.fillRect(0,0,W,H); cx.restore(); } }
+  else if(type==='fondu'){ if(prevV){ const pr=cover(prevV); cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,1-p)); try{ cx.drawImage(prevV,pr.sx,pr.sy,pr.sw,pr.sh,0,0,W,H);}catch(e){} cx.restore(); } else { cx.save(); cx.globalAlpha=Math.pow(Math.sin(p*Math.PI),0.7)*0.96; cx.fillStyle='#000'; cx.fillRect(0,0,W,H); cx.restore(); } } // fondu sur 1 seul clip = vrai fondu au noir bien visible
   else if(type==='filmburn'){ cx.save(); cx.globalCompositeOperation='screen'; const x=(-1.8+2.9*p)*W;
     const g2=cx.createLinearGradient(x,0,x+W*1.8,0); g2.addColorStop(0,'rgba(255,176,86,0)'); g2.addColorStop(0.30,'rgba(255,150,60,0.85)'); g2.addColorStop(0.45,'rgba(255,240,196,1)'); g2.addColorStop(0.60,'rgba(255,150,60,0.85)'); g2.addColorStop(1,'rgba(255,120,40,0)');
     cx.fillStyle=g2; cx.fillRect(0,0,W,H); cx.restore(); }
@@ -32553,15 +32596,21 @@ function edStyleOverlay(ov){
   const el=ov._el; if(!el) return;
   el.style.left=ov.x+'px'; el.style.top=ov.y+'px';
   if(ov.type==='text'){
-    el.style.width=ov.w+'px'; el.style.height='auto';
+    const styl=ov.style||'box', snap=(styl==='snap');
+    // #snapchat (Axel 25/08 : « le vrai truc, taille fixe, de gauche à droite ») : barre PLEINE LARGEUR
+    // bord à bord (comme une légende Insta/Snap), taille FIXE. On ne bouge le texte qu'en vertical.
+    if(snap){ el.style.left='0px'; el.style.width=_ed.dispW+'px'; }
+    else el.style.width=ov.w+'px';
+    el.style.height='auto';
     const t=el.querySelector('.ed-ov-txt'); if(!ov._editing) t.textContent=ov.text||'';
-    const fam=ov.font||'var(--display)'; const styl=ov.style||'box';
+    const fam=ov.font||'var(--display)';
     let deco='';
     if(styl==='box') deco='padding:5px 12px;background:'+(ov.bgColor||'rgba(0,0,0,.55)')+';border-radius:9px;';
-    else if(styl==='snap') deco='display:block;width:100%;box-sizing:border-box;padding:8px 14px;background:'+(ov.bgColor||'rgba(0,0,0,.42)')+';border-radius:3px;'; // #snapchat · barre noire translucide pleine largeur
+    else if(snap) deco='display:block;width:100%;box-sizing:border-box;padding:'+Math.max(8,Math.round(_ed.dispH*0.02))+'px 16px;background:'+(ov.bgColor||'rgba(0,0,0,.5)')+';'; // pleine largeur, bord à bord, pas d'arrondi
     else if(styl==='shadow') deco='text-shadow:0 2px 7px rgba(0,0,0,.85);';
     else if(styl==='outline') deco='-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 1px 2px rgba(0,0,0,.6);';
-    t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+ov.size+'px;line-height:1.12;color:'+ov.color+';text-align:center;word-break:break-word;outline:none;'+deco+(ov._editing?'cursor:text;':'');
+    const fs=snap?Math.round(_ed.dispW*0.062):ov.size;   // #snap · taille FIXE (≈ légende Insta), sinon la taille du curseur
+    t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+fs+'px;line-height:1.2;color:'+ov.color+';text-align:center;word-break:break-word;outline:none;'+deco+(ov._editing?'cursor:text;':'');
   } else {
     el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
     const im=el.querySelector('img,video'); const c=ov.crop||{t:0,r:0,b:0,l:0};
@@ -34034,20 +34083,21 @@ async function edExport(){
           try{ cx.drawImage(srcEl, sx,sy,sw,sh, ov.x*f, ov.y*f, ov.w*f, ov.h*f); }catch(e){}
           }
         } else {
-          const fs=ov.size*f; cx.save();
+          const snap=(ov.style==='snap'), EW=_ed.dispW*f;
+          const fs=(snap?Math.round(_ed.dispW*0.062):ov.size)*f; cx.save();
           cx.font=(ov.bold?'800 ':'600 ')+fs+'px "Bricolage Grotesque",sans-serif';
           cx.textAlign='center'; cx.textBaseline='top';
-          const cxc=(ov.x+ov.w/2)*f, cy=ov.y*f, maxW=ov.w*f;
+          const cxc=snap?EW/2:(ov.x+ov.w/2)*f, cy=ov.y*f, maxW=snap?EW*0.94:ov.w*f;
           const words=(ov.text||'').split(' '); let line='', lines=[];
           for(const wd of words){ const test=line?line+' '+wd:wd; if(cx.measureText(test).width>maxW && line){ lines.push(line); line=wd; } else line=test; }
           if(line) lines.push(line);
-          const lh=fs*1.18;
-          // #snapchat · une SEULE barre noire translucide pleine largeur derrière tout le texte
-          if((ov.style)==='snap'){ const pad=fs*0.34; cx.fillStyle=ov.bgColor||'rgba(0,0,0,.42)'; cx.fillRect(ov.x*f, cy-pad*0.6, ov.w*f, lines.length*lh+pad*0.9); }
+          const lh=fs*1.2, padV=snap?fs*0.4:0;
+          // #snapchat · UNE barre translucide PLEINE LARGEUR (bord à bord), taille fixe
+          if(snap){ cx.fillStyle=ov.bgColor||'rgba(0,0,0,.5)'; cx.fillRect(0, cy, EW, lines.length*lh+padV*2); }
           lines.forEach((ln,i)=>{
-            const ly=cy+i*lh;
-            if((ov.style||'box')==='box'){ const tw=cx.measureText(ln).width, pad=fs*0.28; cx.fillStyle=ov.bgColor||'rgba(0,0,0,.55)'; cx.fillRect(cxc-tw/2-pad, ly-pad*0.35, tw+pad*2, lh*0.96); }
-            else if((ov.style)!=='snap'){ cx.shadowColor='rgba(0,0,0,.85)'; cx.shadowBlur=fs*0.18; cx.shadowOffsetY=fs*0.06; }
+            const ly=cy+padV+i*lh;
+            if(!snap && (ov.style||'box')==='box'){ const tw=cx.measureText(ln).width, pad=fs*0.28; cx.fillStyle=ov.bgColor||'rgba(0,0,0,.55)'; cx.fillRect(cxc-tw/2-pad, ly-pad*0.35, tw+pad*2, lh*0.96); }
+            else if(!snap){ cx.shadowColor='rgba(0,0,0,.85)'; cx.shadowBlur=fs*0.18; cx.shadowOffsetY=fs*0.06; }
             cx.fillStyle=ov.color||'#fff'; cx.fillText(ln,cxc,ly); cx.shadowColor='transparent';
           });
           cx.restore();
@@ -34552,9 +34602,9 @@ function edBandDrag(ov,track,e,mode){
         '<div class="row gap12" style="align-items:center;margin-bottom:12px"><span class="mono faint" style="font-size:11px;width:74px">'+(ov._splitInvert?'Vidéo':'Média')+' en haut</span>'
           +'<input type="range" class="ed-range" min="20" max="80" value="'+r+'" oninput="edSetSplitRatio(+this.value)"><span class="mono accent" id="edSplitRatioLbl" style="font-size:12px;width:38px;text-align:right">'+r+'%</span></div>'
         +'<button onclick="edToggleSplitInvert()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg> Inverser haut / bas</button>'
-        +'<button onclick="edToggleMediaReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(ov._mediaReframe?'var(--accent-line)':'var(--border)')+';background:'+(ov._mediaReframe?'var(--accent-soft)':'')+';color:'+(ov._mediaReframe?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer '+(ov._anim?'l\'animation':'le média')+' (haut)</button>'
-        // #recadrer-visuel (Axel 25/08) : recadrer le VISUEL DU BAS (ta vidéo/avatar) sans quitter le split
-        +'<button onclick="edToggleReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(_ed.reframeMode?'var(--accent-line)':'var(--border)')+';background:'+(_ed.reframeMode?'var(--accent-soft)':'')+';color:'+(_ed.reframeMode?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Recadrer le visuel (bas)</button>'
+        +'<button onclick="edToggleMediaReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(ov._mediaReframe?'var(--accent-line)':'var(--border)')+';background:'+(ov._mediaReframe?'var(--accent-soft)':'')+';color:'+(ov._mediaReframe?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer '+(ov._anim?'l\'animation':'le média')+'</button>'
+        // #recadrer-visuel (Axel 25/08) : recadrer le VISUEL (ta vidéo/avatar) sans quitter le split
+        +'<button onclick="edToggleReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(_ed.reframeMode?'var(--accent-line)':'var(--border)')+';background:'+(_ed.reframeMode?'var(--accent-soft)':'')+';color:'+(_ed.reframeMode?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Recadrer le visuel</button>'
         +'<button onclick="edResetMediaRF()" class="btn btn-quiet btn-sm" style="width:100%">Réinitialiser le cadrage</button>'
         +(ov._anim ? '<button onclick="_ed._splitFillTarget=\''+ov.id+'\';_ed._splitReplace=\''+ov.id+'\';if(typeof edOpenBank===\'function\')edOpenBank(\'anim\')" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Changer l\'animation</button>' : '')
         +(ov._anim ? (function(){
@@ -34565,11 +34615,22 @@ function edBandDrag(ov,track,e,mode){
           var isDark=ov._bgStyle==='dark';
           var selCss='background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700';
           var offCss='background:var(--surface);border:1px solid var(--border);color:var(--text-2)';
+          // #couleur-fond (Axel 25/08 : « vasy fait le go ») : une teinte qui remplace le fond CLAIR de
+          // l'anim (blend multiply → le blanc devient la couleur, le contenu foncé reste). Uniquement sur « Clair ».
+          var swatches=['#FF6B35','#8B5CF6','#3B82F6','#22C55E','#EC4899','#F59E0B','#111318'];
+          var colorRow = (!isDark) ? ('<div style="margin-top:10px">'
+              +'<span class="mono faint" style="font-size:10.5px;display:block;margin-bottom:6px">Couleur du fond</span>'
+              +'<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">'
+              +'<button onclick="edClearAnimBg()" title="Aucune" style="width:26px;height:26px;flex:0 0 auto;border-radius:7px;border:1px solid '+(!ov._animBg?'var(--accent)':'var(--border)')+';background:var(--surface);color:var(--text-3);cursor:pointer;display:grid;place-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l14 14"/></svg></button>'
+              +swatches.map(function(c){ var on=(ov._animBg===c); return '<button onclick="edSetAnimBg(\''+c+'\')" title="'+c+'" style="width:26px;height:26px;flex:0 0 auto;border-radius:7px;border:2px solid '+(on?'#fff':'transparent')+';box-shadow:0 0 0 1px var(--border);background:'+c+';cursor:pointer"></button>'; }).join('')
+              +'<label style="width:26px;height:26px;flex:0 0 auto;border-radius:7px;border:1px solid var(--border);overflow:hidden;cursor:pointer;display:grid;place-items:center;position:relative;color:var(--text-3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="8.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="6.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/><path d="M12 2C6.5 2 2 6 2 11c0 3.9 3.1 7 7 7 1.1 0 1.5-1.3.8-2-.7-.7-.3-2 .7-2h2.5c3.3 0 6-2.7 6-6 0-3.3-3.4-6-7-6z"/></svg><input type="color" value="'+((ov._animBg&&ov._animBg.charAt(0)==='#')?ov._animBg:'#FF6B35')+'" oninput="edSetAnimBg(this.value)" style="position:absolute;inset:-4px;opacity:0;cursor:pointer"></label>'
+              +'</div></div>') : '';
           return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">'
             +'<span class="mono faint" style="font-size:11px;display:block;margin-bottom:8px">Fond de l\'animation</span>'
             +'<div class="row gap6">'
             +'<button onclick="edSetAnimBgVariant(\'light\')" class="btn btn-sm" style="flex:1;'+(!isDark?selCss:offCss)+'">Clair</button>'
-            +'<button onclick="edSetAnimBgVariant(\'dark\')" class="btn btn-sm" style="flex:1;'+(isDark?selCss:offCss)+'">Fond animé</button></div></div>';
+            +'<button onclick="edSetAnimBgVariant(\'dark\')" class="btn btn-sm" style="flex:1;'+(isDark?selCss:offCss)+'">Fond animé</button></div>'
+            +colorRow+'</div>';
         })() : '');
     } else {
       const maxw=Math.round(((_ed&&_ed.dispW)||400)*1.3);
