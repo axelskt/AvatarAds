@@ -14418,11 +14418,15 @@ function _mdPaintClipInfo(){
 // tiges : taille/hauteur selon la proximité du curseur (NEAR 4 s) — imperatif
 function _mdPaintProximity(){
   const t=_md.time, mob=_mdIsMob(), NEAR=4, ZONE=mob?32:40;
+  // #perf (Axel « grosses pertes de fps ») : on ne JSON.parse plus chaque tige à CHAQUE frame (cache el._it),
+  // et on n'écrit PAS 15 styles sur une tige LOIN qui est déjà à l'état « loin » (el._far). Gros gain en lecture.
   document.querySelectorAll('#mdOv [data-stem]').forEach((el)=>{
-    const it=JSON.parse(el.getAttribute('data-stem'));
+    const it=el._it||(el._it=JSON.parse(el.getAttribute('data-stem')));
     const dist=Math.abs(t-it.t), on=dist<=NEAR, prox=on?1-dist/NEAR:0;
     const active=_md.pop&&_md.pop.src==='band'&&_md.pop.item&&_md.pop.item.t===it.t&&_md.pop.item.k===it.k;
     const armed=_md.dragArmed===it.id;
+    if(!on && !active && !armed && el._far){ return; }   // rien à redessiner : déjà au repos
+    el._far = (!on && !active && !armed);
     const lv=Math.min(it.lv,2);
     const pin=on?(mob?18:20)+Math.round(prox*3):(mob?15:16);
     const stem=on?Math.min(ZONE-pin-3,6+prox*(mob?11:14)+lv*(mob?9:11)):3;
@@ -14453,10 +14457,29 @@ function _mdUpItems(){
   ), 0.55/_md.bandZoom);
 }
 function _mdDownItems(){
-  return _mdStack([].concat(
-    _md.marks.sfx.filter(x=>!x.del).map(x=>({t:x.t,k:'sfx',id:x.id,n:x.n,c:(x.mod||x.moved||x.added)?_MD_RED:_MD_CYAN,ico:'wave',lab:'Bruitage'})),
+  // #bruitage-calque (Axel 25/08 : « le bruitage, mets-le en calque aussi comme le texte ») : les bruitages
+  // sortent de la zone du bas et vont sur LEUR piste (voir _mdSfxItems). Le bas ne garde que les transitions.
+  return _mdStack(
     _md.marks.trans.filter(x=>!x.del).map(x=>({t:x.t,k:'trans',id:x.id,n:x.n,c:(x.mod||x.moved||x.added)?_MD_RED:'var(--violet)',ico:'trans',lab:'Transition'}))
-  ), 0.55/_md.bandZoom);
+  , 0.55/_md.bandZoom);
+}
+// #bruitage-calque · les bruitages en tant que PISTE (calque), comme le texte et le split
+function _mdSfxItems(){
+  return _mdStack(
+    _md.marks.sfx.filter(x=>!x.del).map(x=>({t:x.t,k:'sfx',id:x.id,n:x.n,c:(x.mod||x.moved||x.added)?_MD_RED:_MD_CYAN,ico:'wave',lab:'Bruitage'}))
+  , 0.55/_md.bandZoom);
+}
+// #anti-empilement (Axel « les blocs s'empilent entre eux, règle ça pour le visuel ») : range les
+// scènes qui se CHEVAUCHENT dans le temps sur des VOIES distinctes (packing d'intervalles glouton),
+// pour qu'aucun bloc n'en recouvre un autre. Sans chevauchement → 1 seule voie (aucun changement).
+function _mdPackLanes(list){
+  const arr=list.slice().sort((a,b)=>(a.a-b.a)||(a.b-b.b));
+  const laneEnds=[], laneOf={};
+  for(const s of arr){ let lane=-1;
+    for(let i=0;i<laneEnds.length;i++){ if(s.a>=laneEnds[i]-0.001){ lane=i; break; } }
+    if(lane<0){ lane=laneEnds.length; laneEnds.push(0); }
+    laneEnds[lane]=s.b; laneOf[s.id]=lane; }
+  return { laneOf, lanes:Math.max(1,laneEnds.length) };
 }
 
 // une tige (bande principale)
@@ -14520,7 +14543,7 @@ function _mdPaintStemsPos(){
     let t=it.t;
     if(k){ const m=_md.marks[k].find(x=>x.id===it.id); if(m) t = k==='texte'?m.a:m.t; }
     else if(it.id){ const s=_md.scenes.find(x=>x.id===it.id); if(s) t=s.a; }
-    if(t!==it.t){ it.t=t; el.setAttribute('data-stem', _mdEsc(JSON.stringify(it)).replace(/&quot;/g,'"')); }
+    if(t!==it.t){ it.t=t; el.setAttribute('data-stem', _mdEsc(JSON.stringify(it)).replace(/&quot;/g,'"')); el._it=null; el._far=false; }   // #perf · invalide le cache après un déplacement
     const pin=15;
     el.style.left='clamp('+(pin/2)+'px, '+(t/_md.dur*100)+'%, calc(100% - '+(pin/2)+'px))';
   });
@@ -14528,7 +14551,12 @@ function _mdPaintStemsPos(){
 // ── RENDU : bande principale ─────────────────────────────────────────────────
 function _mdBandHtml(){
   const mob=_mdIsMob(), ZONE=mob?32:40, dur=_md.dur;
-  const up=_mdUpItems(), down=_mdDownItems();
+  const up=_mdUpItems(), down=_mdDownItems(), sfxItems=_mdSfxItems();
+  const _isTxt=(s)=> !!(s.replT || (s.added && s.n==='carte'));
+  // voies anti-empilement pour la piste VISUELLE (scènes hors split/texte)
+  const _mainSc=_md.scenes.filter(s=>s.n!=='split' && !_isTxt(s));
+  const _pk=_mdPackLanes(_mainSc);
+  const _trackH=(mob?40:50)+(_pk.lanes-1)*(mob?15:18);
   const mkBloc=(s)=>{
     const meta=_MD_NATURE[s.n];
     // la scène SÉLECTIONNÉE montre deux poignées de bord : tirer = étirer ou
@@ -14545,8 +14573,11 @@ function _mdBandHtml(){
       +'style="position:absolute;top:0;bottom:0;'+(side==='a'?'left:0':'right:0')+';width:9px;cursor:ew-resize;touch-action:none;z-index:3;display:grid;place-items:center">'
       +'<span style="width:3px;height:60%;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></span></div>';
     const col=_mdSceneColor(s);
+    // voie (anti-empilement) : les scènes de la piste principale sont réparties verticalement si elles se chevauchent
+    const _im=(_pk.laneOf[s.id]!=null), _lh=_im?100/_pk.lanes:100, _ln=_im?_pk.laneOf[s.id]:0;
+    const _posCss=_im?('top:calc('+(_ln*_lh).toFixed(3)+'% + 1px);height:calc('+_lh.toFixed(3)+'% - 2px)'):'top:2px;bottom:2px';
     return '<div id="mdB'+s.id+'" onpointerdown="event.stopPropagation();_mdPick(\''+s.id+'\',event)" title="'+_mdEsc(meta.label+' · '+_mdT(s.a))+'" '
-      +'style="position:absolute;left:'+(s.a/dur*100)+'%;width:'+((s.b-s.a)/dur*100)+'%;top:2px;bottom:2px;min-width:5px;border-radius:6px;overflow:hidden;transition:opacity .18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
+      +'style="position:absolute;left:'+(s.a/dur*100)+'%;width:'+((s.b-s.a)/dur*100)+'%;'+_posCss+';min-width:5px;border-radius:6px;overflow:hidden;transition:opacity .18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
       +'background:'+(s.del?'var(--surface-2)':'color-mix(in srgb, '+col+' 18%, var(--panel-1))')+';'
       +'border:1px solid color-mix(in srgb, '+col+' 28%, transparent)">'
       +(((s.b-s.a)/dur*100)>4?_mdIco(meta.ico,mob?11:12,col):'')
@@ -14558,10 +14589,10 @@ function _mdBandHtml(){
   // par-dessus l'avatar → on le sort de la bande principale et on le met sur sa PROPRE piste dessous.
   // #text-strip (Axel 25/08 : « le texte, mets-le en calque aussi ») : les scènes TEXTE (carte AJOUTÉE
   // ou remplacement-texte) sont AUSSI un calque par-dessus l'avatar → propre piste, comme le split.
-  const _isTxt=(s)=> !!(s.replT || (s.added && s.n==='carte'));
-  const blocs=_md.scenes.filter(s=>s.n!=='split' && !_isTxt(s)).map(mkBloc).join('');
+  const blocs=_mainSc.map(mkBloc).join('');
   const splitBlocs=_md.scenes.filter(s=>s.n==='split').map(mkBloc).join('');
   const textBlocs=_md.scenes.filter(s=>s.n!=='split' && _isTxt(s)).map(mkBloc).join('');
+  const sfxBlocs=sfxItems.map(it=>_mdStemHtml(it,'down',mob)).join('');   // #bruitage-calque · chips sur leur piste
   return ''
   +'<div style="position:relative">'
     // barre outils
@@ -14587,7 +14618,7 @@ function _mdBandHtml(){
     +'<div id="mdBandWrap" style="overflow-x:'+(_md.bandZoom>1?'auto':'hidden')+';overflow-y:hidden;padding-bottom:1px;overscroll-behavior-x:contain">'
     +'<div id="mdBandInner" style="position:relative;width:'+(_md.bandZoom*100)+'%">'
       +'<div data-side="up" style="position:relative;height:'+ZONE+'px;margin-bottom:2px;z-index:4">'+up.map(it=>_mdStemHtml(it,'up',mob)).join('')+'</div>'
-      +'<div id="mdTrack" onpointerdown="_mdTrackDown(event)" title="Les espaces vides = ton avatar parle" style="position:relative;height:'+(mob?40:50)+'px;border-radius:10px;overflow:hidden;cursor:pointer;background:color-mix(in srgb, var(--green) 7%, var(--panel-1));border:1px solid var(--border)">'
+      +'<div id="mdTrack" onpointerdown="_mdTrackDown(event)" title="Les espaces vides = ton avatar parle" style="position:relative;height:'+_trackH+'px;border-radius:10px;overflow:hidden;cursor:pointer;background:color-mix(in srgb, var(--green) 7%, var(--panel-1));border:1px solid var(--border)">'
         +blocs
         +'<div id="mdCur" style="position:absolute;top:-6px;bottom:-6px;left:0;width:2.5px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.55), 0 0 14px rgba(255,255,255,1);pointer-events:none;z-index:6;transform:translateX(-50%)">'
           +'<div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff;filter:drop-shadow(0 0 5px rgba(255,255,255,.9))"></div>'
@@ -14603,6 +14634,10 @@ function _mdBandHtml(){
       +(textBlocs?('<div style="position:relative;height:'+(mob?18:22)+'px;margin-top:3px;border-radius:8px;overflow:hidden;background:color-mix(in srgb, var(--blue) 8%, var(--panel-1));border:1px solid color-mix(in srgb,var(--blue) 26%,var(--border))" title="Piste texte (calque par-dessus ton avatar)">'
         +'<span class="mono" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:8px;letter-spacing:.08em;color:var(--blue);z-index:0;pointer-events:none;opacity:.7">TEXTE</span>'
         +textBlocs+'</div>'):'')
+      // #bruitage-calque · les bruitages sur LEUR piste (calque), comme le texte — chips déplaçables (glisse) + tap = menu
+      +(sfxBlocs?('<div data-side="down" style="position:relative;height:'+(mob?22:26)+'px;margin-top:3px;border-radius:8px;overflow:visible;background:color-mix(in srgb, '+_MD_CYAN+' 8%, var(--panel-1));border:1px solid color-mix(in srgb,'+_MD_CYAN+' 26%,var(--border))" title="Piste bruitages (calque)">'
+        +'<span class="mono" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:8px;letter-spacing:.08em;color:'+_MD_CYAN+';z-index:0;pointer-events:none;opacity:.7">BRUITAGE</span>'
+        +sfxBlocs+'</div>'):'')
       +'<div style="position:relative;height:16px;margin-top:1px;z-index:6;pointer-events:none">'
         +'<div id="mdCurH" onpointerdown="_mdTrackDown(event)" title="Glisse pour te déplacer dans la vidéo" style="position:absolute;left:0;top:0;transform:translateX(-50%);width:26px;height:16px;display:grid;place-items:center;pointer-events:auto;cursor:ew-resize;touch-action:none">'
           +'<div style="width:15px;height:11px;border-radius:4px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.7)"></div></div>'
@@ -14757,7 +14792,7 @@ function _mdRenderPop(){
   if(!target) return;
   const isScene=it.k==='scene';
   const acts = isScene
-    ? (it.nat==='animation' ? [['Remplacer l\'animation','repl']].concat((_MD_IMG_ANIMS.has(it.n)||_MD_TEXT_ANIMS.has(it.n))?[['Personnaliser le contenu','edit']]:[],[['Définir la durée','dur'],['Supprimer l\'animation','del']]) : [['Remplacer','repl'],['Définir la durée','dur'],['Supprimer','del']])
+    ? (it.nat==='animation' ? [['Remplacer l\'animation','repl']].concat((_MD_IMG_ANIMS.has(it.n)||_MD_TEXT_ANIMS.has(it.n))?[['Personnaliser le contenu','edit']]:[],[['Définir la durée','dur'],['Séparer ici','split'],['Supprimer l\'animation','del']]) : (it.nat==='split'?[['Remplacer','repl'],['Définir la durée','dur'],['Supprimer','del']]:[['Remplacer','repl'],['Définir la durée','dur'],['Séparer ici','split'],['Supprimer','del']]))
     : it.k==='sfx' ? [['Changer le bruitage','repl'],['Définir la durée','dur'],['Retirer le bruitage','del']]
     : it.k==='trans' ? [['Changer la transition','repl'],['Couper net','del']]
     : [['Modifier le texte','repl'],['Définir la durée','dur'],['Retirer le texte','del']];
@@ -14807,6 +14842,8 @@ function _mdPopAct(act){
     const _sc=_md.scenes.find(x=>x.id===it.id);
     // #perso-anim · rouvrir le menu de contenu (images/texte) d'une anim déjà posée
     if(act==='edit'){ if(_sc){ const _an=_sc.repl||_sc.t; if(_MD_IMG_ANIMS.has(_an)) _mdAskImagesOpen(_sc); else if(_MD_TEXT_ANIMS.has(_an)) _mdAskItemsOpen(_sc); } return; }
+    // #séparer (Axel « ajoute séparer puis supprimer ») : coupe la scène au curseur en deux moitiés indépendantes
+    if(act==='split'){ _mdSplitScene(it.id); return; }
     // #split-changer · « Remplacer » un split rouvre le sélecteur (anim/média), pas le swipe d'anims
     if(act==='repl' && _sc && _sc.n==='split' && typeof _sc.splitIdx==='number'){ _md.splitPick={at:_sc.a, replaceIdx:_sc.splitIdx, tab:(_md.splits[_sc.splitIdx]&&_md.splits[_sc.splitIdx].anim)?'anim':'media'}; _mdRenderModals(); return; }
     if(act==='repl') _mdOpenSwipe(it.id);
@@ -15067,12 +15104,35 @@ function _mdCardHtml(s, i, compact){
             +(s.w?'<span style="font-size:10.5px;color:var(--text-3)">sur « <b style="color:var(--text-2)">'+_mdEsc(s.w)+'</b> »</span>':'')
             +(s.sfx>0?'<span class="row" style="gap:3px;font-size:10.5px;color:'+_MD_CYAN+';align-items:center">'+_mdIco('wave',10,_MD_CYAN)+s.sfx+'</span>':'')
             +(!compact&&s.d?'<span class="faint" style="font-size:10.5px">· '+_mdEsc(s.d)+'</span>':'')
+            // #contenu-générique (Axel « le UN n'est pas remplacé, c'est normal ? ») : les anims à liste/texte
+            // affichent un CONTENU D'EXEMPLE (Un/Deux/Trois). On propose de le personnaliser d'un clic.
+            +((s.n==='animation' && !s.del && (_MD_TEXT_ANIMS.has(s.repl||s.t)||_MD_IMG_ANIMS.has(s.repl||s.t)) && !((s.userItems&&s.userItems.length)||(s.userImages&&s.userImages.length)))
+              ? '<button onclick="event.stopPropagation();_mdPersoOpen(\''+s.id+'\')" class="row" style="gap:4px;align-items:center;font-size:10px;padding:2px 8px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);cursor:pointer"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Contenu à personnaliser</button>' : '')
           +'</div>'
         +'</div>'+acts
       +'</div>'
     +'</div></div>';
 }
 function _mdCardDel(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id); if(s){ s.del=true; s.repl=null; } _mdRender(); }
+// #contenu-générique · ouvre l'éditeur de contenu (items texte OU images) d'une anim à personnaliser
+function _mdPersoOpen(id){ const s=_md.scenes.find(x=>x.id===id); if(!s) return; const an=s.repl||s.t; if(_MD_IMG_ANIMS.has(an)) _mdAskImagesOpen(s); else _mdAskItemsOpen(s); }
+// #séparer (Axel 25/08) : coupe une scène en DEUX au curseur → chaque moitié se supprime/étire seule
+// (comme « Séparer » de l'éditeur). Chaque moitié est une scène rognée normale (déjà gérée au rendu ET
+// à la régénération : une moitié gardée = plan re-timé, une moitié supprimée = zone rendue à l'avatar).
+function _mdSplitScene(id){
+  const s=_md.scenes.find(x=>x.id===id); if(!s){ return; }
+  if(s.n==='split'){ toast('Un split screen ne se sépare pas — supprime-le et recrée-le'); return; }
+  const tc=Math.round(Math.max(s.a+0.4, Math.min(s.b-0.4, _md.time))*100)/100;
+  if(!(tc>s.a+0.2 && tc<s.b-0.2)){ toast('Place le curseur DANS la scène (pas au tout début/fin) pour la séparer'); return; }
+  _mdCommit();
+  const s2=Object.assign({}, s, { id:'sc'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), a:tc, resized:true, _splitOf:(s._splitOf||s.id) });
+  s.b=tc; s.resized=true; s._splitOf=(s._splitOf||s.id);
+  const idx=_md.scenes.indexOf(s); _md.scenes.splice(idx+1,0,s2);
+  _md.scenes.sort((x,y)=>x.a-y.a);
+  _md.sel=s2.id;
+  toast('Scène séparée à '+_mdT(tc)+' — supprime la moitié à enlever');
+  _mdRender();
+}
 function _mdCardUndo(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id);
   if(s){ if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); delete _md.addedMedia[id]; } else { s.del=false; s.repl=null; s.replM=null; s.replT=null; s.userItems=null; s.userImages=null; delete _md.addedMedia[id]; } } _mdRender(); }
 // ── APERÇUS (animation / transition / texte / bruitage) ─────────────────────
@@ -15100,23 +15160,34 @@ function _mdAnimPrevHtml(name, desc, big){
 // aperçu de transition (Détails du montage) : VRAI dessin animé (_edPaintTrans) sur
 // deux panneaux A/B — fini le point blanc générique. Types alignés sur le moteur.
 function _mdTransPrevHtml(name, ratio){
-  const map={ 'Coupe nette':'', 'Fondu enchaîné':'fondu', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Mask Glitch':'maskglitch' };
+  const map={ 'Coupe nette':'', 'Fondu enchaîné':'fondu', 'Flash blanc':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Mask Glitch':'maskglitch', 'Trait avant/après':'linewipe' };
   const ty=map[name]||'';
   setTimeout(function(){ try{ _mdStartTransPrev(); }catch(e){} },30);
+  // #trait-avant-après (Axel « je n'ai pas le trait avant/après ») : l'aperçu montre EXPLICITEMENT
+  // le clip AVANT → l'effet → le clip APRÈS, avec un libellé de phase, pas juste une carte figée.
   return '<div style="position:relative;width:100%;height:100%;aspect-ratio:'+(ratio||'16 / 10')+';border-radius:8px;overflow:hidden;background:#0b0a10;border:1px solid var(--border)">'
     +'<canvas class="mdtprev" data-tt="'+ty+'" width="200" height="356" style="width:100%;height:100%;display:block"></canvas>'
+    +'<span class="mdtprev-lbl mono" style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);color:#fff;font-size:10px;letter-spacing:.06em;pointer-events:none">avant</span>'
     +(ty?'':'<span class="mono" style="position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:12px">Coupe nette</span>')+'</div>';
 }
 function _mdStartTransPrev(){ try{ cancelAnimationFrame(window._mdtpRAF); }catch(e){} window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev); }
 function _mdAnimTransPrev(){
   const cvs=document.querySelectorAll('canvas.mdtprev'); if(!cvs.length) return;
-  if(!window._mdtpA){ const mk=(c1,c2)=>{ const o=document.createElement('canvas'); o.width=200; o.height=356; o.videoWidth=200; o.videoHeight=356; const x=o.getContext('2d'); const g=x.createLinearGradient(0,0,200,356); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,200,356);
-      // léger grain/dégradé pour que l'effet soit lisible, sans lettre
-      const rg=x.createRadialGradient(100,150,10,100,150,180); rg.addColorStop(0,'rgba(255,255,255,.10)'); rg.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=rg; x.fillRect(0,0,200,356); return o; };
-    window._mdtpA=mk('#2a4a7a','#0d1420'); window._mdtpB=mk('#7a2a4a','#20101a'); }
-  const A=window._mdtpA, B=window._mdtpB, now=(performance.now?performance.now():Date.now()), p=(now/1600)%1, srB={sx:0,sy:0,sw:B.width,sh:B.height};
-  cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H); cx.drawImage(B,0,0,W,H);
-    if(ty){ const prevV=(ty==='linewipe'||ty==='fondu')?A:null; try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} } });
+  if(!window._mdtpA){ const mk=(c1,c2,lab)=>{ const o=document.createElement('canvas'); o.width=200; o.height=356; o.videoWidth=200; o.videoHeight=356; const x=o.getContext('2d'); const g=x.createLinearGradient(0,0,200,356); g.addColorStop(0,c1); g.addColorStop(1,c2); x.fillStyle=g; x.fillRect(0,0,200,356);
+      const rg=x.createRadialGradient(100,150,10,100,150,180); rg.addColorStop(0,'rgba(255,255,255,.12)'); rg.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=rg; x.fillRect(0,0,200,356);
+      // gros chiffre AVANT=1 / APRÈS=2 → les deux clips sont visuellement distincts, la transition se lit
+      x.fillStyle='rgba(255,255,255,.9)'; x.font='900 120px system-ui'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(lab,100,178); return o; };
+    window._mdtpA=mk('#2a4a7a','#0d1420','1'); window._mdtpB=mk('#7a2a4a','#20101a','2'); }
+  const A=window._mdtpA, B=window._mdtpB, srB={sx:0,sy:0,sw:B.width,sh:B.height};
+  // cadence LISIBLE : tient sur AVANT (0,55 s) → joue la transition (0,7 s) → tient sur APRÈS (0,55 s) → boucle
+  const now=(performance.now?performance.now():Date.now()), CYC=1800, ph=(now%CYC)/CYC;
+  let p, phase; if(ph<0.30){ p=0; phase='avant'; } else if(ph<0.70){ p=(ph-0.30)/0.40; phase='pendant'; } else { p=1; phase='après'; }
+  cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H);
+    // fond = clip B (après). Pour fondu/linewipe on part de A (avant) et on révèle B.
+    cx.drawImage((ty&&p<1)?A:B,0,0,W,H);
+    if(ty&&p>0){ const prevV=(ty==='linewipe'||ty==='fondu')?A:null; if(!prevV) cx.drawImage(B,0,0,W,H); try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} }
+    const lbl=cv.parentNode&&cv.parentNode.querySelector('.mdtprev-lbl');
+    if(lbl){ lbl.textContent=phase==='pendant'?(_ED_TRANS_LABEL&&_ED_TRANS_LABEL[ty]||'transition'):phase; } });
   window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev);
 }
 // style d'une CARTE DE TEXTE — clé = nom du template (détection par sous-chaîne, comme la
@@ -16083,11 +16154,13 @@ function _mdPlayTransPreview(t, typeArg){
     else if(type==='maskglitch'){ bg='radial-gradient(circle at 50% 42%, rgba(232,246,255,.9), rgba(160,210,255,0) 62%)'; blend='screen'; peak=0.85; vidAnim='mdVidGlitch'; }
     fl.style.background=bg; fl.style.mixBlendMode=blend; fl.style.setProperty('--mdtp', String(peak));
     fl.style.animation='none'; void fl.offsetWidth;   // reflow → redémarre l'anim
-    fl.style.animation='mdTransPulse '+DUR.toFixed(2)+'s ease both';
+    // #transition-boucle (Axel « fondu toujours rien ») : on BOUCLE l'effet ~9 s (au lieu d'un one-shot
+    // ~0,6 s qui se ratait pendant la fermeture de la modale) → impossible à manquer.
+    fl.style.animation='mdTransPulse '+DUR.toFixed(2)+'s ease 0s infinite both';
     if(fll){ fll.textContent=_mdTransLabel(type); fll.style.opacity='1'; }
-    if(v && vidAnim){ v.style.animation='none'; void v.offsetWidth; v.style.animation=vidAnim+' '+DUR.toFixed(2)+'s ease both'; }
+    if(v && vidAnim){ v.style.animation='none'; void v.offsetWidth; v.style.animation=vidAnim+' '+DUR.toFixed(2)+'s ease 0s infinite both'; }
     _md._transPrevTO=setTimeout(()=>{ try{ const f=document.getElementById('mdTransFlash'); if(f){ f.style.animation=''; f.style.opacity='0'; f.style.background='#fff'; f.style.mixBlendMode='screen'; }
-      const l=document.getElementById('mdTransLbl'); if(l) l.style.opacity='0'; const vv=_mdVid(); if(vv){ vv.style.animation=''; vv.style.filter=''; vv.style.transform=''; } }catch(_){} }, Math.round(DUR*1000)+120);
+      const l=document.getElementById('mdTransLbl'); if(l) l.style.opacity='0'; const vv=_mdVid(); if(vv){ vv.style.animation=''; vv.style.filter=''; vv.style.transform=''; } }catch(_){} }, 9000);
   }catch(_){}
 }
 // #texte-sur-vidéo (Axel 25/08 : « le texte doit être lu en priorité, jamais sur fond blanc ») :
@@ -16151,7 +16224,9 @@ function _mdFootHtml(){
     +'background:rgba(11,11,13,.95);border-top:1px solid var(--border);justify-content:space-between;align-items:center;flex-wrap:wrap;z-index:5">'
     +'<div class="col" style="line-height:1.35;min-width:0">'
       +'<span style="font-size:'+(mob?13.5:14.5)+'px;font-weight:700;color:'+(n?'var(--text)':'var(--text-3)')+'">'+(n?n+' modification'+(n>1?'s':'')+' en attente':'Aucune modification')+'</span>'
-      +'<span class="mono" style="font-size:'+(mob?10.5:11.5)+'px;color:var(--text-3)">Lip-sync '+devis.lip+' cr <span class="faint">(clips réutilisés)</span> · Vidéo '+devis.video+' cr</span>'
+      // #pending (Axel « si le changement se fait après la génération, faut le préciser ») : on dit clairement
+      // que l'aperçu montre l'intention et que le rendu final s'applique à la régénération.
+      +'<span class="mono" style="font-size:'+(mob?10.5:11.5)+'px;color:var(--text-3)">'+(n?'<span style="color:var(--accent-2)">Aperçu — appliqué à la régénération</span> · ':'')+'Lip-sync '+devis.lip+' cr <span class="faint">(clips réutilisés)</span> · Vidéo '+devis.video+' cr</span>'
     +'</div>'
     +'<button '+(n?'':'disabled ')+'onclick="_mdRegen()" class="btn btn-primary" style="flex:0 0 auto;padding:'+(mob?'13px 20px':'15px 28px')+';font-size:'+(mob?14.5:16)+'px;font-weight:800;border-radius:14px;'
       +'opacity:'+(n?'1':'.4')+';cursor:'+(n?'pointer':'not-allowed')+';box-shadow:'+(n?'0 1px 0 rgba(255,255,255,.35) inset, 0 14px 36px -12px var(--accent-glow)':'none')+'">Régénérer — '+(devis.lip+devis.video)+' cr</button>'
@@ -16513,7 +16588,9 @@ function _mdBuildRegenPlan(){
         userBans.push({start:_mdR2(src.start),end:_mdR2(Number(src.end)||src.start+(s.b-s.a))});
     }
   }
-  plan.userSlides=userSlides; plan.userBans=userBans;
+  // dédup des bans (une scène séparée peut réclamer deux fois la même fenêtre d'origine)
+  { const _sb=new Set(); plan.userBans=userBans.filter(b=>{ const k=_mdR2(b.start)+'|'+_mdR2(b.end); if(_sb.has(k)) return false; _sb.add(k); return true; }); }
+  plan.userSlides=userSlides;
   // #136 · les splits de l'écran voyagent dans le plan — la dérivation les
   // réserve en priorité (avatar en bas, média au-dessus, safe zone moteur)
   plan.splits=(_md.splits||[]).map(s=>{ const o={start:_mdR2(s.start),end:_mdR2(s.end)};
