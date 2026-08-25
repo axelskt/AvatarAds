@@ -9394,7 +9394,7 @@ function _imgNewPrompt(){
   // reset COMPLET (Axel, 13/08) : les références et l'état 4K partent aussi —
   // une « nouvelle image » repart vraiment de zéro.
   if(typeof _imgClearRefZone==='function') _imgClearRefZone(); else if(typeof _imgClearRef==='function') _imgClearRef();
-  _imgIsHD=false; _imgPrevSrc=null;
+  _imgIsHD=false; _imgPrevSrc=null; _imgHDSrc=null; _imgViewingOriginal=false;
   { const ub=document.getElementById('imgUpscaleBtn');
     if(ub && window._img4kBtnHtml){ ub.disabled=false; ub.style.opacity='1'; ub.innerHTML=window._img4kBtnHtml; } }
   { const nb=document.getElementById('imgNanoBtn');
@@ -9737,18 +9737,32 @@ function _imgProgStart(label){
 }
 function _imgProgStop(){ clearInterval(_imgProgTimer); _imgProgTimer=null; _imgSetProg(100); }
 
-// ── Revenir à l'image d'avant la restauration HD ──
-let _imgPrevSrc=null, _imgIsHD=false;
+// ── Bascule original ⇄ version améliorée (Axel 26/08 : pouvoir REVENIR à l'upgrade après être revenu à l'original) ──
+let _imgPrevSrc=null, _imgIsHD=false, _imgHDSrc=null, _imgViewingOriginal=false;
 function _imgRevertHD(){
-  const img=document.getElementById('imgOutput');
-  if(!img||!_imgPrevSrc){ return; }
-  img.style.height=''; img.style.objectFit='';                     // on revient au cadre naturel de l'image d'origine
-  { const z=document.getElementById('imgZone'); if(z) z.style.height=''; }
-  img.src=_imgPrevSrc;
-  try{ document.getElementById('imgDownloadBtn').href=_imgPrevSrc; }catch(e){}
-  const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none';
-  _imgPrevSrc=null; _imgIsHD=false;
-  toast('Image d\'origine restaurée');
+  const img=document.getElementById('imgOutput'); if(!img) return;
+  const rb=document.getElementById('imgRevertBtn');
+  const dl=document.getElementById('imgDownloadBtn');
+  const backSvg='<svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>';
+  const upSvg='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>';
+  if(!_imgViewingOriginal){
+    // on affiche l'AMÉLIORÉE → revenir à l'original (réversible)
+    if(!_imgPrevSrc){ return; }
+    img.style.height=''; img.style.objectFit='';                   // cadre naturel de l'original
+    { const z=document.getElementById('imgZone'); if(z) z.style.height=''; }
+    img.src=_imgPrevSrc; if(dl) dl.href=_imgPrevSrc;
+    _imgViewingOriginal=true;
+    if(rb) rb.innerHTML=upSvg+'Revenir à la version améliorée';
+    toast('Image d\'origine');
+  } else {
+    // on affiche l'original → revenir à la version AMÉLIORÉE
+    if(!_imgHDSrc){ return; }
+    img.style.height=''; img.style.objectFit='';
+    img.src=_imgHDSrc; if(dl) dl.href=_imgHDSrc;
+    _imgViewingOriginal=false;
+    if(rb) rb.innerHTML=backSvg+'Revenir à l\'ancienne version';
+    toast('Version améliorée');
+  }
 }
 // ── Téléchargement robuste (Safari échoue sur les gros data URLs via <a download>) ──
 async function _imgDownload(ev){
@@ -9933,7 +9947,9 @@ async function _falClarityUpscale(imageDataUrl){
   // débruitage (creativity 0.5) pour qu'il REPEIGNE vraiment pores/duvet/taches de rousseur, et on
   // relâche la ressemblance (0.6) pour que l'original lissé ne domine plus — le ControlNet tile
   // garde le CADRAGE et la STRUCTURE du visage (identité conservée), seule la texture est régénérée.
-  const sub=await fPost(model,{ image_url:src, prompt:'RAW unretouched DSLR photograph, ultra realistic human skin with heavy natural texture: clearly visible skin pores across the whole face, ABUNDANT natural freckles and tiny beauty marks scattered over the cheeks, nose and forehead, fine peach-fuzz vellus hair catching light on the cheeks and jawline, real skin micro-grain, subtly uneven skin tone with faint natural redness and small blemishes, individual eyebrow hairs and eyelashes, sharp fibrous iris, real depth of field and camera grain. Matte lifelike skin, NOT retouched. Keep the exact same face, identity, expression and framing, only recover real detail. Absolutely NO skin smoothing, NO airbrush, NO plastic or waxy or glossy skin, NO beauty filter, NO uniform doll skin, NO CGI or 3D render.', negative_prompt:'smooth skin, plastic skin, waxy skin, airbrushed, over-smoothed, retouched, glossy, shiny, beauty filter, doll skin, uniform skin tone, blurred pores, makeup, CGI, 3d render, blurry, soft focus, oversaturated', upscale_factor:factor, creativity:0.5, resemblance:0.6, num_inference_steps:42 });
+  // #detail-visage (Axel 26/08 « le résultat est horrible ») : dd54f12 avait poussé « ABUNDANT freckles / heavy texture / redness »
+  // + resemblance 0.6 → le visage DÉRIVE (zombie, autre personne). Retour à la version FIDÈLE (resemblance 0.9, creativity 0.3, jamais de freckles inventées).
+  const sub=await fPost(model,{ image_url:src, prompt:'RAW unedited real photograph, hyper-detailed authentic human skin with clearly visible pores and real micro-texture, fine peach-fuzz / vellus hair on cheeks and jaw, natural skin-tone variation, tiny imperfections and any natural freckles or beauty marks where they already exist (never add freckles to skin that has none), a sharp fibrous iris, individual eyelashes and hair strands, crisp fabric weave, natural film grain. It must stay matte and real — absolutely NO smoothing, NO airbrush, NO plastic, waxy or glossy skin, NO beauty filter, NO CGI.', negative_prompt:'plastic skin, waxy skin, airbrushed, over-smoothed, glossy, shiny, CGI, 3d render, beauty filter, doll, blurry, soft focus, oversaturated', upscale_factor:factor, creativity:0.3, resemblance:0.9, num_inference_steps:36 });
   if(!sub.ok){ const _b=(await sub.text().catch(()=>'')); console.error('[clarity] fal '+sub.status+' (facteur '+factor+') : '+_b.slice(0,200)); return null; }
   const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
   if(!url && (sd.status_url||sd.request_id)){
@@ -10046,7 +10062,7 @@ async function _imgUpscaleHD(btn){
       const withFace=await _faceUpscalePass(finalUrl);
       if(withFace && withFace!==finalUrl){ finalUrl=withFace; engine+=' + visage'; }
     }catch(_){}
-    await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true;       // même cadrage, pas de zoom
+    await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true; _imgHDSrc=finalUrl; _imgViewingOriginal=false;   // même cadrage ; garde l'améliorée pour la bascule
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
@@ -10063,7 +10079,7 @@ async function _imgUpscaleHD(btn){
       // sinon on ne sait plus si c'est fait (Axel, 13/08 : « une fois l'image
       // 4K, il faut que le 4K s'enlève, sinon ça porte à confusion »).
       btn.disabled=true; btn.style.opacity='.55';
-      btn.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Déjà en 4K</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">fait</span>';
+      btn.innerHTML='<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Détails faits</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">fait</span>';
     } else { btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; }
   }
 }
@@ -10158,7 +10174,7 @@ async function _imgUpscaleNano(btn){
       if(cl){ try{ const rC=await fetch(cl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){ finalUrl=cl; } engine='Clarity (cadrage conservé)'; }
       else throw new Error('4K : Nano a recadré l\'image et Clarity est indisponible — crédit remboursé');
     }
-    await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true;       // même cadrage, pas de zoom
+    await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true; _imgHDSrc=finalUrl; _imgViewingOriginal=false;   // même cadrage ; garde l'améliorée pour la bascule
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
@@ -10186,7 +10202,7 @@ function _imgShowSingle(url, size){
   { const z=document.getElementById('imgZone'); if(z){ z.style.minHeight='200px'; z.style.height=''; } }  // reset la boîte (+ relâche le cadre figé par un upscale)
   { const o=document.getElementById('imgOutput'); if(o){ o.style.height=''; o.style.objectFit=''; o.style.opacity='1'; } }
   const ov=document.getElementById('imgLoadingOverlay'); if(ov) ov.style.display='none';
-  const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false;
+  const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='none'; _imgPrevSrc=null; _imgIsHD=false; _imgHDSrc=null; _imgViewingOriginal=false;
   // « Restaurer les détails (4K) » = upscaler des résultats de GÉNÉRATION uniquement.
   // En Correction, « Améliorer en 4K » fait déjà le même travail → on masque le doublon.
   // ⚠ le parent des 2 boutons est un `display:flex` INLINE : remettre `''` le repassait en
