@@ -2920,9 +2920,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           <div>
             <div class="row gap10" style="align-items:center;flex-wrap:wrap">
               <h2 class="display row gap8" style="font-size:23px;font-weight:700;align-items:center;line-height:1.1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Images IA</h2>
-              <span class="pill mono" style="align-self:center;font-size:9px;letter-spacing:.05em;color:var(--accent-2);border-color:var(--accent-line);background:var(--accent-soft)">4K</span>
             </div>
-            <p class="muted" style="margin-top:8px;font-size:13px;line-height:1.5">Visuels, B-roll et miniatures pour tes vidéos.</p>
+            <p class="muted" style="margin-top:8px;font-size:13px;line-height:1.5">Visuels 4K pour tes vidéos.</p>
           </div>
 
           <!-- TABS Génération / Correction -->
@@ -3150,7 +3149,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                   <button class="btn btn-primary" onclick="generateImage()" id="imgGenBtn" style="padding:13px 48px;font-weight:800;font-size:17px;border-radius:16px;flex-shrink:0">
                     <span style="display:inline-flex;flex-direction:column;align-items:center;line-height:1.15"><span style="display:inline-flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Générer l'image</span><span style="font-size:10px;font-weight:800;opacity:.75;font-family:var(--mono);letter-spacing:.05em;margin-top:2px">3 cr</span></span></button>
                 </div>
-                <div id="imgQuotaLabel" onclick="openCreditsModal('images')" style="font-size:10px;font-family:var(--mono);color:var(--text3);cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'"></div>
               </div>
 
             </div>
@@ -8644,12 +8642,13 @@ function _imgIco(name, size, color){
 const _IMG_STYLES = [
   { id:'photo',   ic:'camera',  label:'Photo Réel',  sub:'réaliste',      api:'natural', suffix:', photographie réaliste haute qualité et très détaillée, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et détaillés, yeux détaillés et regard naturel, cheveux détaillés, lumière réaliste, décor et arrière-plan détaillés et nets, rendu photo réel non lissé et non plastique' },
   { id:'staticad', ic:'ad',     label:'Static ads',   sub:'pub produit', api:'vivid', suffix:', publicité statique professionnelle de produit (static ad) : le produit en héros au centre, packshot studio parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, quelques éléments ou ingrédients flottants qui dynamisent la composition, mise en page publicitaire premium équilibrée et aérée type marque DTC, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe' },
-  { id:'staticadhand', ic:'ad', label:'Static ad · en main', sub:'produit en main', api:'vivid', suffix:', publicité statique professionnelle de produit (static ad) tenue en main : une vraie main humaine réaliste et détaillée (peau naturelle avec pores et texture crédible, ongles soignés) qui tient le produit bien en évidence au premier plan comme une photo UGC, produit héros net et parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, mise en page publicitaire premium équilibrée et aérée type marque DTC, main et produit photoréalistes, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe' },
   { id:'studio',  ic:'fruit',   label:'Fruit',        sub:'perso fruit', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
   { id:'ugc',     ic:'mic',     label:'UGC Réel',     sub:'authentique',      api:'natural', suffix:', jolie avec de jolies lèvres pulpeuses, vrai selfie/photo UGC pris à l\'iPhone tenu à la main, casual et spontané, lumière non contrôlée d\'intérieur (ambiante, exposition automatique du téléphone), cadrage imparfait légèrement décentré, non retouché, non professionnel, comme un selfie qu\'un ami enverrait' },
   { id:'premium', ic:'robot',   label:'Mascotte',     sub:'de marque',  api:'vivid',   suffix:', mascotte de marque commerciale, personnage 3D expressif et attachant, couleurs vives, branding pro' },
   { id:'dark',    ic:'palette', label:'Autre',        sub:'style libre',      api:'natural', suffix:'' },
 ];
+// #staticad-main (Axel 26/08) : plus de style « en main » séparé — « Static ads » sort 1 fois sur 2 avec le produit tenu en main (variante appliquée à la génération).
+const _IMG_STATICAD_HAND_SUFFIX = ', publicité statique professionnelle de produit (static ad) tenue en main : une vraie main humaine réaliste et détaillée (peau naturelle avec pores et texture crédible, ongles soignés) qui tient le produit bien en évidence au premier plan comme une photo UGC, produit héros net et parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, mise en page publicitaire premium équilibrée et aérée type marque DTC, main et produit photoréalistes, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe';
 
 const _IMG_FORMATS = [
   { id:'square',   label:'Carré',    sub:'1:1',  value:'1024x1024',  w:1,  h:1  },
@@ -10242,7 +10241,9 @@ async function generateImage(){
 
     const size   = _imgSelectedFormat;
     const style  = _imgSelectedStyleApi;
-    const suffix = _imgSelectedStyleSuffix;
+    // #staticad-main (Axel 26/08) : « Static ads » → 1 génération sur 2 avec le produit tenu en main (variante)
+    let suffix = _imgSelectedStyleSuffix;
+    if(_imgSelectedStyleId==='staticad' && Math.random()<0.5){ suffix = _IMG_STATICAD_HAND_SUFFIX; }
     // Détecte une demande de PLANCHE / LAYOUT (reference sheet, mockup, palette…) :
     // dans ce cas on N'AJOUTE PAS le suffixe de style ("portrait hyperréaliste") ni le booster dermato,
     // qui cassent la mise en page → on laisse le prompt de l'utilisateur piloter.
