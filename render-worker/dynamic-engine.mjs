@@ -1763,37 +1763,40 @@ export function buildDynamicComposition(plan, opts = {}) {
   const _secBounds = [...new Set((plan.sections || []).filter((s) => s && _TRANS_OK.has(String(s.transition || '').toLowerCase())).map((s) => r2(s.start)).filter((t) => t > 0.05 && t < D - 0.05))].sort((a, b) => a - b)
   const _transAt = (t) => { let ty = String(_secByStart.get(r2(t))?.transition || '').toLowerCase(); if (ty === 'maskglitch' && !_maskSil) ty = 'glitch'; return ty }
   const _BURNW = Math.round(W * 1.8)
+  // #transition-duree (Axel 25/08) : k = transitionDur/0,5 (1 quand non défini → rendu STRICTEMENT inchangé
+  // pour tous les montages existants). Étire les durées ET les avances de l'effet.
+  const _durAt = (t) => { const s = _secByStart.get(r2(t)); const d = s && Number(s.transitionDur); return (d > 0.05 && d < 3) ? d / 0.5 : 1 }
   const _transJs = _secBounds.map((t) => {
-    const ty = _transAt(t), t0 = r2(Math.max(0, t - 0.04))
+    const ty = _transAt(t), k = _durAt(t), t0 = r2(Math.max(0, t - 0.04 * k))
     if (ty === 'filmburn') return `
-  tl.to('#tBurn', { autoAlpha: 1, duration: 0.08 }, ${r2(Math.max(0, t - 0.18))});
-  tl.fromTo('#tBurn', { x: ${-_BURNW} }, { x: ${Math.round(W * 1.05)}, duration: 0.52, ease: 'power1.inOut' }, ${r2(Math.max(0, t - 0.18))});
-  tl.to('#tBurn', { autoAlpha: 0, duration: 0.12 }, ${r2(t + 0.22)});`
+  tl.to('#tBurn', { autoAlpha: 1, duration: ${r2(0.08 * k)} }, ${r2(Math.max(0, t - 0.18 * k))});
+  tl.fromTo('#tBurn', { x: ${-_BURNW} }, { x: ${Math.round(W * 1.05)}, duration: ${r2(0.52 * k)}, ease: 'power1.inOut' }, ${r2(Math.max(0, t - 0.18 * k))});
+  tl.to('#tBurn', { autoAlpha: 0, duration: ${r2(0.12 * k)} }, ${r2(t + 0.22 * k)});`
     if (ty === 'glitch') return `
-  tl.fromTo('#tGlitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.9, y: -26, duration: 0.05, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${t0});
-  tl.fromTo('#tGlitch2', { autoAlpha: 0, x: 0 }, { autoAlpha: 0.7, x: 24, duration: 0.045, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${r2(Math.max(0, t - 0.02))});
-  tl.set(['#tGlitch','#tGlitch2'], { autoAlpha: 0 }, ${r2(t + 0.24)});`
+  tl.fromTo('#tGlitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.9, y: -26, duration: ${r2(0.05 * k)}, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${t0});
+  tl.fromTo('#tGlitch2', { autoAlpha: 0, x: 0 }, { autoAlpha: 0.7, x: 24, duration: ${r2(0.045 * k)}, repeat: 5, yoyo: true, ease: 'steps(1)' }, ${r2(Math.max(0, t - 0.02 * k))});
+  tl.set(['#tGlitch','#tGlitch2'], { autoAlpha: 0 }, ${r2(t + 0.24 * k)});`
     if (ty === 'maskglitch') return `
-  tl.to('#tMaskSil', { autoAlpha: 1, duration: 0.10, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.14))});
-  tl.to('#tMaskSil', { scale: 1.04, duration: 0.16, ease: 'power1.out' }, ${r2(Math.max(0, t - 0.10))});
-  tl.fromTo('#tMaskBeam', { autoAlpha: 0, scaleX: 0.12 }, { autoAlpha: 1, scaleX: 1.5, duration: 0.14, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.02))});
-  tl.fromTo('#tGlitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.8, y: -20, duration: 0.045, repeat: 3, yoyo: true, ease: 'steps(1)' }, ${t});
-  tl.to('#tMaskSil', { autoAlpha: 0, scale: 1.14, duration: 0.20, ease: 'power2.in' }, ${r2(t + 0.04)});
-  tl.to('#tMaskBeam', { autoAlpha: 0, scaleX: 2.2, duration: 0.22, ease: 'power2.in' }, ${r2(t + 0.08)});
-  tl.set(['#tGlitch'], { autoAlpha: 0 }, ${r2(t + 0.20)});`
+  tl.to('#tMaskSil', { autoAlpha: 1, duration: ${r2(0.10 * k)}, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.14 * k))});
+  tl.to('#tMaskSil', { scale: 1.04, duration: ${r2(0.16 * k)}, ease: 'power1.out' }, ${r2(Math.max(0, t - 0.10 * k))});
+  tl.fromTo('#tMaskBeam', { autoAlpha: 0, scaleX: 0.12 }, { autoAlpha: 1, scaleX: 1.5, duration: ${r2(0.14 * k)}, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.02 * k))});
+  tl.fromTo('#tGlitch', { autoAlpha: 0, y: 0 }, { autoAlpha: 0.8, y: -20, duration: ${r2(0.045 * k)}, repeat: 3, yoyo: true, ease: 'steps(1)' }, ${t});
+  tl.to('#tMaskSil', { autoAlpha: 0, scale: 1.14, duration: ${r2(0.20 * k)}, ease: 'power2.in' }, ${r2(t + 0.04 * k)});
+  tl.to('#tMaskBeam', { autoAlpha: 0, scaleX: 2.2, duration: ${r2(0.22 * k)}, ease: 'power2.in' }, ${r2(t + 0.08 * k)});
+  tl.set(['#tGlitch'], { autoAlpha: 0 }, ${r2(t + 0.20 * k)});`
     if (ty === 'fondu') return `
-  tl.to('#tFondu', { autoAlpha: 0.62, duration: 0.16, ease: 'power2.in' }, ${r2(Math.max(0, t - 0.16))});
-  tl.to('#tFondu', { autoAlpha: 0, duration: 0.22, ease: 'power2.out' }, ${r2(t + 0.02)});`
+  tl.to('#tFondu', { autoAlpha: 0.62, duration: ${r2(0.16 * k)}, ease: 'power2.in' }, ${r2(Math.max(0, t - 0.16 * k))});
+  tl.to('#tFondu', { autoAlpha: 0, duration: ${r2(0.22 * k)}, ease: 'power2.out' }, ${r2(t + 0.02 * k)});`
     if (ty === 'whip') return `
-  tl.to('#tWhip', { autoAlpha: 1, duration: 0.04 }, ${r2(Math.max(0, t - 0.10))});
-  tl.fromTo('#tWhip', { x: ${-Math.round(W * 1.1)} }, { x: ${Math.round(W * 1.1)}, duration: 0.26, ease: 'power2.inOut' }, ${r2(Math.max(0, t - 0.10))});
-  tl.to('#tWhip', { autoAlpha: 0, duration: 0.08 }, ${r2(t + 0.14)});`
+  tl.to('#tWhip', { autoAlpha: 1, duration: ${r2(0.04 * k)} }, ${r2(Math.max(0, t - 0.10 * k))});
+  tl.fromTo('#tWhip', { x: ${-Math.round(W * 1.1)} }, { x: ${Math.round(W * 1.1)}, duration: ${r2(0.26 * k)}, ease: 'power2.inOut' }, ${r2(Math.max(0, t - 0.10 * k))});
+  tl.to('#tWhip', { autoAlpha: 0, duration: ${r2(0.08 * k)} }, ${r2(t + 0.14 * k)});`
     if (ty === 'zoom') return `
-  tl.fromTo('#tZoom', { autoAlpha: 0, scale: 0.3 }, { autoAlpha: 0.8, scale: 1.5, duration: 0.16, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.08))});
-  tl.to('#tZoom', { autoAlpha: 0, scale: 2.2, duration: 0.22, ease: 'power2.in' }, ${r2(t + 0.08)});`
+  tl.fromTo('#tZoom', { autoAlpha: 0, scale: 0.3 }, { autoAlpha: 0.8, scale: 1.5, duration: ${r2(0.16 * k)}, ease: 'power2.out' }, ${r2(Math.max(0, t - 0.08 * k))});
+  tl.to('#tZoom', { autoAlpha: 0, scale: 2.2, duration: ${r2(0.22 * k)}, ease: 'power2.in' }, ${r2(t + 0.08 * k)});`
     return `
-  tl.fromTo('#tFlash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.09, ease: 'power2.out' }, ${t0});
-  tl.to('#tFlash', { autoAlpha: 0, duration: 0.2, ease: 'power2.in' }, ${r2(t + 0.05)});`
+  tl.fromTo('#tFlash', { autoAlpha: 0 }, { autoAlpha: 0.55, duration: ${r2(0.09 * k)}, ease: 'power2.out' }, ${t0});
+  tl.to('#tFlash', { autoAlpha: 0, duration: ${r2(0.2 * k)}, ease: 'power2.in' }, ${r2(t + 0.05 * k)});`
   }).join('')
   const _transHtml = _secBounds.length ? `
 <div id="tFlash" class="clip tovl" data-start="0" data-duration="${D}" data-track-index="16" style="background:#fff"></div>
