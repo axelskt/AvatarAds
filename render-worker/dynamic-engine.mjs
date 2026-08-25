@@ -1813,6 +1813,17 @@ export function buildDynamicComposition(plan, opts = {}) {
   tl.set('#tMaskSil', { scale: 1 }, 0);
   tl.set('#tMaskBeam', { scaleX: 0.12 }, 0);` : ''}${_transJs}` : ''
 
+  // #texte-sur-vidéo (Axel 25/08) : le texte ajouté dans « Détails du montage » est une LÉGENDE posée
+  // PAR-DESSUS la vidéo (jamais une carte plein cadre). Élément `clip` natif HyperFrames (data-start/duration
+  // = fenêtre), positionné par pos {x,y}. Rendu au-dessus de tout (z élevé).
+  const txtLayerHtml = (plan.__textLayers || []).map((L) => {
+    const a = r2(Math.max(0, Number(L.start) || 0)), b = r2(Math.max(a + 0.3, Number(L.end) || a + 2))
+    const px = Math.round(Math.min(0.92, Math.max(0.08, Number(L.pos && L.pos.x) || 0.5)) * W)
+    const py = Math.round(Math.min(0.94, Math.max(0.06, Number(L.pos && L.pos.y) || 0.84)) * H)
+    const fs = Math.round(H * 0.03)
+    return `<div class="clip" data-start="${a}" data-duration="${r2(b - a)}" data-track-index="16" style="position:absolute;left:${px}px;top:${py}px;transform:translate(-50%,-50%);max-width:${Math.round(W * 0.9)}px;padding:${Math.round(fs * 0.5)}px ${Math.round(fs * 0.9)}px;border-radius:${Math.round(fs * 0.7)}px;background:rgba(0,0,0,.6);color:#fff;font-weight:800;font-size:${fs}px;line-height:1.25;text-align:center;text-shadow:0 ${Math.round(H * 0.002)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.6)">${esc(String(L.text || ''))}</div>`
+  }).join('')
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -2028,6 +2039,7 @@ export function buildDynamicComposition(plan, opts = {}) {
 <body>
 <div id="root" data-composition-id="main" data-width="${W}" data-height="${H}" data-start="0" data-duration="${D}">${sousCouche}${html}
 ${capHtml}
+${txtLayerHtml}
 ${hookTitleHtml}${_transHtml}
 </div>
 <script>
