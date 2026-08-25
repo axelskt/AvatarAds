@@ -15183,9 +15183,12 @@ function _mdAnimTransPrev(){
   const now=(performance.now?performance.now():Date.now()), CYC=1800, ph=(now%CYC)/CYC;
   let p, phase; if(ph<0.30){ p=0; phase='avant'; } else if(ph<0.70){ p=(ph-0.30)/0.40; phase='pendant'; } else { p=1; phase='après'; }
   cvs.forEach(cv=>{ const cx=cv.getContext('2d'), W=cv.width, H=cv.height, ty=cv.dataset.tt; cx.clearRect(0,0,W,H);
-    // fond = clip B (après). Pour fondu/linewipe on part de A (avant) et on révèle B.
-    cx.drawImage((ty&&p<1)?A:B,0,0,W,H);
-    if(ty&&p>0){ const prevV=(ty==='linewipe'||ty==='fondu')?A:null; if(!prevV) cx.drawImage(B,0,0,W,H); try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} }
+    // avant → clip 1 (A) ; après → clip 2 (B) ; pendant → base = clip 2 (B) et _edPaintTrans révèle A→B
+    // (miroir du jumeau éditeur edAnimTransPreviews : la base est TOUJOURS B, A n'est qu'un CALQUE qui s'efface).
+    if(!ty){ cx.drawImage(phase==='avant'?A:B,0,0,W,H); }
+    else if(phase==='avant'){ cx.drawImage(A,0,0,W,H); }
+    else if(phase==='après'){ cx.drawImage(B,0,0,W,H); }
+    else { cx.drawImage(B,0,0,W,H); const prevV=(ty==='linewipe'||ty==='fondu')?A:null; try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} }
     const lbl=cv.parentNode&&cv.parentNode.querySelector('.mdtprev-lbl');
     if(lbl){ lbl.textContent=phase==='pendant'?(_ED_TRANS_LABEL&&_ED_TRANS_LABEL[ty]||'transition'):phase; } });
   window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev);
