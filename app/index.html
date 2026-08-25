@@ -32160,7 +32160,9 @@ function _edPlayTransPreview(t, type){
     let prevV=null;
     if(type==='linewipe'||type==='fondu'){ const at=(typeof _edClipAt==='function')?_edClipAt(t):{i:0}; prevV=(at.i>0)?(_ed.clips[at.i-1]||{}).video:null; }
     const _s=(_ed.sfx||[]).find(x=>x.trans&&Math.abs((x.t||0)-t)<0.06); const _len=Math.max(0.6,(_s&&_s.len)||_ED_TRANS_DUR);
-    _ed._transPrev={ t0:performance.now(), type:String(type||''), prevV:prevV, len:_len };   // edDrawLoop l'anime (déterministe)
+    // #transition-boucle (Axel « fondu toujours rien ») : le one-shot ~0,9 s se ratait à l'œil (il jouait
+    // pendant que la modale se fermait). On BOUCLE l'effet ~9 s (cycle + petite pause) → impossible à manquer.
+    _ed._transPrev={ t0:performance.now(), type:String(type||''), prevV:prevV, len:_len, until:performance.now()+9000 };   // edDrawLoop l'anime en boucle
   }catch(_){}
 }
 function edDrawTrans(cx,W,H,gTime,curV,sr){ if(!_ed) return;
@@ -32215,10 +32217,12 @@ function edDrawLoop(){
   const _fa=_edFlashAlpha(_gt); // #111 · flash de transition de section (preview)
   if(_fa>0.01){ try{ ctx.fillStyle='rgba(255,255,255,'+_fa.toFixed(3)+')'; ctx.fillRect(0,0,_ed.dispW,_ed.dispH); }catch(e){} }
   try{ edDrawTrans(ctx, _ed.dispW, _ed.dispH, _gt, v, _cr); }catch(e){}   // transitions entre clips (aperçu)
-  // #transition-preview déterministe (Axel : « fondu ne fait rien ») : anime l'effet 0→1→0 sur ~0,9 s, SANS lecture
-  if(_ed._transPrev){ const p=Math.min(1,(performance.now()-_ed._transPrev.t0)/((_ed._transPrev.len||0.9)*1000));
-    try{ _edPaintTrans(ctx, _ed.dispW, _ed.dispH, p, _ed._transPrev.type, v, _cr, _ed._transPrev.prevV); }catch(e){}
-    if(p>=1) _ed._transPrev=null; }
+  // #transition-preview déterministe + BOUCLE (Axel : « fondu ne fait rien ») : anime l'effet 0→1→0 EN BOUCLE
+  // (durée + pause) pendant ~9 s pour qu'on le voie à coup sûr, puis s'arrête. La <video> reste figée dessous.
+  if(_ed._transPrev){ const _tp=_ed._transPrev; const _dur=(_tp.len||0.9)*1000, _gap=460, _cyc=_dur+_gap;
+    const _el=performance.now()-_tp.t0, _inc=_el%_cyc;
+    if(_inc<_dur){ const p=_inc/_dur; try{ _edPaintTrans(ctx, _ed.dispW, _ed.dispH, p, _tp.type, v, _cr, _tp.prevV); }catch(e){} }
+    if(performance.now()>(_tp.until||0)) _ed._transPrev=null; }
   for(const o of _ed.overlays){
     if(o._el){ const vis=(o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end); o._el.style.visibility=vis?'visible':'hidden'; } // #split · visible SEULEMENT dans sa fenêtre (avant : la sélection le forçait plein écran sur toute la vidéo)
     if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
@@ -32570,6 +32574,33 @@ function _edApplySplitBox(ov){
   if(ov._el){ ov._el.style.left='0px'; ov._el.style.top=ov.y+'px'; ov._el.style.width=ov.w+'px'; ov._el.style.height=ov.h+'px'; }
   if(!ov._splitEmpty) _edStyleSplitMedia(ov);
 }
+// #fond-animé (Axel « impossible d'animer l'arrière-plan ? même avec les grilles ? ») : des fonds ANIMÉS
+// (grille qui défile, dégradé qui balaie, aurora) dispo pour N'IMPORTE QUELLE anim — pas besoin d'une
+// variante « carreaux » cuite. Le fond animé est en CSS (immunisé RAF) derrière l'anim en blend multiply.
+const _ED_ANIMBG = {
+  grille: { base:'#E7DFFF', css:'repeating-linear-gradient(0deg,rgba(124,92,255,.22) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,rgba(124,92,255,.22) 0 1px,transparent 1px 22px),linear-gradient(135deg,#ECE6FF,#D8CCFF)', size:'22px 22px,22px 22px,100% 100%', anim:'edBgGrid 3.4s linear infinite', line:'rgba(124,92,255,.5)' },
+  degrade:{ base:'#F2E7FF', css:'linear-gradient(120deg,#FFE0CE,#E9D8FF,#CFE3FF,#FFE0CE)', size:'300% 300%', anim:'edBgSweep 7s ease infinite', line:null },
+  aurora: { base:'#E7F0FF', css:'radial-gradient(60% 60% at 30% 30%,rgba(124,92,255,.38),transparent 60%),radial-gradient(52% 52% at 74% 66%,rgba(255,120,80,.30),transparent 60%),linear-gradient(135deg,#EAF0FF,#F6E9FF)', size:'200% 200%,200% 200%,100% 100%', anim:'edBgAurora 9s ease-in-out infinite', line:null }
+};
+function _edEnsureAnimBgCss(){ if(document.getElementById('edAnimBgCss')) return;
+  const s=document.createElement('style'); s.id='edAnimBgCss';
+  s.textContent='@keyframes edBgGrid{to{background-position:22px 22px,22px 22px,0 0}}'
+    +'@keyframes edBgSweep{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}'
+    +'@keyframes edBgAurora{0%{background-position:0% 0%,100% 100%,0 0}50%{background-position:100% 50%,0% 50%,0 0}100%{background-position:0% 0%,100% 100%,0 0}}';
+  document.head.appendChild(s); }
+function edSetAnimFx(fx){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim) return; edSnap();
+  if(ov._bgStyle==='dark') edSetAnimBgVariant('light');
+  const p=_ED_ANIMBG[fx]; if(!p){ ov._animFx=null; } else { ov._animFx=fx; ov._animBg=p.base; }   // _animBg = teinte de base (export)
+  _edStyleSplitMedia(ov); edShowProps(); }
+// export : peint le fond animé (teinte + grille défilante) sous l'anim (le multiply est posé par l'appelant)
+function _edDrawAnimBg(cx,x,y,w,h,ov,t){ const p=_ED_ANIMBG[ov&&ov._animFx]; if(!p) return false;
+  cx.fillStyle=p.base||'#eee'; cx.fillRect(x,y,w,h);
+  if(p.line){ cx.save(); cx.beginPath(); cx.rect(x,y,w,h); cx.clip(); cx.strokeStyle='rgba(108,74,255,.7)'; cx.lineWidth=Math.max(2,w/300);
+    const step=Math.max(26,w/16), off=((t*46)%step);   // grille qui DÉFILE (off dépend du temps)
+    for(let gx=x-step+off;gx<x+w+step;gx+=step){ cx.beginPath(); cx.moveTo(gx,y); cx.lineTo(gx,y+h); cx.stroke(); }
+    for(let gy=y-step+off;gy<y+h+step;gy+=step){ cx.beginPath(); cx.moveTo(x,gy); cx.lineTo(x+w,gy); cx.stroke(); }
+    cx.restore(); }
+  return true; }
 // recadrage (pan/zoom) du média du split en preview — DOIT refléter la formule d'export (section D)
 function _edStyleSplitMedia(ov){
   if(!ov||!ov._el) return; const im=ov._el.querySelector('img,video'); if(!im) return;
@@ -32580,10 +32611,12 @@ function _edStyleSplitMedia(ov){
     im.style.objectPosition=(ox*100).toFixed(2)+'% '+(oy*100).toFixed(2)+'%';
     im.style.transform='scale('+z+')'; im.style.transformOrigin=(ox*100).toFixed(2)+'% '+(oy*100).toFixed(2)+'%';
   } else { im.style.objectPosition=(ov._anim?'50% 50%':'50% 30%'); im.style.transform=''; im.style.transformOrigin=''; }
-  // #fond-anim · l'anim a un fond CLAIR/blanc « cuit ». On le remplace par une couleur via
+  // #fond-anim · l'anim a un fond CLAIR/blanc « cuit ». On le remplace par une couleur/motif via
   // le blend MULTIPLY : le fond blanc devient la couleur, le contenu sombre reste. (preview)
-  if(ov._anim && ov._animBg){ ov._el.style.background=ov._animBg; im.style.mixBlendMode='multiply'; }
-  else { ov._el.style.background=''; im.style.mixBlendMode=''; }
+  const _fx=ov._anim&&ov._animFx?_ED_ANIMBG[ov._animFx]:null;
+  if(_fx){ _edEnsureAnimBgCss(); ov._el.style.background=_fx.css; ov._el.style.backgroundSize=_fx.size||'auto'; ov._el.style.animation=_fx.anim; im.style.mixBlendMode='multiply'; }
+  else if(ov._anim && ov._animBg){ ov._el.style.background=ov._animBg; ov._el.style.backgroundSize=''; ov._el.style.animation=''; im.style.mixBlendMode='multiply'; }
+  else { ov._el.style.background=''; ov._el.style.backgroundSize=''; ov._el.style.animation=''; im.style.mixBlendMode=''; }
 }
 
 function edBuildOverlayEl(ov){
@@ -32738,7 +32771,7 @@ function edRenderTextMenu(ov){
   const subs=[['hormozi','Hormozi','#FFE500'],['white','Blanc','#ffffff'],['mrbeast','MrBeast','#FFD000'],['tiktok','TikTok','#ffffff'],['neon','Néon','#39FF14'],['red','Rouge','#FF3B3B']];
   m.innerHTML=
     '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="label" style="margin:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> Texte</div><button onclick="edDeleteSelected()" class="btn btn-quiet btn-sm" style="color:#ff6b6b;font-size:12px;padding:4px 8px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M9 7V4h6v3"/></svg> Supprimer</button></div>'+
-    '<input class="field" value="'+(ov.text||'').replace(/"/g,'&quot;')+'" oninput="edSetProp(\'text\',this.value)" style="margin-bottom:8px" placeholder="Ton texte…">'+
+    '<textarea class="field" rows="2" oninput="edSetProp(\'text\',this.value)" style="margin-bottom:8px;resize:vertical;line-height:1.35;font-family:inherit" placeholder="Ton texte… (Entrée = nouvelle ligne)">'+(ov.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</textarea>'+
     '<div class="row gap6" style="margin-bottom:8px;flex-wrap:wrap">'+subs.map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" class="btn btn-sm" style="border:1px solid var(--border2);background:#0d0d0f;color:'+s[2]+';font-size:11px;font-weight:800;padding:4px 9px;-webkit-text-stroke:.6px #000">'+s[1]+'</button>').join('')+'</div>'+
     '<div class="row gap8" style="align-items:center;flex-wrap:wrap;margin-bottom:8px">'+
       '<select class="field" onchange="edSetFont(this.value)" style="flex:1;min-width:110px">'+fonts.map(f=>'<option value=\''+f[0]+'\' '+((ov.font||'var(--display)')===f[0]?'selected':'')+'>'+f[1]+'</option>').join('')+'</select>'+
@@ -32766,8 +32799,8 @@ function edSetSplitRatio(pct){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if
 function edToggleSplitInvert(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._split) return; edSnap(); ov._splitInvert=!ov._splitInvert; _edApplySplitBox(ov); edShowProps(); }
 function edToggleMediaReframe(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._split) return; ov._mediaReframe=!ov._mediaReframe; if(ov._el){ ov._el.style.cursor=ov._mediaReframe?'grab':''; ov._el.style.touchAction=ov._mediaReframe?'none':''; } edShowProps(); if(typeof toast==='function') toast(ov._mediaReframe?'Recadrage animation : glisse · molette':'Cadrage figé'); }
 function edResetMediaRF(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; edSnap(); ov._mediaRF=null; _edStyleSplitMedia(ov); }
-function edSetAnimBg(color){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim) return; if(ov._bgStyle==='dark') edSetAnimBgVariant('light'); ov._animBg=color; _edStyleSplitMedia(ov); }
-function edClearAnimBg(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; edSnap(); ov._animBg=null; _edStyleSplitMedia(ov); edShowProps(); }
+function edSetAnimBg(color){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim) return; if(ov._bgStyle==='dark') edSetAnimBgVariant('light'); ov._animFx=null; ov._animBg=color; _edStyleSplitMedia(ov); }
+function edClearAnimBg(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; edSnap(); ov._animBg=null; ov._animFx=null; _edStyleSplitMedia(ov); edShowProps(); }
 // #carreaux · bascule le FOND de l'anim : « clair » (aperçu normal + couleur au choix)
 // ou « carreaux sombre » (version rendue sur fond violet à grille, façon Cartoon 15).
 // Le fond sombre est BAKÉ dans la vidéo → on change la SOURCE de l'anim, pas un blend.
@@ -32775,7 +32808,7 @@ function edSetAnimBgVariant(style){
   const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim||!ov.animName) return;
   const nm=String(ov.animName).replace(/[^a-z0-9_-]/gi,'');
   if(style==='dark' && !(window._edBlankDarkSet && window._edBlankDarkSet.has(nm))){ toast('Pas de version « carreaux » pour cette animation'); return; }
-  edSnap(); ov._bgStyle=(style==='dark')?'dark':'light'; ov._animBg=null;   // le fond sombre est baké → pas de multiply
+  edSnap(); ov._bgStyle=(style==='dark')?'dark':'light'; ov._animBg=null; ov._animFx=null;   // le fond sombre est baké → pas de multiply
   const url=(style==='dark')?(window._ED_BLANK_DARK_BASE+nm+'.mp4'):((typeof window._edAnimSrc==='function')?window._edAnimSrc(nm):('anim-previews/'+nm+'.mp4'));
   ov.url=url;
   if(ov.vid){ try{ ov.vid.pause(); }catch(e){} ov.vid.src=url; try{ ov.vid.load(); }catch(e){} const im=ov._el&&ov._el.querySelector('video,img'); if(im&&im.tagName==='VIDEO'){ im.src=url; try{im.load();}catch(e){} } }
@@ -34166,13 +34199,14 @@ async function edExport(){
             const B=_edSplitBands(ov,expH); const dx=0, dy=B.mediaY, dw=expW, dh=B.mediaH;
             const cr3=edCoverRect(iw,ih,dw/Math.max(1,dh)); const rf=ov._mediaRF;
             const _abg=(ov._anim && ov._animBg)?ov._animBg:null;
-            // #fond-anim (export) : fond couleur + blend multiply (le blanc de l'anim devient la couleur)
-            if(_abg){ cx.save(); cx.fillStyle=_abg; cx.fillRect(dx,dy,dw,dh); cx.beginPath(); cx.rect(dx,dy,dw,dh); cx.clip(); cx.globalCompositeOperation='multiply'; }
+            const _afx=(ov._anim && ov._animFx)?ov._animFx:null;
+            // #fond-anim (export) : fond couleur OU motif animé (grille défilante) + blend multiply
+            if(_abg||_afx){ cx.save(); if(_afx){ _edDrawAnimBg(cx,dx,dy,dw,dh,ov,gTime); } else { cx.fillStyle=_abg; cx.fillRect(dx,dy,dw,dh); } cx.beginPath(); cx.rect(dx,dy,dw,dh); cx.clip(); cx.globalCompositeOperation='multiply'; }
             if(rf){ const z=Math.max(1,rf.z||1), sw=cr3.sw/z, sh=cr3.sh/z;
               const sx=(iw-sw)*(rf.ox==null?0.5:rf.ox), sy=(ih-sh)*(rf.oy==null?0.5:rf.oy);
               try{ cx.drawImage(srcEl, sx,sy,sw,sh, dx,dy,dw,dh); }catch(e){}
             } else { try{ cx.drawImage(srcEl, cr3.sx, cr3.sy*0.6, cr3.sw, cr3.sh, dx,dy,dw,dh); }catch(e){} }
-            if(_abg){ cx.restore(); }
+            if(_abg||_afx){ cx.restore(); }
           } else {
           const c=ov.crop||{t:0,r:0,b:0,l:0};
           const sx=iw*c.l/100, sy=ih*c.t/100, sw=iw*(1-(c.l+c.r)/100), sh=ih*(1-(c.t+c.b)/100);
@@ -34684,7 +34718,8 @@ function edBandDrag(ov,track,e,mode){
     const body=document.getElementById('edPropsBody'); if(!body||!ov) return;
     if(ov.type==='text'){
       body.innerHTML=
-        '<input class="field" value="'+(ov.text||'').replace(/"/g,'&quot;')+'" oninput="edSetProp(\'text\',this.value)" placeholder="Ton texte…" style="margin-bottom:14px">'
+        // #saut-de-ligne (Axel « je peux toujours pas aller à la ligne ») : textarea, pas input mono-ligne → Entrée = nouvelle ligne
+        '<textarea class="field" rows="2" oninput="edSetProp(\'text\',this.value)" placeholder="Ton texte… (Entrée = nouvelle ligne)" style="margin-bottom:14px;resize:vertical;line-height:1.35;font-family:inherit">'+(ov.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</textarea>'
         +'<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:16px">'+SUBS_ED.map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" style="padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;border:1px solid var(--border);background:var(--surface);color:'+s[2]+';-webkit-text-stroke:.5px rgba(0,0,0,.5);cursor:pointer">'+s[1]+'</button>').join('')+'</div>'
         +'<div class="row gap10" style="margin-bottom:14px;flex-wrap:wrap">'
           +'<select class="field" onchange="edSetFont(this.value)" style="flex:1 1 130px;padding:10px 12px">'+FONTS_ED.map(f=>'<option value=\''+f[0]+'\' '+((ov.font||'var(--display)')===f[0]?'selected':'')+'>'+f[1]+'</option>').join('')+'</select>'
@@ -34727,10 +34762,19 @@ function edBandDrag(ov,track,e,mode){
               +'</div></div>') : '';
           var toggle = hasDark ? ('<div class="row gap6">'
             +'<button onclick="edSetAnimBgVariant(\'light\')" class="btn btn-sm" style="flex:1;'+(!isDark?selCss:offCss)+'">Clair</button>'
-            +'<button onclick="edSetAnimBgVariant(\'dark\')" class="btn btn-sm" style="flex:1;'+(isDark?selCss:offCss)+'">Fond animé</button></div>') : '';
+            +'<button onclick="edSetAnimBgVariant(\'dark\')" class="btn btn-sm" style="flex:1;'+(isDark?selCss:offCss)+'">Carreaux</button></div>') : '';
+          // #fond-animé (Axel « impossible d'animer le fond ? même avec les grilles ? ») : grille défilante,
+          // dégradé qui balaie, aurora — dispo pour TOUTE anim (fond CSS animé derrière l'anim en multiply).
+          var fxDefs=[['grille','Grille'],['degrade','Dégradé'],['aurora','Aurora']];
+          var fxRow = (!isDark) ? ('<div style="margin-top:10px">'
+              +'<span class="mono faint" style="font-size:10.5px;display:block;margin-bottom:6px">Fond animé</span>'
+              +'<div class="row" style="gap:6px;flex-wrap:wrap">'
+              +fxDefs.map(function(d){ var on=(ov._animFx===d[0]); var pv=_ED_ANIMBG[d[0]];
+                  return '<button onclick="edSetAnimFx(\''+d[0]+'\')" title="'+d[1]+' (animé)" style="flex:1 1 28%;min-width:66px;height:34px;border-radius:9px;border:2px solid '+(on?'#fff':'transparent')+';box-shadow:0 0 0 1px var(--border);cursor:pointer;overflow:hidden;padding:0;position:relative;background:'+pv.base+'"><span style="position:absolute;inset:0;background:'+pv.css+';background-size:'+pv.size+';opacity:.92"></span><span style="position:relative;font-size:10.5px;font-weight:800;color:#2a2540;text-shadow:0 1px 2px rgba(255,255,255,.7)">'+d[1]+'</span></button>'; }).join('')
+              +'</div></div>') : '';
           return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">'
             +'<span class="mono faint" style="font-size:11px;display:block;margin-bottom:8px">Fond de l\'animation</span>'
-            +toggle+colorRow+'</div>';
+            +toggle+colorRow+fxRow+'</div>';
         })() : '');
     } else {
       const maxw=Math.round(((_ed&&_ed.dispW)||400)*1.3);
