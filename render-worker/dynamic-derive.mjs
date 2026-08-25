@@ -993,7 +993,7 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // → jamais une scène à part : attaché à la fin à ce qui occupe la fenêtre
       if (u.layer && u.anim === 'media' && u.src) { (plan.__mediaLayers = plan.__mediaLayers || []).push({ src: u.src, assetId: u.assetId, pos: u.pos, start: a, end: b }); continue }
       // texte AJOUTÉ « sur la vidéo » (Axel : une légende par-dessus, JAMAIS une carte plein cadre) → couche texte globale
-      if (u.textOverlay && u.title) { (plan.__textLayers = plan.__textLayers || []).push({ text: String(u.title), pos: u.pos || { x: 0.5, y: 0.84 }, start: a, end: b }); continue }
+      if (u.textOverlay && u.title) { (plan.__textLayers = plan.__textLayers || []).push({ text: String(u.title), style: String(u.textStyle || ''), pos: u.pos || { x: 0.5, y: 0.84 }, start: a, end: b }); continue }
       // ── LE CHEF D'ORCHESTRE PERSONNALISE SON CHOIX ──────────────────────────
       // Une animation choisie dans la banque arrive NUE (pas d'items, pas de
       // valeur) : lineup rendait une étagère vide pendant qu'Axel dit « produit

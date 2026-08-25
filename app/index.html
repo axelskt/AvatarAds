@@ -8644,6 +8644,7 @@ function _imgIco(name, size, color){
 const _IMG_STYLES = [
   { id:'photo',   ic:'camera',  label:'Photo Réel',  sub:'réaliste',      api:'natural', suffix:', photographie réaliste haute qualité et très détaillée, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et détaillés, yeux détaillés et regard naturel, cheveux détaillés, lumière réaliste, décor et arrière-plan détaillés et nets, rendu photo réel non lissé et non plastique' },
   { id:'staticad', ic:'ad',     label:'Static ads',   sub:'pub produit', api:'vivid', suffix:', publicité statique professionnelle de produit (static ad) : le produit en héros au centre, packshot studio parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, quelques éléments ou ingrédients flottants qui dynamisent la composition, mise en page publicitaire premium équilibrée et aérée type marque DTC, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe' },
+  { id:'staticadhand', ic:'ad', label:'Static ad · en main', sub:'produit en main', api:'vivid', suffix:', publicité statique professionnelle de produit (static ad) tenue en main : une vraie main humaine réaliste et détaillée (peau naturelle avec pores et texture crédible, ongles soignés) qui tient le produit bien en évidence au premier plan comme une photo UGC, produit héros net et parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, mise en page publicitaire premium équilibrée et aérée type marque DTC, main et produit photoréalistes, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe' },
   { id:'studio',  ic:'fruit',   label:'Fruit',        sub:'perso fruit', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
   { id:'ugc',     ic:'mic',     label:'UGC Réel',     sub:'authentique',      api:'natural', suffix:', jolie avec de jolies lèvres pulpeuses, vrai selfie/photo UGC pris à l\'iPhone tenu à la main, casual et spontané, lumière non contrôlée d\'intérieur (ambiante, exposition automatique du téléphone), cadrage imparfait légèrement décentré, non retouché, non professionnel, comme un selfie qu\'un ami enverrait' },
   { id:'premium', ic:'robot',   label:'Mascotte',     sub:'de marque',  api:'vivid',   suffix:', mascotte de marque commerciale, personnage 3D expressif et attachant, couleurs vives, branding pro' },
@@ -13937,12 +13938,12 @@ const _mdTransLabel = (v) => ({ fondu:'Fondu enchaîné', flash:'Flash blanc', f
 // quoi écrire, pré-rempli avec les mots de l'audio (retour Axel 01/08 « y'a
 // écrit "un", faudrait demander à l'user quoi écrire à la place »)
 // combien de textes chaque animation AFFICHE réellement (mesuré au marqueur)
-const _MD_TEXT_SLOTS = {"type":1,"upload":1,"daypart":1,"funnel":3,"flow":3,"quality":1,"free":1,"trend":1,"hook":1,"profile":1,"invoice":1,"thumb":2,"pay":1,"sales":3,"upgrade":1,"discount":3,"keyword":1,"product":1,"cart":1,"portfolio":2,"pnl":1,"mrr":1,"churn":1,"onboarding":1,"property":1,"weight":1,"quote":1,"script":1,"trendsound":1,"loop":1,"clipping":1,"retake":2,"preview":1,"spike":1,"brandeal":1,"mediakit":3,"inventory":1,"stoploss":1,"orderbook":1,"deploy":1,"uptime":1,"leads":1,"share":1,"views":1,"linkbio":2,"salesphone":4,"gaugefill":4,"lineup":4};
-const _MD_TEXT_ANIMS = new Set(['type','upload','funnel','flow','quality','free','trend','hook','profile','invoice','thumb','pay','sales','upgrade','discount','keyword','product','cart','portfolio','pnl','mrr','churn','onboarding','property','weight','quote','script','trendsound','loop','clipping','retake','preview','spike','brandeal','mediakit','inventory','stoploss','orderbook','deploy','uptime','leads','share','views','linkbio','salesphone','gaugefill','lineup','daypart']);
+const _MD_TEXT_SLOTS = {"type":1,"upload":1,"daypart":1,"funnel":3,"flow":3,"quality":1,"free":1,"trend":1,"hook":1,"profile":1,"invoice":1,"thumb":2,"pay":1,"sales":3,"upgrade":1,"discount":3,"keyword":1,"product":1,"cart":1,"portfolio":2,"pnl":1,"mrr":1,"churn":1,"onboarding":1,"property":1,"weight":1,"quote":1,"script":1,"trendsound":1,"loop":1,"clipping":1,"retake":2,"preview":1,"spike":1,"brandeal":1,"mediakit":3,"inventory":1,"stoploss":1,"orderbook":1,"deploy":1,"uptime":1,"leads":1,"share":2,"views":2,"linkbio":2,"salesphone":4,"gaugefill":5,"lineup":4,"chat":1,"comment":1,"search":1};
+const _MD_TEXT_ANIMS = new Set(['type','upload','funnel','flow','quality','free','trend','hook','profile','invoice','thumb','pay','sales','upgrade','discount','keyword','product','cart','portfolio','pnl','mrr','churn','onboarding','property','weight','quote','script','trendsound','loop','clipping','retake','preview','spike','brandeal','mediakit','inventory','stoploss','orderbook','deploy','uptime','leads','share','views','linkbio','salesphone','gaugefill','lineup','daypart','chat','comment','search']);
 // Anims à IMAGES : au lieu d'un texte, l'utilisateur pose SES logos/visuels. Le
 // moteur les lit via items[i].src (anim-pack imgSlot). Nombre de fentes par anim.
-const _MD_IMG_SLOTS = {"tools":2,"connect":2,"copy":1};
-const _MD_IMG_ANIMS = new Set(['tools','connect','copy']);
+const _MD_IMG_SLOTS = {"tools":2,"connect":2,"copy":1,"post":3};
+const _MD_IMG_ANIMS = new Set(['tools','connect','copy','post']);
 // Anims RETIRÉES DE PARTOUT (Montage IA banque/swipe + éditeur) — retours Axel 25/08 :
 // hors-sujet ou buguées (free/hook rendaient noir). Le moteur les ignore aussi (retirées
 // de la banque de rendu + resync). tools/connect/search, eux, ne sont masqués QUE de
@@ -13955,8 +13956,8 @@ function _mdWordsIn(a,b){
   const forts=caps.filter(c=>c.accent||clean(c.text).length>=5);
   return (forts.length?forts:caps).slice(0,4).map(c=>({t:Math.round(c.start*100)/100,text:clean(c.text)}));
 }
-const _MD_TEXT_BANK = ['Accroche plein écran','Mot-clé surligné','Chiffre choc','Question','Call-to-action','Citation',
-  'Compte à rebours','Liste à puces','Avant / après','Témoignage','Prix barré','Badge'];
+const _MD_TEXT_BANK = ['Accroche plein écran','Accroche dorée','Accroche néon','Snapchat','Mot-clé surligné',
+  'Chiffre choc','Citation','Prix barré','Badge'];
 
 // la famille d'aperçu CSS d'une animation RÉELLE (heuristique sur nom + desc)
 function _mdAnimFam(name, desc){
@@ -14380,8 +14381,9 @@ function _mdPaintClipInfo(){
             +badge(isLayer?'posé par-dessus · après régénération':'après régénération');
         } else if(ed.replT||(ed.added&&ed.n==='carte')){
           const txt=ed.replT?ed.replT.text:(ed.userText||ed.t.replace(/^«\s?|\s?»$/g,''));
-          h='<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#ECEFF5,#F6F1EE)">'
-            +'<span style="font-weight:800;font-size:15px;color:#16130F;text-align:center;max-width:86%;line-height:1.25">'+_mdEsc(txt)+'</span></div>'
+          const _tc=_mdTextCardCss(ed.replT?ed.replT.style:(ed.d||''));
+          h='<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10);font-size:15px">'
+            +'<span style="text-align:center;'+(_tc.full?'width:100%;':'max-width:86%;')+'line-height:1.25;'+_tc.span+'">'+_mdEsc(txt)+'</span></div>'
             +badge('après régénération');
         } else {
           const nm=String(ed.repl||ed.t).replace(/[^a-z0-9_-]/gi,'');
@@ -14701,8 +14703,8 @@ function _mdClavier(e){
   if((k==='Backspace'||k==='Delete') && _md.sel){
     const sc=_md.scenes.find(x=>x.id===_md.sel);
     if(sc){ e.preventDefault(); _mdCommit();
-      sc.del=!sc.del; if(sc.del) sc.repl=null;
-      toast(sc.del?'Scène supprimée — ⌘Z pour annuler':'Scène rétablie');
+      if(sc.n==='split'&&typeof sc.splitIdx==='number'){ _md.splits.splice(sc.splitIdx,1); _md.scenes=_mdBuildScenes(); toast('Split supprimé — ⌘Z pour annuler'); }
+      else { sc.del=!sc.del; if(sc.del) sc.repl=null; toast(sc.del?'Scène supprimée — ⌘Z pour annuler':'Scène rétablie'); }
       _mdRender(); }
     return;
   }
@@ -14755,7 +14757,7 @@ function _mdRenderPop(){
   if(!target) return;
   const isScene=it.k==='scene';
   const acts = isScene
-    ? (it.nat==='animation' ? [['Remplacer l\'animation','repl'],['Définir la durée','dur'],['Supprimer l\'animation','del']] : [['Remplacer','repl'],['Définir la durée','dur'],['Supprimer','del']])
+    ? (it.nat==='animation' ? [['Remplacer l\'animation','repl']].concat((_MD_IMG_ANIMS.has(it.n)||_MD_TEXT_ANIMS.has(it.n))?[['Personnaliser le contenu','edit']]:[],[['Définir la durée','dur'],['Supprimer l\'animation','del']]) : [['Remplacer','repl'],['Définir la durée','dur'],['Supprimer','del']])
     : it.k==='sfx' ? [['Changer le bruitage','repl'],['Définir la durée','dur'],['Retirer le bruitage','del']]
     : it.k==='trans' ? [['Changer la transition','repl'],['Couper net','del']]
     : [['Modifier le texte','repl'],['Définir la durée','dur'],['Retirer le texte','del']];
@@ -14782,7 +14784,7 @@ function _mdRenderPop(){
     })()
     +acts.map(a=>'<button onclick="_mdPopAct(\''+a[1]+'\')" class="row" style="width:100%;gap:8px;align-items:center;padding:8px 9px;border-radius:8px;text-align:left;font-size:12.5px;font-weight:600;color:'+(a[1]==='del'?'#ff6b7a':'var(--text)')+';background:transparent;cursor:pointer" '
       +'onmouseenter="this.style.background=\''+(a[1]==='del'?'rgba(255,71,87,.12)':'var(--surface-3)')+'\'" onmouseleave="this.style.background=\'transparent\'">'
-      +(a[1]==='repl'?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg>':a[1]==='dur'?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>':'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M6 6l12 12M18 6L6 18"/></svg>')+' '+a[0]+'</button>').join('')
+      +(a[1]==='repl'?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg>':a[1]==='dur'?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>':a[1]==='edit'?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>':'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M6 6l12 12M18 6L6 18"/></svg>')+' '+a[0]+'</button>').join('')
     +'</div>';
   _mdPaintProximity();
 }
@@ -14803,6 +14805,8 @@ function _mdPopAct(act){
   if(act==='dur'){ _mdCommit(); _md.durEdit={id:it.id,k:it.k}; _mdRender(); return; }
   if(it.k==='scene'){
     const _sc=_md.scenes.find(x=>x.id===it.id);
+    // #perso-anim · rouvrir le menu de contenu (images/texte) d'une anim déjà posée
+    if(act==='edit'){ if(_sc){ const _an=_sc.repl||_sc.t; if(_MD_IMG_ANIMS.has(_an)) _mdAskImagesOpen(_sc); else if(_MD_TEXT_ANIMS.has(_an)) _mdAskItemsOpen(_sc); } return; }
     // #split-changer · « Remplacer » un split rouvre le sélecteur (anim/média), pas le swipe d'anims
     if(act==='repl' && _sc && _sc.n==='split' && typeof _sc.splitIdx==='number'){ _md.splitPick={at:_sc.a, replaceIdx:_sc.splitIdx, tab:(_md.splits[_sc.splitIdx]&&_md.splits[_sc.splitIdx].anim)?'anim':'media'}; _mdRenderModals(); return; }
     if(act==='repl') _mdOpenSwipe(it.id);
@@ -15115,22 +15119,35 @@ function _mdAnimTransPrev(){
     if(ty){ const prevV=(ty==='linewipe'||ty==='fondu')?A:null; try{ _edPaintTrans(cx,W,H,p,ty,B,srB,prevV); }catch(e){} } });
   window._mdtpRAF=requestAnimationFrame(_mdAnimTransPrev);
 }
+// style d'une CARTE DE TEXTE — clé = nom du template (détection par sous-chaîne, comme la
+// banque). Rendu STRICTEMENT IDENTIQUE partout : aperçu de la banque, preview live (_mdPaintText)
+// et rendu worker (dynamic-engine _txtCardCss, en miroir). em-relatif → même look à toute échelle.
+// C'était le bug d'Axel : le style choisi était ignoré, toutes les cartes sortaient pareilles.
+function _mdTextCardCss(name){
+  const f=String(name||'');
+  if(/snapchat/i.test(f)) return {full:true, span:'display:block;width:100%;box-sizing:border-box;padding:.42em 1em;background:rgba(0,0,0,.5);color:#fff;font-weight:700;text-align:center'};
+  if(/surlign/i.test(f)) return {span:'background:var(--accent);color:#1a0d05;font-weight:900;padding:.12em .34em;border-radius:.22em'};
+  if(/chiffre/i.test(f)) return {span:'color:var(--accent-2);font-weight:900;font-size:1.5em;text-shadow:0 2px 8px rgba(0,0,0,.5)'};
+  if(/citation/i.test(f)) return {span:'font-style:italic;color:#fff;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.55)'};
+  if(/prix/i.test(f)) return {span:'text-decoration:line-through;color:#fff;font-weight:800;text-shadow:0 2px 8px rgba(0,0,0,.55)'};
+  if(/badge/i.test(f)) return {span:'border:.12em solid var(--blue);color:var(--blue);padding:.2em .7em;border-radius:999px;font-weight:800;font-size:.8em;letter-spacing:.05em;text-transform:uppercase'};
+  if(/dor/i.test(f)) return {span:"font-family:'Archivo Black',sans-serif;font-weight:900;background:linear-gradient(180deg,#FFEFAE 6%,#F6CE67 46%,#E5A233 94%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 .05em .05em rgba(0,0,0,.5))"};
+  if(/n[ée]on/i.test(f)) return {span:'font-weight:900;color:#fff;text-shadow:0 0 .12em rgba(255,40,60,.95),0 0 .3em rgba(235,0,40,.85),0 0 .55em rgba(210,0,38,.6)'};
+  return {span:'background:rgba(0,0,0,.6);color:#fff;font-weight:800;padding:.36em .8em;border-radius:.55em;text-shadow:0 2px 8px rgba(0,0,0,.55)'};
+}
 function _mdTextPrevHtml(name, ratio){
   const f=String(name);
-  let st='color:#fff', label='TON HOOK ICI';
-  if(f.indexOf('surligné')>=0) st='background:var(--accent);color:#1a0d05;padding:2px 6px;border-radius:4px';
-  else if(f.indexOf('Chiffre')>=0){ st='font-size:22px;color:var(--accent-2);font-weight:900'; label='+284 %'; }
-  else if(f.indexOf('Prix')>=0){ st='text-decoration:line-through;color:rgba(255,255,255,.5)'; label='49 €'; }
-  else if(f.indexOf('Badge')>=0){ st='border:1.5px solid var(--blue);color:var(--blue);padding:2px 7px;border-radius:999px;font-size:10px'; label='NOUVEAU'; }
-  else if(f.indexOf('Citation')>=0){ st='font-style:italic;color:rgba(255,255,255,.85)'; label='« ça change tout »'; }
-  if(f.indexOf('Question')>=0) label='Et si… ?';
-  else if(f.indexOf('Call')>=0) label='Lien en bio 👆';
-  else if(f.indexOf('rebours')>=0) label='3 · 2 · 1';
-  else if(f.indexOf('puces')>=0) label='• 3 étapes';
-  else if(f.indexOf('Avant')>=0) label='AVANT / APRÈS';
-  else if(f.indexOf('Témoignage')>=0) label='— Léa, 24 ans';
-  return '<div style="position:relative;width:100%;height:100%;aspect-ratio:'+(ratio||'16 / 10')+';border-radius:8px;overflow:hidden;display:grid;place-items:center;background:linear-gradient(150deg,#241a33,#0f0f16);border:1px solid var(--border)">'
-    +'<span style="font-weight:800;font-size:12px;text-align:center;line-height:1.2;max-width:88%;'+st+'">'+_mdEsc(label)+'</span></div>';
+  const css=_mdTextCardCss(f);
+  let label='TON HOOK ICI';
+  if(/chiffre/i.test(f)) label='+284 %';
+  else if(/prix/i.test(f)) label='49 €';
+  else if(/badge/i.test(f)) label='NOUVEAU';
+  else if(/citation/i.test(f)) label='« ça change tout »';
+  else if(/snapchat/i.test(f)) label='ton texte en légende';
+  else if(/dor/i.test(f)) label='LE SECRET';
+  else if(/n[ée]on/i.test(f)) label='ÇA MARCHE';
+  return '<div style="position:relative;width:100%;height:100%;aspect-ratio:'+(ratio||'16 / 10')+';border-radius:8px;overflow:hidden;display:grid;place-items:center;background:linear-gradient(150deg,#241a33,#0f0f16);border:1px solid var(--border);font-size:12px">'
+    +'<span style="text-align:center;line-height:1.2;max-width:'+(css.full?'100%':'88%')+';'+css.span+'">'+_mdEsc(label)+'</span></div>';
 }
 function _mdSfxBarsHtml(name, color, big){
   let seed=0; const s=String(name);
@@ -15971,7 +15988,7 @@ function _mdPeindreAnim(t){
 function _mdPaintSplit(t){
   const ov=document.getElementById('mdSplitOv'); if(!ov) return;
   const sp=(_md.splits||[]).find(s=>!s.del && t>=(Number(s.start)||0) && t<(Number(s.end)||0));
-  if(!sp){ if(ov.style.display!=='none'){ ov.style.display='none'; ov.innerHTML=''; ov._k=''; try{ ov.querySelectorAll('video').forEach(v=>v.pause()); }catch(_){} } return; }
+  if(!sp){ if(ov.style.display!=='none'){ try{ const _mv=document.getElementById('mdVid'), _sl=document.getElementById('mdVidSlot'); if(_mv && ov.contains(_mv)){ _mv.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#08070a'; _mv.style.transform=''; _mv.style.transformOrigin=''; if(_sl) _sl.appendChild(_mv); } }catch(_){} ov.style.display='none'; ov.innerHTML=''; ov._k=''; try{ ov.querySelectorAll('video').forEach(v=>v.pause()); }catch(_){} } return; }
   if(!_md.avatarStill && typeof _mdAvatarStillMake==='function'){ try{ _mdAvatarStillMake(); }catch(_){} }   // fallback anti-écran-noir
   const r=(Number(sp.ratio)>0.15&&Number(sp.ratio)<0.85)?Number(sp.ratio):0.5, inv=!!sp.invert;
   const nm=sp.anim?String(sp.anim).replace(/[^a-z0-9_-]/gi,''):'';
@@ -15983,11 +16000,12 @@ function _mdPaintSplit(t){
     // #split-avatar-live (Axel 25/08) : l'avatar est la VRAIE vidéo (source) → il CONTINUE de jouer.
     // ⚠ écran NOIR : une <video> fraîche non encore décodée est noire → un still (avatarStill) DERRIÈRE
     // + un poster comblent le temps du chargement.
-    const avSrc=(_md.job&&(_md.job.source_url||_md.job.url))||'';
+    // #split-avatar-reuse (Axel 25/08) : au lieu d'une 2e <video> de la MEME grosse source
+    // (WebKit/iOS ne decode/joue qu'UNE video a la fois -> la 2e reste figee sur le poster), on
+    // DEPLACE la vraie #mdVid deja en lecture (demarree par geste, deja decodee) dans cette moitie.
+    // Ici on ne pose qu'un HOTE (avec le still en repli) ; #mdVid y est re-attachee apres l'innerHTML.
     const stillImg=_md.avatarStill?'<img src="'+_md.avatarStill+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%">':'';
-    const avatarHtml = avSrc
-      ? '<div style="position:absolute;inset:0;background:#111318">'+stillImg+'<video data-avv src="'+avSrc+'" muted playsinline preload="auto"'+(_md.avatarStill?' poster="'+_md.avatarStill+'"':'')+' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%"></video></div>'
-      : (_md.avatarStill?'<div style="position:absolute;inset:0">'+stillImg+'</div>':'<div style="'+cover+';background:linear-gradient(160deg,#1c1a22,#0d0c10)"></div>');
+    const avatarHtml='<div data-avhost style="position:absolute;inset:0;background:#111318">'+stillImg+'</div>';
     // anim/média EN HAUT : pas de loop (elle se joue UNE fois puis fige), synchronisée à la lecture
     const contentHtml = sp.anim
       ? '<video data-anv src="'+animSrc+'" muted playsinline preload="auto" style="'+cover+'"></video>'
@@ -15996,10 +16014,14 @@ function _mdPaintSplit(t){
     const topH=Math.round(r*100), botH=100-topH;
     const topEl='<div style="position:absolute;left:0;right:0;top:0;height:'+(inv?botH:topH)+'%;overflow:hidden">'+(inv?avatarHtml:contentHtml)+'</div>';
     const botEl='<div style="position:absolute;left:0;right:0;bottom:0;height:'+(inv?topH:botH)+'%;overflow:hidden">'+(inv?contentHtml:avatarHtml)+'</div>';
+    try{ const _mv0=document.getElementById('mdVid'), _sl0=document.getElementById('mdVidSlot'); if(_mv0 && ov.contains(_mv0) && _sl0) _sl0.appendChild(_mv0); }catch(_){}   // extraire #mdVid avant de vider l'overlay (innerHTML='' la detruirait)
     ov.innerHTML=topEl+botEl
       +'<div style="position:absolute;left:0;right:0;top:'+(inv?botH:topH)+'%;height:3px;transform:translateY(-1.5px);background:#0D0D12;z-index:2"></div>'
       +'<div style="position:absolute;left:8px;bottom:8px;padding:4px 9px;border-radius:8px;background:rgba(0,0,0,.66);backdrop-filter:blur(6px);z-index:3"><span class="mono" style="font-size:9px;color:#fff">split · '+(sp.anim?_mdEsc(sp.anim):'ton média')+' + avatar</span></div>';
     ov.style.display='block';
+    // re-attache la VRAIE #mdVid (deja en lecture) dans la moitie avatar -> elle joue/parle, jamais figee
+    try{ const _mv=document.getElementById('mdVid'), _host=ov.querySelector('[data-avhost]');
+      if(_mv && _host){ _mv.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%;background:#111318'; _mv.style.transform=''; _mv.style.transformOrigin=''; _host.appendChild(_mv); } }catch(_){}
   }
   // ── SYNCHRO LECTURE (à chaque frame) ─────────────────────────────────────
   const playing=!!_md.playing;
@@ -16078,7 +16100,9 @@ function _mdPaintText(t){
   const pos=sc.textPos||{x:0.5,y:0.84};
   const k=sc.id+'|'+txt+'|'+(+pos.x).toFixed(3)+'|'+(+pos.y).toFixed(3); if(k===ov._k) return; ov._k=k;
   // #texte-déplaçable (Axel 25/08) : la légende se glisse directement dans l'aperçu (sc.textPos)
-  ov.innerHTML='<span data-mdtext style="position:absolute;left:'+(pos.x*100)+'%;top:'+(pos.y*100)+'%;transform:translate(-50%,-50%);max-width:90%;padding:8px 15px;border-radius:11px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);color:#fff;font-weight:800;font-size:16.5px;line-height:1.25;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,.55);cursor:grab;pointer-events:auto;touch-action:none">'+_mdEsc(txt)+'</span>';
+  const _tcss=_mdTextCardCss(sc.replT?sc.replT.style:(sc.d||''));
+  const _tpos=_tcss.full?('left:0;width:100%;top:'+(pos.y*100)+'%;transform:translateY(-50%)'):('left:'+(pos.x*100)+'%;top:'+(pos.y*100)+'%;transform:translate(-50%,-50%);max-width:90%');
+  ov.innerHTML='<span data-mdtext style="position:absolute;'+_tpos+';font-size:16.5px;line-height:1.25;text-align:center;cursor:grab;pointer-events:auto;touch-action:none;'+_tcss.span+'">'+_mdEsc(txt)+'</span>';
   ov.style.display='block';
   const span=ov.querySelector('[data-mdtext]'); if(span) span.addEventListener('pointerdown',(e)=>_mdTextDragStart(e,sc.id));
 }
@@ -16455,14 +16479,14 @@ function _mdBuildRegenPlan(){
     if(s.del){ userBans.push({start:_mdR2(s.a),end:_mdR2(s.b)}); continue; }
     if(s.added){
       if(s.n==='animation') userSlides.push(Object.assign({start:_mdR2(s.a),end:_mdR2(s.b),anim:s.t}, _mdSceneItems(s)));
-      else if(s.n==='carte') userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.userText||s.t).replace(/^«\s?|\s?»$/g,''),textOverlay:true,pos:s.textPos||{x:0.5,y:0.84}});   // #texte-sur-vidéo · légende, pas une carte
+      else if(s.n==='carte') userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.userText||s.t).replace(/^«\s?|\s?»$/g,''),textOverlay:true,textStyle:String(s.d||''),pos:s.textPos||{x:0.5,y:0.84}});   // #texte-sur-vidéo · légende, pas une carte
       // media ajouté : uploadé dans _mdRegen puis poussé dans broll
       continue;
     }
     if(s.replT){
       // panneau de texte à la place de la scène : posé tel quel, la fenêtre
       // d'origine est réclamée par lui (le chef ne la re-remplit pas)
-      userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.replT.text),textOverlay:true,pos:s.textPos||{x:0.5,y:0.84}});   // #texte-sur-vidéo · légende, pas une carte
+      userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.replT.text),textOverlay:true,textStyle:String(s.replT.style||''),pos:s.textPos||{x:0.5,y:0.84}});   // #texte-sur-vidéo · légende, pas une carte
       continue;
     }
     // s.replM (média à la place) est traité à l'upload, dans _mdRegen
@@ -25287,7 +25311,7 @@ const EXP_STYLES = [
   { id:'realiste', label:'Réaliste',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>', sub:'avatar réel',  prompt:'ultra realistic real photograph of a real person, authentic natural lighting, real human skin with visible pores and fine natural texture, candid smartphone photo, sharp and in focus, NOT cinematic, no plastic or waxy skin, no airbrush, no AI look' },
   { id:'cartoon',  label:'Cartoon 3D', ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4 4 0 007 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>', sub:'style Pixar',  prompt:'cute 3D Pixar-style cartoon character, vibrant colors, soft lighting' },
   { id:'ugc',      label:'UGC réel',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 5h2"/><circle cx="12" cy="18" r="1"/></svg>', sub:'selfie authentique', prompt:'authentic UGC selfie style, handheld phone camera, natural daylight, casual realistic' },
-  { id:'studio',   label:'Studio',     ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>', sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
+  { id:'studio',   label:'Studio produit',     ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>', sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
 ];
 const EXP_FORMATS = [ {v:'9:16',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 18h0"/></svg>',name:'Portrait',ratio:'9:16'}, {v:'16:9',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',name:'Paysage',ratio:'16:9'} ];
 const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
@@ -32659,9 +32683,9 @@ function edEditText(ov){
   const el=ov._el; if(!el) return; const t=el.querySelector('.ed-ov-txt'); if(!t) return;
   ov._editing=true; t.contentEditable='true'; edStyleOverlay(ov); t.focus();
   try{ const rng=document.createRange(); rng.selectNodeContents(t); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(rng); }catch(_){}
-  const finish=()=>{ ov.text=(t.textContent||'').trim()||'TEXTE'; t.contentEditable='false'; ov._editing=false; t.onblur=null; t.onkeydown=null; edStyleOverlay(ov); edRenderLayers(); edRenderOvTrack(); edShowProps(); };
+  const finish=()=>{ ov.text=(t.innerText||'').replace(/ /g,' ').trim()||'TEXTE'; t.contentEditable='false'; ov._editing=false; t.onblur=null; t.onkeydown=null; edStyleOverlay(ov); edRenderLayers(); edRenderOvTrack(); edShowProps(); };
   t.onblur=finish;
-  t.onkeydown=(ke)=>{ if((ke.key==='Enter'&&!ke.shiftKey)||ke.key==='Escape'){ ke.preventDefault(); t.blur(); } };
+  t.onkeydown=(ke)=>{ if(ke.key==='Escape'){ ke.preventDefault(); t.blur(); } };
 }
 
 function edStyleOverlay(ov){
@@ -32682,7 +32706,7 @@ function edStyleOverlay(ov){
     else if(styl==='shadow') deco='text-shadow:0 2px 7px rgba(0,0,0,.85);';
     else if(styl==='outline') deco='-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 1px 2px rgba(0,0,0,.6);';
     const fs=ov.size;   // #snap · taille par DÉFAUT posée en Snapchat (edSetStyle) mais RÉGLABLE au curseur
-    t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+fs+'px;line-height:1.2;color:'+ov.color+';text-align:center;word-break:break-word;outline:none;'+deco+(ov._editing?'cursor:text;':'');
+    t.style.cssText='font-family:'+fam+',sans-serif;font-weight:'+(ov.bold?800:600)+';font-size:'+fs+'px;line-height:1.2;color:'+ov.color+';text-align:center;word-break:break-word;white-space:pre-wrap;outline:none;'+deco+(ov._editing?'cursor:text;':'');
   } else {
     el.style.width=ov.w+'px'; el.style.height=ov.h+'px';
     const im=el.querySelector('img,video'); const c=ov.crop||{t:0,r:0,b:0,l:0};
@@ -34160,9 +34184,8 @@ async function edExport(){
           cx.font=(ov.bold?'800 ':'600 ')+fs+'px "Bricolage Grotesque",sans-serif';
           cx.textAlign='center'; cx.textBaseline='top';
           const cxc=snap?EW/2:(ov.x+ov.w/2)*f, cy=ov.y*f, maxW=snap?EW*0.94:ov.w*f;
-          const words=(ov.text||'').split(' '); let line='', lines=[];
-          for(const wd of words){ const test=line?line+' '+wd:wd; if(cx.measureText(test).width>maxW && line){ lines.push(line); line=wd; } else line=test; }
-          if(line) lines.push(line);
+          const paras=String(ov.text||'').split('\n'); let lines=[];
+          for(const para of paras){ let line=''; for(const wd of para.split(' ')){ const test=line?line+' '+wd:wd; if(cx.measureText(test).width>maxW && line){ lines.push(line); line=wd; } else line=test; } lines.push(line); }
           const lh=fs*1.2, padV=snap?fs*0.4:0;
           // #snapchat · UNE barre translucide PLEINE LARGEUR (bord à bord), taille fixe
           if(snap){ cx.fillStyle=ov.bgColor||'rgba(0,0,0,.5)'; cx.fillRect(0, cy, EW, lines.length*lh+padV*2); }
@@ -34669,7 +34692,7 @@ function edBandDrag(ov,track,e,mode){
           +'<label class="row gap8" style="padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;align-items:center"><input type="color" value="'+(ov.bgColor||'#000000')+'" oninput="edSetProp(\'bgColor\',this.value);edSetProp(\'style\',\'box\')" style="width:20px;height:20px;border:none;background:none;padding:0"> Fond</label>'
           +'<button onclick="edSetProp(\'bold\','+(ov.bold?'false':'true')+');edShowProps()" style="padding:9px 13px;border-radius:10px;font-weight:800;border:1px solid '+(ov.bold?'var(--accent-line)':'var(--border)')+';background:'+(ov.bold?'var(--accent-soft)':'var(--surface)')+';color:'+(ov.bold?'var(--accent-2)':'var(--text)')+';cursor:pointer">B</button>'
         +'</div>'
-        +'<div class="ed-seg" style="width:100%;margin-bottom:16px">'+STYLES_ED.map(s=>'<button class="'+(((ov.style||'box')===s[0])?'on':'')+'" onclick="edSetStyle(\''+s[0]+'\')">'+s[1]+'</button>').join('')+'</div>'
+        +'<div class="ed-seg" style="width:100%;margin-bottom:16px;flex-wrap:wrap;gap:4px">'+STYLES_ED.map(s=>'<button class="'+(((ov.style||'box')===s[0])?'on':'')+'" onclick="edSetStyle(\''+s[0]+'\')">'+s[1]+'</button>').join('')+'</div>'
         +'<div class="row gap12" style="align-items:center"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="14" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>';
     } else if(ov._split && !ov._splitEmpty){
       // #split-controls · réglages du split : taille du média (donc de la vidéo en bas), inversion, recadrage de l'anim

@@ -1819,12 +1819,28 @@ export function buildDynamicComposition(plan, opts = {}) {
   // #texte-sur-vidéo (Axel 25/08) : le texte ajouté dans « Détails du montage » est une LÉGENDE posée
   // PAR-DESSUS la vidéo (jamais une carte plein cadre). Élément `clip` natif HyperFrames (data-start/duration
   // = fenêtre), positionné par pos {x,y}. Rendu au-dessus de tout (z élevé).
+  // miroir EXACT de _mdTextCardCss (app/index.html) : chaque template a SON look, plus de pastille unique.
+  const _txtCardCss = (name) => {
+    const f = String(name || '')
+    if (/snapchat/i.test(f)) return { full: true, span: 'display:block;width:100%;box-sizing:border-box;padding:.42em 1em;background:rgba(0,0,0,.5);color:#fff;font-weight:700;text-align:center' }
+    if (/surlign/i.test(f)) return { span: 'background:#FF6B35;color:#1a0d05;font-weight:900;padding:.12em .34em;border-radius:.22em' }
+    if (/chiffre/i.test(f)) return { span: 'color:#34E39B;font-weight:900;font-size:1.5em;text-shadow:0 2px 8px rgba(0,0,0,.5)' }
+    if (/citation/i.test(f)) return { span: 'font-style:italic;color:#fff;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.55)' }
+    if (/prix/i.test(f)) return { span: 'text-decoration:line-through;color:#fff;font-weight:800;text-shadow:0 2px 8px rgba(0,0,0,.55)' }
+    if (/badge/i.test(f)) return { span: 'border:.12em solid #4DA3FF;color:#4DA3FF;padding:.2em .7em;border-radius:999px;font-weight:800;font-size:.8em;letter-spacing:.05em;text-transform:uppercase' }
+    if (/dor/i.test(f)) return { span: "font-family:'Archivo Black',sans-serif;font-weight:900;background:linear-gradient(180deg,#FFEFAE 6%,#F6CE67 46%,#E5A233 94%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 .05em .05em rgba(0,0,0,.5))" }
+    if (/n[ée]on/i.test(f)) return { span: 'font-weight:900;color:#fff;text-shadow:0 0 .12em rgba(255,40,60,.95),0 0 .3em rgba(235,0,40,.85),0 0 .55em rgba(210,0,38,.6)' }
+    return { span: 'background:rgba(0,0,0,.6);color:#fff;font-weight:800;padding:.36em .8em;border-radius:.55em;text-shadow:0 2px 8px rgba(0,0,0,.55)' }
+  }
   const txtLayerHtml = (plan.__textLayers || []).map((L) => {
     const a = r2(Math.max(0, Number(L.start) || 0)), b = r2(Math.max(a + 0.3, Number(L.end) || a + 2))
-    const px = Math.round(Math.min(0.92, Math.max(0.08, Number(L.pos && L.pos.x) || 0.5)) * W)
     const py = Math.round(Math.min(0.94, Math.max(0.06, Number(L.pos && L.pos.y) || 0.84)) * H)
     const fs = Math.round(H * 0.03)
-    return `<div class="clip" data-start="${a}" data-duration="${r2(b - a)}" data-track-index="16" style="position:absolute;left:${px}px;top:${py}px;transform:translate(-50%,-50%);max-width:${Math.round(W * 0.9)}px;padding:${Math.round(fs * 0.5)}px ${Math.round(fs * 0.9)}px;border-radius:${Math.round(fs * 0.7)}px;background:rgba(0,0,0,.6);color:#fff;font-weight:800;font-size:${fs}px;line-height:1.25;text-align:center;text-shadow:0 ${Math.round(H * 0.002)}px ${Math.round(H * 0.008)}px rgba(0,0,0,.6)">${esc(String(L.text || ''))}</div>`
+    const cs = _txtCardCss(L.style)
+    const posCss = cs.full
+      ? `left:0;width:${W}px;top:${py}px;transform:translateY(-50%)`
+      : `left:${Math.round(Math.min(0.92, Math.max(0.08, Number(L.pos && L.pos.x) || 0.5)) * W)}px;top:${py}px;transform:translate(-50%,-50%);max-width:${Math.round(W * 0.9)}px`
+    return `<div class="clip" data-start="${a}" data-duration="${r2(b - a)}" data-track-index="16" style="position:absolute;${posCss};font-size:${fs}px;line-height:1.25;text-align:center;${cs.span}">${esc(String(L.text || ''))}</div>`
   }).join('')
 
   return `<!DOCTYPE html>
