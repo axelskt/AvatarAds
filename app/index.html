@@ -14138,6 +14138,8 @@ async function _mdOpen(jobId){
     let bank=[]; try{ bank = await (await fetch('anim-bank.json?v='+Date.now())).json(); }catch(_){}
     // manifeste des aperçus RÉELS d'animations (rendus par le moteur)
     if(!window._mdPrevSet){ try{ window._mdPrevSet=new Set(await (await fetch('anim-previews/index.json')).json()); }catch(_){ window._mdPrevSet=new Set(); } }
+    // #anim-blanche · le Montage IA affiche aussi les aperçus SANS texte cuit (« Un » figé) → charger le set blanc
+    if(!window._edBlankSet && typeof window._edEnsureBlankSet==='function'){ try{ window._edEnsureBlankSet(); }catch(_){} }
     // …et on les PRÉCHARGE tous en fond (~2 Mo, lots de 6) : le swipe devient
     // instantané dès la deuxième seconde (retour Axel « 3-4 s à charger »)
     if(!window._mdPrevWarm){ window._mdPrevWarm=true;
@@ -14365,8 +14367,10 @@ function _mdPaintClipInfo(){
           +'<span class="mono" style="font-size:9.5px;color:#fff;letter-spacing:.04em">'+txt+'</span></div>';
         let h='';
         if(ed.del){
+          if(!_md.avatarStill){ try{ _mdAvatarStillMake(); }catch(_){} }
           h=(_md.avatarStill?'<img src="'+_md.avatarStill+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
-            :'<div style="position:absolute;inset:0;background:linear-gradient(160deg,#1c1a22,#0d0c10)"></div>')
+            // #ecran-noir · pas de still avatar → panneau NEUTRE + silhouette (jamais un écran noir)
+            :'<div style="position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(130% 130% at 50% 28%,#2b2740,#15131d 72%)"><svg width="66" height="66" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></div>')
             +badge('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> ton avatar · clip réutilisé (0 cr)');
         } else if(ed.replM||(ed.added&&ed.n==='media'&&ed._mURL)){
           const pos=(ed.replM&&ed.replM.pos)||ed.pos||{x:.5,y:.5,w:.62};
@@ -14389,7 +14393,7 @@ function _mdPaintClipInfo(){
           const nm=String(ed.repl||ed.t).replace(/[^a-z0-9_-]/gi,'');
           const _ui=(ed.userItems||[]).map(u=>String(u.text||'').trim()).filter(Boolean);
           h=(window._mdPrevSet&&window._mdPrevSet.has(nm)
-            ?'<video src="'+((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4'))+'" muted autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+            ?'<video src="'+(window._edAnimSrc?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')))+'" muted autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
             :'<div style="position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:13px">'+_mdEsc(ed.repl||ed.t)+'</span></div>')
             // #éditable · le MP4 d'aperçu est pré-cuit ('Un' figé) → on affiche TON texte en pastilles par-dessus (le vrai remplacement se fait à la régénération)
             +(_ui.length?('<div style="position:absolute;left:8px;right:8px;top:8px;display:flex;flex-wrap:wrap;gap:4px;justify-content:center;z-index:4;pointer-events:none">'+_ui.map(t=>'<span style="padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);color:#fff;font-weight:800;font-size:12px">'+_mdEsc(t)+'</span>').join('')+'</div>'):'')
@@ -14554,7 +14558,7 @@ function _mdBandHtml(){
   const up=_mdUpItems(), down=_mdDownItems(), sfxItems=_mdSfxItems();
   const _isTxt=(s)=> !!(s.replT || (s.added && s.n==='carte'));
   // voies anti-empilement pour la piste VISUELLE (scènes hors split/texte)
-  const _mainSc=_md.scenes.filter(s=>s.n!=='split' && !_isTxt(s));
+  const _mainSc=_md.scenes.filter(s=>s.n!=='split' && !_isTxt(s) && !s.del);
   const _pk=_mdPackLanes(_mainSc);
   const _trackH=(mob?40:50)+(_pk.lanes-1)*(mob?15:18);
   const mkBloc=(s)=>{
@@ -14590,8 +14594,8 @@ function _mdBandHtml(){
   // #text-strip (Axel 25/08 : « le texte, mets-le en calque aussi ») : les scènes TEXTE (carte AJOUTÉE
   // ou remplacement-texte) sont AUSSI un calque par-dessus l'avatar → propre piste, comme le split.
   const blocs=_mainSc.map(mkBloc).join('');
-  const splitBlocs=_md.scenes.filter(s=>s.n==='split').map(mkBloc).join('');
-  const textBlocs=_md.scenes.filter(s=>s.n!=='split' && _isTxt(s)).map(mkBloc).join('');
+  const splitBlocs=_md.scenes.filter(s=>s.n==='split' && !s.del).map(mkBloc).join('');
+  const textBlocs=_md.scenes.filter(s=>s.n!=='split' && _isTxt(s) && !s.del).map(mkBloc).join('');
   const sfxBlocs=sfxItems.map(it=>_mdStemHtml(it,'down',mob)).join('');   // #bruitage-calque · chips sur leur piste
   return ''
   +'<div style="position:relative">'
@@ -15143,9 +15147,9 @@ function _mdAnimPrevHtml(name, desc, big){
   // secours si le fichier manque.
   const nm=String(name).replace(/[^a-z0-9_-]/gi,'');
   if(window._mdPrevSet && window._mdPrevSet.has(nm)){
-    const src=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+    const src=(window._edAnimSrc?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')));
     return '<div style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:'+(big?16:11)+'px;overflow:hidden;background:#08070a;border:1px solid var(--border-2)">'
-      +'<video data-prev src="'+src+'" poster="anim-previews/'+nm+'.jpg" muted loop playsinline preload="'+(big?'auto':'none')+'"'+(big?' autoplay':'')
+      +'<video data-prev src="'+src+'" poster="'+(window._edAnimPoster?window._edAnimPoster(nm):('anim-previews/'+nm+'.jpg'))+'" muted loop playsinline preload="'+(big?'auto':'none')+'"'+(big?' autoplay':'')
       +' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video></div>';
   }
   const anim=_MD_FAM_CSS[_mdAnimFam(name,desc)]||_MD_FAM_CSS.Pop;
@@ -16024,7 +16028,7 @@ function _mdPeindreAnim(t){
   const nom=sc ? String(sc.t).trim() : '';
   const dispo=nom && window._mdPrevSet && window._mdPrevSet.has(nom);
   if(!dispo){ if(o.style.display!=='none'){ o.style.display='none'; try{ o.pause(); }catch(_){} o.removeAttribute('src'); o.removeAttribute('data-anim'); } return; }
-  const src=(window._mdPrevBlob&&window._mdPrevBlob[nom])||('anim-previews/'+nom+'.mp4');
+  const src=(window._edAnimSrc?window._edAnimSrc(nom):((window._mdPrevBlob&&window._mdPrevBlob[nom])||('anim-previews/'+nom+'.mp4')));
   if(o.getAttribute('data-anim')!==nom){ o.setAttribute('data-anim',nom); o.src=src; }
   if(o.style.display==='none') o.style.display='';
   // #joue+noloop · l'anim est calée sur la timeline (position dans sa fenêtre), joue une fois,
@@ -16448,7 +16452,7 @@ function _mdSplitAddAnim(anim){
 function _mdSplitFitAnimDur(idx, anim){
   try{
     const nm=String(anim).replace(/[^a-z0-9_-]/gi,'');
-    const src=(window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4');
+    const src=(window._edAnimSrc?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')));
     const v=document.createElement('video'); v.preload='metadata'; v.muted=true; v.src=src;
     v.addEventListener('loadedmetadata',()=>{ try{ const d=v.duration; const sp=(_md.splits||[])[idx];
       if(sp&&!sp.del&&isFinite(d)&&d>0.3){ sp.end=_mdR2(Math.min(_md.dur-0.05,(Number(sp.start)||0)+d)); _md.scenes=_mdBuildScenes(); _mdRender(); } }catch(_){} v.src=''; });
@@ -32153,8 +32157,33 @@ function _edAfterCut(){ edRefreshTimeline(); edRenderClips();
   if(typeof edRenderOvTrack==='function') edRenderOvTrack();
   if(typeof edRenderLayers==='function') edRenderLayers();
   if(typeof edShowProps==='function' && _ed && !_ed.sel) try{edHideProps();}catch(e){} }
+// #suppr-sel · « suppr avant/après sur une anim/musique supprime TOUT » (Axel) : rogner l'ÉLÉMENT
+// SÉLECTIONNÉ (calque, musique) autour du curseur, sans toucher aux autres pistes. Renvoie true si géré.
+function _edTrimSel(side){
+  if(!_ed) return false; const gt=edGlobalNow();
+  if(_ed.sel){
+    const ov=(_ed.overlays||[]).find(o=>o.id===_ed.sel); if(!ov) return false;
+    const a=ov.start==null?0:ov.start, b=ov.end==null?edTotalDur():ov.end;
+    if(gt<=a+0.03||gt>=b-0.03){ toast('Place le curseur dans l\'élément'); return true; }
+    edSnap(); if(side==='before') ov.start=gt; else ov.end=gt;
+    if((ov.end-ov.start)<0.06){ if(typeof edDeleteSelected==='function') edDeleteSelected(); }
+    else { if(typeof edRenderOvTrack==='function') edRenderOvTrack(); if(typeof edRenderLayers==='function') edRenderLayers(); }
+    toast(side==='before'?'Début de l\'élément rogné':'Fin de l\'élément rognée'); return true;
+  }
+  if(_ed.selTrack && _ed.selTrack.type==='music' && _ed.music){
+    const segs=_edMusicSegs(); const s=segs.find(x=>gt>x.start+0.05&&gt<x.end-0.05);
+    if(!s){ toast('Place le curseur dans la musique'); return true; }
+    edSnap(); if(side==='before'){ s.off+=(gt-s.start); s.start=gt; } else { s.end=gt; } _ed.musicAuto=false;
+    if(typeof edRenderMusicTrack==='function') edRenderMusicTrack();
+    toast(side==='before'?'Musique rognée avant':'Musique rognée après'); return true;
+  }
+  if(_ed.selTrack && _ed.selTrack.type==='sfx'){ toast('Un effet est ponctuel — utilise Supprimer'); return true; }
+  return false;   // audio (voix du clip) / clip visuel / rien → rognage vidéo par défaut
+}
 function edDeleteLeft(){
-  if(!_ed) return; const t=_ed.video.currentTime;
+  if(!_ed) return;
+  if(_edTrimSel('before')) return;
+  const t=_ed.video.currentTime;
   if(t<=_ed.trimA+0.1 || t>=_ed.trimB-0.1){ toast('Place le curseur dans le clip'); return; }
   const clipStart=(typeof edClipGlobalStart==='function')?edClipGlobalStart(_ed.activeIdx):0;
   const removed=t-_ed.trimA;
@@ -32162,7 +32191,9 @@ function edDeleteLeft(){
   _edAfterCut(); toast('Avant le curseur supprimé');
 }
 function edDeleteRight(){
-  if(!_ed) return; const t=_ed.video.currentTime;
+  if(!_ed) return;
+  if(_edTrimSel('after')) return;
+  const t=_ed.video.currentTime;
   if(t<=_ed.trimA+0.1 || t>=_ed.trimB-0.1){ toast('Place le curseur dans le clip'); return; }
   const gt=edGlobalNow();
   edSnap(); _ed.trimB=t; edSyncToClip(); _edTrimAfter(gt);
@@ -32220,18 +32251,23 @@ function _edPlayTransPreview(t, type){
   try{
     if(!type){ const s=(_ed.sfx||[]).find(x=>x.trans&&Math.abs((x.t||0)-t)<0.06); type=s?s.trans:''; }
     if(_ed.playing) edPause();
-    edScrubTo(t);   // fige la tête sur la frame de la transition
-    let prevV=null;
+    const _s=(_ed.sfx||[]).find(x=>x.trans&&Math.abs((x.t||0)-t)<0.06); const _len=Math.max(0.9,(_s&&_s.len)||_ED_TRANS_DUR);
     const isDiss=(type==='linewipe'||type==='fondu');
+    let prevV=null;
     if(isDiss){ const at=(typeof _edClipAt==='function')?_edClipAt(t):{i:0}; prevV=(at.i>0)?(_ed.clips[at.i-1]||{}).video:null; }
-    const _s=(_ed.sfx||[]).find(x=>x.trans&&Math.abs((x.t||0)-t)<0.06); const _len=Math.max(0.6,(_s&&_s.len)||_ED_TRANS_DUR);
-    // #fondu-vrai (Axel « sur l'éditeur ça marche pas ») : sur UN SEUL clip, un « fondu enchaîné » ne peut pas
-    // être un noir (rien à croiser). On GÈLE la frame de départ et on la DISSOUT dans la vidéo qui CONTINUE
-    // → vrai fondu. Il faut LIRE la vidéo pendant l'aperçu (un gel sur une vidéo à l'arrêt = image identique = rien).
-    let once=false;
-    if(isDiss && !prevV){ try{ const v=_ed.video; const fz=document.createElement('canvas'); fz.width=v.videoWidth||640; fz.height=v.videoHeight||360; if(fz.width>2){ fz.getContext('2d').drawImage(v,0,0,fz.width,fz.height); fz.videoWidth=fz.width; fz.videoHeight=fz.height; prevV=fz; once=true; } }catch(_){} }
-    _ed._transPrev={ t0:performance.now(), type:String(type||''), prevV:prevV, len:_len, until:performance.now()+9000, once:once };
-    if(once){ try{ _ed.video.muted=true; const _p=_ed.video.play(); if(_p&&_p.catch)_p.catch(()=>{}); }catch(_){} }   // lit la vidéo → la dissolution se voit
+    // #fondu-vrai (Axel, 3e retour « ça marche toujours pas ») : sur UN SEUL clip, « fondu enchaîné » = dissoudre
+    // la frame@t dans une frame CLAIREMENT différente (t±0,9 s). Pas un noir, pas deux frames identiques. On grab
+    // les deux par seek + snapshot (DÉTERMINISTE, indépendant de la lecture) → la dissolution se voit toujours.
+    if(isDiss && !prevV && _ed.video){
+      const V=_ed.video, trimA=_ed.trimA||0, trimB=_ed.trimB||V.duration||t+2;
+      const t2=(t+0.9<=trimB-0.05)?(t+0.9):Math.max(trimA+0.05,t-0.9);
+      const grab=()=>{ try{ const c=document.createElement('canvas'); c.width=V.videoWidth||640; c.height=V.videoHeight||360; if(c.width<2) return null; c.getContext('2d').drawImage(V,0,0,c.width,c.height); c.videoWidth=c.width; c.videoHeight=c.height; return c; }catch(_){ return null; } };
+      const seek=(time)=>new Promise(res=>{ let d=false; const on=()=>{ if(d)return; d=true; try{V.removeEventListener('seeked',on);}catch(_){} res(); }; try{ V.addEventListener('seeked',on); V.currentTime=time; }catch(_){ d=true; res(); } setTimeout(()=>{ if(!d){ d=true; try{V.removeEventListener('seeked',on);}catch(_){} res(); } },500); });
+      (async()=>{ try{ await seek(Math.max(0,t)); const A=grab(); await seek(t2); if(A) _ed._transPrev={ t0:performance.now(), type:String(type||''), prevV:A, len:_len, until:performance.now()+9000, once:true, restore:Math.max(0,t) }; }catch(_){} })();
+      return;
+    }
+    edScrubTo(t);   // fige la tête sur la frame de la transition (2 clips : croise le clip précédent)
+    _ed._transPrev={ t0:performance.now(), type:String(type||''), prevV:prevV, len:_len, until:performance.now()+9000, once:false };
   }catch(_){}
 }
 function edDrawTrans(cx,W,H,gTime,curV,sr){ if(!_ed) return;
@@ -32261,7 +32297,7 @@ function edAnimTransPreviews(){
     let sr=null, hasFoot=!!(vB&&(vB.videoWidth||vB.naturalWidth));
     if(hasFoot){ sr=edCoverRect(vB.videoWidth||vB.naturalWidth, vB.videoHeight||vB.naturalHeight, W/H); try{ cx.drawImage(vB,sr.sx,sr.sy,sr.sw,sr.sh,0,0,W,H); }catch(e){ hasFoot=false; } }
     if(!hasFoot){ _edPrevBg(cx,W,H,'B'); }
-    if(ty){ const prevV=(ty==='linewipe'||ty==='fondu')?(vA||vB):null; _edPaintTrans(cx,W,H,p,ty, hasFoot?vB:null, sr, prevV); }
+    if(ty){ const twoClips=cl.length>1&&vA&&vB&&vA!==vB; const prevV=((ty==='linewipe'||ty==='fondu')&&twoClips)?vA:null; _edPaintTrans(cx,W,H,p,ty, hasFoot?vB:null, sr, prevV); }
   });
   window._edPrevRAF=requestAnimationFrame(edAnimTransPreviews);
 }
@@ -32298,7 +32334,7 @@ function edDrawLoop(){
     if(_tp.once){ // fondu enchaîné sur 1 clip : lecture + dissolution du gel → UN passage puis pause
       const p=Math.min(1,(performance.now()-_tp.t0)/((_tp.len||0.9)*1000));
       try{ _edPaintTrans(ctx, _ed.dispW, _ed.dispH, p, _tp.type, v, _cr, _tp.prevV); }catch(e){}
-      if(p>=1){ _ed._transPrev=null; try{ if(!_ed.playing) _ed.video.pause(); }catch(e){} }
+      if(p>=1){ _ed._transPrev=null; try{ if(_tp.restore!=null) edScrubTo(_tp.restore); else if(!_ed.playing) _ed.video.pause(); }catch(e){} }
     } else {
       const _dur=(_tp.len||0.9)*1000, _gap=460, _cyc=_dur+_gap;
       const _el=performance.now()-_tp.t0, _inc=_el%_cyc;
@@ -32306,7 +32342,10 @@ function edDrawLoop(){
       if(performance.now()>(_tp.until||0)) _ed._transPrev=null;
     } }
   for(const o of _ed.overlays){
-    if(o._el){ const vis=(o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end); o._el.style.visibility=vis?'visible':'hidden'; } // #split · visible SEULEMENT dans sa fenêtre (avant : la sélection le forçait plein écran sur toute la vidéo)
+    if(o._el){ const vis=(o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end); o._el.style.visibility=vis?'visible':'hidden'; // #split · visible SEULEMENT dans sa fenêtre
+      // #snap-coulisse (Axel « le texte snapchat doit coulisser ») : la légende Snapchat MONTE + apparaît sur ~0,42 s
+      if(o.type==='text' && (o.style||'')==='snap'){ const _tx=o._el.querySelector('.ed-ov-txt'); if(_tx){ const _p=Math.max(0,Math.min(1,(_gt-(o.start||0))/0.42)); const _e=1-Math.pow(1-_p,3); _tx.style.transform='translateY('+((1-_e)*34).toFixed(1)+'px)'; _tx.style.opacity=(0.1+0.9*_e).toFixed(3); } }
+    }
     if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
   }
   if(_ed.playing){ const _pv=_ed._gtPrev||0; for(const s of (_ed.sfx||[])){ if(s.trans) continue; if(s.t>_pv && s.t<=_gt) edPlaySfxPreview(s.type); } }
@@ -32581,6 +32620,7 @@ function _edEnsureBlankSet(){
     .catch(function(){ window._edBlankSet=new Set(); return window._edBlankSet; });
   return window._edBlankSetP;
 }
+window._edEnsureBlankSet=_edEnsureBlankSet;   // #cross-block · le Montage IA (bloc <script> #1) déclenche le chargement du set blanc
 function _edReblankAnims(){
   if(!_ed||!_ed.overlays||!window._edBlankSet||!window._ED_BLANK_BASE) return;
   _ed.overlays.forEach(function(ov){ if(!(ov._anim&&ov.animName&&ov._bgStyle!=='dark')) return;
@@ -32685,7 +32725,6 @@ function _edApplySplitBox(ov){
 // couleurs VIVES (Axel « le fond animé manque de couleur, faut qu'on voie mieux ») : bases saturées
 // (le blend multiply garde le contenu foncé de l'anim lisible, mais fait bien ressortir la teinte).
 const _ED_ANIMBG = {
-  grille: { base:'#B9A2FF', css:'repeating-linear-gradient(0deg,rgba(96,56,255,.7) 0 2px,transparent 2px 22px),repeating-linear-gradient(90deg,rgba(96,56,255,.7) 0 2px,transparent 2px 22px),linear-gradient(135deg,#CDB8FF,#9E7CFF)', size:'22px 22px,22px 22px,100% 100%', anim:'edBgGrid 3.4s linear infinite', line:'rgba(80,40,235,.92)' },
   degrade:{ base:'#FF8FC0', css:'linear-gradient(120deg,#FF9E6B,#FF6FB0,#7FB4FF,#B983FF,#FF9E6B)', size:'320% 320%', anim:'edBgSweep 6.5s ease infinite', line:null },
   aurora: { base:'#D9B6FF', css:'radial-gradient(60% 60% at 28% 30%,rgba(124,52,255,.72),transparent 62%),radial-gradient(55% 55% at 76% 64%,rgba(255,88,58,.62),transparent 62%),radial-gradient(52% 52% at 50% 92%,rgba(40,168,255,.6),transparent 60%),linear-gradient(135deg,#E7D2FF,#FFDDEC)', size:'200% 200%,200% 200%,200% 200%,100% 100%', anim:'edBgAurora 8.5s ease-in-out infinite', line:null }
 };
@@ -32842,7 +32881,7 @@ function edStyleOverlay(ov){
     const fam=ov.font||'var(--display)';
     let deco='';
     if(styl==='box') deco='padding:5px 12px;background:'+(ov.bgColor||'rgba(0,0,0,.55)')+';border-radius:9px;';
-    else if(snap) deco='display:block;width:100%;box-sizing:border-box;padding:'+Math.max(6,Math.round(_ed.dispH*0.013))+'px 16px;background:'+(ov.bgColor||'rgba(0,0,0,.5)')+';'; // pleine largeur, bord à bord, pas d'arrondi
+    else if(snap) deco='display:block;width:100%;box-sizing:border-box;padding:'+Math.max(3,Math.round(_ed.dispH*0.006))+'px 14px;line-height:1.14;background:'+(ov.bgColor||'rgba(0,0,0,.5)')+';'; // pleine largeur, bord à bord, FINE (Axel « plus fin »)
     else if(styl==='shadow') deco='text-shadow:0 2px 7px rgba(0,0,0,.85);';
     else if(styl==='outline') deco='-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 1px 2px rgba(0,0,0,.6);';
     const fs=ov.size;   // #snap · taille par DÉFAUT posée en Snapchat (edSetStyle) mais RÉGLABLE au curseur
@@ -34324,11 +34363,13 @@ async function edExport(){
           const fs=ov.size*f; cx.save();
           cx.font=(ov.bold?'800 ':'600 ')+fs+'px "Bricolage Grotesque",sans-serif';
           cx.textAlign='center'; cx.textBaseline='top';
-          const cxc=snap?EW/2:(ov.x+ov.w/2)*f, cy=ov.y*f, maxW=snap?EW*0.94:ov.w*f;
+          // #snap-coulisse (export) : même glisse d'entrée (monte + apparaît) que l'aperçu
+          let _slY=0; if(snap){ const _p=Math.max(0,Math.min(1,(gTime-(ov.start||0))/0.42)); const _e=1-Math.pow(1-_p,3); _slY=(1-_e)*34*f; cx.globalAlpha=0.1+0.9*_e; }
+          const cxc=snap?EW/2:(ov.x+ov.w/2)*f, cy=ov.y*f+_slY, maxW=snap?EW*0.94:ov.w*f;
           const paras=String(ov.text||'').split('\n'); let lines=[];
           for(const para of paras){ let line=''; for(const wd of para.split(' ')){ const test=line?line+' '+wd:wd; if(cx.measureText(test).width>maxW && line){ lines.push(line); line=wd; } else line=test; } lines.push(line); }
-          const lh=fs*1.2, padV=snap?fs*0.4:0;
-          // #snapchat · UNE barre translucide PLEINE LARGEUR (bord à bord), taille fixe
+          const lh=fs*1.2, padV=snap?fs*0.14:0;
+          // #snapchat · UNE barre translucide PLEINE LARGEUR (bord à bord), FINE (Axel « plus fin »)
           if(snap){ cx.fillStyle=ov.bgColor||'rgba(0,0,0,.5)'; cx.fillRect(0, cy, EW, lines.length*lh+padV*2); }
           lines.forEach((ln,i)=>{
             const ly=cy+padV+i*lh;
@@ -34827,6 +34868,8 @@ function edBandDrag(ov,track,e,mode){
       body.innerHTML=
         // #saut-de-ligne (Axel « je peux toujours pas aller à la ligne ») : textarea, pas input mono-ligne → Entrée = nouvelle ligne
         '<textarea class="field" rows="2" oninput="edSetProp(\'text\',this.value)" placeholder="Ton texte… (Entrée = nouvelle ligne)" style="margin-bottom:14px;resize:vertical;line-height:1.35;font-family:inherit">'+(ov.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</textarea>'
+        // #taille-à-l'ajout (Axel « changer la taille quand on ajoute un texte ») : curseur Taille EN HAUT, visible tout de suite
+        +'<div class="row gap12" style="align-items:center;margin-bottom:16px"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="10" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>'
         +'<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:16px">'+SUBS_ED.map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" style="padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;border:1px solid var(--border);background:var(--surface);color:'+s[2]+';-webkit-text-stroke:.5px rgba(0,0,0,.5);cursor:pointer">'+s[1]+'</button>').join('')+'</div>'
         +'<div class="row gap10" style="margin-bottom:14px;flex-wrap:wrap">'
           +'<select class="field" onchange="edSetFont(this.value)" style="flex:1 1 130px;padding:10px 12px">'+FONTS_ED.map(f=>'<option value=\''+f[0]+'\' '+((ov.font||'var(--display)')===f[0]?'selected':'')+'>'+f[1]+'</option>').join('')+'</select>'
@@ -34835,8 +34878,7 @@ function edBandDrag(ov,track,e,mode){
           +'<button onclick="edSetProp(\'bold\','+(ov.bold?'false':'true')+');edShowProps()" style="padding:9px 13px;border-radius:10px;font-weight:800;border:1px solid '+(ov.bold?'var(--accent-line)':'var(--border)')+';background:'+(ov.bold?'var(--accent-soft)':'var(--surface)')+';color:'+(ov.bold?'var(--accent-2)':'var(--text)')+';cursor:pointer">B</button>'
         +'</div>'
         // #séparation (Axel « met une séparation pour bien qu'on distingue ») : chaque style = une pastille bordée distincte
-        +'<div class="row" style="width:100%;margin-bottom:16px;flex-wrap:wrap;gap:6px">'+STYLES_ED.map(s=>{var on=((ov.style||'box')===s[0]);return '<button onclick="edSetStyle(\''+s[0]+'\')" style="flex:1 1 28%;min-width:82px;padding:9px 6px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid '+(on?'var(--accent-line)':'var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--surface)')+';color:'+(on?'var(--accent-2)':'var(--text-2)')+'">'+s[1]+'</button>';}).join('')+'</div>'
-        +'<div class="row gap12" style="align-items:center"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="10" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>';
+        +'<div class="row" style="width:100%;margin-bottom:16px;flex-wrap:wrap;gap:6px">'+STYLES_ED.map(s=>{var on=((ov.style||'box')===s[0]);return '<button onclick="edSetStyle(\''+s[0]+'\')" style="flex:1 1 28%;min-width:82px;padding:9px 6px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid '+(on?'var(--accent-line)':'var(--border)')+';background:'+(on?'var(--accent-soft)':'var(--surface)')+';color:'+(on?'var(--accent-2)':'var(--text-2)')+'">'+s[1]+'</button>';}).join('')+'</div>';
     } else if(ov._split && !ov._splitEmpty){
       // #split-controls · réglages du split : taille du média (donc de la vidéo en bas), inversion, recadrage de l'anim
       const r=Math.round(((ov._splitRatio!=null?ov._splitRatio:0.5))*100);
@@ -34873,7 +34915,7 @@ function edBandDrag(ov,track,e,mode){
             +'<button onclick="edSetAnimBgVariant(\'dark\')" class="btn btn-sm" style="flex:1;'+(isDark?selCss:offCss)+'">Carreaux</button></div>') : '';
           // #fond-animé (Axel « impossible d'animer le fond ? même avec les grilles ? ») : grille défilante,
           // dégradé qui balaie, aurora — dispo pour TOUTE anim (fond CSS animé derrière l'anim en multiply).
-          var fxDefs=[['grille','Grille'],['degrade','Dégradé'],['aurora','Aurora']];
+          var fxDefs=[['degrade','Dégradé'],['aurora','Aurora']];   // #grille-retirée (Axel « on voit rien »)
           var fxRow = (!isDark) ? ('<div style="margin-top:10px">'
               +'<span class="mono faint" style="font-size:10.5px;display:block;margin-bottom:6px">Fond animé</span>'
               +'<div class="row" style="gap:6px;flex-wrap:wrap">'
