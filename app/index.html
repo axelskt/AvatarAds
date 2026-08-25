@@ -14224,9 +14224,14 @@ function _mdTick(){
   // ne se VOYAIENT jamais dans l'aperçu (retour Axel), elles n'apparaissaient qu'au rendu.
   try{
     const _t0=_md.time;
-    const _trf=_md.marks.trans.find(x=>!x.del&&x.transition&&!x.zoomPos&&Math.abs(_t0-x.t)<0.22);
-    const _fl=document.getElementById('mdTransFlash'), _fll=document.getElementById('mdTransLbl');
-    if(_fl){ if(_trf){ const _pr=Math.max(0,1-Math.abs(_t0-_trf.t)/0.22); _fl.style.opacity=(_pr*0.9).toFixed(2); if(_fll){ _fll.textContent=_trf.n||'Transition'; _fll.style.opacity=_pr>0.12?'1':'0'; } } else { _fl.style.opacity='0'; if(_fll) _fll.style.opacity='0'; } }
+    const _trf=_md.marks.trans.find(x=>!x.del&&x.transition&&!x.zoomPos&&Math.abs(_t0-x.t)<0.3);
+    const _fl=document.getElementById('mdTransFlash'), _fll=document.getElementById('mdTransLbl'), _vv=_mdVid();
+    // #transition-preview (Axel 25/08) : la transition ne se JOUE qu'en LECTURE (ou pendant l'aperçu
+    // auto au moment où on la pose) — parqué dessus, ça ne lave plus l'écran en blanc. Effet PAR TYPE.
+    if(_fl){ if(_trf && (_md.playing || _md._transPrev)){ const _pr=Math.max(0,1-Math.abs(_t0-_trf.t)/0.3);
+        _mdApplyTransFx(String(_trf.transition||''), _pr, _fl, _vv);
+        if(_fll){ _fll.textContent=_trf.n||'Transition'; _fll.style.opacity=_pr>0.12?'1':'0'; } }
+      else { _fl.style.opacity='0'; if(_fll) _fll.style.opacity='0'; if(_vv&&_vv.style.filter) _vv.style.filter=''; } }
   }catch(_){}
   const t=_md.time, dur=_md.dur;
   try{ _mdPeindreAnim(t); }catch(_){ /* l'aperçu ne casse jamais la lecture */ }
@@ -14254,6 +14259,7 @@ function _mdTick(){
     _mdPaintProximity();
     if(_md.detail) _mdPaintCloseUp();
     _mdPaintClipInfo();
+    try{ _mdPaintSplit(t); }catch(_){}   // #split-preview · montre le split dans l'aperçu
   }
 }
 function _mdRaf(){ if(!_md || !_md.playing) return; _mdTick(); _mdSfxLive(); requestAnimationFrame(_mdRaf); }
@@ -15751,6 +15757,7 @@ function _mdBankPick(label){
       // réglage global — chaque frontière a sa propre transition.
       const tv=_MD_TRANS_MAP[label]||'';
       _md.marks.trans=_md.marks.trans.map(x=>x.id===bm.mark?Object.assign({},x,{n:label,transition:tv,mod:true}):x);
+      if(tv) _md._transPendAt=(_md.marks.trans.find(x=>x.id===bm.mark)||{}).t;   // #transition-preview · la jouer tout de suite
     } else {
       _md.marks[k]=_md.marks[k].map(x=>x.id===bm.mark?Object.assign({},x,{n:label,mod:true}):x);
     }
@@ -15770,9 +15777,11 @@ function _mdBankPick(label){
     } else if(bm.kind==='trans'){
       const tv=_MD_TRANS_MAP[label]||'';
       _md.marks.trans.push({id:'tr-add'+Date.now(), t:bm.at, n:label, transition:tv, added:true});
+      if(tv) _md._transPendAt=bm.at;   // #transition-preview · la jouer tout de suite
     }
   }
   _md.bankModal=null; _mdRender();
+  if(_md._transPendAt!=null){ const _tp=_md._transPendAt; _md._transPendAt=null; setTimeout(()=>{ try{ _mdPlayTransPreview(_tp); }catch(_){} }, 70); }
 }
 
 // texte : la modale « Ton texte »
@@ -15928,6 +15937,69 @@ function _mdPeindreAnim(t){
   }
 }
 
+// #split-preview (Axel 25/08) : quand le curseur est dans une fenêtre split, l'aperçu MONTRE
+// le split — ce qu'on ajoute (anim ou média) sur une moitié, l'avatar sur l'autre, en respectant
+// le % et l'inversion. Avant, le split ne se voyait qu'au rendu (« le split ne marche plus »).
+function _mdPaintSplit(t){
+  const ov=document.getElementById('mdSplitOv'); if(!ov) return;
+  const sp=(_md.splits||[]).find(s=>!s.del && t>=(Number(s.start)||0) && t<(Number(s.end)||0));
+  if(!sp){ if(ov.style.display!=='none'){ ov.style.display='none'; ov.innerHTML=''; ov._k=''; try{ const vv=ov.querySelector('video'); if(vv) vv.pause(); }catch(_){} } return; }
+  const r=(Number(sp.ratio)>0.15&&Number(sp.ratio)<0.85)?Number(sp.ratio):0.5, inv=!!sp.invert;
+  const nm=sp.anim?String(sp.anim).replace(/[^a-z0-9_-]/gi,''):'';
+  const k=(sp.anim?('a:'+nm):('m:'+(sp.assetId||'')))+'|'+r.toFixed(2)+'|'+(inv?'I':'')+'|'+(_md.avatarStill?'A':'');
+  if(k===ov._k) return; ov._k=k;
+  const animSrc=nm?((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')):'';
+  const mb=(sp.assetId&&_md.splitBlobs&&_md.splitBlobs[sp.assetId])||null;
+  const cover='width:100%;height:100%;object-fit:cover';
+  const contentHtml = sp.anim
+    ? '<video src="'+animSrc+'" muted loop autoplay playsinline style="'+cover+'"></video>'
+    : (mb ? (mb.isVid?'<video src="'+mb.url+'" muted loop autoplay playsinline style="'+cover+'"></video>':'<img src="'+mb.url+'" style="'+cover+'">')
+          : '<div style="width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:11px;opacity:.8">ton média</span></div>');
+  const avatarHtml = _md.avatarStill
+    ? '<img src="'+_md.avatarStill+'" style="'+cover+'">'
+    : '<div style="width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(160deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:11px;opacity:.7">ton avatar</span></div>';
+  const topH=Math.round(r*100), botH=100-topH;
+  const topEl='<div style="position:absolute;left:0;right:0;top:0;height:'+(inv?botH:topH)+'%;overflow:hidden">'+(inv?avatarHtml:contentHtml)+'</div>';
+  const botEl='<div style="position:absolute;left:0;right:0;bottom:0;height:'+(inv?topH:botH)+'%;overflow:hidden">'+(inv?contentHtml:avatarHtml)+'</div>';
+  ov.innerHTML=topEl+botEl
+    +'<div style="position:absolute;left:0;right:0;top:'+(inv?botH:topH)+'%;height:3px;transform:translateY(-1.5px);background:#0D0D12;z-index:2"></div>'
+    +'<div style="position:absolute;left:8px;bottom:8px;padding:4px 9px;border-radius:8px;background:rgba(0,0,0,.66);backdrop-filter:blur(6px);z-index:3"><span class="mono" style="font-size:9px;color:#fff">split · '+(sp.anim?_mdEsc(sp.anim):'ton média')+' + avatar</span></div>';
+  ov.style.display='block';
+  try{ const v=ov.querySelector('video'); if(v){ const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(_){}
+}
+// #transition-preview · effet propre à CHAQUE type appliqué au calque flash + à la vidéo (pr = 0..1)
+function _mdApplyTransFx(type, pr, fl, v){
+  type=String(type||''); let bg='#fff', op=pr*0.85, blend='screen', filt='';
+  if(type==='fondu'){ bg='#000'; blend='normal'; op=pr*0.9; }
+  else if(type==='flash'){ bg='#fff'; blend='screen'; op=pr*0.92; }
+  else if(type==='filmburn'){ bg='radial-gradient(circle at 50% 45%, #ffe6b0, #ff8a3a 60%, rgba(255,120,40,0))'; blend='screen'; op=pr*0.85; }
+  else if(type==='glitch'){ bg='linear-gradient(90deg, rgba(0,255,238,.5), rgba(255,0,128,.5))'; blend='screen'; op=pr*0.7; filt='hue-rotate('+Math.round(pr*45)+'deg) contrast(1.25)'; }
+  else if(type==='whip'){ bg='#fff'; blend='screen'; op=pr*0.3; filt='blur('+(pr*3).toFixed(1)+'px)'; }
+  else if(type==='zoom'){ bg='#fff'; blend='screen'; op=pr*0.35; filt='blur('+(pr*1.4).toFixed(1)+'px)'; }
+  else if(type==='maskglitch'){ bg='radial-gradient(circle at 50% 42%, rgba(232,246,255,.9), rgba(160,210,255,0) 62%)'; blend='screen'; op=pr*0.8; filt='contrast(1.15)'; }
+  fl.style.background=bg; fl.style.mixBlendMode=blend; fl.style.opacity=op.toFixed(2);
+  if(v) v.style.filter=filt;
+}
+// joue les ~0,45 s avant → 0,55 s après une transition pour qu'elle se VOIE tout de suite (aperçu
+// isolé de la lecture normale — sa propre boucle RAF, se nettoie à la fin).
+function _mdPlayTransPreview(t){
+  if(!_md) return;
+  try{
+    cancelAnimationFrame(_md._transPrevRAF);
+    const v=_mdVid(); if(!v) return;
+    const from=Math.max(0, t-0.45), to=Math.min(_md.dur, t+0.55);
+    _md._transPrev=true;
+    try{ v.currentTime=from; }catch(_){}
+    const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{});
+    const stop=()=>{ _md._transPrev=false; try{ v.pause(); }catch(_){} try{ v.style.filter=''; }catch(_){}
+      const fl=document.getElementById('mdTransFlash'); if(fl) fl.style.opacity='0';
+      const fll=document.getElementById('mdTransLbl'); if(fll) fll.style.opacity='0'; _mdSeek(t); };
+    const step=()=>{ if(!_md||!_md._transPrev) return; _md.time=v.currentTime||_md.time; _mdTick();
+      if((v.currentTime||0)>=to || v.paused){ stop(); return; } _md._transPrevRAF=requestAnimationFrame(step); };
+    _md._transPrevRAF=requestAnimationFrame(step);
+    clearTimeout(_md._transPrevTO); _md._transPrevTO=setTimeout(()=>{ if(_md&&_md._transPrev) stop(); }, 1600); // filet
+  }catch(_){}
+}
 function _mdStatsHtml(){
   const mob=_mdIsMob();
   const nSfx=_md.marks.sfx.filter(x=>!x.del).length;
@@ -16029,6 +16101,7 @@ function _mdRender(){
           +'<div style="position:relative;height:'+(mob?'min(250px,32vh)':'min(350px,42vh)')+';aspect-ratio:9 / 16;border-radius:16px;overflow:hidden;flex:0 0 auto;background:#08070a;border:1px solid var(--border-2);box-shadow:0 20px 46px -26px rgba(0,0,0,.9)">'
             +'<div id="mdVidSlot" style="position:absolute;inset:0"></div>'
             +'<div id="mdClipOver" style="position:absolute;inset:0;display:none;background:#08070a;z-index:1"></div>'
+            +'<div id="mdSplitOv" style="position:absolute;inset:0;display:none;z-index:2;background:#0b0b0e"></div>'
             +'<div id="mdClipHalo" style="position:absolute;inset:0;opacity:.45;pointer-events:none;z-index:1"></div>'
             +'<div id="mdTransFlash" style="position:absolute;inset:0;opacity:0;pointer-events:none;z-index:3;background:#fff;mix-blend-mode:screen"></div>'
             +'<div id="mdTransLbl" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);opacity:0;pointer-events:none;z-index:4;padding:3px 10px;border-radius:99px;background:rgba(154,124,255,.92);color:#fff;font-family:var(--mono);font-size:9.5px;font-weight:700;white-space:nowrap;transition:opacity .1s"></div>'
@@ -16130,23 +16203,34 @@ function _mdSplitPickHtml(){
   const tab=(_md.splitPick&&_md.splitPick.tab)||'anim';
   // ── ANIMATIONS (banque filtrée) ──
   const animNames=(_md.bank||[]).map(b=>b.name).filter(n=>!(window.AA_ANIM_HIDE&&window.AA_ANIM_HIDE.has(n)));
+  // #split-menu-perf (Axel 25/08 « grosse perte de fps dans le menu ») : la grille posait ~48
+  // éléments <video> → Safari ramait. On n'affiche plus qu'une IMAGE (poster) en lazy-load ;
+  // l'anim ne se joue qu'une fois posée (aperçu du split). Bien plus léger, aucune perte de sens.
   const animGrid='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:46vh;overflow:auto;padding-right:2px">'
-    +animNames.map(n=>{ const bk=(_md.bank||[]).find(b=>b.name===n);
+    +animNames.map(n=>{ const nm=String(n).replace(/[^a-z0-9_-]/gi,'');
+      const has=window._mdPrevSet&&window._mdPrevSet.has(nm);
+      const thumb=has
+        ? '<img loading="lazy" src="anim-previews/'+nm+'.jpg" onerror="this.style.display=\'none\'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
+        : '<div style="position:absolute;inset:0;background:linear-gradient(150deg,#2b1a3f,#101018 55%,#3a1f14)"></div>';
       return '<div role="button" tabindex="0" onclick="_mdSplitAddAnim(\''+_mdEsc(n)+'\')" class="col" style="gap:6px;padding:7px;border-radius:11px;border:1px solid var(--border);background:var(--panel-1);cursor:pointer" onmouseenter="this.style.borderColor=\'#22D3EE66\'" onmouseleave="this.style.borderColor=\'var(--border)\'">'
-        +'<div style="width:100%;aspect-ratio:9/16;border-radius:8px;overflow:hidden;position:relative;background:#0d0d12">'+_mdAnimPrevHtml(n,bk?bk.desc:'',false)+'</div>'
+        +'<div style="width:100%;aspect-ratio:9/16;border-radius:8px;overflow:hidden;position:relative;background:#0d0d12">'+thumb+'</div>'
         +'<span style="font-size:10.5px;font-weight:600;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">'+_mdEsc(n)+'</span></div>'; }).join('')
     +'</div>';
-  // ── TON MÉDIA (assets du montage) ──
+  // ── TON MÉDIA : IMPORTER directement + les médias déjà dans le montage ──
+  const importBtn='<button onclick="_mdSplitImportMedia()" class="row" style="width:100%;gap:9px;align-items:center;justify-content:center;padding:12px;border-radius:11px;border:1px dashed var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-weight:800;font-size:12.5px;cursor:pointer;margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 20h16"/></svg> Importer un média</button>';
   const assets=((_md.job&&_md.job.assets)||[]).filter(a=>a&&a.id&&a.id.indexOf('avatar')!==0);
   const mediaRows=assets.length?assets.map(a=>{
-    const p=String(a.path||''); const vid=/\.(mp4|mov|webm|m4v)$/i.test(p);
+    const bl=(_md.splitBlobs&&_md.splitBlobs[a.id])||null;
+    const p=bl?bl.url:String(a.path||''); const vid=bl?bl.isVid:(a.kind==='video'||/\.(mp4|mov|webm|m4v)$/i.test(p));
+    const showable=bl||/^(https?:|blob:|data:)/.test(p);   // les chemins de storage bruts ne s'affichent pas → pas de vignette cassée
     const thumb='<span style="width:38px;height:38px;flex:0 0 auto;border-radius:8px;overflow:hidden;display:grid;place-items:center;background:var(--panel-1);border:1px solid var(--border)">'
-      +(p?(vid?'<video src="'+_mdEsc(p)+'#t=0.1" muted playsinline onerror="this.remove()" style="width:100%;height:100%;object-fit:cover"></video>'
-             :'<img src="'+_mdEsc(p)+'" onerror="this.remove()" style="width:100%;height:100%;object-fit:cover">'):'')+'</span>';
+      +(showable?(vid?'<video src="'+_mdEsc(p)+'#t=0.1" muted playsinline onerror="this.remove()" style="width:100%;height:100%;object-fit:cover"></video>'
+             :'<img src="'+_mdEsc(p)+'" onerror="this.remove()" style="width:100%;height:100%;object-fit:cover">')
+        :'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>')+'</span>';
     return '<button onclick="_mdSplitAdd(\''+String(a.id).replace(/'/g,'')+'\')" class="row" style="width:100%;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);text-align:left;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;margin-bottom:6px" onmouseenter="this.style.borderColor=\'#22D3EE66\'" onmouseleave="this.style.borderColor=\'var(--border)\'">'
-      +thumb+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+_mdEsc(a.id)+'</span>'
+      +thumb+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+_mdEsc(a._local?'importé':a.id)+'</span>'
       +'<span class="mono faint" style="font-size:9.5px;flex:0 0 auto">'+(vid?'vidéo':'image')+'</span></button>';
-  }).join(''):'<div class="faint" style="font-size:12px;padding:12px 4px;line-height:1.5;text-align:center">Aucun média dans ce montage.<br>Ajoute-en un via <b>+ Ajouter → Média</b>.</div>';
+  }).join(''):'<div class="faint" style="font-size:12px;padding:6px 4px 2px;line-height:1.5;text-align:center">Importe ta photo ou ta vidéo ci-dessus.</div>';
   const tabBtn=(k,lbl)=>'<button onclick="_md.splitPick.tab=\''+k+'\';_mdRenderModals()" class="btn btn-sm" style="flex:1;'+(tab===k?'background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700':'background:var(--surface);border:1px solid var(--border);color:var(--text-2)')+'">'+lbl+'</button>';
   return '<div onclick="_md.splitPick=null;_mdRenderModals()" style="position:fixed;inset:0;z-index:6700;background:rgba(6,6,9,.82);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px">'
     +'<div onclick="event.stopPropagation()" style="width:min(380px,94vw);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;background:var(--surface-2);border:1px solid var(--border-2);border-radius:16px;padding:14px">'
@@ -16155,7 +16239,7 @@ function _mdSplitPickHtml(){
       +'<span class="mono faint" style="font-size:10px;margin-left:auto">à '+_mdT(_md.splitPick.at)+'</span></div>'
     +'<div class="faint" style="font-size:11px;margin-bottom:10px">Ton avatar reste en bas, ce que tu choisis passe au-dessus. Tu régleras l\'inversion et le % ensuite (clique la bande).</div>'
     +'<div class="row gap6" style="margin-bottom:10px;flex:0 0 auto">'+tabBtn('anim','Animation')+tabBtn('media','Ton média')+'</div>'
-    +'<div style="overflow:auto;flex:1">'+(tab==='anim'?animGrid:mediaRows)+'</div>'
+    +'<div style="overflow:auto;flex:1">'+(tab==='anim'?animGrid:(importBtn+mediaRows))+'</div>'
     +'</div></div>';
 }
 function _mdSplitAdd(assetId){
@@ -16175,6 +16259,27 @@ function _mdSplitAddAnim(anim){
   else (_md.splits=_md.splits||[]).push({ start:_mdR2(at), end:_mdR2(Math.min(_md.dur-0.1, at+3)), anim:String(anim), added:true, ratio:0.5 });
   _md.splitPick=null; _md.scenes=_mdBuildScenes(); _mdRender(); _mdRenderModals();
   if(typeof toast==='function') toast('Split screen — anim « '+anim+' » en haut');
+}
+// #split-import (Axel 25/08 : « ça doit proposer d'importer directement ») : le picker « Ton média »
+// importe TON fichier ici et maintenant (image/vidéo) → aperçu immédiat (blob) + upload au rendu.
+function _mdSplitImportMedia(){
+  const at=(_md.splitPick&&_md.splitPick.at)!=null?_md.splitPick.at:_md.time;
+  const ri=(_md.splitPick&&_md.splitPick.replaceIdx);
+  let inp=document.getElementById('mdSplitFileInp'); if(inp) inp.remove();
+  inp=document.createElement('input'); inp.type='file'; inp.accept='image/*,video/*';
+  inp.id='mdSplitFileInp'; inp.style.cssText='position:fixed;left:-9999px;width:1px;height:1px;opacity:0';
+  document.body.appendChild(inp); window._mdSplitFileKeep=inp;
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; inp.remove(); if(!f||!_md) return;
+    const isVid=/^video\//.test(f.type||'');
+    const id='usplit'+Date.now().toString(36);
+    _md.splitFiles=_md.splitFiles||{}; _md.splitFiles[id]=f;
+    _md.splitBlobs=_md.splitBlobs||{}; _md.splitBlobs[id]={ url:URL.createObjectURL(f), isVid };
+    // l'asset apparaît aussi dans la liste « Ton média »
+    (_md.job=_md.job||{}); (_md.job.assets=_md.job.assets||[]).push({ id, path:_md.splitBlobs[id].url, kind:isVid?'video':'image', _local:true });
+    _md.splitPick=_md.splitPick||{}; _md.splitPick.at=at; if(ri!=null) _md.splitPick.replaceIdx=ri;
+    _mdSplitAdd(id);
+  };
+  inp.click();
 }
 function _mdRenderModals(keepFocus){
   const host=document.getElementById('mdModals'); if(!host||!_md) return;
@@ -16426,7 +16531,9 @@ async function _mdRegen(){
   try{
     // les médias ajoutés partent d'abord dans render-media
     const { data:{ user } }=await sb.auth.getUser();
-    const assets=(_md.job.assets||[]).slice();
+    // les assets « _local » (blobs importés, ex. split) n'ont pas de chemin storage valide →
+    // on les retire ici, le loop d'upload ci-dessous les remonte proprement (sinon l'edge les filtre).
+    const assets=(_md.job.assets||[]).filter(a=>!a._local);
     for(const s of _md.scenes){
       if(!(((s.added&&s.n==='media')||s.replM)&&_md.addedMedia&&_md.addedMedia[s.id])) continue;
       const f=_md.addedMedia[s.id];
@@ -16443,6 +16550,16 @@ async function _mdRegen(){
       (plan.userSlides=plan.userSlides||[]).push(Object.assign(
         {start:_mdR2(s.a),end:_mdR2(s.b),anim:'media',assetId:id},
         mpos?{pos:mpos}:{}, mlayer?{layer:true}:{}));
+    }
+    // #split-import · les médias importés dans un split (assetId « usplit… ») montent aussi
+    for(const id in (_md.splitFiles||{})){
+      if(!(_md.splits||[]).some(sp=>String(sp.assetId)===id)) continue;   // seulement ceux réellement posés
+      if(assets.some(a=>a.id===id)) continue;
+      const f=_md.splitFiles[id]; const isVid=/^video\//.test(f.type||'');
+      const p2=user.id+'/as-'+id+'.'+(isVid?'mp4':'jpg');
+      const e=await sb.storage.from('render-media').upload(p2,f,{upsert:true,contentType:f.type||(isVid?'video/mp4':'image/jpeg')});
+      if(e.error) throw new Error('upload split : '+e.error.message);
+      assets.push({id,path:p2,kind:isVid?'video':'image'});
     }
     _mdRegenPaint(8);
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job',{method:'POST',headers:{...(await getAuthHeader()),'Content-Type':'application/json'},
@@ -31863,8 +31980,8 @@ function edDeleteRight(){
 // dans l'aperçu (edDrawLoop) ET l'export (renderFrame). Types : flash · filmburn
 // (balayage) · glitch · whip (flou horizontal) · linewipe (révèle avant/après au trait).
 const _ED_TRANS_DUR=0.5;
-const _ED_TRANS_MAP={ 'Cut net':'', 'Fondu enchaîné':'fondu', 'Flash':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Trait avant/après':'linewipe' };
-const _ED_TRANS_LABEL={ fondu:'Fondu', flash:'Flash', filmburn:'Film Burn', glitch:'Glitch', whip:'Whip', zoom:'Zoom', linewipe:'Trait' };
+const _ED_TRANS_MAP={ 'Cut net':'cut', 'Fondu enchaîné':'fondu', 'Flash':'flash', 'Film Burn':'filmburn', 'Glitch RGB':'glitch', 'Whip pan':'whip', 'Zoom':'zoom', 'Trait avant/après':'linewipe' };
+const _ED_TRANS_LABEL={ cut:'Cut', fondu:'Fondu', flash:'Flash', filmburn:'Film Burn', glitch:'Glitch', whip:'Whip', zoom:'Zoom', linewipe:'Trait' };
 function _edClipAt(t){ let g=0; const cl=(_ed&&_ed.clips)||[];
   for(let i=0;i<cl.length;i++){ const d=Math.max(0,cl[i].trimB-cl[i].trimA); if(t<g+d-0.001||i===cl.length-1) return {i,start:g,end:g+d}; g+=d; } return {i:0,start:0,end:0}; }
 // dessin d'UNE transition à la progression p (0→1). Partagé aperçu (edDrawLoop) /
@@ -31873,6 +31990,8 @@ function _edPaintTrans(cx,W,H,p,type,curV,sr,prevV){
   if(p<0||p>1||!type) return;
   const cover=(v)=>edCoverRect(v.videoWidth||v.naturalWidth||9, v.videoHeight||v.naturalHeight||16, W/H);
   if(type==='flash'){ const a=(p<0.28?p/0.28:(1-(p-0.28)/0.72))*0.8; cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,a)); cx.fillStyle='#fff'; cx.fillRect(0,0,W,H); cx.restore(); }
+  else if(type==='cut'){ // coupe nette : un noir bref et crisp qui PONCTUE la coupe (sinon invisible sur un seul clip)
+    const a=p<0.18?(1-p/0.18):0; if(a>0){ cx.save(); cx.globalAlpha=a; cx.fillStyle='#000'; cx.fillRect(0,0,W,H); cx.restore(); } }
   else if(type==='fondu'){ if(prevV){ const pr=cover(prevV); cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,1-p)); try{ cx.drawImage(prevV,pr.sx,pr.sy,pr.sw,pr.sh,0,0,W,H);}catch(e){} cx.restore(); } else { cx.save(); cx.globalAlpha=Math.sin(p*Math.PI)*0.55; cx.fillStyle='#000'; cx.fillRect(0,0,W,H); cx.restore(); } }
   else if(type==='filmburn'){ cx.save(); cx.globalCompositeOperation='screen'; const x=(-1.8+2.9*p)*W;
     const g2=cx.createLinearGradient(x,0,x+W*1.8,0); g2.addColorStop(0,'rgba(255,176,86,0)'); g2.addColorStop(0.30,'rgba(255,150,60,0.85)'); g2.addColorStop(0.45,'rgba(255,240,196,1)'); g2.addColorStop(0.60,'rgba(255,150,60,0.85)'); g2.addColorStop(1,'rgba(255,120,40,0)');
@@ -31894,6 +32013,20 @@ function _edPaintTrans(cx,W,H,p,type,curV,sr,prevV){
   else if(type==='maskglitch'){ const a=Math.sin(Math.min(1,p)*Math.PI); // aperçu Montage IA : lueur blanche (silhouette) + glitch ; le vrai détourage est côté worker
     cx.save(); const r=cx.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,W*0.62); r.addColorStop(0,'rgba(232,246,255,'+(0.92*a)+')'); r.addColorStop(0.5,'rgba(160,210,255,'+(0.4*a)+')'); r.addColorStop(1,'rgba(160,210,255,0)'); cx.fillStyle=r; cx.fillRect(0,0,W,H); cx.restore();
     cx.save(); const fl=(Math.floor(p*11)%2===0)?1:0.4; cx.globalCompositeOperation='screen'; cx.globalAlpha=0.32*fl; for(let y=0;y<H;y+=Math.max(10,H/38)){ cx.fillStyle='#00ffee'; cx.fillRect(0,y,W,Math.max(2,H/300)); cx.fillStyle='#ff0080'; cx.fillRect(0,y+H/46,W,Math.max(2,H/300)); } cx.restore(); }
+}
+// #transition-visible (Axel 25/08) : une transition ne se VOIT qu'en lecture (elle dure ~0,5 s
+// à un instant précis). Quand on en pose/sélectionne une, on rejoue automatiquement les ~0,4 s
+// avant → 0,5 s après pour que l'effet se joue sous les yeux, puis on revient au point posé.
+function _edPlayTransPreview(t){
+  if(!_ed) return;
+  try{
+    clearTimeout(_ed._transPrevTO);
+    const from=Math.max(0, t-0.4), until=Math.min(edTotalDur(), t+_ED_TRANS_DUR+0.15);
+    edScrubTo(from);
+    if(!_ed.playing) edPlay();
+    const ms=Math.max(500, Math.round((until-from)*1000));
+    _ed._transPrevTO=setTimeout(()=>{ try{ if(_ed&&_ed.playing) edPause(); edScrubTo(t); }catch(_){}}, ms);
+  }catch(_){}
 }
 function edDrawTrans(cx,W,H,gTime,curV,sr){ if(!_ed) return;
   for(const s of (_ed.sfx||[])){ if(!s.trans) continue;
@@ -32143,7 +32276,10 @@ function edAddText(){
   const tot=edTotalDur(), gt=edGlobalNow();
   let start=Math.max(0,Math.min(tot-0.5,gt)), end=Math.min(tot,start+3);
   if(end-start<0.6){ start=Math.max(0,tot-3); end=tot; }
-  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', font:'var(--display)', style:'box', bold:true, start:start, end:end };
+  // #texte-sur-vidéo (Axel 25/08) : par défaut le texte s'écrit DIRECTEMENT sur la vidéo
+  // (pas de fond/boîte) — juste une ombre pour la lisibilité. Le fond reste une OPTION
+  // (styles « Fond » / « Snapchat »), plus le défaut.
+  const ov={ id:'ov'+Date.now(), type:'text', text:'TON TEXTE', x:_ed.dispW*0.1, y:_ed.dispH*0.44, w:_ed.dispW*0.8, h:50, size:34, color:'#ffffff', font:'var(--display)', style:'shadow', bold:true, start:start, end:end };
   _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
 }
 function edAddImage(file){
@@ -34416,7 +34552,9 @@ function edBandDrag(ov,track,e,mode){
         '<div class="row gap12" style="align-items:center;margin-bottom:12px"><span class="mono faint" style="font-size:11px;width:74px">'+(ov._splitInvert?'Vidéo':'Média')+' en haut</span>'
           +'<input type="range" class="ed-range" min="20" max="80" value="'+r+'" oninput="edSetSplitRatio(+this.value)"><span class="mono accent" id="edSplitRatioLbl" style="font-size:12px;width:38px;text-align:right">'+r+'%</span></div>'
         +'<button onclick="edToggleSplitInvert()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12M17 20l4-4M17 20l-4-4"/></svg> Inverser haut / bas</button>'
-        +'<button onclick="edToggleMediaReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(ov._mediaReframe?'var(--accent-line)':'var(--border)')+';background:'+(ov._mediaReframe?'var(--accent-soft)':'')+';color:'+(ov._mediaReframe?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer l\'animation</button>'
+        +'<button onclick="edToggleMediaReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(ov._mediaReframe?'var(--accent-line)':'var(--border)')+';background:'+(ov._mediaReframe?'var(--accent-soft)':'')+';color:'+(ov._mediaReframe?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2v15a1 1 0 001 1h15M2 7h15a1 1 0 011 1v15"/></svg> Recadrer '+(ov._anim?'l\'animation':'le média')+' (haut)</button>'
+        // #recadrer-visuel (Axel 25/08) : recadrer le VISUEL DU BAS (ta vidéo/avatar) sans quitter le split
+        +'<button onclick="edToggleReframe()" class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:8px;border-color:'+(_ed.reframeMode?'var(--accent-line)':'var(--border)')+';background:'+(_ed.reframeMode?'var(--accent-soft)':'')+';color:'+(_ed.reframeMode?'var(--accent-2)':'')+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Recadrer le visuel (bas)</button>'
         +'<button onclick="edResetMediaRF()" class="btn btn-quiet btn-sm" style="width:100%">Réinitialiser le cadrage</button>'
         +(ov._anim ? '<button onclick="_ed._splitFillTarget=\''+ov.id+'\';_ed._splitReplace=\''+ov.id+'\';if(typeof edOpenBank===\'function\')edOpenBank(\'anim\')" class="btn btn-ghost btn-sm" style="width:100%;margin-top:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Changer l\'animation</button>' : '')
         +(ov._anim ? (function(){
@@ -34485,13 +34623,13 @@ function edBandDrag(ov,track,e,mode){
     // draggable dans la piste Effets, dessiné à sa position (aperçu + export).
     const type=_ED_TRANS_MAP[label];
     if(type===undefined) return;
-    if(!type){ toast('Cut net — aucune transition'); return; }
     const t=cursorT();
     try{ edSnap&&edSnap(); }catch(e){}
     _ed.sfx=_ed.sfx||[];
     _ed.sfx.push({ id:'tr'+Date.now()+Math.random().toString(36).slice(2,6), t:Math.max(0,t), len:_ED_TRANS_DUR, trans:type, label:'⇥ '+(_ED_TRANS_LABEL[type]||label) });
     try{ edRenderSfxTrack&&edRenderSfxTrack(); }catch(e){}
     toast('Transition « '+label+' » posée au curseur — glisse la pastille pour la placer');
+    _edPlayTransPreview(Math.max(0,t)); // #transition-visible (Axel 25/08) : on JOUE l'effet tout de suite
   }
   function renderBank(){
     const ov=document.getElementById('edBankModal'); if(!ov||!bank) return;
