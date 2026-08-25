@@ -15868,6 +15868,12 @@ function _mdEnsureCss(){
     +'@keyframes mdaGlitch{0%,100%{transform:translate(0,0);filter:hue-rotate(0)}33%{transform:translate(-7px,3px);filter:hue-rotate(70deg)}66%{transform:translate(7px,-3px);filter:hue-rotate(-70deg)}}'
     +'@keyframes mdaPop{0%,100%{transform:scale(.86)}55%{transform:scale(1.16)}}'
     +'@keyframes mdaBlur{0%,100%{filter:blur(0);transform:scale(1)}50%{filter:blur(5px);transform:scale(1.08)}}'
+    // #transition-preview-css (Axel : « toujours rien ») : aperçu de transition piloté par CSS (GPU, pas de RAF
+    // capricieux, pas de réf DOM détachée). L'opacité pulse 0→pic→0 ; le fond/blend fixe le type.
+    +'@keyframes mdTransPulse{0%{opacity:0}12%{opacity:var(--mdtp,.95)}46%{opacity:var(--mdtp,.95)}100%{opacity:0}}'
+    +'@keyframes mdVidWhip{0%{transform:translateX(0) scale(1);filter:blur(0)}45%{transform:translateX(7%) scale(1.06);filter:blur(7px)}100%{transform:translateX(0) scale(1);filter:blur(0)}}'
+    +'@keyframes mdVidZoom{0%,100%{transform:scale(1);filter:blur(0)}50%{transform:scale(1.18);filter:blur(1px)}}'
+    +'@keyframes mdVidGlitch{0%,100%{filter:hue-rotate(0) contrast(1)}30%{filter:hue-rotate(60deg) contrast(1.35)}60%{filter:hue-rotate(-60deg) contrast(1.35)}}'
     +'@keyframes mdaRot{0%,100%{transform:rotate(-4deg) scale(1.05)}50%{transform:rotate(4deg) scale(1.05)}}'
     +'@keyframes mdaFade{0%,100%{opacity:0}50%{opacity:1}}'
     +'#mdOv button{cursor:pointer;font-family:inherit}'
@@ -16027,31 +16033,39 @@ function _mdApplyTransFx(type, pr, fl, v){
 // #transition-visible-v2 (Axel : « toujours rien / pas clair ») : APERÇU AUTONOME. On ne dépend plus de
 // la lecture vidéo (autoplay capricieux) : on fige la tête sur la frame et on anime l'effet 0→1→0 sur ~1 s
 // avec sa PROPRE boucle RAF. Déterministe, toujours visible.
+// #transition-preview-v3 (Axel : « fondu toujours rien ») : APERÇU 100% CSS. Vérifié en runtime que le
+// DESSIN marche (_mdApplyTransFx compose bien) — le point faible était la boucle RAF (pause en arrière-plan,
+// réf DOM détachée par _mdRender). Le CSS est GPU, immunisé. On se cale AVANT la frontière (frame de CONTENU,
+// pas la coupe sombre où un fondu au noir est invisible), et on lance une @keyframes sur #mdTransFlash + la vidéo.
 function _mdPlayTransPreview(t, typeArg){
   if(!_md) return;
   try{
-    cancelAnimationFrame(_md._transPrevRAF); clearTimeout(_md._transPrevTO);
-    try{ _mdRenderModals(); }catch(_){}   // s'assure que la modale (swipe) est bien fermée avant l'aperçu
-    let type=typeArg;
-    if(type==null){ const m=(_md.marks.trans||[]).find(x=>!x.del&&x.transition&&Math.abs((x.t||0)-t)<0.08); type=m?m.transition:''; }
-    _mdPause(); _mdSeek(t);   // fige sur la frame de la transition
-    if(!document.getElementById('mdTransFlash')) return;
-    _md._transPrev=true;
-    const _dm=(_md.marks.trans||[]).find(x=>!x.del&&x.transition&&Math.abs((x.t||0)-t)<0.12); const t0=performance.now(), DUR=Math.max(450,Math.round(((_dm&&_dm.dur)||0.5)*1600));
-    // #robustesse : on RE-CHERCHE l'élément flash À CHAQUE FRAME — _mdRender() peut reconstruire #mdOv
-    // (donc #mdTransFlash) pendant l'aperçu, et une réf capturée deviendrait détachée → invisible.
-    const clean=()=>{ _md._transPrev=false; const fl=document.getElementById('mdTransFlash'), fll=document.getElementById('mdTransLbl'), v=_mdVid();
-      if(fl){ fl.style.opacity='0'; fl.style.background='#fff'; fl.style.mixBlendMode='screen'; } if(fll) fll.style.opacity='0'; if(v){ v.style.filter=''; v.style.transform=''; } };
-    const step=()=>{ if(!_md||!_md._transPrev){ return; }
-      const fl=document.getElementById('mdTransFlash'); if(!fl){ _md._transPrevRAF=requestAnimationFrame(step); return; }
-      const fll=document.getElementById('mdTransLbl'), v=_mdVid();
-      const p=Math.min(1,(performance.now()-t0)/DUR), pr=Math.sin(p*Math.PI);   // 0→1→0
-      _mdApplyTransFx(String(type||''), pr, fl, v);
-      if(fll){ if(!fll.textContent) fll.textContent=_mdTransLabel(type); fll.style.opacity=pr>0.15?'1':'0'; }
-      if(p>=1){ clean(); return; }
-      _md._transPrevRAF=requestAnimationFrame(step); };
-    _md._transPrevRAF=requestAnimationFrame(step);
-    _md._transPrevTO=setTimeout(()=>{ if(_md&&_md._transPrev) clean(); }, 2200);
+    clearTimeout(_md._transPrevTO);
+    try{ _mdRenderModals(); }catch(_){}   // ferme la modale swipe avant l'aperçu
+    let type=String(typeArg||'');
+    if(!typeArg){ const m=(_md.marks.trans||[]).find(x=>!x.del&&x.transition&&Math.abs((x.t||0)-t)<0.08); type=String((m&&m.transition)||''); }
+    const _dm=(_md.marks.trans||[]).find(x=>!x.del&&x.transition&&Math.abs((x.t||0)-t)<0.12);
+    const DUR=Math.max(0.5, Math.min(1.8, (_dm&&_dm.dur)||0.6));
+    _mdPause();
+    _mdSeek(Math.max(0, t-0.25));   // frame de CONTENU juste avant la coupe → le fondu au noir se VOIT
+    const fl=document.getElementById('mdTransFlash'), fll=document.getElementById('mdTransLbl'), v=_mdVid();
+    if(!fl) return;
+    // look par type (fond + blend + pic d'opacité) ; whip/zoom/glitch animent AUSSI la vidéo
+    let bg='#fff', blend='screen', peak=0.95, vidAnim='';
+    if(type==='fondu'){ bg='#000'; blend='normal'; peak=0.96; }
+    else if(type==='flash'){ bg='#fff'; blend='screen'; peak=0.98; }
+    else if(type==='filmburn'){ bg='radial-gradient(circle at 50% 45%, #ffe6b0, #ff8a3a 60%, rgba(255,120,40,0))'; blend='screen'; peak=0.9; }
+    else if(type==='glitch'){ bg='linear-gradient(90deg, rgba(0,255,238,.55), rgba(255,0,128,.55))'; blend='screen'; peak=0.7; vidAnim='mdVidGlitch'; }
+    else if(type==='whip'){ bg='#fff'; blend='screen'; peak=0.42; vidAnim='mdVidWhip'; }
+    else if(type==='zoom'){ bg='#fff'; blend='screen'; peak=0.3; vidAnim='mdVidZoom'; }
+    else if(type==='maskglitch'){ bg='radial-gradient(circle at 50% 42%, rgba(232,246,255,.9), rgba(160,210,255,0) 62%)'; blend='screen'; peak=0.85; vidAnim='mdVidGlitch'; }
+    fl.style.background=bg; fl.style.mixBlendMode=blend; fl.style.setProperty('--mdtp', String(peak));
+    fl.style.animation='none'; void fl.offsetWidth;   // reflow → redémarre l'anim
+    fl.style.animation='mdTransPulse '+DUR.toFixed(2)+'s ease both';
+    if(fll){ fll.textContent=_mdTransLabel(type); fll.style.opacity='1'; }
+    if(v && vidAnim){ v.style.animation='none'; void v.offsetWidth; v.style.animation=vidAnim+' '+DUR.toFixed(2)+'s ease both'; }
+    _md._transPrevTO=setTimeout(()=>{ try{ const f=document.getElementById('mdTransFlash'); if(f){ f.style.animation=''; f.style.opacity='0'; f.style.background='#fff'; f.style.mixBlendMode='screen'; }
+      const l=document.getElementById('mdTransLbl'); if(l) l.style.opacity='0'; const vv=_mdVid(); if(vv){ vv.style.animation=''; vv.style.filter=''; vv.style.transform=''; } }catch(_){} }, Math.round(DUR*1000)+120);
   }catch(_){}
 }
 // #texte-sur-vidéo (Axel 25/08 : « le texte doit être lu en priorité, jamais sur fond blanc ») :
