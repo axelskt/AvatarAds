@@ -3061,7 +3061,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <!-- 05/08 : « Restaurer les détails » passe en CONTOURS orange (Axel) —
                    le bouton plein orange, c'est « Télécharger » ci-dessous. -->
               <div style="display:flex;gap:8px;margin-bottom:10px">
-                <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="flex:1;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;cursor:pointer;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Détails du visage</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">3&nbsp;cr</span></button>
+                <button onclick="_imgUpscaleHD(this)" id="imgUpscaleBtn" style="flex:1;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Détails du visage</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">3&nbsp;cr</span></button>
                 <button onclick="_imgUpscaleNano(this)" id="imgNanoBtn" style="flex:1;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent-2)';this.style.background='var(--accent-soft)'" onmouseout="this.style.borderColor='var(--accent-line)';this.style.background='transparent'"><span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>Améliorer en 4K</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">5&nbsp;cr</span></button>
               </div>
               <button onclick="_imgRevertHD(this)" id="imgRevertBtn" style="display:none;width:100%;margin-bottom:10px;padding:11px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg>Revenir à l'ancienne version</button>
@@ -9960,6 +9960,30 @@ async function _falClarityUpscale(imageDataUrl){
   }
   return url||null;
 }
+// #detail-visage (Axel 26/08) : « Détails du visage » = AuraSR (fal-ai/aura-sr), upscaler GAN NON génératif.
+// Agrandit ×4 sans rien halluciner (PAS de prompt, pas de déformation, pas de taches inventées, cadrage exact).
+// Testé sur la selfie Tokyo (~15 s, 4096×6144, ~0,02 $) : barbe/pores nets, peau naturelle, zéro plastique.
+async function _falAuraSR(imageDataUrl){
+  const Hh=await getAuthHeader();
+  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+  const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
+  const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
+  const model='/fal-ai/aura-sr';
+  // borne l'ENTRÉE à 1536 px (AuraSR = 4× fixe → sortie ≤ ~6144 px, data-URL raisonnable)
+  let src=imageDataUrl;
+  try{ const im=await _loadImgEl(imageDataUrl); const w=im.naturalWidth||1024, h=im.naturalHeight||1024; if(Math.max(w,h)>1536){ const r=1536/Math.max(w,h); const cw=Math.round(w*r), ch=Math.round(h*r); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); src=cv.toDataURL('image/jpeg',0.94); } }catch(_){ }
+  const sub=await fPost(model,{ image_url:src });
+  if(!sub.ok){ const _b=(await sub.text().catch(()=>'')); console.error('[aurasr] fal '+sub.status+' : '+_b.slice(0,200)); return null; }
+  const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
+  if(!url && (sd.status_url||sd.request_id)){
+    const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
+    const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
+    for(let i=0;i<60 && !url;i++){ await new Promise(r=>setTimeout(r,2500)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||null; if(!url){ console.warn('[aurasr] COMPLETED sans image :', JSON.stringify(rd).slice(0,220)); return null; } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ return null; } }
+  }
+  if(!url) return null;
+  // sortie 4× (jusqu'à ~42 Mo) → redescendue ≤2560 px en JPEG (data URL léger). fetch→blob→objectURL évite le canvas "tainted" cross-origin.
+  try{ const resp=await fetch(url); const blob=await resp.blob(); const obj=URL.createObjectURL(blob); try{ const im=await _loadImgEl(obj); const w=im.naturalWidth, h=im.naturalHeight; const mx=2560; const r=Math.min(1,mx/Math.max(w,h)); const cw=Math.max(2,Math.round(w*r)), ch=Math.max(2,Math.round(h*r)); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); return cv.toDataURL('image/jpeg',0.92); } finally { URL.revokeObjectURL(obj); } }catch(_){ return url; }
+}
 async function _faceUpscalePass(dataUrl){
   try{
     window._faceLastStatus='(pas lancé)';
@@ -10024,16 +10048,14 @@ async function _imgUpscaleHD(btn){
       const resp=await fetch(src); const blob=await resp.blob();
       src = await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);});
     }
-    let finalUrl = null, engine = 'Clarity';
-    // ⚠ ZOOM 4K CORRIGÉ (Axel 17/08) : on N'utilise PLUS Nano Banana Pro ici. En génératif,
-    // Nano RE-FABRIQUE l'image et RE-CADRE (zoom sur le visage, la personne sort du cadre).
-    // Clarity Upscaler agrandit ×4 SUR PLACE : proportions et cadrage EXACTS conservés, tout
-    // en ajoutant du détail réel (pores, cheveux…). C'est un upscaler, pas un générateur → il
-    // ne peut PAS recadrer. Chemin principal = fal Clarity ; repli = Clarity Replicate.
+    let finalUrl = null, engine = 'AuraSR';
+    // #detail-visage (Axel 26/08) : « Détails du visage » = AuraSR (upscaler GAN NON génératif), à la place de Clarity.
+    // Testé en vrai : barbe/pores nets, ZÉRO plastique, ZÉRO tache inventée, ZÉRO déformation (≠ Clarity qui hallucinait).
+    // Agrandit ×4 SUR PLACE (cadrage exact, ne recadre pas), sans prompt. Repli = Clarity Replicate.
     try{
-      finalUrl = await _falClarityUpscale(src);
-      if(!finalUrl) throw new Error('Clarity (fal) : aucune image');
-      // URL fal temporaire → data URL pour la persistance bibliothèque
+      finalUrl = await _falAuraSR(src);
+      if(!finalUrl) throw new Error('AuraSR : aucune image');
+      // _falAuraSR renvoie déjà un data URL redescendu ; on garde la conversion (si jamais = URL fal → persistance)
       try{ const rC=await fetch(finalUrl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
     }catch(e){
       engine = 'Clarity (Replicate)';
@@ -10056,13 +10078,8 @@ async function _imgUpscaleHD(btn){
       // Les URLs Replicate expirent ~1h → data URL pour la persistance bibliothèque
       try{ const r2=await fetch(d.url); const b2=await r2.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(b2);}); }catch(e2){}
     }
-    // #81 (dev-only) : passe VISAGE ciblée sur les plans larges (petit visage).
-    // Additive, best-effort — toute erreur renvoie le 4K normal (aucun surcoût
-    // Nano Banana : la passe visage tourne sur fal Clarity, ~0,03 $).
-    try{
-      const withFace=await _faceUpscalePass(finalUrl);
-      if(withFace && withFace!==finalUrl){ finalUrl=withFace; engine+=' + visage'; }
-    }catch(_){}
+    // #detail-visage (26/08) : passe visage Clarity DÉSACTIVÉE — AuraSR (×4) détaille déjà tout le visage,
+    // et la passe Clarity réintroduisait les taches/rougeurs. AuraSR fait tout en une seule passe.
     await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true; _imgHDSrc=finalUrl; _imgViewingOriginal=false;   // même cadrage ; garde l'améliorée pour la bascule
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
