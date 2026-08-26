@@ -10084,7 +10084,7 @@ async function _imgUpscaleHD(btn){
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
-    toast('Détails restaurés — ' + engine + ((typeof _expIsDev==='function'&&_expIsDev())? ' · visage: '+(window._faceLastStatus||'?') : ''));
+    toast('Détails du visage appliqués — ' + engine);   // #detail-visage : plus de debug « visage: ? » (passe Clarity retirée)
   }catch(e){
     // Ni Nano Banana Pro ni Clarity n'ont rendu d'image → on rend les crédits.
     try{ await creditsFlowRefund('la restauration 4K a échoué'); }catch(_){}
