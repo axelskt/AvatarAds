@@ -11,13 +11,13 @@
 <meta property="og:description" content="Génère tes images et vidéos AvatarAds directement depuis Claude, en une simple phrase.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://avatarads.fr/claude.html">
-<meta property="og:image" content="https://avatarads.fr/og-image.png">
+<meta property="og:image" content="https://avatarads.fr/og-image.jpg">
 <meta property="og:site_name" content="AvatarAds">
 <meta property="og:locale" content="fr_FR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Connecter Claude — AvatarAds">
 <meta name="twitter:description" content="Génère tes images et vidéos AvatarAds directement depuis Claude, en une simple phrase.">
-<meta name="twitter:image" content="https://avatarads.fr/og-image.png">
+<meta name="twitter:image" content="https://avatarads.fr/og-image.jpg">
 <link rel="canonical" href="https://avatarads.fr/claude.html">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="shortcut icon" href="/favicon.svg">
@@ -94,7 +94,6 @@ a{color:inherit;text-decoration:none}
 @media (prefers-reduced-motion:reduce){.rise{animation:none}}
 /* pastille d'étape (reprise de l'écran « Connecter Claude » de l'app) */
 .mcp-step{width:28px;height:28px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--accent-2);background:var(--accent-soft);border:1px solid var(--accent-line)}
-.tag-beta{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--accent-2);background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:999px;padding:3px 9px}
 .step-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
 .foot-link{transition:.15s;text-decoration:underline;text-decoration-color:transparent}
 .foot-link:hover{color:var(--text);text-decoration-color:var(--text-3)}
@@ -129,23 +128,12 @@ a{color:inherit;text-decoration:none}
 <!-- ══════════ HERO — sobre, texte uniquement (garde-fou de marque : aucun logo
      ni visuel laissant croire à un partenariat officiel Anthropic) ══════════ -->
 <section class="wrap center" style="padding-top:72px;padding-bottom:56px;max-width:920px">
-  <div class="rise" style="display:inline-flex">
-    <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">CONNECTEUR</span><span class="tag-beta">BÊTA</span></div>
-  </div>
-  <h1 class="display rise" style="font-size:clamp(40px,5.4vw,76px);font-weight:800;margin-top:22px;line-height:1.02;text-wrap:balance">
+  <h1 class="display rise" style="font-size:clamp(40px,5.4vw,76px);font-weight:800;line-height:1.02;text-wrap:balance">
     AvatarAds <span class="accent">×</span> Claude
   </h1>
   <p class="muted rise" style="font-size:clamp(16px,1.4vw,19px);max-width:600px;margin:20px auto 0;line-height:1.55">
-    Crée tes vidéos et tes images AvatarAds directement depuis Claude —
-    <b style="color:var(--text)">une simple phrase suffit</b>, avec tes crédits AvatarAds.
+    Crée tes vidéos et tes images AvatarAds directement depuis Claude.
   </p>
-  <div class="rise" style="margin-top:30px">
-    <a href="https://avatarads.fr/app/#connecter-claude" class="btn btn-primary btn-lg" style="font-weight:800;border-radius:16px;padding:17px 34px">
-      Se connecter
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
-    </a>
-  </div>
-  <p class="faint rise" style="font-size:12.5px;margin-top:16px">Disponible depuis ton compte AvatarAds, en 2 minutes.</p>
 </section>
 
 <!-- tuto video a venir : décommenter et remplir quand la vidéo existe.
@@ -157,11 +145,9 @@ a{color:inherit;text-decoration:none}
 -->
 
 <!-- ══════════ LES 3 ÉTAPES (contenu repris de l'écran « Connecter Claude » de l'app) ══════════ -->
-<section class="wrap" style="padding-bottom:72px;max-width:1160px">
+<section class="wrap" style="padding-bottom:96px;max-width:1160px">
   <div class="center" style="margin-bottom:36px">
-    <div class="eyebrow">Comment ça marche</div>
-    <h2 class="display" style="font-size:clamp(26px,3.4vw,42px);font-weight:800;margin-top:12px;line-height:1.04">Connecté en <span class="accent">3 étapes</span></h2>
-    <p class="muted" style="margin-top:12px;font-size:16px;max-width:560px;margin-inline:auto">Génère tes images &amp; vidéos AvatarAds directement depuis Claude, avec tes crédits.</p>
+    <h2 class="display" style="font-size:clamp(26px,3.4vw,42px);font-weight:800;line-height:1.04">Connecté en <span class="accent">3 étapes</span></h2>
   </div>
 
   <div class="step-grid">
@@ -171,14 +157,13 @@ a{color:inherit;text-decoration:none}
       <div class="row gap10" style="align-items:center;margin-bottom:14px">
         <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Relie ton compte</span>
       </div>
-      <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
-      <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:18px">
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
+      <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:auto">
         <input type="text" id="mcpUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
         <button class="btn btn-sm" onclick="copyMcpUrl(this)" title="Copier l'adresse" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
         </button>
       </div>
-      <p class="faint" style="font-size:11px;line-height:1.5;margin-top:12px">Alternative : connexion par clé (URL secrète), à générer dans ton compte AvatarAds — réservée aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.</p>
     </div>
 
     <!-- ② autoriser -->
@@ -186,8 +171,8 @@ a{color:inherit;text-decoration:none}
       <div class="row gap10" style="align-items:center;margin-bottom:14px">
         <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
       </div>
-      <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Clique « Se connecter » sur le connecteur : Claude t'envoie sur AvatarAds, tu vérifies que c'est bien ton compte et tu cliques <b style="color:var(--text-2)">Autoriser</b>. C'est tout — la connexion reste active 30 jours et se renouvelle seule.</p>
-      <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:18px">
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Clique « Se connecter » sur le connecteur : Claude t'envoie sur AvatarAds et tu cliques <b style="color:var(--text-2)">Autoriser</b>. C'est tout.</p>
+      <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:auto">
         Ouvrir Claude → Connecteurs
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
@@ -198,34 +183,20 @@ a{color:inherit;text-decoration:none}
       <div class="row gap10" style="align-items:center;margin-bottom:14px">
         <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
       </div>
-      <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Active AvatarAds dans ta conversation et demande : « Génère une image de… ». Claude annonce le coût en crédits et attend ton OK avant de lancer.</p>
-      <div class="row card" style="padding:12px 14px;gap:10px;align-items:flex-start;background:var(--panel-1);margin-top:18px">
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Active AvatarAds dans ta conversation et demande : « Génère une image de… ». Claude annonce le coût en crédits et attend ton OK avant de lancer.</p>
+      <div class="row card" style="padding:12px 14px;gap:10px;align-items:flex-start;background:var(--panel-1);margin-top:auto">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto;margin-top:2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
         <span class="faint mono" style="font-size:11.5px;line-height:1.6;text-align:left">« Génère une vidéo de mon avatar qui présente mon produit, en 9:16 »</span>
       </div>
     </div>
   </div>
 
-  <p class="faint center" style="font-size:12px;line-height:1.6;margin-top:28px;max-width:640px;margin-inline:auto">
-    Tes générations utilisent tes crédits AvatarAds, comme dans l'application. Tu peux révoquer la connexion à tout moment depuis ton compte.
-  </p>
-</section>
-
-<!-- ══════════ CTA FINAL ══════════ -->
-<section class="wrap" style="padding-bottom:96px;max-width:920px">
-  <div class="card center" style="position:relative;overflow:hidden;padding:56px 32px;border-color:var(--accent-line);background:radial-gradient(600px 280px at 50% 0%,rgba(255,90,31,.16),var(--surface))">
-    <h2 class="display" style="font-size:clamp(26px,3.8vw,44px);font-weight:800;line-height:1.04;max-width:640px;margin-inline:auto">
-      Tes pubs, générées <span class="accent">en une phrase</span>
-    </h2>
-    <p class="muted" style="margin-top:14px;font-size:16px">Connecte ton compte et génère ta première vidéo depuis Claude.</p>
-    <a href="https://avatarads.fr/app/#connecter-claude" class="btn btn-primary btn-lg" style="margin-top:26px;font-weight:800;border-radius:16px;padding:17px 34px">
+  <div class="center" style="margin-top:36px">
+    <a href="https://avatarads.fr/app/#connecter-claude" class="btn btn-primary btn-lg" style="font-weight:800;border-radius:16px;padding:17px 34px">
       Se connecter
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
     </a>
   </div>
-  <p class="faint center" style="font-size:11px;line-height:1.6;margin-top:18px">
-    Claude est un produit d'Anthropic. AvatarAds n'est pas affilié à Anthropic — le connecteur est développé et maintenu par AvatarAds.
-  </p>
 </section>
 
 </main>
