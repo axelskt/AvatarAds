@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
-<title>AvatarAds — Générateur de vidéos virales par IA</title>
+<title>AvatarAds · Générateur de vidéos et images par IA</title>
 <meta name="description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
 <link rel="canonical" href="https://avatarads.fr/">
-<meta property="og:title" content="AvatarAds — Générateur de vidéos virales par IA">
+<meta property="og:title" content="AvatarAds · Générateur de vidéos et images par IA">
 <meta property="og:description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://avatarads.fr">
-<meta property="og:image" content="https://avatarads.fr/og-image.png">
-<meta property="og:image:secure_url" content="https://avatarads.fr/og-image.png">
+<meta property="og:image" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:secure_url" content="https://avatarads.fr/og-image.jpg">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -21,9 +21,9 @@
 <meta property="og:site_name" content="AvatarAds">
 <meta property="og:locale" content="fr_FR">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="AvatarAds — Générateur de vidéos virales par IA">
+<meta name="twitter:title" content="AvatarAds · Générateur de vidéos et images par IA">
 <meta name="twitter:description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
-<meta name="twitter:image" content="https://avatarads.fr/og-image.png">
+<meta name="twitter:image" content="https://avatarads.fr/og-image.jpg">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="shortcut icon" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -210,9 +210,22 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 .step-visual{position:relative;width:100%;aspect-ratio:1/1;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 60px -26px rgba(124,92,255,.45)}
 .step-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .step-badge{position:absolute;top:12px;left:12px;z-index:2;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px}
+/* menu mobile (burger) — indépendant des anims rise/reveal : visible dès l'ajout de .open */
+.nav-burger{display:none;width:40px;height:40px;border-radius:10px;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);flex:0 0 auto}
+.mob-menu{position:fixed;inset:0;z-index:80;display:none;padding:10px;background:rgba(11,11,13,.55)}
+.mob-menu.open{display:block}
+.mm-panel{position:relative;width:100%;height:100%;border-radius:24px;border:1px solid var(--border-2);overflow:auto;display:flex;flex-direction:column;background:radial-gradient(700px 420px at 80% -10%,rgba(255,90,31,.12),transparent 60%),var(--bg)}
+.mm-close{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);flex:0 0 auto}
+.mm-link{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--text);padding:13px 18px;background:none;border:none;text-align:center}
+.mm-link:active{color:var(--accent-2)}
 /* responsive */
 .only-mobile{display:none}
-@media (max-width:1060px){ .nav-center{display:none !important} }
+@media (max-width:1060px){ .nav-center{display:none !important} .nav-burger{display:grid} }
+/* grille d'avatars UGC (onglet Avatar IA) — 3×2, cellules ~3:4.
+   Positionnée en absolu : height:100% sur un item de grid à rangée auto ne se
+   résout pas (la grille débordait de la zone de 400px) — top/bottom la bornent. */
+.avatar-grid{position:absolute;top:16px;bottom:16px;left:50%;transform:translateX(-50%);aspect-ratio:8/7;max-width:calc(100% - 32px);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:10px}
+.avatar-grid img{width:100%;height:100%;min-height:0;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.1);display:block}
 @media (max-width:900px){
   .grid-3{grid-template-columns:1fr !important}
 }
@@ -351,15 +364,40 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
       <div class="row gap24 nav-center" style="position:absolute;left:50%;transform:translateX(-50%)">
         <button class="nav-link" onclick="document.getElementById('etapes').scrollIntoView({behavior:'smooth'})">Comment ça marche</button>
-        <a class="nav-link" href="/claude.html" style="display:inline-flex;align-items:center">Claude</a>
         <a class="nav-link" href="/app/" style="display:inline-flex;align-items:center">Parrainage</a>
         <button class="nav-link" onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">FAQ</button>
+        <a class="nav-link" href="/claude.html" style="display:inline-flex;align-items:center">MCP</a>
       </div>
       <div class="row gap12">
         <a href="/tarifs.html" class="btn btn-quiet btn-sm hide-mobile nav-tarifs-btn">Découvrir les tarifs</a>
         <a href="/app/" class="btn btn-quiet btn-sm hide-mobile">Se connecter</a>
         <a href="/app/" class="btn btn-primary btn-sm">Commencer <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <button class="nav-burger" aria-label="Ouvrir le menu" onclick="mobMenuOpen()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 2b · MENU MOBILE (burger ≤1060px) ══════════ -->
+<div id="mobMenu" class="mob-menu" role="dialog" aria-modal="true" aria-label="Menu">
+  <div class="mm-panel">
+    <div class="row" style="justify-content:space-between;padding:14px 14px 0 20px;min-height:58px">
+      <div class="row gap10">
+        <img src="assets/avatarads-logo-96.png" alt="" width="22" height="22" style="border-radius:6px;display:block">
+        <span class="logo-wordmark">AvatarAds</span>
+      </div>
+      <button class="mm-close" aria-label="Fermer le menu" onclick="mobMenuClose()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="col" style="flex:1;justify-content:center;align-items:center;gap:4px;padding:24px 20px">
+      <button class="mm-link" onclick="mobMenuGo('etapes')">Comment ça marche</button>
+      <a class="mm-link" href="/app/" onclick="mobMenuClose()">Parrainage</a>
+      <button class="mm-link" onclick="mobMenuGo('faq')">FAQ</button>
+      <a class="mm-link" href="/claude.html" onclick="mobMenuClose()">MCP</a>
+      <a class="mm-link" href="/tarifs.html" onclick="mobMenuClose()">Tarifs</a>
+    </div>
+    <div class="row" style="gap:12px;padding:14px 18px calc(16px + env(safe-area-inset-bottom))">
+      <a href="/app/" class="btn btn-ghost" style="flex:1" onclick="mobMenuClose()">Se connecter</a>
+      <a href="/app/" class="btn btn-primary" style="flex:1" onclick="mobMenuClose()">Commencer</a>
     </div>
   </div>
 </div>
@@ -372,7 +410,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="hero2-grid">
     <div class="hero-left">
       <div class="rise" style="display:inline-flex">
-        <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE VIDÉOS</span></div>
+        <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div>
       </div>
       <h1 class="display" style="font-size:clamp(46px,5.6vw,86px);font-weight:800;margin-top:22px;line-height:1.0;text-wrap:balance;overflow-wrap:break-word">
         Crée des vidéos<br class="hide-mobile">
@@ -621,9 +659,16 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="feat-mockwrap" style="position:relative;min-height:400px;border-right:1px solid var(--border);background:radial-gradient(500px 260px at 40% 0%,rgba(255,90,31,.09),transparent),var(--bg-grad)" id="featMockZone">
       <!-- claude (image placeholder — à remplacer par la version sans logo) -->
       <div class="feat-mock" data-feat="claude" style="padding:8px"><div class="feat-photo" style="aspect-ratio:3/2"><img src="assets/lp/feat-claude-720.webp" alt="AvatarAds × Claude" width="720" height="480" loading="lazy" decoding="async"></div></div>
-      <!-- avatar IA — média existant de la LP (avatar qui présente face caméra) ;
-           🔜 à remplacer par une capture « produit en main » quand elle existera -->
-      <div class="feat-mock" data-feat="avatar" style="padding:8px"><div class="feat-photo" style="aspect-ratio:3/2"><img src="assets/lp/lipsync-720.webp" alt="Avatar IA qui présente face caméra" width="720" height="480" loading="lazy" decoding="async"></div></div>
+      <!-- avatar IA — grille de 6 avatars UGC (vraies images générées par l'app,
+           dossiers « Image IA /Garçon + /Fille » — jamais de visuels externes) -->
+      <div class="feat-mock" data-feat="avatar" style="padding:16px"><div class="avatar-grid">
+        <img src="assets/lp/avatar-ugc-1.webp" alt="Avatar IA homme — face caméra dans une villa, micro-cravate" width="600" height="800" loading="lazy" decoding="async">
+        <img src="assets/lp/avatar-ugc-2.webp" alt="Avatar IA femme — dans la rue en ville, lumière naturelle" width="600" height="800" loading="lazy" decoding="async">
+        <img src="assets/lp/avatar-ugc-3.webp" alt="Avatar IA homme — produit skincare en main, face caméra" width="600" height="800" loading="lazy" decoding="async">
+        <img src="assets/lp/avatar-ugc-4.webp" alt="Avatar IA femme — selfie casual à la maison" width="600" height="800" loading="lazy" decoding="async">
+        <img src="assets/lp/avatar-ugc-5.webp" alt="Avatar IA homme — selfie de rue sous la pluie, style UGC" width="600" height="800" loading="lazy" decoding="async">
+        <img src="assets/lp/avatar-ugc-6.webp" alt="Avatar IA femme — selfie de nuit en ville, néons" width="600" height="800" loading="lazy" decoding="async">
+      </div></div>
       <!-- soustitres -->
       <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres-720.webp" alt="Sous-titres animés" width="720" height="720" loading="lazy" decoding="async"></div></div>
       <!-- montage IA : avant/après vidéo (boucles muettes lancées ensemble à l'apparition) -->
@@ -1066,7 +1111,7 @@ document.querySelectorAll('[data-countup]').forEach(function(el){
 var FEAT_TABS=[
   { id:"claude", tab:"Claude × AvatarAds", t:"Crée tes pubs en automatique dans Claude", d:"Connecte AvatarAds à Claude et génère tes images et vidéos en une simple phrase." },
   { id:"montage", tab:"Montage IA", t:"Ta vidéo brute devient un montage viral", d:"L'IA écoute ta vidéo et la monte de A à Z." },
-  { id:"avatar", tab:"Avatar IA", t:"Ton produit, dans ses mains", d:"Ton avatar IA présente ton produit — en main, en scène, dans ton visuel. Sans tournage." },
+  { id:"avatar", tab:"Avatar IA", t:"Un avatar pour chaque marque", d:"Des visages IA réalistes, style UGC — choisis le tien, il présente ton produit face caméra. Sans casting, sans tournage." },
   { id:"soustitres", tab:"Sous-titres", t:"Le détail qui retient le scroll", d:"Augmente de 200% le taux de rétention sur tes vidéos." },
   { id:"audio", tab:"Nettoyage audio", t:"Un rythme punchy, zéro blanc", d:"Les silences coupés automatiquement pour garder le dynamisme sur tes vidéos et ton audience captive." },
   { id:"editeur", tab:"Éditeur", t:"Le dernier mot te revient", d:"Timeline multi-pistes, calques, musique, effets. Le contrôle total sans quitter AvatarAds." }
@@ -1279,6 +1324,27 @@ function veoToggle(){
   }, { threshold: 0.35 });
   io.observe(row);
 })();
+
+/* ══════════ Menu mobile (burger) ══════════ */
+function mobMenuOpen(){
+  document.getElementById('mobMenu').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function mobMenuClose(){
+  document.getElementById('mobMenu').classList.remove('open');
+  document.body.style.overflow='';
+}
+function mobMenuGo(id){
+  mobMenuClose();
+  var el=document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth'});
+}
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    var m=document.getElementById('mobMenu');
+    if(m && m.classList.contains('open')) mobMenuClose();
+  }
+});
 
 /* lance le scan reveal une fois tout le DOM construit */
 revealScan();
