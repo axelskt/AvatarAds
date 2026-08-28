@@ -811,7 +811,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <div class="nav-i" id="navConnectClaude" onclick="nav('connectclaude',this)" style="color:var(--text2)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
         Connecter Claude
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BÊTA</span>
       </div>
       <div class="nav-i" onclick="openAccountSettings()" style="color:var(--text2)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
@@ -4693,14 +4692,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       <div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(900px 500px at 50% -5%, rgba(255,90,31,.10), transparent 60%)">
       <div style="max-width:1160px;margin:0 auto;padding:clamp(28px,5vh,56px) clamp(20px,6vw,72px) 60px">
 
-        <div class="row gap14" style="align-items:center;justify-content:center;margin-bottom:14px;flex-wrap:wrap">
+        <div class="row gap14" style="align-items:center;justify-content:center;margin-bottom:40px;flex-wrap:wrap">
           <div style="width:52px;height:52px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
           </div>
-          <h2 class="display" style="font-size:clamp(26px,3vw,40px);font-weight:800;margin:0;margin-right:6px">Connecter Claude</h2>
-          <span class="tag-beta" style="align-self:center">BÊTA</span>
+          <h2 class="display" style="font-size:clamp(26px,3vw,40px);font-weight:800;margin:0">Connecter Claude</h2>
         </div>
-        <p class="muted center" style="font-size:16px;max-width:560px;margin:0 auto 40px">Génère tes images &amp; vidéos AvatarAds directement depuis Claude, avec tes crédits.</p>
 
         <!-- 3 étapes -->
         <div id="mcpSteps" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch">
@@ -4710,8 +4707,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="row gap10" style="align-items:center;margin-bottom:14px">
               <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Relie ton compte</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
-            <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:18px">
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
+            <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:auto">
               <input type="text" id="mcpOauthUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
               <button class="btn btn-sm" onclick="mcpOauthCopy()" title="Copier" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
@@ -4722,8 +4719,11 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               Relier à Claude
             </button>
 
-            <!-- alternative : connexion par clé (ancienne méthode), repliée -->
-            <details id="mcpKeyAlt" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+            <!-- alternative : connexion par clé — UI RETIRÉE de la vue (Axel 28/08).
+                 Les nœuds restent en display:none : mcpKeyRefresh() / _mcpState()
+                 (états A/B/C) les ciblent encore à chaque nav('connectclaude') et
+                 pilotent aussi mcpConfirmRow ; mcpKeyCreate reste intact côté MCP. -->
+            <details id="mcpKeyAlt" style="display:none">
               <summary class="faint" style="font-size:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>Alternative : connexion par clé (URL secrète)</summary>
             <!-- état A — pas encore de clé (ou plan insuffisant) -->
             <div id="mcpNoKey" style="margin-top:14px">
@@ -4770,8 +4770,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="row gap10" style="align-items:center;margin-bottom:14px">
               <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Clique « Se connecter » sur le connecteur : Claude t'envoie sur AvatarAds, tu vérifies que c'est bien ton compte et tu cliques <b style="color:var(--text-2)">Autoriser</b>. C'est tout — la connexion reste active 30 jours et se renouvelle seule.</p>
-            <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:18px;text-decoration:none">
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Clique « Se connecter » sur le connecteur : Claude t'envoie sur AvatarAds et tu cliques <b style="color:var(--text-2)">Autoriser</b>. C'est tout.</p>
+            <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:auto;text-decoration:none">
               Ouvrir Claude → Connecteurs
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </a>
@@ -4782,8 +4782,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="row gap10" style="align-items:center;margin-bottom:14px">
               <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Active AvatarAds dans ta conversation et demande : « Génère une image de… ». Claude annonce le coût et attend ton OK.</p>
-            <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:18px;text-decoration:none">
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Active AvatarAds dans ta conversation et demande : « Génère une image de… ». Claude annonce le coût et attend ton OK.</p>
+            <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:auto;text-decoration:none">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               Commencer
             </a>
@@ -6305,7 +6305,12 @@ const CREDIT_COSTS = {
   // centime. À 0,5 crédit/s facturé, la marge sur l'option est de ~90 %.
   hd1080PerSec: 0.5,
   omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
-  hyperframesPerSec: 1    // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
+  hyperframesPerSec: 1,   // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
+  // 🎥 Motion Control « fond vidéo » : le vrai décor de la réf, ANIMÉ, derrière le
+  // personnage (2 détourages fal ben ≈ 0,4-0,6 $/rendu à notre charge + compo worker).
+  // +1 cr/s validé par Axel (28/08) — débité APRÈS le succès Kling, remboursé seul
+  // si le pipeline fond échoue (repli rendu Kling brut).
+  motionBgPerSec: 1
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
@@ -18218,6 +18223,10 @@ function autoGenSubtitles(){
   }
 }
 async function whisperTranscribe(){
+  // btn capturé AVANT le 1er await : window.event ne survit pas aux continuations async
+  // (garde instanceof : hors clic direct, event.currentTarget peut être window)
+  const btn = (typeof event !== 'undefined' && event?.currentTarget instanceof HTMLElement) ? event.currentTarget : null;
+  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled = false; btn.style.opacity = '1'; } };
   // Gate Pro / Elite / BYOK
   const plan = currentMember?.plan || 'free';
   if(!['pro','elite','byok','developer'].includes(plan)){
@@ -18235,19 +18244,35 @@ async function whisperTranscribe(){
     return;
   }
 
-  // Si fichier trop lourd → extraire + rééchantillonner en 16 kHz mono (WAV léger)
+  // Règle produit : une VIDÉO importée (ex : montage déjà fini, juste pour les
+  // sous-titres) n'est JAMAIS envoyée telle quelle à Whisper — on extrait
+  // d'abord sa piste audio (l'audio ORIGINAL de la vidéo est le défaut
+  // attendu). Idem pour tout fichier au-dessus de la limite Whisper.
   const MAX_MB = 24; // limite Whisper = 25 MB, on garde 1 MB de marge
-  if(audioSrc.size > MAX_MB * 1024 * 1024){
-    toast('Fichier lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — compression audio en cours…');
-    audioSrc = await _extractAudioForWhisper(audioSrc);
+  const isVideoSrc = /^video\//i.test(audioSrc.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(audioSrc.name || '');
+  if(isVideoSrc || audioSrc.size > MAX_MB * 1024 * 1024){
+    if(btn){ btn.innerHTML = 'Extraction de l\'audio…'; btn.disabled = true; btn.style.opacity = '.6'; }
+    toast(isVideoSrc
+      ? 'Vidéo détectée — extraction de la piste audio…'
+      : 'Fichier lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — compression audio en cours…');
+    try {
+      audioSrc = await _extractAudioForWhisper(audioSrc);
+    } catch(e){
+      await creditsFlowRefund();
+      toast(e && e.code === 'no_audio'
+        ? 'Cette vidéo ne contient pas de piste audio — rien à transcrire. Importe une vidéo avec du son.'
+        : 'Extraction audio impossible : ' + String(e.message || e).slice(0, 120));
+      _whBtnIdle();
+      return;
+    }
     if(audioSrc.size > MAX_MB * 1024 * 1024){
-      toast('Audio trop long même après compression (' + Math.round(audioSrc.size/1024/1024) + ' MB). Durée max ~12 min pour Whisper.');
-      if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled = false; btn.style.opacity = '1'; }
+      await creditsFlowRefund();
+      toast('Audio trop long même après compression (' + Math.round(audioSrc.size/1024/1024) + ' MB) — au-delà de la limite Whisper (~1 h de parole).');
+      _whBtnIdle();
       return;
     }
   }
 
-  const btn = event?.currentTarget;
   if(btn){ btn.innerHTML = 'Transcription en cours...'; btn.disabled = true; btn.style.opacity = '.6'; }
   try {
     const fd = new FormData();
@@ -18317,7 +18342,7 @@ async function whisperTranscribe(){
     toast('Erreur Whisper : ' + msg);
     console.error('Whisper error:', e);
   } finally {
-    if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled = false; btn.style.opacity = '1'; }
+    _whBtnIdle();
   }
 }
 function applyTranscript(){
@@ -23932,8 +23957,38 @@ async function _mtPublishFinal(){
   } catch(e){ toast('Import impossible : ' + e.message + ' — ton MP4 est déjà téléchargé, dépose-le dans le module'); }
 }
 
-// ── Extrait l'audio d'un fichier vidéo/audio → WAV léger pour Whisper ──
+// ── Extrait la piste audio d'un fichier vidéo/audio → fichier léger pour Whisper ──
+// ① ffmpeg.wasm (le worker single-thread #142 déjà présent) : -vn jette la
+//    vidéo, mono 16 kHz AAC 48 kb/s → une vidéo de 5 min ≈ 2 Mo. Seul chemin
+//    qui tient les GROS fichiers : decodeAudioData saturait sur un MP4 de
+//    167 Mo et le fallback renvoyait le fichier ENTIER à Whisper (bug 28/08).
+// ② Repli Web Audio (decodeAudioData → WAV 16 kHz mono) si ffmpeg échoue.
+// Vidéo sans piste audio → throw avec e.code='no_audio' (message clair amont).
 async function _extractAudioForWhisper(file){
+  const baseName = (file.name || 'audio').replace(/\.[^.]+$/, '');
+  const isVideoFile = /^video\//i.test(file.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(file.name || '');
+  // ① ffmpeg.wasm
+  try {
+    await _loadFFmpeg();
+    const ff = _ffmpegInst;
+    const extM   = /\.([a-z0-9]{2,5})$/i.exec(file.name || '');
+    const inName = 'wh_in.' + (extM ? extM[1].toLowerCase() : 'mp4');
+    try{ await ff.FS('unlink', inName); }catch(_){}
+    try{ await ff.FS('unlink', 'wh_out.m4a'); }catch(_){}
+    await ff.FS('writeFile', inName, await window._ffFetchFile(file));
+    await ff.run('-i', inName, '-vn', '-sn', '-dn', '-ac', '1', '-ar', '16000', '-c:a', 'aac', '-b:a', '48k', 'wh_out.m4a');
+    const out = await ff.FS('readFile', 'wh_out.m4a');   // throw si aucune sortie (ex : pas de piste audio)
+    try{ await ff.FS('unlink', inName); }catch(_){}
+    try{ await ff.FS('unlink', 'wh_out.m4a'); }catch(_){}
+    if(out && out.length > 1024){
+      toast('Audio extrait : ' + (Math.round(out.length / 1024 / 1024 * 10) / 10) + ' MB');
+      return new File([out], baseName + '_audio.m4a', { type: 'audio/mp4' });
+    }
+    // sortie vide → on laisse le repli Web Audio trancher (vraie piste ou pas)
+  } catch(e){
+    console.warn('_extractAudioForWhisper (ffmpeg):', e);
+  }
+  // ② Repli Web Audio — petits fichiers, ou CDN ffmpeg indisponible
   try {
     const arrayBuf = await file.arrayBuffer();
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -23954,11 +24009,17 @@ async function _extractAudioForWhisper(file){
     const wavBlob = _audioBufferToWavBlob(resampled);
     const sizeMB  = Math.round(wavBlob.size / 1024 / 1024 * 10) / 10;
     toast('Audio extrait : ' + sizeMB + ' MB — durée : ' + Math.round(decoded.duration) + 's');
-    return new File([wavBlob], file.name.replace(/\.[^.]+$/, '') + '_audio.wav', { type: 'audio/wav' });
+    return new File([wavBlob], baseName + '_audio.wav', { type: 'audio/wav' });
   } catch(e){
-    console.warn('_extractAudioForWhisper:', e);
-    return file; // fallback
+    console.warn('_extractAudioForWhisper (webaudio):', e);
   }
+  // ③ Rien n'a marché : une vidéo ne part JAMAIS entière à Whisper
+  if(isVideoFile){
+    const err = new Error('Aucune piste audio détectée dans la vidéo');
+    err.code = 'no_audio';
+    throw err;
+  }
+  return file; // fichier audio d'un format que rien ne décode : on tente tel quel
 }
 
 // ── Convertit un AudioBuffer en blob WAV ──
@@ -26120,7 +26181,7 @@ function _mcLoad(f, which){
       const im=document.getElementById('mcCharPrev'), dz=document.getElementById('mcCharDrop');
       if(im){ im.src=b64; im.style.display='block'; }
       if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
-    } else if(which==='bg'){ window._mcBgB64=b64; _mcRenderAdv(); }
+    } else if(which==='bg'){ window._mcBgB64=b64; _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); }
   };
   r.readAsDataURL(f);
 }
@@ -26138,7 +26199,7 @@ function _mcToggleCam(){ window._mcCamFollow=!window._mcCamFollow; _mcSaveOpts()
 // par-dessus la vidéo de référence (render-worker __compose:'motion-bg'). Le chemin
 // frame-figée AVANT Kling est conservé (cohérence lumière du rendu).
 // ⚠ PRICING : aucun crédit supplémentaire débité pour l'instant — Axel tranchera.
-function _mcToggleVidBg(){ window._mcKeepVidBg=!window._mcKeepVidBg; _mcSaveOpts(); _mcRenderAdv(); }
+function _mcToggleVidBg(){ window._mcKeepVidBg=!window._mcKeepVidBg; _mcSaveOpts(); _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); }
 function _mcToggleAutoFrame(){ window._mcAutoFrame=(window._mcAutoFrame===false); _mcSaveOpts(); _mcRenderAdv(); }
 function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcRenderAdv(); }
 // Standard 720p = 2 cr/s ; Standard 1080p = 3 cr/s (Kling 720p + upscale Topaz) ;
@@ -26211,16 +26272,22 @@ function _mcUpdateCost(){
   const el=document.getElementById('mcCostTxt'); if(!el) return;
   const dur=_mcRefDurEff(), rate=_mcRate();
   if(!dur){ el.innerHTML=''; return; }
-  const c=rate*dur;
+  // option « fond vidéo » active (et pas de fond image perso, qui prime) → +1 cr/s
+  const bgOn = !!window._mcKeepVidBg && !window._mcBgB64;
+  const bgSup = bgOn ? CREDIT_COSTS.motionBgPerSec*dur : 0;
+  const c=rate*dur + bgSup;
   const tierLbl = window._mcTier==='pro' ? 'Pro · 1080p natif' : (window._mcQuality==='1080' ? 'Standard · 720p→1080p' : 'Standard · 720p');
   const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max Kling)</span>' : '';
-  el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">· '+rate+' cr/s × '+dur+' s · '+tierLbl+coupe+'</span>';
+  el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">· '+rate+' cr/s × '+dur+' s'+(bgOn?' · fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s':'')+' · '+tierLbl+coupe+'</span>';
 }
 function _mcRenderAdv(){
   const card=document.getElementById('mcAdvCard'); if(!card) return;
   const tier=window._mcTier, q=window._mcQuality, rnd=window._mcRender, rate=_mcRate();
   const dur=_mcRefDurEff();
-  const totalTxt = dur>0 ? `${rate} cr/s × ${dur}s = ${rate*dur} crédits` : `${rate} crédits / seconde`;
+  // option « fond vidéo » : +1 cr/s (inactif si un fond image perso est fourni — il prime)
+  const bgOn=!!window._mcKeepVidBg && !window._mcBgB64;
+  const bgSupTxt=bgOn?` + ${CREDIT_COSTS.motionBgPerSec} cr/s fond vidéo`:'';
+  const totalTxt = dur>0 ? `${rate} cr/s${bgSupTxt} × ${dur}s = ${(rate+(bgOn?CREDIT_COSTS.motionBgPerSec:0))*dur} crédits` : `${rate+(bgOn?CREDIT_COSTS.motionBgPerSec:0)} crédits / seconde`;
   const modes=[['full','Plein écran','Motion seul'],['split-bottom','Original en haut','original ↑ · motion ↓'],['split-top','Original en bas','motion ↑ · original ↓']];
   const diag=(id)=> id==='full' ? '<div style="flex:1;background:var(--accent);opacity:.5"></div>'
     : id==='split-bottom' ? '<div style="flex:1;background:var(--surface-3)"></div><div style="flex:1;background:var(--accent);opacity:.55"></div>'
@@ -26252,7 +26319,7 @@ function _mcRenderAdv(){
     <p class="faint" style="font-size:11.5px;margin-bottom:16px">Auto = la vidéo ressort au même format que ton image.</p>
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
     ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow],
-       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Le vrai décor de ta vidéo, animé — seule la personne est remplacée',!!window._mcKeepVidBg]]
+       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Le vrai décor de ta vidéo, animé — seule la personne est remplacée · +'+CREDIT_COSTS.motionBgPerSec+' cr/s',!!window._mcKeepVidBg]]
       .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
         <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
         <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
@@ -26501,6 +26568,10 @@ async function _mcGenerate(){
     // de réf sert de fond (sa personne effacée), le perso est incrusté dessus.
     let charUrl = si.data.signedUrl;
     let bgSrc = window._mcBgB64 || null, bgDeVid = false;
+    // LOT MC · frame de la réf DÉJÀ nettoyée (personne effacée par gpt-image) — le
+    // pipeline « fond vidéo » d'après-Kling la RÉUTILISE comme patch statique
+    // (assets/bgclean.jpg du worker) : zéro second appel gpt-image.
+    let bgCleanFrame = null;
     if(!bgSrc && window._mcKeepVidBg){
       try{ _mcProg('Fond : frame de ta vidéo…', 9); bgSrc = refFrame || await _mcFrameFromVideo(window._mcRefB64); bgDeVid = true; }
       catch(e){ console.warn('[mc] frame fond :', e); }
@@ -26511,7 +26582,12 @@ async function _mcGenerate(){
         let bgUse = bgSrc;
         if(bgDeVid || window._mcBgClean!==false){
           _mcProg('Fond : on efface la personne…', 10);
-          try{ bgUse = await _mcCleanBgImage(bgUse); }catch(e){ console.warn('[mc] nettoyage fond :', e); }
+          try{
+            const cleaned = await _mcCleanBgImage(bgUse);
+            // même valeur = pas de visage détecté, rien effacé → PAS un patch valable
+            if(bgDeVid && cleaned && cleaned!==bgUse) bgCleanFrame = cleaned;
+            if(cleaned) bgUse = cleaned;
+          }catch(e){ console.warn('[mc] nettoyage fond :', e); }
         }
         _mcProg('Détourage + fond…', 12);
         const comp = await _mcApplyBg(si.data.signedUrl, bgUse, H);
@@ -26614,61 +26690,101 @@ async function _mcGenerate(){
         if(typeof spendCreditsFor==='function'){ await spendCreditsFor(dur,'motion-topaz'); }
       }catch(e){ console.error('topaz:',e); toast('Upscale 1080p indispo — 720p livré'); }
     }
-    // ── LOT7 · FOND = VRAIE VIDÉO D'ORIGINE, ANIMÉE (pipeline prouvé 28/08) ─────
+    // ── LOT7/LOT MC · FOND = VRAIE VIDÉO D'ORIGINE, ANIMÉE (v2, 28/08) ──────────
     // Le chemin frame-figée AVANT Kling (plus haut) est conservé : il cale la lumière
     // du rendu. Ici on va au bout : le rendu Kling est détouré (fal-ai/ben/v2/video →
     // WebM VP9 alpha) puis recomposé PAR-DESSUS la vidéo de référence animée par le
     // render-worker (__compose:'motion-bg' ; audio = piste Kling par défaut,
     // plan.bgAudio:'orig' existe côté worker pour la piste de la réf).
+    // v2 (bug fantôme prouvé par frames, IMG_6133) : la RÉF aussi est détourée — EN
+    // PARALLÈLE du personnage (gain ~2-3 min) — et son masque + la frame nettoyée
+    // (bgCleanFrame, déjà payée plus haut) partent au worker (assets refmask/bgclean) :
+    // la personne d'origine est EFFACÉE du fond au lieu de réapparaître en fantôme
+    // dès que ses gestes sortent de la silhouette du personnage généré.
     // Conditions : option « garder le fond de la vidéo » active, PAS de fond
     // personnalisé fourni (il prime : le recomposer sur la réf l'écraserait), et une
     // référence vidéo décodée (dur>0 — mesurée sur <video>, donc c'est une vidéo).
-    // ⚠ PRICING : AUCUN crédit supplémentaire débité pour l'instant (matting
-    // ≈ 0,001 $/mégapixel à notre charge) — Axel tranchera le prix de l'option.
+    // PRICING (validé Axel 28/08) : +1 cr/s (CREDIT_COSTS.motionBgPerSec), débité
+    // juste APRÈS le succès Kling et AVANT le matting — jamais avant le succès. Si le
+    // pipeline fond échoue (repli rendu Kling brut), SEUL ce supplément est remboursé
+    // (refund_credits sur ses op_ids — le rendu Kling livré reste dû).
     // Robustesse : CHAQUE étape sous try/catch — au moindre échec on livre le rendu
     // Kling tel quel (fond image). JAMAIS de perte d'un rendu payé.
     if(window._mcKeepVidBg && !window._mcBgB64 && dur>0){
-      try{
-        console.log('[mc] fond vidéo : détourage du rendu Kling (ben/v2/video)…');
-        _mcProg('Fond vidéo : détourage du personnage…', 90);
-        const ms=await fPost('/fal-ai/ben/v2/video', { video_url: out, output_format:'webm' });
-        if(!ms.ok) throw new Error('matting '+ms.status+' '+(await ms.text().catch(()=>'')).slice(0,140));
-        const md=await ms.json().catch(()=>({}));
-        // réponse synchrone possible (même motif que _mcApplyBg) — sinon file fal classique
-        let mattedUrl=md?.video?.url||md?.video_url||'';
-        const mStP=md.status_url?md.status_url.replace('https://queue.fal.run',''):'';
-        const mReP=md.response_url?md.response_url.replace('https://queue.fal.run',''):'';
-        if(!mattedUrl && (!mStP||!mReP)) throw new Error('matting : pas de status_url');
-        for(let i=0;i<90 && !mattedUrl;i++){   // ~6 min max (90 × 4 s)
-          await new Promise(r=>setTimeout(r,4000));
-          const pr=await fGet(mStP); if(!pr.ok) continue;
-          const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
-          _mcProg('Fond vidéo : détourage du personnage…', Math.min(93, 90+Math.floor(i/8)));
-          if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
-          if(s==='COMPLETED'){
-            // COMPLETED = « traité », pas « réussi » (leçon Kling du 13/08) : on lit le résultat
-            const rr=await fGet(mReP); const rd=await rr.json().catch(()=>({}));
-            mattedUrl=rd?.video?.url||rd?.video_url||'';
-            if(!rr.ok||!mattedUrl) throw new Error('matting : '+JSON.stringify(rd).slice(0,140));
-            break;
+      const supCost=CREDIT_COSTS.motionBgPerSec*dur;
+      const opsAvant=(typeof _creditOps!=='undefined'&&Array.isArray(_creditOps))?_creditOps.length:0;
+      let bgPaid=false, bgOps=[];
+      if(typeof spendCreditsFor==='function'){ bgPaid=await spendCreditsFor(supCost,'motion-fond-video'); }
+      if(bgPaid && typeof _creditOps!=='undefined'&&Array.isArray(_creditOps)) bgOps=_creditOps.slice(opsAvant);
+      if(!bgPaid){
+        toast('Fond vidéo non appliqué (supplément '+supCost+' cr) — rendu livré sur fond d\'image');
+      } else try{
+        console.log('[mc] fond vidéo : détourage personnage + réf en parallèle (ben/v2/video)…');
+        _mcProg('Fond vidéo : détourage… ~2-4 min (l\'option fond ajoute ~3-5 min)', 90);
+        // un matting fal = submit + poll (~2 min) ; les DEUX vidéos passent dedans
+        const benMatte=async (videoUrl, label)=>{
+          const ms=await fPost('/fal-ai/ben/v2/video', { video_url: videoUrl, output_format:'webm' });
+          if(!ms.ok) throw new Error('matting '+label+' '+ms.status+' '+(await ms.text().catch(()=>'')).slice(0,140));
+          const md=await ms.json().catch(()=>({}));
+          // réponse synchrone possible (même motif que _mcApplyBg) — sinon file fal classique
+          let u=md?.video?.url||md?.video_url||'';
+          const mStP=md.status_url?md.status_url.replace('https://queue.fal.run',''):'';
+          const mReP=md.response_url?md.response_url.replace('https://queue.fal.run',''):'';
+          if(!u && (!mStP||!mReP)) throw new Error('matting '+label+' : pas de status_url');
+          // 10 min max (150 × 4 s) — mesuré 28/08 : ~5 min pour une réf de 5 s
+          // (file fal comprise) ; 6 min coupait trop juste les réfs longues.
+          for(let i=0;i<150 && !u;i++){
+            await new Promise(r=>setTimeout(r,4000));
+            const pr=await fGet(mStP); if(!pr.ok) continue;
+            const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+            _mcProg('Fond vidéo : détourage… ~2-4 min', Math.min(93, 90+Math.floor(i/8)));
+            if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
+            if(s==='COMPLETED'){
+              // COMPLETED = « traité », pas « réussi » (leçon Kling du 13/08) : on lit le résultat
+              const rr=await fGet(mReP); const rd=await rr.json().catch(()=>({}));
+              u=rd?.video?.url||rd?.video_url||'';
+              if(!rr.ok||!u) throw new Error('matting '+label+' : '+JSON.stringify(rd).slice(0,140));
+              break;
+            }
+            throw new Error('matting '+label+' : '+(pd.error?String(pd.error).slice(0,80):s));
           }
-          throw new Error('matting : '+(pd.error?String(pd.error).slice(0,80):s));
+          if(!u) throw new Error('matting '+label+' : délai dépassé (>10 min)');
+          return u;
+        };
+        // le masque de la réf ne sert QUE si la frame nettoyée existe (les deux vont
+        // ensemble côté worker) ; son échec ne coule pas le fond → repli v1 sans patch
+        const [mattedUrl, refMaskUrl]=await Promise.all([
+          benMatte(out, 'personnage'),
+          bgCleanFrame ? benMatte(sv.data.signedUrl, 'réf').catch(e=>{ console.warn('[mc] matting réf (fond v1 sans patch) :', e); return ''; }) : Promise.resolve('')
+        ]);
+        console.log('[mc] fond vidéo : détourés → perso', mattedUrl.slice(0,80), refMaskUrl?('· réf '+refMaskUrl.slice(0,80)):'· réf : sans patch');
+        // WebM alpha → upload à côté de la réf (contrat worker : assets/<id>.<ext>)
+        _mcProg('Fond vidéo : préparation des fichiers…', 94);
+        const upBlob=async (blob, path, type, label)=>{
+          if(!blob || blob.size<1000) throw new Error(label+' vide');
+          const u=await sb.storage.from('render-media').upload(path, blob, { contentType:type, upsert:true });
+          if(u.error) throw new Error('upload '+label+' : '+u.error.message);
+          return path;
+        };
+        const dlBlob=async (url, label)=>{ const rp=await fetch(url); if(!rp.ok) throw new Error('téléchargement '+label+' HTTP '+rp.status); return await rp.blob(); };
+        const mattedPath=await upBlob(await dlBlob(mattedUrl,'matted'), vPath.replace('.mp4','-matted.webm'), 'video/webm', 'matted');
+        const assets=[{ id:'matted', path:mattedPath, kind:'video' }];
+        if(refMaskUrl){
+          try{
+            const refMaskPath=await upBlob(await dlBlob(refMaskUrl,'refmask'), vPath.replace('.mp4','-refmask.webm'), 'video/webm', 'refmask');
+            // bgclean = la frame déjà nettoyée du flux pré-Kling (AUCUN nouvel appel
+            // gpt-image) — dataURL en général, URL http possible (repli it.url)
+            const cleanBlob = String(bgCleanFrame).startsWith('data:') ? b64ToBlob(bgCleanFrame) : await dlBlob(bgCleanFrame,'bgclean');
+            const bgCleanPath=await upBlob(cleanBlob, vPath.replace('.mp4','-bgclean.jpg'), 'image/jpeg', 'bgclean');
+            assets.push({ id:'refmask', path:refMaskPath, kind:'video' }, { id:'bgclean', path:bgCleanPath, kind:'image' });
+            console.log('[mc] fond vidéo : patch v2 joint (refmask + bgclean)');
+          }catch(e){ console.warn('[mc] refmask/bgclean non joints (fond v1) :', e); }
         }
-        if(!mattedUrl) throw new Error('matting : délai dépassé (>6 min)');
-        console.log('[mc] fond vidéo : personnage détouré →', mattedUrl.slice(0,90));
-        // WebM alpha → upload à côté de la réf (contrat worker : assets/matted.webm)
-        const mrp=await fetch(mattedUrl); if(!mrp.ok) throw new Error('téléchargement matted HTTP '+mrp.status);
-        const mBlob=await mrp.blob();
-        if(!mBlob || mBlob.size<1000) throw new Error('matted vide');
-        const mattedPath=vPath.replace('.mp4','-matted.webm');
-        const um=await sb.storage.from('render-media').upload(mattedPath, mBlob, { contentType:'video/webm', upsert:true });
-        if(um.error) throw new Error('upload matted : '+um.error.message);
-        console.log('[mc] fond vidéo : matted uploadé →', mattedPath, Math.round(mBlob.size/1024)+' Ko');
         // Composition render-worker : base = vidéo de réf (vPath, déjà uploadée),
         // perso alpha par-dessus — MÊME modèle de job que _mcRunSplit.
-        _mcProg('Fond vidéo : composition…', 95);
+        _mcProg('Fond vidéo : composition… ~1 min', 95);
         const rjPost=(b)=>fetch(RENDERJOB_FN,{ method:'POST', headers:{...H,'Content-Type':'application/json'}, body:JSON.stringify(b) });
-        const rj=await rjPost({ action:'create', plan:{ __compose:'motion-bg', duration: Math.max(1,dur) }, input_video: vPath, assets:[{ id:'matted', path:mattedPath, kind:'video' }] });
+        const rj=await rjPost({ action:'create', plan:{ __compose:'motion-bg', duration: Math.max(1,dur) }, input_video: vPath, assets });
         const rjd=await rj.json().catch(()=>({}));
         if(!rj.ok||!rjd.ok||!rjd.job_id) throw new Error(rjd.error||('render-job '+rj.status));
         console.log('[mc] fond vidéo : job compo', rjd.job_id);
@@ -26677,7 +26793,7 @@ async function _mcGenerate(){
           await new Promise(r=>setTimeout(r,4000));
           const pr=await rjPost({ action:'status', job_id: rjd.job_id });
           const pd=await pr.json().catch(()=>({}));
-          _mcProg('Fond vidéo : composition…', Math.min(97, 95+Math.floor(i/6)));
+          _mcProg('Fond vidéo : composition… ~1 min', Math.min(97, 95+Math.floor(i/6)));
           if(pd.status==='done' && pd.url){ bgUrl=pd.url; break; }
           if(pd.status==='failed') throw new Error(pd.error||'composition échouée');
         }
@@ -26686,6 +26802,16 @@ async function _mcGenerate(){
         console.log('[mc] fond vidéo : composé →', bgUrl.slice(0,90));
       }catch(e){
         console.error('[mc] fond vidéo :', e);
+        // remboursement du SEUL supplément fond (flux maison refund_credits/credit_ops) :
+        // on isole ses op_ids dans _creditOps le temps de l'appel, le reste est restauré.
+        if(bgOps.length && typeof creditsFlowRefund==='function'){
+          try{
+            const reste=_creditOps.filter(id=>bgOps.indexOf(id)<0);
+            _creditOps=bgOps.slice();
+            await creditsFlowRefund('le fond vidéo a échoué');
+            _creditOps=reste;
+          }catch(_){ }
+        }
         toast('Fond vidéo indisponible — rendu livré sur fond d\'image');
       }
     }
@@ -36256,7 +36382,7 @@ function edBandDrag(ov,track,e,mode){
     h+='</div>';
     h+='<div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">'
       /* 🔌 Connecter Claude (#73) — même place que dans la sidebar : juste au-dessus de « Mon compte » */
-      +'<button class="mm-ghost" data-act="claude"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Connecter Claude <span class="tag-beta" style="margin-left:auto">BÊTA</span></button>'
+      +'<button class="mm-ghost" data-act="claude"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Connecter Claude</button>'
       +'<button class="mm-ghost" data-act="account"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg> Mon compte</button>'
       +'<button class="mm-ghost" data-act="credits"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Acheter des crédits</button>'
       +'<button class="mm-ghost" data-act="logout" style="color:#ff6b6b"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5"/></svg> Déconnexion</button></div>';
