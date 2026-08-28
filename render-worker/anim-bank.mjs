@@ -16,6 +16,16 @@
 // `desc` n'est pas un commentaire : c'est le texte que lit le modèle pour
 // choisir. Écris ce que l'animation MONTRE (« un entonnoir : beaucoup entrent,
 // peu ressortent »), pas ce qu'elle signifie en abstrait.
+//
+// `editorOnly: true` — DEUX CATALOGUES, UNE BANQUE. Une anim marquée ainsi
+// reste rendue par le worker et proposée dans l'Éditeur + Détails du montage
+// (app/anim-bank.json la liste, avec le flag), mais elle est EXCLUE du bloc
+// ANIMS/catalogue/lexique régénéré dans orchestrate : le chef d'orchestre ne
+// peut plus la poser tout seul. Règle (Axel, 28/08) : une anim qui, SANS image
+// utilisateur, afficherait la marque AvatarAds (logo-avatarads.png en fallback
+// d'imgSlot, « avatarads.fr » en dur, logo Claude…) ne doit JAMAIS partir
+// automatiquement sur la vidéo d'un client — elle n'a de sens qu'en pose
+// manuelle, avec SES images.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── BANNIES DÉFINITIVEMENT (Axel, 14/08/26) — ne JAMAIS les remettre ─────────
@@ -38,10 +48,13 @@ export const BANK = [
   { name: 'type',    desc: "un texte qui s'ecrit tout seul : un script genere, une IA qui redige. Mets alors la phrase dans items[0].text (34 caracteres max). « le script s ecrit », « il redige pour toi », « le texte apparait », « genere le texte »." },
 
   // ── la marque, les outils, l'engagement contractuel ──
-  { name: 'logo',    desc: "DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage. « mon site », « ma marque », « chez nous », « notre plateforme »." },
-  { name: 'tools',   desc: "LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils." },
-  { name: 'copy',    desc: "UNE CLE / UN CODE QU'ON COPIE ET QU'ON EMPORTE AILLEURS : la cle apparait, « Copie » claque, et elle s'envole vers l'autre outil. « tu copies cette cle », « copie ce lien », « tu recuperes ton token ». C'est la TRANSITION entre deux applications." },
-  { name: 'connect', desc: "DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — « tools » ne fait que les poser cote a cote." },
+  // logo/tools/copy/connect : SANS image utilisateur elles montrent la marque
+  // AvatarAds (fallback « avatarads.fr » du moteur dynamic, logos AvatarAds/
+  // Claude en repli d'imgSlot) → editorOnly, pose manuelle uniquement.
+  { name: 'logo',    editorOnly: true, desc: "DES QU'IL PRONONCE LE NOM DE SON SITE OU DE SON PRODUIT : le logo s'affiche EN GRAND, plein cadre dans la zone sure. C'est le moment le plus important de la video pour la marque, il ne reste jamais nu. Une seule fois dans la video, au premier passage. « mon site », « ma marque », « chez nous », « notre plateforme »." },
+  { name: 'tools',   editorOnly: true, desc: "LES OUTILS EUX-MEMES, cote a cote : « les bons outils », « ma stack », « avec X et Y ». Les logos apparaissent l'un apres l'autre — pas un interrupteur, pas une ampoule : les vrais outils." },
+  { name: 'copy',    editorOnly: true, desc: "UNE CLE / UN CODE QU'ON COPIE ET QU'ON EMPORTE AILLEURS : la cle apparait, « Copie » claque, et elle s'envole vers l'autre outil. « tu copies cette cle », « copie ce lien », « tu recuperes ton token ». C'est la TRANSITION entre deux applications." },
+  { name: 'connect', editorOnly: true, desc: "DEUX OUTILS QUI SE BRANCHENT L'UN A L'AUTRE : les deux logos, la prise qui s'enclenche, le voyant qui passe au vert. « X est connecte a Y », « c'est relie », « ils communiquent entre eux », « l'integration est faite ». Choisis-la quand la LIAISON est le sujet — « tools » ne fait que les poser cote a cote." },
   { name: 'sign',    desc: "UN CONTRAT QUI SE SIGNE : le document, la signature qui se trace, le tampon SIGNE. « ils signent », « un contrat », « un deal », « ils te paient »." },
   { name: 'post',    desc: "PUBLIER SUR LES PLATEFORMES : les tuiles des reseaux et la video qui s'envole vers elles. « poster sur les reseaux », « publier partout », « en un clic sur tous tes comptes »." },
   { name: 'upload',  desc: "une carte qui s'envole : mettre en ligne, envoyer un fichier, deposer. « importe ton fichier », « televerse », « depose ton audio », « envoie ta video », « charge ton image »." },
@@ -151,7 +164,9 @@ export const BANK = [
   { name: 'delivery', desc: "E-COMMERCE — UN SUIVI DE LIVRAISON : le colis avance, les etapes se cochent. « la livraison », « le colis part », « ils recoivent en 48 h »." },
   { name: 'sizes',   desc: "E-COMMERCE — LES DECLINAISONS : les tailles et les couleurs, celles qu'on choisit s'encadrent. « toutes les tailles », « plusieurs coloris »." },
   { name: 'candles', desc: "TRADING — DES BOUGIES JAPONAISES qui se dessinent une a une, vertes et rouges. « le graphique », « la bougie », « ca monte sur le chart »." },
-  { name: 'order',   desc: "TRADING — PASSER UN ORDRE : achat ou vente, le prix, la quantite, valider. « je passe un ordre », « j'achete », « je prends position »." },
+  // order : branding-sensible (ticket d'ordre aux montants d'exemple codés en
+  // dur, aucun slot texte pour les remplacer) → pose manuelle uniquement.
+  { name: 'order',   editorOnly: true, desc: "TRADING — PASSER UN ORDRE : achat ou vente, le prix, la quantite, valider. « je passe un ordre », « j'achete », « je prends position »." },
   { name: 'pnl',     desc: "TRADING — LA COURBE DE PERFORMANCE qui se trace avec son pourcentage. « le rendement », « la performance », « depuis le debut ». Mets le pourcentage entendu dans items[0].text (« +41 % »)." },
   { name: 'mrr',     desc: "SAAS — LE REVENU RECURRENT : le montant, et les mois qui montent en barres. « le MRR », « l'abonnement mensuel », « le revenu recurrent ». Mets le montant entendu dans items[0].text (« 3 200€ »)." },
   { name: 'churn',   desc: "SAAS — LA RETENTION qui fuit : les barres se vident, le pourcentage en rouge. « le churn », « ils se desabonnent », « on en perd ». Mets le pourcentage entendu dans items[0].text (« -22 % »)." },
@@ -228,8 +243,17 @@ export const BANK = [
   { name: 'lineup', desc: "UN PRESENTOIR QUI SE REMPLIT AU FIL DE L'ENUMERATION : une etagere vide, et un VISUEL qui se pose a chaque terme prononce, choisi d'apres le terme — colis (produit), personne qui parle (coaching), cours qui se joue (formation), calque qui glisse (animations), haut-parleur (sons/bruitages), panneaux qui permutent (transitions) — SANS jamais ecrire les mots (le sous-titre les porte deja). Toute liste de 2 a 4 choses enumerees. items[k].text = le terme k, items[k].t = l'instant ou il est prononce (obligatoire)." },
 ]
 
+// La banque COMPLÈTE — c'est elle que vérifient les moteurs de rendu avant de
+// dessiner : une anim editorOnly posée à la main doit toujours se rendre.
 export const ANIM_NAMES = BANK.map((b) => b.name)
 
+// Liste A — ce que le CHEF D'ORCHESTRE a le droit de poser tout seul. Les
+// editorOnly (liste B) n'y sont pas : sync-anim-bank.mjs ne recopie qu'elle
+// dans le bloc ANIMS/catalogue/lexique d'orchestrate.
+export const ORCH_BANK = BANK.filter((b) => !b.editorOnly)
+export const ORCH_ANIM_NAMES = ORCH_BANK.map((b) => b.name)
+
 // le bloc que lit le modèle, régénéré dans l'orchestrateur par sync-anim-bank.mjs
+// — liste A uniquement : une anim editorOnly ne lui est jamais proposée.
 export const bankPrompt = () =>
-  BANK.map((b) => `    ${b.name.padEnd(9)}— ${b.desc}`).join('\n')
+  ORCH_BANK.map((b) => `    ${b.name.padEnd(9)}— ${b.desc}`).join('\n')

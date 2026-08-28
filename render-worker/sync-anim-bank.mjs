@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { BANK, ANIM_NAMES, bankPrompt } from './anim-bank.mjs'
+import { BANK, ORCH_BANK, ORCH_ANIM_NAMES, bankPrompt } from './anim-bank.mjs'
 
 // GARDE-FOU. Le bloc genere atterrit DANS UN TEMPLATE LITERAL de l'orchestrateur
 // (`const styleBlock = ` ... `). Un backtick dans une description ferme donc la
@@ -47,10 +47,13 @@ const between = (src, tag, body) => {
   return src.slice(0, i + open.length) + '\n' + body + '\n' + src.slice(j)
 }
 
-// la liste JS, en lignes de 8 pour rester lisible dans un diff
+// la liste JS, en lignes de 8 pour rester lisible dans un diff.
+// LISTE A UNIQUEMENT : les anims `editorOnly` (branding AvatarAds en fallback,
+// image utilisateur exigée, pose manuelle) ne sont jamais recopiées côté
+// orchestrate — le chef d'orchestre ne doit pas pouvoir les poser tout seul.
 const rows = []
-for (let i = 0; i < ANIM_NAMES.length; i += 8) {
-  rows.push('  ' + ANIM_NAMES.slice(i, i + 8).map((n) => `'${n}'`).join(', ') + ',')
+for (let i = 0; i < ORCH_ANIM_NAMES.length; i += 8) {
+  rows.push('  ' + ORCH_ANIM_NAMES.slice(i, i + 8).map((n) => `'${n}'`).join(', ') + ',')
 }
 const listBody = 'const ANIMS = [\n' + rows.join('\n').replace(/,$/, '') + '\n]'
 
@@ -60,16 +63,16 @@ out = between(out, 'PROMPT', bankPrompt())
 
 if (process.argv.includes('--check')) {
   if (out !== src) {
-    console.error(`✗ orchestrate/index.ts est désynchronisé de la banque (${BANK.length} animations).`)
+    console.error(`✗ orchestrate/index.ts est désynchronisé de la banque (${ORCH_ANIM_NAMES.length} orchestrables / ${BANK.length} au total).`)
     console.error('  Lance : node render-worker/sync-anim-bank.mjs')
     process.exit(1)
   }
-  console.log(`✓ banque synchronisée (${BANK.length} animations)`)
+  console.log(`✓ banque synchronisée (${ORCH_ANIM_NAMES.length} orchestrables / ${BANK.length} au total)`)
 } else if (out === src) {
-  console.log(`✓ déjà à jour (${BANK.length} animations)`)
+  console.log(`✓ déjà à jour (${ORCH_ANIM_NAMES.length} orchestrables / ${BANK.length} au total)`)
 } else {
   writeFileSync(TARGET, out)
-  console.log(`✓ orchestrate/index.ts mis à jour — ${BANK.length} animations`)
+  console.log(`✓ orchestrate/index.ts mis à jour — ${ORCH_ANIM_NAMES.length} orchestrables (${BANK.length - ORCH_ANIM_NAMES.length} editorOnly exclues)`)
 }
 
 // ── GARDE-FOU : pas d'accent grave dans anim-pack non plus ───────────────────
@@ -110,7 +113,10 @@ if (process.argv.includes('--check')) {
     'rien toute toutes autre autres ceux celle').split(' '))
   const norm = (x) => String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const paires = new Map()
-  for (const a of BANK) {
+  // liste A seulement : le remplissage d'orchestrate ne doit pas pouvoir poser
+  // une editorOnly par mot-cl\u00e9 (la garde ANIMS.includes la jetterait de toute
+  // fa\u00e7on \u2014 autant ne pas \u00e9crire d'entr\u00e9e morte).
+  for (const a of ORCH_BANK) {
     for (const ph of [...String(a.desc).matchAll(/«([^»]+)»/g)].map((m) => m[1])) {
       for (const w of norm(ph).split(/[^a-z0-9]+/)) {
         if (w.length < 4 || STOP.has(w)) continue
@@ -143,8 +149,13 @@ if (process.argv.includes('--check')) {
   const neuf = avant + lignes.join('\n') + '\n  '
   writeFileSync(TARGET, neuf + apres)
   console.log('✓ lexique auto : ' + paires.size + ' racines, ' +
-    new Set([...paires.values()].flat()).size + '/' + BANK.length + ' animations appelables')
+    new Set([...paires.values()].flat()).size + '/' + ORCH_BANK.length + ' animations orchestrables appelables')
 }
 
-writeFileSync(APP_JSON, JSON.stringify(BANK.map((b) => ({ name: b.name, desc: b.desc }))))
-console.log('✓ app/anim-bank.json : ' + BANK.length + ' animations pour l\'écran Détails du montage')
+// L'APP garde le catalogue COMPLET (Éditeur + Détails du montage montrent
+// tout) — le flag editorOnly voyage avec, pour que l'interface puisse
+// distinguer la liste B sans dupliquer la connaissance.
+writeFileSync(APP_JSON, JSON.stringify(BANK.map((b) =>
+  b.editorOnly ? { name: b.name, desc: b.desc, editorOnly: true } : { name: b.name, desc: b.desc })))
+console.log('✓ app/anim-bank.json : ' + BANK.length + ' animations (dont ' +
+  BANK.filter((b) => b.editorOnly).length + ' editorOnly) pour l\'écran Détails du montage')

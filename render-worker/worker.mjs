@@ -292,12 +292,15 @@ async function composeMotionSplit(jobDir, outPath, plan) {
   // échouait TOUJOURS sur ces sources, d'où le repli plein écran systématique.
   // On remuxe la source en VIDÉO+AUDIO seulement (le flux data est écarté) avant
   // la composition. Copie d'abord (rapide) ; ré-encodage léger en repli.
+  // ⚠ 0:a:0? (PREMIÈRE piste audio seulement) et pas 0:a? : certaines captures
+  // iPhone portent une 2e piste audio codec « none » qui fait échouer la copie
+  // ET le ré-encodage (même piège que le flux data — vu sur réf réelle le 28/08).
   const orig = join(jobDir, 'base-av.mp4')
   try {
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a?',
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a:0?',
       '-c', 'copy', '-movflags', '+faststart', orig], { stdio: 'pipe' })
   } catch (_) {
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a?',
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a:0?',
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', orig], { stdio: 'pipe' })
   }
   const mode = plan.mode === 'split-top' ? 'split-top' : 'split-bottom'
@@ -339,6 +342,61 @@ async function composeMotionSplit(jobDir, outPath, plan) {
   console.log(`✅ motion-split (${mode}) → ${outPath}`)
 }
 
+// Motion Control « fond vidéo » (PoC 28/08) : le rendu Kling remplace le fond par un
+// aplat — ici on garde la VRAIE vidéo de référence, ANIMÉE, derrière le personnage.
+// Le rendu Kling est détouré en amont (fal-ai/ben/v2/video, ~0,001 $/mégapixel soit
+// ~0,22 $ pour 3,5 s en 1080×1920 ; output_format:'webm' = VP9 + canal alpha), puis
+// recomposé PAR-DESSUS la référence, plein cadre.
+// jobDir attendu : base.mp4 = vidéo de référence (origPath), assets/matted.webm =
+// personnage détouré (alpha). Repli : assets/matted.mp4 sur fond VERT uni
+// (background_color:[0,255,0] côté fal) → chromakey + despill.
+// ⚠ ffmpeg : seul le DÉCODEUR libvpx-vp9 (forcé avant -i) livre le canal alpha d'un
+// webm VP9 — le décodeur natif « vp9 » le jette silencieusement (fond noir opaque).
+async function composeMotionBg(jobDir, outPath, plan) {
+  const orig0 = join(jobDir, 'base.mp4')
+  let matted = join(jobDir, 'assets', 'matted.webm')
+  let alpha = true
+  if (!existsSync(matted)) { matted = join(jobDir, 'assets', 'matted.mp4'); alpha = false }
+  if (!existsSync(matted)) throw new Error('personnage détouré manquant (assets/matted.webm|.mp4)')
+  // même remux anti-flux-DATA que motion-split : les vidéos iPhone embarquent un
+  // flux « mebx » que ffmpeg refuse de décoder → on garde vidéo+audio seulement.
+  // ⚠ 0:a:0 (PREMIÈRE piste audio seulement) et pas 0:a : certaines captures iPhone
+  // portent une 2e piste audio de codec « none » qui fait échouer copie ET ré-encodage.
+  const orig = join(jobDir, 'base-av.mp4')
+  try {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a:0?',
+      '-c', 'copy', '-movflags', '+faststart', orig], { stdio: 'pipe' })
+  } catch (_) {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a:0?',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', orig], { stdio: 'pipe' })
+  }
+  // format de sortie = format du personnage détouré (celui du rendu Kling)
+  let W = 1080, H = 1920
+  try { const d = ffprobe(matted, 'stream=width,height').split(','); W = parseInt(d[0], 10) || 1080; H = parseInt(d[1], 10) || 1920 } catch (_) { /* probe optionnel */ }
+  W = Math.round(W / 2) * 2; H = Math.round(H / 2) * 2
+  // fond = référence cover-crop au format + cadence alignée ; personnage par-dessus,
+  // centré (mêmes dimensions en pratique → plein cadre exact)
+  const key = alpha ? '' : 'colorkey=0x00FF00:0.22:0.06,despill=type=green,'
+  const fc = `[0:v]fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1[bg];` +
+    `[1:v]${key}setsar=1[fg];[bg][fg]overlay=x=(W-w)/2:y=(H-h)/2:shortest=1:format=auto,format=yuv420p[v]`
+  // audio : le rendu Kling porte la voix (native/lipsync) → il prime ; plan.bgAudio
+  // === 'orig' bascule sur la piste de la vidéo de référence (voix filmée)
+  const audioMap = plan.bgAudio === 'orig' ? ['-map', '0:a?'] : ['-map', '1:a?']
+  const args = ['-v', 'error', '-y', '-ignore_unknown', '-i', orig]
+  if (alpha) args.push('-c:v', 'libvpx-vp9')
+  args.push('-i', matted, '-filter_complex', fc, '-map', '[v]', ...audioMap,
+    '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
+    '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
+    '-movflags', '+faststart', outPath)
+  try {
+    execFileSync('ffmpeg', args, { stdio: 'pipe' })
+  } catch (e) {
+    const err = (e.stderr ? e.stderr.toString() : '') || String(e.message || e)
+    throw new Error('motion-bg ffmpeg : ' + err.trim().slice(-300))
+  }
+  console.log(`✅ motion-bg (${alpha ? 'alpha' : 'chromakey'}, ${W}×${H}) → ${outPath}`)
+}
+
 // utilisateur du rendu en cours (null en --local / tests) — lu par la facturation du lipsync
 let RENDER_USER = null
 export async function renderJob(jobDir, outPath, { draft = false, userId = null } = {}) {
@@ -348,6 +406,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
 
   // Motion Control (#34) : composition légère original + motion, pas de montage.
   if (plan.__compose === 'motion-split') { await composeMotionSplit(jobDir, outPath, plan); return }
+  // Motion Control « fond vidéo » : personnage détouré par-dessus la référence animée.
+  if (plan.__compose === 'motion-bg') { await composeMotionBg(jobDir, outPath, plan); return }
 
   const basePath = join(jobDir, 'base.mp4')
   if (!existsSync(basePath)) throw new Error('base.mp4 manquant dans ' + jobDir)
