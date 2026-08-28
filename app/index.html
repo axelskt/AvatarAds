@@ -807,6 +807,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
     </div>
     <div class="nav-g" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px">
       <!-- (BYOK « Connexions » retiré le 21/08 — abandonné ; to-do : offre membres formation via code promo) -->
+      <!-- 🔌 Connecter Claude (#73) — vue dédiée, deep link app/#connecter-claude -->
+      <div class="nav-i" id="navConnectClaude" onclick="nav('connectclaude',this)" style="color:var(--text2)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+        Connecter Claude
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BÊTA</span>
+      </div>
       <div class="nav-i" onclick="openAccountSettings()" style="color:var(--text2)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
         Mon compte
@@ -1022,7 +1028,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <input type="file" id="avPhotoIn2" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0]);_avReflect();this.value=''">
               <input type="file" id="avVideoIn2" accept="video/*" style="display:none" onchange="_avVideoPick(this.files[0]);this.value=''">
               <div id="avPanePhoto">
-                <div id="avPhotoZone" onclick="document.getElementById('avPhotoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleAvatarFile(f);_avReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta photo ici</div><div class="faint" style="font-size:11.5px">PNG · JPG · WEBP — portrait recommandé</div><button type="button" onclick="event.stopPropagation();document.getElementById('avPhotoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
+                <div id="avPhotoZone" onclick="document.getElementById('avPhotoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleAvatarFile(f);_avReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta photo ici</div><div class="faint" style="font-size:11.5px">PNG · JPG · WEBP</div><button type="button" onclick="event.stopPropagation();document.getElementById('avPhotoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
               </div>
               <div id="avPaneVideo" style="display:none">
                 <div id="avVideoZone" onclick="document.getElementById('avVideoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){_avVideoPick(f)}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta vidéo avatar ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — vidéo Hedra ou autre avatar</div><button type="button" onclick="event.stopPropagation();document.getElementById('avVideoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
@@ -3537,7 +3543,9 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <button id="acDoneLib" class="btn btn-ghost btn-sm grow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg> Bibliothèque</button>
             <button id="acDoneCmp" class="btn btn-ghost btn-sm grow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5v0"/></svg> Comparer</button>
           </div>
-          <button class="btn btn-ghost" style="width:100%;margin-top:10px;font-weight:700" onclick="_acPhase('idle')">
+          <!-- #reset 28/08 : _acPhase('idle') seul RAMENAIT tout l'ancien résultat
+               (carte verte, waveform, coupes) — _acReset() repart d'un écran vierge -->
+          <button class="btn btn-ghost" style="width:100%;margin-top:10px;font-weight:700" onclick="_acReset()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
             Nettoyer un autre audio
           </button>
@@ -3642,10 +3650,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
 
         <!-- corps VEO (le flux Express existant) -->
-        <div id="expVeoBody" style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <!-- #lot6 · overflow-y:auto : le lecteur résultat vise 65vh — si stage + composer
+             dépassent la fenêtre, la colonne scrolle au lieu d'écraser le lecteur -->
+        <div id="expVeoBody" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
 
-        <!-- Résultat / preview -->
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;min-height:0;position:relative">
+        <!-- Résultat / preview — #lot6 : flex:1 0 auto + min-height pour que le stage puisse
+             GRANDIR avec le lecteur (65vh) au lieu d'être écrasé (~440px) par le composer -->
+        <div id="expStage" style="flex:1 0 auto;display:flex;align-items:center;justify-content:center;padding:28px;min-height:320px;position:relative">
           <!-- Écran d'accueil (07/08) : EXACTEMENT le patron d'Images IA — Axel :
                « comme Image IA en fait, mais pour les vidéos ». Icône, titre,
                et une ligne mono qui résume les réglages, mise à jour en direct. -->
@@ -3656,7 +3667,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="display" style="font-size:21px;font-weight:600;color:var(--text-2)">Décris ta vidéo en bas, puis génère</div>
             <span class="mono faint" id="expHeroLine" style="font-size:12px"></span>
           </div>
-          <video id="expResultVid" controls playsinline style="display:none;max-height:100%;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
+          <!-- #lot6 · max-height 65vh (au lieu de 100% du stage ≈ 440px) : grand lecteur desktop, ratio conservé -->
+          <video id="expResultVid" controls playsinline style="display:none;max-height:65vh;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
 
           <!-- Progress overlay -->
           <div id="expProgress" style="display:none;position:absolute;inset:0;background:rgba(10,10,10,.86);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:16px">
@@ -4670,6 +4682,125 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
       </div>
     </div><!-- /studio -->
 
+
+    <!-- ══ CONNECTER CLAUDE ══ (#73 · vue dédiée 28/08) ───────────────────────
+         Ex-modale plein écran (elle-même ex-section de « Mon compte »), reprise
+         1:1 de la maquette compte-handoff (ConnectClaudeModal). Les id d'origine
+         sont conservés pour mcpKeyRefresh / mcpKeyCreate / mcpKeyRevoke /
+         mcpConfirmToggle. Accès : sidebar « Connecter Claude » (au-dessus de
+         « Mon compte ») + deep link app/#connecter-claude (landing claude.html). -->
+    <div class="view" id="v-connectclaude">
+      <div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(900px 500px at 50% -5%, rgba(255,90,31,.10), transparent 60%)">
+      <div style="max-width:1160px;margin:0 auto;padding:clamp(28px,5vh,56px) clamp(20px,6vw,72px) 60px">
+
+        <div class="row gap14" style="align-items:center;justify-content:center;margin-bottom:14px;flex-wrap:wrap">
+          <div style="width:52px;height:52px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+          </div>
+          <h2 class="display" style="font-size:clamp(26px,3vw,40px);font-weight:800;margin:0;margin-right:6px">Connecter Claude</h2>
+          <span class="tag-beta" style="align-self:center">BÊTA</span>
+        </div>
+        <p class="muted center" style="font-size:16px;max-width:560px;margin:0 auto 40px">Génère tes images &amp; vidéos AvatarAds directement depuis Claude, avec tes crédits.</p>
+
+        <!-- 3 étapes -->
+        <div id="mcpSteps" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch">
+
+          <!-- ① relier (OAuth : plus de clé à coller — 20/08) -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column">
+            <div class="row gap10" style="align-items:center;margin-bottom:14px">
+              <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Relie ton compte</span>
+            </div>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
+            <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:18px">
+              <input type="text" id="mcpOauthUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
+              <button class="btn btn-sm" onclick="mcpOauthCopy()" title="Copier" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+              </button>
+            </div>
+            <button class="btn btn-primary" onclick="mcpOauthConnect()" style="width:100%;margin-top:12px;cursor:pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+              Relier à Claude
+            </button>
+
+            <!-- alternative : connexion par clé (ancienne méthode), repliée -->
+            <details id="mcpKeyAlt" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+              <summary class="faint" style="font-size:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>Alternative : connexion par clé (URL secrète)</summary>
+            <!-- état A — pas encore de clé (ou plan insuffisant) -->
+            <div id="mcpNoKey" style="margin-top:14px">
+              <p id="mcpLockNote" class="faint" style="display:none;font-size:11px;line-height:1.5;margin:0 0 10px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.</p>
+              <button id="mcpKeyCreateBtn" class="btn btn-primary" onclick="mcpKeyCreate()" style="width:100%;cursor:pointer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                Générer ma clé
+              </button>
+            </div>
+
+            <!-- état B — clé tout juste créée : l'URL, une seule fois -->
+            <div id="mcpKeyResult" style="display:none;margin-top:18px">
+              <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1)">
+                <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:11.5px;border:none;background:none;color:var(--text-2);text-overflow:ellipsis;padding:0">
+                <button id="mcpKeyCopyBtn" class="btn btn-sm" onclick="mcpKeyCopy()" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+                </button>
+              </div>
+              <p style="font-size:11px;line-height:1.5;margin-top:10px;color:var(--amber)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>Copie-la maintenant : pour ta sécurité, elle ne sera plus jamais affichée.</p>
+            </div>
+
+            <!-- état C — clé active (l'URL n'est plus affichable) -->
+            <div id="mcpKeyActive" style="display:none;margin-top:18px">
+              <div id="mcpKeyStatus" class="card" style="padding:12px 14px;background:rgba(40,199,149,.07);border-color:rgba(40,199,149,.3)">
+                <div class="row gap8" style="font-size:13px">
+                  <span class="dot" style="background:var(--green);box-shadow:0 0 8px rgba(40,199,149,.7)"></span><span><b>Clé active</b></span>
+                </div>
+                <div id="mcpKeyDates" class="faint mono" style="font-size:10.5px;line-height:1.6;margin-top:8px"></div>
+              </div>
+              <p class="faint" style="font-size:11px;line-height:1.5;margin-top:10px">Ta clé est stockée de façon sécurisée et n'est affichée qu'une fois. Perdue ? Régénère-la — attention : régénérer désactive l'ancienne clé, il faudra recoller la nouvelle URL dans ton connecteur Claude.</p>
+              <div class="row gap8" style="margin-top:12px">
+                <button id="mcpKeyRegenBtn" class="btn btn-quiet btn-sm faint row gap6" onclick="mcpKeyCreate(true)" style="font-size:12px;padding:0;background:none;border:none;cursor:pointer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+                  Régénérer
+                </button>
+                <button id="mcpKeyRevokeBtn" class="btn btn-quiet btn-sm" onclick="mcpKeyRevoke()" style="font-size:12px;color:#FF6B6B;margin-left:auto;padding:0;background:none;border:none;cursor:pointer">Révoquer</button>
+              </div>
+            </div>
+            </details>
+          </div>
+
+          <!-- ② autoriser -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column">
+            <div class="row gap10" style="align-items:center;margin-bottom:14px">
+              <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
+            </div>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Clique « Se connecter » sur le connecteur : Claude t'envoie sur AvatarAds, tu vérifies que c'est bien ton compte et tu cliques <b style="color:var(--text-2)">Autoriser</b>. C'est tout — la connexion reste active 30 jours et se renouvelle seule.</p>
+            <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:18px;text-decoration:none">
+              Ouvrir Claude → Connecteurs
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+
+          <!-- ③ générer -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column">
+            <div class="row gap10" style="align-items:center;margin-bottom:14px">
+              <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
+            </div>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Active AvatarAds dans ta conversation et demande : « Génère une image de… ». Claude annonce le coût et attend ton OK.</p>
+            <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:18px;text-decoration:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+              Commencer
+            </a>
+          </div>
+        </div>
+
+        <!-- option confirmation -->
+        <label id="mcpConfirmRow" class="row gap10" style="display:none;width:100%;max-width:680px;margin:22px auto 0;text-align:left;align-items:center;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer">
+          <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked);_mcpConfirmPaint(this.checked)" style="display:none">
+          <span id="mcpConfirmBox" style="width:22px;height:22px;border-radius:6px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent);border:1px solid var(--accent);transition:all .15s">
+            <svg id="mcpConfirmCheck" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </span>
+          <span class="faint" style="font-size:13px;line-height:1.5">Demander confirmation avant chaque génération, avec le coût en crédits <b style="color:var(--text-2)">(recommandé)</b></span>
+        </label>
+      </div>
+      </div>
+    </div>
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -5078,24 +5209,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
     <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
-    <!-- ④ Connecter Claude — ligne compacte, même gabarit que « Ma marque » ci-dessous.
-         La section dépliée prenait un tiers de la modale « Mon compte » ; son contenu
-         part dans sa propre modale, ouverte par cette ligne. -->
-    <button onclick="openMcpModal()" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:10px;text-align:left;cursor:pointer">
-      <span class="row gap12" style="align-items:center;min-width:0">
-        <span style="width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:grid;place-items:center">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
-        </span>
-        <span class="col" style="line-height:1.3;min-width:0">
-          <span class="row gap8" style="align-items:center"><span style="font-weight:700;font-size:14.5px">Connecter Claude</span><span class="tag-beta">BÊTA</span></span>
-          <span class="faint" style="font-size:12px">Génère depuis Claude avec tes crédits</span>
-        </span>
-      </span>
-      <svg class="faint" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <!-- 🧠 Ma marque : un seul bouton qui ouvre TOUT ce qu'il y a à renseigner.
-         Posé sous « Connecter Claude » : c'est le même esprit — ce que l'IA sait de toi. -->
+    <!-- (④ Connecter Claude sorti de « Mon compte » le 28/08 : entrée de sidebar
+         + vue dédiée v-connectclaude, deep link app/#connecter-claude) -->
+    <!-- 🧠 Ma marque : un seul bouton qui ouvre TOUT ce qu'il y a à renseigner —
+         ce que l'IA sait de toi. -->
     <button onclick="openBrandModal()" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:26px;text-align:left;cursor:pointer">
       <span class="row gap12" style="align-items:center;min-width:0">
         <span style="width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:grid;place-items:center">
@@ -6840,6 +6957,11 @@ function enterApp(profile){
   // régénération. Le hash est effacé aussitôt pour qu'un rafraîchissement ne
   // rouvre pas l'écran en boucle.
   setTimeout(function(){ try{ _mdDeepLink(); }catch(e){} }, 200);
+  // ── ARRIVER SUR « CONNECTER CLAUDE » ────────────────────────────────────
+  // `…/app/#connecter-claude` (landing avatarads.fr/claude.html). Pas connecté :
+  // l'overlay de login s'affiche, le hash survit, et enterApp re-route après
+  // l'authentification. 260 ms : APRÈS le nav('express') mobile (120 ms).
+  setTimeout(function(){ try{ _ccDeepLink(); }catch(e){} }, 260);
   updateAccountMenu(profile);
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   window._userHedraKey = profile.hedra_api_key || null; // clé BYOK du user (null = utilise la clé plateforme)
@@ -8110,7 +8232,8 @@ function openAccountSettings(){
     if(newEmailInp) newEmailInp.value = '';
   }
   _syncCancelBtn();
-  mcpKeyRefresh();
+  // (mcpKeyRefresh() retiré le 28/08 : le bloc « Connecter Claude » vit dans sa
+  //  vue dédiée v-connectclaude — nav('connectclaude') fait le refresh)
 }
 function closeAccountSettings(){ document.getElementById('accountOverlay').style.display='none'; }
 
@@ -8641,13 +8764,13 @@ function _imgIco(name, size, color){
 
 const _IMG_STYLES = [
   { id:'photo',   ic:'camera',  label:'Photo Réel',  sub:'réaliste',      api:'natural', suffix:', photographie réaliste haute qualité et très détaillée, peau naturelle avec vraie texture (pores, grain de peau, micro-imperfections), traits nets et détaillés, yeux détaillés et regard naturel, cheveux détaillés, lumière réaliste, décor et arrière-plan détaillés et nets, rendu photo réel non lissé et non plastique' },
-  { id:'staticad', ic:'ad',     label:'Static ads',   sub:'pub produit', api:'vivid', suffix:', publicité statique professionnelle de produit (static ad) : le produit en héros au centre, packshot studio parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, quelques éléments ou ingrédients flottants qui dynamisent la composition, mise en page publicitaire premium équilibrée et aérée type marque DTC, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe' },
+  { id:'staticad', ic:'ad',     label:'Pub Produit',  sub:'static ad', api:'vivid', suffix:', publicité statique professionnelle de produit (static ad) : le produit en héros au centre, packshot studio parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, quelques éléments ou ingrédients flottants qui dynamisent la composition, mise en page publicitaire premium équilibrée et aérée type marque DTC, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe' },
   { id:'studio',  ic:'fruit',   label:'Fruit',        sub:'perso fruit', api:'vivid', suffix:', personnage fruit ou légume humanisé en 3D RÉALISTE très détaillé (style FruitDrama), tête de fruit avec peau réaliste, textures et micro-détails crédibles, corps humanoïde avec vêtements réels, visage expressif, intégré naturellement dans un décor réel cohérent (chambre, rue, intérieur), éclairage réaliste cohérent avec l\'environnement, rendu cinématique haute qualité, PAS de flou d\'arrière-plan artificiel, character design crédible et attachant, pas effrayant' },
   { id:'ugc',     ic:'mic',     label:'UGC Réel',     sub:'authentique',      api:'natural', suffix:', jolie avec de jolies lèvres pulpeuses, vrai selfie/photo UGC pris à l\'iPhone tenu à la main, casual et spontané, lumière non contrôlée d\'intérieur (ambiante, exposition automatique du téléphone), cadrage imparfait légèrement décentré, non retouché, non professionnel, comme un selfie qu\'un ami enverrait' },
   { id:'premium', ic:'robot',   label:'Mascotte',     sub:'de marque',  api:'vivid',   suffix:', mascotte de marque commerciale, personnage 3D expressif et attachant, couleurs vives, branding pro' },
   { id:'dark',    ic:'palette', label:'Autre',        sub:'style libre',      api:'natural', suffix:'' },
 ];
-// #staticad-main (Axel 26/08) : plus de style « en main » séparé — « Static ads » sort 1 fois sur 2 avec le produit tenu en main (variante appliquée à la génération).
+// #staticad-main (Axel 26/08) : plus de style « en main » séparé — « Pub Produit » (ex « Static ads », id inchangé) sort 1 fois sur 2 avec le produit tenu en main (variante appliquée à la génération).
 const _IMG_STATICAD_HAND_SUFFIX = ', publicité statique professionnelle de produit (static ad) tenue en main : une vraie main humaine réaliste et détaillée (peau naturelle avec pores et texture crédible, ongles soignés) qui tient le produit bien en évidence au premier plan comme une photo UGC, produit héros net et parfaitement éclairé avec ombres douces réalistes et reflets crédibles, fond studio épuré d\'une couleur forte assortie à l\'identité du produit, titre court et percutant en typographie grasse moderne parfaitement lisible, annotations fines reliées au produit pour les bénéfices clés, petits badges de réassurance discrets, mise en page publicitaire premium équilibrée et aérée type marque DTC, main et produit photoréalistes, rendu ultra net qualité agence, tous les textes courts et sans fautes d\'orthographe';
 
 const _IMG_FORMATS = [
@@ -8659,6 +8782,12 @@ const _IMG_FORMATS = [
 // Booster réalisme « dermatologique » — appliqué aux styles réalistes (Photo, UGC) pour un rendu HUMAIN/NATUREL, surtout pas « IA »
 // = combinaison des 2 prompts d'Axel : paragraphe "photographe commercial" (physique de l'image) + liste de garde-fous anti-look IA
 const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detailed and sharp, tons of fine detail everywhere, natural realistic lighting with believable shadows and highlights. Real human skin with visible pores, fine texture, natural translucency and subtle imperfections — never plastic, waxy, airbrushed or over-smoothed. Detailed hair strands, natural eyebrows and eyelashes, detailed iris, natural lip texture. The whole scene and background are richly detailed and mostly in focus, with only a mild natural depth of field (no heavy background blur, no artificial bokeh). True-to-life colors and dynamic range. It must look like a genuine real photograph captured with a good camera, absolutely NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty-filter smoothing, no plastic skin, no exaggerated HDR, no oversaturation, no obvious AI artifacts. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
+// #lot6 · Fidélité du TEXTE produit quand une image de RÉFÉRENCE est fournie : le modèle
+// invente/déforme parfois le texte du packaging (mots réécrits, traduits, typos). Injectée
+// aux DEUX points d'appel où une image d'entrée existe par construction — _imgEditOne
+// (gpt-image /v1/images/edits : correction, presets, génération avec réf) et _nbEdit
+// (Nano Banana img2img) — donc jamais sur une génération texte→image sans référence.
+const _IMG_TEXT_FIDELITY = ' Preserve ALL visible text from the reference image EXACTLY as it appears — same words, same spelling, same language, same fonts and same placement on packaging, labels and logos. Never invent, translate, rewrite or distort any text.';
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
 // Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
@@ -9196,12 +9325,15 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
     catch(e){ console.warn('[imgEdit] normalisation réf '+(i+1)+' échouée → envoi brut', e); _refFiles.push(_srcFiles[i]); }
   }
   if(!_refFiles.length && refFile) _refFiles.push(refFile);
+  // #lot6 · /edits = une image de référence par construction → consigne de fidélité du
+  // texte packaging ajoutée UNE fois (garde anti-doublon ; limite gpt-image = 32 000 car., très loin)
+  const _fidPrompt = String(prompt||'').indexOf(_IMG_TEXT_FIDELITY) >= 0 ? prompt : (prompt + _IMG_TEXT_FIDELITY);
   for(const model of _GPT_IMG_MODELS){
     const fd = new FormData();
     fd.append('model', model);
     if(_refFiles.length>1) _refFiles.forEach((f,i)=>fd.append('image[]', f, f.name||('image'+(i+1)+'.png')));
     else fd.append('image', _refFiles[0], _refFiles[0].name || 'image.png');
-    fd.append('prompt', prompt);
+    fd.append('prompt', _fidPrompt);
     fd.append('n', '1');
     fd.append('size', gptSize);
     fd.append('quality', _imgGptQuality()); // qualité pilotée par le slider (4K → medium, l'upscale Nano fait le reste)
@@ -9822,6 +9954,9 @@ function _nbAspect(w, h){
 async function _nbEdit(token, dataUrl, prompt, aspect, size){
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
   if(!m) throw new Error('Image illisible pour Nano Banana Pro');
+  // #lot6 · img2img = une image d'entrée par construction → consigne de fidélité du texte
+  // packaging (anti-doublon : certains prompts — _NB_REFINE_PROMPT / _IMG_REALISM_EDIT — ont déjà leur lock)
+  if(String(prompt||'').indexOf(_IMG_TEXT_FIDELITY) < 0) prompt = String(prompt||'') + _IMG_TEXT_FIDELITY;
   const path = '/v1beta/models/' + _NB_MODEL + ':generateContent';
   const body = {
     contents: [{ role:'user', parts: [
@@ -10275,7 +10410,7 @@ async function generateImage(){
 
     const size   = _imgSelectedFormat;
     const style  = _imgSelectedStyleApi;
-    // #staticad-main (Axel 26/08) : « Static ads » → 1 génération sur 2 avec le produit tenu en main (variante)
+    // #staticad-main (Axel 26/08) : « Pub Produit » (ex « Static ads ») → 1 génération sur 2 avec le produit tenu en main (variante)
     let suffix = _imgSelectedStyleSuffix;
     if(_imgSelectedStyleId==='staticad' && Math.random()<0.5){ suffix = _IMG_STATICAD_HAND_SUFFIX; }
     // Détecte une demande de PLANCHE / LAYOUT (reference sheet, mockup, palette…) :
@@ -11318,6 +11453,7 @@ function nav(id,el){
   if(id==='audioclean') initAudioCleanView();
   if(id==='publish')    initPublishView();
   if(id==='studio')     initStudio();
+  if(id==='connectclaude'){ try{ mcpKeyRefresh(); }catch(_){} }   // #73 · état de la clé rechargé à l'ouverture
   if(id==='generator'){
     // #reset brouillon (Axel 16/08) : revenir sur le Générateur après une génération
     // TERMINÉE repart proprement à l'ÉTAPE 1 (plus coincé sur l'écran « Ta vidéo est prête »).
@@ -11762,21 +11898,15 @@ function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', s
 const MZ_AVATAR_DENS = ['Jamais · 100 % animations', 'Rare · 1 ou 2 passages', 'Équilibré · Recommandé', 'Très présent · il porte la vidéo'];
 
 let _mzPreviewTimer=null, _mzPreviewI=0;
-// 🔌 « Connecter Claude » — la section vivait dépliée dans « Mon compte » et y
-// prenait toute la place. Elle a sa propre modale ; l'état de la clé est rechargé
-// à l'ouverture, comme le faisait l'affichage inline.
-// L'écran est plein cadre (maquette) : pas de clic-dehors possible, donc Échap
-// prend le relais du ✕ pour ne pas enfermer l'utilisateur.
-function _mcpEsc(e){ if(e.key === 'Escape') closeMcpModal(); }
-function openMcpModal(){
-  const m = document.getElementById('mcpModal'); if(!m) return;
-  m.style.display = 'block';
-  document.addEventListener('keydown', _mcpEsc);
-  try{ mcpKeyRefresh(); }catch(_){}
-}
-function closeMcpModal(){
-  const m = document.getElementById('mcpModal'); if(m) m.style.display = 'none';
-  document.removeEventListener('keydown', _mcpEsc);
+// 🔌 « Connecter Claude » — d'abord section dépliée dans « Mon compte », puis
+// modale plein écran, aujourd'hui VUE dédiée (v-connectclaude, entrée sidebar).
+// L'ouverture passe par nav('connectclaude') qui recharge l'état de la clé ;
+// _ccDeepLink() (appelé par enterApp) gère le lien app/#connecter-claude.
+function _ccDeepLink(){
+  if(!/(?:^|[#&])connecter-claude\b/i.test(window.location.hash || '')) return;
+  // hash effacé AVANT d'ouvrir (même logique que _mdDeepLink : un refresh ne re-route pas)
+  try{ history.replaceState(null, '', window.location.pathname + window.location.search); }catch(_){}
+  nav('connectclaude');
 }
 
 function mzAdvOpen(){ const m=document.getElementById('mzAdvModal'); if(!m) return; m.style.display='grid'; mzAdvRender();
@@ -14184,7 +14314,7 @@ async function _mdOpen(jobId){
         } }, 800); }
     _md = { jobId, job:d, derived, bank, dur:Number(derived.duration)||60,
       sel:null, time:0, playing:false, bandZoom:5, zoomWin:3, detail:false, order:false, all:false,
-      pop:null, past:[], future:[], swipe:null, bankModal:null, askText:null, review:'', regen:null, dragArmed:null, addedMedia:{},
+      pop:null, past:[], future:[], swipe:null, bankModal:null, askText:null, review:'', regen:null, dragArmed:null, selMark:null, addedMedia:{},
       splits:(d&&d.plan&&Array.isArray(d.plan.splits))?JSON.parse(JSON.stringify(d.plan.splits)):[], splitPick:null };
     _md.scenes = _mdBuildScenes();
     _md.marks = _mdBuildMarks();
@@ -14275,7 +14405,7 @@ function _mdTick(){
   // curseurs + temps
   for(const id of ['mdCur','mdCurH','mdCurHit']){ const e=document.getElementById(id); if(e) e.style.left=(t/dur*100)+'%'; }
   // scène en cours pendant la lecture
-  if(_md.playing){ const hit=_md.scenes.find(s=>t>=s.a&&t<s.b);
+  if(_md.playing){ const hit=_md.scenes.find(s=>!s.del&&t>=s.a&&t<s.b);   // #suppr-totale · jamais re-sélectionner une scène supprimée
     if(hit && hit.id!==_md.sel){ _md.sel=hit.id; _mdPaintSel(); } }
   // auto-scroll du zoom bande
   const wrap=document.getElementById('mdBandWrap');
@@ -14316,7 +14446,8 @@ function _mdSfxLive(){
 
 // sélection : bande + cartes + clip se répondent
 function _mdSelect(id, scroll){
-  if(!_md) return; _md.sel=id; _mdPaintSel();
+  if(!_md) return; _md.sel=id; if(id) _md.selMark=null;   // #tige-sélection · bloc sélectionné = plus de tige sélectionnée
+  _mdPaintSel();
   if(scroll){ const c=document.getElementById('mdC'+id); if(c) c.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 }
 function _mdPick(id, ev){
@@ -14378,7 +14509,11 @@ function _mdPaintClipInfo(){
     const t=_md.time;
     // #texte-sur-vidéo (Axel 25/08) : le TEXTE ajouté/remplacé est géré par _mdPaintText (calque du
     // DESSUS, sur la vidéo, jamais un fond blanc) — on l'exclut donc d'ici.
-    const _isTxt=(x)=> !!(x.replT || (x.added && x.n==='carte'));
+    // #texte-suppr (Axel 27/08 « supprimer un texte a supprimé toute la vidéo ») : TOUTE scène
+    // texte (les cartes d'origine comprises, ce sont des légendes posées SUR la vidéo) est exclue
+    // de cet overlay — l'image fixe « ton avatar » est réservée aux blocs VISUELS pleine fenêtre.
+    // Supprimer un texte ne touche que le texte : la vidéo du dessous continue.
+    const _isTxt=(x)=> !x.repl && !x.replM && !!(x.replT || x.n==='carte');
     let ed=_md.scenes.find(x=>t>=x.a&&t<x.b&&!_isTxt(x)&&(x.del||x.repl||x.replM||x.added));
     // un trou créé par une RÉDUCTION, sans rien dedans → l'avatar reprend
     if(!ed){
@@ -14391,7 +14526,13 @@ function _mdPaintClipInfo(){
       if(freed) ed={id:'gap'+freed.id, del:true, a:freed.b, b:freed.b};
     }
     const uiSig=(ed&&ed.userItems&&ed.userItems.length)?('·U'+ed.userItems.map(u=>String(u.text||'')).join('|')):'';
-    const key=ed?(ed.id+'·'+(ed.repl||'')+(ed.del?'D':'')+(ed.replM?'M':'')+(ed.replT?'T':'')+(ed.added?'A':'')+(_md.avatarStill?'S':'')+uiSig):'';
+    // #suppr-live (Axel 27/08 « des restes / une image figée ») : quand l'aperçu lit la vidéo
+    // SOURCE (l'avatar brut, rien d'incrusté), une fenêtre supprimée n'a RIEN à couvrir — l'avatar
+    // continue de parler en dessous, en mouvement. L'image fixe (avatarStill) ne reste utile que
+    // quand l'aperçu lit le MONTAGE RENDU (vieux job / audio seul), où l'anim incrustée est à cacher.
+    const _vLive=(function(){ try{ const v=_mdVid(); const su=_md.job&&_md.job.source_url;
+      return !!(v && v.videoWidth && su && (v.currentSrc===su || v.src===su)); }catch(_){ return false; } })();
+    const key=ed?(ed.id+'·'+(ed.repl||'')+(ed.del?'D':'')+(ed.replM?'M':'')+(ed.replT?'T':'')+(ed.added?'A':'')+(_md.avatarStill?'S':'')+(_vLive?'L':'')+uiSig):'';
     if(key!==_md._ovKey){
       _md._ovKey=key;
       if(!ed){ over.style.opacity='0'; setTimeout(()=>{ if(!_md._ovKey){ over.style.display='none'; over.innerHTML=''; } },200); }
@@ -14401,7 +14542,12 @@ function _mdPaintClipInfo(){
         const badge=(txt)=>'<div style="position:absolute;left:8px;right:8px;bottom:8px;padding:5px 9px;border-radius:9px;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);text-align:center">'
           +'<span class="mono" style="font-size:9.5px;color:#fff;letter-spacing:.04em">'+txt+'</span></div>';
         let h='';
-        if(ed.del){
+        if(ed.del && _vLive){
+          // #suppr-live · la source joue en dessous : AUCUN calque plein écran, juste le badge —
+          // « l'espace redevient ton avatar parle », vivant, plus jamais une image figée.
+          over.style.background='transparent';
+          h=badge('<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="8.5" r="3.8"/><path d="M5.5 20a6.5 6.5 0 0113 0"/></svg> ton avatar parle · clip réutilisé (0 cr)');
+        } else if(ed.del){
           if(!_md.avatarStill){ try{ _mdAvatarStillMake(); }catch(_){} }
           h=(_md.avatarStill?'<img src="'+_md.avatarStill+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">'
             // #ecran-noir · pas de still avatar → panneau NEUTRE + silhouette (jamais un écran noir)
@@ -14440,7 +14586,7 @@ function _mdPaintClipInfo(){
       }
     }
   }
-  const s=_md.scenes.find(x=>x.id===_md.sel);
+  const s=_md.scenes.find(x=>x.id===_md.sel&&!x.del);   // #suppr-totale · pas de pastille pour une scène supprimée
   const halo=document.getElementById('mdClipHalo'), pill=document.getElementById('mdClipPill');
   // 07/08 (Axel) : « pourquoi y'a un effet un peu violet sur l'écran ? » — le
   // halo teinté à la couleur de la scène VOILAIT la vidéo (violet plein écran
@@ -14464,23 +14610,25 @@ function _mdPaintProximity(){
     const dist=Math.abs(t-it.t), on=dist<=NEAR, prox=on?1-dist/NEAR:0;
     const active=_md.pop&&_md.pop.src==='band'&&_md.pop.item&&_md.pop.item.t===it.t&&_md.pop.item.k===it.k;
     const armed=_md.dragArmed===it.id;
-    if(!on && !active && !armed && el._far){ return; }   // rien à redessiner : déjà au repos
-    el._far = (!on && !active && !armed);
+    // #tige-sélection · la tige sélectionnée (Suppr la supprime) garde un halo net
+    const selm=!!(_md.selMark&&it.id&&_md.selMark.id===it.id);
+    if(!on && !active && !armed && !selm && el._far){ return; }   // rien à redessiner : déjà au repos
+    el._far = (!on && !active && !armed && !selm);
     const lv=Math.min(it.lv,2);
     const pin=on?(mob?18:20)+Math.round(prox*3):(mob?15:16);
     const stem=on?Math.min(ZONE-pin-3,6+prox*(mob?11:14)+lv*(mob?9:11)):3;
     const tige=el.firstElementChild, btn=el.lastElementChild;
     if(tige){ tige.style.height=stem+'px';
-      tige.style.background='color-mix(in srgb, '+it.c+' '+(active?92:on?58:26)+'%, transparent)'; }
+      tige.style.background='color-mix(in srgb, '+it.c+' '+((active||selm)?92:on?58:26)+'%, transparent)'; }
     if(btn){ btn.style.width=pin+'px'; btn.style.height=pin+'px'; btn.style.borderRadius=(on?7:3)+'px';
-      btn.style.background='color-mix(in srgb, '+it.c+' '+(active?72:on?36:26)+'%, var(--panel-1))';
-      btn.style.border='1.5px solid '+(active?it.c:'color-mix(in srgb, '+it.c+' '+(on?55:34)+'%, transparent)');
-      btn.style.boxShadow=armed?'0 0 0 3px '+it.c:active?'0 0 0 3px color-mix(in srgb, '+it.c+' 24%, transparent)':(on&&prox>.6?'0 0 10px -2px '+it.c:'none');
+      btn.style.background='color-mix(in srgb, '+it.c+' '+(active?72:selm?58:on?36:26)+'%, var(--panel-1))';
+      btn.style.border='1.5px solid '+((active||selm)?it.c:'color-mix(in srgb, '+it.c+' '+(on?55:34)+'%, transparent)');
+      btn.style.boxShadow=armed?'0 0 0 3px '+it.c:selm?'0 0 0 2.5px '+it.c+', 0 0 12px -2px '+it.c:active?'0 0 0 3px color-mix(in srgb, '+it.c+' 24%, transparent)':(on&&prox>.6?'0 0 10px -2px '+it.c:'none');
       btn.style.outline=armed?'1px dashed '+it.c:'none'; btn.style.outlineOffset='3px';
-      btn.style.opacity=it.del?'.35':(on?'1':'.5');
+      btn.style.opacity=it.del?'.35':((on||selm)?'1':'.5');
       const svg=btn.querySelector('svg'); if(svg){ const z=on?(mob?10:11):(mob?8:9); svg.setAttribute('width',z); svg.setAttribute('height',z);
-        svg.setAttribute('stroke',active?'#fff':it.c); } }
-    el.style.zIndex=active?9:on?3:1;
+        svg.setAttribute('stroke',(active||selm)?'#fff':it.c); } }
+    el.style.zIndex=(active||selm)?9:on?3:1;
   });
 }
 
@@ -14489,8 +14637,10 @@ function _mdStack(arr, gap){ const last=[]; return arr.slice().sort((a,b)=>a.t-b
   let lv=0; while(last[lv]!=null && it.t-last[lv]<gap) lv++; last[lv]=it.t; return Object.assign({},it,{lv}); }); }
 
 function _mdUpItems(){
+  // #suppr-totale (Axel) : une scène supprimée disparaît AUSSI de la rangée de tiges
+  // (plus de « reste » grisé) — elle se retrouve/rétablit via ⌘Z ou « Dans l'ordre »
   return _mdStack([].concat(
-    _md.scenes.map(s=>({t:s.a,k:'scene',id:s.id,del:!!s.del,n:s.repl||s.t,nat:s.n,
+    _md.scenes.filter(s=>!s.del).map(s=>({t:s.a,k:'scene',id:s.id,del:false,n:s.repl||s.t,nat:s.n,
       c:_mdSceneColor(s),ico:_MD_NATURE[s.n].ico,lab:s.n==='animation'?'Animation':_MD_NATURE[s.n].label})),
     _md.marks.texte.filter(x=>!x.del).map(x=>({t:x.a,k:'texte',id:x.id,n:x.n,c:(x.mod||x.moved||x.added)?_MD_RED:'var(--blue)',ico:'card',lab:'Texte'}))
   ), 0.55/_md.bandZoom);
@@ -14544,7 +14694,10 @@ function _mdStemDown(ev, btn){
   const openPop = ()=>{
     const same=_md.pop&&_md.pop.item&&_md.pop.item.t===it.t&&_md.pop.item.k===it.k;
     _md.pop = same?null:{item:it, side: btn.parentElement.parentElement.getAttribute('data-side')||'up', src};
-    if(it.id && it.k==='scene') _md.sel=it.id;
+    // #tige-sélection (Axel) : cliquer une tige sélectionne LA TIGE (l'événement), pas le bloc
+    // du dessous — halo sur la tige, et Suppr clavier supprime CET événement.
+    if(it.id && it.k==='scene'){ _md.sel=it.id; _md.selMark=null; }
+    else if(it.id){ _md.selMark={k:it.k,id:it.id}; _md.sel=null; }
     _mdSeek(it.t); _mdRenderPop(); _mdPaintSel();
   };
   if(!it.id){ openPop(); return; }
@@ -14571,6 +14724,9 @@ function _mdMoveItem(id, newT){
     const s=_md.scenes.find(x=>x.id===id); if(!s) return;
     const len=s.b-s.a, a=Math.max(0,Math.min(_md.dur-len,newT));
     s.a=a; s.b=a+len; s.moved=true;
+    // un SPLIT déplacé par sa tige doit suivre dans _md.splits (sinon le déplacement
+    // s'affichait mais était PERDU à la régénération — le plan lit _md.splits)
+    if(s.n==='split'&&typeof s.splitIdx==='number'&&(_md.splits||[])[s.splitIdx]){ const sp=_md.splits[s.splitIdx]; sp.start=_mdR2(s.a); sp.end=_mdR2(s.b); sp._mod=true; }
     _md.scenes.sort((x,y)=>x.a-y.a);
   }
   _mdPaintStemsPos();
@@ -14591,7 +14747,10 @@ function _mdPaintStemsPos(){
 function _mdBandHtml(){
   const mob=_mdIsMob(), ZONE=mob?32:40, dur=_md.dur;
   const up=_mdUpItems(), down=_mdDownItems(), sfxItems=_mdSfxItems();
-  const _isTxt=(s)=> !!(s.replT || (s.added && s.n==='carte'));
+  // #texte-calque-unifié · TOUTE scène texte (cartes d'origine comprises : ce sont des légendes
+  // posées sur la vidéo, cf. _mdBuildRegenPlan textOverlay) vit sur la piste TEXTE — même
+  // définition que _mdPaintClipInfo : supprimer un texte = retirer un calque, jamais la vidéo.
+  const _isTxt=(s)=> !s.repl && !s.replM && !!(s.replT || s.n==='carte');
   // voies anti-empilement pour la piste VISUELLE (scènes hors split/texte)
   const _mainSc=_md.scenes.filter(s=>s.n!=='split' && !_isTxt(s) && !s.del);
   const _pk=_mdPackLanes(_mainSc);
@@ -14615,12 +14774,13 @@ function _mdBandHtml(){
     // voie (anti-empilement) : les scènes de la piste principale sont réparties verticalement si elles se chevauchent
     const _im=(_pk.laneOf[s.id]!=null), _lh=_im?100/_pk.lanes:100, _ln=_im?_pk.laneOf[s.id]:0;
     const _posCss=_im?('top:calc('+(_ln*_lh).toFixed(3)+'% + 1px);height:calc('+_lh.toFixed(3)+'% - 2px)'):'top:2px;bottom:2px';
-    return '<div id="mdB'+s.id+'" onpointerdown="event.stopPropagation();_mdPick(\''+s.id+'\',event)" title="'+_mdEsc(meta.label+' · '+_mdT(s.a))+'" '
-      +'style="position:absolute;left:'+(s.a/dur*100)+'%;width:'+((s.b-s.a)/dur*100)+'%;'+_posCss+';min-width:5px;border-radius:6px;overflow:hidden;transition:opacity .18s;display:grid;place-items:center;opacity:'+(s.del?'.3':'1')+';'
-      +'background:'+(s.del?'var(--surface-2)':'color-mix(in srgb, '+col+' 18%, var(--panel-1))')+';'
+    // #ux-blocs · cursor:grab + hover : le bloc s'attrape (drag = déposer dans un trou libre),
+    // double-clic (ou appui long mobile) = menu Séparer/Supprimer
+    return '<div id="mdB'+s.id+'" data-md-bloc onpointerdown="event.stopPropagation();_mdBlockDown(event,\''+s.id+'\')" ondblclick="_mdBlockMenu(event,\''+s.id+'\')" title="'+_mdEsc(meta.label+' · '+_mdT(s.a)+' · glisse pour déplacer · double-clic : menu')+'" '
+      +'style="position:absolute;left:'+(s.a/dur*100)+'%;width:'+((s.b-s.a)/dur*100)+'%;'+_posCss+';min-width:5px;border-radius:6px;overflow:hidden;transition:opacity .18s;display:grid;place-items:center;cursor:grab;touch-action:none;'
+      +'background:color-mix(in srgb, '+col+' 18%, var(--panel-1));'
       +'border:1px solid color-mix(in srgb, '+col+' 28%, transparent)">'
       +(((s.b-s.a)/dur*100)>4?_mdIco(meta.ico,mob?11:12,col):'')
-      +(s.del?'<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,71,87,.3) 0 4px,transparent 4px 8px)"></div>':'')
       +(sel?grip('a')+grip('b'):'')
       +'</div>';
   };
@@ -14641,6 +14801,9 @@ function _mdBandHtml(){
         +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5"/></svg></button>'
       +'<button id="mdRedoB" onclick="_mdRedo()" title="Rétablir" style="width:24px;height:22px;border-radius:7px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--text-2);cursor:pointer;margin-right:6px">'
         +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 00-5 5"/></svg></button>'
+      // #séparer-bouton (Axel) : ciseaux à côté des contrôles — coupe le bloc SÉLECTIONNÉ au curseur
+      +'<button id="mdSepB" onclick="_mdSepSel()" title="Séparer le bloc sélectionné au curseur" class="row" style="gap:5px;align-items:center;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-size:11px;font-weight:600;color:var(--text-2);cursor:pointer;margin-right:6px">'
+        +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M20 4L8.2 15.9M14.5 14.5L20 20M8.2 8.1L12 12"/></svg>'+(mob?'':' Séparer')+'</button>'
       +'<div style="position:relative;margin-right:6px" data-md-pop>'
         +'<button onclick="event.stopPropagation();_mdPause();_md.pop=(_md.pop&&_md.pop.src===\'add\')?null:{src:\'add\'};_mdRenderPop()" title="Ajouter au curseur" class="row" '
           +'style="gap:5px;align-items:center;padding:4px 10px;border-radius:8px;border:1px solid var(--accent-line);background:var(--accent-soft);font-size:11px;font-weight:700;color:var(--accent-2);cursor:pointer">'
@@ -14758,6 +14921,128 @@ function _mdResizeDown(ev, id, side){
     s.resized=true; _md.scenes.sort((x,y)=>x.a-y.a); _mdRender(); };
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
 }
+// ── ATTRAPER UN BLOC : tap = sélection, glisser = déposer dans un TROU libre ─
+// #drag-blocs (Axel) : on attrape un bloc et on le lâche ailleurs — il s'insère
+// dans l'espace libre le plus proche de sa piste (jamais de chevauchement) ; si
+// aucun trou n'est assez grand, refus avec un feedback discret et retour en place.
+// Mobile : l'appui long (sans bouger) ouvre le menu contextuel du bloc.
+function _mdBlockDown(ev,id){
+  const s=_md.scenes.find(x=>x.id===id); if(!s||s.del) return;
+  _mdPause();
+  const bl=document.getElementById('mdB'+id);
+  const host=document.getElementById('mdTrack');
+  const w=host?Math.max(120,host.getBoundingClientRect().width):0;
+  const st={x0:ev.clientX,y0:ev.clientY,a0:s.a,b0:s.b,aCur:null,moved:false,menued:false};
+  const lp=_mdIsMob()?setTimeout(()=>{ st.menued=true; cleanup(); _mdBlockMenu(null,id); },550):null;
+  const mv=(e)=>{
+    if(!st.moved && Math.abs(e.clientX-st.x0)<=5 && Math.abs(e.clientY-st.y0)<=14) return;
+    if(!st.moved){ st.moved=true; if(lp) clearTimeout(lp);
+      if(bl){ bl.style.cursor='grabbing'; bl.style.zIndex='9'; bl.style.opacity='.85';
+        bl.style.boxShadow='0 6px 18px -6px rgba(0,0,0,.8), 0 0 0 1.5px '+_mdSceneColor(s); } }
+    if(!w) return;
+    const len=st.b0-st.a0;
+    const a=Math.max(0,Math.min(_md.dur-len, st.a0+((e.clientX-st.x0)/w)*_md.dur));
+    st.aCur=a;
+    if(bl) bl.style.left=(a/_md.dur*100)+'%';
+  };
+  const cleanup=()=>{ if(lp) clearTimeout(lp);
+    window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',cancel); };
+  // geste ANNULÉ par le système (scroll qui prend la main…) : on remet tout en place, on ne dépose RIEN
+  const cancel=()=>{ cleanup(); if(st.moved) _mdRender(); };
+  const up=()=>{ cleanup();
+    if(st.menued) return;
+    if(!st.moved){ _mdPick(id,ev); return; }   // simple clic/tap → sélection + curseur, comme avant
+    if(bl){ bl.style.cursor='grab'; bl.style.zIndex=''; bl.style.opacity=''; bl.style.boxShadow=''; }
+    const len=st.b0-st.a0, tt=(st.aCur!=null)?st.aCur:st.a0;
+    const snap=_mdSnapGap(s,tt);
+    if(snap==null){ toast('Pas d\'espace libre assez grand ici — le bloc reste en place'); _mdRender(); return; }
+    if(Math.abs(snap-st.a0)<0.05){ _mdRender(); return; }   // reposé au même endroit
+    _mdCommit();
+    s.a=_mdR2(snap); s.b=_mdR2(snap+len); s.moved=true;
+    // un SPLIT déplacé doit suivre dans _md.splits (c'est LUI qui part à la régénération)
+    if(s.n==='split'&&typeof s.splitIdx==='number'&&(_md.splits||[])[s.splitIdx]){ const sp=_md.splits[s.splitIdx]; sp.start=s.a; sp.end=s.b; sp._mod=true; }
+    _md.scenes.sort((x,y)=>x.a-y.a);
+    _md.sel=s.id; _md.selMark=null;
+    _mdRender();
+  };
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',cancel);
+}
+// le trou libre le plus proche de `tt` qui peut contenir la scène, SUR SA PISTE :
+// visuels entre eux (l'avatar est la couche de base, pas un obstacle), avatar entre
+// avatars, splits entre splits, textes entre textes. null = aucun trou assez grand.
+function _mdSnapGap(s, tt){
+  const len=s.b-s.a;
+  const isTxt=(x)=> !x.repl && !x.replM && !!(x.replT || x.n==='carte');
+  const cat=s.n==='split'?'split':isTxt(s)?'texte':s.n==='avatar'?'avatar':'main';
+  const sib=_md.scenes.filter(x=>{ if(x.id===s.id||x.del) return false;
+    if(cat==='split') return x.n==='split';
+    if(cat==='texte') return x.n!=='split' && isTxt(x);
+    if(cat==='avatar') return x.n==='avatar';
+    return x.n!=='split' && x.n!=='avatar' && !isTxt(x); });
+  const occ=sib.map(x=>[x.a,x.b]).sort((p,q)=>p[0]-q[0]);
+  const merged=[]; for(const iv of occ){ if(merged.length && iv[0]<=merged[merged.length-1][1]+0.001) merged[merged.length-1][1]=Math.max(merged[merged.length-1][1],iv[1]); else merged.push([iv[0],iv[1]]); }
+  const gaps=[]; let prev=0;
+  for(const m2 of merged){ if(m2[0]-prev>0.05) gaps.push([prev,m2[0]]); prev=Math.max(prev,m2[1]); }
+  if(_md.dur-prev>0.05) gaps.push([prev,_md.dur]);
+  let best=null, bd=Infinity;
+  for(const g of gaps){ if(g[1]-g[0]<len-0.001) continue;
+    const a=Math.max(g[0],Math.min(g[1]-len,tt)), d=Math.abs(a-tt);
+    if(d<bd){ bd=d; best=a; } }
+  return best;
+}
+// ── MENU CONTEXTUEL D'UN BLOC (double-clic / appui long) ─────────────────────
+// #menu-bloc (Axel) : petit menu au-dessus du bloc — Séparer (ciseaux) + Supprimer.
+// Clic dehors ou Échap le ferme (voir _mdClavier).
+function _mdBlockMenu(ev,id){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  const s=_md.scenes.find(x=>x.id===id); if(!s||s.del) return;
+  _mdPause();
+  if(_md.pop){ _md.pop=null; _mdRenderPop(); }
+  _md.sel=id; _md.selMark=null; _mdPaintSel();
+  const old=document.getElementById('mdBlocMenu'); if(old) old.remove();
+  const bl=document.getElementById('mdB'+id), host=document.getElementById('mdOv'); if(!bl||!host) return;
+  const r=bl.getBoundingClientRect();
+  const cx=Math.round((ev&&ev.clientX)||(r.left+r.width/2));
+  const wrap=document.createElement('div'); wrap.id='mdBlocMenu';
+  // #menu-pos · PAS de translate(-50%,-100%) ici : l'animation `rise` (fill both) finit sur
+  // `transform:none` et l'écraserait pour toujours — le menu partait en bas-droite et débordait
+  // sur mobile. On MESURE le menu puis on le positionne en absolu (clamp à l'écran, au-dessus
+  // du bloc, ou dessous si le haut manque).
+  wrap.style.cssText='position:fixed;left:0;top:0;visibility:hidden;z-index:7000;display:flex;gap:2px;padding:5px;'
+    +'background:var(--surface-2);border:1px solid var(--border-2);border-radius:12px;box-shadow:0 18px 44px -14px rgba(0,0,0,.9);animation:rise .14s ease both';
+  const mkBtn=(lab,svg,danger,fn)=>{ const b=document.createElement('button');
+    b.className='row'; b.style.cssText='gap:7px;align-items:center;padding:8px 12px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;color:'+(danger?'#ff6b7a':'var(--text)');
+    b.onmouseenter=()=>{ b.style.background=danger?'rgba(255,71,87,.12)':'var(--surface-3)'; };
+    b.onmouseleave=()=>{ b.style.background='transparent'; };
+    b.innerHTML=svg+' '+lab;
+    b.addEventListener('pointerdown',(e)=>e.stopPropagation());
+    b.onclick=(e)=>{ e.stopPropagation(); wrap.remove(); fn(); };
+    return b; };
+  const SCI='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M20 4L8.2 15.9M14.5 14.5L20 20M8.2 8.1L12 12"/></svg>';
+  const CRO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/></svg>';
+  if(s.n!=='split') wrap.appendChild(mkBtn('Séparer',SCI,false,()=>_mdSplitScene(id)));
+  wrap.appendChild(mkBtn('Supprimer',CRO,true,()=>_mdDeleteScene(id)));
+  host.appendChild(wrap);
+  // #menu-pos · position réelle : mesuré, centré sur le clic/bloc, clampé DANS l'écran,
+  // au-dessus du bloc (ou dessous quand le haut manque — cas mobile / bloc tout en haut)
+  try{ const mw=wrap.offsetWidth||160, mh=wrap.offsetHeight||40;
+    wrap.style.left=Math.round(Math.max(6, Math.min(window.innerWidth-mw-6, cx-mw/2)))+'px';
+    const yAbove=Math.round(r.top-8-mh);
+    wrap.style.top=(yAbove>=2 ? yAbove : Math.round(r.bottom+8))+'px';
+    wrap.style.visibility='visible';
+  }catch(_){ wrap.style.visibility='visible'; }
+  setTimeout(()=>{ const closer=(e)=>{ if(e.target&&e.target.closest&&e.target.closest('#mdBlocMenu')) return;
+    document.removeEventListener('pointerdown',closer,true);
+    const wv=document.getElementById('mdBlocMenu'); if(wv===wrap) wv.remove(); };
+    document.addEventListener('pointerdown',closer,true); },0);
+}
+// bouton Séparer de la barre d'outils : agit sur le bloc sélectionné, au curseur
+function _mdSepSel(){
+  if(!_md) return;
+  const s=_md.sel&&_md.scenes.find(x=>x.id===_md.sel&&!x.del);
+  if(!s){ toast('Sélectionne d\'abord un bloc (clique-le), place le curseur, puis Séparer'); return; }
+  _mdSplitScene(s.id);
+}
 // ── LE CLAVIER FAIT CE QUE LA SOURIS FAIT ────────────────────────────────────
 // Axel : « ajoute aussi les raccourcis clavier pour supprimer depuis le clavier,
 // ça me soûle ». Sur un écran où l'on enchaîne vingt corrections, aller chercher
@@ -14769,17 +15054,60 @@ function _mdResizeDown(ev, id, side){
 //   Échap       ferme la fiche ouverte
 // Les raccourcis se taisent dès qu'on écrit dans un champ : on ne supprime pas
 // une scène parce que quelqu'un tape « supprimer » dans une zone de texte.
+// ── SUPPRESSION UNIFIÉE (idempotente) ────────────────────────────────────────
+// #suppr-idempotente (Axel) : Suppr sur un élément DÉJÀ supprimé le RÉTABLISSAIT
+// (toggle involontaire). Un seul chemin de suppression pour le clavier, le menu
+// de tige, le double-clic et les cartes : supprimer DÉSÉLECTIONNE, re-supprimer
+// ne fait rien — le rétablissement passe par ⌘Z (ou le bouton ↺ de la carte).
+function _mdDeleteScene(id){
+  const s=_md.scenes.find(x=>x.id===id); if(!s||s.del) return false;
+  _mdCommit();
+  const isTxt=(s.n==='carte'||s.replT) && !s.repl && !s.replM;
+  if(s.n==='split'&&typeof s.splitIdx==='number'){ _md.splits.splice(s.splitIdx,1); _mdRebuildSplitScenes(); toast('Split supprimé — ⌘Z pour annuler'); }
+  // une scène AJOUTÉE supprimée disparaît tout court (pas de « ban » fantôme à la régénération)
+  // (on GARDE addedMedia[id] : si ⌘Z restaure la scène, son fichier doit encore exister ;
+  // orphelin sinon = inoffensif, _mdRegen n'uploade que les scènes présentes)
+  else if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); toast((isTxt?'Texte':'Scène')+' supprimé'+(isTxt?'':'e')+' — ⌘Z pour annuler'); }
+  else { s.del=true; s.repl=null; toast(isTxt?'Texte supprimé — ⌘Z pour annuler':'Scène supprimée — ⌘Z pour annuler'); }
+  if(_md.sel===id) _md.sel=null;
+  _md.selMark=null; _md.pop=null; _md._ovKey=null;
+  _mdRender();
+  return true;
+}
+// #tige-suppr · supprime l'ÉVÉNEMENT sélectionné (bruitage / transition / texte)
+function _mdDeleteMark(){
+  const sm=_md.selMark; if(!sm) return false;
+  const k=_mdMarkKind(sm.id); if(!k){ _md.selMark=null; return false; }
+  const m=(_md.marks[k]||[]).find(x=>x.id===sm.id);
+  if(!m||m.del){ _md.selMark=null; return false; }
+  _mdCommit(); m.del=true;
+  _md.selMark=null; _md.pop=null;
+  toast((k==='sfx'?'Bruitage retiré':k==='trans'?'Transition retirée (coupe nette)':'Texte retiré')+' — ⌘Z pour annuler');
+  _mdRender();
+  return true;
+}
+// #split-rebuild-doux · ne reconstruit QUE les lignes 'sp*' depuis _md.splits.
+// L'ancien `_md.scenes=_mdBuildScenes()` repartait du plan dérivé : il JETAIT les
+// scènes ajoutées et tous les flags user (del/repl/replT/resized…) des autres
+// scènes — une partie des « restes »/pertes vus par Axel après un split.
+function _mdRebuildSplitScenes(){
+  const fresh=_mdBuildScenes().filter(r=>r.n==='split');
+  _md.scenes=_md.scenes.filter(s=>s.n!=='split').concat(fresh);
+  _md.scenes.sort((x,y)=>x.a-y.a);
+  if(_md.sel && !_md.scenes.some(s=>s.id===_md.sel)) _md.sel=null;
+}
 function _mdClavier(e){
   if(!_md || !document.getElementById('mdOv')) return;
   const t=e.target, tag=(t&&t.tagName||'').toUpperCase();
   if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable)) return;
   const k=e.key;
-  if((k==='Backspace'||k==='Delete') && _md.sel){
+  if(k==='Backspace'||k==='Delete'){
+    // 1) une TIGE sélectionnée (bruitage/transition/texte) prime sur le bloc du dessous
+    if(_md.selMark){ e.preventDefault(); _mdDeleteMark(); return; }
+    // 2) sinon le bloc sélectionné — Suppr sans sélection = rien, jamais de toggle
+    if(!_md.sel) return;
     const sc=_md.scenes.find(x=>x.id===_md.sel);
-    if(sc){ e.preventDefault(); _mdCommit();
-      if(sc.n==='split'&&typeof sc.splitIdx==='number'){ _md.splits.splice(sc.splitIdx,1); _md.scenes=_mdBuildScenes(); toast('Split supprimé — ⌘Z pour annuler'); }
-      else { sc.del=!sc.del; if(sc.del) sc.repl=null; toast(sc.del?'Scène supprimée — ⌘Z pour annuler':'Scène rétablie'); }
-      _mdRender(); }
+    if(sc && !sc.del){ e.preventDefault(); _mdDeleteScene(sc.id); }
     return;
   }
   if((e.metaKey||e.ctrlKey) && k.toLowerCase()==='z'){
@@ -14790,7 +15118,12 @@ function _mdClavier(e){
     e.preventDefault(); const pas=e.shiftKey?1:0.1;
     _mdSeek(_md.time + (k==='ArrowRight'?pas:-pas)); return;
   }
-  if(k==='Escape' && _md.pop){ e.preventDefault(); _md.pop=null; _mdRenderPop(); }
+  if(k==='Escape'){
+    const bm=document.getElementById('mdBlocMenu');
+    if(bm){ e.preventDefault(); bm.remove(); return; }
+    if(_md.pop){ e.preventDefault(); _md.pop=null; _mdRenderPop(); return; }
+    if(_md.selMark){ e.preventDefault(); _md.selMark=null; _mdPaintProximity(); }
+  }
 }
 if(!window._mdClavierPose){ window._mdClavierPose=true; document.addEventListener('keydown', _mdClavier); }
 
@@ -14799,12 +15132,13 @@ function _mdTrackDown(ev){
   // popover était ouvert, le 1er clic ne faisait que le fermer (rien ne bougeait) → « il faut
   // double-cliquer ». On ferme le popover ET on continue à se positionner.
   if(_md.pop){ _md.pop=null; _mdRenderPop(); }
+  if(_md.selMark){ _md.selMark=null; _mdPaintProximity(); }   // #tige-sélection · clic sur la bande = tige désélectionnée
   _mdPause();
   const host=document.getElementById('mdTrack'); if(!host) return;
   const r=host.getBoundingClientRect();
   const at=(cx)=>Math.max(0,Math.min(1,(cx-r.left)/r.width))*_md.dur;
   const t=at(ev.clientX); _mdSeek(t);
-  const hit=_md.scenes.find(s=>t>=s.a&&t<s.b); if(hit) _mdSelect(hit.id,false);
+  const hit=_md.scenes.find(s=>!s.del&&t>=s.a&&t<s.b); if(hit) _mdSelect(hit.id,false);
   const mv=(e)=>_mdSeek(at(e.clientX));
   const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); };
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
@@ -14886,13 +15220,11 @@ function _mdPopAct(act){
     // #split-changer · « Remplacer » un split rouvre le sélecteur (anim/média), pas le swipe d'anims
     if(act==='repl' && _sc && _sc.n==='split' && typeof _sc.splitIdx==='number'){ _md.splitPick={at:_sc.a, replaceIdx:_sc.splitIdx, tab:(_md.splits[_sc.splitIdx]&&_md.splits[_sc.splitIdx].anim)?'anim':'media'}; _mdRenderModals(); return; }
     if(act==='repl') _mdOpenSwipe(it.id);
-    else { _mdCommit(); const s=_md.scenes.find(x=>x.id===it.id);
-      if(s&&s.n==='split'&&typeof s.splitIdx==='number'){ _md.splits.splice(s.splitIdx,1); _md.scenes=_mdBuildScenes(); }
-      else if(s){ s.del=true; s.repl=null; } _mdRender(); }
+    else _mdDeleteScene(it.id);   // #suppr-idempotente · même chemin que le clavier
   } else {
     if(act==='repl'){ _md.bankModal={kind:it.k,at:it.t,mark:it.id,swipe:true,i:0};
       _md.bankModal.list=_mdShuffle(_mdBankDef(it.k).items); _mdRenderModals(); }
-    else { _mdCommit(); const k=_mdMarkKind(it.id); _md.marks[k]=_md.marks[k].map(x=>x.id===it.id?Object.assign({},x,{del:true}):x); _mdRender(); }
+    else { _md.selMark={k:it.k,id:it.id}; _mdDeleteMark(); }   // #suppr-idempotente · même chemin que le clavier
   }
 }
 function _mdRequestAdd(nature){
@@ -15039,7 +15371,7 @@ function _mdPaintCloseUp(){
   const pct=(t)=>((t-from)/span)*100;
   const PIN=mob?24:28, LVL=mob?30:34, HALF=14+3*LVL;
   const stack=(arr)=>_mdStack(arr,0.95);
-  const up=stack(_md.scenes.filter(s=>s.a>=from&&s.a<=to).map(s=>({t:s.a,k:'scene',id:s.id,del:!!s.del,n:s.repl||s.t,nat:s.n,
+  const up=stack(_md.scenes.filter(s=>!s.del&&s.a>=from&&s.a<=to).map(s=>({t:s.a,k:'scene',id:s.id,del:false,n:s.repl||s.t,nat:s.n,
     c:_MD_NATURE[s.n].color,ico:_MD_NATURE[s.n].ico,lab:s.n==='animation'?'Animation':_MD_NATURE[s.n].label})));
   const down=stack([].concat(
     _md.marks.sfx.filter(x=>!x.del&&x.t>=from&&x.t<=to).map(x=>({t:x.t,k:'sfx',id:x.id,n:x.n,c:_MD_CYAN,ico:'wave',lab:'Bruitage'})),
@@ -15071,8 +15403,8 @@ function _mdPaintCloseUp(){
     +'<div id="mdCloseBand" onpointerdown="_mdZSeek(event)" style="position:relative;cursor:pointer">'
       +'<div style="position:relative;height:'+HALF+'px">'+up.map(it=>stem(it,'up')).join('')+'</div>'
       +'<div style="position:relative;height:'+(mob?26:30)+'px;border-radius:7px;overflow:hidden;background:var(--surface);border:1px solid var(--border-2)">'
-        +_md.scenes.filter(s=>s.b>from&&s.a<to).map(s=>{ const meta=_MD_NATURE[s.n], l=Math.max(0,pct(s.a)), r=Math.min(100,pct(s.b));
-          return '<div style="position:absolute;left:'+l+'%;width:'+(r-l)+'%;top:0;bottom:0;background:color-mix(in srgb, '+meta.color+' '+(_md.sel===s.id?42:22)+'%, transparent);border-right:1px solid color-mix(in srgb, '+meta.color+' 55%, transparent);opacity:'+(s.del?'.3':'1')+'"></div>'; }).join('')
+        +_md.scenes.filter(s=>!s.del&&s.b>from&&s.a<to).map(s=>{ const meta=_MD_NATURE[s.n], l=Math.max(0,pct(s.a)), r=Math.min(100,pct(s.b));
+          return '<div style="position:absolute;left:'+l+'%;width:'+(r-l)+'%;top:0;bottom:0;background:color-mix(in srgb, '+meta.color+' '+(_md.sel===s.id?42:22)+'%, transparent);border-right:1px solid color-mix(in srgb, '+meta.color+' 55%, transparent)"></div>'; }).join('')
         +ticks.map(t=>'<div style="position:absolute;left:'+pct(t)+'%;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.09)"><span class="mono" style="position:absolute;left:3px;top:'+(mob?7:8)+'px;font-size:8.5px;color:var(--text-3);white-space:nowrap">'+_mdT(t)+'</span></div>').join('')
       +'</div>'
       +'<div style="position:relative;height:'+HALF+'px">'+down.map(it=>stem(it,'down')).join('')+'</div>'
@@ -15096,7 +15428,8 @@ function _mdZStemDown(ev, btn){
   const it=JSON.parse(btn.parentElement.getAttribute('data-zstem'));
   const openPop=()=>{ const same=_md.pop&&_md.pop.item&&_md.pop.item.t===it.t&&_md.pop.item.k===it.k;
     _md.pop=same?null:{item:it, side: btn.parentElement.style.flexDirection==='column-reverse'?'up':'down', src:'zoom'};
-    if(it.id&&it.k==='scene') _md.sel=it.id;
+    if(it.id&&it.k==='scene'){ _md.sel=it.id; _md.selMark=null; }
+    else if(it.id){ _md.selMark={k:it.k,id:it.id}; _md.sel=null; }   // #tige-sélection · la tige, pas le bloc
     _mdSeek(it.t); _mdRenderPop(); _mdPaintSel(); _mdPaintCloseUp(); _mdRenderPop(); };
   if(!it.id){ openPop(); return; }
   const host=document.getElementById('mdCloseBand');
@@ -15152,20 +15485,23 @@ function _mdCardHtml(s, i, compact){
       +'</div>'
     +'</div></div>';
 }
-function _mdCardDel(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id); if(s){ s.del=true; s.repl=null; } _mdRender(); }
+function _mdCardDel(id){ _mdDeleteScene(id); }   // #suppr-idempotente · même chemin partout
 // #contenu-générique · ouvre l'éditeur de contenu (items texte OU images) d'une anim à personnaliser
 function _mdPersoOpen(id){ const s=_md.scenes.find(x=>x.id===id); if(!s) return; const an=s.repl||s.t; if(_MD_IMG_ANIMS.has(an)) _mdAskImagesOpen(s); else _mdAskItemsOpen(s); }
 // #séparer (Axel 25/08) : coupe une scène en DEUX au curseur → chaque moitié se supprime/étire seule
 // (comme « Séparer » de l'éditeur). Chaque moitié est une scène rognée normale (déjà gérée au rendu ET
 // à la régénération : une moitié gardée = plan re-timé, une moitié supprimée = zone rendue à l'avatar).
 function _mdSplitScene(id){
-  const s=_md.scenes.find(x=>x.id===id); if(!s){ return; }
+  const s=_md.scenes.find(x=>x.id===id); if(!s||s.del){ return; }
   if(s.n==='split'){ toast('Un split screen ne se sépare pas — supprime-le et recrée-le'); return; }
   const tc=Math.round(Math.max(s.a+0.4, Math.min(s.b-0.4, _md.time))*100)/100;
   if(!(tc>s.a+0.2 && tc<s.b-0.2)){ toast('Place le curseur DANS la scène (pas au tout début/fin) pour la séparer'); return; }
   _mdCommit();
   const s2=Object.assign({}, s, { id:'sc'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), a:tc, resized:true, _splitOf:(s._splitOf||s.id) });
   s.b=tc; s.resized=true; s._splitOf=(s._splitOf||s.id);
+  // #séparer-média · la moitié neuve garde le FICHIER local de son média (added/replM) : sans ça,
+  // _mdRegen ne trouve pas addedMedia[s2.id] et la 2e moitié partait au rendu SANS son média.
+  if(_md.addedMedia && _md.addedMedia[s.id]) _md.addedMedia[s2.id]=_md.addedMedia[s.id];
   const idx=_md.scenes.indexOf(s); _md.scenes.splice(idx+1,0,s2);
   _md.scenes.sort((x,y)=>x.a-y.a);
   _md.sel=s2.id;
@@ -15175,6 +15511,25 @@ function _mdSplitScene(id){
 function _mdCardUndo(id){ _mdCommit(); const s=_md.scenes.find(x=>x.id===id);
   if(s){ if(s.added){ _md.scenes=_md.scenes.filter(x=>x.id!==id); delete _md.addedMedia[id]; } else { s.del=false; s.repl=null; s.replM=null; s.replT=null; s.userItems=null; s.userImages=null; delete _md.addedMedia[id]; } } _mdRender(); }
 // ── APERÇUS (animation / transition / texte / bruitage) ─────────────────────
+// Un aperçu qui ne charge pas (503 du bucket anim-previews, réseau) : UN retry,
+// puis un placeholder discret (fond panel + icône SVG) — jamais de case noire
+// infinie. Sur window : les vignettes de l'Éditeur (autre bloc <script>) s'en
+// servent aussi via leur attribut onerror.
+window._aaPrevErr=function(el){
+  try{
+    if(!el) return;
+    const n=(parseInt(el.dataset.err||'0',10)||0)+1; el.dataset.err=String(n);
+    if(n<=1){
+      const s=el.getAttribute('src');
+      setTimeout(function(){ try{ if(el.isConnected&&s){ el.src=s; if(el.load) el.load(); } }catch(_){ } },800);
+      return;
+    }
+    const ph=document.createElement('div');
+    ph.style.cssText='position:absolute;inset:0;display:grid;place-items:center;background:var(--panel-1);color:var(--text-3)';
+    ph.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+    if(el.parentNode) el.parentNode.replaceChild(ph,el);
+  }catch(_){ }
+};
 function _mdAnimPrevHtml(name, desc, big){
   // la VRAIE animation en aperçu (retour Axel) : chaque anim de la banque a été
   // rendue par le moteur lui-même (anim-previews/<nom>.mp4, manifeste
@@ -15185,6 +15540,7 @@ function _mdAnimPrevHtml(name, desc, big){
     const src=(window._edAnimSrc?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')));
     return '<div style="position:relative;width:100%;aspect-ratio:9 / 16;border-radius:'+(big?16:11)+'px;overflow:hidden;background:#08070a;border:1px solid var(--border-2)">'
       +'<video data-prev src="'+src+'" poster="'+(window._edAnimPoster?window._edAnimPoster(nm):('anim-previews/'+nm+'.jpg'))+'" muted loop playsinline preload="'+(big?'auto':'none')+'"'+(big?' autoplay':'')
+      +' onerror="window._aaPrevErr&&window._aaPrevErr(this)"'
       +' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video></div>';
   }
   const anim=_MD_FAM_CSS[_mdAnimFam(name,desc)]||_MD_FAM_CSS.Pop;
@@ -15699,27 +16055,42 @@ function _mdBankDef(kind){
   if(kind==='trans') return { title:'Transitions', ico:'trans', c:'var(--violet)', items:_MD_TRANS_BANK.slice() };
   return { title:'Sous-titre / accroche', ico:'card', c:'var(--blue)', items:_MD_TEXT_BANK.slice() };
 }
+// liste filtrée par la recherche — PARTAGÉE entre le rendu initial et l'append
+// paresseux (le même filtre doit servir les deux, sinon les paquets divergent).
+// Les animations se cherchent aussi par leur DESCRIPTION (les noms sont
+// techniques : « compteur » doit trouver countup).
+function _mdBankFiltered(bm,b){
+  const q=(bm.q||'').toLowerCase();
+  const descOf=(x)=>{ if(bm.kind!=='animation') return ''; const bk=(_md.bank||[]).find(a=>a.name===x); return bk?String(bk.desc).toLowerCase():''; };
+  return b.items.filter(x=>x.toLowerCase().indexOf(q)>=0 || (q && descOf(x).indexOf(q)>=0));
+}
+// une cellule de la grille — partagée elle aussi (rendu initial + append)
+function _mdBankCell(bm,b,it){
+  let prev='';
+  if(bm.kind==='animation'){ const bk=(_md.bank||[]).find(x=>x.name===it);
+    prev='<div style="width:46%;align-self:center">'+_mdAnimPrevHtml(it,bk?bk.desc:'',false)+'</div>'; }
+  else if(bm.kind==='trans') prev=_mdTransPrevHtml(it);
+  else if(bm.kind==='texte') prev=_mdTextPrevHtml(it);
+  else prev=_mdSfxPrevHtml(it,b.c,false);
+  // un DIV cliquable, pas un <button> : la cellule bruitage contient déjà un
+  // bouton play, et un bouton dans un bouton fait éclater le parseur HTML
+  return '<div role="button" tabindex="0" onclick="_mdBankPick(\''+_mdEsc(it)+'\')" class="col" style="gap:7px;align-items:stretch;padding:8px;border-radius:11px;text-align:left;border:1px solid var(--border);background:var(--panel-1);transition:.12s;cursor:pointer" '
+    +'onmouseenter="this.style.borderColor=\''+b.c+'\';this.style.background=\'var(--surface-2)\'" onmouseleave="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--panel-1)\'">'
+    +prev+'<span class="row" style="gap:6px;align-items:center;font-size:12px;font-weight:600;color:var(--text)">'+_mdIco(b.ico,11,b.c)+' '+_mdEsc(it)+'</span></div>';
+}
+// la sentinelle de fin de grille : compteur discret + spinner SVG (montré le
+// temps de poser le paquet suivant). C'est ELLE que l'IntersectionObserver
+// surveille pour déclencher l'append ~5 cellules avant la fin.
+function _mdBankSentHtml(total,shown){
+  if(total<=shown) return '';
+  return '<div id="mdBankSent" style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;color:var(--text-3)">'
+    +'<svg id="mdBankSpin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="animation:spin .8s linear infinite;display:none"><path d="M12 3a9 9 0 1 0 9 9"/></svg>'
+    +'<span class="mono" data-count style="font-size:10.5px">'+shown+' / '+total+'</span></div>';
+}
 function _mdBankModalHtml(){
   const bm=_md.bankModal, b=_mdBankDef(bm.kind);
-  const q=(bm.q||'').toLowerCase();
-  // les animations se cherchent aussi par leur DESCRIPTION (les noms sont
-  // techniques : « compteur » doit trouver countup)
-  const descOf=(x)=>{ if(bm.kind!=='animation') return ''; const bk=(_md.bank||[]).find(a=>a.name===x); return bk?String(bk.desc).toLowerCase():''; };
-  const list=b.items.filter(x=>x.toLowerCase().indexOf(q)>=0 || (q && descOf(x).indexOf(q)>=0));
+  const list=_mdBankFiltered(bm,b);
   const cols=bm.kind==='sfx'?'1fr':'1fr 1fr';
-  const cell=(it)=>{
-    let prev='';
-    if(bm.kind==='animation'){ const bk=(_md.bank||[]).find(x=>x.name===it);
-      prev='<div style="width:46%;align-self:center">'+_mdAnimPrevHtml(it,bk?bk.desc:'',false)+'</div>'; }
-    else if(bm.kind==='trans') prev=_mdTransPrevHtml(it);
-    else if(bm.kind==='texte') prev=_mdTextPrevHtml(it);
-    else prev=_mdSfxPrevHtml(it,b.c,false);
-    // un DIV cliquable, pas un <button> : la cellule bruitage contient déjà un
-    // bouton play, et un bouton dans un bouton fait éclater le parseur HTML
-    return '<div role="button" tabindex="0" onclick="_mdBankPick(\''+_mdEsc(it)+'\')" class="col" style="gap:7px;align-items:stretch;padding:8px;border-radius:11px;text-align:left;border:1px solid var(--border);background:var(--panel-1);transition:.12s;cursor:pointer" '
-      +'onmouseenter="this.style.borderColor=\''+b.c+'\';this.style.background=\'var(--surface-2)\'" onmouseleave="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--panel-1)\'">'
-      +prev+'<span class="row" style="gap:6px;align-items:center;font-size:12px;font-weight:600;color:var(--text)">'+_mdIco(b.ico,11,b.c)+' '+_mdEsc(it)+'</span></div>';
-  };
   return '<div onclick="_md.bankModal=null;_mdRenderModals()" style="position:fixed;inset:0;z-index:6600;background:rgba(6,6,9,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px">'
     +'<div onclick="event.stopPropagation()" style="width:min(460px,94vw);max-height:82vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border-2);border-radius:18px;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)">'
       +'<div class="row" style="gap:9px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)">'
@@ -15729,7 +16100,7 @@ function _mdBankModalHtml(){
       +'<div style="padding:10px 12px">'
         +'<button onclick="_mdBankToSwipe()" class="row" style="width:100%;gap:8px;align-items:center;justify-content:center;padding:9px 12px;border-radius:9px;margin-bottom:9px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-size:12.5px;font-weight:700;cursor:pointer">'
           +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l4 4-4 4M7 16l-4-4 4-4"/></svg> Passer en mode swipe</button>'
-        +'<input autofocus value="'+_mdEsc(bm.q||'')+'" oninput="_md.bankModal.q=this.value;_mdRenderModals(true)" placeholder="Rechercher parmi '+b.items.length+'…" '
+        +'<input autofocus value="'+_mdEsc(bm.q||'')+'" oninput="_mdBankSearch(this.value)" placeholder="Rechercher parmi '+b.items.length+'…" '
           +'style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel-1);color:var(--text);font-size:13px">'
       +'</div>'
       // ── PAR PAQUETS DE 30 ────────────────────────────────────────────────
@@ -15737,15 +16108,12 @@ function _mdBankModalHtml(){
       // fais genre 30 par 30 ». Chaque vignette est une vidéo : en afficher 164
       // d'un coup, c'est 164 lecteurs que le navigateur ouvre ensemble, et
       // l'écran reste blanc le temps qu'ils s'installent.
-      // On en pose 30, et le paquet suivant arrive quand on approche du bas —
-      // sans bouton à cliquer, sans rupture de défilement.
-      +'<div id="mdBankGrid" onscroll="_mdBankPlus(event)" style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:'+cols+';gap:8px">'
-        +list.slice(0, bm.n || 30).map(cell).join('')
-        +(list.length > (bm.n || 30)
-          ? '<div id="mdBankPlus" style="grid-column:1/-1;padding:14px;text-align:center">'
-            +'<button onclick="_mdBankPlus()" class="btn btn-quiet btn-sm">Voir les '
-            + Math.min(30, list.length - (bm.n || 30)) + ' suivantes · ' + (bm.n || 30) + '/' + list.length + '</button></div>'
-          : '')
+      // On en pose 30 ; le paquet suivant est APPENDU (jamais de re-rendu
+      // complet, donc le défilement ne saute plus) quand la sentinelle approche
+      // (IntersectionObserver armé par _mdRenderModals, + secours onscroll).
+      +'<div id="mdBankGrid" onscroll="_mdBankNearEnd(this)" style="overflow-y:auto;padding:0 12px 12px;display:grid;grid-template-columns:'+cols+';gap:8px">'
+        +list.slice(0, bm.n || 30).map(it=>_mdBankCell(bm,b,it)).join('')
+        +_mdBankSentHtml(list.length, bm.n || 30)
       +'</div>'
     +'</div></div>';
 }
@@ -15758,19 +16126,74 @@ function _mdSwapBody(fullHtml, bodyId){
   const nb=t.content.querySelector('#'+bodyId);
   if(nb) host.replaceWith(nb); else _mdRenderModals();
 }
-// Le paquet suivant : au clic, ou dès qu'on arrive à 300 px du bas. On ne
-// remplace que la grille (_mdSwapBody), donc le défilement ne saute pas.
-function _mdBankPlus(ev){
-  if(!_md || !_md.bankModal) return;
-  if(ev && ev.type==='scroll'){
-    const el=ev.target;
-    if(el.scrollHeight - el.scrollTop - el.clientHeight > 300) return;
-    if(_md.bankModal._chargeEnCours) return;
-    _md.bankModal._chargeEnCours=true;
-    setTimeout(()=>{ if(_md&&_md.bankModal) _md.bankModal._chargeEnCours=false; }, 400);
-  }
-  _md.bankModal.n = (_md.bankModal.n || 30) + 30;
-  _mdRenderModals(true);
+// Le paquet suivant : APPEND direct dans la grille — on ne reconstruit RIEN,
+// donc scrollTop ne bouge pas et les 30 vidéos déjà posées ne sont pas
+// recréées (c'était la perte de FPS + le « scroll qui saute tout en haut »).
+function _mdBankAppend(){
+  if(!_md || !_md.bankModal || _md.bankModal._chargeEnCours) return;
+  const bm=_md.bankModal;
+  if(bm.swipe) return;
+  const b=_mdBankDef(bm.kind), list=_mdBankFiltered(bm,b);
+  const from=bm.n||30; if(from>=list.length) return;
+  bm._chargeEnCours=true;
+  const q0=bm.q||'';
+  const spin=document.getElementById('mdBankSpin'); if(spin) spin.style.display='block';
+  // un souffle pour laisser le spinner se peindre, puis l'append synchrone
+  setTimeout(()=>{
+    try{
+      if(!_md || _md.bankModal!==bm) return;
+      // la recherche a changé entre-temps : la grille a été reconstruite avec
+      // un autre filtre — ce paquet-ci est périmé, on n'appende rien
+      if((bm.q||'')!==q0) return;
+      const grid=document.getElementById('mdBankGrid'); if(!grid) return;
+      bm.n=Math.min(list.length, from+30);
+      const html=list.slice(from,bm.n).map(it=>_mdBankCell(bm,b,it)).join('');
+      const sent=document.getElementById('mdBankSent');
+      if(sent) sent.insertAdjacentHTML('beforebegin',html);
+      else grid.insertAdjacentHTML('beforeend',html);
+      // les nouvelles vignettes rejoignent l'observateur play/pause existant
+      // (observer deux fois le même nœud est un no-op — pas besoin de marquer)
+      if(window._mdPrevIO) grid.querySelectorAll('video[data-prev]').forEach(v=>window._mdPrevIO.observe(v));
+      if(bm.n>=list.length){
+        if(sent) sent.remove();
+        if(window._mdBankIO){ window._mdBankIO.disconnect(); window._mdBankIO=null; }
+      } else if(sent){
+        const c=sent.querySelector('[data-count]'); if(c) c.textContent=bm.n+' / '+list.length;
+        const sp=document.getElementById('mdBankSpin'); if(sp) sp.style.display='none';
+      }
+    } finally { bm._chargeEnCours=false; }
+  },30);
+}
+// secours au scroll (les callbacks d'IntersectionObserver ne sont pas garantis
+// dans tous les états d'onglet WebKit) : ~2 rangées avant le bas → append
+function _mdBankNearEnd(el){
+  if(!el) return;
+  if(el.scrollHeight - el.scrollTop - el.clientHeight < 520) _mdBankAppend();
+}
+// l'IntersectionObserver de la sentinelle — armé après chaque (re)construction
+// de la grille ; rootMargin 520px ≈ 5 cellules avant la fin
+function _mdBankArmIO(){
+  if(window._mdBankIO){ window._mdBankIO.disconnect(); window._mdBankIO=null; }
+  const sent=document.getElementById('mdBankSent'), grid=document.getElementById('mdBankGrid');
+  if(!sent||!grid||typeof IntersectionObserver==='undefined') return;
+  window._mdBankIO=new IntersectionObserver((es)=>{ for(const e of es){ if(e.isIntersecting){ _mdBankAppend(); break; } } },{root:grid,rootMargin:'520px 0px'});
+  window._mdBankIO.observe(sent);
+}
+// la recherche filtre EN PLACE : seule la grille est reconstruite — l'input,
+// son focus et la modale ne bougent pas — et la pagination repart à 30
+function _mdBankSearch(val){
+  const bm=_md&&_md.bankModal; if(!bm) return;
+  bm.q=val; bm.n=30; bm._chargeEnCours=false;
+  const grid=document.getElementById('mdBankGrid');
+  if(!grid){ _mdRenderModals(true); return; }
+  const b=_mdBankDef(bm.kind), list=_mdBankFiltered(bm,b);
+  // pauser les vignettes qu'on va jeter : une <video> détachée en pleine
+  // lecture garde son décodeur un moment (FPS) — même règle qu'à la fermeture
+  try{ grid.querySelectorAll('video[data-prev]').forEach(v=>{ try{ v.pause(); }catch(_){ } }); }catch(_){ }
+  grid.scrollTop=0;
+  grid.innerHTML=list.slice(0,30).map(it=>_mdBankCell(bm,b,it)).join('')+_mdBankSentHtml(list.length,30);
+  if(window._mdPrevIO) grid.querySelectorAll('video[data-prev]').forEach(v=>window._mdPrevIO.observe(v));
+  _mdBankArmIO();
 }
 function _mdShuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 // depuis une grille de REMPLACEMENT d'animation, « swipe » = le vrai écran
@@ -15994,7 +16417,14 @@ function _mdEnsureCss(){
     +'#mdOv button{cursor:pointer;font-family:inherit}'
     +'#mdOv button:not(.btn){border:none;background:none}'
     +'#mdClipOver{transition:opacity .22s ease}'
-    +'@keyframes mdPopIn{from{opacity:0;transform:translateY(8px) scale(.92)}to{opacity:1;transform:none}}';
+    +'@keyframes mdPopIn{from{opacity:0;transform:translateY(8px) scale(.92)}to{opacity:1;transform:none}}'
+    // #ux-hit (passe UX) : zones de prise GÉNÉREUSES — la cible réelle déborde de
+    // l'élément dessiné (tiges +6px, poignées +5px) sans toucher au visuel
+    +'#mdOv [data-stem] button{position:relative}'
+    +'#mdOv [data-stem] button::before{content:"";position:absolute;inset:-6px}'
+    +'#mdOv [data-grip]::before{content:"";position:absolute;inset:-3px -5px}'
+    +'#mdOv [data-md-bloc]:hover{filter:brightness(1.22)}'
+    +'#mdOv [data-md-bloc]:active{cursor:grabbing}';
   document.head.appendChild(st);
 }
 
@@ -16058,8 +16488,11 @@ function _mdAnimOv(){
 }
 function _mdPeindreAnim(t){
   const o=_mdAnimOv(); if(!o) return;
-  // la scène qui couvre l'instant ET qui porte une animation jouable
-  const sc=(_md.scenes||[]).find(x=>!x.del && t>=x.a && t<x.b && x.n==='animation' && x.t);
+  // la scène qui couvre l'instant ET qui porte une animation jouable.
+  // #anim-résiduelle · une scène SUPPRIMÉE ou REMPLACÉE (repl/replM/replT) ne joue JAMAIS
+  // son ancienne anim ici : cet overlay est AU-DESSUS de mdClipOver (z3 > z1) et laissait
+  // l'ancienne animation par-dessus l'aperçu du remplacement — les « restes » d'Axel.
+  const sc=(_md.scenes||[]).find(x=>!x.del && !x.repl && !x.replM && !x.replT && t>=x.a && t<x.b && x.n==='animation' && x.t);
   const nom=sc ? String(sc.t).trim() : '';
   const dispo=nom && window._mdPrevSet && window._mdPrevSet.has(nom);
   if(!dispo){ if(o.style.display!=='none'){ o.style.display='none'; try{ o.pause(); }catch(_){} o.removeAttribute('src'); o.removeAttribute('data-anim'); } return; }
@@ -16222,8 +16655,9 @@ function _mdStatsHtml(){
   const nSfx=_md.marks.sfx.filter(x=>!x.del).length;
   const nTx=_md.marks.texte.filter(x=>!x.del).length;
   const nMed=_md.scenes.filter(s=>s.n==='media'&&!s.del).length;
+  const nSc=_md.scenes.filter(s=>!s.del).length;   // #suppr-totale · une scène supprimée ne compte plus
   return '<div class="row" style="gap:'+(mob?14:22)+'px;flex-wrap:wrap;padding:'+(mob?'12px 14px':'14px 20px')+';border-radius:14px;background:var(--panel-1);border:1px solid var(--border)">'
-    +[[_md.scenes.length,'scènes'],[nSfx,'bruitages'],[nTx,'sous-titres'],[nMed,nMed>1?'médias':'média'],[_mdT(_md.dur),'durée']]
+    +[[nSc,'scènes'],[nSfx,'bruitages'],[nTx,'sous-titres'],[nMed,nMed>1?'médias':'média'],[_mdT(_md.dur),'durée']]
       .map(x=>'<div class="col" style="line-height:1.2"><span class="display" style="font-size:'+(mob?16:19)+'px;font-weight:800">'+x[0]+'</span>'
         +'<span class="faint" style="font-size:10.5px">'+x[1]+'</span></div>').join('')
     +'</div>';
@@ -16470,7 +16904,7 @@ function _mdSplitAdd(assetId){
   const ri=_md.splitPick&&_md.splitPick.replaceIdx;
   if(ri!=null && (_md.splits||[])[ri]){ const o=_md.splits[ri]; _md.splits[ri]={ start:o.start, end:o.end, assetId:String(assetId), added:true, _mod:true, ratio:o.ratio!=null?o.ratio:0.5, invert:!!o.invert }; }
   else (_md.splits=_md.splits||[]).push({ start:_mdR2(at), end:_mdR2(Math.min(_md.dur-0.1, at+3)), assetId:String(assetId), added:true, ratio:0.5 });
-  _md.splitPick=null; _md.scenes=_mdBuildScenes(); _mdRender(); _mdRenderModals();
+  _md.splitPick=null; _mdRebuildSplitScenes(); _mdRender(); _mdRenderModals();
   if(typeof toast==='function') toast('Split screen — « '+assetId+' » au-dessus');
 }
 function _mdSplitAddAnim(anim){
@@ -16479,7 +16913,7 @@ function _mdSplitAddAnim(anim){
   const ri=_md.splitPick&&_md.splitPick.replaceIdx; let idx;
   if(ri!=null && (_md.splits||[])[ri]){ const o=_md.splits[ri]; _md.splits[ri]={ start:o.start, end:o.end, anim:String(anim), added:true, _mod:true, ratio:o.ratio!=null?o.ratio:0.5, invert:!!o.invert }; idx=ri; }
   else { (_md.splits=_md.splits||[]).push({ start:_mdR2(at), end:_mdR2(Math.min(_md.dur-0.1, at+3)), anim:String(anim), added:true, ratio:0.5 }); idx=_md.splits.length-1; }
-  _md.splitPick=null; _md.scenes=_mdBuildScenes(); _mdRender(); _mdRenderModals();
+  _md.splitPick=null; _mdRebuildSplitScenes(); _mdRender(); _mdRenderModals();
   _mdSplitFitAnimDur(idx, String(anim));   // #split-durée (Axel) : la fenêtre dure l'anim COMPLÈTE → une seule lecture
   if(typeof toast==='function') toast('Split screen — anim « '+anim+' » en haut');
 }
@@ -16490,7 +16924,7 @@ function _mdSplitFitAnimDur(idx, anim){
     const src=(window._edAnimSrc?window._edAnimSrc(nm):((window._mdPrevBlob&&window._mdPrevBlob[nm])||('anim-previews/'+nm+'.mp4')));
     const v=document.createElement('video'); v.preload='metadata'; v.muted=true; v.src=src;
     v.addEventListener('loadedmetadata',()=>{ try{ const d=v.duration; const sp=(_md.splits||[])[idx];
-      if(sp&&!sp.del&&isFinite(d)&&d>0.3){ sp.end=_mdR2(Math.min(_md.dur-0.05,(Number(sp.start)||0)+d)); _md.scenes=_mdBuildScenes(); _mdRender(); } }catch(_){} v.src=''; });
+      if(sp&&!sp.del&&isFinite(d)&&d>0.3){ sp.end=_mdR2(Math.min(_md.dur-0.05,(Number(sp.start)||0)+d)); _mdRebuildSplitScenes(); _mdRender(); } }catch(_){} v.src=''; });
   }catch(_){}
 }
 // #split-import (Axel 25/08 : « ça doit proposer d'importer directement ») : le picker « Ton média »
@@ -16516,6 +16950,12 @@ function _mdSplitImportMedia(){
 }
 function _mdRenderModals(keepFocus){
   const host=document.getElementById('mdModals'); if(!host||!_md) return;
+  // les vignettes du rendu PRÉCÉDENT sont pausées avant d'être jetées : une
+  // <video> détachée en pleine lecture garde son décodeur un moment (FPS) —
+  // et à la FERMETURE du modal c'est ce qui coupe tout net les 30+ aperçus
+  try{ host.querySelectorAll('video[data-prev]').forEach(v=>{ try{ v.pause(); }catch(_){ } }); }catch(_){ }
+  if(window._mdPrevIO){ window._mdPrevIO.disconnect(); window._mdPrevIO=null; }
+  if(window._mdBankIO){ window._mdBankIO.disconnect(); window._mdBankIO=null; }
   let h='';
   if(_md.bankModal) h+=_md.bankModal.swipe?_mdBankSwipeHtml():_mdBankModalHtml();
   if(_md.askText) h+=_mdAskTextHtml();
@@ -16541,7 +16981,6 @@ function _mdRenderModals(keepFocus){
   // en même temps mettraient Safari à genoux)
   const prevs=host.querySelectorAll('video[data-prev]');
   if(prevs.length){
-    if(window._mdPrevIO) window._mdPrevIO.disconnect();
     window._mdPrevIO=new IntersectionObserver((es)=>{ for(const e of es){
       const v=e.target;
       if(e.isIntersecting){
@@ -16553,6 +16992,8 @@ function _mdRenderModals(keepFocus){
     } },{threshold:0.2});
     prevs.forEach(v=>window._mdPrevIO.observe(v));
   }
+  // la grille paginée de la banque : sentinelle observée pour l'append lazy
+  _mdBankArmIO();
   const inp=host.querySelector('input[autofocus],textarea[autofocus]');
   if(inp){ inp.focus(); if(keepFocus){ try{ inp.selectionStart=inp.selectionEnd=inp.value.length; }catch(_){} } }
 }
@@ -16576,7 +17017,9 @@ function _mdBuildRegenPlan(){
   for(const s of _md.scenes){
     if(s.n==='avatar') continue;   // l'avatar est la couche de base — rien à poser
     const src=(s.srcIdx!=null&&D.slides)?D.slides[s.srcIdx]:null;
-    if(s.del){ userBans.push({start:_mdR2(s.a),end:_mdR2(s.b)}); continue; }
+    // une scène AJOUTÉE puis supprimée n'existe plus : surtout pas de « ban » (il rendrait
+    // à l'avatar une fenêtre que le chef n'a jamais remplie et écraserait ses voisines)
+    if(s.del){ if(!s.added) userBans.push({start:_mdR2(s.a),end:_mdR2(s.b)}); continue; }
     if(s.added){
       if(s.n==='animation') userSlides.push(Object.assign({start:_mdR2(s.a),end:_mdR2(s.b),anim:s.t}, _mdSceneItems(s)));
       else if(s.n==='carte') userSlides.push({start:_mdR2(s.a),end:_mdR2(s.b),title:String(s.userText||s.t).replace(/^«\s?|\s?»$/g,''),textOverlay:true,textStyle:String(s.d||''),pos:s.textPos||{x:0.5,y:0.84}});   // #texte-sur-vidéo · légende, pas une carte
@@ -25625,7 +26068,7 @@ window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
 window._mcKlingVer='v2.6';
 function _mcSetKlingVer(v){ window._mcKlingVer = (v==='v3' && _aaIsDev()) ? 'v3' : 'v2.6'; try{ _mcSaveOpts&&_mcSaveOpts(); }catch(_){} _mcRenderAdv(); }
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
-window._mcCamFollow=false; window._mcKeepVidBg=false; window._mcFormat='9:16';
+window._mcCamFollow=false; window._mcKeepVidBg=false; window._mcFormat='auto';   // 'auto' (défaut) = ratio NATUREL de l'image perso (LOT5, Axel : son Image IA 2:3 ressortait en 9:16)
 window._mcAutoFrame=true;   // cadrage auto du visage — ON par défaut (Axel, 14/08)
 window._mcBgClean=true;     // fond fourni : effacer la personne dessus (par image, non persisté)
 // ── OPTIONS MÉMORISÉES (Axel, 14/08 : « une fois qu'on met une option, elle est
@@ -25637,7 +26080,7 @@ function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts
   if(o.tier==='pro'||o.tier==='standard') window._mcTier=o.tier;
   if(o.quality==='720'||o.quality==='1080') window._mcQuality=o.quality;
   if(['full','split-bottom','split-top'].includes(o.render)) window._mcRender=o.render;
-  if(['9:16','1:1','16:9'].includes(o.format)) window._mcFormat=o.format;
+  if(['auto','9:16','1:1','16:9'].includes(o.format)) window._mcFormat=o.format;
   window._mcCamFollow=!!o.cam; window._mcKeepVidBg=!!o.keepVidBg; window._mcAutoFrame=true;
   window._mcKlingVer=(o.klingVer==='v3')?'v3':'v2.6'; }catch(_){ } } // cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
 _mcLoadOpts();
@@ -25690,6 +26133,11 @@ function _mcSetQual(v){ window._mcQuality=v; _mcSaveOpts(); _mcRenderAdv(); _mcU
 function _mcSetRender(r){ window._mcRender=r; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }
 function _mcSetFormat(f){ window._mcFormat=f; _mcSaveOpts(); _mcRenderAdv(); }
 function _mcToggleCam(){ window._mcCamFollow=!window._mcCamFollow; _mcSaveOpts(); _mcRenderAdv(); }
+// LOT7 · « garder le fond de la vidéo » = désormais le VRAI fond ANIMÉ : après le
+// rendu Kling, le perso est détouré (fal ben/v2/video, WebM alpha) puis recomposé
+// par-dessus la vidéo de référence (render-worker __compose:'motion-bg'). Le chemin
+// frame-figée AVANT Kling est conservé (cohérence lumière du rendu).
+// ⚠ PRICING : aucun crédit supplémentaire débité pour l'instant — Axel tranchera.
 function _mcToggleVidBg(){ window._mcKeepVidBg=!window._mcKeepVidBg; _mcSaveOpts(); _mcRenderAdv(); }
 function _mcToggleAutoFrame(){ window._mcAutoFrame=(window._mcAutoFrame===false); _mcSaveOpts(); _mcRenderAdv(); }
 function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcRenderAdv(); }
@@ -25798,12 +26246,13 @@ function _mcRenderAdv(){
     <span class="label" style="display:block;margin-bottom:8px">Instructions · optionnel</span>
     <textarea id="mcPromptTa" oninput="window._mcPrompt=this.value" class="field" style="min-height:96px;resize:vertical;margin-bottom:18px" placeholder="Ex : garde le regard caméra, ambiance studio, démarche assurée…"></textarea>
     <span class="label" style="display:block;margin-bottom:8px">Format</span>
-    <div class="seg" style="width:100%;margin-bottom:16px">
-      ${[['9:16',9,16],['1:1',12,12],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'9:16')===f;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px" onclick="_mcSetFormat('${f}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>${f}</button>`;}).join('')}
+    <div class="seg" style="width:100%;margin-bottom:6px">
+      ${[['auto',0,0],['9:16',9,16],['1:1',12,12],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'auto')===f;const ic=f==='auto'?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3.2 3.2"/></svg>':`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>`;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 6px;font-size:12.5px" onclick="_mcSetFormat('${f}')">${ic}${f==='auto'?'Auto':f}</button>`;}).join('')}
     </div>
+    <p class="faint" style="font-size:11.5px;margin-bottom:16px">Auto = la vidéo ressort au même format que ton image.</p>
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
     ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow],
-       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine (fond fixe)','Ne remplace que la personne — pour une vidéo à décor immobile',!!window._mcKeepVidBg]]
+       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Le vrai décor de ta vidéo, animé — seule la personne est remplacée',!!window._mcKeepVidBg]]
       .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
         <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
         <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
@@ -25918,31 +26367,46 @@ async function _mcDownload(dl){
    coupable du « délai dépassé » du 13/08 : photo 3392×5056 → Kling échoue en
    ~10 s et l'erreur (422 sur le résultat) n'était jamais lue. Recadrage biaisé
    vers le HAUT : les visages vivent en haut du cadre. Jamais d'upscale. */
-async function _mcPrepChar(b64){
+async function _mcPrepChar(b64, refTarget){
   const img=await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('image personnage illisible')); im.src=b64; });
-  const F=String(window._mcFormat||'9:16'); const [rw,rh]=F==='1:1'?[1,1]:F==='16:9'?[16,9]:[9,16];
-  const W=img.naturalWidth||1, H=img.naturalHeight||1, ratio=rw/rh;
+  const F=String(window._mcFormat||'auto');
+  const W=img.naturalWidth||1, H=img.naturalHeight||1;
+  // LOT5 · format « Auto » (défaut) : ratio NATUREL de l'image perso, borné aux
+  // limites Kling (0,4–2,5) — le rendu ressort au format de l'image d'origine.
+  // 9:16 / 1:1 / 16:9 restent prioritaires quand l'utilisateur les choisit.
+  const ratio = F==='1:1' ? 1 : F==='16:9' ? 16/9 : F==='9:16' ? 9/16 : Math.max(0.4, Math.min(2.5, W/H));
   let cw=W, ch=Math.round(W/ratio); if(ch>H){ ch=H; cw=Math.round(H*ratio); }
   let sx=Math.round((W-cw)/2), sy=Math.min(Math.round((H-ch)/2), Math.round(H*0.08));
   // ── CADRAGE AUTO DU VISAGE (Axel, 14/08 : « souvent c'est trop zoomé, des
   // fois pas assez — le visage en plein dans le cadre, au milieu de la safe
-  // zone »). Détection (gpt-4o, déjà utilisée par le face-upscale) → on recadre
-  // pour un plan standard : la tête ≈ 22 % de la hauteur, centrée, son centre
-  // à 32 % du haut. C'est le cadrage « Zendaya » — jamais le gros plan qui
-  // mange l'écran, jamais la silhouette perdue. Si l'image est déjà un gros
-  // plan, on dézoome au maximum de ce qu'elle contient (on n'invente rien).
+  // zone »). Détection (gpt-4o, déjà utilisée par le face-upscale) → on recadre.
+  // LOT5 · CIBLE ANCRÉE SUR LA RÉF : quand _mcGenerate a mesuré le visage sur
+  // une frame de la vidéo de référence (refTarget = {headFrac,cx,cy}), la tête
+  // de l'image perso doit occuper la MÊME fraction de hauteur que dans la réf
+  // (clamp 0,12–0,42) et son centre être placé au même endroit relatif du cadre.
+  // Diagnostic mesuré : perso tête 26 %, réf 40 %, rendu Kling 64 % — Kling
+  // zoome au-delà des DEUX entrées ; on ancre donc la distance sur la réf.
+  // Sans réf mesurée : plan standard « Zendaya » (tête ≈ 22 %, centre à 32 %).
+  // Clamp aux bords — on n'invente JAMAIS de pixels : si l'image ne permet pas
+  // d'atteindre la cible, on va au maximum possible (console.warn).
   if(window._mcAutoFrame!==false && typeof _detectFaceBox==='function'){
     try{
       const box=await _detectFaceBox(b64);
       if(box){
         const fcx=(box.x+box.w/2)*W, fcy=(box.y+box.h/2)*H, fpx=Math.max(8, box.h*H);
-        let ch2=Math.min(H, Math.round(fpx/0.22));
+        const hasRef = !!(refTarget && isFinite(refTarget.headFrac) && refTarget.headFrac>0);
+        const headT = hasRef ? Math.max(0.12, Math.min(0.42, refTarget.headFrac)) : 0.22;
+        const cxT   = hasRef && isFinite(refTarget.cx) ? Math.max(0, Math.min(1, refTarget.cx)) : 0.5;
+        const cyT   = hasRef && isFinite(refTarget.cy) ? Math.max(0, Math.min(1, refTarget.cy)) : 0.32;
+        let ch2=Math.round(fpx/headT), maxed=false;
+        if(ch2>H){ ch2=H; maxed=true; }
         let cw2=Math.round(ch2*ratio);
-        if(cw2>W){ cw2=W; ch2=Math.round(W/ratio); }
-        let sx2=Math.round(fcx-cw2/2), sy2=Math.round(fcy-ch2*0.32);
+        if(cw2>W){ cw2=W; ch2=Math.round(W/ratio); maxed=true; }
+        let sx2=Math.round(fcx-cw2*cxT), sy2=Math.round(fcy-ch2*cyT);
         sx=Math.max(0, Math.min(W-cw2, sx2)); sy=Math.max(0, Math.min(H-ch2, sy2));
         cw=cw2; ch=ch2;
-        console.log('[mc] cadrage auto : tête', Math.round(fpx/ch*100)+'% de la hauteur, centre à', Math.round(((fcy-sy)/ch)*100)+'%');
+        if(hasRef && maxed) console.warn('[mc] cadrage ref : image trop serrée pour la cible ('+Math.round(headT*100)+'% de tête) — dézoom au maximum possible ('+Math.round(fpx/ch*100)+'%)');
+        console.log('[mc] cadrage '+(hasRef?'ref':'auto')+' : tête '+(hasRef?Math.round(refTarget.headFrac*100)+'% (réf) → ':'')+Math.round(fpx/ch*100)+'% de la hauteur, centre à '+Math.round(((fcx-sx)/cw)*100)+'/'+Math.round(((fcy-sy)/ch)*100)+'% → crop '+cw+'×'+ch+' @ '+sx+','+sy);
       }
     }catch(e){ console.warn('[mc] cadrage auto indisponible :', e); }
   }
@@ -26003,7 +26467,22 @@ async function _mcGenerate(){
     const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
     const base=user.id+'/mc-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
     const vPath=base+'.mp4', iPath=base+'.jpg';
-    const charBlob=await _mcPrepChar(window._mcCharB64);   // recadre format + ≤2560 px (Kling refuse >3850)
+    // LOT5 · CADRAGE ANCRÉ SUR LA RÉF : une frame de la vidéo de référence +
+    // détection visage → cible {headFrac,cx,cy} passée à _mcPrepChar pour que
+    // la tête du perso occupe la MÊME fraction du cadre que dans la réf (Kling
+    // zoome déjà au-delà des deux entrées — on ne lui en donne pas le prétexte).
+    // Échec de détection → refTarget=null, comportement actuel inchangé (22/32 %).
+    let refFrame=null, refTarget=null;
+    if(window._mcAutoFrame!==false && typeof _detectFaceBox==='function'){
+      try{
+        _mcProg('Analyse du cadrage de la référence…', 6);
+        refFrame = await _mcFrameFromVideo(window._mcRefB64);
+        const rb = await _detectFaceBox(refFrame);
+        if(rb && rb.h>0){ refTarget = { headFrac: rb.h, cx: rb.x+rb.w/2, cy: rb.y+rb.h/2 }; }
+        else console.warn('[mc] cadrage ref : aucun visage détecté sur la frame de référence — cadrage standard');
+      }catch(e){ console.warn('[mc] cadrage ref indisponible :', e); }
+    }
+    const charBlob=await _mcPrepChar(window._mcCharB64, refTarget);   // recadre format + ≤2560 px (Kling refuse >3850)
     _mcProg('Vérification de la vidéo de référence…', 7);
     const norm = await _mcNormalizeRef(window._mcRefB64);   // HEVC→H.264, 340–3850 px, ≤30 s
     if(norm.note){ toast('Vidéo de référence '+norm.note.replace(/^ · /,'')); console.warn('[mc] réf normalisée :', norm.note); }
@@ -26023,7 +26502,7 @@ async function _mcGenerate(){
     let charUrl = si.data.signedUrl;
     let bgSrc = window._mcBgB64 || null, bgDeVid = false;
     if(!bgSrc && window._mcKeepVidBg){
-      try{ _mcProg('Fond : frame de ta vidéo…', 9); bgSrc = await _mcFrameFromVideo(window._mcRefB64); bgDeVid = true; }
+      try{ _mcProg('Fond : frame de ta vidéo…', 9); bgSrc = refFrame || await _mcFrameFromVideo(window._mcRefB64); bgDeVid = true; }
       catch(e){ console.warn('[mc] frame fond :', e); }
     }
     if(bgSrc){
@@ -26047,7 +26526,10 @@ async function _mcGenerate(){
     _mcProg('Transfert du mouvement (Kling '+_mcVer.replace('v','')+')…', 18);
     // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
     // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
-    const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its push-in and pull-back, its tilt, its rise and its distance changes. If the reference camera moves, gets closer or changes angle, the output moves the SAME way; do NOT lock it to a static centered shot. Natural, realistic.';
+    // LOT5 · ANTI-ZOOM (mesuré : perso tête 26 %, réf 40 %, rendu Kling 64 % —
+    // Kling zoome au-delà des DEUX entrées) : la distance sujet/caméra est
+    // VERROUILLÉE sur la réf — suivre son vrai push-in : oui ; zoomer davantage : non.
+    const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. DISTANCE LOCK: at every instant keep the SAME subject-to-camera distance and the SAME head size as the reference video — the head occupies the SAME fraction of the frame as in the reference. If the reference camera truly pushes in, follow that exact push-in, but NEVER zoom in closer than the reference and NEVER make the face bigger than it is in the reference. Do NOT lock the camera to a static centered shot either. Natural, realistic.';
     // « Suivi de la caméra » et « garder le fond de la vidéo » n'existent pas en
     // paramètres Kling (schéma fal : image/video/prompt/orientation/son) — ils
     // se pilotent par le PROMPT. Le fond par défaut reste celui de l'IMAGE.
@@ -26060,9 +26542,11 @@ async function _mcGenerate(){
     // Qualité/réalisme (Axel, 21/08) : Kling suit surtout la vidéo + l'image, mais le prompt pèse sur la
     // texture de peau, la lumière et les mains — on le dit court et précis (≤2500 car. au total).
     const _mcRealTxt = ' Photorealistic UGC quality: keep REAL skin — visible pores, fine facial peach fuzz, natural body hair, a few blackheads and small blemishes, freckles and moles exactly where they are, the natural hairline with baby hairs, uneven skin tone and slight shine; never plastic, smoothed or airbrushed. Natural hair strands and fabric detail, correct hands and fingers, consistent lighting and shadows across the whole clip, sharp 4K detail, no warping, no flicker.';
-    // SAFE ZONE (Axel, 22/08) : le visage doit rester au MILIEU de l'écran, jamais rogné ni
-    // poussé sur un bord — placé tôt (juste après l'identité) pour survivre au slice(0,2400).
-    const _mcSafeTxt = ' FRAMING: keep the character\'s face visible and never FULLY cropped out or hidden behind on-screen UI — but DO follow the reference framing: the face may come closer, move within the frame, or change size and angle exactly like the reference camera. Do NOT force a static, perfectly centered, locked shot; reproduce the reference camera movement while keeping the face readable.';
+    // SAFE ZONE (Axel, 22/08) + LOT5 ANTI-ZOOM : visage visible, jamais rogné — et la
+    // DISTANCE verrouillée sur la réf (jamais plus près, visage jamais grossi) — placé
+    // tôt (juste après l'identité) pour survivre au slice(0,2400), car il porte la règle
+    // de distance même quand l'utilisateur remplace _mcMotion par son propre prompt.
+    const _mcSafeTxt = ' FRAMING: keep the character\'s face visible and never FULLY cropped out or hidden behind on-screen UI. DISTANCE RULE: the subject-to-camera distance and the on-screen head size must match the REFERENCE VIDEO at every moment — the head keeps the SAME fraction of the frame as in the reference; never zoom in closer than the reference, never enlarge the face or crop tighter than the reference does. Follow the reference camera movement (including its real push-in) without ever exceeding it; do NOT force a static, perfectly centered, locked shot.';
     const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcSafeTxt + _mcBgTxt + _mcCamTxt + _mcRealTxt;
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
     // (marquée ._moderation quand le content checker a bloqué → repli possible).
@@ -26129,6 +26613,81 @@ async function _mcGenerate(){
         out = await _mcUpscaleTopaz(out, H);
         if(typeof spendCreditsFor==='function'){ await spendCreditsFor(dur,'motion-topaz'); }
       }catch(e){ console.error('topaz:',e); toast('Upscale 1080p indispo — 720p livré'); }
+    }
+    // ── LOT7 · FOND = VRAIE VIDÉO D'ORIGINE, ANIMÉE (pipeline prouvé 28/08) ─────
+    // Le chemin frame-figée AVANT Kling (plus haut) est conservé : il cale la lumière
+    // du rendu. Ici on va au bout : le rendu Kling est détouré (fal-ai/ben/v2/video →
+    // WebM VP9 alpha) puis recomposé PAR-DESSUS la vidéo de référence animée par le
+    // render-worker (__compose:'motion-bg' ; audio = piste Kling par défaut,
+    // plan.bgAudio:'orig' existe côté worker pour la piste de la réf).
+    // Conditions : option « garder le fond de la vidéo » active, PAS de fond
+    // personnalisé fourni (il prime : le recomposer sur la réf l'écraserait), et une
+    // référence vidéo décodée (dur>0 — mesurée sur <video>, donc c'est une vidéo).
+    // ⚠ PRICING : AUCUN crédit supplémentaire débité pour l'instant (matting
+    // ≈ 0,001 $/mégapixel à notre charge) — Axel tranchera le prix de l'option.
+    // Robustesse : CHAQUE étape sous try/catch — au moindre échec on livre le rendu
+    // Kling tel quel (fond image). JAMAIS de perte d'un rendu payé.
+    if(window._mcKeepVidBg && !window._mcBgB64 && dur>0){
+      try{
+        console.log('[mc] fond vidéo : détourage du rendu Kling (ben/v2/video)…');
+        _mcProg('Fond vidéo : détourage du personnage…', 90);
+        const ms=await fPost('/fal-ai/ben/v2/video', { video_url: out, output_format:'webm' });
+        if(!ms.ok) throw new Error('matting '+ms.status+' '+(await ms.text().catch(()=>'')).slice(0,140));
+        const md=await ms.json().catch(()=>({}));
+        // réponse synchrone possible (même motif que _mcApplyBg) — sinon file fal classique
+        let mattedUrl=md?.video?.url||md?.video_url||'';
+        const mStP=md.status_url?md.status_url.replace('https://queue.fal.run',''):'';
+        const mReP=md.response_url?md.response_url.replace('https://queue.fal.run',''):'';
+        if(!mattedUrl && (!mStP||!mReP)) throw new Error('matting : pas de status_url');
+        for(let i=0;i<90 && !mattedUrl;i++){   // ~6 min max (90 × 4 s)
+          await new Promise(r=>setTimeout(r,4000));
+          const pr=await fGet(mStP); if(!pr.ok) continue;
+          const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+          _mcProg('Fond vidéo : détourage du personnage…', Math.min(93, 90+Math.floor(i/8)));
+          if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
+          if(s==='COMPLETED'){
+            // COMPLETED = « traité », pas « réussi » (leçon Kling du 13/08) : on lit le résultat
+            const rr=await fGet(mReP); const rd=await rr.json().catch(()=>({}));
+            mattedUrl=rd?.video?.url||rd?.video_url||'';
+            if(!rr.ok||!mattedUrl) throw new Error('matting : '+JSON.stringify(rd).slice(0,140));
+            break;
+          }
+          throw new Error('matting : '+(pd.error?String(pd.error).slice(0,80):s));
+        }
+        if(!mattedUrl) throw new Error('matting : délai dépassé (>6 min)');
+        console.log('[mc] fond vidéo : personnage détouré →', mattedUrl.slice(0,90));
+        // WebM alpha → upload à côté de la réf (contrat worker : assets/matted.webm)
+        const mrp=await fetch(mattedUrl); if(!mrp.ok) throw new Error('téléchargement matted HTTP '+mrp.status);
+        const mBlob=await mrp.blob();
+        if(!mBlob || mBlob.size<1000) throw new Error('matted vide');
+        const mattedPath=vPath.replace('.mp4','-matted.webm');
+        const um=await sb.storage.from('render-media').upload(mattedPath, mBlob, { contentType:'video/webm', upsert:true });
+        if(um.error) throw new Error('upload matted : '+um.error.message);
+        console.log('[mc] fond vidéo : matted uploadé →', mattedPath, Math.round(mBlob.size/1024)+' Ko');
+        // Composition render-worker : base = vidéo de réf (vPath, déjà uploadée),
+        // perso alpha par-dessus — MÊME modèle de job que _mcRunSplit.
+        _mcProg('Fond vidéo : composition…', 95);
+        const rjPost=(b)=>fetch(RENDERJOB_FN,{ method:'POST', headers:{...H,'Content-Type':'application/json'}, body:JSON.stringify(b) });
+        const rj=await rjPost({ action:'create', plan:{ __compose:'motion-bg', duration: Math.max(1,dur) }, input_video: vPath, assets:[{ id:'matted', path:mattedPath, kind:'video' }] });
+        const rjd=await rj.json().catch(()=>({}));
+        if(!rj.ok||!rjd.ok||!rjd.job_id) throw new Error(rjd.error||('render-job '+rj.status));
+        console.log('[mc] fond vidéo : job compo', rjd.job_id);
+        let bgUrl='';
+        for(let i=0;i<90;i++){
+          await new Promise(r=>setTimeout(r,4000));
+          const pr=await rjPost({ action:'status', job_id: rjd.job_id });
+          const pd=await pr.json().catch(()=>({}));
+          _mcProg('Fond vidéo : composition…', Math.min(97, 95+Math.floor(i/6)));
+          if(pd.status==='done' && pd.url){ bgUrl=pd.url; break; }
+          if(pd.status==='failed') throw new Error(pd.error||'composition échouée');
+        }
+        if(!bgUrl) throw new Error('composition : délai dépassé');
+        out=bgUrl;   // le rendu « fond animé » REMPLACE l'URL Kling livrée (split et livraison le reprennent)
+        console.log('[mc] fond vidéo : composé →', bgUrl.slice(0,90));
+      }catch(e){
+        console.error('[mc] fond vidéo :', e);
+        toast('Fond vidéo indisponible — rendu livré sur fond d\'image');
+      }
     }
     // split (original + motion en 9:16) → composé par le render-worker natif.
     // Repli plein écran si la compo échoue : le livrable payé est toujours rendu.
@@ -26482,6 +27041,50 @@ function _expAutoFormatFromImg(w,h){
   }
 }
 function _expRemoveImg(i){ if(window._expImgs) window._expImgs.splice(i,1); window._expImgB64=(window._expImgs[0]&&window._expImgs[0].b64)||null; window._expImgMime=(window._expImgs[0]&&window._expImgs[0].mime)||'image/png'; _expRenderImgs(); }
+/* ── #lot6 · COVER-CROP EXACT au format Express avant Veo ─────────────────────
+   Bug (avatarads-express.mp4, 28/08) : une image de départ hors ratio (upload
+   libre, bibliothèque, fusion multi-réfs 1024×1536 = 2:3, génération 1024×1792
+   = 4:7) → Veo la LETTERBOXE et les bandes noires sont INCRUSTÉES dans le mp4.
+   Le fix « recadrer l'image de départ » existait sur Motion Control (_mcPrepChar,
+   chemin Kling) mais sur AUCUN chemin Veo. Ici : recadrage cover exact 9:16/16:9,
+   centré sur le visage si _detectFaceBox est joignable (même bloc <script> — on
+   teste quand même typeof) et si le crop est significatif (>8 % de l'image),
+   sinon centre géométrique légèrement remonté (les visages vivent en haut).
+   Sortie plafonnée à 1920 px de long côté, JPEG 0.92. Toute erreur → image
+   d'origine (on ne bloque jamais une génération pour un recadrage). */
+async function _expCoverCropForVeo(b64, mime, fmt){
+  if(!b64) return null;
+  const ratio = (fmt==='16:9') ? 16/9 : 9/16;
+  const dataUrl = 'data:'+(mime||'image/png')+';base64,'+b64;
+  const img = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('image de départ illisible')); im.src=dataUrl; });
+  const W=img.naturalWidth||0, H=img.naturalHeight||0;
+  if(!W || !H) return null;
+  const r=W/H;
+  if(Math.abs(r-ratio)/ratio < 0.005){ console.log('[exp-crop] '+W+'x'+H+' déjà au ratio '+fmt+' — rien à recadrer'); return null; }
+  // fenêtre source en cover (on ne PERD que le débord, jamais de pixels inventés)
+  let cw, ch;
+  if(r > ratio){ ch=H; cw=Math.round(H*ratio); } else { cw=W; ch=Math.round(W/ratio); }
+  cw=Math.max(2,Math.min(W,cw)); ch=Math.max(2,Math.min(H,ch));
+  // centre : géométrique légèrement remonté par défaut ; visage si détectable ET crop significatif
+  let cx=W/2, cy=H*0.44;
+  const cropFrac = 1 - (cw*ch)/(W*H);
+  if(cropFrac > 0.08 && typeof _detectFaceBox === 'function'){
+    try{
+      const box = await _detectFaceBox(dataUrl);
+      if(box){ cx=(box.x+box.w/2)*W; cy=(box.y+box.h/2)*H; }
+    }catch(e){ console.warn('[exp-crop] détection visage indisponible → centre géométrique', e); }
+  }
+  let sx=Math.round(cx-cw/2), sy=Math.round(cy-ch/2);
+  sx=Math.max(0, Math.min(W-cw, sx)); sy=Math.max(0, Math.min(H-ch, sy));
+  // sortie aux dimensions du crop, long côté ≤ 1920 px (limites moteur), JPEG 0.92
+  const k=Math.min(1, 1920/Math.max(cw,ch));
+  const ow=Math.max(2,Math.round(cw*k)), oh=Math.max(2,Math.round(ch*k));
+  const cv=document.createElement('canvas'); cv.width=ow; cv.height=oh;
+  cv.getContext('2d').drawImage(img, sx, sy, cw, ch, 0, 0, ow, oh);
+  const out=cv.toDataURL('image/jpeg', 0.92);
+  console.log('[exp-crop] '+W+'x'+H+' ('+r.toFixed(3)+') → '+ow+'x'+oh+' ('+fmt+'), fenêtre '+cw+'x'+ch+' @ '+sx+','+sy);
+  return { b64: out.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''), mime:'image/jpeg' };
+}
 // ── Importer une image depuis la bibliothèque (Images IA générées) ──
 function openExpLibPicker(){
   let hist=[]; try{ hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); }catch(e){}
@@ -26857,6 +27460,14 @@ async function expressCreate(){
       if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
       if(typeof _updateImgQuotaLabel==='function') _updateImgQuotaLabel();
     }
+
+    // 1bis) #lot6 · COVER-CROP EXACT au format choisi AVANT Veo — TOUS les chemins
+    // convergent ici (upload, bibliothèque, fusion multi-réfs 2:3, image générée 4:7) :
+    // hors ratio, Veo letterboxe et incruste des bandes noires dans le fichier final.
+    try{
+      const _cropped = await _expCoverCropForVeo(imgB64, imgMime, window._expFormat);
+      if(_cropped){ imgB64=_cropped.b64; imgMime=_cropped.mime; }
+    }catch(_cErr){ console.warn('[exp-crop] recadrage impossible — image d\'origine envoyée à Veo', _cErr); }
 
     // 2) Animation image→vidéo via Veo 3.1 Fast
     setP(Math.max(p,28),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Génération de la vidéo…');
@@ -29108,7 +29719,9 @@ async function _acHandleFile(file){
   const btn = document.getElementById('acAnalyzeBtn');
   if(btn){ btn.disabled = false; btn.style.opacity = '1'; }
   // #69 · l'option de débruitage est une préférence → on ne la réinitialise PAS au changement de fichier
-  document.getElementById('acTip').style.display = 'none';
+  // (#reset 28/08 : acTip n'existe plus dans la refonte — l'accès nu jetait un
+  //  TypeError qui coupait la synchro handleSilenceAudioFile juste dessous)
+  { const t = document.getElementById('acTip'); if(t) t.style.display = 'none'; }
   // Sync file into the generator's silence tool
   if(typeof handleSilenceAudioFile === 'function') handleSilenceAudioFile(file);
 }
@@ -30989,29 +31602,68 @@ function _acTogglePlay(btn){
   btn.innerHTML = '⏸ Pause';
 }
 
+// ── ÉCRAN VIERGE, VRAIMENT (#reset 28/08) ───────────────────────────────────
+// « Faire un autre nettoyage » laissait TOUT l'ancien résultat sous « Relancer
+// l'analyse » : carte verte, waveform, coupes du dérush, ancien fichier — et le
+// contenu du dropzone (masqué au chargement du fichier) n'était jamais réaffiché.
+// Ici on repart comme au premier passage : lecture stoppée, URLs objet révoquées,
+// état _ac* purgé, formulaire vide, et retour phase « idle » (le bouton
+// « Nettoyer un autre audio » de l'écran résultat passe aussi par là).
 function _acReset(){
-  // Stopper la lecture en cours
-  if(_acAudioPlayer){ _acAudioPlayer.pause(); _acAudioPlayer = null; }
-  // Vider l'état
+  // ── Stopper toute lecture (carte verte + écran résultat + comparatif) ──
+  if(_acAudioPlayer){
+    try{ _acAudioPlayer.pause(); }catch(_){}
+    try{ if(String(_acAudioPlayer.src).indexOf('blob:') === 0) URL.revokeObjectURL(_acAudioPlayer.src); }catch(_){}
+    _acAudioPlayer = null;
+  }
+  if(_acProgRaf){ cancelAnimationFrame(_acProgRaf); _acProgRaf = null; }
+  if(window._acDoneAudio){ try{ window._acDoneAudio.pause(); }catch(_){} window._acDoneAudio = null; }
+  if(_acCmpAudio){
+    try{ _acCmpAudio.pause(); }catch(_){}
+    try{ if(String(_acCmpAudio.src).indexOf('blob:') === 0) URL.revokeObjectURL(_acCmpAudio.src); }catch(_){}
+    _acCmpAudio = null;
+  }
+  // l'URL de l'écran résultat (créée au passage en phase « done »)
+  try{ if(window._acDoneData && window._acDoneData.url) URL.revokeObjectURL(window._acDoneData.url); }catch(_){}
+  window._acDoneData = null;
+  window._acEditBuf  = null;   // #162 · buffer de la coupe manuelle
+  // ── Vider l'état ──
   _acAudioBlob  = null;
+  _acOrigBlob   = null;        // « Comparer » ne doit plus voir l'ancien original
   _acCleanBlob  = null;
   _acBatch      = null;
   _acVideoFile  = null; _acVideoBlob = null; _acKeepSegsSec = null;  // #68b
-  // Reset UI
-  const dropzone = document.getElementById('acDropzone');
-  const fileInfo = document.getElementById('acFileInfo');
-  const waveWrap = document.getElementById('acWaveWrap');
-  const resEl    = document.getElementById('acResult');
-  const tipEl    = document.getElementById('acTip');
-  const btn      = document.getElementById('acAnalyzeBtn');
-  const fileIn   = document.getElementById('acFileIn');
-  if(dropzone) dropzone.style.display = 'block';
-  if(fileInfo) fileInfo.style.display = 'none';
-  if(waveWrap) waveWrap.style.display = 'none';
-  if(resEl)    resEl.innerHTML = '';
-  if(tipEl)    tipEl.style.display = 'block';
-  if(btn){     btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;gap:7px"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"vertical-align:-3px;margin-right:7px\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12\"/></svg>Supprimer les silences automatiquement</span>'; btn.disabled = true; btn.style.opacity = '.5'; }
-  if(fileIn)   fileIn.value = '';
+  _acDenoisedBuf = null;       // #151 · source du dérush
+  _acDerushCuts = []; _acKeepSegsBase = null;
+  _acCutMarks = []; _acCutUndoStack = [];
+  _acZoom = 1; _acZoomC = 0.5;
+  // (les préférences — niveau, options, preset voix, dérush activé — sont conservées)
+  // ── Reset UI : mêmes affichages que le markup d'origine ──
+  const show = (id, d) => { const e = document.getElementById(id); if(e) e.style.display = d; };
+  show('acDropzone', 'flex');
+  show('acDropContent', 'flex');   // ré-affiché (masqué tant qu'un fichier était chargé)
+  show('acFileInfo', 'none');
+  const fn = document.getElementById('acFileName');   if(fn) fn.textContent = '';
+  show('acSourceInfo', 'none');
+  const sl = document.getElementById('acSourceLabel'); if(sl) sl.textContent = '';
+  show('acWaveWrap', 'none');
+  const ws = document.getElementById('acWaveStats');   if(ws) ws.innerHTML = '';
+  const resEl = document.getElementById('acResult');   if(resEl) resEl.innerHTML = '';
+  show('acDerushPanel', 'none');
+  const dList = document.getElementById('acDerushList'); if(dList) dList.innerHTML = '';
+  show('acDerushApply', 'none');
+  show('acOrigCard', 'none');
+  const tipEl = document.getElementById('acTip');
+  if(tipEl) tipEl.style.display = 'block';
+  const btn = document.getElementById('acAnalyzeBtn');
+  if(btn){
+    // libellé d'origine du markup (pas « Relancer l'analyse »)
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M19 6h2M9 6h2M17.5 4.5L19 3M17.5 7.5L19 9M3 21l9-9"/></svg> Nettoyer mon audio';
+    btn.disabled = true; btn.style.opacity = '.5';
+  }
+  const fileIn = document.getElementById('acFileIn');  if(fileIn) fileIn.value = '';
+  // ── Retour au formulaire (utile quand on vient de l'écran résultat) ──
+  _acPhase('idle');
 }
 
 function _acDownload(){
@@ -31053,7 +31705,7 @@ function _acHandleFiles(files){
   { const si=document.getElementById('acSourceInfo'); if(si) si.style.display='none'; }
   const btn = document.getElementById('acAnalyzeBtn');
   if(btn){ btn.disabled = true; btn.style.opacity = '.5'; } // le lot a son propre bouton
-  document.getElementById('acTip').style.display = 'none';
+  { const t = document.getElementById('acTip'); if(t) t.style.display = 'none'; }   // #reset 28/08 : acTip n'existe plus, l'accès nu jetait
   const ww = document.getElementById('acWaveWrap'); if(ww) ww.style.display = 'none';
   _acBatchRender();
 }
@@ -32378,8 +33030,7 @@ function edDrawLoop(){
     } }
   for(const o of _ed.overlays){
     if(o._el){ const vis=(o.start==null||_gt>=o.start)&&(o.end==null||_gt<=o.end); o._el.style.visibility=vis?'visible':'hidden'; // #split · visible SEULEMENT dans sa fenêtre
-      // #snap-coulisse (Axel « le texte snapchat doit coulisser ») : la légende Snapchat MONTE + apparaît sur ~0,42 s
-      if(o.type==='text' && (o.style||'')==='snap'){ const _tx=o._el.querySelector('.ed-ov-txt'); if(_tx){ const _p=Math.max(0,Math.min(1,(_gt-(o.start||0))/0.42)); const _e=1-Math.pow(1-_p,3); _tx.style.transform='translateY('+((1-_e)*34).toFixed(1)+'px)'; _tx.style.opacity=(0.1+0.9*_e).toFixed(3); } }
+      // #snap-statique (Axel 28/08) : plus d'animation d'entrée « coulisse » — la légende Snapchat s'affiche telle quelle
     }
     if(o.vid && !_ed.exporting) _edSyncOvVid(o, _gt, _ed.playing); // #111 · le clip b-roll joue dans la carte
   }
@@ -32687,14 +33338,23 @@ function edAddAnimToSplit(name){
   let slot = _ed._splitFillTarget ? (_ed.overlays||[]).find(o=>o.id===_ed._splitFillTarget && o._split && o._splitEmpty) : null;
   if(!slot) slot=(_ed.overlays||[]).find(o=>o._split && o._splitEmpty && gt>=o.start && gt<=o.end);
   _ed._splitFillTarget=null;
-  if(slot){ vid.onloadeddata=()=>_edFillSplit(slot,{vid,url,animName:name}); vid.onerror=()=>toast('Animation illisible'); return; }
-  const end=Math.min(edTotalDur(), gt+3);
+  if(slot){ vid.onloadeddata=()=>{ _edFillSplit(slot,{vid,url,animName:name});
+      // #durée-anim (Axel 28/08) : à l'AJOUT d'une anim, la fenêtre = durée intrinsèque + 1 s (repli 3 s + 1 s).
+      // On ne touche la fenêtre du split QUE si elle est encore au défaut (~3 s) : si l'utilisateur l'a
+      // déjà étirée à la main, on respecte son choix.
+      try{ const w0=(slot.end||0)-(slot.start||0);
+        if(Math.abs(w0-3)<0.06){ const d=(isFinite(vid.duration)&&vid.duration>0.3)?vid.duration:3;
+          slot.end=Math.min(edTotalDur(), (slot.start||0)+d+1);
+          if(typeof edRenderOvTrack==='function') edRenderOvTrack(); } }catch(e){}
+    }; vid.onerror=()=>toast('Animation illisible'); return; }
+  const end=Math.min(edTotalDur(), gt+4);   // #durée-anim · repli 3 s + 1 s tant que les métadonnées ne sont pas lues
   if(end-gt<0.5){ toast('Trop proche de la fin — recule la tête de lecture'); return; }
   edSnap();
   const ov={ id:'ov'+Date.now()+Math.random().toString(36).slice(2,5), type:'image', _split:true, _anim:true, _noLoop:true, animName:name, vid, url,
     x:0, y:0, w:_ed.dispW, h:_ed.dispH/2, crop:{t:0,r:0,b:0,l:0}, start:gt, end };
-  // la fenêtre se cale sur la durée RÉELLE de l'anim → elle joue une fois puis se fige (pas de boucle infinie)
-  vid.onloadedmetadata=()=>{ if(_ed && (_ed.overlays||[]).indexOf(ov)>=0){ const d=(isFinite(vid.duration)&&vid.duration>0.3)?vid.duration:2.5; ov.end=Math.min(edTotalDur(), ov.start+d); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); } };
+  // #durée-anim (Axel 28/08) · fenêtre par défaut = durée RÉELLE de l'anim + 1 s : elle joue une fois puis
+  // se fige ~1 s (pas de boucle) ; l'utilisateur peut ensuite l'étirer/rétrécir avec les poignées existantes
+  vid.onloadedmetadata=()=>{ if(_ed && (_ed.overlays||[]).indexOf(ov)>=0){ const d=(isFinite(vid.duration)&&vid.duration>0.3)?vid.duration:3; ov.end=Math.min(edTotalDur(), ov.start+d+1); if(typeof edRenderOvTrack==='function') edRenderOvTrack(); } };
   _ed.overlays.push(ov); edBuildOverlayEl(ov); edSelect(ov.id); edRenderLayers(); if(typeof edRenderOvTrack==='function') edRenderOvTrack();
   _edSplitFaceAware(ov);
   toast('Animation « '+name+' » en haut du split — ta vidéo passe en bas');
@@ -32757,12 +33417,40 @@ function _edApplySplitBox(ov){
 // #fond-animé (Axel « impossible d'animer l'arrière-plan ? même avec les grilles ? ») : des fonds ANIMÉS
 // (grille qui défile, dégradé qui balaie, aurora) dispo pour N'IMPORTE QUELLE anim — pas besoin d'une
 // variante « carreaux » cuite. Le fond animé est en CSS (immunisé RAF) derrière l'anim en blend multiply.
-// couleurs VIVES (Axel « le fond animé manque de couleur, faut qu'on voie mieux ») : bases saturées
-// (le blend multiply garde le contenu foncé de l'anim lisible, mais fait bien ressortir la teinte).
+// #fond-pastel (Axel 28/08 : « le Dégradé doit être PLUS CLAIR et se construire à partir de la pastille
+// choisie ») : le défaut du tableau = version pastel éclaircie de l'ancien dégradé ; si une pastille est
+// choisie (ov._animBgPick), _edAnimFxDef dérive le dégradé (et l'aurora) de CETTE couleur.
 const _ED_ANIMBG = {
-  degrade:{ base:'#FF8FC0', css:'linear-gradient(120deg,#FF9E6B,#FF6FB0,#7FB4FF,#B983FF,#FF9E6B)', size:'320% 320%', anim:'edBgSweep 6.5s ease infinite', line:null },
+  degrade:{ base:'#FFCDE3', css:'linear-gradient(120deg,#FFD3BC,#FFBEDB,#C5DDFF,#E0C7FF,#FFD3BC)', size:'320% 320%', anim:'edBgSweep 6.5s ease infinite', line:null, stops:['#FFD3BC','#FFBEDB','#C5DDFF','#E0C7FF','#FFD3BC'] },
   aurora: { base:'#D9B6FF', css:'radial-gradient(60% 60% at 28% 30%,rgba(124,52,255,.72),transparent 62%),radial-gradient(55% 55% at 76% 64%,rgba(255,88,58,.62),transparent 62%),radial-gradient(52% 52% at 50% 92%,rgba(40,168,255,.6),transparent 60%),linear-gradient(135deg,#E7D2FF,#FFDDEC)', size:'200% 200%,200% 200%,200% 200%,100% 100%', anim:'edBgAurora 8.5s ease-in-out infinite', line:null }
 };
+// éclaircit une couleur hex vers le blanc (p = part de blanc, 0..1)
+function _edMixW(hex,p){ let h=String(hex||'').replace('#',''); if(h.length===3) h=h.replace(/./g,function(c){return c+c;});
+  const r=parseInt(h.substr(0,2),16), g=parseInt(h.substr(2,2),16), b=parseInt(h.substr(4,2),16);
+  if(isNaN(r)||isNaN(g)||isNaN(b)) return hex;
+  const m=function(v){ return Math.round(v+(255-v)*p); };
+  return '#'+(16777216|(m(r)<<16)|(m(g)<<8)|m(b)).toString(16).slice(1).toUpperCase(); }
+function _edRgbaW(hex,p,a){ const c=String(_edMixW(hex,p)).replace('#','');
+  return 'rgba('+parseInt(c.substr(0,2),16)+','+parseInt(c.substr(2,2),16)+','+parseInt(c.substr(4,2),16)+','+a+')'; }
+// déf. du fond animé : dérivée de la pastille choisie (pick) — pastel clair entre la couleur éclaircie
+// et un blanc cassé teinté — sinon défaut clair du tableau. Consommée par le PREVIEW (_edStyleSplitMedia),
+// l'EXPORT (_edDrawAnimBg) et les vignettes du panneau (edFillProps) → même rendu partout.
+function _edAnimFxDef(fx, pick){
+  const p=_ED_ANIMBG[fx]; if(!p) return null;
+  const c=(typeof pick==='string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(pick))?pick:null;
+  if(!c) return p;
+  if(fx==='degrade'){
+    const stops=[_edMixW(c,0.1),_edMixW(c,0.85),_edMixW(c,0.4),_edMixW(c,0.1)];
+    return { base:_edMixW(c,0.45), css:'linear-gradient(120deg,'+stops.join(',')+')', size:p.size, anim:p.anim, line:null, stops:stops };
+  }
+  if(fx==='aurora'){
+    return { base:_edMixW(c,0.55),
+      css:'radial-gradient(60% 60% at 28% 30%,'+_edRgbaW(c,0.08,.62)+',transparent 62%),radial-gradient(55% 55% at 76% 64%,'+_edRgbaW(c,0.3,.55)+',transparent 62%),radial-gradient(52% 52% at 50% 92%,'+_edRgbaW(c,0.18,.5)+',transparent 60%),linear-gradient(135deg,'+_edMixW(c,0.78)+','+_edMixW(c,0.9)+')',
+      size:p.size, anim:p.anim, line:null };
+  }
+  return p;
+}
+window._edAnimFxDef=_edAnimFxDef;   // #cross-block · le panneau (bloc refonte) affiche les vignettes dérivées
 function _edEnsureAnimBgCss(){ if(document.getElementById('edAnimBgCss')) return;
   const s=document.createElement('style'); s.id='edAnimBgCss';
   s.textContent='@keyframes edBgGrid{to{background-position:22px 22px,22px 22px,0 0}}'
@@ -32771,11 +33459,22 @@ function _edEnsureAnimBgCss(){ if(document.getElementById('edAnimBgCss')) return
   document.head.appendChild(s); }
 function edSetAnimFx(fx){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim) return; edSnap();
   if(ov._bgStyle==='dark') edSetAnimBgVariant('light');
-  const p=_ED_ANIMBG[fx]; if(!p){ ov._animFx=null; } else { ov._animFx=fx; ov._animBg=p.base; }   // _animBg = teinte de base (export)
+  const p=_edAnimFxDef(fx, ov._animBgPick); if(!p){ ov._animFx=null; } else { ov._animFx=fx; ov._animBg=p.base; }   // _animBg = teinte de base (export)
   _edStyleSplitMedia(ov); edShowProps(); }
-// export : peint le fond animé (teinte + grille défilante) sous l'anim (le multiply est posé par l'appelant)
-function _edDrawAnimBg(cx,x,y,w,h,ov,t){ const p=_ED_ANIMBG[ov&&ov._animFx]; if(!p) return false;
+// export : peint le fond animé sous l'anim (le multiply est posé par l'appelant).
+// #fond-pastel (export) · le dégradé BALAIE aussi au rendu (≈ edBgSweep : position 0→100→0 % sur 6,5 s,
+// easing cosinus, fenêtre 320 %) pour matcher l'aperçu ; l'aurora reste une teinte pleine (comme avant).
+function _edDrawAnimBg(cx,x,y,w,h,ov,t){ const p=_edAnimFxDef(ov&&ov._animFx, ov&&ov._animBgPick); if(!p) return false;
   cx.fillStyle=p.base||'#eee'; cx.fillRect(x,y,w,h);
+  if(p.stops&&p.stops.length>1){ try{
+    const ph=(((t||0)%6.5)/6.5), pos=0.5-0.5*Math.cos(ph*Math.PI*2);
+    const ang=120*Math.PI/180, ux=Math.sin(ang), uy=-Math.cos(ang);
+    const proj=Math.abs(w*ux)+Math.abs(h*uy), span=proj*3.2, off=pos*(span-proj);
+    const cxm=x+w/2, cym=y+h/2, bx0=cxm-(proj/2)*ux, by0=cym-(proj/2)*uy;
+    const g=cx.createLinearGradient(bx0-off*ux, by0-off*uy, bx0+(span-off)*ux, by0+(span-off)*uy);
+    p.stops.forEach(function(c2,i){ g.addColorStop(i/(p.stops.length-1),c2); });
+    cx.save(); cx.beginPath(); cx.rect(x,y,w,h); cx.clip(); cx.fillStyle=g; cx.fillRect(x,y,w,h); cx.restore();
+  }catch(e){} }
   if(p.line){ cx.save(); cx.beginPath(); cx.rect(x,y,w,h); cx.clip(); cx.strokeStyle='rgba(108,74,255,.7)'; cx.lineWidth=Math.max(2,w/300);
     const step=Math.max(26,w/16), off=((t*46)%step);   // grille qui DÉFILE (off dépend du temps)
     for(let gx=x-step+off;gx<x+w+step;gx+=step){ cx.beginPath(); cx.moveTo(gx,y); cx.lineTo(gx,y+h); cx.stroke(); }
@@ -32794,7 +33493,7 @@ function _edStyleSplitMedia(ov){
   } else { im.style.objectPosition=(ov._anim?'50% 50%':'50% 30%'); im.style.transform=''; im.style.transformOrigin=''; }
   // #fond-anim · l'anim a un fond CLAIR/blanc « cuit ». On le remplace par une couleur/motif via
   // le blend MULTIPLY : le fond blanc devient la couleur, le contenu sombre reste. (preview)
-  const _fx=ov._anim&&ov._animFx?_ED_ANIMBG[ov._animFx]:null;
+  const _fx=ov._anim&&ov._animFx?_edAnimFxDef(ov._animFx,ov._animBgPick):null;   // #fond-pastel · dérivé de la pastille choisie
   if(_fx){ _edEnsureAnimBgCss(); ov._el.style.background=_fx.css; ov._el.style.backgroundSize=_fx.size||'auto'; ov._el.style.animation=_fx.anim; im.style.mixBlendMode='multiply'; }
   else if(ov._anim && ov._animBg){ ov._el.style.background=ov._animBg; ov._el.style.backgroundSize=''; ov._el.style.animation=''; im.style.mixBlendMode='multiply'; }
   else { ov._el.style.background=''; ov._el.style.backgroundSize=''; ov._el.style.animation=''; im.style.mixBlendMode=''; }
@@ -32980,8 +33679,12 @@ function edSetSplitRatio(pct){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if
 function edToggleSplitInvert(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._split) return; edSnap(); ov._splitInvert=!ov._splitInvert; _edApplySplitBox(ov); edShowProps(); }
 function edToggleMediaReframe(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._split) return; ov._mediaReframe=!ov._mediaReframe; if(ov._el){ ov._el.style.cursor=ov._mediaReframe?'grab':''; ov._el.style.touchAction=ov._mediaReframe?'none':''; } edShowProps(); if(typeof toast==='function') toast(ov._mediaReframe?'Recadrage animation : glisse · molette':'Cadrage figé'); }
 function edResetMediaRF(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; edSnap(); ov._mediaRF=null; _edStyleSplitMedia(ov); }
-function edSetAnimBg(color){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim) return; if(ov._bgStyle==='dark') edSetAnimBgVariant('light'); ov._animFx=null; ov._animBg=color; _edStyleSplitMedia(ov); }
-function edClearAnimBg(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; edSnap(); ov._animBg=null; ov._animFx=null; _edStyleSplitMedia(ov); edShowProps(); }
+function edSetAnimBg(color){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov||!ov._anim) return; if(ov._bgStyle==='dark') edSetAnimBgVariant('light');
+  ov._animBgPick=color;   // #fond-pastel · la pastille choisie pilote AUSSI le fond animé (dégradé/aurora dérivés d'elle)
+  if(ov._animFx){ const p=_edAnimFxDef(ov._animFx,color); ov._animBg=p?p.base:color; }
+  else ov._animBg=color;
+  _edStyleSplitMedia(ov); edShowProps(); }
+function edClearAnimBg(){ const ov=_ed.overlays.find(o=>o.id===_ed.sel); if(!ov) return; edSnap(); ov._animBg=null; ov._animFx=null; ov._animBgPick=null; _edStyleSplitMedia(ov); edShowProps(); }
 // #carreaux · bascule le FOND de l'anim : « clair » (aperçu normal + couleur au choix)
 // ou « carreaux sombre » (version rendue sur fond violet à grille, façon Cartoon 15).
 // Le fond sombre est BAKÉ dans la vidéo → on change la SOURCE de l'anim, pas un blend.
@@ -34398,9 +35101,8 @@ async function edExport(){
           const fs=ov.size*f; cx.save();
           cx.font=(ov.bold?'800 ':'600 ')+fs+'px "Bricolage Grotesque",sans-serif';
           cx.textAlign='center'; cx.textBaseline='top';
-          // #snap-coulisse (export) : même glisse d'entrée (monte + apparaît) que l'aperçu
-          let _slY=0; if(snap){ const _p=Math.max(0,Math.min(1,(gTime-(ov.start||0))/0.42)); const _e=1-Math.pow(1-_p,3); _slY=(1-_e)*34*f; cx.globalAlpha=0.1+0.9*_e; }
-          const cxc=snap?EW/2:(ov.x+ov.w/2)*f, cy=ov.y*f+_slY, maxW=snap?EW*0.94:ov.w*f;
+          // #snap-statique (Axel 28/08, export) : plus de glisse d'entrée — la légende s'affiche telle quelle (= aperçu)
+          const cxc=snap?EW/2:(ov.x+ov.w/2)*f, cy=ov.y*f, maxW=snap?EW*0.94:ov.w*f;
           const paras=String(ov.text||'').split('\n'); let lines=[];
           for(const para of paras){ let line=''; for(const wd of para.split(' ')){ const test=line?line+' '+wd:wd; if(cx.measureText(test).width>maxW && line){ lines.push(line); line=wd; } else line=test; } lines.push(line); }
           const lh=fs*1.2, padV=snap?fs*0.14:0;
@@ -34852,7 +35554,9 @@ function edBandDrag(ov,track,e,mode){
         const src=_edAnimSrc(nm);
         // poster JPG = image visible tout de suite ; la lecture réelle est (re)lancée en JS
         // après rendu (muted/playsinline posés par innerHTML pas toujours appliqués — WebKit)
-        return '<video data-edprev src="'+src+'" poster="'+_edAnimPoster(nm)+'" muted loop playsinline '+(big?'autoplay preload="auto"':'preload="none"')+' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>';
+        // onerror : retry unique puis placeholder discret (window._aaPrevErr,
+        // défini dans le bloc du Montage IA) — jamais de case noire infinie
+        return '<video data-edprev src="'+src+'" poster="'+_edAnimPoster(nm)+'" muted loop playsinline '+(big?'autoplay preload="auto"':'preload="none"')+' onerror="window._aaPrevErr&&window._aaPrevErr(this)" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>';
       }
       return '<div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--accent)">'+S(IC.sparkle,big?44:26)+'</div>';
     }
@@ -34942,8 +35646,9 @@ function edBandDrag(ov,track,e,mode){
               +'<span class="mono faint" style="font-size:10.5px;display:block;margin-bottom:6px">Couleur du fond</span>'
               +'<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">'
               +'<button onclick="edClearAnimBg()" title="Aucune" style="width:26px;height:26px;flex:0 0 auto;border-radius:7px;border:1px solid '+(!ov._animBg?'var(--accent)':'var(--border)')+';background:var(--surface);color:var(--text-3);cursor:pointer;display:grid;place-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l14 14"/></svg></button>'
-              +swatches.map(function(c){ var on=(ov._animBg===c); return '<button onclick="edSetAnimBg(\''+c+'\')" title="'+c+'" style="width:26px;height:26px;flex:0 0 auto;border-radius:7px;border:2px solid '+(on?'#fff':'transparent')+';box-shadow:0 0 0 1px var(--border);background:'+c+';cursor:pointer"></button>'; }).join('')
-              +'<label style="width:26px;height:26px;flex:0 0 auto;border-radius:7px;border:1px solid var(--border);overflow:hidden;cursor:pointer;display:grid;place-items:center;position:relative;color:var(--text-3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="8.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="6.5" cy="12.5" r="1.5" fill="currentColor" stroke="none"/><path d="M12 2C6.5 2 2 6 2 11c0 3.9 3.1 7 7 7 1.1 0 1.5-1.3.8-2-.7-.7-.3-2 .7-2h2.5c3.3 0 6-2.7 6-6 0-3.3-3.4-6-7-6z"/></svg><input type="color" value="'+((ov._animBg&&ov._animBg.charAt(0)==='#')?ov._animBg:'#FF6B35')+'" oninput="edSetAnimBg(this.value)" style="position:absolute;inset:-4px;opacity:0;cursor:pointer"></label>'
+              // #pastilles-only (Axel 28/08) : les 7 pastilles UNIQUEMENT — la pipette (sélecteur custom) est retirée.
+              // Fx actif → la pastille surlignée = _animBgPick (elle pilote le dégradé dérivé), sinon = la teinte plate.
+              +swatches.map(function(c){ var on=(ov._animFx?(ov._animBgPick===c):(ov._animBg===c)); return '<button onclick="edSetAnimBg(\''+c+'\')" title="'+c+'" style="width:26px;height:26px;flex:0 0 auto;border-radius:7px;border:2px solid '+(on?'#fff':'transparent')+';box-shadow:0 0 0 1px var(--border);background:'+c+';cursor:pointer"></button>'; }).join('')
               +'</div></div>') : '';
           var toggle = hasDark ? ('<div class="row gap6">'
             +'<button onclick="edSetAnimBgVariant(\'light\')" class="btn btn-sm" style="flex:1;'+(!isDark?selCss:offCss)+'">Clair</button>'
@@ -34954,7 +35659,7 @@ function edBandDrag(ov,track,e,mode){
           var fxRow = (!isDark) ? ('<div style="margin-top:10px">'
               +'<span class="mono faint" style="font-size:10.5px;display:block;margin-bottom:6px">Fond animé</span>'
               +'<div class="row" style="gap:6px;flex-wrap:wrap">'
-              +fxDefs.map(function(d){ var on=(ov._animFx===d[0]); var pv=_ED_ANIMBG[d[0]];
+              +fxDefs.map(function(d){ var on=(ov._animFx===d[0]); var pv=(window._edAnimFxDef?window._edAnimFxDef(d[0],ov._animBgPick):null)||_ED_ANIMBG[d[0]];   // #fond-pastel · vignette dérivée de la pastille
                   return '<button onclick="edSetAnimFx(\''+d[0]+'\')" title="'+d[1]+' (animé)" style="flex:1 1 28%;min-width:66px;height:34px;border-radius:9px;border:2px solid '+(on?'#fff':'transparent')+';box-shadow:0 0 0 1px var(--border);cursor:pointer;overflow:hidden;padding:0;position:relative;background:'+pv.base+'"><span style="position:absolute;inset:0;background:'+pv.css+';background-size:'+pv.size+';opacity:.92"></span><span style="position:relative;font-size:10.5px;font-weight:800;color:#2a2540;text-shadow:0 1px 2px rgba(255,255,255,.7)">'+d[1]+'</span></button>'; }).join('')
               +'</div></div>') : '';
           return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">'
@@ -34999,7 +35704,14 @@ function edBandDrag(ov,track,e,mode){
     // re-rendre pour rien détruisait la <video> de la carte en plein play() (AbortError → carte figée)
     const hadReal=!!(window._edAnimsReal&&window._edAnimsReal.length);
     renderBank(); ensureAnimBank().then(function(){ if(bank&&!hadReal) renderBank(); }); };
-  function closeBank(){ const el=document.getElementById('edBankModal'); if(el) el.remove(); bank=null; }
+  function closeBank(){ const el=document.getElementById('edBankModal');
+    if(el){
+      // pauser TOUTES les préviews avant de jeter le modal : une <video>
+      // détachée en pleine lecture garde son décodeur un moment (FPS)
+      try{ el.querySelectorAll('video').forEach(function(v){ try{ v.pause(); }catch(_){ } }); }catch(_){ }
+      el.remove();
+    }
+    bank=null; }
   window.edCloseBank=closeBank;
   function bankInsert(label){
     const k=bank.kind;
@@ -35023,6 +35735,10 @@ function edBandDrag(ov,track,e,mode){
   }
   function renderBank(){
     const ov=document.getElementById('edBankModal'); if(!ov||!bank) return;
+    // les vignettes du rendu PRÉCÉDENT (mode/recherche/carte suivante) sont
+    // pausées avant que innerHTML les jette : une <video> détachée en pleine
+    // lecture garde son décodeur un moment (FPS)
+    try{ ov.querySelectorAll('video').forEach(function(v){ try{ v.pause(); }catch(_){ } }); }catch(_){ }
     const meta=metaFor(bank.kind); const items=meta.items.filter(function(x){return x.toLowerCase().includes((bank.q||'').toLowerCase());});
     const at='à '+fmtT(cursorT());
     if(bank.mode==='create'){
@@ -35107,16 +35823,28 @@ function edBandDrag(ov,track,e,mode){
   function bankListWire(ov, items, cellHtml){
     const grid=ov.querySelector('#edBankGrid'); if(!grid) return;
     const PAGE=30;
+    // un re-rendu (recherche) recrée la grille : l'observateur de l'ancienne
+    // sentinelle ne doit pas survivre
+    if(bank._moreIO){ try{ bank._moreIO.disconnect(); }catch(_){ } bank._moreIO=null; }
+    let charge=false;
     const loadMore=function(){
-      if(!bank) return;
+      if(!bank||charge) return;
       const from=bank.shown; if(from>=items.length) return;
-      bank.shown=Math.min(items.length, from+PAGE);
       const btn=grid.querySelector('#edBankMore'); if(!btn) return;
-      btn.insertAdjacentHTML('beforebegin', items.slice(from,bank.shown).map(cellHtml).join(''));
-      if(bank.shown>=items.length) btn.remove();
-      else btn.textContent='Voir plus · '+(items.length-bank.shown)+' restants';
-      bindBank(ov);
-      setTimeout(applyVis,0); // jouer/pauser ce qui vient d'apparaître (après layout)
+      charge=true;
+      // petit loader discret (spinner SVG) le temps de poser le paquet suivant
+      btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="animation:spin .8s linear infinite;vertical-align:-2px"><path d="M12 3a9 9 0 1 0 9 9"/></svg>';
+      setTimeout(function(){
+        charge=false;
+        if(!bank||!grid.isConnected) return;
+        const b2=grid.querySelector('#edBankMore'); if(!b2) return;
+        bank.shown=Math.min(items.length, from+PAGE);
+        b2.insertAdjacentHTML('beforebegin', items.slice(from,bank.shown).map(cellHtml).join(''));
+        if(bank.shown>=items.length){ if(bank._moreIO){ try{ bank._moreIO.disconnect(); }catch(_){ } bank._moreIO=null; } b2.remove(); }
+        else b2.textContent='Voir plus · '+(items.length-bank.shown)+' restants';
+        bindBank(ov);
+        setTimeout(applyVis,0); // jouer/pauser ce qui vient d'apparaître (après layout)
+      },30);
     };
     const applyVis=function(){
       if(!bank||!grid.isConnected) return;
@@ -35128,10 +35856,20 @@ function edBandDrag(ov,track,e,mode){
         else if(!v.paused) v.pause();
       });
       const btn=grid.querySelector('#edBankMore');
-      if(btn && btn.getBoundingClientRect().top < gr.bottom+140) loadMore();
+      // ~5 cellules avant la fin (≈ 2,5 rangées) → paquet suivant
+      if(btn && btn.getBoundingClientRect().top < gr.bottom+520) loadMore();
     };
     const more=grid.querySelector('#edBankMore');
-    if(more) more.onclick=function(e){ e.stopPropagation(); loadMore(); };
+    if(more){
+      more.onclick=function(e){ e.stopPropagation(); loadMore(); };
+      // sentinelle observée : l'append part tout seul à l'approche de la fin ;
+      // le test géométrique d'applyVis reste en SECOURS (callbacks IO non
+      // garantis selon l'état de l'onglet WebKit)
+      if(typeof IntersectionObserver!=='undefined'){
+        bank._moreIO=new IntersectionObserver(function(es){ for(var i2=0;i2<es.length;i2++){ if(es[i2].isIntersecting){ loadMore(); break; } } },{root:grid,rootMargin:'520px 0px'});
+        bank._moreIO.observe(more);
+      }
+    }
     // appel DIRECT sur scroll (léger : ≤ quelques dizaines de rects) — pas de rAF :
     // il gèle en onglet masqué et les événements scroll sont déjà coalescés par frame
     grid.addEventListener('scroll',applyVis,{passive:true});
@@ -35360,6 +36098,10 @@ function edBandDrag(ov,track,e,mode){
   /* mobile : les zones carrées (343px) faisaient 3 écrans de scroll — on les
      compacte, le bouton Générer remonte au 2e écran */
   #mcRefDrop,#mcCharDrop{aspect-ratio:auto !important;min-height:200px;max-height:230px}
+  /* #lot6 · mobile : lecteur pleine largeur COMME AVANT (le cap 65vh + min-height 320px
+     sont des réglages desktop — ici hauteur naturelle, largeur bornée par l'écran) */
+  #expStage{min-height:0 !important;flex:1 1 auto !important}
+  #expResultVid{max-height:none !important}
   /* état vide compact (design proto) à la place du grand explicatif */
   #expResultPlaceholder>*{display:none !important}
   #expResultPlaceholder::before{content:'✦';display:block;text-align:center;font-size:28px;color:var(--accent-2);padding-top:34px;text-shadow:0 0 18px var(--accent-glow)}
@@ -35513,6 +36255,8 @@ function edBandDrag(ov,track,e,mode){
     });
     h+='</div>';
     h+='<div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">'
+      /* 🔌 Connecter Claude (#73) — même place que dans la sidebar : juste au-dessus de « Mon compte » */
+      +'<button class="mm-ghost" data-act="claude"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Connecter Claude <span class="tag-beta" style="margin-left:auto">BÊTA</span></button>'
       +'<button class="mm-ghost" data-act="account"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg> Mon compte</button>'
       +'<button class="mm-ghost" data-act="credits"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Acheter des crédits</button>'
       +'<button class="mm-ghost" data-act="logout" style="color:#ff6b6b"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 015 5"/></svg> Déconnexion</button></div>';
@@ -35542,6 +36286,7 @@ function edBandDrag(ov,track,e,mode){
       b.onclick=function(){
         var a=b.dataset.act;
         if(a==='account'){ hideMore(); paint(); openAccountSettings(); }
+        else if(a==='claude'){ goTool('connectclaude'); }
         else if(a==='credits'){ hideMore(); paint(); openCreditsModal(undefined, true); }
         else if(a==='logout'){ authLogout(); }
         else if(a==='navopen'){ navOpen=!navOpen; renderMore(); }
@@ -35713,129 +36458,6 @@ window.mPreviewClose=function(){
   if(gr&&window._mPrevHome){ if(window._mPrevNext&&window._mPrevNext.parentNode===window._mPrevHome) window._mPrevHome.insertBefore(gr,window._mPrevNext); else window._mPrevHome.appendChild(gr); }
 };
 </script>
-    <!-- 🔌 Écran « Connecter Claude » — reprise 1:1 de la maquette Claude Design
-         (compte-handoff · composant ConnectClaudeModal, style Higgsfield) :
-         plein écran, 3 cartes de largeurs égales, case de confirmation dessous.
-         Les id d'origine sont conservés pour que mcpKeyRefresh / mcpKeyCreate /
-         mcpKeyRevoke / mcpConfirmToggle continuent de fonctionner tels quels.
-         Seul écart assumé : la maquette réaffiche l'URL en permanence, alors que
-         notre backend ne la montre qu'une fois (clé stockée hashée). La carte ①
-         affiche donc l'état de la clé, et l'URL n'apparaît qu'à la création. -->
-    <div id="mcpModal" style="display:none;position:fixed;inset:0;z-index:9895;background:radial-gradient(900px 500px at 50% -5%, rgba(255,90,31,.10), transparent 60%), rgba(8,8,10,.97);backdrop-filter:blur(8px);overflow-y:auto;text-align:left">
-      <button class="btn btn-quiet" onclick="closeMcpModal()" style="position:fixed;top:22px;right:26px;z-index:2;width:40px;height:40px;padding:0;border-radius:12px;display:grid;place-items:center;border:1px solid var(--border-2);background:var(--surface);cursor:pointer">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-      <div style="max-width:1160px;margin:0 auto;padding:clamp(56px,8vh,96px) clamp(28px,6vw,72px) 60px">
-
-        <div class="row gap14" style="align-items:center;justify-content:center;margin-bottom:14px;flex-wrap:wrap">
-          <div style="width:52px;height:52px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
-          </div>
-          <h2 class="display" style="font-size:clamp(26px,3vw,40px);font-weight:800;margin:0;margin-right:6px">Connecter Claude</h2>
-          <span class="tag-beta" style="align-self:center">BÊTA</span>
-        </div>
-        <p class="muted center" style="font-size:16px;max-width:560px;margin:0 auto 40px">Génère tes images &amp; vidéos AvatarAds directement depuis Claude, avec tes crédits.</p>
-
-        <!-- 3 étapes -->
-        <div id="mcpSteps" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch">
-
-          <!-- ① relier (OAuth : plus de clé à coller — 20/08) -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column">
-            <div class="row gap10" style="align-items:center;margin-bottom:14px">
-              <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Relie ton compte</span>
-            </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
-            <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:18px">
-              <input type="text" id="mcpOauthUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
-              <button class="btn btn-sm" onclick="mcpOauthCopy()" title="Copier" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
-              </button>
-            </div>
-            <button class="btn btn-primary" onclick="mcpOauthConnect()" style="width:100%;margin-top:12px;cursor:pointer">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
-              Relier à Claude
-            </button>
-
-            <!-- alternative : connexion par clé (ancienne méthode), repliée -->
-            <details id="mcpKeyAlt" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
-              <summary class="faint" style="font-size:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>Alternative : connexion par clé (URL secrète)</summary>
-            <!-- état A — pas encore de clé (ou plan insuffisant) -->
-            <div id="mcpNoKey" style="margin-top:14px">
-              <p id="mcpLockNote" class="faint" style="display:none;font-size:11px;line-height:1.5;margin:0 0 10px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.</p>
-              <button id="mcpKeyCreateBtn" class="btn btn-primary" onclick="mcpKeyCreate()" style="width:100%;cursor:pointer">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-                Générer ma clé
-              </button>
-            </div>
-
-            <!-- état B — clé tout juste créée : l'URL, une seule fois -->
-            <div id="mcpKeyResult" style="display:none;margin-top:18px">
-              <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1)">
-                <input type="text" id="mcpKeyUrl" readonly onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:11.5px;border:none;background:none;color:var(--text-2);text-overflow:ellipsis;padding:0">
-                <button id="mcpKeyCopyBtn" class="btn btn-sm" onclick="mcpKeyCopy()" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
-                </button>
-              </div>
-              <p style="font-size:11px;line-height:1.5;margin-top:10px;color:var(--amber)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>Copie-la maintenant : pour ta sécurité, elle ne sera plus jamais affichée.</p>
-            </div>
-
-            <!-- état C — clé active (l'URL n'est plus affichable) -->
-            <div id="mcpKeyActive" style="display:none;margin-top:18px">
-              <div id="mcpKeyStatus" class="card" style="padding:12px 14px;background:rgba(40,199,149,.07);border-color:rgba(40,199,149,.3)">
-                <div class="row gap8" style="font-size:13px">
-                  <span class="dot" style="background:var(--green);box-shadow:0 0 8px rgba(40,199,149,.7)"></span><span><b>Clé active</b></span>
-                </div>
-                <div id="mcpKeyDates" class="faint mono" style="font-size:10.5px;line-height:1.6;margin-top:8px"></div>
-              </div>
-              <p class="faint" style="font-size:11px;line-height:1.5;margin-top:10px">Ta clé est stockée de façon sécurisée et n'est affichée qu'une fois. Perdue ? Régénère-la — attention : régénérer désactive l'ancienne clé, il faudra recoller la nouvelle URL dans ton connecteur Claude.</p>
-              <div class="row gap8" style="margin-top:12px">
-                <button id="mcpKeyRegenBtn" class="btn btn-quiet btn-sm faint row gap6" onclick="mcpKeyCreate(true)" style="font-size:12px;padding:0;background:none;border:none;cursor:pointer">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
-                  Régénérer
-                </button>
-                <button id="mcpKeyRevokeBtn" class="btn btn-quiet btn-sm" onclick="mcpKeyRevoke()" style="font-size:12px;color:#FF6B6B;margin-left:auto;padding:0;background:none;border:none;cursor:pointer">Révoquer</button>
-              </div>
-            </div>
-            </details>
-          </div>
-
-          <!-- ② autoriser -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column">
-            <div class="row gap10" style="align-items:center;margin-bottom:14px">
-              <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
-            </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Clique « Se connecter » sur le connecteur : Claude t'envoie sur AvatarAds, tu vérifies que c'est bien ton compte et tu cliques <b style="color:var(--text-2)">Autoriser</b>. C'est tout — la connexion reste active 30 jours et se renouvelle seule.</p>
-            <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:18px;text-decoration:none">
-              Ouvrir Claude → Connecteurs
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            </a>
-          </div>
-
-          <!-- ③ générer -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column">
-            <div class="row gap10" style="align-items:center;margin-bottom:14px">
-              <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
-            </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;flex:1;margin:0">Active AvatarAds dans ta conversation et demande : « Génère une image de… ». Claude annonce le coût et attend ton OK.</p>
-            <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:18px;text-decoration:none">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-              Commencer
-            </a>
-          </div>
-        </div>
-
-        <!-- option confirmation -->
-        <label id="mcpConfirmRow" class="row gap10" style="display:none;width:100%;max-width:680px;margin:22px auto 0;text-align:left;align-items:center;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer">
-          <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked);_mcpConfirmPaint(this.checked)" style="display:none">
-          <span id="mcpConfirmBox" style="width:22px;height:22px;border-radius:6px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent);border:1px solid var(--accent);transition:all .15s">
-            <svg id="mcpConfirmCheck" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-          </span>
-          <span class="faint" style="font-size:13px;line-height:1.5">Demander confirmation avant chaque génération, avec le coût en crédits <b style="color:var(--text-2)">(recommandé)</b></span>
-        </label>
-      </div>
-    </div>
-
-
     <!-- 💶 Demande de virement parrainage (21/08) -->
     <div id="affPayoutModal" onclick="if(event.target===this)affClosePayout()" style="display:none;position:fixed;inset:0;z-index:9600;background:rgba(5,5,7,.72);backdrop-filter:blur(6px);place-items:center;padding:24px">
       <div class="card" style="width:100%;max-width:460px;padding:24px 22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">

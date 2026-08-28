@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "avatarads-app",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8734", "--directory", "/Users/axelskotnicki/Downloads/Autre SaaS/avatarads-membres"],
+      "port": 8734
+    }
+  ]
+}
