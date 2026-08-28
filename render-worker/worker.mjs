@@ -350,6 +350,17 @@ async function composeMotionSplit(jobDir, outPath, plan) {
 // jobDir attendu : base.mp4 = vidéo de référence (origPath), assets/matted.webm =
 // personnage détouré (alpha). Repli : assets/matted.mp4 sur fond VERT uni
 // (background_color:[0,255,0] côté fal) → chromakey + despill.
+// ── v2 (LOT MC 28/08) · LA PERSONNE D'ORIGINE EST EFFACÉE DU FOND ─────────────
+// Bug prouvé par frames (IMG_6133) : le fond v1 = la réf BRUTE → dès que les gestes
+// de la personne d'origine sortent de la silhouette du personnage généré (main levée),
+// ses membres réapparaissent en FANTÔME. v2 accepte deux assets OPTIONNELS :
+//   assets/refmask.webm  = matte ALPHA de la RÉF (la personne d'origine, fal ben/v2)
+//   assets/bgclean.jpg   = frame statique de la réf, personne DÉJÀ effacée (gpt-image)
+// Là où le masque ref-personne est actif (DILATÉ ~3 % : gblur+seuil pour couvrir les
+// bords), le fond est REMPLACÉ par la frame nettoyée (alphamerge+overlay — équivalent
+// maskedmerge mais à couture ADOUCIE : le masque re-flouté sert d'alpha du patch).
+// Les deux absents → comportement v1 inchangé ; échec ffmpeg v2 → re-tentative v1
+// (on ne perd JAMAIS un rendu Kling payé pour un patch de fond).
 // ⚠ ffmpeg : seul le DÉCODEUR libvpx-vp9 (forcé avant -i) livre le canal alpha d'un
 // webm VP9 — le décodeur natif « vp9 » le jette silencieusement (fond noir opaque).
 async function composeMotionBg(jobDir, outPath, plan) {
@@ -358,6 +369,9 @@ async function composeMotionBg(jobDir, outPath, plan) {
   let alpha = true
   if (!existsSync(matted)) { matted = join(jobDir, 'assets', 'matted.mp4'); alpha = false }
   if (!existsSync(matted)) throw new Error('personnage détouré manquant (assets/matted.webm|.mp4)')
+  const refmask = join(jobDir, 'assets', 'refmask.webm')
+  const bgclean = join(jobDir, 'assets', 'bgclean.jpg')
+  const patchOK = existsSync(refmask) && existsSync(bgclean)   // les DEUX, sinon v1
   // même remux anti-flux-DATA que motion-split : les vidéos iPhone embarquent un
   // flux « mebx » que ffmpeg refuse de décoder → on garde vidéo+audio seulement.
   // ⚠ 0:a:0 (PREMIÈRE piste audio seulement) et pas 0:a : certaines captures iPhone
@@ -377,24 +391,54 @@ async function composeMotionBg(jobDir, outPath, plan) {
   // fond = référence cover-crop au format + cadence alignée ; personnage par-dessus,
   // centré (mêmes dimensions en pratique → plein cadre exact)
   const key = alpha ? '' : 'colorkey=0x00FF00:0.22:0.06,despill=type=green,'
-  const fc = `[0:v]fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1[bg];` +
-    `[1:v]${key}setsar=1[fg];[bg][fg]overlay=x=(W-w)/2:y=(H-h)/2:shortest=1:format=auto,format=yuv420p[v]`
+  const cover = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}`
+  // v2 : la réf, le masque ET la frame nettoyée passent par le MÊME cover-crop —
+  // sinon le patch ne tombe pas sur les bons pixels. Masque : alphaextract (gris),
+  // DILATATION ≈3 % de la largeur (gblur σ=20 puis seuil bas 10/255 : le halo du
+  // flou devient blanc → le masque s'étend de ~1,8 σ ≈ 35 px, couvre les bords du
+  // détourage), puis re-flou σ=6 = couture fondue quand il sert d'alpha au patch.
+  const fcFor = (patch) => {
+    const fin = `overlay=x=(W-w)/2:y=(H-h)/2:shortest=1:format=auto,format=yuv420p[v]`
+    if (!patch) return `[0:v]fps=30,${cover},setsar=1[bg];[1:v]${key}setsar=1[fg];[bg][fg]${fin}`
+    return `[0:v]fps=30,${cover},setsar=1[bg0];` +
+      `[2:v]fps=30,alphaextract,${cover},gblur=sigma=20,lutyuv=y='if(gt(val,10),255,0)',gblur=sigma=6[mk];` +
+      `[3:v]${cover},setsar=1[cl];[cl][mk]alphamerge[patch];` +
+      `[bg0][patch]overlay=format=auto[bg];` +
+      `[1:v]${key}setsar=1[fg];[bg][fg]${fin}`
+  }
   // audio : le rendu Kling porte la voix (native/lipsync) → il prime ; plan.bgAudio
   // === 'orig' bascule sur la piste de la vidéo de référence (voix filmée)
   const audioMap = plan.bgAudio === 'orig' ? ['-map', '0:a?'] : ['-map', '1:a?']
-  const args = ['-v', 'error', '-y', '-ignore_unknown', '-i', orig]
-  if (alpha) args.push('-c:v', 'libvpx-vp9')
-  args.push('-i', matted, '-filter_complex', fc, '-map', '[v]', ...audioMap,
-    '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
-    '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
-    '-movflags', '+faststart', outPath)
-  try {
+  const run = (patch) => {
+    const args = ['-v', 'error', '-y', '-ignore_unknown', '-i', orig]
+    if (alpha) args.push('-c:v', 'libvpx-vp9')
+    args.push('-i', matted)
+    // refmask = webm VP9 alpha → même décodeur forcé ; bgclean = image en boucle
+    if (patch) args.push('-c:v', 'libvpx-vp9', '-i', refmask, '-loop', '1', '-i', bgclean)
+    args.push('-filter_complex', fcFor(patch), '-map', '[v]', ...audioMap,
+      '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
+      '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
+      '-movflags', '+faststart', outPath)
     execFileSync('ffmpeg', args, { stdio: 'pipe' })
+  }
+  let usedPatch = patchOK
+  try {
+    run(patchOK)
   } catch (e) {
     const err = (e.stderr ? e.stderr.toString() : '') || String(e.message || e)
-    throw new Error('motion-bg ffmpeg : ' + err.trim().slice(-300))
+    if (!patchOK) throw new Error('motion-bg ffmpeg : ' + err.trim().slice(-300))
+    // le patch v2 a fait tomber ffmpeg (masque illisible, alpha absent…) → on livre
+    // quand même le fond animé v1 plutôt que de perdre le rendu.
+    console.warn('motion-bg v2 (patch fond) a échoué, repli v1 :', err.trim().slice(-200))
+    usedPatch = false
+    try {
+      run(false)
+    } catch (e2) {
+      const err2 = (e2.stderr ? e2.stderr.toString() : '') || String(e2.message || e2)
+      throw new Error('motion-bg ffmpeg : ' + err2.trim().slice(-300))
+    }
   }
-  console.log(`✅ motion-bg (${alpha ? 'alpha' : 'chromakey'}, ${W}×${H}) → ${outPath}`)
+  console.log(`✅ motion-bg (${alpha ? 'alpha' : 'chromakey'}, ${W}×${H}, fond ${usedPatch ? 'nettoyé v2' : 'brut v1'}) → ${outPath}`)
 }
 
 // utilisateur du rendu en cours (null en --local / tests) — lu par la facturation du lipsync
