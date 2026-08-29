@@ -94,6 +94,37 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   .hide-mobile{display:none !important}
 }
 </style>
+<!-- Données structurées (SEO) : WebPage + Product/Offer avec les prix mensuels
+     RÉELLEMENT affichés (Starter/Pro/Élite palier 1100 cr). Ne JAMAIS inventer
+     de notes/avis (aggregateRating interdit sans vraies données). -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://avatarads.fr/tarifs.html#webpage",
+      "url": "https://avatarads.fr/tarifs.html",
+      "name": "Tarifs — AvatarAds",
+      "description": "Starter, Pro ou Élite : choisis ton plan AvatarAds. Sans engagement, résiliation en 1 clic. Avatar IA, voix clonée, sous-titres — tout inclus.",
+      "inLanguage": "fr-FR"
+    },
+    {
+      "@type": "Product",
+      "@id": "https://avatarads.fr/tarifs.html#product",
+      "name": "AvatarAds",
+      "description": "Générateur de vidéos et images par IA : avatar IA lipsync, voix clonée, sous-titres animés, Montage IA — sans montrer ton visage.",
+      "brand": { "@type": "Brand", "name": "AvatarAds" },
+      "url": "https://avatarads.fr/",
+      "offers": [
+        { "@type": "Offer", "name": "Starter — mensuel", "price": "29.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/tarifs.html" },
+        { "@type": "Offer", "name": "Pro — mensuel", "price": "49.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/tarifs.html" },
+        { "@type": "Offer", "name": "Élite — mensuel", "price": "89.99", "priceCurrency": "EUR", "url": "https://avatarads.fr/tarifs.html" }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
