@@ -469,6 +469,9 @@ audio{flex:1;height:28px;opacity:0;width:0;position:absolute}
 details.adv>summary{list-style:none}
 details.adv>summary::-webkit-details-marker{display:none}
 details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
+@keyframes mcpRecapIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.mcp-recap{display:none}
+details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 .exp-wpg-chip:hover{border-color:var(--border);color:var(--text)}
 .exp-wpg-chip.on{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.4);color:var(--orange2)}
 /* Cartes de presets Express (style · format · qualité · voix) — sélection = bordure orange + fond chaud */
@@ -1857,7 +1860,6 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div style="margin-top:12px">
             <!-- COULEURS — maquette ColorField : boîte bordée --panel-1 + pastille arrondie + hex -->
             <div class="fld" style="margin-bottom:16px">
-              <div class="label">Couleurs</div>
               <div class="row gap16" style="margin-bottom:14px">
                 <div class="col" style="flex:1;gap:8px">
                   <span class="mono faint" style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">Couleur 1 (accentué)</span>
@@ -4834,13 +4836,19 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="row gap10" style="align-items:center;margin-bottom:12px">
               <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 10px">Sur l'écran « Ajouter un connecteur personnalisé », renseigne :</p>
-            <div class="card" style="padding:10px 12px;background:var(--panel-1);display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:1.5">
-              <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Nom</span><b style="text-align:right">AvatarAds</b></div>
-              <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Adresse</span><b class="mono" style="text-align:right;font-size:11.5px;word-break:break-all">https://mcp.avatarads.fr</b></div>
-              <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Authentification</span><b style="text-align:right">Toujours requis</b></div>
-              <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Client OAuth</span><b style="text-align:right">Métadonnées hébergées par Anthropic (recommandé)</b></div>
-            </div>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 8px">Sur l'écran « Ajouter un connecteur personnalisé », renseigne les réglages AvatarAds.</p>
+            <details class="adv" style="margin:0 0 10px">
+              <summary style="cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);user-select:none;width:fit-content">
+                <svg class="adv-caret" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;transition:transform .2s"><path d="M6 9l6 6 6-6"/></svg>
+                Voir les réglages exacts
+              </summary>
+              <div class="mcp-recap card" style="padding:10px 12px;margin-top:10px;background:var(--panel-1);flex-direction:column;gap:6px;font-size:12.5px;line-height:1.5">
+                <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Nom</span><b style="text-align:right">AvatarAds</b></div>
+                <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Adresse</span><b class="mono" style="text-align:right;font-size:11.5px;word-break:break-all">https://mcp.avatarads.fr</b></div>
+                <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Authentification</span><b style="text-align:right">Toujours requis</b></div>
+                <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Client OAuth</span><b style="text-align:right">Métadonnées hébergées par Anthropic (recommandé)</b></div>
+              </div>
+            </details>
             <p class="faint" style="font-size:12.5px;line-height:1.55;margin:10px 0 0">Clique <b style="color:var(--text-2)">Ajouter</b> puis <b style="color:var(--text-2)">Se connecter</b> : tu approuves l'accès sur AvatarAds, c'est terminé.</p>
             <p class="faint" style="font-size:11.5px;line-height:1.5;margin:8px 0 14px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>« Impossible de vérifier » ? Pas bloquant : clique <b style="color:var(--text-2)">Suivant</b> et garde ces réglages.</p>
             <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:auto;text-decoration:none">
@@ -4854,7 +4862,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <div class="row gap10" style="align-items:center;margin-bottom:12px">
               <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Active AvatarAds dans ta conversation et décris ce que tu veux. Claude annonce le coût en crédits et attend ton OK avant de lancer.</p>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Active AvatarAds dans ta conversation. Décris ce que tu veux — la génération part directement sur tes crédits AvatarAds.</p>
             <div class="row card" style="padding:12px 14px;gap:10px;align-items:flex-start;background:var(--panel-1);margin-top:auto">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto;margin-top:2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               <span class="faint mono" style="font-size:11.5px;line-height:1.6;text-align:left">« Génère une image de mon produit sur fond marbre, en 9:16 »</span>
@@ -19592,8 +19600,9 @@ function updateSubPreviewWithWords(shown, activeIdx, triggerAnim = true){
       html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${box?`background:${c1};color:${_subTextOn(c1)};padding:1px 7px;text-shadow:0 1px 2px rgba(0,0,0,.3)`:`color:${c2};text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`;
     }
     else if(style==='badis'){
-      // « White » (réf. spec) — Bricolage Grotesque 800, couleur c1 (blanc par défaut), contour noir via text-shadow (Safari-safe), MAJUSCULES
-      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:${c1};text-shadow:${_outline(Math.max(2,Math.round(sz*0.09)))};margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`;
+      // « White » — texte propre, SANS fond/contour noir : mot accentué = c1, autres = c2,
+      // ombre douce (lisibilité) mais plus de « fond noir ». MAJUSCULES, Bricolage 800.
+      html+=`<span style="${base}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:${active?c1:c2};text-shadow:0 2px ${Math.max(3,Math.round(sz*0.12))}px rgba(0,0,0,.38);margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`;
     }
     else if(style==='karaoke'){
       // Karaoké : un SEUL mot surligné à la fois (le mot actif) — box c1 (cyan par défaut)
@@ -20017,8 +20026,8 @@ function updateSubPreview(){
     podcast: () => shown.map((w,i) =>
       `<span style="${sc2}font-family:'Arial Black',sans-serif;font-size:${sz}px;color:${i===0?c1:c2};font-weight:900;margin:0 3px">${w}</span>`
     ).join(''),
-    badis: () => shown.map((w) =>
-      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:${c1};text-shadow:${_outline(Math.max(2,Math.round(sz*0.09)))};margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`
+    badis: () => shown.map((w,i) =>
+      `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:${Math.round(sz*1.08)}px;color:${i===0?c1:c2};text-shadow:0 2px ${Math.max(3,Math.round(sz*0.12))}px rgba(0,0,0,.38);margin:0 3px;text-transform:uppercase;letter-spacing:.01em;display:inline-block">${w}</span>`
     ).join(''),
     karaoke: () => shown.map((w,i) =>
       `<span style="${sc2}font-family:'Bricolage Grotesque',sans-serif;font-size:${sz}px;font-weight:800;margin:0 3px;border-radius:7px;${i===0?`background:${c1};color:${_subTextOn(c1)};padding:1px 7px`:`color:${c2};text-shadow:${_outline(Math.max(1,Math.round(sz*0.05)))}`}">${w}</span>`
@@ -21896,39 +21905,89 @@ window._subGroupTimes = window._subGroupTimes || null; // [{start,end}] par grou
 
 function _wtCleanWord(w){ return String(w||'').toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(); }
 function _wtHasAlnum(w){ return /[0-9A-ZÀ-ÖØ-ÞŒ]/.test(w); }
+// #L2-whisper · Normalisation « lâche » pour aligner un token du TEXTE (apostrophes,
+// accents, ponctuation, casse) sur un mot Whisper (brut, sans apostrophe ni accent) :
+// minuscule, sans accents, sans apostrophe (U+0027 ET U+2019) ni ponctuation.
+function _wtNormLoose(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'');
+}
+// Libellé affichable d'un token du TEXTE : MAJUSCULES, apostrophes internes conservées
+// (J'AI, AUJOURD'HUI), ponctuation de bord retirée.
+function _wtLabel(tok){
+  return String(tok||'')
+    .replace(/[.,!?;:"«»…()\[\]{}—–]/g,'')                    // ponctuation (garde ' et ’)
+    .replace(/^[’']+|[’']+$/g,'')          // apostrophes de bord
+    .trim()
+    .toUpperCase();
+}
+// Découpe data.text en tokens affichables + drapeaux de coupure (ponctuation collée).
+function _wtTextTokens(text){
+  const out = [];
+  for(const t of String(text||'').split(/\s+/)){
+    if(!t) continue;
+    const norm   = _wtNormLoose(t);
+    const strong = /[.!?…]["»)\]]*$/.test(t);
+    const soft   = /[,;:]["»)\]]*$/.test(t);
+    if(!norm){ out.push({ label:'', norm:'', strong, soft }); continue; } // « — », « … » seuls → drapeaux seulement
+    out.push({ label:_wtLabel(t), norm, strong, soft });
+  }
+  return out;
+}
+// Aligne les mots Whisper (qui portent les TIMESTAMPS mais arrivent SANS apostrophe ni
+// ponctuation) sur les tokens du TEXTE (qui portent le LIBELLÉ : apostrophes, accents,
+// ponctuation, casse). Retourne [{word,start,end,strongPunct,softPunct}] : word = libellé
+// du texte, start/end = timing du/des mot(s) Whisper correspondant(s). Gère « jai » (1 mot)
+// comme « j »+« ai » (2 mots) → « J'AI » ; « aujourd »+« hui » → « AUJOURD'HUI ».
+function _alignTextToWhisper(rawWords, textTokens){
+  const ws = [];
+  for(const rw of (rawWords||[])){
+    const n = _wtNormLoose(rw && rw.word);
+    if(!n) continue;
+    ws.push({ n, start:+rw.start||0, end:(+rw.end|| +rw.start||0) });
+  }
+  const out = [];
+  let wi = 0;
+  for(const tk of textTokens){
+    if(!tk.norm){ // token de ponctuation seule → reporte les drapeaux sur le mot précédent
+      if(out.length){ const p=out[out.length-1]; p.strongPunct=p.strongPunct||tk.strong; p.softPunct=p.softPunct||tk.soft; }
+      continue;
+    }
+    if(wi >= ws.length){ out.push({ word:tk.label, start:null, end:null, strongPunct:tk.strong, softPunct:tk.soft }); continue; }
+    const tnorm = tk.norm;
+    // Consomme au moins 1 mot Whisper, puis tant que l'accumulé reste un préfixe strict du
+    // token (Whisper a découpé « j'ai » → « j »+« ai », « aujourd'hui » → « aujourd »+« hui »).
+    let acc = ws[wi].n; const startWi = wi; wi++; let steps = 1;
+    while(wi < ws.length && steps < 5 && acc.length < tnorm.length && tnorm.startsWith(acc)){
+      const nn = acc + ws[wi].n;
+      if(tnorm.startsWith(nn) || nn.startsWith(tnorm)){ acc = nn; wi++; steps++; }
+      else break;
+    }
+    out.push({ word:tk.label, start:ws[startWi].start, end:ws[Math.min(wi,ws.length)-1].end, strongPunct:tk.strong, softPunct:tk.soft });
+  }
+  // Comble les timings manquants (tokens texte au-delà des mots Whisper) par report avant.
+  let lastEnd = 0;
+  for(const w of out){ if(w.start!=null){ lastEnd = w.start; break; } }
+  for(const w of out){
+    if(w.start==null){ w.start = lastEnd; w.end = lastEnd + 0.3; }
+    lastEnd = w.end;
+  }
+  return out;
+}
 
 // Construit les groupes de sous-titres depuis les MOTS Whisper (start/end par mot) :
 // 2-4 mots par groupe, coupure à la ponctuation et aux pauses > 0,35 s.
 // Applique AUTOMATIQUEMENT (groupes + transcript + preview) — plus d'étape manuelle.
 function _applyWhisperWords(rawWords, text){
-  const words = [];
-  for(const rw of rawWords){
-    const raw = String(rw.word || '').trim();
-    const c = _wtCleanWord(raw);
-    if(!c || !_wtHasAlnum(c)) continue; // jette les tokens « — », « … », ponctuation seule
-    words.push({
-      word: c, start: +rw.start || 0, end: +rw.end || (+rw.start || 0),
-      strongPunct: /[.!?…]["»)]*$/.test(raw),   // fin de phrase → coupure
-      softPunct:   /[,;:]["»)]*$/.test(raw)     // virgule & co → coupure si groupe assez plein
-    });
-  }
+  // #L2-whisper · Le LIBELLÉ des sous-titres vient du TEXTE (data.text : apostrophes,
+  // accents, ponctuation, casse) ; le TIMING vient des mots Whisper, qui arrivent SANS
+  // apostrophe ni ponctuation (« jai », ou « j »+« ai »). On aligne les deux → « J'AI »
+  // affiché, mais calé sur le timestamp du/des mot(s) Whisper correspondant(s).
+  const textTokens = _wtTextTokens(text);
+  const words = _alignTextToWhisper(rawWords, textTokens);
   if(!words.length){ return false; }
-  // Whisper renvoie les MOTS sans ponctuation → on la récupère depuis le TEXTE
-  // (match glouton monotone) pour couper les groupes aux fins de phrases.
-  try{
-    const txtToks = String(text||'').split(/\s+/).filter(t=>t);
-    let tj = 0;
-    for(const w of words){
-      const lim = Math.min(txtToks.length, tj + 4);
-      for(let k = tj; k < lim; k++){
-        if(_wtCleanWord(txtToks[k]) === w.word){
-          w.strongPunct = w.strongPunct || /[.!?…]["»)]*$/.test(txtToks[k]);
-          w.softPunct   = w.softPunct   || /[,;:]["»)]*$/.test(txtToks[k]);
-          tj = k + 1; break;
-        }
-      }
-    }
-  }catch(e){}
   const built = _buildTimedGroups(words);
   _wordGroups = built.groups;
   window._subGroupTimes = built.times;
@@ -24794,7 +24853,8 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   ctx.lineJoin = 'round';
 
   if(style === 'badis'){
-    // ── « White » (réf. spec) — Bricolage Grotesque 800, blanc, contour noir épais + ombre, MAJUSCULES ──
+    // ── « White » — texte propre, SANS fond/contour noir : mot actif = c1, autres = c2,
+    //    ombre douce (lisibilité) mais plus de « fond noir » (ni stroke épais ni halo). ──
     const font = `800 ${Math.round(sz*1.08)}px 'Bricolage Grotesque',sans-serif`;
     ctx.font = font;
     ctx.textAlign = 'left';
@@ -24809,15 +24869,13 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       let x = posX - lineW / 2;
       x = Math.max(W * 0.05, Math.min(W * 0.88 - lineW, x)); // safe zone : rail droit TikTok
       lineIdxs.forEach(i => {
+        const active = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
         ctx.font = font;
-        // ombre portée (halo noir)
-        ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = Math.round(sz*0.18); ctx.shadowOffsetX = Math.round(sz*0.04); ctx.shadowOffsetY = Math.round(sz*0.05);
-        ctx.lineWidth   = Math.max(3, Math.round(sz*0.09));
-        ctx.strokeStyle = '#000';
-        ctx.fillStyle   = c1; // couleur 1 (blanc par défaut)
-        ctx.strokeText(upWords[i], x, lineY);
-        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+        // ombre douce pour la lisibilité — PAS de fond/contour noir
+        ctx.shadowColor = 'rgba(0,0,0,.38)'; ctx.shadowBlur = Math.round(sz*0.12); ctx.shadowOffsetX = 0; ctx.shadowOffsetY = Math.round(sz*0.04);
+        ctx.fillStyle   = active ? c1 : c2;  // couleur 1 (accentué) / couleur 2 (autres)
         ctx.fillText(upWords[i], x, lineY);
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
         x += wordWidths[i];
       });
     });
@@ -28636,21 +28694,51 @@ window.addEventListener('load', () => { setTimeout(_ouvrirMediaDepuisUrl, 800) }
 // /authorize. On attend sa session (le gate de login fait son travail s'il
 // n'est pas connecté), on demande le consentement, et l'approbation renvoie
 // le code d'autorisation à Claude. Une seule carte, deux boutons, zéro clé.
+//
+// LOT G — la carte « flashait » puis disparaissait à la reconnexion. Ouverture
+// rendue IDEMPOTENTE + STABLE : trois verrous empêchent le double-lancement
+// (booléen _mcpOAuthLance, URL nettoyée = relais consommé une seule fois, carte
+// déjà dans le DOM) et un MutationObserver RÉ-ANCRE la carte si un re-render la
+// détache avant le clic. On n'ouvre JAMAIS avant d'avoir la session (jamais
+// ouvrir-puis-fermer). Chaque étape est tracée dans la console : [mcp-oauth].
 async function _mcpOAuthConsent(){
   const p = new URLSearchParams(location.search)
   const relai = p.get('mcp_oauth')
-  if(!relai) return
-  try { history.replaceState(null, '', location.pathname) } catch(_){}
+  if(!relai) return                                     // pas un relais OAuth → rien à faire
   let params
-  try { params = JSON.parse(atob(relai.replace(/-/g,'+').replace(/_/g,'/'))) } catch(_){ return }
-  if(!params || !params.client_id || !params.redirect_uri) return
-  // la session peut arriver après le login OTP : on patiente jusqu'à 5 min
+  try { params = JSON.parse(atob(relai.replace(/-/g,'+').replace(/_/g,'/'))) } catch(_){ console.warn('[mcp-oauth] relais illisible — ignoré'); return }
+  if(!params || !params.client_id || !params.redirect_uri){ console.warn('[mcp-oauth] relais incomplet — ignoré'); return }
+  console.log('[mcp-oauth] lancement — relais de consentement détecté')
+  // Relais consommé UNE SEULE FOIS : on nettoie l'URL tout de suite → aucun autre
+  // lecteur, ni un refresh, ne peut relancer un flux à partir du même relais.
+  try { history.replaceState(null, '', location.pathname) } catch(_){}
+  // Idempotence : carte déjà à l'écran (ou en cours d'ouverture) → on ne relance rien.
+  if(document.getElementById('mcpOAuthModal') || window._mcpOAuthModalOpen){
+    console.log('[mcp-oauth] garde — carte déjà ouverte, second lancement ignoré')
+    return
+  }
+  // On patiente que la session arrive AVANT d'afficher quoi que ce soit (elle peut
+  // arriver après le login OTP : jusqu'à 5 min). Jamais ouvrir-puis-fermer.
+  console.log('[mcp-oauth] vérification de la session…')
   let session = null
   for(let i = 0; i < 600 && !session; i++){
     try { session = (await sb.auth.getSession()).data.session } catch(_){}
     if(!session) await new Promise(r => setTimeout(r, 500))
   }
-  if(!session) return
+  if(!session){ console.warn('[mcp-oauth] session absente après attente — carte non ouverte'); return }
+  // Une autre exécution a pu ouvrir la carte pendant l'attente : re-vérif idempotence.
+  if(document.getElementById('mcpOAuthModal') || window._mcpOAuthModalOpen){
+    console.log('[mcp-oauth] garde — carte déjà ouverte pendant l’attente')
+    return
+  }
+  _mcpOpenConsentModal(params, session)
+}
+// Ouvre la carte UNE fois et la garde jusqu'à l'action utilisateur. Le MutationObserver
+// la ré-ancre si un re-render la détache — aucune fermeture automatique possible.
+function _mcpOpenConsentModal(params, session){
+  if(document.getElementById('mcpOAuthModal')){ console.log('[mcp-oauth] garde — ouverture ignorée (carte déjà présente)'); return }
+  window._mcpOAuthModalOpen = true
+  window._mcpOAuthDone = false           // true uniquement sur action utilisateur (autoriser / refuser)
   const div = document.createElement('div')
   div.id = 'mcpOAuthModal'
   div.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(8,8,10,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px'
@@ -28663,8 +28751,24 @@ async function _mcpOAuthConsent(){
     + '<button id="mcpOAuthNo" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:none;color:var(--text-3,#888);font-family:var(--font);font-size:12.5px;cursor:pointer">Refuser</button>'
     + '</div>'
   document.body.appendChild(div)
+  console.log('[mcp-oauth] ouverture — carte de consentement affichée (' + String((session.user && session.user.email) || '') + ')')
+  // STABILITÉ : si un re-render (ou une redirection interne) détache la carte AVANT
+  // l'action utilisateur, on la ré-ancre aussitôt. L'observer se débranche dès le clic.
+  let _obs = null
+  try {
+    _obs = new MutationObserver(() => {
+      if(!window._mcpOAuthDone && document.body && !document.body.contains(div)){
+        document.body.appendChild(div)
+        console.log('[mcp-oauth] ré-ancrage — la carte avait été retirée par un re-render')
+      }
+    })
+    _obs.observe(document.body, { childList: true })
+  } catch(_){}
+  const _clore = () => { window._mcpOAuthDone = true; window._mcpOAuthModalOpen = false; try { _obs && _obs.disconnect() } catch(_){} }
   const sep = params.redirect_uri.includes('?') ? '&' : '?'
   document.getElementById('mcpOAuthNo').onclick = () => {
+    _clore()
+    console.log('[mcp-oauth] fermeture — refus utilisateur')
     location.href = params.redirect_uri + sep + 'error=access_denied' + (params.state ? '&state=' + encodeURIComponent(params.state) : '')
   }
   document.getElementById('mcpOAuthOk').onclick = async () => {
@@ -28677,10 +28781,12 @@ async function _mcpOAuthConsent(){
         body: JSON.stringify(params),
       })
       const d = await res.json()
-      if(d && d.redirect_url){ location.href = d.redirect_url; return }
+      if(d && d.redirect_url){ _clore(); console.log('[mcp-oauth] fermeture — autorisation accordée, redirection'); location.href = d.redirect_url; return }
       throw new Error(d && d.error || 'réponse inattendue')
     } catch(e) {
+      // échec réseau/serveur : on GARDE la carte (l'observer reste actif) pour un nouvel essai
       btn.disabled = false; btn.textContent = 'Autoriser'
+      console.warn('[mcp-oauth] échec approbation — carte conservée : ' + (e.message || e))
       toast('Autorisation impossible — réessaie (' + (e.message || e) + ')')
     }
   }
@@ -28694,10 +28800,17 @@ async function _mcpOAuthConsent(){
 // à 12:54:55, approve à 12:54:59, AUCUN appel /token. DOMContentLoaded suffit :
 // `sb` est créé synchroniquement en amont du bloc principal.
 let _mcpOAuthLance = false
-function _mcpOAuthKick(){ if(_mcpOAuthLance) return; _mcpOAuthLance = true; _mcpOAuthConsent() }
-if(document.readyState !== 'loading') _mcpOAuthKick()
-else document.addEventListener('DOMContentLoaded', _mcpOAuthKick)
-window.addEventListener('load', _mcpOAuthKick) // ceinture si DOMContentLoaded déjà passé sans relai
+function _mcpOAuthKick(src){
+  var hasRelai = false
+  try { hasRelai = /(?:^|[?&])mcp_oauth=/.test(location.search) } catch(_){}
+  if(_mcpOAuthLance){ if(hasRelai) console.log('[mcp-oauth] garde — kick « ' + (src||'?') + ' » ignoré (déjà lancé)'); return }
+  _mcpOAuthLance = true
+  if(hasRelai) console.log('[mcp-oauth] kick « ' + (src||'?') + ' » — relais présent')
+  _mcpOAuthConsent()
+}
+if(document.readyState !== 'loading') _mcpOAuthKick('immédiat')
+else document.addEventListener('DOMContentLoaded', function(){ _mcpOAuthKick('DOMContentLoaded') })
+window.addEventListener('load', function(){ _mcpOAuthKick('load') }) // ceinture si DOMContentLoaded déjà passé sans relai
 
 function expressOpenInEditor(){
   if(!window._expVidBlob){ toast('Génère une vidéo d\'abord'); return; }
