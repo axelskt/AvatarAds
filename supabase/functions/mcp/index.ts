@@ -2806,7 +2806,9 @@ async function handleKeyManagement(req: Request): Promise<Response> {
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     return json(200, {
       exists: !!data, created_at: data?.created_at ?? null, last_used_at: data?.last_used_at ?? null,
-      require_confirm: data?.require_confirm ?? true, plan_allowed: planAllowed,
+      // défaut false (29/08) : l'option confirmation quitte l'UI, les nouvelles
+      // clés partent sans devis ; une clé existante garde sa valeur stockée.
+      require_confirm: data?.require_confirm ?? false, plan_allowed: planAllowed,
     })
   }
   if (body.action === 'create') {
@@ -2815,7 +2817,11 @@ async function handleKeyManagement(req: Request): Promise<Response> {
     crypto.getRandomValues(raw)
     const key = 'aa_' + Array.from(raw).map((b) => b.toString(16).padStart(2, '0')).join('')
     await svc.from('mcp_keys').update({ revoked_at: new Date().toISOString() }).eq('user_id', user.id).is('revoked_at', null)
-    const { error: insErr } = await svc.from('mcp_keys').insert({ user_id: user.id, key_hash: await hashKey(key) })
+    // require_confirm: false PAR DEFAUT (Axel, 29/08) — l'option « demander
+    // confirmation » disparaît de l'UI (Anthropic confirme déjà côté client).
+    // Explicite ici + défaut colonne passé à false ; les clés existantes
+    // gardent leur réglage, et set_confirm reste fonctionnel pour qui l'a.
+    const { error: insErr } = await svc.from('mcp_keys').insert({ user_id: user.id, key_hash: await hashKey(key), require_confirm: false })
     if (insErr) return json(500, { error: 'server_error' })
     return json(200, { ok: true, url: `${MCP_PUBLIC_BASE}/${key}` })
   }
