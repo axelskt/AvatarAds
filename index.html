@@ -210,13 +210,15 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 .step-visual{position:relative;width:100%;aspect-ratio:1/1;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 60px -26px rgba(124,92,255,.45)}
 .step-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .step-badge{position:absolute;top:12px;left:12px;z-index:2;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px}
-/* menu mobile (burger) — indépendant des anims rise/reveal : visible dès l'ajout de .open */
+/* menu mobile (burger) — indépendant des anims rise/reveal : visible dès l'ajout de .open.
+   V2 (réf. remakeit) : sheet arrondie sur ~la moitié haute de l'écran, page visible
+   FLOUTÉE derrière (backdrop-filter sur l'overlay), un seul CTA « Commencer ». */
 .nav-burger{display:none;width:40px;height:40px;border-radius:10px;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);flex:0 0 auto}
-.mob-menu{position:fixed;inset:0;z-index:80;display:none;padding:10px;background:rgba(11,11,13,.55)}
+.mob-menu{position:fixed;inset:0;z-index:80;display:none;padding:10px;background:rgba(11,11,13,.45);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .mob-menu.open{display:block}
-.mm-panel{position:relative;width:100%;height:100%;border-radius:24px;border:1px solid var(--border-2);overflow:auto;display:flex;flex-direction:column;background:radial-gradient(700px 420px at 80% -10%,rgba(255,90,31,.12),transparent 60%),var(--bg)}
-.mm-close{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);flex:0 0 auto}
-.mm-link{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--text);padding:13px 18px;background:none;border:none;text-align:center}
+.mm-panel{position:relative;width:100%;max-height:calc(100vh - 20px);border-radius:24px;border:1px solid var(--border-2);overflow:auto;display:flex;flex-direction:column;background:radial-gradient(700px 420px at 80% -10%,rgba(255,90,31,.12),transparent 60%),var(--bg);box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+.mm-close{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border-2);color:var(--text);flex:0 0 auto}
+.mm-link{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--text);padding:0;background:none;border:none;text-align:center;line-height:1.2}
 .mm-link:active{color:var(--accent-2)}
 /* responsive */
 .only-mobile{display:none}
@@ -306,7 +308,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       "@id": "https://avatarads.fr/#organization",
       "name": "AvatarAds",
       "url": "https://avatarads.fr/",
-      "logo": "https://avatarads.fr/favicon.png"
+      "logo": "https://avatarads.fr/favicon.png",
+      "email": "contact@avatarads.fr",
+      "sameAs": ["https://whop.com/avatarads/"]
     },
     {
       "@type": "WebSite",
@@ -379,25 +383,24 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 </div>
 
 <!-- ══════════ 2b · MENU MOBILE (burger ≤1060px) ══════════ -->
-<div id="mobMenu" class="mob-menu" role="dialog" aria-modal="true" aria-label="Menu">
+<div id="mobMenu" class="mob-menu" role="dialog" aria-modal="true" aria-label="Menu" onclick="if(event.target===this)mobMenuClose()">
   <div class="mm-panel">
-    <div class="row" style="justify-content:space-between;padding:14px 14px 0 20px;min-height:58px">
+    <div class="row" style="justify-content:space-between;padding:14px 14px 0 20px">
       <div class="row gap10">
         <img src="assets/avatarads-logo-96.png" alt="" width="22" height="22" style="border-radius:6px;display:block">
         <span class="logo-wordmark">AvatarAds</span>
       </div>
-      <button class="mm-close" aria-label="Fermer le menu" onclick="mobMenuClose()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="mm-close" aria-label="Fermer le menu" onclick="mobMenuClose()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div class="col" style="flex:1;justify-content:center;align-items:center;gap:4px;padding:24px 20px">
+    <div class="col" style="align-items:center;gap:28px;padding:22px 20px 6px">
       <button class="mm-link" onclick="mobMenuGo('etapes')">Comment ça marche</button>
       <a class="mm-link" href="/app/" onclick="mobMenuClose()">Parrainage</a>
       <button class="mm-link" onclick="mobMenuGo('faq')">FAQ</button>
       <a class="mm-link" href="/claude.html" onclick="mobMenuClose()">MCP</a>
       <a class="mm-link" href="/tarifs.html" onclick="mobMenuClose()">Tarifs</a>
     </div>
-    <div class="row" style="gap:12px;padding:14px 18px calc(16px + env(safe-area-inset-bottom))">
-      <a href="/app/" class="btn btn-ghost" style="flex:1" onclick="mobMenuClose()">Se connecter</a>
-      <a href="/app/" class="btn btn-primary" style="flex:1" onclick="mobMenuClose()">Commencer</a>
+    <div style="padding:22px 18px calc(18px + env(safe-area-inset-bottom))">
+      <a href="/app/" class="btn btn-primary" style="width:100%" onclick="mobMenuClose()">Commencer <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </div>
   </div>
 </div>
@@ -413,7 +416,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div>
       </div>
       <h1 class="display" style="font-size:clamp(46px,5.6vw,86px);font-weight:800;margin-top:22px;line-height:1.0;text-wrap:balance;overflow-wrap:break-word">
-        Crée des vidéos<br class="hide-mobile">
+        Crée des vidéos IA<br class="hide-mobile">
         <span class="accent">sans montrer ton visage</span>
       </h1>
       <p class="muted rise" style="font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5">
@@ -505,7 +508,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 
       <!-- carte flottante vues -->
       <div class="card glass rise hp-views" style="position:absolute;left:0%;top:24px;z-index:4;padding:9px 13px;border-radius:14px">
-        <div class="row gap8"><span style="font-size:16px">👁️</span><div class="col" style="line-height:1.1"><b style="font-size:15px">2,1M vues</b><span class="faint" style="font-size:10.5px">en 48h</span></div></div>
+        <div class="row gap8"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><div class="col" style="line-height:1.1"><b style="font-size:15px">2,1M vues</b><span class="faint" style="font-size:10.5px">en 48h</span></div></div>
       </div>
     </div>
 
@@ -631,7 +634,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media">
           <video id="veoVid" src="assets/lp/express-veo.mp4" poster="assets/lp/express-veo-456.webp" playsinline preload="none" onclick="veoToggle()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer"></video>
-          <span class="row gap6" style="position:absolute;top:12px;left:12px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px;pointer-events:none">✦ Veo 3.1</span>
+          <span class="row gap6" style="position:absolute;top:12px;left:12px;z-index:2;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px;pointer-events:none"><svg width="10" height="10" viewBox="0 0 48 48" fill="currentColor" style="flex:0 0 auto"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z"/></svg> Veo 3.1</span>
           <div class="sc-play" id="veoPlayWrap" onclick="veoToggle()" style="pointer-events:auto;cursor:pointer"><div><svg width="22" height="22" viewBox="0 0 24 24" fill="#111"><path d="M7 4l13 8-13 8z"/></svg></div></div>
         </div>
       </div>
@@ -698,7 +701,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
             <span class="mono accent" style="font-size:10px;width:44px;text-align:right">après</span>
             <div class="row" style="flex:1;gap:3px;align-items:center;height:30px" id="audioBarsAfter"></div>
           </div>
-          <span class="pill" style="align-self:center;background:rgba(40,199,149,.12);border-color:rgba(40,199,149,.3);color:var(--green);font-weight:700;font-size:12.5px">✂️ Silences supprimés</span>
+          <span class="pill" style="align-self:center;background:rgba(40,199,149,.12);border-color:rgba(40,199,149,.3);color:var(--green);font-weight:700;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg> Silences supprimés</span>
         </div>
       </div></div>
       <!-- editeur -->
@@ -746,7 +749,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 <!-- ══════════ 7 · GÉNÉRATION IA (éventail) ══════════ -->
 <section class="wrap gen-sec" style="padding-bottom:96px">
   <div class="center reveal gen-head" style="margin-bottom:16px">
-    <div class="eyebrow">✦ Génération IA</div>
+    <div class="eyebrow"><svg width="10" height="10" viewBox="0 0 48 48" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z"/></svg>Génération IA</div>
     <h2 class="display" style="font-size:clamp(28px,4.6vw,58px);font-weight:800;margin-top:12px;line-height:1.02">
       Génère des <span class="accent">vidéos IA virales</span>
     </h2>
@@ -756,11 +759,11 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <!-- desktop : arc + cartes chevauchantes -->
   <div class="reveal hide-mobile" style="position:relative;max-width:1080px;margin:0 auto">
     <div class="row" style="justify-content:center;align-items:flex-start;gap:0;padding-bottom:10px">
-      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1b.jpg" alt="" width="405" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-5.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1b.jpg" alt="Image IA — footballeurs construisant un mur de parpaings sur la pelouse" width="405" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="Cartoon IA — personnages fraise et concombre dans une chambre" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="Image IA — supportrice en tribune de stade" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="Vidéo IA — grand-mère en scooter poursuivie par la police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-5.jpg" alt="Portrait IA — femme dans une rue parisienne" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
     </div>
 
     <div class="row" style="gap:18px;margin-top:-80px;position:relative;z-index:6;align-items:flex-end;padding-inline:8px">
@@ -796,9 +799,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <!-- mobile -->
   <div class="reveal only-mobile" style="flex-direction:column;gap:16px;max-width:460px;margin:0 auto">
     <div class="row" style="gap:0;justify-content:center;align-items:center">
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(-9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:2;transform:rotate(0deg) translateY(0);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(-9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="Cartoon IA — personnages fraise et concombre dans une chambre" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:2;transform:rotate(0deg) translateY(0);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="Image IA — supportrice en tribune de stade" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="Vidéo IA — grand-mère en scooter poursuivie par la police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
     </div>
     <div class="card col" style="padding:16px;border-color:var(--accent-line)">
       <textarea id="genPromptM" placeholder="Décris la vidéo que tu veux créer…" style="min-height:84px;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.5;resize:none;font-family:inherit"></textarea>
@@ -880,7 +883,17 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <h2 class="display" style="font-size:clamp(30px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.02">Questions <span class="accent">fréquentes</span></h2>
     <p class="muted" style="margin-top:14px;font-size:16.5px">Tout ce que tu dois savoir avant de commencer.</p>
   </div>
-  <div class="col" style="gap:12px" id="faq-list"></div>
+  <!-- FAQ PRÉ-RENDUE (SEO) : les 6 Q/R vivent en HTML statique — même markup que
+       l'ancien rendu JS (faq-item/faq-q/faq-a). L'accordéon est porté par les
+       onclick inline : plus aucun JS de construction, pas de double rendu. -->
+  <div class="col" style="gap:12px" id="faq-list">
+    <div class="faq-item open"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">C'est quoi AvatarAds, concrètement ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Un générateur de vidéos faceless : tu écris (ou laisses l'IA écrire) un script, tu choisis un avatar IA et une voix, et l'outil produit une vidéo verticale (TikTok, Reels, Shorts) prête à poster en quelques minutes — sans jamais montrer ton visage ni filmer quoi que ce soit.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Est-ce qu'on voit que c'est une IA ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Non, et c'est tout l'intérêt. Le lipsync et la voix clonée sont ultra-réalistes : la grande majorité des spectateurs ne font pas la différence avec un vrai créateur face caméra. Tes vidéos restent naturelles et engageantes.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Je n'ai pas une belle voix / je n'aime pas parler. Ça marche quand même ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Oui. Tu peux cloner ta voix à partir de 30 secondes d'audio, choisir parmi des dizaines de voix premium (ElevenLabs &amp; Gemini TTS), ou importer un fichier. Tu n'as jamais besoin d'enregistrer face caméra.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">En combien de temps j'ai ma première vidéo ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Environ 2 minutes. Tu décris ta vidéo, l'IA génère l'avatar, la voix et les sous-titres, puis tu exportes en 9:16 prêt à publier. La plupart des créateurs produisent 3 à 5 vidéos par jour.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Pour quel type de business c'est fait ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Dropshipping, e-commerce, coachs, infoproduits, agences SMMA, comptes de niche faceless, affiliation… Dès que tu as besoin de publier beaucoup de contenu vidéo régulièrement sans te filmer, AvatarAds est fait pour toi.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Comment accéder à l'interface gratuitement ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Il te suffit de créer un compte — par e-mail ou avec Google, sans carte bancaire. Tu passes à un plan quand tu veux générer et publier tes vidéos, résiliable en 1 clic et sans engagement.</div></div>
+  </div>
 </section>
 
 <!-- ══════════ 12 · CTA FINAL (carte orange) ══════════ -->
@@ -916,7 +929,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="foot-grid" style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:40px">
       <div>
         <div class="row gap10" style="align-items:center">
-          <div class="brandmark"><img src="assets/avatarads-logo-96.png" alt="" width="26" height="26" style="border-radius:7px;display:block"></div>
+          <div class="brandmark"><img src="assets/avatarads-logo-96.png" alt="" width="26" height="26" loading="lazy" decoding="async" style="border-radius:7px;display:block"></div>
           <span class="logo-wordmark" style="font-size:20px">AvatarAds</span>
         </div>
         <p class="muted" style="margin-top:16px;font-size:14px;line-height:1.6;max-width:320px">
@@ -1279,22 +1292,10 @@ var V='#7C5CFF';
   start();
 })();
 
-/* ══════════ FAQ ══════════ */
-const faqs=[
-  ["C'est quoi AvatarAds, concrètement ?","Un générateur de vidéos faceless : tu écris (ou laisses l'IA écrire) un script, tu choisis un avatar IA et une voix, et l'outil produit une vidéo verticale (TikTok, Reels, Shorts) prête à poster en quelques minutes — sans jamais montrer ton visage ni filmer quoi que ce soit."],
-  ["Est-ce qu'on voit que c'est une IA ?","Non, et c'est tout l'intérêt. Le lipsync et la voix clonée sont ultra-réalistes : la grande majorité des spectateurs ne font pas la différence avec un vrai créateur face caméra. Tes vidéos restent naturelles et engageantes."],
-  ["Je n'ai pas une belle voix / je n'aime pas parler. Ça marche quand même ?","Oui. Tu peux cloner ta voix à partir de 30 secondes d'audio, choisir parmi des dizaines de voix premium (ElevenLabs & Gemini TTS), ou importer un fichier. Tu n'as jamais besoin d'enregistrer face caméra."],
-  ["En combien de temps j'ai ma première vidéo ?","Environ 2 minutes. Tu décris ta vidéo, l'IA génère l'avatar, la voix et les sous-titres, puis tu exportes en 9:16 prêt à publier. La plupart des créateurs produisent 3 à 5 vidéos par jour."],
-  ["Pour quel type de business c'est fait ?","Dropshipping, e-commerce, coachs, infoproduits, agences SMMA, comptes de niche faceless, affiliation… Dès que tu as besoin de publier beaucoup de contenu vidéo régulièrement sans te filmer, AvatarAds est fait pour toi."],
-  ["Comment accéder à l'interface gratuitement ?","Il te suffit de créer un compte — par e-mail ou avec Google, sans carte bancaire. Tu passes à un plan quand tu veux générer et publier tes vidéos, résiliable en 1 clic et sans engagement."],
-];
-const faqList=document.getElementById('faq-list');
-faqs.forEach(([q,a],i)=>{
-  const item=document.createElement('div');
-  item.className='faq-item'+(i===0?' open':'');
-  item.innerHTML=`<button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">${q}</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">${a}</div>`;
-  faqList.appendChild(item);
-});
+/* ══════════ FAQ ══════════
+   Les 6 Q/R sont PRÉ-RENDUES en HTML statique dans #faq-list (SEO : contenu
+   indexable sans JS). L'accordéon est branché via les onclick inline du markup —
+   aucun rendu JS, donc aucun double rendu ni flash. */
 
 /* Vidéo Express (yéti) : lecture AU CLIC, avec son, une seule fois */
 function veoToggle(){
