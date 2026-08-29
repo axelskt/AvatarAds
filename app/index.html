@@ -1040,8 +1040,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <div style="display:flex;flex-direction:column;gap:10px;padding:18px 16px;border-radius:16px;border:1px solid var(--border);background:var(--surface)">
                   <div class="label" style="font-size:11px;letter-spacing:.14em">Décris ton avatar</div>
                   <textarea id="avGenPrompt" placeholder="Décris ton avatar : femme 25 ans, salle de bain, présente un sérum…" style="width:100%;box-sizing:border-box;min-height:88px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
+                  <!-- #lotG1 · images de RÉFÉRENCE (bouton « + » façon ChatGPT) : avec ≥1 réf, la génération passe par gpt-image EDITS multi-image -->
+                  <div id="avGenRefsRow" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <button type="button" id="avGenRefAddBtn" onclick="document.getElementById('avGenRefIn').click()" title="Ajouter une ou plusieurs images de référence (produit, visage…)" style="width:34px;height:34px;flex:0 0 auto;border-radius:10px;border:1px dashed var(--border-2);background:var(--panel-1);color:var(--text-2);cursor:pointer;display:grid;place-items:center;transition:.15s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text-2)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+                    <div id="avGenRefThumbs" style="display:none;gap:8px;flex-wrap:wrap"></div>
+                    <span id="avGenRefHint" class="faint" style="font-size:11.5px;line-height:1.4">Ajoute des images de référence · ton produit, un visage… (4 max)</span>
+                  </div>
+                  <input type="file" id="avGenRefIn" accept="image/*" multiple style="display:none" onchange="_avGenRefAdd(this.files);this.value=''">
                   <button type="button" id="avGenBtn" onclick="_avGenGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:.2s"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer l'image — <span id="avGenBtnCost">3 crédits</span></button>
-                  <div class="faint" style="font-size:11.5px;line-height:1.5">Style UGC réaliste · portrait 9:16 · chaque nouvelle génération est débitée</div>
                 </div>
                 <div id="avGenResult" style="display:none;margin-top:14px">
                   <div style="border-radius:16px;overflow:hidden;border:1px solid var(--border);background:var(--panel-1);max-width:280px;margin:0 auto"><img id="avGenImg" alt="Avatar généré" style="width:100%;aspect-ratio:9/16;object-fit:cover;display:block"></div>
@@ -1306,24 +1312,18 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <button type="button" onclick="_gvRecPick('rec')" data-vsrc="rec" class="vox-src2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:14px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="vox-src2-ico" style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="vox-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14px">Enregistreur</span><span class="faint" style="font-size:12px;line-height:1.4">Enregistre ta voix au micro, direct</span></div></button>
               </div>
               <div id="voxPaneFile" style="margin-bottom:14px"><div id="voxFileZone" onclick="document.getElementById('voxFileIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){window.mp4AudioEnabled=true;window.mp4AudioFile=f;handleMp4AudioFile(f);_voxReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV · MP3 · WAV · M4A</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxFileIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
-              <!-- #lotC · panneau Enregistreur : micro direct → lecture de contrôle → « Utiliser cet audio » (même chemin que le fichier) -->
+              <!-- #lotG1 · panneau Enregistreur (redesign Axel 29/08) : le VRAI composant
+                   de l'Enregistreur vocal (module Audio) vient se DOCKER ici — #recCoreWrap
+                   déplacé, jamais dupliqué : waveform live, timer, « X.Xs de silences
+                   supprimés », Écouter / Couper ici / Supprimer / Remplacer / Silences
+                   ON-OFF identiques. Pas d'import de fichier ici (c'est l'option
+                   « Fichier audio ») ; dessous : Télécharger l'audio + Utiliser cet
+                   audio (même chemin que le fichier importé → handleMp4AudioFile). -->
               <div id="voxPaneRec" style="display:none;margin-bottom:14px">
-                <div style="display:flex;flex-direction:column;gap:12px;padding:30px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center">
-                  <button type="button" id="gvRecBtn" onclick="_gvRecToggle()" style="width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;display:grid;place-items:center;background:var(--accent);transition:.2s;flex:0 0 auto">
-                    <svg id="gvRecIcoMic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
-                    <svg id="gvRecIcoStop" width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="none" style="display:none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                  </button>
-                  <div id="gvRecTime" style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text)">0:00</div>
-                  <div id="gvRecHint" class="faint" style="font-size:11.5px">Clique pour démarrer l'enregistrement</div>
-                  <div id="gvRecErr" style="display:none;font-size:12px;line-height:1.5;color:var(--red,#ff4757);max-width:420px"></div>
-                </div>
-                <div id="gvRecDone" style="display:none;margin-top:12px;padding:14px 16px;border-radius:16px;border:1px solid var(--border);background:var(--surface)">
-                  <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:9px">Écoute de contrôle</div>
-                  <audio id="gvRecAudio" controls preload="metadata" style="width:100%;display:block"></audio>
-                  <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
-                    <button type="button" onclick="_gvRecAgain()" style="flex:1 1 140px;min-width:0;padding:11px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>Ré-enregistrer</button>
-                    <button type="button" id="gvRecUseBtn" onclick="_gvRecUse()" style="flex:1 1 170px;min-width:0;padding:11px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser cet audio</button>
-                  </div>
+                <div id="voxRecHost"></div>
+                <div class="row" style="gap:8px;flex-wrap:wrap">
+                  <button type="button" id="gvRecDlBtn" onclick="_gvRecDownload()" style="flex:1 1 150px;min-width:0;padding:12px 8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger l'audio</button>
+                  <button type="button" id="gvRecUseBtn" onclick="_gvRecUse()" style="flex:1 1 170px;min-width:0;padding:12px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser cet audio</button>
                 </div>
               </div>
               <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">② Nettoyage <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
@@ -1978,9 +1978,10 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <!-- Tap Sync manuel — gratuit (maquette : btn-ghost pleine largeur) -->
                 <button onclick="startTapSync()" class="btn btn-ghost" style="width:100%;margin-bottom:10px">Tap Sync — synchroniser manuellement</button>
                 <!-- Whisper IA — Elite/Pro (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
-                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div></button>
-                <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" class="field" style="min-height:90px;resize:vertical;display:block"></textarea>
-                <button onclick="applyTranscript()" class="btn btn-primary" style="width:100%;margin-top:10px">Appliquer comme sous-titres</button>
+                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">PRO+</span></div></div></button>
+                <!-- #L2-whisper · plus de bouton « Appliquer » : la transcription s'applique toute seule,
+                     et une édition manuelle du texte se ré-applique après une courte pause de frappe -->
+                <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" class="field" style="min-height:90px;resize:vertical;display:block" oninput="_onTranscriptEdited()"></textarea>
               </div>
               <!-- Éditeur de groupes — collapsible -->
               <div id="wordEditorWrap" style="margin-top:6px">
@@ -3229,6 +3230,12 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         </div>
 
         <!-- MAIN CARD -->
+        <!-- #lotG1 · #recCoreWrap = le composant COMPLET (carte + bannière remplacement).
+             Le Générateur (étape Voix, onglet Enregistreur) le DÉPLACE chez lui
+             (_gvRecDock) puis le rend ici (_gvRecUndock) — jamais dupliqué :
+             mêmes ids, même état, même logique silences. #recCoreHome = ancre de retour. -->
+        <div id="recCoreHome" style="display:none"></div>
+        <div id="recCoreWrap">
         <div class="card" style="padding:28px;margin-bottom:14px">
 
           <!-- WAVEFORM + TIME -->
@@ -3252,6 +3259,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               <div id="recMainBtnDot" style="width:30px;height:30px;border-radius:50%;background:#FF4646;transition:all .2s"></div>
               <div id="recPulse" style="display:none;position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(239,68,68,0.35);animation:recPulse 1.2s ease-out infinite"></div>
             </button>
+            <!-- #lotG1 · masqué quand le composant est docké dans le Générateur (l'import = option « Fichier audio ») -->
+            <div id="recImportWrap" style="display:contents">
             <div style="display:flex;align-items:center;gap:10px;color:var(--text3);font-size:11px;font-family:var(--mono)">
               <div style="flex:1;height:1px;background:var(--border)"></div>
               ou
@@ -3262,6 +3271,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
               Importer un fichier audio / vidéo MP4
             </button>
             <input type="file" id="recImportFileIn" accept="audio/*,video/*" style="display:none" onchange="recImportFile(this.files[0]);this.value=''">
+            </div><!-- /recImportWrap -->
           </div>
 
           <!-- CONTROLS ROW -->
@@ -3299,6 +3309,7 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
             <button onclick="recCancelReplace()" style="padding:10px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">Annuler</button>
           </div>
         </div>
+        </div><!-- /recCoreWrap -->
 
         <!-- ACTIONS BOTTOM -->
         <div style="display:flex;gap:8px">
@@ -3861,6 +3872,13 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
                 <span class="faint" id="mcCharSub" style="font-size:11.5px">le perso qui bouge</span>
               </div>
             </div>
+          </div>
+          <!-- LOT3-C · avertissement gros plan (Axel 29/08) : image perso = visage
+               en gros plan → Kling INVENTE les mains (pas visibles sur la photo).
+               Informatif, non bloquant, une fois par image (géré par _mcCheckCloseUp). -->
+          <div id="mcCloseUpWarn" style="display:none;margin-top:12px;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:12px;border:1px solid var(--accent-line);background:var(--accent-soft);font-size:12.5px;line-height:1.45;color:var(--text-2)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>Ta photo est un gros plan : pour des gestes de mains fidèles, choisis une photo où on voit le buste et les mains.</span>
           </div>
           <div class="row" style="margin-top:14px;gap:12px">
             <button onclick="_mcOpenAdv()" class="row gap8" style="flex:0 0 auto;padding:15px 22px;border-radius:14px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit">
@@ -4746,12 +4764,14 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
         <!-- 3 étapes -->
         <div id="mcpSteps" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch">
 
-          <!-- ① relier (OAuth : plus de clé à coller — 20/08) -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column">
-            <div class="row gap10" style="align-items:center;margin-bottom:14px">
+          <!-- ① relier (OAuth : plus de clé à coller — 20/08 · resserré 29/08) -->
+          <div class="card" style="padding:20px;display:flex;flex-direction:column">
+            <div class="row gap10" style="align-items:center;margin-bottom:12px">
               <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Relie ton compte</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 12px">Pas de clé à coller : tu autorises AvatarAds en un clic. Dans Claude, ouvre :</p>
+            <div class="card mono faint" style="padding:11px 12px;background:var(--panel-1);font-size:11.5px;line-height:1.6">Paramètres → Connecteurs<br>→ « Ajouter un connecteur personnalisé »</div>
+            <p class="faint" style="font-size:12.5px;line-height:1.55;margin:12px 0 8px">Puis colle cette adresse :</p>
             <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:auto">
               <input type="text" id="mcpOauthUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
               <button class="btn btn-sm" onclick="mcpOauthCopy()" title="Copier" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
@@ -4765,8 +4785,8 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
 
             <!-- alternative : connexion par clé — UI RETIRÉE de la vue (Axel 28/08).
                  Les nœuds restent en display:none : mcpKeyRefresh() / _mcpState()
-                 (états A/B/C) les ciblent encore à chaque nav('connectclaude') et
-                 pilotent aussi mcpConfirmRow ; mcpKeyCreate reste intact côté MCP. -->
+                 (états A/B/C) les ciblent encore à chaque nav('connectclaude') ;
+                 mcpKeyCreate reste intact côté MCP. -->
             <details id="mcpKeyAlt" style="display:none">
               <summary class="faint" style="font-size:12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>Alternative : connexion par clé (URL secrète)</summary>
             <!-- état A — pas encore de clé (ou plan insuffisant) -->
@@ -4810,46 +4830,45 @@ details.adv[open]>summary .adv-caret{transform:rotate(180deg)}
           </div>
 
           <!-- ② autoriser (copy MAJ 29/08 : nouvel écran claude.ai « Ajouter un connecteur personnalisé ») -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column">
-            <div class="row gap10" style="align-items:center;margin-bottom:14px">
+          <div class="card" style="padding:20px;display:flex;flex-direction:column">
+            <div class="row gap10" style="align-items:center;margin-bottom:12px">
               <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 12px">Sur l'écran « Ajouter un connecteur personnalisé », renseigne :</p>
-            <div class="card" style="padding:12px 14px;background:var(--panel-1);display:flex;flex-direction:column;gap:7px;font-size:12.5px;line-height:1.5">
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 10px">Sur l'écran « Ajouter un connecteur personnalisé », renseigne :</p>
+            <div class="card" style="padding:10px 12px;background:var(--panel-1);display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:1.5">
               <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Nom</span><b style="text-align:right">AvatarAds</b></div>
               <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Adresse</span><b class="mono" style="text-align:right;font-size:11.5px;word-break:break-all">https://mcp.avatarads.fr</b></div>
               <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Authentification</span><b style="text-align:right">Toujours requis</b></div>
               <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Client OAuth</span><b style="text-align:right">Métadonnées hébergées par Anthropic (recommandé)</b></div>
             </div>
-            <p class="faint" style="font-size:12.5px;line-height:1.55;margin:12px 0 0">Clique <b style="color:var(--text-2)">Ajouter</b> puis <b style="color:var(--text-2)">Se connecter</b> : tu approuves l'accès sur AvatarAds, c'est terminé.</p>
-            <p class="faint" style="font-size:11.5px;line-height:1.5;margin:8px 0 16px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>« Impossible de vérifier » ? Pas bloquant : clique <b style="color:var(--text-2)">Suivant</b> et garde ces réglages.</p>
+            <p class="faint" style="font-size:12.5px;line-height:1.55;margin:10px 0 0">Clique <b style="color:var(--text-2)">Ajouter</b> puis <b style="color:var(--text-2)">Se connecter</b> : tu approuves l'accès sur AvatarAds, c'est terminé.</p>
+            <p class="faint" style="font-size:11.5px;line-height:1.5;margin:8px 0 14px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>« Impossible de vérifier » ? Pas bloquant : clique <b style="color:var(--text-2)">Suivant</b> et garde ces réglages.</p>
             <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:auto;text-decoration:none">
               Ouvrir Claude → Connecteurs
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </a>
           </div>
 
-          <!-- ③ générer -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column">
-            <div class="row gap10" style="align-items:center;margin-bottom:14px">
+          <!-- ③ générer (exemple de prompt ajouté 29/08 — équilibre la carte) -->
+          <div class="card" style="padding:20px;display:flex;flex-direction:column">
+            <div class="row gap10" style="align-items:center;margin-bottom:12px">
               <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
             </div>
-            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 18px">Active AvatarAds dans ta conversation et demande : « Génère une image de… ». Claude annonce le coût et attend ton OK.</p>
-            <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:auto;text-decoration:none">
+            <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Active AvatarAds dans ta conversation et décris ce que tu veux. Claude annonce le coût en crédits et attend ton OK avant de lancer.</p>
+            <div class="row card" style="padding:12px 14px;gap:10px;align-items:flex-start;background:var(--panel-1);margin-top:auto">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto;margin-top:2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+              <span class="faint mono" style="font-size:11.5px;line-height:1.6;text-align:left">« Génère une image de mon produit sur fond marbre, en 9:16 »</span>
+            </div>
+            <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:12px;text-decoration:none">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
               Commencer
             </a>
           </div>
         </div>
 
-        <!-- option confirmation -->
-        <label id="mcpConfirmRow" class="row gap10" style="display:none;width:100%;max-width:680px;margin:22px auto 0;text-align:left;align-items:center;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer">
-          <input type="checkbox" id="mcpConfirmChk" onchange="mcpConfirmToggle(this.checked);_mcpConfirmPaint(this.checked)" style="display:none">
-          <span id="mcpConfirmBox" style="width:22px;height:22px;border-radius:6px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent);border:1px solid var(--accent);transition:all .15s">
-            <svg id="mcpConfirmCheck" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-          </span>
-          <span class="faint" style="font-size:13px;line-height:1.5">Demander confirmation avant chaque génération, avec le coût en crédits <b style="color:var(--text-2)">(recommandé)</b></span>
-        </label>
+        <!-- option confirmation RETIRÉE (Axel 29/08 : Claude confirme déjà nativement
+             avant chaque outil — le défaut require_confirm reste géré côté serveur ;
+             mcpConfirmToggle conservé côté JS pour le endpoint set_confirm). -->
       </div>
       </div>
     </div>
@@ -8308,15 +8327,6 @@ async function _mcpKeyCall(action, extra){
     return await res.json();
   }catch(e){ return null; }
 }
-// Case à cocher custom (design AccountModal) : peint l'état visuel de la case 22px
-function _mcpConfirmPaint(on){
-  const box = document.getElementById('mcpConfirmBox');
-  const check = document.getElementById('mcpConfirmCheck');
-  if(!box) return;
-  box.style.background = on ? 'var(--accent)' : 'var(--surface-2)';
-  box.style.borderColor = on ? 'var(--accent)' : 'var(--border-2)';
-  if(check) check.style.display = on ? 'block' : 'none';
-}
 // La carte ① a trois états exclusifs, exactement comme la maquette :
 //   A · pas de clé      → gros bouton « Générer ma clé »
 //   B · clé révélée     → l'URL + l'avertissement (juste après la création)
@@ -8332,7 +8342,6 @@ function _mcpState(name){
 async function mcpKeyRefresh(){
   const createBtn = document.getElementById('mcpKeyCreateBtn');
   const lockNote  = document.getElementById('mcpLockNote');
-  const confirmRow= document.getElementById('mcpConfirmRow');
   if(!createBtn) return;
   const res = await _mcpKeyCall('status');
   if(!res){
@@ -8345,13 +8354,9 @@ async function mcpKeyRefresh(){
     _mcpState('A');
     if(lockNote){ lockNote.style.display = 'block'; lockNote.innerHTML = 'Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.'; }
     createBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Passer au plan Pro';
-    if(confirmRow) confirmRow.style.display = 'none';
     return;
   }
   if(lockNote) lockNote.style.display = 'none';
-  if(confirmRow) confirmRow.style.display = 'flex';
-  const chk = document.getElementById('mcpConfirmChk');
-  if(chk){ chk.checked = res.require_confirm !== false; _mcpConfirmPaint(chk.checked); }
   if(res.exists){
     _mcpState('C');
     const dates = document.getElementById('mcpKeyDates');
@@ -8366,6 +8371,8 @@ async function mcpKeyRefresh(){
     createBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Générer ma clé';
   }
 }
+// UI du toggle retirée de la vue (29/08 — Claude confirme nativement) ; la
+// fonction reste pour le endpoint set_confirm (défaut géré côté serveur).
 async function mcpConfirmToggle(on){
   const res = await _mcpKeyCall('set_confirm', { value: !!on });
   if(!res || !res.ok){ toast('Erreur — réessaie'); mcpKeyRefresh(); return; }
@@ -10791,9 +10798,15 @@ let recSegments       = [];     // [{id, start, end}] en samples pour le découp
 function recInit(){
   const canvas = document.getElementById('recWaveform');
   if(!canvas) return;
-  canvas.addEventListener('click', recCanvasClick);
-  canvas.addEventListener('mousemove', recCanvasHover);
-  recDrawIdle();
+  // #lotG1 · bind UNE seule fois (recInit est rappelé à chaque nav ET à chaque dock du Générateur)
+  if(!window._recCanvasBound){
+    canvas.addEventListener('click', recCanvasClick);
+    canvas.addEventListener('mousemove', recCanvasHover);
+    window._recCanvasBound = true;
+  }
+  // un enregistrement existe déjà → on redessine SA waveform (à la largeur du conteneur courant)
+  if(recAudioBuffer && recState !== 'recording'){ recRenderWaveform(recAudioBuffer, recPlayOffset); _recUpdateTime(recPlayOffset, recAudioBuffer.duration); }
+  else recDrawIdle();
   recUpdateUI();
 }
 
@@ -11482,8 +11495,9 @@ function _gateFreeExport(){
 }
 
 function nav(id,el){
-  // #lotC · quitter le Générateur pendant un enregistrement micro = on coupe le micro
-  try{ if (typeof _gvState !== 'undefined' && _gvState === 'recording') _gvRecStop(); }catch(_){}
+  // #lotG1 · quitter une vue avec l'Enregistreur docké dans le Générateur :
+  // micro coupé + le composant rentre chez lui (module Audio) — no-op sinon.
+  try{ if (typeof _gvRecUndock === 'function') _gvRecUndock(); }catch(_){}
   // ── Paywall free plan : sections premium (génération) uniquement ──
   if(_PAID_ONLY_SECTIONS.includes(id)){
     const plan = (currentMember?.plan || 'free').toLowerCase();
@@ -11521,6 +11535,9 @@ function nav(id,el){
       step = 1; if(typeof updateSteps==='function') updateSteps();
     }
     setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); }
+    // #lotG1 · retour direct sur l'étape Voix (l'undock ci-dessus a rendu le
+    // composant au module Audio) : _voxEnter re-docke si l'onglet rec est actif
+    if(step===2 && typeof _voxEnter==='function') setTimeout(_voxEnter, 0);
   }
   if(window._mNavSync) _mNavSync(id);
 }
@@ -11573,7 +11590,12 @@ async function reuseLastVideo(){
     // ── Restaurer toutes les variables d'état depuis le cache ──
     results.hedraUrl = cache.url;
     if(cache.script)   results.script = cache.script;
-    if(cache.whisperWordTimestamps?.length) whisperWordTimestamps = cache.whisperWordTimestamps;
+    if(cache.whisperWordTimestamps?.length){
+      whisperWordTimestamps = cache.whisperWordTimestamps;
+      // #L2-whisper · la source pristine repart des timestamps restaurés
+      window._whisperWordsPristine = whisperWordTimestamps.map(w => ({ ...w }));
+    }
+    if(cache.subGroupTimes?.length) window._subGroupTimes = cache.subGroupTimes;
     if(cache.wordGroups?.length){ _wordGroups = cache.wordGroups; _renderGroupEditor(); }
     if(cache.silenceKeepSegs?.length) silenceKeepSegs = cache.silenceKeepSegs;
     if(cache.voiceMode && cache.voiceMode!=='mp4') voiceMode = cache.voiceMode; // mp4 non restauré (fichier perdu) → Clone/Preset
@@ -11797,9 +11819,9 @@ async function _genMixInto(srcUrl){
 }
 
 function updateSteps(){
-  // #lotC · on ne laisse JAMAIS le micro de l'Enregistreur (étape Voix) ouvert
-  // derrière un changement d'étape — l'enregistrement en cours est arrêté proprement.
-  try{ if (typeof _gvState !== 'undefined' && _gvState === 'recording' && step !== 2) _gvRecStop(); }catch(_){}
+  // #lotG1 · on ne laisse JAMAIS le micro de l'Enregistreur (étape Voix) ouvert
+  // derrière un changement d'étape — micro coupé + composant rendu au module Audio.
+  try{ if (typeof _gvRecUndock === 'function' && step !== 2) _gvRecUndock(); }catch(_){}
   // Étape Voix : le choix « Audio MP4 » RESTE sélectionné même sans fichier (fix : il « disparaissait »
   // à chaque retour sur l'étape) — la garde fichier est faite à la génération, pas ici
   // En-tête refonte : eyebrow + titre display par étape
@@ -17662,6 +17684,49 @@ function _avGenSyncCosts(){
   const c1 = document.getElementById('avGenBtnCost');    if (c1) c1.textContent = CREDIT_COSTS.imgMedium + ' crédits';
   const c2 = document.getElementById('avGenDetailCost'); if (c2) c2.textContent = CREDIT_COSTS.imgClarity + ' cr';
 }
+// ── #lotG1 · IMAGES DE RÉFÉRENCE (bouton « + ») ─────────────────────────────
+// Une ou plusieurs images (max 4) : produit, visage… Avec ≥1 réf, la génération
+// passe par gpt-image EDITS multi-image (même motif que _imgEditOne /
+// _expComposeRefs) — l'IDENTITÉ vient des réfs, la SCÈNE vient du prompt.
+// Même débit (imgMedium), même refund, même flux upscale/télécharger/utiliser.
+let _avGenRefs = [];   // File[]
+function _avGenRefAdd(files){
+  const list = Array.from(files || []).filter((f) => f && /^image\//.test(f.type || ''));
+  if (!list.length){ toast('Choisis une image (PNG, JPG, WEBP…)'); return; }
+  let plein = false;
+  for (const f of list){
+    if (_avGenRefs.length >= 4){ plein = true; break; }
+    _avGenRefs.push(f);
+  }
+  if (plein) toast('4 images de référence maximum');
+  _avGenRefRender();
+}
+function _avGenRefRemove(i){ _avGenRefs.splice(i, 1); _avGenRefRender(); }
+function _avGenRefsClear(){ _avGenRefs = []; _avGenRefRender(); }
+function _avGenRefRender(){
+  const wrap = document.getElementById('avGenRefThumbs'); if (!wrap) return;
+  wrap.querySelectorAll('img[data-ourl]').forEach((im) => { try{ URL.revokeObjectURL(im.src); }catch(_){} });
+  wrap.innerHTML = '';
+  wrap.style.display = _avGenRefs.length ? 'flex' : 'none';
+  _avGenRefs.forEach((f, i) => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:relative;width:56px;height:56px;flex:0 0 auto';
+    const im = document.createElement('img');
+    im.src = URL.createObjectURL(f); im.setAttribute('data-ourl', '1'); im.alt = 'Référence ' + (i + 1);
+    im.style.cssText = 'width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--border-2);display:block;background:var(--panel-1)';
+    const x = document.createElement('button');
+    x.type = 'button'; x.title = 'Retirer cette image';
+    x.style.cssText = 'position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,.72);color:#fff;cursor:pointer;display:grid;place-items:center;padding:0';
+    x.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    x.onclick = () => _avGenRefRemove(i);
+    d.appendChild(im); d.appendChild(x); wrap.appendChild(d);
+  });
+  const add = document.getElementById('avGenRefAddBtn'); if (add) add.style.display = _avGenRefs.length >= 4 ? 'none' : '';
+  const hint = document.getElementById('avGenRefHint');
+  if (hint) hint.textContent = _avGenRefs.length
+    ? _avGenRefs.length + ' référence' + (_avGenRefs.length > 1 ? 's' : '') + ' — visage et produit repris de tes images'
+    : 'Ajoute des images de référence · ton produit, un visage… (4 max)';
+}
 async function _avGenGenerate(){
   const ta = document.getElementById('avGenPrompt');
   const prompt = ((ta && ta.value) || '').trim();
@@ -17679,7 +17744,10 @@ async function _avGenGenerate(){
     const token = session?.access_token || SUPABASE_KEY;
     const ugc = _IMG_STYLES.find((s) => s.id === 'ugc');
     const fullPrompt = prompt + ((ugc && ugc.suffix) || '') + _IMG_REALISM;
-    const url = await _avGenCallGpt(token, fullPrompt);
+    // #lotG1 · avec des références → EDITS multi-image ; sans → generations (inchangé)
+    const url = _avGenRefs.length
+      ? await _avGenCallGptEdits(token, fullPrompt)
+      : await _avGenCallGpt(token, fullPrompt);
     _avGenUrl = url; _avGenHD = false;
     const img = document.getElementById('avGenImg'); if (img) img.src = url;
     const res = document.getElementById('avGenResult'); if (res) res.style.display = 'block';
@@ -17712,6 +17780,47 @@ async function _avGenCallGpt(token, prompt){
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, prompt, n: 1, size: '1024x1536', quality: 'medium', moderation: 'low' })
+    });
+    const data = await res.json();
+    if (data.error){
+      lastErr = _imgErrText(data.error, 'Erreur génération');
+      if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue;   // modèle inconnu → suivant
+      throw new Error(lastErr);
+    }
+    const item = data.data && data.data[0];
+    if (item && item.b64_json) return 'data:image/png;base64,' + item.b64_json;
+    if (item && item.url) return item.url;
+    lastErr = 'Aucune image retournée';
+  }
+  throw new Error(lastErr);
+}
+// #lotG1 · AVEC références : gpt-image EDITS multi-image via openai-proxy — motif
+// EXACT de _imgEditOne/_expComposeRefs : chaque réf normalisée en PNG propre
+// (sinon HEIC/WEBP → 400 « Invalid image file »), image[] multiples en FormData,
+// clause de fidélité du texte packaging (_IMG_TEXT_FIDELITY) ajoutée UNE fois.
+// Même portrait 1024x1536 et même qualité premium FIGÉE que le chemin sans réf.
+async function _avGenCallGptEdits(token, prompt){
+  let lastErr = 'Erreur génération';
+  const srcs = _avGenRefs.slice(0, 4);
+  const refs = [];
+  for (let i = 0; i < srcs.length; i++){
+    try{ refs.push(await _imgToCleanPng(srcs[i], 'ref' + (i + 1) + '.png')); }
+    catch(e){ console.warn('[avatar IA] normalisation réf ' + (i + 1) + ' échouée → envoi brut', e); refs.push(srcs[i]); }
+  }
+  if (!refs.length) return _avGenCallGpt(token, prompt);   // garde : plus de réfs → chemin normal
+  const fidPrompt = String(prompt || '').indexOf(_IMG_TEXT_FIDELITY) >= 0 ? prompt : (prompt + _IMG_TEXT_FIDELITY);
+  for (const model of _GPT_IMG_MODELS){
+    const fd = new FormData();
+    fd.append('model', model);
+    if (refs.length > 1) refs.forEach((f, i) => fd.append('image[]', f, f.name || ('image' + (i + 1) + '.png')));
+    else fd.append('image', refs[0], refs[0].name || 'image.png');
+    fd.append('prompt', fidPrompt);
+    fd.append('n', '1');
+    fd.append('size', '1024x1536');
+    fd.append('quality', 'medium');
+    fd.append('moderation', 'low');
+    const res = await fetch(SUPABASE_URL + '/functions/v1/openai-proxy?path=/v1/images/edits', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
     });
     const data = await res.json();
     if (data.error){
@@ -17782,6 +17891,7 @@ async function _avGenUse(){
     const resp = await fetch(_avGenUrl); const blob = await resp.blob();
     const file = new File([blob], 'avatar-ia.png', { type: blob.type || 'image/png' });
     handleAvatarFile(file);
+    _avGenRefsClear();   // #lotG1 · vignettes de référence remises à zéro après usage
     _avPick('photo'); _avReflect();
     toast('Avatar chargé — passe à l\'étape Voix');
   }catch(e){ toast('Impossible d\'utiliser cette image : ' + ((e && e.message) || e)); }
@@ -17817,17 +17927,53 @@ function _voxEnter(){
   _voxSetSw('voxSil', _voxSilOn); _voxSetSw('voxGp', _voxGpOn);
   const w = document.getElementById('voxGpZoneWrap'); if (w) w.style.display = _voxGpOn ? '' : 'none';
   if (window.mp4AudioFile) _voxReflect();
+  // #lotG1 · retour sur l'étape Voix avec l'onglet Enregistreur encore actif :
+  // le composant (rendu au module Audio par l'undock) revient se docker ici.
+  const pr = document.getElementById('voxPaneRec');
+  if (pr && pr.style.display !== 'none' && typeof _gvRecDock === 'function') _gvRecDock();
 }
 
-// ══ #lotC · ENREGISTREUR (étape 2 Voix) ═════════════════════════════════════
-// Reprend la mécanique de l'Enregistreur vocal (module Audio) : même liste de
-// formats MediaRecorder (fix Safari 03/08 — premier format réellement supporté,
-// sinon le navigateur choisit seul), même encodeur WAV (_recToWav). L'audio
-// validé emprunte le MÊME chemin que le fichier uploadé (handleMp4AudioFile),
-// donc même nettoyage / silences / transcription derrière.
-let _gvState = 'idle', _gvRecorder = null, _gvStream = null, _gvChunks = [], _gvMime = '', _gvBlob = null, _gvUrl2 = null, _gvT0 = 0, _gvTimerIv = null;
+// ══ #lotG1 · ENREGISTREUR (étape 2 Voix) — LE VRAI COMPOSANT, DOCKÉ ═════════
+// Redesign Axel 29/08 : plus de mini-enregistreur maison — le composant COMPLET
+// de l'Enregistreur vocal (module Audio : waveform live, timer, « X.Xs de
+// silences supprimés », Écouter / Couper ici / Supprimer / Remplacer / toggle
+// Silences) est DÉPLACÉ (#recCoreWrap — jamais dupliqué : mêmes ids, même état
+// recState/recAudioBuffer, même _recRemoveSilence) dans le panneau du
+// Générateur, puis RENDU au module Audio dès qu'on le quitte (nav, changement
+// d'étape ou d'onglet). Différence voulue ici : l'import de fichier est masqué
+// (c'est l'option « Fichier audio ») ; dessous, deux boutons : Télécharger
+// l'audio (recDownload) et Utiliser cet audio (→ handleMp4AudioFile, le même
+// chemin que le fichier importé).
+let _gvRecDocked = false;
+function _gvRecDock(){
+  const wrap = document.getElementById('recCoreWrap');
+  const host = document.getElementById('voxRecHost');
+  if (!wrap || !host) return;
+  if (wrap.parentNode !== host) host.appendChild(wrap);
+  _gvRecDocked = true;
+  const imp = document.getElementById('recImportWrap'); if (imp) imp.style.display = 'none';
+  // bind canvas (une fois) + redessine idle/waveform à la largeur du panneau.
+  // DIFFÉRÉ : updateSteps appelle _voxEnter AVANT d'afficher fs-2 — un rendu
+  // immédiat tomberait sur un canvas de largeur 0 (waveform invisible).
+  setTimeout(() => {
+    const cv = document.getElementById('recWaveform');
+    if (cv && !cv.offsetWidth) setTimeout(recInit, 120); else recInit();
+  }, 0);
+}
+function _gvRecUndock(){
+  if (!_gvRecDocked) return;
+  // on ne laisse JAMAIS le micro ouvert derrière une navigation
+  if (recState === 'recording'){ try{ recStopRecording(); }catch(_){} }
+  if (recState === 'playing'){ try{ recStopPlayback(); }catch(_){} }
+  const wrap = document.getElementById('recCoreWrap');
+  const home = document.getElementById('recCoreHome');
+  if (wrap && home && home.parentNode && wrap.parentNode !== home.parentNode) home.parentNode.insertBefore(wrap, home.nextSibling);
+  _gvRecDocked = false;
+  const imp = document.getElementById('recImportWrap'); if (imp) imp.style.display = 'contents';
+}
 function _gvRecPick(src){
-  if (_gvState === 'recording') _gvRecStop();   // on ne laisse pas un micro ouvert derrière un onglet
+  // quitter l'onglet Enregistreur pendant une prise = micro coupé
+  if (src !== 'rec' && _gvRecDocked && recState === 'recording'){ try{ recStopRecording(); }catch(_){} }
   document.querySelectorAll('#voxSrcCards .vox-src2').forEach((b) => {
     const on = b.dataset.vsrc === src;
     b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
@@ -17841,90 +17987,23 @@ function _gvRecPick(src){
   const aff = (id, v) => { const e = document.getElementById(id); if (e) e.style.display = v ? '' : 'none'; };
   aff('voxPaneFile', src === 'file');
   aff('voxPaneRec',  src === 'rec');
+  if (src === 'rec') _gvRecDock();
 }
-function _gvRecToggle(){ if (_gvState === 'recording') _gvRecStop(); else _gvRecStart(); }
-async function _gvRecStart(){
-  const err = document.getElementById('gvRecErr'); if (err) err.style.display = 'none';
-  try{
-    _gvStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-  }catch(e){
-    if (err){ err.style.display = 'block'; err.textContent = 'Micro refusé ou inaccessible — autorise le micro pour ce site dans ton navigateur (icône cadenas de la barre d\'adresse), puis réessaie.'; }
-    return;
-  }
-  try{
-    const formats = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2', 'audio/ogg;codecs=opus'];
-    const mime = formats.find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch(_) { return false; } }) || '';
-    _gvRecorder = mime ? new MediaRecorder(_gvStream, { mimeType: mime }) : new MediaRecorder(_gvStream);
-    _gvMime = _gvRecorder.mimeType || mime || 'audio/webm';
-    _gvChunks = [];
-    _gvRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) _gvChunks.push(e.data); };
-    _gvRecorder.onstop = _gvRecOnStop;
-    _gvRecorder.start(100);
-  }catch(e){
-    try{ _gvStream.getTracks().forEach((t) => t.stop()); }catch(_){}
-    if (err){ err.style.display = 'block'; err.textContent = 'Enregistrement impossible sur ce navigateur — ' + ((e && e.message) || e); }
-    return;
-  }
-  _gvState = 'recording'; _gvT0 = Date.now();
-  const done = document.getElementById('gvRecDone'); if (done) done.style.display = 'none';
-  _gvRecUi(true);
-  clearInterval(_gvTimerIv);
-  _gvTimerIv = setInterval(() => {
-    const el = document.getElementById('gvRecTime');
-    if (el) el.textContent = _recFmt((Date.now() - _gvT0) / 1000);
-  }, 250);
-  toast('Enregistrement en cours…');
-}
-function _gvRecStop(){
-  clearInterval(_gvTimerIv); _gvTimerIv = null;
-  try{ if (_gvRecorder && _gvRecorder.state !== 'inactive') _gvRecorder.stop(); }catch(_){}
-  try{ if (_gvStream) _gvStream.getTracks().forEach((t) => t.stop()); }catch(_){}
-  if (_gvState === 'recording') _gvState = 'processing';
-  _gvRecUi(false);
-}
-function _gvRecOnStop(){
-  if (!_gvChunks.length){ _gvState = 'idle'; return; }
-  _gvBlob = new Blob(_gvChunks, { type: _gvMime || 'audio/webm' });   // le type RÉEL capté (Safari = audio/mp4)
-  if (_gvUrl2){ try{ URL.revokeObjectURL(_gvUrl2); }catch(_){} }
-  _gvUrl2 = URL.createObjectURL(_gvBlob);
-  const au = document.getElementById('gvRecAudio'); if (au) au.src = _gvUrl2;
-  const done = document.getElementById('gvRecDone'); if (done) done.style.display = 'block';
-  _gvState = 'recorded';
-  const hint = document.getElementById('gvRecHint'); if (hint) hint.textContent = 'Écoute ton enregistrement, puis « Utiliser cet audio » — ou ré-enregistre';
-  toast('Enregistrement prêt — écoute-le ci-dessous');
-}
-function _gvRecUi(on){
-  const mic = document.getElementById('gvRecIcoMic'), stop = document.getElementById('gvRecIcoStop');
-  const btn = document.getElementById('gvRecBtn'), hint = document.getElementById('gvRecHint');
-  if (mic)  mic.style.display  = on ? 'none' : '';
-  if (stop) stop.style.display = on ? '' : 'none';
-  if (btn)  btn.style.background = on ? 'var(--red, #ff4757)' : 'var(--accent)';
-  if (hint) hint.textContent = on ? 'Enregistrement… clique pour arrêter' : 'Clique pour démarrer l\'enregistrement';
-}
-function _gvRecAgain(){
-  const done = document.getElementById('gvRecDone'); if (done) done.style.display = 'none';
-  const t = document.getElementById('gvRecTime'); if (t) t.textContent = '0:00';
-  _gvRecStart();
+function _gvRecDownload(){
+  if (!recAudioBuffer){ toast('Enregistre un audio d\'abord'); return; }
+  recDownload();   // même sortie que le module Audio : m4a/webm natif, WAV si montage
 }
 async function _gvRecUse(){
-  if (!_gvBlob){ toast('Enregistre un audio d\'abord'); return; }
+  if (!recAudioBuffer){ toast('Enregistre un audio d\'abord'); return; }
+  if (recState === 'recording'){ toast('Arrête l\'enregistrement d\'abord'); return; }
   const btn = document.getElementById('gvRecUseBtn'); const orig = btn ? btn.innerHTML : '';
   if (btn){ btn.disabled = true; btn.innerHTML = 'Préparation…'; }
   try{
-    // WAV via _recToWav (l'encodeur de l'Enregistreur) : lisible par tout le flux
-    // aval (waveform, nettoyage, Whisper, Hedra) — un .webm ne l'est pas partout.
-    let file;
+    if (recState === 'playing'){ try{ recStopPlayback(); }catch(_){} }
+    // le buffer TRAITÉ (silences coupés, segments montés, remplacements) → WAV
+    // via _recToWav : lisible par tout le flux aval (waveform, Whisper, Hedra).
     const nom = 'Enregistrement ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    try{
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const buf = await ctx.decodeAudioData(await _gvBlob.arrayBuffer());
-      file = new File([_recToWav(buf)], nom + '.wav', { type: 'audio/wav' });
-      try{ ctx.close(); }catch(_){}
-    }catch(e){
-      // décodage impossible → blob natif (même navigateur = lisible), extension du vrai mime
-      const ext = /mp4/.test(_gvMime) ? '.m4a' : (/ogg/.test(_gvMime) ? '.ogg' : '.webm');
-      file = new File([_gvBlob], nom + ext, { type: _gvMime || 'audio/webm' });
-    }
+    const file = new File([_recToWav(recAudioBuffer)], nom + '.wav', { type: 'audio/wav' });
     // MÊME CHEMIN que le fichier uploadé (voxFileIn2) : drapeaux + handler + reflet
     window.mp4AudioEnabled = true;
     window.mp4AudioFile = file;
@@ -18538,7 +18617,7 @@ async function whisperTranscribe(){
   // btn capturé AVANT le 1er await : window.event ne survit pas aux continuations async
   // (garde instanceof : hors clic direct, event.currentTarget peut être window)
   const btn = (typeof event !== 'undefined' && event?.currentTarget instanceof HTMLElement) ? event.currentTarget : null;
-  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled = false; btn.style.opacity = '1'; } };
+  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">PRO+</span></div></div>'; btn.disabled = false; btn.style.opacity = '1'; } };
   // Gate Pro / Elite / BYOK
   const plan = currentMember?.plan || 'free';
   if(!['pro','elite','byok','developer'].includes(plan)){
@@ -18610,26 +18689,24 @@ async function whisperTranscribe(){
     }
     const data = await resp.json();
     const text = (data.text || '').trim();
-    // Stocker les timestamps par mot pour sync sous-titres précise
-    if(data.words && data.words.length){
-      whisperWordTimestamps = data.words.map(w => ({
-        word: w.word.toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(),
-        start: w.start,
-        end: w.end
-      })).filter(w => w.word);
-    } else {
-      whisperWordTimestamps = [];
-    }
     if(text){
-      populateWordEditor(text);
-      pendingTranscript = text;
+      // #L2-whisper · les groupes se construisent depuis les MOTS (timestamps start/end
+      // par mot) — plus jamais au prorata du texte — et s'appliquent AUTOMATIQUEMENT.
+      if(Array.isArray(data.words) && data.words.length){
+        _applyWhisperWords(data.words, text);
+        toast('Whisper IA — sous-titres appliqués, calés mot par mot');
+      } else {
+        // Repli sans timestamps (API dégradée) : groupes depuis le texte + application auto
+        whisperWordTimestamps = [];
+        window._whisperWordsPristine = null;
+        window._subGroupTimes = null;
+        populateWordEditor(text);
+        pendingTranscript = text;
+        updateSubPreview();
+        toast('Whisper IA — transcript appliqué (timestamps indisponibles)');
+      }
       const voiceTa = document.getElementById('voiceTranscriptTA');
       if(voiceTa) voiceTa.value = text;
-      const ta = document.getElementById('transcriptInput');
-      if(ta) ta.value = text;
-      _renderWordChips(text);
-      const hasTS = whisperWordTimestamps.length > 0;
-      toast('Whisper IA — transcript ' + (hasTS ? '+ timestamps mot par mot !' : 'appliqué aux sous-titres !'));
     } else {
       toast('Aucun texte détecté par Whisper');
     }
@@ -21538,7 +21615,7 @@ function _renderWordChips(text){
     // Chaque ligne = 1 groupe (ou plusieurs si trop longue)
     const groups = [];
     for(const line of lines){
-      const words = line.split(/\s+/).filter(w=>w).map(clean).filter(w=>w);
+      const words = line.split(/\s+/).filter(w=>w).map(clean).filter(w=>w).filter(_wtHasAlnum); // #L2-whisper · jette « — », « … »…
       if(!words.length) continue;
       if(words.length <= MAX_PER_GROUP){
         groups.push(words);
@@ -21551,7 +21628,7 @@ function _renderWordChips(text){
     _wordGroups = groups.filter(g=>g.length>0);
   } else {
     // Pas de sauts de ligne : découpe mécanique par wpg
-    const words = text.trim().split(/\s+/).filter(w=>w).map(clean).filter(w=>w);
+    const words = text.trim().split(/\s+/).filter(w=>w).map(clean).filter(w=>w).filter(_wtHasAlnum); // #L2-whisper · jette « — », « … »…
     const wpg = Math.max(1, cfg.subWpg || 3);
     _wordGroups = _buildWpgGroups(words, wpg);
   }
@@ -21784,6 +21861,9 @@ function _renderGroupEditor(){
     if(src) _renderWordChips(src);
   };
   editor.appendChild(resetBtn);
+  // #L2-whisper · toute mutation des groupes (drag/drop, fusion, édition, reset)
+  // ré-aligne les timestamps mot-à-mot sur les nouveaux groupes
+  try{ _syncWordTimestampsToGroups(); }catch(e){}
   _saveSession && _saveSession();
 }
 
@@ -21804,6 +21884,179 @@ function _buildWordMap(groups){
   const map = [];
   groups.forEach((g, gi) => g.forEach((_, wi) => map.push({gi, wi})));
   return map;
+}
+
+// ── #L2-whisper · Précision au mot ───────────────────────────────────────────
+// Source de vérité inaltérée des mots Whisper (word/start/end nettoyés).
+// whisperWordTimestamps est RÉALIGNÉ dessus à chaque mutation des groupes, pour
+// que groupes.flat() et timestamps restent le MÊME tableau de mots (fini la
+// dérive d'index quand le texte contient des tirets, «…», ou est édité à la main).
+window._whisperWordsPristine = window._whisperWordsPristine || null;
+window._subGroupTimes = window._subGroupTimes || null; // [{start,end}] par groupe (start 1er mot → end dernier)
+
+function _wtCleanWord(w){ return String(w||'').toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(); }
+function _wtHasAlnum(w){ return /[0-9A-ZÀ-ÖØ-ÞŒ]/.test(w); }
+
+// Construit les groupes de sous-titres depuis les MOTS Whisper (start/end par mot) :
+// 2-4 mots par groupe, coupure à la ponctuation et aux pauses > 0,35 s.
+// Applique AUTOMATIQUEMENT (groupes + transcript + preview) — plus d'étape manuelle.
+function _applyWhisperWords(rawWords, text){
+  const words = [];
+  for(const rw of rawWords){
+    const raw = String(rw.word || '').trim();
+    const c = _wtCleanWord(raw);
+    if(!c || !_wtHasAlnum(c)) continue; // jette les tokens « — », « … », ponctuation seule
+    words.push({
+      word: c, start: +rw.start || 0, end: +rw.end || (+rw.start || 0),
+      strongPunct: /[.!?…]["»)]*$/.test(raw),   // fin de phrase → coupure
+      softPunct:   /[,;:]["»)]*$/.test(raw)     // virgule & co → coupure si groupe assez plein
+    });
+  }
+  if(!words.length){ return false; }
+  // Whisper renvoie les MOTS sans ponctuation → on la récupère depuis le TEXTE
+  // (match glouton monotone) pour couper les groupes aux fins de phrases.
+  try{
+    const txtToks = String(text||'').split(/\s+/).filter(t=>t);
+    let tj = 0;
+    for(const w of words){
+      const lim = Math.min(txtToks.length, tj + 4);
+      for(let k = tj; k < lim; k++){
+        if(_wtCleanWord(txtToks[k]) === w.word){
+          w.strongPunct = w.strongPunct || /[.!?…]["»)]*$/.test(txtToks[k]);
+          w.softPunct   = w.softPunct   || /[,;:]["»)]*$/.test(txtToks[k]);
+          tj = k + 1; break;
+        }
+      }
+    }
+  }catch(e){}
+  const built = _buildTimedGroups(words);
+  _wordGroups = built.groups;
+  window._subGroupTimes = built.times;
+  whisperWordTimestamps = words.map(w => ({ word: w.word, start: w.start, end: w.end }));
+  window._whisperWordsPristine = whisperWordTimestamps.map(w => ({ ...w }));
+  // Application auto : transcript synchronisé + éditeur de groupes + preview
+  window._wordEditorOriginalText = text;
+  const ta = document.getElementById('transcriptInput');
+  if(ta) ta.value = text;
+  pendingTranscript = text;
+  _renderGroupEditor();
+  updateSubPreview();
+  return true;
+}
+
+// Groupes 2-4 mots « au rythme » : coupure à la ponctuation et aux pauses > 0,35 s.
+// words = [{word, start, end, strongPunct, softPunct}] → {groups, times}
+// (times : start du 1er mot → end du dernier mot de chaque groupe)
+function _buildTimedGroups(words){
+  const MAXW = Math.min(4, Math.max(2, cfg.subWpg || 3)); // 2-4 mots par groupe
+  const PAUSE = 0.35;
+  const groups = [], times = [];
+  let cur = [], curStart = 0;
+  for(let i = 0; i < words.length; i++){
+    const w = words[i];
+    if(!cur.length) curStart = w.start;
+    cur.push(w.word);
+    const next = words[i+1];
+    const pause = next ? (next.start - w.end) : Infinity;
+    const cut = !next
+      || cur.length >= MAXW
+      || pause > PAUSE
+      || w.strongPunct
+      || (w.softPunct && cur.length >= 2);
+    if(cut){ groups.push(cur); times.push({ start: curStart, end: w.end }); cur = []; }
+  }
+  return { groups, times };
+}
+
+// Réaligne un tableau de mots (nettoyés, MAJ) sur la source pristine : match glouton
+// monotone ; les mots édités/ajoutés sont interpolés entre leurs voisins calés.
+// Retourne [{word,start,end}] de même longueur, ou null si rien ne matche.
+function _realignToPristine(flat){
+  const pris = window._whisperWordsPristine;
+  if(!pris || !pris.length || !flat.length) return null;
+  const out = new Array(flat.length).fill(null);
+  let j = 0, matched = 0;
+  for(let i = 0; i < flat.length; i++){
+    const lim = Math.min(pris.length, j + 6); // fenêtre courte = ordre respecté
+    let hit = -1;
+    for(let k = j; k < lim; k++){ if(pris[k].word === flat[i]){ hit = k; break; } }
+    if(hit < 0){ // repli flou : orthographe corrigée (« AVATARAD » → « AVATARADS »…)
+      for(let k = j; k < lim; k++){
+        const a = pris[k].word, b = flat[i];
+        if(a.length > 3 && b.length > 3 && (a.startsWith(b.slice(0,4)) || b.startsWith(a.slice(0,4)))){ hit = k; break; }
+      }
+    }
+    if(hit >= 0){ out[i] = { word: flat[i], start: pris[hit].start, end: pris[hit].end }; j = hit + 1; matched++; }
+  }
+  if(!matched) return null; // texte sans rapport avec l'audio
+  // Interpolation des trous entre ancres
+  let i = 0;
+  while(i < out.length){
+    if(out[i]){ i++; continue; }
+    let e = i; while(e < out.length && !out[e]) e++;
+    const prevEnd = i > 0 ? out[i-1].end : Math.max(0, (out[e] ? out[e].start : pris[0].start) - 0.3 * (e - i));
+    const nextSt  = e < out.length ? out[e].start : prevEnd + 0.3 * (e - i);
+    const span = Math.max(0.05, nextSt - prevEnd), n = e - i;
+    for(let k = i; k < e; k++){
+      out[k] = { word: flat[k], start: prevEnd + span * (k - i) / n, end: prevEnd + span * (k - i + 1) / n };
+    }
+    i = e;
+  }
+  return out;
+}
+
+// Réaligne whisperWordTimestamps (et les timings de groupes) sur _wordGroups.flat().
+// Appelé à chaque re-rendu de l'éditeur (drag/drop, fusion, édition, reset).
+function _syncWordTimestampsToGroups(){
+  if(!_wordGroups || !_wordGroups.length) return;
+  const out = _realignToPristine(_wordGroups.flat().map(w => String(w||'').toUpperCase()));
+  if(!out) return;
+  whisperWordTimestamps = out;
+  const times = []; let off = 0;
+  for(const g of _wordGroups){
+    if(!g.length) continue;
+    times.push({ start: out[off].start, end: out[off + g.length - 1].end });
+    off += g.length;
+  }
+  window._subGroupTimes = times;
+}
+
+// Édition manuelle du transcript → ré-application auto (debounce léger)
+let _transcriptEditT = null;
+function _onTranscriptEdited(){
+  clearTimeout(_transcriptEditT);
+  _transcriptEditT = setTimeout(() => {
+    const ta = document.getElementById('transcriptInput');
+    const text = (ta?.value || '').trim();
+    if(!text) return;
+    // Ne PAS réécrire transcriptInput (le curseur sauterait). Si des timestamps
+    // Whisper existent, on réaligne le texte édité dessus et on regroupe au
+    // rythme (pauses + ponctuation) ; sinon découpe classique depuis le texte.
+    window._wordEditorOriginalText = text;
+    const toks = text.split(/\s+/).filter(t=>t);
+    const flat = [], flags = [];
+    for(const t of toks){
+      const c = _wtCleanWord(t);
+      if(!c || !_wtHasAlnum(c)) continue;
+      flat.push(c);
+      flags.push({ strong: /[.!?…]["»)]*$/.test(t), soft: /[,;:]["»)]*$/.test(t) });
+    }
+    const out = flat.length ? _realignToPristine(flat) : null;
+    if(out){
+      const words = out.map((w,i)=>({ word: w.word, start: w.start, end: w.end, strongPunct: flags[i].strong, softPunct: flags[i].soft }));
+      const built = _buildTimedGroups(words);
+      _wordGroups = built.groups;
+      window._subGroupTimes = built.times;
+      whisperWordTimestamps = out;
+      _renderGroupEditor();
+    } else {
+      _renderWordChips(text);
+    }
+    const vTa = document.getElementById('voiceTranscriptTA');
+    if(vTa) vTa.value = text;
+    pendingTranscript = text;
+    updateSubPreview();
+  }, 700);
 }
 function onWordTextEdit(value){
   _renderWordChips(value);
@@ -22121,9 +22374,13 @@ async function startGeneration(){
       audioBlob = mp4AudioFile; // fallback
     }
     // Pre-populate word editor from existing transcript if available
-    const ta = document.getElementById('voiceTranscriptTA');
-    if(ta && ta.value.trim()) populateWordEditor(ta.value.trim());
-    else populateWordEditor(finalScript);
+    // #L2-whisper · si des groupes calés Whisper existent déjà, on ne les écrase
+    // PAS par une re-découpe mécanique du texte (c'était une source de décalage)
+    if(!(_wordGroups && _wordGroups.length && whisperWordTimestamps.length)){
+      const ta = document.getElementById('voiceTranscriptTA');
+      if(ta && ta.value.trim()) populateWordEditor(ta.value.trim());
+      else populateWordEditor(finalScript);
+    }
   } else if(voiceMode === 'gameplay'){
     audioBlob = await extractGameplayAudio();
   } else {
@@ -22781,6 +23038,7 @@ function _buildSessionState(){
     hedraUrl: results.hedraUrl || '',
     whisperWordTimestamps,
     wordGroups: _wordGroups || null,
+    subGroupTimes: window._subGroupTimes || null, // #L2-whisper · timings par groupe
     silenceKeepSegs,
     voiceMode,
     selVoiceId,
@@ -23555,7 +23813,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         // en temps ORIGINAL avant de chercher dans les timestamps absolus (même remap
         // que le preview — règle verify-real-render : DOM et canvas font pareil).
         const _wtClean = Math.max(0, elapsed + subAdvSec);
-        const wt = _cleanAudioApplied ? _cleanTimeToOrigTime(_wtClean) : _wtClean;
+        // #L2-whisper · audio MP4 rogné (trim) : l'audio encodé démarre à mp4AudioTrimSt
+        // du fichier original, mais les timestamps Whisper sont ABSOLUS → on ré-ajoute
+        // l'offset (le preview lit currentTime absolu et n'a pas ce décalage).
+        const _wtTrimOff = (!_cleanAudioApplied && mp4AudioEnabled && mp4AudioFile) ? (mp4AudioTrimSt || 0) : 0;
+        const wt = _cleanAudioApplied ? _cleanTimeToOrigTime(_wtClean) : _wtClean + _wtTrimOff;
         let wordIdx = whisperWordTimestamps.findIndex((w, i) =>
           wt >= w.start && (i === whisperWordTimestamps.length - 1 || wt < whisperWordTimestamps[i + 1].start)
         );
@@ -26519,10 +26781,16 @@ _mcLoadOpts();
 // Depuis le 14/08 les OPTIONS ne se réinitialisent plus : elles sont mémorisées
 // (aa_mc_opts) — seuls les fichiers, la durée et l'instruction repartent à zéro.
 function _mcResetAll(){
+  // LOT3-D · HYGIÈNE MÉMOIRE : les gros états base64 (_mcRefB64 = la VIDÉO entière
+  // en b64) sont libérés ici, à la livraison — le re-cadrage du split n'en a pas
+  // besoin (_mcSplitCtx ne garde que des CHEMINS storage, il est conservé).
   window._mcRefB64=null; window._mcCharB64=null; window._mcBgB64=null; window._mcPrompt='';
   window._mcRefDur=0; window._mcBgClean=true;
+  window._mcCharFace=null; if(typeof _mcCloseUpWarnShow==='function') _mcCloseUpWarnShow(false);
   for (const [pv,dz] of [['mcRefPrev','mcRefDrop'],['mcCharPrev','mcCharDrop']]){
-    const v=document.getElementById(pv); if(v){ try{ v.pause&&v.pause(); v.removeAttribute('src'); }catch(_){ } v.style.display='none'; }
+    // ⚠ Safari garde la vidéo DÉCODÉE en mémoire tant que load() n'est pas rappelé
+    // après removeAttribute('src') — le decoder n'est libéré qu'à ce moment-là.
+    const v=document.getElementById(pv); if(v){ try{ v.pause&&v.pause(); v.removeAttribute('src'); v.load&&v.load(); }catch(_){ } v.style.display='none'; }
     const z=document.getElementById(dz); if(z) [...z.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display=''; });
   }
   const s=document.getElementById('mcRefSub'); if(s) s.textContent='le mouvement à reproduire';
@@ -26548,9 +26816,31 @@ function _mcLoad(f, which){
       const im=document.getElementById('mcCharPrev'), dz=document.getElementById('mcCharDrop');
       if(im){ im.src=b64; im.style.display='block'; }
       if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
+      _mcCheckCloseUp(b64);   // LOT3-C · gros plan visage → bandeau info (non bloquant)
     } else if(which==='bg'){ window._mcBgB64=b64; _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); }
   };
   r.readAsDataURL(f);
+}
+// ── LOT3-C · AVERTISSEMENT GROS PLAN (Axel 29/08, validé) ────────────────────
+// Une image perso en GROS PLAN (les mains hors champ) force Kling à INVENTER les
+// mains → gestes ratés. Dès le choix de l'image : détection visage (la même que
+// le cadrage auto) ; tête > ~30 % de la hauteur → bandeau info NON bloquant,
+// UNE fois par image. La box est mise en cache (_mcCharFace) et RÉUTILISÉE par
+// _mcPrepChar → zéro appel de détection supplémentaire sur le chemin normal.
+window._mcCharFace=null;   // { src, box } — box:null = « pas de visage détecté »
+function _mcCloseUpWarnShow(on){ const b=document.getElementById('mcCloseUpWarn'); if(b) b.style.display=on?'flex':'none'; }
+function _mcCheckCloseUp(b64){
+  _mcCloseUpWarnShow(false);
+  window._mcCharFace=null;
+  if(typeof _detectFaceBox!=='function') return;
+  (async()=>{
+    try{
+      const box=await _detectFaceBox(b64);
+      if(window._mcCharB64!==b64) return;   // l'image a changé entre-temps
+      window._mcCharFace={ src:b64, box:box||null };
+      if(box && box.h>0.30) _mcCloseUpWarnShow(true);
+    }catch(e){ console.warn('[mc] gros plan : détection indisponible :', e); }
+  })();
 }
 
 /* ── Motion Control — modale Paramètres avancés (1:1 gen-motion.jsx) ── */
@@ -26793,15 +27083,36 @@ function _mcShowResult(url, render, fullUrl){
 // URL fal cross-origin (v3b.fal.media) est IGNORÉ par Safari → il OUVRE la vidéo
 // et l'user la perd. On récupère donc le blob et on force l'enregistrement ;
 // repli sur l'ouverture (clic droit → Enregistrer) si le CORS bloque le fetch.
+// LOT3-D · CRASH SAFARI (Axel 29/08 : clic « Télécharger » → Safari plante) :
+// fetch→blob charge TOUTE la vidéo en mémoire, par-dessus les états du module.
+// Une URL SIGNÉE Supabase sait servir un VRAI téléchargement (Content-Disposition:
+// attachment) via son paramètre ?download= → navigation directe, ZÉRO blob. Le
+// chemin blob ne reste que pour les URL non-Supabase (CDN fal), avec revoke
+// immédiat de l'objectURL après le clic.
 async function _mcDownload(dl){
   const url=(typeof dl==='string'&&dl)||window._mcLastUrl; if(!url){ return; }
+  const fname='motion-control-'+Date.now()+'.mp4';
+  try{
+    if(/\/storage\/v1\/object\/sign\//.test(url)){
+      const u=new URL(url);
+      u.searchParams.set('download', fname);   // remplace un éventuel download= existant
+      const a=document.createElement('a'); a.href=u.toString(); a.rel='noopener';
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ try{ a.remove(); }catch(_){} }, 1000);
+      toast('Téléchargement…');
+      return;
+    }
+  }catch(e){ console.warn('mc download (lien signé) :', e); /* → chemin blob */ }
   try{
     toast('Téléchargement…');
     const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
     const b=await r.blob();
-    const a=document.createElement('a'); a.href=URL.createObjectURL(b);
-    a.download='motion-control-'+Date.now()+'.mp4'; document.body.appendChild(a); a.click();
-    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(_){} }, 1500);
+    const href=URL.createObjectURL(b);
+    const a=document.createElement('a'); a.href=href;
+    a.download=fname; document.body.appendChild(a); a.click();
+    // revoke IMMÉDIAT (tick suivant : le clic a déjà pris le blob en charge) —
+    // garder l'objectURL vivant 1,5 s doublait la pression mémoire pour rien
+    setTimeout(()=>{ try{ URL.revokeObjectURL(href); a.remove(); }catch(_){} }, 100);
     toast('Vidéo enregistrée ✓');
   }catch(e){ console.warn('mc download:', e); toast('Téléchargement direct bloqué — j\'ouvre la vidéo, fais « Enregistrer sous »'); try{ window.open(url,'_blank'); }catch(_){} }
 }
@@ -26843,7 +27154,9 @@ async function _mcPrepChar(b64, refTarget){
   // d'atteindre la cible, on va au maximum possible (console.warn).
   if(window._mcAutoFrame!==false && typeof _detectFaceBox==='function'){
     try{
-      const box=await _detectFaceBox(b64);
+      // LOT3-C · box déjà détectée au choix de l'image (bandeau gros plan) → réutilisée
+      const cached=(window._mcCharFace && window._mcCharFace.src===b64) ? window._mcCharFace.box : undefined;
+      const box=(cached!==undefined) ? cached : await _detectFaceBox(b64);
       if(box){
         const fcx=(box.x+box.w/2)*W, fcy=(box.y+box.h/2)*H, fpx=Math.max(8, box.h*H);
         const hasRef = !!(refTarget && isFinite(refTarget.headFrac) && refTarget.headFrac>0);
@@ -28372,7 +28685,19 @@ async function _mcpOAuthConsent(){
     }
   }
 }
-window.addEventListener('load', () => { setTimeout(_mcpOAuthConsent, 400) })
+// LANCEMENT AU PLUS TOT (29/08) : sur 'load' + 400 ms, l'app lourde mettait
+// 30-40 s avant d'afficher le consentement → claude.ai (ou l'utilisateur qui
+// re-clique) relançait un DEUXIEME flux /authorize pendant ce temps → le code
+// approuvé appartenait à un flux périmé → « L'autorisation avec AvatarAds a
+// échoué (ofid_…) » puis « Impossible de se connecter au serveur ». Mesuré
+// dans les logs edge du 29/08 12h53-12h55 : authorize à 12:54:15, RE-authorize
+// à 12:54:55, approve à 12:54:59, AUCUN appel /token. DOMContentLoaded suffit :
+// `sb` est créé synchroniquement en amont du bloc principal.
+let _mcpOAuthLance = false
+function _mcpOAuthKick(){ if(_mcpOAuthLance) return; _mcpOAuthLance = true; _mcpOAuthConsent() }
+if(document.readyState !== 'loading') _mcpOAuthKick()
+else document.addEventListener('DOMContentLoaded', _mcpOAuthKick)
+window.addEventListener('load', _mcpOAuthKick) // ceinture si DOMContentLoaded déjà passé sans relai
 
 function expressOpenInEditor(){
   if(!window._expVidBlob){ toast('Génère une vidéo d\'abord'); return; }
@@ -28764,7 +29089,7 @@ async function expressWhisper(){
     try{ const j=JSON.parse(msg); msg=(j?.error?.message||msg).slice(0,150); }catch(_){}
     toast('Whisper : '+msg.slice(0,140));
   } finally {
-    if(btn){ btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled=false; }
+    if(btn){ btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">PRO+</span></div></div>'; btn.disabled=false; }
   }
 }
 
@@ -32872,6 +33197,13 @@ function _tapSyncFinish(){
     });
   });
   whisperWordTimestamps = timestamps;
+  // #L2-whisper · le Tap Sync devient la nouvelle source pristine (sinon le prochain
+  // re-rendu de l'éditeur réalignerait sur les anciens timestamps Whisper)
+  window._whisperWordsPristine = timestamps.map(w => ({ ...w }));
+  window._subGroupTimes = _tapSyncGroups.map((g, gi) => ({
+    start: _tapSyncTimes[gi] ?? 0,
+    end:   _tapSyncTimes[gi+1] ?? ((_tapSyncTimes[gi] ?? 0) + 1.5)
+  }));
 
   // ── Sauvegarde session complète ──
   _saveSession();

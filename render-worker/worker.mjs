@@ -419,6 +419,16 @@ async function composeMotionBg(jobDir, outPath, plan) {
   // via le MÊME cover-crop (dimensions quasi identiques → crop marginal, alignement garanti)
   const key = alpha ? '' : 'colorkey=0x00FF00:0.22:0.06,despill=type=green,'
   const cover = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}`
+  // ── LOT3-A · FRAME 0 AVEC AVATAR, TOUJOURS ────────────────────────────────
+  // Prouvé sur le job du 29/08 (uid f0cae49a, frames extraites) : les webm fal
+  // (matted + refmask) portent un start_time=0.007 s. L'overlay (framesync) sort
+  // donc la 1re frame du fond à t=0 SANS personnage (aucune frame fg ≤ 0) → la
+  // frame 0 du rendu = mur seul, et c'est elle que le player ET la cover TikTok
+  // affichent. Fix : setpts=PTS-STARTPTS sur CHAQUE entrée vidéo avant tout le
+  // reste — la 1re frame utile de chaque flux est recalée à t=0 (même un matte
+  // qui démarrerait plus tard est ramené à 0, effet « clone de la 1re frame
+  // utile ») — + fps=30 partout AVANT l'overlay pour une grille commune.
+  const pts0 = 'setpts=PTS-STARTPTS,fps=30,'
   // v2 : la réf, le masque ET la frame nettoyée passent par le MÊME cover-crop —
   // sinon le patch ne tombe pas sur les bons pixels. Masque : alphaextract (gris),
   // DILATATION ≈3 % de la largeur (gblur σ=20 puis seuil bas 10/255 : le halo du
@@ -427,15 +437,69 @@ async function composeMotionBg(jobDir, outPath, plan) {
   // LOT A : le personnage passe AUSSI par ${cover} (scale/crop préservent le
   // canal alpha yuva420p de libvpx-vp9) → 1072×1920 devient 1080×1920 comme le
   // fond, l'overlay tombe plein cadre sans liseré.
-  const fcFor = (patch) => {
+  // ── LOT3-B · HALO SUR LE MUR LÀ OÙ PASSAIT LA MAIN D'ORIGINE ─────────────
+  // Vu sur frames (job 29/08) : deux causes cumulées. (1) le patch bgclean
+  // (gpt-image) est ~3-8 niveaux de luma PLUS CLAIR que le mur de la réf
+  // (mesuré zone commune hors personne : 85,5 vs 77,7) → là où le masque passe,
+  // le mur « s'allume » = la lueur qui suit la main. (2) la couture σ=6 est trop
+  // franche → l'écart se lit comme un blob net. Fix : fondu plus doux (σ10) +
+  // correction de luminance du patch. ⚠ testé sur pièces : ÉLARGIR la dilatation
+  // (σ26/σ34) fait apparaître une bavure sombre à la frontière mur/plafond —
+  // bgclean est une frame 0 STATIQUE, la caméra bouge, ses arêtes ne tombent
+  // plus au même endroit → dilatation INCHANGÉE (σ20/seuil 10). ⚠ l'écart de
+  // luminance est MULTIPLICATIF (mur +8, plafond blanc +3) — un offset
+  // (eq=brightness) sur-corrige le plafond (tache sombre sur le blanc) ; une
+  // courbe GAMMA ajustée sur la moyenne colle aux deux zones à <1/255 près →
+  // eq=gamma, borné [0,85..1,18].
+  const DILATE = `gblur=sigma=20,lutyuv=y='if(gt(val,10),255,0)'`
+  const FEATHER = 'gblur=sigma=10'
+  const fcFor = (patch, lumFix = 1) => {
     const fin = `overlay=x=(W-w)/2:y=(H-h)/2:shortest=1:format=auto,format=yuv420p[v]`
-    if (!patch) return `[0:v]fps=30,${cover},setsar=1[bg];[1:v]${key}${cover},setsar=1[fg];[bg][fg]${fin}`
-    return `[0:v]fps=30,${cover},setsar=1[bg0];` +
-      `[2:v]fps=30,alphaextract,${cover},gblur=sigma=20,lutyuv=y='if(gt(val,10),255,0)',gblur=sigma=6[mk];` +
-      `[3:v]${cover},setsar=1[cl];[cl][mk]alphamerge[patch];` +
+    if (!patch) return `[0:v]${pts0}${cover},setsar=1[bg];[1:v]${pts0}${key}${cover},setsar=1[fg];[bg][fg]${fin}`
+    const eqPatch = Math.abs(lumFix - 1) >= 0.02 ? `,eq=gamma=${lumFix.toFixed(4)}` : ''
+    return `[0:v]${pts0}${cover},setsar=1[bg0];` +
+      `[2:v]${pts0}alphaextract,${cover},${DILATE},${FEATHER}[mk];` +
+      `[3:v]${cover},setsar=1${eqPatch}[cl];[cl][mk]alphamerge[patch];` +
       `[bg0][patch]overlay=format=auto[bg];` +
-      `[1:v]${key}${cover},setsar=1[fg];[bg][fg]${fin}`
+      `[1:v]${pts0}${key}${cover},setsar=1[fg];[bg][fg]${fin}`
   }
+  // Mesure de l'écart de luminance patch↔réf sur le FOND COMMUN (frame 0, pixels
+  // HORS masque-personne dilaté) : moyenne pondérée par le masque inversé via
+  // blend=multiply + signalstats (metadata→fichier). Best-effort : le moindre
+  // échec → 0 (pas de correction), on ne bloque jamais un rendu pour ça.
+  const mesureLumFix = () => {
+    try {
+      const statFile = (name) => join(jobDir, name)
+      const yavgOf = (file) => {
+        const m = readFileSync(file, 'utf8').match(/YAVG=([0-9.]+)/)
+        return m ? parseFloat(m[1]) : NaN
+      }
+      const mInv = `[0:v]setpts=PTS-STARTPTS,alphaextract,${cover},${DILATE},negate,format=gray`
+      // moyenne du masque inversé (poids total)
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-c:v', 'libvpx-vp9', '-i', refmask,
+        '-filter_complex', `${mInv},signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=${statFile('_lum-m.txt')}[o]`,
+        '-map', '[o]', '-frames:v', '1', '-f', 'null', '-'], { stdio: 'pipe' })
+      // moyenne (Y×poids) de la réf puis du patch, sur la même frame 0
+      const wsum = (input, extra, out) => execFileSync('ffmpeg',
+        ['-v', 'error', '-y', '-c:v', 'libvpx-vp9', '-i', refmask, ...extra, '-i', input,
+          '-filter_complex', `${mInv}[m];[1:v]setpts=PTS-STARTPTS,${cover},format=gray[r];[r][m]blend=all_mode=multiply,` +
+          `signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=${statFile(out)}[o]`,
+          '-map', '[o]', '-frames:v', '1', '-f', 'null', '-'], { stdio: 'pipe' })
+      wsum(orig, [], '_lum-r.txt')
+      wsum(bgclean, ['-loop', '1'], '_lum-c.txt')
+      const m = yavgOf(statFile('_lum-m.txt')), r = yavgOf(statFile('_lum-r.txt')), c = yavgOf(statFile('_lum-c.txt'))
+      if (!(m > 8)) return 1
+      // moyennes pondérées (0..1) du fond commun : réf vs patch
+      const wr = (r * 255 / m) / 255, wc = (c * 255 / m) / 255
+      if (!(wr > 0.02 && wr < 0.98) || !(wc > 0.02 && wc < 0.98)) return 1
+      // exposant p tel que wc^p = wr, appliqué via eq=gamma (out = in^(1/gamma)) → gamma = 1/p
+      const p = Math.log(wr) / Math.log(wc)
+      const fix = Math.max(0.85, Math.min(1.18, 1 / p))
+      if (Math.abs(fix - 1) >= 0.02) console.log(`motion-bg : luminance patch corrigée (gamma ${fix.toFixed(3)})`)
+      return fix
+    } catch (e) { console.warn('motion-bg : mesure luminance patch ignorée :', e?.message || e); return 1 }
+  }
+  const lumFix = patchOK ? mesureLumFix() : 1
   // audio : le rendu Kling porte la voix (native/lipsync) → il prime ; plan.bgAudio
   // === 'orig' bascule sur la piste de la vidéo de référence (voix filmée)
   const audioMap = plan.bgAudio === 'orig' ? ['-map', '0:a?'] : ['-map', '1:a?']
@@ -445,7 +509,7 @@ async function composeMotionBg(jobDir, outPath, plan) {
     args.push('-i', matted)
     // refmask = webm VP9 alpha → même décodeur forcé ; bgclean = image en boucle
     if (patch) args.push('-c:v', 'libvpx-vp9', '-i', refmask, '-loop', '1', '-i', bgclean)
-    args.push('-filter_complex', fcFor(patch), '-map', '[v]', ...audioMap,
+    args.push('-filter_complex', fcFor(patch, lumFix), '-map', '[v]', ...audioMap,
       '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
       '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
       '-movflags', '+faststart', outPath)
