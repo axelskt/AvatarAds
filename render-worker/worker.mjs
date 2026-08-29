@@ -384,12 +384,39 @@ async function composeMotionBg(jobDir, outPath, plan) {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig0, '-map', '0:v:0', '-map', '0:a:0?',
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', orig], { stdio: 'pipe' })
   }
-  // format de sortie = format du personnage détouré (celui du rendu Kling)
-  let W = 1080, H = 1920
-  try { const d = ffprobe(matted, 'stream=width,height').split(','); W = parseInt(d[0], 10) || 1080; H = parseInt(d[1], 10) || 1920 } catch (_) { /* probe optionnel */ }
+  // ── LOT A · SORTIE AU RATIO EXACT DE LA RÉF ────────────────────────────────
+  // Mesuré 28/08 (IMG_6133) : en character_orientation 'video', Kling suit le
+  // ratio de la vidéo de réf mais sort un canvas bâtard — réf 1080×1920 →
+  // rendu 1072×1920 (0,5583 vs 0,5625). La sortie est donc normalisée aux
+  // dimensions EXACTES de la réf quand les deux ratios sont proches (≤5 %) :
+  // ratio = celui de la réf, résolution = celle du rendu Kling (dimension
+  // dominante conservée — jamais d'upscale : une réf 4K ne gonfle pas un rendu
+  // 1080p). Fond ET personnage passent par le MÊME cover-crop (1072→1080 =
+  // 0,4 % de crop, invisible), donc ils restent alignés au pixel. Ratios trop
+  // éloignés (réf illisible, cas inattendu) → comportement v1 inchangé :
+  // format du personnage détouré tel quel.
+  const probeWH = (file) => {
+    const d = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
+      '-show_entries', 'stream=width,height', '-of', 'csv=p=0', file]).toString().trim().split(',')
+    return { w: parseInt(d[0], 10) || 0, h: parseInt(d[1], 10) || 0 }
+  }
+  let W = 1080, H = 1920, mw = 0, mh = 0
+  try { const m = probeWH(matted); mw = m.w; mh = m.h; if (mw && mh) { W = mw; H = mh } } catch (_) { /* probe optionnel */ }
+  try {
+    const r = probeWH(orig)
+    if (r.w && r.h && mw && mh) {
+      const ratioRef = r.w / r.h, ratioM = mw / mh
+      if (Math.abs(ratioRef / ratioM - 1) <= 0.05) {
+        if (ratioRef <= 1) { H = mh; W = Math.round(mh * ratioRef / 2) * 2 }
+        else { W = mw; H = Math.round(mw / ratioRef / 2) * 2 }
+      } else {
+        console.warn(`motion-bg : ratio réf ${ratioRef.toFixed(4)} trop éloigné du rendu Kling ${ratioM.toFixed(4)} — sortie au format du rendu (v1)`)
+      }
+    }
+  } catch (_) { /* probe réf optionnel */ }
   W = Math.round(W / 2) * 2; H = Math.round(H / 2) * 2
-  // fond = référence cover-crop au format + cadence alignée ; personnage par-dessus,
-  // centré (mêmes dimensions en pratique → plein cadre exact)
+  // fond = référence cover-crop au format + cadence alignée ; personnage par-dessus
+  // via le MÊME cover-crop (dimensions quasi identiques → crop marginal, alignement garanti)
   const key = alpha ? '' : 'colorkey=0x00FF00:0.22:0.06,despill=type=green,'
   const cover = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}`
   // v2 : la réf, le masque ET la frame nettoyée passent par le MÊME cover-crop —
@@ -397,14 +424,17 @@ async function composeMotionBg(jobDir, outPath, plan) {
   // DILATATION ≈3 % de la largeur (gblur σ=20 puis seuil bas 10/255 : le halo du
   // flou devient blanc → le masque s'étend de ~1,8 σ ≈ 35 px, couvre les bords du
   // détourage), puis re-flou σ=6 = couture fondue quand il sert d'alpha au patch.
+  // LOT A : le personnage passe AUSSI par ${cover} (scale/crop préservent le
+  // canal alpha yuva420p de libvpx-vp9) → 1072×1920 devient 1080×1920 comme le
+  // fond, l'overlay tombe plein cadre sans liseré.
   const fcFor = (patch) => {
     const fin = `overlay=x=(W-w)/2:y=(H-h)/2:shortest=1:format=auto,format=yuv420p[v]`
-    if (!patch) return `[0:v]fps=30,${cover},setsar=1[bg];[1:v]${key}setsar=1[fg];[bg][fg]${fin}`
+    if (!patch) return `[0:v]fps=30,${cover},setsar=1[bg];[1:v]${key}${cover},setsar=1[fg];[bg][fg]${fin}`
     return `[0:v]fps=30,${cover},setsar=1[bg0];` +
       `[2:v]fps=30,alphaextract,${cover},gblur=sigma=20,lutyuv=y='if(gt(val,10),255,0)',gblur=sigma=6[mk];` +
       `[3:v]${cover},setsar=1[cl];[cl][mk]alphamerge[patch];` +
       `[bg0][patch]overlay=format=auto[bg];` +
-      `[1:v]${key}setsar=1[fg];[bg][fg]${fin}`
+      `[1:v]${key}${cover},setsar=1[fg];[bg][fg]${fin}`
   }
   // audio : le rendu Kling porte la voix (native/lipsync) → il prime ; plan.bgAudio
   // === 'orig' bascule sur la piste de la vidéo de référence (voix filmée)
