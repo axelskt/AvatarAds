@@ -99,6 +99,11 @@ const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, mcp-protocol-version, mcp-session-id',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  // WWW-Authenticate n'est PAS un header « safelisted » : sans Expose-Headers un
+  // client MCP dans un NAVIGATEUR (vérification du nouvel écran claude.ai,
+  // inspector) reçoit le 401 mais ne peut pas LIRE resource_metadata → la
+  // découverte OAuth est « Ignorée ». Ajout 29/08, purement additif.
+  'Access-Control-Expose-Headers': 'WWW-Authenticate, Mcp-Session-Id, Mcp-Protocol-Version',
 }
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
@@ -2549,7 +2554,70 @@ const DOC_AS = (base: string) => ({
   code_challenge_methods_supported: ['S256'],
   token_endpoint_auth_methods_supported: ['none'],
   scopes_supported: ['avatarads'],
+  // CIMD (draft-ietf-oauth-client-id-metadata-document) : le nouvel écran
+  // claude.ai (08/2026) propose « métadonnées client hébergées par Anthropic —
+  // Recommandé » ; il ne choisit CIMD QUE si ce flag est true ET que
+  // token_endpoint_auth_methods_supported contient 'none' (doc Anthropic).
+  client_id_metadata_document_supported: true,
 })
+
+// ═══ CIMD — Client ID Metadata Documents (29/08) ═════════════════════════════
+// Nouveau flux claude.ai : client_id = URL https d'un document JSON de
+// métadonnées (ex. https://claude.ai/oauth/claude-code-client-metadata :
+// { client_id: <l'URL>, client_name, redirect_uris: [...] }). Pas de /register.
+// On mappe chaque URL sur un uuid interne (mcp_oauth_clients.cimd_url unique)
+// pour que codes/tokens (colonnes client_id uuid) restent INCHANGÉS.
+const isCimdClientId = (s: string) => /^https:\/\/\S+$/.test(s)
+// redirection loopback (RFC 8252 §7.3) : Claude Code déclare
+// http://localhost/callback et http://127.0.0.1/callback puis utilise un PORT
+// éphémère → le port ne compte pas dans la comparaison.
+function loopbackUrl(uri: string): URL | null {
+  try {
+    const v = new URL(uri)
+    return (v.protocol === 'http:' && (v.hostname === 'localhost' || v.hostname === '127.0.0.1')) ? v : null
+  } catch { return null }
+}
+function redirectUriAllowed(uri: string, allowed: string[]): boolean {
+  if (allowed.includes(uri)) return true
+  const v = loopbackUrl(uri)
+  if (!v) return false
+  return allowed.some((a) => {
+    const w = loopbackUrl(a)
+    return !!w && w.hostname === v.hostname && w.pathname === v.pathname
+  })
+}
+// Récupère + valide le document, upsert la ligne client, rend l'uuid interne.
+// Garde-fous : https only, pas d'IP/localhost/.local/.internal (anti-SSRF),
+// 5 s max, 100 Ko max, doc.client_id DOIT être l'URL exacte (exigence du draft).
+async function resolveCimdClient(clientIdUrl: string): Promise<{ id: string, uris: string[] } | null> {
+  let u: URL
+  try { u = new URL(clientIdUrl) } catch { return null }
+  if (u.protocol !== 'https:' || u.username || u.password) return null
+  const h = u.hostname.toLowerCase()
+  if (h === 'localhost' || h.includes(':') || /^\d+\.\d+\.\d+\.\d+$/.test(h) ||
+      h.endsWith('.local') || h.endsWith('.internal')) return null
+  const ctl = new AbortController()
+  const t = setTimeout(() => ctl.abort(), 5000)
+  // deno-lint-ignore no-explicit-any
+  let doc: any = null
+  try {
+    const r = await fetch(clientIdUrl, { signal: ctl.signal, redirect: 'error', headers: { Accept: 'application/json' } })
+    if (r.ok) {
+      const txt = await r.text()
+      if (txt.length <= 100_000) doc = JSON.parse(txt)
+    }
+  } catch { doc = null } finally { clearTimeout(t) }
+  if (!doc || typeof doc !== 'object') return null
+  if (String(doc.client_id || '') !== clientIdUrl) return null
+  const uris = Array.isArray(doc.redirect_uris) ? doc.redirect_uris.map(String).slice(0, 16) : []
+  if (!uris.length || uris.some((x: string) => !/^https:\/\//.test(x) && !loopbackUrl(x))) return null
+  const { data: row, error } = await svc.from('mcp_oauth_clients')
+    .upsert({ cimd_url: clientIdUrl, client_name: String(doc.client_name || u.hostname).slice(0, 120), redirect_uris: uris },
+      { onConflict: 'cimd_url' })
+    .select('client_id').single()
+  if (error || !row) return null
+  return { id: String(row.client_id), uris }
+}
 
 // Toutes les routes OAuth ; renvoie null si la requête n'en est pas une.
 async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Response | null> {
@@ -2601,13 +2669,24 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     if (!clientId || !redirectUri || !challenge || method !== 'S256') {
       return json(400, { error: 'invalid_request', error_description: 'client_id, redirect_uri, code_challenge (S256) requis' })
     }
-    const { data: client } = await svc.from('mcp_oauth_clients')
-      .select('client_id, redirect_uris').eq('client_id', clientId).maybeSingle()
-    if (!client) return json(400, { error: 'invalid_client' })
-    const uris = (client.redirect_uris as string[]) || []
-    if (!uris.includes(redirectUri)) return json(400, { error: 'invalid_redirect_uri' })
+    // CIMD : client_id = URL → on résout vers l'uuid interne (le relai, les
+    // codes et les tokens ne voient QUE l'uuid ; /token n'exige pas client_id).
+    let effClientId = clientId
+    let uris: string[] = []
+    if (isCimdClientId(clientId)) {
+      const cimd = await resolveCimdClient(clientId)
+      if (!cimd) return json(400, { error: 'invalid_client', error_description: 'client_id metadata document invalide' })
+      effClientId = cimd.id
+      uris = cimd.uris
+    } else {
+      const { data: client } = await svc.from('mcp_oauth_clients')
+        .select('client_id, redirect_uris').eq('client_id', clientId).maybeSingle()
+      if (!client) return json(400, { error: 'invalid_client' })
+      uris = (client.redirect_uris as string[]) || []
+    }
+    if (!redirectUriAllowed(redirectUri, uris)) return json(400, { error: 'invalid_redirect_uri' })
     const relai = btoa(JSON.stringify({
-      client_id: clientId, redirect_uri: redirectUri, state: String(q.get('state') || ''),
+      client_id: effClientId, redirect_uri: redirectUri, state: String(q.get('state') || ''),
       code_challenge: challenge, scope: String(q.get('scope') || 'avatarads'),
     })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
     return new Response(null, { status: 302, headers: { ...cors, Location: `${APP_URL}?mcp_oauth=${relai}` } })
@@ -2626,7 +2705,9 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     const challenge = String(body.code_challenge || ''), state = String(body.state || '')
     const { data: client } = await svc.from('mcp_oauth_clients')
       .select('client_id, redirect_uris').eq('client_id', clientId).maybeSingle()
-    if (!client || !((client.redirect_uris as string[]) || []).includes(redirectUri) || !challenge) {
+    // redirectUriAllowed (et non .includes) : port éphémère des redirections
+    // loopback des clients CIMD type Claude Code (RFC 8252 §7.3).
+    if (!client || !redirectUriAllowed(redirectUri, (client.redirect_uris as string[]) || []) || !challenge) {
       return json(400, { error: 'invalid_request' })
     }
     const code = 'aac_' + hexAleatoire(24)
@@ -3007,6 +3088,19 @@ serve(async (req) => {
     // sonde SSE de claude. Date.now() est OK ici (fonction edge normale, pas un script workflow).
     const _now = Date.now()
     if (_now - _lastReconcile > 120_000) { _lastReconcile = _now; bg(reconcileAllStale()) }
+    // GET ANONYME → 401 + WWW-Authenticate (29/08). Le nouvel écran claude.ai
+    // « vérification du serveur » sonde l'URL nue ; un 200 ici contredisait le
+    // 401 du POST (claude.ai n'honore JAMAIS WWW-Authenticate sur un 200) →
+    // « Impossible de vérifier ». Le 401 est le signal spec (RFC 9728 §5.1).
+    // Les GET AVEC identifiant (clé aa_ dans le chemin/query, ou Bearer aat_)
+    // gardent le flux SSE vide — keep-warm Railway (GET nu, statut ignoré) OK.
+    const gAuth = (req.headers.get('Authorization') || '').trim()
+    const gKey = segs[1] || url.searchParams.get('key') || ''
+    if (!gAuth && !gKey.startsWith('aa_')) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
+        'Content-Type': 'application/json',
+        'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource"` } })
+    }
     return new Response(': ok\n\n', {
       status: 200,
       headers: { ...cors, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
