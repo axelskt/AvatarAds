@@ -7,17 +7,27 @@
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
 <title>Connecter Claude — AvatarAds · Génère tes vidéos depuis Claude</title>
 <meta name="description" content="Connecte AvatarAds à Claude et génère tes images et vidéos en une simple phrase, directement depuis tes conversations — avec tes crédits AvatarAds.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="theme-color" content="#0B0B0D">
+<meta name="author" content="AvatarAds">
 <meta property="og:title" content="Connecter Claude — AvatarAds">
 <meta property="og:description" content="Génère tes images et vidéos AvatarAds directement depuis Claude, en une simple phrase.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://avatarads.fr/claude.html">
 <meta property="og:image" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:secure_url" content="https://avatarads.fr/og-image.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AvatarAds — génère tes vidéos et images IA depuis Claude">
 <meta property="og:site_name" content="AvatarAds">
 <meta property="og:locale" content="fr_FR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Connecter Claude — AvatarAds">
 <meta name="twitter:description" content="Génère tes images et vidéos AvatarAds directement depuis Claude, en une simple phrase.">
 <meta name="twitter:image" content="https://avatarads.fr/og-image.jpg">
+<meta name="twitter:image:alt" content="AvatarAds — génère tes vidéos et images IA depuis Claude">
+<meta name="twitter:site" content="@avatarads">
 <link rel="canonical" href="https://avatarads.fr/claude.html">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="shortcut icon" href="/favicon.svg">
@@ -25,7 +35,9 @@
 <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Fonts non bloquantes (preload + bascule media=print→all à l'onload) — même pattern que la LP -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
 /* ══════════ DESIGN SYSTEM (repris de la LP — 1:1) ══════════ */
 :root{
@@ -108,12 +120,26 @@ a{color:inherit;text-decoration:none}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "WebPage",
-  "@id": "https://avatarads.fr/claude.html#webpage",
-  "url": "https://avatarads.fr/claude.html",
-  "name": "Connecter Claude — AvatarAds",
-  "description": "Connecte AvatarAds à Claude et génère tes images et vidéos en une simple phrase, directement depuis tes conversations — avec tes crédits AvatarAds.",
-  "inLanguage": "fr-FR"
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://avatarads.fr/claude.html#webpage",
+      "url": "https://avatarads.fr/claude.html",
+      "name": "Connecter Claude — AvatarAds",
+      "description": "Connecte AvatarAds à Claude et génère tes images et vidéos en une simple phrase, directement depuis tes conversations — avec tes crédits AvatarAds.",
+      "inLanguage": "fr-FR",
+      "isPartOf": { "@id": "https://avatarads.fr/#website" },
+      "breadcrumb": { "@id": "https://avatarads.fr/claude.html#breadcrumb" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://avatarads.fr/claude.html#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://avatarads.fr/" },
+        { "@type": "ListItem", "position": 2, "name": "Connecter Claude", "item": "https://avatarads.fr/claude.html" }
+      ]
+    }
+  ]
 }
 </script>
 </head>
@@ -203,7 +229,7 @@ a{color:inherit;text-decoration:none}
       <div class="row gap10" style="align-items:center;margin-bottom:12px">
         <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
       </div>
-      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Active AvatarAds dans ta conversation et décris ce que tu veux. Claude annonce le coût en crédits et attend ton OK avant de lancer.</p>
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Active AvatarAds dans ta conversation. Décris ce que tu veux — la génération part directement sur tes crédits AvatarAds.</p>
       <div class="row card" style="padding:12px 14px;gap:10px;align-items:flex-start;background:var(--panel-1);margin-top:auto">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto;margin-top:2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
         <span class="faint mono" style="font-size:11.5px;line-height:1.6;text-align:left">« Génère une vidéo de mon avatar qui présente mon produit, en 9:16 »</span>
@@ -225,7 +251,7 @@ a{color:inherit;text-decoration:none}
 <footer style="border-top:1px solid var(--border)">
   <div class="wrap" style="padding:30px 32px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap">
     <a href="/" class="row gap10">
-      <img src="assets/avatarads-logo-96.png" alt="" width="20" height="20" style="border-radius:6px;display:block">
+      <img src="assets/avatarads-logo-96.png" alt="" width="20" height="20" loading="lazy" decoding="async" style="border-radius:6px;display:block">
       <span class="logo-wordmark" style="font-size:16px">AvatarAds</span>
     </a>
     <div class="row" style="gap:22px;flex-wrap:wrap">
