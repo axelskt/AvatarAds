@@ -11069,7 +11069,10 @@ async function recStartRecording(){
     // délai de stabilisation RESTANT : le micro doit avoir tourné ~1,8 s (AGC Safari). Pré-chauffé au
     // select (souvent > 1,8 s) → on capte TOUT DE SUITE (pas de « Prépare-toi », rien de perdu).
     const warmed = Date.now() - (_recMicOpenedAt || Date.now());
-    const remaining = Math.max(0, 2200 - warmed);   // 2,2 s = temps mesuré de stabilisation de l'AGC Safari
+    // Le micro est pré-chauffé dès la SÉLECTION de l'Enregistreur → au moment du Record il est presque
+    // toujours déjà chaud (remaining=0, capture instantanée). Si l'user enregistre très vite après avoir
+    // sélectionné, on attend juste le RESTE, plafonné à 900 ms (au lieu de 2,2 s) → « Prépare-toi » court.
+    const remaining = Math.min(900, Math.max(0, 2200 - warmed));
     const _startCapture = () => { recWarmupTimer = null; if(recState!=='recording') return; recCaptureChunks = []; recCapturing = true; recRecStartTime = Date.now(); };
     if(remaining <= 60){ _startCapture(); toast('Enregistrement en cours…'); }
     else {
@@ -11266,6 +11269,25 @@ function _recLowpass(buffer, f0){
   }
   return out;
 }
+// #eq (Axel 31/08) « rendre la voix belle » : EQ douce type voix radio/podcast — coupe le rumble, dé-boue
+// un peu, ajoute présence (clarté) et air (brillance). Réutilise le biquad _acBqJs (highpass/peaking/highshelf).
+function _recVoiceEQ(buffer){
+  if(!buffer||!recCtx || typeof _acBqJs!=='function') return buffer;
+  const sr=buffer.sampleRate, ch=buffer.numberOfChannels;
+  const out=recCtx.createBuffer(ch, buffer.length, sr);
+  for(let c=0;c<ch;c++){
+    const d=Float32Array.from(buffer.getChannelData(c));
+    try{
+      _acBqJs(d, sr, 'highpass', 80, 0.7, 0);      // enlève le rumble / plosives graves
+      _acBqJs(d, sr, 'peaking', 300, 1.0, -1.5);   // dé-boue léger (moins « carton »)
+      _acBqJs(d, sr, 'peaking', 3400, 1.0, 1.8);   // présence / clarté (douce)
+      _acBqJs(d, sr, 'peaking', 6500, 1.5, -2.0);  // dé-ess : tue les pics de sibilance (= anti-saturation)
+      _acBqJs(d, sr, 'highshelf', 9000, 0, 1.5);   // air / brillance
+    }catch(_){}
+    out.getChannelData(c).set(d);
+  }
+  return out;
+}
 // « Volume constant » (Axel 30/08). La capture brute (AGC off) est TRÈS faible (~-30 dBFS, mesuré) →
 // on normalise TOUJOURS à ~-15 dBFS (comme un dictaphone). `flat`=true (Volume constant ON) : leveling
 // PAR BLOCS (enveloppe lissée ±0,6 s) qui aplatit le début faible + les variations lentes, sans pomper.
@@ -11286,7 +11308,7 @@ function _recNormalizeLevel(buffer, flat){
   const speech=_se.length ? (_se[Math.floor(_se.length*0.75)]||_se[_se.length-1]) : maxE;
   const _nf=_se.length?_se[Math.floor(_se.length*0.1)]:0;
   const noise=Math.max(0.004, Math.min(_nf*1.5, 0.02));   // sous ça = vrai silence → gain qui retombe
-  const target=0.12;                            // sortie ≈ -16,4 dBFS (mesuré) : bon niveau SANS saturation
+  const target=0.11;                            // niveau propre (~-17 dB) + marge (dé-ess) → 0 saturation audible
   const G=Math.max(0.5, Math.min(speech>0?target/speech:1, 12));   // gain global SÛR, calé sur la parole
   let envS=null;
   if(flat){
@@ -11320,6 +11342,8 @@ function _recProcessChain(raw){
   let b = raw;
   // 1) passe-bas ~13 kHz ×2 : enlève les bursts ultrasoniques (« pics aigus »), voix intacte.
   try{ b = _recLowpass(_recLowpass(b, 13000), 13000); }catch(_){}
+  // 1b) EQ « belle voix » (présence + air), gentille.
+  try{ b = _recVoiceEQ(b); }catch(_){}
   // 2) NIVEAU D'ABORD : capture brute ~-30 dB (et rampe d'AGC) → -15 dB CONSTANT. On le fait AVANT les
   //    silences pour deux raisons : (a) le plancher de bruit est estimé sur TOUT le signal (silences
   //    inclus) = plus juste ; (b) la détection de silence se fait ensuite sur un signal à niveau STABLE
