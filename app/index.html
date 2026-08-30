@@ -11036,7 +11036,14 @@ async function _recEnsureMic(){
   recCaptureRate = recCtx.sampleRate;
   _recMicOpenedAt = Date.now();
 }
-async function _recPrewarm(){ try{ await _recEnsureMic(); }catch(e){ console.warn('[rec] prewarm:', e); } }
+async function _recPrewarm(){
+  try{
+    const _wasCold = !recStream;
+    await _recEnsureMic();
+    // Signal visible = confirme que la NOUVELLE version (pré-chauffage) tourne bien (fin de la confusion cache/deploy).
+    if(_wasCold){ console.log('🎙 enregistreur: micro pré-chauffé (build warm-mic 31/08)'); if(typeof toast==='function') toast('Micro prêt — parle dès que tu enregistres'); }
+  }catch(e){ console.warn('[rec] prewarm:', e); }
+}
 function _recReleaseMic(){
   if(recState === 'recording') return;   // jamais pendant une prise
   try{ if(recScriptNode){ recScriptNode.onaudioprocess=null; recScriptNode.disconnect(); recScriptNode=null; } }catch(_){}
