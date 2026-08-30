@@ -11855,6 +11855,8 @@ function nav(id,el){
   // #lotG1 · quitter une vue avec l'Enregistreur docké dans le Générateur :
   // micro coupé + le composant rentre chez lui (module Audio) — no-op sinon.
   try{ if (typeof _gvRecUndock === 'function') _gvRecUndock(); }catch(_){}
+  // #warmmic : en QUITTANT la vue Enregistreur (module Audio), on relâche le micro pré-chauffé.
+  try{ const _vr=document.getElementById('v-recorder'); if(id!=='recorder' && _vr && _vr.classList.contains('on') && typeof _recReleaseMic==='function') _recReleaseMic(); }catch(_){}
   // ── Paywall free plan : sections premium (génération) uniquement ──
   if(_PAID_ONLY_SECTIONS.includes(id)){
     const plan = (currentMember?.plan || 'free').toLowerCase();
@@ -11876,7 +11878,7 @@ function nav(id,el){
   if(id==='youtube')    refreshYoutubeView();
   if(id==='imagegen')   initImageGen();
   if(id==='affiliation') initAffiliation();
-  if(id==='recorder')   recInit();
+  if(id==='recorder'){ recInit(); try{ if(typeof _recPrewarm==='function') _recPrewarm(); }catch(_){} }   // #warmmic : pré-chauffe le micro dès l'entrée dans l'Enregistreur du module Audio (même bénéfice que le Générateur)
   if(id==='express')    initExpress();
   if(id==='cartoon')    initCartoon();
   if(id==='montage')    initMontage();
