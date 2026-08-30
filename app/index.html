@@ -22970,10 +22970,101 @@ const QUALITY_CONFIGS = {
 // Layout split, zoom/crop, hook, sous-titres (style/anim/couleurs/pos)
 // Plus fiable que WebCodecs : produit toujours de vraies frames vidéo
 // ══════════════════════════════════════════════════════════════════
+// ── #gen-subs · COMPO SERVEUR du Générateur (owner-gated, phase de test) ──────
+// Grave les sous-titres + garde l'audio CÔTÉ SERVEUR (render-worker
+// __compose:'gen-subs') au lieu du rendu client, qui échoue sur Safari/iOS
+// (WebCodecs AudioEncoder + decodeAudioData KO sur conteneur MP4 → muet /
+// « vidéo trop petite » / blocage 99%). Rendu par HyperFrames = son fiable
+// PARTOUT + rendu fiable. On envoie EXACTEMENT l'état sous-titres de l'aperçu
+// (_cvSubs est porté verbatim côté worker). Repli automatique sur le chemin
+// client si le serveur casse. Renvoie true = pris en charge, false = passe.
+async function _genServerCompose(btn){
+  if(!results?.hedraUrl) return false;
+  let user = null;
+  try{ const r = await sb.auth.getUser(); user = r?.data?.user || null; }catch(_){}
+  if(!user) return false;
+
+  // sous-titres = EXACTEMENT ce que grave l'aperçu (même résolution des groupes que drawFrame)
+  const wpg = Math.max(1, cfg.subWpg || 2);
+  const groups = (_wordGroups && _wordGroups.length) ? _wordGroups
+    : _buildWpgGroups(Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean), wpg);
+  if(!groups || !groups.length) return false; // rien à graver → laisse le chemin client
+
+  const hv = document.getElementById('hedraVideo');
+  const vidDur = (hv && isFinite(hv.duration) && hv.duration > 0.15) ? hv.duration : null;
+  const subs = {
+    groups,
+    whisper: (Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length)
+      ? whisperWordTimestamps.map(w => ({ word: w.word, start: w.start, end: w.end })) : null,
+    cfg: { subSize: cfg.subSize, subPos: cfg.subPos, subPosX: cfg.subPosX, subScaleX: cfg.subScaleX,
+      subWpg: cfg.subWpg, subTimingMode: cfg.subTimingMode, subAdvanceMs: cfg.subAdvanceMs, subSecPerGroup: cfg.subSecPerGroup },
+    colors: { c1: subColors.c1, c2: subColors.c2 },
+    style: selSubStyle, anim: selAnim, animEnabled: !!animEnabled,
+    totalDuration: vidDur || undefined,
+  };
+
+  const compBar  = document.getElementById('composeProgressWrap');
+  const compFill  = document.getElementById('composeProgressFill');
+  const compPct  = document.getElementById('composeProgressPct');
+  const setPct = (p, label) => { if(compBar) compBar.style.display='block'; if(compFill) compFill.style.width=p+'%'; if(compPct) compPct.textContent=(label||'')+' '+p+'%'; };
+  const resetBtn = () => { if(btn){ btn.disabled=false; btn.innerHTML='↓ Télécharger'; } if(compBar) compBar.style.display='none'; };
+  if(btn){ btn.disabled=true; btn.innerHTML='Rendu serveur…'; }
+  setPct(5, 'Préparation…');
+
+  try{
+    const vidBlob = await (await fetch(results.hedraUrl)).blob();
+    const dur = vidDur || 15;
+    const ts = Date.now();
+    const inPath = user.id + '/gen-' + ts + '.mp4';
+    setPct(12, 'Envoi…');
+    const up = await sb.storage.from('render-media').upload(inPath, vidBlob, { contentType: 'video/mp4', upsert: true });
+    if(up.error) throw new Error('upload: ' + up.error.message);
+    setPct(20, 'File d\'attente…');
+    const H = await getAuthHeader();
+    const cr = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', plan: { __compose: 'gen-subs', duration: Math.max(1, dur), subs }, input_video: inPath, assets: [] }) });
+    const crd = await cr.json();
+    if(!cr.ok || !crd.job_id) throw new Error(crd.error || 'création du job échouée');
+    let outUrl = null;
+    for(let i=0; i<180; i++){
+      await new Promise(r => setTimeout(r, 4000));
+      if(window._composeCancelled) throw new Error('CANCELLED');
+      const st = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', job_id: crd.job_id }) });
+      const sd = await st.json();
+      if(sd.status === 'done' && sd.url){ outUrl = sd.url; break; }
+      if(sd.status === 'failed') throw new Error(sd.error || 'le rendu serveur a échoué');
+      setPct(Math.min(95, 25 + i*3), 'Rendu…');
+    }
+    if(!outUrl) throw new Error('rendu trop long');
+    setPct(97, 'Téléchargement…');
+    const finalBlob = await (await fetch(outUrl)).blob();
+    window._aaPublishBlob = finalBlob;
+    const u = URL.createObjectURL(finalBlob);
+    const a = document.createElement('a'); a.href=u; a.download='avatarads-video.mp4';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 8000);
+    try{ if(typeof _libAutoSaveVideo === 'function') await _libAutoSaveVideo(finalBlob, 'Générateur ' + new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }), ['Générateur','9:16'], '🎬', 'AVATAR'); }catch(_){}
+    setPct(100, 'Terminé');
+    toast('Vidéo prête (rendu serveur) ✓');
+    resetBtn();
+    return true;
+  }catch(e){
+    resetBtn();
+    if(String(e && e.message) === 'CANCELLED'){ toast('Annulé'); return true; }
+    console.warn('[gen-subs] compo serveur → repli client :', e);
+    throw e;
+  }
+}
+
 async function composeVideo(btn){
   if(!results.hedraUrl){ toast('Aucune vidéo à composer'); return; }
   if(_gateFreeExport()) return; // paywall à l'export (AB test : génération libre)
   window._composeCancelled = false;
+  // #gen-subs · compo SERVEUR (owner-gated, phase de test) : son fiable partout ;
+  // repli automatique sur le rendu client ci-dessous si le serveur casse.
+  if(currentMember?.is_owner){
+    try{ if(await _genServerCompose(btn)) return; }
+    catch(e){ console.warn('[gen-subs] repli sur compo client', e); }
+  }
   if(btn){ btn.disabled = true; btn.innerHTML = 'Chargement…'; }
   const compBar     = document.getElementById('composeProgressWrap');
   const compFill    = document.getElementById('composeProgressFill');
