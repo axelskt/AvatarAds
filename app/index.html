@@ -11013,64 +11013,75 @@ async function recToggle(){
   else if(recState==='recording') recStopRecording();
 }
 
+// #warmmic (Axel 31/08) — LE vrai fix de la « rampe/montée de volume » + du « son perdu au début ».
+// Safari IGNORE autoGainControl:false et applique quand même un AGC qui met ~2 s à monter : si on capte
+// tout de suite, le début est faible et rampe. Solution : on OUVRE le micro dès que l'Enregistreur est
+// SÉLECTIONNÉ (`_recPrewarm`, appelé par `_gvRecPick('rec')`) → l'AGC se stabilise pendant que l'user se
+// prépare. Au clic Record, la capture démarre INSTANTANÉMENT à niveau constant (plus de rampe, rien de
+// perdu). Le micro reste chaud entre les prises ; il n'est relâché qu'en quittant l'Enregistreur.
+// #hifi5 : les 3 traitements navigateur restent coupés (echoCancellation=« sous l'eau », noiseSuppression=
+// hachage, autoGainControl=rampe ; niveau final repris par « Volume constant »).
+// #pcm : capture PCM BRUTE (ScriptProcessor) au lieu de MediaRecorder (AAC lossy = son abîmé à la source).
+let _recMicOpenedAt = 0;
+async function _recEnsureMic(){
+  if(recStream && recCtx && recCaptureSrc) return;   // déjà chaud
+  recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false }, video:false });
+  try{ const _st=recStream.getAudioTracks && recStream.getAudioTracks()[0]; if(_st && _st.getSettings) console.log('🎙 micro:', _st.getSettings()); }catch(_){}
+  if(!recCtx) recCtx = new AudioContext();
+  if(recCtx.state === 'suspended'){ try{ await recCtx.resume(); }catch(_){} }
+  recCaptureSrc = recCtx.createMediaStreamSource(recStream);
+  recLiveAnalyser = recCtx.createAnalyser(); recLiveAnalyser.fftSize=256;
+  recLiveData = new Float32Array(recLiveAnalyser.frequencyBinCount);
+  recCaptureSrc.connect(recLiveAnalyser);
+  recCaptureRate = recCtx.sampleRate;
+  _recMicOpenedAt = Date.now();
+}
+async function _recPrewarm(){ try{ await _recEnsureMic(); }catch(e){ console.warn('[rec] prewarm:', e); } }
+function _recReleaseMic(){
+  if(recState === 'recording') return;   // jamais pendant une prise
+  try{ if(recScriptNode){ recScriptNode.onaudioprocess=null; recScriptNode.disconnect(); recScriptNode=null; } }catch(_){}
+  try{ if(recCaptureSink){ recCaptureSink.disconnect(); recCaptureSink=null; } }catch(_){}
+  try{ if(recCaptureSrc){ recCaptureSrc.disconnect(); recCaptureSrc=null; } }catch(_){}
+  try{ if(recStream){ recStream.getTracks().forEach(t=>t.stop()); } }catch(_){}
+  recStream=null; recLiveAnalyser=null; _recMicOpenedAt=0;   // on GARDE recCtx pour la lecture
+}
+
 async function recStartRecording(){
   try{
     if(recState==='playing') recStopPlayback();
-    // #hifi5 (Axel 30/08) : on désactive les TROIS traitements navigateur — chacun MESURÉ comme coupable :
-    //  • echoCancellation → sur macOS, route le micro par VoiceProcessingIO = voix CREUSE / « sous l'eau »
-    //    (le vrai coupable : « sous l'eau » inchangé quels que soient nos réglages POST-capture → c'est la CAPTURE).
-    //  • autoGainControl → RAMPE le gain sur ~6 s (mesuré -45 → -17 dBFS) = « le volume monte petit à petit »
-    //    + « 5 premières secondes non captées » (encore trop bas). Coupé → niveau CONSTANT dès t=0.
-    //  • noiseSuppression → gating qui hache/warble la voix.
-    // Capture brute un peu basse → niveau repris par « Volume constant » (_recNormalizeLevel) ; le bug du
-    // seuil de silence qui « mangeait » le son faible est corrigé (seuil = plancher de bruit, pas le max).
-    recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false }, video:false });
-    try{ const _st=recStream.getAudioTracks && recStream.getAudioTracks()[0]; if(_st && _st.getSettings) console.log('🎙 micro réglages Safari:', _st.getSettings()); }catch(_){}
-    recCtx = new AudioContext();
-    if(recCtx.state === 'suspended'){ try{ await recCtx.resume(); }catch(_){} }
-    recLiveAnalyser = recCtx.createAnalyser(); recLiveAnalyser.fftSize=256;
-    recLiveData = new Float32Array(recLiveAnalyser.frequencyBinCount);
-    recCaptureSrc = recCtx.createMediaStreamSource(recStream);
-    recCaptureSrc.connect(recLiveAnalyser);
-    // #pcm (Axel 30/08) : CAPTURE PCM BRUTE (non compressée) au lieu de MediaRecorder. MediaRecorder
-    // encode en AAC/Opus lossy (~128 kbps) → c'est ÇA qui « abîmait » le son à la source (pas comme un
-    // dictaphone). Un ScriptProcessor recopie les samples float du micro tels quels → qualité maximale.
-    recCaptureRate = recCtx.sampleRate;
+    await _recEnsureMic();
     recCaptureChunks = []; recCapturing = false;
+    if(recScriptNode){ try{ recScriptNode.onaudioprocess=null; recScriptNode.disconnect(); }catch(_){} }
     recScriptNode = recCtx.createScriptProcessor(4096, 1, 1);
-    recScriptNode.onaudioprocess = (e) => {
-      if(!recCapturing) return;
-      recCaptureChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));   // COPIE (le buffer est réutilisé)
-    };
-    // sink à gain 0 : indispensable pour que onaudioprocess se déclenche, SANS renvoyer le micro dans les HP.
-    recCaptureSink = recCtx.createGain(); recCaptureSink.gain.value = 0;
+    recScriptNode.onaudioprocess = (e) => { if(!recCapturing) return; recCaptureChunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+    recCaptureSink = recCtx.createGain(); recCaptureSink.gain.value = 0;   // sink gain 0 pour déclencher onaudioprocess sans réémettre dans les HP
     recCaptureSrc.connect(recScriptNode); recScriptNode.connect(recCaptureSink); recCaptureSink.connect(recCtx.destination);
     recRecStartTime=Date.now(); recLiveHistory=[];
     recState='recording'; recUpdateUI();
     recLiveLoop();
-    // #warmup (Axel 30/08) : le micro de Safari met ~0,6 s à atteindre son niveau (début « quiet » = le
-    // fameux « bug des 5 premières secondes »). On laisse le graphe tourner 600 ms AVANT de capter → la
-    // voix est enregistrée à un niveau déjà stable. Le chrono repart de 0 à ce moment.
-    toast('Prépare-toi…');
-    if(recWarmupTimer) clearTimeout(recWarmupTimer);
-    recWarmupTimer = setTimeout(() => {
-      recWarmupTimer = null;
-      if(recState!=='recording') return;   // arrêté pendant le warm-up
-      recCaptureChunks = []; recCapturing = true; recRecStartTime = Date.now();
-      if(typeof toast==='function') toast('Enregistrement en cours…');
-    }, 1500);   // 1,5 s : l'AGC de Safari met ~2,5 s à se stabiliser → on jette le plus gros de la rampe
+    // délai de stabilisation RESTANT : le micro doit avoir tourné ~1,8 s (AGC Safari). Pré-chauffé au
+    // select (souvent > 1,8 s) → on capte TOUT DE SUITE (pas de « Prépare-toi », rien de perdu).
+    const warmed = Date.now() - (_recMicOpenedAt || Date.now());
+    const remaining = Math.max(0, 1800 - warmed);
+    const _startCapture = () => { recWarmupTimer = null; if(recState!=='recording') return; recCaptureChunks = []; recCapturing = true; recRecStartTime = Date.now(); };
+    if(remaining <= 60){ _startCapture(); toast('Enregistrement en cours…'); }
+    else {
+      toast('Prépare-toi…');
+      if(recWarmupTimer) clearTimeout(recWarmupTimer);
+      recWarmupTimer = setTimeout(() => { _startCapture(); if(typeof toast==='function') toast('Enregistrement en cours…'); }, remaining);
+    }
   }catch(e){
-    toast('Micro inaccessible — '+e.message);
+    toast('Micro inaccessible — '+((e&&e.message)||e));
   }
 }
 
 async function recStopRecording(){
   if(recWarmupTimer){ clearTimeout(recWarmupTimer); recWarmupTimer = null; }
   recCapturing = false;
-  try{ if(recScriptNode){ recScriptNode.onaudioprocess=null; recScriptNode.disconnect(); } }catch(_){}
-  try{ if(recCaptureSink) recCaptureSink.disconnect(); }catch(_){}
-  try{ if(recCaptureSrc) recCaptureSrc.disconnect(); }catch(_){}
-  if(recStream) recStream.getTracks().forEach(t=>t.stop());
+  try{ if(recScriptNode){ recScriptNode.onaudioprocess=null; recScriptNode.disconnect(); recScriptNode=null; } }catch(_){}
+  try{ if(recCaptureSink){ recCaptureSink.disconnect(); recCaptureSink=null; } }catch(_){}
+  // #warmmic : on GARDE recStream/recCaptureSrc CHAUD (AGC déjà stabilisé) pour la prochaine prise —
+  // le micro n'est relâché qu'en quittant l'Enregistreur (_recReleaseMic dans _gvRecPick).
   recState='processing'; recUpdateUI();
   cancelAnimationFrame(recAnimId);
   // assembler les samples PCM captés → recRawBuffer (au sample rate du contexte), puis finaliser
@@ -18373,6 +18384,10 @@ function _gvRecPick(src){
   // le bruit) → on masque la legacy ET on coupe son silence côté génération pour ne pas re-couper la voix.
   aff('voxLegacyClean', src === 'file');
   if(src === 'rec'){ _voxSilOn = false; window._voxSilUserSet = true; try{ _voxSetSw('voxSil', false); }catch(_){} }
+  // #warmmic : pré-chauffer le micro dès la sélection de l'Enregistreur (AGC Safari se stabilise pendant
+  // que l'user se prépare → capture instantanée à niveau constant). Relâché si on repasse sur « Fichier ».
+  if(src === 'rec'){ try{ if(typeof _recPrewarm==='function') _recPrewarm(); }catch(_){} }
+  else { try{ if(typeof _recReleaseMic==='function') _recReleaseMic(); }catch(_){} }
   if (src === 'rec') _gvRecDock();
 }
 function _gvRecDownload(){
