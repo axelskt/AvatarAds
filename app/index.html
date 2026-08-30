@@ -10996,12 +10996,12 @@ async function recToggle(){
 async function recStartRecording(){
   try{
     if(recState==='playing') recStopPlayback();
-    // #hifi2 (Axel 30/08) : RETOUR aux réglages micro par défaut du navigateur. Les couper
-    // (echoCancellation/noiseSuppression/autoGainControl) faisait capter le micro trop bas et par
-    // à-coups sur Safari — 5 premières secondes « non détectées » + son pas fluide. Le niveau est
-    // repris APRÈS par « Volume constant » (_recNormalizeLevel), qu'on maîtrise. On loggue ce que
-    // Safari applique réellement (diagnostic).
-    recStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false });
+    // #hifi3 (Axel 30/08) : le bon équilibre, trouvé après 2 essais. On GARDE autoGainControl + echo
+    // cancellation (niveau correct + capture fiable dès la 1re s sur Safari — les couper cassait tout :
+    // 5 s non captées) mais on DÉSACTIVE noiseSuppression : c'était LUI le son « pourri » (gating qui
+    // hache entre les mots + voix warblée/métallique, vu au spectrogramme). Contrainte booléenne =
+    // dégrade proprement si Safari ne l'honore pas (jamais de casse). Niveau final repris par Volume constant.
+    recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:false, autoGainControl:true }, video:false });
     try{ const _st=recStream.getAudioTracks && recStream.getAudioTracks()[0]; if(_st && _st.getSettings) console.log('🎙 micro réglages Safari:', _st.getSettings()); }catch(_){}
     recCtx = new AudioContext();
     recLiveAnalyser = recCtx.createAnalyser(); recLiveAnalyser.fftSize=256;
@@ -11267,7 +11267,7 @@ function recCancelReplace(){
 
 async function recStartReplacing(){
   try{
-    recReplaceStream=await navigator.mediaDevices.getUserMedia({ audio:true, video:false });
+    recReplaceStream=await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:false, autoGainControl:true }, video:false });
     recReplaceChunks=[];
     recReplaceRecorder=new MediaRecorder(recReplaceStream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
     recReplaceRecorder.ondataavailable=e=>{ if(e.data.size>0) recReplaceChunks.push(e.data); };
