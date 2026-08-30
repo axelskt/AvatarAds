@@ -1035,7 +1035,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div id="avPhotoZone" onclick="document.getElementById('avPhotoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleAvatarFile(f);_avReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta photo ici</div><div class="faint" style="font-size:11.5px">PNG · JPG · WEBP</div><button type="button" onclick="event.stopPropagation();document.getElementById('avPhotoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
               </div>
               <div id="avPaneVideo" style="display:none">
-                <div id="avVideoZone" onclick="document.getElementById('avVideoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){_avVideoPick(f)}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta vidéo avatar ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — vidéo Hedra ou autre avatar</div><button type="button" onclick="event.stopPropagation();document.getElementById('avVideoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
+                <div id="avVideoZone" onclick="document.getElementById('avVideoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){_avVideoPick(f)}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta vidéo avatar ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV</div><button type="button" onclick="event.stopPropagation();document.getElementById('avVideoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
               </div>
               <!-- #lotC · panneau « Générer un avatar » : prompt → gpt-image (openai-proxy) qualité premium, style UGC réel, portrait -->
               <div id="avPaneGen" style="display:none">
@@ -1270,7 +1270,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div id="bypassHedraDropContent">
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;opacity:.75"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
                   <div style="font-size:13px;font-weight:700;margin-bottom:4px">Glisse ta vidéo avatar ici</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV — vidéo Hedra ou autre avatar</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">MP4 · MOV</div>
                   <div style="margin-top:10px;display:inline-block;padding:6px 16px;background:var(--orange-dim);border:1px solid rgba(255,107,53,0.3);border-radius:7px;font-size:11px;font-weight:600;color:var(--orange2)">Parcourir</div>
                 </div>
                 <div id="bypassHedraFileInfo" style="display:none">
@@ -23710,8 +23710,16 @@ async function _genServerCompose(btn){
 
   // sous-titres = EXACTEMENT ce que grave l'aperçu (même résolution des groupes que drawFrame)
   const wpg = Math.max(1, cfg.subWpg || 2);
-  const groups = (_wordGroups && _wordGroups.length) ? _wordGroups
+  let groups = (_wordGroups && _wordGroups.length) ? _wordGroups
     : _buildWpgGroups(Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean), wpg);
+  // ⚠ FILET : Whisper a produit des timestamps (whisperWordTimestamps) mais _wordGroups
+  // s'est vidé entre la transcription et l'export (état reset) → on reconstruit les
+  // groupes DEPUIS les mots Whisper alignés. Sinon le serveur reçoit whisper:187 +
+  // groups:0 et ne grave RIEN (bug « sous-titres pas revenus »). Les libellés Whisper
+  // portent déjà les apostrophes → 1:1 avec le timing.
+  if((!groups || !groups.length) && Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length){
+    groups = _buildWpgGroups(whisperWordTimestamps.map(w => String(w && w.word || '')).filter(Boolean), wpg);
+  }
   // ⚠ PAS de bail si groups vide : « uniquement vidéo » (sans sous-titres) DOIT
   // quand même passer par le serveur — le but est le SON fiable (le rendu client
   // est muet sur Safari). Le worker prend un chemin RAPIDE (juste mux audio +
