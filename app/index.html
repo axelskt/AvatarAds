@@ -23849,6 +23849,20 @@ function _composeTimerStop(){
   clearInterval(_composeTimerInt); _composeTimerInt = null;
   const el = document.getElementById('composeTimer'); if(el) el.style.display = 'none';
 }
+// #dur-fix : lit la VRAIE durée d'une vidéo depuis son URL (élément off-DOM), fiable même quand
+// #hedraVideo n'a pas encore chargé ses métadonnées. Renvoie null si illisible.
+function _probeVideoDuration(url){
+  return new Promise(res => {
+    try{
+      const v = document.createElement('video'); v.preload='metadata'; v.muted=true;
+      let done=false; const fin = d => { if(done) return; done=true; res(isFinite(d) && d>0.15 ? d : null); };
+      v.onloadedmetadata = () => fin(v.duration);
+      v.onerror = () => fin(null);
+      setTimeout(() => fin(null), 6000);
+      v.src = url;
+    }catch(_){ res(null); }
+  });
+}
 async function _genServerCompose(btn){
   if(!results?.hedraUrl) return false;
   let user = null;
@@ -23882,7 +23896,11 @@ async function _genServerCompose(btn){
     if(_ho && _ho.style.display !== 'none' && _ht && (_ht.textContent || '').trim()) return false; } // hook non gravé serveur
 
   const hv = document.getElementById('hedraVideo');
-  const vidDur = (hv && isFinite(hv.duration) && hv.duration > 0.15) ? hv.duration : null;
+  let vidDur = (hv && isFinite(hv.duration) && hv.duration > 0.15) ? hv.duration : null;
+  // #dur-fix (Axel 30/08) : l'élément #hedraVideo renvoie souvent une durée NaN au moment du
+  // rendu → on tombait sur le repli 15 s et la vidéo sortait TRONQUÉE. On lit la VRAIE durée
+  // depuis la source vidéo. (Le worker recadre de toute façon sur la vraie durée de base.mp4.)
+  if(!vidDur){ try{ vidDur = await _probeVideoDuration(results.hedraUrl); }catch(_){} }
   const subs = {
     groups,
     whisper: (Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length)
