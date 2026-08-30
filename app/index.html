@@ -11278,7 +11278,7 @@ function _recNormalizeLevel(buffer, flat){
     const d=buffer.getChannelData(c), o=out.getChannelData(c);
     for(let i=0;i<d.length;i++){
       let g;
-      if(flat){ const le=envS[Math.min(nE-1,(i/eWin)|0)]; g=(le>=noise)?Math.min(target/le, gGlobal*2.5, 30):(target/noise)*(le/noise); }
+      if(flat){ const le=envS[Math.min(nE-1,(i/eWin)|0)]; g=(le>=noise)?Math.min(target/le, 40):(target/noise)*(le/noise); }   // cap 40 (avant gGlobal*2.5 = trop bas → le début faible n'atteignait pas la cible = la « courbe » de volume)
       else { g=gGlobal; }
       if(!(g>0)) g=0;
       let x=d[i]*g;
