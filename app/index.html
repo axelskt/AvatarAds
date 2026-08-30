@@ -1053,7 +1053,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </div>
                 <div id="avGenResult" style="display:none;margin-top:14px">
                   <div style="border-radius:16px;overflow:hidden;border:1px solid var(--border);background:var(--panel-1);max-width:280px;margin:0 auto"><img id="avGenImg" alt="Avatar généré" style="width:100%;aspect-ratio:9/16;object-fit:cover;display:block"></div>
-                  <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+                  <!-- #lotG · « Détail en 4K » = Nano Banana Pro 4K (génératif) en action principale ; « Améliorer les détails » (AuraSR non génératif) dessous -->
+                  <button type="button" id="avGen4KBtn" onclick="_avGen4K(this)" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 20px rgba(255,107,53,.3)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Détail en 4K · Nano Banana Pro · <span>5 cr</span></button>
+                  <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
                     <button type="button" id="avGenDetailBtn" onclick="_avGenUpscale(this)" style="flex:1 1 155px;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Améliorer les détails · <span id="avGenDetailCost">3 cr</span></button>
                     <button type="button" onclick="_avGenDownload()" style="flex:1 1 120px;min-width:0;padding:11px 8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
                     <button type="button" id="avGenUseBtn" onclick="_avGenUse()" style="flex:1 1 170px;min-width:0;padding:11px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser comme avatar</button>
@@ -17688,7 +17690,7 @@ function _avEnter(){ _avPick(_avSrc2); if (selAvatar && selAvatar.localUrl) _avR
 // (_IMG_STYLES) + bloc réalisme (_IMG_REALISM), qualité PREMIUM, portrait.
 // Crédits : barème existant CREDIT_COSTS.imgMedium (génération premium = 3 cr),
 // débit AVANT l'appel (spendCreditsFor), creditsFlowRefund si échec.
-let _avGenBusy = false, _avGenUrl = null, _avGenHD = false;
+let _avGenBusy = false, _avGenUrl = null, _avGenHD = false, _avGen4KDone = false;
 function _avGenSyncCosts(){
   // l'UI lit le barème depuis la constante : changer CREDIT_COSTS suffit
   const c1 = document.getElementById('avGenBtnCost');    if (c1) c1.textContent = CREDIT_COSTS.imgMedium + ' crédits';
@@ -17758,7 +17760,7 @@ async function _avGenGenerate(){
     const url = _avGenRefs.length
       ? await _avGenCallGptEdits(token, fullPrompt)
       : await _avGenCallGpt(token, fullPrompt);
-    _avGenUrl = url; _avGenHD = false;
+    _avGenUrl = url; _avGenHD = false; _avGen4KDone = false;
     const img = document.getElementById('avGenImg'); if (img) img.src = url;
     const res = document.getElementById('avGenResult'); if (res) res.style.display = 'block';
     // nouvelle image → le bouton « Améliorer les détails » se réarme
@@ -17881,6 +17883,44 @@ async function _avGenUpscale(btn){
   }finally{
     _avGenBusy = false;
     if (btn) btn.disabled = _avGenHD;
+  }
+}
+// « Détail en 4K » — passe Nano Banana Pro 4K (gemini-3-pro-image) sur l'avatar
+// généré : macro-détail réel (pores, duvet, iris…) identité/pose/texte VERROUILLÉS.
+// Moteur génératif 4K de Google, distinct de « Améliorer les détails » (AuraSR,
+// non génératif). Coût 5 cr (comme Images IA « Améliorer en 4K »).
+async function _avGen4K(btn){
+  if (!_avGenUrl){ toast('Génère un avatar d\'abord'); return; }
+  if (_avGen4KDone){ toast('Déjà passé en 4K sur cette image'); return; }
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  if (!['elite','developer'].includes(plan)){ toast('Le détail 4K est réservé au plan Élite'); try{ openUpgradeModal(); }catch(_){} return; }
+  if (_avGenBusy){ toast('Une opération est déjà en cours — patiente'); return; }
+  creditsFlowBegin();
+  if (!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'détail 4K avatar'))) return;
+  _avGenBusy = true;
+  const orig = btn ? btn.innerHTML : '';
+  if (btn){ btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Passage en 4K… (~40 s)'; }
+  try{
+    let src = _avGenUrl;
+    if (!/^data:/.test(src)){
+      const resp = await fetch(src); const blob = await resp.blob();
+      src = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.readAsDataURL(blob); });
+    }
+    const token = (await sb.auth.getSession())?.data?.session?.access_token;
+    const up = await _nbRefine4K(token, src, '9:16');
+    if (!up) throw new Error('Nano Banana Pro : aucune image renvoyée');
+    _avGenUrl = up; _avGen4KDone = true; _avGenHD = true;
+    const img = document.getElementById('avGenImg'); if (img) img.src = up;
+    creditsFlowDone();
+    toast('Passé en 4K — Nano Banana Pro');
+    if (btn){ btn.style.opacity = '.55'; btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>4K fait'; }
+  }catch(e){
+    console.error('avatar 4K:', e);
+    try{ await creditsFlowRefund('le passage en 4K a échoué'); }catch(_){}
+    toast('' + (typeof _imgFriendlyErr === 'function' ? _imgFriendlyErr(e && e.message) : ((e && e.message) || e)));
+    if (btn){ btn.innerHTML = orig; btn.disabled = false; btn.style.opacity = '1'; }
+  }finally{
+    _avGenBusy = false;
   }
 }
 async function _avGenDownload(){
