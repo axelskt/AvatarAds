@@ -562,6 +562,17 @@ async function composeGenSubs(jobDir, outPath, plan) {
   plan.subs = plan.subs || {}
   if (!Number(plan.subs.totalDuration)) plan.subs.totalDuration = D
 
+  // #vitesse (Axel 30/08) : on rend au fps de la SOURCE (Hedra sort en 25) au lieu de 50. Rendre
+  // 54 s à 50 fps = 2700 frames capturées une à une dans Chromium (~2× plus long) pour une vidéo
+  // qui n'a que ~25 images/s de contenu → AUCUN gain de qualité. On borne 24–30 fps.
+  let genFps = 30
+  try {
+    const rfr = ffprobe(orig, 'stream=r_frame_rate').split('\n').map((s) => s.trim()).find((s) => /^\d+\/\d+$/.test(s))
+    if (rfr) { const [n, d] = rfr.split('/').map(Number); if (n > 0 && d > 0) genFps = Math.round(n / d) }
+  } catch (_) {}
+  genFps = Math.min(30, Math.max(24, genFps || 30))
+  console.log(`▶ gen-subs : rendu à ${genFps} fps (source), durée ${D}s`)
+
   // ── CHEMIN RAPIDE : « uniquement vidéo » (aucun sous-titre à graver) ─────────
   // Pas besoin d'HyperFrames (qui re-rend chaque frame dans Chromium, ~1-2 min) :
   // on normalise 1080×1920 + on GARDE l'audio de la vidéo d'origine + faststart
@@ -576,7 +587,7 @@ async function composeGenSubs(jobDir, outPath, plan) {
     try { _streamsDbg = ffprobe(orig, 'stream=index,codec_type,codec_name').replace(/\n/g, ' | ') } catch (_) {}
     const baseHasAudioF = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
     console.log(`▶ gen-subs source AUDIO = ${baseHasAudioF ? 'OUI' : 'NON (source muette)'} · streams: ${_streamsDbg}`)
-    const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS}`
+    const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}`
     const argsF = ['-v', 'error', '-y', '-i', orig, '-vf', vf,
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p']
     if (baseHasAudioF) argsF.push('-map', '0:v:0', '-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
@@ -594,7 +605,7 @@ async function composeGenSubs(jobDir, outPath, plan) {
     // 1. base normalisée 1080×1920 @ FPS, SANS audio → clip <video> propre à
     //    extraire (fps=50 comme partout ; l'audio viendra de l'original au mux).
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig,
-      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS}`,
+      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}`,
       '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
       '-movflags', '+faststart', join(proj, 'media', 'base.mp4')])
 
@@ -622,7 +633,7 @@ async function composeGenSubs(jobDir, outPath, plan) {
     const visual = join(proj, 'visual.mp4')
     for (let essai = 1; ; essai++) {
       try {
-        sh(`${HF_CMD} render --quality high --fps ${FPS}${wk} --output visual.mp4`, proj, envRendu)
+        sh(`${HF_CMD} render --quality high --fps ${genFps}${wk} --output visual.mp4`, proj, envRendu)
         break
       } catch (e) {
         const stderr = String((e && e.stderr) || '')
