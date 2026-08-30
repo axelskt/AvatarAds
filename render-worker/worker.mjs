@@ -566,7 +566,12 @@ async function composeGenSubs(jobDir, outPath, plan) {
   // HyperFrames complet ci-dessous.
   const _hasSubs = Array.isArray(plan.subs.groups) && plan.subs.groups.length > 0
   if (!_hasSubs) {
+    // DIAGNOSTIC (retours Axel « pas de son ») : dit clairement si la vidéo SOURCE
+    // porte une piste audio. Si NON → il n'y a rien à conserver (source muette).
+    let _streamsDbg = ''
+    try { _streamsDbg = ffprobe(orig, 'stream=index,codec_type,codec_name').replace(/\n/g, ' | ') } catch (_) {}
     const baseHasAudioF = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
+    console.log(`▶ gen-subs source AUDIO = ${baseHasAudioF ? 'OUI' : 'NON (source muette)'} · streams: ${_streamsDbg}`)
     const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS}`
     const argsF = ['-v', 'error', '-y', '-i', orig, '-vf', vf,
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p']
