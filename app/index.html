@@ -2540,8 +2540,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </div>
               </div>
               <div class="row" style="gap:8px;align-items:stretch">
-                <button id="composeBtn" onclick="composeVideo(this)" style="flex:1.7;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
-                <button onclick="nav('library')" style="flex:1;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s" onmouseover="this.style.borderColor='var(--border-2)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Bibliothèque</button>
+                <button id="composeBtn" onclick="composeVideo(this)" style="flex:1;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
               </div>
               <button onclick="genOpenMontageIA()" style="width:100%;margin-top:8px;padding:13px;background:#141414;border:1.5px solid rgba(255,107,53,.75);border-radius:12px;color:#FF6B35;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#1c1310'" onmouseout="this.style.background='#141414'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Envoyer vers Montage IA</button>
               <div id="composeProgressWrap" style="display:none;margin-top:8px">
@@ -24405,7 +24404,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     });
 
     setStage('Finalisation…', 99);
-    await new Promise(resolve => { recorder.onstop = resolve; recorder.stop(); });
+    // Sécurité Safari (30/08) : si onstop ne se déclenche pas, on ne reste pas bloqué —
+    // timeout 8 s (stop() a déjà flushé le dernier chunk via ondataavailable en pratique).
+    await new Promise(resolve => { let _s=false; const _f=()=>{ if(_s)return; _s=true; resolve(); }; recorder.onstop=_f; try{ recorder.stop(); }catch(_){ _f(); } setTimeout(_f, 8000); });
     if(audioEl2) audioEl2.pause();
     if(audioCtx) audioCtx.close();
     hedraVid.pause();
@@ -24418,9 +24419,14 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
     window._lastComposedBlob = mrBlob;
 
-    // FFmpeg post-process : CFR 30fps + yuv420p + H.264 main
+    // FFmpeg post-process : CFR 30fps + yuv420p + H.264 main.
+    // 99% BLOQUÉ (Safari, 30/08) : ffmpeg.wasm single-thread (pas de SharedArrayBuffer sur
+    // Pages) ré-encode une vidéo longue en PLUSIEURS MINUTES → on SAUTE l'optimisation dès
+    // que ce serait lent (mono-thread OU durée > 12 s) et on livre le blob MediaRecorder brut
+    // (déjà H.264, lisible + téléchargeable). Optimisation seulement en multi-thread ET courte.
     let ffBlob = mrBlob;
-    try {
+    const _ffFast = (typeof self !== 'undefined' && self.crossOriginIsolated) || totalDuration <= 12;
+    if(_ffFast) try {
       setStage('Optimisation TikTok…', 99);
       toast('Optimisation TikTok en cours…');
       await _loadFFmpeg();
@@ -24450,6 +24456,11 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   }
 
   window._aaPublishBlob = finalBlob; // 📤 dispo dans le module Publier (#116)
+  // Auto-enregistrement Bibliothèque (Axel 30/08 : plus de bouton, la vidéo COMPOSÉE —
+  // avec sous-titres — s'enregistre toute seule). Non bloquant.
+  if(typeof _libAutoSaveVideo === 'function'){
+    (async()=>{ try{ await _libAutoSaveVideo(finalBlob, 'Générateur ' + new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}), ['Générateur','9:16'], '🎬', 'AVATAR'); }catch(e){ console.warn('compose autosave:', e); } })();
+  }
   const url = URL.createObjectURL(finalBlob);
   results.composedUrl = url;
   document.getElementById('hedraVideo').src = url;
