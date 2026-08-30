@@ -11007,14 +11007,15 @@ async function recToggle(){
 async function recStartRecording(){
   try{
     if(recState==='playing') recStopPlayback();
-    // #hifi4 (Axel 30/08) : on DÉSACTIVE echoCancellation ET noiseSuppression, on garde SEULEMENT
-    // autoGainControl (le niveau). Sur macOS, echoCancellation fait passer le micro par l'unité
-    // « VoiceProcessingIO » → traitement voix d'appel = voix CREUSE / « sous l'eau » (Axel : « je parle
-    // sous l'eau », inchangé quels que soient nos réglages POST-capture → c'est bien la CAPTURE). NB : si
-    // macOS force « Isolation de la voix » (Centre de contrôle → Mode micro), AUCUN flag ne le corrige :
-    // à mettre sur « Standard ». L'ancien essai « tout coupé » semblait casser (5 s vides) mais c'était en
-    // réalité le bug du seuil de silence (corrigé) qui mangeait le son faible ; ici on garde AGC pour le niveau.
-    recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:true }, video:false });
+    // #hifi5 (Axel 30/08) : on désactive les TROIS traitements navigateur — chacun MESURÉ comme coupable :
+    //  • echoCancellation → sur macOS, route le micro par VoiceProcessingIO = voix CREUSE / « sous l'eau »
+    //    (le vrai coupable : « sous l'eau » inchangé quels que soient nos réglages POST-capture → c'est la CAPTURE).
+    //  • autoGainControl → RAMPE le gain sur ~6 s (mesuré -45 → -17 dBFS) = « le volume monte petit à petit »
+    //    + « 5 premières secondes non captées » (encore trop bas). Coupé → niveau CONSTANT dès t=0.
+    //  • noiseSuppression → gating qui hache/warble la voix.
+    // Capture brute un peu basse → niveau repris par « Volume constant » (_recNormalizeLevel) ; le bug du
+    // seuil de silence qui « mangeait » le son faible est corrigé (seuil = plancher de bruit, pas le max).
+    recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false }, video:false });
     try{ const _st=recStream.getAudioTracks && recStream.getAudioTracks()[0]; if(_st && _st.getSettings) console.log('🎙 micro réglages Safari:', _st.getSettings()); }catch(_){}
     recCtx = new AudioContext();
     if(recCtx.state === 'suspended'){ try{ await recCtx.resume(); }catch(_){} }
@@ -11303,7 +11304,7 @@ function recCancelReplace(){
 
 async function recStartReplacing(){
   try{
-    recReplaceStream=await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:true }, video:false });
+    recReplaceStream=await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false }, video:false });
     recReplaceChunks=[];
     recReplaceRecorder=new MediaRecorder(recReplaceStream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
     recReplaceRecorder.ondataavailable=e=>{ if(e.data.size>0) recReplaceChunks.push(e.data); };
