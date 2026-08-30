@@ -11199,7 +11199,7 @@ function recLiveLoop(){
 // #sil-agg (Axel 30/08) : « trop de blanc restait » → détection plus agressive :
 // seuil RMS relevé 0.007→0.013 (attrape le bruit de fond / room tone), silence min
 // abaissé 380→230 ms (coupe les blancs plus courts), padding gardé 80→48 ms (moins de blanc laissé).
-function _recRemoveSilence(buffer, threshold, minSilMs=1000, keepSilMs=200){
+function _recRemoveSilence(buffer, threshold, minSilMs=400, keepSilMs=80){   // aligné sur le Nettoyage audio (400 ms / 80 ms / -40 dB)
   const sr=buffer.sampleRate;
   const input=buffer.getChannelData(0);
   const win=Math.max(1,Math.round(sr*0.02)); // fenêtres ~20 ms
@@ -11215,7 +11215,7 @@ function _recRemoveSilence(buffer, threshold, minSilMs=1000, keepSilMs=200){
   // « pas fluide » (mesuré : 41 % coupé sur la prise d'Axel, 31 % même sur une voix propre de dictaphone).
   const _sorted=Array.from(rms).filter(x=>x>0).sort((a,b)=>a-b);
   const _nf=_sorted.length?_sorted[Math.floor(_sorted.length*0.1)]:0;
-  const thr=Math.min(0.02, Math.max(0.006, _nf*2.2));
+  const thr=Math.min(0.02, Math.max(0.01, _nf*2.2));   // plancher 0,01 = -40 dB comme le Nettoyage audio
   const voiced=new Array(nWin); for(let w=0;w<nWin;w++) voiced[w]=rms[w]>=thr;
   // 2) on GARDE tout par défaut ; on ne coupe QUE le MILIEU des silences LONGS (> minSilMs), en
   //    laissant keepSilMs de respiration de chaque côté → les pauses courtes entre les mots
@@ -11344,13 +11344,12 @@ function _recProcessChain(raw){
   try{ b = _recLowpass(_recLowpass(b, 13000), 13000); }catch(_){}
   // 1b) EQ « belle voix » (présence + air), gentille.
   try{ b = _recVoiceEQ(b); }catch(_){}
-  // 2) NIVEAU D'ABORD : capture brute ~-30 dB (et rampe d'AGC) → -15 dB CONSTANT. On le fait AVANT les
-  //    silences pour deux raisons : (a) le plancher de bruit est estimé sur TOUT le signal (silences
-  //    inclus) = plus juste ; (b) la détection de silence se fait ensuite sur un signal à niveau STABLE
-  //    (parole ~-15, vrai silence ~0) = fiable, elle ne prend plus la voix faible du début pour du silence.
-  try{ b = _recNormalizeLevel(b, !!window._recTreatOn); }catch(_){}
-  // 3) coupe des silences (optionnel), sur le signal déjà nivelé.
+  // 2) coupe des silences AVANT le nivellement (aligné sur le Nettoyage audio : 400 ms / 80 ms / -40 dB).
+  //    Fiable maintenant que le micro pré-chauffé donne un niveau CONSTANT (plus de rampe qui faussait le
+  //    plancher de bruit), et on coupe les vraies pauses AVANT que le leveling ne les remonte.
   if(recSilenceOn){ try{ b = _recRemoveSilence(b); }catch(_){} }
+  // 3) NIVEAU : -17 dB constant + « belle voix » déjà EQ. Volume constant ON = leveling par blocs.
+  try{ b = _recNormalizeLevel(b, !!window._recTreatOn); }catch(_){}
   return b;
 }
 
