@@ -10860,6 +10860,12 @@ let recCtx            = null;
 let recStream         = null;
 let recMediaRecorder  = null;
 let recChunks         = [];
+let recScriptNode     = null;   // capture PCM BRUTE (ScriptProcessor) — remplace MediaRecorder pour le micro
+let recCaptureSrc     = null;
+let recCaptureSink    = null;
+let recCaptureChunks  = [];
+let recCapturing      = false;
+let recCaptureRate    = 0;
 let recAudioBuffer    = null;   // buffer traité (silences supprimés)
 let recRawBuffer      = null;   // buffer brut
 let recDenoisedBuffer = null;   // buffer brut DÉBRUITÉ (RNNoise) — source du pipeline si « Réduire le bruit » ON
@@ -11009,28 +11015,24 @@ async function recStartRecording(){
     recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:false, autoGainControl:true }, video:false });
     try{ const _st=recStream.getAudioTracks && recStream.getAudioTracks()[0]; if(_st && _st.getSettings) console.log('🎙 micro réglages Safari:', _st.getSettings()); }catch(_){}
     recCtx = new AudioContext();
+    if(recCtx.state === 'suspended'){ try{ await recCtx.resume(); }catch(_){} }
     recLiveAnalyser = recCtx.createAnalyser(); recLiveAnalyser.fftSize=256;
     recLiveData = new Float32Array(recLiveAnalyser.frequencyBinCount);
-    const src = recCtx.createMediaStreamSource(recStream);
-    src.connect(recLiveAnalyser);
-    recChunks=[];
-    // ── ON N'IMPOSE PAS UN FORMAT QUE LE NAVIGATEUR NE CONNAÎT PAS ────────
-    // Axel, 03/08 : « l'enregistreur vocal est bugué ». Le code testait deux
-    // formats WebM et, si aucun n'était supporté, passait quand même
-    // 'audio/webm' au constructeur. Safari ne supporte NI l'un NI l'autre — il
-    // enregistre en audio/mp4. Le constructeur levait donc une exception et
-    // l'enregistreur ne démarrait pas du tout sur son navigateur.
-    // On prend maintenant le premier format réellement supporté ; en dernier
-    // recours on laisse le navigateur choisir seul (constructeur sans options),
-    // ce qui marche partout.
-    const _recFormats = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2', 'audio/ogg;codecs=opus'];
-    const _recMime = _recFormats.find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch(_) { return false; } }) || '';
-    recMediaRecorder = _recMime ? new MediaRecorder(recStream, { mimeType: _recMime }) : new MediaRecorder(recStream);
-    window._recMimeUtilise = recMediaRecorder.mimeType || _recMime || 'audio/webm';
-    console.log('🎙 enregistrement en', window._recMimeUtilise);
-    recMediaRecorder.ondataavailable = e=>{ if(e.data.size>0) recChunks.push(e.data); };
-    recMediaRecorder.onstop = recOnStop;
-    recMediaRecorder.start(100);
+    recCaptureSrc = recCtx.createMediaStreamSource(recStream);
+    recCaptureSrc.connect(recLiveAnalyser);
+    // #pcm (Axel 30/08) : CAPTURE PCM BRUTE (non compressée) au lieu de MediaRecorder. MediaRecorder
+    // encode en AAC/Opus lossy (~128 kbps) → c'est ÇA qui « abîmait » le son à la source (pas comme un
+    // dictaphone). Un ScriptProcessor recopie les samples float du micro tels quels → qualité maximale.
+    recCaptureRate = recCtx.sampleRate;
+    recCaptureChunks = []; recCapturing = true;
+    recScriptNode = recCtx.createScriptProcessor(4096, 1, 1);
+    recScriptNode.onaudioprocess = (e) => {
+      if(!recCapturing) return;
+      recCaptureChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));   // COPIE (le buffer est réutilisé)
+    };
+    // sink à gain 0 : indispensable pour que onaudioprocess se déclenche, SANS renvoyer le micro dans les HP.
+    recCaptureSink = recCtx.createGain(); recCaptureSink.gain.value = 0;
+    recCaptureSrc.connect(recScriptNode); recScriptNode.connect(recCaptureSink); recCaptureSink.connect(recCtx.destination);
     recRecStartTime=Date.now(); recLiveHistory=[];
     recState='recording'; recUpdateUI();
     recLiveLoop();
@@ -11040,24 +11042,44 @@ async function recStartRecording(){
   }
 }
 
-function recStopRecording(){
-  if(recMediaRecorder&&recMediaRecorder.state!=='inactive') recMediaRecorder.stop();
+async function recStopRecording(){
+  recCapturing = false;
+  try{ if(recScriptNode){ recScriptNode.onaudioprocess=null; recScriptNode.disconnect(); } }catch(_){}
+  try{ if(recCaptureSink) recCaptureSink.disconnect(); }catch(_){}
+  try{ if(recCaptureSrc) recCaptureSrc.disconnect(); }catch(_){}
   if(recStream) recStream.getTracks().forEach(t=>t.stop());
   recState='processing'; recUpdateUI();
   cancelAnimationFrame(recAnimId);
+  // assembler les samples PCM captés → recRawBuffer (au sample rate du contexte), puis finaliser
+  try{
+    const total = recCaptureChunks.reduce((a,c)=>a+c.length,0);
+    if(!total){ toast('Rien n\'a été capté — réessaie'); recState='idle'; recUpdateUI(); return; }
+    const pcm = new Float32Array(total); let off=0;
+    for(const c of recCaptureChunks){ pcm.set(c, off); off+=c.length; }
+    recCaptureChunks = [];
+    recRawBuffer = recCtx.createBuffer(1, total, recCaptureRate || recCtx.sampleRate);
+    recRawBuffer.getChannelData(0).set(pcm);
+    window._recBlobOrigine = null;   // plus de « compressé d'origine » : on est en PCM lossless
+    await _recFinalizeBuffer();
+  }catch(e){ console.error('[rec] stop:', e); toast('Erreur enregistrement — '+((e&&e.message)||e)); recState='idle'; recUpdateUI(); }
 }
 
+// (Conservé pour compat MediaRecorder — le micro passe désormais par la capture PCM ci-dessus.)
 async function recOnStop(){
-  // le type RÉEL de ce qui a été capté — 'audio/webm' en dur produisait un
-  // fichier mal étiqueté sur Safari, illisible ailleurs.
-  const blob = new Blob(recChunks, { type: window._recMimeUtilise || 'audio/webm' });
-  window._recBlobOrigine = blob;   // gardé tel quel : c'est déjà de l'audio compressé
-  const arrBuf = await blob.arrayBuffer();
-  recRawBuffer = await recCtx.decodeAudioData(arrBuf);
+  try{
+    const blob = new Blob(recChunks, { type: window._recMimeUtilise || 'audio/webm' });
+    window._recBlobOrigine = blob;
+    recRawBuffer = await recCtx.decodeAudioData(await blob.arrayBuffer());
+    await _recFinalizeBuffer();
+  }catch(e){ console.error('[rec] onstop:', e); }
+}
+
+// Finalise recRawBuffer : débruitage → silences → volume constant, puis met à jour l'UI.
+// Utilisé par la capture PCM (micro) ET l'import de fichier.
+async function _recFinalizeBuffer(){
   recDenoisedBuffer = null;
   if(window._recDenoiseOn){ try{ recDenoisedBuffer = await _recDenoiseBuffer(recRawBuffer); }catch(e){ console.warn('[rec] débruitage:', e); } }
-  const processed = _recProcessChain(_recSourceBuffer());
-  recAudioBuffer = processed;
+  recAudioBuffer = _recProcessChain(_recSourceBuffer());
   const removed = recRawBuffer.duration - recAudioBuffer.duration;
   const stats=document.getElementById('recStatsDisplay');
   if(stats){
@@ -11069,12 +11091,9 @@ async function recOnStop(){
   recState='recorded'; recUpdateUI();
   recRenderWaveform(recAudioBuffer, 0);
   _recUpdateTime(0, recAudioBuffer.duration);
-  document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
-  document.getElementById('recTimeline').style.display='none'; // single segment = no timeline yet
+  const dd=document.getElementById('recDurDisplay'); if(dd) dd.textContent='/ '+_recFmt(recAudioBuffer.duration);
+  const tl=document.getElementById('recTimeline'); if(tl) tl.style.display='none';
   toast('Enregistrement prêt');
-  // #audio-final (Axel 30/08) : on NE sauvegarde PLUS chaque enregistrement (ça inondait la
-  // Bibliothèque de « Audio 1..N »). Seul l'audio FINAL — celui qu'on « Utilise » — est sauvegardé,
-  // dans _gvRecUse. (Idem le flux « Utiliser cet audio » plus bas.)
 }
 
 // ── Import fichier audio/vidéo dans l'enregistreur ──
