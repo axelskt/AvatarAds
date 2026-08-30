@@ -11058,7 +11058,7 @@ async function recStartRecording(){
       if(recState!=='recording') return;   // arrêté pendant le warm-up
       recCaptureChunks = []; recCapturing = true; recRecStartTime = Date.now();
       if(typeof toast==='function') toast('Enregistrement en cours…');
-    }, 600);
+    }, 1500);   // 1,5 s : l'AGC de Safari met ~2,5 s à se stabiliser → on jette le plus gros de la rampe
   }catch(e){
     toast('Micro inaccessible — '+e.message);
   }
@@ -11261,16 +11261,15 @@ function _recNormalizeLevel(buffer, flat){
   const env=new Float32Array(nE); let maxE=0;
   for(let k=0;k<nE;k++){ const i=k*eWin,e=Math.min(i+eWin,ref.length); let s=0; for(let j=i;j<e;j++) s+=ref[j]*ref[j]; env[k]=Math.sqrt(s/Math.max(1,e-i)); if(env[k]>maxE) maxE=env[k]; }
   if(!(maxE>0)) return buffer;
-  const target=0.18;                            // ~-15 dBFS RMS (niveau d'un dictaphone)
-  // plancher de bruit = VRAI plancher (10ᵉ percentile des fenêtres), PAS maxE*0.05. L'ancien (maxE*0.05)
-  // montait avec les parties fortes et classait la voix FAIBLE du début (ex -35 dB) comme « silence » →
-  // elle n'était pas remontée → saut de volume brutal à ~2 s. Corrigé : la voix faible est nivelée aussi.
+  // niveau de PAROLE = 75ᵉ percentile des fenêtres (robuste). ⚠ NE PAS utiliser la médiane : elle est
+  // tirée vers le bas par le début faible → gain global trop fort → parties fortes SATURÉES = « pourri »
+  // (mesuré file 12 : mean -10 dB, 5,5 % au plafond). Sur la parole, le gain reste sûr.
   const _se=Array.from(env).filter(x=>x>0).sort((a,b)=>a-b);
+  const speech=_se.length ? (_se[Math.floor(_se.length*0.75)]||_se[_se.length-1]) : maxE;
   const _nf=_se.length?_se[Math.floor(_se.length*0.1)]:0;
-  const noise=Math.max(0.004, Math.min(_nf*1.5, 0.02));   // sous ça = vrai silence → gain qui retombe (pas de boost du souffle)
-  const spoken=Array.from(env).filter(b=>b>=noise).sort((a,b)=>a-b);
-  const med=spoken.length ? spoken[Math.floor(spoken.length*0.5)] : maxE;
-  const gGlobal=Math.max(0.7, Math.min(med>0?target/med:1, 30));
+  const noise=Math.max(0.004, Math.min(_nf*1.5, 0.02));   // sous ça = vrai silence → gain qui retombe
+  const target=0.15;                            // ~-16,5 dBFS (MARGE sous 0 → le limiteur n'écrase plus)
+  const G=Math.max(0.5, Math.min(speech>0?target/speech:1, 12));   // gain global SÛR, calé sur la parole
   let envS=null;
   if(flat){
     const sm=Math.max(1,Math.round(0.6/0.05));  // lissage ±0,6 s → leveling LENT (pas de pompage)
@@ -11278,13 +11277,14 @@ function _recNormalizeLevel(buffer, flat){
     for(let k=0;k<nE;k++){ let s=0,c=0; for(let d=-sm;d<=sm;d++){ const kk=k+d; if(kk>=0&&kk<nE){ s+=env[kk]; c++; } } envS[k]=s/Math.max(1,c); }
   }
   const out=recCtx.createBuffer(ch,buffer.length,sr);
-  const knee=0.7, ceil=0.97;
+  const knee=0.6, ceil=0.89;                    // MARGE (avant 0.7/0.97) → nettement moins de compression
   for(let c=0;c<ch;c++){
     const d=buffer.getChannelData(c), o=out.getChannelData(c);
     for(let i=0;i<d.length;i++){
       let g;
-      if(flat){ const le=envS[Math.min(nE-1,(i/eWin)|0)]; g=(le>=noise)?Math.min(target/le, 40):(target/noise)*(le/noise); }   // cap 40 (avant gGlobal*2.5 = trop bas → le début faible n'atteignait pas la cible = la « courbe » de volume)
-      else { g=gGlobal; }
+      // flat : gain LOCAL BORNÉ autour du gain global G (jamais > G×4) → aplatit sans sur-booster = pas de distorsion.
+      if(flat){ const le=envS[Math.min(nE-1,(i/eWin)|0)]; g=(le>=noise)?(target/le):(target/noise)*(le/noise); g=Math.max(G*0.35, Math.min(g, G*4, 18)); }
+      else { g=G; }
       if(!(g>0)) g=0;
       let x=d[i]*g;
       if(x>knee)       x=knee+(ceil-knee)*Math.tanh((x-knee)/(ceil-knee));
