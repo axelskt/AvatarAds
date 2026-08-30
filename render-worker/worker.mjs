@@ -20,6 +20,7 @@ import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildComposition } from './build-composition.mjs'
+import { buildGenSubsComposition } from './gen-subs-composition.mjs'
 // EXIGE_GLOBAL et ANIMS voyagent avec la dérivation : la passe de finition doit
 // juger une correction avec EXACTEMENT le même garde-fou que le reste de la
 // chaîne, sinon elle rouvrirait par la fenêtre ce qu'on ferme à la porte.
@@ -537,6 +538,94 @@ async function composeMotionBg(jobDir, outPath, plan) {
 
 // utilisateur du rendu en cours (null en --local / tests) — lu par la facturation du lipsync
 let RENDER_USER = null
+// ── Compose SERVEUR du Générateur (__compose:'gen-subs') ─────────────────────
+// GRAVE les sous-titres sur la vidéo générée EXACTEMENT comme l'aperçu client
+// (_cvSubs porté verbatim dans gen-subs-composition.mjs, rendu par HyperFrames
+// dans Chromium), puis MUX l'audio de la vidéo D'ORIGINE avec ffmpeg. Raison
+// d'être : le rendu client échouait sur Safari/iOS (WebCodecs AudioEncoder +
+// decodeAudioData ne savent pas encoder l'audio d'un conteneur MP4) → vidéo
+// muette ou « trop petite ». Côté serveur, ffmpeg copie/réencode l'audio sans
+// problème → son fiable PARTOUT. Aucun crédit ici : la vidéo est déjà payée à
+// la génération (comme composeVideo côté client, qui est gratuit).
+// jobDir attendu : base.mp4 = vidéo du Générateur ; plan.subs = données sous-titres.
+async function composeGenSubs(jobDir, outPath, plan) {
+  const orig = join(jobDir, 'base.mp4')
+  if (!existsSync(orig)) throw new Error('base.mp4 manquant (compose gen-subs)')
+  const W = 1080, H = 1920
+  const baseDur = parseFloat(ffprobe(orig, 'format=duration')) || Number(plan.duration) || 5
+  const D = Math.round(Math.min(Number(plan.duration) || baseDur, baseDur) * 100) / 100
+  plan.duration = D
+  plan.subs = plan.subs || {}
+  if (!Number(plan.subs.totalDuration)) plan.subs.totalDuration = D
+
+  const proj = mkdtempSync(join(tmpdir(), 'aa-gensubs-'))
+  try {
+    mkdirSync(join(proj, 'media'), { recursive: true })
+
+    // 1. base normalisée 1080×1920 @ FPS, SANS audio → clip <video> propre à
+    //    extraire (fps=50 comme partout ; l'audio viendra de l'original au mux).
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig,
+      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS}`,
+      '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart', join(proj, 'media', 'base.mp4')])
+
+    // 2. polices embarquées (substituts des polices SYSTÈME du client : le
+    //    conteneur n'a que fonts-liberation) — cf. gen-subs-composition.mjs.
+    const fontsSrc = join(HERE, 'assets', 'fonts')
+    if (existsSync(fontsSrc)) {
+      mkdirSync(join(proj, 'fonts'), { recursive: true })
+      for (const f of readdirSync(fontsSrc)) copyFileSync(join(fontsSrc, f), join(proj, 'fonts', f))
+    }
+
+    // 3. composition HyperFrames + métas
+    writeFileSync(join(proj, 'index.html'), buildGenSubsComposition(plan))
+    writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-gensubs', name: 'aa-gensubs', createdAt: new Date().toISOString() }))
+    writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
+      $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',
+      paths: { blocks: 'compositions', components: 'compositions/components', assets: 'media' },
+    }, null, 2))
+
+    // 4. rendu visuel headless — mêmes garde-fous que le montage (hf-ffmpeg qui
+    //    plafonne les threads du décodeur + 3 tentatives sur extraction incomplète).
+    const wk = process.env.RENDER_WORKERS ? ` --workers ${parseInt(process.env.RENDER_WORKERS, 10) || 2}` : ''
+    const FFMPEG_PLAFONNE = '/usr/local/bin/hf-ffmpeg'
+    const envRendu = existsSync(FFMPEG_PLAFONNE) ? { HYPERFRAMES_FFMPEG_PATH: FFMPEG_PLAFONNE } : {}
+    const visual = join(proj, 'visual.mp4')
+    for (let essai = 1; ; essai++) {
+      try {
+        sh(`${HF_CMD} render --quality high --fps ${FPS}${wk} --output visual.mp4`, proj, envRendu)
+        break
+      } catch (e) {
+        const stderr = String((e && e.stderr) || '')
+        const couverture = /VideoFrameCoverageError|captured \d+ of expected \d+ frames/.test(stderr)
+        if (!couverture || essai >= 3) throw e
+        console.warn(`⟲ gen-subs : extraction incomplète (essai ${essai}/3) — on relance`)
+        await new Promise((r) => setTimeout(r, 4000))
+      }
+    }
+    if (!existsSync(visual)) throw new Error('gen-subs : rendu visuel échoué (visual.mp4 absent)')
+
+    // 5. mux : vidéo (sous-titres gravés) + AUDIO de la vidéo d'origine.
+    //    -map 1:a:0? = PREMIÈRE piste audio seulement (une source réimportée peut
+    //    porter une 2e piste « none » qui ferait échouer — même piège iPhone que
+    //    motion-split). +faststart obligatoire (sinon les apps mobiles refusent).
+    const baseHasAudio = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
+    if (baseHasAudio) {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', visual, '-i', orig,
+        '-map', '0:v:0', '-map', '1:a:0?', '-c:v', 'copy',
+        '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2',
+        '-t', String(D), '-movflags', '+faststart', outPath], { stdio: 'pipe' })
+    } else {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', visual,
+        '-map', '0:v:0', '-c:v', 'copy', '-an',
+        '-t', String(D), '-movflags', '+faststart', outPath], { stdio: 'pipe' })
+    }
+    console.log(`✅ gen-subs (sous-titres gravés + audio d'origine, ${D}s) → ${outPath}`)
+  } finally {
+    try { rmSync(proj, { recursive: true, force: true }) } catch (_) { /* nettoyage best-effort */ }
+  }
+}
+
 export async function renderJob(jobDir, outPath, { draft = false, userId = null } = {}) {
   RENDER_USER = userId || null
   const t0 = Date.now()
@@ -546,6 +635,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
   if (plan.__compose === 'motion-split') { await composeMotionSplit(jobDir, outPath, plan); return }
   // Motion Control « fond vidéo » : personnage détouré par-dessus la référence animée.
   if (plan.__compose === 'motion-bg') { await composeMotionBg(jobDir, outPath, plan); return }
+  // Générateur : grave les sous-titres (aperçu _cvSubs) sur la vidéo + mux audio d'origine.
+  if (plan.__compose === 'gen-subs') { await composeGenSubs(jobDir, outPath, plan); return }
 
   const basePath = join(jobDir, 'base.mp4')
   if (!existsSync(basePath)) throw new Error('base.mp4 manquant dans ' + jobDir)
