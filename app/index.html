@@ -2150,7 +2150,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <button id="ptab-reels" onclick="setPlatformPreview('reels')" style="padding:7px 15px;border-radius:10px;border:none;background:transparent;color:var(--text3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s">Reels</button>
             <button id="ptab-youtube" onclick="setPlatformPreview('youtube')" style="padding:7px 15px;border-radius:10px;border:none;background:transparent;color:var(--text3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s">YouTube</button>
             <button id="ptab-fbshort" onclick="setPlatformPreview('fbshort')" style="padding:7px 15px;border-radius:10px;border:none;background:transparent;color:var(--text3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s">Facebook</button>
-            <button id="ptab-linkedin" onclick="setPlatformPreview('linkedin')" style="padding:7px 15px;border-radius:10px;border:none;background:transparent;color:var(--text3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s">LinkedIn</button>
           </div>
           <!-- Tabs for Publication (Instagram/Meta) -->
           <div id="tabs-post" style="display:none;gap:4px;background:var(--panel-1);border:1px solid var(--border);border-radius:12px;padding:4px">
@@ -2251,55 +2250,70 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
                                           <!-- ── INSTAGRAM REELS (officiel) ── -->
               <div id="ui-reels" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
-                <div style="position:absolute;top:0;left:0;right:0;height:150px;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);z-index:41"></div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:230px;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);z-index:41"></div>
-                <div style="position:absolute;top:74px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:60">
-                  <span style="font-size:17px;font-weight:800;color:#fff">Reels</span>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div style="position:absolute;top:0;left:0;right:0;height:140px;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);z-index:41"></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:240px;background:linear-gradient(to top,rgba(0,0,0,.62),transparent);z-index:41"></div>
+                <div style="position:absolute;top:46px;left:0;right:0;display:flex;align-items:center;gap:11px;padding:0 14px;z-index:60">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  <span style="font-size:17px;font-weight:800;color:#fff;display:flex;align-items:center;gap:3px">Reels<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+                  <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:5px">Ami(e)s<span style="display:flex;align-items:center"><span style="width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#8a5a44,#2c1a12);border:1.5px solid #000"></span><span style="width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#556677,#1a2430);border:1.5px solid #000;margin-left:-5px"></span></span></span>
                 </div>
-                <div style="position:absolute;right:12px;bottom:86px;display:flex;flex-direction:column;align-items:center;gap:16px">
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">12K</div></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">840</div></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">2,1K</div></div>
-                  <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:2px;line-height:.2">···</div>
-                  <div style="width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:2px solid #fff;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                <div style="position:absolute;right:10px;bottom:98px;display:flex;flex-direction:column;align-items:center;gap:15px;z-index:55">
+                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">12K</div></div>
+                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">840</div></div>
+                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">2,1K</div></div>
+                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">5,3K</div></div>
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                  <div style="width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--accent-2),var(--accent));border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#1A0A02">A</div>
                 </div>
-                <div style="position:absolute;bottom:90px;left:18px;right:90px">
-                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
-                    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#1A0A02;flex-shrink:0">A</div>
-                    <span style="font-weight:700;font-size:13.5px;color:#fff" class="js-handle">avatarads.fr</span>
-                    <span style="border:1.5px solid rgba(255,255,255,.85);font-size:11px;font-weight:700;color:#fff;padding:3px 12px;border-radius:8px">Suivre</span>
+                <div style="position:absolute;bottom:78px;left:14px;right:60px;z-index:55">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#1A0A02;flex-shrink:0">A</div>
+                    <span class="js-handle" style="font-weight:700;font-size:13px;color:#fff">avatarads.fr</span>
+                    <span style="border:1.2px solid rgba(255,255,255,.85);font-size:11px;font-weight:700;color:#fff;padding:2px 10px;border-radius:7px">Suivre</span>
                   </div>
-                  <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.92)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Audio original · <span class="js-name">avatarads.fr</span></span></div>
+                  <div style="font-size:12px;color:rgba(255,255,255,.92);line-height:1.35">Découvre comment créer des vidéos virales avec l'IA…</div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;color:rgba(255,255,255,.9)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span class="js-name">avatarads.fr</span> · Audio original</div>
                 </div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:64px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-around;z-index:60"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><div style="width:40px;height:34px;border:2px solid #fff;border-radius:10px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="15" height="15" rx="4"/><path d="M3 8h18M8 3l2.5 5M14 3l2.5 5"/><path d="M10 11.5l4 2.3-4 2.3z" fill="#fff" stroke="none"/></svg><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:50px;background:#000;border-top:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:space-around;z-index:60">
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M10 8.5l5 3.5-5 3.5z" fill="#fff" stroke="none"/></svg>
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                  <div style="width:21px;height:21px;border-radius:50%;border:2px solid #fff;background:linear-gradient(135deg,#8a5a44,#2c1a12)"></div>
+                </div>
               </div>
-                                          <!-- ── YOUTUBE SHORTS (officiel) ── -->
+              <!-- ── INSTAGRAM REELS · calqué sur l'app réelle ── -->
               <div id="ui-youtube" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
-                <div style="position:absolute;top:0;left:0;right:0;height:150px;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);z-index:41"></div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:230px;background:linear-gradient(to top,rgba(0,0,0,.65),transparent);z-index:41"></div>
-                <div style="position:absolute;top:74px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:60">
-                  <span style="font-size:17px;font-weight:800;color:#fff">Shorts</span>
-                  <div style="display:flex;gap:16px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></div>
+                <div style="position:absolute;top:0;left:0;right:0;height:120px;background:linear-gradient(to bottom,rgba(0,0,0,.45),transparent);z-index:41"></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:250px;background:linear-gradient(to top,rgba(0,0,0,.66),transparent);z-index:41"></div>
+                <div style="position:absolute;top:46px;right:14px;display:flex;align-items:center;gap:16px;z-index:60">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="none"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
                 </div>
-                <div style="position:absolute;right:12px;bottom:86px;display:flex;flex-direction:column;align-items:center;gap:16px">
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 01-1-1v-9a1 1 0 011-1h3zm0 0l4-7a2 2 0 012 2v3h5.5a2 2 0 012 2.3l-1.3 7A2 2 0 0119.2 21H7"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">12K</div></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V3h3a1 1 0 011 1v9a1 1 0 01-1 1h-3zm0 0l-4 7a2 2 0 01-2-2v-3H5.5a2 2 0 01-2-2.3l1.3-7A2 2 0 016.8 3H17"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">J’aime pas</div></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">840</div></div>
-                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">Partager</div></div>
-                  <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#555,#111);border:3px solid #000;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                <div style="position:absolute;right:9px;bottom:80px;display:flex;flex-direction:column;align-items:center;gap:15px;z-index:55">
+                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">12K</div></div>
+                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">840</div></div>
+                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">Remixer</div></div>
+                  <div style="text-align:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">Partager</div></div>
+                  <div style="width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#5a3222,#000);border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                 </div>
-                <div style="position:absolute;bottom:88px;left:18px;right:90px">
-                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">
-                    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#1A0A02;flex-shrink:0">A</div>
-                    <span style="font-weight:700;font-size:13.5px;color:#fff" class="js-handle">avatarads.fr</span>
-                    <span style="background:#FF0033;color:#fff;font-size:11px;font-weight:700;padding:5px 15px;border-radius:999px">S’abonner</span>
+                <div style="position:absolute;bottom:62px;left:14px;right:64px;z-index:55">
+                  <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border-radius:20px;padding:5px 11px;margin-bottom:8px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span style="font-size:10.5px;color:#fff;font-weight:600">Recherchez ce que vous voyez</span></div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                    <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#1A0A02;flex-shrink:0">A</div>
+                    <span class="js-handle" style="font-weight:700;font-size:12.5px;color:#fff">avatarads.fr</span>
+                    <span style="background:#FF0033;color:#fff;font-size:10.5px;font-weight:700;padding:4px 12px;border-radius:999px">S'abonner</span>
                   </div>
-                  <div style="font-size:12px;color:rgba(255,255,255,.92)">Découvre comment… <b>#shorts</b></div>
+                  <div style="font-size:11.5px;color:rgba(255,255,255,.92);line-height:1.3">Découvre comment créer des vidéos virales… <b>#shorts</b></div>
                 </div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:64px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-around;z-index:60"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8.5l5 3.5-5 3.5z" fill="#fff" stroke="none"/><rect x="6" y="3" width="12" height="18" rx="5"/></svg><div style="width:50px;height:34px;border-radius:18px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8l5 3-5 3z" fill="#fff" stroke="none"/></svg><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:50px;background:#0f0f0f;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:flex-end;justify-content:space-around;padding-bottom:5px;z-index:60">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.7)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg><span style="font-size:8px;font-family:var(--font)">Accueil</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="4" y="3" width="16" height="18" rx="5"/><path d="M10 8.5l5 3.5-5 3.5z" fill="#0f0f0f"/></svg><span style="font-size:8px;font-family:var(--font)">Shorts</span></div>
+                  <div style="display:flex;align-items:center;justify-content:center"><div style="width:34px;height:22px;border-radius:11px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.7)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M17 9l4-2v10l-4-2"/></svg><span style="font-size:8px;font-family:var(--font)">Abonn.</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.7)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg><span style="font-size:8px;font-family:var(--font)">Vous</span></div>
+                </div>
               </div>
-              <!-- INSTAGRAM POST UI -->
               <div id="ui-instagram" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
                 <!-- Header -->
                 <div style="position:absolute;top:0;left:0;right:0;height:68px;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:space-between;padding:0 18px;padding-top:16px">
@@ -2332,59 +2346,37 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
                                           <!-- ── FACEBOOK REELS (officiel) ── -->
               <div id="ui-fbshort" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
-                <div style="position:absolute;top:0;left:0;right:0;height:150px;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);z-index:41"></div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:230px;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);z-index:41"></div>
-                <div style="position:absolute;top:74px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:60">
-                  <div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:#0866FF;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:17px;font-family:Georgia,serif">f</div><span style="font-size:16px;font-weight:800;color:#fff">Reels</span></div>
-                  <div style="display:flex;gap:16px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+                <div style="position:absolute;top:0;left:0;right:0;height:130px;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);z-index:41"></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:240px;background:linear-gradient(to top,rgba(0,0,0,.62),transparent);z-index:41"></div>
+                <div style="position:absolute;top:46px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 14px;z-index:60">
+                  <div style="display:flex;align-items:center;gap:10px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span style="font-size:19px;font-weight:800;color:#fff">Reels</span></div>
+                  <div style="display:flex;align-items:center;gap:16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="none"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></div>
                 </div>
-                <div style="position:absolute;right:12px;bottom:86px;display:flex;flex-direction:column;align-items:center;gap:20px">
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="#0866FF" stroke="#0866FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 01-1-1v-9a1 1 0 011-1h3zm0 0l4-7a2 2 0 012 2v3h5.5a2 2 0 012 2.3l-1.3 7A2 2 0 0119.2 21H7"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">12K</div></div>
-                  <div style="text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">840</div></div>
-                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">2,1K</div></div>
-                  <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:2px;line-height:.2">···</div>
-                  <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#555,#111);border:3px solid #0866FF;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                <div style="position:absolute;right:10px;bottom:92px;display:flex;flex-direction:column;align-items:center;gap:15px;z-index:55">
+                  <div style="text-align:center"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M2 9.5h3.5V21H2zM7 9.5l4-6.5c1.2 0 2 1 2 2v3h5.2c1.1 0 1.9 1 1.7 2.1l-1.4 6.9c-.2.9-1 1.5-1.9 1.5H7z"/></svg></div><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:3px">12K</div></div>
+                  <div style="text-align:center"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg></div><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:3px">840</div></div>
+                  <div style="text-align:center"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:3px">2,1K</div></div>
+                  <div style="text-align:center"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg></div><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:3px">385</div></div>
+                  <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></div>
                 </div>
-                <div style="position:absolute;bottom:90px;left:18px;right:90px">
-                  <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">
-                    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#1A0A02;flex-shrink:0">A</div>
-                    <span style="font-weight:700;font-size:13.5px;color:#fff" class="js-handle">avatarads.fr</span>
-                    <span style="background:#0866FF;color:#fff;font-size:11px;font-weight:700;padding:5px 14px;border-radius:7px">Suivre</span>
+                <div style="position:absolute;bottom:70px;left:14px;right:62px;z-index:55">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#1A0A02;flex-shrink:0">A</div>
+                    <span class="js-handle" style="font-weight:700;font-size:13px;color:#fff">avatarads.fr</span>
+                    <span style="background:#1877F2;color:#fff;font-size:10.5px;font-weight:700;padding:4px 12px;border-radius:6px">Suivre</span>
                   </div>
-                  <div style="font-size:12px;color:rgba(255,255,255,.92)">Découvre comment… <b>plus</b></div>
+                  <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.9);margin-bottom:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span class="js-name">avatarads.fr</span> · Original</div>
+                  <div style="font-size:11.5px;color:rgba(255,255,255,.92);line-height:1.3">Découvre comment créer des vidéos virales… <b>voir plus</b></div>
                 </div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:64px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-around;z-index:60"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8l5 3-5 3z" fill="#fff" stroke="none"/></svg><div style="width:40px;height:34px;border:2px solid #fff;border-radius:10px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>
-              </div>
-                                          <!-- ── LINKEDIN (officiel) ── -->
-              <div id="ui-linkedin" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
-                <div style="position:absolute;top:0;left:0;right:0;height:150px;background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent);z-index:41"></div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:250px;background:linear-gradient(to top,rgba(0,0,0,.72),transparent);z-index:41"></div>
-                <div style="position:absolute;top:74px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;z-index:60">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                  <span style="font-size:15px;font-weight:700;color:#fff">Vidéo</span>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-                </div>
-                <div style="position:absolute;right:12px;bottom:86px;display:flex;flex-direction:column;align-items:center;gap:18px">
-                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 01-1-1v-9a1 1 0 011-1h3zm0 0l4-7a2 2 0 012 2v3h5.5a2 2 0 012 2.3l-1.3 7A2 2 0 0119.2 21H7"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">J’aime</div></div>
-                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">Comm.</div></div>
-                  <div style="text-align:center"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">Republier</div></div>
-                  <div style="text-align:center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg><div style="font-size:9.5px;color:#fff;font-family:var(--mono);margin-top:2px">Envoyer</div></div>
-                </div>
-                <div style="position:absolute;left:18px;right:90px;bottom:90px;color:#fff">
-                  <div style="display:flex;align-items:center;gap:10px">
-                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#1A0A02;flex-shrink:0">A</div>
-                    <div style="display:flex;flex-direction:column;line-height:1.25;min-width:0">
-                      <span class="js-handle" style="font-weight:700;font-size:13.5px">avatarads.fr</span>
-                      <span style="font-size:11px;opacity:.8">Créateur de contenu IA · 2 h</span>
-                    </div>
-                    <span style="margin-left:8px;font-size:12px;font-weight:700;color:#7CB3FF">+ Suivre</span>
-                  </div>
-                </div>
-                <div style="position:absolute;bottom:0;left:0;right:0;height:64px;background:rgba(10,30,60,.6);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-around;z-index:60">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20a6 6 0 0112 0M14.5 20a4.5 4.5 0 016.5-4"/></svg><div style="width:40px;height:32px;border-radius:9px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 13h18"/></svg>
+                <div style="position:absolute;bottom:0;left:0;right:0;height:50px;background:#000;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-around;z-index:60">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M10 8.5l5 3.5-5 3.5z" fill="#fff" stroke="none"/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v13H4z"/><path d="M4 9h16M9 17v3h6v-3"/></svg>
+                  <div style="position:relative"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg><span style="position:absolute;top:-4px;right:-5px;background:#FA383E;color:#fff;font-size:8px;font-weight:800;border-radius:8px;padding:0 4px;line-height:13px">6</span></div>
+                  <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#8a5a44,#2c1a12);border:1px solid rgba(255,255,255,.3)"></div>
                 </div>
               </div>
-              <!-- META / FACEBOOK POST UI -->
+              <!-- ── META / FACEBOOK POST UI ── -->
               <div id="ui-meta" style="position:absolute;inset:0;pointer-events:none;display:none;z-index:40">
                 <!-- Top header -->
                 <div style="position:absolute;top:0;left:0;right:0;background:rgba(255,255,255,0.96);padding:12px 14px 10px;display:flex;align-items:center;gap:10px">
@@ -3011,13 +3003,23 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div id="imgCorrectPresetsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
             <!-- #144 · Faceswap : 2 zones (image d'origine → visage à appliquer) + flèche -->
             <!-- #144 · le faceswap passe en PLEIN ÉCRAN (voir #imgFaceFull dans imgCanvas) -->
-            <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="width:100%;margin-top:8px;padding:11px 14px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);border-radius:var(--r);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-              <span style="display:flex;flex-direction:column;line-height:1.25;text-align:left">
-                <b style="font-size:13.5px;font-weight:700">Améliorer en 4K</b>
-                <span id="imgMakeRealCost" class="mono" style="font-size:10px;color:var(--text-3);letter-spacing:.04em">5 cr</span>
-              </span>
-            </button>
+            <!-- #corr2 (Axel 30/08) : Améliorer en 4K (Nano Banana Pro) + Détails du visage (AuraSR) côte à côte -->
+            <div class="row" style="gap:8px;margin-top:8px">
+              <button id="imgMakeRealBtn" onclick="_imgMakeRealistic(this)" style="flex:1 1 0;min-width:0;padding:11px 10px;background:radial-gradient(300px 90px at 50% 0,rgba(255,90,31,.14),var(--surface));border:1px solid var(--accent-line);border-radius:var(--r);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+                <span style="display:flex;flex-direction:column;line-height:1.2;text-align:left;min-width:0">
+                  <b style="font-size:12.5px;font-weight:700">Améliorer en 4K</b>
+                  <span id="imgMakeRealCost" class="mono" style="font-size:9.5px;color:var(--text-3);letter-spacing:.04em">5 cr</span>
+                </span>
+              </button>
+              <button id="imgDetailsBtn" onclick="_imgCorrectDetails(this)" style="flex:1 1 0;min-width:0;padding:11px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M9 15c1 1 5 1 6 0"/></svg>
+                <span style="display:flex;flex-direction:column;line-height:1.2;text-align:left;min-width:0">
+                  <b style="font-size:12.5px;font-weight:700">Détails du visage</b>
+                  <span id="imgDetailsCost" class="mono" style="font-size:9.5px;color:var(--text-3);letter-spacing:.04em">3 cr</span>
+                </span>
+              </button>
+            </div>
           </div>
 
           <!-- FORMAT -->
@@ -9310,6 +9312,38 @@ async function _imgMakeRealistic(btn){
     creditsFlowDone();
     toast('Amélioré en 4K — '+engine);
   }catch(e){ await creditsFlowRefund('l\'amélioration 4K a échoué'); toast(''+(e.message||e)); }
+  finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
+}
+
+// #corr2 (Axel 30/08) : « Détails du visage » dans Correction = AuraSR (×4 NON génératif, agrandit
+// la vraie image sans re-fabriquer) sur l'image importée. Distinct de « Améliorer en 4K » (Nano Banana Pro).
+async function _imgCorrectDetails(btn){
+  if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
+  const _plan = (currentMember?.plan || 'free').toLowerCase();
+  if(!['pro','elite','byok','developer'].includes(_plan)){ try{ showPaywall(); }catch(_){} return; }
+  if(!_imgRefFile){ toast('Importe d\'abord l\'image à corriger'); return; }
+  creditsFlowBegin();
+  if(!(await spendCreditsFor(CREDIT_COSTS.imgDetailHD, 'détails du visage'))) return;
+  const orig = btn ? btn.innerHTML : null;
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Détails…'; }
+  const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), overlay=document.getElementById('imgLoadingOverlay');
+  try{
+    const dataUrl = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
+    if(multiWrap) multiWrap.style.display='none';
+    if(singleWrap) singleWrap.style.display='block';
+    const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
+    _imgIdleShow(false);
+    if(overlay) overlay.style.display='flex';
+    _imgProgStart('Détails du visage… (~20s)');
+    const url = await _falAuraSR(dataUrl);   // AuraSR ×4 non génératif (bornes standard)
+    if(!url) throw new Error('AuraSR : aucune image');
+    _imgMonthIncrement();
+    _imgShowSingle(url, _imgSelectedFormat);
+    _imgSaveHistory(url, 'Détails', _imgSelectedFormat);
+    _imgRenderHistory();
+    creditsFlowDone();
+    toast('Détails du visage appliqués — AuraSR');
+  }catch(e){ await creditsFlowRefund('les détails du visage ont échoué'); toast(''+(typeof _imgFriendlyErr==='function'?_imgFriendlyErr(e&&e.message):((e&&e.message)||e))); }
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
@@ -20066,7 +20100,7 @@ let currentPlatform = 'tiktok';
 
 function setPlatformPreview(p){
   currentPlatform = p;
-  ['tiktok','reels','fbshort','youtube','instagram','meta','linkedin'].forEach(id => {
+  ['tiktok','reels','fbshort','youtube','instagram','meta'].forEach(id => {
     const btn = document.getElementById('ptab-'+id);
     const ui  = document.getElementById('ui-'+id);
     if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; btn.style.fontWeight = id===p ? '700' : '600'; }
