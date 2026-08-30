@@ -11262,7 +11262,12 @@ function _recNormalizeLevel(buffer, flat){
   for(let k=0;k<nE;k++){ const i=k*eWin,e=Math.min(i+eWin,ref.length); let s=0; for(let j=i;j<e;j++) s+=ref[j]*ref[j]; env[k]=Math.sqrt(s/Math.max(1,e-i)); if(env[k]>maxE) maxE=env[k]; }
   if(!(maxE>0)) return buffer;
   const target=0.18;                            // ~-15 dBFS RMS (niveau d'un dictaphone)
-  const noise=Math.max(0.006, maxE*0.05);       // sous ça = silence/souffle → gain qui retombe (pas de boost)
+  // plancher de bruit = VRAI plancher (10ᵉ percentile des fenêtres), PAS maxE*0.05. L'ancien (maxE*0.05)
+  // montait avec les parties fortes et classait la voix FAIBLE du début (ex -35 dB) comme « silence » →
+  // elle n'était pas remontée → saut de volume brutal à ~2 s. Corrigé : la voix faible est nivelée aussi.
+  const _se=Array.from(env).filter(x=>x>0).sort((a,b)=>a-b);
+  const _nf=_se.length?_se[Math.floor(_se.length*0.1)]:0;
+  const noise=Math.max(0.004, Math.min(_nf*1.5, 0.02));   // sous ça = vrai silence → gain qui retombe (pas de boost du souffle)
   const spoken=Array.from(env).filter(b=>b>=noise).sort((a,b)=>a-b);
   const med=spoken.length ? spoken[Math.floor(spoken.length*0.5)] : maxE;
   const gGlobal=Math.max(0.7, Math.min(med>0?target/med:1, 30));
