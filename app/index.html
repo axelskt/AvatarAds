@@ -9335,7 +9335,9 @@ async function _imgCorrectDetails(btn){
     _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
     _imgProgStart('Détails du visage… (~20s)');
-    const url = await _falAuraSR(dataUrl);   // AuraSR ×4 non génératif (bornes standard)
+    // #corr2-hq (Axel 30/08) : bornes HAUTES — on garde presque toute la définition de l'image
+    // importée (inMax 2560, plus 1536) et on ne replafonne plus la sortie sous l'original (outMax 4096).
+    const url = await _falAuraSR(dataUrl, { inMax:2560, outMax:4096, q:0.95 });   // AuraSR ×4 non génératif, haute déf
     if(!url) throw new Error('AuraSR : aucune image');
     _imgMonthIncrement();
     _imgShowSingle(url, _imgSelectedFormat);
