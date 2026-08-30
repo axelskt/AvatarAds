@@ -22990,6 +22990,15 @@ async function _genServerCompose(btn){
     : _buildWpgGroups(Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean), wpg);
   if(!groups || !groups.length) return false; // rien à graver → laisse le chemin client
 
+  // #gen-subs v1 : le serveur ne reproduit encore que le cas FIDÈLE (portrait,
+  // cadrage avatar par défaut, pas de hook gravé). Pour tout le reste on REND LA
+  // MAIN au rendu client (identique à l'aperçu) — le serveur n'est utilisé que
+  // quand il produit EXACTEMENT l'aperçu. À porter côté worker ensuite.
+  if((cfg.format || 'vertical') !== 'vertical') return false;                                   // format carré non géré serveur
+  if((cfg.avZoom ?? 100) !== 100 || (cfg.avWidth ?? 100) !== 100 || (cfg.avCropX ?? 0) !== 0 || (cfg.avCropY ?? 0) !== 0) return false; // recadrage avatar non géré serveur
+  { const _ho = document.getElementById('hookOverlay'), _ht = document.getElementById('hookText');
+    if(_ho && _ho.style.display !== 'none' && _ht && (_ht.textContent || '').trim()) return false; } // hook non gravé serveur
+
   const hv = document.getElementById('hedraVideo');
   const vidDur = (hv && isFinite(hv.duration) && hv.duration > 0.15) ? hv.duration : null;
   const subs = {

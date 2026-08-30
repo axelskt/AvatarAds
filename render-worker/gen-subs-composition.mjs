@@ -324,6 +324,10 @@ const _groupStart = (function(){
   } else {
     for(let gi=0; gi<_totalGroups; gi++) arr[gi] = Math.max(0, (gi/Math.max(1,_totalGroups))*totalDuration - _subAdvSec);
   }
+  // Le groupe 0 est TOUJOURS affiché dès elapsed=0 (comme le client, qui pose
+  // _lastGrpTime=0 à la 1re frame) → son horloge d'anim démarre à 0, même s'il
+  // y a un blanc avant le 1er mot (sinon fade/pop divergeraient de l'export).
+  if(arr.length) arr[0] = 0;
   return arr;
 })();
 
