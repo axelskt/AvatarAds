@@ -10866,6 +10866,7 @@ let recCaptureSink    = null;
 let recCaptureChunks  = [];
 let recCapturing      = false;
 let recCaptureRate    = 0;
+let recWarmupTimer    = null;   // #warmup : délai pour laisser le micro se stabiliser avant de capter
 let recAudioBuffer    = null;   // buffer traité (silences supprimés)
 let recRawBuffer      = null;   // buffer brut
 let recDenoisedBuffer = null;   // buffer brut DÉBRUITÉ (RNNoise) — source du pipeline si « Réduire le bruit » ON
@@ -11027,7 +11028,7 @@ async function recStartRecording(){
     // encode en AAC/Opus lossy (~128 kbps) → c'est ÇA qui « abîmait » le son à la source (pas comme un
     // dictaphone). Un ScriptProcessor recopie les samples float du micro tels quels → qualité maximale.
     recCaptureRate = recCtx.sampleRate;
-    recCaptureChunks = []; recCapturing = true;
+    recCaptureChunks = []; recCapturing = false;
     recScriptNode = recCtx.createScriptProcessor(4096, 1, 1);
     recScriptNode.onaudioprocess = (e) => {
       if(!recCapturing) return;
@@ -11039,13 +11040,24 @@ async function recStartRecording(){
     recRecStartTime=Date.now(); recLiveHistory=[];
     recState='recording'; recUpdateUI();
     recLiveLoop();
-    toast('Enregistrement en cours…');
+    // #warmup (Axel 30/08) : le micro de Safari met ~0,6 s à atteindre son niveau (début « quiet » = le
+    // fameux « bug des 5 premières secondes »). On laisse le graphe tourner 600 ms AVANT de capter → la
+    // voix est enregistrée à un niveau déjà stable. Le chrono repart de 0 à ce moment.
+    toast('Prépare-toi…');
+    if(recWarmupTimer) clearTimeout(recWarmupTimer);
+    recWarmupTimer = setTimeout(() => {
+      recWarmupTimer = null;
+      if(recState!=='recording') return;   // arrêté pendant le warm-up
+      recCaptureChunks = []; recCapturing = true; recRecStartTime = Date.now();
+      if(typeof toast==='function') toast('Enregistrement en cours…');
+    }, 600);
   }catch(e){
     toast('Micro inaccessible — '+e.message);
   }
 }
 
 async function recStopRecording(){
+  if(recWarmupTimer){ clearTimeout(recWarmupTimer); recWarmupTimer = null; }
   recCapturing = false;
   try{ if(recScriptNode){ recScriptNode.onaudioprocess=null; recScriptNode.disconnect(); } }catch(_){}
   try{ if(recCaptureSink) recCaptureSink.disconnect(); }catch(_){}
@@ -11158,7 +11170,7 @@ function recLiveLoop(){
 // #sil-agg (Axel 30/08) : « trop de blanc restait » → détection plus agressive :
 // seuil RMS relevé 0.007→0.013 (attrape le bruit de fond / room tone), silence min
 // abaissé 380→230 ms (coupe les blancs plus courts), padding gardé 80→48 ms (moins de blanc laissé).
-function _recRemoveSilence(buffer, threshold, minSilMs=350, keepSilMs=90){
+function _recRemoveSilence(buffer, threshold, minSilMs=700, keepSilMs=150){
   const sr=buffer.sampleRate;
   const input=buffer.getChannelData(0);
   const win=Math.max(1,Math.round(sr*0.02)); // fenêtres ~20 ms
@@ -11216,22 +11228,28 @@ function _recNormalizeLevel(buffer){
   if(!buffer||!buffer.length||!recCtx) return buffer;
   const sr=buffer.sampleRate, ch=buffer.numberOfChannels;
   const ref=buffer.getChannelData(0);
-  const win=Math.max(1,Math.round(sr*0.4)); const blocks=[];
-  for(let i=0;i<ref.length;i+=win){ let s=0; const e=Math.min(i+win,ref.length); for(let j=i;j<e;j++) s+=ref[j]*ref[j]; blocks.push(Math.sqrt(s/Math.max(1,e-i))); }
-  const maxB=blocks.reduce((m,b)=>b>m?b:m,0);
-  if(!(maxB>0)) return buffer;
-  // « parlé » = blocs forts RELATIVEMENT à la prise → marche même quand tout est faible (micro bas)
-  const spoken=blocks.filter(b=>b>=Math.max(0.008, maxB*0.35)).sort((a,b)=>a-b);
-  const med=spoken.length ? spoken[Math.floor(spoken.length*0.5)] : maxB;
-  if(!(med>0)) return buffer;
-  let gain=0.16/med;                 // cible ~-16 dBFS RMS (voix pro, comme un dictaphone)
-  gain=Math.max(0.7, Math.min(gain, 20));
+  // #leveling (Axel 30/08) : « Volume constant » = leveling PAR BLOCS (pas un simple gain global) →
+  // il aplatit le début faible et les variations lentes (dont la rampe d'AGC que Safari refuse de
+  // couper) pour un niveau VRAIMENT constant, sans pomper syllabe à syllabe (enveloppe lissée ~±0,6 s).
+  const eWin=Math.max(1,Math.round(sr*0.05));   // enveloppe RMS 50 ms
+  const nE=Math.ceil(ref.length/eWin);
+  const env=new Float32Array(nE); let maxE=0;
+  for(let k=0;k<nE;k++){ const i=k*eWin,e=Math.min(i+eWin,ref.length); let s=0; for(let j=i;j<e;j++) s+=ref[j]*ref[j]; env[k]=Math.sqrt(s/Math.max(1,e-i)); if(env[k]>maxE) maxE=env[k]; }
+  if(!(maxE>0)) return buffer;
+  const sm=Math.max(1,Math.round(0.6/0.05));    // lissage ±0,6 s
+  const envS=new Float32Array(nE);
+  for(let k=0;k<nE;k++){ let s=0,c=0; for(let d=-sm;d<=sm;d++){ const kk=k+d; if(kk>=0&&kk<nE){ s+=env[kk]; c++; } } envS[k]=s/Math.max(1,c); }
+  const target=0.14;                            // ~-17 dBFS RMS
+  const noise=Math.max(0.006, maxE*0.05);       // sous ça = silence/souffle → le gain retombe (pas de boost)
   const out=recCtx.createBuffer(ch,buffer.length,sr);
   const knee=0.7, ceil=0.97;
   for(let c=0;c<ch;c++){
     const d=buffer.getChannelData(c), o=out.getChannelData(c);
     for(let i=0;i<d.length;i++){
-      let x=d[i]*gain;
+      const k=Math.min(nE-1,(i/eWin)|0), le=envS[k];
+      let g = (le>=noise) ? Math.min(target/le, 12) : (target/noise)*(le/noise);   // borné ×12
+      if(!(g>0)) g=0;
+      let x=d[i]*g;
       if(x>knee)       x=knee+(ceil-knee)*Math.tanh((x-knee)/(ceil-knee));
       else if(x<-knee) x=-knee-(ceil-knee)*Math.tanh((-x-knee)/(ceil-knee));
       o[i]=x;
