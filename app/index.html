@@ -3247,9 +3247,10 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <div class="card" style="padding:28px;margin-bottom:14px">
 
           <!-- WAVEFORM + TIME -->
-          <div style="position:relative;margin-bottom:16px">
+          <div style="position:relative;margin-bottom:26px">
             <canvas id="recWaveform" height="90" style="width:100%;display:block;border-radius:14px;background:var(--bg3);border:1px solid var(--border2);cursor:crosshair"></canvas>
-            <div id="recCursorHint" style="display:none;position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:9px;font-family:var(--mono);color:var(--text3);background:rgba(0,0,0,.5);padding:2px 8px;border-radius:4px;pointer-events:none">Clique pour positionner le curseur</div>
+            <!-- hint SOUS la waveform (Axel 30/08 : plus sur la bande) -->
+            <div id="recCursorHint" style="display:none;position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);font-size:9px;font-family:var(--mono);color:var(--text3);padding:2px 8px;border-radius:4px;pointer-events:none;white-space:nowrap">Clique pour positionner le curseur</div>
           </div>
 
           <!-- TIME ROW -->
@@ -3298,9 +3299,24 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <button id="recReplaceBtn" onclick="recEnterReplace()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg> Remplacer
             </button>
-            <button id="recSilenceBtn" onclick="recToggleSilence()" style="padding:10px 12px;background:rgba(0,217,126,0.08);border:1px solid rgba(0,217,126,0.25);border-radius:10px;color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg> Silences ON
-            </button>
+          </div>
+
+          <!-- NETTOYAGE & VOIX (Axel 30/08) : silences + traitement voix en segments Désactivé/Activé -->
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Supprimer les silences</span><span style="font-size:11px;color:var(--text3)">Coupe les blancs et les hésitations · volume constant</span></div>
+              <div id="recSilSeg" style="display:inline-flex;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:2px;flex:0 0 auto">
+                <button type="button" onclick="recSetSilence(false)" data-seg="off" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--text3)">Désactivé</button>
+                <button type="button" onclick="recSetSilence(true)" data-seg="on" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--accent);color:#1A0A02">Activé</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Traitement de voix</span><span style="font-size:11px;color:var(--text3)">Voix nette et pro · preset Podcast</span></div>
+              <div id="recTreatSeg" style="display:inline-flex;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:2px;flex:0 0 auto">
+                <button type="button" onclick="recSetTreat(false)" data-seg="off" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--accent);color:#1A0A02">Désactivé</button>
+                <button type="button" onclick="recSetTreat(true)" data-seg="on" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--text3)">Activé</button>
+              </div>
+            </div>
           </div>
 
           <!-- TIMELINE SEGMENTS (CapCut-style) -->
@@ -10974,12 +10990,9 @@ async function recOnStop(){
   document.getElementById('recDurDisplay').textContent='/ '+_recFmt(recAudioBuffer.duration);
   document.getElementById('recTimeline').style.display='none'; // single segment = no timeline yet
   toast('Enregistrement prêt');
-  // Sauvegarde auto dans la Bibliothèque
-  try{
-    const _wav = _recToWav(recAudioBuffer);
-    const _nm  = (typeof _recNextAudioName==='function') ? _recNextAudioName() : ('Enregistrement ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
-    _libAutoSaveAudio(new File([_wav], _nm + '.wav', { type:'audio/wav' }), _nm, _recFmt(recAudioBuffer.duration), '🎙️');
-  }catch(e){ console.warn('rec autosave:', e); }
+  // #audio-final (Axel 30/08) : on NE sauvegarde PLUS chaque enregistrement (ça inondait la
+  // Bibliothèque de « Audio 1..N »). Seul l'audio FINAL — celui qu'on « Utilise » — est sauvegardé,
+  // dans _gvRecUse. (Idem le flux « Utiliser cet audio » plus bas.)
 }
 
 // ── Import fichier audio/vidéo dans l'enregistreur ──
@@ -11036,7 +11049,10 @@ function recLiveLoop(){
 }
 
 // ── Suppression silences ──
-function _recRemoveSilence(buffer, threshold=0.007, minSilMs=380, keepSilMs=80){
+// #sil-agg (Axel 30/08) : « trop de blanc restait » → détection plus agressive :
+// seuil RMS relevé 0.007→0.013 (attrape le bruit de fond / room tone), silence min
+// abaissé 380→230 ms (coupe les blancs plus courts), padding gardé 80→48 ms (moins de blanc laissé).
+function _recRemoveSilence(buffer, threshold=0.013, minSilMs=230, keepSilMs=48){
   const sr=buffer.sampleRate;
   const input=buffer.getChannelData(0);
   const winSamples=Math.round(sr*0.022); // ~22ms windows
@@ -11192,6 +11208,26 @@ function recToggleSilence(){
     const stats=document.getElementById('recStatsDisplay');
     if(stats){ if(recSilenceOn&&removed>0.3){stats.textContent=''+removed.toFixed(1)+'s supprimés';stats.style.display='block';}else{stats.style.display='none';} }
   }
+  _recSegStyle('recSilSeg', recSilenceOn);
+}
+
+// #seg (Axel 30/08) : segments « Désactivé | Activé » (silences + traitement voix) de l'enregistreur.
+function _recSegStyle(segId, on){
+  const seg=document.getElementById(segId); if(!seg) return;
+  const off=seg.querySelector('[data-seg="off"]'), onb=seg.querySelector('[data-seg="on"]');
+  if(off){ off.style.background = on?'transparent':'var(--accent)'; off.style.color = on?'var(--text3)':'#1A0A02'; }
+  if(onb){ onb.style.background = on?'var(--accent)':'transparent'; onb.style.color = on?'#1A0A02':'var(--text3)'; }
+}
+function recSetSilence(on){
+  on=!!on;
+  if(recSilenceOn!==on){ recToggleSilence(); }   // recToggleSilence re-traite le buffer + resync le segment
+  else { _recSegStyle('recSilSeg', on); }
+}
+window._recTreatOn = false;   // « Traitement de voix » : OFF par défaut, ON = preset Podcast sur l'audio final
+function recSetTreat(on){
+  window._recTreatOn = !!on;
+  _recSegStyle('recTreatSeg', window._recTreatOn);
+  if(typeof toast==='function') toast(on ? 'Traitement de voix activé — preset Podcast' : 'Traitement de voix désactivé');
 }
 
 // ── Téléchargement ──
@@ -17901,6 +17937,8 @@ async function _avGen4K(btn){
     if (!up) throw new Error('Nano Banana Pro : aucune image renvoyée');
     _avGenUrl = up; _avGen4KDone = true; _avGenHD = true;
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
+    // la version 4K va aussi dans la Bibliothèque (comme les images IA)
+    try{ if (typeof _imgAutoSaveUrl === 'function') _imgAutoSaveUrl(up, '1024x1792', 'Avatar IA · 4K'); }catch(_){}
     creditsFlowDone();
     toast('Passé en 4K — Nano Banana Pro');
     if (btn){ btn.style.opacity = '.55'; btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>4K fait'; }
@@ -18055,13 +18093,31 @@ async function _gvRecUse(){
     // le buffer TRAITÉ (silences coupés, segments montés, remplacements) → WAV
     // via _recToWav : lisible par tout le flux aval (waveform, Whisper, Hedra).
     const nom = 'Enregistrement ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const file = new File([_recToWav(recAudioBuffer)], nom + '.wav', { type: 'audio/wav' });
+    // #voix-treat (Axel 30/08) : si « Traitement de voix » est activé, on applique le preset Podcast
+    // (_acMasterVoice) à une COPIE du buffer final (sans altérer le buffer d'édition) avant l'export.
+    let _outBuf = recAudioBuffer;
+    if(window._recTreatOn && typeof _acMasterVoice === 'function' && recCtx){
+      try{
+        const _cl = recCtx.createBuffer(recAudioBuffer.numberOfChannels, recAudioBuffer.length, recAudioBuffer.sampleRate);
+        for(let c=0;c<recAudioBuffer.numberOfChannels;c++) _cl.getChannelData(c).set(recAudioBuffer.getChannelData(c));
+        _outBuf = (await _acMasterVoice(_cl, 'podcast')) || _cl;
+      }catch(e){ console.warn('traitement voix:', e); _outBuf = recAudioBuffer; }
+    }
+    const file = new File([_recToWav(_outBuf)], nom + '.wav', { type: 'audio/wav' });
     // MÊME CHEMIN que le fichier uploadé (voxFileIn2) : drapeaux + handler + reflet
     window.mp4AudioEnabled = true;
     window.mp4AudioFile = file;
     handleMp4AudioFile(file);
     _gvRecPick('file');
     _voxReflect();
+    // #audio-final (Axel 30/08) : SEUL cet audio (celui qu'on utilise vraiment) est archivé dans
+    // la Bibliothèque, et une seule fois par prise (les enregistrements bruts ne le sont plus).
+    try{
+      if(recAudioBuffer && !recAudioBuffer._libSaved && typeof _libAutoSaveAudio==='function'){
+        _libAutoSaveAudio(file, nom, _recFmt(recAudioBuffer.duration), '🎙️');
+        recAudioBuffer._libSaved = true;
+      }
+    }catch(_){}
     toast('Audio chargé — il suit le même flux que le fichier importé');
   }catch(e){ toast('Impossible d\'utiliser cet enregistrement : ' + ((e && e.message) || e)); }
   finally{ if (btn){ btn.disabled = false; btn.innerHTML = orig; } }
