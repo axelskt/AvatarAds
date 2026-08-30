@@ -1981,7 +1981,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <!-- Tap Sync manuel — gratuit (maquette : btn-ghost pleine largeur) -->
                 <button onclick="startTapSync()" class="btn btn-ghost" style="width:100%;margin-bottom:10px">Tap Sync — synchroniser manuellement</button>
                 <!-- Whisper IA — Elite/Pro (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
-                <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div></button>
+                <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div></button>
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" class="field" style="min-height:90px;resize:vertical;display:block"></textarea>
                 <button onclick="applyTranscript()" class="btn btn-primary gen-dev-hide" style="width:100%;margin-top:10px">Appliquer comme sous-titres</button>
               </div>
@@ -18667,7 +18667,11 @@ async function whisperTranscribe(){
   // btn capturé AVANT le 1er await : window.event ne survit pas aux continuations async
   // (garde instanceof : hors clic direct, event.currentTarget peut être window)
   const btn = (typeof event !== 'undefined' && event?.currentTarget instanceof HTMLElement) ? event.currentTarget : null;
-  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled = false; btn.style.opacity = '1'; } };
+  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; } };
+  // #gen-dev · après une transcription réussie : bouton FIGÉ « Transcription faite »
+  // (vert, disabled) — évite de recliquer et de repayer/relancer Whisper.
+  const _whBtnDone = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:600;font-size:14.5px;color:var(--text-2)">Transcription faite</span><span class="faint" style="font-size:12px">Sous-titres calés — régénère un audio pour relancer</span></div>'; btn.disabled = true; btn.style.opacity = '.8'; btn.style.cursor = 'default'; } };
+  let _whOk = false;
   // Gate Pro / Elite / BYOK
   const plan = currentMember?.plan || 'free';
   if(!['pro','elite','byok','developer'].includes(plan)){
@@ -18758,6 +18762,7 @@ async function whisperTranscribe(){
       }
     }
     if(text){
+      _whOk = true;   // transcription réussie → bouton figé « Transcription faite » (finally)
       if(_whV2){
         _applyWhisperWords(data.words, text);   // aligne + construit les groupes + applique
         pendingTranscript = text;
@@ -18799,7 +18804,7 @@ async function whisperTranscribe(){
     toast('Erreur Whisper : ' + msg);
     console.error('Whisper error:', e);
   } finally {
-    _whBtnIdle();
+    if(_whOk) _whBtnDone(); else _whBtnIdle();
   }
 }
 function applyTranscript(){
@@ -21103,8 +21108,17 @@ function applyMp4Transcript(text){
   toast('Transcript appliqué aux sous-titres');
 }
 
+// Réarme le bouton Whisper (« Transcription faite » → re-cliquable) quand un
+// NOUVEL audio est chargé : on peut re-transcrire une autre voix.
+function _whisperBtnReset(){
+  const b = document.getElementById('whisperBtn');
+  if(!b) return;
+  b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer';
+  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>';
+}
 function handleMp4AudioFile(file){
   if(!file) return;
+  try{ _whisperBtnReset(); }catch(_){}
   // #69 · l'option de débruitage est une préférence → on ne la réinitialise PAS au changement de fichier
 
   // ── Reset de l'ancienne source (évite que l'ancien audio reste) ──
@@ -23699,7 +23713,10 @@ async function _genServerCompose(btn){
   const wpg = Math.max(1, cfg.subWpg || 2);
   const groups = (_wordGroups && _wordGroups.length) ? _wordGroups
     : _buildWpgGroups(Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean), wpg);
-  if(!groups || !groups.length) return false; // rien à graver → laisse le chemin client
+  // ⚠ PAS de bail si groups vide : « uniquement vidéo » (sans sous-titres) DOIT
+  // quand même passer par le serveur — le but est le SON fiable (le rendu client
+  // est muet sur Safari). Le worker prend un chemin RAPIDE (juste mux audio +
+  // optimisation TikTok, sans HyperFrames) quand il n'y a rien à graver.
 
   // #gen-subs v1 : le serveur ne reproduit encore que le cas FIDÈLE (portrait,
   // cadrage avatar par défaut, pas de hook gravé). Pour tout le reste on REND LA
