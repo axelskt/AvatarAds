@@ -11069,7 +11069,7 @@ async function recStartRecording(){
     // délai de stabilisation RESTANT : le micro doit avoir tourné ~1,8 s (AGC Safari). Pré-chauffé au
     // select (souvent > 1,8 s) → on capte TOUT DE SUITE (pas de « Prépare-toi », rien de perdu).
     const warmed = Date.now() - (_recMicOpenedAt || Date.now());
-    const remaining = Math.max(0, 1800 - warmed);
+    const remaining = Math.max(0, 2200 - warmed);   // 2,2 s = temps mesuré de stabilisation de l'AGC Safari
     const _startCapture = () => { recWarmupTimer = null; if(recState!=='recording') return; recCaptureChunks = []; recCapturing = true; recRecStartTime = Date.now(); };
     if(remaining <= 60){ _startCapture(); toast('Enregistrement en cours…'); }
     else {
@@ -11331,17 +11331,24 @@ function _recProcessChain(raw){
 }
 
 // ── Playback ──
-function recPlayPause(){
+async function recPlayPause(){
   if(recState==='playing') recStopPlayback();
-  else if(recState==='recorded') recStartPlayback();
+  else if(recState==='recorded') await recStartPlayback();
 }
 
-function recStartPlayback(){
+async function recStartPlayback(){
   if(!recAudioBuffer||!recCtx) return;
+  // #playfix (Axel 31/08) : Safari SUSPEND l'AudioContext après un moment d'inactivité (ou pendant la
+  // lecture) → « plus de son après 2 lectures ». On le RÉVEILLE avant de jouer.
+  if(recCtx.state==='suspended'){ try{ await recCtx.resume(); }catch(_){} }
+  // si on était arrivé à la fin (ou offset invalide), on repart du début.
+  if(!(recPlayOffset>=0) || recPlayOffset >= recAudioBuffer.duration-0.05) recPlayOffset=0;
+  // couper proprement une éventuelle source résiduelle (sans déclencher son onended).
+  if(recPlaySrc){ try{ recPlaySrc.onended=null; recPlaySrc.stop(); }catch(_){} recPlaySrc=null; }
   recPlaySrc=recCtx.createBufferSource();
   recPlaySrc.buffer=recAudioBuffer;
   recPlaySrc.connect(recCtx.destination);
-  recPlaySrc.start(0, Math.min(recPlayOffset, recAudioBuffer.duration-0.01));
+  recPlaySrc.start(0, Math.min(Math.max(0,recPlayOffset), Math.max(0,recAudioBuffer.duration-0.01)));
   recPlayStartedAt=recCtx.currentTime-recPlayOffset;
   recPlaySrc.onended=()=>{
     if(recState==='playing'){ recState='recorded'; recPlayOffset=0; recRenderWaveform(recAudioBuffer,0); recUpdateUI(); _recUpdateTime(0,recAudioBuffer.duration); }
@@ -11350,8 +11357,9 @@ function recStartPlayback(){
 }
 
 function recStopPlayback(){
-  if(recPlaySrc){ try{recPlaySrc.stop();}catch(e){} recPlaySrc=null; }
+  if(recPlaySrc){ try{ recPlaySrc.onended=null; recPlaySrc.stop(); }catch(e){} recPlaySrc=null; }
   recPlayOffset=Math.min((recCtx?recCtx.currentTime-recPlayStartedAt:0), recAudioBuffer?.duration||0);
+  if(!(recPlayOffset>=0)) recPlayOffset=0;
   recState='recorded'; recUpdateUI(); cancelAnimationFrame(recAnimId);
   recRenderWaveform(recAudioBuffer, recPlayOffset);
 }
