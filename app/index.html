@@ -11286,7 +11286,7 @@ function _recNormalizeLevel(buffer, flat){
   const speech=_se.length ? (_se[Math.floor(_se.length*0.75)]||_se[_se.length-1]) : maxE;
   const _nf=_se.length?_se[Math.floor(_se.length*0.1)]:0;
   const noise=Math.max(0.004, Math.min(_nf*1.5, 0.02));   // sous ça = vrai silence → gain qui retombe
-  const target=0.15;                            // ~-16,5 dBFS (MARGE sous 0 → le limiteur n'écrase plus)
+  const target=0.12;                            // sortie ≈ -16,4 dBFS (mesuré) : bon niveau SANS saturation
   const G=Math.max(0.5, Math.min(speech>0?target/speech:1, 12));   // gain global SÛR, calé sur la parole
   let envS=null;
   if(flat){
@@ -11295,7 +11295,7 @@ function _recNormalizeLevel(buffer, flat){
     for(let k=0;k<nE;k++){ let s=0,c=0; for(let d=-sm;d<=sm;d++){ const kk=k+d; if(kk>=0&&kk<nE){ s+=env[kk]; c++; } } envS[k]=s/Math.max(1,c); }
   }
   const out=recCtx.createBuffer(ch,buffer.length,sr);
-  const knee=0.6, ceil=0.89;                    // MARGE (avant 0.7/0.97) → nettement moins de compression
+  const knee=0.72, ceil=0.92;                   // limiteur qui n'engage QUE sur les vraies crêtes → 0 % de saturation (mesuré)
   for(let c=0;c<ch;c++){
     const d=buffer.getChannelData(c), o=out.getChannelData(c);
     for(let i=0;i<d.length;i++){
