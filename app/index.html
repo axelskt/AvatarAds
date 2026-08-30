@@ -1981,7 +1981,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <!-- Whisper IA — Elite/Pro (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
                 <button onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div></button>
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" class="field" style="min-height:90px;resize:vertical;display:block"></textarea>
-                <button onclick="applyTranscript()" class="btn btn-primary" style="width:100%;margin-top:10px">Appliquer comme sous-titres</button>
+                <button onclick="applyTranscript()" class="btn btn-primary gen-dev-hide" style="width:100%;margin-top:10px">Appliquer comme sous-titres</button>
               </div>
               <!-- Éditeur de groupes — collapsible -->
               <div id="wordEditorWrap" style="margin-top:6px">
@@ -7091,6 +7091,9 @@ function enterApp(profile){
   // flag window._genDevOn piloté ici ; les cartes .gen-dev sont des flex.
   window._genDevOn = (profile.plan === 'developer' || profile.is_owner);
   try{ document.querySelectorAll('.gen-dev').forEach((el) => { el.style.display = window._genDevOn ? 'flex' : 'none'; }); }catch(_){}
+  // .gen-dev-hide = éléments MASQUÉS quand les features dev sont ON (ex : bouton
+  // « Appliquer comme sous-titres » — Whisper s'applique tout seul en mode dev).
+  try{ document.querySelectorAll('.gen-dev-hide').forEach((el) => { if(window._genDevOn) el.style.display = 'none'; }); }catch(_){}
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
@@ -23735,9 +23738,12 @@ async function composeVideo(btn){
   if(!results.hedraUrl){ toast('Aucune vidéo à composer'); return; }
   if(_gateFreeExport()) return; // paywall à l'export (AB test : génération libre)
   window._composeCancelled = false;
-  // #gen-subs · compo SERVEUR (owner-gated, phase de test) : son fiable partout ;
+  // #gen-subs · compo SERVEUR (dev/owner, phase de test) : son fiable partout ;
   // repli automatique sur le rendu client ci-dessous si le serveur casse.
-  if(currentMember?.is_owner){
+  // ⚠ window._genDevOn (= plan==='developer' || is_owner), PAS is_owner seul —
+  // le compte de test d'Axel est plan 'developer' (is_owner=false) → sinon le
+  // rendu partait en WebCodecs client (muet Safari) au lieu du serveur.
+  if(window._genDevOn){
     try{ if(await _genServerCompose(btn)) return; }
     catch(e){ console.warn('[gen-subs] repli sur compo client', e); }
   }
@@ -24267,8 +24273,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // requestVideoFrameCallback a des bugs sur Safari avec les vidéos hors-DOM
       // setInterval n'affecte PAS le CFR : les timestamps sont assignés par VideoEncoder
       // (frameNum/30 * 1e6 µs) et non par le wall clock → CFR garanti peu importe le jitter JS
-      setStage('Composition ' + qCfg.label + ' (WebCodecs)…', 18);
-      toast('Composition CFR WebCodecs ~' + Math.round(totalDuration) + 's…');
+      setStage('Composition ' + qCfg.label + '…', 18);
+      toast('Composition ~' + Math.round(totalDuration) + 's…');
       hedraVid.currentTime = 0;
       if(gpVid) gpVid.currentTime = 0;
       // Attendre que TOUTES les vidéos aient leur 1ère frame prête (sinon split screen noir au départ)
