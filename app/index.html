@@ -1026,6 +1026,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div class="row gap12" id="avCards2" style="margin-bottom:20px;align-items:stretch;flex-wrap:wrap">
                 <button type="button" onclick="_avPick('photo')" data-src="photo" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:2px solid var(--accent);background:var(--accent-soft)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style=""><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Avatar</span><span class="faint" style="font-size:12px;line-height:1.4">Ton portrait devient un avatar animé</span></div></button>
                 <button type="button" onclick="_avPick('video')" data-src="video" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Vidéo existante</span><span class="faint" style="font-size:12px;line-height:1.4">Réutilise une vidéo déjà générée · 0 crédit</span></div></button>
+                <!-- #lotC · 3ᵉ option : Générer un avatar (owner-gated : classe gen-dev, affichée au chargement membre si dev/owner) -->
+                <button type="button" onclick="_avPick('genai')" data-src="genai" class="av-card2 gen-dev" style="flex:1 1 180px;min-width:170px;display:none;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Générer un avatar</span><span class="faint" style="font-size:12px;line-height:1.4">Décris-le, l'IA crée sa photo · 3 crédits</span></div></button>
               </div>
               <input type="file" id="avPhotoIn2" accept="image/*" style="display:none" onchange="handleAvatarFile(this.files[0]);_avReflect();this.value=''">
               <input type="file" id="avVideoIn2" accept="video/*" style="display:none" onchange="_avVideoPick(this.files[0]);this.value=''">
@@ -1034,6 +1036,29 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
               <div id="avPaneVideo" style="display:none">
                 <div id="avVideoZone" onclick="document.getElementById('avVideoIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){_avVideoPick(f)}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ta vidéo avatar ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — vidéo Hedra ou autre avatar</div><button type="button" onclick="event.stopPropagation();document.getElementById('avVideoIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div>
+              </div>
+              <!-- #lotC · panneau « Générer un avatar » : prompt → gpt-image (openai-proxy) qualité premium, style UGC réel, portrait -->
+              <div id="avPaneGen" style="display:none">
+                <div style="display:flex;flex-direction:column;gap:10px;padding:18px 16px;border-radius:16px;border:1px solid var(--border);background:var(--surface)">
+                  <div class="label" style="font-size:11px;letter-spacing:.14em">Décris ton avatar</div>
+                  <textarea id="avGenPrompt" placeholder="Décris ton avatar : femme 25 ans, salle de bain, présente un sérum…" style="width:100%;box-sizing:border-box;min-height:88px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
+                  <!-- #lotG1 · images de RÉFÉRENCE (bouton « + » façon ChatGPT) : avec ≥1 réf, la génération passe par gpt-image EDITS multi-image -->
+                  <div id="avGenRefsRow" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <button type="button" id="avGenRefAddBtn" onclick="document.getElementById('avGenRefIn').click()" title="Ajouter une ou plusieurs images de référence (produit, visage…)" style="width:34px;height:34px;flex:0 0 auto;border-radius:10px;border:1px dashed var(--border-2);background:var(--panel-1);color:var(--text-2);cursor:pointer;display:grid;place-items:center;transition:.15s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text-2)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+                    <div id="avGenRefThumbs" style="display:none;gap:8px;flex-wrap:wrap"></div>
+                    <span id="avGenRefHint" class="faint" style="font-size:11.5px;line-height:1.4">Ajoute des images de référence · ton produit, un visage… (4 max)</span>
+                  </div>
+                  <input type="file" id="avGenRefIn" accept="image/*" multiple style="display:none" onchange="_avGenRefAdd(this.files);this.value=''">
+                  <button type="button" id="avGenBtn" onclick="_avGenGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:.2s"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer l'image — <span id="avGenBtnCost">3 crédits</span></button>
+                </div>
+                <div id="avGenResult" style="display:none;margin-top:14px">
+                  <div style="border-radius:16px;overflow:hidden;border:1px solid var(--border);background:var(--panel-1);max-width:280px;margin:0 auto"><img id="avGenImg" alt="Avatar généré" style="width:100%;aspect-ratio:9/16;object-fit:cover;display:block"></div>
+                  <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+                    <button type="button" id="avGenDetailBtn" onclick="_avGenUpscale(this)" style="flex:1 1 155px;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Améliorer les détails · <span id="avGenDetailCost">3 cr</span></button>
+                    <button type="button" onclick="_avGenDownload()" style="flex:1 1 120px;min-width:0;padding:11px 8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
+                    <button type="button" id="avGenUseBtn" onclick="_avGenUse()" style="flex:1 1 170px;min-width:0;padding:11px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser comme avatar</button>
+                  </div>
+                </div>
               </div>
               <div id="avPaneLib" style="display:none">
                 <div id="avLibGrid2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px"></div>
@@ -1282,8 +1307,27 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div id="vox2" class="rise">
               <input type="file" id="voxFileIn2" accept="audio/*,video/*" style="display:none" onchange="window.mp4AudioEnabled=true;window.mp4AudioFile=this.files[0];handleMp4AudioFile(this.files[0]);_voxReflect();this.value=''">
               <input type="file" id="voxGpIn2" accept="video/*" style="display:none" onchange="handleSilenceGameplayFile(this.files[0]);_voxGpReflect();this.value=''">
-              <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">① Ton fichier audio</div>
-              <div style="margin-bottom:14px"><div id="voxFileZone" onclick="document.getElementById('voxFileIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){window.mp4AudioEnabled=true;window.mp4AudioFile=f;handleMp4AudioFile(f);_voxReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV · MP3 · WAV · M4A</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxFileIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
+              <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">① Ta voix</div>
+              <!-- #lotC · 2 sources : fichier (défaut, comportement intact) / enregistreur micro (mécanique de l'Enregistreur vocal) -->
+              <div class="row gap12" id="voxSrcCards" style="margin-bottom:14px;align-items:stretch;flex-wrap:wrap">
+                <button type="button" onclick="_gvRecPick('file')" data-vsrc="file" class="vox-src2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:14px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:2px solid var(--accent);background:var(--accent-soft)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="vox-src2-ico" style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="vox-chk2" style=""><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14px">Fichier audio</span><span class="faint" style="font-size:12px;line-height:1.4">Importe un MP4, MP3, WAV ou M4A</span></div></button>
+                <button type="button" onclick="_gvRecPick('rec')" data-vsrc="rec" class="vox-src2 gen-dev" style="flex:1 1 180px;min-width:170px;display:none;flex-direction:column;gap:9px;padding:14px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="vox-src2-ico" style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="vox-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14px">Enregistreur</span><span class="faint" style="font-size:12px;line-height:1.4">Enregistre ta voix au micro, direct</span></div></button>
+              </div>
+              <div id="voxPaneFile" style="margin-bottom:14px"><div id="voxFileZone" onclick="document.getElementById('voxFileIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){window.mp4AudioEnabled=true;window.mp4AudioFile=f;handleMp4AudioFile(f);_voxReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV · MP3 · WAV · M4A</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxFileIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
+              <!-- #lotG1 · panneau Enregistreur (redesign Axel 29/08) : le VRAI composant
+                   de l'Enregistreur vocal (module Audio) vient se DOCKER ici — #recCoreWrap
+                   déplacé, jamais dupliqué : waveform live, timer, « X.Xs de silences
+                   supprimés », Écouter / Couper ici / Supprimer / Remplacer / Silences
+                   ON-OFF identiques. Pas d'import de fichier ici (c'est l'option
+                   « Fichier audio ») ; dessous : Télécharger l'audio + Utiliser cet
+                   audio (même chemin que le fichier importé → handleMp4AudioFile). -->
+              <div id="voxPaneRec" style="display:none;margin-bottom:14px">
+                <div id="voxRecHost"></div>
+                <div class="row" style="gap:8px;flex-wrap:wrap">
+                  <button type="button" id="gvRecDlBtn" onclick="_gvRecDownload()" style="flex:1 1 150px;min-width:0;padding:12px 8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger l'audio</button>
+                  <button type="button" id="gvRecUseBtn" onclick="_gvRecUse()" style="flex:1 1 170px;min-width:0;padding:12px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser cet audio</button>
+                </div>
+              </div>
               <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">② Nettoyage <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
               <div class="col gap10" style="margin-bottom:12px"><div class="row" id="voxSilRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxSilIco" style="flex:0 0 auto"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Supprimer les silences</span><span class="faint" style="font-size:12px">Coupe les blancs, les hésitations et les bruits de fond · volume constant</span></div></div><button type="button" id="voxSilSw" onclick="_voxToggleSil()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
               <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">③ Synchroniser un gameplay <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
@@ -3187,6 +3231,12 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         </div>
 
         <!-- MAIN CARD -->
+        <!-- #lotG1 · #recCoreWrap = le composant COMPLET (carte + bannière remplacement).
+             Le Générateur (étape Voix, onglet Enregistreur) le DÉPLACE chez lui
+             (_gvRecDock) puis le rend ici (_gvRecUndock) — jamais dupliqué :
+             mêmes ids, même état, même logique silences. #recCoreHome = ancre de retour. -->
+        <div id="recCoreHome" style="display:none"></div>
+        <div id="recCoreWrap">
         <div class="card" style="padding:28px;margin-bottom:14px">
 
           <!-- WAVEFORM + TIME -->
@@ -3210,6 +3260,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div id="recMainBtnDot" style="width:30px;height:30px;border-radius:50%;background:#FF4646;transition:all .2s"></div>
               <div id="recPulse" style="display:none;position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(239,68,68,0.35);animation:recPulse 1.2s ease-out infinite"></div>
             </button>
+            <!-- #lotG1 · masqué quand le composant est docké dans le Générateur (l'import = option « Fichier audio ») -->
+            <div id="recImportWrap" style="display:contents">
             <div style="display:flex;align-items:center;gap:10px;color:var(--text3);font-size:11px;font-family:var(--mono)">
               <div style="flex:1;height:1px;background:var(--border)"></div>
               ou
@@ -3220,6 +3272,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               Importer un fichier audio / vidéo MP4
             </button>
             <input type="file" id="recImportFileIn" accept="audio/*,video/*" style="display:none" onchange="recImportFile(this.files[0]);this.value=''">
+            </div><!-- /recImportWrap -->
           </div>
 
           <!-- CONTROLS ROW -->
@@ -3257,6 +3310,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <button onclick="recCancelReplace()" style="padding:10px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;cursor:pointer">Annuler</button>
           </div>
         </div>
+        </div><!-- /recCoreWrap -->
 
         <!-- ACTIONS BOTTOM -->
         <div style="display:flex;gap:8px">
@@ -7032,6 +7086,12 @@ function enterApp(profile){
   // ⚙️ Détails montage : même gating dev — ouvre l'écran post-Montage IA
   const navDet = document.getElementById('navMtDet');
   if(navDet) navDet.style.display = (profile.plan === 'developer' || profile.is_owner) ? 'flex' : 'none';
+  // #gen-dev · features Générateur en TEST : « Générer un avatar », « Enregistreur »
+  // (+ Whisper au-mot, cf composeVideo). Visibles UNIQUEMENT sur le compte dev/owner
+  // pour l'instant ; on retire ce gate (→ tout le monde) quand Axel valide. Un seul
+  // flag window._genDevOn piloté ici ; les cartes .gen-dev sont des flex.
+  window._genDevOn = (profile.plan === 'developer' || profile.is_owner);
+  try{ document.querySelectorAll('.gen-dev').forEach((el) => { el.style.display = window._genDevOn ? 'flex' : 'none'; }); }catch(_){}
   // Bouton "+ Crédits" : visible pour les membres payants
   const buyBtn = document.getElementById('btnBuyCredits');
   if(buyBtn) buyBtn.style.display = (profile.plan && profile.plan !== 'free') ? 'flex' : 'none';
@@ -10751,9 +10811,15 @@ let recSegments       = [];     // [{id, start, end}] en samples pour le découp
 function recInit(){
   const canvas = document.getElementById('recWaveform');
   if(!canvas) return;
-  canvas.addEventListener('click', recCanvasClick);
-  canvas.addEventListener('mousemove', recCanvasHover);
-  recDrawIdle();
+  // #lotG1 · bind UNE seule fois (recInit est rappelé à chaque nav ET à chaque dock du Générateur)
+  if(!window._recCanvasBound){
+    canvas.addEventListener('click', recCanvasClick);
+    canvas.addEventListener('mousemove', recCanvasHover);
+    window._recCanvasBound = true;
+  }
+  // un enregistrement existe déjà → on redessine SA waveform (à la largeur du conteneur courant)
+  if(recAudioBuffer && recState !== 'recording'){ recRenderWaveform(recAudioBuffer, recPlayOffset); _recUpdateTime(recPlayOffset, recAudioBuffer.duration); }
+  else recDrawIdle();
   recUpdateUI();
 }
 
@@ -11442,6 +11508,9 @@ function _gateFreeExport(){
 }
 
 function nav(id,el){
+  // #lotG1 · quitter une vue avec l'Enregistreur docké dans le Générateur :
+  // micro coupé + le composant rentre chez lui (module Audio) — no-op sinon.
+  try{ if (typeof _gvRecUndock === 'function') _gvRecUndock(); }catch(_){}
   // ── Paywall free plan : sections premium (génération) uniquement ──
   if(_PAID_ONLY_SECTIONS.includes(id)){
     const plan = (currentMember?.plan || 'free').toLowerCase();
@@ -11479,6 +11548,9 @@ function nav(id,el){
       step = 1; if(typeof updateSteps==='function') updateSteps();
     }
     setTimeout(initClipPicker, 50); _updateDurationLock((currentMember?.plan)||'free'); setTimeout(_aaInitSliders, 60); if(typeof selectVoiceMode==='function' && !window._bypassHedraOn){ selectVoiceMode('clone'); }
+    // #lotG1 · retour direct sur l'étape Voix (l'undock ci-dessus a rendu le
+    // composant au module Audio) : _voxEnter re-docke si l'onglet rec est actif
+    if(step===2 && typeof _voxEnter==='function') setTimeout(_voxEnter, 0);
   }
   if(window._mNavSync) _mNavSync(id);
 }
@@ -11755,6 +11827,9 @@ async function _genMixInto(srcUrl){
 }
 
 function updateSteps(){
+  // #lotG1 · on ne laisse JAMAIS le micro de l'Enregistreur (étape Voix) ouvert
+  // derrière un changement d'étape — micro coupé + composant rendu au module Audio.
+  try{ if (typeof _gvRecUndock === 'function' && step !== 2) _gvRecUndock(); }catch(_){}
   // Étape Voix : le choix « Audio MP4 » RESTE sélectionné même sans fichier (fix : il « disparaissait »
   // à chaque retour sur l'étape) — la garde fichier est faite à la génération, pas ici
   // En-tête refonte : eyebrow + titre display par étape
@@ -17558,6 +17633,8 @@ function _avPick(src){
   aff('avPanePhoto', src === 'photo');
   aff('avPaneVideo', src === 'video');
   aff('avPaneLib',   src === 'library');
+  aff('avPaneGen',   src === 'genai');   // #lotC · « Générer un avatar »
+  if (src === 'genai' && typeof _avGenSyncCosts === 'function') _avGenSyncCosts();
   // le mode « vidéo existante » = bypass Hedra ; on aligne le drapeau lu à la génération
   window._bypassHedraOn = (src === 'video');
   if (src === 'library') _avLibGrid();
@@ -17604,6 +17681,230 @@ function _avLibGrid(){
 }
 function _avEnter(){ _avPick(_avSrc2); if (selAvatar && selAvatar.localUrl) _avReflect(); }
 
+// ══ #lotC · GÉNÉRER UN AVATAR (étape 1) ═════════════════════════════════════
+// Réutilise le pipeline Images IA : gpt-image via openai-proxy, style UGC RÉEL
+// (_IMG_STYLES) + bloc réalisme (_IMG_REALISM), qualité PREMIUM, portrait.
+// Crédits : barème existant CREDIT_COSTS.imgMedium (génération premium = 3 cr),
+// débit AVANT l'appel (spendCreditsFor), creditsFlowRefund si échec.
+let _avGenBusy = false, _avGenUrl = null, _avGenHD = false;
+function _avGenSyncCosts(){
+  // l'UI lit le barème depuis la constante : changer CREDIT_COSTS suffit
+  const c1 = document.getElementById('avGenBtnCost');    if (c1) c1.textContent = CREDIT_COSTS.imgMedium + ' crédits';
+  const c2 = document.getElementById('avGenDetailCost'); if (c2) c2.textContent = CREDIT_COSTS.imgClarity + ' cr';
+}
+// ── #lotG1 · IMAGES DE RÉFÉRENCE (bouton « + ») ─────────────────────────────
+// Une ou plusieurs images (max 4) : produit, visage… Avec ≥1 réf, la génération
+// passe par gpt-image EDITS multi-image (même motif que _imgEditOne /
+// _expComposeRefs) — l'IDENTITÉ vient des réfs, la SCÈNE vient du prompt.
+// Même débit (imgMedium), même refund, même flux upscale/télécharger/utiliser.
+let _avGenRefs = [];   // File[]
+function _avGenRefAdd(files){
+  const list = Array.from(files || []).filter((f) => f && /^image\//.test(f.type || ''));
+  if (!list.length){ toast('Choisis une image (PNG, JPG, WEBP…)'); return; }
+  let plein = false;
+  for (const f of list){
+    if (_avGenRefs.length >= 4){ plein = true; break; }
+    _avGenRefs.push(f);
+  }
+  if (plein) toast('4 images de référence maximum');
+  _avGenRefRender();
+}
+function _avGenRefRemove(i){ _avGenRefs.splice(i, 1); _avGenRefRender(); }
+function _avGenRefsClear(){ _avGenRefs = []; _avGenRefRender(); }
+function _avGenRefRender(){
+  const wrap = document.getElementById('avGenRefThumbs'); if (!wrap) return;
+  wrap.querySelectorAll('img[data-ourl]').forEach((im) => { try{ URL.revokeObjectURL(im.src); }catch(_){} });
+  wrap.innerHTML = '';
+  wrap.style.display = _avGenRefs.length ? 'flex' : 'none';
+  _avGenRefs.forEach((f, i) => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:relative;width:56px;height:56px;flex:0 0 auto';
+    const im = document.createElement('img');
+    im.src = URL.createObjectURL(f); im.setAttribute('data-ourl', '1'); im.alt = 'Référence ' + (i + 1);
+    im.style.cssText = 'width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--border-2);display:block;background:var(--panel-1)';
+    const x = document.createElement('button');
+    x.type = 'button'; x.title = 'Retirer cette image';
+    x.style.cssText = 'position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,.72);color:#fff;cursor:pointer;display:grid;place-items:center;padding:0';
+    x.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    x.onclick = () => _avGenRefRemove(i);
+    d.appendChild(im); d.appendChild(x); wrap.appendChild(d);
+  });
+  const add = document.getElementById('avGenRefAddBtn'); if (add) add.style.display = _avGenRefs.length >= 4 ? 'none' : '';
+  const hint = document.getElementById('avGenRefHint');
+  if (hint) hint.textContent = _avGenRefs.length
+    ? _avGenRefs.length + ' référence' + (_avGenRefs.length > 1 ? 's' : '') + ' — visage et produit repris de tes images'
+    : 'Ajoute des images de référence · ton produit, un visage… (4 max)';
+}
+async function _avGenGenerate(){
+  const ta = document.getElementById('avGenPrompt');
+  const prompt = ((ta && ta.value) || '').trim();
+  if (!prompt){ toast('Décris ton avatar d\'abord'); return; }
+  if (_avGenBusy){ toast('Une génération est déjà en cours — patiente'); return; }
+  // Débit AVANT l'appel moteur (anti-triche) — gating Free « à l'action » inclus
+  creditsFlowBegin();
+  if (!(await spendCreditsFor(CREDIT_COSTS.imgMedium, 'avatar IA'))) return;
+  _avGenBusy = true;
+  const btn = document.getElementById('avGenBtn');
+  const orig = btn ? btn.innerHTML : '';
+  if (btn){ btn.disabled = true; btn.style.opacity = '.75'; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours… (~30 s)'; }
+  try{
+    const session = (await sb.auth.getSession()).data.session;
+    const token = session?.access_token || SUPABASE_KEY;
+    const ugc = _IMG_STYLES.find((s) => s.id === 'ugc');
+    const fullPrompt = prompt + ((ugc && ugc.suffix) || '') + _IMG_REALISM;
+    // #lotG1 · avec des références → EDITS multi-image ; sans → generations (inchangé)
+    const url = _avGenRefs.length
+      ? await _avGenCallGptEdits(token, fullPrompt)
+      : await _avGenCallGpt(token, fullPrompt);
+    _avGenUrl = url; _avGenHD = false;
+    const img = document.getElementById('avGenImg'); if (img) img.src = url;
+    const res = document.getElementById('avGenResult'); if (res) res.style.display = 'block';
+    // nouvelle image → le bouton « Améliorer les détails » se réarme
+    const db = document.getElementById('avGenDetailBtn');
+    if (db){ db.disabled = false; db.style.opacity = '1'; if (window._avGenDetailHtml) db.innerHTML = window._avGenDetailHtml; }
+    _avGenSyncCosts();
+    creditsFlowDone();
+    // même règle que les Images IA : tout ce qui est généré va sur le compte
+    try{ if (typeof _imgAutoSaveUrl === 'function') _imgAutoSaveUrl(url, '1024x1792', 'Avatar IA'); }catch(_){}
+    toast('Avatar généré — utilise-le comme photo ou améliore les détails');
+    try{ if (res) res.scrollIntoView({ behavior:'smooth', block:'center' }); }catch(_){}
+  }catch(e){
+    console.error('avatar IA:', e);
+    try{ await creditsFlowRefund('la génération de l\'avatar a échoué'); }catch(_){}
+    toast('' + (typeof _imgFriendlyErr === 'function' ? _imgFriendlyErr(e && e.message) : ((e && e.message) || e)));
+  }finally{
+    _avGenBusy = false;
+    if (btn){ btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = orig; }
+  }
+}
+// gpt-image via openai-proxy — même appel que _imgGenerateOne, mais qualité
+// PREMIUM (medium) FIGÉE : _imgEffectiveQuality() est plafonnée par plan et
+// aurait rétrogradé un Starter en low alors qu'il paie les 3 cr du premium.
+// Portrait 1024x1536 (résolution portrait max de gpt-image, idéale 9:16 avatar).
+async function _avGenCallGpt(token, prompt){
+  let lastErr = 'Erreur génération';
+  for (const model of _GPT_IMG_MODELS){
+    const res = await fetch(SUPABASE_URL + '/functions/v1/openai-proxy?path=/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt, n: 1, size: '1024x1536', quality: 'medium', moderation: 'low' })
+    });
+    const data = await res.json();
+    if (data.error){
+      lastErr = _imgErrText(data.error, 'Erreur génération');
+      if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue;   // modèle inconnu → suivant
+      throw new Error(lastErr);
+    }
+    const item = data.data && data.data[0];
+    if (item && item.b64_json) return 'data:image/png;base64,' + item.b64_json;
+    if (item && item.url) return item.url;
+    lastErr = 'Aucune image retournée';
+  }
+  throw new Error(lastErr);
+}
+// #lotG1 · AVEC références : gpt-image EDITS multi-image via openai-proxy — motif
+// EXACT de _imgEditOne/_expComposeRefs : chaque réf normalisée en PNG propre
+// (sinon HEIC/WEBP → 400 « Invalid image file »), image[] multiples en FormData,
+// clause de fidélité du texte packaging (_IMG_TEXT_FIDELITY) ajoutée UNE fois.
+// Même portrait 1024x1536 et même qualité premium FIGÉE que le chemin sans réf.
+async function _avGenCallGptEdits(token, prompt){
+  let lastErr = 'Erreur génération';
+  const srcs = _avGenRefs.slice(0, 4);
+  const refs = [];
+  for (let i = 0; i < srcs.length; i++){
+    try{ refs.push(await _imgToCleanPng(srcs[i], 'ref' + (i + 1) + '.png')); }
+    catch(e){ console.warn('[avatar IA] normalisation réf ' + (i + 1) + ' échouée → envoi brut', e); refs.push(srcs[i]); }
+  }
+  if (!refs.length) return _avGenCallGpt(token, prompt);   // garde : plus de réfs → chemin normal
+  const fidPrompt = String(prompt || '').indexOf(_IMG_TEXT_FIDELITY) >= 0 ? prompt : (prompt + _IMG_TEXT_FIDELITY);
+  for (const model of _GPT_IMG_MODELS){
+    const fd = new FormData();
+    fd.append('model', model);
+    if (refs.length > 1) refs.forEach((f, i) => fd.append('image[]', f, f.name || ('image' + (i + 1) + '.png')));
+    else fd.append('image', refs[0], refs[0].name || 'image.png');
+    fd.append('prompt', fidPrompt);
+    fd.append('n', '1');
+    fd.append('size', '1024x1536');
+    fd.append('quality', 'medium');
+    fd.append('moderation', 'low');
+    const res = await fetch(SUPABASE_URL + '/functions/v1/openai-proxy?path=/v1/images/edits', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+    });
+    const data = await res.json();
+    if (data.error){
+      lastErr = _imgErrText(data.error, 'Erreur génération');
+      if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue;   // modèle inconnu → suivant
+      throw new Error(lastErr);
+    }
+    const item = data.data && data.data[0];
+    if (item && item.b64_json) return 'data:image/png;base64,' + item.b64_json;
+    if (item && item.url) return item.url;
+    lastErr = 'Aucune image retournée';
+  }
+  throw new Error(lastErr);
+}
+// « Améliorer les détails » = AuraSR (même moteur, même prix et même gating Élite
+// que « Détails du visage » des Images IA) — débit avant, remboursé si échec.
+async function _avGenUpscale(btn){
+  if (!_avGenUrl){ toast('Génère un avatar d\'abord'); return; }
+  if (_avGenHD){ toast('Détails déjà améliorés sur cette image'); return; }
+  const plan = (currentMember?.plan || 'free').toLowerCase();
+  if (!['elite','developer'].includes(plan)){ toast('Amélioration des détails réservée au plan Élite'); try{ openUpgradeModal(); }catch(_){} return; }
+  if (_avGenBusy){ toast('Une opération est déjà en cours — patiente'); return; }
+  creditsFlowBegin();
+  if (!(await spendCreditsFor(CREDIT_COSTS.imgClarity, 'clarity avatar'))) return;
+  _avGenBusy = true;
+  const orig = btn ? btn.innerHTML : '';
+  if (btn && !window._avGenDetailHtml) window._avGenDetailHtml = orig;
+  if (btn){ btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Amélioration… (~20 s)'; }
+  try{
+    let src = _avGenUrl;
+    if (!/^data:/.test(src)){
+      const resp = await fetch(src); const blob = await resp.blob();
+      src = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.readAsDataURL(blob); });
+    }
+    const up = await _falAuraSR(src);
+    if (!up) throw new Error('AuraSR : aucune image');
+    _avGenUrl = up; _avGenHD = true;
+    const img = document.getElementById('avGenImg'); if (img) img.src = up;
+    creditsFlowDone();
+    toast('Détails améliorés — AuraSR');
+    // une image déjà améliorée ne se ré-améliore pas : le bouton se fige (comme Images IA)
+    if (btn){ btn.style.opacity = '.55'; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Détails faits'; }
+  }catch(e){
+    console.error('avatar IA upscale:', e);
+    try{ await creditsFlowRefund('l\'amélioration des détails a échoué'); }catch(_){}
+    toast('' + ((e && e.message) || e));
+    if (btn) btn.innerHTML = orig;
+  }finally{
+    _avGenBusy = false;
+    if (btn) btn.disabled = _avGenHD;
+  }
+}
+async function _avGenDownload(){
+  if (!_avGenUrl){ toast('Génère un avatar d\'abord'); return; }
+  try{
+    const resp = await fetch(_avGenUrl); const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'avatarads-avatar-ia.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  }catch(e){ try{ window.open(_avGenUrl, '_blank'); }catch(_){ toast('Téléchargement impossible'); } }
+}
+// « Utiliser comme avatar » : EXACTEMENT le chemin d'une photo uploadée —
+// dataUrl → File → handleAvatarFile (recadrage, preview téléphone, presets compris).
+async function _avGenUse(){
+  if (!_avGenUrl){ toast('Génère un avatar d\'abord'); return; }
+  try{
+    const resp = await fetch(_avGenUrl); const blob = await resp.blob();
+    const file = new File([blob], 'avatar-ia.png', { type: blob.type || 'image/png' });
+    handleAvatarFile(file);
+    _avGenRefsClear();   // #lotG1 · vignettes de référence remises à zéro après usage
+    _avPick('photo'); _avReflect();
+    toast('Avatar chargé — passe à l\'étape Voix');
+  }catch(e){ toast('Impossible d\'utiliser cette image : ' + ((e && e.message) || e)); }
+}
+
 // ── VOIX ───────────────────────────────────────────────────────────────────
 let _voxSilOn = true, _voxGpOn = false;
 function _voxSetSw(rid, on){
@@ -17634,6 +17935,92 @@ function _voxEnter(){
   _voxSetSw('voxSil', _voxSilOn); _voxSetSw('voxGp', _voxGpOn);
   const w = document.getElementById('voxGpZoneWrap'); if (w) w.style.display = _voxGpOn ? '' : 'none';
   if (window.mp4AudioFile) _voxReflect();
+  // #lotG1 · retour sur l'étape Voix avec l'onglet Enregistreur encore actif :
+  // le composant (rendu au module Audio par l'undock) revient se docker ici.
+  const pr = document.getElementById('voxPaneRec');
+  if (pr && pr.style.display !== 'none' && typeof _gvRecDock === 'function') _gvRecDock();
+}
+
+// ══ #lotG1 · ENREGISTREUR (étape 2 Voix) — LE VRAI COMPOSANT, DOCKÉ ═════════
+// Redesign Axel 29/08 : plus de mini-enregistreur maison — le composant COMPLET
+// de l'Enregistreur vocal (module Audio : waveform live, timer, « X.Xs de
+// silences supprimés », Écouter / Couper ici / Supprimer / Remplacer / toggle
+// Silences) est DÉPLACÉ (#recCoreWrap — jamais dupliqué : mêmes ids, même état
+// recState/recAudioBuffer, même _recRemoveSilence) dans le panneau du
+// Générateur, puis RENDU au module Audio dès qu'on le quitte (nav, changement
+// d'étape ou d'onglet). Différence voulue ici : l'import de fichier est masqué
+// (c'est l'option « Fichier audio ») ; dessous, deux boutons : Télécharger
+// l'audio (recDownload) et Utiliser cet audio (→ handleMp4AudioFile, le même
+// chemin que le fichier importé).
+let _gvRecDocked = false;
+function _gvRecDock(){
+  const wrap = document.getElementById('recCoreWrap');
+  const host = document.getElementById('voxRecHost');
+  if (!wrap || !host) return;
+  if (wrap.parentNode !== host) host.appendChild(wrap);
+  _gvRecDocked = true;
+  const imp = document.getElementById('recImportWrap'); if (imp) imp.style.display = 'none';
+  // bind canvas (une fois) + redessine idle/waveform à la largeur du panneau.
+  // DIFFÉRÉ : updateSteps appelle _voxEnter AVANT d'afficher fs-2 — un rendu
+  // immédiat tomberait sur un canvas de largeur 0 (waveform invisible).
+  setTimeout(() => {
+    const cv = document.getElementById('recWaveform');
+    if (cv && !cv.offsetWidth) setTimeout(recInit, 120); else recInit();
+  }, 0);
+}
+function _gvRecUndock(){
+  if (!_gvRecDocked) return;
+  // on ne laisse JAMAIS le micro ouvert derrière une navigation
+  if (recState === 'recording'){ try{ recStopRecording(); }catch(_){} }
+  if (recState === 'playing'){ try{ recStopPlayback(); }catch(_){} }
+  const wrap = document.getElementById('recCoreWrap');
+  const home = document.getElementById('recCoreHome');
+  if (wrap && home && home.parentNode && wrap.parentNode !== home.parentNode) home.parentNode.insertBefore(wrap, home.nextSibling);
+  _gvRecDocked = false;
+  const imp = document.getElementById('recImportWrap'); if (imp) imp.style.display = 'contents';
+}
+function _gvRecPick(src){
+  // quitter l'onglet Enregistreur pendant une prise = micro coupé
+  if (src !== 'rec' && _gvRecDocked && recState === 'recording'){ try{ recStopRecording(); }catch(_){} }
+  document.querySelectorAll('#voxSrcCards .vox-src2').forEach((b) => {
+    const on = b.dataset.vsrc === src;
+    b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+    b.style.background = on ? 'var(--accent-soft)' : 'var(--surface)';
+    const ico = b.querySelector('.vox-src2-ico');
+    if (ico){ ico.style.background  = on ? 'var(--accent)' : 'var(--surface-2)';
+              ico.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+              const p = ico.querySelector('svg'); if (p) p.setAttribute('stroke', on ? '#1A0A02' : 'var(--text-2)'); }
+    const chk = b.querySelector('.vox-chk2'); if (chk) chk.style.display = on ? '' : 'none';
+  });
+  const aff = (id, v) => { const e = document.getElementById(id); if (e) e.style.display = v ? '' : 'none'; };
+  aff('voxPaneFile', src === 'file');
+  aff('voxPaneRec',  src === 'rec');
+  if (src === 'rec') _gvRecDock();
+}
+function _gvRecDownload(){
+  if (!recAudioBuffer){ toast('Enregistre un audio d\'abord'); return; }
+  recDownload();   // même sortie que le module Audio : m4a/webm natif, WAV si montage
+}
+async function _gvRecUse(){
+  if (!recAudioBuffer){ toast('Enregistre un audio d\'abord'); return; }
+  if (recState === 'recording'){ toast('Arrête l\'enregistrement d\'abord'); return; }
+  const btn = document.getElementById('gvRecUseBtn'); const orig = btn ? btn.innerHTML : '';
+  if (btn){ btn.disabled = true; btn.innerHTML = 'Préparation…'; }
+  try{
+    if (recState === 'playing'){ try{ recStopPlayback(); }catch(_){} }
+    // le buffer TRAITÉ (silences coupés, segments montés, remplacements) → WAV
+    // via _recToWav : lisible par tout le flux aval (waveform, Whisper, Hedra).
+    const nom = 'Enregistrement ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const file = new File([_recToWav(recAudioBuffer)], nom + '.wav', { type: 'audio/wav' });
+    // MÊME CHEMIN que le fichier uploadé (voxFileIn2) : drapeaux + handler + reflet
+    window.mp4AudioEnabled = true;
+    window.mp4AudioFile = file;
+    handleMp4AudioFile(file);
+    _gvRecPick('file');
+    _voxReflect();
+    toast('Audio chargé — il suit le même flux que le fichier importé');
+  }catch(e){ toast('Impossible d\'utiliser cet enregistrement : ' + ((e && e.message) || e)); }
+  finally{ if (btn){ btn.disabled = false; btn.innerHTML = orig; } }
 }
 
 // ── LE RÉCAPITULATIF DIT CE QUI VA RÉELLEMENT ÊTRE FACTURÉ ─────────────────
