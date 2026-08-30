@@ -24197,9 +24197,15 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // chemin A produire une vidéo sans audio, c'est le comportement voulu.)
       const _audioSrcExists = !!(_audioBlobToEncode || _audioFallbackBlob);
       const _audioEncodedOk = _canEncodeAudio && !_audioEncErr && !!_audioPCMBuf;
+      // BASCULE CHEMIN B DÉSACTIVÉE (30/08) : le repli MediaRecorder s'est révélé cassé sur
+      // Safari (« vidéo trop petite » = capture ratée + optimisation ffmpeg single-thread
+      // interminable = blocage 99%). On laisse donc le CHEMIN A produire la vidéo AVEC les
+      // sous-titres, quitte à être MUET sur Safari (WebCodecs n'y encode pas l'audio) — au
+      // moins le rendu FINIT et reste rapide, et il a le son sur Chrome/Edge. Le vrai fix
+      // pour l'audio fiable partout (iOS Safari inclus) = composition SERVEUR (worker Railway,
+      // comme le Montage IA), à faire proprement et à tester.
       if(_audioSrcExists && !_audioEncodedOk){
-        console.log('[compose] chemin A abandonné : audio non encodable ici → bascule chemin B (MediaRecorder) AVANT le rendu vidéo', { canEncodeAudio:_canEncodeAudio, audioEncErr:_audioEncErr?(_audioEncErr.message||String(_audioEncErr)):null, pcm:!!_audioPCMBuf, hasEncodable:!!_audioBlobToEncode, hasFallback:!!_audioFallbackBlob });
-        throw new Error('AUDIO_FALLBACK_MEDIARECORDER');
+        console.log('[compose] chemin A · audio non encodable ici (Safari) → vidéo livrée SANS audio (repli MediaRecorder désactivé). Fix audio fiable = composition serveur.');
       }
       console.log('[compose] chemin A (WebCodecs) · audio encodé=' + (_audioEncodedOk?'oui':'non (aucune source)'));
 
@@ -24419,14 +24425,12 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
     window._lastComposedBlob = mrBlob;
 
-    // FFmpeg post-process : CFR 30fps + yuv420p + H.264 main.
-    // 99% BLOQUÉ (Safari, 30/08) : ffmpeg.wasm single-thread (pas de SharedArrayBuffer sur
-    // Pages) ré-encode une vidéo longue en PLUSIEURS MINUTES → on SAUTE l'optimisation dès
-    // que ce serait lent (mono-thread OU durée > 12 s) et on livre le blob MediaRecorder brut
-    // (déjà H.264, lisible + téléchargeable). Optimisation seulement en multi-thread ET courte.
+    // FFmpeg post-process : CFR 30fps + yuv420p + H.264 main (RÉTABLI 30/08 : indispensable
+    // pour le son à l'import TikTok — Axel). Le chemin B est désormais RARE (repli WebCodecs
+    // absent), donc la lenteur ffmpeg single-thread n'affecte plus le cas courant (Safari
+    // passe par le chemin A). Si un jour on remet un repli, faire ce post-process côté SERVEUR.
     let ffBlob = mrBlob;
-    const _ffFast = (typeof self !== 'undefined' && self.crossOriginIsolated) || totalDuration <= 12;
-    if(_ffFast) try {
+    try {
       setStage('Optimisation TikTok…', 99);
       toast('Optimisation TikTok en cours…');
       await _loadFFmpeg();
