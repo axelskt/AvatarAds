@@ -553,7 +553,11 @@ async function composeGenSubs(jobDir, outPath, plan) {
   if (!existsSync(orig)) throw new Error('base.mp4 manquant (compose gen-subs)')
   const W = 1080, H = 1920
   const baseDur = parseFloat(ffprobe(orig, 'format=duration')) || Number(plan.duration) || 5
-  const D = Math.round(Math.min(Number(plan.duration) || baseDur, baseDur) * 100) / 100
+  // #dur-fix (Axel 30/08) : la VRAIE durée de la vidéo uploadée (ffprobe base.mp4) FAIT FOI, POINT.
+  // Avant : D = min(plan.duration, baseDur) → quand le client renvoyait 15 s par défaut (élément
+  // #hedraVideo pas prêt → duration NaN), une vidéo de 50 s+ était TRONQUÉE à 15 s. On ignore
+  // désormais le hint client pour la longueur du rendu : base.mp4 EST la vidéo, sa durée = la cible.
+  const D = Math.round(baseDur * 100) / 100
   plan.duration = D
   plan.subs = plan.subs || {}
   if (!Number(plan.subs.totalDuration)) plan.subs.totalDuration = D
