@@ -1047,7 +1047,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <div id="avGenRefsRow" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                     <button type="button" id="avGenRefAddBtn" onclick="document.getElementById('avGenRefIn').click()" title="Ajouter une ou plusieurs images de référence (produit, visage…)" style="width:34px;height:34px;flex:0 0 auto;border-radius:10px;border:1px dashed var(--border-2);background:var(--panel-1);color:var(--text-2);cursor:pointer;display:grid;place-items:center;transition:.15s" onmouseover="this.style.borderColor='var(--accent-line)';this.style.color='var(--accent-2)'" onmouseout="this.style.borderColor='var(--border-2)';this.style.color='var(--text-2)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
                     <div id="avGenRefThumbs" style="display:none;gap:8px;flex-wrap:wrap"></div>
-                    <span id="avGenRefHint" class="faint" style="font-size:11.5px;line-height:1.4">Ajoute des images de référence · ton produit, un visage… (4 max)</span>
+                    <span id="avGenRefHint" class="faint" style="font-size:11.5px;line-height:1.4">Ajoute des images de référence (4 max)</span>
                   </div>
                   <input type="file" id="avGenRefIn" accept="image/*" multiple style="display:none" onchange="_avGenRefAdd(this.files);this.value=''">
                   <button type="button" id="avGenBtn" onclick="_avGenGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:.2s"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer l'image — <span id="avGenBtnCost">3 crédits</span></button>
@@ -10996,12 +10996,13 @@ async function recToggle(){
 async function recStartRecording(){
   try{
     if(recState==='playing') recStopPlayback();
-    // #hifi (Axel 30/08) : capter la voix EN HAUTE FIDÉLITÉ. {audio:true} laisse le navigateur
-    // activer par défaut echoCancellation / noiseSuppression / autoGainControl (le traitement
-    // « visio » qui rend la voix métallique, pompée et sale — le contraire d'un dictaphone). On
-    // les COUPE → captation brute et naturelle ; le nivellement propre est fait ensuite par
-    // « Volume constant » (_recNormalizeLevel).
-    recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 }, video:false });
+    // #hifi2 (Axel 30/08) : RETOUR aux réglages micro par défaut du navigateur. Les couper
+    // (echoCancellation/noiseSuppression/autoGainControl) faisait capter le micro trop bas et par
+    // à-coups sur Safari — 5 premières secondes « non détectées » + son pas fluide. Le niveau est
+    // repris APRÈS par « Volume constant » (_recNormalizeLevel), qu'on maîtrise. On loggue ce que
+    // Safari applique réellement (diagnostic).
+    recStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false });
+    try{ const _st=recStream.getAudioTracks && recStream.getAudioTracks()[0]; if(_st && _st.getSettings) console.log('🎙 micro réglages Safari:', _st.getSettings()); }catch(_){}
     recCtx = new AudioContext();
     recLiveAnalyser = recCtx.createAnalyser(); recLiveAnalyser.fftSize=256;
     recLiveData = new Float32Array(recLiveAnalyser.frequencyBinCount);
@@ -11126,43 +11127,45 @@ function recLiveLoop(){
 // #sil-agg (Axel 30/08) : « trop de blanc restait » → détection plus agressive :
 // seuil RMS relevé 0.007→0.013 (attrape le bruit de fond / room tone), silence min
 // abaissé 380→230 ms (coupe les blancs plus courts), padding gardé 80→48 ms (moins de blanc laissé).
-function _recRemoveSilence(buffer, threshold=0.013, minSilMs=230, keepSilMs=48){
+function _recRemoveSilence(buffer, threshold, minSilMs=350, keepSilMs=90){
   const sr=buffer.sampleRate;
   const input=buffer.getChannelData(0);
-  const win=Math.max(1,Math.round(sr*0.022)); // fenêtres ~22 ms
-  const keepWin=Math.max(0,Math.round(keepSilMs/22));
+  const win=Math.max(1,Math.round(sr*0.02)); // fenêtres ~20 ms
   const nWin=Math.ceil(input.length/win);
-  // 1) parole vs silence, fenêtre par fenêtre (RMS)
-  const voiced=new Array(nWin);
-  for(let w=0;w<nWin;w++){
-    const i=w*win, e=Math.min(i+win,input.length); let s=0;
-    for(let j=i;j<e;j++) s+=input[j]*input[j];
-    voiced[w]=Math.sqrt(s/Math.max(1,e-i))>=threshold;
+  // 1) RMS par fenêtre + niveau max de la prise → seuil ADAPTATIF (une voix faible n'est plus
+  //    prise pour du silence : c'est ce qui « mangeait » tout l'enregistrement).
+  const rms=new Float32Array(nWin); let maxRms=0;
+  for(let w=0;w<nWin;w++){ const i=w*win,e=Math.min(i+win,input.length); let s=0; for(let j=i;j<e;j++) s+=input[j]*input[j]; rms[w]=Math.sqrt(s/Math.max(1,e-i)); if(rms[w]>maxRms) maxRms=rms[w]; }
+  if(!(maxRms>0)) return buffer;
+  const thr=Math.max(0.004, maxRms*0.08);
+  const voiced=new Array(nWin); for(let w=0;w<nWin;w++) voiced[w]=rms[w]>=thr;
+  // 2) on GARDE tout par défaut ; on ne coupe QUE le MILIEU des silences LONGS (> minSilMs), en
+  //    laissant keepSilMs de respiration de chaque côté → les pauses courtes entre les mots
+  //    restent (son FLUIDE, plus haché).
+  const minSilWin=Math.max(1,Math.round(minSilMs/20)), keepWin=Math.max(0,Math.round(keepSilMs/20));
+  const keep=new Array(nWin).fill(true);
+  let w=0;
+  while(w<nWin){
+    if(voiced[w]){ w++; continue; }
+    const s=w; while(w<nWin && !voiced[w]) w++;
+    if((w-s)>minSilWin){ for(let k=s+keepWin;k<w-keepWin;k++) keep[k]=false; }
   }
-  // 2) garder la parole + un court silence autour (keepWin) pour la respiration
-  const keep=new Array(nWin).fill(false);
-  for(let w=0;w<nWin;w++) if(voiced[w]) for(let k=Math.max(0,w-keepWin);k<=Math.min(nWin-1,w+keepWin);k++) keep[k]=true;
-  // 3) regrouper en segments contigus [start,end] (échantillons)
+  // 3) segments contigus gardés
   const segs=[]; let st=-1;
-  for(let w=0;w<nWin;w++){
-    if(keep[w]&&st<0) st=w;
-    if((!keep[w]||w===nWin-1)&&st>=0){ const end=keep[w]?w:w-1; segs.push([st*win, Math.min((end+1)*win,input.length)]); st=-1; }
+  for(let x=0;x<nWin;x++){
+    if(keep[x]&&st<0) st=x;
+    if((!keep[x]||x===nWin-1)&&st>=0){ const end=keep[x]?x:x-1; segs.push([st*win, Math.min((end+1)*win,input.length)]); st=-1; }
   }
-  if(!segs.length) return buffer;
-  // 4) concaténer avec un micro-fondu (~5 ms) à chaque bord de segment. C'est CE qui manquait :
-  //    recoller deux morceaux d'onde à des phases différentes crée un « clic » (les barres
-  //    verticales du spectre) — le fondu ramène chaque jointure à zéro, donc plus aucun clic.
-  const fade=Math.min(Math.round(sr*0.005), Math.floor(win/2));
   const total=segs.reduce((a,[s,e])=>a+(e-s),0);
+  // FILET DE SÉCURITÉ : ne JAMAIS renvoyer un buffer quasi vide — mieux vaut garder l'audio brut.
+  if(!segs.length || total < sr*0.4) return buffer;
+  // 4) concaténer avec un micro-fondu (~5 ms) à chaque bord → pas de « clic » aux jointures.
+  const fade=Math.min(Math.round(sr*0.005), Math.floor(win/2));
   const result=recCtx.createBuffer(1,Math.max(1,total),sr);
   const out=result.getChannelData(0); let off=0;
   for(const [s,e] of segs){
     const len=e-s;
-    for(let i=0;i<len;i++){
-      let g=1;
-      if(fade>0){ if(i<fade) g=i/fade; else if(i>=len-fade) g=Math.max(0,(len-i)/fade); }
-      out[off+i]=input[s+i]*g;
-    }
+    for(let i=0;i<len;i++){ let g=1; if(fade>0){ if(i<fade) g=i/fade; else if(i>=len-fade) g=Math.max(0,(len-i)/fade); } out[off+i]=input[s+i]*g; }
     off+=len;
   }
   return result;
@@ -11178,12 +11181,14 @@ function _recNormalizeLevel(buffer){
   const ref=buffer.getChannelData(0);
   const win=Math.max(1,Math.round(sr*0.4)); const blocks=[];
   for(let i=0;i<ref.length;i+=win){ let s=0; const e=Math.min(i+win,ref.length); for(let j=i;j<e;j++) s+=ref[j]*ref[j]; blocks.push(Math.sqrt(s/Math.max(1,e-i))); }
-  const spoken=blocks.filter(b=>b>0.02).sort((a,b)=>a-b);
-  if(!spoken.length) return buffer;
-  const med=spoken[Math.floor(spoken.length*0.5)]||spoken[0];
+  const maxB=blocks.reduce((m,b)=>b>m?b:m,0);
+  if(!(maxB>0)) return buffer;
+  // « parlé » = blocs forts RELATIVEMENT à la prise → marche même quand tout est faible (micro bas)
+  const spoken=blocks.filter(b=>b>=Math.max(0.008, maxB*0.35)).sort((a,b)=>a-b);
+  const med=spoken.length ? spoken[Math.floor(spoken.length*0.5)] : maxB;
   if(!(med>0)) return buffer;
   let gain=0.16/med;                 // cible ~-16 dBFS RMS (voix pro, comme un dictaphone)
-  gain=Math.max(0.7, Math.min(gain, 14));
+  gain=Math.max(0.7, Math.min(gain, 20));
   const out=recCtx.createBuffer(ch,buffer.length,sr);
   const knee=0.7, ceil=0.97;
   for(let c=0;c<ch;c++){
@@ -11262,7 +11267,7 @@ function recCancelReplace(){
 
 async function recStartReplacing(){
   try{
-    recReplaceStream=await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 }, video:false });
+    recReplaceStream=await navigator.mediaDevices.getUserMedia({ audio:true, video:false });
     recReplaceChunks=[];
     recReplaceRecorder=new MediaRecorder(recReplaceStream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
     recReplaceRecorder.ondataavailable=e=>{ if(e.data.size>0) recReplaceChunks.push(e.data); };
@@ -17890,7 +17895,7 @@ function _avGenRefRender(){
   const hint = document.getElementById('avGenRefHint');
   if (hint) hint.textContent = _avGenRefs.length
     ? _avGenRefs.length + ' référence' + (_avGenRefs.length > 1 ? 's' : '') + ' — visage et produit repris de tes images'
-    : 'Ajoute des images de référence · ton produit, un visage… (4 max)';
+    : 'Ajoute des images de référence (4 max)';
 }
 async function _avGenGenerate(){
   const ta = document.getElementById('avGenPrompt');
