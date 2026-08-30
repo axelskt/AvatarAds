@@ -1859,7 +1859,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div style="margin-top:12px">
             <!-- COULEURS — maquette ColorField : boîte bordée --panel-1 + pastille arrondie + hex -->
             <div class="fld" style="margin-bottom:16px">
-              <div class="label">Couleurs</div>
               <div class="row gap16" style="margin-bottom:14px">
                 <div class="col" style="flex:1;gap:8px">
                   <span class="mono faint" style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">Couleur 1 (accentué)</span>
@@ -1899,9 +1898,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Position verticale</div>
-                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">75%</span>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">70%</span>
               </div>
-              <input class="aa-slider" type="range" id="subPos" min="0" max="100" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()" style="width:100%">
+              <input class="aa-slider" type="range" id="subPos" min="0" max="100" value="70" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()" style="width:100%">
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -2152,7 +2151,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           </div>
 
           <!-- APERÇU ANIMÉ — au-dessus du téléphone -->
-          <button id="previewPlayBtn" onclick="togglePreviewPlay()" style="display:flex;align-items:center;gap:8px;padding:9px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!previewPlaying){this.style.borderColor='var(--border2)';this.style.color='var(--text2)'}">▶ Aperçu animé</button>
+          <button id="previewPlayBtn" onclick="togglePreviewPlay()" style="display:flex;align-items:center;gap:8px;padding:9px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!previewPlaying && !window._previewPaused){this.style.borderColor='var(--border2)';this.style.color='var(--text2)'}"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="flex-shrink:0"><polygon points="6 4 20 12 6 20"/></svg> Aperçu animé</button>
 
           <div style="display:flex;align-items:center;justify-content:center;gap:10px">
 
@@ -6005,7 +6004,7 @@ let selHedraChar = null;
 
 // Global config for subtitle styling
 const cfg = {
-  subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0,
+  subSize:72, subPos:70, subWpg:2, subWidth:90, subLineH:1.0,   // subPos 75→70 : défaut au-dessus de l'UI TikTok (safe zone bas ~78 %)
   subTimingMode:'proportionnel', subAdvanceMs:300, subSecPerGroup:1.2,
   avClip:{t:0,b:0,l:0,r:0}, gpClip:{t:0,b:0,l:0,r:0},
   format:'vertical', splitRatio:35, gpZoom:100, gpPosition:'bottom',
@@ -19302,18 +19301,59 @@ function toggleGameplayPause(e){
 
 let previewAudio = null;
 let _previewUsingCleanAudio = false; // true quand on joue l'audio nettoyé (silences supprimés)
+window._previewPaused = false; // #pause-apercu · clic 1 = lecture, clic 2 = PAUSE, clic 3 = reprise au même endroit
+
+// Libellé + icône SVG du bouton « Aperçu animé » selon l'état (jamais d'émoji)
+function _previewBtnState(state){
+  const btn = document.getElementById('previewPlayBtn');
+  if(!btn) return;
+  if(state === 'playing'){
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="flex-shrink:0"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg> Pause';
+    btn.style.borderColor = 'var(--orange)'; btn.style.color = 'var(--orange2)';
+  } else if(state === 'paused'){
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="flex-shrink:0"><polygon points="6 4 20 12 6 20"/></svg> Reprendre';
+    btn.style.borderColor = 'var(--orange)'; btn.style.color = 'var(--orange2)';
+  } else {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="flex-shrink:0"><polygon points="6 4 20 12 6 20"/></svg> Aperçu animé';
+    btn.style.borderColor = 'var(--border2)'; btn.style.color = 'var(--text2)';
+  }
+}
 
 async function togglePreviewPlay(){
+  // ── Clic pendant la LECTURE → PAUSE : on fige tout SANS remettre à zéro ──
+  if(previewPlaying){
+    previewPlaying = false;
+    window._previewPaused = true;
+    if(previewInterval !== null){ try{ cancelAnimationFrame(previewInterval); clearInterval(previewInterval); }catch(_){} previewInterval = null; }
+    try{ if(previewAudio) previewAudio.pause(); }catch(_){}
+    try{ if(window._genPreviewMusicEl) window._genPreviewMusicEl.pause(); }catch(_){}
+    const gpvP = document.getElementById('gpVideo');
+    if(gpvP && !gpvP.paused) gpvP.pause();
+    const bpvP = document.getElementById('bypassPreviewVid');
+    if(bpvP && !bpvP.paused && bpvP !== previewAudio) bpvP.pause();
+    _previewBtnState('paused');
+    return;
+  }
+  // ── Clic en PAUSE → REPRISE au même endroit (rien n'est remis à zéro) ──
+  if(window._previewPaused && previewAudio){
+    window._previewPaused = false;
+    previewPlaying = true;
+    try{ previewAudio.play().catch(()=>{}); }catch(_){}
+    try{ if(window._genPreviewMusicEl) window._genPreviewMusicEl.play().catch(()=>{}); }catch(_){}
+    startPreviewAnim(previewAudio, true);   // resume=true : relance la boucle sans reseek à 0
+    _previewBtnState('playing');
+    return;
+  }
+  // ── Sinon : LECTURE depuis le début ──
+  window._previewPaused = false;
   stopPreviewAnim();
   if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
   try{ if(window._genPreviewMusicEl){ window._genPreviewMusicEl.pause(); window._genPreviewMusicEl=null; } }catch(_){}
   if(typeof _genStopPrev==='function') _genStopPrev();   // l'écoute du menu Musique s'arrête aussi : un seul son à la fois
-  previewPlaying = !previewPlaying;
+  previewPlaying = true;
   const btn = document.getElementById('previewPlayBtn');
   if(previewPlaying){
-    btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg> Lecture…';
-    btn.style.borderColor = 'var(--orange)';
-    btn.style.color = 'var(--orange2)';
+    _previewBtnState('playing');
     let activeAudio = null;
     _previewUsingCleanAudio = false;
     window._bypassPreviewIsVideo = false;
@@ -19364,22 +19404,18 @@ async function togglePreviewPlay(){
     if(activeAudio){
       activeAudio.onended = () => {
         previewPlaying = false;
+        window._previewPaused = false;
         stopPreviewAnim();
         if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
         try{ if(window._genPreviewMusicEl){ window._genPreviewMusicEl.pause(); window._genPreviewMusicEl=null; } }catch(_){}
-        const b = document.getElementById('previewPlayBtn');
-        if(b){ b.textContent='▶ Aperçu animé'; b.style.borderColor='var(--border2)'; b.style.color='var(--text2)'; }
+        _previewBtnState('idle');
       };
     }
     startPreviewAnim(activeAudio);
-  } else {
-    btn.textContent = '▶ Aperçu animé';
-    btn.style.borderColor = 'var(--border2)';
-    btn.style.color = 'var(--text2)';
   }
 }
 
-function startPreviewAnim(audioEl){
+function startPreviewAnim(audioEl, resume){
   // Récupère les vrais mots
   let allWords = [];
   // Lire les mots depuis _wordGroups (priorité) ou DOM ou fallback
@@ -19414,15 +19450,16 @@ function startPreviewAnim(audioEl){
   }
   // Si silences actifs en preview → seeking virtuel pour sauter les mêmes silences que l'audio
   const _gpSilenceSync = _previewUsingCleanAudio && silenceKeepSegs.length > 0 && gpVid && gpVid.src;
-  if(gpVid && gpVid.src){ gpVid.currentTime=0; gpVid.play(); }
+  // #pause-apercu · resume=true : on REPREND là où on s'était arrêté — pas de reseek à 0
+  if(gpVid && gpVid.src){ if(!resume) gpVid.currentTime=0; gpVid.play(); }
   // Lancer la vidéo avatar en sync avec l'audio.
   // Si la vidéo lipsync EST elle-même la source audio (audioEl), ne pas la re-piloter ici
   // (sinon on la relance/repositionne et on recrée la désync qu'on vient de corriger).
   const bpv = document.getElementById('bypassPreviewVid');
-  if(bpv && bpv.src && bpv !== audioEl){ bpv.currentTime=0; bpv.play().catch(()=>{}); }
+  if(bpv && bpv.src && bpv !== audioEl){ if(!resume) bpv.currentTime=0; bpv.play().catch(()=>{}); }
 
-  // Affiche le premier groupe immédiatement
-  updateSubPreviewWithWords(groups[0] || allWords.slice(0, wpg));
+  // Affiche le premier groupe immédiatement (sauf reprise : la boucle recale toute seule)
+  if(!resume) updateSubPreviewWithWords(groups[0] || allWords.slice(0, wpg));
 
   // audioDur : durée réelle de l'audio joué (robuste pour tous les cas)
   let audioDur = 0;
@@ -19444,9 +19481,13 @@ function startPreviewAnim(audioEl){
       const elapsed = Math.max(0, audioEl.currentTime - startOffset);
       let groupIdx, wordInGroup;
 
-      if(whisperWordTimestamps.length > 0 && !_previewUsingCleanAudio){
-        // ── Mode Whisper : currentTime absolu du fichier (timestamps Whisper = absolus) ──
-        const wt = audioEl.currentTime + advanceSec;
+      if(whisperWordTimestamps.length > 0){
+        // ── Mode Whisper : timestamps ABSOLUS (fichier original). Si on joue l'audio
+        // NETTOYÉ (silences supprimés), on reconvertit l'horloge clean → temps original
+        // via la table des coupes — sinon les sous-titres dérivent cumulativement
+        // (mesuré : 2,4 s de retard à t=10 s sur le clip de test). Même remap qu'à l'export.
+        const _absT = _previewUsingCleanAudio ? _cleanTimeToOrigTime(audioEl.currentTime) : audioEl.currentTime;
+        const wt = _absT + advanceSec;
         let wi = whisperWordTimestamps.findIndex((w, i) =>
           wt >= w.start && (i === whisperWordTimestamps.length - 1 || wt < whisperWordTimestamps[i + 1].start)
         );
@@ -24624,8 +24665,9 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   if(!shown?.length) return;
   const sz       = Math.max(24, Math.round((cfg.subSize||72) * (H/1920) * 0.85));
   // Position clampée à la SAFE ZONE (UI TikTok/Reels : haut, bas, rail droit)
-  const posY     = Math.round(H * (Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos ||75)) / 100));
-  const posX     = Math.round(W * (Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right,  cfg.subPosX||50)) / 100));
+  // même sémantique que le preview DOM (updateSubPreview) : défaut 70, `!== undefined` (pas ||)
+  const posY     = Math.round(H * (Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos  !== undefined ? cfg.subPos  : 70)) / 100));
+  const posX     = Math.round(W * (Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right,  cfg.subPosX !== undefined ? cfg.subPosX : 50)) / 100));
   const scaleX   = cfg.subScaleX || 1.0;
   const c1       = subColors.c1 || '#FFE500';
   const c2       = subColors.c2 || '#ffffff';
@@ -24664,7 +24706,8 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   ctx.lineJoin = 'round';
 
   if(style === 'badis'){
-    // ── « White » (réf. spec) — Bricolage Grotesque 800, blanc, contour noir épais + ombre, MAJUSCULES ──
+    // ── « White » — texte propre, SANS fond/contour noir : mot actif = c1, autres = c2,
+    //    ombre douce (lisibilité) mais plus de « fond noir » (ni stroke épais ni halo). ──
     const font = `800 ${Math.round(sz*1.08)}px 'Bricolage Grotesque',sans-serif`;
     ctx.font = font;
     ctx.textAlign = 'left';
@@ -24679,15 +24722,13 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       let x = posX - lineW / 2;
       x = Math.max(W * 0.05, Math.min(W * 0.88 - lineW, x)); // safe zone : rail droit TikTok
       lineIdxs.forEach(i => {
+        const active = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
         ctx.font = font;
-        // ombre portée (halo noir)
-        ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = Math.round(sz*0.18); ctx.shadowOffsetX = Math.round(sz*0.04); ctx.shadowOffsetY = Math.round(sz*0.05);
-        ctx.lineWidth   = Math.max(3, Math.round(sz*0.09));
-        ctx.strokeStyle = '#000';
-        ctx.fillStyle   = c1; // couleur 1 (blanc par défaut)
-        ctx.strokeText(upWords[i], x, lineY);
-        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+        // ombre douce pour la lisibilité — PAS de fond/contour noir
+        ctx.shadowColor = 'rgba(0,0,0,.38)'; ctx.shadowBlur = Math.round(sz*0.12); ctx.shadowOffsetX = 0; ctx.shadowOffsetY = Math.round(sz*0.04);
+        ctx.fillStyle   = active ? c1 : c2;  // couleur 1 (accentué) / couleur 2 (autres)
         ctx.fillText(upWords[i], x, lineY);
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
         x += wordWidths[i];
       });
     });
