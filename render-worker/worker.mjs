@@ -558,6 +558,26 @@ async function composeGenSubs(jobDir, outPath, plan) {
   plan.subs = plan.subs || {}
   if (!Number(plan.subs.totalDuration)) plan.subs.totalDuration = D
 
+  // ── CHEMIN RAPIDE : « uniquement vidéo » (aucun sous-titre à graver) ─────────
+  // Pas besoin d'HyperFrames (qui re-rend chaque frame dans Chromium, ~1-2 min) :
+  // on normalise 1080×1920 + on GARDE l'audio de la vidéo d'origine + faststart
+  // TikTok, en UN SEUL ffmpeg (~10-30 s). Le but ici est seulement le SON fiable
+  // (le rendu client est muet sur Safari). Dès qu'il y a des sous-titres → chemin
+  // HyperFrames complet ci-dessous.
+  const _hasSubs = Array.isArray(plan.subs.groups) && plan.subs.groups.length > 0
+  if (!_hasSubs) {
+    const baseHasAudioF = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
+    const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${FPS}`
+    const argsF = ['-v', 'error', '-y', '-i', orig, '-vf', vf,
+      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p']
+    if (baseHasAudioF) argsF.push('-map', '0:v:0', '-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
+    else argsF.push('-an')
+    argsF.push('-t', String(D), '-movflags', '+faststart', outPath)
+    execFileSync('ffmpeg', argsF, { stdio: 'pipe' })
+    console.log(`✅ gen-subs RAPIDE (sans sous-titres · mux audio + faststart, ${D}s) → ${outPath}`)
+    return
+  }
+
   const proj = mkdtempSync(join(tmpdir(), 'aa-gensubs-'))
   try {
     mkdirSync(join(proj, 'media'), { recursive: true })
