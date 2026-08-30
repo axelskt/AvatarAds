@@ -1066,6 +1066,10 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <span aria-hidden="true" style="flex:1 1 110px;min-width:0"></span>
                     <span aria-hidden="true" style="flex:1 1 160px;min-width:0"></span>
                   </div>
+                  <!-- Bascule original ⇄ version améliorée (apparaît après un upscale) — Axel 30/08 -->
+                  <div id="avGenRevertWrap" style="display:none;margin-top:8px">
+                    <button type="button" id="avGenRevertBtn" onclick="_avGenToggleOrig()" style="width:100%;padding:10px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:11px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.borderColor='var(--border3)'" onmouseout="this.style.borderColor='var(--border2)'"><svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5A3.5 3.5 0 1 1 5 8.5"/><path d="M2 2.5V5h2.5"/></svg><span id="avGenRevertLabel">Revenir à l'original</span></button>
+                  </div>
                 </div>
               </div>
               <div id="avPaneLib" style="display:none">
@@ -3303,21 +3307,15 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </button>
           </div>
 
-          <!-- NETTOYAGE & VOIX (Axel 30/08) : silences + traitement voix en segments Désactivé/Activé -->
+          <!-- NETTOYAGE & VOIX (Axel 30/08) : silences + volume constant, interrupteurs iOS (design screen 5) -->
           <div style="margin-top:16px;display:flex;flex-direction:column;gap:11px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Supprimer les silences</span><span style="font-size:11px;color:var(--text3)">Coupe les blancs et les hésitations · volume constant</span></div>
-              <div id="recSilSeg" style="display:inline-flex;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:2px;flex:0 0 auto">
-                <button type="button" onclick="recSetSilence(false)" data-seg="off" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--text3)">Désactivé</button>
-                <button type="button" onclick="recSetSilence(true)" data-seg="on" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--accent);color:#1A0A02">Activé</button>
-              </div>
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Supprimer les silences</span><span style="font-size:11px;color:var(--text3)">Coupe les blancs et les hésitations</span></div>
+              <button type="button" id="recSilSw" onclick="recSetSilence(!recSilenceOn)" aria-label="Supprimer les silences" style="width:44px;height:26px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;align-items:center;border:none;cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Traitement de voix</span><span style="font-size:11px;color:var(--text3)">Voix nette et pro · preset Podcast</span></div>
-              <div id="recTreatSeg" style="display:inline-flex;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:2px;flex:0 0 auto">
-                <button type="button" onclick="recSetTreat(false)" data-seg="off" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--accent);color:#1A0A02">Désactivé</button>
-                <button type="button" onclick="recSetTreat(true)" data-seg="on" style="padding:6px 13px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);background:transparent;color:var(--text3)">Activé</button>
-              </div>
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Volume constant</span><span style="font-size:11px;color:var(--text3)">Même niveau du début à la fin, sans écraser</span></div>
+              <button type="button" id="recTreatSw" onclick="recSetTreat(!window._recTreatOn)" aria-label="Volume constant" style="width:44px;height:26px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;align-items:center;border:none;cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
             </div>
           </div>
 
@@ -9783,12 +9781,33 @@ async function _libGetFullImg(idbKey, fallback, srvPath){
   }
   return fallback;
 }
+// #lightbox (Axel 30/08) : ouvrir une image de la Bibliothèque DANS l'app (visionneuse), au lieu de
+// rediriger vers l'URL Supabase dans un nouvel onglet. Fond cliquable + croix + Échap pour fermer.
+function _libOpenLightbox(url){
+  let ov = document.getElementById('libLightbox');
+  if(!ov){
+    ov = document.createElement('div'); ov.id = 'libLightbox';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;padding:24px;opacity:0;transition:opacity .18s;backdrop-filter:blur(6px)';
+    ov.onclick = (e) => { if(e.target === ov) _libCloseLightbox(); };
+    ov.innerHTML = '<img id="libLightboxImg" style="max-width:96%;max-height:92%;object-fit:contain;border-radius:12px;box-shadow:0 24px 90px rgba(0,0,0,.7)" alt="">'
+      + '<button type="button" onclick="_libCloseLightbox()" aria-label="Fermer" style="position:absolute;top:18px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+    document.body.appendChild(ov);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') _libCloseLightbox(); });
+  }
+  const img = document.getElementById('libLightboxImg'); if(img) img.src = url;
+  ov.style.display = 'flex'; requestAnimationFrame(() => { ov.style.opacity = '1'; });
+}
+function _libCloseLightbox(){
+  const ov = document.getElementById('libLightbox'); if(!ov) return;
+  ov.style.opacity = '0';
+  setTimeout(() => { ov.style.display = 'none'; const img = document.getElementById('libLightboxImg'); if(img) img.src = ''; }, 180);
+}
 // Action sur une image de la Bibliothèque (ouvrir / télécharger / envoyer vers Cartoon) en pleine résolution.
 async function _libImgAction(action, idx){
   let e; try { e = JSON.parse(localStorage.getItem('imgHistory')||'[]')[idx]; } catch(_){}
   if(!e) return;
   const u = await _libGetFullImg(e.idbKey, e.url, e.srvPath);
-  if(action === 'open'){ window.open(u, '_blank'); }
+  if(action === 'open'){ _libOpenLightbox(u); }
   else if(action === 'download'){
     // #dl · télécharger DIRECT (pas de redirection) : sur une URL distante, l'attribut
     // download est ignoré (cross-origin) → le navigateur ouvrait l'image. On passe par un blob.
@@ -10977,7 +10996,12 @@ async function recToggle(){
 async function recStartRecording(){
   try{
     if(recState==='playing') recStopPlayback();
-    recStream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    // #hifi (Axel 30/08) : capter la voix EN HAUTE FIDÉLITÉ. {audio:true} laisse le navigateur
+    // activer par défaut echoCancellation / noiseSuppression / autoGainControl (le traitement
+    // « visio » qui rend la voix métallique, pompée et sale — le contraire d'un dictaphone). On
+    // les COUPE → captation brute et naturelle ; le nivellement propre est fait ensuite par
+    // « Volume constant » (_recNormalizeLevel).
+    recStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 }, video:false });
     recCtx = new AudioContext();
     recLiveAnalyser = recCtx.createAnalyser(); recLiveAnalyser.fftSize=256;
     recLiveData = new Float32Array(recLiveAnalyser.frequencyBinCount);
@@ -11024,7 +11048,7 @@ async function recOnStop(){
   window._recBlobOrigine = blob;   // gardé tel quel : c'est déjà de l'audio compressé
   const arrBuf = await blob.arrayBuffer();
   recRawBuffer = await recCtx.decodeAudioData(arrBuf);
-  const processed = recSilenceOn ? _recRemoveSilence(recRawBuffer) : recRawBuffer;
+  const processed = _recProcessChain(recRawBuffer);
   recAudioBuffer = processed;
   const removed = recRawBuffer.duration - recAudioBuffer.duration;
   const stats=document.getElementById('recStatsDisplay');
@@ -11071,7 +11095,7 @@ async function recImportFile(file){
       URL.revokeObjectURL(blobUrl);
     }
     recRawBuffer = decoded;
-    const processed = recSilenceOn ? _recRemoveSilence(recRawBuffer) : recRawBuffer;
+    const processed = _recProcessChain(recRawBuffer);
     recAudioBuffer = processed;
     recPlayOffset = 0;
     recSegments = [{ id: Date.now(), start: 0, end: recAudioBuffer.length }];
@@ -11105,28 +11129,82 @@ function recLiveLoop(){
 function _recRemoveSilence(buffer, threshold=0.013, minSilMs=230, keepSilMs=48){
   const sr=buffer.sampleRate;
   const input=buffer.getChannelData(0);
-  const winSamples=Math.round(sr*0.022); // ~22ms windows
-  const minSilWin=Math.round(minSilMs/22);
-  const keepSilWin=Math.round(keepSilMs/22);
-  const kept=[]; let silWin=0;
-  for(let i=0;i<input.length;i+=winSamples){
-    const chunk=input.slice(i,Math.min(i+winSamples,input.length));
-    let rms=0; for(let j=0;j<chunk.length;j++) rms+=chunk[j]*chunk[j];
-    rms=Math.sqrt(rms/chunk.length);
-    if(rms>=threshold){ silWin=0; kept.push(chunk); }
-    else{ silWin++; if(silWin<=keepSilWin) kept.push(chunk); }
+  const win=Math.max(1,Math.round(sr*0.022)); // fenêtres ~22 ms
+  const keepWin=Math.max(0,Math.round(keepSilMs/22));
+  const nWin=Math.ceil(input.length/win);
+  // 1) parole vs silence, fenêtre par fenêtre (RMS)
+  const voiced=new Array(nWin);
+  for(let w=0;w<nWin;w++){
+    const i=w*win, e=Math.min(i+win,input.length); let s=0;
+    for(let j=i;j<e;j++) s+=input[j]*input[j];
+    voiced[w]=Math.sqrt(s/Math.max(1,e-i))>=threshold;
   }
-  // Couper silence de fin
-  while(kept.length>0){
-    const last=kept[kept.length-1]; let rms=0;
-    for(let j=0;j<last.length;j++) rms+=last[j]*last[j];
-    if(Math.sqrt(rms/last.length)<threshold) kept.pop(); else break;
+  // 2) garder la parole + un court silence autour (keepWin) pour la respiration
+  const keep=new Array(nWin).fill(false);
+  for(let w=0;w<nWin;w++) if(voiced[w]) for(let k=Math.max(0,w-keepWin);k<=Math.min(nWin-1,w+keepWin);k++) keep[k]=true;
+  // 3) regrouper en segments contigus [start,end] (échantillons)
+  const segs=[]; let st=-1;
+  for(let w=0;w<nWin;w++){
+    if(keep[w]&&st<0) st=w;
+    if((!keep[w]||w===nWin-1)&&st>=0){ const end=keep[w]?w:w-1; segs.push([st*win, Math.min((end+1)*win,input.length)]); st=-1; }
   }
-  const totalLen=Math.max(1,kept.reduce((s,c)=>s+c.length,0));
-  const result=recCtx.createBuffer(1,totalLen,sr);
+  if(!segs.length) return buffer;
+  // 4) concaténer avec un micro-fondu (~5 ms) à chaque bord de segment. C'est CE qui manquait :
+  //    recoller deux morceaux d'onde à des phases différentes crée un « clic » (les barres
+  //    verticales du spectre) — le fondu ramène chaque jointure à zéro, donc plus aucun clic.
+  const fade=Math.min(Math.round(sr*0.005), Math.floor(win/2));
+  const total=segs.reduce((a,[s,e])=>a+(e-s),0);
+  const result=recCtx.createBuffer(1,Math.max(1,total),sr);
   const out=result.getChannelData(0); let off=0;
-  for(const chunk of kept){ out.set(chunk,off); off+=chunk.length; }
+  for(const [s,e] of segs){
+    const len=e-s;
+    for(let i=0;i<len;i++){
+      let g=1;
+      if(fade>0){ if(i<fade) g=i/fade; else if(i>=len-fade) g=Math.max(0,(len-i)/fade); }
+      out[off+i]=input[s+i]*g;
+    }
+    off+=len;
+  }
   return result;
+}
+
+// « Volume constant » (Axel 30/08) — nivelle la voix à un niveau cible SANS la colorer : gain calé
+// sur le RMS médian des zones parlées, puis limiteur DOUX (tanh) sur les crêtes (jamais d'écrêtage
+// brutal). C'est ce qui rattrape un enregistrement faible/inégal et lui donne le niveau franc d'un
+// dictaphone, sans « écraser » le son — pas d'EQ, pas de pompage. Remplace l'ancien preset Podcast.
+function _recNormalizeLevel(buffer){
+  if(!buffer||!buffer.length||!recCtx) return buffer;
+  const sr=buffer.sampleRate, ch=buffer.numberOfChannels;
+  const ref=buffer.getChannelData(0);
+  const win=Math.max(1,Math.round(sr*0.4)); const blocks=[];
+  for(let i=0;i<ref.length;i+=win){ let s=0; const e=Math.min(i+win,ref.length); for(let j=i;j<e;j++) s+=ref[j]*ref[j]; blocks.push(Math.sqrt(s/Math.max(1,e-i))); }
+  const spoken=blocks.filter(b=>b>0.02).sort((a,b)=>a-b);
+  if(!spoken.length) return buffer;
+  const med=spoken[Math.floor(spoken.length*0.5)]||spoken[0];
+  if(!(med>0)) return buffer;
+  let gain=0.16/med;                 // cible ~-16 dBFS RMS (voix pro, comme un dictaphone)
+  gain=Math.max(0.7, Math.min(gain, 14));
+  const out=recCtx.createBuffer(ch,buffer.length,sr);
+  const knee=0.7, ceil=0.97;
+  for(let c=0;c<ch;c++){
+    const d=buffer.getChannelData(c), o=out.getChannelData(c);
+    for(let i=0;i<d.length;i++){
+      let x=d[i]*gain;
+      if(x>knee)       x=knee+(ceil-knee)*Math.tanh((x-knee)/(ceil-knee));
+      else if(x<-knee) x=-knee-(ceil-knee)*Math.tanh((-x-knee)/(ceil-knee));
+      o[i]=x;
+    }
+  }
+  return out;
+}
+
+// Chaîne de traitement de l'enregistreur, appliquée PARTOUT (écoute + export + « Utiliser cet audio »)
+// pour que ce qu'on entend soit exactement ce qu'on obtient. Toujours reconstruite depuis le buffer BRUT.
+function _recProcessChain(raw){
+  if(!raw) return raw;
+  let b = recSilenceOn ? _recRemoveSilence(raw) : raw;
+  if(window._recTreatOn){ try{ b = _recNormalizeLevel(b); }catch(_){} }
+  return b;
 }
 
 // ── Playback ──
@@ -11184,7 +11262,7 @@ function recCancelReplace(){
 
 async function recStartReplacing(){
   try{
-    recReplaceStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    recReplaceStream=await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 }, video:false });
     recReplaceChunks=[];
     recReplaceRecorder=new MediaRecorder(recReplaceStream,{mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
     recReplaceRecorder.ondataavailable=e=>{ if(e.data.size>0) recReplaceChunks.push(e.data); };
@@ -11225,7 +11303,7 @@ async function recOnReplaceStop(){
   const spliced=recCtx.createBuffer(1,Math.max(1,total),sr);
   const out=spliced.getChannelData(0);
   out.set(before,0); out.set(newData,before.length); out.set(after,before.length+newData.length);
-  recAudioBuffer=recSilenceOn?_recRemoveSilence(spliced):spliced;
+  recAudioBuffer=_recProcessChain(spliced);
   const stats=document.getElementById('recStatsDisplay');
   if(stats) stats.style.display='none';
   recInReplace=false;
@@ -11249,7 +11327,7 @@ function recToggleSilence(){
     btn.style.color=recSilenceOn?'var(--green)':'var(--text3)';
   }
   if(recRawBuffer&&recState==='recorded'){
-    recAudioBuffer=recSilenceOn?_recRemoveSilence(recRawBuffer):recRawBuffer;
+    recAudioBuffer=_recProcessChain(recRawBuffer);
     recPlayOffset=0;
     recRenderWaveform(recAudioBuffer,0);
     _recUpdateTime(0,recAudioBuffer.duration);
@@ -11258,26 +11336,36 @@ function recToggleSilence(){
     const stats=document.getElementById('recStatsDisplay');
     if(stats){ if(recSilenceOn&&removed>0.3){stats.textContent=''+removed.toFixed(1)+'s supprimés';stats.style.display='block';}else{stats.style.display='none';} }
   }
-  _recSegStyle('recSilSeg', recSilenceOn);
+  _recSwitchStyle('recSilSw', recSilenceOn);
 }
 
-// #seg (Axel 30/08) : segments « Désactivé | Activé » (silences + traitement voix) de l'enregistreur.
-function _recSegStyle(segId, on){
-  const seg=document.getElementById(segId); if(!seg) return;
-  const off=seg.querySelector('[data-seg="off"]'), onb=seg.querySelector('[data-seg="on"]');
-  if(off){ off.style.background = on?'transparent':'var(--accent)'; off.style.color = on?'var(--text3)':'#1A0A02'; }
-  if(onb){ onb.style.background = on?'var(--accent)':'transparent'; onb.style.color = on?'#1A0A02':'var(--text3)'; }
+// #switch (Axel 30/08) : interrupteurs iOS (silences + volume constant) de l'enregistreur.
+function _recSwitchStyle(swId, on){
+  const sw=document.getElementById(swId); if(!sw) return;
+  sw.style.background = on ? 'var(--accent)' : 'var(--bg4)';
+  sw.style.justifyContent = on ? 'flex-end' : 'flex-start';
 }
+// compat : d'anciens appels passent encore par _recSegStyle(idDeSegment,…)
+function _recSegStyle(segId, on){ _recSwitchStyle(segId==='recSilSeg'?'recSilSw':(segId==='recTreatSeg'?'recTreatSw':segId), on); }
 function recSetSilence(on){
   on=!!on;
-  if(recSilenceOn!==on){ recToggleSilence(); }   // recToggleSilence re-traite le buffer + resync le segment
-  else { _recSegStyle('recSilSeg', on); }
+  if(recSilenceOn!==on){ recToggleSilence(); }   // recToggleSilence re-traite le buffer + resync l'interrupteur
+  else { _recSwitchStyle('recSilSw', on); }
 }
-window._recTreatOn = false;   // « Traitement de voix » : OFF par défaut, ON = preset Podcast sur l'audio final
+window._recTreatOn = true;   // « Volume constant » : ON par défaut (nivelle la voix — voir _recNormalizeLevel)
 function recSetTreat(on){
   window._recTreatOn = !!on;
-  _recSegStyle('recTreatSeg', window._recTreatOn);
-  if(typeof toast==='function') toast(on ? 'Traitement de voix activé — preset Podcast' : 'Traitement de voix désactivé');
+  _recSwitchStyle('recTreatSw', window._recTreatOn);
+  // #reflet : re-traiter le buffer pour que l'ÉCOUTE reflète le réglage (avant, ça ne changeait rien
+  // à l'écoute car le traitement n'était appliqué qu'au moment d'« Utiliser »).
+  if(recRawBuffer && recState==='recorded'){
+    try{
+      recAudioBuffer=_recProcessChain(recRawBuffer);
+      recPlayOffset=0; recRenderWaveform(recAudioBuffer,0); _recUpdateTime(0,recAudioBuffer.duration);
+      const dd=document.getElementById('recDurDisplay'); if(dd) dd.textContent='/ '+_recFmt(recAudioBuffer.duration);
+    }catch(_){}
+  }
+  if(typeof toast==='function') toast(window._recTreatOn ? 'Volume constant activé' : 'Volume constant désactivé');
 }
 
 // ── Téléchargement ──
@@ -17755,7 +17843,7 @@ function _avEnter(){ _avPick(_avSrc2); if (selAvatar && selAvatar.localUrl) _avR
 // (_IMG_STYLES) + bloc réalisme (_IMG_REALISM), qualité PREMIUM, portrait.
 // Crédits : barème existant CREDIT_COSTS.imgMedium (génération premium = 3 cr),
 // débit AVANT l'appel (spendCreditsFor), creditsFlowRefund si échec.
-let _avGenBusy = false, _avGenUrl = null, _avGenHD = false, _avGen4KDone = false;
+let _avGenBusy = false, _avGenUrl = null, _avGenHD = false, _avGen4KDone = false, _avGenUrlOrig = null, _avGenUrlUp = null, _avGenShowingOrig = false;
 function _avGenSyncCosts(){
   // l'UI lit le barème depuis la constante : changer CREDIT_COSTS suffit
   const c1 = document.getElementById('avGenBtnCost');    if (c1) c1.textContent = CREDIT_COSTS.imgMedium + ' crédits';
@@ -17837,6 +17925,7 @@ async function _avGenGenerate(){
       ? await _avGenCallGptEdits(token, fullPrompt)
       : await _avGenCallGpt(token, fullPrompt);
     _avGenUrl = url; _avGenHD = false; _avGen4KDone = false;
+    _avGenUrlOrig = url; _avGenUrlUp = null; _avShowRevert(false);   // nouvelle image → pas encore d'upscale
     const img = document.getElementById('avGenImg'); if (img) img.src = url;
     const res = document.getElementById('avGenResult'); if (res) res.style.display = 'block';
     // nouvelle image → le bouton « Améliorer les détails » se réarme
@@ -17945,7 +18034,7 @@ async function _avGenUpscale(btn){
     }
     const up = await _falAuraSR(src);
     if (!up) throw new Error('AuraSR : aucune image');
-    _avGenUrl = up; _avGenHD = true;
+    _avGenUrl = up; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
     creditsFlowDone();
     toast('Détails améliorés — AuraSR');
@@ -17985,7 +18074,7 @@ async function _avGen4K(btn){
     const token = (await sb.auth.getSession())?.data?.session?.access_token;
     const up = await _nbRefine4K(token, src, '9:16');
     if (!up) throw new Error('Nano Banana Pro : aucune image renvoyée');
-    _avGenUrl = up; _avGen4KDone = true; _avGenHD = true;
+    _avGenUrl = up; _avGen4KDone = true; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
     // la version 4K va aussi dans la Bibliothèque (comme les images IA)
     try{ if (typeof _imgAutoSaveUrl === 'function') _imgAutoSaveUrl(up, '1024x1792', 'Avatar IA · 4K'); }catch(_){}
@@ -18000,6 +18089,20 @@ async function _avGen4K(btn){
   }finally{
     _avGenBusy = false;
   }
+}
+// #toggle (Axel 30/08) : après un upscale (4K Nano ou Détails AuraSR), basculer entre l'ORIGINAL et
+// la version améliorée. « Utiliser comme avatar » / « Télécharger » prennent la version AFFICHÉE (_avGenUrl).
+function _avShowRevert(show){
+  const w = document.getElementById('avGenRevertWrap'); if(w) w.style.display = show ? 'block' : 'none';
+  _avGenShowingOrig = false;
+  const lb = document.getElementById('avGenRevertLabel'); if(lb) lb.textContent = "Revenir à l'original";
+}
+function _avGenToggleOrig(){
+  if(!_avGenUrlUp || !_avGenUrlOrig) return;
+  _avGenShowingOrig = !_avGenShowingOrig;
+  _avGenUrl = _avGenShowingOrig ? _avGenUrlOrig : _avGenUrlUp;
+  const img = document.getElementById('avGenImg'); if(img) img.src = _avGenUrl;
+  const lb = document.getElementById('avGenRevertLabel'); if(lb) lb.textContent = _avGenShowingOrig ? 'Revenir à la version améliorée' : "Revenir à l'original";
 }
 async function _avGenDownload(){
   if (!_avGenUrl){ toast('Génère un avatar d\'abord'); return; }
@@ -18143,17 +18246,9 @@ async function _gvRecUse(){
     // le buffer TRAITÉ (silences coupés, segments montés, remplacements) → WAV
     // via _recToWav : lisible par tout le flux aval (waveform, Whisper, Hedra).
     const nom = 'Enregistrement ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    // #voix-treat (Axel 30/08) : si « Traitement de voix » est activé, on applique le preset Podcast
-    // (_acMasterVoice) à une COPIE du buffer final (sans altérer le buffer d'édition) avant l'export.
-    let _outBuf = recAudioBuffer;
-    if(window._recTreatOn && typeof _acMasterVoice === 'function' && recCtx){
-      try{
-        const _cl = recCtx.createBuffer(recAudioBuffer.numberOfChannels, recAudioBuffer.length, recAudioBuffer.sampleRate);
-        for(let c=0;c<recAudioBuffer.numberOfChannels;c++) _cl.getChannelData(c).set(recAudioBuffer.getChannelData(c));
-        _outBuf = (await _acMasterVoice(_cl, 'podcast')) || _cl;
-      }catch(e){ console.warn('traitement voix:', e); _outBuf = recAudioBuffer; }
-    }
-    const file = new File([_recToWav(_outBuf)], nom + '.wav', { type: 'audio/wav' });
+    // #voix (Axel 30/08) : le « Volume constant » est DÉJÀ appliqué dans recAudioBuffer (chaîne
+    // _recProcessChain) → ce qu'on ÉCOUTE dans l'enregistreur = ce qu'on EXPORTE. On rend tel quel.
+    const file = new File([_recToWav(recAudioBuffer)], nom + '.wav', { type: 'audio/wav' });
     // MÊME CHEMIN que le fichier uploadé (voxFileIn2) : drapeaux + handler + reflet
     window.mp4AudioEnabled = true;
     window.mp4AudioFile = file;
@@ -25798,7 +25893,7 @@ function renderLibrary(){
         _src: 'img', _idx: i, fav: !!img.fav,
         type:'image', emo:'🖼️', name:'Image IA', tags:['image', img.styleLabel||'DALL-E'],
         style:'IMAGE', bg:'linear-gradient(135deg,rgba(77,171,247,0.2),rgba(77,171,247,0.05))',
-        imgUrl: img.url, idbKey: img.idbKey || null, ts: img.ts||0,
+        imgUrl: img.url, idbKey: img.idbKey || null, srvPath: img.srvPath || null, ts: img.ts||0,
         date: img.ts ? new Date(img.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : ''
       }));
     } catch(e){}
@@ -25850,7 +25945,7 @@ function renderLibrary(){
     if(v.type==='image'){
       return `<div class="vid-card" style="cursor:pointer" onclick="_libImgAction('open',${v._idx})">
         <div class="vid-thumb" style="background:${v.bg};overflow:hidden;padding:0">
-          <img src="${v.imgUrl}" ${v.idbKey?`data-libfull="${v.idbKey}"`:''} style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
+          <img src="${v.imgUrl}" data-libidx="${v._idx}" ${v.idbKey?`data-libfull="${v.idbKey}"`:''} ${v.srvPath?`data-libsrv="${v.srvPath}"`:''} style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
           <div class="vid-overlay"></div>
           <div class="vid-badge">${v.style}</div>
           ${_delBtn('img', v._idx)}
@@ -25919,22 +26014,31 @@ function renderLibrary(){
   setTimeout(() => _libSwapFullImages(), 60);
 }
 
-// La grille affiche d'abord la miniature 512px (localStorage, synchrone) — parfait
-// pour l'aperçu instantané mais PIXELISÉ sur les grandes cartes Retina. Dès le
-// rendu fini, on remplace chaque miniature par l'image pleine résolution stockée
-// dans IndexedDB (non bloquant). Les blob: URLs du passage précédent sont révoquées.
-let _libFullUrls = [];
+// La grille affiche d'abord la miniature 512px (localStorage, synchrone) — parfait pour l'aperçu
+// instantané mais PIXELISÉ sur les grandes cartes Retina. On remplace ensuite chaque miniature par
+// la PLEINE résolution : d'abord IndexedDB (local), sinon le Storage du compte (URL signée) — c'est
+// ce qui manquait aux images venant du serveur (elles restaient en miniature). Chargement LAZY
+// (IntersectionObserver) : seules les cartes visibles sont chargées, jamais 300 images d'un coup.
+let _libFullUrls = [], _libIO = null;
 async function _libSwapFullImages(){
   _libFullUrls.forEach(u => { try{ URL.revokeObjectURL(u); }catch(_){} });
   _libFullUrls = [];
-  const imgs = document.querySelectorAll('#libGrid img[data-libfull]');
-  for(const el of imgs){
-    const key = el.getAttribute('data-libfull');
-    if(!key) continue;
-    try {
-      const e = await _idbLoad(key);
-      if(e && e.blob){ const u = URL.createObjectURL(e.blob); _libFullUrls.push(u); el.src = u; }
-    } catch(_){}
+  if(_libIO){ try{ _libIO.disconnect(); }catch(_){} _libIO = null; }
+  const imgs = document.querySelectorAll('#libGrid img[data-libidx]');
+  if(!imgs.length) return;
+  const load = async (el) => {
+    if(el._libFullDone) return; el._libFullDone = true;
+    const idb = el.getAttribute('data-libfull'), srv = el.getAttribute('data-libsrv');
+    try{
+      if(idb){ const e = await _idbLoad(idb); if(e && e.blob){ const u = URL.createObjectURL(e.blob); _libFullUrls.push(u); el.src = u; return; } }
+      if(srv && typeof _libGetFullImg === 'function'){ const full = await _libGetFullImg(null, el.src, srv); if(full && full !== el.src) el.src = full; }
+    }catch(_){}
+  };
+  if('IntersectionObserver' in window){
+    _libIO = new IntersectionObserver((ents) => { ents.forEach(en => { if(en.isIntersecting){ load(en.target); _libIO.unobserve(en.target); } }); }, { rootMargin: '400px' });
+    imgs.forEach(el => _libIO.observe(el));
+  } else {
+    for(const el of imgs) await load(el);
   }
 }
 
