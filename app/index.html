@@ -1979,7 +1979,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <!-- TRANSCRIPT PANEL -->
               <div id="transcriptPanel" style="display:block;margin-bottom:8px">
                 <!-- Tap Sync manuel — gratuit (maquette : btn-ghost pleine largeur) -->
-                <button onclick="startTapSync()" class="btn btn-ghost" style="width:100%;margin-bottom:10px">Tap Sync — synchroniser manuellement</button>
+                <button onclick="startTapSync()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;display:none">Tap Sync — synchroniser manuellement</button>
                 <!-- Whisper IA — Elite/Pro (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
                 <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div></button>
                 <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" class="field" style="min-height:90px;resize:vertical;display:block"></textarea>
@@ -2550,6 +2550,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div style="width:100%;height:6px;background:var(--bg4);border-radius:99px;overflow:hidden">
                   <div id="composeProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px;transition:width .2s ease"></div>
                 </div>
+                <div id="composeTimer" style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:right;margin-top:5px;display:none">0:00</div>
                 <button id="composeCancelBtn" onclick="window._composeCancelled=true;this.style.display='none';document.getElementById('composeBtn').disabled=false;document.getElementById('composeBtn').innerHTML='<svg width=&quot;14&quot; height=&quot;14&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; style=&quot;vertical-align:-2px&quot;><path d=&quot;M12 3v12M7 10l5 5 5-5M5 21h14&quot;/></svg> Télécharger';document.getElementById('composeProgressWrap').style.display='none';toast('Composition annulée — clique Télécharger pour réessayer')" style="display:none;width:100%;margin-top:6px;padding:7px;background:var(--bg4);border:1px solid rgba(255,71,87,0.3);border-radius:8px;color:var(--red);font-family:var(--mono);font-size:11px;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg> Annuler la composition</button>
               </div>
               <button onclick="if(confirm('Créer une nouvelle vidéo ? Le brouillon actuel sera réinitialisé.'))resetAll()" style="width:100%;margin-top:12px;padding:10px;background:transparent;border:none;color:var(--text-3);font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:color .15s" onmouseover="this.style.color='var(--accent-2)'" onmouseout="this.style.color='var(--text-3)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>Créer une nouvelle vidéo</button>
@@ -17954,6 +17955,7 @@ function _voxSetSw(rid, on){
   if (ico) ico.setAttribute('stroke', on ? 'var(--accent-2)' : 'var(--text-3)');
 }
 function _voxToggleSil(){
+  window._voxSilUserSet = true;   // l'utilisateur a choisi → on ne force plus le défaut vidéo
   _voxSilOn = !_voxSilOn; _voxSetSw('voxSil', _voxSilOn);
   // le legacy porte le vrai drapeau de débruitage
   if (typeof _genDenoiseEnabled !== 'undefined' && !!_genDenoiseEnabled !== _voxSilOn
@@ -17973,6 +17975,17 @@ function _voxGpReflect(){
   const z = document.getElementById('voxGpZone'); if (z) z.querySelector('div').textContent = 'Gameplay chargé';
 }
 function _voxEnter(){
+  // #gen · SOURCE VIDÉO (« Vidéo existante » / bypass) : l'audio vient de la vidéo.
+  // On le DÉTECTE automatiquement (Whisper l'utilise déjà via _bypassHedraFile) et
+  // on désactive « Supprimer les silences » PAR DÉFAUT (rogner une vidéo la désync).
+  // L'utilisateur garde la main (window._voxSilUserSet).
+  if(window._bypassHedraOn && window._bypassHedraFile){
+    if(!window.mp4AudioFile) window.mp4AudioFile = window._bypassHedraFile;   // audio = celui de la vidéo
+    if(!window._voxSilUserSet && _voxSilOn){
+      _voxSilOn = false;
+      try{ if(typeof _genDenoiseEnabled !== 'undefined' && _genDenoiseEnabled && typeof _genToggleDenoise === 'function') _genToggleDenoise(); }catch(_){}
+    }
+  }
   _voxSetSw('voxSil', _voxSilOn); _voxSetSw('voxGp', _voxGpOn);
   const w = document.getElementById('voxGpZoneWrap'); if (w) w.style.display = _voxGpOn ? '' : 'none';
   if (window.mp4AudioFile) _voxReflect();
@@ -18671,11 +18684,11 @@ async function whisperTranscribe(){
   // (vert, disabled) — évite de recliquer et de repayer/relancer Whisper.
   const _whBtnDone = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:600;font-size:14.5px;color:var(--text-2)">Transcription faite</span><span class="faint" style="font-size:12px">Sous-titres calés — régénère un audio pour relancer</span></div>'; btn.disabled = true; btn.style.opacity = '.8'; btn.style.cursor = 'default'; } };
   let _whOk = false;
-  // Gate Pro / Elite / BYOK
+  // Gate Whisper IA : Starter et + (PAS free) — ouvert à tous les payants (Axel 30/08)
   const plan = currentMember?.plan || 'free';
-  if(!['pro','elite','byok','developer'].includes(plan)){
+  if(!['starter','pro','elite','byok','developer'].includes(plan)){
     showPaywall();
-    toast('Whisper IA disponible avec les plans Pro, Élite et BYOK');
+    toast('Whisper IA disponible dès le plan Starter');
     return;
   }
   creditsFlowBegin();  // #122 : remboursable si la génération échoue
@@ -23702,6 +23715,23 @@ const QUALITY_CONFIGS = {
 // PARTOUT + rendu fiable. On envoie EXACTEMENT l'état sous-titres de l'aperçu
 // (_cvSubs est porté verbatim côté worker). Repli automatique sur le chemin
 // client si le serveur casse. Renvoie true = pris en charge, false = passe.
+// Timer sous la barre de chargement (mm:ss) — démarre avec la compo, s'arrête au bout.
+let _composeTimerInt = null, _composeTimerT0 = 0;
+function _composeTimerStart(){
+  _composeTimerT0 = Date.now();
+  const el = document.getElementById('composeTimer');
+  if(el){ el.style.display = 'block'; el.textContent = '0:00'; }
+  clearInterval(_composeTimerInt);
+  _composeTimerInt = setInterval(() => {
+    const e = document.getElementById('composeTimer'); if(!e) return;
+    const s = Math.floor((Date.now() - _composeTimerT0) / 1000);
+    e.textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  }, 500);
+}
+function _composeTimerStop(){
+  clearInterval(_composeTimerInt); _composeTimerInt = null;
+  const el = document.getElementById('composeTimer'); if(el) el.style.display = 'none';
+}
 async function _genServerCompose(btn){
   if(!results?.hedraUrl) return false;
   let user = null;
@@ -23751,9 +23781,10 @@ async function _genServerCompose(btn){
   const compFill  = document.getElementById('composeProgressFill');
   const compPct  = document.getElementById('composeProgressPct');
   const setPct = (p, label) => { if(compBar) compBar.style.display='block'; if(compFill) compFill.style.width=p+'%'; if(compPct) compPct.textContent=(label||'')+' '+p+'%'; };
-  const resetBtn = () => { if(btn){ btn.disabled=false; btn.innerHTML='↓ Télécharger'; } if(compBar) compBar.style.display='none'; };
+  const resetBtn = () => { if(btn){ btn.disabled=false; btn.innerHTML='↓ Télécharger'; } if(compBar) compBar.style.display='none'; _composeTimerStop(); };
   if(btn){ btn.disabled=true; btn.innerHTML='Rendu serveur…'; }
   setPct(5, 'Préparation…');
+  _composeTimerStart();
 
   try{
     const vidBlob = await (await fetch(results.hedraUrl)).blob();
@@ -23813,6 +23844,7 @@ async function composeVideo(btn){
     catch(e){ console.warn('[gen-subs] repli sur compo client', e); }
   }
   if(btn){ btn.disabled = true; btn.innerHTML = 'Chargement…'; }
+  _composeTimerStart();
   const compBar     = document.getElementById('composeProgressWrap');
   const compFill    = document.getElementById('composeProgressFill');
   const compPct     = document.getElementById('composeProgressPct');
@@ -23859,6 +23891,7 @@ async function composeVideo(btn){
     clearTimeout(_globalTimeout);
     clearTimeout(_cancelTimer);
     if(cancelBtn) cancelBtn.style.display='none';
+    _composeTimerStop();
   }
 }
 
