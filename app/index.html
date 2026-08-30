@@ -18696,26 +18696,42 @@ async function whisperTranscribe(){
     }
     const data = await resp.json();
     const text = (data.text || '').trim();
-    // Stocker les timestamps par mot pour sync sous-titres précise
-    if(data.words && data.words.length){
-      whisperWordTimestamps = data.words.map(w => ({
-        word: w.word.toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(),
-        start: w.start,
-        end: w.end
-      })).filter(w => w.word);
-    } else {
-      whisperWordTimestamps = [];
+    // #gen-dev · Whisper AU MOT « propre » (owner) : le libellé vient de data.text
+    // (apostrophes/casse/ponctuation), le timing vient des words Whisper RECOLLÉS
+    // (j'+ai → j'ai, aujourd'+hui → aujourd'hui) → whisperWordTimestamps devient 1:1
+    // avec groups.flat(), plus de désync sur les contractions, + auto-application.
+    // NON-OWNER garde le comportement actuel (timestamps bruts + « Appliquer »).
+    const _whV2 = window._genDevOn && Array.isArray(data.words) && data.words.length && typeof _applyWhisperWords === 'function';
+    if(!_whV2){
+      // Stocker les timestamps par mot pour sync sous-titres précise
+      if(data.words && data.words.length){
+        whisperWordTimestamps = data.words.map(w => ({
+          word: w.word.toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(),
+          start: w.start,
+          end: w.end
+        })).filter(w => w.word);
+      } else {
+        whisperWordTimestamps = [];
+      }
     }
     if(text){
-      populateWordEditor(text);
-      pendingTranscript = text;
-      const voiceTa = document.getElementById('voiceTranscriptTA');
-      if(voiceTa) voiceTa.value = text;
-      const ta = document.getElementById('transcriptInput');
-      if(ta) ta.value = text;
-      _renderWordChips(text);
-      const hasTS = whisperWordTimestamps.length > 0;
-      toast('Whisper IA — transcript ' + (hasTS ? '+ timestamps mot par mot !' : 'appliqué aux sous-titres !'));
+      if(_whV2){
+        _applyWhisperWords(data.words, text);   // aligne + construit les groupes + applique
+        pendingTranscript = text;
+        const voiceTa = document.getElementById('voiceTranscriptTA'); if(voiceTa) voiceTa.value = text;
+        const ta = document.getElementById('transcriptInput'); if(ta) ta.value = text;
+        toast('Whisper IA — sous-titres calés mot par mot ✓');
+      } else {
+        populateWordEditor(text);
+        pendingTranscript = text;
+        const voiceTa = document.getElementById('voiceTranscriptTA');
+        if(voiceTa) voiceTa.value = text;
+        const ta = document.getElementById('transcriptInput');
+        if(ta) ta.value = text;
+        _renderWordChips(text);
+        const hasTS = whisperWordTimestamps.length > 0;
+        toast('Whisper IA — transcript ' + (hasTS ? '+ timestamps mot par mot !' : 'appliqué aux sous-titres !'));
+      }
     } else {
       toast('Aucun texte détecté par Whisper');
     }
@@ -21888,6 +21904,229 @@ function _buildWordMap(groups){
   const map = [];
   groups.forEach((g, gi) => g.forEach((_, wi) => map.push({gi, wi})));
   return map;
+}
+
+// ── #L2-whisper · Précision au mot ───────────────────────────────────────────
+// Source de vérité inaltérée des mots Whisper (word/start/end nettoyés).
+// whisperWordTimestamps est RÉALIGNÉ dessus à chaque mutation des groupes, pour
+// que groupes.flat() et timestamps restent le MÊME tableau de mots (fini la
+// dérive d'index quand le texte contient des tirets, «…», ou est édité à la main).
+window._whisperWordsPristine = window._whisperWordsPristine || null;
+window._subGroupTimes = window._subGroupTimes || null; // [{start,end}] par groupe (start 1er mot → end dernier)
+
+function _wtCleanWord(w){ return String(w||'').toUpperCase().replace(/[,!?;:"«»]/g,'').replace(/^\.+|\.+$/g,'').trim(); } // garde un point INTERNE (avatarads.fr, 3.5), retire ceux de bord
+function _wtHasAlnum(w){ return /[0-9A-ZÀ-ÖØ-ÞŒ]/.test(w); }
+// #L2-whisper · Normalisation « lâche » pour aligner un token du TEXTE (apostrophes,
+// accents, ponctuation, casse) sur un mot Whisper (brut, sans apostrophe ni accent) :
+// minuscule, sans accents, sans apostrophe (U+0027 ET U+2019) ni ponctuation.
+function _wtNormLoose(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'');
+}
+// Libellé affichable d'un token du TEXTE : MAJUSCULES, apostrophes internes conservées
+// (J'AI, AUJOURD'HUI), ponctuation de bord retirée.
+function _wtLabel(tok){
+  return String(tok||'')
+    .replace(/[,!?;:"«»…()\[\]{}—–]/g,'')                     // ponctuation SAUF le point (garde ' et ’)
+    .replace(/^[.’']+|[.’']+$/g,'')        // ponctuation de BORD (points + apostrophes) : un point INTERNE reste — « avatarads.fr », « 3.5 »
+    .trim()
+    .toUpperCase();
+}
+// Découpe data.text en tokens affichables + drapeaux de coupure (ponctuation collée).
+function _wtTextTokens(text){
+  const out = [];
+  for(const t of String(text||'').split(/\s+/)){
+    if(!t) continue;
+    const norm   = _wtNormLoose(t);
+    const strong = /[.!?…]["»)\]]*$/.test(t);
+    const soft   = /[,;:]["»)\]]*$/.test(t);
+    if(!norm){ out.push({ label:'', norm:'', strong, soft }); continue; } // « — », « … » seuls → drapeaux seulement
+    out.push({ label:_wtLabel(t), norm, strong, soft });
+  }
+  return out;
+}
+// Aligne les mots Whisper (qui portent les TIMESTAMPS mais arrivent SANS apostrophe ni
+// ponctuation) sur les tokens du TEXTE (qui portent le LIBELLÉ : apostrophes, accents,
+// ponctuation, casse). Retourne [{word,start,end,strongPunct,softPunct}] : word = libellé
+// du texte, start/end = timing du/des mot(s) Whisper correspondant(s). Gère « jai » (1 mot)
+// comme « j »+« ai » (2 mots) → « J'AI » ; « aujourd »+« hui » → « AUJOURD'HUI ».
+function _alignTextToWhisper(rawWords, textTokens){
+  const ws = [];
+  for(const rw of (rawWords||[])){
+    const n = _wtNormLoose(rw && rw.word);
+    if(!n) continue;
+    ws.push({ n, start:+rw.start||0, end:(+rw.end|| +rw.start||0) });
+  }
+  const out = [];
+  let wi = 0;
+  for(const tk of textTokens){
+    if(!tk.norm){ // token de ponctuation seule → reporte les drapeaux sur le mot précédent
+      if(out.length){ const p=out[out.length-1]; p.strongPunct=p.strongPunct||tk.strong; p.softPunct=p.softPunct||tk.soft; }
+      continue;
+    }
+    if(wi >= ws.length){ out.push({ word:tk.label, start:null, end:null, strongPunct:tk.strong, softPunct:tk.soft }); continue; }
+    const tnorm = tk.norm;
+    // Consomme au moins 1 mot Whisper, puis tant que l'accumulé reste un préfixe strict du
+    // token (Whisper a découpé « j'ai » → « j »+« ai », « aujourd'hui » → « aujourd »+« hui »).
+    let acc = ws[wi].n; const startWi = wi; wi++; let steps = 1;
+    while(wi < ws.length && steps < 5 && acc.length < tnorm.length && tnorm.startsWith(acc)){
+      const nn = acc + ws[wi].n;
+      if(tnorm.startsWith(nn) || nn.startsWith(tnorm)){ acc = nn; wi++; steps++; }
+      else break;
+    }
+    out.push({ word:tk.label, start:ws[startWi].start, end:ws[Math.min(wi,ws.length)-1].end, strongPunct:tk.strong, softPunct:tk.soft });
+  }
+  // Comble les timings manquants (tokens texte au-delà des mots Whisper) par report avant.
+  let lastEnd = 0;
+  for(const w of out){ if(w.start!=null){ lastEnd = w.start; break; } }
+  for(const w of out){
+    if(w.start==null){ w.start = lastEnd; w.end = lastEnd + 0.3; }
+    lastEnd = w.end;
+  }
+  return out;
+}
+
+// Construit les groupes de sous-titres depuis les MOTS Whisper (start/end par mot) :
+// 2-4 mots par groupe, coupure à la ponctuation et aux pauses > 0,35 s.
+// Applique AUTOMATIQUEMENT (groupes + transcript + preview) — plus d'étape manuelle.
+function _applyWhisperWords(rawWords, text){
+  // #L2-whisper · Le LIBELLÉ des sous-titres vient du TEXTE (data.text : apostrophes,
+  // accents, ponctuation, casse) ; le TIMING vient des mots Whisper, qui arrivent SANS
+  // apostrophe ni ponctuation (« jai », ou « j »+« ai »). On aligne les deux → « J'AI »
+  // affiché, mais calé sur le timestamp du/des mot(s) Whisper correspondant(s).
+  const textTokens = _wtTextTokens(text);
+  const words = _alignTextToWhisper(rawWords, textTokens);
+  if(!words.length){ return false; }
+  const built = _buildTimedGroups(words);
+  _wordGroups = built.groups;
+  window._subGroupTimes = built.times;
+  whisperWordTimestamps = words.map(w => ({ word: w.word, start: w.start, end: w.end }));
+  window._whisperWordsPristine = whisperWordTimestamps.map(w => ({ ...w }));
+  // Application auto : transcript synchronisé + éditeur de groupes + preview
+  window._wordEditorOriginalText = text;
+  const ta = document.getElementById('transcriptInput');
+  if(ta) ta.value = text;
+  pendingTranscript = text;
+  _renderGroupEditor();
+  updateSubPreview();
+  return true;
+}
+
+// Groupes 2-4 mots « au rythme » : coupure à la ponctuation et aux pauses > 0,35 s.
+// words = [{word, start, end, strongPunct, softPunct}] → {groups, times}
+// (times : start du 1er mot → end du dernier mot de chaque groupe)
+function _buildTimedGroups(words){
+  const MAXW = Math.min(4, Math.max(2, cfg.subWpg || 3)); // 2-4 mots par groupe
+  const PAUSE = 0.35;
+  const groups = [], times = [];
+  let cur = [], curStart = 0;
+  for(let i = 0; i < words.length; i++){
+    const w = words[i];
+    if(!cur.length) curStart = w.start;
+    cur.push(w.word);
+    const next = words[i+1];
+    const pause = next ? (next.start - w.end) : Infinity;
+    const cut = !next
+      || cur.length >= MAXW
+      || pause > PAUSE
+      || w.strongPunct
+      || (w.softPunct && cur.length >= 2);
+    if(cut){ groups.push(cur); times.push({ start: curStart, end: w.end }); cur = []; }
+  }
+  return { groups, times };
+}
+
+// Réaligne un tableau de mots (nettoyés, MAJ) sur la source pristine : match glouton
+// monotone ; les mots édités/ajoutés sont interpolés entre leurs voisins calés.
+// Retourne [{word,start,end}] de même longueur, ou null si rien ne matche.
+function _realignToPristine(flat){
+  const pris = window._whisperWordsPristine;
+  if(!pris || !pris.length || !flat.length) return null;
+  const out = new Array(flat.length).fill(null);
+  let j = 0, matched = 0;
+  for(let i = 0; i < flat.length; i++){
+    const lim = Math.min(pris.length, j + 6); // fenêtre courte = ordre respecté
+    let hit = -1;
+    for(let k = j; k < lim; k++){ if(pris[k].word === flat[i]){ hit = k; break; } }
+    if(hit < 0){ // repli flou : orthographe corrigée (« AVATARAD » → « AVATARADS »…)
+      for(let k = j; k < lim; k++){
+        const a = pris[k].word, b = flat[i];
+        if(a.length > 3 && b.length > 3 && (a.startsWith(b.slice(0,4)) || b.startsWith(a.slice(0,4)))){ hit = k; break; }
+      }
+    }
+    if(hit >= 0){ out[i] = { word: flat[i], start: pris[hit].start, end: pris[hit].end }; j = hit + 1; matched++; }
+  }
+  if(!matched) return null; // texte sans rapport avec l'audio
+  // Interpolation des trous entre ancres
+  let i = 0;
+  while(i < out.length){
+    if(out[i]){ i++; continue; }
+    let e = i; while(e < out.length && !out[e]) e++;
+    const prevEnd = i > 0 ? out[i-1].end : Math.max(0, (out[e] ? out[e].start : pris[0].start) - 0.3 * (e - i));
+    const nextSt  = e < out.length ? out[e].start : prevEnd + 0.3 * (e - i);
+    const span = Math.max(0.05, nextSt - prevEnd), n = e - i;
+    for(let k = i; k < e; k++){
+      out[k] = { word: flat[k], start: prevEnd + span * (k - i) / n, end: prevEnd + span * (k - i + 1) / n };
+    }
+    i = e;
+  }
+  return out;
+}
+
+// Réaligne whisperWordTimestamps (et les timings de groupes) sur _wordGroups.flat().
+// Appelé à chaque re-rendu de l'éditeur (drag/drop, fusion, édition, reset).
+function _syncWordTimestampsToGroups(){
+  if(!_wordGroups || !_wordGroups.length) return;
+  const out = _realignToPristine(_wordGroups.flat().map(w => String(w||'').toUpperCase()));
+  if(!out) return;
+  whisperWordTimestamps = out;
+  const times = []; let off = 0;
+  for(const g of _wordGroups){
+    if(!g.length) continue;
+    times.push({ start: out[off].start, end: out[off + g.length - 1].end });
+    off += g.length;
+  }
+  window._subGroupTimes = times;
+}
+
+// Édition manuelle du transcript → ré-application auto (debounce léger)
+let _transcriptEditT = null;
+function _onTranscriptEdited(){
+  clearTimeout(_transcriptEditT);
+  _transcriptEditT = setTimeout(() => {
+    const ta = document.getElementById('transcriptInput');
+    const text = (ta?.value || '').trim();
+    if(!text) return;
+    // Ne PAS réécrire transcriptInput (le curseur sauterait). Si des timestamps
+    // Whisper existent, on réaligne le texte édité dessus et on regroupe au
+    // rythme (pauses + ponctuation) ; sinon découpe classique depuis le texte.
+    window._wordEditorOriginalText = text;
+    const toks = text.split(/\s+/).filter(t=>t);
+    const flat = [], flags = [];
+    for(const t of toks){
+      const c = _wtCleanWord(t);
+      if(!c || !_wtHasAlnum(c)) continue;
+      flat.push(c);
+      flags.push({ strong: /[.!?…]["»)]*$/.test(t), soft: /[,;:]["»)]*$/.test(t) });
+    }
+    const out = flat.length ? _realignToPristine(flat) : null;
+    if(out){
+      const words = out.map((w,i)=>({ word: w.word, start: w.start, end: w.end, strongPunct: flags[i].strong, softPunct: flags[i].soft }));
+      const built = _buildTimedGroups(words);
+      _wordGroups = built.groups;
+      window._subGroupTimes = built.times;
+      whisperWordTimestamps = out;
+      _renderGroupEditor();
+    } else {
+      _renderWordChips(text);
+    }
+    const vTa = document.getElementById('voiceTranscriptTA');
+    if(vTa) vTa.value = text;
+    pendingTranscript = text;
+    updateSubPreview();
+  }, 700);
 }
 function onWordTextEdit(value){
   _renderWordChips(value);
