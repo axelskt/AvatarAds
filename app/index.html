@@ -3317,6 +3317,10 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Volume constant</span><span style="font-size:11px;color:var(--text3)">Même niveau du début à la fin, sans écraser</span></div>
               <button type="button" id="recTreatSw" onclick="recSetTreat(!window._recTreatOn)" aria-label="Volume constant" style="width:44px;height:26px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;align-items:center;border:none;cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
             </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Réduire le bruit</span><span style="font-size:11px;color:var(--text3)">Enlève le souffle et le bruit de fond (sans hacher la voix)</span></div>
+              <button type="button" id="recDenoiseSw" onclick="recSetDenoise(!window._recDenoiseOn)" aria-label="Réduire le bruit" style="width:44px;height:26px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;align-items:center;border:none;cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
+            </div>
           </div>
 
           <!-- TIMELINE SEGMENTS (CapCut-style) -->
@@ -10858,6 +10862,7 @@ let recMediaRecorder  = null;
 let recChunks         = [];
 let recAudioBuffer    = null;   // buffer traité (silences supprimés)
 let recRawBuffer      = null;   // buffer brut
+let recDenoisedBuffer = null;   // buffer brut DÉBRUITÉ (RNNoise) — source du pipeline si « Réduire le bruit » ON
 let recSilenceOn      = true;
 let recState          = 'idle'; // idle | recording | processing | recorded | playing | replacing
 let recPlaySrc        = null;
@@ -11049,7 +11054,9 @@ async function recOnStop(){
   window._recBlobOrigine = blob;   // gardé tel quel : c'est déjà de l'audio compressé
   const arrBuf = await blob.arrayBuffer();
   recRawBuffer = await recCtx.decodeAudioData(arrBuf);
-  const processed = _recProcessChain(recRawBuffer);
+  recDenoisedBuffer = null;
+  if(window._recDenoiseOn){ try{ recDenoisedBuffer = await _recDenoiseBuffer(recRawBuffer); }catch(e){ console.warn('[rec] débruitage:', e); } }
+  const processed = _recProcessChain(_recSourceBuffer());
   recAudioBuffer = processed;
   const removed = recRawBuffer.duration - recAudioBuffer.duration;
   const stats=document.getElementById('recStatsDisplay');
@@ -11096,7 +11103,9 @@ async function recImportFile(file){
       URL.revokeObjectURL(blobUrl);
     }
     recRawBuffer = decoded;
-    const processed = _recProcessChain(recRawBuffer);
+    recDenoisedBuffer = null;
+    if(window._recDenoiseOn){ try{ recDenoisedBuffer = await _recDenoiseBuffer(recRawBuffer); }catch(e){ console.warn('[rec] débruitage:', e); } }
+    const processed = _recProcessChain(_recSourceBuffer());
     recAudioBuffer = processed;
     recPlayOffset = 0;
     recSegments = [{ id: Date.now(), start: 0, end: recAudioBuffer.length }];
@@ -11365,12 +11374,45 @@ function recSetTreat(on){
   // à l'écoute car le traitement n'était appliqué qu'au moment d'« Utiliser »).
   if(recRawBuffer && recState==='recorded'){
     try{
-      recAudioBuffer=_recProcessChain(recRawBuffer);
+      recAudioBuffer=_recProcessChain(_recSourceBuffer());
       recPlayOffset=0; recRenderWaveform(recAudioBuffer,0); _recUpdateTime(0,recAudioBuffer.duration);
       const dd=document.getElementById('recDurDisplay'); if(dd) dd.textContent='/ '+_recFmt(recAudioBuffer.duration);
     }catch(_){}
   }
   if(typeof toast==='function') toast(window._recTreatOn ? 'Volume constant activé' : 'Volume constant désactivé');
+}
+
+// #denoise (Axel 30/08) : « Réduire le bruit » = RNNoise client-side (le même moteur que le nettoyage
+// audio, gratuit ici). C'est le vrai débruiteur qui enlève le souffle/bruit de fond SANS hacher la voix
+// (contrairement au noiseSuppression du navigateur, qu'on a coupé à la capture). Source du pipeline :
+// buffer brut, ou sa version débruitée si l'option est ON → puis silences → puis volume constant.
+window._recDenoiseOn = true;   // ON par défaut
+function _recSourceBuffer(){ return (window._recDenoiseOn && recDenoisedBuffer) ? recDenoisedBuffer : recRawBuffer; }
+async function _recDenoiseBuffer(buf){
+  if(!buf || typeof _denoisePcm!=='function' || !recCtx) return null;
+  let pcm = buf.getChannelData(0); const srIn = buf.sampleRate;
+  if(srIn !== 48000){   // RNNoise exige du 48 kHz → rééchantillonnage linéaire (suffisant pour la voix)
+    const ratio=48000/srIn, outLen=Math.max(1,Math.round(pcm.length*ratio)), rs=new Float32Array(outLen);
+    for(let i=0;i<outLen;i++){ const t=i/ratio, i0=Math.floor(t), f=t-i0, a=pcm[i0]||0, b=(i0+1<pcm.length?pcm[i0+1]:a)||0; rs[i]=a*(1-f)+b*f; }
+    pcm = rs;
+  }
+  const clean = await _denoisePcm(pcm);
+  const out = recCtx.createBuffer(1, clean.length, 48000);
+  out.getChannelData(0).set(clean);
+  return out;
+}
+async function recSetDenoise(on){
+  window._recDenoiseOn = !!on;
+  _recSwitchStyle('recDenoiseSw', window._recDenoiseOn);
+  if(recRawBuffer && recState==='recorded'){
+    try{
+      if(window._recDenoiseOn && !recDenoisedBuffer){ recDenoisedBuffer = await _recDenoiseBuffer(recRawBuffer); }
+      recAudioBuffer=_recProcessChain(_recSourceBuffer());
+      recPlayOffset=0; recRenderWaveform(recAudioBuffer,0); _recUpdateTime(0,recAudioBuffer.duration);
+      const dd=document.getElementById('recDurDisplay'); if(dd) dd.textContent='/ '+_recFmt(recAudioBuffer.duration);
+    }catch(e){ console.warn('[rec] débruitage toggle:', e); }
+  }
+  if(typeof toast==='function') toast(window._recDenoiseOn ? 'Réduction de bruit activée' : 'Réduction de bruit désactivée');
 }
 
 // ── Téléchargement ──
