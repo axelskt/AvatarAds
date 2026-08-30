@@ -11299,14 +11299,16 @@ function _recNormalizeLevel(buffer, flat){
 // pour que ce qu'on entend soit exactement ce qu'on obtient. Toujours reconstruite depuis le buffer BRUT.
 function _recProcessChain(raw){
   if(!raw) return raw;
-  // 1) passe-bas ~13 kHz ×2 : enlève les bursts ultrasoniques (« pics aigus »), voix intacte.
   let b = raw;
+  // 1) passe-bas ~13 kHz ×2 : enlève les bursts ultrasoniques (« pics aigus »), voix intacte.
   try{ b = _recLowpass(_recLowpass(b, 13000), 13000); }catch(_){}
-  // 2) coupe des silences (optionnel).
-  if(recSilenceOn){ try{ b = _recRemoveSilence(b); }catch(_){} }
-  // 3) NIVEAU : TOUJOURS normalisé (capture brute ~-30 dB, inaudible sinon) → -15 dB comme un dictaphone.
-  //    « Volume constant » ON = leveling par blocs (plat) ; OFF = gain global (dynamique) mais bon niveau.
+  // 2) NIVEAU D'ABORD : capture brute ~-30 dB (et rampe d'AGC) → -15 dB CONSTANT. On le fait AVANT les
+  //    silences pour deux raisons : (a) le plancher de bruit est estimé sur TOUT le signal (silences
+  //    inclus) = plus juste ; (b) la détection de silence se fait ensuite sur un signal à niveau STABLE
+  //    (parole ~-15, vrai silence ~0) = fiable, elle ne prend plus la voix faible du début pour du silence.
   try{ b = _recNormalizeLevel(b, !!window._recTreatOn); }catch(_){}
+  // 3) coupe des silences (optionnel), sur le signal déjà nivelé.
+  if(recSilenceOn){ try{ b = _recRemoveSilence(b); }catch(_){} }
   return b;
 }
 
