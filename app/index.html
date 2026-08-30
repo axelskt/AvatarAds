@@ -10933,11 +10933,15 @@ function recRenderWaveform(buffer, cursorSec){
   const data = buffer.getChannelData(0);
   const step = Math.max(1, Math.floor(data.length/W));
   ctx2d.clearRect(0,0,W,H);
+  // #zoom (Axel 30/08) : normaliser l'affichage au pic → la waveform REMPLIT la hauteur comme le
+  // dictaphone Apple (on voit le détail), même quand le signal est faible.
+  let gp=0; for(let i=0;i<data.length;i+=Math.max(1,step>>2)){ const v=Math.abs(data[i]||0); if(v>gp) gp=v; }
+  const wScale = gp>0.02 ? 0.94/gp : 1;
   const playRatio = (cursorSec!=null && buffer.duration>0) ? cursorSec/buffer.duration : -1;
   for(let i=0;i<W;i++){
     let peak=0;
     for(let j=0;j<step;j++) peak=Math.max(peak,Math.abs(data[i*step+j]||0));
-    const h = Math.max(2, peak*H*0.88);
+    const h = Math.max(2, Math.min(1, peak*wScale)*H*0.92);
     const played = playRatio>=0 && i/W<=playRatio;
     ctx2d.fillStyle = played ? 'rgba(255,107,53,0.9)' : 'rgba(255,255,255,0.2)';
     ctx2d.fillRect(i, (H-h)/2, 1.2, h);
@@ -11170,7 +11174,7 @@ function recLiveLoop(){
 // #sil-agg (Axel 30/08) : « trop de blanc restait » → détection plus agressive :
 // seuil RMS relevé 0.007→0.013 (attrape le bruit de fond / room tone), silence min
 // abaissé 380→230 ms (coupe les blancs plus courts), padding gardé 80→48 ms (moins de blanc laissé).
-function _recRemoveSilence(buffer, threshold, minSilMs=700, keepSilMs=150){
+function _recRemoveSilence(buffer, threshold, minSilMs=1000, keepSilMs=200){
   const sr=buffer.sampleRate;
   const input=buffer.getChannelData(0);
   const win=Math.max(1,Math.round(sr*0.02)); // fenêtres ~20 ms
@@ -11224,30 +11228,54 @@ function _recRemoveSilence(buffer, threshold, minSilMs=700, keepSilMs=150){
 // sur le RMS médian des zones parlées, puis limiteur DOUX (tanh) sur les crêtes (jamais d'écrêtage
 // brutal). C'est ce qui rattrape un enregistrement faible/inégal et lui donne le niveau franc d'un
 // dictaphone, sans « écraser » le son — pas d'EQ, pas de pompage. Remplace l'ancien preset Podcast.
-function _recNormalizeLevel(buffer){
+// Passe-bas biquad (Butterworth, Q=0.707) — enlève les bursts ultrasoniques (« pics aigus », mesurés
+// vers 24 kHz) sans toucher la voix (< 10 kHz). Appliqué ×2 dans la chaîne pour une pente raide.
+function _recLowpass(buffer, f0){
+  if(!buffer||!recCtx) return buffer;
+  const sr=buffer.sampleRate, ch=buffer.numberOfChannels;
+  const Q=0.707, w=2*Math.PI*f0/sr, cw=Math.cos(w), sw=Math.sin(w), al=sw/(2*Q);
+  let b0=(1-cw)/2, b1=1-cw, b2=(1-cw)/2, a0=1+al, a1=-2*cw, a2=1-al;
+  b0/=a0; b1/=a0; b2/=a0; a1/=a0; a2/=a0;
+  const out=recCtx.createBuffer(ch, buffer.length, sr);
+  for(let c=0;c<ch;c++){
+    const d=buffer.getChannelData(c), o=out.getChannelData(c);
+    let x1=0,x2=0,y1=0,y2=0;
+    for(let i=0;i<d.length;i++){ const x=d[i]; const y=b0*x+b1*x1+b2*x2-a1*y1-a2*y2; x2=x1;x1=x;y2=y1;y1=y; o[i]=y; }
+  }
+  return out;
+}
+// « Volume constant » (Axel 30/08). La capture brute (AGC off) est TRÈS faible (~-30 dBFS, mesuré) →
+// on normalise TOUJOURS à ~-15 dBFS (comme un dictaphone). `flat`=true (Volume constant ON) : leveling
+// PAR BLOCS (enveloppe lissée ±0,6 s) qui aplatit le début faible + les variations lentes, sans pomper.
+// `flat`=false : simple gain global (dynamique naturelle) MAIS bon niveau (fini le « trop bas quand off »).
+function _recNormalizeLevel(buffer, flat){
   if(!buffer||!buffer.length||!recCtx) return buffer;
   const sr=buffer.sampleRate, ch=buffer.numberOfChannels;
   const ref=buffer.getChannelData(0);
-  // #leveling (Axel 30/08) : « Volume constant » = leveling PAR BLOCS (pas un simple gain global) →
-  // il aplatit le début faible et les variations lentes (dont la rampe d'AGC que Safari refuse de
-  // couper) pour un niveau VRAIMENT constant, sans pomper syllabe à syllabe (enveloppe lissée ~±0,6 s).
   const eWin=Math.max(1,Math.round(sr*0.05));   // enveloppe RMS 50 ms
   const nE=Math.ceil(ref.length/eWin);
   const env=new Float32Array(nE); let maxE=0;
   for(let k=0;k<nE;k++){ const i=k*eWin,e=Math.min(i+eWin,ref.length); let s=0; for(let j=i;j<e;j++) s+=ref[j]*ref[j]; env[k]=Math.sqrt(s/Math.max(1,e-i)); if(env[k]>maxE) maxE=env[k]; }
   if(!(maxE>0)) return buffer;
-  const sm=Math.max(1,Math.round(0.6/0.05));    // lissage ±0,6 s
-  const envS=new Float32Array(nE);
-  for(let k=0;k<nE;k++){ let s=0,c=0; for(let d=-sm;d<=sm;d++){ const kk=k+d; if(kk>=0&&kk<nE){ s+=env[kk]; c++; } } envS[k]=s/Math.max(1,c); }
-  const target=0.14;                            // ~-17 dBFS RMS
-  const noise=Math.max(0.006, maxE*0.05);       // sous ça = silence/souffle → le gain retombe (pas de boost)
+  const target=0.18;                            // ~-15 dBFS RMS (niveau d'un dictaphone)
+  const noise=Math.max(0.006, maxE*0.05);       // sous ça = silence/souffle → gain qui retombe (pas de boost)
+  const spoken=Array.from(env).filter(b=>b>=noise).sort((a,b)=>a-b);
+  const med=spoken.length ? spoken[Math.floor(spoken.length*0.5)] : maxE;
+  const gGlobal=Math.max(0.7, Math.min(med>0?target/med:1, 30));
+  let envS=null;
+  if(flat){
+    const sm=Math.max(1,Math.round(0.6/0.05));  // lissage ±0,6 s → leveling LENT (pas de pompage)
+    envS=new Float32Array(nE);
+    for(let k=0;k<nE;k++){ let s=0,c=0; for(let d=-sm;d<=sm;d++){ const kk=k+d; if(kk>=0&&kk<nE){ s+=env[kk]; c++; } } envS[k]=s/Math.max(1,c); }
+  }
   const out=recCtx.createBuffer(ch,buffer.length,sr);
   const knee=0.7, ceil=0.97;
   for(let c=0;c<ch;c++){
     const d=buffer.getChannelData(c), o=out.getChannelData(c);
     for(let i=0;i<d.length;i++){
-      const k=Math.min(nE-1,(i/eWin)|0), le=envS[k];
-      let g = (le>=noise) ? Math.min(target/le, 12) : (target/noise)*(le/noise);   // borné ×12
+      let g;
+      if(flat){ const le=envS[Math.min(nE-1,(i/eWin)|0)]; g=(le>=noise)?Math.min(target/le, gGlobal*2.5, 30):(target/noise)*(le/noise); }
+      else { g=gGlobal; }
       if(!(g>0)) g=0;
       let x=d[i]*g;
       if(x>knee)       x=knee+(ceil-knee)*Math.tanh((x-knee)/(ceil-knee));
@@ -11262,8 +11290,14 @@ function _recNormalizeLevel(buffer){
 // pour que ce qu'on entend soit exactement ce qu'on obtient. Toujours reconstruite depuis le buffer BRUT.
 function _recProcessChain(raw){
   if(!raw) return raw;
-  let b = recSilenceOn ? _recRemoveSilence(raw) : raw;
-  if(window._recTreatOn){ try{ b = _recNormalizeLevel(b); }catch(_){} }
+  // 1) passe-bas ~13 kHz ×2 : enlève les bursts ultrasoniques (« pics aigus »), voix intacte.
+  let b = raw;
+  try{ b = _recLowpass(_recLowpass(b, 13000), 13000); }catch(_){}
+  // 2) coupe des silences (optionnel).
+  if(recSilenceOn){ try{ b = _recRemoveSilence(b); }catch(_){} }
+  // 3) NIVEAU : TOUJOURS normalisé (capture brute ~-30 dB, inaudible sinon) → -15 dB comme un dictaphone.
+  //    « Volume constant » ON = leveling par blocs (plat) ; OFF = gain global (dynamique) mais bon niveau.
+  try{ b = _recNormalizeLevel(b, !!window._recTreatOn); }catch(_){}
   return b;
 }
 
