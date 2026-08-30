@@ -562,15 +562,16 @@ async function composeGenSubs(jobDir, outPath, plan) {
   plan.subs = plan.subs || {}
   if (!Number(plan.subs.totalDuration)) plan.subs.totalDuration = D
 
-  // #vitesse (Axel 30/08) : on rend au fps de la SOURCE (Hedra sort en 25) au lieu de 50. Rendre
-  // 54 s à 50 fps = 2700 frames capturées une à une dans Chromium (~2× plus long) pour une vidéo
-  // qui n'a que ~25 images/s de contenu → AUCUN gain de qualité. On borne 24–30 fps.
-  let genFps = 30
+  // #vitesse (Axel 30/08) : on rend au fps EXACT de la SOURCE, pas à 50 en dur. Hedra sort en 25 →
+  // rendre 54 s à 50 fps = 2700 frames capturées une à une dans Chromium (~2× plus long) pour une
+  // vidéo qui n'a que 25 images/s de contenu → AUCUN gain. Mais si la source est en 30/50/60, on
+  // respecte SON fps (ni sur- ni sous-échantillonnage). Plancher 24, plafond 60 (garde-fou anti-aberration).
+  let genFps = 25
   try {
     const rfr = ffprobe(orig, 'stream=r_frame_rate').split('\n').map((s) => s.trim()).find((s) => /^\d+\/\d+$/.test(s))
     if (rfr) { const [n, d] = rfr.split('/').map(Number); if (n > 0 && d > 0) genFps = Math.round(n / d) }
   } catch (_) {}
-  genFps = Math.min(30, Math.max(24, genFps || 30))
+  genFps = Math.min(60, Math.max(24, genFps || 25))
   console.log(`▶ gen-subs : rendu à ${genFps} fps (source), durée ${D}s`)
 
   // ── CHEMIN RAPIDE : « uniquement vidéo » (aucun sous-titre à graver) ─────────
