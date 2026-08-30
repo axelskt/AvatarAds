@@ -9287,18 +9287,18 @@ async function _imgMakeRealistic(btn){
     _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
     _imgProgStart('Amélioration 4K… (~30s)');
-    let url, engine='Nano Banana Pro';
-    // #4k-nano (Axel 30/08) : « Améliorer en 4K » = Nano Banana Pro (gemini-3-pro-image), le
-    // même moteur 4K que le « Détail en 4K » de l'avatar. Le LOCK du prompt (_NB_REFINE_PROMPT)
-    // garde identité/cadrage/proportions et n'AJOUTE que du micro-détail réel. Repli gpt-image edit.
+    let url, engine='AuraSR 4K';
+    // #4k-aurasr (Axel 30/08) : « Améliorer en 4K » = AuraSR ×4 NON GÉNÉRATIF (agrandit la VRAIE image
+    // en haute résolution) plutôt que Nano Banana Pro (génératif : rend en basse déf puis agrandit →
+    // flou/pixelisé, la sortie était même sous la résolution de l'original). Bornes HQ 2560→4096 q0.95.
     try{
-      url = await _nbRefine4K(token, dataUrl, aspect);
-      if(!url) throw new Error('Nano Banana Pro : aucune image');
+      url = await _falAuraSR(dataUrl, { inMax:2048, outMax:4096, q:0.95 });
+      if(!url) throw new Error('AuraSR : aucune image');
     }catch(e){
-      engine='gpt-image';
-      console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
-      const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
-      url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024');
+      engine='Nano Banana Pro';
+      console.warn('AuraSR indispo (améliorer 4K), repli Nano Banana Pro :', e);
+      url = await _nbRefine4K(token, dataUrl, aspect);
+      if(!url){ engine='gpt-image'; const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' }; url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024'); }
     }
     _imgMonthIncrement();
     _imgShowSingle(url, dispFmt);
@@ -10195,15 +10195,19 @@ async function _detectFaceBox(dataUrl){
 // #detail-visage (Axel 26/08) : « Détails du visage » = AuraSR (fal-ai/aura-sr), upscaler GAN NON génératif.
 // Agrandit ×4 sans rien halluciner (PAS de prompt, pas de déformation, pas de taches inventées, cadrage exact).
 // Testé sur la selfie Tokyo (~15 s, 4096×6144, ~0,02 $) : barbe/pores nets, peau naturelle, zéro plastique.
-async function _falAuraSR(imageDataUrl){
+async function _falAuraSR(imageDataUrl, opts){
+  // #4k-hq (Axel 30/08) : bornes paramétrables. Par défaut « Détails du visage » (1536→≤2560).
+  // Le bouton « Améliorer en 4K » passe {inMax:2560,outMax:4096,q:0.95} → vrai 4K net, jamais
+  // sous la résolution de l'original (avant : sortie plafonnée 2560 → une photo 3000px+ revenait PLUS PETITE).
+  const _inMax=(opts&&opts.inMax)||1536, _outMax=(opts&&opts.outMax)||2560, _q=(opts&&opts.q)||0.92;
   const Hh=await getAuthHeader();
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
   const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
   const model='/fal-ai/aura-sr';
-  // borne l'ENTRÉE à 1536 px (AuraSR = 4× fixe → sortie ≤ ~6144 px, data-URL raisonnable)
+  // borne l'ENTRÉE à _inMax px (AuraSR = 4× fixe)
   let src=imageDataUrl;
-  try{ const im=await _loadImgEl(imageDataUrl); const w=im.naturalWidth||1024, h=im.naturalHeight||1024; if(Math.max(w,h)>1536){ const r=1536/Math.max(w,h); const cw=Math.round(w*r), ch=Math.round(h*r); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); src=cv.toDataURL('image/jpeg',0.94); } }catch(_){ }
+  try{ const im=await _loadImgEl(imageDataUrl); const w=im.naturalWidth||1024, h=im.naturalHeight||1024; if(Math.max(w,h)>_inMax){ const r=_inMax/Math.max(w,h); const cw=Math.round(w*r), ch=Math.round(h*r); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); src=cv.toDataURL('image/jpeg',0.95); } }catch(_){ }
   const sub=await fPost(model,{ image_url:src });
   if(!sub.ok){ const _b=(await sub.text().catch(()=>'')); console.error('[aurasr] fal '+sub.status+' : '+_b.slice(0,200)); return null; }
   const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
@@ -10213,8 +10217,8 @@ async function _falAuraSR(imageDataUrl){
     for(let i=0;i<60 && !url;i++){ await new Promise(r=>setTimeout(r,2500)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||null; if(!url){ console.warn('[aurasr] COMPLETED sans image :', JSON.stringify(rd).slice(0,220)); return null; } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ return null; } }
   }
   if(!url) return null;
-  // sortie 4× (jusqu'à ~42 Mo) → redescendue ≤2560 px en JPEG (data URL léger). fetch→blob→objectURL évite le canvas "tainted" cross-origin.
-  try{ const resp=await fetch(url); const blob=await resp.blob(); const obj=URL.createObjectURL(blob); try{ const im=await _loadImgEl(obj); const w=im.naturalWidth, h=im.naturalHeight; const mx=2560; const r=Math.min(1,mx/Math.max(w,h)); const cw=Math.max(2,Math.round(w*r)), ch=Math.max(2,Math.round(h*r)); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); return cv.toDataURL('image/jpeg',0.92); } finally { URL.revokeObjectURL(obj); } }catch(_){ return url; }
+  // sortie 4× → redescendue ≤_outMax px en JPEG (fetch→blob→objectURL évite le canvas "tainted" cross-origin).
+  try{ const resp=await fetch(url); const blob=await resp.blob(); const obj=URL.createObjectURL(blob); try{ const im=await _loadImgEl(obj); const w=im.naturalWidth, h=im.naturalHeight; const mx=_outMax; const r=Math.min(1,mx/Math.max(w,h)); const cw=Math.max(2,Math.round(w*r)), ch=Math.max(2,Math.round(h*r)); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); return cv.toDataURL('image/jpeg',_q); } finally { URL.revokeObjectURL(obj); } }catch(_){ return url; }
 }
 async function _faceUpscalePass(dataUrl){
   try{
