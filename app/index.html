@@ -6387,9 +6387,9 @@ const CREDIT_COSTS = {
   hyperframesPerSec: 1,   // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
   // 🎥 Motion Control « fond vidéo » : le vrai décor de la réf, ANIMÉ, derrière le
   // personnage (2 détourages fal ben ≈ 0,4-0,6 $/rendu à notre charge + compo worker).
-  // +1 cr/s validé par Axel (28/08) — débité APRÈS le succès Kling, remboursé seul
-  // si le pipeline fond échoue (repli rendu Kling brut).
-  motionBgPerSec: 1
+  // +2 cr/s validé par Axel (30/08 ; couvre le détourage réf en 720p + avatar 1080p)
+  // — débité APRÈS le succès Kling, remboursé seul si le pipeline fond échoue.
+  motionBgPerSec: 2
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
@@ -21903,7 +21903,7 @@ function _buildWordMap(groups){
 window._whisperWordsPristine = window._whisperWordsPristine || null;
 window._subGroupTimes = window._subGroupTimes || null; // [{start,end}] par groupe (start 1er mot → end dernier)
 
-function _wtCleanWord(w){ return String(w||'').toUpperCase().replace(/[.,!?;:"«»]/g,'').trim(); }
+function _wtCleanWord(w){ return String(w||'').toUpperCase().replace(/[,!?;:"«»]/g,'').replace(/^\.+|\.+$/g,'').trim(); } // garde un point INTERNE (avatarads.fr, 3.5), retire ceux de bord
 function _wtHasAlnum(w){ return /[0-9A-ZÀ-ÖØ-ÞŒ]/.test(w); }
 // #L2-whisper · Normalisation « lâche » pour aligner un token du TEXTE (apostrophes,
 // accents, ponctuation, casse) sur un mot Whisper (brut, sans apostrophe ni accent) :
@@ -21918,8 +21918,8 @@ function _wtNormLoose(s){
 // (J'AI, AUJOURD'HUI), ponctuation de bord retirée.
 function _wtLabel(tok){
   return String(tok||'')
-    .replace(/[.,!?;:"«»…()\[\]{}—–]/g,'')                    // ponctuation (garde ' et ’)
-    .replace(/^[’']+|[’']+$/g,'')          // apostrophes de bord
+    .replace(/[,!?;:"«»…()\[\]{}—–]/g,'')                     // ponctuation SAUF le point (garde ' et ’)
+    .replace(/^[.’']+|[.’']+$/g,'')        // ponctuation de BORD (points + apostrophes) : un point INTERNE reste — « avatarads.fr », « 3.5 »
     .trim()
     .toUpperCase();
 }
@@ -23834,9 +23834,21 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
   // ── 6. Mots / sous-titres ──
   const wpg = Math.max(1, cfg.subWpg || 2);
-  const groups = (_wordGroups && _wordGroups.length) ? _wordGroups
-    : _buildWpgGroups(Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean), wpg);
+  // #no-sub-regression · Le rendu doit lire EXACTEMENT la même source de mots que le PREVIEW,
+  // sinon on grave 0 sous-titre alors que l'aperçu en montre (bug remonté par Axel : « preview OK,
+  // vidéo sans sous-titres »). Le preview (updateSubPreview) passe par _previewSubWords() qui
+  // retombe sur les chips DOM PUIS sur le texte script/transcript — l'ancien fallback du rendu ne
+  // regardait QUE les chips (vides après Whisper V2) → divergence. Filet final : des timestamps
+  // Whisper sans groupes → on reconstruit les groupes depuis les mots Whisper.
+  let groups = (_wordGroups && _wordGroups.length) ? _wordGroups : null;
+  if(!groups){
+    let flat = [];
+    try { flat = (typeof _previewSubWords === 'function') ? _previewSubWords() : []; } catch(e){ flat = []; }
+    if((!flat || !flat.length) && whisperWordTimestamps.length) flat = whisperWordTimestamps.map(w=>w.word).filter(Boolean);
+    groups = (flat && flat.length) ? _buildWpgGroups(flat, wpg) : [];
+  }
   const words       = groups.flat();
+  console.log('[compose] sous-titres · groupes=' + groups.length + ' mots=' + words.length + ' whisperTS=' + whisperWordTimestamps.length + ' source=' + ((_wordGroups && _wordGroups.length) ? '_wordGroups' : 'preview/fallback'));
   const totalGroups = groups.length;
   const wordMap     = _buildWordMap(groups);
   const subAdvSec   = (cfg.subAdvanceMs || 0) / 1000;
@@ -23963,6 +23975,19 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   if(!_audioBlobToEncode){
     _dbg('3c. Aucune source audio trouvée ✗');
   }
+
+  // #safari-audio · Source de repli pour le chemin B (MediaRecorder). Sur Safari,
+  // AudioContext.decodeAudioData REFUSE souvent les conteneurs MP4/MOV (vidéo Hedra,
+  // fichiers iPhone) → _audioBlobToEncode reste null alors qu'une piste audio EXISTE
+  // dans la vidéo. Un élément <audio>/<video>, lui, décode le MP4 nativement : on garde
+  // donc un blob LISIBLE (l'audio déjà choisi, sinon le fichier importé, sinon la vidéo
+  // Hedra brute) que le chemin B mixera via <audio>+WebAudio. On le garde SÉPARÉ pour ne
+  // pas forcer le chemin A (WebCodecs) à décoder un conteneur qu'il ne sait pas lire.
+  let _audioFallbackBlob = _audioBlobToEncode || (typeof mp4AudioFile !== 'undefined' && mp4AudioFile) || null;
+  if(!_audioFallbackBlob && hedraObjUrl){
+    try { _audioFallbackBlob = await fetch(hedraObjUrl).then(r => r.blob()); } catch(e){ _audioFallbackBlob = null; }
+  }
+  console.log('[compose] source audio · encodable=' + (_audioBlobToEncode ? Math.round(_audioBlobToEncode.size/1024)+'KB' : 'aucune') + ' · repli chemin B=' + (_audioFallbackBlob ? Math.round((_audioFallbackBlob.size||0)/1024)+'KB' : 'aucun') + ' · mp4Audio=' + (typeof mp4AudioEnabled!=='undefined'&&mp4AudioEnabled?'oui':'non'));
 
   // Pre-warm : première frame
   setStage('Chargement 1ère frame…', 13);
@@ -24164,6 +24189,21 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         } catch(e){ _audioEncErr = e; console.warn('AudioEncoder failed:', e); _dbg('4. CRASH: ' + e.message + ' ✗'); }
       }
 
+      // #safari-audio · DÉCISION AUDIO prise ICI, AVANT d'encoder la vidéo. Si une source audio
+      // existe mais que WebCodecs n'a pas pu l'encoder (Safari : decodeAudioData refuse le conteneur,
+      // ou AudioEncoder AAC/Opus indisponible/en erreur), on ABANDONNE le chemin A tout de suite —
+      // sans ré-encoder toute la vidéo pour rien — et on bascule sur le chemin B (MediaRecorder), qui
+      // mixe l'audio nativement via <audio>+WebAudio. Objectif : ne JAMAIS livrer une vidéo muette
+      // quand une piste audio est disponible. (S'il n'y a réellement aucune source, on laisse le
+      // chemin A produire une vidéo sans audio, c'est le comportement voulu.)
+      const _audioSrcExists = !!(_audioBlobToEncode || _audioFallbackBlob);
+      const _audioEncodedOk = _canEncodeAudio && !_audioEncErr && !!_audioPCMBuf;
+      if(_audioSrcExists && !_audioEncodedOk){
+        console.log('[compose] chemin A abandonné : audio non encodable ici → bascule chemin B (MediaRecorder) AVANT le rendu vidéo', { canEncodeAudio:_canEncodeAudio, audioEncErr:_audioEncErr?(_audioEncErr.message||String(_audioEncErr)):null, pcm:!!_audioPCMBuf, hasEncodable:!!_audioBlobToEncode, hasFallback:!!_audioFallbackBlob });
+        throw new Error('AUDIO_FALLBACK_MEDIARECORDER');
+      }
+      console.log('[compose] chemin A (WebCodecs) · audio encodé=' + (_audioEncodedOk?'oui':'non (aucune source)'));
+
       // VideoEncoder — chaque frame reçoit timestamp = frameNum/30 × 1e6 µs (CFR strict)
       let _wcEncErr2 = null;
       const videoEncoder = new VideoEncoder({
@@ -24175,8 +24215,8 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       // requestVideoFrameCallback a des bugs sur Safari avec les vidéos hors-DOM
       // setInterval n'affecte PAS le CFR : les timestamps sont assignés par VideoEncoder
       // (frameNum/30 * 1e6 µs) et non par le wall clock → CFR garanti peu importe le jitter JS
-      setStage('Composition ' + qCfg.label + ' (WebCodecs)…', 18);
-      toast('Composition CFR WebCodecs ~' + Math.round(totalDuration) + 's…');
+      setStage('Composition ' + qCfg.label + '…', 18);
+      toast('Composition ~' + Math.round(totalDuration) + 's…');
       hedraVid.currentTime = 0;
       if(gpVid) gpVid.currentTime = 0;
       // Attendre que TOUTES les vidéos aient leur 1ère frame prête (sinon split screen noir au départ)
@@ -24260,7 +24300,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
       hedraVid.pause();
       if(gpVid) gpVid.pause();
-      setStage('Finalisation WebCodecs…', 99);
+      setStage('Finalisation…', 99);
       await videoEncoder.flush();
       muxer.finalize();
 
@@ -24272,6 +24312,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
 
       const _hasAudio = _canEncodeAudio && !_audioEncErr && _audioPCMBuf;
       finalBlob = wcBlob;
+      console.log('[compose] chemin A terminé · taille=' + Math.round(wcBlob.size/1024) + 'KB · audio=' + (_hasAudio ? 'oui' : 'non (aucune source)'));
 
       URL.revokeObjectURL(hedraObjUrl);
       if(_gpCleanBlobUrl){ URL.revokeObjectURL(_gpCleanBlobUrl); _gpCleanBlobUrl = null; }
@@ -24285,8 +24326,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       }
 
     } catch(wcErr){
-      console.error('WebCodecs composition failed, fallback MediaRecorder:', wcErr);
-      toast('WebCodecs échoué (' + (wcErr.message||wcErr) + ') — mode classique…');
+      const _isAudioFallback = wcErr && wcErr.message === 'AUDIO_FALLBACK_MEDIARECORDER';
+      if(_isAudioFallback) console.log('[compose] bascule volontaire vers le chemin B pour muxer l\'audio (MediaRecorder + WebAudio, robuste sur Safari)');
+      else console.error('WebCodecs composition failed, fallback MediaRecorder:', wcErr);
+      toast(_isAudioFallback ? 'Ajout de l\'audio…' : 'Mode compatible…');
       finalBlob = null; // → déclenche chemin B
     }
   }
@@ -24301,15 +24344,21 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     ];
     let chosenMime = '';
     for(const mt of mimeTypes){ if(typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mt)){ chosenMime = mt; break; } }
-    if(!chosenMime){ toast('Ni WebCodecs ni MediaRecorder — utilise Chrome/Edge'); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
+    if(!chosenMime){ toast('Encodage vidéo non supporté — utilise Chrome/Edge'); resetBtn(); URL.revokeObjectURL(hedraObjUrl); return; }
     isWebm = chosenMime.startsWith('video/webm');
+
+    // #safari-audio · Source audio du chemin B : le blob encodable si on l'a, SINON le repli
+    // lisible NATIVEMENT par un <audio> (décode le MP4/MOV même quand decodeAudioData échoue —
+    // cas Safari). Sans ça, une vidéo « réutilisée » (audioBlob null) ressortait muette sur Safari.
+    const _pbAudioBlob = _audioBlobToEncode || _audioFallbackBlob;
+    console.log('[compose] chemin B (MediaRecorder) · mime=' + chosenMime + ' · source audio=' + (_pbAudioBlob ? Math.round((_pbAudioBlob.size||0)/1024)+'KB' : 'AUCUNE'));
 
     const videoStream = canvas.captureStream(30);
     let combinedStream = videoStream;
     let audioCtx = null, audioEl2 = null;
-    if(_audioBlobToEncode){
+    if(_pbAudioBlob){
       try {
-        const audioUrl2 = URL.createObjectURL(_audioBlobToEncode);
+        const audioUrl2 = URL.createObjectURL(_pbAudioBlob);
         audioEl2 = new Audio(audioUrl2); audioEl2.preload = 'auto';
         await new Promise(res => { audioEl2.oncanplaythrough = res; audioEl2.onerror = res; audioEl2.load(); setTimeout(res, 3000); });
         audioCtx = new AudioContext();
@@ -24320,6 +24369,9 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         combinedStream = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
       } catch(e){ console.warn('Audio mix failed:', e); audioEl2 = null; }
     }
+    const _pbAudioTracks = combinedStream.getAudioTracks().length;
+    if(_pbAudioBlob && !_pbAudioTracks){ console.warn('[compose] chemin B : une source audio existe mais AUCUNE piste audio n\'a pu être mixée → la vidéo risque d\'être muette'); toast('Audio non mixé — réessaie ou change de navigateur'); }
+    else console.log('[compose] chemin B · pistes audio mixées=' + _pbAudioTracks);
 
     let recorder, chunks = [];
     try {
@@ -28709,9 +28761,10 @@ async function _mcpOAuthConsent(){
   try { params = JSON.parse(atob(relai.replace(/-/g,'+').replace(/_/g,'/'))) } catch(_){ console.warn('[mcp-oauth] relais illisible — ignoré'); return }
   if(!params || !params.client_id || !params.redirect_uri){ console.warn('[mcp-oauth] relais incomplet — ignoré'); return }
   console.log('[mcp-oauth] lancement — relais de consentement détecté')
-  // Relais consommé UNE SEULE FOIS : on nettoie l'URL tout de suite → aucun autre
-  // lecteur, ni un refresh, ne peut relancer un flux à partir du même relais.
-  try { history.replaceState(null, '', location.pathname) } catch(_){}
+  // BUG Axel 30/08 (nav privée) : on ne consomme PLUS le relais tout de suite. En session
+  // pas encore restaurée, le boot peut re-router/recharger AVANT l'ouverture de la carte ;
+  // si l'URL est déjà nettoyée, le relais est perdu → la carte n'apparaît qu'au 2e passage.
+  // On garde donc le relais dans l'URL jusqu'à l'ouverture RÉELLE de la carte (plus bas).
   // Idempotence : carte déjà à l'écran (ou en cours d'ouverture) → on ne relance rien.
   if(document.getElementById('mcpOAuthModal') || window._mcpOAuthModalOpen){
     console.log('[mcp-oauth] garde — carte déjà ouverte, second lancement ignoré')
@@ -28731,6 +28784,10 @@ async function _mcpOAuthConsent(){
     console.log('[mcp-oauth] garde — carte déjà ouverte pendant l’attente')
     return
   }
+  // Session prête + carte pas encore ouverte → MAINTENANT on consomme le relais :
+  // l'URL n'est nettoyée qu'ICI, juste avant l'affichage, donc elle survit à un
+  // éventuel re-route/reload de boot en amont (fix nav privée, 30/08).
+  try { history.replaceState(null, '', location.pathname) } catch(_){}
   _mcpOpenConsentModal(params, session)
 }
 // Ouvre la carte UNE fois et la garde jusqu'à l'action utilisateur. Le MutationObserver
