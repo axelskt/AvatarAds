@@ -789,7 +789,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         Éditeur
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BETA</span>
       </div>
-      <div class="nav-i" onclick="nav('affiliation',this);initAffiliation()">
+      <!-- 💶 Parrainage déplacé dans « Mon compte » (Axel 30/08) — masqué de la sidebar pour l'instant -->
+      <div class="nav-i" id="navAffiliation" style="display:none" onclick="nav('affiliation',this);initAffiliation()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h0M18 12h0"/></svg>
         Parrainage
       </div>
@@ -1053,13 +1054,13 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </div>
                 <div id="avGenResult" style="display:none;margin-top:14px">
                   <div style="border-radius:16px;overflow:hidden;border:1px solid var(--border);background:var(--panel-1);max-width:280px;margin:0 auto"><img id="avGenImg" alt="Avatar généré" style="width:100%;aspect-ratio:9/16;object-fit:cover;display:block"></div>
-                  <!-- #lotG · « Détail en 4K » = Nano Banana Pro 4K (génératif) en action principale ; « Améliorer les détails » (AuraSR non génératif) dessous -->
-                  <button type="button" id="avGen4KBtn" onclick="_avGen4K(this)" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 20px rgba(255,107,53,.3)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Détail en 4K · Nano Banana Pro · <span>5 cr</span></button>
-                  <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
-                    <button type="button" id="avGenDetailBtn" onclick="_avGenUpscale(this)" style="flex:1 1 155px;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Améliorer les détails · <span id="avGenDetailCost">3 cr</span></button>
-                    <button type="button" onclick="_avGenDownload()" style="flex:1 1 120px;min-width:0;padding:11px 8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
-                    <button type="button" id="avGenUseBtn" onclick="_avGenUse()" style="flex:1 1 170px;min-width:0;padding:11px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser comme avatar</button>
+                  <!-- #lotG (Axel 30/08) · Ligne 1 : Détail en 4K (Nano Banana Pro) + Télécharger + Utiliser comme avatar sur la même ligne. « Améliorer les détails » (AuraSR) dessous. -->
+                  <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+                    <button type="button" id="avGen4KBtn" onclick="_avGen4K(this)" style="flex:1 1 160px;min-width:0;padding:11px 8px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 18px rgba(255,107,53,.3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Détail en 4K · <span>5 cr</span></button>
+                    <button type="button" onclick="_avGenDownload()" style="flex:1 1 110px;min-width:0;padding:11px 8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
+                    <button type="button" id="avGenUseBtn" onclick="_avGenUse()" style="flex:1 1 160px;min-width:0;padding:11px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser comme avatar</button>
                   </div>
+                  <button type="button" id="avGenDetailBtn" onclick="_avGenUpscale(this)" style="width:100%;margin-top:8px;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Améliorer les détails · <span id="avGenDetailCost">3 cr</span></button>
                 </div>
               </div>
               <div id="avPaneLib" style="display:none">
@@ -5305,6 +5306,20 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <svg class="faint" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>
     </button>
 
+    <!-- 💶 Parrainage (déplacé de la sidebar le 30/08) — ouvre la vue dédiée depuis Mon compte -->
+    <button onclick="closeAccountSettings();nav('affiliation');if(typeof initAffiliation==='function')initAffiliation()" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:26px;text-align:left;cursor:pointer">
+      <span class="row gap12" style="align-items:center;min-width:0">
+        <span style="width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:grid;place-items:center">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h0M18 12h0"/></svg>
+        </span>
+        <span class="col" style="line-height:1.3;min-width:0">
+          <span style="font-weight:700;font-size:14.5px">Parrainage</span>
+          <span class="faint" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Gagne 30 % sur chaque filleul — tes gains &amp; virements</span>
+        </span>
+      </span>
+      <svg class="faint" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+
     <!-- Abonnement & Déconnexion -->
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-ghost" onclick="changeSubscription();closeAccountSettings()" style="width:100%;justify-content:flex-start"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> Changer mon abonnement</button>
@@ -6359,10 +6374,10 @@ const CREDIT_COSTS = {
   // 0,24 $ ≈ 0,22 € : même dépense qu'une image imgHigh, donc même prix — et
   // surtout jamais au-dessus d'un Montage IA, sinon le barème devient illisible.
   imgUpscale4K: 5,
-  // 🔎 « Détails du visage » = Clarity upscaler (fal, ~0,03 $/passe) : upscale EN PLACE
-  // (cadrage inchangé) qui REPEINT la matière peau (pores, duvet, taches de rousseur) sans
-  // lisser — bien moins cher que Nano, donc 3 crédits (Axel, 20/08 ; anti-plastique 25/08).
-  imgClarity: 3,
+  // 🔎 « Détails du visage » / « Améliorer les détails » = AuraSR (fal-ai/aura-sr) : upscale
+  // ×4 EN PLACE (cadrage inchangé), non génératif — détaille pores/duvet/cheveux sans lisser
+  // ni inventer. 3 crédits (Axel, 20/08). #no-clarity (30/08) : Clarity retiré, clé renommée.
+  imgDetailHD: 3,
   // ✨ « Améliorer en 4K » (ex « Rendre réaliste ») via Nano Banana Pro 4K (img2img).
   // Réservé Pro/Élite. Coût Google 0,24 $ ≈ 0,22 € → 5 crédits = ~0,41 € encaissés.
   imgRealistic: 5,
@@ -9251,16 +9266,16 @@ async function _imgMakeRealistic(btn){
     _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
     _imgProgStart('Amélioration 4K… (~30s)');
-    let url, engine='Clarity';
-    // ⚠ ZOOM 4K CORRIGÉ (Axel 17/08) : Clarity Upscaler agrandit ×4 SUR PLACE (cadrage et
-    // proportions EXACTS conservés) + ajoute du détail réel. On NE passe plus par Nano Banana
-    // Pro qui RE-CADRAIT et zoomait sur le visage. Repli gpt-image edit (édition en place).
+    let url, engine='Nano Banana Pro';
+    // #4k-nano (Axel 30/08) : « Améliorer en 4K » = Nano Banana Pro (gemini-3-pro-image), le
+    // même moteur 4K que le « Détail en 4K » de l'avatar. Le LOCK du prompt (_NB_REFINE_PROMPT)
+    // garde identité/cadrage/proportions et n'AJOUTE que du micro-détail réel. Repli gpt-image edit.
     try{
-      url = await _falClarityUpscale(dataUrl);
-      if(!url) throw new Error('Clarity : aucune image');
+      url = await _nbRefine4K(token, dataUrl, aspect);
+      if(!url) throw new Error('Nano Banana Pro : aucune image');
     }catch(e){
       engine='gpt-image';
-      console.warn('Clarity indispo (améliorer 4K), repli gpt-image :', e);
+      console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
       const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
       url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024');
     }
@@ -10049,13 +10064,23 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
       imageConfig: { imageSize: size || '2K', aspectRatio: aspect }
     }
   };
+  // #4k-retry (Axel 30/08) : gemini-3-pro-image renvoie souvent un 503 « This model is
+  // currently experiencing high demand » (surcharge transitoire côté Google). On réessaie
+  // 2 fois avec backoff avant d'abandonner, sinon un simple pic de charge fait échouer l'upscale.
+  const _nbOverloaded = (st, j) => st===503 || st===429 || st===500
+    || (j && j.error && /high demand|overloaded|unavailable|try again later|temporarily|rate.?limit|resource.?exhausted/i.test(JSON.stringify(j.error)));
   const call = async (payload) => {
-    const res = await fetch(SUPABASE_URL + '/functions/v1/google-ai-proxy?path=' + encodeURIComponent(path), {
-      method:'POST',
-      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return res.json();
+    const _url = SUPABASE_URL + '/functions/v1/google-ai-proxy?path=' + encodeURIComponent(path);
+    const _hdr = { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
+    const _body = JSON.stringify(payload);
+    let _last = null;
+    for(let _a=0; _a<3; _a++){
+      if(_a>0) await new Promise(r=>setTimeout(r, 1800*_a));   // backoff : 1,8 s puis 3,6 s
+      const res = await fetch(_url, { method:'POST', headers:_hdr, body:_body });
+      _last = await res.json().catch(()=>({}));
+      if(!_nbOverloaded(res.status, _last)) return _last;
+    }
+    return _last;   // toujours surchargé après 3 tentatives → l'appelant lèvera l'erreur (→ repli/remboursement)
   };
   let d = await call(body);
   // Certaines versions n'acceptent pas imageConfig et renvoient un 400 sur ce champ.
@@ -10143,39 +10168,6 @@ async function _detectFaceBox(dataUrl){
     return { x:Math.max(0,j.x), y:Math.max(0,j.y), w:Math.min(1,j.w||0.15), h:Math.min(1,j.h) };
   }catch(e){ console.warn('[face-upscale] détection err', e); return null; }
 }
-async function _falClarityUpscale(imageDataUrl){
-  const Hh=await getAuthHeader();
-  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
-  const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body:JSON.stringify(b) });
-  const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...Hh } });
-  const model='/fal-ai/clarity-upscaler';
-  // Borne entrée + facteur : Clarity refuse (422) une sortie trop grande. On plafonne
-  // l'ENTRÉE à 2048 px (data-URL léger) et on calcule le facteur pour une SORTIE ≤ 4096 px.
-  let src=imageDataUrl, factor=4;
-  try{
-    const im=await _loadImgEl(imageDataUrl);
-    let w=im.naturalWidth||1024, h=im.naturalHeight||1024;
-    if(Math.max(w,h)>2048){ const r=2048/Math.max(w,h); const cw=Math.round(w*r), ch=Math.round(h*r); const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; cv.getContext('2d').drawImage(im,0,0,cw,ch); src=cv.toDataURL('image/jpeg',0.92); w=cw; h=ch; }
-    factor=Math.max(1, Math.min(4, Math.floor(4096/Math.max(w,h))));
-  }catch(_){ }
-  // Axel 25/08 : « ça lisse trop, ça fait plastique ». Clarity à creativity 0.3 / resemblance 0.9
-  // était un upscale FIDÈLE → il ré-affiche la peau lisse sans repeindre de matière. On ouvre le
-  // débruitage (creativity 0.5) pour qu'il REPEIGNE vraiment pores/duvet/taches de rousseur, et on
-  // relâche la ressemblance (0.6) pour que l'original lissé ne domine plus — le ControlNet tile
-  // garde le CADRAGE et la STRUCTURE du visage (identité conservée), seule la texture est régénérée.
-  // #detail-visage (Axel 26/08) : dd54f12 (resemblance 0.6 + « ABUNDANT freckles / heavy texture ») DÉFORMAIT le visage + posait des particules.
-  // Équilibre : resemblance 0.9 (identité verrouillée = ZÉRO déformation) + creativity 0.4 (repeint de la VRAIE matière peau = anti-plastique),
-  // + négatif anti-particules et prompt qui garde les vêtements/fond propres (pas de grain sur le tee-shirt).
-  const sub=await fPost(model,{ image_url:src, prompt:'RAW unedited real photograph, hyper-detailed authentic human skin with clearly visible pores and real micro-texture, fine peach-fuzz / vellus hair on cheeks and jaw, natural skin-tone variation, tiny imperfections and any natural freckles or beauty marks where they already exist (never add freckles to skin that has none), a sharp fibrous iris, individual eyelashes and hair strands, crisp fabric weave, natural film grain. It must stay MATTE and real — absolutely NO plastic, waxy, glossy or airbrushed skin, NO smoothing, NO beauty filter, NO CGI. Keep clothing and background clean and unchanged — do NOT add grain, dust, speckles or floating particles on fabric or flat areas.', negative_prompt:'plastic skin, waxy skin, airbrushed, over-smoothed, glossy, shiny, CGI, 3d render, beauty filter, doll, floating particles, dust, speckles, noise on clothing, grain on fabric, artifacts, blurry, soft focus, oversaturated', upscale_factor:factor, creativity:0.4, resemblance:0.9, num_inference_steps:36 });
-  if(!sub.ok){ const _b=(await sub.text().catch(()=>'')); console.error('[clarity] fal '+sub.status+' (facteur '+factor+') : '+_b.slice(0,200)); return null; }
-  const sd=await sub.json().catch(()=>({})); let url=(sd.image&&sd.image.url)||null;
-  if(!url && (sd.status_url||sd.request_id)){
-    const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
-    const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
-    for(let i=0;i<50 && !url;i++){ await new Promise(r=>setTimeout(r,2500)); const pr=await fGet(stP); if(!pr.ok) continue; const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase(); if(s==='COMPLETED'){ const rr=await fGet(reP); const rd=await rr.json().catch(()=>({})); url=(rd.image&&rd.image.url)||(rd.images&&rd.images[0]&&rd.images[0].url)||null; if(!url){ console.warn('[clarity] COMPLETED sans image — échec (souvent modération ou image d\'entrée trop lourde) :', JSON.stringify(rd).slice(0,220)); return null; } break; } else if(s!=='IN_QUEUE'&&s!=='IN_PROGRESS'){ return null; } }
-  }
-  return url||null;
-}
 // #detail-visage (Axel 26/08) : « Détails du visage » = AuraSR (fal-ai/aura-sr), upscaler GAN NON génératif.
 // Agrandit ×4 sans rien halluciner (PAS de prompt, pas de déformation, pas de taches inventées, cadrage exact).
 // Testé sur la selfie Tokyo (~15 s, 4096×6144, ~0,02 $) : barbe/pores nets, peau naturelle, zéro plastique.
@@ -10215,7 +10207,7 @@ async function _faceUpscalePass(dataUrl){
     if(cw<48||ch<48) return dataUrl;
     const cc=document.createElement('canvas'); cc.width=cw; cc.height=ch; const cctx=cc.getContext('2d'); cctx.drawImage(im,px0,py0,cw,ch,0,0,cw,ch);
     const cropDataUrl=cc.toDataURL('image/png');
-    const upUrl=await _falClarityUpscale(cropDataUrl); if(!upUrl){ window._faceLastStatus='Clarity a échoué'; console.warn('[face-upscale] Clarity a échoué, skip'); return dataUrl; }
+    const upUrl=await _falAuraSR(cropDataUrl); if(!upUrl){ window._faceLastStatus='AuraSR a échoué'; console.warn('[face-upscale] AuraSR a échoué, skip'); return dataUrl; }
     const upResp=await fetch(upUrl); const upObj=URL.createObjectURL(await upResp.blob());
     let upImg; try{ upImg=await _loadImgEl(upObj); } finally { /* obj révoqué plus bas */ }
     const out=document.createElement('canvas'); out.width=W; out.height=H2; const ctx=out.getContext('2d'); ctx.drawImage(im,0,0);
@@ -10250,7 +10242,7 @@ async function _imgUpscaleHD(btn){
   if(!img||!img.src){ toast('Génère une image d\'abord'); return; }
   // Débit AVANT l'appel Google (anti-triche, cf. spendCreditsFor) ; remboursé si ça casse.
   creditsFlowBegin();
-  if(!(await spendCreditsFor(CREDIT_COSTS.imgClarity, 'clarity'))) return;
+  if(!(await spendCreditsFor(CREDIT_COSTS.imgDetailHD, 'détails HD'))) return;
   _imgPrevSrc = img.src; // mémorise avant HD pour pouvoir revenir en arrière
   const orig=btn.innerHTML; btn.disabled=true;               // le bouton GARDE son design (Axel 23/08)
   if(!window._img4kBtnHtml) window._img4kBtnHtml = orig;   // pour réarmer le bouton sur une nouvelle image
@@ -10265,35 +10257,13 @@ async function _imgUpscaleHD(btn){
       src = await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);});
     }
     let finalUrl = null, engine = 'AuraSR';
-    // #detail-visage (Axel 26/08) : « Détails du visage » = AuraSR (upscaler GAN NON génératif), à la place de Clarity.
-    // Testé en vrai : barbe/pores nets, ZÉRO plastique, ZÉRO tache inventée, ZÉRO déformation (≠ Clarity qui hallucinait).
-    // Agrandit ×4 SUR PLACE (cadrage exact, ne recadre pas), sans prompt. Repli = Clarity Replicate.
-    try{
-      finalUrl = await _falAuraSR(src);
-      if(!finalUrl) throw new Error('AuraSR : aucune image');
-      // _falAuraSR renvoie déjà un data URL redescendu ; on garde la conversion (si jamais = URL fal → persistance)
-      try{ const rC=await fetch(finalUrl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
-    }catch(e){
-      engine = 'Clarity (Replicate)';
-      console.warn('Clarity fal indisponible, repli Replicate :', e);
-      const base=SUPABASE_URL+'/functions/v1/replicate-proxy';
-      const post=async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
-      let d=await post({ image: src, scale_factor:2 });
-      if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur upscale'));
-      if(!d.url && d.id){
-        for(let i=0;i<45 && !d.url;i++){
-          await new Promise(r=>setTimeout(r,2500));
-          const p=await post({poll:d.id});
-          if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
-          if(p.status==='failed'||p.status==='canceled') throw new Error('Upscale échoué');
-          if(p.url) d.url=p.url;
-        }
-      }
-      if(!d.url) throw new Error('Délai dépassé — réessaie');
-      finalUrl = d.url;
-      // Les URLs Replicate expirent ~1h → data URL pour la persistance bibliothèque
-      try{ const r2=await fetch(d.url); const b2=await r2.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(b2);}); }catch(e2){}
-    }
+    // #detail-visage (Axel 26/08) : « Détails du visage » = AuraSR (upscaler GAN NON génératif).
+    // Testé en vrai : barbe/pores nets, ZÉRO plastique, ZÉRO tache inventée, ZÉRO déformation.
+    // Agrandit ×4 SUR PLACE (cadrage exact, ne recadre pas), sans prompt. #no-clarity (30/08) : plus de repli Clarity.
+    finalUrl = await _falAuraSR(src);
+    if(!finalUrl) throw new Error('AuraSR : aucune image');
+    // _falAuraSR renvoie déjà un data URL redescendu ; on garde la conversion (si jamais = URL fal → persistance)
+    try{ const rC=await fetch(finalUrl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
     // #detail-visage (26/08) : passe visage Clarity DÉSACTIVÉE — AuraSR (×4) détaille déjà tout le visage,
     // et la passe Clarity réintroduisait les taches/rougeurs. AuraSR fait tout en une seule passe.
     await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true; _imgHDSrc=finalUrl; _imgViewingOriginal=false;   // même cadrage ; garde l'améliorée pour la bascule
@@ -10402,11 +10372,11 @@ async function _imgUpscaleNano(btn){
     // Nano a-t-il recadré / zoomé ? → on refuse et on agrandit SUR PLACE avec Clarity (non génératif)
     const chk=await _imgFramingMatches(src, finalUrl);
     if(!chk.ok){
-      console.warn('[4K] Nano a changé le cadrage ('+chk.why+') → repli Clarity ×4 (cadrage exact)');
+      console.warn('[4K] Nano a changé le cadrage ('+chk.why+') → repli AuraSR ×4 (cadrage exact, non génératif)');
       { const l=document.getElementById('imgProgLabel'); if(l) l.textContent='4K en cours · cadrage exact…'; }
-      const cl=await _falClarityUpscale(src);
-      if(cl){ try{ const rC=await fetch(cl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){ finalUrl=cl; } engine='Clarity (cadrage conservé)'; }
-      else throw new Error('4K : Nano a recadré l\'image et Clarity est indisponible — crédit remboursé');
+      const cl=await _falAuraSR(src);
+      if(cl){ try{ const rC=await fetch(cl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){ finalUrl=cl; } engine='AuraSR (cadrage conservé)'; }
+      else throw new Error('4K : Nano a recadré l\'image et AuraSR est indisponible — crédit remboursé');
     }
     await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true; _imgHDSrc=finalUrl; _imgViewingOriginal=false;   // même cadrage ; garde l'améliorée pour la bascule
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
@@ -10708,6 +10678,7 @@ function _imgFriendlyErr(m){
               : 'image refusée par le filtre de contenu';
     return 'Génération refusée par le filtre de sécurité du moteur ('+kind+') — c\'est le filtre du moteur d\'images, pas AvatarAds. Essaie une autre photo, un cadrage plus serré (visage/épaules) ou une tenue moins suggestive.';
   }
+  if(/high demand|overloaded|unavailable|503|try again later|temporarily|resource.?exhausted/i.test(m)) return 'Le moteur 4K de Google est surchargé en ce moment (pic de demande) — réessaie dans une minute, ton crédit a été remboursé.';
   if(/billing|quota|insufficient/i.test(m)) return 'Quota du moteur d\'images atteint — réessaie dans quelques minutes.';
   if(/timeout|timed out/i.test(m)) return 'Délai dépassé — réessaie.';
   return m;
@@ -17694,7 +17665,7 @@ let _avGenBusy = false, _avGenUrl = null, _avGenHD = false, _avGen4KDone = false
 function _avGenSyncCosts(){
   // l'UI lit le barème depuis la constante : changer CREDIT_COSTS suffit
   const c1 = document.getElementById('avGenBtnCost');    if (c1) c1.textContent = CREDIT_COSTS.imgMedium + ' crédits';
-  const c2 = document.getElementById('avGenDetailCost'); if (c2) c2.textContent = CREDIT_COSTS.imgClarity + ' cr';
+  const c2 = document.getElementById('avGenDetailCost'); if (c2) c2.textContent = CREDIT_COSTS.imgDetailHD + ' cr';
 }
 // ── #lotG1 · IMAGES DE RÉFÉRENCE (bouton « + ») ─────────────────────────────
 // Une ou plusieurs images (max 4) : produit, visage… Avec ≥1 réf, la génération
@@ -17754,8 +17725,11 @@ async function _avGenGenerate(){
   try{
     const session = (await sb.auth.getSession()).data.session;
     const token = session?.access_token || SUPABASE_KEY;
-    const ugc = _IMG_STYLES.find((s) => s.id === 'ugc');
-    const fullPrompt = prompt + ((ugc && ugc.suffix) || '') + _IMG_REALISM;
+    // #genG (Axel 30/08) : esthétique UGC iPhone SANS les descripteurs genrés — l'ancien
+    // suffixe UGC (« jolie avec de jolies lèvres pulpeuses ») forçait une FEMME même quand
+    // on écrivait « un influenceur ». On garde le look selfie/UGC, on retire ce qui impose un genre.
+    const AV_UGC_SUFFIX = ', vrai selfie/photo UGC pris à l\'iPhone tenu à la main, casual et spontané, lumière non contrôlée d\'intérieur (ambiante, exposition automatique du téléphone), cadrage imparfait légèrement décentré, non retouché, non professionnel, comme un selfie qu\'un ami enverrait';
+    const fullPrompt = prompt + AV_UGC_SUFFIX + _IMG_REALISM;
     // #lotG1 · avec des références → EDITS multi-image ; sans → generations (inchangé)
     const url = _avGenRefs.length
       ? await _avGenCallGptEdits(token, fullPrompt)
@@ -17856,7 +17830,7 @@ async function _avGenUpscale(btn){
   if (!['elite','developer'].includes(plan)){ toast('Amélioration des détails réservée au plan Élite'); try{ openUpgradeModal(); }catch(_){} return; }
   if (_avGenBusy){ toast('Une opération est déjà en cours — patiente'); return; }
   creditsFlowBegin();
-  if (!(await spendCreditsFor(CREDIT_COSTS.imgClarity, 'clarity avatar'))) return;
+  if (!(await spendCreditsFor(CREDIT_COSTS.imgDetailHD, 'détails HD avatar'))) return;
   _avGenBusy = true;
   const orig = btn ? btn.innerHTML : '';
   if (btn && !window._avGenDetailHtml) window._avGenDetailHtml = orig;
