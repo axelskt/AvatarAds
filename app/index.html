@@ -9279,26 +9279,29 @@ async function _imgMakeRealistic(btn){
     const session=(await sb.auth.getSession()).data.session;
     const token=session?.access_token || SUPABASE_KEY;
     const dispFmt = _imgSelectedFormat;
-    const aspect  = _NB_FMT_ASPECT[dispFmt] || '9:16';
     const dataUrl = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
+    // #4k-ratio (Axel 30/08) : ratio RÉEL de l'image importée (pas celui du format sélectionné) → Nano
+    // ne recadre/redimensionne plus (source d'un rendu plus mou), il garde le cadrage exact.
+    let aspect = _NB_FMT_ASPECT[dispFmt] || '9:16';
+    try{ const _im = await _loadImgEl(dataUrl); if(_im && _im.naturalWidth) aspect = _nbAspectFor(_im.naturalWidth, _im.naturalHeight); }catch(_){}
     if(multiWrap) multiWrap.style.display='none';
     if(singleWrap) singleWrap.style.display='block';
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none';
     _imgIdleShow(false);
     if(overlay) overlay.style.display='flex';
     _imgProgStart('Amélioration 4K… (~30s)');
-    let url, engine='AuraSR 4K';
-    // #4k-aurasr (Axel 30/08) : « Améliorer en 4K » = AuraSR ×4 NON GÉNÉRATIF (agrandit la VRAIE image
-    // en haute résolution) plutôt que Nano Banana Pro (génératif : rend en basse déf puis agrandit →
-    // flou/pixelisé, la sortie était même sous la résolution de l'original). Bornes HQ 2560→4096 q0.95.
+    let url, engine='Nano Banana Pro';
+    // #4k-nano (Axel 30/08) : « Améliorer en 4K » = Nano Banana Pro (gemini-3-pro-image) EN VRAIE 4K
+    // (AuraSR est réservé à « Détails du visage »). Prompt fidèle (_NB_REFINE_PROMPT) + résolution 4K
+    // forcée dans _nbEdit (plus de repli en basse déf qui pixélisait). Repli gpt-image edit.
     try{
-      url = await _falAuraSR(dataUrl, { inMax:2048, outMax:4096, q:0.95 });
-      if(!url) throw new Error('AuraSR : aucune image');
-    }catch(e){
-      engine='Nano Banana Pro';
-      console.warn('AuraSR indispo (améliorer 4K), repli Nano Banana Pro :', e);
       url = await _nbRefine4K(token, dataUrl, aspect);
-      if(!url){ engine='gpt-image'; const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' }; url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024'); }
+      if(!url) throw new Error('Nano Banana Pro : aucune image');
+    }catch(e){
+      engine='gpt-image';
+      console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
+      const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
+      url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024');
     }
     _imgMonthIncrement();
     _imgShowSingle(url, dispFmt);
@@ -10107,12 +10110,19 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
     return _last;   // toujours surchargé après 3 tentatives → l'appelant lèvera l'erreur (→ repli/remboursement)
   };
   let d = await call(body);
-  // Certaines versions n'acceptent pas imageConfig et renvoient un 400 sur ce champ.
-  // On retente alors sans imageConfig (Nano Banana Pro rend quand même, à sa taille
-  // par défaut — mieux que retomber sur le repli), plutôt que d'abandonner le modèle.
-  if(d?.error && /imageConfig|imageSize|aspectRatio|Unknown name|Invalid JSON/i.test(JSON.stringify(d.error))){
-    const slim = { contents: body.contents, generationConfig: { responseModalities: ['TEXT','IMAGE'] } };
-    d = await call(slim);
+  // #4k-res (Axel 30/08) : si imageSize/imageConfig rejeté, on RÉTROGRADE la résolution par paliers
+  // (2K puis 1K, en gardant le ratio) AVANT de tomber « sans config » (~1024px = pixelisé). C'est ce
+  // repli brutal qui rendait la « 4K » plus petite/floue que l'original quand le modèle refusait '4K'.
+  const _cfgRejected = (x) => x?.error && /imageConfig|imageSize|aspectRatio|Unknown name|Invalid JSON|not supported|invalid value/i.test(JSON.stringify(x.error));
+  if(_cfgRejected(d)){
+    for(const _s of ['2K','1K']){
+      d = await call({ contents: body.contents, generationConfig: { responseModalities: ['TEXT','IMAGE'], imageConfig: { imageSize: _s, aspectRatio: aspect } } });
+      if(!_cfgRejected(d)) break;
+    }
+    // dernier recours seulement : sans imageConfig
+    if(_cfgRejected(d)){
+      d = await call({ contents: body.contents, generationConfig: { responseModalities: ['TEXT','IMAGE'] } });
+    }
   }
   if(d?.error) throw new Error(d.error.message || String(d.error));
   const b64 = _nbExtractImage(d);
