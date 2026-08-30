@@ -11165,7 +11165,13 @@ function _recRemoveSilence(buffer, threshold, minSilMs=350, keepSilMs=90){
   const rms=new Float32Array(nWin); let maxRms=0;
   for(let w=0;w<nWin;w++){ const i=w*win,e=Math.min(i+win,input.length); let s=0; for(let j=i;j<e;j++) s+=input[j]*input[j]; rms[w]=Math.sqrt(s/Math.max(1,e-i)); if(rms[w]>maxRms) maxRms=rms[w]; }
   if(!(maxRms>0)) return buffer;
-  const thr=Math.max(0.004, maxRms*0.08);
+  // seuil = PLANCHER DE BRUIT (10ᵉ percentile des fenêtres) ×2,2, PLAFONNÉ à 0,02 (~-34 dBFS) → il ne
+  // coupe QUE le silence/souffle, JAMAIS la parole. ⚠ L'ancien seuil `maxRms*0.08` montait avec le
+  // moindre pic fort (une plosive) et classait ~40 % de la VOIX comme silence → hachage, « sous l'eau »,
+  // « pas fluide » (mesuré : 41 % coupé sur la prise d'Axel, 31 % même sur une voix propre de dictaphone).
+  const _sorted=Array.from(rms).filter(x=>x>0).sort((a,b)=>a-b);
+  const _nf=_sorted.length?_sorted[Math.floor(_sorted.length*0.1)]:0;
+  const thr=Math.min(0.02, Math.max(0.006, _nf*2.2));
   const voiced=new Array(nWin); for(let w=0;w<nWin;w++) voiced[w]=rms[w]>=thr;
   // 2) on GARDE tout par défaut ; on ne coupe QUE le MILIEU des silences LONGS (> minSilMs), en
   //    laissant keepSilMs de respiration de chaque côté → les pauses courtes entre les mots
