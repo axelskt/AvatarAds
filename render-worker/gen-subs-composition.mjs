@@ -60,8 +60,8 @@ function _subTextOn(bg){
 function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   if(!shown?.length) return;
   const sz       = Math.max(24, Math.round((cfg.subSize||72) * (H/1920) * 0.85));
-  const posY     = Math.round(H * (Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos ||75)) / 100));
-  const posX     = Math.round(W * (Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right,  cfg.subPosX||50)) / 100));
+  const posY     = Math.round(H * (Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos  !== undefined ? cfg.subPos  : 70)) / 100));
+  const posX     = Math.round(W * (Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right,  cfg.subPosX !== undefined ? cfg.subPosX : 50)) / 100));
   const scaleX   = cfg.subScaleX || 1.0;
   const c1       = subColors.c1 || '#FFE500';
   const c2       = subColors.c2 || '#ffffff';
@@ -113,14 +113,13 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
       let x = posX - lineW / 2;
       x = Math.max(W * 0.05, Math.min(W * 0.88 - lineW, x));
       lineIdxs.forEach(i => {
+        const active = (activeIdx!==undefined && activeIdx!==null) ? (i === activeIdx) : (i===0);
         ctx.font = font;
-        ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = Math.round(sz*0.18); ctx.shadowOffsetX = Math.round(sz*0.04); ctx.shadowOffsetY = Math.round(sz*0.05);
-        ctx.lineWidth   = Math.max(3, Math.round(sz*0.09));
-        ctx.strokeStyle = '#000';
-        ctx.fillStyle   = c1;
-        ctx.strokeText(upWords[i], x, lineY);
-        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+        // « White » (sync client) — SANS fond/contour noir : mot actif = c1, autres = c2, ombre douce
+        ctx.shadowColor = 'rgba(0,0,0,.38)'; ctx.shadowBlur = Math.round(sz*0.12); ctx.shadowOffsetX = 0; ctx.shadowOffsetY = Math.round(sz*0.04);
+        ctx.fillStyle   = active ? c1 : c2;
         ctx.fillText(upWords[i], x, lineY);
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
         x += wordWidths[i];
       });
     });
