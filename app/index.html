@@ -18178,6 +18178,7 @@ function goToStep(n){
 function handleMainBtn(){ if(step<3) nextStep(); else startGeneration(); } // étape 3 = dernière → génère (plus de récap)
 function nextStep(){
   if(step<3){
+    try{ if(window._previewResetToIdle) window._previewResetToIdle(); }catch(_){}   // aperçu propre à chaque étape
     step++;
     updateSteps();
     // Arrivée sur Style (étape 3) : charger un transcript en attente s'il y en a un
@@ -18186,7 +18187,7 @@ function nextStep(){
     }
   }
 }
-function prevStep(){ if(step>1){step--;updateSteps();} }
+function prevStep(){ if(step>1){ try{ if(window._previewResetToIdle) window._previewResetToIdle(); }catch(_){} step--;updateSteps();} }
 
 // ── AVATAR / VOICE / SUBSTYLE PICKS ──
 function pickAvatar(el,emo,name,desc){
@@ -18785,9 +18786,13 @@ async function whisperTranscribe(){
     fd.append('response_format', 'verbose_json');
     fd.append('timestamp_granularities[]', 'word');
     fd.append('temperature', '0'); // déterministe = calage plus stable
-    // Biais de reconnaissance : on donne le script attendu à Whisper → il colle aux mots exacts → meilleur calage sous-titres
+    // #whisper-precis (Axel 30/08) : NE JAMAIS biaiser Whisper avec le script quand l'audio est un
+    // ENREGISTREMENT ou un FICHIER importé. Le prompt Whisper = « contexte précédent » : lui donner le
+    // script complet le faisait RECOPIER le script au lieu de transcrire la vraie voix (d'où « Génial »
+    // au début, jamais prononcé). Le biais n'est gardé que pour un voice-over TTS (l'audio EST le script).
     try {
-      const _sc = (document.getElementById('f-script')?.value || (typeof pendingTranscript!=='undefined'&&pendingTranscript) || (window.results && results.script) || '').trim();
+      const _isUserAudio = (typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled && typeof mp4AudioFile!=='undefined' && !!mp4AudioFile);
+      const _sc = _isUserAudio ? '' : (document.getElementById('f-script')?.value || (typeof pendingTranscript!=='undefined'&&pendingTranscript) || (window.results && results.script) || '').trim();
       if(_sc) fd.append('prompt', _sc.slice(0, 880));
     } catch(e){}
     const resp = await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions', {
@@ -19441,6 +19446,19 @@ function _previewBtnState(state){
   }
 }
 
+// #pause-apercu (Axel 30/08) : au changement d'étape, l'aperçu était laissé « en pause » avec un
+// élément audio PÉRIMÉ (celui de l'étape précédente) → « Reprendre » ne jouait plus aucun son.
+// On remet l'aperçu à zéro (bouton « Aperçu animé ») à chaque changement d'étape : le prochain clic
+// relance une lecture PROPRE avec l'audio/les sous-titres de l'étape courante.
+window._previewResetToIdle = function(){
+  try{ if(previewAudio) previewAudio.pause(); }catch(_){}
+  try{ if(window._genPreviewMusicEl) window._genPreviewMusicEl.pause(); }catch(_){}
+  try{ const bpv=document.getElementById('bypassPreviewVid'); if(bpv && !bpv.paused) bpv.pause(); }catch(_){}
+  try{ const gpv=document.getElementById('gpVideo'); if(gpv && !gpv.paused) gpv.pause(); }catch(_){}
+  try{ stopPreviewAnim(); }catch(_){}
+  previewPlaying = false; window._previewPaused = false; previewAudio = null;
+  try{ _previewBtnState('idle'); }catch(_){}
+};
 async function togglePreviewPlay(){
   // ── Clic pendant la LECTURE → PAUSE : on fige tout SANS remettre à zéro ──
   if(previewPlaying){
@@ -19460,9 +19478,12 @@ async function togglePreviewPlay(){
   if(window._previewPaused && previewAudio){
     window._previewPaused = false;
     previewPlaying = true;
-    try{ previewAudio.play().catch(()=>{}); }catch(_){}
+    const _pa = previewAudio;
+    // si l'élément audio n'est plus jouable → relecture PROPRE depuis le début (au lieu de rester muet)
+    const _restart = () => { previewPlaying=false; window._previewPaused=false; previewAudio=null; try{ stopPreviewAnim(); }catch(_){} togglePreviewPlay(); };
+    try{ const _p=_pa.play(); if(_p && _p.catch) _p.catch(_restart); }catch(_){ _restart(); return; }
     try{ if(window._genPreviewMusicEl) window._genPreviewMusicEl.play().catch(()=>{}); }catch(_){}
-    startPreviewAnim(previewAudio, true);   // resume=true : relance la boucle sans reseek à 0
+    startPreviewAnim(_pa, true);   // resume=true : relance la boucle sans reseek à 0
     _previewBtnState('playing');
     return;
   }
