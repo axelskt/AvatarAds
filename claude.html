@@ -106,6 +106,11 @@ a{color:inherit;text-decoration:none}
 @media (prefers-reduced-motion:reduce){.rise{animation:none}}
 /* pastille d'étape (reprise de l'écran « Connecter Claude » de l'app) */
 .mcp-step{width:28px;height:28px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--accent-2);background:var(--accent-soft);border:1px solid var(--accent-line)}
+/* « Voir les réglages exacts » repliable (repris de l'écran in-app) */
+.adv summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);user-select:none;width:fit-content}
+.adv summary::-webkit-details-marker{display:none}
+.adv .adv-caret{transition:transform .2s}
+.adv[open] .adv-caret{transform:rotate(180deg)}
 .step-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
 .foot-link{transition:.15s;text-decoration:underline;text-decoration-color:transparent}
 .foot-link:hover{color:var(--text);text-decoration-color:var(--text-3)}
@@ -190,32 +195,44 @@ a{color:inherit;text-decoration:none}
 
   <div class="step-grid">
 
-    <!-- ① relier -->
+    <!-- ① relier (aligné sur l'écran in-app : étape encadrée + bouton « Relier à Claude ») -->
     <div class="card" style="padding:20px;display:flex;flex-direction:column">
       <div class="row gap10" style="align-items:center;margin-bottom:12px">
         <span class="mcp-step">1</span><span style="font-weight:700;font-size:16px">Relie ton compte</span>
       </div>
-      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Dans Claude → Connecteurs → « Ajouter un connecteur personnalisé », colle cette adresse. Pas de clé : tu autorises AvatarAds en un clic.</p>
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 12px">Pas de clé à coller : tu autorises AvatarAds en un clic. Dans Claude, ouvre :</p>
+      <div class="card mono faint" style="padding:11px 12px;background:var(--panel-1);font-size:11.5px;line-height:1.6">Paramètres → Connecteurs<br>→ « Ajouter un connecteur personnalisé »</div>
+      <p class="faint" style="font-size:12.5px;line-height:1.55;margin:12px 0 8px">Puis colle cette adresse :</p>
       <div class="row card" style="padding:10px 12px;gap:8px;align-items:center;background:var(--panel-1);margin-top:auto">
         <input type="text" id="mcpUrl" readonly value="https://mcp.avatarads.fr" onclick="this.select()" class="mono" style="flex:1;min-width:0;font-size:13px;border:none;background:none;color:var(--text);font-weight:700;padding:0">
         <button class="btn btn-sm" onclick="copyMcpUrl(this)" title="Copier l'adresse" style="flex:0 0 auto;padding:8px 12px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:700;cursor:pointer">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
         </button>
       </div>
+      <a href="/app/#connecter-claude" class="btn btn-primary" style="width:100%;margin-top:12px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
+        Relier à Claude
+      </a>
     </div>
 
-    <!-- ② autoriser (copy MAJ 29/08 : nouvel écran claude.ai « Ajouter un connecteur personnalisé ») -->
+    <!-- ② autoriser (réglages exacts repliables, comme l'écran in-app) -->
     <div class="card" style="padding:20px;display:flex;flex-direction:column">
       <div class="row gap10" style="align-items:center;margin-bottom:12px">
         <span class="mcp-step">2</span><span style="font-weight:700;font-size:16px">Autorise AvatarAds</span>
       </div>
-      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 10px">Sur l'écran « Ajouter un connecteur personnalisé », renseigne :</p>
-      <div class="card" style="padding:10px 12px;background:var(--panel-1);display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:1.5">
-        <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Nom</span><b style="text-align:right">AvatarAds</b></div>
-        <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Adresse</span><b class="mono" style="text-align:right;font-size:11.5px;word-break:break-all">https://mcp.avatarads.fr</b></div>
-        <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Authentification</span><b style="text-align:right">Toujours requis</b></div>
-        <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Client OAuth</span><b style="text-align:right">Métadonnées hébergées par Anthropic (recommandé)</b></div>
-      </div>
+      <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 8px">Sur l'écran « Ajouter un connecteur personnalisé », renseigne les réglages AvatarAds.</p>
+      <details class="adv" style="margin:0 0 10px">
+        <summary>
+          <svg class="adv-caret" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 9l6 6 6-6"/></svg>
+          Voir les réglages exacts
+        </summary>
+        <div class="card" style="padding:10px 12px;margin-top:10px;background:var(--panel-1);display:flex;flex-direction:column;gap:6px;font-size:12.5px;line-height:1.5">
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Nom</span><b style="text-align:right">AvatarAds</b></div>
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Adresse</span><b class="mono" style="text-align:right;font-size:11.5px;word-break:break-all">https://mcp.avatarads.fr</b></div>
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Authentification</span><b style="text-align:right">Toujours requis</b></div>
+          <div class="row" style="gap:12px;justify-content:space-between;align-items:flex-start"><span class="faint" style="flex:0 0 auto">Client OAuth</span><b style="text-align:right">Métadonnées hébergées par Anthropic (recommandé)</b></div>
+        </div>
+      </details>
       <p class="faint" style="font-size:12.5px;line-height:1.55;margin:10px 0 0">Clique <b style="color:var(--text-2)">Ajouter</b> puis <b style="color:var(--text-2)">Se connecter</b> : tu approuves l'accès sur AvatarAds, c'est terminé.</p>
       <p class="faint" style="font-size:11.5px;line-height:1.5;margin:8px 0 14px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>« Impossible de vérifier » ? Pas bloquant : clique <b style="color:var(--text-2)">Suivant</b> et garde ces réglages.</p>
       <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener" class="btn btn-ghost" style="width:100%;margin-top:auto">
@@ -224,7 +241,7 @@ a{color:inherit;text-decoration:none}
       </a>
     </div>
 
-    <!-- ③ générer -->
+    <!-- ③ générer (bouton « Commencer », comme l'écran in-app) -->
     <div class="card" style="padding:20px;display:flex;flex-direction:column">
       <div class="row gap10" style="align-items:center;margin-bottom:12px">
         <span class="mcp-step">3</span><span style="font-weight:700;font-size:16px">Génère</span>
@@ -232,8 +249,12 @@ a{color:inherit;text-decoration:none}
       <p class="faint" style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Active AvatarAds dans ta conversation. Décris ce que tu veux — la génération part directement sur tes crédits AvatarAds.</p>
       <div class="row card" style="padding:12px 14px;gap:10px;align-items:flex-start;background:var(--panel-1);margin-top:auto">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto;margin-top:2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-        <span class="faint mono" style="font-size:11.5px;line-height:1.6;text-align:left">« Génère une vidéo de mon avatar qui présente mon produit, en 9:16 »</span>
+        <span class="faint mono" style="font-size:11.5px;line-height:1.6;text-align:left">« Génère une image de mon produit sur fond marbre, en 9:16 »</span>
       </div>
+      <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;margin-top:12px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+        Commencer
+      </a>
     </div>
   </div>
 
