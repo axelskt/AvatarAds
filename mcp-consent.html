@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autoriser Claude — AvatarAds</title>
+<meta name="robots" content="noindex">
+<!-- Page de CONSENTEMENT OAuth MCP dédiée + INSTANTANÉE (01/09). Remplace la redirection vers
+     l'app lourde (/app/?mcp_oauth=…) qui mettait ~2 s à afficher la carte → Claude relançait un
+     2ᵉ /authorize → code périmé → pas de token. Ici : page minuscule, MÊME ORIGINE que /app donc
+     MÊME session Supabase (localStorage), consentement affiché en < 0,5 s → OAuth fiable. -->
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(700px 420px at 50% -8%,rgba(255,107,53,.12),transparent 60%),#0a0a0d;
+    color:#f6f4f1;font-family:-apple-system,'Segoe UI',sans-serif;min-height:100vh;display:flex;
+    align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased}
+  .card{width:100%;max-width:420px;background:#141417;border:1px solid #2a2a2e;border-radius:20px;
+    padding:28px 26px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .icon{width:56px;height:56px;border-radius:16px;margin:0 auto 16px;display:grid;place-items:center;
+    background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3)}
+  h1{font-size:21px;font-weight:800;margin-bottom:10px;letter-spacing:-.01em}
+  .sub{font-size:13.5px;line-height:1.6;color:#a7a39e;margin-bottom:8px}
+  .acct{font-size:12px;color:#807c76;margin-bottom:22px}
+  .acct b{color:#f6f4f1}
+  button,input{font-family:inherit}
+  .btn-ok{width:100%;padding:14px;background:linear-gradient(180deg,#FF8A5C,#FF6B35);border:none;
+    border-radius:12px;color:#1A0A02;font-size:15px;font-weight:800;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;gap:8px;min-height:50px}
+  .btn-ok:disabled{opacity:.7;cursor:default}
+  .btn-no{width:100%;margin-top:10px;padding:11px;background:transparent;border:none;color:#807c76;
+    font-size:12.5px;cursor:pointer}
+  input{width:100%;padding:12px 14px;background:#1e1b21;border:1px solid #2a2a2e;border-radius:10px;
+    color:#f6f4f1;font-size:14px;margin-bottom:10px;outline:none}
+  input:focus{border-color:rgba(255,107,53,.5)}
+  .err{color:#FF6B6B;font-size:12px;margin-bottom:10px;display:none}
+  .spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.28);
+    border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .hide{display:none}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div id="loading"><div class="spin"></div><div class="sub" style="margin-top:14px">Chargement…</div></div>
+    <div id="consent" class="hide">
+      <h1>Autoriser Claude ?</h1>
+      <div class="sub">Claude demande l'accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.</div>
+      <div class="acct">Compte&nbsp;: <b id="email"></b></div>
+      <button class="btn-ok" id="ok">Autoriser</button>
+      <button class="btn-no" id="no">Refuser</button>
+    </div>
+    <div id="login" class="hide">
+      <h1>Connexion AvatarAds</h1>
+      <div class="sub" style="margin-bottom:18px">Connecte-toi pour autoriser Claude.</div>
+      <div class="err" id="lerr"></div>
+      <input id="lemail" type="email" placeholder="E-mail" autocomplete="email">
+      <input id="lpwd" type="password" placeholder="Mot de passe" autocomplete="current-password">
+      <button class="btn-ok" id="lbtn">Se connecter</button>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    var SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
+    var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
+    var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    var $ = function(id){ return document.getElementById(id); };
+    function show(id){ ['loading','consent','login'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); }); }
+
+    // Décode le relais (client_id, redirect_uri, state, code_challenge, scope)
+    var params = null;
+    try {
+      var r = new URLSearchParams(location.search).get('mcp_oauth');
+      if (r) params = JSON.parse(atob(r.replace(/-/g,'+').replace(/_/g,'/')));
+    } catch(e) {}
+    if (!params || !params.client_id || !params.redirect_uri) {
+      document.querySelector('.card').innerHTML = '<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Ce lien d\'autorisation est incomplet ou expiré.</div>';
+      throw new Error('relais invalide');
+    }
+
+    function approve(session){
+      var btn = $('ok'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+      fetch(SUPABASE_URL + '/functions/v1/mcp/oauth/approve', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      }).then(function(res){ return res.json(); }).then(function(d){
+        if (d && d.redirect_url) { location.href = d.redirect_url; return; }
+        throw new Error((d && d.error) || 'réponse inattendue');
+      }).catch(function(e){
+        btn.disabled = false; btn.textContent = 'Autoriser';
+        var el = $('lerr'); // réutilise la zone d'erreur si visible, sinon alert léger
+        alert('Autorisation impossible — réessaie (' + (e.message || e) + ')');
+      });
+    }
+    function deny(){
+      var sep = params.redirect_uri.indexOf('?') >= 0 ? '&' : '?';
+      location.href = params.redirect_uri + sep + 'error=access_denied' + (params.state ? '&state=' + encodeURIComponent(params.state) : '');
+    }
+    function toConsent(session){
+      $('email').textContent = (session.user && session.user.email) || '';
+      $('ok').onclick = function(){ approve(session); };
+      $('no').onclick = deny;
+      show('consent');
+    }
+
+    sb.auth.getSession().then(function(res){
+      var session = res.data.session;
+      if (session && session.user) { toConsent(session); return; }
+      // Pas de session sur ce navigateur → mini-login (rare : l'user est en général déjà connecté)
+      $('lbtn').onclick = function(){
+        var email = ($('lemail').value || '').trim().toLowerCase();
+        var pwd = $('lpwd').value || '';
+        if (!email || !pwd) { $('lerr').textContent = 'Entre ton e-mail et ton mot de passe'; $('lerr').style.display = 'block'; return; }
+        var b = $('lbtn'); b.disabled = true; b.innerHTML = '<span class="spin"></span>';
+        sb.auth.signInWithPassword({ email: email, password: pwd }).then(function(r2){
+          if (r2.error || !r2.data.session) {
+            b.disabled = false; b.textContent = 'Se connecter';
+            $('lerr').textContent = 'E-mail ou mot de passe incorrect'; $('lerr').style.display = 'block';
+            return;
+          }
+          toConsent(r2.data.session);
+        });
+      };
+      $('lpwd').onkeydown = function(e){ if (e.key === 'Enter') $('lbtn').click(); };
+      show('login');
+    });
+  </script>
+</body>
+</html>

@@ -40,6 +40,10 @@ const HEDRA_API_KEY  = Deno.env.get('HEDRA_API_KEY') ?? ''
 const ELEVEN_API_KEY = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
 
 const APP_URL         = 'https://avatarads.fr/app/'
+// Page de consentement OAuth DÉDIÉE + instantanée (01/09) — voir mcp-consent.html. Le /authorize y
+// redirige au lieu de l'app lourde : la carte s'affiche en < 0,5 s → Claude ne relance pas un 2ᵉ
+// /authorize → plus de code périmé → token fiable à tous les coups.
+const CONSENT_URL     = 'https://avatarads.fr/mcp-consent.html'
 const IMG_COST        = { standard: 3, high: 5 }
 const VIDEO_COST_SEC  = 1.5 // Veo 3.1 Lite 720p (« Veo Standard ») = 0,05 $/s API (audio inclus)
 const VIDEO_COST_SEC_PRO = 3 // Veo 3.1 Fast (« Veo Pro », qualité max) = 0,10 $/s API — modèle au choix
@@ -2701,7 +2705,7 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
       client_id: effClientId, redirect_uri: redirectUri, state: String(q.get('state') || ''),
       code_challenge: challenge, scope: String(q.get('scope') || 'avatarads'),
     })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-    return new Response(null, { status: 302, headers: { ...cors, Location: `${APP_URL}?mcp_oauth=${relai}` } })
+    return new Response(null, { status: 302, headers: { ...cors, Location: `${CONSENT_URL}?mcp_oauth=${relai}` } })
   }
 
   // ── consentement approuvé par l'app (JWT utilisateur) → code ──
