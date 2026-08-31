@@ -3100,10 +3100,13 @@ serve(async (req) => {
     // « Impossible de vérifier ». Le 401 est le signal spec (RFC 9728 §5.1).
     // Les GET AVEC identifiant (clé aa_ dans le chemin/query, ou Bearer aat_)
     // gardent le flux SSE vide — keep-warm Railway (GET nu, statut ignoré) OK.
-    // GET → TOUJOURS 200 (flux SSE vide), même anonyme. COHÉRENT avec le handshake POST public
-    // (initialize/tools/list en 200) → la « Vérification du serveur » de claude.ai passe au VERT.
-    // L'auth (401 + WWW-Authenticate → OAuth) est portée par tools/call. (Le 401 anonyme sur GET,
-    // ajouté le 29/08, contredisait désormais le POST à 200 → « Impossible de vérifier ».)
+    const gAuth = (req.headers.get('Authorization') || '').trim()
+    const gKey = segs[1] || url.searchParams.get('key') || ''
+    if (!gAuth && !gKey.startsWith('aa_')) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
+        'Content-Type': 'application/json',
+        'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource"` } })
+    }
     return new Response(': ok\n\n', {
       status: 200,
       headers: { ...cors, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
@@ -3125,22 +3128,6 @@ serve(async (req) => {
   // et aucun client ne part en OAuth.
   const bearer = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
   const key = segs[1] || url.searchParams.get('key') || (bearer.startsWith('aa_') ? bearer : '')
-
-  // ── VÉRIFICATION CONNECTEUR CLAUDE AU VERT (Axel 31/08) ────────────────────
-  // On parse le corps TÔT : l'auth dépend de la MÉTHODE. Le handshake et les listes
-  // (initialize, tools/list, resources/*, prompts/list, ping) répondent SANS token →
-  // la « Vérification du serveur » de claude.ai passe au VERT. Le 401 + WWW-Authenticate
-  // (déclencheur OAuth « Se connecter avec AvatarAds ») n'est exigé QUE sur tools/call
-  // (l'exécution = crédits). Les tokens aat_ et les clés aa_ gardent leur accès complet.
-  let msg: Record<string, unknown>
-  try { msg = await req.json() } catch { return rpcError(null, -32700, 'Parse error') }
-  if (Array.isArray(msg)) return rpcError(null, -32600, 'Batch non supporté')
-  const id = 'id' in msg ? msg.id : undefined
-  const method = String(msg.method || '')
-  const params = (msg.params || {}) as Record<string, unknown>
-  const PUBLIC_METHODS = ['initialize', 'ping', 'tools/list', 'resources/list', 'resources/templates/list', 'resources/read', 'prompts/list']
-  const isPublicMethod = id === undefined || PUBLIC_METHODS.includes(method)
-
   // ── UNE CLÉ MORTE NE BLOQUE PLUS LA CONNEXION (Axel, 15/08) ────────────────
   // Quand initialize échouait sur clé révoquée, claude.ai affichait
   // « Impossible de joindre » → l'utilisateur régénérait → ce qui révoquait la
@@ -3167,15 +3154,12 @@ serve(async (req) => {
     bg((async () => { await svc.from('mcp_oauth_tokens').update({ last_used_at: new Date().toISOString() }).eq('token_hash', tok.token_hash) })())
     keyRow = { id: null, user_id: tok.user_id, require_confirm: false }
   } else if (!key || !key.startsWith('aa_')) {
-    // AUCUN identifiant. Handshake + listes (isPublicMethod) → on LAISSE PASSER (keyRow/profile
-    // restent null) : la vérif du connecteur Claude est VERTE et les outils s'affichent. Un
-    // APPEL D'OUTIL sans token → 401 + WWW-Authenticate → claude.ai découvre l'OAuth et lance
-    // « Se connecter avec AvatarAds ». (Les URLs à clé ne passent jamais ici : clé dans le chemin.)
-    if (!isPublicMethod) {
-      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
-        'Content-Type': 'application/json',
-        'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource"` } })
-    }
+    // AUCUN identifiant : 401 + WWW-Authenticate → claude.ai découvre l'OAuth
+    // et lance « Se connecter avec AvatarAds ». (Les URLs à clé ne passent
+    // jamais ici : la clé est dans le chemin.)
+    return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
+      'Content-Type': 'application/json',
+      'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource"` } })
   } else {
     const { data } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
       .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
@@ -3202,7 +3186,12 @@ serve(async (req) => {
     dailyCap: profile && isUnlimited(profile) ? null : (DAILY_CAPS[planKey] ?? 100),
   }
 
-  // (msg / id / method / params déjà parsés plus haut — l'auth dépend de la méthode)
+  let msg: Record<string, unknown>
+  try { msg = await req.json() } catch { return rpcError(null, -32700, 'Parse error') }
+  if (Array.isArray(msg)) return rpcError(null, -32600, 'Batch non supporté')
+  const id = 'id' in msg ? msg.id : undefined
+  const method = String(msg.method || '')
+  const params = (msg.params || {}) as Record<string, unknown>
   console.log('[mcp]', method || '(sans méthode)', '· id:', String(id), '· ua:', (req.headers.get('user-agent') || '?').slice(0, 40), keyErr ? '· keyErr' : '')
 
   // Notifications (pas d'id) → accusé de réception sans corps
