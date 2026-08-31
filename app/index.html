@@ -3657,7 +3657,21 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <input type="file" id="omniFileIn" accept="video/*" style="display:none" onchange="_omniPickFile(this.files[0]);this.value=''">
         <video id="omniPreview" controls playsinline muted style="display:none;width:100%;max-height:300px;border-radius:14px;background:#000;margin-bottom:14px"></video>
 
-        <textarea id="omniPrompt" placeholder="Décris la transformation : ex « transforme la voiture en Bugatti noire », « change le fond en plage au coucher de soleil », « habille-le en costume »…" style="width:100%;box-sizing:border-box;min-height:82px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;margin-bottom:14px" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
+        <div class="label" style="font-size:10.5px;letter-spacing:.12em;margin-bottom:8px;opacity:.7">EXEMPLES — CLIQUE POUR REMPLIR</div>
+        <div class="row" style="gap:7px;flex-wrap:wrap;margin-bottom:12px">
+          <button type="button" onclick="_omniEx('Remplace l\'arrière-plan par une plage au coucher de soleil.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer le décor</button>
+          <button type="button" onclick="_omniEx('Remplace la voiture par une Bugatti noire.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer un produit</button>
+          <button type="button" onclick="_omniEx('Habille la personne avec un costume noir élégant.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer la tenue</button>
+          <button type="button" onclick="_omniEx('Donne à la vidéo un style animation 3D façon Pixar.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer le style</button>
+          <button type="button" onclick="_omniEx('Passe l\'éclairage en golden hour, plus chaud et cinématographique.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer la lumière</button>
+          <button type="button" onclick="_omniEx('Change le texte du panneau pour afficher « SOLDES -50% ».')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Modifier un texte</button>
+          <button type="button" onclick="_omniEx('Fais disparaître le téléphone de la scène.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Retirer un objet</button>
+        </div>
+        <textarea id="omniPrompt" placeholder="Décris la transformation : ex « transforme la voiture en Bugatti noire », « change le fond en plage au coucher de soleil », « habille-le en costume »…" style="width:100%;box-sizing:border-box;min-height:82px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;margin-bottom:10px" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
+        <div class="faint" style="font-size:11.5px;line-height:1.55;margin-bottom:14px;display:flex;gap:7px;align-items:flex-start">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;margin-top:2px"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0012 2z"/></svg>
+          <span><b style="color:var(--text-2);font-weight:700">Un seul changement à la fois.</b> Dis simplement ce qui change — le reste (personne, mouvement, cadrage, son) est gardé automatiquement. Trop de détails = résultats imprévus.</span>
+        </div>
 
         <button id="omniGenBtn" onclick="_omniGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14.5px;font-weight:800;cursor:pointer;transition:.2s"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Transformer — <span id="omniCost">—</span></button>
 
@@ -27971,6 +27985,22 @@ function _omniProg(txt,pct){
   const p=document.getElementById('omniProg'), b=document.getElementById('omniProgBar'), t=document.getElementById('omniProgTxt');
   if(p) p.style.display='block'; if(b&&pct!=null) b.style.width=Math.min(100,Math.max(0,pct))+'%'; if(t&&txt!=null) t.textContent=txt;
 }
+// Chip d'exemple → remplit le champ (et le focus, pour inviter à éditer).
+function _omniEx(t){ const el=document.getElementById('omniPrompt'); if(!el) return; el.value=t; el.focus(); try{ el.setSelectionRange(t.length,t.length); }catch(_){}; }
+// Échafaudage de prompt VOLONTAIREMENT MINIMAL (doc Google : les prompts simples
+// marchent mieux, l'excès de détails déclenche des changements imprévus). On ajoute
+// seulement la phrase de préservation prouvée — sauf si l'utilisateur l'a déjà écrite.
+function _omniBuildPrompt(p){
+  let s=String(p||'').trim();
+  const hasKeep=/(keep everything|reste (identique|inchang)|le reste (identique|inchang)|garde le reste|inchang[ée]|sans (rien )?(d\'autre|autre) chang|only change|ne change (que|rien d))/i.test(s);
+  if(!hasKeep){
+    if(!/[.!?…]$/.test(s)) s+='.';
+    // Anglais : la formule exacte documentée par Google, la plus fiable. Gemini est
+    // multilingue, donc un prompt FR + cette clause EN cohabitent sans souci.
+    s+=' Keep everything else in the video exactly the same.';
+  }
+  return s;
+}
 function _omniErr(d){ try{ let m=d&&(d.detail||(d.error&&(d.error.message||d.error))||d.message); if(Array.isArray(m)) m=m.map(x=>(x&&(x.msg||x.message))||x).join(' · '); return String(m||'Erreur'); }catch(_){ return 'Erreur'; } }
 async function _omniGenerate(){
   if(typeof _aaIsDev==='function' && !_aaIsDev()){ toast('Réservé au compte dev pour le moment'); return; }
@@ -27997,9 +28027,14 @@ async function _omniGenerate(){
     const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
     const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
     const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
-    const model='/google/gemini-omni-flash/edit';
+    // v1.1 (et non l'endpoint de base) : moins cher en 720p (0,10 $ vs 0,13 $/s),
+    // qualité supérieure, et débloque 1080p/4K si on ajoute `resolution` plus tard.
+    const model='/google/gemini-omni-flash/v1.1/edit';
     _omniProg('Transformation en cours… (~30-60 s)',25);
-    const sub=await fPost(model,{ video_url:sg.data.signedUrl, prompt });
+    // Scaffold léger : la doc Google est formelle — « les prompts SIMPLES marchent
+    // mieux ; trop de détails = changements imprévus » (l'INVERSE de Motion Control).
+    // On n'ajoute donc QUE la phrase-clé de préservation prouvée, jamais un mur de contraintes.
+    const sub=await fPost(model,{ video_url:sg.data.signedUrl, prompt:_omniBuildPrompt(prompt) });
     const sd=await sub.json();
     if(!sub.ok) throw new Error(_omniErr(sd));
     const pick=(o)=>o&&(o.video&&o.video.url)||(o&&o.output&&o.output.video&&o.output.video.url)||null;
