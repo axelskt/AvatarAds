@@ -35,7 +35,7 @@ const FIRST_SUB_BONUS: Record<string, number> = { starter: 25, pro: 50, elite: 7
 const PLAN_PRICE_CENTS: Record<string, number> = {
   plan_YKcdyPT6RRQSi: 2999, plan_g4BVtDmk6hgjQ: 4999, plan_w8lh5zpEJFOQR: 8999, plan_pZmWh1dVdmIWT: 15899, plan_63PGeG3MesbJR: 22499,
   plan_cNydK89X39PLE: 24999, plan_P7WIywSa6YrxT: 44999, plan_OvRwm5CW3xcNh: 79999, plan_uWTkJDl1GvxNR: 143988, plan_x2kDWR6ur2W5E: 189588,
-  plan_w0DMfzGzEdmYF: 999, plan_xgsRkGzvSgUkf: 1999, plan_EVUzCdQ1H1EdL: 4999,
+  plan_hR0u4VHoeszbu: 1999, plan_GLoKHMqZtNbLK: 3999, plan_iRh99E5F2g4XU: 7499,
 }
 const REFERRAL_RATE = 0.30
 async function creditReferral(sb: any, referredId: string, referredEmail: string, planId: string, data: any, label: string) {
@@ -65,10 +65,11 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
 // PACKS one-shot → AJOUTE des crédits (ne touche pas au plan)
 // ─────────────────────────────────────────────────────────────────
 const PACK_MAP: Record<string, { credits?: number; imgCredits?: number }> = {
-  // Packs FINAUX (montants revus 11/07 après-midi) — Spark, Storm et Pack M supprimés
-  'plan_w0DMfzGzEdmYF': { credits: 40  },  // Flash    9,99€
-  'plan_xgsRkGzvSgUkf': { credits: 90  },  // Pack S  19,99€ (recréé 11/07 — l'ancien plan_rn0Lomy4QJy0U a été supprimé)
-  'plan_EVUzCdQ1H1EdL': { credits: 250 },  // Pack L  49,99€
+  // Packs revus 31/08 (Axel) — Flash 9,99€ supprimé ; nouveaux produits Whop S/M/L
+  // (anciens plan_w0DMfzGzEdmYF / plan_xgsRkGzvSgUkf / plan_EVUzCdQ1H1EdL supprimés côté Whop)
+  'plan_hR0u4VHoeszbu': { credits: 120 },  // Pack S  19,99€
+  'plan_GLoKHMqZtNbLK': { credits: 300 },  // Pack M  39,99€ (le plus populaire)
+  'plan_iRh99E5F2g4XU': { credits: 600 },  // Pack L  74,99€
 }
 
 // ─── Vérification de signature ───────────────────────────────────

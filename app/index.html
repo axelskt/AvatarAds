@@ -5443,56 +5443,61 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <!-- Tabs -->
         <div id="packTabVideo">
 
-          <!-- Flash · 9,99€ · +40 crédits -->
-          <div class="credits-pack" id="packCardFlash" onclick="buyImageCredits('img_m')" style="margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Flash · <span style="color:#4dabf7">+40 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 20 s d'avatar ou 40 images</div>
-              </div>
+          <!-- Packs revus 31/08 (Axel) : Flash 9,99€ supprimé ; crédits en gros + centrés, sans « ≈ x avatars » -->
+
+          <!-- Pack S · 19,99€ · +120 crédits -->
+          <div class="credits-pack" id="packCardS" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:11px;flex-shrink:0">
+              <div style="width:36px;height:36px;background:rgba(77,171,247,0.1);border:1px solid rgba(77,171,247,0.22);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4dabf7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></div>
+              <div style="font-size:14px;font-weight:800">Pack S</div>
             </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+            <div style="flex:1;text-align:center">
+              <div style="font-size:27px;font-weight:900;letter-spacing:-1px;line-height:1">+120</div>
+              <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px">crédits</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">9,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
+                <div style="font-size:20px;font-weight:900;letter-spacing:-.5px">19,99€</div>
+                <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack">Acheter</button>
             </div>
           </div>
 
-          <!-- Pack S · 19,99€ · +90 crédits (le plus populaire) -->
-          <div class="credits-pack popular" id="packCardS" onclick="buyCredits('pack_s')" style="margin-bottom:10px">
+          <!-- Pack M · 39,99€ · +300 crédits (le plus populaire) -->
+          <div class="credits-pack popular" id="packCardM" onclick="buyCredits('pack_m')" style="margin-bottom:10px">
             <div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:3px 12px;border-radius:20px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 3px 10px rgba(255,107,53,0.4)">✦ LE PLUS POPULAIRE</div>
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.15.43-2.3 1-3a2.5 2.5 0 002.5 2.5z"/></svg></div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack S · <span style="color:var(--orange)">+90 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 2 avatars de 20 s</div>
-              </div>
+            <div style="display:flex;align-items:center;gap:11px;flex-shrink:0">
+              <div style="width:36px;height:36px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.15.43-2.3 1-3a2.5 2.5 0 002.5 2.5z"/></svg></div>
+              <div style="font-size:14px;font-weight:800">Pack M</div>
             </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+            <div style="flex:1;text-align:center">
+              <div style="font-size:29px;font-weight:900;letter-spacing:-1px;line-height:1;color:var(--orange)">+300</div>
+              <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px">crédits</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">19,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
+                <div style="font-size:20px;font-weight:900;letter-spacing:-.5px">39,99€</div>
+                <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack">Acheter</button>
             </div>
           </div>
 
-          <!-- Pack L · 49,99€ · +250 crédits -->
+          <!-- Pack L · 74,99€ · +600 crédits -->
           <div class="credits-pack" id="packCardL" onclick="buyCredits('pack_l')">
-            <div style="display:flex;align-items:center;gap:14px">
-              <div style="width:38px;height:38px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/></svg></div>
-              <div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:3px">Pack L · <span style="color:#a855f7">+250 crédits</span></div>
-                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">≈ 6 avatars de 20 s · 0,20€/crédit</div>
-              </div>
+            <div style="display:flex;align-items:center;gap:11px;flex-shrink:0">
+              <div style="width:36px;height:36px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/></svg></div>
+              <div style="font-size:14px;font-weight:800">Pack L</div>
             </div>
-            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+            <div style="flex:1;text-align:center">
+              <div style="font-size:29px;font-weight:900;letter-spacing:-1px;line-height:1">+600</div>
+              <div style="font-size:9.5px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px">crédits</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
               <div style="text-align:right">
-                <div style="font-size:22px;font-weight:900;letter-spacing:-1px">49,99€</div>
-                <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
+                <div style="font-size:20px;font-weight:900;letter-spacing:-.5px">74,99€</div>
+                <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">paiement unique</div>
               </div>
               <button class="btn-buy-pack" style="background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 6px 18px -4px rgba(168,85,247,0.5);color:#fff">Acheter</button>
             </div>
@@ -8102,8 +8107,10 @@ async function _composeClipWithAudio(clipId, audioBlob) {
 // ────────────────────────────────────────────────────────────────────────────
 
 const CREDIT_PACK_URLS = {
-  pack_s: 'https://whop.com/checkout/plan_xgsRkGzvSgUkf', // Pack S – +90 crédits – 19,99€ (recréé 11/07)
-  pack_l: 'https://whop.com/checkout/plan_EVUzCdQ1H1EdL', // Pack L – +250 crédits – 49,99€
+  // Packs revus 31/08 (Axel) — Flash 9,99€ supprimé, nouveaux produits Whop
+  pack_s: 'https://whop.com/checkout/plan_hR0u4VHoeszbu', // Pack S – +120 crédits – 19,99€
+  pack_m: 'https://whop.com/checkout/plan_GLoKHMqZtNbLK', // Pack M – +300 crédits – 39,99€ (populaire)
+  pack_l: 'https://whop.com/checkout/plan_iRh99E5F2g4XU', // Pack L – +600 crédits – 74,99€
 };
 
 // Plans checkout Whop
@@ -8268,10 +8275,10 @@ function closeUpgradeModal(){
 
 // Surligne le pack le moins cher qui couvre le manque de crédits
 function _highlightPackFor(missing){
-  const covers = { packCardFlash: 40, packCardS: 90, packCardL: 250 };
+  const covers = { packCardS: 120, packCardM: 300, packCardL: 600 };
   const target = missing == null ? null
-    : (missing <= covers.packCardFlash ? 'packCardFlash'
-    :  missing <= covers.packCardS     ? 'packCardS' : 'packCardL');
+    : (missing <= covers.packCardS ? 'packCardS'
+    :  missing <= covers.packCardM ? 'packCardM' : 'packCardL');
   for(const id of Object.keys(covers)){
     const el = document.getElementById(id);
     if(!el) continue;
