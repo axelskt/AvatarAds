@@ -27835,8 +27835,8 @@ function _mcRenderAdv(){
     </div>
     <p class="faint" style="font-size:11.5px;margin-bottom:16px">Auto = format de ta vidéo de référence.</p>
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
-    ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow],
-       ['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Le vrai décor de ta vidéo, animé — seule la personne est remplacée · +'+CREDIT_COSTS.motionBgPerSec+' cr/s',!!window._mcKeepVidBg]]
+    ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow]]
+      .concat((typeof _aaIsDev==='function' && _aaIsDev()) ? [['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Le vrai décor de ta vidéo, animé — seule la personne est remplacée · +'+CREDIT_COSTS.motionBgPerSec+' cr/s (DEV — lent, à améliorer)',!!window._mcKeepVidBg]] : [])
       .map(([fn,t,sub,on])=>`<button onclick="${fn}()" class="row" style="width:100%;justify-content:space-between;align-items:center;gap:12px;padding:13px 14px;border-radius:12px;cursor:pointer;font-family:inherit;color:var(--text);text-align:left;margin-bottom:10px;border:${on?'2px solid var(--accent)':'1px solid var(--border)'};background:${on?'var(--accent-soft)':'var(--surface)'}">
         <div class="col" style="gap:3px;min-width:0"><span style="font-weight:700;font-size:13.5px">${t}</span><span class="faint" style="font-size:11.5px">${sub}</span></div>
         <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
@@ -28235,6 +28235,10 @@ async function _omniSaveLib(){
 
 /* ── Motion Control — génération réelle (Kling 2.6 via fal-proxy) ── */
 async function _mcGenerate(){
+  // #mc-fondvideo (Axel 31/08) : « Garder le fond de la vidéo » (détourage) est LENT (~10 min) +
+  // résultat à améliorer → réservé au compte dev. Garde-fou : pour un non-dev, on force l'option OFF
+  // (même si elle avait été sauvegardée) → Motion Control public = Kling seul, bien plus rapide.
+  if(typeof _aaIsDev==='function' && !_aaIsDev()) window._mcKeepVidBg=false;
   if(!window._mcRefB64){ toast('Insère une vidéo de référence'); return; }
   if(!window._mcCharB64){ toast("Glisse l'image de ton personnage"); return; }
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
