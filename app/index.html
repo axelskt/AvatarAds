@@ -10253,6 +10253,37 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
 async function _nbRefine4K(token, dataUrl, aspect){
   return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K');
 }
+// #4k-repli-fal (Axel 31/08) : MÊME modèle Nano Banana Pro mais via fal.ai
+// (fal-ai/nano-banana-pro/edit) au lieu de l'API Google directe — fournisseur différent,
+// non saturé quand gemini-3-pro-image-preview renvoie 503/504. Même prompt de fidélité 4K.
+// Retourne une URL image (comme _falAuraSR). Entrée = data URI accepté par fal.
+async function _nbProFalEdit(dataUrl, aspect){
+  const H = await getAuthHeader();
+  const PROXY = SUPABASE_URL + '/functions/v1/fal-proxy';
+  const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...H }, body:JSON.stringify(b) });
+  const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...H } });
+  const model='/fal-ai/nano-banana-pro/edit';
+  // Prompt = le refine de fidélité (garde identité/visage, augmente seulement la résolution) + lock texte.
+  const prompt = _NB_REFINE_PROMPT + (typeof _IMG_TEXT_FIDELITY!=='undefined' ? _IMG_TEXT_FIDELITY : '');
+  const pick=(o)=> (o && o.images && o.images[0] && o.images[0].url) || (o && o.image && o.image.url) || null;
+  const sub=await fPost(model,{ prompt, image_urls:[dataUrl], resolution:'4K', aspect_ratio:(aspect||'9:16'), output_format:'jpeg', num_images:1 });
+  const sd=await sub.json().catch(()=>({}));
+  if(!sub.ok) throw new Error('fal nano-banana-pro '+sub.status+' — '+JSON.stringify(sd).slice(0,180));
+  let out=pick(sd);
+  if(!out && (sd.status_url||sd.request_id)){
+    const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
+    const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
+    for(let i=0;i<80;i++){
+      await new Promise(r=>setTimeout(r,3000));
+      const st=await (await fGet(stP)).json().catch(()=>({}));
+      const s=String(st.status||'').toUpperCase();
+      if(s==='COMPLETED'){ const rr=await (await fGet(reP)).json().catch(()=>({})); out=pick(rr); if(!out) throw new Error('fal nano-banana-pro : pas d\'image dans la réponse'); break; }
+      if(s==='FAILED'||st.error) throw new Error('fal nano-banana-pro : échec ('+(st.error?JSON.stringify(st.error).slice(0,100):s)+')');
+    }
+  }
+  if(!out) throw new Error('fal nano-banana-pro : aucune image renvoyée');
+  return out;
+}
 // Correspondance format app → aspect ratio Nano Banana.
 // ⚠ les clés sont les formats d'AFFICHAGE, mais les images RÉELLES font 1024×1536 (2:3) et
 //   1536×1024 (3:2) — pas 9:16 / 16:9. Demander 9:16 forçait Nano à recadrer (zoom visage).
@@ -18319,10 +18350,11 @@ async function _avGen4K(btn){
     try{
       up = await _nbRefine4K(token, src, '9:16');
     }catch(nbErr){
-      console.warn('Nano Banana 4K KO → repli AuraSR :', nbErr);
-      _label = 'Nano Banana saturé — upscale AuraSR…';
-      up = await _falAuraSR(src, { inMax:2560, outMax:4096, q:0.95 });
-      _via = 'AuraSR (Nano Banana saturé)';
+      // Google (gemini-3-pro-image-preview) saturé → MÊME modèle via fal.ai (fournisseur non saturé).
+      console.warn('Nano Banana 4K (Google) KO → repli Nano Banana Pro via fal.ai :', nbErr);
+      _label = 'Google saturé — reprise via fal.ai…';
+      up = await _nbProFalEdit(src, '9:16');
+      _via = 'Nano Banana Pro (fal.ai)';
     }
     if (!up) throw new Error('Nano Banana Pro : aucune image renvoyée');
     _avGenUrl = up; _avGen4KDone = true; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
@@ -34251,7 +34283,7 @@ function _tapSyncCancel(){
   <span style="font-size:9px;color:rgba(255,255,255,0.08)">·</span>
   <a href="/terms.html" style="font-size:9px;color:rgba(255,255,255,0.15);font-family:sans-serif;text-decoration:none;pointer-events:all" target="_blank">Conditions d'utilisation</a>
   <span style="font-size:9px;color:rgba(255,255,255,0.08)">·</span>
-  <a href="mailto:contact@iamanager.fr" style="font-size:9px;color:rgba(255,255,255,0.15);font-family:sans-serif;text-decoration:none;pointer-events:all">Contact</a>
+  <a href="mailto:axel@iamanager.fr" style="font-size:9px;color:rgba(255,255,255,0.15);font-family:sans-serif;text-decoration:none;pointer-events:all">Contact</a>
 </footer>
 
 <script>
