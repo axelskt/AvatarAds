@@ -3645,9 +3645,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     <!-- ══ OMNI · édition vidéo par prompt (Gemini Omni Flash edit via fal) — owner-gated ══ -->
     <div class="view" id="v-omni" style="flex-direction:column;overflow:auto">
       <div style="max-width:760px;margin:0 auto;width:100%;padding:10px 6px 48px">
-        <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:6px">OMNI · ÉDITION VIDÉO IA</div>
-        <h2 class="display" style="font-size:28px;font-weight:700;line-height:1.2;margin-bottom:6px">Transforme ta vidéo par IA</h2>
-        <p class="faint" style="font-size:13.5px;line-height:1.5;margin-bottom:20px">Upload une vidéo (1 à 10 s) et décris ce que tu veux changer — l'IA transforme la scène en gardant le mouvement. Ex : « transforme la voiture en Bugatti noire ».</p>
+        <h2 class="display" style="font-size:28px;font-weight:700;line-height:1.2;margin-bottom:20px">Transforme ta vidéo par IA</h2>
 
         <div id="omniDrop" onclick="document.getElementById('omniFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent-line)'" ondragleave="this.style.borderColor='var(--border-2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';_omniPickFile(event.dataTransfer.files[0])" style="border:1.5px dashed var(--border-2);border-radius:16px;padding:28px;text-align:center;cursor:pointer;background:var(--panel-1);transition:.15s;margin-bottom:14px">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:.9"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
@@ -3657,28 +3655,14 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <input type="file" id="omniFileIn" accept="video/*" style="display:none" onchange="_omniPickFile(this.files[0]);this.value=''">
         <video id="omniPreview" controls playsinline muted style="display:none;width:100%;max-height:300px;border-radius:14px;background:#000;margin-bottom:14px"></video>
 
-        <div class="label" style="font-size:10.5px;letter-spacing:.12em;margin-bottom:8px;opacity:.7">EXEMPLES — CLIQUE POUR REMPLIR</div>
-        <div class="row" style="gap:7px;flex-wrap:wrap;margin-bottom:12px">
-          <button type="button" onclick="_omniEx('Remplace l\'arrière-plan par une plage au coucher de soleil.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer le décor</button>
-          <button type="button" onclick="_omniEx('Remplace la voiture par une Bugatti noire.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer un produit</button>
-          <button type="button" onclick="_omniEx('Habille la personne avec un costume noir élégant.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer la tenue</button>
-          <button type="button" onclick="_omniEx('Donne à la vidéo un style animation 3D façon Pixar.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer le style</button>
-          <button type="button" onclick="_omniEx('Passe l\'éclairage en golden hour, plus chaud et cinématographique.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Changer la lumière</button>
-          <button type="button" onclick="_omniEx('Change le texte du panneau pour afficher « SOLDES -50% ».')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Modifier un texte</button>
-          <button type="button" onclick="_omniEx('Fais disparaître le téléphone de la scène.')" style="padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:.14s;white-space:nowrap">Retirer un objet</button>
-        </div>
-        <textarea id="omniPrompt" placeholder="Décris la transformation : ex « transforme la voiture en Bugatti noire », « change le fond en plage au coucher de soleil », « habille-le en costume »…" style="width:100%;box-sizing:border-box;min-height:82px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;margin-bottom:10px" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
-        <div class="faint" style="font-size:11.5px;line-height:1.55;margin-bottom:14px;display:flex;gap:7px;align-items:flex-start">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;margin-top:2px"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0012 2z"/></svg>
-          <span><b style="color:var(--text-2);font-weight:700">Un seul changement à la fois.</b> Dis simplement ce qui change — le reste (personne, mouvement, cadrage, son) est gardé automatiquement. Trop de détails = résultats imprévus.</span>
-        </div>
+        <textarea id="omniPrompt" placeholder="Décris la transformation : ex « transforme la voiture en Bugatti noire », « change le fond en plage au coucher de soleil », « habille-le en costume »…" style="width:100%;box-sizing:border-box;min-height:82px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;margin-bottom:16px" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
 
         <div class="row" style="gap:9px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
           <span class="faint" style="font-size:12px;font-weight:700">Qualité</span>
           <button type="button" id="omniRes720" onclick="_omniSetRes('720p')" style="padding:8px 15px;border:1px solid var(--border);border-radius:10px;background:var(--accent);color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;transition:.14s">720p · 3 cr/s</button>
           <button type="button" id="omniRes1080" onclick="_omniSetRes('1080p')" style="padding:8px 15px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text-2);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:.14s">1080p · 4 cr/s</button>
         </div>
-        <button id="omniGenBtn" onclick="_omniGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14.5px;font-weight:800;cursor:pointer;transition:.2s"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Transformer — <span id="omniCost">—</span></button>
+        <button id="omniGenBtn" onclick="_omniGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14.5px;font-weight:800;cursor:pointer;transition:.2s"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Transformer<span id="omniCost"></span></button>
 
         <div id="omniProg" style="display:none;margin-top:18px">
           <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div id="omniProgBar" style="height:100%;width:0;background:linear-gradient(90deg,var(--accent-2),var(--accent));transition:width .3s"></div></div>
@@ -27296,10 +27280,10 @@ const _EXP_VOICE_ICON = {
 };
 
 const EXP_STYLES = [
-  { id:'ugc',      label:'UGC réel',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 5h2"/><circle cx="12" cy="18" r="1"/></svg>', sub:'selfie authentique', prompt:'authentic UGC phone selfie, handheld front camera, natural daylight, real unretouched skin with visible pores and small natural imperfections, casual and candid, slightly imperfect framing, looks like a real creator filming themselves, NOT polished, NOT an ad, no plastic or waxy skin, no airbrush, no AI look' },
-  { id:'cartoon',  label:'Cartoon 3D', ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4 4 0 007 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>', sub:'style Pixar',  prompt:'cute 3D Pixar-style cartoon character, vibrant colors, soft lighting' },
-  { id:'realiste', label:'Réaliste',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>', sub:'avatar réel',  prompt:'ultra realistic real photograph of a real person, authentic natural lighting, real human skin with visible pores and fine natural texture, candid smartphone photo, sharp and in focus, NOT cinematic, no plastic or waxy skin, no airbrush, no AI look' },
-  { id:'studio',   label:'Studio produit',     ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>', sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
+  { id:'ugc',      label:'UGC réel',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 5h2"/><circle cx="12" cy="18" r="1"/></svg>', sub:'selfie authentique', prompt:'authentic UGC selfie video, handheld front phone camera, natural daylight, real unretouched skin with visible pores and small natural imperfections, casual candid delivery, natural lifelike motion, slightly imperfect handheld framing, looks like a real creator filming themselves, NOT polished, NOT an ad, no plastic or waxy skin, no AI look' },
+  { id:'cartoon',  label:'Cartoon 3D', ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4 4 0 007 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>', sub:'style Pixar',  prompt:'cute 3D Pixar-style animated video, vibrant colors, soft lighting, smooth lively character animation' },
+  { id:'realiste', label:'Réaliste',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>', sub:'avatar réel',  prompt:'ultra realistic real phone video of a real person, authentic natural lighting, real human skin with visible pores and fine natural texture, candid handheld footage, natural lifelike motion, NOT cinematic, no plastic or waxy skin, no airbrush, no AI look' },
+  { id:'studio',   label:'Studio produit',     ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>', sub:'produit/pub',  prompt:'premium studio product video, soft gradient background, elegant lighting, smooth clean camera motion' },
 ];
 const EXP_FORMATS = [ {v:'9:16',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 18h0"/></svg>',name:'Portrait',ratio:'9:16'}, {v:'16:9',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',name:'Paysage',ratio:'16:9'} ];
 const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
@@ -27986,7 +27970,9 @@ function _omniSetRes(r){
 }
 function _omniUpdateCost(){
   const el=document.getElementById('omniCost'); if(!el) return;
-  el.textContent = _omniDur>0 ? (Math.max(1,Math.round(_omniDur*_omniRate()))+' crédits') : '—';
+  // Bouton dynamique : « Transformer » seul tant qu'aucune vidéo, puis « Transformer · X crédits »
+  // calculé en direct dès l'upload et re-calculé au changement de qualité (720p/1080p).
+  el.textContent = _omniDur>0 ? (' · '+Math.max(1,Math.round(_omniDur*_omniRate()))+' crédits') : '';
 }
 function _omniPickFile(file){
   if(!file) return;
@@ -28940,8 +28926,8 @@ async function _expDirector(userPrompt){
     const styleLabel = (EXP_STYLES.find(s=>s.id===styleId)||{}).label || 'Réaliste';
     const nRefs = (window._expImgs||[]).length;
     const vertical = (window._expFormat!=='16:9');
-    const styleLine = styleId==='cartoon' ? 'cute polished 3D Pixar-style cartoon, vibrant.'
-      : styleId==='studio' ? 'premium studio product shot, clean elegant lighting.'
+    const styleLine = styleId==='cartoon' ? 'cute polished 3D Pixar-style animation, vibrant.'
+      : styleId==='studio' ? 'premium studio product video, clean elegant lighting, smooth camera motion.'
       : styleId==='ugc' ? 'authentic imperfect UGC phone selfie, real unretouched skin with visible pores and small blemishes, casual candid amateur look, natural daylight, NO polish, NO cinematic gloss, NO AI look.'
       : 'ultra realistic real phone footage, natural skin with visible pores and texture, NO plastic or waxy skin, NO airbrush, NO cinematic gloss, NO AI look.';
     const sys = 'You are a senior AI-video prompt director for an image-to-video model (Seedance / Veo). Turn a short user idea into ONE dense, production-ready video prompt.\n'
