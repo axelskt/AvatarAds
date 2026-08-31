@@ -841,7 +841,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <div style="padding:26px 40px 6px;flex-shrink:0;max-width:840px;width:100%;margin:0 auto;box-sizing:border-box;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
           <div style="min-width:0">
             <div class="eyebrow" id="genStepEyebrow">Générateur · Étape 1/4</div>
-            <h2 class="display" id="genStepTitle" style="font-size:30px;font-weight:700;margin-top:8px">Qui parle ?</h2>
+            <h2 class="display" id="genStepTitle" style="font-size:30px;font-weight:700;margin-top:8px">Ton avatar</h2>
           </div>
           <button id="mPrevBtn" onclick="mPreviewOpen()" style="display:none;flex:0 0 auto;align-items:center;gap:6px;padding:9px 13px;border-radius:11px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-2);font-weight:700;font-size:13px;font-family:var(--font);cursor:pointer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg> Aperçu
@@ -4815,11 +4815,10 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(900px 500px at 50% -5%, rgba(255,90,31,.10), transparent 60%)">
       <div style="max-width:1160px;margin:0 auto;padding:clamp(28px,5vh,56px) clamp(20px,6vw,72px) 60px">
 
-        <div class="row gap14" style="align-items:center;justify-content:center;margin-bottom:40px;flex-wrap:wrap">
-          <div style="width:52px;height:52px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
-          </div>
-          <h2 class="display" style="font-size:clamp(26px,3vw,40px);font-weight:800;margin:0">Connecter Claude</h2>
+        <!-- Hero aligné sur la page publique claude.html (Axel 31/08) -->
+        <div style="text-align:center;margin-bottom:40px">
+          <h2 class="display" style="font-size:clamp(28px,3.6vw,48px);font-weight:800;line-height:1.02;margin:0">AvatarAds <span style="color:var(--accent)">×</span> Claude</h2>
+          <p style="font-size:clamp(15px,1.4vw,18px);color:var(--text-2);max-width:560px;margin:14px auto 0;line-height:1.55">Crée tes vidéos et tes images AvatarAds directement depuis Claude.</p>
         </div>
 
         <!-- 3 étapes -->
@@ -12299,7 +12298,7 @@ function updateSteps(){
   // Libellés de la maquette Claude Design — copy validée, ne pas reformuler.
   // L'étape 5 n'existe plus dans la barre : c'est l'état interne « rendu en
   // cours / résultat », d'où le clamp sur 4 dans les compteurs.
-  var _stepTitles=['Qui parle ?','Sa voix','Le style','Génère ta vidéo'];
+  var _stepTitles=['Ton avatar','Sa voix','Le style','Génère ta vidéo'];
   var _eyb=document.getElementById('genStepEyebrow');
   var _ttl=document.getElementById('genStepTitle');
   if(_eyb) _eyb.textContent=(window.innerWidth<=768?'Étape ':'Générateur · Étape ')+Math.min(step,3)+'/3';
