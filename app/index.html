@@ -18295,7 +18295,15 @@ async function _avGen4K(btn){
   if (!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'détail 4K avatar'))) return;
   _avGenBusy = true;
   const orig = btn ? btn.innerHTML : '';
-  if (btn){ btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Passage en 4K… (~40 s)'; }
+  // #4k-timer (Axel 31/08) : Nano Banana Pro peut être long → timer qui compte, pas un « ~40 s » figé.
+  const _spin = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> ';
+  const _setBtn = (txt)=>{ if(btn) btn.innerHTML = _spin + txt; };
+  const _t0 = Date.now();
+  const _fmt = (ms)=>{ const s=Math.max(0,Math.floor(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+  let _label = 'Passage en 4K…', _via = 'Nano Banana Pro';
+  if (btn) btn.disabled = true;
+  _setBtn(_label+' 0:00');
+  const _timerInt = setInterval(()=>{ _setBtn(_label+' '+_fmt(Date.now()-_t0)); }, 1000);
   try{
     let src = _avGenUrl;
     if (!/^data:/.test(src)){
@@ -18303,14 +18311,26 @@ async function _avGen4K(btn){
       src = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.readAsDataURL(blob); });
     }
     const token = (await sb.auth.getSession())?.data?.session?.access_token;
-    const up = await _nbRefine4K(token, src, '9:16');
+    // #4k-repli (Axel 31/08) : gemini-3-pro-image-preview est souvent SATURÉ (503 « high demand »
+    // / 504 timeout) — après 3 essais dans _nbEdit, on REPLIE sur AuraSR (fal, provider différent,
+    // fiable). Bonus : non génératif → ne re-fabrique pas le visage. Le bouton produit donc TOUJOURS
+    // un résultat 4K net au lieu d'échouer quand Google est en surcharge.
+    let up;
+    try{
+      up = await _nbRefine4K(token, src, '9:16');
+    }catch(nbErr){
+      console.warn('Nano Banana 4K KO → repli AuraSR :', nbErr);
+      _label = 'Nano Banana saturé — upscale AuraSR…';
+      up = await _falAuraSR(src, { inMax:2560, outMax:4096, q:0.95 });
+      _via = 'AuraSR (Nano Banana saturé)';
+    }
     if (!up) throw new Error('Nano Banana Pro : aucune image renvoyée');
     _avGenUrl = up; _avGen4KDone = true; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
     // la version 4K va aussi dans la Bibliothèque (comme les images IA)
     try{ if (typeof _imgAutoSaveUrl === 'function') _imgAutoSaveUrl(up, '1024x1792', 'Avatar IA · 4K'); }catch(_){}
     creditsFlowDone();
-    toast('Passé en 4K — Nano Banana Pro');
+    toast('Passé en 4K — ' + _via);
     if (btn){ btn.style.opacity = '.55'; btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>4K fait'; }
   }catch(e){
     console.error('avatar 4K:', e);
@@ -18318,6 +18338,7 @@ async function _avGen4K(btn){
     toast('' + (typeof _imgFriendlyErr === 'function' ? _imgFriendlyErr(e && e.message) : ((e && e.message) || e)));
     if (btn){ btn.innerHTML = orig; btn.disabled = false; btn.style.opacity = '1'; }
   }finally{
+    try{ clearInterval(_timerInt); }catch(_){}
     _avGenBusy = false;
   }
 }
