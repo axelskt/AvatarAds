@@ -7521,8 +7521,9 @@ function _syncSheetPlanButtons(){
     const b = document.getElementById(id); if(!b) return;
     b.style.opacity = ''; b.style.pointerEvents = '';
     if(plan === key){
-      if(key === 'elite'){ b.textContent = 'Changer de palier →'; }
-      else { b.textContent = '✓ Ton plan actuel'; b.style.opacity = '.5'; b.style.pointerEvents = 'none'; }
+      // Axel 31/08 : le plan ACTUEL est marqué et NON cliquable (évite de re-souscrire / fausser le
+      // système) — y compris l'Élite (avant : « Changer de palier » restait cliquable).
+      b.textContent = '✓ Ton plan actuel'; b.style.opacity = '.5'; b.style.pointerEvents = 'none';
     } else if(cur === 0){
       b.textContent = 'Choisir ' + label + ' →';
     } else if((order[key] ?? 0) > cur){
@@ -27468,7 +27469,9 @@ function initExpress(){
     // Position 0 = AUTO (défaut) ; 1..N = durées Veo (4/6/8/15/22/29). Slider TOUJOURS utilisable.
     ds.min=0; ds.max=_da.length; ds.step=1;
     ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||4)+1);
-    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=(window._expDurAuto?'Auto · ':'')+(window._expDur||4)+' s';
+    // Axel 31/08 : en mode Auto, l'outil détermine la durée d'après le script → on affiche juste « Auto »
+    // (pas de « · 4 s » figé qui laisse croire à une durée fixe).
+    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Auto' : ((window._expDur||4)+' s');
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(window._expDurAuto && _expEstimateDur().over)?'block':'none';
