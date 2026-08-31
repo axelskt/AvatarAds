@@ -30,29 +30,34 @@ export default async (request: Request): Promise<Response> => {
   // ── Préflight CORS → immédiat ──
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
 
-  // ── Métadonnées OAuth : servies STATIQUEMENT ici, sur le host réel (0 aller-retour Supabase) ──
-  // (identique octet pour octet à ce que sert la fonction Supabase)
-  if (path === '/.well-known/oauth-protected-resource') {
-    return j({
-      resource: base,
-      authorization_servers: [base],
-      scopes_supported: ['avatarads'],
-      bearer_methods_supported: ['header'],
-    }, 200)
-  }
-  if (path === '/.well-known/oauth-authorization-server') {
-    return j({
-      issuer: base,
-      authorization_endpoint: `${base}/authorize`,
-      token_endpoint: `${base}/token`,
-      registration_endpoint: `${base}/register`,
-      response_types_supported: ['code'],
-      grant_types_supported: ['authorization_code', 'refresh_token'],
-      code_challenge_methods_supported: ['S256'],
-      token_endpoint_auth_methods_supported: ['none'],
-      scopes_supported: ['avatarads'],
-      client_id_metadata_document_supported: true,
-    }, 200)
+  // ── Métadonnées OAuth : TOUT /.well-known/* est servi STATIQUEMENT ici, sur le host réel
+  // (0 aller-retour Supabase — quelle que soit la variante que Claude sonde à « Trouver le serveur
+  // d'autorisation »). Robuste au slash final. Les variantes inconnues → 404 rapide, jamais Supabase.
+  if (path.startsWith('/.well-known/')) {
+    const doc = path.slice('/.well-known/'.length).replace(/\/+$/, '')
+    if (doc === 'oauth-protected-resource') {
+      return j({
+        resource: base,
+        authorization_servers: [base],
+        scopes_supported: ['avatarads'],
+        bearer_methods_supported: ['header'],
+      }, 200)
+    }
+    if (doc === 'oauth-authorization-server' || doc === 'openid-configuration') {
+      return j({
+        issuer: base,
+        authorization_endpoint: `${base}/authorize`,
+        token_endpoint: `${base}/token`,
+        registration_endpoint: `${base}/register`,
+        response_types_supported: ['code'],
+        grant_types_supported: ['authorization_code', 'refresh_token'],
+        code_challenge_methods_supported: ['S256'],
+        token_endpoint_auth_methods_supported: ['none'],
+        scopes_supported: ['avatarads'],
+        client_id_metadata_document_supported: true,
+      }, 200)
+    }
+    return j({ error: 'not_found' }, 404)
   }
 
   // ── Endpoint MCP racine SANS identifiant → challenge 401 servi ICI (rapide) ──
