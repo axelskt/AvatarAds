@@ -72,6 +72,43 @@ serve(async (req) => {
       reason: reason || null, detail: detail || null, outcome: 'cancelled',
     })
   } catch (_) {}
+
+  // ── Notif e-mail à Axel (même logique que Suggestions/Bug via Resend) — NON bloquant ──
+  // Axel reçoit le formulaire de rétention (raison + détail) à chaque churn effectif.
+  try {
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
+    if (RESEND_API_KEY) {
+      const REASON_LABELS: Record<string, string> = {
+        trop_cher: "C'est trop cher pour moi",
+        pas_assez_utilise: "Je ne l'utilise pas assez",
+        qualite: 'La qualité ne me convient pas',
+        technique: 'A eu des problèmes techniques',
+        autre: 'Autre raison',
+      }
+      const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const reasonLabel = REASON_LABELS[reason] || reason || '(non précisée)'
+      const html = `<div style="font-family:-apple-system,Segoe UI,sans-serif;line-height:1.6;color:#111">
+        <h2 style="margin:0 0 10px">🚪 Annulation d'abonnement — AvatarAds</h2>
+        <p style="margin:0 0 4px"><b>Membre :</b> ${esc(user.email || '')}</p>
+        <p style="margin:0 0 4px"><b>Plan annulé :</b> ${esc(profile.plan || '—')}</p>
+        <p style="margin:12px 0 4px"><b>Raison du départ :</b> ${esc(reasonLabel)}</p>
+        <div style="margin:0;padding:12px 14px;background:#f6f6f6;border-radius:8px;white-space:pre-wrap">${esc(detail) || '(pas de détail ajouté)'}</div>
+        <p style="margin:12px 0 0;font-size:12px;color:#666">Annulation en fin de période (l'accès reste jusqu'à la date déjà payée). L'utilisateur a poursuivi malgré l'offre de rétention.</p>
+      </div>`
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'AvatarAds <bonjour@avatarads.fr>',
+          to: ['axel@iamanager.fr'],
+          reply_to: user.email || undefined,
+          subject: `🚪 Annulation AvatarAds — ${reasonLabel}`.slice(0, 120),
+          html,
+        }),
+      })
+    }
+  } catch (e) { console.error('churn email', e) }
+
   console.log(`⏸️ Annulation programmée pour ${user.email} (${profile.plan}) · crédits du plan supprimés${kept ? ` · ${kept} achetés conservés` : ''} · raison: ${reason || '—'}`)
   return json({ ok: true, kept, renewal_period_end: mem?.renewal_period_end ?? null })
 })
