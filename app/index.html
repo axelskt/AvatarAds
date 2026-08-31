@@ -27270,7 +27270,7 @@ let _expressGpSplit      = 60;   // % hauteur pour la vidéo principale (reste =
 //  EXPRESS — créateur de vidéo en un clic (image+texte → vidéo IA)
 //  Réutilise GPT Image (still) + Veo 3.1 (image→vidéo) via proxy.
 // ══════════════════════════════════════════════════════════════
-window._expStyle  = 'realiste';
+window._expStyle  = 'ugc';   // Axel 31/08 : UGC réel = style par défaut (cas d'usage héros)
 window._expFormat = '9:16';
 window._expDur    = 4;   // Veo 3.1 : crans 4/6/8/15/22/29 s (défaut 4 s)
 window._expSubs   = false;
@@ -27296,9 +27296,9 @@ const _EXP_VOICE_ICON = {
 };
 
 const EXP_STYLES = [
-  { id:'realiste', label:'Réaliste',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>', sub:'avatar réel',  prompt:'ultra realistic real photograph of a real person, authentic natural lighting, real human skin with visible pores and fine natural texture, candid smartphone photo, sharp and in focus, NOT cinematic, no plastic or waxy skin, no airbrush, no AI look' },
+  { id:'ugc',      label:'UGC réel',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 5h2"/><circle cx="12" cy="18" r="1"/></svg>', sub:'selfie authentique', prompt:'authentic UGC phone selfie, handheld front camera, natural daylight, real unretouched skin with visible pores and small natural imperfections, casual and candid, slightly imperfect framing, looks like a real creator filming themselves, NOT polished, NOT an ad, no plastic or waxy skin, no airbrush, no AI look' },
   { id:'cartoon',  label:'Cartoon 3D', ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4 4 0 007 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>', sub:'style Pixar',  prompt:'cute 3D Pixar-style cartoon character, vibrant colors, soft lighting' },
-  { id:'ugc',      label:'UGC réel',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 5h2"/><circle cx="12" cy="18" r="1"/></svg>', sub:'selfie authentique', prompt:'authentic UGC selfie style, handheld phone camera, natural daylight, casual realistic' },
+  { id:'realiste', label:'Réaliste',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>', sub:'avatar réel',  prompt:'ultra realistic real photograph of a real person, authentic natural lighting, real human skin with visible pores and fine natural texture, candid smartphone photo, sharp and in focus, NOT cinematic, no plastic or waxy skin, no airbrush, no AI look' },
   { id:'studio',   label:'Studio produit',     ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>', sub:'produit/pub',  prompt:'premium studio product shot, soft gradient background, elegant lighting' },
 ];
 const EXP_FORMATS = [ {v:'9:16',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 18h0"/></svg>',name:'Portrait',ratio:'9:16'}, {v:'16:9',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',name:'Paysage',ratio:'16:9'} ];
@@ -28942,6 +28942,7 @@ async function _expDirector(userPrompt){
     const vertical = (window._expFormat!=='16:9');
     const styleLine = styleId==='cartoon' ? 'cute polished 3D Pixar-style cartoon, vibrant.'
       : styleId==='studio' ? 'premium studio product shot, clean elegant lighting.'
+      : styleId==='ugc' ? 'authentic imperfect UGC phone selfie, real unretouched skin with visible pores and small blemishes, casual candid amateur look, natural daylight, NO polish, NO cinematic gloss, NO AI look.'
       : 'ultra realistic real phone footage, natural skin with visible pores and texture, NO plastic or waxy skin, NO airbrush, NO cinematic gloss, NO AI look.';
     const sys = 'You are a senior AI-video prompt director for an image-to-video model (Seedance / Veo). Turn a short user idea into ONE dense, production-ready video prompt.\n'
       + 'RULES:\n'
@@ -28954,6 +28955,7 @@ async function _expDirector(userPrompt){
       + '- MOTION & PHYSICS: natural, believable, real-world physics, smooth realistic human movement.\n'
       + '- CONTINUITY: the person and product stay photographically identical from the first frame to the last; never morph, swap, distort, age or beautify.\n'
       + '- Keep the user’s idea and scene; do NOT invent a different subject or setting. If the user gives a spoken line in quotes, keep it VERBATIM for lip-sync.\n'
+      + '- VOICE & DELIVERY: if the subject speaks, keep the quoted line VERBATIM in the user’s language, delivered with natural casual dynamic intonation, never monotone. Use AT MOST ONE short natural filler word ("euh", "bref") placed MID-sentence — never at the very start of the clip, never two fillers. CRITICAL ENDING: the clip must END FIRMLY — the person finishes the sentence cleanly and confidently on the final words, mouth closing naturally; absolutely NO trailing "euh", no filler, no unfinished or mumbled word and no hanging sound in the last second.\n'
       + '- TRANSITIONS/TIMELINE: if the user describes a transition, a cut, a finger snap, a zoom/dezoom, or a multi-scene sequence, PRESERVE it and output an explicit compact TIMELINE with time ranges and beats (e.g. "0.0–1.4s: tight close-up then dezoom to a wide shot; ~1.4s: she clearly snaps her fingers CENTERED in frame → fast seamless match cut; 1.4–4.0s: new location, slow push-in to a close-up"). Keep every beat and the scene order, make the snap/gesture clearly VISIBLE and CENTERED, describe each camera move, and shift the lighting on the cut. NEVER collapse a multi-scene or transition prompt into a single static scene.\n'
       + 'Output ONLY the final prompt (one paragraph, or a compact timeline if there is a transition), nothing else.';
     const body = { model:'gpt-4o', max_tokens:340, temperature:0.6, messages:[
@@ -29201,7 +29203,7 @@ async function expressCreate(){
     // Direction du prompt (structuré) d'abord, repli sur l'ancien montage si l'appel échoue.
     const _directed = await _expDirector(prompt);
     let animPrompt = (_directed ? _directed : (prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
-      + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching any spoken words, clear audible voice' : '')
+      + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching the spoken words, clear audible natural voice with dynamic intonation; at most one short filler word placed mid-sentence and never at the very start; the delivery ENDS FIRMLY on the final words with the mouth closing naturally — no trailing "euh", no filler and no unfinished or hanging sound in the last second' : '')
       + _EXP_IDLOCK;
     // ── Contraintes Veo 3.1 : 4/6/8 s par génération ; 1080p uniquement en 8 s ──
     // Durées longues (15/22/29 s) = extensions de scène +7 s, réservées Élite.
