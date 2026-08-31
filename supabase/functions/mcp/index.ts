@@ -3100,13 +3100,10 @@ serve(async (req) => {
     // « Impossible de vérifier ». Le 401 est le signal spec (RFC 9728 §5.1).
     // Les GET AVEC identifiant (clé aa_ dans le chemin/query, ou Bearer aat_)
     // gardent le flux SSE vide — keep-warm Railway (GET nu, statut ignoré) OK.
-    const gAuth = (req.headers.get('Authorization') || '').trim()
-    const gKey = segs[1] || url.searchParams.get('key') || ''
-    if (!gAuth && !gKey.startsWith('aa_')) {
-      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
-        'Content-Type': 'application/json',
-        'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource"` } })
-    }
+    // GET → TOUJOURS 200 (flux SSE vide), même anonyme. COHÉRENT avec le handshake POST public
+    // (initialize/tools/list en 200) → la « Vérification du serveur » de claude.ai passe au VERT.
+    // L'auth (401 + WWW-Authenticate → OAuth) est portée par tools/call. (Le 401 anonyme sur GET,
+    // ajouté le 29/08, contredisait désormais le POST à 200 → « Impossible de vérifier ».)
     return new Response(': ok\n\n', {
       status: 200,
       headers: { ...cors, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
