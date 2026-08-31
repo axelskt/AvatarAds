@@ -27276,18 +27276,24 @@ async function submitBugReport(){
   const btn = document.getElementById('bugSubmitBtn');
   btn.disabled = true;
   btn.textContent = 'Envoi…';
+  const _payload = {
+    date: new Date().toLocaleString('fr-FR'),
+    user: document.getElementById('topbar-username')?.textContent || 'Membre',
+    title,
+    description: desc || '(pas de description)',
+  };
+  // 1) E-mail DIRECT à Axel (axel@iamanager.fr) via Resend (edge function notify-suggestion) —
+  //    le canal fiable pour recevoir chaque suggestion / bug report.
   try {
-    await fetch(BUG_WEBHOOK, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        date: new Date().toLocaleString('fr-FR'),
-        user: document.getElementById('topbar-username')?.textContent || 'Membre',
-        title,
-        description: desc || '(pas de description)',
-      })
+    const _H = (typeof getAuthHeader==='function') ? await getAuthHeader() : {};
+    await fetch(SUPABASE_URL + '/functions/v1/notify-suggestion', {
+      method:'POST', headers:{ 'Content-Type':'application/json', ..._H }, body: JSON.stringify(_payload)
     });
-  } catch(e){ /* make.com répond parfois avec un non-JSON, on ignore */ }
+  } catch(_){}
+  // 2) Webhook Make (historique) — best effort, réponse non-JSON parfois → on ignore.
+  try {
+    await fetch(BUG_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_payload) });
+  } catch(e){ /* ignore */ }
   btn.disabled = false;
   btn.textContent = 'Envoyer';
   document.getElementById('bugForm').style.display = 'none';
