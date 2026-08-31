@@ -19946,7 +19946,15 @@ async function togglePreviewPlay(){
     const _pa = previewAudio;
     // si l'élément audio n'est plus jouable → relecture PROPRE depuis le début (au lieu de rester muet)
     const _restart = () => { previewPlaying=false; window._previewPaused=false; previewAudio=null; try{ stopPreviewAnim(); }catch(_){} togglePreviewPlay(); };
-    try{ const _p=_pa.play(); if(_p && _p.catch) _p.catch(_restart); }catch(_){ _restart(); return; }
+    try{
+      // #pause-apercu (Axel 31/08, cause EXACTE) : sur WebKit/Safari, après une pause, play() SEUL
+      // reprend la TIMELINE mais PAS la sortie audio (« résout » sans relancer le son) → reprise muette.
+      // Toutes les branches du 1er lancement font un currentTime=… (un SEEK) avant play() : c'est CE
+      // seek qui ré-arme la sortie. On le refait ici. Léger recul de 30 ms (imperceptible, garde les
+      // sous-titres synchro) pour que la VALEUR change — une écriture même-valeur peut être ignorée par WebKit.
+      try{ _pa.currentTime = Math.max(0, (_pa.currentTime || 0) - 0.03); }catch(_){}
+      const _p=_pa.play(); if(_p && _p.catch) _p.catch(_restart);
+    }catch(_){ _restart(); return; }
     // #pause-apercu (Axel 31/08) : sur Safari, play() peut « résoudre » sans relancer le son
     // (élément Audio suspendu après la pause) → aucun son à la reprise. Si l'élément reste en
     // pause juste après, on relance une lecture PROPRE depuis le début au lieu de laisser un silence.
