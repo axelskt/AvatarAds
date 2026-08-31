@@ -6776,6 +6776,7 @@ async function authPwdLogin(){
   if(!email || !password){ showErr('Entre ton e-mail et ton mot de passe'); return; }
   const btn=document.getElementById('pwdLoginBtn');
   if(btn){ btn.disabled=true; btn.textContent='Connexion…'; }
+  let _mcpPending=false;
   try{
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if(error){
@@ -6784,9 +6785,15 @@ async function authPwdLogin(){
         : _frAuthErr(error));
       return;
     }
+    // Flux OAuth MCP en cours (?mcp_oauth ou relais mémorisé) : NE PAS recharger — le reload nettoyait
+    // l'URL et faisait disparaître la carte de consentement (bug Axel 31/08). La carte s'ouvre seule via
+    // _mcpOAuthConsent (le poll de session tourne déjà), par-dessus l'app ; l'utilisateur repart ensuite
+    // vers Claude après son choix. Pour un login NORMAL, on garde le reload (boot propre avec la session).
+    try { _mcpPending = /(?:^|[?&])mcp_oauth=/.test(location.search) || !!sessionStorage.getItem('aa_mcp_oauth'); } catch(_){}
+    if(_mcpPending){ if(btn){ btn.textContent='Autorisation…'; } return; }
     location.reload(); // la session est persistée → le boot recharge le compte connecté
   }catch(e){ showErr('Erreur réseau — réessaie'); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent='Se connecter'; } }
+  finally{ if(btn && !_mcpPending){ btn.disabled=false; btn.textContent='Se connecter'; } }
 }
 // 🔑 Mot de passe oublié → on envoie un CODE e-mail (edge auth-otp via Resend, le chemin
 // fiable) et PAS le mail de reset intégré Supabase, qui n'est pas branché sur Resend et
@@ -29685,7 +29692,18 @@ window.addEventListener('load', () => { setTimeout(_ouvrirMediaDepuisUrl, 800) }
 // ouvrir-puis-fermer). Chaque étape est tracée dans la console : [mcp-oauth].
 async function _mcpOAuthConsent(){
   const p = new URLSearchParams(location.search)
-  const relai = p.get('mcp_oauth')
+  let relai = p.get('mcp_oauth')
+  // PERSISTANCE (fix Axel 31/08) : le relais doit SURVIVRE à un reload. Le login mot de passe
+  // (authPwdLogin) faisait location.reload() ; comme l'URL était nettoyée juste avant l'ouverture,
+  // le relais était perdu au reload → la carte « flashait » puis disparaissait, et /oauth/approve
+  // n'était jamais appelé. On mémorise donc le relais en sessionStorage (TTL 15 min) et on le relit
+  // si l'URL ne le porte plus (après un reload).
+  try {
+    if(relai){ sessionStorage.setItem('aa_mcp_oauth', JSON.stringify({ r: relai, t: Date.now() })) }
+    else { const s = JSON.parse(sessionStorage.getItem('aa_mcp_oauth') || 'null')
+           if(s && s.r && Date.now() - (s.t || 0) < 900000) relai = s.r
+           else if(s) sessionStorage.removeItem('aa_mcp_oauth') }
+  } catch(_){}
   if(!relai) return                                     // pas un relais OAuth → rien à faire
   let params
   try { params = JSON.parse(atob(relai.replace(/-/g,'+').replace(/_/g,'/'))) } catch(_){ console.warn('[mcp-oauth] relais illisible — ignoré'); return }
@@ -29751,7 +29769,7 @@ function _mcpOpenConsentModal(params, session){
     })
     _obs.observe(document.body, { childList: true })
   } catch(_){}
-  const _clore = () => { window._mcpOAuthDone = true; window._mcpOAuthModalOpen = false; try { _obs && _obs.disconnect() } catch(_){} }
+  const _clore = () => { window._mcpOAuthDone = true; window._mcpOAuthModalOpen = false; try { sessionStorage.removeItem('aa_mcp_oauth') } catch(_){} try { _obs && _obs.disconnect() } catch(_){} }
   const sep = params.redirect_uri.includes('?') ? '&' : '?'
   document.getElementById('mcpOAuthNo').onclick = () => {
     _clore()
