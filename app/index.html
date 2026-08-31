@@ -21666,6 +21666,9 @@ function _whisperBtnReset(){
 }
 function handleMp4AudioFile(file){
   if(!file) return;
+  // #audio-desync (Axel 31/08) : le flag LOCAL doit suivre l'import (l'UI ne posait que window.*) —
+  // sinon le gate audio de génération/preview reste false et l'audio est ignoré.
+  mp4AudioEnabled = true; window.mp4AudioEnabled = true; window.mp4AudioFile = file;
   try{ _whisperBtnReset(); }catch(_){}
   // #69 · l'option de débruitage est une préférence → on ne la réinitialise PAS au changement de fichier
 
@@ -23020,6 +23023,11 @@ async function startGeneration(){
 
   // STEP 2: Voice
   setStep('gp2','on');
+  // #audio-desync (Axel 31/08) : l'UI Voix redessinée (import fichier + Enregistreur) pose
+  // window.mp4Audio* SANS toucher les variables LOCALES lues ici → l'audio devenait null et
+  // callHedra n'était JAMAIS appelé (« Génération avatar échouée »). On réconcilie window→local.
+  if(!mp4AudioEnabled && window.mp4AudioEnabled) mp4AudioEnabled = true;
+  if(!mp4AudioFile && window.mp4AudioFile) mp4AudioFile = window.mp4AudioFile;
   let audioBlob=null;
   if(mp4AudioEnabled && mp4AudioFile){
     // Extraire l'audio pur (WAV) + appliquer le trim AVANT Hedra et composition.
