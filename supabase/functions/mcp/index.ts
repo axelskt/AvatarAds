@@ -2596,6 +2596,18 @@ async function resolveCimdClient(clientIdUrl: string): Promise<{ id: string, uri
   const h = u.hostname.toLowerCase()
   if (h === 'localhost' || h.includes(':') || /^\d+\.\d+\.\d+\.\d+$/.test(h) ||
       h.endsWith('.local') || h.endsWith('.internal')) return null
+  // ── CACHE CIMD (31/08) : si ce client est DÉJÀ enregistré, on réutilise ses redirect_uris SANS
+  // le fetch externe (vers l'URL de Claude). Ce fetch, dans le chemin bloquant de /authorize,
+  // ajoutait une latence variable qui — combinée au cold start — faisait timeouter Claude
+  // (« Impossible de joindre AvatarAds »). L'URL CIMD de Claude est STABLE et a été validée au 1er
+  // enregistrement → on ne re-fetche QUE si le client est inconnu. /authorize devient rapide+fiable.
+  try {
+    const { data: hit } = await svc.from('mcp_oauth_clients')
+      .select('client_id, redirect_uris').eq('cimd_url', clientIdUrl).maybeSingle()
+    if (hit && Array.isArray(hit.redirect_uris) && hit.redirect_uris.length) {
+      return { id: String(hit.client_id), uris: hit.redirect_uris as string[] }
+    }
+  } catch (_) { /* pas de cache → on fetche normalement ci-dessous */ }
   const ctl = new AbortController()
   const t = setTimeout(() => ctl.abort(), 5000)
   // deno-lint-ignore no-explicit-any
