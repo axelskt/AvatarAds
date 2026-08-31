@@ -10178,8 +10178,12 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
   // #4k-retry (Axel 30/08) : gemini-3-pro-image renvoie souvent un 503 « This model is
   // currently experiencing high demand » (surcharge transitoire côté Google). On réessaie
   // 2 fois avec backoff avant d'abandonner, sinon un simple pic de charge fait échouer l'upscale.
-  const _nbOverloaded = (st, j) => st===503 || st===429 || st===500
-    || (j && j.error && /high demand|overloaded|unavailable|try again later|temporarily|rate.?limit|resource.?exhausted/i.test(JSON.stringify(j.error)));
+  // #4k-504 (Axel 31/08) : le google-ai-proxy renvoie un 504 (gateway timeout) quand Nano Banana
+  // Pro met trop de temps (surcharge Google). C'était traité comme un « refus » d'image (corps vide
+  // → aucune image → faux message « a refusé cette image »). On l'ajoute aux cas RÉESSAYABLES.
+  const _nbOverloaded = (st, j) => st===503 || st===429 || st===500 || st===504 || st===502 || st===408
+    || (j && j.error && /high demand|overloaded|unavailable|try again later|temporarily|rate.?limit|resource.?exhausted|timeout|timed out|deadline/i.test(JSON.stringify(j.error)));
+  let _nbLastStatus = 0;
   const call = async (payload) => {
     const _url = SUPABASE_URL + '/functions/v1/google-ai-proxy?path=' + encodeURIComponent(path);
     const _hdr = { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
@@ -10187,7 +10191,10 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
     let _last = null;
     for(let _a=0; _a<3; _a++){
       if(_a>0) await new Promise(r=>setTimeout(r, 1800*_a));   // backoff : 1,8 s puis 3,6 s
-      const res = await fetch(_url, { method:'POST', headers:_hdr, body:_body });
+      let res;
+      try{ res = await fetch(_url, { method:'POST', headers:_hdr, body:_body }); }
+      catch(e){ _nbLastStatus = 0; _last = { error:{ message:'réseau : '+((e&&e.message)||e) } }; continue; }
+      _nbLastStatus = res.status;
       _last = await res.json().catch(()=>({}));
       if(!_nbOverloaded(res.status, _last)) return _last;
     }
@@ -10217,6 +10224,10 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
     // photo/prompt » + remboursement), pas comme une panne technique.
     const _br = (d && d.promptFeedback && d.promptFeedback.blockReason)
              || (d && d.candidates && d.candidates[0] && d.candidates[0].finishReason) || '';
+    // Timeout gateway (504/502/408/réseau) après 3 essais = SURCHARGE, pas un refus de contenu.
+    if(!_br && (_nbLastStatus===504 || _nbLastStatus===502 || _nbLastStatus===408 || _nbLastStatus===0)){
+      throw new Error('Le service 4K a mis trop de temps à répondre (surcharge Google) — réessaie dans un instant.');
+    }
     throw new Error('Nano Banana Pro a refusé cette image (aucune image renvoyée' + (_br ? ' · '+_br : '') + ')');
   }
   return 'data:image/jpeg;base64,' + b64;
@@ -18250,7 +18261,9 @@ async function _avGenUpscale(btn){
       const resp = await fetch(src); const blob = await resp.blob();
       src = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.readAsDataURL(blob); });
     }
-    const up = await _falAuraSR(src);
+    // Mêmes bornes que « Détails du visage » d'Images IA (2560→4096, q 0.95) pour un rendu
+    // IDENTIQUE dans les deux modules — avant, le Générateur utilisait les défauts plus bas (Axel 31/08).
+    const up = await _falAuraSR(src, { inMax:2560, outMax:4096, q:0.95 });
     if (!up) throw new Error('AuraSR : aucune image');
     _avGenUrl = up; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
@@ -23569,7 +23582,7 @@ function quickLaunchHedra(){
 }
 async function retryHedraAuto(btn){
   if(!btn) btn = event?.target;
-  if(!results.audioBlob){ toast('Aucun audio disponible'); return; }
+  if(!results.audioBlob){ toast('Pas d\'audio à régénérer — relance la génération complète (bouton Générer) depuis l\'étape Voix.'); return; }
   const origText = btn ? btn.textContent : '';
   if(btn){ btn.textContent='Génération IA en cours...'; btn.disabled=true; }
   try {
