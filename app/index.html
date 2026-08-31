@@ -779,7 +779,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.2C2 7.4 3.4 6 5.2 6h13.6C20.6 6 22 7.4 22 9.2v2c0 3.9-3 7-6.7 7-1.3 0-2.5-.6-3.3-1.5-.8.9-2 1.5-3.3 1.5C5 18.2 2 15.1 2 11.2z"/><circle cx="8.2" cy="11.2" r="1.5"/><circle cx="15.8" cy="11.2" r="1.5"/></svg>
         Motion Control
       </div>
-      <div class="nav-i gen-dev" id="navOmni" onclick="nav('omni',this)" style="display:none">
+      <div class="nav-i owner-only" id="navOmni" onclick="nav('omni',this)" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
         Omni
         <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">DEV</span>
@@ -2454,8 +2454,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
           <!-- Roue de progression + chronomètre -->
           <div style="text-align:center">
-            <div style="position:relative;width:128px;height:128px;margin:0 auto 10px">
-              <svg width="140" height="140" viewBox="0 0 140 140" style="transform:rotate(-90deg)">
+            <div style="position:relative;width:140px;height:140px;margin:0 auto 10px">
+              <svg width="140" height="140" viewBox="0 0 140 140" style="display:block;transform:rotate(-90deg)">
                 <circle cx="70" cy="70" r="54" fill="none" stroke="var(--bg4)" stroke-width="9"/>
                 <circle id="genRingFill" cx="70" cy="70" r="54" fill="none" stroke="url(#genRingGrad)" stroke-width="9" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3" style="transition:stroke-dashoffset .6s ease"/>
                 <defs><linearGradient id="genRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
@@ -2479,7 +2479,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <div class="genprog" id="genprog">
             <div class="gp-step" id="gp1"><div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></div>Analyse du script</div>
             <div class="gp-step" id="gp2"><div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg></div>Ton audio</div>
-            <div class="gp-step" id="gp3"><div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>Lipsync avatar (Hedra)</div>
+            <div class="gp-step" id="gp3"><div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>Lipsync avatar</div>
             <div id="hedraProgressBar" style="display:none;width:100%;max-width:340px;margin:4px auto 0">
               <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                 <span>Rendu IA en cours…</span><span id="hedraProgressPct">0%</span>
@@ -7156,8 +7156,12 @@ function enterApp(profile){
   // (+ Whisper au-mot, cf composeVideo). Visibles UNIQUEMENT sur le compte dev/owner
   // pour l'instant ; on retire ce gate (→ tout le monde) quand Axel valide. Un seul
   // flag window._genDevOn piloté ici ; les cartes .gen-dev sont des flex.
-  window._genDevOn = (profile.plan === 'developer' || profile.is_owner);
+  // Axel 31/08 : Générateur VALIDÉ → features .gen-dev (« Générer un avatar », « Enregistreur »,
+  // Whisper au-mot) ouvertes à TOUT LE MONDE. (Les modules encore owner-only utilisent .owner-only.)
+  window._genDevOn = true;
   try{ document.querySelectorAll('.gen-dev').forEach((el) => { el.style.display = window._genDevOn ? 'flex' : 'none'; }); }catch(_){}
+  // .owner-only = éléments RÉSERVÉS owner/dev même quand .gen-dev est public (ex : module Omni, pas encore public)
+  try{ const _od = (profile.plan === 'developer' || profile.is_owner); document.querySelectorAll('.owner-only').forEach((el) => { el.style.display = _od ? 'flex' : 'none'; }); }catch(_){}
   // .gen-dev-hide = éléments MASQUÉS quand les features dev sont ON (ex : bouton
   // « Appliquer comme sous-titres » — Whisper s'applique tout seul en mode dev).
   try{ document.querySelectorAll('.gen-dev-hide').forEach((el) => { if(window._genDevOn) el.style.display = 'none'; }); }catch(_){}
@@ -11290,7 +11294,7 @@ function recLiveLoop(){
 // #sil-agg (Axel 30/08) : « trop de blanc restait » → détection plus agressive :
 // seuil RMS relevé 0.007→0.013 (attrape le bruit de fond / room tone), silence min
 // abaissé 380→230 ms (coupe les blancs plus courts), padding gardé 80→48 ms (moins de blanc laissé).
-function _recRemoveSilence(buffer, threshold, minSilMs=400, keepSilMs=80){   // aligné sur le Nettoyage audio (400 ms / 80 ms / -40 dB)
+function _recRemoveSilence(buffer, threshold, minSilMs=300, keepSilMs=60){   // Axel 31/08 : un peu plus fort (300/60 au lieu de 400/80) — seuil RMS toujours adaptatif (pas de sur-coupe)
   const sr=buffer.sampleRate;
   const input=buffer.getChannelData(0);
   const win=Math.max(1,Math.round(sr*0.02)); // fenêtres ~20 ms
@@ -23099,7 +23103,7 @@ async function startGeneration(){
   const gp3El = document.getElementById('gp3');
   if(gp3El){
     if(window._bypassHedraOn) gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></div>Re-composition vidéo';
-    else if(_hasRealAvatar)   gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>Lipsync avatar (Hedra)';
+    else if(_hasRealAvatar)   gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>Lipsync avatar';
     else                      gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg></div>Audio sur gameplay';
   }
 
@@ -23509,7 +23513,7 @@ async function callHedra(audioBlob){
     const aspectRatio = cfg.format === 'square' ? '1:1' : '9:16';
     const resolution  = (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? '1080p' : '720p';
     const input = {
-      prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
+      prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze. PRONOUNCED, CLEARLY VISIBLE lip-sync and articulation: the mouth OPENS WIDE and distinctly, the lips and jaw move a lot for every syllable, teeth and tongue become visible when the sounds call for it, energetic expressive speech like a real creator talking to camera — NOT a barely-moving, tight or nearly-closed mouth. Mouth movements exactly match every syllable and pause of the audio, strong clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
       aspect_ratio: aspectRatio,
       resolution,
       start_image: startImg,
