@@ -9798,7 +9798,29 @@ async function _imgAutoSaveUrl(url, size, styleLabel){
     hist.unshift({ id, idbKey: fullBlob?idbKey:null, url, styleLabel: styleLabel||'Image', size, ts:Date.now(), fav:false });
     localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60)));
     if(fullBlob && typeof _libPersistServer==='function'){ _libPersistServer(hist[0], fullBlob, { kind:'image', thumb:url, onSaved:(sid,spath)=>{ try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){} }}); }
+    return id;   // #avlib · l'appelant peut suivre l'entrée (pour la REMPLACER à l'upscale)
   }catch(e){ console.warn('[multi] autosave:', e); }
+}
+// #avlib (Axel 31/08) : à l'upscale d'un avatar (4K ou Détails), on REMPLACE l'entrée biblio de base
+// au lieu d'en créer une 2e — supprime l'ancienne (local + serveur + IndexedDB) puis enregistre la
+// version améliorée. window._avLibImgId suit l'entrée courante de l'avatar généré.
+async function _avLibReplace(newUrl, size, label){
+  try{
+    const oldId = window._avLibImgId;
+    if(oldId){
+      const h = JSON.parse(localStorage.getItem('imgHistory')||'[]');
+      const old = h.find(x=>x.id===oldId);
+      if(old){
+        try{ if(typeof _libDeleteServer==='function') await _libDeleteServer({ srvId: old.srvId, srvPath: old.srvPath }); }catch(_){}
+        try{ if(old.idbKey && typeof _idbDelete==='function') await _idbDelete(old.idbKey); }catch(_){}
+        localStorage.setItem('imgHistory', JSON.stringify(h.filter(x=>x.id!==oldId)));
+      }
+    }
+  }catch(_){}
+  window._avLibImgId = await _imgAutoSaveUrl(newUrl, size, label);
+  try{ if(typeof _imgRenderHistory==='function') _imgRenderHistory(); }catch(_){}
+  try{ if(typeof renderLibrary==='function' && document.getElementById('v-library') && getComputedStyle(document.getElementById('v-library')).display!=='none') renderLibrary(); }catch(_){}
+  return window._avLibImgId;
 }
 // Résout l'URL pleine résolution d'une entrée image (IndexedDB si dispo, sinon serveur signé, sinon miniature).
 async function _libGetFullImg(idbKey, fallback, srvPath){
@@ -10257,16 +10279,18 @@ async function _nbRefine4K(token, dataUrl, aspect){
 // (fal-ai/nano-banana-pro/edit) au lieu de l'API Google directe — fournisseur différent,
 // non saturé quand gemini-3-pro-image-preview renvoie 503/504. Même prompt de fidélité 4K.
 // Retourne une URL image (comme _falAuraSR). Entrée = data URI accepté par fal.
-async function _nbProFalEdit(dataUrl, aspect){
+async function _nbProFalEdit(dataUrl){
   const H = await getAuthHeader();
   const PROXY = SUPABASE_URL + '/functions/v1/fal-proxy';
   const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'POST', headers:{ 'Content-Type':'application/json', ...H }, body:JSON.stringify(b) });
   const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{ method:'GET', headers:{ ...H } });
   const model='/fal-ai/nano-banana-pro/edit';
-  // Prompt = le refine de fidélité (garde identité/visage, augmente seulement la résolution) + lock texte.
-  const prompt = _NB_REFINE_PROMPT + (typeof _IMG_TEXT_FIDELITY!=='undefined' ? _IMG_TEXT_FIDELITY : '');
+  // Anti-zoom (Axel 31/08) : Nano Banana Pro recadre/zoome en re-générant. Clause EXPLICITE de cadrage
+  // verrouillé placée EN TÊTE (survit à la troncature), + aspect_ratio:'auto' pour ne pas forcer un re-crop.
+  const NOZOOM = 'CRITICAL FRAMING LOCK — output the SAME shot, only sharper: keep the EXACT same framing, composition, crop, zoom level, field of view, camera distance and margins as the input image. The subject must occupy the EXACT same fraction of the frame, with the SAME borders on all four sides and the SAME amount of background visible. Do NOT zoom in, do NOT crop tighter, do NOT enlarge or move the head, face or body, do NOT re-center or recompose, do NOT change the distance to the subject, do NOT add or remove any part of the scene. Same edges, same background extent — increase resolution ONLY. ';
+  const prompt = NOZOOM + _NB_REFINE_PROMPT + (typeof _IMG_TEXT_FIDELITY!=='undefined' ? _IMG_TEXT_FIDELITY : '');
   const pick=(o)=> (o && o.images && o.images[0] && o.images[0].url) || (o && o.image && o.image.url) || null;
-  const sub=await fPost(model,{ prompt, image_urls:[dataUrl], resolution:'4K', aspect_ratio:(aspect||'9:16'), output_format:'jpeg', num_images:1 });
+  const sub=await fPost(model,{ prompt, image_urls:[dataUrl], resolution:'4K', aspect_ratio:'auto', output_format:'jpeg', num_images:1 });
   const sd=await sub.json().catch(()=>({}));
   if(!sub.ok) throw new Error('fal nano-banana-pro '+sub.status+' — '+JSON.stringify(sd).slice(0,180));
   let out=pick(sd);
@@ -18193,8 +18217,9 @@ async function _avGenGenerate(){
     if (db){ db.disabled = false; db.style.opacity = '1'; if (window._avGenDetailHtml) db.innerHTML = window._avGenDetailHtml; }
     _avGenSyncCosts();
     creditsFlowDone();
-    // même règle que les Images IA : tout ce qui est généré va sur le compte
-    try{ if (typeof _imgAutoSaveUrl === 'function') _imgAutoSaveUrl(url, '1024x1792', 'Avatar IA'); }catch(_){}
+    // même règle que les Images IA : tout ce qui est généré va sur le compte — MÊME sans upscale.
+    // On mémorise l'id pour REMPLACER cette entrée si l'utilisateur passe en 4K / améliore les détails.
+    try{ if (typeof _imgAutoSaveUrl === 'function') window._avLibImgId = await _imgAutoSaveUrl(url, '1024x1792', 'Avatar IA'); }catch(_){}
     toast('Avatar généré — utilise-le comme photo ou améliore les détails');
     try{ if (res) res.scrollIntoView({ behavior:'smooth', block:'center' }); }catch(_){}
   }catch(e){
@@ -18298,8 +18323,10 @@ async function _avGenUpscale(btn){
     if (!up) throw new Error('AuraSR : aucune image');
     _avGenUrl = up; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
+    // la version « détails améliorés » REMPLACE l'entrée de base en Bibliothèque (avant : rien sauvé)
+    try{ await _avLibReplace(up, '1024x1792', 'Avatar IA · Détails'); }catch(_){}
     creditsFlowDone();
-    toast('Détails améliorés — AuraSR');
+    toast('Détails améliorés');
     // une image déjà améliorée ne se ré-améliore pas : le bouton se fige (comme Images IA)
     if (btn){ btn.style.opacity = '.55'; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Détails faits'; }
   }catch(e){
@@ -18351,18 +18378,18 @@ async function _avGen4K(btn){
       up = await _nbRefine4K(token, src, '9:16');
     }catch(nbErr){
       // Google (gemini-3-pro-image-preview) saturé → MÊME modèle via fal.ai (fournisseur non saturé).
+      // UI neutre : on ne montre PAS « Google saturé/fal.ai » à l'utilisateur (Axel 31/08), le timer continue.
       console.warn('Nano Banana 4K (Google) KO → repli Nano Banana Pro via fal.ai :', nbErr);
-      _label = 'Google saturé — reprise via fal.ai…';
-      up = await _nbProFalEdit(src, '9:16');
-      _via = 'Nano Banana Pro (fal.ai)';
+      up = await _nbProFalEdit(src);
+      _via = 'fal.ai';
     }
     if (!up) throw new Error('Nano Banana Pro : aucune image renvoyée');
     _avGenUrl = up; _avGen4KDone = true; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
-    // la version 4K va aussi dans la Bibliothèque (comme les images IA)
-    try{ if (typeof _imgAutoSaveUrl === 'function') _imgAutoSaveUrl(up, '1024x1792', 'Avatar IA · 4K'); }catch(_){}
+    // la version 4K REMPLACE l'entrée de base dans la Bibliothèque (plus de doublon)
+    try{ await _avLibReplace(up, '1024x1792', 'Avatar IA · 4K'); }catch(_){}
     creditsFlowDone();
-    toast('Passé en 4K — ' + _via);
+    toast('Passé en 4K');
     if (btn){ btn.style.opacity = '.55'; btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>4K fait'; }
   }catch(e){
     console.error('avatar 4K:', e);
