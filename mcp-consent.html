@@ -80,35 +80,56 @@
       throw new Error('relais invalide');
     }
 
+    // Client de confiance = Claude (callback sur un domaine Anthropic). Pour lui on approuve
+    // AUTOMATIQUEMENT dès que la session est là : aucun clic humain dans le chemin critique,
+    // donc le code est frappé en < 1 s après /authorize et le flux de Claude n'a pas le temps
+    // de périmer (cause racine du « code créé mais jamais de /token » → ofid). La sécurité tient :
+    // le redirect_uri est validé côté serveur contre le CIMD du client, donc le code ne peut
+    // partir que vers claude.ai, et claude.ai ne le complète que si c'est LUI qui a lancé le flux
+    // (state lié à sa session). Un client tiers inconnu, lui, garde le consentement manuel.
+    function isTrustedClaude(uri){
+      try { var h = new URL(uri).hostname; return /(^|\.)(claude\.ai|claude\.com|anthropic\.com)$/i.test(h); }
+      catch(e){ return false; }
+    }
+    var _approving = false;
     function approve(session){
-      var btn = $('ok'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+      if (_approving) return; _approving = true;
+      show('loading');
+      var sub = $('loading').querySelector('.sub'); if (sub) sub.textContent = 'Autorisation en cours…';
       fetch(SUPABASE_URL + '/functions/v1/mcp/oauth/approve', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
       }).then(function(res){ return res.json(); }).then(function(d){
-        if (d && d.redirect_url) { location.href = d.redirect_url; return; }
+        if (d && d.redirect_url) { location.replace(d.redirect_url); return; }
         throw new Error((d && d.error) || 'réponse inattendue');
       }).catch(function(e){
-        btn.disabled = false; btn.textContent = 'Autoriser';
-        var el = $('lerr'); // réutilise la zone d'erreur si visible, sinon alert léger
-        alert('Autorisation impossible — réessaie (' + (e.message || e) + ')');
+        // Repli : si l'auto-approve échoue (session expirée, réseau…), on montre le
+        // consentement manuel pour que l'utilisateur puisse réessayer d'un clic.
+        _approving = false;
+        toConsent(session, (e && e.message) || String(e));
       });
     }
     function deny(){
       var sep = params.redirect_uri.indexOf('?') >= 0 ? '&' : '?';
       location.href = params.redirect_uri + sep + 'error=access_denied' + (params.state ? '&state=' + encodeURIComponent(params.state) : '');
     }
-    function toConsent(session){
+    function toConsent(session, errMsg){
       $('email').textContent = (session.user && session.user.email) || '';
-      $('ok').onclick = function(){ approve(session); };
+      var ok = $('ok'); ok.disabled = false; ok.textContent = errMsg ? 'Réessayer' : 'Autoriser';
+      ok.onclick = function(){ ok.disabled = true; ok.innerHTML = '<span class="spin"></span>'; _approving = false; approve(session); };
       $('no').onclick = deny;
       show('consent');
     }
 
     sb.auth.getSession().then(function(res){
       var session = res.data.session;
-      if (session && session.user) { toConsent(session); return; }
+      if (session && session.user) {
+        // Claude → on approuve tout de suite. Client inconnu → consentement manuel.
+        if (isTrustedClaude(params.redirect_uri)) approve(session);
+        else toConsent(session);
+        return;
+      }
       // Pas de session sur ce navigateur → mini-login (rare : l'user est en général déjà connecté)
       $('lbtn').onclick = function(){
         var email = ($('lemail').value || '').trim().toLowerCase();
@@ -121,7 +142,8 @@
             $('lerr').textContent = 'E-mail ou mot de passe incorrect'; $('lerr').style.display = 'block';
             return;
           }
-          toConsent(r2.data.session);
+          if (isTrustedClaude(params.redirect_uri)) approve(r2.data.session);
+          else toConsent(r2.data.session);
         });
       };
       $('lpwd').onkeydown = function(e){ if (e.key === 'Enter') $('lbtn').click(); };
