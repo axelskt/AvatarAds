@@ -101,7 +101,7 @@
         headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
       }).then(function(res){ return res.json(); }).then(function(d){
-        if (d && d.redirect_url) { location.replace(d.redirect_url); return; }
+        if (d && d.redirect_url) { location.href = d.redirect_url; return; }
         throw new Error((d && d.error) || 'réponse inattendue');
       }).catch(function(e){
         // Repli : si l'auto-approve échoue (session expirée, réseau…), on montre le
@@ -125,9 +125,11 @@
     sb.auth.getSession().then(function(res){
       var session = res.data.session;
       if (session && session.user) {
-        // Claude → on approuve tout de suite. Client inconnu → consentement manuel.
-        if (isTrustedClaude(params.redirect_uri)) approve(session);
-        else toConsent(session);
+        // Consentement MANUEL (l'utilisateur clique « Autoriser ») — RÉTABLI le 01/09 : l'auto-approve
+        // + location.replace cassait l'échange /token de claude.ai (code créé, jamais de /token → ofid).
+        // Le clic manuel + location.href est le flux qui a produit des jetons (validé). C'est aussi ce
+        // que montre la visite guidée (« autorise la connexion »).
+        toConsent(session);
         return;
       }
       // Pas de session sur ce navigateur → mini-login (rare : l'user est en général déjà connecté)
@@ -142,8 +144,7 @@
             $('lerr').textContent = 'E-mail ou mot de passe incorrect'; $('lerr').style.display = 'block';
             return;
           }
-          if (isTrustedClaude(params.redirect_uri)) approve(r2.data.session);
-          else toConsent(r2.data.session);
+          toConsent(r2.data.session);
         });
       };
       $('lpwd').onkeydown = function(e){ if (e.key === 'Enter') $('lbtn').click(); };
