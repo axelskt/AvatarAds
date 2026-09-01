@@ -28348,7 +28348,7 @@ async function _mcGenerate(){
     // LOT5 · ANTI-ZOOM (mesuré : perso tête 26 %, réf 40 %, rendu Kling 64 % —
     // Kling zoome au-delà des DEUX entrées) : la distance sujet/caméra est
     // VERROUILLÉE sur la réf — suivre son vrai push-in : oui ; zoomer davantage : non.
-    const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. DISTANCE LOCK: at every instant keep the SAME subject-to-camera distance and the SAME head size as the reference video — the head occupies the SAME fraction of the frame as in the reference. If the reference camera truly pushes in, follow that exact push-in, but NEVER zoom in closer than the reference and NEVER make the face bigger than it is in the reference. Do NOT lock the camera to a static centered shot either. Natural, realistic.';
+    const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. Natural, realistic.';
     // « Suivi de la caméra » et « garder le fond de la vidéo » n'existent pas en
     // paramètres Kling (schéma fal : image/video/prompt/orientation/son) — ils
     // se pilotent par le PROMPT. Le fond par défaut reste celui de l'IMAGE.
@@ -28360,8 +28360,11 @@ async function _mcGenerate(){
       : '';
     // Qualité/réalisme (Axel, 21/08) : Kling suit surtout la vidéo + l'image, mais le prompt pèse sur la
     // texture de peau, la lumière et les mains — on le dit court et précis (≤2500 car. au total).
-    const _mcRealTxt = ' Photorealistic UGC quality: keep REAL skin — visible pores, fine facial peach fuzz, natural body hair, a few blackheads and small blemishes, freckles and moles exactly where they are, the natural hairline with baby hairs, uneven skin tone and slight shine; never plastic, smoothed or airbrushed. Natural hair strands and fabric detail, correct hands and fingers, consistent lighting and shadows across the whole clip, sharp 4K detail, no warping, no flicker.';
-    // SAFE ZONE (Axel, 22/08) + LOT5 ANTI-ZOOM : visage visible, jamais rogné — et la
+    const _mcRealTxt = ' Photorealistic UGC quality: REAL skin — visible pores, fine peach fuzz, natural body hair, small blemishes, freckles and moles exactly where they are, natural hairline with baby hairs, uneven skin tone and slight shine; never plastic, smoothed or airbrushed. Natural hair strands and fabric detail, correct hands and fingers, consistent lighting and shadows, sharp 4K detail, no warping, no flicker.';
+    // SAFE ZONE (Axel, 22/08 → REVUE 02/09) + LOT5 ANTI-ZOOM : « visage visible / jamais caché » RETIRÉ —
+    // ça faisait éviter à Kling toute main près du visage (le doigt sur la tempe de la réf n'était pas
+    // reproduit). On ne parle plus que du BORD DU CADRE, et on AUTORISE explicitement la main devant le
+    // visage quand la réf le fait. La DISTANCE reste verrouillée sur la réf — et la
     // DISTANCE verrouillée sur la réf (jamais plus près, visage jamais grossi) — placé
     // tôt (juste après l'identité) pour survivre au slice(0,2400), car il porte la règle
     // de distance même quand l'utilisateur remplace _mcMotion par son propre prompt.
@@ -28374,7 +28377,7 @@ async function _mcGenerate(){
     // Limite honnête : les mains restent le point faible de Kling — le prompt
     // réduit le risque, il ne le supprime pas.
     const _mcGestTxt = ' GESTURE REPLICATION: reproduce the reference HAND poses EXACTLY — same fingers extended or curled, same gesture, trajectory and timing. If the reference points with an index finger, the character points with the index finger — never a fist, a pinch or an invented gesture. Hands anatomically correct.';
-    const _mcSafeTxt = ' FRAMING: keep the character\'s face visible and never FULLY cropped out or hidden behind on-screen UI. DISTANCE RULE: the subject-to-camera distance and the on-screen head size must match the REFERENCE VIDEO at every moment — the head keeps the SAME fraction of the frame as in the reference; never zoom in closer than the reference, never enlarge the face or crop tighter than the reference does. Follow the reference camera movement (including its real push-in) without ever exceeding it; do NOT force a static, perfectly centered, locked shot.';
+    const _mcSafeTxt = ' FRAMING: the face stays inside the frame edges (never cropped out by the frame). Hands may pass close to or in front of the face whenever the reference does — reproduce that exactly. DISTANCE RULE: the subject-to-camera distance and the on-screen head size must match the REFERENCE VIDEO at every moment — the head keeps the SAME fraction of the frame as in the reference; never zoom in closer than the reference, never enlarge the face or crop tighter than the reference does. Follow the reference camera movement (including its real push-in) without ever exceeding it; do NOT force a static, perfectly centered, locked shot.';
     const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcGestTxt + _mcSafeTxt + _mcBgTxt + _mcCamTxt + _mcRealTxt;
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
     // (marquée ._moderation quand le content checker a bloqué → repli possible).
