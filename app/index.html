@@ -1227,18 +1227,19 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
             <div class="fld" style="margin-top:14px;margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-                <div class="flbl" style="font-size:10px;margin:0">↕ Hauteur de l'avatar</div>
+                <div class="flbl" style="font-size:10px;margin:0">Zoom de l'avatar</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avZoomVal">100%</span>
               </div>
-              <input type="range" id="avZoomSlider" class="aa-slider" min="40" max="140" value="100" step="1" oninput="cfg.avZoom=+this.value;document.getElementById('avZoomVal').textContent=this.value+'%';_aaSliderFill(this);updateAvatarCrop()" style="width:100%;--aa-fill:60%">
+              <input type="range" id="avZoomSlider" class="aa-slider" min="100" max="200" value="100" step="1" oninput="cfg.avZoom=+this.value;cfg.avWidth=cfg.avZoom;document.getElementById('avZoomVal').textContent=this.value+'%';_aaSliderFill(this);updateAvatarCrop()" style="width:100%;--aa-fill:60%">
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
             </div>
-            <div class="fld" style="margin-bottom:12px">
+            <div class="fld" style="margin-bottom:12px;display:none" data-merged="zoom">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">↔ Largeur de l'avatar</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avWidthVal">100%</span>
               </div>
               <input type="range" id="avWidthSlider" class="aa-slider" min="40" max="140" value="100" step="1" oninput="cfg.avWidth=+this.value;document.getElementById('avWidthVal').textContent=this.value+'%';_aaSliderFill(this);updateAvatarCrop()" style="width:100%;--aa-fill:60%">
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
+              
             </div>
 
             <!-- Ratio Avatar / Gameplay — visible seulement si split actif -->
@@ -1682,11 +1683,11 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal3">100%</span>
                   </div>
-                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="10" max="300" value="100" step="5"
-                    oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal3').textContent=this.value+'%';const s4=document.getElementById('gpZoom');if(s4){s4.value=this.value;document.getElementById('gpZoomVal').textContent=this.value+'%'}updateGpCrop()"
+                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="100" max="300" value="100" step="5"
+                    oninput="cfg.gpZoom=+this.value;cfg.gpWidth=cfg.gpZoom;document.getElementById('gpZoomVal3').textContent=this.value+'%';const s4=document.getElementById('gpZoom');if(s4){s4.value=this.value;document.getElementById('gpZoomVal').textContent=this.value+'%'}updateGpCrop()"
                     style="width:100%">
                 </div>
-                <div>
+                <div style="display:none" data-merged="zoom"><!-- largeur fusionnée dans le zoom (02/09) -->
                   <div style="display:flex;justify-content:space-between;margin-bottom:5px">
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Largeur du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal3">100%</span>
@@ -1792,9 +1793,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                       <span class="label" style="margin:0">Zoom du clip</span>
                       <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
                     </div>
-                    <input class="aa-slider" type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                    <input class="aa-slider" type="range" id="gpZoom" min="100" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;cfg.gpWidth=cfg.gpZoom;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                   </div>
-                  <div>
+                  <div style="display:none" data-merged="zoom"><!-- largeur fusionnée dans le zoom (02/09) -->
                     <div class="row" style="justify-content:space-between;margin-bottom:8px">
                       <span class="label" style="margin:0">Largeur du gameplay</span>
                       <span class="mono accent" style="font-size:13px" id="gpWidthVal">100%</span>
@@ -22073,76 +22074,64 @@ function applyClip(zone){
   el.style.clipPath = `inset(${c.t}% ${c.r}% ${c.b}% ${c.l}% round 2px)`;
 }
 
+// ── #zoom-unifie (02/09) · UNE géométrie pour l'aperçu, les bornes du glissé et le rendu ──────────────
+// Axel : « combine zoom du clip et largeur du gameplay, ne jamais mettre de bande noire, pouvoir monter /
+// descendre ». Modèle : un seul zoom uniforme (≥ 100 %) ; la boîte (zone × zoom) est centrée dans la zone,
+// le contenu la COUVRE avec une seule échelle (object-fit: cover), et le glissé déplace le CONTENU
+// (object-position) dans des bornes qui gardent la zone couverte sur les deux axes → jamais de noir.
+// Coordonnées linéaires : l'aperçu passe la zone en px espace-phone, le rendu en px canvas.
+function _zoneGeom(zone, sW, sH, zoom, topAlign){
+  const z  = Math.max(1, (zoom || 100) / 100);
+  const bw = zone.w * z, bh = zone.h * z;
+  const bx = zone.x + (zone.w - bw) / 2, by = zone.y + (zone.h - bh) / 2;
+  const s  = Math.max(bw / sW, bh / sH);
+  const cw = sW * s, ch = sH * s;
+  const cx0 = bx + (bw - cw) / 2;                             // contenu centré en X
+  const cy0 = by + (topAlign ? 0 : (bh - ch) / 2);            // centré en Y, ou aligné en haut (avatar)
+  return { z, bw, bh, bx, by, s, cw, ch, cx0, cy0,
+    minTx: (zone.x + zone.w) - (cx0 + cw), maxTx: zone.x - cx0,
+    minTy: (zone.y + zone.h) - (cy0 + ch), maxTy: zone.y - cy0 };
+}
+function _coerceZoomCfg(){
+  const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || lo));
+  cfg.gpZoom = cl(cfg.gpZoom, 100, 300); cfg.gpWidth = cfg.gpZoom;   // largeur = zoom (fusionnés 02/09)
+  cfg.avZoom = cl(cfg.avZoom, 100, 200); cfg.avWidth = cfg.avZoom;
+  for(const k of ['gpCropX','gpCropY','avCropX','avCropY']){ const v = +cfg[k] || 0; cfg[k] = Math.abs(v) > 1.5 ? v / 266 : v; }   // anciens crops en px (zone 266 px) → fraction
+}
+function _applyZoneStyle(el, zoom, tx, ty, topAlign){
+  el.style.maxWidth = 'none'; el.style.maxHeight = 'none';
+  el.style.objectFit = 'cover';
+  el.style.width = zoom + '%'; el.style.height = zoom + '%';
+  el.style.top = '50%'; el.style.left = '50%';
+  el.style.transform = 'translate(-50%, -50%)';
+  el.style.transformOrigin = 'center center';
+  el.style.objectPosition = `calc(50% + ${tx}px) calc(${topAlign ? '0%' : '50%'} + ${ty}px)`;
+}
 function updateGpCrop(){
   const vid = document.getElementById('gpVideo');
   if(!vid) return;
-  // 100 % = le clip COUVRE sa zone (défaut). Au-dessus : zoom/élargissement + recadrage en glissant.
-  // En dessous (Axel 02/09 : « on peut pas dézoomer ? ») : la boîte rétrécit, centrée, bandes noires assumées —
-  // le glissé est alors bloqué sur cet axe (_zoneMaxCrop → 0) pour ne jamais découvrir PLUS de noir.
-  const h = cfg.gpZoom  || 100;
-  const w = cfg.gpWidth || cfg.gpZoom || 100;
-  const tx = cfg.gpCropX || 0;
-  const ty = cfg.gpCropY || 0;
-  vid.style.maxWidth = 'none';
-  vid.style.maxHeight = 'none';
-  vid.style.objectFit = 'cover';
-  if(h === 100 && w === 100){
-    // À 100 % le clip fait la taille de sa zone split : on coulisse le CONTENU
-    // (object-position), pas la boîte — même fix que l'avatar (13/08).
-    vid.style.width = '100%';
-    vid.style.height = '100%';
-    vid.style.top = '0';
-    vid.style.left = '0';
-    vid.style.transform = 'none';
-    vid.style.objectPosition = (tx === 0 && ty === 0) ? '50% 50%' : `calc(50% + ${tx}px) calc(50% + ${ty}px)`;
-  } else {
-    vid.style.width = w + '%';
-    vid.style.height = h + '%';
-    vid.style.top = '50%';
-    vid.style.left = '50%';
-    vid.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
-    vid.style.objectPosition = '50% 50%';
-  }
-  vid.style.transformOrigin = 'center center';
+  cfg.gpZoom = Math.max(100, Math.min(300, +cfg.gpZoom || 100)); cfg.gpWidth = cfg.gpZoom;
+  const m = _zoneMaxCrop('gp');
+  cfg.gpCropX = Math.max(m.minX, Math.min(m.maxX, +cfg.gpCropX || 0));
+  cfg.gpCropY = Math.max(m.minY, Math.min(m.maxY, +cfg.gpCropY || 0));
+  const zEl = document.getElementById('gameplayZone'), zW = zEl ? zEl.offsetWidth : 0;
+  _applyZoneStyle(vid, cfg.gpZoom, cfg.gpCropX * zW, cfg.gpCropY * zW, false);
+  if(!vid.videoWidth && !vid._aaMetaHook){ vid._aaMetaHook = true; vid.addEventListener('loadedmetadata', updateGpCrop); }
+  if(zEl && !zEl._aaRO && window.ResizeObserver){ zEl._aaRO = new ResizeObserver(() => { try{ updateGpCrop(); }catch(_){} }); zEl._aaRO.observe(zEl); }
 }
 
 function updateAvatarCrop(){
-  const h  = cfg.avZoom  || 100;
-  const w  = cfg.avWidth || cfg.avZoom || 100;
-  const tx = cfg.avCropX || 0;
-  const ty = cfg.avCropY || 0;
-
-  function _applyCrop(el){
-    if(!el) return;
-    el.style.maxWidth  = 'none';
-    el.style.maxHeight = 'none';
-    el.style.objectFit = 'cover';
-    if(h === 100 && w === 100){
-      // ── SPLIT : REPOSITIONNER = GLISSER LA PHOTO DANS LE CADRE ──────────────
-      // À 100 %, l'élément fait EXACTEMENT la taille de sa zone : le translater
-      // déplaçait toute la boîte et révélait du noir — en split (zone courte,
-      // cover très rogné) le drag semblait « ne pas marcher » (Axel, 13/08 :
-      // « je peux pas repositionner l'image en split screen »). On déplace donc
-      // le CONTENU via object-position : le cadre reste plein, la photo coulisse.
-      el.style.width     = '100%';
-      el.style.height    = '100%';
-      el.style.top       = '0';
-      el.style.left      = '0';
-      el.style.transform = 'none';
-      el.style.objectPosition = (tx === 0 && ty === 0) ? 'center top' : `calc(50% + ${tx}px) calc(50% + ${ty}px)`;
-    } else {
-      el.style.width     = w + '%';
-      el.style.height    = h + '%';
-      el.style.top       = '50%';
-      el.style.left      = '50%';
-      el.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
-      el.style.objectPosition  = 'center top';
-    }
-    el.style.transformOrigin = 'center center';
+  cfg.avZoom = Math.max(100, Math.min(200, +cfg.avZoom || 100)); cfg.avWidth = cfg.avZoom;
+  const m = _zoneMaxCrop('av');
+  cfg.avCropX = Math.max(m.minX, Math.min(m.maxX, +cfg.avCropX || 0));
+  cfg.avCropY = Math.max(m.minY, Math.min(m.maxY, +cfg.avCropY || 0));
+  const zEl = document.getElementById('avZone'), zW = zEl ? zEl.offsetWidth : 0;
+  if(zEl && !zEl._aaRO && window.ResizeObserver){ zEl._aaRO = new ResizeObserver(() => { try{ updateAvatarCrop(); }catch(_){} }); zEl._aaRO.observe(zEl); }
+  for(const id of ['previewAvImg', 'bypassPreviewVid']){
+    const el = document.getElementById(id); if(!el) continue;
+    _applyZoneStyle(el, cfg.avZoom, cfg.avCropX * zW, cfg.avCropY * zW, true);   // avatar : aligné en haut (« center top »)
+    if(!(el.videoWidth || el.naturalWidth) && !el._aaMetaHook){ el._aaMetaHook = true; el.addEventListener(el.tagName === 'VIDEO' ? 'loadedmetadata' : 'load', updateAvatarCrop); }
   }
-
-  _applyCrop(document.getElementById('previewAvImg'));
-  _applyCrop(document.getElementById('bypassPreviewVid'));
 }
 
 // ── DRAG-TO-CROP ──
@@ -22154,44 +22143,43 @@ let _cropDrag = null;
 // coulisser gauche/droite pour choisir le cadrage (Axel 02/09). Miroir du clamp du
 // rendu MP4 dans _cvDrawZone (fenêtre source bornée dans l'image).
 function _zoneMaxCrop(zone){
-  // Bornes du glissé = tout ce qu'on peut coulisser SANS découvrir de noir, sur les deux axes,
-  // dans les deux modes d'affichage (miroir de updateGpCrop / updateAvatarCrop) :
-  //  · à 100 %/100 % : le contenu coulisse en object-position dans une boîte pleine → débord = contenu cover − zone
-  //  · au-delà : la boîte (w % × h %) est translatée → débord = boîte − zone (le contenu couvre toujours la boîte)
-  const vid = zone==='av' ? (document.getElementById('previewAvImg') || document.getElementById('bypassPreviewVid')) : document.getElementById('gpVideo');
+  // Bornes du glissé (px espace-phone) = tout ce qu'on peut coulisser SANS découvrir de noir, sur les deux
+  // axes — même géométrie que l'aperçu (_applyZoneStyle) et que le rendu (_cvDrawZone), via _zoneGeom.
+  // Unité des crops (cfg.*CropX/Y) : FRACTION de la LARGEUR de la zone (les deux axes), indépendante de la
+  // résolution — l'aperçu (zone 266 px CSS, agrandie ×1,19 à l'écran) et le rendu (1080 px) la lisent pareil.
+  const FREE = { minX:-10, maxX:10, minY:-10, maxY:10 };            // pas encore mesurable : on ne bride pas
+  const cands = zone==='av' ? [document.getElementById('previewAvImg'), document.getElementById('bypassPreviewVid')].filter(Boolean)
+                            : [document.getElementById('gpVideo')].filter(Boolean);
+  const vid = cands.find(e => (e.videoWidth || e.naturalWidth) && e.offsetParent !== null) || cands[0];
   const z   = document.getElementById(zone==='av'?'avZone':'gameplayZone');
-  if(!vid || !z) return {x:0, y:0};
+  if(!vid || !z) return FREE;
   const sW = vid.videoWidth || vid.naturalWidth || 0, sH = vid.videoHeight || vid.naturalHeight || 0;
   const zW = z.offsetWidth, zH = z.offsetHeight;
-  if(!zW || !zH) return {x:0, y:0};
-  const hZ = (zone==='av' ? (cfg.avZoom||100) : (cfg.gpZoom||100)) / 100;
-  const wZ = (zone==='av' ? (cfg.avWidth||cfg.avZoom||100) : (cfg.gpWidth||cfg.gpZoom||100)) / 100;
-  if(hZ === 1 && wZ === 1){
-    if(!sW || !sH) return {x:0, y:800};                 // métadonnées pas encore là : vertical libre (ancien comportement)
-    const cover = Math.max(zW/sW, zH/sH);
-    return { x: Math.max(0, (sW*cover - zW)/2), y: Math.max(0, (sH*cover - zH)/2) };
-  }
-  return { x: Math.max(0, zW*(wZ-1)/2), y: Math.max(0, zH*(hZ-1)/2) };
+  if(!zW || !zH || !sW || !sH) return FREE;
+  const g = _zoneGeom({x:0, y:0, w:zW, h:zH}, sW, sH, zone==='av' ? (cfg.avZoom||100) : (cfg.gpZoom||100), zone==='av');
+  return { minX: g.minTx / zW, maxX: g.maxTx / zW, minY: g.minTy / zW, maxY: g.maxTy / zW };
 }
-function _zoneMaxCropX(zone){ return _zoneMaxCrop(zone).x; }
+function _zoneMaxCropX(zone){ return _zoneMaxCrop(zone).maxX; }
 // Déplacement crop d'une zone — X ET Y. X bornée au débord réel (0 sur un vertical),
 // Y libre. Souris + tactile.
 function _zoneDragMove(clientX, clientY){
   if(!_drag) return;
-  const wrapper = document.getElementById('phoneWrapper');
-  const dispW = wrapper ? wrapper.offsetWidth : 220;   // le téléphone est rendu à 393 px logiques
-  const scale = dispW / 393;
-  const dx = (clientX - _drag.x0) / scale;
-  const dy = (clientY - _drag.y0) / scale;
+  // #zoom-unifie : le déplacement est une FRACTION de la largeur de la zone à l'écran (1 = toute la largeur),
+  // même unité que l'aperçu et le rendu — le clip suit exactement le doigt, quelle que soit l'échelle du téléphone.
+  const zoneEl = document.getElementById(_drag.zone==='av'?'avZone':'gameplayZone');
+  const rect = zoneEl ? zoneEl.getBoundingClientRect() : null;
+  const unit = (rect && rect.width) ? rect.width : 320;
+  const dx = (clientX - _drag.x0) / unit;
+  const dy = (clientY - _drag.y0) / unit;
   const m = _zoneMaxCrop(_drag.zone);
-  const cl = (v, mx) => mx ? Math.max(-mx, Math.min(mx, v)) : 0;
+  const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v));     // bornes par axe, asymétriques pour l'avatar (aligné en haut)
   if(_drag.zone==='av'){
-    cfg.avCropX = cl((_drag.cx0||0) + dx, m.x);
-    cfg.avCropY = cl(_drag.cy0 + dy, m.y);
+    cfg.avCropX = cl((_drag.cx0||0) + dx, m.minX, m.maxX);
+    cfg.avCropY = cl(_drag.cy0 + dy, m.minY, m.maxY);
     updateAvatarCrop();
   } else {
-    cfg.gpCropX = cl((_drag.cx0||0) + dx, m.x);
-    cfg.gpCropY = cl(_drag.cy0 + dy, m.y);
+    cfg.gpCropX = cl((_drag.cx0||0) + dx, m.minX, m.maxX);
+    cfg.gpCropY = cl(_drag.cy0 + dy, m.minY, m.maxY);
     updateGpCrop();
   }
 }
@@ -25677,36 +25665,22 @@ function _audioBufferToWavBlob(buffer){
 }
 
 // ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
-// zone:{x,y,w,h} en pixels canvas — zoomH/zoomW en % — cropX/cropY en pixels espace phone 393px
+// zone:{x,y,w,h} en pixels canvas — zoom en % (zoomW ignoré depuis le 02/09) — cropX/cropY en FRACTION de la largeur de zone
 function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvasH, opts){
   const srcW = src.videoWidth || src.naturalWidth || 0;
   const srcH = src.videoHeight || src.naturalHeight || 0;
   if(!srcW || !srcH) return;
-  // #split-fidele (02/09) : on réplique EXACTEMENT l'aperçu (updateGpCrop / updateAvatarCrop) au lieu
-  // d'une formule à part. L'aperçu, c'est une BOÎTE (l'élément <video>/<img>) de zone.w×largeur % par
-  // zone.h×zoom % centrée dans la zone puis décalée par le glissé, un contenu qui la COUVRE avec UNE SEULE
-  // échelle (object-fit: cover), le tout rogné par la zone. L'ancien code zoomait chaque axe séparément
-  // (largeur 240 % = ×2,4 à l'horizontale seule) : gameplay écrasé et sur-zoomé au rendu alors que
-  // l'aperçu était bon (Axel 02/09 : « le rendu du split screen ne va pas du tout »). Une seule formule
-  // couvre maintenant 100 %, le zoom, le dézoom (bandes noires assumées) et le glissé — à zoom uniforme
-  // (largeur = hauteur) le résultat est identique à avant.
-  const zW = (zoomW || 100) / 100, zH = (zoomH || 100) / 100;
-  const k  = canvasW / 393;                                   // px espace-phone (aperçu) → px canvas
-  const tx = (cropX || 0) * k, ty = (cropY || 0) * k;
-  const bw = zone.w * zW, bh = zone.h * zH;                    // la boîte
-  const bx = zone.x + (zone.w - bw) / 2, by = zone.y + (zone.h - bh) / 2;
-  const s  = Math.max(bw / srcW, bh / srcH);                   // cover : une seule échelle
-  const cw = srcW * s, ch = srcH * s;
-  // object-position : centré — sauf l'avatar (« center top ») : aligné en haut, et à 100 % seulement tant
-  // que rien n'est glissé (l'aperçu repasse alors en calc(50 % + décalage)).
-  const topAlign = !!(opts && opts.topAlign) && !(zW === 1 && zH === 1 && ((cropX || 0) || (cropY || 0)));
-  const cx = bx + (bw - cw) / 2 + tx;
-  const cy = by + (topAlign ? 0 : (bh - ch) / 2) + ty;
-  // visible = zone ∩ boîte ∩ contenu ; le reste de la zone garde le fond noir, comme l'aperçu.
-  const vx0 = Math.max(zone.x, bx + tx, cx), vy0 = Math.max(zone.y, by + ty, cy);
-  const vx1 = Math.min(zone.x + zone.w, bx + tx + bw, cx + cw), vy1 = Math.min(zone.y + zone.h, by + ty + bh, cy + ch);
+  // #zoom-unifie (02/09) : même géométrie que l'aperçu (_zoneGeom) — zoom uniforme ≥ 100 % (la largeur est
+  // fusionnée dans le zoom, zoomW ignoré), boîte centrée, contenu en cover avec UNE échelle, glissé du
+  // contenu borné (jamais de noir), avatar aligné en haut. Prouvé par superposition différence DOM/canvas.
+  const g  = _zoneGeom(zone, srcW, srcH, zoomH || zoomW || 100, !!(opts && opts.topAlign));
+  const tx = Math.max(g.minTx, Math.min(g.maxTx, (cropX || 0) * zone.w));   // crops = fraction de la largeur de zone
+  const ty = Math.max(g.minTy, Math.min(g.maxTy, (cropY || 0) * zone.w));
+  const cx = g.cx0 + tx, cy = g.cy0 + ty;
+  const vx0 = Math.max(zone.x, g.bx, cx), vy0 = Math.max(zone.y, g.by, cy);
+  const vx1 = Math.min(zone.x + zone.w, g.bx + g.bw, cx + g.cw), vy1 = Math.min(zone.y + zone.h, g.by + g.bh, cy + g.ch);
   if(vx1 - vx0 < 0.5 || vy1 - vy0 < 0.5) return;
-  const sx = (vx0 - cx) / s, sy = (vy0 - cy) / s, sw = (vx1 - vx0) / s, sh = (vy1 - vy0) / s;
+  const sx = (vx0 - cx) / g.s, sy = (vy0 - cy) / g.s, sw = (vx1 - vx0) / g.s, sh = (vy1 - vy0) / g.s;
   ctx.save();
   ctx.beginPath(); ctx.rect(zone.x, zone.y, zone.w, zone.h); ctx.clip();
   ctx.drawImage(src, sx, sy, sw, sh, vx0, vy0, vx1 - vx0, vy1 - vy0);
@@ -26937,6 +26911,7 @@ function _restoreGeneratorState(){
     // ── cfg ──
     if(s.cfg){
       Object.assign(cfg, s.cfg);
+      _coerceZoomCfg();                                   // #zoom-unifie : largeur = zoom, zoom ≥ 100 (anciens états)
       _syncSlider('subSize',      cfg.subSize,                    v=>v+'px',                   'subSizeVal');
       _syncSlider('subPos',       cfg.subPos,                     v=>v+'%',                    'subPosVal');
       _syncSlider('subPosX',      cfg.subPosX,                    v=>v+'%',                    'subPosXVal');
