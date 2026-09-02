@@ -208,13 +208,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
    Callées en haut, elles restent sur la même ligne optique à toute largeur. */
 .trust-row{grid-column:1;align-self:start}
 .hero-reassure{grid-column:2;align-self:start}
-/* card-stack (Comment ça marche) */
-#stackSec{height:470vh;position:relative}
-#stackSticky{position:sticky;top:0;height:100vh;display:flex;align-items:center;overflow:hidden}
-.stack-card{position:absolute;inset:0;border-radius:26px;transition:opacity .2s}
-.step-visual{position:relative;width:100%;aspect-ratio:1/1;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 60px -26px rgba(124,92,255,.45)}
-.step-visual img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.step-badge{position:absolute;top:12px;left:12px;z-index:2;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);padding:5px 10px;border-radius:999px}
+/* AvatarAds ✕ Claude — cadre vidéo du tuto (remplace le card-stack « Comment ça marche ») */
+.tuto-frame{position:relative;width:100%;max-width:1100px;margin:0 auto;aspect-ratio:16/9;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 60px -26px rgba(124,92,255,.35);background:#0E0D10}
+.tuto-frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 /* menu mobile (burger) — indépendant des anims rise/reveal : visible dès l'ajout de .open.
    V2 (réf. remakeit) : sheet arrondie sur ~la moitié haute de l'écran, page visible
    FLOUTÉE derrière (backdrop-filter sur l'overlay), un seul CTA « Commencer ». */
@@ -828,36 +824,16 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   </div>
 </section>
 
-<!-- ══════════ 8 · COMMENT ÇA MARCHE — card-stack au scroll ══════════ -->
-<!-- desktop -->
-<section id="etapes" class="hide-mobile-alt"></section>
-<section id="stackSec" class="hide-mobile" style="display:block">
-  <div id="stackSticky">
-    <div class="wrap" style="width:100%">
-      <div class="center" style="margin-bottom:8px">
-        <div class="eyebrow">Comment ça marche</div>
-        <h2 class="display" style="font-size:clamp(32px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.03">
-          De l'idée à la vidéo virale<br><span class="accent">en 4 étapes</span>
-        </h2>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;margin-top:24px">
-        <div style="position:relative" id="stackTexts"></div>
-        <div style="position:relative;height:560px;display:grid;place-items:center">
-          <div style="position:relative;width:500px;max-width:100%;aspect-ratio:1/1" id="stackCards"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- mobile -->
-<section class="wrap only-mobile" id="stackMobile" style="flex-direction:column;padding-top:20px;padding-bottom:60px">
-  <div class="center" style="margin-bottom:34px">
+<!-- ══════════ 8 · AVATARADS ✕ CLAUDE — le tuto en vidéo (remplace le card-stack « Comment ça marche », Axel 02/09) ══════════ -->
+<section id="etapes" class="wrap" style="display:flex;flex-direction:column;padding-top:70px;padding-bottom:80px">
+  <div class="center reveal" style="margin-bottom:34px">
     <div class="eyebrow">Comment ça marche</div>
-    <h2 class="display" style="font-size:30px;font-weight:800;margin-top:14px;line-height:1.03">
-      De l'idée à la vidéo virale<br><span class="accent">en 4 étapes</span>
-    </h2>
+    <h2 class="display" style="font-size:clamp(32px,4.4vw,56px);font-weight:800;margin-top:14px;line-height:1.03">AvatarAds <span class="accent">✕</span> Claude</h2>
+    <p class="muted" style="font-size:clamp(16px,1.6vw,19px);line-height:1.5;margin-top:14px;max-width:640px;margin-left:auto;margin-right:auto">Crée plusieurs vidéos en un seul prompt dans Claude.</p>
   </div>
-  <div class="col" style="gap:30px" id="stackMobileList"></div>
+  <div class="reveal tuto-frame" id="claudeTuto">
+    <video src="assets/lp/tuto-claude.mp4" poster="assets/lp/tuto-claude.jpg" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo : AvatarAds connecté à Claude, deux vidéos générées en un seul prompt"></video>
+  </div>
 </section>
 
 <!-- ══════════ 9 · TOUT EN UN ══════════ -->
@@ -1205,104 +1181,15 @@ function tstToggle(open){
   document.getElementById('tstLess').style.display=open?'block':'none';
 }
 
-/* ══════════ Comment ça marche — card-stack au scroll ══════════ */
-var STEPS=[
-  { n:"01", src:"assets/lp/step-02.jpg", t:"Crée et importe ton avatar", d:"Ta photo ou ta vidéo existante — ton avatar parle à ta place, face caméra.", ic:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>' },
-  { n:"02", src:"assets/lp/step-03.jpg", t:"Ajoute ton audio", d:"Importe ta voix off ou enregistre-la. Le son est nettoyé automatiquement.", ic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>' },
-  { n:"03", src:"assets/lp/step-04.jpg", t:"Style & sous-titres", d:"Format 9:16, sous-titres animés, split-screen, musique — calibrés pour percer.", ic:'<path d="M4 7V5h16v2M9 19h6M12 5v14"/>' },
-  { n:"04", src:"assets/lp/step-05.jpg", t:"Génère & publie", d:"Ta vidéo prête en 2 minutes. Télécharge ou publie directement sur tes réseaux.", ic:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" fill="currentColor" stroke="none"/>' }
-];
-var V='#7C5CFF';
+/* ══════════ AvatarAds ✕ Claude — le tuto tourne (muet, en boucle) quand il est visible, pause sinon ══════════ */
 (function(){
-  // desktop : textes + cartes
-  var texts=document.getElementById('stackTexts'), cards=document.getElementById('stackCards');
-  STEPS.forEach(function(s,i){
-    var tx=document.createElement('div');
-    tx.className='stack-text'; tx.setAttribute('data-i',i);
-    tx.style.cssText='transition:opacity .4s,transform .4s;position:'+(i===0?'relative':'absolute')+';top:0;opacity:'+(i===0?1:0)+';transform:'+(i===0?'none':'translateY(12px)')+';pointer-events:'+(i===0?'auto':'none')+';max-width:460px';
-    var dots='';
-    for(var j=0;j<STEPS.length;j++){ dots+='<span class="stk-dot" data-j="'+j+'" style="width:'+(j===i?26:8)+'px;height:8px;border-radius:999px;background:'+(j===i?V:'var(--surface-3)')+';transition:.3s;display:inline-block;margin-right:8px"></span>'; }
-    tx.innerHTML='<span class="mono" style="font-size:13px;color:'+V+';font-weight:700">'+s.n+' / 04</span>'
-      +'<h3 class="display" style="font-size:34px;font-weight:800;margin-top:10px;line-height:1.05">'+s.t+'</h3>'
-      +'<p class="muted" style="font-size:17px;line-height:1.55;margin-top:16px">'+s.d+'</p>'
-      +'<div style="margin-top:26px">'+dots+'</div>';
-    texts.appendChild(tx);
-    var c=document.createElement('div');
-    c.className='stack-card'; c.style.zIndex=i+1; c.style.opacity=i===0?1:0;
-    c.innerHTML='<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 04</span></div>';
-    cards.appendChild(c);
-  });
-  // mobile
-  var ml=document.getElementById('stackMobileList');
-  STEPS.forEach(function(s){
-    var d=document.createElement('div'); d.className='reveal';
-    d.innerHTML='<div class="row gap12" style="align-items:center;margin-bottom:14px">'
-      +'<span style="width:42px;height:42px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(160deg,#8b6dff,#5b3ce0)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+s.ic+'</svg></span>'
-      +'<div><span class="mono" style="font-size:11px;color:'+V+';font-weight:600">'+s.n+'</span>'
-      +'<h3 class="display" style="font-size:20px;font-weight:700">'+s.t+'</h3></div></div>'
-      +'<p class="muted" style="font-size:14.5px;line-height:1.55;margin-bottom:14px">'+s.d+'</p>'
-      +'<div class="step-visual"><img src="'+s.src+'" alt="Étape '+s.n+'" width="1100" height="1100" loading="lazy" decoding="async"><span class="step-badge">'+s.n+' / 04</span></div>';
-    ml.appendChild(d);
-  });
-})();
-/* progression au scroll — throttlée en rAF avec easing continu */
-(function(){
-  var sec=document.getElementById('stackSec');
-  if(!sec) return;
-  var N=STEPS.length, target=0, cur=0, raf=0, lastAct=-1;
-  var mq=window.matchMedia('(min-width:761px)');
-  // `offsetHeight` lu à CHAQUE scroll forçait un recalcul de mise en page
-  // (l'« ajustement forcé » pointé par PageSpeed) : la hauteur ne change
-  // qu'au resize — on la met en cache et le scroll ne lit plus qu'un rect.
-  var secTotal=0;
-  function mesure(){ secTotal=sec.offsetHeight-window.innerHeight; }
-  function readTarget(){
-    if(!secTotal) mesure();
-    var r=sec.getBoundingClientRect();
-    target=Math.min(1,Math.max(0,-r.top/secTotal))*N;
-  }
-  function apply(p){
-    var act=Math.min(N-1,Math.floor(p+0.5));
-    var cardEls=document.querySelectorAll('#stackCards .stack-card');
-    cardEls.forEach(function(c,i){
-      var local=p-i;
-      var enter=Math.min(1,Math.max(0,p-(i-1)));
-      var ty=local>=0?0:(1-enter)*116;
-      var settled=local>=0;
-      var scale=settled?1-Math.min(0.06,local*0.03):0.99;
-      c.style.transform='translateY('+ty+'%) scale('+scale+')';
-      c.style.opacity=enter<=0?0:1;
-      c.style.boxShadow=settled?'0 40px 90px -30px rgba(0,0,0,.9),0 0 70px -26px rgba(124,92,255,.5)':'none';
-    });
-    if(act!==lastAct){
-      lastAct=act;
-      document.querySelectorAll('#stackTexts .stack-text').forEach(function(tx,i){
-        var on=i===act;
-        tx.style.position=on?'relative':'absolute';
-        tx.style.opacity=on?1:0;
-        tx.style.transform=on?'none':'translateY(12px)';
-        tx.style.pointerEvents=on?'auto':'none';
-        tx.querySelectorAll('.stk-dot').forEach(function(dt,j){
-          dt.style.width=(j===act?26:8)+'px';
-          dt.style.background=j===act?V:'var(--surface-3)';
-        });
-      });
-    }
-  }
-  function loop(){
-    cur+=(target-cur)*0.12;
-    if(Math.abs(target-cur)<0.0015) cur=target;
-    apply(cur);
-    raf=requestAnimationFrame(loop);
-  }
-  function start(){
-    if(!mq.matches) return;
-    readTarget(); cur=target; apply(cur);
-    window.addEventListener('scroll',readTarget,{passive:true});
-    window.addEventListener('resize',function(){ mesure(); readTarget(); });
-    raf=requestAnimationFrame(loop);
-  }
-  start();
+  var box=document.getElementById('claudeTuto'); if(!box) return;
+  var v=box.querySelector('video'); if(!v) return;
+  if(!('IntersectionObserver' in window)){ v.play().catch(function(){}); return; }
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting) v.play().catch(function(){}); else v.pause(); });
+  }, { threshold: 0.35 });
+  io.observe(box);
 })();
 
 /* ══════════ FAQ ══════════
