@@ -1782,15 +1782,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   </button>
                 </div>
 
-                <!-- ZOOM DU CLIP — visible directement (demande d'Axel : le réglage le plus utilisé reste hors de l'accordéon) -->
-                <div>
-                  <div class="row" style="justify-content:space-between;margin-bottom:8px">
-                    <span class="label" style="margin:0">Zoom du clip</span>
-                    <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
-                  </div>
-                  <input class="aa-slider" type="range" id="gpZoom" min="100" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
-                </div>
-
                 <!-- RÉGLAGES DU SPLIT SCREEN — repliable (chevron), autres réglages -->
                 <button onclick="_toggleSplitAdv()" id="splitAdvBtn" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;text-align:left;cursor:pointer">
                   <div class="col" style="line-height:1.35">
@@ -1806,6 +1797,14 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                       <span class="mono accent" style="font-size:13px" id="splitRatioVal">35 / 65</span>
                     </div>
                     <input class="aa-slider" type="range" id="splitRatio" min="20" max="70" value="35" step="5" oninput="cfg.splitRatio=+this.value;document.getElementById('splitRatioVal').textContent=this.value+' / '+(100-this.value);updateLivePreview()" style="width:100%">
+                  </div>
+                  <!-- ZOOM DU CLIP — de retour DANS l'accordéon (Axel 02/09) -->
+                  <div>
+                    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+                      <span class="label" style="margin:0">Zoom du clip</span>
+                      <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
+                    </div>
+                    <input class="aa-slider" type="range" id="gpZoom" min="100" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                   </div>
                   <div>
                     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -22105,19 +22104,27 @@ let _cropDrag = null;
 // bande noire). Un clip 16:9 dans une zone plus étroite déborde → on peut le faire
 // coulisser gauche/droite pour choisir le cadrage (Axel 02/09). Miroir du clamp du
 // rendu MP4 dans _cvDrawZone (fenêtre source bornée dans l'image).
-function _zoneMaxCropX(zone){
+function _zoneMaxCrop(zone){
+  // Bornes du glissé = tout ce qu'on peut coulisser SANS découvrir de noir, sur les deux axes,
+  // dans les deux modes d'affichage (miroir de updateGpCrop / updateAvatarCrop) :
+  //  · à 100 %/100 % : le contenu coulisse en object-position dans une boîte pleine → débord = contenu cover − zone
+  //  · au-delà : la boîte (w % × h %) est translatée → débord = boîte − zone (le contenu couvre toujours la boîte)
   const vid = zone==='av' ? (document.getElementById('previewAvImg') || document.getElementById('bypassPreviewVid')) : document.getElementById('gpVideo');
   const z   = document.getElementById(zone==='av'?'avZone':'gameplayZone');
-  if(!vid || !z) return 0;
-  const sW = vid.videoWidth || vid.naturalWidth || 0;
-  const sH = vid.videoHeight || vid.naturalHeight || 0;
+  if(!vid || !z) return {x:0, y:0};
+  const sW = vid.videoWidth || vid.naturalWidth || 0, sH = vid.videoHeight || vid.naturalHeight || 0;
   const zW = z.offsetWidth, zH = z.offsetHeight;
-  if(!sW || !sH || !zW || !zH) return 0;
-  const wZoom = zone==='av' ? (cfg.avWidth||cfg.avZoom||100)/100 : (cfg.gpWidth||cfg.gpZoom||100)/100;
-  const cover = Math.max(zW/sW, zH/sH);      // object-fit: cover
-  const contentW = sW * cover * wZoom;       // largeur réellement affichée
-  return Math.max(0, (contentW - zW) / 2);   // ± débord, en px espace-phone (393)
+  if(!zW || !zH) return {x:0, y:0};
+  const hZ = (zone==='av' ? (cfg.avZoom||100) : Math.max(100, cfg.gpZoom||100)) / 100;
+  const wZ = (zone==='av' ? (cfg.avWidth||cfg.avZoom||100) : Math.max(100, cfg.gpWidth||cfg.gpZoom||100)) / 100;
+  if(hZ === 1 && wZ === 1){
+    if(!sW || !sH) return {x:0, y:800};                 // métadonnées pas encore là : vertical libre (ancien comportement)
+    const cover = Math.max(zW/sW, zH/sH);
+    return { x: Math.max(0, (sW*cover - zW)/2), y: Math.max(0, (sH*cover - zH)/2) };
+  }
+  return { x: Math.max(0, zW*(wZ-1)/2), y: Math.max(0, zH*(hZ-1)/2) };
 }
+function _zoneMaxCropX(zone){ return _zoneMaxCrop(zone).x; }
 // Déplacement crop d'une zone — X ET Y. X bornée au débord réel (0 sur un vertical),
 // Y libre. Souris + tactile.
 function _zoneDragMove(clientX, clientY){
@@ -22127,15 +22134,15 @@ function _zoneDragMove(clientX, clientY){
   const scale = dispW / 393;
   const dx = (clientX - _drag.x0) / scale;
   const dy = (clientY - _drag.y0) / scale;
+  const m = _zoneMaxCrop(_drag.zone);
+  const cl = (v, mx) => mx ? Math.max(-mx, Math.min(mx, v)) : 0;
   if(_drag.zone==='av'){
-    const mx = _zoneMaxCropX('av');
-    cfg.avCropX = mx ? Math.max(-mx, Math.min(mx, (_drag.cx0||0) + dx)) : 0;
-    cfg.avCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
+    cfg.avCropX = cl((_drag.cx0||0) + dx, m.x);
+    cfg.avCropY = cl(_drag.cy0 + dy, m.y);
     updateAvatarCrop();
   } else {
-    const mx = _zoneMaxCropX('gp');
-    cfg.gpCropX = mx ? Math.max(-mx, Math.min(mx, (_drag.cx0||0) + dx)) : 0;
-    cfg.gpCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
+    cfg.gpCropX = cl((_drag.cx0||0) + dx, m.x);
+    cfg.gpCropY = cl(_drag.cy0 + dy, m.y);
     updateGpCrop();
   }
 }
