@@ -1682,7 +1682,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal3">100%</span>
                   </div>
-                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="100" max="300" value="100" step="5"
+                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="10" max="300" value="100" step="5"
                     oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal3').textContent=this.value+'%';const s4=document.getElementById('gpZoom');if(s4){s4.value=this.value;document.getElementById('gpZoomVal').textContent=this.value+'%'}updateGpCrop()"
                     style="width:100%">
                 </div>
@@ -1691,7 +1691,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Largeur du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal3">100%</span>
                   </div>
-                  <input class="aa-slider" type="range" id="gpWidthSlider3" min="100" max="300" value="100" step="5"
+                  <input class="aa-slider" type="range" id="gpWidthSlider3" min="10" max="300" value="100" step="5"
                     oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal3').textContent=this.value+'%';const s4=document.getElementById('gpWidthSlider');if(s4){s4.value=this.value;document.getElementById('gpWidthVal').textContent=this.value+'%'}updateGpCrop()"
                     style="width:100%">
                 </div>
@@ -1768,19 +1768,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <!-- INVERSER clip ⇄ avatar — bouton fantôme pleine largeur -->
                 <button onclick="swapSplit()" class="btn btn-ghost" style="width:100%">Inverser clip ⇄ avatar</button>
 
-                <!-- AVATAR AU PREMIER PLAN — carte + interrupteur (maquette ToggleRow) -->
-                <div class="row card" style="justify-content:space-between;padding:14px 16px;gap:14px">
-                  <div class="row gap12" style="min-width:0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto" id="avFrontIco"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
-                    <div class="col" style="line-height:1.3;min-width:0">
-                      <span style="font-weight:600;font-size:14.5px">Avatar au premier plan</span>
-                      <span class="faint" style="font-size:12px">Quand l'avatar et le clip se superposent, l'avatar passe devant (sinon derrière)</span>
-                    </div>
-                  </div>
-                  <button onclick="_toggleAvatarFront()" id="avFrontSwitch" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer">
-                    <div id="avFrontThumb" style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>
-                  </button>
-                </div>
+
 
                 <!-- RÉGLAGES DU SPLIT SCREEN — repliable (chevron), autres réglages -->
                 <button onclick="_toggleSplitAdv()" id="splitAdvBtn" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;text-align:left;cursor:pointer">
@@ -1804,14 +1792,27 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                       <span class="label" style="margin:0">Zoom du clip</span>
                       <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
                     </div>
-                    <input class="aa-slider" type="range" id="gpZoom" min="100" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                    <input class="aa-slider" type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                   </div>
                   <div>
                     <div class="row" style="justify-content:space-between;margin-bottom:8px">
                       <span class="label" style="margin:0">Largeur du gameplay</span>
                       <span class="mono accent" style="font-size:13px" id="gpWidthVal">100%</span>
                     </div>
-                    <input class="aa-slider" type="range" id="gpWidthSlider" min="100" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                    <input class="aa-slider" type="range" id="gpWidthSlider" min="10" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                  </div>
+                  <!-- AVATAR AU PREMIER PLAN — carte + interrupteur (maquette ToggleRow) — dans l'accordéon depuis le 02/09 -->
+                  <div class="row card" style="justify-content:space-between;padding:14px 16px;gap:14px">
+                    <div class="row gap12" style="min-width:0">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto" id="avFrontIco"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+                      <div class="col" style="line-height:1.3;min-width:0">
+                        <span style="font-weight:600;font-size:14.5px">Avatar au premier plan</span>
+                        <span class="faint" style="font-size:12px">Quand l'avatar et le clip se superposent, l'avatar passe devant (sinon derrière)</span>
+                      </div>
+                    </div>
+                    <button onclick="_toggleAvatarFront()" id="avFrontSwitch" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer">
+                      <div id="avFrontThumb" style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>
+                    </button>
                   </div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text-3);text-align:center;padding:8px 10px;background:var(--panel-1);border:1px solid var(--border);border-radius:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Glisse directement sur le preview pour recadrer les zones</div>
                 </div>
@@ -22028,10 +22029,11 @@ function applyClip(zone){
 function updateGpCrop(){
   const vid = document.getElementById('gpVideo');
   if(!vid) return;
-  // Le clip REMPLIT toujours sa zone (plancher 100 % — Axel 02/09 : « que ça couvre la zone noire »).
-  // On zoome/élargit vers le haut et on recadre en GLISSANT (gpCropX/gpCropY), jamais de #0a0a0a apparent.
-  const h = Math.max(100, cfg.gpZoom  || 100);
-  const w = Math.max(100, cfg.gpWidth || cfg.gpZoom || 100);
+  // 100 % = le clip COUVRE sa zone (défaut). Au-dessus : zoom/élargissement + recadrage en glissant.
+  // En dessous (Axel 02/09 : « on peut pas dézoomer ? ») : la boîte rétrécit, centrée, bandes noires assumées —
+  // le glissé est alors bloqué sur cet axe (_zoneMaxCrop → 0) pour ne jamais découvrir PLUS de noir.
+  const h = cfg.gpZoom  || 100;
+  const w = cfg.gpWidth || cfg.gpZoom || 100;
   const tx = cfg.gpCropX || 0;
   const ty = cfg.gpCropY || 0;
   vid.style.maxWidth = 'none';
@@ -22115,8 +22117,8 @@ function _zoneMaxCrop(zone){
   const sW = vid.videoWidth || vid.naturalWidth || 0, sH = vid.videoHeight || vid.naturalHeight || 0;
   const zW = z.offsetWidth, zH = z.offsetHeight;
   if(!zW || !zH) return {x:0, y:0};
-  const hZ = (zone==='av' ? (cfg.avZoom||100) : Math.max(100, cfg.gpZoom||100)) / 100;
-  const wZ = (zone==='av' ? (cfg.avWidth||cfg.avZoom||100) : Math.max(100, cfg.gpWidth||cfg.gpZoom||100)) / 100;
+  const hZ = (zone==='av' ? (cfg.avZoom||100) : (cfg.gpZoom||100)) / 100;
+  const wZ = (zone==='av' ? (cfg.avWidth||cfg.avZoom||100) : (cfg.gpWidth||cfg.gpZoom||100)) / 100;
   if(hZ === 1 && wZ === 1){
     if(!sW || !sH) return {x:0, y:800};                 // métadonnées pas encore là : vertical libre (ancien comportement)
     const cover = Math.max(zW/sW, zH/sH);
@@ -24728,7 +24730,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H);
     if(gpVid)
       _cvDrawZone(ctx, gpVid, {x:0,y:_gpY,w:W,h:gpH},
-        Math.max(100, cfg.gpZoom||100), Math.max(100, cfg.gpWidth||cfg.gpZoom||100), cfg.gpCropX||0, cfg.gpCropY||0, W, H);
+        cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100, cfg.gpCropX||0, cfg.gpCropY||0, W, H);
     _cvHook(ctx, W, H);
     if(words.length > 0){
       const sub = Math.max(0, elapsed + subAdvSec);
@@ -25614,7 +25616,12 @@ function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvas
   // BANDE NOIRE (le fillRect en dessous). On réplique object-fit:cover +
   // object-position du preview : destination = zone pleine, la fenêtre source
   // coulisse et reste BORNÉE dans l'image → couverture garantie, jamais de noir.
-  const zW = (zoomW || 100) / 100, zH = (zoomH || 100) / 100;
+  let zW = (zoomW || 100) / 100, zH = (zoomH || 100) / 100;
+  // #dezoom (02/09) : sous 100 % sur un axe, on ne montre pas PLUS de source (ça distordait dès que la fenêtre
+  // dépassait l'image) : la DESTINATION rétrécit sur cet axe, centrée, bandes noires — exactement l'aperçu.
+  zone = { ...zone };
+  if(zW < 1){ const nw = zone.w * zW; zone.x += (zone.w - nw) / 2; zone.w = nw; cropX = 0; zW = 1; }
+  if(zH < 1){ const nh = zone.h * zH; zone.y += (zone.h - nh) / 2; zone.h = nh; cropY = 0; zH = 1; }
   const cover = Math.max(zone.w / srcW, zone.h / srcH);   // remplit la zone (cover)
   const srcCW = Math.min(srcW, (zone.w / cover) / zW);    // fenêtre source (zoom = + petite)
   const srcCH = Math.min(srcH, (zone.h / cover) / zH);
