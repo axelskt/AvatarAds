@@ -1031,7 +1031,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">Sélectionne ton contenu principal</div>
               <div class="row gap12" id="avCards2" style="margin-bottom:20px;align-items:stretch;flex-wrap:wrap">
                 <button type="button" onclick="_avPick('photo')" data-src="photo" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:2px solid var(--accent);background:var(--accent-soft)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style=""><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Avatar</span><span class="faint" style="font-size:12px;line-height:1.4">Ton portrait devient un avatar animé</span></div></button>
-                <button type="button" onclick="_avPick('video')" data-src="video" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Vidéo existante</span><span class="faint" style="font-size:12px;line-height:1.4">Réutilise une vidéo déjà générée · 0 crédit</span></div></button>
+                <button type="button" onclick="_avPick('video')" data-src="video" class="av-card2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Vidéo existante</span><span class="faint" style="font-size:12px;line-height:1.4">Réutilise une vidéo · 0 crédit</span></div></button>
                 <!-- #lotC · 3ᵉ option : Générer un avatar (owner-gated : classe gen-dev, affichée au chargement membre si dev/owner) -->
                 <button type="button" onclick="_avPick('genai')" data-src="genai" class="av-card2 gen-dev" style="flex:1 1 180px;min-width:170px;display:none;flex-direction:column;gap:9px;padding:16px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="av-ico2" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="av-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14.5px">Générer un avatar</span><span class="faint" style="font-size:12px;line-height:1.4">Décris-le, l'IA crée sa photo · 3 crédits</span></div></button>
               </div>
@@ -1112,7 +1112,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </div>
                 <div style="display:flex;flex-direction:column;gap:3px">
                   <span style="font-weight:700;font-size:14.5px">Vidéo existante</span>
-                  <span class="faint" style="font-size:12px;line-height:1.4">Réutilise une vidéo déjà générée · 0 crédit</span>
+                  <span class="faint" style="font-size:12px;line-height:1.4">Réutilise une vidéo · 0 crédit</span>
                 </div>
               </button>
             </div>
@@ -1995,10 +1995,11 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div id="transcriptPanel" style="display:block;margin-bottom:8px">
                 <!-- Tap Sync manuel — gratuit (maquette : btn-ghost pleine largeur) -->
                 <button onclick="startTapSync()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;display:none">Tap Sync — synchroniser manuellement</button>
-                <!-- Whisper IA — Elite/Pro (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
-                <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div></button>
-                <textarea id="transcriptInput" placeholder="…ou colle / tape ton transcript ici" class="field" style="min-height:90px;resize:vertical;display:block"></textarea>
-                <button onclick="applyTranscript()" class="btn btn-primary gen-dev-hide" style="width:100%;margin-top:10px">Appliquer comme sous-titres</button>
+                <!-- Whisper IA — dès Starter (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
+                <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div></button>
+                <!-- Zone « colle / tape ton transcript » RETIRÉE de l'UI (Axel 02/09) : le champ reste dans le DOM, caché, car Whisper y écrit et applyTranscript/le rendu y lisent. -->
+                <textarea id="transcriptInput" class="field" style="display:none"></textarea>
+                <button onclick="applyTranscript()" class="btn btn-primary gen-dev-hide" style="width:100%;margin-top:10px;display:none">Appliquer comme sous-titres</button>
               </div>
               <!-- Éditeur de groupes — collapsible -->
               <div id="wordEditorWrap" style="margin-top:6px">
@@ -19240,7 +19241,7 @@ async function whisperTranscribe(){
   // btn capturé AVANT le 1er await : window.event ne survit pas aux continuations async
   // (garde instanceof : hors clic direct, event.currentTarget peut être window)
   const btn = (typeof event !== 'undefined' && event?.currentTarget instanceof HTMLElement) ? event.currentTarget : null;
-  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; } };
+  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; } };
   // #gen-dev · après une transcription réussie : bouton FIGÉ « Transcription faite »
   // (vert, disabled) — évite de recliquer et de repayer/relancer Whisper.
   const _whBtnDone = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:600;font-size:14.5px;color:var(--text-2)">Transcription faite</span><span class="faint" style="font-size:12px">Sous-titres calés — régénère un audio pour relancer</span></div>'; btn.disabled = true; btn.style.opacity = '.8'; btn.style.cursor = 'default'; } };
@@ -21719,7 +21720,7 @@ function _whisperBtnReset(){
   const b = document.getElementById('whisperBtn');
   if(!b) return;
   b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer';
-  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">ELITE</span></div><span class="faint" style="font-size:12px">Précision maximale en quelques secondes · Plan Pro / Élite</span></div>';
+  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>';
 }
 function handleMp4AudioFile(file){
   if(!file) return;
@@ -23788,7 +23789,7 @@ async function retryHedraAuto(btn){
   }
 }
 function genSubtitlesFromAudio(){
-  toast('Sous-titres auto — utilise Whisper IA dans l\'onglet Voix (Plan Pro/Elite)');
+  toast('Sous-titres auto — utilise Whisper IA dans l\'onglet Voix (dès le plan Starter)');
 }
 
 // ══════════════════════════════════════════════════
@@ -24213,6 +24214,8 @@ function resetAll(){
   const _go = () => { if(_reloaded) return; _reloaded = true; location.reload(); };
   try { _idbPurgeDrafts().finally(_go); } catch(e){ _go(); }
   setTimeout(_go, 1200);                              // filet : reload GARANTI même si l'IDB traîne
+  // #fill (Axel 02/09) : après « Réinitialiser totalement », les sliders gardaient l'ancien remplissage orange (valeur remise sans refaire --aa-fill)
+  try{ _aaInitSliders(); }catch(_){}
 }
 // Filet de sécurité : le flag de reset total ne doit jamais persister au-delà du boot (sinon un futur brouillon ne serait pas restauré)
 setTimeout(function(){ try{ sessionStorage.removeItem('aa_full_reset'); }catch(e){} }, 2500);
@@ -26833,7 +26836,7 @@ function _saveGeneratorState(){
 
 function _syncSlider(id, val, fmtFn, lblId){
   if(val === undefined || val === null) return;
-  const sl = document.getElementById(id); if(sl) sl.value = val;
+  const sl = document.getElementById(id); if(sl){ sl.value = val; if(typeof _aaSliderFill==='function') _aaSliderFill(sl); }  // #fill (02/09) : le remplissage orange ne suivait la valeur qu'au drag utilisateur
   const vl = document.getElementById(lblId); if(vl) vl.textContent = fmtFn(val);
 }
 
@@ -26922,6 +26925,7 @@ function _restoreGeneratorState(){
 
     updateSubPreview(); updateLivePreview();
   } catch(e){ console.warn('_restoreGeneratorState:', e); }
+  try{ _aaInitSliders(); }catch(_){}   // #fill : restauration localStorage → remplissage à jour
 }
 
 // ── BYPASS PERSISTANCE ──
@@ -30221,7 +30225,7 @@ function _expDeductImageCredit(){
 // ── Transcription ─────────────────────────────────────────────
 async function expressWhisper(){
   const plan = (currentMember?.plan||'free').toLowerCase();
-  if(!['pro','elite','byok','developer'].includes(plan)){ showPaywall(); toast('Whisper IA — Plan Pro ou Élite requis'); return; }
+  if(!['starter','pro','elite','byok','developer'].includes(plan)){ showPaywall(); toast('Whisper IA disponible dès le plan Starter'); return; }
   if(!_expressVideoFile){ toast('Importe ta vidéo d\'abord'); return; }
   const btn = document.getElementById('expWhisperBtn');
   if(btn){ btn.innerHTML='Transcription en cours…'; btn.disabled=true; }
@@ -30257,7 +30261,7 @@ async function expressWhisper(){
     try{ const j=JSON.parse(msg); msg=(j?.error?.message||msg).slice(0,150); }catch(_){}
     toast('Whisper : '+msg.slice(0,140));
   } finally {
-    if(btn){ btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcrire automatiquement (Whisper IA)</span><span class="tag-beta">PRO+</span></div></div>'; btn.disabled=false; }
+    if(btn){ btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div></div>'; btn.disabled=false; }
   }
 }
 
