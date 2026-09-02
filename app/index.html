@@ -1682,7 +1682,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal3">100%</span>
                   </div>
-                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="10" max="300" value="100" step="5"
+                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="100" max="300" value="100" step="5"
                     oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal3').textContent=this.value+'%';const s4=document.getElementById('gpZoom');if(s4){s4.value=this.value;document.getElementById('gpZoomVal').textContent=this.value+'%'}updateGpCrop()"
                     style="width:100%">
                 </div>
@@ -1691,7 +1691,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Largeur du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpWidthVal3">100%</span>
                   </div>
-                  <input class="aa-slider" type="range" id="gpWidthSlider3" min="10" max="300" value="100" step="5"
+                  <input class="aa-slider" type="range" id="gpWidthSlider3" min="100" max="300" value="100" step="5"
                     oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal3').textContent=this.value+'%';const s4=document.getElementById('gpWidthSlider');if(s4){s4.value=this.value;document.getElementById('gpWidthVal').textContent=this.value+'%'}updateGpCrop()"
                     style="width:100%">
                 </div>
@@ -1788,7 +1788,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <span class="label" style="margin:0">Zoom du clip</span>
                     <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
                   </div>
-                  <input class="aa-slider" type="range" id="gpZoom" min="10" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                  <input class="aa-slider" type="range" id="gpZoom" min="100" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                 </div>
 
                 <!-- RÉGLAGES DU SPLIT SCREEN — repliable (chevron), autres réglages -->
@@ -1812,7 +1812,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                       <span class="label" style="margin:0">Largeur du gameplay</span>
                       <span class="mono accent" style="font-size:13px" id="gpWidthVal">100%</span>
                     </div>
-                    <input class="aa-slider" type="range" id="gpWidthSlider" min="10" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                    <input class="aa-slider" type="range" id="gpWidthSlider" min="100" max="300" value="100" step="5" oninput="cfg.gpWidth=+this.value;document.getElementById('gpWidthVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                   </div>
                   <div style="font-size:10px;font-family:var(--mono);color:var(--text-3);text-align:center;padding:8px 10px;background:var(--panel-1);border:1px solid var(--border);border-radius:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Glisse directement sur le preview pour recadrer les zones</div>
                 </div>
@@ -2182,7 +2182,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
               <!-- VIDEO CONTENT -->
               <div id="videoContent" style="position:absolute;inset:0;display:flex;flex-direction:column">
-                <div id="avZone" style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 26px),linear-gradient(180deg,oklch(0.32 0.07 18),oklch(0.16 0.04 18));display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" title="Glisse pour repositionner">
+                <div id="avZone" style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 26px),linear-gradient(180deg,oklch(0.32 0.07 18),oklch(0.16 0.04 18));display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex:1;min-height:0;cursor:grab" onmousedown="startZoneDrag(event,'av')" ontouchstart="startZoneDrag(event,'av')" title="Glisse pour repositionner">
                   <div id="avDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Glisse pour recadrer</span></div>
                   <div id="previewAvEmoji" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:.55;color:#fff;pointer-events:none;text-align:center">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
@@ -2193,7 +2193,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <video id="bypassPreviewVid" muted loop playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:3"></video>
                 </div>
 
-                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
+                <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" ontouchstart="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
                   <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Glisse pour recadrer</span></div>
                   <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15);position:relative;z-index:1">
                     <div style="line-height:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg></div>
@@ -22028,8 +22028,10 @@ function applyClip(zone){
 function updateGpCrop(){
   const vid = document.getElementById('gpVideo');
   if(!vid) return;
-  const h = cfg.gpZoom || 100;
-  const w = cfg.gpWidth || cfg.gpZoom || 100;
+  // Le clip REMPLIT toujours sa zone (plancher 100 % — Axel 02/09 : « que ça couvre la zone noire »).
+  // On zoome/élargit vers le haut et on recadre en GLISSANT (gpCropX/gpCropY), jamais de #0a0a0a apparent.
+  const h = Math.max(100, cfg.gpZoom  || 100);
+  const w = Math.max(100, cfg.gpWidth || cfg.gpZoom || 100);
   const tx = cfg.gpCropX || 0;
   const ty = cfg.gpCropY || 0;
   vid.style.maxWidth = 'none';
@@ -22097,11 +22099,51 @@ function updateAvatarCrop(){
 // ── DRAG-TO-CROP ──
 let _drag = null;
 let _cropDrag = null;
+// ── DÉBORD HORIZONTAL d'une zone (0 si le clip n'est pas plus large que sa zone) ──
+// Un clip vertical remplit la largeur → 0 → le glissé latéral ne fait rien (pas de
+// bande noire). Un clip 16:9 dans une zone plus étroite déborde → on peut le faire
+// coulisser gauche/droite pour choisir le cadrage (Axel 02/09). Miroir du clamp du
+// rendu MP4 dans _cvDrawZone (fenêtre source bornée dans l'image).
+function _zoneMaxCropX(zone){
+  const vid = zone==='av' ? (document.getElementById('previewAvImg') || document.getElementById('bypassPreviewVid')) : document.getElementById('gpVideo');
+  const z   = document.getElementById(zone==='av'?'avZone':'gameplayZone');
+  if(!vid || !z) return 0;
+  const sW = vid.videoWidth || vid.naturalWidth || 0;
+  const sH = vid.videoHeight || vid.naturalHeight || 0;
+  const zW = z.offsetWidth, zH = z.offsetHeight;
+  if(!sW || !sH || !zW || !zH) return 0;
+  const wZoom = zone==='av' ? (cfg.avWidth||cfg.avZoom||100)/100 : (cfg.gpWidth||cfg.gpZoom||100)/100;
+  const cover = Math.max(zW/sW, zH/sH);      // object-fit: cover
+  const contentW = sW * cover * wZoom;       // largeur réellement affichée
+  return Math.max(0, (contentW - zW) / 2);   // ± débord, en px espace-phone (393)
+}
+// Déplacement crop d'une zone — X ET Y. X bornée au débord réel (0 sur un vertical),
+// Y libre. Souris + tactile.
+function _zoneDragMove(clientX, clientY){
+  if(!_drag) return;
+  const wrapper = document.getElementById('phoneWrapper');
+  const dispW = wrapper ? wrapper.offsetWidth : 220;   // le téléphone est rendu à 393 px logiques
+  const scale = dispW / 393;
+  const dx = (clientX - _drag.x0) / scale;
+  const dy = (clientY - _drag.y0) / scale;
+  if(_drag.zone==='av'){
+    const mx = _zoneMaxCropX('av');
+    cfg.avCropX = mx ? Math.max(-mx, Math.min(mx, (_drag.cx0||0) + dx)) : 0;
+    cfg.avCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
+    updateAvatarCrop();
+  } else {
+    const mx = _zoneMaxCropX('gp');
+    cfg.gpCropX = mx ? Math.max(-mx, Math.min(mx, (_drag.cx0||0) + dx)) : 0;
+    cfg.gpCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
+    updateGpCrop();
+  }
+}
 function startZoneDrag(e, zone){
   e.preventDefault();
+  const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
   _drag = {
     zone,
-    x0: e.clientX, y0: e.clientY,
+    x0: p.clientX, y0: p.clientY,
     cx0: zone==='av' ? (cfg.avCropX||0) : (cfg.gpCropX||0),
     cy0: zone==='av' ? (cfg.avCropY||0) : (cfg.gpCropY||0)
   };
@@ -22130,31 +22172,18 @@ document.addEventListener('mousemove', e=>{
     return;
   }
   if(!_drag) return;
-  // scale factor: phone renders at 393px native, displayed at wrapper width
-  const wrapper = document.getElementById('phoneWrapper');
-  const dispW = wrapper ? wrapper.offsetWidth : 220;
-  const scale = dispW / 393;
-  const dx = (e.clientX - _drag.x0) / scale;
-  const dy = (e.clientY - _drag.y0) / scale;
-  // ── LA VIDÉO COULISSE, ELLE NE SORT PAS DU CADRE ──────────────────────────
-  // Axel, 03/08 : « on peut sortir le clip comme ça, du coup ça peut casser une
-  // vidéo ; faudrait que la vidéo reste et coulisse juste en haut ou en bas,
-  // pas sur le côté ».
-  // Le déplacement horizontal allait de −800 à +800 px : on pouvait pousser le
-  // clip entièrement hors du cadre et ne garder qu'une bande noire — invisible
-  // à l'aperçu tant qu'on ne regarde pas le bord, mais bien présente dans le
-  // MP4 téléchargé.
-  // Or la vidéo remplit DÉJÀ toute la largeur (object-fit: cover) : la déplacer
-  // latéralement ne peut que découvrir du vide, jamais montrer autre chose. Le
-  // seul recadrage qui a du sens est vertical — choisir la hauteur du visage ou
-  // de l'action. On verrouille donc X et on laisse Y libre.
-  if(_drag.zone==='av'){
-    cfg.avCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
-    updateAvatarCrop();
-  } else {
-    cfg.gpCropY = Math.max(-800, Math.min(800, _drag.cy0 + dy));
-    updateGpCrop();
-  }
+  _zoneDragMove(e.clientX, e.clientY);
+});
+document.addEventListener('touchmove', e=>{
+  if(!_drag || !(e.touches && e.touches[0])) return;
+  e.preventDefault();
+  _zoneDragMove(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:false});
+document.addEventListener('touchend', ()=>{
+  if(!_drag) return;
+  const h = document.getElementById(_drag.zone==='av'?'avDragHint':'gpDragHint'); if(h) h.style.opacity='0';
+  const el = document.getElementById(_drag.zone==='av'?'avZone':'gameplayZone'); if(el) el.style.cursor='grab';
+  _drag = null;
 });
 document.addEventListener('mouseup', ()=>{
   if(_cropDrag){ _cropDrag = null; return; }
@@ -24689,7 +24718,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H);
     if(gpVid)
       _cvDrawZone(ctx, gpVid, {x:0,y:_gpY,w:W,h:gpH},
-        cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100, cfg.gpCropX||0, cfg.gpCropY||0, W, H);
+        Math.max(100, cfg.gpZoom||100), Math.max(100, cfg.gpWidth||cfg.gpZoom||100), cfg.gpCropX||0, cfg.gpCropY||0, W, H);
     _cvHook(ctx, W, H);
     if(words.length > 0){
       const sub = Math.max(0, elapsed + subAdvSec);
