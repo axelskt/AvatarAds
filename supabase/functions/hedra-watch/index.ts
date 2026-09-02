@@ -15,6 +15,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const SUPABASE_URL  = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const ANON_KEY      = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+const HEDRA_V3_KEY  = Deno.env.get('HEDRA_V3_KEY') ?? ''
 const RESEND_KEY    = Deno.env.get('RESEND_API_KEY') ?? ''
 const CRON_SECRET   = Deno.env.get('CRON_SECRET') ?? ''
 const FROM = 'AvatarAds <bonjour@avatarads.fr>'
@@ -33,8 +34,8 @@ async function readState(): Promise<State | null> {
 }
 async function fetchBalance(): Promise<{ balance: number | null; error?: string }> {
   try {
-    // Via NOTRE hedra-proxy (jeton service_role = « moteur ») : la clé Hedra et son en-tête restent au même endroit.
-    const r = await fetch(SUPABASE_URL + '/functions/v1/hedra-proxy?path=' + encodeURIComponent('/v3/balance'), { headers: { 'Authorization': 'Bearer ' + SERVICE_KEY, 'apikey': SERVICE_KEY } })
+    // Même clé et même en-tête que hedra-proxy en v3 : `Authorization: Key <HEDRA_V3_KEY>` (api.hedra.com).
+    const r = await fetch('https://api.hedra.com/v3/balance', { headers: { 'Authorization': `Key ${HEDRA_V3_KEY}`, 'Content-Type': 'application/json' } })
     if (!r.ok) return { balance: null, error: `HTTP ${r.status}` }
     const j = await r.json()
     const b = Number(j?.balance)
