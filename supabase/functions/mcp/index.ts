@@ -694,7 +694,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           bullets: { type: 'array', items: { type: 'string' }, description: "static_ad : 3 bénéfices courts (2 à 4 mots chacun), chacun aura une icône." },
           brand: { type: 'string', description: "static_ad : nom de la marque, tel qu'écrit sur le produit." },
           cta: { type: 'string', description: "static_ad : accroche finale courte (ex. « Pétillant. Sain. Délicieux. »)." },
-          ad_format: { type: 'string', description: "static_ad (compte développeur/owner) : FORMAT de pub pioché dans la banque de 58 formats. Vide ou 'random' = au hasard (parfait quand l'utilisateur demande « une static ad » sans précision). Sinon un id : x-raisons, story, us-vs-them, diagramme, n-achete-pas-ca, notes, message, tableau, urgence, reddit, transformation, news, new-vs-old, avis, annonce, alerte-stock, google, probleme-solution, effets-secondaires, offre, statistiques, dessin, email, idiot, problemes-passes, mythes-vs-realite, x-signes, zero-etoile, tierlist, texte-peau, trustpilot, meme, evite-ca, us-vs-us, attention, ugly, native, blog, hand-pov, selfie-ugc, clean, crashtest, saison, nouveaute, schema, infographie, post-it, ugly-organic, nuancier, greenscreen, comment-answer, starter-pack, usage, commercial, mascotte, cartoon, gamification, quizz." },
           quote: { type: 'string', description: "static_ad : témoignage / message / paragraphe en FRANÇAIS pour les formats qui en ont un (avis, reddit, message, email, story, annonce…)." },
           number: { type: 'string', description: "static_ad : chiffre clé (ex. « 85% », « 10 ») pour les formats statistiques / X signes." },
           format: { type: 'string', enum: ['portrait', 'square', 'landscape'], description: 'portrait 9:16 (défaut, idéal TikTok/Reels), square 1:1, landscape 16:9' },
@@ -1023,7 +1022,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   const productUrl = String(args.product_url || '').trim()
   const hasRefSource = !!directRefUrl || !!productUrl
   // #static-ads-bank : compte développeur/owner → « static_ad » pioche un des 58 formats (ou celui demandé via ad_format).
-  const adFormat: StaticAdFormat | null = (kind === 'static_ad' && isUnlimited(profile)) ? pickStaticAdFormat(STATIC_AD_FORMATS, args.ad_format) : null
+  const adFormat: StaticAdFormat | null = (kind === 'static_ad' && isUnlimited(profile)) ? pickStaticAdFormat(STATIC_AD_FORMATS, 'random') : null   // Axel : toujours au hasard
   if (adFormat) args = { ...args, ad_format: adFormat.id }   // mémorisé → « Regénérer » / carte photo gardent le même format
   const promptFinal = composerPromptImage({ ...args, prompt, __adFormat: adFormat }, hasRefSource)   // source présente → prompt « produit à l'identique »
   // CARTE (dépôt / lien) : static ad ou UGC SANS URL d'image directe (avec ou sans lien produit). La carte

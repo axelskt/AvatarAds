@@ -2933,7 +2933,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <span class="label" style="margin:0">Style visuel</span>
             </div>
             <div id="imgStyleGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 0 auto;grid-auto-rows:1fr"></div>
-            <div id="imgAdFormatRow" style="display:none;margin-top:10px"><div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:6px">Format de pub <span class="faint" style="text-transform:none;letter-spacing:0">· banque de 58 formats · test développeur</span></div><select id="imgAdFormat" class="field" style="width:100%;padding:10px 12px;border-radius:10px"></select></div>
           </div>
 
           <!-- CORRECTIONS RAPIDES (mode Correction) -->
@@ -9734,19 +9733,7 @@ function _imgPickStyle(id){
 // #static-ads-bank (02/09) : « Pub Produit » pioche un des 58 formats analysés (Aléatoire par défaut) —
 // réservé au compte développeur/owner tant qu'Axel n'a pas validé ; ensuite _aaStaticAdsBankOn → tout le monde.
 function _aaStaticAdsBankOn(){ return !!(window.AA_STATIC_ADS && currentMember && (currentMember.is_owner || String(currentMember.plan||'').toLowerCase()==='developer')); }
-function _imgSyncAdFormatRow(){
-  const row = document.getElementById('imgAdFormatRow'), sel = document.getElementById('imgAdFormat');
-  if(!row || !sel) return;
-  const on = _imgSelectedStyleId==='staticad' && _aaStaticAdsBankOn();
-  row.style.display = on ? '' : 'none';
-  if(on && !sel.options.length){
-    const fams = {}; (window.AA_STATIC_ADS||[]).forEach(f => { (fams[f.family] = fams[f.family] || []).push(f); });
-    const lbl = { accroche:'Accroche', preuve:'Preuve sociale', comparaison:'Comparaison', education:'Pédagogie', ugc:'UGC / natif', native:'Natif', offre:'Offre', humour:'Humour', produit:'Produit' };
-    let html = '<option value="random">Aléatoire · pioche parmi les 58</option>';
-    Object.keys(fams).forEach(k => { html += '<optgroup label="'+(lbl[k]||k)+'">' + fams[k].map(f => '<option value="'+f.id+'">'+f.name+'</option>').join('') + '</optgroup>'; });
-    sel.innerHTML = html;
-  }
-}
+function _imgSyncAdFormatRow(){ /* Axel 02/09 : pas de choix de format — toujours aléatoire (sélecteur retiré) */ }
 
 function _imgInitFormatGrid(){
   const g = document.getElementById('imgFormatGrid'); if(!g) return;
@@ -10752,8 +10739,7 @@ async function generateImage(){
     // le texte de l'utilisateur décrit le produit ({PRODUCT}). Le même prompt sert avec ou sans image de référence.
     let _adFmt = null;
     if(_sid==='staticad' && _imgMode!=='correct' && _aaStaticAdsBankOn()){
-      const _wanted = (document.getElementById('imgAdFormat')||{}).value || 'random';
-      _adFmt = window.AA_STATIC_ADS_PICK(window.AA_STATIC_ADS, _wanted);
+      _adFmt = window.AA_STATIC_ADS_PICK(window.AA_STATIC_ADS, 'random');   // Axel : toujours aléatoire, pas de choix
       enhancedPrompt = 'Static ad, format « ' + _adFmt.name + ' ». ' + window.AA_STATIC_ADS_FILL(_adFmt.prompt, { PRODUCT: prompt }) + window.AA_STATIC_ADS_COMMON;
       window._lastAdFormat = _adFmt.id;
       toast('Format de pub : ' + _adFmt.name);
