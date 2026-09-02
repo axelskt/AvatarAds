@@ -588,14 +588,26 @@ async function composeGenSubs(jobDir, outPath, plan) {
     try { _streamsDbg = ffprobe(orig, 'stream=index,codec_type,codec_name').replace(/\n/g, ' | ') } catch (_) {}
     const baseHasAudioF = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
     console.log(`▶ gen-subs source AUDIO = ${baseHasAudioF ? 'OUI' : 'NON (source muette)'} · streams: ${_streamsDbg}`)
-    const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}`
-    const argsF = ['-v', 'error', '-y', '-i', orig, '-vf', vf,
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p']
+    // #vitesse (02/09) : si la source est DÉJÀ du h264 yuv420p en 1080×1920 (sortie Hedra 1080p), on la
+    // recopie telle quelle (-c:v copy) : plus de ré-encodage d'une vidéo qu'on ne modifie pas → ~2× plus
+    // rapide, aucune perte. Sinon (720p, autre codec) : normalisation encodée comme avant.
+    let _copyOk = false
+    try {
+      const pv = ffprobe(orig, 'stream=codec_name,width,height,pix_fmt').split('\n').map((l) => l.trim()).filter(Boolean)
+      _copyOk = pv.some((l) => /(^|,)h264(,|$)/.test(l) && /(^|,)1080(,|$)/.test(l) && /(^|,)1920(,|$)/.test(l) && /(^|,)yuv420p(,|$)/.test(l))
+    } catch (_) { _copyOk = false }
+    const argsF = ['-v', 'error', '-y', '-i', orig]
+    if (_copyOk) {
+      argsF.push('-c:v', 'copy')
+    } else {
+      const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}`
+      argsF.push('-vf', vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p')
+    }
     if (baseHasAudioF) argsF.push('-map', '0:v:0', '-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
     else argsF.push('-an')
     argsF.push('-t', String(D), '-movflags', '+faststart', outPath)
     execFileSync('ffmpeg', argsF, { stdio: 'pipe' })
-    console.log(`✅ gen-subs RAPIDE (sans sous-titres · mux audio + faststart, ${D}s) → ${outPath}`)
+    console.log(`✅ gen-subs RAPIDE (${_copyOk ? 'copie h264 sans ré-encodage' : 'normalisation encodée'} · audio + faststart, ${D}s) → ${outPath}`)
     return
   }
 
@@ -2739,7 +2751,7 @@ async function pollLoop() {
       const { data: jobs } = await sb.from('render_jobs').select('*').eq('status', 'queued')
         .order('created_at').limit(1)
       const job = jobs && jobs[0]
-      if (!job) { await new Promise((r) => setTimeout(r, 5000)); continue }
+      if (!job) { await new Promise((r) => setTimeout(r, 2000)); continue }   // #vitesse (02/09) : 5 s → 2 s de latence de prise
 
       // claim atomique : queued → rendering (un seul worker gagne)
       const { data: claimed } = await sb.from('render_jobs')

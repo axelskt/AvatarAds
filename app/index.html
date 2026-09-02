@@ -18643,6 +18643,43 @@ async function _gvRecUse(){
 // coût est calculé avec le MÊME barème que le débit réel (avatarPerSec + le
 // supplément 1080p) : un écart entre l'annonce et le débit est la faute la plus
 // chère qu'on puisse commettre ici.
+// ── DURÉE RÉELLE DE L'AUDIO (facturation) ──────────────────────────────────────
+// Axel 02/09 : « on facture selon l'audio de l'user, arrondi à la seconde, la vidéo se termine avec l'audio ».
+// L'ancien slider « Durée cible » (#f-duration) n'est plus dans le parcours mais restait LU au débit → 7 s
+// d'audio facturées 20 s. Source de vérité : le fichier audio/vidéo importé (ou enregistré), sinon le PCM
+// décodé (_audioPCMBuf), sinon la vidéo avatar (bypass) ou le clip gameplay (mode « voix sur gameplay »).
+async function _sourceAudioDurationSec(){
+  try{
+    if(typeof _audioPCMBuf !== 'undefined' && _audioPCMBuf && isFinite(_audioPCMBuf.duration) && _audioPCMBuf.duration > 0.2) return _audioPCMBuf.duration;
+    const f = (typeof mp4AudioFile !== 'undefined' && mp4AudioFile) || window.mp4AudioFile || window._bypassHedraFile || null;
+    if(f){
+      if(window._audioDurSec && window._audioDurFile === f) return window._audioDurSec;
+      const d = await _mediaDurationSec(f);
+      if(d > 0){ window._audioDurSec = d; window._audioDurFile = f; return d; }
+    }
+    if(typeof voiceMode !== 'undefined' && voiceMode === 'gameplay'){
+      const gv = document.getElementById('gpVideo'); if(gv && isFinite(gv.duration) && gv.duration > 0) return gv.duration;
+    }
+  }catch(e){ console.warn('[durée audio]', e); }
+  return 0;
+}
+// Durée d'un File/Blob média : métadonnées <audio>/<video> (8 s max), puis decodeAudioData si la durée est
+// Infinity (enregistrements WebM sans en-tête de durée).
+function _mediaDurationSec(file){
+  return new Promise((resolve)=>{
+    let done = false; const fin = (v)=>{ if(!done){ done = true; try{ URL.revokeObjectURL(el.src); }catch(_){} resolve(v); } };
+    const el = document.createElement((file.type||'').startsWith('video') ? 'video' : 'audio');
+    el.preload = 'metadata'; el.muted = true;
+    el.onloadedmetadata = async ()=>{
+      if(isFinite(el.duration) && el.duration > 0) return fin(el.duration);
+      try{ const ab = await file.arrayBuffer(); const ac = new (window.AudioContext||window.webkitAudioContext)(); const buf = await ac.decodeAudioData(ab); try{ ac.close(); }catch(_){} fin(buf.duration||0); }
+      catch(_){ fin(0); }
+    };
+    el.onerror = ()=>fin(0);
+    setTimeout(()=>fin(0), 8000);
+    el.src = URL.createObjectURL(file);
+  });
+}
 function _majRecap(){
   const txt = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
 
@@ -18666,7 +18703,12 @@ function _majRecap(){
   // ⚠ AVATAR = VIDÉO (bypass Hedra) : aucun lipsync à générer → 0 cr/s de
   // lipsync (Axel, 13/08 : « j'ai mis une vidéo à la place de l'avatar et il
   // me dit 10 crédits alors qu'il n'y a aucun lipsync à faire »).
-  const dur   = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
+  const _f = (typeof mp4AudioFile !== 'undefined' && mp4AudioFile) || window.mp4AudioFile || window._bypassHedraFile || null;
+  let dur = (window._audioDurSec && window._audioDurFile === _f) ? Math.ceil(window._audioDurSec) : 0;
+  if(!(dur > 0)){
+    dur = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');   // repli, remplacé dès que la durée est lue
+    if(!window._recapDurPending){ window._recapDurPending = true; _sourceAudioDurationSec().then(d=>{ window._recapDurPending = false; if(d > 0) try{ _majRecap(); }catch(_){} }); }
+  }
   const bypassVid = !!window._bypassHedraOn;
   const base  = (aAvatar && !bypassVid) ? CREDIT_COSTS.avatarPerSec * dur : 0;
   const surHD = q === '1080p' ? Math.ceil(dur * CREDIT_COSTS.hd1080PerSec) : 0;
@@ -23062,7 +23104,10 @@ async function startGeneration(){
   // ── Débit crédits : lipsync 1 cr/s UNIQUEMENT si un avatar est sélectionné (mode
   // « audio sur gameplay » = 0 cr de lipsync). Plus de supplément voix : ElevenLabs retiré. ──
   if(currentMember && !guestMode){
-    const durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes');
+    // Durée facturée = durée RÉELLE de l'audio, arrondie à la seconde supérieure (Axel 02/09). Le slider
+    // #f-duration (retiré du parcours) ne sert plus qu'en repli si aucune durée n'est lisible.
+    let durSecs = Math.ceil((await _sourceAudioDurationSec()) || 0);
+    if(!(durSecs > 0)){ durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes'); console.warn('[crédits] durée audio inconnue → repli', durSecs, 's'); }
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
     const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0);
     // #122 · ouvre le flux AVANT tout débit. L'appel était à l'intérieur du test
@@ -24480,8 +24525,8 @@ async function _genServerCompose(btn){
     const crd = await cr.json();
     if(!cr.ok || !crd.job_id) throw new Error(crd.error || 'création du job échouée');
     let outUrl = null;
-    for(let i=0; i<180; i++){
-      await new Promise(r => setTimeout(r, 4000));
+    for(let i=0; i<288; i++){
+      await new Promise(r => setTimeout(r, 2500));   // #vitesse (02/09) : 4 s → 2,5 s, ~12 min max inchangé
       if(window._composeCancelled) throw new Error('CANCELLED');
       const st = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', job_id: crd.job_id }) });
       const sd = await st.json();
