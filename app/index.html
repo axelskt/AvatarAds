@@ -23489,8 +23489,11 @@ async function _stripSilencesFromBlob(blob){
 // Elite → meilleur modèle (Character-3 / Hedra Omnia)
 // Autres → modèle standard (Character-1 / Hedra Avatar)
 const HEDRA_MODELS = {
-  elite:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s (défaut)
-  default: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character 3 — 8 cr/s (défaut)
+  // #avatar (Axel 02/09) : le Générateur passe sur Hedra AVATAR (v3 « hedra-avatar »), comme le worker Montage IA.
+  // Character-3 (d1dd37a3-…) mettait 14-23 min par clip le 02/09 contre 0,9-2,3 min pour Avatar en août ; même
+  // contrat d'appel (prompt / aspect_ratio / resolution / start_image / audio) et même tarif côté crédits.
+  elite:   '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar (v3 hedra-avatar) — défaut
+  default: '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar (v3 hedra-avatar) — défaut
   omnihuman: '5efced1a-0ca0-4255-87d2-070146842ad9', // OmniHuman 1.5 I2V — qualité max (#107, via Montage IA segmenté)
   // hedraOmnia:   'ab372b84-432f-44f5-bacc-c2542465f712', // Hedra Omnia — 15 cr/s (Elite futur)
   // hedraAvatar:  '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar — 7 cr/s
@@ -23659,7 +23662,7 @@ async function callHedra(audioBlob){
     // pas d'attente repartie de zéro).
     // Signature = taille de l'audio + identité LOCALE de l'image (l'URL d'upload Hedra change à chaque envoi).
     const _imgId = (selAvatar && selAvatar.localFile) ? (selAvatar.localFile.name + ':' + selAvatar.localFile.size) : String((typeof avatarImgUrl !== 'undefined' && avatarImgUrl) || (selAvatar && selAvatar.localUrl) || '');
-    const _sig = String(audioBlob && audioBlob.size) + '|' + _imgId;
+    const _sig = String(audioBlob && audioBlob.size) + '|' + _imgId + '|' + _hedraSlug(MODEL_ID);   // le modèle fait partie de la signature (pas de reprise d'un job Character-3)
     let _last = window._hedraLastJob; if(!_last){ try{ _last = JSON.parse(localStorage.getItem('aa_hedra_last_job') || 'null'); }catch(_){ _last = null; } }
     if(_last && _last.sig === _sig && (Date.now() - _last.at) < 60*60*1000){
       try{
@@ -31568,7 +31571,7 @@ async function _hedraV3Upload(b64, mime, name){
   const blob = await _imgShrinkForUpload(b64, mime);   // b64 = toujours une IMAGE ici
   return _hedraV3UploadBlob(blob, name);
 }
-// UUID modèle (ancienne API) → slug v3 (lipsync). Char-3 = défaut Générateur ; Avatar = worker.
+// UUID modèle (ancienne API) → slug v3 (lipsync). Depuis le 02/09 : AVATAR partout (Générateur + worker) ; Character-3 reste mappé pour les anciens ids.
 function _hedraSlug(modelId){
   return ({
     'd1dd37a3-e39a-4854-a298-6510289f9cf2':'hedra-character-3',
