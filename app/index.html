@@ -23194,6 +23194,8 @@ async function startGeneration(){
     // `_rate > 0` : avec un gameplay et un MP3 importé, le tarif de base est nul
     // et le supplément 1080p se serait greffé sur la liste d'opérations de la
     // génération PRÉCÉDENTE — donc remboursé au mauvais moment en cas d'échec.
+    // #hedra-gate (03/09) : si le fournisseur n'a plus de solde (hedra-watch ok=false), on s'arrête ICI, avant tout débit.
+    if(_rate > 0 && !(await _hedraGate())) return;
     creditsFlowBegin();
     if(_rate > 0){
       const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
@@ -31608,6 +31610,30 @@ function cartoonPickSeedanceDur(ms, el){
 }
 
 // ── Helper générique pour l'API Hedra (via proxy Supabase) ──
+// #hedra-gate (03/09) : AVANT de débiter un membre, on demande l'état du solde Hedra à hedra-watch (mémorisé,
+// rafraîchi toutes les 15 min par pg_cron). ok=false (< 2 $) → message clair, aucun débit, alerte à Axel (1 fois/h).
+async function _hedraGate(){
+  try{
+    const H = await getAuthHeader();
+    const r = await fetch(SUPABASE_URL + '/functions/v1/hedra-watch', { headers: { ...H } });
+    if(!r.ok) return true;                                   // surveillance indisponible → on n'empêche pas de générer
+    const j = await r.json();
+    if(j && j.ok === false){
+      toast('Génération momentanément indisponible : notre fournisseur vidéo est saturé. Aucun crédit débité — réessaie dans quelques minutes.');
+      _hedraAlertAxel('Hedra bloqué côté app — solde ' + (j.balance == null ? '?' : j.balance.toFixed(2)) + ' $', 'Un membre a voulu générer un avatar ; refus avant débit (hedra-watch ok=false).');
+      return false;
+    }
+    return true;
+  }catch(_){ return true; }
+}
+function _hedraAlertAxel(title, description){
+  try{
+    const k = 'aa_hedra_alert_at', last = +localStorage.getItem(k) || 0;
+    if(Date.now() - last < 60*60*1000) return;               // au plus une alerte par heure et par navigateur
+    localStorage.setItem(k, String(Date.now()));
+    getAuthHeader().then(H => fetch(SUPABASE_URL + '/functions/v1/notify-suggestion', { method:'POST', headers:{ 'Content-Type':'application/json', ...H }, body: JSON.stringify({ title:'ALERTE ' + title, description }) })).catch(()=>{});
+  }catch(_){}
+}
 async function _hedraFetch(path, method, body, isForm){
   const PROXY = SUPABASE_URL + '/functions/v1/hedra-proxy';
   const authHdr = await getAuthHeader();
@@ -31659,6 +31685,13 @@ function _hedraSlug(modelId){
 }
 async function _hedraV3Submit(slug, input){
   const r = await _hedraFetch('/v3/models/'+slug, 'POST', { input });
+  // #hedra-402 (03/09) : 402 = plus de solde sur le compte Hedra (vu le 02/09 : six échecs d'un membre Pro en
+  // six minutes, puis résiliation). Message clair pour l'utilisateur (ses crédits sont remboursés par l'appelant)
+  // + alerte immédiate à Axel. Le garde-fou principal est _hedraGate() AVANT le débit.
+  if(r.status === 402){
+    try{ _hedraAlertAxel('Hedra 402 — plus de solde', 'Création de job refusée (402) sur '+slug+'. Recharger le compte Hedra.'); }catch(_){}
+    throw new Error('Fournisseur vidéo momentanément indisponible — aucun crédit débité, réessaie dans un moment');
+  }
   if(!r.ok) throw new Error('Hedra '+slug+' '+r.status+' — '+(await r.text()).slice(0,220));
   const j = await r.json(); const id = j.job_id || j.id;
   if(!id) throw new Error('Hedra : pas de job_id');

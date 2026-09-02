@@ -25,3 +25,7 @@ verify_jwt = false
 
 [functions.auth-otp]
 verify_jwt = false
+
+# hedra-watch : appelée par pg_cron avec x-cron-key (pas de JWT) + GET vérifié dans le code
+[functions.hedra-watch]
+verify_jwt = false
