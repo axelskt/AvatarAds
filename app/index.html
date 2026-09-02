@@ -24491,6 +24491,8 @@ async function _genServerCompose(btn){
   // quand il produit EXACTEMENT l'aperçu. À porter côté worker ensuite.
   if((cfg.format || 'vertical') !== 'vertical') return false;                                   // format carré non géré serveur
   if((cfg.avZoom ?? 100) !== 100 || (cfg.avWidth ?? 100) !== 100 || (cfg.avCropX ?? 0) !== 0 || (cfg.avCropY ?? 0) !== 0) return false; // recadrage avatar non géré serveur
+  { const _gv = document.getElementById('gpVideo'), _gz = document.getElementById('gameplayZone');
+    if(_gv?.src && _gz && _gz.style.display !== 'none') return false; }                       // split gameplay non géré serveur : le worker ne compose pas le split (même test hasGp que la compo client)
   { const _ho = document.getElementById('hookOverlay'), _ht = document.getElementById('hookText');
     if(_ho && _ho.style.display !== 'none' && _ht && (_ht.textContent || '').trim()) return false; } // hook non gravé serveur
 
@@ -24797,7 +24799,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     const _avY = (_gpOnTop && gpVid) ? gpH : 0;
     const _gpY = _gpOnTop ? 0 : avH;
     _cvDrawZone(ctx, hedraVid, {x:0,y:_avY,w:W,h:avH},
-      cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H);
+      cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H, {topAlign:true});
     if(gpVid)
       _cvDrawZone(ctx, gpVid, {x:0,y:_gpY,w:W,h:gpH},
         cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100, cfg.gpCropX||0, cfg.gpCropY||0, W, H);
@@ -25676,36 +25678,38 @@ function _audioBufferToWavBlob(buffer){
 
 // ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
 // zone:{x,y,w,h} en pixels canvas — zoomH/zoomW en % — cropX/cropY en pixels espace phone 393px
-function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvasH){
+function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvasH, opts){
   const srcW = src.videoWidth || src.naturalWidth || 0;
   const srcH = src.videoHeight || src.naturalHeight || 0;
   if(!srcW || !srcH) return;
-  // #recadrage (16/08) : le décalage crop doit déplacer la FENÊTRE SOURCE, pas le
-  // rectangle de DESTINATION. Avant, à 100 % de zoom la destination faisait pile la
-  // taille de la zone → tout offset la faisait sortir de la zone et laissait une
-  // BANDE NOIRE (le fillRect en dessous). On réplique object-fit:cover +
-  // object-position du preview : destination = zone pleine, la fenêtre source
-  // coulisse et reste BORNÉE dans l'image → couverture garantie, jamais de noir.
-  let zW = (zoomW || 100) / 100, zH = (zoomH || 100) / 100;
-  // #dezoom (02/09) : sous 100 % sur un axe, on ne montre pas PLUS de source (ça distordait dès que la fenêtre
-  // dépassait l'image) : la DESTINATION rétrécit sur cet axe, centrée, bandes noires — exactement l'aperçu.
-  zone = { ...zone };
-  if(zW < 1){ const nw = zone.w * zW; zone.x += (zone.w - nw) / 2; zone.w = nw; cropX = 0; zW = 1; }
-  if(zH < 1){ const nh = zone.h * zH; zone.y += (zone.h - nh) / 2; zone.h = nh; cropY = 0; zH = 1; }
-  const cover = Math.max(zone.w / srcW, zone.h / srcH);   // remplit la zone (cover)
-  const srcCW = Math.min(srcW, (zone.w / cover) / zW);    // fenêtre source (zoom = + petite)
-  const srcCH = Math.min(srcH, (zone.h / cover) / zH);
-  // cropX/Y sont en px espace-phone (393 large). En px source : ×(canvasW/393)/(cover·zoom).
-  // cropY>0 (glisser vers le bas) révèle le HAUT de la source → srcY diminue.
-  const offX = cropX * (canvasW / 393) / (cover * zW);
-  const offY = cropY * (canvasW / 393) / (cover * zH);
-  let srcX = (srcW - srcCW) / 2 - offX;
-  let srcY = (srcH - srcCH) / 2 - offY;
-  srcX = Math.max(0, Math.min(srcW - srcCW, srcX));       // borné DANS l'image → aucune bande noire
-  srcY = Math.max(0, Math.min(srcH - srcCH, srcY));
+  // #split-fidele (02/09) : on réplique EXACTEMENT l'aperçu (updateGpCrop / updateAvatarCrop) au lieu
+  // d'une formule à part. L'aperçu, c'est une BOÎTE (l'élément <video>/<img>) de zone.w×largeur % par
+  // zone.h×zoom % centrée dans la zone puis décalée par le glissé, un contenu qui la COUVRE avec UNE SEULE
+  // échelle (object-fit: cover), le tout rogné par la zone. L'ancien code zoomait chaque axe séparément
+  // (largeur 240 % = ×2,4 à l'horizontale seule) : gameplay écrasé et sur-zoomé au rendu alors que
+  // l'aperçu était bon (Axel 02/09 : « le rendu du split screen ne va pas du tout »). Une seule formule
+  // couvre maintenant 100 %, le zoom, le dézoom (bandes noires assumées) et le glissé — à zoom uniforme
+  // (largeur = hauteur) le résultat est identique à avant.
+  const zW = (zoomW || 100) / 100, zH = (zoomH || 100) / 100;
+  const k  = canvasW / 393;                                   // px espace-phone (aperçu) → px canvas
+  const tx = (cropX || 0) * k, ty = (cropY || 0) * k;
+  const bw = zone.w * zW, bh = zone.h * zH;                    // la boîte
+  const bx = zone.x + (zone.w - bw) / 2, by = zone.y + (zone.h - bh) / 2;
+  const s  = Math.max(bw / srcW, bh / srcH);                   // cover : une seule échelle
+  const cw = srcW * s, ch = srcH * s;
+  // object-position : centré — sauf l'avatar (« center top ») : aligné en haut, et à 100 % seulement tant
+  // que rien n'est glissé (l'aperçu repasse alors en calc(50 % + décalage)).
+  const topAlign = !!(opts && opts.topAlign) && !(zW === 1 && zH === 1 && ((cropX || 0) || (cropY || 0)));
+  const cx = bx + (bw - cw) / 2 + tx;
+  const cy = by + (topAlign ? 0 : (bh - ch) / 2) + ty;
+  // visible = zone ∩ boîte ∩ contenu ; le reste de la zone garde le fond noir, comme l'aperçu.
+  const vx0 = Math.max(zone.x, bx + tx, cx), vy0 = Math.max(zone.y, by + ty, cy);
+  const vx1 = Math.min(zone.x + zone.w, bx + tx + bw, cx + cw), vy1 = Math.min(zone.y + zone.h, by + ty + bh, cy + ch);
+  if(vx1 - vx0 < 0.5 || vy1 - vy0 < 0.5) return;
+  const sx = (vx0 - cx) / s, sy = (vy0 - cy) / s, sw = (vx1 - vx0) / s, sh = (vy1 - vy0) / s;
   ctx.save();
   ctx.beginPath(); ctx.rect(zone.x, zone.y, zone.w, zone.h); ctx.clip();
-  ctx.drawImage(src, srcX, srcY, srcCW, srcCH, zone.x, zone.y, zone.w, zone.h);
+  ctx.drawImage(src, sx, sy, sw, sh, vx0, vy0, vx1 - vx0, vy1 - vy0);
   ctx.restore();
 }
 
