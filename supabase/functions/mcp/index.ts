@@ -1,10 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
 // jamais l'image : il ne le place donc pas (vu le 31/07, broll vide).
-import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
+// ⚡ COLD-START (01/09) : chargé en import DYNAMIQUE là où on l'utilise (fabriquerApercu /
+// reframeToAspect / miniature), PAS au module-init. Le WASM ne pèse plus sur le démarrage à
+// froid → les appels d'outils (generate_*) répondent vite même sur un isolate froid. (La
+// connexion — initialize/tools/list — est servie à l'edge Netlify, donc la fonction n'est plus
+// réveillée que pour les vrais appels : son démarrage doit être le plus léger possible.)
+const loadImage = () => import('https://deno.land/x/imagescript@1.3.0/mod.ts').then(m => m.Image)
 
 // ── Serveur MCP AvatarAds ↔ Claude (#73) ──
 // Protocole MCP « Streamable HTTP » (JSON-RPC sur POST, réponses JSON, sans état).
@@ -187,7 +193,7 @@ async function fabriquerApercu(bytes: Uint8Array): Promise<Uint8Array | null> {
   try {
     // 1.3.0 : la 1.2.17 plantait une fois sur deux sur les PNG gpt-image
     // (profils couleur) — c'est pour ça qu'Axel ne voyait « que des liens »
-    const { Image } = await import('https://deno.land/x/imagescript@1.3.0/mod.ts')
+    const Image = await loadImage()
     const img = await Image.decode(bytes)
     if (img.width > APERCU_LARGEUR) img.resize(APERCU_LARGEUR, Image.RESIZE_AUTO)
     return await img.encodeJPEG(82)
@@ -203,6 +209,7 @@ async function fabriquerApercu(bytes: Uint8Array): Promise<Uint8Array | null> {
 // c'est déjà bon). Ne jette jamais vers l'appelant (try/catch côté bg).
 async function reframeToAspect(bytes: Uint8Array, aspect: string): Promise<{ bytes: Uint8Array; mimeType: string }> {
   const target = aspect === '16:9' ? 16 / 9 : 9 / 16
+  const Image = await loadImage()
   const img = await Image.decode(bytes)
   const cur = img.width / img.height
   if (Math.abs(cur - target) / target <= 0.03) return { bytes, mimeType: 'image/png' }
@@ -357,7 +364,7 @@ function aaMedia(url, kind, name){
     : '<img src="'+url+'" alt="" class="aa-m"/>';
   var media=m.querySelector('video,img');
   if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
-  m.style.padding='0'; aaBtns(); aaKick();
+  m.style.padding='0'; m.style.opacity=''; m.style.fontSize=''; aaBtns(); aaKick(); // 02/09 : plus AUCUN voile hérité de l'état « chargement » sur l'image finale
 }
 function aaSetPct(p){ if(p>aaPct) aaPct=p; var pb=document.getElementById('pb'); if(pb) pb.style.width=aaPct+'%'; }
 function aaPollStatus(u){
@@ -372,7 +379,7 @@ function aaStartPoll(u){
   aaStart=Date.now();
   var b=document.getElementById('b'); if(b) b.style.display='none';
   var m=document.getElementById('m');
-  m.innerHTML='<div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
+  m.style.opacity=''; m.innerHTML='<div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
   aaSetPct(6); aaKick(); aaPollStatus(u);
   aaPollT=setInterval(function(){ if(Date.now()-aaStart>240000){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } return; } aaPollStatus(u); }, 2500);
 }
@@ -539,7 +546,7 @@ const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
   .aa-pw{height:6px;background:rgba(128,128,128,.22);border-radius:6px;overflow:hidden;margin:12px 0 2px}
   .aa-pb{height:100%;width:5%;background:#FF5A1F;border-radius:6px;transition:width .6s ease}
 </style></head><body>
-<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px;opacity:.75">AvatarAds — chargement…</div>
+<div class="aa-c" id="c"><div id="m" style="padding:14px 13px;font-size:13px"><span style="opacity:.75">AvatarAds — chargement…</span></div>
 <div class="aa-b" id="b" style="display:none"><button class="aa-a aa-rg" id="rg" type="button" style="border:none;cursor:pointer">↻ Regénérer</button><span style="flex:1"></span><button class="aa-a aa-dl" id="dl" type="button" style="border:none;cursor:pointer">Télécharger</button></div></div>
 <script type="module" src="${WIDGET_ORIGIN}/widget.js"></script></body></html>`
 
@@ -687,6 +694,9 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           bullets: { type: 'array', items: { type: 'string' }, description: "static_ad : 3 bénéfices courts (2 à 4 mots chacun), chacun aura une icône." },
           brand: { type: 'string', description: "static_ad : nom de la marque, tel qu'écrit sur le produit." },
           cta: { type: 'string', description: "static_ad : accroche finale courte (ex. « Pétillant. Sain. Délicieux. »)." },
+          ad_format: { type: 'string', description: "static_ad (compte développeur/owner) : FORMAT de pub pioché dans la banque de 58 formats. Vide ou 'random' = au hasard (parfait quand l'utilisateur demande « une static ad » sans précision). Sinon un id : x-raisons, story, us-vs-them, diagramme, n-achete-pas-ca, notes, message, tableau, urgence, reddit, transformation, news, new-vs-old, avis, annonce, alerte-stock, google, probleme-solution, effets-secondaires, offre, statistiques, dessin, email, idiot, problemes-passes, mythes-vs-realite, x-signes, zero-etoile, tierlist, texte-peau, trustpilot, meme, evite-ca, us-vs-us, attention, ugly, native, blog, hand-pov, selfie-ugc, clean, crashtest, saison, nouveaute, schema, infographie, post-it, ugly-organic, nuancier, greenscreen, comment-answer, starter-pack, usage, commercial, mascotte, cartoon, gamification, quizz." },
+          quote: { type: 'string', description: "static_ad : témoignage / message / paragraphe en FRANÇAIS pour les formats qui en ont un (avis, reddit, message, email, story, annonce…)." },
+          number: { type: 'string', description: "static_ad : chiffre clé (ex. « 85% », « 10 ») pour les formats statistiques / X signes." },
           format: { type: 'string', enum: ['portrait', 'square', 'landscape'], description: 'portrait 9:16 (défaut, idéal TikTok/Reels), square 1:1, landscape 16:9' },
           quality: { type: 'string', enum: ['standard', 'high'], description: `'standard' = DÉFAUT OBLIGATOIRE (${IMG_COST.standard} crédits). N'utilise 'high' (${IMG_COST.high} crédits) QUE si l'utilisateur écrit explicitement « haute qualité »/« high »/« 4K ». NE choisis PAS 'high' parce que le prompt dit « détaillé », « réaliste » ou « ultra » — ça décrit l'image voulue, pas la qualité du moteur.` },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
@@ -698,14 +708,14 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'generate_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (Veo 3.1, audio et dialogues inclus) à partir d'un prompt et optionnellement d'une image de départ. Coût : ${VIDEO_COST_SEC} crédit/seconde, débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video.`,
+      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : ${VIDEO_COST_SEC} crédit/seconde, débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Pour partir de LA photo de l'utilisateur (son visage, un UGC de lui), il te faut une URL publique : dis-lui de la déposer via « Glisse la photo pour Claude » sur ${APP_URL} (ça lui rend un lien) puis de coller ce lien, que tu passes dans image_url. Sans URL, ne bloque pas : propose de générer la scène décrite (sans sa photo). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
       inputSchema: {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: 'Description de la vidéo : scène, mouvement, ambiance, dialogues éventuels.' },
           duration_seconds: { type: 'integer', minimum: 4, maximum: 10, description: 'Durée en secondes, 4 à 10 (défaut 8).' },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
-          image_url: { type: 'string', description: "URL publique d'une image de départ (optionnel) — ex. une image générée avec generate_image." },
+          image_url: { type: 'string', description: "URL publique http(s) d'une image de départ (optionnel) : une image de generate_image, ou une photo que l'utilisateur a déposée via « Glisse la photo pour Claude » sur le site. ⚠️ claude.ai ne transmet PAS les images jointes au chat — il FAUT une vraie URL, une photo collée dans la conversation ne compte pas." },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['prompt'],
@@ -717,8 +727,8 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
       description: "⚠️ NORMALEMENT INUTILE : après generate_image, l'image s'affiche TOUTE SEULE dans la carte (widget + barre de progression), tu n'as RIEN à faire. N'appelle check_image QUE si l'utilisateur redemande explicitement le statut. (Sinon : retourne l'URL de l'image quand prête ; long-poll côté serveur.)",
       inputSchema: {
         type: 'object',
-        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_image.' } },
-        required: ['job_id'],
+        properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_image. OMETS-le pour récupérer la dernière image du compte (après une erreur de relais ou une carte absente).' } },
+        
       },
     },
     {
@@ -728,22 +738,6 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
       inputSchema: {
         type: 'object',
         properties: { job_id: { type: 'string', description: 'Le job_id retourné par generate_video. OMETS-le pour récupérer la dernière vidéo du compte (après une erreur de connexion).' } },
-      },
-    },
-    {
-      name: 'generate_avatar_video',
-      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_avatar_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Génère une VIDÉO AVATAR PARLANT (le Générateur AvatarAds) — un avatar regarde la caméra et DIT le script, VOIX NATIVE Veo 3.1 (audio + lip-sync natifs, plus d'ElevenLabs). Conçu pour un avatar SYNTHÉTIQUE : sans photo, Veo invente une personne réaliste ; pour un look précis (âge, genre, décor), crée d'abord l'avatar avec generate_image puis passe son URL en avatar_image_url — tu gardes ainsi le même visage sur toute une série. N'anime PAS la photo d'une personne réelle sans son consentement. Coût : Veo Standard ${VIDEO_COST_SEC} cr/s · Veo Pro ${VIDEO_COST_SEC_PRO} cr/s (durée estimée depuis le script, 4/6/8 s max par génération), débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre puis lecteur) — n'appelle PAS check_avatar_video.`,
-      inputSchema: {
-        type: 'object',
-        properties: {
-          script: { type: 'string', description: `Le texte que l'avatar va DIRE (français ou anglais), parlé en voix native Veo. ~${CHARS_PER_SEC} caractères ≈ 1 s de vidéo. Max ~${8 * CHARS_PER_SEC} caractères (≈ 8 s, limite d'une génération Veo).` },
-          avatar_image_url: { type: 'string', description: "URL d'un avatar SYNTHÉTIQUE (idéalement généré via generate_image) ou d'un visage dont l'utilisateur détient les droits — PAS la photo d'une vraie personne non consentante. Sans photo, Veo invente une personne réaliste." },
-          model: { type: 'string', enum: ['standard', 'pro'], description: `Modèle Veo : 'standard' (défaut, ${VIDEO_COST_SEC} cr/s) ou 'pro' (meilleure qualité, ${VIDEO_COST_SEC_PRO} cr/s).` },
-          aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
-          confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
-        },
-        required: ['script'],
       },
     },
     {
@@ -757,7 +751,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'clean_audio',
-      description: `Nettoie un fichier audio (le Nettoyage audio AvatarAds) : supprime bruit de fond, clics et parasites en isolant la voix (ElevenLabs Voice Isolator). Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
+      description: `Nettoie un fichier audio (le Nettoyage audio AvatarAds) : supprime bruit de fond, clics et parasites en isolant la voix. Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -769,13 +763,13 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'lipsync_video',
-      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale. Deux moteurs : hedra (Character-3, 1 crédit/s, défaut) ou omnihuman (ByteDance OmniHuman 1.5 via fal, ${OMNI_COST_SEC} crédits/s, plus haute résolution). Débité au lancement, remboursé si échec. Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
+      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale. Deux qualités (paramètre engine) : standard (1 crédit/s, défaut) ou haute résolution (${OMNI_COST_SEC} crédits/s, plan plus large). Débité au lancement, remboursé si échec. Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
           image_url: { type: 'string', description: "URL publique de la photo de l'avatar (PNG/JPEG/WebP)." },
           audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV/MP3, max 60 s) — le clip sortant a la même durée." },
-          engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `hedra (défaut, 1 cr/s) ou omnihuman (${OMNI_COST_SEC} cr/s, 1088×1920).` },
+          engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `Qualité : 'hedra' = standard (défaut, 1 cr/s) · 'omnihuman' = haute résolution 1088×1920 (${OMNI_COST_SEC} cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
@@ -784,7 +778,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'montage_ia',
-      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (Hedra 2 cr/s, OmniHuman 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (lipsync standard 2 cr/s, lipsync haute résolution 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -792,8 +786,8 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : nettoie la voix (isolation, bruit de fond supprimé) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — repasser un fichier propre à l'isolation ne l'améliore pas." },
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
           avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Aucun crédit en plus." },
-          lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (Hedra Character-3) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte 2 crédits par seconde de visage (débités à la génération). Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
-          lipsync_model: { type: 'string', enum: ['hedra', 'omnihuman', 'mix'], description: "Optionnel, 'hedra' par défaut (économique). 'omnihuman' = OmniHuman 1.5 : plan plus large, les deux mains visibles, cheveux sans effet plastique, 50 i/s — ~5 crédits par seconde de visage. 'mix' = OmniHuman sur le PREMIER passage avatar (le hook, là où l'attention se joue) puis Hedra sur les suivants : le meilleur rapport qualité/prix. Ne s'applique que si lipsync est activé." },
+          lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (lipsync standard) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte 2 crédits par seconde de visage (débités à la génération). Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
+          lipsync_model: { type: 'string', enum: ['hedra', 'omnihuman', 'mix'], description: "Optionnel, 'hedra' par défaut (standard, économique). 'omnihuman' = haute résolution : plan plus large, les deux mains visibles, cheveux sans effet plastique, 50 i/s — ~5 crédits par seconde de visage. 'mix' = haute résolution sur le PREMIER passage avatar (le hook, là où l'attention se joue) puis standard sur les suivants : le meilleur rapport qualité/prix. Ne s'applique que si lipsync est activé." },
           media: {
             type: 'array', maxItems: 7,
             description: "Optionnel — jusqu'à 7 images/vidéos de l'utilisateur à placer dans le montage. Le chef d'orchestre les pose au moment que leur NOM décrit (nomme-les par ce qu'elles montrent : « resultat-image-ia-femme-lunettes.png », « demo-produit.mp4 »).",
@@ -901,7 +895,7 @@ async function runGetAccount(profile: Record<string, unknown>): Promise<ToolCont
 - Plan : ${profile.plan || 'free'}
 - Crédits restants : ${credits}
 
-Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · avatar parlant (voix native Veo) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
+Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · avatar parlant (voix native) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
@@ -949,13 +943,26 @@ async function genererImage(prompt: string, size: string, quality: 'standard' | 
 // (maquette de réf. 20/08 : titre géant, sous-titre, 3 bénéfices avec icônes, marque en bas,
 // produit en héros) ; ugc = selfie réaliste ; free = prompt de l'utilisateur.
 const TXT = (v: unknown) => String(v || '').replace(/["\n]+/g, ' ').trim()
+// INTÉGRITÉ TEXTES & LOGOS (02/09, Axel) — ajoutée à TOUS les genres : l'étoile Mercedes sur le volant, un
+// logo de canette, une enseigne… doivent être justes, symétriques, lisibles, jamais brouillés ni inventés.
+const TXT_INTEGRITY = ' TEXT & LOGO INTEGRITY: any brand logo, emblem, badge or text visible anywhere in the scene (packaging, car badge, steering-wheel emblem, clothing, signage, screens) must be geometrically correct and symmetrical where the real one is, sharp and legible, with real correctly-spelled words — no garbled, mirrored, melted, duplicated or invented letters, no distorted or fictional emblems; if a mark cannot be rendered exactly, keep it small and clean rather than wrong.'
 function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): string {
   const kind = String(args.kind || 'free')
   const base = TXT(args.prompt)
   const refTxt = avecRef
-    ? ' Use the EXACT product/subject from the reference image: identical shape, label, logo, typography, colours, materials and proportions — do NOT redesign, rename, recolour or alter it in any way; only re-light and re-compose it.'
+    ? ' PRODUCT 1:1 FROM THE REFERENCE IMAGE — the product/subject must be a faithful, undistorted copy of the reference: identical shape, proportions, colours, materials, label layout, logo geometry and typography. Every letter, word and number on the packaging must be reproduced EXACTLY as in the reference — same spelling, same font, same placement, crisp and fully legible; NEVER invent, mirror, merge, blur, warp or replace characters, never add or remove text. The logo must be a pixel-faithful copy (no warping, no missing or extra strokes). Do NOT redesign, rename, recolour or alter it; only re-light and re-compose it.'
     : ''
   if (kind === 'static_ad') {
+    // #static-ads-bank (02/09) : un format de la banque (58 gabarits analysés) remplace la mise en page unique.
+    const fmt = (args as Record<string, unknown>).__adFormat as StaticAdFormat | null | undefined
+    if (fmt) {
+      const filled = fillStaticAdTemplate(fmt.prompt, {
+        PRODUCT: base, BRAND: TXT(args.brand), HEADLINE: TXT(args.headline), SUB: TXT(args.subheadline),
+        BULLETS: Array.isArray(args.bullets) ? (args.bullets as unknown[]).map(TXT).filter(Boolean).slice(0, 12) : [],
+        CTA: TXT(args.cta), QUOTE: TXT(args.quote), NUMBER: TXT(args.number),
+      })
+      return `Static ad, format « ${fmt.name} ». ` + filled + STATIC_AD_COMMON + refTxt + TXT_INTEGRITY
+    }
     const bullets = Array.isArray(args.bullets) ? (args.bullets as unknown[]).map(TXT).filter(Boolean).slice(0, 4) : []
     const headline = TXT(args.headline), sub = TXT(args.subheadline), brand = TXT(args.brand), cta = TXT(args.cta)
     return [
@@ -967,15 +974,15 @@ function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): s
       `At the bottom: ${brand ? `the brand lockup "${brand}"` : 'the brand name'}${cta ? ` and the tagline "${cta}"` : ''}, small and elegant.`,
       'PRODUCT: the product is the HERO of the composition, large, on the right or centre, photorealistic with studio lighting, soft reflections and a subtle glow, with a few floating ingredients/droplets matching its flavour or purpose.' + refTxt,
       base ? `Art direction: ${base}.` : '',
-      'STYLE: clean premium layout, one dominant brand colour palette derived from the product, generous margins, perfectly legible crisp text, balanced hierarchy, no spelling mistakes, no watermark, no fake interface, no extra logos.',
+      'STYLE: clean premium layout, one dominant brand colour palette derived from the product, generous margins, perfectly legible crisp text, balanced hierarchy, no spelling mistakes, no watermark, no fake interface, no extra logos.' + TXT_INTEGRITY,
     ].filter(Boolean).join(' ')
   }
   if (kind === 'ugc') {
     // « L'avatar imparfait » (réf hugomatias) : le réalisme UGC vient de l'IMPERFECTION de la
     // capture, pas d'un beau portrait — photo iPhone, cadrage imparfait, lumière non contrôlée.
-    return augmenterPortrait(`Candid UGC selfie-style photo shot on an iPhone front camera: a real-looking person naturally holding and showing the product to the camera, casual everyday home setting. Deliberately IMPERFECT amateur capture that reads as a genuine unstaged phone selfie a friend would send — casually off-center and slightly tilted framing (not a composed studio portrait), uncontrolled real indoor lighting with mixed ambient sources and ordinary phone auto-exposure, plain lived-in everyday background. ${base}.` + refTxt)
+    return augmenterPortrait(`Candid UGC selfie-style photo shot on an iPhone front camera: a real-looking person naturally holding and showing the product to the camera, casual everyday home setting. Deliberately IMPERFECT amateur capture that reads as a genuine unstaged phone selfie a friend would send — casually off-center and slightly tilted framing (not a composed studio portrait), uncontrolled real indoor lighting with mixed ambient sources and ordinary phone auto-exposure, plain lived-in everyday background. ${base}.` + refTxt + TXT_INTEGRITY)
   }
-  return augmenterPortrait(base + refTxt)
+  return augmenterPortrait(base + refTxt + TXT_INTEGRITY)
 }
 // Consigne de RÉPONSE pour Claude après une génération (Axel, 20/08 : « juste l'image + une
 // proposition de script, pas de pavé »). Répétée dans chaque résultat : c'est le modèle en
@@ -1015,7 +1022,10 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   const directRefUrl = String(args.reference_image_url || '').trim()
   const productUrl = String(args.product_url || '').trim()
   const hasRefSource = !!directRefUrl || !!productUrl
-  const promptFinal = composerPromptImage({ ...args, prompt }, hasRefSource)   // source présente → prompt « produit à l'identique »
+  // #static-ads-bank : compte développeur/owner → « static_ad » pioche un des 58 formats (ou celui demandé via ad_format).
+  const adFormat: StaticAdFormat | null = (kind === 'static_ad' && isUnlimited(profile)) ? pickStaticAdFormat(STATIC_AD_FORMATS, args.ad_format) : null
+  if (adFormat) args = { ...args, ad_format: adFormat.id }   // mémorisé → « Regénérer » / carte photo gardent le même format
+  const promptFinal = composerPromptImage({ ...args, prompt, __adFormat: adFormat }, hasRefSource)   // source présente → prompt « produit à l'identique »
   // CARTE (dépôt / lien) : static ad ou UGC SANS URL d'image directe (avec ou sans lien produit). La carte
   // tente le lien produit automatiquement ; si le site bloque notre serveur (WAF, ex. Galeries Lafayette →
   // 403 sur IP datacenter), elle propose de DÉPOSER la photo. Rien débité tant que rien n'est généré.
@@ -1029,8 +1039,8 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
       ? "Je récupère la photo depuis le lien du produit — si le site la protège, la carte te proposera de la déposer."
       : "Dépose la photo de ton produit dans la carte ci-dessus (ou clique Sans photo), je m'occupe du reste."
     return {
-      content: [{ type: 'text', text: `[système] La carte gère la photo du produit${productUrl ? " (récupération depuis le lien, repli dépôt si site protégé)" : " (dépôt par l'utilisateur, ou « Sans photo »)"}, puis génère. Aucun crédit débité pour l'instant.\nRÉPONSE À ÉCRIRE MAINTENANT : AUCUNE — n'écris rien, la carte parle d'elle-même. N'appelle aucun autre outil.` }],
-      structuredContent: { job_id: pj.id, statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'image', pending: true, productUrl: productUrl || '', prompt: promptFinal, format, raw: true },
+      content: [{ type: 'text', text: `${adFormat ? `[système] Format de pub choisi : « ${adFormat.name} ». ` : ''}[système] La carte gère la photo du produit${productUrl ? " (récupération depuis le lien, repli dépôt si site protégé)" : " (dépôt par l'utilisateur, ou « Sans photo »)"}, puis génère. Aucun crédit débité pour l'instant.\nRÉPONSE À ÉCRIRE MAINTENANT : AUCUNE — n'écris rien, la carte parle d'elle-même. N'appelle aucun autre outil.` }],
+      structuredContent: { job_id: pj.id, statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'image', pending: true, productUrl: productUrl || '', prompt: promptFinal, format, raw: true, ad_format: adFormat ? adFormat.name : undefined },
     }
   }
 
@@ -1081,9 +1091,9 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   })())
 
   return {
-    content: [{ type: 'text', text: `⛔ N'ÉCRIS AUCUN TEXTE. [système] Généré (${quality}, ${format}${kind !== 'free' ? ', ' + kind : ''}${hasRefSource ? ', produit conservé' : ''}, −${cost} cr). La carte affiche tout. NE rappelle PAS check_image. S'il reste des visuels à faire : appelle generate_image pour le suivant, SANS écrire de texte entre les deux.\n${CONSIGNE_REPONSE}` }],
+    content: [{ type: 'text', text: `⛔ N'ÉCRIS AUCUN TEXTE. [système] Généré (${quality}, ${format}${kind !== 'free' ? ', ' + kind : ''}${adFormat ? ', format « ' + adFormat.name + ' »' : ''}${hasRefSource ? ', produit conservé' : ''}, −${cost} cr). La carte affiche tout. NE rappelle PAS check_image. S'il reste des visuels à faire : appelle generate_image pour le suivant, SANS écrire de texte entre les deux.\n${CONSIGNE_REPONSE}` }],
     // prompt FINAL + référence directe + genre transmis au widget → « Regénérer » refait la MÊME chose
-    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt: promptFinal, format, ref: directRefUrl || '', raw: true },
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt: promptFinal, format, ref: directRefUrl || '', raw: true, ad_format: adFormat ? adFormat.name : undefined },
   }
 }
 
@@ -1128,9 +1138,22 @@ fait l'attente. N'annonce jamais une panne tant que le statut n'est pas « écho
 
 async function runCheckImage(profile: Record<string, unknown>, args: Record<string, unknown>) {
   const jobId = String(args.job_id || '').trim()
-  if (!/^[0-9a-f-]{36}$/i.test(jobId)) return toolErr('job_id invalide.')
-  const job = await attendreJob(jobId, String(profile.id), 'image')
-  if (!job) return toolErr('Job introuvable sur ce compte.')
+  // deno-lint-ignore no-explicit-any
+  let job: any = null
+  if (/^[0-9a-f-]{36}$/i.test(jobId)) {
+    job = await attendreJob(jobId, String(profile.id), 'image')
+    if (!job) return toolErr('Job introuvable sur ce compte.')
+  } else {
+    // RÉCUPÉRATION SANS job_id (02/09) — miroir de latestVideoCard : quand le relais claude.ai a lâché la
+    // réponse de generate_image (« Connecteur inconnu / introuvable », 502, carte jamais affichée) alors que
+    // le job a bien été créé et facturé, Claude rappelle check_image SANS argument → dernière image (20 min).
+    const { data: j } = await svc.from('mcp_jobs').select('*')
+      .eq('user_id', String(profile.id)).eq('kind', 'image')
+      .gt('created_at', new Date(Date.now() - 20 * 60_000).toISOString())
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (!j) return toolErr('Aucune génération d\'image récente sur ce compte : relance generate_image (rien n\'a été débité).')
+    job = j
+  }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
   if (job.status === 'done' && job.result_url) {
     // blocImage réduit désormais À LA VOLÉE (768 px JPEG) : l'image s'affiche
@@ -1284,6 +1307,9 @@ async function reconcileAllStale(): Promise<void> {
 }
 let _lastReconcile = 0
 
+// FIN PROPRE (02/09, Axel) — ajoutée côté serveur à TOUT prompt Express : la personne finit sa phrase et la
+// vidéo s'arrête là ; jamais une nouvelle phrase/un nouveau geste entamé dans la dernière seconde, jamais coupé au milieu.
+const EXPRESS_ENDING = ' ENDING RULE: the clip must end cleanly — the person finishes their current sentence, closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or a new gesture in the final second, never cut mid-word or mid-motion.'
 async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!GOOGLE_AI_KEY) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
@@ -1348,7 +1374,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
         image = { bytesBase64Encoded: btoa(bin), mimeType: mime }
       }
       const mkBody = (withAudio: boolean) => JSON.stringify({
-        instances: [{ prompt, ...(image ? { image } : {}) }],
+        instances: [{ prompt: prompt + EXPRESS_ENDING, ...(image ? { image } : {}) }],
         parameters: { durationSeconds: duration, sampleCount: 1, aspectRatio: aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
       })
       let opName = ''
@@ -2070,6 +2096,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   const miniature = async (bytes: Uint8Array, type: string) => {
     if (!/^image\/(png|jpe?g)$/.test(type)) return null
     try {
+      const Image = await loadImage()
       const img = await Image.decode(bytes)
       const w = Math.min(420, img.width)
       const petite = img.resize(w, Image.RESIZE_AUTO)
@@ -2958,7 +2985,9 @@ serve(async (req) => {
     const bal = await spendCredits(userId, cost)
     if (bal === null || bal === -1) { await svc.from('mcp_jobs').update({ status: 'failed', error: 'crédits' }).eq('id', jobId); return json(402, { error: 'credits' }) }
     const size = ({ portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
-    const promptFinal = composerPromptImage(pArgs, !!ref)
+    // #static-ads-bank : le format mémorisé à la création (ad_format = id) est repris tel quel → même mise en page
+    const pFmt = STATIC_AD_FORMATS.find((f) => f.id === String((pArgs as Record<string, unknown>).ad_format || '')) || null
+    const promptFinal = composerPromptImage({ ...(pArgs as Record<string, unknown>), __adFormat: pFmt }, !!ref)
     bg((async () => {
       let lastErr = 'Erreur génération'
       try {
@@ -3240,13 +3269,33 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon-256.png?v=2', mimeType: 'image/png', sizes: ['256x256'] },
           ],
         },
-        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video · Générateur (avatar parlant voix+lipsync) = generate_avatar_video puis check_avatar_video · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION AUTOMATIQUE (TRÈS IMPORTANT) : « Impossible de joindre AvatarAds » / erreur de connexion sur generate_video ou generate_avatar_video NE VEUT PAS DIRE échec — la génération a bien DÉMARRÉ, les crédits sont débités, c'est juste le relais claude.ai qui a lâché la réponse du lancement (le serveur, lui, répond en ~2 s). Dans CE cas tu DOIS, dans le MÊME tour et SANS RIEN DEMANDER à l'utilisateur (n'écris PAS « la vidéo se génère », ne demande PAS « veux-tu que je vérifie », n'attends PAS qu'il te relance), rappeler IMMÉDIATEMENT check_video (Express) ou check_avatar_video (avatar) SANS aucun argument — c'est CE rappel qui fait apparaître la carte avec la barre de progression puis la vidéo. Si elle n'est pas encore prête, re-rappelle check_video (toujours SANS argument) au bout de ~20 s, jusqu'à ce que la carte s'affiche. Ne relance JAMAIS generate (2ᵉ débit)." + (ctx.requireConfirm
+        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. ⚡ VIDÉO UGC — une personne qui PRÉSENTE / PARLE à partir d'une PHOTO (ou une « vidéo UGC », « vidéo qui présente », « avatar qui parle ») : utilise TOUJOURS generate_video (Express) avec un prompt style UGC RÉEL (selfie authentique tenu à bout de bras, la personne parle face caméra d'un ton naturel et improvise sa présentation du produit ; enchaîne les phrases, pas de « euh »). Durée 4-8 s, aspect 9:16 par défaut. 📷 LA PHOTO : claude.ai ne te transmet PAS les images jointes au chat — tu n'as JAMAIS accès à la photo déposée dans la conversation. Si l'utilisateur veut partir de SA photo, demande-lui une URL publique : le plus simple = bouton « Glisse la photo pour Claude » sur " + APP_URL + " (ça lui rend un lien), qu'il colle et que tu passes dans image_url. S'il n'a pas d'URL, ne réclame PAS un lien Drive au hasard et ne bloque pas : propose de générer la scène décrite sans sa photo. C'est LE SEUL et LE BON outil pour une vidéo d'une personne qui parle — il n'y a pas d'outil « générateur d'avatar » ici (ça reste manuel sur le site). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent (dis « le module Express d'AvatarAds »). Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video (⚡ le SEUL outil pour une VIDÉO d'une personne — voir la règle UGC ci-dessous) · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION AUTOMATIQUE (TRÈS IMPORTANT) : « Impossible de joindre AvatarAds », « Connecteur inconnu », « Connecteur introuvable », « le serveur n'a pas répondu » ou une erreur 502 sur generate_* = le RELAIS de claude.ai a lâché (souvent avant même d'atteindre le serveur) — ce n'est ni une panne du serveur ni la preuve que la génération a démarré. Fais alors, dans le MÊME tour et sans rien demander : (1) UN seul nouvel appel du MÊME outil generate_* ; (2) si ça échoue encore, appelle check_video / check_image SANS aucun argument — ça retrouve et affiche la dernière génération du compte si elle a bien été créée (c'est CE rappel qui fait apparaître la carte), sinon ça répond clairement qu'il n'y a rien. Si aucune carte ne s'affiche après ça, DIS-LE en une phrase (« le relais de claude.ai a coupé, rien n'a été lancé ») — n'écris JAMAIS « ton visuel est en cours dans la carte ci-dessus » sans un résultat d'outil reçu dans ce tour. Quand un résultat est reçu mais que la carte ne s'affiche pas, donne le lien de téléchargement présent dans le résultat (https://mcp.avatarads.fr/i/<job_id>). Ne relance JAMAIS generate plus d'une fois (2ᵉ débit)." + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })
     }
     if (method === 'ping') return rpcResult(id, {})
     if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm) })
+    // ── server/discover (01/09) : le client d'INTERFACE de claude.ai (UA « Claude-User »)
+    // utilise CETTE méthode — hors spec MCP standard — pour peupler la carte du connecteur.
+    // Constat sur les logs : quand Claude prend cette branche, il reçoit notre -32601 puis
+    // BOUCLE sur server/discover + initialize et n'appelle JAMAIS tools/list → « ce connecteur
+    // n'a aucun outil disponible » (bug client claude #1716 : les deux clients ne partagent pas
+    // leur découverte). Un connecteur qui marche (pletor) répond -32601 et SON Claude retombe
+    // sur tools/list — mais ce repli n'est pas fiable chez nous. On répond donc DIRECTEMENT le
+    // descriptif du serveur + les outils, quelle que soit la branche prise par le client.
+    // La forme exacte n'étant pas documentée, on log les params reçus pour affiner au besoin.
+    if (method === 'server/discover') {
+      console.log('[mcp] server/discover · params:', JSON.stringify(params).slice(0, 300))
+      return rpcResult(id, {
+        protocolVersion: '2025-06-18',
+        capabilities: { tools: { listChanged: true }, resources: { listChanged: true } },
+        serverInfo: { name: 'AvatarAds', title: 'AvatarAds', version: '1.4.1', websiteUrl: 'https://avatarads.fr' },
+        tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm),
+        resources: UI_RESOURCES,
+        prompts: [],
+      })
+    }
     if (method === 'resources/list') return rpcResult(id, { resources: UI_RESOURCES })
     if (method === 'resources/templates/list') return rpcResult(id, { resourceTemplates: [] })
     if (method === 'resources/read') {
