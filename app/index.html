@@ -584,7 +584,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 /* LIBRARY AVATAR CARD SELECTED */
 .lib-av-card.on{border-color:var(--orange)!important;box-shadow:0 0 0 2px var(--orange-glow)!important;background:var(--orange-dim)!important}
 /* Crop handles overlay */
-.crop-handles-ov{position:absolute;inset:0;z-index:30;pointer-events:none;box-sizing:border-box;border:2px dashed rgba(255,107,53,0.8)}
+.crop-handles-ov{position:absolute;inset:0;z-index:30;pointer-events:none;box-sizing:border-box;border:2px dashed rgba(255,107,53,0.9);box-shadow:0 0 0 9999px rgba(0,0,0,.58)}
 .crop-handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--orange);border-radius:2px;pointer-events:all;box-sizing:border-box}
 .crop-handle.tl{top:-6px;left:-6px;cursor:nw-resize}
 .crop-handle.tc{top:-6px;left:calc(50% - 6px);cursor:n-resize}
@@ -1230,7 +1230,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div class="flbl" style="font-size:10px;margin:0">Zoom de l'avatar</div>
                 <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="avZoomVal">100%</span>
               </div>
-              <input type="range" id="avZoomSlider" class="aa-slider" min="100" max="200" value="100" step="1" oninput="cfg.avZoom=+this.value;cfg.avWidth=cfg.avZoom;document.getElementById('avZoomVal').textContent=this.value+'%';_aaSliderFill(this);updateAvatarCrop()" style="width:100%;--aa-fill:60%">
+              <input type="range" id="avZoomSlider" class="aa-slider" min="50" max="200" value="100" step="1" oninput="cfg.avZoom=+this.value;cfg.avWidth=cfg.avZoom;document.getElementById('avZoomVal').textContent=this.value+'%';_aaSliderFill(this);updateAvatarCrop()" style="width:100%;--aa-fill:60%">
               <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">Glisse ensuite l'avatar dans le preview pour repositionner</div>
             </div>
             <div class="fld" style="margin-bottom:12px;display:none" data-merged="zoom">
@@ -1683,7 +1683,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <div style="font-size:10px;font-family:var(--mono);color:var(--text3)">Zoom du clip</div>
                     <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="gpZoomVal3">100%</span>
                   </div>
-                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="100" max="300" value="100" step="5"
+                  <input class="aa-slider" type="range" id="gpZoomSlider3" min="50" max="300" value="100" step="5"
                     oninput="cfg.gpZoom=+this.value;cfg.gpWidth=cfg.gpZoom;document.getElementById('gpZoomVal3').textContent=this.value+'%';const s4=document.getElementById('gpZoom');if(s4){s4.value=this.value;document.getElementById('gpZoomVal').textContent=this.value+'%'}updateGpCrop()"
                     style="width:100%">
                 </div>
@@ -1793,7 +1793,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                       <span class="label" style="margin:0">Zoom du clip</span>
                       <span class="mono accent" style="font-size:13px" id="gpZoomVal">100%</span>
                     </div>
-                    <input class="aa-slider" type="range" id="gpZoom" min="100" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;cfg.gpWidth=cfg.gpZoom;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
+                    <input class="aa-slider" type="range" id="gpZoom" min="50" max="300" value="100" step="5" oninput="cfg.gpZoom=+this.value;cfg.gpWidth=cfg.gpZoom;document.getElementById('gpZoomVal').textContent=this.value+'%';updateGpCrop()" style="width:100%">
                   </div>
                   <div style="display:none" data-merged="zoom"><!-- largeur fusionnée dans le zoom (02/09) -->
                     <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -1832,6 +1832,12 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </div>
 
             
+
+            <!-- WHISPER IA — entre « Sous-titres » et les styles (Axel 02/09) -->
+            <div class="fld" style="margin-bottom:12px" id="whisperRow">
+                              <!-- Whisper IA — dès Starter (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
+              <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div></button>
+            </div>
 
             <!-- STYLE SOUS-TITRES (le titre « SOUS-TITRES » de la section suffit — Axel 21/08) -->
             <div class="fld" style="margin-bottom:16px">
@@ -1988,16 +1994,11 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
             <!-- CORRECTION MOTS -->
             <div class="fld" style="margin-bottom:8px">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div class="flbl" style="font-size:11px;margin:0">Transcript / Sous-titres</div>
-                <button id="transcriptPanelBtn" onclick="autoGenSubtitles()" title="Générer depuis l'audio" class="faint mono" style="background:none;border:none;font-size:11px;letter-spacing:0;text-transform:none;cursor:pointer;padding:0;transition:.2s" onmouseover="this.style.color='var(--accent-2)'" onmouseout="this.style.color='var(--text-3)'">Générer depuis l'audio</button>
-              </div>
+              <div style="display:none"><!-- en-tête « Transcript / Sous-titres · Générer depuis l'audio » retiré (Axel 02/09) ; le bouton reste dans le DOM pour le JS --><button id="transcriptPanelBtn" onclick="autoGenSubtitles()" title="Générer depuis l'audio" class="faint mono" style="background:none;border:none;font-size:11px;letter-spacing:0;text-transform:none;cursor:pointer;padding:0;transition:.2s" onmouseover="this.style.color='var(--accent-2)'" onmouseout="this.style.color='var(--text-3)'">Générer depuis l'audio</button></div>
               <!-- TRANSCRIPT PANEL -->
               <div id="transcriptPanel" style="display:block;margin-bottom:8px">
                 <!-- Tap Sync manuel — gratuit (maquette : btn-ghost pleine largeur) -->
                 <button onclick="startTapSync()" class="btn btn-ghost" style="width:100%;margin-bottom:10px;display:none">Tap Sync — synchroniser manuellement</button>
-                <!-- Whisper IA — dès Starter (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
-                <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div></button>
                 <!-- Zone « colle / tape ton transcript » RETIRÉE de l'UI (Axel 02/09) : le champ reste dans le DOM, caché, car Whisper y écrit et applyTranscript/le rendu y lisent. -->
                 <textarea id="transcriptInput" class="field" style="display:none"></textarea>
                 <button onclick="applyTranscript()" class="btn btn-primary gen-dev-hide" style="width:100%;margin-top:10px;display:none">Appliquer comme sous-titres</button>
@@ -2190,6 +2191,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
                     <span id="previewAvName" style="font-size:10px;font-weight:500;font-family:var(--mono);letter-spacing:.5px">avatarads.fr</span>
                   </div>
+                  <img id="previewAvImgBg" alt="" style="display:none;position:absolute;pointer-events:none;z-index:1">
+                  <video id="bypassPreviewVidBg" muted loop playsinline style="display:none;position:absolute;pointer-events:none;z-index:1"></video>
                   <img id="previewAvImg" style="display:none;object-fit:cover;position:absolute;pointer-events:none;z-index:2">
                   <video id="clipPreviewVid" muted loop autoplay playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1"></video>
                   <video id="bypassPreviewVid" muted loop playsinline style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:3"></video>
@@ -2197,6 +2200,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
                 <div id="gameplayZone" style="display:none;background:#0a0a0a;flex-shrink:0;align-items:center;justify-content:center;position:relative;overflow:hidden;cursor:grab" onmousedown="startZoneDrag(event,'gp')" ontouchstart="startZoneDrag(event,'gp')" onclick="toggleGameplayPause(event)" title="Glisse pour repositionner · Clique pour pause">
                   <div id="gpDragHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10"><span style="background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-family:var(--mono);padding:3px 8px;border-radius:20px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Glisse pour recadrer</span></div>
+                  <video id="gpVideoBg" muted loop autoplay playsinline style="display:none;position:absolute;pointer-events:none;z-index:1"></video>
                   <div id="gpEmpty" style="text-align:center;color:rgba(255,255,255,0.15);position:relative;z-index:1">
                     <div style="line-height:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg></div>
                     <div style="font-size:9px;font-family:var(--mono);margin-top:3px">Gameplay ici</div>
@@ -22044,9 +22048,9 @@ function toggleCropMode(zone){
 }
 
 function showCropHandles(zone){
-  const zoneEl = document.getElementById(zone==='av'?'avZone':'gameplayZone');
+  const { zoneEl } = _zoneEls(zone);
   if(!zoneEl) return;
-  hideCropHandles(zone);
+  const old = document.getElementById('cropOv-'+zone); if(old) old.remove();
   const ov = document.createElement('div');
   ov.id = 'cropOv-'+zone;
   ov.className = 'crop-handles-ov';
@@ -22056,7 +22060,11 @@ function showCropHandles(zone){
     h.addEventListener('mousedown', e=>{
       e.stopPropagation(); e.preventDefault();
       const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
-      _cropDrag = {zone, pos, x0:e.clientX, y0:e.clientY, clip0:{...clip}};
+      const rect = zoneEl.getBoundingClientRect(), meta = zoneEl._aaCrop || { sc:1, sW:1, sH:1 };
+      // 1 % du média = (sW·sc) px CSS × (échelle écran) / 100
+      _cropDrag = { zone, pos, x0:e.clientX, y0:e.clientY, clip0:{...clip},
+        pxPerPctX: meta.sW * meta.sc * (rect.width  / (zoneEl.offsetWidth  || 1)) / 100,
+        pxPerPctY: meta.sH * meta.sc * (rect.height / (zoneEl.offsetHeight || 1)) / 100 };
     });
     ov.appendChild(h);
   });
@@ -22066,72 +22074,142 @@ function showCropHandles(zone){
 function hideCropHandles(zone){
   const ov = document.getElementById('cropOv-'+zone);
   if(ov) ov.remove();
+  const { zoneEl } = _zoneEls(zone);
+  if(zoneEl && zoneEl._aaWasCrop){
+    // sortie du rognage : la partie gardée remplit la zone, recentrée (Axel : « le clip s'ajuste pour ne pas laisser d'espace vide »)
+    zoneEl._aaWasCrop = false;
+    if(zone==='av'){ cfg.avCropX = 0; cfg.avCropY = 0; } else { cfg.gpCropX = 0; cfg.gpCropY = 0; }
+  }
+  if(zone==='av') updateAvatarCrop(); else updateGpCrop();
 }
 function applyClip(zone){
+  // #zoom-v3 : plus de clip-path sur la ZONE (l'ancien rognage laissait un vide noir) — le rognage est une partie gardée du média
   const el = document.getElementById(zone==='av'?'avZone':'gameplayZone');
-  if(!el) return;
-  const c = zone==='av' ? (cfg.avClip||{t:0,b:0,l:0,r:0}) : (cfg.gpClip||{t:0,b:0,l:0,r:0});
-  el.style.clipPath = `inset(${c.t}% ${c.r}% ${c.b}% ${c.l}% round 2px)`;
+  if(el) el.style.clipPath = '';
+  if(zone==='av') updateAvatarCrop(); else updateGpCrop();
 }
 
-// ── #zoom-unifie (02/09) · UNE géométrie pour l'aperçu, les bornes du glissé et le rendu ──────────────
-// Axel : « combine zoom du clip et largeur du gameplay, ne jamais mettre de bande noire, pouvoir monter /
-// descendre ». Modèle : un seul zoom uniforme (≥ 100 %) ; la boîte (zone × zoom) est centrée dans la zone,
-// le contenu la COUVRE avec une seule échelle (object-fit: cover), et le glissé déplace le CONTENU
-// (object-position) dans des bornes qui gardent la zone couverte sur les deux axes → jamais de noir.
-// Coordonnées linéaires : l'aperçu passe la zone en px espace-phone, le rendu en px canvas.
-function _zoneGeom(zone, sW, sH, zoom, topAlign){
-  const z  = Math.max(1, (zoom || 100) / 100);
-  const bw = zone.w * z, bh = zone.h * z;
-  const bx = zone.x + (zone.w - bw) / 2, by = zone.y + (zone.h - bh) / 2;
-  const s  = Math.max(bw / sW, bh / sH);
-  const cw = sW * s, ch = sH * s;
-  const cx0 = bx + (bw - cw) / 2;                             // contenu centré en X
-  const cy0 = by + (topAlign ? 0 : (bh - ch) / 2);            // centré en Y, ou aligné en haut (avatar)
-  return { z, bw, bh, bx, by, s, cw, ch, cx0, cy0,
-    minTx: (zone.x + zone.w) - (cx0 + cw), maxTx: zone.x - cx0,
-    minTy: (zone.y + zone.h) - (cy0 + ch), maxTy: zone.y - cy0 };
+// ── #zoom-v3 (02/09 soir) · UNE géométrie pour l'aperçu, le rognage, les bornes du glissé et le rendu ──
+// Axel : « zoom du clip avec la possibilité d'aller en dessous de 100 %, jamais de bande noire, monter /
+// descendre directement dans le preview, et quand je rogne le clip doit s'ajuster pour ne pas laisser
+// d'espace vide ». Modèle :
+//  · rognage (cfg.*Clip, % du média) = la PARTIE GARDÉE du média ; c'est elle qui est cadrée dans la zone ;
+//  · zoom : 100 % = la partie gardée COUVRE la zone ; au-dessus elle grossit, en dessous elle rétrécit ;
+//  · glissé (cfg.*CropX/Y, FRACTION de la largeur de zone) : déplace le contenu sur les deux axes, borné pour
+//    que le contenu couvre encore la zone OU que son centre reste dedans (jamais perdu hors champ) ;
+//  · tout vide dans la zone est rempli par le même média en FOND FLOU (jamais de noir), aperçu et rendu.
+// Coordonnées linéaires : l'aperçu passe la zone en px CSS, le rendu en px canvas.
+function _zoneRect(sW, sH, clip){
+  const c = clip || {}; const l = +c.l || 0, r = +c.r || 0, t = +c.t || 0, b = +c.b || 0;
+  return { x: sW * l / 100, y: sH * t / 100, w: Math.max(1, sW * (1 - (l + r) / 100)), h: Math.max(1, sH * (1 - (t + b) / 100)) };
+}
+function _zoneGeom(zone, sW, sH, zoom, topAlign, clip){
+  const r  = _zoneRect(sW, sH, clip);
+  const z  = Math.max(0.5, Math.min(3, (zoom || 100) / 100));
+  const s  = z * Math.max(zone.w / r.w, zone.h / r.h);          // 100 % = la partie gardée couvre la zone
+  const cw = r.w * s, ch = r.h * s;
+  const cx0 = zone.x + (zone.w - cw) / 2;
+  const cy0 = zone.y + ((topAlign && ch >= zone.h) ? 0 : (zone.h - ch) / 2);   // avatar : aligné en haut quand il déborde
+  const cov = (p0, len, zp0, zlen) => [zp0 + zlen - (p0 + len), zp0 - p0];               // [lo, hi] pour continuer à COUVRIR
+  const cen = (p0, len, zp0, zlen) => [zp0 - (p0 + len / 2), zp0 + zlen - (p0 + len / 2)]; // centre du contenu dans la zone
+  const [cxLo, cxHi] = cov(cx0, cw, zone.x, zone.w), [exLo, exHi] = cen(cx0, cw, zone.x, zone.w);
+  const [cyLo, cyHi] = cov(cy0, ch, zone.y, zone.h), [eyLo, eyHi] = cen(cy0, ch, zone.y, zone.h);
+  return { z, s, r, cw, ch, cx0, cy0,
+    minTx: Math.min(cxLo, exLo), maxTx: Math.max(cxHi, exHi),
+    minTy: Math.min(cyLo, eyLo), maxTy: Math.max(cyHi, eyHi) };
 }
 function _coerceZoomCfg(){
-  const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || lo));
-  cfg.gpZoom = cl(cfg.gpZoom, 100, 300); cfg.gpWidth = cfg.gpZoom;   // largeur = zoom (fusionnés 02/09)
-  cfg.avZoom = cl(cfg.avZoom, 100, 200); cfg.avWidth = cfg.avZoom;
+  const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 100));
+  cfg.gpZoom = cl(cfg.gpZoom, 50, 300); cfg.gpWidth = cfg.gpZoom;   // largeur = zoom (fusionnés 02/09)
+  cfg.avZoom = cl(cfg.avZoom, 50, 200); cfg.avWidth = cfg.avZoom;
   for(const k of ['gpCropX','gpCropY','avCropX','avCropY']){ const v = +cfg[k] || 0; cfg[k] = Math.abs(v) > 1.5 ? v / 266 : v; }   // anciens crops en px (zone 266 px) → fraction
+  for(const k of ['gpClip','avClip']){ const c = cfg[k]; cfg[k] = (c && typeof c === 'object') ? { t:+c.t||0, b:+c.b||0, l:+c.l||0, r:+c.r||0 } : { t:0, b:0, l:0, r:0 }; }
 }
-function _applyZoneStyle(el, zoom, tx, ty, topAlign){
-  el.style.maxWidth = 'none'; el.style.maxHeight = 'none';
-  el.style.objectFit = 'cover';
-  el.style.width = zoom + '%'; el.style.height = zoom + '%';
-  el.style.top = '50%'; el.style.left = '50%';
-  el.style.transform = 'translate(-50%, -50%)';
-  el.style.transformOrigin = 'center center';
-  el.style.objectPosition = `calc(50% + ${tx}px) calc(${topAlign ? '0%' : '50%'} + ${ty}px)`;
+// fond flou : la partie gardée en cover débordant de 12 %, floutée et assombrie — visible seulement s'il reste un vide
+function _bgFit(bg, zoneW, zoneH, sW, sH, r){
+  const sb = Math.max(zoneW / r.w, zoneH / r.h) * 1.12;
+  const cw = r.w * sb, ch = r.h * sb;
+  Object.assign(bg.style, { display:'block', position:'absolute', maxWidth:'none', maxHeight:'none', objectFit:'fill', objectPosition:'50% 50%',
+    width:(sW * sb)+'px', height:(sH * sb)+'px', left:((zoneW - cw) / 2 - r.x * sb)+'px', top:((zoneH - ch) / 2 - r.y * sb)+'px',
+    transform:'none', filter:'blur(14px) brightness(.55) saturate(1.1)', pointerEvents:'none', clipPath:'none' });
 }
-function updateGpCrop(){
-  const vid = document.getElementById('gpVideo');
-  if(!vid) return;
-  cfg.gpZoom = Math.max(100, Math.min(300, +cfg.gpZoom || 100)); cfg.gpWidth = cfg.gpZoom;
-  const m = _zoneMaxCrop('gp');
-  cfg.gpCropX = Math.max(m.minX, Math.min(m.maxX, +cfg.gpCropX || 0));
-  cfg.gpCropY = Math.max(m.minY, Math.min(m.maxY, +cfg.gpCropY || 0));
-  const zEl = document.getElementById('gameplayZone'), zW = zEl ? zEl.offsetWidth : 0;
-  _applyZoneStyle(vid, cfg.gpZoom, cfg.gpCropX * zW, cfg.gpCropY * zW, false);
-  if(!vid.videoWidth && !vid._aaMetaHook){ vid._aaMetaHook = true; vid.addEventListener('loadedmetadata', updateGpCrop); }
-  if(zEl && !zEl._aaRO && window.ResizeObserver){ zEl._aaRO = new ResizeObserver(() => { try{ updateGpCrop(); }catch(_){} }); zEl._aaRO.observe(zEl); }
-}
-
-function updateAvatarCrop(){
-  cfg.avZoom = Math.max(100, Math.min(200, +cfg.avZoom || 100)); cfg.avWidth = cfg.avZoom;
-  const m = _zoneMaxCrop('av');
-  cfg.avCropX = Math.max(m.minX, Math.min(m.maxX, +cfg.avCropX || 0));
-  cfg.avCropY = Math.max(m.minY, Math.min(m.maxY, +cfg.avCropY || 0));
-  const zEl = document.getElementById('avZone'), zW = zEl ? zEl.offsetWidth : 0;
-  if(zEl && !zEl._aaRO && window.ResizeObserver){ zEl._aaRO = new ResizeObserver(() => { try{ updateAvatarCrop(); }catch(_){} }); zEl._aaRO.observe(zEl); }
-  for(const id of ['previewAvImg', 'bypassPreviewVid']){
-    const el = document.getElementById(id); if(!el) continue;
-    _applyZoneStyle(el, cfg.avZoom, cfg.avCropX * zW, cfg.avCropY * zW, true);   // avatar : aligné en haut (« center top »)
-    if(!(el.videoWidth || el.naturalWidth) && !el._aaMetaHook){ el._aaMetaHook = true; el.addEventListener(el.tagName === 'VIDEO' ? 'loadedmetadata' : 'load', updateAvatarCrop); }
+function _bgSyncVideo(main, bg){
+  if(!main || !bg) return;
+  const src = main.currentSrc || main.src || '';
+  if(src && bg.getAttribute('src') !== src){ bg.setAttribute('src', src); bg.muted = true; bg.loop = true; try{ bg.currentTime = main.currentTime || 0; }catch(_){} }
+  if(!main._aaBgHooked){ main._aaBgHooked = true;
+    main.addEventListener('play',   () => { if(bg.style.display !== 'none'){ try{ bg.currentTime = main.currentTime; bg.play().catch(()=>{}); }catch(_){} } });
+    main.addEventListener('pause',  () => { try{ bg.pause(); }catch(_){} });
+    main.addEventListener('seeked', () => { try{ bg.currentTime = main.currentTime; }catch(_){} });
+    main.addEventListener('timeupdate', () => { if(bg.style.display !== 'none' && Math.abs((bg.currentTime || 0) - main.currentTime) > 0.3){ try{ bg.currentTime = main.currentTime; }catch(_){} } });
   }
+  if(bg.style.display !== 'none'){ if(main.paused){ try{ bg.pause(); }catch(_){} } else { try{ bg.play().catch(()=>{}); }catch(_){} } }
+}
+// élément = le média ENTIER à l'échelle s, placé pour que la partie gardée tombe en (cx, cy) ; le reste est masqué (clip-path)
+function _applyZoneStyle(el, bg, zoneW, zoneH, sW, sH, g, tx, ty){
+  const cx = g.cx0 + tx, cy = g.cy0 + ty;
+  Object.assign(el.style, { maxWidth:'none', maxHeight:'none', objectFit:'fill', objectPosition:'50% 50%', position:'absolute',
+    width:(sW * g.s)+'px', height:(sH * g.s)+'px', left:(cx - g.r.x * g.s)+'px', top:(cy - g.r.y * g.s)+'px', transform:'none', transformOrigin:'0 0' });
+  const iT = g.r.y * g.s, iL = g.r.x * g.s, iR = (sW - g.r.x - g.r.w) * g.s, iB = (sH - g.r.y - g.r.h) * g.s;
+  el.style.clipPath = (iT > .5 || iL > .5 || iR > .5 || iB > .5) ? `inset(${iT}px ${iR}px ${iB}px ${iL}px)` : 'none';
+  const gap = cx > 0.5 || cy > 0.5 || cx + g.cw < zoneW - 0.5 || cy + g.ch < zoneH - 0.5;
+  if(bg){ if(gap) _bgFit(bg, zoneW, zoneH, sW, sH, g.r); else { bg.style.display = 'none'; if(bg.tagName === 'VIDEO'){ try{ bg.pause(); }catch(_){} } } }
+}
+function _zoneEls(zone){
+  const g = id => document.getElementById(id);
+  if(zone === 'gp') return { zoneEl: g('gameplayZone'), pairs: [[g('gpVideo'), g('gpVideoBg')]] };
+  return { zoneEl: g('avZone'), pairs: [[g('previewAvImg'), g('previewAvImgBg')], [g('bypassPreviewVid'), g('bypassPreviewVidBg')]] };
+}
+function _zoneMain(zone){
+  const live = _zoneEls(zone).pairs.filter(p => p[0]);
+  const dims = e => !!(e.videoWidth || e.naturalWidth);
+  return live.find(p => dims(p[0]) && getComputedStyle(p[0]).display !== 'none') || live.find(p => dims(p[0])) || live[0] || [null, null];
+}
+function _updateZone(zone){
+  const isAv = zone === 'av';
+  const { zoneEl, pairs } = _zoneEls(zone);
+  if(isAv){ cfg.avZoom = Math.max(50, Math.min(200, +cfg.avZoom || 100)); cfg.avWidth = cfg.avZoom; }
+  else    { cfg.gpZoom = Math.max(50, Math.min(300, +cfg.gpZoom || 100)); cfg.gpWidth = cfg.gpZoom; }
+  const upd = isAv ? updateAvatarCrop : updateGpCrop;
+  for(const [m] of pairs){ if(m && !(m.videoWidth || m.naturalWidth) && !m._aaMetaHook){ m._aaMetaHook = true; m.addEventListener(m.tagName === 'VIDEO' ? 'loadedmetadata' : 'load', upd); } }
+  if(zoneEl && !zoneEl._aaRO && window.ResizeObserver){ zoneEl._aaRO = new ResizeObserver(() => { try{ upd(); }catch(_){} }); zoneEl._aaRO.observe(zoneEl); }
+  const zW = zoneEl ? zoneEl.offsetWidth : 0, zH = zoneEl ? zoneEl.offsetHeight : 0;
+  if(!zW || !zH) return;                                             // zone pas visible : on ré-appliquera (ResizeObserver)
+  const [mainEl, mainBg] = _zoneMain(zone);
+  if(isAv ? cropModeAvatar : cropModeGameplay){ _cropModeLayout(zone); return; }   // mode rognage : média entier + masque
+  const zoom = isAv ? cfg.avZoom : cfg.gpZoom, clip = isAv ? cfg.avClip : cfg.gpClip;
+  const kx = isAv ? 'avCropX' : 'gpCropX', ky = isAv ? 'avCropY' : 'gpCropY';
+  for(const [el, bg] of pairs){
+    if(!el) continue;
+    const sW = el.videoWidth || el.naturalWidth || 0, sH = el.videoHeight || el.naturalHeight || 0;
+    if(!sW || !sH){ if(bg) bg.style.display = 'none'; continue; }
+    const g = _zoneGeom({x:0, y:0, w:zW, h:zH}, sW, sH, zoom, isAv, clip);
+    if(el === mainEl){                                              // les bornes suivent le média affiché
+      cfg[kx] = Math.max(g.minTx / zW, Math.min(g.maxTx / zW, +cfg[kx] || 0));
+      cfg[ky] = Math.max(g.minTy / zW, Math.min(g.maxTy / zW, +cfg[ky] || 0));
+    }
+    if(!isAv) el.style.zIndex = 2;
+    const useBg = (el === mainEl) ? bg : null;
+    if(bg && !useBg){ bg.style.display = 'none'; if(bg.tagName === 'VIDEO'){ try{ bg.pause(); }catch(_){} } }
+    if(useBg){ if(el.tagName === 'VIDEO') _bgSyncVideo(el, useBg); else if(useBg.getAttribute('src') !== el.getAttribute('src')) useBg.setAttribute('src', el.getAttribute('src') || ''); }
+    _applyZoneStyle(el, useBg, zW, zH, sW, sH, g, (+cfg[kx] || 0) * zW, (+cfg[ky] || 0) * zW);
+  }
+}
+function updateGpCrop(){ _updateZone('gp'); }
+function updateAvatarCrop(){ _updateZone('av'); }
+// mode rognage : le média ENTIER est visible (contain), un masque sombre couvre ce qui sera retiré, les poignées bougent la partie gardée
+function _cropModeLayout(zone){
+  const { zoneEl } = _zoneEls(zone); const [el, bg] = _zoneMain(zone);
+  if(!zoneEl || !el) return;
+  const zW = zoneEl.offsetWidth, zH = zoneEl.offsetHeight, sW = el.videoWidth || el.naturalWidth || 0, sH = el.videoHeight || el.naturalHeight || 0;
+  if(!zW || !zH || !sW || !sH) return;
+  const sc = Math.min(zW / sW, zH / sH), dw = sW * sc, dh = sH * sc, ox = (zW - dw) / 2, oy = (zH - dh) / 2;
+  Object.assign(el.style, { maxWidth:'none', maxHeight:'none', objectFit:'fill', position:'absolute', width:dw+'px', height:dh+'px', left:ox+'px', top:oy+'px', transform:'none', clipPath:'none' });
+  if(bg){ bg.style.display = 'none'; if(bg.tagName === 'VIDEO'){ try{ bg.pause(); }catch(_){} } }
+  const r = _zoneRect(sW, sH, zone === 'av' ? cfg.avClip : cfg.gpClip);
+  const ov = document.getElementById('cropOv-' + zone);
+  if(ov) Object.assign(ov.style, { inset:'auto', left:(ox + r.x * sc)+'px', top:(oy + r.y * sc)+'px', width:(r.w * sc)+'px', height:(r.h * sc)+'px' });
+  zoneEl._aaCrop = { sc, sW, sH, ox, oy }; zoneEl._aaWasCrop = true;
 }
 
 // ── DRAG-TO-CROP ──
@@ -22143,20 +22221,14 @@ let _cropDrag = null;
 // coulisser gauche/droite pour choisir le cadrage (Axel 02/09). Miroir du clamp du
 // rendu MP4 dans _cvDrawZone (fenêtre source bornée dans l'image).
 function _zoneMaxCrop(zone){
-  // Bornes du glissé (px espace-phone) = tout ce qu'on peut coulisser SANS découvrir de noir, sur les deux
-  // axes — même géométrie que l'aperçu (_applyZoneStyle) et que le rendu (_cvDrawZone), via _zoneGeom.
-  // Unité des crops (cfg.*CropX/Y) : FRACTION de la LARGEUR de la zone (les deux axes), indépendante de la
-  // résolution — l'aperçu (zone 266 px CSS, agrandie ×1,19 à l'écran) et le rendu (1080 px) la lisent pareil.
+  // Bornes du glissé en FRACTION de la largeur de zone (les deux axes) — même géométrie que l'aperçu et le rendu (_zoneGeom).
   const FREE = { minX:-10, maxX:10, minY:-10, maxY:10 };            // pas encore mesurable : on ne bride pas
-  const cands = zone==='av' ? [document.getElementById('previewAvImg'), document.getElementById('bypassPreviewVid')].filter(Boolean)
-                            : [document.getElementById('gpVideo')].filter(Boolean);
-  const vid = cands.find(e => (e.videoWidth || e.naturalWidth) && e.offsetParent !== null) || cands[0];
-  const z   = document.getElementById(zone==='av'?'avZone':'gameplayZone');
-  if(!vid || !z) return FREE;
-  const sW = vid.videoWidth || vid.naturalWidth || 0, sH = vid.videoHeight || vid.naturalHeight || 0;
-  const zW = z.offsetWidth, zH = z.offsetHeight;
+  const { zoneEl } = _zoneEls(zone); const [el] = _zoneMain(zone);
+  if(!zoneEl || !el) return FREE;
+  const sW = el.videoWidth || el.naturalWidth || 0, sH = el.videoHeight || el.naturalHeight || 0;
+  const zW = zoneEl.offsetWidth, zH = zoneEl.offsetHeight;
   if(!zW || !zH || !sW || !sH) return FREE;
-  const g = _zoneGeom({x:0, y:0, w:zW, h:zH}, sW, sH, zone==='av' ? (cfg.avZoom||100) : (cfg.gpZoom||100), zone==='av');
+  const g = _zoneGeom({x:0, y:0, w:zW, h:zH}, sW, sH, zone==='av' ? cfg.avZoom : cfg.gpZoom, zone==='av', zone==='av' ? cfg.avClip : cfg.gpClip);
   return { minX: g.minTx / zW, maxX: g.maxTx / zW, minY: g.minTy / zW, maxY: g.maxTy / zW };
 }
 function _zoneMaxCropX(zone){ return _zoneMaxCrop(zone).maxX; }
@@ -22202,17 +22274,17 @@ document.addEventListener('mousemove', e=>{
     const {zone, pos, x0, y0, clip0} = _cropDrag;
     const zoneEl = document.getElementById(zone==='av'?'avZone':'gameplayZone');
     if(!zoneEl) return;
-    const rect = zoneEl.getBoundingClientRect();
-    const dx = (e.clientX - x0) / rect.width * 100;
-    const dy = (e.clientY - y0) / rect.height * 100;
+    // #zoom-v3 : les poignées bougent en % du MÉDIA (affiché entier en mode rognage) ; rognage latéral de retour,
+    // puisque la partie gardée est ré-ajustée pour remplir la zone (plus de bandes noires). On garde ≥ 10 % par axe.
+    const { pxPerPctX, pxPerPctY } = _cropDrag;
+    const dx = (e.clientX - x0) / (pxPerPctX || 1);
+    const dy = (e.clientY - y0) / (pxPerPctY || 1);
     const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
-    if(pos.includes('t')) clip.t = Math.max(0, Math.min(45, clip0.t + dy));
-    if(pos.includes('b')) clip.b = Math.max(0, Math.min(45, clip0.b - dy));
-    // ⚠ pas de rognage latéral : il rétrécit l'image sans rien révéler et laisse
-    // deux bandes noires sur les côtés. Même raison que le verrouillage du
-    // glissement horizontal juste en dessous.
-    if(pos.includes('l')) clip.l = 0;
-    if(pos.includes('r')) clip.r = 0;
+    const MIN = 10;
+    if(pos.includes('t')) clip.t = Math.max(0, Math.min(100 - MIN - (clip.b||0), clip0.t + dy));
+    if(pos.includes('b')) clip.b = Math.max(0, Math.min(100 - MIN - (clip.t||0), clip0.b - dy));
+    if(pos.includes('l')) clip.l = Math.max(0, Math.min(100 - MIN - (clip.r||0), clip0.l + dx));
+    if(pos.includes('r')) clip.r = Math.max(0, Math.min(100 - MIN - (clip.l||0), clip0.r - dx));
     applyClip(zone);
     return;
   }
@@ -24478,7 +24550,7 @@ async function _genServerCompose(btn){
   // MAIN au rendu client (identique à l'aperçu) — le serveur n'est utilisé que
   // quand il produit EXACTEMENT l'aperçu. À porter côté worker ensuite.
   if((cfg.format || 'vertical') !== 'vertical') return false;                                   // format carré non géré serveur
-  if((cfg.avZoom ?? 100) !== 100 || (cfg.avWidth ?? 100) !== 100 || (cfg.avCropX ?? 0) !== 0 || (cfg.avCropY ?? 0) !== 0) return false; // recadrage avatar non géré serveur
+  if((cfg.avZoom ?? 100) !== 100 || (cfg.avWidth ?? 100) !== 100 || (cfg.avCropX ?? 0) !== 0 || (cfg.avCropY ?? 0) !== 0 || ((cfg.avClip||{}).t || (cfg.avClip||{}).b || (cfg.avClip||{}).l || (cfg.avClip||{}).r)) return false; // recadrage avatar non géré serveur
   { const _gv = document.getElementById('gpVideo'), _gz = document.getElementById('gameplayZone');
     if(_gv?.src && _gz && _gz.style.display !== 'none') return false; }                       // split gameplay non géré serveur : le worker ne compose pas le split (même test hasGp que la compo client)
   { const _ho = document.getElementById('hookOverlay'), _ht = document.getElementById('hookText');
@@ -24787,10 +24859,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     const _avY = (_gpOnTop && gpVid) ? gpH : 0;
     const _gpY = _gpOnTop ? 0 : avH;
     _cvDrawZone(ctx, hedraVid, {x:0,y:_avY,w:W,h:avH},
-      cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H, {topAlign:true});
+      cfg.avZoom||100, cfg.avWidth||cfg.avZoom||100, cfg.avCropX||0, cfg.avCropY||0, W, H, {topAlign:true, clip:cfg.avClip});
     if(gpVid)
       _cvDrawZone(ctx, gpVid, {x:0,y:_gpY,w:W,h:gpH},
-        cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100, cfg.gpCropX||0, cfg.gpCropY||0, W, H);
+        cfg.gpZoom||100, cfg.gpWidth||cfg.gpZoom||100, cfg.gpCropX||0, cfg.gpCropY||0, W, H, {clip:cfg.gpClip});
     _cvHook(ctx, W, H);
     if(words.length > 0){
       const sub = Math.max(0, elapsed + subAdvSec);
@@ -25666,24 +25738,37 @@ function _audioBufferToWavBlob(buffer){
 
 // ── Dessine une source (vidéo/image) dans une zone canvas avec zoom+crop identique au preview
 // zone:{x,y,w,h} en pixels canvas — zoom en % (zoomW ignoré depuis le 02/09) — cropX/cropY en FRACTION de la largeur de zone
+function _cvBlurBg(ctx, src, zone, r){
+  // fond flou = la partie gardée en cover (+12 %) rendue en 1/14 puis ré-agrandie (flou doux, sans ctx.filter : Safari), assombrie
+  const c = _cvBlurBg._c || (_cvBlurBg._c = document.createElement('canvas'));
+  c.width = Math.max(4, Math.round(zone.w / 14)); c.height = Math.max(4, Math.round(zone.h / 14));
+  const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
+  const sb = Math.max(c.width / r.w, c.height / r.h) * 1.12, cw = r.w * sb, ch = r.h * sb;
+  x.drawImage(src, r.x, r.y, r.w, r.h, (c.width - cw) / 2, (c.height - ch) / 2, cw, ch);
+  ctx.imageSmoothingEnabled = true; try{ ctx.imageSmoothingQuality = 'high'; }catch(_){}
+  ctx.drawImage(c, zone.x, zone.y, zone.w, zone.h);
+  ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+}
 function _cvDrawZone(ctx, src, zone, zoomH, zoomW, cropX, cropY, canvasW, canvasH, opts){
   const srcW = src.videoWidth || src.naturalWidth || 0;
   const srcH = src.videoHeight || src.naturalHeight || 0;
   if(!srcW || !srcH) return;
-  // #zoom-unifie (02/09) : même géométrie que l'aperçu (_zoneGeom) — zoom uniforme ≥ 100 % (la largeur est
-  // fusionnée dans le zoom, zoomW ignoré), boîte centrée, contenu en cover avec UNE échelle, glissé du
-  // contenu borné (jamais de noir), avatar aligné en haut. Prouvé par superposition différence DOM/canvas.
-  const g  = _zoneGeom(zone, srcW, srcH, zoomH || zoomW || 100, !!(opts && opts.topAlign));
+  // #zoom-v3 : même géométrie que l'aperçu (_zoneGeom) — partie gardée (opts.clip) cadrée dans la zone, zoom
+  // 50-300 %, glissé borné, fond flou dans les vides. zoomW est ignoré (largeur fusionnée dans le zoom).
+  const g  = _zoneGeom(zone, srcW, srcH, zoomH || zoomW || 100, !!(opts && opts.topAlign), opts && opts.clip);
   const tx = Math.max(g.minTx, Math.min(g.maxTx, (cropX || 0) * zone.w));   // crops = fraction de la largeur de zone
   const ty = Math.max(g.minTy, Math.min(g.maxTy, (cropY || 0) * zone.w));
   const cx = g.cx0 + tx, cy = g.cy0 + ty;
-  const vx0 = Math.max(zone.x, g.bx, cx), vy0 = Math.max(zone.y, g.by, cy);
-  const vx1 = Math.min(zone.x + zone.w, g.bx + g.bw, cx + g.cw), vy1 = Math.min(zone.y + zone.h, g.by + g.bh, cy + g.ch);
-  if(vx1 - vx0 < 0.5 || vy1 - vy0 < 0.5) return;
-  const sx = (vx0 - cx) / g.s, sy = (vy0 - cy) / g.s, sw = (vx1 - vx0) / g.s, sh = (vy1 - vy0) / g.s;
   ctx.save();
   ctx.beginPath(); ctx.rect(zone.x, zone.y, zone.w, zone.h); ctx.clip();
-  ctx.drawImage(src, sx, sy, sw, sh, vx0, vy0, vx1 - vx0, vy1 - vy0);
+  const gap = cx > zone.x + 0.5 || cy > zone.y + 0.5 || cx + g.cw < zone.x + zone.w - 0.5 || cy + g.ch < zone.y + zone.h - 0.5;
+  if(gap) _cvBlurBg(ctx, src, zone, g.r);
+  const vx0 = Math.max(zone.x, cx), vy0 = Math.max(zone.y, cy);
+  const vx1 = Math.min(zone.x + zone.w, cx + g.cw), vy1 = Math.min(zone.y + zone.h, cy + g.ch);
+  if(vx1 - vx0 >= 0.5 && vy1 - vy0 >= 0.5){
+    const sx = g.r.x + (vx0 - cx) / g.s, sy = g.r.y + (vy0 - cy) / g.s;
+    ctx.drawImage(src, sx, sy, (vx1 - vx0) / g.s, (vy1 - vy0) / g.s, vx0, vy0, vx1 - vx0, vy1 - vy0);
+  }
   ctx.restore();
 }
 
