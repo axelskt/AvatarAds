@@ -23604,7 +23604,19 @@ async function callHedra(audioBlob){
       audio: audioUp
     };
     let jobId;
-    try { jobId = await _hedraV3Submit(_hedraSlug(MODEL_ID), input); }
+    // #hedra-reprise (02/09) : si le même audio + même image ont déjà un job récent (< 30 min) qui tourne ou
+    // qui a fini pendant qu'on avait abandonné, on le REPREND au lieu de resoumettre (pas de 2e job Hedra,
+    // pas d'attente repartie de zéro).
+    const _sig = String(audioBlob && audioBlob.size) + '|' + String(startImg && startImg.url || '');
+    const _last = window._hedraLastJob;
+    if(_last && _last.sig === _sig && (Date.now() - _last.at) < 30*60*1000){
+      try{
+        const pr = await _hedraFetch('/v3/jobs/'+_last.id+'/status', 'GET');
+        if(pr.ok){ const st = String((await pr.json()).status||'').toUpperCase();
+          if(['QUEUED','IN_PROGRESS','PROCESSING','COMPLETED','PENDING','RUNNING'].includes(st)){ jobId = _last.id; toast(st==='COMPLETED' ? 'Vidéo Hedra déjà prête — récupération' : 'Reprise du job Hedra en cours (pas de nouvelle soumission)'); } }
+      }catch(_){}
+    }
+    try { if(!jobId) jobId = await _hedraV3Submit(_hedraSlug(MODEL_ID), input); window._hedraLastJob = { id: jobId, at: Date.now(), sig: _sig }; }
     catch(err){
       window._lastHedraError = 'Hedra erreur — ' + (err&&err.message||err) + '. Réessaie ou vérifie ton solde Hedra.';
       toast('Hedra : ' + (err&&err.message||err));
@@ -23621,12 +23633,15 @@ async function callHedra(audioBlob){
     if(hedraBar) hedraBar.style.display = 'block';
     let out;
     try {
-      out = await _hedraV3Poll(jobId, (p)=>{
+      out = await _hedraV3Poll(jobId, (p, eta)=>{
         const prog = Math.round((p||0)*100);
         if(gpIcon) gpIcon.textContent = prog > 0 ? prog + '%' : '…';
         if(hedraBarFill) hedraBarFill.style.width = prog + '%';
         if(hedraBarPct) hedraBarPct.textContent = prog + '%';
-      }, 90);
+        // ETA annoncée par Hedra → l'attente devient lisible (et « en retard de X s » quand elle est dépassée)
+        const hs = document.getElementById('hedraStatus'); const etaMs = eta ? Date.parse(eta) : 0;
+        if(hs && etaMs){ const d = Math.round((etaMs - Date.now())/1000); hs.textContent = 'Hedra ' + prog + ' % · ' + (d > 0 ? ('fin estimée dans ' + (d>90 ? Math.round(d/60)+' min' : d+' s')) : ('en retard de ' + Math.abs(d) + ' s')); }
+      }, 135);   // plafond 9 min ; un job qui ne progresse plus est abandonné bien avant (voir _hedraV3Poll)
     } catch(err){
       if(hedraBar) hedraBar.style.display = 'none';
       window._lastHedraError = 'Génération Hedra échouée : ' + (err&&err.message||err) + '. Vérifie ton solde ou réessaie.';
@@ -31516,22 +31531,46 @@ async function _hedraV3Submit(slug, input){
   return id;
 }
 async function _hedraV3Poll(jobId, onProgress, maxTries){
-  for(let i=0;i<(maxTries||90);i++){
-    await new Promise(r=>setTimeout(r,4000));
-    const pr = await _hedraFetch('/v3/jobs/'+jobId+'/status', 'GET'); if(!pr.ok) continue;
-    const pd = await pr.json(); const st=(pd.status||'').toUpperCase();
-    if(onProgress && typeof pd.progress==='number') onProgress(pd.progress);
-    if(st==='FAILED'){ const em=(pd.error&&(pd.error.message||pd.error))||''; throw new Error('Hedra a échoué'+(em?(' — '+em):'')); }
+  // #hedra-poll (02/09, Axel : « 10 min pour 7 s d'audio, pas normal ») — le job job_1f592f28 était resté
+  // IN_PROGRESS à 90 % chez Hedra pendant 2 h : 36 sondages à 200 « en cours », et nous on attendait 8 min
+  // en silence avant « délai dépassé ». Désormais : (1) une erreur HTTP répétée remonte telle quelle,
+  // (2) tous les statuts terminaux d'échec sont reconnus, (3) un job qui ne PROGRESSE plus pendant 3 min
+  // alors que son ETA est passée est abandonné tôt (crédits remboursés par l'appelant) avec un message clair,
+  // (4) la progression et l'ETA Hedra remontent à l'UI, (5) plafond horaire explicite avec l'id du job.
+  const C = Object.assign({ interval: 4000, stallMs: 3*60*1000, etaGraceMs: 90*1000, capMs: maxTries ? maxTries*4000 : 10*60*1000 }, window._hedraPollCfg || {});
+  const t0 = Date.now(); let fails = 0, lastP = -1, lastPAt = Date.now();
+  while(Date.now() - t0 < C.capMs){
+    await new Promise(r=>setTimeout(r, C.interval));
+    let pr = null; try{ pr = await _hedraFetch('/v3/jobs/'+jobId+'/status', 'GET'); }catch(_){ pr = null; }
+    if(!pr || !pr.ok){
+      fails++;
+      if(fails >= 5){ let body=''; try{ body = pr ? (await pr.text()).slice(0,160) : 'réseau injoignable'; }catch(_){}
+        throw new Error('Hedra statut '+(pr ? 'HTTP '+pr.status : 'injoignable')+' ×'+fails+' — '+body); }
+      continue;
+    }
+    fails = 0;
+    const pd = await pr.json(); const st = String(pd.status||'').toUpperCase();
+    const prog = (typeof pd.progress==='number') ? pd.progress : null;
+    if(prog !== null && prog > lastP + 0.005){ lastP = prog; lastPAt = Date.now(); }
+    if(onProgress && prog !== null){ try{ onProgress(prog, pd.estimated_completion_at || null); }catch(_){} }
+    if(['FAILED','ERROR','ERRORED','CANCELED','CANCELLED'].includes(st)){
+      const em = (pd.error && (pd.error.message || pd.error)) || (pd.message||'');
+      throw new Error('Hedra a échoué'+(em ? (' — '+String(em).slice(0,160)) : '')+' (job '+jobId+')');
+    }
     if(st==='COMPLETED'){
       const rr = await _hedraFetch('/v3/jobs/'+jobId, 'GET');
-      if(!rr.ok) throw new Error('Hedra résultat '+rr.status);
+      if(!rr.ok) throw new Error('Hedra résultat HTTP '+rr.status);
       const rd = await rr.json();
       const out = (rd.outputs||[]).find(o=>o && o.url) || (rd.outputs||[])[0];
-      if(!out || !out.url) throw new Error('Hedra : pas d\'URL de sortie');
+      if(!out || !out.url) throw new Error('Hedra : pas d\'URL de sortie (job '+jobId+')');
       return out;   // { url, asset_id, content_type, width, height, duration_ms, … }
     }
+    const etaMs = pd.estimated_completion_at ? Date.parse(pd.estimated_completion_at) : 0;
+    if(Date.now() - lastPAt > C.stallMs && (!etaMs || Date.now() > etaMs + C.etaGraceMs)){
+      throw new Error('Hedra bloqué à '+Math.round(Math.max(0,lastP)*100)+' % depuis '+Math.round(C.stallMs/60000)+' min (job '+jobId+') — réessaie');
+    }
   }
-  throw new Error('Hedra : délai dépassé');
+  throw new Error('Hedra : délai dépassé ('+Math.round(C.capMs/60000)+' min, job '+jobId+')');
 }
 
 // ── Résout dynamiquement l'id du modèle Seedance sur le compte Hedra (mis en cache) ──
