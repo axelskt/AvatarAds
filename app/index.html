@@ -3107,10 +3107,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
         <!-- RÉSULTAT MULTI (2-3 images) -->
         <div id="imgResultMulti" class="rise" style="display:none;width:100%;max-width:640px;margin:0 auto">
-          <div style="font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="8" height="8" rx="1.5"/><path d="M1 6.5l2.2-2 2 1.8 1.8-2.3L9 6"/></svg>
-            Variations générées · clique pour sélectionner
-          </div>
           <div id="imgMultiGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
         </div>
 
@@ -11024,22 +11020,19 @@ async function _imgRetryViaNano(){
 // Sélectionne une image depuis la grille multi → l'affiche en grand (single)
 function _imgFillMultiSlot(slot, url, size, showFace){
   if(!slot) return;
-  slot.innerHTML=''; slot.style.cursor='default'; slot.title='';
+  slot.innerHTML=''; slot.style.cursor='pointer'; slot.title='Cliquer pour ouvrir en grand';
   const im=document.createElement('img'); im.src=url;
   im.style.cssText='width:100%;height:100%;object-fit:contain;background:#0d0d0f;display:block';   // contain → l'aperçu ne coupe plus (le résultat téléchargé était déjà complet)
   slot.appendChild(im);
   const bar=document.createElement('div');
-  bar.style.cssText='position:absolute;bottom:0;left:0;right:0;display:flex;gap:5px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.82),transparent)';
-  const DL='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
-  const K4='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>';
-  const FC='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>';
-  const mk=(html,primary,fn)=>{ const b=document.createElement('button'); b.innerHTML=html;
-    b.style.cssText='flex:1;min-width:0;padding:7px 3px;border:none;border-radius:8px;font-family:var(--font);font-size:10px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;'+(primary?'background:var(--accent);color:#fff':'background:rgba(255,255,255,.16);color:#fff');
-    b.onclick=(e)=>{ e.stopPropagation(); fn(); }; return b; };
-  bar.appendChild(mk(DL+'<span>Enregistrer</span>', true, ()=>{ const a=document.createElement('a'); a.href=url; a.download='avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }));
-  bar.appendChild(mk(K4+'<span>4K</span>', false, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
-  if(showFace) bar.appendChild(mk(FC+'<span>Visage</span>', false, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgUpscaleBtn'); if(b) _imgUpscaleHD(b); }));
-  slot.appendChild(bar);
+  bar.style.cssText='position:absolute;bottom:0;left:0;right:0;display:flex;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.82),transparent)';
+  const dl=document.createElement('button');
+  dl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Enregistrer</span>';
+  dl.style.cssText='flex:1;padding:8px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-family:var(--font);font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px';
+  dl.onclick=(e)=>{ e.stopPropagation(); const a=document.createElement('a'); a.href=url; a.download='avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); };
+  bar.appendChild(dl); slot.appendChild(bar);
+  // clic sur l'image → on l'ouvre en grand, avec EXACTEMENT les mêmes actions que la génération d'une seule image (Améliorer en 4K, Détails du visage, Télécharger)
+  slot.onclick=()=> _imgSelectFromMulti(url, size);
 }
 function _imgSelectFromMulti(url, size){
   document.getElementById('imgResultMulti').style.display = 'none';

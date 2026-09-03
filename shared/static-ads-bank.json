@@ -314,7 +314,7 @@
    "family": "offre",
    "ratio": "portrait",
    "person": false,
-   "prompt": "Concept: warning — demand is coming, stock up on {PRODUCT}. Raw warehouse photo: cardboard boxes, blue plastic crates, fluorescent light, an open case full of {PRODUCT} units in the foreground. A red rounded warning sign floats at the top with a triangle icon and bold white text {HEADLINE|ATTENTION : la saison arrive. La demande aussi.} and a full-width red bar at the bottom reads {CTA|{BRAND} | FAIS TON STOCK} in white uppercase. Logistics realism, no polish.",
+   "prompt": "Concept: warning — demand is coming, stock up on {PRODUCT}. Raw warehouse photo: cardboard boxes, blue plastic crates, fluorescent light, an open case full of {PRODUCT} units, ideally held or lifted by a person's hands in the foreground with the stacked stock boxes behind them for a natural feel. A red rounded warning sign floats at the top with a triangle icon and bold white text {HEADLINE|ATTENTION : la saison arrive. La demande aussi.} and a full-width red bar at the bottom reads {CTA|{BRAND} | FAIS TON STOCK} in white uppercase. Logistics realism, no polish.",
    "logic": "attention, la demande arrive : fais ton stock"
   },
   {
