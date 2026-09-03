@@ -30,7 +30,7 @@ const RESEND_KEY   = Deno.env.get('RESEND_API_KEY') ?? ''
 const CRON_SECRET  = Deno.env.get('CRON_SECRET') ?? ''
 const HEDRA_V3_KEY = Deno.env.get('HEDRA_V3_KEY') ?? ''
 // fal : la clé ADMIN d'abord (seule à pouvoir lire la facturation), sinon les noms tolérés par fal-proxy (on saura vite si elle est refusée)
-const FAL_KEY = ['FAL_ADMIN_KEY', 'FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI_KEY', 'FAL_SECRET'].map(n => Deno.env.get(n) ?? '').find(Boolean) ?? ''
+const FAL_KEY = ['FAL_ADMIN_KEY', 'FALAI_ADMIN_KEY', 'FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI_KEY', 'FAL_SECRET'].map(n => Deno.env.get(n) ?? '').find(Boolean) ?? ''
 const ELEVEN_KEY   = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
 const FROM = 'AvatarAds <bonjour@avatarads.fr>'
 const TO   = 'axel@iamanager.fr'
