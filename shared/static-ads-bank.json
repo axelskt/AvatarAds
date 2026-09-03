@@ -1,5 +1,5 @@
 {
- "version": "2026-09-03b",
+ "version": "2026-09-03c",
  "source": "58 formats de static ads (vidéo TikTok « 50+ statics ads format »), REFAITS un par un le 03/09 : chaque gabarit commence par « Concept : » (le sens de la pub), est agnostique du produit (plus d'exemples déodorant), et les formats de comparaison exigent un AUTRE produit générique en face (jamais {PRODUCT} deux fois). Placeholders : {PRODUCT} {BRAND} {HEADLINE|exemple} {SUB|exemple} {BULLETS|ex1;ex2;ex3} {CTA|exemple} {QUOTE|exemple} {NUMBER|exemple}. Un placeholder sans valeur devient une consigne « écris une ligne dans l'esprit de … ».",
  "formats": [
   {
@@ -523,60 +523,6 @@
    "person": false,
    "prompt": "Concept: a 2-minute quiz that reveals you should switch to {PRODUCT}. Quiz sheet on a cream page: a huge condensed black word 'QUIZ' at the top with a small red '2 min' tag, a bold sub-headline {HEADLINE|Tu connais vraiment ce que tu utilises ?}, then three numbered multiple-choice questions with A/B/C checkbox options in small black text, written for THIS product's category, the right answer always pointing to what {PRODUCT} does well {BULLETS|1. Ce qui compte vraiment, c'est… A. Le nom B. Ce qu'il y a dedans C. La couleur du packaging;2. Combien de fois tu devrais en reprendre ? A. Sans arrêt B. Une fois suffit C. Jamais;3. Le bon réflexe, c'est… A. Le premier prix B. {BRAND} C. Changer tous les mois}, the answers printed upside-down at the very bottom, and {PRODUCT} at the bottom right with a small line {CTA|3/3 ? Fais le changement.} Printed-worksheet look.",
    "logic": "quiz de 2 min qui pousse à changer"
-  },
-  {
-   "id": "stack",
-   "name": "La stack",
-   "family": "combo",
-   "ratio": "portrait",
-   "person": false,
-   "logic": "la stack gagnante : des éléments enchaînés → un résultat (screens 1 & 7 regroupés)",
-   "prompt": "Concept: the winning stack — the elements that, combined, unlock a result. On a clean white (or deep dark) background, a vertical flow of 3 to 4 rounded cards stacked top to bottom; each card has a small square icon or logo on the left and two short lines of text — a bold name plus a tiny monospace role label. For a digital service, the cards are the tools, channels or features it connects; for a physical product, its key components or steps. Thin coloured arrows point down from one card to the next. Under the last arrow, a huge extra-bold outcome word in a bright accent colour {HEADLINE|NEXT LEVEL}, and the brand name {BRAND} with a small logo at the very bottom. Crisp, techy, high-contrast."
-  },
-  {
-   "id": "combo",
-   "name": "Le combo",
-   "family": "combo",
-   "ratio": "square",
-   "person": false,
-   "logic": "le combo parfait : A + B + C = gros résultat (screens 8 & 9 regroupés, plat ou 3D glossy)",
-   "prompt": "Concept: the perfect combo — a few elements added together equal a big result. Centered on a plain light or dark background, a horizontal row of 3 to 4 elements joined by bold '+' signs — for a digital service, the product's app icon/logo plus the tools or platforms it pairs with; for a physical product, the product plus what you use it with — then a big '=' and a huge payoff (a punchy word, a clear benefit, or a money symbol) {HEADLINE|LE COMBO PARFAIT}. Optionally render the icons as glossy glowing 3D tiles on a dark studio background for a premium look. Brand name {BRAND} at the bottom. Bold, symmetrical, shareable."
-  },
-  {
-   "id": "chatgpt",
-   "name": "ChatGPT recommande",
-   "family": "preuve",
-   "ratio": "portrait",
-   "person": false,
-   "logic": "un assistant IA recommande le produit comme le meilleur (screen 4) — cousin de reddit/google, UI ChatGPT",
-   "prompt": "Concept: an AI assistant recommends the product as the best option. A pixel-accurate ChatGPT-style conversation screenshot with a clean minimal UI and a model name at the top: a user question in a grey bubble {QUOTE|Quel est le meilleur outil pour identifier ce qui marche vraiment ?} then the assistant's reply in plain text that names {PRODUCT} as today's best solution, with a short intro line and 2 to 3 bullet reasons {BULLETS|La meilleure data du marché;Simple et rapide;Recommandé par les pros}. The product or brand name {BRAND} appears in bold in the answer. No advertising graphics — it must look like a real screenshot someone shared."
-  },
-  {
-   "id": "qa-story",
-   "name": "Story Q&A",
-   "family": "ugc",
-   "ratio": "portrait",
-   "person": true,
-   "logic": "un influenceur recommande le produit dans un sticker question/réponse de story IG + @handle (screen 5)",
-   "prompt": "Concept: someone endorses the product in an Instagram-story Q&A. An authentic Instagram-story screenshot over a real lifestyle phone photo (a person out at night, a car, a desk — whatever fits the audience): the IG 'ask me a question' sticker near the top with a follower question {QUOTE|Tu as un outil pour analyser la concurrence ?}, and below it a big handwritten-style answer that endorses {PRODUCT} with a thumbs-up, plus the account shown as a mention sticker {HEADLINE|Oui, j'utilise {BRAND} tous les jours 👍}. Real story UI (send-message bar, heart/comment/share icons). No ad polish — it must look like a genuine reshared story."
-  },
-  {
-   "id": "roas",
-   "name": "Avec vs sans",
-   "family": "comparaison",
-   "ratio": "portrait",
-   "person": false,
-   "logic": "ajouter le produit multiplie le résultat : setup seul = petit chiffre, setup + produit = gros chiffre (screen 10) — PAS un concurrent, c'est avec/sans le produit",
-   "prompt": "Concept: adding the product multiplies your result — a clean before/after on the SAME setup, not against a rival. On a plain light background, two rounded white cards stacked vertically. Top card: a baseline shown as a small row of icons/logos or a short label (what people use WITHOUT the product) then '=' and a modest result number {SUB|1.2}. Bottom card: the exact SAME baseline PLUS the product's icon/logo added with a '+', then '=' and a much bigger, highlighted result number {HEADLINE|4.9}, with a tiny unit label next to the numbers (e.g. ROAS, résultats, ×). Brand name {BRAND} at the bottom. The second number is clearly the winner."
-  },
-  {
-   "id": "demo-temoignage",
-   "name": "Témoignage en usage",
-   "family": "ugc",
-   "ratio": "portrait",
-   "person": true,
-   "logic": "témoignage brut PAR-DESSUS le produit en vraie utilisation — pour un service : l'appli/dashboard sur un écran ; pour un physique : le produit en main (screens 2 & 3 regroupés)",
-   "prompt": "Concept: a candid testimonial over the product in real use. A real, slightly imperfect phone photo of the product actually being used — for a digital service, a laptop or monitor on a desk showing its real interface or dashboard; for a physical product, a hand using it in context — natural light, real setting, no studio polish, motion blur allowed. Over the photo, one or two bold black-text-on-white stickers with a punchy first-person testimonial {QUOTE|Ce combo est juste imbattable.} and a short second line. No logo lockup, no graphic decoration — it must look like a real story a customer reshared."
   }
  ]
 }
