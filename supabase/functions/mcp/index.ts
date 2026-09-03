@@ -952,7 +952,7 @@ function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): s
     ? ' PRODUCT 1:1 FROM THE REFERENCE IMAGE — the product/subject must be a faithful, undistorted copy of the reference: identical shape, proportions, colours, materials, label layout, logo geometry and typography. Every letter, word and number on the packaging must be reproduced EXACTLY as in the reference — same spelling, same font, same placement, crisp and fully legible; NEVER invent, mirror, merge, blur, warp or replace characters, never add or remove text. The logo must be a pixel-faithful copy (no warping, no missing or extra strokes). Do NOT redesign, rename, recolour or alter it; only re-light and re-compose it.'
     : ''
   if (kind === 'static_ad') {
-    // #static-ads-bank (02/09) : un format de la banque (58 gabarits analysés) remplace la mise en page unique.
+    // #static-ads-bank (02/09) : un format de la banque (64 gabarits analysés) remplace la mise en page unique.
     const fmt = (args as Record<string, unknown>).__adFormat as StaticAdFormat | null | undefined
     if (fmt) {
       const filled = fillStaticAdTemplate(fmt.prompt, {
@@ -1021,7 +1021,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   const directRefUrl = String(args.reference_image_url || '').trim()
   const productUrl = String(args.product_url || '').trim()
   const hasRefSource = !!directRefUrl || !!productUrl
-  // #static-ads-bank : compte développeur/owner → « static_ad » pioche un des 58 formats (ou celui demandé via ad_format).
+  // #static-ads-bank : compte développeur/owner → « static_ad » pioche un des 64 formats (ou celui demandé via ad_format).
   const adFormat: StaticAdFormat | null = (kind === 'static_ad' && isUnlimited(profile)) ? pickStaticAdFormat(STATIC_AD_FORMATS, 'random') : null   // Axel : toujours au hasard
   if (adFormat) args = { ...args, ad_format: adFormat.id }   // mémorisé → « Regénérer » / carte photo gardent le même format
   const promptFinal = composerPromptImage({ ...args, prompt, __adFormat: adFormat }, hasRefSource)   // source présente → prompt « produit à l'identique »
