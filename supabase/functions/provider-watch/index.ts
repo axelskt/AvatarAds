@@ -15,11 +15,11 @@
 //  · Google AI Studio       facturation Google Cloud post-payée (carte) : alerte de budget dans Cloud Billing
 //  · Resend, Whop, Supabase, Railway : quotas mensuels / post-payé, e-mails intégrés
 //
-//  · POST + x-cron-key (pg_cron) ou jeton service_role : lit tous les soldes, mémorise dans service_health (une clé par
-//    fournisseur) et envoie un e-mail Resend sous 15 $ (bas) puis sous 5 $ (critique) — au plus un e-mail par palier
-//    toutes les 6 h, un nouveau si le palier s'aggrave. ElevenLabs : sous 15 % puis sous 5 % du quota.
+//  · POST + x-cron-key (pg_cron toutes les 12 h) ou jeton service_role : lit tous les soldes, mémorise dans
+//    service_health (une clé par fournisseur) et envoie UN e-mail Resend sous 5 $ (ElevenLabs : sous 5 % du quota) —
+//    au plus un rappel par passage du cron (dédoublonnage 11 h). Plus de seuil « critique », plus de blocage.
 //  · GET ?provider=hedra (défaut) avec un jeton utilisateur : état mémorisé { ok, balance, level, at } (rafraîchi si > 20 min).
-//    L'app le consulte AVANT de débiter un membre : ok=false (Hedra sous 2 $) → message clair, aucun débit.
+//    ok est TOUJOURS vrai désormais (on n'empêche plus aucune génération) ; l'app ne bloque plus selon le solde.
 //  · GET ?all=1 avec un jeton service_role : tous les états.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -34,9 +34,9 @@ const FAL_KEY = ['FAL_ADMIN_KEY', 'FALAI_ADMIN_KEY', 'FALAI_API_KEY', 'FAL_KEY',
 const ELEVEN_KEY   = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
 const FROM = 'AvatarAds <bonjour@avatarads.fr>'
 const TO   = 'axel@iamanager.fr'
-const LOW = 15, CRIT = 5, BLOCK = 2                 // USD : alerte basse, alerte critique, seuil de blocage côté app (Hedra)
-const PCT_LOW = 15, PCT_CRIT = 5                    // % de quota restant (ElevenLabs)
-const FRESH_MS = 20 * 60 * 1000, REALERT_MS = 6 * 60 * 60 * 1000
+const LOW = 5, BLOCK = 0                            // USD : un seul rappel sous 5 $ (03/09 — Axel) ; plus AUCUN blocage côté app
+const PCT_LOW = 5                                   // % de quota restant (ElevenLabs)
+const FRESH_MS = 20 * 60 * 1000, REALERT_MS = 11 * 60 * 60 * 1000   // cron 12 h → au plus un rappel par passage
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-key', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 const svc = createClient(SUPABASE_URL, SERVICE_KEY)
@@ -83,9 +83,9 @@ const PROVIDERS: Provider[] = [
 
 function levelOf(p: Provider, f: Fetched): Level {
   if (f.balance === null) return 'ok'
-  if (p.unit === 'usd') return f.balance < CRIT ? 'crit' : f.balance < LOW ? 'low' : 'ok'
+  if (p.unit === 'usd') return f.balance < LOW ? 'low' : 'ok'
   const pct = f.total ? (f.balance / f.total) * 100 : 100
-  return pct < PCT_CRIT ? 'crit' : pct < PCT_LOW ? 'low' : 'ok'
+  return pct < PCT_LOW ? 'low' : 'ok'
 }
 function fmt(s: State): string {
   if (s.balance === null) return '?'
@@ -107,11 +107,9 @@ async function alert(p: Provider, state: State, prev: State | undefined): Promis
   const recent = !!prev?.last_alert_at && (Date.now() - new Date(prev.last_alert_at).getTime()) < REALERT_MS
   if (sameLevel && recent) return false
   const v = fmt(state)
-  const subject = state.level === 'crit' ? `🔴 ${p.label} : solde critique — ${v}` : `🟠 ${p.label} : solde bas — ${v}`
+  const subject = `🟠 ${p.label} : solde bas — ${v} (recharge)`
   const consequence = p.id === 'hedra'
-    ? (state.level === 'crit'
-        ? `Sous ${BLOCK} $, l'app <b>refuse les générations d'avatar</b> avec un message clair et sans débiter personne. Hedra répond 402 à chaque création de job (c'est ce qui est arrivé le 02/09 à 23 h 28, juste avant la résiliation d'un membre Pro).`
-        : `Sous ${CRIT} $ l'alerte devient critique ; sous ${BLOCK} $ l'app bloque les générations d'avatar.`)
+    ? `Recharge avant d'être à zéro : sinon Hedra répond 402 à chaque avatar (c'est ce qui est arrivé le 02/09 à 23 h 28, juste avant la résiliation d'un membre Pro). Les crédits des membres sont remboursés, mais la génération échoue sous leurs yeux.`
     : p.id === 'fal'
     ? `À zéro, fal.ai refuse les jobs : Omni, OmniHuman, changement de visage et upscale échouent (crédits remboursés, mais membres déçus).`
     : `À zéro, les voix ElevenLabs échouent jusqu'au renouvellement du quota.`
