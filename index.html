@@ -608,7 +608,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     </div>
   </section>
 
-  <!-- Images IA (flip) — avant/après -->
+  <!-- Images IA — démo MCP (muette, en boucle, redémarre au scroll) -->
   <section class="wrap sc-sec" style="padding-bottom:88px">
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -616,19 +616,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <p class="muted" style="font-size:17px;line-height:1.55;max-width:440px">Crée des images ultra-réalistes avec un niveau de détail exceptionnel.</p>
       </div>
       <div class="reveal sc-mediawrap" style="position:relative">
-        <!-- comparateur avant/après : les deux rendus superposés, poignée centrale draggable (souris + tactile) -->
-        <div id="baSlider" style="position:relative;width:100%;border-radius:18px;overflow:hidden;cursor:ew-resize;border:1px solid rgba(255,255,255,.1);filter:drop-shadow(0 30px 60px rgba(0,0,0,.7));user-select:none;-webkit-user-select:none;touch-action:pan-y">
-          <img src="assets/lp/ia-after-tom.webp" alt="Résultat IA — après" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%">
-          <div id="baBefore" style="position:absolute;inset:0;width:50%;overflow:hidden">
-            <img src="assets/lp/ia-before-laptop.webp" alt="Résultat IA — avant" width="600" height="900" loading="lazy" decoding="async" draggable="false" style="position:absolute;top:0;left:0;height:100%;width:200%;max-width:none;object-fit:cover;object-position:50% 36%;filter:saturate(.8) blur(.7px)">
-          </div>
-          <span class="ba-tag" style="left:12px">AVANT</span>
-          <span class="ba-tag" style="right:12px">APRÈS</span>
-          <div id="baHandle" style="position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:3px;background:#fff;z-index:4;box-shadow:0 0 12px rgba(0,0,0,.6)">
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.5)">
-              <svg width="20" height="14" viewBox="0 0 26 16" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2 3 8l6 6M17 2l6 6-6 6"/></svg>
-            </div>
-          </div>
+        <div class="sc-media" style="aspect-ratio:16/9">
+          <video id="imagesIaVid" src="assets/lp/images-ia-lp.mp4" poster="assets/lp/images-ia-lp.jpg" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo Images IA : depuis Claude, un produit devient des dizaines de pubs produit et de l'UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
     </div>
@@ -1195,6 +1184,14 @@ function tstToggle(open){
     var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting) v.play().catch(function(){}); else v.pause(); }); }, { threshold: 0.35 });
     io.observe(v);
   });
+})();
+
+/* Vidéo Images IA (démo MCP narrative) : muette, en boucle, REDÉMARRE du début quand elle entre à l'écran */
+(function(){
+  var v=document.getElementById('imagesIaVid'); if(!v) return;
+  if(!('IntersectionObserver' in window)){ v.play().catch(function(){}); return; }
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ try{v.currentTime=0;}catch(_){ } v.play().catch(function(){}); } else v.pause(); }); }, { threshold: 0.35 });
+  io.observe(v);
 })();
 
 /* Montage IA avant/après : les 2 boucles muettes démarrent ENSEMBLE quand la section est visible */
