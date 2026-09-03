@@ -26,6 +26,10 @@ verify_jwt = false
 [functions.auth-otp]
 verify_jwt = false
 
-# hedra-watch : appelée par pg_cron avec x-cron-key (pas de JWT) + GET vérifié dans le code
+# provider-watch : soldes Hedra / fal.ai / ElevenLabs — appelée par pg_cron avec x-cron-key (pas de JWT) + GET vérifié dans le code
+[functions.provider-watch]
+verify_jwt = false
+
+# hedra-watch : remplacée par provider-watch (03/09) — supprimée après bascule de l'app
 [functions.hedra-watch]
 verify_jwt = false

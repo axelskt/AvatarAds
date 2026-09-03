@@ -31610,17 +31610,18 @@ function cartoonPickSeedanceDur(ms, el){
 }
 
 // ── Helper générique pour l'API Hedra (via proxy Supabase) ──
-// #hedra-gate (03/09) : AVANT de débiter un membre, on demande l'état du solde Hedra à hedra-watch (mémorisé,
-// rafraîchi toutes les 15 min par pg_cron). ok=false (< 2 $) → message clair, aucun débit, alerte à Axel (1 fois/h).
+// #hedra-gate (03/09) : AVANT de débiter un membre, on demande l'état du solde Hedra à provider-watch (mémorisé,
+// rafraîchi toutes les 15 min par pg_cron ; surveille aussi fal.ai et ElevenLabs). ok=false (< 2 $) → message clair,
+// aucun débit, alerte à Axel (1 fois/h).
 async function _hedraGate(){
   try{
     const H = await getAuthHeader();
-    const r = await fetch(SUPABASE_URL + '/functions/v1/hedra-watch', { headers: { ...H } });
+    const r = await fetch(SUPABASE_URL + '/functions/v1/provider-watch?provider=hedra', { headers: { ...H } });
     if(!r.ok) return true;                                   // surveillance indisponible → on n'empêche pas de générer
     const j = await r.json();
     if(j && j.ok === false){
       toast('Génération momentanément indisponible : notre fournisseur vidéo est saturé. Aucun crédit débité — réessaie dans quelques minutes.');
-      _hedraAlertAxel('Hedra bloqué côté app — solde ' + (j.balance == null ? '?' : j.balance.toFixed(2)) + ' $', 'Un membre a voulu générer un avatar ; refus avant débit (hedra-watch ok=false).');
+      _hedraAlertAxel('Hedra bloqué côté app — solde ' + (j.balance == null ? '?' : j.balance.toFixed(2)) + ' $', 'Un membre a voulu générer un avatar ; refus avant débit (provider-watch ok=false).');
       return false;
     }
     return true;
