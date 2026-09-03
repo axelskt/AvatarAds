@@ -11020,27 +11020,28 @@ async function _imgRetryViaNano(){
 // Sélectionne une image depuis la grille multi → l'affiche en grand (single)
 function _imgFillMultiSlot(slot, url, size, showFace){
   if(!slot) return;
-  slot.innerHTML=''; slot.style.cursor='pointer'; slot.title='Cliquer pour ouvrir en grand';
-  const im=document.createElement('img'); im.src=url;
-  im.style.cssText='width:100%;height:100%;object-fit:contain;background:#0d0d0f;display:block';   // contain → l'aperçu ne coupe plus (le résultat téléchargé était déjà complet)
-  slot.appendChild(im);
-  const bar=document.createElement('div');
-  bar.style.cssText='position:absolute;bottom:0;left:0;right:0;display:flex;flex-direction:column;gap:6px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.86),transparent)';
-  const K4='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>';
-  const FC='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>';
-  const DL='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
+  // Boutons SOUS l'image (pas en overlay), design/texte/couleur IDENTIQUES à la génération d'une seule image.
+  slot.innerHTML='';
+  slot.style.cssText='display:flex;flex-direction:column;gap:8px;background:transparent;border:none;border-radius:0;overflow:visible;padding:0;position:static';
+  const wrap=document.createElement('div');
+  wrap.style.cssText='width:100%;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';background:#0d0d0f;border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer';
+  const im=document.createElement('img'); im.src=url; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
+  wrap.appendChild(im); wrap.onclick=()=> _imgSelectFromMulti(url, size);   // clic sur l'image → ouvre en grand
+  slot.appendChild(wrap);
+  const K4='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>';
+  const FC='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>';
+  const DL='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
   const mk=(html,style,fn)=>{ const b=document.createElement('button'); b.innerHTML=html; b.style.cssText=style; b.onclick=(e)=>{ e.stopPropagation(); fn(); }; return b; };
-  // Ligne 1 : Enregistrer (plein orange)
-  bar.appendChild(mk(DL+'<span>Enregistrer</span>', 'width:100%;padding:8px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-family:var(--font);font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px',
+  // Ligne 1 : Détails du visage (si visage) + Améliorer en 4K — mêmes boutons outline que la génération unique
+  const outline='flex:1;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .2s';
+  const lbl=(ic,txt,cr)=>'<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">'+ic+txt+'</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">'+cr+'&nbsp;cr</span>';
+  const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px';
+  if(showFace) row.appendChild(mk(lbl(FC,'Détails du visage','3'), outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgUpscaleBtn'); if(b) _imgUpscaleHD(b); }));
+  row.appendChild(mk(lbl(K4,'Améliorer en 4K','5'), outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
+  slot.appendChild(row);
+  // Ligne 2 : Télécharger — plein orange, exactement comme la génération unique
+  slot.appendChild(mk(DL+'<span style="margin-left:7px">Télécharger</span>', 'width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center',
     ()=>{ const a=document.createElement('a'); a.href=url; a.download='avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }));
-  // Ligne 2 : Améliorer en 4K (+ Détails du visage si visage) — mêmes moteurs que la génération unique
-  const row=document.createElement('div'); row.style.cssText='display:flex;gap:6px';
-  const outline='flex:1;min-width:0;padding:7px 4px;border:1.5px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-family:var(--font);font-size:10.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap';
-  row.appendChild(mk(K4+'<span>Améliorer en 4K</span>', outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
-  if(showFace) row.appendChild(mk(FC+'<span>Visage</span>', outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgUpscaleBtn'); if(b) _imgUpscaleHD(b); }));
-  bar.appendChild(row);
-  slot.appendChild(bar);
-  slot.onclick=()=> _imgSelectFromMulti(url, size);   // clic ailleurs → ouvre en grand (mêmes actions)
 }
 function _imgSelectFromMulti(url, size){
   document.getElementById('imgResultMulti').style.display = 'none';
