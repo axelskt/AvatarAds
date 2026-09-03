@@ -350,16 +350,22 @@ serve(async (req) => {
       return new Response('OK', { status: 200 })
     }
     if (profile) {
-      const keep = boughtLeft(profile) // les crédits achetés n'expirent pas au renouvellement
+      // REPORT PLAFONNÉ À 2× (03/09 — Axel) : les crédits du PLAN non consommés sont reportés au mois suivant,
+      // mais le solde du plan ne peut jamais dépasser 2× les crédits mensuels (le surplus des vieux mois est perdu).
+      // Les crédits ACHETÉS en pack (bought) ne sont jamais plafonnés et s'ajoutent par-dessus.
+      const bought      = boughtLeft(profile)
+      const planLeft    = Math.max(0, (profile.credits_remaining || 0) - bought)   // solde du plan encore là
+      const rolled      = Math.min(planLeft + sub.credits, 2 * sub.credits)         // report + mois neuf, plafond 2×
+      const newBalance  = rolled + bought
       await sb.from('profiles').update({
         plan:              sub.plan,
-        credits_remaining: sub.credits + keep,  // remise à niveau chaque mois + report des crédits achetés
-        bought_credits:    keep,
+        credits_remaining: newBalance,
+        bought_credits:    bought,
         credits_total:     sub.credits,
         whop_plan_id:      effPlanId,
         whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
-      console.log(`🔄 Renouvellement: ${sub.plan} (${sub.credits} crédits remis${keep ? ` +${keep} achetés reportés` : ''}) — ${profile.id}`)
+      console.log(`🔄 Renouvellement: ${sub.plan} → ${newBalance} (report ${planLeft} + ${sub.credits}, plafond ${2 * sub.credits}${bought ? ` +${bought} achetés` : ''}) — ${profile.id}`)
       await creditReferral(sb, profile.id, email, effPlanId, data, 'renouvellement')
     } else {
       console.warn(`⚠️ Renouvellement sans profil (email=${email || '—'} member=${memberId || '—'} plan=${effPlanId})`)
