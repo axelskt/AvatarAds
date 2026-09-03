@@ -30,6 +30,3 @@ verify_jwt = false
 [functions.provider-watch]
 verify_jwt = false
 
-# hedra-watch : remplacée par provider-watch (03/09) — supprimée après bascule de l'app
-[functions.hedra-watch]
-verify_jwt = false
