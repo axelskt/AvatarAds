@@ -10732,12 +10732,19 @@ async function generateImage(){
     }
     // #static-ads-bank : Pub Produit (dev/owner) → le gabarit du format choisi (ou tiré au sort) devient LE prompt ;
     // le texte de l'utilisateur décrit le produit ({PRODUCT}). Le même prompt sert avec ou sans image de référence.
-    let _adFmt = null;
+    let _adFmt = null, _adPromptFor = null, _adPool = null;
     if(_sid==='staticad' && _imgMode!=='correct' && _aaStaticAdsBankOn()){
-      _adFmt = window.AA_STATIC_ADS_PICK(window.AA_STATIC_ADS, 'random');   // Axel : toujours aléatoire, pas de choix
-      enhancedPrompt = 'Static ad, format « ' + _adFmt.name + ' ». ' + window.AA_STATIC_ADS_FILL(_adFmt.prompt, { PRODUCT: prompt }) + window.AA_STATIC_ADS_COMMON;
+      // #static-ads-v2 (03/09) : avec une image de référence, {PRODUCT} = LE produit de l'image (le texte de
+      // l'utilisateur n'est plus pris pour une description du produit, c'est un BRIEF) ; sans référence, {PRODUCT} = son texte.
+      const _prodTxt = _imgRefFile ? 'the exact product shown in the reference image — keep its packaging, shape, colours, logo and label identical and readable' : prompt;
+      const _brief   = (_imgRefFile && prompt) ? ' Creative brief from the user (follow it in addition to the format): "' + prompt.replace(/"/g, "'") + '".' : '';
+      _adPromptFor = (f) => 'Static ad, format « ' + f.name + ' ». ' + window.AA_STATIC_ADS_FILL(f.prompt, { PRODUCT: _prodTxt }) + _brief + window.AA_STATIC_ADS_COMMON;
+      // plusieurs images = plusieurs FORMATS différents (jamais deux fois le même dans la série)
+      _adPool = window.AA_STATIC_ADS.slice().sort(() => Math.random() - .5);
+      _adFmt = _adPool[0];
+      enhancedPrompt = _adPromptFor(_adFmt);
       window._lastAdFormat = _adFmt.id;
-      toast('Format de pub : ' + _adFmt.name);
+      toast(actualCount > 1 ? 'Formats de pub : ' + _adPool.slice(0, actualCount).map(f => f.name).join(' · ') : 'Format de pub : ' + _adFmt.name);
     }
 
     // ── CORRECTION (img2img) OU Génération avec image de référence : 1 image via /edits ──
@@ -10750,6 +10757,56 @@ async function generateImage(){
       // En correction → prompt brut ; en génération réaliste avec réf → prompt + bloc réalisme détaillé
       const editPrompt = (_imgMode === 'correct') ? prompt
                        : (_isRealistic ? (prompt + _IMG_REALISM_SUFFIX) : enhancedPrompt);
+      // #nombre-fix (03/09 — Axel : « la fonction Nombre ne marche pas ») : avec une image de référence, ce chemin
+      // ne produisait QU'UNE image alors que le nombre choisi était débité. En génération (pas en correction) et
+      // pour 2-3 images : une boucle /edits par image, un format de pub différent à chaque fois quand la banque est active.
+      if(_imgMode !== 'correct' && actualCount > 1){
+        singleWrap.style.display = 'none'; multiWrap.style.display = 'block'; overlay.style.display = 'none';
+        multiGrid.style.gridTemplateColumns = 'repeat(' + (actualCount===2?2:3) + ',1fr)';
+        multiGrid.innerHTML = '';
+        for(let i=0;i<actualCount;i++){
+          const ph = document.createElement('div'); ph.id = '_imgMultiSlot'+i;
+          ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'16/9':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+          ph.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>';
+          multiGrid.appendChild(ph);
+        }
+        const _is4Km = (_imgEffectiveQuality() === 'high');
+        let _okCount = 0;
+        for(let i=0;i<actualCount;i++){
+          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image ' + (i+1) + '/' + actualCount + '…';
+          const _p = (_adPromptFor && _adPool) ? _adPromptFor(_adPool[i % _adPool.length]) : editPrompt;
+          try {
+            let url = await _imgEditOne(token, _p, _imgRefFile, gptSize);
+            if(_is4Km){ try { url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K'); } catch(_u){ console.warn('upscale 4K', _u); } }
+            _okCount++; _imgMonthIncrement(); _imgAutoSaveUrl(url, size, 'Réf');
+            const slot = document.getElementById('_imgMultiSlot'+i);
+            if(slot){
+              slot.innerHTML = ''; slot.style.cursor = 'pointer'; slot.title = 'Cliquer pour sélectionner';
+              const im = document.createElement('img'); im.src = url; im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block'; slot.appendChild(im);
+              const bar = document.createElement('div'); bar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;display:flex;gap:4px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent)';
+              const pickBtn = document.createElement('button'); pickBtn.textContent = '✓ Choisir';
+              pickBtn.style.cssText = 'flex:1;padding:7px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer';
+              pickBtn.onclick = (e)=>{ e.stopPropagation(); _imgSelectFromMulti(url, size); };
+              const dlBtn = document.createElement('a'); dlBtn.href = url; dlBtn.download = 'avatarads-image-'+(i+1)+'.png';
+              dlBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
+              dlBtn.style.cssText = 'padding:7px 11px;background:rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:12px;text-decoration:none;display:flex;align-items:center';
+              dlBtn.onclick = (e)=>e.stopPropagation();
+              bar.appendChild(pickBtn); bar.appendChild(dlBtn); slot.appendChild(bar);
+              slot.onclick = ()=> _imgSelectFromMulti(url, size);
+            }
+          } catch(err){
+            console.error('Image '+(i+1)+':', err);
+            const _m=_imgFriendlyErr((err&&err.message)||'Échec');
+            const slot = document.getElementById('_imgMultiSlot'+i);
+            if(slot){ slot.innerHTML = '<div style="color:var(--text3);font-size:10px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">⚠ '+_m.replace(/</g,'&lt;').slice(0,180)+'</div>'; }
+            if(i===0) toast(''+_m.slice(0,180));
+          }
+        }
+        if(_okCount === 0) await creditsFlowRefund('Aucune image générée');
+        _imgRenderHistory();
+        btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
+        return;
+      }
       multiWrap.style.display = 'none';
       if(singleWrap.style.display !== 'none') overlay.style.display = 'flex';
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
@@ -10864,7 +10921,7 @@ async function generateImage(){
       for(let i=0;i<actualCount;i++){
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image '+(i+1)+'/'+actualCount+'…';
         try {
-          const url = await _imgGenerateOne(token, enhancedPrompt, size, style);
+          const url = await _imgGenerateOne(token, (_adPromptFor && _adPool) ? _adPromptFor(_adPool[i % _adPool.length]) : enhancedPrompt, size, style);   // banque : un format différent par image
           urls.push(url);
           _imgMonthIncrement();
           _imgAutoSaveUrl(url, size, _imgSelectedStyleLabel);   // #145 · auto-save compte (chaque variation multi)

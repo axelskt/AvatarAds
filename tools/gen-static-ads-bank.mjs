@@ -33,7 +33,7 @@ function pickStaticAdFormat(formats, wanted, seed) {
   const i = (typeof seed === 'number' && isFinite(seed)) ? Math.abs(Math.floor(seed)) % n : Math.floor(Math.random() * n);
   return formats[i];
 }
-const STATIC_AD_COMMON = ' All on-image text is in FRENCH, spelled exactly, legible and never truncated; no other text, no watermark, no fake logos, no gibberish. Photorealistic rendering unless the format says illustration; correct proportions; the product must be recognisable and its label readable.';`;
+const STATIC_AD_COMMON = ' All on-image text is in FRENCH, spelled exactly, legible and never truncated; no other text, no watermark, no fake logos, no gibberish. Every headline, list item and caption must make sense for THIS product and its real category — never invent ingredients, certifications, figures or benefits the product does not have; keep lines short and plausible. The concept stated at the start must be readable at a glance. Photorealistic rendering unless the format says illustration; correct proportions; the product must be recognisable and its label readable.';`;
 const helperTs = helper.replace("const q = (s) =>", "const q = (s: unknown) =>").replace("const norm = (s) =>", "const norm = (s: unknown) =>").replace("(_m, key, ex) =>", "(_m: string, key: string, ex?: string) =>").replace("const val = v[key];", "const val = v[key] as unknown;");
 const ts = `// GÉNÉRÉ par tools/gen-static-ads-bank.mjs depuis shared/static-ads-bank.json — ne pas éditer à la main.
 // Banque de ${bank.formats.length} formats de static ads (${bank.version}).
