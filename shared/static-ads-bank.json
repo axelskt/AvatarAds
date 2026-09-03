@@ -1,5 +1,5 @@
 {
- "version": "2026-09-03c",
+ "version": "2026-09-03d",
  "source": "58 formats de static ads (vidéo TikTok « 50+ statics ads format »), REFAITS un par un le 03/09 : chaque gabarit commence par « Concept : » (le sens de la pub), est agnostique du produit (plus d'exemples déodorant), et les formats de comparaison exigent un AUTRE produit générique en face (jamais {PRODUCT} deux fois). Placeholders : {PRODUCT} {BRAND} {HEADLINE|exemple} {SUB|exemple} {BULLETS|ex1;ex2;ex3} {CTA|exemple} {QUOTE|exemple} {NUMBER|exemple}. Un placeholder sans valeur devient une consigne « écris une ligne dans l'esprit de … ».",
  "formats": [
   {
@@ -523,6 +523,15 @@
    "person": false,
    "prompt": "Concept: a 2-minute quiz that reveals you should switch to {PRODUCT}. Quiz sheet on a cream page: a huge condensed black word 'QUIZ' at the top with a small red '2 min' tag, a bold sub-headline {HEADLINE|Tu connais vraiment ce que tu utilises ?}, then three numbered multiple-choice questions with A/B/C checkbox options in small black text, written for THIS product's category, the right answer always pointing to what {PRODUCT} does well {BULLETS|1. Ce qui compte vraiment, c'est… A. Le nom B. Ce qu'il y a dedans C. La couleur du packaging;2. Combien de fois tu devrais en reprendre ? A. Sans arrêt B. Une fois suffit C. Jamais;3. Le bon réflexe, c'est… A. Le premier prix B. {BRAND} C. Changer tous les mois}, the answers printed upside-down at the very bottom, and {PRODUCT} at the bottom right with a small line {CTA|3/3 ? Fais le changement.} Printed-worksheet look.",
    "logic": "quiz de 2 min qui pousse à changer"
+  },
+  {
+   "id": "story-qa",
+   "name": "Story question",
+   "family": "ugc",
+   "ratio": "portrait",
+   "person": false,
+   "logic": "story Instagram exacte (FR) : une main montre le produit en réponse à un sticker « pose-moi une question »",
+   "prompt": "Concept: someone answers a follower's question by showing the product, in an Instagram story. AUTHENTIC Instagram-story screenshot with the EXACT Instagram story UI, all of it in FRENCH: at the very top a small round profile avatar with a username and a timestamp, the three-dots menu and the white close cross (X) on the right, plus the thin segmented story-progress bar above them; at the very bottom the real story action row — the rounded « Envoyer un message » input on the left, then the heart, the speech-bubble comment and the paper-plane share icons on the right. Behind, a real slightly imperfect phone photo, natural light, real everyday setting, where a HAND clearly holds and shows {PRODUCT} toward the camera (the product recognisable, its label readable). Over the photo, the Instagram « Posez-moi une question » sticker: a white rounded box with a small coloured header line and a follower's question inside {QUOTE|Tu as un truc contre les odeurs qui tient la journée ?}. Just under the sticker, a big bold handwritten-style answer that endorses the product with a thumbs-up {HEADLINE|Oui, j'utilise {BRAND} tous les jours 👍}, and optionally the brand handle as a small mention sticker. It must look like a GENUINE reshared story — no ad polish, no extra graphics, no watermark."
   }
  ]
 }

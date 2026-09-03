@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="static-ads-bank.js"></script><!-- #static-ads-bank : 58 formats de pub (généré depuis shared/static-ads-bank.json) -->
+<script src="static-ads-bank.js"></script><!-- #static-ads-bank : 59 formats de pub (généré depuis shared/static-ads-bank.json) -->
 <!-- Whop embedded checkout (préconnexion = chargement quasi-instantané + monte l'iframe) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
@@ -9721,7 +9721,7 @@ function _imgPickStyle(id){
   _imgInitStyleGrid();
   _imgSyncAdFormatRow();
 }
-// #static-ads-bank (02/09) : « Pub Produit » pioche un des 58 formats analysés (Aléatoire par défaut) —
+// #static-ads-bank (02/09) : « Pub Produit » pioche un des 59 formats analysés (Aléatoire par défaut) —
 // réservé au compte développeur/owner tant qu'Axel n'a pas validé ; ensuite _aaStaticAdsBankOn → tout le monde.
 function _aaStaticAdsBankOn(){ return !!(window.AA_STATIC_ADS && currentMember && (currentMember.is_owner || String(currentMember.plan||'').toLowerCase()==='developer')); }
 function _imgSyncAdFormatRow(){ /* Axel 02/09 : pas de choix de format — toujours aléatoire (sélecteur retiré) */ }
