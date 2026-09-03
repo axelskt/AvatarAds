@@ -7397,16 +7397,11 @@ async function _retDoCancel(){
     const out = await res.json().catch(() => ({}));
     if(!res.ok){ toast('' + (out.error || 'Erreur — réessaie ou contacte le support')); return; }
     currentMember.whop_cancel_at_period_end = true;
-    // Seuls les crédits du plan sont supprimés côté serveur — les achetés en pack restent
-    const _kept = Math.min(currentMember.bought_credits || 0, currentMember.credits_remaining || 0);
-    currentMember.credits_remaining = _kept;
-    currentMember.bought_credits = _kept;
+    // Le membre GARDE ses crédits du mois déjà payé jusqu'à la fin de période (rien n'est retiré ici).
     _updateQuotaDisplay();
     _syncCancelBtn();
     closeRetention();
-    toast(_kept > 0
-      ? '✓ Abonnement annulé — crédits du plan supprimés, tes ' + _kept + ' crédits achetés sont conservés'
-      : '✓ Abonnement annulé — tes crédits du plan ont été supprimés');
+    toast('✓ Abonnement annulé — ton plan et tes crédits restent actifs jusqu\'à la fin de la période déjà payée');
   }catch(e){
     toast('Erreur réseau — réessaie');
   }finally{
@@ -23194,8 +23189,9 @@ async function startGeneration(){
     // `_rate > 0` : avec un gameplay et un MP3 importé, le tarif de base est nul
     // et le supplément 1080p se serait greffé sur la liste d'opérations de la
     // génération PRÉCÉDENTE — donc remboursé au mauvais moment en cas d'échec.
-    // #hedra-gate (03/09) : si le fournisseur n'a plus de solde (hedra-watch ok=false), on s'arrête ICI, avant tout débit.
-    if(_rate > 0 && !(await _hedraGate())) return;
+    // #hedra-gate retiré (03/09 — Axel) : on ne REFUSE plus la génération selon le solde fournisseur.
+    // La surveillance reste (alerte e-mail à Axel sous 5 $) ; si le fournisseur répond 402, le message
+    // « momentanément indisponible » s'affiche et les crédits sont remboursés — mais on ne bloque pas en amont.
     creditsFlowBegin();
     if(_rate > 0){
       const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');

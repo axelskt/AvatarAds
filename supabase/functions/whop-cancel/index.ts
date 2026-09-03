@@ -45,8 +45,8 @@ serve(async (req) => {
 
   // Annulation en fin de période : l'accès au plan reste jusqu'à la date déjà payée,
   // puis Whop enverra membership.deactivated → le webhook repasse le compte en free.
-  // Les crédits DU PLAN sont supprimés immédiatement (mécanique de rétention — annoncée
-  // explicitement dans la modale avant le clic) ; les crédits ACHETÉS en pack sont conservés.
+  // Le membre GARDE ses crédits du mois déjà payé jusqu'à cette expiration (03/09 — Axel) :
+  // ils ne sont supprimés qu'au passage réel en free (membership.deactivated), pas au clic d'annulation.
   const r = await fetch(`https://api.whop.com/api/v1/memberships/${profile.whop_member_id}/cancel`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -59,12 +59,10 @@ serve(async (req) => {
   }
   const mem = await r.json().catch(() => ({} as any))
 
-  // Crédits achetés en pack encore disponibles (les crédits du plan sont consommés en premier)
-  const kept = Math.min(profile.bought_credits || 0, profile.credits_remaining || 0)
+  // On GARDE les crédits du mois payé (rien n'est retiré ici) ; on ne fait que programmer l'annulation.
+  const kept = profile.credits_remaining || 0
   await svc.from('profiles').update({
     whop_cancel_at_period_end: true,
-    credits_remaining: kept,
-    bought_credits: kept,
   }).eq('id', user.id)
   try {
     await svc.from('cancellation_feedback').insert({
@@ -109,6 +107,6 @@ serve(async (req) => {
     }
   } catch (e) { console.error('churn email', e) }
 
-  console.log(`⏸️ Annulation programmée pour ${user.email} (${profile.plan}) · crédits du plan supprimés${kept ? ` · ${kept} achetés conservés` : ''} · raison: ${reason || '—'}`)
+  console.log(`⏸️ Annulation programmée pour ${user.email} (${profile.plan}) · ${kept} crédits conservés jusqu'à la fin de période · raison: ${reason || '—'}`)
   return json({ ok: true, kept, renewal_period_end: mem?.renewal_period_end ?? null })
 })
