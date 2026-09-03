@@ -19711,7 +19711,7 @@ function removeAvatar(){
   updateLivePreview();
   toast('Avatar supprimé');
 }
-function removeGameplay(){
+function removeGameplay(_silent){
   gameplayFile = null;
   if(typeof _syncClipSectionS4==='function') _syncClipSectionS4(); // #clipS4 · plus de gameplay → réaffiche le sélecteur de clip en Style
   if(typeof _syncSilenceGpDropzone==='function') _syncSilenceGpDropzone(); // #silenceGp · réaffiche la dropzone silences
@@ -19729,7 +19729,7 @@ function removeGameplay(){
   if(splitEnabled) toggleSplit();
   _syncGpSizeStep3();
   updateLivePreview();
-  toast('Gameplay supprimé');
+  if(!_silent) toast('Gameplay supprimé');
 }
 
 // ── VOICE PRESET MENU TOGGLE ──
@@ -24400,6 +24400,10 @@ function resetAll(){
   // (script, hook, cta, avatar, voix, clip, gameplay, split, options, sous-titres, preview…)
   // On GARDE : bibliothèque, images générées, avatars/sous-titres presets, voix clonées, réglages compte.
   window._resetting = true;                         // neutralise les sauvegardes auto pendant le reset
+  // #reset-split (03/09 — Axel : « réinitialiser totalement = TOUT, le split ne doit pas rester ») :
+  // aa_gen_state garde les réglages, mais le SPLIT (mode + clip) doit repartir à zéro comme le reste.
+  try { const _gs = JSON.parse(localStorage.getItem('aa_gen_state')||'null'); if(_gs){ delete _gs.splitEnabled; delete _gs.splitSwapped; localStorage.setItem('aa_gen_state', JSON.stringify(_gs)); } } catch(e){}
+  try { splitEnabled = false; } catch(e){}
   try { clearTimeout(_saveStateTimer); } catch(e){}
   try { sessionStorage.setItem('aa_full_reset','1'); } catch(e){} // au reboot : ne rien restaurer + purger IDB
   // aa_gen_state (préférences : toggles, sous-titres, split, qualité, voix…) est CONSERVÉ volontairement :
@@ -24675,6 +24679,7 @@ async function _genServerCompose(btn){
     setPct(100, 'Terminé');
     toast('Vidéo prête (rendu serveur) ✓');
     resetBtn();
+    try { _genResetAfterGeneration(); } catch(_){}   // #reset-apres-gen : composeur propre pour la vidéo suivante
     return true;
   }catch(e){
     resetBtn();
@@ -24682,6 +24687,15 @@ async function _genServerCompose(btn){
     console.warn('[gen-subs] compo serveur → repli client :', e);
     throw e;
   }
+}
+
+// #reset-apres-gen (03/09 — Axel) : une vidéo générée est DÉJÀ téléchargée + auto-enregistrée en
+// bibliothèque → on repart d'un composeur propre pour la suivante (split/gameplay retiré, script vidé).
+// On garde l'avatar et la voix (souvent réutilisés pour une variante) ; tout le reste est nettoyé.
+function _genResetAfterGeneration(){
+  try { if(typeof splitEnabled!=='undefined' && (splitEnabled || (typeof gameplayFile!=='undefined' && gameplayFile))) removeGameplay(true); } catch(_){}
+  ['f-script','f-hook','f-cta'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  try { if(typeof updatePreview==='function') updatePreview(); } catch(_){}
 }
 
 async function composeVideo(btn){
