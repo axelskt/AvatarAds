@@ -23722,8 +23722,20 @@ async function callHedra(audioBlob){
     // ── Génération (POST /v3/models/<slug>) ──
     const aspectRatio = cfg.format === 'square' ? '1:1' : '9:16';
     const resolution  = (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? '1080p' : '720p';
+    // #gestes (03/09 — Axel : « l'avatar doit parler avec les mains, se toucher les sourcils, les cheveux »).
+    // Les gestes de mains ne sont demandés QUE si les mains sont DANS le cadre de la photo (sinon le modèle fait
+    // surgir des mains de nulle part). Détection réutilisée du Montage IA (_mtDetectHands : une question Gemini
+    // par photo, mémorisée). Sans mains visibles : buste vivant, sourcils expressifs, mains hors champ.
+    let _handsIn = false;
+    try {
+      const _f = (selAvatar && selAvatar.localFile) || (avatarImgUrl ? new File([await fetch(avatarImgUrl).then(r=>r.blob())], 'avatar.jpg', { type:'image/jpeg' }) : null);
+      if(_f && typeof _mtDetectHands === 'function') _handsIn = await _mtDetectHands(_f);
+    } catch(_){}
+    const _gestes = _handsIn
+      ? ' Natural hand gestures that illustrate what is being said (talks with the hands when explaining a point), an occasional spontaneous micro-action like briefly touching the hair or an eyebrow, hands anatomically correct with five fingers, no extra or fused fingers.'
+      : ' Lively head and shoulder movement, small natural leans and weight shifts, expressive eyebrows and eyes, hands stay out of frame.';
     const input = {
-      prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze. PRONOUNCED, CLEARLY VISIBLE lip-sync and articulation: the mouth OPENS WIDE and distinctly, the lips and jaw move a lot for every syllable, teeth and tongue become visible when the sounds call for it, energetic expressive speech like a real creator talking to camera — NOT a barely-moving, tight or nearly-closed mouth. Mouth movements exactly match every syllable and pause of the audio, strong clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
+      prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze.' + _gestes + ' PRONOUNCED, CLEARLY VISIBLE lip-sync and articulation: the mouth OPENS WIDE and distinctly, the lips and jaw move a lot for every syllable, teeth and tongue become visible when the sounds call for it, energetic expressive speech like a real creator talking to camera — NOT a barely-moving, tight or nearly-closed mouth. Mouth movements exactly match every syllable and pause of the audio, strong clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
       aspect_ratio: aspectRatio,
       resolution,
       start_image: startImg,
@@ -24606,7 +24618,7 @@ async function _genServerCompose(btn){
     setPct(20, 'File d\'attente…');
     const H = await getAuthHeader();
     const cr = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', plan: { __compose: 'gen-subs', duration: Math.max(1, dur), subs }, input_video: inPath, assets: [] }) });
+      body: JSON.stringify({ action: 'create', plan: { __compose: 'gen-subs', duration: Math.max(1, dur), subs, cameraOrganique: !window._genCamOff }, input_video: inPath, assets: [] }) });   // #cam-realiste (03/09) : caméra « à la main » par défaut (window._genCamOff = true pour couper)
     const crd = await cr.json();
     if(!cr.ok || !crd.job_id) throw new Error(crd.error || 'création du job échouée');
     let outUrl = null;

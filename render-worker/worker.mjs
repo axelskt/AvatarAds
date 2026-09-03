@@ -538,6 +538,19 @@ async function composeMotionBg(jobDir, outPath, plan) {
 
 // utilisateur du rendu en cours (null en --local / tests) — lu par la facturation du lipsync
 let RENDER_USER = null
+// ── CAMÉRA RÉALISTE du Générateur (03/09 — Axel : « faudrait l'effet de caméra qui tremble ») ──
+// Un téléphone tenu à la main ne tient jamais parfaitement : dérive lente (sommes de sinus à fréquences
+// incommensurables → jamais périodique à l'œil) + micro-tremblement + très légère rotation. Tout en ffmpeg
+// (pas de re-rendu Chromium, ~1 s par 4 s de vidéo) : on agrandit de 8 %, on tourne un peu, on recadre une
+// fenêtre qui se promène. Appliqué à la vidéo AVANT les sous-titres (eux ne tremblent pas).
+// Désactivable par le plan : cameraOrganique = false. Testé le 03/09 sur avatar-seul.mp4 (voir mémoire).
+function camOrganiqueFilter(W, H) {
+  const rot = "(0.9*sin(0.53*t+2)+0.35*sin(1.7*t))*PI/180"
+  const dx  = "18*sin(0.71*t)+9*sin(1.93*t+1)+2.5*sin(11.3*t)"
+  const dy  = "14*sin(0.62*t+0.5)+7*sin(2.1*t)+2*sin(9.7*t)"
+  return `scale=iw*1.08:ih*1.08:flags=lanczos,rotate='${rot}':c=black,crop=${W}:${H}:x='(iw-${W})/2+${dx}':y='(ih-${H})/2+${dy}'`
+}
+
 // ── Compose SERVEUR du Générateur (__compose:'gen-subs') ─────────────────────
 // GRAVE les sous-titres sur la vidéo générée EXACTEMENT comme l'aperçu client
 // (_cvSubs porté verbatim dans gen-subs-composition.mjs, rendu par HyperFrames
@@ -596,18 +609,19 @@ async function composeGenSubs(jobDir, outPath, plan) {
       const pv = ffprobe(orig, 'stream=codec_name,width,height,pix_fmt').split('\n').map((l) => l.trim()).filter(Boolean)
       _copyOk = pv.some((l) => /(^|,)h264(,|$)/.test(l) && /(^|,)1080(,|$)/.test(l) && /(^|,)1920(,|$)/.test(l) && /(^|,)yuv420p(,|$)/.test(l))
     } catch (_) { _copyOk = false }
+    const camOn = plan.cameraOrganique !== false      // #cam-realiste (03/09) : caméra « à la main » par défaut
     const argsF = ['-v', 'error', '-y', '-i', orig]
-    if (_copyOk) {
+    if (_copyOk && !camOn) {
       argsF.push('-c:v', 'copy')
     } else {
-      const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}`
+      const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}` + (camOn ? ',' + camOrganiqueFilter(W, H) : '')
       argsF.push('-vf', vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p')
     }
     if (baseHasAudioF) argsF.push('-map', '0:v:0', '-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
     else argsF.push('-an')
     argsF.push('-t', String(D), '-movflags', '+faststart', outPath)
     execFileSync('ffmpeg', argsF, { stdio: 'pipe' })
-    console.log(`✅ gen-subs RAPIDE (${_copyOk ? 'copie h264 sans ré-encodage' : 'normalisation encodée'} · audio + faststart, ${D}s) → ${outPath}`)
+    console.log(`✅ gen-subs RAPIDE (${(_copyOk && !camOn) ? 'copie h264 sans ré-encodage' : 'normalisation encodée'}${camOn ? ' + caméra réaliste' : ''} · audio + faststart, ${D}s) → ${outPath}`)
     return
   }
 
@@ -617,8 +631,9 @@ async function composeGenSubs(jobDir, outPath, plan) {
 
     // 1. base normalisée 1080×1920 @ FPS, SANS audio → clip <video> propre à
     //    extraire (fps=50 comme partout ; l'audio viendra de l'original au mux).
+    const camOnC = plan.cameraOrganique !== false      // #cam-realiste : la vidéo tremble, pas les sous-titres
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig,
-      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}`,
+      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}` + (camOnC ? ',' + camOrganiqueFilter(W, H) : ''),
       '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
       '-movflags', '+faststart', join(proj, 'media', 'base.mp4')])
 
