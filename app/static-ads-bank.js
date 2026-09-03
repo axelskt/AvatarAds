@@ -525,13 +525,13 @@ const STATIC_AD_FORMATS = [
   "logic": "quiz de 2 min qui pousse à changer"
  },
  {
-  "id": "story-qa",
-  "name": "Story question",
-  "family": "ugc",
+  "id": "verse",
+  "name": "Produit versé",
+  "family": "produit",
   "ratio": "portrait",
   "person": false,
-  "logic": "story Instagram exacte (FR) : une main montre le produit en réponse à un sticker « pose-moi une question »",
-  "prompt": "Concept: someone answers a follower's question by showing the product, in an Instagram story. AUTHENTIC Instagram-story screenshot with the EXACT Instagram story UI, all of it in FRENCH: at the very top a small round profile avatar with a username and a timestamp, the three-dots menu and the white close cross (X) on the right, plus the thin segmented story-progress bar above them; at the very bottom the real story action row — the rounded « Envoyer un message » input on the left, then the heart, the speech-bubble comment and the paper-plane share icons on the right. Behind, a real slightly imperfect phone photo, natural light, real everyday setting, where a HAND clearly holds and shows {PRODUCT} toward the camera (the product recognisable, its label readable). Over the photo, the AUTHENTIC Instagram « Questions » sticker, EXACTLY like the real one and clearly present: a DARK translucent grey rounded top bar with the white centered label « Posez-moi une question », and DIRECTLY attached below it a separate WHITE rounded box containing the follower's question in bold black centered text {QUOTE|Tu prends quoi comme boisson pour tenir la journée ?}. Just under the sticker, a big bold handwritten-style answer that endorses the product with a thumbs-up {HEADLINE|Oui, j'utilise {BRAND} tous les jours 👍}, and optionally the brand handle as a small mention sticker. It must look like a GENUINE reshared story — no ad polish, no extra graphics, no watermark."
+  "prompt": "Concept: dramatic 'pour in action' hero shot of {PRODUCT} on a dark near-black studio background. {PRODUCT} is tilted at the top of the frame and pours a smooth, thick stream of whatever content fits it (a creamy shake, milk, juice, an energy drink, a liquid, syrup) in a graceful arc downward into a clear empty glass below that is being filled; splashes and droplets frozen in mid-motion, a crisp rim light running along the falling stream, glossy highlights. In the foreground a matching raw element spills naturally — a scoop of powder, ice cubes, fresh fruit or beans, whatever suits the product. Cinematic high-contrast studio lighting, deep shadows, reflections on the surface, ultra photorealistic premium supplement / beverage advertising look. {BRAND} clearly readable on {PRODUCT}. One tiny caption line at the very bottom {SUB|{BRAND}}, nothing else over the image.",
+  "logic": "produit versé en action (pour shot premium, fond sombre)"
  }
 ];
 
