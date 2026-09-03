@@ -183,6 +183,8 @@ serve(async (req) => {
   const isDeactivate = /membership[._](went[._]invalid|deactivated)/.test(action)
   const isRenew      = /membership[._]renewed|invoice[._]paid|payment[._]succeeded/.test(action)
 
+  // paiements/renouvellements : l'e-mail peut manquer du payload → on garde aussi l'ID d'abonnement Whop
+  const memberId = data.membership_id ?? data.membership?.id ?? ((isActivate || isDeactivate) ? (data.id ?? null) : null) ?? null
   console.log(`📨 Whop webhook: ${action} · plan=${planId} · email=${email || '—'}`)
 
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
@@ -208,11 +210,16 @@ serve(async (req) => {
   }
 
   const findProfile = async () => {
-    if (!email) return null
-    const { data: p } = await sb.from('profiles')
-      .select('id, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used')
-      .eq('email', email).maybeSingle()
-    return p
+    const cols = 'id, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used'
+    if (email) {
+      const { data: p } = await sb.from('profiles').select(cols).eq('email', email).maybeSingle()
+      if (p) return p
+    }
+    if (memberId) {   // renouvellement sans e-mail dans le payload : on retrouve le profil par l'abonnement Whop
+      const { data: p } = await sb.from('profiles').select(cols).eq('whop_member_id', memberId).maybeSingle()
+      if (p) return p
+    }
+    return null
   }
   // Crédits ACHETÉS en pack encore disponibles (les crédits du plan sont consommés en premier)
   const boughtLeft = (p: any) => Math.min(p?.bought_credits || 0, p?.credits_remaining || 0)
@@ -331,14 +338,15 @@ serve(async (req) => {
 
   // ─── membership.renewed → renouvellement mensuel ──────────────
   else if (isRenew) {
-    if (!email) return new Response('OK', { status: 200 })
-    const sub = SUB_MAP[planId]
-    if (!sub) return new Response('OK', { status: 200 })
-
+    // Paiement réussi / renouvellement. L'e-mail peut manquer du payload d'un paiement → on retrouve le profil
+    // par l'abonnement Whop (memberId), et on déduit le plan du profil si le payload ne le porte pas.
     const profile = await findProfile()
+    const effPlanId = planId || profile?.whop_plan_id || ''
+    const sub = SUB_MAP[effPlanId]
+    if (!sub) return new Response('OK', { status: 200 })
     // Ignore le renouvellement d'un ANCIEN abonnement (après upgrade) → ne doit pas écraser le plan actif
-    if (profile && profile.whop_plan_id && profile.whop_plan_id !== planId) {
-      console.log(`ℹ️ Renouvellement ignoré (abonnement ${planId} n'est plus l'actif de ${email})`)
+    if (profile && profile.whop_plan_id && planId && profile.whop_plan_id !== planId) {
+      console.log(`ℹ️ Renouvellement ignoré (abonnement ${planId} n'est plus l'actif de ${profile.id})`)
       return new Response('OK', { status: 200 })
     }
     if (profile) {
@@ -348,11 +356,13 @@ serve(async (req) => {
         credits_remaining: sub.credits + keep,  // remise à niveau chaque mois + report des crédits achetés
         bought_credits:    keep,
         credits_total:     sub.credits,
-        whop_plan_id:      planId,
+        whop_plan_id:      effPlanId,
         whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
-      console.log(`🔄 Renouvellement pour ${email}: ${sub.plan} (${sub.credits} crédits remis${keep ? ` +${keep} achetés reportés` : ''})`)
-      await creditReferral(sb, profile.id, email, planId, data, 'renouvellement')
+      console.log(`🔄 Renouvellement: ${sub.plan} (${sub.credits} crédits remis${keep ? ` +${keep} achetés reportés` : ''}) — ${profile.id}`)
+      await creditReferral(sb, profile.id, email, effPlanId, data, 'renouvellement')
+    } else {
+      console.warn(`⚠️ Renouvellement sans profil (email=${email || '—'} member=${memberId || '—'} plan=${effPlanId})`)
     }
   }
 
