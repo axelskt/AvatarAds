@@ -10762,6 +10762,7 @@ async function generateImage(){
       // pour 2-3 images : une boucle /edits par image, un format de pub différent à chaque fois quand la banque est active.
       if(_imgMode !== 'correct' && actualCount > 1){
         singleWrap.style.display = 'none'; multiWrap.style.display = 'block'; overlay.style.display = 'none';
+        if(typeof _imgIdleShow==='function') _imgIdleShow(false); { const _oo=document.getElementById('imgOutput'); if(_oo) _oo.style.display='none'; }   // le placeholder « Décris ton image… » ne reste plus au-dessus pendant la génération
         multiGrid.style.gridTemplateColumns = 'repeat(' + (actualCount===2?2:3) + ',1fr)';
         multiGrid.innerHTML = '';
         for(let i=0;i<actualCount;i++){
@@ -10774,26 +10775,13 @@ async function generateImage(){
         let _okCount = 0;
         for(let i=0;i<actualCount;i++){
           btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image ' + (i+1) + '/' + actualCount + '…';
-          const _p = (_adPromptFor && _adPool) ? _adPromptFor(_adPool[i % _adPool.length]) : editPrompt;
+          const _fmt = (_adPool) ? _adPool[i % _adPool.length] : null;
+          const _p = (_adPromptFor && _fmt) ? _adPromptFor(_fmt) : editPrompt;
           try {
             let url = await _imgEditOne(token, _p, _imgRefFile, gptSize);
             if(_is4Km){ try { url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K'); } catch(_u){ console.warn('upscale 4K', _u); } }
             _okCount++; _imgMonthIncrement(); _imgAutoSaveUrl(url, size, 'Réf');
-            const slot = document.getElementById('_imgMultiSlot'+i);
-            if(slot){
-              slot.innerHTML = ''; slot.style.cursor = 'pointer'; slot.title = 'Cliquer pour sélectionner';
-              const im = document.createElement('img'); im.src = url; im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block'; slot.appendChild(im);
-              const bar = document.createElement('div'); bar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;display:flex;gap:4px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent)';
-              const pickBtn = document.createElement('button'); pickBtn.textContent = '✓ Choisir';
-              pickBtn.style.cssText = 'flex:1;padding:7px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer';
-              pickBtn.onclick = (e)=>{ e.stopPropagation(); _imgSelectFromMulti(url, size); };
-              const dlBtn = document.createElement('a'); dlBtn.href = url; dlBtn.download = 'avatarads-image-'+(i+1)+'.png';
-              dlBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
-              dlBtn.style.cssText = 'padding:7px 11px;background:rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:12px;text-decoration:none;display:flex;align-items:center';
-              dlBtn.onclick = (e)=>e.stopPropagation();
-              bar.appendChild(pickBtn); bar.appendChild(dlBtn); slot.appendChild(bar);
-              slot.onclick = ()=> _imgSelectFromMulti(url, size);
-            }
+            _imgFillMultiSlot(document.getElementById('_imgMultiSlot'+i), url, size, _fmt ? !!_fmt.person : (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc'));
           } catch(err){
             console.error('Image '+(i+1)+':', err);
             const _m=_imgFriendlyErr((err&&err.message)||'Échec');
@@ -10921,36 +10909,12 @@ async function generateImage(){
       for(let i=0;i<actualCount;i++){
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image '+(i+1)+'/'+actualCount+'…';
         try {
-          const url = await _imgGenerateOne(token, (_adPromptFor && _adPool) ? _adPromptFor(_adPool[i % _adPool.length]) : enhancedPrompt, size, style);   // banque : un format différent par image
+          const _fmtN = (_adPool) ? _adPool[i % _adPool.length] : null;
+          const url = await _imgGenerateOne(token, (_adPromptFor && _fmtN) ? _adPromptFor(_fmtN) : enhancedPrompt, size, style);   // banque : un format différent par image
           urls.push(url);
           _imgMonthIncrement();
           _imgAutoSaveUrl(url, size, _imgSelectedStyleLabel);   // #145 · auto-save compte (chaque variation multi)
-          // Remplir le slot
-          const slot = document.getElementById('_imgMultiSlot'+i);
-          if(slot){
-            slot.innerHTML = '';
-            slot.style.cursor = 'pointer';
-            slot.title = 'Cliquer pour sélectionner';
-            const im = document.createElement('img');
-            im.src = url;
-            im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
-            slot.appendChild(im);
-            // Boutons hover
-            const bar = document.createElement('div');
-            bar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;display:flex;gap:4px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent)';
-            const pickBtn = document.createElement('button');
-            pickBtn.textContent = '✓ Choisir';
-            pickBtn.style.cssText = 'flex:1;padding:7px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer';
-            pickBtn.onclick = (e)=>{ e.stopPropagation(); _imgSelectFromMulti(url, size); };
-            const dlBtn = document.createElement('a');
-            dlBtn.href = url; dlBtn.download = 'avatarads-image-'+(i+1)+'.png';
-            dlBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
-            dlBtn.style.cssText = 'padding:7px 11px;background:rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:12px;text-decoration:none;display:flex;align-items:center';
-            dlBtn.onclick = (e)=>e.stopPropagation();
-            bar.appendChild(pickBtn); bar.appendChild(dlBtn);
-            slot.appendChild(bar);
-            slot.onclick = ()=> _imgSelectFromMulti(url, size);
-          }
+          _imgFillMultiSlot(document.getElementById('_imgMultiSlot'+i), url, size, _fmtN ? !!_fmtN.person : (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc'));
         } catch(err){
           console.error('Image '+(i+1)+':', err);
           const _m=_imgFriendlyErr((err&&err.message)||'Échec');
@@ -11058,6 +11022,25 @@ async function _imgRetryViaNano(){
 }
 
 // Sélectionne une image depuis la grille multi → l'affiche en grand (single)
+function _imgFillMultiSlot(slot, url, size, showFace){
+  if(!slot) return;
+  slot.innerHTML=''; slot.style.cursor='default'; slot.title='';
+  const im=document.createElement('img'); im.src=url;
+  im.style.cssText='width:100%;height:100%;object-fit:contain;background:#0d0d0f;display:block';   // contain → l'aperçu ne coupe plus (le résultat téléchargé était déjà complet)
+  slot.appendChild(im);
+  const bar=document.createElement('div');
+  bar.style.cssText='position:absolute;bottom:0;left:0;right:0;display:flex;gap:5px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.82),transparent)';
+  const DL='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
+  const K4='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>';
+  const FC='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>';
+  const mk=(html,primary,fn)=>{ const b=document.createElement('button'); b.innerHTML=html;
+    b.style.cssText='flex:1;min-width:0;padding:7px 3px;border:none;border-radius:8px;font-family:var(--font);font-size:10px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;'+(primary?'background:var(--accent);color:#fff':'background:rgba(255,255,255,.16);color:#fff');
+    b.onclick=(e)=>{ e.stopPropagation(); fn(); }; return b; };
+  bar.appendChild(mk(DL+'<span>Enregistrer</span>', true, ()=>{ const a=document.createElement('a'); a.href=url; a.download='avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }));
+  bar.appendChild(mk(K4+'<span>4K</span>', false, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
+  if(showFace) bar.appendChild(mk(FC+'<span>Visage</span>', false, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgUpscaleBtn'); if(b) _imgUpscaleHD(b); }));
+  slot.appendChild(bar);
+}
 function _imgSelectFromMulti(url, size){
   document.getElementById('imgResultMulti').style.display = 'none';
   _imgShowSingle(url, size);
