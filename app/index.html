@@ -10763,7 +10763,7 @@ async function generateImage(){
         multiGrid.innerHTML = '';
         for(let i=0;i<actualCount;i++){
           const ph = document.createElement('div'); ph.id = '_imgMultiSlot'+i;
-          ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'16/9':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+          ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
           ph.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>';
           multiGrid.appendChild(ph);
         }
@@ -10897,7 +10897,7 @@ async function generateImage(){
       for(let i=0;i<actualCount;i++){
         const ph = document.createElement('div');
         ph.id = '_imgMultiSlot'+i;
-        ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'16/9':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+        ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
         ph.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>';
         multiGrid.appendChild(ph);
       }
@@ -11025,14 +11025,22 @@ function _imgFillMultiSlot(slot, url, size, showFace){
   im.style.cssText='width:100%;height:100%;object-fit:contain;background:#0d0d0f;display:block';   // contain → l'aperçu ne coupe plus (le résultat téléchargé était déjà complet)
   slot.appendChild(im);
   const bar=document.createElement('div');
-  bar.style.cssText='position:absolute;bottom:0;left:0;right:0;display:flex;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.82),transparent)';
-  const dl=document.createElement('button');
-  dl.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Enregistrer</span>';
-  dl.style.cssText='flex:1;padding:8px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-family:var(--font);font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px';
-  dl.onclick=(e)=>{ e.stopPropagation(); const a=document.createElement('a'); a.href=url; a.download='avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); };
-  bar.appendChild(dl); slot.appendChild(bar);
-  // clic sur l'image → on l'ouvre en grand, avec EXACTEMENT les mêmes actions que la génération d'une seule image (Améliorer en 4K, Détails du visage, Télécharger)
-  slot.onclick=()=> _imgSelectFromMulti(url, size);
+  bar.style.cssText='position:absolute;bottom:0;left:0;right:0;display:flex;flex-direction:column;gap:6px;padding:8px;background:linear-gradient(0deg,rgba(0,0,0,.86),transparent)';
+  const K4='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>';
+  const FC='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>';
+  const DL='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
+  const mk=(html,style,fn)=>{ const b=document.createElement('button'); b.innerHTML=html; b.style.cssText=style; b.onclick=(e)=>{ e.stopPropagation(); fn(); }; return b; };
+  // Ligne 1 : Enregistrer (plein orange)
+  bar.appendChild(mk(DL+'<span>Enregistrer</span>', 'width:100%;padding:8px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-family:var(--font);font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px',
+    ()=>{ const a=document.createElement('a'); a.href=url; a.download='avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }));
+  // Ligne 2 : Améliorer en 4K (+ Détails du visage si visage) — mêmes moteurs que la génération unique
+  const row=document.createElement('div'); row.style.cssText='display:flex;gap:6px';
+  const outline='flex:1;min-width:0;padding:7px 4px;border:1.5px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-family:var(--font);font-size:10.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap';
+  row.appendChild(mk(K4+'<span>Améliorer en 4K</span>', outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
+  if(showFace) row.appendChild(mk(FC+'<span>Visage</span>', outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgUpscaleBtn'); if(b) _imgUpscaleHD(b); }));
+  bar.appendChild(row);
+  slot.appendChild(bar);
+  slot.onclick=()=> _imgSelectFromMulti(url, size);   // clic ailleurs → ouvre en grand (mêmes actions)
 }
 function _imgSelectFromMulti(url, size){
   document.getElementById('imgResultMulti').style.display = 'none';
