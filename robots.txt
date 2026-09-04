@@ -3,11 +3,21 @@
 User-agent: *
 Allow: /
 
+# Moteurs de recherche (les IA s'appuient dessus)
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
 # Crawlers IA explicitement autorisés
 User-agent: GPTBot
 Allow: /
 
 User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: OAI-AdsBot
 Allow: /
 
 User-agent: ChatGPT-User
