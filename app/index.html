@@ -7142,6 +7142,7 @@ function enterApp(profile){
   // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier) — sauf si un modèle a été choisi depuis la LP (aa_tool), auquel cas _applyStartTool ouvrira le bon module
   var _st0; try{ _st0 = localStorage.getItem('aa_tool'); }catch(e){}
   if(!_st0 && window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
+  try{ console.log('[AA-funnel] enterApp appelé (plan:', profile && profile.plan, ')'); }catch(e){}
   _applyStartTool();   // modèle choisi depuis la LP → ouvre le bon module (point unique : enterApp couvre TOUS les chemins de login)
   // ── ARRIVER DIRECTEMENT SUR UN MONTAGE ──────────────────────────────────
   // `…/app/#montage=<job_id>` ouvre « Détails du montage » sur ce job. C'est ce
@@ -7418,15 +7419,18 @@ function changeSubscription(){
 function _applyStartTool(){
   // modèle choisi sur la LP : d'abord l'URL ?start= (force un chargement frais → contourne le cache),
   // sinon localStorage aa_tool (secours). L'un OU l'autre.
-  var t = null;
-  try{ t = new URLSearchParams(window.location.search).get('start'); }catch(e){}
-  if(!t){ try{ t = localStorage.getItem('aa_tool'); }catch(e){} }
+  var t = null, src = 'aucune';
+  try{ t = new URLSearchParams(window.location.search).get('start'); if(t) src='url'; }catch(e){}
+  if(!t){ try{ t = localStorage.getItem('aa_tool'); if(t) src='localStorage'; }catch(e){} }
+  try{ console.log('[AA-funnel] _applyStartTool — source:', src, '· modèle:', t); }catch(e){}
   if(!t) return false;
   try{ localStorage.removeItem('aa_tool'); }catch(e){}
   // enlève ?start= de l'URL pour qu'un rafraîchissement ne rouvre pas le module en boucle
   try{ if(window.location.search) history.replaceState(null, '', window.location.pathname + window.location.hash); }catch(e){}
   var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean' };
-  var view = MAP[t]; if(!view) return false;
+  var view = MAP[t];
+  try{ console.log('[AA-funnel] → ouverture vue:', view); }catch(e){}
+  if(!view) return false;
   var go = function(){ try{ nav(view); window.scrollTo(0,0); }catch(e){} };
   go();                                        // tout de suite
   setTimeout(go, 150); setTimeout(go, 500); setTimeout(go, 1000);   // ré-assertions : gagne contre un nav('generator') par défaut qui passerait après
