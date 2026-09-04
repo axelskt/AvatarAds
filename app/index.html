@@ -5719,7 +5719,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     <!-- Header -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:30px">
       <div>
-        <div class="display" style="font-size:clamp(30px,4vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.02">Commence à créer, aujourd'hui.</div>
+        <div class="display" style="font-size:clamp(30px,4vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.02">Il te reste une dernière étape pour créer.</div>
       </div>
       <button onclick="closePlansSheet()" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 16px;color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--mono);transition:all .15s;flex-shrink:0" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg> Fermer</button>
     </div>
@@ -5798,11 +5798,11 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         </div>
         <div style="display:flex;align-items:baseline;gap:9px;margin-top:18px">
           <div id="sheetOldPro" style="font-size:22px;font-weight:700;color:var(--text-3);text-decoration:line-through;line-height:1">64,99€</div>
-          <div id="sheetPricePro" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1;color:#22c55e">49,99€</div>
+          <div id="sheetPricePro" style="font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1;color:var(--text)">49,99€</div>
           <div id="sheetPeriodPro" style="font-size:14px;color:var(--text-3)">/mois</div>
           <span id="sheetBadgePro" style="font-size:11px;font-weight:800;color:#22c55e;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.3);padding:2px 8px;border-radius:20px">-23%</span>
         </div>
-        <div id="sheetSubPro" style="font-size:11.5px;color:rgba(255,140,90,0.85);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour · sans engagement</div>
+        <div id="sheetSubPro" style="font-size:11.5px;color:var(--text-3);margin-top:6px;min-height:16px;font-family:var(--mono)">soit 1,67€/jour · sans engagement</div>
         <div id="sheetSavePro" style="display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;width:fit-content">économise 150€/an</div>
         <button id="sheetBtnPro" onclick="sheetCheckout('pro')" style="width:100%;padding:13px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-size:14px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .15s;margin:20px 0 22px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 32px -8px var(--accent-glow)" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">Choisir PRO →</button>
         <div style="font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Tout Starter, plus :</div>
@@ -5810,8 +5810,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>AvatarAds × Claude</span><span style="margin-left:auto;flex:0 0 auto;font-size:8.5px;font-weight:800;letter-spacing:.05em;color:#ff8042;background:rgba(255,90,31,.14);border:1px solid rgba(255,90,31,.35);border-radius:4px;padding:1px 5px">EXCLU</span></div>
           <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Montage IA Avancé</span></div>
           <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Qualité Premium images & vidéos</span></div>
-          <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Sous-titres synchronisés à l'audio</span></div>
           <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Motion Control Pro</span></div>
+          <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#22c55e;font-weight:800;flex:0 0 auto">✓</span><span>Support prioritaire</span></div>
         </div>
       </div>
 
@@ -7553,7 +7553,7 @@ function showPlansSheet(){
     const p=prices[k];
     const pe=document.getElementById('sheetPrice'+cap);   if(pe) pe.textContent=p[0];
     const pp=document.getElementById('sheetPeriod'+cap);  if(pp) pp.textContent=p[1];
-    const ps=document.getElementById('sheetSub'+cap);     if(ps){ ps.textContent=p[2]; if(k!=='pro') ps.style.color='var(--text-3)'; }
+    const ps=document.getElementById('sheetSub'+cap);     if(ps){ ps.textContent=p[2]; ps.style.color='var(--text-3)'; }
     const sv=document.getElementById('sheetSave'+cap);    if(sv) sv.style.display='none';
   });
   // Reset des prix barrés (mode mensuel) : Starter/Élite masqués, Pro = barré promo 64,99€
@@ -7623,7 +7623,7 @@ function sheetToggleBilling(){
     if(priceEl)  priceEl.textContent  = _sheetAnnual ? p.a  : p.m;
     if(periodEl) periodEl.textContent = _sheetAnnual ? p.ap : p.mp;
     if(subEl){   subEl.textContent    = _sheetAnnual ? p.as : (p.ms || 'sans engagement');
-                 if(k!=='pro') subEl.style.color = _sheetAnnual ? 'var(--green)' : 'var(--text-3)'; }
+                 subEl.style.color = _sheetAnnual ? 'var(--green)' : 'var(--text-3)'; }
     if(saveEl)   saveEl.style.display = 'none';
     const oldEl = document.getElementById('sheetOld' + cap);
     if(oldEl){
