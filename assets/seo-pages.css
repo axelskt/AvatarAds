@@ -62,3 +62,9 @@ strong{color:var(--text)}
 /* breadcrumb */
 .crumb{font-size:12.5px;color:var(--text3);padding-top:18px}
 .crumb a{color:var(--text3)}
+/* citabilité IA (GEO) : réponse courte + faits en bref, extractibles verbatim */
+.tldr{background:var(--surface);border:1px solid var(--accent-line);border-left:3px solid var(--accent);border-radius:12px;padding:14px 16px;margin:16px 0 4px;font-size:15.5px;color:var(--text2)}
+.tldr strong{color:var(--text)}
+.brief{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}
+.brief li{padding:10px 14px;background:var(--surface);border-left:3px solid var(--accent);border-radius:8px;font-size:14.5px;color:var(--text2)}
+.brief li strong{color:var(--text)}
