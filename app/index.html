@@ -358,7 +358,8 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .sub-card.on{border:2px solid var(--accent);background:var(--accent-soft);padding:13px}
 .sub-name{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--text-2)}
 .sub-card.on .sub-name{color:var(--orange2)}
-.sub-preview{background:transparent;border-radius:8px;padding:6px 0;align-self:center;display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap}
+.sub-preview{background:transparent;border-radius:8px;padding:6px 0;align-self:stretch;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+@media(max-width:768px){ .sub-preview span{font-size:15px !important} .style-card .sub-preview span{font-size:14px !important} }
 /* Cartes « Animation des sous-titres » — maquette : compactes, demo dans une puce --panel-1 */
 .anim-card{border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:.15s;background:var(--surface);display:flex;flex-direction:column;gap:9px;text-align:left}
 .anim-card:hover{border-color:var(--border-2)}
@@ -1348,12 +1349,12 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </div>
               </div>
               <div id="voxLegacyClean"><div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">② Nettoyage <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
-              <div class="col gap10" style="margin-bottom:12px"><div class="row" id="voxSilRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxSilIco" style="flex:0 0 auto"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Supprimer les silences</span><span class="faint" style="font-size:12px">Coupe les blancs, les hésitations et les bruits de fond · volume constant</span></div></div><button type="button" id="voxSilSw" onclick="_voxToggleSil()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
+              <div class="col gap10" style="margin-bottom:12px"><div class="row" id="voxSilRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxSilIco" style="flex:0 0 auto"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Supprimer les silences</span><span class="faint" style="font-size:12px">Coupe les blancs et les bruits de fond</span></div></div><button type="button" id="voxSilSw" onclick="_voxToggleSil()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
               </div><div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">③ Synchroniser un gameplay <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
-              <div style="margin-bottom:0"><div class="row" id="voxGpRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxGpIco" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Le gameplay suit ton audio</span><span class="faint" style="font-size:12px">Quand ta voix est coupée, le gameplay est coupé au même endroit</span></div></div><button type="button" id="voxGpSw" onclick="_voxToggleGp()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
+              <div style="margin-bottom:0"><div class="row" id="voxGpRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxGpIco" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Le gameplay suit ton audio</span><span class="faint" style="font-size:12px">Coupé en même temps que ta voix</span></div></div><button type="button" id="voxGpSw" onclick="_voxToggleGp()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
               <div id="voxGpZoneWrap" class="rise" style="display:none;margin-top:12px"><div id="voxGpZone" onclick="document.getElementById('voxGpIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleSilenceGameplayFile(f);_voxGpReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:32px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton gameplay ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxGpIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
               <div class="label" style="font-size:11px;letter-spacing:.14em;margin:14px 0 11px">④ Musique de fond <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
-              <div style="margin-bottom:0"><div class="row" id="genMusicRow" onclick="_genOpenMusicPicker()" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='var(--accent-line)'" onmouseout="this.style.borderColor='var(--border)'"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Ajouter une musique de fond</span><span class="faint" style="font-size:12px" id="genMusicLabel">Aucune — mixée sous ta voix, démarre sur le drop</span></div></div><span style="font-size:16px;color:var(--text-3);flex:0 0 auto">›</span></div></div>
+              <div style="margin-bottom:0"><div class="row" id="genMusicRow" onclick="_genOpenMusicPicker()" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='var(--accent-line)'" onmouseout="this.style.borderColor='var(--border)'"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Ajouter une musique de fond</span><span class="faint" style="font-size:12px" id="genMusicLabel">Aucune · mixée sous ta voix</span></div></div><span style="font-size:16px;color:var(--text-3);flex:0 0 auto">›</span></div></div>
             </div>
 
             <div id="fs2Legacy" style="display:none">
@@ -1572,7 +1573,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                                     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg>
                   <div>
                     <div style="font-size:12px;font-weight:700">Supprimer les silences</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Coupe les blancs, les hésitations et les bruits de fond · volume constant</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Coupe les blancs et les bruits de fond</div>
                   </div>
                 </div>
                 <span id="silenceToolArrow" style="font-size:12px;color:var(--text3);transition:transform .25s;transform:rotate(90deg)">›</span>
@@ -1588,7 +1589,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <!-- Gameplay upload -->
                 <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M6 12H4.5M5.25 10.75v2.5"/><circle cx="16.5" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg> Le gameplay suit ton audio</div>
                 <div id="silenceGpDropzone" onclick="document.getElementById('silenceGpFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='var(--orange)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';handleSilenceGameplayFile(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;background:var(--bg4);transition:all .2s;margin-bottom:12px">
-                  <div id="silenceGpDropContent"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--text)">Glisse ton gameplay ici</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">Quand ta voix est coupée, le gameplay est coupé au même endroit</div></div>
+                  <div id="silenceGpDropContent"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-size:13px;font-weight:700;margin-top:8px;color:var(--text)">Glisse ton gameplay ici</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:3px">Coupé en même temps que ta voix</div></div>
                   <div id="silenceGpFileInfo" style="display:none"><div style="line-height:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div id="silenceGpFileName" style="font-size:11px;font-weight:600;margin-top:2px"></div></div>
                   <div id="silenceGpAutoInfo" style="display:none"><div style="font-size:18px;color:var(--green)">✓</div><div style="font-size:12px;font-weight:700;margin-top:2px;color:var(--green)">Gameplay déjà chargé</div><div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">Utilisé pour la synchro · glisse ici pour en changer</div></div>
                 </div>
@@ -3864,7 +3865,12 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </button>
           </div>
           <!-- Menu réglages (au-dessus) : qualité · format · durée · voix -->
+          <div id="mExpAdvBackdrop" onclick="_mExpAdvClose()" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.45)"></div>
           <div id="mExpAdvPop" style="display:none;position:fixed;left:12px;right:12px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:401;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 24px 64px -18px rgba(0,0,0,.9);max-height:calc(100dvh - 150px);overflow-y:auto;-webkit-overflow-scrolling:touch">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <span style="font-weight:800;font-size:15px">Réglages</span>
+              <button onclick="_mExpAdvClose()" aria-label="Fermer" style="width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);display:grid;place-items:center;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            </div>
             <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">QUALITÉ</div>
             <div style="display:flex;gap:6px;margin-bottom:15px">
               <button onclick="_expPickQual('720p');_mExpSync()" id="mExpQual720" style="flex:1;padding:11px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">720p · rapide</button>
@@ -19391,7 +19397,7 @@ function _genDenoiseResetOnNewFile(){ _genDenoiseEnabled = true; _genSetDenoiseS
 function _genToggleDenoise(){
   _genDenoiseEnabled = !_genDenoiseEnabled;
   _genSetDenoiseSwitch(_genDenoiseEnabled);
-  if(_genDenoiseEnabled) toast('Bruits de fond activé — appliqué avec la suppression des silences');
+  // toast retiré (Axel 04/09 : gênait l'écran au toggle « supprimer les silences »)
 }
 function autoGenSubtitles(){
   const panel = document.getElementById('transcriptPanel');
@@ -38452,7 +38458,8 @@ function edBandDrag(ov,track,e,mode){
   .guest-banner-text{font-size:11px}
 }
 #mNav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;border-radius:14px;
-  color:var(--text-3);font-family:var(--font);font-size:8.5px;font-weight:500;cursor:pointer;padding:0;min-width:0;transition:background .22s ease,color .18s ease}
+  color:var(--text-3);font-family:var(--font);font-size:8.5px;font-weight:500;cursor:pointer;padding:0;min-width:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  transition:background-color .2s ease,box-shadow .2s ease,color .18s ease,transform .12s ease}
 #mNav button.on{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.085));
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.30),inset 0 1px 0 rgba(255,255,255,.48),0 4px 14px -4px rgba(0,0,0,.55),0 0 14px rgba(255,255,255,.07)}
 #mNav button.on svg{color:#fff;filter:drop-shadow(0 0 4px rgba(255,255,255,.4))}
@@ -38479,6 +38486,8 @@ function edBandDrag(ov,track,e,mode){
   #mPreview .mp-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);flex:0 0 auto}
   #mPreview .mp-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
   #mPreview .gen-right{display:flex !important;width:100% !important;flex:1 !important;border-left:none !important}
+  /* aperçu téléphone plus compact sur mobile (Axel 04/09 : « trop gros ») — on réduit l'échelle et on récupère la place */
+  #mPreview #phoneWrapper{transform:scale(.8);transform-origin:top center;margin-bottom:-130px}
   /* Express mobile (design proto) : aperçu + contrôles compacts, formulaire desktop masqué */
   #v-express{flex-direction:column !important}
   #v-express>div:nth-child(1){display:none !important}
@@ -38500,7 +38509,7 @@ function edBandDrag(ov,track,e,mode){
   #mcRefDrop,#mcCharDrop{aspect-ratio:auto !important;min-height:200px;max-height:230px}
   /* Paramètres avancés Motion : plein écran SCROLLABLE sur mobile (le « .view .scroll-y » global neutralisait le scroll interne → on restait bloqué) */
   #mcAdvModal{padding:0 !important;align-items:stretch !important}
-  #mcAdvCard{width:100% !important;max-height:100dvh !important;height:100dvh;border-radius:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch}
+  #mcAdvCard{width:100% !important;max-height:100dvh !important;height:100dvh;border-radius:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;padding-bottom:calc(46px + env(safe-area-inset-bottom)) !important}
   /* #lot6 · mobile : lecteur pleine largeur COMME AVANT (le cap 65vh + min-height 320px
      sont des réglages desktop — ici hauteur naturelle, largeur bornée par l'écran) */
   #expStage{min-height:0 !important;flex:1 1 auto !important}
@@ -38841,9 +38850,13 @@ window._mExpSync=function(){
 /* Express mobile : un seul menu « Paramètres avancés » (qualité · format · durée · voix) qui s'ouvre au-dessus */
 window._mExpAdvTog=function(){
   var p=document.getElementById('mExpAdvPop'); if(!p) return;
-  var open=p.style.display!=='none';
-  p.style.display=open?'none':'block';
-  if(!open){ _mExpSync(); _mExpRenderVoiceInline(); }
+  if(p.style.display!=='none'){ _mExpAdvClose(); return; }
+  var b=document.getElementById('mExpAdvBackdrop'); if(b) b.style.display='block';
+  p.style.display='block'; _mExpSync(); _mExpRenderVoiceInline();
+};
+window._mExpAdvClose=function(){
+  var p=document.getElementById('mExpAdvPop'); if(p) p.style.display='none';
+  var b=document.getElementById('mExpAdvBackdrop'); if(b) b.style.display='none';
 };
 window._mExpRenderVoiceInline=function(){
   var c=document.getElementById('mExpVoiceInline'); if(!c) return;
