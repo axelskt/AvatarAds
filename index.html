@@ -438,8 +438,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <span class="accent">sans montrer ton visage</span>
       </h1>
       <p class="muted rise" style="font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5">
-        <b style="color:var(--text)">Décris la vidéo que tu veux créer, AvatarAds génère
-        une vidéo virale prête à poster.</b>
+        <b style="color:var(--text)">Choisis le modèle avec lequel tu veux créer, AvatarAds génère ton contenu viral prêt à poster.</b>
       </p>
 
       <!-- MOBILE UNIQUEMENT — la maquette remonte les trois atouts au-dessus du
@@ -456,14 +455,16 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           Prêt à poster</div>
       </div>
 
-      <!-- PromptBar (funnel → connexion) -->
-      <form class="rise" onsubmit="lpGenerate(event)" style="margin-top:30px;display:flex;gap:0;align-items:center;max-width:600px;width:100%;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
-        <div class="pb-ico" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-        </div>
-        <input id="lpPrompt" placeholder="Décris ici la vidéo que tu veux générer…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:17px;font-weight:500;padding:0 16px">
-        <button type="submit" class="btn btn-primary pb-go" style="flex:0 0 auto;padding:16px 32px;font-size:18px;font-weight:800;border-radius:999px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
-      </form>
+      <!-- PromptBar → ouvre le sélecteur de modèle (funnel : modèle → connexion → studio → paywall) -->
+      <div class="rise" style="position:relative;margin-top:30px;max-width:600px;width:100%">
+        <button type="button" onclick="openModelPicker()" aria-label="Choisir un modèle" class="row" style="position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
+          <span class="pb-ico" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
+          </span>
+          <span class="hp-input" style="flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Choisis un modèle pour commencer la création</span>
+          <span class="btn btn-primary pb-go" style="flex:0 0 auto;padding:16px 32px;font-size:18px;font-weight:800;border-radius:999px">Commencer <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </button>
+      </div>
 
     </div>
 
@@ -1221,6 +1222,67 @@ document.addEventListener('keydown', function(e){
 /* lance le scan reveal une fois tout le DOM construit */
 revealScan();
 
+</script>
+
+<!-- ══════════ Sélecteur de modèle (funnel : modèle → connexion → studio → paywall) ══════════ -->
+<style>
+#modelPicker .mp-card{border-radius:16px}
+#modelPicker .mp-card .mp-vis{border-radius:15px 15px 0 0}
+@media(max-width:767px){ #modelGrid{grid-template-columns:1fr 1fr!important} #modelPickerCard{padding:18px!important} #modelPicker h3{font-size:21px!important} }
+</style>
+<div id="modelPicker" hidden onclick="closeModelPicker()" style="position:fixed;inset:0;z-index:8000;background:rgba(6,6,9,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px;opacity:0;transition:opacity .18s">
+  <div id="modelPickerCard" onclick="event.stopPropagation()" style="width:min(920px,96vw);background:var(--surface);border:1px solid var(--border-2);border-radius:22px;padding:32px;box-shadow:0 30px 90px -20px rgba(0,0,0,.9);text-align:left;transform:scale(.97);transition:transform .2s">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <h3 class="display" style="font-size:26px;font-weight:800">Choisis un modèle</h3>
+      <button onclick="closeModelPicker()" aria-label="Fermer" class="btn-quiet" style="display:grid;place-items:center;width:34px;height:34px;border-radius:10px;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <p class="muted" style="font-size:13.5px;margin-bottom:16px">Sélectionne un outil et lance-toi dans le studio.</p>
+    <div id="modelGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var ICONS={
+    film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/>',
+    mask:'<path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/>',
+    image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+    bolt:'<path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/>',
+    sparkle:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/>',
+    waveform:'<path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/>'
+  };
+  var MODELS=[
+    ["montage","Montage IA","Ton audio transformé en vidéo virale",18,"film","audio → vidéo","assets/lp/montage-ia-lp.mp4"],
+    ["motion","Motion Control","Transfère un mouvement sur une image",265,"mask","vidéo + image → vidéo","assets/lp/motion-control-lp.mp4"],
+    ["images","Image IA","Visuels 4K en 1 prompt",330,"image","texte → image","assets/lp/images-ia-lp.mp4"],
+    ["express","Express","Vidéo depuis un texte",200,"bolt","texte → vidéo","assets/lp/express-lp.mp4"],
+    ["gen","Générateur","Avatar IA + voix + sous-titres",150,"sparkle","image + audio → vidéo","assets/lp/generateur-lp.mp4"],
+    ["audio","Nettoyage audio","Bruit, volume et silences nettoyés",45,"waveform","audio → audio","assets/lp/nettoyage-audio-lp.mp4"]
+  ];
+  var grid=document.getElementById('modelGrid');
+  MODELS.forEach(function(m){
+    var id=m[0],t=m[1],d=m[2],hue=m[3],ic=m[4],fmt=m[5],vid=m[6];
+    var b=document.createElement('button');
+    b.className='col card mp-card';
+    b.style.cssText='gap:0;align-items:stretch;padding:0;overflow:hidden;text-align:left;transition:border-color .15s,transform .15s;cursor:pointer;border:1px solid var(--border)';
+    b.innerHTML=
+      '<div class="mp-vis" style="position:relative;aspect-ratio:16 / 10;overflow:hidden;background:radial-gradient(120% 100% at 30% 0%, oklch(0.55 0.16 '+hue+'), oklch(0.16 0.04 '+hue+'))">'
+      +'<div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 24px)"></div>'
+      +'<video class="mp-vid" src="'+vid+'" muted loop playsinline preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .25s"></video>'
+      +'<div style="position:absolute;inset:0;display:grid;place-items:center;z-index:2"><span class="mp-ico" style="width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);transition:opacity .2s"><svg width="21" height="21" viewBox="0 0 24 24" fill="'+(ic==='bolt'?'#fff':'none')+'" stroke="'+(ic==='bolt'?'none':'#fff')+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ICONS[ic]+'</svg></span></div>'
+      +'<span class="mono" style="position:absolute;left:8px;top:8px;z-index:3;font-size:9.5px;font-weight:600;color:#fff;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:3px 7px;border-radius:6px;letter-spacing:.02em">'+fmt+'</span>'
+      +'</div>'
+      +'<div class="col" style="gap:2px;padding:10px 12px"><span style="font-weight:700;font-size:14px">'+t+'</span><span class="faint" style="font-size:11.5px;line-height:1.3">'+d+'</span></div>';
+    b.addEventListener('click',function(){ try{localStorage.setItem('aa_tool',id);}catch(e){} window.location.href='/app/'; });
+    var vidEl=b.querySelector('.mp-vid'), icoEl=b.querySelector('.mp-ico');
+    b.addEventListener('mouseenter',function(){ b.style.borderColor='var(--accent-line)'; b.style.transform='translateY(-2px)'; try{vidEl.currentTime=0;vidEl.play().catch(function(){});}catch(e){} vidEl.style.opacity='1'; icoEl.style.opacity='0'; });
+    b.addEventListener('mouseleave',function(){ b.style.borderColor='var(--border)'; b.style.transform='none'; try{vidEl.pause();}catch(e){} vidEl.style.opacity='0'; icoEl.style.opacity='1'; });
+    grid.appendChild(b);
+  });
+  var mp=document.getElementById('modelPicker'), card=document.getElementById('modelPickerCard');
+  window.openModelPicker=function(){ mp.hidden=false; requestAnimationFrame(function(){ mp.style.opacity='1'; card.style.transform='scale(1)'; }); document.body.style.overflow='hidden'; };
+  window.closeModelPicker=function(){ mp.style.opacity='0'; card.style.transform='scale(.97)'; document.body.style.overflow=''; setTimeout(function(){ mp.hidden=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} }); },180); };
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !mp.hidden) window.closeModelPicker(); });
+})();
 </script>
 
 </body>
