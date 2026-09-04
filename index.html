@@ -260,6 +260,8 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   .hero-left p b{color:var(--text-2) !important;font-weight:400 !important}
   /* Sélecteur de modèle (remplace l'ancien form) — dimensions mobiles pour ne pas déborder */
   .hero-left .rise{max-width:100% !important;margin-top:18px !important}
+  /* les 3 atouts (100% automatique / formats courts / prêt à poster) passent SOUS la barre sur mobile */
+  .hero-left .hero-reassure-m{order:1}
   .hero-left .rise>button{padding:5px 5px 5px 8px !important}
   .hero-left .pb-ico{width:34px !important;height:34px !important}
   .hero-left .pb-ico svg{width:16px !important;height:16px !important}
@@ -479,7 +481,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           <span class="pb-ico" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
           </span>
-          <span class="hp-input" style="flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Choisis un modèle pour commencer la création</span>
+          <span class="hp-input" style="flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Choisis un modèle</span>
           <span class="btn btn-primary pb-go" style="flex:0 0 auto;padding:16px 32px;font-size:18px;font-weight:800;border-radius:999px">Commencer <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         </button>
       </div>
@@ -1257,10 +1259,10 @@ revealScan();
 <style>
 #modelPicker .mp-card{border-radius:16px}
 #modelPicker .mp-card .mp-vis{border-radius:15px 15px 0 0}
-@media(max-width:767px){ #modelGrid{grid-template-columns:1fr 1fr!important} #modelPickerCard{padding:18px!important} #modelPicker h3{font-size:21px!important} }
+@media(max-width:767px){ #modelGrid{grid-template-columns:1fr 1fr!important} #modelPickerCard{padding:18px!important} #modelPicker h3{font-size:21px!important} #modelGrid .mp-card .faint{display:none} }
 </style>
-<div id="modelPicker" onclick="closeModelPicker()" style="position:fixed;inset:0;z-index:8000;background:rgba(6,6,9,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;flex-direction:column;align-items:center;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:20px">
-  <div id="modelPickerCard" onclick="event.stopPropagation()" style="width:min(920px,96vw);margin:auto;background:var(--surface);border:1px solid var(--border-2);border-radius:22px;padding:32px;box-shadow:0 30px 90px -20px rgba(0,0,0,.9);text-align:left;transform:scale(.97);transition:transform .2s">
+<div id="modelPicker" onclick="closeModelPicker()" style="position:fixed;inset:0;z-index:8000;background:rgba(6,6,9,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;flex-direction:column;align-items:center;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:20px">
+  <div id="modelPickerCard" onclick="event.stopPropagation()" style="width:min(920px,100%);max-width:100%;margin:auto;background:var(--surface);border:1px solid var(--border-2);border-radius:22px;padding:32px;box-shadow:0 30px 90px -20px rgba(0,0,0,.9);text-align:left;transform:scale(.97);transition:transform .2s">
     <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:4px">
       <h3 class="display" style="font-size:26px;font-weight:800">Choisis un modèle</h3>
       <button onclick="closeModelPicker()" aria-label="Fermer" class="btn-quiet" style="display:grid;place-items:center;width:34px;height:34px;border-radius:10px;flex:0 0 auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -1311,6 +1313,10 @@ revealScan();
   // Précharge les vidéos dès que l'utilisateur montre l'INTENTION d'ouvrir (survol/focus/touch du bouton),
   // au lieu de lancer 6 téléchargements d'un coup au moment du clic → l'ouverture est fluide.
   window.preloadModelPicker=function(){ if(_preloaded) return; _preloaded=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.preload='auto'; v.load(); }catch(e){} }); };
+  // Axel 05/09 : précharge les vidéos AU REPOS après le chargement de la LP → prêtes dès l'ouverture
+  // du menu (clic = affichage immédiat), sans pénaliser le LCP (l'idle callback passe après le critique).
+  var _schedPreload=function(){ (window.requestIdleCallback||function(f){return setTimeout(f,1800);})(function(){ try{ window.preloadModelPicker(); }catch(e){} }); };
+  if(document.readyState==='complete') _schedPreload(); else window.addEventListener('load',_schedPreload);
   window.openModelPicker=function(){ mp.style.display='flex'; mp.scrollTop=0; void card.offsetWidth; card.style.transform='scale(1)'; document.body.style.overflow='hidden'; window.preloadModelPicker(); grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.currentTime=0; v.play().catch(function(){}); }catch(e){} }); };
   window.closeModelPicker=function(){ card.style.transform='scale(.97)'; document.body.style.overflow=''; mp.style.display='none'; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} }); };
   document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !mp.hidden) window.closeModelPicker(); });
