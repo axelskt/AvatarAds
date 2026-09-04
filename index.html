@@ -1060,7 +1060,9 @@ function lpGenerate(e){
   var dernier=null, tick=false;
   function on(){ tick=false; var s=window.scrollY>620; if(s===dernier) return; dernier=s;
     bar.style.transform=s?'none':'translateY(-110%)'; bar.style.pointerEvents=s?'auto':'none'; }
-  window.addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(on); } },{passive:true}); on();
+  // on() lit window.scrollY : appelé en synchrone pendant le parse, ça force un reflow (flag PageSpeed « ajustement forcé »).
+  // On diffère la 1ʳᵉ lecture au 1er frame (après le layout naturel) — la barre est cachée par défaut à scrollY=0, donc invisible à l'œil.
+  window.addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(on); } },{passive:true}); requestAnimationFrame(on);
 })();
 
 /* ══════════ Scroll-reveal (IntersectionObserver) ══════════ */
