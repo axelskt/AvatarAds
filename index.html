@@ -186,9 +186,10 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 .feat-mock{position:absolute;inset:0;display:none;place-items:center;padding:28px}
 .feat-mock.on{display:grid}
 /* onglet Montage IA en pleine largeur : carte 1 colonne, vidéo plein écran en haut, texte dessous */
-/* Montage IA : vidéo 16:9 qui remplit la colonne mock (gauche), sans s'effondrer (aspect-ratio imbriqués → largeur définie par la colonne, hauteur par le ratio) */
-.feat-mock[data-feat="montage"] .feat-demo{aspect-ratio:auto;max-width:none;width:100%;height:auto}
-.feat-mock[data-feat="montage"] #mtDemoRow{width:100%;max-width:none;height:auto}
+/* Vidéos features 16:9 : remplissent la colonne mock sans s'effondrer (largeur définie par la colonne, hauteur par le ratio) */
+.feat-mock .feat-demo.vidwrap{aspect-ratio:auto;max-width:none;width:100%;height:auto;background:none;border:none;box-shadow:none}
+.feat-vid{position:relative;width:100%;max-width:none;height:auto;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)}
+.feat-vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .feat-photo{position:relative;height:100%;max-width:100%;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8)}
 .feat-photo img{display:block;height:100%;width:100%;object-fit:cover}
 .feat-demo{position:relative;height:100%;aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8);background:radial-gradient(420px 220px at 50% 0%,rgba(255,90,31,.10),transparent),var(--bg-grad)}
@@ -662,35 +663,20 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="feat-mockwrap" style="position:relative;min-height:400px;border-right:1px solid var(--border);background:radial-gradient(500px 260px at 40% 0%,rgba(255,90,31,.09),transparent),var(--bg-grad)" id="featMockZone">
       <!-- avatar IA — grille de 6 avatars UGC (vraies images générées par l'app,
            dossiers « Image IA /Garçon + /Fille » — jamais de visuels externes) -->
-      <div class="feat-mock" data-feat="avatar" style="padding:16px"><div class="avatar-grid">
-        <img src="assets/lp/avatar-ugc-1.webp" alt="Avatar IA homme — face caméra dans une villa, micro-cravate" width="600" height="800" loading="lazy" decoding="async">
-        <img src="assets/lp/avatar-ugc-2.webp" alt="Avatar IA femme — dans la rue en ville, lumière naturelle" width="600" height="800" loading="lazy" decoding="async">
-        <img src="assets/lp/avatar-ugc-3.webp" alt="Avatar IA homme — produit skincare en main, face caméra" width="600" height="800" loading="lazy" decoding="async">
-        <img src="assets/lp/avatar-ugc-4.webp" alt="Avatar IA femme — selfie casual à la maison" width="600" height="800" loading="lazy" decoding="async">
-        <img src="assets/lp/avatar-ugc-5.webp" alt="Avatar IA homme — selfie de rue sous la pluie, style UGC" width="600" height="800" loading="lazy" decoding="async">
-        <img src="assets/lp/avatar-ugc-6.webp" alt="Avatar IA femme — selfie de nuit en ville, néons" width="600" height="800" loading="lazy" decoding="async">
+      <div class="feat-mock" data-feat="avatar" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="assets/lp/avatar-ia-lp.mp4" poster="assets/lp/avatar-ia-lp.webp" muted loop playsinline preload="none" aria-label="Démo Avatar IA : des visages IA réalistes générés pour présenter ton produit"></video></div>
       </div></div>
-      <!-- soustitres -->
-      <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres-720.webp" alt="Sous-titres animés" width="720" height="720" loading="lazy" decoding="async"></div></div>
+      <!-- motion control -->
+      <div class="feat-mock" data-feat="motion" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="assets/lp/motion-control-lp.mp4" poster="assets/lp/motion-control-lp.webp" muted loop playsinline preload="none" aria-label="Démo Motion Control : une image fixe animée en vidéo qui bouge"></video></div>
+      </div></div>
       <!-- montage IA : avant/après vidéo (boucles muettes lancées ensemble à l'apparition) -->
-      <div class="feat-mock" data-feat="montage" style="padding:16px"><div class="feat-demo">
-        <div id="mtDemoRow" style="position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)">
-          <video src="assets/lp/montage-ia-lp.mp4" poster="assets/lp/montage-ia-lp.webp" muted loop playsinline preload="none" aria-label="Démo Montage IA : la même vidéo, brute puis montée par l'IA" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
-        </div>
+      <div class="feat-mock" data-feat="montage" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="assets/lp/montage-ia-lp.mp4" poster="assets/lp/montage-ia-lp.webp" muted loop playsinline preload="none" aria-label="Démo Montage IA : la même vidéo, brute puis montée par l'IA"></video></div>
       </div></div>
-      <!-- audio -->
-      <div class="feat-mock" data-feat="audio" style="padding:8px"><div class="feat-demo">
-        <div class="col" style="width:82%;max-width:400px;gap:16px">
-          <div class="row gap8" style="align-items:center">
-            <span class="mono faint" style="font-size:10px;width:44px;text-align:right">avant</span>
-            <div class="row" style="flex:1;gap:3px;align-items:center;height:30px" id="audioBarsBefore"></div>
-          </div>
-          <div class="row gap8" style="align-items:center">
-            <span class="mono accent" style="font-size:10px;width:44px;text-align:right">après</span>
-            <div class="row" style="flex:1;gap:3px;align-items:center;height:30px" id="audioBarsAfter"></div>
-          </div>
-          <span class="pill" style="align-self:center;background:rgba(40,199,149,.12);border-color:rgba(40,199,149,.3);color:var(--green);font-weight:700;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg> Silences supprimés</span>
-        </div>
+      <!-- nettoyage audio -->
+      <div class="feat-mock" data-feat="audio" style="padding:16px"><div class="feat-demo vidwrap">
+        <div class="feat-vid"><video src="assets/lp/nettoyage-audio-lp.mp4" poster="assets/lp/nettoyage-audio-lp.webp" muted loop playsinline preload="none" aria-label="Démo Nettoyage audio : le son brut nettoyé (bruit, volume, silences)"></video></div>
       </div></div>
       <!-- editeur -->
       <!-- 🎬 À REMPLACER par la vidéo quand Axel l'envoie : <video src="assets/lp/lipsync-montage.mp4" poster="assets/lp/lipsync.jpg" muted loop playsinline …> -->
@@ -1091,8 +1077,8 @@ document.querySelectorAll('[data-countup]').forEach(function(el){
 var FEAT_TABS=[
   { id:"montage", tab:"Montage IA", t:"Ta vidéo brute devient un montage viral", d:"L'IA écoute ta vidéo et la monte de A à Z." },
   { id:"avatar", tab:"Avatar IA", t:"Un avatar pour chaque marque", d:"Des visages IA réalistes, style UGC — choisis le tien, il présente ton produit face caméra. Sans casting, sans tournage." },
-  { id:"soustitres", tab:"Sous-titres", t:"Le détail qui retient le scroll", d:"Augmente de 200% le taux de rétention sur tes vidéos." },
-  { id:"audio", tab:"Nettoyage audio", t:"Un rythme punchy, zéro blanc", d:"Les silences coupés automatiquement pour garder le dynamisme sur tes vidéos et ton audience captive." },
+  { id:"motion", tab:"Motion Control", t:"Une image fixe qui prend vie", d:"Anime n'importe quelle photo : le mouvement se génère, la vidéo est prête à poster." },
+  { id:"audio", tab:"Nettoyage audio", t:"Un audio propre, automatiquement", d:"Bruit de fond, volume, silences — nettoyés d'un coup pour un son net et pro." },
   { id:"editeur", tab:"Éditeur", t:"Le dernier mot te revient", d:"Timeline multi-pistes, calques, musique, effets. Le contrôle total sans quitter AvatarAds." }
 ];
 (function(){
@@ -1103,16 +1089,13 @@ var FEAT_TABS=[
     b.onclick=function(){ setFeat(x.id,b); };
     tabsEl.appendChild(b);
   });
-  // mock: audio bars
-  [[70,12,8,60,10,9,80,8,12,55,9,7,68],'audioBarsBefore',[70,60,80,55,68,74,62,78],'audioBarsAfter'].forEach(function(_,__){});
-  [70,12,8,60,10,9,80,8,12,55,9,7,68].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:'+(h<20?'var(--surface-3)':'var(--text-3)'); document.getElementById('audioBarsBefore').appendChild(d); });
-  [70,60,80,55,68,74,62,78].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:var(--accent)'; document.getElementById('audioBarsAfter').appendChild(d); });
   setFeat(FEAT_TABS[0].id, tabsEl.children[0], true);
 })();
 function setFeat(id, btn, init){
   document.querySelectorAll('#featTabs button').forEach(function(b){ b.classList.remove('on'); });
   if(btn) btn.classList.add('on');
   document.querySelectorAll('.feat-mock').forEach(function(m){ m.classList.toggle('on', m.getAttribute('data-feat')===id); });
+  if(window._playActiveFeatVid) window._playActiveFeatVid();
   var cur=FEAT_TABS.find(function(x){ return x.id===id; })||FEAT_TABS[0];
   var t=document.getElementById('featTitle'), d=document.getElementById('featDesc');
   t.textContent=cur.t; d.textContent=cur.d;
@@ -1196,20 +1179,22 @@ function tstToggle(open){
   io.observe(v);
 })();
 
-/* Montage IA avant/après : les 2 boucles muettes démarrent ENSEMBLE quand la section est visible */
+/* Vidéos features : seule la vidéo de l'onglet ACTIF joue, et seulement quand la section est visible */
 (function(){
-  var row=document.getElementById('mtDemoRow');
-  if(!row || !('IntersectionObserver' in window)) return;
-  var vids=row.querySelectorAll('video');
-  var io=new IntersectionObserver(function(es){
-    es.forEach(function(e){
-      vids.forEach(function(v){
-        if(e.isIntersecting){ v.currentTime=0; v.play().catch(function(){}); }
-        else v.pause();
-      });
+  var zone=document.getElementById('featMockZone');
+  if(!zone) return;
+  function playActive(inView){
+    document.querySelectorAll('.feat-vid video').forEach(function(v){
+      var mock=v.closest('.feat-mock');
+      var on=mock && mock.classList.contains('on');
+      if(on && inView){ try{v.currentTime=0;}catch(e){} v.play().catch(function(){}); }
+      else v.pause();
     });
-  }, { threshold: 0.35 });
-  io.observe(row);
+  }
+  window._playActiveFeatVid=function(){ playActive(true); };  // appelé au changement d'onglet (setFeat)
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(es){ es.forEach(function(e){ playActive(e.isIntersecting); }); }, { threshold: 0.35 }).observe(zone);
+  } else { playActive(true); }
 })();
 
 /* ══════════ Menu mobile (burger) ══════════ */
