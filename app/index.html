@@ -7139,8 +7139,9 @@ function enterApp(profile){
   try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){}   // #65 · fusionne la biblio du compte (tous appareils)
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
-  // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier)
-  if(window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
+  // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier) — sauf si un modèle a été choisi depuis la LP (aa_tool), auquel cas _applyStartTool ouvrira le bon module
+  var _st0; try{ _st0 = localStorage.getItem('aa_tool'); }catch(e){}
+  if(!_st0 && window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
   // ── ARRIVER DIRECTEMENT SUR UN MONTAGE ──────────────────────────────────
   // `…/app/#montage=<job_id>` ouvre « Détails du montage » sur ce job. C'est ce
   // que renvoie le MCP : depuis Claude on ne relit pas le plan en texte, on
@@ -7412,6 +7413,17 @@ function changeSubscription(){
   if(plan !== 'free') toast('Choisis ton nouveau plan — l\'ancien sera annulé automatiquement, tu ne paieras pas deux fois');
 }
 
+// ── Ouvre le modèle choisi depuis la LP (localStorage aa_tool → module) ──
+function _applyStartTool(){
+  var t; try{ t = localStorage.getItem('aa_tool'); }catch(e){}
+  if(!t) return false;
+  try{ localStorage.removeItem('aa_tool'); }catch(e){}
+  var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean' };
+  var view = MAP[t]; if(!view) return false;
+  setTimeout(function(){ try{ nav(view); window.scrollTo(0,0); }catch(e){} }, 160);
+  return true;
+}
+
 // ── INIT AUTH (check session au démarrage) ──
 async function initAuth(){
   // « Rester connecté 14 jours » : au-delà, reconnexion obligatoire
@@ -7424,6 +7436,7 @@ async function initAuth(){
   if(session && session.user){
     if(!born) localStorage.setItem('aa_login_at', String(Date.now())); // sessions d'avant l'OTP : on démarre le compteur maintenant
     await loadProfile(session.user);
+    _applyStartTool();  // modèle choisi depuis la LP → ouvre le bon module
   }
   // Filet de sécurité : si aucune session valide n'a ouvert l'app (session absente/expirée, ou profil non chargé),
   // on ré-affiche le login (au cas où on l'aurait masqué optimistiquement au boot pour éviter le flash).
@@ -7436,6 +7449,7 @@ async function initAuth(){
     if(session && session.user && !currentMember){
       if(!localStorage.getItem('aa_login_at')) localStorage.setItem('aa_login_at', String(Date.now()));
       await loadProfile(session.user);
+      _applyStartTool();  // retour OAuth Google → ouvre le modèle choisi depuis la LP
     }
   });
 }
@@ -7449,7 +7463,7 @@ function checkSetupNeeded(){
 function loginGuest(){
   guestMode = true;
   document.getElementById('loginOverlay').style.display = 'none';
-  if(window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
+  if(!_applyStartTool() && window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
   document.getElementById('guestBanner').style.display = 'flex';
   document.getElementById('memberBar').style.display = 'flex';
   document.getElementById('memberName').textContent = 'Mode Essai';
