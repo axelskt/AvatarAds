@@ -6489,7 +6489,12 @@ const CREDIT_COSTS = {
   // personnage (2 détourages fal ben ≈ 0,4-0,6 $/rendu à notre charge + compo worker).
   // +2 cr/s validé par Axel (30/08 ; couvre le détourage réf en 720p + avatar 1080p)
   // — débité APRÈS le succès Kling, remboursé seul si le pipeline fond échoue.
-  motionBgPerSec: 2
+  motionBgPerSec: 2,
+  // 🎬 Motion 3.0 = Kling 3.0 (`fal-ai/kling-video/v3/pro/motion-control`, 1080p natif) —
+  // coût fournisseur fal 0,168 $/s (relevé 04/09) vs 0,112 $/s pour Motion 2.6 pro (×1,5).
+  // 6 cr/s = MARGE NEUTRE vs l'ancien palier Pro 1080p (4 cr/s à 0,112 $/s) : même ~63 % au
+  // pire tier Élite (6×0,0766 = 0,46 $/s de revenu, coût 0,168). Réservé aux plans Pro & Élite.
+  motion30PerSec: 6
 };
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
@@ -27948,21 +27953,24 @@ window._mcTier='standard'; window._mcQuality='720'; window._mcRender='full';
 window._mcKlingVer='v2.6';
 function _mcSetKlingVer(v){ window._mcKlingVer = (v==='v3' && _aaIsDev()) ? 'v3' : 'v2.6'; try{ _mcSaveOpts&&_mcSaveOpts(); }catch(_){} _mcRenderAdv(); }
 window._mcPrompt=''; window._mcRefB64=null; window._mcRefDur=0; window._mcCharB64=null; window._mcBgB64=null;
-window._mcCamFollow=false; window._mcKeepVidBg=false; window._mcFormat='auto';   // 'auto' (défaut) = ratio de la VIDÉO DE RÉF (LOT A, mesuré : Kling suit le ratio de la vidéo, pas de l'image) ; repli ratio image si réf illisible
+window._mcCamFollow=true; window._mcKeepVidBg=false; window._mcFormat='auto';   // #cam-realiste (04/09) : « Caméra réaliste » COCHÉE par défaut. 'auto' (défaut) = ratio de la VIDÉO DE RÉF (LOT A, mesuré : Kling suit le ratio de la vidéo, pas de l'image) ; repli ratio image si réf illisible
 window._mcAutoFrame=true;   // cadrage auto du visage — ON par défaut (Axel, 14/08)
 window._mcBgClean=true;     // fond fourni : effacer la personne dessus (par image, non persisté)
 // ── OPTIONS MÉMORISÉES (Axel, 14/08 : « une fois qu'on met une option, elle est
 // enregistrée et remise la prochaine fois — sauf arrière-plan et instruction »).
 function _mcSaveOpts(){ try{ localStorage.setItem('aa_mc_opts', JSON.stringify({
   tier:window._mcTier, quality:window._mcQuality, render:window._mcRender, format:window._mcFormat,
-  cam:!!window._mcCamFollow, keepVidBg:!!window._mcKeepVidBg, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer })); }catch(_){ } }
+  cam:!!window._mcCamFollow, camV2:true, keepVidBg:!!window._mcKeepVidBg, autoFrame:window._mcAutoFrame!==false, klingVer:window._mcKlingVer })); }catch(_){ } }
 function _mcLoadOpts(){ try{ const o=JSON.parse(localStorage.getItem('aa_mc_opts')||'null'); if(!o) return;
   if(o.tier==='pro'||o.tier==='standard') window._mcTier=o.tier;
   if(o.quality==='720'||o.quality==='1080') window._mcQuality=o.quality;
   if(['full','split-bottom','split-top'].includes(o.render)) window._mcRender=o.render;
   if(['auto','9:16','1:1','16:9'].includes(o.format)) window._mcFormat=o.format;
-  window._mcCamFollow=!!o.cam; window._mcKeepVidBg=!!o.keepVidBg; window._mcAutoFrame=true;
-  window._mcKlingVer=(o.klingVer==='v3')?'v3':'v2.6'; }catch(_){ } } // cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
+  // Caméra réaliste ON par défaut (Axel 04/09). Migration une seule fois : les préférences
+  // enregistrées AVANT ce changement (sans camV2) sont forcées à ON ; ensuite le choix explicite est respecté.
+  window._mcCamFollow = o.camV2 ? !!o.cam : true;
+  window._mcKeepVidBg=!!o.keepVidBg; window._mcAutoFrame=true;
+  window._mcKlingVer=(window._mcTier==='pro')?'v3':'v2.6'; }catch(_){ } } // version couplée au modèle (Motion 2.6/3.0) ; cadrage auto TOUJOURS actif (option masquée, Axel 15/08)
 _mcLoadOpts();
 // ── RESET COMPLET après une génération réussie (Axel, 13/08 : « à chaque fois
 // qu'on a fini, ça ne se réinitialise pas complètement ») : le formulaire
@@ -28036,7 +28044,14 @@ function _mcCheckCloseUp(b64){
 /* ── Motion Control — modale Paramètres avancés (1:1 gen-motion.jsx) ── */
 function _mcOpenAdv(){ const m=document.getElementById('mcAdvModal'); if(!m) return; m.style.display='flex'; _mcRenderAdv(); }
 function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.style.display='none'; }
-function _mcSetTier(t){ window._mcTier=t; window._mcQuality = (t==='pro'?'1080':'720'); _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }
+function _mcSetTier(t){
+  // Le « forfait » est devenu le MODÈLE : 'standard' = Motion 2.6 (Kling v2.6), 'pro' = Motion 3.0 (Kling v3, 1080p natif).
+  if(t==='pro' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
+    toast('Motion 3.0 est réservé aux plans Pro et Élite'); if(typeof showPaywall==='function') showPaywall(); return;
+  }
+  window._mcTier=t; window._mcKlingVer=(t==='pro')?'v3':'v2.6'; window._mcQuality=(t==='pro'?'1080':'720');
+  _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost();
+}
 function _mcSetQual(v){ window._mcQuality=v; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }
 function _mcSetRender(r){ window._mcRender=r; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }
 function _mcSetFormat(f){ window._mcFormat=f; _mcSaveOpts(); _mcRenderAdv(); }
@@ -28051,7 +28066,7 @@ function _mcToggleAutoFrame(){ window._mcAutoFrame=(window._mcAutoFrame===false)
 function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcRenderAdv(); }
 // Standard 720p = 2 cr/s ; Standard 1080p = 3 cr/s (Kling 720p + upscale Topaz) ;
 // Pro 1080p natif = 4 cr/s.
-function _mcRate(){ return window._mcTier==='pro' ? 4 : (window._mcQuality==='1080' ? 3 : 2); }
+function _mcRate(){ return window._mcTier==='pro' ? CREDIT_COSTS.motion30PerSec : (window._mcQuality==='1080' ? 3 : 2); }
 // #34 · coût dynamique À CÔTÉ du bouton « Générer le mouvement » (pas seulement
 // dans les réglages avancés) : rate × durée de la vidéo de référence. Se met à
 // Kling motion-control (fal, v2.6 et v3) : vidéo de référence de 30 s MAX (orientation 'video'),
@@ -28123,12 +28138,15 @@ function _mcUpdateCost(){
   const bgOn = !!window._mcKeepVidBg && !window._mcBgB64;
   const bgSup = bgOn ? CREDIT_COSTS.motionBgPerSec*dur : 0;
   const c=rate*dur + bgSup;
-  const tierLbl = window._mcTier==='pro' ? 'Pro · 1080p natif' : (window._mcQuality==='1080' ? 'Standard · 720p→1080p' : 'Standard · 720p');
+  const tierLbl = window._mcTier==='pro' ? 'Motion 3.0 · 1080p natif' : (window._mcQuality==='1080' ? 'Motion 2.6 · 720p→1080p' : 'Motion 2.6 · 720p');
   const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max Kling)</span>' : '';
   el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">· '+rate+' cr/s × '+dur+' s'+(bgOn?' · fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s':'')+' · '+tierLbl+coupe+'</span>';
 }
 function _mcRenderAdv(){
   const card=document.getElementById('mcAdvCard'); if(!card) return;
+  // Motion 3.0 (tier 'pro') réservé Pro/Élite : un Starter avec une préférence 'pro' enregistrée retombe sur Motion 2.6.
+  const _mcPaid=['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+  if(window._mcTier==='pro' && !_mcPaid){ window._mcTier='standard'; window._mcKlingVer='v2.6'; window._mcQuality='720'; }
   const tier=window._mcTier, q=window._mcQuality, rnd=window._mcRender, rate=_mcRate();
   const dur=_mcRefDurEff();
   // option « fond vidéo » : +1 cr/s (inactif si un fond image perso est fourni — il prime)
@@ -28139,7 +28157,7 @@ function _mcRenderAdv(){
   const diag=(id)=> id==='full' ? '<div style="flex:1;background:var(--accent);opacity:.5"></div>'
     : id==='split-bottom' ? '<div style="flex:1;background:var(--surface-3)"></div><div style="flex:1;background:var(--accent);opacity:.55"></div>'
     : '<div style="flex:1;background:var(--accent);opacity:.55"></div><div style="flex:1;background:var(--surface-3)"></div>';
-  const tierCard=(id,title,sub)=>`<button onclick="_mcSetTier('${id}')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:${tier===id?'2px solid var(--accent)':'1px solid var(--border)'};background:${tier===id?'var(--accent-soft)':'var(--surface)'}"><span style="font-weight:700;font-size:14px">${title}</span><span class="faint" style="font-size:11.5px">${sub}</span></button>`;
+  const tierCard=(id,title,sub,badge='')=>`<button onclick="_mcSetTier('${id}')" class="col" style="gap:3px;padding:13px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text);border:${tier===id?'2px solid var(--accent)':'1px solid var(--border)'};background:${tier===id?'var(--accent-soft)':'var(--surface)'}"><span class="row" style="align-items:center;justify-content:space-between;gap:6px"><span style="font-weight:700;font-size:14px">${title}</span>${badge}</span><span class="faint" style="font-size:11.5px">${sub}</span></button>`;
   card.innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:18px">
       <span style="font-weight:800;font-size:18px">Paramètres avancés</span>
@@ -28163,7 +28181,7 @@ function _mcRenderAdv(){
     <div class="seg" style="width:100%;margin-bottom:6px">
       ${[['auto',0,0],['9:16',9,16],['1:1',12,12],['16:9',16,9]].map(([f,w,h])=>{const o=(window._mcFormat||'auto')===f;const ic=f==='auto'?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3.2 3.2"/></svg>':`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="${(24-w)/2}" y="${(24-h)/2}" width="${w}" height="${h}" rx="2"/></svg>`;return `<button class="${o?'on':''}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 6px;font-size:12.5px" onclick="_mcSetFormat('${f}')">${ic}${f==='auto'?'Auto':f}</button>`;}).join('')}
     </div>
-    <p class="faint" style="font-size:11.5px;margin-bottom:16px">Auto = format de ta vidéo de référence.</p>
+    <div style="height:10px"></div>
     <span class="label" style="display:block;margin-bottom:8px">Options</span>
     ${[['_mcToggleCam','Caméra réaliste','Léger tremblement organique qui suit les mouvements',!!window._mcCamFollow]]
       .concat((typeof _aaIsDev==='function' && _aaIsDev()) ? [['_mcToggleVidBg','Garder le fond de la vidéo d’origine','Le vrai décor de ta vidéo, animé — seule la personne est remplacée · +'+CREDIT_COSTS.motionBgPerSec+' cr/s (DEV — lent, à améliorer)',!!window._mcKeepVidBg]] : [])
@@ -28172,26 +28190,19 @@ function _mcRenderAdv(){
         <div style="flex:0 0 auto;width:40px;height:23px;border-radius:99px;position:relative;transition:.18s;background:${on?'var(--accent)':'var(--surface-3)'};border:1px solid ${on?'var(--accent)':'var(--border-2)'}"><div style="position:absolute;top:2px;left:${on?'19px':'2px'};width:17px;height:17px;border-radius:50%;background:#fff;transition:.18s"></div></div>
       </button>`).join('')}
     <div style="height:8px"></div>
-    <span class="label" style="display:block;margin-bottom:8px">Forfait de rendu</span>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-      ${tierCard('standard','Standard','720p natif · rapide')}
-      ${tierCard('pro','Pro','1080p natif inclus')}
+    <span class="label" style="display:block;margin-bottom:8px">Modèle</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${tier==='pro'?'16px':'14px'}">
+      ${tierCard('standard','Motion 2.6','Rapide et fiable')}
+      ${tierCard('pro','Motion 3.0','1080p natif · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
     </div>
-    ${_aaIsDev()?`
-    <div style="margin-bottom:16px;padding:12px 14px;border-radius:12px;border:1px dashed var(--accent-2);background:var(--panel-1)">
-      <span class="label" style="display:flex;align-items:center;gap:7px;margin-bottom:8px">Moteur Kling <span class="mono" style="font-size:9px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.06em">DEV ONLY</span></span>
-      <div class="seg" style="width:100%">
-        <button class="${(window._mcKlingVer||'v2.6')!=='v3'?'on':''}" style="flex:1" onclick="_mcSetKlingVer('v2.6')">Kling 2.6</button>
-        <button class="${window._mcKlingVer==='v3'?'on':''}" style="flex:1" onclick="_mcSetKlingVer('v3')">Kling 3.0</button>
-      </div>
-      <p class="faint" style="font-size:11px;margin:8px 0 0">Version du modèle de transfert de mouvement. Visible et utilisable uniquement sur le compte développeur (test).</p>
-    </div>`:''}
+    ${tier==='pro'?`
+    <p class="faint" style="font-size:11.5px;margin-bottom:18px">Motion 3.0 génère en <strong style="color:var(--text)">1080p natif</strong> (moteur Kling 3.0), sans upscale — la meilleure qualité. Réservé aux plans Pro &amp; Élite.</p>`:`
     <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
     <div class="seg" style="width:100%;margin-bottom:6px">
       <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
-      <button class="${q==='1080'?'on':''}" style="flex:1;opacity:${tier==='pro'?'.55':'1'};cursor:${tier==='pro'?'default':'pointer'}" onclick="_mcSetQual('1080')">1080p ${tier==='pro'?'<span class="mono" style="font-size:10px;color:var(--green)">natif</span>':'<span class="mono" style="font-size:10px;color:var(--accent-2)">Topaz +1 cr/s</span>'}</button>
+      <button class="${q==='1080'?'on':''}" style="flex:1" onclick="_mcSetQual('1080')">1080p <span class="mono" style="font-size:10px;color:var(--accent-2)">Topaz +1 cr/s</span></button>
     </div>
-    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${tier==='pro'?"Le 1080p est inclus nativement avec le forfait Pro.":q==='1080'?"1080p via upscale Topaz après le rendu 720p : +1 crédit / seconde.":"Passe en 1080p (upscale Topaz) pour +1 cr/s, ou choisis le forfait Pro pour l'avoir en natif."}</p>
+    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${q==='1080'?"1080p via upscale Topaz après le rendu 720p : +1 crédit / seconde.":"720p rapide. Passe en 1080p (upscale Topaz) pour +1 cr/s, ou choisis Motion 3.0 pour du 1080p natif."}</p>`}
     <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
@@ -28574,7 +28585,7 @@ async function _mcGenerate(){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const tier=window._mcTier, q=window._mcQuality;
   if((tier==='pro'||q==='1080') && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-    toast('Le 1080p / forfait Pro est réservé au plan Pro et +'); if(typeof showPaywall==='function') showPaywall(); return;
+    toast(tier==='pro' ? 'Motion 3.0 est réservé aux plans Pro et Élite' : 'Le 1080p est réservé aux plans Pro et Élite'); if(typeof showPaywall==='function') showPaywall(); return;
   }
   const rate=_mcRate(), dur=_mcRefDurEff();
   if(!dur){ toast('Vidéo de référence illisible — réessaie'); return; }
@@ -28654,9 +28665,10 @@ async function _mcGenerate(){
         if(sc?.data?.signedUrl) charUrl = sc.data.signedUrl; else throw new Error(uc.error?.message||'lien signé');
       }catch(e){ console.error('fond:',e); toast("Fond non appliqué — perso sur son décor d'origine"); }
     }
-    // Version Kling : 'v3' (Kling 3.0) UNIQUEMENT pour le compte dev ; tous les autres restent en v2.6.
-    let _mcVer = (window._mcKlingVer==='v3' && _aaIsDev()) ? 'v3' : 'v2.6';
-    _mcProg('Transfert du mouvement (Kling '+_mcVer.replace('v','')+')…', 18);
+    // Modèle → version Kling : Motion 3.0 (tier 'pro') = Kling v3 (1080p natif), Motion 2.6 = v2.6.
+    // Le gating plan (Pro/Élite) est déjà appliqué plus haut ; ici on ne fait que dériver la version.
+    let _mcVer = tier==='pro' ? 'v3' : 'v2.6';
+    _mcProg('Transfert du mouvement (Motion '+(_mcVer==='v3'?'3.0':'2.6')+')…', 18);
     // #34 · l'identité de l'image fournie DOIT être conservée (Axel) — instruction
     // ajoutée à TOUS les coups, qu'il y ait ou non un prompt perso.
     // LOT5 · ANTI-ZOOM (mesuré : perso tête 26 %, réf 40 %, rendu Kling 64 % —
@@ -28747,9 +28759,10 @@ async function _mcGenerate(){
         out=await runKling('v2.6');
       } else throw e;
     }
-    // Débit au succès (jamais avant). Standard=2 cr/s (720p), Pro=4 cr/s (1080p natif).
-    // Le +1 cr/s du 1080p Standard n'est facturé QUE si l'upscale Topaz réussit.
-    const baseRate = tier==='pro' ? 4 : 2;
+    // Débit au succès (jamais avant). Motion 2.6 (standard) = 2 cr/s (720p) ; Motion 3.0 (pro) = motion30PerSec (1080p natif).
+    // Si Motion 3.0 a basculé sur 2.6 (faux positif de modération) on facture le tarif 2.6 pro (4 cr/s), pas le tarif 3.0.
+    // Le +1 cr/s du 1080p Motion 2.6 n'est facturé QUE si l'upscale Topaz réussit.
+    const baseRate = tier==='pro' ? (_mcVer==='v3' ? CREDIT_COSTS.motion30PerSec : 4) : 2;
     if(typeof spendCreditsFor==='function'){ await spendCreditsFor(baseRate*dur,'motion'); }
     // 1080p depuis Standard : Kling sort en 720p → upscale Topaz vers 1080p.
     if(tier!=='pro' && q==='1080'){
