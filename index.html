@@ -181,6 +181,12 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 .feat-tabs button.on{background:var(--surface-2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.05) inset}
 .feat-mock{position:absolute;inset:0;display:none;place-items:center;padding:28px}
 .feat-mock.on{display:grid}
+/* onglet Montage IA en pleine largeur : carte 1 colonne, vidéo plein écran en haut, texte dessous */
+.feat-card-grid.mt-full{grid-template-columns:1fr}
+.feat-card-grid.mt-full #featMockZone{border-right:none;border-bottom:1px solid var(--border)}
+.feat-card-grid.mt-full .feat-mock[data-feat="montage"]{position:relative;inset:auto;padding:24px 30px}
+.feat-card-grid.mt-full #mtDemoRow{max-width:none}
+.feat-card-grid.mt-full .col{padding:30px 48px 40px;text-align:center;align-items:center}
 .feat-photo{position:relative;height:100%;max-width:100%;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8)}
 .feat-photo img{display:block;height:100%;width:100%;object-fit:cover}
 .feat-demo{position:relative;height:100%;aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8);background:radial-gradient(420px 220px at 50% 0%,rgba(255,90,31,.10),transparent),var(--bg-grad)}
@@ -1108,6 +1114,7 @@ function setFeat(id, btn){
   var cur=FEAT_TABS.find(function(x){ return x.id===id; })||FEAT_TABS[0];
   var t=document.getElementById('featTitle'), d=document.getElementById('featDesc');
   t.textContent=cur.t; d.textContent=cur.d;
+  var g=document.querySelector('.feat-card-grid'); if(g) g.classList.toggle('mt-full', id==='montage');
   var cl=document.getElementById('featClaudeLink'); if(cl) cl.style.display=(cur.id==='claude')?'inline-flex':'none';
   t.classList.remove('rise'); void t.offsetWidth; t.classList.add('rise');
   var z=document.getElementById('featMockZone'); z.classList.remove('rise'); void z.offsetWidth; z.classList.add('rise');
