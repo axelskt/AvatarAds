@@ -1,4 +1,41 @@
+# AvatarAds — https://avatarads.fr
+# Tous les robots, y compris les IA génératives, sont les bienvenus (indexation + citation).
 User-agent: *
 Allow: /
 
+# Crawlers IA explicitement autorisés
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# Résumé lisible par les IA : https://avatarads.fr/llms.txt
 Sitemap: https://avatarads.fr/sitemap.xml
