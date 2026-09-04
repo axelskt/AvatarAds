@@ -2176,7 +2176,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <!-- APERÇU ANIMÉ — au-dessus du téléphone -->
           <button id="previewPlayBtn" onclick="togglePreviewPlay()" style="display:flex;align-items:center;gap:8px;padding:9px 22px;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange2)'" onmouseout="if(!previewPlaying && !window._previewPaused){this.style.borderColor='var(--border2)';this.style.color='var(--text2)'}"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="flex-shrink:0"><polygon points="6 4 20 12 6 20"/></svg> Aperçu animé</button>
 
-          <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+          <div id="previewPhoneRow" style="display:flex;align-items:center;justify-content:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
             <div id="phoneWrapper" style="position:relative;width:320px;height:664px;flex-shrink:0">
@@ -18987,6 +18987,11 @@ function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
   selSubStyle=style;
+  // Choisir un style ré-active automatiquement les sous-titres (sinon aucun retour visuel — audit UX 04/09)
+  if(typeof subtitlesEnabled!=='undefined' && !subtitlesEnabled){
+    subtitlesEnabled = true;
+    if(typeof _syncSubtitleToggleUI==='function') _syncSubtitleToggleUI();
+  }
   // ── Met à jour automatiquement les couleurs selon le style choisi ──
   const col = SUB_STYLE_COLORS[style];
   if(col){
@@ -22198,15 +22203,18 @@ function showCropHandles(zone){
   ['tl','tc','tr','ml','mr','bl','bc','br'].forEach(pos=>{
     const h = document.createElement('div');
     h.className = 'crop-handle '+pos;
-    h.addEventListener('mousedown', e=>{
+    const _startHandle = e=>{
       e.stopPropagation(); e.preventDefault();
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
       const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
       const rect = zoneEl.getBoundingClientRect(), meta = zoneEl._aaCrop || { sc:1, sW:1, sH:1 };
       // 1 % du média = (sW·sc) px CSS × (échelle écran) / 100
-      _cropDrag = { zone, pos, x0:e.clientX, y0:e.clientY, clip0:{...clip},
+      _cropDrag = { zone, pos, x0:p.clientX, y0:p.clientY, clip0:{...clip},
         pxPerPctX: meta.sW * meta.sc * (rect.width  / (zoneEl.offsetWidth  || 1)) / 100,
         pxPerPctY: meta.sH * meta.sc * (rect.height / (zoneEl.offsetHeight || 1)) / 100 };
-    });
+    };
+    h.addEventListener('mousedown', _startHandle);
+    h.addEventListener('touchstart', _startHandle, {passive:false});
     ov.appendChild(h);
   });
   zoneEl.appendChild(ov);
@@ -22410,34 +22418,37 @@ function startZoneDrag(e, zone){
   const el = document.getElementById(zone==='av'?'avZone':'gameplayZone');
   if(el) el.style.cursor='grabbing';
 }
+function _cropDragMove(cx, cy){
+  const {zone, pos, x0, y0, clip0} = _cropDrag;
+  const zoneEl = document.getElementById(zone==='av'?'avZone':'gameplayZone');
+  if(!zoneEl) return;
+  // #zoom-v3 : les poignées bougent en % du MÉDIA (affiché entier en mode rognage) ; rognage latéral de retour,
+  // puisque la partie gardée est ré-ajustée pour remplir la zone (plus de bandes noires). On garde ≥ 10 % par axe.
+  const { pxPerPctX, pxPerPctY } = _cropDrag;
+  const dx = (cx - x0) / (pxPerPctX || 1);
+  const dy = (cy - y0) / (pxPerPctY || 1);
+  const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
+  const MIN = 10;
+  if(pos.includes('t')) clip.t = Math.max(0, Math.min(100 - MIN - (clip.b||0), clip0.t + dy));
+  if(pos.includes('b')) clip.b = Math.max(0, Math.min(100 - MIN - (clip.t||0), clip0.b - dy));
+  if(pos.includes('l')) clip.l = Math.max(0, Math.min(100 - MIN - (clip.r||0), clip0.l + dx));
+  if(pos.includes('r')) clip.r = Math.max(0, Math.min(100 - MIN - (clip.l||0), clip0.r - dx));
+  applyClip(zone);
+}
 document.addEventListener('mousemove', e=>{
-  if(_cropDrag){
-    const {zone, pos, x0, y0, clip0} = _cropDrag;
-    const zoneEl = document.getElementById(zone==='av'?'avZone':'gameplayZone');
-    if(!zoneEl) return;
-    // #zoom-v3 : les poignées bougent en % du MÉDIA (affiché entier en mode rognage) ; rognage latéral de retour,
-    // puisque la partie gardée est ré-ajustée pour remplir la zone (plus de bandes noires). On garde ≥ 10 % par axe.
-    const { pxPerPctX, pxPerPctY } = _cropDrag;
-    const dx = (e.clientX - x0) / (pxPerPctX || 1);
-    const dy = (e.clientY - y0) / (pxPerPctY || 1);
-    const clip = zone==='av' ? cfg.avClip : cfg.gpClip;
-    const MIN = 10;
-    if(pos.includes('t')) clip.t = Math.max(0, Math.min(100 - MIN - (clip.b||0), clip0.t + dy));
-    if(pos.includes('b')) clip.b = Math.max(0, Math.min(100 - MIN - (clip.t||0), clip0.b - dy));
-    if(pos.includes('l')) clip.l = Math.max(0, Math.min(100 - MIN - (clip.r||0), clip0.l + dx));
-    if(pos.includes('r')) clip.r = Math.max(0, Math.min(100 - MIN - (clip.l||0), clip0.r - dx));
-    applyClip(zone);
-    return;
-  }
+  if(_cropDrag){ _cropDragMove(e.clientX, e.clientY); return; }
   if(!_drag) return;
   _zoneDragMove(e.clientX, e.clientY);
 });
 document.addEventListener('touchmove', e=>{
-  if(!_drag || !(e.touches && e.touches[0])) return;
+  if(!(e.touches && e.touches[0])) return;
+  if(_cropDrag){ e.preventDefault(); _cropDragMove(e.touches[0].clientX, e.touches[0].clientY); return; }
+  if(!_drag) return;
   e.preventDefault();
   _zoneDragMove(e.touches[0].clientX, e.touches[0].clientY);
 }, {passive:false});
 document.addEventListener('touchend', ()=>{
+  if(_cropDrag){ _cropDrag = null; return; }
   if(!_drag) return;
   const h = document.getElementById(_drag.zone==='av'?'avDragHint':'gpDragHint'); if(h) h.style.opacity='0';
   const el = document.getElementById(_drag.zone==='av'?'avZone':'gameplayZone'); if(el) el.style.cursor='grab';
@@ -22458,7 +22469,10 @@ document.addEventListener('click', e=>{
   const gpZone = document.getElementById('gameplayZone');
   const avBtn = document.getElementById('crop-btn-av');
   const gpBtn = document.getElementById('crop-btn-gp');
-  const inside = [avZone, gpZone, avBtn, gpBtn].some(el => el && el.contains(e.target));
+  // mobile : ouvrir l'aperçu (#mPrevBtn) ou toucher dans l'overlay #mPreview ne doit PAS annuler le rognage (audit UX 04/09)
+  const mPrevBtn = document.getElementById('mPrevBtn');
+  const mPreview = document.getElementById('mPreview');
+  const inside = [avZone, gpZone, avBtn, gpBtn, mPrevBtn, mPreview].some(el => el && el.contains(e.target));
   if(!inside){
     cropModeAvatar = false; cropModeGameplay = false;
     hideCropHandles('av'); hideCropHandles('gp');
@@ -38484,10 +38498,17 @@ function edBandDrag(ov,track,e,mode){
   #mPrevBtn{display:inline-flex !important}
   #v-generator .gen-left>div:first-child{padding:18px 16px 6px !important}
   #genStepTitle{font-size:24px !important}
-  #mPreview.on{display:flex;flex-direction:column;position:fixed;left:0;right:0;top:54px;bottom:calc(68px + env(safe-area-inset-bottom));z-index:380;background:var(--bg);animation:rise .25s ease both}
+  /* overlay couvre TOUT le bas (jusqu'à 0) pour masquer la zone de dépôt de la config qui débordait sous le preview (Axel 04/09) ; la barre du bas flotte au-dessus (z-index 400) */
+  #mPreview.on{display:flex;flex-direction:column;position:fixed;left:0;right:0;top:54px;bottom:0;z-index:380;background:var(--bg);animation:rise .25s ease both}
   #mPreview .mp-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);flex:0 0 auto}
-  #mPreview .mp-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
+  #mPreview .mp-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
   #mPreview .gen-right{display:flex !important;width:100% !important;flex:1 !important;border-left:none !important}
+  /* Axel 04/09 : sur téléphone, le TÉLÉPHONE d'abord (visible directement), onglets TikTok/Reels/YouTube/Facebook EN DESSOUS */
+  #mPreview #previewArea{display:flex !important;flex-direction:column !important}
+  #mPreview #previewPhoneRow{order:1}
+  #mPreview #tabs-short,#mPreview #tabs-post{order:2}
+  #mPreview #previewPlayBtn{order:3;margin-top:2px}
+  #mPreview #previewSizeLabel{display:none !important}
   /* aperçu téléphone plus compact sur mobile (Axel 04/09 : « trop gros ») — on réduit l'échelle et on récupère la place */
   #mPreview #phoneWrapper{transform:scale(.8);transform-origin:top center;margin-bottom:-130px}
   /* aperçu : padding compact + onglets plateformes scrollables → plus de rognage horizontal (audit UX) */
@@ -38513,8 +38534,12 @@ function edBandDrag(ov,track,e,mode){
      compacte, le bouton Générer remonte au 2e écran */
   #mcRefDrop,#mcCharDrop{aspect-ratio:auto !important;min-height:200px;max-height:230px}
   /* Paramètres avancés Motion : plein écran SCROLLABLE sur mobile (le « .view .scroll-y » global neutralisait le scroll interne → on restait bloqué) */
-  #mcAdvModal{padding:0 !important;align-items:stretch !important}
-  #mcAdvCard{width:100% !important;max-height:100dvh !important;height:100dvh;border-radius:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;padding-bottom:calc(46px + env(safe-area-inset-bottom)) !important}
+  /* Paramètres avancés Motion : VRAI plein écran AU-DESSUS de la topbar (350) et de la barre du bas (400)
+     → la croix (haut-droite) et « Terminé » (bas) sont visibles, et le scroll interne fonctionne (Axel 04/09) */
+  #mcAdvModal{padding:0 !important;align-items:stretch !important;z-index:600 !important;backdrop-filter:none !important}
+  #mcAdvCard{width:100% !important;max-height:100dvh !important;height:100dvh;border-radius:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:calc(16px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom)) !important}
+  /* les sliders gardent leur glissé horizontal, le reste de la carte défile verticalement sans blocage */
+  #mcAdvCard input[type=range]{touch-action:pan-x}
   /* #lot6 · mobile : lecteur pleine largeur COMME AVANT (le cap 65vh + min-height 320px
      sont des réglages desktop — ici hauteur naturelle, largeur bornée par l'écran) */
   #expStage{min-height:0 !important;flex:1 1 auto !important}
@@ -38899,11 +38924,13 @@ window.mPreviewOpen=function(){
   window._mPrevHome=gr.parentNode; window._mPrevNext=gr.nextSibling;
   body.appendChild(gr);
   document.getElementById('mPreview').classList.add('on');
+  try{ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; }catch(e){}
 };
 window.mPreviewClose=function(){
   var mp=document.getElementById('mPreview');
   if(!mp||!mp.classList.contains('on')) return;
   mp.classList.remove('on');
+  try{ document.documentElement.style.overflow=''; document.body.style.overflow=''; }catch(e){}
   var gr=document.getElementById('genRight');
   if(gr&&window._mPrevHome){ if(window._mPrevNext&&window._mPrevNext.parentNode===window._mPrevHome) window._mPrevHome.insertBefore(gr,window._mPrevNext); else window._mPrevHome.appendChild(gr); }
 };

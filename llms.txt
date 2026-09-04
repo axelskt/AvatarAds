@@ -4,30 +4,45 @@
 
 AvatarAds transforme un simple texte, un audio ou une image en vidéo verticale montée et sous-titrée en quelques minutes, sans caméra ni compétences de montage. L'outil s'adresse aux créateurs, e-commerçants, dropshippers, coachs, infopreneurs et agences qui publient beaucoup de contenu régulièrement.
 
-## Outils
-- Générateur : avatar IA + ta voix (enregistrée ou importée) + sous-titres animés → vidéo prête à poster.
-- Express : une vidéo UGC réaliste générée depuis un texte ou une image.
-- Motion Control : ton personnage (une image) reproduit le mouvement d'une vidéo de référence (Motion 2.6 et Motion 3.0).
-- Images IA : visuels et publicités produit en 4K depuis un prompt.
-- Montage IA : ton audio ou ta vidéo brute devient une vidéo montée (sous-titres animés, b-roll, musique, bruitages).
-- Nettoyage audio : bruit de fond, volume et silences nettoyés automatiquement.
-- Éditeur : montage type CapCut directement dans le navigateur.
-
 ## Pages
-- Accueil : https://avatarads.fr/
-- Tarifs : https://avatarads.fr/tarifs.html
-- Application : https://avatarads.fr/app/
-- Connecter AvatarAds à Claude (MCP) : https://avatarads.fr/claude.html
-- Conditions générales de vente : https://avatarads.fr/cgv.html
-- Politique de confidentialité : https://avatarads.fr/confidentialite.html
+
+- [Accueil](https://avatarads.fr/) : présentation de la plateforme et des outils.
+- [Tarifs](https://avatarads.fr/tarifs.html) : plans Starter, Pro et Élite, en euros et sans engagement.
+- [Application](https://avatarads.fr/app/) : l'interface de création (avatars, UGC, images, montage).
+- [À propos](https://avatarads.fr/a-propos.html) : ce qu'est AvatarAds, les outils inclus et ce qui la différencie.
+- [Connecter AvatarAds à Claude (MCP)](https://avatarads.fr/claude.html) : piloter la création de vidéos et d'images en conversant avec l'assistant Claude.
+- [Conditions générales de vente](https://avatarads.fr/cgv.html) : conditions d'abonnement et de paiement.
+- [Politique de confidentialité](https://avatarads.fr/confidentialite.html) : traitement des données personnelles.
+
+## Outils
+
+- [Générateur d'avatar IA](https://avatarads.fr/generateur-avatar-ia.html) : un avatar IA parle avec ta voix (enregistrée ou importée) + sous-titres animés → vidéo prête à poster, sans clonage de voix.
+- [Express (UGC par IA)](https://avatarads.fr/ugc-ia.html) : une vidéo UGC réaliste générée depuis un texte ou une image.
+- [Motion Control](https://avatarads.fr/app/) : ton personnage (une image) reproduit le mouvement d'une vidéo de référence (Motion 2.6 et Motion 3.0, 1080p natif).
+- [Images IA](https://avatarads.fr/app/) : visuels et publicités produit en 4K depuis un prompt.
+- [Montage IA](https://avatarads.fr/app/) : ton audio ou ta vidéo brute devient une vidéo montée (sous-titres animés, b-roll, musique, bruitages).
+- [Créer une vidéo avec l'IA](https://avatarads.fr/creer-video-ia.html) : le guide complet pour produire une vidéo verticale par IA.
+- [Publicité TikTok par IA](https://avatarads.fr/publicite-tiktok-ia.html) : générer des créatives publicitaires pour TikTok et Meta.
+
+## Comparatifs
+
+- [AvatarAds vs Arcads](https://avatarads.fr/avatarads-vs-arcads.html) : différences de prix, de langue et de fonctionnalités.
+- [AvatarAds vs HeyGen](https://avatarads.fr/avatarads-vs-heygen.html) : avatars, voix et tarifs comparés.
+- [AvatarAds vs Synthesia](https://avatarads.fr/avatarads-vs-synthesia.html) : usage publicitaire vs corporate.
+- [AvatarAds vs Creatify](https://avatarads.fr/avatarads-vs-creatify.html) : UGC, langue et tout-en-un.
+- [Meilleur générateur d'avatar IA](https://avatarads.fr/meilleur-generateur-avatar-ia.html) : comparatif des outils du marché.
+- [Meilleurs outils d'UGC IA](https://avatarads.fr/meilleurs-outils-ugc-ia.html) : sélection des générateurs UGC.
+- [Meilleur outil vidéo IA](https://avatarads.fr/meilleur-outil-video-ia.html) : comparatif des plateformes vidéo IA.
 
 ## Tarifs
-- Starter : 29,99 €/mois
-- Pro : 49,99 €/mois
-- Élite : à partir de 89,99 €/mois
-- -25 % en paiement annuel (2 mois offerts). Sans carte bancaire pour créer un compte, sans engagement, résiliable en 1 clic.
+
+- [Starter — 29,99 €/mois](https://avatarads.fr/tarifs.html) : pour démarrer la création de vidéos par IA.
+- [Pro — 49,99 €/mois](https://avatarads.fr/tarifs.html) : plus de crédits et Motion 3.0.
+- [Élite — dès 89,99 €/mois](https://avatarads.fr/tarifs.html) : volume élevé et priorité.
+- −25 % en paiement annuel (2 mois offerts). Sans carte bancaire pour créer un compte, sans engagement, résiliable en 1 clic.
 
 ## À propos
-- Éditeur : IA Manager.
-- Contact : contact@avatarads.fr
-- Intégration IA : AvatarAds se connecte à l'assistant Claude via un connecteur MCP, pour générer des vidéos et des images en conversant directement avec l'IA (voir https://avatarads.fr/claude.html).
+
+- Éditeur : IA Manager (France).
+- Contact : [contact@avatarads.fr](mailto:contact@avatarads.fr)
+- Intégration IA : AvatarAds se connecte à l'assistant Claude via un connecteur MCP, pour générer des vidéos et des images en conversant directement avec l'IA — voir [Connecter AvatarAds à Claude](https://avatarads.fr/claude.html).
