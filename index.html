@@ -375,6 +375,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 </head>
 <body>
 
+<!-- Repère de scroll pour la barre sticky (lu par IntersectionObserver, sans lecture de scrollY → zéro reflow forcé) -->
+<div id="stickyCtaSentinel" aria-hidden="true" style="position:absolute;top:620px;left:0;width:1px;height:1px;pointer-events:none"></div>
+
 <!-- ══════════ 1 · STICKY CTA (apparaît au scroll) ══════════ -->
 <div id="stickyCta" style="position:fixed;left:0;right:0;top:0;z-index:55;transform:translateY(-110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);pointer-events:none">
   <div class="glass" style="border-bottom:1px solid var(--border);background:rgba(14,13,16,.9)">
@@ -1056,13 +1059,19 @@ function lpGenerate(e){
 
 /* ══════════ Sticky CTA ══════════ */
 (function(){
-  var bar=document.getElementById('stickyCta');
-  var dernier=null, tick=false;
-  function on(){ tick=false; var s=window.scrollY>620; if(s===dernier) return; dernier=s;
-    bar.style.transform=s?'none':'translateY(-110%)'; bar.style.pointerEvents=s?'auto':'none'; }
-  // on() lit window.scrollY : appelé en synchrone pendant le parse, ça force un reflow (flag PageSpeed « ajustement forcé »).
-  // On diffère la 1ʳᵉ lecture au 1er frame (après le layout naturel) — la barre est cachée par défaut à scrollY=0, donc invisible à l'œil.
-  window.addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(on); } },{passive:true}); requestAnimationFrame(on);
+  var bar=document.getElementById('stickyCta'), sentinel=document.getElementById('stickyCtaSentinel');
+  if(!bar) return;
+  function show(v){ bar.style.transform=v?'none':'translateY(-110%)'; bar.style.pointerEvents=v?'auto':'none'; }
+  // IntersectionObserver plutôt que lire window.scrollY à chaque scroll → aucun reflow forcé
+  // (le calcul d'intersection se fait hors du chemin de layout). La barre apparaît quand le
+  // repère (à 620px du haut du document) sort du viewport par le haut.
+  if(sentinel && 'IntersectionObserver' in window){
+    new IntersectionObserver(function(e){ show(!e[0].isIntersecting); }, {threshold:0}).observe(sentinel);
+  } else {
+    // repli (pas de repère / d'IO) : lecture de scrollY différée en rAF pour ne pas forcer de reflow au parse
+    var tick=false; function on(){ tick=false; show(window.scrollY>620); }
+    window.addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(on); } },{passive:true}); requestAnimationFrame(on);
+  }
 })();
 
 /* ══════════ Scroll-reveal (IntersectionObserver) ══════════ */
