@@ -3849,51 +3849,38 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
       <!-- ══ EXPRESS MOBILE (design proto : image · format · durée sur une ligne + prompt + générer) ══ -->
       <div id="mExp">
+        <!-- Ligne : télécharger image (moitié) · paramètres avancés (moitié) — le menu réglages s'ouvre AU-DESSUS -->
         <div style="position:relative;margin-bottom:10px">
-        <div style="display:flex;gap:8px;align-items:stretch">
-          <button id="mExpQualBtn" onclick="_mExpQualTog()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;background:var(--panel-1);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M7 12h2l1.5 2 2-4 1.5 2h3"/></svg>
-            <span id="mExpQualVal">720p</span> <span style="color:var(--text-3);font-size:11px">⌄</span>
-          </button>
-          <button id="mExpFmtBtn" onclick="_mExpFmtTog()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;background:var(--panel-1);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
-            <svg id="mExpFmtIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>
-            <span id="mExpFmtVal">9:16</span> <span style="color:var(--text-3);font-size:11px">⌄</span>
-          </button>
-          <button id="mExpDurBtn" onclick="_mExpDurTog()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;background:var(--panel-1);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-            <span id="mExpDurVal">6 s</span> <span id="mExpDurChev" style="color:var(--text-3);font-size:11px">⌄</span>
-          </button>
-          <!-- VOIX : le mobile n'avait AUCUN contrôle de voix — « Pas de voix »
-               (et Gemini / ElevenLabs / import) étaient injoignables au téléphone -->
-          <button id="mExpVoiceBtn" onclick="_mExpVoiceTog()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 8px;border:1px solid var(--border);border-radius:12px;background:var(--panel-1);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
-            <svg id="mExpVoiceIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7"/></svg>
-            <span id="mExpVoiceVal">Voix</span> <span style="color:var(--text-3);font-size:11px">⌄</span>
-          </button>
-        </div>
-        <div id="mExpVoicePop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)"></div>
-        <div id="mExpQualPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;gap:6px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)">
-          <button onclick="_expPickQual('720p');_mExpQualTog();_mExpSync()" id="mExpQual720" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">720p · rapide</button>
-          <button onclick="_expPickQual('1080p');_mExpQualTog();_mExpSync()" id="mExpQual1080" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">1080p · dès 8 s</button>
-        </div>
-        <div id="mExpFmtPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px;gap:6px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)">
-          <button onclick="_expPickFormat('9:16');_mExpFmtTog();_mExpSync()" id="mExpFmt916" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/></svg> 9:16 · vertical
-          </button>
-          <button onclick="_expPickFormat('16:9');_mExpFmtTog();_mExpSync()" id="mExpFmt169" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer">
-            <svg width="15" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/></svg> 16:9 · paysage
-          </button>
-        </div>
-        <div id="mExpDurPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 -14px 40px -18px rgba(0,0,0,.8)">
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--text-3)">DURÉE</span><span class="mono" id="mExpDurVal2" style="font-size:12px;color:var(--accent-2)">6s</span></div>
-          <input id="mExpDurRange" type="range" min="0" max="5" step="1" value="0" oninput="_mExpDurInput(this)" onchange="_mExpDurChange(this)" style="width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:none;background:linear-gradient(90deg,var(--accent) 50%,var(--surface-3) 50%)">
-          <div style="display:flex;justify-content:space-between;margin-top:6px"><span class="mono" id="mExpDurMin" style="font-size:10.5px;color:var(--text-3)">4s</span><span class="mono" id="mExpDurMax" style="font-size:10.5px;color:var(--text-3)">8s</span></div>
-        </div>
-        </div>
-        <div onclick="document.getElementById('expImgInput').click()" style="position:relative;border:1.5px dashed var(--border-2);border-radius:14px;padding:16px 14px;text-align:center;cursor:pointer;margin-bottom:10px">
-          <span class="mono" style="position:absolute;top:10px;right:12px;font-size:9.5px;letter-spacing:.08em;color:var(--text-3)">Optionnel</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:4px"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          <div id="mExpImgLabel" style="font-size:13.5px;font-weight:700">Télécharger une image</div>
-          <div class="mono" style="font-size:10px;color:var(--text-3);margin-top:3px">5 Mo max</div>
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <div onclick="document.getElementById('expImgInput').click()" style="flex:1;position:relative;border:1.5px dashed var(--border-2);border-radius:14px;padding:12px 10px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:96px">
+              <span class="mono" style="position:absolute;top:8px;right:9px;font-size:8.5px;letter-spacing:.06em;color:var(--text-3)">Optionnel</span>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div id="mExpImgLabel" style="font-size:12.5px;font-weight:700;line-height:1.2">Télécharger une image</div>
+            </div>
+            <button id="mExpAdvBtn" onclick="_mExpAdvTog()" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px 10px;border:1px solid var(--border);border-radius:14px;background:var(--panel-1);color:var(--text);font-family:var(--font);cursor:pointer;min-height:96px">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+              <div style="font-size:12.5px;font-weight:700">Paramètres avancés</div>
+              <div class="mono" id="mExpAdvSummary" style="font-size:9px;color:var(--text-3);letter-spacing:-.02em">720p · 9:16 · 6 s · Auto</div>
+            </button>
+          </div>
+          <!-- Menu réglages (au-dessus) : qualité · format · durée · voix -->
+          <div id="mExpAdvPop" style="display:none;position:absolute;bottom:calc(100% + 8px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 -18px 44px -18px rgba(0,0,0,.85);max-height:66vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+            <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">QUALITÉ</div>
+            <div style="display:flex;gap:6px;margin-bottom:15px">
+              <button onclick="_expPickQual('720p');_mExpSync()" id="mExpQual720" style="flex:1;padding:11px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">720p · rapide</button>
+              <button onclick="_expPickQual('1080p');_mExpSync()" id="mExpQual1080" style="flex:1;padding:11px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">1080p · dès 8 s</button>
+            </div>
+            <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">FORMAT</div>
+            <div style="display:flex;gap:6px;margin-bottom:15px">
+              <button onclick="_expPickFormat('9:16');_mExpSync()" id="mExpFmt916" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>9:16</button>
+              <button onclick="_expPickFormat('16:9');_mExpSync()" id="mExpFmt169" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="14" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>16:9</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3)">DURÉE</span><span class="mono" id="mExpDurVal2" style="font-size:12px;color:var(--accent-2)">6s</span></div>
+            <input id="mExpDurRange" type="range" min="0" max="5" step="1" value="0" oninput="_mExpDurInput(this)" onchange="_mExpDurChange(this)" style="width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:none;background:linear-gradient(90deg,var(--accent) 50%,var(--surface-3) 50%)">
+            <div style="display:flex;justify-content:space-between;margin-top:6px;margin-bottom:15px"><span class="mono" id="mExpDurMin" style="font-size:10.5px;color:var(--text-3)">4s</span><span class="mono" id="mExpDurMax" style="font-size:10.5px;color:var(--text-3)">8s</span></div>
+            <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">VOIX</div>
+            <div id="mExpVoiceInline"></div>
+          </div>
         </div>
         <textarea id="mExpPrompt" oninput="var t=document.getElementById('expPrompt'); if(t) t.value=this.value" placeholder="Décris ta vidéo et ce que le perso dit à voix haute…" style="width:100%;min-height:130px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;outline:none;margin-bottom:10px" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
         <button onclick="expressCreate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:14px;color:#1A0A02;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
@@ -5178,6 +5165,20 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     </div>
   </div>
 </div>
+<script>
+/* ANTI-FLASH LOGIN (04/09) : si une session est PROBABLE (jeton Supabase en localStorage, ou
+   « rester connecté » récent), on masque le login TOUT DE SUITE — sinon un retour arrière / reload
+   ré-affichait l'écran de connexion une fraction de seconde avant que la session async se résolve
+   (« ça nous renvoie sur la page pour se reconnecter »). initAuth ré-affiche si la session est en fait invalide. */
+(function(){
+  try{
+    var born=parseInt(localStorage.getItem('aa_login_at')||'0',10);
+    var recent=born && (Date.now()-born < 14*86400000);
+    var hasTok=false; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k && /sb-.*-auth-token/.test(k)){ hasTok=true; break; } }
+    if(recent || hasTok){ var ov=document.getElementById('loginOverlay'); if(ov) ov.style.display='none'; }
+  }catch(e){}
+})();
+</script>
 
 <!-- SETUP MODAL -->
 <div class="setup-overlay" id="setupOverlay" style="display:none" onclick="if(event.target===this)closeSetup()">
@@ -7277,9 +7278,12 @@ async function decrementCredit(durationSecs){
 
 // ── LOGOUT ──
 async function authLogout(){
-  localStorage.removeItem('aa_login_at');
-  await sb.auth.signOut();
-  window.location.href = 'https://avatarads.fr';
+  // Robustesse : si signOut() traîne ou échoue, le bouton semblait « ne rien faire ».
+  // On vide la session localement quoi qu'il arrive, puis on recharge sur l'écran de connexion de l'app.
+  try{ localStorage.removeItem('aa_login_at'); }catch(e){}
+  try{ await Promise.race([ sb.auth.signOut(), new Promise(function(r){ setTimeout(r, 1500); }) ]); }catch(e){}
+  try{ for(var i=localStorage.length-1;i>=0;i--){ var k=localStorage.key(i); if(k && /sb-.*-auth-token/.test(k)) localStorage.removeItem(k); } }catch(e){}
+  window.location.reload();
 }
 
 // ── ACCOUNT MENU ──
@@ -28231,7 +28235,7 @@ function _mcRenderAdv(){
     <span class="label" style="display:block;margin-bottom:8px">Modèle</span>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${tier==='pro'?'16px':'14px'}">
       ${tierCard('standard','Motion 2.6','Rapide et fiable')}
-      ${tierCard('pro','Motion 3.0','1080p · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
+      ${tierCard('pro','Motion 3.0','1080p natif · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
     </div>
     ${tier==='pro'?``:`
     <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
@@ -38488,14 +38492,18 @@ function edBandDrag(ov,track,e,mode){
   /* mobile : les zones carrées (343px) faisaient 3 écrans de scroll — on les
      compacte, le bouton Générer remonte au 2e écran */
   #mcRefDrop,#mcCharDrop{aspect-ratio:auto !important;min-height:200px;max-height:230px}
+  /* Paramètres avancés Motion : plein écran SCROLLABLE sur mobile (le « .view .scroll-y » global neutralisait le scroll interne → on restait bloqué) */
+  #mcAdvModal{padding:0 !important;align-items:stretch !important}
+  #mcAdvCard{width:100% !important;max-height:100dvh !important;height:100dvh;border-radius:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch}
   /* #lot6 · mobile : lecteur pleine largeur COMME AVANT (le cap 65vh + min-height 320px
      sont des réglages desktop — ici hauteur naturelle, largeur bornée par l'écran) */
   #expStage{min-height:0 !important;flex:1 1 auto !important}
   #expResultVid{max-height:none !important}
-  /* état vide compact (design proto) à la place du grand explicatif */
-  #expResultPlaceholder>*{display:none !important}
-  #expResultPlaceholder::before{content:'✦';display:block;text-align:center;font-size:28px;color:var(--accent-2);padding-top:34px;text-shadow:0 0 18px var(--accent-glow)}
-  #expResultPlaceholder::after{content:'Aucune vidéo, commence à générer !';display:block;text-align:center;color:var(--text-3);font-family:var(--mono);font-size:12px;padding:12px 20px 34px}
+  /* état vide (design screen 5) : illustration + « Décris ta vidéo en bas, puis génère » + ligne dynamique, compactés mobile */
+  #expResultPlaceholder{padding:26px 16px !important}
+  #expResultPlaceholder>div:first-child{width:56px !important;height:56px !important;border-radius:16px !important}
+  #expResultPlaceholder>div:first-child svg{width:26px !important;height:26px !important}
+  #expResultPlaceholder .display{font-size:18px !important}
   /* Cartoon : aperçu au-dessus, formulaire en dessous (colonne) */
   #v-cartoon{flex-direction:column !important}
   #v-cartoon>div:first-child{flex:0 0 auto !important;width:100% !important;border-right:none !important;order:2}
@@ -38579,7 +38587,7 @@ function edBandDrag(ov,track,e,mode){
   // le filtre de tabs() purge tout seul les barres sauvegardées qui le listaient.
   var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',motion:'Motion',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
   var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',audioclean:'Audio',affiliation:'Parrainage',cartoon:'Cartoon IA',montage:'Montage IA',publish:'Publier'};
-  var CUSTOMIZABLE=['generator','imagegen','express','motion','studio','library','audioclean','affiliation','cartoon'];
+  var CUSTOMIZABLE=['generator','imagegen','express','motion','studio','library','audioclean','affiliation'];
   // 14/08 : Motion Control remplace l'Éditeur et Audio remplace la Bibliothèque
   // dans la barre par défaut (les deux restent dans « Plus »).
   var DEFAULT=['generator','imagegen','express','motion','audioclean'];
@@ -38632,7 +38640,7 @@ function edBandDrag(ov,track,e,mode){
     var t=tabs();
     var tools=[
       ['generator','Avatar IA en 5 étapes'],['express','Vidéo en 1 prompt · Veo'],['motion','Ton avatar copie une vidéo'],
-      ['cartoon','Mascotte animée'],['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
+      ['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
       ['audioclean','Nettoyage + enregistreur'],['library','Tes vidéos'],['affiliation','Gagne 30% à vie']
     ];
     var h='<h2 class="display" style="font-size:24px;font-weight:800;margin-bottom:16px">Tous les outils</h2>';
@@ -38640,8 +38648,7 @@ function edBandDrag(ov,track,e,mode){
     tools.forEach(function(tl){
       var id=tl[0], name=id==='__setup'?'Connexions':FULL[id];
       h+='<button class="mm-tool" data-go="'+id+'"><span class="mm-ic">'+(id==='__setup'?setupIcon():iconOf(id))+'</span>'
-        +'<span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14.5px">'+name+'</b>'
-        +'<span style="font-size:11.5px;color:var(--text-3);line-height:1.3">'+tl[1]+'</span></span></button>';
+        +'<b style="font-size:14.5px">'+name+'</b></button>';
     });
     h+='</div>';
     h+='<div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">'
@@ -38708,6 +38715,11 @@ function edBandDrag(ov,track,e,mode){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
+  /* Clavier ouvert (saisie de texte) → masquer la barre du bas #mNav, sinon elle chevauche le champ (Images IA, Express, Montage…).
+     Enregistré HORS boot() (qui sort tôt sur desktop) → robuste au redimensionnement ; sans effet sur desktop (#mNav déjà caché). */
+  var _isTextField=function(el){ return el && (el.tagName==='TEXTAREA' || (el.tagName==='INPUT' && ['text','search','url','email','number','tel','password',''].indexOf((el.type||'').toLowerCase())>=0)); };
+  document.addEventListener('focusin',function(e){ if(_isTextField(e.target)){ var n=document.getElementById('mNav'); if(n) n.style.display='none'; } });
+  document.addEventListener('focusout',function(){ setTimeout(function(){ if(!_isTextField(document.activeElement)){ var n=document.getElementById('mNav'); if(n) n.style.display=''; } },120); });
 })();
 
 /* ══ Express mobile : synchro contrôles ↔ état réel ══ */
@@ -38815,8 +38827,32 @@ window._mExpSync=function(){
   if(vv) vv.textContent=SHORT[vId]||(vMeta?vMeta.name:'Voix');
   var vi=document.getElementById('mExpVoiceIcon');
   if(vi) vi.innerHTML=(vId==='none') ? '<path d="M3 9v6h4l5 4V5L7 9z"/><path d="M17 9l4 6M21 9l-4 6"/>' : '<path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7"/>';
+  var _sum=document.getElementById('mExpAdvSummary');
+  if(_sum) _sum.textContent = q + ' · ' + (is169?'16:9':'9:16') + ' · ' + d + ' s · ' + (SHORT[vId]||'Auto');
   var mp=document.getElementById('mExpPrompt'), dp=document.getElementById('expPrompt');
   if(mp&&dp&&document.activeElement!==mp&&dp.value!==mp.value) mp.value=dp.value;
+};
+/* Express mobile : un seul menu « Paramètres avancés » (qualité · format · durée · voix) qui s'ouvre au-dessus */
+window._mExpAdvTog=function(){
+  var p=document.getElementById('mExpAdvPop'); if(!p) return;
+  var open=p.style.display!=='none';
+  p.style.display=open?'none':'block';
+  if(!open){ _mExpSync(); _mExpRenderVoiceInline(); }
+};
+window._mExpRenderVoiceInline=function(){
+  var c=document.getElementById('mExpVoiceInline'); if(!c) return;
+  c.innerHTML=(typeof EXP_VOICES!=='undefined'?EXP_VOICES:[]).map(function(v){
+    var on=(window._expVoice===v.id);
+    return '<button onclick="_mExpPickVoiceInline(\''+v.id+'\')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;gap:10px;text-align:left;padding:11px;margin-bottom:4px;border:none;border-radius:10px;background:'+(on?'var(--surface-2)':'transparent')+';color:'+(on?'var(--text)':'var(--text-3)')+';font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">'
+      + '<span style="flex-shrink:0;display:flex;color:'+(on?'var(--accent-2)':'var(--text-3)')+'">'+((typeof _EXP_VOICE_ICON!=='undefined'&&_EXP_VOICE_ICON[v.id])||'')+'</span>'
+      + '<span style="flex:1;min-width:0"><span style="display:block">'+v.name+'</span><span style="display:block;font-size:11px;font-weight:400;color:var(--text-3);margin-top:1px">'+v.desc+'</span></span>'
+      + (on?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg>':'')
+      + '</button>';
+  }).join('');
+};
+window._mExpPickVoiceInline=function(id){
+  if(typeof _expPickVoice==='function') _expPickVoice(id);
+  _mExpSync(); _mExpRenderVoiceInline();
 };
 
 /* ══ Éditeur mobile : sélectionner un clip fait défiler jusqu'au panneau d'édition ══ */
