@@ -1692,6 +1692,18 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       console.log(`▶ musique : ${pick.name || 'preset'} à partir de ${(pick.start || 0).toFixed(0)} s`)
     }
 
+    // #montage-audio (04/09) : piste audio optionnelle de l'utilisateur (musique / bruitages),
+    // téléchargée par l'intake sous `plan.userAudio`. Jouée une fois depuis le début, alignée sur
+    // la vidéo, avec un fondu de sortie. ADDITIVE : absente si l'utilisateur n'en fournit pas → mix inchangé.
+    const userAudioPath = plan.userAudio ? join(jobDir, plan.userAudio) : null
+    if (userAudioPath && existsSync(userAudioPath)) {
+      inputs.push('-i', userAudioPath)
+      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${plan.userAudioVol || 0.7},afade=t=out:st=${Math.max(0, plan.duration - 0.8)}:d=0.8[usr]`)
+      mixIns.push('[usr]')
+      idx++
+      console.log('▶ audio utilisateur (musique/bruitages) ajouté au mix')
+    }
+
     for (const s of plan.sfx || []) {
       // Axel a retiré boom/impact de la banque (01/08) mais le chef d'orchestre
       // les propose encore dans ses plans : ils jouent leur jumeau gardé.
@@ -2805,6 +2817,14 @@ async function pollLoop() {
           writeFileSync(dest, Buffer.from(await data.arrayBuffer()))
         }
         await dl(job.input_video, join(jobDir, 'base.mp4'))
+        // #montage-audio : son optionnel fourni par l'utilisateur (musique / bruitages) → mixé au montage
+        if (job.plan && job.plan.userAudioPath) {
+          try {
+            const aext = (String(job.plan.userAudioPath).match(/\.(\w{2,4})$/) || [])[1] || 'mp3'
+            await dl(job.plan.userAudioPath, join(jobDir, 'useraudio.' + aext))
+            job.plan.userAudio = 'useraudio.' + aext
+          } catch (e) { console.warn('audio utilisateur non téléchargé:', e && e.message) }
+        }
         writeFileSync(join(jobDir, 'plan.json'), JSON.stringify(job.plan))
         mkdirSync(join(jobDir, 'assets'), { recursive: true })
         for (const a of job.assets || []) {
