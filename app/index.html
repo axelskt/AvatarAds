@@ -7420,7 +7420,9 @@ function _applyStartTool(){
   try{ localStorage.removeItem('aa_tool'); }catch(e){}
   var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean' };
   var view = MAP[t]; if(!view) return false;
-  setTimeout(function(){ try{ nav(view); window.scrollTo(0,0); }catch(e){} }, 160);
+  var go = function(){ try{ nav(view); window.scrollTo(0,0); }catch(e){} };
+  go();                                        // tout de suite
+  setTimeout(go, 150); setTimeout(go, 500); setTimeout(go, 1000);   // ré-assertions : gagne contre un nav('generator') par défaut qui passerait après
   return true;
 }
 
