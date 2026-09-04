@@ -7142,6 +7142,7 @@ function enterApp(profile){
   // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier) — sauf si un modèle a été choisi depuis la LP (aa_tool), auquel cas _applyStartTool ouvrira le bon module
   var _st0; try{ _st0 = localStorage.getItem('aa_tool'); }catch(e){}
   if(!_st0 && window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
+  _applyStartTool();   // modèle choisi depuis la LP → ouvre le bon module (point unique : enterApp couvre TOUS les chemins de login)
   // ── ARRIVER DIRECTEMENT SUR UN MONTAGE ──────────────────────────────────
   // `…/app/#montage=<job_id>` ouvre « Détails du montage » sur ce job. C'est ce
   // que renvoie le MCP : depuis Claude on ne relit pas le plan en texte, on
