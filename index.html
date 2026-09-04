@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
-<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
+<script type="text/javascript">/* Clarity chargé APRÈS le rendu (idle) pour ne pas peser sur le thread principal au chargement */
+(function(){function loadClarity(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");}
+function sched(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(loadClarity);}
+if(document.readyState==='complete')sched();else window.addEventListener('load',sched);})();</script>
 <title>AvatarAds · Générateur de vidéos et images par IA</title>
 <meta name="description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -46,7 +49,8 @@
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
 <link rel="dns-prefetch" href="https://whop.com">
-<script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
+<script>/* Whop checkout chargé au repos après le rendu (non utilisé sur la LP → hors chemin critique) */
+window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,1200)})(function(){var s=document.createElement('script');s.src='https://js.whop.com/static/checkout/loader.js';s.async=true;document.head.appendChild(s);});});</script>
 <style>
 /* Polices de repli aux métriques calquées — supprime le CLS du swap Google Fonts (le H1 est le LCP). Overrides mesurés sur les woff2 réels (upm 1000). */
 @font-face{font-family:'Bricolage Fallback';src:local('Arimo'),local('Arial'),local('Liberation Sans'),local('Helvetica Neue'),local('Roboto');size-adjust:98.26%;ascent-override:94.65%;descent-override:27.48%;line-gap-override:0%}
@@ -1315,10 +1319,24 @@ revealScan();
   window.preloadModelPicker=function(){ if(_preloaded) return; _preloaded=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.preload='auto'; v.load(); }catch(e){} }); };
   // Axel 05/09 : précharge les vidéos AU REPOS après le chargement de la LP → prêtes dès l'ouverture
   // du menu (clic = affichage immédiat), sans pénaliser le LCP (l'idle callback passe après le critique).
-  var _schedPreload=function(){ (window.requestIdleCallback||function(f){return setTimeout(f,1800);})(function(){ try{ window.preloadModelPicker(); }catch(e){} }); };
-  if(document.readyState==='complete') _schedPreload(); else window.addEventListener('load',_schedPreload);
-  window.openModelPicker=function(){ mp.style.display='flex'; mp.scrollTop=0; void card.offsetWidth; card.style.transform='scale(1)'; document.body.style.overflow='hidden'; window.preloadModelPicker(); grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.currentTime=0; v.play().catch(function(){}); }catch(e){} }); };
-  window.closeModelPicker=function(){ card.style.transform='scale(.97)'; document.body.style.overflow=''; mp.style.display='none'; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} }); };
+  // Verrou de scroll robuste (position:fixed sur body) : sur iOS Safari, body{overflow:hidden}
+  // ne bloque PAS le scroll du document → le fond glissait derrière le menu. On fige le body à
+  // sa position et on la restaure à la fermeture. Plus aucun « slider derrière ».
+  var _lockY=0;
+  window.openModelPicker=function(){
+    _lockY=window.scrollY||window.pageYOffset||0;
+    mp.style.display='flex'; mp.scrollTop=0; void card.offsetWidth; card.style.transform='scale(1)';
+    var b=document.body; b.style.position='fixed'; b.style.top=(-_lockY)+'px'; b.style.left='0'; b.style.right='0'; b.style.width='100%'; b.style.overflow='hidden';
+    window.preloadModelPicker();
+    grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.currentTime=0; v.play().catch(function(){}); }catch(e){} });
+  };
+  window.closeModelPicker=function(){
+    card.style.transform='scale(.97)';
+    var b=document.body; b.style.position=''; b.style.top=''; b.style.left=''; b.style.right=''; b.style.width=''; b.style.overflow='';
+    window.scrollTo(0,_lockY);
+    mp.style.display='none';
+    grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} });
+  };
   document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !mp.hidden) window.closeModelPicker(); });
 })();
 </script>
