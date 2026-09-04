@@ -1230,7 +1230,7 @@ revealScan();
 #modelPicker .mp-card .mp-vis{border-radius:15px 15px 0 0}
 @media(max-width:767px){ #modelGrid{grid-template-columns:1fr 1fr!important} #modelPickerCard{padding:18px!important} #modelPicker h3{font-size:21px!important} }
 </style>
-<div id="modelPicker" hidden onclick="closeModelPicker()" style="position:fixed;inset:0;z-index:8000;background:rgba(6,6,9,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px">
+<div id="modelPicker" onclick="closeModelPicker()" style="position:fixed;inset:0;z-index:8000;background:rgba(6,6,9,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;place-items:center;padding:20px">
   <div id="modelPickerCard" onclick="event.stopPropagation()" style="width:min(920px,96vw);background:var(--surface);border:1px solid var(--border-2);border-radius:22px;padding:32px;box-shadow:0 30px 90px -20px rgba(0,0,0,.9);text-align:left;transform:scale(.97);transition:transform .2s">
     <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:4px">
       <h3 class="display" style="font-size:26px;font-weight:800">Choisis un modèle</h3>
@@ -1279,8 +1279,8 @@ revealScan();
     grid.appendChild(b);
   });
   var mp=document.getElementById('modelPicker'), card=document.getElementById('modelPickerCard');
-  window.openModelPicker=function(){ mp.hidden=false; void card.offsetWidth; card.style.transform='scale(1)'; document.body.style.overflow='hidden'; };
-  window.closeModelPicker=function(){ card.style.transform='scale(.97)'; document.body.style.overflow=''; mp.hidden=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} }); };
+  window.openModelPicker=function(){ mp.style.display='grid'; void card.offsetWidth; card.style.transform='scale(1)'; document.body.style.overflow='hidden'; };
+  window.closeModelPicker=function(){ card.style.transform='scale(.97)'; document.body.style.overflow=''; mp.style.display='none'; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} }); };
   document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !mp.hidden) window.closeModelPicker(); });
 })();
 </script>
