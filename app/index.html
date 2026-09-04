@@ -6798,6 +6798,10 @@ async function authPwdLogin(){
   const btn=document.getElementById('pwdLoginBtn');
   if(btn){ btn.disabled=true; btn.textContent='Connexion…'; }
   let _mcpPending=false;
+  // #funnel : on capte le modèle choisi sur la LP AVANT signInWithPassword, car en supabase-js v2
+  // le callback onAuthStateChange (→ enterApp → _applyStartTool) tourne PENDANT l'await ci-dessous
+  // et efface aa_tool + le ?start= de l'URL. Sans ça, le location.reload() plus bas repart sans signal.
+  var _startTool=null; try{ _startTool = new URLSearchParams(location.search).get('start') || localStorage.getItem('aa_tool'); }catch(_){}
   try{
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if(error){
@@ -6812,6 +6816,7 @@ async function authPwdLogin(){
     // vers Claude après son choix. Pour un login NORMAL, on garde le reload (boot propre avec la session).
     try { _mcpPending = /(?:^|[?&])mcp_oauth=/.test(location.search) || !!sessionStorage.getItem('aa_mcp_oauth'); } catch(_){}
     if(_mcpPending){ if(btn){ btn.textContent='Autorisation…'; } return; }
+    if(_startTool){ try{ localStorage.setItem('aa_tool', _startTool); }catch(_){} }   // #funnel : ré-injecté pour survivre au reload → au reboot _applyStartTool ouvre le bon module
     location.reload(); // la session est persistée → le boot recharge le compte connecté
   }catch(e){ showErr('Erreur réseau — réessaie'); }
   finally{ if(btn && !_mcpPending){ btn.disabled=false; btn.textContent='Se connecter'; } }
