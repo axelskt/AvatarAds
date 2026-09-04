@@ -243,7 +243,7 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 .step.on .step-n{background:var(--accent);border-color:var(--accent);color:#1A0A02;box-shadow:0 0 10px var(--accent-glow)}
 .step.done .step-n{background:rgba(0,217,126,0.15);border-color:var(--green);color:var(--green)}
 .step.done .step-n::before{content:'✓';font-size:9px}
-.step.done .step-n-num{display:none}
+.step.done .step-n{font-size:0}  /* masque le chiffre quand l'étape est validée (le ✓ garde son font-size 9px) — audit UX */
 .step-line{flex:1;height:1px;background:linear-gradient(90deg,var(--border),var(--border));margin:0 8px;min-width:8px;transition:background .3s}
 .step.done~.step-line{background:linear-gradient(90deg,rgba(0,217,126,0.3),var(--border))}
 
@@ -571,6 +571,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 /* TOAST */
 .toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:8px;z-index:9999;transform:translateY(60px);opacity:0;transition:all .25s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .toast.show{transform:translateY(0);opacity:1}
+/* Mobile : le toast ne doit PAS recouvrir la barre du bas flottante (#mNav) — on le pose au-dessus, pleine largeur (audit UX 04/09) */
+@media(max-width:768px){ .toast{bottom:calc(72px + env(safe-area-inset-bottom)) !important;left:12px !important;right:12px !important;top:auto !important;justify-content:center} }
 
 /* misc */
 .divider{height:1px;background:var(--border);margin:4px 0}
@@ -34400,7 +34402,7 @@ async function cartoonUseAsAvatar(){
 }
 </script>
 <!-- AVATAR MODAL -->
-<div id="avatarModal">
+<div id="avatarModal" onclick="if(event.target===this)closeAvatarModal()">
   <div class="av-modal-inner">
     <div class="av-modal-header">
       <div class="av-modal-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg> Choisir un avatar IA <span class="mono" style="color:var(--text-3);font-weight:400;font-size:12px;margin-left:4px">49 disponibles</span></div>
@@ -38488,6 +38490,9 @@ function edBandDrag(ov,track,e,mode){
   #mPreview .gen-right{display:flex !important;width:100% !important;flex:1 !important;border-left:none !important}
   /* aperçu téléphone plus compact sur mobile (Axel 04/09 : « trop gros ») — on réduit l'échelle et on récupère la place */
   #mPreview #phoneWrapper{transform:scale(.8);transform-origin:top center;margin-bottom:-130px}
+  /* aperçu : padding compact + onglets plateformes scrollables → plus de rognage horizontal (audit UX) */
+  #mPreview .gen-right{padding-left:12px !important;padding-right:12px !important}
+  #mPreview #tabs-short,#mPreview #tabs-post{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
   /* Express mobile (design proto) : aperçu + contrôles compacts, formulaire desktop masqué */
   #v-express{flex-direction:column !important}
   #v-express>div:nth-child(1){display:none !important}
