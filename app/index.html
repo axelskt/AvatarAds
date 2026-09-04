@@ -4210,6 +4210,14 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div class="mt-eyebrow">Tes visuels & ton script <span style="text-transform:none;letter-spacing:0;color:var(--text-3)">· optionnel</span></div>
                 <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div>
                 <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
+                <!-- #montage-audio : son optionnel (musique / bruitages) mixé au montage — visible en mode « Monter ma vidéo » -->
+                <div id="mtBgAudioWrap" style="display:none;margin-bottom:12px">
+                  <div class="mt-drop" id="mtBgAudioDrop" onclick="document.getElementById('mtBgAudioIn').click()" style="cursor:pointer">
+                    <div class="mt-drop-row"><span class="mt-drop-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="mt-drop-lbl" id="mtBgAudioName">Ajoute un son : musique ou bruitages</span><button id="mtBgAudioClear" onclick="event.stopPropagation();mtClearBgAudio()" title="Retirer" style="display:none;margin-left:auto;background:none;border:none;color:var(--text-3);cursor:pointer;font-size:18px;line-height:1;padding:0 4px">×</button></div>
+                    <span class="mt-drop-sub" id="mtBgAudioSub">MP3 · WAV · M4A · optionnel — mixé dans ton montage</span>
+                  </div>
+                  <input type="file" id="mtBgAudioIn" accept="audio/*" style="display:none" onchange="mtSetBgAudio(this.files[0]);this.value=''">
+                </div>
                 <textarea id="mtBrief" class="field mt-brief-ta" rows="4" oninput="_mt.brief=this.value" placeholder="Décris ce que la vidéo doit dire ou montrer. Ex : présentation de mon app, ton punchy, CTA « lien en bio », montre le logo au début."></textarea>
               </div>
 
@@ -12526,7 +12534,7 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' } };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, bgAudio: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' } };
 
 // ── script / brief : ce que l'user veut vraiment → transmis au chef d'orchestre ──
 function mtBriefOpen(){
@@ -13191,6 +13199,8 @@ function mtSetSrc(src){
   const gb = document.getElementById('mtGameplayBlock'), vb = document.getElementById('mtVideoBlock');
   if(gb) gb.style.display = _mt.src === 'gameplay' ? '' : 'none';
   if(vb) vb.style.display = _mt.src === 'mavideo' ? '' : 'none';
+  // #montage-audio : le son optionnel (musique / bruitages) n'a de sens que pour « Monter ma vidéo »
+  const ba = document.getElementById('mtBgAudioWrap'); if(ba) ba.style.display = _mt.src === 'mavideo' ? '' : 'none';
   _mtUpdateCost();
 }
 // icône ✓ de l'état « rempli » d'une dropzone (design maquette)
@@ -13201,6 +13211,21 @@ function _mtDropFill(dropId, lblId, subId, label){
   const ico=drop.querySelector('.mt-drop-ico'); if(ico) ico.innerHTML=_MT_CHECK;
   const lbl=document.getElementById(lblId); if(lbl) lbl.textContent=label;
   const sub=document.getElementById(subId); if(sub) sub.style.display='none';
+}
+// #montage-audio : son optionnel (musique / bruitages) que l'IA mixe au montage — PAS nettoyé (c'est un bed, pas une voix)
+const _MT_BGAUDIO_ICO='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+function mtSetBgAudio(f){
+  if(!f) return;
+  _mt.bgAudio = f;
+  _mtDropFill('mtBgAudioDrop','mtBgAudioName','mtBgAudioSub', f.name);
+  const c=document.getElementById('mtBgAudioClear'); if(c) c.style.display='';
+}
+function mtClearBgAudio(){
+  _mt.bgAudio = null;
+  const d=document.getElementById('mtBgAudioDrop'); if(d){ d.classList.remove('filled'); const ico=d.querySelector('.mt-drop-ico'); if(ico) ico.innerHTML=_MT_BGAUDIO_ICO; }
+  const n=document.getElementById('mtBgAudioName'); if(n) n.textContent='Ajoute un son : musique ou bruitages';
+  const s=document.getElementById('mtBgAudioSub'); if(s){ s.textContent='MP3 · WAV · M4A · optionnel — mixé dans ton montage'; s.style.display=''; }
+  const c=document.getElementById('mtBgAudioClear'); if(c) c.style.display='none';
 }
 async function mtSetMp3(f){
   if(!f) return; _mt.mp3 = f; _mt.mp3Dur = 0;
@@ -14409,6 +14434,15 @@ async function _mtVideoGenerate(){
     const ts=Date.now();
     const inPath=user.id+'/in-'+ts+'.mp4';
     { const up=await sb.storage.from('render-media').upload(inPath, _mt.video, { contentType:_mt.video.type||'video/mp4', upsert:true }); if(up.error) throw new Error('upload : '+up.error.message); }
+    // #montage-audio : son optionnel de l'utilisateur (musique / bruitages) → uploadé + référencé dans le plan (mixé côté worker)
+    if(_mt.bgAudio){
+      try{
+        const aext=((_mt.bgAudio.name||'').match(/\.(\w{2,4})$/)||[])[1]||'mp3';
+        const audPath=user.id+'/bgaud-'+ts+'.'+aext;
+        const ua=await sb.storage.from('render-media').upload(audPath, _mt.bgAudio, { contentType:_mt.bgAudio.type||'audio/mpeg', upsert:true });
+        if(!ua.error) plan.userAudioPath=audPath;
+      }catch(_){}
+    }
     const assets=[];
     for(const b of (plan.broll||[])){
       const a=_lot.find(x=>x.id===b.assetId); if(!a) continue;

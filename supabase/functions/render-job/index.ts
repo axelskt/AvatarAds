@@ -46,6 +46,9 @@ serve(async (req: Request) => {
       if (Number(plan.duration) > 300) return json({ error: 'video trop longue (max 5 min)' }, 400)
       const input = String(body.input_video || '')
       if (!input.startsWith(user.id + '/')) return json({ error: 'input_video invalide' }, 400)
+      // #montage-audio : son optionnel de l'utilisateur (dans le plan) — doit rester sous <uid>/,
+      // sinon on l'ignore (empeche de referencer le fichier d'un autre compte).
+      if (plan.userAudioPath && !String(plan.userAudioPath).startsWith(user.id + '/')) delete plan.userAudioPath
       const assets = (Array.isArray(body.assets) ? body.assets : []).slice(0, 8)
         .map((a: { id?: string; path?: string; kind?: string }) => ({
           id: String(a.id || '').slice(0, 40),
