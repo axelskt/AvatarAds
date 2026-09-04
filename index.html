@@ -902,7 +902,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 <!-- ══════════ 13 · FOOTER ══════════ -->
 <footer style="border-top:1px solid var(--border);background:linear-gradient(180deg,rgba(124,92,255,.05),transparent 40%),var(--bg);overflow:hidden">
   <div class="wrap" style="padding-top:64px;padding-bottom:10px">
-    <div class="foot-grid" style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1.3fr 1.1fr;gap:36px">
+    <div class="foot-grid" style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1.3fr 1.1fr;gap:36px">
       <div>
         <div class="row gap10" style="align-items:center">
           <div class="brandmark"><img src="assets/avatarads-logo-96.png" alt="" width="26" height="26" loading="lazy" decoding="async" style="border-radius:7px;display:block"></div>
@@ -918,6 +918,17 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           <a href="mailto:contact@avatarads.fr" class="muted foot-link" style="font-size:14px">Nous contacter</a>
           <a href="/app/" class="muted foot-link" style="font-size:14px">Accéder à l'outil</a>
           <a href="/claude.html" class="muted foot-link" style="font-size:14px">Connecter Claude</a>
+        </div>
+      </div>
+      <div>
+        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Outils</div>
+        <div class="col" style="gap:12px">
+          <a href="/express.html" class="muted foot-link" style="font-size:14px">Express</a>
+          <a href="/image-ia.html" class="muted foot-link" style="font-size:14px">Image IA</a>
+          <a href="/motion-control.html" class="muted foot-link" style="font-size:14px">Motion Control</a>
+          <a href="/montage-ia.html" class="muted foot-link" style="font-size:14px">Montage IA</a>
+          <a href="/generateur.html" class="muted foot-link" style="font-size:14px">Générateur</a>
+          <a href="/nettoyage-audio.html" class="muted foot-link" style="font-size:14px">Nettoyage audio</a>
         </div>
       </div>
       <div>
@@ -1247,6 +1258,32 @@ function tstToggle(open){
   document.addEventListener('pointerdown', kick, {passive:true});
   document.addEventListener('touchstart', kick, {passive:true});
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) kick(); });
+})();
+
+/* Préchargement ÉCHELONNÉ des vidéos APRÈS le chargement de la page, EN SÉQUENCE (une à la fois →
+   ne sature pas le réseau, ne pénalise pas le LCP car ça démarre au repos après le rendu).
+   Priorité : 1) vidéos du menu modèle, 2) vidéos features du haut vers le bas, 3) le reste.
+   Résultat : à l'ouverture du menu / au scroll, les vidéos sont déjà prêtes → fluide, mobile compris. (Axel 05/09) */
+(function(){
+  function queue(){
+    var seen=new Set(), list=[];
+    function add(v){ if(v && !seen.has(v)){ seen.add(v); list.push(v); } }
+    document.querySelectorAll('#modelGrid .mp-vid').forEach(add);
+    [].slice.call(document.querySelectorAll('.feat-vid video'))
+      .sort(function(a,b){ return a.getBoundingClientRect().top - b.getBoundingClientRect().top; }).forEach(add);
+    document.querySelectorAll('video').forEach(add);
+    return list;
+  }
+  function run(list, i){
+    if(i>=list.length) return;
+    var v=list[i], done=false;
+    function next(){ if(done) return; done=true; try{ v.removeEventListener('canplaythrough', next); }catch(e){} clearTimeout(t); setTimeout(function(){ run(list, i+1); }, 40); }
+    var t=setTimeout(next, 6000);   // garde-fou : on n'attend jamais indéfiniment une vidéo (réseau lent)
+    try{ v.addEventListener('canplaythrough', next, {once:true}); if(v.getAttribute('preload')!=='auto') v.setAttribute('preload','auto'); v.load(); }
+    catch(e){ next(); }
+  }
+  function start(){ (window.requestIdleCallback||function(f){ setTimeout(f,400); })(function(){ run(queue(), 0); }); }
+  if(document.readyState==='complete') start(); else window.addEventListener('load', start);
 })();
 
 /* ══════════ Menu mobile (burger) ══════════ */
