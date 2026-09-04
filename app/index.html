@@ -3909,7 +3909,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     <div class="view" id="v-motion" style="flex-direction:column;overflow:hidden">
 <div id="expMotionWrap" class="scroll-y" style="flex:1;min-height:0;max-width:920px;margin:0 auto;width:100%;padding:24px 28px 40px;box-sizing:border-box">
           <div class="center" style="margin-bottom:26px">
-            <h2 class="display" style="font-size:26px;font-weight:800;letter-spacing:-.01em">Motion Control</h2>
+            <h2 class="display" style="font-size:26px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;justify-content:center;gap:11px"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M2 9.2C2 7.4 3.4 6 5.2 6h13.6C20.6 6 22 7.4 22 9.2v2c0 3.9-3 7-6.7 7-1.3 0-2.5-.6-3.3-1.5-.8.9-2 1.5-3.3 1.5C5 18.2 2 15.1 2 11.2z"/><circle cx="8.2" cy="11.2" r="1.5"/><circle cx="15.8" cy="11.2" r="1.5"/></svg>Motion Control</h2>
             <p class="muted" style="margin-top:6px;font-size:14.5px">Ton personnage reproduit le mouvement de la vidéo.</p>
           </div>
           <div class="row" style="gap:16px;align-items:center">
@@ -5191,19 +5191,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <div style="font-size:11px;color:var(--green);opacity:.75">Script IA · ElevenLabs · Avatar IA — zéro configuration requise</div>
     </div>
 
-    <!-- Hedra API Key (Plan BYOK) -->
-    <div class="setup-field" id="byok-section" style="display:none">
-      <div class="setup-label" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Clé API Hedra <span style="color:var(--orange);font-size:9px;margin-left:4px;font-weight:700">PLAN BYOK</span></span>
-        <a href="https://hedra.com/settings/api" target="_blank" style="font-size:10px">Obtenir ma clé →</a>
-      </div>
-      <div class="setup-input" style="position:relative">
-        <input type="password" id="inp-hedra-key" placeholder="hdk_xxxxxxxxxxxxxxxxxxxxxxxx" style="padding-right:70px">
-        <button onclick="toggleHedraKeyVisibility()" id="btn-show-key" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:3px 8px;cursor:pointer;font-size:10px;font-family:var(--mono)">Voir</button>
-      </div>
-      <div class="setup-hint" id="byok-status" style="display:none;color:var(--green)">✓ Clé Hedra configurée — tu utilises ton propre compte Hedra</div>
-      <div class="setup-hint">Entre ta clé API Hedra pour utiliser tes propres crédits (Plan BYOK à 9,99€/mois).<br>Crée un compte sur <a href="https://hedra.com" target="_blank">hedra.com</a> et récupère ta clé dans Settings → API.</div>
-    </div>
 
     <div class="setup-divider"></div>
 
@@ -5716,6 +5703,16 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 </style>
 <div id="plansSheet" style="display:none;position:fixed;inset:0;z-index:99990;background:#07080a;overflow-y:auto;min-height:100vh">
   <div style="max-width:1180px;margin:0 auto;padding:56px 32px 64px">
+    <!-- Bandeau contextuel (ex : fonction réservée Pro/Élite) — masqué par défaut -->
+    <div id="plansSheetBanner" style="display:none;margin-bottom:24px">
+      <div style="padding:15px 18px;border-radius:14px;background:var(--accent-soft);border:1px solid var(--accent-line);display:flex;align-items:center;gap:13px">
+        <span style="flex:0 0 auto;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--accent);color:#1A0A02"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+        <div style="min-width:0">
+          <div id="plansSheetBannerTitle" style="font-weight:800;font-size:15.5px;color:var(--text)"></div>
+          <div id="plansSheetBannerSub" style="font-size:12.5px;color:var(--text-2);margin-top:2px"></div>
+        </div>
+      </div>
+    </div>
     <!-- Header -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:30px">
       <div>
@@ -7516,7 +7513,7 @@ function updateGuestWatermarks(){
   if(vw) vw.classList.toggle('active', active);
 }
 
-function showPaywall(){ showPlansSheet(); }
+function showPaywall(bannerTitle, bannerSub){ showPlansSheet(bannerTitle, bannerSub); }
 function closePaywall(){ closePlansSheet(); }
 
 // ── PLANS SHEET ──
@@ -7540,7 +7537,16 @@ window.addEventListener('resize', () => {
   const ps = document.getElementById('plansSheet');
   if(ps && ps.style.display === 'block') _equalizeCredBoxes();
 });
-function showPlansSheet(){
+function showPlansSheet(bannerTitle, bannerSub){
+  // Bandeau contextuel (ex : « fonction réservée Pro/Élite ») — sinon masqué
+  var _bn=document.getElementById('plansSheetBanner');
+  if(_bn){
+    if(bannerTitle){
+      var _bt=document.getElementById('plansSheetBannerTitle'), _bs=document.getElementById('plansSheetBannerSub');
+      if(_bt) _bt.textContent=bannerTitle; if(_bs) _bs.textContent=bannerSub||'';
+      _bn.style.display='block';
+    } else _bn.style.display='none';
+  }
   // Reset toggle to monthly on open
   _sheetAnnual = false;
   const toggle = document.getElementById('sheetBillingToggle');
@@ -8193,8 +8199,6 @@ const PLAN_CHECKOUT_URLS = {
     elite90:  'https://whop.com/checkout/plan_x2kDWR6ur2W5E', // Elite90 1895,88€/an
   },
 };
-// BYOK — membres formation uniquement (lien partagé en privé)
-const BYOK_CHECKOUT_URL = 'https://whop.com/checkout/plan_dXRZRYaSF0FGE'; // 9,99€/mois
 
 // Paywall billing toggle (mensuel ↔ annuel)
 let _paywallAnnual = false;
@@ -28047,7 +28051,7 @@ function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.s
 function _mcSetTier(t){
   // Le « forfait » est devenu le MODÈLE : 'standard' = Motion 2.6 (Kling v2.6), 'pro' = Motion 3.0 (Kling v3, 1080p natif).
   if(t==='pro' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-    toast('Motion 3.0 est réservé aux plans Pro et Élite'); if(typeof showPaywall==='function') showPaywall(); return;
+    if(typeof showPaywall==='function') showPaywall('Oups — Motion 3.0 est réservé aux plans Pro & Élite', 'Passe en Pro ou Élite pour débloquer le moteur Kling 3.0.'); else toast('Motion 3.0 est réservé aux plans Pro et Élite'); return;
   }
   window._mcTier=t; window._mcKlingVer=(t==='pro')?'v3':'v2.6'; window._mcQuality=(t==='pro'?'1080':'720');
   _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost();
@@ -28193,10 +28197,9 @@ function _mcRenderAdv(){
     <span class="label" style="display:block;margin-bottom:8px">Modèle</span>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${tier==='pro'?'16px':'14px'}">
       ${tierCard('standard','Motion 2.6','Rapide et fiable')}
-      ${tierCard('pro','Motion 3.0','1080p natif · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
+      ${tierCard('pro','Motion 3.0','1080p · '+CREDIT_COSTS.motion30PerSec+' cr/s',_mcPaid?'':'<span class="mono" style="font-size:8.5px;color:var(--accent-2);border:1px solid var(--accent-2);border-radius:5px;padding:1px 5px;letter-spacing:.04em;white-space:nowrap">PRO & ÉLITE</span>')}
     </div>
-    ${tier==='pro'?`
-    <p class="faint" style="font-size:11.5px;margin-bottom:18px">Motion 3.0 génère en <strong style="color:var(--text)">1080p natif</strong> (moteur Kling 3.0), sans upscale — la meilleure qualité. Réservé aux plans Pro &amp; Élite.</p>`:`
+    ${tier==='pro'?``:`
     <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
     <div class="seg" style="width:100%;margin-bottom:6px">
       <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
@@ -28585,7 +28588,7 @@ async function _mcGenerate(){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const tier=window._mcTier, q=window._mcQuality;
   if((tier==='pro'||q==='1080') && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-    toast(tier==='pro' ? 'Motion 3.0 est réservé aux plans Pro et Élite' : 'Le 1080p est réservé aux plans Pro et Élite'); if(typeof showPaywall==='function') showPaywall(); return;
+    if(typeof showPaywall==='function') showPaywall(tier==='pro' ? 'Oups — Motion 3.0 est réservé aux plans Pro & Élite' : 'Oups — le 1080p est réservé aux plans Pro & Élite', tier==='pro' ? 'Passe en Pro ou Élite pour débloquer le moteur Kling 3.0.' : "Passe en Pro ou Élite pour l'export 1080p."); else toast(tier==='pro' ? 'Motion 3.0 est réservé aux plans Pro et Élite' : 'Le 1080p est réservé aux plans Pro et Élite'); return;
   }
   const rate=_mcRate(), dur=_mcRefDurEff();
   if(!dur){ toast('Vidéo de référence illisible — réessaie'); return; }

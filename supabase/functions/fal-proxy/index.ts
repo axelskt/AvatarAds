@@ -69,6 +69,18 @@ serve(async (req: Request) => {
     )
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return json({ error: 'Unauthorized — session invalide ou expirée' }, 401)
+
+    // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite ──
+    // Le verrou côté client ne suffit pas (n'importe quel user authentifié pourrait forger
+    // le chemin v3, plus cher : 0,168 $/s). On vérifie le plan en base sur les SOUMISSIONS
+    // (POST) vers un chemin Kling v3. Motion 2.6 (v2.6) et les autres modèles ne sont pas touchés.
+    if (req.method === 'POST' && /\/fal-ai\/kling-video\/v3\//i.test(path)) {
+      const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).single()
+      const plan = String(prof?.plan || 'free').toLowerCase()
+      if (!['pro', 'elite', 'developer'].includes(plan)) {
+        return json({ error: 'Motion 3.0 (Kling 3.0) est réservé aux plans Pro et Élite.' }, 403)
+      }
+    }
   }
 
   // ── relais vers fal ──
