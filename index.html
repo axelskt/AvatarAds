@@ -47,6 +47,9 @@
 <link rel="dns-prefetch" href="https://whop.com">
 <script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
 <style>
+/* Polices de repli aux métriques calquées — supprime le CLS du swap Google Fonts (le H1 est le LCP). Overrides mesurés sur les woff2 réels (upm 1000). */
+@font-face{font-family:'Bricolage Fallback';src:local('Arimo'),local('Arial'),local('Liberation Sans'),local('Helvetica Neue'),local('Roboto');size-adjust:98.26%;ascent-override:94.65%;descent-override:27.48%;line-gap-override:0%}
+@font-face{font-family:'Hanken Fallback';src:local('Arimo'),local('Arial'),local('Liberation Sans'),local('Helvetica Neue'),local('Roboto');size-adjust:101.22%;ascent-override:98.80%;descent-override:29.94%;line-gap-override:0%}
 /* ══════════ DESIGN SYSTEM (handoff Claude Design — 1:1) ══════════ */
 :root{
   --bg:#0B0B0D;--bg-grad:#0E0D10;
@@ -60,8 +63,8 @@
   --amber:#FFB020;--green:#28C795;--violet:#9A7CFF;
   --r-sm:10px;--r:14px;--r-lg:20px;--r-xl:28px;
   --maxw:1320px;
-  --font:'Hanken Grotesk',system-ui,sans-serif;
-  --display:'Bricolage Grotesque',sans-serif;
+  --font:'Hanken Grotesk','Hanken Fallback',system-ui,sans-serif;
+  --display:'Bricolage Grotesque','Bricolage Fallback',sans-serif;
   --mono:'JetBrains Mono',monospace;
   font-synthesis:none;
 }
@@ -182,10 +185,11 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 .feat-mock{position:absolute;inset:0;display:none;place-items:center;padding:28px}
 .feat-mock.on{display:grid}
 /* onglet Montage IA en pleine largeur : carte 1 colonne, vidéo plein écran en haut, texte dessous */
-.feat-card-grid.mt-full{grid-template-columns:1fr}
-.feat-card-grid.mt-full #featMockZone{border-right:none;border-bottom:1px solid var(--border)}
-.feat-card-grid.mt-full .feat-mock[data-feat="montage"]{position:relative;inset:auto;padding:24px 30px}
-.feat-card-grid.mt-full #mtDemoRow{max-width:none}
+.feat-card-grid.mt-full{grid-template-columns:1fr !important}
+.feat-card-grid.mt-full #featMockZone{border-right:none;border-bottom:1px solid var(--border);min-height:0 !important;aspect-ratio:16/9}
+.feat-card-grid.mt-full .feat-mock[data-feat="montage"]{padding:0}
+.feat-card-grid.mt-full .feat-mock[data-feat="montage"] .feat-demo{aspect-ratio:auto;max-width:none;width:100%;height:100%}
+.feat-card-grid.mt-full #mtDemoRow{max-width:none;width:100%;height:100%;aspect-ratio:auto}
 .feat-card-grid.mt-full .col{padding:30px 48px 40px;text-align:center;align-items:center}
 .feat-photo{position:relative;height:100%;max-width:100%;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 60px -30px rgba(0,0,0,.8)}
 .feat-photo img{display:block;height:100%;width:100%;object-fit:cover}
@@ -486,14 +490,14 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <div class="aa-iphone hp-left" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria-621.webp" srcset="assets/hero-bacteria-462.webp 462w, assets/hero-bacteria-536.webp 536w, assets/hero-bacteria-621.webp 621w" sizes="(max-width: 767px) 231px, 300px" alt="Cartoon bactérie virale AvatarAds" width="621" height="1103" fetchpriority="high" decoding="async"></div>
+        <div class="scr"><img src="assets/hero-bacteria-621.webp" srcset="assets/hero-bacteria-320.webp 320w, assets/hero-bacteria-462.webp 462w, assets/hero-bacteria-536.webp 536w, assets/hero-bacteria-621.webp 621w" sizes="(max-width: 767px) 231px, 300px" alt="Cartoon bactérie virale AvatarAds" width="621" height="1103" fetchpriority="high" decoding="async"></div>
       </div>
 
       <!-- phone droite : portrait femme IA + badges -->
       <div class="aa-iphone hp-right" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
         <div class="di"></div><div class="refl"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/lp/hero-fille-669.webp" srcset="assets/lp/hero-fille-531.webp 531w, assets/lp/hero-fille-669.webp 669w" sizes="(max-width: 767px) 229px, 300px" alt="Portrait femme généré par IA" width="669" height="1198" loading="lazy" decoding="async"></div>
+        <div class="scr"><img src="assets/lp/hero-fille-669.webp" srcset="assets/lp/hero-fille-320.webp 320w, assets/lp/hero-fille-531.webp 531w, assets/lp/hero-fille-669.webp 669w" sizes="(max-width: 767px) 229px, 300px" alt="Portrait femme généré par IA" width="669" height="1198" loading="lazy" decoding="async"></div>
         <div class="card glass hp-ready" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:7;padding:9px 13px;border-radius:14px;white-space:nowrap">
           <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
             <div class="col" style="line-height:1.35"><b style="font-size:14px">Prête en 2 min</b><span class="faint" style="font-size:10.5px;margin-top:3px">0 caméra</span></div></div>
@@ -511,7 +515,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
         <div class="di" style="width:74px;height:21px;top:14px"></div><div class="refl" style="inset:5px;border-radius:39px"></div>
         <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
         <div class="scr" style="inset:5px;border-radius:39px">
-          <img src="assets/lp/hero-homme-451.webp" srcset="assets/lp/hero-homme-451.webp 451w, assets/lp/hero-homme-640.webp 640w, assets/lp/hero-homme.webp 900w" sizes="(max-width: 767px) 229px, 300px" alt="Portrait homme généré par IA" width="451" height="672" decoding="async">
+          <img src="assets/lp/hero-homme-451.webp" srcset="assets/lp/hero-homme-320.webp 320w, assets/lp/hero-homme-451.webp 451w, assets/lp/hero-homme-640.webp 640w, assets/lp/hero-homme.webp 900w" sizes="(max-width: 767px) 229px, 300px" alt="Portrait homme généré par IA" width="451" height="672" decoding="async">
           <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 60%,rgba(0,0,0,.6))"></div>
           <div class="ph-rail" style="bottom:22px">
             <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><span>12K</span></div>
@@ -604,7 +608,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="genVid" src="assets/lp/generateur-lp.mp4" poster="assets/lp/generateur-lp.jpg" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo Générateur : un avatar, ta voix, un style de sous-titres — la vidéo est prête" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="genVid" src="assets/lp/generateur-lp.mp4" poster="assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo Générateur : un avatar, ta voix, un style de sous-titres — la vidéo est prête" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -623,7 +627,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="imagesIaVid" src="assets/lp/images-ia-lp.mp4" poster="assets/lp/images-ia-lp.jpg" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo Images IA : depuis Claude, un produit devient des dizaines de pubs produit et de l'UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="imagesIaVid" src="assets/lp/images-ia-lp.mp4" poster="assets/lp/images-ia-lp.webp" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo Images IA : depuis Claude, un produit devient des dizaines de pubs produit et de l'UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
     </div>
@@ -634,7 +638,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="veoVid" src="assets/lp/express-lp.mp4" poster="assets/lp/express-lp.jpg" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo Express : un prompt, plusieurs vidéos générées" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="veoVid" src="assets/lp/express-lp.mp4" poster="assets/lp/express-lp.webp" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo Express : un prompt, plusieurs vidéos générées" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -656,7 +660,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="row" style="justify-content:center;margin-bottom:30px">
     <div class="feat-tabs" id="featTabs"></div>
   </div>
-  <div class="card feat-card-grid" style="display:grid;grid-template-columns:1.35fr 1fr;overflow:hidden;padding:0">
+  <div class="card feat-card-grid mt-full" style="display:grid;grid-template-columns:1.35fr 1fr;overflow:hidden;padding:0">
     <div class="feat-mockwrap" style="position:relative;min-height:400px;border-right:1px solid var(--border);background:radial-gradient(500px 260px at 40% 0%,rgba(255,90,31,.09),transparent),var(--bg-grad)" id="featMockZone">
       <!-- avatar IA — grille de 6 avatars UGC (vraies images générées par l'app,
            dossiers « Image IA /Garçon + /Fille » — jamais de visuels externes) -->
@@ -671,9 +675,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       <!-- soustitres -->
       <div class="feat-mock" data-feat="soustitres" style="padding:8px"><div class="feat-photo" style="aspect-ratio:1/1"><img src="assets/lp/feat-soustitres-720.webp" alt="Sous-titres animés" width="720" height="720" loading="lazy" decoding="async"></div></div>
       <!-- montage IA : avant/après vidéo (boucles muettes lancées ensemble à l'apparition) -->
-      <div class="feat-mock" data-feat="montage" style="padding:20px"><div class="feat-demo">
-        <div id="mtDemoRow" style="position:relative;width:100%;max-width:680px;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)">
-          <video src="assets/lp/montage-ia-lp.mp4" poster="assets/lp/montage-ia-lp.jpg" muted loop playsinline preload="none" aria-label="Démo Montage IA : la même vidéo, brute puis montée par l'IA" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+      <div class="feat-mock" data-feat="montage" style="padding:0"><div class="feat-demo">
+        <div id="mtDemoRow" style="position:relative;width:100%;height:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)">
+          <video src="assets/lp/montage-ia-lp.mp4" poster="assets/lp/montage-ia-lp.webp" muted loop playsinline preload="none" aria-label="Démo Montage IA : la même vidéo, brute puis montée par l'IA" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
         </div>
       </div></div>
       <!-- audio -->
@@ -745,11 +749,11 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <!-- desktop : arc + cartes chevauchantes -->
   <div class="reveal hide-mobile" style="position:relative;max-width:1080px;margin:0 auto">
     <div class="row" style="justify-content:center;align-items:flex-start;gap:0;padding-bottom:10px">
-      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1b.jpg" alt="Image IA — footballeurs construisant un mur de parpaings sur la pelouse" width="405" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="Cartoon IA — personnages fraise et concombre dans une chambre" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="Image IA — supportrice en tribune de stade" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="Vidéo IA — grand-mère en scooter poursuivie par la police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-5.jpg" alt="Portrait IA — femme dans une rue parisienne" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(-14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1b.jpg" srcset="assets/lp/gen-fan-1b-240.jpg 240w,assets/lp/gen-fan-1b.jpg 405w" sizes="232px" alt="Image IA — footballeurs construisant un mur de parpaings sur la pelouse" width="405" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(-7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" srcset="assets/lp/gen-fan-2-240.jpg 240w,assets/lp/gen-fan-2.jpg 480w" sizes="232px" alt="Cartoon IA — personnages fraise et concombre dans une chambre" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(0) rotate(0);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" srcset="assets/lp/gen-fan-1-240.jpg 240w,assets/lp/gen-fan-1.jpg 480w" sizes="232px" alt="Image IA — supportrice en tribune de stade" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(8px) rotate(7deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" srcset="assets/lp/gen-fan-4-240.jpg 240w,assets/lp/gen-fan-4.jpg 576w" sizes="232px" alt="Vidéo IA — grand-mère en scooter poursuivie par la police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="margin-inline:-12px;transform:translateY(24px) rotate(14deg);flex:0 0 auto;filter:drop-shadow(0 26px 46px rgba(0,0,0,.5))"><div style="position:relative;width:232px;height:368px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-5.jpg" srcset="assets/lp/gen-fan-5-240.jpg 240w,assets/lp/gen-fan-5.jpg 480w" sizes="232px" alt="Portrait IA — femme dans une rue parisienne" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
     </div>
 
     <div class="row" style="gap:18px;margin-top:-80px;position:relative;z-index:6;align-items:flex-end;padding-inline:8px">
@@ -785,9 +789,9 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <!-- mobile -->
   <div class="reveal only-mobile" style="flex-direction:column;gap:16px;max-width:460px;margin:0 auto">
     <div class="row" style="gap:0;justify-content:center;align-items:center">
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(-9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" alt="Cartoon IA — personnages fraise et concombre dans une chambre" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:2;transform:rotate(0deg) translateY(0);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" alt="Image IA — supportrice en tribune de stade" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
-      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" alt="Vidéo IA — grand-mère en scooter poursuivie par la police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(-9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-2.jpg" srcset="assets/lp/gen-fan-2-240.jpg 240w,assets/lp/gen-fan-2.jpg 480w" sizes="232px" alt="Cartoon IA — personnages fraise et concombre dans une chambre" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:2;transform:rotate(0deg) translateY(0);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-1.jpg" srcset="assets/lp/gen-fan-1-240.jpg 240w,assets/lp/gen-fan-1.jpg 480w" sizes="232px" alt="Image IA — supportrice en tribune de stade" width="480" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
+      <div style="width:108px;height:190px;flex:0 0 auto;margin-inline:-8px;z-index:1;transform:rotate(9deg) translateY(10px);filter:drop-shadow(0 18px 32px rgba(0,0,0,.5))"><div style="position:relative;width:100%;height:190px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1)"><img src="assets/lp/gen-fan-4.jpg" srcset="assets/lp/gen-fan-4-240.jpg 240w,assets/lp/gen-fan-4.jpg 576w" sizes="232px" alt="Vidéo IA — grand-mère en scooter poursuivie par la police" width="576" height="720" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div></div>
     </div>
     <div class="card col" style="padding:16px;border-color:var(--accent-line)">
       <textarea id="genPromptM" placeholder="Décris la vidéo que tu veux créer…" style="min-height:84px;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.5;resize:none;font-family:inherit"></textarea>
@@ -808,7 +812,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <p class="muted" style="font-size:clamp(16px,1.6vw,19px);line-height:1.5;margin-top:14px;max-width:640px;margin-left:auto;margin-right:auto">Crée plusieurs vidéos en un seul prompt dans Claude.</p>
   </div>
   <div class="reveal tuto-frame" id="claudeTuto">
-    <video src="assets/lp/tuto-claude.mp4" poster="assets/lp/tuto-claude.jpg" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo : AvatarAds connecté à Claude, deux vidéos générées en un seul prompt"></video>
+    <video src="assets/lp/tuto-claude.mp4" poster="assets/lp/tuto-claude.webp" width="1920" height="1080" muted loop playsinline preload="none" aria-label="Démo : AvatarAds connecté à Claude, deux vidéos générées en un seul prompt"></video>
   </div>
 </section>
 
@@ -1105,9 +1109,9 @@ var FEAT_TABS=[
   [[70,12,8,60,10,9,80,8,12,55,9,7,68],'audioBarsBefore',[70,60,80,55,68,74,62,78],'audioBarsAfter'].forEach(function(_,__){});
   [70,12,8,60,10,9,80,8,12,55,9,7,68].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:'+(h<20?'var(--surface-3)':'var(--text-3)'); document.getElementById('audioBarsBefore').appendChild(d); });
   [70,60,80,55,68,74,62,78].forEach(function(h){ var d=document.createElement('div'); d.style.cssText='flex:1;border-radius:2px;height:'+h+'%;background:var(--accent)'; document.getElementById('audioBarsAfter').appendChild(d); });
-  setFeat(FEAT_TABS[0].id, tabsEl.children[0]);
+  setFeat(FEAT_TABS[0].id, tabsEl.children[0], true);
 })();
-function setFeat(id, btn){
+function setFeat(id, btn, init){
   document.querySelectorAll('#featTabs button').forEach(function(b){ b.classList.remove('on'); });
   if(btn) btn.classList.add('on');
   document.querySelectorAll('.feat-mock').forEach(function(m){ m.classList.toggle('on', m.getAttribute('data-feat')===id); });
@@ -1116,8 +1120,12 @@ function setFeat(id, btn){
   t.textContent=cur.t; d.textContent=cur.d;
   var g=document.querySelector('.feat-card-grid'); if(g) g.classList.toggle('mt-full', id==='montage');
   var cl=document.getElementById('featClaudeLink'); if(cl) cl.style.display=(cur.id==='claude')?'inline-flex':'none';
-  t.classList.remove('rise'); void t.offsetWidth; t.classList.add('rise');
-  var z=document.getElementById('featMockZone'); z.classList.remove('rise'); void z.offsetWidth; z.classList.add('rise');
+  var z=document.getElementById('featMockZone');
+  if(init){ t.classList.add('rise'); z.classList.add('rise'); }   // pas de reflow forcé au chargement (PageSpeed)
+  else {
+    t.classList.remove('rise'); void t.offsetWidth; t.classList.add('rise');
+    z.classList.remove('rise'); void z.offsetWidth; z.classList.add('rise');
+  }
 }
 
 /* ══════════ Témoignages ══════════ */
