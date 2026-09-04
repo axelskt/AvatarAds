@@ -7416,9 +7416,15 @@ function changeSubscription(){
 
 // ── Ouvre le modèle choisi depuis la LP (localStorage aa_tool → module) ──
 function _applyStartTool(){
-  var t; try{ t = localStorage.getItem('aa_tool'); }catch(e){}
+  // modèle choisi sur la LP : d'abord l'URL ?start= (force un chargement frais → contourne le cache),
+  // sinon localStorage aa_tool (secours). L'un OU l'autre.
+  var t = null;
+  try{ t = new URLSearchParams(window.location.search).get('start'); }catch(e){}
+  if(!t){ try{ t = localStorage.getItem('aa_tool'); }catch(e){} }
   if(!t) return false;
   try{ localStorage.removeItem('aa_tool'); }catch(e){}
+  // enlève ?start= de l'URL pour qu'un rafraîchissement ne rouvre pas le module en boucle
+  try{ if(window.location.search) history.replaceState(null, '', window.location.pathname + window.location.hash); }catch(e){}
   var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean' };
   var view = MAP[t]; if(!view) return false;
   var go = function(){ try{ nav(view); window.scrollTo(0,0); }catch(e){} };
