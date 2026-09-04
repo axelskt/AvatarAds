@@ -1233,6 +1233,22 @@ function tstToggle(open){
   } else { playActive(true); }
 })();
 
+/* Fallback autoplay iOS/économie d'énergie : le mode « Économie d'énergie » de l'iPhone met en
+   PAUSE l'autoplay des vidéos muettes (erreur « paused to save power »). Un geste utilisateur
+   débloque la lecture → au 1er toucher (et quand l'onglet redevient visible) on relance les
+   vidéos visibles + celles du menu modèle. Les vidéos se chargent quand même (preload à la demande),
+   c'est seulement la LECTURE qui était bloquée. */
+(function(){
+  function kick(){
+    try{ if(window._playActiveFeatVid) window._playActiveFeatVid(); }catch(e){}
+    try{ var mp=document.getElementById('modelPicker'); if(mp && getComputedStyle(mp).display!=='none'){ mp.querySelectorAll('.mp-vid').forEach(function(v){ v.play().catch(function(){}); }); } }catch(e){}
+    try{ document.querySelectorAll('.feat-vid video').forEach(function(v){ if(v.paused){ var r=v.getBoundingClientRect(); if(r.top<innerHeight && r.bottom>0) v.play().catch(function(){}); } }); }catch(e){}
+  }
+  document.addEventListener('pointerdown', kick, {passive:true});
+  document.addEventListener('touchstart', kick, {passive:true});
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) kick(); });
+})();
+
 /* ══════════ Menu mobile (burger) ══════════ */
 function mobMenuOpen(){
   document.getElementById('mobMenu').classList.add('open');
