@@ -1251,10 +1251,10 @@ revealScan();
     waveform:'<path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/>'
   };
   var MODELS=[
-    ["montage","Montage IA","Ton audio transformé en vidéo virale",18,"film","audio → vidéo","assets/lp/montage-ia-lp.mp4"],
+    ["express","Express","Vidéo depuis un texte",200,"bolt","texte → vidéo","assets/lp/express-lp.mp4"],
     ["motion","Motion Control","Transfère un mouvement sur une image",265,"mask","vidéo + image → vidéo","assets/lp/motion-control-lp.mp4"],
     ["images","Image IA","Visuels 4K en 1 prompt",330,"image","texte → image","assets/lp/images-ia-lp.mp4"],
-    ["express","Express","Vidéo depuis un texte",200,"bolt","texte → vidéo","assets/lp/express-lp.mp4"],
+    ["montage","Montage IA","Ton audio transformé en vidéo virale",18,"film","audio → vidéo","assets/lp/montage-ia-lp.mp4"],
     ["gen","Générateur","Avatar IA + voix + sous-titres",150,"sparkle","image + audio → vidéo","assets/lp/generateur-lp.mp4"],
     ["audio","Nettoyage audio","Bruit, volume et silences nettoyés",45,"waveform","audio → audio","assets/lp/nettoyage-audio-lp.mp4"]
   ];
@@ -1267,9 +1267,11 @@ revealScan();
     b.innerHTML=
       '<div class="mp-vis" style="position:relative;aspect-ratio:16 / 10;overflow:hidden;background:radial-gradient(120% 100% at 30% 0%, oklch(0.55 0.16 '+hue+'), oklch(0.16 0.04 '+hue+'))">'
       +'<video class="mp-vid" src="'+vid+'" muted loop playsinline preload="none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
-      +'<span class="mono" style="position:absolute;left:8px;top:8px;z-index:3;font-size:9.5px;font-weight:600;color:#fff;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:3px 7px;border-radius:6px;letter-spacing:.02em">'+fmt+'</span>'
       +'</div>'
-      +'<div class="col" style="gap:2px;padding:10px 12px"><span style="font-weight:700;font-size:14px">'+t+'</span><span class="faint" style="font-size:11.5px;line-height:1.3">'+d+'</span></div>';
+      +'<div class="col" style="gap:3px;padding:10px 12px">'
+        +'<div class="row" style="align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;font-size:14px">'+t+'</span><span class="mono" style="font-size:9px;font-weight:600;color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);padding:2px 7px;border-radius:6px;letter-spacing:.02em;white-space:nowrap">'+fmt+'</span></div>'
+        +'<span class="faint" style="font-size:11.5px;line-height:1.3">'+d+'</span>'
+      +'</div>';
     b.addEventListener('click',function(){ try{localStorage.setItem('aa_tool',id);}catch(e){} window.location.href='/app/'; });
     b.addEventListener('mouseenter',function(){ b.style.borderColor='var(--accent-line)'; b.style.transform='translateY(-2px)'; });
     b.addEventListener('mouseleave',function(){ b.style.borderColor='var(--border)'; b.style.transform='none'; });
