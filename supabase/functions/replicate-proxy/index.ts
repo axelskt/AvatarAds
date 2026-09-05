@@ -11,10 +11,10 @@
 //   { poll: '<prediction id>' }                                   → statut d'une prédiction (helper)
 //   { mode:'flux', prompt, aspect_ratio?, tier?: eco|pro|ultra }  → texte → image        [FACTURANT]
 //   { mode:'kontext', prompt, input_image, aspect_ratio? }        → img2img               [FACTURANT]
-//   { image, scale_factor? }                                       → upscale Clarity (≤2×) [FACTURANT]
+//   { image, scale_factor? }                                       → upscale Clarity (≤2×) [finition, non tiré, 30/h]
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, billableGate, helperGate, applyReservation, settleReservation, resolveOp } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, billableGate, helperGate, applyReservation, settleReservation, resolveOp, releaseReservation } from '../_shared/guard.ts'
 
 const FLUX: Record<string, { slug: string; raw: boolean; cost: number }> = {
   eco:   { slug: 'black-forest-labs/flux-dev',           raw: false, cost: 1 },
@@ -84,6 +84,7 @@ serve(async (req: Request) => {
       const d = await r.json().catch(() => ({})) as Record<string, unknown>
       const o = d.output; const out = Array.isArray(o) ? o[o.length - 1] : o
       const ok = d.status === 'succeeded' && !!out
+      if (gated && /^(failed|canceled|cancelled)$/i.test(String(d.status))) await releaseReservation(uid, req, 9999)   // job échoué → on rend le tirage
       if (ok && gated) { const op = await resolveOp(uid, req); if (op) await settleReservation(uid, op) }
       return jsonRes(200, { status: d.status ?? null, url: ok ? out : null, error: d.error ? short(d.error) : null })
     }
@@ -130,14 +131,24 @@ serve(async (req: Request) => {
     }
 
     if (gated) {
-      const g = await billableGate({ userId: uid, proxy: 'replicate', requireDebit: true, debitMinutes: 60, rateMax: 30, label: mode })
-      if (!g.ok) return jsonRes(g.status, { error: g.error })
-      const r = await applyReservation({ req, userId: uid, proxy: 'replicate', cost, label: mode })
-      if (!r.ok) return jsonRes(r.status, { error: r.error })
+      if (mode === 'upscale') {
+        // FINITION, pas soumission primaire : l'auto-HD suit TOUJOURS une génération Flux/Kontext déjà
+        // payée (débit imgLow=1 = 1 seule réserve pour 2 appels). Non tiré, mais plafonné serré.
+        const g = await helperGate(uid, 'replicate-upscale', 30, 3600)
+        if (!g.ok) return jsonRes(g.status, { error: g.error })
+      } else {
+        const g = await billableGate({ userId: uid, proxy: 'replicate', requireDebit: true, debitMinutes: 60, rateMax: 30, label: mode })
+        if (!g.ok) return jsonRes(g.status, { error: g.error })
+        const r = await applyReservation({ req, userId: uid, proxy: 'replicate', cost, label: mode })
+        if (!r.ok) return jsonRes(r.status, { error: r.error })
+      }
     }
 
     const out = await run()
-    if (gated && typeof out.url === 'string') { const op = await resolveOp(uid, req); if (op) await settleReservation(uid, op) }
+    if (gated && mode !== 'upscale') {
+      if ((out as { error?: string }).error) await releaseReservation(uid, req, cost)                       // amont en erreur → retry sans 402
+      else if (typeof out.url === 'string') { const op = await resolveOp(uid, req); if (op) await settleReservation(uid, op) }
+    }
     return jsonRes(200, out)
   } catch (e) {
     console.error('replicate-proxy error:', e)

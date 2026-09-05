@@ -42,6 +42,16 @@ export async function drawReservation(userId: string, opId: string, cost: number
     return { ok: data !== null, remaining: (data as number | null) }
   } catch { return { ok: true, remaining: null } }
 }
+// Rend un tirage quand l'AMONT a échoué (4xx/5xx à la soumission, ou statut FAILED au poll) : sans ça, le
+// retry légitime (ex. 4K après un 503 Google, fréquent) re-tirait sur une réserve déjà à 0 → 402 sous
+// RESERVE_ENFORCE=1. `cost` = ce qui avait été tiré ; 9999 = « restaure tout » (job async échoué, coût
+// inconnu au poll — plafonné à `amount` par la RPC). No-op sur une op réglée/remboursée. Best-effort.
+export async function releaseReservation(userId: string, req: Request, cost: number): Promise<void> {
+  try {
+    const opId = await resolveOp(userId, req); if (!opId) return
+    await svc().rpc('release_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) })
+  } catch { /* best-effort */ }
+}
 // Marque l'op livrée (non remboursable), idempotent. Best-effort (jamais bloquant).
 export async function settleReservation(userId: string, opId: string): Promise<void> {
   try { await svc().rpc('settle_reservation', { p_user: userId, p_op: opId }) } catch { /* best-effort */ }

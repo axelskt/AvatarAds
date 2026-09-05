@@ -21,7 +21,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -188,6 +188,12 @@ serve(async (req: Request) => {
     }
 
     const body = await hedraRes.text()
+    // Amont en erreur → on rend le tirage : soumission refusée, ou job échoué au poll.
+    if (!estLeMoteur && user) {
+      const bare2 = hedraPath0.split('?')[0]
+      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseReservation(user.id, req, 2)
+      else if (req.method === 'GET' && hedraRes.ok && /"status"\s*:\s*"(failed|error|errored|cancelled|canceled)"/i.test(body)) await releaseReservation(user.id, req, 9999)
+    }
     // Règlement de la réservation quand la génération a abouti (poll /v3/jobs COMPLETE) → op non remboursable.
     if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok) {
       const op = await resolveOp(user.id, req)

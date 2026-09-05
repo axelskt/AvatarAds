@@ -14,7 +14,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 const ALLOW = /^\/v1beta\/(models\/[A-Za-z0-9._-]+:(predict|predictLongRunning|generateContent)|models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+|operations\/[A-Za-z0-9._-]+|files\/[A-Za-z0-9._-]+:download)$/
@@ -69,11 +69,12 @@ serve(async (req: Request) => {
   try {
     const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
     let googleRes: Response
+    let drawn = 0
     if (req.method === 'GET') {
       googleRes = await fetch(up.url, { method: 'GET', headers })
     } else {
       const rawBody = await req.text()
-      if (isBillable && gated) { const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: costFor(bare, rawBody), label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }) }
+      if (isBillable && gated) { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }) }
       googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: rawBody })
     }
     const body = await googleRes.text()
@@ -84,6 +85,11 @@ serve(async (req: Request) => {
         if (isSyncBillable && googleRes.ok) await settleReservation(uid, op)                          // Imagen/Nano synchrones
         else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body) && !/"error"/.test(body)) await settleReservation(uid, op)   // Veo : opération terminée
       }
+    }
+    // Amont en erreur → on rend le tirage : soumission refusée (ex. 503 Nano, fréquent) ou opération Veo échouée au poll.
+    if (gated) {
+      if (isBillable && !googleRes.ok) await releaseReservation(uid, req, drawn)
+      else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body) && /"error"/.test(body)) await releaseReservation(uid, req, 9999)
     }
     return new Response(body, {
       status: googleRes.status,
