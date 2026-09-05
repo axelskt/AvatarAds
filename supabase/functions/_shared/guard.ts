@@ -22,6 +22,36 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 // H3 : exigence de débit récent sur les appels facturants. Warn-only tant que DEBIT_ENFORCE≠'1'
 // (secret Supabase) → on journalise les appels qui seraient refusés, puis on bascule sans redéploiement.
 export const debitEnforce = (): boolean => (Deno.env.get('DEBIT_ENFORCE') ?? '0') === '1'   // lu à CHAQUE requête : un changement de secret s'applique sans attendre un redémarrage d'isolate
+// Réservation (audit offensif 05/09) : le proxy TIRE le coût de chaque soumission sur l'op débitée (x-aa-op)
+// et la RÈGLE quand la génération aboutit. RESERVE_ENFORCE=1 refuse (402) une réservation insuffisante ;
+// à 0 (défaut) = MODE OMBRE : on journalise ce qu'on refuserait, sans bloquer. Le settle (op non
+// remboursable une fois livrée) est TOUJOURS actif (il ne peut jamais bloquer un remboursement d'échec).
+export const reserveEnforce = (): boolean => (Deno.env.get('RESERVE_ENFORCE') ?? '0') === '1'
+export function opFromReq(req: Request): string { const v = (req.headers.get('x-aa-op') || '').trim(); return /^[0-9a-f-]{36}$/i.test(v) ? v : '' }
+// Tire p_cost sur la réservation. ok=false → reste insuffisant (op sous-évaluée). Fail-open sur erreur DB.
+export async function drawReservation(userId: string, opId: string, cost: number): Promise<{ ok: boolean; remaining: number | null }> {
+  try {
+    const { data, error } = await svc().rpc('draw_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) })
+    if (error) { console.warn('draw_reservation err (fail-open):', error.message); return { ok: true, remaining: null } }
+    return { ok: data !== null, remaining: (data as number | null) }
+  } catch { return { ok: true, remaining: null } }
+}
+// Marque l'op livrée (non remboursable), idempotent. Best-effort (jamais bloquant).
+export async function settleReservation(userId: string, opId: string): Promise<void> {
+  try { await svc().rpc('settle_reservation', { p_user: userId, p_op: opId }) } catch { /* best-effort */ }
+}
+// Applique la réservation dans un proxy : tire `cost`, journalise, 402 seulement si enforce. Puis renvoie
+// une fonction `settle()` à appeler quand la génération a abouti (soumission SYNC réussie, ou poll COMPLETED).
+export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate> {
+  const opId = opFromReq(o.req)
+  if (!opId) return { ok: true }   // pas d'op fournie (owner/dev, ou appel legacy) → billableGate a déjà géré le plancher
+  const dr = await drawReservation(o.userId, opId, o.cost)
+  if (!dr.ok) {
+    console.warn(`[reserve] ${o.proxy} op=${opId} cost=${o.cost} ${o.label ?? ''} INSUFFISANT (enforce=${reserveEnforce()})`)
+    if (reserveEnforce()) return { ok: false, status: 402, error: 'Réservation de crédits insuffisante pour cette génération.' }
+  }
+  return { ok: true }
+}
 
 let _svc: SupabaseClient | null = null
 export function svc(): SupabaseClient {
@@ -31,7 +61,7 @@ export function svc(): SupabaseClient {
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 export const jsonRes = (status: number, body: unknown) =>
@@ -113,17 +143,13 @@ export type Gate = { ok: true } | { ok: false; status: number; error: string }
 export async function billableGate(o: { userId: string; proxy: string; requireDebit: boolean; debitMinutes?: number; rateMax?: number; rateWindowS?: number; label?: string }): Promise<Gate> {
   const ok = await rateHit(`proxy:${o.proxy}:bill:${o.userId}`, o.rateWindowS ?? 600, o.rateMax ?? 30)
   if (!ok) return { ok: false, status: 429, error: 'Trop de générations en peu de temps — patiente quelques minutes.' }
-  // Owner / developer : spendCreditsFor() côté client renvoie true SANS appeler la RPC (app l.6524) →
-  // aucune ligne credit_ops n'existe jamais pour eux. Exemption, sinon on bloquerait Axel lui-même.
+  // Owner / developer : spendCreditsFor() côté client renvoie true SANS appeler la RPC → aucune réservation.
   const { plan, isOwner } = await userPlan(o.userId)
   if (isOwner || plan === 'developer') return { ok: true }
-  // Un compte FREE ne peut JAMAIS lancer d'action payante côté app (paywall « à l'action » avant tout appel) :
-  // il doit donc TOUJOURS prouver un débit, même sur les chemins où les abonnés en sont dispensés
-  // (pré-écoutes TTS, Voice Design) — mesuré 05/09 : sans ça, un compte gratuit générait du TTS ElevenLabs.
+  const mins = o.debitMinutes ?? 60
+  // Plancher « un débit récent existe » (le contrôle de MONTANT vit dans applyReservation, appelé par le proxy).
   if (o.requireDebit || plan === 'free') {
-    // 60 min par défaut : un seul débit couvre des flux longs (Montage IA multi-scènes, extensions Express,
-    // Motion Control + matting) — mesuré au traçage du 05/09.
-    const paid = await hasRecentDebit(o.userId, o.debitMinutes ?? 60)
+    const paid = await hasRecentDebit(o.userId, mins)
     if (!paid) {
       if (debitEnforce()) return { ok: false, status: 402, error: 'Aucun débit de crédits récent pour cette action.' }
       console.warn(`[debit-check warn-only] ${o.proxy} ${o.label ?? ''} user=${o.userId} : aucun débit récent`)

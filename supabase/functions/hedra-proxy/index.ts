@@ -21,13 +21,13 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, applyReservation, settleReservation, opFromReq } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
 // pas être détourné, mais on borne quand même la surface. Générations = FACTURANT (plafond + débit récent).
 const HEDRA_ALLOW = /^\/(models|assets(\/[A-Za-z0-9-]+\/upload)?|generations(\/[A-Za-z0-9-]+\/status)?|v3\/(files|models(\/[A-Za-z0-9._-]+)?|jobs(\/[A-Za-z0-9-]+(\/status)?)?|assets(\/[A-Za-z0-9-]+(\/upload)?)?))$/
-const HEDRA_BILLABLE = /^\/(generations|v3\/jobs)$/
+const HEDRA_BILLABLE = /^\/(generations|v3\/models\/[A-Za-z0-9._-]+)$/   // soumission = /generations (ancienne API) ou /v3/models/<slug> (v3)
 
 serve(async (req: Request) => {
   // Preflight
@@ -121,6 +121,11 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: user.id, proxy: 'hedra', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
       : await helperGate(user.id, 'hedra', 900)   // uploads + polling multi-scènes (Montage IA)
     if (!gate.ok) return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    // Réservation : la génération (POST /v3/models/<slug> ou /generations) tire son coût (borne basse 2 = avatarPerSec × 1 s).
+    if (req.method === 'POST' && HEDRA_BILLABLE.test(bare)) {
+      const rr = await applyReservation({ req, userId: user.id, proxy: 'hedra', cost: 2, label: bare })
+      if (!rr.ok) return new Response(JSON.stringify({ error: rr.error }), { status: rr.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    }
   }
 
   // ── Clé Hedra : user BYOK ou plateforme ──
@@ -183,6 +188,11 @@ serve(async (req: Request) => {
     }
 
     const body = await hedraRes.text()
+    // Règlement de la réservation quand la génération a abouti (poll /v3/jobs COMPLETE) → op non remboursable.
+    if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok) {
+      const op = opFromReq(req)
+      if (op && /"status"\s*:\s*"(complete|completed|succeeded|success)"/i.test(body)) await settleReservation(user.id, op)
+    }
 
     return new Response(body, {
       status: hedraRes.status,
