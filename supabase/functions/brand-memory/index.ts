@@ -47,7 +47,7 @@ const MAX_SUMMARY = 1400
 
 // ---------- scrape du site (même extraction que orchestrate) ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée (redirections revalidées, IP/metadata bloqués).
-import { safeFetchHtml } from '../_shared/guard.ts'
+import { safeFetchHtml, helperGate } from '../_shared/guard.ts'
 async function fetchSite(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 7000)
@@ -134,6 +134,7 @@ serve(async (req: Request) => {
   )
   const { data: { user }, error: authErr } = await sb.auth.getUser()
   if (authErr || !user) return json({ error: 'Unauthorized — session invalide ou expirée' }, 401)
+  { const _g = await helperGate(user.id, 'brand-memory', 40); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
   try {
     const body = await req.json().catch(() => ({}))

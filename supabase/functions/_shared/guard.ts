@@ -28,6 +28,12 @@ export const debitEnforce = (): boolean => (Deno.env.get('DEBIT_ENFORCE') ?? '0'
 // remboursable une fois livrée) est TOUJOURS actif (il ne peut jamais bloquer un remboursement d'échec).
 export const reserveEnforce = (): boolean => (Deno.env.get('RESERVE_ENFORCE') ?? '0') === '1'
 export function opFromReq(req: Request): string { const v = (req.headers.get('x-aa-op') || '').trim(); return /^[0-9a-f-]{36}$/i.test(v) ? v : '' }
+// L'en-tête x-aa-op est un simple INDICE (client). La VRAIE source = latest_open_op côté serveur → le
+// settle/draw ne peut plus être contourné en omettant l'en-tête (audit #3 : refund-and-keep async).
+export async function resolveOp(userId: string, req: Request): Promise<string> {
+  const hinted = opFromReq(req); if (hinted) return hinted
+  try { const { data } = await svc().rpc('latest_open_op', { p_user: userId }); return (data as string | null) || '' } catch { return '' }
+}
 // Tire p_cost sur la réservation. ok=false → reste insuffisant (op sous-évaluée). Fail-open sur erreur DB.
 export async function drawReservation(userId: string, opId: string, cost: number): Promise<{ ok: boolean; remaining: number | null }> {
   try {
@@ -43,8 +49,8 @@ export async function settleReservation(userId: string, opId: string): Promise<v
 // Applique la réservation dans un proxy : tire `cost`, journalise, 402 seulement si enforce. Puis renvoie
 // une fonction `settle()` à appeler quand la génération a abouti (soumission SYNC réussie, ou poll COMPLETED).
 export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate> {
-  const opId = opFromReq(o.req)
-  if (!opId) return { ok: true }   // pas d'op fournie (owner/dev, ou appel legacy) → billableGate a déjà géré le plancher
+  const opId = await resolveOp(o.userId, o.req)
+  if (!opId) return { ok: true }   // aucune op ouverte (owner/dev) → billableGate a déjà géré le plancher
   const dr = await drawReservation(o.userId, opId, o.cost)
   if (!dr.ok) {
     console.warn(`[reserve] ${o.proxy} op=${opId} cost=${o.cost} ${o.label ?? ''} INSUFFISANT (enforce=${reserveEnforce()})`)
