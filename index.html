@@ -774,10 +774,6 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
       <div class="grow col" style="border-radius:22px;padding:26px;background:rgba(23,21,25,.72);backdrop-filter:blur(16px);border:1px solid var(--accent-line);box-shadow:0 40px 90px -34px rgba(0,0,0,.85),0 0 0 4px var(--accent-soft);min-height:268px">
         <textarea id="genPrompt" placeholder="Décris la vidéo que tu veux créer…" style="flex:1;min-height:140px;background:transparent;border:none;outline:none;color:var(--text);font-size:17px;line-height:1.5;resize:none;font-family:inherit;padding:2px 2px"></textarea>
-        <div class="row" style="gap:10px;flex-wrap:wrap">
-          <span class="pill" style="font-size:13px;background:var(--surface);padding:7px 13px">16:9</span>
-          <span class="pill" style="font-size:13px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;padding:7px 13px">9:16</span>
-        </div>
       </div>
     </div>
 
@@ -802,10 +798,6 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     </div>
     <div class="card col" style="padding:16px;border-color:var(--accent-line)">
       <textarea id="genPromptM" placeholder="Décris la vidéo que tu veux créer…" style="min-height:84px;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.5;resize:none;font-family:inherit"></textarea>
-      <div class="row" style="gap:10px;flex-wrap:wrap">
-        <span class="pill" style="font-size:13px;background:var(--surface);padding:7px 13px">16:9</span>
-        <span class="pill" style="font-size:13px;background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:600;padding:7px 13px">9:16</span>
-      </div>
     </div>
     <button onclick="lpGenerateFrom('genPromptM')" class="btn btn-primary btn-lg" style="width:100%;font-size:19px;font-weight:800;padding:20px 24px;border-radius:18px">Générer <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></button>
     <p class="center faint mono" style="font-size:11.5px">Essaie gratuitement nos modèles de génération</p>
@@ -949,13 +941,13 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           <a href="/avatarads-vs-arcads.html" class="muted foot-link" style="font-size:14px">AvatarAds vs Arcads</a>
         </div>
       </details>
-      <div>
-        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Mentions légales</div>
+      <details class="foot-col">
+        <summary>Mentions légales</summary>
         <div class="col" style="gap:12px">
           <a href="/cgv.html" class="muted foot-link" style="font-size:14px">Conditions générales</a>
           <a href="/confidentialite.html" class="muted foot-link" style="font-size:14px">Politique de confidentialité</a>
         </div>
-      </div>
+      </details>
     </div>
     <div style="text-align:center;margin-top:54px">
       <div class="display foot-wordmark" style="font-size:clamp(44px,12vw,168px);font-weight:800;line-height:.9;letter-spacing:-.03em;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03));-webkit-background-clip:text;background-clip:text;color:transparent">AvatarAds</div>
@@ -980,7 +972,6 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   .foot-col>summary::after{content:'+';font-size:22px;font-weight:400;color:var(--violet)}
   .foot-col[open]>summary::after{content:'−'}
   .foot-col .col{padding:0 2px 16px}
-  .foot-grid>div:last-child{border-top:1px solid var(--border);padding-top:18px}
 }
 /* mobile : les étoiles décoratives chevauchaient le titre « Tout en un » (colonne unique, texte à gauche) */
 @media (max-width:760px){ .lp-sparkles{display:none !important} }
