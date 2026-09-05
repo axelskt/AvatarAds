@@ -149,9 +149,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   const auth = req.headers.get('authorization') || ''
   const token = auth.replace(/^Bearer\s+/i, '')
-  const role = (() => { try { const p = token.split('.')[1]; const b = p.replace(/-/g, '+').replace(/_/g, '/'); return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '') } catch { return '' } })()
   const isCron = !!CRON_SECRET && timingSafeEqual(req.headers.get('x-cron-key') || '', CRON_SECRET)
-  const isService = role === 'service_role'
+  // Audit offensif 05/09 : verify_jwt=false ici → la passerelle NE vérifie PAS la signature. On ne DÉDUIT
+  // donc JAMAIS service_role d'un claim (un JWT non signé role=service_role était accepté et divulguait les
+  // soldes fournisseurs). Seul le secret cron accorde la vue service/refresh ; un user doit prouver une
+  // vraie session (getUser, validé côté Auth API) pour la vue publique.
+  const isService = isCron
 
   if (req.method === 'POST') {
     if (!isCron && !isService) return json({ error: 'forbidden' }, 403)

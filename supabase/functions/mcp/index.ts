@@ -2872,7 +2872,7 @@ async function handleKeyManagement(req: Request): Promise<Response> {
       exists: !!data, created_at: data?.created_at ?? null, last_used_at: data?.last_used_at ?? null,
       // défaut false (29/08) : l'option confirmation quitte l'UI, les nouvelles
       // clés partent sans devis ; une clé existante garde sa valeur stockée.
-      require_confirm: data?.require_confirm ?? false, plan_allowed: planAllowed,
+      require_confirm: data?.require_confirm ?? true, plan_allowed: planAllowed,
     })
   }
   if (body.action === 'create') {
@@ -2885,7 +2885,7 @@ async function handleKeyManagement(req: Request): Promise<Response> {
     // confirmation » disparaît de l'UI (Anthropic confirme déjà côté client).
     // Explicite ici + défaut colonne passé à false ; les clés existantes
     // gardent leur réglage, et set_confirm reste fonctionnel pour qui l'a.
-    const { error: insErr } = await svc.from('mcp_keys').insert({ user_id: user.id, key_hash: await hashKey(key), require_confirm: false })
+    const { error: insErr } = await svc.from('mcp_keys').insert({ user_id: user.id, key_hash: await hashKey(key), require_confirm: true })   // audit 05/09 : confirmation avant dépense, par défaut (l'user peut décocher ensuite)
     if (insErr) return json(500, { error: 'server_error' })
     return json(200, { ok: true, url: `${MCP_PUBLIC_BASE}/${key}` })
   }
@@ -2948,7 +2948,7 @@ serve(async (req) => {
     const attendu = j.kind === 'image' ? 50000 : j.kind === 'avatar' ? 200000 : 130000
     const done = j.status === 'done' || j.status === 'failed'
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
-    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: j.status === 'done' ? j.result_url : null, progress, error: j.error || null }),
+    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: j.status === 'done' ? j.result_url : null, progress, error: j.status === 'failed' ? 'failed' : null }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
   }
 

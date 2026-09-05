@@ -1,3 +1,4 @@
+import { authUser } from '../_shared/guard.ts'
 // ─────────────────────────────────────────────────────────────────────────────
 // #159 · LIRE UNE CAPTURE D'ÉCRAN : où la rogner, et que contient-elle.
 //
@@ -87,6 +88,10 @@ Champ "app" : le nom du produit affiche dans la capture, tel qu'il s'ecrit.`
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST uniquement' }, 405)
+
+  // Audit offensif 05/09 : atteignable avec la seule clé anon publique → Claude Opus vision facturé.
+  const _a = await authUser(req)
+  if (!_a.isService && !_a.userId) return json({ error: 'unauthorized' }, 401)
 
   try {
     const key = Deno.env.get('ANTHROPIC_API_KEY') ?? ''

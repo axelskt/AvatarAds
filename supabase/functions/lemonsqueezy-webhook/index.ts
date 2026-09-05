@@ -83,6 +83,14 @@ serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false }
   })
 
+  // Idempotence (audit 05/09) : LemonSqueezy rejoue jusqu'à un 2xx → un rejeu créditerait 2×. Verrou sur
+  // l'id de commande (index unique webhook_events.event_id), comme whop-webhook.
+  const _evId = String(event.data?.id ?? '')
+  if (_evId) {
+    const { error: _dup } = await sb.from('webhook_events').insert({ event_id: 'ls_' + _evId, body: event })
+    if (_dup) { console.log('LS rejeu ignoré', _evId); return new Response('OK (déjà traité)', { status: 200 }) }
+  }
+
   // ─── Cherche le profil par email ───
   const { data: profile, error: profileErr } = await sb
     .from('profiles')

@@ -1,3 +1,4 @@
+import { helperGate } from '../_shared/guard.ts'
 // Supabase Edge Function — 🎙️ Dérush IA (#151, plans Pro / Élite / developer)
 //
 // Ne fait QU'UNE chose : transcrire l'audio mot à mot via ElevenLabs Scribe et
@@ -45,6 +46,8 @@ serve(async (req) => {
   const plan = String(prof?.plan || '').toLowerCase()
   const allowed = !!prof && (['pro', 'elite', 'developer'].includes(plan) || !!prof.is_owner)
   if (!allowed) return json(403, { error: 'pro_elite_only' })
+  const _g = await helperGate(user.id, 'derush', 20, 600)   // audit 05/09 : plafond anti-drain Scribe
+  if (!_g.ok) return json(429, { error: 'rate_limited' })
 
   let audio: File | null = null
   try {
