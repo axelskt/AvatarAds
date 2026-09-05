@@ -369,7 +369,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       "mainEntity": [
         { "@type": "Question", "name": "C'est quoi AvatarAds, concrètement ?", "acceptedAnswer": { "@type": "Answer", "text": "Un générateur de vidéos faceless : tu écris (ou laisses l'IA écrire) un script, tu choisis un avatar IA et une voix, et l'outil produit une vidéo verticale (TikTok, Reels, Shorts) prête à poster en quelques minutes — sans jamais montrer ton visage ni filmer quoi que ce soit." } },
         { "@type": "Question", "name": "Est-ce qu'on voit que c'est une IA ?", "acceptedAnswer": { "@type": "Answer", "text": "Non, et c'est tout l'intérêt. Le lipsync et la voix sont ultra-réalistes : la grande majorité des spectateurs ne font pas la différence avec un vrai créateur face caméra. Tes vidéos restent naturelles et engageantes." } },
-        { "@type": "Question", "name": "Je n'ai pas une belle voix / je n'aime pas parler. Ça marche quand même ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Tu enregistres 30 secondes d'audio (ou tu importes un fichier) et ton avatar parle avec ta voix — l'IA nettoie automatiquement le son (bruit de fond, volume, silences). Pas besoin d'une voix de pro ni de parler face caméra." } },
+        { "@type": "Question", "name": "Quels outils sont inclus dans AvatarAds ?", "acceptedAnswer": { "@type": "Answer", "text": "Tout est au même endroit : le Générateur (avatar IA + ta voix + sous-titres animés), Express (une vidéo depuis un simple texte), Motion Control (anime une image fixe), Images IA (visuels et pubs produit en 4K), Montage IA (ton audio devient une vidéo montée) et le nettoyage audio — plus un éditeur. Une seule interface, un seul abonnement, au lieu d'empiler cinq outils séparés." } },
         { "@type": "Question", "name": "En combien de temps j'ai ma première vidéo ?", "acceptedAnswer": { "@type": "Answer", "text": "Environ 2 minutes. Tu décris ta vidéo, l'IA génère l'avatar, la voix et les sous-titres, puis tu exportes en 9:16 prêt à publier. La plupart des créateurs produisent 3 à 5 vidéos par jour." } },
         { "@type": "Question", "name": "Pour quel type de business c'est fait ?", "acceptedAnswer": { "@type": "Answer", "text": "Dropshipping, e-commerce, coachs, infoproduits, agences SMMA, comptes de niche faceless, affiliation… Dès que tu as besoin de publier beaucoup de contenu vidéo régulièrement sans te filmer, AvatarAds est fait pour toi." } },
         { "@type": "Question", "name": "Comment accéder à l'interface gratuitement ?", "acceptedAnswer": { "@type": "Answer", "text": "Il te suffit de créer un compte — par e-mail ou avec Google, sans carte bancaire. Tu passes à un plan quand tu veux générer et publier tes vidéos, résiliable en 1 clic et sans engagement." } }
@@ -481,7 +481,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 
       <!-- PromptBar → ouvre le sélecteur de modèle (funnel : modèle → connexion → studio → paywall) -->
       <div class="rise" style="position:relative;margin-top:30px;max-width:600px;width:100%">
-        <button type="button" onclick="openModelPicker()" onmouseenter="window.preloadModelPicker&&preloadModelPicker()" onfocus="window.preloadModelPicker&&preloadModelPicker()" ontouchstart="window.preloadModelPicker&&preloadModelPicker()" aria-label="Choisir un modèle" class="row" style="position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
+        <button type="button" onclick="openModelPicker()" aria-label="Choisir un modèle" class="row" style="position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
           <span class="pb-ico" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
           </span>
@@ -630,7 +630,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="genVid" src="assets/lp/generateur-lp.mp4" poster="assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="metadata" aria-label="Démo Générateur : un avatar, ta voix, un style de sous-titres — la vidéo est prête" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="genVid" src="assets/lp/generateur-lp.mp4" poster="assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" aria-label="Démo Générateur : un avatar, ta voix, un style de sous-titres — la vidéo est prête" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -649,7 +649,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="imagesIaVid" src="assets/lp/images-ia-lp.mp4" poster="assets/lp/images-ia-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="metadata" aria-label="Démo Images IA : depuis Claude, un produit devient des dizaines de pubs produit et de l'UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="imagesIaVid" src="assets/lp/images-ia-lp.mp4" poster="assets/lp/images-ia-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" aria-label="Démo Images IA : depuis Claude, un produit devient des dizaines de pubs produit et de l'UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
     </div>
@@ -660,7 +660,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="veoVid" src="assets/lp/express-lp.mp4" poster="assets/lp/express-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="metadata" aria-label="Démo Express : un prompt, plusieurs vidéos générées" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="veoVid" src="assets/lp/express-lp.mp4" poster="assets/lp/express-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" aria-label="Démo Express : un prompt, plusieurs vidéos générées" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -865,7 +865,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   <div class="col" style="gap:12px" id="faq-list">
     <div class="faq-item open"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">C'est quoi AvatarAds, concrètement ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Un générateur de vidéos faceless : tu écris (ou laisses l'IA écrire) un script, tu choisis un avatar IA et une voix, et l'outil produit une vidéo verticale (TikTok, Reels, Shorts) prête à poster en quelques minutes — sans jamais montrer ton visage ni filmer quoi que ce soit.</div></div>
     <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Est-ce qu'on voit que c'est une IA ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Non, et c'est tout l'intérêt. Le lipsync et la voix sont ultra-réalistes : la grande majorité des spectateurs ne font pas la différence avec un vrai créateur face caméra. Tes vidéos restent naturelles et engageantes.</div></div>
-    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Je n'ai pas une belle voix / je n'aime pas parler. Ça marche quand même ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Oui. Tu enregistres 30 secondes d'audio (ou tu importes un fichier) et ton avatar parle avec ta voix — l'IA nettoie automatiquement le son (bruit de fond, volume, silences). Pas besoin d'une voix de pro ni de parler face caméra.</div></div>
+    <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Quels outils sont inclus dans AvatarAds ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Tout est au même endroit : le Générateur (avatar IA + ta voix + sous-titres animés), Express (une vidéo depuis un simple texte), Motion Control (anime une image fixe), Images IA (visuels et pubs produit en 4K), Montage IA (ton audio devient une vidéo montée) et le nettoyage audio — plus un éditeur. Une seule interface, un seul abonnement, au lieu d'empiler cinq outils séparés.</div></div>
     <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">En combien de temps j'ai ma première vidéo ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Environ 2 minutes. Tu décris ta vidéo, l'IA génère l'avatar, la voix et les sous-titres, puis tu exportes en 9:16 prêt à publier. La plupart des créateurs produisent 3 à 5 vidéos par jour.</div></div>
     <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Pour quel type de business c'est fait ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Dropshipping, e-commerce, coachs, infoproduits, agences SMMA, comptes de niche faceless, affiliation… Dès que tu as besoin de publier beaucoup de contenu vidéo régulièrement sans te filmer, AvatarAds est fait pour toi.</div></div>
     <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')"><span style="font-weight:600;font-size:16px">Comment accéder à l'interface gratuitement ?</span><span class="faq-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7.5 2v11M2 7.5h11"/></svg></span></button><div class="faq-a">Il te suffit de créer un compte — par e-mail ou avec Google, sans carte bancaire. Tu passes à un plan quand tu veux générer et publier tes vidéos, résiliable en 1 clic et sans engagement.</div></div>
@@ -912,33 +912,33 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           Crée des vidéos faceless virales avec l'IA : avatar, ta voix, sous-titres — sans caméra. Une question ? Notre équipe est disponible pour t'aider.
         </p>
       </div>
-      <div>
-        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Aide</div>
+      <details class="foot-col">
+        <summary>Aide</summary>
         <div class="col" style="gap:12px">
           <a href="mailto:contact@avatarads.fr" class="muted foot-link" style="font-size:14px">Nous contacter</a>
           <a href="/app/" class="muted foot-link" style="font-size:14px">Accéder à l'outil</a>
           <a href="/claude.html" class="muted foot-link" style="font-size:14px">Connecter Claude</a>
         </div>
-      </div>
-      <div>
-        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Outils</div>
+      </details>
+      <details class="foot-col">
+        <summary>Outils</summary>
         <div class="col" style="gap:12px">
           <a href="/express.html" class="muted foot-link" style="font-size:14px">Express</a>
           <a href="/image-ia.html" class="muted foot-link" style="font-size:14px">Image IA</a>
           <a href="/motion-control.html" class="muted foot-link" style="font-size:14px">Motion Control</a>
           <a href="/montage-ia.html" class="muted foot-link" style="font-size:14px">Montage IA</a>
         </div>
-      </div>
-      <div>
-        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Entreprise</div>
+      </details>
+      <details class="foot-col">
+        <summary>Entreprise</summary>
         <div class="col" style="gap:12px">
           <a href="/app/" class="muted foot-link" style="font-size:14px">Parrainage</a>
           <a href="/tarifs.html" class="muted foot-link" style="font-size:14px">Tarification</a>
           <a href="/a-propos.html" class="muted foot-link" style="font-size:14px">À propos</a>
         </div>
-      </div>
-      <div>
-        <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Ressources</div>
+      </details>
+      <details class="foot-col">
+        <summary>Ressources</summary>
         <div class="col" style="gap:12px">
           <a href="/creer-video-ia.html" class="muted foot-link" style="font-size:14px">Créer une vidéo avec l'IA</a>
           <a href="/ugc-ia.html" class="muted foot-link" style="font-size:14px">Vidéos UGC par IA</a>
@@ -948,7 +948,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
           <a href="/meilleur-generateur-avatar-ia.html" class="muted foot-link" style="font-size:14px">Meilleur générateur avatar IA</a>
           <a href="/avatarads-vs-arcads.html" class="muted foot-link" style="font-size:14px">AvatarAds vs Arcads</a>
         </div>
-      </div>
+      </details>
       <div>
         <div style="color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px">Mentions légales</div>
         <div class="col" style="gap:12px">
@@ -966,7 +966,22 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 <style>
 .foot-link{transition:.15s;text-decoration:underline;text-decoration-color:transparent}
 .foot-link:hover{color:var(--text);text-decoration-color:var(--text-3)}
-@media (max-width:760px){ .foot-grid{grid-template-columns:1fr !important;gap:32px !important} footer .wrap{padding-top:44px} }
+/* Colonnes de liens du footer en accordéon : figées OUVERTES en desktop, REPLIABLES sur mobile (footer moins long) */
+.foot-col{min-width:0}
+.foot-col>summary{color:var(--violet);font-weight:700;font-size:16px;margin-bottom:16px;list-style:none;cursor:pointer}
+.foot-col>summary::-webkit-details-marker{display:none}
+@media (min-width:761px){ .foot-col>summary{cursor:default;pointer-events:none} .foot-col>*:not(summary){display:block !important} }
+@media (max-width:760px){
+  .foot-grid{grid-template-columns:1fr !important;gap:0 !important} footer .wrap{padding-top:44px}
+  .foot-grid>div:first-child{margin-bottom:20px}
+  .foot-col{border-top:1px solid var(--border)}
+  .foot-col>summary{display:flex;align-items:center;justify-content:space-between;margin:0;padding:16px 2px}
+  .foot-col[open]>summary{padding-bottom:8px}
+  .foot-col>summary::after{content:'+';font-size:22px;font-weight:400;color:var(--violet)}
+  .foot-col[open]>summary::after{content:'−'}
+  .foot-col .col{padding:0 2px 16px}
+  .foot-grid>div:last-child{border-top:1px solid var(--border);padding-top:18px}
+}
 /* mobile : les étoiles décoratives chevauchaient le titre « Tout en un » (colonne unique, texte à gauche) */
 @media (max-width:760px){ .lp-sparkles{display:none !important} }
 /* ── LP · Features, mobile (handoff §5) ─────────────────────────────────────
@@ -1336,11 +1351,14 @@ revealScan();
   });
   var mp=document.getElementById('modelPicker'), card=document.getElementById('modelPickerCard');
   var _preloaded=false;
-  // Précharge les vidéos dès que l'utilisateur montre l'INTENTION d'ouvrir (survol/focus/touch du bouton),
-  // au lieu de lancer 6 téléchargements d'un coup au moment du clic → l'ouverture est fluide.
-  window.preloadModelPicker=function(){ if(_preloaded) return; _preloaded=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.preload='auto'; }catch(e){} }); };
-  // Axel 05/09 : précharge les vidéos AU REPOS après le chargement de la LP → prêtes dès l'ouverture
-  // du menu (clic = affichage immédiat), sans pénaliser le LCP (l'idle callback passe après le critique).
+  // Précharge (et met vraiment en tampon) les vidéos du menu « Choisis un modèle ». Elles sont
+  // display:none et NE jouent PAS → v.load() est sûr ici : il ne fige rien, contrairement au reset
+  // d'une vidéo visible en cours de lecture (c'est ce v.load()-là qui figeait les démos sur iOS).
+  window.preloadModelPicker=function(){ if(_preloaded) return; _preloaded=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.preload='auto'; v.load(); }catch(e){} }); };
+  // Axel 05/09 : on précharge le menu AU REPOS, après le chargement complet de la LP (idle) → il est
+  // prêt dès l'ouverture (clic = affichage immédiat). Les 3 démos plus haut (preload=auto + autoplay)
+  // gardent la priorité ; l'idle callback passe après le critique → aucun impact LCP.
+  window.addEventListener('load',function(){ (window.requestIdleCallback||function(f){setTimeout(f,1400);})(function(){ try{ window.preloadModelPicker(); }catch(e){} }); });
   // Verrou de scroll robuste (position:fixed sur body) : sur iOS Safari, body{overflow:hidden}
   // ne bloque PAS le scroll du document → le fond glissait derrière le menu. On fige le body à
   // sa position et on la restaure à la fermeture. Plus aucun « slider derrière ».
