@@ -140,13 +140,17 @@ async function refreshAll(): Promise<State[]> {
   return states
 }
 const pub = (s: State) => ({ provider: s.provider, ok: s.ok, balance: s.balance, total: s.total ?? null, unit: s.unit, level: s.level, at: s.at, error: s.error })
+// Vue UTILISATEUR (audit 05/09, L3) : un membre n'a besoin que de « ça marche / dégradé », jamais des
+// soldes fournisseurs (renseignement business) ni des messages d'erreur internes.
+const pubUser = (s: State) => ({ provider: s.provider, ok: s.ok, level: s.level, at: s.at })
+const timingSafeEqual = (a: string, b: string) => { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   const auth = req.headers.get('authorization') || ''
   const token = auth.replace(/^Bearer\s+/i, '')
   const role = (() => { try { const p = token.split('.')[1]; const b = p.replace(/-/g, '+').replace(/_/g, '/'); return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '') } catch { return '' } })()
-  const isCron = !!CRON_SECRET && req.headers.get('x-cron-key') === CRON_SECRET
+  const isCron = !!CRON_SECRET && timingSafeEqual(req.headers.get('x-cron-key') || '', CRON_SECRET)
   const isService = role === 'service_role'
 
   if (req.method === 'POST') {
@@ -169,5 +173,6 @@ Deno.serve(async (req) => {
   if (!cur || (Date.now() - new Date(cur.at).getTime()) > FRESH_MS) { await refreshAll(); states = await readStates() }
   if (isService && url.searchParams.get('all') === '1') return json({ providers: PROVIDERS.map(p => states[p.key]).filter(Boolean).map(pub) })
   const s = states[want.key]
-  return json(s ? pub(s) : { provider: want.id, ok: true, balance: null, level: 'ok', at: null })
+  if (isService) return json(s ? pub(s) : { provider: want.id, ok: true, balance: null, level: 'ok', at: null })
+  return json(s ? pubUser(s) : { provider: want.id, ok: true, level: 'ok', at: null })
 })

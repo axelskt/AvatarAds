@@ -3,25 +3,18 @@
 // Hedra plafonnait nos générations à 720p (résolution codée en dur côté app).
 // La clé fal reste dans les secrets Supabase (FAL_KEY) — jamais exposée au client.
 //
-// Sécurité : même contrat que hedra-proxy — JWT utilisateur obligatoire (la clé anon
-// seule ne suffit pas), sauf pour ?path=/health qui ne renvoie qu'un booléen.
-//
 // Appels :
-//   GET  ?path=/health                       → { ok, hasKey } (diagnostic, sans session)
-//   POST ?path=/fal-ai/bytedance/omnihuman/v1.5   (JSON → soumet dans la file d'attente)
-//   GET  ?path=/requests/<id>/status         → statut d'une génération
-//   GET  ?path=/requests/<id>                → résultat (URL de la vidéo)
+//   GET  ?path=/health                            → { ok, hasKey } (diagnostic, sans session)
+//   POST ?path=/fal-ai/<modèle>                   → SOUMISSION dans la file (FACTURANT)
+//   GET  ?path=/fal-ai/<modèle>/requests/<id>[/status] → statut / résultat (non facturant)
+//   GET  ?path=/requests/<id>[/status]            → idem, forme courte
+//
+// Sécurité (audit 05/09) : session utilisateur obligatoire (moteur de rendu = service_role) ;
+// `?path=` validé (allowlist, jamais d'`@`/`..`) ; soumissions plafonnées par utilisateur + preuve de
+// débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-}
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -31,80 +24,63 @@ const readKey = () => {
   for (const n of KEY_NAMES) { const v = Deno.env.get(n); if (v) return { name: n, value: v } }
   return { name: '', value: '' }
 }
+// /fal-ai/<owner>/<model>[/sub…] pour les soumissions et le polling ; /requests/<id>[/status] forme courte
+const ALLOW = /^\/(fal-ai\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*|requests\/[A-Za-z0-9-]+(\/status)?)$/
+const IS_POLL = /\/requests\/[A-Za-z0-9-]+(\/status)?$/
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  if (req.method !== 'POST' && req.method !== 'GET') return jsonRes(405, { error: 'method_not_allowed' })
 
   const url = new URL(req.url)
-  const path = url.searchParams.get('path') ?? '/'
+  const rawPath = url.searchParams.get('path') ?? '/'
   const { name: keyName, value: falKey } = readKey()
 
   // ── diagnostic : dit SI la clé existe, jamais sa valeur ──
-  if (path === '/health') {
-    return json({ ok: true, hasKey: !!falKey, found: keyName || null, checked: KEY_NAMES, keyLength: falKey ? falKey.length : 0 })
+  if (rawPath === '/health') {
+    return jsonRes(200, { ok: true, hasKey: !!falKey, found: keyName || null, checked: KEY_NAMES, keyLength: falKey ? falKey.length : 0 })
   }
+  if (!falKey) return jsonRes(500, { error: 'Aucune clé fal.ai dans les secrets Supabase (attendu : FALAI_API_KEY)' })
 
-  if (!falKey) return json({ error: 'Aucune clé fal.ai dans les secrets Supabase (attendu : FALAI_API_KEY)' }, 500)
+  const v = safePath(rawPath, ALLOW)
+  if (!v.ok) return jsonRes(400, { error: 'path refusé : ' + v.reason })
+  const path = v.path
+  const isSubmit = req.method === 'POST' && !IS_POLL.test(path.split('?')[0])
 
-  // ── session utilisateur obligatoire (comme hedra-proxy) — SAUF le moteur de
-  //    rendu / le backend Motion Control, qui présente un jeton service_role
-  //    (jamais exposé au client). Le gateway Supabase a DÉJÀ vérifié la
-  //    signature du jeton (verify_jwt actif) : si role==='service_role', il est
-  //    authentique et personne ne peut le forger sans le secret du projet. ──
-  const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '').trim()
-  if (!token) return json({ error: 'Unauthorized — token manquant' }, 401)
+  // ── session utilisateur obligatoire — SAUF le moteur de rendu / backend Motion Control (service_role,
+  //    jeton déjà vérifié par la passerelle et impossible à forger sans le secret du projet) ──
+  const auth = await authUser(req)
+  if (!auth.token) return jsonRes(401, { error: 'Unauthorized — token manquant' })
+  if (!auth.isService && !auth.userId) return jsonRes(401, { error: 'Unauthorized — session invalide ou expirée' })
 
-  const roleDuJeton = (() => {
-    try {
-      const p = token.split('.')[1]; if (!p) return ''
-      const b = p.replace(/-/g, '+').replace(/_/g, '/')
-      return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '')
-    } catch { return '' }
-  })()
-  if (roleDuJeton !== 'service_role') {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: `Bearer ${token}` } } },
-    )
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) return json({ error: 'Unauthorized — session invalide ou expirée' }, 401)
-
-    // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite ──
-    // Le verrou côté client ne suffit pas (n'importe quel user authentifié pourrait forger
-    // le chemin v3, plus cher : 0,168 $/s). On vérifie le plan en base sur les SOUMISSIONS
-    // (POST) vers un chemin Kling v3. Motion 2.6 (v2.6) et les autres modèles ne sont pas touchés.
-    if (req.method === 'POST' && /\/fal-ai\/kling-video\/v3\//i.test(path)) {
-      const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).single()
-      const plan = String(prof?.plan || 'free').toLowerCase()
-      if (!['pro', 'elite', 'developer'].includes(plan)) {
-        return json({ error: 'Motion 3.0 (Kling 3.0) est réservé aux plans Pro et Élite.' }, 403)
+  if (!auth.isService && auth.userId) {
+    // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite (0,168 $/s) ──
+    if (isSubmit && /\/fal-ai\/kling-video\/v3\//i.test(path)) {
+      const { plan, isOwner } = await userPlan(auth.userId)
+      if (!isOwner && !['pro', 'elite', 'developer'].includes(plan)) {
+        return jsonRes(403, { error: 'Motion 3.0 (Kling 3.0) est réservé aux plans Pro et Élite.' })
       }
     }
+    const gate = isSubmit
+      ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, rateMax: 40, label: path })
+      : await helperGate(auth.userId, 'fal', 300)   // polling ~2 s pendant une génération
+    if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
   // ── relais vers fal ──
   try {
-    const target = `${FAL_QUEUE}${path.startsWith('/') ? path : '/' + path}`
-    const init: RequestInit = {
-      method: req.method,
-      headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
-    }
+    const target = `${FAL_QUEUE}${path}`
+    const init: RequestInit = { method: req.method, headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' } }
     if (req.method === 'POST') init.body = await req.text()
-
     const res = await fetch(target, init)
     const text = await res.text()
-
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {
-      return json({ error: 'Crédits fal.ai épuisés — recharge le compte fal', falStatus: res.status, detail: text.slice(0, 300) }, 402)
+      return jsonRes(402, { error: 'Crédits fal.ai épuisés — recharge le compte fal', falStatus: res.status })
     }
-    return new Response(text, {
-      status: res.status,
-      headers: { ...CORS, 'Content-Type': res.headers.get('content-type') ?? 'application/json' },
-    })
+    return new Response(text, { status: res.status, headers: { ...CORS, 'Content-Type': res.headers.get('content-type') ?? 'application/json' } })
   } catch (err) {
     console.error('fal-proxy error:', err)
-    return json({ error: String((err as Error)?.message || err).slice(0, 300) }, 500)
+    return jsonRes(502, { error: 'upstream_error' })
   }
 })

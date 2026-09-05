@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<script>/* audit 05/09 (L8) — anti-clickjacking : l'app (auth + paiement) ne doit jamais être encadrée. GitHub Pages ne pose pas d'en-tête X-Frame-Options → filet JS. */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
@@ -6061,6 +6062,13 @@ const REMOVEBG_PROXY = SUPABASE_URL + '/functions/v1/removebg-proxy';
 
 // Helper : retourne l'Authorization header avec le JWT de l'user connecté
 // Sans JWT valide → le proxy refusera la requête (401)
+// ── Échappement (audit 05/09, L6) : les champs de bibliothèque (nom, style, tags, date…) sont interpolés
+//    dans innerHTML ; sans échappement un nom malicieux devient du script (XSS stocké → vol du jeton en
+//    localStorage). _safeUrl n'accepte que http(s)/blob/data:image ; _safeCss borne une couleur/dégradé.
+function _escH(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function _safeUrl(u){ const s=String(u||'').trim(); return /^(https?:\/\/|blob:|data:image\/(png|jpe?g|webp|gif);base64,)/i.test(s) ? s.replace(/"/g,'%22') : ''; }
+function _safeCss(v){ const s=String(v||''); return (/^[#a-zA-Z0-9(),.%\s\-\/]*$/.test(s) && !/url|expression|javascript|import/i.test(s)) ? s : ''; }
+
 async function getAuthHeader(){
   const { data: { session } } = await sb.auth.getSession();
   const token = session?.access_token || SUPABASE_KEY; // fallback anon si pas de session
@@ -8418,14 +8426,11 @@ function buyImageCredits(pack){
   _whopCheckout(url);
 }
 
-// Appelée par le webhook Stripe après paiement confirmé (ou par l'admin)
-async function _addImgBonusCredits(qty){
-  if(!currentMember){ toast('Non connecté'); return; }
-  const newVal = Math.max(0, (window._imgBonusCreditsCache || 0) + qty);
-  window._imgBonusCreditsCache = newVal;
-  await sb.from('profiles').update({ img_bonus_credits: newVal }).eq('id', currentMember.id);
-  _updateImgQuotaLabel();
-  toast('+' + qty + ' crédits images ajoutés !');
+// Audit 05/09 (M1) : le solde d'images ne se modifie JAMAIS depuis le client — seul le webhook Whop
+// (côté serveur, whop-webhook) crédite img_bonus_credits. Le grant UPDATE n'existe d'ailleurs pas pour
+// `authenticated` sur cette colonne (vérifié en prod) : cette fonction était un code mort trompeur.
+async function _addImgBonusCredits(_qty){
+  toast('Les crédits images sont ajoutés automatiquement après paiement.');
 }
 
 // ── Utiliser l'image générée comme avatar directement ──
@@ -8891,7 +8896,7 @@ async function affSubmitPayout(){
       toast(msgs[data&&data.error]||'Demande refusée'); return;
     }
     // notification (même canal que les suggestions) — Axel paie à la main le 1er du mois
-    try{ await fetch(BUG_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'payout', date:new Date().toLocaleString('fr-FR'), user:(currentMember&&currentMember.email)||'', title:'💶 Demande de virement parrainage — '+(amount/100).toFixed(2)+' €', description:'Montant : '+(amount/100).toFixed(2)+' €\nTitulaire : '+holder+'\nIBAN : '+iban+'\nE-mail : '+email+'\nID demande : '+data.id }) }); }catch(_){}
+    try{ await fetch(BUG_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json', ...(await getAuthHeader())}, body: JSON.stringify({ type:'payout', date:new Date().toLocaleString('fr-FR'), user:(currentMember&&currentMember.email)||'', title:'💶 Demande de virement parrainage — '+(amount/100).toFixed(2)+' €', description:'Montant : '+(amount/100).toFixed(2)+' €\nTitulaire : '+holder+'\nIBAN : '+iban+'\nE-mail : '+email+'\nID demande : '+data.id }) }); }catch(_){}
     affClosePayout(); toast('Demande envoyée — virement le 1er du mois');
     affRefreshSummary();
   }catch(e){ toast('Erreur : '+(e.message||e)); }
@@ -23349,6 +23354,10 @@ async function startGeneration(){
       // Si le surcoût 1080p ne passe pas, l'avatar déjà débité doit repartir (sinon perte). #122
       if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))){ try{ await creditsFlowRefund('crédits insuffisants pour le 1080p'); }catch(_){} return; }
     }
+    // Audit 05/09 : montant à RE-DÉBITER si l'utilisateur relance après un échec (retryHedraAuto). Avant, le
+    // nouvel essai était GRATUIT : le 1er débit avait été remboursé et le retry ne débitait rien.
+    results._retryCost = (_rate > 0 ? Math.max(1, Math.ceil(durSecs * _rate)) : 0)
+      + ((typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0);
   }
 
   step=5; updateSteps();
@@ -24077,6 +24086,13 @@ async function retryHedraAuto(btn){
         const cleanUrl = await _getOrBuildCleanBlobUrl();
         if(cleanUrl) retryAudioBlob = await fetch(cleanUrl).then(r => r.blob());
       } catch(e){ console.warn('Silence clean for retry failed:', e); }
+    }
+    // Audit 05/09 : le nouvel essai se RE-DÉBITE (même montant que la génération d'origine) — callHedra
+    // rembourse lui-même en cas d'échec fournisseur.
+    const _rc = Number(results._retryCost) || 0;
+    if(_rc > 0){
+      creditsFlowBegin();
+      if(!(await spendCreditsFor(_rc, 'avatar (nouvel essai)'))){ if(btn){ btn.textContent=origText; btn.disabled=false; } return; }
     }
     const url = await callHedra(retryAudioBlob);
     if(url){
@@ -26700,16 +26716,16 @@ function renderLibrary(){
     // Image card
     if(v.type==='image'){
       return `<div class="vid-card" style="cursor:pointer" onclick="_libImgAction('open',${v._idx})">
-        <div class="vid-thumb" style="background:${v.bg};overflow:hidden;padding:0">
-          <img src="${v.imgUrl}" data-libidx="${v._idx}" ${v.idbKey?`data-libfull="${v.idbKey}"`:''} ${v.srvPath?`data-libsrv="${v.srvPath}"`:''} style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
+        <div class="vid-thumb" style="background:${_safeCss(v.bg)};overflow:hidden;padding:0">
+          <img src="${_safeUrl(v.imgUrl)}" data-libidx="${v._idx}" ${v.idbKey?`data-libfull="${_escH(v.idbKey)}"`:''} ${v.srvPath?`data-libsrv="${_escH(v.srvPath)}"`:''} style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
           <div class="vid-overlay"></div>
-          <div class="vid-badge">${v.style}</div>
+          <div class="vid-badge">${_escH(v.style)}</div>
           ${_delBtn('img', v._idx)}
           ${_favBtn('img', v._idx, v.fav)}
         </div>
         <div class="vid-meta">
-          <div class="vid-title">${v.name || 'Sans titre'}</div>
-          <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}${_libExpTag(v)}</div>
+          <div class="vid-title">${_escH(v.name) || 'Sans titre'}</div>
+          <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${_escH(t)}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${_escH(v.date)}</span>`:''}${_libExpTag(v)}</div>
           <div style="display:flex;gap:5px;margin-top:6px">
             <button onclick="event.stopPropagation();_libImgAction('download',${v._idx})" title="Télécharger" style="flex:1;padding:6px 0;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:7px;color:var(--accent-2);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(255,90,31,.22)'" onmouseout="this.style.background='var(--accent-soft)'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Télécharger</button>
           </div>
@@ -26720,17 +26736,17 @@ function renderLibrary(){
     if(v.type==='audio'){
       const ri = v._realIdx;
       return `<div class="vid-card">
-        <div class="vid-thumb" style="background:${v.bg};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+        <div class="vid-thumb" style="background:${_safeCss(v.bg)};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
           <!-- #audio-icone · la waveform étirée (160×60 → plein cadre) pixélisait ; on garde juste l'icône propre et centrée (retour Axel « screen 6 parfait ») -->
           <div class="lib-emoji" style="z-index:2;position:relative;color:var(--text2);opacity:.85"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 9v6"/></svg></div>
           <div class="vid-overlay" style="z-index:3"></div>
-          <div class="vid-badge" style="z-index:4">${v.style}</div>
+          <div class="vid-badge" style="z-index:4">${_escH(v.style)}</div>
           <div style="z-index:5">${_delBtn('lib', ri)}</div>
           <div style="z-index:5">${_favBtn('lib', ri, v.fav)}</div>
         </div>
         <div class="vid-meta">
-          <div class="vid-title">${v.name || 'Sans titre'}</div>
-          <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}${_libExpTag(v)}</div>
+          <div class="vid-title">${_escH(v.name) || 'Sans titre'}</div>
+          <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${_escH(t)}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${_escH(v.date)}</span>`:''}${_libExpTag(v)}</div>
           <div style="display:flex;gap:5px;margin-top:7px">
             <button id="libAudioPlay_${ri}" onclick="event.stopPropagation();_libPlayAudio(${ri},this)" style="padding:7px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶</button>
             <button onclick="event.stopPropagation();_libDownloadMedia(${ri},'audio')" style="flex:1;padding:7px 6px;background:linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:8px;color:var(--orange2);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s" onmouseover="this.style.background='rgba(255,107,53,0.22)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(255,107,53,0.15),rgba(255,107,53,0.08))'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
@@ -26742,18 +26758,18 @@ function renderLibrary(){
     const ri = v._realIdx;
     const _hasVid = v.hedraIdbKey || v.srvPath;   // #65 · local (IDB) OU serveur (Storage)
     return `<div class="vid-card">
-      <div class="vid-thumb" style="background:${v.bg};cursor:${_hasVid?'pointer':'default'};position:relative;overflow:hidden" onclick="${_hasVid?`event.stopPropagation();_libPreviewVideo(${ri})`:''}">
+      <div class="vid-thumb" style="background:${_safeCss(v.bg)};cursor:${_hasVid?'pointer':'default'};position:relative;overflow:hidden" onclick="${_hasVid?`event.stopPropagation();_libPreviewVideo(${ri})`:''}">
         ${_hasVid ? `<img id="lib-thumb-${ri}" data-lib-vid="${ri}" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1" alt="">` : ''}
-        <div class="lib-emoji" style="font-size:40px;z-index:2;position:relative">${v.emo}</div>
+        <div class="lib-emoji" style="font-size:40px;z-index:2;position:relative">${_escH(v.emo)}</div>
         ${_hasVid ? `<div style="position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
         <div class="vid-overlay" style="z-index:4"></div>
-        <div class="vid-badge" style="z-index:5">${v.style}</div>
+        <div class="vid-badge" style="z-index:5">${_escH(v.style)}</div>
         <div style="z-index:6">${_delBtn('lib', ri)}</div>
         <div style="z-index:6">${_favBtn('lib', ri, v.fav)}</div>
       </div>
       <div class="vid-meta">
-        <div class="vid-title">${v.name || 'Sans titre'}</div>
-        <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${t}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${v.date}</span>`:''}${_libExpTag(v)}</div>
+        <div class="vid-title">${_escH(v.name) || 'Sans titre'}</div>
+        <div class="vid-tags">${v.tags.map(t=>`<span class="vid-tag">${_escH(t)}</span>`).join('')}${v.date?`<span class="vid-tag" style="opacity:.6">${_escH(v.date)}</span>`:''}${_libExpTag(v)}</div>
         <div class="vid-status"><span id="lib-dur-${ri}" style="font-size:10px;font-family:var(--mono);color:var(--text3)"></span></div>
         ${_hasVid ? `
         <div style="display:flex;gap:5px;margin-top:7px">
@@ -27677,7 +27693,9 @@ function stopResize(){
 }
 
 // ── BUG REPORT ──
-const BUG_WEBHOOK = 'https://hook.eu1.make.com/85nubik4r7qgsm54j4qpjo3kd2skzcjr';
+// Audit 05/09 (M6) : l'URL Make était codée en dur ici (non authentifiée, 1000 ops/mois, recevait des IBAN).
+// Désormais on passe par la fonction `notify` (session obligatoire, plafond par user, URL Make en secret serveur).
+const BUG_WEBHOOK = SUPABASE_URL + '/functions/v1/notify';
 let _bugScreenshotB64 = null;
 
 function openBugReport(){
@@ -27749,7 +27767,7 @@ async function submitBugReport(){
   } catch(_){}
   // 2) Webhook Make (historique) — best effort, réponse non-JSON parfois → on ignore.
   try {
-    await fetch(BUG_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_payload) });
+    await fetch(BUG_WEBHOOK, { method:'POST', headers:{'Content-Type':'application/json', ...(await getAuthHeader())}, body: JSON.stringify(_payload) });
   } catch(e){ /* ignore */ }
   btn.disabled = false;
   btn.textContent = 'Envoyer';
@@ -28655,6 +28673,13 @@ async function _mcGenerate(){
   if((window._mcRefDur||0) < 1){ toast('Vidéo de référence trop courte (1 s minimum) — en dessous de 3 s elle sera prolongée automatiquement'); return; }
   const cost=rate*dur;
   const b64ToBlob=(b64)=>{ const [meta,data]=String(b64).split(','); const mime=(meta.match(/:(.*?);/)||[])[1]||'application/octet-stream'; const bin=atob(data); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); };
+  // ── Audit 05/09 (H3) : DÉBIT AVANT l'appel fournisseur (règle du projet — credits-securite), remboursé par
+  //    le catch global si Kling ou le pipeline échoue. Avant, le débit n'arrivait qu'au SUCCÈS Kling : un appel
+  //    direct au proxy (hors app) = Kling gratuit. Motion 3.0 = motion30PerSec ; 2.6 = 2 cr/s ; si Motion 3.0
+  //    retombe sur 2.6 (faux positif de modération) on refacture au tarif 2.6 pro, plus bas (voir plus loin).
+  const _mcPreRate = tier==='pro' ? CREDIT_COSTS.motion30PerSec : 2;
+  creditsFlowBegin();
+  if(!(await spendCreditsFor(_mcPreRate*dur,'motion'))) return;
   try{
     _mcProg('Envoi des fichiers…', 6);
     const { data:{ user } } = await sb.auth.getUser();
@@ -28822,18 +28847,27 @@ async function _mcGenerate(){
         out=await runKling('v2.6');
       } else throw e;
     }
-    // Débit au succès (jamais avant). Motion 2.6 (standard) = 2 cr/s (720p) ; Motion 3.0 (pro) = motion30PerSec (1080p natif).
-    // Si Motion 3.0 a basculé sur 2.6 (faux positif de modération) on facture le tarif 2.6 pro (4 cr/s), pas le tarif 3.0.
-    // Le +1 cr/s du 1080p Motion 2.6 n'est facturé QUE si l'upscale Topaz réussit.
+    // Tarif effectif : Motion 2.6 (standard) = 2 cr/s ; Motion 3.0 (pro) = motion30PerSec ; 3.0 retombé sur 2.6 = 4 cr/s.
+    // Le débit a eu lieu AVANT Kling (audit 05/09) ; si le tarif effectif diffère (repli 2.6), on refacture.
     const baseRate = tier==='pro' ? (_mcVer==='v3' ? CREDIT_COSTS.motion30PerSec : 4) : 2;
-    if(typeof spendCreditsFor==='function'){ await spendCreditsFor(baseRate*dur,'motion'); }
+    if(baseRate !== _mcPreRate){
+      try{ await creditsFlowRefund('reprise en Kling 2.6 — refacturation au tarif 2.6'); }catch(_){}
+      creditsFlowBegin();
+      await spendCreditsFor(baseRate*dur,'motion');
+    }
     // 1080p depuis Standard : Kling sort en 720p → upscale Topaz vers 1080p.
+    // +1 cr/s : débité AVANT l'upscale ; SEUL ce supplément est remboursé si Topaz échoue (le rendu Kling reste dû).
     if(tier!=='pro' && q==='1080'){
-      try{
-        _mcProg('Upscale 1080p (Topaz)…', 90);
-        out = await _mcUpscaleTopaz(out, H);
-        if(typeof spendCreditsFor==='function'){ await spendCreditsFor(dur,'motion-topaz'); }
-      }catch(e){ console.error('topaz:',e); toast('Upscale 1080p indispo — 720p livré'); }
+      const _opsAvantTopaz=_creditOps.length;
+      if(await spendCreditsFor(dur,'motion-topaz')){
+        try{
+          _mcProg('Upscale 1080p (Topaz)…', 90);
+          out = await _mcUpscaleTopaz(out, H);
+        }catch(e){
+          console.error('topaz:',e); toast('Upscale 1080p indispo — 720p livré');
+          try{ const tops=_creditOps.splice(_opsAvantTopaz); const reste=_creditOps; _creditOps=tops; await creditsFlowRefund('l\'upscale 1080p a échoué'); _creditOps=reste; }catch(_){}
+        }
+      } else toast('Upscale 1080p non débité — 720p livré');
     }
     // ── LOT7/LOT MC · FOND = VRAIE VIDÉO D'ORIGINE, ANIMÉE (v2, 28/08) ──────────
     // Le chemin frame-figée AVANT Kling (plus haut) est conservé : il cale la lumière
@@ -28968,9 +29002,15 @@ async function _mcGenerate(){
       catch(e){ console.error('split:',e); toast('Composition split indispo — plein écran fourni'); finalMode='full'; }
     }
     _mcProg('Terminé', 100);
+    creditsFlowDone();   // livré → plus rien à rembourser
     // #140 · en split, le plein écran (sortie Kling) reste accessible en secours
     _mcShowResult(finalUrl, finalMode, finalMode!=='full' ? out : null);
-  }catch(e){ _mcProgHide(); toast('Motion Control : '+(e && e.message ? e.message : e)); }
+  }catch(e){
+    _mcProgHide();
+    // audit 05/09 : le débit a eu lieu AVANT Kling → tout échec rend les crédits de ce flux
+    try{ await creditsFlowRefund('Motion Control a échoué'); }catch(_){}
+    toast('Motion Control : '+(e && e.message ? e.message : e));
+  }
 }
 /* #139 · Une frame de la vidéo de référence (~0,6 s) → dataURL jpeg. Sert de
    fond quand « garder le fond de la vidéo d'origine » est coché : c'est le seul
@@ -29404,7 +29444,7 @@ function _expRenderImgs(){
   const wrap=document.getElementById('expImgThumbs'); if(!wrap) return;
   if(!imgs.length){ wrap.style.display='none'; wrap.innerHTML=''; _trHide(); return; }
   wrap.style.display='flex';
-  wrap.innerHTML=imgs.map((im,i)=>`<div style="position:relative;width:60px;height:60px;flex:0 0 auto"><img src="${im.url}" style="width:60px;height:60px;object-fit:cover;border-radius:16px;border:1px solid var(--border2);display:block"><span onclick="event.stopPropagation();_expRemoveImg(${i})" title="Retirer" style="position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(15,15,20,.92);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>`).join('');
+  wrap.innerHTML=imgs.map((im,i)=>`<div style="position:relative;width:60px;height:60px;flex:0 0 auto"><img src="${_safeUrl(im.url)}" style="width:60px;height:60px;object-fit:cover;border-radius:16px;border:1px solid var(--border2);display:block"><span onclick="event.stopPropagation();_expRemoveImg(${i})" title="Retirer" style="position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(15,15,20,.92);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>`).join('');
   // Toggle « transitions » (dev only, ≥2 images) : enchaîne les images en clips start→end
   const tr=document.getElementById('expTransRow');
   if(tr){

@@ -161,11 +161,14 @@ serve(async (req) => {
 
   const body = await req.text()
 
-  // Signature OBLIGATOIRE dès que le secret est configuré (sinon n'importe qui peut se créditer)
-  if (WHOP_WEBHOOK_SECRET) {
-    if (!(await verifyWebhook(req, body))) {
-      return new Response('Unauthorized', { status: 401 })
-    }
+  // Signature OBLIGATOIRE — FAIL-CLOSED (audit 05/09, M2) : sans secret configuré on ne traite RIEN,
+  // sinon n'importe qui pourrait POSTer un faux « paiement réussi » et se créditer un plan.
+  if (!WHOP_WEBHOOK_SECRET) {
+    console.error('❌ WHOP_WEBHOOK_SECRET absent — webhook refusé (fail-closed)')
+    return new Response('Webhook secret not configured', { status: 503 })
+  }
+  if (!(await verifyWebhook(req, body))) {
+    return new Response('Unauthorized', { status: 401 })
   }
 
   let event: any
@@ -348,6 +351,26 @@ serve(async (req) => {
     if (profile && profile.whop_plan_id && planId && profile.whop_plan_id !== planId) {
       console.log(`ℹ️ Renouvellement ignoré (abonnement ${planId} n'est plus l'actif de ${profile.id})`)
       return new Response('OK', { status: 200 })
+    }
+    // ── Anti DOUBLE-CRÉDIT du 1er cycle (audit 05/09, M3) : au premier achat Whop envoie DEUX événements
+    //    (activation + paiement) avec des webhook-id différents → l'idempotence par event_id ne les fusionne
+    //    pas et le paiement REPORTAIT un solde tout juste fixé par l'activation (150 → 300). Si une activation
+    //    du même abonnement / e-mail a été reçue dans les 10 dernières minutes, ce paiement est un no-op.
+    if (profile) {
+      const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString()
+      const { data: recents } = await sb.from('webhook_events').select('body').gte('received_at', tenMinAgo).limit(60)
+      const memberKey = memberId || data.id || null
+      const dupAct = (recents || []).some((e: any) => {
+        const b = e?.body || {}; const a = String(b.action ?? b.event ?? b.type ?? '').toLowerCase(); const d = b.data || {}
+        if (!/membership[._](went[._]valid|activated)/.test(a)) return false
+        const em = String(d.user?.email ?? d.member?.user?.email ?? d.customer?.email ?? d.email ?? '').toLowerCase().trim()
+        const mid = d.id ?? d.membership_id ?? d.membership?.id ?? null
+        return (memberKey && mid && String(mid) === String(memberKey)) || (email && em && em === email)
+      })
+      if (dupAct) {
+        console.log(`ℹ️ Paiement du 1er cycle déjà crédité par l'activation (${memberKey || email}) → pas de re-crédit`)
+        return new Response('OK (déjà crédité à l\'activation)', { status: 200 })
+      }
     }
     if (profile) {
       // REPORT PLAFONNÉ À 2× (03/09 — Axel) : les crédits du PLAN non consommés sont reportés au mois suivant,

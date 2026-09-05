@@ -21,7 +21,13 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
+import { safePath, billableGate, helperGate } from '../_shared/guard.ts'
+
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
+// Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
+// pas être détourné, mais on borne quand même la surface. Générations = FACTURANT (plafond + débit récent).
+const HEDRA_ALLOW = /^\/(models|assets(\/[A-Za-z0-9-]+\/upload)?|generations(\/[A-Za-z0-9-]+\/status)?|v3\/(files|models(\/[A-Za-z0-9._-]+)?|jobs(\/[A-Za-z0-9-]+(\/status)?)?|assets(\/[A-Za-z0-9-]+(\/upload)?)?))$/
+const HEDRA_BILLABLE = /^\/(generations|v3\/jobs)$/
 
 serve(async (req: Request) => {
   // Preflight
@@ -100,8 +106,22 @@ serve(async (req: Request) => {
   // HEDRA_V3_KEY. Tout le reste garde l'ancien passe-plat (web-app/public + X-API-Key +
   // HEDRA_API_KEY) → migration incrémentale, on ne casse rien.
   const url0      = new URL(req.url)
-  const hedraPath0 = url0.searchParams.get('path') ?? '/'
+  const _pv = safePath(url0.searchParams.get('path') ?? '/', HEDRA_ALLOW)
+  if (!_pv.ok) {
+    return new Response(JSON.stringify({ error: 'path refusé : ' + _pv.reason }), { status: 400, headers: { ...CORS, 'Content-Type': 'application/json' } })
+  }
+  const hedraPath0 = _pv.path
   const isV3      = hedraPath0.startsWith('/v3')
+
+  // ── Facturation (H3) : une génération = plafond par utilisateur + preuve de débit récent ; le reste
+  //    (uploads, polling) est seulement plafonné. Le moteur de rendu (service_role) passe.
+  if (!estLeMoteur && user) {
+    const bare = hedraPath0.split('?')[0]
+    const gate = (req.method === 'POST' && HEDRA_BILLABLE.test(bare))
+      ? await billableGate({ userId: user.id, proxy: 'hedra', requireDebit: true, rateMax: 30, label: bare })
+      : await helperGate(user.id, 'hedra', 300)
+    if (!gate.ok) return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+  }
 
   // ── Clé Hedra : user BYOK ou plateforme ──
   const userKey    = req.headers.get('x-user-hedra-key') ?? ''
@@ -127,8 +147,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const url       = new URL(req.url)
-    const hedraPath = url.searchParams.get('path') ?? '/'
+    const hedraPath = hedraPath0   // déjà validé (allowlist) plus haut
     const ct        = req.headers.get('content-type') ?? ''
     const base      = isV3 ? 'https://api.hedra.com' : HEDRA_BASE
     const authHeaders: Record<string, string> = isV3 ? { Authorization: `Key ${hedraKey}` } : { 'X-API-Key': hedraKey }

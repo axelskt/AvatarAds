@@ -41,6 +41,7 @@ jobs:
                 --exclude='.agents' --exclude='.claude' --exclude='.anim-check' \
                 --exclude='clips' --exclude='Musique' --exclude='stories' \
                 --exclude='deploy-orchestrate.sh' --exclude='.DS_Store' \
+                --exclude='mcp-proxy' --exclude='skills-lock.json' \
                 ./ _site/
           echo "poids publié : $(du -sh _site | cut -f1)"
       - name: Upload artifact

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { rateHit, realIp } from '../_shared/guard.ts'
 
 // ── Auth par code e-mail (OTP à 6 chiffres) ──
 // Remplace le mot de passe à l'inscription ET à la connexion.
@@ -103,7 +104,8 @@ serve(async (req) => {
       if (waitS > 0) return json(429, { error: 'cooldown', wait: waitS })
       if (recent.length >= MAX_PER_EMAIL_H) return json(429, { error: 'too_many_codes' })
     }
-    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || null
+    // IP réelle = DERNIER segment de x-forwarded-for (le premier est forgeable par le client — L2)
+    const ip = realIp(req) || null
     if (ip) {
       const { count } = await sb.from('otp_codes').select('id', { count: 'exact', head: true })
         .eq('ip', ip).gte('created_at', hourAgo)
@@ -133,24 +135,36 @@ serve(async (req) => {
     const code = (body.code || '').trim()
     if (!/^\d{6}$/.test(code)) return json(400, { error: 'wrong_code' })
 
+    // ── Anti brute-force (H1) : plafond de vérifications INDÉPENDANT du compteur par code — par e-mail
+    //    et par IP réelle — avant même de lire le code.
+    const vip = realIp(req)
+    if (!(await rateHit(`otp:verify:email:${email}`, 600, 12))) return json(429, { error: 'too_many_attempts' })
+    if (vip && !(await rateHit(`otp:verify:ip:${vip}`, 600, 40))) return json(429, { error: 'too_many_attempts' })
+
     const { data: row } = await sb.from('otp_codes').select('*')
       .eq('email', email).is('used_at', null).gt('expires_at', nowIso)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (!row) return json(400, { error: 'expired' })
-    if (row.attempts >= MAX_ATTEMPTS) {
-      await sb.from('otp_codes').delete().eq('id', row.id)
+
+    // ── Essai consommé de façon ATOMIQUE, AVANT la comparaison (RPC otp_take_attempt :
+    //    UPDATE … SET attempts = attempts + 1 WHERE attempts < max RETURNING). Avant, un SELECT → test →
+    //    UPDATE(attempts = n + 1) recalculé côté fonction laissait N requêtes concurrentes lire la même
+    //    valeur → le plafond de 5 essais ne montait jamais → brute-force du code à 6 chiffres.
+    const { data: att, error: attErr } = await sb.rpc('otp_take_attempt', { p_id: row.id, p_max: MAX_ATTEMPTS })
+    if (attErr) return json(500, { error: 'server_error' })
+    if (att === null || att === undefined) {
+      await sb.from('otp_codes').delete().eq('id', row.id)   // plafond atteint → le code est brûlé
       return json(400, { error: 'too_many_attempts' })
     }
     if (row.code_hash !== await hashCode(email, code)) {
-      await sb.from('otp_codes').update({ attempts: row.attempts + 1 }).eq('id', row.id)
-      const left = MAX_ATTEMPTS - row.attempts - 1
-      return left <= 0
-        ? json(400, { error: 'too_many_attempts' })
-        : json(400, { error: 'wrong_code', remaining: left })
+      const left = MAX_ATTEMPTS - Number(att)
+      if (left <= 0) { await sb.from('otp_codes').delete().eq('id', row.id); return json(400, { error: 'too_many_attempts' }) }
+      return json(400, { error: 'wrong_code', remaining: left })
     }
 
-    // Code correct → usage unique
-    await sb.from('otp_codes').update({ used_at: nowIso }).eq('id', row.id)
+    // Code correct → usage unique, CONDITIONNEL (un seul gagnant même sous concurrence)
+    const { data: used } = await sb.from('otp_codes').update({ used_at: nowIso }).eq('id', row.id).is('used_at', null).select('id')
+    if (!used || !used.length) return json(400, { error: 'expired' })
     // Ménage : purge les codes de plus de 24 h
     await sb.from('otp_codes').delete().lt('created_at', new Date(Date.now() - 86_400_000).toISOString())
 

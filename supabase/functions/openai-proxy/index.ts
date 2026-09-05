@@ -1,129 +1,74 @@
 // Supabase Edge Function — OpenAI API proxy
 // La clé OpenAI est stockée côté serveur (secret Supabase OPENAI_API_KEY).
-// Les clients n'ont pas besoin de fournir leur propre clé.
 //
 // Déployé à : https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy
 //
-// Endpoints supportés (via ?path=) :
-//   POST ?path=/v1/chat/completions        → GPT-4o (JSON)
-//   POST ?path=/v1/audio/transcriptions    → Whisper (multipart)
+// Endpoints supportés (via ?path=) — ALLOWLIST STRICTE :
+//   POST ?path=/v1/chat/completions        → GPT-4o (JSON)              [helper, plafonné]
+//   POST ?path=/v1/audio/transcriptions    → Whisper (multipart)        [helper, plafonné]
+//   POST ?path=/v1/images/generations      → gpt-image                  [FACTURANT]
+//   POST ?path=/v1/images/edits            → gpt-image edits (multipart) [FACTURANT]
 //
-// Sécurité : seuls les utilisateurs authentifiés (JWT Supabase valide) peuvent appeler ce proxy.
-// L'anon key seule est refusée — il faut un vrai user session token.
+// Sécurité (audit 05/09) :
+//   • session utilisateur obligatoire (la clé anon/publiable seule est refusée) ; le moteur de rendu
+//     (jeton service_role, déjà vérifié par la passerelle) passe sans profil.
+//   • `?path=` validé + résolu contre la base : un `path=@evil.com/…` détournait l'hôte et envoyait la
+//     clé OpenAI à l'attaquant (C1). Plus jamais : même origine exigée.
+//   • appels facturants : plafond par utilisateur + preuve de débit récent (H3, voir _shared/guard.ts).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate } from '../_shared/guard.ts'
 
 const OPENAI_BASE = 'https://api.openai.com'
+const ALLOW = /^\/v1\/(chat\/completions|audio\/transcriptions|images\/(generations|edits))$/
+const BILLABLE = /^\/v1\/images\/(generations|edits)$/
 
 serve(async (req: Request) => {
-  // Preflight CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  if (req.method !== 'POST') return jsonRes(405, { error: 'method_not_allowed' })
 
-  // ── Vérification JWT : seuls les users connectés peuvent utiliser le proxy ──
-  const authHeader = req.headers.get('Authorization') ?? ''
-  const token = authHeader.replace('Bearer ', '').trim()
-  if (!token) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — token manquant' }), {
-      status: 401,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
-  }
+  const auth = await authUser(req)
+  if (!auth.token) return jsonRes(401, { error: 'Unauthorized — token manquant' })
+  if (!auth.isService && !auth.userId) return jsonRes(401, { error: 'Unauthorized — session invalide ou expirée' })
 
-  // ── LE RENDER-WORKER AUSSI (#136) : détection de visage au rendu. Même porte
-  // que hedra-proxy — la passerelle a DÉJÀ vérifié la signature (verify_jwt),
-  // on ne fait que lire le rôle déclaré ; un jeton service_role ne se forge pas
-  // sans le secret du projet. (Ne PAS comparer à SUPABASE_SERVICE_ROLE_KEY :
-  // mesuré le 03/08 côté hedra-proxy, les valeurs divergent → 401 silencieux.)
-  const roleDuJeton = (() => {
-    try {
-      const p = token.split('.')[1]
-      if (!p) return ''
-      const b = p.replace(/-/g, '+').replace(/_/g, '/')
-      return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '')
-    } catch { return '' }
-  })()
-  const estLeMoteur = roleDuJeton === 'service_role'
-
-  const supabaseUrl    = Deno.env.get('SUPABASE_URL') ?? ''
-  const supabaseAnon   = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-  const supabase = createClient(supabaseUrl, supabaseAnon, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  })
-
-  if (!estLeMoteur) {
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized — session invalide ou expirée' }), {
-        status: 401,
-        headers: { ...CORS, 'Content-Type': 'application/json' },
-      })
-    }
-  }
-
-  // ── Clé OpenAI depuis les secrets Supabase ──
   const openaiKey = Deno.env.get('OPENAI_API_KEY') ?? ''
-  if (!openaiKey) {
-    return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured in Supabase secrets' }), {
-      status: 500,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+  if (!openaiKey) return jsonRes(500, { error: 'OPENAI_API_KEY not configured in Supabase secrets' })
+
+  const url = new URL(req.url)
+  const up = safeUpstream(OPENAI_BASE, url.searchParams.get('path') ?? '/v1/chat/completions', ALLOW)
+  if (!up.ok) return jsonRes(400, { error: 'path refusé : ' + up.reason })
+  const bare = new URL(up.url).pathname
+
+  if (!auth.isService && auth.userId) {
+    const gate = BILLABLE.test(bare)
+      ? await billableGate({ userId: auth.userId, proxy: 'openai', requireDebit: true, rateMax: 40, label: bare })
+      : await helperGate(auth.userId, 'openai', bare.includes('transcriptions') ? 30 : 80)
+    if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
   try {
-    const url      = new URL(req.url)
-    const apiPath  = url.searchParams.get('path') ?? '/v1/chat/completions'
-    const ct       = req.headers.get('content-type') ?? ''
-
+    const ct = req.headers.get('content-type') ?? ''
     let openaiRes: Response
-
     if (ct.includes('multipart/form-data')) {
-      // ── Whisper : transférer le multipart tel quel ──
       const incoming = await req.formData()
       const outgoing = new FormData()
-      for (const [key, value] of incoming.entries()) {
-        outgoing.append(key, value)
-      }
-      openaiRes = await fetch(`${OPENAI_BASE}${apiPath}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${openaiKey}` },
-        body: outgoing,
-      })
+      for (const [key, value] of incoming.entries()) outgoing.append(key, value)
+      openaiRes = await fetch(up.url, { method: 'POST', headers: { 'Authorization': `Bearer ${openaiKey}` }, body: outgoing })
     } else {
-      // ── Chat Completions (JSON) ──
       const rawBody = await req.text()
-      openaiRes = await fetch(`${OPENAI_BASE}${apiPath}`, {
+      openaiRes = await fetch(up.url, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
         body: rawBody,
       })
     }
-
     const body = await openaiRes.text()
-
     return new Response(body, {
       status: openaiRes.status,
-      headers: {
-        ...CORS,
-        'Content-Type': openaiRes.headers.get('content-type') ?? 'application/json',
-      },
+      headers: { ...CORS, 'Content-Type': openaiRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
     console.error('openai-proxy error:', err)
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+    return jsonRes(502, { error: 'upstream_error' })
   }
 })
