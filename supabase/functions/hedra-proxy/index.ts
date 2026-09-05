@@ -118,8 +118,8 @@ serve(async (req: Request) => {
   if (!estLeMoteur && user) {
     const bare = hedraPath0.split('?')[0]
     const gate = (req.method === 'POST' && HEDRA_BILLABLE.test(bare))
-      ? await billableGate({ userId: user.id, proxy: 'hedra', requireDebit: true, rateMax: 30, label: bare })
-      : await helperGate(user.id, 'hedra', 300)
+      ? await billableGate({ userId: user.id, proxy: 'hedra', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
+      : await helperGate(user.id, 'hedra', 900)   // uploads + polling multi-scènes (Montage IA)
     if (!gate.ok) return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
   }
 

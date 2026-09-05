@@ -62,8 +62,8 @@ serve(async (req: Request) => {
       }
     }
     const gate = isSubmit
-      ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, rateMax: 40, label: path })
-      : await helperGate(auth.userId, 'fal', 300)   // polling ~2 s pendant une génération
+      ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
+      : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 

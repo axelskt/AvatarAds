@@ -64,6 +64,7 @@ serve(async (req: Request) => {
       elRes = await fetch(up.url, { method: 'POST', headers: { 'xi-api-key': elKey }, body: outgoing })
     } else {
       const rawBody = await req.text()
+      if (rawBody.length > 20_000) return jsonRes(413, { error: 'Texte trop long (max ~5 000 caractères).' })   // borne serveur (coût ElevenLabs = caractères)
       elRes = await fetch(up.url, {
         method: 'POST',
         headers: { 'xi-api-key': elKey, 'Content-Type': 'application/json', 'Accept': req.headers.get('accept') ?? 'audio/mpeg' },
