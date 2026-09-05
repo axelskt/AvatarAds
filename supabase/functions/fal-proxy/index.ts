@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -27,6 +27,17 @@ const readKey = () => {
 // /fal-ai/<owner>/<model>[/sub…] pour les soumissions et le polling ; /requests/<id>[/status] forme courte
 const ALLOW = /^\/(fal-ai\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*|requests\/[A-Za-z0-9-]+(\/status)?)$/
 const IS_POLL = /\/requests\/[A-Za-z0-9-]+(\/status)?$/
+// Coût serveur (borne basse) : Kling v3=6, Kling pro=4, Kling standard=2, OmniHuman=5, AuraSR=3, Nano=5,
+// Omni edit=3 ; auxiliaires (ben/birefnet/rembg/topaz, couverts par l'op parente) = 1.
+function falCost(path: string): number {
+  if (/\/kling-video\/v3\//i.test(path)) return 6
+  if (/\/kling-video\//i.test(path)) return /\/pro\//i.test(path) ? 4 : 2
+  if (/omnihuman/i.test(path)) return 5
+  if (/nano-banana-pro/i.test(path)) return 5
+  if (/aura-sr/i.test(path)) return 3
+  if (/gemini-omni-flash/i.test(path)) return 3
+  return 1
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -65,6 +76,7 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
+    if (isSubmit) { const rr = await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }) }
   }
 
   // ── relais vers fal ──
@@ -74,6 +86,11 @@ serve(async (req: Request) => {
     if (req.method === 'POST') init.body = await req.text()
     const res = await fetch(target, init)
     const text = await res.text()
+    // Règlement de la réservation quand la génération a abouti (poll COMPLETED / résultat livré) → op non remboursable.
+    if (!auth.isService && auth.userId && req.method === 'GET' && res.ok) {
+      const op = opFromReq(req); const bare = path.split('?')[0]
+      if (op && (/"status"\s*:\s*"COMPLETED"/i.test(text) || (!/\/status$/.test(bare) && /"(video|image|images|url)"\s*:/.test(text)))) await settleReservation(auth.userId, op)
+    }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {
       return jsonRes(402, { error: 'Crédits fal.ai épuisés — recharge le compte fal', falStatus: res.status })

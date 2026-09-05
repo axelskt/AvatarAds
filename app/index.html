@@ -6073,8 +6073,13 @@ function _safeCss(v){ const s=String(v||''); return (/^[#a-zA-Z0-9(),.%\s\-\/]*$
 async function getAuthHeader(){
   const { data: { session } } = await sb.auth.getSession();
   const token = session?.access_token || SUPABASE_KEY; // fallback anon si pas de session
-  return { 'Authorization': `Bearer ${token}` };
+  const h = { 'Authorization': `Bearer ${token}` };
+  // Réservation (audit 05/09) : l'op de crédits la plus récente = jeton de réservation lu par les proxies (x-aa-op).
+  try{ if(typeof _creditOps!=='undefined' && _creditOps.length) h['x-aa-op'] = String(_creditOps[_creditOps.length-1]); }catch(_){}
+  return h;
 }
+// En-tête x-aa-op pour les appels proxy qui construisent Authorization à la main (Images IA gpt-image/Nano).
+function _aaOp(){ try{ return (typeof _creditOps!=='undefined' && _creditOps.length) ? { 'x-aa-op': String(_creditOps[_creditOps.length-1]) } : {}; }catch(_){ return {}; } }
 
 // Minutes de vidéo par plan (stockées en secondes dans Supabase)
 const PLAN_SECONDS = { free: 40, starter: 300, pro: 600, elite: 1500 };
@@ -9638,7 +9643,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
     fd.append('quality', _imgGptQuality()); // qualité pilotée par le slider (4K → medium, l'upscale Nano fait le reste)
     fd.append('moderation', 'low'); // filtre moins restrictif (contenu influenceur)
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
-      method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
+      method:'POST', headers:{ ...(_aaOp()), 'Authorization':'Bearer '+token }, body: fd
     });
     const data = await res.json();
     if(data.error){
@@ -10109,7 +10114,7 @@ async function _imgGenerateFlux(token, prompt, size, tier){
   const arMap = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
   const aspect_ratio = arMap[size] || '9:16';
   const base = SUPABASE_URL + '/functions/v1/replicate-proxy';
-  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
+  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{...(_aaOp()),'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
   let d = await post({ mode:'flux', prompt, aspect_ratio, raw:true, tier: tier||'eco' });
   if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur Flux'));
   if(!d.url && d.id){
@@ -10136,7 +10141,7 @@ async function _imgGenerateFluxKontext(token, prompt, refFile, size){
   const arMap = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
   const aspect_ratio = arMap[size] || '9:16';
   const base = SUPABASE_URL + '/functions/v1/replicate-proxy';
-  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
+  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{...(_aaOp()),'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
   let d = await post({ mode:'kontext', prompt, input_image:dataUrl, aspect_ratio });
   if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur Kontext'));
   if(!d.url && d.id){
@@ -10176,7 +10181,7 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
   for(const model of _GPT_IMG_MODELS){
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+      headers: { ...(_aaOp()), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgGptQuality(), moderation: 'low' })
     });
     const data = await res.json();
@@ -10329,7 +10334,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
   let _nbLastStatus = 0;
   const call = async (payload) => {
     const _url = SUPABASE_URL + '/functions/v1/google-ai-proxy?path=' + encodeURIComponent(path);
-    const _hdr = { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
+    const _hdr = { ...(_aaOp()), 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
     const _body = JSON.stringify(payload);
     let _last = null;
     for(let _a=0; _a<3; _a++){
@@ -10385,7 +10390,7 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
   const prompt="You are given TWO images. In the FIRST image, replace the person's ENTIRE HEAD (face AND hair) with the head of the person from the SECOND image — as if you cut off the first person's head and put the second person's head in its place. CRITICAL: keep the FIRST image's body, clothing, hands, pose, background, framing and camera perspective EXACTLY unchanged and pixel-identical. Blend the neck and skin tone seamlessly, and match the FIRST image's lighting direction, color grading, white balance and grain so the new head looks genuinely photographed in that scene. Keep the EXACT same identity as the SECOND image — same face, features, expression and hairstyle — do NOT beautify, slim or alter them. Photorealistic, high detail, natural real skin texture (no plastic, no smoothing, no airbrush), correct proportions, no distortion, no duplicated limbs, no extra artifacts. Output only the final edited image.";
   const path='/v1beta/models/'+_NB_MODEL+':generateContent';
   const body={ contents:[{ role:'user', parts:[ {text:prompt}, {inline_data:{mime_type:mt[1],data:mt[2]}}, {inline_data:{mime_type:mf[1],data:mf[2]}} ]}], generationConfig:{ responseModalities:['TEXT','IMAGE'] } };
-  const res=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{ method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const res=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{ method:'POST', headers:{...(_aaOp()),'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body) });
   const d=await res.json().catch(()=>({}));
   if(d&&d.error) throw new Error(d.error.message||String(d.error));
   const b64=_nbExtractImage(d);
@@ -13837,7 +13842,7 @@ async function _mtAvatarInFormat(idx, target){
       fd.append('prompt', prompt);
       fd.append('n','1'); fd.append('size', size);
       fd.append('quality','high'); fd.append('moderation','low');
-      const r=await fetch(OPENAI_PROXY+'?path=/v1/images/edits', { method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd });
+      const r=await fetch(OPENAI_PROXY+'?path=/v1/images/edits', { method:'POST', headers:{ ...(_aaOp()), 'Authorization':'Bearer '+token }, body: fd });
       const d=await r.json();
       if(d.error){ if(/model|not found|does not exist|unsupported/i.test(d.error.message||'')) continue; throw new Error(d.error.message); }
       const it=d.data?.[0];
@@ -29489,7 +29494,7 @@ async function _expComposeRefs(token, prompt, gptSize){
       fd.append('size', gptSize);
       fd.append('quality', (typeof _imgGptQuality==='function'? _imgGptQuality() : 'medium'));
       fd.append('moderation','low');
-      const res=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/edits', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
+      const res=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/edits', { method:'POST', headers:{...(_aaOp()),'Authorization':'Bearer '+token}, body:fd });
       const data=await res.json().catch(()=>({}));
       const b64=data && data.data && data.data[0] && data.data[0].b64_json; if(b64) return 'data:image/png;base64,'+b64;
       const url=data && data.data && data.data[0] && data.data[0].url; if(url) return url;
