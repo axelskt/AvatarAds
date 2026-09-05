@@ -24,6 +24,7 @@
 // et l'aperçu tourne dans une iframe isolée, côté navigateur, gratuitement.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { helperGate } from '../_shared/guard.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -521,6 +522,7 @@ Deno.serve(async (req: Request) => {
   const sbUser = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${jeton}` } } })
   const { data: { user } } = await sbUser.auth.getUser()
   if (!user) return json({ ok: false, erreur: 'Reconnecte-toi puis réessaie.' }, 401)
+  { const g = await helperGate(user.id, 'anim-creer', 20, 3600); if (!g.ok) return json({ ok: false, erreur: g.error }, g.status) }
 
   const sbAdmin = createClient(url, srv, { auth: { persistSession: false } })
   const { data: profil } = await sbAdmin.from('profiles').select('plan').eq('id', user.id).single()
@@ -538,10 +540,12 @@ Deno.serve(async (req: Request) => {
   const doitPayer = dejaFaites >= gratuites
 
   if (doitPayer) {
-    const { error: eSpend } = await sbAdmin.rpc('spend_credits', {
-      p_user: user.id, p_amount: 1, p_reason: 'création d\'animation',
-    })
-    if (eSpend) {
+    // Audit 06/09 : l'ancien appel visait `spend_credits(p_user, p_amount, p_reason)` — une signature qui
+    // n'existe pas (seules `spend_credits(p_secs)` et `spend_credits(p_secs, p_reason)`, sur auth.uid()).
+    // Chaque création au-delà du quota répondait donc 402 quel que soit le solde. On débite avec la
+    // session de l'utilisateur (auth.uid() = lui) : {ok:false} = solde insuffisant.
+    const { data: spent, error: eSpend } = await sbUser.rpc('spend_credits', { p_secs: 1, p_reason: 'création d\'animation' })
+    if (eSpend || !(spent as { ok?: boolean } | null)?.ok) {
       return json({ ok: false, erreur: `Tes ${gratuites} créations gratuites du mois sont utilisées, et il te faut 1 crédit pour continuer.` }, 402)
     }
   }
@@ -549,7 +553,7 @@ Deno.serve(async (req: Request) => {
   // consommé le quota si on l'a facturé, et le compte doit rester juste.
   await sbAdmin.from('anim_creations').insert({ user_id: user.id, demande, facturee: doitPayer })
 
-  const user = `Ce que je veux voir : ${demande}`
+  const userPrompt = `Ce que je veux voir : ${demande}`
     + (phrase ? `\n\nLa phrase prononcée à ce moment-là : « ${phrase} »` : '')
 
   try {
@@ -563,7 +567,7 @@ Deno.serve(async (req: Request) => {
         // n'émet plus rien — mesuré au premier essai, « réponse illisible ».
         output_config: { effort: 'low' },
         system: CONSIGNE,
-        messages: [{ role: 'user', content: user }],
+        messages: [{ role: 'user', content: userPrompt }],
       }),
     })
     if (!res.ok) return json({ ok: false, erreur: `Claude ${res.status}` })
@@ -590,7 +594,7 @@ Deno.serve(async (req: Request) => {
           model: CLAUDE_MODEL, max_tokens: 8000, output_config: { effort: 'low' },
           system: CONSIGNE,
           messages: [
-            { role: 'user', content: user },
+            { role: 'user', content: userPrompt },
             { role: 'assistant', content: JSON.stringify(a) },
             { role: 'user', content: `Regarde ton animation comme si tu la voyais jouer sur un téléphone, et réponds-toi honnêtement :
 
