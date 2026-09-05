@@ -22,9 +22,6 @@ const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 // + GET /v1beta/files/<id>:download?alt=media = téléchargement d'une vidéo Veo (clé côté serveur)  [non facturant]
 const ALLOW = /^\/v1beta\/(models\/[A-Za-z0-9._-]+:(predict|predictLongRunning|generateContent)|models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+|operations\/[A-Za-z0-9._-]+|files\/[A-Za-z0-9._-]+:download)$/
 const BILLABLE = /:(predict|predictLongRunning|generateContent)$/
-// Voix Gemini TTS (pré-écoute d'une voix, voix Cartoon) : appels facturants NON débités côté client par conception
-// (traçage 05/09) → plafonnés, sans exigence de débit récent (sinon la pré-écoute des voix casse).
-const TTS_NO_DEBIT = /\/models\/[A-Za-z0-9._-]*tts[A-Za-z0-9._-]*:generateContent$/i
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -48,7 +45,7 @@ serve(async (req: Request) => {
 
   if (!auth.isService && auth.userId) {
     const gate = isBillable
-      ? await billableGate({ userId: auth.userId, proxy: 'google', requireDebit: !TTS_NO_DEBIT.test(bare), debitMinutes: 120, rateMax: 30, label: bare })
+      ? await billableGate({ userId: auth.userId, proxy: 'google', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
       : await helperGate(auth.userId, 'google', 900)   // polling toutes les 5 s pendant ≤10 min par génération Veo, plusieurs en série
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }

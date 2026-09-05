@@ -90,9 +90,10 @@ serve(async (req) => {
     if (!RESEND_API_KEY) return json(503, { error: 'email_unavailable' })
     const mode = body.mode === 'signup' ? 'signup' : 'login'
 
-    // Le compte existe-t-il ? (profiles est créé par trigger pour chaque user)
-    const { data: prof } = await sb.from('profiles').select('id').eq('email', email).maybeSingle()
-    if (mode === 'login' && !prof) return json(404, { error: 'no_account' })
+    // Audit 05/09 (L1) : réponse UNIFORME quel que soit l'état du compte — plus d'oracle d'existence (ni
+    // 404 no_account, ni drapeau existing). Un e-mail inconnu reçoit aussi un code, et verify crée le compte
+    // s'il n'existe pas (même flux que l'inscription). `mode` ne change plus rien côté serveur.
+    void mode
 
     // Rate limits
     const hourAgo = new Date(Date.now() - 3600_000).toISOString()
@@ -127,7 +128,7 @@ serve(async (req) => {
       await sb.from('otp_codes').delete().eq('id', ins.id)
       return json(502, { error: 'send_failed' })
     }
-    return json(200, { ok: true, existing: !!prof })
+    return json(200, { ok: true })
   }
 
   // ── VÉRIFICATION D'UN CODE ──

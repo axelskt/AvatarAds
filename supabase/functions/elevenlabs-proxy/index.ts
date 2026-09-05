@@ -43,11 +43,10 @@ serve(async (req: Request) => {
   if (req.method === 'POST' && !BILLABLE.test(bare)) return jsonRes(405, { error: 'method_not_allowed' })
 
   if (!auth.isService && auth.userId) {
-    // Traçage 05/09 : les flux ElevenLabs vivants (voix Cartoon, Voice Design, pré-écoute de voix) ne sont
-    // PAS débités côté client par conception → pas d'exigence de débit ici (elle casserait ces flux), mais un
-    // plafond serré par utilisateur : l'abus anonyme (C3/H2) est déjà fermé par l'auth obligatoire.
+    // Axel 05/09 : voix Cartoon / Voice Design / pré-écoutes = features SUPPRIMÉES → aucun flux vivant ne
+    // justifie une exemption : tout appel facturant exige un débit récent (comme les autres proxies).
     const gate = isBillable
-      ? await billableGate({ userId: auth.userId, proxy: 'elevenlabs', requireDebit: false, rateMax: 20, label: bare })
+      ? await billableGate({ userId: auth.userId, proxy: 'elevenlabs', requireDebit: true, rateMax: 20, label: bare })
       : await helperGate(auth.userId, 'elevenlabs', 60)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }

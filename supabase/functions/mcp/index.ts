@@ -3220,7 +3220,7 @@ serve(async (req) => {
         'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource", error="invalid_token"` } })
     }
     bg((async () => { await svc.from('mcp_oauth_tokens').update({ last_used_at: new Date().toISOString() }).eq('token_hash', tok.token_hash) })())
-    keyRow = { id: null, user_id: tok.user_id, require_confirm: false }
+    keyRow = { id: null, user_id: tok.user_id, require_confirm: true }   // audit 05/09 : confirmation avant toute dépense, par défaut
   } else if (!key || !key.startsWith('aa_')) {
     // AUCUN identifiant : 401 + WWW-Authenticate → claude.ai découvre l'OAuth
     // et lance « Se connecter avec AvatarAds ». (Les URLs à clé ne passent
