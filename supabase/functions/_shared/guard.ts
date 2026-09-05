@@ -21,7 +21,7 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
 // H3 : exigence de débit récent sur les appels facturants. Warn-only tant que DEBIT_ENFORCE≠'1'
 // (secret Supabase) → on journalise les appels qui seraient refusés, puis on bascule sans redéploiement.
-export const DEBIT_ENFORCE = (Deno.env.get('DEBIT_ENFORCE') ?? '0') === '1'
+export const debitEnforce = (): boolean => (Deno.env.get('DEBIT_ENFORCE') ?? '0') === '1'   // lu à CHAQUE requête : un changement de secret s'applique sans attendre un redémarrage d'isolate
 
 let _svc: SupabaseClient | null = null
 export function svc(): SupabaseClient {
@@ -113,16 +113,19 @@ export type Gate = { ok: true } | { ok: false; status: number; error: string }
 export async function billableGate(o: { userId: string; proxy: string; requireDebit: boolean; debitMinutes?: number; rateMax?: number; rateWindowS?: number; label?: string }): Promise<Gate> {
   const ok = await rateHit(`proxy:${o.proxy}:bill:${o.userId}`, o.rateWindowS ?? 600, o.rateMax ?? 30)
   if (!ok) return { ok: false, status: 429, error: 'Trop de générations en peu de temps — patiente quelques minutes.' }
-  if (o.requireDebit) {
-    // Owner / developer : spendCreditsFor() côté client renvoie true SANS appeler la RPC (app l.6524) →
-    // aucune ligne credit_ops n'existe jamais pour eux. Exemption, sinon on bloquerait Axel lui-même.
-    const { plan, isOwner } = await userPlan(o.userId)
-    if (isOwner || plan === 'developer') return { ok: true }
+  // Owner / developer : spendCreditsFor() côté client renvoie true SANS appeler la RPC (app l.6524) →
+  // aucune ligne credit_ops n'existe jamais pour eux. Exemption, sinon on bloquerait Axel lui-même.
+  const { plan, isOwner } = await userPlan(o.userId)
+  if (isOwner || plan === 'developer') return { ok: true }
+  // Un compte FREE ne peut JAMAIS lancer d'action payante côté app (paywall « à l'action » avant tout appel) :
+  // il doit donc TOUJOURS prouver un débit, même sur les chemins où les abonnés en sont dispensés
+  // (pré-écoutes TTS, Voice Design) — mesuré 05/09 : sans ça, un compte gratuit générait du TTS ElevenLabs.
+  if (o.requireDebit || plan === 'free') {
     // 60 min par défaut : un seul débit couvre des flux longs (Montage IA multi-scènes, extensions Express,
     // Motion Control + matting) — mesuré au traçage du 05/09.
     const paid = await hasRecentDebit(o.userId, o.debitMinutes ?? 60)
     if (!paid) {
-      if (DEBIT_ENFORCE) return { ok: false, status: 402, error: 'Aucun débit de crédits récent pour cette action.' }
+      if (debitEnforce()) return { ok: false, status: 402, error: 'Aucun débit de crédits récent pour cette action.' }
       console.warn(`[debit-check warn-only] ${o.proxy} ${o.label ?? ''} user=${o.userId} : aucun débit récent`)
     }
   }
@@ -138,9 +141,14 @@ export async function helperGate(userId: string, proxy: string, max = 60, window
 // ── IP réelle : x-forwarded-for est une LISTE « client, proxy1, proxy2 » ; le client peut forger le début,
 //    pas la fin (ajoutée par la passerelle). On prend donc le DERNIER segment.
 export function realIp(req: Request): string {
+  const direct = (req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || '').trim()
+  if (direct) return direct
   const xff = (req.headers.get('x-forwarded-for') || '').split(',').map(s => s.trim()).filter(Boolean)
-  if (xff.length) return xff[xff.length - 1]
-  return req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || ''
+  // Chaque saut AJOUTE l'IP de son pair : « [forgé par le client…], client-réel (ajouté par le CDN), IP-du-CDN
+  // (ajoutée par la passerelle) ». MESURÉ le 05/09 : le DERNIER segment est une IP de passerelle (pool
+  // 99.82.161.x, différente à chaque requête) → le vrai client est l'AVANT-DERNIER quand il y a ≥ 2 sauts.
+  if (xff.length >= 2) return xff[xff.length - 2]
+  return xff[0] || ''
 }
 
 // ── Anti-SSRF : hôte interdit si interne, loopback, link-local, metadata, ou IP littérale sous n'importe
