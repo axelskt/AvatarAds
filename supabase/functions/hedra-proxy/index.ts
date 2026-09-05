@@ -21,7 +21,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, applyReservation, settleReservation, opFromReq } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -190,7 +190,7 @@ serve(async (req: Request) => {
     const body = await hedraRes.text()
     // Règlement de la réservation quand la génération a abouti (poll /v3/jobs COMPLETE) → op non remboursable.
     if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok) {
-      const op = opFromReq(req)
+      const op = await resolveOp(user.id, req)
       if (op && /"status"\s*:\s*"(complete|completed|succeeded|success)"/i.test(body)) await settleReservation(user.id, op)
     }
 

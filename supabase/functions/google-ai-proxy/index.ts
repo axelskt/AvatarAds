@@ -14,7 +14,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 const ALLOW = /^\/v1beta\/(models\/[A-Za-z0-9._-]+:(predict|predictLongRunning|generateContent)|models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+|operations\/[A-Za-z0-9._-]+|files\/[A-Za-z0-9._-]+:download)$/
@@ -79,7 +79,7 @@ serve(async (req: Request) => {
     const body = await googleRes.text()
     // Règlement de la réservation quand la génération a abouti :
     if (gated) {
-      const op = opFromReq(req)
+      const op = await resolveOp(uid, req)
       if (op) {
         if (isSyncBillable && googleRes.ok) await settleReservation(uid, op)                          // Imagen/Nano synchrones
         else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body) && !/"error"/.test(body)) await settleReservation(uid, op)   // Veo : opération terminée

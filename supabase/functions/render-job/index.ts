@@ -13,6 +13,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { billableGate } from '../_shared/guard.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +42,8 @@ serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}))
 
     if (body.action === 'create') {
+      // Audit #3 : rendu serveur = coût worker. Exiger un débit récent (le client débite AVANT) + plafond.
+      const _g = await billableGate({ userId: user.id, proxy: 'render-job', requireDebit: true, debitMinutes: 60, rateMax: 20 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
       const plan = body.plan
       if (!plan || typeof plan !== 'object' || !Number(plan.duration)) return json({ error: 'plan invalide (duration manquante)' }, 400)
       if (Number(plan.duration) > 300) return json({ error: 'video trop longue (max 5 min)' }, 400)

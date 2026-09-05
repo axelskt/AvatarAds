@@ -351,7 +351,7 @@ type Plan = {
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
 // IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
-import { safeFetchHtml, authUser } from '../_shared/guard.ts'
+import { safeFetchHtml, authUser, billableGate } from '../_shared/guard.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 6000)
@@ -2508,6 +2508,8 @@ serve(async (req: Request) => {
   // Scribe + appels Claude facturés sans session. On exige une VRAIE session utilisateur (ou le worker).
   const _auth = await authUser(req)
   if (!_auth.isService && !_auth.userId) return json({ error: 'unauthorized' }, 401)
+  // Audit #3 : orchestrate = Scribe + N Claude (coûteux). Exiger un débit récent (montage débite AVANT) + plafond.
+  if (_auth.userId) { const _g = await billableGate({ userId: _auth.userId, proxy: 'orchestrate', requireDebit: true, debitMinutes: 30, rateMax: 12, label: 'plan' }); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
   try {
     const form = await req.formData()

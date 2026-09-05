@@ -11,7 +11,7 @@
 // plafond + preuve de débit + RÉSERVATION (draw le coût de l'op x-aa-op, settle à la livraison).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp } from '../_shared/guard.ts'
 
 const OPENAI_BASE = 'https://api.openai.com'
 const ALLOW = /^\/v1\/(chat\/completions|audio\/transcriptions|images\/(generations|edits))$/
@@ -65,7 +65,7 @@ serve(async (req: Request) => {
     }
     const body = await openaiRes.text()
     // Images gpt-image = SYNCHRONE : un 2xx = image livrée → on règle la réservation (op non remboursable).
-    if (isBillable && gated && openaiRes.ok) { const op = opFromReq(req); if (op) await settleReservation(uid, op) }
+    if (isBillable && gated && openaiRes.ok) { const op = await resolveOp(uid, req); if (op) await settleReservation(uid, op) }
     return new Response(body, {
       status: openaiRes.status,
       headers: { ...CORS, 'Content-Type': openaiRes.headers.get('content-type') ?? 'application/json' },

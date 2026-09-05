@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -49,7 +49,7 @@ serve(async (req: Request) => {
 
   // ── diagnostic : dit SI la clé existe, jamais sa valeur ──
   if (rawPath === '/health') {
-    return jsonRes(200, { ok: true, hasKey: !!falKey, found: keyName || null, checked: KEY_NAMES, keyLength: falKey ? falKey.length : 0 })
+    return jsonRes(200, { ok: true, hasKey: !!falKey })   // audit #3 : ne plus exposer longueur/nom de la clé sans auth
   }
   if (!falKey) return jsonRes(500, { error: 'Aucune clé fal.ai dans les secrets Supabase (attendu : FALAI_API_KEY)' })
 
@@ -88,7 +88,7 @@ serve(async (req: Request) => {
     const text = await res.text()
     // Règlement de la réservation quand la génération a abouti (poll COMPLETED / résultat livré) → op non remboursable.
     if (!auth.isService && auth.userId && req.method === 'GET' && res.ok) {
-      const op = opFromReq(req); const bare = path.split('?')[0]
+      const op = await resolveOp(auth.userId, req); const bare = path.split('?')[0]
       if (op && (/"status"\s*:\s*"COMPLETED"/i.test(text) || (!/\/status$/.test(bare) && /"(video|image|images|url)"\s*:/.test(text)))) await settleReservation(auth.userId, op)
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app

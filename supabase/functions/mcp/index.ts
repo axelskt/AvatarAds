@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { isBlockedHost as guardBlockedHost } from '../_shared/guard.ts'   // audit #3 : version durcie (IPv6, décimal/octal/hex, .internal/.arpa)
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
@@ -165,20 +166,7 @@ function bg(task: Promise<unknown>) {
 }
 
 // Anti-SSRF : refuse les hôtes internes / link-local / metadata pour une URL fournie par l'utilisateur.
-function isBlockedHost(hostname: string): boolean {
-  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '')
-  if (h === 'localhost' || h.endsWith('.localhost') || h === 'metadata.google.internal') return true
-  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
-  if (m) {
-    const a = +m[1], b = +m[2]
-    if (a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) ||
-        (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224) return true
-  }
-  if (h.includes(':')) { // IPv6 littéral
-    if (h === '::1' || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80') || h.startsWith('::ffff:')) return true
-  }
-  return false
-}
+function isBlockedHost(hostname: string): boolean { return guardBlockedHost(hostname) }   // audit #3 : source unique durcie (guard.ts)
 
 async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, contentType: string): Promise<string> {
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
@@ -1492,7 +1480,16 @@ async function hedraFetch(path: string, init?: RequestInit): Promise<Response> {
 // abandonne proprement, la tâche jette, on rembourse.
 async function fetchTO(url: string, ms = 20_000, init?: RequestInit): Promise<Response | null> {
   const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms)
-  try { return await fetch(url, { ...init, signal: ac.signal }) } catch { return null } finally { clearTimeout(t) }
+  try {
+    let u = new URL(url)
+    for (let hop = 0; hop < 4; hop++) {   // audit #3 : chaque saut revalidé (protocole/port/userinfo/hôte interne)
+      if (!/^https?:$/.test(u.protocol) || u.port || u.username || u.password || isBlockedHost(u.hostname)) return null
+      const res = await fetch(u.href, { ...init, redirect: 'manual', signal: ac.signal })
+      if ([301, 302, 303, 307, 308].includes(res.status)) { const loc = res.headers.get('location'); if (!loc) return res; u = new URL(loc, u); continue }
+      return res
+    }
+    return null
+  } catch { return null } finally { clearTimeout(t) }
 }
 // ── LIEN DE PAGE PRODUIT → photo principale (21/08, Axel : « alexya fait avec un lien ») ──
 // Shopify expose /products/<handle>.js (images en clair) ; sinon og:image / twitter:image / JSON-LD Product.
