@@ -38,7 +38,12 @@ async function verifySignature(body: string, signature: string): Promise<boolean
     )
     const mac = await crypto.subtle.sign('HMAC', key, enc.encode(body))
     const hex = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2,'0')).join('')
-    return hex === signature
+    // Comparaison à TEMPS CONSTANT (audit 05/09, L4) : `===` court-circuite au premier octet différent.
+    const sig = String(signature || '').toLowerCase().trim()
+    if (!LS_SIGNING_SECRET || !sig || sig.length !== hex.length) return false
+    let r = 0
+    for (let i = 0; i < hex.length; i++) r |= hex.charCodeAt(i) ^ sig.charCodeAt(i)
+    return r === 0
   } catch { return false }
 }
 

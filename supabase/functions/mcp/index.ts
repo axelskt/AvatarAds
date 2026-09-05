@@ -127,6 +127,28 @@ async function hashKey(key: string): Promise<string> {
   return Array.from(mac).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+// ── Capacité SIGNÉE d'un job (audit 05/09, H4/M5) ──────────────────────────────────────────────
+// /regenerate et /start sont tapés par le widget (iframe claude.ai, AUCUN identifiant) avec le seul
+// job_id — or ce job_id est publié en clair dans les liens de marque mcp.avatarads.fr/i/<job_id>.
+// Un lien fuité permettait de DÉPENSER les crédits du propriétaire (3 cr par regénération, jusqu'au
+// plafond 24 h) et d'imposer une image dans sa bibliothèque. Désormais chaque job reçoit une capacité
+// `cap` = HMAC(clé service, 'cap:'+job_id), renvoyée UNIQUEMENT dans le structuredContent de l'outil
+// (visible du seul propriétaire dans son chat) et exigée par /regenerate et /start. Le lien /i/ ne la
+// porte pas → un job_id seul ne vaut plus rien.
+async function jobCap(jobId: string): Promise<string> {
+  return (await hashKey('cap:' + String(jobId))).slice(0, 32)
+}
+function timingSafeEqual(a: string, b: string): boolean {
+  const x = String(a ?? ''), y = String(b ?? '')
+  if (x.length !== y.length) return false
+  let r = 0
+  for (let i = 0; i < x.length; i++) r |= x.charCodeAt(i) ^ y.charCodeAt(i)
+  return r === 0
+}
+async function capOk(jobId: string, given: unknown): Promise<boolean> {
+  return timingSafeEqual(await jobCap(jobId), String(given ?? ''))
+}
+
 function b64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64)
   const out = new Uint8Array(bin.length)
@@ -322,7 +344,7 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
 // Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
 const UI_WIDGET_JS = `
-var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='', aaJobId='', aaFormat='portrait', aaRef='', aaRaw=false, aaProductUrl='';
+var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='', aaJobId='', aaFormat='portrait', aaRef='', aaRaw=false, aaProductUrl='', aaCap='';
 // Requête vers l'HÔTE (claude.ai) — protocole MCP Apps : télécharger un fichier
 // (ui/download-file), ouvrir un lien (ui/open-link), ou envoyer un message au chat
 // (ui/message = régénérer). Le sandbox bloque download+popups DIRECTS depuis l'iframe,
@@ -332,7 +354,7 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'' };
+  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'' };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -349,9 +371,9 @@ function aaBtns(){
   if(rg){ if(v){ rg.style.display='none'; } else { rg.style.display=''; rg.disabled=false; rg.textContent='↻ Regénérer'; rg.onclick=function(){
     if(!aaJobId||!aaPrompt){ return; }
     var lbl='↻ Regénérer'; rg.disabled=true; rg.textContent='↻ …';
-    fetch('https://mcp.avatarads.fr/regenerate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, prompt:aaPrompt, format:aaFormat||'portrait', ref:aaRef||'', raw:!!aaRaw }) })
+    fetch('https://mcp.avatarads.fr/regenerate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, prompt:aaPrompt, format:aaFormat||'portrait', ref:aaRef||'', raw:!!aaRaw, cap:aaCap }) })
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
-      .then(function(x){ if(x.ok&&x.j&&x.j.statusUrl){ aaJobId=x.j.job_id||aaJobId; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); } else { var er=(x.j&&x.j.error)||''; rg.textContent=er==='daily_cap'?'Plafond 24 h':(er==='no_credits'||er==='credits')?'Crédits épuisés':'Échec'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2400); } })
+      .then(function(x){ if(x.ok&&x.j&&x.j.statusUrl){ aaJobId=x.j.job_id||aaJobId; if(x.j.cap) aaCap=x.j.cap; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); } else { var er=(x.j&&x.j.error)||''; rg.textContent=er==='daily_cap'?'Plafond 24 h':(er==='no_credits'||er==='credits')?'Crédits épuisés':'Échec'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2400); } })
       .catch(function(){ rg.textContent='Réessaie'; setTimeout(function(){ rg.textContent=lbl; rg.disabled=false; }, 2200); });
   }; } }
 }
@@ -389,7 +411,7 @@ function aaShow(out){
     if(d.prompt) aaPrompt=d.prompt;
     if(d.job_id) aaJobId=d.job_id;
     if(d.format) aaFormat=d.format;
-    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl;
+    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.pending){ aaAskPhoto(); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
@@ -447,7 +469,7 @@ function aaSendPhoto(file){
 function aaStartJob(dataUrl, link){
   var pe=document.getElementById('pe'); if(pe) pe.textContent=link?'Lecture de la page produit…':(dataUrl?'Envoi de la photo…':'Lancement…');
   var pk=document.getElementById('pick'), sk=document.getElementById('skip'); if(pk) pk.disabled=true; if(sk) sk.disabled=true;
-  fetch('https://mcp.avatarads.fr/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, data_url:dataUrl||'', product_url:link||'', skip:!dataUrl&&!link }) })
+  fetch('https://mcp.avatarads.fr/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ job:aaJobId, data_url:dataUrl||'', product_url:link||'', skip:!dataUrl&&!link, cap:aaCap }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
       if(x.ok&&x.j&&x.j.statusUrl){ if(x.j.ref) aaRef=x.j.ref; if(x.j.prompt) aaPrompt=x.j.prompt; aaRaw=true; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); return; }
@@ -1039,7 +1061,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
       : "Dépose la photo de ton produit dans la carte ci-dessus (ou clique Sans photo), je m'occupe du reste."
     return {
       content: [{ type: 'text', text: `${adFormat ? `[système] Format de pub choisi : « ${adFormat.name} ». ` : ''}[système] La carte gère la photo du produit${productUrl ? " (récupération depuis le lien, repli dépôt si site protégé)" : " (dépôt par l'utilisateur, ou « Sans photo »)"}, puis génère. Aucun crédit débité pour l'instant.\nRÉPONSE À ÉCRIRE MAINTENANT : AUCUNE — n'écris rien, la carte parle d'elle-même. N'appelle aucun autre outil.` }],
-      structuredContent: { job_id: pj.id, statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'image', pending: true, productUrl: productUrl || '', prompt: promptFinal, format, raw: true, ad_format: adFormat ? adFormat.name : undefined },
+      structuredContent: { job_id: pj.id, cap: await jobCap(pj.id), statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'image', pending: true, productUrl: productUrl || '', prompt: promptFinal, format, raw: true, ad_format: adFormat ? adFormat.name : undefined },
     }
   }
 
@@ -1092,7 +1114,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   return {
     content: [{ type: 'text', text: `⛔ N'ÉCRIS AUCUN TEXTE. [système] Généré (${quality}, ${format}${kind !== 'free' ? ', ' + kind : ''}${adFormat ? ', format « ' + adFormat.name + ' »' : ''}${hasRefSource ? ', produit conservé' : ''}, −${cost} cr). La carte affiche tout. NE rappelle PAS check_image. S'il reste des visuels à faire : appelle generate_image pour le suivant, SANS écrire de texte entre les deux.\n${CONSIGNE_REPONSE}` }],
     // prompt FINAL + référence directe + genre transmis au widget → « Regénérer » refait la MÊME chose
-    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt: promptFinal, format, ref: directRefUrl || '', raw: true, ad_format: adFormat ? adFormat.name : undefined },
+    structuredContent: { job_id: job.id, cap: await jobCap(job.id), statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'image', prompt: promptFinal, format, ref: directRefUrl || '', raw: true, ad_format: adFormat ? adFormat.name : undefined },
   }
 }
 
@@ -2939,6 +2961,7 @@ serve(async (req) => {
     if (!/^[0-9a-f-]{36}$/i.test(jobId)) return json(400, { error: 'bad_request' })
     const { data: pj } = await svc.from('mcp_jobs').select('*').eq('id', jobId).maybeSingle()
     if (!pj) return json(404, { error: 'not_found' })
+    if (!(await capOk(jobId, body.cap))) return json(403, { error: 'forbidden' })   // capacité signée (H4/M5)
     if (pj.status !== 'pending') return json(409, { error: 'not_pending' })
     if (Date.now() - new Date(String(pj.created_at)).getTime() > 2 * 3600 * 1000) return json(403, { error: 'expired' })
     const params = (pj.params || {}) as Record<string, unknown>
@@ -3023,6 +3046,7 @@ serve(async (req) => {
     if (!/^[0-9a-f-]{36}$/i.test(origId) || !prompt) return json(400, { error: 'bad_request' })
     const { data: orig } = await svc.from('mcp_jobs').select('user_id, created_at').eq('id', origId).maybeSingle()
     if (!orig) return json(404, { error: 'not_found' })
+    if (!(await capOk(origId, body.cap))) return json(403, { error: 'forbidden' })   // capacité signée (H4) : un job_id fuité ne suffit plus
     if (Date.now() - new Date(String(orig.created_at)).getTime() > 12 * 3600 * 1000) return json(403, { error: 'expired' })
     const userId = String(orig.user_id)
     const { data: profile } = await svc.from('profiles').select('*').eq('id', userId).maybeSingle()
@@ -3060,7 +3084,7 @@ serve(async (req) => {
       await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
       await refundCredits(userId, cost)
     })())
-    return json(200, { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}` })
+    return json(200, { job_id: job.id, cap: await jobCap(job.id), statusUrl: `https://mcp.avatarads.fr/status/${job.id}` })
   }
 
   // JS du widget MCP App, servi hors sandbox (comme Pletor sert le sien depuis

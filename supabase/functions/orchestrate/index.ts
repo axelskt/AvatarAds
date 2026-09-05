@@ -349,17 +349,13 @@ type Plan = {
 }
 
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
+// Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
+// IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
+import { safeFetchHtml } from '../_shared/guard.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
-    const u = new URL(/^https?:\/\//i.test(url) ? url : 'https://' + url)
-    if (!/^https?:$/.test(u.protocol)) return ''
-    const host = u.hostname.toLowerCase()
-    if (host === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(host) || host.endsWith('.local') || host.endsWith('.internal')) return ''
-    const ctrl = new AbortController()
-    const to = setTimeout(() => ctrl.abort(), 6000)
-    const res = await fetch(u.href, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AvatarAds/1.0)' } })
-    clearTimeout(to)
-    if (!res.ok || !(res.headers.get('content-type') || '').includes('text/html')) return ''
+    const res = await safeFetchHtml(url, 6000)
+    if (!res || !res.ok || !(res.headers.get('content-type') || '').includes('text/html')) return ''
     const html = (await res.text()).slice(0, 400_000)
     const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '').replace(/\s+/g, ' ').trim()
     const desc = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i)?.[1] || '').trim()

