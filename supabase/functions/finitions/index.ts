@@ -1,3 +1,4 @@
+import { authUser } from '../_shared/guard.ts'
 // ── #24 · LA PASSE DE FINITION ───────────────────────────────────────────────
 //
 // Axel, 02/08 : « il faut qu'il voie son travail et fasse les finitions, c'est
@@ -41,6 +42,11 @@ type Scene = { start: number; end: number; quoi: string; dit: string }
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST uniquement' }, 405)
+
+  // Audit offensif 05/09 : atteignable avec la seule clé anon publique → appel Claude facturé. Exiger le
+  // worker (service_role) ou une vraie session ; refuser la clé anon/publiable seule.
+  const _a = await authUser(req)
+  if (!_a.isService && !_a.userId) return json({ error: 'unauthorized' }, 401)
 
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) return json({ ok: false, corrections: [], erreur: 'ANTHROPIC_API_KEY manquante' })

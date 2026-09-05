@@ -104,6 +104,15 @@ const Q_EXPRESS = quoteBlock("3 vidéos TikTok en une heure. L'une d'elles fait 
 type Stage = { kind: string; subject: string; title: string; body: (name: string) => string; cta: string; ctaUrl: string; minH: number; maxH: number; extra?: string }
 const hi = (n: string) => n ? `${n}, ` : ''
 const DRIP: Stage[] = [
+  // (a) Bienvenue immédiate des comptes Free (avant, un Free n'avait AUCUN mail de bienvenue :
+  // celui-ci ne partait que sur un paiement Whop). Fenêtre 0-2h → envoyé dès la 1ʳᵉ exécution
+  // du cron après l'inscription (≤ 1h). Dédup email_log comme les autres.
+  { kind: 'welcome_free', minH: 0, maxH: 2,
+    subject: 'Bienvenue sur AvatarAds 🎬',
+    title: 'Bienvenue à bord 🚀',
+    body: n => `${hi(n)}ton compte est prêt. AvatarAds transforme une idée, un audio ou une image en vidéo verticale montée et prête à poster — sans jamais te filmer.<br><br>Pour ta première vidéo :<br>1. Décris ton idée dans le Générateur<br>2. Choisis un avatar et pose ta voix<br>3. Clique sur Générer, l'IA s'occupe du reste.<br><br>Une question ? Réponds simplement à cet e-mail, on lit tout.`,
+    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: GAL_LIPSYNC },
+
   { kind: 'drip_2h', minH: 2, maxH: 24,
     subject: 'Demande tes vidéos à Claude, il les fait 🤖',
     title: 'Ils publient 10 fois pendant que tu publies une fois',
@@ -260,6 +269,29 @@ serve(async (req) => {
         cta: 'Recharger mes crédits →', ctaUrl: APP_URL, unsubUrl,
       }))
       if (ok) { sent++; report[zeroKind] = (report[zeroKind] || 0) + 1 }
+      await new Promise(r => setTimeout(r, 600))
+    }
+  }
+
+  // ── 3) (b) Win-back : compte Free DORMANT qui vient de se RECONNECTER (1 max / mois) ──
+  // « Reconnexion » = auth.users.last_sign_in_at récent ; « dormant » = compte de +30j (drip
+  // d'onboarding déjà épuisé). La jointure profiles×auth.users se fait dans une fonction SQL
+  // SECURITY DEFINER (le schéma auth n'est pas exposé à PostgREST), qui exclut déjà les déjà-relancés
+  // ce mois-ci. Dédup dur en plus via email_log (kind mensuel).
+  const winbackKind = `winback_${new Date().toISOString().slice(0, 7).replace('-', '')}`
+  if (sent < MAX_SENDS) {
+    const { data: users, error: wbErr } = await sb.rpc('winback_candidates', { p_limit: MAX_SENDS })
+    if (wbErr) console.error('⚠️ winback_candidates:', wbErr.message)
+    for (const u of (users ?? []) as Array<{ id: string; email: string; first_name: string | null }>) {
+      if (sent >= MAX_SENDS) break
+      if (!u.email || !(await claim(u.id, u.email, winbackKind))) continue
+      const unsubUrl = `${UNSUB_BASE}?u=${u.id}&k=${await unsubKey(u.id)}`
+      const ok = await sendEmail(u.email, 'Content de te revoir sur AvatarAds 👋', tpl({
+        title: 'Ça faisait un moment !',
+        body: `${hi(u.first_name || '')}tu viens de repasser sur AvatarAds — et beaucoup de choses ont changé. Tu peux maintenant faire parler un avatar avec TA vraie voix, transformer un simple audio en vidéo montée, et générer des visuels produit en 4K, le tout prêt à poster. Reprends là où tu t'étais arrêté :`,
+        cta: 'Reprendre la création →', ctaUrl: APP_URL, unsubUrl, extra: GAL_LIPSYNC,
+      }))
+      if (ok) { sent++; report[winbackKind] = (report[winbackKind] || 0) + 1 }
       await new Promise(r => setTimeout(r, 600))
     }
   }

@@ -31,7 +31,9 @@ serve(async (req) => {
   const url = new URL(req.url)
   const u = url.searchParams.get('u') ?? ''
   const k = url.searchParams.get('k') ?? ''
-  if (!u || !k || k !== await unsubKey(u)) {
+  const _expect = u ? await unsubKey(u) : ''
+  const _kOk = !!u && !!k && k.length === _expect.length && (() => { let r = 0; for (let i = 0; i < k.length; i++) r |= k.charCodeAt(i) ^ _expect.charCodeAt(i); return r === 0 })()   // temps constant (audit 05/09)
+  if (!_kOk) {
     return page('Lien invalide', 'Ce lien de désinscription est invalide ou expiré. Écris-nous si le problème persiste.')
   }
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })

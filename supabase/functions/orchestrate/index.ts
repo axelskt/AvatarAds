@@ -351,7 +351,7 @@ type Plan = {
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
 // IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
-import { safeFetchHtml } from '../_shared/guard.ts'
+import { safeFetchHtml, authUser } from '../_shared/guard.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 6000)
@@ -2503,6 +2503,11 @@ function buildCaptions(words: Word[], accents: string[], duration: number) {
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST uniquement' }, 405)
+
+  // Audit offensif 05/09 : la clé anon/publiable seule (publique) atteignait ce handler → transcription
+  // Scribe + appels Claude facturés sans session. On exige une VRAIE session utilisateur (ou le worker).
+  const _auth = await authUser(req)
+  if (!_auth.isService && !_auth.userId) return json({ error: 'unauthorized' }, 401)
 
   try {
     const form = await req.formData()
