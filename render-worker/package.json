@@ -13,5 +13,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "sharp": "^0.35.4",
+    "adm-zip": "^0.6.0"
   }
 }

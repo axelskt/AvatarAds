@@ -13,7 +13,9 @@
 # lancé depuis Claude via le MCP — crédits remboursés, mais aucune vidéo).
 # Chromium fait maintenant partie de l'image, et `unzip` est là de toute façon
 # si la CLI décide un jour d'aller chercher sa propre version.
-FROM node:22-bookworm-slim
+# Image épinglée par DIGEST (audit supply-chain 06/09) : un tag est mutable, un digest ne l'est pas.
+# Rafraîchir : curl -s https://hub.docker.com/v2/repositories/library/node/tags/22-bookworm-slim | jq -r .digest
+FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg ca-certificates fonts-liberation unzip \
@@ -28,8 +30,12 @@ ENV HYPERFRAMES_BROWSER_PATH=/usr/bin/chromium
 ENV PUPPETEER_SKIP_DOWNLOAD=1
 
 WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev
+# Lockfile COPIÉ + `npm ci` (audit supply-chain 06/09) : avant, `npm install` sans lockfile résolvait les
+# dépendances au moment du build → chaque image pouvait embarquer des versions différentes (dérive
+# silencieuse, exposition à une publication malveillante). Les `overrides` de package.json (sharp,
+# adm-zip) neutralisent les CVE transitives de hyperframes 0.7.60 sans toucher au pin du moteur.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY . .
 
 # ⚠️ HYPERFRAMES EST INSTALLÉ DANS L'IMAGE ET PATCHÉ ICI — PLUS NPX AU RENDU.
@@ -54,5 +60,10 @@ RUN printf '#!/bin/sh\nexec /usr/bin/ffmpeg -threads "${HF_FFMPEG_THREADS:-2}" "
   && chmod +x /usr/local/bin/hf-ffmpeg \
   && node patch-hyperframes.mjs node_modules/hyperframes/dist/cli.js
 
-ENV NODE_ENV=production
+# Non-root (audit supply-chain 06/09) : le worker n'écrit que sous /tmp (mkdtemp) ; /app reste lisible,
+# HOME pointe sur un dossier inscriptible pour Chromium / le cache hyperframes. Chromium tournait déjà
+# avec --no-sandbox (obligatoire en root) → inchangé en non-root.
+RUN chown -R node:node /app
+ENV NODE_ENV=production HOME=/home/node
+USER node
 CMD ["node", "worker.mjs"]
