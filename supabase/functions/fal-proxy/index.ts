@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -86,10 +86,19 @@ serve(async (req: Request) => {
     if (req.method === 'POST') init.body = await req.text()
     const res = await fetch(target, init)
     const text = await res.text()
-    // Règlement de la réservation quand la génération a abouti (poll COMPLETED / résultat livré) → op non remboursable.
-    if (!auth.isService && auth.userId && req.method === 'GET' && res.ok) {
-      const op = await resolveOp(auth.userId, req); const bare = path.split('?')[0]
-      if (op && (/"status"\s*:\s*"COMPLETED"/i.test(text) || (!/\/status$/.test(bare) && /"(video|image|images|url)"\s*:/.test(text)))) await settleReservation(auth.userId, op)
+    if (!auth.isService && auth.userId) {
+      const bare = path.split('?')[0]
+      const isStatus = /\/status$/.test(bare)
+      const isResult = req.method === 'GET' && !isStatus && /\/requests\/[A-Za-z0-9-]+$/.test(bare)
+      const hasOutput = /"(video|image|images|url)"\s*:/.test(text)
+      // Amont en erreur → on rend le tirage (le retry légitime repasse sans 402) :
+      if (isSubmit && !res.ok) await releaseReservation(auth.userId, req, falCost(path))                                                        // soumission refusée
+      else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) await releaseReservation(auth.userId, req, 9999)   // job échoué
+      else if (isResult && (!res.ok || (!hasOutput && /"(detail|error)"\s*:/.test(text)))) await releaseReservation(auth.userId, req, 9999)          // COMPLETED mais résultat = erreur (422…)
+      // Règlement UNIQUEMENT sur un RÉSULTAT livré (sortie présente). JAMAIS sur `/status: COMPLETED` —
+      // « COMPLETED ≠ réussi » (piège Motion Control, revu 06/09) : un job vide finit COMPLETED et son
+      // résultat est un 422 ; régler là marquait l'op livrée et bloquait le remboursement de l'utilisateur.
+      else if (isResult && res.ok && hasOutput) { const op = await resolveOp(auth.userId, req); if (op) await settleReservation(auth.userId, op) }
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {
