@@ -1206,21 +1206,46 @@ function tstToggle(open){
 }
 
 /* ══════════ Vidéos décoratives (Claude, Express, Générateur, Images IA) ══════════
-   Pilotées par l'ATTRIBUT `autoplay muted playsinline` posé sur le HTML : WebKit/iOS diffère seul le
-   chargement + la lecture hors-écran, démarre à l'entrée dans le viewport et met en pause à la sortie
-   (économie de batterie native). AUCUN v.load() nulle part : sur iOS il réinitialise une vidéo EN LECTURE
-   → elle se fige sur son poster (c'était le bug). On garde juste : un rewind pour Images IA, le contrôleur
-   d'exclusion des onglets features, et un filet qui relance à canplay si un play() a été rejeté. */
+   Démarrage natif via l'ATTRIBUT `autoplay muted playsinline` (WebKit diffère seul le chargement/la lecture
+   hors-écran). MAIS l'autoplay ne se RE-déclenche pas : une vidéo mise en pause hors-champ ne repart jamais
+   toute seule à la ré-entrée. C'est ce qui figeait les démos après ouverture/fermeture du menu « Choisis un
+   modèle » (body position:fixed + lecture des 6 vidéos du menu → iOS met les démos en pause). On ajoute donc
+   un IntersectionObserver qui REJOUE à chaque (ré)entrée dans le viewport, + des re-kicks (fermeture du menu,
+   pageshow, retour d'onglet). Toujours AUCUN v.load() sur une vidéo visible/en lecture (il la figerait). */
 
 /* ══════════ FAQ ══════════
    Les 6 Q/R sont PRÉ-RENDUES en HTML statique dans #faq-list (SEO : contenu
    indexable sans JS). L'accordéon est branché via les onclick inline du markup —
    aucun rendu JS, donc aucun double rendu ni flash. */
 
-/* Images IA : l'autoplay natif gère la lecture ; on ajoute juste un REWIND quand elle (re)entre à l'écran (guardé readyState, PAS de play() ni load()) */
+/* Contrôleur unique des démos toujours-actives (genVid, imagesIaVid, veoVid) + tuto Claude.
+   IntersectionObserver : REJOUE à l'entrée dans le viewport (corrige le figement), met en pause à la sortie
+   (batterie). Idempotent : ne relance que si en pause, ne coupe que si en lecture. play() catché, PAS de
+   load(). Images IA se rembobine en plus à l'entrée. window._ensureDemoVids() = relance forcée des visibles
+   (appelé à la fermeture du menu, sur pageshow et au retour d'onglet). */
 (function(){
-  var v=document.getElementById('imagesIaVid'); if(!v || !('IntersectionObserver' in window)) return;
-  new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting && v.readyState>=1){ try{v.currentTime=0;}catch(_){ } } }); }, { threshold: 0.35 }).observe(v);
+  var vids=[].slice.call(document.querySelectorAll('#genVid,#imagesIaVid,#veoVid,#claudeTuto video'));
+  if(!vids.length) return;
+  function visible(v){ var r=v.getBoundingClientRect(); return r.top<innerHeight && r.bottom>0; }
+  function playV(v){
+    if(!v.paused) return;
+    v.muted=true; var p=v.play();
+    // iOS peut rejeter play() tant que ses décodeurs matériels ne sont pas libres (le menu vient de jouer
+    // 6 vidéos) → un seul réessai différé si la vidéo est toujours en pause ET visible. Plus de figement.
+    if(p&&p.catch) p.catch(function(){ setTimeout(function(){ if(v.paused&&visible(v)){ v.muted=true; var q=v.play(); if(q&&q.catch) q.catch(function(){}); } },260); });
+  }
+  function pauseV(v){ if(!v.paused){ try{v.pause();}catch(e){} } }
+  window._ensureDemoVids=function(){ vids.forEach(function(v){ if(visible(v)) playV(v); }); };
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){ es.forEach(function(e){
+      var v=e.target;
+      if(e.isIntersecting){
+        if(v.id==='imagesIaVid' && v._left && v.readyState>=1){ try{v.currentTime=0;}catch(_){ } }  // rembobine seulement après une VRAIE sortie (pas la gigue de scroll)
+        v._left=false; playV(v);
+      } else { v._left=true; pauseV(v); }
+    }); }, { threshold: 0.01 });   // aligné sur visible() (~0) → pas de bande morte 0-25 %
+    vids.forEach(function(v){ io.observe(v); });
+  } else { vids.forEach(playV); }
 })();
 
 /* Vidéos features : seule la vidéo de l'onglet ACTIF joue, et seulement quand la section est visible */
@@ -1248,12 +1273,15 @@ function tstToggle(open){
    c'est seulement la LECTURE qui était bloquée. */
 (function(){
   function kick(){
+    try{ if(window._ensureDemoVids) window._ensureDemoVids(); }catch(e){}
     try{ if(window._playActiveFeatVid) window._playActiveFeatVid(); }catch(e){}
     try{ var mp=document.getElementById('modelPicker'); if(mp && getComputedStyle(mp).display!=='none'){ mp.querySelectorAll('.mp-vid').forEach(function(v){ v.play().catch(function(){}); }); } }catch(e){}
   }
   document.addEventListener('pointerdown', kick, {passive:true});
   document.addEventListener('touchstart', kick, {passive:true});
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) kick(); });
+  window.addEventListener('pageshow', kick);   // retour arrière / bfcache → relance les vidéos
+  window.addEventListener('orientationchange', function(){ setTimeout(kick,300); });
 })();
 
 /* Filet de récupération iOS : si un play() est rejeté (rare une fois l'attribut autoplay posé), on relance
@@ -1355,10 +1383,14 @@ revealScan();
   // display:none et NE jouent PAS → v.load() est sûr ici : il ne fige rien, contrairement au reset
   // d'une vidéo visible en cours de lecture (c'est ce v.load()-là qui figeait les démos sur iOS).
   window.preloadModelPicker=function(){ if(_preloaded) return; _preloaded=true; grid.querySelectorAll('.mp-vid').forEach(function(v){ try{ v.preload='auto'; v.load(); }catch(e){} }); };
-  // Axel 05/09 : on précharge le menu AU REPOS, après le chargement complet de la LP (idle) → il est
-  // prêt dès l'ouverture (clic = affichage immédiat). Les 3 démos plus haut (preload=auto + autoplay)
-  // gardent la priorité ; l'idle callback passe après le critique → aucun impact LCP.
-  window.addEventListener('load',function(){ (window.requestIdleCallback||function(f){setTimeout(f,1400);})(function(){ try{ window.preloadModelPicker(); }catch(e){} }); });
+  // Axel 05/09 : le menu est PRIORITÉ Nº1. Beaucoup d'utilisateurs l'ouvrent SANS jamais scroller → on
+  // le met en tampon dès le 1er paint (double rAF, après le rendu du hero), au même rang que la 1ʳᵉ démo
+  // (Générateur). load() sur genVid seulement si elle est hors-champ et non lue (readyState<2) → aucun
+  // figement. Les 2 autres démos (Images IA, Express) sont déjà preload=auto et se bufferisent aussi.
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    try{ window.preloadModelPicker(); }catch(e){}
+    try{ var g=document.getElementById('genVid'); if(g && g.paused && g.readyState<2){ g.preload='auto'; g.load(); } }catch(e){}
+  }); });
   // Verrou de scroll robuste (position:fixed sur body) : sur iOS Safari, body{overflow:hidden}
   // ne bloque PAS le scroll du document → le fond glissait derrière le menu. On fige le body à
   // sa position et on la restaure à la fermeture. Plus aucun « slider derrière ».
@@ -1376,8 +1408,13 @@ revealScan();
     window.scrollTo(0,_lockY);
     mp.style.display='none';
     grid.querySelectorAll('.mp-vid').forEach(function(v){ try{v.pause();}catch(e){} });
+    // iOS libère ses décodeurs matériels avec un délai après la pause des 6 vidéos du menu → on ré-assère
+    // la lecture des démos (+ la vidéo d'onglet active) sur PLUSIEURS frames, pas un seul rAF : sinon une
+    // démo restée co-visible peut se figer juste après (play() rejeté avant libération, jamais réessayé).
+    function _revive(){ try{ window._ensureDemoVids&&window._ensureDemoVids(); }catch(e){} try{ window._playActiveFeatVid&&window._playActiveFeatVid(); }catch(e){} }
+    requestAnimationFrame(_revive); setTimeout(_revive,260); setTimeout(_revive,650);
   };
-  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !mp.hidden) window.closeModelPicker(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && mp.style.display!=='none') window.closeModelPicker(); });
 })();
 </script>
 
