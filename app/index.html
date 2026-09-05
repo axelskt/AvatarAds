@@ -7272,7 +7272,7 @@ function enterApp(profile){
   // ── Verrouillage qualité selon plan ──
   _updateQualityLocks(profile.plan);
   const credits = ['elite','developer'].includes(profile.plan) ? '∞' : profile.credits_remaining;
-  toast('Bienvenue ' + displayName + ' · Plan ' + (planLabels[profile.plan]||profile.plan));
+  // toast de bienvenue retiré (Axel 05/09 : « ça sert à rien »)
   // ── Restaurer la session précédente ──
   setTimeout(_restoreSession, 120);
   setTimeout(_restoreFilesFromIDB, 400); // fichiers audio/gameplay depuis IndexedDB
