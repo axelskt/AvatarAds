@@ -1776,7 +1776,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <button onclick="swapSplit()" class="btn btn-ghost" style="width:100%">Inverser clip ⇄ avatar</button>
 
 
-
                 <!-- RÉGLAGES DU SPLIT SCREEN — repliable (chevron), autres réglages -->
                 <button onclick="_toggleSplitAdv()" id="splitAdvBtn" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:13px 15px;text-align:left;cursor:pointer">
                   <div class="col" style="line-height:1.35">
@@ -5261,7 +5260,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <button onclick="openPwdModal()" class="btn btn-ghost" style="width:100%"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> Définir ou changer mon mot de passe</button>
     </div>
     <div id="accountSaveHint" class="faint mono" style="font-size:10.5px;text-align:center;margin-bottom:26px;height:14px"></div>
-
 
 
     <!-- 🧠 Modale « Ma marque » — maquette Claude Design, reprise au pixel -->
@@ -9057,10 +9055,6 @@ const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detai
 const _IMG_TEXT_FIDELITY = ' Preserve ALL visible text from the reference image EXACTLY as it appears — same words, same spelling, same language, same fonts and same placement on packaging, labels and logos. Never invent, translate, rewrite or distort any text.';
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
-// Queue légère pour Flux (styles réalistes) — Flux raw est déjà photoréaliste, on ne le sur-charge pas
-const _IMG_FLUX_TAIL = ', professional photorealistic lifestyle photograph, the person looking directly at the camera, medium framing from the waist up (not a wide full-body shot), natural realistic skin with visible pores and subtle imperfections, natural facial asymmetry, authentic expression, no beauty filter, no plastic skin, no CGI look, shot on Sony A7R V 50mm lens at eye level, bright natural daylight, soft natural shadows, true-to-life colors, detailed sharp background (no heavy blur), ultra realistic commercial lifestyle photography, high detail';
-// Moteur des styles réalistes SANS référence : 'gptimage' | 'flux' (Flux Ultra)
-const _IMG_REALISTIC_ENGINE = 'gptimage';
 // Modèles gpt-image essayés dans l'ordre (gpt-image-2 récent → fallback gpt-image-1)
 // Le proxy OpenAI renvoie ses propres erreurs en CHAÎNE ({"error":"Unauthorized —
 // session invalide ou expirée"}), là où l'API OpenAI renvoie un OBJET
@@ -9109,11 +9103,6 @@ function _imgEffectiveQuality(){
   if(_IMG_Q_ORDER[q] > _IMG_Q_ORDER[cap]) q = cap;
   return q;
 }
-// Palier Flux dérivé du slider qualité : Rapide=éco (flux-dev) · Standard=pro · Max=ultra (flux-1.1-pro-ultra)
-function _imgFluxTier(){
-  const q = _imgEffectiveQuality();
-  return q==='high' ? 'ultra' : (q==='medium' ? 'pro' : 'eco');
-}
 // Qualité librement sélectionnable (Max inclus) — le paywall se déclenche uniquement à « Générer »
 function _imgPickQuality(id){ _imgQuality = id; _imgRenderQuality(); }
 function _imgSliderQuality(v){ _imgQuality = ['low','medium','high'][Number(v)] || 'low'; _imgRenderQuality(); }
@@ -9152,7 +9141,7 @@ let _imgRefDataUrl         = null;
 let _imgRemoveBg           = false;      // suppression de fond auto
 
 const _IMG_MODELS = [
-  { id:'gptimage', label:'GPT Image', sub:'OpenAI · le meilleur',  soon:false },
+  { id:'gptimage', label:'GPT Image', sub:'OpenAI · le meilleur' },
 ];
 
 function _imgInitModelGrid(){
@@ -9162,9 +9151,8 @@ function _imgInitModelGrid(){
     const on = m.id===_imgSelectedModel;
     const el = document.createElement('div');
     el.className = 'img-fmt-card' + (on?' on':'');
-    if(m.soon) el.style.opacity = '.5';
-    el.innerHTML = '<div class="ifc-label">'+m.label+'</div><div class="ifc-sub">'+(m.soon?'bientôt':m.sub)+'</div>';
-    el.onclick = () => { if(m.soon){ toast('Flux Pro arrive bientôt'); return; } _imgPickModel(m.id); };
+    el.innerHTML = '<div class="ifc-label">'+m.label+'</div><div class="ifc-sub">'+m.sub+'</div>';
+    el.onclick = () => _imgPickModel(m.id);
     g.appendChild(el);
   });
 }
@@ -10108,71 +10096,9 @@ async function _imgEnrichPrompt(userPrompt, aspect){
   }catch(e){ return null; }
 }
 
-// ── Génération réaliste via Flux 1.1 Pro Ultra (mode raw) — proxy Replicate ──
-// Renvoie une data URL (les URLs Replicate expirent ~1h → on convertit pour la persistance).
-async function _imgGenerateFlux(token, prompt, size, tier){
-  const arMap = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
-  const aspect_ratio = arMap[size] || '9:16';
-  const base = SUPABASE_URL + '/functions/v1/replicate-proxy';
-  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{...(_aaOp()),'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
-  let d = await post({ mode:'flux', prompt, aspect_ratio, raw:true, tier: tier||'eco' });
-  if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur Flux'));
-  if(!d.url && d.id){
-    for(let i=0;i<45 && !d.url;i++){
-      await new Promise(r=>setTimeout(r,2000));
-      const p=await post({poll:d.id});
-      if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
-      if(p.status==='failed'||p.status==='canceled') throw new Error('Génération échouée — réessaie');
-      if(p.url) d.url=p.url;
-    }
-  }
-  if(!d.url) throw new Error('Délai dépassé — réessaie');
-  // Conversion en data URL (persistance bibliothèque)
-  try{
-    const resp = await fetch(d.url);
-    const blob = await resp.blob();
-    return await new Promise((res)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(blob); });
-  }catch(e){ return d.url; }
-}
-
-// ── Cohérence de personnage via Flux Kontext (garde le perso de l'image de réf, change la scène) ──
-async function _imgGenerateFluxKontext(token, prompt, refFile, size){
-  const dataUrl = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(refFile); });
-  const arMap = { '1024x1792':'9:16', '1792x1024':'16:9', '1024x1024':'1:1' };
-  const aspect_ratio = arMap[size] || '9:16';
-  const base = SUPABASE_URL + '/functions/v1/replicate-proxy';
-  const post = async(b)=>{ const r=await fetch(base,{method:'POST',headers:{...(_aaOp()),'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(b)}); return r.json(); };
-  let d = await post({ mode:'kontext', prompt, input_image:dataUrl, aspect_ratio });
-  if(d.error) throw new Error(typeof d.error==='string'?d.error:(d.error.message||'Erreur Kontext'));
-  if(!d.url && d.id){
-    for(let i=0;i<45 && !d.url;i++){
-      await new Promise(r=>setTimeout(r,2000));
-      const p=await post({poll:d.id});
-      if(p.error) throw new Error(typeof p.error==='string'?p.error:(p.error.message||'Erreur'));
-      if(p.status==='failed'||p.status==='canceled') throw new Error('Génération échouée — réessaie');
-      if(p.url) d.url=p.url;
-    }
-  }
-  if(!d.url) throw new Error('Délai dépassé — réessaie');
-  // Auto-HD (Clarity) : Kontext adoucit le fond → on le re-nettoie/détaille automatiquement
-  let finalUrl = d.url;
-  try{
-    let hd = await post({ image: d.url, scale_factor:2 });
-    if(!hd.error){
-      if(!hd.url && hd.id){
-        for(let i=0;i<40 && !hd.url;i++){ await new Promise(r=>setTimeout(r,2500)); const p=await post({poll:hd.id}); if(p.url) hd.url=p.url; if(p.status==='failed'||p.status==='canceled') break; }
-      }
-      if(hd.url) finalUrl = hd.url;
-    }
-  }catch(e){}
-  try{ const resp=await fetch(finalUrl); const blob=await resp.blob(); return await new Promise((res)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(blob); }); }catch(e){ return finalUrl; }
-}
 
 async function _imgGenerateOne(token, enhancedPrompt, size, style){
-  // Styles réalistes (Photo Réel / UGC) → Flux raw SI moteur flux, sinon gpt-image (prompt brut)
-  if((_imgSelectedStyleId==='photo' || _imgSelectedStyleId==='ugc') && _IMG_REALISTIC_ENGINE==='flux'){
-    return await _imgGenerateFlux(token, enhancedPrompt, size, _imgFluxTier());
-  }
+  // Styles réalistes (Photo Réel / UGC) : gpt-image, prompt brut (Flux abandonné 30/08 — déformait les visages)
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
   // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
   const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
@@ -10200,7 +10126,6 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
 }
 
 // Affiche une image dans le bloc résultat principal (single)
-// ── Restauration HD (Clarity Upscaler via Replicate · proxy Supabase) — Élite ──
 // ── Rond de progression 1→99% (estimé, gpt-image n'expose pas la vraie progression) ──
 let _imgProgTimer=null, _imgProgVal=0;
 function _imgSetProg(p){
@@ -10792,8 +10717,8 @@ async function generateImage(){
     if(_isLayout){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
-      // Styles réalistes sans réf : Flux → queue légère (formule testC/D) ; gpt-image → bloc réalisme ChatGPT.
-      enhancedPrompt = prompt + (_IMG_REALISTIC_ENGINE==='flux' ? _IMG_FLUX_TAIL : _IMG_REALISM_SUFFIX);
+      // Styles réalistes sans réf : bloc réalisme ChatGPT.
+      enhancedPrompt = prompt + _IMG_REALISM_SUFFIX;
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
