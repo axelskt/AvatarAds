@@ -2643,8 +2643,7 @@ async function resolveCimdClient(clientIdUrl: string): Promise<{ id: string, uri
   try { u = new URL(clientIdUrl) } catch { return null }
   if (u.protocol !== 'https:' || u.username || u.password) return null
   const h = u.hostname.toLowerCase()
-  if (h === 'localhost' || h.includes(':') || /^\d+\.\d+\.\d+\.\d+$/.test(h) ||
-      h.endsWith('.local') || h.endsWith('.internal')) return null
+  if (isBlockedHost(h)) return null   // M1 (06/09) : filtre anti-SSRF PARTAGÉ (bloque décimal/octal/hex, IPv6, plages privées, métadonnées)
   // ── CACHE CIMD (31/08) : si ce client est DÉJÀ enregistré, on réutilise ses redirect_uris SANS
   // le fetch externe (vers l'URL de Claude). Ce fetch, dans le chemin bloquant de /authorize,
   // ajoutait une latence variable qui — combinée au cold start — faisait timeouter Claude

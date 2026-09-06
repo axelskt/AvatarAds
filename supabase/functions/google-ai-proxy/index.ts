@@ -60,9 +60,12 @@ serve(async (req: Request) => {
   const isPoll = req.method === 'GET' && /\/operations\/[A-Za-z0-9._-]+$/.test(bare)
 
   if (gated) {
+    const isTts = req.method === 'POST' && /:generateContent$/.test(bare) && /tts/i.test(bare)
     const gate = isBillable
       ? await billableGate({ userId: uid, proxy: 'google', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
-      : await helperGate(uid, 'google', 900)   // polling ≤10 min par génération Veo, plusieurs en série
+      : isTts
+        ? await helperGate(uid, 'google-tts', 60, 3600)   // M3 (06/09) : TTS bridé 60/h (au lieu de 900/10min → drain de quota)
+        : await helperGate(uid, 'google', 900)   // polling ≤10 min par génération Veo, plusieurs en série
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
@@ -96,6 +99,7 @@ serve(async (req: Request) => {
       headers: { ...CORS, 'Content-Type': googleRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
+    if (isBillable && gated) await releaseReservation(uid, req, 9999).catch(() => {})
     console.error('google-ai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

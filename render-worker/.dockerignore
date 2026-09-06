@@ -1,0 +1,8 @@
+# L2 (06/09) : ne jamais copier ces chemins dans l'image (COPY . .). .env porte la SERVICE_ROLE_KEY —
+# déjà exclu de l'upload Railway (.railwayignore), ceci est la défense en profondeur côté build.
+.env
+node_modules
+test
+*.log
+.DS_Store
+npm-debug.log*

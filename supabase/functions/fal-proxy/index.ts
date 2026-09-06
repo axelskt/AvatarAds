@@ -106,6 +106,7 @@ serve(async (req: Request) => {
     }
     return new Response(text, { status: res.status, headers: { ...CORS, 'Content-Type': res.headers.get('content-type') ?? 'application/json' } })
   } catch (err) {
+    if (isSubmit && !auth.isService && auth.userId) await releaseReservation(auth.userId, req, 9999).catch(() => {})
     console.error('fal-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

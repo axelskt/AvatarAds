@@ -2509,7 +2509,8 @@ serve(async (req: Request) => {
   const _auth = await authUser(req)
   if (!_auth.isService && !_auth.userId) return json({ error: 'unauthorized' }, 401)
   // Audit #3 : orchestrate = Scribe + N Claude (coûteux). Exiger un débit récent (montage débite AVANT) + plafond.
-  if (_auth.userId) { const _g = await billableGate({ userId: _auth.userId, proxy: 'orchestrate', requireDebit: true, debitMinutes: 30, rateMax: 12, label: 'plan' }); if (!_g.ok) return json({ error: _g.error }, _g.status) }
+  // M6 (06/09) : amplification réduite — 1 débit → 6 runs / 15 min (au lieu de 12/30).
+  if (_auth.userId) { const _g = await billableGate({ userId: _auth.userId, proxy: 'orchestrate', requireDebit: true, debitMinutes: 15, rateMax: 6, label: 'plan' }); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
   try {
     const form = await req.formData()
