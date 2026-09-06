@@ -80,7 +80,12 @@ serve(async (req: Request) => {
       if (isBillable && gated) { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }) }
       googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: rawBody })
     }
-    const body = await googleRes.text()
+    // Le corps amont est relayé en BINAIRE. `.text()` (05/09, réservation) ré-encodait un MP4 Veo
+    // (GET /files/<id>:download) en UTF-8 → fichier corrompu (moov absent), lecteur noir, Safari qui plante
+    // au téléchargement (bug Express 06/09). Le texte n'est décodé QUE pour les réponses JSON/texte (poll).
+    const buf = await googleRes.arrayBuffer()
+    const ct = googleRes.headers.get('content-type') ?? 'application/json'
+    const body = /json|text\//i.test(ct) ? new TextDecoder().decode(buf) : ''
     // Règlement de la réservation quand la génération a abouti :
     if (gated) {
       const op = await resolveOp(uid, req)
@@ -94,9 +99,9 @@ serve(async (req: Request) => {
       if (isBillable && !googleRes.ok) await releaseReservation(uid, req, drawn)
       else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body) && /"error"/.test(body)) await releaseReservation(uid, req, 9999)
     }
-    return new Response(body, {
+    return new Response(buf, {
       status: googleRes.status,
-      headers: { ...CORS, 'Content-Type': googleRes.headers.get('content-type') ?? 'application/json' },
+      headers: { ...CORS, 'Content-Type': ct },
     })
   } catch (err) {
     if (isBillable && gated) await releaseReservation(uid, req, 9999).catch(() => {})
