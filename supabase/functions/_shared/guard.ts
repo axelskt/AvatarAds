@@ -233,6 +233,30 @@ export function isBlockedHost(hostname: string): boolean {
   return false
 }
 
+// ── IP RÉSOLUE par le DNS (≠ hôte littéral) : seules les PLAGES internes comptent. isBlockedHost refuse TOUTE IP
+//    littérale par conception (« aucune lettre = bloqué ») ; l'appliquer aux réponses DNS bloquait 100 % des domaines
+//    publics (claude.ai, example.com…) → régression du round 3 (06/09 matin) : nouveaux clients CIMD, capture de site
+//    (orchestrate/brand-memory) et images de référence MCP tous refusés. Fail-closed sur une forme inconnue.
+export function isInternalIp(ip: string): boolean {
+  let h = String(ip || '').toLowerCase().replace(/^\[|\]$/g, '')
+  if (!h) return true
+  const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)   // IPv4-mapped IPv6 → on juge l'IPv4
+  if (mapped) h = mapped[1]
+  if (h.includes(':')) {
+    if (h === '::' || h === '::1') return true                      // unspecified / loopback
+    if (/^f[cd][0-9a-f]{2}:/.test(h)) return true                    // fc00::/7 ULA
+    if (/^fe[89ab][0-9a-f]:/.test(h)) return true                    // fe80::/10 link-local
+    if (/^::ffff:/.test(h) || /^::/.test(h)) return true             // mapped/compat non dotté (::ffff:7f00:1, ::7f00:1)
+    if (/^64:ff9b:/.test(h) || /^2002:/.test(h)) return true         // NAT64, 6to4 (peuvent embarquer une IPv4 privée)
+    return false
+  }
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (!m) return true
+  const [a, b] = [Number(m[1]), Number(m[2])]
+  return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31)
+    || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19)) || (a === 100 && b >= 64 && b <= 127)
+}
+
 // ── SSRF par DNS : isBlockedHost ne voit que l'hôte LITTÉRAL ; un domaine public peut résoudre vers une IP
 //    interne. hostResolvesInternal résout A/AAAA et bloque si UNE ip est interne. Best-effort : si resolveDns
 //    est indisponible dans le runtime, on ne bloque pas (fail-open, pas pire qu'avant). Ne couvre pas le DNS
@@ -243,7 +267,7 @@ export async function hostResolvesInternal(hostname: string): Promise<boolean> {
   try {
     const ips: string[] = []
     for (const t of ['A', 'AAAA'] as const) { try { ips.push(...(await Deno.resolveDns(h, t))) } catch { /* type absent */ } }
-    return ips.some((ip) => isBlockedHost(ip))
+    return ips.some((ip) => isInternalIp(ip))   // ⚠ PAS isBlockedHost : il refuse toute IP littérale (voir isInternalIp)
   } catch { return false }   // resolveDns indisponible → fail-open
 }
 
