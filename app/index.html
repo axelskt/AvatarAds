@@ -29731,11 +29731,15 @@ async function expressCreate(){
     else { _dur = _dur<=4?4:(_dur<=6?6:8); }
     let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
     if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
-    const _veoBody = (withAudio)=>({
+    // Veo 3.1 (API Gemini) = audio NATIF, sans paramètre : envoyer `generateAudio` déclenche un 400 « …audio… »
+    // puis le repli (relance muette + voix TTS Gemini à muxer) → 2 appels, une voix TTS PAR-DESSUS la voix native
+    // au moment des sous-titres (bug Express 06/09, vidéo a70mor0r159c). On ne l'ajoute que pour un modèle non-3.1.
+    const _veoNativeAudio = (model)=>/veo-3\.1/i.test(String(model||''));
+    const _veoBody = (withAudio, model)=>({
       instances:[{ prompt:animPrompt, image:{ bytesBase64Encoded:imgB64, mimeType:imgMime } }],
       parameters:Object.assign(
         { durationSeconds: _dur, sampleCount:1, aspectRatio:window._expFormat, resolution:_res },
-        withAudio ? { generateAudio:true } : {}
+        (withAudio && !_veoNativeAudio(model)) ? { generateAudio:true } : {}
       )
     });
     // ── Modèle Veo selon le plan : Élite → 3.1 Fast (meilleur), autres → 3.1 Lite ──
@@ -29744,7 +29748,7 @@ async function expressCreate(){
     const _proAllowed = ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
     let _veoModel = (window._expVeoModel==='pro' && _proAllowed) ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-lite-generate-preview';
     const _startVeo = (model, withAudio) => _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning', {
-      method:'POST', body: JSON.stringify(_veoBody(withAudio))
+      method:'POST', body: JSON.stringify(_veoBody(withAudio, model))
     });
     // Veo natif : on tente avec audio ; si le modèle refuse generateAudio, on relance sans (vidéo quand même produite)
     let _usedAudio = useNativeAudio;
@@ -29782,7 +29786,7 @@ async function expressCreate(){
       const _vidRef = videoUri ? { uri: videoUri } : { bytesBase64Encoded: videoB64, mimeType:'video/mp4' };
       const _extBody = (withAudio)=>JSON.stringify({
         instances:[{ prompt: animPrompt, video: _vidRef }],
-        parameters: Object.assign({ sampleCount:1, aspectRatio:window._expFormat, resolution:_res }, withAudio?{generateAudio:true}:{})
+        parameters: Object.assign({ sampleCount:1, aspectRatio:window._expFormat, resolution:_res }, (withAudio && !_veoNativeAudio(_veoModel))?{generateAudio:true}:{})
       });
       let extResp = await _cartoonProxyFetch('/v1beta/models/'+_veoModel+':predictLongRunning',{ method:'POST', body:_extBody(_usedAudio) });
       if(!extResp.ok && _usedAudio){
@@ -29809,6 +29813,17 @@ async function expressCreate(){
       setP(Math.max(p,92),'↓ Téléchargement de la vidéo…');
       blob = await _veoDownloadUri(videoUri);
     }
+    // Bug Express 06/09 : un MP4 corrompu (proxy qui ré-encodait le binaire en texte) donnait un lecteur
+    // noir puis Safari plantait au téléchargement. On vérifie la signature ISO-BMFF (« ftyp » aux octets 4-7)
+    // AVANT d'afficher/servir quoi que ce soit ; l'opération Veo reste interrogeable pour récupérer la vidéo.
+    try{
+      const _head = new Uint8Array(await blob.slice(0,12).arrayBuffer());
+      const _ftyp = String.fromCharCode(_head[4],_head[5],_head[6],_head[7]);
+      if(blob.size < 50000 || _ftyp !== 'ftyp'){
+        window._veoDerniereOp = { op: opName, uri: videoUri || null };
+        throw new Error('Vidéo reçue corrompue (' + Math.round(blob.size/1024) + ' Ko, en-tête « ' + _ftyp + ' ») — opération ' + opName + ' conservée, réessaie le téléchargement');
+      }
+    }catch(_vErr){ if(/corrompue/.test(_vErr?.message||'')) throw _vErr; }
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
@@ -29819,6 +29834,14 @@ async function expressCreate(){
     if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
     if(prog) prog.style.display='none';
     if(acts) acts.style.display='flex';
+    // Auto-enregistrement sur le compte (règle : tout ce qui est généré est dans la Bibliothèque). Avant, seule
+    // la version SOUS-TITRÉE était sauvegardée → une vidéo Express brute disparaissait avec l'onglet (06/09).
+    try{
+      if(typeof _libAutoSaveVideo==='function'){
+        const _nm = 'Express ' + new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+        _libAutoSaveVideo(blob, _nm, ['Express', window._expFormat==='16:9' ? '16:9' : '9:16'], '⚡', 'EXPRESS');
+      }
+    }catch(_sErr){ console.warn('express autosave:', _sErr); }
     if(typeof _hedraIncrement==='function') _hedraIncrement();
     if(typeof _cartoonUpdateQuota==='function') _cartoonUpdateQuota();
     toast('Vidéo Express générée !');
