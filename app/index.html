@@ -29814,16 +29814,12 @@ async function expressCreate(){
       blob = await _veoDownloadUri(videoUri);
     }
     // Bug Express 06/09 : un MP4 corrompu (proxy qui ré-encodait le binaire en texte) donnait un lecteur
-    // noir puis Safari plantait au téléchargement. On vérifie la signature ISO-BMFF (« ftyp » aux octets 4-7)
-    // AVANT d'afficher/servir quoi que ce soit ; l'opération Veo reste interrogeable pour récupérer la vidéo.
-    try{
-      const _head = new Uint8Array(await blob.slice(0,12).arrayBuffer());
-      const _ftyp = String.fromCharCode(_head[4],_head[5],_head[6],_head[7]);
-      if(blob.size < 50000 || _ftyp !== 'ftyp'){
-        window._veoDerniereOp = { op: opName, uri: videoUri || null };
-        throw new Error('Vidéo reçue corrompue (' + Math.round(blob.size/1024) + ' Ko, en-tête « ' + _ftyp + ' ») — opération ' + opName + ' conservée, réessaie le téléchargement');
-      }
-    }catch(_vErr){ if(/corrompue/.test(_vErr?.message||'')) throw _vErr; }
+    // noir puis Safari plantait au téléchargement. On valide la STRUCTURE MP4 (_mp4Sane) AVANT d'afficher/servir
+    // quoi que ce soit ; l'opération Veo reste interrogeable pour récupérer la vidéo.
+    if(blob.size < 50000 || !(await _mp4Sane(blob))){
+      window._veoDerniereOp = { op: opName, uri: videoUri || null };
+      throw new Error('Vidéo reçue corrompue (' + Math.round(blob.size/1024) + ' Ko) — opération ' + opName + ' conservée, réessaie le téléchargement');
+    }
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
@@ -31513,6 +31509,25 @@ async function _veoAwaitOp(opName){
 }
 
 // Télécharge une vidéo Veo renvoyée sous forme d'URI (via le proxy, clé côté serveur)
+// Validation STRUCTURELLE d'un MP4 (bug Express 06/09) : on parcourt la chaîne d'atomes de tête (taille+type),
+// chaque type doit être 4 caractères ASCII, les tailles doivent tomber exactement sur la fin du fichier, et
+// `moov` + `mdat` doivent exister. Une simple signature « ftyp » ne suffit PAS : un MP4 ré-encodé en UTF-8 par
+// un proxy garde ses 8 premiers octets intacts et n'est détecté qu'au 3e atome. Fail-open si lecture impossible.
+async function _mp4Sane(blob){
+  try{
+    const total=blob.size; let off=0, boxes=0, hasMoov=false, hasMdat=false;
+    while(off+8<=total && boxes<128){
+      const h=new DataView(await blob.slice(off, Math.min(off+16,total)).arrayBuffer());
+      let size=h.getUint32(0); const type=String.fromCharCode(h.getUint8(4),h.getUint8(5),h.getUint8(6),h.getUint8(7));
+      if(!/^[A-Za-z0-9 ]{4}$/.test(type)) return false;
+      if(size===1){ if(off+16>total) return false; size=Number(h.getBigUint64(8)); } else if(size===0){ size=total-off; }
+      if(size<8 || off+size>total) return false;
+      if(type==='moov') hasMoov=true; if(type==='mdat') hasMdat=true;
+      off+=size; boxes++;
+    }
+    return off===total && hasMoov && hasMdat;
+  }catch(_){ return true; }
+}
 async function _veoDownloadUri(uri){
   let path = String(uri).replace(/^https?:\/\/generativelanguage\.googleapis\.com/,'');
   if(!/[?&]alt=media/.test(path)) path += (path.includes('?')?'&':'?')+'alt=media';
