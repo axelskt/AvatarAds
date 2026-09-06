@@ -240,6 +240,7 @@ const b64DepuisOctets = (buf: Uint8Array): string => {
 }
 async function blocImage(url: string): Promise<Record<string, unknown> | null> {
   try {
+    try { const _u = new URL(url); if (!/^https?:$/.test(_u.protocol) || isBlockedHost(_u.hostname)) return null } catch { return null }   // SSRF défense en profondeur (06/09)
     const r = await fetch(url)
     if (!r.ok) return null
     const buf = new Uint8Array(await r.arrayBuffer())

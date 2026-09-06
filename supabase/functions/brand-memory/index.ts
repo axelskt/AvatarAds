@@ -134,7 +134,7 @@ serve(async (req: Request) => {
   )
   const { data: { user }, error: authErr } = await sb.auth.getUser()
   if (authErr || !user) return json({ error: 'Unauthorized — session invalide ou expirée' }, 401)
-  { const _g = await helperGate(user.id, 'brand-memory', 40); if (!_g.ok) return json({ error: _g.error }, _g.status) }
+  { const _g = await helperGate(user.id, 'brand-memory', 15); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
   try {
     const body = await req.json().catch(() => ({}))

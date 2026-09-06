@@ -46,7 +46,7 @@ serve(async (req) => {
   const plan = String(prof?.plan || '').toLowerCase()
   const allowed = !!prof && (['pro', 'elite', 'developer'].includes(plan) || !!prof.is_owner)
   if (!allowed) return json(403, { error: 'pro_elite_only' })
-  const _g = await helperGate(user.id, 'derush', 20, 600)   // audit 05/09 : plafond anti-drain Scribe
+  const _g = await helperGate(user.id, 'derush', 8, 600)   // audit 05/09 + M6 (06/09) : Scribe payant → 8/10min (drain réduit)
   if (!_g.ok) return json(429, { error: 'rate_limited' })
 
   let audio: File | null = null
