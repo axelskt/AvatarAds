@@ -21,7 +21,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -123,7 +123,8 @@ serve(async (req: Request) => {
     if (!gate.ok) return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
     // Réservation : la génération (POST /v3/models/<slug> ou /generations) tire son coût (borne basse 2 = avatarPerSec × 1 s).
     if (req.method === 'POST' && HEDRA_BILLABLE.test(bare)) {
-      const rr = await applyReservation({ req, userId: user.id, proxy: 'hedra', cost: 2, label: bare })
+      // Audit métier 06/09 : on tire la RÉSERVE ENTIÈRE (une op = une vidéo). Ferme « N vidéos pour un débit ».
+      const rr = await applyReservationFull({ req, userId: user.id, proxy: 'hedra', label: bare })
       if (!rr.ok) return new Response(JSON.stringify({ error: rr.error }), { status: rr.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
     }
   }
