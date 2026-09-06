@@ -217,6 +217,20 @@ export function isBlockedHost(hostname: string): boolean {
   return false
 }
 
+// ── SSRF par DNS : isBlockedHost ne voit que l'hôte LITTÉRAL ; un domaine public peut résoudre vers une IP
+//    interne. hostResolvesInternal résout A/AAAA et bloque si UNE ip est interne. Best-effort : si resolveDns
+//    est indisponible dans le runtime, on ne bloque pas (fail-open, pas pire qu'avant). Ne couvre pas le DNS
+//    rebinding (TOCTOU), mais ferme le cas d'un domaine pointant statiquement vers une IP interne/métadonnées.
+export async function hostResolvesInternal(hostname: string): Promise<boolean> {
+  const h = String(hostname || '').replace(/^\[|\]$/g, '').replace(/\.+$/, '')
+  if (isBlockedHost(h)) return true
+  try {
+    const ips: string[] = []
+    for (const t of ['A', 'AAAA'] as const) { try { ips.push(...(await Deno.resolveDns(h, t))) } catch { /* type absent */ } }
+    return ips.some((ip) => isBlockedHost(ip))
+  } catch { return false }   // resolveDns indisponible → fail-open
+}
+
 // ── fetch d'une page utilisateur : redirections MANUELLES, chaque saut revalidé (protocole http(s), port
 //    par défaut, hôte non bloqué). null = refusé / injoignable.
 export async function safeFetchHtml(rawUrl: string, timeoutMs = 7000, maxHops = 3): Promise<Response | null> {
@@ -227,6 +241,7 @@ export async function safeFetchHtml(rawUrl: string, timeoutMs = 7000, maxHops = 
   try {
     for (let hop = 0; hop <= maxHops; hop++) {
       if (!/^https?:$/.test(url.protocol) || url.port || url.username || url.password || isBlockedHost(url.hostname)) return null
+      if (await hostResolvesInternal(url.hostname)) return null   // round3 : DNS pointant en interne
       const res = await fetch(url.href, { signal: ctrl.signal, redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AvatarAds/1.0)' } })
       if ([301, 302, 303, 307, 308].includes(res.status)) {
         const loc = res.headers.get('location'); if (!loc) return null

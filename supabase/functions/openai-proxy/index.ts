@@ -40,7 +40,7 @@ serve(async (req: Request) => {
   if (gated) {
     const gate = isBillable
       ? await billableGate({ userId: uid, proxy: 'openai', requireDebit: true, rateMax: 40, label: bare })
-      : await helperGate(uid, 'openai', bare.includes('transcriptions') ? 30 : 80)
+      : await helperGate(uid, 'openai', bare.includes('transcriptions') ? 12 : 20)   // round3 (06/09) : GPT-4o/Whisper payants → 20/12 par 10 min (drain réduit)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 

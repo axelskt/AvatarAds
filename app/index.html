@@ -30137,11 +30137,11 @@ function _mcpOpenConsentModal(params, session){
     _obs.observe(document.body, { childList: true })
   } catch(_){}
   const _clore = () => { window._mcpOAuthDone = true; window._mcpOAuthModalOpen = false; try { sessionStorage.removeItem('aa_mcp_oauth') } catch(_){} try { _obs && _obs.disconnect() } catch(_){} }
-  const sep = params.redirect_uri.includes('?') ? '&' : '?'
   document.getElementById('mcpOAuthNo').onclick = () => {
     _clore()
     console.log('[mcp-oauth] fermeture — refus utilisateur')
-    location.href = params.redirect_uri + sep + 'error=access_denied' + (params.state ? '&state=' + encodeURIComponent(params.state) : '')
+    // round3 (06/09) : relais mcp_oauth non signé → redirect_uri forgé = open redirect. On ne redirige plus vers
+    // l'URL client au refus (le succès passe par /oauth/approve → d.redirect_url validé serveur).
   }
   document.getElementById('mcpOAuthOk').onclick = async () => {
     const btn = document.getElementById('mcpOAuthOk')

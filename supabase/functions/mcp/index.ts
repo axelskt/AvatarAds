@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { isBlockedHost as guardBlockedHost } from '../_shared/guard.ts'   // audit #3 : version durcie (IPv6, décimal/octal/hex, .internal/.arpa)
+import { isBlockedHost as guardBlockedHost, hostResolvesInternal } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne)
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
@@ -240,7 +240,7 @@ const b64DepuisOctets = (buf: Uint8Array): string => {
 }
 async function blocImage(url: string): Promise<Record<string, unknown> | null> {
   try {
-    try { const _u = new URL(url); if (!/^https?:$/.test(_u.protocol) || isBlockedHost(_u.hostname)) return null } catch { return null }   // SSRF défense en profondeur (06/09)
+    try { const _u = new URL(url); if (!/^https?:$/.test(_u.protocol) || isBlockedHost(_u.hostname) || await hostResolvesInternal(_u.hostname)) return null } catch { return null }   // SSRF défense en profondeur (06/09 + round3 DNS)
     const r = await fetch(url)
     if (!r.ok) return null
     const buf = new Uint8Array(await r.arrayBuffer())
@@ -1485,6 +1485,7 @@ async function fetchTO(url: string, ms = 20_000, init?: RequestInit): Promise<Re
     let u = new URL(url)
     for (let hop = 0; hop < 4; hop++) {   // audit #3 : chaque saut revalidé (protocole/port/userinfo/hôte interne)
       if (!/^https?:$/.test(u.protocol) || u.port || u.username || u.password || isBlockedHost(u.hostname)) return null
+      if (await hostResolvesInternal(u.hostname)) return null   // round3 : DNS pointant en interne/métadonnées
       const res = await fetch(u.href, { ...init, redirect: 'manual', signal: ac.signal })
       if ([301, 302, 303, 307, 308].includes(res.status)) { const loc = res.headers.get('location'); if (!loc) return res; u = new URL(loc, u); continue }
       return res
@@ -2657,6 +2658,7 @@ async function resolveCimdClient(clientIdUrl: string): Promise<{ id: string, uri
       return { id: String(hit.client_id), uris: hit.redirect_uris as string[] }
     }
   } catch (_) { /* pas de cache → on fetche normalement ci-dessous */ }
+  if (await hostResolvesInternal(u.hostname)) return null   // round3 : DNS pointant en interne/métadonnées
   const ctl = new AbortController()
   const t = setTimeout(() => ctl.abort(), 5000)
   // deno-lint-ignore no-explicit-any
