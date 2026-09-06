@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -76,7 +76,7 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
-    if (isSubmit) { const rr = await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }) }
+    if (isSubmit) { const rr = await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }) }
   }
 
   // ── relais vers fal ──

@@ -72,6 +72,22 @@ export async function applyReservation(o: { req: Request; userId: string; proxy:
   return { ok: true }
 }
 
+// Tire la réserve ENTIÈRE d'une op (soumission VIDÉO : une op = une génération). Ferme « N générations pour
+// un débit » : une 2e soumission sur la même op trouve réserve 0 → 402. Fail-open sur erreur DB.
+export async function applyReservationFull(o: { req: Request; userId: string; proxy: string; label?: string }): Promise<Gate> {
+  const opId = await resolveOp(o.userId, o.req)
+  if (!opId) return { ok: true }   // owner/dev : aucune op ouverte
+  try {
+    const { data, error } = await svc().rpc('draw_full_reservation', { p_user: o.userId, p_op: opId })
+    if (error) { console.warn('draw_full err (fail-open):', error.message); return { ok: true } }
+    if (data !== true) {
+      console.warn(`[reserve-full] ${o.proxy} op=${opId} ${o.label ?? ''} VIDE/RÉGLÉE (enforce=${reserveEnforce()})`)
+      if (reserveEnforce()) return { ok: false, status: 402, error: 'Réservation de crédits insuffisante pour cette génération.' }
+    }
+  } catch { /* fail-open */ }
+  return { ok: true }
+}
+
 let _svc: SupabaseClient | null = null
 export function svc(): SupabaseClient {
   if (!_svc) _svc = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })

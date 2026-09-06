@@ -16,7 +16,7 @@
 //   • TTS/STS : plafond par utilisateur + preuve de débit récent (H3).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservationFull, settleReservation, resolveOp, releaseReservation } from '../_shared/guard.ts'
 
 const EL_BASE = 'https://api.elevenlabs.io'
 // Chemins réellement utilisés par l'app (traçage 05/09) : TTS, STS, Voice Design (text-to-voice/*), clonage (voices/add).
@@ -49,6 +49,10 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: auth.userId, proxy: 'elevenlabs', requireDebit: true, rateMax: 20, label: bare })
       : await helperGate(auth.userId, 'elevenlabs', 60)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
+    // Audit métier 06/09 : elevenlabs FACTURANT n'avait AUCUNE réservation → 1 débit finançait N TTS et le
+    // débit restait remboursable APRÈS usage. On tire la réserve entière (une op = un appel) puis on règle à la
+    // livraison (op non remboursable) ; on libère si l'amont échoue.
+    if (isBillable) { const rr = await applyReservationFull({ req, userId: auth.userId, proxy: 'elevenlabs', label: bare }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }) }
   }
 
   try {
@@ -71,11 +75,16 @@ serve(async (req: Request) => {
       })
     }
     const resBody = await elRes.arrayBuffer()
+    if (isBillable && auth.userId) {
+      if (elRes.ok) { const op = await resolveOp(auth.userId, req); if (op) await settleReservation(auth.userId, op) }   // livré → op non remboursable (fin du refund-après-TTS)
+      else await releaseReservation(auth.userId, req, 9999).catch(() => {})                                             // amont en erreur → rendre la réserve
+    }
     return new Response(resBody, {
       status: elRes.status,
       headers: { ...CORS, 'Content-Type': elRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
+    if (isBillable && auth.userId) await releaseReservation(auth.userId, req, 9999).catch(() => {})
     console.error('elevenlabs-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

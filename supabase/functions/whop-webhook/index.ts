@@ -362,7 +362,7 @@ serve(async (req) => {
     //    du même abonnement / e-mail a été reçue dans les 10 dernières minutes, ce paiement est un no-op.
     if (profile) {
       const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString()
-      const { data: recents } = await sb.from('webhook_events').select('body').gte('received_at', tenMinAgo).limit(60)
+      const { data: recents } = await sb.from('webhook_events').select('body').gte('received_at', tenMinAgo).order('received_at', { ascending: false }).limit(200)   // audit métier 06/09 : ordonné + plafond relevé (l'activation ne doit pas sortir de la fenêtre)
       const memberKey = memberId || data.id || null
       const dupAct = (recents || []).some((e: any) => {
         const b = e?.body || {}; const a = String(b.action ?? b.event ?? b.type ?? '').toLowerCase(); const d = b.data || {}
