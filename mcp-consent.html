@@ -115,8 +115,11 @@
       });
     }
     function deny(){
-      var sep = params.redirect_uri.indexOf('?') >= 0 ? '&' : '?';
-      location.href = params.redirect_uri + sep + 'error=access_denied' + (params.state ? '&state=' + encodeURIComponent(params.state) : '');
+      // round3 (06/09) : le relais mcp_oauth n'est PAS signé → un redirect_uri forgé (https://evil) atteignait
+      // location.href = open redirect + fuite du state. On ne REDIRIGE PLUS vers l'URL client sur le refus ;
+      // le succès, lui, passe par le serveur (/oauth/approve → d.redirect_url validé contre le CIMD).
+      document.querySelector('.card').innerHTML = '<h1>Autorisation refusée</h1><div class="sub" style="margin-top:8px">Tu peux fermer cette fenêtre et revenir à Claude.</div>';
+      return;
     }
     function toConsent(session, errMsg){
       $('email').textContent = (session.user && session.user.email) || '';
