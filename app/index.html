@@ -30072,6 +30072,9 @@ async function _mcpOAuthConsent(){
   let params
   try { params = JSON.parse(atob(relai.replace(/-/g,'+').replace(/_/g,'/'))) } catch(_){ console.warn('[mcp-oauth] relais illisible — ignoré'); return }
   if(!params || !params.client_id || !params.redirect_uri){ console.warn('[mcp-oauth] relais incomplet — ignoré'); return }
+  // CRITICAL 1 (06/09) : redirect_uri contrôlé par l'URL (relais base64) → sans validation de schéma,
+  // un `javascript:` dans location.href exécutait du code (CSP unsafe-inline) et volait le JWT du localStorage.
+  try{ const _u = new URL(params.redirect_uri); if(!/^https?:$/.test(_u.protocol)) throw 0; }catch(_){ console.warn('[mcp-oauth] redirect_uri de schéma non-http rejeté'); try{ sessionStorage.removeItem('aa_mcp_oauth') }catch(_){}; return }
   console.log('[mcp-oauth] lancement — relais de consentement détecté')
   // BUG Axel 30/08 (nav privée) : on ne consomme PLUS le relais tout de suite. En session
   // pas encore restaurée, le boot peut re-router/recharger AVANT l'ouverture de la carte ;
@@ -39007,6 +39010,9 @@ window.mPreviewClose=function(){
    · scroll:<px> : fait défiler le premier conteneur scrollable de modale ouverte */
 (function(){
   if(location.hash.indexOf('#capture=')!==0) return;
+  // M7 (06/09) : outillage de capture pour visiteur DÉCONNECTÉ uniquement. Si une session réelle existe, on ne
+  // fait rien : sinon un lien #capture=…/txt:générer piégeait une victime connectée pour cliquer avec SON JWT.
+  try{ for(var _i=0;_i<localStorage.length;_i++){ var _k=localStorage.key(_i); if(_k && /sb-.*-auth-token/.test(_k) && localStorage.getItem(_k)){ console.warn('[capture] session active — désactivé'); return; } } }catch(_){}
   setTimeout(function(){
     try{
       var spec=decodeURIComponent(location.hash.slice(9)).split('/');

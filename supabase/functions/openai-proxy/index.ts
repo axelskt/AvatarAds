@@ -74,6 +74,7 @@ serve(async (req: Request) => {
       headers: { ...CORS, 'Content-Type': openaiRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
+    if (isBillable && gated) await releaseReservation(uid, req, 9999).catch(() => {})   // exception → rendre le tirage (refund légitime possible)
     console.error('openai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

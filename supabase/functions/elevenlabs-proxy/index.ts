@@ -20,7 +20,7 @@ import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate } from 
 
 const EL_BASE = 'https://api.elevenlabs.io'
 // Chemins réellement utilisés par l'app (traçage 05/09) : TTS, STS, Voice Design (text-to-voice/*), clonage (voices/add).
-const ALLOW = /^\/v1\/(user|voices|voices\/add|text-to-voice\/(create-previews|create-voice-from-preview)|text-to-speech\/[A-Za-z0-9]+(\/stream)?|speech-to-speech\/[A-Za-z0-9]+(\/stream)?)$/
+const ALLOW = /^\/v1\/(voices\/add|text-to-voice\/(create-previews|create-voice-from-preview)|text-to-speech\/[A-Za-z0-9]+(\/stream)?|speech-to-speech\/[A-Za-z0-9]+(\/stream)?)$/   // M5 (06/09) : /v1/user et /v1/voices retirés (jamais appelés par l'app, exposaient l'état du compte fournisseur)
 const BILLABLE = /^\/v1\/(text-to-speech|speech-to-speech|text-to-voice|voices\/add)/
 
 serve(async (req: Request) => {

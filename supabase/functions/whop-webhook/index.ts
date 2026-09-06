@@ -91,6 +91,10 @@ async function _hmac(payload: string): Promise<Uint8Array> {
 }
 const _b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u))
 const _hex = (u: Uint8Array) => Array.from(u).map(b => b.toString(16).padStart(2, '0')).join('')
+function _ctEq(a: string, b: string): boolean {   // L1 (06/09) : comparaison de MAC en temps constant
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false
+  let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0
+}
 async function verifyWebhook(req: Request, body: string): Promise<boolean> {
   try {
     const h = req.headers
@@ -102,7 +106,7 @@ async function verifyWebhook(req: Request, body: string): Promise<boolean> {
       const expected = _b64(await _hmac(`${id}.${ts}.${body}`))
       for (const part of sig.split(' ')) {
         const v = part.includes(',') ? part.split(',')[1] : part
-        if (v && v === expected) return true
+        if (v && _ctEq(v, expected)) return true
       }
     }
     // 2) Anciens formats hex
@@ -111,10 +115,10 @@ async function verifyWebhook(req: Request, body: string): Promise<boolean> {
       if (legacy.includes('v1=')) {
         const t  = (legacy.match(/t=([^,]+)/) ?? [])[1] ?? ''
         const v1 = (legacy.match(/v1=([0-9a-f]+)/i) ?? [])[1] ?? ''
-        if (t && v1 && _hex(await _hmac(`${t}.${body}`)) === v1.toLowerCase()) return true
+        if (t && v1 && _ctEq(_hex(await _hmac(`${t}.${body}`)), v1.toLowerCase())) return true
       }
       const plain = legacy.replace(/^sha256=/, '').trim().toLowerCase()
-      if (_hex(await _hmac(body)) === plain) return true
+      if (_ctEq(_hex(await _hmac(body)), plain)) return true
     }
     // Diagnostic (noms de headers seulement, jamais les valeurs)
     console.error('❌ Signature invalide · headers presents:', [...h.keys()].filter(k => /sig|whop|svix|webhook/i.test(k)).join(', ') || 'aucun header de signature')

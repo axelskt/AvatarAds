@@ -202,6 +202,9 @@ export function isBlockedHost(hostname: string): boolean {
   if (h.includes(':')) return true                       // toute IPv6 littérale
   if (!/[a-z]/.test(h)) return true                      // aucune lettre = IP dottée / décimale / octale
   if (/^0x[0-9a-f]+$/.test(h)) return true               // hexa
+  // M2 (06/09) : IP en notation OBFUSQUÉE — un hôte dont TOUS les labels sont hex (0x..) ou décimaux
+  // est une IP (127.0.0.1 = 0x7f.1 = 2130706433 ; métadonnées = 0xa9.0xfe.0xa9.0xfe). On le bloque.
+  { const labels = h.split('.'); if (labels.length && labels.every((l) => /^0x[0-9a-f]+$/.test(l) || /^[0-9]+$/.test(l))) return true }
   const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (m) {
     const [a, b] = [Number(m[1]), Number(m[2])]

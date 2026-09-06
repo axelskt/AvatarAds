@@ -197,7 +197,16 @@ serve(async (req: Request) => {
     // Règlement de la réservation quand la génération a abouti (poll /v3/jobs COMPLETE) → op non remboursable.
     if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok) {
       const op = await resolveOp(user.id, req)
-      if (op && /"status"\s*:\s*"(complete|completed|succeeded|success)"/i.test(body)) await settleReservation(user.id, op)
+      if (op && /"status"\s*:\s*"(complete|completed|succeeded|success)"/i.test(body)) {
+        // HIGH (06/09) — sous-facturation : le tirage Hedra est un forfait 2, or le coût réel = durée × avatarPerSec.
+        // Le coût réel n'est connu qu'ICI (réponse du job terminé). Observation LOG-ONLY pour identifier le champ
+        // de durée avant d'activer une réconciliation qui débite l'écart (voir mémoire securite-guard). Zéro débit.
+        try {
+          const md = body.match(/"(duration|duration_ms|duration_seconds|video_duration|length|seconds|billed_seconds)"\s*:\s*([0-9.]+)/i)
+          console.log(`[hedra-reconcile] op=${op} champs_durée=${md ? md[1] + '=' + md[2] : 'ABSENT'} body=${body.slice(0, 400)}`)
+        } catch (_) { /* log best-effort */ }
+        await settleReservation(user.id, op)
+      }
     }
 
     return new Response(body, {
@@ -208,6 +217,7 @@ serve(async (req: Request) => {
       },
     })
   } catch (err) {
+    if (!estLeMoteur && user) await releaseReservation(user.id, req, 9999).catch(() => {})
     console.error('hedra-proxy error:', err)
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
