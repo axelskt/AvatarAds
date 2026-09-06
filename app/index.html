@@ -30151,13 +30151,25 @@ function _mcpOpenConsentModal(params, session){
   if(document.getElementById('mcpOAuthModal')){ console.log('[mcp-oauth] garde — ouverture ignorée (carte déjà présente)'); return }
   window._mcpOAuthModalOpen = true
   window._mcpOAuthDone = false           // true uniquement sur action utilisateur (autoriser / refuser)
+  // Hameçonnage du consentement (audit 06/09) : la carte disait TOUJOURS « Claude » quel que soit le client.
+  // /register est ouvert → un attaquant enregistre son client et fait cliquer la victime sur « Autoriser Claude »
+  // alors que le code part chez lui. On affiche l'IDENTITÉ RÉELLE (domaine de redirection) ; « Claude » n'apparaît
+  // que pour un domaine Anthropic de confiance.
+  const _esc = (x)=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+  const _trustedClaude = (()=>{ try{ return /(^|\.)(claude\.ai|claude\.com|anthropic\.com)$/i.test(new URL(params.redirect_uri).hostname) }catch(_){ return false } })()
+  const _cliHost = (()=>{ try{ return new URL(params.redirect_uri).host }catch(_){ return params.redirect_uri } })()
+  const _ttl = _trustedClaude ? 'Autoriser Claude ?' : 'Application externe'
+  const _ttlColor = _trustedClaude ? '' : ';color:#ffb020'
+  const _desc = _trustedClaude
+    ? 'Claude demande l\u2019acc\u00e8s \u00e0 ton compte AvatarAds pour g\u00e9n\u00e9rer des images, vid\u00e9os et montages avec tes cr\u00e9dits.'
+    : 'Une application externe (<b>' + _esc(_cliHost) + '</b>) \u2014 <b>ce n\u2019est PAS Claude</b> \u2014 demande l\u2019acc\u00e8s \u00e0 ton compte AvatarAds et pourra d\u00e9penser tes cr\u00e9dits. N\u2019autorise que si tu es toi-m\u00eame \u00e0 l\u2019origine de cette demande.'
   const div = document.createElement('div')
   div.id = 'mcpOAuthModal'
   div.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(8,8,10,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px'
   div.innerHTML = '<div style="width:100%;max-width:420px;background:var(--panel-1,#141417);border:1px solid var(--border,#2a2a2e);border-radius:20px;padding:26px 24px;text-align:center">'
     + '<div style="width:56px;height:56px;border-radius:16px;margin:0 auto 14px;display:grid;place-items:center;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
-    + '<div class="display" style="font-size:20px;font-weight:800;margin-bottom:8px">Autoriser Claude ?</div>'
-    + '<div class="faint" style="font-size:13px;line-height:1.6;margin-bottom:6px">Claude demande l\u2019acc\u00e8s \u00e0 ton compte AvatarAds pour g\u00e9n\u00e9rer des images, vid\u00e9os et montages avec tes cr\u00e9dits.</div>'
+    + '<div class="display" style="font-size:20px;font-weight:800;margin-bottom:8px' + _ttlColor + '">' + _ttl + '</div>'
+    + '<div class="faint" style="font-size:13px;line-height:1.6;margin-bottom:6px">' + _desc + '</div>'
     + '<div class="faint" style="font-size:11.5px;margin-bottom:20px">Compte : <b style="color:var(--text,#eee)">' + String((session.user && session.user.email) || '') + '</b></div>'
     + '<button id="mcpOAuthOk" style="width:100%;padding:13px;background:linear-gradient(180deg,#FF8A5C,#FF6B35);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14.5px;font-weight:800;cursor:pointer">Autoriser</button>'
     + '<button id="mcpOAuthNo" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:none;color:var(--text-3,#888);font-family:var(--font);font-size:12.5px;cursor:pointer">Refuser</button>'

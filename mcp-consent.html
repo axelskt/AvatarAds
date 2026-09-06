@@ -121,8 +121,29 @@
       document.querySelector('.card').innerHTML = '<h1>Autorisation refusée</h1><div class="sub" style="margin-top:8px">Tu peux fermer cette fenêtre et revenir à Claude.</div>';
       return;
     }
+    function _esc(x){ return String(x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    function _clientHost(){ try { return new URL(params.redirect_uri).host; } catch(e){ return params.redirect_uri; } }
+    // Hameçonnage du consentement (audit 06/09) : la carte disait TOUJOURS « Claude » quel que soit le client
+    // réel. N'importe qui peut enregistrer un client (/register ouvert) → un attaquant faisait cliquer la victime
+    // sur une carte « Autoriser Claude » alors que le code partait chez lui. On affiche donc l'IDENTITÉ RÉELLE
+    // (le domaine de redirection) ; « Claude » n'apparaît que pour un domaine Anthropic de confiance.
+    function _renderIdentity(){
+      var trusted = isTrustedClaude(params.redirect_uri);
+      var h1 = document.querySelector('#consent h1');
+      var sub = document.querySelector('#consent .sub');
+      if (trusted) {
+        h1.textContent = 'Autoriser Claude ?';
+        h1.style.color = '';
+        sub.textContent = "Claude demande l'accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.";
+      } else {
+        h1.textContent = 'Application externe';
+        h1.style.color = '#ffb020';
+        sub.innerHTML = "Une application externe (<b>" + _esc(_clientHost()) + "</b>) — <b>ce n'est PAS Claude</b> — demande l'accès à ton compte AvatarAds et pourra dépenser tes crédits. N'autorise que si tu es toi-même à l'origine de cette demande.";
+      }
+    }
     function toConsent(session, errMsg){
       $('email').textContent = (session.user && session.user.email) || '';
+      _renderIdentity();
       var ok = $('ok'); ok.disabled = false; ok.textContent = errMsg ? 'Réessayer' : 'Autoriser';
       ok.onclick = function(){ ok.disabled = true; ok.innerHTML = '<span class="spin"></span>'; _approving = false; approve(session); };
       $('no').onclick = deny;

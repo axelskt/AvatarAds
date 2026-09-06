@@ -79,9 +79,13 @@ serve(async (req: Request) => {
     // liste dise la vérité et que le compteur ne les revoie plus.
     {
       const limite = new Date(Date.now() - 45 * 60 * 1000).toISOString()
-      await service.from('render_jobs')
+      const { data: morts } = await service.from('render_jobs')
         .update({ status: 'failed', error: 'moteur interrompu pendant le rendu — job clos automatiquement' })
         .eq('user_id', user.id).in('status', ['queued', 'rendering']).lt('created_at', limite)
+        .select('id')
+      // Audit métier 06/09 : un job mort clos ici doit RENDRE sa réservation (sinon reserved=0 tiré à la
+      // création reste bloqué → l'utilisateur ne peut plus se faire rembourser une vidéo jamais rendue).
+      for (const m of (morts ?? [])) { try { await service.rpc('release_by_job', { p_user: user.id, p_job: 'render:' + m.id, p_cost: 9999 }) } catch (_) { /* best-effort */ } }
 
       const { count } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).in('status', ['queued', 'rendering']).gte('created_at', limite)
@@ -92,6 +96,18 @@ serve(async (req: Request) => {
         .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
         .select('id').single()
       if (error) return json({ error: error.message }, 500)
+      // Audit métier 06/09 — refund-and-keep du rendu worker : le montage était débité côté client (spend_credits)
+      // mais l'op n'était NI tirée NI réglée → refund_credits(op_id) réussissait APRÈS téléchargement = montage
+      // gratuit. On TIRE la réserve entière (une op = un rendu) et on LIE l'op au job ; le worker règle à la
+      // livraison (settle_by_job → non remboursable) ou libère à l'échec (release_by_job → remboursable). Le
+      // moteur (service_role) contourne le plancher billableGate, donc ce tirage est la seule barrière.
+      try {
+        const { data: opId } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null })
+        if (opId) {
+          await service.rpc('draw_full_reservation', { p_user: user.id, p_op: opId })
+          await service.rpc('bind_reservation_job', { p_user: user.id, p_op: opId, p_job: 'render:' + data.id })
+        }
+      } catch (e) { console.warn('réservation rendu (fail-open):', (e as Error).message) }
       return json({ ok: true, job_id: data.id })
     }
 

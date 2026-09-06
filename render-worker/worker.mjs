@@ -2731,6 +2731,21 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   return faits
 }
 
+// ── Réservation de crédits (audit adverse 06/09) ─────────────────────────────
+// L'edge render-job TIRE la réserve de l'op de l'utilisateur à la création et la LIE au job
+// (provider_job = 'render:<id>'). Le worker RÈGLE à la livraison (op non remboursable) et LIBÈRE
+// à l'échec (remboursement partiel possible côté client). Avant : rien → refund après téléchargement.
+async function reservationJob(sb, job, ok) {
+  try {
+    if (!job || !job.user_id) return
+    const key = 'render:' + job.id
+    const { error } = ok
+      ? await sb.rpc('settle_by_job', { p_user: job.user_id, p_job: key })
+      : await sb.rpc('release_by_job', { p_user: job.user_id, p_job: key, p_cost: 9999 })
+    if (error) console.warn('réservation', ok ? 'settle' : 'release', ':', error.message)
+  } catch (e) { console.warn('réservation :', e.message) }
+}
+
 async function pollLoop() {
   const { createClient } = await import('@supabase/supabase-js')
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -2797,10 +2812,12 @@ async function pollLoop() {
         try {
           await batchBlankPreviews({ list: job.plan.anims || null, draft: job.plan.draft !== false, style: job.plan.style || 'auto', prefix: job.plan.prefix || 'blank' })
           await sb.from('render_jobs').update({ status: 'done', updated_at: new Date().toISOString() }).eq('id', job.id)
+          await reservationJob(sb, job, true)
           console.log('✓ batch anims blanches terminé')
         } catch (e) {
           console.error('✗ batch anims blanches :', e.message)
           await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
+          await reservationJob(sb, job, false)
         }
         jobEnCours = null
         continue
@@ -2912,9 +2929,11 @@ async function pollLoop() {
         // bucket privé : on stocke le PATH ; l'edge render-job signe l'URL à la demande
         console.log(`✅ job ${job.id} → ${outKey} (${Math.round((Date.now() - tDebut) / 1000)}s)`)
         await sb.from('render_jobs').update({ status: 'done', output_url: outKey, trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
+        await reservationJob(sb, job, true)
       } catch (e) {
         console.error('✗ job', job.id, e.message)
         await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
+        await reservationJob(sb, job, false)
       } finally {
         jobEnCours = null
         // la console reprend sa forme normale même si l'écriture a échoué :
