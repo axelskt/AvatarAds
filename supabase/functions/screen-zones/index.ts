@@ -92,7 +92,7 @@ serve(async (req: Request) => {
   // Audit offensif 05/09 : atteignable avec la seule clé anon publique → Claude Opus vision facturé.
   const _a = await authUser(req)
   if (!_a.isService && !_a.userId) return json({ error: 'unauthorized' }, 401)
-  if (_a.userId) { const _g = await helperGate(_a.userId, 'screen-zones', 30); if (!_g.ok) return json({ error: _g.error }, _g.status) }
+  if (_a.userId) { const _g = await helperGate(_a.userId, 'screen-zones', 8); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
   try {
     const key = Deno.env.get('ANTHROPIC_API_KEY') ?? ''

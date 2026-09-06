@@ -31,8 +31,11 @@ export function opFromReq(req: Request): string { const v = (req.headers.get('x-
 // L'en-tête x-aa-op est un simple INDICE (client). La VRAIE source = latest_open_op côté serveur → le
 // settle/draw ne peut plus être contourné en omettant l'en-tête (audit #3 : refund-and-keep async).
 export async function resolveOp(userId: string, req: Request): Promise<string> {
-  const hinted = opFromReq(req); if (hinted) return hinted
-  try { const { data } = await svc().rpc('latest_open_op', { p_user: userId }); return (data as string | null) || '' } catch { return '' }
+  // CRITICAL 2 (06/09) : l'indice x-aa-op N'EST PLUS pris verbatim. resolve_op ne le retient que si c'est une
+  // op OUVERTE de l'utilisateur (sinon dernière op ouverte) → un id leurre/réglé/bidon ne détourne plus le
+  // draw/settle, donc on ne peut plus laisser la vraie op « propre » pour la rembourser après livraison.
+  const hinted = opFromReq(req)
+  try { const { data } = await svc().rpc('resolve_op', { p_user: userId, p_hint: hinted || null }); return (data as string | null) || '' } catch { return '' }
 }
 // Tire p_cost sur la réservation. ok=false → reste insuffisant (op sous-évaluée). Fail-open sur erreur DB.
 export async function drawReservation(userId: string, opId: string, cost: number): Promise<{ ok: boolean; remaining: number | null }> {
@@ -196,8 +199,9 @@ export function realIp(req: Request): string {
 // ── Anti-SSRF : hôte interdit si interne, loopback, link-local, metadata, ou IP littérale sous n'importe
 //    quelle forme (dottée, IPv6, décimale, hexa, octale) — on n'accepte que des NOMS de domaine publics.
 export function isBlockedHost(hostname: string): boolean {
-  const h = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '')
+  const h = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.+$/, '')   // M2 (06/09) : retire crochets IPv6 ET point(s) final(aux) du FQDN (metadata.google.internal. contournait les suffixes)
   if (!h) return true
+  if (!h.includes('.')) return true   // M2 (06/09) : hôte à un seul label (localhost, metadata, intranet…) = interne, jamais un FQDN public
   if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local') || h.endsWith('.internal') || h.endsWith('.arpa') || h === 'metadata.google.internal') return true
   if (h.includes(':')) return true                       // toute IPv6 littérale
   if (!/[a-z]/.test(h)) return true                      // aucune lettre = IP dottée / décimale / octale

@@ -79,6 +79,10 @@
       document.querySelector('.card').innerHTML = '<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Ce lien d\'autorisation est incomplet ou expiré.</div>';
       throw new Error('relais invalide');
     }
+    // CRITICAL 1 (06/09) : redirect_uri vient du relais base64 (URL, contrôlé par l'attaquant). Sans validation
+    // de schéma, deny() ci-dessous exécutait un `javascript:` via location.href (CSP unsafe-inline) → vol du JWT.
+    try { var _u = new URL(params.redirect_uri); if (!/^https?:$/.test(_u.protocol)) throw 0; }
+    catch (e) { document.querySelector('.card').innerHTML = '<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Redirection non autorisée.</div>'; throw new Error('redirect_uri non-http'); }
 
     // Client de confiance = Claude (callback sur un domaine Anthropic). Pour lui on approuve
     // AUTOMATIQUEMENT dès que la session est là : aucun clic humain dans le chemin critique,

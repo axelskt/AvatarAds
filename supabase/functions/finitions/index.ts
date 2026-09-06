@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
   // worker (service_role) ou une vraie session ; refuser la clé anon/publiable seule.
   const _a = await authUser(req)
   if (!_a.isService && !_a.userId) return json({ error: 'unauthorized' }, 401)
-  if (_a.userId) { const _g = await helperGate(_a.userId, 'finitions', 30); if (!_g.ok) return json({ error: _g.error }, _g.status) }
+  if (_a.userId) { const _g = await helperGate(_a.userId, 'finitions', 8); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) return json({ ok: false, corrections: [], erreur: 'ANTHROPIC_API_KEY manquante' })
