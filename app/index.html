@@ -29436,6 +29436,24 @@ const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTI
 // Effet SELFIE (Axel 17/08) : sur les styles réalistes (Réaliste / UGC), la vidéo doit ressembler
 // à un vrai selfie tenu à bout de bras — léger tremblement / micro-jitter de caméra + la caméra
 // qui suit le visage. Ça vend le réel. (Pas pour Hedra avatar — c'est un autre chemin.)
+// Ligne parlée = ce qui est entre guillemets dans l'idée de l'utilisateur (même détection que _expEstimateDur).
+function _expQuotedLine(p){ const m=String(p||'').match(/[«"“”]([^«»"“”]{3,})[»"“”]/); return m ? m[1].replace(/\s+/g,' ').trim() : ''; }
+function _expWantsScenes(p){ return /transition|\bcut\b|multi[- ]?sc[èe]ne|sc[èe]ne\s*2|deuxi[èe]me sc[èe]ne|\bsnap\b|claque|d[ée]zoom|\bzoom|nouveau (lieu|d[ée]cor)|chang\w* de (lieu|d[ée]cor|plan)/i.test(String(p||'')); }
+// Verrou PAROLE (Axel 06/09 : « au début elle raconte je sais pas quoi », « qu'elle s'arrête net ») : la SEULE
+// chose prononcée = la réplique, mot pour mot ; rien avant, rien après ; fin nette sur le dernier mot. L'ancienne
+// consigne AUTORISAIT « un mot de remplissage » → Veo en mettait un au début. Placé en FIN de prompt (poids max).
+function _expSpeechLock(p){
+  const line=_expQuotedLine(p);
+  return '. VOICE: accurate lip-sync, clear audible natural voice with casual dynamic intonation.'
+    + (line ? ' THE ONLY WORDS SPOKEN IN THE ENTIRE CLIP, VERBATIM AND IN THIS LANGUAGE: « '+line+' ».' : ' The person says ONLY the requested line, verbatim.')
+    + ' Nothing is said before it (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second. If time remains, hold a natural silent expression instead of speaking';
+}
+// Verrou DÉCOR (Axel 06/09 : « pourquoi l'environnement change ») : l'image de référence EST le plateau. Levé
+// seulement si l'utilisateur demande explicitement une transition / un changement de lieu.
+function _expEnvLock(p){
+  if(_expWantsScenes(p)) return '';
+  return '. ENVIRONMENT LOCK: the setting, background, lighting, framing and camera position are EXACTLY those of the reference image and stay UNCHANGED for the entire clip — one continuous take, no cut, no scene change, no new location, no camera travel, nothing appears or disappears in the background';
+}
 function _expSelfieCue(){
   return (window._expStyle==='realiste' || window._expStyle==='ugc')
     ? ', filmed as a handheld selfie held at arm’s length on a phone front camera, natural subtle camera shake and micro-jitter, the camera gently follows and stays locked on the person’s face, authentic amateur selfie feel, slightly imperfect framing'
@@ -29455,6 +29473,7 @@ async function _expDirector(userPrompt){
     const styleId = window._expStyle||'realiste';
     const styleLabel = (EXP_STYLES.find(s=>s.id===styleId)||{}).label || 'Réaliste';
     const nRefs = (window._expImgs||[]).length;
+    const multiScene = _expWantsScenes(userPrompt);
     const vertical = (window._expFormat!=='16:9');
     const styleLine = styleId==='cartoon' ? 'cute polished 3D Pixar-style animation, vibrant.'
       : styleId==='studio' ? 'premium studio product video, clean elegant lighting, smooth camera motion.'
@@ -29466,12 +29485,13 @@ async function _expDirector(userPrompt){
       + '- Weave these in order into prose: SUBJECT, ACTION, ENVIRONMENT, CAMERA, LIGHTING, STYLE, MOTION, PHYSICS, CONTINUITY.\n'
       + '- SUBJECT: describe the person/product exactly as in the reference image(s); demand the EXACT same face, identity, hair and skin, and for any product the exact shape, branding, colors and proportions.'
       + (nRefs>1 ? ' There are '+nRefs+' reference images (subjects/products) — feature them together coherently in one scene.' : '') + '\n'
+      + '- ENVIRONMENT: ' + (nRefs>0 ? 'the reference image IS the set. Do NOT describe, embellish or invent a setting, background, props or lighting: state that the environment, background, lighting, framing and camera position are EXACTLY those of the reference image and stay UNCHANGED for the entire clip — one continuous take, no cut, no scene change, no new location, the camera never travels or relocates.' : 'keep the setting the user implies constant for the whole clip — one continuous take, no cut, no scene change.') + (multiScene ? ' EXCEPTION: the user explicitly asked for a transition/multi-scene — follow the TRANSITIONS/TIMELINE rule instead.' : '') + '\n'
       + '- CAMERA: authentic handheld selfie held at arm’s length on a phone front camera, subtle natural camera shake and micro-jitter, eye-level, the camera gently follows the subject’s face. ' + (vertical?'Vertical 9:16.':'Landscape 16:9.') + '\n'
       + '- STYLE ("'+styleLabel+'"): '+styleLine+'\n'
       + '- MOTION & PHYSICS: natural, believable, real-world physics, smooth realistic human movement.\n'
       + '- CONTINUITY: the person and product stay photographically identical from the first frame to the last; never morph, swap, distort, age or beautify.\n'
       + '- Keep the user’s idea and scene; do NOT invent a different subject or setting. If the user gives a spoken line in quotes, keep it VERBATIM for lip-sync.\n'
-      + '- VOICE & DELIVERY: if the subject speaks, keep the quoted line VERBATIM in the user’s language, delivered with natural casual dynamic intonation, never monotone. Use AT MOST ONE short natural filler word ("euh", "bref") placed MID-sentence — never at the very start of the clip, never two fillers. CRITICAL ENDING: the clip must END FIRMLY — the person finishes the sentence cleanly and confidently on the final words, mouth closing naturally; absolutely NO trailing "euh", no filler, no unfinished or mumbled word and no hanging sound in the last second.\n'
+      + '- VOICE & DELIVERY: if the subject speaks, the ONLY words spoken in the whole clip are the user’s quoted line, VERBATIM and in the user’s language — nothing before it (no greeting, no filler like "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame, natural casual dynamic intonation, never monotone. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second.\n'
       + '- TRANSITIONS/TIMELINE: if the user describes a transition, a cut, a finger snap, a zoom/dezoom, or a multi-scene sequence, PRESERVE it and output an explicit compact TIMELINE with time ranges and beats (e.g. "0.0–1.4s: tight close-up then dezoom to a wide shot; ~1.4s: she clearly snaps her fingers CENTERED in frame → fast seamless match cut; 1.4–4.0s: new location, slow push-in to a close-up"). Keep every beat and the scene order, make the snap/gesture clearly VISIBLE and CENTERED, describe each camera move, and shift the lighting on the cut. NEVER collapse a multi-scene or transition prompt into a single static scene.\n'
       + 'Output ONLY the final prompt (one paragraph, or a compact timeline if there is a transition), nothing else.';
     const body = { model:'gpt-4o', max_tokens:340, temperature:0.6, messages:[
@@ -29719,7 +29739,8 @@ async function expressCreate(){
     // Direction du prompt (structuré) d'abord, repli sur l'ancien montage si l'appel échoue.
     const _directed = await _expDirector(prompt);
     let animPrompt = (_directed ? _directed : (prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
-      + (window._expVoice==='native' ? ', accurate lip-sync with mouth movements matching the spoken words, clear audible natural voice with dynamic intonation; at most one short filler word placed mid-sentence and never at the very start; the delivery ENDS FIRMLY on the final words with the mouth closing naturally — no trailing "euh", no filler and no unfinished or hanging sound in the last second' : '')
+      + _expEnvLock(prompt)
+      + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
       + _EXP_IDLOCK;
     // ── Contraintes Veo 3.1 : 4/6/8 s par génération ; 1080p uniquement en 8 s ──
     // Durées longues (15/22/29 s) = extensions de scène +7 s, réservées Élite.
