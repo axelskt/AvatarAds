@@ -19424,9 +19424,13 @@ async function whisperTranscribe(){
   {
     const _isVid = /^video\//i.test(audioSrc.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(audioSrc.name || '');
     if(_isVid && window._bypassAudioPromise){
-      if(btn){ btn.innerHTML = 'Extraction de l\'audio…'; btn.disabled = true; btn.style.opacity = '.6'; }
+      if(btn){ btn.disabled = true; btn.style.opacity = '.6'; }
+      // Affiche le % d'extraction en direct (l'extraction a démarré dès l'upload ; si elle n'est pas
+      // finie quand on clique, on montre où ça en est au lieu d'un « … » figé — Axel 07/09).
+      const _pTick = setInterval(() => { if(btn){ const p = Math.round(window._bypassAudioProgress || 0); btn.innerHTML = 'Extraction de l\'audio… ' + p + '%'; } }, 300);
       try{ const _pre = await window._bypassAudioPromise; if(_pre && _pre.size > 1024) audioSrc = _pre; }
       catch(_){ /* pré-extraction échouée → chemin _extractAudioForWhisper ci-dessous */ }
+      finally{ clearInterval(_pTick); }
     }
   }
 
@@ -25974,6 +25978,8 @@ function _startBypassAudioExtraction(file){
     const isVid = /^video\//i.test(file.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(file.name || '');
     if(!isVid) return;
     window._bypassAudioFile = null;
+    window._bypassAudioProgress = 0;                                 // % d'extraction (lu par whisperTranscribe pour l'affichage)
+    let progTick = null;
     const url = URL.createObjectURL(file);
     const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto';
     v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
@@ -25987,7 +25993,7 @@ function _startBypassAudioExtraction(file){
     const mime = okType('audio/mp4') ? 'audio/mp4' : okType('audio/webm') ? 'audio/webm' : '';
     const rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : undefined);
     const chunks = []; rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-    const cleanup = () => { try{ v.pause(); }catch(_){} try{ document.body.removeChild(v); }catch(_){} try{ URL.revokeObjectURL(url); }catch(_){} try{ ac.close(); }catch(_){} };
+    const cleanup = () => { if(progTick){ clearInterval(progTick); progTick = null; } try{ v.pause(); }catch(_){} try{ document.body.removeChild(v); }catch(_){} try{ URL.revokeObjectURL(url); }catch(_){} try{ ac.close(); }catch(_){} };
     window._bypassAudioPromise = new Promise((resolve, reject) => {
       let stopped = false;
       const stop = () => { if(stopped) return; stopped = true; try{ if(rec.state !== 'inactive') rec.stop(); }catch(_){} };
@@ -25997,7 +26003,7 @@ function _startBypassAudioExtraction(file){
         const blob = new Blob(chunks, { type: outMime });
         if(blob.size < 1024){ const e = new Error('no audio'); e.code = 'no_audio'; reject(e); return; }
         const f = new File([blob], (file.name || 'audio').replace(/\.[^.]+$/, '') + '_audio.' + (/webm/.test(outMime) ? 'webm' : 'm4a'), { type: outMime });
-        window._bypassAudioFile = f; resolve(f);
+        window._bypassAudioProgress = 100; window._bypassAudioFile = f; resolve(f);
       };
       v.onended = stop;
       v.onerror = () => { cleanup(); reject(new Error('vidéo illisible')); };
@@ -26005,6 +26011,7 @@ function _startBypassAudioExtraction(file){
       setTimeout(stop, 12 * 60 * 1000);                                // plafond dur 12 min
     });
     rec.start();
+    progTick = setInterval(() => { try{ const d = (isFinite(v.duration) && v.duration > 0) ? v.duration : 0; if(d) window._bypassAudioProgress = Math.min(99, Math.round((v.currentTime / d) * 100)); }catch(_){} }, 300);
     try{ ac.resume(); }catch(_){}
     const p = v.play();                                               // ⚠ SYNCHRONE dans le geste d'upload → autoplay autorisé
     if(p && p.catch) p.catch(() => { /* bloqué : onerror/timeout gèrent */ });
