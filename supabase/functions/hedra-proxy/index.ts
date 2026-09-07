@@ -21,7 +21,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -198,22 +198,27 @@ serve(async (req: Request) => {
       // path des polls (/v3/jobs/<id>/status, /generations/<id>/status). On LIE l'op au job à la soumission, puis
       // règle/libère PAR JOB → un poll d'un id étranger ne rend plus la réserve d'une autre op (refund-and-keep).
       const jobId = (bare2.match(/\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || ''
-      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && hedraRes.ok) { const jid = (body.match(/"id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (jid) await bindJob(user.id, drawnOp, 'hedra:' + jid) }   // lie l'op au job créé
+      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && hedraRes.ok) { const jid = (body.match(/"job_id"\s*:\s*"([^"]+)"/) || body.match(/"id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (jid) await bindJob(user.id, drawnOp, 'hedra:' + jid) }   // lie l'op au job créé
       else if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseOp(user.id, drawnOp, 2)                                                                                     // soumission refusée → rend l'op TIRÉE
       else if (req.method === 'GET' && hedraRes.ok && /"status"\s*:\s*"(failed|error|errored|cancelled|canceled)"/i.test(body)) { if (jobId) await releaseByJob(user.id, 'hedra:' + jobId) }                // job échoué → rend l'op LIÉE
     }
-    // Règlement de la réservation quand la génération a abouti (poll /v3/jobs COMPLETE) → op non remboursable.
-    if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok) {
+    // Génération aboutie → RÉCONCILIATION À LA DURÉE RÉELLE (calibré 07/09 : la réponse complète /v3/jobs/<id>
+    // porte outputs[].duration_ms ; tarif avatarPerSec = 2 cr/s). On ne règle QUE sur la réponse qui contient la
+    // durée (la réponse complète, pas /status) pour ne pas régler avant d'avoir pu charger le manque. Le manque
+    // (coût réel − débit) est débité par reconcile_hedra_job (tolérance 2s, plafonné au solde, une seule fois).
+    if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok && /"duration_ms"\s*:/.test(body)) {
       const jobId = (hedraPath0.split('?')[0].match(/\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || ''
-      if (jobId && /"status"\s*:\s*"(complete|completed|succeeded|success)"/i.test(body)) {
-        // HIGH (06/09) — sous-facturation : le tirage Hedra est un forfait 2, or le coût réel = durée × avatarPerSec.
-        // Le coût réel n'est connu qu'ICI (réponse du job terminé). Observation LOG-ONLY pour identifier le champ
-        // de durée avant d'activer une réconciliation qui débite l'écart (voir mémoire securite-guard). Zéro débit.
-        try {
-          const md = body.match(/"(duration|duration_ms|duration_seconds|video_duration|length|seconds|billed_seconds)"\s*:\s*([0-9.]+)/i)
-          console.log(`[hedra-reconcile] job=${jobId} champs_durée=${md ? md[1] + '=' + md[2] : 'ABSENT'} body=${body.slice(0, 400)}`)
-        } catch (_) { /* log best-effort */ }
-        await settleByJob(user.id, 'hedra:' + jobId)
+      if (jobId) {
+        let sumMs = 0; const re = /"duration_ms"\s*:\s*([0-9]+)/g; let m: RegExpExecArray | null
+        while ((m = re.exec(body))) sumMs += Number(m[1])
+        const realCost = Math.ceil(sumMs / 1000) * 2   // avatarPerSec = 2 cr/s (plat)
+        if ((Deno.env.get('HEDRA_RECONCILE') ?? '0') === '1') {
+          const r = await reconcileJob(user.id, 'hedra:' + jobId, realCost)
+          console.log(`[hedra-reconcile] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s coût_réel=${realCost} → ${JSON.stringify(r)}`)
+        } else {
+          console.log(`[hedra-reconcile SHADOW] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s coût_réel=${realCost} (enforce=0, réglé sans charge)`) 
+          await settleByJob(user.id, 'hedra:' + jobId)
+        }
       }
     }
 

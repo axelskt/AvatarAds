@@ -108,6 +108,12 @@ export async function settleByJob(userId: string, job: string): Promise<void> {
   if (!job) return
   try { await svc().rpc('settle_by_job', { p_user: userId, p_job: job }) } catch { /* best-effort */ }
 }
+// Réconciliation à la durée réelle (Hedra) : charge le MANQUE (coût réel − débit), règle l'op. Voir
+// migration reconcile_hedra_duration. Renvoie le détail pour le log. Best-effort (jamais bloquant).
+export async function reconcileJob(userId: string, job: string, realCost: number): Promise<Record<string, unknown> | null> {
+  if (!job) return null
+  try { const { data } = await svc().rpc('reconcile_hedra_job', { p_user: userId, p_job: job, p_real_cost: Math.max(0, Math.ceil(realCost)) }); return (data as Record<string, unknown>) || null } catch { return null }
+}
 
 let _svc: SupabaseClient | null = null
 export function svc(): SupabaseClient {
