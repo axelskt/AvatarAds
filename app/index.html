@@ -6512,7 +6512,8 @@ const CREDIT_COSTS = {
   hd1080PerSec: 0.5,
   omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
   omniFlashPerSec: 4,     // ⚡ Express « Omni Flash » = fal google/gemini-omni-flash/v1.1/image-to-video (voix native)
-                          //    coût fournisseur ~0,10-0,13 $/s (720p) ; 4 cr/s FLAT tous plans (comme l'ancien Veo Pro) — marge ~55-70% selon plan
+                          //    720p 0,10 $/s → 4 cr/s (marge 66-75%). Accès Pro/Élite.
+  omni1080Mult: 1.5,      //    1080p NATIF 0,15 $/s (+50% fal) → ×1,5 = 6 cr/s (marge 66-75%, même bande que le 720p)
   hyperframesPerSec: 1,   // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
   // 🎥 Motion Control « fond vidéo » : le vrai décor de la réf, ANIMÉ, derrière le
   // personnage (2 détourages fal ben ≈ 0,4-0,6 $/rendu à notre charge + compo worker).
@@ -27830,12 +27831,14 @@ function initExpress(){
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
   const qr = document.getElementById('expQualRow');
   if(qr){
-    const _dur8=(parseInt(window._expDur)||4)>=8; // 1080p dispo dès 8 s (y compris durées longues Élite)
+    const _isOmniQ = window._expVeoModel==='omni'; // Omni fait du 1080p natif à toute durée → pas de « dès 8 s »
+    const _dur8=(parseInt(window._expDur)||4)>=8; // 1080p Veo dispo dès 8 s (y compris durées longues Élite)
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
-      // 1080p TOUJOURS cliquable (le clic force 8 s) — plus de grisé ; la note « dès 8 s » reste informative
-      const note = (q.v==='1080p' && !_dur8) ? 'dès 8 s' : q.note;
-      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${q.v==='1080p'?'1080p = 8 s minimum (limite Google Veo)':''}" style="flex:1;padding:13px 12px;text-align:center;">
+      // 1080p TOUJOURS cliquable ; la note « dès 8 s » ne concerne QUE Veo (le clic force 8 s), jamais Omni
+      const note = (q.v==='1080p' && !_isOmniQ && !_dur8) ? 'dès 8 s' : q.note;
+      const _qTitle = (q.v==='1080p' && !_isOmniQ) ? '1080p = 8 s minimum (limite Google Veo)' : '';
+      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${_qTitle}" style="flex:1;padding:13px 12px;text-align:center;">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
   }
@@ -27851,7 +27854,7 @@ function initExpress(){
 // 720p → Lite 1,5 cr/s (Starter/Pro) · Fast 3 cr/s (Élite) ; 1080p → +1 cr/s. Arrondi.
 function _expCostCredits(){
   const dur=parseInt(window._expDur)||6;
-  if(window._expVeoModel==='omni') return Math.round(dur * (CREDIT_COSTS.omniFlashPerSec||4));   // Omni Flash : 4 cr/s flat, pas d'extensions
+  if(window._expVeoModel==='omni'){ const om=(window._expQuality==='1080p')?(CREDIT_COSTS.omni1080Mult||1.5):1; return Math.round(dur * (CREDIT_COSTS.omniFlashPerSec||4) * om); }   // Omni Flash : 720p 4 cr/s · 1080p 6 cr/s, pas d'extensions
   const rate=CREDIT_COSTS.expressLitePerSec||1.5;   // Veo Standard (Lite) — le seul Veo restant
   const mult=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1; // 1080p = ×2 du 720p
   return Math.round(dur * rate * mult);
@@ -27865,7 +27868,8 @@ function _expUpdateGenCaption(){
   if(cb){
     const _d=parseInt(window._expDur)||6;
     if(window._expVeoModel==='omni'){
-      const n=Math.round(_d*(CREDIT_COSTS.omniFlashPerSec||4));   // Omni : durée exacte 3-10 s (pas d'extensions)
+      const _om=(window._expQuality==='1080p')?(CREDIT_COSTS.omni1080Mult||1.5):1;   // Omni : 720p 4 cr/s · 1080p 6 cr/s
+      const n=Math.round(_d*(CREDIT_COSTS.omniFlashPerSec||4)*_om);   // durée exacte 3-10 s (pas d'extensions)
       cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit');
     } else {
       const _r=CREDIT_COSTS.expressLitePerSec||1.5, _m=(window._expQuality==='1080p')?(CREDIT_COSTS.express1080Mult||2):1;
@@ -27943,7 +27947,7 @@ function _expPickQual(v){
   // 1080p sélectionnable par tous — le plan (Pro et +) n'est vérifié qu'au clic sur Générer.
   // Axel 07/09 : choisir 1080p FORCE 8 s minimum (limite Veo). Si on avait forcé le 8 s DEPUIS le mode Libre,
   // repasser en 720p REMET en Libre (Axel : « quand je reviens en 720p ça ne remet pas en libre »).
-  if(v==='1080p'){
+  if(v==='1080p' && window._expVeoModel!=='omni'){   // le forçage 8 s est une limite Veo ; Omni sort du 1080p natif à TOUTE durée 3-10 s
     const wasLibre = !!window._expDurAuto;
     const cur = wasLibre ? _expEstimateDur().dur : (parseInt(window._expDur)||4);
     if(cur < 8){ window._expDurAuto=false; window._expDur=8; window._exp1080Forced = wasLibre; }
@@ -29800,7 +29804,8 @@ async function expressCreate(){
     if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
   }
   const _expRate = _isOmni ? (CREDIT_COSTS.omniFlashPerSec||4) : (CREDIT_COSTS.expressLitePerSec||1.5);
-  const _expMult = _isOmni ? 1 : ((_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1);
+  const _expMult = _isOmni ? ((_res==='1080p') ? (CREDIT_COSTS.omni1080Mult||1.5) : 1)   // Omni : 1080p natif = ×1,5 (4→6 cr/s)
+                           : ((_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1);
   const _extCost = Math.round(7 * _expRate * _expMult);
   if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
   if(!(await spendCreditsFor(Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))) return;
@@ -39079,6 +39084,7 @@ window._mExpSync=function(){
     var is1080=(q==='1080p');
     q720.style.background=is1080?'transparent':'var(--surface-2)'; q720.style.color=is1080?'var(--text-3)':'var(--text)';
     q1080.style.background=is1080?'var(--surface-2)':'transparent'; q1080.style.color=is1080?'var(--text)':'var(--text-3)';
+    q1080.textContent = (window._expVeoModel==='omni') ? '1080p · qualité max' : '1080p · dès 8 s';  // Omni : 1080p natif à toute durée
   }
   var vId=(window._expVoice||'native');
   var vMeta=(typeof EXP_VOICES!=='undefined'?EXP_VOICES:[]).find(function(x){return x.id===vId;});
