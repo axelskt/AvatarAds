@@ -413,6 +413,17 @@ export function buildGenSubsComposition(plan, opts = {}) {
   const subsPayload = Object.assign({}, subs, { totalDuration: Number(subs.totalDuration) || D });
   const subsJson = JSON.stringify(subsPayload);
 
+  // #vitesse-overlay (Axel 08/09) : mode « sous-titres seuls » — fond TRANSPARENT + PAS de vidéo de base
+  // dans la composition. HyperFrames ne re-décode/compose plus la vidéo frame par frame (le vrai goulot :
+  // 9 min pour 39 s) ; il rend juste le canvas → webm alpha, superposé ensuite via ffmpeg sur la base
+  // (rapide, natif). Élimine aussi les warnings lint « video frozen » / « overlapping clips ».
+  const _overlayOnly = !!opts.overlayOnly;
+  const _bg = _overlayOnly ? 'transparent' : '#000';
+  const _videoBlock = _overlayOnly ? '' :
+    `<div id="videozone" class="clip" data-start="0" data-duration="${D}" data-track-index="2">
+      <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
+    </div>`;
+
   const fontFace = `
     @font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:800;font-display:block;src:url('fonts/BricolageGrotesque-800-latin.woff2') format('woff2');}
     /* substituts embarqués des polices SYSTÈME du client (le conteneur n'a que Liberation) */
@@ -427,17 +438,15 @@ export function buildGenSubsComposition(plan, opts = {}) {
 <style>
   ${fontFace}
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:${W}px;height:${H}px;background:#000;overflow:hidden}
-  #root{position:relative;width:${W}px;height:${H}px;background:#000;overflow:hidden}
+  html,body{width:${W}px;height:${H}px;background:${_bg};overflow:hidden}
+  #root{position:relative;width:${W}px;height:${H}px;background:${_bg};overflow:hidden}
   #videozone{position:absolute;left:0;top:0;width:${W}px;height:${H}px;overflow:hidden;z-index:1;background:#000}
   #base{position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover;display:block}
   #subcv{position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:5;pointer-events:none}
 </style>
 </head><body>
   <div id="root" data-composition-id="montage" data-start="0" data-duration="${D}" data-width="${W}" data-height="${H}">
-    <div id="videozone" class="clip" data-start="0" data-duration="${D}" data-track-index="2">
-      <video id="base" class="clip" src="media/base.mp4" data-start="0" data-duration="${D}" data-track-index="2" muted playsinline></video>
-    </div>
+    ${_videoBlock}
     <canvas id="subcv" width="${W}" height="${H}"></canvas>
   </div>
   <!-- primer polices : force Chromium à charger les woff2 dès le rendu initial (avant la 1re capture) -->
