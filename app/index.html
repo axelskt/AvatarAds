@@ -20743,6 +20743,10 @@ let currentPlatform = 'tiktok';
 // L'original de la nav (qui couvrait le bas de la vidéo) est masqué ; on CLONE ses items dans la bande
 // (non destructif → se remet à jour à chaque changement de plateforme / format).
 const _AA_PHONE_SHADOW = '0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow)';
+// Bezel de la BANDE : anneau #121116 DIRECTIONNEL (gauche/droite/bas UNIQUEMENT, PAS le haut) — sinon
+// l'anneau du haut déborde de 8px SUR le bas de la vidéo = la « bande sombre » entre écran et interface
+// (Axel 07/09). Le haut de la bande est déjà couvert par le mockup (raccord).
+const _AA_STRIP_SHADOW = '-8px 0 0 0 #121116,8px 0 0 0 #121116,0 8px 0 0 #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow)';
 function _genNavStrip(){
   const wr = document.getElementById('phoneWrapper'), ph = document.getElementById('phoneMockup');
   if(!wr || !ph) return;
@@ -20762,7 +20766,7 @@ function _genNavStrip(){
   if(!host){ host = document.createElement('div'); host.id = 'phoneNavHost'; wr.appendChild(host); }
   // align-items:flex-start + padding-top faible → la nav colle au bas de la vidéo (Axel : « toujours l'espace »).
   // L'espace RESTANT sous les icônes accueille la barre d'accueil (home indicator), comme un vrai iPhone.
-  host.style.cssText = 'position:absolute;left:0;top:'+(DH-1)+'px;width:'+DW+'px;height:'+(NAV+1)+'px;background:#000;border:1px solid #2a2730;border-top:none;border-radius:0 0 38px 38px;box-shadow:'+_AA_PHONE_SHADOW+';box-sizing:border-box;overflow:hidden;display:flex;align-items:flex-start;justify-content:space-around;padding-top:4px;z-index:5';
+  host.style.cssText = 'position:absolute;left:0;top:'+DH+'px;width:'+DW+'px;height:'+NAV+'px;background:#000;border:1px solid #2a2730;border-top:none;border-radius:0 0 38px 38px;box-shadow:'+_AA_STRIP_SHADOW+';box-sizing:border-box;overflow:hidden;display:flex;align-items:flex-start;justify-content:space-around;padding-top:2px;z-index:5';
   host.innerHTML = '';
   const p = currentPlatform || 'tiktok';
   const ui = document.getElementById('ui-'+p);
