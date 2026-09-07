@@ -2262,7 +2262,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <div style="font-size:12px;opacity:.95;margin-top:5px;line-height:1.35">Découvre comment créer des vidéos virales avec l'IA… <b>plus</b></div>
                 </div>
                 <!-- barre de progression (temps de la vidéo) au bas de la vidéo, juste au-dessus de la nav (Axel 07/09) — animée par _ttProgSync -->
-                <div id="ttProg" style="position:absolute;left:10px;right:10px;bottom:5px;height:2.5px;background:rgba(255,255,255,.22);border-radius:3px;z-index:57"><div style="position:absolute;left:0;top:0;bottom:0;width:2%;background:rgba(255,255,255,.9);border-radius:3px"></div><div style="position:absolute;left:2%;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 3px rgba(0,0,0,.5)"></div></div>
+                <div id="ttProg" style="position:absolute;left:10px;right:10px;bottom:6px;height:4px;background:rgba(255,255,255,.32);border-radius:3px;z-index:57"><div style="position:absolute;left:0;top:0;bottom:0;width:2%;background:#fff;border-radius:3px"></div><div style="position:absolute;left:2%;top:50%;width:11px;height:11px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(0,0,0,.6)"></div></div>
                 <!-- bottom nav : Accueil · Ami(e)s · + · Messages · Profil — maquette. Fond TRANSPARENT (Axel 07/09 :
                      « l'interface du bas cache la vidéo ») : la vidéo transparaît, comme sur le vrai TikTok ; les icônes
                      restent lisibles grâce au scrim bas de #ui-tiktok. -->
@@ -20760,7 +20760,9 @@ function _genNavStrip(){
   ph.style.boxShadow = '0 0 0 8px #121116';
   wr.style.height = (DH + NAV) + 'px';
   if(!host){ host = document.createElement('div'); host.id = 'phoneNavHost'; wr.appendChild(host); }
-  host.style.cssText = 'position:absolute;left:0;top:'+(DH-1)+'px;width:'+DW+'px;height:'+(NAV+1)+'px;background:#000;border:1px solid #2a2730;border-top:none;border-radius:0 0 38px 38px;box-shadow:'+_AA_PHONE_SHADOW+';box-sizing:border-box;overflow:hidden;display:flex;align-items:center;justify-content:space-around;z-index:5';
+  // align-items:flex-start + padding-top faible → la nav colle au bas de la vidéo (Axel : « toujours l'espace »).
+  // L'espace RESTANT sous les icônes accueille la barre d'accueil (home indicator), comme un vrai iPhone.
+  host.style.cssText = 'position:absolute;left:0;top:'+(DH-1)+'px;width:'+DW+'px;height:'+(NAV+1)+'px;background:#000;border:1px solid #2a2730;border-top:none;border-radius:0 0 38px 38px;box-shadow:'+_AA_PHONE_SHADOW+';box-sizing:border-box;overflow:hidden;display:flex;align-items:flex-start;justify-content:space-around;padding-top:4px;z-index:5';
   host.innerHTML = '';
   const p = currentPlatform || 'tiktok';
   const ui = document.getElementById('ui-'+p);
@@ -20771,6 +20773,9 @@ function _genNavStrip(){
       [...nav.children].forEach(it => { const cl = it.cloneNode(true); cl.style.transform = ''; host.appendChild(cl); });
     }
   }
+  const hi = document.createElement('div');                        // barre d'accueil (home indicator)
+  hi.style.cssText = 'position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:34%;height:4px;border-radius:3px;background:rgba(255,255,255,.85)';
+  host.appendChild(hi);
   try{ _ttProgSync(); }catch(_){}
 }
 // Barre de progression = VRAIE progression de la vidéo (currentTime/duration), animée pendant la lecture
