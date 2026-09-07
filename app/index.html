@@ -8999,7 +8999,7 @@ function _updateImgQuotaLabel(){
   // Topbar image credits pill
   const topBox = document.getElementById('memberImgQuotaBox');
   const topEl  = document.getElementById('memberImgCredits');
-  if(topBox) topBox.style.display = lim > 0 ? 'flex' : 'none';
+  if(topBox) topBox.style.display = 'none';   // compteur « img » retiré du header (Axel 07/09) — un seul compteur (crédits)
   if(topEl){
     topEl.textContent = rem + (bonus > 0 ? ' (+'+bonus+')' : '');
     topEl.style.color = rem <= 2 ? 'var(--orange)' : 'var(--text2)';
@@ -19417,6 +19417,19 @@ async function whisperTranscribe(){
     return;
   }
 
+  // #whisper-audio-preextrait (Axel 07/09) : l'audio est extrait EN TÂCHE DE FOND dès l'upload de la vidéo
+  // (dans le geste utilisateur, cf. _startBypassAudioExtraction) → on RÉUTILISE ce résultat. Évite la
+  // ré-extraction ici, qui échoue sur les grosses vidéos (v.play() non-muet bloqué hors geste → capture
+  // vide → faux « pas d'audio »). Si la pré-extraction a échoué/absente, on retombe sur le chemin normal.
+  {
+    const _isVid = /^video\//i.test(audioSrc.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(audioSrc.name || '');
+    if(_isVid && window._bypassAudioPromise){
+      if(btn){ btn.innerHTML = 'Extraction de l\'audio…'; btn.disabled = true; btn.style.opacity = '.6'; }
+      try{ const _pre = await window._bypassAudioPromise; if(_pre && _pre.size > 1024) audioSrc = _pre; }
+      catch(_){ /* pré-extraction échouée → chemin _extractAudioForWhisper ci-dessous */ }
+    }
+  }
+
   // Règle produit : une VIDÉO importée (ex : montage déjà fini, juste pour les
   // sous-titres) n'est JAMAIS envoyée telle quelle à Whisper — on extrait
   // d'abord sa piste audio (l'audio ORIGINAL de la vidéo est le défaut
@@ -20641,6 +20654,7 @@ function toggleBypassHedra(){
 async function handleBypassHedraFile(file){
   if(!file || !file.type.startsWith('video/')) return;
   window._bypassHedraFile = file;
+  try{ _startBypassAudioExtraction(file); }catch(_){}   // extrait l'audio EN TÂCHE DE FOND, DANS le geste d'upload (v.play() autorisé) → Whisper réutilise le résultat (fiable + instantané)
   if(window._bypassHedraUrl) URL.revokeObjectURL(window._bypassHedraUrl);
   window._bypassHedraUrl = URL.createObjectURL(file);
   document.getElementById('bypassHedraFileName').textContent = file.name;
@@ -25914,6 +25928,53 @@ async function _extractAudioViaElement(file, baseName){
     if(blob.size < 1024){ const e = new Error('no audio'); e.code = 'no_audio'; throw e; }
     return new File([blob], baseName + '_audio.' + (/webm/.test(outMime) ? 'webm' : 'm4a'), { type: outMime });
   } catch(e){ cleanup(); throw e; }
+}
+// Extraction audio DÉMARRÉE DANS LE GESTE d'upload (Axel 07/09). Le v.play() d'une vidéo NON-MUETTE n'est
+// autorisé que dans un geste utilisateur ; muter la vidéo autoriserait l'autoplay mais rend la capture
+// SILENCIEUSE (testé : rms=0). Après les await de whisperTranscribe le geste est perdu → play bloqué →
+// capture vide → faux « pas d'audio ». On lance donc la capture au moment où l'utilisateur CHOISIT le
+// fichier (onchange = geste), en tâche de fond pendant qu'il navigue l'assistant ; Whisper réutilise le
+// résultat (instantané + fiable). Résout avec un File audio ; window._bypassAudioFile = résultat.
+function _startBypassAudioExtraction(file){
+  try{
+    const isVid = /^video\//i.test(file.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(file.name || '');
+    if(!isVid) return;
+    window._bypassAudioFile = null;
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto';
+    v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+    document.body.appendChild(v);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC();
+    const srcNode = ac.createMediaElementSource(v);
+    const dest = ac.createMediaStreamDestination();
+    srcNode.connect(dest);                                            // PAS connecté à ac.destination → silencieux
+    const okType = t => (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+    const mime = okType('audio/mp4') ? 'audio/mp4' : okType('audio/webm') ? 'audio/webm' : '';
+    const rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : undefined);
+    const chunks = []; rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+    const cleanup = () => { try{ v.pause(); }catch(_){} try{ document.body.removeChild(v); }catch(_){} try{ URL.revokeObjectURL(url); }catch(_){} try{ ac.close(); }catch(_){} };
+    window._bypassAudioPromise = new Promise((resolve, reject) => {
+      let stopped = false;
+      const stop = () => { if(stopped) return; stopped = true; try{ if(rec.state !== 'inactive') rec.stop(); }catch(_){} };
+      rec.onstop = () => {
+        cleanup();
+        const outMime = mime || (chunks[0] && chunks[0].type) || 'audio/mp4';
+        const blob = new Blob(chunks, { type: outMime });
+        if(blob.size < 1024){ const e = new Error('no audio'); e.code = 'no_audio'; reject(e); return; }
+        const f = new File([blob], (file.name || 'audio').replace(/\.[^.]+$/, '') + '_audio.' + (/webm/.test(outMime) ? 'webm' : 'm4a'), { type: outMime });
+        window._bypassAudioFile = f; resolve(f);
+      };
+      v.onended = stop;
+      v.onerror = () => { cleanup(); reject(new Error('vidéo illisible')); };
+      v.onloadedmetadata = () => { const d = (isFinite(v.duration) && v.duration > 0) ? v.duration : 60; setTimeout(stop, (d + 12) * 1000); };  // garde-fou anti-stall
+      setTimeout(stop, 12 * 60 * 1000);                                // plafond dur 12 min
+    });
+    rec.start();
+    try{ ac.resume(); }catch(_){}
+    const p = v.play();                                               // ⚠ SYNCHRONE dans le geste d'upload → autoplay autorisé
+    if(p && p.catch) p.catch(() => { /* bloqué : onerror/timeout gèrent */ });
+  }catch(_){ window._bypassAudioPromise = null; /* whisper retombera sur _extractAudioForWhisper */ }
 }
 // Vidéo sans piste audio → throw avec e.code='no_audio' (message clair amont).
 async function _extractAudioForWhisper(file){
