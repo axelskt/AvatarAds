@@ -24762,7 +24762,13 @@ async function _genServerCompose(btn){
   // MAIN au rendu client (identique à l'aperçu) — le serveur n'est utilisé que
   // quand il produit EXACTEMENT l'aperçu. À porter côté worker ensuite.
   if((cfg.format || 'vertical') !== 'vertical') return false;                                   // format carré non géré serveur
-  if((cfg.avZoom ?? 100) !== 100 || (cfg.avWidth ?? 100) !== 100 || (cfg.avCropX ?? 0) !== 0 || (cfg.avCropY ?? 0) !== 0 || ((cfg.avClip||{}).t || (cfg.avClip||{}).b || (cfg.avClip||{}).l || (cfg.avClip||{}).r)) return false; // recadrage avatar non géré serveur
+  // Recadrage avatar : reproduit EXACTEMENT côté client (petit fichier). Mais un GROS fichier (4K,
+  // >120 Mo) fait CRASHER le client (decodeAudioData 225 Mo + 1140 seeks 4K sur le thread principal →
+  // gel + sortie muette, Axel 07/09) → on préfère alors le SERVEUR (audio gardé, pas de crash), même
+  // s'il ne reproduit pas le repositionnement exact : pour une vidéo 9:16 « plein écran », le cover-crop
+  // du worker = la vidéo entière (le repositionnement était surtout esthétique, fond flou).
+  const _bigSrc = !!(window._bypassHedraFile && window._bypassHedraFile.size > 120 * 1024 * 1024);
+  if(!_bigSrc && ((cfg.avZoom ?? 100) !== 100 || (cfg.avWidth ?? 100) !== 100 || (cfg.avCropX ?? 0) !== 0 || (cfg.avCropY ?? 0) !== 0 || ((cfg.avClip||{}).t || (cfg.avClip||{}).b || (cfg.avClip||{}).l || (cfg.avClip||{}).r))) return false; // recadrage avatar : géré client sur petit fichier ; serveur sur gros fichier
   { const _gv = document.getElementById('gpVideo'), _gz = document.getElementById('gameplayZone');
     if(_gv?.src && _gz && _gz.style.display !== 'none') return false; }                       // split gameplay non géré serveur : le worker ne compose pas le split (même test hasGp que la compo client)
   { const _ho = document.getElementById('hookOverlay'), _ht = document.getElementById('hookText');
@@ -26088,7 +26094,7 @@ function _cvSubs(ctx, shown, activeIdx, animElapsed, W, H){
   const sz       = Math.max(24, Math.round((cfg.subSize||72) * (H/1920) * 0.85));
   // Position clampée à la SAFE ZONE (UI TikTok/Reels : haut, bas, rail droit)
   // même sémantique que le preview DOM (updateSubPreview) : défaut 70, `!== undefined` (pas ||)
-  const posY     = Math.round(H * (Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos  !== undefined ? cfg.subPos  : 70)) / 100));
+  const posY     = Math.round(H * (Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, cfg.subPos  !== undefined ? cfg.subPos  : 75)) / 100));
   const posX     = Math.round(W * (Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right,  cfg.subPosX !== undefined ? cfg.subPosX : 50)) / 100));
   const scaleX   = cfg.subScaleX || 1.0;
   const c1       = subColors.c1 || '#FFE500';
