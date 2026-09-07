@@ -2262,7 +2262,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <div style="font-size:12px;opacity:.95;margin-top:5px;line-height:1.35">Découvre comment créer des vidéos virales avec l'IA… <b>plus</b></div>
                 </div>
                 <!-- barre de progression (temps de la vidéo) au bas de la vidéo, juste au-dessus de la nav (Axel 07/09) -->
-                <div style="position:absolute;left:10px;right:10px;bottom:5px;height:2.5px;background:rgba(255,255,255,.22);border-radius:3px;z-index:57"><div style="position:absolute;left:0;top:0;bottom:0;width:9%;background:rgba(255,255,255,.9);border-radius:3px"></div><div style="position:absolute;left:9%;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 3px rgba(0,0,0,.5)"></div></div>
+                <div style="position:absolute;left:10px;right:10px;bottom:5px;height:2.5px;background:rgba(255,255,255,.22);border-radius:3px;z-index:57"><div style="position:absolute;left:0;top:0;bottom:0;width:2%;background:rgba(255,255,255,.9);border-radius:3px"></div><div style="position:absolute;left:2%;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 3px rgba(0,0,0,.5)"></div></div>
                 <!-- bottom nav : Accueil · Ami(e)s · + · Messages · Profil — maquette. Fond TRANSPARENT (Axel 07/09 :
                      « l'interface du bas cache la vidéo ») : la vidéo transparaît, comme sur le vrai TikTok ; les icônes
                      restent lisibles grâce au scrim bas de #ui-tiktok. -->
@@ -20742,20 +20742,25 @@ let currentPlatform = 'tiktok';
 // lui une BANDE connectée (même bezel, coin bas arrondi) qui porte la barre de nav de la plateforme active.
 // L'original de la nav (qui couvrait le bas de la vidéo) est masqué ; on CLONE ses items dans la bande
 // (non destructif → se remet à jour à chaque changement de plateforme / format).
+const _AA_PHONE_SHADOW = '0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow)';
 function _genNavStrip(){
   const wr = document.getElementById('phoneWrapper'), ph = document.getElementById('phoneMockup');
   if(!wr || !ph) return;
   const vertical = (cfg.format === 'vertical' || !cfg.format);
   let host = document.getElementById('phoneNavHost');
-  if(!vertical){ if(host) host.style.display = 'none'; return; }   // carré/paysage : pas de bande (setFormat a remis rayon plein + hauteur)
+  if(!vertical){ if(host) host.style.display = 'none'; ph.style.boxShadow = _AA_PHONE_SHADOW; ph.style.borderBottom = ''; return; }
   const sc = parseFloat((ph.style.transform.match(/scale\(([\d.]+)\)/) || [])[1]) || 1.194;
   const NW = parseFloat(ph.style.width) || 268, NH = parseFloat(ph.style.height) || 476;
   const DW = NW * sc, DH = NH * sc, NAV = 54;
   ph.style.borderRadius = '38px 38px 0 0';                          // coin bas plat → connecté à la bande
-  ph.style.borderBottom = 'none';                                  // pas de double bordure au raccord (seam, Axel 07/09)
+  ph.style.borderBottom = 'none';                                  // pas de double bordure au raccord (seam)
+  // L'« écart » sombre entre la vidéo et la bande = le DROP SHADOW du mockup (0 40px 80px) qui tombait ENTRE
+  // les deux. On laisse au mockup UNIQUEMENT l'anneau (0 0 0 8px), et on met le drop shadow sur la BANDE
+  // (le bas du téléphone) → plus d'écart, ombre au bon endroit (Axel 07/09).
+  ph.style.boxShadow = '0 0 0 8px #121116';
   wr.style.height = (DH + NAV) + 'px';
   if(!host){ host = document.createElement('div'); host.id = 'phoneNavHost'; wr.appendChild(host); }
-  host.style.cssText = 'position:absolute;left:0;top:'+(DH-1)+'px;width:'+DW+'px;height:'+(NAV+1)+'px;background:#000;border:1px solid #2a2730;border-top:none;border-radius:0 0 38px 38px;box-shadow:0 0 0 8px #121116;box-sizing:border-box;overflow:hidden;display:flex;align-items:center;justify-content:space-around;z-index:5';
+  host.style.cssText = 'position:absolute;left:0;top:'+(DH-1)+'px;width:'+DW+'px;height:'+(NAV+1)+'px;background:#000;border:1px solid #2a2730;border-top:none;border-radius:0 0 38px 38px;box-shadow:'+_AA_PHONE_SHADOW+';box-sizing:border-box;overflow:hidden;display:flex;align-items:center;justify-content:space-around;z-index:5';
   host.innerHTML = '';
   const p = currentPlatform || 'tiktok';
   const ui = document.getElementById('ui-'+p);
@@ -20766,6 +20771,22 @@ function _genNavStrip(){
       [...nav.children].forEach(it => { const cl = it.cloneNode(true); cl.style.transform = ''; host.appendChild(cl); });
     }
   }
+  try{ _ttProgSync(); }catch(_){}
+}
+// Barre de progression = VRAIE progression de la vidéo (currentTime/duration), animée pendant la lecture
+// (Axel 07/09). Se branche sur la vidéo affichée (bypass/clip) ; se met à jour à chaque timeupdate.
+function _ttProgSync(){
+  const prog = document.getElementById('ttProg'); if(!prog) return;
+  const fill = prog.children[0], dot = prog.children[1];
+  const upd = (v) => { if(!v || !v.duration || !isFinite(v.duration)) return; const pc = Math.max(0, Math.min(100, (v.currentTime / v.duration) * 100)); if(fill) fill.style.width = pc + '%'; if(dot) dot.style.left = pc + '%'; };
+  ['bypassPreviewVid','clipPreviewVid'].forEach(id => {
+    const v = document.getElementById(id); if(!v || v._ttHook) return;
+    v._ttHook = true;
+    v.addEventListener('timeupdate',     () => upd(v));
+    v.addEventListener('loadedmetadata', () => upd(v));
+    v.addEventListener('seeked',         () => upd(v));
+    upd(v);
+  });
 }
 function setPlatformPreview(p){
   currentPlatform = p;
