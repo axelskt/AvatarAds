@@ -29735,7 +29735,8 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     aspect_ratio: (window._expFormat==='16:9'?'16:9':'9:16'),
     duration: Math.max(3, Math.min(10, Math.round(durSec)||6)),
     resolution: (res==='1080p'?'1080p':'720p'),
-    generate_audio: true,
+    // PAS de generate_audio : l'endpoint image-to-video de gemini-omni-flash sort la voix native
+    // par défaut — ce champ n'existe pas dans le schéma fal (un param inconnu risque un 422).
   });
   const sd=await sub.json().catch(()=>({}));
   if(!sub.ok) throw new Error('Omni Flash '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160));
