@@ -29449,11 +29449,23 @@ function _expWantsScenes(p){ return /transition|\bcut\b|multi[- ]?sc[èe]ne|sc[�
 // Verrou PAROLE (Axel 06/09 : « au début elle raconte je sais pas quoi », « qu'elle s'arrête net ») : la SEULE
 // chose prononcée = la réplique, mot pour mot ; rien avant, rien après ; fin nette sur le dernier mot. L'ancienne
 // consigne AUTORISAIT « un mot de remplissage » → Veo en mettait un au début. Placé en FIN de prompt (poids max).
+// Mot-clé d'appel à l'action (Axel 07/09) : « commente SITE et je t'envoie en privé » → Veo rend « SITE »
+// grammatical (« un site où… ») car ce n'est pas du français à cet endroit. On DÉTECTE le mot (après
+// « commente / écris / tape », ou un mot TOUT EN MAJUSCULES) et on impose de le dire EXACT + accentué.
+function _expCommentKeyword(line){
+  const t=String(line||'');
+  let m=t.match(/(?:comment(?:e|er|ez|es)?|[ée]cri[st]|tape[zr]?)\s+(?:(?:le|ce)\s+mot\s+|the\s+word\s+)?[«"“'']?([\p{L}][\p{L}0-9-]{1,})[»"”'']?/iu);
+  if(m && !/^(le|la|les|ce|the|word|mot|en|et|si|tu|me)$/i.test(m[1])) return m[1];
+  m=t.match(/(?<![\p{L}])([A-ZÀ-Ÿ][A-ZÀ-Ÿ0-9]{1,})(?![\p{L}])/u);   // placeholder tout en majuscules (SITE)
+  return m ? m[1] : '';
+}
 function _expSpeechLock(p){
   const line=_expQuotedLine(p);
+  const kw=_expCommentKeyword(line);
   return '. VOICE: accurate lip-sync, clear audible natural voice with casual dynamic intonation.'
     + (line ? ' THE ONLY WORDS SPOKEN IN THE ENTIRE CLIP, VERBATIM AND IN THIS LANGUAGE: « '+line+' ».' : ' The person says ONLY the requested line, verbatim.')
-    + ' Nothing is said before it (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second. If time remains, hold a natural silent expression instead of speaking';
+    + (kw ? ' CALL-TO-ACTION KEYWORD « '+kw+' »: this is a literal keyword the viewer must TYPE in the comments, NOT an ordinary word — she pronounces « '+kw+' » EXACTLY as written, letter for letter, as one clearly detached standalone word; never translate it, inflect it, pluralize it, add an article, or dissolve it into a phrase (do NOT say "un '+kw.toLowerCase()+'", do NOT turn « '+kw+' » into a sentence or a place). On that word she slows down slightly and says it a bit LOUDER and crisper than the rest, with a deliberate hand gesture (pointing down toward the comments / tapping) and a strong, expressive face, so the viewer unmistakably understands THIS exact word « '+kw+' » is the one to comment.' : '')
+    + ' Nothing is said before the line (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second. If time remains, hold a natural silent expression instead of speaking';
 }
 // Verrou DÉCOR (Axel 06/09 : « pourquoi l'environnement change ») : l'image de référence EST le plateau. Levé
 // seulement si l'utilisateur demande explicitement une transition / un changement de lieu.
@@ -29498,7 +29510,7 @@ async function _expDirector(userPrompt){
       + '- MOTION & PHYSICS: natural, believable, real-world physics, smooth realistic human movement.\n'
       + '- CONTINUITY: the person and product stay photographically identical from the first frame to the last; never morph, swap, distort, age or beautify.\n'
       + '- Keep the user’s idea and scene; do NOT invent a different subject or setting. If the user gives a spoken line in quotes, keep it VERBATIM for lip-sync.\n'
-      + '- VOICE & DELIVERY: if the subject speaks, the ONLY words spoken in the whole clip are the user’s quoted line, VERBATIM and in the user’s language — nothing before it (no greeting, no filler like "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame, natural casual dynamic intonation, never monotone. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second.\n'
+      + '- VOICE & DELIVERY: if the subject speaks, the ONLY words spoken in the whole clip are the user’s quoted line, VERBATIM and in the user’s language — nothing before it (no greeting, no filler like "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame, natural casual dynamic intonation, never monotone. If the line contains a call-to-action KEYWORD (an ALL-CAPS word, or the word right after "commente / comment / écris / tape"), keep that keyword EXACTLY as written and instruct that she pronounce it letter-perfect, clearly detached, a bit slower and LOUDER, with a hand gesture and strong facial expression — never translate it, inflect it, add an article, or turn it into a phrase or a place. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second.\n'
       + '- TRANSITIONS/TIMELINE: if the user describes a transition, a cut, a finger snap, a zoom/dezoom, or a multi-scene sequence, PRESERVE it and output an explicit compact TIMELINE with time ranges and beats (e.g. "0.0–1.4s: tight close-up then dezoom to a wide shot; ~1.4s: she clearly snaps her fingers CENTERED in frame → fast seamless match cut; 1.4–4.0s: new location, slow push-in to a close-up"). Keep every beat and the scene order, make the snap/gesture clearly VISIBLE and CENTERED, describe each camera move, and shift the lighting on the cut. NEVER collapse a multi-scene or transition prompt into a single static scene.\n'
       + 'Output ONLY the final prompt (one paragraph, or a compact timeline if there is a transition), nothing else.';
     const body = { model:'gpt-4o', max_tokens:340, temperature:0.6, messages:[
