@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { rateHit } from '../_shared/guard.ts'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 // ── Réactivation d'abonnement in-app (type Disney+ « Vous avez changé d'avis ? ») ──
@@ -26,6 +27,8 @@ serve(async (req) => {
   })
   const { data: { user }, error: authErr } = await anon.auth.getUser()
   if (authErr || !user) return json({ error: 'Non connecté — session invalide' }, 401)
+
+  if (!(await rateHit('whop-uncancel:' + user.id, 3600, 12))) return json({ error: 'Trop de tentatives — réessaie plus tard.' }, 429)
 
   const svc = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { autoRefreshToken: false, persistSession: false },
