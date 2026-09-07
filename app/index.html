@@ -27910,7 +27910,7 @@ function _expDurSlide(v){
   else { _expSetDur(a[Math.min(v, a.length)-1]); }   // _expSetDur passe _expDurAuto à false
 }
 function _expSetDur(v){
-  window._expDurAuto=false; // l'utilisateur reprend la main → sort du mode Auto
+  window._expDurAuto=false; window._exp1080Forced=false; // l'utilisateur reprend la main → sort du mode Libre
   const a=_expDurAllowed(); let d=parseInt(v)||6;
   d = a.reduce((best,x)=>Math.abs(x-d)<Math.abs(best-d)?x:best, a[0]); // snap sur la valeur permise la plus proche
   window._expDur=d;
@@ -27923,11 +27923,14 @@ function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){ window._expFormat=v; initExpress(); }
 function _expPickQual(v){
   // 1080p sélectionnable par tous — le plan (Pro et +) n'est vérifié qu'au clic sur Générer.
-  // Axel 07/09 : choisir 1080p FORCE une durée de 8 s minimum (limite Veo) au lieu de refuser. Le repli
-  // « au pire du pire » (script trop court → 720p) reste dans expressCreate.
+  // Axel 07/09 : choisir 1080p FORCE 8 s minimum (limite Veo). Si on avait forcé le 8 s DEPUIS le mode Libre,
+  // repasser en 720p REMET en Libre (Axel : « quand je reviens en 720p ça ne remet pas en libre »).
   if(v==='1080p'){
-    const cur = window._expDurAuto ? _expEstimateDur().dur : (parseInt(window._expDur)||4);
-    if(cur < 8) _expSetDur(8);   // passe en 8 s (sort du mode Libre) — re-render inclus
+    const wasLibre = !!window._expDurAuto;
+    const cur = wasLibre ? _expEstimateDur().dur : (parseInt(window._expDur)||4);
+    if(cur < 8){ window._expDurAuto=false; window._expDur=8; window._exp1080Forced = wasLibre; }
+  } else {
+    if(window._exp1080Forced){ window._exp1080Forced=false; window._expDurAuto=true; }   // retour Libre
   }
   window._expQuality=v; initExpress();
 }
