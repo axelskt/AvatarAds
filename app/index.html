@@ -3725,13 +3725,13 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <!-- ③ DURÉE (slider 3→30s) — Veo ; masqué en mode Seedance (durée dédiée dans la scène) -->
         <div class="exp-section" id="expDureeSection" style="margin-bottom:0">
           <div class="exp-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-            <span>⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">Auto</span></span>
+            <span>⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">Libre</span></span>
           </div>
           <!-- Position 0 = AUTO (le système/Veo cale la durée sur ton texte) — défaut ; 1..6 = 4/6/8/15/22/29 s (Axel 17/08) -->
           <input id="expDurSlider" class="exp-slider" type="range" min="0" max="6" step="1" value="0" oninput="_expDurSlide(+this.value)" style="width:100%">
           <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px">Texte long pour un clip → débit rapide. Pour du long au rythme naturel : Montage IA.</div>
           <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> +8 s (extensions de scène) réservé au plan Élite</div>
-          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">Auto</span><span class="faint mono" style="font-size:9px">29 s</span></div>
+          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">Libre</span><span class="faint mono" style="font-size:9px">29 s</span></div>
         </div>
 
         <!-- ③b QUALITÉ — Veo ; masqué en mode Seedance (1080p natif) -->
@@ -27816,7 +27816,7 @@ function initExpress(){
     ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||4)+1);
     // Axel 31/08 : en mode Auto, l'outil détermine la durée d'après le script → on affiche juste « Auto »
     // (pas de « · 4 s » figé qui laisse croire à une durée fixe).
-    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Auto' : ((window._expDur||4)+' s');
+    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Libre' : ((window._expDur||4)+' s');
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(window._expDurAuto && _expEstimateDur().over)?'block':'none';
@@ -27828,10 +27828,9 @@ function initExpress(){
     const _dur8=(parseInt(window._expDur)||4)>=8; // 1080p dispo dès 8 s (y compris durées longues Élite)
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
-      const grayDur  = q.v==='1080p' && !_dur8;
-      const note = grayDur ? 'dès 8 s' : q.note;
-      const extra = grayDur ? 'opacity:.38;cursor:not-allowed;' : '';
-      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${grayDur?'1080p disponible uniquement à partir de 8 s (limite Google Veo)':''}" style="flex:1;padding:13px 12px;text-align:center;${extra}">
+      // 1080p TOUJOURS cliquable (le clic force 8 s) — plus de grisé ; la note « dès 8 s » reste informative
+      const note = (q.v==='1080p' && !_dur8) ? 'dès 8 s' : q.note;
+      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${q.v==='1080p'?'1080p = 8 s minimum (limite Google Veo)':''}" style="flex:1;padding:13px 12px;text-align:center;">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
   }
@@ -27923,8 +27922,13 @@ function _expSetDur(v){
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){ window._expFormat=v; initExpress(); }
 function _expPickQual(v){
-  // 1080p sélectionnable par tous — le plan (Pro et +) n'est vérifié qu'au clic sur Générer
-  if(v==='1080p' && (parseInt(window._expDur)||4)<8){ toast('1080p dispo à partir de 8 s — monte la durée'); return; }
+  // 1080p sélectionnable par tous — le plan (Pro et +) n'est vérifié qu'au clic sur Générer.
+  // Axel 07/09 : choisir 1080p FORCE une durée de 8 s minimum (limite Veo) au lieu de refuser. Le repli
+  // « au pire du pire » (script trop court → 720p) reste dans expressCreate.
+  if(v==='1080p'){
+    const cur = window._expDurAuto ? _expEstimateDur().dur : (parseInt(window._expDur)||4);
+    if(cur < 8) _expSetDur(8);   // passe en 8 s (sort du mode Libre) — re-render inclus
+  }
   window._expQuality=v; initExpress();
 }
 
