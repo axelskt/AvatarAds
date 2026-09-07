@@ -24354,23 +24354,10 @@ async function _restoreFilesFromIDB(){
     try { await _idbPurgeDrafts(); } catch(e){}
     return;
   }
-  try {
-    const [audioEntry, gpEntry] = await Promise.all([_idbLoad('mp4audio'), _idbLoad('gameplay')]);
-    if(audioEntry){
-      const file = new File([audioEntry.blob], audioEntry.name, { type: audioEntry.type });
-      handleMp4AudioFile(file);
-      // Le fichier reste chargé, mais on n'impose pas le mode : Clone/Preset par défaut à l'arrivée
-      if(typeof selectVoiceMode==='function') selectVoiceMode('clone');
-      toast('Audio restauré : ' + audioEntry.name);
-    }
-    if(gpEntry){
-      const file = new File([gpEntry.blob], gpEntry.name, { type: gpEntry.type });
-      handleGameplayFile(file);
-      // handleGameplayFile auto-active « Audio MP4 » — au restore on garde Clone/Preset par défaut
-      if(!window.mp4AudioFile && !(typeof mp4AudioFile!=='undefined' && mp4AudioFile) && typeof selectVoiceMode==='function') selectVoiceMode('clone');
-      toast('Gameplay restauré : ' + gpEntry.name);
-    }
-  } catch(e){ console.warn('_restoreFilesFromIDB:', e); }
+  // Réinitialisation propre (Axel 07/09) : on ne restaure PLUS l'ancien clip/audio au retour sur le
+  // Générateur — on repart vierge à chaque fois. On purge les brouillons média pour ne rien laisser traîner.
+  try { await _idbDelete('mp4audio'); } catch(e){}
+  try { await _idbDelete('gameplay'); } catch(e){}
 }
 
 function _saveSession(){
@@ -24534,7 +24521,7 @@ function _restoreSession(){
     if(saved.mp4AudioTrimSt)   mp4AudioTrimSt   = saved.mp4AudioTrimSt;
     if(saved.mp4AudioTrimEnd)  mp4AudioTrimEnd  = saved.mp4AudioTrimEnd;
     // mp4AudioEnabled non restauré : le fichier audio ne survit pas à la session → Clone/Preset par défaut
-    if(saved.cfg)       Object.assign(cfg, saved.cfg);
+    if(saved.cfg){ delete saved.cfg.subPos; delete saved.cfg.subPosX; Object.assign(cfg, saved.cfg); }   // position sous-titres NON restaurée → défaut propre 75 % / 50 % (Axel 07/09)
     if(saved.subColors){ subColors.c1 = saved.subColors.c1; subColors.c2 = saved.subColors.c2; }
     if(saved.selAvatar) Object.assign(selAvatar, saved.selAvatar);
 
@@ -24748,6 +24735,26 @@ function _probeVideoDuration(url){
     }catch(_){ res(null); }
   });
 }
+// Upload gros fichier fiable : URL signée (chemin « direct upload » de Supabase, plus tolérant qu'un
+// .upload() mono-requête pour un blob de 225 Mo) + 2 tentatives. Un échec ici renvoyait avant sur le
+// rendu client muet qui crashait le Mac ; on veut donc qu'il réussisse, ou qu'il échoue proprement.
+async function _genUploadRobuste(inPath, vidBlob){
+  let lastErr = null;
+  for(let attempt = 1; attempt <= 2; attempt++){
+    try{
+      const sign = await sb.storage.from('render-media').createSignedUploadUrl(inPath);
+      if(sign.error || !sign.data?.token) throw new Error('URL signée : ' + (sign.error?.message || 'token manquant'));
+      const up = await sb.storage.from('render-media').uploadToSignedUrl(inPath, sign.data.token, vidBlob, { contentType: 'video/mp4' });
+      if(up.error) throw new Error('envoi : ' + up.error.message);
+      return true;
+    }catch(e){
+      lastErr = e;
+      console.warn('[gen-subs] upload tentative ' + attempt + '/2 échouée :', e);
+      if(attempt < 2) await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  throw lastErr || new Error('envoi échoué');
+}
 async function _genServerCompose(btn){
   if(!results?.hedraUrl) return false;
   let user = null;
@@ -24819,9 +24826,15 @@ async function _genServerCompose(btn){
     const dur = vidDur || 15;
     const ts = Date.now();
     const inPath = user.id + '/gen-' + ts + '.mp4';
+    // Preflight taille : au-delà de la limite bucket, l'upload est voué à l'échec → message clair
+    // (pas un throw opaque qui renverrait au client muet).
+    if(vidBlob.size > PUB_MAX_MO * 1024 * 1024){
+      throw new Error('Vidéo trop lourde (' + Math.round(vidBlob.size/1024/1024) + ' Mo, max ' + PUB_MAX_MO + ' Mo)');
+    }
     setPct(12, 'Envoi…');
-    const up = await sb.storage.from('render-media').upload(inPath, vidBlob, { contentType: 'video/mp4', upsert: true });
-    if(up.error) throw new Error('upload: ' + up.error.message);
+    // Gros fichiers 4K (225 Mo) : l'ancien .upload() mono-requête jetait (timeout gateway) → repli
+    // client muet qui crashait le Mac. On passe par une URL signée (chemin gros fichiers) + 2 essais.
+    await _genUploadRobuste(inPath, vidBlob);
     setPct(20, 'File d\'attente…');
     const H = await getAuthHeader();
     const cr = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
@@ -24877,9 +24890,30 @@ async function composeVideo(btn){
   // ⚠ window._genDevOn (= plan==='developer' || is_owner), PAS is_owner seul —
   // le compte de test d'Axel est plan 'developer' (is_owner=false) → sinon le
   // rendu partait en WebCodecs client (muet Safari) au lieu du serveur.
+  // Gros fichier (bypass 4K > 120 Mo) ou mode « vidéo existante » : le rendu CLIENT crashe le Mac et
+  // sort une vidéo MUETTE (decodeAudioData 225 Mo + WebCodecs cassé sur Safari). On FORCE le serveur et
+  // on NE retombe JAMAIS sur le client dans ce cas — un échec = message clair + stop propre (Axel 07/09).
+  const _bpFile = window._bypassHedraFile;
+  const _forceServer = !!(window._bypassHedraOn) || !!(_bpFile && _bpFile.size > 120 * 1024 * 1024);
+  if(_forceServer){
+    try{
+      if(await _genServerCompose(btn)) return;
+      // serveur a renvoyé false (cas non géré : split/hook/carré) → on ne crashe pas le client
+      toast('Ce format n\'est pas géré par le rendu serveur — retire le split / le hook et réessaie.');
+      if(btn){ btn.disabled=false; btn.innerHTML='↓ Télécharger'; }
+      _composeTimerStop();
+      return;
+    }catch(e){
+      console.error('[gen-subs] rendu serveur échoué, PAS de repli client (gros fichier) :', e);
+      toast('Le rendu serveur a échoué : ' + (e && e.message || 'erreur') + '. Réessaie.');
+      if(btn){ btn.disabled=false; btn.innerHTML='↓ Télécharger'; }
+      _composeTimerStop();
+      return;   // ⛔ jamais _composeVideoInner sur un gros fichier → crash + muet
+    }
+  }
   if(window._genDevOn){
     try{ if(await _genServerCompose(btn)) return; }
-    catch(e){ console.warn('[gen-subs] repli sur compo client', e); }
+    catch(e){ console.warn('[gen-subs] repli sur compo client (petit fichier)', e); }
   }
   if(btn){ btn.disabled = true; btn.innerHTML = 'Chargement…'; }
   _composeTimerStart();
@@ -27484,52 +27518,15 @@ function _clearBypassState(){
 }
 
 async function _restoreBypassState(){
+  // Réinitialisation propre (Axel 07/09) : plus de restauration de l'ancien clip « vidéo existante » au
+  // retour sur le Générateur → on purge le brouillon persistant (localStorage + blob IDB) et on repart vierge.
   try {
     const raw = localStorage.getItem('aa_bypass_resume');
-    if(!raw) return;
-    const saved = JSON.parse(raw);
-    if(!saved?.hedraIdbKey) return;
-
-    const stored = await _idbLoad(saved.hedraIdbKey);
-    let blob = null;
-    if(stored instanceof File || stored instanceof Blob) blob = stored;
-    else if(stored?.blob) blob = stored.blob;
-    if(!blob){ localStorage.removeItem('aa_bypass_resume'); return; }
-
-    const file = new File([blob], (saved.name||'avatar')+'.mp4', {type:'video/mp4'});
-
-    // Activer bypass mode
-    window._bypassHedraOn = true;
-    const sw    = document.getElementById('bypassHedraSwitch');
-    const thumb = document.getElementById('bypassHedraThumb');
-    const panel = document.getElementById('bypassHedraPanel');
-    const row   = document.getElementById('bypassHedraToggleRow');
-    if(sw)    { sw.style.background = 'var(--green)'; }
-    if(thumb) { thumb.style.left = '21px'; thumb.style.opacity = '1'; }
-    if(panel) { panel.style.display = 'block'; }
-    if(row)   { row.style.borderColor = 'rgba(0,217,126,0.4)'; row.style.background = 'rgba(0,217,126,0.05)'; }
-
-    window._bypassHedraFile = file;
-    window._bypassHedraUrl = URL.createObjectURL(file);
-
-    const nameEl   = document.getElementById('bypassHedraFileName');
-    const dropCont = document.getElementById('bypassHedraDropContent');
-    const fileInfo = document.getElementById('bypassHedraFileInfo');
-    if(nameEl)   nameEl.textContent     = saved.name + '.mp4';
-    if(dropCont) dropCont.style.display = 'none';
-    if(fileInfo) fileInfo.style.display = 'block';
-
-    const hv = document.getElementById('hedraVideo');
-    if(hv) hv.src = window._bypassHedraUrl;
-    _setBypassPreviewThumbnail(window._bypassHedraUrl);
-    _updateBypassUI();
-
-    _applyBypassScriptAndBanner(saved.script, saved.name);
-    toast('Vidéo "' + (saved.name||'') + '" restaurée depuis la session précédente');
-  } catch(e){
-    console.warn('_restoreBypassState:', e);
-    localStorage.removeItem('aa_bypass_resume');
-  }
+    if(raw){
+      try { const s = JSON.parse(raw); if(s?.hedraIdbKey) await _idbDelete(s.hedraIdbKey); } catch(_){}
+      localStorage.removeItem('aa_bypass_resume');
+    }
+  } catch(e){ console.warn('_restoreBypassState purge:', e); }
 }
 
 // ── UTILS ──
