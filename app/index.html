@@ -30064,6 +30064,14 @@ async function _ouvrirMediaDepuisUrl(){
   // on nettoie l'URL tout de suite : un rechargement ne doit pas relancer
   try { history.replaceState(null, '', location.pathname) } catch(_){}
   const nom = (p.get('nom') || 'video.mp4').replace(/[^\w.\-]/g, '_')
+  // Audit 06/09 : ?video= faisait fetch() une URL ARBITRAIRE choisie par un lien (l'app connectée récupérait
+  // une URL tierce). L'usage légitime = un média de NOTRE stockage (carte MCP). On restreint donc aux hôtes de
+  // confiance : Supabase du projet + avatarads.fr. Sinon on refuse.
+  try {
+    const _h = new URL(src, location.href).hostname.toLowerCase()
+    const _ok = _h === 'guvwgiejzkiodghywpwj.supabase.co' || _h === 'avatarads.fr' || _h.endsWith('.avatarads.fr')
+    if (!/^https:$/.test(new URL(src, location.href).protocol) || !_ok) { toast('Source vidéo non autorisée'); return }
+  } catch(_){ toast('Lien vidéo invalide'); return }
   // l'Éditeur n'existe qu'une fois l'app démarrée : on attend qu'il réponde
   for (let i = 0; i < 60 && typeof edRouteFile !== 'function'; i++) {
     await new Promise(r => setTimeout(r, 250))

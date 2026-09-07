@@ -61,11 +61,14 @@ serve(async (req: Request) => {
 
   if (gated) {
     const isTts = req.method === 'POST' && /:generateContent$/.test(bare) && /tts/i.test(bare)
+    const isChat = req.method === 'POST' && /:generateContent$/.test(bare) && !isTts && !isBillable   // gemini texte/vision (non facturant)
     const gate = isBillable
       ? await billableGate({ userId: uid, proxy: 'google', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
       : isTts
         ? await helperGate(uid, 'google-tts', 60, 3600)   // M3 (06/09) : TTS bridé 60/h (au lieu de 900/10min → drain de quota)
-        : await helperGate(uid, 'google', 900)   // polling ≤10 min par génération Veo, plusieurs en série
+        : isChat
+          ? await helperGate(uid, 'google-chat', 40, 600)   // audit 06/09 : chat gemini plafonné 40/10min (au lieu de 900 → drain)
+          : await helperGate(uid, 'google', 900)   // polling ≤10 min par génération Veo, plusieurs en série
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 

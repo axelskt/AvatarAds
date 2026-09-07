@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { isBlockedHost as guardBlockedHost, hostResolvesInternal } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne)
+import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
@@ -2702,6 +2702,9 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
 
   // ── enregistrement dynamique du client (RFC 7591) ──
   if (p1 === 'register' && req.method === 'POST') {
+    // Audit 06/09 : /register est ouvert (spec OAuth dynamique) → throttle par IP contre l'enregistrement en masse
+    // de clients (chaque client sert au hameçonnage du consentement, déjà atténué par l'affichage d'identité).
+    if (!(await rateHit('mcp-register:' + realIp(req), 3600, 30))) return json(429, { error: 'rate_limited' })
     let body: Record<string, unknown>
     try { body = await req.json() } catch { return json(400, { error: 'invalid_client_metadata' }) }
     const uris = Array.isArray(body.redirect_uris) ? body.redirect_uris.map(String).slice(0, 8) : []
