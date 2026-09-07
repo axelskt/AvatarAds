@@ -2458,7 +2458,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
           </div>
 
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">1080 × 1920 · 9:16</div>
+          <div style="display:none;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center" id="previewSizeLabel">1080 × 1920 · 9:16</div>
         </div>
 
         <!-- GENERATING -->
@@ -19494,7 +19494,7 @@ async function whisperTranscribe(){
         pendingTranscript = text;
         const voiceTa = document.getElementById('voiceTranscriptTA'); if(voiceTa) voiceTa.value = text;
         const ta = document.getElementById('transcriptInput'); if(ta) ta.value = text;
-        toast('Whisper IA — sous-titres calés mot par mot ✓');
+        // (Axel 07/09 : toast « sous-titres calés mot par mot » retiré — le bouton passe déjà à « Transcription faite »)
       } else {
         populateWordEditor(text);
         pendingTranscript = text;
@@ -20642,6 +20642,11 @@ async function handleBypassHedraFile(file){
   // Précharger la vidéo dans le player résultat pour preview
   const hv = document.getElementById('hedraVideo');
   if(hv) hv.src = window._bypassHedraUrl;
+  // Nouvelle vidéo = cadrage NEUF : zoom 100 %, centré, sans clip (un recadrage résiduel d'une session
+  // précédente re-zoomerait la vidéo — Axel 07/09). Les bornes de glissé (verrou si la vidéo remplit
+  // pile) sont gérées dans _zoneGeom.
+  cfg.avZoom = 100; cfg.avWidth = 100; cfg.avCropX = 0; cfg.avCropY = 0; cfg.avClip = { t:0, b:0, l:0, r:0 };
+  const _avz = document.getElementById('avZoomSlider'); if(_avz){ _avz.value = 100; const _avv = document.getElementById('avZoomVal'); if(_avv) _avv.textContent = '100%'; if(typeof _aaSliderFill==='function') _aaSliderFill(_avz); }
   // Injecter une thumbnail dans le preview phone
   _setBypassPreviewThumbnail(window._bypassHedraUrl);
   // ── Persistance : sauvegarder en IDB pour survie aux rechargements ──
@@ -22213,9 +22218,14 @@ function _zoneGeom(zone, sW, sH, zoom, topAlign, clip){
   const cen = (p0, len, zp0, zlen) => [zp0 - (p0 + len / 2), zp0 + zlen - (p0 + len / 2)]; // centre du contenu dans la zone
   const [cxLo, cxHi] = cov(cx0, cw, zone.x, zone.w), [exLo, exHi] = cen(cx0, cw, zone.x, zone.w);
   const [cyLo, cyHi] = cov(cy0, ch, zone.y, zone.h), [eyLo, eyHi] = cen(cy0, ch, zone.y, zone.h);
+  // Bornes du glissé PAR AXE : quand le média COUVRE la zone sur cet axe (aspect ≈ la zone, ex. 9:16 dans
+  // 9:16), on borne au débord RÉEL (cov) → un clip qui remplit PILE est verrouillé (Axel 07/09 : « je peux
+  // encore repositionner alors que ça remplit »). S'il ne couvre pas (plus petit), on autorise le recentrage
+  // (cen) + le fond flou. Avant : union des deux → ±½ zone de glissé même sur un clip qui remplit pile.
+  const bx = cw >= zone.w - 0.5, by = ch >= zone.h - 0.5;
   return { z, s, r, cw, ch, cx0, cy0,
-    minTx: Math.min(cxLo, exLo), maxTx: Math.max(cxHi, exHi),
-    minTy: Math.min(cyLo, eyLo), maxTy: Math.max(cyHi, eyHi) };
+    minTx: bx ? Math.min(cxLo, cxHi) : Math.min(exLo, exHi), maxTx: bx ? Math.max(cxLo, cxHi) : Math.max(exLo, exHi),
+    minTy: by ? Math.min(cyLo, cyHi) : Math.min(eyLo, eyHi), maxTy: by ? Math.max(cyLo, cyHi) : Math.max(eyLo, eyHi) };
 }
 function _coerceZoomCfg(){
   const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 100));
@@ -35087,8 +35097,9 @@ function _tapSyncCancel(){
   </div>
 </div>
 
-<!-- Legal footer — visible par les bots de vérification Google -->
-<footer style="position:fixed;bottom:0;right:0;z-index:0;padding:5px 12px;display:flex;align-items:center;justify-content:flex-end;gap:12px;pointer-events:none">
+<!-- Legal footer — masqué de l'UI (Axel 07/09 : « ça prend de la place ») mais GARDÉ dans le DOM pour les
+     bots de vérification Google (liens privacy/terms/contact crawlables dans la source). -->
+<footer style="display:none;position:fixed;bottom:0;right:0;z-index:0;padding:5px 12px;align-items:center;justify-content:flex-end;gap:12px;pointer-events:none">
   <a href="/privacy.html" style="font-size:9px;color:rgba(255,255,255,0.15);font-family:sans-serif;text-decoration:none;pointer-events:all" target="_blank">Politique de confidentialité</a>
   <span style="font-size:9px;color:rgba(255,255,255,0.08)">·</span>
   <a href="/terms.html" style="font-size:9px;color:rgba(255,255,255,0.15);font-family:sans-serif;text-decoration:none;pointer-events:all" target="_blank">Conditions d'utilisation</a>
