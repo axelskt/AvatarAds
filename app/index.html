@@ -27764,7 +27764,7 @@ const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 // Starter = Standard seul. Défaut : Élite → Pro, sinon Standard. Le tarif suit (via _expCostCredits).
 const EXP_MODELS = [
   { v:'standard', name:'Veo Standard', sub:'Rapide · éco' },
-  { v:'omni',     name:'Omni Flash',   sub:'Voix native · bouche fluide' },
+  { v:'omni',     name:'Omni Flash',   sub:'Qualité Max · voix native' },
 ];
 function _expModelAllowed(v){
   if(v==='omni') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
