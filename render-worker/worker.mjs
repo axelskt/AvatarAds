@@ -627,41 +627,39 @@ async function composeGenSubs(jobDir, outPath, plan) {
 
   const proj = mkdtempSync(join(tmpdir(), 'aa-gensubs-'))
   try {
-    mkdirSync(join(proj, 'media'), { recursive: true })
+    mkdirSync(join(proj, 'media'), { recursive: true })   // hyperframes.json pointe assets→media (vide : plus de vidéo dans la compo)
 
-    // 1. base normalisée 1080×1920 @ FPS, SANS audio → clip <video> propre à
-    //    extraire (fps=50 comme partout ; l'audio viendra de l'original au mux).
-    const camOnC = plan.cameraOrganique !== false      // #cam-realiste : la vidéo tremble, pas les sous-titres
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', orig,
-      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}` + (camOnC ? ',' + camOrganiqueFilter(W, H) : ''),
-      '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart', join(proj, 'media', 'base.mp4')])
-
-    // 2. polices embarquées (substituts des polices SYSTÈME du client : le
-    //    conteneur n'a que fonts-liberation) — cf. gen-subs-composition.mjs.
+    // 1. polices embarquées (substituts des polices SYSTÈME du client : le conteneur n'a que fonts-liberation).
     const fontsSrc = join(HERE, 'assets', 'fonts')
     if (existsSync(fontsSrc)) {
       mkdirSync(join(proj, 'fonts'), { recursive: true })
       for (const f of readdirSync(fontsSrc)) copyFileSync(join(fontsSrc, f), join(proj, 'fonts', f))
     }
 
-    // 3. composition HyperFrames + métas
-    writeFileSync(join(proj, 'index.html'), buildGenSubsComposition(plan))
+    // 2. composition HyperFrames = SOUS-TITRES SEULS (fond transparent, PAS de vidéo de base).
+    //    #vitesse-overlay (Axel 08/09) : avant, HyperFrames re-décodait+composait la vidéo de base frame
+    //    par frame dans Chromium (9 min pour 39 s). Désormais il ne rend QUE le canvas → subs.webm alpha,
+    //    superposé ensuite sur la base par ffmpeg (natif, rapide). ~3-5× plus rapide, et fini les warnings
+    //    lint « video frozen » / « overlapping clips ».
+    writeFileSync(join(proj, 'index.html'), buildGenSubsComposition(plan, { overlayOnly: true }))
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-gensubs', name: 'aa-gensubs', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
       $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',
       paths: { blocks: 'compositions', components: 'compositions/components', assets: 'media' },
     }, null, 2))
 
-    // 4. rendu visuel headless — mêmes garde-fous que le montage (hf-ffmpeg qui
-    //    plafonne les threads du décodeur + 3 tentatives sur extraction incomplète).
+    // 3. rendu OVERLAY alpha (webm) — pas de vidéo à décoder → capture ~3-5× plus rapide. Mêmes garde-fous
+    //    (hf-ffmpeg plafonne les threads + 3 tentatives sur extraction incomplète).
     const wk = process.env.RENDER_WORKERS ? ` --workers ${parseInt(process.env.RENDER_WORKERS, 10) || 2}` : ''
     const FFMPEG_PLAFONNE = '/usr/local/bin/hf-ffmpeg'
     const envRendu = existsSync(FFMPEG_PLAFONNE) ? { HYPERFRAMES_FFMPEG_PATH: FFMPEG_PLAFONNE } : {}
-    const visual = join(proj, 'visual.mp4')
+    // ⚠ MOV (prores 4444, yuva444p12le) et NON webm : HyperFrames n'écrit PAS d'alpha en webm (sortie
+    //   yuv420p opaque → fond noir qui masque la base). Le MOV porte une vraie couche alpha → ffmpeg
+    //   superpose correctement. Vérifié en rendu local (frames = base vidéo + sous-titres).
+    const subsVid = join(proj, 'subs.mov')
     for (let essai = 1; ; essai++) {
       try {
-        sh(`${HF_CMD} render --quality high --fps ${genFps}${wk} --output visual.mp4`, proj, envRendu)
+        sh(`${HF_CMD} render --format mov --quality high --fps ${genFps}${wk} --output subs.mov`, proj, envRendu)
         break
       } catch (e) {
         const stderr = String((e && e.stderr) || '')
@@ -671,24 +669,22 @@ async function composeGenSubs(jobDir, outPath, plan) {
         await new Promise((r) => setTimeout(r, 4000))
       }
     }
-    if (!existsSync(visual)) throw new Error('gen-subs : rendu visuel échoué (visual.mp4 absent)')
+    if (!existsSync(subsVid)) throw new Error('gen-subs : rendu overlay échoué (subs.mov absent)')
 
-    // 5. mux : vidéo (sous-titres gravés) + AUDIO de la vidéo d'origine.
-    //    -map 1:a:0? = PREMIÈRE piste audio seulement (une source réimportée peut
-    //    porter une 2e piste « none » qui ferait échouer — même piège iPhone que
-    //    motion-split). +faststart obligatoire (sinon les apps mobiles refusent).
+    // 4. UN SEUL ffmpeg : normalise la base (scale/crop/fps + caméra réaliste) → superpose les sous-titres
+    //    alpha STEADY (la vidéo tremble, PAS les sous-titres) → garde l'AUDIO d'origine + faststart TikTok.
+    //    -map 0:a:0? = PREMIÈRE piste audio seulement (une source réimportée peut porter une 2e piste « none »).
+    const camOnC = plan.cameraOrganique !== false      // #cam-realiste : appliqué à la BASE, avant l'overlay
+    const baseChain = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}` + (camOnC ? ',' + camOrganiqueFilter(W, H) : '')
     const baseHasAudio = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
-    if (baseHasAudio) {
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', visual, '-i', orig,
-        '-map', '0:v:0', '-map', '1:a:0?', '-c:v', 'copy',
-        '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2',
-        '-t', String(D), '-movflags', '+faststart', outPath], { stdio: 'pipe' })
-    } else {
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', visual,
-        '-map', '0:v:0', '-c:v', 'copy', '-an',
-        '-t', String(D), '-movflags', '+faststart', outPath], { stdio: 'pipe' })
-    }
-    console.log(`✅ gen-subs (sous-titres gravés + audio d'origine, ${D}s) → ${outPath}`)
+    const fc = `[0:v]${baseChain}[b];[b][1:v]overlay=0:0[v]`
+    const args = ['-v', 'error', '-y', '-i', orig, '-i', subsVid, '-filter_complex', fc, '-map', '[v]']
+    if (baseHasAudio) args.push('-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
+    else args.push('-an')
+    args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
+      '-t', String(D), '-movflags', '+faststart', outPath)
+    execFileSync('ffmpeg', args, { stdio: 'pipe' })
+    console.log(`✅ gen-subs OVERLAY (sous-titres alpha superposés + audio d'origine, ${D}s) → ${outPath}`)
   } finally {
     try { rmSync(proj, { recursive: true, force: true }) } catch (_) { /* nettoyage best-effort */ }
   }
