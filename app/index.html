@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-0135'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-0145'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -19410,7 +19410,10 @@ function autoGenSubtitles(){
 // (Google Cloud / AWS Cloud restent corrects). Liste facile à étendre. (Axel 08/09)
 function _aaFixBrandText(s){
   try {
-    return String(s == null ? '' : s).replace(/(\bgoogle\s+|\baws\s+|\bamazon\s+)?\bcloud\b/gi, (m, pre) => pre ? m : 'Claude');
+    let out = String(s == null ? '' : s);
+    out = out.replace(/\bavatar[\s\-]?ads?\b/gi, 'AvatarAds');                                  // avatarads, avatar ads, avatar-ad → AvatarAds
+    out = out.replace(/(\bgoogle\s+|\baws\s+|\bamazon\s+)?\bcloud\b/gi, (m, pre) => pre ? m : 'Claude');
+    return out;
   } catch(_){ return s; }
 }
 async function whisperTranscribe(){
@@ -19501,7 +19504,11 @@ async function whisperTranscribe(){
     try {
       const _isUserAudio = (typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled && typeof mp4AudioFile!=='undefined' && !!mp4AudioFile);
       const _sc = _isUserAudio ? '' : (document.getElementById('f-script')?.value || (typeof pendingTranscript!=='undefined'&&pendingTranscript) || (window.results && results.script) || '').trim();
-      if(_sc) fd.append('prompt', _sc.slice(0, 880));
+      // BIAIS DE MARQUE (Axel 08/09) : un simple VOCABULAIRE (pas une phrase) → Whisper épelle « AvatarAds »,
+      // « Claude » etc. correctement à la SOURCE, sans le recopiage que provoquait le script complet.
+      const _brand = 'AvatarAds, Claude, ChatGPT, TikTok, IA, IA Manager, Hedra, ElevenLabs.';
+      const _prompt = (_brand + (_sc ? ' ' + _sc.slice(0, 800) : '')).slice(0, 880);
+      fd.append('prompt', _prompt);
     } catch(e){}
     const resp = await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions', {
       method: 'POST',
@@ -26340,7 +26347,7 @@ async function _extractAudioViaRemux(file, baseName){
   mp4.onReady = (info) => {
     const at = (info.audioTracks && info.audioTracks[0]) || (info.tracks||[]).find(t => t.audio);
     if(!at){ const e = new Error('pas de piste audio'); e.code = 'no_audio'; fail(e); return; }
-    if(!/^mp4a\./i.test(at.codec||'')){ fail(new Error('piste audio non-AAC (' + (at.codec||'?') + ')')); return; }   // mp4-muxer = AAC uniquement
+    if(!/^mp4a/i.test(at.codec||'')){ fail(new Error('piste audio non-AAC (' + (at.codec||'?') + ')')); return; }   // mp4-muxer = AAC ; « mp4a » ou « mp4a.40.2 » (⚠ PAS de point exigé — bug 08/09)
     audioTrackId = at.id;
     const sampleRate = (at.audio && at.audio.sample_rate) || 44100;
     const channels = (at.audio && at.audio.channel_count) || 2;
