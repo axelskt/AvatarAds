@@ -1927,9 +1927,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
                 <div class="flbl" style="font-size:10px;margin:0">Position verticale</div>
-                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">70%</span>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--orange2)" id="subPosVal">75%</span>
               </div>
-              <input class="aa-slider" type="range" id="subPos" min="0" max="100" value="70" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()" style="width:100%">
+              <input class="aa-slider" type="range" id="subPos" min="0" max="100" value="75" oninput="cfg.subPos=+this.value;document.getElementById('subPosVal').textContent=this.value+'%';updateLivePreview()" style="width:100%">
             </div>
             <div class="fld" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -6138,7 +6138,7 @@ let selHedraChar = null;
 
 // Global config for subtitle styling
 const cfg = {
-  subSize:72, subPos:70, subWpg:2, subWidth:90, subLineH:1.0,   // subPos 75→70 : défaut au-dessus de l'UI TikTok (safe zone bas ~78 %)
+  subSize:72, subPos:75, subWpg:2, subWidth:90, subLineH:1.0,   // subPos = 75 % par défaut (Axel 07/09)
   subTimingMode:'proportionnel', subAdvanceMs:300, subSecPerGroup:1.2,
   avClip:{t:0,b:0,l:0,r:0}, gpClip:{t:0,b:0,l:0,r:0},
   format:'vertical', splitRatio:35, gpZoom:100, gpPosition:'bottom',
