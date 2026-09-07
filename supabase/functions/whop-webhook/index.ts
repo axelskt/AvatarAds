@@ -216,6 +216,14 @@ serve(async (req) => {
     try { await sb.from('webhook_events').insert({ body: event }) } catch (_) {}
   }
 
+  // Audit métier 06/09 : le verrou d'idempotence est posé AVANT le traitement. Si une étape échoue (500), la
+  // ligne webhook_events restait → au rejeu de Whop, l'insertion dédoublonnait → 200 « déjà traité » → le
+  // crédit n'était JAMAIS appliqué (paiement perdu). failDb RELÂCHE le verrou avant tout 500 → le rejeu re-traite.
+  const failDb = async () => {
+    if (eventId) { try { await sb.from('webhook_events').delete().eq('event_id', eventId) } catch (_) { /* best-effort */ } }
+    return await failDb()
+  }
+
   const findProfile = async () => {
     const cols = 'id, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used'
     if (email) {
@@ -280,16 +288,23 @@ serve(async (req) => {
           whop_cancel_at_period_end: false,
           first_sub_bonus_used: true,
         }).eq('id', profile.id)
-        if (error) { console.error('❌ Update profil:', error); return new Response('DB error', { status: 500 }) }
+        if (error) { console.error('❌ Update profil:', error); return await failDb() }
         await creditReferral(sb, profile.id, email, planId, data, 'abonnement')
         console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''})`)
         await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: sub.credits + bonus + keep })
       } else {
+        // Audit 06/09 : l'upsert écrasait un pending EXISTANT → un pack acheté AVANT l'abonnement (sans compte)
+        // était perdu. On préserve les crédits d'un pack (pending plan=free) et les crédits image en attente.
+        const { data: paS } = await sb.from('pending_activations').select('plan, credits, img_credits').eq('email', email).maybeSingle()
+        const carryPack = (paS && (!paS.plan || paS.plan === 'free')) ? (paS.credits || 0) : 0
+        const carryImg  = paS?.img_credits || 0
         const { error } = await sb.from('pending_activations').upsert({
-          email, product: 'avatarads', plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0),
+          email, product: 'avatarads', plan: sub.plan,
+          credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0) + carryPack,
+          img_credits: carryImg,
           whop_member_id: data.id ?? null, whop_plan_id: planId, paid_at: new Date().toISOString(),
         }, { onConflict: 'email' })
-        if (error) { console.error('❌ pending_activations:', error); return new Response('DB error', { status: 500 }) }
+        if (error) { console.error('❌ pending_activations:', error); return await failDb() }
         console.log(`⏳ Activation en attente pour ${email}: ${sub.plan}`)
         await sendWelcomeEmail(sb, { email, plan: sub.plan, credits: sub.credits + (FIRST_SUB_BONUS[sub.plan] ?? 0), pending: true })
       }
@@ -300,7 +315,7 @@ serve(async (req) => {
           bought_credits:    boughtLeft(profile) + (pack.credits || 0), // tracés à part : préservés à l'annulation
           img_bonus_credits: (profile.img_bonus_credits || 0) + (pack.imgCredits || 0),
         }).eq('id', profile.id)
-        if (error) { console.error('❌ Crédit pack:', error); return new Response('DB error', { status: 500 }) }
+        if (error) { console.error('❌ Crédit pack:', error); return await failDb() }
         console.log(`✅ Pack crédité pour ${email}: +${pack.credits || 0} crédits, +${pack.imgCredits || 0} images`)
         await creditReferral(sb, profile.id, email, planId, data, 'pack')
       } else {
@@ -313,7 +328,7 @@ serve(async (req) => {
           img_credits: (pa?.img_credits || 0) + (pack.imgCredits || 0),
           paid_at:     new Date().toISOString(),
         }, { onConflict: 'email' })
-        if (error) { console.error('❌ pending pack:', error); return new Response('DB error', { status: 500 }) }
+        if (error) { console.error('❌ pending pack:', error); return await failDb() }
         console.log(`⏳ Pack en attente pour ${email}`)
       }
     }
@@ -326,9 +341,15 @@ serve(async (req) => {
     if (PACK_MAP[planId] || !SUB_MAP[planId]) return new Response('OK', { status: 200 })
 
     const profile = await findProfile()
-    // Downgrade uniquement si c'est BIEN l'abonnement actif du profil
-    // (évite qu'un ancien abonnement expiré après upgrade ne casse le nouveau plan)
-    if (profile && (!profile.whop_plan_id || profile.whop_plan_id === planId)) {
+    // Downgrade uniquement si l'abonnement QUI EXPIRE est BIEN l'actif du profil — par IDENTIFIANT D'ABONNEMENT
+    // (audit 06/09 : comparer le plan id cassait l'upgrade vers le MÊME palier — l'ancien membership expirait avec
+    // le même plan id et rétrogradait le nouveau). Repli sur le plan id seulement si aucun member id n'est stocké.
+    const expiringMember = data.id ?? memberId ?? null
+    const estActif = profile && (
+      (profile.whop_member_id && expiringMember && String(profile.whop_member_id) === String(expiringMember)) ||
+      (!profile.whop_member_id && (!profile.whop_plan_id || profile.whop_plan_id === planId))
+    )
+    if (estActif) {
       const keep = boughtLeft(profile) // les crédits achetés restent parqués (réutilisables au prochain abonnement)
       await sb.from('profiles').update({
         plan:              'free',

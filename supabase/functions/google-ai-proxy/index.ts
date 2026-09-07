@@ -14,7 +14,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 const ALLOW = /^\/v1beta\/(models\/[A-Za-z0-9._-]+:(predict|predictLongRunning|generateContent)|models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+|operations\/[A-Za-z0-9._-]+|files\/[A-Za-z0-9._-]+:download)$/
@@ -73,11 +73,12 @@ serve(async (req: Request) => {
     const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
     let googleRes: Response
     let drawn = 0
+    let drawnOp: string | undefined
     if (req.method === 'GET') {
       googleRes = await fetch(up.url, { method: 'GET', headers })
     } else {
       const rawBody = await req.text()
-      if (isBillable && gated) { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }) }
+      if (isBillable && gated) { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId }
       googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: rawBody })
     }
     // Le corps amont est relayé en BINAIRE. `.text()` (05/09, réservation) ré-encodait un MP4 Veo
@@ -86,25 +87,31 @@ serve(async (req: Request) => {
     const buf = await googleRes.arrayBuffer()
     const ct = googleRes.headers.get('content-type') ?? 'application/json'
     const body = /json|text\//i.test(ct) ? new TextDecoder().decode(buf) : ''
-    // Règlement de la réservation quand la génération a abouti :
+    // Réconciliation. Le job Veo = le nom d'opération (models/…/operations/<id>) renvoyé à la soumission et
+    // présent dans le path des polls. On LIE l'op tirée à ce job à la soumission, puis règle/libère PAR JOB au
+    // poll (audit 06/09) → un poll d'une opération étrangère ne peut plus rendre/régler la réserve d'une autre op.
+    // Les images (Imagen/Nano) sont SYNCHRONES → on règle/libère l'op PRÉCISE tirée dans cette requête.
     if (gated) {
-      const op = await resolveOp(uid, req)
-      if (op) {
-        if (isSyncBillable && googleRes.ok) await settleReservation(uid, op)                          // Imagen/Nano synchrones
-        else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body) && !/"error"/.test(body)) await settleReservation(uid, op)   // Veo : opération terminée
+      const opTail = (bare.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''   // depuis le path (poll)
+      if (isSyncBillable) {
+        // Imagen/Nano synchrones : 2xx → op livrée (non remboursable) ; erreur → on rend l'op tirée.
+        if (googleRes.ok) { if (drawnOp) await settleReservation(uid, drawnOp) }
+        else await releaseOp(uid, drawnOp, drawn)
+      } else if (isBillable) {
+        // Veo : soumission async. 2xx → on lie l'op au job ; erreur → on rend l'op tirée.
+        if (googleRes.ok) { const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''; if (name) await bindJob(uid, drawnOp, 'veo:' + name) }
+        else await releaseOp(uid, drawnOp, drawn)
+      } else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body)) {
+        // Poll d'une opération Veo terminée : livrée (pas d'erreur) → règle le job ; en erreur → rend le job.
+        if (opTail) { if (/"error"/.test(body)) await releaseByJob(uid, 'veo:' + opTail); else await settleByJob(uid, 'veo:' + opTail) }
       }
-    }
-    // Amont en erreur → on rend le tirage : soumission refusée (ex. 503 Nano, fréquent) ou opération Veo échouée au poll.
-    if (gated) {
-      if (isBillable && !googleRes.ok) await releaseReservation(uid, req, drawn)
-      else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body) && /"error"/.test(body)) await releaseReservation(uid, req, 9999)
     }
     return new Response(buf, {
       status: googleRes.status,
       headers: { ...CORS, 'Content-Type': ct },
     })
   } catch (err) {
-    if (isBillable && gated) await releaseReservation(uid, req, 9999).catch(() => {})
+    if (isBillable && gated) await releaseOp(uid, drawnOp, 9999).catch(() => {})
     console.error('google-ai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

@@ -61,7 +61,7 @@ export async function settleReservation(userId: string, opId: string): Promise<v
 }
 // Applique la réservation dans un proxy : tire `cost`, journalise, 402 seulement si enforce. Puis renvoie
 // une fonction `settle()` à appeler quand la génération a abouti (soumission SYNC réussie, ou poll COMPLETED).
-export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate> {
+export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate & { opId?: string }> {
   const opId = await resolveOp(o.userId, o.req)
   if (!opId) return { ok: true }   // aucune op ouverte (owner/dev) → billableGate a déjà géré le plancher
   const dr = await drawReservation(o.userId, opId, o.cost)
@@ -69,23 +69,44 @@ export async function applyReservation(o: { req: Request; userId: string; proxy:
     console.warn(`[reserve] ${o.proxy} op=${opId} cost=${o.cost} ${o.label ?? ''} INSUFFISANT (enforce=${reserveEnforce()})`)
     if (reserveEnforce()) return { ok: false, status: 402, error: 'Réservation de crédits insuffisante pour cette génération.' }
   }
-  return { ok: true }
+  return { ok: true, opId }
 }
 
 // Tire la réserve ENTIÈRE d'une op (soumission VIDÉO : une op = une génération). Ferme « N générations pour
 // un débit » : une 2e soumission sur la même op trouve réserve 0 → 402. Fail-open sur erreur DB.
-export async function applyReservationFull(o: { req: Request; userId: string; proxy: string; label?: string }): Promise<Gate> {
+export async function applyReservationFull(o: { req: Request; userId: string; proxy: string; label?: string }): Promise<Gate & { opId?: string }> {
   const opId = await resolveOp(o.userId, o.req)
   if (!opId) return { ok: true }   // owner/dev : aucune op ouverte
   try {
     const { data, error } = await svc().rpc('draw_full_reservation', { p_user: o.userId, p_op: opId })
-    if (error) { console.warn('draw_full err (fail-open):', error.message); return { ok: true } }
+    if (error) { console.warn('draw_full err (fail-open):', error.message); return { ok: true, opId } }
     if (data !== true) {
       console.warn(`[reserve-full] ${o.proxy} op=${opId} ${o.label ?? ''} VIDE/RÉGLÉE (enforce=${reserveEnforce()})`)
       if (reserveEnforce()) return { ok: false, status: 402, error: 'Réservation de crédits insuffisante pour cette génération.' }
     }
   } catch { /* fail-open */ }
-  return { ok: true }
+  return { ok: true, opId }
+}
+
+// ── Libération/règlement CIBLÉS (audit 06/09) — depuis que resolve_op exige reserve>0 (anti-réutilisation),
+//    une op TIRÉE (reserve 0) n'est plus retrouvable par resolveOp → la libération sur échec ne rendait plus
+//    rien = SUR-DÉBIT d'une génération ratée. On rend/règle donc l'op PRÉCISE (échec synchrone) ou l'op LIÉE
+//    au job fournisseur (échec asynchrone), jamais « la dernière op ouverte » (qui rouvrait le refund-and-keep).
+export async function releaseOp(userId: string, opId: string | undefined, cost: number): Promise<void> {
+  if (!opId) return
+  try { await svc().rpc('release_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) }) } catch { /* best-effort */ }
+}
+export async function bindJob(userId: string, opId: string | undefined, job: string): Promise<void> {
+  if (!opId || !job) return
+  try { await svc().rpc('bind_reservation_job', { p_user: userId, p_op: opId, p_job: job }) } catch { /* best-effort */ }
+}
+export async function releaseByJob(userId: string, job: string): Promise<void> {
+  if (!job) return
+  try { await svc().rpc('release_by_job', { p_user: userId, p_job: job, p_cost: 9999 }) } catch { /* best-effort */ }
+}
+export async function settleByJob(userId: string, job: string): Promise<void> {
+  if (!job) return
+  try { await svc().rpc('settle_by_job', { p_user: userId, p_job: job }) } catch { /* best-effort */ }
 }
 
 let _svc: SupabaseClient | null = null

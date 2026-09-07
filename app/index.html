@@ -29867,6 +29867,10 @@ async function expressCreate(){
     console.error('Express error:', e);
     if(prog) prog.style.display='none';
     if(ph) ph.style.display='block';
+    // Express débite EN AMONT (spendCreditsFor). Un échec (Veo refusé, téléchargement raté, vidéo corrompue)
+    // ne remboursait rien → l'utilisateur payait pour rien. On rend ce qui est remboursable : refund_credits
+    // ne rend que la RÉSERVE RESTANTE (une étape déjà livrée — image, extension — reste facturée à juste titre).
+    try{ if(typeof creditsFlowRefund==='function') await creditsFlowRefund('la génération Express a échoué'); }catch(_r){}
     toast('Express : ' + (e.message||e));
   } finally {
     if(btn){ btn.disabled=false; btn.style.opacity='1'; }
