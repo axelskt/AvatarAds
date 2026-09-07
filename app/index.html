@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-0025'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-0055'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -26020,7 +26020,14 @@ function _startBypassAudioExtraction(file){
     const _demuxable = typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function' && _mp4Family;  // ⚠ PAS de check global AudioData : Safari ne l'expose pas toujours mais décode quand même
     const _small = (file.size||0) < 220*1024*1024;                   // decodeAudioData charge tout en mémoire → jusqu'à ~220 Mo (couvre les 4K ~150-200 Mo) ; au-delà = capture
     window._bypassAudioPromise = (async () => {
-      // 1) Démux WebCodecs — rapide, timing exact, streamé (gère le 225 Mo). Peut échouer sur Safari.
+      // 0) RÉEMBALLAGE AAC → .m4a (mp4box, SANS décoder) : marche PARTOUT (Safari inclus, pas de WebCodecs),
+      //    streamé (gère le 4K >220 Mo), timing EXACT, ~150 ms. C'est le chemin PRIORITAIRE (AAC = cas courant).
+      if(_mp4Family){
+        const rx = await _extractAudioViaRemux(file, _base).then(w => ({ ok:true, w })).catch(e => ({ ok:false, e }));
+        if(rx.ok && rx.w){ try{ cap.abort(); }catch(_){} window._bypassAudioFile = rx.w; window._bypassAudioProgress = 100; _diag('remux OK (' + Math.round(rx.w.size/1024) + ' Ko)'); return rx.w; }
+        _diag('remux KO (' + ((rx.e&&rx.e.code)||'') + ' ' + (rx.e&&rx.e.message||'') + ')');
+      }
+      // 1) Démux WebCodecs — rapide, timing exact, streamé (gère le 225 Mo). Peut échouer sur Safari (pas d'AAC).
       if(_demuxable){
         const dr = await _extractAudioViaDemux(file, _base).then(w => ({ ok:true, w })).catch(e => ({ ok:false, e }));
         if(dr.ok && dr.w){ try{ cap.abort(); }catch(_){} window._bypassAudioFile = dr.w; window._bypassAudioProgress = 100; _diag('démux OK (' + Math.round(dr.w.size/1024) + ' Ko)'); return dr.w; }
@@ -26288,6 +26295,68 @@ async function _extractAudioViaDemux(file, baseName){
   try{ window._bypassAudioProgress = 100; }catch(_){}
   return new File([wav], (baseName||'audio') + '_audio.wav', { type: 'audio/wav' });
 }
+// RÉEMBALLAGE de la piste AAC en .m4a SANS DÉCODER (mp4box démux → mp4-muxer). LE chemin fiable sur SAFARI :
+// pas de WebCodecs (Safari ne décode PAS l'AAC → « Codec is not supported »), pas de capture muette, streamé
+// par tranches (gère le 4K >220 Mo, faible mémoire), TIMING EXACT (échantillons AAC bruts, pas de ré-encodage).
+// Sortie .m4a acceptée telle quelle par OpenAI whisper-1. (Axel 08/09)
+async function _extractAudioViaRemux(file, baseName){
+  const isMp4 = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
+  if(!isMp4) throw new Error('conteneur non MP4/MOV/M4A');
+  const MP4Box = await _loadMp4Box();
+  const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
+  const CHUNK = 16*1024*1024;
+  const mp4 = MP4Box.createFile();
+  let muxer = null, audioTrackId = -1, count = 0;
+  let started = false, fed = false, finishing = false, done, fail;
+  const finished = new Promise((res, rej) => { done = res; fail = rej; });
+  const maybeFinish = () => { if(finishing || !started || !fed) return; finishing = true; done(); };
+
+  mp4.onError = (e) => fail(new Error('mp4box: ' + e));
+  mp4.onReady = (info) => {
+    const at = (info.audioTracks && info.audioTracks[0]) || (info.tracks||[]).find(t => t.audio);
+    if(!at){ const e = new Error('pas de piste audio'); e.code = 'no_audio'; fail(e); return; }
+    if(!/^mp4a\./i.test(at.codec||'')){ fail(new Error('piste audio non-AAC (' + (at.codec||'?') + ')')); return; }   // mp4-muxer = AAC uniquement
+    audioTrackId = at.id;
+    const sampleRate = (at.audio && at.audio.sample_rate) || 44100;
+    const channels = (at.audio && at.audio.channel_count) || 2;
+    try { muxer = new Muxer({ target: new ArrayBufferTarget(), audio: { codec: 'aac', sampleRate, numberOfChannels: channels }, fastStart: 'in-memory' }); }
+    catch(e){ fail(new Error('muxer: ' + (e && e.message || e))); return; }
+    mp4.setExtractionOptions(at.id, null, { nbSamples: 1000 });
+    mp4.start();
+    started = true; maybeFinish();
+  };
+  mp4.onSamples = (id, user, samples) => {
+    if(id !== audioTrackId || !muxer) return;
+    for(const s of samples){
+      try {
+        muxer.addAudioChunkRaw(new Uint8Array(s.data), 'key',            // COPIE (mp4box réutilise le buffer après release)
+          Math.round(s.cts / s.timescale * 1e6), Math.round(s.duration / s.timescale * 1e6), undefined);
+        count++;
+      } catch(e){ fail(e); return; }
+    }
+    try{ mp4.releaseUsedSamples(id, samples[samples.length-1].number); }catch(_){}
+  };
+
+  (async () => {
+    try {
+      for(let off=0; off<file.size; off+=CHUNK){
+        const buf = await file.slice(off, Math.min(off+CHUNK, file.size)).arrayBuffer();
+        buf.fileStart = off;
+        mp4.appendBuffer(buf);
+      }
+      mp4.flush();
+      fed = true; maybeFinish();
+    } catch(e){ fail(e); }
+  })();
+
+  let _to; const _timeout = new Promise((_, rej) => { _to = setTimeout(() => rej(new Error('remux timeout')), 30000); });
+  try { await Promise.race([finished, _timeout]); } finally { clearTimeout(_to); try{ mp4.stop && mp4.stop(); }catch(_){} }
+  if(!muxer || !count){ const e = new Error('0 échantillon audio'); e.code = 'no_audio'; throw e; }
+  muxer.finalize();
+  const buf = muxer.target.buffer;
+  if(!buf || buf.byteLength < 512){ const e = new Error('m4a vide'); e.code = 'no_audio'; throw e; }
+  return new File([buf], (baseName||'audio') + '_audio.m4a', { type: 'audio/mp4' });
+}
 // Décodage EXACT via decodeAudioData → WAV 16 kHz mono. TIMING PARFAIT (décode les vrais échantillons,
 // aucun décalage) et FIABLE sur Safari, SANS geste utilisateur. C'est le fix du désync des sous-titres
 // (la capture temps réel décalait les timestamps Whisper). Réservé aux fichiers qui tiennent en mémoire
@@ -26320,6 +26389,8 @@ async function _extractAudioForWhisper(file){
   // Repli sur TOUTE la chaîne existante en cas d'échec (y compris "no_audio" du démux, qui n'est PAS
   // autoritaire : c'est _extractAudioViaElement en fin de chaîne qui tranche l'absence réelle de piste).
   if(isVideoFile){
+    try { return await _extractAudioViaRemux(file, baseName); }   // ⚡ Safari + gros fichiers : réemballe l'AAC (sans décoder)
+    catch(e){ console.warn('_extractAudioViaRemux → repli :', (e && e.code) || '', e && e.message); }
     try { return await _extractAudioViaDemux(file, baseName); }
     catch(e){ console.warn('_extractAudioViaDemux → repli :', (e && e.code) || '', e && e.message); }
   }
