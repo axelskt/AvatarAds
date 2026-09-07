@@ -29470,6 +29470,10 @@ const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTI
 // Les modèles i2v re-rendent le visage et LISSENT. On exige la fidélité pixel + on INTERDIT explicitement
 // tout embellissement (leçon Images IA : le détail dit ce qu'on veut, l'interdit dit comment ne pas lisser).
 const _EXP_TEXLOCK = '. TEXTURE FIDELITY (CRITICAL): reproduce her face EXACTLY as in the reference photo — keep the real skin texture, visible pores, fine lines, natural imperfections, freckles or moles, under-eye area and every hair strand at the SAME level of detail and sharpness as the reference; the skin must look like real PHOTOGRAPHED skin, never rendered or plastic. Do NOT smooth, soften, blur, denoise, airbrush, retouch or beautify the skin; do NOT even out, brighten or unify the complexion; do NOT remove pores, texture, blemishes, redness, shine or natural shadows; do NOT slim the face or jaw, plump or enlarge the lips, widen the eyes, whiten the teeth or the eyes, thin the nose, smooth the hair or add any makeup, gloss or beauty filter. Match the reference photo\'s exact grain, micro-contrast and depth of field. Every single frame must look like the SAME real photo of the SAME real skin, only moving.';
+// Verrou SPÉCIFIQUE Omni (Axel 07/09 : « garde la photo en 1:1 — cheveux, traits, peau, couleur, bouche »).
+// Omni Flash est de l'image-to-video : il RE-GÉNÈRE le visage au lieu d'animer la photo → dérive « beauté ».
+// On le recadre : la photo EST la 1re frame, on anime SEULEMENT, on ne redessine pas le visage.
+const _EXP_TEXLOCK_OMNI = '. IDENTITY 1:1 (this is an image-to-video animation of the reference photo): the input image IS the first frame — keep it pixel-for-pixel and ONLY add motion; do NOT re-render, repaint, regenerate, restyle or reinterpret the person. Her appearance stays 100 percent identical to the reference photo in EVERY frame: the exact same hair (same cut, color, parting, volume and individual strands and flyaways), the exact same facial features (eyes, eyebrows, nose, mouth shape, cheekbones, jawline and overall face shape), the exact same skin with its real texture, pores, fine lines, moles, blemishes, shine and shadows, and the exact same skin tone and undertone. The mouth keeps its exact natural shape, size and lip color and only moves to speak. Do NOT smooth, blur, soften, airbrush, retouch, beautify, brighten or even out the skin; do NOT lighten or shift the skin color; do NOT slim the face, plump the lips, enlarge or widen the eyes, whiten teeth or eyes, reshape the nose, or add makeup or any beauty filter. It must look like the SAME real photograph of the SAME real person, only moving — never a prettier, cleaner or smoother version.';
 // Effet SELFIE (Axel 17/08) : sur les styles réalistes (Réaliste / UGC), la vidéo doit ressembler
 // à un vrai selfie tenu à bout de bras — léger tremblement / micro-jitter de caméra + la caméra
 // qui suit le visage. Ça vend le réel. (Pas pour Hedra avatar — c'est un autre chemin.)
@@ -29881,6 +29885,7 @@ async function expressCreate(){
       + _expEnvLock(prompt)
       + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
+      + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
       + _EXP_IDLOCK;
     // (durée _dur, base débitée, extensions _extCount, résolution _res, tarifs _expRate/_expMult calculés en amont)
     let blob;
