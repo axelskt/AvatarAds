@@ -189,6 +189,10 @@ serve(async (req) => {
   const isActivate   = /membership[._](went[._]valid|activated)/.test(action)
   const isDeactivate = /membership[._](went[._]invalid|deactivated)/.test(action)
   const isRenew      = /membership[._]renewed|invoice[._]paid|payment[._]succeeded/.test(action)
+  // Audit métier 06/09 : un remboursement / litige / chargeback n'était PAS traité → l'utilisateur gardait ses
+  // crédits alors qu'il a récupéré son argent. On rétrograde + remet à zéro. (payment.failed = échec temporaire
+  // avec retries Whop → EXCLU ; la résiliation définitive passe par membership.went_invalid.)
+  const isClawback   = /(refund|dispute|chargeback)/.test(action) && !/dispute[._](won|closed|resolved)/.test(action)
 
   // paiements/renouvellements : l'e-mail peut manquer du payload → on garde aussi l'ID d'abonnement Whop
   const memberId = data.membership_id ?? data.membership?.id ?? ((isActivate || isDeactivate) ? (data.id ?? null) : null) ?? null
@@ -417,6 +421,36 @@ serve(async (req) => {
       await creditReferral(sb, profile.id, email, effPlanId, data, 'renouvellement')
     } else {
       console.warn(`⚠️ Renouvellement sans profil (email=${email || '—'} member=${memberId || '—'} plan=${effPlanId})`)
+    }
+  }
+
+  // ─── remboursement / litige / chargeback → clawback des crédits ──
+  else if (isClawback) {
+    const profile = await findProfile()
+    if (profile) {
+      await sb.from('profiles').update({
+        plan: 'free', credits_remaining: 0, bought_credits: 0,
+        whop_member_id: null, whop_plan_id: null, whop_manage_url: null, whop_cancel_at_period_end: false,
+      }).eq('id', profile.id)
+      console.log(`💸 Clawback (${action}) pour ${email || profile.id} → free, crédits remis à zéro`)
+      // E-mail à Axel : la commission de parrainage éventuelle doit être réversée À LA MAIN (l'accounting des
+      // payouts est trop sensible pour un revert automatique — double-réversion, commission déjà virée…).
+      try {
+        const rk = Deno.env.get('RESEND_API_KEY') ?? ''
+        if (rk) await fetch('https://api.resend.com/emails', {
+          method: 'POST', headers: { 'Authorization': `Bearer ${rk}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'AvatarAds <bonjour@avatarads.fr>', to: ['axel@iamanager.fr'],
+            subject: `⚠️ Clawback AvatarAds — ${email || profile.id}`,
+            html: `<div style="font-family:sans-serif;line-height:1.6"><h2>Remboursement / litige</h2>`
+              + `<p><b>Événement :</b> ${String(action)}</p><p><b>Membre :</b> ${email || profile.id}</p>`
+              + `<p>Plan remis à <b>free</b>, crédits <b>à zéro</b>. Si une <b>commission de parrainage</b> a été`
+              + ` versée sur ce paiement, pense à la réverser dans « Tes gains ».</p></div>`,
+          }),
+        })
+      } catch (e) { console.error('clawback email', e) }
+    } else {
+      console.log(`ℹ️ Clawback ${action} sans profil (${email || '—'})`)
     }
   }
 
