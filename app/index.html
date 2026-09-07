@@ -25864,10 +25864,62 @@ async function _mtPublishFinal(){
 //    qui tient les GROS fichiers : decodeAudioData saturait sur un MP4 de
 //    167 Mo et le fallback renvoyait le fichier ENTIER à Whisper (bug 28/08).
 // ② Repli Web Audio (decodeAudioData → WAV 16 kHz mono) si ffmpeg échoue.
+// Extraction audio SANS charger le fichier entier en mémoire (Axel 07/09 : une 4K de 225 Mo faisait
+// planter ffmpeg.wasm ET decodeAudioData en Safari → faux « pas d'audio »). On lit la vidéo (déjà
+// STREAMÉE, pas chargée) via un <video>, on route son audio dans un MediaStreamDestination et on
+// l'enregistre en TEMPS RÉEL avec MediaRecorder. Fiable en Safari, quelle que soit la taille du fichier.
+async function _extractAudioViaElement(file, baseName){
+  const url = URL.createObjectURL(file);
+  const v = document.createElement('video');
+  v.src = url; v.preload = 'auto'; v.playsInline = true;
+  v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  document.body.appendChild(v);
+  const btn = document.getElementById('whisperBtn');
+  let tick = null;
+  const cleanup = () => { if(tick) clearInterval(tick); try{ v.pause(); }catch(_){} try{ document.body.removeChild(v); }catch(_){} try{ URL.revokeObjectURL(url); }catch(_){} };
+  try {
+    await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('vidéo illisible')); setTimeout(res, 12000); });
+    const dur = (v.duration && isFinite(v.duration)) ? v.duration : 0;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC();
+    try{ await ac.resume(); }catch(_){}
+    const srcNode = ac.createMediaElementSource(v);
+    const dest = ac.createMediaStreamDestination();
+    srcNode.connect(dest);                                            // PAS de connexion à ac.destination → silencieux
+    if(!dest.stream.getAudioTracks().length){ try{ ac.close(); }catch(_){} const e = new Error('no audio'); e.code = 'no_audio'; throw e; }
+    const okType = t => (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+    const mime = okType('audio/mp4') ? 'audio/mp4' : okType('audio/webm') ? 'audio/webm' : '';
+    const rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : undefined);
+    const chunks = [];
+    rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(r => { rec.onstop = r; });
+    rec.start();
+    tick = setInterval(() => { if(btn && dur){ const p = Math.min(99, Math.round((v.currentTime / dur) * 100)); btn.innerHTML = 'Extraction de l\'audio… ' + p + '%'; } }, 400);
+    try{ v.currentTime = 0; }catch(_){}
+    await v.play();
+    await new Promise((res) => { v.onended = res; v.onerror = res; });
+    if(tick){ clearInterval(tick); tick = null; }
+    rec.stop();
+    await stopped;
+    try{ ac.close(); }catch(_){}
+    cleanup();
+    const outMime = mime || (chunks[0] && chunks[0].type) || 'audio/mp4';
+    const blob = new Blob(chunks, { type: outMime });
+    if(blob.size < 1024){ const e = new Error('no audio'); e.code = 'no_audio'; throw e; }
+    return new File([blob], baseName + '_audio.' + (/webm/.test(outMime) ? 'webm' : 'm4a'), { type: outMime });
+  } catch(e){ cleanup(); throw e; }
+}
 // Vidéo sans piste audio → throw avec e.code='no_audio' (message clair amont).
 async function _extractAudioForWhisper(file){
   const baseName = (file.name || 'audio').replace(/\.[^.]+$/, '');
   const isVideoFile = /^video\//i.test(file.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(file.name || '');
+  const sizeMB = (file.size || 0) / 1024 / 1024;
+  // GROS fichiers (4K…) : ffmpeg.wasm et decodeAudioData chargent TOUT en mémoire → plantent (Safari).
+  // On capte alors l'audio en temps réel depuis la vidéo streamée (voir _extractAudioViaElement).
+  if(isVideoFile && sizeMB > 100){
+    try { return await _extractAudioViaElement(file, baseName); }
+    catch(e){ if(e && e.code === 'no_audio') throw e; console.warn('_extractAudioForWhisper (capture) échouée, essai ffmpeg:', e); }
+  }
   // ① ffmpeg.wasm
   try {
     await _loadFFmpeg();
@@ -25914,8 +25966,11 @@ async function _extractAudioForWhisper(file){
   } catch(e){
     console.warn('_extractAudioForWhisper (webaudio):', e);
   }
-  // ③ Rien n'a marché : une vidéo ne part JAMAIS entière à Whisper
+  // ③ ① et ② ont échoué : dernier recours = capture temps réel depuis la vidéo (gère aussi les fichiers
+  //    que decodeAudioData ne sait pas décoder). Ne throw « no_audio » que si ÇA AUSSI ne donne rien.
   if(isVideoFile){
+    try { return await _extractAudioViaElement(file, baseName); }
+    catch(e){ if(!(e && e.code === 'no_audio')) console.warn('_extractAudioForWhisper (capture finale):', e); }
     const err = new Error('Aucune piste audio détectée dans la vidéo');
     err.code = 'no_audio';
     throw err;
