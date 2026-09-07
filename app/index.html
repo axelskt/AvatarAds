@@ -25978,55 +25978,70 @@ function _startBypassAudioExtraction(file){
     const isVid = /^video\//i.test(file.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(file.name || '');
     if(!isVid) return;
     window._bypassAudioFile = null;
-    window._bypassAudioProgress = 0;                                 // % d'extraction (lu par whisperTranscribe pour l'affichage)
-    // ⚡ CHEMIN RAPIDE (sans geste) : démux WebCodecs si dispo + conteneur MP4 → on l'utilise et on N'ARME
-    // PAS la capture temps réel. S'il rejette, _bypassAudioPromise résout null → whisperTranscribe retombe
-    // sur _extractAudioForWhisper SOUS LE GESTE DU CLIC (qui refait démux puis capture temps réel).
+    window._bypassAudioProgress = 0;                                 // % d'extraction (lu par whisperTranscribe)
+    const _base = (file.name || 'audio').replace(/\.[^.]+$/, '');
+    const _diag = (m) => { try{ console.warn('[audio] ' + m); if(typeof _aaIsDev==='function' && _aaIsDev()) _devErr('AUDIO-DIAG · ' + m); }catch(_){} };
+    // Capture temps réel DÉMARRÉE DANS LE GESTE d'upload (v.play() non-muet autorisé) = repli GARANTI même si
+    // le démux échoue (ex : Safari sans décodage AAC WebCodecs). ⚠ Régression du 07/09 : passer en « démux seul »
+    // retirait ce filet → faux « pas d'audio » quand le démux plantait sur Safari (le repli au clic perd le geste).
+    const cap = _startRealtimeCaptureInGesture(file);
+    // Démux WebCodecs en PARALLÈLE (sans geste, bien plus rapide). S'il réussit → on l'utilise + on stoppe la capture.
     const _mp4Family = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
-    if(typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function' && _mp4Family){
-      const _base = (file.name || 'audio').replace(/\.[^.]+$/, '');
-      window._bypassAudioPromise = _extractAudioViaDemux(file, _base)
-        .then(f => { window._bypassAudioFile = f; window._bypassAudioProgress = 100; return f; })
-        .catch(err => { console.warn('pré-extraction démux échouée → repli au clic :', err && err.message); return null; });
-      return;   // démux rapide et indépendant du geste → pas de capture temps réel
-    }
-    let progTick = null;
-    const url = URL.createObjectURL(file);
-    const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto';
-    v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
-    document.body.appendChild(v);
-    const AC = window.AudioContext || window.webkitAudioContext;
-    const ac = new AC();
-    const srcNode = ac.createMediaElementSource(v);
-    const dest = ac.createMediaStreamDestination();
-    srcNode.connect(dest);                                            // PAS connecté à ac.destination → silencieux
-    const okType = t => (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
-    const mime = okType('audio/mp4') ? 'audio/mp4' : okType('audio/webm') ? 'audio/webm' : '';
-    const rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : undefined);
-    const chunks = []; rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-    const cleanup = () => { if(progTick){ clearInterval(progTick); progTick = null; } try{ v.pause(); }catch(_){} try{ document.body.removeChild(v); }catch(_){} try{ URL.revokeObjectURL(url); }catch(_){} try{ ac.close(); }catch(_){} };
-    window._bypassAudioPromise = new Promise((resolve, reject) => {
-      let stopped = false;
-      const stop = () => { if(stopped) return; stopped = true; try{ if(rec.state !== 'inactive') rec.stop(); }catch(_){} };
-      rec.onstop = () => {
-        cleanup();
-        const outMime = mime || (chunks[0] && chunks[0].type) || 'audio/mp4';
-        const blob = new Blob(chunks, { type: outMime });
-        if(blob.size < 1024){ const e = new Error('no audio'); e.code = 'no_audio'; reject(e); return; }
-        const f = new File([blob], (file.name || 'audio').replace(/\.[^.]+$/, '') + '_audio.' + (/webm/.test(outMime) ? 'webm' : 'm4a'), { type: outMime });
-        window._bypassAudioProgress = 100; window._bypassAudioFile = f; resolve(f);
-      };
-      v.onended = stop;
-      v.onerror = () => { cleanup(); reject(new Error('vidéo illisible')); };
-      v.onloadedmetadata = () => { const d = (isFinite(v.duration) && v.duration > 0) ? v.duration : 60; setTimeout(stop, (d + 12) * 1000); };  // garde-fou anti-stall
-      setTimeout(stop, 12 * 60 * 1000);                                // plafond dur 12 min
-    });
-    rec.start();
-    progTick = setInterval(() => { try{ const d = (isFinite(v.duration) && v.duration > 0) ? v.duration : 0; if(d) window._bypassAudioProgress = Math.min(99, Math.round((v.currentTime / d) * 100)); }catch(_){} }, 300);
-    try{ ac.resume(); }catch(_){}
-    const p = v.play();                                               // ⚠ SYNCHRONE dans le geste d'upload → autoplay autorisé
-    if(p && p.catch) p.catch(() => { /* bloqué : onerror/timeout gèrent */ });
-  }catch(_){ window._bypassAudioPromise = null; /* whisper retombera sur _extractAudioForWhisper */ }
+    const _demuxable = typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function' && typeof AudioData !== 'undefined' && _mp4Family;
+    window._bypassAudioPromise = (async () => {
+      if(_demuxable){
+        const dr = await _extractAudioViaDemux(file, _base).then(w => ({ ok:true, w })).catch(e => ({ ok:false, e }));
+        if(dr.ok && dr.w){ try{ cap.abort(); }catch(_){} window._bypassAudioFile = dr.w; window._bypassAudioProgress = 100; _diag('démux OK (' + Math.round(dr.w.size/1024) + ' Ko)'); return dr.w; }
+        _diag('démux KO (' + ((dr.e&&dr.e.code)||'') + ' ' + (dr.e&&dr.e.message||'') + ') → capture temps réel');
+      }
+      const capWav = await cap.promise;                              // résout File | null (jamais de reject)
+      if(capWav){ window._bypassAudioFile = capWav; window._bypassAudioProgress = 100; _diag('capture OK (' + Math.round(capWav.size/1024) + ' Ko)'); return capWav; }
+      _diag('capture KO (muette/vide)');
+      return null;
+    })();
+  }catch(err){ window._bypassAudioPromise = null; try{ console.warn('[audio] _startBypassAudioExtraction:', err); }catch(_){} }
+}
+// Capture temps réel de la piste audio (MediaRecorder sur <video> rejoué, muet pour l'utilisateur car non
+// connecté à ac.destination). DOIT être appelée DANS un geste (v.play non-muet). Retourne {promise, abort}.
+// La promesse RÉSOUT toujours (File si OK, null si muet/vide/abandon) — jamais de reject.
+function _startRealtimeCaptureInGesture(file){
+  let progTick = null, resolveP, settled = false, aborted = false, stopped = false;
+  const promise = new Promise((res) => { resolveP = res; });
+  const settle = (val) => { if(settled) return; settled = true; resolveP(val); };
+  const url = URL.createObjectURL(file);
+  const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto';
+  v.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  document.body.appendChild(v);
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ac = new AC();
+  const srcNode = ac.createMediaElementSource(v);
+  const dest = ac.createMediaStreamDestination();
+  srcNode.connect(dest);                                             // PAS connecté à ac.destination → silencieux
+  const okType = t => (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+  const mime = okType('audio/mp4') ? 'audio/mp4' : okType('audio/webm') ? 'audio/webm' : '';
+  const rec = new MediaRecorder(dest.stream, mime ? { mimeType: mime } : undefined);
+  const chunks = []; rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+  const cleanup = () => { if(progTick){ clearInterval(progTick); progTick = null; } try{ v.pause(); }catch(_){} try{ document.body.removeChild(v); }catch(_){} try{ URL.revokeObjectURL(url); }catch(_){} try{ ac.close(); }catch(_){} };
+  rec.onstop = () => {
+    cleanup();
+    if(aborted){ settle(null); return; }
+    const outMime = mime || (chunks[0] && chunks[0].type) || 'audio/mp4';
+    const blob = new Blob(chunks, { type: outMime });
+    if(blob.size < 1024){ settle(null); return; }                    // muet/vide
+    settle(new File([blob], (file.name || 'audio').replace(/\.[^.]+$/, '') + '_audio.' + (/webm/.test(outMime) ? 'webm' : 'm4a'), { type: outMime }));
+  };
+  const stop = () => { if(stopped) return; stopped = true; try{ if(rec.state !== 'inactive'){ rec.stop(); } else { cleanup(); settle(null); } }catch(_){ cleanup(); settle(null); } };
+  v.onended = stop;
+  v.onerror = () => { cleanup(); settle(null); };
+  v.onloadedmetadata = () => { const d = (isFinite(v.duration) && v.duration > 0) ? v.duration : 60; setTimeout(stop, (d + 12) * 1000); };  // garde-fou anti-stall
+  setTimeout(stop, 12 * 60 * 1000);                                  // plafond dur 12 min
+  try{ rec.start(); }catch(_){ cleanup(); settle(null); }
+  progTick = setInterval(() => { try{ const d = (isFinite(v.duration) && v.duration > 0) ? v.duration : 0; if(d) window._bypassAudioProgress = Math.min(99, Math.round((v.currentTime / d) * 100)); }catch(_){} }, 300);
+  try{ ac.resume(); }catch(_){}
+  const p = v.play();                                                // ⚠ SYNCHRONE dans le geste d'upload → autoplay non-muet autorisé
+  if(p && p.catch) p.catch(() => { /* bloqué : onerror/timeout gèrent */ });
+  const abort = () => { aborted = true; stop(); };
+  return { promise, abort };
 }
 // ── CHEMIN RAPIDE Whisper : DÉMUX WebCodecs (mp4box + AudioDecoder) ──────────────────────────────
 // Décode la piste audio d'un MP4/MOV/M4A SANS rejouer la vidéo → quelques secondes au lieu du temps
@@ -26202,7 +26217,7 @@ async function _extractAudioViaDemux(file, baseName){
   })();
 
   // Garde-fou anti-blocage : budget large (le goulot = lecture des tranches, pas le décodage).
-  let _to; const _timeout = new Promise((_, rej) => { _to = setTimeout(() => rej(new Error('démux timeout')), 25000); });
+  let _to; const _timeout = new Promise((_, rej) => { _to = setTimeout(() => rej(new Error('démux timeout')), 15000); });
   try { await Promise.race([finished, _timeout]); }
   catch(e){ cleanup(); clearTimeout(_to); throw e; }
   clearTimeout(_to);
