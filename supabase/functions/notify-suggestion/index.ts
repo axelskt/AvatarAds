@@ -4,6 +4,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { rateHit } from '../_shared/guard.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -32,6 +33,9 @@ serve(async (req: Request) => {
   )
   const { data: { user }, error: authErr } = await sb.auth.getUser()
   if (authErr || !user) return json({ error: 'Unauthorized' }, 401)
+
+  // Audit 06/09 : aucun plafond → une session valide pouvait inonder la boîte d'Axel. 8 suggestions / heure / user.
+  if (!(await rateHit('notify-sugg:' + user.id, 3600, 8))) return json({ error: 'Trop de suggestions envoyées — réessaie plus tard.' }, 429)
 
   if (!RESEND_API_KEY) return json({ ok: true, skipped: 'RESEND_API_KEY manquant' })
 
