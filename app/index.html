@@ -27856,7 +27856,14 @@ function _expUpdateGenCaption(){
   if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||4} s`; }
   // Coût DYNAMIQUE dans le bouton Générer — SOURCE UNIQUE _expCostCredits (= débit réel).
   const cb=document.getElementById('expGenCost');
-  if(cb){ const n=_expCostCredits(); const approx = !!window._expDurAuto || (parseInt(window._expDur)||4)>8; cb.textContent = (approx?'≈ ':'') + n + (n>1?' crédits':' crédit'); }
+  if(cb){
+    const _d=parseInt(window._expDur)||4;
+    const _r=(window._expVeoModel==='pro')?(CREDIT_COSTS.expressFastPerSec||3):(CREDIT_COSTS.expressLitePerSec||1.5);
+    const _m=(window._expQuality==='1080p')?(CREDIT_COSTS.express1080Mult||2):1;
+    const _cc=v=>Math.round(v*_r*_m);
+    if(_d>8){ cb.textContent = '≈ '+_cc(8)+' à '+_cc(_d)+' crédits'; }   // extensions incertaines → fourchette [8 s livrés, tout]
+    else { const n=_cc(_d); cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit'); }
+  }
 }
 // L'écran d'accueil RÉSUME les réglages en direct (07/08, patron d'Images IA) :
 // une ligne mono « 9:16 · 4 s · 720p · Voix native (Veo) », comme imgIdleMeta.
@@ -29440,6 +29447,10 @@ async function _expComposeRefs(token, prompt, gptSize){
 // dérivent le visage pendant le mouvement (surtout sur un changement de scène / match cut) —
 // retour Axel 17/08 « ça déforme la fille ». Réduit la dérive (ne l'annule pas sur un match cut).
 const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTIRE video — same face, hairstyle, skin tone, eye color and facial features, photographically identical to the first frame; the identity must never morph, swap, distort, age, beautify or change, and the hands must stay natural; same person from the first frame to the last.';
+// Verrou TEXTURE (Axel 07/09 : « Express lisse trop la peau, il faut garder l'image de référence en 1:1 »).
+// Les modèles i2v re-rendent le visage et LISSENT. On exige la fidélité pixel + on INTERDIT explicitement
+// tout embellissement (leçon Images IA : le détail dit ce qu'on veut, l'interdit dit comment ne pas lisser).
+const _EXP_TEXLOCK = '. TEXTURE FIDELITY (CRITICAL): reproduce her face EXACTLY as in the reference photo — keep the real skin texture, visible pores, fine lines, natural imperfections, freckles or moles, under-eye area and every hair strand at the SAME level of detail and sharpness as the reference; the skin must look like real PHOTOGRAPHED skin, never rendered or plastic. Do NOT smooth, soften, blur, denoise, airbrush, retouch or beautify the skin; do NOT even out, brighten or unify the complexion; do NOT remove pores, texture, blemishes, redness, shine or natural shadows; do NOT slim the face or jaw, plump or enlarge the lips, widen the eyes, whiten the teeth or the eyes, thin the nose, smooth the hair or add any makeup, gloss or beauty filter. Match the reference photo\'s exact grain, micro-contrast and depth of field. Every single frame must look like the SAME real photo of the SAME real skin, only moving.';
 // Effet SELFIE (Axel 17/08) : sur les styles réalistes (Réaliste / UGC), la vidéo doit ressembler
 // à un vrai selfie tenu à bout de bras — léger tremblement / micro-jitter de caméra + la caméra
 // qui suit le visage. Ça vend le réel. (Pas pour Hedra avatar — c'est un autre chemin.)
@@ -29502,7 +29513,7 @@ async function _expDirector(userPrompt){
       + 'RULES:\n'
       + '- Output in English, ready to feed the model: normally ONE dense paragraph (~90-130 words); BUT if the user describes a transition/cut/multi-scene, output a COMPACT TIMELINE (a few lines with time ranges) instead.\n'
       + '- Weave these in order into prose: SUBJECT, ACTION, ENVIRONMENT, CAMERA, LIGHTING, STYLE, MOTION, PHYSICS, CONTINUITY.\n'
-      + '- SUBJECT: describe the person/product exactly as in the reference image(s); demand the EXACT same face, identity, hair and skin, and for any product the exact shape, branding, colors and proportions.'
+      + '- SUBJECT: describe the person/product exactly as in the reference image(s); demand the EXACT same face, identity, hair and skin, and for any product the exact shape, branding, colors and proportions. For a real person, demand PHOTO-FAITHFUL skin: keep the reference photo\'s real skin texture, visible pores and fine detail at the same sharpness — explicitly forbid any smoothing, softening, airbrushing, retouching, beautifying, complexion-evening, pore removal, lip/eye enlargement, teeth whitening or beauty filter (she must look like the same real photo, not a polished render).'
       + (nRefs>1 ? ' There are '+nRefs+' reference images (subjects/products) — feature them together coherently in one scene.' : '') + '\n'
       + '- ENVIRONMENT: ' + (nRefs>0 ? 'the reference image IS the set. Do NOT describe, embellish or invent a setting, background, props or lighting: state that the environment, background, lighting, framing and camera position are EXACTLY those of the reference image and stay UNCHANGED for the entire clip — one continuous take, no cut, no scene change, no new location, the camera never travels or relocates.' : 'keep the setting the user implies constant for the whole clip — one continuous take, no cut, no scene change.') + (multiScene ? ' EXCEPTION: the user explicitly asked for a transition/multi-scene — follow the TRANSITIONS/TIMELINE rule instead.' : '') + '\n'
       + '- CAMERA: authentic handheld selfie held at arm’s length on a phone front camera, subtle natural camera shake and micro-jitter, eye-level, the camera gently follows the subject’s face. ' + (vertical?'Vertical 9:16.':'Landscape 16:9.') + '\n'
@@ -29773,6 +29784,7 @@ async function expressCreate(){
     let animPrompt = (_directed ? _directed : (prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
       + _expEnvLock(prompt)
       + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
+      + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + _EXP_IDLOCK;
     // (durée _dur, base débitée, extensions _extCount, résolution _res, tarifs _expRate/_expMult calculés en amont)
     // Veo 3.1 (API Gemini) = audio NATIF, sans paramètre : envoyer `generateAudio` déclenche un 400 « …audio… »
