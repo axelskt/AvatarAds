@@ -2180,11 +2180,12 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <div id="previewPhoneRow" style="display:flex;align-items:center;justify-content:center;gap:10px">
 
             <!-- PHONE MOCKUP WRAPPER (display size 220×477) -->
-            <div id="phoneWrapper" style="position:relative;width:320px;height:664px;flex-shrink:0">
-            <!-- phoneMockup en 9:16 EXACT (393×699 = aspect 1080/1920) pour que le recadrage du preview
-                 corresponde PILE au rendu (Axel 16/08). Avant : 393×852 (19.5:9) → preview plus haut que la sortie.
-                 Agrandi (378×672 affiché, scale 0.9618) à la demande d'Axel. -->
-            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:268px;height:556px;border-radius:38px;border:1px solid #2a2730;overflow:hidden;background:#000;box-shadow:0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow);transform:scale(1.194);transform-origin:top left">
+            <div id="phoneWrapper" style="position:relative;width:320px;height:569px;flex-shrink:0">
+            <!-- phoneMockup en 9:16 EXACT (affiché 320×569 = 0.5625 = 1080/1920) pour que le preview corresponde
+                 PILE au rendu : une vidéo 9:16 remplit sans rognage (Axel 07/09). Base 268×476, scale 1.194.
+                 Avant : 320×664 (0.482, plus haut que 9:16) → une vidéo 9:16 en object-fit:cover était rognée
+                 sur les côtés = « zoomée ». Dims réellement pilotées par setFormat() (config 'vertical'). -->
+            <div id="phoneMockup" style="position:absolute;top:0;left:0;width:268px;height:476px;border-radius:38px;border:1px solid #2a2730;overflow:hidden;background:#000;box-shadow:0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow);transform:scale(1.194);transform-origin:top left">
               <!-- Notch (maquette .phone-notch : 86×24, top 10) — sous le chrome (z-index bas) pour ne pas couvrir les onglets -->
               <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:86px;height:24px;background:#000;border-radius:14px;z-index:6"></div>
 
@@ -12160,7 +12161,7 @@ async function reuseLastVideo(){
     if(cache.selAnim)      selAnim      = cache.selAnim;
     if(cache.animEnabled      !== undefined) animEnabled      = cache.animEnabled;
     if(cache.subtitlesEnabled !== undefined) subtitlesEnabled = cache.subtitlesEnabled;
-    if(cache.splitEnabled     !== undefined) splitEnabled     = cache.splitEnabled;
+    splitEnabled = false;   // défaut PLEIN ÉCRAN : réutiliser une vidéo ne réactive plus le split
     if(cache.splitSwapped     !== undefined) splitSwapped     = cache.splitSwapped;
     if(cache.currentPlatform)  currentPlatform  = cache.currentPlatform;
     if(cache.mp4AudioTrimSt)   mp4AudioTrimSt   = cache.mp4AudioTrimSt;
@@ -19934,7 +19935,7 @@ function setFormat(fmt){
   cfg.format = fmt;
   // display size → native iPhone logical resolution
   const dims = {
-    vertical:  {dw:320,dh:664,nw:268,nh:556,br:38},   // maquette Claude Design gen-phone.jsx : chrome dessiné en 268×556, AGRANDI à 320×664 via scale=dw/nw (Axel 17/08 : « agrandis-le, y'a de la marge ») — tout scale ensemble (chrome inclus)
+    vertical:  {dw:320,dh:569,nw:268,nh:476,br:38},   // 9:16 EXACT (320/569 = 268/476 = 0.5625) : le cadre = le rendu, une vidéo 9:16 remplit PILE sans rognage (Axel 07/09 : « ma vidéo est zoomée »). Avant 320×664 (0.482) → rognait les côtés. Largeur inchangée → overlays TikTok (ancrés haut/bas) intacts.
     square:    {dw:404,dh:404,nw:572,nh:572},
     landscape: {dw:440,dh:248,nw:679,nh:382}
   };
@@ -24436,7 +24437,7 @@ function _restoreSession(){
     if(saved.selAnim)      selAnim      = saved.selAnim;
     if(saved.animEnabled      !== undefined) animEnabled      = saved.animEnabled;
     if(saved.subtitlesEnabled !== undefined) subtitlesEnabled = saved.subtitlesEnabled;
-    if(saved.splitEnabled     !== undefined) splitEnabled     = saved.splitEnabled;
+    splitEnabled = false;   // défaut PLEIN ÉCRAN : on ne restaure plus le split de la session
     if(saved.splitSwapped     !== undefined) splitSwapped     = saved.splitSwapped;
     if(saved.currentPlatform)  currentPlatform  = saved.currentPlatform;
     if(saved.mp4AudioTrimSt)   mp4AudioTrimSt   = saved.mp4AudioTrimSt;
@@ -27186,7 +27187,7 @@ function _restoreGeneratorState(){
     }
 
     // ── Split ──
-    if(s.splitEnabled !== undefined) splitEnabled = s.splitEnabled;
+    splitEnabled = false;   // Axel 07/09 : le Générateur s'ouvre TOUJOURS en PLEIN ÉCRAN (on ne restaure plus le split)
     if(s.splitSwapped !== undefined && typeof splitSwapped!=='undefined') splitSwapped = s.splitSwapped;
     // ── Autres réglages mémorisés (21/08) ──
     try{
