@@ -29765,8 +29765,15 @@ async function expressCreate(){
   // Moteur Seedance (dev-only) : chemin auto-contenu, ne touche pas au flux Veo.
   if(window._expEngine==='seedance' && _expIsDev()){ return _expCreateSeedance(prompt); }
   if(_gateFreeGenerate()) return;
-  // Durées >8 s = extensions de scène Veo, réservées Élite → paywall avant de consommer quoi que ce soit
-  if((parseInt(window._expDur)||4)>8 && !['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
+  // Omni Flash = Pro/Élite. L'UI cache le bouton pour les autres, mais on REGATE ici avant tout débit
+  // (sinon un plan inférieur pourrait forcer window._expVeoModel='omni' et accéder à la feature).
+  if(window._expVeoModel==='omni' && !_expModelAllowed('omni')){
+    toast('Omni Flash est réservé aux plans Pro et Élite');
+    showPaywall(); return;
+  }
+  // Durées >8 s = extensions de scène Veo, réservées Élite → paywall avant de consommer quoi que ce soit.
+  // Omni n'utilise PAS d'extensions (3-10 s à la seconde, déjà gaté Pro/Élite) → ce garde ne s'applique qu'à Veo.
+  if(window._expVeoModel!=='omni' && (parseInt(window._expDur)||4)>8 && !['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
     toast('Les vidéos de +8 s sont réservées au plan Élite');
     showPaywall(); return;
   }
