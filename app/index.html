@@ -3729,7 +3729,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           </div>
           <!-- Position 0 = AUTO (le système/Veo cale la durée sur ton texte) — défaut ; 1..6 = 4/6/8/15/22/29 s (Axel 17/08) -->
           <input id="expDurSlider" class="exp-slider" type="range" min="0" max="6" step="1" value="0" oninput="_expDurSlide(+this.value)" style="width:100%">
-          <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px">Texte long pour un clip → débit rapide. Pour du long au rythme naturel : Montage IA.</div>
+          <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px">Pour du long au rythme naturel : Montage IA.</div>
           <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> +8 s (extensions de scène) réservé au plan Élite</div>
           <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">Libre</span><span class="faint mono" style="font-size:9px">29 s</span></div>
         </div>
@@ -27856,7 +27856,7 @@ function _expUpdateGenCaption(){
   if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||4} s`; }
   // Coût DYNAMIQUE dans le bouton Générer — SOURCE UNIQUE _expCostCredits (= débit réel).
   const cb=document.getElementById('expGenCost');
-  if(cb){ const n=_expCostCredits(); cb.textContent = n + (n>1?' crédits':' crédit'); }
+  if(cb){ const n=_expCostCredits(); const approx = !!window._expDurAuto || (parseInt(window._expDur)||4)>8; cb.textContent = (approx?'≈ ':'') + n + (n>1?' crédits':' crédit'); }
 }
 // L'écran d'accueil RÉSUME les réglages en direct (07/08, patron d'Images IA) :
 // une ligne mono « 9:16 · 4 s · 720p · Voix native (Veo) », comme imgIdleMeta.
@@ -29693,9 +29693,22 @@ async function expressCreate(){
     toast('La 1080p est réservée au plan Pro et +');
     showPaywall(); return;
   }
-  // ── Débit = SOURCE UNIQUE _expCostCredits (720p Lite 1,5 · Fast 3 · +1 en 1080p) ──
-  // Exactement la valeur affichée dans le badge du bouton Générer.
-  if(!(await spendCreditsFor(_expCostCredits(), 'express'))) return;
+  // ── Durée/résolution RÉELLES + DÉBIT À LA DURÉE GÉNÉRÉE (Axel 07/09 : « payé 174 pour 8 s ») ──
+  // Avant, on débitait _expDur×tarif d'un coup (29 s en Libre) même si les extensions échouaient → sur-débit.
+  // Maintenant on débite la BASE (4/6/8 s) ici, puis CHAQUE extension seulement quand elle réussit (plus bas).
+  const _planNow=(currentMember?.plan||'free').toLowerCase();
+  const _extElite=['elite','developer'].includes(_planNow);
+  const _reqDur = parseInt(window._expDur)||4;
+  let _dur = _reqDur, _extCount=0;
+  if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
+  else { _dur = _dur<=4?4:(_dur<=6?6:8); }
+  let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
+  if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
+  const _expRate = (window._expVeoModel==='pro') ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
+  const _expMult = (_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1;
+  const _extCost = Math.round(7 * _expRate * _expMult);
+  if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express (débit base + extensions)
+  if(!(await spendCreditsFor(Math.round(_dur * _expRate * _expMult), 'express'))) return;
 
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
@@ -29761,16 +29774,7 @@ async function expressCreate(){
       + _expEnvLock(prompt)
       + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
       + _EXP_IDLOCK;
-    // ── Contraintes Veo 3.1 : 4/6/8 s par génération ; 1080p uniquement en 8 s ──
-    // Durées longues (15/22/29 s) = extensions de scène +7 s, réservées Élite.
-    const _planNow=(currentMember?.plan||'free').toLowerCase();
-    const _extElite=['elite','developer'].includes(_planNow);
-    const _reqDur = parseInt(window._expDur)||4;
-    let _dur = _reqDur, _extCount=0;
-    if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
-    else { _dur = _dur<=4?4:(_dur<=6?6:8); }
-    let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
-    if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
+    // (durée _dur, base débitée, extensions _extCount, résolution _res, tarifs _expRate/_expMult calculés en amont)
     // Veo 3.1 (API Gemini) = audio NATIF, sans paramètre : envoyer `generateAudio` déclenche un 400 « …audio… »
     // puis le repli (relance muette + voix TTS Gemini à muxer) → 2 appels, une voix TTS PAR-DESSUS la voix native
     // au moment des sous-titres (bug Express 06/09, vidéo a70mor0r159c). On ne l'ajoute que pour un modèle non-3.1.
@@ -29822,6 +29826,10 @@ async function expressCreate(){
 
     // ── Extensions de scène (Élite) : chaque passe repart de la fin et ajoute ~7 s ──
     for(let x=0; x<_extCount; x++){
+      // Débit de CETTE extension (7 s) — seulement si on la produit vraiment ; insuffisant → on livre la durée actuelle.
+      if(!(await spendCreditsFor(_extCost, 'express-ext'))){ toast('Crédits insuffisants — vidéo livrée en '+(8+x*7)+' s'); break; }
+      const _extOpIdx = _creditOps.length - 1;
+      const _refundExt = async () => { try{ const _o=_creditOps.splice(_extOpIdx,1); const _keep=_creditOps; _creditOps=_o; await creditsFlowRefund('extension non produite'); _creditOps=_keep; }catch(_){} };
       setP(Math.max(p,60+x*10), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Extension '+(x+1)+'/'+_extCount+' (+7 s)…');
       const _vidRef = videoUri ? { uri: videoUri } : { bytesBase64Encoded: videoB64, mimeType:'video/mp4' };
       const _extBody = (withAudio)=>JSON.stringify({
@@ -29836,12 +29844,12 @@ async function expressCreate(){
       if(!extResp.ok){
         const eX2 = await extResp.json().catch(()=>({}));
         console.warn('Extension Veo refusée:', eX2?.error?.message||extResp.status);
-        toast('Extension impossible — vidéo livrée en '+(8+x*7)+' s'); break;
+        await _refundExt(); toast('Extension impossible — vidéo livrée en '+(8+x*7)+' s'); break;
       }
       const { name: extOp } = await extResp.json();
-      if(!extOp){ toast('Extension impossible — vidéo livrée en '+(8+x*7)+' s'); break; }
+      if(!extOp){ await _refundExt(); toast('Extension impossible — vidéo livrée en '+(8+x*7)+' s'); break; }
       const _ext = await _veoAwaitOp(extOp);
-      if(_ext.err){ console.warn('Extension Veo échouée:', _ext.err); toast('Extension '+(x+1)+' échouée — vidéo livrée en '+(8+x*7)+' s'); break; }
+      if(_ext.err){ console.warn('Extension Veo échouée:', _ext.err); await _refundExt(); toast('Extension '+(x+1)+' échouée — vidéo livrée en '+(8+x*7)+' s'); break; }
       videoB64=_ext.b64; videoUri=_ext.uri;
     }
 
@@ -29863,6 +29871,7 @@ async function expressCreate(){
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
+    if(typeof creditsFlowDone==='function') creditsFlowDone();   // succès → plus rien à rembourser (base + extensions produites = payées)
     window._expVidBlobRaw=null; // nouvelle vidéo → la version "sans sous-titres" repart de celle-ci
     window._expVoiceBlob = voiceBlob; // voix à ajouter dans l'Éditeur (null si native)
 
