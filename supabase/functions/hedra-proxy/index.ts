@@ -21,12 +21,12 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
 // pas être détourné, mais on borne quand même la surface. Générations = FACTURANT (plafond + débit récent).
-const HEDRA_ALLOW = /^\/(models|assets(\/[A-Za-z0-9-]+\/upload)?|generations(\/[A-Za-z0-9-]+\/status)?|v3\/(files|models(\/[A-Za-z0-9._-]+)?|jobs(\/[A-Za-z0-9-]+(\/status)?)?|assets(\/[A-Za-z0-9-]+(\/upload)?)?))$/
+const HEDRA_ALLOW = /^\/(models|assets(\/[A-Za-z0-9._-]+\/upload)?|generations(\/[A-Za-z0-9._-]+\/status)?|v3\/(files|models(\/[A-Za-z0-9._-]+)?|jobs(\/[A-Za-z0-9._-]+(\/status)?)?|assets(\/[A-Za-z0-9._-]+(\/upload)?)?))$/   // audit 06/09 : les job id Hedra v3 contiennent un '_' (job_1f592f28) → les polls /v3/jobs/<id>/status tombaient en 400. safePath (une seule barre de tête, jamais @ \\ .. %2e) reste la garde de sécurité.
 const HEDRA_BILLABLE = /^\/(generations|v3\/models\/[A-Za-z0-9._-]+)$/   // soumission = /generations (ancienne API) ou /v3/models/<slug> (v3)
 
 serve(async (req: Request) => {
@@ -115,6 +115,7 @@ serve(async (req: Request) => {
 
   // ── Facturation (H3) : une génération = plafond par utilisateur + preuve de débit récent ; le reste
   //    (uploads, polling) est seulement plafonné. Le moteur de rendu (service_role) passe.
+  let drawnOp: string | undefined
   if (!estLeMoteur && user) {
     const bare = hedraPath0.split('?')[0]
     const gate = (req.method === 'POST' && HEDRA_BILLABLE.test(bare))
@@ -126,6 +127,7 @@ serve(async (req: Request) => {
       // Audit métier 06/09 : on tire la RÉSERVE ENTIÈRE (une op = une vidéo). Ferme « N vidéos pour un débit ».
       const rr = await applyReservationFull({ req, userId: user.id, proxy: 'hedra', label: bare })
       if (!rr.ok) return new Response(JSON.stringify({ error: rr.error }), { status: rr.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+      drawnOp = rr.opId
     }
   }
 
@@ -192,21 +194,26 @@ serve(async (req: Request) => {
     // Amont en erreur → on rend le tirage : soumission refusée, ou job échoué au poll.
     if (!estLeMoteur && user) {
       const bare2 = hedraPath0.split('?')[0]
-      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseReservation(user.id, req, 2)
-      else if (req.method === 'GET' && hedraRes.ok && /"status"\s*:\s*"(failed|error|errored|cancelled|canceled)"/i.test(body)) await releaseReservation(user.id, req, 9999)
+      // Le job Hedra = l'id renvoyé à la soumission (v3 « job_… », ou l'id de /generations) ; il figure dans le
+      // path des polls (/v3/jobs/<id>/status, /generations/<id>/status). On LIE l'op au job à la soumission, puis
+      // règle/libère PAR JOB → un poll d'un id étranger ne rend plus la réserve d'une autre op (refund-and-keep).
+      const jobId = (bare2.match(/\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && hedraRes.ok) { const jid = (body.match(/"id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (jid) await bindJob(user.id, drawnOp, 'hedra:' + jid) }   // lie l'op au job créé
+      else if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseOp(user.id, drawnOp, 2)                                                                                     // soumission refusée → rend l'op TIRÉE
+      else if (req.method === 'GET' && hedraRes.ok && /"status"\s*:\s*"(failed|error|errored|cancelled|canceled)"/i.test(body)) { if (jobId) await releaseByJob(user.id, 'hedra:' + jobId) }                // job échoué → rend l'op LIÉE
     }
     // Règlement de la réservation quand la génération a abouti (poll /v3/jobs COMPLETE) → op non remboursable.
     if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok) {
-      const op = await resolveOp(user.id, req)
-      if (op && /"status"\s*:\s*"(complete|completed|succeeded|success)"/i.test(body)) {
+      const jobId = (hedraPath0.split('?')[0].match(/\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+      if (jobId && /"status"\s*:\s*"(complete|completed|succeeded|success)"/i.test(body)) {
         // HIGH (06/09) — sous-facturation : le tirage Hedra est un forfait 2, or le coût réel = durée × avatarPerSec.
         // Le coût réel n'est connu qu'ICI (réponse du job terminé). Observation LOG-ONLY pour identifier le champ
         // de durée avant d'activer une réconciliation qui débite l'écart (voir mémoire securite-guard). Zéro débit.
         try {
           const md = body.match(/"(duration|duration_ms|duration_seconds|video_duration|length|seconds|billed_seconds)"\s*:\s*([0-9.]+)/i)
-          console.log(`[hedra-reconcile] op=${op} champs_durée=${md ? md[1] + '=' + md[2] : 'ABSENT'} body=${body.slice(0, 400)}`)
+          console.log(`[hedra-reconcile] job=${jobId} champs_durée=${md ? md[1] + '=' + md[2] : 'ABSENT'} body=${body.slice(0, 400)}`)
         } catch (_) { /* log best-effort */ }
-        await settleReservation(user.id, op)
+        await settleByJob(user.id, 'hedra:' + jobId)
       }
     }
 
@@ -218,7 +225,7 @@ serve(async (req: Request) => {
       },
     })
   } catch (err) {
-    if (!estLeMoteur && user) await releaseReservation(user.id, req, 9999).catch(() => {})
+    if (!estLeMoteur && user) await releaseOp(user.id, drawnOp, 9999).catch(() => {})
     console.error('hedra-proxy error:', err)
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,

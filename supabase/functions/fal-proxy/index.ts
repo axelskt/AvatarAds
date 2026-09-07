@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -64,6 +64,7 @@ serve(async (req: Request) => {
   if (!auth.token) return jsonRes(401, { error: 'Unauthorized — token manquant' })
   if (!auth.isService && !auth.userId) return jsonRes(401, { error: 'Unauthorized — session invalide ou expirée' })
 
+  let drawnOp: string | undefined
   if (!auth.isService && auth.userId) {
     // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite (0,168 $/s) ──
     if (isSubmit && /\/fal-ai\/kling-video\/v3\//i.test(path)) {
@@ -76,7 +77,7 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
-    if (isSubmit) { const rr = await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }) }
+    if (isSubmit) { const rr = await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }); drawnOp = rr.opId }
   }
 
   // ── relais vers fal ──
@@ -89,16 +90,17 @@ serve(async (req: Request) => {
     if (!auth.isService && auth.userId) {
       const bare = path.split('?')[0]
       const isStatus = /\/status$/.test(bare)
-      const isResult = req.method === 'GET' && !isStatus && /\/requests\/[A-Za-z0-9-]+$/.test(bare)
+      const isResult = req.method === 'GET' && !isStatus && /\/requests\/[A-Za-z0-9._-]+$/.test(bare)
       const hasOutput = /"(video|image|images|url)"\s*:/.test(text)
-      // Amont en erreur → on rend le tirage (le retry légitime repasse sans 402) :
-      if (isSubmit && !res.ok) await releaseReservation(auth.userId, req, falCost(path))                                                        // soumission refusée
-      else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) await releaseReservation(auth.userId, req, 9999)   // job échoué
-      else if (isResult && (!res.ok || (!hasOutput && /"(detail|error)"\s*:/.test(text)))) await releaseReservation(auth.userId, req, 9999)          // COMPLETED mais résultat = erreur (422…)
-      // Règlement UNIQUEMENT sur un RÉSULTAT livré (sortie présente). JAMAIS sur `/status: COMPLETED` —
-      // « COMPLETED ≠ réussi » (piège Motion Control, revu 06/09) : un job vide finit COMPLETED et son
-      // résultat est un 422 ; régler là marquait l'op livrée et bloquait le remboursement de l'utilisateur.
-      else if (isResult && res.ok && hasOutput) { const op = await resolveOp(auth.userId, req); if (op) await settleReservation(auth.userId, op) }
+      // Le job fal = le request_id (dans le path des polls, ou dans la réponse de soumission). On LIE l'op tirée
+      // à ce job à la soumission, puis on règle/libère PAR JOB au poll → un poll d'un id ÉTRANGER ne peut plus
+      // rendre la réserve d'une autre op (fermait le refund-and-keep) ni un id bidon débloquer un refund.
+      const jobId = (bare.match(/\/requests\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+      if (isSubmit && res.ok) { const rid = (text.match(/"request_id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (rid) await bindJob(auth.userId, drawnOp, 'fal:' + rid) }   // lie l'op au job créé
+      else if (isSubmit && !res.ok) await releaseOp(auth.userId, drawnOp, falCost(path))                                                                                 // soumission refusée → rend l'op TIRÉE
+      else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }   // job échoué → rend l'op LIÉE
+      else if (isResult && (!res.ok || (!hasOutput && /"(detail|error)"\s*:/.test(text)))) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }                            // COMPLETED mais résultat = erreur (422…)
+      else if (isResult && res.ok && hasOutput) { if (jobId) await settleByJob(auth.userId, 'fal:' + jobId) }                                                                         // livré → op LIÉE non remboursable
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {
@@ -106,7 +108,7 @@ serve(async (req: Request) => {
     }
     return new Response(text, { status: res.status, headers: { ...CORS, 'Content-Type': res.headers.get('content-type') ?? 'application/json' } })
   } catch (err) {
-    if (isSubmit && !auth.isService && auth.userId) await releaseReservation(auth.userId, req, 9999).catch(() => {})
+    if (isSubmit && !auth.isService && auth.userId) await releaseOp(auth.userId, drawnOp, 9999).catch(() => {})
     console.error('fal-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }
