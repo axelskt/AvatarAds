@@ -3731,7 +3731,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <input id="expDurSlider" class="exp-slider" type="range" min="0" max="6" step="1" value="0" oninput="_expDurSlide(+this.value)" style="width:100%">
           <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px">Pour du long au rythme naturel : Montage IA.</div>
           <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> +8 s (extensions de scène) réservé au plan Élite</div>
-          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">Libre</span><span class="faint mono" style="font-size:9px">29 s</span></div>
+          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">Libre</span><span class="faint mono" style="font-size:9px" id="expDurMaxLbl">29 s</span></div>
         </div>
 
         <!-- ③b QUALITÉ — Veo ; masqué en mode Seedance (1080p natif) -->
@@ -6511,6 +6511,8 @@ const CREDIT_COSTS = {
   // centime. À 0,5 crédit/s facturé, la marge sur l'option est de ~90 %.
   hd1080PerSec: 0.5,
   omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
+  omniFlashPerSec: 4,     // ⚡ Express « Omni Flash » = fal google/gemini-omni-flash/v1.1/image-to-video (voix native)
+                          //    coût fournisseur ~0,10-0,13 $/s (720p) ; 4 cr/s FLAT tous plans (comme l'ancien Veo Pro) — marge ~55-70% selon plan
   hyperframesPerSec: 1,   // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
   // 🎥 Motion Control « fond vidéo » : le vrai décor de la réf, ANIMÉ, derrière le
   // personnage (2 détourages fal ben ≈ 0,4-0,6 $/rendu à notre charge + compo worker).
@@ -27762,17 +27764,18 @@ const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 // Starter = Standard seul. Défaut : Élite → Pro, sinon Standard. Le tarif suit (via _expCostCredits).
 const EXP_MODELS = [
   { v:'standard', name:'Veo Standard', sub:'Rapide · éco' },
-  { v:'pro',      name:'Veo Pro',      sub:'Qualité max' },
+  { v:'omni',     name:'Omni Flash',   sub:'Voix native · bouche fluide' },
 ];
 function _expModelAllowed(v){
-  if(v==='pro') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
-  return true; // Standard pour tous
+  if(v==='omni') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+  return true; // Veo Standard pour tous
 }
 function _expRenderModels(){
   const row=document.getElementById('expModelRow'); if(!row) return;
   const plan=(currentMember?.plan||'free').toLowerCase();
-  if(!window._expVeoModel) window._expVeoModel = ['elite','developer'].includes(plan) ? 'pro' : 'standard';
-  if(window._expVeoModel==='pro' && !_expModelAllowed('pro')) window._expVeoModel='standard'; // plan rétrogradé
+  if(window._expVeoModel==='pro') window._expVeoModel='standard';   // migration : l'ancien « Veo Pro » n'existe plus
+  if(!window._expVeoModel) window._expVeoModel='standard';
+  if(window._expVeoModel==='omni' && !_expModelAllowed('omni')) window._expVeoModel='standard'; // plan sans Omni
   row.innerHTML = EXP_MODELS.map(m=>{
     const on=m.v===window._expVeoModel, locked=!_expModelAllowed(m.v);
     const lock=locked?' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>':'';
@@ -27782,7 +27785,7 @@ function _expRenderModels(){
   }).join('');
 }
 function _expPickModel(v){
-  if(!_expModelAllowed(v)){ toast('Veo Pro est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
+  if(!_expModelAllowed(v)){ toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
   window._expVeoModel=v; initExpress();
 }
 
@@ -27818,7 +27821,8 @@ function initExpress(){
     // Axel 31/08 : en mode Auto, l'outil détermine la durée d'après le script → on affiche juste « Auto »
     // (pas de « · 4 s » figé qui laisse croire à une durée fixe).
     const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Libre' : ((window._expDur||4)+' s');
-    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())?'none':'block';
+    const _mx=document.getElementById('expDurMaxLbl'); if(_mx) _mx.textContent = _da[_da.length-1]+' s';   // 10 s (Omni) ou 29 s (Veo)
+    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=(window._expVeoModel==='omni'||['elite','developer'].includes((currentMember?.plan||'free').toLowerCase()))?'none':'block';
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(window._expDurAuto && _expEstimateDur().over)?'block':'none';
     _aaSliderFill(ds);
@@ -27846,10 +27850,11 @@ function initExpress(){
 // Coût crédits Express = SOURCE UNIQUE (bouton Générer ET débit expressCreate) :
 // 720p → Lite 1,5 cr/s (Starter/Pro) · Fast 3 cr/s (Élite) ; 1080p → +1 cr/s. Arrondi.
 function _expCostCredits(){
-  const pro=window._expVeoModel==='pro'; // modèle CHOISI (défaut Standard), plus l'auto-plan
-  const rate=pro ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
+  const dur=parseInt(window._expDur)||6;
+  if(window._expVeoModel==='omni') return Math.round(dur * (CREDIT_COSTS.omniFlashPerSec||4));   // Omni Flash : 4 cr/s flat, pas d'extensions
+  const rate=CREDIT_COSTS.expressLitePerSec||1.5;   // Veo Standard (Lite) — le seul Veo restant
   const mult=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1; // 1080p = ×2 du 720p
-  return Math.round((parseInt(window._expDur)||4) * rate * mult);
+  return Math.round(dur * rate * mult);
 }
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
@@ -27858,12 +27863,16 @@ function _expUpdateGenCaption(){
   // Coût DYNAMIQUE dans le bouton Générer — SOURCE UNIQUE _expCostCredits (= débit réel).
   const cb=document.getElementById('expGenCost');
   if(cb){
-    const _d=parseInt(window._expDur)||4;
-    const _r=(window._expVeoModel==='pro')?(CREDIT_COSTS.expressFastPerSec||3):(CREDIT_COSTS.expressLitePerSec||1.5);
-    const _m=(window._expQuality==='1080p')?(CREDIT_COSTS.express1080Mult||2):1;
-    const _cc=v=>Math.round(v*_r*_m);
-    if(_d>8){ cb.textContent = '≈ '+_cc(8)+' à '+_cc(_d)+' crédits'; }   // extensions incertaines → fourchette [8 s livrés, tout]
-    else { const n=_cc(_d); cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit'); }
+    const _d=parseInt(window._expDur)||6;
+    if(window._expVeoModel==='omni'){
+      const n=Math.round(_d*(CREDIT_COSTS.omniFlashPerSec||4));   // Omni : durée exacte 3-10 s (pas d'extensions)
+      cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit');
+    } else {
+      const _r=CREDIT_COSTS.expressLitePerSec||1.5, _m=(window._expQuality==='1080p')?(CREDIT_COSTS.express1080Mult||2):1;
+      const _cc=v=>Math.round(v*_r*_m);
+      if(_d>8){ cb.textContent = '≈ '+_cc(8)+' à '+_cc(_d)+' crédits'; }   // Veo : extensions incertaines → fourchette
+      else { const n=_cc(_d); cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit'); }
+    }
   }
 }
 // L'écran d'accueil RÉSUME les réglages en direct (07/08, patron d'Images IA) :
@@ -27886,7 +27895,8 @@ function _expHeroSync(){
 }
 // Durées possibles : Veo 3.1 = 4/6/8 s par génération ; Élite débloque 15/22/29 s (extensions de scène +7 s)
 function _expDurAllowed(){
-  // Visibles pour tous — les durées >8 s (extensions de scène Élite) sont vérifiées au moment de générer
+  if(window._expVeoModel==='omni') return [3,4,5,6,7,8,9,10];   // Omni Flash : à la seconde, 3→10 s (pas d'extensions)
+  // Veo : visibles pour tous — les durées >8 s (extensions de scène Élite) sont vérifiées au moment de générer
   return [4,6,8,15,22,29];
 }
 // ── DURÉE AUTO (défaut) : cale la durée sur la longueur du texte PARLÉ du prompt ──
@@ -27904,7 +27914,7 @@ function _expEstimateDur(){
   // Hors Élite : Veo cape à 8 s / clip. Élite / dev : extensions jusqu'à 29 s (au-delà = Montage IA).
   const plan=(currentMember?.plan||'free').toLowerCase();
   const elite=['elite','developer'].includes(plan) || !!currentMember?.is_owner;
-  const ladder = elite ? [4,6,8,15,22,29] : [4,6,8];
+  const ladder = (window._expVeoModel==='omni') ? [3,4,5,6,7,8,9,10] : (elite ? [4,6,8,15,22,29] : [4,6,8]);
   const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
   return { dur, over: secs>ladder[ladder.length-1] };
 }
@@ -29474,13 +29484,15 @@ function _expCommentKeyword(line){
 function _expSpeechLock(p){
   const line=_expQuotedLine(p);
   const kw=_expCommentKeyword(line);
+  const _noEnd = (window._expVeoModel==='omni');   // Omni Flash clôt la fin naturellement → pas de verrou de fin
   // « SITE » en MAJUSCULES pousse Veo à ÉPELER (« S-site »). Dans la ligne PARLÉE on met le mot-clé en
   // minuscule → prononciation naturelle ; l'emphase (geste/voix) reste imposée par l'instruction plus bas.
   const lineSpoken = (kw && /^[A-ZÀ-Ÿ0-9]{2,}$/.test(kw)) ? line.split(kw).join(kw.toLowerCase()) : line;
   return '. VOICE: accurate lip-sync, clear audible natural voice with casual dynamic intonation.'
     + (line ? ' THE ONLY WORDS SPOKEN IN THE ENTIRE CLIP, VERBATIM AND IN THIS LANGUAGE: « '+lineSpoken+' ».' : ' The person says ONLY the requested line, verbatim.')
     + (kw ? ' CALL-TO-ACTION KEYWORD « '+kw.toLowerCase()+' »: this is a keyword the viewer must TYPE in the comments. She says « '+kw.toLowerCase()+' » as ONE single, whole, FLUID word — its normal natural pronunciation, spoken smoothly in one breath — clearly and a bit LOUDER and a touch slower than the rest for emphasis, with a deliberate hand gesture (pointing down toward the comments) and a strong expressive face. NEVER spell it out, NEVER separate, announce or repeat its letters, NEVER split it into syllables, NEVER stutter, hesitate on it or repeat it (do NOT say it as separate letters, do NOT put a pause or an extra consonant before it, e.g. never « '+kw[0]+'… '+kw.toLowerCase()+' » nor « '+kw[0]+'-'+kw.toLowerCase()+' »); it comes out as one clean confident word. Never translate it, inflect it, pluralize it, add an article, or turn « '+kw+' » into a phrase or a place (do NOT say "un '+kw.toLowerCase()+'").' : '')
-    + ' Nothing is said before the line (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame. CRITICAL ENDING: she must COMPLETE the whole sentence and land its final word BEFORE the clip ends (never cut off mid-word); pace the delivery so the last word finishes with about half a second to spare, then she STOPS talking, closes her mouth and holds a natural still, silent expression until the very end. The last ~0.5 second contains ABSOLUTELY no speech, no extra word, no filler and no trailing mouth movement or sound — total silence with a closed mouth.';
+    + ' Nothing is said before the line (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame.'
+    + (_noEnd ? '' : ' CRITICAL ENDING: she must COMPLETE the whole sentence and land its final word BEFORE the clip ends (never cut off mid-word); pace the delivery so the last word finishes with about half a second to spare, then she STOPS talking, closes her mouth and holds a natural still, silent expression until the very end. The last ~0.5 second contains ABSOLUTELY no speech, no extra word, no filler and no trailing mouth movement or sound — total silence with a closed mouth.');
 }
 // Verrou DÉCOR (Axel 06/09 : « pourquoi l'environnement change ») : l'image de référence EST le plateau. Levé
 // seulement si l'utilisateur demande explicitement une transition / un changement de lieu.
@@ -29692,6 +29704,61 @@ async function _expCreateSeedance(prompt){
   }catch(e){ if(String(e&&e.message)!=='__abort'){ console.error('Seedance:',e); toast('Seedance : '+(e.message||e)); } if(ph) ph.style.display='block'; }
   finally{ clearInterval(tick); setTimeout(()=>{ if(prog)prog.style.display='none'; },700); if(btn){ btn.disabled=false; btn.style.opacity=''; } }
 }
+// ⚡ Omni Flash pour Express : fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
+// Renvoie le blob vidéo. Même chaîne que le module Omni (upload image → submit → poll status/result).
+async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep){
+  const step=(v,t)=>{ try{ onStep && onStep(v,t); }catch(_){} };
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) throw new Error('Session expirée — reconnecte-toi');
+  let imgFile;
+  try{
+    const bl = await (await fetch('data:'+(imgMime||'image/png')+';base64,'+imgB64)).blob();
+    imgFile = new File([bl], 'omni.'+(/png/i.test(imgMime||'')?'png':'jpg'), { type: imgMime||'image/png' });
+  }catch(e){ throw new Error('Image Omni illisible'); }
+  imgFile = await _falImageSous5Mo(imgFile);
+  step(38,'↑ Envoi de l\'image…');
+  const base=user.id+'/omni-i2v-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+  const imgPath=base+(/\.png$/i.test(imgFile.name||'')?'.png':'.jpg');
+  const upI=await sb.storage.from('render-media').upload(imgPath, imgFile, { contentType:imgFile.type||'image/jpeg', upsert:true });
+  if(upI.error) throw new Error('upload Omni : '+upI.error.message);
+  const sI=await sb.storage.from('render-media').createSignedUrl(imgPath, 3600);
+  if(sI.error || !(sI.data&&sI.data.signedUrl)) throw new Error('Lien signé Omni indisponible');
+  const H=await getAuthHeader();
+  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+  const fPost=(pp,b)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+  const fGet =(pp)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'GET',headers:{...H}});
+  const model='/google/gemini-omni-flash/v1.1/image-to-video';
+  step(42,'Omni Flash — génération…');
+  const sub=await fPost(model, {
+    image_url: sI.data.signedUrl,
+    prompt: prompt,
+    aspect_ratio: (window._expFormat==='16:9'?'16:9':'9:16'),
+    duration: Math.max(3, Math.min(10, Math.round(durSec)||6)),
+    resolution: (res==='1080p'?'1080p':'720p'),
+    generate_audio: true,
+  });
+  const sd=await sub.json().catch(()=>({}));
+  if(!sub.ok) throw new Error('Omni Flash '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160));
+  const pick=(o)=>{ if(!o) return null; return (o.video&&o.video.url)||(o.output&&o.output.video&&o.output.video.url)||(o.videos&&o.videos[0]&&o.videos[0].url)||o.video_url||null; };
+  let outUrl=pick(sd);
+  if(!outUrl && (sd.status_url||sd.request_id)){
+    const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
+    const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
+    for(let i=0;i<120;i++){
+      await new Promise(r=>setTimeout(r,3000));
+      const stR=await fGet(stP); if(!stR.ok) continue;
+      const st=await stR.json().catch(()=>({}));
+      const S=String(st.status||'').toUpperCase();
+      if(S==='COMPLETED'){ const rr=await (await fGet(reP)).json().catch(()=>({})); outUrl=pick(rr); if(!outUrl) throw new Error('Omni Flash : pas de vidéo dans le résultat'); break; }
+      if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):''));
+      step(Math.min(88,42+i*2),'Omni Flash — génération… ('+Math.min(88,42+i*2)+' %)');
+    }
+  }
+  if(!outUrl) throw new Error('Omni Flash : délai dépassé');
+  step(90,'↓ Récupération de la vidéo…');
+  const vb=await (await fetch(outUrl)).blob();
+  return new Blob([vb], { type:'video/mp4' });
+}
 async function expressCreate(){
   const prompt = (document.getElementById('expPrompt')?.value || '').trim();
   if(!prompt && !window._expImgB64){ toast('Décris ta vidéo (ou ajoute une image)'); return; }
@@ -29713,17 +29780,22 @@ async function expressCreate(){
   // Maintenant on débite la BASE (4/6/8 s) ici, puis CHAQUE extension seulement quand elle réussit (plus bas).
   const _planNow=(currentMember?.plan||'free').toLowerCase();
   const _extElite=['elite','developer'].includes(_planNow);
-  const _reqDur = parseInt(window._expDur)||4;
+  const _isOmni = window._expVeoModel==='omni';
+  const _reqDur = parseInt(window._expDur)||(_isOmni?6:4);
   let _dur = _reqDur, _extCount=0;
-  if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
-  else { _dur = _dur<=4?4:(_dur<=6?6:8); }
   let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
-  if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
-  const _expRate = (window._expVeoModel==='pro') ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
-  const _expMult = (_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1;
+  if(_isOmni){
+    _dur = Math.min(10, Math.max(3, _reqDur));   // Omni Flash : 3-10 s à la seconde, pas d'extensions
+  } else {
+    if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
+    else { _dur = _dur<=4?4:(_dur<=6?6:8); }
+    if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
+  }
+  const _expRate = _isOmni ? (CREDIT_COSTS.omniFlashPerSec||4) : (CREDIT_COSTS.expressLitePerSec||1.5);
+  const _expMult = _isOmni ? 1 : ((_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1);
   const _extCost = Math.round(7 * _expRate * _expMult);
-  if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express (débit base + extensions)
-  if(!(await spendCreditsFor(Math.round(_dur * _expRate * _expMult), 'express'))) return;
+  if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
+  if(!(await spendCreditsFor(Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))) return;
 
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
@@ -29794,6 +29866,12 @@ async function expressCreate(){
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + _EXP_IDLOCK;
     // (durée _dur, base débitée, extensions _extCount, résolution _res, tarifs _expRate/_expMult calculés en amont)
+    let blob;
+    if(_isOmni){
+      // ⚡ Omni Flash = fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
+      setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni Flash — génération…');
+      blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t));
+    } else {
     // Veo 3.1 (API Gemini) = audio NATIF, sans paramètre : envoyer `generateAudio` déclenche un 400 « …audio… »
     // puis le repli (relance muette + voix TTS Gemini à muxer) → 2 appels, une voix TTS PAR-DESSUS la voix native
     // au moment des sous-titres (bug Express 06/09, vidéo a70mor0r159c). On ne l'ajoute que pour un modèle non-3.1.
@@ -29872,7 +29950,6 @@ async function expressCreate(){
       videoB64=_ext.b64; videoUri=_ext.uri;
     }
 
-    let blob;
     if(videoB64){
       const bytes=Uint8Array.from(atob(videoB64),c=>c.charCodeAt(0));
       blob=new Blob([bytes],{type:'video/mp4'});
@@ -29880,6 +29957,7 @@ async function expressCreate(){
       setP(Math.max(p,92),'↓ Téléchargement de la vidéo…');
       blob = await _veoDownloadUri(videoUri);
     }
+    }   // ── fin de la branche Veo (else de _isOmni) ──
     // ── Nettoyage AUDIO (Axel 07/09 : « pics de saturation ») : la voix Veo a des pics durs (crest ~10).
     // Compression douce + adoucissement des hautes fréquences (de-ess) + loudnorm -16 LUFS/-1.5 dBTP → pics
     // lissés, niveau constant, plus de dureté. VIDÉO copiée (rapide) ; repli sur l'original si ffmpeg échoue.

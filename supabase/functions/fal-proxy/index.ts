@@ -25,7 +25,7 @@ const readKey = () => {
   return { name: '', value: '' }
 }
 // /fal-ai/<owner>/<model>[/sub…] pour les soumissions et le polling ; /requests/<id>[/status] forme courte
-const ALLOW = /^\/(fal-ai\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*|requests\/[A-Za-z0-9-]+(\/status)?)$/
+const ALLOW = /^\/((fal-ai|google)\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*|requests\/[A-Za-z0-9-]+(\/status)?)$/   // + google/ (Gemini Omni Flash : /edit, /image-to-video, /requests/<id>[/status])
 const IS_POLL = /\/requests\/[A-Za-z0-9-]+(\/status)?$/
 // Coût serveur (borne basse) : Kling v3=6, Kling pro=4, Kling standard=2, OmniHuman=5, AuraSR=3, Nano=5,
 // Omni edit=3 ; auxiliaires (ben/birefnet/rembg/topaz, couverts par l'op parente) = 1.
