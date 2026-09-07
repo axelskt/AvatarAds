@@ -19957,6 +19957,7 @@ function setFormat(fmt){
     lbl.textContent = _ar < 0.72 ? '1080 × 1920 · 9:16' : _ar > 1.3 ? '1920 × 1080 · 16:9' : '1080 × 1080 · 1:1';
   }
   // Format button highlighting is handled by selectFormatGroup
+  try{ _genNavStrip(); }catch(_){}   // téléphone étendu : bande de nav connectée sous la vidéo (vertical seulement)
   updateLivePreview();
 }
 
@@ -20732,32 +20733,34 @@ function handleGameplayFile(file){
 // ── PLATFORM PREVIEW ──
 let currentPlatform = 'tiktok';
 
-// ── Barre de nav du bas SORTIE du téléphone (Axel 07/09 : « mets l'interface Accueil/Amis/… dans la
-// zone sous le téléphone ») → la vidéo reste 100 % propre, la nav vit dans une pilule sous le mockup.
-// Relocalisation PARESSEUSE par plateforme (au 1er affichage de sa plateforme), puis on ne montre que
-// la pilule de la plateforme active. #previewPhoneRow passe en colonne pour empiler phone + nav.
-function _genNavBelow(p){
-  const wr = document.getElementById('phoneWrapper'), row = document.getElementById('previewPhoneRow');
-  if(!wr || !row) return;
+// Téléphone ÉTENDU (Axel 07/09 : « étends le téléphone vers le bas, mets l'interface juste SOUS la vidéo,
+// dans l'écran »). Le mockup reste la VIDÉO 9:16 EXACTE (aucune desync crop/sous-titres) ; on ajoute sous
+// lui une BANDE connectée (même bezel, coin bas arrondi) qui porte la barre de nav de la plateforme active.
+// L'original de la nav (qui couvrait le bas de la vidéo) est masqué ; on CLONE ses items dans la bande
+// (non destructif → se remet à jour à chaque changement de plateforme / format).
+function _genNavStrip(){
+  const wr = document.getElementById('phoneWrapper'), ph = document.getElementById('phoneMockup');
+  if(!wr || !ph) return;
+  const vertical = (cfg.format === 'vertical' || !cfg.format);
   let host = document.getElementById('phoneNavHost');
-  if(!host){
-    row.style.flexDirection = 'column';
-    host = document.createElement('div'); host.id = 'phoneNavHost'; host.style.cssText = 'width:320px;margin-top:9px';
-    wr.insertAdjacentElement('afterend', host);
-  }
+  if(!vertical){ if(host) host.style.display = 'none'; return; }   // carré/paysage : pas de bande (setFormat a remis rayon plein + hauteur)
+  const sc = parseFloat((ph.style.transform.match(/scale\(([\d.]+)\)/) || [])[1]) || 1.194;
+  const NW = parseFloat(ph.style.width) || 268, NH = parseFloat(ph.style.height) || 476;
+  const DW = NW * sc, DH = NH * sc, NAV = 54;
+  ph.style.borderRadius = '38px 38px 0 0';                          // coin bas plat → connecté à la bande
+  wr.style.height = (DH + NAV) + 'px';
+  if(!host){ host = document.createElement('div'); host.id = 'phoneNavHost'; wr.appendChild(host); }
+  host.style.cssText = 'position:absolute;left:0;top:'+DH+'px;width:'+DW+'px;height:'+NAV+'px;background:#000;border:1px solid #2a2730;border-top:1px solid rgba(255,255,255,.06);border-radius:0 0 38px 38px;box-shadow:0 0 0 8px #121116;box-sizing:border-box;overflow:hidden;display:flex;align-items:center;justify-content:space-around;z-index:5';
+  host.innerHTML = '';
+  const p = currentPlatform || 'tiktok';
   const ui = document.getElementById('ui-'+p);
-  if(ui && !ui._navMoved){
+  if(ui){
     const nav = [...ui.children].find(d => { const s = d.getAttribute('style') || ''; return /bottom:\s*0/.test(s) && /space-around/.test(s); });
     if(nav){
-      ui._navMoved = true;
-      nav.style.position = 'static'; nav.style.height = '46px'; nav.style.background = 'transparent'; nav.style.borderTop = 'none';
-      const pill = document.createElement('div'); pill.id = 'pnav-'+p;
-      pill.style.cssText = 'width:320px;border-radius:16px;background:#111015;border:1px solid #201d26;overflow:hidden';
-      pill.appendChild(nav); host.appendChild(pill);
+      nav.style.display = 'none';                                   // masque l'original (il couvrait le bas de la vidéo)
+      [...nav.children].forEach(it => { const cl = it.cloneNode(true); cl.style.transform = ''; host.appendChild(cl); });
     }
   }
-  [...host.children].forEach(c => { c.style.display = (c.id === 'pnav-'+p) ? 'block' : 'none'; });
-  host.style.display = document.getElementById('pnav-'+p) ? 'block' : 'none';
 }
 function setPlatformPreview(p){
   currentPlatform = p;
@@ -20767,7 +20770,7 @@ function setPlatformPreview(p){
     if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; btn.style.fontWeight = id===p ? '700' : '600'; }
     if(ui)  ui.style.display = id===p ? 'block' : 'none';
   });
-  try{ _genNavBelow(p); }catch(_){}
+  try{ _genNavStrip(); }catch(_){}
 }
 
 let currentFormatGroup = 'short';
