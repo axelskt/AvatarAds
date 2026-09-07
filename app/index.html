@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-0055'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-0135'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -20920,7 +20920,11 @@ function _initSubDrag(){
     xp = Math.max(SAFE_ZONE.left, Math.min(SAFE_ZONE.right, xp));
     yp = Math.max(SAFE_ZONE.top,  Math.min(SAFE_ZONE.bottom, yp));
     cfg.subPosX = xp; cfg.subPos = yp;
+    // Repositionner EXACTEMENT comme updateSubPreview (même transform) + garde-fou visibilité : le glissé
+    // laissait un transform incohérent qui pouvait décaler/masquer les sous-titres (Axel 08/09).
     overlay.style.left = xp+'%'; overlay.style.top = yp+'%';
+    overlay.style.transform = 'translateX(-50%) scaleX(' + (cfg.subScaleX||1.0) + ')';
+    overlay.style.visibility = 'visible';
     const sx=document.getElementById('subPosX'), sxv=document.getElementById('subPosXVal');
     const sy=document.getElementById('subPos'),  syv=document.getElementById('subPosVal');
     if(sx) sx.value=xp; if(sxv) sxv.textContent=xp+'%';
@@ -24552,7 +24556,7 @@ function _restoreSession(){
     if(saved.mp4AudioTrimSt)   mp4AudioTrimSt   = saved.mp4AudioTrimSt;
     if(saved.mp4AudioTrimEnd)  mp4AudioTrimEnd  = saved.mp4AudioTrimEnd;
     // mp4AudioEnabled non restauré : le fichier audio ne survit pas à la session → Clone/Preset par défaut
-    if(saved.cfg){ delete saved.cfg.subPos; delete saved.cfg.subPosX; Object.assign(cfg, saved.cfg); }   // position sous-titres NON restaurée → défaut propre 75 % / 50 % (Axel 07/09)
+    if(saved.cfg)       Object.assign(cfg, saved.cfg);   // position sous-titres RESTAURÉE (persiste le glissé d'Axel ; défaut 75 % si jamais réglée)
     if(saved.subColors){ subColors.c1 = saved.subColors.c1; subColors.c2 = saved.subColors.c2; }
     if(saved.selAvatar) Object.assign(selAvatar, saved.selAvatar);
 
@@ -24769,18 +24773,38 @@ function _probeVideoDuration(url){
 // Upload gros fichier fiable : URL signée (chemin « direct upload » de Supabase, plus tolérant qu'un
 // .upload() mono-requête pour un blob de 225 Mo) + 2 tentatives. Un échec ici renvoyait avant sur le
 // rendu client muet qui crashait le Mac ; on veut donc qu'il réussisse, ou qu'il échoue proprement.
-async function _genUploadRobuste(inPath, vidBlob){
+async function _genUploadRobuste(inPath, vidBlob, onProg){
+  // XHR direct sur l'URL signée → VRAIE progression d'upload (le 4K ~150-220 Mo prend ~15-25 s : sans %,
+  // ça ressemble à un « plantage » — Axel 08/09). onprogress non exposé par uploadToSignedUrl. Repli SDK si KO.
   let lastErr = null;
   for(let attempt = 1; attempt <= 2; attempt++){
+    let sign = null;
+    try{ sign = await sb.storage.from('render-media').createSignedUploadUrl(inPath); }catch(e){ lastErr = e; continue; }
+    if(sign.error || !sign.data?.token){ lastErr = new Error('URL signée : ' + (sign.error?.message || 'token manquant')); continue; }
     try{
-      const sign = await sb.storage.from('render-media').createSignedUploadUrl(inPath);
-      if(sign.error || !sign.data?.token) throw new Error('URL signée : ' + (sign.error?.message || 'token manquant'));
-      const up = await sb.storage.from('render-media').uploadToSignedUrl(inPath, sign.data.token, vidBlob, { contentType: 'video/mp4' });
-      if(up.error) throw new Error('envoi : ' + up.error.message);
+      const putUrl = SUPABASE_URL + '/storage/v1/object/upload/sign/render-media/' + inPath + '?token=' + encodeURIComponent(sign.data.token);
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', putUrl);
+        xhr.setRequestHeader('content-type', 'video/mp4');
+        if(xhr.upload && onProg) xhr.upload.onprogress = (e) => { if(e.lengthComputable){ try{ onProg(e.loaded / e.total); }catch(_){} } };
+        xhr.onload  = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('upload HTTP ' + xhr.status));
+        xhr.onerror = () => reject(new Error('upload réseau'));
+        xhr.send(vidBlob);
+      });
       return true;
     }catch(e){
       lastErr = e;
-      console.warn('[gen-subs] upload tentative ' + attempt + '/2 échouée :', e);
+      console.warn('[gen-subs] upload XHR tentative ' + attempt + '/2 :', e && e.message);
+      // repli SDK (sans progression) : URL signée fraîche + uploadToSignedUrl
+      try{
+        const s2 = await sb.storage.from('render-media').createSignedUploadUrl(inPath);
+        if(s2.data?.token){
+          const up = await sb.storage.from('render-media').uploadToSignedUrl(inPath, s2.data.token, vidBlob, { contentType: 'video/mp4' });
+          if(!up.error) return true;
+          lastErr = new Error('envoi SDK : ' + up.error.message);
+        }
+      }catch(e2){ lastErr = e2; }
       if(attempt < 2) await new Promise(r => setTimeout(r, 1500));
     }
   }
@@ -24866,9 +24890,10 @@ async function _genServerCompose(btn){
     setPct(12, 'Envoi de la vidéo (' + _mo + ' Mo)…');
     // Gros fichiers 4K (225 Mo) : l'ancien .upload() mono-requête jetait (timeout gateway) → repli
     // client muet qui crashait le Mac. On passe par une URL signée (chemin gros fichiers) + 2 essais.
-    // Progression qui AVANCE pendant l'upload (sinon « 12 % » figé 25 s = ressenti « plantage », Axel 08/09).
-    let _upP = 12; const _upTick = setInterval(() => { _upP = Math.min(19, _upP + 0.4); setPct(Math.round(_upP), 'Envoi de la vidéo (' + _mo + ' Mo)…'); }, 500);
-    try { await _genUploadRobuste(inPath, vidBlob); } finally { clearInterval(_upTick); }
+    // VRAIE progression d'upload (XHR onprogress) → plus de « 12 % figé » qui ressemble à un plantage.
+    let _upTick = setInterval(() => { setPct(Math.min(19, 12 + Math.random()*1.5), 'Envoi de la vidéo (' + _mo + ' Mo)…'); }, 600);  // repli si onprogress muet (SDK)
+    const _onUp = (frac) => { if(_upTick){ clearInterval(_upTick); _upTick = null; } setPct(12 + Math.round(Math.max(0,Math.min(1,frac)) * 8), 'Envoi ' + Math.round(frac*100) + '% (' + _mo + ' Mo)…'); };
+    try { await _genUploadRobuste(inPath, vidBlob, _onUp); } finally { if(_upTick) clearInterval(_upTick); }
     setPct(20, 'File d\'attente…');
     const H = await getAuthHeader();
     const cr = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
@@ -27752,8 +27777,7 @@ function _restoreGeneratorState(){
 
     // ── cfg ──
     if(s.cfg){
-      delete s.cfg.subPos; delete s.cfg.subPosX;           // position sous-titres NON restaurée → défaut propre 75 %/50 % (Axel 07/09) — c'était LA source du 53 %
-      Object.assign(cfg, s.cfg);
+      Object.assign(cfg, s.cfg);                            // position sous-titres RESTAURÉE (persiste le glissé ; défaut 75 % si jamais réglée) — le 53 % venait du CACHE, pas d'ici (Axel 08/09)
       _coerceZoomCfg();                                   // #zoom-unifie : largeur = zoom, zoom ≥ 100 (anciens états)
       _syncSlider('subSize',      cfg.subSize,                    v=>v+'px',                   'subSizeVal');
       _syncSlider('subPos',       cfg.subPos,                     v=>v+'%',                    'subPosVal');
