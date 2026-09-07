@@ -29465,7 +29465,7 @@ function _expSpeechLock(p){
   return '. VOICE: accurate lip-sync, clear audible natural voice with casual dynamic intonation.'
     + (line ? ' THE ONLY WORDS SPOKEN IN THE ENTIRE CLIP, VERBATIM AND IN THIS LANGUAGE: « '+line+' ».' : ' The person says ONLY the requested line, verbatim.')
     + (kw ? ' CALL-TO-ACTION KEYWORD « '+kw+' »: this is a literal keyword the viewer must TYPE in the comments, NOT an ordinary word — she pronounces « '+kw+' » EXACTLY as written, letter for letter, as one clearly detached standalone word; never translate it, inflect it, pluralize it, add an article, or dissolve it into a phrase (do NOT say "un '+kw.toLowerCase()+'", do NOT turn « '+kw+' » into a sentence or a place). On that word she slows down slightly and says it a bit LOUDER and crisper than the rest, with a deliberate hand gesture (pointing down toward the comments / tapping) and a strong, expressive face, so the viewer unmistakably understands THIS exact word « '+kw+' » is the one to comment.' : '')
-    + ' Nothing is said before the line (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second. If time remains, hold a natural silent expression instead of speaking';
+    + ' Nothing is said before the line (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame. CRITICAL ENDING: she must COMPLETE the whole sentence and land its final word BEFORE the clip ends (never cut off mid-word); pace the delivery so the last word finishes with about half a second to spare, then she STOPS talking, closes her mouth and holds a natural still, silent expression until the very end. The last ~0.5 second contains ABSOLUTELY no speech, no extra word, no filler and no trailing mouth movement or sound — total silence with a closed mouth.';
 }
 // Verrou DÉCOR (Axel 06/09 : « pourquoi l'environnement change ») : l'image de référence EST le plateau. Levé
 // seulement si l'utilisateur demande explicitement une transition / un changement de lieu.
@@ -29510,7 +29510,7 @@ async function _expDirector(userPrompt){
       + '- MOTION & PHYSICS: natural, believable, real-world physics, smooth realistic human movement.\n'
       + '- CONTINUITY: the person and product stay photographically identical from the first frame to the last; never morph, swap, distort, age or beautify.\n'
       + '- Keep the user’s idea and scene; do NOT invent a different subject or setting. If the user gives a spoken line in quotes, keep it VERBATIM for lip-sync.\n'
-      + '- VOICE & DELIVERY: if the subject speaks, the ONLY words spoken in the whole clip are the user’s quoted line, VERBATIM and in the user’s language — nothing before it (no greeting, no filler like "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame, natural casual dynamic intonation, never monotone. If the line contains a call-to-action KEYWORD (an ALL-CAPS word, or the word right after "commente / comment / écris / tape"), keep that keyword EXACTLY as written and instruct that she pronounce it letter-perfect, clearly detached, a bit slower and LOUDER, with a hand gesture and strong facial expression — never translate it, inflect it, add an article, or turn it into a phrase or a place. CRITICAL ENDING: the sentence ends FIRMLY on its last word, the mouth closes, a brief still hold, then the clip ends — never a new word, filler or sound in the final second.\n'
+      + '- VOICE & DELIVERY: if the subject speaks, the ONLY words spoken in the whole clip are the user’s quoted line, VERBATIM and in the user’s language — nothing before it (no greeting, no filler like "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame, natural casual dynamic intonation, never monotone. If the line contains a call-to-action KEYWORD (an ALL-CAPS word, or the word right after "commente / comment / écris / tape"), keep that keyword EXACTLY as written and instruct that she pronounce it letter-perfect, clearly detached, a bit slower and LOUDER, with a hand gesture and strong facial expression — never translate it, inflect it, add an article, or turn it into a phrase or a place. CRITICAL ENDING: she COMPLETES the whole sentence and lands its last word about half a second before the clip ends (never cut off mid-word), then STOPS talking, closes her mouth and holds a silent still expression — the last ~0.5s is total silence with a closed mouth, no filler, no trailing sound.\n'
       + '- TRANSITIONS/TIMELINE: if the user describes a transition, a cut, a finger snap, a zoom/dezoom, or a multi-scene sequence, PRESERVE it and output an explicit compact TIMELINE with time ranges and beats (e.g. "0.0–1.4s: tight close-up then dezoom to a wide shot; ~1.4s: she clearly snaps her fingers CENTERED in frame → fast seamless match cut; 1.4–4.0s: new location, slow push-in to a close-up"). Keep every beat and the scene order, make the snap/gesture clearly VISIBLE and CENTERED, describe each camera move, and shift the lighting on the cut. NEVER collapse a multi-scene or transition prompt into a single static scene.\n'
       + 'Output ONLY the final prompt (one paragraph, or a compact timeline if there is a transition), nothing else.';
     const body = { model:'gpt-4o', max_tokens:340, temperature:0.6, messages:[
@@ -29860,6 +29860,23 @@ async function expressCreate(){
     } else {
       setP(Math.max(p,92),'↓ Téléchargement de la vidéo…');
       blob = await _veoDownloadUri(videoUri);
+    }
+    // ── Nettoyage AUDIO (Axel 07/09 : « pics de saturation ») : la voix Veo a des pics durs (crest ~10).
+    // Compression douce + adoucissement des hautes fréquences (de-ess) + loudnorm -16 LUFS/-1.5 dBTP → pics
+    // lissés, niveau constant, plus de dureté. VIDÉO copiée (rapide) ; repli sur l'original si ffmpeg échoue.
+    if(window._expVoice!=='none'){
+      try{
+        setP(Math.max(p,95),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18M12 3a5 5 0 010 10"/></svg> Nettoyage de l\'audio…');
+        await _loadFFmpeg(); const _ffa=_ffmpegInst;
+        try{ await _ffa.FS('unlink','exa_in.mp4'); }catch(_){}
+        try{ await _ffa.FS('unlink','exa_out.mp4'); }catch(_){}
+        await _ffa.FS('writeFile','exa_in.mp4', new Uint8Array(await blob.arrayBuffer()));
+        await _ffa.run('-i','exa_in.mp4','-c:v','copy','-af','acompressor=threshold=-18dB:ratio=2:attack=8:release=90,highshelf=g=-2:f=7000,loudnorm=I=-16:TP=-1.5:LRA=11','-c:a','aac','-b:a','160k','-movflags','+faststart','exa_out.mp4');
+        const _outa=await _ffa.FS('readFile','exa_out.mp4');
+        const _cleaned=new Blob([_outa.buffer],{type:'video/mp4'});
+        if(_cleaned.size>50000) blob=_cleaned;
+        try{ await _ffa.FS('unlink','exa_in.mp4'); await _ffa.FS('unlink','exa_out.mp4'); }catch(_){}
+      }catch(_ae){ console.warn('express audio cleanup:', _ae); }
     }
     // Bug Express 06/09 : un MP4 corrompu (proxy qui ré-encodait le binaire en texte) donnait un lecteur
     // noir puis Safari plantait au téléchargement. On valide la STRUCTURE MP4 (_mp4Sane) AVANT d'afficher/servir
