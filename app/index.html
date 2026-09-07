@@ -24853,7 +24853,7 @@ async function _genServerCompose(btn){
       const sd = await st.json();
       if(sd.status === 'done' && sd.url){ outUrl = sd.url; break; }
       if(sd.status === 'failed') throw new Error(sd.error || 'le rendu serveur a échoué');
-      setPct(Math.min(95, 25 + i*3), 'Rendu…');
+      setPct(Math.min(94, 25 + i*0.32), 'Rendu serveur…');   // creep lent (une longue vidéo = plusieurs min) + le chrono mm:ss donne le vrai temps — plus de « 95 % figé »
     }
     if(!outUrl) throw new Error('rendu trop long');
     setPct(97, 'Téléchargement…');
@@ -25985,15 +25985,24 @@ function _startBypassAudioExtraction(file){
     // le démux échoue (ex : Safari sans décodage AAC WebCodecs). ⚠ Régression du 07/09 : passer en « démux seul »
     // retirait ce filet → faux « pas d'audio » quand le démux plantait sur Safari (le repli au clic perd le geste).
     const cap = _startRealtimeCaptureInGesture(file);
-    // Démux WebCodecs en PARALLÈLE (sans geste, bien plus rapide). S'il réussit → on l'utilise + on stoppe la capture.
+    // Chemins d'extraction, du plus précis au plus tolérant. TOUS SANS GESTE sauf la capture (démarrée dans le geste).
     const _mp4Family = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
-    const _demuxable = typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function' && typeof AudioData !== 'undefined' && _mp4Family;
+    const _demuxable = typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function' && _mp4Family;  // ⚠ PAS de check global AudioData : Safari ne l'expose pas toujours mais décode quand même
+    const _small = (file.size||0) < 120*1024*1024;                   // decodeAudioData charge tout en mémoire → fichiers pas trop lourds
     window._bypassAudioPromise = (async () => {
+      // 1) Démux WebCodecs — rapide, timing exact, streamé (gère le 225 Mo). Peut échouer sur Safari.
       if(_demuxable){
         const dr = await _extractAudioViaDemux(file, _base).then(w => ({ ok:true, w })).catch(e => ({ ok:false, e }));
         if(dr.ok && dr.w){ try{ cap.abort(); }catch(_){} window._bypassAudioFile = dr.w; window._bypassAudioProgress = 100; _diag('démux OK (' + Math.round(dr.w.size/1024) + ' Ko)'); return dr.w; }
-        _diag('démux KO (' + ((dr.e&&dr.e.code)||'') + ' ' + (dr.e&&dr.e.message||'') + ') → capture temps réel');
+        _diag('démux KO (' + ((dr.e&&dr.e.code)||'') + ' ' + (dr.e&&dr.e.message||'') + ')');
       }
+      // 2) decodeAudioData — TIMING EXACT (fix désync des sous-titres), fiable Safari, sans geste — fichiers pas trop lourds.
+      if(_small){
+        const rr = await _extractAudioViaDecodeAudioData(file, _base).then(w => ({ ok:true, w })).catch(e => ({ ok:false, e }));
+        if(rr.ok && rr.w){ try{ cap.abort(); }catch(_){} window._bypassAudioFile = rr.w; window._bypassAudioProgress = 100; _diag('decodeAudioData OK (' + Math.round(rr.w.size/1024) + ' Ko)'); return rr.w; }
+        _diag('decodeAudioData KO (' + ((rr.e&&rr.e.code)||'') + ' ' + (rr.e&&rr.e.message||'') + ') → capture temps réel');
+      }
+      // 3) Capture temps réel (démarrée dans le geste) — dernier recours, léger décalage possible.
       const capWav = await cap.promise;                              // résout File | null (jamais de reject)
       if(capWav){ window._bypassAudioFile = capWav; window._bypassAudioProgress = 100; _diag('capture OK (' + Math.round(capWav.size/1024) + ' Ko)'); return capWav; }
       _diag('capture KO (muette/vide)');
@@ -26137,8 +26146,8 @@ function _monoF32ToWavBlob(mono, sampleRate){
 // Démux + décode → File WAV 16 kHz mono. THROW sur tout échec (l'appelant retombe sur la capture temps réel).
 // THROW {code:'no_audio'} si aucune piste audio. Met à jour window._bypassAudioProgress.
 async function _extractAudioViaDemux(file, baseName){
-  if(typeof AudioDecoder !== 'function' || typeof EncodedAudioChunk !== 'function' || typeof AudioData === 'undefined')
-    throw new Error('WebCodecs AudioDecoder indisponible');          // Safari < 16.4
+  if(typeof AudioDecoder !== 'function' || typeof EncodedAudioChunk !== 'function')
+    throw new Error('WebCodecs AudioDecoder indisponible');          // Safari < 16.4 (AudioData global pas requis : Safari ne l'expose pas toujours)
   const isMp4 = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
   if(!isMp4) throw new Error('conteneur non MP4/MOV/M4A');            // WebM/AVI/MKV → repli direct
   const isIOS = /iP(hone|ad|od)/.test(navigator.platform||'') || (/Mac/.test(navigator.platform||'') && (navigator.maxTouchPoints||0) > 1);
@@ -26247,6 +26256,29 @@ async function _extractAudioViaDemux(file, baseName){
   const wav = _monoF32ToWavBlob(out16, TARGET_SR);
   if(!wav || wav.size < 1024){ const e = new Error('wav vide'); e.code = 'incoherent'; throw e; }
   try{ window._bypassAudioProgress = 100; }catch(_){}
+  return new File([wav], (baseName||'audio') + '_audio.wav', { type: 'audio/wav' });
+}
+// Décodage EXACT via decodeAudioData → WAV 16 kHz mono. TIMING PARFAIT (décode les vrais échantillons,
+// aucun décalage) et FIABLE sur Safari, SANS geste utilisateur. C'est le fix du désync des sous-titres
+// (la capture temps réel décalait les timestamps Whisper). Réservé aux fichiers qui tiennent en mémoire
+// (gate taille en amont) car decodeAudioData charge tout d'un coup. (Axel 07/09)
+async function _extractAudioViaDecodeAudioData(file, baseName){
+  const ab = await file.arrayBuffer();                                // ⚠ charge tout → gate taille côté appelant
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ac = new AC();
+  let decoded;
+  try { decoded = await ac.decodeAudioData(ab.slice(0)); }            // slice(0) : decodeAudioData détache le buffer
+  finally { try{ ac.close(); }catch(_){} }
+  if(!decoded || !decoded.length){ const e = new Error('decode vide'); e.code = 'no_audio'; throw e; }
+  const TARGET_SR = 16000;
+  const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * TARGET_SR)), TARGET_SR);
+  const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start(0);
+  const rendered = await off.startRendering();                        // resample 16 kHz mono, timing 1:1 préservé
+  const mono = rendered.getChannelData(0);
+  let peak = 0, step = Math.max(1,(mono.length/200000)|0);
+  for(let i=0;i<mono.length;i+=step){ const a = Math.abs(mono[i]); if(a>peak) peak = a; }
+  if(peak < 5e-3){ const e = new Error('silencieux'); e.code = 'no_audio'; throw e; }
+  const wav = _monoF32ToWavBlob(mono, TARGET_SR);
   return new File([wav], (baseName||'audio') + '_audio.wav', { type: 'audio/wav' });
 }
 // Vidéo sans piste audio → throw avec e.code='no_audio' (message clair amont).
@@ -27619,6 +27651,7 @@ function _restoreGeneratorState(){
 
     // ── cfg ──
     if(s.cfg){
+      delete s.cfg.subPos; delete s.cfg.subPosX;           // position sous-titres NON restaurée → défaut propre 75 %/50 % (Axel 07/09) — c'était LA source du 53 %
       Object.assign(cfg, s.cfg);
       _coerceZoomCfg();                                   // #zoom-unifie : largeur = zoom, zoom ≥ 100 (anciens états)
       _syncSlider('subSize',      cfg.subSize,                    v=>v+'px',                   'subSizeVal');
