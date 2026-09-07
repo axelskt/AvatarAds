@@ -10,7 +10,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 const json = (obj: unknown, status = 200) =>

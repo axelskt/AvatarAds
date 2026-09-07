@@ -26,7 +26,7 @@ const svc = createClient(SUPABASE_URL, SERVICE_KEY)
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 const json = (status: number, body: unknown) =>

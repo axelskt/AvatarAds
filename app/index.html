@@ -26177,17 +26177,22 @@ async function _extractAudioViaDemux(file, baseName){
     };
     if(description) cfg.description = description;
     else if(/^mp4a\./i.test(cfg.codec)){ fail(new Error('description AAC (esds) introuvable')); return; }
-    AudioDecoder.isConfigSupported(cfg).then((sup) => {
-      if(!sup || !sup.supported){ fail(new Error('config audio non supportée (' + cfg.codec + ')')); return; }
-      decoder = new AudioDecoder({
-        output: (ad) => { try{ if(!srcRate) srcRate = ad.sampleRate; monoChunks.push(_audioDataToMono(ad)); } catch(err){ fail(err); } finally { ad.close(); } },  // close() par frame = pas de fuite
-        error: (e) => fail(new Error('AudioDecoder: ' + (e && e.message || e))),
-      });
-      decoder.configure(cfg);
-      mp4.setExtractionOptions(at.id, null, { nbSamples: 1000 });
-      mp4.start();
-      started = true; maybeFinish();
-    }).catch(fail);
+    // ⚠ Safari : AudioDecoder.isConfigSupported rejette l'AAC À TORT (même bug que VideoEncoder, cf ~l.25284).
+    // On NE bloque donc PAS dessus → on tente configure() directement ; un vrai échec remonte via decoder.error
+    // (→ repli capture). Sans ça, le démux échouait toujours sur Safari (d'où le désync : c'était la capture).
+    (async () => {
+      try { await AudioDecoder.isConfigSupported(cfg); } catch(_){}   // best-effort, informatif, NON bloquant
+      try {
+        decoder = new AudioDecoder({
+          output: (ad) => { try{ if(!srcRate) srcRate = ad.sampleRate; monoChunks.push(_audioDataToMono(ad)); } catch(err){ fail(err); } finally { ad.close(); } },  // close() par frame = pas de fuite
+          error: (e) => fail(new Error('AudioDecoder: ' + (e && e.message || e))),
+        });
+        decoder.configure(cfg);
+        mp4.setExtractionOptions(at.id, null, { nbSamples: 1000 });
+        mp4.start();
+        started = true; maybeFinish();
+      } catch(e){ fail(new Error('configure: ' + (e && e.message || e))); }
+    })();
   };
   mp4.onSamples = (id, user, samples) => {
     if(id !== audioTrackId || !decoder) return;

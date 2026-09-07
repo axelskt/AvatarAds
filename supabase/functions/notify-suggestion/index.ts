@@ -8,7 +8,7 @@ import { rateHit } from '../_shared/guard.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
