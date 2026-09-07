@@ -22218,14 +22218,13 @@ function _zoneGeom(zone, sW, sH, zoom, topAlign, clip){
   const cen = (p0, len, zp0, zlen) => [zp0 - (p0 + len / 2), zp0 + zlen - (p0 + len / 2)]; // centre du contenu dans la zone
   const [cxLo, cxHi] = cov(cx0, cw, zone.x, zone.w), [exLo, exHi] = cen(cx0, cw, zone.x, zone.w);
   const [cyLo, cyHi] = cov(cy0, ch, zone.y, zone.h), [eyLo, eyHi] = cen(cy0, ch, zone.y, zone.h);
-  // Bornes du glissé PAR AXE : quand le média COUVRE la zone sur cet axe (aspect ≈ la zone, ex. 9:16 dans
-  // 9:16), on borne au débord RÉEL (cov) → un clip qui remplit PILE est verrouillé (Axel 07/09 : « je peux
-  // encore repositionner alors que ça remplit »). S'il ne couvre pas (plus petit), on autorise le recentrage
-  // (cen) + le fond flou. Avant : union des deux → ±½ zone de glissé même sur un clip qui remplit pile.
-  const bx = cw >= zone.w - 0.5, by = ch >= zone.h - 0.5;
+  // Glissé LIBRE : union de « couvrir » (cov) et « recentrer » (cen). Axel 07/09 : la possibilité de
+  // repositionner la vidéo dans le preview — MÊME quand elle remplit pile le cadre — est importante, avec
+  // le FOND FLOU de la vidéo derrière (_applyZoneStyle/_bgFit remplissent le vide). On garde donc les
+  // bornes larges (ne pas re-verrouiller un clip qui couvre).
   return { z, s, r, cw, ch, cx0, cy0,
-    minTx: bx ? Math.min(cxLo, cxHi) : Math.min(exLo, exHi), maxTx: bx ? Math.max(cxLo, cxHi) : Math.max(exLo, exHi),
-    minTy: by ? Math.min(cyLo, cyHi) : Math.min(eyLo, eyHi), maxTy: by ? Math.max(cyLo, cyHi) : Math.max(eyLo, eyHi) };
+    minTx: Math.min(cxLo, exLo), maxTx: Math.max(cxHi, exHi),
+    minTy: Math.min(cyLo, eyLo), maxTy: Math.max(cyHi, eyHi) };
 }
 function _coerceZoomCfg(){
   const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 100));
