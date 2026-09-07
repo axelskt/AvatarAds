@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-08-07-md-fluide'; window.__AA_BUILD = AA_BUILD;
+const AA_BUILD = '2026-09-08-0025'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -6473,6 +6473,20 @@ function _getPlanQuota(plan){ return PLAN_QUOTAS[plan] || PLAN_QUOTAS.free; }
 // (jusqu'à 500 Go). 23/08 : projet passé en Pro, limite réglée à 500 Mo (API de
 // management, `fileSizeLimit`). Ce chiffre doit rester ≤ à celui du projet.
 const PUB_MAX_MO = 500;
+// ── ANTI-CACHE (Axel 08/09) : Safari garde parfois l'ANCIEN JS malgré « vider les caches » → on ne voit pas
+// les correctifs déployés (subPos, sync, console…). On compare le build embarqué à version.txt (récupéré HORS
+// cache) et on recharge UNE fois si obsolète. Compare AA_BUILD (défini plus haut) à app/version.txt.
+(async () => {
+  try {
+    const r = await fetch('version.txt?_=' + Date.now(), { cache: 'no-store' });
+    if(!r.ok) return;
+    const v = (await r.text()).trim();
+    if(v && v !== AA_BUILD && !sessionStorage.getItem('aa_rl_' + v)){
+      try{ sessionStorage.setItem('aa_rl_' + v, '1'); }catch(_){}   // garde-fou : une seule recharge par version
+      location.reload();
+    }
+  } catch(_){}
+})();
 
 const CREDIT_COSTS = {
   // 4 et non 2 : le rendu serveur ne rejoue pas le plan à l'identique, c'est lui
@@ -19391,6 +19405,14 @@ function autoGenSubtitles(){
     if(ta) setTimeout(()=>ta.focus(), 50);
   }
 }
+// Corrections de marque post-Whisper : « Claude » est très souvent transcrit « cloud » dans les vidéos
+// d'Axel (contenu IA). On remplace le mot « cloud » isolé par « Claude », SAUF quand il suit « Google/AWS »
+// (Google Cloud / AWS Cloud restent corrects). Liste facile à étendre. (Axel 08/09)
+function _aaFixBrandText(s){
+  try {
+    return String(s == null ? '' : s).replace(/(\bgoogle\s+|\baws\s+|\bamazon\s+)?\bcloud\b/gi, (m, pre) => pre ? m : 'Claude');
+  } catch(_){ return s; }
+}
 async function whisperTranscribe(){
   // btn capturé AVANT le 1er await : window.event ne survit pas aux continuations async
   // (garde instanceof : hors clic direct, event.currentTarget peut être window)
@@ -19497,6 +19519,11 @@ async function whisperTranscribe(){
     // (j'+ai → j'ai, aujourd'+hui → aujourd'hui) → whisperWordTimestamps devient 1:1
     // avec groups.flat(), plus de désync sur les contractions, + auto-application.
     // NON-OWNER garde le comportement actuel (timestamps bruts + « Appliquer »).
+    // Corrections de marque (Whisper transcrit « Claude » en « cloud ») — AVANT les 2 chemins (owner + non-owner).
+    try {
+      if(Array.isArray(data.words)) for(const w of data.words){ if(w && typeof w.word==='string') w.word = _aaFixBrandText(w.word); }
+      if(typeof data.text==='string') data.text = _aaFixBrandText(data.text);
+    } catch(_){}
     const _whV2 = window._genDevOn && Array.isArray(data.words) && data.words.length && typeof _applyWhisperWords === 'function';
     if(!_whV2){
       // Stocker les timestamps par mot pour sync sous-titres précise
@@ -24835,10 +24862,13 @@ async function _genServerCompose(btn){
     if(vidBlob.size > PUB_MAX_MO * 1024 * 1024){
       throw new Error('Vidéo trop lourde (' + Math.round(vidBlob.size/1024/1024) + ' Mo, max ' + PUB_MAX_MO + ' Mo)');
     }
-    setPct(12, 'Envoi…');
+    const _mo = Math.round(vidBlob.size/1024/1024);
+    setPct(12, 'Envoi de la vidéo (' + _mo + ' Mo)…');
     // Gros fichiers 4K (225 Mo) : l'ancien .upload() mono-requête jetait (timeout gateway) → repli
     // client muet qui crashait le Mac. On passe par une URL signée (chemin gros fichiers) + 2 essais.
-    await _genUploadRobuste(inPath, vidBlob);
+    // Progression qui AVANCE pendant l'upload (sinon « 12 % » figé 25 s = ressenti « plantage », Axel 08/09).
+    let _upP = 12; const _upTick = setInterval(() => { _upP = Math.min(19, _upP + 0.4); setPct(Math.round(_upP), 'Envoi de la vidéo (' + _mo + ' Mo)…'); }, 500);
+    try { await _genUploadRobuste(inPath, vidBlob); } finally { clearInterval(_upTick); }
     setPct(20, 'File d\'attente…');
     const H = await getAuthHeader();
     const cr = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
@@ -25988,7 +26018,7 @@ function _startBypassAudioExtraction(file){
     // Chemins d'extraction, du plus précis au plus tolérant. TOUS SANS GESTE sauf la capture (démarrée dans le geste).
     const _mp4Family = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
     const _demuxable = typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function' && _mp4Family;  // ⚠ PAS de check global AudioData : Safari ne l'expose pas toujours mais décode quand même
-    const _small = (file.size||0) < 120*1024*1024;                   // decodeAudioData charge tout en mémoire → fichiers pas trop lourds
+    const _small = (file.size||0) < 220*1024*1024;                   // decodeAudioData charge tout en mémoire → jusqu'à ~220 Mo (couvre les 4K ~150-200 Mo) ; au-delà = capture
     window._bypassAudioPromise = (async () => {
       // 1) Démux WebCodecs — rapide, timing exact, streamé (gère le 225 Mo). Peut échouer sur Safari.
       if(_demuxable){

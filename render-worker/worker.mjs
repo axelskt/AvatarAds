@@ -584,8 +584,11 @@ async function composeGenSubs(jobDir, outPath, plan) {
     const rfr = ffprobe(orig, 'stream=r_frame_rate').split('\n').map((s) => s.trim()).find((s) => /^\d+\/\d+$/.test(s))
     if (rfr) { const [n, d] = rfr.split('/').map(Number); if (n > 0 && d > 0) genFps = Math.round(n / d) }
   } catch (_) {}
-  genFps = Math.min(60, Math.max(24, genFps || 25))
-  console.log(`▶ gen-subs : rendu à ${genFps} fps (source), durée ${D}s`)
+  // #vitesse-overlay (08/09) : plafond 30 fps (avant 60). L'overlay ne recompose plus la base dans Chrome,
+  // mais la capture reste O(frames) : une source 50/60 fps → 30 fps = ~2× moins de frames = ~2× plus rapide,
+  // pour une vidéo « sous-titrée » où 30 fps est le standard social (base ré-échantillonnée par ffmpeg).
+  genFps = Math.min(30, Math.max(24, genFps || 25))
+  console.log(`▶ gen-subs : rendu à ${genFps} fps (plafond 30), durée ${D}s`)
 
   // ── CHEMIN RAPIDE : « uniquement vidéo » (aucun sous-titre à graver) ─────────
   // Pas besoin d'HyperFrames (qui re-rend chaque frame dans Chromium, ~1-2 min) :
