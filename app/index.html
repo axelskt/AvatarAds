@@ -12271,23 +12271,32 @@ function _genPrevIcon(id, playing){
 }
 function _genStopPrev(){ if(window._genPrevAudio){ try{ window._genPrevAudio.pause(); }catch(_){} } if(window._genPrevVoice){ try{ window._genPrevVoice.pause(); }catch(_){} window._genPrevVoice=null; } if(window._genPrevId){ _genPrevIcon(window._genPrevId,false); window._genPrevId=null; } }
 function _genClearMusic(){ try{ if(window._genMusic && window._genMusic.url && window._genMusic.url.startsWith('blob:')) URL.revokeObjectURL(window._genMusic.url); }catch(_){} window._genMusic = { url:'', dyn:'', name:'', volume:(window._genMusic&&window._genMusic.volume)||0.35 }; _genStopPrev(); _genRefreshMusicLabel(); const md=document.getElementById('_genMusModal'); if(md) md.remove(); toast('Musique retirée'); }
-function _genPickMusic(id){
-  const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return;
+// sélection PURE de la musique (état + highlight + label), SANS audio
+function _genSelectMusic(id){
+  const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return false;
   window._genMusic.url=m.url; window._genMusic.dyn=m.dyn||''; window._genMusic.name=m.name;
-  document.querySelectorAll('#_genMusModal [data-mid]').forEach(r=>{ const on=r.getAttribute('data-mid')===id; r.style.borderColor=on?'var(--accent)':'var(--border)'; r.style.background=on?'var(--accent-soft)':'var(--panel-1)'; });
+  document.querySelectorAll('#_genMusModal [data-mid]').forEach(r=>{ const on=r.getAttribute('data-mid')===id; r.style.borderColor=on?'var(--accent)':'var(--border)'; r.style.background=on?'var(--accent-soft)':'var(--panel-1)'; r.style.boxShadow=on?'inset 0 0 0 1px var(--accent)':'none'; });
   _genRefreshMusicLabel();
+  return true;
 }
-// play↔pause : reclic sur la même = pause ; clic sur une autre = stoppe la précédente
-function _genPrevMusic(id){
+// Clic sur une ligne = SÉLECTIONNE **et** lance l'écoute (Axel 07/09 : « je clique, ça ne sélectionne pas » —
+// en réalité le bouton ▶ capturait le clic ; désormais sélectionner et écouter sont la MÊME action).
+function _genPickMusic(id){ if(_genSelectMusic(id)) _genPlayPrev(id); }
+// joue l'aperçu de la piste id SANS toggle — coupe la précédente + l'« Aperçu animé » (un seul son à la fois, Axel 21/08)
+function _genPlayPrev(id){
   const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return;
-  if(window._genPrevId===id && window._genPrevAudio && !window._genPrevAudio.paused){ window._genPrevAudio.pause(); _genPrevIcon(id,false); window._genPrevId=null; return; }
   _genStopPrev();
-  // Un seul son à la fois (Axel, 21/08) : si l'« Aperçu animé » tourne (voix + sa musique), on le coupe.
   try{ if(typeof previewPlaying!=='undefined' && previewPlaying && typeof togglePreviewPlay==='function') togglePreviewPlay(); }catch(_){}
   // JUSTE la musique, au volume du slider (qui bouge en direct, cf. _genSetMusicVol).
   const a=new Audio(_genMusicSrc(m)); a.loop=true; a.volume=Math.max(0,Math.min(1,(window._genMusic&&window._genMusic.volume!=null)?window._genMusic.volume:0.35)); window._genPrevAudio=a; window._genPrevId=id;
   a.onended=()=>{ _genPrevIcon(id,false); if(window._genPrevId===id) window._genPrevId=null; };
   a.play().then(()=>_genPrevIcon(id,true)).catch(()=>{});
+}
+// Bouton ▶ : SÉLECTIONNE aussi la piste (fix Axel — avant, il ne faisait qu'écouter), puis play/pause.
+// Reclic sur la même en lecture = pause (mais garde la sélection).
+function _genPrevMusic(id){
+  if(window._genPrevId===id && window._genPrevAudio && !window._genPrevAudio.paused){ window._genPrevAudio.pause(); _genPrevIcon(id,false); window._genPrevId=null; _genSelectMusic(id); return; }
+  _genSelectMusic(id); _genPlayPrev(id);
 }
 // Voix de référence pour l'écoute du mix : audio généré > audio du MP4 > échantillon de la voix choisie.
 function _genPrevVoiceSrc(){
