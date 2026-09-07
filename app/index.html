@@ -27743,7 +27743,7 @@ const EXP_QUALITIES = [ {v:'720p',l:'720p',note:''}, {v:'1080p',l:'1080p',note:'
 // Gemini ne subsiste qu'en repli INTERNE quand Veo refuse l'audio natif
 // (_expTtsFallback) — ce n'est plus un choix offert à l'utilisateur.
 const EXP_VOICES = [
-  { id:'native', name:'Voix native (Veo)', desc:'audio généré avec la vidéo' },
+  { id:'native', name:'Voix native', desc:'audio généré avec la vidéo' },
   { id:'none',   name:'Pas de voix',        desc:'vidéo muette' },
 ];
 // Icônes SVG par mode de voix
@@ -27765,7 +27765,7 @@ const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 // Starter = Standard seul. Défaut : Élite → Pro, sinon Standard. Le tarif suit (via _expCostCredits).
 const EXP_MODELS = [
   { v:'standard', name:'Veo Standard', sub:'Rapide · éco' },
-  { v:'omni',     name:'Omni Flash',   sub:'Qualité Max · voix native' },
+  { v:'omni',     name:'Omni Flash',   sub:'Qualité Max' },
 ];
 function _expModelAllowed(v){
   if(v==='omni') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
@@ -27835,11 +27835,13 @@ function initExpress(){
     const _dur8=(parseInt(window._expDur)||4)>=8; // 1080p Veo dispo dès 8 s (y compris durées longues Élite)
     qr.innerHTML = EXP_QUALITIES.map(q=>{
       const on=q.v===window._expQuality;
-      // 1080p TOUJOURS cliquable ; la note « dès 8 s » ne concerne QUE Veo (le clic force 8 s), jamais Omni
-      const note = (q.v==='1080p' && !_isOmniQ && !_dur8) ? 'dès 8 s' : q.note;
-      const _qTitle = (q.v==='1080p' && !_isOmniQ) ? '1080p = 8 s minimum (limite Google Veo)' : '';
-      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${_qTitle}" style="flex:1;padding:13px 12px;text-align:center;">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
+      const _lk = (q.v==='1080p' && !_exp1080Allowed());   // 1080p = Pro/Élite → CADENAS (icône seule, aucun texte « Pro »)
+      // note « dès 8 s » = Veo seul (jamais Omni), et masquée si verrouillé
+      const note = _lk ? '' : ((q.v==='1080p' && !_isOmniQ && !_dur8) ? 'dès 8 s' : q.note);
+      const _lock = _lk ? ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>' : '';
+      const _qTitle = _lk ? '1080p — réservé aux plans Pro et Élite' : ((q.v==='1080p' && !_isOmniQ) ? '1080p = 8 s minimum (limite Google Veo)' : '');
+      return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${_qTitle}" style="flex:1;padding:13px 12px;text-align:center;${_lk?'opacity:.6;':''}">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${_lock}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
   }
   _expRenderModels();
@@ -27893,7 +27895,7 @@ function _expHeroSync(){
     line.textContent = [ (window._expFormat||'9:16'), sd+' s', '1080p', st, 'Seedance · audio natif', imgTxt ].filter(Boolean).join(' · ');
     return;
   }
-  const vx=(EXP_VOICES.find(v=>v.id===window._expVoice)||{}).name||'Voix native (Veo)';
+  const vx=(EXP_VOICES.find(v=>v.id===window._expVoice)||{}).name||'Voix native';
   line.textContent = [ (window._expFormat||'9:16'), (window._expDur||4)+' s',
     (window._expQuality||'720p'), st, vx, imgTxt ].filter(Boolean).join(' · ');
 }
@@ -27943,9 +27945,11 @@ function _expSetDur(v){
 }
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){ window._expFormat=v; initExpress(); }
+function _exp1080Allowed(){ return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase()); }
 function _expPickQual(v){
-  // 1080p sélectionnable par tous — le plan (Pro et +) n'est vérifié qu'au clic sur Générer.
-  // Axel 07/09 : choisir 1080p FORCE 8 s minimum (limite Veo). Si on avait forcé le 8 s DEPUIS le mode Libre,
+  // 1080p = Pro/Élite : cadenas dans l'UI + blocage au clic (le clic sur Générer revérifie aussi).
+  if(v==='1080p' && !_exp1080Allowed()){ toast('La 1080p est réservée aux plans Pro et Élite'); showPaywall(); return; }
+  // Choisir 1080p FORCE 8 s minimum (limite Veo). Si on avait forcé le 8 s DEPUIS le mode Libre,
   // repasser en 720p REMET en Libre (Axel : « quand je reviens en 720p ça ne remet pas en libre »).
   if(v==='1080p' && window._expVeoModel!=='omni'){   // le forçage 8 s est une limite Veo ; Omni sort du 1080p natif à TOUTE durée 3-10 s
     const wasLibre = !!window._expDurAuto;
@@ -39084,7 +39088,9 @@ window._mExpSync=function(){
     var is1080=(q==='1080p');
     q720.style.background=is1080?'transparent':'var(--surface-2)'; q720.style.color=is1080?'var(--text-3)':'var(--text)';
     q1080.style.background=is1080?'var(--surface-2)':'transparent'; q1080.style.color=is1080?'var(--text)':'var(--text-3)';
-    q1080.textContent = (window._expVeoModel==='omni') ? '1080p · qualité max' : '1080p · dès 8 s';  // Omni : 1080p natif à toute durée
+    q1080.innerHTML = (typeof _exp1080Allowed==='function' && !_exp1080Allowed())
+      ? '1080p <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>'
+      : ((window._expVeoModel==='omni') ? '1080p' : '1080p · dès 8 s');  // cadenas si non Pro/Élite ; Omni = 1080p natif à toute durée
   }
   var vId=(window._expVoice||'native');
   var vMeta=(typeof EXP_VOICES!=='undefined'?EXP_VOICES:[]).find(function(x){return x.id===vId;});
