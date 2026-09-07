@@ -25979,6 +25979,17 @@ function _startBypassAudioExtraction(file){
     if(!isVid) return;
     window._bypassAudioFile = null;
     window._bypassAudioProgress = 0;                                 // % d'extraction (lu par whisperTranscribe pour l'affichage)
+    // ⚡ CHEMIN RAPIDE (sans geste) : démux WebCodecs si dispo + conteneur MP4 → on l'utilise et on N'ARME
+    // PAS la capture temps réel. S'il rejette, _bypassAudioPromise résout null → whisperTranscribe retombe
+    // sur _extractAudioForWhisper SOUS LE GESTE DU CLIC (qui refait démux puis capture temps réel).
+    const _mp4Family = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
+    if(typeof AudioDecoder === 'function' && typeof EncodedAudioChunk === 'function' && _mp4Family){
+      const _base = (file.name || 'audio').replace(/\.[^.]+$/, '');
+      window._bypassAudioPromise = _extractAudioViaDemux(file, _base)
+        .then(f => { window._bypassAudioFile = f; window._bypassAudioProgress = 100; return f; })
+        .catch(err => { console.warn('pré-extraction démux échouée → repli au clic :', err && err.message); return null; });
+      return;   // démux rapide et indépendant du geste → pas de capture temps réel
+    }
     let progTick = null;
     const url = URL.createObjectURL(file);
     const v = document.createElement('video'); v.src = url; v.playsInline = true; v.preload = 'auto';
@@ -26017,11 +26028,219 @@ function _startBypassAudioExtraction(file){
     if(p && p.catch) p.catch(() => { /* bloqué : onerror/timeout gèrent */ });
   }catch(_){ window._bypassAudioPromise = null; /* whisper retombera sur _extractAudioForWhisper */ }
 }
+// ── CHEMIN RAPIDE Whisper : DÉMUX WebCodecs (mp4box + AudioDecoder) ──────────────────────────────
+// Décode la piste audio d'un MP4/MOV/M4A SANS rejouer la vidéo → quelques secondes au lieu du temps
+// réel (~30-40 s de la capture MediaRecorder). Sortie = WAV 16 kHz mono (accepté par OpenAI whisper-1,
+// petit, timing/pitch EXACTS car reconstruit par échantillons — jamais de playbackRate). REPLI STRICT
+// sur la capture temps réel à la moindre anomalie : le pire cas reste = comportement actuel. (Axel 07/09)
+let _mp4boxLoading = null;
+function _loadMp4Box(){
+  if(window.MP4Box) return Promise.resolve(window.MP4Box);
+  if(_mp4boxLoading) return _mp4boxLoading;                          // single-flight
+  _mp4boxLoading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js';  // UMD → window.MP4Box (cdnjs n'héberge PAS mp4box ; 2.x = ESM sans global)
+    s.onload = () => window.MP4Box ? res(window.MP4Box) : rej(new Error('MP4Box absent'));
+    s.onerror = () => { _mp4boxLoading = null; rej(new Error('mp4box CDN indisponible')); };
+    document.head.appendChild(s);
+  });
+  return _mp4boxLoading;
+}
+// AudioSpecificConfig (description AAC, requise par Safari) depuis la stsd — navigation PAR TAG.
+// ⚠ Ne PAS prendre le 1er descripteur qui a un .data : le SLConfigDescriptor (tag 6) en porte un (0x02)
+// qui n'est PAS l'ASC → configure()/decode() jetterait « Unsupported configuration » (isConfigSupported,
+// laxiste, laisse pourtant passer). Le bon chemin = ES_Descriptor(3) → DecoderConfigDescriptor(tag 4)
+// → DecoderSpecificInfo(tag 5).data. Vérifié en rendu réel (ASC 24 kHz mono = 130856e500). (Axel 07/09)
+function _mp4boxAudioDescription(mp4file, trackId){
+  try {
+    const trak = mp4file.getTrackById(trackId);
+    const entries = (trak && trak.mdia && trak.mdia.minf && trak.mdia.minf.stbl && trak.mdia.minf.stbl.stsd && trak.mdia.minf.stbl.stsd.entries) || [];
+    for(const entry of entries){
+      const esds = entry.esds || (entry.mp4a && entry.mp4a.esds);
+      const esd = esds && esds.esd;
+      if(!esd || !esd.descs) continue;
+      const dcd = esd.descs.find(d => d && d.tag === 4) || esd.descs[0];           // DecoderConfigDescriptor
+      const dsi = dcd && dcd.descs && (dcd.descs.find(d => d && d.tag === 5) || dcd.descs[0]);  // DecoderSpecificInfo
+      if(dsi && dsi.data && dsi.data.length) return new Uint8Array(dsi.data);      // COPIE (le buffer mp4box peut être réutilisé)
+    }
+  } catch(_){}
+  return null;
+}
+// AudioData (n'importe quel format) → Float32 MONO, en lisant le format NATIF (pas de conversion via
+// copyTo({format}), non garantie sur Safari). Gère planar/interleaved + int/float.
+function _audioDataToMono(ad){
+  const nCh = ad.numberOfChannels, nFr = ad.numberOfFrames;
+  const fmt = ad.format || 'f32-planar';
+  const planar = fmt.endsWith('-planar');
+  const base = fmt.replace('-planar','');
+  const Ctor = base==='f32'?Float32Array : base==='s16'?Int16Array : base==='s32'?Int32Array : Uint8Array;
+  const toF = base==='f32' ? (v)=>v : base==='s16' ? (v)=>v/32768 : base==='s32' ? (v)=>v/2147483648 : (v)=>(v-128)/128;
+  const mono = new Float32Array(nFr);
+  if(planar){
+    for(let ch=0; ch<nCh; ch++){
+      const buf = new ArrayBuffer(ad.allocationSize({ planeIndex: ch }));
+      ad.copyTo(buf, { planeIndex: ch });
+      const view = new Ctor(buf);
+      for(let i=0;i<nFr;i++) mono[i] += toF(view[i]);
+    }
+  } else {                                                            // interleaved : plane 0 = tout
+    const buf = new ArrayBuffer(ad.allocationSize({ planeIndex: 0 }));
+    ad.copyTo(buf, { planeIndex: 0 });
+    const view = new Ctor(buf);
+    for(let i=0;i<nFr;i++){ let s=0; for(let ch=0;ch<nCh;ch++) s+=toF(view[i*nCh+ch]); mono[i]=s; }
+  }
+  if(nCh>1) for(let i=0;i<nFr;i++) mono[i] /= nCh;                    // mixdown stéréo→mono
+  return mono;
+}
+// Rééchantillonnage linéaire → 16 kHz. Ratio EXACT = durée préservée (aucun pitch-shift).
+function _resampleLinearMono(input, srcRate, dstRate){
+  if(srcRate === dstRate) return input;
+  const ratio = srcRate / dstRate;
+  const outLen = Math.max(1, Math.round(input.length / ratio));
+  const out = new Float32Array(outLen);
+  for(let i=0;i<outLen;i++){
+    const pos = i*ratio, i0 = Math.floor(pos), i1 = Math.min(i0+1, input.length-1), f = pos-i0;
+    out[i] = input[i0]*(1-f) + input[i1]*f;
+  }
+  return out;
+}
+// Float32 mono → WAV PCM16 (autonome, pas d'AudioContext).
+function _monoF32ToWavBlob(mono, sampleRate){
+  const dataSize = mono.length * 2, ab = new ArrayBuffer(44 + dataSize), view = new DataView(ab);
+  const w=(o,v)=>view.setUint32(o,v,true), ws=(o,v)=>view.setUint16(o,v,true);
+  [82,73,70,70].forEach((b,i)=>view.setUint8(i,b));                  // "RIFF"
+  w(4, 36+dataSize);
+  [87,65,86,69].forEach((b,i)=>view.setUint8(8+i,b));                // "WAVE"
+  [102,109,116,32].forEach((b,i)=>view.setUint8(12+i,b));            // "fmt "
+  w(16,16); ws(20,1); ws(22,1); w(24,sampleRate); w(28,sampleRate*2); ws(32,2); ws(34,16);
+  [100,97,116,97].forEach((b,i)=>view.setUint8(36+i,b));             // "data"
+  w(40,dataSize);
+  let off=44;
+  for(let i=0;i<mono.length;i++){ let s=Math.max(-1,Math.min(1,mono[i])); view.setInt16(off, s<0?s*32768:s*32767, true); off+=2; }
+  return new Blob([ab], { type:'audio/wav' });
+}
+// Démux + décode → File WAV 16 kHz mono. THROW sur tout échec (l'appelant retombe sur la capture temps réel).
+// THROW {code:'no_audio'} si aucune piste audio. Met à jour window._bypassAudioProgress.
+async function _extractAudioViaDemux(file, baseName){
+  if(typeof AudioDecoder !== 'function' || typeof EncodedAudioChunk !== 'function' || typeof AudioData === 'undefined')
+    throw new Error('WebCodecs AudioDecoder indisponible');          // Safari < 16.4
+  const isMp4 = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
+  if(!isMp4) throw new Error('conteneur non MP4/MOV/M4A');            // WebM/AVI/MKV → repli direct
+  const isIOS = /iP(hone|ad|od)/.test(navigator.platform||'') || (/Mac/.test(navigator.platform||'') && (navigator.maxTouchPoints||0) > 1);
+  if(isIOS && (file.size||0) > 180*1024*1024) throw new Error('trop gros pour un démux iOS');  // ceinture+bretelles mémoire iOS
+
+  const MP4Box = await _loadMp4Box();
+  const TARGET_SR = 16000, CHUNK = 16*1024*1024;
+  const mp4 = MP4Box.createFile();
+  const monoChunks = [];
+  let srcRate = 0, containerDur = 0, expectedSamples = 0, seen = 0, audioTrackId = -1, decoder = null;
+  let done, fail;
+  const finished = new Promise((res, rej) => { done = res; fail = rej; });
+  const cleanup = () => { try{ if(decoder && decoder.state!=='closed') decoder.close(); }catch(_){} try{ mp4.stop && mp4.stop(); }catch(_){} };
+  // Complétion insensible au comptage : on ne draine le décodeur QUE lorsque le fichier entier est nourri
+  // (fed) ET que l'extraction a démarré (started) — start() émet les onSamples de façon synchrone, donc à
+  // ce stade tous les decode() sont en file. Évite un done() prématuré si nb_samples manque.
+  let started = false, fed = false, finishing = false;
+  const maybeFinish = () => {
+    if(finishing || !started || !fed || !decoder) return;
+    finishing = true;
+    decoder.flush().then(done).catch(fail);
+  };
+
+  mp4.onError = (e) => fail(new Error('mp4box: ' + e));
+  mp4.onReady = (info) => {
+    const at = (info.audioTracks && info.audioTracks[0]) || (info.tracks||[]).find(t => t.audio || /mp4a|aac|opus/i.test(t.codec||''));
+    if(!at){ const err = new Error('pas de piste audio'); err.code = 'no_audio'; fail(err); return; }
+    audioTrackId = at.id;
+    expectedSamples = at.nb_samples || 0;
+    containerDur = (at.duration && at.timescale) ? at.duration/at.timescale : (info.duration && info.timescale ? info.duration/info.timescale : 0);
+    const description = _mp4boxAudioDescription(mp4, at.id);
+    const cfg = {
+      codec: at.codec || 'mp4a.40.2',
+      sampleRate: (at.audio && at.audio.sample_rate) || at.audio_sample_rate || 44100,
+      numberOfChannels: (at.audio && at.audio.channel_count) || at.audio_channel_count || 2,
+    };
+    if(description) cfg.description = description;
+    else if(/^mp4a\./i.test(cfg.codec)){ fail(new Error('description AAC (esds) introuvable')); return; }
+    AudioDecoder.isConfigSupported(cfg).then((sup) => {
+      if(!sup || !sup.supported){ fail(new Error('config audio non supportée (' + cfg.codec + ')')); return; }
+      decoder = new AudioDecoder({
+        output: (ad) => { try{ if(!srcRate) srcRate = ad.sampleRate; monoChunks.push(_audioDataToMono(ad)); } catch(err){ fail(err); } finally { ad.close(); } },  // close() par frame = pas de fuite
+        error: (e) => fail(new Error('AudioDecoder: ' + (e && e.message || e))),
+      });
+      decoder.configure(cfg);
+      mp4.setExtractionOptions(at.id, null, { nbSamples: 1000 });
+      mp4.start();
+      started = true; maybeFinish();
+    }).catch(fail);
+  };
+  mp4.onSamples = (id, user, samples) => {
+    if(id !== audioTrackId || !decoder) return;
+    for(const s of samples){
+      decoder.decode(new EncodedAudioChunk({
+        type: s.is_sync ? 'key' : 'delta',                           // AAC : chaque frame = key
+        timestamp: Math.round(s.cts / s.timescale * 1e6),            // µs, CTS (composition) pas DTS
+        duration:  Math.round(s.duration / s.timescale * 1e6),
+        data: s.data,
+      }));
+      seen++;
+    }
+    try{ mp4.releaseUsedSamples(id, samples[samples.length-1].number); }catch(_){}   // borne la RAM sur 225 Mo
+    if(expectedSamples){ try{ window._bypassAudioProgress = Math.min(99, Math.round(seen/expectedSamples*100)); }catch(_){} }   // affichage seulement
+  };
+
+  (async () => {                                                     // feed mp4box par TRANCHES (mémoire bornée)
+    try {
+      for(let off=0; off<file.size; off+=CHUNK){
+        const buf = await file.slice(off, Math.min(off+CHUNK, file.size)).arrayBuffer();
+        buf.fileStart = off;                                         // REQUIS par mp4box (sinon parse à l'offset 0 → flux corrompu)
+        mp4.appendBuffer(buf);
+      }
+      mp4.flush();
+      fed = true; maybeFinish();                                     // fichier entièrement nourri → draine si start() a eu lieu
+    } catch(e){ fail(e); }
+  })();
+
+  // Garde-fou anti-blocage : budget large (le goulot = lecture des tranches, pas le décodage).
+  let _to; const _timeout = new Promise((_, rej) => { _to = setTimeout(() => rej(new Error('démux timeout')), 25000); });
+  try { await Promise.race([finished, _timeout]); }
+  catch(e){ cleanup(); clearTimeout(_to); throw e; }
+  clearTimeout(_to);
+  cleanup();
+
+  let total = 0; for(const c of monoChunks) total += c.length;
+  if(!total){ const e = new Error('0 échantillon décodé'); e.code = 'no_audio'; throw e; }
+  const full = new Float32Array(total);
+  { let p = 0; for(const c of monoChunks){ full.set(c, p); p += c.length; } }
+  monoChunks.length = 0;
+
+  const out16 = _resampleLinearMono(full, srcRate || 44100, TARGET_SR);
+  // CONTRÔLE DE COHÉRENCE (repli si douteux) : durée ≈ conteneur ET non-silencieux.
+  const decodedDur = (srcRate ? full.length/srcRate : 0);
+  if(containerDur && Math.abs(decodedDur - containerDur) > Math.max(1.0, containerDur*0.08))
+    throw new Error('durée décodée incohérente (' + decodedDur.toFixed(1) + 's vs ' + containerDur.toFixed(1) + 's)');
+  let peak = 0, sq = 0, step = Math.max(1,(out16.length/200000)|0), n = 0;
+  for(let i=0;i<out16.length;i+=step){ const a = Math.abs(out16[i]); if(a>peak) peak = a; sq += out16[i]*out16[i]; n++; }
+  const rms = Math.sqrt(sq/Math.max(1,n));
+  if(peak < 5e-3 || rms < 1e-3){ const e = new Error('audio décodé silencieux'); e.code = 'no_audio'; throw e; }
+
+  const wav = _monoF32ToWavBlob(out16, TARGET_SR);
+  if(!wav || wav.size < 1024){ const e = new Error('wav vide'); e.code = 'incoherent'; throw e; }
+  try{ window._bypassAudioProgress = 100; }catch(_){}
+  return new File([wav], (baseName||'audio') + '_audio.wav', { type: 'audio/wav' });
+}
 // Vidéo sans piste audio → throw avec e.code='no_audio' (message clair amont).
 async function _extractAudioForWhisper(file){
   const baseName = (file.name || 'audio').replace(/\.[^.]+$/, '');
   const isVideoFile = /^video\//i.test(file.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(file.name || '');
   const sizeMB = (file.size || 0) / 1024 / 1024;
+  // ⚡ CHEMIN RAPIDE : démux WebCodecs (mp4box + AudioDecoder) — quelques secondes au lieu du temps réel.
+  // Repli sur TOUTE la chaîne existante en cas d'échec (y compris "no_audio" du démux, qui n'est PAS
+  // autoritaire : c'est _extractAudioViaElement en fin de chaîne qui tranche l'absence réelle de piste).
+  if(isVideoFile){
+    try { return await _extractAudioViaDemux(file, baseName); }
+    catch(e){ console.warn('_extractAudioViaDemux → repli :', (e && e.code) || '', e && e.message); }
+  }
   // GROS fichiers (4K…) : ffmpeg.wasm et decodeAudioData chargent TOUT en mémoire → plantent (Safari).
   // On capte alors l'audio en temps réel depuis la vidéo streamée (voir _extractAudioViaElement).
   if(isVideoFile && sizeMB > 100){
