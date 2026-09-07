@@ -20732,6 +20732,33 @@ function handleGameplayFile(file){
 // ── PLATFORM PREVIEW ──
 let currentPlatform = 'tiktok';
 
+// ── Barre de nav du bas SORTIE du téléphone (Axel 07/09 : « mets l'interface Accueil/Amis/… dans la
+// zone sous le téléphone ») → la vidéo reste 100 % propre, la nav vit dans une pilule sous le mockup.
+// Relocalisation PARESSEUSE par plateforme (au 1er affichage de sa plateforme), puis on ne montre que
+// la pilule de la plateforme active. #previewPhoneRow passe en colonne pour empiler phone + nav.
+function _genNavBelow(p){
+  const wr = document.getElementById('phoneWrapper'), row = document.getElementById('previewPhoneRow');
+  if(!wr || !row) return;
+  let host = document.getElementById('phoneNavHost');
+  if(!host){
+    row.style.flexDirection = 'column';
+    host = document.createElement('div'); host.id = 'phoneNavHost'; host.style.cssText = 'width:320px;margin-top:9px';
+    wr.insertAdjacentElement('afterend', host);
+  }
+  const ui = document.getElementById('ui-'+p);
+  if(ui && !ui._navMoved){
+    const nav = [...ui.children].find(d => { const s = d.getAttribute('style') || ''; return /bottom:\s*0/.test(s) && /space-around/.test(s); });
+    if(nav){
+      ui._navMoved = true;
+      nav.style.position = 'static'; nav.style.height = '46px'; nav.style.background = 'transparent'; nav.style.borderTop = 'none';
+      const pill = document.createElement('div'); pill.id = 'pnav-'+p;
+      pill.style.cssText = 'width:320px;border-radius:16px;background:#111015;border:1px solid #201d26;overflow:hidden';
+      pill.appendChild(nav); host.appendChild(pill);
+    }
+  }
+  [...host.children].forEach(c => { c.style.display = (c.id === 'pnav-'+p) ? 'block' : 'none'; });
+  host.style.display = document.getElementById('pnav-'+p) ? 'block' : 'none';
+}
 function setPlatformPreview(p){
   currentPlatform = p;
   ['tiktok','reels','fbshort','youtube','instagram','meta'].forEach(id => {
@@ -20740,6 +20767,7 @@ function setPlatformPreview(p){
     if(btn){ btn.style.background = id===p ? 'var(--orange)' : 'transparent'; btn.style.color = id===p ? '#fff' : 'var(--text3)'; btn.style.fontWeight = id===p ? '700' : '600'; }
     if(ui)  ui.style.display = id===p ? 'block' : 'none';
   });
+  try{ _genNavBelow(p); }catch(_){}
 }
 
 let currentFormatGroup = 'short';
