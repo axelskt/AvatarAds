@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1815'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1830'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28450,7 +28450,7 @@ function _expRenderModels(){
 }
 function _expPickModel(v){
   if(!_expModelAllowed(v)){ toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
-  window._expVeoModel=v; if(v==='omni') window._expOmniDurLocked=false; initExpress();   // Omni fraîchement choisi → l'auto-suit de durée reprend
+  window._expVeoModel=v; initExpress();
 }
 
 function initExpress(){
@@ -28477,23 +28477,19 @@ function initExpress(){
   // Durée (slider) — 4/6/8 s pour tous ; Élite : jusqu'à 29 s via extensions de scène (8+7+7+7)
   const ds = document.getElementById('expDurSlider');
   if(ds){
-    // Omni Flash : PAS de « Libre ». La durée SUIT AUTOMATIQUEMENT le script (3-10 s) tant que l'user n'a pas
-    // pris la main au slider (_expOmniDurLocked). L'API fal n'a pas de mode auto → c'est l'app qui décide. (Axel 08/09)
+    // Libre (position 0, DÉFAUT) : Omni prend sa durée MAX (10 s) et coupe si le script est plus long ; le débit
+    // est ensuite AJUSTÉ à la durée RÉELLE produite (mesure + remboursement des secondes en moins). Veo Libre cale
+    // la durée sur le script. L'user peut aussi choisir une durée fixe au slider (1..N). (Axel 08/09 — plan original)
     const _isOmniDur = (window._expVeoModel==='omni');
-    if(_isOmniDur) window._expDurAuto=false;
-    if(window._expDurAuto) window._expDur=_expEstimateDur().dur; // Auto (Veo) : recale sur le texte
     const _da=_expDurAllowed();
-    if(_isOmniDur && (!window._expOmniDurLocked || !_da.includes(parseInt(window._expDur)))) window._expDur = _expEstimateDur().dur;
-    // Position 0 = « Libre » (Veo uniquement) ; 1..N = durées. Omni : min=1 → aucune position Libre.
-    ds.min = _isOmniDur ? 1 : 0; ds.max=_da.length; ds.step=1;
+    if(window._expDurAuto) window._expDur = _isOmniDur ? _da[_da.length-1] : _expEstimateDur().dur;
+    ds.min=0; ds.max=_da.length; ds.step=1;   // position 0 = Libre (Omni ET Veo)
     ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||_da[0])+1);
-    // Axel 31/08 : en mode Auto (Veo), l'outil cale la durée sur le script → on affiche « Libre ».
     const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Libre' : ((window._expDur||_da[0])+' s');
-    const _mn=document.getElementById('expDurMinLbl'); if(_mn) _mn.textContent = _isOmniDur ? (_da[0]+' s') : 'Libre';   // Omni : borne gauche = 3 s, pas « Libre »
+    const _mn=document.getElementById('expDurMinLbl'); if(_mn) _mn.textContent = 'Libre';
     const _mx=document.getElementById('expDurMaxLbl'); if(_mx) _mx.textContent = _da[_da.length-1]+' s';   // 10 s (Omni) ou 29 s (Veo)
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=(_isOmniDur||['elite','developer'].includes((currentMember?.plan||'free').toLowerCase()))?'none':'block';
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
-    // Pas de texte d'indice pour Omni (Axel : « pas beau ») — la durée s'ajuste TOUTE SEULE au script. Veo Libre garde son indice discret.
     const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(!_isOmniDur && window._expDurAuto && _expEstimateDur().over)?'block':'none';
     _aaSliderFill(ds);
   }
@@ -28596,18 +28592,13 @@ function _expEstimateDur(){
   const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
   return { dur, over: secs>ladder[ladder.length-1] };
 }
-function _expApplyAutoDur(){
-  // Omni : la durée S'AUTO-SUIT sur le script (recalculée dans initExpress) tant que l'user n'a pas pris la main au slider.
-  if(window._expVeoModel==='omni'){ initExpress(); return; }
-  if(!window._expDurAuto) return; window._expDur=_expEstimateDur().dur; initExpress();
-}
+function _expApplyAutoDur(){ if(!window._expDurAuto) return; initExpress(); }   // Libre : Omni=10 s max · Veo=estimation (durée posée dans initExpress)
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
 // Slider durée : position 0 = AUTO (le système / Veo cale la durée sur le texte parlé, défaut) ;
 // 1..N = durées Veo manuelles (4/6/8/15/22/29). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
 function _expDurSlide(v){
   const a=_expDurAllowed();
-  if(window._expVeoModel==='omni'){ window._expOmniDurLocked=true; _expSetDur(a[Math.min(Math.max(1,v), a.length)-1]); return; }   // Omni : l'user prend la main → stoppe l'auto-suit
-  if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }
+  if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }   // position 0 = Libre (Omni : 10 s max + remboursement · Veo : script)
   else { _expSetDur(a[Math.min(v, a.length)-1]); }   // _expSetDur passe _expDurAuto à false
 }
 function _expSetDur(v){
@@ -30439,7 +30430,9 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     image_url: sI.data.signedUrl,
     // Verrou anti-texte (Axel 08/09) : Omni incrustait des mots à l'écran (ex : « SITE » lu dans la réplique).
     // On lui interdit explicitement tout texte visuel — la réplique reste PARLÉE, jamais écrite.
-    prompt: prompt + " Absolutely no on-screen text, no captions, no subtitles, no letters, no words, no logos and no watermark anywhere in the video — the spoken line stays spoken only, never written. Visuals only.",
+    // Anti-texte RENFORCÉ (Axel 08/09) : le modèle incrustait « SITE » (mot du script) sur les vêtements/le décor.
+    // Consigne forte EN TÊTE (les modèles pondèrent le début) + rappel en fin. Reste imparfait (limite modèle).
+    prompt: "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)",
     aspect_ratio: (window._expFormat==='16:9'?'16:9':'9:16'),
     duration: Math.max(3, Math.min(10, Math.round(durSec)||6)),
     resolution: (res==='1080p'?'1080p':'720p'),
