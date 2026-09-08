@@ -3904,7 +3904,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div id="mExpVoiceInline"></div>
           </div>
         </div>
-        <textarea id="mExpPrompt" oninput="var t=document.getElementById('expPrompt'); if(t) t.value=this.value" placeholder="Décris ta vidéo et ce que le perso dit à voix haute…" style="width:100%;min-height:130px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;outline:none;margin-bottom:10px" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+        <textarea id="mExpPrompt" oninput="var t=document.getElementById('expPrompt'); if(t) t.value=this.value; if(typeof _expApplyAutoDur==='function') _expApplyAutoDur();" placeholder="Décris ta vidéo et ce que le perso dit à voix haute…" style="width:100%;min-height:130px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;color:var(--text);font-family:var(--font);font-size:15px;line-height:1.55;outline:none;margin-bottom:10px" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
         <button onclick="expressCreate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:14px;color:#1A0A02;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Générer
         </button>
@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1420'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1700'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28567,7 +28567,10 @@ function _expDurAllowed(){
 window._expDurAuto = (window._expDurAuto !== false);
 function _expEstimateDur(){
   const p=(document.getElementById('expPrompt')?.value||'');
-  const m=p.match(/[«"“”]([^«»"“”]{3,})[»"“”]/);
+  // GREEDY (Axel 08/09) : capture la réplique ENTIÈRE entre le 1er guillemet ouvrant et le DERNIER fermant,
+  // même avec des guillemets imbriqués — ex : `"… commente «SITE» et je te l'envoie"`. L'ancien `[^«»"“”]{3,}`
+  // cassait sur le « interne et ne lisait que le marqueur court « SITE » → durée estimée à 4 s au lieu de ~13 s.
+  const m=p.match(/[«"“”]([\s\S]{3,})[»"“”]/);
   const spoken=(m?m[1]:p).replace(/\s+/g,' ').trim();
   const secs=Math.max(4, Math.ceil(spoken.length/14));   // ~14 caractères / seconde parlée
   // AUTO = la durée qu'il FAUT selon le texte, calée sur le cran autorisé juste au-dessus.
@@ -30372,6 +30375,21 @@ async function _expCreateSeedance(prompt){
 }
 // ⚡ Omni Flash pour Express : fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
 // Renvoie le blob vidéo. Même chaîne que le module Omni (upload image → submit → poll status/result).
+// Mesure la durée réelle d'un blob vidéo (pour débiter Omni au réel, jamais plus que produit).
+function _expMeasureDur(blob){
+  return new Promise((resolve)=>{
+    let done=false; const fin=(d)=>{ if(done) return; done=true; try{ URL.revokeObjectURL(url); }catch(_){}; resolve(d); };
+    let url;
+    try{
+      const v=document.createElement('video'); v.preload='metadata'; v.muted=true;
+      url=URL.createObjectURL(blob);
+      v.onloadedmetadata=()=>{ const d=v.duration; fin(isFinite(d)&&d>0?d:0); };
+      v.onerror=()=>fin(0);
+      v.src=url;
+      setTimeout(()=>fin(0), 6000);   // garde-fou : jamais bloquer la génération
+    }catch(_){ fin(0); }
+  });
+}
 async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep){
   const step=(v,t)=>{ try{ onStep && onStep(v,t); }catch(_){} };
   const { data:{ user } } = await sb.auth.getUser();
@@ -30397,7 +30415,9 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   step(42,'Omni Flash — génération…');
   const sub=await fPost(model, {
     image_url: sI.data.signedUrl,
-    prompt: prompt,
+    // Verrou anti-texte (Axel 08/09) : Omni incrustait des mots à l'écran (ex : « SITE » lu dans la réplique).
+    // On lui interdit explicitement tout texte visuel — la réplique reste PARLÉE, jamais écrite.
+    prompt: prompt + " Absolutely no on-screen text, no captions, no subtitles, no letters, no words, no logos and no watermark anywhere in the video — the spoken line stays spoken only, never written. Visuals only.",
     aspect_ratio: (window._expFormat==='16:9'?'16:9':'9:16'),
     duration: Math.max(3, Math.min(10, Math.round(durSec)||6)),
     resolution: (res==='1080p'?'1080p':'720p'),
@@ -30547,6 +30567,20 @@ async function expressCreate(){
       // ⚡ Omni Flash = fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
       setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni Flash — génération…');
       blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t));
+      // ── DÉBIT À LA DURÉE RÉELLE (Axel 08/09) ──────────────────────────────────────────────
+      // On a RÉSERVÉ _dur×tarif AVANT l'appel (règle sécurité : débiter avant le fournisseur).
+      // Omni peut sortir plus COURT que demandé (surtout en Libre). On mesure la vidéo produite
+      // et on rembourse le trop-perçu : refund de l'op réservée + re-débit du réel. Jamais de
+      // sur-débit rétroactif (on ne facture jamais plus que ce qui a été réservé/produit).
+      try{
+        const _realSec = await _expMeasureDur(blob);
+        const _billSec = Math.max(3, Math.min(_dur, Math.round(_realSec||0)));
+        if(_realSec>0 && _billSec < _dur && typeof _creditOps!=='undefined' && _creditOps.length){
+          const _newCost = Math.round(_billSec * _expRate * _expMult);
+          await creditsFlowRefund('Omni : durée réelle '+_billSec+' s (< '+_dur+' s réservé)');
+          if(_newCost>0) await spendCreditsFor(_newCost, 'express-omni');   // re-débit du réel (solde toujours suffisant : on vient de rembourser plus)
+        }
+      }catch(_durErr){ console.warn('[omni] ajustement durée réelle:', _durErr); }
     } else {
     // Veo 3.1 (API Gemini) = audio NATIF, sans paramètre : envoyer `generateAudio` déclenche un 400 « …audio… »
     // puis le repli (relance muette + voix TTS Gemini à muxer) → 2 appels, une voix TTS PAR-DESSUS la voix native
