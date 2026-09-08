@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1745'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1800'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28495,7 +28495,7 @@ function initExpress(){
     const _mx=document.getElementById('expDurMaxLbl'); if(_mx) _mx.textContent = _da[_da.length-1]+' s';   // 10 s (Omni) ou 29 s (Veo)
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=(_isOmniDur||['elite','developer'].includes((currentMember?.plan||'free').toLowerCase()))?'none':'block';
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
-    const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(window._expDurAuto && _expEstimateDur().over)?'block':'none';
+    _expUpdateDurHint();
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
@@ -28597,7 +28597,28 @@ function _expEstimateDur(){
   const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
   return { dur, over: secs>ladder[ladder.length-1] };
 }
-function _expApplyAutoDur(){ if(!window._expDurAuto) return; window._expDur=_expEstimateDur().dur; initExpress(); }
+// Indice « durée pour ton texte » : Omni n'a pas de Libre → l'user doit choisir, donc on lui MONTRE la durée
+// qu'il faut pour sa réplique et on l'avertit si son texte dépasse 10 s (il serait coupé). (Axel 08/09)
+function _expUpdateDurHint(){
+  const _ah=document.getElementById('expDurAutoHint'); if(!_ah) return;
+  const _isOmni=(window._expVeoModel==='omni');
+  const _txt=((document.getElementById('expPrompt')||{}).value||'').trim();
+  if(_isOmni){
+    if(_txt.length<12){ _ah.style.display='none'; return; }   // pas assez de texte pour estimer
+    const _e=_expEstimateDur();               // { dur, over } sur l'échelle Omni [3..10]
+    const _chosen=parseInt(window._expDur)||_e.dur;
+    if(_e.over){ _ah.style.display='block'; _ah.style.color='var(--orange2)'; _ah.textContent='⚠ Ton texte dépasse 10 s (le max d\'Omni Flash) — la fin sera coupée. Raccourcis-le, ou utilise Veo Standard.'; }
+    else if(_chosen<_e.dur){ _ah.style.display='block'; _ah.style.color='var(--orange2)'; _ah.textContent='⚠ Ton texte tient en ≈ '+_e.dur+' s — à '+_chosen+' s la fin sera coupée. Monte la durée à '+_e.dur+' s.'; }
+    else { _ah.style.display='block'; _ah.style.color='var(--text-3)'; _ah.textContent='✓ '+_chosen+' s suffit pour ton texte (≈ '+_e.dur+' s parlées).'; }
+  } else {
+    if(window._expDurAuto && _expEstimateDur().over){ _ah.style.display='block'; _ah.style.color='var(--orange2)'; _ah.textContent='Ton texte est long — au-delà du maximum, utilise le Montage IA pour une vidéo plus longue.'; }
+    else { _ah.style.display='none'; }
+  }
+}
+function _expApplyAutoDur(){
+  if(window._expVeoModel==='omni'){ _expUpdateDurHint(); return; }   // Omni : pas de Libre, mais on rafraîchit l'indice « durée pour ton texte »
+  if(!window._expDurAuto) return; window._expDur=_expEstimateDur().dur; initExpress();
+}
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
 // Slider durée : position 0 = AUTO (le système / Veo cale la durée sur le texte parlé, défaut) ;
 // 1..N = durées Veo manuelles (4/6/8/15/22/29). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
@@ -30140,6 +30161,8 @@ async function _expComposeRefs(token, prompt, gptSize){
 // dérivent le visage pendant le mouvement (surtout sur un changement de scène / match cut) —
 // retour Axel 17/08 « ça déforme la fille ». Réduit la dérive (ne l'annule pas sur un match cut).
 const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTIRE video — same face, hairstyle, skin tone, eye color and facial features, photographically identical to the first frame; the identity must never morph, swap, distort, age, beautify or change, and the hands must stay natural; same person from the first frame to the last.';
+// Anti-lévitation (Axel 08/09) : un produit tenu en main le RESTE toute la vidéo (jamais lâché, jamais flottant).
+const _EXP_HOLDLOCK = '. If the person is holding a product or object, they keep it FIRMLY gripped in the hand for the ENTIRE video and keep showing it to the camera while speaking: the hand never releases it, the object never leaves the hand, never floats, hovers, levitates, is dropped, set down or disappears — it stays physically held with believable weight and constant hand contact from the first frame to the last.';
 // Verrou TEXTURE (Axel 07/09 : « Express lisse trop la peau, il faut garder l'image de référence en 1:1 »).
 // Les modèles i2v re-rendent le visage et LISSENT. On exige la fidélité pixel + on INTERDIT explicitement
 // tout embellissement (leçon Images IA : le détail dit ce qu'on veut, l'interdit dit comment ne pas lisser).
@@ -30577,7 +30600,7 @@ async function expressCreate(){
       + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
-      + _EXP_IDLOCK;
+      + _EXP_IDLOCK + _EXP_HOLDLOCK;
     // (durée _dur, base débitée, extensions _extCount, résolution _res, tarifs _expRate/_expMult calculés en amont)
     let blob;
     if(_isOmni){
