@@ -3741,7 +3741,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <input id="expDurSlider" class="exp-slider" type="range" min="0" max="6" step="1" value="0" oninput="_expDurSlide(+this.value)" style="width:100%">
           <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px"></div>
           <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> +8 s (extensions de scène) réservé au plan Élite</div>
-          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px">Libre</span><span class="faint mono" style="font-size:9px" id="expDurMaxLbl">29 s</span></div>
+          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px" id="expDurMinLbl">Libre</span><span class="faint mono" style="font-size:9px" id="expDurMaxLbl">29 s</span></div>
         </div>
 
         <!-- ③b QUALITÉ — Veo ; masqué en mode Seedance (1080p natif) -->
@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1700'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1720'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28468,16 +28468,23 @@ function initExpress(){
   // Durée (slider) — 4/6/8 s pour tous ; Élite : jusqu'à 29 s via extensions de scène (8+7+7+7)
   const ds = document.getElementById('expDurSlider');
   if(ds){
-    if(window._expDurAuto) window._expDur=_expEstimateDur().dur; // Auto : recale sur le texte
+    // Omni Flash : PAS de « Libre » (l'API fal n'a pas de mode auto → durée figée) → l'user CHOISIT sa durée (Axel 08/09).
+    const _isOmniDur = (window._expVeoModel==='omni');
+    const _wasLibre = !!window._expDurAuto;
+    if(_isOmniDur) window._expDurAuto=false;
+    if(window._expDurAuto) window._expDur=_expEstimateDur().dur; // Auto (Veo) : recale sur le texte
     const _da=_expDurAllowed();
-    // Position 0 = AUTO (défaut) ; 1..N = durées Veo (4/6/8/15/22/29). Slider TOUJOURS utilisable.
-    ds.min=0; ds.max=_da.length; ds.step=1;
-    ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||4)+1);
-    // Axel 31/08 : en mode Auto, l'outil détermine la durée d'après le script → on affiche juste « Auto »
-    // (pas de « · 4 s » figé qui laisse croire à une durée fixe).
-    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Libre' : ((window._expDur||4)+' s');
+    // Omni : au passage depuis Libre (ou durée hors échelle), on PROPOSE l'estimation du script comme point
+    // de départ (toujours dans 3-10 pour Omni) ; l'user ajuste ensuite librement avec le slider.
+    if(_isOmniDur && (_wasLibre || !_da.includes(parseInt(window._expDur)))) window._expDur = _expEstimateDur().dur;
+    // Position 0 = « Libre » (Veo uniquement) ; 1..N = durées. Omni : min=1 → aucune position Libre.
+    ds.min = _isOmniDur ? 1 : 0; ds.max=_da.length; ds.step=1;
+    ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||_da[0])+1);
+    // Axel 31/08 : en mode Auto (Veo), l'outil cale la durée sur le script → on affiche « Libre ».
+    const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Libre' : ((window._expDur||_da[0])+' s');
+    const _mn=document.getElementById('expDurMinLbl'); if(_mn) _mn.textContent = _isOmniDur ? (_da[0]+' s') : 'Libre';   // Omni : borne gauche = 3 s, pas « Libre »
     const _mx=document.getElementById('expDurMaxLbl'); if(_mx) _mx.textContent = _da[_da.length-1]+' s';   // 10 s (Omni) ou 29 s (Veo)
-    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=(window._expVeoModel==='omni'||['elite','developer'].includes((currentMember?.plan||'free').toLowerCase()))?'none':'block';
+    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=(_isOmniDur||['elite','developer'].includes((currentMember?.plan||'free').toLowerCase()))?'none':'block';
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(window._expDurAuto && _expEstimateDur().over)?'block':'none';
     _aaSliderFill(ds);
@@ -28587,6 +28594,7 @@ function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window.
 // 1..N = durées Veo manuelles (4/6/8/15/22/29). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
 function _expDurSlide(v){
   const a=_expDurAllowed();
+  if(window._expVeoModel==='omni'){ _expSetDur(a[Math.min(Math.max(1,v), a.length)-1]); return; }   // Omni : pas de Libre → toujours une durée concrète
   if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }
   else { _expSetDur(a[Math.min(v, a.length)-1]); }   // _expSetDur passe _expDurAuto à false
 }
@@ -30479,7 +30487,7 @@ async function expressCreate(){
   let _dur = _reqDur, _extCount=0;
   let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
   if(_isOmni){
-    _dur = Math.min(10, Math.max(3, _reqDur));   // Omni Flash : 3-10 s à la seconde, pas d'extensions
+    _dur = Math.min(10, Math.max(3, _reqDur));   // Omni Flash : 3-10 s à la seconde, pas d'extensions (pas de Libre → durée choisie par l'user)
   } else {
     if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
     else { _dur = _dur<=4?4:(_dur<=6?6:8); }
