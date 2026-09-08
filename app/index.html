@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1830'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1845'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -30451,7 +30451,18 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
       const stR=await fGet(stP); if(!stR.ok) continue;
       const st=await stR.json().catch(()=>({}));
       const S=String(st.status||'').toUpperCase();
-      if(S==='COMPLETED'){ const rr=await (await fGet(reP)).json().catch(()=>({})); outUrl=pick(rr); if(!outUrl) throw new Error('Omni Flash : pas de vidéo dans le résultat'); break; }
+      if(S==='COMPLETED'){
+        // Vidéo PRÊTE — mais l'endpoint résultat de fal peut renvoyer une 504 transitoire (Axel 08/09) : on RÉESSAIE
+        // au lieu d'abandonner (la vidéo existe, il faut juste réussir à la récupérer). Jusqu'à ~15 s de retry.
+        for(let r=0;r<6;r++){
+          const rrR=await fGet(reP);
+          if(rrR.ok){ const rr=await rrR.json().catch(()=>({})); outUrl=pick(rr); if(outUrl) break; }
+          step(Math.min(89,86+r),'↓ Récupération de la vidéo…');
+          await new Promise(res=>setTimeout(res,2500));
+        }
+        if(!outUrl) throw new Error('Omni Flash : vidéo prête mais récupération impossible — réessaie dans un instant');
+        break;
+      }
       if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):''));
       step(Math.min(88,42+i*2),'Omni Flash — génération… ('+Math.min(88,42+i*2)+' %)');
     }
