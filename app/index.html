@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1845'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1900'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -30135,7 +30135,9 @@ async function _expComposeRefs(token, prompt, gptSize){
 // retour Axel 17/08 « ça déforme la fille ». Réduit la dérive (ne l'annule pas sur un match cut).
 const _EXP_IDLOCK = '. IMPORTANT: keep the EXACT same person throughout the ENTIRE video — same face, hairstyle, skin tone, eye color and facial features, photographically identical to the first frame; the identity must never morph, swap, distort, age, beautify or change, and the hands must stay natural; same person from the first frame to the last.';
 // Anti-lévitation (Axel 08/09) : un produit tenu en main le RESTE toute la vidéo (jamais lâché, jamais flottant).
-const _EXP_HOLDLOCK = '. If the person is holding a product or object, they keep it FIRMLY gripped in the hand for the ENTIRE video and keep showing it to the camera while speaking: the hand never releases it, the object never leaves the hand, never floats, hovers, levitates, is dropped, set down or disappears — it stays physically held with believable weight and constant hand contact from the first frame to the last.';
+const _EXP_HOLDLOCK = '. If the person is holding a product or object, they keep it FIRMLY gripped in the hand for the ENTIRE video and ACTIVELY PRESENT it to the camera while speaking — raising it toward the lens, angling and turning it to show it off, gesturing with it and drawing attention to it, keeping it clearly visible and engaging with it dynamically: the hand never releases it, the object never leaves the hand, never floats, hovers, levitates, is dropped, set down or disappears — it stays physically held with believable weight and constant hand contact from the first frame to the last.';
+// Débit vocal rapide + dynamique (Axel 08/09) : les hooks UGC qui marchent sont PUNCHY, pas mous/lents.
+const _EXP_ENERGYLOCK = '. DELIVERY: the person speaks FAST, punchy and high-energy — a quick, lively, dynamic, upbeat tempo like a confident social-media hook; no slow, flat, dragging or monotone speech and NO dead pauses or silent gaps; expressive, animated hands and face, engaged and enthusiastic from start to finish, keeping the pace tight the whole time.';
 // Verrou TEXTURE (Axel 07/09 : « Express lisse trop la peau, il faut garder l'image de référence en 1:1 »).
 // Les modèles i2v re-rendent le visage et LISSENT. On exige la fidélité pixel + on INTERDIT explicitement
 // tout embellissement (leçon Images IA : le détail dit ce qu'on veut, l'interdit dit comment ne pas lisser).
@@ -30586,7 +30588,7 @@ async function expressCreate(){
       + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
-      + _EXP_IDLOCK + _EXP_HOLDLOCK;
+      + _EXP_IDLOCK + _EXP_HOLDLOCK + _EXP_ENERGYLOCK;
     // (durée _dur, base débitée, extensions _extCount, résolution _res, tarifs _expRate/_expMult calculés en amont)
     let blob;
     if(_isOmni){
