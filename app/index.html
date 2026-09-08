@@ -3590,7 +3590,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         #v-omni .ov-drop{border:1.5px dashed var(--border-2);background:var(--panel-1);transition:.18s;cursor:pointer}
         #v-omni .ov-drop:hover{border-color:var(--accent);background:var(--accent-soft)}
         @media(max-width:760px){
-          #v-omni .ov-wrap{padding:20px 16px 96px}
+          #v-omni .ov-wrap{padding:20px 16px 24px}
           #v-omni .ov-grid{grid-template-columns:1fr;gap:16px}
           #v-omni .ov-title{font-size:28px}
         }
@@ -6059,7 +6059,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-0930'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1130'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12094,6 +12094,7 @@ function nav(id,el){
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('on'));
   const vEl = document.getElementById('v-'+id);
   vEl.classList.add('on');
+  try{ const _m=document.querySelector('.main'); if(_m) _m.scrollTop=0; }catch(_){}   // scroll INTERNE (mobile) : remis en haut à chaque navigation (window.scrollTo ne scrolle plus le body)
   if(id==='express' || id==='cartoon') vEl.style.flexDirection='row';
   if(id==='studio') vEl.style.flexDirection='column';
   if(el) el.classList.add('on');
@@ -12480,7 +12481,7 @@ function updateSteps(){
 // Scroll en haut du contenu d'étape : le bouton « Continuer » est en bas → sans ça on arrive sous les onglets
 // « Avatar plein écran / Split screen ». (Axel 08/09)
 function _genScrollTop(){
-  try{ window.scrollTo(0,0); }catch(_){}
+  try{ window.scrollTo(0,0); const _m=document.querySelector('.main'); if(_m) _m.scrollTop=0; }catch(_){}
   try{ let el=document.getElementById('fs-'+step); while(el && el!==document.body){ const oy=getComputedStyle(el).overflowY; if(oy==='auto'||oy==='scroll') el.scrollTop=0; el=el.parentElement; } }catch(_){}
   try{ const t=document.getElementById('genStepTitle'); if(t) t.scrollIntoView({block:'start'}); }catch(_){}
 }
@@ -39299,11 +39300,14 @@ function edBandDrag(ov,track,e,mode){
 #mNav,#mMore{display:none}
 @media(max-width:768px){
   .sidebar{display:none !important}
-  /* Scroll naturel de la page (iOS) — supprime la bande noire et le blocage */
-  html,body{overflow:auto;height:auto !important}
+  /* Scroll INTERNE (iOS · 08/09) : le BODY ne scrolle plus → le toolbar Safari reste stable.
+     Conséquence : plus de « zone de révélation » du toolbar en bas (les raccourcis répondent au 1er tap),
+     et plus de recalcul des unités dvh pendant l'animation du toolbar (fin du tremblement au scroll).
+     C'est .main (entre le topbar fixe et la barre du bas) qui devient le conteneur scrollable. */
+  html,body{overflow:hidden;height:100%;overscroll-behavior:none}
   body{padding-top:54px}
-  .layout{display:block !important;height:auto !important;min-height:calc(100dvh - 54px);overflow:visible !important;background:var(--bg2)}
-  .main{overflow:visible !important;height:auto !important;display:block !important}
+  .layout{display:block !important;height:auto !important;overflow:visible !important;background:var(--bg2)}
+  .main{position:fixed !important;top:54px;left:0;right:0;bottom:0;display:block !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--bg2);padding-bottom:calc(85px + env(safe-area-inset-bottom))}
   .view{overflow:visible !important;height:auto !important}
   /* plus aucun scroller imbriqué dans les vues : la page défile, c'est tout */
   .view .scroll-y{overflow:visible !important;max-height:none !important}
@@ -39333,13 +39337,15 @@ function edBandDrag(ov,track,e,mode){
   #memberQuotaBox .mono{font-size:10.5px !important;white-space:nowrap;letter-spacing:-.02em}
   #memberQuotaBox svg{width:12px;height:12px}
   #btnSeePlans,#btnUpgradePlan{padding:6px 10px !important;font-size:10.5px !important;white-space:nowrap}
-  .layout{padding-bottom:calc(85px + env(safe-area-inset-bottom))} /* barre 54px + 24px du bas (hors zone de révélation du toolbar Safari) + 7px de marge */
+  /* dégagement de la barre du bas : padding-bottom porté par .main (le conteneur scrollable) */
   /* les boutons Générer sont dockés en bas : les vues remplissent l'écran et le bouton descend */
   .view.on{min-height:calc(100dvh - 139px - env(safe-area-inset-bottom))}
   .gen-left{display:flex !important;flex-direction:column;min-height:calc(100dvh - 139px - env(safe-area-inset-bottom))}
   .gen-footer{margin-top:auto}
   #v-imagegen>.row{min-height:calc(100dvh - 139px - env(safe-area-inset-bottom))}
   #v-imagegen>.row>*:last-child{display:flex;flex-direction:column;flex:1 0 auto !important}
+  /* Omni : bouton NON docké → on retire le min-height plein écran qui laissait un gros vide sous « Transformer ma vidéo » */
+  #v-omni.view.on{min-height:auto !important}
   #edEmpty{align-items:stretch !important;padding-bottom:5px !important}
   #edEmpty>div{display:flex;flex-direction:column;width:100%}
   #edEmpty div[ondrop]{flex:1}
