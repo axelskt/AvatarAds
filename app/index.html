@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-0145'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-0210'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12217,11 +12217,18 @@ async function reuseLastVideo(){
 // Affiche la zone résultats (vidéo prête) — centralisé ici pour éviter la duplication
 function _showResultArea(){
   _stopGenTimer();
-  // #86 · musique de fond choisie → la mixer sous la voix AVANT d'afficher (une seule fois)
+  // #86 · musique de fond → mixée sous la voix. ⚠ Bypass / gros fichier : le mix CLIENT (_genMixMusic) charge
+  // la vidéo (200 Mo) dans ffmpeg.wasm → FREEZE 15-20 s sur le thread principal puis échoue (Axel 08/09).
+  // Comme le rendu part au SERVEUR, c'est le WORKER qui muxe la musique (fiable) → on SAUTE le mix client ici.
   if(window._genMusic && window._genMusic.url && results.hedraUrl && !(window._genMixedUrls && window._genMixedUrls.has(results.hedraUrl))){
-    toast('Ajout de la musique de fond…');
-    _genMixInto(results.hedraUrl).finally(()=>_showResultArea());
-    return;
+    const _serverWillMuxMusic = !!(window._bypassHedraOn) || !!(window._bypassHedraFile && window._bypassHedraFile.size > 120*1024*1024);
+    if(_serverWillMuxMusic){
+      try{ window._genMixedUrls.add(results.hedraUrl); }catch(_){}      // marqué « traité » → le worker s'en charge, pas de freeze
+    } else {
+      toast('Ajout de la musique de fond…');
+      _genMixInto(results.hedraUrl).finally(()=>_showResultArea());
+      return;
+    }
   }
   document.getElementById('v-generator').classList.add('gen-generating'); // résultat plein écran centré, sans colonne de gauche
   document.getElementById('previewArea').style.display = 'none';
@@ -19909,6 +19916,10 @@ function _enterStyleStep(){
   _syncSubtitleToggleUI();
   if(typeof updateSubPreview === 'function') updateSubPreview();
   _syncSubsPreviewVisibility();
+  // Rappelle la bande de nav ÉTENDUE (interface TikTok SOUS l'écran) : dans setFormat elle peut tourner
+  // avant que le téléphone soit dimensionné → ici le mockup est prêt (Axel 08/09 : « remets l'interface en
+  // dessous de l'écran »). Idempotent (réutilise #phoneNavHost).
+  try{ if(typeof _genNavStrip === 'function') _genNavStrip(); }catch(_){}
 }
 // Mots réels du script pour la preview des sous-titres — aucun placeholder « PASSE À L'ACTION »
 function _previewSubWords(){
@@ -24884,7 +24895,15 @@ async function _genServerCompose(btn){
   _composeTimerStart();
 
   try{
-    const vidBlob = await (await fetch(results.hedraUrl)).blob();
+    // Bypass : on upload la vidéo D'ORIGINE (window._bypassHedraFile), PAS results.hedraUrl qui peut être une
+    // version « musique mixée » côté client (double musique sinon). La musique est muxée par le WORKER (fiable).
+    const vidBlob = (window._bypassHedraOn && window._bypassHedraFile) ? window._bypassHedraFile : await (await fetch(results.hedraUrl)).blob();
+    // Musique de fond → passée au worker (le mix CLIENT _genMixMusic casse sur les gros fichiers). URL de la
+    // banque = relative (../assets/music/*.mp3) → on résout en absolu ; on ne passe que du http (le worker fetch).
+    const _mus = (typeof window._genMusic === 'object' && window._genMusic) ? window._genMusic : null;
+    const _musSrc = (_mus && (_mus.dyn || _mus.url)) || '';
+    let _musUrl = ''; try{ _musUrl = _musSrc ? new URL(_musSrc, location.href).href : ''; }catch(_){ _musUrl = ''; }
+    const _music = (_musUrl && /^https?:/i.test(_musUrl)) ? { url: _musUrl, volume: (typeof _mus.volume === 'number' ? _mus.volume : 0.35) } : null;
     const dur = vidDur || 15;
     const ts = Date.now();
     const inPath = user.id + '/gen-' + ts + '.mp4';
@@ -24904,7 +24923,7 @@ async function _genServerCompose(btn){
     setPct(20, 'File d\'attente…');
     const H = await getAuthHeader();
     const cr = await fetch(RENDERJOB_FN, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', plan: { __compose: 'gen-subs', duration: Math.max(1, dur), subs, cameraOrganique: !window._genCamOff }, input_video: inPath, assets: [] }) });   // #cam-realiste (03/09) : caméra « à la main » par défaut (window._genCamOff = true pour couper)
+      body: JSON.stringify({ action: 'create', plan: { __compose: 'gen-subs', duration: Math.max(1, dur), subs, cameraOrganique: !window._genCamOff, music: _music }, input_video: inPath, assets: [] }) });   // #cam-realiste (03/09) ; music = { url, volume } muxé par le worker (08/09)
     const crd = await cr.json();
     if(!cr.ok || !crd.job_id) throw new Error(crd.error || 'création du job échouée');
     let outUrl = null;
