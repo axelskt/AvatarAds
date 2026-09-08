@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1720'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1745'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -10135,19 +10135,28 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
   const gptSize = sizeMap[size] || '1024x1024';
   let lastErr = 'Erreur génération';
   for(const model of _GPT_IMG_MODELS){
-    const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
-      method: 'POST',
-      headers: { ...(_aaOp()), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgGptQuality(), moderation: 'low' })
-    });
-    const data = await res.json();
-    if(data.error){
+    let data=null, res=null;
+    // OpenAI renvoie parfois une 500 TRANSITOIRE (« The server had an error while processing your request »)
+    // ou une surcharge (429/503) → on réessaie 2× (backoff) avant d'abandonner, au lieu de faire échouer la génération.
+    for(let attempt=0; attempt<3; attempt++){
+      res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
+        method: 'POST',
+        headers: { ...(_aaOp()), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgGptQuality(), moderation: 'low' })
+      });
+      data = await res.json().catch(()=>({ error:{ message:'réponse illisible (HTTP '+res.status+')' } }));
+      if(!data.error) break;
       lastErr = _imgErrText(data.error, 'Erreur génération');
-      // modèle inconnu/non dispo → on tente le suivant ; autre erreur → on arrête
+      const transient = (res.status>=500) || (res.status===429) || /server had an error|try again|overloaded|temporar|timeout|rate.?limit/i.test(lastErr);
+      if(transient && attempt<2){ await new Promise(r=>setTimeout(r, 1500*(attempt+1))); continue; }   // 1,5 s puis 3 s
+      break;
+    }
+    if(data && data.error){
+      // modèle inconnu/non dispo → on tente le modèle suivant ; sinon (transitoire épuisé ou autre) on arrête
       if(/model|not found|does not exist|unsupported/i.test(lastErr)) continue;
       throw new Error(lastErr);
     }
-    const item = data.data?.[0];
+    const item = data && data.data && data.data[0];
     if(item?.b64_json) return 'data:image/png;base64,' + item.b64_json;
     if(item?.url) return item.url;
     lastErr = 'Aucune image retournée';
@@ -30378,7 +30387,7 @@ async function _expCreateSeedance(prompt){
     if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
     if(acts) acts.style.display='flex';
     setP(100,'✓ Vidéo Seedance prête'); toast('Vidéo Seedance générée');
-  }catch(e){ if(String(e&&e.message)!=='__abort'){ console.error('Seedance:',e); toast('Seedance : '+(e.message||e)); } if(ph) ph.style.display='block'; }
+  }catch(e){ if(String(e&&e.message)!=='__abort'){ console.error('Seedance:',e); toast('Seedance : '+(e.message||e)); } if(ph) ph.style.display='flex'; }
   finally{ clearInterval(tick); setTimeout(()=>{ if(prog)prog.style.display='none'; },700); if(btn){ btn.disabled=false; btn.style.opacity=''; } }
 }
 // ⚡ Omni Flash pour Express : fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
@@ -30735,7 +30744,7 @@ async function expressCreate(){
     clearInterval(tick);
     console.error('Express error:', e);
     if(prog) prog.style.display='none';
-    if(ph) ph.style.display='block';
+    if(ph) ph.style.display='flex';   // .col (flex) — surtout PAS 'block' (casse le centrage : icône décalée à gauche)
     // Express débite EN AMONT (spendCreditsFor). Un échec (Veo refusé, téléchargement raté, vidéo corrompue)
     // ne remboursait rien → l'utilisateur payait pour rien. On rend ce qui est remboursable : refund_credits
     // ne rend que la RÉSERVE RESTANTE (une étape déjà livrée — image, extension — reste facturée à juste titre).
@@ -30758,7 +30767,7 @@ function expressReset(){
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
   const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
   const vid=document.getElementById('expResultVid'); if(vid){ try{ vid.pause(); }catch(_){} vid.style.display='none'; vid.removeAttribute('src'); }
-  const ph=document.getElementById('expResultPlaceholder'); if(ph) ph.style.display='block';
+  const ph=document.getElementById('expResultPlaceholder'); if(ph) ph.style.display='flex';   // .col (flex), pas 'block' (sinon icône décalée)
   const acts=document.getElementById('expResultActions'); if(acts) acts.style.display='none';
   try{ if(typeof _expSetDur==='function' && typeof _expDurAllowed==='function'){ _expSetDur(_expDurAllowed()[0]); const sl=document.getElementById('expDurSlider'); if(sl){ sl.value=0; if(typeof _aaSliderFill==='function') _aaSliderFill(sl); } } }catch(_){}
 }
