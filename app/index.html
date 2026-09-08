@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-0210'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-0230'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12471,6 +12471,16 @@ function updateSteps(){
   _updateReuseBar();
   if(typeof _syncClipSectionS4==='function') _syncClipSectionS4();
   if(typeof _syncSilenceGpDropzone==='function') _syncSilenceGpDropzone();
+  // Interface TikTok ÉTENDUE (bande de nav SOUS l'écran) : rappelée à CHAQUE étape — dans setFormat elle peut
+  // tourner avant que le mockup soit dimensionné, d'où l'interface non « remise » dès l'étape 1 (Axel 08/09).
+  try{ if(typeof _genNavStrip==='function') _genNavStrip(); }catch(_){}
+}
+// Scroll en haut du contenu d'étape : le bouton « Continuer » est en bas → sans ça on arrive sous les onglets
+// « Avatar plein écran / Split screen ». (Axel 08/09)
+function _genScrollTop(){
+  try{ window.scrollTo(0,0); }catch(_){}
+  try{ let el=document.getElementById('fs-'+step); while(el && el!==document.body){ const oy=getComputedStyle(el).overflowY; if(oy==='auto'||oy==='scroll') el.scrollTop=0; el=el.parentElement; } }catch(_){}
+  try{ const t=document.getElementById('genStepTitle'); if(t) t.scrollIntoView({block:'start'}); }catch(_){}
 }
 // #clipS4 · masque le sélecteur « Clip Gameplay » (étape Style) si un gameplay est déjà uploadé
 function _syncClipSectionS4(){
@@ -18857,6 +18867,7 @@ function goToStep(n){
   }
   step = n;
   updateSteps();
+  _genScrollTop();
   if(typeof _updateGenTtsSilenceUI==='function') _updateGenTtsSilenceUI();
 }
 
@@ -18870,9 +18881,10 @@ function nextStep(){
     if(step===3 && pendingTranscript && pendingTranscript.trim()){
       populateWordEditor(pendingTranscript);
     }
+    _genScrollTop();
   }
 }
-function prevStep(){ if(step>1){ try{ if(window._previewResetToIdle) window._previewResetToIdle(); }catch(_){} step--;updateSteps();} }
+function prevStep(){ if(step>1){ try{ if(window._previewResetToIdle) window._previewResetToIdle(); }catch(_){} step--;updateSteps();_genScrollTop();} }
 
 // ── AVATAR / VOICE / SUBSTYLE PICKS ──
 function pickAvatar(el,emo,name,desc){
