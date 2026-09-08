@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1800'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1815'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28450,7 +28450,7 @@ function _expRenderModels(){
 }
 function _expPickModel(v){
   if(!_expModelAllowed(v)){ toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
-  window._expVeoModel=v; initExpress();
+  window._expVeoModel=v; if(v==='omni') window._expOmniDurLocked=false; initExpress();   // Omni fraîchement choisi → l'auto-suit de durée reprend
 }
 
 function initExpress(){
@@ -28477,15 +28477,13 @@ function initExpress(){
   // Durée (slider) — 4/6/8 s pour tous ; Élite : jusqu'à 29 s via extensions de scène (8+7+7+7)
   const ds = document.getElementById('expDurSlider');
   if(ds){
-    // Omni Flash : PAS de « Libre » (l'API fal n'a pas de mode auto → durée figée) → l'user CHOISIT sa durée (Axel 08/09).
+    // Omni Flash : PAS de « Libre ». La durée SUIT AUTOMATIQUEMENT le script (3-10 s) tant que l'user n'a pas
+    // pris la main au slider (_expOmniDurLocked). L'API fal n'a pas de mode auto → c'est l'app qui décide. (Axel 08/09)
     const _isOmniDur = (window._expVeoModel==='omni');
-    const _wasLibre = !!window._expDurAuto;
     if(_isOmniDur) window._expDurAuto=false;
     if(window._expDurAuto) window._expDur=_expEstimateDur().dur; // Auto (Veo) : recale sur le texte
     const _da=_expDurAllowed();
-    // Omni : au passage depuis Libre (ou durée hors échelle), on PROPOSE l'estimation du script comme point
-    // de départ (toujours dans 3-10 pour Omni) ; l'user ajuste ensuite librement avec le slider.
-    if(_isOmniDur && (_wasLibre || !_da.includes(parseInt(window._expDur)))) window._expDur = _expEstimateDur().dur;
+    if(_isOmniDur && (!window._expOmniDurLocked || !_da.includes(parseInt(window._expDur)))) window._expDur = _expEstimateDur().dur;
     // Position 0 = « Libre » (Veo uniquement) ; 1..N = durées. Omni : min=1 → aucune position Libre.
     ds.min = _isOmniDur ? 1 : 0; ds.max=_da.length; ds.step=1;
     ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||_da[0])+1);
@@ -28495,7 +28493,8 @@ function initExpress(){
     const _mx=document.getElementById('expDurMaxLbl'); if(_mx) _mx.textContent = _da[_da.length-1]+' s';   // 10 s (Omni) ou 29 s (Veo)
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=(_isOmniDur||['elite','developer'].includes((currentMember?.plan||'free').toLowerCase()))?'none':'block';
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
-    _expUpdateDurHint();
+    // Pas de texte d'indice pour Omni (Axel : « pas beau ») — la durée s'ajuste TOUTE SEULE au script. Veo Libre garde son indice discret.
+    const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(!_isOmniDur && window._expDurAuto && _expEstimateDur().over)?'block':'none';
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
@@ -28597,26 +28596,9 @@ function _expEstimateDur(){
   const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
   return { dur, over: secs>ladder[ladder.length-1] };
 }
-// Indice « durée pour ton texte » : Omni n'a pas de Libre → l'user doit choisir, donc on lui MONTRE la durée
-// qu'il faut pour sa réplique et on l'avertit si son texte dépasse 10 s (il serait coupé). (Axel 08/09)
-function _expUpdateDurHint(){
-  const _ah=document.getElementById('expDurAutoHint'); if(!_ah) return;
-  const _isOmni=(window._expVeoModel==='omni');
-  const _txt=((document.getElementById('expPrompt')||{}).value||'').trim();
-  if(_isOmni){
-    if(_txt.length<12){ _ah.style.display='none'; return; }   // pas assez de texte pour estimer
-    const _e=_expEstimateDur();               // { dur, over } sur l'échelle Omni [3..10]
-    const _chosen=parseInt(window._expDur)||_e.dur;
-    if(_e.over){ _ah.style.display='block'; _ah.style.color='var(--orange2)'; _ah.textContent='⚠ Ton texte dépasse 10 s (le max d\'Omni Flash) — la fin sera coupée. Raccourcis-le, ou utilise Veo Standard.'; }
-    else if(_chosen<_e.dur){ _ah.style.display='block'; _ah.style.color='var(--orange2)'; _ah.textContent='⚠ Ton texte tient en ≈ '+_e.dur+' s — à '+_chosen+' s la fin sera coupée. Monte la durée à '+_e.dur+' s.'; }
-    else { _ah.style.display='block'; _ah.style.color='var(--text-3)'; _ah.textContent='✓ '+_chosen+' s suffit pour ton texte (≈ '+_e.dur+' s parlées).'; }
-  } else {
-    if(window._expDurAuto && _expEstimateDur().over){ _ah.style.display='block'; _ah.style.color='var(--orange2)'; _ah.textContent='Ton texte est long — au-delà du maximum, utilise le Montage IA pour une vidéo plus longue.'; }
-    else { _ah.style.display='none'; }
-  }
-}
 function _expApplyAutoDur(){
-  if(window._expVeoModel==='omni'){ _expUpdateDurHint(); return; }   // Omni : pas de Libre, mais on rafraîchit l'indice « durée pour ton texte »
+  // Omni : la durée S'AUTO-SUIT sur le script (recalculée dans initExpress) tant que l'user n'a pas pris la main au slider.
+  if(window._expVeoModel==='omni'){ initExpress(); return; }
   if(!window._expDurAuto) return; window._expDur=_expEstimateDur().dur; initExpress();
 }
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
@@ -28624,7 +28606,7 @@ function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window.
 // 1..N = durées Veo manuelles (4/6/8/15/22/29). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
 function _expDurSlide(v){
   const a=_expDurAllowed();
-  if(window._expVeoModel==='omni'){ _expSetDur(a[Math.min(Math.max(1,v), a.length)-1]); return; }   // Omni : pas de Libre → toujours une durée concrète
+  if(window._expVeoModel==='omni'){ window._expOmniDurLocked=true; _expSetDur(a[Math.min(Math.max(1,v), a.length)-1]); return; }   // Omni : l'user prend la main → stoppe l'auto-suit
   if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }
   else { _expSetDur(a[Math.min(v, a.length)-1]); }   // _expSetDur passe _expDurAuto à false
 }
@@ -30519,7 +30501,7 @@ async function expressCreate(){
   let _dur = _reqDur, _extCount=0;
   let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
   if(_isOmni){
-    _dur = Math.min(10, Math.max(3, _reqDur));   // Omni Flash : 3-10 s à la seconde, pas d'extensions (pas de Libre → durée choisie par l'user)
+    _dur = Math.min(10, Math.max(3, _reqDur));   // Omni Flash 3-10 s : durée auto-suivie sur le script (ou choix user), débit ajusté au réel plus bas
   } else {
     if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
     else { _dur = _dur<=4?4:(_dur<=6?6:8); }
@@ -30786,7 +30768,7 @@ function expressReset(){
   // (moteur, format, qualité) restent : ce sont des réglages, pas du brouillon.
   window._expImgB64=null; window._expImgMime=null; window._expVidBlob=null; window._expVidBlobRaw=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
   window._expVidUrl=null; window._expVoiceBlob=null; window._expSubs=null; window._expSubsBusy=false;
-  window._expAvatarFile=null; window._expAvatarUrl=null; window._expClipId=null;
+  window._expAvatarFile=null; window._expAvatarUrl=null; window._expClipId=null; window._expOmniDurLocked=false;   // nouvelle vidéo → l'auto-suit de durée Omni reprend
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
   const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
   const vid=document.getElementById('expResultVid'); if(vid){ try{ vid.pause(); }catch(_){} vid.style.display='none'; vid.removeAttribute('src'); }
@@ -39801,6 +39783,7 @@ window._mExpDurInput=function(el){
 };
 /* au relâchement : applique la durée du cran + synchro complète */
 window._mExpDurChange=function(el){
+  if(window._expVeoModel==='omni') window._expOmniDurLocked=true;   // Omni : l'user prend la main → stoppe l'auto-suit
   _expSetDur(_mExpDurAt(el));
   _mExpSync();
 };
