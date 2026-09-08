@@ -680,14 +680,38 @@ async function composeGenSubs(jobDir, outPath, plan) {
     const camOnC = plan.cameraOrganique !== false      // #cam-realiste : appliqué à la BASE, avant l'overlay
     const baseChain = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}` + (camOnC ? ',' + camOrganiqueFilter(W, H) : '')
     const baseHasAudio = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
-    const fc = `[0:v]${baseChain}[b];[b][1:v]overlay=0:0[v]`
-    const args = ['-v', 'error', '-y', '-i', orig, '-i', subsVid, '-filter_complex', fc, '-map', '[v]']
-    if (baseHasAudio) args.push('-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
-    else args.push('-an')
+
+    // #musique-serveur (Axel 08/09) : la musique de fond était mixée CÔTÉ CLIENT (_genMixMusic) et cassait sur
+    // les gros fichiers → absente du rendu. On la MUXE ici : téléchargée, bouclée+tronquée à la durée, volume
+    // réduit, mixée SOUS l'audio d'origine (normalize=0 → la voix reste pleine). URL de la banque = hébergée.
+    let musicPath = null
+    if (plan.music && plan.music.url && /^https?:/i.test(plan.music.url)) {
+      try {
+        const mp = join(proj, 'music.mp3')
+        const resp = await fetch(plan.music.url)
+        if (resp.ok) { const buf = Buffer.from(await resp.arrayBuffer()); if (buf.length > 1024) { writeFileSync(mp, buf); musicPath = mp } }
+        else console.warn('gen-subs musique HTTP ' + resp.status)
+      } catch (e) { console.warn('gen-subs musique download KO:', e && e.message) }
+    }
+    const musVol = (plan.music && typeof plan.music.volume === 'number') ? Math.max(0, Math.min(1, plan.music.volume)) : 0.35
+
+    const args = ['-v', 'error', '-y', '-i', orig, '-i', subsVid]
+    if (musicPath) args.push('-i', musicPath)                                   // input 2 = musique
+    let fc = `[0:v]${baseChain}[b];[b][1:v]overlay=0:0[v]`
+    if (musicPath) {
+      fc += `;[2:a]aloop=loop=-1:size=2e9,atrim=0:${D},asetpts=N/SR/TB,volume=${musVol}[mus]`
+      if (baseHasAudio) fc += `;[0:a][mus]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[aout]`
+      else              fc += `;[mus]anull[aout]`
+      args.push('-filter_complex', fc, '-map', '[v]', '-map', '[aout]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
+    } else {
+      args.push('-filter_complex', fc, '-map', '[v]')
+      if (baseHasAudio) args.push('-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
+      else args.push('-an')
+    }
     args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
       '-t', String(D), '-movflags', '+faststart', outPath)
     execFileSync('ffmpeg', args, { stdio: 'pipe' })
-    console.log(`✅ gen-subs OVERLAY (sous-titres alpha superposés + audio d'origine, ${D}s) → ${outPath}`)
+    console.log(`✅ gen-subs OVERLAY (sous-titres + audio d'origine${musicPath ? ' + musique ' + Math.round(musVol*100) + '%' : ''}, ${D}s) → ${outPath}`)
   } finally {
     try { rmSync(proj, { recursive: true, force: true }) } catch (_) { /* nettoyage best-effort */ }
   }
