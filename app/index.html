@@ -3150,9 +3150,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div class="col grow" style="gap:12px">
                 <div id="imgRefStrip" class="row" style="display:none;gap:10px;flex-wrap:wrap;padding-top:4px"></div>
                 <div style="position:relative;flex:1">
-                  <textarea id="imgPrompt" maxlength="1000" class="field" style="height:100%;min-height:104px;resize:none;padding-right:124px;font-size:15.5px;line-height:1.5" placeholder="Décris l'image que tu veux générer…" oninput="_imgUpdateCharCount(this)"></textarea>
-                  <button onclick="enhanceImagePrompt()" id="imgEnhanceBtn" class="btn btn-sm row gap6" style="position:absolute;right:10px;top:10px;padding:8px 13px;font-size:12.5px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);font-weight:600">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Améliorer</button>
+                  <textarea id="imgPrompt" maxlength="1000" class="field" style="height:100%;min-height:104px;resize:none;padding-right:16px;font-size:15.5px;line-height:1.5" placeholder="Décris l'image que tu veux générer…" oninput="_imgUpdateCharCount(this)"></textarea>
+                  <!-- #img-enhance-removed (Axel 09/09) : bouton « Améliorer » retiré de la zone de prompt (padding-right du textarea réduit en conséquence) -->
+
                   <span id="imgCharCount" class="mono faint" style="position:absolute;right:14px;bottom:9px;font-size:10px;pointer-events:none">0 / 1000</span>
                 </div>
                 <div class="row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -6062,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1900'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-09-0115'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -10929,6 +10929,7 @@ async function generateImage(){
       // ── Mode multi (2-3 images) ──
       singleWrap.style.display = 'none';
       multiWrap.style.display = 'block';
+      if(typeof _imgIdleShow==='function') _imgIdleShow(false);   // #img-idle-multi (09/09) : masque l'empty-state (icône + « Décris ton image… » + méta « N images ») pendant la génération multi SANS réf — parité avec la branche AVEC réf (l.10799)
       multiGrid.style.gridTemplateColumns = 'repeat(' + (actualCount===2?2:3) + ',1fr)';
       // Placeholders loading
       multiGrid.innerHTML = '';
