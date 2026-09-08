@@ -186,6 +186,9 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
   .logo-members{display:none}
   #memberBar{font-size:11px;padding:4px 10px;gap:8px}
   .lib-view{padding:16px;overflow:visible !important;max-height:none !important} /* mobile : UN SEUL scroller (.main). Sinon le overflow-y:auto desktop de .lib-view crée un conteneur qui accroche le scroll tactile iOS (Enregistreur/Audio/Biblio « pas fluide ») */
+  /* Enregistreur : boutons de contrôle en grille 2×2 sur mobile → « Écouter »/« Couper ici »/… tiennent chacun sur une ligne */
+  #recCtrlRow{display:grid !important;grid-template-columns:1fr 1fr}
+  #recCtrlRow>button{min-width:0 !important;white-space:nowrap}
   .lib-grid{grid-template-columns:repeat(2,1fr)!important}
   .row2{grid-template-columns:1fr!important}
 }
@@ -3234,9 +3237,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           </div>
 
           <!-- CONTROLS ROW -->
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="recPlayBtn" onclick="recPlayPause()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px">
-              ▶ Écouter
+          <div id="recCtrlRow" style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="recPlayBtn" onclick="recPlayPause()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex:0 0 auto"><path d="M8 5v14l11-7z"/></svg> Écouter
             </button>
             <button id="recSplitBtn" onclick="recSplitAtCursor()" disabled style="flex:1;min-width:80px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px" title="Coupe l'audio au curseur — supprime ensuite le segment voulu">
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l5 5m0 0l5 5M6 6l5-5M6 6L1 11"/><circle cx="2" cy="2" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="11" r="1.5" fill="currentColor" stroke="none"/></svg>
@@ -3253,16 +3256,16 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
           <!-- NETTOYAGE & VOIX (Axel 30/08) : silences + volume constant, interrupteurs iOS (design screen 5) -->
           <div style="margin-top:16px;display:flex;flex-direction:column;gap:11px">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Supprimer les silences</span><span style="font-size:11px;color:var(--text3)">Coupe les blancs et les hésitations</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0;flex:1"><span style="font-weight:600;font-size:13px">Supprimer les silences</span><span style="font-size:11px;color:var(--text3)">Coupe les blancs et les hésitations</span></div>
               <button type="button" id="recSilSw" onclick="recSetSilence(!recSilenceOn)" aria-label="Supprimer les silences" style="width:44px;height:26px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;align-items:center;border:none;cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Volume constant</span><span style="font-size:11px;color:var(--text3)">Même niveau du début à la fin, sans écraser</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0;flex:1"><span style="font-weight:600;font-size:13px">Volume constant</span><span style="font-size:11px;color:var(--text3)">Même niveau du début à la fin, sans écraser</span></div>
               <button type="button" id="recTreatSw" onclick="recSetTreat(!window._recTreatOn)" aria-label="Volume constant" style="width:44px;height:26px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;align-items:center;border:none;cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-weight:600;font-size:13px">Réduire le bruit</span><span style="font-size:11px;color:var(--text3)">Enlève le souffle et le bruit de fond (sans hacher la voix)</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0;flex:1"><span style="font-weight:600;font-size:13px">Réduire le bruit</span><span style="font-size:11px;color:var(--text3)">Enlève le souffle et le bruit de fond</span></div>
               <button type="button" id="recDenoiseSw" onclick="recSetDenoise(!window._recDenoiseOn)" aria-label="Réduire le bruit" style="width:44px;height:26px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;align-items:center;border:none;cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
             </div>
           </div>
@@ -6059,7 +6062,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-1400'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-1420'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12035,7 +12038,7 @@ function recUpdateUI(){
     mainBtn.style.borderColor  = isRec ? 'rgba(255,70,70,0.7)'  : 'rgba(255,70,70,0.4)';
   }
   if(pulse)    pulse.style.display = isRec ? 'block' : 'none';
-  if(playBtn){ playBtn.disabled = !has||isRec||isProc; playBtn.innerHTML = isPlay ? '⏸ Pause' : '▶ Écouter'; }
+  if(playBtn){ playBtn.disabled = !has||isRec||isProc; playBtn.innerHTML = isPlay ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex:0 0 auto"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Pause' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex:0 0 auto"><path d="M8 5v14l11-7z"/></svg> Écouter'; }
   if(splitBtn) splitBtn.disabled = !has||isRec||isProc;
   if(delBtn2)  delBtn2.disabled  = !has||isRec||isProc;
   if(replBtn)  replBtn.disabled  = !has||isRec||isProc;
@@ -39309,7 +39312,10 @@ function edBandDrag(ov,track,e,mode){
   .layout{display:block !important;height:auto !important;overflow:visible !important;background:var(--bg2)}
   /* position:ABSOLUTE (pas fixed) : même effet visuel (le body ne scrolle pas), mais z-index:auto → .main NE crée PAS de stacking context.
      Sinon toute modale position:fixed d'une vue (Motion « Paramètres avancés », overlay de chargement Omni…) resterait piégée sous le topbar/la barre malgré son z-index. */
-  .main{position:absolute !important;top:54px;left:0;right:0;bottom:0;display:block !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--bg2);padding-bottom:calc(85px + env(safe-area-inset-bottom))}
+  /* ⚠️ PAS de -webkit-overflow-scrolling:touch ici : sur Safari iOS cette propriété crée un STACKING CONTEXT
+     (Chromium l'ignore) qui repiégerait les modales position:fixed des vues (Motion « Paramètres avancés »,
+     overlay Omni) SOUS le topbar/la barre. Le momentum scroll est natif sur iOS 13+, cette prop n'est plus nécessaire. */
+  .main{position:absolute !important;top:54px;left:0;right:0;bottom:0;display:block !important;overflow-y:auto !important;overscroll-behavior:contain;background:var(--bg2);padding-bottom:calc(85px + env(safe-area-inset-bottom))}
   .view{overflow:visible !important;height:auto !important}
   /* plus aucun scroller imbriqué dans les vues : la page défile, c'est tout */
   .view .scroll-y{overflow:visible !important;max-height:none !important}
