@@ -397,7 +397,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
    (sinon .gen-right{display:none!important} mobile cache toute la progression) */
 @media(max-width:768px){
   #v-generator.gen-generating .gen-left{display:none !important}
-  #v-generator.gen-generating .gen-right{display:flex !important;width:100% !important;flex:1 1 auto !important;border-left:none !important;padding:24px 16px 30px !important;min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
+  #v-generator.gen-generating .gen-right{display:flex !important;width:100% !important;flex:1 1 auto !important;border-left:none !important;padding:24px 16px 30px !important;min-height:calc(100dvh - 139px - env(safe-area-inset-bottom))}
   /* zoom de l'onde : 22px se rate au doigt */
   #acZoomPanL,#acZoomOut,#acZoomIn,#acZoomPanR{width:30px !important;height:30px !important}
 }
@@ -785,10 +785,10 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.2C2 7.4 3.4 6 5.2 6h13.6C20.6 6 22 7.4 22 9.2v2c0 3.9-3 7-6.7 7-1.3 0-2.5-.6-3.3-1.5-.8.9-2 1.5-3.3 1.5C5 18.2 2 15.1 2 11.2z"/><circle cx="8.2" cy="11.2" r="1.5"/><circle cx="15.8" cy="11.2" r="1.5"/></svg>
         Motion Control
       </div>
-      <div class="nav-i owner-only" id="navOmni" onclick="nav('omni',this)" style="display:none">
+      <div class="nav-i" id="navOmni" onclick="nav('omni',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
         Omni
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">DEV</span>
+        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BÊTA</span>
       </div>
       <div class="nav-i" onclick="nav('montage',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/></svg>
@@ -3660,7 +3660,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
           <!-- colonne droite : idée + résultat -->
           <div class="col" style="gap:12px">
-            <button type="button" onclick="_omniEx('transforme la voiture en Bugatti noire mate, jantes chromées')" class="col" style="padding:0;overflow:hidden;border-radius:14px;text-align:left;transition:.15s;border:1px solid var(--border);cursor:pointer;background:transparent">
+            <button type="button" onclick="_omniEx('transforme la voiture en Bugatti noire mate, jantes chromées')" class="col" id="omniExampleCard" style="display:none;padding:0;overflow:hidden;border-radius:14px;text-align:left;transition:.15s;border:1px solid var(--border);cursor:pointer;background:transparent">
               <div style="position:relative;aspect-ratio:16/10;overflow:hidden;width:100%">
                 <div style="position:absolute;inset:0;display:flex">
                   <div style="flex:1;background:repeating-linear-gradient(135deg, oklch(0.3 0.03 0) 0 8px, oklch(0.24 0.02 0) 8px 16px)"></div>
@@ -3892,6 +3892,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <button onclick="_expPickFormat('9:16');_mExpSync()" id="mExpFmt916" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>9:16</button>
               <button onclick="_expPickFormat('16:9');_mExpSync()" id="mExpFmt169" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="14" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>16:9</button>
             </div>
+            <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">MODÈLE</div>
+            <div id="mExpModelInline" style="display:flex;gap:6px;margin-bottom:15px"></div>
             <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3)">DURÉE</span><span class="mono" id="mExpDurVal2" style="font-size:12px;color:var(--accent-2)">6s</span></div>
             <input id="mExpDurRange" type="range" min="0" max="5" step="1" value="0" oninput="_mExpDurInput(this)" onchange="_mExpDurChange(this)" style="width:100%;height:6px;border-radius:6px;appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:none;background:linear-gradient(90deg,var(--accent) 50%,var(--surface-3) 50%)">
             <div style="display:flex;justify-content:space-between;margin-top:6px;margin-bottom:15px"><span class="mono" id="mExpDurMin" style="font-size:10.5px;color:var(--text-3)">4s</span><span class="mono" id="mExpDurMax" style="font-size:10.5px;color:var(--text-3)">8s</span></div>
@@ -6057,7 +6059,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-08-0230'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-08-0930'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7273,7 +7275,7 @@ function enterApp(profile){
   // Whisper au-mot) ouvertes à TOUT LE MONDE. (Les modules encore owner-only utilisent .owner-only.)
   window._genDevOn = true;
   try{ document.querySelectorAll('.gen-dev').forEach((el) => { el.style.display = window._genDevOn ? 'flex' : 'none'; }); }catch(_){}
-  // .owner-only = éléments RÉSERVÉS owner/dev même quand .gen-dev est public (ex : module Omni, pas encore public)
+  // .owner-only = éléments RÉSERVÉS owner/dev même quand .gen-dev est public (Omni est passé public le 08/09, plus aucun élément .owner-only à ce jour — boucle inoffensive conservée pour un futur module gaté)
   try{ const _od = (profile.plan === 'developer' || profile.is_owner); document.querySelectorAll('.owner-only').forEach((el) => { el.style.display = _od ? 'flex' : 'none'; }); }catch(_){}
   // .gen-dev-hide = éléments MASQUÉS quand les features dev sont ON (ex : bouton
   // « Appliquer comme sous-titres » — Whisper s'applique tout seul en mode dev).
@@ -29105,14 +29107,15 @@ function _mcIsModeration(rd){
 /* ══ OMNI — édition vidéo par prompt (Gemini Omni Flash edit via fal-proxy) · owner-gated ══ */
 let _omniFile=null, _omniDur=0, _omniOutUrl=null, _omniRes='720p';
 function initOmni(){
-  if(typeof _aaIsDev==='function' && !_aaIsDev()){ nav('generator'); return; }   // ceinture : réservé dev/owner
+  // Omni ouvert à tous (08/09) : le gating de plan est géré à l'action par spendCreditsFor
+  // (pas de membre → paywall, Free → showPlansSheet, developer/owner → illimité).
   _omniSetRes(_omniRes);   // applique l'état visuel du toggle + recalcule le coût
   _omniCharCount();
 }
-// Taux crédits/s selon la résolution choisie (720p 4 cr/s · 1080p 5 cr/s).
+// Taux crédits/s selon la résolution choisie (720p 3 cr/s · 1080p 4 cr/s).
 function _omniRate(){
   const c=(typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS)||{};
-  return _omniRes==='1080p' ? (c.omniEdit1080PerSec||5) : (c.omniEditPerSec||4);
+  return _omniRes==='1080p' ? (c.omniEdit1080PerSec||4) : (c.omniEditPerSec||3);
 }
 function _omniSetRes(r){
   _omniRes = (r==='1080p') ? '1080p' : '720p';
@@ -29189,7 +29192,6 @@ function _omniBuildPrompt(p){
 }
 function _omniErr(d){ try{ let m=d&&(d.detail||(d.error&&(d.error.message||d.error))||d.message); if(Array.isArray(m)) m=m.map(x=>(x&&(x.msg||x.message))||x).join(' · '); return String(m||'Erreur'); }catch(_){ return 'Erreur'; } }
 async function _omniGenerate(){
-  if(typeof _aaIsDev==='function' && !_aaIsDev()){ toast('Réservé au compte dev pour le moment'); return; }
   if(!_omniFile){ toast('Upload une vidéo d\'abord'); return; }
   const prompt=((document.getElementById('omniPrompt')||{}).value||'').trim();
   if(!prompt){ toast('Décris la transformation'); return; }
@@ -29231,7 +29233,7 @@ async function _omniGenerate(){
         await new Promise(r=>setTimeout(r,3000));
         const st=await (await fGet(stP)).json();
         if(st.status==='COMPLETED'){ const rr=await (await fGet(reP)).json(); outUrl=pick(rr); if(!outUrl) throw new Error(_omniErr(rr)); break; }
-        if(st.status==='FAILED'||st.error) throw new Error(_omniErr(st));
+        if(st.status==='FAILED'||st.status==='ERROR'||st.status==='CANCELLED'||st.error) throw new Error(_omniErr(st));
         _omniProg('Transformation en cours… ('+Math.min(96,25+i*2)+' %)',Math.min(96,25+i*2));
       }
     }
@@ -39331,23 +39333,23 @@ function edBandDrag(ov,track,e,mode){
   #memberQuotaBox .mono{font-size:10.5px !important;white-space:nowrap;letter-spacing:-.02em}
   #memberQuotaBox svg{width:12px;height:12px}
   #btnSeePlans,#btnUpgradePlan{padding:6px 10px !important;font-size:10.5px !important;white-space:nowrap}
-  .layout{padding-bottom:calc(67px + env(safe-area-inset-bottom))} /* nav 62px + 5px de marge */
+  .layout{padding-bottom:calc(85px + env(safe-area-inset-bottom))} /* barre 54px + 24px du bas (hors zone de révélation du toolbar Safari) + 7px de marge */
   /* les boutons Générer sont dockés en bas : les vues remplissent l'écran et le bouton descend */
-  .view.on{min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
-  .gen-left{display:flex !important;flex-direction:column;min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
+  .view.on{min-height:calc(100dvh - 139px - env(safe-area-inset-bottom))}
+  .gen-left{display:flex !important;flex-direction:column;min-height:calc(100dvh - 139px - env(safe-area-inset-bottom))}
   .gen-footer{margin-top:auto}
-  #v-imagegen>.row{min-height:calc(100dvh - 121px - env(safe-area-inset-bottom))}
+  #v-imagegen>.row{min-height:calc(100dvh - 139px - env(safe-area-inset-bottom))}
   #v-imagegen>.row>*:last-child{display:flex;flex-direction:column;flex:1 0 auto !important}
   #edEmpty{align-items:stretch !important;padding-bottom:5px !important}
   #edEmpty>div{display:flex;flex-direction:column;width:100%}
   #edEmpty div[ondrop]{flex:1}
   /* Barre du bas « style Apple » : capsule flottante, verre dépoli, pilule active — 1:1 réf */
-  #mNav{display:flex;position:fixed;left:12px;right:12px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:400;height:54px;
+  #mNav{display:flex;position:fixed;left:12px;right:12px;bottom:max(calc(env(safe-area-inset-bottom) + 24px),24px);z-index:400;height:54px;
     padding:5px;gap:3px;border-radius:20px;
     background:rgba(20,20,24,.72);backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
     border:1px solid rgba(255,255,255,.09);box-shadow:0 16px 44px -16px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.06) inset;
     justify-content:space-between;align-items:stretch}
-  #mMore.on{display:block;position:fixed;left:0;right:0;top:54px;bottom:calc(68px + env(safe-area-inset-bottom));z-index:390;
+  #mMore.on{display:block;position:fixed;left:0;right:0;top:54px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:390;
     background:var(--bg);overflow-y:auto;padding:20px 16px 24px;-webkit-overflow-scrolling:touch}
   .guest-banner{padding:6px 12px;flex-wrap:wrap}
   .guest-banner-text{font-size:11px}
@@ -39509,8 +39511,8 @@ function edBandDrag(ov,track,e,mode){
   var GRID='<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
   // « recorder » n'est plus un outil à part : fusionné dans « Audio » (audioclean),
   // le filtre de tabs() purge tout seul les barres sauvegardées qui le listaient.
-  var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',motion:'Motion',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
-  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',audioclean:'Audio',affiliation:'Parrainage',cartoon:'Cartoon IA',montage:'Montage IA',publish:'Publier'};
+  var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',motion:'Motion',omni:'Omni',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
+  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',omni:'Omni',audioclean:'Audio',affiliation:'Parrainage',cartoon:'Cartoon IA',montage:'Montage IA',publish:'Publier'};
   var CUSTOMIZABLE=['generator','imagegen','express','motion','studio','library','audioclean','affiliation'];
   // 14/08 : Motion Control remplace l'Éditeur et Audio remplace la Bibliothèque
   // dans la barre par défaut (les deux restent dans « Plus »).
@@ -39564,7 +39566,7 @@ function edBandDrag(ov,track,e,mode){
     var t=tabs();
     var tools=[
       ['generator','Avatar IA en 5 étapes'],['express','Vidéo en 1 prompt · Veo'],['motion','Ton avatar copie une vidéo'],
-      ['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
+      ['omni','Édition vidéo par prompt'],['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
       ['audioclean','Nettoyage + enregistreur'],['library','Tes vidéos'],['affiliation','Gagne 30% à vie']
     ];
     var h='<h2 class="display" style="font-size:24px;font-weight:800;margin-bottom:16px">Tous les outils</h2>';
@@ -39639,11 +39641,11 @@ function edBandDrag(ov,track,e,mode){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
-  /* Clavier ouvert (saisie de texte) → masquer la barre du bas #mNav, sinon elle chevauche le champ (Images IA, Express, Montage…).
-     Enregistré HORS boot() (qui sort tôt sur desktop) → robuste au redimensionnement ; sans effet sur desktop (#mNav déjà caché). */
-  var _isTextField=function(el){ return el && (el.tagName==='TEXTAREA' || (el.tagName==='INPUT' && ['text','search','url','email','number','tel','password',''].indexOf((el.type||'').toLowerCase())>=0)); };
-  document.addEventListener('focusin',function(e){ if(_isTextField(e.target)){ var n=document.getElementById('mNav'); if(n) n.style.display='none'; } });
-  document.addEventListener('focusout',function(){ setTimeout(function(){ if(!_isTextField(document.activeElement)){ var n=document.getElementById('mNav'); if(n) n.style.display=''; } },120); });
+  /* NB (08/09) : on NE masque PLUS #mNav au focus d'un champ. L'ancien focusin→display:none + focusout→restore(120ms)
+     provoquait le « double-tap » sur les raccourcis (screens 2/3, iPhone) : venant d'un champ focus, le 1er tap ne faisait
+     que blur (la barre était en display:none), elle réapparaissait 120ms plus tard, et seul le 2e tap l'atteignait.
+     La barre reste visible : un seul tap l'atteint directement (et blur le champ en même temps). Combiné au décalage du bas
+     de #mNav (24px, hors zone de révélation du toolbar Safari), l'accès aux raccourcis se fait en un seul tap. */
 })();
 
 /* ══ Express mobile : synchro contrôles ↔ état réel ══ */
@@ -39764,7 +39766,7 @@ window._mExpAdvTog=function(){
   var p=document.getElementById('mExpAdvPop'); if(!p) return;
   if(p.style.display!=='none'){ _mExpAdvClose(); return; }
   var b=document.getElementById('mExpAdvBackdrop'); if(b) b.style.display='block';
-  p.style.display='block'; _mExpSync(); _mExpRenderVoiceInline();
+  p.style.display='block'; _mExpSync(); _mExpRenderModelInline(); _mExpRenderVoiceInline();
 };
 window._mExpAdvClose=function(){
   var p=document.getElementById('mExpAdvPop'); if(p) p.style.display='none';
@@ -39784,6 +39786,24 @@ window._mExpRenderVoiceInline=function(){
 window._mExpPickVoiceInline=function(id){
   if(typeof _expPickVoice==='function') _expPickVoice(id);
   _mExpSync(); _mExpRenderVoiceInline();
+};
+/* Express mobile : sélecteur de MODÈLE inline (miroir du desktop expModelRow) — même EXP_MODELS / _expModelAllowed / _expPickModel */
+window._mExpRenderModelInline=function(){
+  var c=document.getElementById('mExpModelInline'); if(!c) return;
+  if(window._expVeoModel==='pro') window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus
+  if(!window._expVeoModel) window._expVeoModel='standard';
+  if(window._expVeoModel==='omni' && typeof _expModelAllowed==='function' && !_expModelAllowed('omni')) window._expVeoModel='standard';
+  c.innerHTML=(typeof EXP_MODELS!=='undefined'?EXP_MODELS:[]).map(function(m){
+    var on=(m.v===window._expVeoModel), locked=(typeof _expModelAllowed==='function' && !_expModelAllowed(m.v));
+    var lock=locked?' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>':'';
+    return '<button onclick="_mExpPickModelInline(\''+m.v+'\')" style="flex:1;padding:11px 8px;border:none;border-radius:10px;background:'+(on?'var(--surface-2)':'transparent')+';font-family:var(--font);cursor:pointer;'+(locked?'opacity:.6;':'')+'text-align:center">'
+      + '<div style="font-size:13px;font-weight:700;color:'+(on?'var(--text)':'var(--text-3)')+'">'+m.name+lock+'</div>'
+      + '<div style="font-size:10.5px;font-weight:400;color:var(--text-3);margin-top:2px">'+m.sub+'</div></button>';
+  }).join('');
+};
+window._mExpPickModelInline=function(v){
+  if(typeof _expPickModel==='function') _expPickModel(v);   // gère toast + upgrade si verrouillé
+  _mExpSync(); _mExpRenderModelInline();
 };
 
 /* ══ Éditeur mobile : sélectionner un clip fait défiler jusqu'au panneau d'édition ══ */
