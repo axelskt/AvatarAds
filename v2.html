@@ -407,6 +407,14 @@ body{background-color:var(--bg);color:var(--text);
   background-image:
     linear-gradient(90deg,transparent calc(50% - 661px),var(--rail) calc(50% - 661px),var(--rail) calc(50% - 660px),transparent calc(50% - 660px)),
     linear-gradient(90deg,transparent calc(50% + 660px),var(--rail) calc(50% + 660px),var(--rail) calc(50% + 661px),transparent calc(50% + 661px))}
+/* ── SÉPARATEURS DE SECTIONS façon Qoves (Axel 12/09) : une ligne fine au-dessus de chaque bloc ; le bandeau
+   « Propulsé par » est ENCADRÉ par deux lignes avec un fond opaque → les rails ne le traversent plus. Les sections
+   sans padding-top reçoivent 64px pour que la ligne respire (sur mobile la LP impose 25px en !important). ── */
+:root{--sep:rgba(16,24,32,.11)}
+main>section.wrap{border-top:1px solid var(--sep)}
+main>section.wrap:not(#etapes):not(#toutEnUn):not(#faq){padding-top:64px}
+#scWrap{padding-bottom:64px}
+main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);background:var(--bg);padding:22px 0!important;position:relative;z-index:1}
 /* ── FOOTER : accordéons repliables (clic sur la flèche) AUSSI sur desktop (Axel) — remplace le force-open ── */
 @media(min-width:761px){
   footer .foot-grid{display:block!important;grid-template-columns:none!important;max-width:720px}
@@ -479,10 +487,9 @@ body{background-color:var(--bg);color:var(--text);
   .v2hero-pill .pb-go{width:44px;height:44px;min-width:44px;padding:0;border-radius:50%;flex:0 0 auto;display:block;position:relative;overflow:hidden;text-indent:-9999px;white-space:nowrap}
   .v2hero-pill .pb-go svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;margin:0;text-indent:0}
   .v2hero-trust{display:none}
-  /* RAILS aussi sur mobile (Axel) : 2 traits fins près des bords (±16px) */
-  body{background-image:
-    linear-gradient(90deg,transparent 15px,var(--rail) 15px,var(--rail) 16px,transparent 16px),
-    linear-gradient(90deg,transparent calc(100% - 16px),var(--rail) calc(100% - 16px),var(--rail) calc(100% - 15px),transparent calc(100% - 15px))}
+  /* mobile : PAS de rails verticaux (ils traversaient « Propulsé par » — Axel) ; la structure vient des SÉPARATEURS horizontaux */
+  body{background-image:none}
+  main>.pw-sec{padding:18px 0!important}
 }
 </style>
 </head>
