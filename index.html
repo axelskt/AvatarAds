@@ -111,6 +111,13 @@ a{color:inherit;text-decoration:none}
 /* cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
 .glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
+/* ══ Header : TRANSPARENT pleine largeur en haut → PILULE flottante au scroll (LP claire ET sombre) ══
+   ⚠️ scopé à .aa-hdr : .glass sert AUSSI aux badges de contenu (« 2,1M vues » sur les iPhones) — à NE PAS toucher. */
+#stickyCta{display:none!important}   /* plus de barre-doublon : la pilule flottante EST la barre persistante */
+.aa-hdr .glass{background:transparent!important;border-bottom-color:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transition:padding .4s cubic-bezier(.4,0,.2,1)}
+.aa-hdr .glass>.wrap{transition:max-width .4s cubic-bezier(.4,0,.2,1),background .4s ease,border-radius .4s ease,box-shadow .4s ease,padding .4s ease;border:1px solid transparent;border-radius:999px}
+body.aa-nav-float .aa-hdr .glass{padding:12px 16px 0}
+body.aa-nav-float .aa-hdr .glass>.wrap{max-width:1180px;background:color-mix(in srgb,var(--surface) 84%,transparent);border:1px solid var(--border);border-radius:999px;box-shadow:0 22px 48px -24px rgba(0,0,0,.55);padding-left:22px;padding-right:12px;-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
 /* layout helpers */
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
 .row{display:flex;align-items:center}
@@ -399,7 +406,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 </div>
 
 <!-- ══════════ 2 · NAV ══════════ -->
-<div style="position:sticky;top:0;z-index:50">
+<div class="aa-hdr" style="position:sticky;top:0;z-index:50">
   <div class="glass" style="border-bottom:1px solid var(--border)">
     <div class="wrap row" style="height:72px;justify-content:space-between">
       <div class="row gap12">
@@ -1410,5 +1417,7 @@ revealScan();
 })();
 </script>
 
+<script>/* Header : pilule flottante dès qu'on descend (>40px) — LP claire et sombre. */
+(function(){function n(){try{document.body.classList.toggle('aa-nav-float',(window.scrollY||document.documentElement.scrollTop||0)>40);}catch(e){}}n();window.addEventListener('scroll',n,{passive:true});window.addEventListener('resize',n);})();</script>
 </body>
 </html>
