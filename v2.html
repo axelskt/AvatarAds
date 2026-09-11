@@ -434,12 +434,13 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
    l'ancien zoom « trop fort » et les 120 % « pas assez »), son bord DROIT est aligné sur le conteneur (plus collée
    au bord de l'écran), et SANS FLOU : plus de fondu large ni de fondu du buste. Le raccord invisible vient du FOND :
    ::before reproduit EXACTEMENT le dégradé vertical du clip (mesuré image par image : #eef2f3 en haut → #9cb0bb en
-   bas) dans le MÊME repère que la vidéo (même top, même hauteur 165 %) → les bords gauche/droit de la vidéo sont
-   mathématiquement de la même couleur que la page. Il ne reste qu'un léger fondu de 10 % sur les bords verticaux
-   pour les bras coupés par le cadre en bas. Le « un peu plus foncé » façon Qoves = voile sombre progressif (::after)
-   posé sur TOUT le hero (vidéo comprise, donc sans raccord), quasi nul sur le visage, plus marqué vers le bas. */
+   bas) dans le MÊME repère que la vidéo (même top:1 %, même hauteur 120 %) → les bords gauche/droit de la vidéo sont
+   mathématiquement de la même couleur que la page (Δ ≤ 5). Donc AUCUN masque latéral : les bords sont invisibles au
+   lieu d'être flous (retour Axel 12/09 : les fondus gauche/droit = « flou », à supprimer). Seul masque restant = un
+   fondu bas très court (12 %) pour poser le buste sur le fond. Le « un peu plus foncé » façon Qoves = voile sombre
+   progressif (::after) posé sur TOUT le hero (vidéo comprise, donc sans raccord), quasi nul sur le visage. */
 .v2hero{position:relative;overflow:hidden;padding:0;min-height:min(780px,calc(100vh - 76px));display:flex;align-items:center;background:#eef2f3}
-.v2hero::before{content:"";position:absolute;left:0;right:0;top:3%;height:165%;z-index:0;pointer-events:none;
+.v2hero::before{content:"";position:absolute;left:0;right:0;top:1%;height:120%;z-index:0;pointer-events:none;
   background:linear-gradient(to bottom,#eef2f3 0%,#ebf0f3 5%,#eaeef4 10%,#e7ecf0 15%,#e5ebf0 20%,#e2e8ec 25%,#dce3ea 30%,#d8e0e7 35%,#d2dbe1 40%,#ccd7df 45%,#c7d2da 50%,#a0b2be 95%,#9cb0bb 100%)}
 .v2hero::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
   background:linear-gradient(to bottom,rgba(14,19,25,.04) 0%,rgba(14,19,25,.06) 40%,rgba(14,19,25,.2) 100%)}
@@ -455,15 +456,17 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
 .v2hero-pill .pb-ico{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)}
 .v2hero-pill .hp-input{flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v2hero-pill .pb-go{flex:0 0 auto;padding:16px 30px;font-size:17px;font-weight:800;border-radius:999px}
-/* vidéo = boîte calée sur la HAUTEUR du hero (165 %, largeur auto au ratio 9:16 → aucun recadrage horizontal, zoom
-   constant quelle que soit la largeur d'écran), tête jamais coupée (top 3 % ; la tête commence à 2-6 % du clip),
-   le buste est coupé NET par le bas du hero (façon Qoves). Bord droit = bord du conteneur .wrap (max 1320 + 32 de
-   padding), jamais moins de 12 % du viewport (le cadre rouge d'Axel). Seul fondu restant : 10 % sur les bords
-   verticaux, là où les bras touchent le cadre en bas — le visage et le buste restent NETS. */
-.v2hero-media{position:absolute;top:3%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:165%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
+/* vidéo = boîte calée sur la HAUTEUR du hero (120 %, largeur auto au ratio 9:16 → aucun recadrage horizontal, zoom
+   constant quelle que soit la largeur d'écran). Cadrage TÊTE + ÉPAULES + poitrine façon Qoves : à 120 % on voit
+   ~81 % du clip (contre 58 % à 165 %) → les épaules sont bien visibles, le visage est BEAUCOUP moins zoomé (retour
+   Axel 12/09 : « beaucoup trop zoomé encore, dézoome pour voir les épaules »). top:1 % = visage remonté avec un peu
+   de headroom (la tête commence à 2-6 % du clip → jamais coupée). Bord droit = bord du conteneur .wrap (max 1320
+   + 32 de padding), jamais < 12 % du viewport. Bords latéraux NETS (pas de masque, le fond fait le raccord). */
+.v2hero-media{position:absolute;top:1%;right:0;bottom:auto;left:auto;height:120%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
 .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block;
-  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 10%,#000 90%,transparent 100%);
-  mask-image:linear-gradient(to right,transparent 0,#000 10%,#000 90%,transparent 100%)}
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 34%,#000 100%),linear-gradient(to top,transparent 0,#000 11%,#000 100%);
+  mask-image:linear-gradient(to right,transparent 0,#000 34%,#000 100%),linear-gradient(to top,transparent 0,#000 11%,#000 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
 @media(max-width:768px){
   /* MOBILE = hero CINÉMA façon Qoves (en mieux) : vidéo PLEIN CADRE avec le visage dégagé en haut (headroom),
      DÉGRADÉ SOMBRE pleine largeur en bas (sur ::after du média, pas sur le texte → pas de marges), texte BLANC posé dessus,
