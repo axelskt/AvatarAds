@@ -435,26 +435,31 @@ body{background-color:var(--bg);color:var(--text);
 .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block;
   -webkit-mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.5) 16%,#000 40%);mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.5) 16%,#000 40%)}
 @media(max-width:768px){
-  .v2hero{padding:0;min-height:calc(100svh - 116px);display:block;background:linear-gradient(to bottom,#edf1f4 0%,#dde5ea 50%,#c7d3dc 100%)}
-  .v2hero-grid{display:block;height:100%}
+  /* MOBILE = SPLIT DOUX : vidéo en zone HAUTE (visage à TAILLE NATURELLE — plus étiré/zoomé — qui se fond dans le fond),
+     texte en zone BASSE sur fond clair PLEINE LARGEUR → plus jamais de texte par-dessus le visage. */
+  .v2hero{min-height:calc(100svh - 116px);display:flex;flex-direction:column;padding:0;overflow:hidden;
+    background:linear-gradient(to bottom,#eef2f5 0%,#e7edf1 46%,#edf1f4 62%)}
+  .v2hero-media{position:relative;inset:auto;order:1;width:100%;height:47svh;flex:0 0 auto;overflow:hidden}
+  .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 22%;
+    -webkit-mask-image:linear-gradient(to top,transparent 0,rgba(0,0,0,.55) 14%,#000 32%);mask-image:linear-gradient(to top,transparent 0,rgba(0,0,0,.55) 14%,#000 32%)}
+  .v2hero-grid{position:relative;order:2;flex:1 1 auto;display:flex;align-items:flex-start;width:100%}
   .v2hbadge{display:none!important}
-  /* vidéo : visage un peu plus BAS (pas collé tout en haut) + PLEIN cadre ; pas de mask (le scrim du texte gère la lisibilité) */
-  .v2hero-media{position:absolute;inset:0;width:100%;height:100%}
-  .v2hero-vid{object-position:50% 18%;-webkit-mask-image:none;mask-image:none}
-  /* SCRIM clair FORT sous le texte → texte lisible et SÉPARÉ du visage (le visage reste au-dessus, dégagé) */
-  .v2hero-copy{position:relative;z-index:3;min-height:calc(100svh - 116px);justify-content:flex-end;padding:0 20px 30px;max-width:100%;
-    background:linear-gradient(to top,#e9eef2 20%,rgba(233,238,242,.92) 40%,rgba(233,238,242,.55) 54%,rgba(233,238,242,0) 68%)}
+  .v2hero-copy{position:relative;justify-content:flex-start;padding:4px 20px 26px;max-width:100%;width:100%;background:none}
   .v2hero-h1{font-size:33px;margin-top:0;color:var(--text);line-height:1.06}
-  .v2hero-h1 .accent{color:#6d7885}
-  .v2hero-sub{color:var(--text-2);max-width:100%;font-size:15px;margin-top:15px}
+  .v2hero-h1 .accent{color:#7a8794}
+  .v2hero-sub{color:var(--text-2);max-width:100%;font-size:15px;margin-top:14px}
   .v2hero-cta{max-width:100%;margin-top:20px}
-  /* pilule mobile : on doit LIRE « Choisis un modèle » EN ENTIER → le bouton devient une pastille flèche (la pilule entière ouvre le sélecteur) */
+  /* pilule mobile : « Choisis un modèle » EN ENTIER → le bouton devient une pastille flèche (la pilule entière ouvre le sélecteur) */
   .v2hero-pill{padding:6px 6px 6px 8px;box-shadow:0 18px 40px -24px rgba(16,24,32,.42),0 0 0 3px var(--accent-soft)}
   .v2hero-pill .pb-ico{width:38px;height:38px}
   .v2hero-pill .hp-input{font-size:15.5px;padding:0 10px 0 11px}
   .v2hero-pill .pb-go{width:44px;height:44px;min-width:44px;padding:0;border-radius:50%;flex:0 0 auto;display:block;position:relative;overflow:hidden;text-indent:-9999px;white-space:nowrap}
   .v2hero-pill .pb-go svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;margin:0;text-indent:0}
   .v2hero-trust{display:none}
+  /* RAILS aussi sur mobile (Axel) : 2 traits fins près des bords (±16px) */
+  body{background-image:
+    linear-gradient(90deg,transparent 15px,var(--rail) 15px,var(--rail) 16px,transparent 16px),
+    linear-gradient(90deg,transparent calc(100% - 16px),var(--rail) calc(100% - 16px),var(--rail) calc(100% - 15px),transparent calc(100% - 15px))}
 }
 </style>
 </head>

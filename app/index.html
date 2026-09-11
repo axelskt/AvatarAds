@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-11-2305'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-12-0005'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -39519,7 +39519,9 @@ function edBandDrag(ov,track,e,mode){
    descend (labels repliés + hauteur réduite + marges/écart réduits), et revient en grand quand on remonte. */
 #mNav{transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),left .28s ease,right .28s ease,bottom .28s ease,border-radius .28s ease}
 #mNav button span{max-height:13px;overflow:hidden;transition:opacity .18s ease,max-height .28s cubic-bezier(.4,0,.2,1)}
-#mNav.mnav-min{height:42px;padding:3px;left:7px;right:7px;bottom:max(calc(env(safe-area-inset-bottom) + 12px),12px);border-radius:15px}
+#mNav button{transition:flex-basis .28s cubic-bezier(.4,0,.2,1),flex-grow .28s,padding .28s ease,background-color .2s ease,box-shadow .2s ease,color .18s ease,transform .12s ease}
+#mNav.mnav-min{height:42px;padding:3px 6px;left:7px;right:7px;bottom:max(calc(env(safe-area-inset-bottom) + 12px),12px);border-radius:15px;justify-content:center;gap:9px}
+#mNav.mnav-min button{flex:0 0 auto;padding:0 9px}   /* icônes RESSERRÉES entre elles (au lieu d'étalées) */
 #mNav.mnav-min button span{opacity:0;max-height:0}
 #mNav.mnav-min button svg{width:22px;height:22px}
 #mMore .mm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px}
@@ -39657,11 +39659,14 @@ function edBandDrag(ov,track,e,mode){
 <div id="mNav"></div>
 <script>/* #mNav : RÉTRÉCIT au scroll vers le bas, revient au scroll vers le haut (façon Instagram). Scroll capté en phase
    CAPTURE → marche avec .main et tout conteneur scrollable, quelle que soit la vue. Seuil ±4 accumulé (anti-jitter). */
-(function(){var nav=document.getElementById('mNav');if(!nav)return;var lastY=0;
+(function(){var nav=document.getElementById('mNav');if(!nav)return;var lastY=0,idle;
+function normal(){nav.classList.remove('mnav-min');}
 document.addEventListener('scroll',function(e){var t=e.target;var y=(t&&t!==document&&t.scrollTop!=null)?t.scrollTop:(window.scrollY||document.documentElement.scrollTop||0);
-if(y<24){nav.classList.remove('mnav-min');lastY=y;return;}
-if(y>lastY+4){nav.classList.add('mnav-min');lastY=y;}
-else if(y<lastY-4){nav.classList.remove('mnav-min');lastY=y;}},true);})();</script>
+clearTimeout(idle);idle=setTimeout(normal,450);/* arrêt du scroll → redevient NORMAL (icônes étalées + texte) */
+if(y<24){normal();lastY=y;return;}
+if(y>lastY+4){nav.classList.add('mnav-min');lastY=y;}/* on descend → resserre */
+else if(y<lastY-4){normal();lastY=y;}/* on remonte → normal */
+},true);})();</script>
 <div id="mMore"></div>
 <div id="mPreview">
   <div class="mp-head">
