@@ -460,12 +460,14 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
    constant quelle que soit la largeur d'écran). Cadrage TÊTE + ÉPAULES + poitrine façon Qoves : à 120 % on voit
    ~81 % du clip (contre 58 % à 165 %) → les épaules sont bien visibles, le visage est BEAUCOUP moins zoomé (retour
    Axel 12/09 : « beaucoup trop zoomé encore, dézoome pour voir les épaules »). top:1 % = visage remonté avec un peu
-   de headroom (la tête commence à 2-6 % du clip → jamais coupée). Bord droit = bord du conteneur .wrap (max 1320
-   + 32 de padding), jamais < 12 % du viewport. Bords latéraux NETS (pas de masque, le fond fait le raccord). */
-.v2hero-media{position:absolute;top:1%;right:0;bottom:auto;left:auto;height:120%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
+   de headroom (la tête commence à 2-6 % du clip → jamais coupée). Position = CENTRE-DROIT (bord droit = bord du
+   conteneur .wrap, max 1320 + 32 de padding, floor 12 % du viewport) = le cadre rouge d'Axel, PAS collée au bord de
+   l'écran. Fondu latéral SUBTIL 16 % des 2 côtés (Axel : « le flou est beaucoup trop fort, diminue ») + fondu bas
+   9 % : à ce cadrage les épaules touchent les 2 bords, un fondu court les fond sur le fond assorti sans bande floue. */
+.v2hero-media{position:absolute;top:1%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:120%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
 .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block;
-  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 34%,#000 100%),linear-gradient(to top,transparent 0,#000 11%,#000 100%);
-  mask-image:linear-gradient(to right,transparent 0,#000 34%,#000 100%),linear-gradient(to top,transparent 0,#000 11%,#000 100%);
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to top,transparent 0,#000 9%,#000 100%);
+  mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to top,transparent 0,#000 9%,#000 100%);
   -webkit-mask-composite:source-in;mask-composite:intersect}
 @media(max-width:768px){
   /* MOBILE = hero CINÉMA façon Qoves (en mieux) : vidéo PLEIN CADRE avec le visage dégagé en haut (headroom),
