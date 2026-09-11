@@ -97,10 +97,28 @@ const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate
 // l'interdit qui tue l'effet « peau de cire ». JAMAIS sur un produit (packshot).
 const IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter.'
 const RE_PERSONNE = /\b(femmes?|filles?|hommes?|gar[çc]ons?|meufs?|nanas?|influenceu\w*|mannequins?|mod[eè]les?|models?|selfies?|portraits?|personnes?|gens|visages?|humains?|humans?|women|woman|man|men|girls?|boys?|guys?|ladies|lady|people|persons?|faces?|influencers?|creators?|avatars?|ugc)\b/i
+// Genre (Axel 11/09) : influenceur = HOMME, influenceuse = FEMME. gpt-image ignore parfois le genre
+// (biais « influenceuse » par défaut) → on l'ANCRE explicitement quand le prompt le désigne. Le féminin
+// est testé À PART du masculin (influenceuSE ≠ influenceuR) ; prompt MIXTE (les deux) → on ne force rien.
+function genreIndice(p: string): 'homme' | 'femme' | null {
+  const fem = /\b(influenceuses?|femmes?|filles?|meufs?|nanas?|cr[ée]atrices?|actrices?|mannequines?|dames?|madames?|women|woman|female|girls?|ladies|lady)\b/i.test(p)
+  const masc = /\b(influenceurs?|hommes?|gar[çc]ons?|mecs?|cr[ée]ateurs?|acteurs?|messieurs?|monsieur|men|man|male|boys?|guys?|dudes?|gentlem[ae]n)\b/i.test(p)
+  if (fem && masc) return null   // couple / scène mixte → ne pas imposer un genre
+  if (fem) return 'femme'
+  if (masc) return 'homme'
+  return null
+}
 // N'augmente QUE si le prompt parle d'une personne (sinon on casserait un packshot produit).
 function augmenterPortrait(prompt: string): string {
   if (!RE_PERSONNE.test(prompt)) return prompt
-  return prompt.slice(0, 3990 - IMG_REALISM_SUFFIX.length) + IMG_REALISM_SUFFIX
+  const g = genreIndice(prompt)
+  const genreTxt = g === 'femme'
+    ? ' The person is a WOMAN (female) — respect this gender exactly, never render a man.'
+    : g === 'homme'
+      ? ' The person is a MAN (male) — respect this gender exactly, never render a woman.'
+      : ''
+  const suffix = genreTxt + IMG_REALISM_SUFFIX
+  return prompt.slice(0, 3990 - suffix.length) + suffix
 }
 // Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
 const ALLOWED_PLANS   = ['pro', 'elite']
@@ -1328,6 +1346,57 @@ let _lastReconcile = 0
 // FIN PROPRE (02/09, Axel) — ajoutée côté serveur à TOUT prompt Express : la personne finit sa phrase et la
 // vidéo s'arrête là ; jamais une nouvelle phrase/un nouveau geste entamé dans la dernière seconde, jamais coupé au milieu.
 const EXPRESS_ENDING = ' ENDING RULE: the clip must end cleanly — the person finishes their current sentence, closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or a new gesture in the final second, never cut mid-word or mid-motion.'
+
+// ── FILE D'ATTENTE DES SOUMISSIONS VEO (11/09, Axel : « la file d'attente, fais-le proprement ») ──
+// Lancer plusieurs générations EN MÊME TEMPS télescopait leurs POST predictLongRunning chez Google
+// (rafale → ≈5/7 « failed » génériques). Deux parades, sans nouveau statut ni schéma :
+//  1) ÉTALEMENT : chaque job attend selon son RANG dans la rafale récente du compte (jobs 'video'
+//     'running' encore SANS op_name) → 3 s d'écart entre soumissions. Le rang ne compte QUE les jobs
+//     non encore soumis : dès qu'op_name est posé, le job sort de la file (aucun créneau bloqué
+//     pendant la génération elle-même, qui dure 1-3 min chez Veo).
+//  2) RETRIES : une erreur de lancement transitoire (429/quota/UNAVAILABLE/5xx/« failed ») est
+//     réessayée avec backoff (2,5/5/7,5 s) ; une erreur permanente (modèle inexistant…) stoppe net.
+// Si l'isolate meurt pendant l'attente, le job reste 'running' sans op_name → le réconciliateur le
+// rembourse après 8 min (aucun crédit perdu). Le cas single-gen est INCHANGÉ (rang 0 → 0 s d'attente).
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, Math.max(0, ms)))
+function isTransientLaunchErr(msg: string): boolean {
+  return /429|resource[_ ]?exhausted|exhausted|quota|rate.?limit|unavailable|overloaded|too many|concurr|deadline|timeout|temporar|\b5\d\d\b|internal|backend|try again|failed|unknown/i.test(msg || '')
+}
+async function veoStaggerDelay(userId: string, jobId: string): Promise<number> {
+  try {
+    const since = new Date(Date.now() - 90_000).toISOString()
+    const { data } = await svc.from('mcp_jobs').select('id')
+      .eq('user_id', userId).eq('kind', 'video').eq('status', 'running').is('op_name', null)
+      .gte('created_at', since).order('created_at', { ascending: true }).limit(24)
+    const rank = Math.max(0, (data || []).findIndex((j) => j.id === jobId))
+    return Math.min(rank, 10) * 3000
+  } catch { return 0 }
+}
+// Soumet à Veo avec file d'attente (étalement) + retries. Rend l'op_name ou jette (échec définitif).
+async function launchVeo(userId: string, jobId: string, mkBody: (withAudio: boolean) => string, models: string[]): Promise<string> {
+  await sleep(await veoStaggerDelay(userId, jobId))
+  let opName = ''
+  let lastErr = 'Erreur au lancement'
+  for (let attempt = 0; attempt < 4 && !opName; attempt++) {
+    if (attempt > 0) await sleep(2500 * attempt)   // backoff 2,5 / 5 / 7,5 s
+    outer: for (const model of models) {
+      for (const withAudio of [true, false]) {   // audio d'abord (voix), repli sans si Veo refuse
+        const res = await veoFetch(`/v1beta/models/${model}:predictLongRunning`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: mkBody(withAudio),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok && data.name) { opName = data.name; break outer }
+        lastErr = data?.error?.message || `HTTP ${res.status}`
+        if (withAudio && /generateAudio|generate_audio|audio/i.test(lastErr)) continue
+        if (/model|not found|does not exist|unsupported|permission/i.test(lastErr)) continue outer
+        break outer
+      }
+    }
+    if (!opName && !isTransientLaunchErr(lastErr)) break   // erreur permanente → on arrête les retries
+  }
+  if (!opName) throw new Error(lastErr)
+  return opName
+}
 async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!GOOGLE_AI_KEY) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
@@ -1395,23 +1464,8 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
         instances: [{ prompt: prompt + EXPRESS_ENDING, ...(image ? { image } : {}) }],
         parameters: { durationSeconds: duration, sampleCount: 1, aspectRatio: aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
       })
-      let opName = ''
-      let lastErr = 'Erreur au lancement'
-      outer: for (const model of VEO_MODELS) {
-        // Certains modèles Veo refusent generateAudio → on retente sans (même fallback que l'app)
-        for (const withAudio of [true, false]) {
-          const res = await veoFetch(`/v1beta/models/${model}:predictLongRunning`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: mkBody(withAudio),
-          })
-          const data = await res.json().catch(() => ({}))
-          if (res.ok && data.name) { opName = data.name; break outer }
-          lastErr = data?.error?.message || `HTTP ${res.status}`
-          if (withAudio && /generateAudio|generate_audio|audio/i.test(lastErr)) continue
-          if (/model|not found|does not exist|unsupported/i.test(lastErr)) continue outer
-          break outer
-        }
-      }
-      if (!opName) throw new Error(lastErr)
+      // FILE D'ATTENTE : étalement anti-rafale + retries transitoires (voir launchVeo).
+      const opName = await launchVeo(userId, job.id, mkBody, VEO_MODELS)
       await svc.from('mcp_jobs').update({ op_name: opName, updated_at: new Date().toISOString() }).eq('id', job.id)
     } catch (e) {
       await svc.from('mcp_jobs').update({ status: 'failed', error: String((e as Error)?.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
@@ -1666,22 +1720,8 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
       })
       // Modèle : Pro → Fast (repli Lite si indispo), Standard → Lite.
       const models = isPro ? ['veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'] : ['veo-3.1-lite-generate-preview']
-      let opName = ''
-      let lastErr = 'Erreur au lancement'
-      outer: for (const model of models) {
-        for (const withAudio of [true, false]) {   // audio D'ABORD (c'est la VOIX), repli sans si Veo refuse
-          const res = await veoFetch(`/v1beta/models/${model}:predictLongRunning`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: mkBody(withAudio),
-          })
-          const data = await res.json().catch(() => ({}))
-          if (res.ok && data.name) { opName = data.name; break outer }
-          lastErr = data?.error?.message || `HTTP ${res.status}`
-          if (withAudio && /generateAudio|generate_audio|audio/i.test(lastErr)) continue
-          if (/model|not found|does not exist|unsupported|permission/i.test(lastErr)) continue outer
-          break outer
-        }
-      }
-      if (!opName) throw new Error(lastErr)
+      // FILE D'ATTENTE : étalement anti-rafale + retries transitoires (voir launchVeo).
+      const opName = await launchVeo(userId, job.id, mkBody, models)
       await svc.from('mcp_jobs').update({ op_name: opName, updated_at: new Date().toISOString() }).eq('id', job.id)
     } catch (e) {
       await svc.from('mcp_jobs').update({ status: 'failed', error: String((e as Error)?.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
