@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-11-2245'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-11-2305'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -39515,10 +39515,11 @@ function edBandDrag(ov,track,e,mode){
 #mNav button.on span{font-weight:700;color:#fff;text-shadow:0 0 6px rgba(255,255,255,.25)}
 #mNav button svg{width:19px;height:19px;flex:0 0 auto}
 #mNav button:active{transform:scale(.94)}
-/* Barre du bas façon Instagram : elle RÉTRÉCIT quand on descend (labels repliés + hauteur réduite), revient quand on remonte. */
-#mNav{transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1)}
+/* Barre du bas façon Instagram : elle RÉTRÉCIT + se REPLIE (moins d'espace/de marge, plus collée en bas) quand on
+   descend (labels repliés + hauteur réduite + marges/écart réduits), et revient en grand quand on remonte. */
+#mNav{transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),left .28s ease,right .28s ease,bottom .28s ease,border-radius .28s ease}
 #mNav button span{max-height:13px;overflow:hidden;transition:opacity .18s ease,max-height .28s cubic-bezier(.4,0,.2,1)}
-#mNav.mnav-min{height:44px;padding:3px}
+#mNav.mnav-min{height:42px;padding:3px;left:7px;right:7px;bottom:max(calc(env(safe-area-inset-bottom) + 12px),12px);border-radius:15px}
 #mNav.mnav-min button span{opacity:0;max-height:0}
 #mNav.mnav-min button svg{width:22px;height:22px}
 #mMore .mm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px}

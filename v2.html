@@ -448,7 +448,12 @@ body{background-color:var(--bg);color:var(--text);
   .v2hero-h1 .accent{color:#6d7885}
   .v2hero-sub{color:var(--text-2);max-width:100%;font-size:15px;margin-top:15px}
   .v2hero-cta{max-width:100%;margin-top:20px}
-  .v2hero-pill .pb-go{padding:14px 20px;font-size:15px}
+  /* pilule mobile : on doit LIRE « Choisis un modèle » EN ENTIER → le bouton devient une pastille flèche (la pilule entière ouvre le sélecteur) */
+  .v2hero-pill{padding:6px 6px 6px 8px;box-shadow:0 18px 40px -24px rgba(16,24,32,.42),0 0 0 3px var(--accent-soft)}
+  .v2hero-pill .pb-ico{width:38px;height:38px}
+  .v2hero-pill .hp-input{font-size:15.5px;padding:0 10px 0 11px}
+  .v2hero-pill .pb-go{width:44px;height:44px;min-width:44px;padding:0;border-radius:50%;flex:0 0 auto;display:block;position:relative;overflow:hidden;text-indent:-9999px;white-space:nowrap}
+  .v2hero-pill .pb-go svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;margin:0;text-indent:0}
   .v2hero-trust{display:none}
 }
 </style>
