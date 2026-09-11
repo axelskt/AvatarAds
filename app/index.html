@@ -6057,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-11-2030'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-11-2245'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -39515,6 +39515,12 @@ function edBandDrag(ov,track,e,mode){
 #mNav button.on span{font-weight:700;color:#fff;text-shadow:0 0 6px rgba(255,255,255,.25)}
 #mNav button svg{width:19px;height:19px;flex:0 0 auto}
 #mNav button:active{transform:scale(.94)}
+/* Barre du bas façon Instagram : elle RÉTRÉCIT quand on descend (labels repliés + hauteur réduite), revient quand on remonte. */
+#mNav{transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1)}
+#mNav button span{max-height:13px;overflow:hidden;transition:opacity .18s ease,max-height .28s cubic-bezier(.4,0,.2,1)}
+#mNav.mnav-min{height:44px;padding:3px}
+#mNav.mnav-min button span{opacity:0;max-height:0}
+#mNav.mnav-min button svg{width:22px;height:22px}
 #mMore .mm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px}
 #mMore .mm-tool{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;text-align:left;background:var(--surface);
   border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer}
@@ -39648,6 +39654,13 @@ function edBandDrag(ov,track,e,mode){
 }
 </style>
 <div id="mNav"></div>
+<script>/* #mNav : RÉTRÉCIT au scroll vers le bas, revient au scroll vers le haut (façon Instagram). Scroll capté en phase
+   CAPTURE → marche avec .main et tout conteneur scrollable, quelle que soit la vue. Seuil ±4 accumulé (anti-jitter). */
+(function(){var nav=document.getElementById('mNav');if(!nav)return;var lastY=0;
+document.addEventListener('scroll',function(e){var t=e.target;var y=(t&&t!==document&&t.scrollTop!=null)?t.scrollTop:(window.scrollY||document.documentElement.scrollTop||0);
+if(y<24){nav.classList.remove('mnav-min');lastY=y;return;}
+if(y>lastY+4){nav.classList.add('mnav-min');lastY=y;}
+else if(y<lastY-4){nav.classList.remove('mnav-min');lastY=y;}},true);})();</script>
 <div id="mMore"></div>
 <div id="mPreview">
   <div class="mp-head">
