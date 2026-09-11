@@ -2053,8 +2053,21 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
             </div>
 
-            <!-- MODÈLE IA AVATAR : sélecteur retiré — Character 3 (Hedra) est le seul modèle, utilisé par défaut -->
-            <input type="hidden" id="modelBtn-character3" value="character3">
+            <!-- MODÈLE (Axel 11/09) : Avatar (Hedra Character-3, défaut) / Omni Human (fal, 1080p natif, BÊTA) -->
+            <div class="fld" style="margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Modèle d'avatar</div>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px" id="genModelBtns">
+                <button type="button" onclick="genSetModel('avatar',this)" class="qual-btn on" data-gm="avatar" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:12px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.15s;position:relative">
+                  <span style="position:absolute;top:-9px;background:var(--accent);color:#1A0A02;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap">Défaut</span>
+                  <span style="font-weight:700;font-size:14.5px">Avatar</span><span class="faint mono" style="font-size:10.5px">Character 3 · 2 cr/s</span>
+                </button>
+                <button type="button" onclick="genSetModel('omnihuman',this)" class="qual-btn" data-gm="omnihuman" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);cursor:pointer;transition:.15s;position:relative">
+                  <span style="position:absolute;top:-9px;background:var(--surface-3);color:var(--text-2);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap">BÊTA</span>
+                  <span style="font-weight:700;font-size:14.5px">Omni Human</span><span class="faint mono" style="font-size:10.5px">1080p natif · 5 cr/s</span>
+                </button>
+              </div>
+              <input type="hidden" id="modelBtn-character3" value="character3">
+            </div>
 
             <!-- 🎼 Montage IA après la génération (concerne les deux modes de génération) -->
             <div id="genMontageToggleWrap" style="display:none">
@@ -5402,7 +5415,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     </button>
 
     <!-- 💶 Parrainage (déplacé de la sidebar le 30/08) — ouvre la vue dédiée depuis Mon compte -->
-    <button onclick="closeAccountSettings();nav('affiliation');if(typeof initAffiliation==='function')initAffiliation()" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:26px;text-align:left;cursor:pointer">
+    <button onclick="openAffiliation()" class="row card" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:26px;text-align:left;cursor:pointer">
       <span class="row gap12" style="align-items:center;min-width:0">
         <span style="width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);display:grid;place-items:center">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h0M18 12h0"/></svg>
@@ -6062,7 +6075,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-09-0115'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-11-1500'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7152,8 +7165,10 @@ async function authVerifyCode(){
   // Nouveau compte : prénom + parrainage (le trigger crée le profil sans ces infos)
   try{
     if(_otpCtx.firstName) await sb.from('profiles').update({ first_name: _otpCtx.firstName }).eq('id', data.user.id);
+    // Parrainage OU code promo — jamais les deux ; PRIORITÉ au code promo (Axel 11/09)
     const ref = localStorage.getItem('aa_ref');
-    if(res.created && ref) await sb.from('profiles').update({ referred_by: ref }).eq('id', data.user.id);
+    const promo = localStorage.getItem('aa_promo');
+    if(res.created && ref && !promo) await sb.from('profiles').update({ referred_by: ref }).eq('id', data.user.id);
   }catch(e){}
   btn.textContent = 'Chargement du profil…';
   await loadProfile(data.user);
@@ -7197,7 +7212,7 @@ async function loadProfile(user){
     // Fallback : créer le profil manuellement si le trigger n'a pas fonctionné
     const { data } = await sb.from('profiles').insert({
       id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40,
-      referred_by: localStorage.getItem('aa_ref') || null
+      referred_by: (localStorage.getItem('aa_promo') ? null : localStorage.getItem('aa_ref')) || null
     }).select().single();
     profile = data;
   }
@@ -8862,8 +8877,16 @@ async function testKey(k){
 function _affCode(userId){ return userId.replace(/-/g,'').substring(0,10).toUpperCase(); }
 function _affLink(code){ return 'https://avatarads.fr/?ref=' + code; }   // (ex avatarads.iamanager.fr : domaine mort)
 
+// Ouvre le Parrainage depuis « Mon compte » — réservé aux plans payants (Axel 11/09) : Free/invité → mur d'upgrade
+function openAffiliation(){
+  closeAccountSettings();
+  if(typeof _isFreePlan==='function' && _isFreePlan()){ showPlansSheet('Le Parrainage est réservé aux membres','Passe à un plan payant pour gagner 30 % sur les paiements de tes filleuls.'); return; }
+  nav('affiliation');
+  if(typeof initAffiliation==='function') initAffiliation();
+}
 function initAffiliation(){
   if(!currentMember) return;
+  if(typeof _isFreePlan==='function' && _isFreePlan()){ showPlansSheet('Le Parrainage est réservé aux membres','Passe à un plan payant pour gagner sur tes filleuls.'); return; }   // sécurité : Free/invité bloqué même par appel direct
   const code = _affCode(currentMember.id);
   const link = _affLink(code);
   const inp  = document.getElementById('affLink');
@@ -8982,10 +9005,13 @@ function saveAffPayment(){
   });
 }
 
-// Capturer le ?ref= à l'arrivée sur la page et le stocker
+// Capturer le ?ref= (parrainage) et le ?promo=/?code= (code promo) à l'arrivée et les stocker
 (function(){
-  const ref = new URLSearchParams(window.location.search).get('ref');
+  const q = new URLSearchParams(window.location.search);
+  const ref = q.get('ref');
   if(ref) localStorage.setItem('aa_ref', ref);
+  const promo = q.get('promo') || q.get('code');
+  if(promo) localStorage.setItem('aa_promo', promo.trim().toUpperCase());   // priorité promo à l'inscription (cf authVerifyCode)
 })();
 
 // ── GÉNÉRATEUR D'IMAGES IA (DALL-E 3) ──
@@ -18864,8 +18890,9 @@ function _majRecap(){
     if(!window._recapDurPending){ window._recapDurPending = true; _sourceAudioDurationSec().then(d=>{ window._recapDurPending = false; if(d > 0) try{ _majRecap(); }catch(_){} }); }
   }
   const bypassVid = !!window._bypassHedraOn;
-  const base  = (aAvatar && !bypassVid) ? CREDIT_COSTS.avatarPerSec * dur : 0;
-  const surHD = q === '1080p' ? Math.ceil(dur * CREDIT_COSTS.hd1080PerSec) : 0;
+  const _omniG = window._genModel==='omnihuman';
+  const base  = (aAvatar && !bypassVid) ? (_omniG ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec) * dur : 0;
+  const surHD = (q === '1080p' && !_omniG) ? Math.ceil(dur * CREDIT_COSTS.hd1080PerSec) : 0;
   const total = Math.max(1, Math.round(base + surHD));
   txt('recapCout', total + ' crédit' + (total > 1 ? 's' : '') + ' vidéo' + (bypassVid ? ' (vidéo avatar : lipsync déjà fait, non facturé)' : ''));
   if(bypassVid) txt('recapAvatar', 'Vidéo avatar importée');
@@ -23451,7 +23478,7 @@ async function startGeneration(){
     let durSecs = Math.ceil((await _sourceAudioDurationSec()) || 0);
     if(!(durSecs > 0)){ durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes'); console.warn('[crédits] durée audio inconnue → repli', durSecs, 's'); }
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
-    const _rate = (_hasAvatarSel ? CREDIT_COSTS.avatarPerSec : 0);
+    const _rate = (_hasAvatarSel ? (window._genModel==='omnihuman' ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec) : 0);
     // #122 · ouvre le flux AVANT tout débit. L'appel était à l'intérieur du test
     // `_rate > 0` : avec un gameplay et un MP3 importé, le tarif de base est nul
     // et le supplément 1080p se serait greffé sur la liste d'opérations de la
@@ -23466,7 +23493,7 @@ async function startGeneration(){
     }
     // 📐 1080p facturé à la seconde (720p gratuit) — même durée que la vidéo,
     // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
-    if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080){
+    if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman'){   // OmniHuman = 1080p natif inclus dans les 5 cr/s
       const surcout = Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec);
       // Si le surcoût 1080p ne passe pas, l'avatar déjà débité doit repartir (sinon perte). #122
       if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))){ try{ await creditsFlowRefund('crédits insuffisants pour le 1080p'); }catch(_){} return; }
@@ -23474,7 +23501,7 @@ async function startGeneration(){
     // Audit 05/09 : montant à RE-DÉBITER si l'utilisateur relance après un échec (retryHedraAuto). Avant, le
     // nouvel essai était GRATUIT : le 1er débit avait été remboursé et le retry ne débitait rien.
     results._retryCost = (_rate > 0 ? Math.max(1, Math.ceil(durSecs * _rate)) : 0)
-      + ((typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0);
+      + ((typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman') ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0);
   }
 
   step=5; updateSteps();
@@ -23901,7 +23928,37 @@ window.probeSeedance = async function(){
 };
 
 
+// ── MODÈLE Générateur (Axel 11/09) : 'avatar' = Hedra Character-3 (défaut) · 'omnihuman' = OmniHuman 1.5 (fal, BÊTA) ──
+window._genModel = window._genModel || 'avatar';
+function genSetModel(m, btn){
+  window._genModel = m;
+  document.querySelectorAll('#genModelBtns .qual-btn').forEach(b=>{ const on=b.dataset.gm===m; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; b.classList.toggle('on',on); });
+  if(typeof _majRecap==='function'){ try{ _majRecap(); }catch(_){ } }
+}
+// Génère la vidéo via OmniHuman 1.5 (fal) — réutilise _mtOmniScene (Montage IA). Même contrat de retour que
+// callHedra : une blob: URL (ou '' en cas d'échec → le remboursement crédits est géré en amont dans startGeneration).
+async function _genOmniScene(audioBlob){
+  let imgFile=null;
+  const avatarImgUrl=(document.getElementById('f-avatarimg')||{}).value?.trim()||'';
+  if(avatarImgUrl){ try{ imgFile=new File([await fetch(avatarImgUrl).then(r=>r.blob())],'avatar.jpg',{type:'image/jpeg'}); }catch(e){} }
+  if(!imgFile && selAvatar && selAvatar.localFile) imgFile=selAvatar.localFile;
+  if(!imgFile){ window._lastHedraError='Ajoute une image d\'avatar — obligatoire pour OmniHuman.'; toast('Ajoute une image d\'avatar pour générer la vidéo'); return ''; }
+  let segSec=0; try{ segSec=await new Promise(res=>{ const a=new Audio(); a.preload='metadata'; a.onloadedmetadata=()=>res(a.duration||0); a.onerror=()=>res(0); a.src=URL.createObjectURL(audioBlob); }); }catch(_){}
+  const fmt=(typeof cfg!=='undefined' && cfg && cfg.format==='paysage') ? 'paysage' : 'vertical';   // fal OmniHuman : 9:16 / 16:9 (pas 1:1)
+  try{
+    const blob=await _mtOmniScene(imgFile, audioBlob, fmt, segSec, 'hook');
+    await _incrementVideosUsed();
+    return URL.createObjectURL(blob);
+  }catch(err){
+    window._lastHedraError='OmniHuman échoué : '+(err&&err.message||err)+' — OmniHuman est limité à ~60 s ; pour un script plus long, repasse sur Avatar.';
+    toast('OmniHuman : '+String(err&&err.message||err).slice(0,70));
+    console.error('OmniHuman (générateur):', err);
+    return '';
+  }
+}
 async function callHedra(audioBlob){
+  // MODÈLE OmniHuman sélectionné → route vers fal (tout le chemin Hedra ci-dessous reste inchangé sinon)
+  if(window._genModel==='omnihuman') return await _genOmniScene(audioBlob);
   // Hedra API — via proxy Supabase Edge Function (clé HEDRA_API_KEY côté serveur)
   // Flow : 1) POST /assets (créer) → 2) POST /assets/{id}/upload (fichier)
   //        → 3) POST /generations → 4) GET /generations/{id}/status (poll)
@@ -39963,14 +40020,9 @@ window.mPreviewClose=function(){
         </div>
 
         <div class="col" style="gap:13px;margin-bottom:24px">
-          <div><div class="mz-lbl">Animation</div><div class="seg" id="mzSegAnim" style="width:100%;flex-wrap:wrap"></div></div>
-          <div><div class="mz-lbl">Style</div><div class="seg" id="mzSegStyle" style="width:100%;flex-wrap:wrap"></div></div>
-          <div class="row gap12" id="mzPosSize" style="flex-wrap:wrap">
-            <div style="flex:1;min-width:0"><div class="mz-lbl">Position</div><div class="seg" id="mzSegPos" style="width:100%;flex-wrap:wrap"></div></div>
-            <div style="flex:1;min-width:0"><div class="mz-lbl">Taille</div><div class="seg" id="mzSegSize" style="width:100%;flex-wrap:wrap"></div></div>
-          </div>
-          <div id="mzTogEmoji"></div>
+          <div><div class="mz-lbl">Style des sous-titres</div><div class="seg" id="mzSegStyle" style="width:100%;flex-wrap:wrap"></div></div>
         </div>
+        <!-- Contrôles retirés (Axel 11/09) : Animation, Position, Taille, Emoji auto — le chef d'orchestre gère. Vars gardées à leur défaut dans _mzDefaults(). -->
 
         <div class="divider" style="margin-bottom:22px"></div>
 
@@ -39981,26 +40033,14 @@ window.mPreviewClose=function(){
 
         <div class="col" style="gap:13px;margin-bottom:24px">
           <div><div class="mz-lbl">Musique</div><div class="seg" id="mzSegMusic" style="width:100%;flex-wrap:wrap"></div></div>
-          <div><div class="mz-lbl">Rythme du montage</div><div class="seg" id="mzSegRhythm" style="width:100%;flex-wrap:wrap"></div></div>
-          <div><div class="mz-lbl">Transitions entre les plans</div><div class="seg" id="mzSegTrans" style="width:100%;flex-wrap:wrap"></div>
-            <p class="faint" style="font-size:11px;margin-top:7px">L'effet visuel à chaque changement de plan.</p></div>
-          <div id="mzMotionRow"><div class="mz-lbl">Mouvement de l'avatar</div><div class="seg" id="mzSegMotion" style="width:100%;flex-wrap:wrap"></div>
-            <p class="faint" style="font-size:11px;margin-top:7px" id="mzMotionHint">Les mains ne sont animées que si ta photo les montre.</p></div>
         </div>
+        <!-- Retirés (Axel 11/09) : Rythme, Transitions, Mouvement de l'avatar — gérés par le chef d'orchestre, vars gardées à leur défaut. -->
 
-        <div style="margin-bottom:22px">
-          <div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="mz-lbl" style="margin:0">Présence de ton visage</div><span class="mono" id="mzAvatarLbl" style="font-size:11px;color:var(--text-3)"></span></div>
-          <input type="range" id="mzAvatarDens" class="ed-range" min="0" max="3" step="1" value="2" oninput="mzAdvSet('avatarDens',+this.value)" style="width:100%">
-          <p class="faint" style="font-size:11px;margin-top:8px">À quelle fréquence on te voit parler entre les animations.</p>
-        </div>
+        <!-- Retiré (Axel 11/09) : « Présence de ton visage » (avatarDens) — gardé à 2 par défaut, piloté par le chef d'orchestre. -->
 
-        <div class="col" style="gap:13px;margin-bottom:24px">
-          <div id="mzTogPunch"></div>
-          <div id="mzTogSfx"></div>
-        </div>
+        <!-- Retirés (Axel 11/09) : « Accent des temps forts » (punch) et « Bruitages » (sfx) — gardés ON par défaut, gérés par le chef d'orchestre. -->
 
         <div class="row gap10" style="margin-top:8px">
-          <button type="button" class="btn btn-quiet btn-sm" onclick="mzAdvReset()" style="border:none;background:none;cursor:pointer;font-family:var(--font)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Tout remettre en auto</button>
           <button type="button" class="btn btn-primary" style="margin-left:auto;padding:12px 28px;font-weight:800" onclick="mzAdvClose()">Appliquer</button>
         </div>
       </div>
