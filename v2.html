@@ -435,16 +435,19 @@ body{background-color:var(--bg);color:var(--text);
 .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block;
   -webkit-mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.5) 16%,#000 40%);mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.5) 16%,#000 40%)}
 @media(max-width:768px){
-  .v2hero{padding:0;min-height:calc(100svh - 116px);display:block;background:linear-gradient(to bottom,#edf1f4 0%,#dbe3e9 52%,#c4d1da 100%)}
+  .v2hero{padding:0;min-height:calc(100svh - 116px);display:block;background:linear-gradient(to bottom,#edf1f4 0%,#dde5ea 50%,#c7d3dc 100%)}
   .v2hero-grid{display:block;height:100%}
   .v2hbadge{display:none!important}
+  /* vidéo : visage un peu plus BAS (pas collé tout en haut) + PLEIN cadre ; pas de mask (le scrim du texte gère la lisibilité) */
   .v2hero-media{position:absolute;inset:0;width:100%;height:100%}
-  .v2hero-vid{object-position:50% 5%;-webkit-mask-image:linear-gradient(to top,transparent 1%,rgba(0,0,0,.55) 22%,#000 46%);mask-image:linear-gradient(to top,transparent 1%,rgba(0,0,0,.55) 22%,#000 46%)}
-  .v2hero-copy{position:relative;z-index:3;min-height:calc(100svh - 116px);justify-content:flex-end;padding:0 20px 30px;max-width:100%}
-  .v2hero-h1{font-size:37px;margin-top:0;color:var(--text)}
+  .v2hero-vid{object-position:50% 18%;-webkit-mask-image:none;mask-image:none}
+  /* SCRIM clair FORT sous le texte → texte lisible et SÉPARÉ du visage (le visage reste au-dessus, dégagé) */
+  .v2hero-copy{position:relative;z-index:3;min-height:calc(100svh - 116px);justify-content:flex-end;padding:0 20px 30px;max-width:100%;
+    background:linear-gradient(to top,#e9eef2 20%,rgba(233,238,242,.92) 40%,rgba(233,238,242,.55) 54%,rgba(233,238,242,0) 68%)}
+  .v2hero-h1{font-size:33px;margin-top:0;color:var(--text);line-height:1.06}
   .v2hero-h1 .accent{color:#6d7885}
-  .v2hero-sub{color:var(--text-2);max-width:100%}
-  .v2hero-cta{max-width:100%}
+  .v2hero-sub{color:var(--text-2);max-width:100%;font-size:15px;margin-top:15px}
+  .v2hero-cta{max-width:100%;margin-top:20px}
   .v2hero-pill .pb-go{padding:14px 20px;font-size:15px}
   .v2hero-trust{display:none}
 }
@@ -1375,13 +1378,16 @@ revealScan();
 /* Hero V2 animé : autoplay robuste (iOS Safari) — muted+playsinline+autoplay, relance au 1er geste + IO + retour d'onglet. */
 (function(){
   var v=document.getElementById('v2heroVid'); if(!v) return;
-  v.muted=true; try{ v.setAttribute('muted',''); }catch(_){}
-  function play(){ try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){} }
+  v.muted=true; try{ v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline',''); }catch(_){}
+  function play(){ if(!v.paused) return; try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){} }
   play();
-  ['touchstart','click','pointerdown'].forEach(function(ev){ document.addEventListener(ev, play, {once:true, passive:true}); });
-  try{ new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting && v.paused) play(); }); },{threshold:0.1}).observe(v); }catch(_){}
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden && v.paused) play(); });
+  /* iOS Safari fige souvent la vidéo : gestes (persistants) + scroll + loadeddata/canplay + relance périodique. */
+  ['touchstart','touchend','click','pointerdown','scroll'].forEach(function(ev){ window.addEventListener(ev, play, {passive:true}); });
+  try{ new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting) play(); }); },{threshold:0.05}).observe(v); }catch(_){}
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) play(); });
   window.addEventListener('pageshow', play);
+  v.addEventListener('loadeddata', play); v.addEventListener('canplay', play);
+  var t=0, iv=setInterval(function(){ play(); if(++t>16){ clearInterval(iv); } }, 500);   /* relance ~8 s */
 })();
 /* Page V2 autonome (accès manuel via /v2). PAS de redirection. On tague juste les sessions V2 dans Clarity pour pouvoir comparer. */
 (function tag(){ try{ if(window.clarity){ window.clarity('set','lp_variant','v2'); return; } }catch(_){} setTimeout(tag,600); })();
