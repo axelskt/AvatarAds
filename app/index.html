@@ -6081,7 +6081,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-11-1700'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-11-1830'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9921,6 +9921,9 @@ function _imgMakeThumb(imgEl, maxDim, q){
 // Enregistrement MANUEL dans la Bibliothèque : image pleine résolution → IndexedDB (quota large),
 // miniature + métadonnées → localStorage (index synchrone). Fiable même pour des images 4K.
 let _imgLastSavedSrc = '';
+// Miniature JPEG légère depuis une URL/data: — pour ne JAMAIS stocker le base64 COMPLET en localStorage
+// (c'est ce qui faisait dépasser le quota mobile → setItem throw → sauvegarde serveur sautée → image perdue).
+function _imgThumbFromUrl(u, max, q){ return new Promise(res=>{ try{ const im=new Image(); im.onload=()=>{ try{ const w=im.naturalWidth||max||512, h=im.naturalHeight||max||512; const s=Math.min(1,(max||512)/Math.max(w,h)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*s)); c.height=Math.max(1,Math.round(h*s)); c.getContext('2d').drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg', q||0.72)); }catch(_){ res(null); } }; im.onerror=()=>res(null); im.src=u; }catch(_){ res(null); } }); }
 async function _imgSaveToLibrary(btn){
   const img = document.getElementById('imgOutput');
   if(!img || !img.src || img.src === window.location.href){ if(btn) toast('Génère une image d\'abord'); return; }
@@ -9943,20 +9946,21 @@ async function _imgSaveToLibrary(btn){
     const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
     const idbKey = 'img_' + id;
     if(fullBlob){ await _idbSave(idbKey, new File([fullBlob], id + '.png', { type: fullBlob.type || 'image/png' })); }
-    const thumb = _imgMakeThumb(img, 512, 0.72) || img.src;
-    const hist = JSON.parse(localStorage.getItem('imgHistory')||'[]');
-    hist.unshift({
-      id, idbKey: fullBlob ? idbKey : null, url: thumb,
+    // miniature légère (JAMAIS le base64 complet → sinon quota localStorage mobile dépassé)
+    let thumb = _imgMakeThumb(img, 512, 0.72); if(!thumb){ try{ thumb = await _imgThumbFromUrl(img.src, 512, 0.72); }catch(_){} } if(!thumb) thumb='';
+    const entry = { id, idbKey: fullBlob ? idbKey : null, url: thumb,
       styleLabel: _imgIsHD ? 'HD' : (_imgSelectedStyleLabel || 'Image'),
-      size: _imgSelectedFormat, ts: Date.now(), fav: false
-    });
-    localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60)));
-    if(btn) toast('Enregistré dans la bibliothèque');
+      size: _imgSelectedFormat, ts: Date.now(), fav: false };
+    // 1) SERVEUR D'ABORD (durable, récupéré au rechargement via _libLoadServer) — indépendant du localStorage
     if(fullBlob && typeof _libPersistServer==='function'){   // #65 · image côté compte (Storage + row + thumb)
-      _libPersistServer(hist[0], fullBlob, { kind:'image', thumb, onSaved:(sid,spath)=>{
+      try{ _libPersistServer(entry, fullBlob, { kind:'image', thumb, onSaved:(sid,spath)=>{
         try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){}
-      }});
+      }}); }catch(_){}
     }
+    // 2) cache local (miniature) — si le quota casse (mobile/privé), le serveur est DÉJÀ fait : on évince
+    try{ const hist = JSON.parse(localStorage.getItem('imgHistory')||'[]'); hist.unshift(entry); localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60))); }
+    catch(_){ try{ const hist = JSON.parse(localStorage.getItem('imgHistory')||'[]'); hist.unshift(entry); localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,15))); }catch(__){} }
+    if(btn) toast('Enregistré dans la bibliothèque');
   } catch(e){ toast('Enregistrement impossible'); }
   finally { if(btn){ btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = orig; } }
 }
@@ -9965,17 +9969,21 @@ async function _imgSaveToLibrary(btn){
 // va sur le compte comme la génération simple). Même logique que _imgSaveToLibrary mais sur une URL.
 async function _imgAutoSaveUrl(url, size, styleLabel){
   if(!url) return;
+  const id='i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   try{
     let fullBlob=null; try{ fullBlob=await (await fetch(url)).blob(); }catch(_){}
-    const id='i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
     const idbKey='img_'+id;
     if(fullBlob){ try{ await _idbSave(idbKey, new File([fullBlob], id+'.png', {type:fullBlob.type||'image/png'})); }catch(_){} }
-    const hist=JSON.parse(localStorage.getItem('imgHistory')||'[]');
-    hist.unshift({ id, idbKey: fullBlob?idbKey:null, url, styleLabel: styleLabel||'Image', size, ts:Date.now(), fav:false });
-    localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60)));
-    if(fullBlob && typeof _libPersistServer==='function'){ _libPersistServer(hist[0], fullBlob, { kind:'image', thumb:url, onSaved:(sid,spath)=>{ try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){} }}); }
+    // miniature légère pour le cache local — JAMAIS le base64 complet (c'était LE bug mobile : quota dépassé)
+    let thumb=''; try{ thumb=await _imgThumbFromUrl(url, 512, 0.72) || ''; }catch(_){}
+    const entry={ id, idbKey: fullBlob?idbKey:null, url: thumb, styleLabel: styleLabel||'Image', size, ts:Date.now(), fav:false };
+    // 1) SERVEUR D'ABORD (durable, indépendant du localStorage) → l'image réapparaît au rechargement via _libLoadServer
+    if(fullBlob && typeof _libPersistServer==='function'){ try{ _libPersistServer(entry, fullBlob, { kind:'image', thumb: thumb||url, onSaved:(sid,spath)=>{ try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){} }}); }catch(_){} }
+    // 2) cache local (miniature) avec repli quota — le serveur est déjà fait, un échec local ne perd plus l'image
+    try{ const hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); hist.unshift(entry); localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60))); }
+    catch(_){ try{ const hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); hist.unshift(entry); localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,15))); }catch(__){} }
     return id;   // #avlib · l'appelant peut suivre l'entrée (pour la REMPLACER à l'upscale)
-  }catch(e){ console.warn('[multi] autosave:', e); }
+  }catch(e){ console.warn('[multi] autosave:', e); return id; }
 }
 // #avlib (Axel 31/08) : à l'upscale d'un avatar (4K ou Détails), on REMPLACE l'entrée biblio de base
 // au lieu d'en créer une 2e — supprime l'ancienne (local + serveur + IndexedDB) puis enregistre la
@@ -39680,10 +39688,11 @@ function edBandDrag(ov,track,e,mode){
   // le filtre de tabs() purge tout seul les barres sauvegardées qui le listaient.
   var SHORT={generator:'Générer',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',motion:'Motion',omni:'Omni',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
   var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',omni:'Omni',audioclean:'Audio',affiliation:'Parrainage',cartoon:'Cartoon IA',montage:'Montage IA',publish:'Publier'};
-  var CUSTOMIZABLE=['generator','imagegen','express','motion','studio','library','audioclean','affiliation'];
+  var CUSTOMIZABLE=['generator','imagegen','express','motion','omni','studio','library','audioclean','affiliation'];
   // 14/08 : Motion Control remplace l'Éditeur et Audio remplace la Bibliothèque
   // dans la barre par défaut (les deux restent dans « Plus »).
-  var DEFAULT=['generator','imagegen','express','motion','audioclean'];
+  // 11/09 (Axel) : Omni remplace Audio dans la barre du bas par défaut (Audio reste dans « Plus »).
+  var DEFAULT=['generator','imagegen','express','motion','omni'];
   var current='generator', moreOpen=false;
 
   function tabs(){ try{
@@ -39691,7 +39700,8 @@ function edBandDrag(ov,track,e,mode){
     // migration des anciens ordres PAR DÉFAUT (l'utilisateur n'a jamais vraiment
     // choisi) : on les efface pour qu'ils prennent le nouveau défaut motion+audio
     if(raw==='["generator","library","imagegen","express","studio"]'
-      || raw==='["generator","imagegen","express","studio","library"]'){ localStorage.removeItem('aa_navtabs'); raw=null; }
+      || raw==='["generator","imagegen","express","studio","library"]'
+      || raw==='["generator","imagegen","express","motion","audioclean"]'){ localStorage.removeItem('aa_navtabs'); raw=null; }   // 11/09 : bascule l'ancien défaut audio → omni
     var s=raw?JSON.parse(raw):null;
     return (Array.isArray(s)&&s.length)?s.filter(function(id){return SHORT[id];}):DEFAULT.slice();
   }catch(e){ return DEFAULT.slice(); } }
