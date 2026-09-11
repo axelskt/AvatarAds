@@ -696,7 +696,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: "Description de l'image (sujet, ambiance, lumière, cadrage…). Pour kind='static_ad', décris le produit, la couleur dominante et l'ambiance — les TEXTES vont dans headline/subheadline/bullets/brand/cta." },
-          kind: { type: 'string', enum: ['free', 'static_ad', 'ugc'], description: "'static_ad' = publicité statique produit (titre + sous-titre + bénéfices + marque, le produit est le héros) · 'ugc' = photo selfie/UGC réaliste d'une personne avec le produit · 'free' (défaut) = prompt libre." },
+          kind: { type: 'string', enum: ['free', 'static_ad', 'ugc'], description: "'static_ad' = publicité statique produit (titre + sous-titre + bénéfices + marque, le produit est le héros) · 'ugc' = photo selfie/UGC d'une personne QUI TIENT UN PRODUIT — à n'utiliser QUE s'il y a réellement un produit (photo/lien fournis, ou produit décrit) ; une personne/un selfie/un influenceur SANS produit = 'free', PAS 'ugc' (sinon un produit fantôme est ajouté) · 'free' (défaut) = prompt libre, aucun produit n'est ajouté s'il n'est pas décrit." },
           reference_image_url: { type: 'string', description: "URL http(s) DIRECTE de l'image du produit (…/xxx.jpg|png|webp, ≤ 10 Mo) à reproduire à l'identique. ASTUCE : si tu as déjà consulté la page produit et que tu vois l'URL de l'image principale (souvent un lien cdn.shopify.com ou autre CDN dans la balise og:image), passe-la ICI — elle fonctionne même quand la page bloque notre serveur." },
           product_url: { type: 'string', description: "LIEN de la page produit (Shopify, site e-commerce, ou lien direct vers l'image) : la photo principale est récupérée automatiquement et reproduite à l'identique. À utiliser dès que l'utilisateur colle un lien." },
           no_reference: { type: 'boolean', description: "true = générer directement SANS photo du produit (l'utilisateur n'en a pas ou veut un produit inventé). Sinon la carte demande la photo." },
@@ -956,6 +956,9 @@ const TXT = (v: unknown) => String(v || '').replace(/["\n]+/g, ' ').trim()
 // INTÉGRITÉ TEXTES & LOGOS (02/09, Axel) — ajoutée à TOUS les genres : l'étoile Mercedes sur le volant, un
 // logo de canette, une enseigne… doivent être justes, symétriques, lisibles, jamais brouillés ni inventés.
 const TXT_INTEGRITY = ' TEXT & LOGO INTEGRITY: any brand logo, emblem, badge or text visible anywhere in the scene (packaging, car badge, steering-wheel emblem, clothing, signage, screens) must be geometrically correct and symmetrical where the real one is, sharp and legible, with real correctly-spelled words — no garbled, mirrored, melted, duplicated or invented letters, no distorted or fictional emblems; if a mark cannot be rendered exactly, keep it small and clean rather than wrong.'
+// « NE PAS INVENTER DE PRODUIT » (Axel 11/09) — ajouté aux prompts SANS produit de référence : un « influenceur
+// UGC selfie » sortait avec un produit fantôme dans les mains. On ne met un produit QUE s'il est décrit ou fourni.
+const NO_INVENT_PRODUCT = " NO INVENTED PRODUCT: do NOT add, invent or place any product, packaged good, bottle, can, box, cosmetic, tube, jar, gadget, phone, poster, sign, branded item, mockup, logo or held object in the person's hands or anywhere in the scene that is NOT explicitly described in the request above. If no product is described, the hands stay empty and there is no product, packaging, label or branding anywhere — render ONLY what is described, nothing added."
 function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): string {
   const kind = String(args.kind || 'free')
   const base = TXT(args.prompt)
@@ -990,9 +993,14 @@ function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): s
   if (kind === 'ugc') {
     // « L'avatar imparfait » (réf hugomatias) : le réalisme UGC vient de l'IMPERFECTION de la
     // capture, pas d'un beau portrait — photo iPhone, cadrage imparfait, lumière non contrôlée.
-    return augmenterPortrait(`Candid UGC selfie-style photo shot on an iPhone front camera: a real-looking person naturally holding and showing the product to the camera, casual everyday home setting. Deliberately IMPERFECT amateur capture that reads as a genuine unstaged phone selfie a friend would send — casually off-center and slightly tilted framing (not a composed studio portrait), uncontrolled real indoor lighting with mixed ambient sources and ordinary phone auto-exposure, plain lived-in everyday background. ${base}.` + refTxt + TXT_INTEGRITY)
+    // ⚠️ Le produit n'est mis EN MAIN que s'il y a une vraie référence produit (photo/lien) : sinon on
+    // NE l'invente PAS (Axel 11/09 : « influenceur UGC selfie » sortait avec un produit fantôme).
+    const tientProduit = avecRef
+      ? 'naturally holding and showing the product to the camera'
+      : 'talking to the camera with empty hands, not holding anything'
+    return augmenterPortrait(`Candid UGC selfie-style photo shot on an iPhone front camera: a real-looking person ${tientProduit}, casual everyday home setting. Deliberately IMPERFECT amateur capture that reads as a genuine unstaged phone selfie a friend would send — casually off-center and slightly tilted framing (not a composed studio portrait), uncontrolled real indoor lighting with mixed ambient sources and ordinary phone auto-exposure, plain lived-in everyday background. ${base}.` + refTxt + TXT_INTEGRITY + (avecRef ? '' : NO_INVENT_PRODUCT))
   }
-  return augmenterPortrait(base + refTxt + TXT_INTEGRITY)
+  return augmenterPortrait(base + refTxt + TXT_INTEGRITY + (avecRef ? '' : NO_INVENT_PRODUCT))
 }
 // Consigne de RÉPONSE pour Claude après une génération (Axel, 20/08 : « juste l'image + une
 // proposition de script, pas de pavé »). Répétée dans chaque résultat : c'est le modèle en
@@ -2916,16 +2924,32 @@ serve(async (req) => {
   // média. L'URL storage est déjà publique (bucket mcp-media public) : on ne fait
   // qu'un raccourci propre à la place du long lien supabase brut. Aucune auth.
   if (segs[1] === 'i' && segs[2]) {
-    const { data: j } = await svc.from('mcp_jobs').select('result_url').eq('id', segs[2]).maybeSingle()
-    let dest = j?.result_url ? String(j.result_url) : ''
-    if (dest) {
-      // ?download=<nom> forwardé sur l'URL storage → Content-Disposition:attachment
-      // (le navigateur télécharge au lieu d'ouvrir) = le bouton Télécharger du widget.
-      const dl = new URL(req.url).searchParams.get('download')
-      if (dl) dest += (dest.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(dl)
-      return new Response(null, { status: 302, headers: { ...cors, Location: dest, 'Cache-Control': dl ? 'no-store' : 'public, max-age=3600' } })
+    const { data: j } = await svc.from('mcp_jobs').select('result_url, kind').eq('id', segs[2]).maybeSingle()
+    const dest = j?.result_url ? String(j.result_url) : ''
+    if (!dest) return new Response('Média introuvable', { status: 404, headers: cors })
+    const dl = new URL(req.url).searchParams.get('download')
+    // TÉLÉCHARGEMENT d'une IMAGE : on relaie les octets NOUS-MÊMES (single-origin, application/
+    // octet-stream) au lieu d'un 302 cross-origin vers Supabase. Le saut cross-origin PENDANT un
+    // download, dans le contexte hôte claude.ai (Safari), faisait planter/fermer Safari (11/09).
+    // Les images sont petites (~2-3 Mo) → relais sûr et forcé en fichier (jamais rendu inline).
+    // Les vidéos (lourdes) restent en 302 pour ne pas streamer 20+ Mo à travers l'edge function.
+    if (dl && j?.kind === 'image') {
+      try {
+        const r = await fetch(dest)
+        if (r.ok && r.body) {
+          const safe = dl.replace(/[^\w.\-]+/g, '_').slice(0, 80) || 'avatarads.png'
+          const h = new Headers(cors)
+          h.set('Content-Type', 'application/octet-stream')
+          h.set('Content-Disposition', `attachment; filename="${safe}"; filename*=UTF-8''${encodeURIComponent(dl)}`)
+          const len = r.headers.get('content-length'); if (len) h.set('Content-Length', len)
+          h.set('Cache-Control', 'no-store'); h.set('X-Content-Type-Options', 'nosniff')
+          return new Response(r.body, { status: 200, headers: h })
+        }
+      } catch (_) { /* repli sur le 302 ci-dessous */ }
     }
-    return new Response('Média introuvable', { status: 404, headers: cors })
+    // Vidéo, ou repli : 302 vers le storage (?download forwardé → Content-Disposition:attachment).
+    const to = dl ? dest + (dest.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(dl) : dest
+    return new Response(null, { status: 302, headers: { ...cors, Location: to, 'Cache-Control': dl ? 'no-store' : 'public, max-age=3600' } })
   }
 
   // Statut d'un job, SONDÉ PAR LE WIDGET lui-même → une seule carte avec barre de
