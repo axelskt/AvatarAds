@@ -2053,8 +2053,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
             </div>
 
-            <!-- MODÈLE (Axel 11/09) : Avatar (Hedra Character-3, défaut) / Omni Human (fal, 1080p natif, BÊTA) -->
-            <div class="fld" style="margin-bottom:8px">
+            <!-- MODÈLE (Axel 11/09) : Avatar (Hedra Character-3, défaut) / Omni Human (fal, 1080p natif, BÊTA, Élite uniquement) -->
+            <div class="fld" id="genModelFld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Modèle d'avatar</div>
               <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px" id="genModelBtns">
                 <button type="button" onclick="genSetModel('avatar',this)" class="qual-btn on" data-gm="avatar" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:12px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.15s;position:relative">
@@ -2063,7 +2063,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </button>
                 <button type="button" onclick="genSetModel('omnihuman',this)" class="qual-btn" data-gm="omnihuman" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);cursor:pointer;transition:.15s;position:relative">
                   <span style="position:absolute;top:-9px;background:var(--surface-3);color:var(--text-2);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap">BÊTA</span>
-                  <span style="font-weight:700;font-size:14.5px">Omni Human</span><span class="faint mono" style="font-size:10.5px">1080p natif · 5 cr/s</span>
+                  <span style="font-weight:700;font-size:14.5px">Omni Human</span><span class="faint mono" style="font-size:10.5px">1080p · Élite · ≤ 60 s · 5 cr/s</span>
                 </button>
               </div>
               <input type="hidden" id="modelBtn-character3" value="character3">
@@ -4196,15 +4196,21 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div id="mtModelWrap" style="display:none;margin-bottom:18px">
                   <div class="mt-sep"></div>
                   <div class="mt-eyebrow">4 · Qualité du lipsync</div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
                     <div id="mtModelC3" onclick="mtSetLipModel('character3')" class="mt-qual on">
                       <span class="mt-qual-badge">Économique</span>
                       <span class="mt-qual-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
                       <div class="mt-qual-t">Character 3</div>
                       <div class="mt-qual-sub">2 cr/s</div>
                     </div>
+                    <div id="mtModelMix" onclick="mtSetLipModel('mix')" class="mt-qual">
+                      <span class="mt-qual-badge accent">Recommandé</span>
+                      <span class="mt-qual-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                      <div class="mt-qual-t">Mix</div>
+                      <div class="mt-qual-sub">hook Omni · reste C3</div>
+                    </div>
                     <div id="mtModelOmni" onclick="mtSetLipModel('omnihuman')" class="mt-qual">
-                      <span class="mt-qual-badge accent">Meilleure qualité</span>
+                      <span class="mt-qual-badge accent">Qualité max</span>
                       <span class="mt-qual-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
                       <div class="mt-qual-t">Omni</div>
                       <div class="mt-qual-sub">5 cr/s · 1080p</div>
@@ -6075,7 +6081,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-11-1500'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-11-1700'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12472,7 +12478,7 @@ function updateSteps(){
   var _gf=document.getElementById('genFooter');
   if(_gf) _gf.style.paddingBottom=(window.innerWidth<=768 && step===1)?'8px':'';
   // Sous-titres : auto-activés à l'arrivée sur Style (désormais l'étape 3)
-  if(step>=3){ if(typeof _enterStyleStep==='function') _enterStyleStep(); }
+  if(step>=3){ if(typeof _enterStyleStep==='function') _enterStyleStep(); if(typeof _genApplyModelGate==='function') _genApplyModelGate(); }   // OmniHuman réservé Élite
   // les cartes de décor reflètent l'état réel du split, y compris s'il a été
   // changé ailleurs (preview, raccourci) pendant qu'on était sur une autre étape
   if(step===3 && typeof _syncDecorCards==='function') _syncDecorCards();
@@ -13370,9 +13376,10 @@ function mtClearAvatar(){
 }
 // #119 · modèle des scènes avatar : Character-3 (économe) ou OmniHuman 1.5 (qualité max)
 function mtSetLipModel(m){
-  _mt.lipModel = (m==='omnihuman') ? 'omnihuman' : 'character3';
-  const c3=document.getElementById('mtModelC3'), om=document.getElementById('mtModelOmni');
+  _mt.lipModel = (m==='omnihuman') ? 'omnihuman' : (m==='mix') ? 'mix' : 'character3';
+  const c3=document.getElementById('mtModelC3'), om=document.getElementById('mtModelOmni'), mx=document.getElementById('mtModelMix');
   if(c3) c3.classList.toggle('on', _mt.lipModel==='character3');
+  if(mx) mx.classList.toggle('on', _mt.lipModel==='mix');
   if(om) om.classList.toggle('on', _mt.lipModel==='omnihuman');
   _mtUpdateCost();
 }
@@ -13387,9 +13394,9 @@ function mtSetLipModel(m){
 function _mtUpdateCost(){
   const b=document.getElementById('mtGoLbl'); if(!b) return;
   if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — ' + CREDIT_COSTS.montageIA + ' crédits'; return; }
-  const omni=_mt.lipModel==='omnihuman';
+  const omni=_mt.lipModel==='omnihuman', mix=_mt.lipModel==='mix';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
-  const lbl=omni?'Omni':'Character 3';
+  const lbl=omni?'Omni':(mix?'Mix (hook Omni + reste Character-3)':'Character 3');
   const note=document.getElementById('mtCostNote');
   if(_mt.mp3Dur){
     // L'avatar n'est PAS lipsyncé sur toute la vidéo : le chef d'orchestre ne garde que
@@ -13398,7 +13405,10 @@ function _mtUpdateCost(){
     const dur=_mt.mp3Dur;
     const lo=Math.min(6, Math.max(2, Math.round(dur*0.18)));   // au mieux : le hook seul
     const hi=Math.min(10, Math.max(lo+2, Math.round(dur*0.42))); // au pire : plusieurs scènes
-    const cost=(sec)=>Math.ceil(CREDIT_COSTS.montageIA + sec*rate + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
+    const _hook=Math.min(6, Math.max(2, Math.round(dur*0.18))); // Mix : le hook part en Omni (5 cr/s), le reste des scènes en C3 (2 cr/s)
+    const cost=(sec)=> mix
+      ? Math.ceil(CREDIT_COSTS.montageIA + Math.min(sec,_hook)*CREDIT_COSTS.omniPerSec + Math.max(0,sec-_hook)*CREDIT_COSTS.avatarPerSec + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec)
+      : Math.ceil(CREDIT_COSTS.montageIA + sec*rate + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
     const cLo=cost(lo), cHi=cost(hi);
     // si le lipsync coûte le même prix que l'habillage, le total ne bouge pas selon le nombre
     // de scènes → un seul chiffre ; sinon (2 cr/s) une vraie fourchette
@@ -14056,7 +14066,9 @@ async function _mtDetectHands(imgFile){
 
 // aiguillage : OmniHuman → fal.ai (1080p) · Character-3 → Hedra
 function _mtScene(img, wav, fmt, modelId, segSec, role){
-  return _mt.lipModel==='omnihuman' ? _mtOmniScene(img, wav, fmt, segSec, role) : _mtHedraScene(img, wav, fmt, modelId, role);
+  // Mix (Axel 11/09) : hook + CTA en OmniHuman (accroche premium), le reste en Character-3 (Hedra) pour le coût
+  const useOmni = _mt.lipModel==='omnihuman' || (_mt.lipModel==='mix' && (role==='hook' || role==='cta'));
+  return useOmni ? _mtOmniScene(img, wav, fmt, segSec, role) : _mtHedraScene(img, wav, fmt, modelId, role);
 }
 
 // base gameplay 9:16 bouclée à la durée de l'audio + la voix en piste audio → Blob mp4
@@ -14114,7 +14126,7 @@ async function _mtSegmentedGenerate(){
   const omni = _mt.lipModel==='omnihuman';
   const rate = omni ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec;
   const modelId = omni ? HEDRA_MODELS.omnihuman : HEDRA_MODELS.default;
-  const modelLbl = omni ? 'OmniHuman 1080p' : 'Character-3';
+  const modelLbl = omni ? 'OmniHuman 1080p' : (_mt.lipModel==='mix' ? 'Mix' : 'Character-3');
 
   // 1) chef d'orchestre (transcription + plan) débité d'avance
   if((_mt.mp3Dur||0) > 90.5){ toast('Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
@@ -14207,7 +14219,11 @@ async function _mtSegmentedGenerate(){
     // 4) coût réel : avSec × tarif modèle + reste × hyperframes (1 cr/s) — débité avant Hedra
     // pricing À LA SECONDE : lipsync sur les scènes (avSec × rate) + reste habillé (hyperframes 1 cr/s)
     const avSec=segs.reduce((s,a)=>s+Math.max(0,(a.end||0)-(a.start||0)),0);
-    const scenesCost=Math.ceil(avSec*rate + Math.max(0, dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
+    // Mix : chaque scène est facturée à SON modèle (hook/cta = Omni 5 cr/s, reste = Character-3 2 cr/s).
+    // La logique de rôle est CALQUÉE sur celle de la boucle de génération (l.+bas) → facturation = ce qui est réellement généré.
+    const _segRate=(i,s)=>{ if(_mt.lipModel!=='mix') return rate; const _r = i===0 ? 'hook' : (i===segs.length-1 && (s.start||0) > dur*0.6 ? 'cta' : 'mid'); return (_r==='hook'||_r==='cta') ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec; };
+    const lipCost=segs.reduce((sum,s,i)=> sum + Math.max(0,(s.end||0)-(s.start||0))*_segRate(i,s), 0);
+    const scenesCost=Math.ceil(lipCost + Math.max(0, dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
     if(!(await spendCreditsFor(scenesCost, 'scènes avatar '+modelLbl))){ _mtProg(-1); return; }
 
     // 5) génère chaque scène avatar (photo régénérée au bon format si besoin)
@@ -23477,6 +23493,11 @@ async function startGeneration(){
     // #f-duration (retiré du parcours) ne sert plus qu'en repli si aucune durée n'est lisible.
     let durSecs = Math.ceil((await _sourceAudioDurationSec()) || 0);
     if(!(durSecs > 0)){ durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes'); console.warn('[crédits] durée audio inconnue → repli', durSecs, 's'); }
+    // OmniHuman (fal) : réservé Élite + plafonné à 60 s (au-delà = trop cher / non supporté par fal) — sinon repli Avatar
+    if(window._genModel==='omnihuman'){
+      if(typeof _genIsElite==='function' && !_genIsElite()){ window._genModel='avatar'; }
+      else if(durSecs > 60){ toast('OmniHuman est limité à 60 s — ton audio fait '+durSecs+' s. Repasse sur Avatar pour cette vidéo.'); step=3; updateSteps(); return; }
+    }
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
     const _rate = (_hasAvatarSel ? (window._genModel==='omnihuman' ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec) : 0);
     // #122 · ouvre le flux AVANT tout débit. L'appel était à l'intérieur du test
@@ -23930,10 +23951,22 @@ window.probeSeedance = async function(){
 
 // ── MODÈLE Générateur (Axel 11/09) : 'avatar' = Hedra Character-3 (défaut) · 'omnihuman' = OmniHuman 1.5 (fal, BÊTA) ──
 window._genModel = window._genModel || 'avatar';
+function _genIsElite(){ return !!(currentMember && (['elite','developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner)); }
 function genSetModel(m, btn){
+  if(m==='omnihuman' && !_genIsElite()){ showPaywall('OmniHuman est réservé au plan Élite','Passe à Élite pour débloquer OmniHuman 1080p dans le Générateur.'); return; }
   window._genModel = m;
   document.querySelectorAll('#genModelBtns .qual-btn').forEach(b=>{ const on=b.dataset.gm===m; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; b.classList.toggle('on',on); });
   if(typeof _majRecap==='function'){ try{ _majRecap(); }catch(_){ } }
+}
+// OmniHuman = Élite uniquement : on masque le sélecteur pour les autres (ils n'ont que l'Avatar par défaut)
+function _genApplyModelGate(){
+  const elite=_genIsElite();
+  const fld=document.getElementById('genModelFld'); if(fld) fld.style.display = elite ? '' : 'none';
+  if(!elite && window._genModel==='omnihuman'){
+    window._genModel='avatar';
+    document.querySelectorAll('#genModelBtns .qual-btn').forEach(b=>{ const on=b.dataset.gm==='avatar'; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; b.classList.toggle('on',on); });
+    if(typeof _majRecap==='function'){ try{ _majRecap(); }catch(_){ } }
+  }
 }
 // Génère la vidéo via OmniHuman 1.5 (fal) — réutilise _mtOmniScene (Montage IA). Même contrat de retour que
 // callHedra : une blob: URL (ou '' en cas d'échec → le remboursement crédits est géré en amont dans startGeneration).
