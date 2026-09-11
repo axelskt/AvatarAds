@@ -45,6 +45,22 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     if (!code) return
     const { data: referrerId } = await sb.rpc('referrer_id_from_code', { p_code: code })
     if (!referrerId || referrerId === referredId) return
+    // Parrainage OU code promo — jamais les deux (Axel 11/09). Si un COUPON/REMISE Whop a été appliqué au
+    // paiement → PAS de commission de parrainage. Whop peut nommer le champ de plusieurs façons : on regarde
+    // large ET on logge les clés du payload pour CONFIRMER le nom exact du champ sur un vrai paiement avec promo.
+    const _cpFields: Record<string, unknown> = {
+      coupon: data?.coupon, coupon_id: data?.coupon_id, coupon_code: data?.coupon_code,
+      discount: data?.discount, discount_code: data?.discount_code, discount_id: data?.discount_id,
+      promo_code: data?.promo_code, promo: data?.promo,
+      checkout_coupon: data?.checkout?.coupon, membership_coupon: data?.membership?.coupon,
+      plan_coupon: data?.plan?.coupon, meta_promo: data?.metadata?.promo, meta_coupon: data?.metadata?.coupon,
+    }
+    const _hasCoupon = Object.values(_cpFields).some(v => v !== undefined && v !== null && v !== '' && v !== false && v !== 0)
+    if (_hasCoupon) {
+      console.log(`🎟️ Parrainage ANNULÉ (coupon détecté) — filleul ${referredEmail}, plan ${planId}, champs=${JSON.stringify(Object.fromEntries(Object.entries(_cpFields).filter(([, v]) => v !== undefined)))}`)
+      return
+    }
+    console.log(`🔎 parrainage payload keys (${label}/${planId}): ${Object.keys(data || {}).join(',')}`)   // confirmer le champ coupon sur un vrai paiement avec promo
     // montant payé : payload Whop (final_amount / amount / total, en unités) sinon le prix du plan
     const raw = Number(data?.final_amount ?? data?.amount ?? data?.total ?? data?.subtotal ?? NaN)
     const amountCents = Number.isFinite(raw) && raw > 0 ? Math.round(raw * 100) : (PLAN_PRICE_CENTS[planId] ?? 0)
