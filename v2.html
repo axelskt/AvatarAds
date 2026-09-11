@@ -110,6 +110,13 @@ a{color:inherit;text-decoration:none}
 /* cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
 .glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
+/* ══ Header : TRANSPARENT pleine largeur en haut → PILULE flottante au scroll (LP claire ET sombre) ══
+   ⚠️ scopé à .aa-hdr : .glass sert AUSSI aux badges de contenu (« 2,1M vues » sur les iPhones) — à NE PAS toucher. */
+#stickyCta{display:none!important}   /* plus de barre-doublon : la pilule flottante EST la barre persistante */
+.aa-hdr .glass{background:transparent!important;border-bottom-color:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transition:padding .4s cubic-bezier(.4,0,.2,1)}
+.aa-hdr .glass>.wrap{transition:max-width .4s cubic-bezier(.4,0,.2,1),background .4s ease,border-radius .4s ease,box-shadow .4s ease,padding .4s ease;border:1px solid transparent;border-radius:999px}
+body.aa-nav-float .aa-hdr .glass{padding:12px 16px 0}
+body.aa-nav-float .aa-hdr .glass>.wrap{max-width:1180px;background:color-mix(in srgb,var(--surface) 84%,transparent);border:1px solid var(--border);border-radius:999px;box-shadow:0 22px 48px -24px rgba(0,0,0,.55);padding-left:22px;padding-right:12px;-webkit-backdrop-filter:saturate(1.4) blur(16px);backdrop-filter:saturate(1.4) blur(16px)}
 /* layout helpers */
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
 .row{display:flex;align-items:center}
@@ -381,53 +388,61 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 
 <style id="v2-light-theme">
 /* ══ V2 = LP CLAIRE façon Qoves : on SURCHARGE le thème sombre par un thème blanc/gris ══
-   (variables définies après le :root sombre d'index → elles gagnent). Tee noir des avatars
-   ressort sur le clair. Accent orange gardé pour les boutons (marque), texte en noir/gris. */
+   (variables définies après le :root sombre d'index → elles gagnent). Le header pilule est
+   dans index.html (scopé .aa-hdr, theme-aware) → hérité ici, rien à redéfinir. */
 :root{
-  --bg:#EAEEF2; --bg-grad:#F3F6F8;
+  --bg:#EDF1F4; --bg-grad:#F4F7F9;
   --panel-1:#FFFFFF; --surface:#FFFFFF; --surface-2:#F1F5F8; --surface-3:#E6ECF1;
   --border:rgba(16,24,32,.10); --border-2:rgba(16,24,32,.16);
   --text:#0E1319; --text-2:#59636E; --text-3:#8A939D;
+  --rail:rgba(16,24,32,.055);
 }
 html{background:var(--bg)}
-/* fond gris clair + QUADRILLAGE fin façon Qoves (visible dans les sections aérées, couvert par les cartes/hero) */
+/* fond clair + RAILS VERTICAUX façon Qoves : 2 traits fins encadrant la colonne de contenu (--maxw 1320 → ±660px), pleine hauteur, derrière le contenu */
 body{background-color:var(--bg);color:var(--text);
-  background-image:linear-gradient(rgba(16,24,32,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(16,24,32,.05) 1px,transparent 1px);
-  background-size:76px 76px;background-position:center top}
-/* ── HEADER : pleine largeur TRANSPARENT en haut → PILULE flottante au scroll (petite anim) ── */
-.glass{position:sticky;top:0;z-index:60;background:transparent!important;border-bottom:1px solid transparent!important;transition:padding .4s cubic-bezier(.4,0,.2,1)}
-.glass>.wrap{transition:max-width .4s cubic-bezier(.4,0,.2,1),background .4s ease,border-radius .4s ease,box-shadow .4s ease,padding .4s ease;border:1px solid transparent;border-radius:0}
-body.aa-nav-float .glass{padding:12px 16px 0}
-body.aa-nav-float .glass>.wrap{max-width:1180px;background:rgba(255,255,255,.74);border:1px solid var(--border);border-radius:999px;box-shadow:0 20px 46px -24px rgba(16,24,32,.4);padding-left:20px;padding-right:10px;-webkit-backdrop-filter:saturate(1.5) blur(16px);backdrop-filter:saturate(1.5) blur(16px)}
+  background-image:
+    linear-gradient(90deg,transparent calc(50% - 661px),var(--rail) calc(50% - 661px),var(--rail) calc(50% - 660px),transparent calc(50% - 660px)),
+    linear-gradient(90deg,transparent calc(50% + 660px),var(--rail) calc(50% + 660px),var(--rail) calc(50% + 661px),transparent calc(50% + 661px))}
+/* ── FOOTER : accordéons repliables (clic sur la flèche) AUSSI sur desktop (Axel) — remplace le force-open ── */
+@media(min-width:761px){
+  footer .foot-grid{display:block!important;grid-template-columns:none!important;max-width:720px}
+  footer .foot-col{border-top:1px solid var(--border)}
+  footer .foot-col>summary{cursor:pointer!important;pointer-events:auto!important;display:flex!important;align-items:center;justify-content:space-between;margin:0;padding:15px 2px}
+  footer .foot-col>summary::after{content:'+';font-size:22px;font-weight:400;color:var(--violet)}
+  footer .foot-col[open]>summary::after{content:'\2212'}
+  footer .foot-col>*:not(summary){display:none!important}
+  footer .foot-col[open]>*:not(summary){display:block!important;padding:0 2px 16px}
+}
 </style>
 <style id="v2hero-css">
-.v2hero{position:relative;overflow:hidden;padding:0;min-height:min(770px,calc(100vh - 84px));display:flex;align-items:center;
-  background:radial-gradient(135% 125% at 78% 34%, #d9e1e7 0%, #c6d2da 46%, #aebdc8 100%)}
-.v2hero-grid{position:relative;z-index:2;display:block;width:100%}
-.v2hero-copy{display:flex;flex-direction:column;align-items:flex-start;max-width:560px;padding:34px 0}
+/* HERO plein cadre : le fond prend TOUTE LA LARGEUR, dégradé VERTICAL calé sur celui du clip
+   (clair #EDF1F4 en haut → slate #A9BAC6 en bas) → la vidéo se fond SANS bord visible (mask). */
+.v2hero{position:relative;overflow:hidden;padding:0;min-height:min(780px,calc(100vh - 76px));display:flex;align-items:center;
+  background:linear-gradient(to bottom,#edf1f4 0%,#cdd7de 52%,#a9bac6 100%)}
+.v2hero-grid{position:relative;z-index:2;width:100%}
+.v2hero-copy{display:flex;flex-direction:column;align-items:flex-start;max-width:530px;padding:34px 0}
 .v2hero-h1{font-size:clamp(44px,5.2vw,82px);font-weight:800;margin-top:22px;line-height:1.02;text-wrap:balance;overflow-wrap:break-word;color:var(--text)}
 .v2hero-h1 .accent{color:#8b98a6}
-.v2hero-sub{font-size:clamp(16px,1.4vw,20px);max-width:470px;margin-top:22px;line-height:1.5;color:var(--text-2)}
+.v2hero-sub{font-size:clamp(16px,1.4vw,20px);max-width:460px;margin-top:22px;line-height:1.5;color:var(--text-2)}
 .v2hero-sub b{color:var(--text);font-weight:600}
-.v2hero-cta{position:relative;margin-top:30px;max-width:540px;width:100%}
+.v2hero-cta{position:relative;margin-top:30px;max-width:520px;width:100%}
 .v2hero-pill{position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:#fff;border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 26px 55px -30px rgba(16,24,32,.45),0 0 0 4px var(--accent-soft)}
 .v2hero-pill .pb-ico{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)}
 .v2hero-pill .hp-input{flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v2hero-pill .pb-go{flex:0 0 auto;padding:16px 30px;font-size:17px;font-weight:800;border-radius:999px}
-/* la vidéo = une BANDE à droite qui déborde jusqu'au bord et se FOND dans le fond (pas de carte) */
-.v2hero-media{position:absolute;top:0;right:0;bottom:0;width:47%;max-width:none;overflow:hidden;background:transparent;z-index:1;border-radius:0;box-shadow:none}
-.v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 10%;display:block}
-/* FONDU PLUS DOUX : dégradé gauche large (0→52 %) + fondu bas, aux couleurs du fond hero */
-.v2hero-media::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
-  background:linear-gradient(100deg,#c9d4dc 0%,rgba(201,212,220,.6) 26%,rgba(201,212,220,0) 52%),linear-gradient(to bottom,rgba(174,189,200,0) 58%,#aebdc8 100%)}
+/* vidéo = bande pleine hauteur qui DÉBORDE à droite jusqu'au bord ; bord gauche MASQUÉ → laisse voir le fond identique = fondu invisible (pas de rectangle) */
+.v2hero-media{position:absolute;top:0;right:0;bottom:0;width:54%;max-width:none;overflow:hidden;background:transparent;z-index:1}
+.v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 8%;display:block;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.5) 16%,#000 40%);mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.5) 16%,#000 40%)}
 @media(max-width:768px){
-  .v2hero{padding:0;min-height:calc(100svh - 116px);display:block;background:#e4eaef}
+  .v2hero{padding:0;min-height:calc(100svh - 116px);display:block;background:linear-gradient(to bottom,#edf1f4 0%,#dbe3e9 52%,#c4d1da 100%)}
   .v2hero-grid{display:block;height:100%}
+  .v2hbadge{display:none!important}
   .v2hero-media{position:absolute;inset:0;width:100%;height:100%}
-  .v2hero-vid{object-position:50% 7%}
-  .v2hero-media::after{background:linear-gradient(to top,#e4eaef 7%,rgba(228,234,239,.72) 30%,rgba(228,234,239,0) 58%)}
-  .v2hero-copy{position:relative;z-index:3;min-height:calc(100svh - 116px);justify-content:flex-end;padding:0 20px 26px;max-width:100%}
-  .v2hero-h1{font-size:38px;margin-top:0;color:var(--text)}
+  .v2hero-vid{object-position:50% 5%;-webkit-mask-image:linear-gradient(to top,transparent 1%,rgba(0,0,0,.55) 22%,#000 46%);mask-image:linear-gradient(to top,transparent 1%,rgba(0,0,0,.55) 22%,#000 46%)}
+  .v2hero-copy{position:relative;z-index:3;min-height:calc(100svh - 116px);justify-content:flex-end;padding:0 20px 30px;max-width:100%}
+  .v2hero-h1{font-size:37px;margin-top:0;color:var(--text)}
+  .v2hero-h1 .accent{color:#6d7885}
   .v2hero-sub{color:var(--text-2);max-width:100%}
   .v2hero-cta{max-width:100%}
   .v2hero-pill .pb-go{padding:14px 20px;font-size:15px}
@@ -454,7 +469,7 @@ body.aa-nav-float .glass>.wrap{max-width:1180px;background:rgba(255,255,255,.74)
 </div>
 
 <!-- ══════════ 2 · NAV ══════════ -->
-<div style="position:sticky;top:0;z-index:50">
+<div class="aa-hdr" style="position:sticky;top:0;z-index:50">
   <div class="glass" style="border-bottom:1px solid var(--border)">
     <div class="wrap row" style="height:72px;justify-content:space-between">
       <div class="row gap12">
@@ -507,10 +522,13 @@ body.aa-nav-float .glass>.wrap{max-width:1180px;background:rgba(255,255,255,.74)
 <main>
 
 <!-- ══════════ 3 · HERO V2 (animé — casting vivant, A/B) ══════════ -->
-<section class="wrap hero-sec v2hero">
-  <div class="v2hero-grid">
+<section class="hero-sec v2hero">
+  <div class="v2hero-media">
+    <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutnet.mp4" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
+  </div>
+  <div class="wrap v2hero-grid">
     <div class="v2hero-copy">
-      <div class="rise" style="display:inline-flex"><div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div></div>
+      <div class="v2hbadge rise" style="display:inline-flex"><div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div></div>
       <h1 class="display v2hero-h1">Crée des vidéos virales <span class="accent">sans montrer ton visage</span></h1>
       <p class="muted rise v2hero-sub"><b>Choisis le modèle avec lequel tu veux créer, AvatarAds génère ton contenu viral prêt à poster.</b></p>
       <div class="rise v2hero-cta">
@@ -524,9 +542,6 @@ body.aa-nav-float .glass>.wrap{max-width:1180px;background:rgba(255,255,255,.74)
         <div class="pill" style="padding:8px 14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg><span style="color:var(--text-2)">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span style="color:var(--text-2)">créateurs</span></div>
         <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;milliards</b>&nbsp;de vues</div>
       </div>
-    </div>
-    <div class="v2hero-media">
-      <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutnet.mp4" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
     </div>
   </div>
 </section>
@@ -1353,6 +1368,8 @@ revealScan();
 })();
 </script>
 
+<script>/* Header : pilule flottante dès qu'on descend (>40px) — LP claire et sombre. */
+(function(){function n(){try{document.body.classList.toggle('aa-nav-float',(window.scrollY||document.documentElement.scrollTop||0)>40);}catch(e){}}n();window.addEventListener('scroll',n,{passive:true});window.addEventListener('resize',n);})();</script>
 
 <script>
 /* Hero V2 animé : autoplay robuste (iOS Safari) — muted+playsinline+autoplay, relance au 1er geste + IO + retour d'onglet. */
@@ -1368,12 +1385,7 @@ revealScan();
 })();
 /* Page V2 autonome (accès manuel via /v2). PAS de redirection. On tague juste les sessions V2 dans Clarity pour pouvoir comparer. */
 (function tag(){ try{ if(window.clarity){ window.clarity('set','lp_variant','v2'); return; } }catch(_){} setTimeout(tag,600); })();
-/* Footer : ouvrir les colonnes <details> sur DESKTOP (l'astuce CSS display:block ne suffit plus selon le navigateur) ; collapsibles sur mobile. */
-function aaFootCols(){ try{ var open=matchMedia('(min-width:761px)').matches; document.querySelectorAll('details.foot-col').forEach(function(d){ if(open){ d.setAttribute('open',''); } else { d.removeAttribute('open'); } }); }catch(_){}}
-aaFootCols(); window.addEventListener('resize', aaFootCols);
-/* Header : pleine largeur transparent en haut → pilule flottante dès qu'on descend (>40px). */
-function aaNav(){ try{ document.body.classList.toggle('aa-nav-float',(window.scrollY||document.documentElement.scrollTop||0)>40); }catch(_){}}
-aaNav(); window.addEventListener('scroll', aaNav, {passive:true}); window.addEventListener('resize', aaNav);
+/* NB : le header pilule (aa-nav-float) est géré par index.html (hérité) ; le footer = accordéons natifs <details>. */
 </script>
 </body>
 </html>
