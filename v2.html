@@ -27,7 +27,7 @@ if(document.readyState==='complete')sched();else window.addEventListener('load',
 </script>
 <title>AvatarAds · Générateur de vidéos et images par IA</title>
 <meta name="description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0B0B0D">
 <meta name="author" content="AvatarAds">
 <link rel="canonical" href="https://avatarads.fr/">
@@ -61,7 +61,6 @@ if(document.readyState==='complete')sched();else window.addEventListener('load',
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <!-- Image LCP du hero (téléphone central = hero-homme) : préchargée en priorité haute, responsive -->
-<link rel="preload" as="image" href="assets/lp/hero-homme-451.webp" imagesrcset="assets/lp/hero-homme-320.webp 320w, assets/lp/hero-homme-451.webp 451w, assets/lp/hero-homme-640.webp 640w, assets/lp/hero-homme.webp 900w" imagesizes="(max-width: 767px) 140px, 300px" fetchpriority="high">
 <!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
@@ -395,6 +394,38 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   ]
 }
 </script>
+
+<style id="v2hero-css">
+.v2hero{position:relative;overflow:hidden;padding-top:52px;padding-bottom:34px}
+.v2hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center}
+.v2hero-copy{display:flex;flex-direction:column;align-items:flex-start}
+.v2hero-h1{font-size:clamp(44px,5.2vw,82px);font-weight:800;margin-top:22px;line-height:1.02;text-wrap:balance;overflow-wrap:break-word}
+.v2hero-h1 .accent{color:#c6d0d8}
+
+.v2hero-sub{font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5}
+.v2hero-sub b{color:var(--text);font-weight:600}
+.v2hero-cta{position:relative;margin-top:30px;max-width:560px;width:100%}
+.v2hero-pill{position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)}
+.v2hero-pill .pb-ico{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)}
+.v2hero-pill .hp-input{flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2hero-pill .pb-go{flex:0 0 auto;padding:16px 30px;font-size:17px;font-weight:800;border-radius:999px}
+.v2hero-media{position:relative;justify-self:center;width:100%;max-width:400px;aspect-ratio:9/16;border-radius:30px;overflow:hidden;background:#c9d3db;box-shadow:0 44px 90px -34px rgba(0,0,0,.85),0 0 80px -22px var(--accent-glow)}
+.v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+@media(max-width:768px){
+  .v2hero{padding:0;min-height:calc(100svh - 116px)}
+  .v2hero-grid{display:block;height:100%}
+  .v2hero-media{position:absolute;inset:0;max-width:none;width:100%;height:100%;border-radius:0;box-shadow:none;aspect-ratio:auto}
+  .v2hero-copy{position:relative;z-index:2;min-height:calc(100svh - 116px);justify-content:flex-end;padding:0 20px 26px;background:linear-gradient(to top,rgba(9,13,18,.94) 8%,rgba(9,13,18,.66) 34%,rgba(9,13,18,0) 64%)}
+  .v2hero-h1{color:#fff;font-size:38px;margin-top:0}
+  .v2hero-sub{color:rgba(255,255,255,.82);max-width:100%}
+  .v2hero-sub b{color:#fff}
+  .v2hero-cta{max-width:100%}
+  .v2hero-pill{background:#fff;border-color:rgba(255,255,255,.2)}
+  .v2hero-pill .hp-input{color:#0b0f14}
+  .v2hero-pill .pb-go{padding:14px 20px;font-size:15px}
+  .v2hero-trust{display:none}
+}
+</style>
 </head>
 <body>
 
@@ -467,140 +498,28 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 <!-- <main> : repère principal (audit accessibilité « document sans landmark ») — aucun impact visuel -->
 <main>
 
-<!-- ══════════ 3 · HERO V2 ══════════ -->
-<section class="wrap hero-sec" style="padding-top:64px;padding-bottom:30px">
-  <div class="hero2-grid">
-    <div class="hero-left">
-      <div class="rise" style="display:inline-flex">
-        <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div>
-      </div>
-      <h1 class="display" style="font-size:clamp(46px,5.6vw,86px);font-weight:800;margin-top:22px;line-height:1.0;text-wrap:balance;overflow-wrap:break-word">
-        Crée des vidéos virales<br class="hide-mobile">
-        <span class="accent">sans montrer ton visage</span>
-      </h1>
-      <p class="muted rise" style="font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5">
-        <b style="color:var(--text)">Choisis le modèle avec lequel tu veux créer, AvatarAds génère ton contenu viral prêt à poster.</b>
-      </p>
-
-      <!-- MOBILE UNIQUEMENT — la maquette remonte les trois atouts au-dessus du
-           champ, en --text-3, et raccourcit « Optimisé formats courts ». -->
-      <div class="row rise hero-reassure-m only-mobile" style="gap:14px;margin-top:18px;flex-wrap:wrap;align-items:center;justify-content:center;color:var(--text-3)">
-        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
-          100 % automatique</div>
-        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg>
-          Formats courts</div>
-        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-          Prêt à poster</div>
-      </div>
-
-      <!-- PromptBar → ouvre le sélecteur de modèle (funnel : modèle → connexion → studio → paywall) -->
-      <div class="rise" style="position:relative;margin-top:30px;max-width:600px;width:100%">
-        <button type="button" onclick="openModelPicker()" aria-label="Choisir un modèle" class="row" style="position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
-          <span class="pb-ico" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-          </span>
-          <span class="hp-input" style="flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Choisis un modèle</span>
-          <span class="btn btn-primary pb-go" style="flex:0 0 auto;padding:16px 32px;font-size:18px;font-weight:800;border-radius:999px">Commencer <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+<!-- ══════════ 3 · HERO V2 (animé — casting vivant, A/B) ══════════ -->
+<section class="wrap hero-sec v2hero">
+  <div class="v2hero-grid">
+    <div class="v2hero-copy">
+      <div class="rise" style="display:inline-flex"><div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div></div>
+      <h1 class="display v2hero-h1">Crée des vidéos virales <span class="accent">sans montrer ton visage</span></h1>
+      <p class="muted rise v2hero-sub"><b>Choisis le modèle avec lequel tu veux créer, AvatarAds génère ton contenu viral prêt à poster.</b></p>
+      <div class="rise v2hero-cta">
+        <button type="button" onclick="openModelPicker()" aria-label="Choisir un modèle" class="row v2hero-pill">
+          <span class="pb-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg></span>
+          <span class="hp-input">Choisis un modèle</span>
+          <span class="btn btn-primary pb-go">Commencer <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         </button>
       </div>
-
-    </div>
-
-    <!-- HeroShowcase — 3 iPhones -->
-    <div class="rise hero2-show" style="position:relative;height:560px;perspective:1500px">
-      <div class="hp-glow" style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.30) 0%,rgba(255,107,53,.14) 34%,rgba(255,107,53,.05) 55%,transparent 72%);z-index:0;pointer-events:none"></div>
-      <!-- Étincelles : les NEUF du design, reprises une à une (position, taille,
-           opacité). J'en avais mis quatorze, toutes minuscules et en z-index 0 —
-           donc DERRIÈRE les téléphones, invisibles. Ici z-index 4, devant. -->
-      <div id="heroSparks" style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:4">
-        <svg viewBox="0 0 48 48" width="26" height="26" style="position:absolute;left:30%;top:6%;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:52%;top:2%;opacity:0.8;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="20" height="20" style="position:absolute;left:70%;top:12%;opacity:0.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="22" height="22" style="position:absolute;left:92%;top:26%;opacity:0.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="18" height="18" style="position:absolute;left:96%;top:58%;opacity:0.85;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="24" height="24" style="position:absolute;left:84%;top:78%;opacity:0.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:16%;top:82%;opacity:0.55;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:60%;top:92%;opacity:0.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:44%;top:70%;opacity:0.5;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-      </div>
-
-      <!-- phone gauche : bactérie -->
-      <div class="aa-iphone hp-left" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
-        <div class="di"></div><div class="refl"></div>
-        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria-621.webp" srcset="assets/hero-bacteria-320.webp 320w, assets/hero-bacteria-462.webp 462w, assets/hero-bacteria-536.webp 536w, assets/hero-bacteria-621.webp 621w" sizes="(max-width: 767px) 150px, 300px" alt="Cartoon bactérie virale AvatarAds" width="621" height="1103" decoding="async"></div>
-      </div>
-
-      <!-- phone droite : portrait femme IA + badges -->
-      <div class="aa-iphone hp-right" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
-        <div class="di"></div><div class="refl"></div>
-        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/lp/hero-fille-669.webp" srcset="assets/lp/hero-fille-320.webp 320w, assets/lp/hero-fille-531.webp 531w, assets/lp/hero-fille-669.webp 669w" sizes="(max-width: 767px) 150px, 300px" alt="Portrait femme généré par IA" width="669" height="1198" loading="lazy" decoding="async"></div>
-        <div class="card glass hp-ready" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:7;padding:9px 13px;border-radius:14px;white-space:nowrap">
-          <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
-            <div class="col" style="line-height:1.35"><b style="font-size:14px">Prête en 2 min</b><span class="faint" style="font-size:10.5px;margin-top:3px">0 caméra</span></div></div>
-        </div>
-      </div>
-
-      <!-- carte "Prête en 2 min" — position mobile (sous le téléphone droit) -->
-      <div class="card glass only-mobile" style="position:absolute;right:6%;top:313px;z-index:7;padding:7px 11px;border-radius:13px;white-space:nowrap">
-        <div class="row gap8"><span style="width:20px;height:20px;border-radius:6px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
-          <div class="col" style="line-height:1.1"><b style="font-size:12.5px">Prête en 2 min</b><span class="faint" style="font-size:9.5px">0 caméra</span></div></div>
-      </div>
-
-      <!-- phone central : avatar humain, incliné 3D -->
-      <div class="aa-iphone hp-center" style="left:50%;top:18px;width:244px;height:496px;border-radius:44px;padding:5px;z-index:3;transform:translateX(-50%) perspective(1400px) rotateY(-14deg) rotateX(3deg);box-shadow:0 0 0 1px rgba(255,255,255,.06),-28px 40px 70px -28px rgba(0,0,0,.9),0 0 60px -14px var(--accent-glow)">
-        <div class="di" style="width:74px;height:21px;top:14px"></div><div class="refl" style="inset:5px;border-radius:39px"></div>
-        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr" style="inset:5px;border-radius:39px">
-          <img src="assets/lp/hero-homme-451.webp" srcset="assets/lp/hero-homme-320.webp 320w, assets/lp/hero-homme-451.webp 451w, assets/lp/hero-homme-640.webp 640w, assets/lp/hero-homme.webp 900w" sizes="(max-width: 767px) 140px, 300px" alt="Portrait homme généré par IA" width="451" height="672" fetchpriority="high" decoding="async">
-          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 60%,rgba(0,0,0,.6))"></div>
-          <div class="ph-rail" style="bottom:22px">
-            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><span>12K</span></div>
-            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg><span>840</span></div>
-            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg><span>2,1K</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- carte flottante vues -->
-      <div class="card glass rise hp-views" style="position:absolute;left:0%;top:24px;z-index:4;padding:9px 13px;border-radius:14px">
-        <div class="row gap8"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><div class="col" style="line-height:1.1"><b style="font-size:15px">2,1M vues</b><span class="faint" style="font-size:10.5px">en 48h</span></div></div>
+      <div class="row rise trust-row v2hero-trust" style="gap:22px;margin-top:20px;flex-wrap:wrap">
+        <div class="pill" style="padding:8px 14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg><span style="color:var(--text-2)">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span style="color:var(--text-2)">créateurs</span></div>
+        <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;milliards</b>&nbsp;de vues</div>
       </div>
     </div>
-
-      <!-- ── LIGNE DE PREUVE : les deux rangées sont sur la MÊME ligne de grille.
-           La rangée « Rejoins » vivait dans .hero-left et la réassurance était un
-           3ᵉ enfant de la grille : elles tombaient dans deux lignes différentes,
-           89 px d'écart. Compenser à la marge marchait au-dessus de 1200 px et
-           dérivait en dessous (le titre passe à quatre lignes, la première ligne
-           grandit). Sorties toutes les deux en ligne 2, `align-items:center` les
-           tient alignées à n'importe quelle largeur, sans nombre magique. -->
-      <div class="row rise trust-row" style="gap:24px;margin-top:8px;flex-wrap:wrap">
-        <div class="pill" style="padding:8px 14px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
-          <span style="color:var(--text-2)">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span style="color:var(--text-2)">utilisateurs<span class="hide-mobile"> satisfaits</span></span>
-        </div>
-        <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;milliards</b>&nbsp;de vues<span class="hide-mobile"> générées</span></div>
-      </div>
-
-      <!-- Les trois atouts. `faint` sur le CONTENEUR et `stroke:currentColor` sur
-           les icônes : dans la maquette elles n'ont aucune couleur propre, elles
-           héritent du gris du texte. Je les avais passées en orange, deux fois. -->
-      <div class="row rise hero-reassure faint" style="justify-content:center;gap:22px;flex-wrap:wrap;margin-top:8px">
-        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
-          100 % automatique</div>
-        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg>
-          Optimisé formats courts</div>
-        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-          Prêt à poster</div>
-      </div>
+    <div class="v2hero-media">
+      <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutnet.mp4" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
+    </div>
   </div>
 </section>
 
@@ -1426,5 +1345,19 @@ revealScan();
 })();
 </script>
 
+
+<script>
+/* Hero V2 animé : autoplay robuste (iOS Safari) — muted+playsinline+autoplay, relance au 1er geste + IO + retour d'onglet. */
+(function(){
+  var v=document.getElementById('v2heroVid'); if(!v) return;
+  v.muted=true; try{ v.setAttribute('muted',''); }catch(_){}
+  function play(){ try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){} }
+  play();
+  ['touchstart','click','pointerdown'].forEach(function(ev){ document.addEventListener(ev, play, {once:true, passive:true}); });
+  try{ new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting && v.paused) play(); }); },{threshold:0.1}).observe(v); }catch(_){}
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && v.paused) play(); });
+  window.addEventListener('pageshow', play);
+})();
+</script>
 </body>
 </html>
