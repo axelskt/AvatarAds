@@ -429,16 +429,15 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
 <style id="v2hero-css">
 /* HERO plein cadre : le fond prend TOUTE LA LARGEUR, dégradé VERTICAL calé sur celui du clip
    (clair #EDF1F4 en haut → slate #A9BAC6 en bas) → la vidéo se fond SANS bord visible (mask). */
-/* DESKTOP = l'ANCIENNE version validée (copy sombre centrée à gauche, vidéo à droite fondue dans le fond)
-   + retouches Axel 12/09 (cadre rouge) : la vidéo est calée sur la HAUTEUR du hero (165 % = l'entre-deux entre
-   l'ancien zoom « trop fort » et les 120 % « pas assez »), son bord DROIT est aligné sur le conteneur (plus collée
-   au bord de l'écran), et SANS FLOU : plus de fondu large ni de fondu du buste. Le raccord invisible vient du FOND :
-   ::before reproduit EXACTEMENT le dégradé vertical du clip (mesuré image par image : #eef2f3 en haut → #9cb0bb en
-   bas) dans le MÊME repère que la vidéo (même top:1 %, même hauteur 120 %) → les bords gauche/droit de la vidéo sont
-   mathématiquement de la même couleur que la page (Δ ≤ 5). Donc AUCUN masque latéral : les bords sont invisibles au
-   lieu d'être flous (retour Axel 12/09 : les fondus gauche/droit = « flou », à supprimer). Seul masque restant = un
-   fondu bas très court (12 %) pour poser le buste sur le fond. Le « un peu plus foncé » façon Qoves = voile sombre
-   progressif (::after) posé sur TOUT le hero (vidéo comprise, donc sans raccord), quasi nul sur le visage. */
+/* DESKTOP — VIDÉO DÉTOURÉE façon Qoves (idée d'Axel 12/09, la BONNE) : au lieu d'une bande vidéo rectangulaire dont
+   le buste touchait les bords (→ arête / flou), chaque frame est DÉTOURÉE (rembg isnet-general-use) et recomposée sur
+   un canevas LARGE 960×1280 rempli du dégradé EXACT de ::before → la silhouette (épaules comprises) a de la MARGE de
+   dégradé sur les côtés et ne touche JAMAIS le bord. Vidéo = `hero-cutout.mp4` (H.264 OPAQUE, aucune alpha → marche
+   sur iOS Safari, contrairement au WebM alpha cassé), tag sRGB 1-13-1. Comme le dégradé baké = ::before (même repère
+   top:1 %;height:120 %), la silhouette pose sur le fond de la page SANS rectangle ni bord, exactement comme Qoves.
+   Ratio 3/4 (960/1280) au lieu de 9/16 : le personnage garde la MÊME taille (calage hauteur 120 %), on ajoute juste
+   la marge. Position centre-droit (bord droit = conteneur). AUCUN masque latéral (plus besoin), fondu bas 6 % pour la
+   coupe du buste. Voile sombre ::after (léger) sur tout le hero. Pipeline scratchpad : detour_video.py + compose_encode.py. */
 .v2hero{position:relative;overflow:hidden;padding:0;min-height:min(780px,calc(100vh - 76px));display:flex;align-items:center;background:#eef2f3}
 .v2hero::before{content:"";position:absolute;left:0;right:0;top:1%;height:120%;z-index:0;pointer-events:none;
   background:linear-gradient(to bottom,#eef2f3 0%,#ebf0f3 5%,#eaeef4 10%,#e7ecf0 15%,#e5ebf0 20%,#e2e8ec 25%,#dce3ea 30%,#d8e0e7 35%,#d2dbe1 40%,#ccd7df 45%,#c7d2da 50%,#a0b2be 95%,#9cb0bb 100%)}
@@ -464,10 +463,10 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
    conteneur .wrap, max 1320 + 32 de padding, floor 12 % du viewport) = le cadre rouge d'Axel, PAS collée au bord de
    l'écran. Fondu latéral SUBTIL 16 % des 2 côtés (Axel : « le flou est beaucoup trop fort, diminue ») + fondu bas
    9 % : à ce cadrage les épaules touchent les 2 bords, un fondu court les fond sur le fond assorti sans bande floue. */
-.v2hero-media{position:absolute;top:1%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:120%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
+.v2hero-media{position:absolute;top:1%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:120%;width:auto;aspect-ratio:3/4;max-width:none;overflow:visible;background:transparent;z-index:1}
 .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block;
-  -webkit-mask-image:linear-gradient(to top,transparent 0,#000 8%,#000 100%);
-  mask-image:linear-gradient(to top,transparent 0,#000 8%,#000 100%)}
+  -webkit-mask-image:linear-gradient(to top,transparent 0,#000 6%,#000 100%);
+  mask-image:linear-gradient(to top,transparent 0,#000 6%,#000 100%)}
 @media(max-width:768px){
   /* MOBILE = hero CINÉMA façon Qoves (en mieux) : vidéo PLEIN CADRE avec le visage dégagé en haut (headroom),
      DÉGRADÉ SOMBRE pleine largeur en bas (sur ::after du média, pas sur le texte → pas de marges), texte BLANC posé dessus,
@@ -579,7 +578,7 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
 <!-- ══════════ 3 · HERO V2 (animé — casting vivant, A/B) ══════════ -->
 <section class="hero-sec v2hero">
   <div class="v2hero-media">
-    <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutnet.mp4?v=srgb1" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
+    <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutout.mp4?v=cut1" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
   </div>
   <div class="wrap v2hero-grid">
     <div class="v2hero-copy">
