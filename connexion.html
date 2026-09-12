@@ -112,11 +112,11 @@ function GoogleG({size=18}){
 /* vitrine plein cadre : le rendu d'un modèle, carrousel en bas (vidéos réelles) */
 function ShowcaseVideo({ mob }){
   const models = [
-    { n:"EXPRESS", d:"Une créatrice qui parle face caméra, avec ta voix", hue:18, vid:"assets/lp/v2/connexion/express.mp4" },
-    { n:"MONTAGE IA", d:"Ton audio devient une vidéo montée, sous-titrée et rythmée", hue:265, vid:"assets/lp/v2/connexion/montage.mp4" },
+    { n:"EXPRESS", d:"Une créatrice qui parle face caméra, avec ta voix", hue:18, vid:"assets/lp/v2/connexion/express.mp4?v=2" },
+    { n:"MONTAGE IA", d:"Ton audio devient une vidéo montée, sous-titrée et rythmée", hue:265, vid:"assets/lp/v2/connexion/montage.mp4?v=2" },
     { n:"OMNI", d:"Transforme n'importe quel objet", hue:200 },
     { n:"IMAGE IA", d:"Hyper-réalisme, qualité 4K naturel", hue:330, src:"assets/lp/v2/connexion/image-ia.jpg" },
-    { n:"MOTION CONTROL", d:"Ton personnage reproduit le mouvement d'une vidéo", hue:150, vid:"assets/lp/v2/connexion/motion-control.mp4" },
+    { n:"MOTION CONTROL", d:"Ton personnage reproduit le mouvement d'une vidéo", hue:150, vid:"assets/lp/v2/connexion/motion-control.mp4?v=2" },
   ];
   const [i,setI] = useStateA(0);
   // auto-rotation : le timer se RÉINITIALISE à chaque changement de slide (clic inclus) → chaque vidéo a ses 4,2 s pleines
@@ -125,8 +125,8 @@ function ShowcaseVideo({ mob }){
   return (
     <div style={{position:"relative",height:"100%",minHeight:mob?300:520,borderRadius:20,overflow:"hidden",border:"1px solid var(--border-2)",
       background:`radial-gradient(120% 90% at 70% 10%, oklch(0.42 0.14 ${m.hue}), #0b0910 72%)`,transition:"background .8s"}}>
-      {m.src && <img src={m.src} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain"}}/>}
-      {m.vid && <video key={m.vid} src={m.vid} autoPlay muted loop playsInline preload="auto" onLoadedData={e=>e.target.play&&e.target.play().catch(()=>{})} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",background:"transparent"}}/>}
+      {m.src && <img src={m.src} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>}
+      {m.vid && <video key={m.vid} src={m.vid} autoPlay muted loop playsInline preload="auto" onLoadedData={e=>e.target.play&&e.target.play().catch(()=>{})} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",background:"#000"}}/>}
       <div style={{position:"absolute",inset:0,opacity:(m.src||m.vid)?.15:.5,transition:"opacity .8s",
         background:`repeating-linear-gradient(${45+i*20}deg, rgba(255,255,255,.06) 0 22px, transparent 22px 44px)`}}></div>
       {!m.src && !m.vid && <div style={{position:"absolute",right:"-8%",top:"14%",width:"52%",aspectRatio:"1",borderRadius:"50%",
