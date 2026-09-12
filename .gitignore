@@ -5,3 +5,4 @@
 
 # L3 (06/09) : artefacts de build Netlify (générés au deploy, pas de source)
 mcp-proxy/.netlify/
+.detour-work/
