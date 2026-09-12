@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#EDF1F4">
+<meta name="color-scheme" content="light">
+<title>Connexion — AvatarAds</title>
+<link rel="icon" href="assets/avatarads-logo-96.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0B0D;--bg-grad:#0E0D10;--panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
+  --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
+  --text:#F6F4F1;--text-2:#A7A39E;--text-3:#6B6862;
+  --accent:#FF5A1F;--accent-2:#FF8042;
+  --accent-soft:color-mix(in srgb,var(--accent) 14%, transparent);
+  --accent-line:color-mix(in srgb,var(--accent) 32%, transparent);
+  --accent-glow:color-mix(in srgb,var(--accent) 48%, transparent);
+  --amber:#FFB020;--green:#28C795;--violet:#9A7CFF;--blue:#4dabf7;
+  --r-sm:10px;--r:14px;--r-lg:20px;--r-xl:28px;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 20px 50px -20px rgba(0,0,0,.7);
+  --maxw:1320px;font-synthesis:none;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+html,body{background:radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)}
+body{color:var(--text);font-family:"Hanken Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:hidden}
+#root{min-height:100%}
+.mono{font-family:"JetBrains Mono",monospace;}
+.display{font-family:"Bricolage Grotesque",sans-serif;letter-spacing:-.02em;line-height:.98;}
+::selection{background:var(--accent);color:#0B0B0D}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:15px;border-radius:var(--r);padding:13px 20px;transition:transform .15s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s,border-color .2s;white-space:nowrap;}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 12px 30px -10px var(--accent-glow);}
+.btn-primary:hover{box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 16px 40px -10px var(--accent-glow);transform:translateY(-1px)}
+.btn-quiet{background:transparent;color:var(--text-2)}
+.btn-quiet:hover{color:var(--text)}
+.btn-sm{padding:9px 14px;font-size:13.5px;border-radius:var(--r-sm)}
+/* layout helpers */
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}
+.grow{flex:1}
+.muted{color:var(--text-2)}
+.faint{color:var(--text-3)}
+.accent{color:var(--accent)}
+.center{text-align:center}
+.brandmark{display:grid;place-items:center;color:#fff;flex:0 0 auto}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.rise{animation:none}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+<script>window.__resources={brandLogo:"assets/avatarads-logo.png"};</script>
+
+<script type="text/babel" data-presets="react">
+/* ── icônes + logo (extrait du handoff) ── */
+const Ic = ({d, size=20, fill=false, sw=1.8, children, ...p}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill?"currentColor":"none"}
+       stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" {...p}>
+    {d ? <path d={d}/> : children}
+  </svg>
+);
+const Logo = ({size=22}) => (
+  <img src={(window.__resources&&window.__resources.brandLogo)||"assets/avatarads-logo.png"} alt="AvatarAds" width={size} height={size}
+    style={{borderRadius:size*0.26,display:"block",flex:"0 0 auto"}}/>
+);
+const Icons = {
+  star:(p)=><Ic {...p} fill sw={0}><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></Ic>,
+  arrow:(p)=><Ic {...p} d="M5 12h14M13 6l6 6-6 6"/>,
+  lock:(p)=><Ic {...p}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></Ic>,
+};
+
+/* ── useIsMobile (extrait de app.jsx) ── */
+function useIsMobile(bp=760){
+  const force = typeof window!=="undefined" && (localStorage.getItem("aa_force_mobile")==="1" || /[?&]mobile=1/.test(location.search));
+  const [m,setM]=React.useState(()=> force || (typeof window!=="undefined" && window.innerWidth<=bp));
+  React.useEffect(()=>{
+    const on=()=>setM(force || window.innerWidth<=bp);
+    window.addEventListener("resize",on); on();
+    return ()=>window.removeEventListener("resize",on);
+  },[bp,force]);
+  return m;
+}
+window.useIsMobile = useIsMobile;
+const { useState:useStateA } = React;
+
+function GoogleG({size=18}){
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.4-3.5z"/>
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 16.3 4.5 9.7 8.9 6.3 14.7z"/>
+      <path fill="#4CAF50" d="M24 43.5c5.5 0 10.3-1.9 13.8-5.1l-6.4-5.4C29.4 34.6 26.9 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.6 39 16.2 43.5 24 43.5z"/>
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.4 5.4C41 36.9 43.5 31 43.5 24c0-1.2-.1-2.3-.4-3.5z"/>
+    </svg>
+  );
+}
+
+/* vitrine plein cadre : le rendu d'un modèle, carrousel en bas (vidéos réelles) */
+function ShowcaseVideo({ mob }){
+  const models = [
+    { n:"EXPRESS", d:"Une créatrice qui parle face caméra, avec ta voix", hue:18, vid:"assets/lp/v2/connexion/express.mp4" },
+    { n:"MONTAGE IA", d:"Ton audio devient une vidéo montée, sous-titrée et rythmée", hue:265, vid:"assets/lp/v2/connexion/montage.mp4" },
+    { n:"OMNI", d:"Transforme n'importe quel objet", hue:200 },
+    { n:"IMAGE IA", d:"Hyper-réalisme, qualité 4K naturel", hue:330, src:"assets/lp/v2/connexion/image-ia.jpg" },
+    { n:"MOTION CONTROL", d:"Ton personnage reproduit le mouvement d'une vidéo", hue:150, vid:"assets/lp/v2/connexion/motion-control.mp4" },
+  ];
+  const [i,setI] = useStateA(0);
+  React.useEffect(()=>{ const t=setInterval(()=>setI(v=>(v+1)%models.length),3200); return ()=>clearInterval(t); },[]);
+  const m = models[i];
+  return (
+    <div style={{position:"relative",height:"100%",minHeight:mob?300:520,borderRadius:20,overflow:"hidden",border:"1px solid var(--border-2)",
+      background:`radial-gradient(120% 90% at 70% 10%, oklch(0.42 0.14 ${m.hue}), #0b0910 72%)`,transition:"background .8s"}}>
+      {m.src && <img src={m.src} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>}
+      {m.vid && <video key={m.vid} src={m.vid} autoPlay muted loop playsInline preload="auto" onLoadedData={e=>e.target.play&&e.target.play().catch(()=>{})} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",background:"#000"}}/>}
+      <div style={{position:"absolute",inset:0,opacity:(m.src||m.vid)?.15:.5,transition:"opacity .8s",
+        background:`repeating-linear-gradient(${45+i*20}deg, rgba(255,255,255,.06) 0 22px, transparent 22px 44px)`}}></div>
+      {!m.src && !m.vid && <div style={{position:"absolute",right:"-8%",top:"14%",width:"52%",aspectRatio:"1",borderRadius:"50%",
+        background:`radial-gradient(circle at 40% 35%, oklch(0.7 0.16 ${m.hue}), transparent 68%)`,filter:"blur(6px)",transition:"all .8s"}}></div>}
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 45%, rgba(0,0,0,.72))"}}></div>
+
+      <div style={{position:"absolute",left:mob?18:28,right:mob?18:28,bottom:mob?58:70}}>
+        <div className="display" style={{fontSize:mob?"26px":"clamp(30px,3vw,46px)",fontWeight:800,color:"#fff",letterSpacing:"-.01em"}}>{m.n}</div>
+        <div style={{fontSize:mob?13:15,color:"rgba(255,255,255,.7)",marginTop:6}}>{m.d}</div>
+      </div>
+
+      <div className="row" style={{position:"absolute",left:mob?14:20,right:mob?14:20,bottom:mob?14:20,gap:mob?8:14}}>
+        {models.map((x,j)=>(
+          <button key={j} onClick={()=>setI(j)} className="col" style={{flex:1,gap:7,alignItems:"stretch",textAlign:"left"}}>
+            <div style={{height:3,borderRadius:3,background:j===i?"#fff":"rgba(255,255,255,.22)",transition:".3s"}}></div>
+            {!mob && <span style={{fontSize:11.5,fontWeight:600,color:j===i?"#fff":"rgba(255,255,255,.5)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.n}</span>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Login({ go }){
+  const mob = window.useIsMobile ? window.useIsMobile() : false;
+  const [email, setEmail] = useStateA(false);
+  const [pw, setPw] = useStateA(false);
+  const [sent, setSent] = useStateA(false);
+  const [show, setShow] = useStateA(false);
+
+  const L = { ink:"#141013", sub:"#5b5750", line:"rgba(0,0,0,.1)", field:"#fff", fieldLine:"rgba(0,0,0,.14)" };
+  const panel = (
+    <div className="rise col" style={{width:"100%",maxWidth:380,alignItems:"center"}}>
+      <div className="brandmark" style={{marginBottom:22,color:L.ink}}><Logo size={40}/></div>
+      <h2 className="display center" style={{fontSize:mob?24:28,fontWeight:800,color:L.ink}}>Connexion à AvatarAds</h2>
+      <p className="center" style={{marginTop:9,fontSize:14.5,maxWidth:320,color:L.sub}}>Choisis ta méthode de connexion pour commencer.</p>
+
+      <button className="btn" style={{width:"100%",marginTop:26,background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={()=>go("app")}>
+        <GoogleG/> Continuer avec Google
+      </button>
+
+      <div className="row gap16" style={{width:"100%",margin:"20px 0",alignItems:"center"}}>
+        <div style={{flex:1,height:1,background:L.line}}></div>
+        <span className="mono" style={{fontSize:10.5,letterSpacing:".14em",color:L.sub}}>OU AVEC EMAIL</span>
+        <div style={{flex:1,height:1,background:L.line}}></div>
+      </div>
+
+      {sent ? (
+        <div className="col rise" style={{width:"100%",gap:11,alignItems:"center"}}>
+          <p className="center" style={{fontSize:13.5,maxWidth:300,color:L.sub}}>Code envoyé à ton email. Entre les 6 chiffres reçus.</p>
+          <div className="row" style={{gap:8,justifyContent:"center"}}>
+            {[0,1,2,3,4,5].map(k=>(
+              <input key={k} maxLength={1} inputMode="numeric" style={{width:44,height:52,textAlign:"center",fontSize:20,fontWeight:800,padding:0,borderRadius:12,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,outline:"none"}}
+                onInput={e=>{ if(e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus(); }}/>
+            ))}
+          </div>
+          <button className="btn btn-primary" style={{width:"100%",marginTop:6,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=>go("app")}>
+            Entrer dans l'app <Icons.arrow size={16}/>
+          </button>
+          <button className="btn btn-quiet btn-sm" style={{fontSize:13,color:L.sub}} onClick={()=>setSent(false)}>← Changer d'email</button>
+          <span style={{fontSize:12,color:L.sub}}>Pas reçu ? <span className="accent" style={{cursor:"pointer",fontWeight:600}}>Renvoyer</span></span>
+        </div>
+      ) : (<>
+        <input type="email" placeholder="ton@email.com" style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
+        {pw && (
+          <div style={{position:"relative",width:"100%",marginTop:11}}>
+            <input type={show?"text":"password"} placeholder="••••••••" style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
+            <button onClick={()=>setShow(!show)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",fontSize:12,fontWeight:600,color:L.sub}}>{show?"Cacher":"Voir"}</button>
+          </div>
+        )}
+        <button className="btn btn-primary" style={{width:"100%",marginTop:11,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? go("app") : setSent(true)}>
+          {pw ? "Se connecter" : "Recevoir mon code"} <Icons.arrow size={16}/>
+        </button>
+        <button className="btn" style={{width:"100%",marginTop:9,padding:"13px 20px",fontSize:13.5,background:"#fff",border:"1px solid "+L.fieldLine,color:L.ink,fontWeight:600}} onClick={()=>setPw(!pw)}>
+          {pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"}
+        </button>
+      </>)}
+
+      <p className="center" style={{marginTop:26,fontSize:12.5,lineHeight:1.6,maxWidth:320,color:L.sub}}>
+        En continuant, tu acceptes les <span style={{textDecoration:"underline",cursor:"pointer"}}>Conditions</span> et la <span style={{textDecoration:"underline",cursor:"pointer"}}>Confidentialité</span>.
+      </p>
+      <div className="row gap16" style={{alignItems:"center",marginTop:22}}>
+        <span className="row gap6" style={{padding:"7px 13px",borderRadius:999,border:"1px solid "+L.fieldLine,background:"#fff",alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:L.ink}}>4,9/5</b></span>
+        <span className="row gap8" style={{fontSize:13,color:L.sub}}><Icons.lock size={13}/> Connexion sécurisée</span>
+      </div>
+    </div>
+  );
+
+  const back = (
+    <button onClick={()=>go("landing")}
+      style={{position:"absolute",top:24,left:24,zIndex:2,width:40,height:40,borderRadius:12,padding:0,border:"1px solid "+L.fieldLine,background:"#fff",color:L.ink,display:"grid",placeItems:"center"}}>
+      <Icons.arrow size={17} style={{transform:"rotate(180deg)"}}/>
+    </button>
+  );
+
+  const lightBg = "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)";
+
+  if(mob){
+    const D = { card:"rgba(255,255,255,.72)", line:"rgba(0,0,0,.12)", ink:"#141013", sub:"#5b5750", field:"#fff" };
+    return (
+      <div style={{minHeight:"100dvh",display:"flex",flexDirection:"column",justifyContent:"center",padding:"64px 16px 28px",position:"relative",
+        background:"radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)"}}>
+        <button onClick={()=>go("landing")} className="row gap8" style={{position:"absolute",top:22,left:18,zIndex:2,color:D.sub,fontSize:15,fontWeight:600,alignItems:"center"}}>
+          <Icons.arrow size={17} style={{transform:"rotate(180deg)"}}/> Retour
+        </button>
+        <div style={{background:D.card,backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",border:"1px solid "+D.line,borderRadius:26,padding:"30px 22px 26px"}}>
+          <div className="brandmark" style={{marginBottom:20,color:D.ink}}><Logo size={34}/></div>
+          <h1 className="display" style={{fontSize:34,fontWeight:800,lineHeight:1.02,color:D.ink}}>Connexion à<br/><span style={{color:D.sub}}>AvatarAds</span></h1>
+          <div className="mono" style={{fontSize:11.5,letterSpacing:".12em",color:D.sub,margin:"16px 0 20px"}}>+50 000 CRÉATEURS DÉJÀ INSCRITS</div>
+
+          <button className="btn" style={{width:"100%",background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={()=>go("app")}>
+            <GoogleG/> Continuer avec Google
+          </button>
+
+          {sent ? (
+            <div className="col" style={{gap:11,marginTop:14}}>
+              <p style={{fontSize:13.5,color:D.sub}}>Code envoyé. Entre les 6 chiffres reçus.</p>
+              <div className="row" style={{gap:8}}>
+                {[0,1,2,3,4,5].map(k=>(
+                  <input key={k} maxLength={1} inputMode="numeric" style={{flex:1,height:52,textAlign:"center",fontSize:20,fontWeight:800,padding:0,borderRadius:12,border:"1px solid "+D.line,background:D.field,color:D.ink,outline:"none"}}
+                    onInput={e=>{ if(e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus(); }}/>
+                ))}
+              </div>
+              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=>go("app")}>Entrer dans l'app <Icons.arrow size={16}/></button>
+              <button onClick={()=>setSent(false)} style={{fontSize:13,color:D.sub,fontWeight:600}}>← Changer d'email</button>
+            </div>
+          ) : (
+            <div className="col" style={{gap:11,marginTop:14}}>
+              <input type="email" placeholder="ton@email.com" style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
+              {pw && (
+                <div style={{position:"relative"}}>
+                  <input type={show?"text":"password"} placeholder="••••••••" style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
+                  <button onClick={()=>setShow(!show)} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:12,fontWeight:600,color:D.sub}}>{show?"Cacher":"Voir"}</button>
+                </div>
+              )}
+              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? go("app") : setSent(true)}>
+                {pw ? "Se connecter" : "Recevoir mon code"} <Icons.arrow size={16}/>
+              </button>
+              <button onClick={()=>setPw(!pw)} className="btn" style={{width:"100%",padding:"13px 20px",fontSize:13.5,background:D.field,border:"1px solid "+D.line,color:D.ink,fontWeight:600}}>
+                {pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"}
+              </button>
+            </div>
+          )}
+
+          <p style={{fontSize:12.5,lineHeight:1.6,color:D.sub,marginTop:20}}>
+            En continuant, tu acceptes les <span style={{textDecoration:"underline"}}>Conditions</span> et la <span style={{textDecoration:"underline"}}>Confidentialité</span>.
+          </p>
+          <div className="row" style={{alignItems:"center",marginTop:18,gap:16,justifyContent:"space-between"}}>
+            <span className="row gap6" style={{padding:"6px 12px",borderRadius:999,border:"1px solid "+D.line,background:"#fff",alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:D.ink,fontSize:13}}>4,9/5</b></span>
+            <span className="row gap8" style={{fontSize:13,color:D.sub}}><Icons.lock size={13}/> Connexion sécurisée</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{minHeight:"100vh",display:"grid",gridTemplateColumns:"1fr 1.15fr",background:lightBg}}>
+      <div style={{position:"relative",display:"grid",placeItems:"center",padding:"40px 48px"}}>
+        {back}{panel}
+      </div>
+      <div style={{padding:16}}><ShowcaseVideo/></div>
+    </div>
+  );
+}
+
+/* ── routing : retour LP = /v2.html · app = studio ── */
+function go(view){
+  if(view==="landing"){ location.href = "/v2.html"; }
+  else { location.href = "/app/"; }
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Login go={go}/>);
+</script>
+</body>
+</html>
