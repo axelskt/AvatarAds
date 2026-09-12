@@ -65,6 +65,7 @@ a{color:inherit;text-decoration:none}
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>window.__resources={brandLogo:"assets/avatarads-logo.png"};</script>
 
 <script type="text/babel" data-presets="react">
@@ -98,6 +99,16 @@ function useIsMobile(bp=760){
 }
 window.useIsMobile = useIsMobile;
 const { useState:useStateA } = React;
+
+/* ── Auth réelle (même projet Supabase que /app/, session partagée same-origin) ── */
+const SUPABASE_URL = "https://guvwgiejzkiodghywpwj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const AUTH_OTP_FN = SUPABASE_URL + "/functions/v1/auth-otp";
+async function otpCall(payload){
+  try{ const r = await fetch(AUTH_OTP_FN, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) }); return await r.json(); }
+  catch(e){ return { error:"network" }; }
+}
 
 function GoogleG({size=18}){
   return (
@@ -153,10 +164,61 @@ function ShowcaseVideo({ mob }){
 
 function Login({ go }){
   const mob = window.useIsMobile ? window.useIsMobile() : false;
-  const [email, setEmail] = useStateA(false);
-  const [pw, setPw] = useStateA(false);
-  const [sent, setSent] = useStateA(false);
-  const [show, setShow] = useStateA(false);
+  const [email, setEmail] = useStateA("");
+  const [pw, setPw] = useStateA(false);      // mode mot de passe
+  const [pwVal, setPwVal] = useStateA("");
+  const [sent, setSent] = useStateA(false);  // code OTP envoyé
+  const [show, setShow] = useStateA(false);  // visibilité mot de passe
+  const [busy, setBusy] = useStateA(false);
+  const [err, setErr] = useStateA("");
+
+  // déjà connecté → studio direct (session partagée avec /app/)
+  React.useEffect(()=>{ try{ sb.auth.getSession().then(({data})=>{ if(data && data.session) location.href="/app/"; }); }catch(e){} },[]);
+
+  const validEmail = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+  async function authGoogle(){
+    setErr("");
+    try{ const { error } = await sb.auth.signInWithOAuth({ provider:"google", options:{ redirectTo: location.origin+"/app/", queryParams:{ access_type:"offline", prompt:"consent" } } }); if(error) setErr("Google indisponible, réessaie."); }
+    catch(e){ setErr("Google indisponible, réessaie."); }
+  }
+  async function authSend(){
+    const e = (email||"").trim().toLowerCase();
+    if(!validEmail(e)){ setErr("Entre un email valide."); return; }
+    setBusy(true); setErr("");
+    const res = await otpCall({ action:"send", mode:"login", email:e, firstName:"" });
+    setBusy(false);
+    if(res && res.error){ setErr("Envoi impossible, réessaie dans un instant."); return; }
+    setSent(true);
+  }
+  async function authVerify(codeStr){
+    const c = (codeStr||"").replace(/\D/g,"").slice(0,6);
+    if(c.length!==6){ setErr("Entre les 6 chiffres reçus."); return; }
+    setBusy(true); setErr("");
+    const res = await otpCall({ action:"verify", email:(email||"").trim().toLowerCase(), code:c });
+    if(!res || res.error || !res.token_hash){ setBusy(false); setErr("Code invalide ou expiré."); return; }
+    const { error } = await sb.auth.verifyOtp({ type:"magiclink", token_hash: res.token_hash });
+    if(error){ setBusy(false); setErr("Code invalide ou expiré."); return; }
+    location.href = "/app/";
+  }
+  async function authPassword(){
+    const e = (email||"").trim().toLowerCase();
+    if(!validEmail(e)){ setErr("Entre un email valide."); return; }
+    if(!pwVal){ setErr("Entre ton mot de passe."); return; }
+    setBusy(true); setErr("");
+    const { error } = await sb.auth.signInWithPassword({ email:e, password:pwVal });
+    setBusy(false);
+    if(error){ setErr("Email ou mot de passe incorrect."); return; }
+    location.href = "/app/";
+  }
+  function onOtpInput(e){
+    e.target.value = e.target.value.replace(/\D/g,"").slice(0,1);
+    if(e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus();
+    const c = [...e.target.parentElement.children].filter(x=>x.tagName==="INPUT").map(b=>b.value).join("");
+    if(c.length===6) authVerify(c);
+  }
+  function onOtpKey(e){ if(e.key==="Backspace" && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus(); }
+  function onOtpPaste(e){ const t=(e.clipboardData.getData("text")||"").replace(/\D/g,"").slice(0,6); if(!t) return; e.preventDefault(); const boxes=[...e.target.parentElement.children].filter(x=>x.tagName==="INPUT"); boxes.forEach((b,i)=>{ b.value=t[i]||""; }); (boxes[Math.min(t.length,5)]||e.target).focus(); if(t.length===6) authVerify(t); }
+  const errLine = err ? <p className="center" style={{fontSize:12.5,color:"#c0341d",marginTop:2,width:"100%"}}>{err}</p> : null;
 
   const L = { ink:"#141013", sub:"#5b5750", line:"rgba(0,0,0,.1)", field:"#fff", fieldLine:"rgba(0,0,0,.14)" };
   const panel = (
@@ -165,7 +227,7 @@ function Login({ go }){
       <h2 className="display center" style={{fontSize:mob?24:28,fontWeight:800,color:L.ink}}>Connexion à AvatarAds</h2>
       <p className="center" style={{marginTop:9,fontSize:14.5,maxWidth:320,color:L.sub}}>Choisis ta méthode de connexion pour commencer.</p>
 
-      <button className="btn" style={{width:"100%",marginTop:26,background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={()=>go("app")}>
+      <button className="btn" style={{width:"100%",marginTop:26,background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={authGoogle}>
         <GoogleG/> Continuer avec Google
       </button>
 
@@ -178,33 +240,34 @@ function Login({ go }){
       {sent ? (
         <div className="col rise" style={{width:"100%",gap:11,alignItems:"center"}}>
           <p className="center" style={{fontSize:13.5,maxWidth:300,color:L.sub}}>Code envoyé à ton email. Entre les 6 chiffres reçus.</p>
-          <div className="row" style={{gap:8,justifyContent:"center"}}>
+          <div id="otpbox" className="row" style={{gap:8,justifyContent:"center"}}>
             {[0,1,2,3,4,5].map(k=>(
               <input key={k} maxLength={1} inputMode="numeric" style={{width:44,height:52,textAlign:"center",fontSize:20,fontWeight:800,padding:0,borderRadius:12,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,outline:"none"}}
-                onInput={e=>{ if(e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus(); }}/>
+                onInput={onOtpInput} onKeyDown={onOtpKey} onPaste={onOtpPaste}/>
             ))}
           </div>
-          <button className="btn btn-primary" style={{width:"100%",marginTop:6,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=>go("app")}>
+          <button className="btn btn-primary" style={{width:"100%",marginTop:6,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=>authVerify([...document.querySelectorAll('#otpbox input')].map(b=>b.value).join(''))}>
             Entrer dans l'app <Icons.arrow size={16}/>
           </button>
           <button className="btn btn-quiet btn-sm" style={{fontSize:13,color:L.sub}} onClick={()=>setSent(false)}>← Changer d'email</button>
-          <span style={{fontSize:12,color:L.sub}}>Pas reçu ? <span className="accent" style={{cursor:"pointer",fontWeight:600}}>Renvoyer</span></span>
+          <span style={{fontSize:12,color:L.sub}}>Pas reçu ? <span className="accent" style={{cursor:"pointer",fontWeight:600}} onClick={authSend}>Renvoyer</span></span>
         </div>
       ) : (<>
-        <input type="email" placeholder="ton@email.com" style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
+        <input type="email" placeholder="ton@email.com" value={email} onChange={e=>setEmail(e.target.value)}style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
         {pw && (
           <div style={{position:"relative",width:"100%",marginTop:11}}>
-            <input type={show?"text":"password"} placeholder="••••••••" style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
+            <input type={show?"text":"password"} placeholder="••••••••" value={pwVal} onChange={e=>setPwVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")authPassword();}}style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
             <button onClick={()=>setShow(!show)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",fontSize:12,fontWeight:600,color:L.sub}}>{show?"Cacher":"Voir"}</button>
           </div>
         )}
-        <button className="btn btn-primary" style={{width:"100%",marginTop:11,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? go("app") : setSent(true)}>
+        <button className="btn btn-primary" style={{width:"100%",marginTop:11,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? authPassword() : authSend()}>
           {pw ? "Se connecter" : "Recevoir mon code"} <Icons.arrow size={16}/>
         </button>
-        <button className="btn" style={{width:"100%",marginTop:9,padding:"13px 20px",fontSize:13.5,background:"#fff",border:"1px solid "+L.fieldLine,color:L.ink,fontWeight:600}} onClick={()=>setPw(!pw)}>
+        <button className="btn" style={{width:"100%",marginTop:9,padding:"13px 20px",fontSize:13.5,background:"#fff",border:"1px solid "+L.fieldLine,color:L.ink,fontWeight:600}} onClick={()=>{setPw(!pw);setErr("");}}>
           {pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"}
         </button>
       </>)}
+      {errLine}
 
       <p className="center" style={{marginTop:26,fontSize:12.5,lineHeight:1.6,maxWidth:320,color:L.sub}}>
         En continuant, tu acceptes les <span style={{textDecoration:"underline",cursor:"pointer"}}>Conditions</span> et la <span style={{textDecoration:"underline",cursor:"pointer"}}>Confidentialité</span>.
@@ -238,39 +301,40 @@ function Login({ go }){
           <h1 className="display" style={{fontSize:34,fontWeight:800,lineHeight:1.02,color:D.ink}}>Connexion à<br/><span style={{color:D.sub}}>AvatarAds</span></h1>
           <div className="mono" style={{fontSize:11.5,letterSpacing:".12em",color:D.sub,margin:"16px 0 20px"}}>+50 000 CRÉATEURS DÉJÀ INSCRITS</div>
 
-          <button className="btn" style={{width:"100%",background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={()=>go("app")}>
+          <button className="btn" style={{width:"100%",background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={authGoogle}>
             <GoogleG/> Continuer avec Google
           </button>
 
           {sent ? (
             <div className="col" style={{gap:11,marginTop:14}}>
               <p style={{fontSize:13.5,color:D.sub}}>Code envoyé. Entre les 6 chiffres reçus.</p>
-              <div className="row" style={{gap:8}}>
+              <div id="otpbox" className="row" style={{gap:8}}>
                 {[0,1,2,3,4,5].map(k=>(
                   <input key={k} maxLength={1} inputMode="numeric" style={{flex:1,height:52,textAlign:"center",fontSize:20,fontWeight:800,padding:0,borderRadius:12,border:"1px solid "+D.line,background:D.field,color:D.ink,outline:"none"}}
-                    onInput={e=>{ if(e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus(); }}/>
+                    onInput={onOtpInput} onKeyDown={onOtpKey} onPaste={onOtpPaste}/>
                 ))}
               </div>
-              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=>go("app")}>Entrer dans l'app <Icons.arrow size={16}/></button>
+              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=>authVerify([...document.querySelectorAll('#otpbox input')].map(b=>b.value).join(''))}>Entrer dans l'app <Icons.arrow size={16}/></button>
               <button onClick={()=>setSent(false)} style={{fontSize:13,color:D.sub,fontWeight:600}}>← Changer d'email</button>
             </div>
           ) : (
             <div className="col" style={{gap:11,marginTop:14}}>
-              <input type="email" placeholder="ton@email.com" style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
+              <input type="email" placeholder="ton@email.com" value={email} onChange={e=>setEmail(e.target.value)}style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
               {pw && (
                 <div style={{position:"relative"}}>
-                  <input type={show?"text":"password"} placeholder="••••••••" style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
+                  <input type={show?"text":"password"} placeholder="••••••••" value={pwVal} onChange={e=>setPwVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")authPassword();}}style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
                   <button onClick={()=>setShow(!show)} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:12,fontWeight:600,color:D.sub}}>{show?"Cacher":"Voir"}</button>
                 </div>
               )}
-              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? go("app") : setSent(true)}>
+              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? authPassword() : authSend()}>
                 {pw ? "Se connecter" : "Recevoir mon code"} <Icons.arrow size={16}/>
               </button>
-              <button onClick={()=>setPw(!pw)} className="btn" style={{width:"100%",padding:"13px 20px",fontSize:13.5,background:D.field,border:"1px solid "+D.line,color:D.ink,fontWeight:600}}>
+              <button onClick={()=>{setPw(!pw);setErr("");}} className="btn" style={{width:"100%",padding:"13px 20px",fontSize:13.5,background:D.field,border:"1px solid "+D.line,color:D.ink,fontWeight:600}}>
                 {pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"}
               </button>
             </div>
           )}
+          {errLine}
 
           <p style={{fontSize:12.5,lineHeight:1.6,color:D.sub,marginTop:20}}>
             En continuant, tu acceptes les <span style={{textDecoration:"underline"}}>Conditions</span> et la <span style={{textDecoration:"underline"}}>Confidentialité</span>.
