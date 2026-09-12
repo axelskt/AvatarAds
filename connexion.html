@@ -119,13 +119,14 @@ function ShowcaseVideo({ mob }){
     { n:"MOTION CONTROL", d:"Ton personnage reproduit le mouvement d'une vidéo", hue:150, vid:"assets/lp/v2/connexion/motion-control.mp4" },
   ];
   const [i,setI] = useStateA(0);
-  React.useEffect(()=>{ const t=setInterval(()=>setI(v=>(v+1)%models.length),3200); return ()=>clearInterval(t); },[]);
+  // auto-rotation : le timer se RÉINITIALISE à chaque changement de slide (clic inclus) → chaque vidéo a ses 4,2 s pleines
+  React.useEffect(()=>{ const t=setInterval(()=>setI(v=>(v+1)%models.length),4200); return ()=>clearInterval(t); },[i]);
   const m = models[i];
   return (
     <div style={{position:"relative",height:"100%",minHeight:mob?300:520,borderRadius:20,overflow:"hidden",border:"1px solid var(--border-2)",
       background:`radial-gradient(120% 90% at 70% 10%, oklch(0.42 0.14 ${m.hue}), #0b0910 72%)`,transition:"background .8s"}}>
-      {m.src && <img src={m.src} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>}
-      {m.vid && <video key={m.vid} src={m.vid} autoPlay muted loop playsInline preload="auto" onLoadedData={e=>e.target.play&&e.target.play().catch(()=>{})} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",background:"#000"}}/>}
+      {m.src && <img src={m.src} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain"}}/>}
+      {m.vid && <video key={m.vid} src={m.vid} autoPlay muted loop playsInline preload="auto" onLoadedData={e=>e.target.play&&e.target.play().catch(()=>{})} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"contain",background:"transparent"}}/>}
       <div style={{position:"absolute",inset:0,opacity:(m.src||m.vid)?.15:.5,transition:"opacity .8s",
         background:`repeating-linear-gradient(${45+i*20}deg, rgba(255,255,255,.06) 0 22px, transparent 22px 44px)`}}></div>
       {!m.src && !m.vid && <div style={{position:"absolute",right:"-8%",top:"14%",width:"52%",aspectRatio:"1",borderRadius:"50%",
