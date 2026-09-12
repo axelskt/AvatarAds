@@ -172,9 +172,6 @@ function Login({ go }){
   const [busy, setBusy] = useStateA(false);
   const [err, setErr] = useStateA("");
 
-  // déjà connecté → studio direct (session partagée avec /app/)
-  React.useEffect(()=>{ try{ sb.auth.getSession().then(({data})=>{ if(data && data.session) location.href="/app/"; }); }catch(e){} },[]);
-
   const validEmail = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
   async function authGoogle(){
     setErr("");
