@@ -464,10 +464,10 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
    conteneur .wrap, max 1320 + 32 de padding, floor 12 % du viewport) = le cadre rouge d'Axel, PAS collée au bord de
    l'écran. Fondu latéral SUBTIL 16 % des 2 côtés (Axel : « le flou est beaucoup trop fort, diminue ») + fondu bas
    9 % : à ce cadrage les épaules touchent les 2 bords, un fondu court les fond sur le fond assorti sans bande floue. */
-.v2hero-media{position:absolute;top:1%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:120%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
+.v2hero-media{position:absolute;top:1%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:145%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
 .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block;
-  -webkit-mask-image:linear-gradient(to top,transparent 0,rgba(0,0,0,.35) 16%,#000 32%,#000 100%);
-  mask-image:linear-gradient(to top,transparent 0,rgba(0,0,0,.35) 16%,#000 32%,#000 100%)}
+  -webkit-mask-image:linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%);
+  mask-image:linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%)}
 @media(max-width:768px){
   /* MOBILE = hero CINÉMA façon Qoves (en mieux) : vidéo PLEIN CADRE avec le visage dégagé en haut (headroom),
      DÉGRADÉ SOMBRE pleine largeur en bas (sur ::after du média, pas sur le texte → pas de marges), texte BLANC posé dessus,
