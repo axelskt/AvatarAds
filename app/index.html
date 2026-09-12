@@ -3905,7 +3905,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div style="display:flex;gap:6px;margin-bottom:15px">
               <button onclick="_expPickFormat('9:16');_mExpSync()" id="mExpFmt916" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>9:16</button>
               <button onclick="_expPickFormat('16:9');_mExpSync()" id="mExpFmt169" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="14" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>16:9</button>
-              <button onclick="_expPickFormat('1:1');_mExpSync()" id="mExpFmt11" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>1:1</button>
             </div>
             <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">MODÈLE</div>
             <div id="mExpModelInline" style="display:flex;gap:6px;margin-bottom:15px"></div>
@@ -6058,7 +6057,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-12-0006'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-12-0007'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28498,7 +28497,7 @@ const EXP_STYLES = [
   { id:'realiste', label:'Réaliste',   ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>', sub:'avatar réel',  prompt:'ultra realistic real phone video of a real person, authentic natural lighting, real human skin with visible pores and fine natural texture, candid handheld footage, natural lifelike motion, NOT cinematic, no plastic or waxy skin, no airbrush, no AI look ENDING RULE: the clip must end cleanly — the person finishes their current sentence (or the action completes), closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or gesture in the final second, never cut mid-word or mid-motion.' },
   { id:'studio',   label:'Studio produit',     ico:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>', sub:'produit/pub',  prompt:'premium studio product video, soft gradient background, elegant lighting, smooth clean camera motion ENDING RULE: the clip must end cleanly — the person finishes their current sentence (or the action completes), closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or gesture in the final second, never cut mid-word or mid-motion.' },
 ];
-const EXP_FORMATS = [ {v:'9:16',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 18h0"/></svg>',name:'Portrait',ratio:'9:16'}, {v:'16:9',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',name:'Paysage',ratio:'16:9'}, {v:'1:1',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>',name:'Carré',ratio:'1:1'} ];
+const EXP_FORMATS = [ {v:'9:16',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 18h0"/></svg>',name:'Portrait',ratio:'9:16'}, {v:'16:9',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',name:'Paysage',ratio:'16:9'} ];
 const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 
 // ②b MODÈLE Veo : Standard (Lite) ou Pro (Fast, meilleure qualité). Pro réservé Pro/Élite ;
@@ -28527,7 +28526,7 @@ function _expRenderModels(){
 }
 function _expPickModel(v){
   if(!_expModelAllowed(v)){ toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
-  window._expVeoModel=v; if(v!=='omni' && window._expFormat==='1:1') window._expFormat='9:16'; initExpress();
+  window._expVeoModel=v; initExpress();
 }
 
 function initExpress(){
@@ -28689,11 +28688,7 @@ function _expSetDur(v){
   initExpress(); // re-render : état grisé/actif du 1080p selon la durée
 }
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
-function _expPickFormat(v){
-  // Le carré (1:1) est natif sur Omni Flash uniquement (Veo ne fait pas le 1:1) → on bascule sur Omni.
-  if(v==='1:1'){ if(!_expModelAllowed('omni')){ toast('Le format carré (1:1) passe par Omni Flash — réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; } window._expVeoModel='omni'; }
-  window._expFormat=v; initExpress();
-}
+function _expPickFormat(v){ window._expFormat=v; initExpress(); }
 function _exp1080Allowed(){ return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase()); }
 function _expPickQual(v){
   // 1080p = Pro/Élite : cadenas dans l'UI + blocage au clic (le clic sur Générer revérifie aussi).
@@ -30078,7 +30073,7 @@ function _expRemoveImg(i){ if(window._expImgs) window._expImgs.splice(i,1); wind
    d'origine (on ne bloque jamais une génération pour un recadrage). */
 async function _expCoverCropForVeo(b64, mime, fmt){
   if(!b64) return null;
-  const ratio = (fmt==='16:9') ? 16/9 : (fmt==='1:1' ? 1 : 9/16);
+  const ratio = (fmt==='16:9') ? 16/9 : 9/16;
   const dataUrl = 'data:'+(mime||'image/png')+';base64,'+b64;
   const img = await new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('image de départ illisible')); im.src=dataUrl; });
   const W=img.naturalWidth||0, H=img.naturalHeight||0;
@@ -30450,7 +30445,7 @@ async function _expCreateSeedance(prompt){
     }
     if(!imgB64){
       setP(8,'Création de l\'image…');
-      const size = window._expFormat==='16:9' ? '1792x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1792');
+      const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
       const url = await _imgGenerateOne(token, prompt+', '+styleMeta.prompt+', no text, no watermark, high quality', size, null);
       if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
       else { const b=await (await fetch(url)).blob(); imgMime=b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:[^,]+,/,''));fr.readAsDataURL(b);}); }
@@ -30519,7 +30514,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     // Anti-texte RENFORCÉ (Axel 08/09) : le modèle incrustait « SITE » (mot du script) sur les vêtements/le décor.
     // Consigne forte EN TÊTE (les modèles pondèrent le début) + rappel en fin. Reste imparfait (limite modèle).
     prompt: "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)",
-    aspect_ratio: (window._expFormat==='16:9'?'16:9':(window._expFormat==='1:1'?'1:1':'9:16')),
+    aspect_ratio: (window._expFormat==='16:9'?'16:9':'9:16'),
     duration: Math.max(3, Math.min(10, Math.round(durSec)||6)),
     resolution: (res==='1080p'?'1080p':'720p'),
     // PAS de generate_audio : l'endpoint image-to-video de gemini-omni-flash sort la voix native
@@ -30635,7 +30630,7 @@ async function expressCreate(){
     if((window._expImgs||[]).length > 1){
       setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
       try{
-        const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1536');
+        const _cSize = window._expFormat==='16:9' ? '1536x1024' : '1024x1536';
         const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize);
         if(_composed){
           if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
@@ -30645,7 +30640,7 @@ async function expressCreate(){
     }
     if(!imgB64){
       setP(8,'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg> Création de l\'image…');
-      const size = window._expFormat==='16:9' ? '1792x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1792');
+      const size = window._expFormat==='16:9' ? '1792x1024' : '1024x1792';
       const imgPrompt = prompt + ', ' + styleMeta.prompt + ', no text, no watermark, high quality';
       const url = await _imgGenerateOne(token, imgPrompt, size, null);
       if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
