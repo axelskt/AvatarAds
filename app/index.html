@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com https://js.whop.com https://*.whop.com https://*.clarity.ms; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
 <script>/* audit 05/09 (L8) — anti-clickjacking : l'app (auth + paiement) ne doit jamais être encadrée. GitHub Pages ne pose pas d'en-tête X-Frame-Options → filet JS. */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
+<script>/* Thème studio (clair/sombre) — posé AVANT le paint pour zéro flash au chargement. */try{if(localStorage.getItem('aa_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
@@ -30,6 +31,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
+  color-scheme:dark;
   /* ── New design tokens ── */
   --bg:#0B0B0D;--bg-grad:#0E0D10;
   --panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
@@ -47,10 +49,33 @@
   /* ── Legacy aliases — valeurs proches originals pour ne pas casser l'UI ── */
   --bg2:#0d0f12;--bg3:#13161a;--bg4:#1a1e24;--bg5:#22272f;
   --border2:rgba(255,255,255,0.10);--border3:rgba(255,255,255,0.18);
-  --text2:#a7a39e;--text3:#6b6862;
+  --text1:var(--text);--text2:#a7a39e;--text3:#6b6862;
   --orange:var(--accent);--orange2:var(--accent-2);
   --orange-dim:var(--accent-soft);--orange-glow:var(--accent-glow);
 }
+/* ════════ THÈME CLAIR DU STUDIO — toggle « Mon compte » (aa_theme=light) ═══════════
+   Racine data-theme=light → couvre AUSSI les modales position:fixed injectées dans
+   <body> par JS (un wrapper .gen-light les raterait). .gen-light = alias conservé
+   pour rester compatible avec la maquette Claude Design. Mapping des alias legacy
+   (sans tiret) validé avec Claude Design : mêmes rôles clairs que les tokens « new ». */
+:root[data-theme="light"], .gen-light{
+  color-scheme:light;
+  /* — tokens « new » — */
+  --bg:#F4F3F6; --bg-grad:#FBFBFD;
+  --panel-1:#FFFFFF; --surface:#FFFFFF; --surface-2:#F2F1F5; --surface-3:#E7E5EC;
+  --border:rgba(0,0,0,.09); --border-2:rgba(0,0,0,.15); --border-3:rgba(0,0,0,.24);
+  --text:#141013; --text-2:#5B5750; --text-3:#8B8880;
+  /* — alias legacy → rôles clairs (Claude Design : bg2→surface-2, bg3→panel-1/bg-grad,
+       bg4/bg5→surfaces plus foncées, border2→border-2, border3→bordure max) — */
+  --bg2:#F2F1F5; --bg3:#FFFFFF; --bg4:#E7E5EC; --bg5:#DEDCE3;
+  --border2:rgba(0,0,0,.15); --border3:rgba(0,0,0,.24);
+  --text2:#5B5750; --text3:#8B8880;
+}
+/* .glass : le voile blanc du sombre devient un voile noir en clair (sinon invisible) */
+:root[data-theme="light"] .glass, .gen-light .glass{ background:linear-gradient(180deg,rgba(0,0,0,.03),rgba(0,0,0,0)) }
+/* Aperçus de STYLE de sous-titres : ce sont des rendus de sous-titres (texte blanc/néon
+   sur "écran") → on épingle un fond sombre en clair pour qu'ils restent fidèles/lisibles. */
+:root[data-theme="light"] .sub-preview, :root[data-theme="light"] .style-card .sub-preview{ background:#0d0d0f }
 html,body{height:100%;overflow:hidden;background:var(--bg)}
 body{font-family:var(--font);color:var(--text);display:flex;flex-direction:column}
 
@@ -323,9 +348,9 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 
 /* ── BUY CREDITS MODAL ── */
 .credits-overlay{position:fixed;inset:0;background:rgba(4,5,8,0.94);backdrop-filter:blur(12px);z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
-.credits-box{background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px 30px 24px;max-width:480px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04)}
+.credits-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 30px 24px;max-width:480px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04)}
 .credits-pack{border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;margin-bottom:10px;position:relative;background:var(--panel-1)}
-.credits-pack:hover{border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.credits-pack:hover{border-color:var(--border-2);background:var(--surface-2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .credits-pack.popular{border-color:var(--orange);background:rgba(255,107,53,0.06);box-shadow:0 0 0 1px rgba(255,107,53,0.1)}
 .credits-pack.popular:hover{box-shadow:0 8px 28px rgba(255,107,53,0.2)}
 .btn-buy-pack{padding:10px 22px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all .2s;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 10px 26px -8px var(--accent-glow);letter-spacing:-0.1px}
@@ -565,7 +590,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
   background:var(--surface-3);transition:.25s;display:block}
 .ac-row.is-on .ac-sw{background:var(--accent)}
 .ac-sw-th{width:17px;height:17px;border-radius:50%;position:absolute;top:3px;left:3px;
-  background:#fff;opacity:.7;transition:.25s}
+  background:#fff;opacity:.95;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:.25s}
 .ac-row.is-on .ac-sw-th{left:20px;opacity:1}
 
 .ac-mode.is-on{border:2px solid var(--accent);background:var(--accent-soft)}
@@ -2581,7 +2606,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div class="row" style="gap:8px;align-items:stretch">
                 <button id="composeBtn" onclick="composeVideo(this)" style="flex:1;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 20px rgba(255,107,53,.35)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Télécharger</button>
               </div>
-              <button onclick="genOpenMontageIA()" style="width:100%;margin-top:8px;padding:13px;background:#141414;border:1.5px solid rgba(255,107,53,.75);border-radius:12px;color:#FF6B35;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#1c1310'" onmouseout="this.style.background='#141414'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Envoyer vers Montage IA</button>
+              <button onclick="genOpenMontageIA()" style="width:100%;margin-top:8px;padding:13px;background:var(--surface);border:1.5px solid rgba(255,107,53,.75);border-radius:12px;color:#FF6B35;font-family:var(--font);font-weight:800;font-size:14px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Envoyer vers Montage IA</button>
               <div id="composeProgressWrap" style="display:none;margin-top:8px">
                 <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">
                   <span id="composeProgressStage">Composition en cours…</span><span id="composeProgressPct">0%</span>
@@ -2715,7 +2740,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <!-- YouTube (disponible) -->
         <div style="background:var(--bg2);border:1px solid rgba(255,0,0,0.25);border-radius:14px;padding:20px;margin-bottom:12px">
           <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
-            <div style="width:44px;height:44px;background:#ff0000;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">▶</div>
+            <div style="width:44px;height:44px;background:#ff0000;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;color:#fff">▶</div>
             <div style="flex:1">
               <div style="font-size:14px;font-weight:700;margin-bottom:2px">YouTube Shorts</div>
               <div id="yt-connect-status" style="font-size:11px;font-family:var(--mono);color:var(--text3)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="8"/></svg> Non connecté</div>
@@ -3512,7 +3537,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <!-- #162 · zone de coupe manuelle : la sélection se voit SUR l'onde -->
                 <div id="acCutSel" style="display:none;position:absolute;top:-2px;bottom:-2px;background:rgba(255,90,54,.20);border-left:1.5px solid var(--accent);border-right:1.5px solid var(--accent);border-radius:2px;pointer-events:none"></div>
                 <div id="acCutMarkA" style="display:none;position:absolute;top:-4px;bottom:-4px;width:1.5px;background:var(--accent);box-shadow:0 0 5px var(--accent-glow,rgba(255,90,54,.6));pointer-events:none"></div>
-                <div id="acDoneHead" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:#fff;border-radius:2px;box-shadow:0 0 6px rgba(255,255,255,.55);pointer-events:none"></div>
+                <div id="acDoneHead" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:var(--accent);border-radius:2px;box-shadow:0 0 6px var(--accent-glow);pointer-events:none"></div>
               </div>
               <span id="acDoneDur" class="mono faint" style="font-size:11px;flex:0 0 auto">0:00</span>
             </div>
@@ -3569,7 +3594,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </button>
               <div id="acOrigWaveWrap" style="flex:1;position:relative;height:30px;cursor:pointer">
                 <canvas id="acOrigWave" style="width:100%;height:30px;display:block"></canvas>
-                <div id="acOrigHead" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:#fff;border-radius:2px;pointer-events:none"></div>
+                <div id="acOrigHead" style="position:absolute;top:-3px;bottom:-3px;left:0;width:2px;background:var(--accent);border-radius:2px;pointer-events:none"></div>
               </div>
               <span id="acOrigDur" class="mono faint" style="font-size:11px;flex:0 0 auto">0:00</span>
             </div>
@@ -3814,7 +3839,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <video id="expResultVid" controls playsinline style="display:none;max-height:65vh;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
 
           <!-- Progress overlay -->
-          <div id="expProgress" style="display:none;position:absolute;inset:0;background:rgba(10,10,10,.86);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:16px">
+          <div id="expProgress" style="display:none;position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:16px">
             <div style="width:54px;height:54px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div>
             <div id="expProgressTxt" style="font-size:13px;font-family:var(--mono);color:var(--text2)">Initialisation…</div>
             <div style="width:260px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="expProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .3s"></div></div>
@@ -4052,8 +4077,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                distincts (jour / heure) et trois raccourcis suffisent : on ne
                programme jamais un post à 14 h 37. -->
           <div id="pubWhenBox" style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
-            <input id="pubWhenDay" type="date" style="padding:8px 12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;color-scheme:dark">
-            <input id="pubWhenTime" type="time" step="900" style="padding:8px 12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;color-scheme:dark">
+            <input id="pubWhenDay" type="date" style="padding:8px 12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none">
+            <input id="pubWhenTime" type="time" step="900" style="padding:8px 12px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none">
             <button type="button" onclick="_pubQuick(0,18)" class="btn btn-quiet btn-sm" style="font-size:11.5px">Ce soir 18 h</button>
             <button type="button" onclick="_pubQuick(1,15)" class="btn btn-quiet btn-sm" style="font-size:11.5px">Demain 15 h</button>
             <button type="button" onclick="_pubQuick(1,18)" class="btn btn-quiet btn-sm" style="font-size:11.5px">Demain 18 h</button>
@@ -5092,7 +5117,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <p id="login-sub" style="margin-top:8px;font-size:15px;color:var(--text-2)">Reprends là où tu t'es arrêté.</p>
 
       <!-- Google -->
-      <button onclick="authGoogle()" style="width:100%;margin-top:26px;padding:13px 20px;background:#fff;border:none;border-radius:var(--r);color:#1a1a1a;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.2)'" onmouseout="this.style.boxShadow='none'">
+      <button onclick="authGoogle()" style="width:100%;margin-top:26px;padding:13px 20px;background:#fff;border:1.5px solid rgba(0,0,0,.2);border-radius:var(--r);color:#1a1a1a;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.2)'" onmouseout="this.style.boxShadow='none'">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 16.3 4.5 9.7 8.9 6.3 14.7z"/><path fill="#4CAF50" d="M24 43.5c5.5 0 10.3-1.9 13.8-5.1l-6.4-5.4C29.4 34.6 26.9 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.6 39 16.2 43.5 24 43.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.4 5.4C41 36.9 43.5 31 43.5 24c0-1.2-.1-2.3-.4-3.5z"/></svg>
         Continuer avec Google
       </button>
@@ -5379,6 +5404,20 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
     <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
+    <!-- ③ Apparence · thème du studio (toggle clair/sombre) — maquette Claude Design -->
+    <div class="row card" style="justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:26px;gap:12px">
+      <span class="col" style="line-height:1.3;min-width:0">
+        <span style="font-weight:600;font-size:14.5px">Apparence</span>
+        <span class="faint" style="font-size:12px">Thème du studio</span>
+      </span>
+      <div class="seg" id="themeSeg" style="flex:0 0 auto">
+        <button type="button" data-theme="dark" onclick="setStudioTheme('dark')" style="display:flex;align-items:center;gap:6px;padding:7px 13px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Sombre</button>
+        <button type="button" data-theme="light" onclick="setStudioTheme('light')" style="display:flex;align-items:center;gap:6px;padding:7px 13px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg> Clair</button>
+      </div>
+    </div>
+
     <!-- (④ Connecter Claude sorti de « Mon compte » le 28/08 : entrée de sidebar
          + vue dédiée v-connectclaude, deep link app/#connecter-claude) -->
     <!-- 🧠 Ma marque : un seul bouton qui ouvre TOUT ce qu'il y a à renseigner —
@@ -5433,7 +5472,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 <!-- UPGRADE + CREDITS MODAL (combined) -->
 <div class="credits-overlay" id="upgradeModal" onclick="if(event.target===this)closeUpgradeModal()">
-  <div id="upgradeModalBox" style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px 30px 24px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04);max-width:880px">
+  <div id="upgradeModalBox" style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px 30px 24px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,0.04);max-width:880px">
 
     <!-- Header -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px">
@@ -5566,7 +5605,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 <!-- MES CRÉDITS (clic sur les compteurs de la topbar) -->
 <div id="creditsMenuModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:20px" onclick="if(event.target===this)closeCreditsMenu()">
-  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:24px 22px 18px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,.6);margin:6vh 0 30px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px 22px 18px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,.6);margin:6vh 0 30px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div>
         <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase">Mes crédits</div>
@@ -5607,7 +5646,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 <!-- RÉTENTION À L'ANNULATION (type ElevenLabs : raison → offre → confirmation) -->
 <div id="retentionModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.88);backdrop-filter:blur(8px);z-index:950;align-items:flex-start;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:20px" onclick="if(event.target===this)closeRetention()">
-  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:26px 24px 20px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.6);margin:6vh 0 30px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:26px 24px 20px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.6);margin:6vh 0 30px">
 
     <!-- Étape 1 : raison -->
     <div id="retStep1">
@@ -5656,7 +5695,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 <!-- AVATAR PRESET SAVE MODAL -->
 <div id="avatarPresetSaveModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
-  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
     <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Sauvegarder avatar</div>
     <div style="font-size:17px;font-weight:800;margin-bottom:16px">Nomme cet avatar</div>
     <input id="avatarPresetNameInput" type="text" maxlength="32" placeholder="Ex : Moi studio, Avatar pro…"
@@ -5671,7 +5710,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 <!-- AVATAR PRESET PICKER MODAL -->
 <div id="avatarPresetPickerModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
-  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:420px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 22px;width:420px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div style="font-size:17px;font-weight:800"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Avatars sauvegardés</div>
       <button onclick="document.getElementById('avatarPresetPickerModal').style.display='none'" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -5682,7 +5721,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 <!-- PRESET SAVE MODAL -->
 <div id="subPresetSaveModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)closeSubPresetSave()">
-  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 22px;width:340px;box-shadow:0 24px 60px rgba(0,0,0,.6)">
     <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Nouveau preset</div>
     <div style="font-size:17px;font-weight:800;margin-bottom:16px">Nomme ton preset</div>
     <input id="subPresetNameInput" type="text" maxlength="32" placeholder="Ex : TikTok orange, Hormozi bold…"
@@ -5698,7 +5737,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 <!-- PRESET PICKER MODAL -->
 <div id="subPresetPickerModal" style="display:none;position:fixed;inset:0;background:rgba(4,5,8,0.85);backdrop-filter:blur(8px);z-index:900;align-items:center;justify-content:center" onclick="if(event.target===this)closeSubPresetPicker()">
-  <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px 22px;width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 22px;width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.6)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div>
         <div style="font-size:11px;font-family:var(--mono);color:var(--orange2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Mes presets</div>
@@ -5726,7 +5765,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
   .sheet-card-pro{transform:none !important;order:0}
 }
 </style>
-<div id="plansSheet" style="display:none;position:fixed;inset:0;z-index:99990;background:#07080a;overflow-y:auto;min-height:100vh">
+<div id="plansSheet" style="display:none;position:fixed;inset:0;z-index:99990;background:var(--bg);overflow-y:auto;min-height:100vh">
   <div style="max-width:1180px;margin:0 auto;padding:56px 32px 64px">
     <!-- Bandeau contextuel (ex : fonction réservée Pro/Élite) — masqué par défaut -->
     <div id="plansSheetBanner" style="display:none;margin-bottom:24px">
@@ -6057,7 +6096,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-12-0009'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0001'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7375,7 +7414,7 @@ function updateAccountMenu(profile){
     const badge = el('accountMenuPlanBadge');
     badge.textContent = plan;
     const colors = { FREE:'rgba(255,255,255,0.07)', STARTER:'rgba(77,171,247,0.15)', PRO:'rgba(255,107,53,0.15)', ELITE:'rgba(168,85,247,0.15)', BYOK:'rgba(168,85,247,0.15)' };
-    const textColors = { FREE:'rgba(255,255,255,0.4)', STARTER:'#4dabf7', PRO:'var(--orange)', ELITE:'#c084fc', BYOK:'#c084fc' };
+    const textColors = { FREE:'var(--text-3)', STARTER:'#4dabf7', PRO:'var(--orange)', ELITE:'#c084fc', BYOK:'#c084fc' };
     badge.style.background = colors[plan] || colors.FREE;
     badge.style.color = textColors[plan] || textColors.FREE;
     badge.style.borderColor = (textColors[plan] || 'rgba(255,255,255,0.12)').replace(')', ',0.3)').replace('rgba','rgba');
@@ -8536,10 +8575,28 @@ function openAccountSettings(){
     if(newEmailInp) newEmailInp.value = '';
   }
   _syncCancelBtn();
+  _aaSyncThemeSeg();
   // (mcpKeyRefresh() retiré le 28/08 : le bloc « Connecter Claude » vit dans sa
   //  vue dédiée v-connectclaude — nav('connectclaude') fait le refresh)
 }
 function closeAccountSettings(){ document.getElementById('accountOverlay').style.display='none'; }
+
+// ── Thème du studio (clair / sombre) — toggle « Mon compte », persistant (aa_theme) ──
+// Le bootstrap du <head> pose déjà l'attribut avant le paint ; ici : bascule au clic +
+// synchro visuelle du segmented à l'ouverture de la modale.
+function _aaGetTheme(){ try{ return localStorage.getItem('aa_theme')==='light' ? 'light' : 'dark'; }catch(_){ return 'dark'; } }
+function _aaSyncThemeSeg(){
+  const t = _aaGetTheme();
+  const seg = document.getElementById('themeSeg');
+  if(seg) seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.theme===t));
+}
+function setStudioTheme(t){
+  t = (t==='light') ? 'light' : 'dark';
+  if(t==='light') document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  try{ localStorage.setItem('aa_theme', t); }catch(_){}
+  _aaSyncThemeSeg();
+}
 
 // ── Clé MCP « Connecter Claude » (#73) ──
 const MCP_KEY_FN = SUPABASE_URL + '/functions/v1/mcp/key';
@@ -22788,7 +22845,7 @@ function _showWordChipMenu(e, chip, gi, wi){
   document.getElementById('_wcMenu')?.remove();
   const menu = document.createElement('div');
   menu.id = '_wcMenu';
-  menu.style.cssText = 'position:fixed;z-index:99999;background:#16181c;border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.7);padding:4px;min-width:170px';
+  menu.style.cssText = 'position:fixed;z-index:99999;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.4);padding:4px;min-width:170px';
   const rect = chip.getBoundingClientRect();
   const left = Math.min(rect.left, window.innerWidth - 185);
   const top  = rect.bottom + 6;
@@ -22799,13 +22856,13 @@ function _showWordChipMenu(e, chip, gi, wi){
     const b = document.createElement('button');
     b.innerHTML = ico + ' &nbsp;' + label;
     b.style.cssText = 'width:100%;display:flex;align-items:center;padding:9px 12px;background:transparent;border:none;border-radius:7px;color:' + color + ';font-family:var(--mono);font-size:12px;cursor:pointer;text-align:left;transition:background .12s;gap:4px';
-    b.onmouseover = () => b.style.background = color==='#ff4757' ? 'rgba(255,71,87,0.12)' : 'rgba(255,255,255,0.07)';
+    b.onmouseover = () => b.style.background = color==='#ff4757' ? 'rgba(255,71,87,0.12)' : 'var(--surface-2)';
     b.onmouseout  = () => b.style.background = 'transparent';
     b.onclick = () => { menu.remove(); fn(); };
     return b;
   };
 
-  menu.appendChild(mkBtn('<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>', 'Modifier l\'écriture', '#fff', () => _editWordChip(chip, gi, wi)));
+  menu.appendChild(mkBtn('<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>', 'Modifier l\'écriture', 'var(--text)', () => _editWordChip(chip, gi, wi)));
   menu.appendChild(mkBtn('<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M9 7V4h6v3"/></svg>', 'Supprimer le mot',    '#ff4757', () => {
     _wordGroups[gi].splice(wi,1);
     _wordGroups = _wordGroups.filter(g=>g.length>0);
@@ -34954,7 +35011,7 @@ async function _acAnalyze(){
         <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:2px">✓ ${removedS}s de silences supprimés · ${origS}s → ${cleanS}s</div>
         <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:12px">Niveau : ${isStrong?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 010 7"/></svg> Avancé':'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg> Standard'}</div>
         <div id="acProgWrap" onclick="_acSeek(event)" title="Cliquer pour se déplacer" style="height:5px;background:var(--bg4);border-radius:99px;overflow:hidden;margin-bottom:10px;cursor:pointer">
-          <div id="acProgFill" style="height:100%;width:0%;background:#fff;border-radius:99px;transition:width .1s linear"></div>
+          <div id="acProgFill" style="height:100%;width:0%;background:var(--accent);border-radius:99px;transition:width .1s linear"></div>
         </div>
         <button id="acPlayBtn" onclick="_acTogglePlay(this)" style="width:100%;padding:10px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.borderColor='var(--orange2)';this.style.color='var(--orange2)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">▶ Écouter l'audio nettoyé</button>
         ${_acVideoFile ? '<button onclick="_acExportVideo(this)" style="width:100%;padding:11px;background:var(--green);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px">↓ Télécharger la vidéo nettoyée (MP4)</button>' : ''}
@@ -35666,7 +35723,7 @@ function _tapSyncRenderWave(pct){
   if(wave.querySelectorAll('.tsw-bar').length < 70){
     let h='';
     for(let i=0;i<70;i++){ h+=`<div class="tsw-bar" style="flex:1;height:${(22+Math.abs(Math.sin(i*0.7))*60).toFixed(1)}%;border-radius:2px;background:var(--surface-3);transition:background .1s"></div>`; }
-    h+='<div id="tapSyncHead" style="position:absolute;top:0;bottom:0;left:0%;width:2px;background:#fff;box-shadow:0 0 8px #fff"></div>';
+    h+='<div id="tapSyncHead" style="position:absolute;top:0;bottom:0;left:0%;width:2px;background:var(--accent);box-shadow:0 0 8px var(--accent-glow)"></div>';
     wave.innerHTML=h;
   }
   const bars = wave.querySelectorAll('.tsw-bar');
@@ -39056,7 +39113,7 @@ function edBandDrag(ov,track,e,mode){
         '<textarea class="field" rows="2" oninput="edSetProp(\'text\',this.value)" placeholder="Ton texte… (Entrée = nouvelle ligne)" style="margin-bottom:14px;resize:vertical;line-height:1.35;font-family:inherit">'+(ov.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</textarea>'
         // #taille-à-l'ajout (Axel « changer la taille quand on ajoute un texte ») : curseur Taille EN HAUT, visible tout de suite
         +'<div class="row gap12" style="align-items:center;margin-bottom:16px"><span class="mono faint" style="font-size:11px;width:42px">Taille</span><input type="range" class="ed-range" min="10" max="90" value="'+ov.size+'" oninput="edSetProp(\'size\',+this.value);var l=document.getElementById(\'edSizeLbl\');if(l)l.textContent=this.value"><span class="mono accent" id="edSizeLbl" style="font-size:12px;width:34px;text-align:right">'+ov.size+'</span></div>'
-        +'<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:16px">'+SUBS_ED.map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" style="padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;border:1px solid var(--border);background:var(--surface);color:'+s[2]+';-webkit-text-stroke:.5px rgba(0,0,0,.5);cursor:pointer">'+s[1]+'</button>').join('')+'</div>'
+        +'<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:16px">'+SUBS_ED.map(s=>'<button onclick="edApplyTextPreset(\''+s[0]+'\')" style="padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;border:1px solid var(--border);background:#0d0d0f;color:'+s[2]+';-webkit-text-stroke:.5px rgba(0,0,0,.5);cursor:pointer">'+s[1]+'</button>').join('')+'</div>'
         +'<div class="row gap10" style="margin-bottom:14px;flex-wrap:wrap">'
           +'<select class="field" onchange="edSetFont(this.value)" style="flex:1 1 130px;padding:10px 12px">'+FONTS_ED.map(f=>'<option value=\''+f[0]+'\' '+((ov.font||'var(--display)')===f[0]?'selected':'')+'>'+f[1]+'</option>').join('')+'</select>'
           +'<label class="row gap8" style="padding:9px 11px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12.5px;align-items:center"><input type="color" value="'+ov.color+'" oninput="edSetProp(\'color\',this.value)" style="width:20px;height:20px;border:none;background:none;padding:0"> Couleur</label>'
