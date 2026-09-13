@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://js.whop.com https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Tunnel V2 = porte SOMBRE. À la 1re venue (aucune préférence), on ensemence aa_theme=sombre
+     pour que tout le chemin v2 (login de l'app + studio) reste sombre. Partagé même-origine avec
+     /app/. Un choix explicite (toggle Mon compte) prime toujours. -->
+<script>try{if(!localStorage.getItem('aa_theme'))localStorage.setItem('aa_theme','dark');}catch(e){}</script>
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">/* Clarity chargé APRÈS le rendu (idle) pour ne pas peser sur le thread principal au chargement */
 (function(){function loadClarity(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");}
