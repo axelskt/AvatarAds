@@ -3700,22 +3700,22 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
             <button id="omniGenBtn" class="btn btn-primary" onclick="_omniGenerate()" style="width:100%;padding:18px;font-size:17px;font-weight:800;border-radius:16px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 16px 44px -10px var(--accent-glow);display:flex;align-items:center;justify-content:center;gap:8px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer la vidéo<span id="omniCost"></span></button>
 
-            <!-- Chargement PLEIN ÉCRAN (type Images IA) : ring + % + timer -->
-            <div id="omniLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:9000;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:18px">
-              <div style="position:relative;width:132px;height:132px">
-                <svg width="132" height="132" viewBox="0 0 132 132" style="display:block;transform:rotate(-90deg)">
+            <!-- Chargement CONTENU dans le menu (type Images IA/Express, PAS en plein écran) : ring + % + timer -->
+            <div id="omniLoadingOverlay" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:44px 24px;border-radius:20px;background:var(--panel-1);border:1px solid var(--border)">
+              <div style="position:relative;width:116px;height:116px">
+                <svg width="116" height="116" viewBox="0 0 132 132" style="display:block;transform:rotate(-90deg)">
                   <circle cx="66" cy="66" r="52" fill="none" stroke="var(--bg4)" stroke-width="8"/>
                   <circle id="omniProgArc" cx="66" cy="66" r="52" fill="none" stroke="url(#omniRingGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .35s linear"/>
                   <defs><linearGradient id="omniRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
                 </svg>
                 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
-                  <div id="omniProgPct" style="font-size:26px;font-weight:800;font-family:var(--font);line-height:1">0%</div>
+                  <div id="omniProgPct" style="font-size:24px;font-weight:800;font-family:var(--font);line-height:1">0%</div>
                   <div id="omniProgTimer" style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text-3);letter-spacing:1px">0:00</div>
                 </div>
               </div>
               <div style="text-align:center">
-                <div style="font-size:17px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px">Transformation en cours…</div>
-                <div id="omniProgLabel" class="faint" style="font-size:11.5px;font-family:var(--mono)">L'IA transforme ta vidéo…</div>
+                <div style="font-size:16px;font-weight:800;letter-spacing:-.3px">Transformation en cours…</div>
+                <div id="omniProgLabel" class="faint" style="font-size:11.5px;font-family:var(--mono);margin-top:4px">L'IA transforme ta vidéo · ~30-60 s</div>
               </div>
             </div>
           </div>
@@ -3736,7 +3736,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
             <div id="omniResult" style="display:none">
               <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:8px">RÉSULTAT</div>
-              <video id="omniOut" controls playsinline style="width:100%;border-radius:14px;background:#000"></video>
+              <!-- Taille CONTENUE : une vidéo 9:16 en width:100% dépassait l'écran (retour Axel 13/09).
+                   max-height borne la hauteur → la vidéo tient en entier, bouton Télécharger visible dessous. -->
+              <video id="omniOut" controls playsinline style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;margin:0 auto;border-radius:14px;background:#000"></video>
               <div class="row" style="gap:8px;margin-top:12px">
                 <button onclick="_omniDownload()" class="btn btn-primary" style="flex:1;padding:13px;border-radius:12px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
               </div>
@@ -6125,7 +6127,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0008'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0009'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -27388,9 +27390,18 @@ async function _loadLibThumbnails(){
   const els = document.querySelectorAll('[data-lib-vid],[data-lib-audio-idb]');
   if(!els.length) return;
   _libThumbIO = new IntersectionObserver((entries)=>{
-    entries.forEach(en=>{ if(en.isIntersecting){ const t=en.target; _libThumbIO.unobserve(t); _libGenThumbOne(t); } });
-  }, { rootMargin:'500px' });   // marge : on prépare un peu avant que la carte n'entre à l'écran
-  els.forEach(el=>_libThumbIO.observe(el));
+    entries.forEach(en=>{ if(en.isIntersecting){ const card=en.target; _libThumbIO.unobserve(card); _libGenThumbOne(card._libThumbEl||card); } });
+  }, { rootMargin:'600px' });   // marge : on prépare un peu avant que la carte n'entre à l'écran
+  els.forEach(el=>{
+    // PIÈGE (retour Axel 13/09 : « aucune preview ne s'affiche ») : la miniature vidéo
+    // <img data-lib-vid> est en display:none tant que le frame n'est pas prêt — or un élément
+    // display:none n'a AUCUNE boîte, donc IntersectionObserver ne le signale JAMAIS comme visible
+    // → _libGenThumbOne n'était jamais appelé. On observe donc l'ANCÊTRE VISIBLE (.vid-card) et on
+    // garde le lien vers l'élément cible réel.
+    const target = el.closest('.vid-card, .lvp-thumb') || el;
+    target._libThumbEl = el;
+    _libThumbIO.observe(target);
+  });
 }
 // Génère la miniature/waveform d'UNE carte (appelé quand elle devient visible). Idempotent.
 async function _libGenThumbOne(el){
@@ -29399,21 +29410,27 @@ function _omniPickFile(file){
   };
 }
 let _omniProgTimer=null, _omniProgVal=0, _omniProgT0=0;
-function _omniSetProg(p){
+function _omniSetProg(p, force){
+  p = Math.min(100, Math.max(0, p));
+  // MONOTONE : la barre ne recule JAMAIS (sauf reset explicite au lancement). Avant, le timer
+  // fluide montait _omniProgVal puis le poll le RÉ-ÉCRIVAIT plus bas (25+i*2) → 20→12→16→14
+  // en zig-zag (retour Axel 13/09). `force` = remise à zéro au tout début d'une génération.
+  if(!force && p < _omniProgVal) p = _omniProgVal;
   _omniProgVal=p;
   const arc=document.getElementById('omniProgArc'), pct=document.getElementById('omniProgPct');
-  if(arc) arc.style.strokeDashoffset=String(326.7 - 326.7*(Math.min(100,Math.max(0,p))/100));
-  if(pct) pct.textContent=Math.round(Math.min(100,Math.max(0,p)))+'%';
+  if(arc) arc.style.strokeDashoffset=String(326.7 - 326.7*(p/100));
+  if(pct) pct.textContent=Math.round(p)+'%';
 }
-// Chargement PLEIN ÉCRAN (type Images IA) : ring + % + timer. 1er appel = ouvre l'overlay + lance le timer.
+// Chargement CONTENU dans le menu (type Images IA/Express) : ring + % + timer. 1er appel = ouvre l'overlay + lance le timer.
 function _omniProg(txt,pct){
   const ov=document.getElementById('omniLoadingOverlay');
   if(ov && ov.style.display==='none'){
-    ov.style.display='flex'; _omniProgT0=Date.now(); _omniSetProg(pct!=null?pct:1);
+    ov.style.display='flex'; _omniProgT0=Date.now(); _omniSetProg(pct!=null?pct:1, true);
+    try{ ov.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){}
     clearInterval(_omniProgTimer);
     _omniProgTimer=setInterval(()=>{
       const t=document.getElementById('omniProgTimer'); if(t && _omniProgT0){ const s=Math.floor((Date.now()-_omniProgT0)/1000); t.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
-      if(_omniProgVal<99) _omniSetProg(_omniProgVal + Math.max(0.3,(99-_omniProgVal)*0.02));   // progression douce entre les updates réels
+      if(_omniProgVal<95) _omniSetProg(_omniProgVal + Math.max(0.25,(95-_omniProgVal)*0.03));   // progression douce (fal ne renvoie pas de % réel) — plafonnée à 95, le 100 arrive à la fin
     }, 400);
   }
   const l=document.getElementById('omniProgLabel'); if(l && txt!=null) l.textContent=txt;
@@ -29433,6 +29450,15 @@ function _omniBuildPrompt(p){
     // Anglais : la formule exacte documentée par Google, la plus fiable. Gemini est
     // multilingue, donc un prompt FR + cette clause EN cohabitent sans souci.
     s+=' Keep everything else in the video exactly the same.';
+  }
+  // Préservations CIBLÉES (retours Axel 13/09, mêmes défauts que gpt-image corrigés) : la
+  // POSITION/placement des personnes et le CADRAGE ne changent pas (il mettait le sujet côté
+  // conducteur au lieu de passager), et AUCUN logo/texte inventé (il collait un faux logo « V »
+  // au lieu du vrai). Court (la doc Google déconseille les murs de contraintes), ajouté une
+  // seule fois si non déjà exprimé.
+  if(!/(same (seat|position|side|placement)|do not (add|invent)|n'invente|sans inventer)/i.test(s)){
+    s+=' Keep every person and object in their EXACT original position, side, seat and placement — never move the subject to a different seat or the opposite side — and keep the same camera angle and framing.';
+    s+=' Do NOT add, invent, fabricate or hallucinate any logo, emblem, badge, brand mark, symbol, letters or written text that is not already in the source; keep any existing logo or text faithful to the original. If the transformation names a real brand, use ONLY that brand\'s authentic real logo, never a made-up substitute; when in doubt, add no logo and no text at all.';
   }
   return s;
 }
@@ -29463,7 +29489,7 @@ async function _omniGenerate(){
     // v1.1 (et non l'endpoint de base) : moins cher en 720p (0,10 $ vs 0,13 $/s),
     // qualité supérieure, et débloque 1080p/4K si on ajoute `resolution` plus tard.
     const model='/google/gemini-omni-flash/v1.1/edit';
-    _omniProg('Transformation en cours… (~30-60 s)',25);
+    _omniProg("L'IA transforme ta vidéo…",25);
     // Scaffold léger : la doc Google est formelle — « les prompts SIMPLES marchent
     // mieux ; trop de détails = changements imprévus » (l'INVERSE de Motion Control).
     // On n'ajoute donc QUE la phrase-clé de préservation prouvée, jamais un mur de contraintes.
@@ -29480,7 +29506,8 @@ async function _omniGenerate(){
         const st=await (await fGet(stP)).json();
         if(st.status==='COMPLETED'){ const rr=await (await fGet(reP)).json(); outUrl=pick(rr); if(!outUrl) throw new Error(_omniErr(rr)); break; }
         if(st.status==='FAILED'||st.status==='ERROR'||st.status==='CANCELLED'||st.error) throw new Error(_omniErr(st));
-        _omniProg('Transformation en cours… ('+Math.min(96,25+i*2)+' %)',Math.min(96,25+i*2));
+        // La barre avance seule (timer fluide monotone) — fal ne renvoie pas de % réel, donc on
+        // n'écrit AUCUN pourcentage dans le label (fini le zig-zag et le doublon de texte).
       }
     }
     if(!outUrl) throw new Error('Aucune vidéo renvoyée');
