@@ -6116,7 +6116,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-14-0014'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-14-0015'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7210,7 +7210,7 @@ async function authVerifyCode(){
     // Parrainage OU code promo — jamais les deux ; PRIORITÉ au code promo (Axel 11/09)
     const ref = localStorage.getItem('aa_ref');
     const promo = localStorage.getItem('aa_promo');
-    if(res.created && ref && !promo) await sb.from('profiles').update({ referred_by: ref }).eq('id', data.user.id);
+    if(res.created && ref && !promo) await sb.rpc('set_referrer', { p_code: ref });   // M2 (14/09) : referred_by write-once serveur — l'UPDATE direct était REFUSÉ par les grants colonnes (parrainage jamais attribué) ; la RPC le pose une seule fois
   }catch(e){}
   btn.textContent = 'Chargement du profil…';
   await loadProfile(data.user);
