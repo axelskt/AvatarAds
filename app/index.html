@@ -72,6 +72,11 @@
 }
 /* .glass : le voile blanc du sombre devient un voile noir en clair (sinon invisible) */
 :root[data-theme="light"] .glass, .gen-light .glass{ background:linear-gradient(180deg,rgba(0,0,0,.03),rgba(0,0,0,0)) }
+/* Switch de thème INSTANTANÉ : le temps du basculement on coupe TOUTES les transitions.
+   Sans ça, ~190 éléments en transition:all animent en même temps background/bordure/gradient/
+   color-mix du sombre vers le clair → orage de repaint Safari (grosse chute de FPS + cartes qui
+   restent grises jusqu'au clic). On veut un flip instantané, pas une animation. */
+html.aa-theme-switching *{ transition:none !important }
 /* Aperçus de STYLE de sous-titres : rendus de sous-titres (texte blanc/néon sur "écran").
    En clair on les épingle sur un mini-écran sombre arrondi (fidèle + joli, pas une barre brute). */
 :root[data-theme="light"] .sub-preview, :root[data-theme="light"] .style-card .sub-preview{
@@ -6098,7 +6103,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0002'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0003'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -8594,10 +8599,20 @@ function _aaSyncThemeSeg(){
 }
 function setStudioTheme(t){
   t = (t==='light') ? 'light' : 'dark';
-  if(t==='light') document.documentElement.setAttribute('data-theme','light');
-  else document.documentElement.removeAttribute('data-theme');
+  const root = document.documentElement;
+  // Flip INSTANTANÉ : on coupe les transitions le temps du switch (sinon orage de repaint Safari
+  // = chute de FPS + cartes grises jusqu'au clic), on bascule, on force UNE passe de paint, puis
+  // on réactive les transitions au frame suivant.
+  root.classList.add('aa-theme-switching');
+  if(t==='light') root.setAttribute('data-theme','light');
+  else root.removeAttribute('data-theme');
   try{ localStorage.setItem('aa_theme', t); }catch(_){}
   _aaSyncThemeSeg();
+  void root.offsetWidth;   // reflow → recalcul + paint en une seule fois
+  // setTimeout (pas rAF) : rAF est gelé sur un onglet en arrière-plan → la classe ne partirait
+  // jamais et les transitions resteraient coupées. setTimeout se déclenche toujours.
+  clearTimeout(window._aaThemeSwT);
+  window._aaThemeSwT = setTimeout(function(){ root.classList.remove('aa-theme-switching'); }, 80);
 }
 
 // ── Clé MCP « Connecter Claude » (#73) ──
