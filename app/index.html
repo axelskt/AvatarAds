@@ -3716,7 +3716,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </div>
             <div style="text-align:center">
               <div style="font-size:16px;font-weight:800;letter-spacing:-.3px">Transformation en cours…</div>
-              <div id="omniProgLabel" class="faint" style="font-size:11.5px;font-family:var(--mono);margin-top:4px">L'IA transforme ta vidéo · ~30-60 s</div>
             </div>
           </div>
 
@@ -3729,7 +3728,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <!-- Taille CONTENUE : une vidéo 9:16 en width:100% dépassait l'écran (retour Axel 13/09).
                  max-height borne la hauteur → la vidéo tient en entier, bouton Télécharger visible dessous. -->
             <video id="omniOut" controls playsinline style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;margin:0 auto;border-radius:14px;background:#000"></video>
-            <div class="row" style="gap:8px;margin-top:12px">
+            <div class="row" style="gap:8px;margin:12px 0 44px">
               <button onclick="_omniDownload()" class="btn btn-primary" style="flex:1;padding:13px;border-radius:12px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
             </div>
           </div>
@@ -6116,7 +6115,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0010'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0011'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -29447,7 +29446,10 @@ function _omniBuildPrompt(p){
   // seule fois si non déjà exprimé.
   if(!/(same (seat|position|side|placement)|do not (add|invent)|n'invente|sans inventer)/i.test(s)){
     s+=' Keep every person and object in their EXACT original position, side, seat and placement — never move the subject to a different seat or the opposite side — and keep the same camera angle and framing.';
-    s+=' Do NOT add, invent, fabricate or hallucinate any logo, emblem, badge, brand mark, symbol, letters or written text that is not already in the source; keep any existing logo or text faithful to the original. If the transformation names a real brand, use ONLY that brand\'s authentic real logo, never a made-up substitute; when in doubt, add no logo and no text at all.';
+    s+=' Do NOT add, invent, fabricate or hallucinate any EXTRA logo, emblem, badge or written text that is not in the source or implied by the request.';
+    // TEXTE PROPRE (retour Axel 13/09 : « GT3 RS » rendu sale/inventé) : ce n'est pas
+    // « pas de texte » (il demandait cette écriture) mais « texte OFFICIEL, exact et net ».
+    s+=' Any lettering, badge, model name, emblem or logo that DOES appear (including one the request asks for) MUST use its EXACT official correct spelling and be rendered crisp, sharp, straight and fully legible — never garbled, misspelled, warped, blurred, doubled, gibberish or made-up fantasy characters. If a real brand or model is requested (e.g. a car trim name), reproduce ONLY its authentic real name and logo exactly as officially written; when unsure of the exact wording, leave that text out rather than invent it.';
   }
   return s;
 }
