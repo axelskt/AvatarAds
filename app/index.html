@@ -1876,7 +1876,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <!-- WHISPER IA — entre « Sous-titres » et les styles (Axel 02/09) -->
             <div class="fld" style="margin-bottom:12px" id="whisperRow">
                               <!-- Whisper IA — dès Starter (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
-              <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div></button>
+              <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--surface);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div></button>
             </div>
 
             <!-- STYLE SOUS-TITRES (le titre « SOUS-TITRES » de la section suffit — Axel 21/08) -->
@@ -3631,13 +3631,15 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     <div class="view" id="v-omni" style="flex-direction:column;overflow:auto;background:radial-gradient(760px 380px at 50% -12%, rgba(255,90,31,.10), transparent 60%)">
       <style>
         #v-omni .ov-wrap{max-width:1040px;margin:0 auto;width:100%;padding:34px 28px 44px;box-sizing:border-box}
-        #v-omni .ov-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:22px;align-items:start}
+        /* Une seule colonne CENTRÉE (le formulaire remplit le cadre au lieu d'être coincé à gauche
+           d'une colonne droite vide) ; le résultat/exemple s'affiche dessous quand il existe. */
+        #v-omni .ov-grid{display:flex;flex-direction:column;gap:18px;max-width:620px;margin:0 auto;width:100%}
         #v-omni .ov-title{font-size:40px}
         #v-omni .ov-drop{border:1.5px dashed var(--border-2);background:var(--panel-1);transition:.18s;cursor:pointer}
         #v-omni .ov-drop:hover{border-color:var(--accent);background:var(--accent-soft)}
         @media(max-width:760px){
           #v-omni .ov-wrap{padding:20px 16px 24px}
-          #v-omni .ov-grid{grid-template-columns:1fr;gap:16px}
+          #v-omni .ov-grid{gap:16px}
           #v-omni .ov-title{font-size:28px}
         }
       </style>
@@ -5228,7 +5230,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
        vers la connexion dédiée (connexion.html), thémée selon le tunnel. On ne redirige PAS si une
        session est probable (jeton/récent) NI pendant un retour OAuth (jeton dans l'URL → à traiter ici). */
     var oauth = /(?:[#&?])(access_token|code|error|provider_token)=/.test((location.hash||'')+(location.search||''));
-    if(recent || hasTok || oauth){ var ov=document.getElementById('loginOverlay'); if(ov) ov.style.display='none'; }
+    var capture = (location.hash||'').indexOf('#capture=')===0;   // outil interne de capture (visiteur déconnecté) — ne pas rediriger
+    if(recent || hasTok || oauth || capture){ var ov=document.getElementById('loginOverlay'); if(ov) ov.style.display='none'; }
     else { location.replace('/connexion.html'); }
   }catch(e){}
 })();
@@ -6108,7 +6111,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0005'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0006'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7580,10 +7583,11 @@ async function initAuth(){
     // OAuth en cours (jeton dans l'URL) — on NE redirige pas (sinon jeton perdu), onAuthStateChange finit
     // d'ouvrir l'app ; en secours on montre le login intégré si l'OAuth échoue (pas d'écran blanc).
     const _oauthReturn = /(?:[#&?])(access_token|code|error|error_description|provider_token)=/.test((location.hash||'')+(location.search||''));
+    const _capture = (location.hash||'').indexOf('#capture=')===0;   // outil de capture interne : il appelle enterApp lui-même
     if(_oauthReturn){
       const ov = document.getElementById('loginOverlay');
       if(ov) ov.style.display = 'grid';
-    } else {
+    } else if(!_capture){
       try{ location.replace('/connexion.html'); }catch(e){ location.href='/connexion.html'; }
       return;
     }
@@ -12570,7 +12574,13 @@ function updateSteps(){
   for(let i=1;i<=5;i++){
     const fs=document.getElementById('fs-'+i);
     const st=document.getElementById('st-'+i);
-    if(fs) fs.style.display=i===step?'block':'none';
+    if(fs){
+      fs.style.display=i===step?'block':'none';
+      // Safari : un panneau révélé depuis display:none ne repeint pas toujours ses fonds var()
+      // (cartes 720p/1080p/modèle/Whisper qui restaient GRISES jusqu'au clic en thème clair).
+      // On force un repaint du panneau via un micro-nudge de compositing.
+      if(i===step){ fs.style.transform='translateZ(0)'; void fs.offsetHeight; fs.style.transform=''; }
+    }
     if(st){
       st.classList.remove('on','done');
       if(i<step) st.classList.add('done');
@@ -28398,7 +28408,8 @@ async function uploadToYoutube(){
   // Login unifié : uncached + pas de retour OAuth → connexion dédiée (connexion.html). Sinon on masque
   // l'ancien login intégré (initAuth/onAuthStateChange décident ; grid réaffiché seulement en secours OAuth).
   var oauth = /(?:[#&?])(access_token|code|error|provider_token)=/.test((location.hash||'')+(location.search||''));
-  if(!cached && !oauth){ try{ location.replace('/connexion.html'); }catch(e){} return; }
+  var capture = (location.hash||'').indexOf('#capture=')===0;
+  if(!cached && !oauth && !capture){ try{ location.replace('/connexion.html'); }catch(e){} return; }
   document.getElementById('loginOverlay').style.display = 'none';
 })();
 document.getElementById('setupOverlay').style.display = 'none';
