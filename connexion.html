@@ -7,6 +7,10 @@
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="theme-color" content="#EDF1F4">
 <meta name="color-scheme" content="light">
+<!-- Héritage du thème par le tunnel : cette page de connexion est CLAIRE. À la 1re venue
+     (aucune préférence encore), on ensemence aa_theme=clair pour que l'app démarre en clair.
+     Partagé même-origine avec /app/. Un choix explicite (toggle Mon compte) prime toujours. -->
+<script>try{if(!localStorage.getItem('aa_theme'))localStorage.setItem('aa_theme','light');}catch(e){}</script>
 <title>Connexion — AvatarAds</title>
 <link rel="icon" href="assets/avatarads-logo-96.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
