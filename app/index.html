@@ -2717,7 +2717,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         </div>
 
         <!-- TikTok -->
-        <div id="sc-tiktok" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
+        <div id="soc-tiktok" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;opacity:.55;transition:all .3s">
           <div style="width:44px;height:44px;background:#010101;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:700;margin-bottom:2px">TikTok</div>
@@ -6125,7 +6125,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0007'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0008'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -24957,6 +24957,8 @@ function setQuality(q, btn){
   _qualiteChoisie = true;   // à partir d'ici le défaut ne se réimpose plus
   // Sync tous les boutons qual-btn par data-q
   document.querySelectorAll('.qual-btn').forEach(b=>{
+    if(!b.dataset.q) return;   // NE PAS toucher les cartes MODÈLE (data-gm) — sinon changer la qualité
+                               // les désélectionnait visuellement. Un modèle doit toujours rester choisi.
     const bq = parseInt(b.dataset.q || '0');
     if(bq === q){
       b.style.background='var(--accent-soft)'; b.style.border='2px solid var(--accent)'; b.style.color='var(--text)';
@@ -27172,9 +27174,9 @@ async function publishToSocial(platform){
 
 function refreshSocialCards(){
   const platforms = [
-    { id:'sc-tiktok',    key:'tiktok'    },
-    { id:'sc-instagram', key:'instagram' },
-    { id:'sc-facebook',  key:'facebook'  },
+    { id:'soc-tiktok',   key:'tiktok'    },   // #collision-id : renommé soc-* (sc-tiktok existait aussi
+    { id:'sc-instagram', key:'instagram' },   //   comme carte de style de sous-titre → refreshSocialCards
+    { id:'sc-facebook',  key:'facebook'  },   //   dimait la mauvaise carte). Seul tiktok entrait en conflit.
     { id:'sc-linkedin',  key:'linkedin'  },
   ];
   platforms.forEach(({id, key}) => {
@@ -27376,16 +27378,32 @@ async function _libDownloadMedia(ri, kind){
     setTimeout(()=>{ try{ URL.revokeObjectURL(u); }catch(_){} if(String(srcUrl).startsWith('blob:')){ try{ URL.revokeObjectURL(srcUrl); }catch(_){} } }, 4000);
   }catch(e){ console.error('lib download:', e); toast('Téléchargement impossible'); }
 }
+let _libThumbIO = null;
 async function _loadLibThumbnails(){
-  // 1. Thumbnails vidéo — premier frame via canvas (local IDB OU serveur signé)
-  const thumbEls = document.querySelectorAll('[data-lib-vid]');
-  for(const img of thumbEls){
+  // Chargement LAZY (IntersectionObserver) : la miniature vidéo (premier frame) et la waveform audio
+  // ne sont générées QUE pour les cartes VISIBLES. Avant, on traitait TOUTE la bibliothèque d'un coup
+  // (chaque vidéo chargée + décodée, chaque audio décodé) → l'app ramait fort dès qu'il y avait
+  // beaucoup de contenu, en clair COMME en sombre (retour Axel 13/09).
+  if(_libThumbIO){ try{ _libThumbIO.disconnect(); }catch(_){} _libThumbIO = null; }
+  const els = document.querySelectorAll('[data-lib-vid],[data-lib-audio-idb]');
+  if(!els.length) return;
+  _libThumbIO = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{ if(en.isIntersecting){ const t=en.target; _libThumbIO.unobserve(t); _libGenThumbOne(t); } });
+  }, { rootMargin:'500px' });   // marge : on prépare un peu avant que la carte n'entre à l'écran
+  els.forEach(el=>_libThumbIO.observe(el));
+}
+// Génère la miniature/waveform d'UNE carte (appelé quand elle devient visible). Idempotent.
+async function _libGenThumbOne(el){
+  if(el._libThumbDone) return; el._libThumbDone = true;
+  // — Vidéo : premier frame via canvas (local IDB OU serveur signé) —
+  if(el.hasAttribute('data-lib-vid')){
+    const img = el;
     const ri = +img.dataset.libVid;
     const entry = library[ri];
-    if(!entry) continue;
+    if(!entry) return;
     try {
       const url = await _libVideoUrl(entry);
-      if(!url) continue;
+      if(!url) return;
       const isBlob = url.startsWith('blob:');
       await new Promise(resolve => {
         const vid = document.createElement('video');
@@ -27424,16 +27442,16 @@ async function _loadLibThumbnails(){
         vid.load();
       });
     } catch(e){ /* silencieux */ }
+    return;
   }
-
-  // 2. Waveforms audio — barres sur canvas
-  const waveEls = document.querySelectorAll('[data-lib-audio-idb]');
-  for(const canvas of waveEls){
+  // — Audio : waveform sur canvas —
+  if(el.hasAttribute('data-lib-audio-idb')){
+    const canvas = el;
     const key = canvas.dataset.libAudioIdb;
-    if(!key) continue;
+    if(!key) return;
     try {
       const entry = await _idbLoad(key);
-      if(!entry) continue;
+      if(!entry) return;
       const file = new File([entry.blob], entry.name||'audio.wav', { type: entry.type||'audio/wav' });
       const ab   = await file.arrayBuffer();
       const ac   = new (window.AudioContext||window.webkitAudioContext)();
@@ -27552,7 +27570,7 @@ function renderLibrary(){
     if(v.type==='image'){
       return `<div class="vid-card" style="cursor:pointer" onclick="_libImgAction('open',${v._idx})">
         <div class="vid-thumb" style="background:${_safeCss(v.bg)};overflow:hidden;padding:0">
-          <img src="${_safeUrl(v.imgUrl)}" data-libidx="${v._idx}" ${v.idbKey?`data-libfull="${_escH(v.idbKey)}"`:''} ${v.srvPath?`data-libsrv="${_escH(v.srvPath)}"`:''} style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
+          <img src="${_safeUrl(v.imgUrl)}" loading="lazy" decoding="async" data-libidx="${v._idx}" ${v.idbKey?`data-libfull="${_escH(v.idbKey)}"`:''} ${v.srvPath?`data-libsrv="${_escH(v.srvPath)}"`:''} style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="Image IA">
           <div class="vid-overlay"></div>
           <div class="vid-badge">${_escH(v.style)}</div>
           ${_delBtn('img', v._idx)}
@@ -28088,7 +28106,7 @@ function _restoreGeneratorState(){
       if(s.duration){ const d=document.getElementById('f-duration'); if(d){ d.value=s.duration; const l=document.getElementById('f-duration-lbl'); if(l) l.textContent=s.duration+' s'; if(typeof _aaSliderFill==='function') _aaSliderFill(d); } }
       if(s.composeQuality && typeof _composeQuality!=='undefined'){
         _composeQuality = s.composeQuality; _qualiteChoisie = true;   // sans toast (setQuality en afficherait un)
-        document.querySelectorAll('.qual-btn').forEach(b=>{ const bq=parseInt(b.dataset.q||'0'); if(bq===_composeQuality){ b.style.background='var(--accent-soft)'; b.style.border='2px solid var(--accent)'; b.style.color='var(--text)'; } else { b.style.background='var(--surface)'; b.style.border='1px solid var(--border)'; b.style.color='var(--text)'; } });
+        document.querySelectorAll('.qual-btn').forEach(b=>{ if(!b.dataset.q) return; const bq=parseInt(b.dataset.q||'0'); if(bq===_composeQuality){ b.style.background='var(--accent-soft)'; b.style.border='2px solid var(--accent)'; b.style.color='var(--text)'; } else { b.style.background='var(--surface)'; b.style.border='1px solid var(--border)'; b.style.color='var(--text)'; } });
       }
       if(typeof _syncUIFromState==='function') setTimeout(()=>{ try{ _syncUIFromState(); }catch(_){} }, 0);
     }catch(_){}
