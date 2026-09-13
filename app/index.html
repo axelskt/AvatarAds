@@ -1454,7 +1454,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div id="voice-el-sections" style="display:none">
 
             <!-- CLONE TA VOIX -->
-            <div id="voice-clone-section" class="fld" style="margin-bottom:20px">
+            <div id="voice-clone-section" class="fld" style="display:none;margin-bottom:20px">
               <div class="flbl" style="font-size:11px;margin-bottom:10px">Clone ta voix — upload un extrait</div>
               <div id="voiceDropzone" onclick="document.getElementById('voiceFileIn').click()"
                 ondragover="ev=>{ev.preventDefault();this.classList.add('av-drag')}"
@@ -5648,15 +5648,16 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:8px">
       <button onclick="const d=document.getElementById('cmBareme');const on=d.style.display==='none';d.style.display=on?'block':'none';document.getElementById('cmBaremeArrow').textContent=on?'▴':'▾'" style="width:100%;background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:10.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px">Comment sont calculés les crédits ? <span id="cmBaremeArrow">▾</span></button>
       <div id="cmBareme" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:2.1;margin-top:8px">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Avatar lipsync — <b style="color:var(--text2)">2 crédits / seconde</b> · <b style=\"color:var(--text2)\">5 cr/s</b> en Omni<br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Voix IA (ElevenLabs) — <b style="color:var(--text2)">+0,5 cr/s</b> · gratuit avec ton MP3<br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express & Cartoon — <b style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite (Veo Fast)<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Avatar lipsync — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">5 cr/s</b> en Omni<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Voix IA — <b style="color:var(--text2)">+0,5 cr/s</b> · gratuit avec ton MP3<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express &amp; Cartoon — <b style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni · transformation vidéo — <b style="color:var(--text2)">3 cr/s</b> en 720p · <b style="color:var(--text2)">4 cr/s</b> en 1080p<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">6 cr/s</b> en Motion 3.0<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9.9 2.6l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5zM18 13l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg> Montage IA — <b style="color:var(--text2)">8 crédits</b> · <b style="color:var(--text2)">4</b> pour un re-rendu<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Image IA — <b style="color:var(--text2)">1</b> Standard · <b style="color:var(--text2)">3</b> Premium · <b style="color:var(--text2)">5</b> 4K<br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Réutiliser un avatar — <b style="color:var(--text2)">2 crédits</b><br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg> Transcription auto — <b style="color:var(--text2)">1 crédit</b><br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Réutiliser un avatar — <b style="color:var(--text2)">gratuit</b><br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg> Nettoyage audio — <b style="color:var(--text2)">1 crédit</b><br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg> Export depuis l'éditeur — <b style="color:var(--text2)">2 crédits</b><br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Clonage de voix — <b style="color:var(--text2)">3</b> le 1er · <b style="color:var(--text2)">6</b> le 2e · <b style="color:var(--text2)">10</b> ensuite
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg> Export depuis l'éditeur — <b style="color:var(--text2)">2 crédits</b>
       </div>
     </div>
     <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:10px">Crédits du plan renouvelés chaque mois · les crédits de packs n'expirent pas</div>
@@ -6115,7 +6116,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0013'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-14-0014'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -6572,7 +6573,7 @@ const CREDIT_COSTS = {
   // ✨ « Améliorer en 4K » (ex « Rendre réaliste ») via Nano Banana Pro 4K (img2img).
   // Réservé Pro/Élite. Coût Google 0,24 $ ≈ 0,22 € → 5 crédits = ~0,41 € encaissés.
   imgRealistic: 5,
-  reuseAvatar: 2, whisper: 1, audioClean: 1, editorExport: 2, denoise: 1,
+  reuseAvatar: 0, whisper: 0, audioClean: 1, editorExport: 2, denoise: 1,   // reuse + transcription GRATUITS (Axel 14/09)
   // 8 et non 6 : mesuré, un montage coûte ~0,13 € d'API (≈ 0,11 € pour le seul
   // appel Claude — 20 000 tokens d'entrée : prompt système, 6 à 8 images de la
   // vidéo, transcript, mémoire de marque). À 8, la marge tient même sur le
@@ -6615,6 +6616,7 @@ function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='med
 let _spendLock = false;
 async function spendCreditsFor(amount, label){
   if(typeof currentMember==='undefined' || !currentMember){ showPaywall(); return false; }
+  if(!(amount > 0)) return true;   // action GRATUITE (réutiliser un avatar, transcription) → aucun débit, aucun paywall
   if(_spendLock){ toast('Une génération est déjà en cours — patiente'); return false; }
   if(['developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner) return true;
   // Free → paywall direct dès qu'une action payante (API) se lance — #69/#40 « à l'action »
@@ -12293,7 +12295,7 @@ function _updateReuseBar(){
 }
 
 async function reuseLastVideo(){
-  // Réutiliser un avatar déjà généré : 2 crédits (aucun coût API, valeur d'usage)
+  // Réutiliser un avatar déjà généré : GRATUIT (0 crédit — Axel 14/09)
   creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(CREDIT_COSTS.reuseAvatar, 'reuse'))) return;
   try {
