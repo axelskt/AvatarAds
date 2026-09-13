@@ -6115,7 +6115,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0011'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0012'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7557,7 +7557,7 @@ function _applyStartTool(){
   try{ localStorage.removeItem('aa_tool'); }catch(e){}
   // enlève ?start= de l'URL pour qu'un rafraîchissement ne rouvre pas le module en boucle
   try{ if(window.location.search) history.replaceState(null, '', window.location.pathname + window.location.hash); }catch(e){}
-  var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean' };
+  var MAP = { montage:'montage', motion:'motion', images:'imagegen', express:'express', gen:'generator', audio:'audioclean', omni:'omni' };
   var view = MAP[t];
   if(!view) return false;
   var go = function(){ try{ nav(view); window.scrollTo(0,0); }catch(e){} };
