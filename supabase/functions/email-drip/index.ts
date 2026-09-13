@@ -167,7 +167,10 @@ serve(async (req) => {
       status: 503, headers: { 'Content-Type': 'application/json' },
     })
   }
-  if (req.headers.get('x-cron-key') !== CRON_SECRET) {
+  // L2 (audit 14/09) : comparaison du secret cron en TEMPS CONSTANT (comme whop/lemonsqueezy/email-unsub).
+  const _ck = req.headers.get('x-cron-key') ?? ''
+  const _ctEq = (a: string, b: string) => { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0 }
+  if (!_ctEq(_ck, CRON_SECRET)) {
     return new Response('Unauthorized', { status: 401 })
   }
   if (!RESEND_API_KEY) return new Response(JSON.stringify({ ok: true, skipped: 'RESEND_API_KEY manquant' }), { status: 200 })

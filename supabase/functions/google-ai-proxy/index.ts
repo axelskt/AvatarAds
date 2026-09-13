@@ -72,11 +72,11 @@ serve(async (req: Request) => {
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
+  let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
+  let drawnOp: string | undefined
   try {
     const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
     let googleRes: Response
-    let drawn = 0
-    let drawnOp: string | undefined
     if (req.method === 'GET') {
       googleRes = await fetch(up.url, { method: 'GET', headers })
     } else {

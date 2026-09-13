@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os'
 import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { lookup as dnsLookup } from 'node:dns/promises'
 import { buildComposition } from './build-composition.mjs'
 import { buildGenSubsComposition } from './gen-subs-composition.mjs'
 // EXIGE_GLOBAL et ANIMS voyagent avec la dérivation : la passe de finition doit
@@ -31,6 +32,49 @@ import { cleLipsync, cacheLire, cacheEcrire, HEDRA_CR_SEC } from './lipsync-cach
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
 const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le temps
+
+// M5 (audit 14/09) : garde anti-SSRF pour tout fetch d'une URL issue du plan/DB (contrôlée par le client).
+// Le worker tourne en service_role avec les clés fournisseurs en env → une SSRF ici est à fort impact. On
+// RÉSOUT le DNS et on bloque si une IP résolue est interne (ferme le cas domaine→IP interne statique, ex.
+// 169.254.169.254.nip.io). Le rebinding TOCTOU reste un résidu assumé, identique à guard.ts.hostResolvesInternal.
+function _ipInternal(ip) {
+  ip = String(ip || '').toLowerCase()
+  if (!ip) return true
+  if (ip.includes(':')) {                                   // IPv6
+    if (ip === '::1' || ip === '::') return true
+    const mm = ip.match(/::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)   // IPv4 mappée
+    if (mm) return _ipInternal(mm[1])
+    if (/^f[cd]/.test(ip)) return true                      // ULA fc00::/7
+    if (/^fe[89ab]/.test(ip)) return true                   // link-local fe80::/10
+    return false
+  }
+  const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (!m) return true                                       // pas une IP reconnue → suspect
+  const a = +m[1], b = +m[2], c = +m[3]
+  if (a === 0 || a === 127 || a === 10) return true
+  if (a === 169 && b === 254) return true                   // link-local / metadata cloud
+  if (a === 172 && b >= 16 && b <= 31) return true          // RFC1918
+  if (a === 192 && b === 168) return true                   // RFC1918
+  if (a === 100 && b >= 64 && b <= 127) return true         // CGNAT 100.64/10
+  if (a === 198 && (b === 18 || b === 19)) return true      // benchmarking 198.18/15
+  if (a === 192 && b === 0 && c === 0) return true          // 192.0.0.0/24
+  if (a >= 224) return true                                 // multicast / réservé
+  return false
+}
+function _hostLiteralInternal(h) {
+  h = String(h || '').toLowerCase().replace(/\.+$/, '')     // retire TOUS les points finaux (localhost.. inclus)
+  if (!h) return true
+  if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal') || h.endsWith('.arpa') || !h.includes('.')) return true
+  if (h.includes(':') || /^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return _ipInternal(h)   // IP littérale (v6/v4)
+  return false                                              // hôte nommé → à résoudre
+}
+async function _urlBlockedSSRF(u) {
+  let host
+  try { host = new URL(String(u)).hostname } catch { return true }
+  if (_hostLiteralInternal(host)) return true
+  try { const addrs = await dnsLookup(host, { all: true }); return addrs.some(a => _ipInternal(a.address)) }
+  catch { return true }                                     // DNS KO → on bloque (la musique de fond est optionnelle)
+}
 // Sur Railway, la CLI vit DANS l'image (node_modules du worker) et y est
 // PATCHÉE au build : la 0.7.60 avale les erreurs d'extraction vidéo, le patch
 // (patch-hyperframes.mjs) les loggue enfin. npx n'est que le repli local — si
@@ -685,14 +729,17 @@ async function composeGenSubs(jobDir, outPath, plan) {
     // les gros fichiers → absente du rendu. On la MUXE ici : téléchargée, bouclée+tronquée à la durée, volume
     // réduit, mixée SOUS l'audio d'origine (normalize=0 → la voix reste pleine). URL de la banque = hébergée.
     let musicPath = null
-    if (plan.music && plan.music.url && /^https?:/i.test(plan.music.url)) {
+    if (plan.music && plan.music.url && /^https?:/i.test(plan.music.url) && !(await _urlBlockedSSRF(plan.music.url))) {   // M5 (audit 14/09) : anti-SSRF (résolution DNS + plages internes)
       try {
         const mp = join(proj, 'music.mp3')
-        const resp = await fetch(plan.music.url)
-        if (resp.ok) { const buf = Buffer.from(await resp.arrayBuffer()); if (buf.length > 1024) { writeFileSync(mp, buf); musicPath = mp } }
-        else console.warn('gen-subs musique HTTP ' + resp.status)
+        const ctl = new AbortController(); const _tt = setTimeout(() => ctl.abort(), 20000)   // timeout : pas de hang sur un endpoint lent
+        let resp
+        try { resp = await fetch(plan.music.url, { redirect: 'error', signal: ctl.signal }) } finally { clearTimeout(_tt) }   // pas de redirection vers un hôte interne
+        const clen = Number(resp.headers.get('content-length') || 0)
+        if (resp.ok && clen <= 30 * 1024 * 1024) { const buf = Buffer.from(await resp.arrayBuffer()); if (buf.length > 1024 && buf.length < 30 * 1024 * 1024) { writeFileSync(mp, buf); musicPath = mp } }
+        else console.warn('gen-subs musique refusée/HTTP ' + resp.status + ' (clen=' + clen + ')')
       } catch (e) { console.warn('gen-subs musique download KO:', e && e.message) }
-    }
+    } else if (plan.music && plan.music.url) { console.warn('gen-subs musique refusée (SSRF/hôte interne):', String(plan.music.url).slice(0, 120)) }
     const musVol = (plan.music && typeof plan.music.volume === 'number') ? Math.max(0, Math.min(1, plan.music.volume)) : 0.35
 
     const args = ['-v', 'error', '-y', '-i', orig, '-i', subsVid]
@@ -2877,7 +2924,8 @@ async function pollLoop() {
           // #84 · les visages du POOL (avatar-1, avatar-2…) : eux aussi à la
           // racine, en avatar-1.png… — le worker les répartit sur les fenêtres.
           if (/^avatar-\d+$/.test(String(a.id))) { await dl(a.path, join(jobDir, a.id + '.' + ext)); continue }
-          await dl(a.path, join(jobDir, 'assets', a.id + '.' + ext))
+          const safeId = String(a.id).replace(/[^\w.-]/g, '_').replace(/\.{2,}/g, '_')   // C2 (audit 14/09) : jamais de / \ .. joint à un chemin (défense en profondeur — l'edge render-job filtre déjà)
+          await dl(a.path, join(jobDir, 'assets', safeId + '.' + ext))
         }
         // #119 · scènes avatar : téléchargées comme av0.mp4, av1.mp4… (ordre = plan.avatarSegments)
         const avClips = job.avatar_clips || []

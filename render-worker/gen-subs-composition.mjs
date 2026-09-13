@@ -411,7 +411,11 @@ export function buildGenSubsComposition(plan, opts = {}) {
   const subs = plan.subs || {};
   // totalDuration porté sur la durée réelle du rendu (source de vérité = plan.duration)
   const subsPayload = Object.assign({}, subs, { totalDuration: Number(subs.totalDuration) || D });
-  const subsJson = JSON.stringify(subsPayload);
+  // M6 (audit 14/09) : ce JSON est injecté BRUT dans un <script> inline (const SUBS = ...). JSON.stringify
+  // n'échappe PAS `<` → un mot de sous-titre contenant `</script>` fermait la balise (le parseur HTML termine
+  // <script> quel que soit le contexte JS) et injectait du markup dans la page rendue par Chromium. On
+  // neutralise `<`/`>` et les séparateurs de ligne JS U+2028/U+2029.
+  const subsJson = JSON.stringify(subsPayload).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
   // #vitesse-overlay (Axel 08/09) : mode « sous-titres seuls » — fond TRANSPARENT + PAS de vidéo de base
   // dans la composition. HyperFrames ne re-décode/compose plus la vidéo frame par frame (le vrai goulot :

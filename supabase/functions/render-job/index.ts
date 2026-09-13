@@ -58,7 +58,7 @@ serve(async (req: Request) => {
           path: String(a.path || ''),
           kind: a.kind === 'video' ? 'video' : 'image',
         }))
-        .filter((a: { id: string; path: string }) => a.id && a.path.startsWith(user.id + '/'))
+        .filter((a: { id: string; path: string }) => a.id && !/[\/\\]|\.\./.test(a.id) && a.path.startsWith(user.id + '/'))   // C2 (audit 14/09) : jamais de / \ .. dans a.id (path traversal → RCE dans le worker)
 
       // #119 lipsync segmenté : clips avatar (ordre = plan.avatarSegments), chemins <uid>/…
       const avatar_clips = (Array.isArray(body.avatar_clips) ? body.avatar_clips : []).slice(0, 8)
