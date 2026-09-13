@@ -5224,7 +5224,12 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     var born=parseInt(localStorage.getItem('aa_login_at')||'0',10);
     var recent=born && (Date.now()-born < 14*86400000);
     var hasTok=false; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k && /sb-.*-auth-token/.test(k)){ hasTok=true; break; } }
-    if(recent || hasTok){ var ov=document.getElementById('loginOverlay'); if(ov) ov.style.display='none'; }
+    /* LOGIN UNIFIÉ (13/09) : plus d'écran de login intégré. Un visiteur NON connecté de /app/ part
+       vers la connexion dédiée (connexion.html), thémée selon le tunnel. On ne redirige PAS si une
+       session est probable (jeton/récent) NI pendant un retour OAuth (jeton dans l'URL → à traiter ici). */
+    var oauth = /(?:[#&?])(access_token|code|error|provider_token)=/.test((location.hash||'')+(location.search||''));
+    if(recent || hasTok || oauth){ var ov=document.getElementById('loginOverlay'); if(ov) ov.style.display='none'; }
+    else { location.replace('/connexion.html'); }
   }catch(e){}
 })();
 </script>
@@ -6103,7 +6108,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0004'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0005'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7571,8 +7576,17 @@ async function initAuth(){
   // Filet de sécurité : si aucune session valide n'a ouvert l'app (session absente/expirée, ou profil non chargé),
   // on ré-affiche le login (au cas où on l'aurait masqué optimistiquement au boot pour éviter le flash).
   if(!currentMember){
-    const ov = document.getElementById('loginOverlay');
-    if(ov) ov.style.display = 'grid';
+    // Login unifié : pas de session valide → connexion dédiée (connexion.html). Exception : un retour
+    // OAuth en cours (jeton dans l'URL) — on NE redirige pas (sinon jeton perdu), onAuthStateChange finit
+    // d'ouvrir l'app ; en secours on montre le login intégré si l'OAuth échoue (pas d'écran blanc).
+    const _oauthReturn = /(?:[#&?])(access_token|code|error|error_description|provider_token)=/.test((location.hash||'')+(location.search||''));
+    if(_oauthReturn){
+      const ov = document.getElementById('loginOverlay');
+      if(ov) ov.style.display = 'grid';
+    } else {
+      try{ location.replace('/connexion.html'); }catch(e){ location.href='/connexion.html'; }
+      return;
+    }
   }
   // Écouter les changements de session (retour OAuth Google inclus)
   sb.auth.onAuthStateChange(async (_event, session) => {
@@ -28381,7 +28395,11 @@ async function uploadToYoutube(){
       if(k && /^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)){ cached = true; break; }
     }
   } catch(e){}
-  document.getElementById('loginOverlay').style.display = cached ? 'none' : 'grid';
+  // Login unifié : uncached + pas de retour OAuth → connexion dédiée (connexion.html). Sinon on masque
+  // l'ancien login intégré (initAuth/onAuthStateChange décident ; grid réaffiché seulement en secours OAuth).
+  var oauth = /(?:[#&?])(access_token|code|error|provider_token)=/.test((location.hash||'')+(location.search||''));
+  if(!cached && !oauth){ try{ location.replace('/connexion.html'); }catch(e){} return; }
+  document.getElementById('loginOverlay').style.display = 'none';
 })();
 document.getElementById('setupOverlay').style.display = 'none';
 
