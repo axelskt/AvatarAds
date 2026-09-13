@@ -6103,7 +6103,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0003'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0004'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7376,7 +7376,10 @@ async function authLogout(){
   try{ localStorage.removeItem('aa_login_at'); }catch(e){}
   try{ await Promise.race([ sb.auth.signOut(), new Promise(function(r){ setTimeout(r, 1500); }) ]); }catch(e){}
   try{ for(var i=localStorage.length-1;i>=0;i--){ var k=localStorage.key(i); if(k && /sb-.*-auth-token/.test(k)) localStorage.removeItem(k); } }catch(e){}
-  window.location.reload();
+  // On revient sur la page de connexion dédiée (connexion.html), qui s'affiche dans le thème du
+  // tunnel (aa_theme conservé) → cohérent clair↔clair / sombre↔sombre. (Avant : reload = login
+  // intégré, que le thème pouvait rendre incohérent avec le tunnel.)
+  window.location.href = '/connexion.html';
 }
 
 // ── ACCOUNT MENU ──
