@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://js.whop.com https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- LP PRINCIPALE = porte CLAIRE (chemin v1). À la 1re venue (aucune préférence), on ensemence
+     aa_theme=clair pour que tout le chemin (connexion + app) reste clair. Partagé même-origine avec
+     /app/. Un choix explicite (toggle Mon compte) prime toujours. -->
+<script>try{if(!localStorage.getItem('aa_theme'))localStorage.setItem('aa_theme','light');}catch(e){}</script>
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">/* Clarity chargé APRÈS le rendu (idle) pour ne pas peser sur le thread principal au chargement */
 (function(){function loadClarity(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");}
@@ -11,8 +15,8 @@ function sched(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(load
 if(document.readyState==='complete')sched();else window.addEventListener('load',sched);})();</script>
 <title>AvatarAds · Générateur de vidéos et images par IA</title>
 <meta name="description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="theme-color" content="#0B0B0D">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#EDF1F4">
 <meta name="author" content="AvatarAds">
 <link rel="canonical" href="https://avatarads.fr/">
 <meta property="og:title" content="AvatarAds · Générateur de vidéos et images par IA">
@@ -45,7 +49,6 @@ if(document.readyState==='complete')sched();else window.addEventListener('load',
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <!-- Image LCP du hero (téléphone central = hero-homme) : préchargée en priorité haute, responsive -->
-<link rel="preload" as="image" href="assets/lp/hero-homme-451.webp" imagesrcset="assets/lp/hero-homme-320.webp 320w, assets/lp/hero-homme-451.webp 451w, assets/lp/hero-homme-640.webp 640w, assets/lp/hero-homme.webp 900w" imagesizes="(max-width: 767px) 140px, 300px" fetchpriority="high">
 <!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
@@ -386,6 +389,126 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
   ]
 }
 </script>
+
+<style id="v2-light-theme">
+/* ══ V2 = LP CLAIRE façon Qoves : on SURCHARGE le thème sombre par un thème blanc/gris ══
+   (variables définies après le :root sombre d'index → elles gagnent). Le header pilule est
+   dans index.html (scopé .aa-hdr, theme-aware) → hérité ici, rien à redéfinir. */
+:root{
+  --bg:#EDF1F4; --bg-grad:#F4F7F9;
+  --panel-1:#FFFFFF; --surface:#FFFFFF; --surface-2:#F1F5F8; --surface-3:#E6ECF1;
+  --border:rgba(16,24,32,.10); --border-2:rgba(16,24,32,.16);
+  --text:#0E1319; --text-2:#59636E; --text-3:#8A939D;
+  --rail:rgba(16,24,32,.055);
+}
+html{background:var(--bg);color-scheme:light}
+/* formulaires : la LP sombre hérite color-scheme dark → iOS peint un fond de champ gris sous le placeholder. On force clair + apparence neutre. */
+textarea{color-scheme:light;-webkit-appearance:none;appearance:none}
+#genPrompt,#genPromptM{background:transparent!important}
+#genPrompt::placeholder,#genPromptM::placeholder{color:var(--text-3);opacity:1}
+/* fond clair + RAILS VERTICAUX façon Qoves : 2 traits fins encadrant la colonne de contenu (--maxw 1320 → ±660px), pleine hauteur, derrière le contenu */
+body{background-color:var(--bg);color:var(--text);
+  background-image:
+    linear-gradient(90deg,transparent calc(50% - 661px),var(--rail) calc(50% - 661px),var(--rail) calc(50% - 660px),transparent calc(50% - 660px)),
+    linear-gradient(90deg,transparent calc(50% + 660px),var(--rail) calc(50% + 660px),var(--rail) calc(50% + 661px),transparent calc(50% + 661px))}
+/* ── SÉPARATEURS DE SECTIONS façon Qoves (Axel 12/09) : une ligne fine au-dessus de chaque bloc ; le bandeau
+   « Propulsé par » est ENCADRÉ par deux lignes avec un fond opaque → les rails ne le traversent plus. Les sections
+   sans padding-top reçoivent 64px pour que la ligne respire (sur mobile la LP impose 25px en !important). ── */
+:root{--sep:rgba(16,24,32,.11)}
+main>section.wrap{border-top:1px solid var(--sep)}
+main>section.wrap:not(#etapes):not(#toutEnUn):not(#faq){padding-top:64px}
+#scWrap{padding-bottom:64px}
+main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);background:var(--bg);padding:22px 0!important;position:relative;z-index:1}
+/* ── FOOTER : accordéons repliables (clic sur la flèche) AUSSI sur desktop (Axel) — remplace le force-open ── */
+@media(min-width:761px){
+  footer .foot-grid{display:block!important;grid-template-columns:none!important;max-width:720px}
+  footer .foot-col{border-top:1px solid var(--border)}
+  footer .foot-col>summary{cursor:pointer!important;pointer-events:auto!important;display:flex!important;align-items:center;justify-content:space-between;margin:0;padding:15px 2px}
+  footer .foot-col>summary::after{content:'+';font-size:22px;font-weight:400;color:var(--violet)}
+  footer .foot-col[open]>summary::after{content:'\2212'}
+  footer .foot-col>*:not(summary){display:none!important}
+  footer .foot-col[open]>*:not(summary){display:block!important;padding:0 2px 16px}
+}
+</style>
+<style id="v2hero-css">
+/* HERO plein cadre : le fond prend TOUTE LA LARGEUR, dégradé VERTICAL calé sur celui du clip
+   (clair #EDF1F4 en haut → slate #A9BAC6 en bas) → la vidéo se fond SANS bord visible (mask). */
+/* DESKTOP = l'ANCIENNE version validée (copy sombre centrée à gauche, vidéo à droite fondue dans le fond)
+   + retouches Axel 12/09 (cadre rouge) : la vidéo est calée sur la HAUTEUR du hero (165 % = l'entre-deux entre
+   l'ancien zoom « trop fort » et les 120 % « pas assez »), son bord DROIT est aligné sur le conteneur (plus collée
+   au bord de l'écran), et SANS FLOU : plus de fondu large ni de fondu du buste. Le raccord invisible vient du FOND :
+   ::before reproduit EXACTEMENT le dégradé vertical du clip (mesuré image par image : #eef2f3 en haut → #9cb0bb en
+   bas) dans le MÊME repère que la vidéo (même top:1 %, même hauteur 120 %) → les bords gauche/droit de la vidéo sont
+   mathématiquement de la même couleur que la page (Δ ≤ 5). Donc AUCUN masque latéral : les bords sont invisibles au
+   lieu d'être flous (retour Axel 12/09 : les fondus gauche/droit = « flou », à supprimer). Seul masque restant = un
+   fondu bas très court (12 %) pour poser le buste sur le fond. Le « un peu plus foncé » façon Qoves = voile sombre
+   progressif (::after) posé sur TOUT le hero (vidéo comprise, donc sans raccord), quasi nul sur le visage. */
+.v2hero{position:relative;overflow:hidden;padding:0;min-height:min(780px,calc(100vh - 76px));display:flex;align-items:center;background:#eef2f3}
+.v2hero::before{content:"";position:absolute;left:0;right:0;top:1%;height:145%;z-index:0;pointer-events:none;
+  background:linear-gradient(to bottom,#eef2f3 0%,#ebf0f3 5%,#eaeef4 10%,#e7ecf0 15%,#e5ebf0 20%,#e2e8ec 25%,#dce3ea 30%,#d8e0e7 35%,#d2dbe1 40%,#ccd7df 45%,#c7d2da 50%,#a0b2be 95%,#9cb0bb 100%)}
+.v2hero::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(14,19,25,.04) 0%,rgba(14,19,25,.06) 40%,rgba(14,19,25,.2) 100%)}
+.v2hero-grid{position:relative;z-index:3;width:100%}
+.v2hero-copy{display:flex;flex-direction:column;align-items:flex-start;max-width:540px;padding:34px 0}
+.v2hero-h1{font-size:clamp(44px,5.2vw,82px);font-weight:800;margin-top:22px;line-height:1.02;text-wrap:balance;overflow-wrap:break-word;color:var(--text)}
+.v2hero-h1 .accent{color:#5d6d7a}
+.v2hero-sub{font-size:clamp(16px,1.4vw,20px);max-width:460px;margin-top:22px;line-height:1.5;color:#2f3a45}
+.v2hero-sub b{color:var(--text);font-weight:600}
+.v2hero-cta{position:relative;margin-top:30px;max-width:520px;width:100%}
+.v2hero-trust .pill svg{display:none!important}   /* étoile retirée (Axel) */
+.v2hero-pill{position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:#fff;border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 26px 55px -30px rgba(16,24,32,.55),0 0 0 4px var(--accent-soft)}
+.v2hero-pill .pb-ico{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)}
+.v2hero-pill .hp-input{flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2hero-pill .pb-go{flex:0 0 auto;padding:16px 30px;font-size:17px;font-weight:800;border-radius:999px}
+/* vidéo = boîte calée sur la HAUTEUR du hero (120 %, largeur auto au ratio 9:16 → aucun recadrage horizontal, zoom
+   constant quelle que soit la largeur d'écran). Cadrage TÊTE + ÉPAULES + poitrine façon Qoves : à 120 % on voit
+   ~81 % du clip (contre 58 % à 165 %) → les épaules sont bien visibles, le visage est BEAUCOUP moins zoomé (retour
+   Axel 12/09 : « beaucoup trop zoomé encore, dézoome pour voir les épaules »). top:1 % = visage remonté avec un peu
+   de headroom (la tête commence à 2-6 % du clip → jamais coupée). Position = CENTRE-DROIT (bord droit = bord du
+   conteneur .wrap, max 1320 + 32 de padding, floor 12 % du viewport) = le cadre rouge d'Axel, PAS collée au bord de
+   l'écran. Fondu latéral SUBTIL 16 % des 2 côtés (Axel : « le flou est beaucoup trop fort, diminue ») + fondu bas
+   9 % : à ce cadrage les épaules touchent les 2 bords, un fondu court les fond sur le fond assorti sans bande floue. */
+.v2hero-media{position:absolute;top:1%;right:max(12%,calc((100% - 1320px) / 2 + 32px));bottom:auto;left:auto;height:145%;width:auto;aspect-ratio:9/16;max-width:none;overflow:visible;background:transparent;z-index:1}
+.v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 12%,#000 88%,transparent 100%),linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%);
+  mask-image:linear-gradient(to right,transparent 0,#000 12%,#000 88%,transparent 100%),linear-gradient(to top,transparent 0,rgba(0,0,0,.4) 22%,#000 36%,#000 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+@media(max-width:768px){
+  /* MOBILE = hero CINÉMA façon Qoves (en mieux) : vidéo PLEIN CADRE avec le visage dégagé en haut (headroom),
+     DÉGRADÉ SOMBRE pleine largeur en bas (sur ::after du média, pas sur le texte → pas de marges), texte BLANC posé dessus,
+     accroche « Rejoins +50K créateurs » au-dessus du titre. */
+  .v2hero{position:relative;display:block;padding:0!important;min-height:calc(100svh - 72px);overflow:hidden;background:#e9eef2}   /* !important : .hero-sec impose un padding mobile en !important */
+  .v2hero::before,.v2hero::after{content:none}   /* dégradé de raccord + voile sombre = DESKTOP only (mobile = vidéo plein cadre + scrim sur le média) */
+  .v2hero-media{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
+  .v2hero-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%;-webkit-mask-image:none;mask-image:none}
+  .v2hero-media::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(to top,rgba(10,14,20,.97) 0%,rgba(10,14,20,.9) 16%,rgba(10,14,20,.62) 34%,rgba(10,14,20,.22) 50%,rgba(10,14,20,0) 63%)}
+  .v2hero-grid{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:flex-end;min-height:calc(100svh - 72px);padding:0!important;max-width:none;width:100%}
+  .v2hbadge{display:none!important}
+  .v2hero-copy{display:flex;flex-direction:column;align-items:flex-start;padding:0 22px 30px;max-width:100%;width:100%;background:none}
+  /* accroche sociale au-dessus du titre (comme « Join 50,000+ people ») */
+  .v2hero-trust{display:flex!important;order:-1;margin:0 0 14px!important;gap:8px!important;font-size:13.5px}
+  .v2hero-trust .pill{background:none!important;border:0!important;padding:0!important;box-shadow:none!important;gap:7px}
+  .v2hero-trust span{color:rgba(255,255,255,.74)!important}
+  .v2hero-trust b{color:#fff!important}
+  .v2hero-trust>.row{display:none!important}
+  .v2hero-h1{font-size:38px;line-height:1.02;margin-top:0;color:#fff;letter-spacing:-.012em;text-shadow:0 2px 26px rgba(0,0,0,.28)}
+  .v2hero-h1 .accent{color:#b9c7d3}
+  .v2hero-sub{margin-top:14px;font-size:15.5px;line-height:1.5;color:rgba(255,255,255,.8);max-width:100%}
+  .v2hero-sub b{color:rgba(255,255,255,.9);font-weight:500}
+  .v2hero-cta{max-width:100%;margin-top:22px}
+  /* pilule mobile : « Choisis un modèle » EN ENTIER → le bouton devient une pastille flèche (la pilule entière ouvre le sélecteur) */
+  .v2hero-pill{padding:6px 6px 6px 8px;background:#fff;border-color:rgba(255,255,255,.4);box-shadow:0 24px 54px -22px rgba(0,0,0,.75),0 0 0 3px rgba(255,255,255,.12)}
+  .v2hero-pill .pb-ico{width:38px;height:38px}
+  .v2hero-pill .hp-input{font-size:15.5px;padding:0 10px 0 11px;color:#3a444f}
+  .v2hero-pill .pb-go{width:44px;height:44px;min-width:44px;padding:0;border-radius:50%;flex:0 0 auto;display:block;position:relative;overflow:hidden;text-indent:-9999px;white-space:nowrap}
+  .v2hero-pill .pb-go svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;margin:0;text-indent:0}
+  .v2hero-trust{display:none}
+  /* mobile : PAS de rails verticaux (ils traversaient « Propulsé par » — Axel) ; la structure vient des SÉPARATEURS horizontaux */
+  body{background-image:none}
+  main>.pw-sec{padding:18px 0!important}
+}
+</style>
 </head>
 <body>
 
@@ -424,7 +547,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
       </div>
       <div class="row gap12">
         <a href="/tarifs.html" class="btn btn-quiet btn-sm hide-mobile nav-tarifs-btn">Découvrir les tarifs</a>
-        <a href="/app/" class="btn btn-quiet btn-sm hide-mobile">Se connecter</a>
+        <a href="/connexion.html" class="btn btn-quiet btn-sm hide-mobile">Se connecter</a>
         <a href="/app/" class="btn btn-primary btn-sm">Commencer <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <button class="nav-burger" aria-label="Ouvrir le menu" onclick="mobMenuOpen()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       </div>
@@ -451,6 +574,7 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
     </div>
     <div style="padding:22px 18px calc(18px + env(safe-area-inset-bottom))">
       <a href="/app/" class="btn btn-primary" style="width:100%" onclick="mobMenuClose()">Commencer <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a href="/connexion.html" class="btn btn-quiet btn-sm" style="width:100%;margin-top:10px" onclick="mobMenuClose()">Se connecter</a>
     </div>
   </div>
 </div>
@@ -458,140 +582,28 @@ input[type=range].elite-range::-moz-range-thumb{width:20px;height:20px;border-ra
 <!-- <main> : repère principal (audit accessibilité « document sans landmark ») — aucun impact visuel -->
 <main>
 
-<!-- ══════════ 3 · HERO V2 ══════════ -->
-<section class="wrap hero-sec" style="padding-top:64px;padding-bottom:30px">
-  <div class="hero2-grid">
-    <div class="hero-left">
-      <div class="rise" style="display:inline-flex">
-        <div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div>
-      </div>
-      <h1 class="display" style="font-size:clamp(46px,5.6vw,86px);font-weight:800;margin-top:22px;line-height:1.0;text-wrap:balance;overflow-wrap:break-word">
-        Crée des vidéos virales<br class="hide-mobile">
-        <span class="accent">sans montrer ton visage</span>
-      </h1>
-      <p class="muted rise" style="font-size:clamp(16px,1.4vw,20px);max-width:500px;margin-top:22px;line-height:1.5">
-        <b style="color:var(--text)">Choisis le modèle avec lequel tu veux créer, AvatarAds génère ton contenu viral prêt à poster.</b>
-      </p>
-
-      <!-- MOBILE UNIQUEMENT — la maquette remonte les trois atouts au-dessus du
-           champ, en --text-3, et raccourcit « Optimisé formats courts ». -->
-      <div class="row rise hero-reassure-m only-mobile" style="gap:14px;margin-top:18px;flex-wrap:wrap;align-items:center;justify-content:center;color:var(--text-3)">
-        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
-          100 % automatique</div>
-        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg>
-          Formats courts</div>
-        <div class="row gap10" style="font-size:12px;font-weight:600;align-items:center">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-          Prêt à poster</div>
-      </div>
-
-      <!-- PromptBar → ouvre le sélecteur de modèle (funnel : modèle → connexion → studio → paywall) -->
-      <div class="rise" style="position:relative;margin-top:30px;max-width:600px;width:100%">
-        <button type="button" onclick="openModelPicker()" aria-label="Choisir un modèle" class="row" style="position:relative;gap:0;width:100%;cursor:pointer;text-align:left;background:var(--surface);border:1px solid var(--border-2);border-radius:999px;padding:7px 7px 7px 10px;box-shadow:0 24px 60px -28px rgba(0,0,0,.7),0 0 0 4px var(--accent-soft)">
-          <span class="pb-ico" style="width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-          </span>
-          <span class="hp-input" style="flex:1;min-width:0;color:var(--text-2);font-size:17px;font-weight:500;padding:0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Choisis un modèle</span>
-          <span class="btn btn-primary pb-go" style="flex:0 0 auto;padding:16px 32px;font-size:18px;font-weight:800;border-radius:999px">Commencer <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+<!-- ══════════ 3 · HERO V2 (animé — casting vivant, A/B) ══════════ -->
+<section class="hero-sec v2hero">
+  <div class="v2hero-media">
+    <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutnet.mp4?v=srgb1" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
+  </div>
+  <div class="wrap v2hero-grid">
+    <div class="v2hero-copy">
+      <div class="v2hbadge rise" style="display:inline-flex"><div class="pill"><span class="dot"></span><span class="mono" style="font-size:12px">#1 OUTIL IA · CRÉATION DE CONTENU</span></div></div>
+      <h1 class="display v2hero-h1">Crée des vidéos virales <span class="accent">ultra-réalistes</span></h1>
+      <p class="muted rise v2hero-sub"><b>Transforme tes idées en vidéos qui cartonnent, images et audio prêts à poster.</b></p>
+      <div class="rise v2hero-cta">
+        <button type="button" onclick="openModelPicker()" aria-label="Choisir un modèle" class="row v2hero-pill">
+          <span class="pb-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg></span>
+          <span class="hp-input">Choisis un modèle</span>
+          <span class="btn btn-primary pb-go">Commencer <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         </button>
       </div>
-
-    </div>
-
-    <!-- HeroShowcase — 3 iPhones -->
-    <div class="rise hero2-show" style="position:relative;height:560px;perspective:1500px">
-      <div class="hp-glow" style="position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.30) 0%,rgba(255,107,53,.14) 34%,rgba(255,107,53,.05) 55%,transparent 72%);z-index:0;pointer-events:none"></div>
-      <!-- Étincelles : les NEUF du design, reprises une à une (position, taille,
-           opacité). J'en avais mis quatorze, toutes minuscules et en z-index 0 —
-           donc DERRIÈRE les téléphones, invisibles. Ici z-index 4, devant. -->
-      <div id="heroSparks" style="position:absolute;inset:-6% -4%;pointer-events:none;z-index:4">
-        <svg viewBox="0 0 48 48" width="26" height="26" style="position:absolute;left:30%;top:6%;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="14" height="14" style="position:absolute;left:52%;top:2%;opacity:0.8;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="20" height="20" style="position:absolute;left:70%;top:12%;opacity:0.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="22" height="22" style="position:absolute;left:92%;top:26%;opacity:0.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="18" height="18" style="position:absolute;left:96%;top:58%;opacity:0.85;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="24" height="24" style="position:absolute;left:84%;top:78%;opacity:0.95;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="12" height="12" style="position:absolute;left:16%;top:82%;opacity:0.55;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="15" height="15" style="position:absolute;left:60%;top:92%;opacity:0.7;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-        <svg viewBox="0 0 48 48" width="10" height="10" style="position:absolute;left:44%;top:70%;opacity:0.5;filter:drop-shadow(0 0 6px rgba(255,255,255,.9)) drop-shadow(0 0 14px var(--accent-glow))"><path d="M24 0c1.2 13 9.8 22.8 24 24-14.2 1.2-22.8 11-24 24-1.2-13-9.8-22.8-24-24C14.2 22.8 22.8 13 24 0z" fill="#fff"/></svg>
-      </div>
-
-      <!-- phone gauche : bactérie -->
-      <div class="aa-iphone hp-left" style="left:-2%;top:78px;width:178px;height:356px;transform:rotateZ(-9deg);z-index:1">
-        <div class="di"></div><div class="refl"></div>
-        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/hero-bacteria-621.webp" srcset="assets/hero-bacteria-320.webp 320w, assets/hero-bacteria-462.webp 462w, assets/hero-bacteria-536.webp 536w, assets/hero-bacteria-621.webp 621w" sizes="(max-width: 767px) 150px, 300px" alt="Cartoon bactérie virale AvatarAds" width="621" height="1103" decoding="async"></div>
-      </div>
-
-      <!-- phone droite : portrait femme IA + badges -->
-      <div class="aa-iphone hp-right" style="right:-2%;top:96px;width:178px;height:356px;transform:rotateZ(9deg);z-index:1">
-        <div class="di"></div><div class="refl"></div>
-        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr"><img src="assets/lp/hero-fille-669.webp" srcset="assets/lp/hero-fille-320.webp 320w, assets/lp/hero-fille-531.webp 531w, assets/lp/hero-fille-669.webp 669w" sizes="(max-width: 767px) 150px, 300px" alt="Portrait femme généré par IA" width="669" height="1198" loading="lazy" decoding="async"></div>
-        <div class="card glass hp-ready" style="position:absolute;left:50%;bottom:-22px;transform:translateX(-50%) rotateZ(9deg);z-index:7;padding:9px 13px;border-radius:14px;white-space:nowrap">
-          <div class="row gap8"><span style="width:24px;height:24px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
-            <div class="col" style="line-height:1.35"><b style="font-size:14px">Prête en 2 min</b><span class="faint" style="font-size:10.5px;margin-top:3px">0 caméra</span></div></div>
-        </div>
-      </div>
-
-      <!-- carte "Prête en 2 min" — position mobile (sous le téléphone droit) -->
-      <div class="card glass only-mobile" style="position:absolute;right:6%;top:313px;z-index:7;padding:7px 11px;border-radius:13px;white-space:nowrap">
-        <div class="row gap8"><span style="width:20px;height:20px;border-radius:6px;background:var(--accent-soft);border:1px solid var(--accent-line);display:grid;place-items:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--accent-2)"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg></span>
-          <div class="col" style="line-height:1.1"><b style="font-size:12.5px">Prête en 2 min</b><span class="faint" style="font-size:9.5px">0 caméra</span></div></div>
-      </div>
-
-      <!-- phone central : avatar humain, incliné 3D -->
-      <div class="aa-iphone hp-center" style="left:50%;top:18px;width:244px;height:496px;border-radius:44px;padding:5px;z-index:3;transform:translateX(-50%) perspective(1400px) rotateY(-14deg) rotateX(3deg);box-shadow:0 0 0 1px rgba(255,255,255,.06),-28px 40px 70px -28px rgba(0,0,0,.9),0 0 60px -14px var(--accent-glow)">
-        <div class="di" style="width:74px;height:21px;top:14px"></div><div class="refl" style="inset:5px;border-radius:39px"></div>
-        <div class="btns-l"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div><div class="btns-r"></div>
-        <div class="scr" style="inset:5px;border-radius:39px">
-          <img src="assets/lp/hero-homme-451.webp" srcset="assets/lp/hero-homme-320.webp 320w, assets/lp/hero-homme-451.webp 451w, assets/lp/hero-homme-640.webp 640w, assets/lp/hero-homme.webp 900w" sizes="(max-width: 767px) 140px, 300px" alt="Portrait homme généré par IA" width="451" height="672" fetchpriority="high" decoding="async">
-          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent 30%,transparent 60%,rgba(0,0,0,.6))"></div>
-          <div class="ph-rail" style="bottom:22px">
-            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7-4.4-9.5-8.5C.8 9.4 2.3 6 5.5 6 7.6 6 9 7.5 12 10c3-2.5 4.4-4 6.5-4 3.2 0 4.7 3.4 3 6.5C19 16.6 12 21 12 21z"/></svg><span>12K</span></div>
-            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg><span>840</span></div>
-            <div class="it"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg><span>2,1K</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- carte flottante vues -->
-      <div class="card glass rise hp-views" style="position:absolute;left:0%;top:24px;z-index:4;padding:9px 13px;border-radius:14px">
-        <div class="row gap8"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg><div class="col" style="line-height:1.1"><b style="font-size:15px">2,1M vues</b><span class="faint" style="font-size:10.5px">en 48h</span></div></div>
+      <div class="row rise trust-row v2hero-trust" style="gap:22px;margin-top:20px;flex-wrap:wrap">
+        <div class="pill" style="padding:8px 14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg><span style="color:var(--text-2)">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span style="color:var(--text-2)">créateurs</span></div>
+        <div class="row" style="font-size:13.5px;gap:5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;milliards</b><span style="color:var(--text-2)">de&nbsp;vues</span></div>
       </div>
     </div>
-
-      <!-- ── LIGNE DE PREUVE : les deux rangées sont sur la MÊME ligne de grille.
-           La rangée « Rejoins » vivait dans .hero-left et la réassurance était un
-           3ᵉ enfant de la grille : elles tombaient dans deux lignes différentes,
-           89 px d'écart. Compenser à la marge marchait au-dessus de 1200 px et
-           dérivait en dessous (le titre passe à quatre lignes, la première ligne
-           grandit). Sorties toutes les deux en ligne 2, `align-items:center` les
-           tient alignées à n'importe quelle largeur, sans nombre magique. -->
-      <div class="row rise trust-row" style="gap:24px;margin-top:8px;flex-wrap:wrap">
-        <div class="pill" style="padding:8px 14px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--amber)"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>
-          <span style="color:var(--text-2)">Rejoins</span><b style="color:var(--text)" data-countup="+50K">+50K</b><span style="color:var(--text-2)">utilisateurs<span class="hide-mobile"> satisfaits</span></span>
-        </div>
-        <div class="row faint gap8" style="font-size:13.5px"><b style="color:var(--text)"><span data-countup="+2">+2</span>&nbsp;milliards</b>&nbsp;de vues<span class="hide-mobile"> générées</span></div>
-      </div>
-
-      <!-- Les trois atouts. `faint` sur le CONTENEUR et `stroke:currentColor` sur
-           les icônes : dans la maquette elles n'ont aucune couleur propre, elles
-           héritent du gris du texte. Je les avais passées en orange, deux fois. -->
-      <div class="row rise hero-reassure faint" style="justify-content:center;gap:22px;flex-wrap:wrap;margin-top:8px">
-        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>
-          100 % automatique</div>
-        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 9v12"/></svg>
-          Optimisé formats courts</div>
-        <div class="row gap8" style="font-size:13.5px;font-weight:600;align-items:center">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-          Prêt à poster</div>
-      </div>
   </div>
 </section>
 
@@ -1419,5 +1431,25 @@ revealScan();
 
 <script>/* Header : pilule flottante dès qu'on descend (>40px) — LP claire et sombre. */
 (function(){function n(){try{document.body.classList.toggle('aa-nav-float',(window.scrollY||document.documentElement.scrollTop||0)>40);}catch(e){}}n();window.addEventListener('scroll',n,{passive:true});window.addEventListener('resize',n);})();</script>
+
+<script>
+/* Hero V2 animé : autoplay robuste (iOS Safari) — muted+playsinline+autoplay, relance au 1er geste + IO + retour d'onglet. */
+(function(){
+  var v=document.getElementById('v2heroVid'); if(!v) return;
+  v.muted=true; try{ v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline',''); }catch(_){}
+  function play(){ if(!v.paused) return; try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(_){} }
+  play();
+  /* iOS Safari fige souvent la vidéo : gestes (persistants) + scroll + loadeddata/canplay + relance périodique. */
+  ['touchstart','touchend','click','pointerdown','scroll'].forEach(function(ev){ window.addEventListener(ev, play, {passive:true}); });
+  try{ new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting) play(); }); },{threshold:0.05}).observe(v); }catch(_){}
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) play(); });
+  window.addEventListener('pageshow', play);
+  v.addEventListener('loadeddata', play); v.addEventListener('canplay', play);
+  var t=0, iv=setInterval(function(){ play(); if(++t>16){ clearInterval(iv); } }, 500);   /* relance ~8 s */
+})();
+/* Page V2 autonome (accès manuel via /v2). PAS de redirection. On tague juste les sessions V2 dans Clarity pour pouvoir comparer. */
+(function tag(){ try{ if(window.clarity){ window.clarity('set','lp_variant','v2'); return; } }catch(_){} setTimeout(tag,600); })();
+/* NB : le header pilule (aa-nav-float) est géré par index.html (hérité) ; le footer = accordéons natifs <details>. */
+</script>
 </body>
 </html>
