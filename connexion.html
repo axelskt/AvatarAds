@@ -10,7 +10,9 @@
 <!-- Héritage du thème par le tunnel : cette page de connexion est CLAIRE. À la 1re venue
      (aucune préférence encore), on ensemence aa_theme=clair pour que l'app démarre en clair.
      Partagé même-origine avec /app/. Un choix explicite (toggle Mon compte) prime toujours. -->
-<script>try{if(!localStorage.getItem('aa_theme'))localStorage.setItem('aa_theme','light');}catch(e){}</script>
+<script>/* Tunnel v1 = clair par défaut, mais connexion s'ADAPTE : si on vient du tunnel v2 (aa_theme=dark
+   déjà posé), on rend la connexion en sombre. Sinon on ensemence clair. La préférence prime. */
+try{var _t=localStorage.getItem('aa_theme');if(!_t){_t='light';localStorage.setItem('aa_theme','light');}if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <title>Connexion — AvatarAds</title>
 <link rel="icon" href="assets/avatarads-logo-96.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +35,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 html,body{background:radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)}
+html[data-theme="dark"],html[data-theme="dark"] body{background:radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.11), transparent 60%), linear-gradient(160deg,#0B0B0D,#141117)}
 body{color:var(--text);font-family:"Hanken Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:hidden}
 #root{min-height:100%}
 .mono{font-family:"JetBrains Mono",monospace;}
@@ -103,6 +106,9 @@ function useIsMobile(bp=760){
 }
 window.useIsMobile = useIsMobile;
 const { useState:useStateA } = React;
+/* Thème de la connexion : sombre si on arrive du tunnel v2 (aa_theme=dark), clair sinon.
+   Lu une fois — l'utilisateur ne bascule pas le thème sur l'écran de login. */
+const _AA_DARK = (()=>{ try{ return localStorage.getItem('aa_theme')==='dark'; }catch(e){ return false; } })();
 
 /* ── Auth réelle (même projet Supabase que /app/, session partagée same-origin) ── */
 const SUPABASE_URL = "https://guvwgiejzkiodghywpwj.supabase.co";
@@ -224,7 +230,9 @@ function Login({ go }){
   function onOtpPaste(e){ const t=(e.clipboardData.getData("text")||"").replace(/\D/g,"").slice(0,6); if(!t) return; e.preventDefault(); const boxes=[...e.target.parentElement.children].filter(x=>x.tagName==="INPUT"); boxes.forEach((b,i)=>{ b.value=t[i]||""; }); (boxes[Math.min(t.length,5)]||e.target).focus(); if(t.length===6) authVerify(t); }
   const errLine = err ? <p className="center" style={{fontSize:12.5,color:"#c0341d",marginTop:2,width:"100%"}}>{err}</p> : null;
 
-  const L = { ink:"#141013", sub:"#5b5750", line:"rgba(0,0,0,.1)", field:"#fff", fieldLine:"rgba(0,0,0,.14)" };
+  const L = _AA_DARK
+    ? { ink:"#F6F4F1", sub:"#A7A39E", line:"rgba(255,255,255,.12)", field:"#171519", fieldLine:"rgba(255,255,255,.18)", btn:"#1E1B21" }
+    : { ink:"#141013", sub:"#5b5750", line:"rgba(0,0,0,.1)", field:"#fff", fieldLine:"rgba(0,0,0,.14)", btn:"#fff" };
   const panel = (
     <div className="rise col" style={{width:"100%",maxWidth:380,alignItems:"center"}}>
       <div className="brandmark" style={{marginBottom:22,color:L.ink}}><Logo size={40}/></div>
@@ -267,7 +275,7 @@ function Login({ go }){
         <button className="btn btn-primary" style={{width:"100%",marginTop:11,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? authPassword() : authSend()}>
           {pw ? "Se connecter" : "Recevoir mon code"} <Icons.arrow size={16}/>
         </button>
-        <button className="btn" style={{width:"100%",marginTop:9,padding:"13px 20px",fontSize:13.5,background:"#fff",border:"1px solid "+L.fieldLine,color:L.ink,fontWeight:600}} onClick={()=>{setPw(!pw);setErr("");}}>
+        <button className="btn" style={{width:"100%",marginTop:9,padding:"13px 20px",fontSize:13.5,background:L.btn,border:"1px solid "+L.fieldLine,color:L.ink,fontWeight:600}} onClick={()=>{setPw(!pw);setErr("");}}>
           {pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"}
         </button>
       </>)}
@@ -277,7 +285,7 @@ function Login({ go }){
         En continuant, tu acceptes les <span style={{textDecoration:"underline",cursor:"pointer"}}>Conditions</span> et la <span style={{textDecoration:"underline",cursor:"pointer"}}>Confidentialité</span>.
       </p>
       <div className="row gap16" style={{alignItems:"center",marginTop:22}}>
-        <span className="row gap6" style={{padding:"7px 13px",borderRadius:999,border:"1px solid "+L.fieldLine,background:"#fff",alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:L.ink}}>4,9/5</b></span>
+        <span className="row gap6" style={{padding:"7px 13px",borderRadius:999,border:"1px solid "+L.fieldLine,background:L.btn,alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:L.ink}}>4,9/5</b></span>
         <span className="row gap8" style={{fontSize:13,color:L.sub}}><Icons.lock size={13}/> Connexion sécurisée</span>
       </div>
     </div>
@@ -285,18 +293,22 @@ function Login({ go }){
 
   const back = (
     <button onClick={()=>go("landing")}
-      style={{position:"absolute",top:24,left:24,zIndex:2,width:40,height:40,borderRadius:12,padding:0,border:"1px solid "+L.fieldLine,background:"#fff",color:L.ink,display:"grid",placeItems:"center"}}>
+      style={{position:"absolute",top:24,left:24,zIndex:2,width:40,height:40,borderRadius:12,padding:0,border:"1px solid "+L.fieldLine,background:L.btn,color:L.ink,display:"grid",placeItems:"center"}}>
       <Icons.arrow size={17} style={{transform:"rotate(180deg)"}}/>
     </button>
   );
 
-  const lightBg = "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)";
+  const lightBg = _AA_DARK
+    ? "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.12), transparent 60%), linear-gradient(160deg,#0B0B0D,#151319)"
+    : "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)";
 
   if(mob){
-    const D = { card:"rgba(255,255,255,.72)", line:"rgba(0,0,0,.12)", ink:"#141013", sub:"#5b5750", field:"#fff" };
+    const D = _AA_DARK
+      ? { card:"rgba(22,20,25,.72)", line:"rgba(255,255,255,.12)", ink:"#F6F4F1", sub:"#A7A39E", field:"#171519", btn:"#1E1B21" }
+      : { card:"rgba(255,255,255,.72)", line:"rgba(0,0,0,.12)", ink:"#141013", sub:"#5b5750", field:"#fff", btn:"#fff" };
     return (
       <div style={{minHeight:"100dvh",display:"flex",flexDirection:"column",justifyContent:"center",padding:"64px 16px 28px",position:"relative",
-        background:"radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)"}}>
+        background: _AA_DARK ? "radial-gradient(120% 80% at 50% 0%, #17151b, #0e0d10 55%, #0b0b0d)" : "radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)"}}>
         <button onClick={()=>go("landing")} className="row gap8" style={{position:"absolute",top:22,left:18,zIndex:2,color:D.sub,fontSize:15,fontWeight:600,alignItems:"center"}}>
           <Icons.arrow size={17} style={{transform:"rotate(180deg)"}}/> Retour
         </button>
@@ -344,7 +356,7 @@ function Login({ go }){
             En continuant, tu acceptes les <span style={{textDecoration:"underline"}}>Conditions</span> et la <span style={{textDecoration:"underline"}}>Confidentialité</span>.
           </p>
           <div className="row" style={{alignItems:"center",marginTop:18,gap:16,justifyContent:"space-between"}}>
-            <span className="row gap6" style={{padding:"6px 12px",borderRadius:999,border:"1px solid "+D.line,background:"#fff",alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:D.ink,fontSize:13}}>4,9/5</b></span>
+            <span className="row gap6" style={{padding:"6px 12px",borderRadius:999,border:"1px solid "+D.line,background:D.btn,alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:D.ink,fontSize:13}}>4,9/5</b></span>
             <span className="row gap8" style={{fontSize:13,color:D.sub}}><Icons.lock size={13}/> Connexion sécurisée</span>
           </div>
         </div>
