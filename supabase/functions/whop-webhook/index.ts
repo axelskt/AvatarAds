@@ -241,7 +241,9 @@ serve(async (req) => {
   // crédit n'était JAMAIS appliqué (paiement perdu). failDb RELÂCHE le verrou avant tout 500 → le rejeu re-traite.
   const failDb = async () => {
     if (eventId) { try { await sb.from('webhook_events').delete().eq('event_id', eventId) } catch (_) { /* best-effort */ } }
-    return await failDb()
+    // H1 (audit 14/09) : était `return await failDb()` = RÉCURSION INFINIE (hang + martèlement DELETE, jamais
+    // de 500). On relâche le verrou d'idempotence PUIS on rend un vrai 500 → Whop rejoue et re-traite proprement.
+    return new Response('Erreur interne — réessai attendu', { status: 500 })
   }
 
   const findProfile = async () => {

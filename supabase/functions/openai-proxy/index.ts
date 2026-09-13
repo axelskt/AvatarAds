@@ -11,7 +11,7 @@
 // plafond + preuve de débit + RÉSERVATION (draw le coût de l'op x-aa-op, settle à la livraison).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp } from '../_shared/guard.ts'
 
 const OPENAI_BASE = 'https://api.openai.com'
 const ALLOW = /^\/v1\/(chat\/completions|audio\/transcriptions|images\/(generations|edits))$/
@@ -38,17 +38,27 @@ serve(async (req: Request) => {
   const uid = auth.userId as string
 
   if (gated) {
+    const isTranscribe = bare.includes('transcriptions')
+    // M1 (audit 14/09) : Whisper est un fournisseur PAYANT. Le client réserve la transcription aux plans
+    // payants (whisperTranscribe) mais le serveur ne le gardait pas → un compte Free l'appelait direct.
+    // On aligne le serveur sur le produit : Starter+ / owner / dev (comme derush-transcribe pour Scribe).
+    if (isTranscribe) {
+      const { plan, isOwner } = await userPlan(uid)
+      if (!isOwner && !['starter', 'pro', 'elite', 'developer', 'byok'].includes(plan)) {
+        return jsonRes(403, { error: 'La transcription est réservée aux plans payants.' })
+      }
+    }
     const gate = isBillable
       ? await billableGate({ userId: uid, proxy: 'openai', requireDebit: true, rateMax: 40, label: bare })
-      : await helperGate(uid, 'openai', bare.includes('transcriptions') ? 12 : 20)   // round3 (06/09) : GPT-4o/Whisper payants → 20/12 par 10 min (drain réduit)
+      : await helperGate(uid, 'openai', isTranscribe ? 12 : 20)   // round3 (06/09) : GPT-4o/Whisper payants → 20/12 par 10 min (drain réduit)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
+  let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
+  let drawnOp: string | undefined   // l'op PRÉCISE tirée — resolveOp ne la retrouve plus une fois à réserve 0 (audit 06/09)
   try {
     const ct = req.headers.get('content-type') ?? ''
     let openaiRes: Response
-    let drawn = 0   // coût tiré sur la réservation — rendu si l'amont échoue (retry sans 402)
-    let drawnOp: string | undefined   // l'op PRÉCISE tirée — resolveOp ne la retrouve plus une fois à réserve 0 (audit 06/09)
     if (ct.includes('multipart/form-data')) {
       const incoming = await req.formData()
       const outgoing = new FormData()

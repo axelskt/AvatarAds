@@ -27,6 +27,11 @@ export const debitEnforce = (): boolean => (Deno.env.get('DEBIT_ENFORCE') ?? '0'
 // à 0 (défaut) = MODE OMBRE : on journalise ce qu'on refuserait, sans bloquer. Le settle (op non
 // remboursable une fois livrée) est TOUJOURS actif (il ne peut jamais bloquer un remboursement d'échec).
 export const reserveEnforce = (): boolean => (Deno.env.get('RESERVE_ENFORCE') ?? '0') === '1'
+// C1 (audit 14/09) : « aucune op tirable » ≠ seulement owner/dev — c'est AUSSI un abonné dont l'op a été
+// tirée à 0 et qui re-soumet gratuitement tant que has_recent_debit reste vrai (60-120 min). RESERVE_STRICT=1
+// refuse ce cas (fail-closed sauf owner/dev, par le PLAN). Défaut 0 = MODE OMBRE : journalise « would-402 »
+// sans bloquer → observer les logs [reserve-strict] avant de basculer (aucun flux légitime ne doit en émettre).
+export const reserveStrict = (): boolean => (Deno.env.get('RESERVE_STRICT') ?? '0') === '1'
 export function opFromReq(req: Request): string { const v = (req.headers.get('x-aa-op') || '').trim(); return /^[0-9a-f-]{36}$/i.test(v) ? v : '' }
 // L'en-tête x-aa-op est un simple INDICE (client). La VRAIE source = latest_open_op côté serveur → le
 // settle/draw ne peut plus être contourné en omettant l'en-tête (audit #3 : refund-and-keep async).
@@ -59,11 +64,20 @@ export async function releaseReservation(userId: string, req: Request, cost: num
 export async function settleReservation(userId: string, opId: string): Promise<void> {
   try { await svc().rpc('settle_reservation', { p_user: userId, p_op: opId }) } catch { /* best-effort */ }
 }
+// C1 (audit 14/09) : aucune op tirable trouvée → owner/dev = OK (aucune réservation par conception, détecté
+// par le PLAN) ; sinon = génération non financée (op épuisée / sous-débit) → fail-closed sous RESERVE_STRICT,
+// sinon journalisé (ombre). Ferme « 1 débit finance des générations illimitées dans la fenêtre has_recent_debit ».
+async function noDrawableOpGate(userId: string, proxy: string, label?: string): Promise<Gate> {
+  const { plan, isOwner } = await userPlan(userId)
+  if (isOwner || plan === 'developer') return { ok: true }
+  console.warn(`[reserve-strict] ${proxy} ${label ?? ''} user=${userId} : aucune op tirable (strict=${reserveStrict()})`)
+  return reserveStrict() ? { ok: false, status: 402, error: 'Aucune réservation de crédits ouverte pour cette génération.' } : { ok: true }
+}
 // Applique la réservation dans un proxy : tire `cost`, journalise, 402 seulement si enforce. Puis renvoie
 // une fonction `settle()` à appeler quand la génération a abouti (soumission SYNC réussie, ou poll COMPLETED).
 export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate & { opId?: string }> {
   const opId = await resolveOp(o.userId, o.req)
-  if (!opId) return { ok: true }   // aucune op ouverte (owner/dev) → billableGate a déjà géré le plancher
+  if (!opId) return await noDrawableOpGate(o.userId, o.proxy, o.label)   // C1 : plus de laisser-passer aveugle
   const dr = await drawReservation(o.userId, opId, o.cost)
   if (!dr.ok) {
     console.warn(`[reserve] ${o.proxy} op=${opId} cost=${o.cost} ${o.label ?? ''} INSUFFISANT (enforce=${reserveEnforce()})`)
@@ -76,7 +90,7 @@ export async function applyReservation(o: { req: Request; userId: string; proxy:
 // un débit » : une 2e soumission sur la même op trouve réserve 0 → 402. Fail-open sur erreur DB.
 export async function applyReservationFull(o: { req: Request; userId: string; proxy: string; label?: string }): Promise<Gate & { opId?: string }> {
   const opId = await resolveOp(o.userId, o.req)
-  if (!opId) return { ok: true }   // owner/dev : aucune op ouverte
+  if (!opId) return await noDrawableOpGate(o.userId, o.proxy, o.label)   // C1 : plus de laisser-passer aveugle
   try {
     const { data, error } = await svc().rpc('draw_full_reservation', { p_user: o.userId, p_op: opId })
     if (error) { console.warn('draw_full err (fail-open):', error.message); return { ok: true, opId } }

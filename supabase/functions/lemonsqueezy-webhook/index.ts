@@ -90,6 +90,9 @@ serve(async (req) => {
     const { error: _dup } = await sb.from('webhook_events').insert({ event_id: 'ls_' + _evId, body: event })
     if (_dup) { console.log('LS rejeu ignoré', _evId); return new Response('OK (déjà traité)', { status: 200 }) }
   }
+  // L3 (audit 14/09) : relâche le verrou d'idempotence AVANT tout 500 (sinon le rejeu LemonSqueezy dédoublonne
+  // sur la ligne restée en base → crédit JAMAIS appliqué). Miroir de whop-webhook.failDb.
+  const failLs = async () => { if (_evId) { try { await sb.from('webhook_events').delete().eq('event_id', 'ls_' + _evId) } catch (_) { /* best-effort */ } } return new Response('DB error', { status: 500 }) }
 
   // ─── Cherche le profil par email ───
   const { data: profile, error: profileErr } = await sb
@@ -100,7 +103,7 @@ serve(async (req) => {
 
   if (profileErr) {
     console.error('Erreur lookup profil:', profileErr)
-    return new Response('DB error', { status: 500 })
+    return await failLs()
   }
 
   if (profile) {
@@ -113,7 +116,7 @@ serve(async (req) => {
 
       if (error) {
         console.error('Erreur topup crédits:', error)
-        return new Response('DB error', { status: 500 })
+        return await failLs()
       }
       console.log(`➕ Crédits ajoutés pour ${email}: +${config.credits}s → total ${newCredits}s`)
 
@@ -126,7 +129,7 @@ serve(async (req) => {
 
       if (error) {
         console.error('Erreur update profil:', error)
-        return new Response('DB error', { status: 500 })
+        return await failLs()
       }
       console.log(`✅ Plan activé pour ${email}: ${config.plan} (${config.product})`)
     }
@@ -149,7 +152,7 @@ serve(async (req) => {
 
     if (error) {
       console.error('Erreur pending_activations:', error)
-      return new Response('DB error', { status: 500 })
+      return await failLs()
     }
     console.log(`⏳ Activation en attente pour ${email}: ${config.plan} (${config.product})`)
   }
