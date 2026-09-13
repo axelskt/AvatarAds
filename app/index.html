@@ -5,6 +5,17 @@
 <meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com https://js.whop.com https://*.whop.com https://*.clarity.ms; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
 <script>/* audit 05/09 (L8) — anti-clickjacking : l'app (auth + paiement) ne doit jamais être encadrée. GitHub Pages ne pose pas d'en-tête X-Frame-Options → filet JS. */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <script>/* Thème studio (clair/sombre) — posé AVANT le paint pour zéro flash au chargement. */try{if(localStorage.getItem('aa_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+<script>/* LOGIN UNIFIÉ — redirection AU PLUS TÔT : un visiteur NON connecté de /app/ part vers la connexion
+   dédiée AVANT tout rendu → plus de flash « connexion au générateur » puis retour login. Exceptions :
+   session probable (jeton/récent), retour OAuth (jeton dans l'URL), outil de capture interne. */
+try{
+  var _hasTok=false; for(var _i=0;_i<localStorage.length;_i++){ var _k=localStorage.key(_i); if(_k && /sb-.*-auth-token/.test(_k) && localStorage.getItem(_k)){ _hasTok=true; break; } }
+  var _born=parseInt(localStorage.getItem('aa_login_at')||'0',10);
+  var _recent=_born && (Date.now()-_born < 14*86400000);
+  var _oauth=/(?:[#&?])(access_token|code|error|provider_token)=/.test((location.hash||'')+(location.search||''));
+  var _cap=(location.hash||'').indexOf('#capture=')===0;
+  if(!_hasTok && !_recent && !_oauth && !_cap){ location.replace('/connexion.html'); }
+}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
@@ -77,6 +88,9 @@
    color-mix du sombre vers le clair → orage de repaint Safari (grosse chute de FPS + cartes qui
    restent grises jusqu'au clic). On veut un flip instantané, pas une animation. */
 html.aa-theme-switching *{ transition:none !important }
+/* Reveal d'une étape du wizard : mêmes précautions (Safari anime le fond var() au passage
+   display:none→block → cartes grises jusqu'au clic). On coupe les transitions le temps du reveal. */
+.fs-reveal, .fs-reveal *{ transition:none !important }
 /* Aperçus de STYLE de sous-titres : rendus de sous-titres (texte blanc/néon sur "écran").
    En clair on les épingle sur un mini-écran sombre arrondi (fidèle + joli, pas une barre brute). */
 :root[data-theme="light"] .sub-preview, :root[data-theme="light"] .style-card .sub-preview{
@@ -6111,7 +6125,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0006'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0007'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12575,11 +12589,17 @@ function updateSteps(){
     const fs=document.getElementById('fs-'+i);
     const st=document.getElementById('st-'+i);
     if(fs){
-      fs.style.display=i===step?'block':'none';
-      // Safari : un panneau révélé depuis display:none ne repeint pas toujours ses fonds var()
-      // (cartes 720p/1080p/modèle/Whisper qui restaient GRISES jusqu'au clic en thème clair).
-      // On force un repaint du panneau via un micro-nudge de compositing.
-      if(i===step){ fs.style.transform='translateZ(0)'; void fs.offsetHeight; fs.style.transform=''; }
+      if(i===step){
+        // Safari : un panneau révélé depuis display:none ANIME ses fonds var() via transition:.15s
+        // → les cartes (720p/1080p/modèle/Whisper/styles) restaient GRISES jusqu'au clic en clair.
+        // On coupe les transitions le temps du reveal (comme le switch de thème) → paint direct.
+        fs.classList.add('fs-reveal');
+        fs.style.display='block';
+        void fs.offsetHeight;
+        setTimeout(function(){ fs.classList.remove('fs-reveal'); }, 60);
+      } else {
+        fs.style.display='none';
+      }
     }
     if(st){
       st.classList.remove('on','done');
@@ -24914,11 +24934,14 @@ function _updateQualityLocks(plan){
   _composeQuality = Math.min(_qualiteChoisie ? _composeQuality : defaultQ, maxQ);
   // Sync visuel des boutons
   document.querySelectorAll('.qual-btn').forEach(b => {
+    if(!b.dataset.q) return;   // ne toucher QUE les cartes de qualité (les cartes modèle ont data-gm)
     const bq = parseInt(b.dataset.q||'0');
     if(bq === _composeQuality){
-      b.style.background='var(--orange-dim)'; b.style.borderColor='rgba(255,107,53,0.5)'; b.style.color='var(--orange2)';
+      b.style.background='var(--accent-soft)'; b.style.border='2px solid var(--accent)'; b.style.color='var(--text)';
     } else {
-      b.style.background='var(--bg4)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)';
+      // #bugcouleur (13/09) : était var(--bg4) = GRIS en thème clair (les cartes restaient grises
+      // jusqu'au clic). var(--surface) = blanc en clair / sombre en sombre, comme le markup + setQuality.
+      b.style.background='var(--surface)'; b.style.border='1px solid var(--border)'; b.style.color='var(--text)';
     }
   });
 }
