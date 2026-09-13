@@ -3667,8 +3667,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         </div>
 
         <div class="ov-grid">
-          <!-- colonne gauche -->
-          <div class="col" style="gap:16px">
+          <!-- FORMULAIRE — masqué pendant le chargement ET le résultat (ils PRENNENT SA PLACE, type Images IA/Express) -->
+          <div id="omniForm" class="col" style="gap:16px">
             <div id="omniDrop" class="ov-drop col" onclick="if(!_omniFile)document.getElementById('omniFileIn').click()" ondragover="event.preventDefault();this.classList.add('hover');this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='';this.style.background=''" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';_omniPickFile(event.dataTransfer.files[0])" style="gap:12px;padding:52px 20px;border-radius:20px;align-items:center;text-align:center">
               <div id="omniDropEmpty" class="col" style="gap:12px;align-items:center">
                 <div style="width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(160deg,var(--accent-2),var(--accent));box-shadow:0 12px 30px -10px var(--accent-glow)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:#1A0A02"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></div>
@@ -3699,49 +3699,38 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </div>
 
             <button id="omniGenBtn" class="btn btn-primary" onclick="_omniGenerate()" style="width:100%;padding:18px;font-size:17px;font-weight:800;border-radius:16px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 16px 44px -10px var(--accent-glow);display:flex;align-items:center;justify-content:center;gap:8px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer la vidéo<span id="omniCost"></span></button>
+          </div>
 
-            <!-- Chargement CONTENU dans le menu (type Images IA/Express, PAS en plein écran) : ring + % + timer -->
-            <div id="omniLoadingOverlay" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:44px 24px;border-radius:20px;background:var(--panel-1);border:1px solid var(--border)">
-              <div style="position:relative;width:116px;height:116px">
-                <svg width="116" height="116" viewBox="0 0 132 132" style="display:block;transform:rotate(-90deg)">
-                  <circle cx="66" cy="66" r="52" fill="none" stroke="var(--bg4)" stroke-width="8"/>
-                  <circle id="omniProgArc" cx="66" cy="66" r="52" fill="none" stroke="url(#omniRingGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .35s linear"/>
-                  <defs><linearGradient id="omniRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
-                </svg>
-                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
-                  <div id="omniProgPct" style="font-size:24px;font-weight:800;font-family:var(--font);line-height:1">0%</div>
-                  <div id="omniProgTimer" style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text-3);letter-spacing:1px">0:00</div>
-                </div>
+          <!-- CHARGEMENT — PREND LA PLACE du formulaire (type Images IA/Express) : ring + % + timer -->
+          <div id="omniLoadingOverlay" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 24px;border-radius:20px;background:var(--panel-1);border:1px solid var(--border);min-height:360px">
+            <div style="position:relative;width:122px;height:122px">
+              <svg width="122" height="122" viewBox="0 0 132 132" style="display:block;transform:rotate(-90deg)">
+                <circle cx="66" cy="66" r="52" fill="none" stroke="var(--bg4)" stroke-width="8"/>
+                <circle id="omniProgArc" cx="66" cy="66" r="52" fill="none" stroke="url(#omniRingGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .35s linear"/>
+                <defs><linearGradient id="omniRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+                <div id="omniProgPct" style="font-size:26px;font-weight:800;font-family:var(--font);line-height:1">0%</div>
+                <div id="omniProgTimer" style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text-3);letter-spacing:1px">0:00</div>
               </div>
-              <div style="text-align:center">
-                <div style="font-size:16px;font-weight:800;letter-spacing:-.3px">Transformation en cours…</div>
-                <div id="omniProgLabel" class="faint" style="font-size:11.5px;font-family:var(--mono);margin-top:4px">L'IA transforme ta vidéo · ~30-60 s</div>
-              </div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:16px;font-weight:800;letter-spacing:-.3px">Transformation en cours…</div>
+              <div id="omniProgLabel" class="faint" style="font-size:11.5px;font-family:var(--mono);margin-top:4px">L'IA transforme ta vidéo · ~30-60 s</div>
             </div>
           </div>
 
-          <!-- colonne droite : idée + résultat -->
-          <div class="col" style="gap:12px">
-            <button type="button" onclick="_omniEx('transforme la voiture en Bugatti noire mate, jantes chromées')" class="col" id="omniExampleCard" style="display:none;padding:0;overflow:hidden;border-radius:14px;text-align:left;transition:.15s;border:1px solid var(--border);cursor:pointer;background:transparent">
-              <div style="position:relative;aspect-ratio:16/10;overflow:hidden;width:100%">
-                <div style="position:absolute;inset:0;display:flex">
-                  <div style="flex:1;background:repeating-linear-gradient(135deg, oklch(0.3 0.03 0) 0 8px, oklch(0.24 0.02 0) 8px 16px)"></div>
-                  <div style="flex:1;background:radial-gradient(circle at 60% 40%, oklch(0.55 0.16 18), oklch(0.3 0.1 265))"></div>
-                </div>
-                <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:var(--accent);display:grid;place-items:center;box-shadow:0 4px 12px var(--accent-glow)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:#1A0A02"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-                <span class="mono" style="position:absolute;top:6px;left:6px;font-size:8.5px;color:rgba(255,255,255,.7);background:rgba(0,0,0,.4);padding:1px 5px;border-radius:5px">avant</span>
-                <span class="mono" style="position:absolute;top:6px;right:6px;font-size:8.5px;color:#fff;background:var(--accent);padding:1px 5px;border-radius:5px">après</span>
-              </div>
-            </button>
-
-            <div id="omniResult" style="display:none">
-              <div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:8px">RÉSULTAT</div>
-              <!-- Taille CONTENUE : une vidéo 9:16 en width:100% dépassait l'écran (retour Axel 13/09).
-                   max-height borne la hauteur → la vidéo tient en entier, bouton Télécharger visible dessous. -->
-              <video id="omniOut" controls playsinline style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;margin:0 auto;border-radius:14px;background:#000"></video>
-              <div class="row" style="gap:8px;margin-top:12px">
-                <button onclick="_omniDownload()" class="btn btn-primary" style="flex:1;padding:13px;border-radius:12px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
-              </div>
+          <!-- RÉSULTAT — PREND LA PLACE du formulaire ; « Nouvelle transformation » y ramène -->
+          <div id="omniResult" style="display:none">
+            <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px">
+              <div class="label" style="font-size:11px;letter-spacing:.14em">RÉSULTAT</div>
+              <button type="button" onclick="_omniReset()" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Nouvelle transformation</button>
+            </div>
+            <!-- Taille CONTENUE : une vidéo 9:16 en width:100% dépassait l'écran (retour Axel 13/09).
+                 max-height borne la hauteur → la vidéo tient en entier, bouton Télécharger visible dessous. -->
+            <video id="omniOut" controls playsinline style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;margin:0 auto;border-radius:14px;background:#000"></video>
+            <div class="row" style="gap:8px;margin-top:12px">
+              <button onclick="_omniDownload()" class="btn btn-primary" style="flex:1;padding:13px;border-radius:12px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
             </div>
           </div>
         </div>
@@ -6127,7 +6116,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0009'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0010'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -29474,6 +29463,7 @@ async function _omniGenerate(){
   if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
   try{
     const res=document.getElementById('omniResult'); if(res) res.style.display='none';
+    const _form=document.getElementById('omniForm'); if(_form) _form.style.display='none';   // le chargement/résultat PREND la place du formulaire
     _omniProg('Envoi de la vidéo…',10);
     const { data:{ user } } = await sb.auth.getUser();
     if(!user) throw new Error('Session expirée — reconnecte-toi');
@@ -29524,8 +29514,16 @@ async function _omniGenerate(){
     console.error('[omni]',e);
     try{ if(typeof creditsFlowRefund==='function') await creditsFlowRefund('la transformation Omni a échoué'); }catch(_){}
     _omniProgHide();
+    const _form=document.getElementById('omniForm'); if(_form) _form.style.display='';   // échec → on rend le formulaire pour réessayer
     toast(''+((e&&e.message)||e));
   }finally{ if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } }
+}
+// « Nouvelle transformation » : referme le résultat et rouvre le formulaire (le résultat avait pris sa place).
+function _omniReset(){
+  const res=document.getElementById('omniResult'); if(res) res.style.display='none';
+  _omniProgHide();
+  const form=document.getElementById('omniForm'); if(form) form.style.display='';
+  try{ const v=document.getElementById('v-omni'); if(v) v.scrollTo({top:0,behavior:'smooth'}); }catch(_){}
 }
 async function _omniDownload(){
   if(!_omniOutUrl) return;
