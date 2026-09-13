@@ -6115,7 +6115,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-13-0012'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-13-0013'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -29362,6 +29362,9 @@ function _omniRate(){
   const c=(typeof CREDIT_COSTS!=='undefined' && CREDIT_COSTS)||{};
   return _omniRes==='1080p' ? (c.omniEdit1080PerSec||4) : (c.omniEditPerSec||3);
 }
+// Coût Omni (source UNIQUE, affichage ET débit) : la durée est ARRONDIE À LA SECONDE
+// SUPÉRIEURE (Math.ceil), puis × le tarif/s. Ex. 3,4 s → 4 s → 720p 4×3=12 cr · 1080p 4×4=16 cr.
+function _omniCost(){ return Math.max(1, Math.ceil(_omniDur||0) * _omniRate()); }
 function _omniSetRes(r){
   _omniRes = (r==='1080p') ? '1080p' : '720p';
   [['omniRes720','720p','omniRate720'],['omniRes1080','1080p','omniRate1080']].forEach(function(p){
@@ -29379,7 +29382,7 @@ function _omniUpdateCost(){
   const el=document.getElementById('omniCost'); if(!el) return;
   // Bouton dynamique : « Transformer » seul tant qu'aucune vidéo, puis « Transformer · X crédits »
   // calculé en direct dès l'upload et re-calculé au changement de qualité (720p/1080p).
-  el.textContent = _omniDur>0 ? (' · '+Math.max(1,Math.round(_omniDur*_omniRate()))+' crédits') : '';
+  el.textContent = _omniDur>0 ? (' · '+_omniCost()+' crédits') : '';
 }
 function _omniPickFile(file){
   if(!file) return;
@@ -29458,7 +29461,7 @@ async function _omniGenerate(){
   if(!_omniFile){ toast('Upload une vidéo d\'abord'); return; }
   const prompt=((document.getElementById('omniPrompt')||{}).value||'').trim();
   if(!prompt){ toast('Décris la transformation'); return; }
-  const cost=Math.max(1,Math.round(_omniDur*_omniRate()));
+  const cost=_omniCost();   // durée arrondie à la seconde supérieure × tarif/s (720p 3 · 1080p 4)
   const btn=document.getElementById('omniGenBtn'); const orig=btn?btn.innerHTML:'';
   if(typeof creditsFlowBegin==='function') creditsFlowBegin();
   if(!(await spendCreditsFor(cost,'Omni — édition vidéo'))) return;
