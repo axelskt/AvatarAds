@@ -351,7 +351,7 @@ type Plan = {
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
 // IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
-import { safeFetchHtml, authUser, billableGate, resolveOp, drawReservation } from '../_shared/guard.ts'
+import { safeFetchHtml, authUser, billableGate } from '../_shared/guard.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 6000)
@@ -2726,12 +2726,10 @@ serve(async (req: Request) => {
     const captions = buildCaptions(fixedWords, plan.accents, duration)
     const subsSurPanneaux = !!plan.detected.subtitles
 
-    // M3 (audit 14/09) : le plan Montage (Claude + Scribe) est livré ici en SYNCHRONE. Sans toucher à la
-    // réservation, un abonné pouvait refund_credits(op) juste après = plan gratuit + crédits rendus en boucle.
-    // On TIRE un marqueur (1) sur l'op ouverte → refund_credits la refuse (in_progress) tout en laissant la
-    // réserve au rendu (render-job tire le reste + règle à la livraison). Best-effort : ne bloque jamais le plan.
-    try { if (_auth.userId) { const _op = await resolveOp(_auth.userId, req); if (_op) await drawReservation(_auth.userId, _op, 1) } } catch (_) { /* best-effort */ }
-
+    // M3 (audit 14/09) — RÉSIDU ASSUMÉ, PAS de tirage ici. Un marqueur de tirage cassait le remboursement
+    // LÉGITIME d'un montage raté (op laissée à reserve<amount → refund_credits « in_progress » → le client
+    // perd ses crédits, cf. app _mtRenderSegmented catch). Or « refund-and-keep du plan » est quasi nul : un
+    // plan sans rendu est inutilisable, et le rembourser vide l'op → plus de rendu possible. On laisse donc.
     return json({
       ok: true,
       version: '1.5',
