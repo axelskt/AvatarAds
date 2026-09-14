@@ -95,19 +95,25 @@ export async function applyReservation(o: { req: Request; userId: string; proxy:
 
 // Tire la réserve ENTIÈRE d'une op (soumission VIDÉO : une op = une génération). Ferme « N générations pour
 // un débit » : une 2e soumission sur la même op trouve réserve 0 → 402. Fail-open sur erreur DB.
-export async function applyReservationFull(o: { req: Request; userId: string; proxy: string; label?: string }): Promise<Gate & { opId?: string }> {
+// `minCost` = plancher serveur du modèle (audit métier 14/09) : draw_full REFUSE (renvoie 0 → 402) une
+// réserve inférieure → ferme « spend_credits(1) finance une vidéo chère ». Renvoie AUSSI `drawn` = le
+// montant réellement drainé, que le proxy passe à bindJob → release_by_job restaure EXACTEMENT ce montant
+// (jamais 9999), ce qui ferme le refund-and-keep par sur-restauration.
+export async function applyReservationFull(o: { req: Request; userId: string; proxy: string; label?: string; minCost?: number }): Promise<Gate & { opId?: string; drawn?: number }> {
   const opId = await resolveOp(o.userId, o.req)
   if (opId === '__ERR__') return { ok: true }   // C1 (14/09) : erreur technique resolve_op → fail-open
   if (!opId) return await noDrawableOpGate(o.userId, o.proxy, o.label)   // C1 : plus de laisser-passer aveugle
+  const min = Math.max(1, Math.ceil(o.minCost ?? 1))
   try {
-    const { data, error } = await svc().rpc('draw_full_reservation', { p_user: o.userId, p_op: opId })
-    if (error) { console.warn('draw_full err (fail-open):', error.message); return { ok: true, opId } }
-    if (data !== true) {
-      console.warn(`[reserve-full] ${o.proxy} op=${opId} ${o.label ?? ''} VIDE/RÉGLÉE (enforce=${reserveEnforce()})`)
+    const { data, error } = await svc().rpc('draw_full_reservation', { p_user: o.userId, p_op: opId, p_min: min })
+    if (error) { console.warn('draw_full err (fail-open):', error.message); return { ok: true, opId, drawn: 0 } }
+    const drawn = Number(data) || 0   // 0 = réserve < plancher / vide / réglée
+    if (drawn <= 0) {
+      console.warn(`[reserve-full] ${o.proxy} op=${opId} ${o.label ?? ''} INSUFFISANTE/VIDE (min=${min}, enforce=${reserveEnforce()})`)
       if (reserveEnforce()) return { ok: false, status: 402, error: 'Réservation de crédits insuffisante pour cette génération.' }
     }
-  } catch { /* fail-open */ }
-  return { ok: true, opId }
+    return { ok: true, opId, drawn }
+  } catch { return { ok: true, opId, drawn: 0 } }
 }
 
 // ── Libération/règlement CIBLÉS (audit 06/09) — depuis que resolve_op exige reserve>0 (anti-réutilisation),
@@ -118,9 +124,11 @@ export async function releaseOp(userId: string, opId: string | undefined, cost: 
   if (!opId) return
   try { await svc().rpc('release_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) }) } catch { /* best-effort */ }
 }
-export async function bindJob(userId: string, opId: string | undefined, job: string): Promise<void> {
+// `drawn` = montant tiré par CE job → mémorisé (job_drawn) pour une restauration EXACTE au release. Omis
+// (ancien appelant) → job_drawn reste NULL → release retombe sur son p_cost (compat pendant le rollout).
+export async function bindJob(userId: string, opId: string | undefined, job: string, drawn?: number): Promise<void> {
   if (!opId || !job) return
-  try { await svc().rpc('bind_reservation_job', { p_user: userId, p_op: opId, p_job: job }) } catch { /* best-effort */ }
+  try { await svc().rpc('bind_reservation_job', { p_user: userId, p_op: opId, p_job: job, p_drawn: (drawn != null && drawn > 0) ? Math.ceil(drawn) : null }) } catch { /* best-effort */ }
 }
 export async function releaseByJob(userId: string, job: string): Promise<void> {
   if (!job) return

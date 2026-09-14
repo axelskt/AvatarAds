@@ -116,6 +116,7 @@ serve(async (req: Request) => {
   // ── Facturation (H3) : une génération = plafond par utilisateur + preuve de débit récent ; le reste
   //    (uploads, polling) est seulement plafonné. Le moteur de rendu (service_role) passe.
   let drawnOp: string | undefined
+  let drawnAmt = 0   // audit 14/09 : montant réellement tiré → restauration EXACTE au release (plus de 2/9999)
   if (!estLeMoteur && user) {
     const bare = hedraPath0.split('?')[0]
     const gate = (req.method === 'POST' && HEDRA_BILLABLE.test(bare))
@@ -125,9 +126,12 @@ serve(async (req: Request) => {
     // Réservation : la génération (POST /v3/models/<slug> ou /generations) tire son coût (borne basse 2 = avatarPerSec × 1 s).
     if (req.method === 'POST' && HEDRA_BILLABLE.test(bare)) {
       // Audit métier 06/09 : on tire la RÉSERVE ENTIÈRE (une op = une vidéo). Ferme « N vidéos pour un débit ».
-      const rr = await applyReservationFull({ req, userId: user.id, proxy: 'hedra', label: bare })
+      // 14/09 : plancher serveur = 2 (avatarPerSec × 1 s) → spend_credits(1) devant un lipsync est refusé (402) ;
+      // le reconcile à la durée réelle (HEDRA_RECONCILE=1) charge le manque restant à la livraison.
+      const rr = await applyReservationFull({ req, userId: user.id, proxy: 'hedra', label: bare, minCost: 2 })
       if (!rr.ok) return new Response(JSON.stringify({ error: rr.error }), { status: rr.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
       drawnOp = rr.opId
+      drawnAmt = (rr as { drawn?: number }).drawn ?? 0
     }
   }
 
@@ -198,8 +202,8 @@ serve(async (req: Request) => {
       // path des polls (/v3/jobs/<id>/status, /generations/<id>/status). On LIE l'op au job à la soumission, puis
       // règle/libère PAR JOB → un poll d'un id étranger ne rend plus la réserve d'une autre op (refund-and-keep).
       const jobId = (bare2.match(/\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || ''
-      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && hedraRes.ok) { const jid = (body.match(/"job_id"\s*:\s*"([^"]+)"/) || body.match(/"id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (jid) await bindJob(user.id, drawnOp, 'hedra:' + jid) }   // lie l'op au job créé
-      else if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseOp(user.id, drawnOp, 2)                                                                                     // soumission refusée → rend l'op TIRÉE
+      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && hedraRes.ok) { const jid = (body.match(/"job_id"\s*:\s*"([^"]+)"/) || body.match(/"id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (jid) await bindJob(user.id, drawnOp, 'hedra:' + jid, drawnAmt) }   // lie l'op au job créé + mémorise le tiré
+      else if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseOp(user.id, drawnOp, drawnAmt)                                                                              // soumission refusée → rend EXACTEMENT le tiré
       else if (req.method === 'GET' && hedraRes.ok && /"status"\s*:\s*"(failed|error|errored|cancelled|canceled)"/i.test(body)) { if (jobId) await releaseByJob(user.id, 'hedra:' + jobId) }                // job échoué → rend l'op LIÉE
     }
     // Génération aboutie → RÉCONCILIATION À LA DURÉE RÉELLE (calibré 07/09 : la réponse complète /v3/jobs/<id>
@@ -230,7 +234,7 @@ serve(async (req: Request) => {
       },
     })
   } catch (err) {
-    if (!estLeMoteur && user) await releaseOp(user.id, drawnOp, 9999).catch(() => {})
+    if (!estLeMoteur && user) await releaseOp(user.id, drawnOp, drawnAmt || 1).catch(() => {})
     console.error('hedra-proxy error:', err)
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,

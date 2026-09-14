@@ -107,8 +107,10 @@ serve(async (req: Request) => {
       }
       // Tirage AVANT l'insertion + on vérifie le booléen : un perdant du burst (op déjà à 0) → 402, pas de job.
       let drew = false
+      let drewAmt = 0
       if (opId && opId !== '__ERR__') {
-        try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: opId }); drew = _ok === true }
+        // audit 14/09 : draw_full_reservation renvoie désormais le MONTANT tiré (int, 0 = rien), plus un booléen.
+        try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: opId }); drewAmt = Number(_ok) || 0; drew = drewAmt > 0 }
         catch (e) { console.warn('draw_full render-job:', (e as Error).message); drew = false }
         if (!drew && !exempt && reserveEnforce()) return json({ error: 'Réservation de crédits insuffisante pour ce rendu.' }, 402)
       }
@@ -116,11 +118,11 @@ serve(async (req: Request) => {
         .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
         .select('id').single()
       if (error) {
-        if (drew) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: opId, p_cost: 9999 }) } catch (_) { /* best-effort */ } }   // job non créé → rendre le tirage
+        if (drew) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: opId, p_cost: drewAmt }) } catch (_) { /* best-effort */ } }   // job non créé → rendre EXACTEMENT le tirage
         return json({ error: error.message }, 500)
       }
-      // lie l'op tirée au job → le worker règle (settle_by_job) à la livraison, libère (release_by_job) à l'échec
-      if (drew) { try { await service.rpc('bind_reservation_job', { p_user: user.id, p_op: opId, p_job: 'render:' + data.id }) } catch (e) { console.warn('bind render:', (e as Error).message) } }
+      // lie l'op tirée au job (+ montant tiré) → le worker règle (settle_by_job) à la livraison, libère (release_by_job) à l'échec
+      if (drew) { try { await service.rpc('bind_reservation_job', { p_user: user.id, p_op: opId, p_job: 'render:' + data.id, p_drawn: drewAmt }) } catch (e) { console.warn('bind render:', (e as Error).message) } }
       return json({ ok: true, job_id: data.id })
     }
 

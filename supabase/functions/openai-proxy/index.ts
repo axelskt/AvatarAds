@@ -85,7 +85,7 @@ serve(async (req: Request) => {
       headers: { ...CORS, 'Content-Type': openaiRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
-    if (isBillable && gated) await releaseOp(uid, drawnOp, 9999).catch(() => {})   // exception → rendre l'op TIRÉE
+    if (isBillable && gated) await releaseOp(uid, drawnOp, drawn).catch(() => {})   // exception → rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration)
     console.error('openai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }
