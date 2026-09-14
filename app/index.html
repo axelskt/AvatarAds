@@ -6116,7 +6116,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-14-0015'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-14-0016'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -39704,13 +39704,26 @@ function edBandDrag(ov,track,e,mode){
 #mNav button:active{transform:scale(.94)}
 /* Barre du bas façon Instagram : elle RÉTRÉCIT + se REPLIE (moins d'espace/de marge, plus collée en bas) quand on
    descend (labels repliés + hauteur réduite + marges/écart réduits), et revient en grand quand on remonte. */
-#mNav{transition:height .28s cubic-bezier(.4,0,.2,1),padding .28s cubic-bezier(.4,0,.2,1),left .28s ease,right .28s ease,bottom .28s ease,border-radius .28s ease}
-#mNav button span{max-height:13px;overflow:hidden;transition:opacity .18s ease,max-height .28s cubic-bezier(.4,0,.2,1)}
-#mNav button{transition:flex-basis .28s cubic-bezier(.4,0,.2,1),flex-grow .28s,padding .28s ease,background-color .2s ease,box-shadow .2s ease,color .18s ease,transform .12s ease}
-#mNav.mnav-min{height:42px;padding:3px 6px;left:7px;right:7px;bottom:max(calc(env(safe-area-inset-bottom) + 12px),12px);border-radius:15px;justify-content:center;gap:9px}
-#mNav.mnav-min button{flex:0 0 auto;padding:0 9px}   /* icônes RESSERRÉES entre elles (au lieu d'étalées) */
+#mNav{transition:height .3s cubic-bezier(.4,0,.2,1),padding .3s cubic-bezier(.4,0,.2,1),left .3s cubic-bezier(.4,0,.2,1),right .3s cubic-bezier(.4,0,.2,1),bottom .3s ease,border-radius .3s ease,gap .3s cubic-bezier(.34,1.56,.64,1),background-color .3s ease}
+#mNav button span{max-height:13px;overflow:hidden;transition:opacity .16s ease,max-height .28s cubic-bezier(.4,0,.2,1)}
+#mNav button{transition:flex-basis .3s cubic-bezier(.34,1.56,.64,1),flex-grow .3s,padding .3s cubic-bezier(.34,1.56,.64,1),background-color .2s ease,box-shadow .2s ease,color .18s ease,transform .12s ease}
+/* REPLI au slide : la barre se contracte et les icônes se RESSERRENT (espaces entre raccourcis supprimés), retour normal à l'arrêt */
+#mNav.mnav-min{height:44px;padding:4px 7px;left:7px;right:7px;bottom:max(calc(env(safe-area-inset-bottom) + 13px),13px);border-radius:17px;justify-content:center;gap:1px}
+#mNav.mnav-min button{flex:0 0 auto;padding:0 6px}   /* icônes collées entre elles pendant le slide */
 #mNav.mnav-min button span{opacity:0;max-height:0}
-#mNav.mnav-min button svg{width:22px;height:22px}
+#mNav.mnav-min button svg{width:23px;height:23px}
+/* ── BARRE DU BAS EN LIQUID GLASS CLAIR (thème light) — verre blanchâtre, icônes sombres, actif orange ── */
+:root[data-theme="light"] #mNav, .gen-light #mNav{
+  background:color-mix(in srgb,#ffffff 64%,transparent);
+  border:1px solid rgba(255,255,255,.72);
+  box-shadow:0 18px 46px -18px rgba(72,56,40,.30),inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 1px rgba(255,255,255,.4);
+  backdrop-filter:blur(30px) saturate(1.9);-webkit-backdrop-filter:blur(30px) saturate(1.9)}
+:root[data-theme="light"] #mNav button, .gen-light #mNav button{color:var(--text-3)}
+:root[data-theme="light"] #mNav button.on, .gen-light #mNav button.on{
+  color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 34%,transparent),inset 0 1px 0 rgba(255,255,255,.8),0 4px 14px -5px rgba(255,90,31,.38)}
+:root[data-theme="light"] #mNav button.on svg, .gen-light #mNav button.on svg{color:var(--accent);filter:drop-shadow(0 0 4px rgba(255,90,31,.3))}
+:root[data-theme="light"] #mNav button.on span, .gen-light #mNav button.on span{color:var(--accent);text-shadow:none}
 #mMore .mm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px}
 #mMore .mm-tool{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;text-align:left;background:var(--surface);
   border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--font);cursor:pointer}
@@ -39849,10 +39862,10 @@ function edBandDrag(ov,track,e,mode){
 (function(){var nav=document.getElementById('mNav');if(!nav)return;var lastY=0,idle;
 function normal(){nav.classList.remove('mnav-min');}
 document.addEventListener('scroll',function(e){var t=e.target;var y=(t&&t!==document&&t.scrollTop!=null)?t.scrollTop:(window.scrollY||document.documentElement.scrollTop||0);
-clearTimeout(idle);idle=setTimeout(normal,450);/* arrêt du scroll → redevient NORMAL (icônes étalées + texte) */
+clearTimeout(idle);idle=setTimeout(normal,340);/* on ARRÊTE de slider → la barre se redéploie (normal) */
 if(y<24){normal();lastY=y;return;}
-if(y>lastY+4){nav.classList.add('mnav-min');lastY=y;}/* on descend → resserre */
-else if(y<lastY-4){normal();lastY=y;}/* on remonte → normal */
+if(Math.abs(y-lastY)>3){nav.classList.add('mnav-min');}/* on SLIDE (haut OU bas) → repli : icônes resserrées, espaces supprimés */
+lastY=y;
 },true);})();</script>
 <div id="mMore"></div>
 <div id="mPreview">
