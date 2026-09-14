@@ -2092,10 +2092,16 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
 // Pas grave si approximative : le moteur de rendu recale plan.duration sur la durée réelle.
 function estimateAudioSeconds(bytes: Uint8Array, contentType: string): number {
   if (bytes.length > 44 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
-    const br = bytes[28] | (bytes[29] << 8) | (bytes[30] << 16) | (bytes[31] << 24)
-    if (br > 0) return (bytes.length - 44) / br
+    // WAV : durée = octets de données ÷ (sampleRate × canaux × octets/échantillon) — les champs de FORMAT que le
+    // fournisseur décode RÉELLEMENT. On n'utilise PLUS byteRate (offset 28) : il est ignoré au décodage et forgeable
+    // (audit MCP 14/09 : un byteRate énorme faisait facturer ~1 crédit un WAV de plusieurs minutes / passer le plafond 60 s).
+    const ch = (bytes[22] | (bytes[23] << 8)) || 1
+    const sr = (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16) | (bytes[27] << 24)) >>> 0
+    const bytesPerSample = Math.max(1, Math.floor(((bytes[34] | (bytes[35] << 8)) || 16) / 8))
+    const bps = sr * ch * bytesPerSample
+    if (bps > 0) return (bytes.length - 44) / bps
   }
-  const bps = /mp4|m4a|aac/.test(contentType) ? 12_000 : 16_000 // M4A ~96 kbps, MP3 ~128 kbps
+  const bps = /mp4|m4a|aac/.test(contentType) ? 12_000 : 16_000 // M4A ~96 kbps, MP3 ~128 kbps (résidu : sous-estime un fichier à très bas débit — fermé pour le WAV)
   return bytes.length / bps
 }
 
@@ -3119,10 +3125,16 @@ serve(async (req) => {
     const refUrl = String(body.ref || '').trim()
     const raw = body.raw === true || body.raw === 'true'   // prompt déjà composé par generate_image → ne pas le ré-augmenter
     if (!/^[0-9a-f-]{36}$/i.test(origId) || !prompt) return json(400, { error: 'bad_request' })
-    const { data: orig } = await svc.from('mcp_jobs').select('user_id, created_at').eq('id', origId).maybeSingle()
+    const { data: orig } = await svc.from('mcp_jobs').select('user_id, created_at, params').eq('id', origId).maybeSingle()
     if (!orig) return json(404, { error: 'not_found' })
     if (!(await capOk(origId, body.cap))) return json(403, { error: 'forbidden' })   // capacité signée (H4) : un job_id fuité ne suffit plus
-    if (Date.now() - new Date(String(orig.created_at)).getTime() > 12 * 3600 * 1000) return json(403, { error: 'expired' })
+    // F2 (audit MCP 14/09) : fraîcheur ancrée à la RACINE, pas au parent chaînable. Un job régénéré hérite du root_ts ;
+    // ré-générer en boucle ne réarme donc plus la fenêtre 12 h (avant : chaque nouveau job avait created_at=now →
+    // chaîne /regenerate auto-entretenue = spend indéfini sur une capacité fuitée). Après 12 h depuis le job d'ORIGINE → expiré.
+    const _rootTs = ((orig.params as Record<string, unknown> | null)?.root_ts)
+      ? new Date(String((orig.params as Record<string, unknown>).root_ts)).getTime()
+      : new Date(String(orig.created_at)).getTime()
+    if (Date.now() - _rootTs > 12 * 3600 * 1000) return json(403, { error: 'expired' })
     const userId = String(orig.user_id)
     const { data: profile } = await svc.from('profiles').select('*').eq('id', userId).maybeSingle()
     if (!profile) return json(404, { error: 'no_profile' })
@@ -3137,7 +3149,8 @@ serve(async (req) => {
     const bal = await spendCredits(userId, cost)
     if (bal === null || bal === -1) return json(402, { error: 'credits' })
     const size = ({ portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
-    const { data: job, error: jErr } = await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'image', status: 'running', credits_cost: cost }).select('id').single()
+    // F2 : le job régénéré porte le root_ts → la fraîcheur de la PROCHAINE régénération reste ancrée à la racine.
+    const { data: job, error: jErr } = await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'image', status: 'running', credits_cost: cost, params: { root_ts: new Date(_rootTs).toISOString() } }).select('id').single()
     if (jErr || !job) { await refundCredits(userId, cost); return json(500, { error: 'job' }) }
     bg((async () => {
       let lastErr = 'Erreur génération'
