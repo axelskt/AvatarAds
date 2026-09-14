@@ -312,9 +312,11 @@ Coût : ${cost} crédits · solde : ${balTxt}
 Montre ce devis à l'utilisateur et attends son accord explicite, puis rappelle ${toolName} avec les mêmes paramètres + confirm: true. Ne confirme JAMAIS à sa place.`)
   }
   if (ctx.dailyCap !== null && !isUnlimited(profile)) {
-    const spent = await mcpSpentToday(String(profile.id))
-    if (spent + cost > ctx.dailyCap) {
-      return toolErr(`Plafond quotidien via Claude atteint : ${spent}/${ctx.dailyCap} crédits sur 24 h (cette génération en demande ${cost}). Réessaie plus tard ou génère directement sur ${APP_URL}`)
+    // Audit MCP 14/09 (F1) : réservation ATOMIQUE du plafond (compteur mcp_day_spent sous le verrou de ligne du
+    // profil) au lieu d'un SELECT non-atomique de mcp_jobs → fin du TOCTOU (un burst concurrent ne dépasse plus le plafond).
+    const { data: r } = await svc.rpc('mcp_cap_reserve', { p_user: String(profile.id), p_cost: cost, p_cap: ctx.dailyCap })
+    if (typeof r === 'number' && r < 0) {
+      return toolErr(`Plafond quotidien via Claude atteint : ${ctx.dailyCap} crédits sur 24 h (cette génération en demande ${cost}). Réessaie plus tard ou génère directement sur ${APP_URL}`)
     }
   }
   return null
@@ -3049,8 +3051,8 @@ serve(async (req) => {
     const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
-      const spent = await mcpSpentToday(userId)
-      if (spent + cost > cap) return json(429, { error: 'daily_cap' })
+      const { data: capR } = await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: cost, p_cap: cap })   // F1 : plafond atomique
+      if (typeof capR === 'number' && capR < 0) return json(429, { error: 'daily_cap' })
       if ((Number(profile.credits_remaining) || 0) < cost) return json(402, { error: 'no_credits' })
     }
     // photo déposée dans la carte → mcp-media public (ref-…) → référence de l'édition
@@ -3128,8 +3130,8 @@ serve(async (req) => {
     const cost = IMG_COST.standard
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
-      const spent = await mcpSpentToday(userId)
-      if (spent + cost > cap) return json(429, { error: 'daily_cap' })
+      const { data: capR } = await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: cost, p_cap: cap })   // F1 : plafond atomique
+      if (typeof capR === 'number' && capR < 0) return json(429, { error: 'daily_cap' })
       if ((Number(profile.credits_remaining) || 0) < cost) return json(402, { error: 'no_credits' })
     }
     const bal = await spendCredits(userId, cost)
