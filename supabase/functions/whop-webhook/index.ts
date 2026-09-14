@@ -38,6 +38,12 @@ const PLAN_PRICE_CENTS: Record<string, number> = {
   plan_hR0u4VHoeszbu: 1999, plan_GLoKHMqZtNbLK: 3999, plan_iRh99E5F2g4XU: 7499,
 }
 const REFERRAL_RATE = 0.30
+// Prix mensuel (centimes) du plan du PARRAIN par tier — sert de plafond économique anti auto-parrainage ASYMÉTRIQUE
+// (audit 14/09) : si la commission (30% du plan DU FILLEUL) dépasse ce que le parrain paie lui-même, c'est le signal
+// typique d'un compte-leurre petit-plan qui parraine un gros filleul → on FLAGUE la commission pour revue owner
+// (referral_reviews / approve_referral_earning) au lieu de l'auto-créditer. Faux positif = un vrai petit affilié qui
+// amène un gros client → il est simplement mis en revue, jamais perdu (l'owner approuve). elite = plan mensuel max.
+const REFERRER_PLAN_CAP: Record<string, number> = { starter: 2999, pro: 4999, elite: 22499 }
 async function creditReferral(sb: any, referredId: string, referredEmail: string, planId: string, data: any, label: string) {
   try {
     const { data: prof } = await sb.from('profiles').select('referred_by, signup_ip').eq('id', referredId).maybeSingle()
@@ -95,9 +101,19 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     if (!amountCents) { console.log(`ℹ️ parrainage : payé 0/inconnu (${_payStr || '—'}) pour ${planId} → pas de commission`); return }
     const commission = Math.round(amountCents * REFERRAL_RATE)
     const day = new Date().toISOString().slice(0, 10)
+    // Anti auto-parrainage ASYMÉTRIQUE (audit 14/09) : commission > prix du plan du parrain = signal typique du
+    // compte-leurre. On n'écarte pas (un vrai petit affilié amenant un gros client existe) → on FLAGUE pour revue owner :
+    // la commission est enregistrée mais N'ENTRE PAS dans le disponible (get_referral_summary l'exclut) tant que
+    // l'owner ne l'a pas approuvée (approve_referral_earning). refProf null (hoquet DB, fail-open) → cap 0 → pas de flag.
+    const refPlanCap = REFERRER_PLAN_CAP[String(refProf?.plan || '').toLowerCase()] ?? 0
+    const reviewReason = (refPlanCap > 0 && commission > refPlanCap)
+      ? `auto-parrainage possible : commission ${(commission / 100).toFixed(2)}€ > plan parrain ${refProf?.plan} ${(refPlanCap / 100).toFixed(2)}€`
+      : null
+    if (reviewReason) console.warn(`🚩 parrainage ASYMÉTRIQUE (flag revue owner) — ${reviewReason} (parrain ${referrerId}, filleul ${referredEmail})`)
     const { error } = await sb.from('referral_earnings').insert({
       referrer_id: referrerId, referred_id: referredId, referred_email: referredEmail, plan_id: planId, label,
       amount_cents: amountCents, commission_cents: commission, currency: 'EUR',
+      review_reason: reviewReason,
       dedupe_key: `${referredId}:${planId}:${day}`,   // une commission par paiement (activation + payment.succeeded = même jour)
     })
     if (error) { if (String(error.code) === '23505') console.log('↩️ parrainage : commission déjà comptée aujourd\'hui'); else console.error('⚠️ parrainage :', error.message); return }
