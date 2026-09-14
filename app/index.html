@@ -6116,7 +6116,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-14-0018'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-14-0019'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -39696,9 +39696,9 @@ function edBandDrag(ov,track,e,mode){
 #mNav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;border-radius:14px;
   color:var(--text-3);font-family:var(--font);font-size:8.5px;font-weight:500;cursor:pointer;padding:0;min-width:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
   transition:background-color .2s ease,box-shadow .2s ease,color .18s ease,transform .12s ease}
-#mNav button.on{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.085));
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.30),inset 0 1px 0 rgba(255,255,255,.48),0 4px 14px -4px rgba(0,0,0,.55),0 0 14px rgba(255,255,255,.07)}
-#mNav button.on svg{color:#fff;filter:drop-shadow(0 0 4px rgba(255,255,255,.4))}
+#mNav button.on{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.48),rgba(255,255,255,.2));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.6),inset 0 1px 0 rgba(255,255,255,.8),0 4px 16px -4px rgba(0,0,0,.5),0 0 26px rgba(255,255,255,.36)}
+#mNav button.on svg{color:#fff;filter:drop-shadow(0 0 8px rgba(255,255,255,.95))}   /* icône active PLUS lumineuse */
 #mNav button.on span{font-weight:700;color:#fff;text-shadow:0 0 6px rgba(255,255,255,.25)}
 #mNav button svg{width:19px;height:19px;flex:0 0 auto}
 #mNav button:active{transform:scale(.94)}
@@ -39710,8 +39710,8 @@ function edBandDrag(ov,track,e,mode){
 /* REPLI au slide : la barre se contracte et les icônes se RESSERRENT (espaces entre raccourcis supprimés), retour normal à l'arrêt */
 /* REPLI : la BARRE se CONTRACTE (largeur resserrée vers le centre) MAIS garde une marge intérieure — la pastille
    active d'un raccourci de BORD (Générateur/Plus) ne doit JAMAIS être coupée par le coin arrondi de la barre. */
-#mNav.mnav-min{height:48px;padding:6px 16px;left:calc(50% - 149px);right:calc(50% - 149px);bottom:max(calc(env(safe-area-inset-bottom) + 14px),14px);border-radius:20px;justify-content:center;gap:4px}
-#mNav.mnav-min button{flex:0 0 auto;padding:0 8px}
+#mNav.mnav-min{height:48px;padding:6px 15px;left:calc(50% - 153px);right:calc(50% - 153px);bottom:max(calc(env(safe-area-inset-bottom) + 14px),14px);border-radius:19px;justify-content:center;gap:5px}
+#mNav.mnav-min button{flex:0 0 40px;width:40px;padding:0}   /* largeur FIXE identique pour tous → espacement RIGOUREUSEMENT égal (icône centrée) */
 #mNav.mnav-min button span{opacity:0;max-height:0}
 #mNav.mnav-min button svg{width:23px;height:23px}
 /* ── BARRE DU BAS EN VERRE DÉPOLI SMOKÉ (thème light) — juste milieu entre le noir d'avant et le blanc, ── */
@@ -39861,7 +39861,7 @@ function edBandDrag(ov,track,e,mode){
 (function(){var nav=document.getElementById('mNav');if(!nav)return;var lastY=0,idle;
 function normal(){nav.classList.remove('mnav-min');}
 document.addEventListener('scroll',function(e){var t=e.target;var y=(t&&t!==document&&t.scrollTop!=null)?t.scrollTop:(window.scrollY||document.documentElement.scrollTop||0);
-clearTimeout(idle);idle=setTimeout(normal,340);/* on ARRÊTE de slider → la barre se redéploie (normal) */
+clearTimeout(idle);idle=setTimeout(normal,90);/* on ARRÊTE de slider (ou on atteint haut/bas) → retour NORMAL quasi INSTANTANÉ */
 if(y<24){normal();lastY=y;return;}
 if(Math.abs(y-lastY)>3){nav.classList.add('mnav-min');}/* on SLIDE (haut OU bas) → repli : icônes resserrées, espaces supprimés */
 lastY=y;
