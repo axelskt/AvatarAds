@@ -61,10 +61,16 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
       return
     }
     console.log(`🔎 parrainage payload keys (${label}/${planId}): ${Object.keys(data || {}).join(',')}`)   // confirmer le champ coupon sur un vrai paiement avec promo
-    // montant payé : payload Whop (final_amount / amount / total, en unités) sinon le prix du plan
-    const raw = Number(data?.final_amount ?? data?.amount ?? data?.total ?? data?.subtotal ?? NaN)
-    const amountCents = Number.isFinite(raw) && raw > 0 ? Math.round(raw * 100) : (PLAN_PRICE_CENTS[planId] ?? 0)
-    if (!amountCents) { console.log(`ℹ️ parrainage : montant inconnu pour ${planId}, pas de commission`); return }
+    // Montant RÉELLEMENT payé (audit 14/09, vérifié sur les vrais webhooks) : Whop l'expose en chaîne
+    // formatée `initial_price_paid` ("€49.99" ; "€0.00" pour une promo 100%). Les champs final_amount/amount/
+    // total N'EXISTENT PAS dans le payload. On calcule la commission sur le VRAI payé quand il est là → JAMAIS
+    // 30% du prix plein d'une vente remisée. Ferme le stacking promo⊕parrainage à la racine : une vente à 0 €
+    // = 0 commission, même si une promo échappait au check promo_code. Repli sur le prix du plan uniquement si
+    // le champ manque (une vente SANS promo = prix plein ; les ventes AVEC promo sont déjà écartées plus haut).
+    const _payStr = String(data?.initial_price_paid ?? '').trim()
+    const _pay = parseFloat(_payStr.replace(/[^0-9.]/g, ''))
+    const amountCents = _payStr !== '' && Number.isFinite(_pay) ? Math.round(_pay * 100) : (PLAN_PRICE_CENTS[planId] ?? 0)
+    if (!amountCents) { console.log(`ℹ️ parrainage : payé 0/inconnu (${_payStr || '—'}) pour ${planId} → pas de commission`); return }
     const commission = Math.round(amountCents * REFERRAL_RATE)
     const day = new Date().toISOString().slice(0, 10)
     const { error } = await sb.from('referral_earnings').insert({
