@@ -77,7 +77,19 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
-    if (isSubmit) { const rr = await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }); drawnOp = rr.opId }   // H2 REVERT (audit 14/09) : une vidéo fal = UNE op, tirée ENTIÈREMENT (reserve→0). Le tirage per-cost (falCost) laissait un reliquat (débit durée-échelonné − coût plat) REMBOURSABLE après livraison = refund-and-keep rouvert. On garde le draw_full ; la sous-facturation 1ʳᵉ soumission reste un résidu assumé (borné par C1 pour les suivantes).
+    if (isSubmit) {
+      // H2 (audit 14/09) : AUXILIAIRES connus (matting/utilitaires « couverts par l'op parente ») = tirage
+      // per-cost → plusieurs peuvent PARTAGER une op (corrige « garder le fond vidéo » : 2 mattings en parallèle
+      // sur 1 débit se 402-aient mutuellement avec draw_full). TOUT LE RESTE (générations primaires ET modèles
+      // NON listés) = draw_full : 1 op = 1 génération → ni refund-and-keep (reliquat remboursable) ni
+      // sous-facturation d'un modèle inconnu retombé à falCost=1.
+      const _aux = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(path)
+      const rr = _aux
+        ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path })
+        : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path })
+      if (!rr.ok) return jsonRes(rr.status, { error: rr.error })
+      drawnOp = rr.opId
+    }
   }
 
   // ── relais vers fal ──
