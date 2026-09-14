@@ -13,7 +13,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { billableGate } from '../_shared/guard.ts'
+import { billableGate, userPlan, reserveStrict } from '../_shared/guard.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -92,22 +92,32 @@ serve(async (req: Request) => {
       if ((count ?? 0) >= 2) return json({ error: 'Tu as deja un rendu en cours — attends qu\'il se termine' }, 429)
     }
 
+      // C1 (audit 14/09) — render-job DOIT aussi fail-closed sous RESERVE_STRICT. Le rendu worker facture
+      // Hedra/fal en service_role SANS re-gate applicatif → ce tirage est la SEULE barrière. Sans ça, 1 débit
+      // finançait des montages illimités (le proxy applyReservation ne couvre PAS render-job, tirage inline).
+      // On résout l'op AVANT de créer le job : aucune op tirable + non owner/dev + RESERVE_STRICT → 402.
+      let opId: string | null = null
+      try { const { data: _op } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null }); opId = (_op as string | null) || null }
+      catch (e) { console.warn('resolve_op render-job (fail-open technique):', (e as Error).message); opId = '__ERR__' }
+      if (!opId) {   // aucune op tirable (≠ erreur technique '__ERR__')
+        const { plan: uplan, isOwner, err: planErr } = await userPlan(user.id)
+        if (!planErr && !isOwner && uplan !== 'developer') {
+          console.warn(`[reserve-strict] render-job user=${user.id} : aucune op tirable (strict=${reserveStrict()})`)
+          if (reserveStrict()) return json({ error: 'Aucune réservation de crédits ouverte pour ce rendu.' }, 402)
+        }
+      }
       const { data, error } = await service.from('render_jobs')
         .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
         .select('id').single()
       if (error) return json({ error: error.message }, 500)
-      // Audit métier 06/09 — refund-and-keep du rendu worker : le montage était débité côté client (spend_credits)
-      // mais l'op n'était NI tirée NI réglée → refund_credits(op_id) réussissait APRÈS téléchargement = montage
-      // gratuit. On TIRE la réserve entière (une op = un rendu) et on LIE l'op au job ; le worker règle à la
-      // livraison (settle_by_job → non remboursable) ou libère à l'échec (release_by_job → remboursable). Le
-      // moteur (service_role) contourne le plancher billableGate, donc ce tirage est la seule barrière.
-      try {
-        const { data: opId } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null })
-        if (opId) {
+      // Audit métier 06/09 — refund-and-keep du rendu worker : on TIRE la réserve entière (une op = un rendu)
+      // et on LIE l'op au job ; le worker règle à la livraison (settle_by_job) ou libère à l'échec (release_by_job).
+      if (opId && opId !== '__ERR__') {
+        try {
           await service.rpc('draw_full_reservation', { p_user: user.id, p_op: opId })
           await service.rpc('bind_reservation_job', { p_user: user.id, p_op: opId, p_job: 'render:' + data.id })
-        }
-      } catch (e) { console.warn('réservation rendu (fail-open):', (e as Error).message) }
+        } catch (e) { console.warn('réservation rendu (fail-open):', (e as Error).message) }
+      }
       return json({ ok: true, job_id: data.id })
     }
 

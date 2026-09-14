@@ -69,7 +69,11 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // le champ manque (une vente SANS promo = prix plein ; les ventes AVEC promo sont déjà écartées plus haut).
     const _payStr = String(data?.initial_price_paid ?? '').trim()
     const _pay = parseFloat(_payStr.replace(/[^0-9.]/g, ''))
-    const amountCents = _payStr !== '' && Number.isFinite(_pay) ? Math.round(_pay * 100) : (PLAN_PRICE_CENTS[planId] ?? 0)
+    let amountCents = _payStr !== '' && Number.isFinite(_pay) ? Math.round(_pay * 100) : (PLAN_PRICE_CENTS[planId] ?? 0)
+    // Garde-fou (audit 14/09) : JAMAIS plus que le prix plein du plan. Protège d'un parse de locale à virgule
+    // (« €1 439,88 » → strip → 143988 → gonflé ×100). Le montant vient d'un payload SIGNÉ, mais on borne par sûreté.
+    const _cap = PLAN_PRICE_CENTS[planId] ?? 0
+    if (_cap > 0 && amountCents > _cap) { console.warn(`⚠️ parrainage : montant parsé ${amountCents} > prix plan ${_cap} (${_payStr}) → plafonné`); amountCents = _cap }
     if (!amountCents) { console.log(`ℹ️ parrainage : payé 0/inconnu (${_payStr || '—'}) pour ${planId} → pas de commission`); return }
     const commission = Math.round(amountCents * REFERRAL_RATE)
     const day = new Date().toISOString().slice(0, 10)
