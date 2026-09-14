@@ -77,6 +77,13 @@ serve(async (req: Request) => {
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
+  // Helper LLM/TTS non facturant (audit chaînes 15/09) : le MODÈLE est dans le PATH → un compte pouvait appeler
+  // gemini-2.5-PRO:generateContent gratuitement sur la clé du proprio (helperGate = rate-limit seul). On restreint le
+  // chemin helper à la famille 'flash' (l'app n'utilise que gemini-2.5-flash + *-flash-preview-tts). Le facturant (images/Veo) n'est pas concerné.
+  if (gated && !isBillable && /:generateContent$/.test(bare) && !/flash/i.test(bare)) {
+    return jsonRes(403, { error: 'modèle non autorisé sur cet endpoint (famille flash uniquement)' })
+  }
+
   // Audit métier 14/09 (Phase 2) : Veo 3.1 FAST (Express « Pro ») = Pro/Élite. Veo Lite reste Starter+ → on
   // ne gate QUE le modèle 'fast' (pas la famille veo-3.1). Résolution 1080p / extensions >8 s sont des paliers
   // par PARAMÈTRE de body (non-chemin) et NE sont PAS gatés ici (risque de 402 l'extension légitime).
@@ -93,6 +100,7 @@ serve(async (req: Request) => {
       googleRes = await fetch(up.url, { method: 'GET', headers })
     } else {
       const rawBody = await req.text()
+      let sendBody = rawBody
       if (isBillable && gated) {
         // Audit 14/09 : paliers Veo PAR BODY-PARAM (non-chemin, donc lus sur le VRAI body → précis, pas de faux 402).
         // 1080p = Pro/Élite ; extension vidéo→vidéo (instances[].video, >8 s) = Élite (le client réserve déjà ces paliers).
@@ -103,8 +111,11 @@ serve(async (req: Request) => {
           else if (_res === '1080p') { const g = await requirePlan(uid, ['pro', 'elite'], 'Veo 1080p'); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
         }
         drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId
+      } else if (gated && /:generateContent$/.test(bare) && !/tts/i.test(bare)) {
+        // Helper chat non facturant : plafond de tokens de sortie (audit chaînes 15/09).
+        try { const b = JSON.parse(rawBody); b.generationConfig = { ...(b.generationConfig || {}), maxOutputTokens: Math.min(Number(b?.generationConfig?.maxOutputTokens) || 4096, 4096) }; sendBody = JSON.stringify(b) } catch { /* body non-JSON : laissé tel quel */ }
       }
-      googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: rawBody })
+      googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: sendBody })
     }
     // Le corps amont est relayé en BINAIRE. `.text()` (05/09, réservation) ré-encodait un MP4 Veo
     // (GET /files/<id>:download) en UTF-8 → fichier corrompu (moov absent), lecteur noir, Safari qui plante

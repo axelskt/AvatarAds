@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -122,7 +122,23 @@ serve(async (req: Request) => {
       else if (isSubmit && !res.ok) await releaseOp(auth.userId, drawnOp, drawnAmt)                                                                                       // soumission refusée → rend EXACTEMENT le tiré
       else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }   // job échoué → rend l'op LIÉE
       else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }         // échec TERMINAL uniquement (422 / statut FAILED). PAS un 400/202 « pas prêt » : sinon poller un job ENCORE EN COURS rendait sa réserve → refund-and-keep (audit 14/09)
-      else if (isResult && res.ok && hasOutput) { if (jobId) await settleByJob(auth.userId, 'fal:' + jobId) }                                                                         // livré → op LIÉE non remboursable
+      else if (isResult && res.ok && hasOutput) {   // livré → RECONCILE À LA DURÉE (audit chaînes 15/09) : falCost = plancher plat → une vidéo longue est sous-facturée.
+        if (jobId) {
+          // Best-effort : lire une durée dans le résultat fal. OmniHuman/Omni = 5 cr/s (audio-driven, le plus sous-facturé).
+          let sec = 0; const md = text.match(/"duration(_ms)?"\s*:\s*([0-9.]+)/i)
+          if (md) sec = md[1] ? Number(md[2]) / 1000 : Number(md[2])
+          const rate = /omnihuman|gemini-omni-flash/i.test(bare) ? 5 : 0   // clip fixe (Kling) → pas de reconcile durée
+          if ((Deno.env.get('FAL_RECONCILE') ?? '0') === '1' && rate > 0 && sec > 0 && sec < 600) {
+            const realCost = Math.ceil(sec) * rate
+            const r = await reconcileJob(auth.userId, 'fal:' + jobId, realCost)
+            console.log(`[fal-reconcile] job=${jobId} durée=${sec.toFixed(2)}s coût_réel=${realCost} → ${JSON.stringify(r)}`)
+          } else {
+            // SHADOW (défaut) : aucun sur-débit ; on LOGGE le format réel (URLs masquées) pour confirmer le champ durée avant d'activer FAL_RECONCILE=1.
+            console.log(`[fal-reconcile SHADOW] job=${jobId} durée_parsée=${sec}s bare=${bare} result=${text.replace(/https?:\/\/[^"\s]+/g, '<url>').slice(0, 400)}`)
+            await settleByJob(auth.userId, 'fal:' + jobId)
+          }
+        }
+      }
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {

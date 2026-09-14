@@ -16,6 +16,11 @@ import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, userPl
 const OPENAI_BASE = 'https://api.openai.com'
 const ALLOW = /^\/v1\/(chat\/completions|audio\/transcriptions|images\/(generations|edits))$/
 const BILLABLE = /^\/v1\/images\/(generations|edits)$/
+// Endpoints « helper » LLM (chat/completions) : NON facturants (helperGate = rate-limit seul, aucun crédit) → un compte
+// pouvait relayer un modèle/prompt ARBITRAIRE vers la clé OpenAI du proprio (drain de coût, audit chaînes 15/09). On borne
+// le COÛT par appel : allowlist de modèle (l'app n'utilise que ceux-ci ; hors liste → coercé vers le moins cher) + plafond tokens.
+const OPENAI_HELPER_MODELS = new Set(['gpt-4o', 'gpt-4o-mini'])
+const OPENAI_HELPER_MAX_TOKENS = 4096
 const imgCost = (q: string) => q === 'low' ? 1 : q === 'high' ? 5 : 3   // gpt-image : low 1 / medium 3 / high 5
 
 serve(async (req: Request) => {
@@ -68,13 +73,22 @@ serve(async (req: Request) => {
       openaiRes = await fetch(up.url, { method: 'POST', headers: { 'Authorization': `Bearer ${openaiKey}` }, body: outgoing })
     } else {
       const rawBody = await req.text()
+      let sendBody = rawBody
       if (isBillable && gated) {
         let cost = 3
         try { const b = JSON.parse(rawBody); cost = imgCost(String(b.quality || 'medium')) * Math.max(1, Number(b.n) || 1) } catch { /* défaut 3 */ }
         drawn = cost
         const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId
+      } else if (gated && bare.includes('/chat/completions')) {
+        // Helper LLM non facturant : borne le coût (audit chaînes 15/09) — modèle hors allowlist coercé vers le moins cher + plafond tokens.
+        try {
+          const b = JSON.parse(rawBody)
+          if (!OPENAI_HELPER_MODELS.has(String(b?.model || ''))) b.model = 'gpt-4o-mini'
+          b.max_tokens = Math.min(Number(b.max_tokens) || OPENAI_HELPER_MAX_TOKENS, OPENAI_HELPER_MAX_TOKENS)
+          sendBody = JSON.stringify(b)
+        } catch { /* body non-JSON : laissé tel quel (OpenAI le rejettera) */ }
       }
-      openaiRes = await fetch(up.url, { method: 'POST', headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' }, body: rawBody })
+      openaiRes = await fetch(up.url, { method: 'POST', headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' }, body: sendBody })
     }
     const body = await openaiRes.text()
     // Images gpt-image = SYNCHRONE : un 2xx = image livrée → on règle la réservation (op non remboursable).
