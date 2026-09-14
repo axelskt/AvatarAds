@@ -66,9 +66,13 @@ export async function releaseReservation(userId: string, req: Request, cost: num
     await svc().rpc('release_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) })
   } catch { /* best-effort */ }
 }
-// Marque l'op livrée (non remboursable), idempotent. Best-effort (jamais bloquant).
-export async function settleReservation(userId: string, opId: string): Promise<void> {
-  try { await svc().rpc('settle_reservation', { p_user: userId, p_op: opId }) } catch { /* best-effort */ }
+// Marque l'op livrée (non remboursable), idempotent. RENVOIE true SEULEMENT si settled_at a bien été posé (le RPC
+// settle_reservation renvoie `found`). Un appelant qui fait un tirage PARTIEL puis règle (orchestrate) DOIT lire ce
+// booléen : sur échec technique du règlement, laisser l'op tirée-mais-non-réglée rouvre la garde « in_progress »
+// de refund_credits (piège M3). Un tireur FULL (réserve 0) peut l'ignorer (un échec de règlement y tombe sur
+// « already_delivered », inoffensif). Best-effort → false sur erreur (jamais bloquant).
+export async function settleReservation(userId: string, opId: string): Promise<boolean> {
+  try { const { data, error } = await svc().rpc('settle_reservation', { p_user: userId, p_op: opId }); return !error && data === true } catch { return false }
 }
 // C1 (audit 14/09) : aucune op tirable trouvée → owner/dev = OK (aucune réservation par conception, détecté
 // par le PLAN) ; sinon = génération non financée (op épuisée / sous-débit) → fail-closed sous RESERVE_STRICT,

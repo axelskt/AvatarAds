@@ -351,7 +351,7 @@ type Plan = {
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
 // IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
-import { safeFetchHtml, authUser, billableGate } from '../_shared/guard.ts'
+import { safeFetchHtml, authUser, billableGate, applyReservation, settleReservation, releaseOp } from '../_shared/guard.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 6000)
@@ -2512,6 +2512,15 @@ serve(async (req: Request) => {
   // M6 (06/09) : amplification réduite — 1 débit → 6 runs / 15 min (au lieu de 12/30).
   if (_auth.userId) { const _g = await billableGate({ userId: _auth.userId, proxy: 'orchestrate', requireDebit: true, debitMinutes: 15, rateMax: 6, label: 'plan' }); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
+  // Audit métier 14/09 : orchestrate TIRE une part non-remboursable (coût-plan) sur l'op montageIA et la RÈGLE au
+  // succès → fin du free-oracle (spend(1)+orchestrate+refund net-0). Tirage PARTIEL (applyReservation, PAS draw_full)
+  // → la réserve restante finance render-job (pas de 402). RÈGLEMENT au succès → un rendu raté rembourse quand même
+  // le RESTE : settled_at posé ⇒ la garde « in_progress » de refund_credits ne s'applique plus (c'est ce qui manquait
+  // à la tentative M3, tirage SANS règlement, qui avait cassé le remboursement d'un rendu échoué).
+  let _opId: string | undefined
+  let _drew = false
+  let _settled = false
+
   try {
     const form = await req.formData()
     const audio = form.get('audio')
@@ -2526,6 +2535,14 @@ serve(async (req: Request) => {
 
     const duration = clamp(Number(form.get('duration')) || 0, 1, MAX_DURATION)
     if (!duration) return json({ error: 'Champ "duration" manquant' }, 400)
+
+    // Tirage du coût-plan (2 cr) sur l'op montageIA, AVANT Scribe/Claude. spend(1) → réserve 1 < 2 → 402 (oracle fermé).
+    // Le reste (montageIA=8 − 2 = 6) demeure tirable pour render-job (resolve_op retient une op réglée à réserve>0).
+    if (_auth.userId) {
+      const _rr = await applyReservation({ req, userId: _auth.userId, proxy: 'orchestrate', cost: 2, label: 'plan' })
+      if (!_rr.ok) return json({ error: _rr.error }, _rr.status)
+      _opId = _rr.opId; _drew = true
+    }
 
     const script = String(form.get('script') || '').trim().slice(0, 4000) || null
     let options: { lang?: string; filters?: string; style?: string; vstyle?: string } = {}
@@ -2726,10 +2743,11 @@ serve(async (req: Request) => {
     const captions = buildCaptions(fixedWords, plan.accents, duration)
     const subsSurPanneaux = !!plan.detected.subtitles
 
-    // M3 (audit 14/09) — RÉSIDU ASSUMÉ, PAS de tirage ici. Un marqueur de tirage cassait le remboursement
-    // LÉGITIME d'un montage raté (op laissée à reserve<amount → refund_credits « in_progress » → le client
-    // perd ses crédits, cf. app _mtRenderSegmented catch). Or « refund-and-keep du plan » est quasi nul : un
-    // plan sans rendu est inutilisable, et le rembourser vide l'op → plus de rendu possible. On laisse donc.
+    // Plan livré → on RÈGLE l'op (les 2 cr du plan deviennent non remboursables : fin du free-oracle). Le reste (6 cr)
+    // finance render-job ; s'il échoue, refund_credits rend le reste (settled_at posé → plus de blocage « in_progress »).
+    // On ne marque _settled QUE si le règlement est CONFIRMÉ : sinon le finally rend les 2 (op réserve=amount, settled null)
+    // → dégradation sûre en remboursement PLEIN sur échec de rendu, jamais le blocage « in_progress » (piège M3).
+    if (_auth.userId && _opId) { _settled = await settleReservation(_auth.userId, _opId) }
     return json({
       ok: true,
       version: '1.5',
@@ -2742,5 +2760,8 @@ serve(async (req: Request) => {
   } catch (err) {
     console.error('orchestrate error:', err)
     return json({ error: String((err as Error)?.message || err).slice(0, 300) }, 500)
+  } finally {
+    // Échec APRÈS le tirage (Scribe/Claude KO, 422, exception) sans règlement → on REND les 2 cr tirés (op remboursable).
+    if (_drew && !_settled && _auth.userId && _opId) { try { await releaseOp(_auth.userId, _opId, 2) } catch { /* best-effort */ } }
   }
 })
