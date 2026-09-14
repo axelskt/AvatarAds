@@ -13,7 +13,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { billableGate, userPlan, reserveStrict } from '../_shared/guard.ts'
+import { billableGate, userPlan, reserveStrict, reserveEnforce } from '../_shared/guard.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -92,32 +92,35 @@ serve(async (req: Request) => {
       if ((count ?? 0) >= 2) return json({ error: 'Tu as deja un rendu en cours — attends qu\'il se termine' }, 429)
     }
 
-      // C1 (audit 14/09) — render-job DOIT aussi fail-closed sous RESERVE_STRICT. Le rendu worker facture
-      // Hedra/fal en service_role SANS re-gate applicatif → ce tirage est la SEULE barrière. Sans ça, 1 débit
-      // finançait des montages illimités (le proxy applyReservation ne couvre PAS render-job, tirage inline).
-      // On résout l'op AVANT de créer le job : aucune op tirable + non owner/dev + RESERVE_STRICT → 402.
+      // C1 (audit 14/09, durci re-audit) — render-job fail-closed + ANTI-RACE. Le rendu worker facture Hedra/fal
+      // en service_role SANS re-gate → ce tirage est la SEULE barrière. On RÉSOUT puis on TIRE la réserve AVANT
+      // de créer le job : draw_full est atomique (UPDATE ... WHERE reserve>0), donc un burst concurrent sur la
+      // même op → UN SEUL tirage gagne, les perdants prennent 402 (sinon N montages rendus pour 1 seul débit).
       let opId: string | null = null
       try { const { data: _op } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null }); opId = (_op as string | null) || null }
       catch (e) { console.warn('resolve_op render-job (fail-open technique):', (e as Error).message); opId = '__ERR__' }
-      if (!opId) {   // aucune op tirable (≠ erreur technique '__ERR__')
-        const { plan: uplan, isOwner, err: planErr } = await userPlan(user.id)
-        if (!planErr && !isOwner && uplan !== 'developer') {
-          console.warn(`[reserve-strict] render-job user=${user.id} : aucune op tirable (strict=${reserveStrict()})`)
-          if (reserveStrict()) return json({ error: 'Aucune réservation de crédits ouverte pour ce rendu.' }, 402)
-        }
+      const { plan: uplan, isOwner, err: planErr } = await userPlan(user.id)
+      const exempt = planErr || isOwner || uplan === 'developer'   // owner/dev ou hoquet DB → fail-open
+      if (!opId && !exempt) {
+        console.warn(`[reserve-strict] render-job user=${user.id} : aucune op tirable (strict=${reserveStrict()})`)
+        if (reserveStrict()) return json({ error: 'Aucune réservation de crédits ouverte pour ce rendu.' }, 402)
+      }
+      // Tirage AVANT l'insertion + on vérifie le booléen : un perdant du burst (op déjà à 0) → 402, pas de job.
+      let drew = false
+      if (opId && opId !== '__ERR__') {
+        try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: opId }); drew = _ok === true }
+        catch (e) { console.warn('draw_full render-job:', (e as Error).message); drew = false }
+        if (!drew && !exempt && reserveEnforce()) return json({ error: 'Réservation de crédits insuffisante pour ce rendu.' }, 402)
       }
       const { data, error } = await service.from('render_jobs')
         .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
         .select('id').single()
-      if (error) return json({ error: error.message }, 500)
-      // Audit métier 06/09 — refund-and-keep du rendu worker : on TIRE la réserve entière (une op = un rendu)
-      // et on LIE l'op au job ; le worker règle à la livraison (settle_by_job) ou libère à l'échec (release_by_job).
-      if (opId && opId !== '__ERR__') {
-        try {
-          await service.rpc('draw_full_reservation', { p_user: user.id, p_op: opId })
-          await service.rpc('bind_reservation_job', { p_user: user.id, p_op: opId, p_job: 'render:' + data.id })
-        } catch (e) { console.warn('réservation rendu (fail-open):', (e as Error).message) }
+      if (error) {
+        if (drew) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: opId, p_cost: 9999 }) } catch (_) { /* best-effort */ } }   // job non créé → rendre le tirage
+        return json({ error: error.message }, 500)
       }
+      // lie l'op tirée au job → le worker règle (settle_by_job) à la livraison, libère (release_by_job) à l'échec
+      if (drew) { try { await service.rpc('bind_reservation_job', { p_user: user.id, p_op: opId, p_job: 'render:' + data.id }) } catch (e) { console.warn('bind render:', (e as Error).message) } }
       return json({ ok: true, job_id: data.id })
     }
 
