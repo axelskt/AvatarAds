@@ -181,6 +181,10 @@ serve(async (req) => {
       if (cuErr && !/already|exists/i.test(cuErr.message)) return json(500, { error: 'server_error' })
       created = !cuErr
     }
+    // Audit métier 14/09 : persiste l'IP d'inscription (une seule fois, si absente) — signal anti auto-parrainage
+    // (paires parrain↔filleul créées sur la même IP, cf. whop-webhook creditReferral). Colonne non écrivable côté
+    // client ; posée ici en service_role. Best-effort (ne bloque jamais la connexion).
+    try { const _sip = realIp(req); if (_sip) await sb.from('profiles').update({ signup_ip: _sip }).eq('email', email).is('signup_ip', null) } catch { /* best-effort */ }
 
     // Session : magic link admin → le client l'échange via verifyOtp({ token_hash })
     const { data: linkData, error: linkErr } = await sb.auth.admin.generateLink({ type: 'magiclink', email })

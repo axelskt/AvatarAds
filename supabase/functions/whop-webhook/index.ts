@@ -40,7 +40,7 @@ const PLAN_PRICE_CENTS: Record<string, number> = {
 const REFERRAL_RATE = 0.30
 async function creditReferral(sb: any, referredId: string, referredEmail: string, planId: string, data: any, label: string) {
   try {
-    const { data: prof } = await sb.from('profiles').select('referred_by').eq('id', referredId).maybeSingle()
+    const { data: prof } = await sb.from('profiles').select('referred_by, signup_ip').eq('id', referredId).maybeSingle()
     const code = String(prof?.referred_by || '').trim()
     if (!code) return
     const { data: referrerId } = await sb.rpc('referrer_id_from_code', { p_code: code })
@@ -49,10 +49,19 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // Ce gate n'existait que côté client (app/index.html:8966,8972). Le porter au serveur ferme l'auto-parrainage
     // RENTABLE (2 comptes à soi) : pour toucher 30 % il faut désormais garder un 2e compte payant → net négatif.
     // Ne bloque JAMAIS un paiement — n'écarte qu'une commission indue (le paiement du filleul est traité normalement).
-    const { data: refProf, error: refErr } = await sb.from('profiles').select('plan').eq('id', referrerId).maybeSingle()
+    const { data: refProf, error: refErr } = await sb.from('profiles').select('plan, signup_ip').eq('id', referrerId).maybeSingle()
     if (!refErr) {   // FAIL-OPEN sur hoquet DB (cohérent avec requirePlan/userPlan) : ne jamais dropper une commission légitime
       const refPlan = String(refProf?.plan || 'free').toLowerCase()
       if (refPlan === 'free' || refPlan === '') { console.log(`ℹ️ parrainage : parrain ${referrerId} non-payant (plan=${refPlan || '—'}) → pas de commission`); return }
+    }
+    // Audit métier 14/09 : auto-parrainage same-IP. Parrain et filleul inscrits depuis la MÊME IP → très probablement
+    // le même propriétaire (2 comptes) → pas de commission. Faux positif rare (wifi partagé) = perte d'une commission
+    // seulement (jamais un blocage de paiement), et c'est logué pour un override manuel de l'owner au virement du 1er.
+    const _sipRef = String(refProf?.signup_ip || '').trim()
+    const _sipFilleul = String((prof as { signup_ip?: string } | null)?.signup_ip || '').trim()
+    if (_sipRef && _sipFilleul && _sipRef === _sipFilleul) {
+      console.warn(`🚩 parrainage SAME-IP (auto-parrainage probable) — parrain ${referrerId} + filleul ${referredId} même IP d'inscription → pas de commission`)
+      return
     }
     // Parrainage OU code promo — jamais les deux (Axel 11/09). Si un COUPON/REMISE Whop a été appliqué au
     // paiement → PAS de commission de parrainage. Whop peut nommer le champ de plusieurs façons : on regarde

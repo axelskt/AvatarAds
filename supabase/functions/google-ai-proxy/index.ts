@@ -93,7 +93,17 @@ serve(async (req: Request) => {
       googleRes = await fetch(up.url, { method: 'GET', headers })
     } else {
       const rawBody = await req.text()
-      if (isBillable && gated) { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId }
+      if (isBillable && gated) {
+        // Audit 14/09 : paliers Veo PAR BODY-PARAM (non-chemin, donc lus sur le VRAI body → précis, pas de faux 402).
+        // 1080p = Pro/Élite ; extension vidéo→vidéo (instances[].video, >8 s) = Élite (le client réserve déjà ces paliers).
+        if (/:predictLongRunning$/.test(bare)) {
+          let _res = '', _ext = false
+          try { const _b = JSON.parse(rawBody); _res = String(_b?.parameters?.resolution || ''); _ext = !!(_b?.instances?.[0]?.video) } catch { /* */ }
+          if (_ext) { const g = await requirePlan(uid, ['elite'], 'Extension vidéo (>8 s)'); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
+          else if (_res === '1080p') { const g = await requirePlan(uid, ['pro', 'elite'], 'Veo 1080p'); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
+        }
+        drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId
+      }
       googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: rawBody })
     }
     // Le corps amont est relayé en BINAIRE. `.text()` (05/09, réservation) ré-encodait un MP4 Veo
