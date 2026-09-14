@@ -14,7 +14,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 const ALLOW = /^\/v1beta\/(models\/[A-Za-z0-9._-]+:(predict|predictLongRunning|generateContent)|models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+|operations\/[A-Za-z0-9._-]+|files\/[A-Za-z0-9._-]+:download)$/
@@ -75,6 +75,13 @@ serve(async (req: Request) => {
           ? await helperGate(uid, 'google-chat', 40, 600)   // audit 06/09 : chat gemini plafonné 40/10min (au lieu de 900 → drain)
           : await helperGate(uid, 'google', 900)   // polling ≤10 min par génération Veo, plusieurs en série
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
+  }
+
+  // Audit métier 14/09 (Phase 2) : Veo 3.1 FAST (Express « Pro ») = Pro/Élite. Veo Lite reste Starter+ → on
+  // ne gate QUE le modèle 'fast' (pas la famille veo-3.1). Résolution 1080p / extensions >8 s sont des paliers
+  // par PARAMÈTRE de body (non-chemin) et NE sont PAS gatés ici (risque de 402 l'extension légitime).
+  if (gated && isBillable && /:predictLongRunning$/.test(bare) && /veo-3\.1-fast/i.test(bare)) {
+    const g = await requirePlan(uid, ['pro', 'elite'], 'Veo Pro (rapide)'); if (!g.ok) return jsonRes(g.status, { error: g.error })
   }
 
   let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
