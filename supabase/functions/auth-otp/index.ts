@@ -95,7 +95,9 @@ serve(async (req) => {
     // s'il n'existe pas (même flux que l'inscription). `mode` ne change plus rien côté serveur.
     void mode
 
-    // Rate limits
+    // Rate limits — COOLDOWN 30 s dérivé du dernier code (UX), mais les PLAFONDS HORAIRES d'envoi vivent
+    // désormais dans rate_events (rateHit), INDÉPENDANT d'otp_codes : brûler/supprimer un code ne remet PLUS
+    // le compteur à zéro (audit escalade 14/09 — finding LOW « reset du compteur d'envoi »). Même socle que verify.
     const hourAgo = new Date(Date.now() - 3600_000).toISOString()
     const { data: recent } = await sb.from('otp_codes').select('created_at')
       .eq('email', email).gte('created_at', hourAgo).order('created_at', { ascending: false })
@@ -103,15 +105,12 @@ serve(async (req) => {
       const lastMs = new Date(recent[0].created_at).getTime()
       const waitS = Math.ceil((lastMs + COOLDOWN_S * 1000 - Date.now()) / 1000)
       if (waitS > 0) return json(429, { error: 'cooldown', wait: waitS })
-      if (recent.length >= MAX_PER_EMAIL_H) return json(429, { error: 'too_many_codes' })
     }
     // IP réelle = DERNIER segment de x-forwarded-for (le premier est forgeable par le client — L2)
     const ip = realIp(req) || null
-    if (ip) {
-      const { count } = await sb.from('otp_codes').select('id', { count: 'exact', head: true })
-        .eq('ip', ip).gte('created_at', hourAgo)
-      if ((count ?? 0) >= MAX_PER_IP_H) return json(429, { error: 'too_many_codes' })
-    }
+    // Plafonds horaires AUTORITAIRES sur rate_events (non réinitialisables via une suppression d'otp_codes) :
+    if (!(await rateHit(`otp:send:email:${email}`, 3600, MAX_PER_EMAIL_H))) return json(429, { error: 'too_many_codes' })
+    if (ip && !(await rateHit(`otp:send:ip:${ip}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
 
     // NB : on ne supprime pas les anciens codes ici — verify ne lit que le plus
     // récent (les précédents sont donc invalidés de fait) et les garder permet
