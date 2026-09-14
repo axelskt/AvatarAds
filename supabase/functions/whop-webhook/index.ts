@@ -43,7 +43,10 @@ const REFERRAL_RATE = 0.30
 // typique d'un compte-leurre petit-plan qui parraine un gros filleul → on FLAGUE la commission pour revue owner
 // (referral_reviews / approve_referral_earning) au lieu de l'auto-créditer. Faux positif = un vrai petit affilié qui
 // amène un gros client → il est simplement mis en revue, jamais perdu (l'owner approuve). elite = plan mensuel max.
-const REFERRER_PLAN_CAP: Record<string, number> = { starter: 2999, pro: 4999, elite: 22499 }
+// Repli par TIER = prix MINIMUM du tier (audit chaînes 15/09) : un parrain Élite30 (8999) ne doit pas être jugé sur
+// le prix Élite max (22499) — sinon commission 13500 (filleul Pro annuel) < 22499 → NON flaguée alors qu'elle dépasse
+// ce que le parrain paie. On préfère le prix EXACT via whop_plan_id (ci-dessous) ; ce repli ne sert que s'il manque.
+const REFERRER_PLAN_CAP: Record<string, number> = { starter: 2999, pro: 4999, elite: 8999 }
 async function creditReferral(sb: any, referredId: string, referredEmail: string, planId: string, data: any, label: string) {
   try {
     const { data: prof } = await sb.from('profiles').select('referred_by, signup_ip').eq('id', referredId).maybeSingle()
@@ -55,7 +58,7 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // Ce gate n'existait que côté client (app/index.html:8966,8972). Le porter au serveur ferme l'auto-parrainage
     // RENTABLE (2 comptes à soi) : pour toucher 30 % il faut désormais garder un 2e compte payant → net négatif.
     // Ne bloque JAMAIS un paiement — n'écarte qu'une commission indue (le paiement du filleul est traité normalement).
-    const { data: refProf, error: refErr } = await sb.from('profiles').select('plan, signup_ip').eq('id', referrerId).maybeSingle()
+    const { data: refProf, error: refErr } = await sb.from('profiles').select('plan, signup_ip, whop_plan_id').eq('id', referrerId).maybeSingle()
     if (!refErr) {   // FAIL-OPEN sur hoquet DB (cohérent avec requirePlan/userPlan) : ne jamais dropper une commission légitime
       const refPlan = String(refProf?.plan || 'free').toLowerCase()
       if (refPlan === 'free' || refPlan === '') { console.log(`ℹ️ parrainage : parrain ${referrerId} non-payant (plan=${refPlan || '—'}) → pas de commission`); return }
@@ -105,7 +108,8 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // compte-leurre. On n'écarte pas (un vrai petit affilié amenant un gros client existe) → on FLAGUE pour revue owner :
     // la commission est enregistrée mais N'ENTRE PAS dans le disponible (get_referral_summary l'exclut) tant que
     // l'owner ne l'a pas approuvée (approve_referral_earning). refProf null (hoquet DB, fail-open) → cap 0 → pas de flag.
-    const refPlanCap = REFERRER_PLAN_CAP[String(refProf?.plan || '').toLowerCase()] ?? 0
+    // Prix EXACT du plan du parrain via son whop_plan_id (Élite30=8999 ≠ Élite90=22499) ; repli tier-min sinon.
+    const refPlanCap = (PLAN_PRICE_CENTS[String(refProf?.whop_plan_id || '')] ?? REFERRER_PLAN_CAP[String(refProf?.plan || '').toLowerCase()]) ?? 0
     const reviewReason = (refPlanCap > 0 && commission > refPlanCap)
       ? `auto-parrainage possible : commission ${(commission / 100).toFixed(2)}€ > plan parrain ${refProf?.plan} ${(refPlanCap / 100).toFixed(2)}€`
       : null
