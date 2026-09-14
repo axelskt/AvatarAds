@@ -40,7 +40,13 @@ export async function resolveOp(userId: string, req: Request): Promise<string> {
   // op OUVERTE de l'utilisateur (sinon dernière op ouverte) → un id leurre/réglé/bidon ne détourne plus le
   // draw/settle, donc on ne peut plus laisser la vraie op « propre » pour la rembourser après livraison.
   const hinted = opFromReq(req)
-  try { const { data } = await svc().rpc('resolve_op', { p_user: userId, p_hint: hinted || null }); return (data as string | null) || '' } catch { return '' }
+  // C1 (14/09) : distinguer une ERREUR technique (→ '__ERR__' = fail-open) d'un « aucune op » réel (→ ''
+  // = fail-closed sous RESERVE_STRICT). Sinon un simple hoquet DB 402 un client légitime en pleine génération.
+  try {
+    const { data, error } = await svc().rpc('resolve_op', { p_user: userId, p_hint: hinted || null })
+    if (error) { console.warn('resolve_op erreur (fail-open):', error.message); return '__ERR__' }
+    return (data as string | null) || ''
+  } catch (e) { console.warn('resolve_op exception (fail-open):', (e as Error)?.message); return '__ERR__' }
 }
 // Tire p_cost sur la réservation. ok=false → reste insuffisant (op sous-évaluée). Fail-open sur erreur DB.
 export async function drawReservation(userId: string, opId: string, cost: number): Promise<{ ok: boolean; remaining: number | null }> {
@@ -56,7 +62,7 @@ export async function drawReservation(userId: string, opId: string, cost: number
 // inconnu au poll — plafonné à `amount` par la RPC). No-op sur une op réglée/remboursée. Best-effort.
 export async function releaseReservation(userId: string, req: Request, cost: number): Promise<void> {
   try {
-    const opId = await resolveOp(userId, req); if (!opId) return
+    const opId = await resolveOp(userId, req); if (!opId || opId === '__ERR__') return
     await svc().rpc('release_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) })
   } catch { /* best-effort */ }
 }
@@ -68,8 +74,8 @@ export async function settleReservation(userId: string, opId: string): Promise<v
 // par le PLAN) ; sinon = génération non financée (op épuisée / sous-débit) → fail-closed sous RESERVE_STRICT,
 // sinon journalisé (ombre). Ferme « 1 débit finance des générations illimitées dans la fenêtre has_recent_debit ».
 async function noDrawableOpGate(userId: string, proxy: string, label?: string): Promise<Gate> {
-  const { plan, isOwner } = await userPlan(userId)
-  if (isOwner || plan === 'developer') return { ok: true }
+  const { plan, isOwner, err } = await userPlan(userId)
+  if (err || isOwner || plan === 'developer') return { ok: true }   // err = hoquet DB → fail-open (ne pas 402 à l'aveugle)
   console.warn(`[reserve-strict] ${proxy} ${label ?? ''} user=${userId} : aucune op tirable (strict=${reserveStrict()})`)
   return reserveStrict() ? { ok: false, status: 402, error: 'Aucune réservation de crédits ouverte pour cette génération.' } : { ok: true }
 }
@@ -77,6 +83,7 @@ async function noDrawableOpGate(userId: string, proxy: string, label?: string): 
 // une fonction `settle()` à appeler quand la génération a abouti (soumission SYNC réussie, ou poll COMPLETED).
 export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate & { opId?: string }> {
   const opId = await resolveOp(o.userId, o.req)
+  if (opId === '__ERR__') return { ok: true }   // C1 (14/09) : erreur technique resolve_op → fail-open (ne pas 402 un client légitime)
   if (!opId) return await noDrawableOpGate(o.userId, o.proxy, o.label)   // C1 : plus de laisser-passer aveugle
   const dr = await drawReservation(o.userId, opId, o.cost)
   if (!dr.ok) {
@@ -90,6 +97,7 @@ export async function applyReservation(o: { req: Request; userId: string; proxy:
 // un débit » : une 2e soumission sur la même op trouve réserve 0 → 402. Fail-open sur erreur DB.
 export async function applyReservationFull(o: { req: Request; userId: string; proxy: string; label?: string }): Promise<Gate & { opId?: string }> {
   const opId = await resolveOp(o.userId, o.req)
+  if (opId === '__ERR__') return { ok: true }   // C1 (14/09) : erreur technique resolve_op → fail-open
   if (!opId) return await noDrawableOpGate(o.userId, o.proxy, o.label)   // C1 : plus de laisser-passer aveugle
   try {
     const { data, error } = await svc().rpc('draw_full_reservation', { p_user: o.userId, p_op: opId })
@@ -189,11 +197,12 @@ export async function authUser(req: Request): Promise<Auth> {
   } catch { return { token, isService: false, userId: null } }
 }
 
-export async function userPlan(userId: string): Promise<{ plan: string; isOwner: boolean }> {
+export async function userPlan(userId: string): Promise<{ plan: string; isOwner: boolean; err: boolean }> {
   try {
-    const { data } = await svc().from('profiles').select('plan, is_owner').eq('id', userId).maybeSingle()
-    return { plan: String(data?.plan || 'free').toLowerCase(), isOwner: !!data?.is_owner }
-  } catch { return { plan: 'free', isOwner: false } }
+    const { data, error } = await svc().from('profiles').select('plan, is_owner').eq('id', userId).maybeSingle()
+    if (error) { console.warn('userPlan erreur:', error.message); return { plan: 'free', isOwner: false, err: true } }   // err → les gates par plan fail-open (ne pas 402/403 un abonné pendant un incident DB)
+    return { plan: String(data?.plan || 'free').toLowerCase(), isOwner: !!data?.is_owner, err: false }
+  } catch (e) { console.warn('userPlan exception:', (e as Error)?.message); return { plan: 'free', isOwner: false, err: true } }
 }
 
 // ── Limiteur serveur (RPC rate_hit, service_role only). true = accepté. Fail-open sur erreur technique.

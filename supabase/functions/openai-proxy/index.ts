@@ -43,8 +43,8 @@ serve(async (req: Request) => {
     // payants (whisperTranscribe) mais le serveur ne le gardait pas → un compte Free l'appelait direct.
     // On aligne le serveur sur le produit : Starter+ / owner / dev (comme derush-transcribe pour Scribe).
     if (isTranscribe) {
-      const { plan, isOwner } = await userPlan(uid)
-      if (!isOwner && !['starter', 'pro', 'elite', 'developer', 'byok'].includes(plan)) {
+      const { plan, isOwner, err } = await userPlan(uid)
+      if (!err && !isOwner && !['starter', 'pro', 'elite', 'developer', 'byok'].includes(plan)) {   // err = hoquet DB → fail-open (ne pas 403 un abonné pendant un incident)
         return jsonRes(403, { error: 'La transcription est réservée aux plans payants.' })
       }
     }
