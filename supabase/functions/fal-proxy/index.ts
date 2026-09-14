@@ -65,6 +65,7 @@ serve(async (req: Request) => {
   if (!auth.isService && !auth.userId) return jsonRes(401, { error: 'Unauthorized — session invalide ou expirée' })
 
   let drawnOp: string | undefined
+  let drawnAmt = 0   // audit 14/09 : montant réellement tiré → restauration EXACTE au release (plus de falCost/9999)
   if (!auth.isService && auth.userId) {
     // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite (0,168 $/s) ──
     if (isSubmit && /\/fal-ai\/kling-video\/v3\//i.test(path)) {
@@ -84,11 +85,14 @@ serve(async (req: Request) => {
       // NON listés) = draw_full : 1 op = 1 génération → ni refund-and-keep (reliquat remboursable) ni
       // sous-facturation d'un modèle inconnu retombé à falCost=1.
       const _aux = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(path)
+      // Primaire : plancher serveur = falCost(path) (audit 14/09) → une réserve sous ce plancher (ex.
+      // spend_credits(1) devant un OmniHuman à 5) est refusée (402), fin de « 1 crédit = vidéo chère ».
       const rr = _aux
         ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path })
-        : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path })
+        : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path, minCost: falCost(path) })
       if (!rr.ok) return jsonRes(rr.status, { error: rr.error })
       drawnOp = rr.opId
+      drawnAmt = _aux ? falCost(path) : ((rr as { drawn?: number }).drawn ?? 0)   // aux = coût tiré ; primaire = réserve drainée
     }
   }
 
@@ -108,10 +112,10 @@ serve(async (req: Request) => {
       // à ce job à la soumission, puis on règle/libère PAR JOB au poll → un poll d'un id ÉTRANGER ne peut plus
       // rendre la réserve d'une autre op (fermait le refund-and-keep) ni un id bidon débloquer un refund.
       const jobId = (bare.match(/\/requests\/([A-Za-z0-9._-]+)/) || [])[1] || ''
-      if (isSubmit && res.ok) { const rid = (text.match(/"request_id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (rid) await bindJob(auth.userId, drawnOp, 'fal:' + rid) }   // lie l'op au job créé
-      else if (isSubmit && !res.ok) await releaseOp(auth.userId, drawnOp, falCost(path))                                                                                 // soumission refusée → rend l'op TIRÉE
+      if (isSubmit && res.ok) { const rid = (text.match(/"request_id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (rid) await bindJob(auth.userId, drawnOp, 'fal:' + rid, drawnAmt) }   // lie l'op au job créé + mémorise le tiré
+      else if (isSubmit && !res.ok) await releaseOp(auth.userId, drawnOp, drawnAmt)                                                                                       // soumission refusée → rend EXACTEMENT le tiré
       else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }   // job échoué → rend l'op LIÉE
-      else if (isResult && (!res.ok || (!hasOutput && /"(detail|error)"\s*:/.test(text)))) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }                            // COMPLETED mais résultat = erreur (422…)
+      else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }         // échec TERMINAL uniquement (422 / statut FAILED). PAS un 400/202 « pas prêt » : sinon poller un job ENCORE EN COURS rendait sa réserve → refund-and-keep (audit 14/09)
       else if (isResult && res.ok && hasOutput) { if (jobId) await settleByJob(auth.userId, 'fal:' + jobId) }                                                                         // livré → op LIÉE non remboursable
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
@@ -120,7 +124,7 @@ serve(async (req: Request) => {
     }
     return new Response(text, { status: res.status, headers: { ...CORS, 'Content-Type': res.headers.get('content-type') ?? 'application/json' } })
   } catch (err) {
-    if (isSubmit && !auth.isService && auth.userId) await releaseOp(auth.userId, drawnOp, 9999).catch(() => {})
+    if (isSubmit && !auth.isService && auth.userId) await releaseOp(auth.userId, drawnOp, drawnAmt || 1).catch(() => {})
     console.error('fal-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

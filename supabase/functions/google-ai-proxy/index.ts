@@ -28,9 +28,14 @@ function costFor(bare: string, body: string): number {
   if (/:predict$/.test(bare)) return 3                                                       // Imagen
   if (/:predictLongRunning$/.test(bare)) {                                                   // Veo
     const rate = /fast/i.test(bare) ? 3 : 1.5
-    let dur = 0, mult = 1
-    try { const b = JSON.parse(body); dur = Number(b?.parameters?.durationSeconds) || 0; if (String(b?.parameters?.resolution) === '1080p') mult = 2 } catch { /* */ }
-    return dur > 0 ? Math.ceil(dur * rate * mult) : Math.ceil(rate)   // borne basse = 1 s si durée absente
+    let dur = 0, mult = 1, isExt = false
+    try { const b = JSON.parse(body); dur = Number(b?.parameters?.durationSeconds) || 0; if (String(b?.parameters?.resolution) === '1080p') mult = 2; isExt = !!(b?.instances?.[0]?.video) } catch { /* */ }
+    // audit 14/09 : durée absente → 8 s (anti-abus : omettre durationSeconds ne finance plus une vidéo Veo
+    // complète à bas coût, et plusieurs soumissions ne partagent plus une op). EXCEPTION : une EXTENSION
+    // vidéo→vidéo (instances[].video, sans durationSeconds) produit ~7 s fixes et est débitée à 7 s côté
+    // client (_extCost) → la coter 7 s, sinon 402 systématique sur chaque extension Express.
+    const sec = dur > 0 ? dur : (isExt ? 7 : 8)
+    return Math.ceil(sec * rate * mult)
   }
   return 1
 }
@@ -102,7 +107,7 @@ serve(async (req: Request) => {
         else await releaseOp(uid, drawnOp, drawn)
       } else if (isBillable) {
         // Veo : soumission async. 2xx → on lie l'op au job ; erreur → on rend l'op tirée.
-        if (googleRes.ok) { const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''; if (name) await bindJob(uid, drawnOp, 'veo:' + name) }
+        if (googleRes.ok) { const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''; if (name) await bindJob(uid, drawnOp, 'veo:' + name, drawn) }
         else await releaseOp(uid, drawnOp, drawn)
       } else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body)) {
         // Poll d'une opération Veo terminée : livrée (pas d'erreur) → règle le job ; en erreur → rend le job.
@@ -114,7 +119,7 @@ serve(async (req: Request) => {
       headers: { ...CORS, 'Content-Type': ct },
     })
   } catch (err) {
-    if (isBillable && gated) await releaseOp(uid, drawnOp, 9999).catch(() => {})
+    if (isBillable && gated) await releaseOp(uid, drawnOp, drawn).catch(() => {})   // audit 14/09 : rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration = refund-and-keep sur une op multi-étapes réglée)
     console.error('google-ai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }
