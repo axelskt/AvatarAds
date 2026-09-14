@@ -1240,13 +1240,16 @@ async function fetchVideoBytes(b64: string | null, uri: string | null): Promise<
   return null
 }
 
-// Échec d'un job : marque failed + rembourse. Le remboursement est IDEMPOTENT — le
-// filtre .eq('refunded', false) garantit qu'un seul appel concurrent rembourse (jamais 2×).
+// Échec d'un job : marque failed + rembourse. Le remboursement est IDEMPOTENT — le filtre
+// .eq('refunded', false) garantit qu'un seul appel concurrent rembourse (jamais 2×).
+// Audit métier MCP 14/09 : on exige AUSSI .eq('status','running') → un job déjà LIVRÉ (deliverVideo l'a passé
+// à 'done' avec result_url) ne peut plus être remboursé (fin du refund-and-keep : livraison et remboursement
+// sont mutuellement exclusifs via le verrou de ligne, chacun ne matchant que status='running').
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function failAndRefund(userId: string, job: Record<string, any>, reason: string): Promise<void> {
   const { data: claimed } = await svc.from('mcp_jobs')
     .update({ status: 'failed', error: reason, refunded: true, updated_at: new Date().toISOString() })
-    .eq('id', job.id).eq('refunded', false).select('id')
+    .eq('id', job.id).eq('refunded', false).eq('status', 'running').select('id')
   if (claimed && claimed.length) await refundCredits(userId, job.credits_cost)
 }
 
@@ -2011,7 +2014,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
       if (!reqId) return toolErr("OmniHuman n'a pas retourné d'identifiant — crédits remboursés.")
 
       const { data: job, error } = await svc.from('mcp_jobs')
-        .insert({ user_id: userId, kind: 'avatar', op_name: 'fal:' + reqId, credits_cost: cost }).select('id').single()
+        .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: 'fal:' + reqId, credits_cost: cost }).select('id').single()
       if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés.')
       launchedO = true
       return toolText(
@@ -2066,7 +2069,7 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
     if (!gen.id) return toolErr("Hedra n'a pas retourné d'ID de génération — crédits remboursés.")
 
     const { data: job, error } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'avatar', op_name: String(gen.id), credits_cost: cost }).select('id').single()
+      .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: String(gen.id), credits_cost: cost }).select('id').single()
     if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
     launched = true
     return toolText(
@@ -2104,7 +2107,7 @@ async function createMontageJobs(
     .select('id').single()
   if (error || !rj) return 'Erreur serveur à la création du job de rendu — crédits remboursés.'
   const { data: mj, error: e2 } = await svc.from('mcp_jobs')
-    .insert({ user_id: userId, kind: 'montage', op_name: String(rj.id), credits_cost: cost })
+    .insert({ user_id: userId, kind: 'montage', status: 'running', op_name: String(rj.id), credits_cost: cost })
     .select('id').single()
   if (e2 || !mj) {
     // pas de suivi possible → on annule le rendu pour ne pas travailler dans le vide
@@ -2228,7 +2231,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   // On crée le job de suivi tout de suite et TOUT le travail part en tâche de fond
   // (waitUntil) — check_montage suit la préparation puis le rendu.
   const { data: mj, error: mjErr } = await svc.from('mcp_jobs')
-    .insert({ user_id: userId, kind: 'montage', credits_cost: cost }).select('id').single()
+    .insert({ user_id: userId, kind: 'montage', status: 'running', credits_cost: cost }).select('id').single()
   if (mjErr || !mj) {
     await refundCredits(userId, cost)
     return toolErr('Erreur serveur au suivi du job (crédits remboursés) — réessaie.')
@@ -2248,7 +2251,11 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
           // paie un service qu'il n'a pas eu sans jamais le savoir.
           console.warn('nettoyage voix ignoré :', propre)
           await refundCredits(userId, coutClean)
-          await svc.from('mcp_jobs').update({ error: `voix non nettoyée (${propre}) — ${coutClean} cr remboursés` }).eq('id', mcpJob.id)
+          // Audit métier MCP 14/09 : DÉCRÉMENTER credits_cost du montant partiellement remboursé (DB + objet
+          // en mémoire) → si le montage échoue ensuite, failAndRefund ne rend QUE le reste (plus de double
+          // remboursement du nettoyage = minting). Si le montage aboutit, le solde facturé reste juste.
+          mcpJob.credits_cost = Math.max(0, (Number(mcpJob.credits_cost) || 0) - coutClean)
+          await svc.from('mcp_jobs').update({ credits_cost: mcpJob.credits_cost, error: `voix non nettoyée (${propre}) — ${coutClean} cr remboursés` }).eq('id', mcpJob.id)
         } else {
           got.bytes = propre
           got.contentType = 'audio/mpeg'
