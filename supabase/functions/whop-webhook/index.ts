@@ -45,6 +45,15 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     if (!code) return
     const { data: referrerId } = await sb.rpc('referrer_id_from_code', { p_code: code })
     if (!referrerId || referrerId === referredId) return
+    // Audit métier 14/09 (Phase 2) : la commission n'est due que si le PARRAIN est lui-même un client PAYANT.
+    // Ce gate n'existait que côté client (app/index.html:8966,8972). Le porter au serveur ferme l'auto-parrainage
+    // RENTABLE (2 comptes à soi) : pour toucher 30 % il faut désormais garder un 2e compte payant → net négatif.
+    // Ne bloque JAMAIS un paiement — n'écarte qu'une commission indue (le paiement du filleul est traité normalement).
+    const { data: refProf, error: refErr } = await sb.from('profiles').select('plan').eq('id', referrerId).maybeSingle()
+    if (!refErr) {   // FAIL-OPEN sur hoquet DB (cohérent avec requirePlan/userPlan) : ne jamais dropper une commission légitime
+      const refPlan = String(refProf?.plan || 'free').toLowerCase()
+      if (refPlan === 'free' || refPlan === '') { console.log(`ℹ️ parrainage : parrain ${referrerId} non-payant (plan=${refPlan || '—'}) → pas de commission`); return }
+    }
     // Parrainage OU code promo — jamais les deux (Axel 11/09). Si un COUPON/REMISE Whop a été appliqué au
     // paiement → PAS de commission de parrainage. Whop peut nommer le champ de plusieurs façons : on regarde
     // large ET on logge les clés du payload pour CONFIRMER le nom exact du champ sur un vrai paiement avec promo.

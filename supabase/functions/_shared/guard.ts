@@ -213,6 +213,17 @@ export async function userPlan(userId: string): Promise<{ plan: string; isOwner:
   } catch (e) { console.warn('userPlan exception:', (e as Error)?.message); return { plan: 'free', isOwner: false, err: true } }
 }
 
+// ── Entitlement par plan (audit métier 14/09, Phase 2). `needed` = plans autorisés EN PLUS de owner/developer
+//    (qui passent toujours). FAIL-OPEN sur erreur DB (err) — ne JAMAIS 403 un client payant pendant un incident.
+//    N'ajouter un gate QUE sur un chemin dont TOUS les points d'entrée client exigent au moins `needed` (union la
+//    plus large), sinon on 403 un flux légitime (ex. OmniHuman = Élite au Générateur mais Starter+ en Montage IA).
+export async function requirePlan(userId: string, needed: string[], label: string): Promise<Gate> {
+  const { plan, isOwner, err } = await userPlan(userId)
+  if (err || isOwner || plan === 'developer') return { ok: true }   // hoquet DB → laisser passer ; owner/dev illimités
+  if (needed.includes(plan)) return { ok: true }
+  return { ok: false, status: 403, error: needed.length ? `« ${label} » nécessite un plan ${needed.join(' / ')}.` : `« ${label} » est réservé.` }
+}
+
 // ── Limiteur serveur (RPC rate_hit, service_role only). true = accepté. Fail-open sur erreur technique.
 export async function rateHit(key: string, windowS: number, max: number): Promise<boolean> {
   try {

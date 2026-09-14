@@ -1,4 +1,4 @@
-import { authUser, helperGate } from '../_shared/guard.ts'
+import { authUser } from '../_shared/guard.ts'
 // ── #24 · LA PASSE DE FINITION ───────────────────────────────────────────────
 //
 // Axel, 02/08 : « il faut qu'il voie son travail et fasse les finitions, c'est
@@ -43,11 +43,12 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST uniquement' }, 405)
 
-  // Audit offensif 05/09 : atteignable avec la seule clé anon publique → appel Claude facturé. Exiger le
-  // worker (service_role) ou une vraie session ; refuser la clé anon/publiable seule.
+  // Audit offensif 05/09 : atteignable avec la seule clé anon publique → appel Claude facturé.
+  // Audit métier 14/09 (Phase 2) : le SEUL appelant réel est le render-worker (service_role, worker.mjs:2013) ;
+  // aucun appel client n'existe. On restreint donc à SERVICE-ONLY → ferme 100 % de l'abus Claude Sonnet standalone
+  // (une session utilisateur ne peut plus déclencher une passe de finitions gratuite) sans aucun risque montage.
   const _a = await authUser(req)
-  if (!_a.isService && !_a.userId) return json({ error: 'unauthorized' }, 401)
-  if (_a.userId) { const _g = await helperGate(_a.userId, 'finitions', 8); if (!_g.ok) return json({ error: _g.error }, _g.status) }
+  if (!_a.isService) return json({ error: 'unauthorized' }, 401)
 
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) return json({ ok: false, corrections: [], erreur: 'ANTHROPIC_API_KEY manquante' })

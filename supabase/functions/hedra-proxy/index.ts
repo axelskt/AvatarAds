@@ -21,7 +21,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -123,6 +123,11 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: user.id, proxy: 'hedra', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
       : await helperGate(user.id, 'hedra', 900)   // uploads + polling multi-scènes (Montage IA)
     if (!gate.ok) return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    // Audit métier 14/09 (Phase 2) : Seedance 2.0 = moteur DEV-only (tourne sur la clé dev HEDRA_V3_KEY). Le
+    // client ne l'offre qu'aux dev, mais le serveur ne gatait rien → un non-dev pouvait forger le chemin. Fermé.
+    if (req.method === 'POST' && HEDRA_BILLABLE.test(bare) && /\/v3\/models\/seedance/i.test(bare)) {
+      const g = await requirePlan(user.id, [], 'Seedance'); if (!g.ok) return new Response(JSON.stringify({ error: g.error }), { status: g.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    }
     // Réservation : la génération (POST /v3/models/<slug> ou /generations) tire son coût (borne basse 2 = avatarPerSec × 1 s).
     if (req.method === 'POST' && HEDRA_BILLABLE.test(bare)) {
       // Audit métier 06/09 : on tire la RÉSERVE ENTIÈRE (une op = une vidéo). Ferme « N vidéos pour un débit ».

@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, userPlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -69,10 +69,16 @@ serve(async (req: Request) => {
   if (!auth.isService && auth.userId) {
     // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite (0,168 $/s) ──
     if (isSubmit && /\/fal-ai\/kling-video\/v3\//i.test(path)) {
-      const { plan, isOwner } = await userPlan(auth.userId)
-      if (!isOwner && !['pro', 'elite', 'developer'].includes(plan)) {
-        return jsonRes(403, { error: 'Motion 3.0 (Kling 3.0) est réservé aux plans Pro et Élite.' })
-      }
+      const g = await requirePlan(auth.userId, ['pro', 'elite'], 'Motion 3.0 (Kling 3.0)'); if (!g.ok) return jsonRes(g.status, { error: g.error })   // via requirePlan → fail-open sur hoquet DB (audit 14/09)
+    }
+    // Audit métier 14/09 (Phase 2) — entitlement serveur des modèles à palier supérieur. Union client la plus
+    // LARGE par chemin (voir matrice) → aucun 403 d'un flux légitime. AuraSR HD + Nano Banana Pro (fal) = Pro/Élite/BYOK.
+    else if (isSubmit && (/\/fal-ai\/aura-sr/i.test(path) || /\/fal-ai\/nano-banana-pro/i.test(path))) {
+      const g = await requirePlan(auth.userId, ['pro', 'elite', 'byok'], 'HD / 4K'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+    }
+    // Express Omni Flash IMAGE→VIDÉO = Pro/Élite. L'EDIT (/edit, Module Omni) reste Starter+ → ne PAS gater sur le nom seul.
+    else if (isSubmit && /\/google\/gemini-omni-flash\//i.test(path) && /image-to-video/i.test(path)) {
+      const g = await requirePlan(auth.userId, ['pro', 'elite'], 'Express Omni'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
     const gate = isSubmit
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
