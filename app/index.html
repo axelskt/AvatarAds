@@ -6116,7 +6116,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-14-0017'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-14-0018'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -39708,9 +39708,10 @@ function edBandDrag(ov,track,e,mode){
 #mNav button span{max-height:13px;overflow:hidden;transition:opacity .16s ease,max-height .28s cubic-bezier(.4,0,.2,1)}
 #mNav button{transition:flex-basis .3s cubic-bezier(.34,1.56,.64,1),flex-grow .3s,padding .3s cubic-bezier(.34,1.56,.64,1),background-color .2s ease,box-shadow .2s ease,color .18s ease,transform .12s ease}
 /* REPLI au slide : la barre se contracte et les icônes se RESSERRENT (espaces entre raccourcis supprimés), retour normal à l'arrêt */
-/* REPLI : la BARRE se CONTRACTE (largeur qui se resserre vers le centre, pas que les icônes) + icônes collées */
-#mNav.mnav-min{height:46px;padding:4px 8px;left:calc(50% - 125px);right:calc(50% - 125px);bottom:max(calc(env(safe-area-inset-bottom) + 14px),14px);border-radius:22px;justify-content:center;gap:2px}
-#mNav.mnav-min button{flex:0 0 auto;padding:0 7px}
+/* REPLI : la BARRE se CONTRACTE (largeur resserrée vers le centre) MAIS garde une marge intérieure — la pastille
+   active d'un raccourci de BORD (Générateur/Plus) ne doit JAMAIS être coupée par le coin arrondi de la barre. */
+#mNav.mnav-min{height:48px;padding:6px 16px;left:calc(50% - 149px);right:calc(50% - 149px);bottom:max(calc(env(safe-area-inset-bottom) + 14px),14px);border-radius:20px;justify-content:center;gap:4px}
+#mNav.mnav-min button{flex:0 0 auto;padding:0 8px}
 #mNav.mnav-min button span{opacity:0;max-height:0}
 #mNav.mnav-min button svg{width:23px;height:23px}
 /* ── BARRE DU BAS EN VERRE DÉPOLI SMOKÉ (thème light) — juste milieu entre le noir d'avant et le blanc, ── */
