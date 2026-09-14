@@ -77,7 +77,7 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
-    if (isSubmit) { const rr = await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }); drawnOp = rr.opId }   // H2 (audit 14/09) : tire le VRAI coût par modèle (borne basse) au lieu de zéro-tirer la réserve — ferme « vidéo 5 cr payée 1 cr » (aligné sur le tirage per-cost d'images/Veo)
+    if (isSubmit) { const rr = await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path }); if (!rr.ok) return jsonRes(rr.status, { error: rr.error }); drawnOp = rr.opId }   // H2 REVERT (audit 14/09) : une vidéo fal = UNE op, tirée ENTIÈREMENT (reserve→0). Le tirage per-cost (falCost) laissait un reliquat (débit durée-échelonné − coût plat) REMBOURSABLE après livraison = refund-and-keep rouvert. On garde le draw_full ; la sous-facturation 1ʳᵉ soumission reste un résidu assumé (borné par C1 pour les suivantes).
   }
 
   // ── relais vers fal ──
