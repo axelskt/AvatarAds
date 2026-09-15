@@ -29443,6 +29443,7 @@ function _omniEx(t){ const el=document.getElementById('omniPrompt'); if(!el) ret
 // Échafaudage de prompt VOLONTAIREMENT MINIMAL (doc Google : les prompts simples
 // marchent mieux, l'excès de détails déclenche des changements imprévus). On ajoute
 // seulement la phrase de préservation prouvée — sauf si l'utilisateur l'a déjà écrite.
+const _OMNI_LOGO_FIDELITY = true;   // ⚠️ KILL-SWITCH (audit 15/09) : true = logos de marque fidèles (choix C d'Axel). Si Google redurcit et re-bloque EN MASSE comme la nuit du 14/09 → passer à false désactive INSTANTANÉMENT la phrase « reproduce official brand logo » (le seul déclencheur), sans rien casser d'autre.
 function _omniBuildPrompt(p){
   let s=String(p||'').trim();
   const hasKeep=/(keep everything|reste (identique|inchang)|le reste (identique|inchang)|garde le reste|inchang[ée]|sans (rien )?(d\'autre|autre) chang|only change|ne change (que|rien d))/i.test(s);
@@ -29461,7 +29462,9 @@ function _omniBuildPrompt(p){
   // l'anti-hallucination (texte/graphismes génériques, sans « logo »). Court, ajouté une seule fois.
   if(!/(same (seat|position|side|placement)|do not (add|invent)|n'invente|sans inventer)/i.test(s)){
     s+=' Keep every subject and object in their EXACT original position, side, seat and placement — never move the subject to a different seat or the opposite side — and keep the same camera angle and framing.';
-    s+=' Do NOT add, invent or fabricate any extra text, markings, symbols or graphics that are not already present in the source video.';
+    s+=' Do NOT add, invent, fabricate or hallucinate any extra logo, emblem, badge or written text that is not in the source OR implied by the request.';
+    // ⚠️ FIDÉLITÉ LOGO (Axel 15/09, choix C assumé — testé OK avec Patek Philippe). Gaté par _OMNI_LOGO_FIDELITY (kill-switch).
+    if(_OMNI_LOGO_FIDELITY) s+=' Any lettering, badge, model name, emblem or logo that DOES appear (including one the request asks for) MUST use its EXACT official correct spelling and be rendered crisp, sharp, straight and fully legible — never garbled, misspelled, warped, blurred, doubled, gibberish or made-up fantasy characters. If a real brand or model is requested, reproduce ONLY its authentic real name and logo exactly as officially written; when unsure of the exact wording, leave that text out rather than invent it.';
   }
   return s;
 }
