@@ -29444,17 +29444,16 @@ function _omniBuildPrompt(p){
     // multilingue, donc un prompt FR + cette clause EN cohabitent sans souci.
     s+=' Keep everything else in the video exactly the same.';
   }
-  // Préservations CIBLÉES (retours Axel 13/09, mêmes défauts que gpt-image corrigés) : la
-  // POSITION/placement des personnes et le CADRAGE ne changent pas (il mettait le sujet côté
-  // conducteur au lieu de passager), et AUCUN logo/texte inventé (il collait un faux logo « V »
-  // au lieu du vrai). Court (la doc Google déconseille les murs de contraintes), ajouté une
-  // seule fois si non déjà exprimé.
+  // Préservations CIBLÉES (retours Axel 13/09) : la POSITION/placement et le CADRAGE ne changent pas
+  // (il mettait le sujet côté conducteur au lieu de passager), et rien d'inventé.
+  // ⚠️ Diagnostic 15/09 : la phrase « reproduce a real brand's authentic name and logo… » ajoutée le
+  // 13/09 18h10 (commit e3a890d) était collée à CHAQUE prompt → le filtre marques/trademark de Gemini
+  // (« sensitive words violate Google's Prohibited Use policy ») bloquait TOUTES les requêtes, même sans
+  // marque (montre, voiture, porte-clés…). On RETIRE tout langage marque/logo/badge et on neutralise
+  // l'anti-hallucination (texte/graphismes génériques, sans « logo »). Court, ajouté une seule fois.
   if(!/(same (seat|position|side|placement)|do not (add|invent)|n'invente|sans inventer)/i.test(s)){
-    s+=' Keep every person and object in their EXACT original position, side, seat and placement — never move the subject to a different seat or the opposite side — and keep the same camera angle and framing.';
-    s+=' Do NOT add, invent, fabricate or hallucinate any EXTRA logo, emblem, badge or written text that is not in the source or implied by the request.';
-    // TEXTE PROPRE (retour Axel 13/09 : « GT3 RS » rendu sale/inventé) : ce n'est pas
-    // « pas de texte » (il demandait cette écriture) mais « texte OFFICIEL, exact et net ».
-    s+=' Any lettering, badge, model name, emblem or logo that DOES appear (including one the request asks for) MUST use its EXACT official correct spelling and be rendered crisp, sharp, straight and fully legible — never garbled, misspelled, warped, blurred, doubled, gibberish or made-up fantasy characters. If a real brand or model is requested (e.g. a car trim name), reproduce ONLY its authentic real name and logo exactly as officially written; when unsure of the exact wording, leave that text out rather than invent it.';
+    s+=' Keep every subject and object in their EXACT original position, side, seat and placement — never move the subject to a different seat or the opposite side — and keep the same camera angle and framing.';
+    s+=' Do NOT add, invent or fabricate any extra text, markings, symbols or graphics that are not already present in the source video.';
   }
   return s;
 }
