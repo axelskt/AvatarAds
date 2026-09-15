@@ -138,6 +138,24 @@ export async function releaseByJob(userId: string, job: string): Promise<void> {
   if (!job) return
   try { await svc().rpc('release_by_job', { p_user: userId, p_job: job, p_cost: 9999 }) } catch { /* best-effort */ }
 }
+// Remboursement SERVEUR du SOLDE sur ÉCHEC TERMINAL (audit Omni 15/09) — release_reservation/release_by_job
+// ne restauraient QUE le compteur de réserve, jamais credits_remaining : le vrai remboursement dépendait du
+// client (refund_credits), donc un onglet fermé pendant l'échec = crédits perdus (cf. Kling O1 404, −40 cr).
+// Ces deux RPC recréditent le solde ET posent refunded_at → refund_credits client devient no-op
+// (already_refunded) = exactement-une-fois, garanti serveur. PÉRIMÈTRE ÉTROIT AU CAS PROPRE : elles ne
+// remboursent QUE l'op PRIMAIRE dont rien n'a été livré (settled_at null) et dont restaurer le tiré rend TOUTE
+// la réserve (v_res>=amount) → aucun refund-and-keep, restauration CALCULÉE (jamais persistée) → idempotent au
+// double-poll. Renvoie true SEULEMENT si le remboursement a eu lieu ; sinon (op partagée aux / multi-étapes /
+// livrée / déjà remboursée) false → l'appelant RETOMBE sur le release réserve existant (comportement inchangé).
+// Best-effort. À N'APPELER QUE sur un état terminal CONFIRMÉ (soumission 4xx non-retryable, ou statut FAILED).
+export async function refundOpTerminal(userId: string, opId: string | undefined, restore: number): Promise<boolean> {
+  if (!opId) return false
+  try { const { data } = await svc().rpc('refund_op_terminal', { p_user: userId, p_op: opId, p_restore: Math.max(1, Math.ceil(restore || 1)) }); return !!(data && (data as { ok?: boolean }).ok) } catch { return false }
+}
+export async function refundByJobTerminal(userId: string, job: string): Promise<boolean> {
+  if (!job) return false
+  try { const { data } = await svc().rpc('refund_by_job_terminal', { p_user: userId, p_job: job }); return !!(data && (data as { ok?: boolean }).ok) } catch { return false }
+}
 export async function settleByJob(userId: string, job: string): Promise<void> {
   if (!job) return
   try { await svc().rpc('settle_by_job', { p_user: userId, p_job: job }) } catch { /* best-effort */ }
