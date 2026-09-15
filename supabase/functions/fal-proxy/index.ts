@@ -14,7 +14,7 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -118,10 +118,25 @@ serve(async (req: Request) => {
       // à ce job à la soumission, puis on règle/libère PAR JOB au poll → un poll d'un id ÉTRANGER ne peut plus
       // rendre la réserve d'une autre op (fermait le refund-and-keep) ni un id bidon débloquer un refund.
       const jobId = (bare.match(/\/requests\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+      // Op auxiliaire (matting/utilitaire, tirée per-cost et POTENTIELLEMENT partagée) : on ne rembourse
+      // jamais le solde en son nom (sur-remboursement de la part parente) → on garde le release réserve.
+      const isAux = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(bare)
+      // Échec de SOUMISSION terminal = 4xx non-retryable (400/401/402/403/404/405/422…). PAS 408/425/429
+      // (throttle/timeout retryables) ni 5xx (transitoires) : ceux-là restent un simple release réserve, pour
+      // ne pas tuer un retry légitime (ex. 4K après un 503 Google). Le terminal = définitif → remboursable.
+      const submitTerminal = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 425 && res.status !== 429
       if (isSubmit && res.ok) { const rid = (text.match(/"request_id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (rid) await bindJob(auth.userId, drawnOp, 'fal:' + rid, drawnAmt) }   // lie l'op au job créé + mémorise le tiré
-      else if (isSubmit && !res.ok) await releaseOp(auth.userId, drawnOp, drawnAmt)                                                                                       // soumission refusée → rend EXACTEMENT le tiré
-      else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }   // job échoué → rend l'op LIÉE
-      else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) await releaseByJob(auth.userId, 'fal:' + jobId) }         // échec TERMINAL uniquement (422 / statut FAILED). PAS un 400/202 « pas prêt » : sinon poller un job ENCORE EN COURS rendait sa réserve → refund-and-keep (audit 14/09)
+      // Soumission refusée : terminal PRIMAIRE → tente le REMBOURSEMENT SOLDE serveur (garanti, ne dépend plus du
+      // client, pose refunded_at → refund_credits client = no-op). S'il REFUSE (in_progress/déjà livré : op partagée
+      // ou multi-étapes) OU aux OU transitoire (5xx/429) → repli release réserve inchangé (appel unique = pas de double-restauration).
+      else if (isSubmit && !res.ok) { if (!(!isAux && submitTerminal && await refundOpTerminal(auth.userId, drawnOp, drawnAmt))) await releaseOp(auth.userId, drawnOp, drawnAmt) }
+      // Job mort (statut FAILED/ERROR/CANCELLED, ou 422 terminal) → tente le REMBOURSEMENT SOLDE serveur de l'op LIÉE
+      // (cas PROPRE : 1 job = 1 gen, rien livré). refundByJobTerminal est idempotent (restauration CALCULÉE, refus =
+      // aucune écriture ; un 2e poll → already_refunded/no_op). S'il REFUSE (op partagée aux / multi-étapes / livrée)
+      // → repli release_by_job INCHANGÉ (le refund serveur n'a rien écrit → pas de double-restauration sur le cas propre ;
+      // sur le cas non-propre release_by_job no-op après un refund grâce à sa garde refunded_at is null).
+      else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }
+      else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }         // échec TERMINAL uniquement (422 / statut FAILED). PAS un 400/202 « pas prêt » : sinon poller un job ENCORE EN COURS remboursait → refund-and-keep (audit 14/09)
       else if (isResult && res.ok && hasOutput) { if (jobId) await settleByJob(auth.userId, 'fal:' + jobId) }                                                                         // livré → op LIÉE non remboursable
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
