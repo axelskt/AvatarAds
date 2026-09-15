@@ -29423,7 +29423,7 @@ function _omniProg(txt,pct){
     clearInterval(_omniProgTimer);
     _omniProgTimer=setInterval(()=>{
       const t=document.getElementById('omniProgTimer'); if(t && _omniProgT0){ const s=Math.floor((Date.now()-_omniProgT0)/1000); t.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
-      if(_omniProgVal<95) _omniSetProg(_omniProgVal + Math.max(0.25,(95-_omniProgVal)*0.03));   // progression douce (fal ne renvoie pas de % réel) — plafonnée à 95, le 100 arrive à la fin
+      if(_omniProgVal<99) _omniSetProg(_omniProgVal + Math.max(0.08,(99-_omniProgVal)*0.015));   // progression douce (fal ne renvoie pas de % réel) : approche LENTE et continue de 99 (ne se fige plus à 95) ; le chrono mm:ss rassure à côté ; le 100 arrive à la fin
     }, 400);
   }
   const l=document.getElementById('omniProgLabel'); if(l && txt!=null) l.textContent=txt;
