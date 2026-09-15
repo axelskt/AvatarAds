@@ -6661,9 +6661,12 @@ async function creditsFlowRefund(why){
   for(const id of ops){
     try{
       const { data, error } = await sb.rpc('refund_credits', { p_op_id: id });
-      if(!error && data && data.ok){
-        total += (data.refunded || 0);
-        if(typeof data.balance === 'number' && typeof currentMember !== 'undefined' && currentMember) currentMember.credits_remaining = data.balance;
+      if(!error && data){
+        if(data.ok) total += (data.refunded || 0);
+        // Resync du mirror local sur CHAQUE réponse portant un solde — y compris 'already_refunded' : quand le PROXY
+        // a déjà remboursé côté serveur (échec fal), sans ça le solde AFFICHÉ et les pré-checks client (ex. le
+        // re-débit du repli modération 2.6) resteraient périmés (trop bas) jusqu'à un refresh complet. (audit 15/09)
+        if(typeof data.balance === 'number' && typeof currentMember !== 'undefined' && currentMember){ currentMember.credits_remaining = data.balance; try{ _updateQuotaDisplay(); }catch(_){} }
       }
     }catch(e){ console.warn('refund_credits:', e); }
   }
@@ -29588,7 +29591,7 @@ async function _mcGenerate(){
   //    le catch global si Kling ou le pipeline échoue. Avant, le débit n'arrivait qu'au SUCCÈS Kling : un appel
   //    direct au proxy (hors app) = Kling gratuit. Motion 3.0 = motion30PerSec ; 2.6 = 2 cr/s ; si Motion 3.0
   //    retombe sur 2.6 (faux positif de modération) on refacture au tarif 2.6 pro, plus bas (voir plus loin).
-  const _mcPreRate = tier==='pro' ? CREDIT_COSTS.motion30PerSec : 2;
+  let _mcPreRate = tier==='pro' ? CREDIT_COSTS.motion30PerSec : 2;   // réassignable : mis à jour si repli modération v3→2.6 (refacturation)
   creditsFlowBegin();
   if(!(await spendCreditsFor(_mcPreRate*dur,'motion'))) return;
   try{
@@ -29755,11 +29758,26 @@ async function _mcGenerate(){
         toast('Kling 3.0 a jugé ce contenu sensible — reprise automatique en Kling 2.6');
         _mcProg('Reprise en Kling 2.6…', 20);
         _mcVer='v2.6';
-        out=await runKling('v2.6');
+        // ⚠️ REFACTURATION AVANT le repli (audit 15/09) — sinon DOUBLE FACTURATION (90 + 60 au lieu de 60).
+        // Sur le 422 de modération, le proxy rembourse l'op v3 côté serveur (refundByJobTerminal) OU, à défaut, la
+        // libère (réserve = amount). Dans les DEUX cas, ce creditsFlowRefund est nécessaire ICI, AVANT de relancer :
+        //   • si le proxy a déjà remboursé → refund_credits renvoie 'already_refunded' AVEC le solde → on
+        //     RESYNCHRONISE le mirror local (sinon le pré-check du re-débit 2.6 lit un solde périmé et 402) ;
+        //   • sinon (repli release) → refund_credits rembourse vraiment l'op v3 (réserve intacte).
+        // PUIS on débite l'op 2.6 FRAÎCHE : la relance 2.6 tire cette op-là (l'op v3 est remboursée → non tirable).
+        const _v26Rate = tier==='pro' ? 4 : 2;
+        if(_v26Rate !== _mcPreRate){
+          try{ await creditsFlowRefund('reprise en Kling 2.6 — refacturation au tarif 2.6'); }catch(_){}
+          creditsFlowBegin();
+          if(!(await spendCreditsFor(_v26Rate*dur,'motion'))) throw new Error('Crédits insuffisants pour la reprise en Kling 2.6');
+          _mcPreRate = _v26Rate;   // rend le garde-fou de refacturation ci-dessous inopérant (déjà refacturé)
+        }
+        out=await runKling('v2.6');   // tire désormais l'op 2.6 FRAÎCHE (l'op v3 a été remboursée, réserve intacte)
       } else throw e;
     }
-    // Tarif effectif : Motion 2.6 (standard) = 2 cr/s ; Motion 3.0 (pro) = motion30PerSec ; 3.0 retombé sur 2.6 = 4 cr/s.
-    // Le débit a eu lieu AVANT Kling (audit 05/09) ; si le tarif effectif diffère (repli 2.6), on refacture.
+    // Garde-fou : la refacturation du repli modération est faite CI-DESSUS (avant la soumission 2.6, condition d'un
+    // remboursement réussi de l'op v3). _mcPreRate y est mis à jour → ce bloc ne refacture donc plus rien en pratique
+    // (baseRate === _mcPreRate). Conservé pour un éventuel futur chemin qui changerait _mcVer sans passer par le repli.
     const baseRate = tier==='pro' ? (_mcVer==='v3' ? CREDIT_COSTS.motion30PerSec : 4) : 2;
     if(baseRate !== _mcPreRate){
       try{ await creditsFlowRefund('reprise en Kling 2.6 — refacturation au tarif 2.6'); }catch(_){}
