@@ -3689,11 +3689,11 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
               <button type="button" id="omniRes720" onclick="_omniSetRes('720p')" class="col" style="gap:2px;padding:14px 16px;border-radius:14px;text-align:left;transition:.15s;border:2px solid var(--accent);background:var(--accent-soft);cursor:pointer;font-family:var(--font);color:var(--text)">
-                <span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:800;font-size:16px">Standard</span><span class="mono" id="omniRate720" style="font-size:11px;color:var(--accent-2)">4 cr/s</span></span>
+                <span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:800;font-size:16px">720p</span><span class="mono" id="omniRate720" style="font-size:11px;color:var(--accent-2)">3 cr/s</span></span>
                 <span class="faint" style="font-size:11.5px">Rapide</span>
               </button>
               <button type="button" id="omniRes1080" onclick="_omniSetRes('1080p')" class="col" style="gap:2px;padding:14px 16px;border-radius:14px;text-align:left;transition:.15s;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-family:var(--font);color:var(--text)">
-                <span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:800;font-size:16px">Pro</span><span class="mono" id="omniRate1080" style="font-size:11px;color:var(--text-3)">5 cr/s</span></span>
+                <span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:800;font-size:16px">1080p</span><span class="mono" id="omniRate1080" style="font-size:11px;color:var(--text-3)">4 cr/s</span></span>
                 <span class="faint" style="font-size:11.5px">Meilleure qualité</span>
               </button>
             </div>
@@ -6559,8 +6559,8 @@ const CREDIT_COSTS = {
   expressLitePerSec: 1.5, // Veo 3.1 Lite 720p (Starter/Pro) — 0,05 $/s API (audio inclus), marge ~66% Pro
   expressFastPerSec: 3,   // Veo 3.1 Fast 720p (Élite) — 0,10 $/s API (audio inclus)
   express1080Mult: 2,     // 1080p = ×2 du 720p (Std 1,5→3 cr/s · Pro 3→6 cr/s) — coût API réel +0,02-0,03 $/s
-  omniEditPerSec: 4,      // 🎬 Module Omni « Standard » = fal Kling O1 video-to-video edit standard (0,126 $/s) — 4 cr/s. Remplace gemini-omni-flash (15/09 : filtre marques/trademark Google bloquait TOUTES les requêtes). NB : distinct de `omniPerSec` (OmniHuman 1.5 lipsync, plus bas)
-  omniEdit1080PerSec: 5,  // 🎬 Module Omni « Pro » = fal Kling O1 video-to-video edit pro (0,168 $/s) — 5 cr/s. (Retester Omni Flash / gemini-omni-flash si Google assouplit son filtre.)
+  omniEditPerSec: 3,      // 🎬 Module Omni 720p (édition vidéo par prompt, fal gemini-omni-flash v1.1/edit, 0,10 $/s) — 3 cr/s = marge 55% pire cas Élite90 mensuel (Axel 31/08, plus attractif : 30 cr un clip 10 s). NB : distinct de `omniPerSec` (OmniHuman 1.5 lipsync, plus bas)
+  omniEdit1080PerSec: 4,  // 🎬 Module Omni 1080p (fal v1.1 resolution:1080p, 0,15 $/s) — 4 cr/s = marge ~49% pire cas Élite90 mensuel (Axel 31/08 : écart minime 720p 3 → 1080p 4, pousse au 1080p)
   imgLow: 1, imgMedium: 3, imgHigh: 5,
   // 🔍 Passe 4K Nano Banana Pro sur une image déjà générée (Élite). Coût Google
   // 0,24 $ ≈ 0,22 € : même dépense qu'une image imgHigh, donc même prix — et
@@ -29482,13 +29482,14 @@ async function _omniGenerate(){
     const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
     const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
     const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
-    // MOTEUR = Kling O1 video-to-video edit (fal, NON-Google). Remplace gemini-omni-flash dont le filtre
-    // marques/trademark de Google bloquait TOUTES les requêtes (diagnostic 15/09). Toggle qualité → standard/pro.
-    // Mêmes entrées qu'Omni Flash : { video_url, prompt }. (Retester Omni Flash si Google assouplit son filtre.)
-    const model='/fal-ai/kling-video/o1/'+(_omniRes==='1080p'?'pro':'standard')+'/video-to-video/edit';
+    // v1.1 (et non l'endpoint de base) : moins cher en 720p (0,10 $ vs 0,13 $/s),
+    // qualité supérieure, et débloque 1080p/4K si on ajoute `resolution` plus tard.
+    const model='/google/gemini-omni-flash/v1.1/edit';
     _omniProg("L'IA transforme ta vidéo…",25);
-    // Scaffold léger : prompts SIMPLES (la préservation ciblée est déjà dans _omniBuildPrompt).
-    const sub=await fPost(model,{ video_url:sg.data.signedUrl, prompt:_omniBuildPrompt(prompt) });
+    // Scaffold léger : la doc Google est formelle — « les prompts SIMPLES marchent
+    // mieux ; trop de détails = changements imprévus » (l'INVERSE de Motion Control).
+    // On n'ajoute donc QUE la phrase-clé de préservation prouvée, jamais un mur de contraintes.
+    const sub=await fPost(model,{ video_url:sg.data.signedUrl, prompt:_omniBuildPrompt(prompt), resolution:_omniRes });
     const sd=await sub.json();
     if(!sub.ok) throw new Error(_omniErr(sd));
     const pick=(o)=>o&&(o.video&&o.video.url)||(o&&o.output&&o.output.video&&o.output.video.url)||null;
