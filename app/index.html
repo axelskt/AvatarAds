@@ -3677,6 +3677,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
               <video id="omniPreview" controls playsinline muted onclick="event.stopPropagation()" style="display:none;width:100%;max-height:280px;border-radius:14px;background:#000"></video>
               <div id="omniDropLabel" class="mono faint" style="display:none;font-size:11.5px"></div>
+              <button type="button" id="omniChange" onclick="event.stopPropagation();document.getElementById('omniFileIn').click()" class="btn btn-ghost btn-sm" style="display:none;font-size:11.5px;padding:6px 12px;border-radius:9px;align-items:center;justify-content:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>Changer la vidéo</button>
             </div>
             <input type="file" id="omniFileIn" accept="video/*" style="display:none" onchange="_omniPickFile(this.files[0]);this.value=''">
 
@@ -3727,7 +3728,13 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </div>
             <!-- Taille CONTENUE : une vidéo 9:16 en width:100% dépassait l'écran (retour Axel 13/09).
                  max-height borne la hauteur → la vidéo tient en entier, bouton Télécharger visible dessous. -->
-            <video id="omniOut" controls playsinline style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;margin:0 auto;border-radius:14px;background:#000"></video>
+            <div style="position:relative;width:fit-content;max-width:100%;margin:0 auto">
+              <video id="omniOut" controls playsinline onplay="var o=document.getElementById('omniPlayOv');if(o)o.style.display='none'" onpause="var o=document.getElementById('omniPlayOv');if(o)o.style.display='flex'" style="display:block;max-width:100%;max-height:min(66vh,620px);width:auto;border-radius:14px;background:#000"></video>
+              <!-- Bouton play TOUJOURS visible quand en pause (pas seulement au survol). pointer-events:none sur le calque → les contrôles natifs restent cliquables ; seul le rond central lance la lecture. -->
+              <div id="omniPlayOv" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+                <span onclick="var v=document.getElementById('omniOut');if(v)v.play()" style="pointer-events:auto;cursor:pointer;width:62px;height:62px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px -4px rgba(0,0,0,.5)"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
+              </div>
+            </div>
             <div class="row" style="gap:8px;margin:12px 0 44px">
               <button onclick="_omniDownload()" class="btn btn-primary" style="flex:1;padding:13px;border-radius:12px;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
             </div>
@@ -29389,9 +29396,9 @@ function _omniUpdateCost(){
 function _omniPickFile(file){
   if(!file) return;
   if(!/^video\//.test(file.type||'')){ toast('Choisis une vidéo (MP4/MOV)'); return; }
-  const v=document.getElementById('omniPreview'), empty=document.getElementById('omniDropEmpty'), lbl=document.getElementById('omniDropLabel');
+  const v=document.getElementById('omniPreview'), empty=document.getElementById('omniDropEmpty'), lbl=document.getElementById('omniDropLabel'), chg=document.getElementById('omniChange');
   try{ if(v.src) URL.revokeObjectURL(v.src); }catch(_){}
-  const showEmpty=()=>{ v.style.display='none'; if(empty) empty.style.display='flex'; if(lbl) lbl.style.display='none'; };
+  const showEmpty=()=>{ v.style.display='none'; if(empty) empty.style.display='flex'; if(lbl) lbl.style.display='none'; if(chg) chg.style.display='none'; };
   v.src=URL.createObjectURL(file);
   v.onloadedmetadata=()=>{
     const d=v.duration||0;
@@ -29400,6 +29407,7 @@ function _omniPickFile(file){
     _omniFile=file; _omniDur=d; _omniUpdateCost();
     v.style.display='block'; if(empty) empty.style.display='none';
     if(lbl){ lbl.textContent=(file.name||'vidéo')+' · '+d.toFixed(1)+' s'; lbl.style.display='block'; }
+    if(chg) chg.style.display='inline-flex';
   };
 }
 let _omniProgTimer=null, _omniProgVal=0, _omniProgT0=0;
@@ -29510,6 +29518,7 @@ async function _omniGenerate(){
     _omniProg('Terminé ✓',100);
     _omniOutUrl=outUrl;
     const out=document.getElementById('omniOut'); if(out) out.src=outUrl;
+    { const _ov=document.getElementById('omniPlayOv'); if(_ov) _ov.style.display='flex'; }   // bouton play visible sur le nouveau résultat
     if(res) res.style.display='block';
     setTimeout(()=>{ _omniProgHide(); }, 500);
     // Auto-save en Bibliothèque (le bouton « Enregistrer » manuel a été retiré — Axel 31/08)
@@ -29525,9 +29534,17 @@ async function _omniGenerate(){
   }finally{ if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } }
 }
 // « Nouvelle transformation » : referme le résultat et rouvre le formulaire (le résultat avait pris sa place).
-function _omniReset(){
+function _omniClearFile(){   // remet l'uploader à zéro (vidéo déchargée) → on peut en remettre une autre
+  const v=document.getElementById('omniPreview'), empty=document.getElementById('omniDropEmpty'), lbl=document.getElementById('omniDropLabel'), chg=document.getElementById('omniChange');
+  try{ if(v){ v.pause(); if(v.src) URL.revokeObjectURL(v.src); v.removeAttribute('src'); if(v.load) v.load(); } }catch(_){}
+  if(v) v.style.display='none'; if(empty) empty.style.display='flex'; if(lbl) lbl.style.display='none'; if(chg) chg.style.display='none';
+  _omniFile=null; _omniDur=0; _omniUpdateCost();
+}
+function _omniReset(){   // « Nouvelle transformation » = TOUT réinitialiser (nouvelle vidéo + prompt vierge)
   const res=document.getElementById('omniResult'); if(res) res.style.display='none';
   _omniProgHide();
+  _omniClearFile();
+  const p=document.getElementById('omniPrompt'); if(p){ p.value=''; try{ _omniCharCount(); }catch(_){} }
   const form=document.getElementById('omniForm'); if(form) form.style.display='';
   try{ const v=document.getElementById('v-omni'); if(v) v.scrollTo({top:0,behavior:'smooth'}); }catch(_){}
 }
