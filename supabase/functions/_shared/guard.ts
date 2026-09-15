@@ -130,9 +130,9 @@ export async function releaseOp(userId: string, opId: string | undefined, cost: 
 }
 // `drawn` = montant tiré par CE job → mémorisé (job_drawn) pour une restauration EXACTE au release. Omis
 // (ancien appelant) → job_drawn reste NULL → release retombe sur son p_cost (compat pendant le rollout).
-export async function bindJob(userId: string, opId: string | undefined, job: string, drawn?: number): Promise<void> {
+export async function bindJob(userId: string, opId: string | undefined, job: string, drawn?: number, path?: string): Promise<void> {
   if (!opId || !job) return
-  try { await svc().rpc('bind_reservation_job', { p_user: userId, p_op: opId, p_job: job, p_drawn: (drawn != null && drawn > 0) ? Math.ceil(drawn) : null }) } catch { /* best-effort */ }
+  try { await svc().rpc('bind_reservation_job', { p_user: userId, p_op: opId, p_job: job, p_drawn: (drawn != null && drawn > 0) ? Math.ceil(drawn) : null, p_path: path || null }) } catch { /* best-effort */ }
 }
 export async function releaseByJob(userId: string, job: string): Promise<void> {
   if (!job) return

@@ -123,6 +123,11 @@ serve(async (req: Request) => {
       // rendre la réserve d'une autre op (fermait le refund-and-keep) ni un id bidon débloquer un refund.
       const jobId = (bare.match(/\/requests\/([A-Za-z0-9._-]+)/) || [])[1] || ''
       const submitRid = isSubmit ? ((text.match(/"request_id"\s*:\s*"([^"]+)"/) || [])[1] || '') : ''
+      // URL de suivi RENVOYÉE PAR fal (response_url = base .../requests/<id>, ou status_url sans /status) : l'espace-file
+      // fal vit sur la RACINE fournisseur (ex. OmniHuman = /fal-ai/bytedance, PAS le chemin modèle qui répond 405) → on
+      // stocke ce que fal donne, jamais une reconstruction. Sert à la réconciliation serveur (reconcile-fal-orphans).
+      const submitRespUrl = isSubmit ? (((text.match(/"response_url"\s*:\s*"([^"]+)"/) || [])[1]) || (((text.match(/"status_url"\s*:\s*"([^"]+)"/) || [])[1] || '').replace(/\/status$/, ''))) : ''
+      const falBase = /^https:\/\/queue\.fal\.run\/[A-Za-z0-9._\/-]+$/.test(submitRespUrl) ? submitRespUrl : ''   // jamais un autre hôte
       // ÉCHEC DE SOUMISSION — statuts RETRYABLES sur la MÊME op (à NE PAS rembourser, sinon on tue le renvoi) :
       //   • 400/422 = Motion Control v3 renvoie sans `elements` sur la même op (app _mcGenerate/runKling) ;
       //   • 408/425/429 = throttle/timeout, le flux peut re-tenter.
@@ -130,9 +135,9 @@ serve(async (req: Request) => {
       //   (voir submitRid), donc il ne peut RIEN récupérer → aucun refund-and-keep possible même si fal a mis un
       //   job en file (504). On REMBOURSE donc le solde côté serveur (synchrone → l'onglet peut mourir, c'est déjà fait).
       const submitRetryable = res.status === 400 || res.status === 408 || res.status === 422 || res.status === 425 || res.status === 429
-      if (isSubmit && res.ok) { if (submitRid) await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt) }   // lie l'op au job créé + mémorise le tiré
+      if (isSubmit && res.ok) { if (submitRid) await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase) }   // lie l'op au job créé + tiré + URL de suivi fal (réconciliation)
       // Soumission NON-2xx AVEC un request_id (rare : erreur mais job créé) → on LIE (le poll gèrera), jamais de refund.
-      else if (isSubmit && !res.ok && submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt) }
+      else if (isSubmit && !res.ok && submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase) }
       // Soumission échouée SANS job récupérable : définitif+primaire → REMBOURSE le solde serveur (couvre 5xx/timeout,
       // ferme « onglet fermé = crédits perdus », point 1) ; retryable OU aux OU refus (op partagée/multi-étapes/livrée)
       // → repli release réserve inchangé (préserve le renvoi même-op de MC v3).
