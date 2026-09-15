@@ -57,6 +57,10 @@ serve(async (req: Request) => {
   if (!v.ok) return jsonRes(400, { error: 'path refusé : ' + v.reason })
   const path = v.path
   const isSubmit = req.method === 'POST' && !IS_POLL.test(path.split('?')[0])
+  // Op auxiliaire (matting/utilitaire, tirée per-cost et POTENTIELLEMENT partagée avec l'op parente) : on ne
+  // rembourse JAMAIS le solde en son nom (sur-remboursement de la part parente) → seulement release réserve.
+  // Hissé ici pour être lisible aussi dans le catch réseau (échec de soumission sans réponse).
+  const isAuxPath = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(path.split('?')[0])
 
   // ── session utilisateur obligatoire — SAUF le moteur de rendu / backend Motion Control (service_role,
   //    jeton déjà vérifié par la passerelle et impossible à forger sans le secret du projet) ──
@@ -118,25 +122,30 @@ serve(async (req: Request) => {
       // à ce job à la soumission, puis on règle/libère PAR JOB au poll → un poll d'un id ÉTRANGER ne peut plus
       // rendre la réserve d'une autre op (fermait le refund-and-keep) ni un id bidon débloquer un refund.
       const jobId = (bare.match(/\/requests\/([A-Za-z0-9._-]+)/) || [])[1] || ''
-      // Op auxiliaire (matting/utilitaire, tirée per-cost et POTENTIELLEMENT partagée) : on ne rembourse
-      // jamais le solde en son nom (sur-remboursement de la part parente) → on garde le release réserve.
-      const isAux = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(bare)
-      // Échec de SOUMISSION terminal = 4xx non-retryable (400/401/402/403/404/405/422…). PAS 408/425/429
-      // (throttle/timeout retryables) ni 5xx (transitoires) : ceux-là restent un simple release réserve, pour
-      // ne pas tuer un retry légitime (ex. 4K après un 503 Google). Le terminal = définitif → remboursable.
-      const submitTerminal = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 425 && res.status !== 429
-      if (isSubmit && res.ok) { const rid = (text.match(/"request_id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (rid) await bindJob(auth.userId, drawnOp, 'fal:' + rid, drawnAmt) }   // lie l'op au job créé + mémorise le tiré
-      // Soumission refusée : terminal PRIMAIRE → tente le REMBOURSEMENT SOLDE serveur (garanti, ne dépend plus du
-      // client, pose refunded_at → refund_credits client = no-op). S'il REFUSE (in_progress/déjà livré : op partagée
-      // ou multi-étapes) OU aux OU transitoire (5xx/429) → repli release réserve inchangé (appel unique = pas de double-restauration).
-      else if (isSubmit && !res.ok) { if (!(!isAux && submitTerminal && await refundOpTerminal(auth.userId, drawnOp, drawnAmt))) await releaseOp(auth.userId, drawnOp, drawnAmt) }
-      // Job mort (statut FAILED/ERROR/CANCELLED, ou 422 terminal) → tente le REMBOURSEMENT SOLDE serveur de l'op LIÉE
-      // (cas PROPRE : 1 job = 1 gen, rien livré). refundByJobTerminal est idempotent (restauration CALCULÉE, refus =
-      // aucune écriture ; un 2e poll → already_refunded/no_op). S'il REFUSE (op partagée aux / multi-étapes / livrée)
-      // → repli release_by_job INCHANGÉ (le refund serveur n'a rien écrit → pas de double-restauration sur le cas propre ;
-      // sur le cas non-propre release_by_job no-op après un refund grâce à sa garde refunded_at is null).
+      const submitRid = isSubmit ? ((text.match(/"request_id"\s*:\s*"([^"]+)"/) || [])[1] || '') : ''
+      // ÉCHEC DE SOUMISSION — statuts RETRYABLES sur la MÊME op (à NE PAS rembourser, sinon on tue le renvoi) :
+      //   • 400/422 = Motion Control v3 renvoie sans `elements` sur la même op (app _mcGenerate/runKling) ;
+      //   • 408/425/429 = throttle/timeout, le flux peut re-tenter.
+      // TOUT LE RESTE (5xx, 404, 401/402/403, 405, 410…) = définitif : le client n'a JAMAIS reçu de request_id
+      //   (voir submitRid), donc il ne peut RIEN récupérer → aucun refund-and-keep possible même si fal a mis un
+      //   job en file (504). On REMBOURSE donc le solde côté serveur (synchrone → l'onglet peut mourir, c'est déjà fait).
+      const submitRetryable = res.status === 400 || res.status === 408 || res.status === 422 || res.status === 425 || res.status === 429
+      if (isSubmit && res.ok) { if (submitRid) await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt) }   // lie l'op au job créé + mémorise le tiré
+      // Soumission NON-2xx AVEC un request_id (rare : erreur mais job créé) → on LIE (le poll gèrera), jamais de refund.
+      else if (isSubmit && !res.ok && submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt) }
+      // Soumission échouée SANS job récupérable : définitif+primaire → REMBOURSE le solde serveur (couvre 5xx/timeout,
+      // ferme « onglet fermé = crédits perdus », point 1) ; retryable OU aux OU refus (op partagée/multi-étapes/livrée)
+      // → repli release réserve inchangé (préserve le renvoi même-op de MC v3).
+      else if (isSubmit && !res.ok) { if (!(!submitRetryable && !isAuxPath && await refundOpTerminal(auth.userId, drawnOp, drawnAmt))) await releaseOp(auth.userId, drawnOp, drawnAmt) }
+      // Poll de STATUT (GET .../status, 200 body FAILED) → job mort : REMBOURSE le solde de l'op LIÉE (cas propre,
+      // idempotent ; refus → repli release_by_job). Aucun flux ne ré-utilise la même op après un statut FAILED.
       else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }
-      else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }         // échec TERMINAL uniquement (422 / statut FAILED). PAS un 400/202 « pas prêt » : sinon poller un job ENCORE EN COURS remboursait → refund-and-keep (audit 14/09)
+      // GET de RÉSULTAT terminal (422 / body FAILED) → REMBOURSE le solde de l'op LIÉE côté serveur (mort-client
+      // protégé : Omni/OmniHuman/Express qui échouent en 422 au résultat n'attendent plus le refund client). SÛR
+      // vis-à-vis du repli modération Motion 3.0→2.6 : le client refacture DÉSORMAIS AVANT de relancer la 2.6 (il
+      // débite une op FRAÎCHE, cf. app _mcGenerate) → le 2.6 ne ré-utilise plus cette op (refundée) → pas de 402.
+      // Refus (op partagée/multi-étapes/livrée) → repli release_by_job inchangé. (Échec TERMINAL only.)
+      else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }
       else if (isResult && res.ok && hasOutput) { if (jobId) await settleByJob(auth.userId, 'fal:' + jobId) }                                                                         // livré → op LIÉE non remboursable
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
@@ -145,7 +154,12 @@ serve(async (req: Request) => {
     }
     return new Response(text, { status: res.status, headers: { ...CORS, 'Content-Type': res.headers.get('content-type') ?? 'application/json' } })
   } catch (err) {
-    if (isSubmit && !auth.isService && auth.userId) await releaseOp(auth.userId, drawnOp, drawnAmt || 1).catch(() => {})
+    // Échec RÉSEAU/TIMEOUT d'une soumission (aucune réponse fal reçue → aucun request_id renvoyé au client →
+    // rien à récupérer → pas de refund-and-keep) : primaire → REMBOURSE le solde serveur (couvre le « timeout de
+    // soumission », point 1) ; aux ou refus → repli release réserve. Best-effort (jamais bloquant).
+    if (isSubmit && !auth.isService && auth.userId) {
+      try { if (!(!isAuxPath && await refundOpTerminal(auth.userId, drawnOp, drawnAmt || 1))) await releaseOp(auth.userId, drawnOp, drawnAmt || 1) } catch { /* best-effort */ }
+    }
     console.error('fal-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }
