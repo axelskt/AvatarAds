@@ -712,7 +712,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 .img-hist-thumb{border-radius:8px;overflow:hidden;cursor:pointer;border:1.5px solid var(--border);aspect-ratio:1;background:var(--bg3);transition:all .15s}
 .img-hist-thumb:hover{border-color:var(--border3);transform:scale(1.03)}
 .img-hist-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.img-loading-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit}
+.img-loading-overlay{position:absolute;inset:0;background:color-mix(in srgb, var(--bg4) 82%, transparent);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:inherit}
 @keyframes imgPulse{0%,100%{opacity:.4;transform:scale(0.95)}50%{opacity:1;transform:scale(1.05)}}
 /* ── Slider esthétique (durée cible) ── */
 .aa-slider{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--surface-3);outline:none;cursor:pointer}
@@ -3114,9 +3114,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <circle cx="37" cy="37" r="32" fill="none" stroke="rgba(255,107,53,0.18)" stroke-width="5"/>
                     <circle id="imgProgArc" cx="37" cy="37" r="32" fill="none" stroke="var(--orange)" stroke-width="5" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" style="transition:stroke-dashoffset .35s linear"/>
                   </svg>
-                  <div id="imgProgPct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;font-family:var(--font);color:#fff">1%</div>
+                  <div id="imgProgPct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;font-family:var(--font);color:var(--text)">1%</div>
                 </div>
-                <div id="imgProgLabel" style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,0.7)">Génération en cours…</div>
+                <div id="imgProgLabel" style="font-size:12px;font-family:var(--mono);color:var(--text-2)">Génération en cours…</div>
               </div>
               <!-- Badges -->
               <div id="imgBadges" style="position:absolute;top:12px;left:12px;display:flex;gap:6px"></div>
@@ -3675,7 +3675,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <span style="font-weight:700;font-size:16px;color:var(--text)">Glisse ta vidéo ou clique</span>
                 <span class="mono faint" style="font-size:11.5px">MP4 / MOV · 1 à 10 secondes</span>
               </div>
-              <video id="omniPreview" controls playsinline muted onclick="event.stopPropagation()" style="display:none;width:100%;max-height:280px;border-radius:14px;background:#000"></video>
+              <video id="omniPreview" controls playsinline muted onclick="event.stopPropagation()" style="display:none;max-width:100%;max-height:280px;width:auto;height:auto;margin:0 auto;border-radius:14px;background:#000"></video>
               <div id="omniDropLabel" class="mono faint" style="display:none;font-size:11.5px"></div>
               <button type="button" id="omniChange" onclick="event.stopPropagation();document.getElementById('omniFileIn').click()" class="btn btn-ghost btn-sm" style="display:none;font-size:11.5px;padding:6px 12px;border-radius:9px;align-items:center;justify-content:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>Changer la vidéo</button>
             </div>
