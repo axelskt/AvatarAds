@@ -15,7 +15,7 @@ function sched(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(load
 if(document.readyState==='complete')sched();else window.addEventListener('load',sched);})();</script>
 <title>AvatarAds · Générateur de vidéos et images par IA</title>
 <meta name="description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
-<meta name="robots" content="noindex, nofollow">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
 <meta name="theme-color" content="#EDF1F4">
 <meta name="author" content="AvatarAds">
 <link rel="canonical" href="https://avatarads.fr/">
@@ -537,7 +537,7 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
         <div class="brandmark"><img src="assets/avatarads-logo-96.png" alt="AvatarAds" width="22" height="22" style="border-radius:6px;display:block"></div>
         <div class="col" style="line-height:1">
           <span class="logo-wordmark">AvatarAds</span>
-          <span class="mono faint" style="font-size:9.5px;letter-spacing:.1em;margin-top:3px">BY IA MANAGER</span>
+          <span class="mono" style="color:var(--text-2);font-size:9.5px;letter-spacing:.1em;margin-top:3px">BY IA MANAGER</span>
         </div>
       </div>
       <div class="row gap24 nav-center" style="position:absolute;left:50%;transform:translateX(-50%)">
@@ -586,7 +586,7 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
 <!-- ══════════ 3 · HERO V2 (animé — casting vivant, A/B) ══════════ -->
 <section class="hero-sec v2hero">
   <div class="v2hero-media">
-    <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutnet.mp4?v=srgb1" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
+    <video id="v2heroVid" class="v2hero-vid" src="assets/lp/v2/hero-cutnet.mp4?v=srgb1" poster="assets/lp/v2/anim-start-01.jpg" muted loop playsinline autoplay preload="auto" fetchpriority="high" aria-label="Avatars IA générés par AvatarAds — casting vivant"></video>
   </div>
   <div class="wrap v2hero-grid">
     <div class="v2hero-copy">
@@ -651,7 +651,7 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="genVid" src="assets/lp/generateur-lp.mp4" poster="assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" aria-label="Démo Générateur : un avatar, ta voix, un style de sous-titres — la vidéo est prête" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="genVid" src="assets/lp/generateur-lp.mp4" poster="assets/lp/generateur-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="Démo Générateur : un avatar, ta voix, un style de sous-titres — la vidéo est prête" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -670,7 +670,7 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
       </div>
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="imagesIaVid" src="assets/lp/images-ia-lp.mp4" poster="assets/lp/images-ia-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" aria-label="Démo Images IA : depuis Claude, un produit devient des dizaines de pubs produit et de l'UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="imagesIaVid" src="assets/lp/images-ia-lp.mp4" poster="assets/lp/images-ia-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="Démo Images IA : depuis Claude, un produit devient des dizaines de pubs produit et de l'UGC" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
     </div>
@@ -681,7 +681,7 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
     <div class="sc-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center">
       <div class="reveal sc-mediawrap" style="position:relative">
         <div class="sc-media" style="aspect-ratio:16/9">
-          <video id="veoVid" src="assets/lp/express-lp.mp4" poster="assets/lp/express-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" aria-label="Démo Express : un prompt, plusieurs vidéos générées" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
+          <video id="veoVid" src="assets/lp/express-lp.mp4" poster="assets/lp/express-lp.webp" width="1920" height="1080" muted loop playsinline autoplay preload="auto" fetchpriority="low" aria-label="Démo Express : un prompt, plusieurs vidéos générées" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block"></video>
         </div>
       </div>
       <div class="reveal sc-text col" style="gap:16px;justify-content:center">
@@ -1030,7 +1030,7 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
    Piste dupliquée (2 × .pw-seq identiques) + translateX(-50%) → boucle infinie
    sans raccord. Le wrapper masque tout débordement horizontal. */
 .pw-sec{padding:6px 0 14px;overflow:hidden}
-.pw-label{font-size:14px;font-weight:500;color:var(--text-2);opacity:.6;letter-spacing:.02em;text-align:center}
+.pw-label{font-size:14px;font-weight:500;color:var(--text-2);letter-spacing:.02em;text-align:center}
 .pw-marquee{overflow:hidden;max-width:var(--maxw);margin:16px auto 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .pw-track{display:flex;width:max-content;animation:pwScroll 30s linear infinite}
 /* pause au survol : UNIQUEMENT sur les vrais pointeurs — sur iOS le tap rend le
@@ -1038,8 +1038,8 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
 @media (hover:hover) and (pointer:fine){ .pw-marquee:hover .pw-track{animation-play-state:paused} }
 @keyframes pwScroll{to{transform:translateX(-50%)}}
 .pw-seq{display:flex;align-items:center;flex:0 0 auto}
-.pw-item{display:flex;align-items:center;gap:9px;color:#9a9a9a;opacity:.55;margin-right:58px;flex:0 0 auto;transition:opacity .25s}
-.pw-item:hover{opacity:.95}
+.pw-item{display:flex;align-items:center;gap:9px;color:var(--text-2);margin-right:58px;flex:0 0 auto;transition:color .25s}
+.pw-item:hover{color:var(--text)}
 .pw-item svg{display:block;width:28px;height:28px}
 .pw-item span{font-weight:600;font-size:16.5px;white-space:nowrap;letter-spacing:-.01em}
 @media (max-width:760px){

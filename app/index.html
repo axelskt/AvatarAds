@@ -9204,7 +9204,9 @@ const _IMG_REALISM = '. Ultra-realistic high-quality photograph, extremely detai
 const _IMG_TEXT_FIDELITY = ' Preserve ALL visible text from the reference image EXACTLY as it appears — same words, same spelling, same language, same fonts and same placement on packaging, labels and logos. Never invent, translate, rewrite or distort any text.';
 // Booster qualité pour les styles 3D/cartoon (rendu propre, pas de dermato)
 const _IMG_CARTOON_Q = ', rendu 3D studio propre et soigné, éclairage cinématique doux, textures détaillées réalistes, intégré naturellement au décor, haute qualité, netteté maximale';
-// Modèles gpt-image essayés dans l'ordre (gpt-image-2 récent → fallback gpt-image-1)
+// Modèles gpt-image essayés dans l'ordre. gpt-image-2.5-flare (sorti 09/26) = qualité > gpt-image-2,
+// ~2× plus rapide, MÊME tarif token → primaire ; gpt-image-2 = seul fallback (gpt-image-1 retiré, inutile).
+// Drop-in : mêmes endpoints /v1/images/generations + /edits, mêmes params (quality low/medium/high).
 // Le proxy OpenAI renvoie ses propres erreurs en CHAÎNE ({"error":"Unauthorized —
 // session invalide ou expirée"}), là où l'API OpenAI renvoie un OBJET
 // ({"error":{"message":"..."}}). Le client ne lisait que `.message` : sur toute
@@ -9216,7 +9218,7 @@ function _imgErrText(err, fallback){
   if(typeof err === 'string') return err;
   return err.message || err.error || err.code || fallback;
 }
-const _GPT_IMG_MODELS = ['gpt-image-2', 'gpt-image-1'];
+const _GPT_IMG_MODELS = ['gpt-image-2.5-flare', 'gpt-image-2'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
 const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
@@ -10973,7 +10975,7 @@ async function generateImage(){
         // moins »). gpt compose ; Nano ajoute la texture et monte en 4K.
         // Si OpenAI refuse (filtre) → Nano direct, comme avant.
         try {
-          _imgProgStart('gpt-image-2…');
+          _imgProgStart('gpt-image-2.5…');
           url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
           try {
             _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
@@ -11025,7 +11027,7 @@ async function generateImage(){
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('Image générée' + (_is4K ? ' — gpt-image-2 + upscale 4K' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('Image générée' + (_is4K ? ' — gpt-image-2.5 + upscale 4K' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
