@@ -9221,6 +9221,16 @@ function _imgErrText(err, fallback){
 const _GPT_IMG_MODELS = ['gpt-image-2.5-flare', 'gpt-image-2'];
 // Bloc réalisme recommandé (méthode ChatGPT) — ajouté à la fin des prompts Photo Réel / UGC.
 // Pas de 85mm/shallow-DOF ici → évite le flou d'arrière-plan.
+// Genre : gpt-image défaute sur une FEMME pour « influenceur / UGC » (Axel 16/09 : « un influenceur » sortait une femme).
+// On lit le genre dans le texte FR (masc / fém) et on l'impose. Le féminin prime en cas d'ambiguïté (le défaut est déjà féminin).
+function _imgGenderHint(p){
+  const t = String(p||'').toLowerCase();
+  const fem  = /\b(influenceuse|influenceuses|femme|femmes|fille|filles|meuf|actrice|f[eé]minine?|madame|maman|m[eè]re|s[oœ]ur|girl|woman|female)\b/.test(t);
+  const masc = /\b(influenceur|influenceurs|homme|hommes|mec|mecs|gars|gar[cç]on|gar[cç]ons|acteur|masculine?|monsieur|papa|p[eè]re|fr[eè]re|boy|man|male|guy)\b/.test(t);
+  if(masc && !fem) return ' [IMPORTANT: the subject is a MAN — a male, masculine person; absolutely NOT a woman.]';
+  if(fem && !masc) return ' [IMPORTANT: the subject is a WOMAN — a female person.]';
+  return '';
+}
 const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
@@ -10886,12 +10896,12 @@ async function generateImage(){
       enhancedPrompt = prompt + ', très détaillé, haute qualité, rendu cohérent et propre';
     } else if((_sid==='photo'||_sid==='ugc') && !_imgRefFile && _imgMode!=='correct'){
       // Styles réalistes sans réf : bloc réalisme ChatGPT.
-      enhancedPrompt = prompt + _IMG_REALISM_SUFFIX;
+      enhancedPrompt = prompt + _imgGenderHint(prompt) + _IMG_REALISM_SUFFIX;
     } else {
       const _qSuffix = (_sid==='photo'||_sid==='ugc') ? _IMG_REALISM
                      : (['studio','premium'].includes(_sid) ? _IMG_CARTOON_Q
                      : ', extrêmement détaillé, netteté maximale, haute résolution, qualité professionnelle, sans flou, sans artefacts');
-      enhancedPrompt = prompt + suffix + _qSuffix;
+      enhancedPrompt = prompt + _imgGenderHint(prompt) + suffix + _qSuffix;
     }
     // #static-ads-bank : Pub Produit (dev/owner) → le gabarit du format choisi (ou tiré au sort) devient LE prompt ;
     // le texte de l'utilisateur décrit le produit ({PRODUCT}). Le même prompt sert avec ou sans image de référence.
@@ -10919,7 +10929,7 @@ async function generateImage(){
       const _isRealistic = (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc');
       // En correction → prompt brut ; en génération réaliste avec réf → prompt + bloc réalisme détaillé
       const editPrompt = (_imgMode === 'correct') ? prompt
-                       : (_isRealistic ? (prompt + _IMG_REALISM_SUFFIX) : enhancedPrompt);
+                       : (_isRealistic ? (prompt + _imgGenderHint(prompt) + _IMG_REALISM_SUFFIX) : enhancedPrompt);
       // #nombre-fix (03/09 — Axel : « la fonction Nombre ne marche pas ») : avec une image de référence, ce chemin
       // ne produisait QU'UNE image alors que le nombre choisi était débité. En génération (pas en correction) et
       // pour 2-3 images : une boucle /edits par image, un format de pub différent à chaque fois quand la banque est active.
