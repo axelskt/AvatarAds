@@ -3106,7 +3106,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
             <!-- Image zone -->
             <div id="imgZone" style="position:relative;background:var(--bg4);min-height:200px">
-              <img id="imgOutput" style="width:100%;display:block" alt="Image générée">
+              <img id="imgOutput" decoding="async" style="width:100%;display:block" alt="Image générée">
               <!-- Loading overlay -->
               <div id="imgLoadingOverlay" class="img-loading-overlay" style="display:none;border-radius:0">
                 <div style="position:relative;width:74px;height:74px">
@@ -9231,6 +9231,20 @@ function _imgGenderHint(p){
   if(fem && !masc) return ' [IMPORTANT: the subject is a WOMAN — a female person.]';
   return '';
 }
+// Variété : gpt-image converge sur le MÊME visage avec un prompt générique (Axel 16/09 : « toujours la même tête »).
+// Pour les portraits réalistes SANS référence, on ajoute un casting ALÉATOIRE par image → visages différents.
+// « unless the description already specifies » : un prompt explicite garde la main.
+function _imgVariationHint(){
+  if(!['photo','ugc'].includes(_imgSelectedStyleId)) return '';
+  const P = a => a[Math.floor(Math.random()*a.length)];
+  const age  = P(['in their early 20s','in their mid 20s','in their late 20s','around 30','in their early 30s','in their mid 30s']);
+  const hair = P(['dark brown','brown','light brown','black','dark blond','chestnut','ash brown','auburn']);
+  const cut  = P(['short','medium-length','short and tousled','slightly wavy','straight','with loose curls','neatly styled']);
+  const build= P(['slim','athletic','average','broad-shouldered']);
+  const ang  = P(['looking straight into the camera','at a slight three-quarter angle','with a subtle head tilt','slightly turned toward the camera']);
+  const exp  = P(['a warm natural smile','a relaxed neutral expression','caught mid-sentence talking','a friendly confident look','a calm approachable expression']);
+  return ' Casting direction for THIS image (unless the description already specifies these): a distinct, unique individual ' + age + ', ' + build + ' build, ' + hair + ' ' + cut + ' hair, ' + ang + ', ' + exp + '. Make this person clearly DIFFERENT in face, hair and features from other generations.';
+}
 const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
 function _imgQualityForPlan(){
@@ -10953,7 +10967,7 @@ async function generateImage(){
           try {
             let url = await _imgEditOne(token, _p, _imgRefFile, gptSize);
             if(_is4Km){ try { url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K'); } catch(_u){ console.warn('upscale 4K', _u); } }
-            _okCount++; _imgMonthIncrement(); _imgAutoSaveUrl(url, size, 'Réf');
+            _okCount++; _imgMonthIncrement(); (window.requestIdleCallback||function(f){setTimeout(f,80);})(()=>_imgAutoSaveUrl(url, size, 'Réf'));
             _imgFillMultiSlot(document.getElementById('_imgMultiSlot'+i), url, size, _fmt ? !!_fmt.person : (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc'));
           } catch(err){
             console.error('Image '+(i+1)+':', err);
@@ -11050,7 +11064,7 @@ async function generateImage(){
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
       _imgProgStart('Génération en cours…');
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours…';
-      let url = await _imgGenerateOne(token, enhancedPrompt, size, style);
+      let url = await _imgGenerateOne(token, enhancedPrompt + _imgVariationHint(), size, style);
       if(_imgEffectiveQuality() === 'high'){
         // 4K = gpt high puis upscale Nano (Axel 15/08) — l'image gpt reste si Nano échoue
         try {
@@ -11084,10 +11098,10 @@ async function generateImage(){
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image '+(i+1)+'/'+actualCount+'…';
         try {
           const _fmtN = (_adPool) ? _adPool[i % _adPool.length] : null;
-          const url = await _imgGenerateOne(token, (_adPromptFor && _fmtN) ? _adPromptFor(_fmtN) : enhancedPrompt, size, style);   // banque : un format différent par image
+          const url = await _imgGenerateOne(token, (_adPromptFor && _fmtN) ? _adPromptFor(_fmtN) : (enhancedPrompt + _imgVariationHint()), size, style);   // banque : un format différent par image ; sinon casting différent par image
           urls.push(url);
           _imgMonthIncrement();
-          _imgAutoSaveUrl(url, size, _imgSelectedStyleLabel);   // #145 · auto-save compte (chaque variation multi)
+          (window.requestIdleCallback||function(f){setTimeout(f,80);})(()=>_imgAutoSaveUrl(url, size, _imgSelectedStyleLabel));   // #145 · auto-save DIFFÉRÉ (idle) → n'fige plus l'UI ~5-10s après l'affichage
           _imgFillMultiSlot(document.getElementById('_imgMultiSlot'+i), url, size, _fmtN ? !!_fmtN.person : (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc'));
         } catch(err){
           console.error('Image '+(i+1)+':', err);
@@ -11203,7 +11217,7 @@ function _imgFillMultiSlot(slot, url, size, showFace){
   slot.style.cssText='display:flex;flex-direction:column;gap:8px;background:transparent;border:none;border-radius:0;overflow:visible;padding:0;position:static';
   const wrap=document.createElement('div');
   wrap.style.cssText='width:100%;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';background:#0d0d0f;border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer';
-  const im=document.createElement('img'); im.src=url; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
+  const im=document.createElement('img'); im.decoding='async'; im.src=url; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
   wrap.appendChild(im); wrap.onclick=()=> _imgSelectFromMulti(url, size);   // clic sur l'image → ouvre en grand
   slot.appendChild(wrap);
   const K4='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>';
