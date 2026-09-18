@@ -85,7 +85,9 @@ const HOOK_START = Math.max(0, (words[0]?.s ?? 0) - 0.06);   // démarre au 1er 
 // ⚠️ Axel : on ne garde QUE hook / liaison / CTA — le CONTENU est jeté (la brique contenu = la démo, déjà à part).
 const segs = [];
 segs.push({ id:`H${cartoonN}-audio`, kind:'hook', a:HOOK_START, b:tAt(hookEndIdx,'end') });
-if (liaEndIdx>hookEndIdx) segs.push({ id:`L${cartoonN}-audio`, kind:'liaison', a:tAt(hookEndIdx+1,'start'), b:tAt(liaEndIdx,'end') });
+// LIAISON seulement si un VRAI connecteur court existe (Axel : « des fois y'a pas de liaison, n'en met pas »).
+if (connIdx>0 && liaEndIdx>hookEndIdx){ const la=tAt(hookEndIdx+1,'start'), lb=tAt(liaEndIdx,'end');
+  if ((lb-la)>=0.4 && (lb-la)<=7) segs.push({ id:`L${cartoonN}-audio`, kind:'liaison', a:la, b:lb }); }
 if (ctaIdx>0) segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta', a:tAt(ctaIdx,'start'), b:total });
 
 // 5) découpe ffmpeg
