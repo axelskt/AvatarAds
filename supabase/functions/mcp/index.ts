@@ -121,22 +121,8 @@ function castingAleatoire(): string {
   const mouth = pickRnd(['a calm expression with the mouth closed, lips gently together', 'a natural closed-mouth smile (mouth not open)', 'a relaxed neutral face, mouth closed', 'a soft closed-lipped confident look', 'lips only slightly parted in a subtle expression', 'mid-sentence with the mouth open while talking'])
   return ` Casting direction for THIS image (unless the description already specifies these): a distinct, unique individual ${age}, ${build} build, ${hair} ${cut} hair, ${ang}, ${mouth}. VARY the mouth and expression — do NOT always show an open, talking mouth. Make this person clearly DIFFERENT in face, hair and features from other generations.`
 }
-function angleMarketingAleatoire(): string {
-  const angle = pickRnd([
-    'lead with the single strongest HERO BENEFIT as the big headline',
-    'lead with SOCIAL PROOF (a bold review-style claim / rating)',
-    'lead with the PROBLEM it solves, then present the product as the answer',
-    'lead with PREMIUM / LUXURY positioning and an elegant minimal layout',
-    'lead with a BEFORE / AFTER or transformation angle',
-    'lead with a KEY INGREDIENT / technology spotlight and fine callouts',
-    'lead with an URGENCY / limited-offer angle',
-    'lead with a LIFESTYLE "in use" hero shot rather than a plain packshot',
-    'lead with a "WHY US" / comparison angle',
-  ])
-  const layout = pickRnd(['a bold top-headline layout', 'a centered hero with radial benefit callouts', 'an editorial magazine-style layout', 'a clean split layout', 'a big-type minimalist layout'])
-  const bg = pickRnd(['a deep saturated brand-colour backdrop', 'a soft gradient studio backdrop', 'a dark premium backdrop', 'a light airy backdrop', 'a textured backdrop matching the product world'])
-  return ` Marketing direction for THIS image — make it CLEARLY DIFFERENT from other generations: ${angle}; use ${layout} on ${bg}. Change the exact copy, the marketing angle and the composition on every generation.`
-}
+// (angle marketing inventé RETIRÉ le 18/09 — la variété des static ads vient des 59 formats VALIDÉS
+//  de la banque, désormais ouverte à tous ; on n'invente pas d'angle.)
 // N'augmente QUE si le prompt parle d'une personne (sinon on casserait un packshot produit).
 function augmenterPortrait(prompt: string): string {
   if (!RE_PERSONNE.test(prompt)) return prompt
@@ -1037,7 +1023,6 @@ function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): s
       'PRODUCT: the product is the HERO of the composition, large, on the right or centre, photorealistic with studio lighting, soft reflections and a subtle glow, with a few floating ingredients/droplets matching its flavour or purpose.' + refTxt,
       base ? `Art direction: ${base}.` : '',
       'STYLE: clean premium layout, one dominant brand colour palette derived from the product, generous margins, perfectly legible crisp text, balanced hierarchy, no spelling mistakes, no watermark, no fake interface, no extra logos.' + TXT_INTEGRITY,
-      angleMarketingAleatoire(),   // #aleatoire : hors banque, chaque static ad varie d'angle/mise en page (comme Images IA)
     ].filter(Boolean).join(' ')
   }
   if (kind === 'ugc') {
@@ -1091,7 +1076,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   const productUrl = String(args.product_url || '').trim()
   const hasRefSource = !!directRefUrl || !!productUrl
   // #static-ads-bank : compte développeur/owner → « static_ad » pioche un des 59 formats (ou celui demandé via ad_format).
-  const adFormat: StaticAdFormat | null = (kind === 'static_ad' && isUnlimited(profile)) ? pickStaticAdFormat(STATIC_AD_FORMATS, 'random') : null   // Axel : toujours au hasard
+  const adFormat: StaticAdFormat | null = (kind === 'static_ad') ? pickStaticAdFormat(STATIC_AD_FORMATS, 'random') : null   // Axel 18/09 : banque des 59 formats validés ouverte à tous (Pro/Élite) — un format au hasard/image
   if (adFormat) args = { ...args, ad_format: adFormat.id }   // mémorisé → « Regénérer » / carte photo gardent le même format
   const promptFinal = composerPromptImage({ ...args, prompt, __adFormat: adFormat }, hasRefSource)   // source présente → prompt « produit à l'identique »
   // CARTE (dépôt / lien) : static ad ou UGC SANS URL d'image directe (avec ou sans lien produit). La carte
