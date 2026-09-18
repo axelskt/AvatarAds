@@ -3564,7 +3564,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </div>
             <div class="faint" style="font-size:10.5px;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span style="width:9px;height:2px;background:var(--accent);border-radius:2px;display:inline-block"></span>
-              <span id="acDoneCutLegend" style="flex:1 1 auto;min-width:0">les traits marquent les silences retirés</span>
+              <span id="acDoneCutLegend" style="flex:1 1 auto;min-width:0"></span>
               <!-- 🔍 zoom : viser un « euh » de 200 ms sur 60 s d'onde est impossible
                    sans loupe — la fenêtre se resserre autour de la tête de lecture -->
               <span style="display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;margin-left:auto">
@@ -34478,11 +34478,7 @@ function _acFillDone(d){
   if(el('acDoneSaved')) el('acDoneSaved').textContent = saved + ' s';
   if(el('acDoneDur'))   el('acDoneDur').textContent   = _acFmt(d.duration || 0);
   const leg = el('acDoneCutLegend');
-  const compr = d.compressed | 0;
-  if(leg) leg.textContent = (cuts ? 'les traits marquent les ' + cuts + ' silence' + (cuts > 1 ? 's retirés' : ' retiré')
-                                  : 'aucun silence à retirer sur cet audio')
-                          + (compr ? ' · ' + compr + ' blanc' + (compr > 1 ? 's' : '') + ' resserré' + (compr > 1 ? 's' : '') : '')
-                          + (cuts ? ' · clique un trait pour rétablir le blanc' : '');
+  if(leg) leg.textContent = '';   // Axel : légende des traits retirée
   _acWavePaint('acDoneWave', d.peaks, d.marks);
   _acHeadSet('acDoneHead', 0);
   // l'original est refermé à chaque nouveau nettoyage
@@ -34597,9 +34593,7 @@ async function _acRebuildFromRestore(){
   if(el('acDoneSaved'))      el('acDoneSaved').textContent      = Math.round(d.saved) + ' s';
   if(el('acDoneDur'))        el('acDoneDur').textContent        = _acFmt(d.duration || 0);
   const leg = el('acDoneCutLegend');
-  if(leg) leg.textContent = (cuts ? 'les traits marquent les ' + cuts + ' silence' + (cuts > 1 ? 's retirés' : ' retiré') : 'aucun silence retiré')
-                          + (nRest ? ' · ' + nRest + ' blanc' + (nRest > 1 ? 's' : '') + ' rétabli' + (nRest > 1 ? 's' : '') : '')
-                          + ' · clique un trait pour rétablir/recouper';
+  if(leg) leg.textContent = '';   // Axel : légende des traits retirée
   _acWavePaint('acDoneWave', d.peaks, d.marks);
   _acHeadSet('acDoneHead', 0);
   // recâbler le lecteur sur le nouveau blob (nouvelle durée)
