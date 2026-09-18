@@ -145,15 +145,28 @@ const findIdx = (re, from, to) => { const a=are(re); for(let i=Math.max(0,from);
 const flatToks = [], tokToWord = [];
 words.forEach((w,wi)=>{ for(const tk of norm(w.t).split(' ').filter(Boolean)){ flatToks.push(tk); tokToWord.push(wi); } });
 const asToks = s => norm(s).split(' ').filter(Boolean);
-function bestMatchFlat(pat){                                // index (token à plat) du meilleur match de `pat`
-  if(!pat.length) return -1; let best=-1, bestSc=0;
-  for(let i=0;i<flatToks.length;i++){ let sc=0; for(let k=0;k<pat.length && i+k<flatToks.length;k++){ if(flatToks[i+k]===pat[k]) sc++; }
+// fenêtre (ensemble de mots) qui contient le PLUS de mots de `pat` — tolérante aux insertions/omissions
+// (l'audio « Écris CE site » vs texte « écris site », « 1000€ » vs « 1000 euros »). Renvoie [i, i+W[.
+function bestWindow(pat){ const pset=new Set(pat), W=pat.length+3; let best=-1, bestSc=0;
+  for(let i=0;i<flatToks.length;i++){ let sc=0; const seen=new Set();
+    for(let j=i;j<Math.min(flatToks.length,i+W);j++){ if(pset.has(flatToks[j])&&!seen.has(flatToks[j])){ sc++; seen.add(flatToks[j]); } }
     if(sc>bestSc){ bestSc=sc; best=i; } }
-  return bestSc>=Math.max(2, Math.ceil(pat.length*0.55)) ? best : -1;   // ≥55 % des tokens collent
+  return (best>=0 && bestSc>=Math.max(2, Math.ceil(pat.length*0.5))) ? { best, W, pset } : null;
 }
-const alignStart = text => { const t=asToks(text); const f=bestMatchFlat(t.slice(0, Math.min(6,t.length))); return f>=0 ? tokToWord[f] : -1; };
-const alignEnd   = text => { const t=asToks(text); const tail=t.slice(-Math.min(6,t.length)); const f=bestMatchFlat(tail);
-  return f>=0 ? tokToWord[Math.min(f+tail.length-1, flatToks.length-1)] : -1; };
+const alignStart = text => { const head=asToks(text).slice(0, Math.min(6,asToks(text).length)); const r=bestWindow(head); if(!r) return -1;
+  const lim=Math.min(flatToks.length, r.best+r.W);
+  for(let j=r.best;j<lim;j++){ if(flatToks[j]===head[0]) return tokToWord[j]; }        // le 1er MOT EXACT du texte (« écris »), pas un mot commun (« en »)
+  for(let j=r.best;j<lim;j++){ if(r.pset.has(flatToks[j])) return tokToWord[j]; } return -1; };  // repli : 1er mot du motif
+// alignEnd TOLÉRANT AUX INSERTIONS (l'audio « 1000€ par jour » n'a pas le mot « euros » du texte) :
+// on cherche la fenêtre qui contient le plus de mots de la fin du texte, puis le DERNIER mot du motif qui y figure.
+const alignEnd = text => { const t=asToks(text); const tail=t.slice(-Math.min(6,t.length));
+  const pset=new Set(tail), W=tail.length+3; let best=-1, bestSc=0;
+  for(let i=0;i<flatToks.length;i++){ let sc=0; const seen=new Set();
+    for(let j=i;j<Math.min(flatToks.length,i+W);j++){ if(pset.has(flatToks[j])&&!seen.has(flatToks[j])){ sc++; seen.add(flatToks[j]); } }
+    if(sc>bestSc){ bestSc=sc; best=i; } }
+  if(best<0 || bestSc<Math.max(2, Math.ceil(tail.length*0.5))) return -1;
+  let last=best; for(let j=best;j<Math.min(flatToks.length,best+W);j++){ if(pset.has(flatToks[j])) last=j; }
+  return tokToWord[last]; };
 
 // recule un index jusqu'à la 1re VRAIE pause avant lui ; s'il n'y en a pas dans la fenêtre, on reste sur place
 const sentStartBefore = (idx, maxBack=8) => { for(let j=idx-1;j>=Math.max(0,idx-maxBack);j--){ if(gapAfter(j)>0.28) return j+1; } return idx; };
@@ -191,7 +204,7 @@ let earlyClose = -1;
 
 // début de liaison depuis le texte fourni (sert AUSSI à borner le hook — plus robuste que la fin du texte hook,
 // souvent idéalisée : « prête à poster depuis un prompt » ≠ audio « en tapant un prompt »).
-const liaStartBrief = (brief && brief.liaison) ? alignStart(brief.liaison) : -1;
+const liaStartBrief = (brief && typeof brief.liaison==='string') ? alignStart(brief.liaison) : -1;
 
 // ── HOOK end : (a) début de liaison −1 si connu ; (b) sinon fin du texte hook ; (c) sinon 1re borne audio. ──
 let hookEndIdx;
@@ -200,20 +213,27 @@ else if (brief && brief.hook){ const he=alignEnd(brief.hook); hookEndIdx = he>0 
 else { const cands=[conceptIdx, earlyTuto, earlyClose, ctaIdx].filter(x=>x>2);
   hookEndIdx = cands.length ? Math.min(...cands)-1 : Math.min(words.length-1,14); }
 
-// ── LIAISON : du hook au TUTO appli (repère AUDIO fiable, quel que soit le script). ──
-const wantLiaison = brief ? !!brief.liaison : (conceptIdx>0);
+// ── LIAISON : du hook au TUTO appli. Bornée par le texte fourni (Axel s'arrête souvent AVANT le tuto),
+//    sinon par le repère TUTO audio. wantLiaison : oui sauf si brief la désactive (« liaison:false »). ──
+const wantLiaison = brief ? (brief.liaison!==false) : (conceptIdx>0);
 let liaStartIdx = liaStartBrief>0 ? liaStartBrief : hookEndIdx+1;
 const tutoRaw = findIdx(TUTO_RE, Math.max(liaStartIdx+1, 4), Math.floor(words.length*0.96));
 let tutoIdx = tutoRaw>liaStartIdx ? sentStartBefore(tutoRaw) : -1;   // recalé au début de la phrase du tuto
 if (tutoIdx>0 && tutoIdx<=liaStartIdx) tutoIdx = tutoRaw;            // sécurité : jamais avant le début de liaison
+let liaEndIdx = tutoIdx>liaStartIdx ? tutoIdx-1 : -1;
+if (brief && typeof brief.liaison==='string'){ const le=alignEnd(brief.liaison);   // fin explicite → on prend la PLUS COURTE
+  if (le>liaStartIdx && (liaEndIdx<0 || le<liaEndIdx)) liaEndIdx=le; }
 let liaSeg = null;
-if (wantLiaison && tutoIdx>liaStartIdx){
-  const la=tAt(liaStartIdx,'start'), lb=tAt(tutoIdx-1,'end');
+if (wantLiaison && liaEndIdx>liaStartIdx){
+  const la=tAt(liaStartIdx,'start'), lb=tAt(liaEndIdx,'end');
   if ((lb-la)>=0.6 && (lb-la)<=45) liaSeg={ a:la, b:lb };
 }
 
-// bornes finales (le brief a déjà été fondu dans hook/liaison ; CTA = repère audio)
-let hookB=hookEndIdx, liaB=liaSeg, ctaStartB=ctaIdx, ctaEndB=total;
+// bornes finales. CTA : démarre sur le texte fourni s'il s'aligne (ex. C19 « Et si je te disais… », qui
+// ne commence PAS par un impératif), sinon sur le repère audio ; fin = dernier mot + marge (anti-clipping).
+let hookB=hookEndIdx, liaB=liaSeg, ctaStartB=ctaIdx;
+if (brief && typeof brief.cta==='string'){ const cs=alignStart(brief.cta); if(cs>=0) ctaStartB=cs; }
+let ctaEndB = tAt(words.length-1, 'end');
 
 // ⚠️ Axel : on ne garde QUE hook / liaison / CTA (le CONTENU tuto appli est jeté) ; `parts` filtre encore.
 const segs = [];
