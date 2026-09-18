@@ -259,11 +259,16 @@ for (const seg of segs){
   if (seg.b - seg.a < 0.4) continue;
   const out = join(outDir, `${seg.id}.wav`);
   const segdur = seg.b - seg.a;
-  // highpass léger + fondus courts (le vrai anti-vibration est le calage du début sur la voix)
-  execFileSync('ffmpeg', ['-v','error','-y','-ss', seg.a.toFixed(3), '-t', segdur.toFixed(3), '-i', audio,
-    '-af', `${MASTER},afade=t=in:st=0:d=0.03,afade=t=out:st=${Math.max(0,segdur-0.06).toFixed(3)}:d=0.06`,
-    '-ac','1','-ar','48000', out]);
   const inSeg = words.filter(w=>{ const mid=(w.s+w.e)/2; return mid>=seg.a-0.02 && mid<=seg.b+0.02; }); // 1 mot = 1 segment (milieu)
+  // ⚠️ FONDU DE SORTIE calé sur la FIN DU DERNIER MOT (pas la fin du segment) : quand le mot suivant
+  // enchaîne sans blanc (« entrepreneurs. Je te… »), le fondu fait dispa­raître ce mot suivant au lieu de
+  // laisser le dernier mot du segment sonner rogné. Le dernier mot reste à plein volume, la traîne est fondue.
+  const lastRelEnd = inSeg.length ? Math.max(0.1, inSeg[inSeg.length-1].e - seg.a) : (segdur-0.06);
+  const foStart = Math.max(0.1, Math.min(lastRelEnd, segdur-0.03));
+  const foDur   = Math.max(0.03, Math.min(0.16, segdur - foStart));
+  execFileSync('ffmpeg', ['-v','error','-y','-ss', seg.a.toFixed(3), '-t', segdur.toFixed(3), '-i', audio,
+    '-af', `${MASTER},afade=t=in:st=0:d=0.03,afade=t=out:st=${foStart.toFixed(3)}:d=${foDur.toFixed(3)}`,
+    '-ac','1','-ar','48000', out]);
   const txt = inSeg.map(w=>w.t).join(' ');
   const captions = inSeg.map(w=>({ t:w.t, s:+Math.max(0,w.s-seg.a).toFixed(3), e:+Math.min(seg.b-seg.a, w.e-seg.a).toFixed(3) }));
   let meanDb = NaN;
