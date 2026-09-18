@@ -108,6 +108,35 @@ function genreIndice(p: string): 'homme' | 'femme' | null {
   if (masc) return 'homme'
   return null
 }
+// #aleatoire (Axel 18/09) : comme _imgVariationHint côté app — CHAQUE génération d'une PERSONNE
+// reçoit un casting DIFFÉRENT (âge/cheveux/morpho/angle/bouche) → fini « toujours le même visage,
+// toujours la bouche ouverte » ; chaque STATIC AD hors banque reçoit un angle marketing différent.
+function pickRnd<T>(a: T[]): T { return a[Math.floor(Math.random() * a.length)] }
+function castingAleatoire(): string {
+  const age   = pickRnd(['in their early 20s', 'in their mid 20s', 'in their late 20s', 'around 30', 'in their early 30s', 'in their mid 30s'])
+  const hair  = pickRnd(['dark brown', 'brown', 'light brown', 'black', 'dark blond', 'chestnut', 'ash brown', 'auburn'])
+  const cut   = pickRnd(['short', 'medium-length', 'short and tousled', 'slightly wavy', 'straight', 'with loose curls', 'neatly styled'])
+  const build = pickRnd(['slim', 'athletic', 'average', 'broad-shouldered'])
+  const ang   = pickRnd(['looking straight into the camera', 'at a slight three-quarter angle', 'with a subtle head tilt', 'slightly turned toward the camera'])
+  const mouth = pickRnd(['a calm expression with the mouth closed, lips gently together', 'a natural closed-mouth smile (mouth not open)', 'a relaxed neutral face, mouth closed', 'a soft closed-lipped confident look', 'lips only slightly parted in a subtle expression', 'mid-sentence with the mouth open while talking'])
+  return ` Casting direction for THIS image (unless the description already specifies these): a distinct, unique individual ${age}, ${build} build, ${hair} ${cut} hair, ${ang}, ${mouth}. VARY the mouth and expression — do NOT always show an open, talking mouth. Make this person clearly DIFFERENT in face, hair and features from other generations.`
+}
+function angleMarketingAleatoire(): string {
+  const angle = pickRnd([
+    'lead with the single strongest HERO BENEFIT as the big headline',
+    'lead with SOCIAL PROOF (a bold review-style claim / rating)',
+    'lead with the PROBLEM it solves, then present the product as the answer',
+    'lead with PREMIUM / LUXURY positioning and an elegant minimal layout',
+    'lead with a BEFORE / AFTER or transformation angle',
+    'lead with a KEY INGREDIENT / technology spotlight and fine callouts',
+    'lead with an URGENCY / limited-offer angle',
+    'lead with a LIFESTYLE "in use" hero shot rather than a plain packshot',
+    'lead with a "WHY US" / comparison angle',
+  ])
+  const layout = pickRnd(['a bold top-headline layout', 'a centered hero with radial benefit callouts', 'an editorial magazine-style layout', 'a clean split layout', 'a big-type minimalist layout'])
+  const bg = pickRnd(['a deep saturated brand-colour backdrop', 'a soft gradient studio backdrop', 'a dark premium backdrop', 'a light airy backdrop', 'a textured backdrop matching the product world'])
+  return ` Marketing direction for THIS image — make it CLEARLY DIFFERENT from other generations: ${angle}; use ${layout} on ${bg}. Change the exact copy, the marketing angle and the composition on every generation.`
+}
 // N'augmente QUE si le prompt parle d'une personne (sinon on casserait un packshot produit).
 function augmenterPortrait(prompt: string): string {
   if (!RE_PERSONNE.test(prompt)) return prompt
@@ -117,7 +146,7 @@ function augmenterPortrait(prompt: string): string {
     : g === 'homme'
       ? ' The person is a MAN (male) — respect this gender exactly, never render a woman.'
       : ''
-  const suffix = genreTxt + IMG_REALISM_SUFFIX
+  const suffix = genreTxt + castingAleatoire() + IMG_REALISM_SUFFIX
   return prompt.slice(0, 3990 - suffix.length) + suffix
 }
 // Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
@@ -1008,6 +1037,7 @@ function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): s
       'PRODUCT: the product is the HERO of the composition, large, on the right or centre, photorealistic with studio lighting, soft reflections and a subtle glow, with a few floating ingredients/droplets matching its flavour or purpose.' + refTxt,
       base ? `Art direction: ${base}.` : '',
       'STYLE: clean premium layout, one dominant brand colour palette derived from the product, generous margins, perfectly legible crisp text, balanced hierarchy, no spelling mistakes, no watermark, no fake interface, no extra logos.' + TXT_INTEGRITY,
+      angleMarketingAleatoire(),   // #aleatoire : hors banque, chaque static ad varie d'angle/mise en page (comme Images IA)
     ].filter(Boolean).join(' ')
   }
   if (kind === 'ugc') {
