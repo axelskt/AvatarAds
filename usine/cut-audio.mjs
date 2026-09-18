@@ -40,7 +40,7 @@ let words = rawTr.map(w=>({t:String(w.t||'').trim(), s:+w.s, e:+w.e}))
 // ── Correction MARQUE (Whisper : « avatar hats », « atarhats.fr, »…) tolérante à la ponctuation ──
 const bareOf = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
 const brandFix = t => { const b = bareOf(t);
-  if (/atarhat|avatarad|atarad|avatarhat|avataraad/.test(b)) return (/fr$/.test(b) || /\.?fr\b/i.test(t)) ? 'avatarads.fr' : 'avatarads';
+  if (/atarhat|avatarad|atarad|avatarhat|avataraad|avataha|atahad|avataads/.test(b)) return (/fr$/.test(b) || /\.?fr\b/i.test(t)) ? 'avatarads.fr' : 'avatarads';
   return t; };
 { const merged=[]; for(let i=0;i<words.length;i++){ const w=words[i], n=words[i+1];
     if(n && /^a?v?atar$/.test(bareOf(w.t)) && /^(hat|had|ad|rad|hads|aad)/.test(bareOf(n.t))){
@@ -143,7 +143,7 @@ const CONCEPT_RE = /(c est ce qu?e? ?(l ?)?on appelle|et c est (comme ca|ce qu o
 const TUTO_RE = /(maintenant,? (pour (creer|faire|bien)|voici|on va|je vais te (montrer|expliquer)|rends|va |il (te )?faut|c est parti|creons|on cree|suis)|(et |alors |donc )?pour (faire ca|creer ton|creer un|animer|finir|bien commencer|commencer)|pour commencer|commenc(er|ez|ons)|la premiere etape|commence par (creer|te rendre|par aller|aller|choisir ton|selectionner|te connecter)|cree(r| toi)? (un |ton )?compte|connecte ?toi|rends ?toi (dans|sur)|tu vas (te rendre|aller (dans|sur)|cliquer|ouvrir|ajouter|selectionner|importer|decrire|generer)|(va|vas|rends|rendez) (sur|dans) (le site|avatarads|l app|l onglet)|ouvre (l onglet|le module|l application)|va(s)? dans l onglet|sur avatarads|dans l onglet (images|montage)|selectionne (photos|le format|l onglet)|clique sur (commencer|le bouton|creer))/i;
 // Close/CTA — openers de close variés (« Des centaines… », « Si tu veux… », « Tu veux la méthode… »)
 const CLOSE_OPENER_RE = /^(des centaines|des milliers|si tu veux (la|le|ca|ce|reussir|avoir|faire|toi)|tu veux (la|le|ce|recevoir|avoir|apprendre|reussir|obtenir|savoir))/i;
-const CTA_IMP_RE = /^(go|commente|commande|clique|va |vas |teste|abonne|rends|ecris|envoie|mets|recois|recupere|profite|rejoins|telecharge|inscris)/i;
+const CTA_IMP_RE = /^(go|commente|commande|marque|clique|va |vas |teste|abonne|rends|ecris|envoie|mets|recois|recupere|profite|rejoins|telecharge|inscris)/i;
 
 const are = re => new RegExp('^(?:'+re.source+')', re.flags.replace('g',''));
 const win = (i,n=6) => norm(words.slice(i, i+n).map(x=>x.t).join(' '));
@@ -192,7 +192,7 @@ let ctaIdx = -1;
   for(let i=Math.floor(words.length*0.4);i<words.length;i++){
     const sStart=(i===0)||gapAfter(i-1)>0.25; if(sStart && a.test(win(i,4))){ ctaIdx=i; break; } } }
 if (ctaIdx<0){
-  const CTA_CUE=/(sous la video|commente|commande (go|site|le|ia)|va sur avatarads|teste par toi|mets le mot|lien en bio|je t envoie|je te l envoie|en prive)/i;
+  const CTA_CUE=/(sous la video|commente|commande (go|site|le|ia)|marque (go|aide|site|ia|le)|va sur avatarads|teste par toi|mets le mot|lien en bio|je t envoie|je te l envoie|en prive)/i;
   const ca=are(CTA_CUE); let cue=-1;
   for(let i=Math.floor(words.length*0.4);i<words.length;i++){ if(ca.test(win(i,3))) cue=i; }   // dernière occurrence
   if(cue>0){
