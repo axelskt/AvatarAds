@@ -77,7 +77,9 @@
     <div class="muted" style="font-size:13px;margin-bottom:14px">Connecte-toi avec l'e-mail owner AvatarAds.</div>
     <div id="loginStep1">
       <input id="email" type="email" placeholder="ton e-mail" autocomplete="email">
-      <button class="btn btn-primary" style="width:100%" onclick="sendOtp()">Recevoir le code</button>
+      <input id="pwd" type="password" placeholder="mot de passe" autocomplete="current-password" onkeydown="if(event.key==='Enter')signInPwd()">
+      <button class="btn btn-primary" style="width:100%" onclick="signInPwd()">Se connecter</button>
+      <button class="btn" style="width:100%;margin-top:8px" onclick="sendOtp()">Plutôt recevoir un code par e-mail</button>
     </div>
     <div id="loginStep2" style="display:none">
       <input id="otp" type="text" inputmode="numeric" placeholder="code reçu par e-mail">
@@ -116,6 +118,14 @@ async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
   if(session){ $('who').textContent = session.user.email; $('login').style.display='none'; $('app').style.display='block'; $('refreshBtn').style.display='inline-block'; loadAll(); }
   else { $('login').style.display='block'; $('app').style.display='none'; }
+}
+async function signInPwd(){
+  const email = $('email').value.trim(), password = $('pwd').value;
+  if(!email || !password){ $('loginMsg').textContent='E-mail + mot de passe requis.'; return; }
+  $('loginMsg').textContent='Connexion…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ $('loginMsg').textContent = error.message; return; }
+  boot();
 }
 async function sendOtp(){
   const email = $('email').value.trim(); if(!email){ $('loginMsg').textContent='Entre ton e-mail.'; return; }
