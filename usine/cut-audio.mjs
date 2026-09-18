@@ -71,7 +71,7 @@ const tAt = (idx, side) => idx<=0 ? 0 : idx>=words.length ? total
   : (side==='end'
       // marge de fin : ≥120 ms de traîne (Whisper marque souvent la fin du mot TÔT ; on capte la traîne
       // du dernier mot — « manière », « marché » — même sans blanc, le mot suivant est fondu).
-      ? (words[idx].e + Math.max(0.12, Math.min(0.24, gapAfter(idx)*0.85)))
+      ? (words[idx].e + Math.max(0.15, Math.min(0.26, gapAfter(idx)*0.9)))
       : (words[idx].s - Math.min(0.12, (idx>0 ? gapAfter(idx-1)/2 : 0.08))));
 
 // ── ANTI-VIBRATION : vrai début de voix ──
@@ -231,9 +231,10 @@ let liaStartIdx = liaStartBrief>0 ? liaStartBrief : hookEndIdx+1;
 const tutoRaw = findIdx(TUTO_RE, Math.max(liaStartIdx+1, 4), Math.floor(words.length*0.96));
 let tutoIdx = tutoRaw>liaStartIdx ? sentStartBefore(tutoRaw) : -1;   // recalé au début de la phrase du tuto
 if (tutoIdx>0 && tutoIdx<=liaStartIdx) tutoIdx = tutoRaw;            // sécurité : jamais avant le début de liaison
+// fin de liaison : si Axel a fourni le texte, on RESPECTE sa fin (alignEnd) — même si elle contient un
+// mot qui ressemble à un début de tuto (« pour faire ça » du C30). Sinon repère TUTO audio.
 let liaEndIdx = tutoIdx>liaStartIdx ? tutoIdx-1 : -1;
-if (brief && typeof brief.liaison==='string'){ const le=alignEnd(brief.liaison);   // fin explicite → on prend la PLUS COURTE
-  if (le>liaStartIdx && (liaEndIdx<0 || le<liaEndIdx)) liaEndIdx=le; }
+if (brief && typeof brief.liaison==='string'){ const le=alignEnd(brief.liaison); if (le>liaStartIdx) liaEndIdx=le; }
 let liaSeg = null;
 if (wantLiaison && liaEndIdx>liaStartIdx){
   const la=tAt(liaStartIdx,'start'), lb=tAt(liaEndIdx,'end');
