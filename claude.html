@@ -8,7 +8,7 @@
 <title>Connecter Claude — AvatarAds · Génère tes vidéos depuis Claude</title>
 <meta name="description" content="Connecte AvatarAds à Claude et génère tes images et vidéos en une simple phrase, directement depuis tes conversations — avec tes crédits AvatarAds.">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="theme-color" content="#0B0B0D">
+<meta name="theme-color" content="#FBFAF8">
 <meta name="author" content="AvatarAds">
 <meta property="og:title" content="Connecter Claude — AvatarAds">
 <meta property="og:description" content="Génère tes images et vidéos AvatarAds directement depuis Claude, en une simple phrase.">
@@ -41,10 +41,11 @@
 <style>
 /* ══════════ DESIGN SYSTEM (repris de la LP — 1:1) ══════════ */
 :root{
-  --bg:#0B0B0D;--bg-grad:#0E0D10;
-  --panel-1:#111013;--surface:#171519;--surface-2:#1E1B21;--surface-3:#252128;
-  --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
-  --text:#F6F4F1;--text-2:#A7A39E;--text-3:#807C76;
+  /* Axel 18/09 : page passée en CLAIR (comme le reste du site) — mêmes rôles de tokens, valeurs inversées */
+  --bg:#FBFAF8;--bg-grad:#F3F1ED;
+  --panel-1:#FFFFFF;--surface:#FFFFFF;--surface-2:#F4F2EF;--surface-3:#ECE9E4;
+  --border:rgba(20,16,12,.09);--border-2:rgba(20,16,12,.16);
+  --text:#1A1714;--text-2:#5B564F;--text-3:#8A847B;
   --accent:#FF5A1F;--accent-2:#FF8042;
   --accent-soft:color-mix(in srgb,var(--accent) 14%,transparent);
   --accent-line:color-mix(in srgb,var(--accent) 32%,transparent);
@@ -61,7 +62,7 @@
 html{overflow-x:clip;max-width:100vw;scroll-behavior:smooth}
 body{
   background:
-    radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.10),transparent 60%),
+    radial-gradient(1200px 620px at 78% -8%,rgba(255,90,31,.09),transparent 60%),
     radial-gradient(900px 600px at 0% 100%,rgba(255,90,31,.05),transparent 55%),
     var(--bg);
   color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:clip;
@@ -89,7 +90,7 @@ a{color:inherit;text-decoration:none}
 .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--text-2)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent-glow)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)}
-.glass{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));backdrop-filter:blur(12px)}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,.5));backdrop-filter:blur(12px)}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
 .row{display:flex;align-items:center}
 .col{display:flex;flex-direction:column}
@@ -121,7 +122,7 @@ a{color:inherit;text-decoration:none}
   .hide-mobile{display:none !important}
 }
 /* Le tuto en vidéo (02/09) */
-.tuto-frame{position:relative;width:100%;max-width:1100px;margin:0 auto;aspect-ratio:16/9;border-radius:24px;overflow:hidden;border:1px solid var(--border-2);box-shadow:0 40px 80px -34px rgba(0,0,0,.85),0 0 60px -26px var(--accent-glow);background:var(--bg-grad)}
+.tuto-frame{position:relative;width:100%;max-width:1100px;margin:0 auto;aspect-ratio:16/9;border-radius:24px;overflow:hidden;border:1px solid var(--border-2);box-shadow:0 40px 80px -40px rgba(20,16,12,.28),0 0 60px -30px var(--accent-glow);background:var(--bg-grad)}
 .tuto-frame video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 </style>
 <!-- Données structurées (SEO) : WebPage simple, description réelle de la page. -->

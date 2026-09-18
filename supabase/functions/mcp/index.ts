@@ -88,7 +88,7 @@ const FAL_KEY = ['FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI
   .map((n) => Deno.env.get(n)).find(Boolean) ?? ''
 const falFetch = (path: string, init?: RequestInit) =>
   fetch(`${FAL_QUEUE}/${path}`, { ...init, headers: { Authorization: `Key ${FAL_KEY}`, ...(init?.headers || {}) } })
-const GPT_IMG_MODELS  = ['gpt-image-2', 'gpt-image-1']
+const GPT_IMG_MODELS  = ['gpt-image-2.5-flare', 'gpt-image-2']   // Axel 18/09 : MCP aligné sur l'app (gpt-image-2.5-flare, drop de gpt-image-1)
 const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']
 // Réalisme « UGC / makeugc » — MÊME bloc que le module Images IA de l'app
 // (_IMG_REALISM_SUFFIX). Ajouté AUTOMATIQUEMENT à toute image de PERSONNE générée via
