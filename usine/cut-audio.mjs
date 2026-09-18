@@ -163,11 +163,17 @@ function bestWindow(pat){ const pset=new Set(pat), W=pat.length+3; let best=-1, 
     if(sc>bestSc){ bestSc=sc; best=i; } }
   return (best>=0 && bestSc>=Math.max(2, Math.ceil(pat.length*0.5))) ? { best, W, pset } : null;
 }
-const like = (a,b) => a===b || (a.length>=5 && b.startsWith(a.slice(0,5))) || (b.length>=5 && a.startsWith(b.slice(0,5)));  // flou : commente≈commence, écris≈écrit
-const alignStart = text => { const head=asToks(text).slice(0, Math.min(6,asToks(text).length)); const r=bestWindow(head); if(!r) return -1;
-  const lim=Math.min(flatToks.length, r.best+r.W);
-  for(let j=r.best;j<lim;j++){ if(like(flatToks[j],head[0])) return tokToWord[j]; }     // le 1er MOT du texte (flou : commente≈commence), pas un mot commun (« en »)
-  for(let j=r.best;j<lim;j++){ if(r.pset.has(flatToks[j])) return tokToWord[j]; } return -1; };  // repli : 1er mot du motif
+const like = (a,b) => a===b || (a.length>=6 && b.length>=6 && a.slice(0,4)===b.slice(0,4))  // « commande »≈« commente » (partagent « comm »)
+  || (a.length>=5 && b.startsWith(a.slice(0,5))) || (b.length>=5 && a.startsWith(b.slice(0,5)));  // flou : commente≈commence, écris≈écrit
+const STOP = new Set('les le la de des du un une et en ou tu je ce ca se on qui que pour dans sur il elle au aux ne pas plus tout tous mais si ton ta tes son sa mon ma mes te me nos vos leur a as est'.split(' '));
+// début = on cale sur le 1er mot DISTINCTIF du texte (pas un mot commun « les/en/de… »), puis on recule
+// des mots communs qui le précèdent. Évite « les réseaux » quand le texte est « Les possibilités… ».
+const alignStart = text => { const head=asToks(text).slice(0, Math.min(7,asToks(text).length)); const r=bestWindow(head); if(!r) return -1;
+  const lo=Math.max(0, r.best-2), hi=Math.min(flatToks.length, r.best+r.W);   // -2 : rattrape un 1er mot flou (commande≈commente) exclu de la fenêtre
+  let di=head.findIndex(t=>t.length>=4 && !STOP.has(t)); if(di<0) di=0;   // 1er mot distinctif du head
+  for(let j=lo;j<hi;j++){ if(like(flatToks[j], head[di])) return tokToWord[Math.max(0, j-di)]; }  // recule de `di` mots communs
+  for(let j=lo;j<hi;j++){ if(like(flatToks[j], head[0])) return tokToWord[j]; }                    // repli : 1er mot du texte
+  for(let j=lo;j<hi;j++){ if(r.pset.has(flatToks[j])) return tokToWord[j]; } return -1; };
 // alignEnd TOLÉRANT AUX INSERTIONS (l'audio « 1000€ par jour » n'a pas le mot « euros » du texte) :
 // on cherche la fenêtre qui contient le plus de mots de la fin du texte, puis le DERNIER mot du motif qui y figure.
 const alignEnd = text => { const t=asToks(text); const tail=t.slice(-Math.min(6,t.length));
