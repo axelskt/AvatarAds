@@ -58,11 +58,12 @@ const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
  body{margin:0;background:#000}
  #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:'Arial Black','Archivo Black',system-ui,sans-serif}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
- /* SAFE ZONE (tracé Axel) : bande basse ~330px du bas, au-dessus du clavier/dock */
- .cap{position:absolute;left:50%;bottom:330px;transform:translateX(-50%);z-index:5;
-   max-width:900px;font-weight:900;font-size:82px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
+ /* SAFE ZONE (tracé Axel) : bande basse ~330px du bas ; PLEINE LARGEUR + text-align:center
+    → chaque mot est parfaitement centré (plus de translateX qui décalait les 1ers mots) */
+ .cap{position:absolute;left:0;right:0;bottom:330px;z-index:5;text-align:center;
+   font-weight:900;font-size:82px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
    -webkit-text-stroke:8px #000;paint-order:stroke fill;
-   text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;text-align:center;line-height:1}
+   text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
 </style></head><body>
  <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>
@@ -71,7 +72,6 @@ const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
  </div>
  <script>
    const tl = gsap.timeline({ paused:true });
-   gsap.set('.cap',{xPercent:-50});
    ${anim}
    if(!tl.getChildren().length) tl.to({},{duration:${dur.toFixed(3)}});
    window.__timelines['main'] = tl;
