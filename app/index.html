@@ -35199,16 +35199,15 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   // COMPRESSÉS (pas supprimés : la voix respire) — tout silence entre shrinkMs
   // et minSilMs est ramené à ~2 × keepShortMs.
   const isStrong  = _acLevel === 'strong';
-  // ── DESSERRAGE 18/09 (Axel : « il coupe carrément des mots ») ──────────────
-  // On ne coupe QUE les vrais blancs longs (dead-air / hésitations), jamais les
-  // micro-gaps naturels entre les mots d'un débit rapide. minSilMs remonte (380 /
-  // 300) et la marge autour des mots s'élargit (110 / 85) pour protéger les
-  // attaques douces et les fins de mots (plosives, fricatives /s/ /f/). Le filet
-  // « restaurer un blanc en cliquant sur son trait » (plus bas) rattrape le reste.
-  const minSilMs  = isStrong ? 300   : 380;    // durée mini silence à couper
-  const keepMs    = isStrong ? 85    : 110;    // marge autour des mots (protège attaques/fins)
-  const shrinkMs  = isStrong ? 190   : 230;    // en dessous : on garde tel quel
-  const keepShortMs = isStrong ? 60  : 70;     // respiration laissée en compressant
+  // ── RE-SERRAGE 18/09 (Axel : « remets comme avant, à la même fréquence ») ──
+  // Le desserrage (380/110) coupait MOINS bien les silences. Axel préfère la coupe
+  // agressive d'avant — le filet « restaurer un blanc en cliquant sur son trait »
+  // (plus bas, _acToggleRestore) rattrape un mot mangé d'un clic. On revient donc
+  // aux valeurs d'avant : minSilMs 300/240, marge 80/60, shrink 200/160, resp. 60/55.
+  const minSilMs  = isStrong ? 240   : 300;    // durée mini silence à couper
+  const keepMs    = isStrong ? 60    : 80;     // marge autour des mots
+  const shrinkMs  = isStrong ? 160   : 200;    // en dessous : on garde tel quel
+  const keepShortMs = isStrong ? 55  : 60;     // respiration laissée en compressant
 
   const winSz    = Math.round(0.05 * sr);
   const minSilSmp = Math.round(minSilMs/1000 * sr);
