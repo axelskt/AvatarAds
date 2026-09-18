@@ -42,58 +42,39 @@ const gapAfter = i => (i<words.length-1) ? (words[i+1].s - words[i].e) : 1;
 const snapToPause = (idx) => { let best=idx, bestGap=gapAfter(idx);
   for(let j=Math.max(0,idx-5);j<=Math.min(words.length-1,idx+2);j++){ if(gapAfter(j) > bestGap+0.02){ bestGap=gapAfter(j); best=j; } } return best; };
 
-// 2) HOOK : aligner la fin du script H<N> sur le transcript (flou)
-let hookEndIdx = Math.min(words.length-1, 18); // repli : ~18 premiers mots
-if (hookScriptFile && existsSync(hookScriptFile)) {
-  const hookTokens = norm(readFileSync(hookScriptFile,'utf8')).split(' ').filter(Boolean);
-  const wn = words.map(w=>norm(w.t));
-  // fenêtre glissante : position i où wn[i..] recouvre le plus de tokens du hook (dans l'ordre)
-  let bestI=hookEndIdx, bestScore=-1;
-  for (let i=Math.floor(hookTokens.length*0.5); i<Math.min(wn.length, hookTokens.length*2.2); i++){
-    let hi=0, score=0;
-    for (let k=0;k<=i && hi<hookTokens.length;k++){ if(wn[k]===hookTokens[hi]){ hi++; score++; } }
-    if (score>=bestScore){ bestScore=score; bestI=i; }
-  }
-  if (bestScore >= Math.max(3, hookTokens.length*0.4)) hookEndIdx = bestI;
-}
-hookEndIdx = snapToPause(hookEndIdx);
+// ── Segmentation par CUES (structure Miro : HOOK → [« et là je vais… » LIAISON] → CONTENU(jeté) → CTA) ──
+// Le hook s'arrête à la FIN DE SA PHRASE, juste avant le connecteur « et là je vais t'apprendre… ».
+const CONNECT_RE = /(et (l[aà] )?je vais|je vais (t'|te )?(apprendre|montrer|expliquer|donner)|et je (t'|te )?explique|laisse[- ]?moi|je te (montre|donne)|et maintenant|maintenant (je|voici)|dans (cette|la) video)/i;
+const CONTENT_RE = /(c'est ce qu'on appelle|pour que (ca|ça) fonctionne|commence par|premierement|ensuite|rends[- ]?toi|selectionne|clique|voici comment (faire|creer)|la premiere etape|tu as juste (a|à)|il faut d'abord|il te suffit|tape ton|va(s)? dans (l'onglet|express)|ouvre (l'onglet|le module))/i;
+const CTA_RE = /(lien en bio|en bio|va(s)? sur (le site|avatarads)|sur avatarads|avatarads\.?fr|je te mets le lien|en commentaire|commente|ecris[- ]?moi|envoie[- ]?moi|abonne|teste (par|le|toi)|gratuit(ement)?|mets? le mot|sous la video|va(s)? le tester|recevoir gratuit)/i;
+const findIdx = (re, from, to) => { for(let i=Math.max(0,from);i<Math.min(words.length,to);i++){ if(re.test(norm(words.slice(i,i+9).map(x=>x.t).join(' ')))) return i; } return -1; };
 
-// 3) CTA : chercher un appel à l'action dans le dernier tiers
-const CTA_RE = /(lien en bio|en bio|va(s)? sur (le site|avatarads)|sur avatarads|avatarads\.?fr|le lien|je te mets le lien|en commentaire|commente|ecris[- ]?moi|envoie[- ]?moi|abonne|clique|teste|essaie|tu peux tester|gratuit|dispo|mets? le mot)/i;
-let ctaStartIdx = -1;
-for (let i=Math.floor(words.length*0.6); i<words.length; i++){
-  const windowTxt = words.slice(i, Math.min(words.length, i+10)).map(w=>w.t).join(' ');
-  if (CTA_RE.test(norm(windowTxt))) { ctaStartIdx = i; break; }
-}
-if (ctaStartIdx < 0) ctaStartIdx = words.length; // pas de CTA détecté
-else ctaStartIdx = snapToPause(ctaStartIdx-1)+1;
+const connIdx = findIdx(CONNECT_RE, 2, 44);
+const contIdx = findIdx(CONTENT_RE, connIdx>0?connIdx+1:2, 75);
+const ctaIdx  = findIdx(CTA_RE, Math.floor(words.length*0.5), words.length);
 
-// 4) LIAISON : connecteur court juste après le hook
-const LIA_RE = /(et je (t'|te )?explique|laisse[- ]?moi|je vais te (montrer|expliquer)|je vais t'(apprendre|expliquer|montrer)|je te montre|regarde|voici comment|suis[- ]?moi|je t'explique exactement|dans (cette|la) video|reste jusqu|maintenant)/i;
-let liaisonEndIdx = hookEndIdx;
-{
-  const windowTxt = words.slice(hookEndIdx+1, Math.min(ctaStartIdx, hookEndIdx+14)).map(w=>w.t).join(' ');
-  if (LIA_RE.test(norm(windowTxt))) {
-    // fin de la phrase de liaison = première pause nette après le hook (dans les 14 mots)
-    let end=hookEndIdx+1; for(let j=hookEndIdx+1;j<Math.min(ctaStartIdx,hookEndIdx+14);j++){ if(gapAfter(j)>0.28){ end=j; break; } end=j; }
-    liaisonEndIdx = end;
-  }
-}
+const hookEndIdx = snapToPause(connIdx>0 ? connIdx-1 : (contIdx>0 ? contIdx-1 : Math.min(words.length-1,14)));
+const liaEndIdx  = (connIdx>0) ? snapToPause(contIdx>connIdx ? contIdx-1 : hookEndIdx+8) : hookEndIdx;
 
-// bornes temporelles
-const tAt = (idx, side) => idx<=0 ? 0 : idx>=words.length ? total : (side==='end'? (words[idx].e+gapAfter(idx)/2) : (words[idx].s - Math.min(0.15,(idx>0?gapAfter(idx-1)/2:0.1))));
+const tAt = (idx, side) => idx<=0 ? 0 : idx>=words.length ? total : (side==='end'? (words[idx].e+Math.min(0.18,gapAfter(idx)/2)) : (words[idx].s - Math.min(0.12,(idx>0?gapAfter(idx-1)/2:0.08))));
+const HOOK_START = Math.max(0, (words[0]?.s ?? 0) - 0.06);   // démarre au 1er mot → coupe la vibration/clic du début
+
 // ⚠️ Axel : on ne garde QUE hook / liaison / CTA — le CONTENU est jeté (la brique contenu = la démo, déjà à part).
 const segs = [];
-segs.push({ id:`H${cartoonN}-audio`, kind:'hook', a:0, b:tAt(hookEndIdx,'end') });
-if (liaisonEndIdx>hookEndIdx) segs.push({ id:`L${cartoonN}-audio`, kind:'liaison', a:tAt(hookEndIdx+1,'start'), b:tAt(liaisonEndIdx,'end') });
-if (ctaStartIdx<words.length) segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta', a:tAt(ctaStartIdx,'start'), b:total });
+segs.push({ id:`H${cartoonN}-audio`, kind:'hook', a:HOOK_START, b:tAt(hookEndIdx,'end') });
+if (liaEndIdx>hookEndIdx) segs.push({ id:`L${cartoonN}-audio`, kind:'liaison', a:tAt(hookEndIdx+1,'start'), b:tAt(liaEndIdx,'end') });
+if (ctaIdx>0) segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta', a:tAt(snapToPause(ctaIdx-1)+1,'start'), b:total });
 
 // 5) découpe ffmpeg
 const manifest = [];
 for (const seg of segs){
   if (seg.b - seg.a < 0.4) continue;
   const out = join(outDir, `${seg.id}.wav`);
-  execFileSync('ffmpeg', ['-v','error','-y','-i', audio, '-ss', seg.a.toFixed(2), '-to', seg.b.toFixed(2), '-ac','1','-ar','48000', out]);
+  const segdur = seg.b - seg.a;
+  // anti-vibration : highpass (coupe le rumble/clic sub-grave) + fondu in/out court aux bords
+  execFileSync('ffmpeg', ['-v','error','-y','-ss', seg.a.toFixed(2), '-t', segdur.toFixed(2), '-i', audio,
+    '-af', `highpass=f=65,afade=t=in:st=0:d=0.05,afade=t=out:st=${Math.max(0,segdur-0.07).toFixed(2)}:d=0.07`,
+    '-ac','1','-ar','48000', out]);
   const inSeg = words.filter(w=>w.e>seg.a-0.05 && w.s<seg.b+0.05);
   const txt = inSeg.map(w=>w.t).join(' ');
   // SOUS-TITRES PORTÉS PAR LA BRIQUE : timings RELATIFS au début de la brique (réutilisables, calculés 1×).
