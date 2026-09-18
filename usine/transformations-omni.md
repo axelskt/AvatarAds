@@ -31,8 +31,24 @@ Canvas 1080×1920, ~2,8 s / transformation. Assembleur : `scratchpad/omni-hook-1
 | `HK-O01-02b` | [TX-O01, TX-O02b] | Lambo puis Mustang |
 | `HK-O02b-03` | [TX-O02b, TX-O03] | Mustang puis Patek |
 
-Combos restants possibles (non encore rendus, l'assembleur/Supabase les produira) : toutes les paires ordonnées de
-{TX-O01, TX-O02a, TX-O02b, TX-O03} avec unités distinctes → surface « en attente » du tableau des IDs.
+**OMNI complet le 18/09** : les 10 hooks possibles rendus (+ `HK-O02b-01`, `HK-O03-02b`). Aucun combo OMNI « en attente ».
+
+## Motion Control — unités `TX-M*` (18/09)
+Même gabarit (avant/après, médaillon 9:16 dès frame 0). Concept MC = **transformation de personnage** : MÊME mouvement/pose, l'avatar change (homme → femme ici). main = résultat, médaillon = original.
+
+| ID | avant (médaillon) → après (plein écran) | fichiers | notes |
+|---|---|---|---|
+| `TX-M01` | homme → femme (cuisine) | `MC/VIdéo 1.mp4` → `MC/Vidéo 1.1.mp4` | source **paysage 16:9** recadrée 9:16 |
+| `TX-M02` | homme → femme (Spider-Man) | `MC/Vidéo 2.mp4` → `MC/Vidéo 2.1.mp4` | 9:16 natif |
+| `TX-M04` | homme → femme (veste) | `MC/Vidéo 4.mp4` → `MC/Vidéo 4.1.mp4` | 9:16 natif |
+> `MC/Vidéo 3.mp4` = solo (pas de paire). Dossier source : `Vidéo et Motion Control/Motion Control/Vidéo qui vont ensemble/`.
+
+Hooks MC rendus (6 combos) : `HK-M01-02`, `HK-M02-01`, `HK-M01-04`, `HK-M04-01`, `HK-M02-04`, `HK-M04-02`.
+
+## Source de vérité = Supabase (18/09)
+Tout est en base : `factory_bricks` (34 briques : 7 transfo + 10 contenus/démos + 13 musiques + 2 sous-titres + 2 avatars) et
+`factory_recipes` (16 hooks, tous `done`). Ce `.md` reste la doc humaine ; la matrice « en attente » vit dans `factory_recipes.status`.
+Règle Axel : **chaque nouveau contenu → générer TOUTES ses variantes** (paires ordonnées d'unités distinctes du même sujet).
 
 ## Règles de cohérence (pour Supabase)
 - `TX-O*` = sujet **omni** → compatibles avec les contenus/CTA de sujet omni.
