@@ -49,7 +49,7 @@ const brandFix = t => { const b = bareOf(t);
   } words = merged.map(w=>({ ...w, t:brandFix(w.t) })); }
 // Whisper entend « Commente » comme « commande » dans le CTA (« commande go ») → correction ciblée.
 words = words.map((w,i)=>{ const b=bareOf(w.t), nx=words[i+1]?bareOf(words[i+1].t):'';
-  return (b==='commande' && (nx==='go'||nx==='le'||nx==='site'||nx==='ia'||nx==='dm')) ? { ...w, t:'Commente' } : w; });
+  return ((b==='commande'||b==='commence') && (nx==='go'||nx==='le'||nx==='site'||nx==='ia'||nx==='dm'||nx==='ce')) ? { ...w, t:'Commente' } : w; });
 
 const total = words.length ? words[words.length-1].e : 0;
 const fullText = words.map(w=>w.t).join(' ');
@@ -69,9 +69,9 @@ const MASTER = 'highpass=f=78:width_type=q:width=0.7'
 const gapAfter = i => (i<words.length-1) ? (words[i+1].s - words[i].e) : 1;
 const tAt = (idx, side) => idx<=0 ? 0 : idx>=words.length ? total
   : (side==='end'
-      // marge de fin : ≥70 ms de traîne (même sans blanc, on mord un peu le mot suivant qui sera fondu)
-      // pour que le fondu de sortie ne rogne JAMAIS le dernier mot ; sinon 70 % du blanc dispo.
-      ? (words[idx].e + Math.max(0.07, Math.min(0.20, gapAfter(idx)*0.7)))
+      // marge de fin : ≥120 ms de traîne (Whisper marque souvent la fin du mot TÔT ; on capte la traîne
+      // du dernier mot — « manière », « marché » — même sans blanc, le mot suivant est fondu).
+      ? (words[idx].e + Math.max(0.12, Math.min(0.24, gapAfter(idx)*0.85)))
       : (words[idx].s - Math.min(0.12, (idx>0 ? gapAfter(idx-1)/2 : 0.08))));
 
 // ── ANTI-VIBRATION : vrai début de voix ──
@@ -163,9 +163,10 @@ function bestWindow(pat){ const pset=new Set(pat), W=pat.length+3; let best=-1, 
     if(sc>bestSc){ bestSc=sc; best=i; } }
   return (best>=0 && bestSc>=Math.max(2, Math.ceil(pat.length*0.5))) ? { best, W, pset } : null;
 }
+const like = (a,b) => a===b || (a.length>=5 && b.startsWith(a.slice(0,5))) || (b.length>=5 && a.startsWith(b.slice(0,5)));  // flou : commente≈commence, écris≈écrit
 const alignStart = text => { const head=asToks(text).slice(0, Math.min(6,asToks(text).length)); const r=bestWindow(head); if(!r) return -1;
   const lim=Math.min(flatToks.length, r.best+r.W);
-  for(let j=r.best;j<lim;j++){ if(flatToks[j]===head[0]) return tokToWord[j]; }        // le 1er MOT EXACT du texte (« écris »), pas un mot commun (« en »)
+  for(let j=r.best;j<lim;j++){ if(like(flatToks[j],head[0])) return tokToWord[j]; }     // le 1er MOT du texte (flou : commente≈commence), pas un mot commun (« en »)
   for(let j=r.best;j<lim;j++){ if(r.pset.has(flatToks[j])) return tokToWord[j]; } return -1; };  // repli : 1er mot du motif
 // alignEnd TOLÉRANT AUX INSERTIONS (l'audio « 1000€ par jour » n'a pas le mot « euros » du texte) :
 // on cherche la fenêtre qui contient le plus de mots de la fin du texte, puis le DERNIER mot du motif qui y figure.
@@ -273,5 +274,12 @@ for (const seg of segs){
   manifest.push({ ...seg, file:out, dur:+(seg.b-seg.a).toFixed(2), text:txt, captions, meanDb, audible, wordsOk, ok });
   console.log(`  ${ok?'✓':'⚠'} ${seg.kind.padEnd(8)} ${seg.a.toFixed(2)}→${seg.b.toFixed(2)}s (${(seg.b-seg.a).toFixed(1)}s)  ${seg.id}  (${inSeg.length} mots, ${isFinite(meanDb)?meanDb.toFixed(0):'?'}dB)  « ${txt.slice(0,60)}${txt.length>60?'…':''} »`);
 }
-writeFileSync(join(outDir, `cartoon-${cartoonN}.manifest.json`), JSON.stringify({ cartoon:+cartoonN, total, fullText, segs:manifest }, null, 2));
+// FUSION : on garde les segments existants NON regénérés (ex. CTA manuel réenregistré par Axel, ou une
+// brique dont le kind n'est pas dans `parts`) → un re-cut partiel ne perd plus les briques manuelles.
+const mfFile = join(outDir, `cartoon-${cartoonN}.manifest.json`);
+let prevSegs = [];
+if (existsSync(mfFile)) { try { prevSegs = JSON.parse(readFileSync(mfFile,'utf8')).segs || []; } catch(e){} }
+const kept = prevSegs.filter(s => !KEEP.has(s.kind));
+const allSegs = [...kept, ...manifest].sort((a,b)=>({hook:0,liaison:1,cta:2}[a.kind]??3)-({hook:0,liaison:1,cta:2}[b.kind]??3));
+writeFileSync(mfFile, JSON.stringify({ cartoon:+cartoonN, total, fullText, segs:allSegs }, null, 2));
 console.log('OK ->', outDir);
