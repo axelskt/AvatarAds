@@ -53,7 +53,17 @@ words = words.map((w,i)=>{ const b=bareOf(w.t), nx=words[i+1]?bareOf(words[i+1].
 
 const total = words.length ? words[words.length-1].e : 0;
 const fullText = words.map(w=>w.t).join(' ');
+const fileDur = parseFloat(execFileSync('ffprobe',['-v','error','-show_entries','format=duration','-of','csv=p=0', audio]).toString().trim()) || total;
 console.log(`  ${words.length} mots · ${total.toFixed(1)}s`);
+
+// ── MASTERING VOIX « Podcast » (réplique de _acMasterVoice de l'app, preset podcast) ──
+// highpass 78 + EQ (dé-boue 400/-4.2, présence 175/+1.4, air 3400/+6.8) + compresseur + loudnorm -14.8.
+const MASTER = 'highpass=f=78:width_type=q:width=0.7'
+  + ',equalizer=f=400:width_type=q:width=0.95:g=-4.2'
+  + ',equalizer=f=175:width_type=q:width=0.8:g=1.4'
+  + ',highshelf=f=3400:g=6.8'
+  + ',acompressor=threshold=-25dB:ratio=4.8:attack=3:release=110'
+  + ',loudnorm=I=-14.8:TP=-1.5:LRA=11';
 
 // gaps (pauses) : repérage des fins de phrase / coupes calées sur les silences
 const gapAfter = i => (i<words.length-1) ? (words[i+1].s - words[i].e) : 1;
@@ -233,7 +243,7 @@ if (wantLiaison && liaEndIdx>liaStartIdx){
 // ne commence PAS par un impératif), sinon sur le repère audio ; fin = dernier mot + marge (anti-clipping).
 let hookB=hookEndIdx, liaB=liaSeg, ctaStartB=ctaIdx;
 if (brief && typeof brief.cta==='string'){ const cs=alignStart(brief.cta); if(cs>=0) ctaStartB=cs; }
-let ctaEndB = tAt(words.length-1, 'end');
+let ctaEndB = fileDur;   // Axel : le CTA va JUSQU'À LA FIN du fichier (ne pas le recouper avant la fin)
 
 // ⚠️ Axel : on ne garde QUE hook / liaison / CTA (le CONTENU tuto appli est jeté) ; `parts` filtre encore.
 const segs = [];
@@ -249,7 +259,7 @@ for (const seg of segs){
   const segdur = seg.b - seg.a;
   // highpass léger + fondus courts (le vrai anti-vibration est le calage du début sur la voix)
   execFileSync('ffmpeg', ['-v','error','-y','-ss', seg.a.toFixed(3), '-t', segdur.toFixed(3), '-i', audio,
-    '-af', `highpass=f=70,afade=t=in:st=0:d=0.03,afade=t=out:st=${Math.max(0,segdur-0.06).toFixed(3)}:d=0.06`,
+    '-af', `${MASTER},afade=t=in:st=0:d=0.03,afade=t=out:st=${Math.max(0,segdur-0.06).toFixed(3)}:d=0.06`,
     '-ac','1','-ar','48000', out]);
   const inSeg = words.filter(w=>{ const mid=(w.s+w.e)/2; return mid>=seg.a-0.02 && mid<=seg.b+0.02; }); // 1 mot = 1 segment (milieu)
   const txt = inSeg.map(w=>w.t).join(' ');
