@@ -260,12 +260,19 @@ for (const seg of segs){
   const out = join(outDir, `${seg.id}.wav`);
   const segdur = seg.b - seg.a;
   const inSeg = words.filter(w=>{ const mid=(w.s+w.e)/2; return mid>=seg.a-0.02 && mid<=seg.b+0.02; }); // 1 mot = 1 segment (milieu)
-  // ⚠️ FONDU DE SORTIE calé sur la FIN DU DERNIER MOT (pas la fin du segment) : quand le mot suivant
-  // enchaîne sans blanc (« entrepreneurs. Je te… »), le fondu fait dispa­raître ce mot suivant au lieu de
-  // laisser le dernier mot du segment sonner rogné. Le dernier mot reste à plein volume, la traîne est fondue.
+  // ⚠️ FONDU DE SORTIE — 3 cas pour ne JAMAIS rogner le dernier mot :
+  //   a) le segment finit à la fin du FICHIER (CTA « …par jour. » = fin d'audio) → pas de coupe, pas de
+  //      clic → fondu quasi nul (sinon on mange la fin du dernier mot qui touche la fin du fichier).
+  //   b) grosse traîne après le dernier mot (silence) → fondu court à la fin, dans le silence.
+  //   c) le mot suivant enchaîne SANS blanc (« entrepreneurs. Je te… ») → fondu calé sur la FIN DU DERNIER
+  //      MOT : il reste à plein volume, seul le mot suivant est fondu.
   const lastRelEnd = inSeg.length ? Math.max(0.1, inSeg[inSeg.length-1].e - seg.a) : (segdur-0.06);
-  const foStart = Math.max(0.1, Math.min(lastRelEnd, segdur-0.03));
-  const foDur   = Math.max(0.03, Math.min(0.16, segdur - foStart));
+  const trailing = segdur - lastRelEnd;
+  let foStart, foDur;
+  if (seg.b >= fileDur - 0.05)      { foDur = 0.02; foStart = Math.max(0.1, segdur - foDur); }         // (a) fin de fichier
+  else if (trailing > 0.25)         { foDur = 0.06; foStart = Math.max(0.1, segdur - foDur); }         // (b) traîne/silence
+  else                              { foStart = Math.max(0.1, Math.min(lastRelEnd, segdur-0.03));       // (c) mot collé
+                                      foDur = Math.max(0.03, Math.min(0.16, segdur - foStart)); }
   execFileSync('ffmpeg', ['-v','error','-y','-ss', seg.a.toFixed(3), '-t', segdur.toFixed(3), '-i', audio,
     '-af', `${MASTER},afade=t=in:st=0:d=0.03,afade=t=out:st=${foStart.toFixed(3)}:d=${foDur.toFixed(3)}`,
     '-ac','1','-ar','48000', out]);
