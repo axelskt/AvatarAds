@@ -3,7 +3,7 @@
 // Précision via Whisper (large-v3 FR, mots+timestamps). Le HOOK est ancré sur son script H<N> connu
 // (alignement flou) ; le CTA est repéré par mots-clés d'appel à l'action ; coupes calées sur les PAUSES.
 // Usage : node usine/cut-audio.mjs <audio> <outDir> <cartoonN> [hookScriptFile]
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -18,15 +18,29 @@ const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replac
 execFileSync('ffmpeg', ['-v','error','-y','-i', audio, '-vn','-ac','1','-ar','16000', join(work,'a.wav')]);
 execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'a.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','600000'], { stdio:'inherit' });
 const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
-const words = (Array.isArray(tr)?tr:(tr.words||[])).map(w=>({t:String(w.text||w.word||'').trim(), s:+w.start, e:+w.end}))
+let words = (Array.isArray(tr)?tr:(tr.words||[])).map(w=>({t:String(w.text||w.word||'').trim(), s:+w.start, e:+w.end}))
   .filter(w=>w.t && isFinite(w.s) && isFinite(w.e)).sort((a,b)=>a.s-b.s);
+
+// ── Correction MARQUE (Whisper : « avatar hats », « atarhats.fr, »…) tolérante à la ponctuation ──
+const bareOf = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
+const brandFix = t => { const b = bareOf(t);
+  if (/atarhat|avatarad|atarad|avatarhat|avataraad/.test(b)) return (/fr$/.test(b) || /\.?fr\b/i.test(t)) ? 'avatarads.fr' : 'avatarads';
+  return t; };
+{ const merged=[]; for(let i=0;i<words.length;i++){ const w=words[i], n=words[i+1];
+    if(n && /^a?v?atar$/.test(bareOf(w.t)) && /^(hat|had|ad|rad|hads|aad)/.test(bareOf(n.t))){
+      merged.push({ t:(/fr/.test(bareOf(n.t))||/\.fr/i.test(n.t))?'avatarads.fr':'avatarads', s:w.s, e:n.e }); i++;
+    } else merged.push(w);
+  } words = merged.map(w=>({ ...w, t:brandFix(w.t) })); }
+
 const total = words.length ? words[words.length-1].e : 0;
 const fullText = words.map(w=>w.t).join(' ');
 console.log(`  ${words.length} mots · ${total.toFixed(1)}s`);
 
 // gaps (pauses) pour couper proprement : on cale un point de coupe sur le plus grand silence proche
 const gapAfter = i => (i<words.length-1) ? (words[i+1].s - words[i].e) : 1;
-const snapToPause = (idx) => { let best=idx; for(let j=Math.max(0,idx-3);j<=Math.min(words.length-1,idx+3);j++){ if(gapAfter(j)>gapAfter(best)) best=j; } return best; };
+// snap sur la plus GROSSE pause proche, biaisé vers l'AVANT (fin de phrase) pour ne pas déborder sur la suite
+const snapToPause = (idx) => { let best=idx, bestGap=gapAfter(idx);
+  for(let j=Math.max(0,idx-5);j<=Math.min(words.length-1,idx+2);j++){ if(gapAfter(j) > bestGap+0.02){ bestGap=gapAfter(j); best=j; } } return best; };
 
 // 2) HOOK : aligner la fin du script H<N> sur le transcript (flou)
 let hookEndIdx = Math.min(words.length-1, 18); // repli : ~18 premiers mots
@@ -55,7 +69,7 @@ if (ctaStartIdx < 0) ctaStartIdx = words.length; // pas de CTA détecté
 else ctaStartIdx = snapToPause(ctaStartIdx-1)+1;
 
 // 4) LIAISON : connecteur court juste après le hook
-const LIA_RE = /(et je (t'|te )?explique|laisse[- ]?moi|je vais te montrer|regarde|voici comment|suis[- ]?moi|je t'explique exactement|dans (cette|la) video|reste jusqu)/i;
+const LIA_RE = /(et je (t'|te )?explique|laisse[- ]?moi|je vais te (montrer|expliquer)|je vais t'(apprendre|expliquer|montrer)|je te montre|regarde|voici comment|suis[- ]?moi|je t'explique exactement|dans (cette|la) video|reste jusqu|maintenant)/i;
 let liaisonEndIdx = hookEndIdx;
 {
   const windowTxt = words.slice(hookEndIdx+1, Math.min(ctaStartIdx, hookEndIdx+14)).map(w=>w.t).join(' ');
@@ -68,10 +82,10 @@ let liaisonEndIdx = hookEndIdx;
 
 // bornes temporelles
 const tAt = (idx, side) => idx<=0 ? 0 : idx>=words.length ? total : (side==='end'? (words[idx].e+gapAfter(idx)/2) : (words[idx].s - Math.min(0.15,(idx>0?gapAfter(idx-1)/2:0.1))));
+// ⚠️ Axel : on ne garde QUE hook / liaison / CTA — le CONTENU est jeté (la brique contenu = la démo, déjà à part).
 const segs = [];
-segs.push({ id:`H${cartoonN}-audio`, kind:'hook',   a:0,                         b:tAt(hookEndIdx,'end') });
-if (liaisonEndIdx>hookEndIdx) segs.push({ id:`L${cartoonN}`, kind:'liaison', a:tAt(hookEndIdx+1,'start'), b:tAt(liaisonEndIdx,'end') });
-segs.push({ id:`C${cartoonN}-audio`, kind:'contenu', a:tAt((liaisonEndIdx>hookEndIdx?liaisonEndIdx:hookEndIdx)+1,'start'), b: ctaStartIdx<words.length? tAt(ctaStartIdx-1,'end'):total });
+segs.push({ id:`H${cartoonN}-audio`, kind:'hook', a:0, b:tAt(hookEndIdx,'end') });
+if (liaisonEndIdx>hookEndIdx) segs.push({ id:`L${cartoonN}-audio`, kind:'liaison', a:tAt(hookEndIdx+1,'start'), b:tAt(liaisonEndIdx,'end') });
 if (ctaStartIdx<words.length) segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta', a:tAt(ctaStartIdx,'start'), b:total });
 
 // 5) découpe ffmpeg
@@ -84,8 +98,15 @@ for (const seg of segs){
   const txt = inSeg.map(w=>w.t).join(' ');
   // SOUS-TITRES PORTÉS PAR LA BRIQUE : timings RELATIFS au début de la brique (réutilisables, calculés 1×).
   const captions = inSeg.map(w=>({ t:w.t, s:+Math.max(0,w.s-seg.a).toFixed(3), e:+Math.min(seg.b-seg.a, w.e-seg.a).toFixed(3) }));
-  manifest.push({ ...seg, file:out, dur:+(seg.b-seg.a).toFixed(2), text:txt, captions });
-  console.log(`  ✂ ${seg.kind.padEnd(8)} ${seg.a.toFixed(1)}→${seg.b.toFixed(1)}s  ${seg.id}`);
+  // ── VÉRIFICATION : ça s'entend ? c'est bien découpé ? ──
+  let meanDb = NaN;
+  { const r = spawnSync('ffmpeg', ['-hide_banner','-i', out, '-af','volumedetect','-f','null','-'], { encoding:'utf8' });
+    const m = /mean_volume:\s*(-?\d+(\.\d+)?) dB/.exec((r.stderr||'')+(r.stdout||'')); if(m) meanDb=+m[1]; }
+  const audible = isFinite(meanDb) && meanDb > -45;      // sinon quasi silence
+  const wordsOk = inSeg.length >= (seg.kind==='cta'?2:2);
+  const ok = audible && wordsOk && (seg.b-seg.a)>=0.5;
+  manifest.push({ ...seg, file:out, dur:+(seg.b-seg.a).toFixed(2), text:txt, captions, meanDb, audible, wordsOk, ok });
+  console.log(`  ${ok?'✓':'⚠'} ${seg.kind.padEnd(8)} ${seg.a.toFixed(1)}→${seg.b.toFixed(1)}s  ${seg.id}  (${inSeg.length} mots, ${isFinite(meanDb)?meanDb.toFixed(0):'?'}dB)  « ${txt.slice(0,60)} »`);
 }
 writeFileSync(join(outDir, `cartoon-${cartoonN}.manifest.json`), JSON.stringify({ cartoon:+cartoonN, total, fullText, segs:manifest }, null, 2));
 console.log('OK ->', outDir);

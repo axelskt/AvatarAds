@@ -38,12 +38,10 @@ if (cta) {
      `[hv][ha][dv][da]concat=n=2:v=1:a=1[v][a]`,
      '-map','[v]','-map','[a]','-c:v','libx264','-pix_fmt','yuv420p','-crf','20','-r','30','-c:a','aac','-b:a','192k', voice]);
 }
-// zone parlée = après le hook s'il est MUET ; si voix off fournie sur le hook, on sous-titre dès 0.
-const voiceStart = hookVoice ? 0 : hookDur;
-
-// ── 2) SOUS-TITRES (zone parlée uniquement) ──
+// ── 2) SOUS-TITRES PAR BRIQUE : on transcrit la DÉMO directement (audio propre → capte le début,
+//    pas de musique), puis on décale ses captions de la durée du hook (hook muet = pas de captions). ──
 const capt = join(work, 'capt.mp4');
-execFileSync('node', [join(HERE, 'captions.mjs'), voice, capt, String(voiceStart)], { stdio:'inherit' });
+execFileSync('node', [join(HERE, 'captions.mjs'), voice, capt, demo, String(hookDur), '0'], { stdio:'inherit' });
 
 // ── 3) MUSIQUE duckée + BRUITAGES ──
 const tMid = Math.round(hookDur/2*1000), tCut = Math.round(hookDur*1000);
