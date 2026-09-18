@@ -17,7 +17,8 @@ copyFileSync(input, join(work, 'src.mp4'));
 // 1) audio + transcription Whisper (multilingue)
 console.log('▶ transcription…');
 execFileSync('ffmpeg', ['-v','error','-y','-i', input, '-vn','-ac','1','-ar','16000', join(work,'audio.wav')]);
-execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','small'], { stdio:'inherit' });
+// FR : les modèles *.en sont anglais-only → large-v3 (multilingue) + --language fr.
+execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','300000'], { stdio:'inherit' });
 const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
 const words = (Array.isArray(tr) ? tr : (tr.words||tr.segments||[]))
   .map(w => ({ text:String(w.text||w.word||'').trim(), start:+w.start, end:+w.end }))
