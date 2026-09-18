@@ -279,8 +279,11 @@ for (const seg of segs){
   else if (trailing > 0.25)         { foDur = 0.06; foStart = Math.max(0.1, segdur - foDur); }         // (b) traîne/silence
   else                              { foStart = Math.max(0.1, Math.min(lastRelEnd, segdur-0.03));       // (c) mot collé
                                       foDur = Math.max(0.03, Math.min(0.16, segdur - foStart)); }
+  // ⚠️ PAS de mastering « podcast » (Axel : « ça bascule vers le robot vs AvatarAds, je préfère la version
+  //    AvatarAds »). On garde le SON de la source (déjà traitée par AvatarAds) : juste highpass léger
+  //    (rumble/vibration) + fondus. Le nivellement final se fait à l'assemblage (loudnorm -16).
   execFileSync('ffmpeg', ['-v','error','-y','-ss', seg.a.toFixed(3), '-t', segdur.toFixed(3), '-i', audio,
-    '-af', `${MASTER},afade=t=in:st=0:d=0.03,afade=t=out:st=${foStart.toFixed(3)}:d=${foDur.toFixed(3)}`,
+    '-af', `highpass=f=70,afade=t=in:st=0:d=0.03,afade=t=out:st=${foStart.toFixed(3)}:d=${foDur.toFixed(3)}`,
     '-ac','1','-ar','48000', out]);
   const txt = inSeg.map(w=>w.t).join(' ');
   const captions = inSeg.map(w=>({ t:w.t, s:+Math.max(0,w.s-seg.a).toFixed(3), e:+Math.min(seg.b-seg.a, w.e-seg.a).toFixed(3) }));

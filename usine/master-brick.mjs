@@ -7,12 +7,9 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const MASTER = 'highpass=f=78:width_type=q:width=0.7'
-  + ',equalizer=f=400:width_type=q:width=0.95:g=-4.2'
-  + ',equalizer=f=175:width_type=q:width=0.8:g=1.4'
-  + ',highshelf=f=3400:g=6.8'
-  + ',acompressor=threshold=-25dB:ratio=4.8:attack=3:release=110'
-  + ',loudnorm=I=-14.8:TP=-1.5:LRA=11';
+// ⚠️ PAS de mastering « podcast » (Axel préfère le son AvatarAds natif, mon EQ/compression/loudnorm
+//    sonnait robotique). Ses enregistrements sont déjà propres → juste highpass léger, rien d'autre.
+const MASTER = 'highpass=f=70';
 
 const files = process.argv.slice(2);
 if (!files.length) { console.error('usage: master-brick.mjs <wav> [wav...]'); process.exit(1); }
