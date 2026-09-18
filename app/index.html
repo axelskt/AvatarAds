@@ -9235,15 +9235,44 @@ function _imgGenderHint(p){
 // Pour les portraits réalistes SANS référence, on ajoute un casting ALÉATOIRE par image → visages différents.
 // « unless the description already specifies » : un prompt explicite garde la main.
 function _imgVariationHint(){
-  if(!['photo','ugc'].includes(_imgSelectedStyleId)) return '';
+  const sid = _imgSelectedStyleId;
   const P = a => a[Math.floor(Math.random()*a.length)];
-  const age  = P(['in their early 20s','in their mid 20s','in their late 20s','around 30','in their early 30s','in their mid 30s']);
-  const hair = P(['dark brown','brown','light brown','black','dark blond','chestnut','ash brown','auburn']);
-  const cut  = P(['short','medium-length','short and tousled','slightly wavy','straight','with loose curls','neatly styled']);
-  const build= P(['slim','athletic','average','broad-shouldered']);
-  const ang  = P(['looking straight into the camera','at a slight three-quarter angle','with a subtle head tilt','slightly turned toward the camera']);
-  const mouth= P(['a calm expression with the MOUTH CLOSED, lips gently together','a natural closed-mouth smile (mouth not open)','a relaxed neutral face, mouth closed','a soft closed-lipped confident look','lips only slightly parted in a subtle expression','mid-sentence with the mouth open while talking']);
-  return ' Casting direction for THIS image (unless the description already specifies these): a distinct, unique individual ' + age + ', ' + build + ' build, ' + hair + ' ' + cut + ' hair, ' + ang + ', ' + mouth + '. VARY the mouth and expression across generations — do NOT always show an open, talking mouth. Make this person clearly DIFFERENT in face, hair and features from other generations.';
+  // ── Styles réalistes (personne) : casting DIFFÉRENT par image ──
+  //    SAUF avec une image de référence → on préserve l'identité (aucune variation).
+  if(['photo','ugc'].includes(sid)){
+    if(_imgRefFile) return '';
+    const age  = P(['in their early 20s','in their mid 20s','in their late 20s','around 30','in their early 30s','in their mid 30s']);
+    const hair = P(['dark brown','brown','light brown','black','dark blond','chestnut','ash brown','auburn']);
+    const cut  = P(['short','medium-length','short and tousled','slightly wavy','straight','with loose curls','neatly styled']);
+    const build= P(['slim','athletic','average','broad-shouldered']);
+    const ang  = P(['looking straight into the camera','at a slight three-quarter angle','with a subtle head tilt','slightly turned toward the camera']);
+    const mouth= P(['a calm expression with the MOUTH CLOSED, lips gently together','a natural closed-mouth smile (mouth not open)','a relaxed neutral face, mouth closed','a soft closed-lipped confident look','lips only slightly parted in a subtle expression','mid-sentence with the mouth open while talking']);
+    return ' Casting direction for THIS image (unless the description already specifies these): a distinct, unique individual ' + age + ', ' + build + ' build, ' + hair + ' ' + cut + ' hair, ' + ang + ', ' + mouth + '. VARY the mouth and expression across generations — do NOT always show an open, talking mouth. Make this person clearly DIFFERENT in face, hair and features from other generations.';
+  }
+  // ── Pub Produit : ANGLE MARKETING + mise en page DIFFÉRENTS à chaque image ──
+  //    (garde le MÊME produit — même avec une réf — mais change l'accroche, l'angle et la compo :
+  //     évite les 2 pubs quasi identiques quand la banque de formats n'est pas active).
+  if(sid==='staticad'){
+    const angle = P([
+      'lead with the single strongest HERO BENEFIT as the big headline',
+      'lead with SOCIAL PROOF (a bold review-style claim / rating)',
+      'lead with the PROBLEM it solves, then present the product as the answer',
+      'lead with PREMIUM / LUXURY positioning and an elegant minimal layout',
+      'lead with a BEFORE / AFTER or transformation angle',
+      'lead with a KEY INGREDIENT / technology spotlight and fine callouts',
+      'lead with an URGENCY / limited-offer angle (badge, "aujourd\'hui seulement")',
+      'lead with a LIFESTYLE "in use" hero shot rather than a plain packshot',
+      'lead with a "WHY US" / comparison angle (what makes it different)'
+    ]);
+    const layout = P(['a bold top-headline layout','a centered hero with radial benefit callouts','an editorial magazine-style layout','a clean split layout (product one side, copy the other)','a big-type minimalist layout']);
+    const bg = P(['a deep saturated brand-colour backdrop','a soft gradient studio backdrop','a dark premium backdrop','a light airy backdrop','a textured backdrop matching the product world']);
+    return ' Marketing direction for THIS image — make it CLEARLY DIFFERENT from the other generations: ' + angle + '; use ' + layout + ' on ' + bg + '. Change the exact copy, the marketing angle and the composition on EVERY generation — never produce two near-identical ads.';
+  }
+  // ── Autres styles (fruit, mascotte, autre) : varier angle / cadrage / décor / couleurs ──
+  //    (sauf avec réf → on ne dérive pas de la référence)
+  if(_imgRefFile) return '';
+  const scene = P(['a different camera angle','a different framing (closer or wider)','a different pose or action','a different setting / background','a different colour palette and lighting','a different time of day / mood']);
+  return ' For THIS image use ' + scene + ' so it is CLEARLY different from the other generations; vary the composition on every generation.';
 }
 const _IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like "sexy", "hot" or "belle".';
 // Qualité gpt-image-1 selon le plan (coût : low ≈0,016$ · medium ≈0,06$ · high ≈0,25$)
@@ -9724,8 +9753,19 @@ function _imgUpdateIdleMeta(){
   const n=_imgSelectedCount||1;
   el.textContent = _imgMode==='correct' ? (fmt+' · correction · qualité '+qLabel) : (fmt+' · '+n+' image'+(n>1?'s':'')+' · qualité '+qLabel);
 }
-// Affiche/masque l'état vide du canvas
-function _imgIdleShow(on){ const e=document.getElementById('imgIdle'); if(e) e.style.display = on?'':'none'; }
+// Affiche/masque l'état vide du canvas.
+// GARDE (Axel 18/09) : on ne RÉ-AFFICHE JAMAIS l'empty-state (« Décris ton image… » + méta
+// « N images ») tant qu'un résultat est visible (single OU multi) — sinon le titre réapparaissait
+// AU-DESSUS des images générées (un chemin dormant appelait _imgIdleShow(true) après coup).
+function _imgIdleShow(on){
+  const e=document.getElementById('imgIdle'); if(!e) return;
+  if(on){
+    const r=document.getElementById('imgResult'), rm=document.getElementById('imgResultMulti');
+    const shown = el => el && el.style.display!=='none';
+    if(shown(r) || shown(rm)){ e.style.display='none'; return; }
+  }
+  e.style.display = on?'':'none';
+}
 function _imgClearRefZone(){ _imgClearRef(); const p=document.getElementById('imgRefPreview'); if(p){p.style.display='none';p.src='';} const c=document.getElementById('imgRefClear'); if(c) c.style.display='none'; const face=document.getElementById('imgRefFace'); if(face) face.style.display=''; const rb=document.getElementById('imgRefBtnComposer'); if(rb){ const corr=_imgMode==='correct'; rb.style.borderColor = corr?'var(--accent-line)':'var(--border-2)'; rb.style.background = corr?'var(--accent-soft)':'var(--panel-1)'; } }
 // « Modifier cette image » : bascule en mode Correction avec l'image générée comme source
 async function _imgEditThis(){
@@ -10963,7 +11003,7 @@ async function generateImage(){
         for(let i=0;i<actualCount;i++){
           btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image ' + (i+1) + '/' + actualCount + '…';
           const _fmt = (_adPool) ? _adPool[i % _adPool.length] : null;
-          const _p = (_adPromptFor && _fmt) ? _adPromptFor(_fmt) : editPrompt;
+          const _p = (_adPromptFor && _fmt) ? _adPromptFor(_fmt) : (editPrompt + _imgVariationHint());   // avec réf : angle marketing différent par image (Pub Produit) ; identité préservée pour les autres styles (hint vide si réf)
           try {
             let url = await _imgEditOne(token, _p, _imgRefFile, gptSize);
             if(_is4Km){ try { url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K'); } catch(_u){ console.warn('upscale 4K', _u); } }
@@ -29437,6 +29477,9 @@ function _omniPickFile(file){
     v.style.display='block'; if(empty) empty.style.display='none';
     if(lbl){ lbl.textContent=(file.name||'vidéo')+' · '+d.toFixed(1)+' s'; lbl.style.display='block'; }
     if(chg) chg.style.display='inline-flex';
+    // Axel 18/09 : dès qu'une vidéo est chargée, on fait défiler jusqu'au prompt + bouton « Générer »
+    // (comme Images IA) — plus besoin de scroller à la main pour trouver le bouton.
+    try{ const gb=document.getElementById('omniGenBtn'); if(gb) requestAnimationFrame(()=>gb.scrollIntoView({behavior:'smooth', block:'center'})); }catch(_){}
   };
 }
 let _omniProgTimer=null, _omniProgVal=0, _omniProgT0=0;
@@ -34453,7 +34496,8 @@ function _acFillDone(d){
   const compr = d.compressed | 0;
   if(leg) leg.textContent = (cuts ? 'les traits marquent les ' + cuts + ' silence' + (cuts > 1 ? 's retirés' : ' retiré')
                                   : 'aucun silence à retirer sur cet audio')
-                          + (compr ? ' · ' + compr + ' blanc' + (compr > 1 ? 's' : '') + ' resserré' + (compr > 1 ? 's' : '') : '');
+                          + (compr ? ' · ' + compr + ' blanc' + (compr > 1 ? 's' : '') + ' resserré' + (compr > 1 ? 's' : '') : '')
+                          + (cuts ? ' · clique un trait pour rétablir le blanc' : '');
   _acWavePaint('acDoneWave', d.peaks, d.marks);
   _acHeadSet('acDoneHead', 0);
   // l'original est refermé à chaque nouveau nettoyage
@@ -34467,6 +34511,7 @@ function _acFillDone(d){
   // #162 · la coupe manuelle repart d'une ardoise vierge à chaque nettoyage
   window._acEditBuf = d.buf || null;
   _acCutMarks = []; _acCutUndoStack = [];
+  _acRestored = new Set();   // #restore · aucun blanc rétabli au départ
   // Le lecteur était conservé d'un nettoyage à l'autre : au 2e audio, play
   // rejouait le 1er et la tête se calait sur l'ANCIENNE durée. On repart d'un
   // Audio neuf branché sur la nouvelle URL.
@@ -34475,6 +34520,109 @@ function _acFillDone(d){
   _acCutPaint();
   _acZoom = 1; _acZoomC = 0.5; _acZoomPaint();   // chaque nettoyage repart à ×1
   _acBindSeek('acDoneWaveWrap', () => window._acDoneAudio, 'acDoneHead');
+  _acRenderCutMarks();   // #restore · traits cliquables (rétablir/recouper un blanc)
+}
+
+// ── #restore (Axel 18/09) : RÉTABLIR UN BLANC COUPÉ EN CLIQUANT SON TRAIT ────
+// Le nettoyage auto peut manger un mot (une fin douce, un « s » collé). Ici chaque
+// trait de coupe devient cliquable : un clic ressoude le blanc d'origine (et le mot
+// avec, puisqu'on ré-insère l'audio ORIGINAL, pas du silence), un reclic le recoupe.
+// On reconstruit à partir du buffer décodé + keepSegs, avec le MÊME mastering.
+let _acRestored = new Set();   // indices de gaps rétablis (gap i = entre keepSegs[i] et keepSegs[i+1])
+
+function _acRenderCutMarks(){
+  const wrap = document.getElementById('acDoneWaveWrap'); if(!wrap) return;
+  let layer = document.getElementById('acRestoreLayer');
+  if(!layer){ layer = document.createElement('div'); layer.id = 'acRestoreLayer'; layer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:4'; wrap.appendChild(layer); }
+  layer.innerHTML = '';
+  const d = window._acDoneData;
+  // marques cliquables seulement à ×1 (en zoom, l'onde est repositionnée — on masque)
+  if(!d || !d.keepSegs || _acZoom > 1) return;
+  const ks = d.keepSegs, sr = d.sr || 44100;
+  const dur = (d.buf && d.buf.duration) || d.duration || 0; if(dur <= 0 || ks.length < 2) return;
+  // Garde : si une COUPE MANUELLE a raccourci la piste, la timeline a divergé des
+  // keepSegs d'origine → le mapping restore n'est plus fiable, on n'affiche pas de
+  // trait cliquable (plutôt que de le poser au mauvais endroit).
+  let effDur = 0;
+  for(let i = 0; i < ks.length; i++){ effDur += (ks[i].end - ks[i].start) / sr; if(i < ks.length - 1 && _acRestored.has(i)) effDur += (ks[i+1].start - ks[i].end) / sr; }
+  if(Math.abs(effDur - dur) > 0.06) return;
+  let t = 0;
+  for(let i = 0; i < ks.length; i++){
+    t += (ks[i].end - ks[i].start) / sr;
+    if(i >= ks.length - 1) break;
+    const restored = _acRestored.has(i);
+    let r;
+    if(restored){ const gap = (ks[i+1].start - ks[i].end) / sr; r = (t + gap/2) / dur; t += gap; }
+    else { r = t / dur; }
+    const hit = document.createElement('button');
+    hit.type = 'button';
+    hit.title = restored ? 'Blanc rétabli — clique pour le recouper' : 'Clique pour rétablir ce blanc (annule la coupe)';
+    hit.style.cssText = 'position:absolute;top:-6px;bottom:-6px;width:16px;transform:translateX(-50%);left:' + (Math.max(0,Math.min(1,r))*100) + '%;background:transparent;border:none;padding:0;margin:0;cursor:pointer;pointer-events:auto;display:flex;align-items:stretch;justify-content:center';
+    const bar = document.createElement('span');
+    bar.style.cssText = 'width:' + (restored ? '2.5px' : '3px') + ';border-radius:2px;background:' + (restored ? 'var(--green)' : 'transparent') + (restored ? ';box-shadow:0 0 5px rgba(40,199,149,.7)' : '');
+    hit.appendChild(bar);
+    // le seek de l'onde écoute mousedown/touchstart sur le wrap → on les arrête ICI,
+    // sinon cliquer un trait déplacerait aussi la tête de lecture.
+    hit.addEventListener('mousedown', (e) => e.stopPropagation());
+    hit.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+    (function(idx){ hit.onclick = (ev) => { ev.stopPropagation(); ev.preventDefault(); _acToggleRestore(idx); }; })(i);
+    layer.appendChild(hit);
+  }
+}
+
+async function _acToggleRestore(i){
+  const d = window._acDoneData; if(!d || !d.decoded || !d.keepSegs) return;
+  if(_acRestored.has(i)) _acRestored.delete(i); else _acRestored.add(i);
+  try { await _acRebuildFromRestore(); toast(_acRestored.has(i) ? 'Blanc rétabli' : 'Blanc recoupé'); }
+  catch(e){ console.error('restore', e); toast('Impossible de rétablir ce blanc'); }
+}
+
+async function _acRebuildFromRestore(){
+  const d = window._acDoneData; if(!d || !d.decoded || !d.keepSegs) return;
+  const decoded = d.decoded, sr = d.sr || decoded.sampleRate, nCh = decoded.numberOfChannels, ks = d.keepSegs;
+  // segments EFFECTIFS = keepSegs, avec les gaps rétablis soudés au segment suivant
+  const segs = []; let cur = { start: ks[0].start, end: ks[0].end };
+  for(let i = 1; i < ks.length; i++){
+    if(_acRestored.has(i-1)) cur.end = ks[i].end;           // gap i-1 rétabli → on ressoude le blanc + le segment
+    else { segs.push(cur); cur = { start: ks[i].start, end: ks[i].end }; }
+  }
+  segs.push(cur);
+  const totalSmp = segs.reduce((s,g) => s + (g.end - g.start), 0);
+  const off = new OfflineAudioContext(nCh, Math.max(1, totalSmp), sr);
+  let o = 0;
+  for(const g of segs){ const len = g.end - g.start; const s = off.createBufferSource(); s.buffer = decoded; s.connect(off.destination); s.start(o/sr, g.start/sr, len/sr); o += len; }
+  const raw = await off.startRendering();
+  const buf = (typeof _acMasterVoice === 'function') ? await _acMasterVoice(raw, null, { denoised: !!d.masterDenoised }) : raw;
+  _acCleanBlob = _audioBufferToWavBlob(buf);
+  try{ if(d.url) URL.revokeObjectURL(d.url); }catch(_){}
+  d.url = URL.createObjectURL(_acCleanBlob); d.buf = buf; window._acEditBuf = buf;
+  // #68b · sync vidéo : les instants de coupe suivent les segments effectifs
+  _acKeepSegsSec = segs.map(s => ({ start: s.start / sr, end: s.end / sr }));
+  // compteurs + marques (uniquement les gaps NON rétablis) sur la timeline nettoyée
+  d.cuts = segs.length - 1;
+  d.saved = Math.round((decoded.duration - buf.duration) * 10) / 10;
+  d.duration = Math.round(buf.duration);
+  const marks = []; let t = 0;
+  for(let i = 0; i < ks.length; i++){ t += (ks[i].end - ks[i].start) / sr; if(i < ks.length - 1){ if(_acRestored.has(i)) t += (ks[i+1].start - ks[i].end) / sr; else marks.push(t / buf.duration); } }
+  d.marks = marks; d.peaks = _acPeaks(buf, 150);
+  const el = (id) => document.getElementById(id);
+  const cuts = d.cuts, nRest = _acRestored.size;
+  if(el('acDoneCuts'))       el('acDoneCuts').textContent       = cuts + (cuts > 1 ? ' silences' : ' silence');
+  if(el('acDoneCutsSuffix')) el('acDoneCutsSuffix').textContent = cuts > 1 ? ' supprimés' : ' supprimé';
+  if(el('acDoneSaved'))      el('acDoneSaved').textContent      = Math.round(d.saved) + ' s';
+  if(el('acDoneDur'))        el('acDoneDur').textContent        = _acFmt(d.duration || 0);
+  const leg = el('acDoneCutLegend');
+  if(leg) leg.textContent = (cuts ? 'les traits marquent les ' + cuts + ' silence' + (cuts > 1 ? 's retirés' : ' retiré') : 'aucun silence retiré')
+                          + (nRest ? ' · ' + nRest + ' blanc' + (nRest > 1 ? 's' : '') + ' rétabli' + (nRest > 1 ? 's' : '') : '')
+                          + ' · clique un trait pour rétablir/recouper';
+  _acWavePaint('acDoneWave', d.peaks, d.marks);
+  _acHeadSet('acDoneHead', 0);
+  // recâbler le lecteur sur le nouveau blob (nouvelle durée)
+  if(window._acDoneAudio){ try{ window._acDoneAudio.pause(); }catch(_){} window._acDoneAudio = null; }
+  _acDoneEnsureAudio();
+  // la coupe manuelle repart d'une base propre (l'undo pointait sur l'ancien buffer)
+  _acCutMarks = []; _acCutUndoStack = []; _acCutPaint();
+  _acRenderCutMarks();
 }
 
 // ── LA FORME D'ONDE EST CELLE DU FICHIER, PAS UN DÉCOR ──────────────────────
@@ -34648,6 +34796,7 @@ function _acZoomPaint(){
   const au = window._acDoneAudio;
   if(au && isFinite(au.duration) && au.duration > 0) _acHeadSet('acDoneHead', au.currentTime / au.duration);
   _acCutPaint();
+  if(typeof _acRenderCutMarks === 'function') _acRenderCutMarks();   // #restore · traits cliquables (masqués en zoom, réaffichés à ×1)
   const set = (id, on) => { const e = document.getElementById(id); if(e){ e.style.opacity = on ? '1' : '.4'; e.style.pointerEvents = on ? '' : 'none'; } };
   set('acZoomOut', _acZoom > 1); set('acZoomIn', _acZoom < 32);
   set('acZoomPanL', _acZoom > 1 && a > 0.0001); set('acZoomPanR', _acZoom > 1 && b < 0.9999);
@@ -35065,10 +35214,16 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   // COMPRESSÉS (pas supprimés : la voix respire) — tout silence entre shrinkMs
   // et minSilMs est ramené à ~2 × keepShortMs.
   const isStrong  = _acLevel === 'strong';
-  const minSilMs  = isStrong ? 240   : 300;    // durée mini silence à couper
-  const keepMs    = isStrong ? 60    : 80;     // marge autour des mots
-  const shrinkMs  = isStrong ? 160   : 200;    // en dessous : on garde tel quel
-  const keepShortMs = isStrong ? 55  : 60;     // respiration laissée en compressant
+  // ── DESSERRAGE 18/09 (Axel : « il coupe carrément des mots ») ──────────────
+  // On ne coupe QUE les vrais blancs longs (dead-air / hésitations), jamais les
+  // micro-gaps naturels entre les mots d'un débit rapide. minSilMs remonte (380 /
+  // 300) et la marge autour des mots s'élargit (110 / 85) pour protéger les
+  // attaques douces et les fins de mots (plosives, fricatives /s/ /f/). Le filet
+  // « restaurer un blanc en cliquant sur son trait » (plus bas) rattrape le reste.
+  const minSilMs  = isStrong ? 300   : 380;    // durée mini silence à couper
+  const keepMs    = isStrong ? 85    : 110;    // marge autour des mots (protège attaques/fins)
+  const shrinkMs  = isStrong ? 190   : 230;    // en dessous : on garde tel quel
+  const keepShortMs = isStrong ? 60  : 70;     // respiration laissée en compressant
 
   const winSz    = Math.round(0.05 * sr);
   const minSilSmp = Math.round(minSilMs/1000 * sr);
@@ -35092,7 +35247,7 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   const voiceLevel = Math.max(q(0.9), 0.01);
   // le plancher d'« Avancé » redescend : 0,012 classait les fins de mots douces
   // comme silence — c'était lui qui « écorchait », pas la durée
-  const threshold  = Math.min(Math.max(noiseFloor*3, isStrong ? 0.009 : 0.008), voiceLevel*0.35);
+  const threshold  = Math.min(Math.max(noiseFloor*3, isStrong ? 0.009 : 0.008), voiceLevel*0.28);   // plafond abaissé (0.35→0.28) : les syllabes douces ne passent plus pour du silence
   const voiced = rmsArr.map((r) => r >= threshold);
 
   // Construire segments à garder — trois sorts pour un silence :
@@ -35148,7 +35303,8 @@ async function _acCleanCore(srcBlob, onAfterDenoise){
   // d'un DJI Mic : toutes les prises d'Axel repartaient filtrées à 13,5 kHz,
   // exactement ce que l'avertissement juste au-dessus interdit.
   const cleanBuf = await _acMasterVoice(rawClean, null, { denoised: _acDenoiseEnabled && !alreadyClean });
-  return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs, nCoupes, nCompr };
+  return { working, decoded, cleanBuf, blob: _audioBufferToWavBlob(cleanBuf), data, sr, keepSegs, nCoupes, nCompr,
+    masterDenoised: _acDenoiseEnabled && !alreadyClean };   // #restore : re-mastering identique quand on rétablit un blanc
 }
 
 async function _acAnalyze(){
@@ -35222,6 +35378,7 @@ async function _acAnalyze(){
     _acPhase('done', { cuts: r.nCoupes, compressed: r.nCompr, saved: removedS, duration: cleanS,
       peaks: _acPeaks(cleanBuf, 150), marks, origPeaks: _acPeaks(decoded, 150),
       buf: cleanBuf,   // #162 · la coupe manuelle travaille sur ce buffer
+      decoded, keepSegs, sr: r.sr, masterDenoised: r.masterDenoised,   // #restore · rétablir un blanc coupé (clic sur son trait)
       url: _acCleanBlob ? URL.createObjectURL(_acCleanBlob) : '' });
     toast('Audio nettoyé — ' + removedS + 's supprimés');
     if(_acDerushEnabled) _acDerushRun();   // #151 : propose les coupes une fois l'analyse posée
@@ -35324,6 +35481,8 @@ function _acReset(){
   _acDenoisedBuf = null;       // #151 · source du dérush
   _acDerushCuts = []; _acKeepSegsBase = null;
   _acCutMarks = []; _acCutUndoStack = [];
+  _acRestored = new Set();   // #restore
+  { const _rl = document.getElementById('acRestoreLayer'); if(_rl) _rl.innerHTML = ''; }
   _acZoom = 1; _acZoomC = 0.5;
   // (les préférences — niveau, options, preset voix, dérush activé — sont conservées)
   // ── Reset UI : mêmes affichages que le markup d'origine ──
