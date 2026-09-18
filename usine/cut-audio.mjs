@@ -15,10 +15,18 @@ const work = mkdtempSync(join(tmpdir(), 'cut-'));
 const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 
 // 1) transcription
-execFileSync('ffmpeg', ['-v','error','-y','-i', audio, '-vn','-ac','1','-ar','16000', join(work,'a.wav')]);
-execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'a.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','600000'], { stdio:'inherit' });
-const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
-let words = (Array.isArray(tr)?tr:(tr.words||[])).map(w=>({t:String(w.text||w.word||'').trim(), s:+w.start, e:+w.end}))
+// cache transcription (itération rapide : on ne re-transcrit pas le même audio)
+const cacheFile = join(outDir, `cartoon-${cartoonN}.transcript.json`);
+let rawTr;
+if (existsSync(cacheFile)) { rawTr = JSON.parse(readFileSync(cacheFile,'utf8')); console.log('  (transcript en cache)'); }
+else {
+  execFileSync('ffmpeg', ['-v','error','-y','-i', audio, '-vn','-ac','1','-ar','16000', join(work,'a.wav')]);
+  execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'a.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','600000'], { stdio:'inherit' });
+  const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
+  rawTr = (Array.isArray(tr)?tr:(tr.words||[])).map(w=>({t:String(w.text||w.word||'').trim(), s:+w.start, e:+w.end}));
+  writeFileSync(cacheFile, JSON.stringify(rawTr));
+}
+let words = rawTr.map(w=>({t:String(w.t||'').trim(), s:+w.s, e:+w.e}))
   .filter(w=>w.t && isFinite(w.s) && isFinite(w.e)).sort((a,b)=>a.s-b.s);
 
 // ── Correction MARQUE (Whisper : « avatar hats », « atarhats.fr, »…) tolérante à la ponctuation ──
@@ -44,17 +52,32 @@ const snapToPause = (idx) => { let best=idx, bestGap=gapAfter(idx);
 
 // ── Segmentation par CUES (structure Miro : HOOK → [« et là je vais… » LIAISON] → CONTENU(jeté) → CTA) ──
 // Le hook s'arrête à la FIN DE SA PHRASE, juste avant le connecteur « et là je vais t'apprendre… ».
-const CONNECT_RE = /(et (l[aà] )?je vais|je vais (t'|te )?(apprendre|montrer|expliquer|donner)|et je (t'|te )?explique|laisse[- ]?moi|je te (montre|donne)|et maintenant|maintenant (je|voici)|dans (cette|la) video)/i;
-const CONTENT_RE = /(c'est ce qu'on appelle|pour que (ca|ça) fonctionne|commence par|premierement|ensuite|rends[- ]?toi|selectionne|clique|voici comment (faire|creer)|la premiere etape|tu as juste (a|à)|il faut d'abord|il te suffit|tape ton|va(s)? dans (l'onglet|express)|ouvre (l'onglet|le module))/i;
-const CTA_RE = /(lien en bio|en bio|va(s)? sur (le site|avatarads)|sur avatarads|avatarads\.?fr|je te mets le lien|en commentaire|commente|ecris[- ]?moi|envoie[- ]?moi|abonne|teste (par|le|toi)|gratuit(ement)?|mets? le mot|sous la video|va(s)? le tester|recevoir gratuit)/i;
-const findIdx = (re, from, to) => { for(let i=Math.max(0,from);i<Math.min(words.length,to);i++){ if(re.test(norm(words.slice(i,i+9).map(x=>x.t).join(' ')))) return i; } return -1; };
+// ⚠️ patterns au format NORMALISÉ : norm() met tout en minuscules, retire accents, et remplace apostrophes/traits par ESPACE.
+const CONNECT_RE = /(et (la )?je vais|je vais (t |te )?(apprendre|montrer|expliquer|donner)|et je (t |te )?explique|laisse ?moi|je te (montre|donne)|et maintenant|maintenant (je|voici)|dans (cette|la) video)/i;
+const CONTENT_RE = /(c est ce qu on appelle|pour que ca fonctionne|commence par|premierement|ensuite|rends ?toi|selectionne|clique|voici comment (faire|creer)|la premiere etape|tu as juste a|il faut d abord|il te suffit|tape ton|va(s)? dans (l onglet|express)|ouvre (l onglet|le module))/i;
+// CTA : cues SPÉCIFIQUES au close uniquement (« avatarads »/« va sur le site » sont dits AUSSI dans la démo → exclus)
+const STRONG_CTA = /(sous la video|commente|teste par toi|recevoir (le|gratuit|ce|la)|mets? le mot|lien en bio|en commentaire|ecris ?moi|envoie ?moi|abonne|\bdm\b|si tu veux (la|le|ce)|des centaines de personnes)/i;
+// match ANCRÉ au début de la fenêtre → position exacte du cue (plus de décalage de fenêtre)
+const are = re => new RegExp('^(?:'+re.source+')', re.flags.replace('g',''));
+const findIdx = (re, from, to) => { const a=are(re); for(let i=Math.max(0,from);i<Math.min(words.length,to);i++){ if(a.test(norm(words.slice(i,i+6).map(x=>x.t).join(' ')))) return i; } return -1; };
+const findLastIdx = (re, from) => { const a=are(re); let r=-1; for(let i=Math.max(0,from);i<words.length;i++){ if(a.test(norm(words.slice(i,i+6).map(x=>x.t).join(' ')))) r=i; } return r; };
 
 const connIdx = findIdx(CONNECT_RE, 2, 44);
-const contIdx = findIdx(CONTENT_RE, connIdx>0?connIdx+1:2, 75);
-const ctaIdx  = findIdx(CTA_RE, Math.floor(words.length*0.5), words.length);
-
-const hookEndIdx = snapToPause(connIdx>0 ? connIdx-1 : (contIdx>0 ? contIdx-1 : Math.min(words.length-1,14)));
-const liaEndIdx  = (connIdx>0) ? snapToPause(contIdx>connIdx ? contIdx-1 : hookEndIdx+8) : hookEndIdx;
+const contIdx = findIdx(CONTENT_RE, connIdx>0?connIdx+1:2, 90);
+// hook/liaison : bornes DIRECTES (les cues sont déjà à des fins de phrase — pas de snap arrière qui déborde)
+const hookEndIdx = connIdx>0 ? connIdx-1 : (contIdx>0 ? contIdx-1 : Math.min(words.length-1,14));
+const liaEndIdx  = (connIdx>0) ? (contIdx>connIdx ? contIdx-1 : hookEndIdx+10) : hookEndIdx;
+// CTA : DÉBUT DE PHRASE impératif dans la 2e moitié (on garde la DERNIÈRE phrase-CTA)
+const CTA_START = /^(go|commente|clique|va |vas |teste|abonne|rends|ecris|envoie|des centaines|si tu veux|mets|recois|recupere|profite)/i;
+let ctaIdx = -1;
+for (let i=Math.floor(words.length*0.5); i<words.length; i++){
+  const sentStart = (i===0) || gapAfter(i-1) > 0.28;
+  if (sentStart && CTA_START.test(norm(words.slice(i,i+3).map(x=>x.t).join(' ')))) ctaIdx = i; // dernière
+}
+if (ctaIdx<0){ // repli : dernier cue fort ramené au début de sa phrase (max 14 mots)
+  const li = findLastIdx(STRONG_CTA, Math.floor(words.length*0.5));
+  if (li>0){ let s=li; for(let j=li-1;j>=Math.max(liaEndIdx+1,li-14);j--){ if(gapAfter(j)>0.3){ s=j+1; break; } s=j; } ctaIdx=s; }
+}
 
 const tAt = (idx, side) => idx<=0 ? 0 : idx>=words.length ? total : (side==='end'? (words[idx].e+Math.min(0.18,gapAfter(idx)/2)) : (words[idx].s - Math.min(0.12,(idx>0?gapAfter(idx-1)/2:0.08))));
 const HOOK_START = Math.max(0, (words[0]?.s ?? 0) - 0.06);   // démarre au 1er mot → coupe la vibration/clic du début
@@ -63,7 +86,7 @@ const HOOK_START = Math.max(0, (words[0]?.s ?? 0) - 0.06);   // démarre au 1er 
 const segs = [];
 segs.push({ id:`H${cartoonN}-audio`, kind:'hook', a:HOOK_START, b:tAt(hookEndIdx,'end') });
 if (liaEndIdx>hookEndIdx) segs.push({ id:`L${cartoonN}-audio`, kind:'liaison', a:tAt(hookEndIdx+1,'start'), b:tAt(liaEndIdx,'end') });
-if (ctaIdx>0) segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta', a:tAt(snapToPause(ctaIdx-1)+1,'start'), b:total });
+if (ctaIdx>0) segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta', a:tAt(ctaIdx,'start'), b:total });
 
 // 5) découpe ffmpeg
 const manifest = [];
