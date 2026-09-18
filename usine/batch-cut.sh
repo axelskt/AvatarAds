@@ -13,7 +13,8 @@ for n in $(seq "$START" "$END"); do
   # déjà fait (manifeste présent = découpe terminée) → on saute
   if [ -f "$outdir/cartoon-$n.manifest.json" ] && ls "$outdir"/H${n}-audio.wav >/dev/null 2>&1; then
     echo "— Cartoon $n : déjà découpé (skip)"; done_already=$((done_already+1)); continue; fi
-  audio=$(ls "$dir"/audio-nettoye*.wav 2>/dev/null | grep -v sansbruit | head -1)
+  audio=$(ls "$dir"/audio*nettoye*.wav 2>/dev/null | grep -v sansbruit | head -1)   # tiret OU underscore
+  [ -z "$audio" ] && audio=$(ls "$dir"/*.wav 2>/dev/null | grep -v sansbruit | head -1)
   [ -z "$audio" ] && audio=$(ls "$dir"/*.wav 2>/dev/null | head -1)
   if [ -z "$audio" ]; then echo "— Cartoon $n : pas d'audio"; skip=$((skip+1)); continue; fi
   echo "=== Cartoon $n ==="
