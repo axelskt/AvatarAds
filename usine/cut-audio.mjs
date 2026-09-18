@@ -174,15 +174,16 @@ const alignStart = text => { const head=asToks(text).slice(0, Math.min(7,asToks(
   for(let j=lo;j<hi;j++){ if(like(flatToks[j], head[di])) return tokToWord[Math.max(0, j-di)]; }  // recule de `di` mots communs
   for(let j=lo;j<hi;j++){ if(like(flatToks[j], head[0])) return tokToWord[j]; }                    // repli : 1er mot du texte
   for(let j=lo;j<hi;j++){ if(r.pset.has(flatToks[j])) return tokToWord[j]; } return -1; };
-// alignEnd TOLÉRANT AUX INSERTIONS (l'audio « 1000€ par jour » n'a pas le mot « euros » du texte) :
-// on cherche la fenêtre qui contient le plus de mots de la fin du texte, puis le DERNIER mot du motif qui y figure.
+// alignEnd TOLÉRANT AUX INSERTIONS + au FLOU (« 1000€ » vs « 1000 euros » ; « vidéo » vs « vidéos » du C72) :
+// fenêtre qui contient le plus de mots de la fin du texte, puis le DERNIER mot du motif qui y figure.
 const alignEnd = text => { const t=asToks(text); const tail=t.slice(-Math.min(6,t.length));
-  const pset=new Set(tail), W=tail.length+3; let best=-1, bestSc=0;
+  const inT = tok => tail.some(p=>like(p,tok));   // flou : singulier/pluriel, préfixes
+  const W=tail.length+3; let best=-1, bestSc=0;
   for(let i=0;i<flatToks.length;i++){ let sc=0; const seen=new Set();
-    for(let j=i;j<Math.min(flatToks.length,i+W);j++){ if(pset.has(flatToks[j])&&!seen.has(flatToks[j])){ sc++; seen.add(flatToks[j]); } }
+    for(let j=i;j<Math.min(flatToks.length,i+W);j++){ const tk=flatToks[j]; if(inT(tk)&&!seen.has(tk)){ sc++; seen.add(tk); } }
     if(sc>bestSc){ bestSc=sc; best=i; } }
   if(best<0 || bestSc<Math.max(2, Math.ceil(tail.length*0.5))) return -1;
-  let last=best; for(let j=best;j<Math.min(flatToks.length,best+W);j++){ if(pset.has(flatToks[j])) last=j; }
+  let last=best; for(let j=best;j<Math.min(flatToks.length,best+W);j++){ if(inT(flatToks[j])) last=j; }
   return tokToWord[last]; };
 
 // recule un index jusqu'à la 1re VRAIE pause avant lui ; s'il n'y en a pas dans la fenêtre, on reste sur place
