@@ -9249,25 +9249,10 @@ function _imgVariationHint(){
     const mouth= P(['a calm expression with the MOUTH CLOSED, lips gently together','a natural closed-mouth smile (mouth not open)','a relaxed neutral face, mouth closed','a soft closed-lipped confident look','lips only slightly parted in a subtle expression','mid-sentence with the mouth open while talking']);
     return ' Casting direction for THIS image (unless the description already specifies these): a distinct, unique individual ' + age + ', ' + build + ' build, ' + hair + ' ' + cut + ' hair, ' + ang + ', ' + mouth + '. VARY the mouth and expression across generations — do NOT always show an open, talking mouth. Make this person clearly DIFFERENT in face, hair and features from other generations.';
   }
-  // ── Pub Produit : ANGLE MARKETING + mise en page DIFFÉRENTS à chaque image ──
-  //    (garde le MÊME produit — même avec une réf — mais change l'accroche, l'angle et la compo :
-  //     évite les 2 pubs quasi identiques quand la banque de formats n'est pas active).
-  if(sid==='staticad'){
-    const angle = P([
-      'lead with the single strongest HERO BENEFIT as the big headline',
-      'lead with SOCIAL PROOF (a bold review-style claim / rating)',
-      'lead with the PROBLEM it solves, then present the product as the answer',
-      'lead with PREMIUM / LUXURY positioning and an elegant minimal layout',
-      'lead with a BEFORE / AFTER or transformation angle',
-      'lead with a KEY INGREDIENT / technology spotlight and fine callouts',
-      'lead with an URGENCY / limited-offer angle (badge, "aujourd\'hui seulement")',
-      'lead with a LIFESTYLE "in use" hero shot rather than a plain packshot',
-      'lead with a "WHY US" / comparison angle (what makes it different)'
-    ]);
-    const layout = P(['a bold top-headline layout','a centered hero with radial benefit callouts','an editorial magazine-style layout','a clean split layout (product one side, copy the other)','a big-type minimalist layout']);
-    const bg = P(['a deep saturated brand-colour backdrop','a soft gradient studio backdrop','a dark premium backdrop','a light airy backdrop','a textured backdrop matching the product world']);
-    return ' Marketing direction for THIS image — make it CLEARLY DIFFERENT from the other generations: ' + angle + '; use ' + layout + ' on ' + bg + '. Change the exact copy, the marketing angle and the composition on EVERY generation — never produce two near-identical ads.';
-  }
+  // ── Pub Produit : PAS d'angle inventé (Axel 18/09) ──
+  //    La variété vient UNIQUEMENT des 59 formats VALIDÉS de la banque (un format différent par
+  //    image, via _adPromptFor/_adPool) — on n'invente pas de nouvel angle marketing ici.
+  if(sid==='staticad') return '';
   // ── Autres styles (fruit, mascotte, autre) : varier angle / cadrage / décor / couleurs ──
   //    (sauf avec réf → on ne dérive pas de la référence)
   if(_imgRefFile) return '';
@@ -10000,7 +9985,7 @@ function _imgPickStyle(id){
 }
 // #static-ads-bank (02/09) : « Pub Produit » pioche un des 59 formats analysés (Aléatoire par défaut) —
 // réservé au compte développeur/owner tant qu'Axel n'a pas validé ; ensuite _aaStaticAdsBankOn → tout le monde.
-function _aaStaticAdsBankOn(){ return !!(window.AA_STATIC_ADS && currentMember && (currentMember.is_owner || String(currentMember.plan||'').toLowerCase()==='developer')); }
+function _aaStaticAdsBankOn(){ return !!(window.AA_STATIC_ADS && currentMember); }   // Axel 18/09 : banque des 59 formats VALIDÉS ouverte à tous — la variété vient de ces formats (on n'invente pas d'angle)
 function _imgSyncAdFormatRow(){ /* Axel 02/09 : pas de choix de format — toujours aléatoire (sélecteur retiré) */ }
 
 function _imgInitFormatGrid(){
