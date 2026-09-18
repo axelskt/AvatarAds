@@ -224,10 +224,13 @@ let earlyClose = -1;
 // souvent idéalisée : « prête à poster depuis un prompt » ≠ audio « en tapant un prompt »).
 const liaStartBrief = (brief && typeof brief.liaison==='string') ? alignStart(brief.liaison) : -1;
 
-// ── HOOK end : (a) début de liaison −1 si connu ; (b) sinon fin du texte hook ; (c) sinon 1re borne audio. ──
+// ── HOOK end : (a) fin du texte hook si elle s'aligne (permet de JETER un bout entre hook et liaison,
+//    ex. C12 « …la même chose » puis on saute « C'est ce qu'on appelle… ») ; (b) sinon début de liaison −1 ;
+//    (c) sinon 1re borne audio. ──
+const heBrief = (brief && brief.hook) ? alignEnd(brief.hook) : -1;
 let hookEndIdx;
-if (liaStartBrief>0) hookEndIdx = liaStartBrief-1;                                  // le hook finit où la liaison commence
-else if (brief && brief.hook){ const he=alignEnd(brief.hook); hookEndIdx = he>0 ? he : Math.min(words.length-1,14); }
+if (heBrief>0 && (liaStartBrief<=0 || heBrief<liaStartBrief)) hookEndIdx = heBrief;
+else if (liaStartBrief>0) hookEndIdx = liaStartBrief-1;
 else { const cands=[conceptIdx, earlyTuto, earlyClose, ctaIdx].filter(x=>x>2);
   hookEndIdx = cands.length ? Math.min(...cands)-1 : Math.min(words.length-1,14); }
 
