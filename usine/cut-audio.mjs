@@ -59,7 +59,9 @@ console.log(`  ${words.length} mots · ${total.toFixed(1)}s`);
 const gapAfter = i => (i<words.length-1) ? (words[i+1].s - words[i].e) : 1;
 const tAt = (idx, side) => idx<=0 ? 0 : idx>=words.length ? total
   : (side==='end'
-      ? (words[idx].e + Math.min(0.18, gapAfter(idx)/2))
+      // marge de fin : ≥70 ms de traîne (même sans blanc, on mord un peu le mot suivant qui sera fondu)
+      // pour que le fondu de sortie ne rogne JAMAIS le dernier mot ; sinon 70 % du blanc dispo.
+      ? (words[idx].e + Math.max(0.07, Math.min(0.20, gapAfter(idx)*0.7)))
       : (words[idx].s - Math.min(0.12, (idx>0 ? gapAfter(idx-1)/2 : 0.08))));
 
 // ── ANTI-VIBRATION : vrai début de voix ──
@@ -152,35 +154,19 @@ const alignEnd   = text => { const t=asToks(text); const tail=t.slice(-Math.min(
 // recule un index jusqu'à la 1re VRAIE pause avant lui ; s'il n'y en a pas dans la fenêtre, on reste sur place
 const sentStartBefore = (idx, maxBack=8) => { for(let j=idx-1;j>=Math.max(0,idx-maxBack);j--){ if(gapAfter(j)>0.28) return j+1; } return idx; };
 
-// ── HOOK end : texte fourni (frontière idiosyncrasique du script) sinon marqueur CONCEPT ──
+// ── repères AUDIO (calculés AVANT le hook : concept / tuto / CTA peuvent tous borner un hook seul) ──
 const conceptIdx = findIdx(CONCEPT_RE, 3, Math.max(6, Math.floor(words.length*0.6)));
-let hookEndIdx = conceptIdx>0 ? conceptIdx-1 : Math.min(words.length-1, 14);
-if (brief && brief.hook){ const he=alignEnd(brief.hook); if(he>0) hookEndIdx=he; }
+const earlyTuto  = findIdx(TUTO_RE, 4, Math.floor(words.length*0.96));   // 1er repère tuto, où qu'il soit
 
-// ── LIAISON : du hook au TUTO appli. Le TUTO (avatarads.fr, onglets, « tu vas te rendre/cliquer… »)
-//    est le repère AUDIO fiable qui borne la liaison, quel que soit le script (les textes fournis sont
-//    idéalisés et ne collent pas toujours à l'audio). Existe si brief.liaison OU marqueurs concept. ──
-const wantLiaison = brief ? !!brief.liaison : (conceptIdx>0);
-let liaStartIdx = hookEndIdx+1;
-if (brief && brief.liaison){ const ls=alignStart(brief.liaison); if(ls>=0) liaStartIdx=ls; }
-const tutoRaw = findIdx(TUTO_RE, Math.max(liaStartIdx+1, 3), Math.max(liaStartIdx+2, Math.floor(words.length*0.96)));
-let tutoIdx = tutoRaw>liaStartIdx ? sentStartBefore(tutoRaw) : -1;   // recalé au début de la phrase du tuto
-if (tutoIdx>0 && tutoIdx<=liaStartIdx) tutoIdx = tutoRaw;            // sécurité : jamais avant le début de liaison
-let liaSeg = null;
-if (wantLiaison && tutoIdx>liaStartIdx){
-  const la=tAt(liaStartIdx,'start'), lb=tAt(tutoIdx-1,'end');
-  if ((lb-la)>=0.6 && (lb-la)<=45) liaSeg={ a:la, b:lb };
-}
-
-// ── CTA (repère AUDIO) : 1) opener de close ; 2) sinon ancrage sur le close + remontée à l'impératif. ──
+// CTA (repère AUDIO) : 1) opener de close ; 2) sinon ancrage sur le close + remontée à l'impératif.
 let ctaIdx = -1;
 { const a=are(CLOSE_OPENER_RE);
-  for(let i=Math.floor(words.length*0.5);i<words.length;i++){
+  for(let i=Math.floor(words.length*0.4);i<words.length;i++){
     const sStart=(i===0)||gapAfter(i-1)>0.25; if(sStart && a.test(win(i,4))){ ctaIdx=i; break; } } }
 if (ctaIdx<0){
   const CTA_CUE=/(sous la video|commente|commande (go|site|le|ia)|va sur avatarads|teste par toi|mets le mot|lien en bio|je t envoie|je te l envoie|en prive)/i;
   const ca=are(CTA_CUE); let cue=-1;
-  for(let i=Math.floor(words.length*0.5);i<words.length;i++){ if(ca.test(win(i,3))) cue=i; }   // dernière occurrence
+  for(let i=Math.floor(words.length*0.4);i<words.length;i++){ if(ca.test(win(i,3))) cue=i; }   // dernière occurrence
   if(cue>0){
     const IMP=/^(go|commente|commande|clique|mets|abonne|ecris|envoie|rejoins|teste|profite|recois|recupere|va |vas |tu veux)/i;
     const ia=are(IMP); let st=cue;
@@ -191,6 +177,32 @@ if (ctaIdx<0){
 if (ctaIdx<0){ const a=are(CTA_IMP_RE);
   for(let i=Math.floor(words.length*0.5);i<words.length;i++){
     const sStart=(i===0)||gapAfter(i-1)>0.28; if(sStart && a.test(win(i,3))) ctaIdx=i; } } // on garde la DERNIÈRE
+
+// close PRÉCOCE : un impératif de CTA en début de phrase tôt dans l'audio (ex. C14 : « Commente avatar… »
+// à 3,8 s) borne aussi le hook — le CTA « de fin » (2ᵉ moitié) le raterait.
+let earlyClose = -1;
+{ const EC=/^(commente|commande|clique|abonne|ecris|envoie|rejoins|teste par|rends ?toi|va sur (le site|avatarads)|inscris|telecharge)/i;
+  const ea=are(EC);
+  for(let i=3;i<Math.floor(words.length*0.6);i++){ if(gapAfter(i-1)>0.15 && ea.test(win(i,2))){ earlyClose=i; break; } } }
+
+// ── HOOK end : texte fourni (frontière idiosyncrasique) sinon la 1re BORNE (concept / tuto / close) − 1 ──
+let hookEndIdx;
+if (brief && brief.hook){ const he=alignEnd(brief.hook); hookEndIdx = he>0 ? he : Math.min(words.length-1,14); }
+else { const cands=[conceptIdx, earlyTuto, earlyClose, ctaIdx].filter(x=>x>2);
+  hookEndIdx = cands.length ? Math.min(...cands)-1 : Math.min(words.length-1,14); }
+
+// ── LIAISON : du hook au TUTO appli (repère AUDIO fiable, quel que soit le script). ──
+const wantLiaison = brief ? !!brief.liaison : (conceptIdx>0);
+let liaStartIdx = hookEndIdx+1;
+if (brief && brief.liaison){ const ls=alignStart(brief.liaison); if(ls>=0) liaStartIdx=ls; }
+const tutoRaw = findIdx(TUTO_RE, Math.max(liaStartIdx+1, 4), Math.floor(words.length*0.96));
+let tutoIdx = tutoRaw>liaStartIdx ? sentStartBefore(tutoRaw) : -1;   // recalé au début de la phrase du tuto
+if (tutoIdx>0 && tutoIdx<=liaStartIdx) tutoIdx = tutoRaw;            // sécurité : jamais avant le début de liaison
+let liaSeg = null;
+if (wantLiaison && tutoIdx>liaStartIdx){
+  const la=tAt(liaStartIdx,'start'), lb=tAt(tutoIdx-1,'end');
+  if ((lb-la)>=0.6 && (lb-la)<=45) liaSeg={ a:la, b:lb };
+}
 
 // bornes finales (le brief a déjà été fondu dans hook/liaison ; CTA = repère audio)
 let hookB=hookEndIdx, liaB=liaSeg, ctaStartB=ctaIdx, ctaEndB=total;
@@ -209,7 +221,7 @@ for (const seg of segs){
   const segdur = seg.b - seg.a;
   // highpass léger + fondus courts (le vrai anti-vibration est le calage du début sur la voix)
   execFileSync('ffmpeg', ['-v','error','-y','-ss', seg.a.toFixed(3), '-t', segdur.toFixed(3), '-i', audio,
-    '-af', `highpass=f=70,afade=t=in:st=0:d=0.03,afade=t=out:st=${Math.max(0,segdur-0.07).toFixed(3)}:d=0.07`,
+    '-af', `highpass=f=70,afade=t=in:st=0:d=0.03,afade=t=out:st=${Math.max(0,segdur-0.06).toFixed(3)}:d=0.06`,
     '-ac','1','-ar','48000', out]);
   const inSeg = words.filter(w=>{ const mid=(w.s+w.e)/2; return mid>=seg.a-0.02 && mid<=seg.b+0.02; }); // 1 mot = 1 segment (milieu)
   const txt = inSeg.map(w=>w.t).join(' ');
