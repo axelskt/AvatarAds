@@ -6,14 +6,19 @@
 //   LIAISON = le bloc CONCEPTUEL/générique (« c'est ce qu'on appelle un influenceur IA… rediriger ton audience ») → jusqu'au tuto appli.
 //   CTA     = le close (« Des centaines de personnes… » / « Go sous la vidéo et va sur avatarads.fr… »).
 // Anti-vibration : détection acoustique du VRAI début de voix (saute un blip/artefact de début d'enregistrement).
-// Usage : node usine/cut-audio.mjs <audio> <outDir> <cartoonN> [hookScriptFile]
+// Usage : node usine/cut-audio.mjs <audio> <outDir> <cartoonN> [parts] [briefFile]
+//   parts    = liste des briques à produire, ex. "hook" ou "hook,cta" (défaut : hook,liaison,cta)
+//   briefFile= JSON {hook, liaison, cta} : textes EXACTS fournis par Axel → mode TEXTE-ANCRÉ (aligne
+//              chaque texte sur la transcription au lieu des marqueurs). Une clé absente = brique non produite.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const [audio, outDir, cartoonN, hookScriptFile] = process.argv.slice(2);
-if (!audio || !outDir || !cartoonN) { console.error('usage: cut-audio.mjs <audio> <outDir> <cartoonN> [hookScriptFile]'); process.exit(1); }
+const [audio, outDir, cartoonN, partsArg, briefFile] = process.argv.slice(2);
+if (!audio || !outDir || !cartoonN) { console.error('usage: cut-audio.mjs <audio> <outDir> <cartoonN> [parts] [briefFile]'); process.exit(1); }
+const KEEP = new Set((partsArg && partsArg!=='all' ? partsArg : 'hook,liaison,cta').split(',').map(s=>s.trim()).filter(Boolean));
+const brief = (briefFile && existsSync(briefFile)) ? JSON.parse(readFileSync(briefFile,'utf8')) : null;
 mkdirSync(outDir, { recursive: true });
 const work = mkdtempSync(join(tmpdir(), 'cut-'));
 const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
@@ -44,7 +49,7 @@ const brandFix = t => { const b = bareOf(t);
   } words = merged.map(w=>({ ...w, t:brandFix(w.t) })); }
 // Whisper entend « Commente » comme « commande » dans le CTA (« commande go ») → correction ciblée.
 words = words.map((w,i)=>{ const b=bareOf(w.t), nx=words[i+1]?bareOf(words[i+1].t):'';
-  return (b==='commande' && (nx==='go'||nx==='le')) ? { ...w, t:'Commente' } : w; });
+  return (b==='commande' && (nx==='go'||nx==='le'||nx==='site'||nx==='ia'||nx==='dm')) ? { ...w, t:'Commente' } : w; });
 
 const total = words.length ? words[words.length-1].e : 0;
 const fullText = words.map(w=>w.t).join(' ');
@@ -120,55 +125,81 @@ const HOOK_START = hookOnset(audio, words[0]?.s ?? 0);
 // La PROMESSE fait partie du hook (Axel) — elle n'est PAS une borne.
 // CONCEPT = début du bloc conceptuel (= fin du hook, début de la liaison).
 const CONCEPT_RE = /(c est ce qu?e? ?(l ?)?on appelle|et c est (comme ca|ce qu on)|pour que (ca|cela) fonctionne|il (te )?faut d abord)/i;
-// TUTO = 1re ÉTAPE CONCRÈTE du tuto appli (= fin de la liaison, début du CONTENU jeté).
-// ⚠️ la transition « maintenant pour créer ton influenceur IA » reste DANS la liaison (Axel) →
-//    on n'ancre PAS sur « maintenant », mais sur la 1re instruction concrète (compte / onglet / avatarads.fr).
-const TUTO_RE = /(commence par (creer|te rendre|par aller|aller|choisir ton|selectionner|te connecter)|cree(r| toi)? (un |ton )?compte|connecte ?toi|rends ?toi (dans|sur)|(va|vas|rends|rendez) (sur|dans) (le site|avatarads|l app|l onglet)|ouvre (l onglet|le module|l application)|va(s)? dans l onglet|sur avatarads|dans l onglet (images|montage)|selectionne (photos|le format|l onglet))/i;
-// Close/CTA
-const CLOSE_OPENER_RE = /^(des centaines|des milliers|si tu veux (la|le|ca|ce|reussir|avoir|faire|toi))/i;
-const CTA_IMP_RE = /^(go|commente|clique|va |vas |teste|abonne|rends|ecris|envoie|mets|recois|recupere|profite|rejoins|telecharge|inscris)/i;
+// TUTO = début du tuto appli (= fin de la liaison, début du CONTENU jeté).
+// ⚠️ Axel : « maintenant pour créer ton influenceur IA » NE doit PAS rester dans la liaison (ça empiète
+//    sur la démo) → on ancre sur la transition « maintenant … » ET sur la 1re instruction concrète.
+const TUTO_RE = /(maintenant,? (pour (creer|faire|bien)|voici|on va|je vais te (montrer|expliquer)|rends|va |il (te )?faut|c est parti|creons|on cree|suis)|(et |alors |donc )?pour (faire ca|creer ton|creer un|animer|finir|bien commencer)|commence par (creer|te rendre|par aller|aller|choisir ton|selectionner|te connecter)|cree(r| toi)? (un |ton )?compte|connecte ?toi|rends ?toi (dans|sur)|tu vas (te rendre|aller (dans|sur)|cliquer|ouvrir|ajouter|selectionner|importer|decrire|generer)|(va|vas|rends|rendez) (sur|dans) (le site|avatarads|l app|l onglet)|ouvre (l onglet|le module|l application)|va(s)? dans l onglet|sur avatarads|dans l onglet (images|montage)|selectionne (photos|le format|l onglet))/i;
+// Close/CTA — openers de close variés (« Des centaines… », « Si tu veux… », « Tu veux la méthode… »)
+const CLOSE_OPENER_RE = /^(des centaines|des milliers|si tu veux (la|le|ca|ce|reussir|avoir|faire|toi)|tu veux (la|le|ce|recevoir|avoir|apprendre|reussir|obtenir|savoir))/i;
+const CTA_IMP_RE = /^(go|commente|commande|clique|va |vas |teste|abonne|rends|ecris|envoie|mets|recois|recupere|profite|rejoins|telecharge|inscris)/i;
 
 const are = re => new RegExp('^(?:'+re.source+')', re.flags.replace('g',''));
 const win = (i,n=6) => norm(words.slice(i, i+n).map(x=>x.t).join(' '));
 const findIdx = (re, from, to) => { const a=are(re); for(let i=Math.max(0,from);i<Math.min(words.length,to);i++){ if(a.test(win(i))) return i; } return -1; };
 
+// ── ALIGNEMENT TEXTE (mode texte-ancré) : trouve dans la transcription où un texte fourni commence/finit ──
+const wtoks = words.map(w=>norm(w.t));
+const asToks = s => norm(s).split(' ').filter(Boolean);
+function bestMatch(pat){                                    // index de départ du meilleur match de `pat` (tokens normalisés)
+  if(!pat.length) return -1; let best=-1, bestSc=0;
+  for(let i=0;i<wtoks.length;i++){ let sc=0; for(let k=0;k<pat.length && i+k<wtoks.length;k++){ if(wtoks[i+k]===pat[k]) sc++; }
+    if(sc>bestSc){ bestSc=sc; best=i; } }
+  return bestSc>=Math.max(2, Math.ceil(pat.length*0.55)) ? best : -1;   // ≥55 % des mots collent
+}
+const alignStart = text => { const t=asToks(text); return bestMatch(t.slice(0, Math.min(5,t.length))); };
+const alignEnd   = text => { const t=asToks(text); const tail=t.slice(-Math.min(5,t.length)); const st=bestMatch(tail); return st>=0 ? st+tail.length-1 : -1; };
+
+// recule un index jusqu'à la 1re VRAIE pause avant lui ; s'il n'y en a pas dans la fenêtre, on reste sur place
+const sentStartBefore = (idx, maxBack=8) => { for(let j=idx-1;j>=Math.max(0,idx-maxBack);j--){ if(gapAfter(j)>0.28) return j+1; } return idx; };
+
+// ── HOOK end : texte fourni (frontière idiosyncrasique du script) sinon marqueur CONCEPT ──
 const conceptIdx = findIdx(CONCEPT_RE, 3, Math.max(6, Math.floor(words.length*0.6)));
-const hookEndIdx = conceptIdx>0 ? conceptIdx-1 : Math.min(words.length-1, 14);
-const tutoIdx    = conceptIdx>0 ? findIdx(TUTO_RE, conceptIdx+2, Math.max(conceptIdx+3, Math.floor(words.length*0.92))) : -1;
-// LIAISON = bloc conceptuel entre le hook et le tuto appli (souvent long ; jusqu'à 40 s).
+let hookEndIdx = conceptIdx>0 ? conceptIdx-1 : Math.min(words.length-1, 14);
+if (brief && brief.hook){ const he=alignEnd(brief.hook); if(he>0) hookEndIdx=he; }
+
+// ── LIAISON : du hook au TUTO appli. Le TUTO (avatarads.fr, onglets, « tu vas te rendre/cliquer… »)
+//    est le repère AUDIO fiable qui borne la liaison, quel que soit le script (les textes fournis sont
+//    idéalisés et ne collent pas toujours à l'audio). Existe si brief.liaison OU marqueurs concept. ──
+const wantLiaison = brief ? !!brief.liaison : (conceptIdx>0);
+let liaStartIdx = hookEndIdx+1;
+if (brief && brief.liaison){ const ls=alignStart(brief.liaison); if(ls>=0) liaStartIdx=ls; }
+const tutoRaw = findIdx(TUTO_RE, Math.max(liaStartIdx+1, 3), Math.max(liaStartIdx+2, Math.floor(words.length*0.96)));
+let tutoIdx = tutoRaw>liaStartIdx ? sentStartBefore(tutoRaw) : -1;   // recalé au début de la phrase du tuto
+if (tutoIdx>0 && tutoIdx<=liaStartIdx) tutoIdx = tutoRaw;            // sécurité : jamais avant le début de liaison
 let liaSeg = null;
-if (conceptIdx>0 && tutoIdx>conceptIdx+1){
-  const la=tAt(conceptIdx,'start'), lb=tAt(tutoIdx-1,'end');
-  if ((lb-la)>=0.6 && (lb-la)<=40) liaSeg={ a:la, b:lb, from:conceptIdx, to:tutoIdx-1 };
+if (wantLiaison && tutoIdx>liaStartIdx){
+  const la=tAt(liaStartIdx,'start'), lb=tAt(tutoIdx-1,'end');
+  if ((lb-la)>=0.6 && (lb-la)<=45) liaSeg={ a:la, b:lb };
 }
 
-// CTA : 1) opener de close explicite (Des centaines / si tu veux) ; 2) sinon on ancre sur le close
-//       (« … sous la vidéo et va sur avatarads.fr … ») et on remonte à l'impératif de début de phrase ;
-//       3) repli : dernière phrase impérative.
+// ── CTA (repère AUDIO) : 1) opener de close ; 2) sinon ancrage sur le close + remontée à l'impératif. ──
 let ctaIdx = -1;
 { const a=are(CLOSE_OPENER_RE);
   for(let i=Math.floor(words.length*0.5);i<words.length;i++){
     const sStart=(i===0)||gapAfter(i-1)>0.25; if(sStart && a.test(win(i,4))){ ctaIdx=i; break; } } }
 if (ctaIdx<0){
-  const CTA_CUE=/(sous la video|commente|commande go|va sur avatarads|teste par toi|mets le mot|lien en bio)/i;
+  const CTA_CUE=/(sous la video|commente|commande (go|site|le|ia)|va sur avatarads|teste par toi|mets le mot|lien en bio|je t envoie|je te l envoie|en prive)/i;
   const ca=are(CTA_CUE); let cue=-1;
   for(let i=Math.floor(words.length*0.5);i<words.length;i++){ if(ca.test(win(i,3))) cue=i; }   // dernière occurrence
   if(cue>0){
-    const IMP=/^(go|commente|commande|clique|mets|abonne|ecris|envoie|rejoins|teste|profite|recois|recupere|va |vas )/i;
+    const IMP=/^(go|commente|commande|clique|mets|abonne|ecris|envoie|rejoins|teste|profite|recois|recupere|va |vas |tu veux)/i;
     const ia=are(IMP); let st=cue;
     for(let j=cue;j>=Math.max(0,cue-9);j--){ if(ia.test(win(j,2))) st=j; }   // 1er impératif de la fenêtre du close
-    ctaIdx=st;
+    ctaIdx=st;                                                                // l'impératif EST le début (pas de recalage)
   }
 }
 if (ctaIdx<0){ const a=are(CTA_IMP_RE);
   for(let i=Math.floor(words.length*0.5);i<words.length;i++){
     const sStart=(i===0)||gapAfter(i-1)>0.28; if(sStart && a.test(win(i,3))) ctaIdx=i; } } // on garde la DERNIÈRE
 
-// ⚠️ Axel : on ne garde QUE hook / liaison / CTA — le CONTENU (tuto appli) est jeté.
+// bornes finales (le brief a déjà été fondu dans hook/liaison ; CTA = repère audio)
+let hookB=hookEndIdx, liaB=liaSeg, ctaStartB=ctaIdx, ctaEndB=total;
+
+// ⚠️ Axel : on ne garde QUE hook / liaison / CTA (le CONTENU tuto appli est jeté) ; `parts` filtre encore.
 const segs = [];
-segs.push({ id:`H${cartoonN}-audio`, kind:'hook', a:HOOK_START, b:tAt(hookEndIdx,'end') });
-if (liaSeg) segs.push({ id:`L${cartoonN}-audio`, kind:'liaison', a:liaSeg.a, b:liaSeg.b });
-if (ctaIdx>0) segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta', a:tAt(ctaIdx,'start'), b:total });
+if (KEEP.has('hook'))                 segs.push({ id:`H${cartoonN}-audio`,   kind:'hook',    a:HOOK_START,           b:tAt(hookB,'end') });
+if (KEEP.has('liaison') && liaB)      segs.push({ id:`L${cartoonN}-audio`,   kind:'liaison', a:liaB.a,               b:liaB.b });
+if (KEEP.has('cta') && ctaStartB>0)   segs.push({ id:`CTA${cartoonN}-audio`, kind:'cta',     a:tAt(ctaStartB,'start'), b:ctaEndB });
 
 // découpe ffmpeg + vérification
 const manifest = [];
