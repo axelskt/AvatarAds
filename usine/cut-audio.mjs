@@ -130,7 +130,7 @@ const CONCEPT_RE = /(c est ce qu?e? ?(l ?)?on appelle|et c est (comme ca|ce qu o
 // TUTO = début du tuto appli (= fin de la liaison, début du CONTENU jeté).
 // ⚠️ Axel : « maintenant pour créer ton influenceur IA » NE doit PAS rester dans la liaison (ça empiète
 //    sur la démo) → on ancre sur la transition « maintenant … » ET sur la 1re instruction concrète.
-const TUTO_RE = /(maintenant,? (pour (creer|faire|bien)|voici|on va|je vais te (montrer|expliquer)|rends|va |il (te )?faut|c est parti|creons|on cree|suis)|(et |alors |donc )?pour (faire ca|creer ton|creer un|animer|finir|bien commencer)|commence par (creer|te rendre|par aller|aller|choisir ton|selectionner|te connecter)|cree(r| toi)? (un |ton )?compte|connecte ?toi|rends ?toi (dans|sur)|tu vas (te rendre|aller (dans|sur)|cliquer|ouvrir|ajouter|selectionner|importer|decrire|generer)|(va|vas|rends|rendez) (sur|dans) (le site|avatarads|l app|l onglet)|ouvre (l onglet|le module|l application)|va(s)? dans l onglet|sur avatarads|dans l onglet (images|montage)|selectionne (photos|le format|l onglet))/i;
+const TUTO_RE = /(maintenant,? (pour (creer|faire|bien)|voici|on va|je vais te (montrer|expliquer)|rends|va |il (te )?faut|c est parti|creons|on cree|suis)|(et |alors |donc )?pour (faire ca|creer ton|creer un|animer|finir|bien commencer|commencer)|pour commencer|commenc(er|ez|ons)|la premiere etape|commence par (creer|te rendre|par aller|aller|choisir ton|selectionner|te connecter)|cree(r| toi)? (un |ton )?compte|connecte ?toi|rends ?toi (dans|sur)|tu vas (te rendre|aller (dans|sur)|cliquer|ouvrir|ajouter|selectionner|importer|decrire|generer)|(va|vas|rends|rendez) (sur|dans) (le site|avatarads|l app|l onglet)|ouvre (l onglet|le module|l application)|va(s)? dans l onglet|sur avatarads|dans l onglet (images|montage)|selectionne (photos|le format|l onglet)|clique sur (commencer|le bouton|creer))/i;
 // Close/CTA — openers de close variés (« Des centaines… », « Si tu veux… », « Tu veux la méthode… »)
 const CLOSE_OPENER_RE = /^(des centaines|des milliers|si tu veux (la|le|ca|ce|reussir|avoir|faire|toi)|tu veux (la|le|ce|recevoir|avoir|apprendre|reussir|obtenir|savoir))/i;
 const CTA_IMP_RE = /^(go|commente|commande|clique|va |vas |teste|abonne|rends|ecris|envoie|mets|recois|recupere|profite|rejoins|telecharge|inscris)/i;
@@ -140,16 +140,20 @@ const win = (i,n=6) => norm(words.slice(i, i+n).map(x=>x.t).join(' '));
 const findIdx = (re, from, to) => { const a=are(re); for(let i=Math.max(0,from);i<Math.min(words.length,to);i++){ if(a.test(win(i))) return i; } return -1; };
 
 // ── ALIGNEMENT TEXTE (mode texte-ancré) : trouve dans la transcription où un texte fourni commence/finit ──
-const wtoks = words.map(w=>norm(w.t));
+// ⚠️ un mot Whisper avec apostrophe/trait (« c'est » → « c est ») donne DEUX tokens après norm() → on
+//    aplatit tous les mots en tokens individuels (flatToks) avec la correspondance vers l'index de MOT.
+const flatToks = [], tokToWord = [];
+words.forEach((w,wi)=>{ for(const tk of norm(w.t).split(' ').filter(Boolean)){ flatToks.push(tk); tokToWord.push(wi); } });
 const asToks = s => norm(s).split(' ').filter(Boolean);
-function bestMatch(pat){                                    // index de départ du meilleur match de `pat` (tokens normalisés)
+function bestMatchFlat(pat){                                // index (token à plat) du meilleur match de `pat`
   if(!pat.length) return -1; let best=-1, bestSc=0;
-  for(let i=0;i<wtoks.length;i++){ let sc=0; for(let k=0;k<pat.length && i+k<wtoks.length;k++){ if(wtoks[i+k]===pat[k]) sc++; }
+  for(let i=0;i<flatToks.length;i++){ let sc=0; for(let k=0;k<pat.length && i+k<flatToks.length;k++){ if(flatToks[i+k]===pat[k]) sc++; }
     if(sc>bestSc){ bestSc=sc; best=i; } }
-  return bestSc>=Math.max(2, Math.ceil(pat.length*0.55)) ? best : -1;   // ≥55 % des mots collent
+  return bestSc>=Math.max(2, Math.ceil(pat.length*0.55)) ? best : -1;   // ≥55 % des tokens collent
 }
-const alignStart = text => { const t=asToks(text); return bestMatch(t.slice(0, Math.min(5,t.length))); };
-const alignEnd   = text => { const t=asToks(text); const tail=t.slice(-Math.min(5,t.length)); const st=bestMatch(tail); return st>=0 ? st+tail.length-1 : -1; };
+const alignStart = text => { const t=asToks(text); const f=bestMatchFlat(t.slice(0, Math.min(6,t.length))); return f>=0 ? tokToWord[f] : -1; };
+const alignEnd   = text => { const t=asToks(text); const tail=t.slice(-Math.min(6,t.length)); const f=bestMatchFlat(tail);
+  return f>=0 ? tokToWord[Math.min(f+tail.length-1, flatToks.length-1)] : -1; };
 
 // recule un index jusqu'à la 1re VRAIE pause avant lui ; s'il n'y en a pas dans la fenêtre, on reste sur place
 const sentStartBefore = (idx, maxBack=8) => { for(let j=idx-1;j>=Math.max(0,idx-maxBack);j--){ if(gapAfter(j)>0.28) return j+1; } return idx; };
@@ -185,16 +189,20 @@ let earlyClose = -1;
   const ea=are(EC);
   for(let i=3;i<Math.floor(words.length*0.6);i++){ if(gapAfter(i-1)>0.15 && ea.test(win(i,2))){ earlyClose=i; break; } } }
 
-// ── HOOK end : texte fourni (frontière idiosyncrasique) sinon la 1re BORNE (concept / tuto / close) − 1 ──
+// début de liaison depuis le texte fourni (sert AUSSI à borner le hook — plus robuste que la fin du texte hook,
+// souvent idéalisée : « prête à poster depuis un prompt » ≠ audio « en tapant un prompt »).
+const liaStartBrief = (brief && brief.liaison) ? alignStart(brief.liaison) : -1;
+
+// ── HOOK end : (a) début de liaison −1 si connu ; (b) sinon fin du texte hook ; (c) sinon 1re borne audio. ──
 let hookEndIdx;
-if (brief && brief.hook){ const he=alignEnd(brief.hook); hookEndIdx = he>0 ? he : Math.min(words.length-1,14); }
+if (liaStartBrief>0) hookEndIdx = liaStartBrief-1;                                  // le hook finit où la liaison commence
+else if (brief && brief.hook){ const he=alignEnd(brief.hook); hookEndIdx = he>0 ? he : Math.min(words.length-1,14); }
 else { const cands=[conceptIdx, earlyTuto, earlyClose, ctaIdx].filter(x=>x>2);
   hookEndIdx = cands.length ? Math.min(...cands)-1 : Math.min(words.length-1,14); }
 
 // ── LIAISON : du hook au TUTO appli (repère AUDIO fiable, quel que soit le script). ──
 const wantLiaison = brief ? !!brief.liaison : (conceptIdx>0);
-let liaStartIdx = hookEndIdx+1;
-if (brief && brief.liaison){ const ls=alignStart(brief.liaison); if(ls>=0) liaStartIdx=ls; }
+let liaStartIdx = liaStartBrief>0 ? liaStartBrief : hookEndIdx+1;
 const tutoRaw = findIdx(TUTO_RE, Math.max(liaStartIdx+1, 4), Math.floor(words.length*0.96));
 let tutoIdx = tutoRaw>liaStartIdx ? sentStartBefore(tutoRaw) : -1;   // recalé au début de la phrase du tuto
 if (tutoIdx>0 && tutoIdx<=liaStartIdx) tutoIdx = tutoRaw;            // sécurité : jamais avant le début de liaison
