@@ -28,6 +28,23 @@ let words = (Array.isArray(tr) ? tr : (tr.words||tr.segments||[]))
   // NE GARDER que la zone parlée (après le hook muet) → aucun sous-titre là où il n'y a pas de voix
   .filter(w => w.start >= VOICE_START - 0.15)
   .sort((a,b)=>a.start-b.start);
+
+// ── Corrections de marque (Whisper entend « avatar hats », « atarhats »…) ──
+// 1) fusion du duo « avatar » + « hats/ads/... » en un seul mot « avatarads.fr »
+const merged = [];
+for (let i=0;i<words.length;i++){
+  const w=words[i], n=words[i+1];
+  if (n && /avatar/i.test(w.text) && /^(hat|had|ad|rad|hads)/i.test(n.text)) {
+    const suffix = /\.fr|fr$/i.test(n.text) ? '.fr' : '';
+    merged.push({ text:'avatarads'+suffix, start:w.start, end:n.end }); i++;
+  } else merged.push(w);
+}
+// 2) mots isolés mal transcrits
+const FIX = s => s
+  .replace(/^atarhats?(\.fr)?$/i,'avatarads$1')
+  .replace(/^avatarhats?(\.fr)?$/i,'avatarads$1')
+  .replace(/^avatar[- ]?ads?(\.fr)?$/i,'avatarads$1');
+words = merged.map(w => ({ ...w, text: FIX(w.text) }));
 console.log(`  ${words.length} mots (voiceStart=${VOICE_START}s)`);
 
 // captions CONTINUES : chaque mot reste affiché jusqu'au mot suivant (pas de trou/flicker),
@@ -50,8 +67,8 @@ const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
  body{margin:0;background:#000}
  #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:'Arial Black','Archivo Black',system-ui,sans-serif}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
- /* SAFE ZONE : ~40% depuis le bas, jamais collé au bord/UI ; un seul mot à la fois (continu) */
- .cap{position:absolute;left:50%;bottom:760px;transform:translateX(-50%);z-index:5;
+ /* SAFE ZONE (Axel, tracé vert/bleu) : bande basse ~330px du bas, au-dessus du danger clavier/dock */
+ .cap{position:absolute;left:50%;bottom:330px;transform:translateX(-50%);z-index:5;
    max-width:900px;font-weight:900;font-size:82px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
    -webkit-text-stroke:8px #000;paint-order:stroke fill;
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;text-align:center;line-height:1}
