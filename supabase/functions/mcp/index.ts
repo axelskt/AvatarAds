@@ -57,6 +57,16 @@ const VIDEO_COST_SEC_PRO = 3 // Veo 3.1 Fast (« Veo Pro », qualité max) = 0,1
 // ── Générateur (avatar parlant) via Claude : mêmes briques que l'app ──
 const HEDRA_BASE      = 'https://api.hedra.com/web-app/public'
 const HEDRA_MODEL_ID  = '26f0fc66-152b-40ab-abed-76c43df99bc8' // Hedra Avatar (swap 10/08, même modèle que l'app). Character-3 = d1dd37a3-e39a-4854-a298-6510289f9cf2
+// ── Hedra v3 (clé dev) : l'ancienne API web-app/public est MORTE (upload /assets échoue). Le lipsync
+//    passe désormais par /v3/files → /v3/models/<slug> → /v3/jobs, EXACTEMENT comme le render-worker. ──
+const HEDRA_V3_KEY    = Deno.env.get('HEDRA_V3_KEY') ?? ''
+const HEDRA_V3_BASE   = 'https://api.hedra.com'
+const HEDRA_V3_SLUG   = Deno.env.get('HEDRA_SLUG') ?? 'hedra-avatar'
+// Prompt lipsync (Hedra + OmniHuman). Axel 19/09 : l'ancien prompt « charismatic/expressive/cinematic »
+// poussait le modèle à RECONSTRUIRE le visage (peau lisse plastique, cheveux plastique, filtre) et à
+// lâcher la synchro sur le dernier mot. Leçon réalisme [[image-engine-flux]]/[[images-4k-verrou-cadrage]] :
+// dire ce qu'il ne faut PAS faire. Priorité : garder la PHOTO EXACTE + lipsync jusqu'au tout dernier mot.
+const AVATAR_PROMPT   = 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands'
 const AVATAR_COST_SEC = 2.5 // 2 cr/s lipsync Hedra (1080p, barème 23/08) + 0,5 cr/s voix ElevenLabs
 const AVATAR_MAX_SEC  = 60
 const CHARS_PER_SEC   = 14  // débit de parole FR moyen pour estimer la durée depuis le script
@@ -135,9 +145,10 @@ function augmenterPortrait(prompt: string): string {
   const suffix = genreTxt + castingAleatoire() + IMG_REALISM_SUFFIX
   return prompt.slice(0, 3990 - suffix.length) + suffix
 }
-// Accès réservé Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h
-const ALLOWED_PLANS   = ['pro', 'elite']
-const DAILY_CAPS: Record<string, number> = { pro: 100, elite: 200 }
+// Accès Starter/Pro/Élite (+ developer/owner) ; plafond de crédits dépensés via MCP par 24 h.
+// Axel 19/09 : le connecteur Claude n'est plus un premium Pro/Élite — le Starter y a droit aussi.
+const ALLOWED_PLANS   = ['starter', 'pro', 'elite']
+const DAILY_CAPS: Record<string, number> = { starter: 50, pro: 100, elite: 200 }
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -498,7 +509,7 @@ function aaStartJob(dataUrl, link){
     .then(function(x){
       if(x.ok&&x.j&&x.j.statusUrl){ if(x.j.ref) aaRef=x.j.ref; if(x.j.prompt) aaPrompt=x.j.prompt; aaRaw=true; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); return; }
       var er=(x.j&&x.j.error)||'';
-      if(pe) pe.textContent = er==='daily_cap'?'Plafond 24 h atteint':(er==='no_credits'||er==='credits')?'Crédits épuisés — recharge sur avatarads.fr':er==='expired'?'Carte expirée — redemande à Claude':er==='not_pending'?'Déjà lancé':er==='plan'?'Réservé aux plans Pro et Élite':er==='no_image_in_link'?'Photo non récupérable depuis ce lien (site protégé) — dépose-la ci-dessus, ou colle le lien DIRECT de l\\'image':'Échec ('+(er||'réseau')+') — réessaie';
+      if(pe) pe.textContent = er==='daily_cap'?'Plafond 24 h atteint':(er==='no_credits'||er==='credits')?'Crédits épuisés — recharge sur avatarads.fr':er==='expired'?'Carte expirée — redemande à Claude':er==='not_pending'?'Déjà lancé':er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='no_image_in_link'?'Photo non récupérable depuis ce lien (site protégé) — dépose-la ci-dessus, ou colle le lien DIRECT de l\\'image':'Échec ('+(er||'réseau')+') — réessaie';
       if(pk) pk.disabled=false; if(sk) sk.disabled=false;
     })
     .catch(function(){ if(pe) pe.textContent='Réseau indisponible — réessaie.'; if(pk) pk.disabled=false; if(sk) sk.disabled=false; });
@@ -816,6 +827,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV/MP3, max 60 s) — le clip sortant a la même durée." },
           engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `Qualité : 'hedra' = standard (défaut, 1 cr/s) · 'omnihuman' = haute résolution 1088×1920 (${OMNI_COST_SEC} cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
+          model: { type: 'string', enum: ['hedra-avatar', 'hedra-character-3'], description: "Interne (engine 'hedra' uniquement) : modèle Hedra v3. Défaut hedra-avatar." },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['image_url', 'audio_url'],
@@ -1305,19 +1317,25 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     // ── Jobs avatar (Hedra) : op_name = ID de génération Hedra ──
     if (job.kind === 'avatar') {
       try {
-        const r = await hedraFetch(`/generations/${job.op_name}/status`, { method: 'GET' })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const d: Record<string, any> = r.ok ? await r.json().catch(() => ({})) : {}
-        const status = String(d.status || d.state || '').toLowerCase()
-        if (['complete', 'completed', 'succeeded'].includes(status)) {
-          const vu = d.url || d.download_url || d.video_url || d.streaming_url || ''
-          const vRes = vu ? await fetch(vu).catch(() => null) : null
-          if (vRes && vRes.ok) { await deliverVideo(userId, job, new Uint8Array(await vRes.arrayBuffer())); continue }
+        if (String(job.op_name || '').startsWith('v3:')) {
+          const rv = await hedraV3StatusUrl(String(job.op_name).slice(3))
+          if (rv.url) { const vRes = await fetch(rv.url).catch(() => null); if (vRes && vRes.ok) { await deliverVideo(userId, job, new Uint8Array(await vRes.arrayBuffer())); continue } }
+        } else {
+          const r = await hedraFetch(`/generations/${job.op_name}/status`, { method: 'GET' })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const d: Record<string, any> = r.ok ? await r.json().catch(() => ({})) : {}
+          const status = String(d.status || d.state || '').toLowerCase()
+          if (['complete', 'completed', 'succeeded'].includes(status)) {
+            const vu = d.url || d.download_url || d.video_url || d.streaming_url || ''
+            const vRes = vu ? await fetch(vu).catch(() => null) : null
+            if (vRes && vRes.ok) { await deliverVideo(userId, job, new Uint8Array(await vRes.arrayBuffer())); continue }
+          }
         }
       } catch { /* poll KO : remboursement ci-dessous */ }
       await failAndRefund(userId, job, 'timeout')
       continue
     }
+
 
     // ── Jobs Veo ──
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1665,6 +1683,38 @@ async function hedraUploadAsset(type: 'audio' | 'image', name: string, bytes: Ui
   return up.ok ? String(asset.id) : null
 }
 
+// ── Hedra v3 (clé dev HEDRA_V3_KEY, auth « Key … ») : /v3/files → /v3/models/<slug> → /v3/jobs ──
+async function hedraV3Fetch(path: string, init?: RequestInit): Promise<Response> {
+  return await fetch(`${HEDRA_V3_BASE}${path}`, {
+    ...init,
+    headers: { Authorization: `Key ${HEDRA_V3_KEY}`, ...(init?.headers || {}) },
+  })
+}
+// Upload d'un média → { source:'url', url } (contrat des inputs v3), ou null.
+async function hedraV3Upload(name: string, bytes: Uint8Array, contentType: string): Promise<{ source: string; url: string } | null> {
+  const fd = new FormData()
+  fd.append('file', new Blob([bytes as unknown as BlobPart], { type: contentType }), name)
+  const r = await hedraV3Fetch('/v3/files', { method: 'POST', body: fd })
+  if (!r.ok) return null
+  const j = await r.json().catch(() => ({})) as { url?: string }
+  return j && j.url ? { source: 'url', url: j.url } : null
+}
+// Statut d'un job v3 : { pending } tant que ça tourne, { failed, err } en échec, { url } quand livré.
+async function hedraV3StatusUrl(jobId: string): Promise<{ pending?: boolean; failed?: boolean; url?: string; progress?: number; err?: string }> {
+  const st = await hedraV3Fetch(`/v3/jobs/${jobId}/status`, { method: 'GET' })
+  if (!st.ok) return { pending: true, progress: 0 }
+  const d = await st.json().catch(() => ({})) as Record<string, unknown>
+  const s = String(d.status || '').toUpperCase()
+  const progress = Math.round((Number(d.progress) || 0) * 100)
+  if (['FAILED', 'ERROR', 'ERRORED', 'CANCELLED', 'CANCELED'].includes(s)) return { failed: true, err: String(d.error || d.error_message || s) }
+  if (s !== 'COMPLETED') return { pending: true, progress }
+  const rr = await hedraV3Fetch(`/v3/jobs/${jobId}`, { method: 'GET' })
+  if (!rr.ok) return { pending: true, progress }
+  const rd = await rr.json().catch(() => ({})) as { outputs?: Array<{ url?: string }> }
+  const out = (rd.outputs || []).find((o) => o && o.url) || (rd.outputs || [])[0]
+  return out && out.url ? { url: String(out.url), progress: 100 } : { pending: true, progress }
+}
+
 async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!GOOGLE_AI_KEY) return toolErr('Génération avatar indisponible (configuration serveur incomplète).')
   const script = String(args.script || '').trim()
@@ -1812,9 +1862,18 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   let videoUrl = ''
   let lastProgress = 0
   let hedraErr = ''
+  const _v3 = String(job.op_name || '').startsWith('v3:')
+  const _jid = _v3 ? String(job.op_name).slice(3) : String(job.op_name)
   for (let i = 0; i < 9; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, 5000))
-    const res = await hedraFetch(`/generations/${job.op_name}/status`, { method: 'GET' })
+    if (_v3) {
+      const rv = await hedraV3StatusUrl(_jid)
+      if (rv.progress) lastProgress = rv.progress
+      if (rv.failed) { hedraErr = rv.err || 'échec'; break }
+      if (rv.url) { videoUrl = rv.url; break }
+      continue
+    }
+    const res = await hedraFetch(`/generations/${_jid}/status`, { method: 'GET' })
     if (!res.ok) continue
     const d = await res.json().catch(() => ({}))
     const status = String(d.status || d.state || '').toLowerCase()
@@ -1887,7 +1946,17 @@ async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
       await deliverVideo(userId, job, new Uint8Array(await vres.arrayBuffer()))
       return
     }
-    // Hedra Character-3
+    // Hedra v3 : op_name préfixé « v3: »
+    if (String(job.op_name || '').startsWith('v3:')) {
+      const rv = await hedraV3StatusUrl(String(job.op_name).slice(3))
+      if (rv.failed) { await failAndRefund(userId, job, rv.err || 'échec'); return }
+      if (!rv.url) return
+      const vr = await fetch(rv.url).catch(() => null)
+      if (!vr || !vr.ok) return
+      await deliverVideo(userId, job, new Uint8Array(await vr.arrayBuffer()))
+      return
+    }
+    // Hedra Character-3 (ancienne API, jobs hérités)
     const res = await hedraFetch(`/generations/${job.op_name}/status`, { method: 'GET' })
     if (!res.ok) return
     const d = await res.json().catch(() => ({})) as Record<string, unknown>
@@ -2019,7 +2088,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
           resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
           // MÊME prompt que Hedra, mot pour mot : sans ça la comparaison de
           // qualité entre les deux moteurs porte sur deux consignes différentes.
-          prompt: 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
+          prompt: AVATAR_PROMPT,
         }),
       })
       if (!sub.ok) {
@@ -2045,48 +2114,39 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
 
   let launched = false
   try {
+    if (!HEDRA_V3_KEY) return toolErr('Lipsync Hedra indisponible (configuration serveur incomplète).')
     const ext = /wav/.test(aud.contentType) ? 'wav' : 'mp3'
-    const audioId = await hedraUploadAsset('audio', 'segment.' + ext, aud.bytes, aud.contentType)
-    if (!audioId) return toolErr('Upload audio vers Hedra échoué — crédits remboursés, réessaie.')
-    const imageId = await hedraUploadAsset('image', 'avatar.jpg', img.bytes, img.contentType)
-    if (!imageId) return toolErr("Upload de la photo vers Hedra échoué — crédits remboursés, réessaie.")
+    // Hedra v3 : /v3/files (l'ancienne API web-app/public + /assets est morte → 401/404).
+    const audioRef = await hedraV3Upload('segment.' + ext, aud.bytes, aud.contentType)
+    if (!audioRef) return toolErr('Upload audio vers Hedra échoué — crédits remboursés, réessaie.')
+    const imageRef = await hedraV3Upload('avatar.jpg', img.bytes, img.contentType)
+    if (!imageRef) return toolErr("Upload de la photo vers Hedra échoué — crédits remboursés, réessaie.")
 
-    // RÉSOLUTION : on demande la plus haute d'abord. Character-3 était figé à 720p
-    // en dur ; si le compte/modèle accepte mieux, autant le prendre — sinon l'API
-    // refuse et on retombe sur 720p sans que l'utilisateur ne voie rien.
-    let genRes: Response | null = null
-    let hedraLaunchErr = ''
-    let usedRes = ''
-    for (const res of ['1080p', '720p']) {
-      genRes = await hedraFetch('/generations', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'video',
-          ai_model_id: HEDRA_MODEL_ID,
-          audio_id: audioId,
-          start_keyframe_id: imageId,
-          generated_video_inputs: {
-            text_prompt: 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands',
-            aspect_ratio: aspect,
-            character_orientation: 'video',
-            resolution: res,
-          },
-        }),
-      })
-      if (genRes.ok) { usedRes = res; break }
-      hedraLaunchErr = `${genRes.status} — ${(await genRes.text().catch(() => '')).slice(0, 160)}`
-      console.log(`hedra ${res} refusé : ${hedraLaunchErr}`)
-      if (genRes.status < 400 || genRes.status >= 500) break   // pas une erreur de validation
+    // Soumission v3 : POST /v3/models/<slug> { input:{ prompt, aspect_ratio, resolution, start_image, audio } }
+    const slug = ['hedra-avatar', 'hedra-character-3'].includes(String(args.model)) ? String(args.model) : HEDRA_V3_SLUG
+    const sub = await hedraV3Fetch('/v3/models/' + slug, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: {
+          prompt: AVATAR_PROMPT,
+          aspect_ratio: aspect,
+          resolution: '1080p',
+          start_image: imageRef,
+          audio: audioRef,
+        },
+      }),
+    })
+    if (!sub.ok) {
+      const t = await sub.text().catch(() => '')
+      return toolErr(`Lancement Hedra échoué (${sub.status}${t ? ' — ' + t.slice(0, 140) : ''}) — crédits remboursés.`)
     }
-    if (!genRes || !genRes.ok) {
-      return toolErr(`Lancement Hedra échoué (${hedraLaunchErr}) — crédits remboursés.`)
-    }
-    console.log(`hedra : résolution retenue ${usedRes}`)
-    const gen = await genRes.json().catch(() => ({}))
-    if (!gen.id) return toolErr("Hedra n'a pas retourné d'ID de génération — crédits remboursés.")
+    const sd = await sub.json().catch(() => ({})) as { job_id?: string; id?: string }
+    const jobId = sd.job_id || sd.id
+    if (!jobId) return toolErr("Hedra n'a pas retourné d'ID de génération — crédits remboursés.")
 
+    // op_name préfixé « v3: » → check_avatar_video / advanceAvatarJob / reconcile pollent en v3.
     const { data: job, error } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: String(gen.id), credits_cost: cost }).select('id').single()
+      .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: 'v3:' + String(jobId), credits_cost: cost }).select('id').single()
     if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
     launched = true
     return toolText(
@@ -3068,7 +3128,7 @@ serve(async (req) => {
     const userId = String(pj.user_id)
     const { data: profile } = await svc.from('profiles').select('*').eq('id', userId).maybeSingle()
     if (!profile) return json(404, { error: 'no_profile' })
-    if (!isUnlimited(profile) && !['pro', 'elite'].includes(String(profile.plan || '').toLowerCase())) return json(403, { error: 'plan' })
+    if (!isUnlimited(profile) && !ALLOWED_PLANS.includes(String(profile.plan || '').toLowerCase())) return json(403, { error: 'plan' })
     const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
@@ -3153,7 +3213,7 @@ serve(async (req) => {
     const userId = String(orig.user_id)
     const { data: profile } = await svc.from('profiles').select('*').eq('id', userId).maybeSingle()
     if (!profile) return json(404, { error: 'no_profile' })
-    if (!isUnlimited(profile) && !['pro', 'elite'].includes(String(profile.plan || '').toLowerCase())) return json(403, { error: 'plan' })
+    if (!isUnlimited(profile) && !ALLOWED_PLANS.includes(String(profile.plan || '').toLowerCase())) return json(403, { error: 'plan' })
     const cost = IMG_COST.standard
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
@@ -3439,7 +3499,7 @@ serve(async (req) => {
       const name = String(params.name || '')
       const args = (params.arguments || {}) as Record<string, unknown>
       if (!planAllowed) {
-        return rpcResult(id, toolErr(`L'accès via Claude est réservé aux plans Pro et Élite. Ton plan actuel : ${profile.plan || 'free'}. Passe au plan supérieur sur ${APP_URL}`))
+        return rpcResult(id, toolErr(`L'accès via Claude est réservé aux plans Starter, Pro et Élite. Ton plan actuel : ${profile.plan || 'free'}. Passe au plan supérieur sur ${APP_URL}`))
       }
       // Rattrapage en arrière-plan des vidéos bloquées (débits sans contrepartie) — n'ajoute pas de latence
       if (!isUnlimited(profile)) bg(reconcileStaleJobs(String(profile.id)))
