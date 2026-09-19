@@ -32,7 +32,8 @@
   .btn:hover{border-color:var(--accent);color:var(--accent)}
   .btn-primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#180800;border:none}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:6px 0 26px}
-  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;cursor:pointer;transition:.15s}
+  .kpi:hover{border-color:var(--accent);transform:translateY(-2px)}
   .kpi .n{font-family:var(--display);font-size:30px;font-weight:800;line-height:1}
   .kpi .l{color:var(--text-2);font-size:12px;margin-top:6px;font-family:var(--mono)}
   h2{font-family:var(--display);font-size:18px;font-weight:700;margin:26px 0 12px}
@@ -118,11 +119,8 @@
 
   <div id="app" style="display:none">
     <div class="kpis" id="kpis"></div>
-    <div class="legend">
-      <span><span class="badge b-done">done</span> Réussie</span>
-      <span><span class="badge b-prog">in_progress</span> En cours</span>
-      <span><span class="badge b-pend">pending</span> En attente</span>
-    </div>
+    <h2 style="font-size:15px;color:var(--text-2)">Performance <span style="font-weight:400;font-size:12px;color:var(--text-3)">— missions postées (scrap Refetcher)</span></h2>
+    <div class="kpis" id="kpisPerf"></div>
     <h2>Graphiques</h2>
     <div class="charts">
       <div class="card"><div class="subhdr">Hooks par module</div><div class="cbody"><canvas id="chHooksMod"></canvas></div></div>
@@ -152,6 +150,7 @@ const esc = s => String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt
 const KIND_LABEL = {transformation:'Transformations',contenu:'Contenus / démos',musique:'Musiques',"sous-titre":'Sous-titres',avatar:'Avatars',hook:'Hooks',liaison:'Phrases de liaison',cta:'CTA'};
 const badge = st => st==='done'?'<span class="badge b-done">done</span>':st==='in_progress'?'<span class="badge b-prog">in_progress</span>':st==='flagged'?'<span class="badge b-flag">à faire</span>':'<span class="badge b-pend">'+esc(st||'pending')+'</span>';
 let BRICKS = {};
+let DATA = { bricks:[], recipes:[], matrix:[] };
 
 async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
@@ -188,7 +187,9 @@ async function loadAll(){
   ]);
   if(bricks==null){ $('kpis').innerHTML='<div class="empty">Aucune donnée — ce compte n\'est pas owner/dev (RLS).</div>'; return; }
   BRICKS = {}; bricks.forEach(b=>BRICKS[b.id]=b);
+  DATA = { bricks, recipes:recipes||[], matrix:matrix||[] };
   renderKpis(bricks, recipes, matrix||[]);
+  renderPerfKpis();
   renderModules(bricks, recipes||[]);
   renderPool(bricks);
   renderCharts(bricks, recipes||[]);
@@ -303,10 +304,25 @@ function renderKpis(bricks, recipes, matrix){
   const pend = matrix.filter(m=>m.status==='pending').length;
   const tx = bricks.filter(b=>b.kind==='transformation').length;
   const k = [
-    [bricks.length,'briques'],[recipes.length,'hooks assemblés'],[done,'hooks Réussie'],
-    [pend,'combos en attente'],[matrix.length,'combos valides'],[tx,'unités transfo']
+    [bricks.length,'briques','briques'],[recipes.length,'hooks assemblés','recipes'],[done,'hooks Réussie','recipes_done'],
+    [pend,'combos en attente','pending'],[matrix.length,'combos valides','matrix'],[tx,'unités transfo','transfo']
   ];
-  $('kpis').innerHTML = k.map(([n,l])=>`<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+  $('kpis').innerHTML = k.map(([n,l,key])=>`<div class="kpi" onclick="openKpi('${key}')"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+}
+function renderPerfKpis(){
+  const P=['vues','likes','commentaires','enregistrements','partages','vues 24h','vues all time'];
+  $('kpisPerf').innerHTML = P.map(l=>`<div class="kpi" onclick="openKpi('perf')"><div class="n">0</div><div class="l">${l}</div></div>`).join('');
+}
+const recipeTable = rs => rs.length ? `<table><thead><tr><th>ID</th><th>Sujet</th><th>Statut</th></tr></thead><tbody>${rs.map(r=>`<tr><td class="id">${esc(r.id)}</td><td class="muted">${esc(r.subject||'')}</td><td>${badge(r.status)}</td></tr>`).join('')}</tbody></table>` : '<div class="muted" style="font-size:12px;padding:4px 0">Aucun.</div>';
+function openKpi(key){
+  const b=DATA.bricks||[], r=DATA.recipes||[], m=DATA.matrix||[]; let title='', body='';
+  if(key==='briques'){ title='Toutes les briques'; const byk={}; b.forEach(x=>(byk[x.kind]=byk[x.kind]||[]).push(x)); body=Object.keys(byk).map(k=>H4((KIND_LABEL[k]||k)+' ('+byk[k].length+')')+chips(byk[k])).join(''); }
+  else if(key==='recipes'||key==='matrix'){ title='Hooks assemblés'; body=recipeTable(r); }
+  else if(key==='recipes_done'){ title='Hooks réussis'; body=recipeTable(r.filter(x=>x.status==='done')); }
+  else if(key==='pending'){ title='Combos en attente'; const p=m.filter(x=>x.status==='pending'); body=p.length?recipeTable(p):'<div class="muted" style="font-size:12px;padding:4px 0">Aucun combo en attente.</div>'; }
+  else if(key==='transfo'){ title='Unités transfo'; body=chips(b.filter(x=>x.kind==='transformation')); }
+  else if(key==='perf'){ title='Performance (missions)'; body='<div class="note" style="margin-top:8px">Tout à 0 pour l\'instant. Vues, likes, commentaires, enregistrements, partages, vues 24h et all-time seront <b>scrapés via Refetcher</b> à chaque mission (vidéo postée).</div>'; }
+  $('modal-body').innerHTML=`<h3>${title}</h3>${body}`; $('modal').style.display='flex';
 }
 
 function renderMatrix(matrix){
