@@ -12,7 +12,10 @@ if (!video) { console.error('usage: qc.mjs <video.mp4> [--json]'); process.exit(
 
 // bornes attendues d'un short OMNI (ajustables)
 const CFG = { w: 1080, h: 1920, fps: 30, durMin: 8, durMax: 90,
-  clipMaxDb: -0.5, silentMeanDb: -50, blackMinS: 0.30, freezeMinS: 1.5, silenceMinS: 2.0, endFadeTolDb: 3 };
+  clipMaxDb: -0.5, silentMeanDb: -50, blackMinS: 0.30, freezeMinS: 1.5,
+  blankMinS: 0.9,        // musique continue → tout silence > 0.9s = un « blanc » (trou de contenu)
+  tailSilMinS: 0.5,      // silence en toute fin > 0.5s = vidéo pas coupée (continue sans audio)
+  endFadeTolDb: 3 };
 
 // spawnSync : capture stdout ET stderr (ffmpeg écrit blackdetect/volumedetect/etc. sur stderr, même à l'exit 0).
 const sh = (cmd, args) => { const r = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 27 }); return (r.stdout || '') + (r.stderr || ''); };
@@ -36,7 +39,7 @@ add('audio_present', hasAudio, 'hard', hasAudio ? 'piste audio OK' : 'AUCUNE pis
 // ── ffmpeg 1 passe : blackdetect + freezedetect (vidéo) · silencedetect + volumedetect (audio) ──
 const log = sh('ffmpeg', ['-hide_banner','-nostats','-i', video,
   '-vf', `blackdetect=d=${CFG.blackMinS}:pic_th=0.98,freezedetect=n=-60dB:d=${CFG.freezeMinS}`,
-  '-af', `silencedetect=n=-45dB:d=${CFG.silenceMinS},volumedetect`,
+  '-af', `silencedetect=n=-45dB:d=${CFG.blankMinS},volumedetect`,
   '-f','null','-']);
 
 const mMax = /max_volume:\s*(-?[\d.]+) dB/.exec(log); const maxDb = mMax ? +mMax[1] : null;
@@ -50,8 +53,15 @@ add('pas_de_frame_noire', blacks.length===0, 'hard', blacks.length ? `${blacks.l
 const freezes = [...log.matchAll(/freeze_start:\s*([\d.]+)[\s\S]*?freeze_end:\s*([\d.]+)/g)].map(m => (+m[2]-+m[1]));
 add('pas_de_frame_figee', freezes.length===0, 'hard', freezes.length ? `${freezes.length} gel(s) > ${CFG.freezeMinS}s (max ${Math.max(...freezes).toFixed(2)}s)` : 'aucun');
 
-const sils = [...log.matchAll(/silence_start:\s*(-?[\d.]+)[\s\S]*?silence_duration:\s*([\d.]+)/g)].map(m => +m[2]);
-add('pas_de_silence_anormal', sils.length===0, 'hard', sils.length ? `${sils.length} silence(s) > ${CFG.silenceMinS}s (max ${Math.max(...sils).toFixed(2)}s)` : 'aucun');
+// silences (musique continue → un silence = un vrai trou). On lit start ET end pour repérer le trou de fin.
+const sils = [...log.matchAll(/silence_start:\s*(-?[\d.]+)[\s\S]*?silence_end:\s*(-?[\d.]+)\s*\|\s*silence_duration:\s*([\d.]+)/g)]
+  .map(m => ({ start: +m[1], end: +m[2], dur: +m[3] }));
+add('pas_de_blanc', sils.length===0, 'hard',
+  sils.length ? `${sils.length} blanc(s) > ${CFG.blankMinS}s (max ${Math.max(...sils.map(s=>s.dur)).toFixed(2)}s @ ${sils[0].start.toFixed(1)}s)` : 'aucun');
+// « vidéo pas coupée » : un silence qui FINIT à la toute fin de la vidéo = ça continue sans audio après le dernier mot.
+const tail = sils.find(s => s.end >= DUR - 0.15 && s.dur >= CFG.tailSilMinS);
+add('fin_coupee_a_l_audio', !tail, 'hard',
+  tail ? `silence de ${tail.dur.toFixed(2)}s jusqu'à la fin (${tail.start.toFixed(1)}→${tail.end.toFixed(1)}s) — vidéo pas coupée` : 'coupée net');
 
 // ── musique coupée net à la fin : la fin doit être PLUS BASSE que le milieu (preuve d'un fade) ──
 const seg = (ss, t) => { const l = sh('ffmpeg', ['-hide_banner','-nostats','-ss', String(ss), '-t', String(t), '-i', video, '-af','volumedetect','-f','null','-']); const m = /mean_volume:\s*(-?[\d.]+) dB/.exec(l); return m ? +m[1] : null; };
