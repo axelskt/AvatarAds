@@ -119,7 +119,9 @@
 
   <div id="app" style="display:none">
     <div class="kpis" id="kpis"></div>
-    <h2 style="font-size:15px;color:var(--text-2)">Performance <span style="font-weight:400;font-size:12px;color:var(--text-3)">— missions postées (scrap Refetcher)</span></h2>
+    <h2 style="font-size:15px;color:var(--text-2)">Croissance users <span style="font-weight:400;font-size:12px;color:var(--text-3)">— TrackAds</span></h2>
+    <div class="card" style="margin-bottom:22px"><div class="cbody"><canvas id="chUsers"></canvas></div></div>
+    <h2 style="font-size:15px;color:var(--text-2)">Performance <span style="font-weight:400;font-size:12px;color:var(--text-3)">— data combinée des users TrackAds qui ont posté (scrap Refetcher)</span></h2>
     <div class="kpis" id="kpisPerf"></div>
     <h2>Graphiques</h2>
     <div class="charts">
@@ -180,15 +182,17 @@ async function verifyOtp(){
 }
 
 async function loadAll(){
-  const [{ data:bricks }, { data:recipes }, { data:matrix }] = await Promise.all([
+  const [{ data:bricks }, { data:recipes }, { data:matrix }, { data:ops }] = await Promise.all([
     sb.from('factory_bricks').select('*').order('kind').order('id'),
     sb.from('factory_recipes').select('*').order('subject').order('id'),
-    sb.rpc('factory_hook_matrix')
+    sb.rpc('factory_hook_matrix'),
+    sb.rpc('factory_ops_stats')
   ]);
   if(bricks==null){ $('kpis').innerHTML='<div class="empty">Aucune donnée — ce compte n\'est pas owner/dev (RLS).</div>'; return; }
   BRICKS = {}; bricks.forEach(b=>BRICKS[b.id]=b);
-  DATA = { bricks, recipes:recipes||[], matrix:matrix||[] };
-  renderKpis(bricks, recipes, matrix||[]);
+  DATA = { bricks, recipes:recipes||[], matrix:matrix||[], ops: (ops&&!ops.error)?ops:{} };
+  renderOpsKpis(DATA.ops);
+  renderUsersChart((DATA.ops.users_by_month)||[]);
   renderPerfKpis();
   renderModules(bricks, recipes||[]);
   renderPool(bricks);
@@ -304,17 +308,24 @@ function renderCharts(bricks, recipes){
   mkChart('chStatus',{type:'doughnut',data:{labels:['Réussie','En cours','En attente'],datasets:[{data:[st.done||0,st.in_progress||0,st.pending||0],backgroundColor:[GR,AM,GY],borderWidth:0}]},options:{...noAR,cutout:'62%',plugins:{legend:{position:'bottom'}}}});
 }
 
-function renderKpis(bricks, recipes, matrix){
-  const nk = k => bricks.filter(b=>b.kind===k).length;
+function renderOpsKpis(o){
+  o = o||{};
   const k = [
-    [bricks.length,'Briques (total)','briques'],
-    [nk('hook'),'Hooks (accroches)','hooks'],
-    [nk('liaison'),'Liaisons','liaisons'],
-    [nk('cta'),'CTA','ctas'],
-    [nk('contenu'),'Démos','demos'],
-    [recipes.length,'Assemblages transfo','recipes']
+    [o.missions_validated,'Missions validées','k_validated'],
+    [o.variantes_manquantes,'Variantes avatar manquantes','k_variantes'],
+    [o.missions_pending,'Missions en attente','k_pending'],
+    [o.pas_cree,'Pas encore créé','k_pascree'],
+    [o.users_total,'Users TrackAds','k_users']
   ];
-  $('kpis').innerHTML = k.map(([n,l,key])=>`<div class="kpi" onclick="openKpi('${key}')"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+  $('kpis').innerHTML = k.map(([n,l,key])=>`<div class="kpi" onclick="openKpi('${key}')"><div class="n">${(n||0).toLocaleString('fr-FR')}</div><div class="l">${l}</div></div>`).join('');
+}
+function renderUsersChart(series){
+  series = series||[];
+  const A=CSSV('--accent')||'#FF5A1F';
+  const el=$('chUsers'); if(!el) return;
+  if(!series.length){ const p=el.closest('.card'); if(p) p.innerHTML='<div class="empty" style="padding:40px 20px">Aucun user TrackAds encore — la courbe se remplira au lancement de TrackAds.</div>'; return; }
+  let cum=0; const labels=series.map(s=>s.mois), data=series.map(s=>(cum+=(s.n||0)));
+  mkChart('chUsers',{type:'line',data:{labels,datasets:[{label:'Users cumulés',data,borderColor:A,backgroundColor:'rgba(255,90,31,.12)',fill:true,tension:.3,pointRadius:3,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
 }
 function renderPerfKpis(){
   const P=['likes','commentaires','enregistrements','partages','vues 24h','vues all time'];
@@ -330,12 +341,13 @@ function openAssemblage(id){
   $('modal-body').innerHTML=body; $('modal').style.display='flex';
 }
 function openKpi(key){
-  const b=DATA.bricks||[], r=DATA.recipes||[]; let title='', body='';
-  const kindOf={hooks:'hook',liaisons:'liaison',ctas:'cta',demos:'contenu'};
-  if(key==='briques'){ title='Toutes les briques'; const byk={}; b.forEach(x=>(byk[x.kind]=byk[x.kind]||[]).push(x)); body=Object.keys(byk).map(k=>H4((KIND_LABEL[k]||k)+' ('+byk[k].length+')')+chips(byk[k])).join(''); }
-  else if(kindOf[key]){ const arr=b.filter(x=>x.kind===kindOf[key]); title=(KIND_LABEL[kindOf[key]]||key)+' ('+arr.length+')'; body='<div class="note" style="margin:2px 0 10px">Clique une brique pour son aperçu.</div>'+chips(arr); }
-  else if(key==='recipes'){ title='Assemblages transfo ('+r.length+')'; body='<div class="note" style="margin:2px 0 10px">Vidéos déjà montées à partir des transformations. Clique un ID pour voir la vidéo.</div>'+recipeTable(r); }
-  else if(key==='perf'){ title='Performance (missions)'; body='<div class="note" style="margin-top:8px">Tout à 0 pour l\'instant. Likes, commentaires, enregistrements, partages, vues 24h et all-time seront <b>scrapés via Refetcher</b> à chaque mission (vidéo postée).</div>'; }
+  const o=DATA.ops||{}; const N=x=>`<b>${(x||0).toLocaleString('fr-FR')}</b>`; let title='', body='';
+  if(key==='k_validated'){ title='Missions validées'; body='<div class="note" style="margin-top:8px">Vidéos <b>postées et validées</b> (qui performent). Se branchera sur <b>Refetcher / TrackAds</b>. 0 pour l\'instant.</div>'; }
+  else if(key==='k_variantes'){ title='Variantes avatar manquantes (pour 100%)'; body=`<div class="note" style="margin-top:8px">${N(o.avatars)} avatars × ${N(o.hooks)} hooks = ${N(o.variantes_possibles)} variantes possibles · ${N(o.variantes_creees)} créées → <b>${(o.variantes_manquantes||0).toLocaleString('fr-FR')} manquantes</b>. Ajoute des avatars et ça s'allume.</div>`; }
+  else if(key==='k_pending'){ title='Missions en attente'; body='<div class="note" style="margin-top:8px">Vidéos <b>assemblées, prêtes à poster</b> (pas encore postées). 0 pour l\'instant.</div>'; }
+  else if(key==='k_pascree'){ title='Pas encore créé'; body='<div class="note" style="margin-top:8px">Assemblages restant à monter (avatars × 375 combos − missions créées). 0 pour l\'instant.</div>'; }
+  else if(key==='k_users'){ title='Users TrackAds'; body=`<div class="note" style="margin-top:8px">${N(o.users_total)} utilisateurs <b>TrackAds</b> (≠ AvatarAds ni formation). 0 tant que TrackAds n'est pas lancé. Voir la courbe ci-dessus.</div>`; }
+  else if(key==='perf'){ title='Performance (missions)'; body='<div class="note" style="margin-top:8px">Data <b>combinée de tous les users TrackAds qui ont posté</b> (vues, likes, commentaires, enregistrements, partages, 24h, all-time) — <b>scrapée par Refetcher</b>. 0 pour l\'instant.</div>'; }
   $('modal-body').innerHTML=`<h3>${title}</h3>${body}`; $('modal').style.display='flex';
 }
 
