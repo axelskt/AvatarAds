@@ -106,13 +106,17 @@
       <span><span class="badge b-prog">in_progress</span> En cours</span>
       <span><span class="badge b-pend">pending</span> En attente</span>
     </div>
+    <h2>Graphiques</h2>
+    <div class="charts">
+      <div class="card"><div class="subhdr">Hooks par module</div><div class="cbody"><canvas id="chHooksMod"></canvas></div></div>
+      <div class="card"><div class="subhdr">Briques par type</div><div class="cbody"><canvas id="chKinds"></canvas></div></div>
+      <div class="card"><div class="subhdr">Assemblages par statut</div><div class="cbody"><canvas id="chStatus"></canvas></div></div>
+    </div>
     <h2>Modules</h2>
     <div class="note" style="margin:-4px 0 10px">Clique un module pour voir toutes ses briques + assemblages (IDs).</div>
     <div id="modules"></div>
     <h2>Pool réutilisable <span style="font-weight:400;font-size:13px;color:var(--text-3)">— partagé entre tous les modules</span></h2>
     <div id="pool"></div>
-    <h2>Vue d'ensemble</h2>
-    <div class="card"><div class="cbody" style="height:280px"><canvas id="chKinds"></canvas></div></div>
     <div class="note">Source : Supabase <code>factory_bricks</code> / <code>factory_recipes</code> · cohérence via <code>factory_hook_matrix()</code> · lecture seule (v1).</div>
   </div>
 </div>
@@ -167,7 +171,7 @@ async function loadAll(){
   renderKpis(bricks, recipes, matrix||[]);
   renderModules(bricks, recipes||[]);
   renderPool(bricks);
-  renderCharts(bricks);
+  renderCharts(bricks, recipes||[]);
 }
 
 let CH = {};
@@ -215,11 +219,21 @@ function renderPool(bricks){
   }).join('');
 }
 
-// Vue d'ensemble : briques par type
-function renderCharts(bricks){
-  const A=CSSV('--accent')||'#FF5A1F';
+// Graphiques : hooks par module · briques par type · assemblages par statut
+function renderCharts(bricks, recipes){
+  const A=CSSV('--accent')||'#FF5A1F', A2=CSSV('--accent-2')||'#FF8042', GR=CSSV('--green')||'#1a9e6b', AM=CSSV('--amber')||'#c98a00', GY=CSSV('--grey')||'#8A847B', TX2=CSSV('--text-2');
+  if(typeof Chart!=='undefined'){ Chart.defaults.font.family="'Hanken Grotesk',sans-serif"; Chart.defaults.color=TX2; }
+  const noAR={responsive:true,maintainAspectRatio:false};
+  // hooks par module (un hook peut compter dans plusieurs)
+  const hooks=bricks.filter(b=>b.kind==='hook');
+  const modCounts=MODULES.map(m=>hooks.filter(b=>modsOf(b).some(s=>m.subj.includes(s))).length);
+  mkChart('chHooksMod',{type:'bar',data:{labels:MODULES.map(m=>m.name),datasets:[{data:modCounts,backgroundColor:A,borderRadius:6}]},options:{...noAR,plugins:{legend:{display:false}},scales:{x:{ticks:{maxRotation:60,minRotation:35,font:{size:9.5}}},y:{beginAtZero:true,ticks:{precision:0}}}}});
+  // briques par type
   const bk={}; bricks.forEach(b=>bk[b.kind]=(bk[b.kind]||0)+1); const kk=Object.keys(bk).sort((a,b)=>bk[b]-bk[a]);
-  mkChart('chKinds',{type:'bar',data:{labels:kk.map(k=>KIND_LABEL[k]||k),datasets:[{data:kk.map(k=>bk[k]),backgroundColor:A,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  mkChart('chKinds',{type:'bar',data:{labels:kk.map(k=>KIND_LABEL[k]||k),datasets:[{data:kk.map(k=>bk[k]),backgroundColor:A2,borderRadius:6}]},options:{...noAR,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9.5},maxRotation:45,minRotation:0}},y:{beginAtZero:true,ticks:{precision:0}}}}});
+  // assemblages par statut
+  const st={done:0,in_progress:0,pending:0}; (recipes||[]).forEach(r=>st[r.status]=(st[r.status]||0)+1);
+  mkChart('chStatus',{type:'doughnut',data:{labels:['Réussie','En cours','En attente'],datasets:[{data:[st.done||0,st.in_progress||0,st.pending||0],backgroundColor:[GR,AM,GY],borderWidth:0}]},options:{...noAR,cutout:'62%',plugins:{legend:{position:'bottom'}}}});
 }
 
 function renderKpis(bricks, recipes, matrix){
