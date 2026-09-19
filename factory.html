@@ -89,11 +89,15 @@
   .sub-mock{border-radius:12px;padding:40px 20px;text-align:center;margin-top:12px;min-height:130px;display:flex;align-items:center;justify-content:center;background:#0d0d0f}
   .note{font-size:12px;color:var(--text-3);margin-top:8px;font-family:var(--mono)}
   /* ── QC : bannière « À valider » ── */
-  .qc-banner{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:6px 0 26px}
-  .qc-banner .n{font-family:var(--display);font-size:30px;font-weight:800;line-height:1}
-  .qc-banner .l{color:var(--text-2);font-size:12.5px;font-family:var(--mono)}
-  .qc-banner .refused{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--amber);cursor:pointer}
+  .qc-banner{display:flex;align-items:center;gap:15px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 20px;margin:6px 0 26px}
+  .qc-banner .qc-ic{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .qc-banner .n{font-family:var(--display);font-size:22px;font-weight:800;line-height:1.05}
+  .qc-banner .l{color:var(--text-2);font-size:12.5px;font-family:var(--mono);margin-top:3px}
+  .qc-banner .sp{margin-left:auto;display:flex;align-items:center;gap:16px}
+  .qc-banner .refused{font-family:var(--mono);font-size:12px;color:var(--amber);cursor:pointer;white-space:nowrap}
   .qc-banner .refused:hover{text-decoration:underline}
+  .qc-banner.empty{opacity:.7}
+  @media(max-width:560px){.qc-banner .sp{gap:10px}.qc-banner{flex-wrap:wrap}}
   /* ── QC : overlay revue (Tinder) ── */
   .qc-ov{position:fixed;inset:0;background:rgba(12,10,8,.92);z-index:80;display:flex;flex-direction:column;align-items:center;padding:14px}
   .qc-top{width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -111,7 +115,9 @@
   .qc-yes{background:#fff}.qc-yes svg{stroke:#1a9e6b}
   .qc-reason{width:100%;max-width:520px;background:var(--panel);border-radius:14px;padding:14px;margin-top:4px}
   .qc-reason textarea{width:100%;min-height:84px;border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;font-family:var(--font);font-size:14px;resize:vertical}
-  .qc-done{color:#fff;text-align:center;font-family:var(--display);font-size:20px;font-weight:800;margin:auto}
+  .qc-donewrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .qc-doneic{width:72px;height:72px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  .qc-done{color:#fff;text-align:center;font-family:var(--display);font-size:21px;font-weight:800}
 </style>
 </head>
 <body>
@@ -178,20 +184,25 @@
       <div class="qc-count" id="qcCount"></div>
       <button class="qc-icbtn" onclick="qcClose()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg> fermer</button>
     </div>
-    <div class="qc-stage">
+    <div class="qc-stage" id="qcStage">
       <video id="qcVid" playsinline></video>
       <button id="qcReplay" class="qc-replay" onclick="qcReplay()" style="display:none" title="Rejouer">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
       </button>
     </div>
     <div class="qc-meta" id="qcMeta"></div>
-    <div class="qc-actions">
+    <div class="qc-actions" id="qcActions">
       <button class="qc-btn qc-no" onclick="qcRefuse()" title="Refuser">
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
       <button class="qc-btn qc-yes" onclick="qcApprove()" title="Valider">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
       </button>
+    </div>
+    <div id="qcDonePanel" class="qc-donewrap" style="display:none">
+      <div class="qc-doneic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#1a9e6b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="qc-done">Tout est passé en revue</div>
+      <button class="btn btn-primary" onclick="qcClose()" style="margin-top:16px">Retour au tableau de bord</button>
     </div>
     <div id="qcReason" class="qc-reason" style="display:none">
       <textarea id="qcReasonTxt" placeholder="Pourquoi tu refuses ? (ce qu'il faut corriger — ça part dans la liste « à corriger »)"></textarea>
@@ -276,10 +287,11 @@ async function qcLoad(){
 }
 function renderQcBanner(n, refused){
   const el=$('qcBanner'); if(!el) return;
+  const ic = `<div class="qc-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/><path d="M9 11l3 3L22 4"/></svg></div>`;
   const refLink = refused ? `<span class="refused" onclick="openRefused()">${refused} refusé${refused>1?'s':''} à corriger →</span>` : '';
   el.innerHTML = n
-    ? `<div class="qc-banner"><div><div class="n">${n}</div><div class="l">vidéo${n>1?'s':''} en attente de validation</div></div><button class="btn btn-primary" onclick="qcOpen()">Ouvrir la revue</button>${refLink}</div>`
-    : `<div class="qc-banner"><div><div class="n">0</div><div class="l">rien à valider — file vide</div></div>${refLink}</div>`;
+    ? `<div class="qc-banner">${ic}<div><div class="n">${n} vidéo${n>1?'s':''}</div><div class="l">en attente de validation</div></div><div class="sp">${refLink}<button class="btn btn-primary" onclick="qcOpen()">Ouvrir la revue</button></div></div>`
+    : `<div class="qc-banner empty">${ic}<div><div class="n">Rien à valider</div><div class="l">la file est vide</div></div><div class="sp">${refLink}</div></div>`;
 }
 function qcMetaHtml(it){
   const bc=it.brick_combo||{}; const parts=Object.entries(bc).map(([k,v])=>`${esc(k)}: ${esc(v)}`);
@@ -289,6 +301,8 @@ function qcMetaHtml(it){
 function qcOpen(){ if(!QC.list.length) return; QC.i=0; $('qcReview').style.display='flex'; qcShow(); }
 function qcShow(){
   const it=QC.list[QC.i]; if(!it){ qcDone(); return; }
+  $('qcStage').style.display=''; $('qcActions').style.display=''; $('qcMeta').style.display='';
+  $('qcDonePanel').style.display='none';
   $('qcCount').textContent=`${QC.i+1} / ${QC.list.length}`;
   $('qcReason').style.display='none'; if($('qcReasonTxt')) $('qcReasonTxt').value='';
   $('qcMeta').innerHTML=qcMetaHtml(it);
@@ -316,10 +330,16 @@ async function qcConfirmRefuse(){
 function qcNext(){ QC.i++; if(QC.i>=QC.list.length) qcDone(); else qcShow(); }
 function qcDone(){
   const v=$('qcVid'); v.pause(); v.removeAttribute('src');
-  v.style.display='none'; $('qcReplay').style.display='none'; $('qcCount').textContent=''; $('qcReason').style.display='none';
-  $('qcMeta').innerHTML='<div class="qc-done">Tout est passé en revue.</div>';
+  $('qcStage').style.display='none'; $('qcActions').style.display='none'; $('qcMeta').style.display='none';
+  $('qcReplay').style.display='none'; $('qcCount').textContent=''; $('qcReason').style.display='none';
+  $('qcDonePanel').style.display='flex';
 }
-function qcClose(){ const v=$('qcVid'); v.pause(); v.removeAttribute('src'); $('qcReview').style.display='none'; qcLoad(); }
+function qcClose(){
+  const v=$('qcVid'); v.pause(); v.removeAttribute('src');
+  $('qcReview').style.display='none';
+  $('qcStage').style.display=''; $('qcActions').style.display=''; $('qcMeta').style.display=''; $('qcDonePanel').style.display='none';
+  qcLoad();
+}
 async function openRefused(){
   const { data } = await sb.from('factory_qc').select('*').eq('status','refused').order('reviewed_at',{ascending:false}).limit(50);
   pushView(()=>{
