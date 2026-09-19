@@ -271,13 +271,20 @@ function subMock(label){
 }
 function openPreview(id){
   const b=BRICKS[id]; if(!b) return;
+  const media=b.meta&&b.meta.media, mtype=(b.meta&&b.meta.media_type)|| (['contenu','transformation'].includes(b.kind)?'video':'audio');
   let body=`<h3>${esc(b.id)}</h3><div class="muted" style="font-family:var(--mono);font-size:11px">${esc(KIND_LABEL[b.kind]||b.kind)}${b.subject?' · '+esc(b.subject):''}</div>`;
+  if(media){
+    body += (mtype==='video')
+      ? `<video controls playsinline style="width:100%;border-radius:12px;margin-top:12px;background:#000;max-height:60vh" src="${esc(media)}"></video>`
+      : `<audio controls style="width:100%;margin-top:14px" src="${esc(media)}"></audio>`;
+  }
   if(['hook','liaison','cta'].includes(b.kind)){
-    body+=`<div class="prev-text">${esc(b.label||'—')}</div><div class="note" style="margin-top:10px">Aperçu texte (transcription) — l'audio réel n'est pas encore hébergé.</div>`;
+    body+=`<div class="prev-text">${esc(b.label||'—')}</div>`;
+    if(!media) body+=`<div class="note" style="margin-top:10px">Audio pas encore hébergé (aperçu texte).</div>`;
   } else if(b.kind==='sous-titre'){
     body+=`<div class="sub-mock">${subMock(b.label)}</div><div class="note" style="margin-top:10px">Maquette du style « ${esc(b.label||'')} ».</div>`;
-  } else {
-    body+=`<div class="prev-text">${esc(b.label||'—')}</div><div class="note" style="margin-top:10px">Média (${esc(b.kind)}) en local — à héberger pour la lecture réelle.</div>`;
+  } else if(!media){
+    body+=`<div class="prev-text">${esc(b.label||'—')}</div><div class="note" style="margin-top:10px">Média (${esc(b.kind)}) pas encore hébergé.</div>`;
   }
   $('modal-body').innerHTML=body; $('modal').style.display='flex';
 }
