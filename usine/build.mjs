@@ -28,8 +28,10 @@ const TRANS = 'slideleft';
 // Traitement AVATAR (CTA) pour casser le côté « IA figée » : grain + tremblement selfie tenu à la main
 // (dérive + micro-tremble, repris de camOrganiqueFilter du render-worker). Le hook/la démo = vraie vidéo, pas touchés.
 const GRAIN = 'noise=alls=9:allf=t+u,eq=saturation=1.03:contrast=1.02';
-const SHAKE = "scale=iw*1.06:ih*1.06:flags=lanczos,rotate='(0.7*sin(0.53*t+2)+0.28*sin(1.7*t))*PI/180':c=black,"
-  + "crop=1080:1920:x='(iw-1080)/2+14*sin(0.71*t)+7*sin(1.93*t+1)+2*sin(11.3*t)':y='(ih-1920)/2+11*sin(0.62*t+0.5)+5*sin(2.1*t)+1.6*sin(9.7*t)'";
+// Tremblé main tenue « faible » (validé Axel) : vraies fréquences ~1-3 Hz, A=8px, rotation 0,4°, zoom 1,09.
+const SHAKE = "scale=iw*1.09:ih*1.09:flags=lanczos,rotate='(0.4*(sin(5.7*t)+0.4*sin(11.3*t)))*PI/180':c=black,"
+  + "crop=1080:1920:x='(iw-1080)/2+8*(sin(6.3*t)+0.5*sin(12.9*t+1)+0.3*sin(19.7*t))':"
+  + "y='(ih-1920)/2+8*(cos(7.1*t)+0.5*sin(13.7*t+0.5)+0.25*sin(22.3*t))'";
 const AV_TREAT = GRAIN + ',' + SHAKE;
 const GAPH = 0.50;    // respiration après la voix du hook (phrase finie AVANT le raccord)
 const AFMT = 'aformat=sample_rates=48000:channel_layouts=stereo';
@@ -55,7 +57,9 @@ const emitWords = (audio, offset) => { const j = join(work, 'w'+Math.round(offse
 const vHook = hookVoice ? Math.min(dur(hookVoice), dur(hook)) : dur(hook);
 const durH = (hookVoice ? vHook : dur(hook)) + GAPH;
 const durD = dur(demo);
-const durC = cta ? dur(cta) : 0;      // clip avatar entier (audio embarqué)
+const END_MARGIN = 0.35;              // marge après le dernier mot du CTA avant de couper (pas de silence mort)
+// durée CTA = lead + voix (durée du ctaCap) + marge → coupe le silence de fin du clip avatar
+const durC = cta ? (ctaCap ? Math.min(dur(cta), CTA_LEAD + dur(ctaCap) + END_MARGIN) : dur(cta)) : 0;
 const O1 = durH - TS;                 // démo entre ici (start du slide 1)
 const O2 = durH + durD - 2*TS;        // cta entre ici (start du slide 2)
 
@@ -71,11 +75,11 @@ let vf = `[0:v]trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,${VF}[hv];[${iDemo}
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${LN}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
-  vf += `[${iCta}:v]${VF},${AV_TREAT}[cv];`
+  vf += `[${iCta}:v]trim=0:${durC.toFixed(3)},setpts=PTS-STARTPTS,${VF},${AV_TREAT}[cv];`
       + `[hv][dv]xfade=transition=${TRANS}:duration=${TS}:offset=${O1.toFixed(3)}[vhd];`
       + `[vhd][cv]xfade=transition=${TRANS}:duration=${TS}:offset=${O2.toFixed(3)}[v]`;
-  // audio EMBARQUÉ du clip avatar, posé à O2 (l'avatar est silencieux pendant le slide grâce au lead)
-  af += `[${iCta}:a]${AFMT},${LN},adelay=${Math.round(O2*1000)}|${Math.round(O2*1000)}[ca];`
+  // audio EMBARQUÉ du clip avatar, TRIMMÉ à la voix (pas de silence mort) puis posé à O2
+  af += `[${iCta}:a]${AFMT},${LN},atrim=0:${durC.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${Math.round(O2*1000)}|${Math.round(O2*1000)}[ca];`
       + `[ha][da][ca]amix=inputs=3:duration=longest:normalize=0[a]`;
 } else {
   vf += `[hv][dv]xfade=transition=${TRANS}:duration=${TS}:offset=${O1.toFixed(3)}[v]`;
