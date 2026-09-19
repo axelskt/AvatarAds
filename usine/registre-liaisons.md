@@ -44,8 +44,8 @@ Une liaison **SPÉCIFIQUE** ne va qu'avec sa famille.
   > En ce moment, TikTok pousse à fond le contenu dynamique, et c'est le fondateur de TikTok lui-même qui le dit. Les premiers qui utilisent ce système prendront une avance qu'on ne rattrapera jamais.
 - **L34** (5,5s) · SPÉCIFIQUE (problème de vues)
   > Si tu bloques à 300-400 vues, c'est que tes vidéos ne sont pas assez dynamiques. Et j'ai la méthode exacte pour contrer ce problème.
-- **L28** (6s) · SPÉCIFIQUE (vs monteur)
-  > Pourtant c'est la réalité : tu n'as plus besoin de payer des milliers d'euros un monteur vidéo et d'attendre deux semaines ta vidéo. Je te montre comment faire.
+- **L28** (5,4s) · NICHE MONTAGE (+ MCP Claude) · rogné : démarre à « Tu n'as plus besoin… »
+  > Tu n'as plus besoin de payer des milliers d'euros un monteur vidéo et d'attendre deux semaines ta vidéo. Je te montre comment faire.
 
 ---
 
@@ -66,16 +66,14 @@ Une liaison **SPÉCIFIQUE** ne va qu'avec sa famille.
   > Avoir de la visibilité en 2026 peut te faire vendre tout ce que tu veux, et c'est précisément la cause d'échec de 99% des entrepreneurs.
 - **L70** (4,9s) · GÉNÉRIQUE (sans montrer ton visage)
   > AvatarAds te permet de créer du contenu sur ton produit sans jamais montrer ton visage. Je te montre tout ça.
-- **L69** (16s) · SPÉCIFIQUE (stratégie pré-lancement)
-  > La plupart des gens construisent leur produit, puis cherchent des acheteurs. Au lancement, leur business est à zéro et ils espèrent que l'algorithme leur donne de la visibilité ce jour-là. Moi je fais l'inverse : avant même de construire, je crée du contenu de pré-lancement pour voir si mon produit a de la demande.
+- ~~**L69**~~ · **ABANDONNÉE** (Axel : trop niche). Brique + manifest + brief supprimés.
 
 ---
 
 ## Famille 6 — CLAUDE / CONNECTEUR (AvatarAds × Claude)
 **Hooks** : H16, H17, H18, H24, H67, H72
 
-- **L72** (8,8s) · SPÉCIFIQUE
-  > Parce que maintenant tu peux connecter Claude à un connecteur. C'est un outil qui s'appelle AvatarAds qui te permet de connecter directement Claude à la génération d'images et de vidéos.
+- ~~**L72**~~ · **ABANDONNÉE** (Axel : phrase trop niche, ne colle qu'après une phrase niche précise). Brique + manifest + brief supprimés.
 
 ---
 
