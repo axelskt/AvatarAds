@@ -319,12 +319,13 @@ const kpiCard = (n,l,key) => `<div class="kpi" onclick="openKpi('${key}')"><div 
 function renderMissionsKpis(o){ o=o||{}; $('kpisMissions').innerHTML = [
   kpiCard(o.missions_validated,'Validées','k_validated'),
   kpiCard(o.missions_in_progress,'En cours','k_inprogress'),
-  kpiCard(o.missions_pending,'En attente','k_pending'),
   kpiCard(o.missions_failed,'Échouées','k_failed')
 ].join(''); }
 function renderProdKpis(o){ o=o||{}; $('kpisProd').innerHTML = [
+  kpiCard(o.avatars,'Avatars','k_avatars'),
+  kpiCard(o.variantes_creees,'Variantes générées','k_generees'),
   kpiCard(o.variantes_manquantes,'Variantes à générer','k_variantes'),
-  kpiCard(o.a_assembler,'Vidéos à assembler','k_assembler')
+  kpiCard(o.missions_total,'Vidéos assemblées','k_assemblees')
 ].join(''); }
 const emptyChart = (id,msg) => { const el=$(id); if(!el) return; const p=el.closest('.cbody'); if(p) p.innerHTML='<div class="empty" style="padding:34px 16px;font-size:13px">'+msg+'</div>'; };
 function renderUsersChart(series){ series=series||[];
@@ -357,11 +358,12 @@ function openAssemblage(id){
 function openKpi(key){
   const o=DATA.ops||{}; const N=x=>`<b>${(x||0).toLocaleString('fr-FR')}</b>`; let title='', body='';
   if(key==='k_validated'){ title='Missions validées'; body='<div class="note" style="margin-top:8px">Vidéos <b>postées et validées</b>. Via <b>Refetcher / TrackAds</b>. 0 pour l\'instant.</div>'; }
-  else if(key==='k_inprogress'){ title='Missions en cours'; body='<div class="note" style="margin-top:8px">Vidéos <b>en cours</b> de génération / assemblage. 0 pour l\'instant.</div>'; }
-  else if(key==='k_pending'){ title='Missions en attente'; body='<div class="note" style="margin-top:8px">Vidéos <b>assemblées, prêtes à poster</b> (pas encore postées). 0 pour l\'instant.</div>'; }
+  else if(key==='k_inprogress'){ title='Missions en cours'; body='<div class="note" style="margin-top:8px">Vidéos <b>en cours / prêtes à poster</b> (en génération, assemblage ou en attente de post). 0 pour l\'instant.</div>'; }
   else if(key==='k_failed'){ title='Missions échouées'; body='<div class="note" style="margin-top:8px">Générations / assemblages / posts <b>échoués</b> (à relancer). 0 pour l\'instant.</div>'; }
-  else if(key==='k_variantes'){ title='Variantes à générer (pour 100%)'; body=`<div class="note" style="margin-top:8px">${N(o.avatars)} avatars × ${N(o.hooks)} hooks = ${N(o.variantes_possibles)} variantes possibles · ${N(o.variantes_creees)} créées → <b>${(o.variantes_manquantes||0).toLocaleString('fr-FR')} à générer</b>. Ajoute des avatars et ça s'allume.</div>`; }
-  else if(key==='k_assembler'){ title='Vidéos à assembler'; body='<div class="note" style="margin-top:8px">Assemblages restant à monter (avatars × 375 combos − missions créées). 0 pour l\'instant.</div>'; }
+  else if(key==='k_avatars'){ title='Avatars'; body='<div class="note" style="margin-top:8px">Tes avatars (base de la production). Un avatar est <b>valide avec 5 arrière-plans</b>. 0 pour l\'instant.</div>'; }
+  else if(key==='k_generees'){ title='Variantes générées'; body=`<div class="note" style="margin-top:8px"><b>${(o.variantes_creees||0).toLocaleString('fr-FR')}</b> briques lipsync créées (avatar × hook) sur ${N(o.variantes_possibles)} possibles.</div>`; }
+  else if(key==='k_variantes'){ title='Variantes à générer (pour 100%)'; body=`<div class="note" style="margin-top:8px">${N(o.avatars)} avatars × ${N(o.hooks)} hooks = ${N(o.variantes_possibles)} possibles · ${N(o.variantes_creees)} générées → <b>${(o.variantes_manquantes||0).toLocaleString('fr-FR')} à générer</b>. Ajoute des avatars et ça s'allume.</div>`; }
+  else if(key==='k_assemblees'){ title='Vidéos assemblées'; body='<div class="note" style="margin-top:8px">Montages finaux produits (hook + liaison + démo + CTA). Prêts à poster. 0 pour l\'instant.</div>'; }
   else if(key==='perf'){ title='Performance (missions)'; body='<div class="note" style="margin-top:8px">Data <b>combinée de tous les users TrackAds qui ont posté</b> (vues, likes, commentaires, enregistrements, partages, 24h, all-time) — <b>scrapée par Refetcher</b>. 0 pour l\'instant.</div>'; }
   $('modal-body').innerHTML=`<h3>${title}</h3>${body}`; $('modal').style.display='flex';
 }
