@@ -82,6 +82,8 @@
   .modal-box{background:var(--panel);border:1px solid var(--border);border-radius:18px;max-width:640px;width:100%;max-height:84vh;overflow:auto;padding:22px 24px;position:relative}
   .modal-x{position:absolute;top:12px;right:16px;background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-3);line-height:1}
   .modal-x:hover{color:var(--accent)}
+  .modal-back{display:inline-block;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-family:var(--font);font-weight:600;font-size:12.5px;cursor:pointer;color:var(--text-2);margin-bottom:14px}
+  .modal-back:hover{border-color:var(--accent);color:var(--accent)}
   .modal-box h3{font-family:var(--display);font-size:18px;margin-bottom:4px}
   .prev-text{font-size:15px;line-height:1.55;background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:12px}
   .sub-mock{border-radius:12px;padding:40px 20px;text-align:center;margin-top:12px;min-height:130px;display:flex;align-items:center;justify-content:center;background:#0d0d0f}
@@ -249,14 +251,14 @@ function renderModules(bricks, recipes){
     mkChart('dm'+i,{type:'doughnut',data:{labels:['Hooks','Démos','Assemblages'],datasets:[{data:empty?[1]:data,backgroundColor:empty?[GY]:[AC,GR,AM],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:!empty}}}});
   });
 }
-function openModule(i){
+function openModule(i){ pushView(()=>_moduleBody(i), true); }
+function _moduleBody(i){
   const d=MODDATA[i]; if(!d) return;
   const recRows = d.recipes.length ? recipeTable(d.recipes) : '<div class="muted" style="font-size:12px;padding:4px 0">Aucun assemblage encore.</div>';
-  $('modal-body').innerHTML = `<h3>${esc(d.name)}</h3><div class="muted" style="font-family:var(--mono);font-size:12px">${d.hooks.length} hooks · ${d.demos.length} démos · ${d.recipes.length} assemblages</div>
+  $('modal-body').innerHTML = backBtn() + `<h3>${esc(d.name)}</h3><div class="muted" style="font-family:var(--mono);font-size:12px">${d.hooks.length} hooks · ${d.demos.length} démos · ${d.recipes.length} assemblages</div>
     ${H4('Assemblages / vidéos réalisées')}${recRows}
     ${H4('Hooks ('+d.hooks.length+')')}${chips(d.hooks)}
     ${H4('Démos ('+d.demos.length+')')}${chips(d.demos)}`;
-  $('modal').style.display='flex';
 }
 // Pool réutilisable (partagé entre tous les modules)
 function renderPool(bricks){
@@ -266,7 +268,11 @@ function renderPool(bricks){
     return `<details class="mod" open><summary>${lab} <span class="muted" style="font-weight:400;font-size:12.5px;font-family:var(--mono)">· ${arr.length}</span></summary><div class="modbody"><div style="padding-top:12px">${chips(arr)}</div></div></details>`;
   }).join('');
 }
-function closeModal(){ const m=$('modal'); if(m) m.style.display='none'; }
+let MHIST=[];
+function pushView(thunk, fresh){ if(fresh) MHIST=[]; MHIST.push(thunk); thunk(); const m=$('modal'); if(m) m.style.display='flex'; }
+function modalBack(){ if(MHIST.length>1){ MHIST.pop(); MHIST[MHIST.length-1](); } else closeModal(); }
+function backBtn(){ return MHIST.length>1 ? '<button class="modal-back" onclick="modalBack()">← retour</button>' : ''; }
+function closeModal(){ const m=$('modal'); if(m) m.style.display='none'; MHIST=[]; }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
 function subMock(label){
   const l=(label||'').toLowerCase(), base='font-family:var(--display);font-weight:800;';
@@ -278,10 +284,11 @@ function subMock(label){
   if(l.includes('caption')) return `<div style="font-family:var(--font);font-weight:600;color:#fff;font-size:20px;background:rgba(0,0,0,.6);padding:6px 12px;border-radius:6px">créer une vidéo en 2 clics</div>`;
   return `<div style="font-family:var(--font);font-weight:600;color:#fff;font-size:20px">${esc(label||'')}</div>`;
 }
-function openPreview(id){
+function openPreview(id){ pushView(()=>_previewBody(id)); }
+function _previewBody(id){
   const b=BRICKS[id]; if(!b) return;
   const media=b.meta&&b.meta.media, mtype=(b.meta&&b.meta.media_type)|| (['contenu','transformation'].includes(b.kind)?'video':'audio');
-  let body=`<h3>${esc(b.id)}</h3><div class="muted" style="font-family:var(--mono);font-size:11px">${esc(KIND_LABEL[b.kind]||b.kind)}${b.subject?' · '+esc(b.subject):''}</div>`;
+  let body=backBtn()+`<h3>${esc(b.id)}</h3><div class="muted" style="font-family:var(--mono);font-size:11px">${esc(KIND_LABEL[b.kind]||b.kind)}${b.subject?' · '+esc(b.subject):''}</div>`;
   if(media){
     body += (mtype==='video')
       ? `<video controls playsinline style="width:100%;border-radius:12px;margin-top:12px;background:#000;max-height:60vh" src="${esc(media)}"></video>`
@@ -293,9 +300,9 @@ function openPreview(id){
   } else if(b.kind==='sous-titre'){
     body+=`<div class="sub-mock">${subMock(b.label)}</div><div class="note" style="margin-top:10px">Maquette du style « ${esc(b.label||'')} ».</div>`;
   } else if(!media){
-    body+=`<div class="prev-text">${esc(b.label||'—')}</div><div class="note" style="margin-top:10px">Média (${esc(b.kind)}) pas encore hébergé.</div>`;
+    body+=`<div class="prev-text">${esc(b.label||'—')}</div><div class="note" style="margin-top:10px">${b.kind==='transformation'?"Transformation — visible dans l'assemblage (pas de clip source isolé).":'Média ('+esc(b.kind)+') pas encore hébergé.'}</div>`;
   }
-  $('modal-body').innerHTML=body; $('modal').style.display='flex';
+  $('modal-body').innerHTML=body;
 }
 
 // Graphiques : hooks par module · briques par type · assemblages par statut
@@ -322,10 +329,9 @@ function renderMissionsKpis(o){ o=o||{}; $('kpisMissions').innerHTML = [
   kpiCard(o.missions_failed,'Échouées','k_failed')
 ].join(''); }
 function renderProdKpis(o){ o=o||{}; $('kpisProd').innerHTML = [
-  kpiCard(o.avatars,'Avatars','k_avatars'),
   kpiCard(o.variantes_creees,'Variantes générées','k_generees'),
-  kpiCard(o.variantes_manquantes,'Variantes à générer','k_variantes'),
-  kpiCard(o.missions_total,'Vidéos assemblées','k_assemblees')
+  kpiCard(o.variantes_manquantes,"Variantes en attente d'être générées",'k_variantes'),
+  kpiCard(o.missions_total,'Vidéos prêtes à poster','k_pretes')
 ].join(''); }
 const emptyChart = (id,msg) => { const el=$(id); if(!el) return; const p=el.closest('.cbody'); if(p) p.innerHTML='<div class="empty" style="padding:34px 16px;font-size:13px">'+msg+'</div>'; };
 function renderUsersChart(series){ series=series||[];
@@ -348,24 +354,25 @@ function renderPerfKpis(){
 }
 const recipeRow = r => `<tr><td class="id"><span class="idchip" onclick="openAssemblage('${esc(r.id)}')">${esc(r.id)}</span></td><td>${(r.components||[]).map(c=>`<span class="idchip" onclick="openPreview('${esc(c.brick_id)}')">${esc(c.brick_id)}</span>`).join(' <span class="arrow">→</span> ')}</td><td>${badge(r.status)}</td></tr>`;
 const recipeTable = rs => rs.length ? `<table><thead><tr><th>ID assemblage</th><th>Composants</th><th>Statut</th></tr></thead><tbody>${rs.map(recipeRow).join('')}</tbody></table>` : '<div class="muted" style="font-size:12px;padding:4px 0">Aucun.</div>';
-function openAssemblage(id){
+function openAssemblage(id){ pushView(()=>_assemblageBody(id)); }
+function _assemblageBody(id){
   const r=(DATA.recipes||[]).find(x=>x.id===id); if(!r) return;
-  let body=`<h3>${esc(r.id)}</h3><div class="muted" style="font-family:var(--mono);font-size:11px">Assemblage · ${esc(r.subject||'')}</div>`;
+  let body=backBtn()+`<h3>${esc(r.id)}</h3><div class="muted" style="font-family:var(--mono);font-size:11px">Assemblage · ${esc(r.subject||'')}</div>`;
   if(r.render_url && /^https?:/.test(r.render_url)) body+=`<video controls playsinline style="width:100%;border-radius:12px;margin-top:12px;background:#000;max-height:60vh" src="${esc(r.render_url)}"></video>`;
   body+=`${H4('Composants (clique pour voir chaque partie)')}<div class="idlist">${(r.components||[]).map(c=>`<span class="idchip" onclick="openPreview('${esc(c.brick_id)}')">${esc(c.brick_id)}</span>`).join('')}</div>`;
-  $('modal-body').innerHTML=body; $('modal').style.display='flex';
+  $('modal-body').innerHTML=body;
 }
-function openKpi(key){
+function openKpi(key){ pushView(()=>_kpiBody(key), true); }
+function _kpiBody(key){
   const o=DATA.ops||{}; const N=x=>`<b>${(x||0).toLocaleString('fr-FR')}</b>`; let title='', body='';
   if(key==='k_validated'){ title='Missions validées'; body='<div class="note" style="margin-top:8px">Vidéos <b>postées et validées</b>. Via <b>Refetcher / TrackAds</b>. 0 pour l\'instant.</div>'; }
   else if(key==='k_inprogress'){ title='Missions en cours'; body='<div class="note" style="margin-top:8px">Vidéos <b>en cours / prêtes à poster</b> (en génération, assemblage ou en attente de post). 0 pour l\'instant.</div>'; }
   else if(key==='k_failed'){ title='Missions échouées'; body='<div class="note" style="margin-top:8px">Générations / assemblages / posts <b>échoués</b> (à relancer). 0 pour l\'instant.</div>'; }
-  else if(key==='k_avatars'){ title='Avatars'; body='<div class="note" style="margin-top:8px">Tes avatars (base de la production). Un avatar est <b>valide avec 5 arrière-plans</b>. 0 pour l\'instant.</div>'; }
   else if(key==='k_generees'){ title='Variantes générées'; body=`<div class="note" style="margin-top:8px"><b>${(o.variantes_creees||0).toLocaleString('fr-FR')}</b> briques lipsync créées (avatar × hook) sur ${N(o.variantes_possibles)} possibles.</div>`; }
-  else if(key==='k_variantes'){ title='Variantes à générer (pour 100%)'; body=`<div class="note" style="margin-top:8px">${N(o.avatars)} avatars × ${N(o.hooks)} hooks = ${N(o.variantes_possibles)} possibles · ${N(o.variantes_creees)} générées → <b>${(o.variantes_manquantes||0).toLocaleString('fr-FR')} à générer</b>. Ajoute des avatars et ça s'allume.</div>`; }
-  else if(key==='k_assemblees'){ title='Vidéos assemblées'; body='<div class="note" style="margin-top:8px">Montages finaux produits (hook + liaison + démo + CTA). Prêts à poster. 0 pour l\'instant.</div>'; }
+  else if(key==='k_variantes'){ title="Variantes en attente d'être générées"; body=`<div class="note" style="margin-top:8px">${N(o.avatars)} avatars × ${N(o.hooks)} hooks = ${N(o.variantes_possibles)} possibles · ${N(o.variantes_creees)} générées → <b>${(o.variantes_manquantes||0).toLocaleString('fr-FR')} en attente</b>. Ajoute des avatars et ça s'allume.</div>`; }
+  else if(key==='k_pretes'){ title='Vidéos prêtes à poster'; body='<div class="note" style="margin-top:8px">Montages finaux produits (hook + liaison + démo + CTA), <b>prêts à poster</b>. 0 pour l\'instant.</div>'; }
   else if(key==='perf'){ title='Performance (missions)'; body='<div class="note" style="margin-top:8px">Data <b>combinée de tous les users TrackAds qui ont posté</b> (vues, likes, commentaires, enregistrements, partages, 24h, all-time) — <b>scrapée par Refetcher</b>. 0 pour l\'instant.</div>'; }
-  $('modal-body').innerHTML=`<h3>${title}</h3>${body}`; $('modal').style.display='flex';
+  $('modal-body').innerHTML=backBtn()+`<h3>${title}</h3>${body}`;
 }
 
 function renderMatrix(matrix){
