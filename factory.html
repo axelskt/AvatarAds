@@ -56,6 +56,8 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-2);font-family:var(--mono);margin-bottom:10px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:8px}
+  .cbody{padding:16px;height:250px;position:relative}
   .note{font-size:12px;color:var(--text-3);margin-top:8px;font-family:var(--mono)}
 </style>
 </head>
@@ -95,6 +97,10 @@
       <span><span class="badge b-prog">in_progress</span> En cours</span>
       <span><span class="badge b-pend">pending</span> En attente</span>
     </div>
+    <h2>Assemblages par module</h2>
+    <div id="modules" class="charts"></div>
+    <h2>Briques par type</h2>
+    <div class="card"><div class="cbody" style="height:280px"><canvas id="chKinds"></canvas></div></div>
     <h2>Matrice des hooks (cohérence)</h2>
     <div id="matrix"></div>
     <h2>Briques</h2>
@@ -104,6 +110,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
@@ -150,8 +157,50 @@ async function loadAll(){
   if(bricks==null){ $('kpis').innerHTML='<div class="empty">Aucune donnée — ce compte n\'est pas owner/dev (RLS).</div>'; return; }
   BRICKS = {}; bricks.forEach(b=>BRICKS[b.id]=b);
   renderKpis(bricks, recipes, matrix||[]);
+  renderModules(matrix||[], recipes||[]);
+  renderCharts(bricks);
   renderMatrix(matrix||[]);
   renderBricks(bricks);
+}
+
+let CH = {};
+const CSSV = n => (getComputedStyle(document.documentElement).getPropertyValue(n).trim());
+function mkChart(id, cfg){ const el=$(id); if(!el||typeof Chart==='undefined') return; if(CH[id]) CH[id].destroy(); CH[id]=new Chart(el, cfg); }
+
+// Cartes PAR MODULE (motion-control, omni…) : combos possibles / faites / pas créées / missions + IDs
+function renderModules(matrix, recipes){
+  const GR=CSSV('--green')||'#1a9e6b', GY=CSSV('--grey')||'#8A847B', TX2=CSSV('--text-2')||'#5B564F';
+  if(typeof Chart!=='undefined'){ Chart.defaults.font.family="'Hanken Grotesk',sans-serif"; Chart.defaults.color=TX2; }
+  const bySub={};
+  matrix.forEach(m=>{ const s=bySub[m.subject]=bySub[m.subject]||{ids:[],done:0,pending:0};
+    s.ids.push(m.recipe_id||'—'); if(m.status==='done') s.done++; else s.pending++; });
+  const subs=Object.keys(bySub).sort();
+  if(!subs.length){ $('modules').innerHTML='<div class="card"><div class="empty">Aucun module.</div></div>'; return; }
+  $('modules').innerHTML = subs.map(s=>{
+    const d=bySub[s], total=d.done+d.pending;
+    const posted = recipes.filter(r=>r.subject===s && r.meta && r.meta.posted).length; // missions postées (champ meta.posted)
+    return `<div class="card"><div class="subhdr">${esc(s)}</div><div class="cbody" style="height:auto;padding:16px">
+      <div style="display:flex;gap:18px;align-items:center">
+        <div style="width:118px;height:118px;position:relative;flex:0 0 auto"><canvas id="chMod-${esc(s)}"></canvas></div>
+        <div style="font-family:var(--mono);font-size:12.5px;line-height:2">
+          <div><b style="font-size:20px;font-family:var(--display)">${total}</b> combos possibles</div>
+          <div style="color:var(--green)">● ${d.done} faites</div>
+          <div style="color:var(--grey)">● ${d.pending} pas créées</div>
+          <div style="color:var(--accent)">▶ ${posted} missions postées</div>
+        </div>
+      </div>
+      <div class="muted" style="margin-top:12px;font-size:11px;font-family:var(--mono);word-break:break-word">IDs : ${d.ids.map(esc).join(' · ')}</div>
+    </div></div>`;
+  }).join('');
+  subs.forEach(s=>{ const d=bySub[s];
+    mkChart('chMod-'+s,{type:'doughnut',data:{labels:['Faites','Pas créées'],datasets:[{data:[d.done,d.pending],backgroundColor:[GR,GY],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false}}}}); });
+}
+
+// Vue d'ensemble : briques par type
+function renderCharts(bricks){
+  const A=CSSV('--accent')||'#FF5A1F';
+  const bk={}; bricks.forEach(b=>bk[b.kind]=(bk[b.kind]||0)+1); const kk=Object.keys(bk).sort((a,b)=>bk[b]-bk[a]);
+  mkChart('chKinds',{type:'bar',data:{labels:kk.map(k=>KIND_LABEL[k]||k),datasets:[{data:kk.map(k=>bk[k]),backgroundColor:A,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
 }
 
 function renderKpis(bricks, recipes, matrix){
