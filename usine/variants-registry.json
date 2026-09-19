@@ -1,0 +1,21 @@
+{
+  "_doc": "Dashboard Creative Factory. Dimensions de génération : avatar × arrière-plan × type × brique. Assemblage (gratuit) : hook[+liaison même arrière-plan] + démo + CTA(aléatoire). Claude rattache un videoId à chaque ligne créée ; pas de ligne = non créé.",
+  "regles": {
+    "avatar_valide": "1 avatar n'est VALIDE que s'il a 5 arrière-plans différents (salle de bain, bureau, chambre, dehors…).",
+    "cta": "aléatoire — PAS un multiplicateur de variante (un CTA déjà fait par l'avatar, arrière-plan libre)",
+    "arriere_plan": "RÉPARTITION pour la variété (PAS un multiplicateur) : les briques d'un avatar sont réparties sur plusieurs décors (salle de bain, bureau, chambre, dehors…) → feed naturel, anti-shadowban, contenu original.",
+    "arriere_plan_assemblage": "DÉCOR LIBRE par défaut : n'importe quel hook se colle à n'importe quelle liaison/CTA quel que soit le décor (débloque les 375 combos à coût 0). Le changement de décor est absorbé par une transition nette au raccord (cut+whoosh / zoom / match-cut). Option 'continu' : forcer le même décor hook+liaison pour un effet une-seule-prise (à réserver aux vidéos premium).",
+    "avatar_hook": "cohérence soft — au pire un autre avatar couvre les hooks incohérents, coût inchangé",
+    "demo": "interchangeable — une vidéo qui marche = on swap la démo et on repropose"
+  },
+  "variantTypes": [
+    { "id": "lipsync",         "label": "Avatar + voix (lipsync Hedra)",                 "usdPerSec": 0.063 },
+    { "id": "voix_native",     "label": "Avatar voix native (Omni/Veo)",                 "usdPerSec": null },
+    { "id": "sans_voix_texte", "label": "Avatar sans voix (texte + mouvements de tête)", "usdPerSec": null }
+  ],
+  "avatars": [],
+  "demos": [],
+  "created": [],
+  "assembled": [],
+  "missions": []
+}
