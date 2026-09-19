@@ -8691,8 +8691,8 @@ async function mcpKeyRefresh(){
   window._mcpPlanAllowed = res.plan_allowed !== false;
   if(!window._mcpPlanAllowed){
     _mcpState('A');
-    if(lockNote){ lockNote.style.display = 'block'; lockNote.innerHTML = 'Réservé aux plans <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.'; }
-    createBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Passer au plan Pro';
+    if(lockNote){ lockNote.style.display = 'block'; lockNote.innerHTML = 'Réservé aux plans <b style="color:var(--text-2)">Starter</b>, <b style="color:var(--text-2)">Pro</b> et <b style="color:var(--text-2)">Élite</b>.'; }
+    createBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Passer au plan Starter';
     return;
   }
   if(lockNote) lockNote.style.display = 'none';

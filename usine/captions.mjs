@@ -1,66 +1,59 @@
 #!/usr/bin/env node
 // Creative Factory — sous-titres brûlés via HyperFrames (ffmpeg local sans drawtext/libass).
-// LOGIQUE PAR BRIQUE : on transcrit l'AUDIO DE LA BRIQUE (propre, ex. la démo) directement, puis on
-// DÉCALE ses captions de `offset` (position de la brique dans le montage). Pas de transcription du
-// stitch (évite hallucinations sur la musique + capte le début de la démo). Marque « avatarads » corrigée.
-// Usage : node usine/captions.mjs <video> <output> [audioBrique] [offsetSec] [voiceStartSec]
+// 3 modes :
+//   emit  <audio> <offsetSec> <outWords.json>     → transcrit (Whisper large-v3 fr) et écrit les MOTS (start/end + offset)
+//   burn  <video> <output> <words.json>           → brûle des mots déjà prêts (ex. captions-manifest exactes)
+//   (legacy) <video> <output> [audioBrique] [offset] [voiceStart]  → transcrit PUIS brûle (compat)
+// Principe usine : une brique connaît ses mots (manifest) → 0 erreur ; seules les démos passent par Whisper.
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const [video, output, audioBrique, offsetArg, voiceStartArg] = process.argv.slice(2);
-if (!video || !output) { console.error('usage: captions.mjs <video> <output> [audioBrique] [offsetSec] [voiceStartSec]'); process.exit(1); }
-const OFFSET = parseFloat(offsetArg || '0') || 0;
-const VOICE_START = Math.max(0, parseFloat(voiceStartArg || '0') || 0);
 const LEAD = 0.12;
-
-const work = mkdtempSync(join(tmpdir(), 'caps-'));
-const dur = parseFloat(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0', video]).toString().trim());
-copyFileSync(video, join(work, 'src.mp4'));
-
-// audio à transcrire : la BRIQUE si fournie (propre, 0-based → on décale de OFFSET), sinon la vidéo
-const srcAudio = audioBrique || video;
-console.log('▶ transcription FR (' + (audioBrique ? 'brique' : 'vidéo') + ')…');
-execFileSync('ffmpeg', ['-v','error','-y','-i', srcAudio, '-vn','-ac','1','-ar','16000', join(work,'audio.wav')]);
-execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','300000'], { stdio:'inherit' });
-const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
-let words = (Array.isArray(tr) ? tr : (tr.words||tr.segments||[]))
-  .map(w => ({ text:String(w.text||w.word||'').trim(), start:+w.start + OFFSET, end:+w.end + OFFSET }))
-  .filter(w => w.text && isFinite(w.start) && isFinite(w.end) && w.end>w.start)
-  .filter(w => w.start >= VOICE_START - 0.15)
-  .sort((a,b)=>a.start-b.start);
-
-// ── correction MARQUE tolérante à la ponctuation (« atarhats.fr, » → avatarads.fr) ──
 const bareOf = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
 const brandFix = t => { const b=bareOf(t); if(/atarhat|avatarad|atarad|avatarhat|avataraad/.test(b)) return (/fr$/.test(b)||/\.?fr\b/i.test(t))?'avatarads.fr':'avatarads'; return t; };
-{ const merged=[]; for(let i=0;i<words.length;i++){ const w=words[i], n=words[i+1];
-    if(n && /^a?v?atar$/.test(bareOf(w.text)) && /^(hat|had|ad|rad|hads|aad)/.test(bareOf(n.text))){
-      merged.push({ text:(/fr/.test(bareOf(n.text))||/\.fr/i.test(n.text))?'avatarads.fr':'avatarads', start:w.start, end:n.end }); i++;
-    } else merged.push(w);
-  } words = merged.map(w=>({ ...w, text:brandFix(w.text) })); }
-console.log(`  ${words.length} mots (offset=${OFFSET}s)`);
 
-// captions CONTINUES (pas de trou) + lead, bornées à la vidéo
-const caps = words.map((w,i)=>{ const next=words[i+1];
-  const s = Math.max(0, w.start - LEAD);
-  const e = Math.min(dur, next ? Math.max(w.start - LEAD, next.start - LEAD) : w.end + 0.35);
-  return { t:w.text.toUpperCase().replace(/[<>&"]/g,''), s, e };
-}).filter(c => c.e - c.s >= 0.06);
+function transcribeWords(audio, offset) {
+  const work = mkdtempSync(join(tmpdir(), 'caps-tr-'));
+  execFileSync('ffmpeg', ['-v','error','-y','-i', audio, '-vn','-ac','1','-ar','16000', join(work,'audio.wav')]);
+  execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','300000'], { stdio:'inherit' });
+  const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
+  return (Array.isArray(tr) ? tr : (tr.words||tr.segments||[]))
+    .map(w => ({ text:String(w.text||w.word||'').trim(), start:+w.start + offset, end:+w.end + offset }))
+    .filter(w => w.text && isFinite(w.start) && isFinite(w.end) && w.end>w.start);
+}
 
-const clipsHtml = caps.map((c,i)=>`<div class="cap clip" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">${c.t}</div>`).join('\n      ');
-const anim = caps.map((c,i)=>`tl.fromTo('#c${i}',{autoAlpha:0,y:10},{autoAlpha:1,y:0,duration:0.09,ease:'power1.out'}, ${c.s.toFixed(3)});`).join('\n      ');
+// mots (start/end absolus) → captions continues + lead + fix marque → HTML → rendu
+function burn(video, output, words) {
+  const work = mkdtempSync(join(tmpdir(), 'caps-'));
+  const dur = parseFloat(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0', video]).toString().trim());
+  copyFileSync(video, join(work, 'src.mp4'));
+  words = words.slice().sort((a,b)=>a.start-b.start);
+  // fusion « avatar »+« ads » puis fix marque
+  { const merged=[]; for(let i=0;i<words.length;i++){ const w=words[i], n=words[i+1];
+      if(n && /^a?v?atar$/.test(bareOf(w.text)) && /^(hat|had|ad|rad|hads|aad)/.test(bareOf(n.text))){
+        merged.push({ text:(/fr/.test(bareOf(n.text))||/\.fr/i.test(n.text))?'avatarads.fr':'avatarads', start:w.start, end:n.end }); i++;
+      } else merged.push(w);
+    } words = merged.map(w=>({ ...w, text:brandFix(w.text) })); }
+  // captions continues (pas de trou) + lead, bornées à la vidéo
+  const caps = words.map((w,i)=>{ const next=words[i+1];
+    const s = Math.max(0, w.start - LEAD);
+    const e = Math.min(dur, next ? Math.max(w.start - LEAD, next.start - LEAD) : w.end + 0.35);
+    return { t:w.text.toUpperCase().replace(/[<>&"]/g,''), s, e };
+  }).filter(c => c.e - c.s >= 0.06);
 
-const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
+  const clipsHtml = caps.map((c,i)=>`<div class="cap clip" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">${c.t}</div>`).join('\n      ');
+  const anim = caps.map((c,i)=>`tl.fromTo('#c${i}',{autoAlpha:0,y:10},{autoAlpha:1,y:0,duration:0.09,ease:'power1.out'}, ${c.s.toFixed(3)});`).join('\n      ');
+  const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=1080, height=1920">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 <style>
  body{margin:0;background:#000}
  #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:'Arial Black','Archivo Black',system-ui,sans-serif}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
- /* SAFE ZONE (tracé Axel) : bande basse ~330px du bas ; PLEINE LARGEUR + text-align:center
-    → chaque mot est parfaitement centré (plus de translateX qui décalait les 1ers mots) */
- .cap{position:absolute;left:0;right:0;bottom:330px;z-index:5;text-align:center;
+ /* SAFE ZONE (tracé Axel) : bande basse ~430px du bas (remontée) ; PLEINE LARGEUR + text-align:center */
+ .cap{position:absolute;left:0;right:0;bottom:430px;z-index:5;text-align:center;
    font-weight:900;font-size:82px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
    -webkit-text-stroke:8px #000;paint-order:stroke fill;
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
@@ -77,7 +70,31 @@ const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
    window.__timelines['main'] = tl;
  </script>
 </body></html>`;
-writeFileSync(join(work,'index.html'), html);
-console.log('▶ rendu sous-titres…');
-execFileSync('npx', ['--yes','hyperframes','render','--output', output], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
-console.log('OK ->', output);
+  writeFileSync(join(work,'index.html'), html);
+  console.log(`▶ rendu sous-titres (${caps.length} captions)…`);
+  execFileSync('npx', ['--yes','hyperframes','render','--output', output], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
+  console.log('OK ->', output);
+}
+
+// ── CLI ──
+const argv = process.argv.slice(2);
+const mode = (argv[0]==='emit'||argv[0]==='burn') ? argv.shift() : 'legacy';
+if (mode === 'emit') {
+  const [audio, offsetArg, outJson] = argv;
+  if (!audio || !outJson) { console.error('usage: captions.mjs emit <audio> <offsetSec> <out.json>'); process.exit(1); }
+  console.log('▶ transcription FR (émission mots)…');
+  const words = transcribeWords(audio, parseFloat(offsetArg||'0')||0);
+  writeFileSync(outJson, JSON.stringify(words));
+  console.log(`  ${words.length} mots -> ${outJson}`);
+} else if (mode === 'burn') {
+  const [video, output, wordsJson] = argv;
+  if (!video || !output || !wordsJson) { console.error('usage: captions.mjs burn <video> <output> <words.json>'); process.exit(1); }
+  burn(video, output, JSON.parse(readFileSync(wordsJson,'utf8')));
+} else {
+  const [video, output, audioBrique, offsetArg, voiceStartArg] = argv;
+  if (!video || !output) { console.error('usage: captions.mjs <video> <output> [audioBrique] [offset] [voiceStart]'); process.exit(1); }
+  const OFFSET = parseFloat(offsetArg||'0')||0, VS = Math.max(0, parseFloat(voiceStartArg||'0')||0);
+  console.log('▶ transcription FR (' + (audioBrique ? 'brique' : 'vidéo') + ')…');
+  const words = transcribeWords(audioBrique || video, OFFSET).filter(w => w.start >= VS - 0.15);
+  burn(video, output, words);
+}
