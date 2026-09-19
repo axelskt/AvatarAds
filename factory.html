@@ -240,9 +240,7 @@ function renderModules(bricks, recipes){
 }
 function openModule(i){
   const d=MODDATA[i]; if(!d) return;
-  const recRows = d.recipes.length
-    ? `<table><thead><tr><th>ID assemblage</th><th>Composants</th><th>Statut</th></tr></thead><tbody>${d.recipes.map(r=>`<tr><td class="id">${esc(r.id)}</td><td class="muted">${(r.components||[]).map(c=>esc(c.brick_id)).join(' <span class="arrow">→</span> ')}</td><td>${badge(r.status)}</td></tr>`).join('')}</tbody></table>`
-    : '<div class="muted" style="font-size:12px;padding:4px 0">Aucun assemblage encore.</div>';
+  const recRows = d.recipes.length ? recipeTable(d.recipes) : '<div class="muted" style="font-size:12px;padding:4px 0">Aucun assemblage encore.</div>';
   $('modal-body').innerHTML = `<h3>${esc(d.name)}</h3><div class="muted" style="font-family:var(--mono);font-size:12px">${d.hooks.length} hooks · ${d.demos.length} démos · ${d.recipes.length} assemblages</div>
     ${H4('Assemblages / vidéos réalisées')}${recRows}
     ${H4('Hooks ('+d.hooks.length+')')}${chips(d.hooks)}
@@ -307,28 +305,37 @@ function renderCharts(bricks, recipes){
 }
 
 function renderKpis(bricks, recipes, matrix){
-  const done = recipes.filter(r=>r.status==='done').length;
-  const pend = matrix.filter(m=>m.status==='pending').length;
-  const tx = bricks.filter(b=>b.kind==='transformation').length;
+  const nk = k => bricks.filter(b=>b.kind===k).length;
   const k = [
-    [bricks.length,'briques','briques'],[recipes.length,'hooks assemblés','recipes'],[done,'hooks Réussie','recipes_done'],
-    [pend,'combos en attente','pending'],[matrix.length,'combos valides','matrix'],[tx,'unités transfo','transfo']
+    [bricks.length,'Briques (total)','briques'],
+    [nk('hook'),'Hooks (accroches)','hooks'],
+    [nk('liaison'),'Liaisons','liaisons'],
+    [nk('cta'),'CTA','ctas'],
+    [nk('contenu'),'Démos','demos'],
+    [recipes.length,'Assemblages transfo','recipes']
   ];
   $('kpis').innerHTML = k.map(([n,l,key])=>`<div class="kpi" onclick="openKpi('${key}')"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
 }
 function renderPerfKpis(){
-  const P=['vues','likes','commentaires','enregistrements','partages','vues 24h','vues all time'];
+  const P=['likes','commentaires','enregistrements','partages','vues 24h','vues all time'];
   $('kpisPerf').innerHTML = P.map(l=>`<div class="kpi" onclick="openKpi('perf')"><div class="n">0</div><div class="l">${l}</div></div>`).join('');
 }
-const recipeTable = rs => rs.length ? `<table><thead><tr><th>ID</th><th>Sujet</th><th>Statut</th></tr></thead><tbody>${rs.map(r=>`<tr><td class="id">${esc(r.id)}</td><td class="muted">${esc(r.subject||'')}</td><td>${badge(r.status)}</td></tr>`).join('')}</tbody></table>` : '<div class="muted" style="font-size:12px;padding:4px 0">Aucun.</div>';
+const recipeRow = r => `<tr><td class="id"><span class="idchip" onclick="openAssemblage('${esc(r.id)}')">${esc(r.id)}</span></td><td>${(r.components||[]).map(c=>`<span class="idchip" onclick="openPreview('${esc(c.brick_id)}')">${esc(c.brick_id)}</span>`).join(' <span class="arrow">→</span> ')}</td><td>${badge(r.status)}</td></tr>`;
+const recipeTable = rs => rs.length ? `<table><thead><tr><th>ID assemblage</th><th>Composants</th><th>Statut</th></tr></thead><tbody>${rs.map(recipeRow).join('')}</tbody></table>` : '<div class="muted" style="font-size:12px;padding:4px 0">Aucun.</div>';
+function openAssemblage(id){
+  const r=(DATA.recipes||[]).find(x=>x.id===id); if(!r) return;
+  let body=`<h3>${esc(r.id)}</h3><div class="muted" style="font-family:var(--mono);font-size:11px">Assemblage · ${esc(r.subject||'')}</div>`;
+  if(r.render_url && /^https?:/.test(r.render_url)) body+=`<video controls playsinline style="width:100%;border-radius:12px;margin-top:12px;background:#000;max-height:60vh" src="${esc(r.render_url)}"></video>`;
+  body+=`${H4('Composants (clique pour voir chaque partie)')}<div class="idlist">${(r.components||[]).map(c=>`<span class="idchip" onclick="openPreview('${esc(c.brick_id)}')">${esc(c.brick_id)}</span>`).join('')}</div>`;
+  $('modal-body').innerHTML=body; $('modal').style.display='flex';
+}
 function openKpi(key){
-  const b=DATA.bricks||[], r=DATA.recipes||[], m=DATA.matrix||[]; let title='', body='';
+  const b=DATA.bricks||[], r=DATA.recipes||[]; let title='', body='';
+  const kindOf={hooks:'hook',liaisons:'liaison',ctas:'cta',demos:'contenu'};
   if(key==='briques'){ title='Toutes les briques'; const byk={}; b.forEach(x=>(byk[x.kind]=byk[x.kind]||[]).push(x)); body=Object.keys(byk).map(k=>H4((KIND_LABEL[k]||k)+' ('+byk[k].length+')')+chips(byk[k])).join(''); }
-  else if(key==='recipes'||key==='matrix'){ title='Hooks assemblés'; body=recipeTable(r); }
-  else if(key==='recipes_done'){ title='Hooks réussis'; body=recipeTable(r.filter(x=>x.status==='done')); }
-  else if(key==='pending'){ title='Combos en attente'; const p=m.filter(x=>x.status==='pending'); body=p.length?recipeTable(p):'<div class="muted" style="font-size:12px;padding:4px 0">Aucun combo en attente.</div>'; }
-  else if(key==='transfo'){ title='Unités transfo'; body=chips(b.filter(x=>x.kind==='transformation')); }
-  else if(key==='perf'){ title='Performance (missions)'; body='<div class="note" style="margin-top:8px">Tout à 0 pour l\'instant. Vues, likes, commentaires, enregistrements, partages, vues 24h et all-time seront <b>scrapés via Refetcher</b> à chaque mission (vidéo postée).</div>'; }
+  else if(kindOf[key]){ const arr=b.filter(x=>x.kind===kindOf[key]); title=(KIND_LABEL[kindOf[key]]||key)+' ('+arr.length+')'; body='<div class="note" style="margin:2px 0 10px">Clique une brique pour son aperçu.</div>'+chips(arr); }
+  else if(key==='recipes'){ title='Assemblages transfo ('+r.length+')'; body='<div class="note" style="margin:2px 0 10px">Vidéos déjà montées à partir des transformations. Clique un ID pour voir la vidéo.</div>'+recipeTable(r); }
+  else if(key==='perf'){ title='Performance (missions)'; body='<div class="note" style="margin-top:8px">Tout à 0 pour l\'instant. Likes, commentaires, enregistrements, partages, vues 24h et all-time seront <b>scrapés via Refetcher</b> à chaque mission (vidéo postée).</div>'; }
   $('modal-body').innerHTML=`<h3>${title}</h3>${body}`; $('modal').style.display='flex';
 }
 
