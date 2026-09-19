@@ -2,6 +2,8 @@
   "_doc": "Dashboard Creative Factory. Dimensions de génération : avatar × arrière-plan × type × brique. Assemblage (gratuit) : hook[+liaison même arrière-plan] + démo + CTA(aléatoire). Claude rattache un videoId à chaque ligne créée ; pas de ligne = non créé.",
   "regles": {
     "avatar_valide": "1 avatar n'est VALIDE que s'il a 5 arrière-plans différents (salle de bain, bureau, chambre, dehors…).",
+    "hook_influenceuse_image": "Un hook qui parle d'une influenceuse/fille (H12, H13…) DOIT afficher une image de fille dans le hook, sinon il ne veut rien dire.",
+    "hook_multi_module": "Un hook peut appartenir à plusieurs modules (meta.modules dans factory_bricks) — le hook ET la liaison orientent la direction/le module.",
     "cta": "aléatoire — PAS un multiplicateur de variante (un CTA déjà fait par l'avatar, arrière-plan libre)",
     "arriere_plan": "RÉPARTITION pour la variété (PAS un multiplicateur) : les briques d'un avatar sont réparties sur plusieurs décors (salle de bain, bureau, chambre, dehors…) → feed naturel, anti-shadowban, contenu original.",
     "arriere_plan_assemblage": "DÉCOR LIBRE par défaut : n'importe quel hook se colle à n'importe quelle liaison/CTA quel que soit le décor (débloque les 375 combos à coût 0). Le changement de décor est absorbé par une transition nette au raccord (cut+whoosh / zoom / match-cut). Option 'continu' : forcer le même décor hook+liaison pour un effet une-seule-prise (à réserver aux vidéos premium).",

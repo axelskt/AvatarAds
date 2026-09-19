@@ -179,16 +179,19 @@ const MODULES=[
   {name:'Motion Control', subj:['motion-control']},
   {name:'OMNI', subj:['omni']},
   {name:'Image IA', subj:['image-ia','static-ads','image']},
-  {name:'Montage IA', subj:['montage-ia','montage','nettoyage-audio']},
+  {name:'Montage IA', subj:['montage-ia','montage']},
+  {name:'Nettoyage audio', subj:['nettoyage-audio']},
   {name:'MCP Claude', subj:['mcp-claude']},
   {name:'Express', subj:['express']},
   {name:'Générateur', subj:['generateur','generator']},
   {name:'Générique / transversal', subj:['generique']},
 ];
+// un hook peut appartenir à PLUSIEURS modules (meta.modules) ; fallback = subject
+const modsOf = b => (b.meta && Array.isArray(b.meta.modules) && b.meta.modules.length) ? b.meta.modules : (b.subject ? [b.subject] : []);
 const chips = arr => arr.length ? `<div class="idlist">${arr.map(b=>`<span class="idchip" title="${esc(b.label||'')}">${esc(b.id)}</span>`).join('')}</div>` : '<div class="muted" style="font-size:12px">—</div>';
 function renderModules(bricks, recipes){
   $('modules').innerHTML = MODULES.map(m=>{
-    const mb = bricks.filter(b=>m.subj.includes(b.subject));
+    const mb = bricks.filter(b=>modsOf(b).some(s=>m.subj.includes(s)));
     const mr = recipes.filter(r=>m.subj.includes(r.subject));
     const hooks = mb.filter(b=>b.kind==='hook'), demos = mb.filter(b=>b.kind==='contenu');
     const done = mr.filter(r=>r.status==='done').length;
