@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connexion TikTok — AvatarAds</title>
+<style>
+  :root{ --bg:#0f0f12; --card:#17171c; --tx:#fff; --tx3:#9a9aa5; --acc:#3ecf6a; --err:#e0554d; --border:#26262e; }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--tx);
+       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px}
+  .card{max-width:440px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:20px;
+        padding:36px 28px;text-align:center}
+  .ic{width:64px;height:64px;margin:0 auto 18px;display:grid;place-items:center;border-radius:50%}
+  h1{font-size:22px;margin:0 0 8px}
+  p{color:var(--tx3);font-size:15px;line-height:1.5;margin:0}
+  .spin{width:52px;height:52px;border:4px solid var(--border);border-top-color:var(--acc);border-radius:50%;
+        margin:0 auto 18px;animation:r .8s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="spin"></div>
+    <h1>Connexion TikTok…</h1>
+    <p>Un instant, on lie ton compte.</p>
+  </div>
+<script>
+  var EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/tiktok-auth';
+  var q = new URLSearchParams(location.search);
+  var code = q.get('code'), err = q.get('error') || q.get('error_description');
+  var card = document.getElementById('card');
+  function okSvg(){ return '<div class="ic" style="background:rgba(62,207,106,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3ecf6a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>'; }
+  function errSvg(){ return '<div class="ic" style="background:rgba(224,85,77,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e0554d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>'; }
+  function show(icon, title, msg){ card.innerHTML = icon + '<h1>' + title + '</h1><p>' + msg + '</p>'; }
+  (async function(){
+    if (err){ show(errSvg(), 'Autorisation refusée', String(err)); return; }
+    if (!code){ show(errSvg(), 'Rien à faire ici', 'Ouvre cette page depuis le bouton « Connecter TikTok » de l\'app.'); return; }
+    try{
+      var r = await fetch(EDGE + '?action=exchange', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+      });
+      var d = await r.json();
+      if (d && d.ok){ show(okSvg(), 'TikTok connecté', 'Ton compte est lié à AvatarAds. Tu peux fermer cette page.'); }
+      else { show(errSvg(), 'Erreur', (d && d.error) ? d.error : 'Échange du token impossible.'); }
+    } catch(e){ show(errSvg(), 'Erreur réseau', e && e.message ? e.message : 'Réessaie.'); }
+  })();
+</script>
+</body>
+</html>

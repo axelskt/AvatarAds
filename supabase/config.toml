@@ -14,6 +14,9 @@ project_id = "guvwgiejzkiodghywpwj"
 [functions.mcp]
 verify_jwt = false
 
+[functions.tiktok-auth]
+verify_jwt = false
+
 [functions.whop-webhook]
 verify_jwt = false
 
