@@ -315,7 +315,7 @@ async function tkSendTest(){
   const name = acc.display_name || acc.open_id;
   res.textContent = 'Envoi en brouillon vers ' + name + '…';
   try{
-    const video_url = SUPABASE_URL + '/storage/v1/object/public/factory-media/test-tiktok/test1.mp4';
+    const video_url = SUPABASE_URL + '/storage/v1/object/public/factory-media/test-tiktok/test3.mp4';
     const caption = 'Marque « GO » en commentaire et va sur AvatarAds.fr pour tester par toi-même 🚀 #AvatarAds';
     const d = await (await fetch(TK_EDGE + '?action=post', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ open_id: acc.open_id, video_url, title: caption }) })).json();
     res.innerHTML = d.ok
