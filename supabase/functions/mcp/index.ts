@@ -827,7 +827,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV/MP3, max 60 s) — le clip sortant a la même durée." },
           engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `Qualité : 'hedra' = standard (défaut, 1 cr/s) · 'omnihuman' = haute résolution 1088×1920 (${OMNI_COST_SEC} cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
-          model: { type: 'string', enum: ['hedra-avatar', 'hedra-character-3'], description: "Interne (engine 'hedra' uniquement) : modèle Hedra v3. Défaut hedra-avatar." },
+          model: { type: 'string', enum: ['hedra-avatar', 'hedra-character-3', 'minimax-h3', 'minimax-h3-max-turbo', 'kling-ai-avatar-v2'], description: "Interne (engine 'hedra' uniquement) : modèle Hedra v3. Défaut hedra-avatar. minimax-h3 (768p, audios[], durée 5-15 s) et kling-ai-avatar-v2 (720p) = alternatives image+audio pour comparaison qualité." },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['image_url', 'audio_url'],
@@ -2122,19 +2122,25 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
     const imageRef = await hedraV3Upload('avatar.jpg', img.bytes, img.contentType)
     if (!imageRef) return toolErr("Upload de la photo vers Hedra échoué — crédits remboursés, réessaie.")
 
-    // Soumission v3 : POST /v3/models/<slug> { input:{ prompt, aspect_ratio, resolution, start_image, audio } }
-    const slug = ['hedra-avatar', 'hedra-character-3'].includes(String(args.model)) ? String(args.model) : HEDRA_V3_SLUG
+    // Soumission v3 : POST /v3/models/<slug> { input:{ … } }. Le schéma d'entrée DIFFÈRE
+    // selon le modèle (vérifié via GET /v3/models/<slug>) :
+    //  - hedra-avatar / hedra-character-3 : resolution 540/720/1080p, audio (singulier)
+    //  - minimax-h3 / -max-turbo : resolution 480p/768p/2K/4K (PAS de 1080p), audios[] (tableau), duration_ms (enum 5000..15000)
+    //  - kling-ai-avatar-v2 : resolution 720p uniquement, audio (singulier), quality standard|pro
+    const ALLOWED = ['hedra-avatar', 'hedra-character-3', 'minimax-h3', 'minimax-h3-max-turbo', 'kling-ai-avatar-v2']
+    const slug = ALLOWED.includes(String(args.model)) ? String(args.model) : HEDRA_V3_SLUG
+    let input: Record<string, unknown>
+    if (slug === 'minimax-h3' || slug === 'minimax-h3-max-turbo') {
+      const durMs = Math.min(15000, Math.max(5000, Math.ceil(secs) * 1000))   // enum 5000..15000 par pas de 1000
+      input = { prompt: AVATAR_PROMPT, aspect_ratio: aspect, resolution: '768p', start_image: imageRef, audios: [audioRef], duration_ms: durMs }
+    } else if (slug === 'kling-ai-avatar-v2') {
+      input = { prompt: AVATAR_PROMPT, aspect_ratio: aspect, resolution: '720p', start_image: imageRef, audio: audioRef, quality: 'standard' }
+    } else {
+      input = { prompt: AVATAR_PROMPT, aspect_ratio: aspect, resolution: '1080p', start_image: imageRef, audio: audioRef }
+    }
     const sub = await hedraV3Fetch('/v3/models/' + slug, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        input: {
-          prompt: AVATAR_PROMPT,
-          aspect_ratio: aspect,
-          resolution: '1080p',
-          start_image: imageRef,
-          audio: audioRef,
-        },
-      }),
+      body: JSON.stringify({ input }),
     })
     if (!sub.ok) {
       const t = await sub.text().catch(() => '')

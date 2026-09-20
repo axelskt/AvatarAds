@@ -29456,7 +29456,8 @@ function _omniPickFile(file){
   v.src=URL.createObjectURL(file);
   v.onloadedmetadata=()=>{
     const d=v.duration||0;
-    if(d>10.5){ toast('Vidéo trop longue — 10 s maximum'); _omniFile=null; _omniDur=0; showEmpty(); _omniUpdateCost(); return; }
+    const _maxS = _omniIsDev() ? 60.5 : 10.5;   // dev/owner : auto-découpe jusqu'à 60 s (expérimental)
+    if(d>_maxS){ toast('Vidéo trop longue — '+(_omniIsDev()?'60':'10')+' s maximum'); _omniFile=null; _omniDur=0; showEmpty(); _omniUpdateCost(); return; }
     if(d<0.8){ toast('Vidéo trop courte (1 s minimum)'); _omniFile=null; _omniDur=0; showEmpty(); _omniUpdateCost(); return; }
     _omniFile=file; _omniDur=d; _omniUpdateCost();
     v.style.display='block'; if(empty) empty.style.display='none';
@@ -29526,6 +29527,72 @@ function _omniBuildPrompt(p){
   return s;
 }
 function _omniErr(d){ try{ let m=d&&(d.detail||(d.error&&(d.error.message||d.error))||d.message); if(Array.isArray(m)) m=m.map(x=>(x&&(x.msg||x.message))||x).join(' · '); return String(m||'Erreur'); }catch(_){ return 'Erreur'; } }
+// ── Omni > 10 s : auto-découpe (dev/owner, expérimental) ────────────────────
+// gemini-omni-flash edit REFUSE > 10 s. Pour tester des vidéos plus longues on
+// découpe en segments ≤10 s ÉQUILIBRÉS (ffmpeg.wasm), on édite CHAQUE bout avec le
+// MÊME prompt, puis on recolle (ré-encodage concat). ⚠ MVP hard-cut : le raccord
+// peut « sauter » (chaque bout est édité indépendamment) → si visible, on ajoutera
+// un fondu enchaîné. Gaté dev/owner ; débit inchangé = ceil(durée)×tarif/s.
+function _omniIsDev(){ try{ return !!(currentMember && (String(currentMember.plan||'').toLowerCase()==='developer' || currentMember.is_owner)); }catch(_){ return false; } }
+
+async function _omniEditSignedUrl(signedUrl, prompt){
+  const H=await getAuthHeader();
+  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
+  const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+  const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+  const model='/google/gemini-omni-flash/v1.1/edit';
+  const sub=await fPost(model,{ video_url:signedUrl, prompt:_omniBuildPrompt(prompt), resolution:_omniRes });
+  const sd=await sub.json(); if(!sub.ok) throw new Error(_omniErr(sd));
+  const pick=(o)=>o&&(o.video&&o.video.url)||(o&&o.output&&o.output.video&&o.output.video.url)||null;
+  let outUrl=pick(sd);
+  if(!outUrl && (sd.status_url||sd.request_id)){
+    const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
+    const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
+    for(let i=0;i<100;i++){
+      await new Promise(r=>setTimeout(r,3000));
+      const st=await (await fGet(stP)).json();
+      if(st.status==='COMPLETED'){ const rr=await (await fGet(reP)).json(); outUrl=pick(rr); if(!outUrl) throw new Error(_omniErr(rr)); break; }
+      if(st.status==='FAILED'||st.status==='ERROR'||st.status==='CANCELLED'||st.error) throw new Error(_omniErr(st));
+    }
+  }
+  if(!outUrl) throw new Error('Aucune vidéo renvoyée');
+  return outUrl;
+}
+
+// Découpe → édite chaque bout → recolle. Renvoie { url, blob } du MP4 final.
+// ⚠ core ST : on LIT chaque segment juste après son run (les sorties sont perdues au
+// reset suivant) ; les résultats sont remis en `writeFile` → recachés, donc présents
+// au moment du concat.
+async function _omniGenerateChunked(prompt){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) throw new Error('Session expirée — reconnecte-toi');
+  await _loadFFmpeg(); const ff=_ffmpegInst;
+  const dur=_omniDur, N=Math.max(2, Math.ceil(dur/10)), seg=dur/N;   // équilibré : 20 s→2×10 · 24 s→3×8
+  _omniProg('Découpage en '+N+' parties…',12);
+  await ff.FS('writeFile','oin.mp4', await window._ffFetchFile(_omniFile));
+  const doneNames=[];
+  for(let i=0;i<N;i++){
+    await ff.run('-ss', (i*seg).toFixed(3), '-i','oin.mp4','-t', seg.toFixed(3),
+      '-c:v','libx264','-preset','ultrafast','-c:a','aac','-movflags','+faststart','oseg.mp4');
+    const segBytes = await ff.FS('readFile','oseg.mp4');   // LIRE avant tout run/reset suivant
+    _omniProg('Partie '+(i+1)+'/'+N+' — transformation IA…', 15 + Math.round(i*(78/N)));
+    const path=user.id+'/omni-'+Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6)+'.mp4';
+    const up=await sb.storage.from('render-media').upload(path, new Blob([segBytes.buffer],{type:'video/mp4'}), {contentType:'video/mp4',upsert:true});
+    if(up.error) throw new Error('upload partie '+(i+1)+' : '+up.error.message);
+    const sg=await sb.storage.from('render-media').createSignedUrl(path,3600);
+    if(sg.error||!sg.data||!sg.data.signedUrl) throw new Error('lien signé indisponible (partie '+(i+1)+')');
+    const outUrl=await _omniEditSignedUrl(sg.data.signedUrl, prompt);
+    const rname='odone'+i+'.mp4';
+    await ff.FS('writeFile', rname, await window._ffFetchFile(outUrl));   // recaché → survit au reset
+    doneNames.push(rname);
+  }
+  _omniProg('Recollage des '+N+' parties…',94);
+  await ff.FS('writeFile','olist.txt', new TextEncoder().encode(doneNames.map(n=>"file '"+n+"'").join('\n')));
+  await ff.run('-f','concat','-safe','0','-i','olist.txt','-c:v','libx264','-preset','veryfast','-pix_fmt','yuv420p','-c:a','aac','ofinal.mp4');
+  const finalBytes = await ff.FS('readFile','ofinal.mp4');
+  const blob=new Blob([finalBytes.buffer],{type:'video/mp4'});
+  return { url: URL.createObjectURL(blob), blob };
+}
 async function _omniGenerate(){
   if(!_omniFile){ toast('Upload une vidéo d\'abord'); return; }
   const prompt=((document.getElementById('omniPrompt')||{}).value||'').trim();
@@ -29539,6 +29606,20 @@ async function _omniGenerate(){
     const res=document.getElementById('omniResult'); if(res) res.style.display='none';
     const _form=document.getElementById('omniForm'); if(_form) _form.style.display='none';   // le chargement/résultat PREND la place du formulaire
     _omniProg('Envoi de la vidéo…',10);
+    // > 10 s (dev/owner) : auto-découpe en segments ≤10 s, édition de chaque bout, recollage.
+    if(_omniDur>10 && _omniIsDev()){
+      const chunk=await _omniGenerateChunked(prompt);
+      _omniProg('Terminé ✓',100);
+      _omniOutUrl=chunk.url;
+      const outc=document.getElementById('omniOut'); if(outc) outc.src=chunk.url;
+      { const _ov=document.getElementById('omniPlayOv'); if(_ov) _ov.style.display='flex'; }
+      if(res) res.style.display='block';
+      setTimeout(()=>{ _omniProgHide(); }, 500);
+      (async()=>{ try{ if(typeof _libAutoSaveVideo==='function'){ await _libAutoSaveVideo(chunk.blob, 'Omni '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}), ['Omni','Vidéo'], '🎬', 'OMNI'); } }catch(e){ console.warn('omni autosave:', e); } })();
+      if(typeof creditsFlowDone==='function') creditsFlowDone();
+      toast('Vidéo transformée ✓ ('+Math.max(2,Math.ceil(_omniDur/10))+' parties recollées)');
+      return;
+    }
     const { data:{ user } } = await sb.auth.getUser();
     if(!user) throw new Error('Session expirée — reconnecte-toi');
     const path=user.id+'/omni-'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.mp4';
