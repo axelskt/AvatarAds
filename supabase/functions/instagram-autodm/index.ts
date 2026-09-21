@@ -25,7 +25,7 @@ const svc = createClient(SB_URL, SERVICE)
 
 // Défauts si aucune règle ig_rules (CTA AvatarAds « marque GO en commentaire »).
 const DEF = {
-  keywords: ['go', 'lien', 'link', 'test'],
+  keywords: ['go', 'site', 'guide', 'plan', 'montage', 'avatar', 'aide', 'ia', 'ugc', 'direct', 'cafe', 'libre', 'lien', 'link', 'test'],
   link: 'https://avatarads.fr',
   askTitle: 'Le lien est réservé aux abonnés 👀',
   askSub: "Abonne-toi à AvatarAds puis clique le bouton, je te l'envoie direct.",
@@ -181,9 +181,9 @@ async function handleEvent(body: any) {
       const commentId = String(v.id || '')
       const fromId = v.from?.id ? String(v.from.id) : ''
       if (!commentId || fromId === igId) continue            // ignore ses propres commentaires
-      const text = norm(v.text)
+      const words = new Set(norm(v.text).split(/[^a-z0-9]+/).filter(Boolean))   // match par MOT entier (pas sous-chaîne)
       const rule = await loadRule(igId, v.media?.id)
-      if (!rule.keywords.some((k: string) => text.includes(k))) continue
+      if (!rule.keywords.some((k: string) => words.has(k))) continue
       if (await alreadyDone('comment_id', commentId, 'ask')) continue   // dédup : 1 réponse / commentaire
       await replyToComment(commentId, token, pick(PUBLIC_REPLIES, commentId))   // réponse PUBLIQUE variée
       await sendMessage(igId, token, { comment_id: commentId }, askMsg(rule))    // DM privé + bouton
