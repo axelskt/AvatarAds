@@ -288,6 +288,15 @@ async function loadAll(){
 // ── Auto-DM Instagram : bouton connexion (OAuth) + dashboard data (dev/owner) ──
 const IG_AUTH = SUPABASE_URL + '/functions/v1/instagram-auth';
 const igKpi = (n,l) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+const igFmtN = n => { n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n); };
+function igTimeAgo(iso){
+  if(!iso) return '—';
+  const d = Math.floor((Date.now()-new Date(iso).getTime())/1000);
+  if(d<60) return "à l'instant";
+  if(d<3600) return 'il y a '+Math.floor(d/60)+' min';
+  if(d<86400) return 'il y a '+Math.floor(d/3600)+' h';
+  return 'il y a '+Math.floor(d/86400)+' j';
+}
 async function igConnect(){
   try{
     const d = await (await fetch(IG_AUTH + '?action=authorize')).json();
@@ -319,13 +328,22 @@ async function igLoad(){
   const list = data.contacts_list || [];
   if(!list.length){ $('igContacts').innerHTML = '<div class="note">Aucun lead encore — commente un mot-clé sous une publi pour tester.</div>'; return; }
   const rows = list.map(c=>{
-    const st  = c.got_link ? '<span class="badge b-done">lien reçu</span>' : '<span class="badge b-pend">en attente</span>';
-    const clk = c.clicked ? ' <span class="badge b-done">cliqué</span>' : '';
-    const when = c.last_seen ? new Date(c.last_seen).toLocaleString('fr-FR') : '';
-    return '<tr><td style="font-family:var(--mono);font-size:11px">'+esc(String(c.sender_id).slice(0,16))+'…</td><td>'+st+clk+'</td><td style="font-size:11px;color:var(--text-3)">'+(c.events||0)+'</td><td style="font-size:11px;color:var(--text-3)">'+esc(when)+'</td></tr>';
+    const name = c.username ? '@'+esc(c.username) : (esc(String(c.sender_id).slice(0,12))+'…');
+    const fol  = (c.follower_count!=null) ? igFmtN(c.follower_count) : '—';
+    const st = [
+      c.follows ? '<span class="badge b-done">abonné</span>' : '',
+      c.got_link ? '<span class="badge b-done">lien reçu</span>' : (c.follows ? '' : '<span class="badge b-pend">en attente</span>'),
+      c.clicked ? '<span class="badge b-done">cliqué</span>' : ''
+    ].filter(Boolean).join(' ');
+    return '<tr>'
+      + '<td style="font-weight:600">'+name+'</td>'
+      + '<td style="font-size:11px;color:var(--text-3)">'+fol+'</td>'
+      + '<td>'+st+'</td>'
+      + '<td style="font-size:11px;color:var(--text-3)">'+esc(igTimeAgo(c.first_seen))+'</td>'
+      + '</tr>';
   }).join('');
   $('igContacts').innerHTML = '<div class="subhdr" style="margin-top:12px">Leads récents <span class="muted" style="font-weight:400;font-size:12px;margin-left:auto">'+list.length+'</span></div>'
-    + '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="text-align:left"><th>Contact</th><th>Statut</th><th>Events</th><th>Dernier</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    + '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="text-align:left"><th>Contact</th><th>Followers</th><th>Statut</th><th>1er contact</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 // NB : l'intégration TikTok (edge tiktok-auth + table tiktok_accounts + 4 comptes connectés)
 // reste en place côté backend. Le panneau « Connecter TikTok » était temporaire (vérif app +
