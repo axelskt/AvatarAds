@@ -120,7 +120,10 @@ const card = (title: string, subtitle: string) => ({
 })
 const askMsg    = (rule: any) => card(rule.askTitle, rule.askSub)
 const notYetMsg = (rule: any) => card(rule.notyetTitle, rule.notyetSub)
-const linkMsg   = (rule: any) => ({ text: "C'est bon, merci de ton soutien 🙌 Voici le lien pour tester AvatarAds : " + rule.link })
+const linkMsg   = (url: string) => ({ text: "C'est bon, merci de ton soutien 🙌 Voici le lien pour tester AvatarAds : " + url })
+// Lien tracké : passe par avatarads.fr/r.html (logge le clic → CTR) puis redirige vers rule.link.
+const trackedLink = (igId: string, sender: string, dest: string) =>
+  'https://avatarads.fr/r.html?u=' + encodeURIComponent(sender) + '&ig=' + encodeURIComponent(igId) + '&to=' + encodeURIComponent(dest)
 
 async function alreadyDone(field: 'comment_id' | 'sender_id', value: string, kind: string): Promise<boolean> {
   const { data } = await svc.from('ig_dm_log').select('id').eq(field, value).eq('kind', kind).limit(1)
@@ -193,7 +196,7 @@ async function handleEvent(body: any) {
       const rule = await loadRule(igId)
       const follows = await isFollower(sender, token)
       if (follows === true) {
-        await sendMessage(igId, token, { id: sender }, linkMsg(rule))
+        await sendMessage(igId, token, { id: sender }, linkMsg(trackedLink(igId, sender, rule.link)))
         await logDm({ ig_id: igId, sender_id: sender, kind: 'link' })
         console.log('[ig-autodm] LIEN envoyé à', sender)
       } else {
