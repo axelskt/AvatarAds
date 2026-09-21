@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>AvatarAds</title>
+<meta http-equiv="refresh" content="0;url=https://avatarads.fr">
+<style>body{margin:0;background:#0f0f11;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}</style>
+</head>
+<body>
+<p>Redirection…</p>
+<script>
+  // Tracker de clic Auto-DM : logge le clic (sendBeacon, survit à la navigation) puis redirige.
+  const EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/ig-go';
+  const p = new URLSearchParams(location.search);
+  const u = p.get('u') || '', ig = p.get('ig') || '';
+  let to = p.get('to') || 'https://avatarads.fr';
+  try { const t = new URL(to); if (!/^https?:$/.test(t.protocol)) to = 'https://avatarads.fr'; } catch (e) { to = 'https://avatarads.fr'; }
+  try { if (u) navigator.sendBeacon(EDGE + '?log=1&u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig)); } catch (e) { /* ignore */ }
+  location.replace(to);
+</script>
+</body>
+</html>

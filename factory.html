@@ -151,6 +151,15 @@
   <div id="app" style="display:none">
     <h2 style="font-size:15px">À valider</h2>
     <div id="qcBanner"></div>
+    <h2 style="font-size:15px">Auto-DM Instagram <span style="font-weight:400;font-size:12px;color:var(--text-3)">— commentaire → DM · machine à data</span></h2>
+    <div class="card"><div class="cbody">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-primary" onclick="igConnect()">Connecter Instagram</button>
+        <span id="igAccounts" class="note" style="margin:0"></span>
+      </div>
+      <div class="kpis" id="igKpis"></div>
+      <div id="igContacts" style="margin-top:6px"></div>
+    </div></div>
     <h2 style="font-size:15px">Missions</h2>
     <div class="kpis" id="kpisMissions"></div>
     <h2 style="font-size:15px">Production</h2>
@@ -273,6 +282,50 @@ async function loadAll(){
   renderPool(bricks);
   renderCharts(bricks, recipes||[]);
   qcLoad();
+  igLoad();
+}
+
+// ── Auto-DM Instagram : bouton connexion (OAuth) + dashboard data (dev/owner) ──
+const IG_AUTH = SUPABASE_URL + '/functions/v1/instagram-auth';
+const igKpi = (n,l) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+async function igConnect(){
+  try{
+    const d = await (await fetch(IG_AUTH + '?action=authorize')).json();
+    if(d.authorize_url){ window.open(d.authorize_url, 'ig_oauth', 'width=560,height=760'); }
+  }catch(e){ /* ignore */ }
+}
+async function igLoad(){
+  // comptes connectés (OAuth)
+  try{
+    const a = await (await fetch(IG_AUTH + '?action=accounts')).json();
+    const accs = a.accounts || [];
+    $('igAccounts').innerHTML = accs.length
+      ? 'Connecté : ' + accs.map(x=>'<b>@'+esc(x.username||x.ig_id)+'</b>').join(' · ')
+      : 'Aucun compte connecté — clique « Connecter Instagram ».';
+  }catch(e){ $('igAccounts').textContent=''; }
+  // data (RPC owner/dev — ig_dm_log reste verrouillé)
+  const { data } = await sb.rpc('ig_dashboard_stats');
+  if(!data || data.error){ $('igKpis').innerHTML=''; $('igContacts').innerHTML=''; return; }
+  const conv = data.asks ? Math.round((data.links/data.asks)*100) : 0;
+  const ctr  = data.links ? Math.round((data.clicks/data.links)*100) : 0;
+  $('igKpis').innerHTML = [
+    igKpi((data.contacts||0).toLocaleString('fr-FR'), 'Leads (contacts)'),
+    igKpi((data.asks||0).toLocaleString('fr-FR'),     'DM d\'ouverture'),
+    igKpi((data.links||0).toLocaleString('fr-FR'),    'Liens envoyés'),
+    igKpi(conv+'%',                                   'Taux de conversion'),
+    igKpi((data.clicks||0).toLocaleString('fr-FR'),   'Clics sur le lien'),
+    igKpi(ctr+'%',                                    'CTR (clics/liens)')
+  ].join('');
+  const list = data.contacts_list || [];
+  if(!list.length){ $('igContacts').innerHTML = '<div class="note">Aucun lead encore — commente un mot-clé sous une publi pour tester.</div>'; return; }
+  const rows = list.map(c=>{
+    const st  = c.got_link ? '<span class="badge b-done">lien reçu</span>' : '<span class="badge b-pend">en attente</span>';
+    const clk = c.clicked ? ' <span class="badge b-done">cliqué</span>' : '';
+    const when = c.last_seen ? new Date(c.last_seen).toLocaleString('fr-FR') : '';
+    return '<tr><td style="font-family:var(--mono);font-size:11px">'+esc(String(c.sender_id).slice(0,16))+'…</td><td>'+st+clk+'</td><td style="font-size:11px;color:var(--text-3)">'+(c.events||0)+'</td><td style="font-size:11px;color:var(--text-3)">'+esc(when)+'</td></tr>';
+  }).join('');
+  $('igContacts').innerHTML = '<div class="subhdr" style="margin-top:12px">Leads récents <span class="muted" style="font-weight:400;font-size:12px;margin-left:auto">'+list.length+'</span></div>'
+    + '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="text-align:left"><th>Contact</th><th>Statut</th><th>Events</th><th>Dernier</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 // NB : l'intégration TikTok (edge tiktok-auth + table tiktok_accounts + 4 comptes connectés)
 // reste en place côté backend. Le panneau « Connecter TikTok » était temporaire (vérif app +
