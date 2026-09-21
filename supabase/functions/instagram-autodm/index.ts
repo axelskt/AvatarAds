@@ -82,13 +82,17 @@ async function loadRule(igId: string, mediaId?: string) {
   return base
 }
 
-// Un utilisateur suit-il le compte ? (API User Profile — dispo une fois en conversation)
-async function isFollower(igsid: string, token: string): Promise<boolean | null> {
+// Profil du lead (API User Profile — dispo une fois en conversation) : abonné ? + username + followers
+async function getProfile(igsid: string, token: string): Promise<{ follows: boolean | null, username: string | null, follower_count: number | null }> {
   try {
-    const r = await fetch(`${GRAPH}/${igsid}?fields=is_user_follow_business&access_token=${token}`)
+    const r = await fetch(`${GRAPH}/${igsid}?fields=is_user_follow_business,username,follower_count&access_token=${token}`)
     const j = await r.json().catch(() => ({}))
-    return typeof j.is_user_follow_business === 'boolean' ? j.is_user_follow_business : null
-  } catch { return null }
+    return {
+      follows: typeof j.is_user_follow_business === 'boolean' ? j.is_user_follow_business : null,
+      username: j.username || null,
+      follower_count: typeof j.follower_count === 'number' ? j.follower_count : null,
+    }
+  } catch { return { follows: null, username: null, follower_count: null } }
 }
 
 async function sendMessage(igId: string, token: string, recipient: unknown, message: unknown) {
@@ -183,7 +187,7 @@ async function handleEvent(body: any) {
       if (await alreadyDone('comment_id', commentId, 'ask')) continue   // dédup : 1 réponse / commentaire
       await replyToComment(commentId, token, pick(PUBLIC_REPLIES, commentId))   // réponse PUBLIQUE variée
       await sendMessage(igId, token, { comment_id: commentId }, askMsg(rule))    // DM privé + bouton
-      await logDm({ ig_id: igId, comment_id: commentId, sender_id: fromId, media_id: v.media?.id || null, kind: 'ask' })
+      await logDm({ ig_id: igId, comment_id: commentId, sender_id: fromId, username: v.from?.username || null, media_id: v.media?.id || null, kind: 'ask' })
       console.log('[ig-autodm] ASK + réponse publique sur commentaire', commentId)
     }
 
@@ -194,14 +198,16 @@ async function handleEvent(body: any) {
       const payload = m.postback?.payload || m.message?.quick_reply?.payload
       if (payload !== 'FOLLOW_CHECK') continue
       const rule = await loadRule(igId)
-      const follows = await isFollower(sender, token)
+      const prof = await getProfile(sender, token)
+      const follows = prof.follows
+      const meta = { username: prof.username, follower_count: prof.follower_count, follows }
       if (follows === true) {
         await sendMessage(igId, token, { id: sender }, linkMsg(trackedLink(igId, sender, rule.link)))
-        await logDm({ ig_id: igId, sender_id: sender, kind: 'link' })
+        await logDm({ ig_id: igId, sender_id: sender, kind: 'link', ...meta })
         console.log('[ig-autodm] LIEN envoyé à', sender)
       } else {
         await sendMessage(igId, token, { id: sender }, notYetMsg(rule))
-        await logDm({ ig_id: igId, sender_id: sender, kind: 'notyet' })
+        await logDm({ ig_id: igId, sender_id: sender, kind: 'notyet', ...meta })
         console.log('[ig-autodm] pas encore abonné', sender, '(follows=', follows, ')')
       }
     }
