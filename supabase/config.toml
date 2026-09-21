@@ -26,6 +26,9 @@ verify_jwt = false
 [functions.ig-go]
 verify_jwt = false
 
+[functions.ig-followup]
+verify_jwt = false
+
 [functions.whop-webhook]
 verify_jwt = false
 
