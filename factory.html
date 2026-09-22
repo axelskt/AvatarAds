@@ -152,12 +152,13 @@
     <h2 style="font-size:15px">À valider</h2>
     <div id="qcBanner"></div>
     <h2 style="font-size:15px">Auto-DM Instagram <span style="font-weight:400;font-size:12px;color:var(--text-3)">— commentaire → DM · machine à data</span></h2>
-    <div class="card"><div class="cbody">
+    <div class="card"><div class="cbody" style="height:auto">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn btn-primary" onclick="igConnect()">Connecter Instagram</button>
         <span id="igAccounts" class="note" style="margin:0"></span>
       </div>
       <div class="kpis" id="igKpis"></div>
+      <div id="igInsights"></div>
       <div id="igContacts" style="margin-top:6px"></div>
     </div></div>
     <h2 style="font-size:15px">Missions</h2>
@@ -312,6 +313,7 @@ async function igLoad(){
       ? 'Connecté : ' + accs.map(x=>'<b>@'+esc(x.username||x.ig_id)+'</b>').join(' · ')
       : 'Aucun compte connecté — clique « Connecter Instagram ».';
   }catch(e){ $('igAccounts').textContent=''; }
+  igLoadInsights();
   // data (RPC owner/dev — ig_dm_log reste verrouillé)
   const { data } = await sb.rpc('ig_dashboard_stats');
   if(!data || data.error){ $('igKpis').innerHTML=''; $('igContacts').innerHTML=''; return; }
@@ -344,6 +346,23 @@ async function igLoad(){
   }).join('');
   $('igContacts').innerHTML = '<div class="subhdr" style="margin-top:12px">Leads récents <span class="muted" style="font-weight:400;font-size:12px;margin-left:auto">'+list.length+'</span></div>'
     + '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="text-align:left"><th>Contact</th><th>Followers</th><th>Statut</th><th>1er contact</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+// Insights du compte (abonnés, publications, reach) — via instagram_business_manage_insights
+async function igLoadInsights(){
+  try{
+    const d = await (await fetch(SUPABASE_URL + '/functions/v1/ig-insights')).json();
+    if(!d || d.error){ $('igInsights').innerHTML=''; return; }
+    const ins = d.insights || {};
+    const cards = [
+      igKpi(d.followers_count!=null ? igFmtN(d.followers_count) : '—', 'Abonnés du compte'),
+      igKpi(d.media_count!=null ? d.media_count : '—', 'Publications')
+    ];
+    if(ins.reach!=null)         cards.push(igKpi(igFmtN(ins.reach), 'Reach (28j)'));
+    if(ins.profile_views!=null) cards.push(igKpi(igFmtN(ins.profile_views), 'Vues du profil'));
+    $('igInsights').innerHTML = '<div class="subhdr" style="margin-top:12px">Insights du compte'
+      + (d.username ? ' <span class="muted" style="font-weight:400;font-size:12px;margin-left:auto">@'+esc(d.username)+'</span>' : '')
+      + '</div><div class="kpis" style="margin-bottom:4px">'+cards.join('')+'</div>';
+  }catch(e){ $('igInsights').innerHTML=''; }
 }
 // NB : l'intégration TikTok (edge tiktok-auth + table tiktok_accounts + 4 comptes connectés)
 // reste en place côté backend. Le panneau « Connecter TikTok » était temporaire (vérif app +

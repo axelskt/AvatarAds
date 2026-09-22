@@ -9,7 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const IG_APP_ID  = Deno.env.get('IG_APP_ID') || '1101714336162805'   // ID d'app Instagram (public)
 const APP_SECRET = Deno.env.get('IG_APP_SECRET') || ''
 const REDIRECT   = 'https://avatarads.fr/ig-callback.html'
-const SCOPE      = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments'
+const SCOPE      = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_manage_insights'
 const SB_URL     = Deno.env.get('SUPABASE_URL') || ''
 const SERVICE    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const svc = createClient(SB_URL, SERVICE)

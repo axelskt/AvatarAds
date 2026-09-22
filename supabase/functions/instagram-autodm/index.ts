@@ -27,10 +27,10 @@ const svc = createClient(SB_URL, SERVICE)
 const DEF = {
   keywords: ['go', 'site', 'guide', 'plan', 'montage', 'avatar', 'aide', 'ia', 'ugc', 'direct', 'cafe', 'libre', 'lien', 'link', 'test'],
   link: 'https://avatarads.fr',
-  askTitle: 'Le lien est réservé aux abonnés 👀',
-  askSub: "Abonne-toi à AvatarAds puis clique le bouton, je te l'envoie direct.",
-  notyetTitle: "Tu n'es pas encore abonné 🙈",
-  notyetSub: 'Abonne-toi à AvatarAds, reviens ici et clique le bouton.',
+  askTitle: "Réservé aux abonnés 👀 Abonne-toi, clique le bouton et je te l'envoie direct",   // ≤ 80 car. (titre seul)
+  askSub: '',
+  notyetTitle: "Tu n'es pas encore abonné 🙈 Abonne-toi puis reviens cliquer le bouton",
+  notyetSub: '',
 }
 const BTN_LABEL = 'Je suis abonné'   // libellé du bouton (au lieu de « Following »)
 
@@ -118,10 +118,11 @@ async function replyToComment(commentId: string, token: string, text: string) {
 
 // Carte (generic template) : bouton INTÉGRÉ dans la bulle (style ManyChat) + libellé custom.
 // Le tap = postback silencieux (ne pollue pas la conv). title/subtitle ≤ 80 caractères.
-const card = (title: string, subtitle: string) => ({
-  attachment: { type: 'template', payload: { template_type: 'generic',
-    elements: [{ title, subtitle, buttons: [{ type: 'postback', title: BTN_LABEL, payload: 'FOLLOW_CHECK' }] }] } },
-})
+const card = (title: string, subtitle: string) => {
+  const el: any = { title, buttons: [{ type: 'postback', title: BTN_LABEL, payload: 'FOLLOW_CHECK' }] }
+  if (subtitle) el.subtitle = subtitle   // pas de sous-titre si vide → tout dans le titre
+  return { attachment: { type: 'template', payload: { template_type: 'generic', elements: [el] } } }
+}
 const askMsg    = (rule: any) => card(rule.askTitle, rule.askSub)
 const notYetMsg = (rule: any) => card(rule.notyetTitle, rule.notyetSub)
 const linkMsg   = (url: string) => ({ text: "C'est bon, merci de ton soutien 🙌 Voici le lien pour tester AvatarAds : " + url })
