@@ -42,6 +42,9 @@
     fetch(EDGE + '?action=exchange', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code }) })
       .then(r => r.json())
       .then(d => {
+        // Prévient la page qui a ouvert le popup (ex. ig-review.html pour l'App Review),
+        // pour qu'elle affiche le compte fraîchement connecté. No-op si pas d'opener.
+        if (window.opener) { try { window.opener.postMessage({ source:'ig-oauth', ok:!!d.ok, ig_id:d.ig_id, username:d.username, error:d.error }, location.origin); } catch(_){} }
         if (d.ok) show(CHECK + '<h1>Compte connecté</h1><p class="muted"><b>@' + esc(d.username || d.ig_id) + '</b> est branché à AvatarAds. Tu peux fermer cette fenêtre.</p>');
         else show(CROSS + '<h1>Erreur</h1><p class="muted">' + esc(d.error || 'inconnue') + '</p>');
       })

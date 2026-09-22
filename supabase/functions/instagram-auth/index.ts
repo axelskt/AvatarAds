@@ -62,11 +62,20 @@ Deno.serve(async (req) => {
     const userId = String(t1.user_id || '')
 
     // b) token court → token long (60j)
+    // ⚠️ Si cet échange échoue (compte non pro, token court invalide, rate limit…), on
+    // NE stocke PAS le token court : il meurt en ~1h et casse le dashboard/insights en
+    // silence (vécu le 22/09 : token court stocké → « Unsupported request » sur /me).
+    // On renvoie une erreur claire pour que l'utilisateur reconnecte proprement.
     const r2 = await fetch('https://graph.instagram.com/access_token?grant_type=ig_exchange_token'
       + `&client_secret=${encodeURIComponent(APP_SECRET)}&access_token=${encodeURIComponent(shortTok)}`)
     const t2 = await r2.json().catch(() => ({}))
-    const longTok = String(t2.access_token || shortTok)
-    const expiresIn = Number(t2.expires_in) || 0
+    if (!r2.ok || !t2.access_token) {
+      return json({ error: 'échange token long (60j) échoué : '
+        + (t2.error?.message || t2.error_message || `HTTP ${r2.status}`)
+        + ' — vérifie que le compte Instagram est bien un compte Professionnel (Business/Créateur).' }, 400)
+    }
+    const longTok = String(t2.access_token)
+    const expiresIn = Number(t2.expires_in) || 5184000  // 60j par défaut si l'API ne le renvoie pas
 
     // c) username (affichage)
     let username: string | null = null
