@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AvatarAds · App Review — Connexion Instagram</title>
+<style>
+  :root{
+    --bg:#faf7f2; --panel:#ffffff; --ink:#141414; --muted:#6b6b73; --line:#ececec;
+    --accent:#ff6b35; --ok:#1f9d55; --okbg:rgba(31,157,85,.10);
+  }
+  *{ box-sizing:border-box }
+  body{ margin:0; min-height:100vh; padding:32px 16px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; line-height:1.5;
+    display:flex; align-items:flex-start; justify-content:center }
+  .wrap{ width:100%; max-width:560px }
+  .brand{ font-size:22px; font-weight:800; letter-spacing:-.02em; margin:0 0 4px }
+  .brand b{ color:var(--accent) }
+  .sub{ color:var(--muted); font-size:13px; margin:0 0 22px }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:26px; margin-bottom:16px }
+  h2{ font-size:16px; margin:0 0 10px }
+  p{ margin:0 0 12px; font-size:14px }
+  .en{ color:var(--muted); font-size:13px }
+  .btn{ display:inline-flex; align-items:center; gap:9px; background:var(--accent); color:#fff; border:0;
+    font-size:15px; font-weight:700; padding:13px 22px; border-radius:12px; cursor:pointer; text-decoration:none }
+  .btn:active{ transform:translateY(1px) }
+  .steps{ margin:14px 0 0; padding:0; list-style:none; font-size:13px; color:var(--muted) }
+  .steps li{ padding:6px 0 6px 26px; position:relative }
+  .steps li::before{ content:attr(data-n); position:absolute; left:0; top:5px; width:18px; height:18px;
+    background:#f0ede7; border-radius:50%; font-size:11px; font-weight:700; color:var(--ink);
+    display:grid; place-items:center }
+  /* état connecté */
+  .result{ display:none }
+  .okrow{ display:flex; align-items:center; gap:12px; margin-bottom:18px }
+  .okic{ width:44px; height:44px; border-radius:50%; background:var(--okbg); display:grid; place-items:center; flex:0 0 auto }
+  .okrow h2{ margin:0; font-size:16px }
+  .okrow .u{ color:var(--muted); font-size:13px }
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
+  .stat{ background:#faf9f6; border:1px solid var(--line); border-radius:12px; padding:14px 12px }
+  .stat .n{ font-size:24px; font-weight:800; letter-spacing:-.02em }
+  .stat .l{ font-size:11px; color:var(--muted); margin-top:2px }
+  .foot{ font-size:11px; color:var(--muted); margin-top:16px }
+  .spin{ width:26px; height:26px; border:3px solid var(--line); border-top-color:var(--accent);
+    border-radius:50%; animation:r .8s linear infinite; display:inline-block; vertical-align:middle }
+  @keyframes r{ to{ transform:rotate(360deg) } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="brand">Avatar<b>Ads</b></p>
+    <p class="sub">App Review — Instagram professional account connection &amp; profile display</p>
+
+    <!-- avant connexion -->
+    <div class="card" id="connectCard">
+      <h2>Connectez un compte Instagram professionnel</h2>
+      <p>Cliquez sur le bouton ci-dessous pour autoriser AvatarAds via Instagram Business Login. Après
+         autorisation, les informations de profil (nom d'utilisateur, abonnés, publications) et les
+         statistiques (portée sur 28 jours) de VOTRE compte s'affichent ci-dessous.</p>
+      <p class="en">Click the button to authorize AvatarAds via Instagram Business Login. After you approve,
+         your Instagram professional account's profile info (username, followers, media count) and insights
+         (28-day reach) are displayed below — inside the app.</p>
+      <button class="btn" id="connectBtn" onclick="connect()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        Connecter Instagram
+      </button>
+      <ul class="steps">
+        <li data-n="1">Une fenêtre Instagram s'ouvre — connectez-vous à votre compte professionnel.</li>
+        <li data-n="2">Autorisez les accès demandés (profil, commentaires, messages, statistiques).</li>
+        <li data-n="3">Revenez sur cette page — votre profil et vos insights s'affichent automatiquement.</li>
+      </ul>
+    </div>
+
+    <!-- pendant -->
+    <div class="card" id="loadingCard" style="display:none">
+      <h2><span class="spin"></span>&nbsp;&nbsp;Récupération de votre profil…</h2>
+      <p class="en">Fetching your professional account profile &amp; insights…</p>
+    </div>
+
+    <!-- après connexion -->
+    <div class="card result" id="resultCard">
+      <div class="okrow">
+        <div class="okic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1f9d55" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div>
+          <h2>Compte connecté</h2>
+          <div class="u" id="rUser">@—</div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="stat"><div class="n" id="rFollowers">—</div><div class="l">Abonnés · Followers</div></div>
+        <div class="stat"><div class="n" id="rMedia">—</div><div class="l">Publications · Media</div></div>
+        <div class="stat"><div class="n" id="rReach">—</div><div class="l">Reach 28 j · Insights</div></div>
+      </div>
+      <p class="foot" id="rFoot">Ces informations proviennent de votre compte Instagram professionnel via l'API
+        Instagram (instagram_business_basic pour le profil, instagram_business_manage_insights pour la portée).</p>
+    </div>
+  </div>
+
+<script>
+  const EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1';
+  const IG_AUTH = EDGE + '/instagram-auth';
+  const IG_INSIGHTS = EDGE + '/ig-insights';
+  let pollTimer = null, connectedId = null;
+
+  function fmtN(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  const $ = id => document.getElementById(id);
+
+  async function connect(){
+    try{
+      const d = await (await fetch(IG_AUTH + '?action=authorize')).json();
+      if(d.authorize_url){
+        window.open(d.authorize_url, 'ig_oauth', 'width=560,height=760');
+        $('connectCard').style.display = 'none';
+        $('loadingCard').style.display = 'block';
+        // filet de sécurité : on interroge le profil régulièrement même si postMessage est raté
+        if(pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(()=>loadProfile(connectedId), 3000);
+      }
+    }catch(e){ /* ignore */ }
+  }
+
+  // le callback (ig-callback.html) renvoie l'id du compte fraîchement connecté
+  window.addEventListener('message', (e)=>{
+    const m = e.data;
+    if(!m || m.source !== 'ig-oauth') return;
+    if(m.ok){ connectedId = m.ig_id || null; loadProfile(connectedId); }
+  });
+
+  async function loadProfile(igId){
+    try{
+      const u = IG_INSIGHTS + (igId ? ('?ig_id=' + encodeURIComponent(igId)) : '');
+      const d = await (await fetch(u)).json();
+      if(!d || d.error || d.basic_error || d.username == null) return; // pas encore prêt → on retente
+      if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+      $('rUser').textContent = '@' + esc(d.username);
+      $('rFollowers').textContent = d.followers_count!=null ? fmtN(d.followers_count) : '—';
+      $('rMedia').textContent = d.media_count!=null ? d.media_count : '—';
+      const reach = d.insights && d.insights.reach!=null ? d.insights.reach : null;
+      $('rReach').textContent = reach!=null ? fmtN(reach) : 'n/a';
+      $('loadingCard').style.display = 'none';
+      $('resultCard').style.display = 'block';
+    }catch(e){ /* on retente au prochain tick */ }
+  }
+</script>
+</body>
+</html>
