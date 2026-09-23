@@ -10099,7 +10099,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
   if(_kieOn()){
     try{
       const _u = await _kieUpload(dataUrl);
-      const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:200 });   // 10 min : la file kie peut être longue
+      const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:300 });   // 15 min : kie est lent (4K mesurée à 9 min le 23/09) et il n'y a plus de repli
       const _d = await _kieDataUrl(_r.url);
       window._aaLastEngine = 'kie';
       return _d;
@@ -10192,7 +10192,7 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
     try{
       let _ar='auto'; try{ const _im=await _loadImgEl(targetDataUrl); _ar=_nbAspectFor(_im.naturalWidth,_im.naturalHeight); }catch(_){}
       const _u1=await _kieUpload(targetDataUrl), _u2=await _kieUpload(faceDataUrl);
-      const _r=await _kieRun('nano-banana-pro', { prompt, image_urls:[_u1,_u2], aspect_ratio:_ar, resolution:'1K' }, { every:3000, maxPolls:160 });
+      const _r=await _kieRun('nano-banana-pro', { prompt, image_urls:[_u1,_u2], aspect_ratio:_ar, resolution:'1K' }, { every:3000, maxPolls:300 });   // 15 min
       const _d=await _kieDataUrl(_r.url); window._aaLastEngine='kie'; return _d;
     }catch(e){
       console.warn('[kie] faceswap : échec kie', e);
@@ -13860,7 +13860,7 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
         _aud = await _kieUpload(_audioBufferToWavBlob(await _oc.startRendering()), 'wav');
       }
       const _r = await _kieRun('omnihuman-1.5', { image_url:sI.data.signedUrl, audio_url:_aud, resolution, prompt:_mtMotionPrompt('omnihuman', role) },
-        { every:5000, maxPolls: Math.min(144, 48 + 3*Math.ceil(Number(segSec)||0)) });
+        { every:5000, maxPolls:240 });   // 20 min (kie lent, pas de repli)
       window._aaLastEngine='kie';
       return await _kieFetchBlob(_r.url);
     }catch(e){
@@ -29660,7 +29660,7 @@ async function _mcGenerate(){
           const _r = await _kieRun(ver==='v3' ? 'kling-3.0-mc' : 'kling-2.6-mc',
             { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId).slice(0,2400),
               mode: tier==='pro' ? '1080p' : '720p', background_source:'input_image' },
-            { every:4000, maxPolls:165, onTick:(i)=>_mcProg(i>75?'Génération en cours… (kie.ai est chargé, ça arrive)':'Génération en cours… (kie.ai)', Math.min(88, 22+i*2)) });
+            { every:4000, maxPolls:375, onTick:(i)=>_mcProg(i>75?'Génération en cours… (kie.ai est chargé, ça arrive)':'Génération en cours… (kie.ai)', Math.min(88, 22+i*2)) });
           window._aaLastEngine='kie';
           return _r.url;
         }catch(e){
@@ -30854,7 +30854,7 @@ async function expressCreate(){
         setP(Math.max(p,30), 'Génération de la vidéo (kie.ai)…');
         const _kImg = await _kieUpload('data:'+imgMime+';base64,'+imgB64);
         const _kr = await _kieRun(/fast/.test(_veoModel) ? 'veo3-fast' : 'veo3-lite',
-          { prompt: animPrompt, image_url:_kImg, aspect_ratio: window._expFormat, resolution:_res, duration:_dur }, { every:5000, maxPolls:144 });
+          { prompt: animPrompt, image_url:_kImg, aspect_ratio: window._expFormat, resolution:_res, duration:_dur }, { every:5000, maxPolls:240 });   // 20 min
         _kieBlob = await _kieFetchBlob(_kr.url);
         window._aaLastEngine='kie';
       }catch(e){
