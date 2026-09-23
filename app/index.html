@@ -28494,7 +28494,17 @@ const EXP_MODELS = [
   { v:'omni',     name:'Omni Flash',   sub:'Qualité Max' },
   { v:'pro',      name:'Veo Fast',     sub:'kie.ai · dev', dev:true },   // test kie.ai : compte developer seulement
 ];
-function _expModelsVisible(){ return EXP_MODELS.filter(m=>!m.dev || _kieOn()); }
+function _expModelsVisible(){
+  const kie=_kieOn();
+  return EXP_MODELS.filter(m=>!m.dev || kie).map(m=>{
+    if(!kie) return m;   // clients : cartes inchangées
+    if(m.v==='standard') return { ...m, sub:'kie.ai · dev' };
+    if(m.v==='omni')     return { ...m, sub:'kie.ai · 1080p' };
+    return m;
+  });
+}
+// Omni Flash via kie (compte dev) : TOUJOURS 1080p (même prix que 720p chez kie) → 720p masqué et refusé.
+function _expOmniKie(){ return window._expVeoModel==='omni' && typeof _kieOn==='function' && _kieOn(); }
 function _expModelAllowed(v){
   if(v==='omni') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
   if(v==='pro') return _kieOn();   // Veo Fast : réservé au test kie.ai du compte developer
@@ -28568,7 +28578,8 @@ function initExpress(){
   if(qr){
     const _isOmniQ = window._expVeoModel==='omni'; // Omni fait du 1080p natif à toute durée → pas de « dès 8 s »
     const _dur8=(parseInt(window._expDur)||4)>=8; // 1080p Veo dispo dès 8 s (y compris durées longues Élite)
-    qr.innerHTML = EXP_QUALITIES.map(q=>{
+    if(_expOmniKie()) window._expQuality='1080p';   // kie : 1080p imposé
+    qr.innerHTML = EXP_QUALITIES.filter(q=>!(q.v==='720p' && _expOmniKie())).map(q=>{
       const on=q.v===window._expQuality;
       const _lk = (q.v==='1080p' && !_exp1080Allowed());   // 1080p = Pro/Élite → CADENAS (icône seule, aucun texte « Pro »)
       // note « dès 8 s » = Veo seul (jamais Omni), et masquée si verrouillé
@@ -28689,6 +28700,7 @@ function _expPickFormat(v){
 }
 function _exp1080Allowed(){ return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase()); }
 function _expPickQual(v){
+  if(v==='720p' && _expOmniKie()){ toast('Omni Flash via kie : toujours en 1080p (même prix que le 720p)'); window._expQuality='1080p'; initExpress(); return; }
   // 1080p = Pro/Élite : cadenas dans l'UI + blocage au clic (le clic sur Générer revérifie aussi).
   if(v==='1080p' && !_exp1080Allowed()){ toast('La 1080p est réservée aux plans Pro et Élite'); showPaywall(); return; }
   // Choisir 1080p FORCE 8 s minimum (limite Veo). Si on avait forcé le 8 s DEPUIS le mode Libre,
@@ -39531,9 +39543,11 @@ window._mExpSync=function(){
     var _ix=_al.indexOf(d); if(_ix<0) _ix=0;
     rg.value=_ix; _mExpFill(rg,_ix);
   }
+  if(typeof _expOmniKie==='function' && _expOmniKie()) window._expQuality='1080p';   // kie : 1080p imposé
   var q=(window._expQuality||'720p');
   var qv=document.getElementById('mExpQualVal'); if(qv) qv.textContent=q;
   var q720=document.getElementById('mExpQual720'), q1080=document.getElementById('mExpQual1080');
+  if(q720) q720.style.display=(typeof _expOmniKie==='function' && _expOmniKie()) ? 'none' : '';
   if(q720&&q1080){
     var is1080=(q==='1080p');
     q720.style.background=is1080?'transparent':'var(--surface-2)'; q720.style.color=is1080?'var(--text-3)':'var(--text)';
