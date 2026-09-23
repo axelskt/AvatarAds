@@ -30669,7 +30669,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   // est un forfait par clip identique en 720p et 1080p → 1080p toujours (Axel 23/09). Durées kie : 4/6/8/10 s (arrondi
   // au-dessus) ; 9:16 / 16:9 seulement (pas de carré chez kie). Aucun repli : kie ou l'erreur. Les clients restent sur fal.
   if(_kieOn()){
-    if(window._expFormat==='1:1') throw new Error('Omni Flash via kie : format carré indisponible chez kie — choisis 9:16 ou 16:9');
+    if(window._expFormat==='1:1'){ window._expFormat='9:16'; toast('Carré indisponible chez kie — vidéo générée en 9:16'); }   // kie : 9:16 / 16:9 seulement
     step(42,'Omni Flash (kie.ai) — génération…');
     const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
       duration: Math.max(4, Math.min(10, Math.round(durSec)||6)) }, { every:5000, maxPolls:240,
