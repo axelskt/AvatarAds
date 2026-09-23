@@ -28681,9 +28681,9 @@ function _expEstimateDur(){
   // cassait sur le « interne et ne lisait que le marqueur court « SITE » → durée estimée à 4 s au lieu de ~13 s.
   const m=p.match(/[«"“”]([\s\S]{3,})[»"“”]/);
   const spoken=(m?m[1]:p).replace(/\s+/g,' ').trim();
-  // ~14 caractères / seconde parlée. Omni kie : 0,5 s de marge minimum avant la fin du cran (≈ 0,3 s de silence avant le
-  // 1er mot) — la coupe à la fin de la parole enlève ensuite le silence, la marge ne coûte un cran que près d'une limite.
-  const secs = _expOmniKie() ? Math.max(4, spoken.length/14 + 0.5) : Math.max(4, Math.ceil(spoken.length/14));
+  // ~14 caractères / seconde parlée, arrondi à la seconde puis au cran au-dessus. AUCUNE marge, Omni kie compris
+  // (Axel 24/09 : « Omni Flash gère bien ») ; la coupe à la fin de la parole enlève le silence restant.
+  const secs = Math.max(4, Math.ceil(spoken.length/14));
   // AUTO = la durée qu'il FAUT selon le texte, calée sur le cran autorisé juste au-dessus.
   // Hors Élite : Veo cape à 8 s / clip. Élite / dev : extensions jusqu'à 29 s (au-delà = Montage IA).
   const ladder = _expDurAllowed();   // Veo 4/6/8 · Omni fal 3→10 · Omni kie 4/6/8/10 (voir _expDurAllowed)
