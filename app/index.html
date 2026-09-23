@@ -10104,7 +10104,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
       window._aaLastEngine = 'kie';
       return _d;
     }catch(e){
-      console.warn('[kie] Nano Banana Pro → repli Google', e);
+      console.warn('[kie] Nano Banana Pro : échec kie', e);
       if(e && e._kieRefus){ const r=new Error('Nano Banana Pro a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
       if(!_kieCanFallback(e)) throw e;
     }
@@ -10195,7 +10195,7 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
       const _r=await _kieRun('nano-banana-pro', { prompt, image_urls:[_u1,_u2], aspect_ratio:_ar, resolution:'1K' }, { every:3000, maxPolls:160 });
       const _d=await _kieDataUrl(_r.url); window._aaLastEngine='kie'; return _d;
     }catch(e){
-      console.warn('[kie] faceswap → repli Google', e);
+      console.warn('[kie] faceswap : échec kie', e);
       if(e && e._kieRefus){ const r=new Error('Faceswap refusé — '+e.message); r._kieStage='failed'; throw r; }
       if(!_kieCanFallback(e)) throw e;
     }
@@ -13864,7 +13864,7 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
       window._aaLastEngine='kie';
       return await _kieFetchBlob(_r.url);
     }catch(e){
-      console.warn('[kie] OmniHuman → repli fal', e);
+      console.warn('[kie] OmniHuman : échec kie', e);
       if(e && e._kieRefus) throw new Error('OmniHuman (kie) a refusé ce contenu — '+e.message);
       if(!_kieCanFallback(e)) throw e;
       window._aaLastEngine='fal';
@@ -30858,7 +30858,7 @@ async function expressCreate(){
         _kieBlob = await _kieFetchBlob(_kr.url);
         window._aaLastEngine='kie';
       }catch(e){
-        console.warn('[kie] Veo → repli Google', e);
+        console.warn('[kie] Veo : échec kie', e);
         if(e && e._kieRefus) throw new Error('Veo (kie.ai) a refusé ce contenu — '+e.message);
         if(!_kieCanFallback(e)) throw e;
         toast('kie.ai indisponible — repli Google');
