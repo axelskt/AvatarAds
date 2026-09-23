@@ -28505,6 +28505,12 @@ function _expModelsVisible(){
 }
 // Omni Flash via kie (compte dev) : TOUJOURS 1080p (même prix que 720p chez kie) → 720p masqué et refusé.
 function _expOmniKie(){ return window._expVeoModel==='omni' && typeof _kieOn==='function' && _kieOn(); }
+// kie impose le 1080p à Omni SANS écraser le choix de l'user : dès qu'on quitte Omni kie, sa qualité (720p) revient.
+// (Sinon le 1080p imposé restait actif sur Veo → 8 s forcé ou toast « 1080p dispo à partir de 8 s » jamais demandé.)
+function _expKieQualSync(){
+  if(_expOmniKie()){ if(window._expQuality!=='1080p'){ window._expQualityKieForced=true; window._expQuality='1080p'; } }
+  else if(window._expQualityKieForced){ window._expQualityKieForced=false; window._expQuality='720p'; }
+}
 function _expModelAllowed(v){
   if(v==='omni') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
   if(v==='pro') return _kieOn();   // Veo Fast : réservé au test kie.ai du compte developer
@@ -28527,11 +28533,16 @@ function _expRenderModels(){
 function _expPickModel(v){
   if(!_expModelAllowed(v)){ if(v==='pro') return; toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
   window._expVeoModel=v; if(v!=='omni' && window._expFormat==='1:1') window._expFormat='9:16';
-  if(!window._expDurAuto){ const _a=_expDurAllowed(), _d=parseInt(window._expDur)||_a[0]; window._expDur=_a.reduce((b,x)=>Math.abs(x-_d)<Math.abs(b-_d)?x:b,_a[0]); }
+  _expKieQualSync();
+  if(v==='omni' && window._exp1080Forced){ window._exp1080Forced=false; window._expDurAuto=true; }   // le 8 s forcé était une limite Veo → Omni repasse en Libre
+  if(!window._expDurAuto){ const _a=_expDurAllowed(), _d=parseInt(window._expDur)||_a[0]; window._expDur=_a.find(x=>x>=_d)||_a[_a.length-1]; }   // cran AU-DESSUS (jamais une réplique coupée)
+  // Omni → Veo en 1080p avec une durée FIXE < 8 s → 720p (limite Veo, comme _expSetDur). En Libre, initExpress cale 8 s.
+  if(v!=='omni' && window._expQuality==='1080p' && !window._expDurAuto && (parseInt(window._expDur)||4)<8){ window._expQuality='720p'; toast('1080p dispo à partir de 8 s → qualité repassée en 720p'); }
   initExpress();
 }
 
 function initExpress(){
+  _expKieQualSync();   // AVANT la durée : la règle Veo « 1080p dès 8 s » doit lire la vraie qualité de l'user
   // Style grid
   const sg = document.getElementById('expStyleGrid');
   if(sg){
@@ -28561,7 +28572,11 @@ function initExpress(){
     // la durée sur le script. L'user peut aussi choisir une durée fixe au slider (1..N). (Axel 08/09 — plan original)
     const _isOmniDur = (window._expVeoModel==='omni');
     const _da=_expDurAllowed();
-    if(window._expDurAuto) window._expDur = _isOmniDur ? _da[_da.length-1] : _expEstimateDur().dur;
+    if(!window._expDurAuto && !_da.includes(parseInt(window._expDur))) window._expDur = _da.find(x=>x>=(parseInt(window._expDur)||_da[0])) || _da[_da.length-1];   // durée hors crans (ex. 5 s quand kie s'allume) → cran au-dessus
+    // Omni kie (dev) : forfait PAR CLIP, sans ajustement à la seconde → Libre = durée du script (cran 4/6/8/10 au-dessus),
+    // jamais 10 s d'office (0,63 $ au lieu de 0,42 $ pour une réplique de 6 s).
+    if(window._expDurAuto) window._expDur = (_isOmniDur && !_expOmniKie()) ? _da[_da.length-1] : _expEstimateDur().dur;
+    if(window._expDurAuto && !_isOmniDur && window._expQuality==='1080p' && (parseInt(window._expDur)||4)<8) window._expDur=8;   // Veo 1080p = 8 s minimum : le bouton affiche ce qui sera généré et débité
     ds.min=0; ds.max=_da.length; ds.step=1;   // position 0 = Libre (Omni ET Veo)
     ds.value = window._expDurAuto ? 0 : Math.max(1, _da.indexOf(parseInt(window._expDur)||_da[0])+1);
     const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Libre' : ((window._expDur||_da[0])+' s');
@@ -28570,7 +28585,7 @@ function initExpress(){
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display='none';   // plus de durées +8 s (extensions retirées le 23/09)
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint');
-    if(_ah){ const _ov=(!_isOmniDur && window._expDurAuto && _expEstimateDur().over); _ah.textContent=_ov?'Texte long : Veo s’arrête à 8 s — passe sur Omni Flash (10 s) ou Montage IA pour une vidéo plus longue':''; _ah.style.display=_ov?'block':'none'; }
+    if(_ah){ const _ov=((!_isOmniDur || _expOmniKie()) && window._expDurAuto && _expEstimateDur().over); _ah.textContent=_ov?(_isOmniDur?'Texte long : Omni Flash s’arrête à 10 s — raccourcis la réplique ou passe par Montage IA':'Texte long : Veo s’arrête à 8 s — passe sur Omni Flash (10 s) ou Montage IA pour une vidéo plus longue'):''; _ah.style.display=_ov?'block':'none'; }
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
@@ -28578,7 +28593,7 @@ function initExpress(){
   if(qr){
     const _isOmniQ = window._expVeoModel==='omni'; // Omni fait du 1080p natif à toute durée → pas de « dès 8 s »
     const _dur8=(parseInt(window._expDur)||4)>=8; // 1080p Veo dispo dès 8 s (y compris durées longues Élite)
-    if(_expOmniKie()) window._expQuality='1080p';   // kie : 1080p imposé
+    _expKieQualSync();   // kie : 1080p imposé sur Omni (qualité de l'user rendue ailleurs)
     qr.innerHTML = EXP_QUALITIES.filter(q=>!(q.v==='720p' && _expOmniKie())).map(q=>{
       const on=q.v===window._expQuality;
       const _lk = (q.v==='1080p' && !_exp1080Allowed());   // 1080p = Pro/Élite → CADENAS (icône seule, aucun texte « Pro »)
@@ -28650,7 +28665,7 @@ function _expHeroSync(){
 // (0 débit « express-ext » en 60 jours). Le vrai correctif (Fast 720p + réplique découpée par extension) change le
 // tarif Élite : en attente de la décision d'Axel. Au-delà de 8 s → Omni Flash (10 s) ou Montage IA.
 function _expDurAllowed(){
-  if(window._expVeoModel==='omni') return [3,4,5,6,7,8,9,10];   // Omni Flash : à la seconde, 3→10 s (pas d'extensions)
+  if(window._expVeoModel==='omni') return _expOmniKie() ? [4,6,8,10] : [3,4,5,6,7,8,9,10];   // Omni Flash : fal à la seconde 3→10 s ; kie (dev) = crans 4/6/8/10 s seulement
   return [4,6,8];
 }
 // ── DURÉE AUTO (défaut) : cale la durée sur la longueur du texte PARLÉ du prompt ──
@@ -28666,14 +28681,14 @@ function _expEstimateDur(){
   // cassait sur le « interne et ne lisait que le marqueur court « SITE » → durée estimée à 4 s au lieu de ~13 s.
   const m=p.match(/[«"“”]([\s\S]{3,})[»"“”]/);
   const spoken=(m?m[1]:p).replace(/\s+/g,' ').trim();
-  const secs=Math.max(4, Math.ceil(spoken.length/14));   // ~14 caractères / seconde parlée
+  const secs=Math.max(4, Math.ceil(spoken.length/14) + (_expOmniKie()?1:0));   // ~14 caractères / seconde parlée (+1 s de marge sur Omni kie : durée fixe au cran, jamais de réplique coupée)
   // AUTO = la durée qu'il FAUT selon le texte, calée sur le cran autorisé juste au-dessus.
   // Hors Élite : Veo cape à 8 s / clip. Élite / dev : extensions jusqu'à 29 s (au-delà = Montage IA).
-  const ladder = (window._expVeoModel==='omni') ? [3,4,5,6,7,8,9,10] : [4,6,8];   // Veo : 8 s max pour tous (voir _expDurAllowed)
+  const ladder = _expDurAllowed();   // Veo 4/6/8 · Omni fal 3→10 · Omni kie 4/6/8/10 (voir _expDurAllowed)
   const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
   return { dur, over: secs>ladder[ladder.length-1] };
 }
-function _expApplyAutoDur(){ if(!window._expDurAuto) return; initExpress(); }   // Libre : Omni=10 s max · Veo=estimation (durée posée dans initExpress)
+function _expApplyAutoDur(){ if(!window._expDurAuto) return; initExpress(); }   // Libre : Omni fal=10 s max · Omni kie (dev) et Veo=estimation du script (durée posée dans initExpress)
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
 // Slider durée : position 0 = AUTO (le système / Veo cale la durée sur le texte parlé, défaut) ;
 // 1..N = durées Veo manuelles (4/6/8). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
@@ -28689,7 +28704,7 @@ function _expSetDur(v){
   window._expDur=d;
   const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent=d+' s';
   // 1080p exige au moins 8 s (limite Google) → repli auto sur 720p si durée plus courte
-  if(window._expQuality==='1080p' && d<8){ window._expQuality='720p'; toast('1080p dispo à partir de 8 s → qualité repassée en 720p'); }
+  if(window._expVeoModel!=='omni' && window._expQuality==='1080p' && d<8){ window._expQuality='720p'; toast('1080p dispo à partir de 8 s → qualité repassée en 720p'); }   // limite Veo seulement : Omni fait du 1080p à toute durée
   initExpress(); // re-render : état grisé/actif du 1080p selon la durée
 }
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
@@ -28712,6 +28727,7 @@ function _expPickQual(v){
   } else {
     if(window._exp1080Forced){ window._exp1080Forced=false; window._expDurAuto=true; }   // retour Libre
   }
+  if(!_expOmniKie()) window._expQualityKieForced=false;   // sur Omni kie, re-cliquer 1080p (imposé) ne doit pas effacer le 720p de l'user
   window._expQuality=v; initExpress();
 }
 
@@ -30684,7 +30700,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     if(window._expFormat==='1:1'){ window._expFormat='9:16'; toast('Carré indisponible chez kie — vidéo générée en 9:16'); }   // kie : 9:16 / 16:9 seulement
     step(42,'Omni Flash (kie.ai) — génération…');
     const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
-      duration: Math.max(4, Math.min(10, Math.round(durSec)||6)) }, { every:5000, maxPolls:240,
+      duration: ([4,6,8,10].find(x=>x>=(Math.round(durSec)||6))||10) }, { every:5000, maxPolls:240,
       onTick:(i)=>step(Math.min(88,42+i), 'Omni Flash (kie.ai) — génération…') });
     step(90,'↓ Récupération de la vidéo…');
     const _vb = await _kieFetchBlob(_kr.url);
@@ -30769,7 +30785,8 @@ async function expressCreate(){
   let _dur = _reqDur;
   let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
   if(_isOmni){
-    _dur = Math.min(10, Math.max(3, _reqDur));   // Omni Flash 3-10 s : durée auto-suivie sur le script (ou choix user), débit ajusté au réel plus bas
+    _dur = _expOmniKie() ? ([4,6,8,10].find(x=>x>=_reqDur)||10)   // Omni kie (dev) : crans 4/6/8/10 s (arrondi au-dessus, comme kie-proxy)
+                         : Math.min(10, Math.max(3, _reqDur));   // Omni Flash 3-10 s : durée auto-suivie sur le script (ou choix user), débit ajusté au réel plus bas
   } else {
     _dur = _dur<=4?4:(_dur<=6?6:8);   // Veo : 4/6/8 s (plus d'extensions de scène, voir _expDurAllowed)
     if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
@@ -31032,7 +31049,9 @@ function expressReset(){
   const vid=document.getElementById('expResultVid'); if(vid){ try{ vid.pause(); }catch(_){} vid.style.display='none'; vid.removeAttribute('src'); }
   const ph=document.getElementById('expResultPlaceholder'); if(ph) ph.style.display='flex';   // .col (flex), pas 'block' (sinon icône décalée)
   const acts=document.getElementById('expResultActions'); if(acts) acts.style.display='none';
-  try{ if(typeof _expSetDur==='function' && typeof _expDurAllowed==='function'){ _expSetDur(_expDurAllowed()[0]); const sl=document.getElementById('expDurSlider'); if(sl){ sl.value=0; if(typeof _aaSliderFill==='function') _aaSliderFill(sl); } } }catch(_){}
+  // Durée → Libre (position 0 du curseur). Avant : _expSetDur(min) SORTAIT du Libre tout en remettant le curseur sur 0
+  // → Omni générait 3 s (réplique coupée) et l'estimation ne suivait plus le texte. Veo en 1080p : initExpress cale 8 s.
+  try{ window._exp1080Forced=false; window._expDurAuto=true; if(typeof initExpress==='function') initExpress(); }catch(_){}
 }
 // ── Sous-titres Express : modal style → Whisper IA → incrustation → téléchargement direct ──
 function expressAddSubs(){
@@ -39543,7 +39562,7 @@ window._mExpSync=function(){
     var _ix=_al.indexOf(d); if(_ix<0) _ix=0;
     rg.value=_ix; _mExpFill(rg,_ix);
   }
-  if(typeof _expOmniKie==='function' && _expOmniKie()) window._expQuality='1080p';   // kie : 1080p imposé
+  if(typeof _expKieQualSync==='function') _expKieQualSync();   // kie : 1080p imposé sur Omni (qualité de l'user rendue ailleurs)
   var q=(window._expQuality||'720p');
   var qv=document.getElementById('mExpQualVal'); if(qv) qv.textContent=q;
   var q720=document.getElementById('mExpQual720'), q1080=document.getElementById('mExpQual1080');
