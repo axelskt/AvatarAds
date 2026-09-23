@@ -96,17 +96,14 @@ export function kieKindOf(ct: string, buf: ArrayBuffer): { ext: string; mime: st
   return null
 }
 
-// Propriété d'une tâche : TOUTES les URL d'entrée enregistrées par kie (image_input, input_urls, video_urls, image_url,
-// audio_url, imageUrls…) doivent être des URL signées du dossier de ce user. Jamais une sous-chaîne du prompt.
+// Propriété d'une tâche : on relève TOUTES les URL signées de notre bucket présentes dans le `param` enregistré par kie
+// (quelle que soit sa structure : champ d'entrée, tableau, JSON imbriqué…) ; il en faut au moins une, et TOUTES doivent
+// venir du dossier de ce user. Sûr : kie-proxy n'accepte en entrée que des URL du dossier de l'appelant, et un tiers ne
+// peut pas faire apparaître SON uid dans la tâche d'un autre (la tâche d'un autre ne contient que les URL de l'autre).
 export function kieOwnedBy(param: string, uid: string, storeSign: string): boolean {
-  const prefix = storeSign + uid + '/'
-  const urls: string[] = []
-  const walk = (n: unknown, k = '', depth = 0) => {
-    if (depth > 6 || n == null) return
-    if (typeof n === 'string') { if (/url|image_input/i.test(k) && !/callback/i.test(k)) urls.push(n); return }
-    if (Array.isArray(n)) { for (const v of n) walk(v, k, depth + 1); return }
-    if (typeof n === 'object') for (const [kk, v] of Object.entries(n as Record<string, unknown>)) walk(v, kk, depth + 1)
-  }
-  try { walk(JSON.parse(param)) } catch { return false }
-  return urls.length > 0 && urls.every((u) => u.startsWith(prefix))
+  const esc = storeSign.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(esc + '([0-9a-fA-F-]{36})/', 'g')
+  const owners = [...String(param || '').matchAll(re)].map((m) => m[1].toLowerCase())
+  return owners.length > 0 && owners.every((o) => o === String(uid).toLowerCase())
 }
+
