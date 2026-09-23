@@ -9261,6 +9261,7 @@ async function _imgMakeRealistic(btn){
       url = await _nbRefine4K(token, dataUrl, aspect);
       if(!url) throw new Error('Nano Banana Pro : aucune image');
     }catch(e){
+      if(e && e._kieStage) throw e;   // compte dev sur kie : pas de repli (Axel 23/09)
       engine='gpt-image';
       console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
       const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
@@ -10094,7 +10095,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
       return _d;
     }catch(e){
       console.warn('[kie] Nano Banana Pro → repli Google', e);
-      if(e && e._kieRefus) throw new Error('Nano Banana Pro a refusé cette image ('+e.message+')');
+      if(e && e._kieRefus){ const r=new Error('Nano Banana Pro a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
       if(!_kieCanFallback(e)) throw e;
     }
   }
@@ -10185,7 +10186,7 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
       const _d=await _kieDataUrl(_r.url); window._aaLastEngine='kie'; return _d;
     }catch(e){
       console.warn('[kie] faceswap → repli Google', e);
-      if(e && e._kieRefus) throw new Error('Faceswap refusé — '+e.message);
+      if(e && e._kieRefus){ const r=new Error('Faceswap refusé — '+e.message); r._kieStage='failed'; throw r; }
       if(!_kieCanFallback(e)) throw e;
     }
   }
@@ -10202,10 +10203,9 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
 // Mêmes modèles, MÊMES prompts backend : seul le fournisseur change (kie ≈ −20 à −70 %). Le serveur (kie-proxy)
 // revérifie le plan developer. Panne technique kie → repli automatique sur le fournisseur habituel.
 // kie n'a ni DPA ni garantie RGPD → jamais pour les clients tant que ce n'est pas tranché.
-// Réglages (console du compte dev) : localStorage aa_kie='0' coupe kie · aa_kie_nofallback='1' interdit le repli.
+// Réglage (console du compte dev) : localStorage aa_kie='0' coupe kie (retour aux fournisseurs habituels). Aucun repli automatique.
 const KIE_PROXY = SUPABASE_URL + '/functions/v1/kie-proxy';
 function _kieOn(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer' && localStorage.getItem('aa_kie')!=='0'; }catch(_){ return false; } }
-function _kieNoFallback(){ try{ return localStorage.getItem('aa_kie_nofallback')==='1'; }catch(_){ return false; } }
 function _kieTag(){ const t = (window._aaLastEngine==='kie' && _kieOn()) ? ' · kie.ai' : ''; window._aaLastEngine=''; return t; }
 // Dépose une entrée (Blob, File ou data-URL) dans render-media/<uid>/kie-in/ → URL signée 1 h lisible par kie.
 async function _kieUpload(src, ext){
@@ -10265,9 +10265,9 @@ async function _kieRun(alias, body, opt){
   }
   throw fail('kie : délai dépassé (tâche '+rid+' toujours en cours chez kie)', 'pending');
 }
-// Repli vers le fournisseur habituel : seulement si RIEN n'a été lancé chez kie (ou si kie a échoué sans facturer),
-// jamais sur un refus de contenu, jamais si aa_kie_nofallback='1'.
-function _kieCanFallback(e){ return !!e && !e._kieRefus && (e._kieStage==='submit' || e._kieStage==='failed') && !_kieNoFallback(); }
+// Axel 23/09 : AUCUN repli sur le compte developer — kie ou l'erreur, jamais Google / fal / gpt-image en secours
+// (plus simple à lire pendant le test, et jamais une génération payée deux fois). Les clients gardent leurs replis.
+function _kieCanFallback(e){ return false; }
 // Récupère le média rapatrié (URL signée de NOTRE storage) : contrôle HTTP + 3 essais.
 async function _kieFetchBlob(url){
   for(let k=0; k<3; k++){
@@ -18554,6 +18554,7 @@ async function _avGen4K(btn){
     try{
       up = await _nbRefine4K(token, src, '9:16');
     }catch(nbErr){
+      if(nbErr && nbErr._kieStage) throw nbErr;   // compte dev sur kie : pas de repli fal (Axel 23/09)
       // Google (gemini-3-pro-image) saturé → MÊME modèle via fal.ai (fournisseur non saturé).
       // UI neutre : on ne montre PAS « Google saturé/fal.ai » à l'utilisateur (Axel 31/08), le timer continue.
       console.warn('Nano Banana 4K (Google) KO → repli Nano Banana Pro via fal.ai :', nbErr);
