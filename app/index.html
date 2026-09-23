@@ -28681,7 +28681,9 @@ function _expEstimateDur(){
   // cassait sur le « interne et ne lisait que le marqueur court « SITE » → durée estimée à 4 s au lieu de ~13 s.
   const m=p.match(/[«"“”]([\s\S]{3,})[»"“”]/);
   const spoken=(m?m[1]:p).replace(/\s+/g,' ').trim();
-  const secs=Math.max(4, Math.ceil(spoken.length/14) + (_expOmniKie()?1:0));   // ~14 caractères / seconde parlée (+1 s de marge sur Omni kie : durée fixe au cran, jamais de réplique coupée)
+  // ~14 caractères / seconde parlée. Omni kie : 0,5 s de marge minimum avant la fin du cran (≈ 0,3 s de silence avant le
+  // 1er mot) — la coupe à la fin de la parole enlève ensuite le silence, la marge ne coûte un cran que près d'une limite.
+  const secs = _expOmniKie() ? Math.max(4, spoken.length/14 + 0.5) : Math.max(4, Math.ceil(spoken.length/14));
   // AUTO = la durée qu'il FAUT selon le texte, calée sur le cran autorisé juste au-dessus.
   // Hors Élite : Veo cape à 8 s / clip. Élite / dev : extensions jusqu'à 29 s (au-delà = Montage IA).
   const ladder = _expDurAllowed();   // Veo 4/6/8 · Omni fal 3→10 · Omni kie 4/6/8/10 (voir _expDurAllowed)
@@ -30660,6 +30662,25 @@ async function _expCreateSeedance(prompt){
 // ⚡ Omni Flash pour Express : fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
 // Renvoie le blob vidéo. Même chaîne que le module Omni (upload image → submit → poll status/result).
 // Mesure la durée réelle d'un blob vidéo (pour débiter Omni au réel, jamais plus que produit).
+// Fin de la PAROLE dans un clip (Axel 24/09) : Omni / Veo remplissent toute la durée demandée (crans fixes) → la voix
+// s'arrête avant la fin (mesuré : 4,8 s de voix dans un clip de 6 s). On décode l'audio (WebAudio, sur l'appareil),
+// RMS par fenêtres de 50 ms, seuil RELATIF au pic (−25 dB, plancher −45 dBFS) → instant de la dernière fenêtre parlée.
+// Renvoie { end, dur } en secondes, ou null (pas d'audio / rien d'audible).
+async function _expSpeechEnd(blob){
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext; if(!OAC) return null;
+  const ab = await blob.arrayBuffer();
+  const ctx = new OAC(1, 1, 44100);
+  const buf = await new Promise((res, rej)=>{ try{ const pr = ctx.decodeAudioData(ab, res, rej); if(pr && pr.then) pr.then(res, rej); }catch(e){ rej(e); } });
+  if(!buf || !buf.length) return null;
+  const sr = buf.sampleRate, n = buf.length, W = Math.max(1, Math.round(sr*0.05)), chans = [];
+  for(let k=0;k<buf.numberOfChannels;k++) chans.push(buf.getChannelData(k));
+  const db = [];
+  for(let i=0;i<n;i+=W){ let sum=0, c=0; const e=Math.min(n, i+W); for(const d of chans){ for(let j=i;j<e;j++){ sum+=d[j]*d[j]; c++; } } db.push(20*Math.log10(Math.sqrt(sum/Math.max(1,c))+1e-9)); }
+  const peak = Math.max(...db); if(!(peak > -40)) return null;   // clip anormalement faible → pas de coupe (jamais rogner un mot)
+  const thr = Math.max(-60, peak - 25);   // seuil RELATIF au pic ; un plancher plus haut (-45) coupait dans la parole d'un clip faible
+  let last = -1; for(let i=db.length-1;i>=0;i--){ if(db[i] > thr){ last = i; break; } }
+  return last < 0 ? null : { end: Math.min(n/sr, (last+1)*0.05), dur: n/sr };
+}
 function _expMeasureDur(blob){
   return new Promise((resolve)=>{
     let done=false; const fin=(d)=>{ if(done) return; done=true; try{ URL.revokeObjectURL(url); }catch(_){}; resolve(d); };
@@ -30821,6 +30842,7 @@ async function expressCreate(){
       voiceBlob = await _expBuildVoice();
     }
     const useNativeAudio = (window._expVoice==='native');
+    const _cutOk = useNativeAudio && _kieOn();   // coupe fin de parole (dev / kie), décidée au lancement
 
     // 1) Image de départ : fournie, sinon générée via GPT Image
     let imgB64=window._expImgB64, imgMime=window._expImgMime||'image/png';
@@ -30968,26 +30990,44 @@ async function expressCreate(){
     // ── Nettoyage AUDIO (Axel 07/09 : « pics de saturation ») : la voix Veo a des pics durs (crest ~10).
     // Compression douce + adoucissement des hautes fréquences (de-ess) + loudnorm -16 LUFS/-1.5 dBTP → pics
     // lissés, niveau constant, plus de dureté. VIDÉO copiée (rapide) ; repli sur l'original si ffmpeg échoue.
+    // Coupe à la FIN DE LA PAROLE (compte dev / kie, Axel 24/09) : Omni et Veo remplissent tout le clip → silence final
+    // (avatar qui attend). On coupe 0,3 s après le dernier mot, avec un fondu audio de 0,12 s, dans le MÊME passage
+    // ffmpeg que le nettoyage audio. Voix native seulement (une voix importée/TTS est posée plus tard dans l'Éditeur).
+    let _cutAt = null;
+    if(_cutOk){
+      try{
+        const _se = await Promise.race([ _expSpeechEnd(blob), new Promise(r=>setTimeout(()=>r(null), 8000)) ]);
+        if(_se && _se.end >= 1.5 && _se.dur - (_se.end + 0.3) >= 0.4) _cutAt = Math.round((_se.end + 0.3)*100)/100;
+        console.info('[express] fin de parole', _se, _cutAt ? '→ coupe à '+_cutAt+' s' : '→ pas de coupe');
+      }catch(_cE){ console.warn('[express] fin de parole illisible — pas de coupe', _cE); }
+    }
     if(window._expVoice!=='none'){
       try{
         // Styles réalistes/UGC : on RESTAURE de la micro-texture peau (Veo lisse) — léger sharpen + grain fin —
         // en même temps que le nettoyage audio, en UNE passe. Autres styles : audio seul (vidéo copiée, rapide).
         const _texStyle=(window._expStyle==='realiste'||window._expStyle==='ugc');
-        setP(Math.max(p,95), _texStyle
+        setP(Math.max(p,95), _cutAt ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg> ' + (_texStyle ? 'Texture + coupe' : 'Coupe') + ' à la fin de la parole…' : _texStyle
           ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg> Texture + audio…'
           : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18M12 3a5 5 0 010 10"/></svg> Nettoyage de l\'audio…');
         await _loadFFmpeg(); const _ffa=_ffmpegInst;
         try{ await _ffa.FS('unlink','exa_in.mp4'); }catch(_){}
         try{ await _ffa.FS('unlink','exa_out.mp4'); }catch(_){}
         await _ffa.FS('writeFile','exa_in.mp4', new Uint8Array(await blob.arrayBuffer()));
-        const _afChain='acompressor=threshold=-18dB:ratio=2:attack=8:release=90,highshelf=g=-2:f=7000,loudnorm=I=-16:TP=-1.5:LRA=11';
+        const _afChain='acompressor=threshold=-18dB:ratio=2:attack=8:release=90,highshelf=g=-2:f=7000,loudnorm=I=-16:TP=-1.5:LRA=11'
+          + (_cutAt ? ',afade=t=out:st='+Math.max(0,_cutAt-0.12).toFixed(2)+':d=0.12' : '');
+        // Coupe : vidéo RÉENCODÉE (une coupe en copie peut laisser 1-2 images cassées à la fin, B-frames orphelines).
+        const _cutArgs = _cutAt ? ['-t', String(_cutAt)] : [];
         const _args = _texStyle
-          ? ['-i','exa_in.mp4','-vf','unsharp=5:5:0.7,noise=alls=6:allf=t','-af',_afChain,'-c:v','libx264','-preset','ultrafast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k','-movflags','+faststart','exa_out.mp4']
-          : ['-i','exa_in.mp4','-c:v','copy','-af',_afChain,'-c:a','aac','-b:a','160k','-movflags','+faststart','exa_out.mp4'];
+          ? ['-i','exa_in.mp4','-vf','unsharp=5:5:0.7,noise=alls=6:allf=t','-af',_afChain,'-c:v','libx264','-preset','ultrafast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k',..._cutArgs,'-movflags','+faststart','exa_out.mp4']
+          : (_cutAt
+            ? ['-i','exa_in.mp4','-af',_afChain,'-c:v','libx264','-preset','ultrafast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k',..._cutArgs,'-movflags','+faststart','exa_out.mp4']
+            : ['-i','exa_in.mp4','-c:v','copy','-af',_afChain,'-c:a','aac','-b:a','160k','-movflags','+faststart','exa_out.mp4']);
         await _ffa.run(..._args);
         const _outa=await _ffa.FS('readFile','exa_out.mp4');
         const _cleaned=new Blob([_outa.buffer],{type:'video/mp4'});
-        if(_cleaned.size>50000) blob=_cleaned;
+        const _dOut = _cutAt ? await _expMeasureDur(_cleaned) : 0;
+        if(_cleaned.size>50000 && await _mp4Sane(_cleaned) && (!_cutAt || (_dOut>0 && Math.abs(_dOut-_cutAt)<0.4))) blob=_cleaned;   // sinon on garde l'original (jamais une vidéo tronquée ou illisible)
+        else console.warn('[express] sortie ffmpeg rejetée — original gardé', { size:_cleaned.size, dOut:_dOut, cutAt:_cutAt });
         try{ await _ffa.FS('unlink','exa_in.mp4'); await _ffa.FS('unlink','exa_out.mp4'); }catch(_){}
       }catch(_ae){ console.warn('express audio cleanup:', _ae); }
     }
