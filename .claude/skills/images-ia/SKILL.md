@@ -1,6 +1,6 @@
 ---
 name: images-ia
-description: Le module Images IA d'AvatarAds — génération, correction img2img, « Améliorer en 4K », styles, formats et prompts de réalisme. À lire AVANT de toucher aux prompts d'image, aux moteurs (gpt-image, Nano Banana Pro, Imagen, Flux) ou au module Images IA de app/index.html. Contient la leçon la plus contre-intuitive du module : demander du détail à un modèle produit une peau de cire.
+description: Le module Images IA d'AvatarAds — génération, correction img2img, « Améliorer en 4K », styles, formats et prompts de réalisme. À lire AVANT de toucher aux prompts d'image, aux moteurs (gpt-image, Nano Banana Pro, Flux, kie.ai dev) ou au module Images IA de app/index.html. Contient la leçon la plus contre-intuitive du module : demander du détail à un modèle produit une peau de cire.
 ---
 
 # Images IA
@@ -13,9 +13,11 @@ Un prompt (et parfois une image de référence) devient un visuel prêt à poste
 |---|---|---|
 | Génération (texte → image) | `gpt-image-1` (`gpt-image-2` prévu) | `openai-proxy` |
 | Correction / img2img | `gpt-image-1` edit | `openai-proxy` |
-| « Améliorer en 4K », passe de détail | **Nano Banana Pro** (`gemini-3-pro-image-preview`) | `google-ai-proxy` |
-| Cartoon (module Cartoon) | `imagen-4.0-generate-001` | `google-ai-proxy` |
+| « Améliorer en 4K », passe de détail, « Changer le visage » | **Nano Banana Pro** (`gemini-3-pro-image`, GA ; la préversion est arrêtée depuis le 25/06/2026) | `google-ai-proxy` |
+| Même chose, compte **developer** seulement (test) | Nano Banana Pro via **kie.ai** (même prompt, repli Google) | `kie-proxy` |
 | Alternative | Flux, derrière un drapeau | — |
+
+Le module Cartoon (Imagen 4) a été supprimé le 23/09/2026 : Google a arrêté Imagen 4 le 17/08/2026.
 
 Le repli est systématique : si Google échoue sur le 4K, on retombe sur gpt-image
 plutôt que de laisser l'utilisateur sans rien, et **le toast dit quel moteur a

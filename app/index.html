@@ -186,7 +186,7 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
 .seg.accent-seg>button.on{background:var(--accent);color:#1A0A02}
 /* image placeholder (renamed from handoff .ph to avoid collision with app's panel-header .ph) */
 .aaph{background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 10px,rgba(255,255,255,0) 10px 20px),var(--panel-1);border:1px dashed var(--border-2);display:grid;place-items:center;color:var(--text-3);font-family:var(--mono);font-size:11px;letter-spacing:.05em;border-radius:var(--r)}
-/* preview phone (modules Express/Cartoon) */
+/* preview phone (module Express) */
 .aa-phone{position:relative;border-radius:38px;background:#000;border:1px solid #2a2730;box-shadow:0 0 0 8px #121116,0 40px 80px -30px rgba(0,0,0,.9),0 0 60px -20px var(--accent-glow);overflow:hidden;flex:0 0 auto}
 .aa-phone-notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:86px;height:24px;background:#000;border-radius:14px;z-index:6}
 /* fade-in */
@@ -3793,11 +3793,10 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <div class="exp-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
             <span>⏱ Durée · <span id="expDurLabel" style="color:var(--orange2)">Libre</span></span>
           </div>
-          <!-- Position 0 = AUTO (le système/Veo cale la durée sur ton texte) — défaut ; 1..6 = 4/6/8/15/22/29 s (Axel 17/08) -->
+          <!-- Position 0 = AUTO (le système/Veo cale la durée sur ton texte) — défaut ; 1..3 = 4/6/8 s (Axel 17/08 ; +8 s retiré le 23/09) -->
           <input id="expDurSlider" class="exp-slider" type="range" min="0" max="6" step="1" value="0" oninput="_expDurSlide(+this.value)" style="width:100%">
           <div id="expDurAutoHint" class="mono" style="display:none;font-size:10px;color:var(--orange2);margin-top:5px"></div>
-          <div id="expDurEliteHint" onclick="openUpgradeModal()" class="mono" style="font-size:10px;color:var(--text3);margin-top:5px;cursor:pointer;display:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg> +8 s (extensions de scène) réservé au plan Élite</div>
-          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px" id="expDurMinLbl">Libre</span><span class="faint mono" style="font-size:9px" id="expDurMaxLbl">29 s</span></div>
+          <div class="row" style="justify-content:space-between;margin-top:2px"><span class="faint mono" style="font-size:9px" id="expDurMinLbl">Libre</span><span class="faint mono" style="font-size:9px" id="expDurMaxLbl">8 s</span></div>
         </div>
 
         <!-- ③b QUALITÉ — Veo ; masqué en mode Seedance (1080p natif) -->
@@ -4026,9 +4025,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         </div>
     </div><!-- /motion -->
 
-    <!-- ══════════════════════════════════════════════════════
-         🎭 CARTOON AVATAR — Imagen 4 + Veo 3.1 Fast
-         ══════════════════════════════════════════════════════ -->
     <!-- ══ 🪄 MONTAGE IA — ta vidéo virale de A à Z (module chef d'orchestre) ══ -->
     <!-- ═══════════ 📤 PUBLIER (#116) — cross-post Postiz · module compte developer ═══════════ -->
     <div class="view" id="v-publish">
@@ -4302,342 +4298,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         </div>
 
     </div>
-
-    <div class="view" id="v-cartoon" style="overflow:hidden">
-
-      <!-- ══ LEFT — Workflow ══ -->
-      <div style="flex:0 0 500px;overflow-y:auto;padding:20px 16px 40px;border-right:1px solid var(--border)">
-
-        <!-- HEADER -->
-        <div style="margin-bottom:18px">
-          <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);border-radius:20px;padding:3px 10px;font-size:9px;font-family:var(--mono);color:#c084fc;letter-spacing:0.8px;margin-bottom:8px">
-            <svg width="5" height="5" viewBox="0 0 6 6" fill="#c084fc"><circle cx="3" cy="3" r="3"/></svg>
-            IMAGEN 4 · VEO 3.1 FAST · ÉLITE
-          </div>
-          <h2 class="display row gap10" style="font-size:26px;font-weight:700;align-items:center;line-height:1.1;margin-bottom:4px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>Avatar Cartoon IA</h2>
-          <p class="muted" style="font-size:13px">Mascotte animée avec voix — sans avatar réel</p>
-        </div>
-
-        <!-- BIENTÔT DISPONIBLE (module bloqué en attendant le tunnel FruitDrama) -->
-        <div id="cartoonComingSoon" style="display:none;background:var(--bg2);border:1.5px solid rgba(168,85,247,0.3);border-radius:18px;padding:44px 28px;text-align:center;margin-bottom:16px">
-          <div style="width:62px;height:62px;margin:0 auto 18px;border-radius:16px;background:rgba(168,85,247,0.12);display:flex;align-items:center;justify-content:center">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          </div>
-          <div style="font-size:21px;font-weight:800;margin-bottom:8px">Bientôt disponible</div>
-          <div style="font-size:13.5px;color:var(--text3);line-height:1.6;max-width:440px;margin:0 auto"><strong style="color:var(--text2)">Reste connecté <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></strong></div>
-        </div>
-
-        <!-- PAYWALL ELITE -->
-        <div id="cartoonPaywall" style="display:none;background:var(--bg2);border:1.5px solid rgba(168,85,247,0.3);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px">
-          <div style="margin-bottom:12px;line-height:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>
-          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Fonctionnalité Élite</div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:16px">La génération d'avatars cartoon est réservée au plan Élite.</div>
-          <button onclick="openUpgradeModal()" style="padding:12px 24px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer">Passer Élite →</button>
-        </div>
-
-        <!-- CONTENU PRINCIPAL -->
-        <div id="cartoonContent">
-
-          <!-- ── MODULE 1 : STYLE + PERSO ── -->
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">1</div>
-              <div style="font-size:13px;font-weight:700">Ton personnage</div>
-            </div>
-
-            <!-- Sources du personnage -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-              <div onclick="nav('imagegen', document.querySelector('.nav-i[onclick*=\'imagegen\']'))" style="padding:11px 10px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)'" onmouseout="this.style.borderColor='var(--border2)'">
-                <span style="font-size:17px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
-                <div><div style="font-size:11px;font-weight:700;color:var(--text)">Créer dans Images IA</div><div class="faint" style="font-size:9px;font-family:var(--mono);margin-top:1px">générateur dédié</div></div>
-              </div>
-              <div onclick="document.getElementById('cartoonImportIn').click()" style="padding:11px 10px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.borderColor='rgba(168,85,247,.4)'" onmouseout="this.style.borderColor='var(--border2)'">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-                <div><div style="font-size:11px;font-weight:700;color:var(--text)">Importer une image</div><div class="faint" style="font-size:9px;font-family:var(--mono);margin-top:1px">depuis ta biblio</div></div>
-              </div>
-            </div>
-            <input type="file" id="cartoonImportIn" accept="image/*" style="display:none" onchange="cartoonImportImage(this.files[0]);this.value=''">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="flex:1;height:1px;background:var(--border)"></div><span class="faint" style="font-size:9px;font-family:var(--mono)">OU GÉNÈRE-LE ICI</span><div style="flex:1;height:1px;background:var(--border)"></div></div>
-
-            <!-- Style presets avec descriptions -->
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px" id="cartoonStyleGrid">
-              <button onclick="selectCartoonStyle(this,'pixar')" class="cartoon-style-btn" data-style="pixar" style="padding:10px 8px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:10px;color:var(--text);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
-                <span style="flex-shrink:0;line-height:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg></span>
-                <div><div style="font-weight:700;font-size:11px">Pixar 3D</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Rendu 3D type Toy Story</div></div>
-              </button>
-              <button onclick="selectCartoonStyle(this,'flat')" class="cartoon-style-btn" data-style="flat" style="padding:10px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
-                <span style="flex-shrink:0;line-height:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg></span>
-                <div><div style="font-weight:700;font-size:11px">Flat 2D</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Illustration vectorielle plate</div></div>
-              </button>
-              <button onclick="selectCartoonStyle(this,'anime')" class="cartoon-style-btn" data-style="anime" style="padding:10px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
-                <span style="flex-shrink:0;line-height:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="5.8" r="2.6"/><circle cx="18.2" cy="12" r="2.6"/><circle cx="12" cy="18.2" r="2.6"/><circle cx="5.8" cy="12" r="2.6"/></svg></span>
-                <div><div style="font-weight:700;font-size:11px">Anime</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Manga japonais, grands yeux</div></div>
-              </button>
-              <button onclick="selectCartoonStyle(this,'mascot')" class="cartoon-style-btn" data-style="mascot" style="padding:10px 8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text3);font-family:var(--font);font-size:11px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:8px">
-                <span style="flex-shrink:0;line-height:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M8 14H4M16 10h4M16 14h4M12 6V3M9 4l1.5 2M15 4l-1.5 2"/></svg></span>
-                <div><div style="font-weight:700;font-size:11px">Mascotte</div><div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:1px">Perso de marque commercial</div></div>
-              </button>
-            </div>
-
-            <!-- Prompt perso -->
-            <textarea id="cartoonCharPrompt" placeholder="Ex: Une chaussure de sport blanche avec des yeux et des jambes, sourire amical…" style="width:100%;min-height:72px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-
-            <!-- Quick suggestions -->
-            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:7px">
-              <button onclick="cartoonQuickPrompt('Un téléphone smartphone avec des bras et un visage souriant, style Pixar 3D coloré')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 18h0"/></svg> Smartphone</button>
-              <button onclick="cartoonQuickPrompt('Une paire de lunettes avec des yeux expressifs et un grand sourire, style mascotte 3D')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="6" cy="15" r="3.5"/><circle cx="18" cy="15" r="3.5"/><path d="M9.5 15a2.5 2.5 0 015 0M2.5 13L5 7h1M21.5 13L19 7h-1"/></svg> Lunettes</button>
-              <button onclick="cartoonQuickPrompt('Une bouteille de supplément sportif avec des bras musclés, style 3D cartoon')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg> Fitness</button>
-              <button onclick="cartoonQuickPrompt('Un robot IA amical avec un écran facial expressif, couleurs vives, style Pixar')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M8 14H4M16 10h4M16 14h4M12 6V3M9 4l1.5 2M15 4l-1.5 2"/></svg> Robot IA</button>
-            </div>
-
-            <button onclick="cartoonEnhancePrompt()" style="margin-top:10px;width:100%;padding:9px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.28);border-radius:9px;color:#c4a3f7;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(168,85,247,0.16)'" onmouseout="this.style.background='rgba(168,85,247,0.08)'">✦ Améliorer (4K · qualité pro)</button>
-            <button onclick="cartoonGenImage(this)" id="cartoonImgBtn" style="margin-top:10px;width:100%;padding:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:10px;color:#fff;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(168,85,247,0.3)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-              <svg width="13" height="13" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg>
-              Générer le personnage
-              <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 crédit image</span>
-            </button>
-          </div>
-
-          <!-- ── MODULE 2 : ANIMER ── -->
-          <div id="cartoonModule2" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">2</div>
-              <div style="font-size:13px;font-weight:700">Anime le personnage</div>
-              <span id="cartoonModelBadge" style="margin-left:auto;font-size:9px;font-family:var(--mono);background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);color:#c084fc;padding:2px 8px;border-radius:10px">Veo 3.1 · 10s</span>
-            </div>
-
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">Décris les mouvements :</div>
-            <textarea id="cartoonAnimPrompt" placeholder="Marche vers la caméra, sourire expressif, mouvements fluides…" style="width:100%;min-height:64px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px;outline:none;resize:vertical;transition:border-color .15s;box-sizing:border-box;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-
-            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:7px">
-              <button onclick="cartoonAnimPreset('marche vers la caméra, sourire expressif, mouvements fluides, fond blanc')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="13" cy="4.5" r="2"/><path d="M12.5 8.5L10 13l2.5 2.5V21M10 13l-2.5 1.5M13 9.5l2.5 1.5 2.5.5M11.5 16.5L8.5 21"/></svg> Walk</button>
-              <button onclick="cartoonAnimPreset('danse de joie, bras levés, expression excitée, énergie positive')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Dance</button>
-              <button onclick="cartoonAnimPreset('présente un produit à la caméra, clin d\'oeil, sourire complice')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v9"/></svg> Présente</button>
-              <button onclick="cartoonAnimPreset('salue la caméra, expression amicale et enthousiaste')" style="padding:3px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)'" onmouseout="this.style.borderColor='var(--border)'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Salue</button>
-            </div>
-
-            <!-- 💬 Réplique → lip-sync Veo natif -->
-            <div id="cartoonDialogueWrap" style="margin-top:12px;padding:11px;border:1px solid rgba(168,85,247,0.28);border-radius:10px;background:rgba(168,85,247,0.05)">
-              <div style="font-size:10px;font-family:var(--mono);color:#c4a3f7;margin-bottom:6px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M21 11.5a8 8 0 01-11.5 7.2L3 21l1.8-5.5A8 8 0 1121 11.5z"/></svg> Réplique du personnage <span style="color:var(--text3)">· lip-sync Veo</span></div>
-              <textarea id="cartoonDialogue" placeholder="Ce que le perso dit à voix haute, ex : Mon Dieu, mais qu'est-ce que tu fais ?!" style="width:100%;box-sizing:border-box;min-height:48px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px;resize:vertical;line-height:1.5" onfocus="this.style.borderColor='rgba(168,85,247,0.5)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-              <div style="display:flex;align-items:center;gap:7px;margin-top:7px">
-                <span style="font-size:9px;font-family:var(--mono);color:var(--text3)">Ton de voix :</span>
-                <input id="cartoonVoiceTone" type="text" placeholder="ex : voix féminine jeune, dramatique" style="flex:1;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:var(--font);font-size:11px;padding:6px 8px;outline:none">
-              </div>
-              <div class="faint" style="font-size:9px;font-family:var(--mono);margin-top:6px;line-height:1.5">Avec <b style="color:#c4a3f7">Veo</b>, la réplique est dite + bouche synchronisée (1 passe). Laisse vide pour une vidéo muette.</div>
-            </div>
-
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:12px;margin-bottom:5px">Modèle d'animation :</div>
-            <div style="display:flex;gap:6px">
-              <button id="cartoonModelVeo" onclick="cartoonPickVidModel('veo',this)" style="flex:1;padding:9px 6px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:9px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Veo 3.1<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">audio natif · 10s</span></button>
-              <button id="cartoonModelSeedance" onclick="cartoonPickVidModel('seedance',this)" style="flex:1;padding:9px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3">Seedance<br><span style="font-size:8.5px;opacity:.75;font-family:var(--mono);font-weight:400">cartoon · voix requise</span></button>
-            </div>
-            <div id="cartoonSeedanceDurRow" style="display:none;align-items:center;gap:6px;margin-top:8px">
-              <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">Durée :</span>
-              <button id="cartoonSdDur5" onclick="cartoonPickSeedanceDur(5000,this)" style="padding:5px 12px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:8px;color:#c084fc;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">5s</button>
-              <button id="cartoonSdDur10" onclick="cartoonPickSeedanceDur(10000,this)" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer">10s</button>
-            </div>
-          </div>
-
-          <!-- ── MODULE 3 : VOIX ── -->
-          <div id="cartoonModule3Voice" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">3</div>
-              <div style="font-size:13px;font-weight:700">Voix <span id="cartoonVoiceOptLabel" style="font-size:10px;font-weight:400;color:var(--text3)"></span></div>
-            </div>
-            <div id="cartoonVoiceHint" style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">Veo génère une voix auto. Pour <b style="color:#c4a3f7">100 % la voix de ton perso</b>, choisis une source ci-dessous (on remplace l'audio Veo).</div>
-
-            <!-- Source de voix : Import / Gemini / ElevenLabs -->
-            <div style="display:flex;gap:6px;margin-bottom:8px">
-              <button id="cartoonVoiceEngImport" onclick="cartoonPickVoiceEngine('import')" style="flex:1;padding:8px 4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Import</button>
-              <button id="cartoonVoiceEngGemini" onclick="cartoonPickVoiceEngine('gemini')" style="flex:1;padding:8px 4px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);border-radius:8px;color:#c084fc;font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Gemini</button>
-              <button id="cartoonVoiceEngEleven" onclick="cartoonPickVoiceEngine('eleven')" style="flex:1;padding:8px 4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> ElevenLabs</button>
-            </div>
-
-            <!-- Import mp4/audio -->
-            <div id="cartoonImportWrap" style="display:none;margin-bottom:8px">
-              <div onclick="document.getElementById('cartoonVoiceFileIn').click()" ondragover="event.preventDefault();this.style.borderColor='#a855f7'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="event.preventDefault();this.style.borderColor='var(--border2)';_cartoonHandleVoice(event.dataTransfer.files[0])" style="border:2px dashed var(--border2);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .2s">
-                <div id="cartoonVoiceDrop" style="font-size:10px;font-family:var(--mono);color:var(--text3)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Glisse ton fichier audio / mp4<br><span style="font-size:9px;opacity:.6">mp3 · wav · mp4 · m4a</span></div>
-                <div id="cartoonVoiceInfo" style="display:none;font-size:11px;font-weight:600;color:var(--text2)"></div>
-              </div>
-              <input type="file" id="cartoonVoiceFileIn" accept="audio/*,video/*" style="display:none" onchange="_cartoonHandleVoice(this.files[0]);this.value=''">
-            </div>
-
-            <!-- TTS (Gemini / ElevenLabs) -->
-            <div id="cartoonTtsWrap" style="padding:10px;border:1px solid var(--border2);border-radius:10px;background:var(--bg3)">
-              <textarea id="cartoonTtsText" placeholder="Écris ce que le personnage doit dire…" style="width:100%;box-sizing:border-box;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px;resize:vertical;min-height:46px;margin-bottom:6px"></textarea>
-              <!-- Menu voix Gemini -->
-              <div id="cartoonGeminiVoiceWrap">
-                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">CHOISIS LA VOIX QUI COLLE AU PERSO</div>
-                <input type="hidden" id="cartoonTtsVoice" value="Puck">
-                <button onclick="openVoicePicker('gemini')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;margin-bottom:8px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.5)'" onmouseout="this.style.borderColor='var(--border2)'"><span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Voix : <b id="cartoonGeminiVoiceLabel" style="color:#c4a3f7">Puck</b></span><span style="color:var(--text3);font-size:11px">parcourir ▾</span></button>
-              </div>
-              <!-- Voix ElevenLabs -->
-              <div id="cartoonElevenVoiceWrap" style="display:none;margin-bottom:8px">
-                <div style="font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">CHOISIS UNE VOIX ELEVENLABS</div>
-                <button onclick="openVoicePicker('eleven')" style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:10px 11px;margin-bottom:6px;cursor:pointer" onmouseover="this.style.borderColor='rgba(168,85,247,0.5)'" onmouseout="this.style.borderColor='var(--border2)'"><span><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Voix : <b id="cartoonElevenVoiceLabel" style="color:#c4a3f7">Rachel</b></span><span style="color:var(--text3);font-size:11px">parcourir ▾</span></button>
-                <div class="faint" style="font-size:9.5px;font-family:var(--mono);line-height:1.5">Voix premium · ou clone la tienne depuis l'onglet voix du Générateur.</div>
-              </div>
-              <button id="cartoonTtsBtn" onclick="cartoonGenVoice()" style="width:100%;padding:9px 12px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Générer la voix</button>
-              <label class="row gap6" style="margin-top:8px;font-size:11px;color:var(--text2);cursor:pointer;align-items:center"><input type="checkbox" id="cartoonTtsSilence" checked style="cursor:pointer"> <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg> Supprimer les silences (voix plus punchy)</label>
-              <button id="cartoonExportAudioBtn" onclick="cartoonExportAudio()" style="display:none;width:100%;margin-top:8px;padding:9px;background:var(--bg4);border:1px solid rgba(168,85,247,0.45);border-radius:8px;color:#c4a3f7;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(168,85,247,0.12)'" onmouseout="this.style.background='var(--bg4)'">↓ Exporter l'audio généré (WAV)</button>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
-              <button onclick="_cartoonVoicePreview()" style="padding:8px;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .2s" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">▶ Écouter</button>
-              <button onclick="cartoonUseAsAvatarWithVoice()" style="padding:8px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">→ Générer avec voix</button>
-            </div>
-          </div>
-
-          <!-- ── MODULE 4 : SOUS-TITRES ── -->
-          <div id="cartoonModule3" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;opacity:.4;pointer-events:none;transition:all .3s">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-              <div style="width:20px;height:20px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">4</div>
-              <div style="font-size:13px;font-weight:700">Sous-titres</div>
-            </div>
-
-            <!-- Position -->
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">POSITION</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px">
-              <button onclick="cartoonSubPos(this,'top')" class="cs-pos-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                <div style="margin-bottom:3px;line-height:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>Haut
-              </button>
-              <button onclick="cartoonSubPos(this,'center')" class="cs-pos-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                <div style="margin-bottom:3px;line-height:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg></div>Centre
-              </button>
-              <button onclick="cartoonSubPos(this,'bottom')" class="cs-pos-btn active-sub" style="padding:7px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;text-align:center">
-                <div style="margin-bottom:3px;line-height:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>Bas
-              </button>
-            </div>
-
-            <!-- Taille -->
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">TAILLE</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px">
-              <button onclick="cartoonSubSize(this,'small')" class="cs-size-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">
-                <span style="font-size:9px">T</span> Petit
-              </button>
-              <button onclick="cartoonSubSize(this,'medium')" class="cs-size-btn active-sub" style="padding:7px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">
-                <span style="font-size:11px">T</span> Moyen
-              </button>
-              <button onclick="cartoonSubSize(this,'large')" class="cs-size-btn" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text3);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s">
-                <span style="font-size:13px">T</span> Grand
-              </button>
-            </div>
-
-            <!-- Style texte -->
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:6px">STYLE TEXTE</div>
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:12px">
-              <button onclick="cartoonSubStyle(this,'white-outline')" class="cs-style-btn active-sub" style="padding:8px;background:rgba(168,85,247,0.15);border:1.5px solid rgba(168,85,247,0.5);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
-                <span style="color:#fff;font-weight:800;font-size:11px;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000">Aa</span>
-                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Blanc + contour</span>
-              </button>
-              <button onclick="cartoonSubStyle(this,'yellow')" class="cs-style-btn" style="padding:8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
-                <span style="color:#fbbf24;font-weight:800;font-size:11px;text-shadow:-1px -1px 0 #000,1px 1px 0 #000">Aa</span>
-                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Jaune</span>
-              </button>
-              <button onclick="cartoonSubStyle(this,'orange')" class="cs-style-btn" style="padding:8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
-                <span style="color:var(--orange2);font-weight:800;font-size:11px;text-shadow:-1px -1px 0 #000,1px 1px 0 #000">Aa</span>
-                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Orange</span>
-              </button>
-              <button onclick="cartoonSubStyle(this,'bg-black')" class="cs-style-btn" style="padding:8px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
-                <span style="color:#fff;font-weight:800;font-size:11px;background:rgba(0,0,0,0.75);padding:0 4px;border-radius:3px">Aa</span>
-                <span style="font-size:9px;font-family:var(--mono);color:var(--text2)">Fond noir</span>
-              </button>
-            </div>
-
-            <!-- Preview texte sous-titre -->
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-bottom:5px">TEXTE EXEMPLE</div>
-            <input id="cartoonSubSample" type="text" value="Découvre notre produit !" maxlength="40"
-              style="width:100%;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:12px;padding:8px 10px;outline:none;box-sizing:border-box;transition:border-color .15s"
-              onfocus="this.style.borderColor='rgba(168,85,247,0.4)'" onblur="this.style.borderColor='var(--border2)'"
-              oninput="cartoonUpdatePreview()">
-          </div>
-
-          <!-- ── GÉNÉRATION FINALE (à la toute fin) ── -->
-          <div style="background:radial-gradient(400px 120px at 50% 0,rgba(168,85,247,.10),var(--surface));border:1px solid rgba(168,85,247,.3);border-radius:14px;padding:16px;margin-bottom:10px">
-            <div style="font-size:11px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#c084fc;margin-bottom:10px;text-align:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Génère ta vidéo cartoon</div>
-            <button onclick="cartoonGenVideo(this)" id="cartoonVidBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);border:none;border-radius:12px;color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 8px 24px rgba(168,85,247,0.4)" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-              <svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg>
-              Générer la vidéo animée
-              <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>
-            </button>
-
-            <div id="cartoonVidProgress" style="display:none;margin-top:10px;padding:10px;background:var(--bg3);border-radius:10px;text-align:center">
-              <div style="font-size:11px;font-family:var(--mono);color:#c084fc;margin-bottom:7px" id="cartoonVidProgressTxt">Veo 3.1 génère ta vidéo…</div>
-              <div style="height:3px;background:var(--bg4);border-radius:3px;overflow:hidden">
-                <div id="cartoonVidProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#a855f7,#7c3aed);border-radius:3px;transition:width .8s ease"></div>
-              </div>
-              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:5px">~60-90 secondes</div>
-            </div>
-
-            <div id="cartoonVidResult" style="display:none;margin-top:12px">
-              <button onclick="cartoonUseAsAvatar()" style="width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:10px;color:#1A0A02;font-family:var(--font);font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser comme avatar → Générateur
-              </button>
-            </div>
-          </div>
-
-          <!-- Quota info -->
-          <div style="text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);padding:6px" id="cartoonQuotaInfo"></div>
-
-        </div><!-- /cartoonContent -->
-      </div><!-- /left -->
-
-      <!-- ══ RIGHT — Phone Preview ══ -->
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg1)">
-
-        <!-- Phone mockup iPhone 17 -->
-        <div style="position:relative;width:300px">
-          <!-- Frame titanium -->
-          <div style="background:linear-gradient(145deg,#2a2a2e,#1a1a1e);border-radius:52px;padding:12px;box-shadow:0 0 0 1px rgba(255,255,255,0.08),0 0 0 3px #1c1c1e,0 30px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.06)">
-            <div style="background:#000;border-radius:42px;overflow:hidden;position:relative;aspect-ratio:9/19.5;width:276px">
-
-              <!-- Placeholder vide -->
-              <div id="cartoonPhonePlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(168,85,247,0.03))">
-                <div style="opacity:.3;line-height:0"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></div>
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center;opacity:.5">Génère ton<br>personnage</div>
-              </div>
-
-              <!-- Image générée -->
-              <img id="cartoonPhoneImg" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0" alt="">
-
-              <!-- Vidéo générée -->
-              <video id="cartoonPhoneVid" loop playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0"></video>
-
-              <!-- Overlay sous-titres -->
-              <div id="cartoonSubOverlay" style="position:absolute;left:0;right:0;bottom:12%;display:flex;justify-content:center;pointer-events:none;padding:0 14px">
-                <div id="cartoonSubText" style="font-size:17px;font-weight:800;font-family:var(--font);color:#fff;text-align:center;text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000;line-height:1.3;max-width:100%">Découvre notre produit !</div>
-              </div>
-
-              <!-- Dynamic Island (iPhone 17) -->
-              <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#000;border-radius:20px;z-index:10;box-shadow:0 0 0 1px rgba(255,255,255,0.06)">
-                <div style="position:absolute;right:18px;top:50%;transform:translateY(-50%);width:10px;height:10px;background:#1a1a1a;border-radius:50%;border:1.5px solid rgba(255,255,255,0.05)"></div>
-              </div>
-            </div>
-          </div>
-          <!-- Bouton latéral droit -->
-          <div style="position:absolute;right:-4px;top:20%;width:3px;height:60px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:0 3px 3px 0"></div>
-          <!-- Boutons latéraux gauche -->
-          <div style="position:absolute;left:-4px;top:16%;width:3px;height:30px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:3px 0 0 3px"></div>
-          <div style="position:absolute;left:-4px;top:28%;width:3px;height:50px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:3px 0 0 3px"></div>
-          <div style="position:absolute;left:-4px;top:40%;width:3px;height:50px;background:linear-gradient(180deg,#2a2a2e,#3a3a3e,#2a2a2e);border-radius:3px 0 0 3px"></div>
-        </div>
-
-          <!-- Regen image bouton flottant -->
-          <button id="cartoonRegenImgBtn" onclick="cartoonGenImage(document.getElementById('cartoonImgBtn'))" style="display:none;position:absolute;top:16px;right:-14px;width:28px;height:28px;background:var(--bg3);border:1px solid var(--border2);border-radius:50%;color:var(--text2);font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3)" title="Regénérer l'image"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg></button>
-
-        <!-- Style actif label -->
-        <div id="cartoonStyleLabel" style="margin-top:14px;font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center">
-          Style sélectionné : <span id="cartoonStyleLabelName" style="color:#c084fc;font-weight:600">Pixar 3D</span>
-        </div>
-
-        <!-- Video controls quand dispo -->
-        <div id="cartoonPhoneVidControls" style="display:none;margin-top:8px;gap:6px;align-items:center">
-          <button onclick="_cartoonTogglePhoneVid()" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;color:var(--text2);font-family:var(--mono);font-size:10px;cursor:pointer">▶ Lecture</button>
-        </div>
-
-      </div><!-- /right -->
-
-    </div><!-- /cartoon -->
 
     <!-- ══ ÉDITEUR / STUDIO (BETA) ══ -->
     <div class="view" id="v-studio">
@@ -5270,22 +4930,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 
     <div class="setup-divider"></div>
-
-    <!-- Google AI API Key (Cartoon Avatar) -->
-    <div class="setup-field" id="google-ai-section">
-      <div class="setup-label" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Clé API Google AI <span style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;margin-left:4px;font-weight:700">ÉLITE · CARTOON</span></span>
-        <a href="https://aistudio.google.com/apikey" target="_blank" style="font-size:10px">Obtenir ma clé →</a>
-      </div>
-      <div class="setup-input" style="position:relative">
-        <input type="password" id="inp-google-key" placeholder="AIza…">
-        <button onclick="document.getElementById('inp-google-key').type=document.getElementById('inp-google-key').type==='password'?'text':'password'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg4);border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:3px 8px;cursor:pointer;font-size:10px;font-family:var(--mono)">Voir</button>
-      </div>
-      <div class="setup-hint" style="color:var(--green)" id="google-key-status">✓ Clé Google AI configurée côté serveur — Imagen 4 + Veo 3.1 activés</div>
-      <div class="setup-hint">Clé gérée côté serveur Supabase. Ajoute <strong>GOOGLE_AI_KEY</strong> dans tes secrets Supabase pour activer la génération cartoon.</div>
-    </div>
-
-    <div class="setup-divider"></div>
     <button class="btn-setup-save" onclick="saveKeys()">Enregistrer →</button>
   </div>
 </div>
@@ -5657,7 +5301,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <div id="cmBareme" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px;font-size:11px;font-family:var(--mono);color:var(--text3);line-height:2.1;margin-top:8px">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Avatar lipsync — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">5 cr/s</b> en Omni<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Voix IA — <b style="color:var(--text2)">+0,5 cr/s</b> · gratuit avec ton MP3<br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express &amp; Cartoon — <b style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express — <b style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni · transformation vidéo — <b style="color:var(--text2)">3 cr/s</b> en 720p · <b style="color:var(--text2)">4 cr/s</b> en 1080p<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">6 cr/s</b> en Motion 3.0<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9.9 2.6l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5zM18 13l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg> Montage IA — <b style="color:var(--text2)">8 crédits</b> · <b style="color:var(--text2)">4</b> pour un re-rendu<br>
@@ -8587,12 +8231,7 @@ function openSetup(){
     hedraEl.value = window._userHedraKey;
     if(statusEl) statusEl.style.display = 'block';
   }
-  // Charger la clé Google AI
-  const googleKey = localStorage.getItem('aa_google_ai_key')||'';
-  const googleEl  = document.getElementById('inp-google-key');
-  const googleSt  = document.getElementById('google-key-status');
-  if(googleEl) googleEl.value = googleKey ? '••••••••••••••••' : '';
-  if(googleSt) googleSt.style.display = googleKey ? 'block' : 'none';
+  try{ localStorage.removeItem('aa_google_ai_key'); }catch(_){}   // ancienne clé du module Cartoon (supprimé le 23/09)
 }
 function closeSetup(){ document.getElementById('setupOverlay').style.display='none'; }
 
@@ -8891,9 +8530,6 @@ function toggleHedraKeyVisibility(){
   if(btn) btn.textContent = inp.type === 'password' ? 'Voir' : 'Cacher';
 }
 async function saveKeys(){
-  // Clé Google AI (Cartoon)
-  const googleEl = document.getElementById('inp-google-key');
-  if(googleEl){ const v=googleEl.value.trim(); if(v){ localStorage.setItem('aa_google_ai_key',v); const s=document.getElementById('google-key-status'); if(s) s.style.display='block'; } else { localStorage.removeItem('aa_google_ai_key'); } }
   ['tiktok','instagram','facebook','linkedin'].forEach(p=>{
     const el = document.getElementById('inp-wh-'+p);
     if(el){ const v=el.value.trim(); if(v) localStorage.setItem('aa_wh_'+p,v); else localStorage.removeItem('aa_wh_'+p); }
@@ -9529,7 +9165,7 @@ async function _imgRunFaceSwap(btn){
     const dataUrl=await _nbHeadSwap(_fsTok, target, face);   // #144 · head swap Nano Banana Pro (~40 s) : remplace la tête ENTIÈRE (visage + cheveux) en gardant corps + décor
     if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
     _imgShowSingle(dataUrl, _imgSelectedFormat); _imgSaveHistory(dataUrl,'Faceswap',_imgSelectedFormat); if(typeof _imgRenderHistory==='function') _imgRenderHistory();
-    toast('Visage changé');
+    toast('Visage changé'+_kieTag());
   }catch(e){ console.error('faceswap:',e); try{ await creditsFlowRefund(); }catch(_){} try{ _imgToggleFaceZone(true); }catch(_){} toast(''+((e&&e.message)||e)); }
   finally{ if(_fsTimer) clearInterval(_fsTimer); if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
@@ -9635,7 +9271,7 @@ async function _imgMakeRealistic(btn){
     _imgSaveHistory(url, '4K', dispFmt);
     _imgRenderHistory();
     creditsFlowDone();
-    toast('Amélioré en 4K — '+engine);
+    toast('Amélioré en 4K — '+engine+(engine==='Nano Banana Pro'?_kieTag():''));
   }catch(e){ await creditsFlowRefund('l\'amélioration 4K a échoué'); toast(''+(e.message||e)); }
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
@@ -9872,7 +9508,7 @@ async function _imgUpscale(btn){
     const dl = document.getElementById('imgDownloadBtn'); if(dl){ dl.href = url; dl.download = 'avatarads-image-hd.png'; }
     toast('Image agrandie en ' + c.width + '×' + c.height);
   } catch(e){
-    toast('Upscale bloqué (image externe). Fonctionne sur Imagen 4 — ou télécharge puis ré-importe.');
+    toast('Upscale bloqué (image externe). Télécharge-la puis ré-importe-la pour l’agrandir.');
   } finally { btn.disabled = false; btn.style.opacity='1'; btn.innerHTML = orig; }
 }
 
@@ -10175,7 +9811,7 @@ function _libCloseLightbox(){
   ov.style.opacity = '0';
   setTimeout(() => { ov.style.display = 'none'; const img = document.getElementById('libLightboxImg'); if(img) img.src = ''; }, 180);
 }
-// Action sur une image de la Bibliothèque (ouvrir / télécharger / envoyer vers Cartoon) en pleine résolution.
+// Action sur une image de la Bibliothèque (ouvrir / télécharger) en pleine résolution.
 async function _libImgAction(action, idx){
   let e; try { e = JSON.parse(localStorage.getItem('imgHistory')||'[]')[idx]; } catch(_){}
   if(!e) return;
@@ -10190,7 +9826,6 @@ async function _libImgAction(action, idx){
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(bu), 3000);
     }catch(_){ const a = document.createElement('a'); a.href = u; a.download = 'avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }
   }
-  else if(action === 'cartoon'){ _libSendImageToCartoon(u); }
 }
 
 function _imgRenderHistory(){
@@ -10234,14 +9869,6 @@ function enhanceImagePrompt(){
   _imgUpdateCharCount(ta);
   toast('Prompt d\'amélioration ajouté');
 }
-function cartoonEnhancePrompt(){
-  const ta = document.getElementById('cartoonCharPrompt');
-  if(!ta) return;
-  const cur = ta.value.trim();
-  ta.value = cur ? (cur + ' ' + _ENHANCE_PROMPT) : _ENHANCE_PROMPT;
-  toast('Prompt d\'amélioration ajouté');
-}
-
 const _IMG_SUGGEST_GEN = [
   'Entrepreneur en studio moderne, MacBook, lumière naturelle',
   'Face cam UGC outdoor, micro-cravate, t-shirt uni',
@@ -10408,11 +10035,13 @@ async function _imgDownload(ev){
 }
 
 // ── Nano Banana Pro (Gemini 3 Pro Image) ──
-// Le google-ai-proxy est un passe-plat générique (?path=), il sert déjà Imagen 4 et
-// Veo 3.1 → aucun travail backend pour ajouter ce modèle.
+// Le google-ai-proxy est un passe-plat générique (?path=), il sert déjà Veo 3.1
+// → aucun travail backend pour ce modèle.
 // Tarif Google : 0,134 $ en 1K/2K · 0,24 $ en 4K. Trop cher pour chaque brouillon,
 // mais c'est exactement l'usage recommandé : une passe 4K sur une image qu'on garde.
-const _NB_MODEL = 'gemini-3-pro-image-preview';
+// 23/09/2026 : identifiant GA (sorti le 28/05/2026). La préversion « gemini-3-pro-image-preview » est
+// arrêtée depuis le 25/06/2026 (ai.google.dev/gemini-api/docs/deprecations). Mêmes paramètres, même prix.
+const _NB_MODEL = 'gemini-3-pro-image';
 // #4k-faithful (Axel 30/08) : ancien prompt « BRING OUT abundant micro-detail / peach-fuzz / film
 // grain » RE-TEXTURAIT la peau (résultat rugueux, taches inventées, visage changé). Axel veut un 4K
 // FIDÈLE — « le même esprit que la génération » : on agrandit SANS rien ajouter ni embellir.
@@ -10445,7 +10074,7 @@ function _nbAspect(w, h){
 // Édition img2img générique via Nano Banana Pro. size = '1K' | '2K' | '4K'.
 // API = generateContent (la voie stable, celle qu'utilise déjà le proxy pour Imagen).
 // La première doc lue donnait un endpoint /interactions qui n'existe pas → 404
-// silencieux. Vérifié sur ai.google.dev : modèle gemini-3-pro-image-preview,
+// silencieux. Vérifié sur ai.google.dev : modèle gemini-3-pro-image (GA depuis le 28/05/2026),
 // config par responseModalities + imageConfig(imageSize/aspectRatio).
 // Partagé par « Restaurer les détails » (4K) et « Rendre réaliste » (2K).
 async function _nbEdit(token, dataUrl, prompt, aspect, size){
@@ -10454,6 +10083,21 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
   // #lot6 · img2img = une image d'entrée par construction → consigne de fidélité du texte
   // packaging (anti-doublon : certains prompts — _NB_REFINE_PROMPT / _IMG_REALISM_EDIT — ont déjà leur lock)
   if(String(prompt||'').indexOf(_IMG_TEXT_FIDELITY) < 0) prompt = String(prompt||'') + _IMG_TEXT_FIDELITY;
+  // kie.ai (compte developer) : MÊME modèle, MÊME prompt, même ratio/taille ; seul le fournisseur change.
+  window._aaLastEngine = 'google';
+  if(_kieOn()){
+    try{
+      const _u = await _kieUpload(dataUrl);
+      const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:100 });
+      const _d = await _kieDataUrl(_r.url);
+      window._aaLastEngine = 'kie';
+      return _d;
+    }catch(e){
+      console.warn('[kie] Nano Banana Pro → repli Google', e);
+      if(e && e._kieRefus) throw new Error('Nano Banana Pro a refusé cette image ('+e.message+')');
+      if(!_kieCanFallback(e)) throw e;
+    }
+  }
   const path = '/v1beta/models/' + _NB_MODEL + ':generateContent';
   const body = {
     contents: [{ role:'user', parts: [
@@ -10530,6 +10174,21 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
   const mt=/^data:([^;]+);base64,(.+)$/.exec(targetDataUrl||''); const mf=/^data:([^;]+);base64,(.+)$/.exec(faceDataUrl||'');
   if(!mt||!mf) throw new Error('Images illisibles pour le faceswap');
   const prompt="You are given TWO images. In the FIRST image, replace the person's ENTIRE HEAD (face AND hair) with the head of the person from the SECOND image — as if you cut off the first person's head and put the second person's head in its place. CRITICAL: keep the FIRST image's body, clothing, hands, pose, background, framing and camera perspective EXACTLY unchanged and pixel-identical. Blend the neck and skin tone seamlessly, and match the FIRST image's lighting direction, color grading, white balance and grain so the new head looks genuinely photographed in that scene. Keep the EXACT same identity as the SECOND image — same face, features, expression and hairstyle — do NOT beautify, slim or alter them. Photorealistic, high detail, natural real skin texture (no plastic, no smoothing, no airbrush), correct proportions, no distortion, no duplicated limbs, no extra artifacts. Output only the final edited image.";
+  // kie.ai (compte developer) : même prompt, images dans le même ordre (cible puis visage). kie recadre en 1:1 par
+  // défaut → on passe le ratio de la cible. 1K = la sortie par défaut de Google (sans imageConfig).
+  window._aaLastEngine='google';
+  if(_kieOn()){
+    try{
+      let _ar='auto'; try{ const _im=await _loadImgEl(targetDataUrl); _ar=_nbAspectFor(_im.naturalWidth,_im.naturalHeight); }catch(_){}
+      const _u1=await _kieUpload(targetDataUrl), _u2=await _kieUpload(faceDataUrl);
+      const _r=await _kieRun('nano-banana-pro', { prompt, image_urls:[_u1,_u2], aspect_ratio:_ar, resolution:'1K' }, { every:3000, maxPolls:80 });
+      const _d=await _kieDataUrl(_r.url); window._aaLastEngine='kie'; return _d;
+    }catch(e){
+      console.warn('[kie] faceswap → repli Google', e);
+      if(e && e._kieRefus) throw new Error('Faceswap refusé — '+e.message);
+      if(!_kieCanFallback(e)) throw e;
+    }
+  }
   const path='/v1beta/models/'+_NB_MODEL+':generateContent';
   const body={ contents:[{ role:'user', parts:[ {text:prompt}, {inline_data:{mime_type:mt[1],data:mt[2]}}, {inline_data:{mime_type:mf[1],data:mf[2]}} ]}], generationConfig:{ responseModalities:['TEXT','IMAGE'] } };
   const res=await fetch(SUPABASE_URL+'/functions/v1/google-ai-proxy?path='+encodeURIComponent(path),{ method:'POST', headers:{...(_aaOp()),'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body) });
@@ -10539,13 +10198,95 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
   if(!b64){ const _br=(d&&d.promptFeedback&&d.promptFeedback.blockReason)||(d&&d.candidates&&d.candidates[0]&&d.candidates[0].finishReason)||''; throw new Error('Faceswap refusé — Nano Banana n\'a pas renvoyé d\'image'+(_br?' ('+_br+')':'')+'. Essaie d\'autres photos.'); }
   return 'data:image/jpeg;base64,'+b64;
 }
+// ── kie.ai (23/09/2026) — COMPTE DEVELOPER UNIQUEMENT ─────────────────────────────────────────────
+// Mêmes modèles, MÊMES prompts backend : seul le fournisseur change (kie ≈ −20 à −70 %). Le serveur (kie-proxy)
+// revérifie le plan developer. Panne technique kie → repli automatique sur le fournisseur habituel.
+// kie n'a ni DPA ni garantie RGPD → jamais pour les clients tant que ce n'est pas tranché.
+// Réglages (console du compte dev) : localStorage aa_kie='0' coupe kie · aa_kie_nofallback='1' interdit le repli.
+const KIE_PROXY = SUPABASE_URL + '/functions/v1/kie-proxy';
+function _kieOn(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer' && localStorage.getItem('aa_kie')!=='0'; }catch(_){ return false; } }
+function _kieNoFallback(){ try{ return localStorage.getItem('aa_kie_nofallback')==='1'; }catch(_){ return false; } }
+function _kieTag(){ const t = (window._aaLastEngine==='kie' && _kieOn()) ? ' · kie.ai' : ''; window._aaLastEngine=''; return t; }
+// Dépose une entrée (Blob, File ou data-URL) dans render-media/<uid>/kie-in/ → URL signée 1 h lisible par kie.
+async function _kieUpload(src, ext){
+  const { data:{ session } } = await sb.auth.getSession();
+  const uid = session?.user?.id; if(!uid) throw new Error('kie : session requise');
+  const blob = (typeof src==='string') ? await (await fetch(src)).blob() : src;
+  const t = String(blob.type||'');
+  const e = ext || (t.includes('png') ? 'png' : t.includes('webp') ? 'webp' : t.includes('wav') ? 'wav' : t.includes('mp4') ? 'mp4' : 'jpg');
+  const path = uid + '/kie-in/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + e;
+  const up = await sb.storage.from('render-media').upload(path, blob, { contentType: t || undefined, upsert:true });
+  if(up.error) throw new Error('kie : dépôt impossible ('+up.error.message+')');
+  const sg = await sb.storage.from('render-media').createSignedUrl(path, 3600);
+  if(sg.error || !sg.data?.signedUrl) throw new Error('kie : URL signée impossible');
+  return sg.data.signedUrl;
+}
+// Soumet puis suit une tâche kie → { url (URL signée de NOTRE storage), kind, kie }.
+// Erreur marquée e._kieRefus = refus de CONTENU (inutile de relancer ailleurs) ; sinon panne technique (repli possible).
+async function _kieRun(alias, body, opt){
+  opt = opt || {};
+  const every = opt.every || 4000, maxPolls = opt.maxPolls || 180;
+  // En-têtes relus à CHAQUE requête : le jeton peut expirer pendant 11 min de suivi. 401 → rafraîchit puis 1 réessai.
+  const call = async (p, init, retried) => {
+    const H = await getAuthHeader();
+    const r = await fetch(KIE_PROXY+'?path='+encodeURIComponent(p), Object.assign({ headers:{ ...H, 'Content-Type':'application/json' } }, init||{}));
+    if(r.status===401 && !retried){ try{ await sb.auth.refreshSession(); }catch(_){} return call(p, init, true); }
+    const j = await r.json().catch(()=>({}));
+    return { r, j };
+  };
+  const refusRe = /policy|moderat|safety|sensitive|violat|nsfw|prohibit|flagged|content check|inappropriate|minor/i;
+  // _kieStage : 'submit' = rien de lancé chez kie · 'failed' = kie a échoué (non facturé) → repli possible ;
+  //             'pending' = tâche lancée, issue inconnue → JAMAIS de repli (on paierait la même génération deux fois).
+  const fail = (msg, stage, refus) => { const e = new Error(msg); e._kieStage = stage; e._kieRefus = !!refus; return e; };
+  let rs, sd;
+  try{ ({ r:rs, j:sd } = await call('/kie/'+alias, { method:'POST', body: JSON.stringify(body) })); }
+  catch(e){ throw fail('kie : soumission sans réponse ('+((e&&e.message)||e)+')', 'pending'); }
+  if(!rs.ok || !sd.request_id){ const m = sd.error || ('HTTP '+rs.status); throw fail('kie : '+m, 'submit', rs.status===422 && refusRe.test(m)); }
+  const rid = sd.request_id;
+  console.log('[kie] tâche', alias, rid);
+  for(let i=0; i<maxPolls; i++){
+    await new Promise(res=>setTimeout(res, every));
+    if(typeof opt.onTick==='function'){ try{ opt.onTick(i, maxPolls); }catch(_){} }
+    let rt, st;
+    try{ ({ r:rt, j:st } = await call(sd.status_url)); }catch(_){ continue; }   // coupure réseau : on réessaie au tour suivant
+    if(!rt.ok){ if(rt.status===429 || rt.status===401 || rt.status>=500) continue; throw fail('kie : suivi '+(st.error||rt.status)+' (tâche '+rid+')', 'pending'); }
+    if(st.status==='IN_QUEUE' || st.status==='IN_PROGRESS') continue;
+    if(st.status==='FAILED'){ const m = st.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m+' '+JSON.stringify(st.detail||''))); }
+    if(st.status==='COMPLETED'){
+      for(let k=0; k<5; k++){   // la route résultat est idempotente côté kie-proxy → on peut la rappeler
+        let rr=null, rd={};
+        try{ ({ r:rr, j:rd } = await call(sd.response_url)); }catch(_){}
+        if(rr && rr.ok && rd.url){ console.log('[kie] terminé', alias, rid, rd.kie||{}); return { url: rd.url, kind: rd.kind, kie: rd.kie||{} }; }
+        if(rr && rr.status===422){ const m = rd.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m)); }
+        await new Promise(res=>setTimeout(res, 3000*(k+1)));
+      }
+      throw fail('kie : résultat prêt mais non récupéré (tâche '+rid+') — ne relance pas, réessaie plus tard', 'pending');
+    }
+  }
+  throw fail('kie : délai dépassé (tâche '+rid+' toujours en cours chez kie)', 'pending');
+}
+// Repli vers le fournisseur habituel : seulement si RIEN n'a été lancé chez kie (ou si kie a échoué sans facturer),
+// jamais sur un refus de contenu, jamais si aa_kie_nofallback='1'.
+function _kieCanFallback(e){ return !!e && !e._kieRefus && (e._kieStage==='submit' || e._kieStage==='failed') && !_kieNoFallback(); }
+// Récupère le média rapatrié (URL signée de NOTRE storage) : contrôle HTTP + 3 essais.
+async function _kieFetchBlob(url){
+  for(let k=0; k<3; k++){
+    try{ const r = await fetch(url); if(r.ok){ const b = await r.blob(); if(b.size > 1000) return b; } }catch(_){}
+    await new Promise(res=>setTimeout(res, 1500*(k+1)));
+  }
+  const e = new Error('kie : média terminé mais téléchargement impossible'); e._kieStage = 'pending'; throw e;
+}
+async function _kieDataUrl(url){
+  const b = await _kieFetchBlob(url);
+  return await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(b); });
+}
 // Restauration 4K (bouton « Restaurer les détails ») — prompt figé, taille max.
 async function _nbRefine4K(token, dataUrl, aspect){
   return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K');
 }
 // #4k-repli-fal (Axel 31/08) : MÊME modèle Nano Banana Pro mais via fal.ai
 // (fal-ai/nano-banana-pro/edit) au lieu de l'API Google directe — fournisseur différent,
-// non saturé quand gemini-3-pro-image-preview renvoie 503/504. Même prompt de fidélité 4K.
+// non saturé quand gemini-3-pro-image renvoie 503/504. Même prompt de fidélité 4K.
 // Retourne une URL image (comme _falAuraSR). Entrée = data URI accepté par fal.
 async function _nbProFalEdit(dataUrl){
   const H = await getAuthHeader();
@@ -10838,7 +10579,7 @@ async function _imgUpscaleNano(btn){
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
-    toast('Amélioré en 4K — '+engine);
+    toast('Amélioré en 4K — '+engine+(engine==='Nano Banana Pro'?_kieTag():''));
   }catch(e){
     try{ await creditsFlowRefund('le 4K Nano a échoué'); }catch(_){}
     toast(''+(e.message||e));
@@ -11076,7 +10817,7 @@ async function generateImage(){
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('Image générée' + (_is4K ? ' — gpt-image-2.5 + upscale 4K' : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('Image générée' + (_is4K ? ' — gpt-image-2.5 + upscale 4K' + _kieTag() : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
@@ -11102,7 +10843,7 @@ async function generateImage(){
       _imgSaveHistory(url, _imgSelectedStyleLabel, size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('Image générée · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('Image générée' + _kieTag() + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
     } else {
       // ── Mode multi (2-3 images) ──
       singleWrap.style.display = 'none';
@@ -11213,7 +10954,7 @@ async function _imgRetryViaNano(){
     _imgSaveHistory(url, 'Nano Banana Pro', fmt);
     _imgRenderHistory();
     const rem=_imgMonthRemaining();
-    toast('Image générée via Nano Banana Pro · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
+    toast('Image générée via Nano Banana Pro'+_kieTag()+' · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
   }catch(e){
     await creditsFlowRefund('Nano Banana Pro a échoué');
     const _m = String((e&&e.message)||e);
@@ -12281,12 +12022,13 @@ function nav(id,el){
     }
   }
 
+  const vEl = document.getElementById('v-'+id);
+  if(!vEl) return;   // vue inexistante (ex. ancien onglet « cartoon » mémorisé) → on ne touche à rien, l'écran reste affiché
   document.querySelectorAll('.view').forEach(v=>{ v.classList.remove('on'); v.style.flexDirection=''; });
   document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('on'));
-  const vEl = document.getElementById('v-'+id);
   vEl.classList.add('on');
   try{ const _m=document.querySelector('.main'); if(_m) _m.scrollTop=0; }catch(_){}   // scroll INTERNE (mobile) : remis en haut à chaque navigation (window.scrollTo ne scrolle plus le body)
-  if(id==='express' || id==='cartoon') vEl.style.flexDirection='row';
+  if(id==='express') vEl.style.flexDirection='row';
   if(id==='studio') vEl.style.flexDirection='column';
   if(el) el.classList.add('on');
   else { const _auto=[...document.querySelectorAll('.nav-i')].find(n=>{const o=n.getAttribute('onclick')||'';return o.includes("nav('"+id+"'")||o.includes('nav("'+id+'"');}); if(_auto) _auto.classList.add('on'); }
@@ -12297,7 +12039,6 @@ function nav(id,el){
   if(id==='recorder'){ recInit(); try{ if(typeof _recPrewarm==='function') _recPrewarm(); }catch(_){} }   // #warmmic : pré-chauffe le micro dès l'entrée dans l'Enregistreur du module Audio (même bénéfice que le Générateur)
   if(id==='express')    initExpress();
   if(id==='omni')       initOmni();
-  if(id==='cartoon')    initCartoon();
   if(id==='montage')    initMontage();
   if(id==='audioclean') initAudioCleanView();
   if(id==='publish')    initPublishView();
@@ -14096,6 +13837,29 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
   // fal : 1080p limité à 30 s d'audio, 720p jusqu'à 60 s. Nos scènes font 2-6 s, mais on
   // se protège si le chef d'orchestre en pose une longue.
   const resolution = (Number(segSec)||0) > 28 ? '720p' : '1080p';
+  // kie.ai (compte developer) : MÊME prompt (_mtMotionPrompt), mêmes médias ; seul le fournisseur change. Panne → fal.
+  window._aaLastEngine='fal';
+  if(_kieOn()){
+    try{
+      let _aud = sA.data.signedUrl;
+      if(audioWav.size > 9.5*1024*1024){   // kie refuse un audio > 10 Mo (WAV stéréo 48 kHz ≈ 52 s) → mono, même fréquence
+        const _ac = new (window.AudioContext||window.webkitAudioContext)();
+        const _ab = await _ac.decodeAudioData(await audioWav.arrayBuffer()); try{ _ac.close(); }catch(_){}
+        const _oc = new OfflineAudioContext(1, _ab.length, _ab.sampleRate);
+        const _src = _oc.createBufferSource(); _src.buffer = _ab; _src.connect(_oc.destination); _src.start();
+        _aud = await _kieUpload(_audioBufferToWavBlob(await _oc.startRendering()), 'wav');
+      }
+      const _r = await _kieRun('omnihuman-1.5', { image_url:sI.data.signedUrl, audio_url:_aud, resolution, prompt:_mtMotionPrompt('omnihuman', role) },
+        { every:5000, maxPolls: Math.min(144, 48 + 3*Math.ceil(Number(segSec)||0)) });
+      window._aaLastEngine='kie';
+      return await _kieFetchBlob(_r.url);
+    }catch(e){
+      console.warn('[kie] OmniHuman → repli fal', e);
+      if(e && e._kieRefus) throw new Error('OmniHuman (kie) a refusé ce contenu — '+e.message);
+      if(!_kieCanFallback(e)) throw e;
+      window._aaLastEngine='fal';
+    }
+  }
   const sub=await fPost(FAL_OMNI, {
     image_url: sI.data.signedUrl,
     audio_url: sA.data.signedUrl,
@@ -18782,7 +18546,7 @@ async function _avGen4K(btn){
       src = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.readAsDataURL(blob); });
     }
     const token = (await sb.auth.getSession())?.data?.session?.access_token;
-    // #4k-repli (Axel 31/08) : gemini-3-pro-image-preview est souvent SATURÉ (503 « high demand »
+    // #4k-repli (Axel 31/08) : gemini-3-pro-image est souvent SATURÉ (503 « high demand »
     // / 504 timeout) — après 3 essais dans _nbEdit, on REPLIE sur AuraSR (fal, provider différent,
     // fiable). Bonus : non génératif → ne re-fabrique pas le visage. Le bouton produit donc TOUJOURS
     // un résultat 4K net au lieu d'échouer quand Google est en surcharge.
@@ -18790,7 +18554,7 @@ async function _avGen4K(btn){
     try{
       up = await _nbRefine4K(token, src, '9:16');
     }catch(nbErr){
-      // Google (gemini-3-pro-image-preview) saturé → MÊME modèle via fal.ai (fournisseur non saturé).
+      // Google (gemini-3-pro-image) saturé → MÊME modèle via fal.ai (fournisseur non saturé).
       // UI neutre : on ne montre PAS « Google saturé/fal.ai » à l'utilisateur (Axel 31/08), le timer continue.
       console.warn('Nano Banana 4K (Google) KO → repli Nano Banana Pro via fal.ai :', nbErr);
       up = await _nbProFalEdit(src);
@@ -18802,7 +18566,7 @@ async function _avGen4K(btn){
     // la version 4K REMPLACE l'entrée de base dans la Bibliothèque (plus de doublon)
     try{ await _avLibReplace(up, '1024x1792', 'Avatar IA · 4K'); }catch(_){}
     creditsFlowDone();
-    toast('Passé en 4K');
+    toast('Passé en 4K'+_kieTag());
     if (btn){ btn.style.opacity = '.55'; btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>4K fait'; }
   }catch(e){
     console.error('avatar 4K:', e);
@@ -27324,7 +27088,7 @@ function libSetTab(tab){
   renderLibrary();
 }
 
-// ── Envoyer depuis bibliothèque vers Express / Cartoon ──────────────────
+// ── Envoyer depuis bibliothèque vers Express ──────────────────
 async function _libSendVideoToExpress(idx){
   // idx = indice library (#65) ; rétro-compat clé IDB string
   const it = (typeof idx==='number') ? library[idx] : library.find(e=>e && e.hedraIdbKey===idx);
@@ -27363,26 +27127,6 @@ async function _libSendAudioToExpress(libIdx){
   const navEl = document.querySelector('.nav-i[onclick*="express"]');
   nav('express', navEl);
   toast('Audio envoyé vers Express');
-}
-
-function _libSendImageToCartoon(imgUrl){
-  // Naviguer vers Cartoon et pré-remplir l'image de référence
-  const navEl = document.querySelector('.nav-i[onclick*="cartoon"]');
-  nav('cartoon', navEl);
-  setTimeout(async () => {
-    try {
-      const res  = await fetch(imgUrl);
-      const blob = await res.blob();
-      const file = new File([blob], 'ref-image.jpg', { type: blob.type || 'image/jpeg' });
-      window._cartoonRefImageFile = file;
-      // Afficher l'aperçu dans Cartoon
-      const preview = document.getElementById('cartoonRefPreview');
-      const wrap    = document.getElementById('cartoonRefWrap');
-      if(preview){ preview.src = imgUrl; preview.style.display = 'block'; }
-      if(wrap)    wrap.style.display = 'block';
-      toast('Image envoyée vers Cartoon comme référence');
-    } catch(e){ toast('Impossible de charger l\'image'); }
-  }, 300);
 }
 
 // ── Chargement des thumbnails vidéo + waveforms audio en arrière-plan ──
@@ -28685,7 +28429,7 @@ let _expressGpSplit      = 60;   // % hauteur pour la vidéo principale (reste =
 // ══════════════════════════════════════════════════════════════
 window._expStyle  = 'ugc';   // Axel 31/08 : UGC réel = style par défaut (cas d'usage héros)
 window._expFormat = '9:16';
-window._expDur    = 4;   // Veo 3.1 : crans 4/6/8/15/22/29 s (défaut 4 s)
+window._expDur    = 4;   // Veo 3.1 : crans 4/6/8 s (défaut 4 s)
 window._expSubs   = false;
 window._expImgB64 = null;   // image fournie/générée (base64 brut, sans préfixe)
 window._expQuality = '720p';
@@ -28722,18 +28466,21 @@ const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 const EXP_MODELS = [
   { v:'standard', name:'Veo Standard', sub:'Rapide · éco' },
   { v:'omni',     name:'Omni Flash',   sub:'Qualité Max' },
+  { v:'pro',      name:'Veo Fast',     sub:'kie.ai · dev', dev:true },   // test kie.ai : compte developer seulement
 ];
+function _expModelsVisible(){ return EXP_MODELS.filter(m=>!m.dev || _kieOn()); }
 function _expModelAllowed(v){
   if(v==='omni') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+  if(v==='pro') return _kieOn();   // Veo Fast : réservé au test kie.ai du compte developer
   return true; // Veo Standard pour tous
 }
 function _expRenderModels(){
   const row=document.getElementById('expModelRow'); if(!row) return;
   const plan=(currentMember?.plan||'free').toLowerCase();
-  if(window._expVeoModel==='pro') window._expVeoModel='standard';   // migration : l'ancien « Veo Pro » n'existe plus
+  if(window._expVeoModel==='pro' && !_expModelAllowed('pro')) window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus (sauf test kie dev)
   if(!window._expVeoModel) window._expVeoModel='standard';
   if(window._expVeoModel==='omni' && !_expModelAllowed('omni')) window._expVeoModel='standard'; // plan sans Omni
-  row.innerHTML = EXP_MODELS.map(m=>{
+  row.innerHTML = _expModelsVisible().map(m=>{
     const on=m.v===window._expVeoModel, locked=!_expModelAllowed(m.v);
     const lock=locked?' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>':'';
     return `<div onclick="_expPickModel('${m.v}')" class="exp-card${on?' on':''}" style="flex:1;padding:13px 12px;text-align:center;${locked?'opacity:.5;':''}">
@@ -28742,8 +28489,10 @@ function _expRenderModels(){
   }).join('');
 }
 function _expPickModel(v){
-  if(!_expModelAllowed(v)){ toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
-  window._expVeoModel=v; if(v!=='omni' && window._expFormat==='1:1') window._expFormat='9:16'; initExpress();
+  if(!_expModelAllowed(v)){ if(v==='pro') return; toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
+  window._expVeoModel=v; if(v!=='omni' && window._expFormat==='1:1') window._expFormat='9:16';
+  if(!window._expDurAuto){ const _a=_expDurAllowed(), _d=parseInt(window._expDur)||_a[0]; window._expDur=_a.reduce((b,x)=>Math.abs(x-_d)<Math.abs(b-_d)?x:b,_a[0]); }
+  initExpress();
 }
 
 function initExpress(){
@@ -28768,7 +28517,7 @@ function initExpress(){
         <div style="font-size:10px;color:var(--text3)">${f.ratio}</div></div>`;
     }).join('');
   }
-  // Durée (slider) — 4/6/8 s pour tous ; Élite : jusqu'à 29 s via extensions de scène (8+7+7+7)
+  // Durée (slider) — Veo 4/6/8 s pour tous (extensions retirées le 23/09) ; Omni 3→10 s
   const ds = document.getElementById('expDurSlider');
   if(ds){
     // Libre (position 0, DÉFAUT) : Omni prend sa durée MAX (10 s) et coupe si le script est plus long ; le débit
@@ -28782,9 +28531,10 @@ function initExpress(){
     const lb=document.getElementById('expDurLabel'); if(lb) lb.textContent = window._expDurAuto ? 'Libre' : ((window._expDur||_da[0])+' s');
     const _mn=document.getElementById('expDurMinLbl'); if(_mn) _mn.textContent = 'Libre';
     const _mx=document.getElementById('expDurMaxLbl'); if(_mx) _mx.textContent = _da[_da.length-1]+' s';   // 10 s (Omni) ou 29 s (Veo)
-    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display=(_isOmniDur||['elite','developer'].includes((currentMember?.plan||'free').toLowerCase()))?'none':'block';
+    const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display='none';   // plus de durées +8 s (extensions retirées le 23/09)
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
-    const _ah=document.getElementById('expDurAutoHint'); if(_ah) _ah.style.display=(!_isOmniDur && window._expDurAuto && _expEstimateDur().over)?'block':'none';
+    const _ah=document.getElementById('expDurAutoHint');
+    if(_ah){ const _ov=(!_isOmniDur && window._expDurAuto && _expEstimateDur().over); _ah.textContent=_ov?'Texte long : Veo s’arrête à 8 s — passe sur Omni Flash (10 s) ou Montage IA pour une vidéo plus longue':''; _ah.style.display=_ov?'block':'none'; }
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
@@ -28816,7 +28566,7 @@ function initExpress(){
 function _expCostCredits(){
   const dur=parseInt(window._expDur)||6;
   if(window._expVeoModel==='omni'){ const om=(window._expQuality==='1080p')?(CREDIT_COSTS.omni1080Mult||1.5):1; return Math.round(dur * (CREDIT_COSTS.omniFlashPerSec||4) * om); }   // Omni Flash : 720p 4 cr/s · 1080p 6 cr/s, pas d'extensions
-  const rate=CREDIT_COSTS.expressLitePerSec||1.5;   // Veo Standard (Lite) — le seul Veo restant
+  const rate=(window._expVeoModel==='pro') ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);   // Veo Standard (Lite) ; Veo Fast = test kie dev
   const mult=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1; // 1080p = ×2 du 720p
   return Math.round(dur * rate * mult);
 }
@@ -28833,10 +28583,9 @@ function _expUpdateGenCaption(){
       const n=Math.round(_d*(CREDIT_COSTS.omniFlashPerSec||4)*_om);   // durée exacte 3-10 s (pas d'extensions)
       cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit');
     } else {
-      const _r=CREDIT_COSTS.expressLitePerSec||1.5, _m=(window._expQuality==='1080p')?(CREDIT_COSTS.express1080Mult||2):1;
+      const _r=(window._expVeoModel==='pro')?(CREDIT_COSTS.expressFastPerSec||3):(CREDIT_COSTS.expressLitePerSec||1.5), _m=(window._expQuality==='1080p')?(CREDIT_COSTS.express1080Mult||2):1;
       const _cc=v=>Math.round(v*_r*_m);
-      if(_d>8){ cb.textContent = '≈ '+_cc(8)+' à '+_cc(_d)+' crédits'; }   // Veo : extensions incertaines → fourchette
-      else { const n=_cc(_d); cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit'); }
+      const n=_cc(Math.min(8,_d)); cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit');
     }
   }
 }
@@ -28858,11 +28607,14 @@ function _expHeroSync(){
   line.textContent = [ (window._expFormat||'9:16'), (window._expDur||4)+' s',
     (window._expQuality||'720p'), st, vx, imgTxt ].filter(Boolean).join(' · ');
 }
-// Durées possibles : Veo 3.1 = 4/6/8 s par génération ; Élite débloque 15/22/29 s (extensions de scène +7 s)
+// Durées possibles : Veo 3.1 = 4/6/8 s par génération.
+// 23/09/2026 : les durées 15/22/29 s (extensions de scène Élite) sont RETIRÉES. Elles tournaient sur Veo 3.1 Lite,
+// que l'API Gemini n'accepte pas en extension (Veo 3.1 / Fast seulement, 720p) → aucune extension n'a jamais abouti
+// (0 débit « express-ext » en 60 jours). Le vrai correctif (Fast 720p + réplique découpée par extension) change le
+// tarif Élite : en attente de la décision d'Axel. Au-delà de 8 s → Omni Flash (10 s) ou Montage IA.
 function _expDurAllowed(){
   if(window._expVeoModel==='omni') return [3,4,5,6,7,8,9,10];   // Omni Flash : à la seconde, 3→10 s (pas d'extensions)
-  // Veo : visibles pour tous — les durées >8 s (extensions de scène Élite) sont vérifiées au moment de générer
-  return [4,6,8,15,22,29];
+  return [4,6,8];
 }
 // ── DURÉE AUTO (défaut) : cale la durée sur la longueur du texte PARLÉ du prompt ──
 // Veo débite TOUT le dialogue dans le clip → texte trop long pour la durée = ça « rushe ».
@@ -28880,16 +28632,14 @@ function _expEstimateDur(){
   const secs=Math.max(4, Math.ceil(spoken.length/14));   // ~14 caractères / seconde parlée
   // AUTO = la durée qu'il FAUT selon le texte, calée sur le cran autorisé juste au-dessus.
   // Hors Élite : Veo cape à 8 s / clip. Élite / dev : extensions jusqu'à 29 s (au-delà = Montage IA).
-  const plan=(currentMember?.plan||'free').toLowerCase();
-  const elite=['elite','developer'].includes(plan) || !!currentMember?.is_owner;
-  const ladder = (window._expVeoModel==='omni') ? [3,4,5,6,7,8,9,10] : (elite ? [4,6,8,15,22,29] : [4,6,8]);
+  const ladder = (window._expVeoModel==='omni') ? [3,4,5,6,7,8,9,10] : [4,6,8];   // Veo : 8 s max pour tous (voir _expDurAllowed)
   const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
   return { dur, over: secs>ladder[ladder.length-1] };
 }
 function _expApplyAutoDur(){ if(!window._expDurAuto) return; initExpress(); }   // Libre : Omni=10 s max · Veo=estimation (durée posée dans initExpress)
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
 // Slider durée : position 0 = AUTO (le système / Veo cale la durée sur le texte parlé, défaut) ;
-// 1..N = durées Veo manuelles (4/6/8/15/22/29). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
+// 1..N = durées Veo manuelles (4/6/8). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
 function _expDurSlide(v){
   const a=_expDurAllowed();
   if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }   // position 0 = Libre (Omni : 10 s max + remboursement · Veo : script)
@@ -29852,7 +29602,7 @@ async function _mcGenerate(){
     const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcGestTxt + _mcSafeTxt + _mcBgTxt + _mcCamTxt + _mcRealTxt;
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
     // (marquée ._moderation quand le content checker a bloqué → repli possible).
-    const runKling = async (ver) => {
+    const runKlingFal = async (ver) => {
       const model='/fal-ai/kling-video/'+ver+'/'+(tier==='pro'?'pro':'standard')+'/motion-control';
       const body={ image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId).slice(0,2400) };
       // Kling 3.0 : « elements » = liaison d'identité FACIALE (doc fal : « enhances facial identity
@@ -29888,6 +29638,28 @@ async function _mcGenerate(){
         throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
       }
       throw new Error('Délai dépassé (>11 min) — Kling saturé, réessaie dans un moment');
+    };
+    // kie.ai (compte developer) : MÊMES médias, MÊME prompt ; seul le fournisseur change.
+    //   Motion 2.6 = kling-2.6 720p (puis Topaz fal inchangé pour la 1080p) · repli modération 2.6 « pro » = kling-2.6 1080p
+    //   Motion 3.0 = kling-3.0 1080p, fond de l'IMAGE (= comportement fal). Refus de contenu → repli modération existant ;
+    //   panne technique → fal.
+    const runKling = async (ver) => {
+      if(_kieOn()){
+        try{
+          const _r = await _kieRun(ver==='v3' ? 'kling-3.0-mc' : 'kling-2.6-mc',
+            { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId).slice(0,2400),
+              mode: tier==='pro' ? '1080p' : '720p', background_source:'input_image' },
+            { every:4000, maxPolls:165, onTick:(i)=>_mcProg(i>75?'Génération en cours… (kie.ai est chargé, ça arrive)':'Génération en cours… (kie.ai)', Math.min(88, 22+i*2)) });
+          window._aaLastEngine='kie';
+          return _r.url;
+        }catch(e){
+          if(e && e._kieRefus){ const er=new Error(e.message); er._moderation=true; throw er; }
+          if(!_kieCanFallback(e)) throw e;
+          console.warn('[mc] kie KO → repli fal', e); toast('kie.ai indisponible — repli fal');
+        }
+      }
+      window._aaLastEngine='fal';
+      return runKlingFal(ver);
     };
     let out='';
     try{ out=await runKling(_mcVer); }
@@ -30923,16 +30695,11 @@ async function expressCreate(){
   // Moteur Seedance (dev-only) : chemin auto-contenu, ne touche pas au flux Veo.
   if(window._expEngine==='seedance' && _expIsDev()){ return _expCreateSeedance(prompt); }
   if(_gateFreeGenerate()) return;
+  window._aaLastEngine='';
   // Omni Flash = Pro/Élite. L'UI cache le bouton pour les autres, mais on REGATE ici avant tout débit
   // (sinon un plan inférieur pourrait forcer window._expVeoModel='omni' et accéder à la feature).
   if(window._expVeoModel==='omni' && !_expModelAllowed('omni')){
     toast('Omni Flash est réservé aux plans Pro et Élite');
-    showPaywall(); return;
-  }
-  // Durées >8 s = extensions de scène Veo, réservées Élite → paywall avant de consommer quoi que ce soit.
-  // Omni n'utilise PAS d'extensions (3-10 s à la seconde, déjà gaté Pro/Élite) → ce garde ne s'applique qu'à Veo.
-  if(window._expVeoModel!=='omni' && (parseInt(window._expDur)||4)>8 && !['elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-    toast('Les vidéos de +8 s sont réservées au plan Élite');
     showPaywall(); return;
   }
   // 1080p = Pro et + → sélectionnable par tous, mais paywall au moment de générer
@@ -30943,23 +30710,19 @@ async function expressCreate(){
   // ── Durée/résolution RÉELLES + DÉBIT À LA DURÉE GÉNÉRÉE (Axel 07/09 : « payé 174 pour 8 s ») ──
   // Avant, on débitait _expDur×tarif d'un coup (29 s en Libre) même si les extensions échouaient → sur-débit.
   // Maintenant on débite la BASE (4/6/8 s) ici, puis CHAQUE extension seulement quand elle réussit (plus bas).
-  const _planNow=(currentMember?.plan||'free').toLowerCase();
-  const _extElite=['elite','developer'].includes(_planNow);
   const _isOmni = window._expVeoModel==='omni';
   const _reqDur = parseInt(window._expDur)||(_isOmni?6:4);
-  let _dur = _reqDur, _extCount=0;
+  let _dur = _reqDur;
   let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
   if(_isOmni){
     _dur = Math.min(10, Math.max(3, _reqDur));   // Omni Flash 3-10 s : durée auto-suivie sur le script (ou choix user), débit ajusté au réel plus bas
   } else {
-    if(_dur>8 && _extElite){ _extCount=Math.min(3, Math.ceil((_dur-8)/7)); _dur=8; }
-    else { _dur = _dur<=4?4:(_dur<=6?6:8); }
+    _dur = _dur<=4?4:(_dur<=6?6:8);   // Veo : 4/6/8 s (plus d'extensions de scène, voir _expDurAllowed)
     if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
   }
-  const _expRate = _isOmni ? (CREDIT_COSTS.omniFlashPerSec||4) : (CREDIT_COSTS.expressLitePerSec||1.5);
+  const _expRate = _isOmni ? (CREDIT_COSTS.omniFlashPerSec||4) : (window._expVeoModel==='pro' ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5));
   const _expMult = _isOmni ? ((_res==='1080p') ? (CREDIT_COSTS.omni1080Mult||1.5) : 1)   // Omni : 1080p natif = ×1,5 (4→6 cr/s)
                            : ((_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1);
-  const _extCost = Math.round(7 * _expRate * _expMult);
   if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
   if(!(await spendCreditsFor(Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))) return;
 
@@ -31032,7 +30795,7 @@ async function expressCreate(){
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
       + _EXP_IDLOCK + _EXP_HOLDLOCK + _EXP_ENERGYLOCK + _EXP_PRODUCTLOCK;
-    // (durée _dur, base débitée, extensions _extCount, résolution _res, tarifs _expRate/_expMult calculés en amont)
+    // (durée _dur, base débitée, résolution _res, tarifs _expRate/_expMult calculés en amont)
     let blob;
     if(_isOmni){
       // ⚡ Omni Flash = fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
@@ -31072,6 +30835,26 @@ async function expressCreate(){
     const _startVeo = (model, withAudio) => _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning', {
       method:'POST', body: JSON.stringify(_veoBody(withAudio, model))
     });
+    // kie.ai (compte developer) : MÊME animPrompt, même image recadrée, même format/résolution/durée ; seul le
+    // fournisseur change. Traduction du prompt coupée côté serveur (la réplique FR reste en FR). Panne → Google.
+    let _kieBlob = null;
+    if(_kieOn()){
+      try{
+        setP(Math.max(p,30), 'Génération de la vidéo (kie.ai)…');
+        const _kImg = await _kieUpload('data:'+imgMime+';base64,'+imgB64);
+        const _kr = await _kieRun(/fast/.test(_veoModel) ? 'veo3-fast' : 'veo3-lite',
+          { prompt: animPrompt, image_url:_kImg, aspect_ratio: window._expFormat, resolution:_res, duration:_dur }, { every:5000, maxPolls:144 });
+        _kieBlob = await _kieFetchBlob(_kr.url);
+        window._aaLastEngine='kie';
+      }catch(e){
+        console.warn('[kie] Veo → repli Google', e);
+        if(e && e._kieRefus) throw new Error('Veo (kie.ai) a refusé ce contenu — '+e.message);
+        if(!_kieCanFallback(e)) throw e;
+        toast('kie.ai indisponible — repli Google');
+      }
+    }
+    if(_kieBlob){ blob = _kieBlob; } else {
+    window._aaLastEngine='google';
     // Veo natif : on tente avec audio ; si le modèle refuse generateAudio, on relance sans (vidéo quand même produite)
     let _usedAudio = useNativeAudio;
     let startResp = await _startVeo(_veoModel, useNativeAudio);
@@ -31102,35 +30885,6 @@ async function expressCreate(){
     if(_first.err) throw new Error(_first.err);
     let videoB64=_first.b64, videoUri=_first.uri;
 
-    // ── Extensions de scène (Élite) : chaque passe repart de la fin et ajoute ~7 s ──
-    for(let x=0; x<_extCount; x++){
-      // Débit de CETTE extension (7 s) — seulement si on la produit vraiment ; insuffisant → on livre la durée actuelle.
-      if(!(await spendCreditsFor(_extCost, 'express-ext'))){ toast('Crédits insuffisants — vidéo livrée en '+(8+x*7)+' s'); break; }
-      const _extOpIdx = _creditOps.length - 1;
-      const _refundExt = async () => { try{ const _o=_creditOps.splice(_extOpIdx,1); const _keep=_creditOps; _creditOps=_o; await creditsFlowRefund('extension non produite'); _creditOps=_keep; }catch(_){} };
-      setP(Math.max(p,60+x*10), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Extension '+(x+1)+'/'+_extCount+' (+7 s)…');
-      const _vidRef = videoUri ? { uri: videoUri } : { bytesBase64Encoded: videoB64, mimeType:'video/mp4' };
-      const _extBody = (withAudio)=>JSON.stringify({
-        instances:[{ prompt: animPrompt, video: _vidRef }],
-        parameters: Object.assign({ sampleCount:1, aspectRatio:window._expFormat, resolution:_res }, (withAudio && !_veoNativeAudio(_veoModel))?{generateAudio:true}:{})
-      });
-      let extResp = await _cartoonProxyFetch('/v1beta/models/'+_veoModel+':predictLongRunning',{ method:'POST', body:_extBody(_usedAudio) });
-      if(!extResp.ok && _usedAudio){
-        const eX = await extResp.clone().json().catch(()=>({}));
-        if(/generateAudio|generate_audio|audio/i.test(eX?.error?.message||'')) extResp = await _cartoonProxyFetch('/v1beta/models/'+_veoModel+':predictLongRunning',{ method:'POST', body:_extBody(false) });
-      }
-      if(!extResp.ok){
-        const eX2 = await extResp.json().catch(()=>({}));
-        console.warn('Extension Veo refusée:', eX2?.error?.message||extResp.status);
-        await _refundExt(); toast('Extension impossible — vidéo livrée en '+(8+x*7)+' s'); break;
-      }
-      const { name: extOp } = await extResp.json();
-      if(!extOp){ await _refundExt(); toast('Extension impossible — vidéo livrée en '+(8+x*7)+' s'); break; }
-      const _ext = await _veoAwaitOp(extOp);
-      if(_ext.err){ console.warn('Extension Veo échouée:', _ext.err); await _refundExt(); toast('Extension '+(x+1)+' échouée — vidéo livrée en '+(8+x*7)+' s'); break; }
-      videoB64=_ext.b64; videoUri=_ext.uri;
-    }
-
     if(videoB64){
       const bytes=Uint8Array.from(atob(videoB64),c=>c.charCodeAt(0));
       blob=new Blob([bytes],{type:'video/mp4'});
@@ -31138,6 +30892,7 @@ async function expressCreate(){
       setP(Math.max(p,92),'↓ Téléchargement de la vidéo…');
       blob = await _veoDownloadUri(videoUri);
     }
+    }   // ── fin du chemin Google (else de _kieBlob) ──
     }   // ── fin de la branche Veo (else de _isOmni) ──
     // ── Nettoyage AUDIO (Axel 07/09 : « pics de saturation ») : la voix Veo a des pics durs (crest ~10).
     // Compression douce + adoucissement des hautes fréquences (de-ess) + loudnorm -16 LUFS/-1.5 dBTP → pics
@@ -31169,13 +30924,14 @@ async function expressCreate(){
     // noir puis Safari plantait au téléchargement. On valide la STRUCTURE MP4 (_mp4Sane) AVANT d'afficher/servir
     // quoi que ce soit ; l'opération Veo reste interrogeable pour récupérer la vidéo.
     if(blob.size < 50000 || !(await _mp4Sane(blob))){
-      window._veoDerniereOp = { op: opName, uri: videoUri || null };
-      throw new Error('Vidéo reçue corrompue (' + Math.round(blob.size/1024) + ' Ko) — opération ' + opName + ' conservée, réessaie le téléchargement');
+      const _opN = (typeof opName!=='undefined') ? opName : null, _vU = (typeof videoUri!=='undefined') ? videoUri : null;
+      window._veoDerniereOp = { op: _opN, uri: _vU };
+      throw new Error('Vidéo reçue corrompue (' + Math.round(blob.size/1024) + ' Ko)' + (_opN ? ' — opération ' + _opN + ' conservée, réessaie le téléchargement' : ' — réessaie'));
     }
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
-    if(typeof creditsFlowDone==='function') creditsFlowDone();   // succès → plus rien à rembourser (base + extensions produites = payées)
+    if(typeof creditsFlowDone==='function') creditsFlowDone();   // succès → plus rien à rembourser
     window._expVidBlobRaw=null; // nouvelle vidéo → la version "sans sous-titres" repart de celle-ci
     window._expVoiceBlob = voiceBlob; // voix à ajouter dans l'Éditeur (null si native)
 
@@ -31192,8 +30948,7 @@ async function expressCreate(){
       }
     }catch(_sErr){ console.warn('express autosave:', _sErr); }
     if(typeof _hedraIncrement==='function') _hedraIncrement();
-    if(typeof _cartoonUpdateQuota==='function') _cartoonUpdateQuota();
-    toast('Vidéo Express générée !');
+    toast('Vidéo Express générée !'+_kieTag());
   } catch(e){
     clearInterval(tick);
     console.error('Express error:', e);
@@ -32429,40 +32184,6 @@ async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
   resetBtn();
 }
 
-// ════════════════════════════════════════════════════════════
-// 🎭 CARTOON AVATAR — Imagen 4 + Veo 3.1 Fast
-// ════════════════════════════════════════════════════════════
-
-window._cartoonStyle    = 'pixar';
-window._cartoonImgB64   = null;  // base64 image Imagen 4
-window._cartoonVidModel = 'veo'; // 'veo' (Google) | 'seedance' (Hedra)
-window._cartoonSeedanceDur = 5000; // durée Seedance en ms (5000 | 10000)
-window._cartoonImgUrl   = null;  // object URL preview
-window._cartoonVidUrl   = null;  // object URL vidéo
-
-const CARTOON_STYLE_PROMPTS = {
-  pixar:  'Pixar 3D animation style, high quality render, warm lighting, expressive face, smooth textures, white clean background',
-  flat:   'flat 2D cartoon style, bold colors, clean vector art, simple shapes, friendly mascot, white background',
-  anime:  'anime manga style, vibrant colors, big expressive eyes, clean lineart, kawaii friendly character, white background',
-  mascot: 'brand mascot 3D style, professional product mascot, bold personality, dynamic pose, white clean background'
-};
-
-function initCartoon(){
-  // Module bloqué « Bientôt disponible » en attendant le tunnel FruitDrama (#65).
-  const cs = document.getElementById('cartoonComingSoon'); if(cs) cs.style.display = 'block';
-  const pw = document.getElementById('cartoonPaywall');     if(pw) pw.style.display = 'none';
-  const ct = document.getElementById('cartoonContent');     if(ct) ct.style.display = 'none';
-}
-
-// Gate de génération Cartoon : free → fiche plans ; payant non-Élite → upgrade Élite.
-function _cartoonGate(){
-  if(_gateFreeGenerate()) return true;
-  const plan = (currentMember?.plan || 'free').toLowerCase();
-  const isElite = ['elite','byok','developer'].includes(plan) || currentMember?.is_owner;
-  if(!isElite){ toast('Avatar Cartoon — réservé au plan Élite'); openUpgradeModal(); return true; }
-  return false;
-}
-
 // ── Voix Gemini : rangées sélectionnables (la voix doit coller au perso) ──
 // Menu complet des voix Gemini TTS (gemini-2.5-flash-preview-tts)
 const _CARTOON_VOICES = [
@@ -32518,8 +32239,6 @@ function _refreshVoiceLabels(){
   ['cartoonGeminiVoiceLabel','expGeminiVoiceLabel'].forEach(id=>{ const e=document.getElementById(id); if(e&&gv) e.textContent=gv.name; });
   ['cartoonElevenVoiceLabel','expElevenVoiceLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=ev?ev.name:'Rachel'; });
 }
-function _cartoonRenderVoices(){ _refreshVoiceLabels(); }
-function cartoonPickVoice(id){ window._selGeminiVoice=id; const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; _refreshVoiceLabels(); }
 
 // ═══════════ MENU DE VOIX (preview + favoris) — Gemini & ElevenLabs ═══════════
 const _VOICE_SAMPLE = "Bonjour, voici un aperçu de ma voix.";
@@ -32718,59 +32437,7 @@ async function _voicePreview(engine,id,btn){
   finally{ if(btn){ btn.disabled=false; btn.textContent=orig||'▶'; } }
 }
 
-// ── Importer une image comme personnage (biblio / upload) ──
-function cartoonImportImage(file){
-  if(!file || !file.type.startsWith('image/')){ toast('Choisis une image'); return; }
-  const r = new FileReader();
-  r.onload = () => {
-    const dataUrl = String(r.result);
-    window._cartoonImgB64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-    window._cartoonImgUrl = dataUrl;
-    const phoneImg = document.getElementById('cartoonPhoneImg');
-    if(phoneImg){ phoneImg.src = dataUrl; phoneImg.style.display = 'block'; }
-    const ph = document.getElementById('cartoonPhonePlaceholder'); if(ph) ph.style.display = 'none';
-    const mod2 = document.getElementById('cartoonModule2'); if(mod2){ mod2.style.opacity='1'; mod2.style.pointerEvents='auto'; }
-    const regen = document.getElementById('cartoonRegenImgBtn'); if(regen) regen.style.display='none';
-    toast('Personnage importé');
-  };
-  r.readAsDataURL(file);
-}
-
-// Quota avatars cartoon = quota vidéos du plan (système réel _videos*).
-function _hedraLimit(){ return _getPlanQuota((currentMember?.plan||'free').toLowerCase()).videos || 0; }
-function _hedraRemaining(){ return _videosRemaining(); }
 function _hedraIncrement(){ if(typeof _incrementVideosUsed==='function') _incrementVideosUsed(); }
-function _getMonthKey(){ const d=new Date(); return d.getFullYear()+'_'+(d.getMonth()+1); }
-
-function _cartoonUpdateQuota(){
-  const lbl = document.getElementById('cartoonQuotaInfo');
-  if(!lbl) return;
-  const rem   = _hedraRemaining();
-  const limit = _hedraLimit();
-  if(limit >= 999){ lbl.textContent = 'Vidéos illimitées ce mois'; return; }
-  lbl.textContent = `${rem} vidéo${rem!==1?'s':''} restante${rem!==1?'s':''} ce mois · ${limit}/mois`;
-}
-
-function selectCartoonStyle(btn, style){
-  window._cartoonStyle = style;
-  document.querySelectorAll('.cartoon-style-btn').forEach(b=>{
-    b.style.background   = 'var(--bg3)';
-    b.style.borderColor  = 'var(--border)';
-    b.style.color        = 'var(--text3)';
-  });
-  btn.style.background  = 'rgba(168,85,247,0.15)';
-  btn.style.borderColor = 'rgba(168,85,247,0.5)';
-  btn.style.color       = 'var(--text)';
-  // Update phone style label
-  const styleLabelEl = document.getElementById('cartoonStyleLabelName');
-  if(styleLabelEl){
-    const names = { pixar:'Pixar 3D', flat:'Flat 2D', anime:'Anime', mascot:'Mascotte' };
-    styleLabelEl.textContent = names[style] || style;
-  }
-}
-
-function cartoonQuickPrompt(txt){ document.getElementById('cartoonCharPrompt').value = txt; }
-function cartoonAnimPreset(txt){ document.getElementById('cartoonAnimPrompt').value = txt; }
 
 async function _cartoonProxyFetch(path, options={}){
   const authH = await getAuthHeader();
@@ -32914,263 +32581,6 @@ async function _veoDownloadUri(uri){
   return new Blob([b], { type:'video/mp4' });
 }
 
-async function cartoonGenImage(btn){
-  const prompt = document.getElementById('cartoonCharPrompt').value.trim();
-  if(!prompt){ toast('Décris ton personnage d\'abord'); return; }
-  if(_cartoonGate()) return;
-
-  // Débit crédits image (même barème que le module Images IA)
-  if(!(await spendCreditsFor(_imgCreditCost(_imgEffectiveQuality()), 'cartoon-image'))) return;
-
-  const styleExtra = CARTOON_STYLE_PROMPTS[window._cartoonStyle] || CARTOON_STYLE_PROMPTS.pixar;
-  const fullPrompt = `${prompt}, ${styleExtra}, no text, no watermark, 9:16 vertical format`;
-
-  if(btn){ btn.disabled=true; btn.innerHTML='<span style="opacity:.6">Génération…</span>'; }
-
-  try {
-    const resp = await _cartoonProxyFetch(
-      '/v1beta/models/imagen-4.0-generate-001:predict',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          instances: [{ prompt: fullPrompt }],
-          parameters: { sampleCount: 1, aspectRatio: '9:16', safetyFilterLevel: 'block_some' }
-        })
-      }
-    );
-    if(!resp.ok){
-      const err = await resp.json().catch(()=>({}));
-      throw new Error(err?.error?.message || `HTTP ${resp.status}`);
-    }
-    const data = await resp.json();
-    const b64  = data?.predictions?.[0]?.bytesBase64Encoded;
-    if(!b64) throw new Error('Aucune image retournée');
-
-    window._cartoonImgB64 = b64;
-    window._cartoonImgUrl = `data:image/png;base64,${b64}`;
-
-    const preview = document.getElementById('cartoonImgPreview');
-    if(preview) preview.src = window._cartoonImgUrl;
-    const _cartoonRes = document.getElementById('cartoonImgResult');
-    if(_cartoonRes) _cartoonRes.style.display = 'block';
-
-    // ── Phone mockup update ──
-    const phoneImg = document.getElementById('cartoonPhoneImg');
-    const phonePlaceholder = document.getElementById('cartoonPhonePlaceholder');
-    if(phoneImg){
-      phoneImg.src = window._cartoonImgUrl;
-      phoneImg.style.display = 'block';
-    }
-    if(phonePlaceholder) phonePlaceholder.style.display = 'none';
-    const regenBtn = document.getElementById('cartoonRegenImgBtn');
-    if(regenBtn) regenBtn.style.display = 'inline-flex';
-
-    // Débloquer module 2
-    const mod2 = document.getElementById('cartoonModule2');
-    mod2.style.opacity = '1'; mod2.style.pointerEvents = 'auto';
-
-    // Auto-remplir l'animation prompt
-    const animTa = document.getElementById('cartoonAnimPrompt');
-    if(animTa && !animTa.value){
-      animTa.value = `The character walks confidently toward the camera, friendly smile, expressive gestures, ${CARTOON_STYLE_PROMPTS[window._cartoonStyle]?.split(',')[0] || 'Pixar 3D'} animation, smooth fluid motion, white background`;
-    }
-
-    // Décrémenter crédits image
-    _imgMonthIncrement();
-    _updateImgQuotaLabel();
-
-    toast('Personnage généré !');
-  } catch(e){
-    console.error('Imagen 4 error:', e);
-    toast('Erreur Imagen 4 : ' + e.message);
-  } finally {
-    if(btn){ btn.disabled=false; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="13" height="13" rx="2"/><circle cx="5" cy="5" r="1.2"/><path d="M1 10l3.5-3.5 2.5 2.5 2-2 4 4"/></svg> Générer le personnage <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 crédit image</span>'; }
-  }
-}
-
-async function cartoonGenVideo(btn){
-  if(_cartoonGate()) return;
-  if(!window._cartoonImgB64){ toast('Génère d\'abord le personnage'); return; }
-  // Débit crédits : vidéo cartoon ~8 s — Veo Lite 1 cr/s (Starter/Pro) · Fast 3 cr/s (Élite)
-  {
-    const _isEliteCr = ['elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
-    if(!(await spendCreditsFor(8 * (_isEliteCr ? CREDIT_COSTS.expressFastPerSec : CREDIT_COSTS.expressLitePerSec), 'cartoon'))) return;
-  }
-
-  let animPrompt = document.getElementById('cartoonAnimPrompt').value.trim() ||
-    'The character walks toward the camera with enthusiasm, friendly expression, smooth Pixar-style animation';
-
-  // 💬 Réplique → lip-sync Veo natif (injectée dans le prompt)
-  const _diag = (document.getElementById('cartoonDialogue')?.value||'').trim();
-  const _tone = (document.getElementById('cartoonVoiceTone')?.value||'').trim();
-  if(_diag && window._cartoonVidModel !== 'seedance'){
-    animPrompt += `. The character looks at the camera and says out loud, in French${_tone?(' with '+_tone):''}: "${_diag.replace(/"/g,'\\"')}". Accurate lip-sync with mouth movements precisely matching the spoken words, clear audible voice.`;
-  }
-
-  if(btn){ btn.disabled=true; btn.innerHTML='<span style="opacity:.6">Lancement…</span>'; }
-  document.getElementById('cartoonVidProgress').style.display = 'block';
-  document.getElementById('cartoonVidResult').style.display   = 'none';
-
-  // Progress bar animation
-  let prog = 0;
-  const progBar = document.getElementById('cartoonVidProgressBar');
-  const progTxt = document.getElementById('cartoonVidProgressTxt');
-  const _mLabel = (window._cartoonVidModel === 'seedance') ? 'Seedance' : 'Veo 3.1';
-  const progInt = setInterval(()=>{
-    prog = Math.min(prog + (prog < 70 ? 1.2 : 0.3), 92);
-    if(progBar) progBar.style.width = prog + '%';
-    if(progTxt){
-      if(prog < 30)       progTxt.textContent = ''+_mLabel+' initialise la génération…';
-      else if(prog < 60)  progTxt.textContent = 'Création du mouvement…';
-      else if(prog < 85)  progTxt.textContent = 'Finalisation de la vidéo…';
-      else                progTxt.textContent = 'Presque terminé…';
-    }
-  }, 800);
-
-  try {
-    let videoBlob;
-
-    if(window._cartoonVidModel === 'seedance'){
-      // ── Seedance 1.5 Pro via Hedra (image→vidéo, audio natif) ──
-      videoBlob = await _cartoonSeedanceGenerate(animPrompt, progTxt);
-    } else {
-      // 1. Démarrer la génération Veo 3.1 Fast
-      const startResp = await _cartoonProxyFetch(
-        '/v1beta/models/veo-3.1-lite-generate-preview:predictLongRunning',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            instances: [{
-              prompt: animPrompt,
-              image: { bytesBase64Encoded: window._cartoonImgB64, mimeType: 'image/png' }
-            }],
-            parameters: {
-              durationSeconds: 10,
-              sampleCount: 1,
-              aspectRatio: '9:16',
-              resolution: '720p',
-              generateAudio: true
-            }
-          })
-        }
-      );
-      if(!startResp.ok){
-        const err = await startResp.json().catch(()=>({}));
-        throw new Error(err?.error?.message || `HTTP ${startResp.status}`);
-      }
-      const { name: opName } = await startResp.json();
-      if(!opName) throw new Error('Opération Veo introuvable');
-
-      // 2. Polling jusqu'à completion (jusqu'à 10 min — Veo peut être lent)
-      let videoB64 = null, videoUri = null, opErr = null;
-      for(let i=0; i<120; i++){
-        await new Promise(r=>setTimeout(r,5000));
-        const pollResp = await _cartoonProxyFetch(`/v1beta/${opName}`, { method: 'GET' });
-        if(!pollResp.ok) continue;
-        const pollData = await pollResp.json();
-        if(pollData.done){
-          if(pollData.error){ opErr = pollData.error.message || 'Génération refusée par Google'; break; }
-          // même extraction que l'Express : on ne devine plus les chemins
-          ({ b64: videoB64, uri: videoUri } = _veoPickVideo(pollData.response || pollData));
-          if(!videoB64 && !videoUri){
-            const f = _veoFiltre(pollData.response || pollData);
-            opErr = f ? _veoMsgFiltre(f)
-              : 'Vidéo terminée mais introuvable — forme reçue : ' + _veoForme(pollData.response || pollData);
-          }
-          break;
-        }
-      }
-      if(opErr) throw new Error(opErr);
-      if(!videoB64 && !videoUri) throw new Error('Délai dépassé — Veo n\'a pas terminé, réessaie');
-
-      // 3. Créer le blob (base64 direct, ou téléchargement de l'URI via le proxy)
-      if(videoB64){
-        const videoBytes = Uint8Array.from(atob(videoB64), c=>c.charCodeAt(0));
-        videoBlob = new Blob([videoBytes], { type:'video/mp4' });
-      } else {
-        if(progTxt) progTxt.textContent = '↓ Téléchargement de la vidéo…';
-        videoBlob = await _veoDownloadUri(videoUri);
-      }
-    }
-
-    if(window._cartoonVidUrl) URL.revokeObjectURL(window._cartoonVidUrl);
-    window._cartoonVidUrl = URL.createObjectURL(videoBlob);
-    window._cartoonVidBlob = videoBlob;
-
-    clearInterval(progInt);
-    if(progBar) progBar.style.width='100%';
-    if(progTxt) progTxt.textContent='✓ Vidéo générée !';
-
-    const vid = document.getElementById('cartoonVidPreview');
-    if(vid){ vid.src = window._cartoonVidUrl; vid.load(); }
-    document.getElementById('cartoonVidResult').style.display = 'block';
-
-    // ── Phone mockup : show video ──
-    const phoneVid = document.getElementById('cartoonPhoneVid');
-    const phoneImg = document.getElementById('cartoonPhoneImg');
-    if(phoneVid){
-      phoneVid.src = window._cartoonVidUrl;
-      phoneVid.style.display = 'block';
-      phoneVid.load();
-    }
-    if(phoneImg) phoneImg.style.display = 'none';
-    const phoneVidControls = document.getElementById('cartoonPhoneVidControls');
-    if(phoneVidControls) phoneVidControls.style.display = 'flex';
-
-    // ── Débloquer module 3 (voix) et module 4 (sous-titres) ──
-    const modVoice = document.getElementById('cartoonModule3Voice');
-    if(modVoice){ modVoice.style.opacity='1'; modVoice.style.pointerEvents='auto'; }
-    const mod3 = document.getElementById('cartoonModule3');
-    if(mod3){ mod3.style.opacity='1'; mod3.style.pointerEvents='auto'; }
-
-    // Show subtitle overlay with default sample
-    cartoonUpdatePreview();
-
-    // Incrémenter quota avatar
-    _hedraIncrement();
-    _cartoonUpdateQuota();
-    toast('Avatar cartoon prêt !');
-
-  } catch(e){
-    clearInterval(progInt);
-    await creditsFlowRefund();
-    console.error(_mLabel+' error:', e);
-    toast('Erreur '+_mLabel+' : ' + e.message);
-    document.getElementById('cartoonVidProgress').style.display = 'none';
-  } finally {
-    if(btn){ btn.disabled=false; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3,1 13,7.5 3,14"/></svg> Générer la vidéo animée <span style="font-size:10px;opacity:.8;font-family:var(--mono)">· 1 avatar</span>'; }
-  }
-}
-
-// ── Sélecteur de modèle d'animation (Veo / Seedance) ──
-function cartoonPickVidModel(m, el){
-  window._cartoonVidModel = m;
-  ['cartoonModelVeo','cartoonModelSeedance'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.background='var(--bg3)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)'; } });
-  if(el){ el.style.background='rgba(168,85,247,0.12)'; el.style.borderColor='rgba(168,85,247,0.5)'; el.style.color='#c084fc'; }
-  const durRow=document.getElementById('cartoonSeedanceDurRow');
-  if(durRow) durRow.style.display = (m==='seedance') ? 'flex' : 'none';
-  const badge=document.getElementById('cartoonModelBadge');
-  if(badge) badge.textContent = (m==='seedance') ? ('Seedance · '+((window._cartoonSeedanceDur||5000)/1000)+'s') : 'Veo 3.1 · 10s';
-  // Seedance = pas d'audio → voix obligatoire
-  const optLbl=document.getElementById('cartoonVoiceOptLabel'), hint=document.getElementById('cartoonVoiceHint');
-  if(optLbl){
-    if(m==='seedance'){ optLbl.textContent='(obligatoire)'; optLbl.style.color='#ff8a5b'; }
-    else { optLbl.textContent=''; optLbl.style.color='var(--text3)'; }
-  }
-  if(hint) hint.innerHTML = (m==='seedance')
-    ? '⚠ <b style="color:#ff8a5b">Seedance n\'a pas d\'audio</b> — choisis une source de voix (Import / Gemini / ElevenLabs).'
-    : 'Veo génère une voix auto. Pour <b style="color:#c4a3f7">100 % la voix de ton perso</b>, choisis une source ci-dessous (on remplace l\'audio Veo).';
-  // Seedance → préselectionne Gemini si rien
-  if(m==='seedance' && !window._cartoonVoiceEngine){ cartoonPickVoiceEngine('gemini'); }
-  toast(m==='seedance' ? '🎬 Seedance — voix obligatoire (anim cartoon, sans audio)' : '🎬 Veo 3.1 Fast — audio natif');
-}
-function cartoonPickSeedanceDur(ms, el){
-  window._cartoonSeedanceDur = ms;
-  ['cartoonSdDur5','cartoonSdDur10'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.style.background='var(--bg3)'; b.style.borderColor='var(--border2)'; b.style.color='var(--text3)'; } });
-  if(el){ el.style.background='rgba(168,85,247,0.12)'; el.style.borderColor='rgba(168,85,247,0.5)'; el.style.color='#c084fc'; }
-  const badge=document.getElementById('cartoonModelBadge');
-  if(badge) badge.textContent = 'Seedance · '+(ms/1000)+'s';
-}
 
 // ── Helper générique pour l'API Hedra (via proxy Supabase) ──
 // #hedra-gate (03/09) : AVANT de débiter un membre, on demande l'état du solde Hedra à provider-watch (mémorisé,
@@ -33308,23 +32718,6 @@ async function _hedraV3Poll(jobId, onProgress, maxTries){
   throw new Error('Hedra n\'a pas fini en '+Math.round((Date.now()-t0)/60000)+' min (job '+jobId+') — il continue chez Hedra : relance plus tard avec le même audio, la vidéo sera récupérée sans nouvelle génération');
 }
 
-// ── Résout dynamiquement l'id du modèle Seedance sur le compte Hedra (mis en cache) ──
-async function _cartoonResolveSeedanceModel(){
-  if(window._seedanceModelId) return window._seedanceModelId;
-  const r = await _hedraFetch('/models', 'GET');
-  if(!r.ok) throw new Error('Liste des modèles Hedra inaccessible ('+r.status+')');
-  const data = await r.json().catch(()=>null);
-  const all = Array.isArray(data) ? data : (data?.models || data?.data || []);
-  // On RESTE sur Seedance 2.0 (Axel 17/08 : « oublie la 2.5 »). Hedra n'expose de toute
-  // façon que la 2.0 (la 2.5 = fal). 2.0 → sinon 1.5 Pro → sinon n'importe quel Seedance.
-  const m = all.find(x=>/seedance/i.test(x.name||'') && /2\.?0|(^|[^\d])2([^\d.]|$)/.test(x.name||''))
-         || all.find(x=>/seedance/i.test(x.name||'') && /1\.5/.test(x.name||'') && /pro/i.test(x.name||''))
-         || all.find(x=>/seedance/i.test(x.name||''));
-  if(!m || !m.id) throw new Error('Modèle Seedance introuvable sur ton compte Hedra — lance listHedraModels() dans la console');
-  window._seedanceModelId = m.id;
-  console.log('🎬 Seedance modèle résolu :', m.name, '→', m.id);
-  return m.id;
-}
 
 // Résolveur DÉDIÉ Express : « Seedance 2.0 Fast » = LE modèle Higgsfield (« Enhanced Fast » :
 // 720p, mode référence natif ≤9 images, moins cher : 24 vs 30 cr/s Hedra). Sinon 2.0 → autre
@@ -33346,139 +32739,6 @@ async function _expSeedanceModel(){
   return m.id;
 }
 
-// ── Génère une vidéo cartoon avec Seedance 1.5 Pro via Hedra (image→vidéo) ──
-async function _cartoonSeedanceGenerate(animPrompt, progTxt){
-  if(progTxt) progTxt.textContent = 'Seedance : préparation…';
-  // API Hedra v3 : /v3/files (image perso Imagen 4) → /v3/models/seedance-20 → /v3/jobs (poll)
-  const start_image = await _hedraV3Upload(window._cartoonImgB64, 'image/png', 'cartoon.png');
-  if(progTxt) progTxt.textContent = 'Seedance génère…';
-  const DUR=[4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000];
-  const want = window._cartoonSeedanceDur || 5000;
-  const dms = DUR.reduce((a,b)=> Math.abs(b-want)<Math.abs(a-want)?b:a, 5000);
-  const input = {
-    prompt: animPrompt,
-    aspect_ratio: '9:16',
-    resolution: '1080p',       // 1080p ⇒ quality 'standard' (fast = 480p/720p uniquement)
-    duration_ms: dms,
-    quality: 'standard',
-    generate_audio: false,
-    start_image
-  };
-  const jobId = await _hedraV3Submit('seedance-20', input);
-  const out   = await _hedraV3Poll(jobId, null, 90);
-  const vr = await fetch(out.url);
-  if(!vr.ok) throw new Error('Téléchargement vidéo Seedance échoué ('+vr.status+')');
-  return new Blob([await vr.blob()], { type: out.content_type||'video/mp4' });
-}
-
-// ── Cartoon subtitle config ──────────────────────────────────────────
-window._cartoonSubConfig = { position: 'bottom', size: 'medium', style: 'white-outline' };
-
-function cartoonSubPos(btn, pos){
-  window._cartoonSubConfig.position = pos;
-  document.querySelectorAll('.cs-pos-btn').forEach(b=>{
-    b.style.background  = 'var(--bg3)';
-    b.style.borderColor = 'var(--border)';
-    b.style.color       = 'var(--text3)';
-    b.classList.remove('active-sub');
-  });
-  btn.style.background  = 'rgba(168,85,247,0.15)';
-  btn.style.borderColor = 'rgba(168,85,247,0.5)';
-  btn.style.color       = 'var(--text)';
-  btn.classList.add('active-sub');
-  cartoonUpdatePreview();
-}
-
-function cartoonSubSize(btn, size){
-  window._cartoonSubConfig.size = size;
-  document.querySelectorAll('.cs-size-btn').forEach(b=>{
-    b.style.background  = 'var(--bg3)';
-    b.style.borderColor = 'var(--border)';
-    b.style.color       = 'var(--text3)';
-    b.classList.remove('active-sub');
-  });
-  btn.style.background  = 'rgba(168,85,247,0.15)';
-  btn.style.borderColor = 'rgba(168,85,247,0.5)';
-  btn.style.color       = 'var(--text)';
-  btn.classList.add('active-sub');
-  cartoonUpdatePreview();
-}
-
-function cartoonSubStyle(btn, style){
-  window._cartoonSubConfig.style = style;
-  document.querySelectorAll('.cs-style-btn').forEach(b=>{
-    b.style.background  = 'var(--bg3)';
-    b.style.borderColor = 'var(--border)';
-    b.classList.remove('active-sub');
-  });
-  btn.style.background  = 'rgba(168,85,247,0.15)';
-  btn.style.borderColor = 'rgba(168,85,247,0.5)';
-  btn.classList.add('active-sub');
-  cartoonUpdatePreview();
-}
-
-function cartoonUpdatePreview(){
-  const overlay = document.getElementById('cartoonSubOverlay');
-  const textEl  = document.getElementById('cartoonSubText');
-  if(!overlay || !textEl) return;
-
-  const cfg   = window._cartoonSubConfig;
-  const sampleInput = document.getElementById('cartoonSubSample');
-  const sample = sampleInput?.value?.trim() || 'Ton texte ici';
-
-  // Position verticale (utilise bottom pour 'bottom', top pour les autres)
-  overlay.style.bottom = '';
-  overlay.style.top    = '';
-  if(cfg.position === 'bottom'){
-    overlay.style.bottom = '12%';
-  } else if(cfg.position === 'center'){
-    overlay.style.top = '44%';
-  } else {
-    overlay.style.top = '8%';
-  }
-
-  // Taille
-  const sizeMap = { small:'11px', medium:'14px', large:'18px' };
-  textEl.style.fontSize = sizeMap[cfg.size] || '14px';
-
-  // Style texte
-  const styleMap = {
-    'white-outline': { color:'#fff', background:'transparent', textShadow:'-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000' },
-    'yellow':        { color:'#FFE600', background:'transparent', textShadow:'-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000' },
-    'orange':        { color:'var(--orange)', background:'transparent', textShadow:'-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000' },
-    'bg-black':      { color:'#fff', background:'rgba(0,0,0,0.72)', textShadow:'none' }
-  };
-  const st = styleMap[cfg.style] || styleMap['white-outline'];
-  textEl.style.color      = st.color;
-  textEl.style.background = st.background;
-  textEl.style.textShadow = st.textShadow;
-  if(st.background !== 'transparent'){
-    textEl.style.padding      = '3px 8px';
-    textEl.style.borderRadius = '4px';
-  } else {
-    textEl.style.padding      = '0';
-    textEl.style.borderRadius = '0';
-  }
-  textEl.textContent = sample.toUpperCase();
-
-  // Show overlay if video or image exists
-  if(window._cartoonVidUrl || window._cartoonImgUrl){
-    overlay.style.display = 'flex';
-  }
-}
-
-function _cartoonTogglePhoneVid(){
-  const vid = document.getElementById('cartoonPhoneVid');
-  const btn = event?.currentTarget || document.querySelector('#cartoonPhoneVidControls button');
-  if(!vid) return;
-  if(vid.paused){
-    vid.play();
-    if(btn) btn.textContent = '⏸ Pause';
-  } else {
-    vid.pause();
-    if(btn) btn.textContent = '▶ Lecture';
-  }
-}
 
 // ── Audio Clean view helpers ─────────────────────────────────────────
 let _acAudioBlob = null;
@@ -35736,133 +34996,6 @@ const _acZipCrcTable = (() => { const t = new Uint32Array(256);
   return t; })();
 function _acZipCrc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c = _acZipCrcTable[(c ^ u8[i]) & 0xFF] ^ (c>>>8); return (c ^ 0xFFFFFFFF)>>>0; }
 
-// ── Cartoon Module Voix ─────────────────────────────────────
-let _cartoonVoiceFile = null;
-let _cartoonVoiceAudioEl = null;
-
-function _cartoonHandleVoice(file){
-  if(!file) return;
-  _cartoonVoiceFile = file;
-  const drop = document.getElementById('cartoonVoiceDrop');
-  const info = document.getElementById('cartoonVoiceInfo');
-  if(drop) drop.style.display = 'none';
-  if(info){ info.style.display = 'block'; info.textContent = '' + file.name; }
-}
-
-function _cartoonVoicePreview(){
-  if(!_cartoonVoiceFile){ toast('Importe un fichier audio d\'abord'); return; }
-  if(_cartoonVoiceAudioEl){ _cartoonVoiceAudioEl.pause(); _cartoonVoiceAudioEl = null; }
-  const url = URL.createObjectURL(_cartoonVoiceFile);
-  _cartoonVoiceAudioEl = new Audio(url);
-  _cartoonVoiceAudioEl.play();
-  _cartoonVoiceAudioEl.onended = () => URL.revokeObjectURL(url);
-}
-
-// ── Moteur de voix : Gemini TTS / ElevenLabs ──
-window._cartoonVoiceEngine = 'gemini';
-function cartoonPickVoiceEngine(e){
-  window._cartoonVoiceEngine = e;
-  const base='flex:1;padding:8px 4px;border-radius:8px;font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer;';
-  const on='background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.5);color:#c084fc', off='background:var(--bg3);border:1px solid var(--border2);color:var(--text3)';
-  const map={ import:'cartoonVoiceEngImport', gemini:'cartoonVoiceEngGemini', eleven:'cartoonVoiceEngEleven' };
-  Object.keys(map).forEach(k=>{ const b=document.getElementById(map[k]); if(b) b.style.cssText=base+(e===k?on:off); });
-  const imp=document.getElementById('cartoonImportWrap'), tts=document.getElementById('cartoonTtsWrap');
-  const gw=document.getElementById('cartoonGeminiVoiceWrap'), ew=document.getElementById('cartoonElevenVoiceWrap');
-  if(imp) imp.style.display = e==='import' ? 'block' : 'none';
-  if(tts) tts.style.display = e==='import' ? 'none' : 'block';
-  if(gw) gw.style.display = e==='gemini' ? 'block' : 'none';
-  if(ew) ew.style.display = e==='eleven' ? 'block' : 'none';
-  if(e==='gemini') _cartoonRenderVoices();
-}
-// Dispatch selon le moteur choisi
-function cartoonGenVoice(){
-  return window._cartoonVoiceEngine==='eleven' ? cartoonGenVoiceEleven() : cartoonGenVoiceTTS();
-}
-async function cartoonGenVoiceEleven(){
-  const txt=(document.getElementById('cartoonTtsText')?.value||'').trim();
-  if(!txt){ toast('Écris le texte à dire'); return; }
-  if(_cartoonGate()) return;
-  const btn=document.getElementById('cartoonTtsBtn'); const lbl=btn?btn.textContent:'';
-  if(btn){ btn.disabled=true; btn.textContent='Voix ElevenLabs…'; }
-  try{
-    const authH=await getAuthHeader();
-    const vid=(typeof selVoiceId!=='undefined' && selVoiceId) ? selVoiceId : '21m00Tcm4TlvDq8ikWAM';
-    const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${vid}`,{
-      method:'POST', headers:{...authH,'Content-Type':'application/json'},
-      body:JSON.stringify({ text:txt, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5,similarity_boost:0.75} })
-    });
-    if(!resp.ok){ const e=await resp.text(); throw new Error('ElevenLabs '+resp.status+' '+e.slice(0,80)); }
-    let blob=await resp.blob();
-    const stripSil=document.getElementById('cartoonTtsSilence');
-    if(stripSil && stripSil.checked){
-      try{
-        if(!recCtx) recCtx=new (window.AudioContext||window.webkitAudioContext)();
-        const ab=await blob.arrayBuffer();
-        const decoded=await recCtx.decodeAudioData(ab.slice(0));
-        const cleaned=_recRemoveSilence(decoded);
-        blob=_audioBufferToWavBlob(cleaned);
-      }catch(e){ console.warn('Silence strip ElevenLabs skip:',e); }
-    }
-    const ext=(blob.type||'').includes('wav')?'wav':'mp3';
-    const file=new File([blob],'cartoon-voix.'+ext,{type:blob.type||'audio/mpeg'});
-    _cartoonHandleVoice(file);
-    window._cartoonTtsBlob=blob;
-    const exBtn=document.getElementById('cartoonExportAudioBtn'); if(exBtn) exBtn.style.display='flex';
-    toast('Voix ElevenLabs générée');
-  }catch(e){ toast(''+e.message); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
-}
-
-async function cartoonGenVoiceTTS(){
-  const txt=(document.getElementById('cartoonTtsText')?.value||'').trim();
-  if(!txt){ toast('Écris le texte à dire'); return; }
-  if(_cartoonGate()) return;
-  const btn=document.getElementById('cartoonTtsBtn'); const lbl=btn?btn.textContent:'';
-  if(btn){ btn.disabled=true; btn.textContent='Voix…'; }
-  try{
-    const voice=document.getElementById('cartoonTtsVoice')?.value||'Puck';
-    const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
-      method:'POST',
-      body:JSON.stringify({
-        contents:[{parts:[{text:txt}]}],
-        generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:voice } } } }
-      })
-    });
-    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message||('HTTP '+resp.status)); }
-    const data=await resp.json();
-    const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
-    const b64=(part?.inlineData||part?.inline_data)?.data;
-    if(!b64) throw new Error('Pas d\'audio renvoyé par Gemini');
-    const pcm=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-    let blob=new Blob([_pcmToWav(pcm,24000,1)],{type:'audio/wav'});
-    const stripSil=document.getElementById('cartoonTtsSilence');
-    const doStrip=stripSil && stripSil.checked;
-    if(doStrip){
-      try{
-        if(!recCtx) recCtx=new (window.AudioContext||window.webkitAudioContext)();
-        const ab=await blob.arrayBuffer();
-        const decoded=await recCtx.decodeAudioData(ab.slice(0));
-        const cleaned=_recRemoveSilence(decoded);
-        blob=_audioBufferToWavBlob(cleaned);
-      }catch(e){ console.warn('Silence strip TTS skip:',e); }
-    }
-    const file=new File([blob],'cartoon-voix.wav',{type:'audio/wav'});
-    _cartoonHandleVoice(file);
-    window._cartoonTtsBlob=blob; // pour l'export audio
-    const exBtn=document.getElementById('cartoonExportAudioBtn'); if(exBtn) exBtn.style.display='flex';
-    toast(doStrip?'✓ Voix IA générée + silences supprimés':'✓ Voix IA générée (Gemini)');
-  }catch(e){ toast(''+e.message); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
-}
-function cartoonExportAudio(){
-  const blob=window._cartoonTtsBlob || (_cartoonVoiceFile||null);
-  if(!blob){ toast('Génère d\'abord la voix'); return; }
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='cartoon-voix.wav';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
-  toast('Audio exporté (WAV)');
-}
 function _pcmToWav(pcm,rate,channels){
   const bytesPerSample=2, blockAlign=channels*bytesPerSample, byteRate=rate*blockAlign;
   const buf=new ArrayBuffer(44+pcm.length); const dv=new DataView(buf);
@@ -35873,44 +35006,6 @@ function _pcmToWav(pcm,rate,channels){
   ws(36,'data'); dv.setUint32(40,pcm.length,true);
   new Uint8Array(buf,44).set(pcm);
   return buf;
-}
-
-async function cartoonUseAsAvatarWithVoice(){
-  if(!window._cartoonVidBlob){ toast('Génère la vidéo d\'abord'); return; }
-  // Charger l'avatar cartoon dans le générateur
-  const charPrompt = document.getElementById('cartoonCharPrompt')?.value?.trim() || 'cartoon-avatar';
-  const name = charPrompt.slice(0,30).replace(/[^a-zA-Z0-9À-ž ]/g,'').trim() || 'cartoon-avatar';
-  const file = new File([window._cartoonVidBlob], name+'.mp4', { type: 'video/mp4' });
-  await handleBypassHedraFile(file);
-  // Injecter la voix si disponible
-  if(_cartoonVoiceFile){
-    handleMp4AudioFile(_cartoonVoiceFile);
-    toggleMp4AudioOption(true);
-  }
-  const navEl = document.querySelector('.nav-i[onclick*="generator"]');
-  nav('generator', navEl);
-  await wait(120);
-  goToStep(_cartoonVoiceFile ? 4 : 2); // Step 4 (Style) si voix déjà chargée
-  toast(_cartoonVoiceFile ? '✓ Avatar + voix chargés — va à Style pour composer !' : '✓ Avatar cartoon chargé — passe à Voix pour ajouter ta voix !');
-}
-
-async function cartoonUseAsAvatar(){
-  if(!window._cartoonVidBlob){ toast('Génère la vidéo d\'abord'); return; }
-  // Seedance = vidéo muette → une voix est obligatoire
-  if(window._cartoonVidModel==='seedance' && !_cartoonVoiceFile){
-    toast('Seedance n\'a pas d\'audio — ajoute une voix (Import / Gemini / ElevenLabs)');
-    const mv=document.getElementById('cartoonModule3Voice'); if(mv) mv.scrollIntoView({behavior:'smooth',block:'center'});
-    return;
-  }
-  const charPrompt = document.getElementById('cartoonCharPrompt').value.trim() || 'cartoon-avatar';
-  const name = charPrompt.slice(0,30).replace(/[^a-zA-Z0-9À-ž ]/g,'').trim() || 'cartoon-avatar';
-  const file = new File([window._cartoonVidBlob], name+'.mp4', { type:'video/mp4' });
-  await handleBypassHedraFile(file);
-  const navEl = document.querySelector('.nav-i[onclick*="generator"]');
-  nav('generator', navEl);
-  await wait(120);
-  goToStep(2);
-  toast('Avatar cartoon chargé — passe à l\'étape 3 pour générer !');
 }
 </script>
 <!-- AVATAR MODAL -->
@@ -40079,10 +39174,6 @@ function edBandDrag(ov,track,e,mode){
   #expResultPlaceholder>div:first-child{width:56px !important;height:56px !important;border-radius:16px !important}
   #expResultPlaceholder>div:first-child svg{width:26px !important;height:26px !important}
   #expResultPlaceholder .display{font-size:18px !important}
-  /* Cartoon : aperçu au-dessus, formulaire en dessous (colonne) */
-  #v-cartoon{flex-direction:column !important}
-  #v-cartoon>div:first-child{flex:0 0 auto !important;width:100% !important;border-right:none !important;order:2}
-  #v-cartoon>div:last-child{order:1;min-height:300px;border-bottom:1px solid var(--border)}
   /* Images IA mobile : état vide, Améliorer, presets et Correction masqués */
   #imgIdle{display:none !important}
   #imgCanvas{padding:0 !important}
@@ -40170,8 +39261,8 @@ lastY=y;
   var GRID='<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
   // « recorder » n'est plus un outil à part : fusionné dans « Audio » (audioclean),
   // le filtre de tabs() purge tout seul les barres sauvegardées qui le listaient.
-  var SHORT={generator:'Générateur',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',motion:'Motion',omni:'Omni',audioclean:'Audio',affiliation:'Parrain.',cartoon:'Cartoon'};
-  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',omni:'Omni',audioclean:'Audio',affiliation:'Parrainage',cartoon:'Cartoon IA',montage:'Montage IA',publish:'Publier'};
+  var SHORT={generator:'Générateur',library:'Biblio',imagegen:'Images',express:'Express',studio:'Éditeur',motion:'Motion',omni:'Omni',audioclean:'Audio',affiliation:'Parrain.'};
+  var FULL={generator:'Générateur',library:'Bibliothèque',imagegen:'Images IA',express:'Express',studio:'Éditeur',motion:'Motion Control',omni:'Omni',audioclean:'Audio',affiliation:'Parrainage',montage:'Montage IA',publish:'Publier'};
   var CUSTOMIZABLE=['generator','imagegen','express','motion','omni','studio','library','audioclean'];   // 11/09 : Parrainage retiré des raccourcis personnalisables (inutile dans la barre)
   // 14/08 : Motion Control remplace l'Éditeur et Audio remplace la Bibliothèque
   // dans la barre par défaut (les deux restent dans « Plus »).
@@ -40360,9 +39451,9 @@ function _mExpFill(el,v){
   var pct=mx>mn?((v-mn)/(mx-mn))*100:0;
   el.style.background='linear-gradient(90deg,var(--accent) '+pct+'%,var(--surface-3) '+pct+'%)';
 }
-/* le slider est en crans : la valeur = l'index dans les durées Veo (4/6/8/15/22/29) */
+/* le slider est en crans : la valeur = l'index dans les durées Veo (4/6/8) */
 function _mExpDurAt(el){
-  var _al=(typeof _expDurAllowed==='function')?_expDurAllowed():[4,6,8,15,22,29];
+  var _al=(typeof _expDurAllowed==='function')?_expDurAllowed():[4,6,8];
   return _al[Math.max(0,Math.min(_al.length-1,parseInt(el.value)||0))];
 }
 /* pendant le glissement : uniquement les libellés (pas de re-render → le curseur suit le doigt) */
@@ -40390,8 +39481,8 @@ window._mExpSync=function(){
   var v2=document.getElementById('mExpDurVal2'); if(v2) v2.textContent=d+'s';
   var rg=document.getElementById('mExpDurRange');
   if(rg){
-    /* slider à crans : chaque pas = une durée Veo (4/6/8/15/22/29) */
-    var _al=(typeof _expDurAllowed==='function')?_expDurAllowed():[4,6,8,15,22,29];
+    /* slider à crans : chaque pas = une durée Veo (4/6/8) */
+    var _al=(typeof _expDurAllowed==='function')?_expDurAllowed():[4,6,8];
     rg.min=0; rg.max=_al.length-1; rg.step=1;
     var mnl=document.getElementById('mExpDurMin'); if(mnl) mnl.textContent=_al[0]+'s';
     var mxl=document.getElementById('mExpDurMax'); if(mxl) mxl.textContent=_al[_al.length-1]+'s';
@@ -40451,10 +39542,10 @@ window._mExpPickVoiceInline=function(id){
 /* Express mobile : sélecteur de MODÈLE inline (miroir du desktop expModelRow) — même EXP_MODELS / _expModelAllowed / _expPickModel */
 window._mExpRenderModelInline=function(){
   var c=document.getElementById('mExpModelInline'); if(!c) return;
-  if(window._expVeoModel==='pro') window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus
+  if(window._expVeoModel==='pro' && !(typeof _expModelAllowed==='function' && _expModelAllowed('pro'))) window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus (sauf test kie dev)
   if(!window._expVeoModel) window._expVeoModel='standard';
   if(window._expVeoModel==='omni' && typeof _expModelAllowed==='function' && !_expModelAllowed('omni')) window._expVeoModel='standard';
-  c.innerHTML=(typeof EXP_MODELS!=='undefined'?EXP_MODELS:[]).map(function(m){
+  c.innerHTML=(typeof _expModelsVisible==='function'?_expModelsVisible():[]).map(function(m){
     var on=(m.v===window._expVeoModel), locked=(typeof _expModelAllowed==='function' && !_expModelAllowed(m.v));
     var lock=locked?' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:0"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>':'';
     return '<button onclick="_mExpPickModelInline(\''+m.v+'\')" style="flex:1;padding:11px 8px;border:none;border-radius:10px;background:'+(on?'var(--surface-2)':'transparent')+';font-family:var(--font);cursor:pointer;'+(locked?'opacity:.6;':'')+'text-align:center">'
