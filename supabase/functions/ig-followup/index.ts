@@ -3,6 +3,7 @@
 //  donc encore dans la fenêtre de messagerie 24h). Appelé par un cron horaire (pg_cron → net.http_post).
 //  Idempotent : dédup via kind='relance'. verify_jwt=false (déclencheur cron). Optionnel : ?key=IG_CRON_SECRET.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { DEFAULT_DEST, trackedLink } from '../_shared/iglink.ts'
 
 const GRAPH   = 'https://graph.instagram.com/v21.0'
 const SB_URL  = Deno.env.get('SUPABASE_URL') || ''
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
     if (!sender) continue
     const token = await accountToken(igId)
     if (!token) continue
-    const dest = 'https://avatarads.fr/r.html?u=' + encodeURIComponent(sender) + '&ig=' + encodeURIComponent(igId) + '&to=' + encodeURIComponent('https://avatarads.fr')
+    const dest = await trackedLink(igId, sender, DEFAULT_DEST)   // lien signé (_shared/iglink.ts)
     const text = "Petit rappel — tu n'as pas encore ouvert le lien 👀 Le voici : " + dest
     const r = await fetch(`${GRAPH}/me/messages`, {
       method: 'POST',

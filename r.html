@@ -23,12 +23,19 @@
 <p>Redirection…</p>
 <script>
   // Tracker de clic Auto-DM : logge le clic (sendBeacon, survit à la navigation) puis redirige.
+  // Destination en liste blanche (avatarads.fr, trackads.fr) : pas de redirection ouverte vers un
+  // site tiers. La signature s est vérifiée par ig-go avant d'enregistrer le clic.
   const EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/ig-go';
+  const ALLOWED = ['avatarads.fr', 'trackads.fr'];
   const p = new URLSearchParams(location.search);
-  const u = p.get('u') || '', ig = p.get('ig') || '';
-  let to = p.get('to') || 'https://avatarads.fr';
-  try { const t = new URL(to); if (!/^https?:$/.test(t.protocol)) to = 'https://avatarads.fr'; } catch (e) { to = 'https://avatarads.fr'; }
-  try { if (u) navigator.sendBeacon(EDGE + '?log=1&u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig)); } catch (e) { /* ignore */ }
+  const u = p.get('u') || '', ig = p.get('ig') || '', s = p.get('s') || '';
+  let to = 'https://avatarads.fr';
+  try {
+    const t = new URL(p.get('to') || '');
+    const h = t.hostname.toLowerCase();
+    if (t.protocol === 'https:' && ALLOWED.some(a => h === a || h.endsWith('.' + a))) to = t.href;
+  } catch (e) { /* destination par défaut */ }
+  try { if (u) navigator.sendBeacon(EDGE + '?log=1&u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig) + '&s=' + encodeURIComponent(s)); } catch (e) { /* ignore */ }
   location.replace(to);
 </script>
 </body>
