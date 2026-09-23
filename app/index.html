@@ -31013,7 +31013,9 @@ async function expressCreate(){
         try{ await _ffa.FS('unlink','exa_in.mp4'); }catch(_){}
         try{ await _ffa.FS('unlink','exa_out.mp4'); }catch(_){}
         await _ffa.FS('writeFile','exa_in.mp4', new Uint8Array(await blob.arrayBuffer()));
-        const _afChain='acompressor=threshold=-18dB:ratio=2:attack=8:release=90,highshelf=g=-2:f=7000,loudnorm=I=-16:TP=-1.5:LRA=11'
+        // aresample=48000 : loudnorm suréchantillonne en interne et le son sortait en 96 kHz (Google envoie du 48 kHz,
+        // le standard vidéo) → retour au 48 kHz (Axel 24/09), mieux lu partout, même durée.
+        const _afChain='acompressor=threshold=-18dB:ratio=2:attack=8:release=90,highshelf=g=-2:f=7000,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000'
           + (_cutAt ? ',afade=t=out:st='+Math.max(0,_cutAt-0.12).toFixed(2)+':d=0.12' : '');
         // Coupe : vidéo RÉENCODÉE (une coupe en copie peut laisser 1-2 images cassées à la fin, B-frames orphelines).
         const _cutArgs = _cutAt ? ['-t', String(_cutAt)] : [];
