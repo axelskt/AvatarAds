@@ -32,6 +32,13 @@ verify_jwt = false
 [functions.ig-insights]
 verify_jwt = false
 
+# Filets appelés par pg_cron (x-cron-key vérifié DANS la fonction, pas de JWT)
+[functions.reconcile-fal-orphans]
+verify_jwt = false
+
+[functions.reconcile-kie]
+verify_jwt = false
+
 [functions.whop-webhook]
 verify_jwt = false
 

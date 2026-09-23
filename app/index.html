@@ -6100,6 +6100,9 @@ async function _libPersistServer(entry, blob, opts){
     return ins.data.id;
   }catch(e){ console.warn('lib persist server:', e); }
 }
+// Retour sur l'onglet → re-fusion de la Bibliothèque du compte (throttle 60 s) : ce qu'un autre appareil ou le filet
+// kie serveur a rangé apparaît sans recharger la page.
+document.addEventListener('visibilitychange', ()=>{ try{ if(document.visibilityState!=='visible') return; const n=Date.now(); if(n-(window._libSrvSyncAt||0)<60000) return; window._libSrvSyncAt=n; if(typeof currentMember!=='undefined' && currentMember) _libLoadServer(); }catch(_){} });
 async function _libLoadServer(){
   try{
     if(typeof sb==='undefined') return;
@@ -10101,7 +10104,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
       const _u = await _kieUpload(dataUrl);
       const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:300 });   // 15 min : kie est lent (4K mesurée à 9 min le 23/09) et il n'y a plus de repli
       const _d = await _kieDataUrl(_r.url);
-      window._aaLastEngine = 'kie';
+      window._aaLastEngine = 'kie'; _kieAck(_r.rid);
       return _d;
     }catch(e){
       console.warn('[kie] Nano Banana Pro : échec kie', e);
@@ -10193,7 +10196,7 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
       let _ar='auto'; try{ const _im=await _loadImgEl(targetDataUrl); _ar=_nbAspectFor(_im.naturalWidth,_im.naturalHeight); }catch(_){}
       const _u1=await _kieUpload(targetDataUrl), _u2=await _kieUpload(faceDataUrl);
       const _r=await _kieRun('nano-banana-pro', { prompt, image_urls:[_u1,_u2], aspect_ratio:_ar, resolution:'1K' }, { every:3000, maxPolls:300 });   // 15 min
-      const _d=await _kieDataUrl(_r.url); window._aaLastEngine='kie'; return _d;
+      const _d=await _kieDataUrl(_r.url); window._aaLastEngine='kie'; _kieAck(_r.rid); return _d;
     }catch(e){
       console.warn('[kie] faceswap : échec kie', e);
       if(e && e._kieRefus){ const r=new Error('Faceswap refusé — '+e.message); r._kieStage='failed'; throw r; }
@@ -10236,6 +10239,9 @@ async function _kieUpload(src, ext){
 async function _kieRun(alias, body, opt){
   opt = opt || {};
   const every = opt.every || 4000, maxPolls = opt.maxPolls || 180;
+  // Échéance en DURÉE RÉELLE (pas en nombre de tours) : un onglet mis en veille puis réveillé 1 h plus tard ne reprend
+  // pas un suivi que le filet serveur (reconcile-kie, > 45 min) a peut-être déjà rangé en Bibliothèque.
+  const t0 = Date.now(), maxMs = every * maxPolls;
   // En-têtes relus à CHAQUE requête : le jeton peut expirer pendant 11 min de suivi. 401 → rafraîchit puis 1 réessai.
   const call = async (p, init, retried) => {
     const H = await getAuthHeader();
@@ -10254,8 +10260,9 @@ async function _kieRun(alias, body, opt){
   if(!rs.ok || !sd.request_id){ const m = sd.error || ('HTTP '+rs.status); throw fail('kie : '+m, 'submit', rs.status===422 && refusRe.test(m)); }
   const rid = sd.request_id;
   console.log('[kie] tâche', alias, rid);
-  for(let i=0; i<maxPolls; i++){
+  for(let i=0; Date.now()-t0 < maxMs; i++){
     await new Promise(res=>setTimeout(res, every));
+    if(Date.now()-t0 >= maxMs) break;
     if(typeof opt.onTick==='function'){ try{ opt.onTick(i, maxPolls); }catch(_){} }
     let rt, st;
     try{ ({ r:rt, j:st } = await call(sd.status_url)); }catch(_){ continue; }   // coupure réseau : on réessaie au tour suivant
@@ -10266,14 +10273,20 @@ async function _kieRun(alias, body, opt){
       for(let k=0; k<5; k++){   // la route résultat est idempotente côté kie-proxy → on peut la rappeler
         let rr=null, rd={};
         try{ ({ r:rr, j:rd } = await call(sd.response_url)); }catch(_){}
-        if(rr && rr.ok && rd.url){ console.log('[kie] terminé', alias, rid, rd.kie||{}); return { url: rd.url, kind: rd.kind, kie: rd.kie||{} }; }
+        if(rr && rr.ok && rd.url){ console.log('[kie] terminé', alias, rid, rd.kie||{}); return { url: rd.url, kind: rd.kind, kie: rd.kie||{}, rid }; }
+        if(rr && rr.status===409){ try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){} throw fail('kie : '+(rd.error||'déjà rangée dans ta Bibliothèque'), 'pending'); }
         if(rr && rr.status===422){ const m = rd.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m)); }
         await new Promise(res=>setTimeout(res, 3000*(k+1)));
       }
-      throw fail('kie : résultat prêt mais non récupéré (tâche '+rid+') — ne relance pas, réessaie plus tard', 'pending');
+      throw fail('kie : résultat prêt mais pas encore récupéré — ne relance pas, il arrivera tout seul dans ta Bibliothèque d’ici ~1 h', 'pending');
     }
   }
-  throw fail('kie : délai dépassé (tâche '+rid+' toujours en cours chez kie)', 'pending');
+  throw fail('kie est lent : la génération continue chez kie et arrivera toute seule dans ta Bibliothèque d’ici ~1 h — ne relance pas', 'pending');
+}
+// Accusé de réception : l'app a rangé le résultat (ou l'a consommé) → le filet serveur ne le rangera pas une 2e fois.
+function _kieAck(rid){
+  if(!rid) return;
+  (async()=>{ try{ const H=await getAuthHeader(); await fetch(KIE_PROXY+'?path='+encodeURIComponent('/kie/requests/'+rid+'/ack'), { method:'POST', headers:{ ...H, 'Content-Type':'application/json' }, body:'{}' }); }catch(_){} })();
 }
 // Axel 23/09 : AUCUN repli sur le compte developer — kie ou l'erreur, jamais Google / fal / gpt-image en secours
 // (plus simple à lire pendant le test, et jamais une génération payée deux fois). Les clients gardent leurs replis.
@@ -12042,7 +12055,7 @@ function nav(id,el){
   if(id==='studio') vEl.style.flexDirection='column';
   if(el) el.classList.add('on');
   else { const _auto=[...document.querySelectorAll('.nav-i')].find(n=>{const o=n.getAttribute('onclick')||'';return o.includes("nav('"+id+"'")||o.includes('nav("'+id+'"');}); if(_auto) _auto.classList.add('on'); }
-  if(id==='library')    renderLibrary();
+  if(id==='library'){ try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){} renderLibrary(); }
   if(id==='youtube')    refreshYoutubeView();
   if(id==='imagegen')   initImageGen();
   if(id==='affiliation') initAffiliation();
@@ -13861,8 +13874,9 @@ async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
       }
       const _r = await _kieRun('omnihuman-1.5', { image_url:sI.data.signedUrl, audio_url:_aud, resolution, prompt:_mtMotionPrompt('omnihuman', role) },
         { every:5000, maxPolls:240 });   // 20 min (kie lent, pas de repli)
-      window._aaLastEngine='kie';
-      return await _kieFetchBlob(_r.url);
+      const _ob = await _kieFetchBlob(_r.url);
+      window._aaLastEngine='kie'; _kieAck(_r.rid);
+      return _ob;
     }catch(e){
       console.warn('[kie] OmniHuman : échec kie', e);
       if(e && e._kieRefus) throw new Error('OmniHuman (kie) a refusé ce contenu — '+e.message);
@@ -27507,6 +27521,7 @@ async function deleteLibItem(src, idx){
       const hist = JSON.parse(localStorage.getItem('imgHistory')||'[]');
       const entry = hist[idx];
       if(entry && entry.idbKey){ try { await _idbDelete(entry.idbKey); } catch(_){} }
+      if(entry && (entry.srvId || entry.srvPath) && typeof _libDeleteServer==='function'){ try{ _libDeleteServer(entry); }catch(_){} }   // sinon elle revient au chargement suivant
       hist.splice(idx, 1);
       localStorage.setItem('imgHistory', JSON.stringify(hist));
     } catch(e){}
@@ -29029,7 +29044,7 @@ function _mcShowResult(url, render, fullUrl){
   // vidéo ne se perde pas. Repli silencieux si le CORS bloque le fetch.
   if(url && window._mcSavedUrl!==url && typeof _libAutoSaveVideo==='function'){
     window._mcSavedUrl=url;
-    (async()=>{ try{ const r=await fetch(url); if(r.ok){ await _libAutoSaveVideo(await r.blob(), 'Motion Control', ['Motion Control','9:16'], '🎬', 'MOTION'); } }catch(e){ console.warn('mc autosave:', e); } })();
+    (async()=>{ try{ const r=await fetch(url); if(r.ok){ await _libAutoSaveVideo(await r.blob(), 'Motion Control', ['Motion Control','9:16'], '🎬', 'MOTION'); if(window._mcKieRid){ _kieAck(window._mcKieRid); window._mcKieRid=null; } } }catch(e){ console.warn('mc autosave:', e); } })();
   }
   const isSplit = (render && render!=='full');
   // LOT A · le cadre du lecteur ÉPOUSE le ratio RÉEL de la vidéo : Kling en mode
@@ -29661,7 +29676,7 @@ async function _mcGenerate(){
             { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId).slice(0,2400),
               mode: tier==='pro' ? '1080p' : '720p', background_source:'input_image' },
             { every:4000, maxPolls:375, onTick:(i)=>_mcProg(i>75?'Génération en cours… (kie.ai est chargé, ça arrive)':'Génération en cours… (kie.ai)', Math.min(88, 22+i*2)) });
-          window._aaLastEngine='kie';
+          window._aaLastEngine='kie'; window._mcKieRid=_r.rid;
           return _r.url;
         }catch(e){
           if(e && e._kieRefus){ const er=new Error(e.message); er._moderation=true; throw er; }
@@ -30648,6 +30663,22 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   if(upI.error) throw new Error('upload Omni : '+upI.error.message);
   const sI=await sb.storage.from('render-media').createSignedUrl(imgPath, 3600);
   if(sI.error || !(sI.data&&sI.data.signedUrl)) throw new Error('Lien signé Omni indisponible');
+  // Prompt backend Omni Flash — IDENTIQUE pour fal et kie.
+  const _omniPrompt = "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)";
+  // kie.ai (COMPTE DEVELOPER UNIQUEMENT, via _kieOn) : Gemini Omni 1.1 Flash, MÊME modèle et MÊME prompt. Chez kie le prix
+  // est un forfait par clip identique en 720p et 1080p → 1080p toujours (Axel 23/09). Durées kie : 4/6/8/10 s (arrondi
+  // au-dessus) ; 9:16 / 16:9 seulement (pas de carré chez kie). Aucun repli : kie ou l'erreur. Les clients restent sur fal.
+  if(_kieOn()){
+    if(window._expFormat==='1:1') throw new Error('Omni Flash via kie : format carré indisponible chez kie — choisis 9:16 ou 16:9');
+    step(42,'Omni Flash (kie.ai) — génération…');
+    const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
+      duration: Math.max(4, Math.min(10, Math.round(durSec)||6)) }, { every:5000, maxPolls:240,
+      onTick:(i)=>step(Math.min(88,42+i), 'Omni Flash (kie.ai) — génération…') });
+    step(90,'↓ Récupération de la vidéo…');
+    const _vb = await _kieFetchBlob(_kr.url);
+    window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
+    return new Blob([_vb], { type:'video/mp4' });
+  }
   const H=await getAuthHeader();
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const fPost=(pp,b)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
@@ -30660,7 +30691,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     // On lui interdit explicitement tout texte visuel — la réplique reste PARLÉE, jamais écrite.
     // Anti-texte RENFORCÉ (Axel 08/09) : le modèle incrustait « SITE » (mot du script) sur les vêtements/le décor.
     // Consigne forte EN TÊTE (les modèles pondèrent le début) + rappel en fin. Reste imparfait (limite modèle).
-    prompt: "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)",
+    prompt: _omniPrompt,
     aspect_ratio: (window._expFormat==='16:9'?'16:9':(window._expFormat==='1:1'?'1:1':'9:16')),
     duration: Math.max(3, Math.min(10, Math.round(durSec)||6)),
     resolution: (res==='1080p'?'1080p':'720p'),
@@ -30706,7 +30737,7 @@ async function expressCreate(){
   // Moteur Seedance (dev-only) : chemin auto-contenu, ne touche pas au flux Veo.
   if(window._expEngine==='seedance' && _expIsDev()){ return _expCreateSeedance(prompt); }
   if(_gateFreeGenerate()) return;
-  window._aaLastEngine='';
+  window._aaLastEngine=''; window._expKieRid=null;
   // Omni Flash = Pro/Élite. L'UI cache le bouton pour les autres, mais on REGATE ici avant tout débit
   // (sinon un plan inférieur pourrait forcer window._expVeoModel='omni' et accéder à la feature).
   if(window._expVeoModel==='omni' && !_expModelAllowed('omni')){
@@ -30856,7 +30887,7 @@ async function expressCreate(){
         const _kr = await _kieRun(/fast/.test(_veoModel) ? 'veo3-fast' : 'veo3-lite',
           { prompt: animPrompt, image_url:_kImg, aspect_ratio: window._expFormat, resolution:_res, duration:_dur }, { every:5000, maxPolls:240 });   // 20 min
         _kieBlob = await _kieFetchBlob(_kr.url);
-        window._aaLastEngine='kie';
+        window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
       }catch(e){
         console.warn('[kie] Veo : échec kie', e);
         if(e && e._kieRefus) throw new Error('Veo (kie.ai) a refusé ce contenu — '+e.message);
@@ -30955,7 +30986,7 @@ async function expressCreate(){
     try{
       if(typeof _libAutoSaveVideo==='function'){
         const _nm = 'Express ' + new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-        _libAutoSaveVideo(blob, _nm, ['Express', window._expFormat==='16:9' ? '16:9' : '9:16'], '⚡', 'EXPRESS');
+        Promise.resolve(_libAutoSaveVideo(blob, _nm, ['Express', window._expFormat==='16:9' ? '16:9' : '9:16'], '⚡', 'EXPRESS')).then(()=>{ if(window._expKieRid){ _kieAck(window._expKieRid); window._expKieRid=null; } }).catch(()=>{});
       }
     }catch(_sErr){ console.warn('express autosave:', _sErr); }
     if(typeof _hedraIncrement==='function') _hedraIncrement();

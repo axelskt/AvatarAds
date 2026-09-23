@@ -10,7 +10,8 @@
 //   POST ?path=/kie/<alias>                    → SOUMISSION → { request_id, status_url, response_url }
 //   GET  ?path=/kie/requests/<rid>/status      → { status: IN_QUEUE | IN_PROGRESS | COMPLETED | FAILED }
 //   GET  ?path=/kie/requests/<rid>             → résultat RAPATRIÉ dans render-media (URL signée 1 h)
-// alias : nano-banana-pro · veo3-lite · veo3-fast · kling-2.6-mc · kling-3.0-mc · omnihuman-1.5
+//   POST ?path=/kie/requests/<rid>/ack         → l'app confirme avoir rangé le résultat (filet : plus rien à faire)
+// alias : nano-banana-pro · veo3-lite · veo3-fast · kling-2.6-mc · kling-3.0-mc · omnihuman-1.5 · omni-flash
 //
 // Sécurité : le corps kie est RECONSTRUIT côté serveur (jamais de spread du corps client) ; modèle, traduction,
 // filigrane, fond Kling… imposés ici. Entrées = URL signées de NOTRE storage (render-media/<uid>/…) seulement.
@@ -18,19 +19,16 @@
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, userPlan, helperGate, rateHit, safePath, svc, SUPABASE_URL, isBlockedHost, hostResolvesInternal } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, userPlan, helperGate, rateHit, safePath, svc, SUPABASE_URL } from '../_shared/guard.ts'
+import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, KIE_LABELS } from '../_shared/kie.ts'
 
-const KIE = 'https://api.kie.ai'
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
-const ALIASES = ['nano-banana-pro', 'veo3-lite', 'veo3-fast', 'kling-2.6-mc', 'kling-3.0-mc', 'omnihuman-1.5'] as const
+const ALIASES = ['nano-banana-pro', 'veo3-lite', 'veo3-fast', 'kling-2.6-mc', 'kling-3.0-mc', 'omnihuman-1.5', 'omni-flash'] as const
 type Alias = typeof ALIASES[number]
-const ALLOW = /^\/(health|balance|kie\/(nano-banana-pro|veo3-lite|veo3-fast|kling-2\.6-mc|kling-3\.0-mc|omnihuman-1\.5)|kie\/requests\/(mk|veo)-[A-Za-z0-9_-]{6,120}(\/status)?)$/
+const ALLOW = /^\/(health|balance|kie\/(nano-banana-pro|veo3-lite|veo3-fast|kling-2\.6-mc|kling-3\.0-mc|omnihuman-1\.5|omni-flash)|kie\/requests\/(mk|veo)-[A-Za-z0-9_-]{6,120}(\/status|\/ack)?)$/
 const NB_AR = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9', 'auto']
-const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (lecture en flux, abandon au-delà)
 
-const key = () => Deno.env.get('KIEAI_API_KEY') ?? ''
-const kieHeaders = () => ({ Authorization: `Bearer ${key()}`, 'Content-Type': 'application/json' })
 const str = (v: unknown, max: number) => String(v ?? '').slice(0, max)
 const pick = <T extends string>(v: unknown, allowed: readonly T[], dflt: T): T => (allowed as readonly string[]).includes(String(v)) ? String(v) as T : dflt
 
@@ -91,6 +89,18 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null): Built 
     input.background_source = b.background_source === 'input_video' ? 'input_video' : 'input_image'
     return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'kling-3.0/motion-control', callBackUrl: cb, input } }
   }
+  if (alias === 'omni-flash') {
+    // Gemini Omni 1.1 Flash image→vidéo (= fal google/gemini-omni-flash/v1.1/image-to-video). Chez kie le prix est un
+    // forfait par clip IDENTIQUE en 720p et 1080p → 1080p IMPOSÉ (Axel 23/09). Durées kie : 4/6/8/10 s ; 9:16 ou 16:9.
+    const img = okInput(b.image_url, uid)
+    if (!img) return { error: 'image_url : URL de notre storage uniquement' }
+    const prompt = str(b.prompt, 20000)
+    if (!prompt) return { error: 'prompt requis' }
+    const d = Number(b.duration) || 6
+    const duration = d <= 4 ? '4' : d <= 6 ? '6' : d <= 8 ? '8' : '10'
+    return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'google/gemini-omni-flash-1-1', input: {
+      prompt, first_frame_url: img, duration, aspect_ratio: pick(b.aspect_ratio, ['9:16', '16:9'] as const, '9:16'), resolution: '1080p' } } }
+  }
   // omnihuman-1.5
   const img = okInput(b.image_url, uid), aud = okInput(b.audio_url, uid)
   if (!img || !aud) return { error: 'image_url / audio_url : URL de notre storage uniquement' }
@@ -112,77 +122,7 @@ function kieErr(code: number, msg: string) {
   return jsonRes(502, { error: `kie.ai ${code || 'erreur'} : ${m}`, kieCode: code })
 }
 
-// ── Suivi normalisé des deux familles (market = jobs/recordInfo ; veo = veo/record-info) ──
-type Rec = { found: boolean; transient?: boolean; state: 'queue' | 'run' | 'ok' | 'fail'; urls: string[]; err: string; errType: string; param: string; meta: Record<string, unknown> }
-async function record(fam: 'mk' | 'veo', taskId: string): Promise<Rec> {
-  const path = fam === 'veo' ? '/api/v1/veo/record-info' : '/api/v1/jobs/recordInfo'
-  const miss = (err: string, extra: Partial<Rec> = {}): Rec => ({ found: false, state: 'fail', urls: [], err, errType: 'not_found', param: '', meta: {}, ...extra })
-  let r: Response, j: any
-  try { r = await fetch(`${KIE}${path}?taskId=${encodeURIComponent(taskId)}`, { headers: kieHeaders(), signal: AbortSignal.timeout(20000) }) }
-  catch { return miss('kie injoignable', { transient: true }) }
-  try { j = await r.json() } catch { return miss('réponse kie illisible', { transient: true }) }
-  const code = Number(j?.code), d = j?.data
-  // Panne PASSAGÈRE (le client réessaie) ≠ tâche introuvable (404) ≠ échec réel (FAILED → repli possible côté client).
-  if (r.status >= 500 || [429, 433, 455, 500, 505].includes(code)) return miss(String(j?.msg || 'kie momentanément indisponible'), { transient: true })
-  if (code === 200 && !d) return miss('tâche introuvable')
-  if (code !== 200) {
-    if (code === 404 || (code === 422 && /null|not.?found|record/i.test(String(j?.msg || '')))) return miss(String(j?.msg || 'tâche introuvable'))
-    return { found: true, state: 'fail', urls: [], err: String(j?.msg || 'échec kie'), errType: String(code || 'failed'), param: '', meta: { kieCode: code } }
-  }
-  if (fam === 'veo') {
-    const f = Number(d.successFlag)
-    const urls = Array.isArray(d.response?.resultUrls) ? d.response.resultUrls : []
-    return { found: true, state: f === 1 ? 'ok' : (f === 2 || f === 3 ? 'fail' : 'run'), urls,
-      err: String(d.errorMessage || ''), errType: String(d.errorCode ?? ''), param: String(d.paramJson || ''),
-      meta: { resolution: d.response?.resolution ?? null, originUrls: d.response?.originUrls ?? null, fallbackFlag: d.fallbackFlag ?? null } }
-  }
-  const st = String(d.state || '')
-  let urls: string[] = []
-  if (st === 'success') { try { urls = JSON.parse(d.resultJson || '{}').resultUrls || [] } catch { urls = [] } }
-  return { found: true, state: st === 'success' ? 'ok' : st === 'fail' ? 'fail' : st === 'generating' ? 'run' : 'queue', urls,
-    err: String(d.failMsg || ''), errType: String(d.failCode || ''), param: String(d.param || ''),
-    meta: { model: d.model ?? null, costTime: d.costTime ?? null, creditsConsumed: d.creditsConsumed ?? null } }
-}
-
-// Téléchargement du résultat kie (anti-SSRF : https, hôte public, redirections revalidées), JAMAIS .text() sur un binaire.
-async function download(raw: string): Promise<{ buf: ArrayBuffer; ct: string; host: string } | null> {
-  let u = raw
-  for (let hop = 0; hop < 4; hop++) {
-    let p: URL
-    try { p = new URL(u) } catch { return null }
-    if (p.protocol !== 'https:' || isBlockedHost(p.hostname) || await hostResolvesInternal(p.hostname)) return null
-    const r = await fetch(p.href, { redirect: 'manual', signal: AbortSignal.timeout(120000) })
-    if (r.status >= 300 && r.status < 400) { const loc = r.headers.get('location'); if (!loc) return null; u = new URL(loc, p.href).href; continue }
-    if (!r.ok) return null
-    const len = Number(r.headers.get('content-length') || 0)
-    if (len > MAX_RESULT_BYTES || !r.body) return null
-    const chunks: Uint8Array[] = []; let total = 0
-    const reader = r.body.getReader()
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      total += value.byteLength
-      if (total > MAX_RESULT_BYTES) { try { await reader.cancel() } catch { /* */ } return null }
-      chunks.push(value)
-    }
-    if (total < 1000) return null
-    const buf = new Uint8Array(total); let off = 0
-    for (const c of chunks) { buf.set(c, off); off += c.byteLength }
-    return { buf: buf.buffer, ct: (r.headers.get('content-type') || '').toLowerCase(), host: p.hostname }
-  }
-  return null
-}
-
-function kindOf(ct: string, buf: ArrayBuffer): { ext: string; mime: string; kind: 'image' | 'video' } | null {
-  const h = new Uint8Array(buf.slice(0, 12))
-  if (h[0] === 0xff && h[1] === 0xd8) return { ext: 'jpg', mime: 'image/jpeg', kind: 'image' }
-  if (h[0] === 0x89 && h[1] === 0x50 && h[2] === 0x4e && h[3] === 0x47) return { ext: 'png', mime: 'image/png', kind: 'image' }
-  if (h[0] === 0x52 && h[1] === 0x49 && h[2] === 0x46 && h[3] === 0x46 && h[8] === 0x57) return { ext: 'webp', mime: 'image/webp', kind: 'image' }
-  if (h[4] === 0x66 && h[5] === 0x74 && h[6] === 0x79 && h[7] === 0x70) return { ext: 'mp4', mime: 'video/mp4', kind: 'video' }
-  if (ct.startsWith('image/')) return { ext: ct.includes('png') ? 'png' : 'jpg', mime: ct.split(';')[0], kind: 'image' }
-  if (ct.startsWith('video/')) return { ext: 'mp4', mime: 'video/mp4', kind: 'video' }
-  return null
-}
+// Suivi, rapatriement et détection du format : ../_shared/kie.ts (partagés avec reconcile-kie, le filet).
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -235,28 +175,54 @@ serve(async (req: Request) => {
       const fam = alias.startsWith('veo3') ? 'veo' : 'mk'
       const rid = `${fam}-${taskId}`
       console.log('[kie] submit ok', alias, taskId, who)
+      if (uid) { const { error: jErr } = await svc().from('kie_jobs').insert({ task_id: rid, user_id: uid, alias, label: KIE_LABELS[alias] || 'kie.ai' }); if (jErr) console.warn('[kie] kie_jobs insert', jErr.message) }
       return jsonRes(200, { request_id: rid, status_url: `/kie/requests/${rid}/status`, response_url: `/kie/requests/${rid}`, status: 'IN_QUEUE', provider: 'kie' })
+    }
+
+    // ── ACCUSÉ : l'app a rangé le résultat en Bibliothèque → le filet n'a plus rien à faire ──
+    const ack = path.match(/^\/kie\/requests\/((mk|veo)-[A-Za-z0-9_-]{6,120})\/ack$/)
+    if (ack && req.method === 'POST') {
+      if (!uid) return jsonRes(200, { ok: true })
+      const { error: aErr } = await svc().from('kie_jobs').update({ state: 'saved', updated_at: new Date().toISOString() })
+        .eq('task_id', ack[1]).eq('user_id', uid).in('state', ['pending', 'fetched'])
+      if (aErr) console.warn('[kie] ack', aErr.message)
+      return jsonRes(200, { ok: true })
     }
 
     // ── SUIVI / RÉSULTAT ──
     const q = path.match(/^\/kie\/requests\/(mk|veo)-([A-Za-z0-9_-]{6,120})(\/status)?$/)
     if (q && req.method === 'GET') {
       if (uid) { const g = await helperGate(uid, 'kie', 1500, 600); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
-      const fam = q[1] as 'mk' | 'veo', taskId = q[2], isStatus = !!q[3]
+      const fam = q[1] as 'mk' | 'veo', taskId = q[2], isStatus = !!q[3], rid = `${fam}-${taskId}`
       const rec = await record(fam, taskId)
+      // Clé / solde / droits kie refusés : erreur IMMÉDIATE et vraie (pas 15 min d'attente), la tâche reste au filet.
+      if (rec.account) return jsonRes(424, { error: 'clé ou compte kie.ai refusé (' + rec.err.slice(0, 120) + ') — la génération sera rangée dans ta Bibliothèque une fois réglé', detail: [{ type: 'kie_account', msg: rec.err }] })
       if (rec.transient) return jsonRes(503, { error: 'kie.ai momentanément indisponible', detail: [{ type: 'transient', msg: rec.err }] })
       if (!rec.found) return jsonRes(404, { error: 'tâche kie introuvable', detail: [{ type: 'not_found', msg: rec.err }] })
-      // Propriété : nos URL d'entrée signées portent /render-media/<uid>/ et kie les renvoie dans `param`.
-      // Un échec kie peut revenir SANS param (ex. refus 400) : on laisse alors passer le statut d'échec (rien à protéger) ;
-      // un résultat réussi, lui, exige toujours la preuve de propriété.
-      if (uid && (rec.state === 'ok' || rec.param) && !rec.param.includes(`/${BUCKET}/${uid}/`)) return jsonRes(404, { error: 'tâche kie introuvable' })
+      // Propriété : TOUTES les URL d'entrée enregistrées par kie viennent du dossier de l'appelant. Un échec sans param
+      // (ex. refus 400) passe (rien à protéger) ; un résultat réussi exige toujours la preuve.
+      if (uid && (rec.state === 'ok' || rec.param) && !kieOwnedBy(rec.param, uid, STORE_SIGN)) return jsonRes(404, { error: 'tâche kie introuvable' })
       const failed = rec.state === 'fail' || (rec.state === 'ok' && !rec.urls.length)   // « succès » sans URL = échec
       if (isStatus) {
         if (failed) return jsonRes(200, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], meta: rec.meta })
         return jsonRes(200, { status: rec.state === 'ok' ? 'COMPLETED' : rec.state === 'run' ? 'IN_PROGRESS' : 'IN_QUEUE', meta: rec.meta })
       }
+      if (failed && uid) { const { error: jErr } = await svc().from('kie_jobs').update({ state: 'failed', last_error: (rec.err || 'échec kie').slice(0, 200), updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid).in('state', ['pending', 'fetched']); if (jErr) console.warn('[kie] kie_jobs failed', jErr.message) }
       if (failed) return jsonRes(422, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], meta: rec.meta })
       if (rec.state !== 'ok') return jsonRes(202, { status: rec.state === 'run' ? 'IN_PROGRESS' : 'IN_QUEUE' })
+
+      // Le filet l'a déjà prise (onglet revenu après une veille) → on ne la redonne pas : sinon doublon en Bibliothèque.
+      let claimed = false
+      if (uid) {
+        const { data: rows } = await svc().from('kie_jobs').select('state, library_id').eq('task_id', rid).eq('user_id', uid).limit(1)
+        const row = rows && rows[0]
+        if (row && (row.state === 'saving' || (row.state === 'saved' && row.library_id)))
+          return jsonRes(409, { status: 'SAVED_BY_NET', error: 'déjà rangée dans ta Bibliothèque (récupérée automatiquement)', library_id: row.library_id || null })
+        // Réservation pending → fetched AVANT la copie (le filet ne peut plus la prendre en même temps).
+        const { data: cl } = await svc().from('kie_jobs').update({ state: 'fetched', updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid).eq('state', 'pending').select('task_id')
+        claimed = !!(cl && cl.length)
+      }
+      const unclaim = async () => { if (claimed) await svc().from('kie_jobs').update({ state: 'pending', updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid as string).eq('state', 'fetched') }
 
       // Rapatriement idempotent : déjà copié ? → URL signée directe.
       const st = svc().storage.from(BUCKET)
@@ -266,19 +232,21 @@ serve(async (req: Request) => {
       let dst = hit ? `${who}/kie/${hit.name}` : '', kind: 'image' | 'video' = hit && /\.(jpg|png|webp)$/.test(hit.name) ? 'image' : 'video', host = ''
       if (!dst) {
         const dl = await download(rec.urls[0])
-        if (!dl) return jsonRes(502, { error: 'rapatriement du résultat kie impossible' })
+        if (!dl) { await unclaim(); return jsonRes(502, { error: 'rapatriement du résultat kie impossible' }) }
         const k = kindOf(dl.ct, dl.buf)
-        if (!k) return jsonRes(502, { error: 'format de résultat kie inattendu (' + (dl.ct || 'inconnu') + ')' })
+        if (!k) { await unclaim(); return jsonRes(502, { error: 'format de résultat kie inattendu' }) }
         dst = `${base}.${k.ext}`; kind = k.kind; host = dl.host
         const { error: upErr } = await st.upload(dst, new Uint8Array(dl.buf), { contentType: k.mime, upsert: true })
-        if (upErr) return jsonRes(500, { error: 'copie du résultat impossible : ' + upErr.message })
+        if (upErr) { await unclaim(); return jsonRes(500, { error: 'copie du résultat impossible : ' + upErr.message }) }
       }
       const { data: signed, error: sErr } = await st.createSignedUrl(dst, 3600)
-      if (sErr || !signed?.signedUrl) return jsonRes(500, { error: 'URL signée impossible' })
+      if (sErr || !signed?.signedUrl) { await unclaim(); return jsonRes(500, { error: 'URL signée impossible' }) }
+      // Copie faite : on la note (le filet saura ranger CE fichier si l'app ne confirme jamais le rangement).
+      if (uid) { const { error: jErr } = await svc().from('kie_jobs').update({ storage_path: dst, updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid).eq('state', 'fetched'); if (jErr) console.warn('[kie] kie_jobs fetched', jErr.message) }
       const out = signed.signedUrl
       console.log('[kie] résultat', fam, taskId, kind, dst, host)
       const media = kind === 'image' ? { images: [{ url: out }], image: { url: out } } : { video: { url: out }, video_url: out }
-      return jsonRes(200, { status: 'COMPLETED', url: out, kind, storage_path: dst, ...media, kie: { taskId, source_host: host || null, ...rec.meta } })
+      return jsonRes(200, { status: 'COMPLETED', url: out, kind, storage_path: dst, rid, ...media, kie: { taskId, source_host: host || null, ...rec.meta } })
     }
     return jsonRes(400, { error: 'requête non prise en charge' })
   } catch (e) {
