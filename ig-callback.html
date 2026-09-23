@@ -34,23 +34,44 @@
   const CHECK = '<div class="ic" style="background:rgba(52,199,89,.14)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>';
   const CROSS = '<div class="ic" style="background:rgba(255,107,53,.14)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>';
   function show(html){ c.innerHTML = html; }
+  // Prévient la page qui a ouvert le popup (ex. ig-review.html, page du reviewer Meta) du résultat,
+  // SUCCÈS COMME ÉCHEC, sinon elle reste bloquée sur son chargement. L'aperçu (profil + reach 28 j)
+  // vient de l'échange lui-même : seul celui qui vient de s'authentifier le reçoit.
+  // Deux canaux : window.opener (cas normal) + BroadcastChannel (même origine), qui fonctionne même si
+  // une page de connexion (ex. facebook.com) a coupé le lien opener via COOP.
+  function notify(msg){
+    msg = Object.assign({ source:'ig-oauth' }, msg);
+    if (window.opener) { try { window.opener.postMessage(msg, location.origin); } catch(_){} }
+    try { const bc = new BroadcastChannel('ig-oauth'); bc.postMessage(msg); bc.close(); } catch(_){}
+  }
   if (err) {
+    notify({ ok:false, error:'Connexion annulée : ' + err });
     show(CROSS + '<h1>Connexion annulée</h1><p class="muted">' + esc(err) + '</p>');
   } else if (!code) {
+    notify({ ok:false, error:'Aucun code d’autorisation reçu.' });
     show(CROSS + '<h1>Lien invalide</h1><p class="muted">Aucun code d’autorisation reçu.</p>');
   } else {
     fetch(EDGE + '?action=exchange', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code }) })
       .then(r => r.json())
       .then(d => {
-        // Prévient la page qui a ouvert le popup (ex. ig-review.html pour l'App Review),
-        // pour qu'elle affiche le compte fraîchement connecté. No-op si pas d'opener.
-        if (window.opener) { try { window.opener.postMessage({ source:'ig-oauth', ok:!!d.ok, ig_id:d.ig_id, username:d.username, error:d.error }, location.origin); } catch(_){} }
-        if (d.ok) show(CHECK + '<h1>Compte connecté</h1><p class="muted"><b>@' + esc(d.username || d.ig_id) + '</b> est branché à AvatarAds. Tu peux fermer cette fenêtre.</p>');
+        notify({ ok:!!d.ok, ig_id:d.ig_id, username:d.username, preview:d.preview || null, error:d.error });
+        if (d.ok) {
+          const pv = d.preview || {};
+          const stats = (pv.followers_count != null)
+            ? '<p class="muted" style="margin-top:10px">' + fmtN(pv.followers_count) + ' abonnés · ' + (pv.media_count ?? '—') + ' publications'
+              + (pv.reach_28j != null ? ' · reach 28 j : ' + fmtN(pv.reach_28j) : '') + '</p>'
+            : '';
+          show(CHECK + '<h1>Compte connecté</h1><p class="muted"><b>@' + esc(d.username || d.ig_id) + '</b> est branché à AvatarAds. Tu peux fermer cette fenêtre.</p>' + stats);
+        }
         else show(CROSS + '<h1>Erreur</h1><p class="muted">' + esc(d.error || 'inconnue') + '</p>');
       })
-      .catch(e => show(CROSS + '<h1>Erreur</h1><p class="muted">' + esc(e.message) + '</p>'));
+      .catch(e => {
+        notify({ ok:false, error:e.message });
+        show(CROSS + '<h1>Erreur</h1><p class="muted">' + esc(e.message) + '</p>');
+      });
   }
   function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function fmtN(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n); }
 </script>
 </body>
 </html>

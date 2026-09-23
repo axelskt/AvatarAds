@@ -298,20 +298,31 @@ function igTimeAgo(iso){
   if(d<86400) return 'il y a '+Math.floor(d/3600)+' h';
   return 'il y a '+Math.floor(d/86400)+' j';
 }
+// ig-insights et instagram-auth?action=accounts sont réservés au propriétaire : on leur passe la session.
+async function igAuthHeaders(){
+  const { data:{ session } } = await sb.auth.getSession();
+  return session ? { Authorization: 'Bearer ' + session.access_token } : {};
+}
 async function igConnect(){
+  // Popup ouvert tout de suite dans le clic (Safari le bloque si on attend la réponse de la fonction).
+  const w = window.open('about:blank', 'ig_oauth', 'width=560,height=760');
+  if(!w){ $('igAccounts').textContent = 'Popup bloqué : autorise les popups pour avatarads.fr puis réessaie.'; return; }
   try{
     const d = await (await fetch(IG_AUTH + '?action=authorize')).json();
-    if(d.authorize_url){ window.open(d.authorize_url, 'ig_oauth', 'width=560,height=760'); }
-  }catch(e){ /* ignore */ }
+    if(d.authorize_url) w.location.href = d.authorize_url; else w.close();
+  }catch(e){ try{ w.close(); }catch(_){} }
 }
 async function igLoad(){
   // comptes connectés (OAuth)
   try{
-    const a = await (await fetch(IG_AUTH + '?action=accounts')).json();
+    const a = await (await fetch(IG_AUTH + '?action=accounts', { headers: await igAuthHeaders() })).json();
+    if(a.error){ $('igAccounts').textContent = 'Accès refusé (session expirée ?) — reconnecte-toi au dashboard.'; }
+    else {
     const accs = a.accounts || [];
     $('igAccounts').innerHTML = accs.length
       ? 'Connecté : ' + accs.map(x=>'<b>@'+esc(x.username||x.ig_id)+'</b>').join(' · ')
       : 'Aucun compte connecté — clique « Connecter Instagram ».';
+    }
   }catch(e){ $('igAccounts').textContent=''; }
   igLoadInsights();
   // data (RPC owner/dev — ig_dm_log reste verrouillé)
@@ -350,8 +361,8 @@ async function igLoad(){
 // Insights du compte (abonnés, publications, reach) — via instagram_business_manage_insights
 async function igLoadInsights(){
   try{
-    const d = await (await fetch(SUPABASE_URL + '/functions/v1/ig-insights')).json();
-    if(!d || d.error){ $('igInsights').innerHTML=''; return; }
+    const d = await (await fetch(SUPABASE_URL + '/functions/v1/ig-insights', { headers: await igAuthHeaders() })).json();
+    if(!d || d.error){ $('igInsights').innerHTML = d && d.error ? '<div class="note">Insights indisponibles : '+esc(d.error)+'</div>' : ''; return; }
     const ins = d.insights || {};
     const cards = [
       igKpi(d.followers_count!=null ? igFmtN(d.followers_count) : '—', 'Abonnés du compte'),

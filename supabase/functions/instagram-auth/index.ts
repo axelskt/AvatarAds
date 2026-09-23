@@ -22,6 +22,20 @@ const CORS = {
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
+// Session owner/developer exigée (fermé par défaut : sans session valide ou si la base ne répond pas,
+// on refuse). La clé publique du site n'a pas d'utilisateur → refusée.
+async function ownerOk(req: Request): Promise<boolean> {
+  const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim()
+  if (!jwt) return false
+  try {
+    const { data: { user }, error } = await svc.auth.getUser(jwt)
+    if (error || !user) return false
+    const { data, error: e2 } = await svc.from('profiles').select('plan, is_owner').eq('id', user.id).maybeSingle()
+    if (e2 || !data) return false
+    return !!data.is_owner || String(data.plan || '').toLowerCase() === 'developer'
+  } catch { return false }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (!APP_SECRET) return json({ error: 'IG_APP_SECRET manquant (secret Supabase)' }, 500)
@@ -77,12 +91,26 @@ Deno.serve(async (req) => {
     const longTok = String(t2.access_token)
     const expiresIn = Number(t2.expires_in) || 5184000  // 60j par défaut si l'API ne le renvoie pas
 
-    // c) username (affichage)
+    // c) profil + aperçu (affichage). L'aperçu n'est renvoyé QU'À celui qui vient de s'authentifier
+    //    avec son propre code : c'est ce qu'affichent ig-callback.html et ig-review.html (page du
+    //    reviewer Meta), sans passer par ig-insights, qui est réservé au propriétaire.
     let username: string | null = null
+    let preview: Record<string, unknown> | null = null
     try {
-      const ru = await fetch(`https://graph.instagram.com/me?fields=user_id,username&access_token=${encodeURIComponent(longTok)}`)
+      const ru = await fetch(`https://graph.instagram.com/v21.0/me?fields=user_id,username,name,profile_picture_url,followers_count,media_count&access_token=${encodeURIComponent(longTok)}`)
       const ju = await ru.json().catch(() => ({}))
       username = ju.username || null
+      if (!ju.error) {
+        preview = {
+          username, name: ju.name ?? null, profile_picture_url: ju.profile_picture_url ?? null,
+          followers_count: ju.followers_count ?? null, media_count: ju.media_count ?? null, reach_28j: null,
+        }
+        const until = Math.floor(Date.now() / 1000), since = until - 28 * 86400
+        const rr = await fetch(`https://graph.instagram.com/v21.0/me/insights?metric=reach&metric_type=total_value&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(longTok)}`)
+        const jr = await rr.json().catch(() => ({}))
+        const v = jr?.data?.[0]?.total_value?.value
+        if (typeof v === 'number') preview.reach_28j = v
+      }
     } catch { /* non bloquant */ }
 
     // d) upsert
@@ -94,11 +122,13 @@ Deno.serve(async (req) => {
     }
     const { error } = await svc.from('ig_accounts').upsert(row, { onConflict: 'ig_id' })
     if (error) return json({ error: 'stockage token : ' + error.message }, 500)
-    return json({ ok: true, ig_id: userId, username })
+    return json({ ok: true, ig_id: userId, username, preview })
   }
 
-  // 3) comptes connectés (jamais le token)
+  // 3) comptes connectés (jamais le token) — owner/dev uniquement : la liste contiendra les
+  //    comptes des users TrackAds.
   if (action === 'accounts') {
+    if (!(await ownerOk(req))) return json({ error: 'réservé au propriétaire' }, 401)
     const { data } = await svc.from('ig_accounts').select('ig_id, username, updated_at').order('updated_at', { ascending: false })
     return json({ accounts: data || [] })
   }
