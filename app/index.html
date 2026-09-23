@@ -9236,7 +9236,7 @@ async function _imgMakeRealistic(btn){
   creditsFlowBegin();
   if(!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'améliorer en 4K'))) return;
   const orig = btn ? btn.innerHTML : null;
-  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Amélioration 4K… (~30s)'; }
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Amélioration 4K… <span id="imgMakeRealTimer" style="font-family:var(--mono)">0:00</span>'; }
   const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), overlay=document.getElementById('imgLoadingOverlay');
   try{
     const session=(await sb.auth.getSession()).data.session;
@@ -9983,11 +9983,21 @@ function _imgProgStart(label){
   { const a=document.getElementById('imgActions'); if(a) a.style.display='none'; }  // boutons cachés pendant le chargement
   { const z=document.getElementById('imgZone'); if(z) z.style.minHeight='clamp(320px,52vh,560px)';   // boîte haute → « génération en cours » centré (plus trop en haut)
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none'; }                     // masque l'image précédente pendant le chargement
-  const l=document.getElementById('imgProgLabel'); if(l&&label) l.textContent=label;
+  // Chrono RÉEL (Axel 23/09) à la place de l'estimation « (~30s) », qui mentait dès que le moteur était chargé.
+  const l=document.getElementById('imgProgLabel');
+  const _base=String(label || (l ? l.textContent : '') || '').replace(/\s*\(~\d+\s*s\)\s*$/,'').replace(/\s*·\s*\d+:\d{2}$/,'');
+  const _t0=Date.now();
+  const _fmt=(ms)=>{ const x=Math.floor(ms/1000); return Math.floor(x/60)+':'+String(x%60).padStart(2,'0'); };
+  if(l) l.textContent=_base+' · 0:00';
   if(typeof _imgIdleShow==='function') _imgIdleShow(false);
   _imgSetProg(1);
   clearInterval(_imgProgTimer);
-  _imgProgTimer=setInterval(()=>{ if(_imgProgVal<99) _imgSetProg(_imgProgVal + Math.max(0.4,(99-_imgProgVal)*0.05)); }, 350);
+  _imgProgTimer=setInterval(()=>{
+    if(_imgProgVal<99) _imgSetProg(_imgProgVal + Math.max(0.4,(99-_imgProgVal)*0.05));
+    const t=_fmt(Date.now()-_t0);
+    const el=document.getElementById('imgProgLabel'); if(el) el.textContent=_base+' · '+t;
+    const bt=document.getElementById('imgMakeRealTimer'); if(bt) bt.textContent=t;
+  }, 350);
 }
 function _imgProgStop(){ clearInterval(_imgProgTimer); _imgProgTimer=null; _imgSetProg(100); }
 
@@ -10089,7 +10099,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
   if(_kieOn()){
     try{
       const _u = await _kieUpload(dataUrl);
-      const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:100 });
+      const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:200 });   // 10 min : la file kie peut être longue
       const _d = await _kieDataUrl(_r.url);
       window._aaLastEngine = 'kie';
       return _d;
@@ -10182,7 +10192,7 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
     try{
       let _ar='auto'; try{ const _im=await _loadImgEl(targetDataUrl); _ar=_nbAspectFor(_im.naturalWidth,_im.naturalHeight); }catch(_){}
       const _u1=await _kieUpload(targetDataUrl), _u2=await _kieUpload(faceDataUrl);
-      const _r=await _kieRun('nano-banana-pro', { prompt, image_urls:[_u1,_u2], aspect_ratio:_ar, resolution:'1K' }, { every:3000, maxPolls:80 });
+      const _r=await _kieRun('nano-banana-pro', { prompt, image_urls:[_u1,_u2], aspect_ratio:_ar, resolution:'1K' }, { every:3000, maxPolls:160 });
       const _d=await _kieDataUrl(_r.url); window._aaLastEngine='kie'; return _d;
     }catch(e){
       console.warn('[kie] faceswap → repli Google', e);
