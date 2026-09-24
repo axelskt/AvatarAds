@@ -9241,8 +9241,8 @@ async function _imgMakeRealistic(btn){
   if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const _plan = (currentMember?.plan || 'free').toLowerCase();
-  if(!['pro','elite','byok','developer'].includes(_plan)){
-    try{ showPaywall(); }catch(_){}   // Starter/free → redirigé direct vers le paywall
+  if(!['starter','pro','elite','byok','developer'].includes(_plan)){   // « Améliorer en 4K » ouvert à TOUS les plans payants, Starter compris (Axel 24/09)
+    try{ showPaywall(); }catch(_){}   // Free → redirigé direct vers le paywall
     return;
   }
   if(!_imgRefFile){ toast('Importe d\'abord l\'image à corriger'); return; }
@@ -10719,7 +10719,7 @@ async function _imgFramingMatches(origUrl, newUrl){
 async function _imgUpscaleNano(btn){
   if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   const plan=(currentMember?.plan||'free').toLowerCase();
-  if(!['elite','developer'].includes(plan)){ toast('Le 4K est réservé au plan Élite'); openUpgradeModal(); return; }
+  if(!['starter','pro','elite','byok','developer'].includes(plan)){ toast('Améliorer en 4K : disponible dès le plan Starter'); openUpgradeModal(); return; }   // ouvert dès Starter (Axel 24/09)
   const img=document.getElementById('imgOutput');
   if(!img||!img.src){ toast('Génère une image d\'abord'); return; }
   creditsFlowBegin();
