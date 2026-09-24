@@ -106,7 +106,7 @@
     { k: 'watch', label: 'Visionnage moyen', ic: 'clock', target: 40, sec: true, f: 'avgWatchS', of: ' de la vidéo' },
     { k: 'skip', label: 'Swipe < 3' + NB + 's', ic: 'skip', target: 30, max: true, pct: true, f: 'skipRate' },
     { k: 'like', label: 'Like rate', ic: 'heart', target: 5, pct: true, f: 'likes', u: ['like', 'likes'] },
-    { k: 'comment', label: 'Comment rate', ic: 'chat', target: null, pct: true, f: 'comments', u: ['comm.', 'comm.'] },   // cible à fixer par Axel
+    { k: 'comment', label: 'Comment rate', ic: 'chat', target: 5, pct: true, f: 'comments', u: ['comm.', 'comm.'] },
     { k: 'save', label: 'Save rate', ic: 'save', target: 5, pct: true, f: 'saved', u: ['save', 'saves'] },
     { k: 'share', label: 'Share rate', ic: 'send', target: 1, pct: true, f: 'shares', u: ['share', 'shares'] }
   ];
@@ -382,15 +382,14 @@
       var v = null, n = 0, sub, na = null;
       if (g.k === 'perDay') {
         if (R && X.nDays) { v = R.length / X.nDays; n = R.length; }
-        sub = R ? n + ' ' + plural(n, 'reel') + ' ' + X.per + ' · objectif ' + g.target + ' / jour' : null;
+        sub = R ? n + ' ' + plural(n, 'reel') + ' ' + X.per : null;
       } else if (R) {
         var vals = R.map(function (p) { return rateOf(p, g); }).filter(function (x) { return x != null; });
         n = vals.length;
         v = n ? vals.reduce(function (a, b) { return a + b; }, 0) / n : null;
+        // « moyenne de 14 reels · 1/14 atteint » (l'objectif est dans le titre de la carte)
         var scored = R.filter(function (p) { return scoreOf(p, g) != null; }), hit = scored.filter(function (p) { return goalOk(g, scoreOf(p, g)); }).length;
-        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + ' · ' + goalTxt(g) + (g.target != null && scored.length ? ' · ' + hit + '/' + scored.length + ' ' + plural(hit, 'atteint') : '')
-          + (g.k === 'watch' && scored.length < n ? ' · durée inconnue pour ' + (n - scored.length) + ' ' + plural(n - scored.length, 'reel') : '')
-          : null;
+        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + (g.target != null && scored.length ? ' · ' + hit + '/' + scored.length + ' ' + plural(hit, 'atteint') : '') : '';
         if (!n) na = R.length ? 'non fourni pour ces reels' : 'aucun reel publié ' + X.per;
       }
       if (v == null && !na) na = X.off ? 'compte déconnecté' : (R ? 'aucun reel publié ' + X.per : X.mediaWhy);
@@ -398,13 +397,15 @@
       var sc = g.k === 'watch' ? (dur ? v / dur * 100 : null) : v;       // ce qui est comparé à la cible
       var ok = goalOk(g, sc), fill = sc == null || g.target == null ? 0 : g.max ? (sc <= g.target ? 1 : g.target / sc) : Math.min(1, sc / g.target);
       var val = loading ? '…' : v == null ? '—' : g.pct ? fRate(v) : g.sec ? fSec(v) : fDec(v, 1);
-      if (dur) sub = 'sur ' + fSec0(dur) + ' de vidéo en moyenne · ' + fDec(sc, 0) + NB + '% regardé · ' + sub;
+      if (dur) sub = fDec(sc, 0) + NB + '% regardé';
+      var tgt = g.target == null ? '' : 'objectif ' + (g.k === 'perDay' ? g.target + ' / jour' : (g.max ? '≤ ' : '≥ ') + g.target + NB + '%');
       return '<div class="cf-goal' + (ok ? ' is-ok' : '') + '" data-goal="' + g.k + '">'
         + '<span class="cf-goal-tile">' + svg(IC[g.ic], 16) + '</span>'
-        + '<span class="cf-goal-l">' + esc(g.label) + (ok ? '<span class="cf-goal-ok">' + svg('M5 12l5 5L20 7', 10) + 'objectif atteint</span>' : '') + '</span>'
+        + '<span class="cf-goal-l">' + esc(g.label) + (tgt ? '<span class="cf-goal-sep" aria-hidden="true">|</span><span class="cf-goal-t'
+          + (loading || sc == null ? '' : ok ? ' is-ok' : ' is-ko') + '">' + esc(tgt) + '</span>' : '') + '</span>'
         + '<span class="cf-goal-v' + (v == null && !loading ? ' is-na' : '') + '">' + esc(val) + (dur && !loading ? '<small> / ' + esc(fSec0(dur)) + '</small>' : '') + '</span>'
         + '<span class="cf-goal-bar' + (g.target == null ? ' is-none' : '') + '"><i style="width:' + (loading ? 0 : Math.round(fill * 1000) / 10) + '%"></i></span>'
-        + '<span class="cf-goal-s">' + esc(loading ? 'chargement' : v == null ? na : sub) + '</span></div>';
+        + (loading || v == null || sub ? '<span class="cf-goal-s">' + esc(loading ? 'chargement' : v == null ? na : sub) + '</span>' : '') + '</div>';
     }).join('');
     return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectifs · ' + esc(PERIOD[ui.range].evo) + '</h2></div></div>'
       + '<div class="cf-goals">' + cards + '</div></section>';
