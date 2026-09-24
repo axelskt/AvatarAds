@@ -697,6 +697,7 @@
     if (!a) return '';
     if (a.status === 'pending') return '<span class="cf-chip is-muted">briques : analyse en cours…</span>';
     if (a.status === 'error') return '';
+    if (a.noVoice) return '<span class="cf-chip is-muted">sans voix</span>';
     return a.bricks.map(function (b) { return '<span class="cf-chip is-brick" title="' + esc(KIND_L[b.kind] + ' · ' + b.label) + '">' + esc(b.id) + '</span>'; }).join('');
   }
   function moduleOptions(cur) {
@@ -888,6 +889,7 @@
     if (!a) return '<div class="cf-meta">briques : pas de vidéo à analyser</div>';
     if (a.status === 'pending') return '<div class="cf-meta">briques : transcription en cours, la fiche se met à jour toute seule</div>';
     if (a.status === 'error') return '<div class="cf-meta">briques : analyse impossible · ' + esc(a.error || '') + '</div>';
+    if (a.noVoice) return '<div class="cf-meta">vidéo sans voix (musique seule) : aucune brique parlée à reconnaître, choisis le module à la main</div>';
     if (!a.bricks.length) return '<div class="cf-meta">aucune brique reconnue dans l’audio de cette vidéo</div>';
     return '<div class="cf-brick-list">' + a.bricks.map(function (b) {
       return '<div class="cf-brick-row"><span class="cf-chip is-brick">' + esc(b.id) + '</span><span class="cf-brick-k">' + esc(KIND_L[b.kind]) + '</span>'

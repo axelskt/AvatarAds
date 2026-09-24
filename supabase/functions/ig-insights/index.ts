@@ -437,10 +437,17 @@ async function ensureBrickTranscripts(rows: BrickRow[], deadline: number) {
 }
 // Joint l'analyse aux publications (reconnaissance refaite à chaque chargement : une nouvelle brique compte tout de
 // suite) ; renvoie les reels encore à analyser.
+// Musique seule : Whisper invente alors ses phrases fantômes (« Générique de fin », « Sous-titres réalisés par la
+// communauté d'Amara.org »…) ou quelques mots. Vu le 24/09 sur les 3 reels Motion Control du top 5.
+const GHOST = /g[ée]n[ée]rique de fin|amara\.org|sous-titr(es|age) (r[ée]alis[ée]s )?par|merci d'avoir regard[ée]|abonnez-vous|musique/i
+function noVoice(t: unknown): boolean {
+  const s = String(t || '').trim()
+  return !s || s.split(/\s+/).length < 4 || (GHOST.test(s) && s.split(/\s+/).length < 16)
+}
 async function attachAnalysis(list: any[]): Promise<any[]> {
   if (!list.length) return []
   const [{ data: rows }, bricksRows] = await Promise.all([
-    svc.from('ig_media_analysis').select('ig_media_id, status, segments, error, started_at, analyzed_at').in('ig_media_id', list.map((m) => String(m.id))),
+    svc.from('ig_media_analysis').select('ig_media_id, status, transcript, segments, error, started_at, analyzed_at').in('ig_media_id', list.map((m) => String(m.id))),
     loadBricks(),
   ])
   const by = new Map((rows || []).map((r: any) => [String(r.ig_media_id), r]))
@@ -450,9 +457,10 @@ async function attachAnalysis(list: any[]): Promise<any[]> {
   for (const m of list) {
     const r: any = by.get(String(m.id))
     if (r && r.status === 'done') {
+      if (noVoice(r.transcript)) { m.analysis = { status: 'done', module: null, bricks: [], no_voice: true }; continue }
       const res = matchBricks(Array.isArray(r.segments) ? r.segments : [], m.caption || '', bricks)
       m.analysis = { status: 'done', module: res.module, bricks: res.found.map((f) => ({ ...f, label: labels.get(f.id) || f.id })) }
-    } else if (r && r.status === 'error' && now - Date.parse(r.analyzed_at || r.started_at) < 24 * 3600 * 1000) {
+    } else if (r && r.status === 'error' && now - Date.parse(r.analyzed_at || r.started_at) < (/trop lourd/.test(r.error || '') ? 24 : 1) * 3600 * 1000) {
       m.analysis = { status: 'error', error: r.error || 'analyse impossible', bricks: [], module: null }
     } else if (m.video_url) {
       const running = r && r.status === 'running' && now - Date.parse(r.started_at) < 10 * 60 * 1000

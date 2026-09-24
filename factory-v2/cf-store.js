@@ -416,7 +416,7 @@
   function normAnalysis(a) {
     if (!a || typeof a !== 'object' || ['done', 'pending', 'error'].indexOf(a.status) < 0) return null;
     return {
-      status: a.status, error: str(a.error),
+      status: a.status, error: str(a.error), noVoice: a.no_voice === true,
       module: typeof a.module === 'string' && MODULES[a.module] ? a.module : null,
       bricks: Array.isArray(a.bricks) ? a.bricks.map(function (b) {
         return b && typeof b.id === 'string' && ['hook', 'liaison', 'cta'].indexOf(b.kind) >= 0
