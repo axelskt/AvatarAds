@@ -80,6 +80,7 @@
   var gateSeq = 0;
   var inflight = {};  // une seule requête en vol par source (accounts, ig:<fenêtre>, aud, media)
   var retries = {};   // relances automatiques d'un historique incomplet, par fenêtre
+  var mediaPolls = 0; // relectures des publications pendant l'analyse des briques
 
   // ── utilitaires ──
   function emit(key) {
@@ -99,7 +100,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < TTL_MS; }
-  function resetData() { epoch += 1; inflight = {}; retries = {}; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.oauth = null; }
+  function resetData() { epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.oauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -405,14 +406,30 @@
       caption: typeof p.caption === 'string' ? p.caption : '', timestamp: t, ms: isFinite(ms) ? ms : null,
       reach: num(p.reach), views: num(p.views), likes: num(p.likes), comments: num(p.comments),
       saved: num(p.saved), shares: num(p.shares), interactions: num(p.interactions), avgWatchS: num(p.avg_watch_s),
-      skipRate: num(p.skip_rate), module: typeof p.module === 'string' && MODULES[p.module] ? p.module : null
+      skipRate: num(p.skip_rate), totalWatchS: num(p.total_watch_s),
+      trial: p.shared_to_feed === false,   // pas sur la grille du profil = réel d'essai (16 = 42 − 26 le 24/09)
+      module: typeof p.module === 'string' && MODULES[p.module] ? p.module : null,
+      analysis: normAnalysis(p.analysis)
+    };
+  }
+  // Briques reconnues par ig-insights (transcription du reel comparée au texte des briques).
+  function normAnalysis(a) {
+    if (!a || typeof a !== 'object' || ['done', 'pending', 'error'].indexOf(a.status) < 0) return null;
+    return {
+      status: a.status, error: str(a.error),
+      module: typeof a.module === 'string' && MODULES[a.module] ? a.module : null,
+      bricks: Array.isArray(a.bricks) ? a.bricks.map(function (b) {
+        return b && typeof b.id === 'string' && ['hook', 'liaison', 'cta'].indexOf(b.kind) >= 0
+          ? { kind: b.kind, id: b.id.slice(0, 40), label: str(b.label) || b.id, score: num(b.score) } : null;
+      }).filter(Boolean) : []
     };
   }
   function normMedia(b, at) {
     var list = Array.isArray(b.media) ? b.media.map(normMediaItem).filter(Boolean) : null;
     return {
       fetchedAt: at, username: str(b.username), followers: num(b.followers_count), mediaCount: num(b.media_count), mediaTotal: num(b.media_total),
-      list: list || [], error: str(b.media_error) || (list ? null : 'liste absente de la réponse')
+      list: list || [], error: str(b.media_error) || (list ? null : 'liste absente de la réponse'),
+      analysisPending: num(b.analysis_pending) || 0
     };
   }
   function loadMedia(opts) {
@@ -444,6 +461,11 @@
       if (ep !== epoch) return S;
       Object.assign(S, patch, { loading: false, at: Date.now() });
       if (inflight.media === p) delete inflight.media;
+      // Analyse des briques en cours côté serveur : on relit la liste dans une minute (8 fois au plus).
+      if (S.state === 'ready' && S.data && S.data.analysisPending > 0 && mediaPolls < 8) {
+        mediaPolls += 1;
+        setTimeout(function () { if (ep === epoch) loadMedia({ force: true }); }, 60000);
+      }
       pumpPrefetch();
       emit('media');
       return S;

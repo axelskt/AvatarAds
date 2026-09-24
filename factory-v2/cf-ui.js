@@ -40,6 +40,11 @@
   function fPct(a, b) { return a == null || b == null || !b ? null : fDec(a / b * 100, 1) + NB + '%'; }
   function fSec(s) { return s == null ? null : fDec(s, 1) + NB + 's'; }
   var MINUS = '\u2212';
+  function fDur(s) {
+    if (s == null) return null;
+    var m = Math.round(s / 60);
+    return s < 60 ? Math.round(s) + NB + 's' : m < 60 ? m + NB + 'min' : Math.floor(m / 60) + NB + 'h' + NB + p2(m % 60) + NB + 'min';
+  }
   function fSigned(n) { return n > 0 ? '+' + fInt(n) : n < 0 ? MINUS + fInt(-n) : '0'; }
   function p2(n) { return String(n).padStart(2, '0'); }
   function dmy(d) { return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
@@ -93,7 +98,6 @@
   var SER = [
     { k: 'followers', label: 'Abonnés', c: 'var(--cf-c-followers)', ic: IC.follow },
     { k: 'posts', label: 'Publications', c: 'var(--cf-c-posts)', ic: IC.grid },
-    { k: 'watch', label: 'Visionnage moyen', c: 'var(--cf-c-watch)', ic: IC.clock, fixed: true },
     { k: 'engaged', label: 'Comptes engagés', c: 'var(--cf-c-engaged)', ic: IC.users, hero: true },
     { k: 'reach', label: 'Reach', c: 'var(--cf-c-reach)', ic: IC.reach },
     { k: 'views', label: 'Vues', c: 'var(--cf-c-views)', ic: IC.eye },
@@ -403,15 +407,7 @@
     card('posts', posts ? posts.length : null,
       posts && posts.length ? nReel + ' ' + plural(nReel, 'reel') + (nOther ? ' · ' + nOther + ' ' + plural(nOther, 'autre') : '') + ' ' + per : 'aucune publication ' + per,
       total != null ? 'total publié : ' + fInt(total) + (grid != null ? ' · ' + fInt(grid) + ' sur le profil' : '') : '', { why: mediaWhy });
-    // Visionnage moyen = temps regardé / vues des reels publiés dans la fenêtre (chiffres à vie de chaque reel).
-    var wv = 0, ww = 0;
-    (reels || []).forEach(function (p) { if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; } });
-    // Swipe < 3 s (reels_skip_rate) des mêmes reels, pondéré par les vues.
-    var sv = 0, sw = 0;
-    (reels || []).forEach(function (p) { if (p.skipRate != null && p.views) { sv += p.views; sw += p.skipRate * p.views; } });
-    card('watch', wv ? ww / wv : null, 'temps regardé / vues · ' + nReel + ' ' + plural(nReel, 'reel') + ' ' + per,
-      sv ? 'swipe < 3' + NB + 's : ' + fShare(sw / sv) : '',
-      { fmt: fSec, why: reels ? (nReel ? 'visionnage non fourni pour ces reels' : 'aucun reel publié ' + per) : mediaWhy });
+    // Visionnage moyen et swipe < 3 s : en-tête du Top publications (all time), plus dans les cartes.
     // Comptes uniques
     var reach = M.reach, eng = M.engaged;
     card('engaged', eng, fPct(eng, reach) ? fPct(eng, reach) + ' du reach · ' + per : per, '', { why: eng == null ? uniqWhy(E.engaged) : null, title: E.engaged || '' });
@@ -626,6 +622,20 @@
       ? '<span class="cf-chip is-mod">' + (withIcon ? svg(IC.puzzle, 12) : '') + esc(lab) + '</span>'
       : '<span class="cf-chip is-muted">' + (withIcon ? svg(IC.puzzle, 12) : '') + 'vidéo non reconnue</span>';
   }
+  // Module affiché : celui saisi à la main, sinon celui déduit du hook reconnu.
+  function effModule(p) { return p.module || (p.analysis && p.analysis.module) || null; }
+  function reelChip(p) {
+    if (p.type !== 'REELS' && p.type !== 'VIDEO') return '';
+    return p.trial ? '<span class="cf-chip is-trial">réel d’essai</span>' : '<span class="cf-chip">réel</span>';
+  }
+  var KIND_L = { hook: 'hook', liaison: 'liaison', cta: 'CTA' };
+  function bricksChips(p) {
+    var a = p.analysis;
+    if (!a) return '';
+    if (a.status === 'pending') return '<span class="cf-chip is-muted">briques : analyse en cours…</span>';
+    if (a.status === 'error') return '';
+    return a.bricks.map(function (b) { return '<span class="cf-chip is-brick" title="' + esc(KIND_L[b.kind] + ' · ' + b.label) + '">' + esc(b.id) + '</span>'; }).join('');
+  }
   function moduleOptions(cur) {
     var o = '<option value=""' + (cur ? '' : ' selected') + '>— non renseigné</option>';
     Object.keys(CF.MODULES || {}).forEach(function (k) {
@@ -655,10 +665,18 @@
   }
   function topHTML(off) {
     var MS = CF.acct.media, MD = off ? null : MS.data, list = topList();
-    var wv = 0, ww = 0;
-    if (MD) MD.list.forEach(function (p) { if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; } });
-    var box = wv ? '<div class="cf-watchbox"><span class="cf-watchbox-ic">' + svg(IC.clock, 17) + '</span><span><b>' + esc(fSec(ww / wv)) + '</b>'
-      + '<span>visionnage moyen · temps regardé / vues · all time</span></span></div>' : '';
+    // All time, pondérés par les vues : visionnage moyen (gauche) et swipe < 3 s (droite).
+    var wv = 0, ww = 0, sv = 0, sw = 0;
+    if (MD) MD.list.forEach(function (p) {
+      if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; }
+      if (p.skipRate != null && p.views) { sv += p.views; sw += p.skipRate * p.views; }
+    });
+    var box = (wv || sv) ? '<div class="cf-kpi2">'
+      + (wv ? '<div class="cf-watchbox"><span class="cf-watchbox-ic">' + svg(IC.clock, 17) + '</span><span><b>' + esc(fSec(ww / wv)) + '</b>'
+        + '<span>visionnage moyen · all time</span></span></div>' : '')
+      + (sv ? '<div class="cf-watchbox is-skip"><span class="cf-watchbox-ic">' + svg(IC.chevron, 17) + '</span><span><b>' + esc(fShare(sw / sv)) + '</b>'
+        + '<span>swipe < 3' + NB + 's · all time</span></span></div>' : '')
+      + '</div>' : '';
     var head = '<div class="cf-card-h"><div><h2 class="cf-h2">' + (ui.allPosts ? 'Toutes les publications' : 'Top publications') + '</h2></div>' + box + '</div>';
     var nAll = MD ? MD.list.filter(function (p) { return p.views != null; }).length : 0;
     var more = nAll > 5 ? '<button type="button" class="cf-btn is-sm cf-more" data-act="all-posts">'
@@ -683,8 +701,8 @@
       + '<span class="cf-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '')
       + (vid ? '<span class="cf-thumb-play">' + svg(IC.play, 10) + '</span>' : '') + '</span>'
       + '<span class="cf-post-b">'
-      + '<span class="cf-post-meta">' + moduleChip(p.module) + '<span class="cf-meta">'
-      + esc((d ? 'posté le ' + dmy(d) : 'date inconnue') + ' · ' + typeLabel(p.type)) + '</span></span>'
+      + '<span class="cf-post-meta">' + reelChip(p) + moduleChip(effModule(p)) + bricksChips(p) + '<span class="cf-meta">'
+      + esc((d ? 'posté le ' + dmy(d) : 'date inconnue') + (reelChip(p) ? '' : ' · ' + typeLabel(p.type))) + '</span></span>'
       + '<span class="cf-post-cap">' + esc(capText(p.caption)) + '</span>'
       + '<span class="cf-post-stats">' + stats.join('') + '</span>'
       + '</span>'
@@ -796,6 +814,17 @@
     if (f && document.body.contains(f)) f.focus();
     else { var c = document.querySelector('.cf-post[data-i="' + (rank - 1) + '"]'); if (c) c.focus(); }
   }
+  function bricksDetail(p) {
+    var a = p.analysis;
+    if (!a) return '<div class="cf-meta">briques : pas de vidéo à analyser</div>';
+    if (a.status === 'pending') return '<div class="cf-meta">briques : transcription en cours, la fiche se met à jour toute seule</div>';
+    if (a.status === 'error') return '<div class="cf-meta">briques : analyse impossible · ' + esc(a.error || '') + '</div>';
+    if (!a.bricks.length) return '<div class="cf-meta">aucune brique reconnue dans l’audio de cette vidéo</div>';
+    return '<div class="cf-brick-list">' + a.bricks.map(function (b) {
+      return '<div class="cf-brick-row"><span class="cf-chip is-brick">' + esc(b.id) + '</span><span class="cf-brick-k">' + esc(KIND_L[b.kind]) + '</span>'
+        + '<span class="cf-brick-l">' + esc(b.label) + '</span>' + (b.score != null ? '<span class="cf-meta">' + Math.round(b.score * 100) + NB + '%</span>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
   function tile(label, v, why) {
     return '<div class="cf-tile"><div class="cf-tile-l">' + esc(label) + '</div>'
       + '<div class="cf-tile-v' + (v == null ? ' is-na' : '') + '">' + esc(v == null ? '—' : v) + '</div>'
@@ -820,21 +849,21 @@
       tile('visionnage moyen', fSec(p.avgWatchS), isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('engagement / vues', eng, 'vues ou interactions manquantes'),
       tile('swipe < 3' + NB + 's', p.skipRate != null ? fShare(p.skipRate) : null, isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
-      tile('temps total regardé', null, 'pas encore demandé à l’API')
+      tile('temps total regardé', fDur(p.totalWatchS), isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication')
     ].join('');
     setHTML($('cfModalBody'),
       '<div class="cf-sheet">'
       + '<div class="cf-sheet-media">' + (thumb ? '<img src="' + esc(thumb) + '" alt="Miniature de la publication" referrerpolicy="no-referrer" decoding="async">' : '<span class="cf-sheet-none">aperçu indisponible</span>') + '</div>'
       + '<div class="cf-sheet-info">'
-      + '<div class="cf-meta">#' + rank + ' en vues · ' + esc(typeLabel(p.type)) + '</div>'
+      + '<div class="cf-meta">#' + rank + ' en vues · ' + esc(p.trial ? 'réel d’essai (pas sur la grille du profil)' : typeLabel(p.type)) + '</div>'
       + '<h2 class="cf-h2" id="cfModalTitle">' + esc(d ? 'Publication du ' + dmy(d) : 'Publication') + '</h2>'
       + '<p class="cf-sheet-cap">' + esc(capText(p.caption)) + '</p>'
       + (link ? '<a class="cf-link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">voir sur Instagram ' + svg(IC.external, 12) + '</a>' : '')
       + '<div class="cf-tiles">' + tiles + '</div>'
       + '<div class="cf-bricks"><div class="cf-over">Briques utilisées</div>'
-      + '<div class="cf-bricks-na">' + moduleChip(p.module, true)
-      + '<span class="cf-meta">hook, liaison et CTA : pas encore reconnus</span></div>'
-      + '<label class="cf-tag"><span class="cf-lbl">Module de la vidéo</span>'
+      + '<div class="cf-bricks-na">' + moduleChip(effModule(p), true) + (p.module ? '' : (p.analysis && p.analysis.module ? '<span class="cf-meta">module déduit du hook</span>' : '')) + '</div>'
+      + bricksDetail(p)
+      + '<label class="cf-tag"><span class="cf-lbl">Module de la vidéo' + (p.module ? '' : ' (corrige la détection)') + '</span>'
       + '<select class="cf-in cf-tag-sel" data-tag-id="' + esc(p.id) + '">' + moduleOptions(p.module) + '</select></label>'
       + (ui.tagMsg && ui.tagMsg.id === p.id ? '<div class="cf-acct-msg is-' + (ui.tagMsg.ok ? 'ok' : 'err') + '">' + esc(ui.tagMsg.text) + '</div>' : '')
       + '</div>'
