@@ -8916,8 +8916,8 @@ function _imgQualityForPlan(){
   if(['pro','byok'].includes(p)) return 'medium';
   return 'low'; // Starter (et free) : qualité low uniquement — la Standard est l'upsell vers Pro
 }
-// ── Sélecteur de qualité (low/medium/high), plafonné par plan (high = Élite) ──
-let _imgQuality = 'medium'; // défaut = Premium (medium) ; le cap plan ramène Free/Starter à Standard
+// ── Sélecteur de qualité (low/medium/high), plafonné par plan : 4K ouvert à tous les plans payants (Axel 24/09) ──
+let _imgQuality = 'medium'; // défaut = Premium (medium) ; le cap plan ramène Free à Standard
 const _IMG_QUALITIES = [
   { id:'low',    label:'Standard', sub:'éco' },
   { id:'medium', label:'Premium',  sub:'équilibré' },
@@ -8926,9 +8926,10 @@ const _IMG_QUALITIES = [
 const _IMG_Q_ORDER = { low:0, medium:1, high:2 };
 function _imgQualityCap(){
   const p = (currentMember?.plan || 'free').toLowerCase();
-  if(['elite','developer'].includes(p)) return 'high';
-  if(['pro','byok'].includes(p)) return 'medium';
-  return 'low'; // Starter : low uniquement
+  // Axel 24/09 : le niveau 4K (gpt medium + upscale Nano Banana Pro, 5 cr) est ouvert à Starter et Pro, comme
+  // « Améliorer en 4K ». Le curseur fonctionne par niveaux : Premium s'ouvre donc aussi au Starter.
+  if(['elite','developer','pro','byok','starter'].includes(p)) return 'high';
+  return 'low'; // Free : Standard (le paywall tombe de toute façon à « Générer »)
 }
 function _imgGptQuality(){ const q = _imgEffectiveQuality(); return q === 'high' ? 'medium' : q; }
 function _imgEffectiveQuality(){
