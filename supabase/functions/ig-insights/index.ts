@@ -448,7 +448,7 @@ function noVoice(t: unknown): boolean {
 async function attachAnalysis(list: any[]): Promise<any[]> {
   if (!list.length) return []
   const [{ data: rows }, bricksRows] = await Promise.all([
-    svc.from('ig_media_analysis').select('ig_media_id, status, transcript, segments, error, started_at, analyzed_at').in('ig_media_id', list.map((m) => String(m.id))),
+    svc.from('ig_media_analysis').select('ig_media_id, status, transcript, segments, audio_seconds, error, started_at, analyzed_at').in('ig_media_id', list.map((m) => String(m.id))),
     loadBricks(),
   ])
   const by = new Map((rows || []).map((r: any) => [String(r.ig_media_id), r]))
@@ -465,6 +465,8 @@ async function attachAnalysis(list: any[]): Promise<any[]> {
   for (const m of list) {
     const r: any = by.get(String(m.id))
     if (r && r.status === 'done') {
+      // Durée de la vidéo = durée de son audio, mesurée par la transcription (l'API Instagram ne la donne pas).
+      if (typeof r.audio_seconds === 'number' || typeof r.audio_seconds === 'string') { const d = Number(r.audio_seconds); if (d > 0) m.duration_s = Math.round(d * 10) / 10 }
       if (noVoice(r.transcript)) { m.analysis = { status: 'done', module: null, bricks: [], no_voice: true }; continue }
       const res = matchBricks(Array.isArray(r.segments) ? r.segments : [], m.caption || '', bricks)
       m.analysis = { status: 'done', module: res.module, bricks: res.found.map((f) => ({ ...f, ...brickInfo(f.id) })) }
