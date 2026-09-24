@@ -894,7 +894,8 @@
   }
   function bricksDetail(p) {
     var a = p.analysis;
-    if (!a) return '<div class="cf-meta">briques : pas de vidéo à analyser</div>';
+    if (!a) return '<div class="cf-meta">' + (isVideo(p) ? 'Instagram ne donne pas le fichier de cette vidéo (souvent une musique sous droits) : briques non détectables, choisis le module à la main'
+      : 'briques : pas de vidéo à analyser') + '</div>';
     if (a.status === 'pending') return '<div class="cf-meta">briques : transcription en cours, la fiche se met à jour toute seule</div>';
     if (a.status === 'error') return '<div class="cf-meta">briques : analyse impossible · ' + esc(a.error || '') + '</div>';
     if (a.noVoice) return '<div class="cf-meta">vidéo sans voix (musique seule) : aucune brique parlée à reconnaître, choisis le module à la main</div>';
@@ -905,6 +906,14 @@
     }).join('') + '</div>';
   }
 
+  // « likes 74 · 2,2 % » : le nombre et son taux (÷ vues), coloré selon l'objectif.
+  function tileRate(label, p, g, vid) {
+    var c = p[g.f], v = vid ? rateOf(p, g) : null;
+    return '<div class="cf-tile"><div class="cf-tile-l">' + esc(label + (vid ? ' · ' + goalTxt(g) : '')) + '</div>'
+      + '<div class="cf-tile-v' + (c == null ? ' is-na' : '') + '">' + esc(c == null ? '—' : fInt(c))
+      + (v != null ? ' <span class="cf-tile-r ' + (goalOk(g, v) ? 'is-ok' : 'is-ko') + '">' + esc(fRate(v)) + '</span>' : '') + '</div>'
+      + (c == null ? '<div class="cf-tile-w">non fourni par l’API</div>' : '') + '</div>';
+  }
   function tile(label, v, why) {
     return '<div class="cf-tile"><div class="cf-tile-l">' + esc(label) + '</div>'
       + '<div class="cf-tile-v' + (v == null ? ' is-na' : '') + '">' + esc(v == null ? '—' : v) + '</div>'
@@ -999,17 +1008,14 @@
     var tiles = [
       tile('vues', fInt(p.views), 'non fourni par l’API'),
       tile('reach', fInt(p.reach), 'non fourni par l’API'),
-      tile('likes', fInt(p.likes), 'non fourni par l’API'),
+      tileRate('likes', p, GOAL.like, isVid),
       tile('commentaires', fInt(p.comments), 'non fourni par l’API'),
-      tile('enregistrements', fInt(p.saved), 'non fourni par l’API'),
-      tile('partages', fInt(p.shares), 'non fourni par l’API'),
+      tileRate('enregistrements', p, GOAL.save, isVid),
+      tileRate('partages', p, GOAL.share, isVid),
       tile('interactions', fInt(p.interactions), 'non fourni par l’API'),
       tile('visionnage moyen', p.avgWatchS != null ? fSec(p.avgWatchS) + (p.durationS ? ' / ' + fSec0(p.durationS) + ' (' + fDec(p.avgWatchS / p.durationS * 100, 0) + NB + '%)' : '') : null,
         isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('engagement / vues', eng, 'vues ou interactions manquantes'),
-      tile('like rate · objectif ≥ 5' + NB + '%', fRate(rateOf(p, GOAL.like)), 'vues ou likes manquants'),
-      tile('save rate · objectif ≥ 5' + NB + '%', fRate(rateOf(p, GOAL.save)), 'vues ou enregistrements manquants'),
-      tile('share rate · objectif ≥ 1' + NB + '%', fRate(rateOf(p, GOAL.share)), 'vues ou partages manquants'),
       tile('swipe < 3' + NB + 's', p.skipRate != null ? fShare(p.skipRate) : null, isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('temps total regardé', fDur(p.totalWatchS), isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication')
     ].join('');
