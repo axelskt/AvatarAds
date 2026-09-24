@@ -78,15 +78,43 @@
 
   // ── une seule table des périodes ──
   var PERIODS = [
-    { k: '24h', label: '24' + NB + 'h', per: 'sur 24' + NB + 'h', days: 1, live: true },
-    { k: '7j', label: '7' + NB + 'j', per: 'sur 7' + NB + 'j', days: 7, live: true },
-    { k: '30j', label: '30' + NB + 'j', per: 'sur 30' + NB + 'j', days: 30, live: true }, // la fenêtre de l'app Instagram
-    { k: '90j', label: '90' + NB + 'j', live: false },
-    { k: '6m', label: '6' + NB + 'mois', live: false },
-    { k: 'all', label: 'All time', live: false }
+    { k: '24h', label: '24' + NB + 'h', per: 'sur 24' + NB + 'h', evo: '24' + NB + 'h' },
+    { k: '7j', label: '7' + NB + 'j', per: 'sur 7' + NB + 'j', evo: '7' + NB + 'j' },
+    { k: '30j', label: '30' + NB + 'j', per: 'sur 30' + NB + 'j', evo: '30' + NB + 'j' },
+    { k: '90j', label: '90' + NB + 'j', per: 'sur 90' + NB + 'j', evo: '90' + NB + 'j' },
+    { k: '6m', label: '6' + NB + 'mois', per: 'sur 6' + NB + 'mois', evo: '6' + NB + 'mois' },
+    { k: 'all', label: 'All time', per: 'depuis la 1re publication', evo: 'all time' }
   ];
   var PERIOD = {};
   PERIODS.forEach(function (p) { PERIOD[p.k] = p; });
+  var LONG = { '90j': true, '6m': true, 'all': true };   // > 30 jours : sommes des jours, pas de comptes uniques
+
+  // ── métriques de l'onglet Compte : une couleur par métrique (maquette), la même pour la carte, la courbe et la légende ──
+  var SER = [
+    { k: 'followers', label: 'Abonnés', c: 'var(--cf-c-followers)', ic: IC.follow },
+    { k: 'posts', label: 'Publications', c: 'var(--cf-c-posts)', ic: IC.grid },
+    { k: 'watch', label: 'Visionnage moyen', c: 'var(--cf-c-watch)', ic: IC.clock, fixed: true },
+    { k: 'engaged', label: 'Comptes engagés', c: 'var(--cf-c-engaged)', ic: IC.users, hero: true },
+    { k: 'reach', label: 'Reach', c: 'var(--cf-c-reach)', ic: IC.reach },
+    { k: 'views', label: 'Vues', c: 'var(--cf-c-views)', ic: IC.eye },
+    { k: 'inter', label: 'Interactions', c: 'var(--cf-c-inter)', ic: IC.heart },
+    { k: 'pviews', label: 'Vues de profil', c: 'var(--cf-c-pviews)', ic: IC.user },
+    { k: 'clicks', label: 'Clics lien en bio', c: 'var(--cf-c-clicks)', ic: IC.link }
+  ];
+  var SERC = {};
+  SER.forEach(function (s) { SERC[s.k] = s.c; });
+  var EVO_KEYS = ['followers', 'posts', 'engaged', 'reach', 'views', 'inter', 'pviews', 'clicks'];
+  var UNIQUE = { reach: true, engaged: true };   // comptes uniques : jamais additionnés (pas de cumul)
+
+  // Jours Instagram = jours calendaires à l'heure du Pacifique (les mêmes que ceux d'ig-insights).
+  var PT_FMT = (function () {
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }); } catch (e) { return null; }
+  })();
+  function ptDay(ms) { return PT_FMT ? PT_FMT.format(new Date(ms)) : new Date(ms).toISOString().slice(0, 10); }
+  function ymdDate(s) { return new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10), 12); }
+  function nDays(a, b) { return Math.round((ymdDate(b) - ymdDate(a)) / 864e5) + 1; }
+  function fK(v) { return v >= 1e6 ? (v / 1e6) + NB + 'M' : v >= 1e3 ? (v / 1e3) + 'k' : String(v); }
+  function fShare(pct) { return (pct > 0 && pct < 0.05 ? '<' + NB + '0,1' : fDec(pct, pct < 10 && pct > 0 ? 1 : 0)) + NB + '%'; }
 
   // ── onglets ──
   var TAB_KEYS = ['home', 'prod', 'trackads', 'dm', 'compte'];
@@ -107,7 +135,7 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null };
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {} };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -210,6 +238,7 @@
     CF.loadAccounts();
     CF.loadInsights(ui.range);
     CF.loadAudience();
+    CF.loadMedia();
   }
 
   // ── onglets pas encore branchés ──
@@ -226,12 +255,12 @@
   // ── onglet Compte @avataradss ──
   function compteHTML() {
     var S = CF.acct.ig[ui.range], D = S.data, off = S.kind === 'disconnected';
+    var X = model(S, D, off);
     return '<section class="cf-title"><h1>Compte @' + esc(CF.PRIMARY_USERNAME) + '</h1></section>'
       + acctHTML(D)
-      + insightsHTML(S, D, off)
-      + splitHTML(S, D, off)
-      + evolutionHTML()
-      + topHTML(S, D, off)
+      + insightsHTML(S, D, off, X)
+      + repHTML(S, D, off)
+      + topHTML(off)
       + audienceHTML(D, off);
   }
 
@@ -270,32 +299,34 @@
   }
 
   function periodLine(S, D) {
-    var P = PERIOD[ui.range];
-    var until = D ? new Date(D.until != null ? D.until : D.fetchedAt) : new Date();
-    var since = D && D.since != null ? new Date(D.since) : new Date(until.getTime() - P.days * 864e5);
-    var range = P.k === '24h'
-      ? dm(since) + ' ' + hm(since) + ' → ' + dm(until) + ' ' + hm(until)
-      : dm(since) + ' → ' + dmy(until);
-    var when = D ? ' · relevé à ' + hm(until) + (S.state === 'error' ? ' (actualisation échouée)' : '') : '';
-    return '<span class="cf-over">Période sélectionnée</span> ' + esc(range + when);
+    var P = PERIOD[ui.range], txt;
+    if (D && D.dayFirst && D.dayLast) {
+      var n = nDays(D.dayFirst, D.dayLast);
+      txt = dm(ymdDate(D.dayFirst)) + ' → ' + dmy(ymdDate(D.dayLast)) + ' · ' + n + ' ' + plural(n, 'jour') + ' Instagram, aujourd’hui compris'
+        + (ui.range === 'all' ? ' · depuis la 1re publication' : '');
+    } else if (D && D.since != null && D.until != null) {
+      var s0 = new Date(D.since), u0 = new Date(D.until);
+      txt = dm(s0) + ' ' + hm(s0) + ' → ' + dm(u0) + ' ' + hm(u0);
+    } else {
+      txt = P.per;
+    }
+    var when = D ? ' · relevé à ' + hm(new Date(D.fetchedAt)) + (S.state === 'error' ? ' (actualisation échouée)' : '') : '';
+    return '<span class="cf-over">Période sélectionnée</span> ' + esc(txt + when);
   }
 
-  function insightsHTML(S, D, off) {
+  function insightsHTML(S, D, off, X) {
     var seg = PERIODS.map(function (p) {
-      if (!p.live) {
-        return '<button type="button" class="cf-seg-b" disabled title="historique pas encore relevé">' + esc(p.label) + '</button>';
-      }
       var on = p.k === ui.range;
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="range" data-range="' + p.k + '" aria-pressed="' + on + '">' + esc(p.label) + '</button>';
     }).join('');
     return '<section class="cf-sec" aria-labelledby="cfInsT">'
       + '<div class="cf-sec-h"><div><h2 class="cf-h2" id="cfInsT">Insights du compte</h2>'
-      + '<div class="cf-meta">@' + esc(CF.PRIMARY_USERNAME) + ' · instagram graph · valeur directe par période</div></div>'
+      + '<div class="cf-meta">@' + esc(CF.PRIMARY_USERNAME) + ' · instagram graph · touche une carte pour l’afficher ou la masquer sur la courbe</div></div>'
       + '<div class="cf-seg" role="group" aria-label="Période">' + seg + '</div></div>'
       + '<div class="cf-per">' + periodLine(S, D) + '</div>'
-      + '<div class="cf-note">' + svg(IC.info, 12) + '<span>90' + NB + 'j, 6' + NB + 'mois et All time : historique pas encore relevé.</span></div>'
       + slotBanner(S, D)
-      + '<div class="cf-kpis">' + kpiCards(S, D, off) + '</div>'
+      + '<div class="cf-icards">' + cardsHTML(X) + '</div>'
+      + evoHTML(S, D, off, X)
       + '</section>';
   }
 
@@ -313,7 +344,8 @@
     }
     if (S.loading) {
       return '<div class="cf-status" role="status"><span class="cf-spin" aria-hidden="true"></span>'
-        + (D ? 'Actualisation ' : 'Chargement des insights ') + esc(P.per) + '…</div>';
+        + (D ? 'Actualisation ' : 'Chargement des insights ') + esc(P.per) + '…'
+        + (LONG[ui.range] && !D ? ' Premier relevé de l’historique : jusqu’à une minute.' : '') + '</div>';
     }
     return '';
   }
@@ -321,98 +353,256 @@
     return '<div class="cf-banner is-' + tone + '" role="status"><span class="cf-banner-ic">' + svg(icon, 16) + '</span><span class="cf-banner-t">' + html + '</span>' + (action || '') + '</div>';
   }
 
-  function kpiCards(S, D, off) {
-    var per = PERIOD[ui.range].per;
+  // Tout ce que l'onglet Compte affiche pour la fenêtre active, calculé à UN seul endroit : les cartes, la courbe et
+  // sa légende lisent ce modèle (jamais deux calculs du même chiffre).
+  function model(S, D, off) {
+    var MS = CF.acct.media, MD = off ? null : MS.data;
+    var P = PERIOD[ui.range], per = P.per, long = !!LONG[ui.range];
     var pending = !D && !off && (S.loading || S.state === 'idle');
     var why = off ? 'compte déconnecté' : (!D && S.state === 'error' ? 'erreur de chargement' : 'non fourni par l’API Instagram');
-    var M = D ? D.m : {};
-    function card(label, icon, kind, value, sub, extra, opt) {
-      var v, s, na = false;
-      opt = opt || {};
-      if (pending) { v = '…'; s = 'chargement'; }
-      else if (value == null) { v = '—'; s = opt.why || why; na = true; }
-      else { v = (opt.fmt || fInt)(value); s = sub; }
-      return '<div class="cf-kpi' + (kind ? ' is-' + kind : '') + '">'
-        + '<div class="cf-kpi-h"><span class="cf-kpi-ic">' + svg(icon, 15) + '</span><span class="cf-kpi-l">' + esc(label) + '</span></div>'
-        + '<div class="cf-kpi-v' + (na ? ' is-na' : '') + '">' + esc(v) + '</div>'
-        + '<div class="cf-kpi-s">' + esc(s) + '</div>'
-        + (extra ? '<div class="cf-kpi-x">' + esc(extra) + '</div>' : '')
-        + '</div>';
+    var M = D ? D.m : {}, E = D && !off ? D.err : {};
+    var c = {};
+    function card(k, v, sub, extra, o) {
+      o = o || {};
+      c[k] = { v: v, sub: sub, extra: extra || '', fmt: o.fmt || fInt, why: o.why || null, title: o.title || '', label: o.label || null };
     }
-    var reach = M.reach, views = M.views, eng = M.engaged, inter = M.interactions, pv = M.profileViews, taps = M.linkTaps, bio = M.bioTaps;
-    var engPct = fPct(eng, reach), bioPct = fPct(bio, pv);
-    var vpr = views != null && reach ? views / reach : null;
-    var ipe = inter != null && eng ? inter / eng : null;
-    var E = D && !off ? D.err : {};
-    // follows_and_unfollows : FOLLOWER = abonnements, NON_FOLLOWER = désabonnements (ou comptes supprimés)
+    // Comptes uniques au-delà de 30 jours : raison lisible (l'erreur brute de l'API reste en infobulle).
+    function uniqWhy(err) { return long ? 'Instagram ne donne pas de comptes uniques au-delà de 30 jours' : (err ? 'refusé par l’API : ' + err : null); }
+    function addWhy(err) { return err ? (/^historique en cours/.test(err) ? err : 'refusé par l’API : ' + err) : null; }
+
+    // Publications de la fenêtre (horodatage dans [since, until]) et leurs reels.
+    var posts = null, reels = null;
+    var total = MD ? (MD.mediaCount != null ? MD.mediaCount : MD.list.length) : (D && !off ? D.media : null);
+    if (D && MD && D.since != null && D.until != null) {
+      posts = MD.list.filter(function (p) { return p.ms != null && p.ms >= D.since && p.ms <= D.until; });
+      reels = posts.filter(function (p) { return p.type === 'REELS' || p.type === 'VIDEO'; });
+    }
+    var mediaWhy = MS.state === 'error' && !MD ? 'publications indisponibles : ' + MS.error : (MD || off ? why : 'chargement des publications');
+
+    // Abonnés : net de la période (follows_and_unfollows : FOLLOWER = abonnements, NON_FOLLOWER = désabonnements).
     var F = D && !off ? D.flow : null, fin = F ? (F.parts.FOLLOWER || 0) : null, fout = F ? (F.parts.NON_FOLLOWER || 0) : null;
-    var follow = F
-      ? card('Abonnés', IC.follow, 'static', fin - fout, 'net ' + per + ' · total ' + (D.followers == null ? '—' : fInt(D.followers)),
-          fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement'), { fmt: fSigned })
-      : card('Abonnés', IC.follow, 'static', D ? D.followers : null, 'total actuel',
-          pending ? '' : 'net ' + per + ' : — · ' + (E.follows ? 'refusé par l’API : ' + E.follows : D ? 'non fourni par l’API Instagram' : why));
-    return [
-      follow,
-      card('Publications', IC.grid, 'static', D ? D.media : null, 'total publié'),
-      card('Comptes engagés', IC.users, 'hero', eng, engPct ? engPct + ' du reach · ' + per : per),
-      card('Reach', IC.reach, '', reach, 'comptes uniques touchés · ' + per),
-      card('Vues', IC.eye, '', views, vpr != null ? fDec(vpr, 2) + ' ' + plural(vpr, 'vue') + ' par compte touché' : per),
-      card('Interactions', IC.heart, '', inter, ipe != null ? fDec(ipe, 1) + ' par compte engagé' : per),
-      card('Vues de profil', IC.user, '', pv, per),
-      // website_clicks = le lien en bio (absent de la doc actuelle : souvent refusé) ; profile_links_taps = les boutons
-      // de contact (appel, e-mail, itinéraire…). Sans website_clicks, la carte montre les boutons, sous leur vrai nom.
-      bio != null
-        ? card('Clics lien en bio', IC.link, '', bio, bio === 0 ? 'aucun clic ' + per : bioPct ? bioPct + ' des vues de profil' : per,
-            'boutons de contact : ' + (taps == null ? '—' : fInt(taps)))
-        : card('Clics boutons de contact', IC.link, '', taps, taps === 0 ? 'aucun clic ' + per : fPct(taps, pv) ? fPct(taps, pv) + ' des vues de profil' : per,
-            pending ? '' : 'lien en bio : — · ' + (E.bioTaps ? 'non fourni par l’API Instagram (' + E.bioTaps + ')' : 'non fourni par l’API Instagram'))
-    ].join('');
+    var fol = D && !off ? D.followers : null;
+    card('followers', F ? fin - fout : null, 'net ' + per + ' · total ' + (fol == null ? '—' : fInt(fol)),
+      F ? fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement') : (fol != null ? 'total actuel : ' + fInt(fol) : ''),
+      { fmt: fSigned, why: F ? null : addWhy(E.follows), title: E.follows || '' });
+    // Publications
+    var nReel = reels ? reels.length : 0, nOther = posts ? posts.length - nReel : 0;
+    card('posts', posts ? posts.length : null,
+      posts && posts.length ? nReel + ' ' + plural(nReel, 'reel') + (nOther ? ' · ' + nOther + ' ' + plural(nOther, 'autre') : '') + ' ' + per : 'aucune publication ' + per,
+      total != null ? 'total publié : ' + fInt(total) : '', { why: mediaWhy });
+    // Visionnage moyen = temps regardé / vues des reels publiés dans la fenêtre (chiffres à vie de chaque reel).
+    var wv = 0, ww = 0;
+    (reels || []).forEach(function (p) { if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; } });
+    card('watch', wv ? ww / wv : null, 'temps regardé / vues · ' + nReel + ' ' + plural(nReel, 'reel') + ' ' + per, '',
+      { fmt: fSec, why: reels ? (nReel ? 'visionnage non fourni pour ces reels' : 'aucun reel publié ' + per) : mediaWhy });
+    // Comptes uniques
+    var reach = M.reach, eng = M.engaged;
+    card('engaged', eng, fPct(eng, reach) ? fPct(eng, reach) + ' du reach · ' + per : per, '', { why: eng == null ? uniqWhy(E.engaged) : null, title: E.engaged || '' });
+    card('reach', reach, 'comptes uniques touchés · ' + per, '', { why: reach == null ? uniqWhy(E.reach) : null, title: E.reach || '' });
+    // Métriques additives
+    var views = M.views, inter = M.interactions, pv = M.profileViews;
+    var vpr = views != null && reach ? views / reach : null, ipe = inter != null && eng ? inter / eng : null;
+    card('views', views, vpr != null ? fDec(vpr, 2) + ' ' + plural(vpr, 'vue') + ' par compte touché' : per, '', { why: addWhy(E.views), title: E.views || '' });
+    card('inter', inter, ipe != null ? fDec(ipe, 1) + ' par compte engagé' : per, '', { why: addWhy(E.interactions), title: E.interactions || '' });
+    card('pviews', pv, fPct(pv, reach) ? fPct(pv, reach) + ' du reach' : per, '', { why: addWhy(E.profileViews), title: E.profileViews || '' });
+    // Clics : le lien en bio (website_clicks) ; sinon les boutons de contact (profile_links_taps), sous leur vrai nom.
+    var bio = M.bioTaps, taps = M.linkTaps, useBio = bio != null, clicks = useBio ? bio : taps;
+    card('clicks', clicks, clicks === 0 ? 'aucun clic ' + per : (fPct(clicks, pv) ? fPct(clicks, pv) + ' des vues de profil' : per),
+      useBio ? 'boutons de contact : ' + (taps == null ? '—' : fInt(taps)) : (D ? 'lien en bio : — · ' + (E.bioTaps ? addWhy(E.bioTaps) : 'non fourni par l’API Instagram') : ''),
+      { why: addWhy(useBio ? null : (E.linkTaps || E.bioTaps)), label: useBio || !D ? null : 'Clics boutons de contact' });
+
+    // Courbe : une valeur par jour Instagram (null = pas encore relevé, ou refusé ce jour-là → trait interrompu).
+    var days = D && !off && D.series && D.series.length ? D.series : null, series = null;
+    if (days) {
+      var perDay = {};
+      if (MD) MD.list.forEach(function (p) { if (p.ms != null) { var d = ptDay(p.ms); perDay[d] = (perDay[d] || 0) + 1; } });
+      var col = function (k) { return days.map(function (x) { return x[k]; }); };
+      series = {
+        labels: col('d'), followers: col('follows'), unfollows: col('unfollows'),
+        posts: MD ? days.map(function (x) { return perDay[x.d] || 0; }) : days.map(function () { return null; }),
+        engaged: col('engaged'), reach: col('reach'), views: col('views'), inter: col('inter'), pviews: col('pviews'),
+        clicks: days.map(function (x) { return useBio ? x.bio : x.links; })
+      };
+    }
+    return { c: c, pending: pending, why: why, series: series, missing: D ? D.seriesMissing : 0, per: per, long: long, off: off };
   }
 
-  // ── répartitions de la fenêtre : vues par type de contenu, abonnés / non-abonnés ──
-  var TYPE_L = { REEL: 'Reels', REELS: 'Reels', POST: 'Publications', FEED: 'Publications', CAROUSEL_CONTAINER: 'Carrousels', STORY: 'Stories', AD: 'Publicités' };
-  var FOL_L = { FOLLOWER: 'Abonnés', NON_FOLLOWER: 'Non-abonnés', UNKNOWN: 'Inconnu' };
-  // Barres en % de la SOMME des parts (pas du total de la carte : une répartition peut ne pas retomber pile dessus).
-  function barsHTML(rows, opt) {
-    opt = opt || {};
-    var sum = rows.reduce(function (a, r) { return a + r.v; }, 0);
-    if (!rows.length || !sum) return '<div class="cf-empty-s">' + esc(opt.zero || 'Aucune donnée sur la période.') + '</div>';
-    return '<div class="cf-bars">' + rows.map(function (r) {
-      var pct = r.v / sum * 100;
-      return '<div class="cf-bar"><span class="cf-bar-l" title="' + esc(r.l) + '">' + esc(r.l) + '</span>'
-        + '<span class="cf-bar-t" aria-hidden="true"><span style="width:' + Math.max(pct, pct > 0 ? 1.5 : 0).toFixed(1) + '%"></span></span>'
-        + '<span class="cf-bar-v">' + esc((pct > 0 && pct < 0.05 ? '< 0,1' : fDec(pct, pct < 10 && pct > 0 ? 1 : 0)) + NB + '%') + (opt.counts ? '<i>' + esc(fInt(r.v)) + '</i>' : '') + '</span></div>';
-    }).join('') + '</div>';
+  // Cartes de la maquette : une couleur par métrique ; toucher une carte affiche / masque sa courbe.
+  function cardsHTML(X) {
+    return SER.map(function (s) {
+      var m = X.c[s.k], label = m.label || s.label, on = !s.fixed && !ui.evoHidden[s.k];
+      var v, sub, na = false;
+      if (X.pending) { v = '…'; sub = 'chargement'; }
+      else if (m.v == null) { v = '—'; sub = m.why || X.why; na = true; }
+      else { v = m.fmt(m.v); sub = m.sub; }
+      var cls = 'cf-icard' + (s.fixed ? ' is-fixed' : (on ? ' is-on' : ' is-off')) + (s.hero ? ' is-hero' : '');
+      var inner = '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(s.ic, 14) + '</span><span class="cf-icard-l">' + esc(label) + '</span>'
+        + (s.fixed ? '' : '<span class="cf-icard-ck" aria-hidden="true">' + (on ? svg('M5 12l5 5L20 7', 10) : '') + '</span>') + '</span>'
+        + '<span class="cf-icard-v' + (na ? ' is-na' : '') + '">' + esc(v) + '</span>'
+        + '<span class="cf-icard-s">' + esc(sub) + '</span>'
+        + (m.extra && !X.pending ? '<span class="cf-icard-x">' + esc(m.extra) + '</span>' : '');
+      var attrs = ' style="--c:' + s.c + '"' + (m.title ? ' title="' + esc(m.title) + '"' : '');
+      return s.fixed
+        ? '<div class="' + cls + '"' + attrs + '>' + inner + '</div>'
+        : '<button type="button" class="' + cls + '"' + attrs + ' data-act="evo-toggle" data-k="' + s.k + '" aria-pressed="' + on + '">' + inner + '</button>';
+    }).join('');
   }
-  function bkRows(bk, labels) {
-    return Object.keys(bk.parts).map(function (k) { return { l: labels[k] || k.toLowerCase(), v: bk.parts[k] }; })
+
+  // ── Évolution : courbes jour par jour, échelle logarithmique (maquette) ──
+  var evoCur = null;   // modèle de la courbe affichée, lu par la bulle de survol (sans redessiner le panneau)
+  function chartModel(X) {
+    var s = X.series, n = s.labels.length;
+    var act = EVO_KEYS.filter(function (k) { return !ui.evoHidden[k]; });
+    var max = 1;
+    act.forEach(function (k) {
+      (s[k] || []).forEach(function (v) { if (v != null && v > max) max = v; });
+      if (k === 'followers') s.unfollows.forEach(function (v) { if (v != null && v > max) max = v; });
+    });
+    var top = Math.max(2, Math.ceil(Math.log10(max + 1)));
+    var Y = function (v) { return 300 - (Math.log10(v + 1) / top) * 290; };
+    var Xp = function (i) { return n > 1 ? i / (n - 1) * 1000 : 500; };
+    var path = function (arr) {
+      var d = '', pen = false;
+      arr.forEach(function (v, i) {
+        if (v == null) { pen = false; return; }
+        d += (pen ? ' L' : ' M') + Xp(i).toFixed(1) + ',' + Y(v).toFixed(1);
+        pen = true;
+      });
+      return d.trim();
+    };
+    var lines = act.map(function (k) { return { k: k, d: path(s[k]) }; });
+    if (act.indexOf('followers') >= 0) lines.push({ k: 'followers', d: path(s.unfollows), dash: true });
+    var ticks = [];
+    for (var e = 0; e <= top; e++) { var tv = e ? Math.pow(10, e) : 0; ticks.push({ label: e ? fK(tv) : '0', top: Y(tv) / 3 }); }
+    return { n: n, s: s, act: act, lines: lines, ticks: ticks, Y: Y, c: X.c };
+  }
+  function evoHTML(S, D, off, X) {
+    var P = PERIOD[ui.range];
+    var miss = X.missing > 0 ? '<span class="cf-meta">historique en cours de relevé · ' + X.missing + ' ' + plural(X.missing, 'jour') + ' manquant' + (X.missing > 1 ? 's' : '') + ', relu automatiquement</span>' : '';
+    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(P.evo) + '</h3>' + miss + '</div>';
+    var msg = '';
+    if (off) msg = 'Instagram déconnecté : reconnecte @' + CF.PRIMARY_USERNAME + ' pour voir les courbes.';
+    else if (ui.range === '24h') msg = 'Pas de courbe sur 24 h : Instagram ne donne pas de valeurs heure par heure. Les cartes ci-dessus donnent les totaux.';
+    else if (!D && S.state === 'error') msg = 'Courbe indisponible : ' + (S.error || 'erreur de chargement') + '.';
+    else if (D && !X.series) msg = 'Courbe indisponible pour cette période.';
+    if (msg) { evoCur = null; return '<div class="cf-evo">' + head + '<div class="cf-evo-msg">' + esc(msg) + '</div></div>'; }
+    if (!D) { evoCur = null; return '<div class="cf-evo">' + head + '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement de la courbe…</div></div>'; }
+    var ch = chartModel(X);
+    evoCur = ch;
+    var y = ch.ticks.map(function (t) { return '<span style="top:' + t.top.toFixed(2) + '%">' + esc(t.label) + '</span>'; }).join('');
+    var grid = ch.ticks.map(function (t, i) { return '<i class="cf-evo-grid' + (i ? '' : ' is-zero') + '" style="top:' + t.top.toFixed(2) + '%"></i>'; }).join('');
+    var paths = ch.lines.map(function (l) {
+      return l.d ? '<path d="' + l.d + '" style="stroke:' + SERC[l.k] + '"' + (l.dash ? ' stroke-dasharray="5 5"' : '') + ' fill="none" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' : '';
+    }).join('');
+    var n = ch.n, idx = [0, Math.round((n - 1) / 4), Math.round((n - 1) / 2), Math.round(3 * (n - 1) / 4), n - 1]
+      .filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var xl = idx.map(function (i) { return '<span>' + esc(dm(ymdDate(ch.s.labels[i]))) + '</span>'; }).join('');
+    var lg = EVO_KEYS.map(function (k) {
+      var m = X.c[k], hid = !!ui.evoHidden[k];
+      var v = hid || m.v == null ? '—' : m.fmt(m.v);
+      var lab = k === 'followers' ? 'Abonnés (net)' : (m.label || SER.filter(function (s) { return s.k === k; })[0].label);
+      return '<div class="cf-evo-lg' + (hid ? ' is-off' : '') + '"><span class="cf-sq" style="background:' + SERC[k] + '"></span><b>' + esc(v) + '</b><span>' + esc(lab) + '</span></div>';
+    }).join('');
+    return '<div class="cf-evo">' + head
+      + '<div class="cf-evo-body">'
+      + '<div class="cf-evo-y" aria-hidden="true">' + y + '</div>'
+      + '<div class="cf-evo-main">'
+      + '<div class="cf-evo-plot" role="img" aria-label="' + esc('Courbes jour par jour ' + X.per + ', échelle logarithmique') + '">' + grid
+      + '<svg class="cf-evo-svg" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg>'
+      + '<div class="cf-evo-hover" hidden></div></div>'
+      + '<div class="cf-evo-x" aria-hidden="true">' + xl + '</div>'
+      + '<div class="cf-meta cf-evo-note">un point par jour Instagram · trait plein : abonnements, pointillé : désabonnements · échelle logarithmique</div>'
+      + '</div>'
+      + '<div class="cf-evo-legend"><div class="cf-over">total période</div>' + lg + '</div>'
+      + '</div></div>';
+  }
+  // Bulle de survol : valeur du jour + cumul depuis le début de la période (jamais pour reach / comptes engagés).
+  function evoHover(plot, clientX) {
+    var ch = evoCur;
+    if (!ch || ch.n < 1 || !plot) return;
+    var r = plot.getBoundingClientRect();
+    if (!r.width) return;
+    var i = ch.n > 1 ? Math.round((clientX - r.left) / r.width * (ch.n - 1)) : 0;
+    i = Math.max(0, Math.min(ch.n - 1, i));
+    var box = plot.querySelector('.cf-evo-hover');
+    if (!box || (box._i === i && !box.hidden)) return;
+    box._i = i;
+    var x = ch.n > 1 ? i / (ch.n - 1) * 100 : 50;
+    var dots = '', rows = '';
+    EVO_KEYS.forEach(function (k) {
+      if (ch.act.indexOf(k) < 0) return;
+      var arr = ch.s[k], v = arr[i], day, cum;
+      if (k === 'followers') {
+        var u = ch.s.unfollows[i], net = v != null && u != null ? v - u : null, acc = 0, ok = true;
+        for (var j = 0; j <= i; j++) { if (ch.s.followers[j] == null || ch.s.unfollows[j] == null) { ok = false; break; } acc += ch.s.followers[j] - ch.s.unfollows[j]; }
+        day = net == null ? '—' : fSigned(net) + ' (' + fSigned(v) + ' / ' + fSigned(-u) + ')';
+        cum = ok ? fSigned(acc) : '—';
+      } else {
+        day = v == null ? '—' : fInt(v);
+        if (UNIQUE[k]) cum = '—';
+        else { var s2 = 0, ok2 = true; for (var q = 0; q <= i; q++) { if (arr[q] == null) { ok2 = false; break; } s2 += arr[q]; } cum = ok2 ? fInt(s2) : '—'; }
+      }
+      if (v != null) dots += '<span class="cf-evo-dot" style="left:' + x + '%;top:' + (ch.Y(v) / 3).toFixed(2) + '%;background:' + SERC[k] + '"></span>';
+      var lab = k === 'followers' ? 'Abonnés' : (ch.c[k].label || SER.filter(function (s) { return s.k === k; })[0].label);
+      rows += '<div class="cf-evo-tr"><span><span class="cf-sq" style="background:' + SERC[k] + '"></span>' + esc(lab) + '</span><span>' + esc(day) + '</span><b>' + esc(cum) + '</b></div>';
+    });
+    var d = ymdDate(ch.s.labels[i]);
+    var date = d.toLocaleDateString('fr-FR', { weekday: 'short' }) + ' ' + dm(d);
+    box.innerHTML = '<span class="cf-evo-vl" style="left:' + x + '%"></span>' + dots
+      + '<div class="cf-evo-tip"><div class="cf-evo-tr is-h"><span>' + esc(date) + '</span><span>jour</span><span>cumul</span></div>' + rows + '</div>';
+    box.hidden = false;
+    // La bulle reste DANS la courbe (jamais de défilement horizontal sur mobile).
+    var tip = box.querySelector('.cf-evo-tip'), W = r.width, w = tip.offsetWidth, px = x / 100 * W;
+    var left = px + 12 + w <= W ? px + 12 : px - 12 - w;
+    tip.style.left = Math.max(0, Math.min(W - w, left)) + 'px';
+  }
+  function evoHide() {
+    var boxes = document.querySelectorAll('.cf-evo-hover');
+    for (var k = 0; k < boxes.length; k++) { boxes[k].hidden = true; boxes[k]._i = null; }
+  }
+
+  // ── Répartition (même graphique que « Genre » dans la maquette : barre empilée + légende) ──
+  var TYPE_L = { REEL: 'Reels', REELS: 'Reels', POST: 'Publications', FEED: 'Publications', CAROUSEL_CONTAINER: 'Carrousels', STORY: 'Stories', AD: 'Publicités' };
+  var TYPE_C = { REEL: 'var(--cf-c-views)', REELS: 'var(--cf-c-views)', POST: 'var(--cf-c-posts)', FEED: 'var(--cf-c-posts)', CAROUSEL_CONTAINER: 'var(--cf-c-pviews)', STORY: 'var(--cf-c-reach)', AD: 'var(--cf-c-clicks)' };
+  var FOL_L = { FOLLOWER: 'Abonnés', NON_FOLLOWER: 'Non-abonnés', UNKNOWN: 'Inconnu' };
+  var FOL_C = { FOLLOWER: 'var(--cf-c-followers)', NON_FOLLOWER: 'var(--cf-c-views)', UNKNOWN: 'var(--cf-c-other)' };
+  // Parts en % de la SOMME des parts (pas du total de la carte : une répartition peut ne pas retomber pile dessus).
+  function stackHTML(rows, counts) {
+    var sum = rows.reduce(function (a, r) { return a + r.v; }, 0);
+    if (!rows.length || !sum) return '<div class="cf-empty-s">Aucune donnée sur la période.</div>';
+    var bar = '<div class="cf-stack" aria-hidden="true">' + rows.map(function (r) {
+      return r.v > 0 ? '<span style="width:' + (r.v / sum * 100).toFixed(2) + '%;background:' + r.c + '"></span>' : '';
+    }).join('') + '</div>';
+    var lg = rows.map(function (r) {
+      return '<div class="cf-stack-r"><span class="cf-stack-k"><span class="cf-sq" style="background:' + r.c + '"></span>' + esc(r.l) + '</span>'
+        + '<span class="cf-stack-v"><b>' + esc(fShare(r.v / sum * 100)) + '</b>' + (counts ? '<i>' + esc(fInt(r.v)) + '</i>' : '') + '</span></div>';
+    }).join('');
+    return bar + '<div class="cf-stack-l">' + lg + '</div>';
+  }
+  function bkRows(bk, labels, colors) {
+    return Object.keys(bk.parts).map(function (k) { return { l: labels[k] || k.toLowerCase(), v: bk.parts[k], c: colors[k] || 'var(--cf-c-other)' }; })
       .sort(function (a, b) { return b.v - a.v; });
   }
-  function bkBlock(title, bk, err, labels, pending, off, loadErr) {
+  function repBlock(title, bk, err, labels, colors, st) {
     var body;
-    if (off) body = emptyLine('—', 'compte déconnecté');
-    else if (loadErr) body = emptyLine('—', 'erreur de chargement');
-    else if (pending) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement…</div>';
-    else if (!bk) body = emptyLine('—', err ? 'refusé par l’API Instagram : ' + err : 'non fourni par l’API Instagram');
-    else body = barsHTML(bkRows(bk, labels), { counts: true });
-    return '<div class="cf-split-b"><div class="cf-over">' + esc(title) + '</div>' + body + '</div>';
+    if (st.off) body = emptyLine('—', 'compte déconnecté');
+    else if (st.loadErr) body = emptyLine('—', 'erreur de chargement');
+    else if (st.pending) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement…</div>';
+    else if (!bk) body = emptyLine('—', err ? (st.long && /reach/i.test(title) ? 'comptes uniques : pas de total au-delà de 30 jours' : 'refusé par l’API Instagram : ' + err) : 'non fourni par l’API Instagram');
+    else body = stackHTML(bkRows(bk, labels, colors), true);
+    return '<div class="cf-rep-b"><div class="cf-over">' + esc(title) + '</div>' + body + '</div>';
   }
-  function splitHTML(S, D, off) {
-    var P = PERIOD[ui.range], pending = !D && !off && (S.loading || S.state === 'idle');
-    var E = D ? D.err : {}, le = !D && !off && !S.loading && S.state === 'error';
+  function repHTML(S, D, off) {
+    var P = PERIOD[ui.range];
+    var st = { off: off, pending: !D && !off && (S.loading || S.state === 'idle'), loadErr: !D && !off && !S.loading && S.state === 'error', long: !!LONG[ui.range] };
+    var E = D ? D.err : {};
     return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Répartition ' + esc(P.per) + '</h2>'
       + '<div class="cf-meta">vues par type de contenu · abonnés et non-abonnés · même période que les insights</div></div></div>'
-      + '<div class="cf-split">'
-      + bkBlock('Vues par type de contenu', D && D.viewsByType, E.viewsByType, TYPE_L, pending, off, le)
-      + bkBlock('Vues · abonnés / non-abonnés', D && D.viewsByFollower, E.viewsByFollower, FOL_L, pending, off, le)
-      + bkBlock('Reach · abonnés / non-abonnés', D && D.reachByFollow, E.reachByFollow, FOL_L, pending, off, le)
+      + '<div class="cf-rep">'
+      + repBlock('Vues par type de contenu', D && D.viewsByType, E.viewsByType, TYPE_L, TYPE_C, st)
+      + repBlock('Vues · abonnés / non-abonnés', D && D.viewsByFollower, E.viewsByFollower, FOL_L, FOL_C, st)
+      + repBlock('Reach · abonnés / non-abonnés', D && D.reachByFollow, E.reachByFollow, FOL_L, FOL_C, st)
       + '</div></section>';
-  }
-
-  function evolutionHTML() {
-    return '<section class="cf-card"><div class="cf-card-h"><h2 class="cf-h2">Évolution</h2></div>'
-      + '<div class="cf-empty">' + svg(IC.chart, 20) + '<div><b>Courbe disponible après le premier relevé quotidien.</b>'
-      + '<span>L’API Instagram ne renvoie qu’un total par période ; aucun relevé jour par jour n’est encore stocké.</span></div></div></section>';
   }
 
   function typeLabel(t) {
@@ -428,15 +618,28 @@
     return '<span class="cf-st' + (hero && v != null ? ' is-hero' : '') + (v == null ? ' is-na' : '') + '"><b>' + esc(v == null ? '—' : v) + '</b> ' + esc(label) + '</span>';
   }
 
-  function topHTML(S, D, off) {
-    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Top publications parmi les 12 dernières</h2>'
-      + '<div class="cf-meta">triées par vues · chiffres à vie de chaque publication, indépendants de la période</div></div></div>';
+  // ── Top publications : les 5 plus vues de TOUTES les publications (chiffres à vie) ──
+  function topList() {
+    var MD = CF.acct.media.data;
+    if (!MD) return [];
+    return MD.list.filter(function (p) { return p.views != null; })
+      .sort(function (a, b) { return b.views - a.views; }).slice(0, 5);
+  }
+  function topHTML(off) {
+    var MS = CF.acct.media, MD = off ? null : MS.data, list = topList();
+    var wv = 0, ww = 0;
+    if (MD) MD.list.forEach(function (p) { if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; } });
+    var box = wv ? '<div class="cf-watchbox"><span class="cf-watchbox-ic">' + svg(IC.clock, 17) + '</span><span><b>' + esc(fSec(ww / wv)) + '</b>'
+      + '<span>visionnage moyen · temps regardé / vues · all time</span></span></div>' : '';
+    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Top publications</h2>'
+      + '<div class="cf-meta">toutes les publications · triées par vues · chiffres à vie, indépendants de la période</div></div>' + box + '</div>';
     var body;
-    if (off) body = emptyLine('—', 'compte déconnecté');
-    else if (!D) body = (S.loading || S.state === 'idle') ? '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement des publications…</div>' : emptyLine('—', S.error || 'indisponible');
-    else if (!D.posts.length && D.postsError) body = emptyLine('—', 'liste des publications indisponible : ' + D.postsError);
-    else if (!D.posts.length) body = '<div class="cf-empty-s">Aucune publication pour l’instant.</div>';
-    else body = '<div class="cf-posts">' + D.posts.map(postRowHTML).join('') + '</div>';
+    if (off || MS.kind === 'disconnected') body = emptyLine('—', 'compte déconnecté');
+    else if (!MD) body = (MS.loading || MS.state === 'idle') ? '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement des publications…</div>'
+      : '<div class="cf-na-line"><span class="cf-na-v">—</span><span>' + esc(MS.error || 'indisponible') + '</span><button type="button" class="cf-link-btn" data-act="retry-media">Réessayer</button></div>';
+    else if (!list.length && MD.error) body = emptyLine('—', 'liste des publications indisponible : ' + MD.error);
+    else if (!list.length) body = '<div class="cf-empty-s">Aucune publication pour l’instant.</div>';
+    else body = '<div class="cf-posts">' + list.map(postRowHTML).join('') + '</div>';
     return '<section class="cf-card">' + head + body + '</section>';
   }
 
@@ -459,13 +662,15 @@
       + '</button>';
   }
 
+  // ── Audience (maquette : barres pays / villes, colonnes d'âge, barre empilée du genre) ──
   var AGE_ORDER = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
-  var GENDER_L = { M: 'Hommes', F: 'Femmes', U: 'Non précisé' };
+  var GENDER = [['M', 'Hommes', 'var(--cf-c-followers)'], ['F', 'Femmes', 'var(--cf-c-views)'], ['U', 'Non précisé', 'var(--cf-c-other)']];
   var regionName = (function () {
     var dn = null;
     try { dn = new Intl.DisplayNames(['fr'], { type: 'region' }); } catch (e) { dn = null; }
     return function (code) { try { return (dn && /^[A-Z]{2}$/.test(code) && dn.of(code)) || code; } catch (e) { return code; } };
   })();
+  function sumOf(list) { return list.reduce(function (a, x) { return a + x.v; }, 0); }
   // Les N premiers + « Autres » (le reste des 45 valeurs renvoyées par Instagram).
   function topRows(list, n, label) {
     var rows = list.slice(0, n).map(function (x) { return { l: label(x.k), v: x.v }; });
@@ -473,10 +678,42 @@
     if (rest > 0) rows.push({ l: 'Autres', v: rest });
     return rows;
   }
-  function audBlock(title, list, err, rowsOf) {
-    var body = list ? barsHTML(rowsOf(list), { zero: 'Aucune donnée.' })
-      : emptyLine('—', err ? 'refusé par l’API Instagram : ' + err : 'non fourni par l’API Instagram');
-    return '<div class="cf-split-b"><div class="cf-over">' + esc(title) + '</div>' + body + '</div>';
+  function audNa(title, err) {
+    return '<div class="cf-aud-b"><div class="cf-over">' + esc(title) + '</div>' + emptyLine('—', err ? 'refusé par l’API Instagram : ' + err : 'non fourni par l’API Instagram') + '</div>';
+  }
+  function audBars(title, list, err, rows, soft) {
+    if (!list) return audNa(title, err);
+    var sum = sumOf(list);
+    if (!sum) return '<div class="cf-aud-b"><div class="cf-over">' + esc(title) + '</div><div class="cf-empty-s">Aucune donnée.</div></div>';
+    var max = Math.max.apply(null, rows.map(function (r) { return r.v; }));
+    return '<div class="cf-aud-b' + (soft ? ' is-soft' : '') + '"><div class="cf-over">' + esc(title) + '</div>' + rows.map(function (r) {
+      return '<div class="cf-hbar"><span class="cf-hbar-l" title="' + esc(r.l) + '">' + esc(r.l) + '</span>'
+        + '<span class="cf-hbar-t" aria-hidden="true"><span style="width:' + (r.v / max * 100).toFixed(1) + '%"></span></span>'
+        + '<span class="cf-hbar-v">' + esc(fShare(r.v / sum * 100)) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function audAges(list, err) {
+    if (!list) return audNa('Âge', err);
+    var rows = list.slice().sort(function (a, b) {
+      var ia = AGE_ORDER.indexOf(a.k), ib = AGE_ORDER.indexOf(b.k);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    var sum = sumOf(rows), max = Math.max.apply(null, rows.map(function (r) { return r.v; }).concat([0]));
+    if (!sum) return '<div class="cf-aud-b"><div class="cf-over">Âge</div><div class="cf-empty-s">Aucune donnée.</div></div>';
+    return '<div class="cf-aud-b"><div class="cf-over">Âge</div>'
+      + '<div class="cf-cols">' + rows.map(function (r) {
+        return '<div class="cf-col' + (r.v === max ? ' is-max' : '') + '"><span>' + esc(fShare(r.v / sum * 100)) + '</span>'
+          + '<i style="height:calc(' + (r.v / max * 100).toFixed(1) + '% - 18px)"></i></div>';
+      }).join('') + '</div>'
+      + '<div class="cf-cols-x">' + rows.map(function (r) { return '<span>' + esc(r.k) + '</span>'; }).join('') + '</div></div>';
+  }
+  function audGender(list, err) {
+    if (!list) return audNa('Genre', err);
+    var byK = {};
+    list.forEach(function (x) { byK[x.k] = (byK[x.k] || 0) + x.v; });
+    var rows = GENDER.filter(function (g) { return byK[g[0]] != null; }).map(function (g) { return { l: g[1], v: byK[g[0]], c: g[2] }; });
+    Object.keys(byK).forEach(function (k) { if (!GENDER.some(function (g) { return g[0] === k; })) rows.push({ l: k, v: byK[k], c: 'var(--cf-c-other)' }); });
+    return '<div class="cf-aud-b"><div class="cf-over">Genre</div>' + stackHTML(rows, false) + '</div>';
   }
   function audienceHTML(D, off) {
     var A = CF.acct.aud, X = A.data, f = D && !off ? D.followers : null;
@@ -492,16 +729,11 @@
     else {
       body = (A.state === 'error' ? banner('err', IC.alert, '<b>Actualisation échouée</b> · ' + esc(A.error) + ' · chiffres du ' + esc(hm(new Date(X.fetchedAt))) + ' conservés',
           '<button type="button" class="cf-btn is-sm" data-act="retry-aud">Réessayer</button>') : '')
-        + '<div class="cf-split cf-aud">'
-        + audBlock('Pays', X.country, X.err.country, function (l) { return topRows(l, 5, regionName); })
-        + audBlock('Villes principales', X.city, X.err.city, function (l) { return topRows(l, 5, function (k) { return k.split(',')[0]; }); })
-        + audBlock('Âge', X.age, X.err.age, function (l) {
-            return l.slice().sort(function (a, b) {
-              var ia = AGE_ORDER.indexOf(a.k), ib = AGE_ORDER.indexOf(b.k);
-              return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-            }).map(function (x) { return { l: x.k, v: x.v }; });
-          })
-        + audBlock('Genre', X.gender, X.err.gender, function (l) { return l.map(function (x) { return { l: GENDER_L[x.k] || x.k, v: x.v }; }); })
+        + '<div class="cf-aud">'
+        + audBars('Pays', X.country, X.err.country, X.country ? topRows(X.country, 5, regionName) : [], false)
+        + audBars('Villes principales', X.city, X.err.city, X.city ? topRows(X.city, 5, function (k) { return k.split(',')[0]; }) : [], true)
+        + audAges(X.age, X.err.age)
+        + audGender(X.gender, X.err.gender)
         + '</div>';
     }
     return '<section class="cf-card">' + head + body + '</section>';
@@ -512,9 +744,9 @@
 
   // ── fiche post (modale) ──
   function openPost(i, trigger) {
-    var D = CF.acct.ig[ui.range].data;
-    if (!D || !D.posts[i]) return;
-    ui.modal = { post: D.posts[i], rank: i + 1 };
+    var list = topList();
+    if (!list[i]) return;
+    ui.modal = { post: list[i], rank: i + 1 };
     ui.lastFocus = trigger || null;
     renderModal();
     var wrap = document.querySelector('.cf-wrap'); if (wrap) wrap.inert = true;   // Tab reste dans la fiche
@@ -563,7 +795,7 @@
       '<div class="cf-sheet">'
       + '<div class="cf-sheet-media">' + (thumb ? '<img src="' + esc(thumb) + '" alt="Miniature de la publication" referrerpolicy="no-referrer" decoding="async">' : '<span class="cf-sheet-none">aperçu indisponible</span>') + '</div>'
       + '<div class="cf-sheet-info">'
-      + '<div class="cf-meta">#' + rank + ' en vues · parmi les 12 dernières · ' + esc(typeLabel(p.type)) + '</div>'
+      + '<div class="cf-meta">#' + rank + ' en vues · toutes les publications · ' + esc(typeLabel(p.type)) + '</div>'
       + '<h2 class="cf-h2" id="cfModalTitle">' + esc(d ? 'Publication du ' + dmy(d) : 'Publication') + '</h2>'
       + '<p class="cf-sheet-cap">' + esc(capText(p.caption)) + '</p>'
       + (link ? '<a class="cf-link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">voir sur Instagram ' + svg(IC.external, 12) + '</a>' : '')
@@ -616,6 +848,8 @@
       else if (act === 'retry-ig') CF.loadInsights(ui.range, { force: true });
       else if (act === 'retry-accounts') CF.loadAccounts({ force: true });
       else if (act === 'retry-aud') CF.loadAudience({ force: true });
+      else if (act === 'retry-media') CF.loadMedia({ force: true });
+      else if (act === 'evo-toggle') { var k = el.getAttribute('data-k'); if (EVO_KEYS.indexOf(k) >= 0) { ui.evoHidden[k] = !ui.evoHidden[k]; evoHide(); render(); } }
       else if (act === 'reconnect') reconnect(); // la popup s'ouvre dans ce clic (Safari)
       else if (act === 'post') openPost(parseInt(el.getAttribute('data-i'), 10), el);
       else if (act === 'modal-close') closeModal();
@@ -633,6 +867,18 @@
       if (b) b.focus();
       e.preventDefault();
     });
+
+    // Bulle de la courbe Évolution : souris et doigt (le survol ne redessine jamais le panneau).
+    document.addEventListener('mousemove', function (e) {
+      var plot = e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
+      if (plot) evoHover(plot, e.clientX); else if (evoCur) evoHide();
+    });
+    var onTouch = function (e) {
+      var t = e.touches && e.touches[0], plot = t && e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
+      if (plot) evoHover(plot, t.clientX); else if (evoCur) evoHide();
+    };
+    document.addEventListener('touchstart', onTouch, { passive: true });
+    document.addEventListener('touchmove', onTouch, { passive: true });
 
     $('cfModal').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeModal(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ui.modal) closeModal(); });
