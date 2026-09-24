@@ -39,6 +39,8 @@
   function fDec(n, d) { return n.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
   function fPct(a, b) { return a == null || b == null || !b ? null : fDec(a / b * 100, 1) + NB + '%'; }
   function fSec(s) { return s == null ? null : fDec(s, 1) + NB + 's'; }
+  var MINUS = '\u2212';
+  function fSigned(n) { return n > 0 ? '+' + fInt(n) : n < 0 ? MINUS + fInt(-n) : '0'; }
   function p2(n) { return String(n).padStart(2, '0'); }
   function dmy(d) { return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
   function dm(d) { return p2(d.getDate()) + '/' + p2(d.getMonth() + 1); }
@@ -78,7 +80,7 @@
   var PERIODS = [
     { k: '24h', label: '24' + NB + 'h', per: 'sur 24' + NB + 'h', days: 1, live: true },
     { k: '7j', label: '7' + NB + 'j', per: 'sur 7' + NB + 'j', days: 7, live: true },
-    { k: '28j', label: '28' + NB + 'j', per: 'sur 28' + NB + 'j', days: 28, live: true },
+    { k: '30j', label: '30' + NB + 'j', per: 'sur 30' + NB + 'j', days: 30, live: true }, // la fenêtre de l'app Instagram
     { k: '90j', label: '90' + NB + 'j', live: false },
     { k: '6m', label: '6' + NB + 'mois', live: false },
     { k: 'all', label: 'All time', live: false }
@@ -105,7 +107,7 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '28j', modal: null, lastFocus: null, recon: null, lastStatus: null };
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -207,6 +209,7 @@
     if (CF.status !== 'ready') return;
     CF.loadAccounts();
     CF.loadInsights(ui.range);
+    CF.loadAudience();
   }
 
   // ── onglets pas encore branchés ──
@@ -226,6 +229,7 @@
     return '<section class="cf-title"><h1>Compte @' + esc(CF.PRIMARY_USERNAME) + '</h1></section>'
       + acctHTML(D)
       + insightsHTML(S, D, off)
+      + splitHTML(S, D, off)
       + evolutionHTML()
       + topHTML(S, D, off)
       + audienceHTML(D, off);
@@ -267,8 +271,8 @@
 
   function periodLine(S, D) {
     var P = PERIOD[ui.range];
-    var until = D ? new Date(D.fetchedAt) : new Date();
-    var since = new Date(until.getTime() - P.days * 864e5);
+    var until = D ? new Date(D.until != null ? D.until : D.fetchedAt) : new Date();
+    var since = D && D.since != null ? new Date(D.since) : new Date(until.getTime() - P.days * 864e5);
     var range = P.k === '24h'
       ? dm(since) + ' ' + hm(since) + ' → ' + dm(until) + ' ' + hm(until)
       : dm(since) + ' → ' + dmy(until);
@@ -322,11 +326,12 @@
     var pending = !D && !off && (S.loading || S.state === 'idle');
     var why = off ? 'compte déconnecté' : (!D && S.state === 'error' ? 'erreur de chargement' : 'non fourni par l’API Instagram');
     var M = D ? D.m : {};
-    function card(label, icon, kind, value, sub, extra) {
+    function card(label, icon, kind, value, sub, extra, opt) {
       var v, s, na = false;
+      opt = opt || {};
       if (pending) { v = '…'; s = 'chargement'; }
-      else if (value == null) { v = '—'; s = why; na = true; }
-      else { v = fInt(value); s = sub; }
+      else if (value == null) { v = '—'; s = opt.why || why; na = true; }
+      else { v = (opt.fmt || fInt)(value); s = sub; }
       return '<div class="cf-kpi' + (kind ? ' is-' + kind : '') + '">'
         + '<div class="cf-kpi-h"><span class="cf-kpi-ic">' + svg(icon, 15) + '</span><span class="cf-kpi-l">' + esc(label) + '</span></div>'
         + '<div class="cf-kpi-v' + (na ? ' is-na' : '') + '">' + esc(v) + '</div>'
@@ -334,20 +339,74 @@
         + (extra ? '<div class="cf-kpi-x">' + esc(extra) + '</div>' : '')
         + '</div>';
     }
-    var reach = M.reach, views = M.views, eng = M.engaged, inter = M.interactions, pv = M.profileViews, taps = M.linkTaps;
-    var engPct = fPct(eng, reach), tapPct = fPct(taps, pv);
+    var reach = M.reach, views = M.views, eng = M.engaged, inter = M.interactions, pv = M.profileViews, taps = M.linkTaps, bio = M.bioTaps;
+    var engPct = fPct(eng, reach), bioPct = fPct(bio, pv);
     var vpr = views != null && reach ? views / reach : null;
     var ipe = inter != null && eng ? inter / eng : null;
+    var E = D && !off ? D.err : {};
+    // follows_and_unfollows : FOLLOWER = abonnements, NON_FOLLOWER = désabonnements (ou comptes supprimés)
+    var F = D && !off ? D.flow : null, fin = F ? (F.parts.FOLLOWER || 0) : null, fout = F ? (F.parts.NON_FOLLOWER || 0) : null;
+    var follow = F
+      ? card('Abonnés', IC.follow, 'static', fin - fout, 'net ' + per + ' · total ' + (D.followers == null ? '—' : fInt(D.followers)),
+          fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement'), { fmt: fSigned })
+      : card('Abonnés', IC.follow, 'static', D ? D.followers : null, 'total actuel',
+          pending ? '' : 'net ' + per + ' : — · ' + (E.follows ? 'refusé par l’API : ' + E.follows : D ? 'non fourni par l’API Instagram' : why));
     return [
-      card('Abonnés', IC.follow, 'static', D ? D.followers : null, 'total actuel', 'gagnés ' + per + ' : — · pas encore relevé'),
+      follow,
       card('Publications', IC.grid, 'static', D ? D.media : null, 'total publié'),
       card('Comptes engagés', IC.users, 'hero', eng, engPct ? engPct + ' du reach · ' + per : per),
       card('Reach', IC.reach, '', reach, 'comptes uniques touchés · ' + per),
       card('Vues', IC.eye, '', views, vpr != null ? fDec(vpr, 2) + ' ' + plural(vpr, 'vue') + ' par compte touché' : per),
       card('Interactions', IC.heart, '', inter, ipe != null ? fDec(ipe, 1) + ' par compte engagé' : per),
       card('Vues de profil', IC.user, '', pv, per),
-      card('Clics lien profil', IC.link, '', taps, taps === 0 ? 'aucun clic ' + per : tapPct ? tapPct + ' des vues de profil' : per)
+      // website_clicks = le lien en bio (absent de la doc actuelle : souvent refusé) ; profile_links_taps = les boutons
+      // de contact (appel, e-mail, itinéraire…). Sans website_clicks, la carte montre les boutons, sous leur vrai nom.
+      bio != null
+        ? card('Clics lien en bio', IC.link, '', bio, bio === 0 ? 'aucun clic ' + per : bioPct ? bioPct + ' des vues de profil' : per,
+            'boutons de contact : ' + (taps == null ? '—' : fInt(taps)))
+        : card('Clics boutons de contact', IC.link, '', taps, taps === 0 ? 'aucun clic ' + per : fPct(taps, pv) ? fPct(taps, pv) + ' des vues de profil' : per,
+            pending ? '' : 'lien en bio : — · ' + (E.bioTaps ? 'non fourni par l’API Instagram (' + E.bioTaps + ')' : 'non fourni par l’API Instagram'))
     ].join('');
+  }
+
+  // ── répartitions de la fenêtre : vues par type de contenu, abonnés / non-abonnés ──
+  var TYPE_L = { REEL: 'Reels', REELS: 'Reels', POST: 'Publications', FEED: 'Publications', CAROUSEL_CONTAINER: 'Carrousels', STORY: 'Stories', AD: 'Publicités' };
+  var FOL_L = { FOLLOWER: 'Abonnés', NON_FOLLOWER: 'Non-abonnés', UNKNOWN: 'Inconnu' };
+  // Barres en % de la SOMME des parts (pas du total de la carte : une répartition peut ne pas retomber pile dessus).
+  function barsHTML(rows, opt) {
+    opt = opt || {};
+    var sum = rows.reduce(function (a, r) { return a + r.v; }, 0);
+    if (!rows.length || !sum) return '<div class="cf-empty-s">' + esc(opt.zero || 'Aucune donnée sur la période.') + '</div>';
+    return '<div class="cf-bars">' + rows.map(function (r) {
+      var pct = r.v / sum * 100;
+      return '<div class="cf-bar"><span class="cf-bar-l" title="' + esc(r.l) + '">' + esc(r.l) + '</span>'
+        + '<span class="cf-bar-t" aria-hidden="true"><span style="width:' + Math.max(pct, pct > 0 ? 1.5 : 0).toFixed(1) + '%"></span></span>'
+        + '<span class="cf-bar-v">' + esc((pct > 0 && pct < 0.05 ? '< 0,1' : fDec(pct, pct < 10 && pct > 0 ? 1 : 0)) + NB + '%') + (opt.counts ? '<i>' + esc(fInt(r.v)) + '</i>' : '') + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function bkRows(bk, labels) {
+    return Object.keys(bk.parts).map(function (k) { return { l: labels[k] || k.toLowerCase(), v: bk.parts[k] }; })
+      .sort(function (a, b) { return b.v - a.v; });
+  }
+  function bkBlock(title, bk, err, labels, pending, off, loadErr) {
+    var body;
+    if (off) body = emptyLine('—', 'compte déconnecté');
+    else if (loadErr) body = emptyLine('—', 'erreur de chargement');
+    else if (pending) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement…</div>';
+    else if (!bk) body = emptyLine('—', err ? 'refusé par l’API Instagram : ' + err : 'non fourni par l’API Instagram');
+    else body = barsHTML(bkRows(bk, labels), { counts: true });
+    return '<div class="cf-split-b"><div class="cf-over">' + esc(title) + '</div>' + body + '</div>';
+  }
+  function splitHTML(S, D, off) {
+    var P = PERIOD[ui.range], pending = !D && !off && (S.loading || S.state === 'idle');
+    var E = D ? D.err : {}, le = !D && !off && !S.loading && S.state === 'error';
+    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Répartition ' + esc(P.per) + '</h2>'
+      + '<div class="cf-meta">vues par type de contenu · abonnés et non-abonnés · même période que les insights</div></div></div>'
+      + '<div class="cf-split">'
+      + bkBlock('Vues par type de contenu', D && D.viewsByType, E.viewsByType, TYPE_L, pending, off, le)
+      + bkBlock('Vues · abonnés / non-abonnés', D && D.viewsByFollower, E.viewsByFollower, FOL_L, pending, off, le)
+      + bkBlock('Reach · abonnés / non-abonnés', D && D.reachByFollow, E.reachByFollow, FOL_L, pending, off, le)
+      + '</div></section>';
   }
 
   function evolutionHTML() {
@@ -400,13 +459,52 @@
       + '</button>';
   }
 
+  var AGE_ORDER = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+  var GENDER_L = { M: 'Hommes', F: 'Femmes', U: 'Non précisé' };
+  var regionName = (function () {
+    var dn = null;
+    try { dn = new Intl.DisplayNames(['fr'], { type: 'region' }); } catch (e) { dn = null; }
+    return function (code) { try { return (dn && /^[A-Z]{2}$/.test(code) && dn.of(code)) || code; } catch (e) { return code; } };
+  })();
+  // Les N premiers + « Autres » (le reste des 45 valeurs renvoyées par Instagram).
+  function topRows(list, n, label) {
+    var rows = list.slice(0, n).map(function (x) { return { l: label(x.k), v: x.v }; });
+    var rest = list.slice(n).reduce(function (a, x) { return a + x.v; }, 0);
+    if (rest > 0) rows.push({ l: 'Autres', v: rest });
+    return rows;
+  }
+  function audBlock(title, list, err, rowsOf) {
+    var body = list ? barsHTML(rowsOf(list), { zero: 'Aucune donnée.' })
+      : emptyLine('—', err ? 'refusé par l’API Instagram : ' + err : 'non fourni par l’API Instagram');
+    return '<div class="cf-split-b"><div class="cf-over">' + esc(title) + '</div>' + body + '</div>';
+  }
   function audienceHTML(D, off) {
-    var f = D && !off ? D.followers : null;
-    var why = 'pas encore demandée à l’API Instagram · disponible à partir de 100 abonnés'
-      + (f != null && f < 100 ? ' (' + fInt(f) + ' aujourd’hui)' : '');
-    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Audience</h2>'
-      + '<div class="cf-meta">abonnés @' + esc(CF.PRIMARY_USERNAME) + ' · pays, villes, âge, genre</div></div></div>'
-      + emptyLine('—', why) + '</section>';
+    var A = CF.acct.aud, X = A.data, f = D && !off ? D.followers : null;
+    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Audience</h2>'
+      + '<div class="cf-meta">abonnés actuels @' + esc(CF.PRIMARY_USERNAME) + ' · données Instagram · en % des 45 premières valeurs</div></div>'
+      + (X && !off ? '<div class="cf-meta">relevé à ' + esc(hm(new Date(X.fetchedAt))) + '</div>' : '') + '</div>';
+    var body;
+    if (off || A.kind === 'disconnected') body = emptyLine('—', 'compte déconnecté');
+    else if (!X && (A.loading || A.state === 'idle')) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement de l’audience…</div>';
+    else if (!X) body = '<div class="cf-na-line"><span class="cf-na-v">—</span><span>' + esc(A.error || 'indisponible')
+      + (f != null && f < 100 ? ' · il faut au moins 100 abonnés (' + fInt(f) + ' aujourd’hui)' : '') + '</span>'
+      + '<button type="button" class="cf-link-btn" data-act="retry-aud">Réessayer</button></div>';
+    else {
+      body = (A.state === 'error' ? banner('err', IC.alert, '<b>Actualisation échouée</b> · ' + esc(A.error) + ' · chiffres du ' + esc(hm(new Date(X.fetchedAt))) + ' conservés',
+          '<button type="button" class="cf-btn is-sm" data-act="retry-aud">Réessayer</button>') : '')
+        + '<div class="cf-split cf-aud">'
+        + audBlock('Pays', X.country, X.err.country, function (l) { return topRows(l, 5, regionName); })
+        + audBlock('Villes principales', X.city, X.err.city, function (l) { return topRows(l, 5, function (k) { return k.split(',')[0]; }); })
+        + audBlock('Âge', X.age, X.err.age, function (l) {
+            return l.slice().sort(function (a, b) {
+              var ia = AGE_ORDER.indexOf(a.k), ib = AGE_ORDER.indexOf(b.k);
+              return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+            }).map(function (x) { return { l: x.k, v: x.v }; });
+          })
+        + audBlock('Genre', X.gender, X.err.gender, function (l) { return l.map(function (x) { return { l: GENDER_L[x.k] || x.k, v: x.v }; }); })
+        + '</div>';
+    }
+    return '<section class="cf-card">' + head + body + '</section>';
   }
   function emptyLine(v, why) {
     return '<div class="cf-na-line"><span class="cf-na-v">' + esc(v) + '</span><span>' + esc(why) + '</span></div>';
@@ -517,6 +615,7 @@
       else if (act === 'retry') CF.refresh({ gate: true });
       else if (act === 'retry-ig') CF.loadInsights(ui.range, { force: true });
       else if (act === 'retry-accounts') CF.loadAccounts({ force: true });
+      else if (act === 'retry-aud') CF.loadAudience({ force: true });
       else if (act === 'reconnect') reconnect(); // la popup s'ouvre dans ce clic (Safari)
       else if (act === 'post') openPost(parseInt(el.getAttribute('data-i'), 10), el);
       else if (act === 'modal-close') closeModal();
