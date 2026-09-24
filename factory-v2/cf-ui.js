@@ -301,7 +301,7 @@
   function compteHTML() {
     var S = CF.acct.ig[ui.range], D = S.data, off = S.kind === 'disconnected';
     var X = model(S, D, off);
-    return '<section class="cf-title"><h1>Compte @' + esc(CF.PRIMARY_USERNAME) + '</h1></section>'
+    return '<section class="cf-title"><h1>Insight Instagram</h1></section>'
       + acctHTML(D)
       + insightsHTML(S, D, off, X)
       + goalsHTML(X)
@@ -407,7 +407,7 @@
         + '<span class="cf-goal-bar' + (g.target == null ? ' is-none' : '') + '"><i style="width:' + (loading ? 0 : Math.round(fill * 1000) / 10) + '%"></i></span>'
         + (loading || v == null || sub ? '<span class="cf-goal-s">' + esc(loading ? 'chargement' : v == null ? na : sub) + '</span>' : '') + '</div>';
     }).join('');
-    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectifs · ' + esc(PERIOD[ui.range].evo) + '</h2></div></div>'
+    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectif</h2></div></div>'
       + '<div class="cf-goals">' + cards + '</div></section>';
   }
 
@@ -576,7 +576,7 @@
   function evoHTML(S, D, off, X) {
     var P = PERIOD[ui.range];
     var miss = X.missing > 0 ? '<span class="cf-meta">historique en cours de relevé · ' + X.missing + ' ' + plural(X.missing, 'jour') + ' manquant' + (X.missing > 1 ? 's' : '') + ', relu automatiquement</span>' : '';
-    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(P.evo) + '</h3>' + miss + '</div>';
+    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution</h3>' + miss + '</div>';
     var msg = '';
     if (off) msg = 'Instagram déconnecté : reconnecte @' + CF.PRIMARY_USERNAME + ' pour voir les courbes.';
     else if (!D && S.state === 'error') msg = 'Courbe indisponible : ' + (S.error || 'erreur de chargement') + '.';
