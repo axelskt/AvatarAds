@@ -68,7 +68,6 @@
     loadMedia: loadMedia,
     prefetch: prefetch,
     tagMedia: tagMedia,
-    setDuration: setDuration,
     isFresh: isFresh,
     igConnect: igConnect,
     guardWrite: guardWrite,
@@ -520,25 +519,6 @@
       if (M) M.list.forEach(function (p) { if (p.id === String(id)) p.module = d.module || null; });
       emit('media');
       return { ok: true };
-    } catch (e) { return { error: errText(e) }; }
-  }
-
-  // Durée d'un reel dont Instagram ne donne pas le fichier (saisie dans la fiche) ; 0 ou vide = retirée.
-  async function setDuration(id, seconds) {
-    if (!sb || CF.status !== 'ready') return { error: 'pas prêt' };
-    var s = seconds == null || seconds === '' ? 0 : Number(seconds);
-    if (!isFinite(s) || s < 0 || s > 900) return { error: 'durée entre 1 et 900 s' };
-    logNet('rpc ig_media_duration_set');
-    try {
-      var r = await sb.rpc('ig_media_duration_set', { p_media: String(id), p_seconds: s });
-      var d = r && r.data;
-      if (r.error || !d || d.error) return { error: r.error ? errText(r.error) : (d && d.error) || 'réponse vide' };
-      var M = CF.acct.media.data;
-      if (M) M.list.forEach(function (p) {
-        if (p.id === String(id) && (p.durationS == null || p.durationManual)) { p.durationS = num(d.duration_s); p.durationManual = p.durationS != null; }
-      });
-      emit('media');
-      return { ok: true, duration: num(d.duration_s) };
     } catch (e) { return { error: errText(e) }; }
   }
 

@@ -178,7 +178,7 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, durMsg: null, prefetched: false };
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -407,7 +407,7 @@
         + '<span class="cf-goal-bar' + (g.target == null ? ' is-none' : '') + '"><i style="width:' + (loading ? 0 : Math.round(fill * 1000) / 10) + '%"></i></span>'
         + (loading || v == null || sub ? '<span class="cf-goal-s">' + esc(loading ? 'chargement' : v == null ? na : sub) + '</span>' : '') + '</div>';
     }).join('');
-    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectif</h2></div></div>'
+    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectifs · ' + esc(PERIOD[ui.range].evo) + '</h2></div></div>'
       + '<div class="cf-goals">' + cards + '</div></section>';
   }
 
@@ -576,7 +576,7 @@
   function evoHTML(S, D, off, X) {
     var P = PERIOD[ui.range];
     var miss = X.missing > 0 ? '<span class="cf-meta">historique en cours de relevé · ' + X.missing + ' ' + plural(X.missing, 'jour') + ' manquant' + (X.missing > 1 ? 's' : '') + ', relu automatiquement</span>' : '';
-    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution</h3>' + miss + '</div>';
+    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(P.evo) + '</h3>' + miss + '</div>';
     var msg = '';
     if (off) msg = 'Instagram déconnecté : reconnecte @' + CF.PRIMARY_USERNAME + ' pour voir les courbes.';
     else if (!D && S.state === 'error') msg = 'Courbe indisponible : ' + (S.error || 'erreur de chargement') + '.';
@@ -688,13 +688,20 @@
     else body = stackHTML(bkRows(bk, labels, colors), true);
     return '<div class="cf-rep-b"><div class="cf-over">' + esc(title) + '</div>' + body + '</div>';
   }
+  // « Publications » toujours listées, à 0 tant qu'aucune publication (hors reels) n'a de vues (demande d'Axel, 25/09).
+  function withPosts(bk) {
+    if (!bk || 'POST' in bk.parts || 'FEED' in bk.parts) return bk;
+    var parts = {}; Object.keys(bk.parts).forEach(function (k) { parts[k] = bk.parts[k]; });
+    parts.POST = 0;
+    return { breakdown: bk.breakdown, total: bk.total, parts: parts };
+  }
   function repHTML(S, D, off) {
     var P = PERIOD[ui.range];
     var st = { off: off, pending: !D && !off && (S.loading || S.state === 'idle'), loadErr: !D && !off && !S.loading && S.state === 'error', long: !!LONG[ui.range] };
     var E = D ? D.err : {};
     return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Répartition ' + esc(P.per) + '</h2></div></div>'
       + '<div class="cf-rep">'
-      + repBlock('Vues par type de contenu', D && D.viewsByType, E.viewsByType, TYPE_L, TYPE_C, st)
+      + repBlock('Vues par type de contenu', withPosts(D && D.viewsByType), E.viewsByType, TYPE_L, TYPE_C, st)
       + repBlock('Vues · abonnés / non-abonnés', D && D.viewsByFollower, E.viewsByFollower, FOL_L, FOL_C, st)
       + '</div></section>';
   }
@@ -721,12 +728,14 @@
     if (a.noVoice) return '<span class="cf-chip is-muted">sans voix</span>';
     return a.bricks.map(function (b) { return '<span class="cf-chip is-brick" title="' + esc(KIND_L[b.kind] + ' · ' + b.label) + '">' + esc(b.id) + '</span>'; }).join('');
   }
-  function moduleOptions(cur) {
-    var o = '<option value=""' + (cur ? '' : ' selected') + '>— non renseigné</option>';
-    Object.keys(CF.MODULES || {}).forEach(function (k) {
-      o += '<option value="' + esc(k) + '"' + (k === cur ? ' selected' : '') + '>' + esc(CF.MODULES[k]) + '</option>';
-    });
-    return o;
+  // Pastilles du module : la saisie à la main (sinon « détecté » sur celui déduit du hook) ; re-toucher la pastille active la retire.
+  function moduleChoices(p) {
+    var cur = p.module, auto = !cur && p.analysis && p.analysis.module;
+    return Object.keys(CF.MODULES || {}).map(function (k) {
+      var on = k === cur, det = k === auto;
+      return '<button type="button" class="cf-mod' + (on ? ' is-on' : det ? ' is-det' : '') + '" role="radio" aria-checked="' + on + '" data-act="tag-set" data-tag-id="' + esc(p.id) + '" data-mod="' + esc(on ? '' : k) + '">'
+        + (on ? svg('M5 12l5 5L20 7', 11) : '') + esc(CF.MODULES[k]) + (det ? '<span class="cf-mod-d">détecté</span>' : '') + '</button>';
+    }).join('');
   }
   function typeLabel(t) {
     var T = { REELS: 'reel', FEED: 'publication', STORY: 'story', VIDEO: 'vidéo', IMAGE: 'image', CAROUSEL_ALBUM: 'carrousel' };
@@ -909,8 +918,7 @@
   }
   function bricksDetail(p) {
     var a = p.analysis;
-    if (!a) return '<div class="cf-meta">' + (isVideo(p) ? 'Instagram ne donne pas le fichier de cette vidéo (souvent une musique sous droits) : briques non détectables, choisis le module à la main'
-      : 'briques : pas de vidéo à analyser') + '</div>';
+    if (!a) return '';
     if (a.status === 'pending') return '<div class="cf-meta">briques : transcription en cours, la fiche se met à jour toute seule</div>';
     if (a.status === 'error') return '<div class="cf-meta">briques : analyse impossible · ' + esc(a.error || '') + '</div>';
     if (a.noVoice) return '<div class="cf-meta">vidéo sans voix (musique seule) : aucune brique parlée à reconnaître, choisis le module à la main</div>';
@@ -935,16 +943,7 @@
     return '<div class="cf-tile"><div class="cf-tile-l">' + esc('visionnage moyen · ' + goalTxt(GOAL.watch)) + '</div>'
       + '<div class="cf-tile-v">' + esc(fSec(p.avgWatchS) + (p.durationS ? ' / ' + fSec0(p.durationS) : ''))
       + (r != null ? ' <span class="cf-tile-r ' + (goalOk(GOAL.watch, r) ? 'is-ok' : 'is-ko') + '">' + esc(fRate(r)) + '</span>' : '') + '</div>'
-      + (p.durationS ? '' : '<div class="cf-tile-w">durée de la vidéo inconnue : saisis-la plus bas</div>') + '</div>';
-  }
-  // Reel dont Instagram ne donne pas le fichier : la durée se saisit une fois (sinon « / durée » reste inconnu).
-  function durationForm(p) {
-    if (!isVideo(p) || (p.durationS != null && !p.durationManual)) return '';
-    var msg = ui.durMsg && ui.durMsg.id === p.id ? '<div class="cf-acct-msg is-' + (ui.durMsg.ok ? 'ok' : 'err') + '">' + esc(ui.durMsg.text) + '</div>' : '';
-    return '<form class="cf-dur" data-dur-id="' + esc(p.id) + '"><label class="cf-lbl" for="cfDur">Durée de la vidéo (secondes)</label>'
-      + '<div class="cf-dur-row"><input id="cfDur" class="cf-in" type="number" inputmode="decimal" min="1" max="900" step="0.1" value="' + esc(p.durationS != null ? String(p.durationS) : '') + '" placeholder="ex. 30">'
-      + '<button type="submit" class="cf-btn is-sm">Enregistrer</button></div>'
-      + '<div class="cf-meta">Instagram ne donne pas le fichier de cette vidéo (musique sous droits) : sa durée ne peut pas être mesurée.</div>' + msg + '</form>';
+      + '</div>';
   }
   function tile(label, v, why) {
     return '<div class="cf-tile"><div class="cf-tile-l">' + esc(label) + '</div>'
@@ -965,6 +964,16 @@
     var MD = CF.acct.media.data; if (!MD) return null;
     var all = MD.list.filter(function (x) { return x.views != null; }).sort(function (a, b) { return b.views - a.views; });
     var i = all.indexOf(p); return i >= 0 ? i + 1 : null;
+  }
+  // Module d'une publication : enregistré tout de suite, message sous les pastilles.
+  function setTag(el) {
+    var id = el.getAttribute('data-tag-id'), v = el.getAttribute('data-mod') || '';
+    [].forEach.call(document.querySelectorAll('#cfModalBody .cf-mod'), function (b) { b.disabled = true; });
+    CF.tagMedia(id, v).then(function (r) {
+      ui.tagMsg = { id: id, ok: !r.error, text: r.error ? 'Non enregistré : ' + r.error : (v ? 'Enregistré : ' + CF.MODULES[v] : 'Module retiré') };
+      schedule();
+      setTimeout(function () { var b = document.querySelector('#cfModalBody .cf-mod[data-tag-id="' + id + '"].is-on') || document.querySelector('#cfModalBody .cf-mod'); if (b) b.focus(); }, 0);
+    });
   }
   function openBrick(id) {
     if (!ui.modal || !id) return;
@@ -1062,9 +1071,8 @@
       + '<div class="cf-bricks"><div class="cf-over">Briques utilisées</div>'
       + '<div class="cf-bricks-na">' + moduleChip(effModule(p), true) + (p.module ? '' : (p.analysis && p.analysis.module ? '<span class="cf-meta">module déduit du hook</span>' : '')) + '</div>'
       + bricksDetail(p)
-      + durationForm(p)
-      + '<label class="cf-tag"><span class="cf-lbl">Module de la vidéo' + (p.module ? '' : ' (corrige la détection)') + '</span>'
-      + '<select class="cf-in cf-tag-sel" data-tag-id="' + esc(p.id) + '">' + moduleOptions(p.module) + '</select></label>'
+      + '<div class="cf-tag"><div class="cf-over" id="cfTagL">Module de la vidéo</div>'
+      + '<div class="cf-tag-chips" role="radiogroup" aria-labelledby="cfTagL">' + moduleChoices(p) + '</div></div>'
       + (ui.tagMsg && ui.tagMsg.id === p.id ? '<div class="cf-acct-msg is-' + (ui.tagMsg.ok ? 'ok' : 'err') + '">' + esc(ui.tagMsg.text) + '</div>' : '')
       + '</div>'
       + '</div></div>');
@@ -1117,6 +1125,7 @@
       else if (act === 'reconnect') reconnect(); // la popup s'ouvre dans ce clic (Safari)
       else if (act === 'post') openPost(parseInt(el.getAttribute('data-i'), 10), el);
       else if (act === 'modal-close') closeModal();
+      else if (act === 'tag-set') setTag(el);
       else if (act === 'brick-open') openBrick(el.getAttribute('data-bid'));
       else if (act === 'brick-back') brickBack();
       else if (act === 'brick-post') brickPost(el.getAttribute('data-pid'));
@@ -1135,33 +1144,6 @@
       e.preventDefault();
     });
 
-    // Durée saisie dans la fiche (reel sans fichier fourni par Instagram).
-    document.addEventListener('submit', function (e) {
-      var f = e.target;
-      if (!f || !f.matches || !f.matches('form[data-dur-id]')) return;
-      e.preventDefault();
-      var id = f.getAttribute('data-dur-id'), inp = f.querySelector('input'), btn = f.querySelector('button');
-      var v = inp.value.trim().replace(',', '.');
-      if (btn) btn.disabled = true;
-      CF.setDuration(id, v === '' ? 0 : Number(v)).then(function (r) {
-        ui.durMsg = { id: id, ok: !r.error, text: r.error ? 'Non enregistrée : ' + r.error : (r.duration ? 'Enregistrée : ' + fSec0(r.duration) : 'Durée retirée') };
-        if (btn) btn.disabled = false;
-        schedule();
-      });
-    });
-
-    // Module d'une publication (fiche) : enregistré tout de suite, message sous le menu.
-    document.addEventListener('change', function (e) {
-      var sel = e.target;
-      if (!sel || !sel.matches || !sel.matches('select[data-tag-id]')) return;
-      var id = sel.getAttribute('data-tag-id'), v = sel.value;
-      sel.disabled = true;
-      CF.tagMedia(id, v).then(function (r) {
-        ui.tagMsg = { id: id, ok: !r.error, text: r.error ? 'Non enregistré : ' + r.error : (v ? 'Enregistré : ' + CF.MODULES[v] : 'Module retiré') };
-        sel.disabled = false;
-        schedule();
-      });
-    });
 
     // Bulle de la courbe Évolution : souris et doigt (le survol ne redessine jamais le panneau).
     document.addEventListener('mousemove', function (e) {
