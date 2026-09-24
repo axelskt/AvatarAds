@@ -361,6 +361,31 @@ img { max-width: 100%; }
 .cf-tag-sel { font-size: 16px; padding: 8px 10px; }   /* 16 px : iOS ne zoome pas sur le menu */
 .cf-more { align-self: center; }
 
+/* ── Objectifs (maquette d'Axel) ── */
+.cf-goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; margin-top: 14px; }
+.cf-goal { display: flex; flex-direction: column; gap: 10px; background: #fff; border: 1.5px solid var(--cf-line-3); border-radius: 18px; padding: 16px 18px; min-width: 0; }
+.cf-goal-tile { width: 40px; height: 40px; border-radius: 10px; background: #f1ece4; color: var(--cf-ink-2); display: flex; align-items: center; justify-content: center; }
+.cf-goal-l { font-family: var(--cf-mono); font-size: 13px; color: var(--cf-ink-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cf-goal-ok { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #1f7a45; background: #e4f3ea; border-radius: 99px; padding: 2px 8px; }
+.cf-goal-v { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--cf-ink); font-variant-numeric: tabular-nums; }
+.cf-goal-v.is-na { color: var(--cf-mute); }
+.cf-goal.is-ok .cf-goal-v { color: #e5541f; }
+.cf-goal-bar { height: 8px; border-radius: 99px; background: #f1ece4; overflow: hidden; }
+.cf-goal-bar i { display: block; height: 100%; border-radius: 99px; background: #ff6b35; }
+.cf-goal-s { font-family: var(--cf-mono); font-size: 11.5px; line-height: 1.45; color: var(--cf-mute); }
+.cf-st.is-rate.is-ok { background: #e4f3ea; border-color: #bfe3cc; }
+.cf-st.is-rate.is-ok b { color: #1f7a45; }
+.cf-st.is-rate.is-ko b { color: #c2410c; }
+@media (max-width: 640px) {
+  .cf-goals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .cf-goal { padding: 13px 13px; gap: 8px; border-radius: 16px; }
+  .cf-goal[data-goal="perDay"] { grid-column: 1 / -1; }
+  .cf-goal-tile { width: 32px; height: 32px; }
+  .cf-goal-v { font-size: 30px; }
+  .cf-goal-l { font-size: 12px; }
+  .cf-goal-s { font-size: 10.5px; }
+}
+
 /* ── publications : type de reel, briques reconnues ── */
 .cf-chip.is-trial { background: #fbf0d2; border-color: #f0dca4; color: #7a5412; }
 .cf-chip.is-brick { font-weight: 700; color: var(--cf-ink); background: #fff; border-color: var(--cf-line-3); }

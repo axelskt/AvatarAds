@@ -74,7 +74,11 @@
     play: 'M6 4l14 8-14 8z',
     chevron: 'M9 6l6 6-6 6',
     external: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3',
-    puzzle: 'M4 4h6v3a2 2 0 1 0 4 0V4h6v6h-3a2 2 0 1 0 0 4h3v6h-6v-3a2 2 0 1 0-4 0v3H4z'
+    puzzle: 'M4 4h6v3a2 2 0 1 0 4 0V4h6v6h-3a2 2 0 1 0 0 4h3v6h-6v-3a2 2 0 1 0-4 0v3H4z',
+    cal: 'M3 5h18v16H3zM16 3v4M8 3v4M3 10h18',
+    skip: 'M13 19l9-7-9-7zM2 19l9-7-9-7z',
+    save: 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
+    send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z'
   };
   function svg(path, size) {
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
@@ -92,7 +96,26 @@
   ];
   var PERIOD = {};
   PERIODS.forEach(function (p) { PERIOD[p.k] = p; });
-  var LONG = { '90j': true, '6m': true, 'all': true };   // > 30 jours : sommes des jours, pas de comptes uniques
+  var LONG = { '90j': true, '6m': true, 'all': true };
+  // Objectifs d'Axel (24/09) : 5 reels par jour, et sur CHAQUE reel swipe < 3 s ≤ 30 %, like ≥ 5 %, save ≥ 5 %,
+  // share ≥ 1 % (rapportés aux vues). Les cartes montrent la moyenne des reels de la période, chaque reel compte pareil.
+  var GOALS = [
+    { k: 'perDay', label: 'Reels par jour', ic: 'cal', target: 5 },
+    { k: 'skip', label: 'Swipe < 3' + NB + 's', ic: 'skip', target: 30, max: true, pct: true, f: 'skipRate' },
+    { k: 'like', label: 'Like rate', ic: 'heart', target: 5, pct: true, f: 'likes' },
+    { k: 'save', label: 'Save rate', ic: 'save', target: 5, pct: true, f: 'saved' },
+    { k: 'share', label: 'Share rate', ic: 'send', target: 1, pct: true, f: 'shares' }
+  ];
+  var GOAL = {};
+  GOALS.forEach(function (g) { GOAL[g.k] = g; });
+  // Taux d'un reel pour un objectif (en %), null si la donnée manque.
+  function rateOf(p, g) {
+    if (g.k === 'skip') return p.skipRate != null ? p.skipRate : null;
+    var v = p[g.f];
+    return v != null && p.views ? v / p.views * 100 : null;
+  }
+  function goalOk(g, v) { return v != null && (g.max ? v <= g.target : v >= g.target); }
+  function fRate(v) { return v == null ? null : fDec(v, v < 10 ? 1 : 0) + NB + '%'; }   // > 30 jours : sommes des jours, pas de comptes uniques
 
   // ── métriques de l'onglet Compte : une couleur par métrique (maquette), la même pour la carte, la courbe et la légende ──
   var SER = [
@@ -265,6 +288,7 @@
     return '<section class="cf-title"><h1>Compte @' + esc(CF.PRIMARY_USERNAME) + '</h1></section>'
       + acctHTML(D)
       + insightsHTML(S, D, off, X)
+      + goalsHTML(X)
       + topHTML(off)
       + audienceHTML(D, off)
       + repHTML(S, D, off);
@@ -335,6 +359,37 @@
       + '</section>';
   }
 
+  // ── Objectifs (maquette d'Axel) : moyenne des reels de la période, barre = chemin vers l'objectif ──
+  function goalsHTML(X) {
+    var R = X.reels, loading = X.pending || (!R && !X.off && CF.acct.media.state !== 'error' && !(CF.acct.media.data));
+    var cards = GOALS.map(function (g) {
+      var v = null, n = 0, sub, na = null;
+      if (g.k === 'perDay') {
+        if (R && X.nDays) { v = R.length / X.nDays; n = R.length; }
+        sub = R ? n + ' ' + plural(n, 'reel') + ' ' + X.per + ' · objectif ' + g.target + ' / jour' : null;
+      } else if (R) {
+        var vals = R.map(function (p) { return rateOf(p, g); }).filter(function (x) { return x != null; });
+        n = vals.length;
+        v = n ? vals.reduce(function (a, b) { return a + b; }, 0) / n : null;
+        var hit = R.filter(function (p) { return goalOk(g, rateOf(p, g)); }).length;
+        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + ' · objectif ' + (g.max ? '≤ ' : '≥ ') + g.target + NB + '% · ' + hit + '/' + n + ' ' + plural(hit, 'atteint')
+          : null;
+        if (!n) na = R.length ? 'non fourni pour ces reels' : 'aucun reel publié ' + X.per;
+      }
+      if (v == null && !na) na = X.off ? 'compte déconnecté' : (R ? 'aucun reel publié ' + X.per : X.mediaWhy);
+      var ok = goalOk(g, v), fill = v == null ? 0 : g.max ? (v <= g.target ? 1 : g.target / v) : Math.min(1, v / g.target);
+      var val = loading ? '…' : v == null ? '—' : g.pct ? fRate(v) : fDec(v, 1);
+      return '<div class="cf-goal' + (ok ? ' is-ok' : '') + '" data-goal="' + g.k + '">'
+        + '<span class="cf-goal-tile">' + svg(IC[g.ic], 16) + '</span>'
+        + '<span class="cf-goal-l">' + esc(g.label) + (ok ? '<span class="cf-goal-ok">' + svg('M5 12l5 5L20 7', 10) + 'objectif atteint</span>' : '') + '</span>'
+        + '<span class="cf-goal-v' + (v == null && !loading ? ' is-na' : '') + '">' + esc(val) + '</span>'
+        + '<span class="cf-goal-bar"><i style="width:' + (loading ? 0 : Math.round(fill * 1000) / 10) + '%"></i></span>'
+        + '<span class="cf-goal-s">' + esc(loading ? 'chargement' : v == null ? na : sub) + '</span></div>';
+    }).join('');
+    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectifs · ' + esc(PERIOD[ui.range].evo) + '</h2></div></div>'
+      + '<div class="cf-goals">' + cards + '</div></section>';
+  }
+
   function slotBanner(S, D) {
     var P = PERIOD[ui.range];
     if (S.kind === 'disconnected') {
@@ -369,7 +424,8 @@
     var c = {};
     function card(k, v, sub, extra, o) {
       o = o || {};
-      c[k] = { v: v, sub: sub, extra: extra || '', fmt: o.fmt || fInt, why: o.why || null, title: o.title || '', label: o.label || null };
+      c[k] = { v: v, sub: sub, extra: extra || '', fmt: o.fmt || fInt, why: o.why || null, title: o.title || '', label: o.label || null,
+        lgV: 'lgV' in o ? o.lgV : v, lgFmt: o.lgFmt || o.fmt || fInt };
     }
     // Comptes uniques : « — » avec la raison (au-delà des 90 jours que garde Instagram, ou refus de l'API).
     function uniqWhy(err) { return err ? (/^Instagram ne garde/.test(err) ? err : 'refusé par l’API : ' + err) : null; }
@@ -395,13 +451,18 @@
     var netSnap = base && fol != null ? fol - base.followers : null;
     var net = netSnap != null ? netSnap : (F ? fin - fout : null);
     var pend = D && !off && D.flowPending;
-    var pDays = D && !off ? D.flowPendingDays : 0;
-    card('followers', net, 'net ' + per + ' · total ' + (fol == null ? '—' : fInt(fol)),
-      netSnap != null ? 'compteur d’abonnés : ' + fInt(base.followers) + ' → ' + fInt(fol) + ' (relevé du ' + dm(ymdDate(base.day)) + ')'
-        : F ? fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement')
-          + (pDays ? ' · hors ' + pDays + ' ' + plural(pDays, 'jour') + ' pas encore ' + plural(pDays, 'publié') + ' par Instagram' : '')
-        : (fol != null ? 'total actuel : ' + fInt(fol) : ''),
-      { fmt: fSigned, why: net == null ? (pend ? 'Instagram publie les abonnements avec ~2 jours de retard' : addWhy(E.follows)) : null, title: E.follows || '' });
+    var flowTxt = F ? fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement') : '';
+    if (ui.range === 'all' && fol != null) {
+      // Instagram ne compte les abonnements qu'à l'intérieur de la fenêtre : les abonnés d'avant la 1re publication n'y
+      // sont pas. All time = le total, le net de la fenêtre en dessous (la légende de la courbe garde le net).
+      card('followers', fol, 'abonnés au total' + (net != null ? ' · ' + fSigned(net) + ' net ' + per : ''), flowTxt,
+        { label: 'Abonnés', lgV: net, lgFmt: fSigned });
+    } else {
+      card('followers', net, 'net ' + per + ' · total ' + (fol == null ? '—' : fInt(fol)),
+        netSnap != null ? 'compteur d’abonnés : ' + fInt(base.followers) + ' → ' + fInt(fol) + ' (relevé du ' + dm(ymdDate(base.day)) + ')'
+          : F ? flowTxt : (fol != null ? 'total actuel : ' + fInt(fol) : ''),
+        { fmt: fSigned, why: net == null ? (pend ? 'Instagram publie les abonnements avec ~2 jours de retard' : addWhy(E.follows)) : null, title: E.follows || '' });
+    }
     // Publications
     var nReel = reels ? reels.length : 0, nOther = posts ? posts.length - nReel : 0;
     card('posts', posts ? posts.length : null,
@@ -437,7 +498,9 @@
         clicks: days.map(function (x) { return useBio ? x.bio : x.links; })
       };
     }
-    return { c: c, pending: pending, why: why, series: series, missing: D ? D.seriesMissing : 0, per: per, long: long, off: off };
+    var nDays = D && D.dayFirst && D.dayLast ? Math.round((ymdDate(D.dayLast) - ymdDate(D.dayFirst)) / 864e5) + 1 : null;
+    return { c: c, pending: pending, why: why, series: series, missing: D ? D.seriesMissing : 0, per: per, long: long, off: off,
+      reels: reels, nDays: nDays, mediaWhy: mediaWhy };
   }
 
   // Cartes de la maquette : une couleur par métrique ; toucher une carte affiche / masque sa courbe.
@@ -511,7 +574,7 @@
     var xl = idx.map(function (i) { return '<span>' + esc(dm(ymdDate(ch.s.labels[i]))) + '</span>'; }).join('');
     var lg = EVO_KEYS.map(function (k) {
       var m = X.c[k], hid = !!ui.evoHidden[k];
-      var v = hid || m.v == null ? '—' : m.fmt(m.v);
+      var v = hid || m.lgV == null ? '—' : m.lgFmt(m.lgV);
       var lab = k === 'followers' ? 'Abonnés (net)' : (m.label || SER.filter(function (s) { return s.k === k; })[0].label);
       return '<div class="cf-evo-lg' + (hid ? ' is-off' : '') + '"><span class="cf-sq" style="background:' + SERC[k] + '"></span><b>' + esc(v) + '</b><span>' + esc(lab) + '</span></div>';
     }).join('');
@@ -652,6 +715,11 @@
     return c.length >= 90 ? c.replace(/\s+\S*$/, '') + '…' : c; // ig-insights coupe la légende à 90 caractères
   }
   function isVideo(p) { return p.type === 'REELS' || p.type === 'VIDEO' || p.avgWatchS != null; }
+  function rateStat(p, g) {
+    var v = rateOf(p, g), lab = g.k === 'skip' ? 'swipe < 3' + NB + 's' : g.k;
+    return '<span class="cf-st is-rate' + (v == null ? ' is-na' : goalOk(g, v) ? ' is-ok' : ' is-ko') + '" title="objectif ' + (g.max ? '≤ ' : '≥ ') + g.target + ' %"><b>'
+      + esc(v == null ? '—' : fRate(v)) + '</b> ' + esc(lab) + '</span>';
+  }
   function stat(v, label, hero) {
     return '<span class="cf-st' + (hero && v != null ? ' is-hero' : '') + (v == null ? ' is-na' : '') + '"><b>' + esc(v == null ? '—' : v) + '</b> ' + esc(label) + '</span>';
   }
@@ -665,11 +733,11 @@
   }
   function topHTML(off) {
     var MS = CF.acct.media, MD = off ? null : MS.data, list = topList();
-    // All time, pondérés par les vues : visionnage moyen (gauche) et swipe < 3 s (droite).
+    // All time, moyenne de tous les reels (chacun compte pareil, comme les objectifs) : visionnage (gauche), swipe (droite).
     var wv = 0, ww = 0, sv = 0, sw = 0;
     if (MD) MD.list.forEach(function (p) {
-      if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; }
-      if (p.skipRate != null && p.views) { sv += p.views; sw += p.skipRate * p.views; }
+      if (p.avgWatchS != null) { wv += 1; ww += p.avgWatchS; }
+      if (p.skipRate != null) { sv += 1; sw += p.skipRate; }
     });
     var box = (wv || sv) ? '<div class="cf-kpi2">'
       + (wv ? '<div class="cf-watchbox"><span class="cf-watchbox-ic">' + svg(IC.clock, 17) + '</span><span><b>' + esc(fSec(ww / wv)) + '</b>'
@@ -693,9 +761,10 @@
 
   function postRowHTML(p, i) {
     var thumb = safeUrl(p.thumb), d = validDate(p.timestamp), vid = isVideo(p);
-    var stats = [stat(fInt(p.views), plural(p.views, 'vue'), true), stat(fInt(p.likes), plural(p.likes, 'like')), stat(fInt(p.comments), 'comm.')];
+    var stats = [stat(fInt(p.views), plural(p.views, 'vue'), true)];
+    if (vid) ['like', 'save', 'share', 'skip'].forEach(function (k) { stats.push(rateStat(p, GOAL[k])); });
+    stats.push(stat(fInt(p.likes), plural(p.likes, 'like')), stat(fInt(p.comments), 'comm.'));
     if (p.avgWatchS != null) stats.push(stat(fSec(p.avgWatchS), 'visionnage moyen'));
-    stats.push(stat(p.skipRate != null ? fShare(p.skipRate) : null, 'swipe < 3' + NB + 's'));
     return '<button type="button" class="cf-post" data-act="post" data-i="' + i + '" aria-label="Ouvrir la fiche de la publication ' + (i + 1) + '">'
       + '<span class="cf-post-rank">#' + (i + 1) + '</span>'
       + '<span class="cf-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '')
@@ -848,6 +917,9 @@
       tile('interactions', fInt(p.interactions), 'non fourni par l’API'),
       tile('visionnage moyen', fSec(p.avgWatchS), isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('engagement / vues', eng, 'vues ou interactions manquantes'),
+      tile('like rate · objectif ≥ 5' + NB + '%', fRate(rateOf(p, GOAL.like)), 'vues ou likes manquants'),
+      tile('save rate · objectif ≥ 5' + NB + '%', fRate(rateOf(p, GOAL.save)), 'vues ou enregistrements manquants'),
+      tile('share rate · objectif ≥ 1' + NB + '%', fRate(rateOf(p, GOAL.share)), 'vues ou partages manquants'),
       tile('swipe < 3' + NB + 's', p.skipRate != null ? fShare(p.skipRate) : null, isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('temps total regardé', fDur(p.totalWatchS), isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication')
     ].join('');
