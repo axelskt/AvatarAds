@@ -406,7 +406,7 @@
       caption: typeof p.caption === 'string' ? p.caption : '', timestamp: t, ms: isFinite(ms) ? ms : null,
       reach: num(p.reach), views: num(p.views), likes: num(p.likes), comments: num(p.comments),
       saved: num(p.saved), shares: num(p.shares), interactions: num(p.interactions), avgWatchS: num(p.avg_watch_s),
-      skipRate: num(p.skip_rate), totalWatchS: num(p.total_watch_s),
+      skipRate: num(p.skip_rate), totalWatchS: num(p.total_watch_s), durationS: num(p.duration_s),
       trial: p.shared_to_feed === false,   // pas sur la grille du profil = réel d'essai (16 = 42 − 26 le 24/09)
       module: typeof p.module === 'string' && MODULES[p.module] ? p.module : null,
       analysis: normAnalysis(p.analysis)
