@@ -1,16 +1,15 @@
 // Insights compte Instagram — AvatarAds (instagram_business_manage_insights + basic)
 //  GET (sans range ni part) → ancien format de factory.html v1 : profil + insights 28 j glissants + top 5 des
 //      12 dernières publications. Inchangé.
-//  GET ?range=24h|7j|30j|90j|6m|all → dashboard v2 : profil + insights de la fenêtre + répartitions
-//      (abonnements/désabonnements, vues par type de contenu, vues et reach abonnés / non-abonnés, clics sur le
-//      lien en bio) + courbe JOUR PAR JOUR (series). Chaque bloc a son propre appel : un refus de l'API sur l'un
+//  GET ?range=3j|7j|30j|90j|6m|all → dashboard v2 : profil + insights de la fenêtre + répartitions
+//      (abonnements/désabonnements, vues par type de contenu, vues abonnés / non-abonnés, clics sur le lien en bio) + courbe JOUR PAR JOUR (series). Chaque bloc a son propre appel : un refus de l'API sur l'un
 //      met SON erreur dans part_errors, sans toucher aux autres.
-//      · 24h = glissant (maintenant − 24 h), sans courbe.
-//      · 7j / 30j = jours Instagram (minuit heure du Pacifique) jusqu'à maintenant, aujourd'hui compris : totaux
-//        demandés DIRECTEMENT à l'API (≤ 30 jours par requête).
-//      · 90j / 6m / all = au-delà de 30 jours l'API ne répond plus en une fois : les métriques additives (vues,
-//        interactions, vues de profil, clics, abonnements) = somme des jours ; reach et comptes engagés (comptes
-//        UNIQUES, jamais additionnables) = tentative directe, sinon « — » avec la raison.
+//      · 3j / 7j / 30j / 90j / 6m = jours Instagram (minuit heure du Pacifique) jusqu'à maintenant, aujourd'hui compris ;
+//        all = depuis la 1re publication. Totaux demandés DIRECTEMENT à l'API sur toute la fenêtre (elle répond aussi
+//        au-delà de 30 jours, mesuré le 24/09) ; repli = somme des jours pour les métriques additives.
+//      · 24h (glissant) reste accepté, le dashboard ne le propose plus (Instagram met ~48 h à tout compter).
+//      · Abonnements des 1-2 derniers jours pas encore publiés par Instagram → follows_pending (ni 0 ni erreur) ;
+//        followers_base = compteur d'abonnés relevé la veille du 1er jour (ig_followers_daily) → net exact.
 //      Les jours viennent de la table ig_daily_insights (cache service role) : un jour clos depuis > 48 h n'est
 //      plus jamais relu ; les jours récents sont relus au plus toutes les 15 min.
 //  GET ?part=media → profil + TOUTES les publications (≤ 200) avec leurs chiffres à vie (vues, reach, likes,
@@ -85,8 +84,8 @@ const ymdAdd = (ymd: string, n: number) => { const [y, m, d] = ymd.split('-').ma
 
 // ── fenêtres ──
 type Win = { since: number, until: number }
-const RANGES = ['24h', '7j', '28j', '30j', '90j', '6m', 'all']
-const SPAN_DAYS: Record<string, number> = { '7j': 7, '30j': 30, '90j': 90, '6m': 183 }
+const RANGES = ['24h', '3j', '7j', '28j', '30j', '90j', '6m', 'all']
+const SPAN_DAYS: Record<string, number> = { '3j': 3, '7j': 7, '30j': 30, '90j': 90, '6m': 183 }
 const MAX_SPAN = 30 * 86400 - 60      // l'API plafonne une requête à 30 jours : on reste 1 min dessous
 const MAX_DAYS = 730                   // l'API garde 2 ans d'historique
 function dayList(first: string, last: string): string[] {
@@ -130,8 +129,10 @@ async function singleTotal(token: string, metric: string, win: Win): Promise<{ v
 // Répartition vide ({}) acceptée si le total vaut 0, ou si l'API renvoie la répartition demandée avec une
 // liste de résultats VIDE et sans total (aucun événement : cas de follows_and_unfollows sur une journée calme).
 // Vide avec un total > 0, ou sans aucune répartition = erreur, jamais un faux « 0 ».
-type Bk = { breakdown: string, total: number | null, parts: Record<string, number> }
-async function breakdownOf(token: string, qs: string, breakdowns: string[], label?: string): Promise<Bk | { error: string }> {
+// Instagram publie les abonnements avec ~1-2 jours de retard : pour une fenêtre sans données publiées, il renvoie la
+// répartition demandée SANS aucune clé results → { pending: true } (ni 0, ni erreur : « pas encore publié »).
+type Bk = { breakdown: string, total: number | null, parts: Record<string, number>, pending?: boolean }
+async function breakdownOf(token: string, qs: string, breakdowns: string[], label?: string, pendingOk = false): Promise<Bk | { error: string }> {
   let last = 'réponse vide'
   for (const bd of breakdowns) {
     try {
@@ -150,6 +151,7 @@ async function breakdownOf(token: string, qs: string, breakdowns: string[], labe
       if (Object.keys(parts).length || total === 0) return { breakdown: bd, total, parts }
       const sameKey = Array.isArray(b0?.dimension_keys) && b0.dimension_keys[0] === bd
       if (Array.isArray(res) && sameKey && total == null) return { breakdown: bd, total: null, parts: {} }
+      if (pendingOk && res === undefined && sameKey && total == null) return { breakdown: bd, total: null, parts: {}, pending: true }
       last = total == null ? 'répartition absente de la réponse' : `répartition vide alors que le total vaut ${total}`
     } catch (e) { last = safeErr(e) }
   }
@@ -172,8 +174,8 @@ async function fetchProfile(token: string, out: Record<string, unknown>) {
 }
 
 // ── publications ──
-const MEDIA_FIELDS = 'id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count'
-async function listMedia(token: string, fields: string, max: number): Promise<{ list: any[], error?: string }> {
+const MEDIA_FIELDS = 'id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count,is_shared_to_feed'
+async function listMedia(token: string, fields: string, max: number): Promise<{ list: any[], error?: string, raw?: number }> {
   const list: any[] = []
   let next: string | null = `${GRAPH}/me/media?fields=${fields}&limit=${Math.min(100, max)}&access_token=${encodeURIComponent(token)}`
   try {
@@ -184,17 +186,22 @@ async function listMedia(token: string, fields: string, max: number): Promise<{ 
       next = typeof j?.paging?.next === 'string' ? j.paging.next : null
     }
   } catch (e) { return { list, error: safeErr(e) } }
-  return { list: list.slice(0, max) }
+  const seen = new Set<string>()
+  const uniq = list.filter((m) => { const id = String(m?.id || ''); if (!id || seen.has(id)) return false; seen.add(id); return true })
+  return { list: uniq.slice(0, max), raw: list.length } as { list: any[], error?: string, raw?: number }
 }
 async function mediaInsights(token: string, m: any) {
   const isReel = (m.media_product_type === 'REELS') || (m.media_type === 'VIDEO')
   const metrics = ['reach', 'views', 'total_interactions', 'saved', 'shares']
   if (isReel) metrics.push('ig_reels_avg_watch_time')
   const mi: Record<string, number> = {}
-  try {
-    const ji = await (await gfetch(`${GRAPH}/${m.id}/insights?metric=${metrics.join(',')}&access_token=${encodeURIComponent(token)}`)).json()
-    if (Array.isArray(ji?.data)) for (const x of ji.data) { const v = x.values?.[0]?.value ?? x.total_value?.value; if (typeof v === 'number') mi[x.name] = v }
-  } catch { /* chiffres absents → null */ }
+  const read = (ji: any) => { if (Array.isArray(ji?.data)) for (const x of ji.data) { const v = x.values?.[0]?.value ?? x.total_value?.value; if (typeof v === 'number') mi[x.name] = v } }
+  const [ji, js] = await Promise.all([
+    gfetch(`${GRAPH}/${m.id}/insights?metric=${metrics.join(',')}&access_token=${encodeURIComponent(token)}`).then((r) => r.json()).catch(() => null),
+    // « swipe < 3 s » (part des vues qui passent le reel dans les 3 premières secondes), reels seulement, appel à part
+    isReel ? gfetch(`${GRAPH}/${m.id}/insights?metric=reels_skip_rate&access_token=${encodeURIComponent(token)}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
+  ])
+  read(ji); read(js)
   return {
     id: m.id, permalink: m.permalink, thumbnail: m.thumbnail_url || m.media_url || null,
     media_type: m.media_product_type || m.media_type, caption: (m.caption || '').slice(0, 90), timestamp: m.timestamp,
@@ -202,7 +209,17 @@ async function mediaInsights(token: string, m: any) {
     likes: m.like_count ?? null, comments: m.comments_count ?? null,
     saved: mi.saved ?? null, shares: mi.shares ?? null, interactions: mi.total_interactions ?? null,
     avg_watch_s: mi.ig_reels_avg_watch_time != null ? Math.round(mi.ig_reels_avg_watch_time / 100) / 10 : null, // ms → s
+    skip_rate: mi.reels_skip_rate ?? null,   // brut : l'échelle (0-1 ou 0-100) est fixée pour toute la liste dans normSkip
+    shared_to_feed: typeof m.is_shared_to_feed === 'boolean' ? m.is_shared_to_feed : null,
   }
+}
+// L'API dit seulement « percentage » : si AUCUNE valeur ne dépasse 1, ce sont des fractions → ×100. Journalisé.
+function normSkip(list: any[]) {
+  const vals = list.map((m) => m.skip_rate).filter((v) => typeof v === 'number')
+  if (!vals.length) return
+  const frac = Math.max(...vals) <= 1
+  for (const m of list) if (typeof m.skip_rate === 'number') m.skip_rate = Math.round((frac ? m.skip_rate * 100 : m.skip_rate) * 10) / 10
+  logIg('swipe', { n: vals.length, echelle: frac ? '0-1 → ×100' : '0-100', exemples: vals.slice(0, 4) })
 }
 async function pool<T>(items: T[], n: number, fn: (x: T, i: number) => Promise<void>, deadline = Infinity) {
   let i = 0
@@ -225,13 +242,17 @@ async function fetchDay(token: string, day: string, nowS: number, valid: Set<str
   if (until <= since) return { day, metrics, errors: null, final: false }
   const [ins, fol] = await Promise.all([
     want.length ? fetchAccountInsights(token, want, { since, until }) : Promise.resolve({ out: {} as Record<string, number>, errors: {} as Record<string, string> }),
-    breakdownOf(token, `metric=follows_and_unfollows&period=day&since=${since}&until=${until}&metric_type=total_value`, ['follow_type']),
+    breakdownOf(token, `metric=follows_and_unfollows&period=day&since=${since}&until=${until}&metric_type=total_value`, ['follow_type'], undefined, true),
   ])
   for (const m of want) { if (m in ins.out) metrics[m] = ins.out[m]; else errors[m] = ins.errors[m] || 'valeur absente' }
   for (const m of DAY_METRICS) if (!valid.has(m)) errors[m] = 'métrique refusée par l’API'
+  let pending = false
   if ('error' in fol) { errors.follows = fol.error; errors.unfollows = fol.error }
+  else if (fol.pending) pending = true   // pas encore publié par Instagram : null, relu plus tard (sans erreur)
   else { metrics.follows = fol.parts.FOLLOWER ?? 0; metrics.unfollows = fol.parts.NON_FOLLOWER ?? 0 }
-  const final = ptMidnight(ymdAdd(day, 1)) < nowS - 48 * 3600 && !Object.keys(errors).some((k) => valid.has(k) || k === 'follows')
+  const endS = ptMidnight(ymdAdd(day, 1))
+  const final = endS < nowS - 48 * 3600 && !Object.keys(errors).some((k) => valid.has(k) || k === 'follows')
+    && (!pending || endS < nowS - 7 * 86400)
   return { day, metrics, errors: Object.keys(errors).length ? errors : null, final }
 }
 
@@ -284,16 +305,17 @@ function sumDays(days: string[], rows: Map<string, DayRow>, k: string): { value:
 // Répartitions d'une fenêtre ≤ 30 jours, en parallèle. Chaque clé absente de la sortie a son erreur dans errors.
 async function fetchWindowParts(token: string, win: Win, log: boolean) {
   const w = `period=day&since=${win.since}&until=${win.until}&metric_type=total_value`
-  const [follows, byType, byFollower, reachFollow, bio] = await Promise.all([
-    breakdownOf(token, `metric=follows_and_unfollows&${w}`, ['follow_type'], log ? 'follows' : undefined),
+  const [follows, byType, byFollower, bio] = await Promise.all([
+    breakdownOf(token, `metric=follows_and_unfollows&${w}`, ['follow_type'], log ? 'follows' : undefined, true),
     breakdownOf(token, `metric=views&${w}`, ['media_product_type']),
     breakdownOf(token, `metric=views&${w}`, ['follower_type', 'follow_type']),
-    breakdownOf(token, `metric=reach&${w}`, ['follow_type']),
     singleTotal(token, 'website_clicks', win),
   ])
   const out: Record<string, unknown> = {}, errors: Record<string, string> = {}
   const put = (key: string, r: any) => { if (r && 'error' in r) errors[key] = r.error; else out[key] = r }
-  put('follows', follows); put('views_by_type', byType); put('views_by_follower', byFollower); put('reach_by_follow', reachFollow)
+  if (follows && !('error' in follows) && follows.pending) out.follows_pending = true
+  else put('follows', follows)
+  put('views_by_type', byType); put('views_by_follower', byFollower)
   if ('error' in bio) errors.website_clicks = bio.error; else out.website_clicks = bio.value
   return { out, errors }
 }
@@ -316,6 +338,45 @@ async function chunkedViewsParts(token: string, win: Win) {
   }
   const [byType, byFollower] = await Promise.all([acc(['media_product_type']), acc(['follower_type', 'follow_type'])])
   return { byType, byFollower }
+}
+
+// ── module de chaque publication (ig_media_tags) + étiquetage donné par rang, appliqué une fois ──
+async function applyTags(list: any[]) {
+  if (!list.length) return
+  try {
+    // Étiquetage par rang donné il y a MOINS de 48 h seulement : plus tard, l'ordre du top a pu changer.
+    const { data: pend } = await svc.from('ig_media_tag_rank_pending').select('rank, module').gt('created_at', new Date(Date.now() - 48 * 3600 * 1000).toISOString()).order('rank')
+    if (pend && pend.length) {
+      // Même ordre que le top du dashboard : publications avec des vues, triées par vues décroissantes (tri stable).
+      const top = list.filter((m) => m.views != null).slice().sort((a, b) => b.views - a.views)
+      const rows = pend.map((p: any) => ({ p, m: top[p.rank - 1] })).filter((x) => x.m)
+      if (rows.length) {
+        const { data: already } = await svc.from('ig_media_tags').select('ig_media_id').in('ig_media_id', rows.map((x) => String(x.m.id)))
+        const has = new Set((already || []).map((r: any) => String(r.ig_media_id)))
+        const ins = rows.filter((x) => !has.has(String(x.m.id))).map((x) => ({ ig_media_id: String(x.m.id), module: x.p.module }))
+        if (ins.length) await svc.from('ig_media_tags').insert(ins)
+        await svc.from('ig_media_tag_rank_pending').delete().in('rank', rows.map((x) => x.p.rank))
+        logIg('tags par rang', rows.map((x) => ({ rang: x.p.rank, module: x.p.module, id: x.m.id, vues: x.m.views, le: String(x.m.timestamp || '').slice(0, 10) })))
+      }
+    }
+    const { data } = await svc.from('ig_media_tags').select('ig_media_id, module').in('ig_media_id', list.map((m) => String(m.id)))
+    const byId = new Map((data || []).map((r: any) => [String(r.ig_media_id), r.module]))
+    for (const m of list) m.module = byId.get(String(m.id)) ?? null
+  } catch (e) { logIg('tags', safeErr(e)) }
+}
+
+// ── compteur d'abonnés, un relevé par jour Instagram (le dernier de la journée) ──
+async function snapFollowers(igId: string, followers: unknown) {
+  if (!igId || typeof followers !== 'number') return
+  try {
+    await svc.from('ig_followers_daily').upsert({ ig_id: igId, day: ptYmd(Date.now()), followers, captured_at: new Date().toISOString() }, { onConflict: 'ig_id,day' })
+  } catch { /* best-effort */ }
+}
+async function followersOn(igId: string, day: string): Promise<{ day: string, followers: number } | null> {
+  try {
+    const { data } = await svc.from('ig_followers_daily').select('day, followers').eq('ig_id', igId).eq('day', day).maybeSingle()
+    return data && typeof data.followers === 'number' ? { day: String(data.day).slice(0, 10), followers: data.followers } : null
+  } catch { return null }
 }
 
 // Audience des abonnés actuels (follower_demographics, 100 abonnés minimum, 45 valeurs max par répartition).
@@ -361,7 +422,7 @@ Deno.serve(async (req) => {
     return json({ ig_id: igId, part: 'audience', audience: a.audience, audience_errors: a.errors })
   }
 
-  // Publications : profil + toutes les publications (≤ 200) avec leurs chiffres à vie.
+  // Publications : profil + toutes les publications (≤ 200, dédoublonnées) avec leurs chiffres à vie et leur module.
   if (part === 'media') {
     out.part = 'media'
     await fetchProfile(token, out)
@@ -369,12 +430,22 @@ Deno.serve(async (req) => {
     if (lm.error) out.media_error = lm.error
     const media: any[] = new Array(lm.list.length)
     await pool(lm.list, 8, async (m, i) => { media[i] = await mediaInsights(token, m) })
-    out.media = media.filter(Boolean)
+    const list = media.filter(Boolean)
+    normSkip(list)
+    await applyTags(list)
+    out.media = list
+    out.media_total = list.length
+    const types: Record<string, number> = {}
+    for (const m of list) types[m.media_type || '?'] = (types[m.media_type || '?'] || 0) + 1
+    const notOnFeed = list.filter((m) => m.shared_to_feed === false).length
+    logIg('media', { raw: lm.raw, unique: list.length, media_count: out.media_count, types, pas_sur_la_grille: notOnFeed })
+    await snapFollowers(igId, out.followers_count)
     return json(out)
   }
 
   // 1) profil (basic)
   await fetchProfile(token, out)
+  await snapFollowers(igId, out.followers_count)
 
   // 2) insights compte. range renvoyée = celle APPLIQUÉE (une valeur inconnue repasse en 24h) : le dashboard
   //    compare avec sa demande. Sans range : 28j glissants + top posts, ce qu'attend factory.html (v1).
@@ -402,59 +473,55 @@ Deno.serve(async (req) => {
     }
     days = dayList(first, today)
     win = { since: ptMidnight(first), until: nowS }
+    // Net exact d'abonnés : compteur d'aujourd'hui − compteur relevé la veille du 1er jour (si on l'a déjà relevé).
+    const base = await followersOn(igId, ymdAdd(first, -1))
+    if (base) out.followers_base = base
   }
   out.since = win.since
   out.until = win.until
   out.day_first = days[0] ?? null
   out.day_last = days[days.length - 1] ?? null
-  const direct = win.until - win.since <= MAX_SPAN + 3600   // ≤ 30 jours (+1 h de changement d'heure) : l'API répond en une fois
 
+  // Totaux et répartitions demandés DIRECTEMENT à l'API sur toute la fenêtre : mesuré le 24/09, elle répond aussi
+  // au-delà de 30 jours (reach 6 mois = 13 407). Si elle refusait une métrique sur une longue fenêtre, repli = somme
+  // des jours pour les métriques additives (jamais pour reach / comptes engagés, comptes UNIQUES).
+  const long = win.until - win.since > MAX_SPAN + 3600
+  const w: Win = long ? win : { since: Math.max(win.since, win.until - MAX_SPAN), until: win.until }
   const METRICS = ['reach', 'views', 'profile_views', 'accounts_engaged', 'profile_links_taps', 'total_interactions']
-  if (direct) {
-    // Fenêtre ≤ 30 jours : totaux et répartitions demandés directement à l'API. Si le changement d'heure pousse la
-    // fenêtre au-delà de 30 jours, on la raccourcit d'autant (≤ 1 h du premier jour).
-    const w: Win = { since: Math.max(win.since, win.until - MAX_SPAN), until: win.until }
-    const deadline = t0 + 45000
-    const [ins, parts, series] = await Promise.all([
-      fetchAccountInsights(token, METRICS, w),
-      fetchWindowParts(token, w, !legacy),
-      days.length ? dailySeries(token, igId, days, nowS, deadline) : Promise.resolve(null),
-    ])
-    out.insights = ins.out
-    Object.assign(out, parts.out)
-    out.part_errors = { ...parts.errors, ...Object.fromEntries(Object.entries(ins.errors).map(([k, v]) => ['insights.' + k, v])) }
-    if (series) out.series = { days: days.map((d) => ({ d, ...(series.rows.get(d)?.metrics || {}) })), missing: series.missing, complete: series.missing === 0 }
-  } else {
-    // > 30 jours : sommes des jours pour les métriques additives ; comptes uniques (reach, comptes engagés,
-    // reach abonnés / non-abonnés) = tentative directe sur toute la fenêtre, sinon « — » avec la raison.
-    const deadline = t0 + 50000
-    const [series, uniq, reachFollow, views] = await Promise.all([
-      dailySeries(token, igId, days, nowS, deadline),
-      fetchAccountInsights(token, ['reach', 'accounts_engaged'], win),
-      breakdownOf(token, `metric=reach&period=day&since=${win.since}&until=${win.until}&metric_type=total_value`, ['follow_type']),
-      chunkedViewsParts(token, win),
-    ])
-    logIg('long ' + range + ' unique', { ok: uniq.out, err: uniq.errors })
-    const ins: Record<string, number> = { ...uniq.out }
-    const errs: Record<string, string> = {}
-    for (const m of ['reach', 'accounts_engaged']) if (!(m in ins)) errs['insights.' + m] = uniq.errors[m] || 'non fourni'
+  const deadline = t0 + (long ? 50000 : 45000)
+  const [ins, parts, series] = await Promise.all([
+    fetchAccountInsights(token, METRICS, w),
+    fetchWindowParts(token, w, !legacy),
+    days.length ? dailySeries(token, igId, days, nowS, deadline) : Promise.resolve(null),
+  ])
+  if (long && series) {
     for (const m of ['views', 'profile_views', 'profile_links_taps', 'total_interactions']) {
+      if (m in ins.out) continue
       const r = sumDays(days, series.rows, m)
-      if ('error' in r) errs['insights.' + m] = r.error; else ins[m] = r.value
+      if (!('error' in r)) { ins.out[m] = r.value; delete ins.errors[m] }
     }
-    out.insights = ins
-    const bio = sumDays(days, series.rows, 'website_clicks')
-    if ('error' in bio) errs.website_clicks = bio.error; else out.website_clicks = bio.value
-    const f = sumDays(days, series.rows, 'follows'), u = sumDays(days, series.rows, 'unfollows')
-    if ('error' in f) errs.follows = f.error
-    else if ('error' in u) errs.follows = u.error
-    else out.follows = { breakdown: 'follow_type', total: null, parts: { FOLLOWER: f.value, NON_FOLLOWER: u.value } }
-    if ('error' in reachFollow) errs.reach_by_follow = reachFollow.error; else out.reach_by_follow = reachFollow
-    if ('error' in views.byType) errs.views_by_type = views.byType.error; else out.views_by_type = views.byType
-    if ('error' in views.byFollower) errs.views_by_follower = views.byFollower.error; else out.views_by_follower = views.byFollower
-    out.part_errors = errs
-    out.series = { days: days.map((d) => ({ d, ...(series.rows.get(d)?.metrics || {}) })), missing: series.missing, complete: series.missing === 0 }
+    if (!('website_clicks' in parts.out)) {
+      const r = sumDays(days, series.rows, 'website_clicks')
+      if (!('error' in r)) { parts.out.website_clicks = r.value; delete parts.errors.website_clicks }
+    }
+    if (!('views_by_type' in parts.out) || !('views_by_follower' in parts.out)) {
+      const v = await chunkedViewsParts(token, win)
+      if (!('views_by_type' in parts.out) && !('error' in v.byType)) { parts.out.views_by_type = v.byType; delete parts.errors.views_by_type }
+      if (!('views_by_follower' in parts.out) && !('error' in v.byFollower)) { parts.out.views_by_follower = v.byFollower; delete parts.errors.views_by_follower }
+    }
   }
+  // Note : Meta écrit « User Metrics data is stored for up to 90 days », mais l'API a renvoyé le 24/09 des jours de
+  // mars à juin (86-182 jours) non nuls et des totaux directs sur 6 mois : on garde les totaux directs. Si un jour
+  // elle tronquait, le repli ci-dessus (somme de NOTRE historique) ne s'applique qu'aux métriques qu'elle refuse.
+  // Abonnements : jours de la fenêtre pas encore publiés par Instagram (~2 jours de retard) → compte à part, affiché.
+  if (series && 'follows' in parts.out) {
+    const n = days.filter((d) => { const r = series.rows.get(d); return !r || (r.metrics?.follows == null && !r.errors?.follows) }).length
+    if (n) out.follows_pending_days = n
+  }
+  out.insights = ins.out
+  Object.assign(out, parts.out)
+  out.part_errors = { ...parts.errors, ...Object.fromEntries(Object.entries(ins.errors).map(([k, v]) => ['insights.' + k, v])) }
+  if (series) out.series = { days: days.map((d) => ({ d, ...(series.rows.get(d)?.metrics || {}) })), missing: series.missing, complete: series.missing === 0 }
 
   // 3) v1 seulement : top 5 (en vues) des 12 dernières publications. Le v2 lit ?part=media.
   if (legacy) {

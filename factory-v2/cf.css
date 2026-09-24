@@ -355,6 +355,12 @@ img { max-width: 100%; }
 .cf-cols-x { display: flex; gap: 10px; font-family: var(--cf-mono); font-size: 10px; color: #a9a197; }
 .cf-cols-x span { flex: 1; text-align: center; min-width: 0; white-space: nowrap; }
 
+/* ── module d'une publication ── */
+.cf-chip.is-mod { background: var(--cf-accent-50); border-color: var(--cf-accent-200); color: var(--cf-accent-ink); font-weight: 600; }
+.cf-tag { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; max-width: 280px; }
+.cf-tag-sel { font-size: 16px; padding: 8px 10px; }   /* 16 px : iOS ne zoome pas sur le menu */
+.cf-more { align-self: center; }
+
 /* ── Top publications : visionnage moyen all time (maquette) ── */
 .cf-watchbox, .cf-card-h > .cf-watchbox { display: flex; flex-direction: row; align-items: center; gap: 12px; background: #fdebe4; border: 1.5px solid #ff6b35; border-radius: 14px; padding: 10px 14px; min-width: 0; }
 .cf-watchbox-ic { width: 34px; height: 34px; border-radius: 10px; background: #ff6b35; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }

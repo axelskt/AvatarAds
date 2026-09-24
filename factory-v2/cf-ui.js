@@ -78,7 +78,7 @@
 
   // ── une seule table des périodes ──
   var PERIODS = [
-    { k: '24h', label: '24' + NB + 'h', per: 'sur 24' + NB + 'h', evo: '24' + NB + 'h' },
+    { k: '3j', label: '3' + NB + 'j', per: 'sur 3' + NB + 'j', evo: '3' + NB + 'j' },   // remplace 24 h : Instagram met ~48 h à tout compter
     { k: '7j', label: '7' + NB + 'j', per: 'sur 7' + NB + 'j', evo: '7' + NB + 'j' },
     { k: '30j', label: '30' + NB + 'j', per: 'sur 30' + NB + 'j', evo: '30' + NB + 'j' },
     { k: '90j', label: '90' + NB + 'j', per: 'sur 90' + NB + 'j', evo: '90' + NB + 'j' },
@@ -135,7 +135,7 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {} };
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -239,6 +239,8 @@
     CF.loadInsights(ui.range);
     CF.loadAudience();
     CF.loadMedia();
+    // Les autres périodes se chargent ensuite en arrière-plan, une par une : changer de période devient instantané.
+    CF.prefetch(ui.range);   // idempotent (une fois par session, relancé après reconnexion)
   }
 
   // ── onglets pas encore branchés ──
@@ -259,9 +261,9 @@
     return '<section class="cf-title"><h1>Compte @' + esc(CF.PRIMARY_USERNAME) + '</h1></section>'
       + acctHTML(D)
       + insightsHTML(S, D, off, X)
-      + repHTML(S, D, off)
       + topHTML(off)
-      + audienceHTML(D, off);
+      + audienceHTML(D, off)
+      + repHTML(S, D, off);
   }
 
   function acctHTML(D) {
@@ -320,8 +322,7 @@
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="range" data-range="' + p.k + '" aria-pressed="' + on + '">' + esc(p.label) + '</button>';
     }).join('');
     return '<section class="cf-sec" aria-labelledby="cfInsT">'
-      + '<div class="cf-sec-h"><div><h2 class="cf-h2" id="cfInsT">Insights du compte</h2>'
-      + '<div class="cf-meta">@' + esc(CF.PRIMARY_USERNAME) + ' · instagram graph · touche une carte pour l’afficher ou la masquer sur la courbe</div></div>'
+      + '<div class="cf-sec-h"><div><h2 class="cf-h2" id="cfInsT">Insights du compte</h2></div>'
       + '<div class="cf-seg" role="group" aria-label="Période">' + seg + '</div></div>'
       + '<div class="cf-per">' + periodLine(S, D) + '</div>'
       + slotBanner(S, D)
@@ -366,34 +367,50 @@
       o = o || {};
       c[k] = { v: v, sub: sub, extra: extra || '', fmt: o.fmt || fInt, why: o.why || null, title: o.title || '', label: o.label || null };
     }
-    // Comptes uniques au-delà de 30 jours : raison lisible (l'erreur brute de l'API reste en infobulle).
-    function uniqWhy(err) { return long ? 'Instagram ne donne pas de comptes uniques au-delà de 30 jours' : (err ? 'refusé par l’API : ' + err : null); }
+    // Comptes uniques : « — » avec la raison (au-delà des 90 jours que garde Instagram, ou refus de l'API).
+    function uniqWhy(err) { return err ? (/^Instagram ne garde/.test(err) ? err : 'refusé par l’API : ' + err) : null; }
     function addWhy(err) { return err ? (/^historique en cours/.test(err) ? err : 'refusé par l’API : ' + err) : null; }
 
     // Publications de la fenêtre (horodatage dans [since, until]) et leurs reels.
     var posts = null, reels = null;
-    var total = MD ? (MD.mediaCount != null ? MD.mediaCount : MD.list.length) : (D && !off ? D.media : null);
-    if (D && MD && D.since != null && D.until != null) {
+    var mediaOk = MD && !(MD.error && !MD.list.length);   // liste en erreur et vide → « — », jamais un faux 0
+    var total = mediaOk ? (MD.mediaTotal != null ? MD.mediaTotal : MD.list.length) : (D && !off ? D.media : null);
+    var grid = MD && MD.mediaCount != null && total != null && MD.mediaCount !== total ? MD.mediaCount : null;
+    if (D && mediaOk && D.since != null && D.until != null) {
       posts = MD.list.filter(function (p) { return p.ms != null && p.ms >= D.since && p.ms <= D.until; });
       reels = posts.filter(function (p) { return p.type === 'REELS' || p.type === 'VIDEO'; });
     }
-    var mediaWhy = MS.state === 'error' && !MD ? 'publications indisponibles : ' + MS.error : (MD || off ? why : 'chargement des publications');
+    var mediaWhy = MD && !mediaOk ? 'publications indisponibles : ' + MD.error
+      : MS.state === 'error' && !MD ? 'publications indisponibles : ' + MS.error : (MD || off ? why : 'chargement des publications');
 
     // Abonnés : net de la période (follows_and_unfollows : FOLLOWER = abonnements, NON_FOLLOWER = désabonnements).
+    // Net exact = compteur d'abonnés d'aujourd'hui − celui relevé la veille du 1er jour (dès qu'on l'a relevé) ;
+    // sinon follows_and_unfollows, qu'Instagram publie avec ~2 jours de retard.
     var F = D && !off ? D.flow : null, fin = F ? (F.parts.FOLLOWER || 0) : null, fout = F ? (F.parts.NON_FOLLOWER || 0) : null;
-    var fol = D && !off ? D.followers : null;
-    card('followers', F ? fin - fout : null, 'net ' + per + ' · total ' + (fol == null ? '—' : fInt(fol)),
-      F ? fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement') : (fol != null ? 'total actuel : ' + fInt(fol) : ''),
-      { fmt: fSigned, why: F ? null : addWhy(E.follows), title: E.follows || '' });
+    var fol = D && !off ? D.followers : null, base = D && !off ? D.followersBase : null;
+    var netSnap = base && fol != null ? fol - base.followers : null;
+    var net = netSnap != null ? netSnap : (F ? fin - fout : null);
+    var pend = D && !off && D.flowPending;
+    var pDays = D && !off ? D.flowPendingDays : 0;
+    card('followers', net, 'net ' + per + ' · total ' + (fol == null ? '—' : fInt(fol)),
+      netSnap != null ? 'compteur d’abonnés : ' + fInt(base.followers) + ' → ' + fInt(fol) + ' (relevé du ' + dm(ymdDate(base.day)) + ')'
+        : F ? fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement')
+          + (pDays ? ' · hors ' + pDays + ' ' + plural(pDays, 'jour') + ' pas encore ' + plural(pDays, 'publié') + ' par Instagram' : '')
+        : (fol != null ? 'total actuel : ' + fInt(fol) : ''),
+      { fmt: fSigned, why: net == null ? (pend ? 'Instagram publie les abonnements avec ~2 jours de retard' : addWhy(E.follows)) : null, title: E.follows || '' });
     // Publications
     var nReel = reels ? reels.length : 0, nOther = posts ? posts.length - nReel : 0;
     card('posts', posts ? posts.length : null,
       posts && posts.length ? nReel + ' ' + plural(nReel, 'reel') + (nOther ? ' · ' + nOther + ' ' + plural(nOther, 'autre') : '') + ' ' + per : 'aucune publication ' + per,
-      total != null ? 'total publié : ' + fInt(total) : '', { why: mediaWhy });
+      total != null ? 'total publié : ' + fInt(total) + (grid != null ? ' · ' + fInt(grid) + ' sur le profil' : '') : '', { why: mediaWhy });
     // Visionnage moyen = temps regardé / vues des reels publiés dans la fenêtre (chiffres à vie de chaque reel).
     var wv = 0, ww = 0;
     (reels || []).forEach(function (p) { if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; } });
-    card('watch', wv ? ww / wv : null, 'temps regardé / vues · ' + nReel + ' ' + plural(nReel, 'reel') + ' ' + per, '',
+    // Swipe < 3 s (reels_skip_rate) des mêmes reels, pondéré par les vues.
+    var sv = 0, sw = 0;
+    (reels || []).forEach(function (p) { if (p.skipRate != null && p.views) { sv += p.views; sw += p.skipRate * p.views; } });
+    card('watch', wv ? ww / wv : null, 'temps regardé / vues · ' + nReel + ' ' + plural(nReel, 'reel') + ' ' + per,
+      sv ? 'swipe < 3' + NB + 's : ' + fShare(sw / sv) : '',
       { fmt: fSec, why: reels ? (nReel ? 'visionnage non fourni pour ces reels' : 'aucun reel publié ' + per) : mediaWhy });
     // Comptes uniques
     var reach = M.reach, eng = M.engaged;
@@ -415,11 +432,11 @@
     var days = D && !off && D.series && D.series.length ? D.series : null, series = null;
     if (days) {
       var perDay = {};
-      if (MD) MD.list.forEach(function (p) { if (p.ms != null) { var d = ptDay(p.ms); perDay[d] = (perDay[d] || 0) + 1; } });
+      if (mediaOk) MD.list.forEach(function (p) { if (p.ms != null) { var d = ptDay(p.ms); perDay[d] = (perDay[d] || 0) + 1; } });
       var col = function (k) { return days.map(function (x) { return x[k]; }); };
       series = {
         labels: col('d'), followers: col('follows'), unfollows: col('unfollows'),
-        posts: MD ? days.map(function (x) { return perDay[x.d] || 0; }) : days.map(function () { return null; }),
+        posts: mediaOk ? days.map(function (x) { return perDay[x.d] || 0; }) : days.map(function () { return null; }),
         engaged: col('engaged'), reach: col('reach'), views: col('views'), inter: col('inter'), pviews: col('pviews'),
         clicks: days.map(function (x) { return useBio ? x.bio : x.links; })
       };
@@ -482,7 +499,6 @@
     var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(P.evo) + '</h3>' + miss + '</div>';
     var msg = '';
     if (off) msg = 'Instagram déconnecté : reconnecte @' + CF.PRIMARY_USERNAME + ' pour voir les courbes.';
-    else if (ui.range === '24h') msg = 'Pas de courbe sur 24 h : Instagram ne donne pas de valeurs heure par heure. Les cartes ci-dessus donnent les totaux.';
     else if (!D && S.state === 'error') msg = 'Courbe indisponible : ' + (S.error || 'erreur de chargement') + '.';
     else if (D && !X.series) msg = 'Courbe indisponible pour cette période.';
     if (msg) { evoCur = null; return '<div class="cf-evo">' + head + '<div class="cf-evo-msg">' + esc(msg) + '</div></div>'; }
@@ -588,7 +604,7 @@
     if (st.off) body = emptyLine('—', 'compte déconnecté');
     else if (st.loadErr) body = emptyLine('—', 'erreur de chargement');
     else if (st.pending) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement…</div>';
-    else if (!bk) body = emptyLine('—', err ? (st.long && /reach/i.test(title) ? 'comptes uniques : pas de total au-delà de 30 jours' : 'refusé par l’API Instagram : ' + err) : 'non fourni par l’API Instagram');
+    else if (!bk) body = emptyLine('—', err ? 'refusé par l’API Instagram : ' + err : 'non fourni par l’API Instagram');
     else body = stackHTML(bkRows(bk, labels, colors), true);
     return '<div class="cf-rep-b"><div class="cf-over">' + esc(title) + '</div>' + body + '</div>';
   }
@@ -596,15 +612,27 @@
     var P = PERIOD[ui.range];
     var st = { off: off, pending: !D && !off && (S.loading || S.state === 'idle'), loadErr: !D && !off && !S.loading && S.state === 'error', long: !!LONG[ui.range] };
     var E = D ? D.err : {};
-    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Répartition ' + esc(P.per) + '</h2>'
-      + '<div class="cf-meta">vues par type de contenu · abonnés et non-abonnés · même période que les insights</div></div></div>'
+    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Répartition ' + esc(P.per) + '</h2></div></div>'
       + '<div class="cf-rep">'
       + repBlock('Vues par type de contenu', D && D.viewsByType, E.viewsByType, TYPE_L, TYPE_C, st)
       + repBlock('Vues · abonnés / non-abonnés', D && D.viewsByFollower, E.viewsByFollower, FOL_L, FOL_C, st)
-      + repBlock('Reach · abonnés / non-abonnés', D && D.reachByFollow, E.reachByFollow, FOL_L, FOL_C, st)
       + '</div></section>';
   }
 
+  // Module de la vidéo (saisi par le propriétaire, en attendant la reconnaissance automatique des vidéos postées).
+  function moduleChip(m, withIcon) {
+    var lab = m && CF.MODULES && CF.MODULES[m];
+    return lab
+      ? '<span class="cf-chip is-mod">' + (withIcon ? svg(IC.puzzle, 12) : '') + esc(lab) + '</span>'
+      : '<span class="cf-chip is-muted">' + (withIcon ? svg(IC.puzzle, 12) : '') + 'vidéo non reconnue</span>';
+  }
+  function moduleOptions(cur) {
+    var o = '<option value=""' + (cur ? '' : ' selected') + '>— non renseigné</option>';
+    Object.keys(CF.MODULES || {}).forEach(function (k) {
+      o += '<option value="' + esc(k) + '"' + (k === cur ? ' selected' : '') + '>' + esc(CF.MODULES[k]) + '</option>';
+    });
+    return o;
+  }
   function typeLabel(t) {
     var T = { REELS: 'reel', FEED: 'publication', STORY: 'story', VIDEO: 'vidéo', IMAGE: 'image', CAROUSEL_ALBUM: 'carrousel' };
     return t ? (T[t] || t.toLowerCase()) : 'type inconnu';
@@ -622,8 +650,8 @@
   function topList() {
     var MD = CF.acct.media.data;
     if (!MD) return [];
-    return MD.list.filter(function (p) { return p.views != null; })
-      .sort(function (a, b) { return b.views - a.views; }).slice(0, 5);
+    var all = MD.list.filter(function (p) { return p.views != null; }).sort(function (a, b) { return b.views - a.views; });
+    return ui.allPosts ? all : all.slice(0, 5);
   }
   function topHTML(off) {
     var MS = CF.acct.media, MD = off ? null : MS.data, list = topList();
@@ -631,15 +659,17 @@
     if (MD) MD.list.forEach(function (p) { if (p.avgWatchS != null && p.views) { wv += p.views; ww += p.avgWatchS * p.views; } });
     var box = wv ? '<div class="cf-watchbox"><span class="cf-watchbox-ic">' + svg(IC.clock, 17) + '</span><span><b>' + esc(fSec(ww / wv)) + '</b>'
       + '<span>visionnage moyen · temps regardé / vues · all time</span></span></div>' : '';
-    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Top publications</h2>'
-      + '<div class="cf-meta">toutes les publications · triées par vues · chiffres à vie, indépendants de la période</div></div>' + box + '</div>';
+    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">' + (ui.allPosts ? 'Toutes les publications' : 'Top publications') + '</h2></div>' + box + '</div>';
+    var nAll = MD ? MD.list.filter(function (p) { return p.views != null; }).length : 0;
+    var more = nAll > 5 ? '<button type="button" class="cf-btn is-sm cf-more" data-act="all-posts">'
+      + esc(ui.allPosts ? 'Afficher seulement le top 5' : 'Afficher les ' + nAll + ' publications') + '</button>' : '';
     var body;
     if (off || MS.kind === 'disconnected') body = emptyLine('—', 'compte déconnecté');
     else if (!MD) body = (MS.loading || MS.state === 'idle') ? '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement des publications…</div>'
       : '<div class="cf-na-line"><span class="cf-na-v">—</span><span>' + esc(MS.error || 'indisponible') + '</span><button type="button" class="cf-link-btn" data-act="retry-media">Réessayer</button></div>';
     else if (!list.length && MD.error) body = emptyLine('—', 'liste des publications indisponible : ' + MD.error);
     else if (!list.length) body = '<div class="cf-empty-s">Aucune publication pour l’instant.</div>';
-    else body = '<div class="cf-posts">' + list.map(postRowHTML).join('') + '</div>';
+    else body = '<div class="cf-posts">' + list.map(postRowHTML).join('') + '</div>' + more;
     return '<section class="cf-card">' + head + body + '</section>';
   }
 
@@ -647,13 +677,13 @@
     var thumb = safeUrl(p.thumb), d = validDate(p.timestamp), vid = isVideo(p);
     var stats = [stat(fInt(p.views), plural(p.views, 'vue'), true), stat(fInt(p.likes), plural(p.likes, 'like')), stat(fInt(p.comments), 'comm.')];
     if (p.avgWatchS != null) stats.push(stat(fSec(p.avgWatchS), 'visionnage moyen'));
-    stats.push(stat(null, 'swipe < 3' + NB + 's'));
+    stats.push(stat(p.skipRate != null ? fShare(p.skipRate) : null, 'swipe < 3' + NB + 's'));
     return '<button type="button" class="cf-post" data-act="post" data-i="' + i + '" aria-label="Ouvrir la fiche de la publication ' + (i + 1) + '">'
       + '<span class="cf-post-rank">#' + (i + 1) + '</span>'
       + '<span class="cf-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '')
       + (vid ? '<span class="cf-thumb-play">' + svg(IC.play, 10) + '</span>' : '') + '</span>'
       + '<span class="cf-post-b">'
-      + '<span class="cf-post-meta"><span class="cf-chip is-muted">vidéo non reconnue</span><span class="cf-meta">'
+      + '<span class="cf-post-meta">' + moduleChip(p.module) + '<span class="cf-meta">'
       + esc((d ? 'posté le ' + dmy(d) : 'date inconnue') + ' · ' + typeLabel(p.type)) + '</span></span>'
       + '<span class="cf-post-cap">' + esc(capText(p.caption)) + '</span>'
       + '<span class="cf-post-stats">' + stats.join('') + '</span>'
@@ -717,8 +747,7 @@
   }
   function audienceHTML(D, off) {
     var A = CF.acct.aud, X = A.data, f = D && !off ? D.followers : null;
-    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Audience</h2>'
-      + '<div class="cf-meta">abonnés actuels @' + esc(CF.PRIMARY_USERNAME) + ' · données Instagram · en % des 45 premières valeurs</div></div>'
+    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Audience</h2></div>'
       + (X && !off ? '<div class="cf-meta">relevé à ' + esc(hm(new Date(X.fetchedAt))) + '</div>' : '') + '</div>';
     var body;
     if (off || A.kind === 'disconnected') body = emptyLine('—', 'compte déconnecté');
@@ -773,6 +802,8 @@
       + (v == null && why ? '<div class="cf-tile-w">' + esc(why) + '</div>' : '') + '</div>';
   }
   function renderModal() {
+    var cur = CF.acct.media.data && CF.acct.media.data.list.filter(function (x) { return x.id === ui.modal.post.id; })[0];
+    if (cur) ui.modal.post = cur;   // la liste a pu être relue : jamais un module périmé dans la fiche
     var p = ui.modal.post, rank = ui.modal.rank;
     var thumb = safeUrl(p.thumb), link = safeUrl(p.permalink, IG_HOST), d = validDate(p.timestamp);
     var isVid = isVideo(p);
@@ -788,22 +819,25 @@
       tile('interactions', fInt(p.interactions), 'non fourni par l’API'),
       tile('visionnage moyen', fSec(p.avgWatchS), isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('engagement / vues', eng, 'vues ou interactions manquantes'),
-      tile('swipe < 3' + NB + 's', null, 'pas encore demandé à l’API'),
+      tile('swipe < 3' + NB + 's', p.skipRate != null ? fShare(p.skipRate) : null, isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('temps total regardé', null, 'pas encore demandé à l’API')
     ].join('');
     setHTML($('cfModalBody'),
       '<div class="cf-sheet">'
       + '<div class="cf-sheet-media">' + (thumb ? '<img src="' + esc(thumb) + '" alt="Miniature de la publication" referrerpolicy="no-referrer" decoding="async">' : '<span class="cf-sheet-none">aperçu indisponible</span>') + '</div>'
       + '<div class="cf-sheet-info">'
-      + '<div class="cf-meta">#' + rank + ' en vues · toutes les publications · ' + esc(typeLabel(p.type)) + '</div>'
+      + '<div class="cf-meta">#' + rank + ' en vues · ' + esc(typeLabel(p.type)) + '</div>'
       + '<h2 class="cf-h2" id="cfModalTitle">' + esc(d ? 'Publication du ' + dmy(d) : 'Publication') + '</h2>'
       + '<p class="cf-sheet-cap">' + esc(capText(p.caption)) + '</p>'
       + (link ? '<a class="cf-link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">voir sur Instagram ' + svg(IC.external, 12) + '</a>' : '')
       + '<div class="cf-tiles">' + tiles + '</div>'
       + '<div class="cf-bricks"><div class="cf-over">Briques utilisées</div>'
-      + '<div class="cf-bricks-na"><span class="cf-chip is-muted">' + svg(IC.puzzle, 12) + 'vidéo non reconnue · briques inconnues</span>'
-      + '<span class="cf-meta">le lien publication → vidéo finale n’est pas encore enregistré</span></div></div>'
-      + '<p class="cf-meta">Chiffres à vie de la publication, lus en direct sur Instagram.</p>'
+      + '<div class="cf-bricks-na">' + moduleChip(p.module, true)
+      + '<span class="cf-meta">hook, liaison et CTA : pas encore reconnus</span></div>'
+      + '<label class="cf-tag"><span class="cf-lbl">Module de la vidéo</span>'
+      + '<select class="cf-in cf-tag-sel" data-tag-id="' + esc(p.id) + '">' + moduleOptions(p.module) + '</select></label>'
+      + (ui.tagMsg && ui.tagMsg.id === p.id ? '<div class="cf-acct-msg is-' + (ui.tagMsg.ok ? 'ok' : 'err') + '">' + esc(ui.tagMsg.text) + '</div>' : '')
+      + '</div>'
       + '</div></div>');
   }
 
@@ -849,6 +883,7 @@
       else if (act === 'retry-accounts') CF.loadAccounts({ force: true });
       else if (act === 'retry-aud') CF.loadAudience({ force: true });
       else if (act === 'retry-media') CF.loadMedia({ force: true });
+      else if (act === 'all-posts') { ui.allPosts = !ui.allPosts; render(); }
       else if (act === 'evo-toggle') { var k = el.getAttribute('data-k'); if (EVO_KEYS.indexOf(k) >= 0) { ui.evoHidden[k] = !ui.evoHidden[k]; evoHide(); render(); } }
       else if (act === 'reconnect') reconnect(); // la popup s'ouvre dans ce clic (Safari)
       else if (act === 'post') openPost(parseInt(el.getAttribute('data-i'), 10), el);
@@ -866,6 +901,19 @@
       var b = $('cfTab-' + k);
       if (b) b.focus();
       e.preventDefault();
+    });
+
+    // Module d'une publication (fiche) : enregistré tout de suite, message sous le menu.
+    document.addEventListener('change', function (e) {
+      var sel = e.target;
+      if (!sel || !sel.matches || !sel.matches('select[data-tag-id]')) return;
+      var id = sel.getAttribute('data-tag-id'), v = sel.value;
+      sel.disabled = true;
+      CF.tagMedia(id, v).then(function (r) {
+        ui.tagMsg = { id: id, ok: !r.error, text: r.error ? 'Non enregistré : ' + r.error : (v ? 'Enregistré : ' + CF.MODULES[v] : 'Module retiré') };
+        sel.disabled = false;
+        schedule();
+      });
     });
 
     // Bulle de la courbe Évolution : souris et doigt (le survol ne redessine jamais le panneau).

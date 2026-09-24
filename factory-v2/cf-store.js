@@ -9,7 +9,7 @@
  *   CF.user    { id, email } de la session supabase-js (partagée avec l'app, même domaine)
  *   CF.acct    onglet Compte @avataradss
  *     .accounts  instagram-auth?action=accounts  → { state, loading, at, list, primary, error }
- *     .ig[r]     ig-insights?range=r, r ∈ 24h | 7j | 30j | 90j | 6m | all → { state, loading, at, data, error, kind }
+ *     .ig[r]     ig-insights?range=r, r ∈ 3j | 7j | 30j | 90j | 6m | all → { state, loading, at, data, error, kind }
  *                une case de cache par fenêtre, rechargée au plus toutes les 15 min ; data.series = un point par
  *                jour Instagram (courbe Évolution) ; historique incomplet → relu tout seul toutes les 4 s (8 fois max)
  *     .aud       ig-insights?part=audience → même forme ; abonnés par pays, ville, âge, genre (hors fenêtre)
@@ -21,7 +21,8 @@
  *
  * Contrôle d'accès : 1er appel = RPC factory_access(). {error:'forbidden'} ⇒ « Accès réservé ».
  * Ses chiffres ne sont PAS gardés (formule des variantes fausse, cf. plan §3.3) : c'est une simple porte.
- * Lecture seule : CF_READONLY = true, SAUF « Reconnecter » (igConnect) qui passe par le vrai OAuth Instagram et
+ * Lecture seule : CF_READONLY = true, SAUF le module d'une publication (tagMedia → RPC ig_media_tag_set, owner/dev) et
+ * « Reconnecter » (igConnect) qui passe par le vrai OAuth Instagram et
  * réécrit ig_accounts en prod (voulu : renouveler le token du compte, plan étape 2).
  */
 (function () {
@@ -31,7 +32,7 @@
   var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck'; // clé publishable (publique) ; jamais de clé service ici
   var FN = SUPABASE_URL + '/functions/v1/';
   var PRIMARY_USERNAME = 'avataradss';     // même compte par défaut qu'ig-insights (IG_PRIMARY_USERNAME)
-  var IG_RANGES = ['24h', '7j', '30j', '90j', '6m', 'all'];   // 30 j = la fenêtre de l'app Instagram
+  var IG_RANGES = ['3j', '7j', '30j', '90j', '6m', 'all'];   // 30 j = la fenêtre de l'app Instagram ; 3 j remplace 24 h (Instagram met ~48 h à tout compter)
   var TTL_MS = 15 * 60 * 1000;             // ~15 appels Graph par fenêtre : un chargement par fenêtre et par 15 min
   var TIMEOUT_MS = 45000;
   var SERIES_TIMEOUT_MS = 90000;           // 1er relevé d'un long historique : jusqu'à ~50 s côté serveur
@@ -43,7 +44,7 @@
   function newAcct() {
     return {
       accounts: { state: 'idle', loading: false, at: 0, list: [], primary: null, error: null },
-      ig: { '24h': newSlot(), '7j': newSlot(), '30j': newSlot(), '90j': newSlot(), '6m': newSlot(), 'all': newSlot() },
+      ig: { '3j': newSlot(), '7j': newSlot(), '30j': newSlot(), '90j': newSlot(), '6m': newSlot(), 'all': newSlot() },
       aud: newSlot(),
       media: newSlot()
     };
@@ -65,6 +66,8 @@
     loadInsights: loadInsights,
     loadAudience: loadAudience,
     loadMedia: loadMedia,
+    prefetch: prefetch,
+    tagMedia: tagMedia,
     isFresh: isFresh,
     igConnect: igConnect,
     guardWrite: guardWrite,
@@ -96,7 +99,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < TTL_MS; }
-  function resetData() { epoch += 1; inflight = {}; retries = {}; CF.acct = newAcct(); CF.oauth = null; }
+  function resetData() { epoch += 1; inflight = {}; retries = {}; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.oauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -259,7 +262,10 @@
         bioTaps: num(b.website_clicks)
       },
       // répartitions de la même fenêtre (chacune son appel ; absente = sa raison dans err)
-      flow: normBk(b.follows), viewsByType: normBk(b.views_by_type),
+      flow: normBk(b.follows), flowPending: b.follows_pending === true, flowPendingDays: num(b.follows_pending_days) || 0,
+      followersBase: b.followers_base && typeof b.followers_base === 'object' && num(b.followers_base.followers) != null && ymd(b.followers_base.day)
+        ? { day: b.followers_base.day, followers: num(b.followers_base.followers) } : null,
+      viewsByType: normBk(b.views_by_type),
       viewsByFollower: normBk(b.views_by_follower), reachByFollow: normBk(b.reach_by_follow),
       err: {
         follows: str(pe.follows), viewsByType: str(pe.views_by_type), viewsByFollower: str(pe.views_by_follower),
@@ -274,7 +280,7 @@
 
   // La fenêtre réellement appliquée doit être celle affichée : 24 h glissantes (± 3 min), sinon N jours Instagram
   // entiers (aujourd'hui compris) ; « all » = depuis la 1re publication.
-  var RANGE_DAYS = { '7j': 7, '30j': 30, '90j': 90, '6m': 183 };
+  var RANGE_DAYS = { '3j': 3, '7j': 7, '30j': 30, '90j': 90, '6m': 183 };
   function dayCount(a, b) { return Math.round((Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10)) - Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10))) / 864e5) + 1; }
   function spanOk(b, range) {
     var s = num(b.since), u = num(b.until);
@@ -298,7 +304,7 @@
       await null;
       var patch;
       try {
-        var res = await callFn('ig-insights?range=' + range, range === '24h' ? TIMEOUT_MS : SERIES_TIMEOUT_MS);
+        var res = await callFn('ig-insights?range=' + range, SERIES_TIMEOUT_MS);
         var b = res.body || {};
         if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
           patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
@@ -320,10 +326,12 @@
       if (ep !== epoch) return S;
       Object.assign(S, patch, { loading: false, at: Date.now() });
       if (inflight[key] === p) delete inflight[key];
+      pumpPrefetch();
       // Historique encore incomplet (1er relevé d'un long historique) : on relit la même fenêtre un peu plus tard.
       if (S.state === 'ready' && S.data && S.data.seriesMissing > 0 && (retries[range] || 0) < SERIES_RETRY_MAX) {
         retries[range] = (retries[range] || 0) + 1;
-        setTimeout(function () { if (ep === epoch) loadInsights(range, { force: true }); }, SERIES_RETRY_MS);
+        retryWaits += 1;
+        setTimeout(function () { retryWaits = Math.max(0, retryWaits - 1); if (ep === epoch) loadInsights(range, { force: true }); }, SERIES_RETRY_MS);
       }
       emit(key);
       return S;
@@ -379,6 +387,7 @@
       if (ep !== epoch) return S;
       Object.assign(S, patch, { loading: false, at: Date.now() });
       if (inflight.aud === p) delete inflight.aud;
+      pumpPrefetch();
       emit('aud');
       return S;
     })();
@@ -395,13 +404,14 @@
       id: str(p.id), permalink: str(p.permalink), thumb: str(p.thumbnail), type: str(p.media_type),
       caption: typeof p.caption === 'string' ? p.caption : '', timestamp: t, ms: isFinite(ms) ? ms : null,
       reach: num(p.reach), views: num(p.views), likes: num(p.likes), comments: num(p.comments),
-      saved: num(p.saved), shares: num(p.shares), interactions: num(p.interactions), avgWatchS: num(p.avg_watch_s)
+      saved: num(p.saved), shares: num(p.shares), interactions: num(p.interactions), avgWatchS: num(p.avg_watch_s),
+      skipRate: num(p.skip_rate), module: typeof p.module === 'string' && MODULES[p.module] ? p.module : null
     };
   }
   function normMedia(b, at) {
     var list = Array.isArray(b.media) ? b.media.map(normMediaItem).filter(Boolean) : null;
     return {
-      fetchedAt: at, username: str(b.username), followers: num(b.followers_count), mediaCount: num(b.media_count),
+      fetchedAt: at, username: str(b.username), followers: num(b.followers_count), mediaCount: num(b.media_count), mediaTotal: num(b.media_total),
       list: list || [], error: str(b.media_error) || (list ? null : 'liste absente de la réponse')
     };
   }
@@ -434,12 +444,54 @@
       if (ep !== epoch) return S;
       Object.assign(S, patch, { loading: false, at: Date.now() });
       if (inflight.media === p) delete inflight.media;
+      pumpPrefetch();
       emit('media');
       return S;
     })();
     inflight.media = p;
     emit('media');
     return p;
+  }
+
+  // ── préchargement : une fois la fenêtre affichée prête, les autres se chargent UNE par UNE en arrière-plan →
+  //    passer de 30 j à 7 j ou à All time devient instantané (cache 15 min comme le reste) ──
+  var pre = { on: false, queue: [], ep: -1 };
+  var retryWaits = 0;   // relectures d'historique programmées (setTimeout) : le préchargement attend qu'elles passent
+  function prefetch(first) {
+    if (pre.on && pre.ep === epoch) return;   // déjà lancé pour cette session : rien à refaire
+    pre.on = true;
+    pre.ep = epoch;
+    pre.queue = IG_RANGES.filter(function (r) { return r !== first; });
+    pumpPrefetch();
+  }
+  function pumpPrefetch() {
+    if (!pre.on || pre.ep !== epoch || CF.status !== 'ready' || retryWaits > 0) return;
+    for (var q = 0; q < IG_RANGES.length; q++) { if (CF.acct.ig[IG_RANGES[q]].kind === 'disconnected') { pre.queue = []; return; } }
+    for (var k in inflight) { if (inflight[k] && k !== 'accounts') return; }   // une seule requête Instagram à la fois
+    while (pre.queue.length) {
+      var r = pre.queue.shift(), S = CF.acct.ig[r];
+      if (S.kind === 'disconnected') { pre.queue = []; return; }
+      if (!isFresh(S)) { setTimeout(function () { loadInsights(r); }, 300); return; }
+    }
+  }
+
+  // ── module d'une publication (seule écriture du dashboard avec « Reconnecter » : action explicite du propriétaire) ──
+  var MODULES = { 'motion-control': 'Motion Control', 'omni': 'Omni', 'express': 'Express', 'generateur': 'Générateur',
+    'image-ia': 'Images IA', 'montage-ia': 'Montage IA', 'mcp-claude': 'MCP Claude', 'autre': 'Autre' };
+  CF.MODULES = MODULES;
+  async function tagMedia(id, module) {
+    if (!sb || CF.status !== 'ready') return { error: 'pas prêt' };
+    if (module && !MODULES[module]) return { error: 'module inconnu' };
+    logNet('rpc ig_media_tag_set');
+    try {
+      var r = await sb.rpc('ig_media_tag_set', { p_media: String(id), p_module: module || '' });
+      var d = r && r.data;
+      if (r.error || !d || d.error) return { error: r.error ? errText(r.error) : (d && d.error) || 'réponse vide' };
+      var M = CF.acct.media.data;
+      if (M) M.list.forEach(function (p) { if (p.id === String(id)) p.module = d.module || null; });
+      emit('media');
+      return { ok: true };
+    } catch (e) { return { error: errText(e) }; }
   }
 
   // ── rafraîchissement ──
@@ -498,6 +550,8 @@
       CF.acct.aud = newSlot(); delete inflight.aud;
       CF.acct.media = newSlot(); delete inflight.media;
       retries = {};
+      pre.on = false;   // relancé par l'onglet Compte au prochain rendu (nouveau token)
+      pre.queue = [];
       emit('oauth');
       loadAccounts({ force: true });
       return;
