@@ -412,6 +412,11 @@
       analysis: normAnalysis(p.analysis)
     };
   }
+  // Audio d'une brique : seulement depuis notre bucket public factory-media (lu par <audio>, CSP media-src).
+  function brickAudio(u) {
+    var pre = SUPABASE_URL + '/storage/v1/object/public/factory-media/';
+    return typeof u === 'string' && u.indexOf(pre) === 0 && !/[\s"'<>]/.test(u) ? u : null;
+  }
   // Briques reconnues par ig-insights (transcription du reel comparée au texte des briques).
   function normAnalysis(a) {
     if (!a || typeof a !== 'object' || ['done', 'pending', 'error'].indexOf(a.status) < 0) return null;
@@ -420,7 +425,8 @@
       module: typeof a.module === 'string' && MODULES[a.module] ? a.module : null,
       bricks: Array.isArray(a.bricks) ? a.bricks.map(function (b) {
         return b && typeof b.id === 'string' && ['hook', 'liaison', 'cta'].indexOf(b.kind) >= 0
-          ? { kind: b.kind, id: b.id.slice(0, 40), label: str(b.label) || b.id, score: num(b.score) } : null;
+          ? { kind: b.kind, id: b.id.slice(0, 40), label: str(b.label) || b.id, score: num(b.score),
+              text: str(b.text), audio: brickAudio(b.audio), subject: str(b.subject), keyword: str(b.keyword) } : null;
       }).filter(Boolean) : []
     };
   }
