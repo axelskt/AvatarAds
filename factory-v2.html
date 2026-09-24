@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>Creative Factory · préprod</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="factory-v2/cf.css?v=1">
+</head>
+<body>
+<div class="cf-wrap">
+  <header class="cf-head">
+    <div class="cf-brand">Creative <em>Factory</em><span class="cf-env">préprod</span></div>
+    <div class="cf-head-r">
+      <span id="cfIg" class="cf-pill is-mute" hidden></span>
+      <span id="cfWho" class="cf-who"></span>
+    </div>
+  </header>
+
+  <main class="cf-main">
+  <section id="cfBoot" class="cf-card cf-gate" role="status" aria-live="polite">
+    <span class="cf-spin" aria-hidden="true"></span>
+    <p id="cfBootMsg">Chargement…</p>
+  </section>
+
+  <section id="cfLogin" class="cf-card cf-gate cf-login" hidden aria-labelledby="cfLoginT">
+    <span class="cf-gate-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+    <h1 id="cfLoginT">Connexion</h1>
+    <p class="cf-dim">Connecte-toi avec l’e-mail owner AvatarAds.</p>
+    <form id="cfLoginPwd" class="cf-form" novalidate>
+      <label class="cf-lbl" for="cfEmail">E-mail</label>
+      <input id="cfEmail" class="cf-in" type="email" autocomplete="email" inputmode="email" required>
+      <label class="cf-lbl" for="cfPwd">Mot de passe</label>
+      <input id="cfPwd" class="cf-in" type="password" autocomplete="current-password">
+      <button type="submit" class="cf-btn is-dark is-wide">Se connecter</button>
+      <button type="button" class="cf-btn is-wide" data-act="otp-send">Plutôt recevoir un code par e-mail</button>
+    </form>
+    <form id="cfLoginOtp" class="cf-form" novalidate hidden>
+      <label class="cf-lbl" for="cfOtp">Code reçu par e-mail</label>
+      <input id="cfOtp" class="cf-in" type="text" inputmode="numeric" autocomplete="one-time-code">
+      <button type="submit" class="cf-btn is-dark is-wide">Se connecter</button>
+      <button type="button" class="cf-btn is-wide" data-act="otp-back">Retour</button>
+    </form>
+    <p id="cfLoginMsg" class="cf-login-msg" role="status" aria-live="polite"></p>
+  </section>
+
+  <section id="cfDenied" class="cf-card cf-gate" hidden aria-labelledby="cfDeniedT">
+    <span class="cf-gate-ic is-err"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+    <h1 id="cfDeniedT">Accès réservé</h1>
+    <p>Ce tableau de bord est réservé au propriétaire d’AvatarAds. Tu es connecté avec <b id="cfDeniedWho"></b>.</p>
+    <p class="cf-dim">Pour changer de compte, déconnecte-toi depuis l’app AvatarAds puis reviens ici.</p>
+  </section>
+
+  <section id="cfError" class="cf-card cf-gate" hidden role="alert" aria-labelledby="cfErrorT">
+    <span class="cf-gate-ic is-warn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+    <h1 id="cfErrorT">Erreur de chargement</h1>
+    <p id="cfErrMsg" class="cf-dim"></p>
+    <button type="button" class="cf-btn is-dark" data-act="retry">Réessayer</button>
+  </section>
+
+  <div id="cfApp" class="cf-app" hidden>
+    <nav id="cfTabs" class="cf-tabs" role="tablist" aria-label="Onglets du tableau de bord">
+      <button type="button" class="cf-tab" id="cfTab-home" role="tab" data-act="tab" data-tab="home" aria-controls="cfPanel" aria-selected="false">
+        <span class="cf-tab-top"><span class="cf-tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span><svg class="cf-tab-ck" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg></span>
+        <span class="cf-tab-txt"><span class="cf-tab-l">Accueil</span><span class="cf-tab-short">Accueil</span><span class="cf-tab-s">Vue d’ensemble · alertes</span></span>
+      </button>
+      <button type="button" class="cf-tab" id="cfTab-prod" role="tab" data-act="tab" data-tab="prod" aria-controls="cfPanel" aria-selected="false">
+        <span class="cf-tab-top"><span class="cf-tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></span><svg class="cf-tab-ck" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg></span>
+        <span class="cf-tab-txt"><span class="cf-tab-l">Production</span><span class="cf-tab-short">Production</span><span class="cf-tab-s">Pipeline, briques, QC et bibliothèque</span></span>
+      </button>
+      <button type="button" class="cf-tab" id="cfTab-trackads" role="tab" data-act="tab" data-tab="trackads" aria-controls="cfPanel" aria-selected="false">
+        <span class="cf-tab-top"><span class="cf-tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><svg class="cf-tab-ck" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg></span>
+        <span class="cf-tab-txt"><span class="cf-tab-l">TrackAds</span><span class="cf-tab-short">TrackAds</span><span class="cf-tab-s">Performance, missions et classement users</span></span>
+      </button>
+      <button type="button" class="cf-tab" id="cfTab-dm" role="tab" data-act="tab" data-tab="dm" aria-controls="cfPanel" aria-selected="false">
+        <span class="cf-tab-top"><span class="cf-tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><svg class="cf-tab-ck" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg></span>
+        <span class="cf-tab-txt"><span class="cf-tab-l">Auto-DM Instagram</span><span class="cf-tab-short">Auto-DM</span><span class="cf-tab-s">Commentaire → « Je suis abonné » → lien → clic</span></span>
+      </button>
+      <button type="button" class="cf-tab" id="cfTab-compte" role="tab" data-act="tab" data-tab="compte" aria-controls="cfPanel" aria-selected="false">
+        <span class="cf-tab-top"><span class="cf-tab-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3h18v18H3zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17.5 6.5h.01"/></svg></span><svg class="cf-tab-ck" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg></span>
+        <span class="cf-tab-txt"><span class="cf-tab-l">Compte @avataradss</span><span class="cf-tab-short">Compte</span><span class="cf-tab-s">Insights Instagram · top publications</span></span>
+      </button>
+    </nav>
+    <div id="cfPanel" class="cf-panel" role="tabpanel" tabindex="-1"></div>
+  </div>
+  </main>
+</div>
+
+<div id="cfModal" class="cf-modal" hidden>
+  <div class="cf-modal-box" role="dialog" aria-modal="true" aria-labelledby="cfModalTitle">
+    <button type="button" id="cfModalClose" class="cf-modal-x" data-act="modal-close" aria-label="Fermer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div id="cfModalBody"></div>
+  </div>
+</div>
+
+<noscript><p class="cf-noscript">Ce tableau de bord a besoin de JavaScript.</p></noscript>
+
+<!-- supabase-js 2.117.1, version exacte, empreinte SRI calculée sur le fichier servi (identique à l'archive npm) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js" integrity="sha384-K1nraABOP/zFehpLIUksXebbs7jMpB8gYMlb+uhVKZcWT/9Vkq1+qhv6ndC+1Yuz" crossorigin="anonymous"></script>
+<script src="factory-v2/cf-store.js?v=1"></script>
+<script src="factory-v2/cf-ui.js?v=1"></script>
+</body>
+</html>

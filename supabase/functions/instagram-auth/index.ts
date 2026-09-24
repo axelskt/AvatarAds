@@ -129,7 +129,8 @@ Deno.serve(async (req) => {
   //    comptes des users TrackAds.
   if (action === 'accounts') {
     if (!(await ownerOk(req))) return json({ error: 'réservé au propriétaire' }, 401)
-    const { data } = await svc.from('ig_accounts').select('ig_id, username, updated_at').order('updated_at', { ascending: false })
+    // token_expires_at (date seule, JAMAIS le token) : le dashboard affiche « token valide jusqu'au … » (24/09/2026).
+    const { data } = await svc.from('ig_accounts').select('ig_id, username, updated_at, token_expires_at').order('updated_at', { ascending: false })
     return json({ accounts: data || [] })
   }
 
