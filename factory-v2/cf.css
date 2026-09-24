@@ -361,11 +361,30 @@ img { max-width: 100%; }
 .cf-tag-sel { font-size: 16px; padding: 8px 10px; }   /* 16 px : iOS ne zoome pas sur le menu */
 .cf-more { align-self: center; }
 
+/* ── publications : type de reel, briques reconnues ── */
+.cf-chip.is-trial { background: #fbf0d2; border-color: #f0dca4; color: #7a5412; }
+.cf-chip.is-brick { font-weight: 700; color: var(--cf-ink); background: #fff; border-color: var(--cf-line-3); }
+.cf-brick-list { display: flex; flex-direction: column; gap: 6px; }
+.cf-brick-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 12.5px; min-width: 0; }
+.cf-brick-k { font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute); text-transform: uppercase; letter-spacing: .04em; }
+.cf-brick-l { color: var(--cf-ink-2); min-width: 0; overflow-wrap: anywhere; flex: 1 1 200px; }
+.cf-kpi2, .cf-card-h > .cf-kpi2 { display: flex; flex-direction: row; gap: 10px; }
+@media (max-width: 640px) {
+  .cf-card-h > .cf-kpi2 { width: 100%; }
+  .cf-kpi2 > .cf-watchbox { flex: 1 1 0; padding: 10px 12px; gap: 10px; }
+  .cf-kpi2 .cf-watchbox-ic { width: 28px; height: 28px; border-radius: 8px; }
+  .cf-kpi2 .cf-watchbox b { font-size: 20px; }
+}
+.cf-watchbox.is-skip { background: #f4f0ea; border-color: #d6cec3; }
+.cf-watchbox.is-skip .cf-watchbox-ic { background: #5f584f; }
+.cf-watchbox.is-skip b { color: var(--cf-ink); }
+.cf-watchbox.is-skip b + span { color: var(--cf-mute); }
+
 /* ── Top publications : visionnage moyen all time (maquette) ── */
 .cf-watchbox, .cf-card-h > .cf-watchbox { display: flex; flex-direction: row; align-items: center; gap: 12px; background: #fdebe4; border: 1.5px solid #ff6b35; border-radius: 14px; padding: 10px 14px; min-width: 0; }
 .cf-watchbox-ic { width: 34px; height: 34px; border-radius: 10px; background: #ff6b35; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
 .cf-watchbox b { display: block; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #e5541f; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.cf-watchbox b + span { font-family: var(--cf-mono); font-size: 10.5px; color: #9a6a52; }
+.cf-watchbox b + span { display: block; font-family: var(--cf-mono); font-size: 10.5px; line-height: 1.35; color: #9a6a52; }
 
 /* ── largeurs ── */
 @media (min-width: 640px) {

@@ -18,6 +18,7 @@
 //  GET ?part=audience → répartition des abonnés (pays, villes, âge, genre).
 //  Réservé owner/developer. verify_jwt=false. ⚠ « qui regarde mon profil » / vues UNIQUES = NON exposé par l'API IG.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { matchBricks, type Brick, type Seg } from './bricks.ts'
 
 const GRAPH   = 'https://graph.instagram.com/v21.0'
 const SB_URL  = Deno.env.get('SUPABASE_URL') || ''
@@ -27,6 +28,7 @@ const svc = createClient(SB_URL, SERVICE)
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info', 'Access-Control-Allow-Methods': 'GET, OPTIONS' }
 // Compte affiché par défaut (sans ig_id) : le compte principal, jamais « le dernier connecté ».
 const PRIMARY_USERNAME = Deno.env.get('IG_PRIMARY_USERNAME') || 'avataradss'
+const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || ''
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 // Session owner/developer exigée (fermé par défaut : sans session valide ou si la base ne répond pas,
@@ -196,12 +198,14 @@ async function mediaInsights(token: string, m: any) {
   if (isReel) metrics.push('ig_reels_avg_watch_time')
   const mi: Record<string, number> = {}
   const read = (ji: any) => { if (Array.isArray(ji?.data)) for (const x of ji.data) { const v = x.values?.[0]?.value ?? x.total_value?.value; if (typeof v === 'number') mi[x.name] = v } }
-  const [ji, js] = await Promise.all([
-    gfetch(`${GRAPH}/${m.id}/insights?metric=${metrics.join(',')}&access_token=${encodeURIComponent(token)}`).then((r) => r.json()).catch(() => null),
-    // « swipe < 3 s » (part des vues qui passent le reel dans les 3 premières secondes), reels seulement, appel à part
-    isReel ? gfetch(`${GRAPH}/${m.id}/insights?metric=reels_skip_rate&access_token=${encodeURIComponent(token)}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
-  ])
-  read(ji); read(js)
+  const ins = (ms: string[]) => gfetch(`${GRAPH}/${m.id}/insights?metric=${ms.join(',')}&access_token=${encodeURIComponent(token)}`).then((r) => r.json()).catch(() => null)
+  // Reels : « swipe < 3 s » (reels_skip_rate) et temps total regardé (ig_reels_video_view_total_time), appel à part ;
+  // refusé ensemble → une métrique à la fois (une métrique refusée ne casse jamais les autres).
+  const EXTRA = ['reels_skip_rate', 'ig_reels_video_view_total_time']
+  const [ji, jx] = await Promise.all([ins(metrics), isReel ? ins(EXTRA) : Promise.resolve(null)])
+  read(ji)
+  if (jx && !jx.error) read(jx)
+  else if (isReel) for (const one of await Promise.all(EXTRA.map((x) => ins([x])))) if (one && !one.error) read(one)
   return {
     id: m.id, permalink: m.permalink, thumbnail: m.thumbnail_url || m.media_url || null,
     media_type: m.media_product_type || m.media_type, caption: (m.caption || '').slice(0, 90), timestamp: m.timestamp,
@@ -210,8 +214,25 @@ async function mediaInsights(token: string, m: any) {
     saved: mi.saved ?? null, shares: mi.shares ?? null, interactions: mi.total_interactions ?? null,
     avg_watch_s: mi.ig_reels_avg_watch_time != null ? Math.round(mi.ig_reels_avg_watch_time / 100) / 10 : null, // ms → s
     skip_rate: mi.reels_skip_rate ?? null,   // brut : l'échelle (0-1 ou 0-100) est fixée pour toute la liste dans normSkip
+    total_watch_raw: mi.ig_reels_video_view_total_time ?? null, avg_watch_raw: mi.ig_reels_avg_watch_time ?? null,   // unités fixées dans normTotal
+    // false = pas sur la grille du profil : les 16 reels de @avataradss dans ce cas = exactement l'écart entre la liste
+    // de l'API (42) et media_count (26) le 24/09 → réels d'essai
     shared_to_feed: typeof m.is_shared_to_feed === 'boolean' ? m.is_shared_to_feed : null,
+    video_url: isReel && typeof m.media_url === 'string' ? m.media_url : null,   // pour la transcription seulement, jamais renvoyé
   }
+}
+// Temps total regardé : l'API ne donne pas l'unité. Comparé à visionnage moyen × vues (même unité, ms selon les tiers) :
+// rapport médian ≥ 0,1 → ms ; ≤ 0,01 → secondes (×1000). Journalisé, puis converti en secondes pour toute la liste.
+function normTotal(list: any[]) {
+  const r = list.filter((m) => typeof m.total_watch_raw === 'number' && typeof m.avg_watch_raw === 'number' && m.avg_watch_raw > 0 && m.views > 0)
+    .map((m) => m.total_watch_raw / (m.avg_watch_raw * m.views)).sort((a, b) => a - b)
+  const med = r.length ? r[Math.floor(r.length / 2)] : null
+  const toMs = med != null && med <= 0.01 ? 1000 : 1
+  for (const m of list) {
+    m.total_watch_s = typeof m.total_watch_raw === 'number' ? Math.round(m.total_watch_raw * toMs / 1000) : null
+    delete m.total_watch_raw; delete m.avg_watch_raw
+  }
+  if (med != null) logIg('temps total', { n: r.length, rapport_median: Math.round(med * 1000) / 1000, unite: toMs === 1 ? 'ms' : 's' })
 }
 // L'API dit seulement « percentage » : si AUCUNE valeur ne dépasse 1, ce sont des fractions → ×100. Journalisé.
 function normSkip(list: any[]) {
@@ -365,6 +386,114 @@ async function applyTags(list: any[]) {
   } catch (e) { logIg('tags', safeErr(e)) }
 }
 
+// ── briques de chaque publication : transcription du reel (une fois) + comparaison au texte des briques ──
+async function download(url: string, max: number): Promise<{ bytes: Uint8Array, type: string } | { error: string }> {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(60000) })
+    if (!r.ok) return { error: 'téléchargement HTTP ' + r.status }
+    const len = Number(r.headers.get('content-length') || 0)
+    if (len > max) return { error: `fichier trop lourd pour la transcription (${(len / 1e6).toFixed(1)} Mo)` }
+    const bytes = new Uint8Array(await r.arrayBuffer())
+    if (bytes.length > max) return { error: `fichier trop lourd pour la transcription (${(bytes.length / 1e6).toFixed(1)} Mo)` }
+    return { bytes, type: (r.headers.get('content-type') || 'video/mp4').split(';')[0] }
+  } catch (e) { return { error: safeErr(e) } }
+}
+async function whisper(bytes: Uint8Array, name: string, type: string): Promise<{ text: string, segs: Seg[], dur: number } | { error: string }> {
+  try {
+    const fd = new FormData()
+    fd.append('file', new File([bytes as unknown as BlobPart], name, { type }))
+    fd.append('model', 'whisper-1'); fd.append('language', 'fr'); fd.append('response_format', 'verbose_json')
+    fd.append('timestamp_granularities[]', 'segment')
+    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${OPENAI_KEY}` }, body: fd, signal: AbortSignal.timeout(120000) })
+    const j: any = await r.json().catch(() => null)
+    if (!r.ok || !j) return { error: safeErr(j?.error?.message || 'transcription HTTP ' + r.status) }
+    const segs: Seg[] = (Array.isArray(j.segments) ? j.segments : []).map((x: any) => ({ s: Number(x.start) || 0, e: Number(x.end) || 0, t: String(x.text || '').trim() }))
+    return { text: String(j.text || ''), segs, dur: Number(j.duration) || 0 }
+  } catch (e) { return { error: safeErr(e) } }
+}
+type BrickRow = { id: string, kind: string, subject: string, label: string, meta: any }
+async function loadBricks(): Promise<BrickRow[]> {
+  const { data } = await svc.from('factory_bricks').select('id, kind, subject, label, meta').in('kind', ['hook', 'liaison', 'cta']).eq('status', 'ready')
+  return (data || []) as BrickRow[]
+}
+const asBricks = (rows: BrickRow[]): Brick[] => rows.map((b) => ({
+  id: b.id, kind: b.kind, subject: b.subject, text: b.meta?.transcript || b.meta?.script || b.label,
+  keyword: b.meta?.keyword ?? null, modules: Array.isArray(b.meta?.modules) ? b.meta.modules : [],
+}))
+// Texte réellement PRONONCÉ de chaque brique (son audio transcrit une fois, gardé dans meta.transcript) : comparé à la
+// transcription du reel par le même outil, bien plus fiable que le titre ou le script écrit.
+async function ensureBrickTranscripts(rows: BrickRow[], deadline: number) {
+  const need = rows.filter((b) => !b.meta?.transcript && typeof b.meta?.media === 'string' && /\.(wav|mp3|m4a)(\?|$)/i.test(b.meta.media))
+  await pool(need, 4, async (b) => {
+    const d = await download(b.meta.media, 24_000_000)
+    if ('error' in d) return
+    const w = await whisper(d.bytes, b.id + '.' + (b.meta.media.split('.').pop() || 'wav').split('?')[0], d.type || 'audio/wav')
+    if ('error' in w || !w.text.trim()) return
+    const meta = { ...(b.meta || {}), transcript: w.text.trim() }
+    const { error } = await svc.from('factory_bricks').update({ meta }).eq('id', b.id)
+    if (!error) b.meta = meta
+  }, deadline)
+  if (need.length) logIg('briques transcrites', { a_faire: need.length, faites: need.filter((b) => b.meta?.transcript).length })
+}
+// Joint l'analyse aux publications (reconnaissance refaite à chaque chargement : une nouvelle brique compte tout de
+// suite) ; renvoie les reels encore à analyser.
+async function attachAnalysis(list: any[]): Promise<any[]> {
+  if (!list.length) return []
+  const [{ data: rows }, bricksRows] = await Promise.all([
+    svc.from('ig_media_analysis').select('ig_media_id, status, segments, error, started_at, analyzed_at').in('ig_media_id', list.map((m) => String(m.id))),
+    loadBricks(),
+  ])
+  const by = new Map((rows || []).map((r: any) => [String(r.ig_media_id), r]))
+  const bricks = asBricks(bricksRows), labels = new Map(bricksRows.map((b) => [b.id, b.label]))
+  const pending: any[] = []
+  const now = Date.now()
+  for (const m of list) {
+    const r: any = by.get(String(m.id))
+    if (r && r.status === 'done') {
+      const res = matchBricks(Array.isArray(r.segments) ? r.segments : [], m.caption || '', bricks)
+      m.analysis = { status: 'done', module: res.module, bricks: res.found.map((f) => ({ ...f, label: labels.get(f.id) || f.id })) }
+    } else if (r && r.status === 'error' && now - Date.parse(r.analyzed_at || r.started_at) < 24 * 3600 * 1000) {
+      m.analysis = { status: 'error', error: r.error || 'analyse impossible', bricks: [], module: null }
+    } else if (m.video_url) {
+      const running = r && r.status === 'running' && now - Date.parse(r.started_at) < 10 * 60 * 1000
+      m.analysis = { status: 'pending', bricks: [], module: null }
+      if (!running) pending.push({ id: m.id, video_url: m.video_url, caption: m.caption })   // copie : video_url est retiré de la réponse
+    } else {
+      m.analysis = null
+    }
+  }
+  return pending
+}
+async function analyzeMedia(items: any[]) {
+  const t0 = Date.now(), deadline = t0 + 200_000   // mur de 400 s par appel : marge pour le dernier fichier en cours
+  const at = new Date().toISOString()
+  await svc.from('ig_media_analysis').upsert(items.map((m) => ({ ig_media_id: String(m.id), status: 'running', started_at: at })), { onConflict: 'ig_media_id' })
+  const rows = await loadBricks()
+  await ensureBrickTranscripts(rows, t0 + 90_000)
+  const done = new Set<string>()
+  let secs = 0, errs = 0
+  await pool(items, 2, async (m) => {   // 2 vidéos à la fois : jusqu'à ~25 Mo chacune en mémoire (limite 256 Mo)
+    const id = String(m.id)
+    const d = await download(m.video_url, 24_500_000)
+    let row: Record<string, unknown>
+    if ('error' in d) { row = { status: 'error', error: d.error }; errs++ }
+    else {
+      const w = await whisper(d.bytes, id + '.mp4', d.type || 'video/mp4')
+      if ('error' in w) { row = { status: 'error', error: w.error }; errs++ }
+      else {
+        secs += w.dur
+        const res = matchBricks(w.segs, m.caption || '', asBricks(rows))
+        row = { status: 'done', transcript: w.text.slice(0, 5000), segments: w.segs.slice(0, 300), bricks: res.found, module: res.module, audio_seconds: w.dur, error: null }
+      }
+    }
+    await svc.from('ig_media_analysis').update({ ...row, analyzed_at: new Date().toISOString() }).eq('ig_media_id', id)
+    done.add(id)
+  }, deadline)
+  const left = items.map((m) => String(m.id)).filter((id) => !done.has(id))
+  if (left.length) await svc.from('ig_media_analysis').delete().in('ig_media_id', left).eq('status', 'running')   // repris au prochain chargement
+  logIg('analyse', { reels: items.length, faits: done.size, erreurs: errs, reste: left.length, minutes_audio: Math.round(secs / 6) / 10, ms: Date.now() - t0 })
+}
+
 // ── compteur d'abonnés, un relevé par jour Instagram (le dernier de la journée) ──
 async function snapFollowers(igId: string, followers: unknown) {
   if (!igId || typeof followers !== 'number') return
@@ -432,7 +561,17 @@ Deno.serve(async (req) => {
     await pool(lm.list, 8, async (m, i) => { media[i] = await mediaInsights(token, m) })
     const list = media.filter(Boolean)
     normSkip(list)
+    normTotal(list)
     await applyTags(list)
+    const pending = await attachAnalysis(list)
+    if (pending.length && OPENAI_KEY) {
+      // Reels pas encore analysés : transcription + reconnaissance en tâche de fond ; le dashboard relit la liste.
+      const job = analyzeMedia(pending).catch((e) => logIg('analyse', safeErr(e)))
+      const rt = (globalThis as any).EdgeRuntime
+      if (rt && typeof rt.waitUntil === 'function') rt.waitUntil(job)
+      out.analysis_pending = pending.length
+    }
+    for (const m of list) delete m.video_url
     out.media = list
     out.media_total = list.length
     const types: Record<string, number> = {}
