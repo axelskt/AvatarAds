@@ -134,8 +134,14 @@ serve(async (req: Request) => {
     if (gated) {
       const opTail = (bare.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''   // depuis le path (poll)
       if (isSyncBillable) {
-        // Nano synchrone : 2xx → op livrée (non remboursable) ; erreur → on rend l'op tirée.
-        if (googleRes.ok) { if (drawnOp) await settleReservation(uid, drawnOp) }
+        // Nano synchrone : 2xx → op livrée (non remboursable) ; erreur → on rend l'op tirée. EXCEPTION (24/09/2026) :
+        // un 200 SANS image ET marqué REFUS par Google (promptFeedback.blockReason, ou finishReason de sécurité) → on
+        // rend l'op, sinon le repli client (gpt-image) prenait un 402 et le client perdait ses crédits. Volontairement
+        // étroit : une réponse texte ordinaire (finishReason STOP, pas d'image) reste RÉGLÉE — jamais d'appel gratuit.
+        const hasImage = /"inline_?[dD]ata"\s*:\s*\{[^}]*?"data"\s*:\s*"/.test(body)
+        const refused = !hasImage && /json/i.test(ct) && (/"blockReason"\s*:\s*"/.test(body)
+          || /"finishReason"\s*:\s*"(SAFETY|IMAGE_SAFETY|PROHIBITED_CONTENT|IMAGE_PROHIBITED_CONTENT|BLOCKLIST|SPII|RECITATION|IMAGE_RECITATION)"/.test(body))
+        if (googleRes.ok && !refused) { if (drawnOp) await settleReservation(uid, drawnOp) }
         else await releaseOp(uid, drawnOp, drawn)
       } else if (isBillable) {
         // Veo : soumission async. 2xx → on lie l'op au job ; erreur → on rend l'op tirée.
