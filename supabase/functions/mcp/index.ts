@@ -828,6 +828,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `Qualité : 'hedra' = standard (défaut, 1 cr/s) · 'omnihuman' = haute résolution 1088×1920 (${OMNI_COST_SEC} cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
           model: { type: 'string', enum: ['hedra-avatar', 'hedra-character-3', 'minimax-h3', 'minimax-h3-max-turbo', 'kling-ai-avatar-v2'], description: "Interne (engine 'hedra' uniquement) : modèle Hedra v3. Défaut hedra-avatar. minimax-h3 (768p, audios[], durée 5-15 s) et kling-ai-avatar-v2 (720p) = alternatives image+audio pour comparaison qualité." },
+          ...(isOwner ? { prompt: { type: 'string', description: "Interne/dev : remplace le prompt avatar par défaut (A/B test qualité, ex. préservation cheveux/peau). Vide → prompt par défaut." } } : {}),
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['image_url', 'audio_url'],
@@ -960,7 +961,14 @@ Recharger / changer de plan : ${APP_URL}`)
 // Avec une référence, gpt-image travaille en ÉDITION avec input_fidelity:'high' : le produit /
 // visage fourni est conservé à l'identique (forme, étiquette, logo, typo, couleurs). C'est ce qui
 // manquait le 20/08 : Claude décrivait le produit en mots → une bouteille « générique ».
+// Portrait 9:16 en 2K (1152x2048, Axel 24/09) : si OpenAI refusait cette taille, UNE relance en 1024x1536 (un refus
+// de validation n'est pas facturé).
 async function genererImage(prompt: string, size: string, quality: 'standard' | 'high', ref?: { bytes: Uint8Array; contentType: string } | null): Promise<{ bytes: Uint8Array } | { error: string }> {
+  const r = await genererImageAt(prompt, size, quality, ref)
+  if ('error' in r && size === '1152x2048' && /\bsize\b|1152x2048|dimension/i.test(r.error)) return genererImageAt(prompt, '1024x1536', quality, ref)
+  return r
+}
+async function genererImageAt(prompt: string, size: string, quality: 'standard' | 'high', ref?: { bytes: Uint8Array; contentType: string } | null): Promise<{ bytes: Uint8Array } | { error: string }> {
   let lastErr = 'Erreur génération'
   for (const model of GPT_IMG_MODELS) {
     try {
@@ -1061,7 +1069,7 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
   if (prompt.length > 4000) return toolErr('Prompt trop long (4000 caractères max).')
   const quality = args.quality === 'high' ? 'high' : 'standard'
   const format = ['portrait', 'square', 'landscape'].includes(String(args.format)) ? String(args.format) : 'portrait'
-  const sizeMap: Record<string, string> = { portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' }
+  const sizeMap: Record<string, string> = { portrait: '1152x2048', square: '1024x1024', landscape: '1536x1024' }
   const size = sizeMap[format]
   const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
 
@@ -2041,6 +2049,8 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   const audioUrl = String(args.audio_url || '').trim()
   if (!imageUrl || !audioUrl) return toolErr('image_url et audio_url sont requis.')
   const aspect = ['1:1', '16:9'].includes(String(args.aspect_ratio)) ? String(args.aspect_ratio) : '9:16'
+  // Override de prompt (dev/A-B test) : compte propriétaire SEULEMENT (relecture 24/09) ; sinon le prompt avatar par défaut.
+  const avPrompt = (profile.is_owner === true && typeof args.prompt === 'string' && String(args.prompt).trim()) ? String(args.prompt).trim().slice(0, 2000) : AVATAR_PROMPT
 
   const img = await fetchUserFile(imageUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (image_url)")
   if (typeof img === 'string') return toolErr(img)
@@ -2053,6 +2063,9 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   // lui demandait « no camera movement » sans jamais demander de gestuelle.
   const engine = String(args.engine || 'hedra') === 'omnihuman' ? 'omnihuman' : 'hedra'
   if (engine === 'omnihuman' && !FAL_KEY) return toolErr('OmniHuman indisponible (clé fal absente des secrets).')
+  // fal refuse une image de plus de 5 Mo (file_too_large) : refus clair AVANT tout débit (un portrait 1152x2048 en PNG
+  // peut dépasser cette limite ; Hedra, le moteur par défaut, l'accepte).
+  if (engine === 'omnihuman' && img.bytes.length > 5_000_000) return toolErr(`OmniHuman refuse les images de plus de 5 Mo (celle-ci fait ${(img.bytes.length / 1_000_000).toFixed(1)} Mo) : relance sans engine (Hedra, par défaut) ou avec une image plus légère. Aucun crédit débité.`)
   const secs = Math.ceil(Math.max(1, estimateAudioSeconds(aud.bytes, aud.contentType)))
   if (secs > 60) return toolErr(`Segment audio trop long (~${secs} s) : 60 secondes maximum par clip lipsync.`)
   const cost = engine === 'omnihuman' ? secs * OMNI_COST_SEC : secs
@@ -2088,7 +2101,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
           resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
           // MÊME prompt que Hedra, mot pour mot : sans ça la comparaison de
           // qualité entre les deux moteurs porte sur deux consignes différentes.
-          prompt: AVATAR_PROMPT,
+          prompt: avPrompt,
         }),
       })
       if (!sub.ok) {
@@ -2132,11 +2145,11 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
     let input: Record<string, unknown>
     if (slug === 'minimax-h3' || slug === 'minimax-h3-max-turbo') {
       const durMs = Math.min(15000, Math.max(5000, Math.ceil(secs) * 1000))   // enum 5000..15000 par pas de 1000
-      input = { prompt: AVATAR_PROMPT, aspect_ratio: aspect, resolution: '768p', start_image: imageRef, audios: [audioRef], duration_ms: durMs }
+      input = { prompt: avPrompt, aspect_ratio: aspect, resolution: '768p', start_image: imageRef, audios: [audioRef], duration_ms: durMs }
     } else if (slug === 'kling-ai-avatar-v2') {
-      input = { prompt: AVATAR_PROMPT, aspect_ratio: aspect, resolution: '720p', start_image: imageRef, audio: audioRef, quality: 'standard' }
+      input = { prompt: avPrompt, aspect_ratio: aspect, resolution: '720p', start_image: imageRef, audio: audioRef, quality: 'standard' }
     } else {
-      input = { prompt: AVATAR_PROMPT, aspect_ratio: aspect, resolution: '1080p', start_image: imageRef, audio: audioRef }
+      input = { prompt: avPrompt, aspect_ratio: aspect, resolution: '1080p', start_image: imageRef, audio: audioRef }
     }
     const sub = await hedraV3Fetch('/v3/models/' + slug, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -3168,7 +3181,7 @@ serve(async (req) => {
     if (!took || !took.length) return json(409, { error: 'not_pending' })
     const bal = await spendCredits(userId, cost)
     if (bal === null || bal === -1) { await svc.from('mcp_jobs').update({ status: 'failed', error: 'crédits' }).eq('id', jobId); return json(402, { error: 'credits' }) }
-    const size = ({ portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
+    const size = ({ portrait: '1152x2048', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
     // #static-ads-bank : le format mémorisé à la création (ad_format = id) est repris tel quel → même mise en page
     const pFmt = STATIC_AD_FORMATS.find((f) => f.id === String((pArgs as Record<string, unknown>).ad_format || '')) || null
     const promptFinal = composerPromptImage({ ...(pArgs as Record<string, unknown>), __adFormat: pFmt }, !!ref)
@@ -3229,7 +3242,7 @@ serve(async (req) => {
     }
     const bal = await spendCredits(userId, cost)
     if (bal === null || bal === -1) return json(402, { error: 'credits' })
-    const size = ({ portrait: '1024x1536', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
+    const size = ({ portrait: '1152x2048', square: '1024x1024', landscape: '1536x1024' } as Record<string, string>)[format]
     // F2 : le job régénéré porte le root_ts → la fraîcheur de la PROCHAINE régénération reste ancrée à la racine.
     const { data: job, error: jErr } = await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'image', status: 'running', credits_cost: cost, params: { root_ts: new Date(_rootTs).toISOString() } }).select('id').single()
     if (jErr || !job) { await refundCredits(userId, cost); return json(500, { error: 'job' }) }
