@@ -82,12 +82,12 @@ serve(async (req: Request) => {
 
   let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
   let drawnOp: string | undefined   // l'op PRÉCISE tirée — resolveOp ne la retrouve plus une fois à réserve 0 (audit 06/09)
-  // Palier 4K (x-aa-chain: nano4k, plans payants comme dans l'app depuis le 24/09) : seulement une image gpt low/medium, n=1 → tire 5 et
+  // Palier 4K (x-aa-chain: nano4k, plans Pro/Élite comme dans l'app depuis le 24/09) : seulement une image gpt low/medium, n=1 → tire 5 et
   // crée un droit d'upscale Nano. Toute autre combinaison = tirage normal, aucun droit (pas de gpt high + Nano pour 5).
   let chain = false, chainPlanOk = false
   if (isBillable && gated && wantsNanoChain(req)) {
     const { plan, isOwner, err } = await userPlan(uid)
-    chainPlanOk = !err && (isOwner || ['starter', 'pro', 'byok', 'elite', 'developer'].includes(plan))
+    chainPlanOk = !err && (isOwner || ['pro', 'byok', 'elite', 'developer'].includes(plan))
   }
   const chainCost = (q: string, n: number) => (chainPlanOk && n === 1 && (q === 'medium' || q === 'low')) ? (chain = true, CHAIN_NANO_COST) : imgCost(q) * n
   try {
