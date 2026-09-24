@@ -18712,7 +18712,7 @@ async function _avGen4K(btn){
   if (!_avGenUrl){ toast('Génère un avatar d\'abord'); return; }
   if (_avGen4KDone){ toast('Déjà passé en 4K sur cette image'); return; }
   const plan = (currentMember?.plan || 'free').toLowerCase();
-  if (!['elite','developer'].includes(plan)){ toast('Le détail 4K est réservé au plan Élite'); try{ openUpgradeModal(); }catch(_){} return; }
+  if (!['starter','pro','elite','byok','developer'].includes(plan)){ toast('Détail en 4K : disponible dès le plan Starter'); try{ openUpgradeModal(); }catch(_){} return; }   // ouvert dès Starter (Axel 24/09)
   if (_avGenBusy){ toast('Une opération est déjà en cours — patiente'); return; }
   creditsFlowBegin();
   if (!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'détail 4K avatar'))) return;
