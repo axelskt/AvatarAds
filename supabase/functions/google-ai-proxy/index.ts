@@ -13,7 +13,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundByJobTerminal } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 // 23/09/2026 : `:predict` (Imagen 4, arrêté par Google le 17/08/2026, seul appelant = module Cartoon supprimé) retiré.
@@ -94,6 +94,16 @@ serve(async (req: Request) => {
 
   let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
   let drawnOp: string | undefined
+  let chainOp: string | null = null   // droit d'upscale du palier 4K consommé (tirage 0) — rendu si Nano échoue
+  let settled = false, gaveBack = false
+  // Rend UNE seule fois, jamais après un règlement : le droit s'il a été pris, sinon le tirage (jamais un tirage nul,
+  // que release_reservation arrondirait à 1 crédit rendu).
+  const giveBack = async () => {
+    if (settled || gaveBack) return
+    gaveBack = true
+    if (chainOp) await chainCreditGiveBack(uid, chainOp)
+    else if (drawn > 0) await releaseOp(uid, drawnOp, drawn)
+  }
   try {
     const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
     let googleRes: Response
@@ -114,7 +124,11 @@ serve(async (req: Request) => {
           if (_ext) { const g = await requirePlan(uid, ['elite'], 'Extension vidéo (>8 s)'); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
           else if (_res === '1080p') { const g = await requirePlan(uid, ['pro', 'elite'], 'Veo 1080p'); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
         }
-        drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId
+        // Nano marqué x-aa-chain (upscale du palier 4K) : le droit déjà payé (5 tirés par openai-proxy) passe avant un
+        // nouveau tirage ; pris d'abord sur l'op du palier (x-aa-op). Un Nano non marqué tire ses 5 comme avant.
+        if (isSyncBillable && wantsNanoChain(req)) chainOp = await chainCreditTake(uid, opFromReq(req))
+        if (chainOp) { drawn = 0; drawnOp = chainOp }
+        else { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId }
       } else if (gated && /:generateContent$/.test(bare) && !/tts/i.test(bare)) {
         // Helper chat non facturant : plafond de tokens de sortie (audit chaînes 15/09).
         try { const b = JSON.parse(rawBody); b.generationConfig = { ...(b.generationConfig || {}), maxOutputTokens: Math.min(Number(b?.generationConfig?.maxOutputTokens) || 4096, 4096) }; sendBody = JSON.stringify(b) } catch { /* body non-JSON : laissé tel quel */ }
@@ -141,8 +155,8 @@ serve(async (req: Request) => {
         const hasImage = /"inline_?[dD]ata"\s*:\s*\{[^}]*?"data"\s*:\s*"/.test(body)
         const refused = !hasImage && /json/i.test(ct) && (/"blockReason"\s*:\s*"/.test(body)
           || /"finishReason"\s*:\s*"(SAFETY|IMAGE_SAFETY|PROHIBITED_CONTENT|IMAGE_PROHIBITED_CONTENT|BLOCKLIST|SPII|RECITATION|IMAGE_RECITATION)"/.test(body))
-        if (googleRes.ok && !refused) { if (drawnOp) await settleReservation(uid, drawnOp) }
-        else await releaseOp(uid, drawnOp, drawn)
+        if (googleRes.ok && !refused) { if (drawnOp) await settleReservation(uid, drawnOp); settled = true }
+        else await giveBack()
       } else if (isBillable) {
         // Veo : soumission async. 2xx → on lie l'op au job ; erreur → on rend l'op tirée.
         if (googleRes.ok) { const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''; if (name) await bindJob(uid, drawnOp, 'veo:' + name, drawn) }
@@ -165,7 +179,7 @@ serve(async (req: Request) => {
       headers: { ...CORS, 'Content-Type': ct },
     })
   } catch (err) {
-    if (isBillable && gated) await releaseOp(uid, drawnOp, drawn).catch(() => {})   // audit 14/09 : rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration = refund-and-keep sur une op multi-étapes réglée)
+    if (isBillable && gated) await giveBack().catch(() => {})   // audit 14/09 : rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration = refund-and-keep sur une op multi-étapes réglée)
     console.error('google-ai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

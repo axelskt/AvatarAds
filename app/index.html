@@ -8964,7 +8964,7 @@ let _imgSelectedStyleId    = 'ugc';   // 21/09 : UGC Réel = 1er + style par dé
 let _imgSelectedStyleApi   = 'natural';
 let _imgSelectedStyleSuffix= _IMG_STYLES[0].suffix;
 let _imgSelectedStyleLabel = _IMG_STYLES[0].label;
-let _imgSelectedFormat     = '1024x1792'; // → 1024x1536 (portrait, résolution max de gpt-image-1, idéal 9:16)
+let _imgSelectedFormat     = '1024x1792'; // → 1152x2048 (portrait 9:16 natif en 2K, gpt-image-2.5 — Axel 24/09)
 let _imgSelectedFormatId   = 'portrait';
 let _imgSelectedCount      = 1;
 let _imgSelectedModel      = 'gptimage'; // gptimage (gpt-image-1, le meilleur — évolution de DALL·E 3)
@@ -9207,7 +9207,7 @@ async function _imgDoEdit(promptText, btn, spinLabel, styleLabel, fmtOverride){
     const session=(await sb.auth.getSession()).data.session;
     const token=session?.access_token || SUPABASE_KEY;
     const dispFmt = fmtOverride || _imgSelectedFormat;
-    const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
+    const sizeMap={ '1024x1792':'1152x2048','1792x1024':'1536x1024','1024x1024':'1024x1024' };
     const gptSize=sizeMap[dispFmt]||'1024x1024';
     if(multiWrap) multiWrap.style.display='none';
     if(singleWrap) singleWrap.style.display='block';
@@ -9278,7 +9278,7 @@ async function _imgMakeRealistic(btn){
       if(e && e._kieStage) throw e;   // compte dev sur kie : pas de repli (Axel 23/09)
       engine='gpt-image';
       console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
-      const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
+      const sizeMap={ '1024x1792':'1152x2048','1792x1024':'1536x1024','1024x1024':'1024x1024' };
       url = await _imgEditOne(token, _IMG_REALISM_EDIT, _imgRefFile, sizeMap[dispFmt]||'1024x1024');
     }
     _imgMonthIncrement();
@@ -9381,7 +9381,7 @@ async function _imgMakeRealisticBatch(btn){
         catch(e){
           if(e && e._kieStage) throw e;   // compte dev sur kie : pas de repli (Axel 23/09)
           console.warn('Nano Banana Pro indispo (4K lot '+(i+1)+'/'+n+'), repli gpt-image :', e);
-          const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
+          const sizeMap={ '1024x1792':'1152x2048','1792x1024':'1536x1024','1024x1024':'1024x1024' };
           url = await _imgEditOne(tk, _IMG_REALISM_EDIT, x.f, sizeMap[fmt]||'1024x1024', { only:true, op });   // SA seule image
           gpt = true; viaGpt++;
         }
@@ -9584,7 +9584,10 @@ async function _imgToCleanPng(src, name){
 }
 // Édition d'image via gpt-image-1 /v1/images/edits (multipart)
 async function _imgEditOne(token, prompt, refFile, gptSize, opt){
-  opt = opt || {};   // opt.only : n'envoyer QUE refFile (lot 4K : l'image de sa case) · opt.op : réservation explicite
+  return _gptSizeFallback(gptSize, (sz) => _imgEditAt(token, prompt, refFile, sz, opt));
+}
+async function _imgEditAt(token, prompt, refFile, gptSize, opt){
+  opt = opt || {};   // opt.only : n'envoyer QUE refFile (lot 4K : l'image de sa case) · opt.op : réservation explicite · opt.chain : palier 4K (upscale Nano ensuite)
   let lastErr = 'Erreur correction';
   // Jusqu'à 5 images de référence (gpt-image accepte image[] en multipart).
   // ⚠ On NORMALISE chaque réf en PNG propre avant l'envoi (sinon un HEIC/WEBP → 400 « Invalid image file »).
@@ -9610,7 +9613,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize, opt){
     fd.append('quality', _imgGptQuality()); // qualité pilotée par le slider (4K → medium, l'upscale Nano fait le reste)
     fd.append('moderation', 'low'); // filtre moins restrictif (contenu influenceur)
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
-      method:'POST', headers:{ ...(_aaOp(opt.op)), 'Authorization':'Bearer '+token }, body: fd
+      method:'POST', headers:{ ...(_aaOp(opt.op)), ...(opt.chain ? { 'x-aa-chain': 'nano4k' } : {}), 'Authorization':'Bearer '+token }, body: fd
     });
     const data = await res.json();
     if(data.error){
@@ -10082,12 +10085,27 @@ async function _imgEnrichPrompt(userPrompt, aspect){
 }
 
 
-async function _imgGenerateOne(token, enhancedPrompt, size, style){
+// Portrait 9:16 en 2K (1152x2048, Axel 24/09) : si OpenAI refusait cette taille pour un modèle, on repasse UNE fois
+// en 1024x1536 au lieu d'échouer (une erreur de validation n'est pas facturée ; le proxy rend la réserve).
+async function _gptSizeFallback(gptSize, fn){
+  try { return await fn(gptSize); }
+  catch(e){
+    if(gptSize === '1152x2048' && /\bsize\b|1152x2048|dimension/i.test(String((e && e.message) || e))){
+      console.warn('[gpt-image] 1152x2048 refusé → 1024x1536', e);
+      return await fn('1024x1536');
+    }
+    throw e;
+  }
+}
+async function _imgGenerateOne(token, enhancedPrompt, size, style, opt){
+  const sizeMap = { '1024x1792':'1152x2048', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
+  return _gptSizeFallback(sizeMap[size] || '1024x1024', (gptSize) => _imgGenerateAt(token, enhancedPrompt, gptSize, opt));
+}
+async function _imgGenerateAt(token, enhancedPrompt, gptSize, opt){
+  opt = opt || {};   // opt.chain : palier 4K → le serveur tire le palier entier (5) et ouvre UN upscale Nano (x-aa-chain)
   // Styles réalistes (Photo Réel / UGC) : gpt-image, prompt brut (Flux abandonné 30/08 — déformait les visages)
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
-  // tailles supportées : 1024x1024 · 1024x1536 (portrait) · 1536x1024 (paysage)
-  const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
-  const gptSize = sizeMap[size] || '1024x1024';
+  // tailles : 1024x1024 · 1152x2048 (portrait 9:16 en 2K, ~même prix que 1024x1536 chez OpenAI — Axel 24/09) · 1536x1024 (paysage)
   let lastErr = 'Erreur génération';
   for(const model of _GPT_IMG_MODELS){
     let data=null, res=null;
@@ -10096,7 +10114,7 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style){
     for(let attempt=0; attempt<3; attempt++){
       res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
         method: 'POST',
-        headers: { ...(_aaOp()), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+        headers: { ...(_aaOp()), ...(opt.chain ? { 'x-aa-chain': 'nano4k' } : {}), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgGptQuality(), moderation: 'low' })
       });
       data = await res.json().catch(()=>({ error:{ message:'réponse illisible (HTTP '+res.status+')' } }));
@@ -10237,7 +10255,7 @@ function _nbAspect(w, h){
 // silencieux. Vérifié sur ai.google.dev : modèle gemini-3-pro-image (GA depuis le 28/05/2026),
 // config par responseModalities + imageConfig(imageSize/aspectRatio).
 // Partagé par « Restaurer les détails » (4K) et « Rendre réaliste » (2K).
-async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint){
+async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain){   // chain : upscale du palier 4K (droit payé par l'appel gpt, x-aa-chain)
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
   if(!m) throw new Error('Image illisible pour Nano Banana Pro');
   // #lot6 · img2img = une image d'entrée par construction → consigne de fidélité du texte
@@ -10280,7 +10298,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint){
   let _nbLastStatus = 0;
   const call = async (payload) => {
     const _url = SUPABASE_URL + '/functions/v1/google-ai-proxy?path=' + encodeURIComponent(path);
-    const _hdr = { ...(_aaOp(opHint)), 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
+    const _hdr = { ...(_aaOp(opHint)), ...(chain ? { 'x-aa-chain': 'nano4k' } : {}), 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
     const _body = JSON.stringify(payload);
     let _last = null;
     for(let _a=0; _a<3; _a++){
@@ -10487,9 +10505,10 @@ async function _nbProFalEdit(dataUrl){
   return out;
 }
 // Correspondance format app → aspect ratio Nano Banana.
-// ⚠ les clés sont les formats d'AFFICHAGE, mais les images RÉELLES font 1024×1536 (2:3) et
-//   1536×1024 (3:2) — pas 9:16 / 16:9. Demander 9:16 forçait Nano à recadrer (zoom visage).
-const _NB_FMT_ASPECT = { '1024x1792':'2:3', '1792x1024':'3:2', '1024x1024':'1:1' };
+// ⚠ les clés sont les formats d'AFFICHAGE. Depuis le 24/09 le portrait gpt sort en 1152×2048 = VRAI 9:16 ;
+//   le paysage reste 1536×1024 (3:2). Pour une image existante, préférer _nbAspectOf (ratio réel) :
+//   les anciens portraits 1024×1536 sont en 2:3, et demander 9:16 forçait Nano à recadrer (zoom visage).
+const _NB_FMT_ASPECT = { '1024x1792':'9:16', '1792x1024':'3:2', '1024x1024':'1:1' };
 // ── LE RATIO ENVOYÉ À NANO DOIT ÊTRE CELUI DE L'IMAGE (Axel 23/08) ─────────────────
 // Nos portraits gpt-image font 1024×1536 = 2:3, mais on demandait « 9:16 » à Nano Banana :
 // pour tenir ce ratio il DEVAIT perdre 16 % de largeur → il recadrait et, génératif, zoomait
@@ -10501,6 +10520,12 @@ function _nbAspectFor(w,h){
   const r=w/h; let best='1:1', d=1e9;
   for(const [k,v] of _NB_RATIOS){ const e=Math.abs(Math.log(r/v)); if(e<d){ d=e; best=k; } }
   return best;
+}
+// Ratio Nano d'après l'image RÉELLE (jamais seulement le format demandé : si OpenAI rendait une autre taille,
+// ou pour une ancienne image 2:3, Nano recadrerait). `fallback` si l'image ne se charge pas.
+async function _nbAspectOf(src, fallback){
+  try{ const im = await _loadImgEl(src); if(im && im.naturalWidth) return _nbAspectFor(im.naturalWidth, im.naturalHeight); }catch(_){}
+  return fallback || '9:16';
 }
 
 /* ── #81 · PASSE VISAGE CIBLÉE (dev-only) ─────────────────────────────────────
@@ -10875,7 +10900,7 @@ async function generateImage(){
     // ── CORRECTION (img2img) OU Génération avec image de référence : 1 image via /edits ──
     if(_imgMode === 'correct' || _imgRefFile){
       if(_imgMode === 'correct' && !_imgRefFile){ toast('Importe l\'image à corriger d\'abord'); btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel; return; }
-      const sizeMap = { '1024x1792':'1024x1536', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
+      const sizeMap = { '1024x1792':'1152x2048', '1792x1024':'1536x1024', '1024x1024':'1024x1024' };
       const gptSize = sizeMap[size] || '1024x1024';
       // Génération AVEC référence → gpt-image /edits (comme ChatGPT), en qualité HIGH forcée.
       const _isRealistic = (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc');
@@ -10892,7 +10917,7 @@ async function generateImage(){
         multiGrid.innerHTML = '';
         for(let i=0;i<actualCount;i++){
           const ph = document.createElement('div'); ph.id = '_imgMultiSlot'+i;
-          ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+          ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'3/2':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
           ph.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>';
           multiGrid.appendChild(ph);
         }
@@ -10903,8 +10928,8 @@ async function generateImage(){
           const _fmt = (_adPool) ? _adPool[i % _adPool.length] : null;
           const _p = (_adPromptFor && _fmt) ? _adPromptFor(_fmt) : (editPrompt + _imgVariationHint());   // avec réf : angle marketing différent par image (Pub Produit) ; identité préservée pour les autres styles (hint vide si réf)
           try {
-            let url = await _imgEditOne(token, _p, _imgRefFile, gptSize);
-            if(_is4Km){ try { url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K'); } catch(_u){ console.warn('upscale 4K', _u); } }
+            let url = await _imgEditOne(token, _p, _imgRefFile, gptSize, { chain: _is4Km });
+            if(_is4Km){ try { const _src = await _imgToDataUrl(url); url = await _nbEdit(token, _src, _IMG_REALISM_EDIT, await _nbAspectOf(_src, _NB_FMT_ASPECT[size]), '4K', undefined, true); } catch(_u){ console.warn('upscale 4K', _u); } }
             _okCount++; _imgMonthIncrement(); (window.requestIdleCallback||function(f){setTimeout(f,80);})(()=>_imgAutoSaveUrl(url, size, 'Réf'));
             _imgFillMultiSlot(document.getElementById('_imgMultiSlot'+i), url, size, _fmt ? !!_fmt.person : (_imgSelectedStyleId==='photo'||_imgSelectedStyleId==='ugc'));
           } catch(err){
@@ -10938,10 +10963,11 @@ async function generateImage(){
         // Si OpenAI refuse (filtre) → Nano direct, comme avant.
         try {
           _imgProgStart('gpt-image-2.5…');
-          url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize);
+          url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize, { chain: true });
           try {
             _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
-            url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K');
+            const _src = await _imgToDataUrl(url);
+            url = await _nbEdit(token, _src, _IMG_REALISM_EDIT, await _nbAspectOf(_src, _NB_FMT_ASPECT[size]), '4K', undefined, true);
           } catch(_upErr){
             // l'image gpt reste : on ne jette jamais un bon résultat pour un upscale raté
             console.warn('upscale Nano après gpt high indispo :', _upErr);
@@ -11002,13 +11028,15 @@ async function generateImage(){
       else { singleWrap.style.display = 'block'; overlay.style.display = 'flex'; document.getElementById('imgOutput').style.display = 'none'; }
       _imgProgStart('Génération en cours…');
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Génération en cours…';
-      let url = await _imgGenerateOne(token, enhancedPrompt + _imgVariationHint(), size, style);
-      if(_imgEffectiveQuality() === 'high'){
-        // 4K = gpt high puis upscale Nano (Axel 15/08) — l'image gpt reste si Nano échoue
+      const _is4Ks = (_imgEffectiveQuality() === 'high');
+      let url = await _imgGenerateOne(token, enhancedPrompt + _imgVariationHint(), size, style, { chain: _is4Ks });
+      if(_is4Ks){
+        // 4K = gpt medium puis upscale Nano (Axel 15/08) — l'image gpt reste si Nano échoue
         try {
           _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
-          url = await _nbEdit(token, await _imgToDataUrl(url), _IMG_REALISM_EDIT, _NB_FMT_ASPECT[size] || '9:16', '4K');
-        } catch(_upErr){ console.warn('upscale Nano après gpt high indispo :', _upErr); }
+          const _src = await _imgToDataUrl(url);
+          url = await _nbEdit(token, _src, _IMG_REALISM_EDIT, await _nbAspectOf(_src, _NB_FMT_ASPECT[size]), '4K', undefined, true);
+        } catch(_upErr){ console.warn('upscale Nano après gpt indispo :', _upErr); }
       }
       _imgMonthIncrement();
       _imgShowSingle(url, size);
@@ -11027,16 +11055,18 @@ async function generateImage(){
       for(let i=0;i<actualCount;i++){
         const ph = document.createElement('div');
         ph.id = '_imgMultiSlot'+i;
-        ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+        ph.style.cssText = 'position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'3/2':'1/1')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
         ph.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>';
         multiGrid.appendChild(ph);
       }
       const urls = [];
+      const _is4Kn = (_imgEffectiveQuality() === 'high');   // palier 4K : gpt medium PUIS upscale Nano, image par image (comme l'image seule)
       for(let i=0;i<actualCount;i++){
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg> Image '+(i+1)+'/'+actualCount+'…';
         try {
           const _fmtN = (_adPool) ? _adPool[i % _adPool.length] : null;
-          const url = await _imgGenerateOne(token, (_adPromptFor && _fmtN) ? _adPromptFor(_fmtN) : (enhancedPrompt + _imgVariationHint()), size, style);   // banque : un format différent par image ; sinon casting différent par image
+          let url = await _imgGenerateOne(token, (_adPromptFor && _fmtN) ? _adPromptFor(_fmtN) : (enhancedPrompt + _imgVariationHint()), size, style, { chain: _is4Kn });   // banque : un format différent par image ; sinon casting différent par image
+          if(_is4Kn){ try { const _src = await _imgToDataUrl(url); url = await _nbEdit(token, _src, _IMG_REALISM_EDIT, await _nbAspectOf(_src, _NB_FMT_ASPECT[size]), '4K', undefined, true); } catch(_u){ console.warn('upscale 4K', _u); } }
           urls.push(url);
           _imgMonthIncrement();
           (window.requestIdleCallback||function(f){setTimeout(f,80);})(()=>_imgAutoSaveUrl(url, size, _imgSelectedStyleLabel));   // #145 · auto-save DIFFÉRÉ (idle) → n'fige plus l'UI ~5-10s après l'affichage
@@ -11156,7 +11186,7 @@ function _imgFillMultiSlot(slot, url, size, showFace, opt){
   slot.innerHTML='';
   slot.style.cssText='display:flex;flex-direction:column;gap:8px;background:transparent;border:none;border-radius:0;overflow:visible;padding:0;position:static';
   const wrap=document.createElement('div');
-  wrap.style.cssText='width:100%;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';background:#0d0d0f;border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer';
+  wrap.style.cssText='width:100%;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'3/2':'1/1')+';background:#0d0d0f;border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer';
   const im=document.createElement('img'); im.decoding='async'; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
   // Plus de bandes noires (Axel 24/09) : la case adopte le ratio RÉEL de l'image (une photo 3:4 dans une case 2:3 = bandes).
   im.onload=()=>{ if(im.naturalWidth && im.naturalHeight){ wrap.style.aspectRatio = im.naturalWidth+'/'+im.naturalHeight; wrap.style.background='transparent'; } };
@@ -13946,26 +13976,36 @@ async function _mtAvatarInFormat(idx, target){
   if(okAsIs) return remember(base);
   // sinon régénération img2img dans le nouveau format
   let token=''; try{ token=(await sb.auth.getSession()).data.session?.access_token || ''; }catch(_){}
-  const size   = want==='paysage' ? '1536x1024' : '1024x1536';
+  // portrait = vrai 9:16 en 2K (Axel 24/09) ; repli 1024x1536 si OpenAI refusait cette taille
+  const sizes  = want==='paysage' ? ['1536x1024'] : ['1152x2048', '1024x1536'];
   const framing= want==='paysage' ? 'horizontal 16:9 landscape' : 'vertical 9:16 portrait';
   const prompt = 'Recompose this exact same person into a '+framing+' photo. Keep the identical face, hair, skin tone, expression, clothing, lighting and background style — do NOT change the person or the outfit. Photorealistic, natural framing, head and shoulders well centered, high quality, sharp.';
-  for(const model of _GPT_IMG_MODELS){
-    try{
-      const fd=new FormData();
-      fd.append('model', model);
-      fd.append('image', base, base.name||'avatar.png');
-      fd.append('prompt', prompt);
-      fd.append('n','1'); fd.append('size', size);
-      fd.append('quality','high'); fd.append('moderation','low');
-      const r=await fetch(OPENAI_PROXY+'?path=/v1/images/edits', { method:'POST', headers:{ ...(_aaOp()), 'Authorization':'Bearer '+token }, body: fd });
-      const d=await r.json();
-      if(d.error){ if(/model|not found|does not exist|unsupported/i.test(d.error.message||'')) continue; throw new Error(d.error.message); }
-      const it=d.data?.[0];
-      let blob=null;
-      if(it?.b64_json) blob=await (await fetch('data:image/png;base64,'+it.b64_json)).blob();
-      else if(it?.url)  blob=await (await fetch(it.url)).blob();
-      if(blob) return remember(new File([blob], 'avatar-'+want+'.png', {type:'image/png'}));
-    }catch(e){ console.warn('régénération format '+want+':', e); }
+  for(const size of sizes){
+    let sizeRefused = false;
+    for(const model of _GPT_IMG_MODELS){
+      try{
+        const fd=new FormData();
+        fd.append('model', model);
+        fd.append('image', base, base.name||'avatar.png');
+        fd.append('prompt', prompt);
+        fd.append('n','1'); fd.append('size', size);
+        fd.append('quality','high'); fd.append('moderation','low');
+        const r=await fetch(OPENAI_PROXY+'?path=/v1/images/edits', { method:'POST', headers:{ ...(_aaOp()), 'Authorization':'Bearer '+token }, body: fd });
+        const d=await r.json();
+        if(d.error){
+          const _em = String(d.error.message||'');
+          if(/model|not found|does not exist|unsupported/i.test(_em)) continue;
+          if(/\bsize\b|1152x2048|dimension/i.test(_em)){ sizeRefused = true; break; }
+          throw new Error(_em);
+        }
+        const it=d.data?.[0];
+        let blob=null;
+        if(it?.b64_json) blob=await (await fetch('data:image/png;base64,'+it.b64_json)).blob();
+        else if(it?.url)  blob=await (await fetch(it.url)).blob();
+        if(blob) return remember(new File([blob], 'avatar-'+want+'.png', {type:'image/png'}));
+      }catch(e){ console.warn('régénération format '+want+':', e); }
+    }
+    if(!sizeRefused) break;
   }
   // échec de régénération → on renvoie l'original (le renderer cover-crop centre le visage)
   return base;
@@ -18599,14 +18639,17 @@ async function _avGenGenerate(){
 // gpt-image via openai-proxy — même appel que _imgGenerateOne, mais qualité
 // PREMIUM (medium) FIGÉE : _imgEffectiveQuality() est plafonnée par plan et
 // aurait rétrogradé un Starter en low alors qu'il paie les 3 cr du premium.
-// Portrait 1024x1536 (résolution portrait max de gpt-image, idéale 9:16 avatar).
+// Portrait 1152x2048 : vrai 9:16 en 2K (même prix que 1024x1536 chez OpenAI — Axel 24/09).
 async function _avGenCallGpt(token, prompt){
+  return _gptSizeFallback('1152x2048', (sz) => _avGenCallGptAt(token, prompt, sz));
+}
+async function _avGenCallGptAt(token, prompt, gptSize){
   let lastErr = 'Erreur génération';
   for (const model of _GPT_IMG_MODELS){
     const res = await fetch(SUPABASE_URL + '/functions/v1/openai-proxy?path=/v1/images/generations', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt, n: 1, size: '1024x1536', quality: 'medium', moderation: 'low' })
+      body: JSON.stringify({ model, prompt, n: 1, size: gptSize, quality: 'medium', moderation: 'low' })
     });
     const data = await res.json();
     if (data.error){
@@ -18625,8 +18668,11 @@ async function _avGenCallGpt(token, prompt){
 // EXACT de _imgEditOne/_expComposeRefs : chaque réf normalisée en PNG propre
 // (sinon HEIC/WEBP → 400 « Invalid image file »), image[] multiples en FormData,
 // clause de fidélité du texte packaging (_IMG_TEXT_FIDELITY) ajoutée UNE fois.
-// Même portrait 1024x1536 et même qualité premium FIGÉE que le chemin sans réf.
+// Même portrait 1152x2048 et même qualité premium FIGÉE que le chemin sans réf.
 async function _avGenCallGptEdits(token, prompt){
+  return _gptSizeFallback('1152x2048', (sz) => _avGenCallGptEditsAt(token, prompt, sz));
+}
+async function _avGenCallGptEditsAt(token, prompt, gptSize){
   let lastErr = 'Erreur génération';
   const srcs = _avGenRefs.slice(0, 4);
   const refs = [];
@@ -18643,7 +18689,7 @@ async function _avGenCallGptEdits(token, prompt){
     else fd.append('image', refs[0], refs[0].name || 'image.png');
     fd.append('prompt', fidPrompt);
     fd.append('n', '1');
-    fd.append('size', '1024x1536');
+    fd.append('size', gptSize);
     fd.append('quality', 'medium');
     fd.append('moderation', 'low');
     const res = await fetch(SUPABASE_URL + '/functions/v1/openai-proxy?path=/v1/images/edits', {
@@ -18740,7 +18786,7 @@ async function _avGen4K(btn){
     // un résultat 4K net au lieu d'échouer quand Google est en surcharge.
     let up;
     try{
-      up = await _nbRefine4K(token, src, '9:16');
+      up = await _nbRefine4K(token, src, await _nbAspectOf(src, '9:16'));
     }catch(nbErr){
       if(nbErr && nbErr._kieStage) throw nbErr;   // compte dev sur kie : pas de repli fal (Axel 23/09)
       // Google (gemini-3-pro-image) saturé → MÊME modèle via fal.ai (fournisseur non saturé).
@@ -31091,7 +31137,7 @@ async function expressCreate(){
     if((window._expImgs||[]).length > 1){
       setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
       try{
-        const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1536');
+        const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1152x2048');
         const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize);
         if(_composed){
           if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
