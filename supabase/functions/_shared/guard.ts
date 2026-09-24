@@ -124,6 +124,23 @@ export async function applyReservationFull(o: { req: Request; userId: string; pr
 //    une op TIRÉE (reserve 0) n'est plus retrouvable par resolveOp → la libération sur échec ne rendait plus
 //    rien = SUR-DÉBIT d'une génération ratée. On rend/règle donc l'op PRÉCISE (échec synchrone) ou l'op LIÉE
 //    au job fournisseur (échec asynchrone), jamais « la dernière op ouverte » (qui rouvrait le refund-and-keep).
+// ── Palier « 4K » Images IA (24/09/2026, migration 20260924193000) : gpt MEDIUM + upscale Nano pour 5 crédits.
+// L'appel gpt marqué `x-aa-chain: nano4k` tire le palier entier (5) et, réussi, crédite l'op d'UN droit d'upscale ;
+// l'appel Nano consomme ce droit (tirage 0) au lieu de ses 5. Nano en échec → droit rendu. RPC service seulement.
+export const CHAIN_NANO_COST = 5
+export function wantsNanoChain(req: Request): boolean { return (req.headers.get('x-aa-chain') || '').trim().toLowerCase() === 'nano4k' }
+export async function chainCreditAdd(userId: string, opId: string | undefined, n = 1): Promise<boolean> {
+  if (!opId) return false
+  try { const { data, error } = await svc().rpc('chain_credit_add', { p_user: userId, p_op: opId, p_n: n }); return !error && data === true } catch { return false }
+}
+// `hint` = l'op indiquée par le client (x-aa-op : l'op du palier), prise en priorité ; sinon la plus récente.
+export async function chainCreditTake(userId: string, hint?: string): Promise<string | null> {
+  try { const { data, error } = await svc().rpc('chain_credit_take', { p_user: userId, p_hint: hint || null }); return !error && typeof data === 'string' && data ? data : null } catch { return null }
+}
+export async function chainCreditGiveBack(userId: string, opId: string | null | undefined): Promise<void> {
+  if (!opId) return
+  try { await svc().rpc('chain_credit_give_back', { p_user: userId, p_op: opId }) } catch { /* best-effort */ }
+}
 export async function releaseOp(userId: string, opId: string | undefined, cost: number): Promise<void> {
   if (!opId) return
   try { await svc().rpc('release_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)) }) } catch { /* best-effort */ }
@@ -175,7 +192,7 @@ export function svc(): SupabaseClient {
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op, x-aa-chain',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 export const jsonRes = (status: number, body: unknown) =>
