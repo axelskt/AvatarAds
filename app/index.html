@@ -5795,7 +5795,10 @@ async function getAuthHeader(){
   return h;
 }
 // En-tête x-aa-op pour les appels proxy qui construisent Authorization à la main (Images IA gpt-image/Nano).
-function _aaOp(){ try{ return (typeof _creditOps!=='undefined' && _creditOps.length) ? { 'x-aa-op': String(_creditOps[_creditOps.length-1]) } : {}; }catch(_){ return {}; } }
+// En-tête x-aa-op = la réservation de crédits que le proxy doit tirer. Sans argument : la dernière op du flux en cours.
+// Avec `op` : CETTE réservation — obligatoire pour des requêtes PARALLÈLES (lot 4K), sinon le serveur prend la dernière
+// réservation ouverte pour toutes et la 2e reçoit un 402 (vérif du 24/09).
+function _aaOp(op){ try{ if(op) return { 'x-aa-op': String(op) }; return (typeof _creditOps!=='undefined' && _creditOps.length) ? { 'x-aa-op': String(_creditOps[_creditOps.length-1]) } : {}; }catch(_){ return {}; } }
 
 // Minutes de vidéo par plan (stockées en secondes dans Supabase)
 const PLAN_SECONDS = { free: 40, starter: 300, pro: 600, elite: 1500 };
@@ -6269,9 +6272,10 @@ function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='med
 // pas concernés : ils sont séquentiels, jamais simultanés.
 let _spendLock = false;
 async function spendCreditsFor(amount, label){
+  window._aaSpendFail = null; window._aaLastSpendOp = null;   // lot 4K : motif d'échec + op EXACTE de ce débit
   if(typeof currentMember==='undefined' || !currentMember){ showPaywall(); return false; }
   if(!(amount > 0)) return true;   // action GRATUITE (réutiliser un avatar, transcription) → aucun débit, aucun paywall
-  if(_spendLock){ toast('Une génération est déjà en cours — patiente'); return false; }
+  if(_spendLock){ window._aaSpendFail='lock'; toast('Une génération est déjà en cours — patiente'); return false; }
   if(['developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner) return true;
   // Free → paywall direct dès qu'une action payante (API) se lance — #69/#40 « à l'action »
   if(_isFreePlan()){ showPlansSheet(); return false; }
@@ -6285,10 +6289,11 @@ async function spendCreditsFor(amount, label){
   let data, error;
   try { ({ data, error } = await sb.rpc('spend_credits', { p_secs: amount, p_reason: label || null })); }
   finally { _spendLock = false; }
-  if(error){ console.warn('spend_credits:', error); toast('Erreur crédits — réessaie'); return false; }
+  if(error){ window._aaSpendFail='rpc'; console.warn('spend_credits:', error); toast('Erreur crédits — réessaie'); return false; }
   if(!data || data.ok !== true){ _insufficientCredits(Math.max(1, amount - creditsBalance())); return false; }
   currentMember.credits_remaining = data.balance;
   // #122 : on retient l'opération pour pouvoir la REMBOURSER si la génération échoue
+  window._aaLastSpendOp = data.op_id || null;
   if(data.op_id) _creditOps.push(data.op_id);
   _updateQuotaDisplay();
   return true;
@@ -6302,8 +6307,9 @@ async function spendCreditsFor(amount, label){
 let _creditOps = [];
 function creditsFlowBegin(){ _creditOps = []; }        // début d'une génération
 function creditsFlowDone(){ _creditOps = []; }         // succès → plus rien à rendre
-async function creditsFlowRefund(why){
-  const ops = _creditOps.slice(); _creditOps = [];
+async function creditsFlowRefund(why, opsOverride){
+  // opsOverride : rembourse CES ops sans toucher au flux global (_creditOps) d'une autre génération en cours.
+  const ops = opsOverride ? opsOverride.slice() : _creditOps.slice(); if(!opsOverride) _creditOps = [];
   let total = 0;
   for(const id of ops){
     try{
@@ -9022,9 +9028,10 @@ function _imgClearRef(){
 function _imgSyncRefCount(){
   const n=_imgRefFiles.length;
   const b=document.getElementById('imgRefCount');
-  if(b){ b.style.display = n>=1 ? 'block' : 'none'; b.textContent = n+'/'+_IMG_REF_MAX; }
+  if(b){ b.style.display = n>=1 ? 'block' : 'none'; b.textContent = n+'/'+_imgRefMax(); }
   const t=document.getElementById('imgRefTitle');
-  if(t) t.textContent = n>1 ? n+' images de référence' : (_imgMode==='correct'?'Image à corriger':'Image de référence');
+  if(t) t.textContent = n>1 ? (n+(_imgMode==='correct'?' images à corriger':' images de référence')) : (_imgMode==='correct'?'Image à corriger':'Image de référence');
+  if(typeof _imgSyncRealCost==='function') _imgSyncRealCost();   // « Améliorer en 4K » : N images · N×5 cr
 }
 // ── Vignettes des références AU-DESSUS du prompt, chacune avec sa croix ──────
 // Axel (13/08) : « quand on met une image elle s'affiche au-dessus de la zone
@@ -9097,6 +9104,7 @@ function _imgSelectCorrection(idx){
 }
 // Lance la correction SÉLECTIONNÉE — appelée par « Générer l'image » en mode correction.
 function _imgRunSelectedCorrection(){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   if(!_imgRefFile){ toast('Importe d\'abord l\'image à corriger'); const inp=document.getElementById('imgRefInput'); if(inp) inp.click(); return; }
   if(_imgCorrectSel==null || _imgCorrectSel<0){ toast('Choisis une correction au-dessus'); return; }
   const p=_IMG_CORRECT_PRESETS[_imgCorrectSel];
@@ -9149,6 +9157,7 @@ async function _imgDetectGender(dataUrl){
 }
 async function _imgFileToDataUrl(file, maxPx){ const url=URL.createObjectURL(file); try{ const im=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; }); const k=Math.min(1,(maxPx||1024)/Math.max(im.naturalWidth,im.naturalHeight)); const w=Math.max(2,Math.round(im.naturalWidth*k)), h=Math.max(2,Math.round(im.naturalHeight*k)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); return cv.toDataURL('image/jpeg',0.9); } finally { URL.revokeObjectURL(url); } }
 async function _imgRunFaceSwap(btn){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   if(!_imgRefFile){ toast('Charge l\'image à corriger (en haut)'); return; }
   if(!_imgFaceFile){ toast('Charge le visage à appliquer'); const fi=document.getElementById('imgFaceInput'); if(fi) fi.click(); return; }
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
@@ -9229,6 +9238,7 @@ async function _imgToDataUrl(u){
   return await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(b); });
 }
 async function _imgMakeRealistic(btn){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const _plan = (currentMember?.plan || 'free').toLowerCase();
   if(!['pro','elite','byok','developer'].includes(_plan)){
@@ -9236,6 +9246,7 @@ async function _imgMakeRealistic(btn){
     return;
   }
   if(!_imgRefFile){ toast('Importe d\'abord l\'image à corriger'); return; }
+  if(_imgRefFiles.length > 1) return _imgMakeRealisticBatch(btn);   // plusieurs images importées → toutes passent en 4K (Axel 24/09)
   creditsFlowBegin();
   if(!(await spendCreditsFor(CREDIT_COSTS.imgRealistic, 'améliorer en 4K'))) return;
   const orig = btn ? btn.innerHTML : null;
@@ -9280,9 +9291,130 @@ async function _imgMakeRealistic(btn){
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
 
+// « Améliorer en 4K » sur PLUSIEURS images importées (Axel 24/09 : « charger 6 images, appuyer sur Améliorer en 4K et
+// voir les 6 charger »). Avant, seule la 1re image partait. Chaque image passe par EXACTEMENT le même chemin que l'image
+// seule (Nano Banana Pro 4K au ratio réel ; clients : repli gpt-image si Google échoue ; compte dev = kie sans repli).
+// UNE CASE PAR IMAGE, affichées d'emblée : chacune a son écran de chargement + son chrono, puis son image et son bouton
+// Télécharger dès qu'elle est prête (dans l'ordre d'arrivée). Chaque résultat est rangé automatiquement en Bibliothèque.
+// Crédits (clients) : UN débit PAR image, tous passés AVANT de lancer (le verrou de débit interdit les débits simultanés)
+// → une image en échec est remboursée SEULE ; si le solde ne couvre pas tout, les dernières cases restent « non lancées ».
+// En parallèle : compte dev (kie) = toutes les images d'un coup ; clients (Google) = 3 à la fois.
+async function _imgMakeRealisticBatch(btn){
+  const files = _imgRefFiles.slice(), n = files.length, cost = CREDIT_COSTS.imgRealistic;
+  const kie = _kieOn(), par = kie ? n : 3;
+  const orig = btn ? btn.innerHTML : null;
+  const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), multiGrid=document.getElementById('imgMultiGrid'), overlay=document.getElementById('imgLoadingOverlay');
+  if(window._img4kBusy){ toast('Un lot 4K est déjà en cours — patiente'); return; }
+  window._img4kBusy = true;   // bloque les autres actions Images IA pendant le lot (elles réécriraient la grille / le flux crédits)
+  const _bu = (e)=>{ e.preventDefault(); e.returnValue = 'Lot 4K en cours'; return 'Lot 4K en cours'; };
+  window.addEventListener('beforeunload', _bu);   // lot en cours : confirmer avant de quitter (écouteur à part, n'écrase pas celui du Générateur)
+  let done = 0, ok = 0, ko = 0, skipped = 0, refunded = 0, viaGpt = 0;
+  const t0 = Date.now(), fmtT = (ms)=>{ const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+  const spin = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg>';
+  const started = new Array(n).fill(0);   // heure de départ de chaque image (0 = en file)
+  const paint = ()=>{
+    if(btn) btn.innerHTML = spin+' 4K '+done+'/'+n+'… <span style="font-family:var(--mono)">'+fmtT(Date.now()-t0)+'</span>';
+    for(let i=0;i<n;i++){ const el=document.getElementById('_imgMultiTime'+i); if(el) el.textContent = started[i] ? fmtT(Date.now()-started[i]) : 'en file'; }
+  };
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; }
+  const tick = setInterval(paint, 1000);
+  const fmtFor = (w,h)=> (h > w*1.15) ? '1024x1792' : (w > h*1.15) ? '1792x1024' : '1024x1024';   // format le plus proche (cases + actions)
+  const readUrl = (f)=> new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(f); });
+  const slotMsg = (i, m)=>{ const sl=document.getElementById('_imgMultiSlot'+i); if(sl) sl.innerHTML='<div style="color:var(--text3);font-size:10.5px;font-family:var(--mono);text-align:center;padding:12px;line-height:1.5">'+String(m).replace(/</g,'&lt;').slice(0,220)+'</div>'; };
+  const slotLoading = (i, label)=>{ const sl=document.getElementById('_imgMultiSlot'+i); if(!sl) return;
+    sl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:9px">'
+      + '<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>'
+      + '<div style="font-size:11px;font-weight:700;color:var(--text2)">'+label+'</div>'
+      + '<div id="_imgMultiTime'+i+'" style="font-size:10.5px;font-family:var(--mono);color:var(--text3)">'+(started[i]?fmtT(Date.now()-started[i]):'en file')+'</div></div>'; };
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const token=session?.access_token || SUPABASE_KEY;
+    const src = [];
+    for(const f of files){ const d = await readUrl(f); let w=0, h=0; try{ const im=await _loadImgEl(d); w=im.naturalWidth; h=im.naturalHeight; }catch(_){} src.push({ f, d, w, h }); }
+    // Les N cases apparaissent TOUT DE SUITE, chacune avec son écran de chargement.
+    if(singleWrap) singleWrap.style.display='none';
+    if(overlay) overlay.style.display='none';
+    _imgIdleShow(false);
+    if(multiGrid){
+      multiGrid.innerHTML='';
+      src.forEach((x,i)=>{ const ph=document.createElement('div'); ph.id='_imgMultiSlot'+i;
+        ph.style.cssText='position:relative;background:var(--bg4);border:1px solid var(--border);border-radius:14px;aspect-ratio:'+((x.w&&x.h)?(x.w+'/'+x.h):'2/3')+';display:flex;align-items:center;justify-content:center;overflow:hidden';
+        multiGrid.appendChild(ph); slotLoading(i, 'Image '+(i+1)); });
+    }
+    if(multiWrap){ multiWrap.style.display='block'; try{ multiWrap.scrollIntoView({ behavior:'smooth', block:'start' }); }catch(_){} }
+    paint();
+    // Clients : débit de CHAQUE image au moment où elle démarre (jamais 6 débits d'avance : un onglet fermé en plein
+    // lot ne laisse pas de crédits débités sans génération). Débits SÉRIALISÉS (verrou de débit) ; l'op est retirée du
+    // flux global (splice) pour être remboursée seule. Solde épuisé → les images suivantes restent « non lancées ».
+    const ops = new Array(n).fill(null);
+    let noCredit = false, skipWhy = 'crédits insuffisants', debitQ = Promise.resolve();
+    const skip = (i)=>{ skipped++; done++; slotMsg(i, 'Image '+(i+1)+' non lancée — '+skipWhy); paint(); };
+    const one = async (i)=>{
+      const x = src[i], fmt = fmtFor(x.w, x.h);
+      if(!kie){
+        if(noCredit){ skip(i); return; }
+        const got = await (debitQ = debitQ.then(async ()=>{
+          if(noCredit) return null;
+          try{
+            const lbl = 'améliorer en 4K ('+(i+1)+'/'+n+')';
+            let okD = await spendCreditsFor(cost, lbl);
+            // verrou tenu par un autre module ou erreur serveur ≠ solde insuffisant → un 2e essai après 1,5 s
+            if(!okD && (window._aaSpendFail==='lock' || window._aaSpendFail==='rpc')){ await new Promise(r=>setTimeout(r,1500)); okD = await spendCreditsFor(cost, lbl); }
+            if(!okD){ noCredit = true; skipWhy = (window._aaSpendFail==='lock' || window._aaSpendFail==='rpc') ? 'débit impossible, réessaie' : 'crédits insuffisants'; return null; }
+            const id = window._aaLastSpendOp; window._aaLastSpendOp = null;
+            if(id){ const k = _creditOps.lastIndexOf(id); if(k >= 0) _creditOps.splice(k, 1); }   // retirée du flux global, gardée pour CETTE image
+            return id ? [id] : [];
+          }
+          catch(_){ noCredit = true; skipWhy = 'débit impossible, réessaie'; return null; }
+        }));
+        if(!got){ skip(i); return; }
+        ops[i] = got;   // [] possible (compte sans op renvoyée) : l'image part avec l'en-tête par défaut
+      }
+      started[i] = Date.now(); slotLoading(i, 'Image '+(i+1)+' · 4K…');
+      const op = (ops[i] && ops[i][0]) || null;   // la réservation de CETTE image (en-tête x-aa-op)
+      let gpt = false;
+      try{
+        const aspect = (x.w && x.h) ? _nbAspectFor(x.w, x.h) : (_NB_FMT_ASPECT[_imgSelectedFormat] || '9:16');
+        let tk = token; try{ tk = (await sb.auth.getSession()).data.session?.access_token || token; }catch(_){}   // jeton relu : le lot peut durer
+        let url;
+        try{ url = await _nbRefine4K(tk, x.d, aspect, op); if(!url) throw new Error('Nano Banana Pro : aucune image'); }
+        catch(e){
+          if(e && e._kieStage) throw e;   // compte dev sur kie : pas de repli (Axel 23/09)
+          console.warn('Nano Banana Pro indispo (4K lot '+(i+1)+'/'+n+'), repli gpt-image :', e);
+          const sizeMap={ '1024x1792':'1024x1536','1792x1024':'1536x1024','1024x1024':'1024x1024' };
+          url = await _imgEditOne(tk, _IMG_REALISM_EDIT, x.f, sizeMap[fmt]||'1024x1024', { only:true, op });   // SA seule image
+          gpt = true; viaGpt++;
+        }
+        ok++; _imgMonthIncrement();
+        (window._imgAutoSavedUrls = window._imgAutoSavedUrls || new Set()).add(_imgUrlKey(url));   // tout de suite : un clic rapide sur la case ne ré-enregistre pas
+        (window.requestIdleCallback||function(f){ setTimeout(f,80); })(()=>_imgAutoSaveUrl(url, fmt, '4K'));
+        // Aperçu de la case à ~1200 px (une 4K décodée pèse ~130 Mo de mémoire) ; la vraie 4K au clic et au téléchargement.
+        let view = null; try{ view = await _imgThumbFromUrl(url, 1200, 0.88); }catch(_){}
+        const ext = /^data:image\/png/i.test(url) ? 'png' : 'jpg';
+        _imgFillMultiSlot(document.getElementById('_imgMultiSlot'+i), url, fmt, false, { no4K:true, view, dlName:(gpt?'avatarads-image-':'avatarads-4k-')+(i+1)+'.'+ext });
+      }catch(e){
+        ko++;
+        if(ops[i] && ops[i].length){ const r = await creditsFlowRefund('image '+(i+1)+'/'+n+' : l\'amélioration 4K a échoué', ops[i]); if(r > 0) refunded++; }
+        const m = (e && e._kieStage==='pending') ? (e.message||'') : _imgFriendlyErr((e&&e.message)||'Échec');
+        slotMsg(i, 'Image '+(i+1)+' : '+m);
+      }finally{ done++; paint(); }
+    };
+    let next = 0;
+    const worker = async ()=>{ for(;;){ const i = next++; if(i >= n) return; await one(i); } };
+    await Promise.all(Array.from({ length: Math.min(par, n) }, worker));
+    _imgRenderHistory();
+    const tag = (kie && ok) ? ' · kie.ai' : '';
+    toast(ok===n ? (n+' images améliorées en 4K — rangées dans ta Bibliothèque'+tag)
+                 : ('4K : '+ok+'/'+n+' réussie'+(ok>1?'s':'')+(ko?(' · '+ko+' en échec'+(refunded?(' ('+refunded+' remboursée'+(refunded>1?'s':'')+')'):'')):'')+(skipped?(' · '+skipped+' non lancée'+(skipped>1?'s':'')+' (crédits)'):'')+tag)
+                   + (viaGpt ? (' · '+viaGpt+' via gpt-image (Google indisponible)') : ''));
+  }catch(e){ toast(''+(e.message||e)); }
+  finally{ window._img4kBusy = false; window.removeEventListener('beforeunload', _bu); clearInterval(tick); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } try{ _imgSyncRealCost(); }catch(_){} }
+}
+
 // #corr2 (Axel 30/08) : « Détails du visage » dans Correction = AuraSR (×4 NON génératif, agrandit
 // la vraie image sans re-fabriquer) sur l'image importée. Distinct de « Améliorer en 4K » (Nano Banana Pro).
 async function _imgCorrectDetails(btn){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const _plan = (currentMember?.plan || 'free').toLowerCase();
   if(!['pro','elite','byok','developer'].includes(_plan)){ try{ showPaywall(); }catch(_){} return; }
@@ -9340,7 +9472,8 @@ function _imgRunCorrection(idx, btn){
 // donc si CREDIT_COSTS.imgRealistic change, le bouton suit (dynamique).
 function _imgSyncRealCost(){
   const el = document.getElementById('imgMakeRealCost');
-  if(el) el.textContent = CREDIT_COSTS.imgRealistic + ' cr';
+  const n = (typeof _imgRefFiles!=='undefined' && _imgRefFiles.length > 1) ? _imgRefFiles.length : 1;
+  if(el) el.textContent = n > 1 ? (n + ' images · ' + (n * CREDIT_COSTS.imgRealistic) + ' cr') : (CREDIT_COSTS.imgRealistic + ' cr');
 }
 function _imgSetMode(m){
   _imgMode = m;
@@ -9357,10 +9490,13 @@ function _imgSetMode(m){
   _imgCorrectSel=-1; _imgToggleFaceZone(false);   // #144 · reset faceswap dans TOUS les modes (le composer réapparaît en Génération)
   if(corr){ _imgRenderCorrectPresets(); _imgSyncRealCost(); }
   else _imgSyncGenBtn();  // onglet Génération : coût dynamique sur « Générer l'image »
+  // 6 images en Correction (lot 4K), 5 références en Génération : on garde les 5 premières en repassant en Génération.
+  if(!corr && _imgRefFiles.length > _IMG_REF_MAX){ _imgRefFiles.length = _IMG_REF_MAX; _imgRefUrls.length = Math.min(_imgRefUrls.length, _IMG_REF_MAX); _imgRenderRefStrip(); toast('Génération : 5 images de référence maximum — les 5 premières sont gardées'); }
+  _imgSyncRefCount();   // compteur n/6 (Correction) ou n/5 (Génération)
   _imgInitSuggestions();
   // Composer : bouton image de référence — bordure/label selon le mode
   const setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
-  setTxt('imgRefTitle',    corr ? 'Image à corriger' : 'Image de référence');
+  if(typeof _imgSyncRefCount==='function') _imgSyncRefCount(); else setTxt('imgRefTitle', corr ? 'Image à corriger' : 'Image de référence');
   setTxt('imgRefSubLabel', corr ? 'requis' : '');
   const rb=document.getElementById('imgRefBtnComposer');
   if(rb && !_imgRefFile){ rb.style.borderColor = corr ? 'var(--accent-line)' : 'var(--border-2)'; rb.style.background = corr ? 'var(--accent-soft)' : 'var(--panel-1)'; }
@@ -9410,9 +9546,11 @@ async function _imgEditThis(){
 function _imgOnRefDrop(e){ e.preventDefault(); e.currentTarget.style.borderColor='var(--border-2)'; [...(e.dataTransfer?.files||[])].forEach(f=>_imgLoadRef(f)); }
 function _imgOnRefInput(input){ [...(input?.files||[])].forEach(f=>_imgLoadRef(f)); if(input) input.value=''; }
 const _IMG_REF_MAX = 5; // jusqu'à 5 images de référence (Axel 17/08)
+// Correction : jusqu'à 6 images (lot « Améliorer en 4K », Axel 24/09) ; Génération : 5 références.
+function _imgRefMax(){ return (typeof _imgMode!=='undefined' && _imgMode==='correct') ? 6 : _IMG_REF_MAX; }
 function _imgLoadRef(file){
   if(!file || !file.type.startsWith('image/')){ toast('Choisis une image'); return; }
-  if(_imgRefFiles.length>=_IMG_REF_MAX){ toast('Maximum '+_IMG_REF_MAX+' images de référence'); return; }
+  if(_imgRefFiles.length>=_imgRefMax()){ toast('Maximum '+_imgRefMax()+' images'+(_imgMode==='correct'?'':' de référence')); return; }
   _imgRefFiles.push(file);
   _imgRefFile = _imgRefFiles[0];
   const isFirst = _imgRefFiles.length===1;
@@ -9428,7 +9566,7 @@ function _imgLoadRef(file){
     _imgRenderRefStrip();
     const _fzOn=document.getElementById('imgFaceFull');
     if(_fzOn && _fzOn.style.display!=='none'){ _imgToggleFaceZone(true); toast('Image à corriger chargée'); }   // #144 · faceswap plein écran : affiche l'aperçu à gauche + toast dédié
-    else toast('Image '+_imgRefFiles.length+'/'+_IMG_REF_MAX+' chargée');
+    else toast('Image '+_imgRefFiles.length+'/'+_imgRefMax()+' chargée');
   };
   r.readAsDataURL(file);
 }
@@ -9445,11 +9583,12 @@ async function _imgToCleanPng(src, name){
   return new File([blob], name||'ref.png', { type:'image/png' });
 }
 // Édition d'image via gpt-image-1 /v1/images/edits (multipart)
-async function _imgEditOne(token, prompt, refFile, gptSize){
+async function _imgEditOne(token, prompt, refFile, gptSize, opt){
+  opt = opt || {};   // opt.only : n'envoyer QUE refFile (lot 4K : l'image de sa case) · opt.op : réservation explicite
   let lastErr = 'Erreur correction';
   // Jusqu'à 5 images de référence (gpt-image accepte image[] en multipart).
   // ⚠ On NORMALISE chaque réf en PNG propre avant l'envoi (sinon un HEIC/WEBP → 400 « Invalid image file »).
-  const _srcFiles = (_imgRefFiles && _imgRefFiles.length) ? _imgRefFiles.slice(0,5) : [refFile];
+  const _srcFiles = opt.only ? [refFile] : ((_imgRefFiles && _imgRefFiles.length) ? _imgRefFiles.slice(0,5) : [refFile]);
   const _refFiles = [];
   for(let i=0;i<_srcFiles.length;i++){
     if(!_srcFiles[i]) continue;
@@ -9471,7 +9610,7 @@ async function _imgEditOne(token, prompt, refFile, gptSize){
     fd.append('quality', _imgGptQuality()); // qualité pilotée par le slider (4K → medium, l'upscale Nano fait le reste)
     fd.append('moderation', 'low'); // filtre moins restrictif (contenu influenceur)
     const res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/edits', {
-      method:'POST', headers:{ ...(_aaOp()), 'Authorization':'Bearer '+token }, body: fd
+      method:'POST', headers:{ ...(_aaOp(opt.op)), 'Authorization':'Bearer '+token }, body: fd
     });
     const data = await res.json();
     if(data.error){
@@ -9701,11 +9840,11 @@ function _imgMakeThumb(imgEl, maxDim, q){
 let _imgLastSavedSrc = '';
 // Miniature JPEG légère depuis une URL/data: — pour ne JAMAIS stocker le base64 COMPLET en localStorage
 // (c'est ce qui faisait dépasser le quota mobile → setItem throw → sauvegarde serveur sautée → image perdue).
-function _imgThumbFromUrl(u, max, q){ return new Promise(res=>{ try{ const im=new Image(); im.onload=()=>{ try{ const w=im.naturalWidth||max||512, h=im.naturalHeight||max||512; const s=Math.min(1,(max||512)/Math.max(w,h)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*s)); c.height=Math.max(1,Math.round(h*s)); c.getContext('2d').drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg', q||0.72)); }catch(_){ res(null); } }; im.onerror=()=>res(null); im.src=u; }catch(_){ res(null); } }); }
+function _imgThumbFromUrl(u, max, q){ return new Promise(res=>{ try{ const im=new Image(); if(/^https?:/i.test(String(u||''))) im.crossOrigin='anonymous'; im.onload=()=>{ try{ const w=im.naturalWidth||max||512, h=im.naturalHeight||max||512; const s=Math.min(1,(max||512)/Math.max(w,h)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*s)); c.height=Math.max(1,Math.round(h*s)); c.getContext('2d').drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg', q||0.72)); }catch(_){ res(null); } }; im.onerror=()=>res(null); im.src=u; }catch(_){ res(null); } }); }
 async function _imgSaveToLibrary(btn){
   const img = document.getElementById('imgOutput');
   if(!img || !img.src || img.src === window.location.href){ if(btn) toast('Génère une image d\'abord'); return; }
-  if(!btn && img.src === _imgLastSavedSrc) return;   // #145 · auto-save : jamais deux fois la même image
+  if(!btn && (img.src === _imgLastSavedSrc || (window._imgAutoSavedUrls && window._imgAutoSavedUrls.has(_imgUrlKey(img.src))))) return;   // #145 · auto-save : jamais deux fois la même image
   _imgLastSavedSrc = img.src;
   const orig = btn ? btn.innerHTML : null;
   if(btn){ btn.disabled = true; btn.style.opacity = '.7'; btn.innerHTML = 'Enregistrement…'; }
@@ -9745,8 +9884,15 @@ async function _imgSaveToLibrary(btn){
 
 // #145 · Auto-save d'une image par URL (utilisé par la génération MULTI : chaque variation
 // va sur le compte comme la génération simple). Même logique que _imgSaveToLibrary mais sur une URL.
+// Empreinte courte d'une URL (une dataURL 4K fait 10-20 Mo : on ne la garde JAMAIS comme clé d'un Set).
+function _imgUrlKey(u){ u = String(u||''); if(u.length <= 256) return u;
+  let h = 0x811c9dc5; const st = Math.max(1, (u.length/8192)|0);
+  for(let i=0;i<u.length;i+=st){ h ^= u.charCodeAt(i); h = Math.imul(h, 16777619); }
+  for(let i=Math.max(0,u.length-512);i<u.length;i++){ h ^= u.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return 'k'+u.length+'.'+(h>>>0).toString(36); }
 async function _imgAutoSaveUrl(url, size, styleLabel){
   if(!url) return;
+  (window._imgAutoSavedUrls = window._imgAutoSavedUrls || new Set()).add(_imgUrlKey(url));   // ouverte ensuite en grand → pas de 2e enregistrement
   const id='i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   try{
     let fullBlob=null; try{ fullBlob=await (await fetch(url)).blob(); }catch(_){}
@@ -9756,7 +9902,7 @@ async function _imgAutoSaveUrl(url, size, styleLabel){
     let thumb=''; try{ thumb=await _imgThumbFromUrl(url, 512, 0.72) || ''; }catch(_){}
     const entry={ id, idbKey: fullBlob?idbKey:null, url: thumb, styleLabel: styleLabel||'Image', size, ts:Date.now(), fav:false };
     // 1) SERVEUR D'ABORD (durable, indépendant du localStorage) → l'image réapparaît au rechargement via _libLoadServer
-    if(fullBlob && typeof _libPersistServer==='function'){ try{ _libPersistServer(entry, fullBlob, { kind:'image', thumb: thumb||url, onSaved:(sid,spath)=>{ try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){} }}); }catch(_){} }
+    if(fullBlob && typeof _libPersistServer==='function'){ try{ _libPersistServer(entry, fullBlob, { kind:'image', thumb: thumb||'', onSaved:(sid,spath)=>{ try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); const it=h.find(x=>x.id===id); if(it){ it.srvId=sid; it.srvPath=spath; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(_){} }}); }catch(_){} }
     // 2) cache local (miniature) avec repli quota — le serveur est déjà fait, un échec local ne perd plus l'image
     try{ const hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); hist.unshift(entry); localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,60))); }
     catch(_){ try{ const hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); hist.unshift(entry); localStorage.setItem('imgHistory', JSON.stringify(hist.slice(0,15))); }catch(__){} }
@@ -10091,7 +10237,7 @@ function _nbAspect(w, h){
 // silencieux. Vérifié sur ai.google.dev : modèle gemini-3-pro-image (GA depuis le 28/05/2026),
 // config par responseModalities + imageConfig(imageSize/aspectRatio).
 // Partagé par « Restaurer les détails » (4K) et « Rendre réaliste » (2K).
-async function _nbEdit(token, dataUrl, prompt, aspect, size){
+async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint){
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
   if(!m) throw new Error('Image illisible pour Nano Banana Pro');
   // #lot6 · img2img = une image d'entrée par construction → consigne de fidélité du texte
@@ -10134,7 +10280,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size){
   let _nbLastStatus = 0;
   const call = async (payload) => {
     const _url = SUPABASE_URL + '/functions/v1/google-ai-proxy?path=' + encodeURIComponent(path);
-    const _hdr = { ...(_aaOp()), 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
+    const _hdr = { ...(_aaOp(opHint)), 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
     const _body = JSON.stringify(payload);
     let _last = null;
     for(let _a=0; _a<3; _a++){
@@ -10304,8 +10450,8 @@ async function _kieDataUrl(url){
   return await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(b); });
 }
 // Restauration 4K (bouton « Restaurer les détails ») — prompt figé, taille max.
-async function _nbRefine4K(token, dataUrl, aspect){
-  return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K');
+async function _nbRefine4K(token, dataUrl, aspect, opHint){
+  return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K', opHint);
 }
 // #4k-repli-fal (Axel 31/08) : MÊME modèle Nano Banana Pro mais via fal.ai
 // (fal-ai/nano-banana-pro/edit) au lieu de l'API Google directe — fournisseur différent,
@@ -10456,6 +10602,7 @@ async function _faceUpscalePass(dataUrl){
 }
 
 async function _imgUpscaleHD(btn){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(!['elite','developer'].includes(plan)){ toast('Restauration HD réservée au plan Élite'); openUpgradeModal(); return; }
   const img=document.getElementById('imgOutput');
@@ -10570,6 +10717,7 @@ async function _imgFramingMatches(origUrl, newUrl){
   }catch(e){ return { ok:true, why:'check impossible' }; }   // en cas de doute technique on ne bloque pas
 }
 async function _imgUpscaleNano(btn){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(!['elite','developer'].includes(plan)){ toast('Le 4K est réservé au plan Élite'); openUpgradeModal(); return; }
   const img=document.getElementById('imgOutput');
@@ -10654,6 +10802,7 @@ function _imgShowSingle(url, size){
 }
 
 async function generateImage(){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   if(_imgMode==='correct'){ _imgRunSelectedCorrection(); return; }   // #143 · en correction, le bouton lance la correction SÉLECTIONNÉE (les presets ne lancent plus au clic)
   const prompt = document.getElementById('imgPrompt').value.trim();
   if(!prompt){ toast('Écris une description d\'image d\'abord'); return; }
@@ -10950,6 +11099,7 @@ function _imgShowNanoOffer(prompt, size){
 }
 // « Réessayer via Nano Banana Pro (5 cr) » — génération img2img en 4K sur la même réf.
 async function _imgRetryViaNano(){
+  if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   const ctx = window._imgNanoCtx || {};
   if(!_imgRefFile){ toast('Image de référence perdue — relance la génération'); return; }
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
@@ -10999,14 +11149,15 @@ async function _imgRetryViaNano(){
 }
 
 // Sélectionne une image depuis la grille multi → l'affiche en grand (single)
-function _imgFillMultiSlot(slot, url, size, showFace){
+function _imgFillMultiSlot(slot, url, size, showFace, opt){
   if(!slot) return;
+  opt = opt || {};
   // Boutons SOUS l'image (pas en overlay), design/texte/couleur IDENTIQUES à la génération d'une seule image.
   slot.innerHTML='';
   slot.style.cssText='display:flex;flex-direction:column;gap:8px;background:transparent;border:none;border-radius:0;overflow:visible;padding:0;position:static';
   const wrap=document.createElement('div');
   wrap.style.cssText='width:100%;aspect-ratio:'+(size==='1024x1792'?'2/3':size==='1792x1024'?'3/2':'1/1')+';background:#0d0d0f;border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer';
-  const im=document.createElement('img'); im.decoding='async'; im.src=url; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
+  const im=document.createElement('img'); im.decoding='async'; im.src=opt.view||url; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
   wrap.appendChild(im); wrap.onclick=()=> _imgSelectFromMulti(url, size);   // clic sur l'image → ouvre en grand
   slot.appendChild(wrap);
   const K4='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.1 6.3L20.5 10l-6.4 1.7L12 18l-2.1-6.3L3.5 10l6.4-1.7z"/></svg>';
@@ -11018,11 +11169,11 @@ function _imgFillMultiSlot(slot, url, size, showFace){
   const lbl=(ic,txt,cr)=>'<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">'+ic+txt+'</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">'+cr+'&nbsp;cr</span>';
   const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px';
   if(showFace) row.appendChild(mk(lbl(FC,'Détails du visage','3'), outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgUpscaleBtn'); if(b) _imgUpscaleHD(b); }));
-  row.appendChild(mk(lbl(K4,'Améliorer en 4K','5'), outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
-  slot.appendChild(row);
+  if(!opt.no4K) row.appendChild(mk(lbl(K4,'Améliorer en 4K','5'), outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
+  if(row.children.length) slot.appendChild(row);
   // Ligne 2 : Télécharger — plein orange, exactement comme la génération unique
   slot.appendChild(mk(DL+'<span style="margin-left:7px">Télécharger</span>', 'width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center',
-    ()=>{ const a=document.createElement('a'); a.href=url; a.download='avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }));
+    ()=>{ const a=document.createElement('a'); a.href=url; a.download=opt.dlName||'avatarads-image.png'; document.body.appendChild(a); a.click(); a.remove(); }));
 }
 function _imgSelectFromMulti(url, size){
   document.getElementById('imgResultMulti').style.display = 'none';
@@ -27209,6 +27360,79 @@ async function _libDownloadMedia(ri, kind){
   }catch(e){ console.error('lib download:', e); toast('Téléchargement impossible'); }
 }
 let _libThumbIO = null;
+// ── Vignettes vidéo : fabriquées UNE fois puis gardées (audit Bibliothèque 24/09) ─────────────────────────
+// Avant : chaque rendu de la grille ouvrait un vrai lecteur <video> par carte visible (URL signée → Safari
+// télécharge jusqu'au fichier entier, 40-60 Mo pour un Express), jamais refermé → +1,3 Go de mémoire mesurés,
+// le Mac d'Axel gelait. Maintenant : cache mémoire + IndexedDB ('vthumb_'+clé), 2 lecteurs au plus en même temps,
+// lecteur vidé et libéré juste après la capture, copie locale (IndexedDB) avant le réseau, ciblage par CLÉ
+// (srvPath / hedraIdbKey) et jamais par position (library[] est retriée par _libLoadServer).
+const _libVThumbs = new Map();
+let _libVBusy = 0; const _libVWait = [];
+const _libVSlot = () => new Promise(r => { if(_libVBusy < 2){ _libVBusy++; r(); } else _libVWait.push(r); });
+const _libVFree = () => { const n = _libVWait.shift(); if(n) n(); else _libVBusy = Math.max(0, _libVBusy-1); };
+const _libVKey = (e) => (e && (e.srvPath || e.hedraIdbKey)) || '';
+async function _libVThumbGet(k){
+  if(!k) return null;
+  if(_libVThumbs.has(k)) return _libVThumbs.get(k);
+  try{ const r = await _idbLoad('vthumb_'+k); if(r && r.thumb){ const t = { src:r.thumb, dur:r.dur||0 }; _libVThumbs.set(k, t); return t; } }catch(_){}
+  return null;
+}
+async function _libVThumbPut(k, t){ try{ const db = await _idbOpen(); db.transaction(_IDB_STORE,'readwrite').objectStore(_IDB_STORE).put({ thumb:t.src, dur:t.dur }, 'vthumb_'+k); }catch(_){} }
+// Première image d'une vidéo (0,5 s) → JPEG 360×640 ; le lecteur est TOUJOURS vidé et libéré (délai max 8 s).
+function _libGrabFrame(url, isBlob){
+  return new Promise(resolve => {
+    const vid = document.createElement('video'); let fini = false;
+    const end = (src) => {
+      if(fini) return; fini = true; clearTimeout(to);
+      const dur = isFinite(vid.duration) ? vid.duration : 0;
+      vid.onloadeddata = vid.onseeked = vid.onerror = null;
+      try{ vid.pause(); vid.removeAttribute('src'); vid.load(); }catch(_){}   // libère décodeur + tampons
+      if(isBlob){ try{ URL.revokeObjectURL(url); }catch(_){} }
+      resolve({ src, dur });
+    };
+    const to = setTimeout(() => end(null), 8000);
+    if(!isBlob) vid.crossOrigin = 'anonymous';   // canvas propre pour l'URL signée Supabase
+    vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
+    vid.onerror = () => end(null);
+    vid.onloadeddata = () => {
+      vid.onseeked = () => { let src = null; try{
+        const c = document.createElement('canvas'); c.width = 360; c.height = 640; const x = c.getContext('2d');
+        x.fillStyle = '#0e0e10'; x.fillRect(0,0,360,640);
+        const vw = vid.videoWidth, vh = vid.videoHeight, sc = Math.max(360/vw, 640/vh)*0.85;   // cover puis léger dézoom
+        x.drawImage(vid, (360-vw*sc)/2, (640-vh*sc)/2, vw*sc, vh*sc);
+        src = c.toDataURL('image/jpeg', 0.8); c.width = c.height = 0; }catch(_){} end(src); };
+      try{ vid.currentTime = Math.min(0.5, (vid.duration||1)/2); }catch(_){ end(null); }
+    };
+    vid.src = url;
+  });
+}
+// Pose une vignette (et la durée) sur l'<img> d'une carte de la grille.
+function _libApplyVThumb(img, t){
+  if(!img || !t || !t.src) return;
+  img.src = t.src; img.style.display = 'block';
+  const emo = img.parentElement && img.parentElement.querySelector('.lib-emoji'); if(emo) emo.style.display = 'none';
+  const card = img.closest && img.closest('.vid-card'); const d = card && card.querySelector('[id^="lib-dur-"]'), sec = Math.round(t.dur||0);
+  if(d && sec) d.textContent = sec>=60 ? Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0') : sec+'s';
+}
+// Vignette d'une entrée vidéo : cache → sinon capture (copie locale d'abord, sinon URL signée en lecture partielle).
+async function _libVThumbFor(entry, isAlive){
+  const key = _libVKey(entry); if(!key) return null;
+  let t = await _libVThumbGet(key); if(t) return t;
+  await _libVSlot();
+  try{
+    t = _libVThumbs.get(key); if(t) return t;
+    if(isAlive && !isAlive()) return null;          // grille re-rendue / fenêtre fermée : pas de lecteur pour rien
+    let url = '', isBlob = false;
+    if(entry.hedraIdbKey){ try{ const r = await _idbLoad(entry.hedraIdbKey); const b = r && (r.blob || (r instanceof Blob ? r : null)); if(b){ url = URL.createObjectURL(b); isBlob = true; } }catch(_){} }
+    if(!url) url = await _libVideoUrl(entry);
+    if(!url) return null;
+    if(/^blob:/.test(url) && !isBlob) isBlob = true;
+    t = await _libGrabFrame(url, isBlob);
+    if(!t || !t.src) return null;
+    _libVThumbs.set(key, t); _libVThumbPut(key, t);
+    return t;
+  } finally { _libVFree(); }
+}
 async function _loadLibThumbnails(){
   // Chargement LAZY (IntersectionObserver) : la miniature vidéo (premier frame) et la waveform audio
   // ne sont générées QUE pour les cartes VISIBLES. Avant, on traitait TOUTE la bibliothèque d'un coup
@@ -27221,6 +27445,8 @@ async function _loadLibThumbnails(){
     entries.forEach(en=>{ if(en.isIntersecting){ const card=en.target; _libThumbIO.unobserve(card); _libGenThumbOne(card._libThumbEl||card); } });
   }, { rootMargin:'600px' });   // marge : on prépare un peu avant que la carte n'entre à l'écran
   els.forEach(el=>{
+    const _k = el.getAttribute && el.getAttribute('data-lib-key');
+    if(_k && _libVThumbs.has(_k)){ _libApplyVThumb(el, _libVThumbs.get(_k)); el._libThumbDone = true; return; }   // déjà en cache : instantané
     // PIÈGE (retour Axel 13/09 : « aucune preview ne s'affiche ») : la miniature vidéo
     // <img data-lib-vid> est en display:none tant que le frame n'est pas prêt — or un élément
     // display:none n'a AUCUNE boîte, donc IntersectionObserver ne le signale JAMAIS comme visible
@@ -27234,53 +27460,18 @@ async function _loadLibThumbnails(){
 // Génère la miniature/waveform d'UNE carte (appelé quand elle devient visible). Idempotent.
 async function _libGenThumbOne(el){
   if(el._libThumbDone) return; el._libThumbDone = true;
-  // — Vidéo : premier frame via canvas (local IDB OU serveur signé) —
+  // — Vidéo : vignette en cache, sinon capture UNE fois (voir _libVThumbFor) —
   if(el.hasAttribute('data-lib-vid')){
-    const img = el;
-    const ri = +img.dataset.libVid;
-    const entry = library[ri];
+    const key = el.getAttribute('data-lib-key') || '';
+    const entry = key ? library.find(e => _libVKey(e) === key) : library[+el.dataset.libVid];
     if(!entry) return;
-    try {
-      const url = await _libVideoUrl(entry);
-      if(!url) return;
-      const isBlob = url.startsWith('blob:');
-      await new Promise(resolve => {
-        const vid = document.createElement('video');
-        if(!isBlob) vid.crossOrigin = 'anonymous';   // canvas propre pour l'URL signée Supabase
-        vid.src = url; vid.muted = true; vid.preload = 'metadata'; vid.playsInline = true;
-        const _cleanup = () => { if(isBlob){ try{ URL.revokeObjectURL(url); }catch(_){} } };
-        vid.onloadeddata = () => {
-          try{ const dEl=document.getElementById('lib-dur-'+ri); if(dEl && vid.duration && isFinite(vid.duration)){ const s=Math.round(vid.duration); dEl.textContent = s>=60 ? (Math.floor(s/60)+':'+String(s%60).padStart(2,'0')) : (s+'s'); } }catch(_){}
-          vid.currentTime = 0.5;
-          vid.onseeked = () => {
-            try {
-              const c = document.createElement('canvas');
-              c.width = 360; c.height = 640; // 9:16 haute résolution → net
-              const ctx = c.getContext('2d');
-              const vw = vid.videoWidth, vh = vid.videoHeight;
-              const cw = c.width,       ch = c.height;
-              ctx.fillStyle = '#0e0e10';
-              ctx.fillRect(0,0,cw,ch);
-              // Cover puis léger dézoom → remplit la carte mais montre + l'avatar
-              const scale = Math.max(cw/vw, ch/vh) * 0.85;
-              const dw = vw*scale, dh = vh*scale;
-              const dx = (cw-dw)/2, dy = (ch-dh)/2;
-              ctx.drawImage(vid, 0, 0, vw, vh, dx, dy, dw, dh);
-              img.src = c.toDataURL('image/jpeg', 0.85);
-              img.style.display = 'block';
-              const emoEl = img.parentElement?.querySelector('.lib-emoji');
-              if(emoEl) emoEl.style.display = 'none';
-            } catch(e){}
-            _cleanup(); resolve();
-          };
-          vid.onerror = () => { _cleanup(); resolve(); };
-          setTimeout(resolve, 2000);
-        };
-        vid.onerror = () => { _cleanup(); resolve(); };
-        setTimeout(() => { _cleanup(); resolve(); }, 5000);
-        vid.load();
-      });
-    } catch(e){ /* silencieux */ }
+    try{
+      const t = await _libVThumbFor(entry, () => el.isConnected);
+      if(!t) return;
+      // re-ciblé par CLÉ : la carte a pu être re-rendue (autre élément) pendant la capture
+      const k = _libVKey(entry);
+      document.querySelectorAll('#libGrid img[data-lib-key]').forEach(x => { if(x.getAttribute('data-lib-key') === k) _libApplyVThumb(x, t); });
+    }catch(_){}
     return;
   }
   // — Audio : waveform sur canvas —
@@ -27451,7 +27642,7 @@ function renderLibrary(){
     const _hasVid = v.hedraIdbKey || v.srvPath;   // #65 · local (IDB) OU serveur (Storage)
     return `<div class="vid-card">
       <div class="vid-thumb" style="background:${_safeCss(v.bg)};cursor:${_hasVid?'pointer':'default'};position:relative;overflow:hidden" onclick="${_hasVid?`event.stopPropagation();_libPreviewVideo(${ri})`:''}">
-        ${_hasVid ? `<img id="lib-thumb-${ri}" data-lib-vid="${ri}" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1" alt="">` : ''}
+        ${_hasVid ? `<img id="lib-thumb-${ri}" data-lib-vid="${ri}" data-lib-key="${_escH(v.srvPath||v.hedraIdbKey||'')}" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1" alt="">` : ''}
         <div class="lib-emoji" style="font-size:40px;z-index:2;position:relative">${_escH(v.emo)}</div>
         ${_hasVid ? `<div style="position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
         <div class="vid-overlay" style="z-index:4"></div>
@@ -27478,31 +27669,78 @@ function renderLibrary(){
   setTimeout(() => _libSwapFullImages(), 60);
 }
 
-// La grille affiche d'abord la miniature 512px (localStorage, synchrone) — parfait pour l'aperçu
-// instantané mais PIXELISÉ sur les grandes cartes Retina. On remplace ensuite chaque miniature par
-// la PLEINE résolution : d'abord IndexedDB (local), sinon le Storage du compte (URL signée) — c'est
-// ce qui manquait aux images venant du serveur (elles restaient en miniature). Chargement LAZY
-// (IntersectionObserver) : seules les cartes visibles sont chargées, jamais 300 images d'un coup.
-let _libFullUrls = [], _libIO = null;
+// La grille affiche d'abord la miniature 512px (localStorage, synchrone) — instantanée mais PIXELISÉE sur les
+// grandes cartes Retina. Avant (jusqu'au 24/09), on la remplaçait par la PLEINE résolution : une 4K (3072×5504)
+// décodée = 64,5 Mo de mémoire pour une case de ~340 px, retéléchargée à chaque rendu (URL signée neuve) → le Mac
+// d'Axel gelait. Maintenant : une VIGNETTE D'AFFICHAGE de 1280 px (nette sur Retina, ~3,7 Mo décodée), fabriquée
+// UNE fois (une image à la fois), gardée en mémoire + IndexedDB ('disp_'+clé), ciblée par CLÉ (srvPath/idbKey,
+// jamais l'indice : imgHistory est retrié par _libLoadServer). La pleine résolution reste pour la visionneuse et
+// le téléchargement (_libImgAction → _libGetFullImg).
+let _libIO = null;
+const _libDispMem = new Map(); let _libDispBusy = false; const _libDispQ = [];
+const _libDispKey = (el) => el.getAttribute('data-libsrv') || el.getAttribute('data-libfull') || '';
+async function _libDispGet(k){
+  if(_libDispMem.has(k)) return _libDispMem.get(k);
+  try{ const r = await _idbLoad('disp_'+k); if(r && r.blob){ const u = URL.createObjectURL(r.blob); _libDispMem.set(k, u); return u; } }catch(_){}
+  return null;
+}
+async function _libDispMake(el, k){
+  const full = await _libGetFullImg(el.getAttribute('data-libfull'), '', el.getAttribute('data-libsrv'));
+  if(!full) return null;
+  const im = new Image(); if(/^https?:/i.test(full)) im.crossOrigin = 'anonymous';
+  const done = () => { try{ im.src = ''; }catch(_){} if(/^blob:/.test(full)){ try{ URL.revokeObjectURL(full); }catch(_){} } };
+  try{
+    // 1) Hors du fil principal : createImageBitmap REDIMENSIONNÉ (la 4K n'est jamais décodée en grand sur la page ;
+    //    mesuré : 0 blocage au lieu de 53). 2) Repli (navigateur sans redimensionnement) : décodage classique.
+    let c = null;
+    try{
+      const blob = await (await fetch(full)).blob();
+      const dim = await new Promise(res => { const ou = URL.createObjectURL(blob); const i = new Image(); i.onload = () => { res([i.naturalWidth, i.naturalHeight]); URL.revokeObjectURL(ou); }; i.onerror = () => { res(null); URL.revokeObjectURL(ou); }; i.src = ou; });
+      if(dim && typeof createImageBitmap === 'function'){
+        const sc = Math.min(1, 1280/Math.max(dim[0], dim[1])), w = Math.max(1, Math.round(dim[0]*sc)), h = Math.max(1, Math.round(dim[1]*sc));
+        const bmp = await createImageBitmap(blob, { resizeWidth:w, resizeHeight:h, resizeQuality:'high' });
+        c = document.createElement('canvas'); c.width = w; c.height = h;   // Safari ignore le redimensionnement : on dessine à la taille voulue
+        const cx = c.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(bmp, 0, 0, w, h);
+        try{ bmp.close(); }catch(_){}
+      }
+    }catch(_){ c = null; }
+    if(!c){
+      im.src = full; await im.decode();
+      const sc = Math.min(1, 1280/Math.max(im.naturalWidth, im.naturalHeight)); c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(im.naturalWidth*sc)); c.height = Math.max(1, Math.round(im.naturalHeight*sc));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    }
+    const b = await new Promise(r => { try{ c.toBlob(r, 'image/jpeg', 0.85); }catch(_){ r(null); } });
+    c.width = c.height = 0;
+    if(!b) return null;
+    try{ await _idbSave('disp_'+k, new File([b], 'disp.jpg', { type:'image/jpeg' })); }catch(_){}
+    const u = URL.createObjectURL(b); _libDispMem.set(k, u); return u;
+  }catch(_){ return null; }
+  finally{ done(); }
+}
+async function _libDispRun(){
+  if(_libDispBusy) return; _libDispBusy = true;
+  try{
+    while(_libDispQ.length){
+      const el = _libDispQ.shift(); if(!el.isConnected) continue;
+      const k = _libDispKey(el); if(!k) continue;
+      const u = (await _libDispGet(k)) || (await _libDispMake(el, k));
+      if(u) document.querySelectorAll('#libGrid img[data-libidx]').forEach(x => { if(_libDispKey(x) === k) x.src = u; });   // re-ciblé par CLÉ
+    }
+  } finally { _libDispBusy = false; }
+}
 async function _libSwapFullImages(){
-  _libFullUrls.forEach(u => { try{ URL.revokeObjectURL(u); }catch(_){} });
-  _libFullUrls = [];
   if(_libIO){ try{ _libIO.disconnect(); }catch(_){} _libIO = null; }
+  _libDispQ.length = 0;
   const imgs = document.querySelectorAll('#libGrid img[data-libidx]');
   if(!imgs.length) return;
-  const load = async (el) => {
-    if(el._libFullDone) return; el._libFullDone = true;
-    const idb = el.getAttribute('data-libfull'), srv = el.getAttribute('data-libsrv');
-    try{
-      if(idb){ const e = await _idbLoad(idb); if(e && e.blob){ const u = URL.createObjectURL(e.blob); _libFullUrls.push(u); el.src = u; return; } }
-      if(srv && typeof _libGetFullImg === 'function'){ const full = await _libGetFullImg(null, el.src, srv); if(full && full !== el.src) el.src = full; }
-    }catch(_){}
-  };
+  imgs.forEach(el => { const k = _libDispKey(el); if(k && _libDispMem.has(k)) el.src = _libDispMem.get(k); });   // déjà faite : instantané
+  const want = (el) => { const k = _libDispKey(el); return k && !_libDispMem.has(k); };
   if('IntersectionObserver' in window){
-    _libIO = new IntersectionObserver((ents) => { ents.forEach(en => { if(en.isIntersecting){ load(en.target); _libIO.unobserve(en.target); } }); }, { rootMargin: '400px' });
-    imgs.forEach(el => _libIO.observe(el));
+    _libIO = new IntersectionObserver((ents) => { ents.forEach(en => { if(en.isIntersecting){ _libIO.unobserve(en.target); if(want(en.target)){ _libDispQ.push(en.target); _libDispRun(); } } }); }, { rootMargin: '200px' });
+    imgs.forEach(el => { if(want(el)) _libIO.observe(el); });
   } else {
-    for(const el of imgs) await load(el);
+    imgs.forEach(el => { if(want(el)) _libDispQ.push(el); }); _libDispRun();
   }
 }
 
@@ -27521,6 +27759,7 @@ async function deleteLibItem(src, idx){
       const hist = JSON.parse(localStorage.getItem('imgHistory')||'[]');
       const entry = hist[idx];
       if(entry && entry.idbKey){ try { await _idbDelete(entry.idbKey); } catch(_){} }
+      for(const dk of [entry && entry.srvPath, entry && entry.idbKey].filter(Boolean)){ try{ _idbDelete('disp_'+dk); }catch(_){} const u = _libDispMem.get(dk); if(u){ try{ URL.revokeObjectURL(u); }catch(_){} } _libDispMem.delete(dk); }
       if(entry && (entry.srvId || entry.srvPath) && typeof _libDeleteServer==='function'){ try{ _libDeleteServer(entry); }catch(_){} }   // sinon elle revient au chargement suivant
       hist.splice(idx, 1);
       localStorage.setItem('imgHistory', JSON.stringify(hist));
@@ -27530,6 +27769,7 @@ async function deleteLibItem(src, idx){
     if(!entry) return;
     // Nettoie les blobs IndexedDB associés
     const keysToDelete = [entry.hedraIdbKey, entry.audioIdbKey, entry.idbKey].filter(Boolean);
+    for(const vk of [entry.srvPath, entry.hedraIdbKey].filter(Boolean)){ keysToDelete.push('vthumb_'+vk); _libVThumbs.delete(vk); }
     for(const k of keysToDelete){
       try { await _idbDelete(k); } catch(e){}
     }
@@ -27783,32 +28023,20 @@ function openLibVideoPicker(){
   document.body.appendChild(modal);
   _lvpLoadThumbs(modal);
 }
-// Charge un aperçu (1ère frame de la vidéo) pour chaque entrée du picker bibliothèque
+// Aperçu (1re image) de chaque entrée du sélecteur « bibliothèque ». Avant (jusqu'au 24/09) : chaque vidéo du
+// compte était TÉLÉCHARGÉE EN ENTIER (fetch → blob) puis gardée dans un <video preload=auto>, même après la
+// fermeture de la fenêtre → jusqu'à 1,3 Go par ouverture sur le compte d'Axel. Maintenant : mêmes vignettes que la
+// grille (cache mémoire + IndexedDB, capture en lecture partielle, lecteur libéré), arrêt dès que la fenêtre ferme.
 async function _lvpLoadThumbs(modal){
   const cells = modal.querySelectorAll('.lvp-thumb[data-ri]');
   for(const cell of cells){
-    const ri = +cell.getAttribute('data-ri');
-    const entry = library[ri]; if(!entry) continue;
+    if(!modal.isConnected) return;                                   // fenêtre fermée → on arrête
+    const entry = library[+cell.getAttribute('data-ri')]; if(!entry) continue;
     try{
-      let blob = null;
-      if(entry.hedraIdbKey){ const s = await _idbLoad(entry.hedraIdbKey); blob = (s instanceof Blob) ? s : (s?.blob||null); }
-      if(!blob && entry.hedraUrl?.startsWith('blob:')){ const r = await fetch(entry.hedraUrl); if(r.ok) blob = await r.blob(); }
-      if(!blob && entry.srvPath){ blob = await _libServerBlob(entry); }   // #65 · serveur
-      if(!blob && entry.posterUrl){ cell.innerHTML = `<img src="${entry.posterUrl}" style="width:100%;height:100%;object-fit:cover">`; continue; }
-      if(!blob) continue;
-      const url = URL.createObjectURL(blob);
-      const isImg = (blob.type||'').startsWith('image/');
-      if(isImg){ cell.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`; }
-      else {
-        const vid = document.createElement('video');
-        vid.src = url; vid.muted = true; vid.playsInline = true; vid.preload = 'auto';
-        vid.style.cssText = 'width:100%;height:100%;object-fit:cover';
-        const _seekThumb = ()=>{ try{ if(vid.currentTime < 0.05) vid.currentTime = Math.min(0.1, (vid.duration||1)/2); }catch(e){} };
-        vid.addEventListener('loadedmetadata', _seekThumb);
-        vid.addEventListener('loadeddata', _seekThumb);
-        cell.innerHTML = ''; cell.appendChild(vid);
-      }
-    }catch(e){ /* garde l'emoji */ }
+      if(entry.posterUrl && !_libVKey(entry)){ cell.innerHTML = `<img src="${_safeUrl(entry.posterUrl)}" style="width:100%;height:100%;object-fit:cover" alt="">`; continue; }
+      const t = await _libVThumbFor(entry, () => modal.isConnected);
+      if(t && t.src && cell.isConnected) cell.innerHTML = `<img src="${t.src}" style="width:100%;height:100%;object-fit:cover" alt="">`;
+    }catch(_){ /* garde l'emoji */ }
   }
 }
 
