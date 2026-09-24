@@ -386,6 +386,18 @@ async function applyTags(list: any[]) {
   } catch (e) { logIg('tags', safeErr(e)) }
 }
 
+// Durée saisie dans la fiche (reels sans fichier : musique sous droits) — seulement si elle n'a pas été mesurée.
+async function applyDurations(list: any[]) {
+  try {
+    const { data } = await svc.from('ig_media_durations').select('ig_media_id, duration_s').in('ig_media_id', list.map((m) => String(m.id)))
+    const by = new Map((data || []).map((r: any) => [String(r.ig_media_id), Number(r.duration_s)]))
+    for (const m of list) {
+      const d = by.get(String(m.id))
+      if (m.duration_s == null && d && d > 0) { m.duration_s = d; m.duration_src = 'manual' }
+    }
+  } catch (e) { logIg('durées', safeErr(e)) }
+}
+
 // ── briques de chaque publication : transcription du reel (une fois) + comparaison au texte des briques ──
 async function download(url: string, max: number): Promise<{ bytes: Uint8Array, type: string } | { error: string }> {
   try {
@@ -582,6 +594,7 @@ Deno.serve(async (req) => {
     normTotal(list)
     await applyTags(list)
     const pending = await attachAnalysis(list)
+    await applyDurations(list)
     if (pending.length && OPENAI_KEY) {
       // Reels pas encore analysés : transcription + reconnaissance en tâche de fond ; le dashboard relit la liste.
       const job = analyzeMedia(pending).catch((e) => logIg('analyse', safeErr(e)))

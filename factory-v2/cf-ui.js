@@ -76,6 +76,7 @@
     external: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3',
     puzzle: 'M4 4h6v3a2 2 0 1 0 4 0V4h6v6h-3a2 2 0 1 0 0 4h3v6h-6v-3a2 2 0 1 0-4 0v3H4z',
     cal: 'M3 5h18v16H3zM16 3v4M8 3v4M3 10h18',
+    chat: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
     skip: 'M13 19l9-7-9-7zM2 19l9-7-9-7z',
     save: 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
     send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z'
@@ -101,21 +102,27 @@
   // share ≥ 1 % (rapportés aux vues). Les cartes montrent la moyenne des reels de la période, chaque reel compte pareil.
   var GOALS = [
     { k: 'perDay', label: 'Reels par jour', ic: 'cal', target: 5 },
-    { k: 'watch', label: 'Visionnage moyen', ic: 'clock', target: null, sec: true, f: 'avgWatchS' },   // cible à fixer par Axel
+    // visionnage : objectif = part de la vidéo regardée (40 % : 12 s sur une vidéo de 30 s)
+    { k: 'watch', label: 'Visionnage moyen', ic: 'clock', target: 40, sec: true, f: 'avgWatchS', of: ' de la vidéo' },
     { k: 'skip', label: 'Swipe < 3' + NB + 's', ic: 'skip', target: 30, max: true, pct: true, f: 'skipRate' },
-    { k: 'like', label: 'Like rate', ic: 'heart', target: 5, pct: true, f: 'likes' },
-    { k: 'save', label: 'Save rate', ic: 'save', target: 5, pct: true, f: 'saved' },
-    { k: 'share', label: 'Share rate', ic: 'send', target: 1, pct: true, f: 'shares' }
+    { k: 'like', label: 'Like rate', ic: 'heart', target: 5, pct: true, f: 'likes', u: ['like', 'likes'] },
+    { k: 'comment', label: 'Comment rate', ic: 'chat', target: null, pct: true, f: 'comments', u: ['comm.', 'comm.'] },   // cible à fixer par Axel
+    { k: 'save', label: 'Save rate', ic: 'save', target: 5, pct: true, f: 'saved', u: ['save', 'saves'] },
+    { k: 'share', label: 'Share rate', ic: 'send', target: 1, pct: true, f: 'shares', u: ['share', 'shares'] }
   ];
   var GOAL = {};
   GOALS.forEach(function (g) { GOAL[g.k] = g; });
   // Taux d'un reel pour un objectif (en %), null si la donnée manque.
   function rateOf(p, g) {
     if (g.k === 'skip') return p.skipRate != null ? p.skipRate : null;
-    if (g.k === 'watch') return p.avgWatchS != null ? p.avgWatchS : null;
+    if (g.k === 'watch') return p.avgWatchS != null ? p.avgWatchS : null;   // secondes (la cible, elle, porte sur retentionOf)
     var v = p[g.f];
     return v != null && p.views ? v / p.views * 100 : null;
   }
+  // Part de la vidéo regardée (%), si la durée est connue.
+  function retentionOf(p) { return p.avgWatchS != null && p.durationS ? p.avgWatchS / p.durationS * 100 : null; }
+  // Valeur d'un reel comparée à la cible : taux (%) ou, pour le visionnage, part de la vidéo regardée.
+  function scoreOf(p, g) { return g.k === 'watch' ? retentionOf(p) : rateOf(p, g); }
   function goalOk(g, v) { return v != null && g.target != null && (g.max ? v <= g.target : v >= g.target); }
   function fSec0(s) { return Math.round(s) + NB + 's'; }
   // Durée moyenne des reels qui ont un visionnage moyen ET une durée connue (mesurée à la transcription).
@@ -123,7 +130,7 @@
     var d = R.filter(function (p) { return p.avgWatchS != null && p.durationS; }).map(function (p) { return p.durationS; });
     return d.length ? d.reduce(function (a, b) { return a + b; }, 0) / d.length : null;
   }
-  function goalTxt(g) { return g.target == null ? 'objectif à définir' : 'objectif ' + (g.max ? '≤ ' : '≥ ') + g.target + (g.sec ? NB + 's' : NB + '%'); }
+  function goalTxt(g) { return g.target == null ? 'objectif à définir' : 'objectif ' + (g.max ? '≤ ' : '≥ ') + g.target + NB + '%' + (g.of || ''); }
   function fRate(v) { return v == null ? null : fDec(v, v < 10 ? 1 : 0) + NB + '%'; }   // > 30 jours : sommes des jours, pas de comptes uniques
 
   // ── métriques de l'onglet Compte : une couleur par métrique (maquette), la même pour la carte, la courbe et la légende ──
@@ -171,7 +178,7 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false };
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, durMsg: null, prefetched: false };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -380,16 +387,18 @@
         var vals = R.map(function (p) { return rateOf(p, g); }).filter(function (x) { return x != null; });
         n = vals.length;
         v = n ? vals.reduce(function (a, b) { return a + b; }, 0) / n : null;
-        var hit = R.filter(function (p) { return goalOk(g, rateOf(p, g)); }).length;
-        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + ' · ' + goalTxt(g) + (g.target != null ? ' · ' + hit + '/' + n + ' ' + plural(hit, 'atteint') : '')
+        var scored = R.filter(function (p) { return scoreOf(p, g) != null; }), hit = scored.filter(function (p) { return goalOk(g, scoreOf(p, g)); }).length;
+        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + ' · ' + goalTxt(g) + (g.target != null && scored.length ? ' · ' + hit + '/' + scored.length + ' ' + plural(hit, 'atteint') : '')
+          + (g.k === 'watch' && scored.length < n ? ' · durée inconnue pour ' + (n - scored.length) + ' ' + plural(n - scored.length, 'reel') : '')
           : null;
         if (!n) na = R.length ? 'non fourni pour ces reels' : 'aucun reel publié ' + X.per;
       }
       if (v == null && !na) na = X.off ? 'compte déconnecté' : (R ? 'aucun reel publié ' + X.per : X.mediaWhy);
-      var ok = goalOk(g, v), fill = v == null || g.target == null ? 0 : g.max ? (v <= g.target ? 1 : g.target / v) : Math.min(1, v / g.target);
-      var val = loading ? '…' : v == null ? '—' : g.pct ? fRate(v) : g.sec ? fSec(v) : fDec(v, 1);
       var dur = g.k === 'watch' && R && v != null ? meanDur(R) : null;   // « sur combien » : durée moyenne des mêmes reels
-      if (dur) sub = 'sur ' + fSec0(dur) + ' de vidéo en moyenne · ' + fDec(v / dur * 100, 0) + NB + '% regardé · ' + sub;
+      var sc = g.k === 'watch' ? (dur ? v / dur * 100 : null) : v;       // ce qui est comparé à la cible
+      var ok = goalOk(g, sc), fill = sc == null || g.target == null ? 0 : g.max ? (sc <= g.target ? 1 : g.target / sc) : Math.min(1, sc / g.target);
+      var val = loading ? '…' : v == null ? '—' : g.pct ? fRate(v) : g.sec ? fSec(v) : fDec(v, 1);
+      if (dur) sub = 'sur ' + fSec0(dur) + ' de vidéo en moyenne · ' + fDec(sc, 0) + NB + '% regardé · ' + sub;
       return '<div class="cf-goal' + (ok ? ' is-ok' : '') + '" data-goal="' + g.k + '">'
         + '<span class="cf-goal-tile">' + svg(IC[g.ic], 16) + '</span>'
         + '<span class="cf-goal-l">' + esc(g.label) + (ok ? '<span class="cf-goal-ok">' + svg('M5 12l5 5L20 7', 10) + 'objectif atteint</span>' : '') + '</span>'
@@ -735,8 +744,14 @@
   // « 74 likes 2,2 % » : le nombre et son taux (÷ vues), le taux coloré selon l'objectif.
   function countRate(p, g, vid) {
     var c = p[g.f], v = vid ? rateOf(p, g) : null;
-    return '<span class="cf-st is-rate' + (c == null ? ' is-na' : v == null ? '' : goalOk(g, v) ? ' is-ok' : ' is-ko') + '" title="' + esc(goalTxt(g)) + '"><b>'
-      + esc(c == null ? '—' : fInt(c)) + '</b> ' + esc(plural(c, g.k)) + (v != null ? ' <b class="cf-st-r">' + esc(fRate(v)) + '</b>' : '') + '</span>';
+    return '<span class="cf-st is-rate' + (c == null ? ' is-na' : v == null || g.target == null ? '' : goalOk(g, v) ? ' is-ok' : ' is-ko') + '" title="' + esc(goalTxt(g)) + '"><b>'
+      + esc(c == null ? '—' : fInt(c)) + '</b> ' + esc(c != null && Math.abs(c) >= 2 ? g.u[1] : g.u[0]) + (v != null ? ' <b class="cf-st-r">' + esc(fRate(v)) + '</b>' : '') + '</span>';
+  }
+  // « 8,3 s / 28 s visionnage 30 % » : part de la vidéo regardée, colorée selon l'objectif (40 %).
+  function watchStat(p) {
+    var r = retentionOf(p);
+    return '<span class="cf-st is-rate' + (r == null ? '' : goalOk(GOAL.watch, r) ? ' is-ok' : ' is-ko') + '" title="' + esc(goalTxt(GOAL.watch)) + '"><b>'
+      + esc(fSec(p.avgWatchS) + (p.durationS ? ' / ' + fSec0(p.durationS) : '')) + '</b> visionnage' + (r != null ? ' <b class="cf-st-r">' + esc(fRate(r)) + '</b>' : '') + '</span>';
   }
   function stat(v, label, hero) {
     return '<span class="cf-st' + (hero && v != null ? ' is-hero' : '') + (v == null ? ' is-na' : '') + '"><b>' + esc(v == null ? '—' : v) + '</b> ' + esc(label) + '</span>';
@@ -770,10 +785,9 @@
   function postRowHTML(p, i) {
     var thumb = safeUrl(p.thumb), d = validDate(p.timestamp), vid = isVideo(p);
     var stats = [stat(fInt(p.views), plural(p.views, 'vue'), true)];
-    ['like', 'save', 'share'].forEach(function (k) { stats.push(countRate(p, GOAL[k], vid)); });
+    ['like', 'comment', 'save', 'share'].forEach(function (k) { stats.push(countRate(p, GOAL[k], vid)); });
     if (vid) stats.push(rateStat(p, GOAL.skip));
-    stats.push(stat(fInt(p.comments), 'comm.'));
-    if (p.avgWatchS != null) stats.push(stat(fSec(p.avgWatchS) + (p.durationS ? ' / ' + fSec0(p.durationS) : ''), 'visionnage moyen'));
+    if (p.avgWatchS != null) stats.push(watchStat(p));
     return '<button type="button" class="cf-post" data-act="post" data-i="' + i + '" aria-label="Ouvrir la fiche de la publication ' + (i + 1) + '">'
       + '<span class="cf-post-rank">#' + (i + 1) + '</span>'
       + '<span class="cf-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '')
@@ -911,8 +925,25 @@
     var c = p[g.f], v = vid ? rateOf(p, g) : null;
     return '<div class="cf-tile"><div class="cf-tile-l">' + esc(label + (vid ? ' · ' + goalTxt(g) : '')) + '</div>'
       + '<div class="cf-tile-v' + (c == null ? ' is-na' : '') + '">' + esc(c == null ? '—' : fInt(c))
-      + (v != null ? ' <span class="cf-tile-r ' + (goalOk(g, v) ? 'is-ok' : 'is-ko') + '">' + esc(fRate(v)) + '</span>' : '') + '</div>'
+      + (v != null ? ' <span class="cf-tile-r' + (g.target == null ? '' : goalOk(g, v) ? ' is-ok' : ' is-ko') + '">' + esc(fRate(v)) + '</span>' : '') + '</div>'
       + (c == null ? '<div class="cf-tile-w">non fourni par l’API</div>' : '') + '</div>';
+  }
+  function tileWatch(p, vid) {
+    var r = retentionOf(p);
+    if (p.avgWatchS == null) return tile('visionnage moyen', null, vid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication');
+    return '<div class="cf-tile"><div class="cf-tile-l">' + esc('visionnage moyen · ' + goalTxt(GOAL.watch)) + '</div>'
+      + '<div class="cf-tile-v">' + esc(fSec(p.avgWatchS) + (p.durationS ? ' / ' + fSec0(p.durationS) : ''))
+      + (r != null ? ' <span class="cf-tile-r ' + (goalOk(GOAL.watch, r) ? 'is-ok' : 'is-ko') + '">' + esc(fRate(r)) + '</span>' : '') + '</div>'
+      + (p.durationS ? '' : '<div class="cf-tile-w">durée de la vidéo inconnue : saisis-la plus bas</div>') + '</div>';
+  }
+  // Reel dont Instagram ne donne pas le fichier : la durée se saisit une fois (sinon « / durée » reste inconnu).
+  function durationForm(p) {
+    if (!isVideo(p) || (p.durationS != null && !p.durationManual)) return '';
+    var msg = ui.durMsg && ui.durMsg.id === p.id ? '<div class="cf-acct-msg is-' + (ui.durMsg.ok ? 'ok' : 'err') + '">' + esc(ui.durMsg.text) + '</div>' : '';
+    return '<form class="cf-dur" data-dur-id="' + esc(p.id) + '"><label class="cf-lbl" for="cfDur">Durée de la vidéo (secondes)</label>'
+      + '<div class="cf-dur-row"><input id="cfDur" class="cf-in" type="number" inputmode="decimal" min="1" max="900" step="0.1" value="' + esc(p.durationS != null ? String(p.durationS) : '') + '" placeholder="ex. 30">'
+      + '<button type="submit" class="cf-btn is-sm">Enregistrer</button></div>'
+      + '<div class="cf-meta">Instagram ne donne pas le fichier de cette vidéo (musique sous droits) : sa durée ne peut pas être mesurée.</div>' + msg + '</form>';
   }
   function tile(label, v, why) {
     return '<div class="cf-tile"><div class="cf-tile-l">' + esc(label) + '</div>'
@@ -1009,12 +1040,11 @@
       tile('vues', fInt(p.views), 'non fourni par l’API'),
       tile('reach', fInt(p.reach), 'non fourni par l’API'),
       tileRate('likes', p, GOAL.like, isVid),
-      tile('commentaires', fInt(p.comments), 'non fourni par l’API'),
+      tileRate('commentaires', p, GOAL.comment, isVid),
       tileRate('enregistrements', p, GOAL.save, isVid),
       tileRate('partages', p, GOAL.share, isVid),
       tile('interactions', fInt(p.interactions), 'non fourni par l’API'),
-      tile('visionnage moyen', p.avgWatchS != null ? fSec(p.avgWatchS) + (p.durationS ? ' / ' + fSec0(p.durationS) + ' (' + fDec(p.avgWatchS / p.durationS * 100, 0) + NB + '%)' : '') : null,
-        isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
+      tileWatch(p, isVid),
       tile('engagement / vues', eng, 'vues ou interactions manquantes'),
       tile('swipe < 3' + NB + 's', p.skipRate != null ? fShare(p.skipRate) : null, isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication'),
       tile('temps total regardé', fDur(p.totalWatchS), isVid ? 'non fourni par l’API' : 'pas fourni pour ce type de publication')
@@ -1031,6 +1061,7 @@
       + '<div class="cf-bricks"><div class="cf-over">Briques utilisées</div>'
       + '<div class="cf-bricks-na">' + moduleChip(effModule(p), true) + (p.module ? '' : (p.analysis && p.analysis.module ? '<span class="cf-meta">module déduit du hook</span>' : '')) + '</div>'
       + bricksDetail(p)
+      + durationForm(p)
       + '<label class="cf-tag"><span class="cf-lbl">Module de la vidéo' + (p.module ? '' : ' (corrige la détection)') + '</span>'
       + '<select class="cf-in cf-tag-sel" data-tag-id="' + esc(p.id) + '">' + moduleOptions(p.module) + '</select></label>'
       + (ui.tagMsg && ui.tagMsg.id === p.id ? '<div class="cf-acct-msg is-' + (ui.tagMsg.ok ? 'ok' : 'err') + '">' + esc(ui.tagMsg.text) + '</div>' : '')
@@ -1101,6 +1132,21 @@
       var b = $('cfTab-' + k);
       if (b) b.focus();
       e.preventDefault();
+    });
+
+    // Durée saisie dans la fiche (reel sans fichier fourni par Instagram).
+    document.addEventListener('submit', function (e) {
+      var f = e.target;
+      if (!f || !f.matches || !f.matches('form[data-dur-id]')) return;
+      e.preventDefault();
+      var id = f.getAttribute('data-dur-id'), inp = f.querySelector('input'), btn = f.querySelector('button');
+      var v = inp.value.trim().replace(',', '.');
+      if (btn) btn.disabled = true;
+      CF.setDuration(id, v === '' ? 0 : Number(v)).then(function (r) {
+        ui.durMsg = { id: id, ok: !r.error, text: r.error ? 'Non enregistrée : ' + r.error : (r.duration ? 'Enregistrée : ' + fSec0(r.duration) : 'Durée retirée') };
+        if (btn) btn.disabled = false;
+        schedule();
+      });
     });
 
     // Module d'une publication (fiche) : enregistré tout de suite, message sous le menu.

@@ -68,6 +68,7 @@
     loadMedia: loadMedia,
     prefetch: prefetch,
     tagMedia: tagMedia,
+    setDuration: setDuration,
     isFresh: isFresh,
     igConnect: igConnect,
     guardWrite: guardWrite,
@@ -406,7 +407,7 @@
       caption: typeof p.caption === 'string' ? p.caption : '', timestamp: t, ms: isFinite(ms) ? ms : null,
       reach: num(p.reach), views: num(p.views), likes: num(p.likes), comments: num(p.comments),
       saved: num(p.saved), shares: num(p.shares), interactions: num(p.interactions), avgWatchS: num(p.avg_watch_s),
-      skipRate: num(p.skip_rate), totalWatchS: num(p.total_watch_s), durationS: num(p.duration_s),
+      skipRate: num(p.skip_rate), totalWatchS: num(p.total_watch_s), durationS: num(p.duration_s), durationManual: p.duration_src === 'manual',
       trial: p.shared_to_feed === false,   // pas sur la grille du profil = réel d'essai (16 = 42 − 26 le 24/09)
       module: typeof p.module === 'string' && MODULES[p.module] ? p.module : null,
       analysis: normAnalysis(p.analysis)
@@ -519,6 +520,25 @@
       if (M) M.list.forEach(function (p) { if (p.id === String(id)) p.module = d.module || null; });
       emit('media');
       return { ok: true };
+    } catch (e) { return { error: errText(e) }; }
+  }
+
+  // Durée d'un reel dont Instagram ne donne pas le fichier (saisie dans la fiche) ; 0 ou vide = retirée.
+  async function setDuration(id, seconds) {
+    if (!sb || CF.status !== 'ready') return { error: 'pas prêt' };
+    var s = seconds == null || seconds === '' ? 0 : Number(seconds);
+    if (!isFinite(s) || s < 0 || s > 900) return { error: 'durée entre 1 et 900 s' };
+    logNet('rpc ig_media_duration_set');
+    try {
+      var r = await sb.rpc('ig_media_duration_set', { p_media: String(id), p_seconds: s });
+      var d = r && r.data;
+      if (r.error || !d || d.error) return { error: r.error ? errText(r.error) : (d && d.error) || 'réponse vide' };
+      var M = CF.acct.media.data;
+      if (M) M.list.forEach(function (p) {
+        if (p.id === String(id) && (p.durationS == null || p.durationManual)) { p.durationS = num(d.duration_s); p.durationManual = p.durationS != null; }
+      });
+      emit('media');
+      return { ok: true, duration: num(d.duration_s) };
     } catch (e) { return { error: errText(e) }; }
   }
 

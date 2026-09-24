@@ -364,7 +364,11 @@ img { max-width: 100%; }
 
 /* ── Objectifs (maquette d'Axel) ── */
 .cf-goals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.cf-goal[data-goal="perDay"] { grid-column: 1 / -1; }
 @media (max-width: 900px) { .cf-goals { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cf-dur { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 2px; }
+.cf-dur-row { display: flex; gap: 8px; align-items: center; }
+.cf-dur-row .cf-in { width: 120px; font-size: 16px; }
 .cf-goal { display: flex; flex-direction: column; gap: 10px; background: #fff; border: 1.5px solid var(--cf-line-3); border-radius: 18px; padding: 16px 18px; min-width: 0; }
 .cf-goal-tile { width: 40px; height: 40px; border-radius: 10px; background: #f1ece4; color: var(--cf-ink-2); display: flex; align-items: center; justify-content: center; }
 .cf-goal-l { font-family: var(--cf-mono); font-size: 13px; color: var(--cf-ink-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
