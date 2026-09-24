@@ -101,6 +101,7 @@
   // share ≥ 1 % (rapportés aux vues). Les cartes montrent la moyenne des reels de la période, chaque reel compte pareil.
   var GOALS = [
     { k: 'perDay', label: 'Reels par jour', ic: 'cal', target: 5 },
+    { k: 'watch', label: 'Visionnage moyen', ic: 'clock', target: null, sec: true, f: 'avgWatchS' },   // cible à fixer par Axel
     { k: 'skip', label: 'Swipe < 3' + NB + 's', ic: 'skip', target: 30, max: true, pct: true, f: 'skipRate' },
     { k: 'like', label: 'Like rate', ic: 'heart', target: 5, pct: true, f: 'likes' },
     { k: 'save', label: 'Save rate', ic: 'save', target: 5, pct: true, f: 'saved' },
@@ -111,10 +112,12 @@
   // Taux d'un reel pour un objectif (en %), null si la donnée manque.
   function rateOf(p, g) {
     if (g.k === 'skip') return p.skipRate != null ? p.skipRate : null;
+    if (g.k === 'watch') return p.avgWatchS != null ? p.avgWatchS : null;
     var v = p[g.f];
     return v != null && p.views ? v / p.views * 100 : null;
   }
-  function goalOk(g, v) { return v != null && (g.max ? v <= g.target : v >= g.target); }
+  function goalOk(g, v) { return v != null && g.target != null && (g.max ? v <= g.target : v >= g.target); }
+  function goalTxt(g) { return g.target == null ? 'objectif à définir' : 'objectif ' + (g.max ? '≤ ' : '≥ ') + g.target + (g.sec ? NB + 's' : NB + '%'); }
   function fRate(v) { return v == null ? null : fDec(v, v < 10 ? 1 : 0) + NB + '%'; }   // > 30 jours : sommes des jours, pas de comptes uniques
 
   // ── métriques de l'onglet Compte : une couleur par métrique (maquette), la même pour la carte, la courbe et la légende ──
@@ -162,7 +165,7 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false };
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false, openBrick: null };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -372,18 +375,18 @@
         n = vals.length;
         v = n ? vals.reduce(function (a, b) { return a + b; }, 0) / n : null;
         var hit = R.filter(function (p) { return goalOk(g, rateOf(p, g)); }).length;
-        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + ' · objectif ' + (g.max ? '≤ ' : '≥ ') + g.target + NB + '% · ' + hit + '/' + n + ' ' + plural(hit, 'atteint')
+        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + ' · ' + goalTxt(g) + (g.target != null ? ' · ' + hit + '/' + n + ' ' + plural(hit, 'atteint') : '')
           : null;
         if (!n) na = R.length ? 'non fourni pour ces reels' : 'aucun reel publié ' + X.per;
       }
       if (v == null && !na) na = X.off ? 'compte déconnecté' : (R ? 'aucun reel publié ' + X.per : X.mediaWhy);
-      var ok = goalOk(g, v), fill = v == null ? 0 : g.max ? (v <= g.target ? 1 : g.target / v) : Math.min(1, v / g.target);
-      var val = loading ? '…' : v == null ? '—' : g.pct ? fRate(v) : fDec(v, 1);
+      var ok = goalOk(g, v), fill = v == null || g.target == null ? 0 : g.max ? (v <= g.target ? 1 : g.target / v) : Math.min(1, v / g.target);
+      var val = loading ? '…' : v == null ? '—' : g.pct ? fRate(v) : g.sec ? fSec(v) : fDec(v, 1);
       return '<div class="cf-goal' + (ok ? ' is-ok' : '') + '" data-goal="' + g.k + '">'
         + '<span class="cf-goal-tile">' + svg(IC[g.ic], 16) + '</span>'
         + '<span class="cf-goal-l">' + esc(g.label) + (ok ? '<span class="cf-goal-ok">' + svg('M5 12l5 5L20 7', 10) + 'objectif atteint</span>' : '') + '</span>'
         + '<span class="cf-goal-v' + (v == null && !loading ? ' is-na' : '') + '">' + esc(val) + '</span>'
-        + '<span class="cf-goal-bar"><i style="width:' + (loading ? 0 : Math.round(fill * 1000) / 10) + '%"></i></span>'
+        + '<span class="cf-goal-bar' + (g.target == null ? ' is-none' : '') + '"><i style="width:' + (loading ? 0 : Math.round(fill * 1000) / 10) + '%"></i></span>'
         + '<span class="cf-goal-s">' + esc(loading ? 'chargement' : v == null ? na : sub) + '</span></div>';
     }).join('');
     return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectifs · ' + esc(PERIOD[ui.range].evo) + '</h2></div></div>'
@@ -734,18 +737,8 @@
   }
   function topHTML(off) {
     var MS = CF.acct.media, MD = off ? null : MS.data, list = topList();
-    // All time, moyenne de tous les reels (chacun compte pareil, comme les objectifs) : visionnage (gauche), swipe (droite).
-    var wv = 0, ww = 0, sv = 0, sw = 0;
-    if (MD) MD.list.forEach(function (p) {
-      if (p.avgWatchS != null) { wv += 1; ww += p.avgWatchS; }
-      if (p.skipRate != null) { sv += 1; sw += p.skipRate; }
-    });
-    var box = (wv || sv) ? '<div class="cf-kpi2">'
-      + (wv ? '<div class="cf-watchbox"><span class="cf-watchbox-ic">' + svg(IC.clock, 17) + '</span><span><b>' + esc(fSec(ww / wv)) + '</b>'
-        + '<span>visionnage moyen · all time</span></span></div>' : '')
-      + (sv ? '<div class="cf-watchbox is-skip"><span class="cf-watchbox-ic">' + svg(IC.chevron, 17) + '</span><span><b>' + esc(fShare(sw / sv)) + '</b>'
-        + '<span>swipe < 3' + NB + 's · all time</span></span></div>' : '')
-      + '</div>' : '';
+    // Visionnage moyen et swipe < 3 s : dans la section Objectifs (moyenne des reels de la période).
+    var box = '';
     var head = '<div class="cf-card-h"><div><h2 class="cf-h2">' + (ui.allPosts ? 'Toutes les publications' : 'Top publications') + '</h2></div>' + box + '</div>';
     var nAll = MD ? MD.list.filter(function (p) { return p.views != null; }).length : 0;
     var more = nAll > 5 ? '<button type="button" class="cf-btn is-sm cf-more" data-act="all-posts">'
@@ -864,6 +857,7 @@
     var list = topList();
     if (!list[i]) return;
     ui.modal = { post: list[i], rank: i + 1 };
+    ui.openBrick = null;
     ui.lastFocus = trigger || null;
     renderModal();
     var wrap = document.querySelector('.cf-wrap'); if (wrap) wrap.inert = true;   // Tab reste dans la fiche
@@ -892,8 +886,18 @@
     if (a.noVoice) return '<div class="cf-meta">vidéo sans voix (musique seule) : aucune brique parlée à reconnaître, choisis le module à la main</div>';
     if (!a.bricks.length) return '<div class="cf-meta">aucune brique reconnue dans l’audio de cette vidéo</div>';
     return '<div class="cf-brick-list">' + a.bricks.map(function (b) {
-      return '<div class="cf-brick-row"><span class="cf-chip is-brick">' + esc(b.id) + '</span><span class="cf-brick-k">' + esc(KIND_L[b.kind]) + '</span>'
-        + '<span class="cf-brick-l">' + esc(b.label) + '</span>' + (b.score != null ? '<span class="cf-meta">' + Math.round(b.score * 100) + NB + '%</span>' : '') + '</div>';
+      var open = ui.openBrick === b.kind + ':' + b.id;
+      return '<div class="cf-brick' + (open ? ' is-open' : '') + '">'
+        + '<button type="button" class="cf-brick-row" data-act="brick" data-bk="' + esc(b.kind + ':' + b.id) + '" aria-expanded="' + open + '">'
+        + '<span class="cf-chip is-brick">' + esc(b.id) + '</span><span class="cf-brick-k">' + esc(KIND_L[b.kind]) + '</span>'
+        + '<span class="cf-brick-l">' + esc(b.label) + '</span>' + (b.score != null ? '<span class="cf-meta">' + Math.round(b.score * 100) + NB + '%</span>' : '')
+        + '<span class="cf-brick-caret" aria-hidden="true">' + svg(IC.chevron, 12) + '</span></button>'
+        + (open ? '<div class="cf-brick-d">'
+          + (b.audio ? '<audio controls preload="none" src="' + esc(b.audio) + '"></audio>' : '<span class="cf-meta">audio indisponible</span>')
+          + (b.text ? '<p class="cf-brick-t"><span class="cf-lbl">Texte prononcé</span>' + esc(b.text) + '</p>' : '')
+          + '<span class="cf-meta">' + esc([b.subject ? 'sujet : ' + (CF.MODULES && CF.MODULES[b.subject] || b.subject) : '', b.keyword ? 'mot-clé : ' + b.keyword : '', b.score != null ? 'ressemblance ' + Math.round(b.score * 100) + ' %' : ''].filter(Boolean).join(' · ')) + '</span>'
+          + '</div>' : '')
+        + '</div>';
     }).join('') + '</div>';
   }
   function tile(label, v, why) {
@@ -991,6 +995,7 @@
       else if (act === 'reconnect') reconnect(); // la popup s'ouvre dans ce clic (Safari)
       else if (act === 'post') openPost(parseInt(el.getAttribute('data-i'), 10), el);
       else if (act === 'modal-close') closeModal();
+      else if (act === 'brick') { var bk = el.getAttribute('data-bk'); ui.openBrick = ui.openBrick === bk ? null : bk; renderModal(); var nb2 = document.querySelector('[data-bk="' + (window.CSS && CSS.escape ? CSS.escape(bk) : bk) + '"]'); if (nb2) nb2.focus(); }
       else if (act === 'otp-send') sendOtp();
       else if (act === 'otp-back') { show('cfLoginOtp', false); show('cfLoginPwd', true); loginMsg(''); }
     });

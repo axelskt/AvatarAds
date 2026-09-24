@@ -412,6 +412,7 @@ async function whisper(bytes: Uint8Array, name: string, type: string): Promise<{
   } catch (e) { return { error: safeErr(e) } }
 }
 type BrickRow = { id: string, kind: string, subject: string, label: string, meta: any }
+const BRICK_MEDIA = `${Deno.env.get('SUPABASE_URL') || ''}/storage/v1/object/public/factory-media/`
 async function loadBricks(): Promise<BrickRow[]> {
   const { data } = await svc.from('factory_bricks').select('id, kind, subject, label, meta').in('kind', ['hook', 'liaison', 'cta']).eq('status', 'ready')
   return (data || []) as BrickRow[]
@@ -451,7 +452,14 @@ async function attachAnalysis(list: any[]): Promise<any[]> {
     loadBricks(),
   ])
   const by = new Map((rows || []).map((r: any) => [String(r.ig_media_id), r]))
-  const bricks = asBricks(bricksRows), labels = new Map(bricksRows.map((b) => [b.id, b.label]))
+  const bricks = asBricks(bricksRows), byBrick = new Map(bricksRows.map((b) => [b.id, b]))
+  // Fiche d'une brique pour le dashboard : libellé, texte prononcé, audio (uniquement s'il vient de notre bucket public).
+  const brickInfo = (id: string) => {
+    const b = byBrick.get(id), meta = b?.meta || {}
+    const audio = typeof meta.media === 'string' && meta.media.startsWith(BRICK_MEDIA) ? meta.media : null
+    return { label: b?.label || id, text: String(meta.transcript || meta.script || '').slice(0, 600) || null, audio,
+      subject: b?.subject || null, keyword: typeof meta.keyword === 'string' ? meta.keyword : null }
+  }
   const pending: any[] = []
   const now = Date.now()
   for (const m of list) {
@@ -459,7 +467,7 @@ async function attachAnalysis(list: any[]): Promise<any[]> {
     if (r && r.status === 'done') {
       if (noVoice(r.transcript)) { m.analysis = { status: 'done', module: null, bricks: [], no_voice: true }; continue }
       const res = matchBricks(Array.isArray(r.segments) ? r.segments : [], m.caption || '', bricks)
-      m.analysis = { status: 'done', module: res.module, bricks: res.found.map((f) => ({ ...f, label: labels.get(f.id) || f.id })) }
+      m.analysis = { status: 'done', module: res.module, bricks: res.found.map((f) => ({ ...f, ...brickInfo(f.id) })) }
     } else if (r && r.status === 'error' && now - Date.parse(r.analyzed_at || r.started_at) < (/trop lourd/.test(r.error || '') ? 24 : 1) * 3600 * 1000) {
       m.analysis = { status: 'error', error: r.error || 'analyse impossible', bricks: [], module: null }
     } else if (m.video_url) {
