@@ -9,9 +9,12 @@
  *   CF.user    { id, email } de la session supabase-js (partagée avec l'app, même domaine)
  *   CF.acct    onglet Compte @avataradss
  *     .accounts  instagram-auth?action=accounts  → { state, loading, at, list, primary, error }
- *     .ig[r]     ig-insights?range=r, r ∈ 24h | 7j | 30j → { state, loading, at, data, error, kind }
- *                une case de cache par fenêtre, rechargée au plus toutes les 15 min
+ *     .ig[r]     ig-insights?range=r, r ∈ 24h | 7j | 30j | 90j | 6m | all → { state, loading, at, data, error, kind }
+ *                une case de cache par fenêtre, rechargée au plus toutes les 15 min ; data.series = un point par
+ *                jour Instagram (courbe Évolution) ; historique incomplet → relu tout seul toutes les 4 s (8 fois max)
  *     .aud       ig-insights?part=audience → même forme ; abonnés par pays, ville, âge, genre (hors fenêtre)
+ *     .media     ig-insights?part=media → même forme ; profil + toutes les publications (chiffres à vie) :
+ *                publications et visionnage moyen par fenêtre, top publications
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { force } ignore les 15 min
  *   CF.net     journal des appels réseau faits par le store (pour vérifier « 3 appels max, puis 0 »)
@@ -28,9 +31,11 @@
   var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck'; // clé publishable (publique) ; jamais de clé service ici
   var FN = SUPABASE_URL + '/functions/v1/';
   var PRIMARY_USERNAME = 'avataradss';     // même compte par défaut qu'ig-insights (IG_PRIMARY_USERNAME)
-  var IG_RANGES = ['24h', '7j', '30j'];    // 30 j = la fenêtre de l'app Instagram ; ig-insights : toute autre valeur retombe EN SILENCE sur 24 h
+  var IG_RANGES = ['24h', '7j', '30j', '90j', '6m', 'all'];   // 30 j = la fenêtre de l'app Instagram
   var TTL_MS = 15 * 60 * 1000;             // ~15 appels Graph par fenêtre : un chargement par fenêtre et par 15 min
   var TIMEOUT_MS = 45000;
+  var SERIES_TIMEOUT_MS = 90000;           // 1er relevé d'un long historique : jusqu'à ~50 s côté serveur
+  var SERIES_RETRY_MS = 4000, SERIES_RETRY_MAX = 8;
 
   window.CF_READONLY = true;
 
@@ -38,8 +43,9 @@
   function newAcct() {
     return {
       accounts: { state: 'idle', loading: false, at: 0, list: [], primary: null, error: null },
-      ig: { '24h': newSlot(), '7j': newSlot(), '30j': newSlot() },
-      aud: newSlot()
+      ig: { '24h': newSlot(), '7j': newSlot(), '30j': newSlot(), '90j': newSlot(), '6m': newSlot(), 'all': newSlot() },
+      aud: newSlot(),
+      media: newSlot()
     };
   }
 
@@ -58,6 +64,7 @@
     loadAccounts: loadAccounts,
     loadInsights: loadInsights,
     loadAudience: loadAudience,
+    loadMedia: loadMedia,
     isFresh: isFresh,
     igConnect: igConnect,
     guardWrite: guardWrite,
@@ -68,7 +75,8 @@
   var sb = null;
   var epoch = 0;      // change à chaque changement d'utilisateur : une réponse d'avant n'écrit jamais dans le store
   var gateSeq = 0;
-  var inflight = {};  // une seule requête en vol par source (accounts, ig:24h, ig:7j, ig:30j, aud)
+  var inflight = {};  // une seule requête en vol par source (accounts, ig:<fenêtre>, aud, media)
+  var retries = {};   // relances automatiques d'un historique incomplet, par fenêtre
 
   // ── utilitaires ──
   function emit(key) {
@@ -88,7 +96,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < TTL_MS; }
-  function resetData() { epoch += 1; inflight = {}; CF.acct = newAcct(); CF.oauth = null; }
+  function resetData() { epoch += 1; inflight = {}; retries = {}; CF.acct = newAcct(); CF.oauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -145,18 +153,19 @@
   }
 
   // ── appel d'une edge function avec le jeton de session (comme igAuthHeaders de factory.html) ──
-  async function callFn(path) {
+  async function callFn(path, timeoutMs) {
     var r = await sb.auth.getSession();
     var tok = r && r.data && r.data.session && r.data.session.access_token;
     if (!tok) throw { kind: 'auth', message: 'session absente' };
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
-    var tm = ctl ? setTimeout(function () { ctl.abort(); }, TIMEOUT_MS) : null;
+    var tms = timeoutMs || TIMEOUT_MS;
+    var tm = ctl ? setTimeout(function () { ctl.abort(); }, tms) : null;
     logNet(path);
     var resp;
     try {
       resp = await fetch(FN + path, { headers: { Authorization: 'Bearer ' + tok }, signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
     } catch (e) {
-      throw { kind: 'network', message: e && e.name === 'AbortError' ? 'délai dépassé (45 s)' : 'réseau indisponible' };
+      throw { kind: 'network', message: e && e.name === 'AbortError' ? 'délai dépassé (' + Math.round(tms / 1000) + ' s)' : 'réseau indisponible' };
     } finally {
       if (tm) clearTimeout(tm);
     }
@@ -209,13 +218,13 @@
   }
 
   // ── insights du compte, une fenêtre à la fois ──
-  function normPost(p) {
-    if (!p || typeof p !== 'object') return null;
+  function ymd(x) { return typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) ? x : null; }
+  function normDay(p) {
+    if (!p || typeof p !== 'object' || !ymd(p.d)) return null;
     return {
-      id: str(p.id), permalink: str(p.permalink), thumb: str(p.thumbnail), type: str(p.media_type),
-      caption: typeof p.caption === 'string' ? p.caption : '', timestamp: str(p.timestamp),
-      reach: num(p.reach), views: num(p.views), likes: num(p.likes), comments: num(p.comments),
-      saved: num(p.saved), shares: num(p.shares), interactions: num(p.interactions), avgWatchS: num(p.avg_watch_s)
+      d: p.d, reach: num(p.reach), views: num(p.views), engaged: num(p.accounts_engaged), inter: num(p.total_interactions),
+      pviews: num(p.profile_views), links: num(p.profile_links_taps), bio: num(p.website_clicks),
+      follows: num(p.follows), unfollows: num(p.unfollows)
     };
   }
   // Répartition { total, parts: {DIMENSION: n} } renvoyée par ig-insights ; null si absente ou illisible.
@@ -227,18 +236,23 @@
   }
   function normInsights(b, range, at) {
     var ins = b.insights && typeof b.insights === 'object' ? b.insights : {};
-    var posts = Array.isArray(b.top_posts) ? b.top_posts : null;
     var pe = b.part_errors && typeof b.part_errors === 'object' ? b.part_errors : {};
     var since = num(b.since), until = num(b.until);
+    var ser = b.series && typeof b.series === 'object' && Array.isArray(b.series.days) ? b.series : null;
     return {
       range: range,
       fetchedAt: at,
-      // bornes exactes de la fenêtre demandée à l'API (secondes), sinon null
+      // bornes exactes de la fenêtre demandée à l'API (secondes), sinon null ; jours Instagram (AAAA-MM-JJ, heure du Pacifique)
       since: since != null ? since * 1000 : null, until: until != null ? until * 1000 : null,
+      dayFirst: ymd(b.day_first), dayLast: ymd(b.day_last),
+      // courbe : un point par jour ; null = pas (encore) relevé ou refusé par l'API ce jour-là
+      series: ser ? ser.days.map(normDay).filter(Boolean) : null,
+      seriesMissing: ser ? (num(ser.missing) || 0) : 0,
       igId: str(b.ig_id), username: str(b.username), name: str(b.name), picture: str(b.profile_picture_url),
       followers: num(b.followers_count), follows: num(b.follows_count), media: num(b.media_count),
       basicError: str(b.basic_error),
-      // valeur directe de l'API pour CETTE fenêtre (since/until) : jamais additionnée, jamais déduite d'une autre fenêtre
+      // valeurs de l'API pour CETTE fenêtre : directes jusqu'à 30 jours ; au-delà, somme des jours pour les métriques
+      // additives (vues, interactions, vues de profil, clics) et « — » pour les comptes uniques (jamais additionnés)
       m: {
         reach: num(ins.reach), views: num(ins.views), engaged: num(ins.accounts_engaged),
         interactions: num(ins.total_interactions), profileViews: num(ins.profile_views), linkTaps: num(ins.profile_links_taps),
@@ -249,23 +263,30 @@
       viewsByFollower: normBk(b.views_by_follower), reachByFollow: normBk(b.reach_by_follow),
       err: {
         follows: str(pe.follows), viewsByType: str(pe.views_by_type), viewsByFollower: str(pe.views_by_follower),
-        reachByFollow: str(pe.reach_by_follow), bioTaps: str(pe.website_clicks)
+        reachByFollow: str(pe.reach_by_follow), bioTaps: str(pe.website_clicks),
+        reach: str(pe['insights.reach']), views: str(pe['insights.views']), engaged: str(pe['insights.accounts_engaged']),
+        interactions: str(pe['insights.total_interactions']), profileViews: str(pe['insights.profile_views']),
+        linkTaps: str(pe['insights.profile_links_taps'])
       },
-      // ig-insights : 5 meilleures (en vues) des 12 derniers médias, chiffres à vie de chaque publication
-      posts: posts ? posts.slice(0, 5).map(normPost).filter(Boolean) : [],
-      postsError: str(b.top_posts_error) || str(b.media_error) || (posts ? null : 'liste absente de la réponse')
+      mediaError: str(b.media_error)
     };
   }
 
-  // La fenêtre réellement demandée à l'API doit couvrir la durée affichée (± 3 min : 30 j = 30 j − 60 s).
-  var RANGE_DAYS = { '24h': 1, '7j': 7, '30j': 30 };
+  // La fenêtre réellement appliquée doit être celle affichée : 24 h glissantes (± 3 min), sinon N jours Instagram
+  // entiers (aujourd'hui compris) ; « all » = depuis la 1re publication.
+  var RANGE_DAYS = { '7j': 7, '30j': 30, '90j': 90, '6m': 183 };
+  function dayCount(a, b) { return Math.round((Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10)) - Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10))) / 864e5) + 1; }
   function spanOk(b, range) {
     var s = num(b.since), u = num(b.until);
-    return s != null && u != null && Math.abs((u - s) - RANGE_DAYS[range] * 86400) <= 180;
+    if (s == null || u == null || u <= s) return false;
+    if (range === '24h') return Math.abs((u - s) - 86400) <= 180;
+    var f = ymd(b.day_first), l = ymd(b.day_last);
+    if (!f || !l || !b.series || !Array.isArray(b.series.days)) return false;
+    return range === 'all' ? dayCount(f, l) >= 1 : dayCount(f, l) === RANGE_DAYS[range];
   }
   function loadInsights(range, opts) {
     if (IG_RANGES.indexOf(range) < 0) {
-      return Promise.reject(new Error('Fenêtre refusée : « ' + range + ' » (seulement 24h, 7j ou 30j).'));
+      return Promise.reject(new Error('Fenêtre refusée : « ' + range + ' » (seulement 24h, 7j, 30j, 90j, 6m ou all).'));
     }
     var force = !!(opts && opts.force), key = 'ig:' + range, S = CF.acct.ig[range];
     if (CF.status !== 'ready') return Promise.resolve(S);
@@ -277,7 +298,7 @@
       await null;
       var patch;
       try {
-        var res = await callFn('ig-insights?range=' + range);
+        var res = await callFn('ig-insights?range=' + range, range === '24h' ? TIMEOUT_MS : SERIES_TIMEOUT_MS);
         var b = res.body || {};
         if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
           patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
@@ -299,6 +320,11 @@
       if (ep !== epoch) return S;
       Object.assign(S, patch, { loading: false, at: Date.now() });
       if (inflight[key] === p) delete inflight[key];
+      // Historique encore incomplet (1er relevé d'un long historique) : on relit la même fenêtre un peu plus tard.
+      if (S.state === 'ready' && S.data && S.data.seriesMissing > 0 && (retries[range] || 0) < SERIES_RETRY_MAX) {
+        retries[range] = (retries[range] || 0) + 1;
+        setTimeout(function () { if (ep === epoch) loadInsights(range, { force: true }); }, SERIES_RETRY_MS);
+      }
       emit(key);
       return S;
     })();
@@ -361,6 +387,61 @@
     return p;
   }
 
+  // ── publications (hors fenêtre : ig-insights?part=media) ──
+  function normMediaItem(p) {
+    if (!p || typeof p !== 'object') return null;
+    var t = str(p.timestamp), ms = t ? Date.parse(t) : NaN;
+    return {
+      id: str(p.id), permalink: str(p.permalink), thumb: str(p.thumbnail), type: str(p.media_type),
+      caption: typeof p.caption === 'string' ? p.caption : '', timestamp: t, ms: isFinite(ms) ? ms : null,
+      reach: num(p.reach), views: num(p.views), likes: num(p.likes), comments: num(p.comments),
+      saved: num(p.saved), shares: num(p.shares), interactions: num(p.interactions), avgWatchS: num(p.avg_watch_s)
+    };
+  }
+  function normMedia(b, at) {
+    var list = Array.isArray(b.media) ? b.media.map(normMediaItem).filter(Boolean) : null;
+    return {
+      fetchedAt: at, username: str(b.username), followers: num(b.followers_count), mediaCount: num(b.media_count),
+      list: list || [], error: str(b.media_error) || (list ? null : 'liste absente de la réponse')
+    };
+  }
+  function loadMedia(opts) {
+    var force = !!(opts && opts.force), S = CF.acct.media;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight.media) return inflight.media;
+    if (!force && isFresh(S)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var patch;
+      try {
+        var res = await callFn('ig-insights?part=media', SERIES_TIMEOUT_MS);
+        var b = res.body || {};
+        if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
+          patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
+        } else if (!res.ok || b.error) {
+          throw { kind: res.status === 401 ? 'auth' : 'http', message: b.error ? String(b.error) : 'HTTP ' + res.status };
+        } else if (b.part !== 'media') {
+          throw { kind: 'range', message: 'ig-insights ne connaît pas encore part=media' };
+        } else {
+          patch = { state: 'ready', kind: null, error: null, data: normMedia(b, Date.now()) };
+        }
+      } catch (e) {
+        patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
+        if (e.kind === 'auth' || e.kind === 'range') patch.data = null;
+      }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.media === p) delete inflight.media;
+      emit('media');
+      return S;
+    })();
+    inflight.media = p;
+    emit('media');
+    return p;
+  }
+
   // ── rafraîchissement ──
   function refresh(opts) {
     opts = opts || {};
@@ -374,7 +455,7 @@
     }
     if (CF.status !== 'ready') return Promise.resolve();
     var tasks = [loadAccounts({ force: !!opts.force })];
-    if (opts.igRange) tasks.push(loadInsights(opts.igRange, { force: !!opts.force }), loadAudience({ force: !!opts.force }));
+    if (opts.igRange) tasks.push(loadInsights(opts.igRange, { force: !!opts.force }), loadAudience({ force: !!opts.force }), loadMedia({ force: !!opts.force }));
     return Promise.all(tasks);
   }
 
@@ -415,6 +496,8 @@
       // Le compte ou son token ont changé : toutes les fenêtres en cache sont invalidées.
       IG_RANGES.forEach(function (r) { CF.acct.ig[r] = newSlot(); delete inflight['ig:' + r]; });
       CF.acct.aud = newSlot(); delete inflight.aud;
+      CF.acct.media = newSlot(); delete inflight.media;
+      retries = {};
       emit('oauth');
       loadAccounts({ force: true });
       return;
