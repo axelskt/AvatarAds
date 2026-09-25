@@ -4,80 +4,131 @@
 // POST /audio/clean), avec le même traitement que le module « Nettoyage audio » de l'app :
 // RNNoise + chaîne voix, 0 € la minute. ElevenLabs Voice Isolator (0,12 $/min) ne sert
 // plus que de SECOURS, quand le serveur est injoignable ou répond en erreur — pour ne
-// jamais laisser l'utilisateur sans résultat. Si les deux échouent, l'appelant garde son
-// comportement d'avant : erreur + remboursement pour clean_audio ; le Montage IA continue
-// sur l'audio d'origine et rembourse la part nettoyage.
+// jamais laisser l'utilisateur sans résultat. Seule exception : un refus DÉFINITIF du
+// serveur (HTTP 413 : plus de 10 min, format hors limites), que le secours ne rattraperait
+// pas au prix facturé. Si rien n'aboutit, l'appelant garde son comportement d'avant :
+// erreur + remboursement pour clean_audio ; le Montage IA continue sur l'audio d'origine
+// et rembourse la part nettoyage.
 //
 // Aucun accès réseau ni variable d'environnement ici : tout arrive par la configuration
 // (index.ts la remplit depuis les secrets), ce qui rend le module testable avec un fetch simulé.
 
 export type ConfigNettoyage = {
-  workerUrl: string   // AUDIO_CLEAN_URL : domaine public Railway du render-worker (https://…)
+  workerUrl: string   // AUDIO_CLEAN_URL : domaine public Railway du render-worker (https:// obligatoire)
   workerKey: string   // AUDIO_CLEAN_KEY : même secret que la variable Railway du worker
   elevenKey: string   // ELEVENLABS_API_KEY : le secours
-  timeoutMs?: number  // délai accordé au worker (60 s par défaut)
+  timeoutMs?: number        // délai fixe accordé au worker (tests) ; sinon delaiWorker(taille)
+  elevenTimeoutMs?: number  // délai accordé au secours (60 s par défaut)
+  httpAutorise?: boolean    // TESTS SEULEMENT (serveur local en http://) — jamais en production
   fetch?: typeof fetch
   journal?: (msg: string) => void
 }
 
 // Octets nettoyés, ou une chaîne d'erreur (jamais d'exception : l'appelant décide).
+// La chaîne est montrée à l'utilisateur : jamais de nom de fournisseur dedans.
 export type ResultatNettoyage = Uint8Array | string
 
-export const WORKER_DELAI_MS = 60_000
+// ── Le temps, compté au plus juste ──────────────────────────────────────────
+// clean_audio est un appel d'outil SYNCHRONE : téléchargement (20 s max) + serveur de
+// rendu + secours + upload doivent tenir sous le délai d'inactivité de Supabase (150 s),
+// sinon l'isolat est coupé et le remboursement du finally ne s'exécute jamais — et bien
+// avant, le client claude.ai abandonne. D'où :
+//   · un délai du serveur de rendu PROPORTIONNEL à la durée estimée (≈ 960 Ko par
+//     minute, comme le devis) : 5 s + 0,1 s par seconde d'audio, entre 15 et 40 s. Le
+//     traitement lui-même prend ~0,3 s pour 90 s d'audio, ~12 s pour 10 min ;
+//   · ce délai est transmis au serveur (x-clean-delai-ms, 3 s de marge) : il répond 504
+//     AVANT qu'on abandonne, jamais un 200 qui arrive après notre délai et un secours
+//     payé pour rien ;
+//   · le secours est borné lui aussi (60 s). Pire cas : 20 + 40 + 60 s + upload.
+export const WORKER_DELAI_MIN_MS = 15_000
+export const WORKER_DELAI_MAX_MS = 40_000
+export const WORKER_MARGE_MS = 3_000
+export const ELEVEN_DELAI_MS = 60_000
 export const WORKER_MAX_OCTETS = 15_000_000   // la borne de la route /audio/clean
+export const delaiWorker = (taille: number) =>
+  Math.min(WORKER_DELAI_MAX_MS, Math.max(WORKER_DELAI_MIN_MS, Math.round(5_000 + taille / 160)))
 
-export const workerConfigure = (c: ConfigNettoyage) => !!(c.workerUrl && c.workerKey)
+// https:// obligatoire : le secret partagé ne circule jamais en clair
+export const urlWorkerValide = (c: ConfigNettoyage) =>
+  /^https:\/\/[^/\s]+/i.test(c.workerUrl) || (!!c.httpAutorise && /^http:\/\/[^/\s]+/i.test(c.workerUrl))
+export const workerConfigure = (c: ConfigNettoyage) => !!(c.workerKey && urlWorkerValide(c))
 export const nettoyageDisponible = (c: ConfigNettoyage) => workerConfigure(c) || !!c.elevenKey
 
+// Refus DÉFINITIFS du serveur de rendu (HTTP 413) : le fichier est hors limites, le
+// secours n'y changerait rien — sinon, pire, il traiterait des heures d'audio (payées
+// à la minute réelle) pour un devis calculé sur la taille (3 h d'Opus tiennent en 4 Mo).
+const REFUS_DEFINITIFS: Record<string, string> = {
+  trop_long: 'audio trop long pour le nettoyage : 10 min au plus',
+  hors_limites: 'format audio hors limites : 8 canaux et 192 kHz au plus',
+}
+
+type EchecWorker = { raison: string; definitif?: string }
+
 // ── 1. le serveur de rendu ──────────────────────────────────────────────────
-export async function nettoyerViaWorker(bytes: Uint8Array, contentType: string, c: ConfigNettoyage): Promise<ResultatNettoyage> {
-  if (!workerConfigure(c)) return 'serveur de rendu non configuré'
-  if (bytes.length > WORKER_MAX_OCTETS) return `fichier au-delà de ${WORKER_MAX_OCTETS / 1_000_000} Mo`
+export async function nettoyerViaWorker(bytes: Uint8Array, contentType: string, c: ConfigNettoyage): Promise<Uint8Array | EchecWorker> {
+  if (!c.workerUrl || !c.workerKey) return { raison: 'non configuré' }
+  if (!urlWorkerValide(c)) return { raison: 'AUDIO_CLEAN_URL doit commencer par https://' }
+  if (bytes.length > WORKER_MAX_OCTETS) return { raison: `fichier au-delà de ${WORKER_MAX_OCTETS / 1_000_000} Mo` }
   const f = c.fetch ?? fetch
   const url = c.workerUrl.replace(/\/+$/, '') + '/audio/clean'
+  const delai = c.timeoutMs ?? delaiWorker(bytes.length)
   try {
     const r = await f(url, {
       method: 'POST',
-      headers: { 'x-worker-key': c.workerKey, 'content-type': contentType || 'application/octet-stream' },
+      headers: {
+        'x-worker-key': c.workerKey,
+        'content-type': contentType || 'application/octet-stream',
+        'x-clean-delai-ms': String(Math.max(1_000, delai - WORKER_MARGE_MS)),
+      },
       body: bytes as unknown as BodyInit,
-      signal: AbortSignal.timeout(c.timeoutMs ?? WORKER_DELAI_MS),
+      // une redirection est une erreur : le secret ne suit jamais une redirection
+      // vers une autre origine, et une réponse venue d'ailleurs n'est jamais livrée
+      redirect: 'error',
+      signal: AbortSignal.timeout(delai),
     })
     if (!r.ok) {
-      const code = await r.json().then((j: { error?: string }) => j?.error).catch(() => '')
-      return `serveur de rendu HTTP ${r.status}${code ? ' ' + String(code).slice(0, 40) : ''}`
+      const code = await r.json().then((j: { error?: string }) => String(j?.error ?? '')).catch(() => '')
+      const raison = `HTTP ${r.status}${code ? ' ' + code.slice(0, 40) : ''}`
+      if (r.status === 413 && REFUS_DEFINITIFS[code]) return { raison, definitif: REFUS_DEFINITIFS[code] }
+      return { raison }
     }
     if (!/^audio\/mpeg/i.test(r.headers.get('content-type') || '')) {
       await r.body?.cancel().catch(() => {})
-      return 'serveur de rendu : réponse inattendue'
+      return { raison: 'réponse inattendue' }
     }
     const out = new Uint8Array(await r.arrayBuffer())
-    if (!out.length) return 'serveur de rendu : réponse vide'
+    if (!out.length) return { raison: 'réponse vide' }
     return out
   } catch (e) {
     const nom = (e as Error)?.name
-    return nom === 'TimeoutError' || nom === 'AbortError'
-      ? `serveur de rendu : délai de ${Math.round((c.timeoutMs ?? WORKER_DELAI_MS) / 1000)} s dépassé`
-      : 'serveur de rendu injoignable'
+    return { raison: nom === 'TimeoutError' || nom === 'AbortError' ? `délai de ${Math.round(delai / 1000)} s dépassé` : 'injoignable' }
   }
 }
 
-// ── 2. le secours : ElevenLabs Voice Isolator (appel d'avant, inchangé) ─────
+// ── 2. le secours : ElevenLabs Voice Isolator (appel d'avant, borné dans le temps) ──
+// Renvoie une raison NEUTRE (sans nom de fournisseur) ; le détail va au journal.
 export async function isolerViaElevenLabs(bytes: Uint8Array, contentType: string, c: ConfigNettoyage): Promise<ResultatNettoyage> {
-  if (!c.elevenKey) return 'configuration serveur incomplète'
+  const log = c.journal ?? ((m: string) => console.log(m))
+  if (!c.elevenKey) return 'non configuré'
   const f = c.fetch ?? fetch
+  const delai = c.elevenTimeoutMs ?? ELEVEN_DELAI_MS
   try {
     const fd = new FormData()
     fd.append('audio', new Blob([bytes as unknown as BlobPart], { type: contentType }), 'input.mp3')
     const iso = await f('https://api.elevenlabs.io/v1/audio-isolation', {
       method: 'POST', headers: { 'xi-api-key': c.elevenKey }, body: fd,
+      signal: AbortSignal.timeout(delai),
     })
     if (!iso.ok) {
       const err = await iso.text().catch(() => '')
-      return `ElevenLabs ${iso.status}${err ? ' — ' + err.slice(0, 120) : ''}`
+      log(`[clean] ElevenLabs ${iso.status}${err ? ' — ' + err.slice(0, 120) : ''}`)
+      return `HTTP ${iso.status}`
     }
-    return new Uint8Array(await iso.arrayBuffer())
-  } catch (_) {
-    return 'ElevenLabs injoignable'
+    const out = new Uint8Array(await iso.arrayBuffer())
+    return out.length ? out : 'réponse vide'
+  } catch (e) {
+    const nom = (e as Error)?.name
+    return nom === 'TimeoutError' || nom === 'AbortError' ? `délai de ${Math.round(delai / 1000)} s dépassé` : 'injoignable'
   }
 }
 
@@ -85,14 +136,20 @@ export async function isolerViaElevenLabs(bytes: Uint8Array, contentType: string
 export async function nettoyerVoix(bytes: Uint8Array, contentType: string, c: ConfigNettoyage): Promise<ResultatNettoyage> {
   const log = c.journal ?? ((m: string) => console.log(m))
   const w = await nettoyerViaWorker(bytes, contentType, c)
-  if (typeof w !== 'string') {
+  if (w instanceof Uint8Array) {
     log(`[clean] serveur de rendu : voix nettoyée (${(bytes.length / 1024).toFixed(0)} Ko → ${(w.length / 1024).toFixed(0)} Ko)`)
     return w
   }
-  log(`[clean] repli ElevenLabs (${w})`)
+  if (w.definitif) {
+    log(`[clean] refus définitif du serveur de rendu (${w.raison}) — pas de repli`)
+    return w.definitif
+  }
+  log(`[clean] repli ElevenLabs (serveur de rendu : ${w.raison})`)
   const e = await isolerViaElevenLabs(bytes, contentType, c)
-  if (typeof e === 'string') log(`[clean] repli ElevenLabs en échec aussi (${e})`)
-  return e
+  if (typeof e !== 'string') return e
+  log(`[clean] repli ElevenLabs en échec aussi (${e})`)
+  // les deux causes, sans nom de fournisseur : c'est ce que lit l'utilisateur
+  return `serveur de rendu : ${w.raison} ; secours : ${e}`
 }
 
 // ── clean_audio : les crédits sont DÉJÀ débités par l'appelant ──────────────

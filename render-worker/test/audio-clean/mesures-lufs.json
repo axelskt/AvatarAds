@@ -1,6 +1,6 @@
 {
   "genere_par": "render-worker/test/audio-clean/parite.test.mjs",
-  "chaine": "RNNoise → WAV 16 bits → _acMasterVoice('off') → MP3 192 kbps",
+  "chaine": "ffmpeg (mixage mono de Web Audio) → RNNoise → WAV 16 bits → _acMasterVoice('off') → MP3 192 kbps (fichier, en-tête LAME)",
   "tolerance_parite": 0.00001,
   "parite": [
     {
@@ -81,7 +81,7 @@
       },
       "apres": {
         "lufs": -16.3,
-        "lra": 1.3,
+        "lra": 1.4,
         "crete_echantillon_dbfs": -2.2,
         "crete_vraie_dbfs": -2
       }
@@ -123,9 +123,30 @@
       },
       "apres": {
         "lufs": -16.5,
-        "lra": 6.5,
+        "lra": 6.4,
         "crete_echantillon_dbfs": -2.2,
         "crete_vraie_dbfs": -2.2
+      }
+    },
+    {
+      "echantillon": "H73 stéréo G=D",
+      "duree_s": 8.02,
+      "prise": {
+        "dejaDebruite": false,
+        "priseSaine": false,
+        "preset": "off"
+      },
+      "avant": {
+        "lufs": -11.4,
+        "lra": 1.8,
+        "crete_echantillon_dbfs": -1,
+        "crete_vraie_dbfs": -0.5
+      },
+      "apres": {
+        "lufs": -16.3,
+        "lra": 1.4,
+        "crete_echantillon_dbfs": -2.2,
+        "crete_vraie_dbfs": -2
       }
     }
   ]

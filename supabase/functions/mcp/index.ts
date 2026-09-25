@@ -817,7 +817,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'clean_audio',
-      description: `Nettoie la voix d'un fichier audio (le Nettoyage audio AvatarAds) : voix nettoyée (bruit de fond, souffle, clics). Fait pour une prise de voix — ne sépare pas une voix d'une musique de fond. Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
+      description: `Nettoie la voix d'un fichier audio (le Nettoyage audio AvatarAds) : voix nettoyée (bruit de fond, souffle, clics). Fait pour une prise de voix — ne sépare pas une voix d'une musique de fond. 10 min d'audio au plus. Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -1996,7 +1996,7 @@ async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
 // Utilisé par clean_audio ET par le Montage IA (étape 0). Renvoie les octets
 // nettoyés (MP3), ou une chaîne d'erreur (jamais d'exception : l'appelant décide
 // s'il abandonne ou s'il continue avec l'audio d'origine). Le détail — worker
-// Railway (AUDIO_CLEAN_URL / AUDIO_CLEAN_KEY, délai 60 s), repli ElevenLabs
+// Railway (AUDIO_CLEAN_URL / AUDIO_CLEAN_KEY, https, délai de 15 à 40 s selon la taille), repli ElevenLabs
 // journalisé « [clean] repli ElevenLabs » — est dans nettoyage-voix.ts.
 async function isolerVoix(bytes: Uint8Array, contentType: string): Promise<Uint8Array | string> {
   return await nettoyerVoix(bytes, contentType, NETTOYAGE)
@@ -2467,14 +2467,14 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   })())
 
   return toolText(
-    `🎬 Montage IA lancé ! (~${Math.round(durEst)} s, style ${style}, −${cost} crédits)
+    `Montage IA lancé (~${Math.round(durEst)} s, style ${style}, −${cost} crédits)
 job_id : ${mj.id}
 Le chef d'orchestre transcrit et prépare le plan (~2 min), puis le moteur rend le MP4.
 Appelle check_montage avec ce job_id dans environ 2 minutes.
 ${nettoyer
   ? `La voix est nettoyée avant le montage (bruit de fond, souffle, clics — −${coutClean} cr sur le total). Si ton audio est DÉJÀ traité, passe clean_audio: false — le renettoyer ne l'améliore pas.`
-  : `⚠️ Audio monté TEL QUEL, à ta demande (clean_audio: false). Si le rendu sonne sale, relance sans ce paramètre.`}
-💡 Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
+  : `Attention : audio monté TEL QUEL, à ta demande (clean_audio: false). Si le rendu sonne sale, relance sans ce paramètre.`}
+Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
 }
 
 async function runCheckMontage(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
