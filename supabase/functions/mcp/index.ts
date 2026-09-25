@@ -329,7 +329,9 @@ async function preSpendGate(
   profile: Record<string, unknown>, ctx: ToolCtx, args: Record<string, unknown>,
   cost: number, label: string, toolName: string,
 ): Promise<ToolContent | null> {
-  if (ctx.requireConfirm && args.confirm !== true) {
+  // Certains clients MCP envoient le booléen en chaîne (« true ») : même accord explicite, on l'accepte (25/09).
+  const confirmed = args.confirm === true || String(args.confirm).toLowerCase() === 'true'
+  if (ctx.requireConfirm && !confirmed) {
     const bal = Number(profile.credits_remaining) || 0
     const balTxt = isUnlimited(profile) ? '∞' : `${bal} → ${bal - cost} après génération`
     return toolText(
