@@ -7017,6 +7017,34 @@ async function loadProfile(user){
   if(profile) enterApp(profile);
 }
 
+// ── ATTRIBUTION AUTO-DM INSTAGRAM (25/09) ──────────────────────────────────
+// Au clic du lien reçu en DM, r.html (SEULE page qui écrit aa_lead ; aucune référence n'est lue dans une URL, pour
+// qu'un tiers ne puisse pas en déposer une par un lien) a gardé dans aa_lead une référence CHIFFRÉE du lead
+// (jamais son identifiant Instagram). Une fois connecté, on l'envoie UNE fois à ig-go ?action=attach : le serveur la
+// vérifie et relie CE compte (celui de la session) au lead ; nouveau compte ou compte existant, c'est lui qui tranche.
+// Silencieux dans tous les cas (aucun toast) : réponse définitive (reliée, déjà reliée, invalide, expirée) → on
+// l'efface ; réseau / serveur indisponible / session refusée → on la garde pour la prochaine ouverture (30 j max).
+async function _aaLeadSend(){
+  if(window._aaLeadBusy) return;
+  var o = null; try{ o = JSON.parse(localStorage.getItem('aa_lead') || 'null'); }catch(e){}
+  if(!o || typeof o.r !== 'string') return;
+  var drop = function(){ try{ var c = JSON.parse(localStorage.getItem('aa_lead') || 'null'); if(c && c.r === o.r) localStorage.removeItem('aa_lead'); }catch(e){} };
+  if(!(o.x > Date.now())){ drop(); return; }
+  window._aaLeadBusy = true;
+  try{
+    const session = (await sb.auth.getSession()).data.session;
+    if(!session || !session.access_token) return;
+    const res = await fetch(SUPABASE_URL + '/functions/v1/ig-go?action=attach', {
+      method: 'POST', redirect: 'error',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: o.r })
+    });
+    const j = await res.json().catch(() => null);
+    if(res.ok && j && typeof j.attached === 'boolean') drop();
+  }catch(e){ /* réseau : nouvel essai à la prochaine ouverture de l'app */ }
+  finally{ window._aaLeadBusy = false; }
+}
+
 // ── ENTER APP ──
 function enterApp(profile){
   currentMember = profile;
@@ -7039,6 +7067,8 @@ function enterApp(profile){
   // l'overlay de login s'affiche, le hash survit, et enterApp re-route après
   // l'authentification. 260 ms : APRÈS le nav('express') mobile (120 ms).
   setTimeout(function(){ try{ _ccDeepLink(); }catch(e){} }, 260);
+  // Attribution Auto-DM Instagram : référence du lead envoyée une fois, en fond (hors chemin critique du login).
+  setTimeout(function(){ try{ _aaLeadSend(); }catch(e){} }, 1500);
   updateAccountMenu(profile);
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   window._userHedraKey = profile.hedra_api_key || null; // clé BYOK du user (null = utilise la clé plateforme)

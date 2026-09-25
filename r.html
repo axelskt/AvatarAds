@@ -16,15 +16,21 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://avatarads.fr/og-image.jpg">
-<meta http-equiv="refresh" content="0;url=https://avatarads.fr">
+<!-- Sans JavaScript seulement : avec JS, la page attend (1,5 s max) la référence d'attribution avant de rediriger. -->
+<noscript><meta http-equiv="refresh" content="0;url=https://avatarads.fr"></noscript>
 <style>body{margin:0;background:#0f0f11;color:#fff;font-family:-apple-system,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}</style>
 </head>
 <body>
 <p>Redirection…</p>
 <script>
-  // Tracker de clic Auto-DM : logge le clic (sendBeacon, survit à la navigation) puis redirige.
+  // Tracker de clic Auto-DM : logge le clic puis redirige.
   // Destination en liste blanche (avatarads.fr, trackads.fr) : pas de redirection ouverte vers un
   // site tiers. La signature s est vérifiée par ig-go avant d'enregistrer le clic.
+  // Attribution (25/09) : pour un clic enregistré, ig-go renvoie une RÉFÉRENCE CHIFFRÉE du lead (jamais son
+  // identifiant Instagram en clair). Elle est gardée 30 jours dans ce navigateur (aa_lead, même domaine que le site
+  // et l'app ; jamais remplacée par une plus ancienne) : si la personne crée un compte ou se connecte, l'app l'envoie
+  // une fois au serveur, qui relie le compte au lead. On attend la réponse 1,5 s au plus puis on redirige quoi qu'il
+  // arrive (keepalive : le clic est quand même enregistré, seule l'attribution de ce clic manquerait).
   const EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/ig-go';
   const ALLOWED = ['avatarads.fr', 'trackads.fr'];
   const p = new URLSearchParams(location.search);
@@ -35,8 +41,30 @@
     const h = t.hostname.toLowerCase();
     if (t.protocol === 'https:' && ALLOWED.some(a => h === a || h.endsWith('.' + a))) to = t.href;
   } catch (e) { /* destination par défaut */ }
-  try { if (u) navigator.sendBeacon(EDGE + '?log=1&u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig) + '&s=' + encodeURIComponent(s)); } catch (e) { /* ignore */ }
-  location.replace(to);
+  let gone = false;
+  const go = () => { if (!gone) { gone = true; location.replace(to); } };
+  const keep = (r) => {
+    try {
+      const m = /^1\.([0-9a-z]{1,10})\.[A-Za-z0-9_-]{20,400}$/.exec(r || ''); if (!m) return;
+      const t = parseInt(m[1], 36) * 1000, n = Date.now();
+      if (!(t > 0) || n - t > 2592e6 || t - n > 3e5) return;
+      let o = null; try { o = JSON.parse(localStorage.getItem('aa_lead') || 'null'); } catch (e) { /* illisible */ }
+      if (o && o.t >= t && o.x > n) return;
+      localStorage.setItem('aa_lead', JSON.stringify({ r: r, t: t, x: t + 2592e6 }));
+    } catch (e) { /* stockage indisponible : pas d'attribution, la redirection passe */ }
+  };
+  if (u) {
+    const q = EDGE + '?log=1&u=' + encodeURIComponent(u) + '&ig=' + encodeURIComponent(ig) + '&s=' + encodeURIComponent(s);
+    let sent = false;
+    try {
+      if (window.fetch) {
+        fetch(q, { keepalive: true }).then(r => r.json()).then(j => { if (j && j.ref) keep(j.ref); }).catch(() => {}).then(go);
+        sent = true;
+      }
+    } catch (e) { /* navigateur ancien */ }
+    if (!sent) { try { navigator.sendBeacon(q); } catch (e) { /* ignore */ } go(); }
+    setTimeout(go, 1500);
+  } else go();
 </script>
 </body>
 </html>
