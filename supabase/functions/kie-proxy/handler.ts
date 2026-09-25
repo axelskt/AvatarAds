@@ -234,8 +234,12 @@ export async function handler(req: Request): Promise<Response> {
       if (uid && !noBill) {
         const rr = await applyReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
         if (!rr.ok) return jsonRes(rr.status, { error: rr.error, billing: 'unfunded' })
-        opId = rr.opId
-        drawn = cost
+        // Montant RÉELLEMENT tiré (relecture 25/09), jamais `cost` : en mode ombre (RESERVE_ENFORCE≠1) ou sur hoquet DB, une
+        // réserve insuffisante passe avec 0 tiré. Rien tiré = op NON liée à cette tâche → ni release, ni refund, ni règlement
+        // fantôme. Sinon : op Express 33 déjà tirée de 30 par une vidéo en cours, 2e soumission refusée par kie → release 30
+        // jamais tirés puis remboursement de l'op ENTIÈRE (33) pendant que la 1re vidéo était livrée.
+        drawn = (rr as { drawn?: number }).drawn ?? 0
+        opId = drawn > 0 ? rr.opId : undefined
       }
       // Soumission ratée : tirage RENDU à la réservation (repli possible sur la même op) ou REMBOURSÉ (sans réponse de kie).
       // Une réserve rendue est notée (ligne 'sub-…', état failed) : si l'onglet meurt avant repli / remboursement, le
