@@ -10196,6 +10196,7 @@ async function _imgGenerateOne(token, enhancedPrompt, size, style, opt){
 }
 async function _imgGenerateAt(token, enhancedPrompt, gptSize, opt){
   opt = opt || {};   // opt.chain : palier 4K → le serveur tire le palier entier (5) et ouvre UN upscale Nano (x-aa-chain)
+  // opt.op (Axel 25/09) : l'op EXACTE à tirer (image de départ d'Express), sinon la dernière du flux (_aaOp()).
   // Styles réalistes (Photo Réel / UGC) : gpt-image, prompt brut (Flux abandonné 30/08 — déformait les visages)
   // gpt-image-1 n'accepte PAS 'style' ni 'response_format' (renvoie du base64 par défaut)
   // tailles : 1024x1024 · 1152x2048 (portrait 9:16 en 2K, ~même prix que 1024x1536 chez OpenAI — Axel 24/09) · 1536x1024 (paysage)
@@ -10207,7 +10208,7 @@ async function _imgGenerateAt(token, enhancedPrompt, gptSize, opt){
     for(let attempt=0; attempt<3; attempt++){
       res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
         method: 'POST',
-        headers: { ...(_aaOp()), ...(opt.chain ? { 'x-aa-chain': 'nano4k' } : {}), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+        headers: { ...(_aaOp(opt.op)), ...(opt.chain ? { 'x-aa-chain': 'nano4k' } : {}), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgGptQuality(), moderation: 'low' })
       });
       data = await res.json().catch(()=>({ error:{ message:'réponse illisible (HTTP '+res.status+')' } }));
@@ -19282,10 +19283,12 @@ async function _gnGenerate(){
   // Image lue AVANT le débit : une image illisible ne coûte rien
   let img;
   try{ img = await _gnImageB64(g.img); }catch(e){ toast('Image illisible — choisis-en une autre'); return; }
-  // ── Débit AVANT l'appel fournisseur (réservation tirée par fal-proxy via x-aa-op), remboursé si échec ──
-  if(typeof creditsFlowBegin === 'function') creditsFlowBegin();
+  // ── Débit AVANT l'appel fournisseur (réservation tirée par kie-proxy via x-aa-op), remboursé si échec ──
+  // Relecture 25/09 : plus de creditsFlowBegin() ici (il vidait _creditOps d'un Express en cours → son image et son
+  // remboursement visaient la mauvaise op). Voix native travaille sur SON op : x-aa-op explicite + remboursement ciblé.
   if(!(await spendCreditsFor(_gnCost(), 'voix native'))) return;
-  const ops = (typeof _creditOps !== 'undefined') ? _creditOps.slice() : [];
+  const op = window._aaLastSpendOp || null;
+  const ops = op ? [op] : [];
   g.busy = true; g.showForm = false; g._p = 0; _gnRender(); _gnProg(4, 'Préparation de l\'image…');
   const t0 = Date.now();
   const tm = document.getElementById('gnLoadTimer'); if(tm) tm.textContent = '0:00';
@@ -19304,7 +19307,7 @@ async function _gnGenerate(){
     // _expOmniImageToVideo lit le format d'Express (window._expFormat) : forcé à 9:16 le temps de l'appel, puis rendu.
     const fmt0 = window._expFormat; if(fmt0 !== '9:16') window._expFormat = '9:16';
     let blob;
-    try{ blob = await _expOmniImageToVideo(img.b64, img.mime, fullPrompt, dur, '1080p', (v, t) => _gnProg(v, t)); }   // 1080p (Axel 25/09)
+    try{ blob = await _expOmniImageToVideo(img.b64, img.mime, fullPrompt, dur, '1080p', (v, t) => _gnProg(v, t), op); }   // 1080p (Axel 25/09) ; op exacte
     finally{ if(fmt0 !== '9:16') window._expFormat = fmt0; }
     if(!blob || blob.size < 50000 || (typeof _mp4Sane === 'function' && !(await _mp4Sane(blob)))) throw new Error('vidéo reçue illisible — réessaie');
     _gnProg(96, 'Vidéo prête');
@@ -31339,7 +31342,7 @@ function _expRenderImgs(){
 // Veo ET Seedance sont image→vidéo (UNE image de départ). Pour que les 8 références soient
 // vraiment prises en compte (Axel 17/08), on les fusionne d'abord via gpt-image edit multi-images
 // (avatar + produit + perso → une scène cohérente) → cette image sert de frame de départ.
-async function _expComposeRefs(token, prompt, gptSize){
+async function _expComposeRefs(token, prompt, gptSize, op){   // op = x-aa-op explicite (l'op d'Express, Axel 25/09)
   const imgs = window._expImgs || [];
   if(imgs.length < 2) return null;   // 0 ou 1 image → rien à composer
   const toBlob=(durl)=>{ const m=/^data:([^;]+);base64,(.+)$/.exec(durl||''); if(!m) return null; const bin=atob(m[2]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:m[1]||'image/png'}); };
@@ -31365,7 +31368,7 @@ async function _expComposeRefs(token, prompt, gptSize){
       fd.append('size', gptSize);
       fd.append('quality', (typeof _imgGptQuality==='function'? _imgGptQuality() : 'medium'));
       fd.append('moderation','low');
-      const res=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/edits', { method:'POST', headers:{...(_aaOp()),'Authorization':'Bearer '+token}, body:fd });
+      const res=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/edits', { method:'POST', headers:{...(_aaOp(op)),'Authorization':'Bearer '+token}, body:fd });
       const data=await res.json().catch(()=>({}));
       const b64=data && data.data && data.data[0] && data.data[0].b64_json; if(b64) return 'data:image/png;base64,'+b64;
       const url=data && data.data && data.data[0] && data.data[0].url; if(url) return url;
@@ -31686,7 +31689,11 @@ function _omniKieErr(e){
   out._kieStage = e._kieStage; out._kieBill = e._kieBill; out._kieRefus = !!e._kieRefus;
   return out;
 }
-async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep){
+// `op` (Axel 25/09, relecture) = l'op EXACTE de CE débit (window._aaLastSpendOp juste après spendCreditsFor) : envoyée en
+// x-aa-op à kie-proxy comme à fal-proxy. Sans elle, le serveur prenait « la dernière op ouverte » du compte : deux générations
+// payantes en parallèle (Express + Voix native) → la vidéo tirait EXACTEMENT 5 × durée sur l'op de l'autre (402, ou crédits
+// tirés jamais remboursés). Absente (developer / owner : aucun débit) → comportement d'avant (dernière op du flux).
+async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep, op){
   const step=(v,t)=>{ try{ onStep && onStep(v,t); }catch(_){} };
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) throw new Error('Session expirée — reconnecte-toi');
@@ -31721,7 +31728,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     try{
       step(42,'Omni Flash (kie.ai) — génération…');
       const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
-        duration: _sec }, { every:5000, maxPolls:240,
+        duration: _sec }, { every:5000, maxPolls:240, op: op || undefined,
         onTick:(i)=>step(Math.min(88,42+i), 'Omni Flash (kie.ai) — génération…') });
       step(90,'↓ Récupération de la vidéo…');
       const _vb = await _kieFetchBlob(_kr.url);
@@ -31729,7 +31736,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
       return new Blob([_vb], { type:'video/mp4' });
     }catch(e){ throw _omniKieErr(e); }   // plus AUCUN repli fal (Axel 25/09)
   }
-  const H=await getAuthHeader();
+  const H={ ...(await getAuthHeader()), ...(op ? { 'x-aa-op': String(op) } : {}) };   // carré 1:1 : même op explicite
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
   const fPost=(pp,b)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
   const fGet =(pp)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'GET',headers:{...H}});
@@ -31817,6 +31824,13 @@ async function expressCreate(){
   let _omniImgMade = false;
   if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
   if(!(await spendCreditsFor(_isOmni ? _expOmniCost(_dur) : Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))) return;
+  // Op EXACTE de ce débit (Axel 25/09, relecture) : chaque appel payant d'Express (image de départ, Omni kie / fal, Veo) la
+  // nomme en x-aa-op, et le remboursement ne vise qu'ELLE. Avant, tout passait par _creditOps (global) : une autre génération
+  // lancée pendant Express (ex. Voix native du Générateur) le vidait / l'écrasait → vidéo tirée sur l'op de l'autre et
+  // remboursement d'Express sur la mauvaise op (crédits perdus). Developer / owner : aucun débit → [] (rien à rendre).
+  const _expOp = window._aaLastSpendOp || null;
+  const _expOps = _expOp ? [_expOp] : [];
+  const _expOpsDone = () => { try{ _creditOps = _creditOps.filter((id) => !_expOps.includes(id)); }catch(_){} };   // sans toucher aux ops d'un autre flux
 
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
@@ -31851,7 +31865,7 @@ async function expressCreate(){
       setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
       try{
         const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1152x2048');
-        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize);
+        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize, _expOp);
         if(_composed){
           _omniImgMade = true;
           if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
@@ -31863,7 +31877,7 @@ async function expressCreate(){
       setP(8,'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg> Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1792');
       const imgPrompt = prompt + ', ' + styleMeta.prompt + ', no text, no watermark, high quality';
-      const url = await _imgGenerateOne(token, imgPrompt, size, null);
+      const url = await _imgGenerateOne(token, imgPrompt, size, null, { op: _expOp });
       _omniImgMade = true;
       if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
       else { const b=await (await fetch(url)).blob(); imgMime=b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(b);}); }
@@ -31895,13 +31909,13 @@ async function expressCreate(){
     if(_isOmni){
       // ⚡ Omni Flash image→vidéo (image + texte → vidéo + VOIX NATIVE) : kie.ai pour tous, sans repli (carré 1:1 : fal).
       setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni Flash — génération…');
-      blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t));
+      blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t), _expOp);
       // Plus d'« ajustement à la durée réelle » (Axel 25/09) : Omni sort au cran demandé (4/6/8/10 s) et le serveur facture
       // EXACTEMENT ce cran puis règle l'op dès la livraison (un remboursement après coup répondait already_delivered).
       // Image de départ réservée mais finalement NON créée (composition ratée → 1re image gardée) : ce reliquat est resté
       // dans la réserve (kie-proxy / fal-proxy ne tirent que 5 × durée) → rendu ici, par le serveur (refund_credits = la
       // réserve RESTANTE seulement, jamais la vidéo livrée).
-      if(_omniImgPart > 0 && !_omniImgMade){ try{ await creditsFlowRefund('image de départ non créée'); }catch(_){} }
+      if(_omniImgPart > 0 && !_omniImgMade){ try{ await creditsFlowRefund('image de départ non créée', _expOps); }catch(_){} }
     } else {
     // Veo 3.1 (API Gemini) = audio NATIF, sans paramètre : envoyer `generateAudio` déclenche un 400 « …audio… »
     // puis le repli (relance muette + voix TTS Gemini à muxer) → 2 appels, une voix TTS PAR-DESSUS la voix native
@@ -31920,7 +31934,7 @@ async function expressCreate(){
     const _proAllowed = ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
     let _veoModel = (window._expVeoModel==='pro' && _proAllowed) ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-lite-generate-preview';
     const _startVeo = (model, withAudio) => _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning', {
-      method:'POST', body: JSON.stringify(_veoBody(withAudio, model))
+      method:'POST', headers:_aaOp(_expOp), body: JSON.stringify(_veoBody(withAudio, model))
     });
     // kie.ai (compte developer) : MÊME animPrompt, même image recadrée, même format/résolution/durée ; seul le
     // fournisseur change. Traduction du prompt coupée côté serveur (la réplique FR reste en FR). Panne → Google.
@@ -32039,7 +32053,7 @@ async function expressCreate(){
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
-    if(typeof creditsFlowDone==='function') creditsFlowDone();   // succès → plus rien à rembourser
+    _expOpsDone();   // succès → plus rien à rembourser (seulement SES ops : jamais celles d'une autre génération en cours)
     window._expVidBlobRaw=null; // nouvelle vidéo → la version "sans sous-titres" repart de celle-ci
     window._expVoiceBlob = voiceBlob; // voix à ajouter dans l'Éditeur (null si native)
 
@@ -32065,7 +32079,8 @@ async function expressCreate(){
     // Express débite EN AMONT (spendCreditsFor). Un échec (Veo refusé, téléchargement raté, vidéo corrompue)
     // ne remboursait rien → l'utilisateur payait pour rien. On rend ce qui est remboursable : refund_credits
     // ne rend que la RÉSERVE RESTANTE (une étape déjà livrée — image, extension — reste facturée à juste titre).
-    try{ if(typeof creditsFlowRefund==='function') await creditsFlowRefund('la génération Express a échoué'); }catch(_r){}
+    try{ if(typeof creditsFlowRefund==='function') await creditsFlowRefund('la génération Express a échoué', _expOps); }catch(_r){}
+    _expOpsDone();
     toast('Express : ' + (e.message||e));
   } finally {
     if(btn){ btn.disabled=false; btn.style.opacity='1'; }
