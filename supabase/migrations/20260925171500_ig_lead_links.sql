@@ -5,7 +5,8 @@
 -- jamais l'identifiant Instagram en clair) → le navigateur la garde 30 jours (localStorage aa_lead) → après connexion,
 -- l'app l'envoie UNE fois à ig-go ?action=attach → ig-go la vérifie et appelle ig_lead_attach (ci-dessous) avec le
 -- user_id de la SESSION (jamais un id fourni par le client) → whop-webhook appelle ig_lead_mark_paid quand ce compte
--- passe d'un plan gratuit à un abonnement payant.
+-- passe d'un plan gratuit à un abonnement payant, et ig_lead_unmark_paid s'il est remboursé (remboursement, litige,
+-- chargeback).
 --
 -- Définitions :
 --   · new_account  = compte CRÉÉ APRÈS le clic (auth.users.created_at > clicked_at) → « devenu user » ;
@@ -14,6 +15,9 @@
 --                    un compte déjà payant au rattachement (paying_at_link) n'est pas un « passé payant » ;
 --                    nouveau compte déjà payant au rattachement (abonnement payé AVANT la création du compte, via
 --                    pending_activations) : paid_at = création du compte, forcément après le clic ;
+--   · remboursement / litige / chargeback (le webhook remet le profil en free, 0 crédit) → paid_at et plan remis à
+--                    null, refunded_at posé (trace) : plus compté payant ; un réabonnement ultérieur (gratuit → payant)
+--                    le re-marque par ig_lead_mark_paid ;
 --   · UNE seule attribution par compte (la 1re) : clé primaire user_id, insert … on conflict do nothing (idempotent).
 -- Données : le minimum pour relier aux stats d'ig_dm_log (sender_id, déjà stocké en clair côté serveur dans ig_dm_log ;
 -- ni pseudo, ni e-mail, ni IP). Supprimée avec le compte (on delete cascade). RLS activée SANS policy : service role
@@ -28,7 +32,8 @@ create table if not exists public.ig_lead_links (
   paying_at_link     boolean not null default false,
   attributed_at      timestamptz not null default now(),
   paid_at            timestamptz,
-  plan               text
+  plan               text,
+  refunded_at        timestamptz   -- dernier remboursement / litige / chargeback qui a annulé un passage payant
 );
 create index if not exists ig_lead_links_sender_idx on public.ig_lead_links (sender_id);
 alter table public.ig_lead_links enable row level security;
@@ -95,3 +100,26 @@ begin
 end $$;
 revoke execute on function public.ig_lead_mark_paid(uuid, text, text) from public, anon, authenticated;
 grant execute on function public.ig_lead_mark_paid(uuid, text, text) to service_role;
+
+-- Remboursement / litige / chargeback d'un compte relié. Appelée UNIQUEMENT par whop-webhook (service role), dans la
+-- branche clawback (profil remis en free, 0 crédit), par un appel isolé qui ne peut ni bloquer ni faire échouer le
+-- traitement. Le passage payant est annulé (il n'est plus compté dans funnel.paid ni attribution.existing_paid) ; un
+-- réabonnement ultérieur repart de free → ig_lead_mark_paid le re-marque. Idempotent (rejeu ou 2e évènement du même
+-- remboursement → rien). Rend true si un passage payant a été annulé.
+create or replace function public.ig_lead_unmark_paid(p_user uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer;
+begin
+  if p_user is null then return false; end if;
+  update public.ig_lead_links
+     set paid_at = null, plan = null, refunded_at = now()
+   where user_id = p_user and paid_at is not null;
+  get diagnostics n = row_count;
+  return n > 0;
+end $$;
+revoke execute on function public.ig_lead_unmark_paid(uuid) from public, anon, authenticated;
+grant execute on function public.ig_lead_unmark_paid(uuid) to service_role;

@@ -135,6 +135,15 @@ async function markIgLeadPaid(sb: any, userId: string, plan: string, prevPlan: s
     if (error) console.warn('ℹ️ attribution Instagram (non bloquant) :', error.message)
   } catch (e) { console.warn('ℹ️ attribution Instagram (non bloquant) :', (e as Error)?.message) }
 }
+// Remboursement / litige / chargeback (branche clawback, profil remis en free) d'un compte relié → son passage payant
+// est annulé (paid_at et plan remis à null, refunded_at posé) : il n'est plus compté « payant » dans les stats Auto-DM.
+// Un réabonnement ultérieur (free → payant) le re-marque par markIgLeadPaid. Mêmes garanties : isolé, erreur avalée.
+async function unmarkIgLeadPaid(sb: any, userId: string) {
+  try {
+    const { error } = await sb.rpc('ig_lead_unmark_paid', { p_user: userId })
+    if (error) console.warn('ℹ️ attribution Instagram, remboursement (non bloquant) :', error.message)
+  } catch (e) { console.warn('ℹ️ attribution Instagram, remboursement (non bloquant) :', (e as Error)?.message) }
+}
 
 // ─────────────────────────────────────────────────────────────────
 // PACKS one-shot → AJOUTE des crédits (ne touche pas au plan)
@@ -507,11 +516,12 @@ serve(async (req) => {
   else if (isClawback) {
     const profile = await findProfile()
     if (profile) {
-      await sb.from('profiles').update({
+      const { error: clawErr } = await sb.from('profiles').update({
         plan: 'free', credits_remaining: 0, bought_credits: 0,
         whop_member_id: null, whop_plan_id: null, whop_manage_url: null, whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
       console.log(`💸 Clawback (${action}) pour ${email || profile.id} → free, crédits remis à zéro`)
+      if (!clawErr) await unmarkIgLeadPaid(sb, profile.id)   // plus compté « payant » (seulement si le profil est bien repassé free)
       // E-mail à Axel : la commission de parrainage éventuelle doit être réversée À LA MAIN (l'accounting des
       // payouts est trop sensible pour un revert automatique — double-réversion, commission déjà virée…).
       try {
