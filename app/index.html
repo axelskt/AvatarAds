@@ -1385,6 +1385,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div class="row gap12 gen-dev" id="voxSrcCards" style="display:none;margin-bottom:14px;align-items:stretch;flex-wrap:wrap">
                 <button type="button" onclick="_gvRecPick('file')" data-vsrc="file" class="vox-src2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:14px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:2px solid var(--accent);background:var(--accent-soft)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="vox-src2-ico" style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="vox-chk2" style=""><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14px">Fichier audio</span><span class="faint" style="font-size:12px;line-height:1.4">Importe un MP4, MP3, WAV ou M4A</span></div></button>
                 <button type="button" onclick="_gvRecPick('rec')" data-vsrc="rec" class="vox-src2 gen-dev" style="flex:1 1 180px;min-width:170px;display:none;flex-direction:column;gap:9px;padding:14px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="vox-src2-ico" style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="vox-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14px">Enregistreur</span><span class="faint" style="font-size:12px;line-height:1.4">Enregistre ta voix au micro, direct</span></div></button>
+                <!-- Voix native (Axel 25/09) : Omni Flash image→vidéo — l'IA fait parler l'image de l'étape Avatar, voix + lipsync compris -->
+                <button type="button" onclick="_gvRecPick('native')" data-vsrc="native" class="vox-src2" style="flex:1 1 180px;min-width:170px;display:flex;flex-direction:column;gap:9px;padding:14px 15px;border-radius:16px;text-align:left;transition:.16s;cursor:pointer;font-family:var(--font);color:inherit;border:1px solid var(--border);background:var(--surface)"><div class="row" style="justify-content:space-between;align-items:center;width:100%"><span class="vox-src2-ico" style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--surface-2);border:1px solid var(--border)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 01-12.3 7.6L3 21l1.4-5.2A8.5 8.5 0 1121 12z"/><path d="M9 10.5v3M12 8.5v7M15 10.5v3"/></svg></span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="vox-chk2" style="display:none"><path d="M20 6L9 17l-5-5"/></svg></div><div class="col" style="gap:3px"><span style="font-weight:700;font-size:14px">Voix native<span id="gnProBadge" style="display:none;margin-left:7px;font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:6px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);vertical-align:1px">PRO</span></span><span class="faint" style="font-size:12px;line-height:1.4">L'IA fait parler ton image, voix comprise</span></div></button>
               </div>
               <div id="voxPaneFile" style="margin-bottom:14px"><div id="voxFileZone" onclick="document.getElementById('voxFileIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){window.mp4AudioEnabled=true;window.mp4AudioFile=f;handleMp4AudioFile(f);_voxReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:48px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton fichier ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV · MP3 · WAV · M4A</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxFileIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
               <!-- #lotG1 · panneau Enregistreur (redesign Axel 29/08) : le VRAI composant
@@ -1401,13 +1403,52 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <button type="button" id="gvRecUseBtn" onclick="_gvRecUse()" style="flex:1 1 170px;min-width:0;padding:12px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Utiliser cet audio</button>
                 </div>
               </div>
+              <!-- Voix native (Axel 25/09) : image de l'étape Avatar (sinon la sienne) + prompt → Omni Flash image→vidéo (fonction
+                   EXISTANTE _expOmniImageToVideo, barème omniFlashPerSec) → vidéo DÉJÀ PARLANTE → étape Style, sans Hedra.
+                   3 états : formulaire (#gnForm) · chargement (#gnLoading) · résultat (#gnResult). Rendu piloté par _gnRender(). -->
+              <div id="voxPaneNative" style="display:none;margin-bottom:14px">
+                <input type="file" id="gnImgIn" accept="image/*" style="display:none" onchange="_gnPickImg(this.files[0]);this.value=''">
+                <div id="gnForm" style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;border:1px solid var(--border);background:var(--surface)">
+                  <div class="label" style="font-size:11px;letter-spacing:.14em;margin:0">Image de départ</div>
+                  <div id="gnImgBox"></div>
+                  <div class="label" style="font-size:11px;letter-spacing:.14em;margin:4px 0 0">Ce que dit et fait ton avatar</div>
+                  <textarea id="gnPrompt" placeholder="Ex : elle regarde la caméra, sourit et dit « J'ai testé ce sérum pendant 7 jours, et franchement je ne m'attendais pas à ça. »" style="width:100%;box-sizing:border-box;min-height:96px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
+                  <div class="faint" style="font-size:11.5px;line-height:1.45;margin-top:-4px">Mets la réplique entre guillemets : la voix et le lipsync sont créés avec la vidéo.</div>
+                  <div class="label" style="font-size:11px;letter-spacing:.14em;margin:4px 0 0">Durée</div>
+                  <div id="gnDurRow" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+                    <button type="button" data-d="4" onclick="_gnSetDur(4)" style="padding:10px 4px;border-radius:11px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;transition:.15s">4 s</button>
+                    <button type="button" data-d="6" onclick="_gnSetDur(6)" style="padding:10px 4px;border-radius:11px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--text);font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;transition:.15s">6 s</button>
+                    <button type="button" data-d="8" onclick="_gnSetDur(8)" style="padding:10px 4px;border-radius:11px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;transition:.15s">8 s</button>
+                    <button type="button" data-d="10" onclick="_gnSetDur(10)" style="padding:10px 4px;border-radius:11px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;transition:.15s">10 s</button>
+                  </div>
+                  <button type="button" id="gnGenBtn" onclick="_gnGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;padding:13px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:.2s"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer la vidéo<span style="font-weight:700;opacity:.72">·</span><span id="gnCost" style="font-weight:700;opacity:.72">24 crédits</span></button>
+                  <div class="faint mono" style="font-size:10.5px;text-align:center;letter-spacing:.02em">Omni Flash · 9:16 · 720p · voix incluse</div>
+                  <button type="button" id="gnBackVid" onclick="_gnBackToVid()" style="display:none;align-self:center;background:none;border:none;padding:2px 6px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px">Revenir à ma vidéo actuelle</button>
+                </div>
+                <div id="gnLoading" style="display:none;flex-direction:column;align-items:center;gap:14px;padding:30px 18px 26px;border-radius:16px;border:1px solid var(--border);background:var(--surface);text-align:center">
+                  <div style="width:48px;height:48px;border-radius:50%;border:3px solid var(--border-2);border-top-color:var(--accent);animation:spin .8s linear infinite"></div>
+                  <div style="font-weight:700;font-size:15px">Création de ta vidéo…</div>
+                  <div id="gnLoadSub" class="faint mono" style="font-size:11px;min-height:14px">Préparation…</div>
+                  <div style="width:100%;max-width:280px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="gnLoadBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .3s"></div></div>
+                  <div class="row" style="gap:10px;justify-content:center"><span id="gnLoadPct" class="mono" style="font-size:11px;color:var(--text-2)">0 %</span><span id="gnLoadTimer" class="mono" style="font-size:11px;color:var(--text-3)">0:00</span></div>
+                  <div class="faint" style="font-size:12px;line-height:1.45;max-width:300px">Environ 1 à 3 minutes. Dès qu'elle est prête, tu passes au style avec la vidéo dans l'aperçu.</div>
+                </div>
+                <div id="gnResult" style="display:none;padding:14px;border-radius:16px;border:1px solid var(--border);background:var(--surface)">
+                  <div class="row" style="gap:8px;align-items:center;margin-bottom:10px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg><span style="font-weight:700;font-size:14px">Ta vidéo parle déjà</span><span class="faint" style="font-size:12px">· lipsync inclus</span></div>
+                  <video id="gnResultVid" playsinline controls preload="metadata" style="display:block;height:min(46vh,340px);max-width:100%;aspect-ratio:9/16;margin:0 auto;border-radius:12px;background:#000;object-fit:cover"></video>
+                  <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+                    <button type="button" onclick="_gnDownload()" style="flex:1 1 120px;min-width:0;padding:11px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
+                    <button type="button" onclick="_gnNew()" style="flex:1 1 120px;min-width:0;padding:11px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--text-2);font-family:var(--font);font-weight:700;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg>Nouvelle vidéo</button>
+                    <button type="button" onclick="_gnGoStyle()" style="flex:1 1 170px;min-width:0;padding:11px 8px;background:var(--accent);border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">Ajouter le style<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+                  </div>
+                </div>
+              </div>
               <div id="voxLegacyClean"><div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">② Nettoyage <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
               <div class="col gap10" style="margin-bottom:12px"><div class="row" id="voxSilRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxSilIco" style="flex:0 0 auto"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Supprimer les silences</span><span class="faint" style="font-size:12px">Coupe les blancs et les bruits de fond</span></div></div><button type="button" id="voxSilSw" onclick="_voxToggleSil()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
-              </div><div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">③ Synchroniser un gameplay <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
+              </div><div id="voxGpSection"><div class="label" style="font-size:11px;letter-spacing:.14em;margin-bottom:11px">③ Synchroniser un gameplay <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
               <div style="margin-bottom:0"><div class="row" id="voxGpRow" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg)"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="voxGpIco" style="flex:0 0 auto"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Le gameplay suit ton audio</span><span class="faint" style="font-size:12px">Coupé en même temps que ta voix</span></div></div><button type="button" id="voxGpSw" onclick="_voxToggleGp()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--surface-3);display:flex;justify-content:flex-start;border:none;cursor:pointer"><div style="width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div></button></div></div>
-              <div id="voxGpZoneWrap" class="rise" style="display:none;margin-top:12px"><div id="voxGpZone" onclick="document.getElementById('voxGpIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleSilenceGameplayFile(f);_voxGpReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:32px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton gameplay ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxGpIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div>
-              <div class="label" style="font-size:11px;letter-spacing:.14em;margin:14px 0 11px">④ Musique de fond <span class="faint" style="text-transform:none;letter-spacing:0">· optionnel</span></div>
-              <div style="margin-bottom:0"><div class="row" id="genMusicRow" onclick="_genOpenMusicPicker()" style="justify-content:space-between;padding:14px 16px;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='var(--accent-line)'" onmouseout="this.style.borderColor='var(--border)'"><div class="row gap12" style="min-width:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div class="col" style="line-height:1.3;min-width:0"><span style="font-weight:600;font-size:14.5px">Ajouter une musique de fond</span><span class="faint" style="font-size:12px" id="genMusicLabel">Aucune · mixée sous ta voix</span></div></div><span style="font-size:16px;color:var(--text-3);flex:0 0 auto">›</span></div></div>
+              <div id="voxGpZoneWrap" class="rise" style="display:none;margin-top:12px"><div id="voxGpZone" onclick="document.getElementById('voxGpIn2').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-soft)'" ondragleave="this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-2)';this.style.background='var(--panel-1)';var f=event.dataTransfer.files[0];if(f){handleSilenceGameplayFile(f);_voxGpReflect()}" style="display:flex;flex-direction:column;gap:12px;padding:32px 20px;border-radius:16px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:.18s"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg><div style="font-weight:700;font-size:15.5px;color:var(--text)">Glisse ton gameplay ici</div><div class="faint" style="font-size:11.5px">MP4 · MOV — sera coupé aux mêmes moments que l'audio</div><button type="button" onclick="event.stopPropagation();document.getElementById('voxGpIn2').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:4px">Parcourir</button></div></div></div><!-- /voxGpSection -->
+              <!-- « ④ Musique de fond » déplacée à l'étape Style, sous « Animation des sous-titres » (Axel 25/09) — même état window._genMusic -->
             </div>
 
             <div id="fs2Legacy" style="display:none">
@@ -1762,6 +1803,17 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <!-- STEP 4 -->
           <div id="fs-3" style="display:none">
 
+            <!-- Voix native (Axel 25/09) : la vidéo Omni Flash parle déjà → bandeau + Télécharger (vidéo brute, sans sous-titres).
+                 Affiché par _gnSyncStyle() uniquement quand la vidéo native est la source voix active. -->
+            <div id="gnStyleCard" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;margin-bottom:16px;border-radius:14px;border:1px solid var(--accent-line);background:var(--accent-soft)">
+              <span style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent);border:1px solid var(--accent)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1A0A02" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 01-12.3 7.6L3 21l1.4-5.2A8.5 8.5 0 1121 12z"/><path d="M9 10.5v3M12 8.5v7M15 10.5v3"/></svg></span>
+              <div class="col" style="flex:1 1 170px;min-width:0;line-height:1.35"><span style="font-weight:700;font-size:14px">Vidéo voix native prête</span><span class="faint" style="font-size:12px">Voix et lipsync déjà dans la vidéo : ajoute sous-titres, split ou musique.</span></div>
+              <div class="row" style="gap:8px;flex:0 0 auto;margin-left:auto">
+                <button type="button" id="gnStylePrevBtn" onclick="if(typeof mPreviewOpen==='function')mPreviewOpen()" class="btn btn-sm" style="display:none;background:var(--surface);border:1px solid var(--border);color:var(--text-2)"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:5px"><path d="M7 4l13 8-13 8z"/></svg>Aperçu</button>
+                <button type="button" onclick="_gnDownload()" class="btn btn-sm" style="background:var(--surface);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Télécharger</button>
+              </div>
+            </div>
+
             <!-- FORMAT : sélecteur retiré (toujours 9:16 TikTok/Reels — cfg.format défaut 'portrait') -->
 
             <!-- SPLIT SCREEN -->
@@ -2046,6 +2098,21 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
             </div>
 
+            <!-- MUSIQUE DE FOND — déplacée de l'étape Voix sous « Animation des sous-titres », pour TOUS les chemins (Axel 25/09).
+                 Mêmes ids (genMusicRow / genMusicLabel) et même état window._genMusic : menu, écoute, volume, mix serveur inchangés. -->
+            <div class="fld" style="margin-bottom:16px">
+              <div class="row card" id="genMusicRow" onclick="_genOpenMusicPicker()" style="justify-content:space-between;align-items:center;padding:13px 15px;cursor:pointer;text-align:left">
+                <div class="row gap12" style="align-items:center;min-width:0">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  <div class="col" style="line-height:1.35;min-width:0">
+                    <span style="font-weight:600;font-size:14.5px">Musique de fond</span>
+                    <span class="faint" style="font-size:12px" id="genMusicLabel">Aucune · mixée sous ta voix</span>
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="faint" style="flex:0 0 auto"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+            </div>
+
             <!-- CORRECTION MOTS -->
             <div class="fld" style="margin-bottom:8px">
               <div style="display:none"><!-- en-tête « Transcript / Sous-titres · Générer depuis l'audio » retiré (Axel 02/09) ; le bouton reste dans le DOM pour le JS --><button id="transcriptPanelBtn" onclick="autoGenSubtitles()" title="Générer depuis l'audio" class="faint mono" style="background:none;border:none;font-size:11px;letter-spacing:0;text-transform:none;cursor:pointer;padding:0;transition:.2s" onmouseover="this.style.color='var(--accent-2)'" onmouseout="this.style.color='var(--text-3)'">Générer depuis l'audio</button></div>
@@ -2085,8 +2152,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div id="crop-hint" style="display:none;margin-top:8px;font-size:10px;font-family:var(--mono);color:var(--orange2);text-align:center;padding:6px;background:var(--orange-dim);border-radius:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2a8 8 0 01-8-8v-1a2 2 0 014 0"/></svg> Mode rognage actif — glisse sur la zone dans le preview · Clic à nouveau pour désactiver</div>
             </div>
 
-            <!-- QUALITÉ D'EXPORT — sélecteur avant génération -->
-            <div class="fld" style="margin-bottom:8px">
+            <!-- QUALITÉ D'EXPORT — sélecteur avant génération (masqué en Voix native : rien à générer en 1080p, _gnSyncStyle) -->
+            <div class="fld" id="genQualFld" style="margin-bottom:8px">
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>Qualité d'export MP4</div>
               <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px" id="qualityBtnsStep4">
                 <button onclick="setQuality(720,this)" class="qual-btn" data-q="720" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);cursor:pointer;transition:.15s;position:relative">
@@ -2111,6 +2178,15 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </button>
               </div>
               <input type="hidden" id="modelBtn-character3" value="character3">
+            </div>
+            <!-- Voix native (Axel 25/09) : le modèle d'avatar DÉTECTE que le lipsync est déjà fait → pas de choix Avatar / Omni Human,
+                 la vidéo est utilisée telle quelle (pas de Hedra, 0 crédit de lipsync). Affiché par _gnSyncStyle(). -->
+            <div class="fld" id="gnModelNote" style="display:none;margin-bottom:8px">
+              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Modèle d'avatar</div>
+              <div class="row gap12" style="align-items:center;padding:13px 15px;border-radius:12px;border:1px solid var(--border);background:var(--surface)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg>
+                <div class="col" style="line-height:1.35;min-width:0"><span style="font-weight:700;font-size:14px">Lipsync déjà fait</span><span class="faint" style="font-size:12px">Ta vidéo voix native est utilisée telle quelle : pas de Hedra, 0 crédit de lipsync.</span></div>
+              </div>
             </div>
 
             <!-- 🎼 Montage IA après la génération (concerne les deux modes de génération) -->
@@ -12511,6 +12587,17 @@ async function reuseLastVideo(){
 // Affiche la zone résultats (vidéo prête) — centralisé ici pour éviter la duplication
 function _showResultArea(){
   _stopGenTimer();
+  // Voix native (Axel 25/09) : vidéo ≤ 10 s → musique mixée ICI, dans le navigateur (_gnMixMusic), et non plus laissée au
+  // worker (son chemin rapide ne la mixait pas ; le split = rendu navigateur). Même mémo que composeVideo → un seul mix.
+  if(typeof _genNativeActive === 'function' && _genNativeActive() && results.hedraUrl && results.hedraUrl === window._bypassHedraUrl && _gnMixKey()){
+    const _mx = window._gn.mix;
+    if(!(_mx && _mx.key === _gnMixKey() && _mx.done)){
+      toast('Ajout de la musique de fond…');
+      _gnMixMusic().finally(()=>_showResultArea());
+      return;
+    }
+    if(_mx.url) results.hedraUrl = _mx.url;   // échec ffmpeg → vidéo d'origine, la musique part au worker (_genServerCompose)
+  }
   // #86 · musique de fond → mixée sous la voix. ⚠ Bypass / gros fichier : le mix CLIENT (_genMixMusic) charge
   // la vidéo (200 Mo) dans ffmpeg.wasm → FREEZE 15-20 s sur le thread principal puis échoue (Axel 08/09).
   // Comme le rendu part au SERVEUR, c'est le WORKER qui muxe la musique (fiable) → on SAUTE le mix client ici.
@@ -12696,9 +12783,12 @@ async function _genMixInto(srcUrl){
     window._genMixedUrls = window._genMixedUrls || new Set();
     window._genMixedUrls.add(srcUrl);
     const r=await fetch(srcUrl); if(!r.ok) return;
-    const mixed=await _genMixMusic(await r.blob());
+    const _src=await r.blob();
+    const mixed=await _genMixMusic(_src);
     if(mixed){
       const u=URL.createObjectURL(mixed); window._genMixedUrls.add(u); results.hedraUrl=u;
+      // (Axel 25/09) musique VRAIMENT dans cette vidéo (ffmpeg a réussi) → _genServerCompose ne la renvoie pas au worker
+      if(mixed!==_src){ try{ (window._genMusicBaked = window._genMusicBaked || new Set()).add(u); }catch(_){} }
       const hv=document.getElementById('hedraVideo'); if(hv){ hv.src=u; if(hv.load) hv.load(); }
       const bpv=document.getElementById('bypassPreviewVid'); if(bpv){ bpv.src=u; bpv.load(); }
     }
@@ -18618,13 +18708,17 @@ function _avPick(src){
   // masqué en « Vidéo existante » et « Générer un avatar » (Axel 31/08).
   document.querySelectorAll('[data-reset-total]').forEach((b) => { b.style.display = (src === 'video' || src === 'genai') ? 'none' : ''; });
   if (src === 'genai' && typeof _avGenSyncCosts === 'function') _avGenSyncCosts();
-  // le mode « vidéo existante » = bypass Hedra ; on aligne le drapeau lu à la génération
-  window._bypassHedraOn = (src === 'video');
+  // le mode « vidéo existante » = bypass Hedra ; on aligne le drapeau lu à la génération.
+  // Voix native (Axel 25/09) : la vidéo Omni Flash passe par ce même bypass → revenir sur l'étape Avatar ne la coupe pas.
+  window._bypassHedraOn = (src === 'video') || (typeof _genNativeActive === 'function' && _genNativeActive());
   if (src === 'library') _avLibGrid();
 }
 // choix d'une vidéo avatar existante : bypass ON, puis le handler legacy complet
 function _avVideoPick(file){
   if (!file) return;
+  // Voix native (Axel 25/09) : une nouvelle « vidéo existante » REMPLACE la vidéo native comme source → état audio
+  // d'avant rendu, et la carte de l'étape Voix repasse sur « Fichier audio » (la vidéo native reste en mémoire).
+  try{ if (window._gn && window._gn.adopted){ _gnDeactivate(); _gvRecPick('file'); } }catch(_){}
   window._bypassHedraOn = true;
   try { handleBypassHedraFile(file); } catch (e) { console.warn('bypass :', e); }
   const z = document.getElementById('avVideoZone');
@@ -19034,11 +19128,351 @@ function _voxEnter(){
   }
   _voxSetSw('voxSil', _voxSilOn); _voxSetSw('voxGp', _voxGpOn);
   const w = document.getElementById('voxGpZoneWrap'); if (w) w.style.display = _voxGpOn ? '' : 'none';
-  if (window.mp4AudioFile) _voxReflect();
+  if (window.mp4AudioFile && !_genNativeActive()) _voxReflect();   // (Axel 25/09) jamais le nom de la vidéo native dans la zone « Fichier audio »
   // #lotG1 · retour sur l'étape Voix avec l'onglet Enregistreur encore actif :
   // le composant (rendu au module Audio par l'undock) revient se docker ici.
   const pr = document.getElementById('voxPaneRec');
   if (pr && pr.style.display !== 'none' && typeof _gvRecDock === 'function') _gvRecDock();
+  // Voix native (Axel 25/09) : la vidéo a été remplacée ailleurs (bypass coupé / autre vidéo) → la carte « Voix native »
+  // n'est plus la vraie source : on rend l'état audio d'avant (sans toucher à la nouvelle vidéo) et retour sur « Fichier audio ».
+  const g = window._gn;
+  if (g && g.src === 'native'){
+    if (g.adopted && !_genNativeActive()){ _gnDeactivate(); _gvRecPick('file'); }
+    else _gnRender();
+  }
+}
+
+// ══ VOIX NATIVE (étape 2, 3ᵉ carte — Axel 25/09) ════════════════════════════
+// « S'il a généré une image dans l'étape Avatar, elle est importée directement ; sinon il ajoute la sienne. Il tape
+// son prompt, petit chargement, puis redirection vers Style avec la vidéo dans l'aperçu. Téléchargeable. Sous-titres
+// désactivés par défaut ; les activer lance Whisper tout seul. Le modèle d'avatar détecte que le lipsync est déjà fait. »
+// • Génération = la fonction EXISTANTE _expOmniImageToVideo (Omni Flash image→vidéo, voix native ; fal pour les
+//   clients, kie pour le compte developer) — AUCUN nouvel appel fournisseur ici. Barème = CREDIT_COSTS.omniFlashPerSec
+//   (celui d'Express Omni Flash 720p), durées 4/6/8/10 s, 9:16. Débit AVANT l'appel (spendCreditsFor → x-aa-op),
+//   remboursement de CES ops si échec. Gating = celui du mode Omni Flash d'Express (_expModelAllowed('omni') :
+//   Pro / Élite ; fal-proxy refait le contrôle côté serveur).
+// • La vidéo produite devient une « vidéo déjà parlante » via le chemin EXISTANT « Vidéo existante » (bypass Hedra :
+//   handleBypassHedraFile) : aperçu téléphone, Whisper sur l'audio de la vidéo, rendu serveur qui garde son audio,
+//   aucun lipsync. Différences : pas de quota « re-composition » (déjà payée), pas de supplément 1080p.
+// • L'état audio d'avant (fichier / enregistrement / vidéo existante) est MÉMORISÉ et rendu si l'user repasse sur
+//   « Fichier audio » ou « Enregistreur ». La vidéo (payée) reste en mémoire : re-cliquer « Voix native » la reprend.
+// État sur window (et non en `let`) : lu par startGeneration / composeVideo / _avPick, parfois avant ce bloc.
+window._gn = window._gn || { src:'file', vid:null, adopted:false, saved:null, img:null, dur:6, busy:false, showForm:false };
+// La vidéo native est-elle LA source voix active ? (adoptée ET toujours la vidéo « existante » du bypass)
+function _genNativeActive(){
+  const g = window._gn;
+  return !!(g && g.adopted && g.vid && window._bypassHedraOn && window._bypassHedraFile === g.vid.file);
+}
+function _gnAllowed(){
+  if(typeof _expModelAllowed === 'function') return _expModelAllowed('omni');
+  return ['pro','elite','developer'].includes(((typeof currentMember!=='undefined' && currentMember && currentMember.plan) || 'free').toLowerCase());
+}
+function _gnAbs(u){ try{ return u ? new URL(u, location.href).href : ''; }catch(_){ return u || ''; } }
+// Image de l'étape Avatar : l'image GÉNÉRÉE (« Générer un avatar ») si c'est l'onglet actif, sinon l'avatar choisi
+// (photo importée / bibliothèque / image générée « utilisée comme avatar »), sinon une image générée restée à l'écran.
+function _gnAutoImage(){
+  try{
+    if(_avSrc2 === 'genai' && _avGenUrl) return { url:_avGenUrl, from:'genai' };
+    if(selAvatar && (selAvatar.localFile || selAvatar.localUrl)) return { file:selAvatar.localFile || null, url:selAvatar.localUrl || (selAvatar.localFile ? URL.createObjectURL(selAvatar.localFile) : ''), from:'avatar' };
+    if(_avGenUrl) return { url:_avGenUrl, from:'genai' };
+  }catch(_){}
+  return null;
+}
+function _gnPickImg(file){
+  if(!file) return;
+  const ext = (file.name || '').split('.').pop().toLowerCase();
+  if(!/^image\//.test(file.type || '') && !['jpg','jpeg','png','webp','heic','heif','avif'].includes(ext)){ toast('Choisis une image (JPG, PNG ou WEBP)'); return; }
+  const g = window._gn;
+  if(g.img && g.img.from === 'user' && g.img.url){ try{ URL.revokeObjectURL(g.img.url); }catch(_){} }
+  g.img = { file, url:URL.createObjectURL(file), from:'user' };
+  _gnRenderImg();
+}
+function _gnRenderImg(){
+  const g = window._gn, box = document.getElementById('gnImgBox'); if(!box) return;
+  if(!g.img || g.img.from !== 'user') g.img = _gnAutoImage();   // l'image de l'étape Avatar suit ses changements
+  if(!g.img){
+    box.innerHTML = '<div onclick="document.getElementById(\'gnImgIn\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--accent)\'" ondragleave="this.style.borderColor=\'var(--border-2)\'" ondrop="event.preventDefault();this.style.borderColor=\'var(--border-2)\';_gnPickImg(event.dataTransfer.files[0])" '
+      + 'style="display:flex;flex-direction:column;gap:8px;padding:22px 16px;border-radius:14px;border:1px dashed var(--border-2);background:var(--panel-1);align-items:center;text-align:center;cursor:pointer;transition:.18s">'
+      + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'
+      + '<div style="font-weight:700;font-size:14px;color:var(--text)">Ajoute l\'image de ton avatar</div>'
+      + '<div class="faint" style="font-size:11.5px">Ou génère-la à l\'étape Avatar : elle arrive ici toute seule</div>'
+      + '<button type="button" onclick="event.stopPropagation();document.getElementById(\'gnImgIn\').click()" class="btn btn-sm" style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2);margin-top:2px">Parcourir</button></div>';
+    return;
+  }
+  const lbl = g.img.from === 'genai' ? 'Image générée à l\'étape Avatar' : (g.img.from === 'avatar' ? 'Ton avatar de l\'étape Avatar' : 'Ton image');
+  const sub = g.img.from === 'user' ? _escH(((g.img.file && g.img.file.name) || 'Image importée').slice(0, 44)) : 'Importée automatiquement';
+  // bouton SOUS le libellé (pas à droite) : à 375 px le libellé gardait ~80 px et cassait sur 4 lignes
+  box.innerHTML = '<div class="row gap12" style="align-items:center;padding:10px;border-radius:14px;border:1px solid var(--border-2);background:var(--panel-1)">'
+    + '<img src="' + _safeUrl(_gnAbs(g.img.url)) + '" alt="" style="width:54px;height:96px;object-fit:cover;border-radius:9px;flex:0 0 auto;background:#000">'
+    + '<div class="col" style="flex:1;min-width:0;line-height:1.35;gap:2px"><span style="font-weight:700;font-size:13.5px">' + lbl + '</span>'
+    + '<span class="faint" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + sub + '</span>'
+    + '<button type="button" onclick="document.getElementById(\'gnImgIn\').click()" class="btn btn-sm" style="align-self:flex-start;margin-top:7px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">Changer d\'image</button></div></div>';
+}
+function _gnCost(){ return Math.max(1, Math.round(window._gn.dur * (CREDIT_COSTS.omniFlashPerSec || 4))); }   // même barème qu'Express Omni Flash 720p
+function _gnSetDur(d){ window._gn.dur = [4,6,8,10].includes(+d) ? +d : 6; _gnRenderDur(); }
+function _gnRenderDur(){
+  const g = window._gn;
+  document.querySelectorAll('#gnDurRow button[data-d]').forEach((b) => {
+    const on = +b.dataset.d === g.dur;
+    b.style.border = on ? '2px solid var(--accent)' : '1px solid var(--border)';
+    b.style.background = on ? 'var(--accent-soft)' : 'var(--panel-1)';
+    b.style.color = on ? 'var(--text)' : 'var(--text-2)';
+  });
+  const c = document.getElementById('gnCost'); if(c) c.textContent = _gnCost() + ' crédits';   // l'affiché = le débité
+}
+// Pilote les 3 états du panneau : formulaire / chargement / résultat
+function _gnRender(){
+  const g = window._gn, $ = (id) => document.getElementById(id);
+  const showRes = !g.busy && !!g.vid && !g.showForm;
+  if($('gnForm'))    $('gnForm').style.display    = (!g.busy && !showRes) ? 'flex' : 'none';
+  if($('gnLoading')) $('gnLoading').style.display = g.busy ? 'flex' : 'none';
+  if($('gnResult'))  $('gnResult').style.display  = showRes ? 'block' : 'none';
+  if(showRes){ const v = $('gnResultVid'); if(v && v.dataset.src !== g.vid.url){ v.src = g.vid.url; v.dataset.src = g.vid.url; } }
+  const b = $('gnProBadge'); if(b) b.style.display = _gnAllowed() ? 'none' : '';
+  const bv = $('gnBackVid'); if(bv) bv.style.display = g.vid ? '' : 'none';   // « Nouvelle vidéo » ou échec : la vidéo actuelle reste la source
+  _gnRenderImg(); _gnRenderDur();
+}
+function _gnProg(v, t){
+  const g = window._gn; v = Math.max(g._p || 0, Math.min(100, Math.round(v || 0))); g._p = v;   // monotone : ne recule jamais
+  const bar = document.getElementById('gnLoadBar'); if(bar) bar.style.width = v + '%';
+  const pc = document.getElementById('gnLoadPct'); if(pc) pc.textContent = v + ' %';
+  if(t){ const s = document.getElementById('gnLoadSub'); if(s) s.textContent = String(t).replace(/<[^>]*>/g, '').replace(/\s*\(\d+\s*%\)\s*$/, '').trim(); }
+}
+// Image → base64 (fichier local, data:, blob: ou URL signée de l'étape Avatar)
+async function _gnImageB64(im){
+  let blob = im.file || null;
+  if(!blob){ const r = await fetch(_gnAbs(im.url)); if(!r.ok) throw new Error('HTTP ' + r.status); blob = await r.blob(); }
+  const mime = /^image\//.test(blob.type || '') ? blob.type : 'image/png';
+  const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).replace(/^data:[^,]*,/, '')); fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob); });
+  if(!b64) throw new Error('image vide');
+  return { b64, mime };
+}
+async function _gnGenerate(){
+  const g = window._gn;
+  if(g.busy) return;
+  if(_gateFreeGenerate()) return;                                      // Free → offres
+  if(!_gnAllowed()){ toast('La voix native (Omni Flash) est réservée aux plans Pro et Élite'); showPaywall(); return; }
+  const pEl = document.getElementById('gnPrompt');
+  const prompt = ((pEl && pEl.value) || '').trim();
+  if(!prompt){ toast('Écris ce que ton avatar dit et fait'); if(pEl) pEl.focus(); return; }
+  if(!g.img || g.img.from !== 'user') g.img = _gnAutoImage();
+  if(!g.img){ toast('Ajoute l\'image de ton avatar (ou génère-la à l\'étape Avatar)'); return; }
+  const dur = [4,6,8,10].includes(g.dur) ? g.dur : 6;
+  // Image lue AVANT le débit : une image illisible ne coûte rien
+  let img;
+  try{ img = await _gnImageB64(g.img); }catch(e){ toast('Image illisible — choisis-en une autre'); return; }
+  // ── Débit AVANT l'appel fournisseur (réservation tirée par fal-proxy via x-aa-op), remboursé si échec ──
+  if(typeof creditsFlowBegin === 'function') creditsFlowBegin();
+  if(!(await spendCreditsFor(_gnCost(), 'voix native'))) return;
+  const ops = (typeof _creditOps !== 'undefined') ? _creditOps.slice() : [];
+  g.busy = true; g.showForm = false; g._p = 0; _gnRender(); _gnProg(4, 'Préparation de l\'image…');
+  const t0 = Date.now();
+  const tm = document.getElementById('gnLoadTimer'); if(tm) tm.textContent = '0:00';
+  const tick = setInterval(() => {
+    if((g._p || 0) < 90) _gnProg((g._p || 0) + ((g._p || 0) < 60 ? 1.2 : 0.4));
+    const s = Math.floor((Date.now() - t0) / 1000); if(tm) tm.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }, 800);
+  const prevUnload = window.onbeforeunload;
+  window.onbeforeunload = (e) => { const m = 'Ta vidéo voix native est en cours de création.'; e.preventDefault(); e.returnValue = m; return m; };
+  try{
+    // Cadrage 9:16 EXACT avant Omni (hors ratio → bandes noires dans la vidéo) — même helper qu'Express
+    try{ const c = await _expCoverCropForVeo(img.b64, img.mime, '9:16'); if(c) img = c; }catch(_){}
+    // Prompt de l'user + verrous génériques d'Express (décor inchangé, même personne du début à la fin).
+    // _expOmniImageToVideo ajoute lui-même son verrou « aucun texte à l'écran ».
+    const fullPrompt = prompt + _expEnvLock(prompt) + _EXP_IDLOCK;
+    // _expOmniImageToVideo lit le format d'Express (window._expFormat) : forcé à 9:16 le temps de l'appel, puis rendu.
+    const fmt0 = window._expFormat; if(fmt0 !== '9:16') window._expFormat = '9:16';
+    let blob;
+    try{ blob = await _expOmniImageToVideo(img.b64, img.mime, fullPrompt, dur, '720p', (v, t) => _gnProg(v, t)); }
+    finally{ if(fmt0 !== '9:16') window._expFormat = fmt0; }
+    if(!blob || blob.size < 50000 || (typeof _mp4Sane === 'function' && !(await _mp4Sane(blob)))) throw new Error('vidéo reçue illisible — réessaie');
+    _gnProg(96, 'Vidéo prête');
+    // Succès : ces ops ne sont plus remboursables (sans toucher au flux d'une autre génération)
+    try{ _creditOps = _creditOps.filter((id) => !ops.includes(id)); }catch(_){}
+    const file = new File([blob], 'voix-native-' + Date.now() + '.mp4', { type:'video/mp4' });
+    const oldUrl = g.vid && g.vid.url;   // (URL propre au panneau : l'aperçu / le rendu passent par _bypassHedraUrl)
+    g.vid = { file, url:URL.createObjectURL(file), ts:Date.now(), dur };
+    if(oldUrl){ try{ URL.revokeObjectURL(oldUrl); }catch(_){} }
+    // Tout ce qui est généré va dans la Bibliothèque (comme Express)
+    try{
+      const d = new Date(), nm = 'Voix native ' + d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      await Promise.race([ Promise.resolve(_libAutoSaveVideo(file, nm, ['Générateur','Voix native','9:16'], '⚡', 'OMNI')), new Promise((r) => setTimeout(r, 5000)) ]);
+      if(window._aaLastEngine === 'kie' && window._expKieRid){ _kieAck(window._expKieRid); window._expKieRid = null; }
+    }catch(_){}
+    g.busy = false;
+    if(g.src === 'native'){
+      await _gnAdopt();
+      // Redirection vers Style : la vidéo est déjà dans l'aperçu (mobile : l'aperçu s'ouvre) — seulement si l'user est
+      // encore sur le Générateur ; sinon l'étape est juste posée et il la retrouve en revenant.
+      const onGen = !!document.getElementById('v-generator')?.classList.contains('on');
+      try{ if(window._previewResetToIdle) window._previewResetToIdle(); }catch(_){}
+      step = 3; updateSteps();
+      if(onGen){
+        _genScrollTop();
+        if(window.innerWidth <= 768 && typeof mPreviewOpen === 'function'){ try{ mPreviewOpen(); }catch(_){} }
+      }
+      toast('Vidéo prête — ajoute tes sous-titres ou télécharge-la');
+    } else {
+      toast('Ta vidéo voix native est prête — choisis « Voix native » à l\'étape Voix pour l\'utiliser');
+    }
+  }catch(e){
+    console.error('[voix native]', e);
+    const msg = String((e && e.message) || e || 'erreur').slice(0, 140);
+    g.showForm = true;
+    // Remboursement de CES ops (un seul toast « X crédits remboursés — voix native : cause ») ; si le proxy a déjà
+    // remboursé côté serveur (0 rendu ici), on affiche quand même la cause.
+    let back = 0;
+    try{ back = await creditsFlowRefund('voix native : ' + msg, ops); }catch(_){}
+    try{ _creditOps = _creditOps.filter((id) => !ops.includes(id)); }catch(_){}
+    if(!(back > 0)) toast('Voix native : ' + msg);
+  }finally{
+    clearInterval(tick);
+    g.busy = false;
+    window.onbeforeunload = prevUnload || null;
+    _gnRender();
+  }
+}
+// La vidéo native devient LA source voix : chemin « vidéo existante » (bypass) — aucun lipsync, audio = celui de la vidéo
+async function _gnAdopt(){
+  const g = window._gn, v = g.vid; if(!v) return;
+  if(!g.adopted){
+    g.saved = { lf:mp4AudioFile, le:mp4AudioEnabled, wf:window.mp4AudioFile || null, we:!!window.mp4AudioEnabled,
+                bOn:!!window._bypassHedraOn, bFile:window._bypassHedraFile || null, subs:subtitlesEnabled,
+                sil:_voxSilOn, silUser:!!window._voxSilUserSet, den:(typeof _genDenoiseEnabled !== 'undefined') ? _genDenoiseEnabled : null };   // _voxEnter coupe « Supprimer les silences » pour une vidéo
+  }
+  g.adopted = true;
+  window._bypassHedraOn = true;
+  // Chemin « vidéo existante » : sa partie SYNCHRONE pose la vidéo (fichier, URL, aperçu, #hedraVideo, extraction audio
+  // pour Whisper, cadrage neuf) ; seule la sauvegarde IDB est attendue plus bas → l'état est cohérent tout de suite.
+  const pBypass = handleBypassHedraFile(v.file);
+  // L'audio de la vidéo EST la voix : aucun fichier audio séparé (sinon silences / ancienne voix réinjectés au rendu)
+  mp4AudioFile = v.file; window.mp4AudioFile = v.file;
+  mp4AudioEnabled = false; window.mp4AudioEnabled = false;
+  // Nouvelle vidéo = nouveau projet : l'aperçu ne doit pas rejouer une ancienne vidéo générée
+  results = { script:'', audioBlob:null, hedraUrl:'' };
+  // Sous-titres DÉSACTIVÉS par défaut sur ce chemin ; transcription remise à zéro (nouvelle voix)
+  whisperWordTimestamps = []; pendingTranscript = '';
+  try{ populateWordEditor(''); }catch(_){}
+  try{ _whisperBtnReset(); }catch(_){}
+  subtitlesEnabled = false; window._reachedStyle = true;   // _reachedStyle : pas d'auto-activation à l'arrivée sur Style
+  try{ _syncSubtitleToggleUI(); }catch(_){}
+  try{ updateLivePreview(); }catch(_){}
+  _gnSyncStyle();
+  try{ await pBypass; }catch(e){ console.warn('[voix native] adoption :', e); }
+}
+// Retour sur « Fichier audio » / « Enregistreur » : on rend l'état audio d'avant (la vidéo native reste en mémoire)
+function _gnDeactivate(){
+  const g = window._gn; if(!g.adopted) return;
+  g.adopted = false;
+  const s = g.saved; g.saved = null;
+  const nf = g.vid && g.vid.file;
+  // une vidéo finale rendue DEPUIS la vidéo native (brute, ou mixée avec la musique : _gnMixMusic) ne doit plus
+  // s'afficher dans l'aperçu de l'autre voix
+  if(nf && typeof results !== 'undefined' && results && results.hedraUrl
+     && (results.hedraUrl === window._bypassHedraUrl || (g.mix && g.mix.url && results.hedraUrl === g.mix.url))) results = { script:'', audioBlob:null, hedraUrl:'' };
+  if(nf && window._bypassHedraFile === nf){
+    // « Vidéo existante » d'avant : rendue SEULEMENT si l'étape Avatar est toujours sur cet onglet (Axel 25/09). Passé sur
+    // Photo / Bibliothèque / Générer entre-temps, c'est cet avatar-là la source : sinon l'ancienne vidéo serait recomposée
+    // (quota re-composition) et la photo + le nouvel audio ignorés.
+    const _avVid = (typeof _avSrc2 === 'undefined') || _avSrc2 === 'video';
+    if(s && s.bOn && s.bFile && s.bFile !== nf && _avVid){ window._bypassHedraOn = true; try{ handleBypassHedraFile(s.bFile); }catch(_){} }
+    else {
+      window._bypassHedraOn = false; window._bypassHedraFile = null; window._bypassHedraUrl = null;
+      window._bypassAudioPromise = null; window._bypassAudioFile = null;
+      try{ localStorage.removeItem('aa_bypass_resume'); }catch(_){}
+      const hv = document.getElementById('hedraVideo'); if(hv){ try{ hv.pause(); }catch(_){} hv.removeAttribute('src'); }
+    }
+  }
+  if(s){
+    mp4AudioFile = s.lf; mp4AudioEnabled = s.le; window.mp4AudioFile = s.wf; window.mp4AudioEnabled = s.we;
+    if(typeof s.subs === 'boolean') subtitlesEnabled = s.subs;
+    _voxSilOn = s.sil; window._voxSilUserSet = s.silUser; try{ _voxSetSw('voxSil', _voxSilOn); }catch(_){}
+    if(typeof s.den === 'boolean' && typeof _genDenoiseEnabled !== 'undefined'){ _genDenoiseEnabled = s.den; try{ _genSetDenoiseSwitch(s.den); }catch(_){} }
+  }
+  // la transcription était celle de la vidéo native : elle ne vaut pas pour l'autre voix
+  whisperWordTimestamps = [];
+  try{ populateWordEditor(''); _whisperBtnReset(); }catch(_){}
+  try{ _syncSubtitleToggleUI(); }catch(_){}
+  if(window.mp4AudioFile) try{ _voxReflect(); }catch(_){}
+  try{ updateLivePreview(); }catch(_){}
+  _gnSyncStyle();
+}
+// Arrivée sur la carte « Voix native » : une vidéo déjà générée (payée) redevient la source, sans régénérer
+function _gnEnter(){
+  const g = window._gn;
+  if(g.vid && !g.adopted && !g.busy){ g.showForm = false; _gnAdopt(); }   // on montre la vidéo reprise
+  _gnRender();
+}
+function _gnNew(){ window._gn.showForm = true; _gnRender(); const p = document.getElementById('gnPrompt'); if(p) p.focus(); }
+function _gnBackToVid(){ window._gn.showForm = false; _gnRender(); }
+function _gnGoStyle(){
+  if(!_genNativeActive()) _gnEnter();   // (état posé de façon synchrone par _gnAdopt)
+  if(!_genNativeActive()){ toast('Génère d\'abord ta vidéo voix native'); return; }
+  try{ if(window._previewResetToIdle) window._previewResetToIdle(); }catch(_){}
+  step = 3; updateSteps(); _genScrollTop();
+}
+function _gnDownload(){
+  const v = window._gn && window._gn.vid; if(!v){ toast('Génère ta vidéo d\'abord'); return; }
+  if(_gateFreeExport()) return;
+  const a = document.createElement('a'); a.href = v.url; a.download = 'avatarads-voix-native.mp4';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+// Étape Style : bandeau « vidéo prête » + le modèle d'avatar montre « Lipsync déjà fait » (pas de choix Avatar / Omni
+// Human, pas de qualité 1080p facturée : il n'y a rien à générer).
+function _gnSyncStyle(){
+  const on = _genNativeActive(), $ = (id) => document.getElementById(id);
+  if($('gnStyleCard'))    $('gnStyleCard').style.display    = on ? 'flex' : 'none';
+  if($('gnStylePrevBtn')) $('gnStylePrevBtn').style.display = (on && window.innerWidth <= 768) ? '' : 'none';
+  if($('gnModelNote'))    $('gnModelNote').style.display    = on ? '' : 'none';
+  if($('genQualFld'))     $('genQualFld').style.display     = on ? 'none' : '';
+  if(on && $('genModelFld')) $('genModelFld').style.display = 'none';
+}
+// Sous-titres activés sur une vidéo native → Whisper se lance TOUT SEUL sur l'audio de la vidéo. Même chemin que le
+// clic sur « Whisper IA » (le bouton affiche l'extraction % puis « Transcription en cours… » = chargement lisible).
+function _gnAutoWhisper(){
+  if(!_genNativeActive()) return;
+  if(Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length) return;   // déjà synchronisé
+  const b = document.getElementById('whisperBtn');
+  if(!b || b.disabled) return;                                                      // en cours, ou « Transcription faite »
+  toast('Synchronisation des sous-titres sur la voix de ta vidéo…');
+  b.click();
+}
+// Musique de fond sur la vidéo native (Axel 25/09) : mixée DANS LE NAVIGATEUR (_genMixMusic, ffmpeg.wasm, image copiée).
+// La vidéo fait ≤ 10 s → pas le gel des gros fichiers (08/09). Avant, on comptait sur le worker, mais son chemin RAPIDE
+// (sous-titres coupés = le défaut ici) ne la mixait pas, et le split passe par le rendu navigateur qui ne la mixe pas
+// non plus → vidéo exportée SANS musique. Mémo par (vidéo, piste, volume) : _showResultArea l'affiche, composeVideo
+// l'attend, _genServerCompose l'envoie telle quelle avec music:null (jamais de double musique). Échec ffmpeg → null :
+// la vidéo d'origine + la musique repartent au worker (qui la mixe aussi dans son chemin rapide depuis le 25/09).
+function _gnMixKey(){
+  const g = window._gn, m = window._genMusic, src = (typeof _genMusicSrc === 'function') ? _genMusicSrc(m) : '';
+  if(!g || !g.vid || !m || !m.url || !src) return '';
+  return g.vid.ts + '|' + src + '|' + ((m.volume != null) ? m.volume : 0.35);
+}
+function _gnMixMusic(){
+  const g = window._gn, key = _gnMixKey();
+  if(!key || !_genNativeActive()) return Promise.resolve(null);
+  if(g.mix && g.mix.key === key) return g.mix.p;                       // déjà mixée (ou en cours) pour CETTE piste
+  const vf = g.vid.file, mix = { key, done:false, url:'', blob:null };
+  mix.p = (async () => {
+    let out = null;
+    // Garde-fou 90 s : le chargement de ffmpeg.wasm (~30 Mo, unpkg) peut rester pendu (vu en test headless) → composeVideo,
+    // qui attend ce mix, ne doit jamais bloquer : au-delà, la musique repart au worker.
+    try{ out = await Promise.race([ _genMixMusic(vf), new Promise((r) => setTimeout(() => r(null), 90000)) ]); }catch(e){ console.warn('[voix native] musique :', e); }
+    if(!out || out === vf) console.warn('[voix native] mix navigateur indisponible → musique confiée au worker');
+    if(out && out !== vf && out.size > 0){                              // _genMixMusic rend la vidéo d'entrée si ffmpeg échoue
+      mix.blob = out; mix.url = URL.createObjectURL(out);
+      try{ (window._genMusicBaked = window._genMusicBaked || new Set()).add(mix.url); }catch(_){}
+    }
+    mix.done = true;
+    return mix.url ? { url:mix.url, blob:mix.blob } : null;
+  })();
+  g.mix = mix;
+  return mix.p;
+}
+// Mix prêt pour la vidéo native ACTIVE et la musique ACTUELLE (sinon null → vidéo d'origine + musique au worker)
+function _gnMixReady(){
+  const g = window._gn, key = _gnMixKey();
+  return (key && _genNativeActive() && g.mix && g.mix.key === key && g.mix.done && g.mix.url) ? g.mix : null;
 }
 
 // ══ #lotG1 · ENREGISTREUR (étape 2 Voix) — LE VRAI COMPOSANT, DOCKÉ ═════════
@@ -19082,6 +19516,7 @@ function _gvRecUndock(){
 function _gvRecPick(src){
   // quitter l'onglet Enregistreur pendant une prise = micro coupé
   if (src !== 'rec' && _gvRecDocked && recState === 'recording'){ try{ recStopRecording(); }catch(_){} }
+  const _gnS = window._gn || {}; const _prevSrc = _gnS.src; _gnS.src = src;   // Voix native (Axel 25/09) : carte active
   document.querySelectorAll('#voxSrcCards .vox-src2').forEach((b) => {
     const on = b.dataset.vsrc === src;
     b.style.border     = on ? '2px solid var(--accent)' : '1px solid var(--border)';
@@ -19095,6 +19530,9 @@ function _gvRecPick(src){
   const aff = (id, v) => { const e = document.getElementById(id); if (e) e.style.display = v ? '' : 'none'; };
   aff('voxPaneFile', src === 'file');
   aff('voxPaneRec',  src === 'rec');
+  aff('voxPaneNative', src === 'native');
+  // Voix native : « le gameplay suit ton audio coupé » est sans objet pour une vidéo qui parle déjà (Axel 25/09)
+  aff('voxGpSection', src !== 'native');
   // #dedup (Axel 30/08) : la section legacy « ② Nettoyage » (voxSilRow) ne concerne QUE le fichier
   // importé. L'Enregistreur a ses propres réglages (Supprimer les silences / Volume constant / Réduire
   // le bruit) → on masque la legacy ET on coupe son silence côté génération pour ne pas re-couper la voix.
@@ -19104,6 +19542,9 @@ function _gvRecPick(src){
   // que l'user se prépare → capture instantanée à niveau constant). Relâché si on repasse sur « Fichier ».
   if(src === 'rec'){ try{ if(typeof _recPrewarm==='function') _recPrewarm(); }catch(_){} }
   else { try{ if(typeof _recReleaseMic==='function') _recReleaseMic(); }catch(_){} }
+  // Voix native : la vidéo générée (re)devient la source ; en repartant sur Fichier / Enregistreur, l'état d'avant revient
+  if (src === 'native') _gnEnter();
+  else if (_prevSrc === 'native' || _gnS.adopted) _gnDeactivate();
   if (src === 'rec') _gvRecDock();
 }
 function _gvRecDownload(){
@@ -19216,7 +19657,8 @@ function _majRecap(){
   const bypassVid = !!window._bypassHedraOn;
   const _omniG = window._genModel==='omnihuman';
   const base  = (aAvatar && !bypassVid) ? (_omniG ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec) * dur : 0;
-  const surHD = (q === '1080p' && !_omniG) ? Math.ceil(dur * CREDIT_COSTS.hd1080PerSec) : 0;
+  const _gnOnR = typeof _genNativeActive==='function' && _genNativeActive();   // Voix native : vidéo déjà payée, pas de 1080p Hedra (Axel 25/09)
+  const surHD = (q === '1080p' && !_omniG && !_gnOnR) ? Math.ceil(dur * CREDIT_COSTS.hd1080PerSec) : 0;
   const total = Math.max(1, Math.round(base + surHD));
   txt('recapCout', total + ' crédit' + (total > 1 ? 's' : '') + ' vidéo' + (bypassVid ? ' (vidéo avatar : lipsync déjà fait, non facturé)' : ''));
   if(bypassVid) txt('recapAvatar', 'Vidéo avatar importée');
@@ -19241,6 +19683,12 @@ function goToStep(n){
 function handleMainBtn(){ if(step<3) nextStep(); else startGeneration(); } // étape 3 = dernière → génère (plus de récap)
 function nextStep(){
   if(step<3){
+    // Voix native (Axel 25/09) : sans vidéo générée, l'étape Style n'aurait aucune voix → on reste sur l'étape Voix
+    const _gnS = window._gn;
+    if(step===2 && _gnS && _gnS.src==='native' && !_genNativeActive()){
+      toast(_gnS.busy ? 'Ta vidéo est en cours de création — tu passes au style dès qu\'elle est prête' : 'Génère d\'abord ta vidéo voix native (ou choisis une autre source)');
+      return;
+    }
     try{ if(window._previewResetToIdle) window._previewResetToIdle(); }catch(_){}   // aperçu propre à chaque étape
     step++;
     updateSteps();
@@ -19347,6 +19795,7 @@ function pickSub(el,style){
   if(typeof subtitlesEnabled!=='undefined' && !subtitlesEnabled){
     subtitlesEnabled = true;
     if(typeof _syncSubtitleToggleUI==='function') _syncSubtitleToggleUI();
+    try{ if(typeof _gnAutoWhisper==='function') _gnAutoWhisper(); }catch(_){}   // Voix native : Whisper se lance tout seul (Axel 25/09)
   }
   // ── Met à jour automatiquement les couleurs selon le style choisi ──
   const col = SUB_STYLE_COLORS[style];
@@ -19821,8 +20270,9 @@ async function whisperTranscribe(){
   creditsFlowBegin();  // #122 : remboursable si la génération échoue
   if(!(await spendCreditsFor(CREDIT_COSTS.whisper, 'whisper'))) return;
 
-  // Choisir la source audio : mp4AudioFile OU vidéo bypass (lipsync)
-  let audioSrc = mp4AudioFile || (window._bypassHedraOn && window._bypassHedraFile) || null;
+  // Choisir la source audio : mp4AudioFile OU vidéo bypass (lipsync). Voix native (Axel 25/09) : TOUJOURS la vidéo générée.
+  let audioSrc = ((typeof _genNativeActive==='function' && _genNativeActive()) ? window._bypassHedraFile : null)
+              || mp4AudioFile || (window._bypassHedraOn && window._bypassHedraFile) || null;
   if(!audioSrc){
     toast('Upload un fichier audio dans l\'étape Voix d\'abord');
     return;
@@ -19888,7 +20338,9 @@ async function whisperTranscribe(){
     // script complet le faisait RECOPIER le script au lieu de transcrire la vraie voix (d'où « Génial »
     // au début, jamais prononcé). Le biais n'est gardé que pour un voice-over TTS (l'audio EST le script).
     try {
-      const _isUserAudio = (typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled && typeof mp4AudioFile!=='undefined' && !!mp4AudioFile);
+      // Voix native (Axel 25/09) : la voix a été inventée par Omni à partir du prompt → pas de biais « script » non plus
+      const _isUserAudio = (typeof mp4AudioEnabled!=='undefined' && mp4AudioEnabled && typeof mp4AudioFile!=='undefined' && !!mp4AudioFile)
+                        || (typeof _genNativeActive==='function' && _genNativeActive());
       const _sc = _isUserAudio ? '' : (document.getElementById('f-script')?.value || (typeof pendingTranscript!=='undefined'&&pendingTranscript) || (window.results && results.script) || '').trim();
       // BIAIS DE MARQUE (Axel 08/09) : un simple VOCABULAIRE (pas une phrase) → Whisper épelle « AvatarAds »,
       // « Claude » etc. correctement à la SOURCE, sans le recopiage que provoquait le script complet.
@@ -20258,6 +20710,8 @@ window._reachedStyle = window._reachedStyle || false; // vrai dès que l'user a 
 function toggleSubtitles(){
   subtitlesEnabled = !subtitlesEnabled;
   _syncSubtitleToggleUI();
+  // Voix native (Axel 25/09) : activer les sous-titres lance Whisper TOUT SEUL (synchro sur l'audio de la vidéo)
+  if(subtitlesEnabled){ try{ if(typeof _gnAutoWhisper==='function') _gnAutoWhisper(); }catch(_){} }
 }
 // Met à jour le switch + le label des sous-titres selon subtitlesEnabled, puis la visibilité preview
 function _syncSubtitleToggleUI(){
@@ -20299,6 +20753,7 @@ function _enterStyleStep(){
   // avant que le téléphone soit dimensionné → ici le mockup est prêt (Axel 08/09 : « remets l'interface en
   // dessous de l'écran »). Idempotent (réutilise #phoneNavHost).
   try{ if(typeof _genNavStrip === 'function') _genNavStrip(); }catch(_){}
+  try{ if(typeof _gnSyncStyle === 'function') _gnSyncStyle(); }catch(_){}   // Voix native : bandeau + « Lipsync déjà fait » (Axel 25/09)
 }
 // Mots réels du script pour la preview des sous-titres — aucun placeholder « PASSE À L'ACTION »
 function _previewSubWords(){
@@ -21169,8 +21624,10 @@ function handleGameplayFile(file){
   if(lbl3) lbl3.textContent = '' + file.name;
   _syncGpSizeStep3();
   updateLivePreview();
-  // Auto-activer "Ajouter un audio depuis un fichier MP4" si pas déjà activé
-  if(!mp4AudioEnabled){
+  // Auto-activer "Ajouter un audio depuis un fichier MP4" si pas déjà activé.
+  // Sauf avec une vidéo avatar qui PARLE déjà (vidéo existante / Voix native, Axel 25/09) : sa voix est dans la vidéo,
+  // activer l'audio MP4 réinjecterait une autre piste (ou ses silences) au rendu.
+  if(!mp4AudioEnabled && !window._bypassHedraOn){
     toggleMp4AudioOption(true);
     toast('Audio MP4 activé — importe ta voix pour le lipsync');
   }
@@ -23755,6 +24212,8 @@ Le script doit sembler authentique, comme un vrai témoignage. Commence directem
 
 // ── GENERATION PIPELINE ──
 async function startGeneration(){
+  // Voix native (Axel 25/09) : pas de rendu pendant que la vidéo Omni Flash se crée (elle n'est pas encore la source)
+  if(window._gn && window._gn.busy){ toast('Ta vidéo voix native est en cours de création — patiente quelques instants'); return; }
   _genMontageFired = false; // 🎼 nouvelle génération → le toggle Montage IA peut se re-déclencher
   const script = document.getElementById('f-script').value.trim();
   const _hookTxt = (document.getElementById('f-hook')?.value||'').trim();
@@ -23801,13 +24260,19 @@ async function startGeneration(){
     // #f-duration (retiré du parcours) ne sert plus qu'en repli si aucune durée n'est lisible.
     let durSecs = Math.ceil((await _sourceAudioDurationSec()) || 0);
     if(!(durSecs > 0)){ durSecs = durationToSecs(document.getElementById('f-duration')?.value || '20 secondes'); console.warn('[crédits] durée audio inconnue → repli', durSecs, 's'); }
-    // OmniHuman (fal) : réservé Élite + plafonné à 60 s (au-delà = trop cher / non supporté par fal) — sinon repli Avatar
-    if(window._genModel==='omnihuman'){
+    // Voix native (Axel 25/09) : la vidéo Omni Flash a été débitée à SA génération (étape Voix) et parle déjà →
+    // aucun lipsync, aucun supplément 1080p Hedra ici.
+    const _gnOnDebit = typeof _genNativeActive==='function' && _genNativeActive();
+    // OmniHuman (fal) : réservé Élite + plafonné à 60 s (au-delà = trop cher / non supporté par fal) — sinon repli Avatar.
+    // Sans objet avec une vidéo qui parle déjà (vidéo existante / Voix native) : aucun lipsync n'est généré.
+    if(window._genModel==='omnihuman' && !window._bypassHedraOn){
       if(typeof _genIsElite==='function' && !_genIsElite()){ window._genModel='avatar'; }
       else if(durSecs > 60){ toast('OmniHuman est limité à 60 s — ton audio fait '+durSecs+' s. Repasse sur Avatar pour cette vidéo.'); step=3; updateSteps(); return; }
     }
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
-    const _rate = (_hasAvatarSel ? (window._genModel==='omnihuman' ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec) : 0);
+    // Vidéo qui parle déjà (bypass : vidéo existante / Voix native) = 0 cr/s de lipsync, même si une photo d'avatar
+    // traîne dans selAvatar (Axel 25/09 ; c'était déjà la règle affichée par _majRecap depuis le 13/08).
+    const _rate = ((_hasAvatarSel && !window._bypassHedraOn) ? (window._genModel==='omnihuman' ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec) : 0);
     // #122 · ouvre le flux AVANT tout débit. L'appel était à l'intérieur du test
     // `_rate > 0` : avec un gameplay et un MP3 importé, le tarif de base est nul
     // et le supplément 1080p se serait greffé sur la liste d'opérations de la
@@ -23822,7 +24287,7 @@ async function startGeneration(){
     }
     // 📐 1080p facturé à la seconde (720p gratuit) — même durée que la vidéo,
     // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
-    if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman'){   // OmniHuman = 1080p natif inclus dans les 5 cr/s
+    if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman' && !_gnOnDebit){   // OmniHuman = 1080p natif inclus dans les 5 cr/s ; Voix native = rien à générer
       const surcout = Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec);
       // Si le surcoût 1080p ne passe pas, l'avatar déjà débité doit repartir (sinon perte). #122
       if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))){ try{ await creditsFlowRefund('crédits insuffisants pour le 1080p'); }catch(_){} return; }
@@ -23830,7 +24295,7 @@ async function startGeneration(){
     // Audit 05/09 : montant à RE-DÉBITER si l'utilisateur relance après un échec (retryHedraAuto). Avant, le
     // nouvel essai était GRATUIT : le 1er débit avait été remboursé et le retry ne débitait rien.
     results._retryCost = (_rate > 0 ? Math.max(1, Math.ceil(durSecs * _rate)) : 0)
-      + ((typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman') ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0);
+      + ((typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman' && !_gnOnDebit) ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0);
   }
 
   step=5; updateSteps();
@@ -23875,7 +24340,12 @@ async function startGeneration(){
   if(!mp4AudioEnabled && window.mp4AudioEnabled) mp4AudioEnabled = true;
   if(!mp4AudioFile && window.mp4AudioFile) mp4AudioFile = window.mp4AudioFile;
   let audioBlob=null;
-  if(mp4AudioEnabled && mp4AudioFile){
+  // Voix native (Axel 25/09) : la voix EST dans la vidéo Omni Flash → aucun audio à préparer (ni trim, ni silences),
+  // et les sous-titres restent ceux de l'étape Style (Whisper sur l'audio de la vidéo, ou aucun).
+  const _gnOnGen = typeof _genNativeActive==='function' && _genNativeActive();
+  if(_gnOnGen){
+    audioBlob = null;
+  } else if(mp4AudioEnabled && mp4AudioFile){
     // Extraire l'audio pur (WAV) + appliquer le trim AVANT Hedra et composition.
     // Si on envoie le fichier vidéo brut à Hedra renommé en .mp3, le lipsync est décalé.
     // En envoyant le même WAV à Hedra ET à la composition → sync parfaite garantie.
@@ -23936,7 +24406,8 @@ async function startGeneration(){
   // Adapter le label Step 3 selon le mode
   const gp3El = document.getElementById('gp3');
   if(gp3El){
-    if(window._bypassHedraOn) gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></div>Re-composition vidéo';
+    if(_gnOnGen) gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>Voix native · lipsync déjà fait';
+    else if(window._bypassHedraOn) gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></div>Re-composition vidéo';
     else if(_hasRealAvatar)   gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></div>Lipsync avatar';
     else                      gp3El.innerHTML = '<div class="gp-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v0M8 7v10M12 4v16M16 8v8M20 12v0"/></svg></div>Audio sur gameplay';
   }
@@ -23951,7 +24422,13 @@ async function startGeneration(){
     return;
   }
 
-  if(window._bypassHedraOn && window._bypassHedraUrl){
+  if(_gnOnGen && window._bypassHedraUrl){
+    // ── VOIX NATIVE (Axel 25/09) : la vidéo Omni Flash (payée à l'étape Voix) EST la vidéo avatar, elle parle déjà.
+    // Aucun lipsync (ni Hedra ni OmniHuman), aucun quota « re-composition » : on la compose telle quelle.
+    hedraUrl = window._bypassHedraUrl;
+    setStep('gp3','done');
+
+  } else if(window._bypassHedraOn && window._bypassHedraUrl){
     // ── MODE BYPASS : vidéo existante, 0 crédit — vérifier quota ──
     if(_bypassLimit() <= 0){
       toast('Cette fonctionnalité n\'est pas disponible sur ton plan');
@@ -24269,7 +24746,9 @@ function genSetModel(m, btn){
 // OmniHuman = Élite uniquement : on masque le sélecteur pour les autres (ils n'ont que l'Avatar par défaut)
 function _genApplyModelGate(){
   const elite=_genIsElite();
-  const fld=document.getElementById('genModelFld'); if(fld) fld.style.display = elite ? '' : 'none';
+  // Voix native (Axel 25/09) : lipsync déjà fait → pas de choix de modèle (note « Lipsync déjà fait » à la place, _gnSyncStyle)
+  const _gnOn = typeof _genNativeActive==='function' && _genNativeActive();
+  const fld=document.getElementById('genModelFld'); if(fld) fld.style.display = (elite && !_gnOn) ? '' : 'none';
   if(!elite && window._genModel==='omnihuman'){
     window._genModel='avatar';
     document.querySelectorAll('#genModelBtns .qual-btn').forEach(b=>{ const on=b.dataset.gm==='avatar'; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; b.classList.toggle('on',on); });
@@ -25277,6 +25756,10 @@ async function _genServerCompose(btn){
   if((!groups || !groups.length) && Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length){
     groups = _buildWpgGroups(whisperWordTimestamps.map(w => String(w && w.word || '')).filter(Boolean), wpg);
   }
+  // Interrupteur « Sous-titres » COUPÉ → rien à graver (Axel 25/09 : Voix native = sous-titres désactivés par défaut).
+  // Avant, il ne masquait que l'aperçu : le rendu gravait quand même les mots. Le worker prend alors le chemin rapide.
+  const _subsOff = (typeof subtitlesEnabled !== 'undefined' && !subtitlesEnabled);
+  if(_subsOff) groups = [];
   // ⚠ PAS de bail si groups vide : « uniquement vidéo » (sans sous-titres) DOIT
   // quand même passer par le serveur — le but est le SON fiable (le rendu client
   // est muet sur Safari). Le worker prend un chemin RAPIDE (juste mux audio +
@@ -25307,7 +25790,7 @@ async function _genServerCompose(btn){
   if(!vidDur){ try{ vidDur = await _probeVideoDuration(results.hedraUrl); }catch(_){} }
   const subs = {
     groups,
-    whisper: (Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length)
+    whisper: (!_subsOff && Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length)
       ? whisperWordTimestamps.map(w => ({ word: w.word, start: w.start, end: w.end })) : null,
     cfg: { subSize: cfg.subSize, subPos: cfg.subPos, subPosX: cfg.subPosX, subScaleX: cfg.subScaleX,
       subWpg: cfg.subWpg, subTimingMode: cfg.subTimingMode, subAdvanceMs: cfg.subAdvanceMs, subSecPerGroup: cfg.subSecPerGroup },
@@ -25328,13 +25811,20 @@ async function _genServerCompose(btn){
   try{
     // Bypass : on upload la vidéo D'ORIGINE (window._bypassHedraFile), PAS results.hedraUrl qui peut être une
     // version « musique mixée » côté client (double musique sinon). La musique est muxée par le WORKER (fiable).
-    const vidBlob = (window._bypassHedraOn && window._bypassHedraFile) ? window._bypassHedraFile : await (await fetch(results.hedraUrl)).blob();
+    // Voix native (Axel 25/09) : la vidéo DÉJÀ mixée avec la musique dans le navigateur (_gnMixMusic, ≤ 10 s) part telle
+    // quelle, sans musique pour le worker. Pas de mix prêt (échec ffmpeg) → vidéo d'origine + musique au worker, comme avant.
+    const _gnMx = (typeof _gnMixReady === 'function') ? _gnMixReady() : null;
+    const _bpSrc = !!(window._bypassHedraOn && window._bypassHedraFile);
+    const vidBlob = _gnMx ? _gnMx.blob : _bpSrc ? window._bypassHedraFile : await (await fetch(results.hedraUrl)).blob();
+    // Musique DÉJÀ dans la vidéo envoyée (mix navigateur réussi : voix native, ou vidéo Hedra via _genMixInto) → rien au
+    // worker, sinon double musique (Axel 25/09 : son chemin rapide « sans sous-titres » mixe désormais lui aussi).
+    const _baked = !!_gnMx || (!_bpSrc && !!(window._genMusicBaked && window._genMusicBaked.has(results.hedraUrl)));
     // Musique de fond → passée au worker (le mix CLIENT _genMixMusic casse sur les gros fichiers). URL de la
     // banque = relative (../assets/music/*.mp3) → on résout en absolu ; on ne passe que du http (le worker fetch).
     const _mus = (typeof window._genMusic === 'object' && window._genMusic) ? window._genMusic : null;
     const _musSrc = (_mus && (_mus.dyn || _mus.url)) || '';
     let _musUrl = ''; try{ _musUrl = _musSrc ? new URL(_musSrc, location.href).href : ''; }catch(_){ _musUrl = ''; }
-    const _music = (_musUrl && /^https?:/i.test(_musUrl)) ? { url: _musUrl, volume: (typeof _mus.volume === 'number' ? _mus.volume : 0.35) } : null;
+    const _music = (!_baked && _musUrl && /^https?:/i.test(_musUrl)) ? { url: _musUrl, volume: (typeof _mus.volume === 'number' ? _mus.volume : 0.35) } : null;
     const dur = vidDur || 15;
     const ts = Date.now();
     const inPath = user.id + '/gen-' + ts + '.mp4';
@@ -25410,8 +25900,30 @@ async function composeVideo(btn){
   // sort une vidéo MUETTE (decodeAudioData 225 Mo + WebCodecs cassé sur Safari). On FORCE le serveur et
   // on NE retombe JAMAIS sur le client dans ce cas — un échec = message clair + stop propre (Axel 07/09).
   const _bpFile = window._bypassHedraFile;
-  const _forceServer = !!(window._bypassHedraOn) || !!(_bpFile && _bpFile.size > 120 * 1024 * 1024);
-  if(_forceServer){
+  // Voix native (Axel 25/09) : petite vidéo (≤ 10 s) qui parle déjà → rendu SERVEUR comme une vidéo existante (son +
+  // sous-titres fiables, échec = message + stop, pas de repli client silencieux). Seule différence : le split screen
+  // (non composé par le worker → false) passe par le rendu navigateur, exactement comme une vidéo Hedra — sinon
+  // « le split screen s'il veut » serait refusé.
+  const _gnOnC = typeof _genNativeActive==='function' && _genNativeActive();
+  const _forceServer = (!!(window._bypassHedraOn) && !_gnOnC) || !!(_bpFile && _bpFile.size > 120 * 1024 * 1024);
+  if(_gnOnC && !_forceServer){
+    // Musique de fond : mixée dans le navigateur AVANT le rendu (mémo _gnMixMusic, en général déjà lancé par _showResultArea)
+    // → le serveur ET le rendu navigateur (split) reçoivent la vidéo avec sa musique (Axel 25/09)
+    try{
+      const _mx = await _gnMixMusic();
+      if(_mx) results.hedraUrl = _mx.url;
+      else if(window._genMusicBaked && window._genMusicBaked.has(results.hedraUrl)) results.hedraUrl = window._bypassHedraUrl;   // musique retirée : vidéo d'origine
+    }catch(_){}
+    try{ if(await _genServerCompose(btn)) return; }
+    catch(e){
+      console.error('[gen-subs] rendu serveur échoué (voix native), pas de repli client :', e);
+      toast('Le rendu serveur a échoué : ' + (e && e.message || 'erreur') + '. Réessaie.');
+      if(btn){ btn.disabled=false; btn.innerHTML='↓ Télécharger'; }
+      _composeTimerStop();
+      return;
+    }
+    // false = mise en page que le worker ne compose pas (split / hook / recadrage) → rendu navigateur ci-dessous
+  } else if(_forceServer){
     try{
       if(await _genServerCompose(btn)) return;
       // serveur a renvoyé false (cas non géré : split/hook/carré) → on ne crashe pas le client
@@ -25427,7 +25939,7 @@ async function composeVideo(btn){
       return;   // ⛔ jamais _composeVideoInner sur un gros fichier → crash + muet
     }
   }
-  if(window._genDevOn){
+  if(window._genDevOn && !_gnOnC){   // (voix native : serveur déjà tenté juste au-dessus)
     try{ if(await _genServerCompose(btn)) return; }
     catch(e){ console.warn('[gen-subs] repli sur compo client (petit fichier)', e); }
   }
@@ -25630,9 +26142,10 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // ── 6. Mots / sous-titres ──
+  // ── 6. Mots / sous-titres ── (interrupteur « Sous-titres » coupé → rien à graver, comme le rendu serveur — Axel 25/09)
   const wpg = Math.max(1, cfg.subWpg || 2);
-  const groups = (_wordGroups && _wordGroups.length) ? _wordGroups
+  const groups = (typeof subtitlesEnabled !== 'undefined' && !subtitlesEnabled) ? []
+    : (_wordGroups && _wordGroups.length) ? _wordGroups
     : _buildWpgGroups(Array.from(document.querySelectorAll('#wordEditor span.word-chip')).map(s=>s.textContent.trim()).filter(Boolean), wpg);
   const words       = groups.flat();
   const totalGroups = groups.length;
