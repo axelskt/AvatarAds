@@ -21,7 +21,7 @@
 //  · POST + x-cron-key (pg_cron toutes les 12 h) ou jeton service_role : lit tous les soldes, mémorise dans
 //    service_health (une clé par fournisseur) et envoie UN e-mail Resend sous 5 $ (ElevenLabs : sous 5 % du quota) —
 //    au plus un rappel par passage du cron (dédoublonnage 11 h). Plus de seuil « critique », plus de blocage.
-//  · GET ?provider=hedra (défaut) avec un jeton utilisateur : état mémorisé { ok, balance, level, at } (rafraîchi si > 20 min).
+//  · GET ?provider=hedra (défaut) avec un jeton utilisateur : état mémorisé { ok, level, at, readable } (rafraîchi si > 20 min).
 //    ok est TOUJOURS vrai désormais (on n'empêche plus aucune génération) ; l'app ne bloque plus selon le solde.
 //  · GET ?all=1 avec un jeton service_role : tous les états.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -158,7 +158,10 @@ async function refreshAll(): Promise<State[]> {
 const pub = (s: State) => ({ provider: s.provider, ok: s.ok, balance: s.balance, total: s.total ?? null, unit: s.unit, level: s.level, at: s.at, error: s.error })
 // Vue UTILISATEUR (audit 05/09, L3) : un membre n'a besoin que de « ça marche / dégradé », jamais des
 // soldes fournisseurs (renseignement business) ni des messages d'erreur internes.
-const pubUser = (s: State) => ({ provider: s.provider, ok: s.ok, level: s.level, at: s.at })
+// readable (25/09, Accueil du dashboard) : le solde a-t-il VRAIMENT été lu à ce relevé ? levelOf() range un solde
+// illisible (clé fal non admin → 401, fournisseur en 500, champ absent) en 'ok' : sans ce booléen, « ok » ne
+// distingue pas « solde suffisant » de « solde inconnu ». Aucun montant, aucun message interne.
+const pubUser = (s: State) => ({ provider: s.provider, ok: s.ok, level: s.level, at: s.at, readable: typeof s.balance === 'number' && !s.error })
 const timingSafeEqual = (a: string, b: string) => { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0 }
 
 Deno.serve(async (req) => {
@@ -193,5 +196,5 @@ Deno.serve(async (req) => {
   if (isService && url.searchParams.get('all') === '1') return json({ providers: PROVIDERS.map(p => states[p.key]).filter(Boolean).map(pub) })
   const s = states[want.key]
   if (isService) return json(s ? pub(s) : { provider: want.id, ok: true, balance: null, level: 'ok', at: null })
-  return json(s ? pubUser(s) : { provider: want.id, ok: true, level: 'ok', at: null })
+  return json(s ? pubUser(s) : { provider: want.id, ok: true, level: 'ok', at: null, readable: false })
 })

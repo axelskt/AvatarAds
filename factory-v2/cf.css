@@ -618,6 +618,76 @@ img { max-width: 100%; }
   .cf-fun-kpi { align-items: flex-start; text-align: left; }
 }
 
+/* ── Accueil (étape 3, Axel 25/09) : alertes, paiements, 4 cartes résumé (maquette 01 / 21 / 24) ── */
+.cf-hig { display: inline-flex; align-items: baseline; gap: 7px; margin-top: 12px; max-width: 100%; font-family: var(--cf-mono); font-size: 11.5px; line-height: 1.45;
+  padding: 6px 12px; border-radius: 12px; background: var(--cf-track); color: var(--cf-ink-3); overflow-wrap: anywhere; }
+.cf-hig .cf-dot { transform: translateY(-1px); }
+.cf-hig.is-ok { background: var(--cf-ok-bg); color: var(--cf-ok-fg); }
+.cf-hig.is-warn { background: var(--cf-warn-bg); color: var(--cf-warn-fg); }
+.cf-hig.is-err { background: var(--cf-err-bg); color: var(--cf-err-fg); }
+.cf-alerts-h { display: flex; align-items: center; gap: 8px; }
+.cf-alerts-h .cf-badge { margin-left: 0; vertical-align: 0; }
+.cf-alerts { display: flex; flex-direction: column; gap: 8px; }
+.cf-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; border-radius: 12px; padding: 12px 14px; background: var(--cf-track); min-width: 0; }
+.cf-alert.is-danger { background: var(--cf-err-bg); }
+.cf-alert.is-warn { background: var(--cf-warn-bg); }
+.cf-alert.is-ok { background: var(--cf-ok-bg); }
+.cf-alert-ic { width: 30px; height: 30px; border-radius: 9px; background: var(--cf-mute); color: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+.cf-alert.is-danger .cf-alert-ic { background: var(--cf-err); }
+.cf-alert.is-warn .cf-alert-ic { background: var(--cf-warn); }
+.cf-alert.is-ok .cf-alert-ic { background: var(--cf-ok); }
+.cf-alert-t { display: flex; flex-direction: column; gap: 2px; flex: 1 1 260px; min-width: 0; }
+.cf-alert-t b { font-size: 13.5px; font-weight: 650; overflow-wrap: anywhere; }
+.cf-alert-t span { font-size: 12px; color: var(--cf-ink-3); overflow-wrap: anywhere; }
+.cf-alert-go { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--cf-line-3); background: #fff; border-radius: 9px; padding: 7px 11px;
+  font: inherit; font-size: 12.5px; color: var(--cf-ink); cursor: pointer; white-space: nowrap; text-decoration: none; }
+.cf-alert-go:hover { border-color: var(--cf-accent); color: var(--cf-accent-ink); text-decoration: none; }
+.cf-hsrc { font-family: var(--cf-mono); font-size: 10.5px; line-height: 1.5; color: var(--cf-mute-2); overflow-wrap: anywhere; }
+.cf-pay-ks, .cf-card-h > .cf-pay-ks { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px 22px; }
+.cf-pay-k { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.cf-pay-k b { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--cf-mute-3); line-height: 1.1; }
+.cf-pay-k span { font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute); }
+.cf-hsum { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cf-hcards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 700px) { .cf-hcards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* 2 × 2 comme la maquette, jamais une carte orpheline */
+.cf-hcard { gap: 16px; }
+.cf-hcard-h { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cf-hcard-h .cf-h2 { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.cf-hcard-ic { width: 36px; height: 36px; border-radius: 11px; background: var(--cf-accent-50); color: var(--cf-accent); display: flex; align-items: center; justify-content: center; flex: none; }
+.cf-hcard-per { margin-left: auto; flex: none; font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute); background: var(--cf-track); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+.cf-hstats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cf-hstat { background: var(--cf-tile); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cf-hstat-v { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cf-hstat-v small { font-size: .55em; font-weight: 600; letter-spacing: 0; color: var(--cf-mute); }
+.cf-hstat-v.is-acc { color: var(--cf-accent-ink); }
+.cf-hstat-v.is-na { color: var(--cf-mute-3); }
+.cf-hstat-l { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.cf-hstat-s { font-family: var(--cf-mono); font-size: 10.5px; line-height: 1.4; color: var(--cf-mute); overflow-wrap: anywhere; }
+.cf-hkinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.cf-hkinds .cf-chip { gap: 4px; }
+.cf-hkinds .cf-chip b { font-family: var(--cf-sans); font-size: 12px; }
+.cf-hnote { font-family: var(--cf-mono); font-size: 10.5px; line-height: 1.45; color: var(--cf-mute-2); overflow-wrap: anywhere; }
+.cf-hgo { align-self: flex-start; }
+.cf-htop { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; text-align: left; font: inherit; color: inherit; background: var(--cf-tile);
+  border: 1px solid var(--cf-line-2); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
+.cf-htop:hover { border-color: var(--cf-accent); }
+.cf-htop.is-static { cursor: default; }
+.cf-htop .cf-thumb { width: 30px; border-radius: 6px; }
+.cf-htop-b { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+.cf-htop-cap { font-size: 13px; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.cf-htop-id { display: flex; min-width: 0; }
+.cf-htop-id .cf-vid { font-size: 11.5px; padding: 2px 8px; border: 1px solid var(--cf-line); border-radius: 6px; background: #fff; }
+@media (max-width: 480px) {
+  /* le texte reste à côté de l'icône, le bouton passe seul sur la ligne suivante, aligné sous le texte (maquette §16) */
+  .cf-alert-t { flex: 1 1 calc(100% - 42px); }
+  .cf-alert-go { margin-left: 42px; }
+  .cf-card-h > .cf-pay-ks { width: 100%; flex-wrap: nowrap; gap: 14px; }
+  .cf-pay-k { align-items: flex-start; flex: 1 1 0; min-width: 0; }
+  .cf-pay-k span { overflow-wrap: anywhere; }
+  .cf-hstat { padding: 10px; }
+  .cf-hstat-v { font-size: 22px; }
+}
+
 /* ── largeurs ── */
 @media (min-width: 640px) {
   .cf-sheet { grid-template-columns: 200px minmax(0, 1fr); gap: 20px; }
