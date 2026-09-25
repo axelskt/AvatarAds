@@ -81,7 +81,8 @@ serve(async (req: Request) => {
   }
 
   let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
-  let drawnReal = 0   // montant RÉELLEMENT tiré (0 si fail-open / ombre) — seul lui ouvre la remise image de départ Omni
+  let drawnReal = 0   // montant RÉELLEMENT tiré (0 si fail-open / ombre) : seul lui ouvre la remise Omni et seul lui est rendu
+  let imgQ = '', imgN = 0   // qualité / nombre d'images facturés (remise Omni : UNE image low ou medium)
   let drawnOp: string | undefined   // l'op PRÉCISE tirée — resolveOp ne la retrouve plus une fois à réserve 0 (audit 06/09)
   // Palier 4K (x-aa-chain: nano4k, plans Pro/Élite comme dans l'app depuis le 24/09) : seulement une image gpt low/medium, n=1 → tire 5 et
   // crée un droit d'upscale Nano. Toute autre combinaison = tirage normal, aucun droit (pas de gpt high + Nano pour 5).
@@ -104,7 +105,7 @@ serve(async (req: Request) => {
         const nm = normImage(text)
         if ('error' in nm) return jsonRes(400, { error: nm.error })
         for (const [k, v] of Object.entries({ ...text, ...nm.fields })) outgoing.append(k, v)
-        drawn = chainCost(nm.q, nm.n); const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId; drawnReal = r.drawn ?? 0
+        drawn = chainCost(nm.q, nm.n); imgQ = nm.q; imgN = nm.n; const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId; drawnReal = r.drawn ?? 0
       } else {
         for (const [k, v] of incoming.entries()) outgoing.append(k, v)
       }
@@ -120,7 +121,7 @@ serve(async (req: Request) => {
         if ('error' in nm) return jsonRes(400, { error: nm.error })
         Object.assign(b, nm.fields, { n: nm.n })
         sendBody = JSON.stringify(b)
-        drawn = chainCost(nm.q, nm.n)
+        drawn = chainCost(nm.q, nm.n); imgQ = nm.q; imgN = nm.n
         const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId; drawnReal = r.drawn ?? 0
       } else if (gated && bare.includes('/chat/completions')) {
         // Helper LLM non facturant : borne le coût (audit chaînes 15/09) — modèle hors allowlist coercé vers le moins cher + plafond tokens.
@@ -141,16 +142,16 @@ serve(async (req: Request) => {
         if (chain) await chainCreditAdd(uid, drawnOp, 1)
         // Image de départ d'Express Omni OFFERTE (Axel 25/09) : ce qui vient d'être tiré sera déduit du tirage de la vidéo
         // (draw_omni_reservation). Seulement une image low/medium (≤ 3), op « express-omni », une fois (garde SQL).
-        else if (wantsOmniStart(req) && drawnReal > 0 && drawnReal <= 3) await omniStartAdd(uid, drawnOp, drawnReal)
+        else if (wantsOmniStart(req) && drawnReal > 0 && imgN === 1 && (imgQ === 'low' || imgQ === 'medium')) await omniStartAdd(uid, drawnOp, drawnReal)
       }
     }
-    if (isBillable && gated && !openaiRes.ok) await releaseOp(uid, drawnOp, drawn)   // amont en erreur → on rend l'op TIRÉE (resolveOp ne la retrouverait pas à réserve 0)
+    if (isBillable && gated && !openaiRes.ok && drawnReal > 0) await releaseOp(uid, drawnOp, drawnReal)   // amont en erreur → on rend l'op TIRÉE (resolveOp ne la retrouverait pas à réserve 0)
     return new Response(body, {
       status: openaiRes.status,
       headers: { ...CORS, 'Content-Type': openaiRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
-    if (isBillable && gated) await releaseOp(uid, drawnOp, drawn).catch(() => {})   // exception → rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration)
+    if (isBillable && gated && drawnReal > 0) await releaseOp(uid, drawnOp, drawnReal).catch(() => {})   // exception → rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration)
     console.error('openai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }
