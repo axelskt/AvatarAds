@@ -42,7 +42,7 @@
 // exige /render-media/<uid>/ ; clients : la ligne kie_jobs (écrite à la soumission) doit AUSSI être la leur.
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
-import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, refundOpTerminal, releaseOp, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, applyOmniReservation, refundOpTerminal, releaseOp, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
 import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, KIE_LABELS, KIE_OPEN, KIE_NO_FALLBACK, kieClientsOn } from '../_shared/kie.ts'
 
 const BUCKET = 'render-media'
@@ -57,8 +57,8 @@ const NB_AR = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', 
 //   soit la durée » (relecture 25/09 : une réserve de 3 cr suffisait pour une vidéo de 10 s). Durée facturée = le cran kie
 //   envoyé (4/6/8/10 s, arrondi au-dessus comme kie) : l'app ne propose QUE ces crans pour Omni, c'est donc exactement la
 //   durée affichée et débitée par l'UI. Express crée parfois l'image de départ (gpt-image) sur la MÊME op juste avant :
-//   l'app réserve alors image + vidéo (voir _expOmniCost dans app/index.html), l'image est tirée puis réglée par
-//   openai-proxy, et il reste pile 5 × durée ici. Tirage EXACT (draw_reservation) et non plus la réserve entière : un
+//   depuis le 25/09 elle est OFFERTE — l'app réserve 5 × durée seulement, l'image est tirée puis réglée par openai-proxy
+//   (qui la note sur l'op, omni_start_img) et la vidéo tire ici 5 × durée MOINS cette image (draw_omni_reservation). Tirage EXACT (draw_reservation) et non plus la réserve entière : un
 //   reliquat (image de départ finalement non créée) reste remboursable par l'app au lieu d'être avalé par la vidéo.
 const NANO_COST = 5
 
@@ -232,7 +232,10 @@ export async function handler(req: Request): Promise<Response> {
       const cost = alias === 'omni-flash' ? OMNI_FLASH_PER_SEC * omniSecOf(built) : NANO_COST
       let opId: string | undefined, drawn = 0
       if (uid && !noBill) {
-        const rr = await applyReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
+        // Omni : draw_omni_reservation = 5 × cran MOINS l'image de départ d'Express déjà tirée sur l'op (image OFFERTE, 25/09)
+        const rr = alias === 'omni-flash'
+          ? await applyOmniReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
+          : await applyReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
         if (!rr.ok) return jsonRes(rr.status, { error: rr.error, billing: 'unfunded' })
         // Montant RÉELLEMENT tiré (relecture 25/09), jamais `cost` : en mode ombre (RESERVE_ENFORCE≠1) ou sur hoquet DB, une
         // réserve insuffisante passe avec 0 tiré. Rien tiré = op NON liée à cette tâche → ni release, ni refund, ni règlement

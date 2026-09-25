@@ -470,8 +470,7 @@
       + '<div class="cf-hig is-' + ig.tone + '" data-ig="' + ig.key + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(ig.line) + '</span></div></section>'
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
-      + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2>'
-      + '<span class="cf-meta">' + esc('chiffres sur 30' + NB + 'j, la période par défaut des onglets : ce sont les mêmes que dans chaque onglet') + '</span></div></div>'
+      + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
       + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>';
   }
 
@@ -598,27 +597,23 @@
     var watch = W.loading ? hstat('watch', '…', 'Visionnage moyen', 'chargement')
       : W.v == null ? hstat('watch', '—', 'Visionnage moyen', W.na)
         : hstat('watch', W.val, 'Visionnage moyen', (W.sub ? W.sub + ' · ' : '') + 'reels publiés ' + X.per, { small: W.dur ? ' / ' + fSec0(W.dur) : '' });
-    return hcard('compte', 'Insight Instagram', IC.insta, '30' + NB + 'j', [
-      fol, one('views', 'Vues', c.views, X.per), watch, one('engaged', 'Comptes engagés', c.engaged, X.per)
-    ], homeTopHTML(off));
+    // Axel 25/09 : pas de « 30 j » en en-tête ni de top post ; « Likes » (total + like rate + objectif) remplace « Comptes engagés »
+    return hcard('compte', 'Insight Instagram', IC.insta, '', [
+      fol, one('views', 'Vues', c.views, X.per), watch, homeLikeStat(X)
+    ], '');
   }
-  // Top post = le n° 1 du « Top publications » de l'onglet Insight (vues à vie), même liste, même tri.
-  function homeTopHTML(off) {
-    var MS = CF.acct.media, MD = off ? null : MS.data, top = MD ? topAll()[0] : null;
-    if (off || MS.kind === 'disconnected') return emptyLine('—', 'top post : compte déconnecté');
-    if (!MD) {
-      return MS.state === 'error' ? emptyLine('—', 'top post : ' + (MS.error || 'publications indisponibles'))
-        : '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement du top post…</div>';
-    }
-    if (!top) return emptyLine('—', MD.error ? 'top post : liste des publications indisponible' : 'top post : aucune publication avec des vues');
-    var vid = videoId(top), thumb = safeUrl(top.thumb);
-    var inner = '<span class="cf-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '')
-      + (isVideo(top) ? '<span class="cf-thumb-play">' + svg(IC.play, 10) + '</span>' : '') + '</span>'
-      + '<span class="cf-htop-b"><span class="cf-meta">' + esc('top post · n° 1 du Top publications · ' + fInt(top.views) + ' ' + plural(top.views, 'vue') + ' à vie') + '</span>'
-      + '<span class="cf-htop-cap">' + esc(capText(top.caption)) + '</span>'
-      + '<span class="cf-htop-id">' + (vid ? '<span class="cf-vid">' + esc(vid) + '</span>' : '<span class="cf-chip is-muted">vidéo non reconnue</span>') + '</span></span>';
-    return top.id ? '<button type="button" class="cf-htop" data-act="home-top" data-pid="' + esc(top.id) + '" aria-label="Ouvrir la fiche du top post">' + inner + '<span class="cf-post-go">' + svg(IC.chevron, 16) + '</span></button>'
-      : '<div class="cf-htop is-static">' + inner + '</div>';
+  // Likes des reels publiés sur la période + like rate moyen (le MÊME calcul que la carte Objectif « Like rate » de l'onglet
+  // Insight : goalValue) + l'objectif, vert s'il est atteint, rouge sinon.
+  function homeLikeStat(X) {
+    var g = GOAL.like, G = goalValue(X, g), R = X.reels;
+    if (X.pending || G.loading) return hstat('likes', '…', 'Likes', 'chargement');
+    var L = R ? R.filter(function (p) { return p.likes != null; }) : [];
+    if (!L.length) return hstat('likes', '—', 'Likes', G.na || (X.off ? 'compte déconnecté' : 'likes non fournis'));
+    var tot = L.reduce(function (a, p) { return a + p.likes; }, 0), ok = goalOk(g, G.v);
+    return '<div class="cf-hstat" data-h="likes"><span class="cf-hstat-v">' + esc(fInt(tot))
+      + (G.v != null ? '<small>' + esc(' · ' + G.val) + '</small>' : '') + '</span><span class="cf-hstat-l">Likes</span>'
+      + '<span class="cf-hstat-s">' + (G.v != null ? '<span class="cf-goal-t ' + (ok ? 'is-ok' : 'is-ko') + '">' + esc(goalTxt(g)) + '</span> · ' : '')
+      + esc(L.length + ' ' + plural(L.length, 'reel') + ' ' + X.per) + '</span></div>';
   }
   // Carte ou alerte de l'Accueil → l'onglet, sur la MÊME période que la carte (30 j) : on y retrouve les mêmes chiffres.
   function homeGo(k) {
@@ -1126,7 +1121,7 @@
   }
 
   // ── Top publications : les 5 plus vues de TOUTES les publications (chiffres à vie) ──
-  // Toutes les publications qui ont des vues, triées : la seule liste du Top publications (et du top post de l'Accueil).
+  // Toutes les publications qui ont des vues, triées : la seule liste du Top publications.
   function topAll() {
     var MD = CF.acct.media.data;
     if (!MD) return [];
@@ -2023,7 +2018,6 @@
       else if (act === 'dm-all-posts') { ui.dmAllPosts = !ui.dmAllPosts; render(); }
       else if (act === 'dm-post') openPostById(el.getAttribute('data-pid'), el);
       else if (act === 'home-go') homeGo(el.getAttribute('data-tab'));
-      else if (act === 'home-top') openPostById(el.getAttribute('data-pid'), el);
       else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); }
       else if (act === 'otp-send') sendOtp();
       else if (act === 'otp-back') { show('cfLoginOtp', false); show('cfLoginPwd', true); loginMsg(''); }

@@ -6963,10 +6963,7 @@ async function authVerifyCode(){
   // Nouveau compte : prénom + parrainage (le trigger crée le profil sans ces infos)
   try{
     if(_otpCtx.firstName) await sb.from('profiles').update({ first_name: _otpCtx.firstName }).eq('id', data.user.id);
-    // Parrainage OU code promo — jamais les deux ; PRIORITÉ au code promo (Axel 11/09)
-    const ref = localStorage.getItem('aa_ref');
-    const promo = localStorage.getItem('aa_promo');
-    if(res.created && ref && !promo) await sb.rpc('set_referrer', { p_code: ref });   // M2 (14/09) : referred_by write-once serveur — l'UPDATE direct était REFUSÉ par les grants colonnes (parrainage jamais attribué) ; la RPC le pose une seule fois
+    // Parrainage : posé par _aaRefSend (enterApp), un seul chemin pour toutes les connexions (25/09)
   }catch(e){}
   btn.textContent = 'Chargement du profil…';
   await loadProfile(data.user);
@@ -7009,12 +7006,34 @@ async function loadProfile(user){
   if(!profile){
     // Fallback : créer le profil manuellement si le trigger n'a pas fonctionné
     const { data } = await sb.from('profiles').insert({
-      id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40,
-      referred_by: (localStorage.getItem('aa_promo') ? null : localStorage.getItem('aa_ref')) || null
-    }).select().single();
+      id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40
+    }).select().single();   // parrain : posé ensuite par _aaRefSend (validé côté serveur), jamais écrit ici
     profile = data;
   }
   if(profile) enterApp(profile);
+}
+
+// ── PARRAINAGE (25/09) ─────────────────────────────────────────────────────
+// Le lien avatarads.fr/?ref=CODE (LP, app ou connexion.html) garde le code dans aa_ref. Avant le 25/09, seul le login
+// intégré à l'app posait le parrain : connexion.html (OTP et Google) ne l'appelait jamais → filleuls perdus. On l'envoie
+// désormais à chaque ouverture de l'app tant que le code est là ; set_referrer tranche (code d'un vrai compte, pas
+// soi-même, compte de 30 j au plus, write-once). Code promo présent = priorité au promo (Axel 11/09) → pas de parrain.
+// Réponse de la base (posé ou refusé) → on oublie le code ; erreur réseau → on le garde pour la prochaine ouverture.
+async function _aaRefSend(p){
+  if(window._aaRefBusy) return;
+  var ref = null, promo = null;
+  try{ ref = localStorage.getItem('aa_ref'); promo = localStorage.getItem('aa_promo'); }catch(e){ return; }
+  if(!ref) return;
+  var drop = function(){ try{ if(localStorage.getItem('aa_ref') === ref) localStorage.removeItem('aa_ref'); }catch(e){} };
+  if(promo || (p && p.referred_by) || !/^[A-Za-z0-9_-]{4,40}$/.test(ref)){ drop(); return; }
+  var t = p && p.created_at ? new Date(p.created_at).getTime() : NaN;
+  if(t && Date.now() - t > 30 * 864e5){ drop(); return; }
+  window._aaRefBusy = true;
+  try{
+    const { data, error } = await sb.rpc('set_referrer', { p_code: ref });
+    if(!error){ drop(); if(data === true && currentMember && currentMember.id === (p && p.id)) currentMember.referred_by = ref; }
+  }catch(e){ /* réseau : on réessaiera à la prochaine ouverture */ }
+  finally{ window._aaRefBusy = false; }
 }
 
 // ── ATTRIBUTION AUTO-DM INSTAGRAM (25/09) ──────────────────────────────────
@@ -7069,6 +7088,8 @@ function enterApp(profile){
   setTimeout(function(){ try{ _ccDeepLink(); }catch(e){} }, 260);
   // Attribution Auto-DM Instagram : référence du lead envoyée une fois, en fond (hors chemin critique du login).
   setTimeout(function(){ try{ _aaLeadSend(); }catch(e){} }, 1500);
+  // Parrainage : posé ici pour TOUS les chemins de connexion (connexion.html OTP / Google, login intégré).
+  setTimeout(function(){ try{ _aaRefSend(profile); }catch(e){} }, 1700);
   updateAccountMenu(profile);
   window._userPlan = profile.plan || 'free'; // utilisé par callHedra() pour sélectionner le modèle
   window._userHedraKey = profile.hedra_api_key || null; // clé BYOK du user (null = utilise la clé plateforme)
@@ -8203,7 +8224,11 @@ function switchPackTab(tab){
 function openUpgradeModal(mode){ showPaywall(); }
 // Modal d'achat de crédits (packs) — gardée pour les boutons crédits explicites
 // missing (optionnel) : nombre de crédits manquants → bandeau "il te manque X" + pack conseillé
+const _PACK_GATE_T = 'Les packs de crédits sont réservés aux abonnés';
+const _PACK_GATE_S = 'Choisis un plan Starter, Pro ou Élite : tu pourras ensuite recharger des crédits à tout moment.';
 function openCreditsModal(mode, force, missing){
+  // Packs réservés aux abonnés Starter / Pro / Élite (Axel 25/09) : Free et invité → les plans, même via un bouton « forcé »
+  if(typeof _isFreePlan === 'function' && _isFreePlan()){ showPlansSheet(_PACK_GATE_T, _PACK_GATE_S); return; }
   if(!force && (!currentMember || currentMember.plan === 'free')){
     showPaywall(); return;
   }
@@ -8300,6 +8325,7 @@ function goUpgradePlan(){
   _whopCheckout(url || 'https://whop.com/avatarads');
 }
 function buyCredits(pack){
+  if(typeof _isFreePlan === 'function' && _isFreePlan()){ try{ closeUpgradeModal(); }catch(e){} showPlansSheet(_PACK_GATE_T, _PACK_GATE_S); return; }   // packs = abonnés seulement (25/09)
   const url = CREDIT_PACK_URLS[pack];
   if(!url){ toast('Boutique bientôt disponible !'); return; }
   closeBuyCredits();
@@ -8873,7 +8899,7 @@ function saveAffPayment(){
 (function(){
   const q = new URLSearchParams(window.location.search);
   const ref = q.get('ref');
-  if(ref) localStorage.setItem('aa_ref', ref);
+  if(ref && /^[A-Za-z0-9_-]{4,40}$/.test(ref)) localStorage.setItem('aa_ref', ref.toUpperCase());   // même format que la LP
   const promo = q.get('promo') || q.get('code');
   if(promo) localStorage.setItem('aa_promo', promo.trim().toUpperCase());   // priorité promo à l'inscription (cf authVerifyCode)
 })();
@@ -10246,7 +10272,7 @@ async function _imgGenerateAt(token, enhancedPrompt, gptSize, opt){
     for(let attempt=0; attempt<3; attempt++){
       res = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/openai-proxy?path=/v1/images/generations', {
         method: 'POST',
-        headers: { ...(_aaOp(opt.op)), ...(opt.chain ? { 'x-aa-chain': 'nano4k' } : {}), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+        headers: { ...(_aaOp(opt.op)), ...(opt.chain ? { 'x-aa-chain': 'nano4k' } : opt.omniStart ? { 'x-aa-chain': 'omni-start' } : {}), 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, prompt: enhancedPrompt, n: 1, size: gptSize, quality: _imgGptQuality(), moderation: 'low' })
       });
       data = await res.json().catch(()=>({ error:{ message:'réponse illisible (HTTP '+res.status+')' } }));
@@ -29909,18 +29935,14 @@ function initExpress(){
   if(typeof _expInitSeedanceDev==='function') _expInitSeedanceDev();  // carte Seedance si compte dev
   if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine==='motion' ? 'veo' : (window._expEngine||'veo'));
 }
-// Omni Flash (Axel 25/09) : 5 cr/s en 1080p pour tous, crans 4/6/8/10 s — PLUS l'image de départ quand Express doit la
-// CRÉER (aucune image, ou plusieurs images à composer en une) : gpt-image la tire sur la MÊME op juste avant la vidéo
-// (openai-proxy, x-aa-op) et kie-proxy exige ensuite EXACTEMENT 5 × durée → la réservation doit couvrir les deux.
-// Coût de l'image = celui qu'openai-proxy tire (imgCost : low 1 / medium 3) pour la qualité réellement envoyée.
-function _expOmniImgPart(){
-  const n = (window._expImgs||[]).length;
-  if(n <= 1 && window._expImgB64) return 0;   // image fournie telle quelle → rien à créer
-  return _imgCreditCost(typeof _imgGptQuality==='function' ? _imgGptQuality() : 'medium');
-}
+// Omni Flash (Axel 25/09) : 5 cr/s en 1080p pour tous, crans 4/6/8/10 s. L'image de départ qu'Express doit parfois CRÉER
+// (aucune image, ou plusieurs à composer en une) est OFFERTE (Axel 25/09) : gpt-image la tire toujours sur la MÊME op juste
+// avant la vidéo (openai-proxy, x-aa-op + x-aa-chain: omni-start), le serveur la note sur l'op et la vidéo tire ensuite
+// 5 × durée MOINS cette image (draw_omni_reservation). Réservation = 5 × durée : le prix affiché, image comprise.
+function _expOmniImgPart(){ return 0; }   // image de départ offerte (gardé pour les appelants : plus aucun supplément)
 function _expOmniCost(dur){
   const sec = [4,6,8,10].find(x=>x>=(parseInt(dur)||6)) || 10;   // cran kie au-dessus (= ce que kie-proxy facture)
-  return Math.round(sec * (CREDIT_COSTS.omniFlashPerSec||5)) + _expOmniImgPart();
+  return Math.round(sec * (CREDIT_COSTS.omniFlashPerSec||5));
 }
 // Coût crédits Express = SOURCE UNIQUE (bouton Générer ET débit expressCreate) :
 // 720p → Lite 1,5 cr/s (Starter/Pro) · Fast 3 cr/s (Élite) ; 1080p → +1 cr/s. Arrondi.
@@ -31671,7 +31693,7 @@ function _expRenderImgs(){
 // Veo ET Seedance sont image→vidéo (UNE image de départ). Pour que les 8 références soient
 // vraiment prises en compte (Axel 17/08), on les fusionne d'abord via gpt-image edit multi-images
 // (avatar + produit + perso → une scène cohérente) → cette image sert de frame de départ.
-async function _expComposeRefs(token, prompt, gptSize, op){   // op = x-aa-op explicite (l'op d'Express, Axel 25/09)
+async function _expComposeRefs(token, prompt, gptSize, op, omniStart){   // op = x-aa-op explicite (l'op d'Express, Axel 25/09) ; omniStart = image offerte (Omni)
   const imgs = window._expImgs || [];
   if(imgs.length < 2) return null;   // 0 ou 1 image → rien à composer
   const toBlob=(durl)=>{ const m=/^data:([^;]+);base64,(.+)$/.exec(durl||''); if(!m) return null; const bin=atob(m[2]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:m[1]||'image/png'}); };
@@ -31697,7 +31719,7 @@ async function _expComposeRefs(token, prompt, gptSize, op){   // op = x-aa-op ex
       fd.append('size', gptSize);
       fd.append('quality', (typeof _imgGptQuality==='function'? _imgGptQuality() : 'medium'));
       fd.append('moderation','low');
-      const res=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/edits', { method:'POST', headers:{...(_aaOp(op)),'Authorization':'Bearer '+token}, body:fd });
+      const res=await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path=/v1/images/edits', { method:'POST', headers:{...(_aaOp(op)),...(omniStart ? {'x-aa-chain':'omni-start'} : {}),'Authorization':'Bearer '+token}, body:fd });
       const data=await res.json().catch(()=>({}));
       const b64=data && data.data && data.data[0] && data.data[0].b64_json; if(b64) return 'data:image/png;base64,'+b64;
       const url=data && data.data && data.data[0] && data.data[0].url; if(url) return url;
@@ -32147,8 +32169,8 @@ async function expressCreate(){
   }
   const _expRate = _isOmni ? (CREDIT_COSTS.omniFlashPerSec||5) : (window._expVeoModel==='pro' ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5));
   const _expMult = _isOmni ? 1 : ((_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1);
-  // Omni (25/09) : 5 × cran + l'image de départ quand Express doit la CRÉER sur la même op (_expOmniImgPart) → kie-proxy
-  // trouve ensuite pile 5 × durée à tirer. L'image non créée au final (composition ratée → 1re image) est rendue au succès.
+  // Omni (25/09) : 5 × cran, image de départ OFFERTE (tirée sur la même op, déduite par le serveur du tirage de la vidéo).
+  // _omniImgPart vaut donc 0 : plus de reliquat « image non créée » à rendre.
   const _omniImgPart = _isOmni ? _expOmniImgPart() : 0;
   let _omniImgMade = false;
   if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
@@ -32194,7 +32216,7 @@ async function expressCreate(){
       setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
       try{
         const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1152x2048');
-        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize, _expOp);
+        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize, _expOp, _isOmni);
         if(_composed){
           _omniImgMade = true;
           if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
@@ -32206,7 +32228,7 @@ async function expressCreate(){
       setP(8,'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg> Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1792');
       const imgPrompt = prompt + ', ' + styleMeta.prompt + ', no text, no watermark, high quality';
-      const url = await _imgGenerateOne(token, imgPrompt, size, null, { op: _expOp });
+      const url = await _imgGenerateOne(token, imgPrompt, size, null, { op: _expOp, omniStart: _isOmni });   // Omni : image offerte (remise serveur sur la vidéo)
       _omniImgMade = true;
       if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
       else { const b=await (await fetch(url)).blob(); imgMime=b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(b);}); }
