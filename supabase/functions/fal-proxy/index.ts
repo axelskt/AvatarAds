@@ -129,7 +129,10 @@ serve(async (req: Request) => {
         : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path, minCost: falCost(path) })
       if (!rr.ok) return jsonRes(rr.status, { error: rr.error })
       drawnOp = rr.opId
-      drawnAmt = omniCost || (_aux ? falCost(path) : ((rr as { drawn?: number }).drawn ?? 0))   // Omni / aux = coût tiré ; primaire = réserve drainée
+      // Omni = montant RÉELLEMENT tiré (relecture 25/09), jamais `omniCost` : 0 en mode ombre / hoquet DB → op NON liée
+      // (ni bindJob, ni release / refund par job ou par op : rien à restaurer, pas de règlement de l'op d'une autre vidéo).
+      if (omniCost) { drawnAmt = (rr as { drawn?: number }).drawn ?? 0; if (drawnAmt <= 0) drawnOp = undefined }
+      else drawnAmt = _aux ? falCost(path) : ((rr as { drawn?: number }).drawn ?? 0)   // aux = coût tiré ; primaire = réserve drainée
     }
   }
 
