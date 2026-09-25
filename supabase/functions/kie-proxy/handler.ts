@@ -4,18 +4,24 @@
 // ACCÈS (Axel 25/09/2026) :
 //   • compte developer : tous les alias, aucune réservation, aucun repli (INCHANGÉ) ; service_role : tout (moteur / tests) ;
 //   • clients payants : EXACTEMENT deux usages — nano-banana-pro (« Améliorer en 4K », Starter / Pro / Élite / BYOK) et
-//     omni-flash (Omni Flash image→vidéo d'Express, Pro / Élite) — voir KIE_OPEN (../_shared/kie.ts). Tout autre alias
-//     (Veo, Kling Motion Control, OmniHuman, faceswap Nano 1K) → 403. Secret KIE_CLIENTS=0 = tout refermer sans redéployer.
+//     omni-flash (Omni Flash image→vidéo : Express + Voix native du Générateur, Starter / Pro / Élite / BYOK depuis le
+//     25/09) — voir KIE_OPEN (../_shared/kie.ts). Tout autre alias (Veo, Kling Motion Control, OmniHuman, faceswap Nano
+//     1K) → 403. Secret KIE_CLIENTS=0 = tout refermer sans redéployer (Omni Flash n'a plus de repli : il est alors
+//     indisponible pour les clients, sauf le carré 1:1 qui passe par fal).
 // RGPD : kie.ai n'a ni DPA ni garantie RGPD. L'ouverture aux clients de ces deux usages est une décision d'Axel du 25/09/2026 ;
 //        la politique de confidentialité doit lister kie.ai comme sous-traitant. La clé reste dans les secrets (KIEAI_API_KEY).
 //
 // FACTURATION (clients) — identique aux proxys existants (guard.ts) :
-//   • tirage AVANT l'appel kie : Nano = 5 sur l'op x-aa-op (comme google-ai-proxy) ; Omni = réserve ENTIÈRE avec plancher
-//     serveur (comme fal-proxy) ; réservation absente / insuffisante → 402 (RESERVE_ENFORCE / RESERVE_STRICT) ;
+//   • tirage AVANT l'appel kie : Nano = 5 sur l'op x-aa-op (comme google-ai-proxy) ; Omni = EXACTEMENT 5 cr × durée
+//     facturée (Axel 25/09, voir OMNI_FLASH_PER_SEC) ; réservation absente / insuffisante → 402 (RESERVE_ENFORCE /
+//     RESERVE_STRICT) ;
 //   • l'op tirée est LIÉE à la tâche (kie_jobs.op_id / drawn / bill_state) → RPC kie_job_bill, exactement une fois :
 //       résultat rapatrié → settle ; échec kie (FAILED, résultat vide) → release (rendu à la RÉSERVE : l'app peut re-tirer
-//       la MÊME op pour son repli Google / fal, ou la rembourser) ; soumission refusée par kie → release ; soumission SANS
+//       la MÊME op pour son repli Google, ou la rembourser) ; soumission refusée par kie → release ; soumission SANS
 //       réponse (délai, réseau) → refund serveur (taskId inconnu = rien de récupérable) et PAS de repli (double coût) ;
+//   • Omni Flash (Axel 25/09 : « kie directement, pas de fallback ») : plus AUCUN repli fal côté app → tout échec kie est
+//     rendu PUIS remboursé ici même (release → refund, KIE_NO_FALLBACK) : la réservation ne reste jamais tirée et le
+//     client n'a plus rien à rembourser (son refund_credits répond already_refunded) ;
 //   • onglet fermé : reconcile-kie règle (rangée en Bibliothèque) ou rembourse (échec), et balaie les réserves rendues
 //     jamais re-tirées ni remboursées.
 //
@@ -28,7 +34,7 @@
 //   POST ?path=/kie/requests/<rid>/ack         → l'app confirme avoir rangé le résultat (filet : plus rien à faire)
 // alias : nano-banana-pro · veo3-lite · veo3-fast · kling-2.6-mc · kling-3.0-mc · omnihuman-1.5 · omni-flash
 // `billing` (erreurs et FAILED) : none | released | refunded | drawn | closed | unfunded — l'app ne replie QUE sur
-// released / none (réservation re-tirable proprement).
+// released / none (réservation re-tirable proprement), et jamais pour Omni Flash (refunded en temps normal).
 //
 // Sécurité : le corps kie est RECONSTRUIT côté serveur (jamais de spread du corps client) ; modèle, traduction,
 // filigrane, fond Kling… imposés ici (clients : Nano en 4K, UNE image). Entrées = URL signées de NOTRE storage
@@ -36,8 +42,8 @@
 // exige /render-media/<uid>/ ; clients : la ligne kie_jobs (écrite à la soumission) doit AUSSI être la leur.
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
-import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, applyReservationFull, refundOpTerminal, releaseOp, safePath, svc, SUPABASE_URL } from '../_shared/guard.ts'
-import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, KIE_LABELS, KIE_OPEN, kieClientsOn } from '../_shared/kie.ts'
+import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, refundOpTerminal, releaseOp, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, KIE_LABELS, KIE_OPEN, KIE_NO_FALLBACK, kieClientsOn } from '../_shared/kie.ts'
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
@@ -45,13 +51,16 @@ const ALIASES = ['nano-banana-pro', 'veo3-lite', 'veo3-fast', 'kling-2.6-mc', 'k
 type Alias = typeof ALIASES[number]
 const ALLOW = /^\/(health|balance|kie\/(nano-banana-pro|veo3-lite|veo3-fast|kling-2\.6-mc|kling-3\.0-mc|omnihuman-1\.5|omni-flash)|kie\/requests\/(mk|veo)-[A-Za-z0-9_-]{6,120}(\/status|\/ack)?)$/
 const NB_AR = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9', 'auto']
-// Coûts serveur (bornes basses, jamais > débit légitime → ne 402 jamais un flux normal) :
+// Coûts serveur (= débit légitime de l'app → ne 402 jamais un flux normal) :
 //   Nano Banana Pro = 5 (= google-ai-proxy costFor, = CREDIT_COSTS.imgUpscale4K / imgRealistic) ;
-//   Omni Flash = plancher 3, IDENTIQUE à fal-proxy (falCost gemini-omni-flash). Pas de plancher « par seconde » : dans
-//   Express, l'image de départ (gpt-image, 1 à 5 cr, + composition multi-réfs) est tirée sur la MÊME op juste avant
-//   Omni → un plancher 3 cr/s × durée refusait (402) des vidéos légitimes de 3 à 5 s.
+//   Omni Flash (Axel 25/09) = EXACTEMENT OMNI_FLASH_PER_SEC (5) × durée facturée, 1080p. Fin du « plancher 3 cr quelle que
+//   soit la durée » (relecture 25/09 : une réserve de 3 cr suffisait pour une vidéo de 10 s). Durée facturée = le cran kie
+//   envoyé (4/6/8/10 s, arrondi au-dessus comme kie) : l'app ne propose QUE ces crans pour Omni, c'est donc exactement la
+//   durée affichée et débitée par l'UI. Express crée parfois l'image de départ (gpt-image) sur la MÊME op juste avant :
+//   l'app réserve alors image + vidéo (voir _expOmniCost dans app/index.html), l'image est tirée puis réglée par
+//   openai-proxy, et il reste pile 5 × durée ici. Tirage EXACT (draw_reservation) et non plus la réserve entière : un
+//   reliquat (image de départ finalement non créée) reste remboursable par l'app au lieu d'être avalé par la vidéo.
 const NANO_COST = 5
-const OMNI_MIN = 3
 
 const str = (v: unknown, max: number) => String(v ?? '').slice(0, max)
 const pick = <T extends string>(v: unknown, allowed: readonly T[], dflt: T): T => (allowed as readonly string[]).includes(String(v)) ? String(v) as T : dflt
@@ -137,6 +146,13 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
   return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'omnihuman-1-5', input } }
 }
 
+// Durée FACTURÉE d'une soumission Omni (Axel 25/09) = le cran réellement envoyé à kie (4/6/8/10 s), jamais le chiffre brut
+// du client : une demande de 3 s part en 4 s chez kie et se facture 4 s.
+function omniSecOf(built: { body: Record<string, unknown> }): number {
+  const s = Number((built.body.input as { duration?: unknown } | undefined)?.duration)
+  return [4, 6, 8, 10].includes(s) ? s : 10   // introuvable → le cran le plus cher (jamais sous-facturer)
+}
+
 // Erreur métier kie (le code est DANS le corps, le HTTP peut valoir 200) → réponse client lisible. `billing` = sort de la
 // réservation tirée pour cette soumission (clients) : l'app ne replie que sur 'released' / 'none'.
 function kieErr(code: number, msg: string, billing = 'none') {
@@ -152,7 +168,7 @@ function kieErr(code: number, msg: string, billing = 'none') {
 
 // Suivi, rapatriement et détection du format : ../_shared/kie.ts (partagés avec reconcile-kie, le filet).
 
-type JobRow = { state: string; library_id: string | null; op_id: string | null; bill_state: string | null }
+type JobRow = { state: string; library_id: string | null; op_id: string | null; bill_state: string | null; alias: string | null }
 
 export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -169,7 +185,8 @@ export async function handler(req: Request): Promise<Response> {
 
   // ── Accès (25/09) : developer = tout, sans réservation (inchangé) ; clients payants = les 2 usages ouverts (KIE_OPEN)
   //    + le suivi de LEURS tâches ; service_role = tout. Doute sur le plan (hoquet DB) → 403 FERMÉ AVANT tout tirage :
-  //    l'app replie alors sur Google / fal (billing 'none'), dont les gates sont, eux, ouverts sur hoquet.
+  //    l'app replie alors sur Google (4K, billing 'none'), dont le gate est, lui, ouvert sur hoquet ; Omni Flash (sans
+  //    repli) affiche l'erreur et rembourse son débit (rien n'a été tiré ici).
   const auth = await authUser(req)
   let uid: string | null = null, isDev = false, noBill = false
   if (!auth.isService) {
@@ -210,27 +227,31 @@ export async function handler(req: Request): Promise<Response> {
       if ('error' in built) return jsonRes(400, { error: built.error, billing: 'none' })
 
       // ── Réservation (clients, 25/09) : tirée AVANT l'appel kie, EXACTEMENT comme les proxys historiques ──
-      //    Nano 4K = 5 sur l'op x-aa-op (google-ai-proxy) ; Omni = réserve ENTIÈRE, plancher 3 (fal-proxy) — 1 op = 1 vidéo.
+      //    Nano 4K = 5 sur l'op x-aa-op (google-ai-proxy) ; Omni = EXACTEMENT 5 × le cran envoyé à kie (Axel 25/09) :
+      //    réserve qui ne couvre pas ce montant → 402 AVANT kie (plus de vidéo de 10 s financée par 3 crédits).
+      const cost = alias === 'omni-flash' ? OMNI_FLASH_PER_SEC * omniSecOf(built) : NANO_COST
       let opId: string | undefined, drawn = 0
       if (uid && !noBill) {
-        const rr = alias === 'omni-flash'
-          ? await applyReservationFull({ req, userId: uid, proxy: 'kie', label: alias, minCost: OMNI_MIN })
-          : await applyReservation({ req, userId: uid, proxy: 'kie', cost: NANO_COST, label: alias })
+        const rr = await applyReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
         if (!rr.ok) return jsonRes(rr.status, { error: rr.error, billing: 'unfunded' })
         opId = rr.opId
-        drawn = alias === 'omni-flash' ? ((rr as { drawn?: number }).drawn ?? 0) : NANO_COST
+        drawn = cost
       }
       // Soumission ratée : tirage RENDU à la réservation (repli possible sur la même op) ou REMBOURSÉ (sans réponse de kie).
       // Une réserve rendue est notée (ligne 'sub-…', état failed) : si l'onglet meurt avant repli / remboursement, le
       // balayage de reconcile-kie la rembourse (> 30 min, seulement si personne ne l'a re-tirée).
+      // Omni Flash (sans repli, 25/09) : rendue PUIS remboursée tout de suite via cette ligne (kie_job_bill refund : même
+      // règle que refund_credits → seule la part non livrée ; l'image de départ d'Express, réglée, reste payée).
       const failSubmit = async (why: string, refund: boolean): Promise<string> => {
         if (!uid || !opId) return 'none'
         if (refund && await refundOpTerminal(uid, opId, drawn || 1)) return 'refunded'
         if (drawn <= 0) return 'none'
         await releaseOp(uid, opId, drawn)
-        const { error: fErr } = await svc().from('kie_jobs').insert({ task_id: 'sub-' + crypto.randomUUID(), user_id: uid, alias, label: KIE_LABELS[alias] || 'kie.ai',
+        const subRid = 'sub-' + crypto.randomUUID()
+        const { error: fErr } = await svc().from('kie_jobs').insert({ task_id: subRid, user_id: uid, alias, label: KIE_LABELS[alias] || 'kie.ai',
           state: 'failed', last_error: why.slice(0, 200), op_id: opId, drawn, bill_state: 'released', billed_at: new Date().toISOString() })
-        if (fErr) console.warn('[kie] kie_jobs (soumission ratée)', fErr.message)
+        if (fErr) { console.warn('[kie] kie_jobs (soumission ratée)', fErr.message); return 'released' }   // l'app rembourse (refund_credits)
+        if (KIE_NO_FALLBACK.has(alias)) return (await kieBill(svc(), uid, subRid, 'refund')).bill ?? 'released'
         return 'released'
       }
 
@@ -291,7 +312,7 @@ export async function handler(req: Request): Promise<Response> {
       // par le param kie ci-dessous. Lecture impossible → 503 (l'app réessaie), jamais un accès « au doute ». Developer : inchangé.
       let job: JobRow | null = null
       if (uid) {
-        const { data: jr, error: jrErr } = await svc().from('kie_jobs').select('state, library_id, op_id, bill_state').eq('task_id', rid).eq('user_id', uid).limit(1)
+        const { data: jr, error: jrErr } = await svc().from('kie_jobs').select('state, library_id, op_id, bill_state, alias').eq('task_id', rid).eq('user_id', uid).limit(1)
         if (jrErr) { if (!isDev) return jsonRes(503, { error: 'suivi momentanément indisponible', detail: [{ type: 'transient', msg: jrErr.message }] }) }
         else job = (jr && jr[0]) as JobRow || null
         if (!job && !isDev) return jsonRes(404, { error: 'tâche kie introuvable' })
@@ -309,9 +330,14 @@ export async function handler(req: Request): Promise<Response> {
       // refusée pendant le suivi restait « pending » jusqu'au passage du filet, 45 min plus tard).
       if (failed && uid) { const { error: jErr } = await svc().from('kie_jobs').update({ state: 'failed', last_error: (rec.err || 'échec kie').slice(0, 200), updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid).in('state', ['pending', 'fetched']); if (jErr) console.warn('[kie] kie_jobs failed', jErr.message) }
       // …et le tirage est RENDU à la réservation (une seule fois, même relu) : l'app re-tire la MÊME op pour son repli
-      // (Google / fal) ou la rembourse. Onglet mort ici → balayage de reconcile-kie. `billing` dit à l'app ce qui reste possible.
+      // (Google) ou la rembourse. Onglet mort ici → balayage de reconcile-kie. `billing` dit à l'app ce qui reste possible.
+      // Omni Flash (sans repli, Axel 25/09) : rendu PUIS remboursé ici même, exactement une fois (relu : kie_job_bill répond
+      // not_drawn / not_open et renvoie l'état 'refunded' ; un remboursement raté est retenté au suivi suivant, puis au filet).
       let billing = 'none'
-      if (failed && uid && job?.op_id) billing = (await kieBill(svc(), uid, rid, 'release')).bill ?? job.bill_state ?? 'drawn'
+      if (failed && uid && job?.op_id) {
+        billing = (await kieBill(svc(), uid, rid, 'release')).bill ?? job.bill_state ?? 'drawn'
+        if (billing === 'released' && KIE_NO_FALLBACK.has(String(job.alias))) billing = (await kieBill(svc(), uid, rid, 'refund')).bill ?? billing
+      }
       if (isStatus) {
         if (failed) return jsonRes(200, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], meta: rec.meta, billing })
         return jsonRes(200, { status: rec.state === 'ok' ? 'COMPLETED' : rec.state === 'run' ? 'IN_PROGRESS' : 'IN_QUEUE', meta: rec.meta })

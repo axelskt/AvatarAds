@@ -12,9 +12,11 @@
 // Sécurité (audit 05/09) : session utilisateur obligatoire (moteur de rendu = service_role) ;
 // `?path=` validé (allowlist, jamais d'`@`/`..`) ; soumissions plafonnées par utilisateur + preuve de
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
+// Omni Flash IMAGE→VIDÉO (Axel 25/09) : ici = le seul CARRÉ 1:1 d'Express (kie ne fait pas de carré ; tout le reste passe
+// par kie-proxy, sans repli fal) — Starter / Pro / Élite / BYOK, 1080p imposé, tirage EXACT de 5 cr × durée.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -37,6 +39,20 @@ function falCost(path: string): number {
   if (/aura-sr/i.test(path)) return 3
   if (/gemini-omni-flash/i.test(path)) return 3
   return 1
+}
+// Omni Flash image→vidéo (Axel 25/09) : corps RECONSTRUIT (champs de l'app seulement — jamais un paramètre client qui
+// multiplierait le coût), 1080p IMPOSÉ, durée bornée 3-10 s comme fal (la même que celle qu'on facture). Facturé EXACTEMENT
+// OMNI_FLASH_PER_SEC × durée : fin du plancher 3 cr quelle que soit la durée (réserve de 3 cr pour une vidéo de 10 s).
+const OMNI_I2V = /\/google\/gemini-omni-flash\/[^?]*image-to-video/i
+function omniI2vBody(raw: string): { body: string; sec: number } | { error: string } {
+  let b: any = null
+  try { b = JSON.parse(raw || '{}') } catch { /* traité juste dessous */ }
+  if (!b || typeof b !== 'object') return { error: 'corps JSON invalide' }
+  if (typeof b.image_url !== 'string' || !b.image_url) return { error: 'image_url requis' }
+  if (typeof b.prompt !== 'string' || !b.prompt) return { error: 'prompt requis' }
+  const sec = Math.max(3, Math.min(10, Math.round(Number(b.duration)) || 6))
+  const aspect_ratio = ['9:16', '16:9', '1:1'].includes(String(b.aspect_ratio)) ? String(b.aspect_ratio) : '9:16'
+  return { body: JSON.stringify({ image_url: b.image_url, prompt: b.prompt.slice(0, 20000), aspect_ratio, duration: sec, resolution: '1080p' }), sec }
 }
 
 serve(async (req: Request) => {
@@ -61,6 +77,9 @@ serve(async (req: Request) => {
   // rembourse JAMAIS le solde en son nom (sur-remboursement de la part parente) → seulement release réserve.
   // Hissé ici pour être lisible aussi dans le catch réseau (échec de soumission sans réponse).
   const isAuxPath = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(path.split('?')[0])
+  // Corps lu UNE fois ici (relayé tel quel plus bas) : Omni Flash image→vidéo doit connaître sa durée AVANT le tirage.
+  let rawBody = req.method === 'POST' ? await req.text() : undefined
+  const isOmniI2v = isSubmit && OMNI_I2V.test(path)
 
   // ── session utilisateur obligatoire — SAUF le moteur de rendu / backend Motion Control (service_role,
   //    jeton déjà vérifié par la passerelle et impossible à forger sans le secret du projet) ──
@@ -80,9 +99,10 @@ serve(async (req: Request) => {
     else if (isSubmit && (/\/fal-ai\/aura-sr/i.test(path) || /\/fal-ai\/nano-banana-pro/i.test(path))) {
       const g = await requirePlan(auth.userId, ['pro', 'elite', 'byok'], 'HD / 4K'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
-    // Express Omni Flash IMAGE→VIDÉO = Pro/Élite. L'EDIT (/edit, Module Omni) reste Starter+ → ne PAS gater sur le nom seul.
-    else if (isSubmit && /\/google\/gemini-omni-flash\//i.test(path) && /image-to-video/i.test(path)) {
-      const g = await requirePlan(auth.userId, ['pro', 'elite'], 'Express Omni'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+    // Omni Flash IMAGE→VIDÉO = tous les plans payants depuis le 25/09 (Axel : « Starter inclus ») ; Free → 403. L'EDIT
+    // (/edit, Module Omni) reste Starter+ → ne PAS gater sur le nom seul.
+    else if (isOmniI2v) {
+      const g = await requirePlan(auth.userId, ['starter', 'pro', 'elite', 'byok'], 'Omni Flash'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
     const gate = isSubmit
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
@@ -95,14 +115,21 @@ serve(async (req: Request) => {
       // NON listés) = draw_full : 1 op = 1 génération → ni refund-and-keep (reliquat remboursable) ni
       // sous-facturation d'un modèle inconnu retombé à falCost=1.
       const _aux = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(path)
+      // Omni Flash image→vidéo (25/09) : corps reconstruit + coût EXACT 5 × durée (tirage exact, comme kie-proxy).
+      let omniCost = 0
+      if (isOmniI2v) {
+        const ob = omniI2vBody(rawBody ?? '')
+        if ('error' in ob) return jsonRes(400, { error: ob.error })
+        rawBody = ob.body; omniCost = OMNI_FLASH_PER_SEC * ob.sec
+      }
       // Primaire : plancher serveur = falCost(path) (audit 14/09) → une réserve sous ce plancher (ex.
       // spend_credits(1) devant un OmniHuman à 5) est refusée (402), fin de « 1 crédit = vidéo chère ».
-      const rr = _aux
-        ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path })
+      const rr = (_aux || omniCost)
+        ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: omniCost || falCost(path), label: path })
         : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path, minCost: falCost(path) })
       if (!rr.ok) return jsonRes(rr.status, { error: rr.error })
       drawnOp = rr.opId
-      drawnAmt = _aux ? falCost(path) : ((rr as { drawn?: number }).drawn ?? 0)   // aux = coût tiré ; primaire = réserve drainée
+      drawnAmt = omniCost || (_aux ? falCost(path) : ((rr as { drawn?: number }).drawn ?? 0))   // Omni / aux = coût tiré ; primaire = réserve drainée
     }
   }
 
@@ -110,7 +137,7 @@ serve(async (req: Request) => {
   try {
     const target = `${FAL_QUEUE}${path}`
     const init: RequestInit = { method: req.method, headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' } }
-    if (req.method === 'POST') init.body = await req.text()
+    if (req.method === 'POST') init.body = rawBody
     const res = await fetch(target, init)
     const text = await res.text()
     if (!auth.isService && auth.userId) {

@@ -1410,7 +1410,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 </div>
               </div>
               <!-- Voix native (Axel 25/09) : image de l'étape Avatar (sinon la sienne) + prompt → Omni Flash image→vidéo (fonction
-                   EXISTANTE _expOmniImageToVideo, barème omniFlashPerSec) → vidéo DÉJÀ PARLANTE → étape Style, sans Hedra.
+                   EXISTANTE _expOmniImageToVideo, kie.ai 1080p, barème omniFlashPerSec) → vidéo DÉJÀ PARLANTE → étape Style, sans Hedra.
                    3 états : formulaire (#gnForm) · chargement (#gnLoading) · résultat (#gnResult). Rendu piloté par _gnRender(). -->
               <div id="voxPaneNative" style="display:none;margin-bottom:14px">
                 <input type="file" id="gnImgIn" accept="image/*" style="display:none" onchange="_gnPickImg(this.files[0]);this.value=''">
@@ -1419,7 +1419,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <div id="gnImgBox"></div>
                   <div class="label" style="font-size:11px;letter-spacing:.14em;margin:4px 0 0">Ce que dit et fait ton avatar</div>
                   <textarea id="gnPrompt" placeholder="Ex : elle regarde la caméra, sourit et dit « J'ai testé ce sérum pendant 7 jours, et franchement je ne m'attendais pas à ça. »" style="width:100%;box-sizing:border-box;min-height:96px;padding:12px 14px;background:var(--panel-1);border:1px solid var(--border-2);border-radius:12px;color:var(--text);font-family:var(--font);font-size:13.5px;line-height:1.5;resize:vertical;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--accent-line)'" onblur="this.style.borderColor='var(--border-2)'"></textarea>
-                  <div class="faint" style="font-size:11.5px;line-height:1.45;margin-top:-4px">Mets la réplique entre guillemets : la voix et le lipsync sont créés avec la vidéo.</div>
                   <div class="label" style="font-size:11px;letter-spacing:.14em;margin:4px 0 0">Durée</div>
                   <div id="gnDurRow" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
                     <button type="button" data-d="4" onclick="_gnSetDur(4)" style="padding:10px 4px;border-radius:11px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;transition:.15s">4 s</button>
@@ -1427,8 +1426,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                     <button type="button" data-d="8" onclick="_gnSetDur(8)" style="padding:10px 4px;border-radius:11px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;transition:.15s">8 s</button>
                     <button type="button" data-d="10" onclick="_gnSetDur(10)" style="padding:10px 4px;border-radius:11px;border:1px solid var(--border);background:var(--panel-1);color:var(--text-2);font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;transition:.15s">10 s</button>
                   </div>
-                  <button type="button" id="gnGenBtn" onclick="_gnGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;padding:13px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:.2s"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer la vidéo<span style="font-weight:700;opacity:.72">·</span><span id="gnCost" style="font-weight:700;opacity:.72">24 crédits</span></button>
-                  <div class="faint mono" style="font-size:10.5px;text-align:center;letter-spacing:.02em">Omni Flash · 9:16 · 720p · voix incluse</div>
+                  <button type="button" id="gnGenBtn" onclick="_gnGenerate()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;padding:13px;background:var(--accent);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:.2s"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Générer la vidéo<span style="font-weight:700;opacity:.72">·</span><span id="gnCost" style="font-weight:700;opacity:.72">30 crédits</span></button>
                   <button type="button" id="gnBackVid" onclick="_gnBackToVid()" style="display:none;align-self:center;background:none;border:none;padding:2px 6px;color:var(--text-2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px">Revenir à ma vidéo actuelle</button>
                 </div>
                 <div id="gnLoading" style="display:none;flex-direction:column;align-items:center;gap:14px;padding:30px 18px 26px;border-radius:16px;border:1px solid var(--border);background:var(--surface);text-align:center">
@@ -5384,6 +5382,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Avatar lipsync — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">5 cr/s</b> en Omni<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Voix IA — <b style="color:var(--text2)">+0,5 cr/s</b> · gratuit avec ton MP3<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express — <b style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 12a8.5 8.5 0 01-12.3 7.6L3 21l1.4-5.2A8.5 8.5 0 1121 12z"/><path d="M9 10.5v3M12 8.5v7M15 10.5v3"/></svg> Omni Flash · voix native — <b data-cc-sec="omniFlashPerSec" style="color:var(--text2)">5 cr/s</b> en 1080p<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni · transformation vidéo — <b style="color:var(--text2)">3 cr/s</b> en 720p · <b style="color:var(--text2)">4 cr/s</b> en 1080p<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">6 cr/s</b> en Motion 3.0<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9.9 2.6l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5zM18 13l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg> Montage IA — <b style="color:var(--text2)">8 crédits</b> · <b style="color:var(--text2)">4</b> pour un re-rendu<br>
@@ -6330,9 +6329,10 @@ const CREDIT_COSTS = {
   // centime. À 0,5 crédit/s facturé, la marge sur l'option est de ~90 %.
   hd1080PerSec: 0.5,
   omniPerSec: 5,          // 💎 OmniHuman 1.5 via fal.ai, 1080p (#121) — coût fournisseur 0,16 $/s
-  omniFlashPerSec: 4,     // ⚡ Express « Omni Flash » = fal google/gemini-omni-flash/v1.1/image-to-video (voix native)
-                          //    720p 0,10 $/s → 4 cr/s (marge 66-75%). Accès Pro/Élite.
-  omni1080Mult: 1.5,      //    1080p NATIF 0,15 $/s (+50% fal) → ×1,5 = 6 cr/s (marge 66-75%, même bande que le 720p)
+  omniFlashPerSec: 5,     // ⚡ Omni Flash image→vidéo, voix native (Express « UGC réel » + Voix native du Générateur).
+                          //    Axel 25/09 : TOUS les plans payants (Starter inclus), kie.ai DIRECT sans repli, 1080p SEUL
+                          //    (plus de 720p ni de ×1,5) → 5 cr/s. kie = forfait/clip 0,315-0,63 $ (4-10 s) ; le carré 1:1
+                          //    passe par fal 1080p 0,15 $/s. SERVEUR : OMNI_FLASH_PER_SEC (_shared/guard.ts) — à changer ENSEMBLE.
   hyperframesPerSec: 1,   // 🎞 habillage hyperframes sur les secondes SANS avatar (flux avatar segmenté)
   // 🎥 Motion Control « fond vidéo » : le vrai décor de la réf, ANIMÉ, derrière le
   // personnage (2 détourages fal ben ≈ 0,4-0,6 $/rendu à notre charge + compo worker).
@@ -6345,6 +6345,9 @@ const CREDIT_COSTS = {
   // pire tier Élite (6×0,0766 = 0,46 $/s de revenu, coût 0,168). Réservé aux plans Pro & Élite.
   motion30PerSec: 6
 };
+// #cmBareme (Mon compte) lit ses tarifs « par seconde » ICI (Axel 25/09) : <b data-cc-sec="clé"> → « 5 cr/s ». Le
+// barème affiché ne peut plus diverger de CREDIT_COSTS (le chiffre écrit dans le HTML n'est qu'un repli sans JS).
+try{ document.querySelectorAll('[data-cc-sec]').forEach((el)=>{ const v = CREDIT_COSTS[el.getAttribute('data-cc-sec')]; if(typeof v==='number') el.textContent = String(v).replace('.', ',') + ' cr/s'; }); }catch(_){}
 function creditsBalance(){ return Math.max(0, (typeof currentMember!=='undefined' && currentMember && currentMember.credits_remaining) || 0); }
 function _imgCreditCost(q){ return q==='high' ? CREDIT_COSTS.imgHigh : (q==='medium' ? CREDIT_COSTS.imgMedium : CREDIT_COSTS.imgLow); }
 // Débit unifié : vérifie le solde, débite côté serveur (RPC anti-triche), met l'UI à jour
@@ -10491,18 +10494,23 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
 // le plan, tire la réservation (x-aa-op) AVANT l'appel kie, règle au rapatriement, rend sur échec (voir kie-proxy/handler.ts).
 //   • compte developer : tous les usages kie, AUCUN repli (inchangé) ;
 //   • clients payants (Axel 25/09) : EXACTEMENT deux usages — « Améliorer en 4K » (Nano Banana Pro, dès Starter, via
-//     _nbRefine4K) et Omni Flash image→vidéo (Express, Pro/Élite). Échec kie → REPLI sur le chemin habituel (Google /
-//     fal) SEULEMENT si le serveur a rendu le tirage à la réservation (billing 'released') ou n'a rien tiré ('none') :
-//     la même op est alors re-tirée proprement. Jamais de repli sur un délai dépassé ni une soumission sans réponse
-//     (la tâche peut tourner chez kie → double coût) : la génération arrive en Bibliothèque, ou les crédits sont rendus.
+//     _nbRefine4K) et Omni Flash image→vidéo (Express + Voix native du Générateur, TOUS les plans payants).
+//     « Améliorer en 4K » : échec kie → REPLI Google SEULEMENT si le serveur a rendu le tirage à la réservation (billing
+//     'released') ou n'a rien tiré ('none') : la même op est alors re-tirée proprement. Jamais de repli sur un délai
+//     dépassé ni une soumission sans réponse (la tâche peut tourner chez kie → double coût).
+//     Omni Flash (Axel 25/09 : « kie directement, pas de fallback, en 1080p ») : kie ou l'erreur, pour TOUS ; le serveur
+//     rend puis rembourse le tirage lui-même (billing 'refunded') → message « réessaie ». Seule exception : le carré 1:1
+//     (kie n'en fait pas) passe par fal, au même prix (voir _expOmniImageToVideo).
 // kie n'a pas de DPA : ouverture décidée par Axel le 25/09/2026 (politique de confidentialité à mettre à jour).
-// Réglage (console) : localStorage aa_kie='0' coupe kie sur ce navigateur (retour aux fournisseurs habituels).
+// Réglage (console) : localStorage aa_kie='0' coupe kie sur ce navigateur (retour aux fournisseurs habituels) — sauf
+// Omni Flash des clients, qui n'a plus d'autre fournisseur (compte developer : aa_kie='0' → fal, réglage de test).
 const KIE_PROXY = SUPABASE_URL + '/functions/v1/kie-proxy';
 function _kieOn(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer' && localStorage.getItem('aa_kie')!=='0'; }catch(_){ return false; } }
 function _kieDev(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer'; }catch(_){ return false; } }
 // Usages kie ouverts aux clients (mêmes plans que l'UI et que KIE_OPEN côté serveur) : '4k' = « Améliorer en 4K »,
-// 'omni' = Omni Flash image→vidéo d'Express. Owner : comme un client (sans débit). Developer : _kieOn() (inchangé).
-const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['pro','elite'] };
+// 'omni' = Omni Flash image→vidéo (Express + Voix native ; tous les plans payants depuis le 25/09). Owner : comme un
+// client (sans débit). Developer : _kieOn() (inchangé).
+const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['starter','pro','elite','byok'] };
 function _kieClientOn(usage){
   try{
     if(typeof currentMember==='undefined' || !currentMember) return false;
@@ -10601,6 +10609,7 @@ function _kieAck(rid){
 // Clients (25/09) : repli sur le chemin habituel SEULEMENT si kie a échoué pour de bon ou refusé la soumission
 // ('submit' / 'failed') ET que la réservation est re-tirable proprement ('released' = tirage rendu à la réserve, 'none' =
 // rien tiré). Délai dépassé / soumission sans réponse / crédits déjà rendus / issue inconnue → pas de repli.
+// (Omni Flash ne l'appelle plus : aucun repli, Axel 25/09.)
 function _kieCanFallback(e){
   if(_kieDev() || !e) return false;
   if(e._kieStage!=='submit' && e._kieStage!=='failed') return false;
@@ -19155,11 +19164,12 @@ function _voxEnter(){
 // « S'il a généré une image dans l'étape Avatar, elle est importée directement ; sinon il ajoute la sienne. Il tape
 // son prompt, petit chargement, puis redirection vers Style avec la vidéo dans l'aperçu. Téléchargeable. Sous-titres
 // désactivés par défaut ; les activer lance Whisper tout seul. Le modèle d'avatar détecte que le lipsync est déjà fait. »
-// • Génération = la fonction EXISTANTE _expOmniImageToVideo (Omni Flash image→vidéo, voix native ; fal pour les
-//   clients, kie pour le compte developer) — AUCUN nouvel appel fournisseur ici. Barème = CREDIT_COSTS.omniFlashPerSec
-//   (celui d'Express Omni Flash 720p), durées 4/6/8/10 s, 9:16. Débit AVANT l'appel (spendCreditsFor → x-aa-op),
-//   remboursement de CES ops si échec. Gating = celui du mode Omni Flash d'Express (_expModelAllowed('omni') :
-//   Pro / Élite ; fal-proxy refait le contrôle côté serveur).
+// • Génération = la fonction EXISTANTE _expOmniImageToVideo (Omni Flash image→vidéo, voix native ; kie.ai DIRECT pour
+//   tous, sans repli, en 1080p — Axel 25/09) — AUCUN nouvel appel fournisseur ici. Barème = CREDIT_COSTS.omniFlashPerSec
+//   (5 cr/s, le même qu'Express), durées 4/6/8/10 s (= crans kie : affiché = débité = facturé par kie-proxy), 9:16.
+//   Débit AVANT l'appel (spendCreditsFor → x-aa-op), remboursement de CES ops si échec (kie-proxy rembourse déjà côté
+//   serveur ; le client ne fait que le filet). Gating = celui d'Express (_expModelAllowed('omni') : tous les plans ;
+//   Free → offres via _gateFreeGenerate ; kie-proxy refait le contrôle de plan côté serveur).
 // • La vidéo produite devient une « vidéo déjà parlante » via le chemin EXISTANT « Vidéo existante » (bypass Hedra :
 //   handleBypassHedraFile) : aperçu téléphone, Whisper sur l'audio de la vidéo, rendu serveur qui garde son audio,
 //   aucun lipsync. Différences : pas de quota « re-composition » (déjà payée), pas de supplément 1080p.
@@ -19172,9 +19182,11 @@ function _genNativeActive(){
   const g = window._gn;
   return !!(g && g.adopted && g.vid && window._bypassHedraOn && window._bypassHedraFile === g.vid.file);
 }
+// Axel 25/09 : « tout le monde y a droit pareil, Starter inclus » → toujours vrai (plus de badge PRO) ; le Free est arrêté
+// au clic sur Générer (_gateFreeGenerate → offres), comme partout ailleurs.
 function _gnAllowed(){
   if(typeof _expModelAllowed === 'function') return _expModelAllowed('omni');
-  return ['pro','elite','developer'].includes(((typeof currentMember!=='undefined' && currentMember && currentMember.plan) || 'free').toLowerCase());
+  return true;
 }
 function _gnAbs(u){ try{ return u ? new URL(u, location.href).href : ''; }catch(_){ return u || ''; } }
 // Image de l'étape Avatar : l'image GÉNÉRÉE (« Générer un avatar ») si c'est l'onglet actif, sinon l'avatar choisi
@@ -19217,7 +19229,7 @@ function _gnRenderImg(){
     + '<span class="faint" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + sub + '</span>'
     + '<button type="button" onclick="document.getElementById(\'gnImgIn\').click()" class="btn btn-sm" style="align-self:flex-start;margin-top:7px;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">Changer d\'image</button></div></div>';
 }
-function _gnCost(){ return Math.max(1, Math.round(window._gn.dur * (CREDIT_COSTS.omniFlashPerSec || 4))); }   // même barème qu'Express Omni Flash 720p
+function _gnCost(){ return Math.max(1, Math.round(window._gn.dur * (CREDIT_COSTS.omniFlashPerSec || 5))); }   // même barème qu'Express Omni Flash (1080p, 5 cr/s)
 function _gnSetDur(d){ window._gn.dur = [4,6,8,10].includes(+d) ? +d : 6; _gnRenderDur(); }
 function _gnRenderDur(){
   const g = window._gn;
@@ -19260,7 +19272,7 @@ async function _gnGenerate(){
   const g = window._gn;
   if(g.busy) return;
   if(_gateFreeGenerate()) return;                                      // Free → offres
-  if(!_gnAllowed()){ toast('La voix native (Omni Flash) est réservée aux plans Pro et Élite'); showPaywall(); return; }
+  if(!_gnAllowed()){ toast('La voix native (Omni Flash) n\'est pas disponible sur ton plan'); showPaywall(); return; }   // (tous les plans payants depuis le 25/09)
   const pEl = document.getElementById('gnPrompt');
   const prompt = ((pEl && pEl.value) || '').trim();
   if(!prompt){ toast('Écris ce que ton avatar dit et fait'); if(pEl) pEl.focus(); return; }
@@ -19292,7 +19304,7 @@ async function _gnGenerate(){
     // _expOmniImageToVideo lit le format d'Express (window._expFormat) : forcé à 9:16 le temps de l'appel, puis rendu.
     const fmt0 = window._expFormat; if(fmt0 !== '9:16') window._expFormat = '9:16';
     let blob;
-    try{ blob = await _expOmniImageToVideo(img.b64, img.mime, fullPrompt, dur, '720p', (v, t) => _gnProg(v, t)); }
+    try{ blob = await _expOmniImageToVideo(img.b64, img.mime, fullPrompt, dur, '1080p', (v, t) => _gnProg(v, t)); }   // 1080p (Axel 25/09)
     finally{ if(fmt0 !== '9:16') window._expFormat = fmt0; }
     if(!blob || blob.size < 50000 || (typeof _mp4Sane === 'function' && !(await _mp4Sane(blob)))) throw new Error('vidéo reçue illisible — réessaie');
     _gnProg(96, 'Vidéo prête');
@@ -29454,16 +29466,18 @@ function _expModelsVisible(){
     return m;
   });
 }
-// Omni Flash via kie (compte dev) : TOUJOURS 1080p (même prix que 720p chez kie) → 720p masqué et refusé.
-function _expOmniKie(){ return window._expVeoModel==='omni' && typeof _kieOn==='function' && _kieOn(); }
-// kie impose le 1080p à Omni SANS écraser le choix de l'user : dès qu'on quitte Omni kie, sa qualité (720p) revient.
+// Omni Flash = kie.ai pour TOUS depuis le 25/09 (Axel : « kie directement, pas de fallback, en 1080p pas 720p ») :
+// TOUJOURS 1080p (même prix que 720p chez kie) → 720p masqué et refusé ; durées = crans kie 4/6/8/10 s. Le carré 1:1
+// (fal, kie n'en fait pas) suit les mêmes règles : 1080p, mêmes crans, même prix → une seule règle Omni dans l'UI.
+function _expOmniKie(){ return window._expVeoModel==='omni'; }
+// kie impose le 1080p à Omni SANS écraser le choix de l'user : dès qu'on quitte Omni, sa qualité (720p) revient.
 // (Sinon le 1080p imposé restait actif sur Veo → 8 s forcé ou toast « 1080p dispo à partir de 8 s » jamais demandé.)
 function _expKieQualSync(){
   if(_expOmniKie()){ if(window._expQuality!=='1080p'){ window._expQualityKieForced=true; window._expQuality='1080p'; } }
   else if(window._expQualityKieForced){ window._expQualityKieForced=false; window._expQuality='720p'; }
 }
 function _expModelAllowed(v){
-  if(v==='omni') return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase());
+  if(v==='omni') return true;   // Omni Flash : tous les plans (Axel 25/09, Starter inclus) ; Free → offres au clic sur Générer
   if(v==='pro') return _kieOn();   // Veo Fast : réservé au test kie.ai du compte developer
   return true; // Veo Standard pour tous
 }
@@ -29482,7 +29496,7 @@ function _expRenderModels(){
   }).join('');
 }
 function _expPickModel(v){
-  if(!_expModelAllowed(v)){ if(v==='pro') return; toast('Omni Flash est réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; }
+  if(!_expModelAllowed(v)) return;   // seul « Veo Fast » (test kie du compte developer) peut être fermé ; Omni = tous (25/09)
   window._expVeoModel=v; if(v!=='omni' && window._expFormat==='1:1') window._expFormat='9:16';
   _expKieQualSync();
   if(v==='omni' && window._exp1080Forced){ window._exp1080Forced=false; window._expDurAuto=true; }   // le 8 s forcé était une limite Veo → Omni repasse en Libre
@@ -29518,14 +29532,13 @@ function initExpress(){
   // Durée (slider) — Veo 4/6/8 s pour tous (extensions retirées le 23/09) ; Omni 3→10 s
   const ds = document.getElementById('expDurSlider');
   if(ds){
-    // Libre (position 0, DÉFAUT) : Omni prend sa durée MAX (10 s) et coupe si le script est plus long ; le débit
-    // est ensuite AJUSTÉ à la durée RÉELLE produite (mesure + remboursement des secondes en moins). Veo Libre cale
-    // la durée sur le script. L'user peut aussi choisir une durée fixe au slider (1..N). (Axel 08/09 — plan original)
+    // Libre (position 0, DÉFAUT) : Omni ET Veo calent la durée sur le script (cran au-dessus). L'user peut aussi choisir
+    // une durée fixe au slider (1..N). (Axel 08/09 ; Omni : plus de « 10 s puis remboursement » depuis le 25/09)
     const _isOmniDur = (window._expVeoModel==='omni');
     const _da=_expDurAllowed();
     if(!window._expDurAuto && !_da.includes(parseInt(window._expDur))) window._expDur = _da.find(x=>x>=(parseInt(window._expDur)||_da[0])) || _da[_da.length-1];   // durée hors crans (ex. 5 s quand kie s'allume) → cran au-dessus
-    // Omni kie (dev) : forfait PAR CLIP, sans ajustement à la seconde → Libre = durée du script (cran 4/6/8/10 au-dessus),
-    // jamais 10 s d'office (0,63 $ au lieu de 0,42 $ pour une réplique de 6 s).
+    // Omni = kie pour tous (25/09) : forfait PAR CLIP, sans ajustement à la seconde → Libre = durée du script (cran
+    // 4/6/8/10 au-dessus), jamais 10 s d'office (0,63 $ au lieu de 0,42 $ pour une réplique de 6 s).
     if(window._expDurAuto) window._expDur = (_isOmniDur && !_expOmniKie()) ? _da[_da.length-1] : _expEstimateDur().dur;
     if(window._expDurAuto && !_isOmniDur && window._expQuality==='1080p' && (parseInt(window._expDur)||4)<8) window._expDur=8;   // Veo 1080p = 8 s minimum : le bouton affiche ce qui sera généré et débité
     ds.min=0; ds.max=_da.length; ds.step=1;   // position 0 = Libre (Omni ET Veo)
@@ -29547,7 +29560,7 @@ function initExpress(){
     _expKieQualSync();   // kie : 1080p imposé sur Omni (qualité de l'user rendue ailleurs)
     qr.innerHTML = EXP_QUALITIES.filter(q=>!(q.v==='720p' && _expOmniKie())).map(q=>{
       const on=q.v===window._expQuality;
-      const _lk = (q.v==='1080p' && !_exp1080Allowed());   // 1080p = Pro/Élite → CADENAS (icône seule, aucun texte « Pro »)
+      const _lk = (q.v==='1080p' && !_isOmniQ && !_exp1080Allowed());   // 1080p Veo = Pro/Élite → CADENAS (icône seule, aucun texte « Pro ») ; Omni = 1080p pour tous (25/09)
       // note « dès 8 s » = Veo seul (jamais Omni), et masquée si verrouillé
       const note = _lk ? '' : ((q.v==='1080p' && !_isOmniQ && !_dur8) ? 'dès 8 s' : q.note);
       const _lock = _lk ? ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>' : '';
@@ -29564,11 +29577,24 @@ function initExpress(){
   if(typeof _expInitSeedanceDev==='function') _expInitSeedanceDev();  // carte Seedance si compte dev
   if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine==='motion' ? 'veo' : (window._expEngine||'veo'));
 }
+// Omni Flash (Axel 25/09) : 5 cr/s en 1080p pour tous, crans 4/6/8/10 s — PLUS l'image de départ quand Express doit la
+// CRÉER (aucune image, ou plusieurs images à composer en une) : gpt-image la tire sur la MÊME op juste avant la vidéo
+// (openai-proxy, x-aa-op) et kie-proxy exige ensuite EXACTEMENT 5 × durée → la réservation doit couvrir les deux.
+// Coût de l'image = celui qu'openai-proxy tire (imgCost : low 1 / medium 3) pour la qualité réellement envoyée.
+function _expOmniImgPart(){
+  const n = (window._expImgs||[]).length;
+  if(n <= 1 && window._expImgB64) return 0;   // image fournie telle quelle → rien à créer
+  return _imgCreditCost(typeof _imgGptQuality==='function' ? _imgGptQuality() : 'medium');
+}
+function _expOmniCost(dur){
+  const sec = [4,6,8,10].find(x=>x>=(parseInt(dur)||6)) || 10;   // cran kie au-dessus (= ce que kie-proxy facture)
+  return Math.round(sec * (CREDIT_COSTS.omniFlashPerSec||5)) + _expOmniImgPart();
+}
 // Coût crédits Express = SOURCE UNIQUE (bouton Générer ET débit expressCreate) :
 // 720p → Lite 1,5 cr/s (Starter/Pro) · Fast 3 cr/s (Élite) ; 1080p → +1 cr/s. Arrondi.
 function _expCostCredits(){
   const dur=parseInt(window._expDur)||6;
-  if(window._expVeoModel==='omni'){ const om=(window._expQuality==='1080p')?(CREDIT_COSTS.omni1080Mult||1.5):1; return Math.round(dur * (CREDIT_COSTS.omniFlashPerSec||4) * om); }   // Omni Flash : 720p 4 cr/s · 1080p 6 cr/s, pas d'extensions
+  if(window._expVeoModel==='omni') return _expOmniCost(dur);   // Omni Flash : 1080p 5 cr/s (+ image de départ à créer), pas d'extensions
   const rate=(window._expVeoModel==='pro') ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);   // Veo Standard (Lite) ; Veo Fast = test kie dev
   const mult=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1; // 1080p = ×2 du 720p
   return Math.round(dur * rate * mult);
@@ -29582,8 +29608,7 @@ function _expUpdateGenCaption(){
   if(cb){
     const _d=parseInt(window._expDur)||6;
     if(window._expVeoModel==='omni'){
-      const _om=(window._expQuality==='1080p')?(CREDIT_COSTS.omni1080Mult||1.5):1;   // Omni : 720p 4 cr/s · 1080p 6 cr/s
-      const n=Math.round(_d*(CREDIT_COSTS.omniFlashPerSec||4)*_om);   // durée exacte 3-10 s (pas d'extensions)
+      const n=_expOmniCost(_d);   // Omni : 1080p 5 cr/s × cran 4/6/8/10 s (+ image de départ à créer) = le débit exact
       cb.textContent = (window._expDurAuto?'≈ ':'') + n + (n>1?' crédits':' crédit');
     } else {
       const _r=(window._expVeoModel==='pro')?(CREDIT_COSTS.expressFastPerSec||3):(CREDIT_COSTS.expressLitePerSec||1.5), _m=(window._expQuality==='1080p')?(CREDIT_COSTS.express1080Mult||2):1;
@@ -29616,7 +29641,7 @@ function _expHeroSync(){
 // (0 débit « express-ext » en 60 jours). Le vrai correctif (Fast 720p + réplique découpée par extension) change le
 // tarif Élite : en attente de la décision d'Axel. Au-delà de 8 s → Omni Flash (10 s) ou Montage IA.
 function _expDurAllowed(){
-  if(window._expVeoModel==='omni') return _expOmniKie() ? [4,6,8,10] : [3,4,5,6,7,8,9,10];   // Omni Flash : fal à la seconde 3→10 s ; kie (dev) = crans 4/6/8/10 s seulement
+  if(window._expVeoModel==='omni') return [4,6,8,10];   // Omni Flash = kie pour tous (25/09) : crans 4/6/8/10 s seulement (le carré fal suit les mêmes)
   return [4,6,8];
 }
 // ── DURÉE AUTO (défaut) : cale la durée sur la longueur du texte PARLÉ du prompt ──
@@ -29637,17 +29662,17 @@ function _expEstimateDur(){
   const secs = Math.max(4, Math.ceil(spoken.length/14));
   // AUTO = la durée qu'il FAUT selon le texte, calée sur le cran autorisé juste au-dessus.
   // Hors Élite : Veo cape à 8 s / clip. Élite / dev : extensions jusqu'à 29 s (au-delà = Montage IA).
-  const ladder = _expDurAllowed();   // Veo 4/6/8 · Omni fal 3→10 · Omni kie 4/6/8/10 (voir _expDurAllowed)
+  const ladder = _expDurAllowed();   // Veo 4/6/8 · Omni 4/6/8/10 (voir _expDurAllowed)
   const dur = ladder.find(x=>x>=secs) || ladder[ladder.length-1];
   return { dur, over: secs>ladder[ladder.length-1] };
 }
-function _expApplyAutoDur(){ if(!window._expDurAuto) return; initExpress(); }   // Libre : Omni fal=10 s max · Omni kie (dev) et Veo=estimation du script (durée posée dans initExpress)
+function _expApplyAutoDur(){ if(!window._expDurAuto) return; initExpress(); }   // Libre : Omni et Veo = estimation du script (durée posée dans initExpress)
 function _expToggleDurAuto(){ window._expDurAuto=!window._expDurAuto; if(window._expDurAuto) _expApplyAutoDur(); else initExpress(); }
 // Slider durée : position 0 = AUTO (le système / Veo cale la durée sur le texte parlé, défaut) ;
 // 1..N = durées Veo manuelles (4/6/8). (Axel 17/08 : « AUTO avant 4 s, par défaut ».)
 function _expDurSlide(v){
   const a=_expDurAllowed();
-  if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }   // position 0 = Libre (Omni : 10 s max + remboursement · Veo : script)
+  if(!v || v<=0){ window._expDurAuto=true; _expApplyAutoDur(); }   // position 0 = Libre (Omni et Veo : durée du script)
   else { _expSetDur(a[Math.min(v, a.length)-1]); }   // _expSetDur passe _expDurAuto à false
 }
 function _expSetDur(v){
@@ -29663,14 +29688,14 @@ function _expSetDur(v){
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){
   // Le carré (1:1) est natif sur Omni Flash uniquement (Veo ne fait pas le 1:1) → on bascule sur Omni.
-  if(v==='1:1'){ if(!_expModelAllowed('omni')){ toast('Le format carré (1:1) passe par Omni Flash — réservé aux plans Pro et Élite'); if(typeof openUpgradeModal==='function') openUpgradeModal(); return; } window._expVeoModel='omni'; }
+  if(v==='1:1') window._expVeoModel='omni';   // carré = Omni Flash (via fal : kie n'en fait pas), ouvert à tous depuis le 25/09
   window._expFormat=v; initExpress();
 }
 function _exp1080Allowed(){ return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase()); }
 function _expPickQual(v){
-  if(v==='720p' && _expOmniKie()){ toast('Omni Flash via kie : toujours en 1080p (même prix que le 720p)'); window._expQuality='1080p'; initExpress(); return; }
-  // 1080p = Pro/Élite : cadenas dans l'UI + blocage au clic (le clic sur Générer revérifie aussi).
-  if(v==='1080p' && !_exp1080Allowed()){ toast('La 1080p est réservée aux plans Pro et Élite'); showPaywall(); return; }
+  if(v==='720p' && _expOmniKie()){ toast('Omni Flash est toujours en 1080p'); window._expQuality='1080p'; initExpress(); return; }
+  // 1080p Veo = Pro/Élite : cadenas dans l'UI + blocage au clic (le clic sur Générer revérifie aussi). Omni : 1080p pour tous.
+  if(v==='1080p' && !_expOmniKie() && !_exp1080Allowed()){ toast('La 1080p est réservée aux plans Pro et Élite'); showPaywall(); return; }
   // Choisir 1080p FORCE 8 s minimum (limite Veo). Si on avait forcé le 8 s DEPUIS le mode Libre,
   // repasser en 720p REMET en Libre (Axel : « quand je reviens en 720p ça ne remet pas en libre »).
   if(v==='1080p' && window._expVeoModel!=='omni'){   // le forçage 8 s est une limite Veo ; Omni sort du 1080p natif à TOUTE durée 3-10 s
@@ -29680,7 +29705,7 @@ function _expPickQual(v){
   } else {
     if(window._exp1080Forced){ window._exp1080Forced=false; window._expDurAuto=true; }   // retour Libre
   }
-  if(!_expOmniKie()) window._expQualityKieForced=false;   // sur Omni kie, re-cliquer 1080p (imposé) ne doit pas effacer le 720p de l'user
+  if(!_expOmniKie()) window._expQualityKieForced=false;   // sur Omni, re-cliquer 1080p (imposé) ne doit pas effacer le 720p de l'user
   window._expQuality=v; initExpress();
 }
 
@@ -31284,6 +31309,7 @@ function _expPickFromLib(i){
 function _expRenderImgs(){
   const imgs=window._expImgs||[];
   if(typeof _expHeroSync==='function') _expHeroSync();
+  if(typeof _expUpdateGenCaption==='function') _expUpdateGenCaption();   // Omni : le prix suit l'image de départ à créer (25/09)
   const p=document.getElementById('expImgPreview'), d=document.getElementById('expImgDrop'), cnt=document.getElementById('expImgCount');
   // Le bouton « Ajoute tes images » reste un bouton d'ajout (il ne se transforme plus en aperçu
   // plein cadre) : les images vivent en vignettes dans la zone sombre, juste au-dessus du
@@ -31610,7 +31636,8 @@ async function _expCreateSeedance(prompt){
   }catch(e){ if(String(e&&e.message)!=='__abort'){ console.error('Seedance:',e); toast('Seedance : '+(e.message||e)); } if(ph) ph.style.display='flex'; }
   finally{ clearInterval(tick); setTimeout(()=>{ if(prog)prog.style.display='none'; },700); if(btn){ btn.disabled=false; btn.style.opacity=''; } }
 }
-// ⚡ Omni Flash pour Express : fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
+// ⚡ Omni Flash image→vidéo (image + texte → vidéo + VOIX NATIVE) pour Express et la Voix native du Générateur :
+// kie.ai (google/gemini-omni-flash-1-1) pour TOUS depuis le 25/09, sans repli ; carré 1:1 → fal (…/v1.1/image-to-video).
 // Renvoie le blob vidéo. Même chaîne que le module Omni (upload image → submit → poll status/result).
 // Mesure la durée réelle d'un blob vidéo (pour débiter Omni au réel, jamais plus que produit).
 // Fin de la PAROLE dans un clip (Axel 24/09) : Omni / Veo remplissent toute la durée demandée (crans fixes) → la voix
@@ -31646,6 +31673,19 @@ function _expMeasureDur(blob){
     }catch(_){ fin(0); }
   });
 }
+// Erreur kie d'Omni Flash → message utilisateur (Axel 25/09 : pas de repli, « réessaie »). Tâche lancée à l'issue inconnue
+// ('pending' : délai dépassé, résultat pas encore récupéré) → message d'origine (« arrivera dans ta Bibliothèque, ne relance
+// pas ») : ses crédits restent tirés, le filet serveur livre ou rembourse. Sinon rien n'a été livré : kie-proxy a rendu PUIS
+// remboursé le tirage (billing 'refunded'), ou rien n'a été tiré ('none' / 'unfunded') et l'appelant rembourse son débit.
+function _omniKieErr(e){
+  if(!e || e._kieStage==='pending') return e;
+  const cause = String((e && e.message) || e || 'échec').replace(/^kie\s*:\s*/i, '').replace(/\s*\(crédits rendus\)\s*$/, '').replace(/\s*—\s*réessaie[^—]*$/i, '').slice(0, 120);
+  const out = new Error(e._kieRefus
+    ? 'Omni Flash a refusé ce contenu (' + cause + ') — tes crédits te sont rendus ; change la réplique ou l\'image puis réessaie'
+    : 'Omni Flash a échoué (' + cause + ') — tes crédits te sont rendus, réessaie');
+  out._kieStage = e._kieStage; out._kieBill = e._kieBill; out._kieRefus = !!e._kieRefus;
+  return out;
+}
 async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep){
   const step=(v,t)=>{ try{ onStep && onStep(v,t); }catch(_){} };
   const { data:{ user } } = await sb.auth.getUser();
@@ -31667,28 +31707,27 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   const _omniPrompt = "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)";
   // kie.ai : Gemini Omni 1.1 Flash, MÊME modèle et MÊME prompt. Chez kie le prix est un forfait par clip identique en 720p
   // et 1080p → 1080p toujours (Axel 23/09). Durées kie : 4/6/8/10 s (arrondi au-dessus) ; 9:16 / 16:9 seulement.
-  //   • compte developer (_kieOn) : kie ou l'erreur, aucun repli ; un carré passe en 9:16 (inchangé) ;
-  //   • clients Pro / Élite (Axel 25/09) : kie d'abord, au prix choisi (720p / 1080p) ; un CARRÉ reste sur fal (kie n'en fait
-  //     pas) ; échec kie → repli fal sur la MÊME réservation quand le serveur l'a rendue (_kieCanFallback), sinon l'erreur
-  //     (délai dépassé = la vidéo arrivera en Bibliothèque ; soumission sans réponse = crédits rendus).
+  // Axel 25/09 : « tout le monde y a droit pareil, Starter inclus ; kie directement, pas de fallback, en 1080p » :
+  //   • 9:16 / 16:9 → kie pour TOUS (clients et developer), AUCUN repli fal : échec = kie-proxy rend puis rembourse le
+  //     tirage lui-même → erreur « réessaie » (délai dépassé = la vidéo arrivera en Bibliothèque, crédits gardés) ;
+  //   • carré 1:1 → fal (kie ne fait pas de carré) : SEULE exception, même prix (5 cr/s), même 1080p, mêmes crans ;
+  //   • compte developer avec aa_kie='0' (réglage de test en console) → fal, comme avant.
+  // `res` n'est plus lu : Omni Flash sort TOUJOURS en 1080p (paramètre gardé pour les appelants).
+  void res;
   window._aaLastEngine='fal'; window._aaKieFellBack=false;
-  const _kDev=_kieOn(), _kCli=!_kDev && _kieClientOn('omni') && window._expFormat!=='1:1';
-  if(_kDev || _kCli){
-    if(_kDev && window._expFormat==='1:1'){ window._expFormat='9:16'; toast('Carré indisponible chez kie — vidéo générée en 9:16'); }   // kie : 9:16 / 16:9 seulement
+  const _viaKie = window._expFormat!=='1:1' && (_kieDev() ? _kieOn() : true);
+  const _sec = [4,6,8,10].find(x=>x>=(Math.round(durSec)||6)) || 10;   // cran kie = la durée affichée et facturée
+  if(_viaKie){
     try{
       step(42,'Omni Flash (kie.ai) — génération…');
       const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
-        duration: ([4,6,8,10].find(x=>x>=(Math.round(durSec)||6))||10) }, { every:5000, maxPolls:240,
+        duration: _sec }, { every:5000, maxPolls:240,
         onTick:(i)=>step(Math.min(88,42+i), 'Omni Flash (kie.ai) — génération…') });
       step(90,'↓ Récupération de la vidéo…');
       const _vb = await _kieFetchBlob(_kr.url);
       window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
       return new Blob([_vb], { type:'video/mp4' });
-    }catch(e){
-      if(_kDev || !_kieCanFallback(e)) throw e;   // developer : aucun repli (Axel 23/09) ; client : réservation non re-tirable
-      console.warn('[kie] Omni Flash : échec kie, repli fal (réservation '+(e._kieBill||'?')+')', e);
-      window._aaKieFellBack=true; toast('kie.ai indisponible — repli Omni Flash (fal)');
-    }
+    }catch(e){ throw _omniKieErr(e); }   // plus AUCUN repli fal (Axel 25/09)
   }
   const H=await getAuthHeader();
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
@@ -31704,13 +31743,13 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     // Consigne forte EN TÊTE (les modèles pondèrent le début) + rappel en fin. Reste imparfait (limite modèle).
     prompt: _omniPrompt,
     aspect_ratio: (window._expFormat==='16:9'?'16:9':(window._expFormat==='1:1'?'1:1':'9:16')),
-    duration: Math.max(3, Math.min(10, Math.round(durSec)||6)),
-    resolution: (res==='1080p'?'1080p':'720p'),
+    duration: _sec,          // mêmes crans que kie (fal accepte 3-10 s) : affiché = débité = facturé par fal-proxy
+    resolution: '1080p',     // 1080p seul (Axel 25/09), imposé aussi par fal-proxy
     // PAS de generate_audio : l'endpoint image-to-video de gemini-omni-flash sort la voix native
     // par défaut — ce champ n'existe pas dans le schéma fal (un param inconnu risque un 422).
   });
   const sd=await sub.json().catch(()=>({}));
-  if(!sub.ok) throw new Error('Omni Flash '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160));
+  if(!sub.ok) throw new Error('Omni Flash '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160)+' — tes crédits te sont rendus, réessaie');
   const pick=(o)=>{ if(!o) return null; return (o.video&&o.video.url)||(o.output&&o.output.video&&o.output.video.url)||(o.videos&&o.videos[0]&&o.videos[0].url)||o.video_url||null; };
   let outUrl=pick(sd);
   if(!outUrl && (sd.status_url||sd.request_id)){
@@ -31733,7 +31772,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
         if(!outUrl) throw new Error('Omni Flash : vidéo prête mais récupération impossible — réessaie dans un instant');
         break;
       }
-      if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):''));
+      if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):'')+' — tes crédits te sont rendus, réessaie');
       step(Math.min(88,42+i*2),'Omni Flash — génération… ('+Math.min(88,42+i*2)+' %)');
     }
   }
@@ -31749,36 +31788,35 @@ async function expressCreate(){
   if(window._expEngine==='seedance' && _expIsDev()){ return _expCreateSeedance(prompt); }
   if(_gateFreeGenerate()) return;
   window._aaLastEngine=''; window._expKieRid=null;
-  // Omni Flash = Pro/Élite. L'UI cache le bouton pour les autres, mais on REGATE ici avant tout débit
-  // (sinon un plan inférieur pourrait forcer window._expVeoModel='omni' et accéder à la feature).
-  if(window._expVeoModel==='omni' && !_expModelAllowed('omni')){
-    toast('Omni Flash est réservé aux plans Pro et Élite');
-    showPaywall(); return;
-  }
-  // 1080p = Pro et + → sélectionnable par tous, mais paywall au moment de générer
-  if(window._expQuality==='1080p' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
+  const _isOmni = window._expVeoModel==='omni';
+  // Omni Flash = TOUS les plans depuis le 25/09 (Axel : « Starter inclus ») : plus de gate Pro/Élite ici (le Free est
+  // arrêté juste au-dessus par _gateFreeGenerate ; kie-proxy / fal-proxy refont le contrôle de plan côté serveur).
+  // 1080p Veo = Pro et + → sélectionnable par tous, mais paywall au moment de générer. Omni : 1080p pour tous.
+  if(!_isOmni && window._expQuality==='1080p' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
     toast('La 1080p est réservée au plan Pro et +');
     showPaywall(); return;
   }
   // ── Durée/résolution RÉELLES + DÉBIT À LA DURÉE GÉNÉRÉE (Axel 07/09 : « payé 174 pour 8 s ») ──
   // Avant, on débitait _expDur×tarif d'un coup (29 s en Libre) même si les extensions échouaient → sur-débit.
   // Maintenant on débite la BASE (4/6/8 s) ici, puis CHAQUE extension seulement quand elle réussit (plus bas).
-  const _isOmni = window._expVeoModel==='omni';
   const _reqDur = parseInt(window._expDur)||(_isOmni?6:4);
   let _dur = _reqDur;
   let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
   if(_isOmni){
-    _dur = _expOmniKie() ? ([4,6,8,10].find(x=>x>=_reqDur)||10)   // Omni kie (dev) : crans 4/6/8/10 s (arrondi au-dessus, comme kie-proxy)
-                         : Math.min(10, Math.max(3, _reqDur));   // Omni Flash 3-10 s : durée auto-suivie sur le script (ou choix user), débit ajusté au réel plus bas
+    _dur = [4,6,8,10].find(x=>x>=_reqDur)||10;   // Omni = kie pour tous (25/09) : crans 4/6/8/10 s (arrondi au-dessus, comme kie-proxy)
+    _res = '1080p';                              // 1080p seul (Axel 25/09 : « en 1080p pas 720p »)
   } else {
     _dur = _dur<=4?4:(_dur<=6?6:8);   // Veo : 4/6/8 s (plus d'extensions de scène, voir _expDurAllowed)
     if(_res!=='720p' && _reqDur<8){ _res='720p'; toast('1080p dispo à partir de 8 s — vidéo générée en 720p'); }
   }
-  const _expRate = _isOmni ? (CREDIT_COSTS.omniFlashPerSec||4) : (window._expVeoModel==='pro' ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5));
-  const _expMult = _isOmni ? ((_res==='1080p') ? (CREDIT_COSTS.omni1080Mult||1.5) : 1)   // Omni : 1080p natif = ×1,5 (4→6 cr/s)
-                           : ((_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1);
+  const _expRate = _isOmni ? (CREDIT_COSTS.omniFlashPerSec||5) : (window._expVeoModel==='pro' ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5));
+  const _expMult = _isOmni ? 1 : ((_res==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1);
+  // Omni (25/09) : 5 × cran + l'image de départ quand Express doit la CRÉER sur la même op (_expOmniImgPart) → kie-proxy
+  // trouve ensuite pile 5 × durée à tirer. L'image non créée au final (composition ratée → 1re image) est rendue au succès.
+  const _omniImgPart = _isOmni ? _expOmniImgPart() : 0;
+  let _omniImgMade = false;
   if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
-  if(!(await spendCreditsFor(Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))) return;
+  if(!(await spendCreditsFor(_isOmni ? _expOmniCost(_dur) : Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))) return;
 
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
@@ -31815,6 +31853,7 @@ async function expressCreate(){
         const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1152x2048');
         const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize);
         if(_composed){
+          _omniImgMade = true;
           if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
           else { const _b=await (await fetch(_composed)).blob(); imgMime=_b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(_b);}); }
         }
@@ -31825,6 +31864,7 @@ async function expressCreate(){
       const size = window._expFormat==='16:9' ? '1792x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1792');
       const imgPrompt = prompt + ', ' + styleMeta.prompt + ', no text, no watermark, high quality';
       const url = await _imgGenerateOne(token, imgPrompt, size, null);
+      _omniImgMade = true;
       if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
       else { const b=await (await fetch(url)).blob(); imgMime=b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(b);}); }
       if(typeof _imgMonthIncrement==='function') _imgMonthIncrement();
@@ -31853,25 +31893,15 @@ async function expressCreate(){
     // (durée _dur, base débitée, résolution _res, tarifs _expRate/_expMult calculés en amont)
     let blob;
     if(_isOmni){
-      // ⚡ Omni Flash = fal google/gemini-omni-flash/v1.1/image-to-video (image + texte → vidéo + VOIX NATIVE).
+      // ⚡ Omni Flash image→vidéo (image + texte → vidéo + VOIX NATIVE) : kie.ai pour tous, sans repli (carré 1:1 : fal).
       setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni Flash — génération…');
       blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t));
-      // ── DÉBIT À LA DURÉE RÉELLE (Axel 08/09) ──────────────────────────────────────────────
-      // On a RÉSERVÉ _dur×tarif AVANT l'appel (règle sécurité : débiter avant le fournisseur).
-      // Omni peut sortir plus COURT que demandé (surtout en Libre). On mesure la vidéo produite
-      // et on rembourse le trop-perçu : refund de l'op réservée + re-débit du réel. Jamais de
-      // sur-débit rétroactif (on ne facture jamais plus que ce qui a été réservé/produit).
-      try{
-        const _realSec = await _expMeasureDur(blob);
-        const _billSec = Math.max(3, Math.min(_dur, Math.round(_realSec||0)));
-        if(_realSec>0 && _billSec < _dur && typeof _creditOps!=='undefined' && _creditOps.length){
-          const _newCost = Math.round(_billSec * _expRate * _expMult);
-          const _rf = await creditsFlowRefund('Omni : durée réelle '+_billSec+' s (< '+_dur+' s réservé)');
-          // (Axel 25/09) Re-débit SEULEMENT si le remboursement a eu lieu : le proxy (fal comme kie) RÈGLE l'op dès que la
-          // vidéo est rapatriée → refund_credits répond already_delivered (0) et re-débiter faisait payer la vidéo DEUX fois.
-          if(_rf>0 && _newCost>0) await spendCreditsFor(_newCost, 'express-omni');   // re-débit du réel (solde toujours suffisant : on vient de rembourser plus)
-        }
-      }catch(_durErr){ console.warn('[omni] ajustement durée réelle:', _durErr); }
+      // Plus d'« ajustement à la durée réelle » (Axel 25/09) : Omni sort au cran demandé (4/6/8/10 s) et le serveur facture
+      // EXACTEMENT ce cran puis règle l'op dès la livraison (un remboursement après coup répondait already_delivered).
+      // Image de départ réservée mais finalement NON créée (composition ratée → 1re image gardée) : ce reliquat est resté
+      // dans la réserve (kie-proxy / fal-proxy ne tirent que 5 × durée) → rendu ici, par le serveur (refund_credits = la
+      // réserve RESTANTE seulement, jamais la vidéo livrée).
+      if(_omniImgPart > 0 && !_omniImgMade){ try{ await creditsFlowRefund('image de départ non créée'); }catch(_){} }
     } else {
     // Veo 3.1 (API Gemini) = audio NATIF, sans paramètre : envoyer `generateAudio` déclenche un 400 « …audio… »
     // puis le repli (relance muette + voix TTS Gemini à muxer) → 2 appels, une voix TTS PAR-DESSUS la voix native
@@ -40578,9 +40608,9 @@ window._mExpSync=function(){
     var is1080=(q==='1080p');
     q720.style.background=is1080?'transparent':'var(--surface-2)'; q720.style.color=is1080?'var(--text-3)':'var(--text)';
     q1080.style.background=is1080?'var(--surface-2)':'transparent'; q1080.style.color=is1080?'var(--text)':'var(--text-3)';
-    q1080.innerHTML = (typeof _exp1080Allowed==='function' && !_exp1080Allowed())
+    q1080.innerHTML = (typeof _exp1080Allowed==='function' && !_exp1080Allowed() && window._expVeoModel!=='omni')
       ? '1080p <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>'
-      : ((window._expVeoModel==='omni') ? '1080p' : '1080p · dès 8 s');  // cadenas si non Pro/Élite ; Omni = 1080p natif à toute durée
+      : ((window._expVeoModel==='omni') ? '1080p' : '1080p · dès 8 s');  // cadenas si non Pro/Élite (Veo) ; Omni = 1080p pour tous, à toute durée (25/09)
   }
   var vId=(window._expVoice||'native');
   var vMeta=(typeof EXP_VOICES!=='undefined'?EXP_VOICES:[]).find(function(x){return x.id===vId;});
