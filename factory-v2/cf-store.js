@@ -1,5 +1,5 @@
 /*
- * Creative Factory v2 · cf-store.js · étapes 0 et 1 du plan (préprod, lecture seule)
+ * Creative Factory v2 · cf-store.js · étapes 0, 1 et 2 du plan (préprod, lecture seule)
  *
  * UNE seule source par chiffre : l'interface ne lit que window.CF et se redessine sur l'événement
  * « cf-data » (detail = { ver, key }). Aucune donnée n'est gardée ailleurs (ni localStorage, ni copie).
@@ -15,8 +15,13 @@
  *     .aud       ig-insights?part=audience → même forme ; abonnés par pays, ville, âge, genre (hors fenêtre)
  *     .media     ig-insights?part=media → même forme ; profil + toutes les publications (chiffres à vie) :
  *                publications et visionnage moyen par fenêtre, top publications
+ *   CF.dm[r]   onglet Auto-DM (étape 2, Axel 25/09) : RPC ig_dm_stats_v2(p_range), r ∈ 24h | 7j | 30j | 90j | all
+ *              → { state, loading, at, data, error, kind } ; notre base (pas Instagram) : relue au plus toutes les 2 min.
+ *              Personnes uniques (commentaire → « Je suis abonné » → lien → clic), relance en lecture seule,
+ *              leads = pseudo + état seulement (jamais d'identifiant Instagram)
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
- *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { force } ignore les 15 min
+ *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
+ *                     { force } ignore les 15 min
  *   CF.net     journal des appels réseau faits par le store (pour vérifier « 3 appels max, puis 0 »)
  *
  * Contrôle d'accès : 1er appel = RPC factory_access(). {error:'forbidden'} ⇒ « Accès réservé ».
@@ -37,10 +42,13 @@
   var TIMEOUT_MS = 45000;
   var SERIES_TIMEOUT_MS = 90000;           // 1er relevé d'un long historique : jusqu'à ~50 s côté serveur
   var SERIES_RETRY_MS = 4000, SERIES_RETRY_MAX = 8;
+  var DM_RANGES = ['24h', '7j', '30j', '90j', 'all'];   // Auto-DM : nos propres horodatages, donc 24 h possible (Axel 25/09)
+  var DM_TTL_MS = 2 * 60 * 1000;           // RPC légère sur notre base : on peut relire souvent
 
   window.CF_READONLY = true;
 
   function newSlot() { return { state: 'idle', loading: false, at: 0, data: null, error: null, kind: null }; }
+  function newDm() { var o = {}; DM_RANGES.forEach(function (r) { o[r] = newSlot(); }); return o; }
   function newAcct() {
     return {
       accounts: { state: 'idle', loading: false, at: 0, list: [], primary: null, error: null },
@@ -56,16 +64,20 @@
     ver: 0,
     user: null,
     acct: newAcct(),
+    dm: newDm(),
     oauth: null,
     net: [],
     IG_RANGES: IG_RANGES.slice(),
+    DM_RANGES: DM_RANGES.slice(),
     TTL_MS: TTL_MS,
+    DM_TTL_MS: DM_TTL_MS,
     PRIMARY_USERNAME: PRIMARY_USERNAME,
     refresh: refresh,
     loadAccounts: loadAccounts,
     loadInsights: loadInsights,
     loadAudience: loadAudience,
     loadMedia: loadMedia,
+    loadDm: loadDm,
     prefetch: prefetch,
     tagMedia: tagMedia,
     isFresh: isFresh,
@@ -99,8 +111,8 @@
     var m = String(e.message || e);
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
-  function isFresh(slot) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < TTL_MS; }
-  function resetData() { epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.oauth = null; }
+  function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
+  function resetData() { epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.oauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -481,6 +493,97 @@
     return p;
   }
 
+  // ── Auto-DM (étape 2, Axel 25/09) : RPC ig_dm_stats_v2, owner/dev seulement, une case par période ──
+  // Liste blanche de ce qui entre dans le store : compteurs entiers ≥ 0 (sinon null → « — »), pseudo Instagram
+  // conforme (lettres, chiffres, point, tiret bas, 30 car.), jamais d'identifiant de personne.
+  function cnt(x) { return typeof x === 'number' && isFinite(x) && x >= 0 ? Math.round(x) : null; }
+  function ms(x) { var t = typeof x === 'string' ? Date.parse(x) : NaN; return isFinite(t) ? t : null; }
+  function igName(x) { return typeof x === 'string' && /^[A-Za-z0-9._]{1,30}$/.test(x) ? x : null; }
+  function mediaId(x) { return typeof x === 'string' && /^[0-9]{5,30}$/.test(x) ? x : null; }
+  var DM_REL = { done: 'done', planned: 'planned', missed: 'missed' };
+  function normDm(b, range, at) {
+    var f = b.funnel && typeof b.funnel === 'object' ? b.funnel : {}, r = b.relance && typeof b.relance === 'object' ? b.relance : {};
+    var cr = b.relance_cron && typeof b.relance_cron === 'object' ? b.relance_cron : null;
+    function steps(o) { return { commented: cnt(o.commented), tapped: cnt(o.tapped), linked: cnt(o.linked), clicked: cnt(o.clicked) }; }
+    return {
+      range: range, fetchedAt: at, step: ['hour', 'day', 'week', 'month'].indexOf(b.step) >= 0 ? b.step : null,
+      since: ms(b.since), until: ms(b.until), firstAt: ms(b.first_event_at), lastAt: ms(b.last_event_at),
+      f: steps(f),
+      rel: { unclicked: cnt(r.unclicked), done: cnt(r.done), doneUnclicked: cnt(r.done_unclicked), doneClicked: cnt(r.done_clicked),
+        planned: cnt(r.planned), missed: cnt(r.missed) },
+      cron: cr ? { active: cr.active === true, schedule: str(cr.schedule) ? cr.schedule.slice(0, 40) : null } : null,
+      late: cnt(b.late) || 0, comments: cnt(b.comments),
+      series: Array.isArray(b.series) ? b.series.map(function (p) {
+        if (!p || typeof p !== 'object' || ms(p.t) == null) return null;
+        var s = steps(p);
+        return { t: ms(p.t), d: ymd(p.d), h: cnt(p.h), commented: s.commented, tapped: s.tapped, linked: s.linked, clicked: s.clicked };
+      }).filter(Boolean) : [],
+      posts: Array.isArray(b.by_media) ? b.by_media.map(function (p) {
+        var id = p && mediaId(p.media_id);
+        if (!id) return null;
+        var s = steps(p); s.id = id;
+        return s;
+      }).filter(Boolean) : [],
+      heat: Array.isArray(b.heat) ? b.heat.map(function (c) {
+        return Array.isArray(c) && cnt(c[0]) >= 1 && cnt(c[0]) <= 7 && cnt(c[1]) != null && cnt(c[1]) <= 23 && cnt(c[2]) != null ? { dow: cnt(c[0]), h: cnt(c[1]), n: cnt(c[2]) } : null;
+      }).filter(Boolean) : [],
+      leadsTotal: cnt(b.leads_total),
+      leads: Array.isArray(b.leads) ? b.leads.map(function (l) {
+        if (!l || typeof l !== 'object' || ms(l.at) == null) return null;
+        return { u: igName(l.username), at: ms(l.at), tapped: l.tapped === true, linked: l.linked === true, clicked: l.clicked === true,
+          rel: typeof l.relance === 'string' && Object.prototype.hasOwnProperty.call(DM_REL, l.relance) ? DM_REL[l.relance] : null };
+      }).filter(Boolean).slice(0, 200) : []
+    };
+  }
+  function loadDm(range, opts) {
+    if (DM_RANGES.indexOf(range) < 0) return Promise.reject(new Error('Période Auto-DM refusée : « ' + range + ' »'));
+    var force = !!(opts && opts.force), key = 'dm:' + range, S = CF.dm[range];
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight[key]) return inflight[key];
+    if (!force && isFresh(S, DM_TTL_MS)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var patch;
+      logNet('rpc ig_dm_stats_v2 ' + range);
+      try {
+        var res = await sb.rpc('ig_dm_stats_v2', { p_range: range });
+        var err = res && res.error, d = res && res.data, code = err ? String(err.code || '') : '';
+        if (err && (code === 'PGRST202' || res.status === 404)) {
+          throw { kind: 'missing', message: 'la fonction ig_dm_stats_v2 n’est pas encore en base (migration 20260925124500 à appliquer)' };
+        } else if (err && (code === '42501' || res.status === 403)) {
+          throw { kind: 'forbidden', message: 'lecture refusée par la base (réservée owner / plan developer)' };
+        } else if (err && (res.status === 401 || code === 'PGRST301' || code === 'PGRST303')) {
+          throw { kind: 'auth', message: 'session expirée : reconnecte-toi' };
+        } else if (err) {
+          throw { kind: 'http', message: errText(err) };
+        } else if (!d || typeof d !== 'object' || Array.isArray(d)) {
+          throw { kind: 'http', message: 'réponse vide' };
+        } else if (d.error) {
+          throw d.error === 'forbidden' ? { kind: 'forbidden', message: 'réservé au propriétaire (owner / plan developer)' }
+            : { kind: 'range', message: 'ig_dm_stats_v2 : ' + String(d.error).slice(0, 120) };
+        } else if (d.range !== range) {
+          // Garde-fou, comme ig-insights : jamais des chiffres d'une autre période sous « 7 j ».
+          throw { kind: 'range', message: 'ig_dm_stats_v2 a répondu pour « ' + String(d.range).slice(0, 12) + ' » au lieu de « ' + range + ' »' };
+        } else {
+          patch = { state: 'ready', kind: null, error: null, data: normDm(d, range, Date.now()) };
+        }
+      } catch (e) {
+        patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
+        if (e.kind && e.kind !== 'http' && e.kind !== 'error') patch.data = null;   // réseau ou 500 : on garde les chiffres précédents, datés
+      }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight[key] === p) delete inflight[key];
+      emit(key);
+      return S;
+    })();
+    inflight[key] = p;
+    emit(key);
+    return p;
+  }
+
   // ── préchargement : une fois la fenêtre affichée prête, les autres se chargent UNE par UNE en arrière-plan →
   //    passer de 30 j à 7 j ou à All time devient instantané (cache 15 min comme le reste) ──
   var pre = { on: false, queue: [], ep: -1 };
@@ -495,7 +598,7 @@
   function pumpPrefetch() {
     if (!pre.on || pre.ep !== epoch || CF.status !== 'ready' || retryWaits > 0) return;
     for (var q = 0; q < IG_RANGES.length; q++) { if (CF.acct.ig[IG_RANGES[q]].kind === 'disconnected') { pre.queue = []; return; } }
-    for (var k in inflight) { if (inflight[k] && k !== 'accounts') return; }   // une seule requête Instagram à la fois
+    for (var k in inflight) { if (inflight[k] && k !== 'accounts' && k.indexOf('dm:') !== 0) return; }   // une seule requête Instagram à la fois (l'Auto-DM lit notre base)
     while (pre.queue.length) {
       var r = pre.queue.shift(), S = CF.acct.ig[r];
       if (S.kind === 'disconnected') { pre.queue = []; return; }
@@ -536,6 +639,7 @@
     if (CF.status !== 'ready') return Promise.resolve();
     var tasks = [loadAccounts({ force: !!opts.force })];
     if (opts.igRange) tasks.push(loadInsights(opts.igRange, { force: !!opts.force }), loadAudience({ force: !!opts.force }), loadMedia({ force: !!opts.force }));
+    if (opts.dmRange) tasks.push(loadDm(opts.dmRange, { force: !!opts.force }), loadMedia({ force: !!opts.force }));
     return Promise.all(tasks);
   }
 
