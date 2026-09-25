@@ -1,0 +1,151 @@
+{
+  "genere_par": "render-worker/test/audio-clean/parite-chrome.test.mjs",
+  "tolerance": {
+    "correlation": 0.9999,
+    "residuDb": -40,
+    "gainDb": 0.1,
+    "longueurS": 0.03
+  },
+  "entrees": {
+    "h73.wav": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -96.5,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -63.8,
+        "gainDb": 0.001,
+        "ecartLongueurS": 0
+      }
+    },
+    "cta74.wav": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -96.5,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -77.3,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      }
+    },
+    "h73_bruit.wav": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -96.5,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -77.7,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      }
+    },
+    "h73_st48.wav": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -96.5,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -63.8,
+        "gainDb": 0.001,
+        "ecartLongueurS": 0
+      }
+    },
+    "h73_decor48.wav": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -96.2,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -66.8,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      }
+    },
+    "cta74_faible_st48.wav": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -96.5,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -73.6,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      }
+    },
+    "h73_mono44.wav": {
+      "decodage": {
+        "correlation": 0.999999,
+        "residuDb": -59.7,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 0.999999,
+        "residuDb": -56.6,
+        "gainDb": 0.001,
+        "ecartLongueurS": 0
+      }
+    },
+    "h73_st44.mp3": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -84.1,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -74.8,
+        "gainDb": 0,
+        "ecartLongueurS": 0
+      }
+    },
+    "h73_mono48.m4a": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -143,
+        "gainDb": 0,
+        "ecartLongueurS": 0.0013
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -69.9,
+        "gainDb": 0,
+        "ecartLongueurS": 0.0013
+      }
+    },
+    "h73_video.mp4": {
+      "decodage": {
+        "correlation": 1,
+        "residuDb": -82.8,
+        "gainDb": 0,
+        "ecartLongueurS": 0.0141
+      },
+      "nettoyage": {
+        "correlation": 1,
+        "residuDb": -68.7,
+        "gainDb": 0,
+        "ecartLongueurS": 0.0141
+      }
+    }
+  }
+}

@@ -1,19 +1,21 @@
 // serveur.test.mjs — la route POST /audio/clean du worker : auth, taille, type,
-// concurrence, délai, sécurité (SSRF), vrai nettoyage de bout en bout, et le
-// serveur qui répond PENDANT qu'un rendu bloque le processus principal.
+// concurrence, délai (le sien et celui du MCP), sécurité (SSRF), vrai nettoyage de
+// bout en bout (MP3 de la bonne durée, sans décalage), refus définitifs (413), et le
+// serveur qui répond — et qui est relancé s'il meurt — PENDANT qu'un rendu bloque le
+// processus principal.
 //
 //   node --test test/audio-clean/serveur.test.mjs
 import { test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import net from 'node:net'
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { creerServeurAudio, cleValide, envEnfant } from '../../audio-server.mjs'
-import { nettoyerAudio } from '../../audio-clean.mjs'
+import { nettoyerAudio, nettoyerPcm, decoder48kMono } from '../../audio-clean.mjs'
 
 const ICI = dirname(fileURLToPath(import.meta.url))
 const CLE = 'cle-de-test-0123456789abcdef'
@@ -175,6 +177,26 @@ test('délai maximal : un traitement trop long est interrompu (504) et son signa
   assert.equal(faux.enCours[0].signal.aborted, true, 'le travail en cours doit être arrêté')
   await jusqua(() => s.etat().actifs === 0)
 })
+test('délai de l\'appelant (x-clean-delai-ms) : le plus court des deux s\'applique, jamais sous 1 s', async () => {
+  const faux = fauxNettoyage()
+  const { base } = await demarrer({ nettoyer: faux.fn, delaiMs: 10_000 })
+  let t = Date.now()
+  let r = await poster(base, H73, { 'x-clean-delai-ms': '1200' })
+  assert.equal(r.status, 504)
+  const ecoule = Date.now() - t
+  assert.ok(ecoule >= 1100 && ecoule < 3000, `504 attendu vers 1,2 s, obtenu en ${ecoule} ms`)
+  // valeur absurde : bornée à 1 s ; illisible : ignorée (délai du serveur)
+  t = Date.now()
+  r = await poster(base, H73, { 'x-clean-delai-ms': '5' })
+  assert.equal(r.status, 504)
+  assert.ok(Date.now() - t >= 900, 'jamais sous 1 s')
+  const f2 = fauxNettoyage()
+  const { base: b2 } = await demarrer({ nettoyer: f2.fn, delaiMs: 400 })
+  t = Date.now()
+  r = await poster(b2, H73, { 'x-clean-delai-ms': '60000' })
+  assert.equal(r.status, 504)
+  assert.ok(Date.now() - t < 2000, 'un appelant ne peut pas allonger le délai du serveur')
+})
 test('traitement qui ignore son délai : 504 quand même, sa place reste prise jusqu\'à sa vraie fin, la file expire sans démarrer', async () => {
   const faux = fauxNettoyage({ ignoreSignal: true })
   const { s, base } = await demarrer({ nettoyer: faux.fn, concurrence: 1, file: 2, delaiMs: 400 })
@@ -201,7 +223,23 @@ test('un vrai traitement abandonné arrête ffmpeg et RNNoise net', async () => 
 })
 
 // ── le vrai nettoyage, de bout en bout ──
-test('H73.wav → 200 audio/mpeg, durée en en-tête, MP3 lisible de même durée', async () => {
+// PCM 48 kHz mono d'un fichier, décodé par ffmpeg (décodeur sans blanc : respecte l'en-tête LAME)
+function pcmDe(fichier) {
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', fichier, '-f', 'f32le', '-ac', '1', '-ar', '48000', 'pipe:1'], { maxBuffer: 1 << 28 })
+  const ab = new ArrayBuffer(r.stdout.length); new Uint8Array(ab).set(r.stdout)
+  return new Float32Array(ab)
+}
+// décalage (en échantillons) qui maximise la corrélation de b sur a, sur une fenêtre parlée
+function decalage(a, b, debut = 48_000, n = 24_000, max = 2_000) {
+  let meilleur = 0, score = -Infinity
+  for (let k = -max; k <= max; k++) {
+    let c = 0
+    for (let i = debut; i < debut + n; i++) c += a[i] * (b[i + k] || 0)
+    if (c > score) { score = c; meilleur = k }
+  }
+  return meilleur
+}
+test('H73.wav → 200 audio/mpeg : durée EXACTE (en-tête LAME), voix sans décalage, en-tête de durée juste', async () => {
   const { base, lignes } = await demarrer()
   const r = await poster(base, H73)
   assert.equal(r.status, 200)
@@ -216,9 +254,23 @@ test('H73.wav → 200 audio/mpeg, durée en en-tête, MP3 lisible de même duré
   assert.equal(info.streams[0].sample_rate, '48000')
   assert.equal(info.streams[0].channels, 1)
   assert.equal(info.streams[0].bit_rate, '192000')
-  assert.ok(Math.abs(Number(info.format.duration) - 8.02) < 0.1, 'durée ' + info.format.duration)
+  assert.equal(Number(info.format.duration).toFixed(3), r.headers.get('x-audio-duration'), 'durée du fichier = en-tête X-Audio-Duration')
+  // le MP3 décodé a EXACTEMENT les échantillons du signal nettoyé, et la voix n'est pas décalée
+  const attendu = (await nettoyerPcm(await decoder48kMono(join(ICI, 'H73.wav')))).propre
+  const decode = pcmDe(f)
+  assert.equal(decode.length, attendu.length, `échantillons décodés ${decode.length} ≠ ${attendu.length}`)
+  assert.equal(decalage(attendu, decode), 0, 'la voix du MP3 doit tomber au même échantillon que le signal nettoyé')
   assert.equal(lignes.length, 1)
   assert.match(lignes[0], /^\[clean\] 200 · 8\.0 s d'audio · 0\.77 Mo → 0\.19 Mo · \d+\.\d s$/)
+})
+test('stéréo G=D : même MP3, octet pour octet, que la prise mono (mixage de Web Audio, pas +3 dB)', async () => {
+  const { base } = await demarrer()
+  const stereo = join(TMP, 'h73-stereo.wav')
+  spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', join(ICI, 'H73.wav'), '-af', 'pan=stereo|c0=c0|c1=c0', '-c:a', 'pcm_s16le', stereo])
+  const a = Buffer.from(await (await poster(base, H73)).arrayBuffer())
+  const b = Buffer.from(await (await poster(base, readFileSync(stereo))).arrayBuffer())
+  assert.ok(a.length > 100_000)
+  assert.ok(a.equals(b), 'la version stéréo doit donner exactement le même résultat')
 })
 test('un MP4 vidéo avec piste audio est accepté (video/mp4) ; sans piste audio → 422', async () => {
   const { base } = await demarrer()
@@ -241,6 +293,39 @@ test('audio plus long que la borne → 413 trop_long', async () => {
   assert.equal(r.status, 413)
   assert.equal((await r.json()).error, 'trop_long')
 })
+test('audio qui MENT sur sa durée (WebM annonçant 1 s pour 8 s) : la borne du décodage tient quand même', async () => {
+  const webm = join(TMP, 'menteur.webm')
+  const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', join(ICI, 'H73.wav'), '-c:a', 'libopus', '-b:a', '48k', webm])
+  assert.equal(g.status, 0, String(g.stderr))
+  // élément Duration de Matroska (0x4489, flottant 8 octets, en ms) réécrit à 1000
+  const octets = readFileSync(webm)
+  const i = octets.indexOf(Buffer.from([0x44, 0x89, 0x88]))
+  assert.ok(i > 0, 'élément Duration introuvable')
+  octets.writeDoubleBE(1000, i + 3)
+  const p = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', '-'], { input: octets, encoding: 'utf8' })
+  assert.equal(Number(p.stdout.trim()), 1, 'ffprobe doit croire l\'en-tête (1 s)')
+  const { base } = await demarrer({ maxSecondes: 3 })
+  const r = await poster(base, octets, { 'content-type': 'audio/webm' })
+  assert.equal(r.status, 413)
+  assert.equal((await r.json()).error, 'trop_long')
+})
+test('format hors limites (8 canaux à 384 kHz, la « bombe » FLAC) → 413 hors_limites immédiat', async () => {
+  const bombe = join(TMP, 'bombe.flac')
+  const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'anullsrc=r=384000:cl=7.1', '-t', '1', '-c:a', 'flac', bombe])
+  assert.equal(g.status, 0, String(g.stderr))
+  const { base } = await demarrer()
+  const t = Date.now()
+  const r = await poster(base, readFileSync(bombe), { 'content-type': 'audio/flac' })
+  assert.equal(r.status, 413)
+  assert.equal((await r.json()).error, 'hors_limites')
+  assert.ok(Date.now() - t < 5000, `refus en ${Date.now() - t} ms`)
+})
+test('garde-fou « sortie muette » → 422 (le MCP passe alors à son secours, jamais un silence facturé)', async () => {
+  const { base } = await demarrer({ nettoyer: async () => { throw Object.assign(new Error('muet'), { code: 'sortie_muette' }) } })
+  const r = await poster(base, H73)
+  assert.equal(r.status, 422)
+  assert.equal((await r.json()).error, 'sortie_muette')
+})
 test('SSRF : une liste de lecture déguisée en audio ne fait ouvrir AUCUNE URL', async () => {
   let visites = 0
   const piege = http.createServer((q, s) => { visites++; s.end('x') })
@@ -260,27 +345,66 @@ test('SSRF : une liste de lecture déguisée en audio ne fait ouvrir AUCUNE URL'
 })
 
 // ── architecture : le serveur répond pendant qu'un rendu bloque worker.mjs ──
-test('processus enfant : /health répond alors que le processus principal est bloqué (execSync)', async () => {
+test('processus enfant : /health répond pendant le blocage (execSync) ; tué, il est RELANCÉ sans attendre la fin du « rendu »', async () => {
   const port = await new Promise((ok) => { const t = net.createServer().listen(0, '127.0.0.1', () => { const p = t.address().port; t.close(() => ok(p)) }) })
-  const aide = spawn(process.execPath, [join(ICI, 'aide-bloque.mjs')], { env: { ...process.env, PORT: String(port), AUDIO_CLEAN_KEY: CLE }, stdio: ['ignore', 'pipe', 'pipe'] })
+  const aide = spawn(process.execPath, [join(ICI, 'aide-bloque.mjs')], { env: { ...process.env, PORT: String(port), AUDIO_CLEAN_KEY: CLE, BLOCAGE_S: '14' }, stdio: ['ignore', 'pipe', 'pipe'] })
   let sortie = ''
   aide.stdout.on('data', (d) => { sortie += d })
   aide.stderr.on('data', (d) => { sortie += d })
+  const sante = async () => { try { return (await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(500) })).status === 200 } catch (_) { return false } }
   try {
-    await jusqua(() => sortie.includes('BLOQUE'), 10_000)
+    await jusqua(() => /BLOQUE \d+/.test(sortie), 10_000)
+    const pid = Number(/BLOQUE (\d+)/.exec(sortie)[1])
     const t = Date.now()
-    const r = await fetch(`http://127.0.0.1:${port}/health`)
-    assert.equal(r.status, 200)
+    assert.ok(await sante(), '/health doit répondre pendant le blocage')
     assert.ok(Date.now() - t < 1500, `réponse en ${Date.now() - t} ms pendant le blocage`)
     const n = await poster(`http://127.0.0.1:${port}`, readFileSync(join(ICI, 'CTA74.wav')))
     assert.equal(n.status, 200, 'le vrai nettoyage marche aussi pendant le blocage')
+    // le serveur audio meurt (manque de mémoire…) en plein « rendu »
+    process.kill(pid, 'SIGKILL')
+    const mort = Date.now()
+    await jusqua(() => { try { process.kill(pid, 0); return false } catch (_) { return true } }, 3000)
+    let relance = false
+    while (Date.now() - mort < 8000) { if (await sante()) { relance = true; break } await attendre(200) }
+    assert.ok(relance, 'le serveur audio doit être relancé pendant le blocage')
+    assert.ok(Date.now() - mort < 6000, `relancé en ${Date.now() - mort} ms`)
     assert.ok(!sortie.includes('DEBLOQUE'), 'le processus principal était bien encore bloqué')
+    assert.match(sortie, /\[clean\] serveur audio arrêté \(SIGKILL\) — relance dans 2 s/)
   } finally {
     aide.kill('SIGKILL')
   }
-  await attendre(500)
+  await attendre(800)
   // le parent tué, l'enfant (relié par IPC) s'arrête de lui-même
   await assert.rejects(fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(2000) }))
+})
+test('serveur tué en plein travail : l\'audio de l\'utilisateur est effacé au redémarrage', async () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'aa-srv-crash-'))
+  const long = join(tmp, 'long.mp3')
+  spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'anoisesrc=d=300:c=pink:a=0.1:r=48000', '-ac', '1', '-b:a', '64k', long])
+  const port = await new Promise((ok) => { const t = net.createServer().listen(0, '127.0.0.1', () => { const p = t.address().port; t.close(() => ok(p)) }) })
+  const env = { PATH: process.env.PATH, TMPDIR: tmp, PORT: String(port), AUDIO_CLEAN_KEY: CLE }
+  const lancer = () => spawn(process.execPath, [join(ICI, '..', '..', 'audio-server.mjs')], { env, stdio: ['ignore', 'pipe', 'pipe'] })
+  const pret = async () => { for (let i = 0; i < 100; i++) { try { if ((await fetch(`http://127.0.0.1:${port}/health`)).ok) return } catch (_) { /* pas prêt */ } await attendre(100) } throw new Error('serveur jamais prêt') }
+  const base = join(tmp, 'aa-clean')
+  let s1 = lancer(), s2 = null
+  try {
+    await pret()
+    const envoi = poster(`http://127.0.0.1:${port}`, readFileSync(long), { 'content-type': 'audio/mpeg' }).catch((e) => e)
+    await jusqua(() => existsSync(base) && readdirSync(base).length > 0, 5000)
+    s1.kill('SIGKILL')
+    await envoi
+    await attendre(200)
+    assert.equal(readdirSync(base).length, 1, 'le dossier du serveur tué est resté sur le disque')
+    s2 = lancer()
+    let journal = ''
+    s2.stdout.on('data', (d) => { journal += d })
+    await pret()
+    await jusqua(() => readdirSync(base).length === 0, 3000)
+    await jusqua(() => journal.includes('orphelin'), 3000)
+  } finally {
+    s1.kill('SIGKILL'); if (s2) s2.kill('SIGKILL')
+    rmSync(tmp, { recursive: true, force: true })
+  }
 })
 test('le processus enfant ne reçoit pas les secrets du worker', () => {
   const env = envEnfant({ PATH: '/bin', SUPABASE_SERVICE_ROLE_KEY: 'secret', HEDRA_API_KEY: 'x', AUDIO_CLEAN_KEY: CLE, PORT: '8080' })
@@ -306,5 +430,5 @@ test('contrat MCP ↔ worker : nettoyage-voix.ts (Deno) obtient le MP3 du vrai s
   // mauvaise clé : le worker refuse (401) → le MCP le voit et tente son secours (absent ici)
   const mauvais = JSON.parse((await lancer('mauvaise-cle-0123456789')).out.trim().split('\n').pop())
   assert.equal(mauvais.ok, false)
-  assert.ok(mauvais.journal.some((l) => l.includes('[clean] repli ElevenLabs (serveur de rendu HTTP 401 cle)')), JSON.stringify(mauvais.journal))
+  assert.ok(mauvais.journal.some((l) => l.includes('[clean] repli ElevenLabs (serveur de rendu : HTTP 401 cle)')), JSON.stringify(mauvais.journal))
 })

@@ -63,22 +63,42 @@ Le MCP (outil `clean_audio` et étape 0 du Montage IA) nettoie les voix ICI, ave
 même traitement que le module « Nettoyage audio » de l'app, au lieu d'ElevenLabs
 (qui reste le secours du MCP si ce serveur ne répond pas) :
 
-- ffmpeg → 48 kHz mono → **RNNoise** (le WASM de l'app, copié dans `vendor/rnnoise/`)
-  → passage 16 bits → **chaîne voix** `voice-chain.mjs` (copie à l'identique des
-  fonctions de `app/index.html`, préréglage par défaut de l'app) → MP3 192 kbps.
-  Pas de coupe des silences.
+- ffprobe (refus immédiat au-delà de 8 canaux ou 192 kHz ; durée bornée à 10 min au décodage) → ffmpeg → 48 kHz
+  mono avec le **mixage de Web Audio** (0,5·(G+D) en stéréo, comme l'app) → signal
+  assaini (NaN / infinis → 0) → **RNNoise** (le WASM de l'app, copié dans
+  `vendor/rnnoise/`) → passage 16 bits → **chaîne voix** `voice-chain.mjs` (copie à
+  l'identique des fonctions de `app/index.html`, préréglage par défaut de l'app) →
+  MP3 192 kbps écrit dans un fichier (en-tête LAME : durée exacte, voix sans
+  décalage). Pas de coupe des silences. Une sortie muette pour une entrée audible
+  est refusée (422), jamais livrée.
 - `POST /audio/clean` (octets audio, 15 Mo max, en-tête `x-worker-key` =
-  `AUDIO_CLEAN_KEY`) → `audio/mpeg` + `X-Audio-Duration`. `GET /health` → `{"ok":true}`.
-- Tourne dans un **processus enfant** lancé par `worker.mjs` (les rendus bloquent la
-  boucle d'événements du processus principal), en priorité CPU basse, concurrence 1,
-  file 3, délai 55 s. Sans `AUDIO_CLEAN_KEY` la route répond 503.
+  `AUDIO_CLEAN_KEY`, en-tête facultatif `x-clean-delai-ms`) → `audio/mpeg` +
+  `X-Audio-Duration`. 413 `trop_long` / `hors_limites` = refus définitif (le MCP ne
+  passe pas au secours). `GET /health` → `{"ok":true}`.
+- Tourne dans un **processus enfant** surveillé par un **thread** de `worker.mjs`
+  (`audio-superviseur.mjs`) : les rendus bloquent la boucle d'événements du
+  processus principal, pas celle du thread — le serveur répond pendant un rendu et,
+  s'il meurt, il est relancé 2 s plus tard. Priorité CPU basse, concurrence 1,
+  file 3, délai 40 s au plus (le MCP envoie le sien, 12 à 37 s selon la taille).
+  Fichiers temporaires sous `$TMPDIR/aa-clean/<pid>-…`, effacés même après un
+  plantage (au redémarrage). Sans `AUDIO_CLEAN_KEY` la route répond 503.
 - Variables : `PORT` (8080), `AUDIO_CLEAN_KEY` (≥ 16 caractères), optionnelles
-  `AUDIO_CLEAN_CONCURRENCY`, `AUDIO_CLEAN_QUEUE`, `AUDIO_CLEAN_TIMEOUT_MS`,
+  `AUDIO_CLEAN_CONCURRENCY`, `AUDIO_CLEAN_QUEUE`, `AUDIO_CLEAN_TIMEOUT_MS` (40000),
   `AUDIO_CLEAN_MAX_SECONDS` (600), `AUDIO_CLEAN_DISABLED=1` pour ne pas le lancer.
+- Mémoire : ~340 Mo au pic pour 10 min d'audio (mesuré), plus les corps en attente
+  (jusqu'à 4 × 15 Mo) et la réponse (~14 Mo) : compter 350 à 420 Mo.
 
 ```bash
-npm run test:audio      # parité avec l'app (écart 0), route, auth, taille, concurrence, délai
+npm run test:audio      # chaîne identique à l'app, décodage (stéréo…), Chrome, route, auth, délais
 ```
+
+Les bancs : `parite.test.mjs` (la chaîne, au bit près), `decodage.test.mjs` (mixage
+de Web Audio, formats, signaux piégés, ménage), `parite-chrome.test.mjs` (l'app dans
+un vrai Chrome headless contre le worker, fichier par fichier : corrélation ≥ 0,9999,
+résidu ≤ -40 dB, gain ±0,1 dB ; sauté sans Chrome), `serveur.test.mjs` (la route et
+le superviseur). Parité = « identique à l'app sur un appareil à 48 kHz, au décodeur
+près » : le décodeur est ffmpeg et non celui de Chrome, écarts inaudibles consignés
+dans `parite-chrome.json`.
 
 ⚠️ Toute modification de la chaîne voix se fait d'abord dans l'app, puis se reporte
 dans `voice-chain.mjs` : le banc `test/audio-clean/parite.test.mjs` échoue sinon.

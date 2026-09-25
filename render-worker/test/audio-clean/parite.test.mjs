@@ -1,15 +1,19 @@
-// parite.test.mjs — le nettoyage du serveur EST celui de l'app.
+// parite.test.mjs — la CHAÎNE de nettoyage du serveur EST celle de l'app.
 //
 // On extrait de app/index.html les vraies fonctions du module « Nettoyage audio »
 // (boucle RNNoise _denoisePcm, WAV intermédiaire _pcmToWavBlob, chaîne voix
 // _acMasterVoice et ses briques, préréglage par défaut, options par défaut), on
 // les exécute dans Node sur le WASM RNNoise de l'app, et on compare leur sortie à
-// celle du worker sur les mêmes échantillons :
+// celle du worker sur le MÊME signal décodé :
 //   · RNNoise : identique à l'échantillon près (même WASM, même boucle) ;
 //   · après la chaîne : écart maximal ≤ 1e-5 (en pratique 0).
+// Ce banc part d'un PCM déjà décodé : il ne dit rien du décodage (stéréo, 44,1 kHz,
+// MP3, MP4…). C'est le rôle de decodage.test.mjs (règles de Web Audio) et de
+// parite-chrome.test.mjs (l'app dans un vrai Chrome, de bout en bout).
 // Échantillons : deux prises d'Axel (H73, CTA74) et un signal synthétique bruité.
-// On mesure aussi sonie (LUFS) et crêtes avant / après avec ffmpeg ebur128 ;
-// les mesures sont consignées dans mesures-lufs.json.
+// On mesure aussi sonie (LUFS) et crêtes avant / après avec ffmpeg ebur128 (plus la
+// version stéréo G=D de H73, qui doit sortir comme la mono) ; les mesures sont
+// consignées dans mesures-lufs.json.
 //
 //   node --test test/audio-clean/parite.test.mjs
 import { test } from 'node:test'
@@ -200,7 +204,9 @@ test('mesures sonie / crêtes avant-après (ffmpeg ebur128) consignées', async 
   const d = mkdtempSync(join(tmpdir(), 'aa-mesures-'))
   const mesures = []
   try {
-    for (const e of ECHANTILLONS) {
+    const stereo = join(d, 'H73-stereo.wav')
+    assert.equal(spawnSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', '-i', join(ICI, 'H73.wav'), '-af', 'pan=stereo|c0=c0|c1=c0', '-c:a', 'pcm_s16le', stereo]).status, 0)
+    for (const e of [...ECHANTILLONS, { nom: 'H73 stéréo G=D', fichier: stereo }]) {
       let source = e.fichier
       if (e.synth) { source = join(d, 'synth.wav'); ecrireWavFloat(source, entrees[e.nom]) }
       const r = await nettoyerAudio(readFileSync(source))
@@ -211,11 +217,15 @@ test('mesures sonie / crêtes avant-après (ffmpeg ebur128) consignées', async 
       // le limiteur de l'app plafonne à 0,89 (-1,01 dBFS) ; l'encodage MP3 ajoute un peu de dépassement
       assert.ok(apres.crete_echantillon_dbfs <= 0, `crête ${apres.crete_echantillon_dbfs} dBFS`)
       mesures.push({ echantillon: e.nom, duree_s: +r.duree.toFixed(3), prise: r.infos, avant, apres })
+      if (e.nom === 'H73 stéréo G=D') {
+        const mono = mesures.find((m) => m.echantillon === 'H73.wav').apres
+        assert.deepEqual(apres, mono, 'la version stéréo doit sortir exactement comme la mono')
+      }
     }
   } finally { rmSync(d, { recursive: true, force: true }) }
   const doc = {
     genere_par: 'render-worker/test/audio-clean/parite.test.mjs',
-    chaine: `RNNoise → WAV 16 bits → _acMasterVoice('${chaine.PRESET_DEFAUT}') → MP3 192 kbps`,
+    chaine: `ffmpeg (mixage mono de Web Audio) → RNNoise → WAV 16 bits → _acMasterVoice('${chaine.PRESET_DEFAUT}') → MP3 192 kbps (fichier, en-tête LAME)`,
     tolerance_parite: TOLERANCE,
     parite: RESULTATS,
     mesures,

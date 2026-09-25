@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 // audio-server.mjs — le Nettoyage audio de l'app, servi aux edge functions (MCP).
 //
-//   POST /audio/clean   corps = l'audio en octets (15 Mo max), en-tête x-worker-key
+//   POST /audio/clean   corps = l'audio en octets (15 Mo max), en-tête x-worker-key,
+//                       en-tête facultatif x-clean-delai-ms (délai accordé par l'appelant)
 //                       → 200 audio/mpeg (MP3 192 kbps) + X-Audio-Duration (secondes)
+//                       → 413 trop_long / hors_limites : refus DÉFINITIF (plus de
+//                         10 min, trop de canaux…) — le MCP ne tente pas son secours
+//                       → 422 illisible / sans_audio / sortie_muette
 //   GET  /health        → 200 {"ok":true}, public, rien d'autre
 //
 // ── POURQUOI UN PROCESSUS À PART, ET PAS UNE ROUTE DANS worker.mjs ──────────
@@ -10,15 +14,21 @@
 // execSync / execFileSync : pendant un rendu, sa boucle d'événements est
 // BLOQUÉE plusieurs minutes. Un serveur HTTP logé dans ce même processus ne
 // répondrait donc à personne pendant qu'une vidéo se rend — le MCP tomberait sur
-// son délai de 60 s à chaque fois. Le serveur tourne donc dans un processus
-// enfant, lancé et surveillé par worker.mjs (superviserServeurAudio, en bas) :
+// son délai à chaque fois. Le serveur tourne donc dans un processus
+// enfant, lancé et surveillé depuis worker.mjs (superviserServeurAudio, en bas),
+// par un THREAD dédié (audio-superviseur.mjs) qui a sa propre boucle d'événements :
 //   · il répond même au milieu d'un rendu ;
+//   · s'il meurt pendant un rendu, il est relancé 2 s plus tard, sans attendre
+//     la fin du rendu ;
 //   · il tourne en priorité CPU basse (nice 10) : c'est le rendu qui passe
 //     d'abord, le nettoyage prend ce qui reste ;
 //   · il se désigne comme victime préférée du tueur OOM du conteneur : si la
 //     mémoire vient à manquer, c'est un nettoyage qui tombe (le MCP bascule
 //     alors sur ElevenLabs), jamais le rendu d'un client ;
-//   · concurrence bornée, file courte, délai maximal par requête.
+//   · concurrence bornée, file courte, délai maximal par requête — et ce délai
+//     s'aligne sur celui du MCP (en-tête x-clean-delai-ms) : le serveur répond
+//     toujours AVANT que le MCP n'abandonne, jamais une réponse perdue suivie d'un
+//     secours payé pour rien.
 //
 // Sécurité : la route exige un secret partagé (AUDIO_CLEAN_KEY, comparé en temps
 // constant). Sans secret configuré, elle répond 503 — jamais ouverte par défaut.
@@ -27,10 +37,10 @@
 // Journaux sobres : un statut, des durées, des tailles. Jamais le contenu, jamais la clé.
 import http from 'node:http'
 import { createHash, timingSafeEqual } from 'node:crypto'
-import { spawn } from 'node:child_process'
-import { existsSync, writeFileSync, realpathSync } from 'node:fs'
+import { writeFileSync, realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { nettoyerAudio, chargerRnnoise } from './audio-clean.mjs'
+import { Worker } from 'node:worker_threads'
+import { nettoyerAudio, chargerRnnoise, menageTemporaire } from './audio-clean.mjs'
 import { PRESETS, PRESET_DEFAUT } from './voice-chain.mjs'
 
 const MO = 1_000_000
@@ -51,8 +61,12 @@ export function configDepuisEnv(env = process.env) {
     tailleMax: TAILLE_MAX,
     concurrence: entier(env.AUDIO_CLEAN_CONCURRENCY, 1, 1, 4),     // nettoyages simultanés
     file: entier(env.AUDIO_CLEAN_QUEUE, 3, 0, 20),                  // requêtes en attente au-delà
-    delaiMs: entier(env.AUDIO_CLEAN_TIMEOUT_MS, 55_000, 1_000, 300_000), // < 60 s du MCP : on répond avant qu'il abandonne
-    maxSecondes: entier(env.AUDIO_CLEAN_MAX_SECONDS, 600, 1, 3_600), // borne la mémoire (10 min ≈ 230 Mo au pic)
+    // Délai maximal par requête. Le MCP envoie le sien (x-clean-delai-ms, 12 à 37 s
+    // selon la taille) : on prend le plus court des deux.
+    delaiMs: entier(env.AUDIO_CLEAN_TIMEOUT_MS, 40_000, 1_000, 300_000),
+    // Borne la mémoire : 10 min d'audio ≈ 340 Mo au pic mesuré pour le traitement,
+    // plus les corps en attente (jusqu'à 4 × 15 Mo) et la réponse (~14 Mo).
+    maxSecondes: entier(env.AUDIO_CLEAN_MAX_SECONDS, 600, 1, 3_600),
   }
 }
 
@@ -79,7 +93,9 @@ function auPlusTard(p, signal) {
 }
 
 // statut HTTP de chaque erreur du traitement
-const STATUT_ERREUR = { trop_long: 413, illisible: 422, sans_audio: 422, preset: 400, annule: 504, ffmpeg: 500 }
+// 413 = refus définitif (le fichier ne passera pas mieux ailleurs à ce prix) ;
+// sortie_muette = garde-fou de nettoyerPcm (jamais de silence livré en 200)
+const STATUT_ERREUR = { trop_long: 413, hors_limites: 413, illisible: 422, sans_audio: 422, sortie_muette: 422, preset: 400, annule: 504, ffmpeg: 500 }
 
 function lireCorps(req, max, signal) {
   return new Promise((resolve, reject) => {
@@ -173,7 +189,10 @@ export function creerServeurAudio(options = {}) {
 
     admis++
     const ctrl = new AbortController()
-    const minuterie = setTimeout(() => ctrl.abort(), cfg.delaiMs)
+    // le délai de l'appelant, s'il est plus court que le nôtre (jamais sous 1 s)
+    const demande = parseInt(String(req.headers['x-clean-delai-ms'] ?? ''), 10)
+    const delai = Number.isFinite(demande) && demande > 0 ? Math.max(1_000, Math.min(cfg.delaiMs, demande)) : cfg.delaiMs
+    const minuterie = setTimeout(() => ctrl.abort(), delai)
     // client parti avant la réponse : on arrête le travail tout de suite
     let clientParti = false
     res.on('close', () => { if (!res.writableFinished) { clientParti = true; ctrl.abort() } })
@@ -225,6 +244,8 @@ export function demarrer(env = process.env) {
   try { writeFileSync('/proc/self/oom_score_adj', '800') } catch (_) { /* hors Linux */ }
   if (!cfg.cle) console.warn('[clean] AUDIO_CLEAN_KEY absente : /audio/clean répondra 503')
   else if (cfg.cle.length < CLE_MIN) console.warn(`[clean] AUDIO_CLEAN_KEY trop courte (< ${CLE_MIN} caractères) : /audio/clean répondra 503`)
+  // audio laissé sur le disque par un serveur précédent tué en plein travail
+  menageTemporaire().then((n) => { if (n) console.log(`[clean] ${n} dossier(s) temporaire(s) orphelin(s) effacé(s)`) }).catch(() => {})
   const serveur = creerServeurAudio(cfg)
   serveur.listen(cfg.port, () => console.log(`[clean] serveur audio en écoute sur :${cfg.port} (concurrence ${cfg.concurrence}, file ${cfg.file}, délai ${cfg.delaiMs / 1000} s)`))
   serveur.on('error', (e) => { console.error('[clean] écoute impossible :', e.message); process.exit(1) })
@@ -249,29 +270,35 @@ export function envEnfant(env) {
 }
 
 // ── côté worker.mjs : lancer le serveur en processus enfant et le relancer s'il tombe ──
-export function superviserServeurAudio({ env = process.env, journal = (m) => console.log(m) } = {}) {
+// La surveillance tourne dans un thread (audio-superviseur.mjs), pas dans la boucle
+// d'événements de worker.mjs que les rendus bloquent. Si le thread lui-même
+// disparaissait, on le relance (dès que la boucle principale est libre).
+export function superviserServeurAudio({ env = process.env, pauseMs = 2_000, journal = (m) => console.log(m) } = {}) {
   const script = fileURLToPath(import.meta.url)
-  const nice = ['/usr/bin/nice', '/bin/nice'].find((p) => existsSync(p))
-  let enfant = null, arret = false, pause = 2_000
-  const lancer = () => {
-    const cmd = nice ? nice : process.execPath
-    const args = nice ? ['-n', '10', process.execPath, script] : [script]
-    const debut = Date.now()
-    enfant = spawn(cmd, args, { env: envEnfant(env), stdio: ['ignore', 'inherit', 'inherit', 'ipc'] })
-    enfant.on('error', (e) => journal(`[clean] lancement du serveur audio impossible : ${e.message}`))
-    enfant.on('exit', (code, sig) => {
-      enfant = null
+  const superviseur = new URL('./audio-superviseur.mjs', import.meta.url)
+  let thread = null, pid = null, arret = false
+  const demarrerThread = () => {
+    const t = new Worker(superviseur, { workerData: { script, env: envEnfant(env), pauseMs } })
+    thread = t
+    t.unref()   // ne retient pas le processus : c'est pollLoop qui le fait vivre
+    t.on('message', (m) => { if (m && 'pid' in m) pid = m.pid })
+    t.on('error', (e) => journal(`[clean] superviseur audio en erreur : ${e.message}`))
+    t.on('exit', (code) => {
+      if (thread === t) thread = null
       if (arret) return
-      if (Date.now() - debut > 60_000) pause = 2_000   // il a tenu : on repart du délai court
-      journal(`[clean] serveur audio arrêté (${sig || 'code ' + code}) — relance dans ${pause / 1000} s`)
-      setTimeout(() => { if (!arret) lancer() }, pause).unref()
-      pause = Math.min(pause * 2, 300_000)
+      journal(`[clean] superviseur audio arrêté (code ${code}) — relance dans 5 s`)
+      setTimeout(() => { if (!arret) demarrerThread() }, 5_000).unref()
     })
   }
-  lancer()
-  const stop = () => { arret = true; if (enfant) { try { enfant.kill('SIGTERM') } catch (_) { /* déjà mort */ } } }
+  demarrerThread()
+  const stop = () => {
+    arret = true
+    if (thread) thread.postMessage('stop')
+    // filet : le processus s'en va (exit synchrone), le thread n'aura peut-être pas le temps
+    if (pid) { try { process.kill(pid, 'SIGTERM') } catch (_) { /* déjà mort */ } }
+  }
   process.on('exit', stop)
-  return { stop, enfant: () => enfant }
+  return { stop, pid: () => pid }
 }
 
 const estPrincipal = (() => {
