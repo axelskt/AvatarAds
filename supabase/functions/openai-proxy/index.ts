@@ -140,8 +140,9 @@ serve(async (req: Request) => {
       if (drawnOp) {
         await settleReservation(uid, drawnOp)
         if (chain) await chainCreditAdd(uid, drawnOp, 1)
-        // Image de départ d'Express Omni OFFERTE (Axel 25/09) : ce qui vient d'être tiré sera déduit du tirage de la vidéo
-        // (draw_omni_reservation). Seulement une image low/medium (≤ 3), op « express-omni », une fois (garde SQL).
+        // Image de départ d'Express OFFERTE (Axel 25/09 : Omni, puis Veo le même jour) : ce qui vient d'être tiré sera déduit
+        // du tirage de la vidéo (draw_omni_reservation, kie-proxy / google-ai-proxy / fal-proxy). Seulement une image
+        // low/medium (≤ 3), op « express-omni » ou « express », une fois (garde SQL de omni_start_add).
         else if (wantsOmniStart(req) && drawnReal > 0 && imgN === 1 && (imgQ === 'low' || imgQ === 'medium')) await omniStartAdd(uid, drawnOp, drawnReal)
       }
     }

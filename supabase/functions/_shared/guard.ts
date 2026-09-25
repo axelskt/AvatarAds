@@ -103,7 +103,9 @@ export async function applyReservation(o: { req: Request; userId: string; proxy:
 
 // Omni Flash (Axel 25/09) : comme applyReservation, mais via draw_omni_reservation → tire `cost` (5 × durée) MOINS l'image
 // de départ d'Express déjà tirée sur la même op (image OFFERTE : notée par openai-proxy, omniStartAdd). `drawn` = le montant
-// réellement tiré (c'est lui que les proxys rendent / remboursent, jamais `cost`).
+// réellement tiré (c'est lui que les proxys rendent / remboursent, jamais `cost`). Veo d'Express (kie-proxy ET google-ai-proxy,
+// 25/09) tire aussi par ici : même image offerte, tirage EXACT (tarif × durée − image) ; remise rendue avec le tirage
+// (releaseOmniOp) pour que le repli re-tire la même op au même prix.
 export async function applyOmniReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate & { opId?: string; drawn?: number }> {
   const opId = await resolveOp(o.userId, o.req)
   if (opId === '__ERR__') return { ok: true, drawn: 0 }
@@ -124,7 +126,32 @@ export async function applyOmniReservation(o: { req: Request; userId: string; pr
     return { ok: true, opId, drawn }
   } catch { return { ok: true, opId, drawn: 0 } }
 }
-// openai-proxy : image de départ d'Express Omni livrée sur l'op → la vidéo coûtera ce montant de moins (3 max, une fois).
+// Remise « image de départ » CONSOMMÉE par un tirage draw_omni_reservation : cost − drawn (0 à 3). Seul un tirage réel
+// (drawn > 0) en a consommé une ; c'est elle que release_omni_reservation remet sur l'op quand ce tirage est rendu.
+export function omniStartUsed(cost: number, drawn: number): number {
+  if (!(drawn > 0)) return 0
+  return Math.max(0, Math.min(3, Math.ceil(cost) - Math.ceil(drawn)))
+}
+// Rend un tirage draw_omni_reservation EN ENTIER (Veo, 25/09) : le tiré ET la remise d'image consommée, dans la même
+// transaction (RPC release_omni_reservation, migration 20260925230000) → le repli Google re-tire la MÊME op au même prix
+// (vidéo − image offerte). Sans remise consommée → release_reservation classique. RPC absente (fonction déployée avant la
+// migration) → release_reservation : le tiré est rendu, seule la remise manque (le repli prendrait alors un 402 propre).
+export async function releaseOmniOp(userId: string, opId: string | undefined, cost: number, img: number): Promise<void> {
+  if (!opId) return
+  if (!(img > 0)) return releaseOp(userId, opId, cost)
+  try {
+    const { error } = await svc().rpc('release_omni_reservation', { p_user: userId, p_op: opId, p_cost: Math.max(1, Math.ceil(cost)), p_img: Math.min(3, Math.ceil(img)) })
+    // Fonction ABSENTE (migration pas encore appliquée) = rien n'a été appliqué → release simple. Toute autre erreur (réseau,
+    // délai…) = issue inconnue, la RPC a pu passer → rien de plus, comme releaseOp (best-effort) : jamais rendre deux fois.
+    if (error) {
+      const missing = /PGRST202|42883|could not find the function|does not exist/i.test(`${(error as { code?: string }).code || ''} ${error.message || ''}`)
+      console.warn('release_omni_reservation err' + (missing ? ' (absente) → release simple' : '') + ':', error.message)
+      if (missing) await releaseOp(userId, opId, cost)
+    }
+  } catch { /* best-effort */ }
+}
+// openai-proxy : image de départ d'Express (Omni ET Veo depuis le 25/09) livrée sur l'op → la vidéo coûtera ce montant de
+// moins (3 max, une fois ; ops « express-omni » et « express » seulement, garde SQL de omni_start_add).
 export function wantsOmniStart(req: Request): boolean { return (req.headers.get('x-aa-chain') || '').trim().toLowerCase() === 'omni-start' }
 export async function omniStartAdd(userId: string, opId: string | undefined, cost: number): Promise<boolean> {
   if (!opId || !(cost > 0)) return false

@@ -24,7 +24,7 @@
 //   ce qui n'a pas été livré (règle refund_credits sans la garde 2 h, bill_reason 'too_old') au lieu de clore sans rien rendre.
 // Déclenché par pg_cron (POST + x-cron-key = CRON_SECRET), comme reconcile-fal-orphans. Best-effort, jamais bloquant.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnedBy, kieBill } from '../_shared/kie.ts'
+import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnedBy, kieBill, kieLibMeta } from '../_shared/kie.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -80,12 +80,15 @@ export async function handler(req: Request): Promise<Response> {
     if (!r.ok && r.reason !== 'not_drawn') console.log('[reconcile-kie] facturation', action, j.task_id, r.bill, r.reason)
   }
   // Range un fichier déjà dans NOTRE storage en Bibliothèque (idempotent : réutilise une ligne existante).
+  // Nom / tags / style : « kie.ai » pour le compte developer seulement (libellé écrit par kie-proxy, kieLabel) ; un client
+  // ne voit jamais le nom du moteur dans sa Bibliothèque (Axel 25/09) — kieLibMeta.
   const toLibrary = async (userId: string, path: string, kind: 'image' | 'video', label: string | null): Promise<string | null> => {
     const { data: prev, error: pErr } = await svc.from('library_items').select('id').eq('user_id', userId).eq('storage_path', path).limit(1)
     if (pErr) throw new Error('bibliothèque (lecture) : ' + pErr.message)
     if (prev && prev[0]) return prev[0].id
+    const meta = kieLibMeta(label)
     const ins = await svc.from('library_items').insert({ user_id: userId, kind: kind === 'image' ? 'image' : 'video-simple',
-      name: label || 'kie.ai', tags: ['kie.ai', 'récupérée'], style: 'kie.ai', emo: '', storage_path: path }).select('id').single()
+      name: meta.name, tags: meta.tags, style: meta.style, emo: '', storage_path: path }).select('id').single()
     if (ins.error) throw new Error('bibliothèque : ' + ins.error.message)
     return ins.data.id
   }
