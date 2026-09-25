@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com https://js.whop.com https://*.whop.com https://*.clarity.ms; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
 <script>/* audit 05/09 (L8) — anti-clickjacking : l'app (auth + paiement) ne doit jamais être encadrée. GitHub Pages ne pose pas d'en-tête X-Frame-Options → filet JS. */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
-<script>/* Attribution Auto-DM Instagram (25/09) : ?aa_ld=<référence CHIFFRÉE du lead, fabriquée par ig-go au clic> gardée 30 j dans aa_lead (jamais remplacée par une plus ancienne) puis retirée de l'URL ; les autres paramètres (?ref= parrainage, ?start=…) et le # restent. L'app l'envoie une fois au serveur après connexion. */
-try{(function(){var L=location,re=/([?&])aa_ld=([^&#]*)&?/,m=re.exec(L.search);if(!m)return;try{var r=decodeURIComponent(m[2]),k=/^1\.([0-9a-z]{1,10})\.[A-Za-z0-9_-]{20,400}$/.exec(r),n=Date.now();if(k){var t=parseInt(k[1],36)*1e3;if(t>0&&n-t<2592e6&&t-n<3e5){var o=null;try{o=JSON.parse(localStorage.getItem('aa_lead')||'null')}catch(e){}if(!(o&&o.t>=t&&o.x>n))localStorage.setItem('aa_lead',JSON.stringify({r:r,t:t,x:t+2592e6}))}}}catch(e){}var q=L.search;while(re.test(q))q=q.replace(re,'$1');q=q.replace(/[?&]$/,'');history.replaceState(history.state,'',L.pathname+q+L.hash)})()}catch(e){}</script>
 <script>/* Thème studio (clair/sombre) — posé AVANT le paint pour zéro flash au chargement. */try{if(localStorage.getItem('aa_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
 <script>/* LOGIN UNIFIÉ — redirection AU PLUS TÔT : un visiteur NON connecté de /app/ part vers la connexion
    dédiée AVANT tout rendu → plus de flash « connexion au générateur » puis retour login. Exceptions :
@@ -7009,7 +7007,8 @@ async function loadProfile(user){
 }
 
 // ── ATTRIBUTION AUTO-DM INSTAGRAM (25/09) ──────────────────────────────────
-// Au clic du lien reçu en DM, r.html (ou la LP via ?aa_ld=) a gardé dans aa_lead une référence CHIFFRÉE du lead
+// Au clic du lien reçu en DM, r.html (SEULE page qui écrit aa_lead ; aucune référence n'est lue dans une URL, pour
+// qu'un tiers ne puisse pas en déposer une par un lien) a gardé dans aa_lead une référence CHIFFRÉE du lead
 // (jamais son identifiant Instagram). Une fois connecté, on l'envoie UNE fois à ig-go ?action=attach : le serveur la
 // vérifie et relie CE compte (celui de la session) au lead ; nouveau compte ou compte existant, c'est lui qui tranche.
 // Silencieux dans tous les cas (aucun toast) : réponse définitive (reliée, déjà reliée, invalide, expirée) → on

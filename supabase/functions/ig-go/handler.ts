@@ -8,7 +8,9 @@
 //    vraiment reçu un lien ('link' ou 'relance').
 //  - Attribution (Axel 25/09) : un clic enregistré renvoie une RÉFÉRENCE CHIFFRÉE du lead (_shared/leadref.ts,
 //    jamais l'identifiant Instagram en clair) : { ok, ref } en JSON pour r.html, qui la garde 30 jours dans le
-//    navigateur ; en 302 direct, elle est ajoutée à la destination avatarads.fr (?aa_ld=, retirée par la page).
+//    navigateur. Le 302 direct (aucun DM ne l'utilise : tous les liens passent par r.html) ne transporte JAMAIS de
+//    référence : une référence lisible dans une URL permettrait à n'importe qui d'en déposer une dans le navigateur
+//    d'un autre (lien avatarads.fr/?…=<sa ref>) et de relier le compte de cette personne à son propre lead.
 //  POST ?action=attach (Authorization: Bearer <session de l'utilisateur>, corps { ref }) : l'app renvoie la référence
 //    une fois connecté ; elle est vérifiée puis le compte est relié au lead (RPC ig_lead_attach, 1re attribution
 //    seulement, idempotent). Référence forgée / expirée / d'un autre projet : 200 { attached:false }, rien d'écrit.
@@ -30,24 +32,10 @@ const CORS = {
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-// Paramètre de la référence sur une destination avatarads.fr (les pages le retirent de l'URL aussitôt).
-export const REF_PARAM = 'aa_ld'
-const OWN_HOSTS = ['avatarads.fr', 'www.avatarads.fr']
-
 async function clickAllowed(u: string, ig: string, s: string): Promise<boolean> {
   if (s) return verifyClick(u, ig, s)
   const { data } = await svc.from('ig_dm_log').select('id').eq('sender_id', u).in('kind', ['link', 'relance']).limit(1)
   return !!data?.length
-}
-
-function withRef(to: string, ref: string | null): string {
-  if (!ref) return to
-  try {
-    const t = new URL(to)
-    if (!OWN_HOSTS.includes(t.hostname.toLowerCase())) return to   // autre site (trackads.fr) : rien à ajouter
-    t.searchParams.set(REF_PARAM, ref)
-    return t.href
-  } catch { return to }
 }
 
 function bearer(req: Request): string {
@@ -105,20 +93,21 @@ export async function handler(req: Request): Promise<Response> {
   const ig = url.searchParams.get('ig') || ''
   const s  = url.searchParams.get('s') || ''
   const to = safeDest(url.searchParams.get('to'))
+  // Appelé par r.html (fetch, ou sendBeacon des anciennes pages) → 200 JSON (la redirection est faite par la page).
+  // Un GET direct redirige, sans référence.
+  const wantsJson = (req.headers.get('accept') || '').includes('application/json') || url.searchParams.get('log') === '1'
   let ref: string | null = null
   if (u) {
     try {
       if (await clickAllowed(u, ig, s)) {
         const clickedAt = Date.now()
         const { error } = await svc.from('ig_dm_log').insert({ ig_id: ig || null, sender_id: u, kind: 'click' })
-        // Référence seulement pour un clic ENREGISTRÉ : un compte relié a donc toujours un clic dans ig_dm_log.
-        if (!error) ref = await mintLeadRef(u, clickedAt)
+        // Référence seulement pour un clic ENREGISTRÉ (un compte relié a donc toujours un clic dans ig_dm_log), et
+        // seulement dans la réponse JSON lue par r.html (seule page qui l'écrit dans le navigateur).
+        if (!error && wantsJson) ref = await mintLeadRef(u, clickedAt)
       }
     } catch (_) { /* non bloquant : la redirection passe quand même */ }
   }
-  // Appelé par r.html (fetch, ou sendBeacon des anciennes pages) → 200 JSON (la redirection est faite par la page).
-  // Un GET direct redirige.
-  const wantsJson = (req.headers.get('accept') || '').includes('application/json') || url.searchParams.get('log') === '1'
   if (wantsJson) return json(200, ref ? { ok: true, ref } : { ok: true })
-  return new Response(null, { status: 302, headers: { ...CORS, Location: withRef(to, ref) } })
+  return new Response(null, { status: 302, headers: { ...CORS, Location: to } })
 }

@@ -13,8 +13,6 @@
 <script>/* Tunnel v1 = clair par défaut, mais connexion s'ADAPTE : si on vient du tunnel v2 (aa_theme=dark
    déjà posé), on rend la connexion en sombre. Sinon on ensemence clair. La préférence prime. */
 try{var _t=localStorage.getItem('aa_theme');if(!_t){_t='light';localStorage.setItem('aa_theme','light');}if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
-<script>/* Attribution Auto-DM Instagram (25/09) : ?aa_ld=<référence CHIFFRÉE du lead, fabriquée par ig-go au clic> gardée 30 j dans aa_lead (jamais remplacée par une plus ancienne) puis retirée de l'URL ; les autres paramètres (?ref= parrainage, ?start=…) et le # restent. L'app l'envoie une fois au serveur après connexion. */
-try{(function(){var L=location,re=/([?&])aa_ld=([^&#]*)&?/,m=re.exec(L.search);if(!m)return;try{var r=decodeURIComponent(m[2]),k=/^1\.([0-9a-z]{1,10})\.[A-Za-z0-9_-]{20,400}$/.exec(r),n=Date.now();if(k){var t=parseInt(k[1],36)*1e3;if(t>0&&n-t<2592e6&&t-n<3e5){var o=null;try{o=JSON.parse(localStorage.getItem('aa_lead')||'null')}catch(e){}if(!(o&&o.t>=t&&o.x>n))localStorage.setItem('aa_lead',JSON.stringify({r:r,t:t,x:t+2592e6}))}}}catch(e){}var q=L.search;while(re.test(q))q=q.replace(re,'$1');q=q.replace(/[?&]$/,'');history.replaceState(history.state,'',L.pathname+q+L.hash)})()}catch(e){}</script>
 <title>Connexion — AvatarAds</title>
 <link rel="icon" href="assets/avatarads-logo-96.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">

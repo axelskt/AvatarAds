@@ -3,9 +3,10 @@
 -- clés ; ajoute seulement, à partir de public.ig_lead_links (migration 20260925171500, à appliquer AVANT celle-ci) :
 --   · funnel.users  = leads de la période (personnes uniques, ancrées sur leur 1er commentaire mot-clé) qui ont cliqué
 --                     et dont un compte AvatarAds a été CRÉÉ APRÈS le clic (rattaché après l'ancre) → « Devenus users » ;
---   · funnel.paid   = parmi eux, ceux passés d'un plan gratuit à un abonnement payant après le clic ;
+--   · funnel.paid   = parmi eux, ceux passés d'un plan gratuit à un abonnement payant après le clic (un passage
+--                     remboursé / contesté est annulé par ig_lead_unmark_paid : paid_at null, donc plus compté) ;
 --   · attribution.existing      = leads qui ont cliqué avec un compte déjà existant (et aucun nouveau) : pas des users ;
---   · attribution.existing_paid = parmi eux, les comptes existants passés payants APRÈS le clic ;
+--   · attribution.existing_paid = parmi eux, les comptes existants passés payants APRÈS le clic (remboursés exclus) ;
 --   · series[].users = « Devenus users » par groupe (ancre du lead, comme les autres courbes : les points s'additionnent).
 -- Chaque étape reste incluse dans la précédente (users ⊂ clics) : le funnel ne peut pas remonter. « 0 » = mesuré.
 -- Aucune donnée personnelle ajoutée : seulement des totaux (ni e-mail, ni compte, ni sender_id).
