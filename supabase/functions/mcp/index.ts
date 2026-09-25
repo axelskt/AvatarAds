@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
+import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -22,7 +23,9 @@ const loadImage = () => import('https://deno.land/x/imagescript@1.3.0/mod.ts').t
 //
 // La clé est dans l'URL (pattern Zapier) : c'est la seule forme que les connecteurs
 // claude.ai acceptent sans OAuth. Stockée hachée (HMAC service key), jamais en clair.
-// Génération : gpt-image-2/1 (images) et Veo 3.1 (vidéos, job asynchrone start/poll).
+// Génération : gpt-image-2/1 (images) et Veo 3.1 (vidéos, job asynchrone start/poll). Veo 3.1 Lite (Standard) et Fast
+// (Pro) passent chez kie.ai pour TOUS les clients depuis le 25/09 (décision d'Axel), Google direct en REPLI seulement
+// quand kie refuse la soumission (aucune tâche créée) — voir « VEO VIA KIE.AI » plus bas.
 // Crédits : mêmes tarifs que l'app, débit via les RPC service-only mcp_spend_credits
 // / mcp_refund_credits (barème #79 : image 3 ou 5, vidéo 1/s).
 
@@ -99,7 +102,11 @@ const FAL_KEY = ['FALAI_API_KEY', 'FAL_KEY', 'FAL_API_KEY', 'FAL_AI_KEY', 'FALAI
 const falFetch = (path: string, init?: RequestInit) =>
   fetch(`${FAL_QUEUE}/${path}`, { ...init, headers: { Authorization: `Key ${FAL_KEY}`, ...(init?.headers || {}) } })
 const GPT_IMG_MODELS  = ['gpt-image-2.5-flare', 'gpt-image-2']   // Axel 18/09 : MCP aligné sur l'app (gpt-image-2.5-flare, drop de gpt-image-1)
-const VEO_MODELS      = ['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview']
+// Veo via kie.ai (Axel 25/09) : op_name « kie:<taskId> » = tâche kie (suivi veo/record-info), sinon opération Google.
+const KIE_OP_PREFIX   = 'kie:'
+// Durées acceptées par Veo 3.1 (Google comme kie) : 4 / 6 / 8 s. La durée demandée est ARRONDIE au cran supérieur
+// (plafonnée à 8) AVANT le calcul du prix → le client paie exactement la durée générée (un « 5 s » part en 6 s, payé 6 s).
+const veoCran = (s: number): number => (s <= 4 ? 4 : s <= 6 ? 6 : 8)
 // Réalisme « UGC / makeugc » — MÊME bloc que le module Images IA de l'app
 // (_IMG_REALISM_SUFFIX). Ajouté AUTOMATIQUEMENT à toute image de PERSONNE générée via
 // le MCP → rendu photo Instagram réelle, plus de « random IA ». Leçon clé : le bloc
@@ -771,7 +778,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: 'Description de la vidéo : scène, mouvement, ambiance, dialogues éventuels.' },
-          duration_seconds: { type: 'integer', minimum: 4, maximum: 10, description: 'Durée en secondes, 4 à 10 (défaut 8).' },
+          duration_seconds: { type: 'integer', enum: [4, 6, 8], description: 'Durée en secondes : 4, 6 ou 8 (défaut 8). Une autre valeur est arrondie au cran supérieur (8 max) et facturée à ce cran.' },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           image_url: { type: 'string', description: "URL publique http(s) d'une image de départ (optionnel) : une image de generate_image, ou une photo que l'utilisateur a déposée via « Glisse la photo pour Claude » sur le site. ⚠️ claude.ai ne transmet PAS les images jointes au chat — il FAUT une vraie URL, une photo collée dans la conversation ne compte pas." },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
@@ -955,7 +962,7 @@ async function runGetAccount(profile: Record<string, unknown>): Promise<ToolCont
 - Plan : ${profile.plan || 'free'}
 - Crédits restants : ${credits}
 
-Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4 à 10 s) · avatar parlant (voix native) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
+Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4, 6 ou 8 s) · avatar parlant (voix native) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
@@ -1304,7 +1311,15 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
     const { data: fresh } = await svc.from('mcp_jobs').select('result_url').eq('id', job.id).maybeSingle()
     return fresh?.result_url ?? null
   }
-  const url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4')
+  // Copie ratée APRÈS le claim (25/09) : on repasse le job en « running » au lieu de le laisser « done » sans média
+  // (payé, jamais livré, plus remboursable). Le prochain suivi retente la livraison ; le filet 20 min rembourse sinon.
+  let url: string
+  try { url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4') }
+  catch (e) {
+    console.warn('[mcp] livraison vidéo : copie impossible', job.id, (e as Error)?.message)
+    await svc.from('mcp_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'done').is('result_url', null)
+    return null
+  }
   await svc.from('mcp_jobs').update({ result_url: url, updated_at: new Date().toISOString() }).eq('id', job.id)
   await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Vidéo AvatarAds')  // filet Bibliothèque
   return url
@@ -1347,7 +1362,15 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     }
 
 
-    // ── Jobs Veo ──
+    // ── Jobs Veo via kie (op_name « kie:<taskId> ») : dernière tentative de livraison, puis remboursement si toujours
+    //    en cours (failAndRefund ne touche qu'un job encore 'running' → no-op s'il vient d'être livré).
+    if (String(job.op_name).startsWith(KIE_OP_PREFIX)) {
+      await advanceVideoJob(job)
+      await failAndRefund(userId, job, 'délai dépassé')
+      continue
+    }
+
+    // ── Jobs Veo (Google) ──
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let d: Record<string, any> | null = null
     try {
@@ -1421,8 +1444,9 @@ async function veoStaggerDelay(userId: string, jobId: string): Promise<number> {
   } catch { return 0 }
 }
 // Soumet à Veo avec file d'attente (étalement) + retries. Rend l'op_name ou jette (échec définitif).
-async function launchVeo(userId: string, jobId: string, mkBody: (withAudio: boolean) => string, models: string[]): Promise<string> {
-  await sleep(await veoStaggerDelay(userId, jobId))
+// `stagger` = false quand l'étalement a déjà été fait (repli Google après un refus kie : on n'attend pas deux fois).
+async function launchVeo(userId: string, jobId: string, mkBody: (withAudio: boolean) => string, models: string[], stagger = true): Promise<string> {
+  if (stagger) await sleep(await veoStaggerDelay(userId, jobId))
   let opName = ''
   let lastErr = 'Erreur au lancement'
   for (let attempt = 0; attempt < 4 && !opName; attempt++) {
@@ -1445,13 +1469,122 @@ async function launchVeo(userId: string, jobId: string, mkBody: (withAudio: bool
   if (!opName) throw new Error(lastErr)
   return opName
 }
+// ── VEO VIA KIE.AI (décision d'Axel du 25/09 : « Veo Lite passe sur kie, Veo Fast pareil ») ──────────────────────────
+// Toutes les générations Veo du MCP — Express generate_video (Veo 3.1 Lite) et avatar parlant voix native
+// generate_avatar_video (Lite, ou Fast en model « pro ») — partent chez kie (API « ancienne » /api/v1/veo/generate, la
+// seule qui expose Lite et Fast), en 720p comme avant (le MCP ne propose pas le 1080p). Prix clients INCHANGÉS :
+// 1,5 cr/s Lite, 3 cr/s Fast (kie : 0,15 $ / 0,30 $ la vidéo de 4, 6 ou 8 s).
+// CRÉDITS — rien ne change côté MCP : débit UNIQUE mcp_spend_credits au lancement (tâche de fond), remboursement
+// mcp_refund_credits sur échec terminal, exactement une fois (failAndRefund : verrou refunded=false + status='running',
+// exclusif avec la livraison deliverVideo qui, elle, ne prend qu'un job 'running').
+// REPLI GOOGLE — sur le MÊME débit, jamais un second — UNIQUEMENT quand aucune tâche kie n'existe :
+//   • kie a répondu NON à la soumission (code ≠ 200 dans le corps JSON : 402 solde, 422 refus, 429, 455, 500, 501…) ;
+//   • kie inutilisable avant tout appel (interrupteur KIE_CLIENTS=0, clé absente, image de départ impossible à héberger).
+// JAMAIS de repli quand on ne sait pas si la tâche existe (délai / réseau pendant la soumission, corps illisible, 200 sans
+// taskId) : on paierait deux fois → échec + remboursement, le client relance. Tâche créée puis échouée chez kie
+// (successFlag 2/3, « succès » sans URL) → échec terminal + remboursement, pas de repli.
+// SUIVI : op_name « kie:<taskId> » (comme fal: / v3:) → advanceVideoJob (widget /status, check_video, filets de
+// réconciliation) interroge veo/record-info puis RAPATRIE le MP4 dans mcp-media (les URL kie expirent ~24 h) via
+// deliverVideo (claim running→done anti-doublon) + copie en Bibliothèque, comme pour Google. Les filets 8 min (job jamais
+// lancé) et 20 min (job perdu) sont inchangés.
+// IMAGE DE DÉPART : kie veut une URL → l'image recadrée est déposée dans render-media/<uid>/mcp-kie/<job>.<ext> (privé,
+// URL signée 6 h), jamais l'URL d'origine de l'utilisateur.
+// Aucun message client ne nomme kie (erreurs fournisseur passées par sansMoteur).
+const kieVeoOn = (profile: Record<string, unknown>): boolean =>
+  !!kieKey() && (kieClientsOn() || String(profile.plan || '').toLowerCase() === 'developer')
+type KieVeoModel = 'veo3_lite' | 'veo3_fast'
+// Message d'un fournisseur → texte montré au client : ni nom de sous-traitant, ni URL, 200 caractères max.
+function sansMoteur(msg: string): string {
+  return String(msg || '').replace(/https?:\/\/\S+/gi, '').replace(/\bkie(\.ai)?\b/gi, 'service vidéo').replace(/\s+/g, ' ').trim().slice(0, 200)
+}
+type KieSubmit = { ok: true; taskId: string } | { ok: false; uncertain: boolean; why: string }
+async function submitKieVeo(model: KieVeoModel, prompt: string, imageUrl: string | null, aspect: string, duration: number): Promise<KieSubmit> {
+  const body = {
+    prompt: prompt.slice(0, 10000), model,
+    ...(imageUrl ? { imageUrls: [imageUrl], generationType: 'FIRST_AND_LAST_FRAMES_2_VIDEO' } : { generationType: 'TEXT_2_VIDEO' }),
+    aspect_ratio: aspect === '16:9' ? '16:9' : '9:16', resolution: '720p', duration: veoCran(duration),
+    enableTranslation: false,   // OBLIGATOIRE : sinon la réplique française entre guillemets est traduite (l'avatar parlerait anglais)
+  }
+  let r: Response
+  try { r = await fetch(`${KIE}/api/v1/veo/generate`, { method: 'POST', headers: kieHeaders(), body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) }) }
+  catch (e) { return { ok: false, uncertain: true, why: 'sans réponse : ' + String((e as Error)?.message || e).slice(0, 120) } }
+  // deno-lint-ignore no-explicit-any
+  let j: any = null
+  try { j = await r.json() } catch { /* corps illisible */ }
+  const code = j && typeof j === 'object' ? Number(j.code) : NaN
+  if (!Number.isFinite(code)) return { ok: false, uncertain: true, why: `HTTP ${r.status}, réponse illisible` }
+  const taskId = String(j?.data?.taskId || '')
+  if (code === 200 && /^[A-Za-z0-9_-]{6,120}$/.test(taskId)) return { ok: true, taskId }
+  if (code === 200) return { ok: false, uncertain: true, why: 'accepté sans identifiant de tâche' }
+  return { ok: false, uncertain: false, why: `refus ${code} : ${String(j.msg || '').slice(0, 160)}` }
+}
+// Image de départ → render-media/<uid>/mcp-kie/<job>.<ext> (format lu dans les OCTETS) → URL signée 6 h. null = impossible.
+async function stageKieImage(userId: string, jobId: string, bytes: Uint8Array): Promise<string | null> {
+  try {
+    const k = kieKindOf('', bytes.slice(0, 16).buffer)
+    if (!k || k.kind !== 'image') return null
+    const path = `${userId}/mcp-kie/${jobId}.${k.ext}`
+    const st = svc.storage.from('render-media')
+    const { error } = await st.upload(path, bytes, { contentType: k.mime, upsert: true })
+    if (error) return null
+    const { data, error: sErr } = await st.createSignedUrl(path, 6 * 3600)
+    return !sErr && data?.signedUrl ? data.signedUrl : null
+  } catch { return null }
+}
+// Lance UNE génération Veo pour un job DÉJÀ débité. Rend l'op_name à poser sur le job (« kie:<taskId> » ou opération
+// Google) ou jette (échec définitif → l'appelant rembourse, une fois). Voir l'en-tête ci-dessus pour la règle de repli.
+async function launchVideo(o: {
+  profile: Record<string, unknown>; userId: string; jobId: string; prompt: string
+  image: { bytes: Uint8Array; mime: string } | null; aspect: string; duration: number
+  kieModel: KieVeoModel; googleModels: string[]
+}): Promise<string> {
+  await sleep(await veoStaggerDelay(o.userId, o.jobId))   // FILE D'ATTENTE anti-rafale (inchangée), une seule fois
+  if (kieVeoOn(o.profile)) {
+    const imgUrl = o.image ? await stageKieImage(o.userId, o.jobId, o.image.bytes) : null
+    if (!o.image || imgUrl) {
+      const s = await submitKieVeo(o.kieModel, o.prompt, imgUrl, o.aspect, o.duration)
+      if (s.ok) { console.log('[mcp] veo kie lancé', o.kieModel, s.taskId, 'job', o.jobId); return KIE_OP_PREFIX + s.taskId }
+      console.warn('[mcp] veo kie', s.uncertain ? 'INCERTAIN → pas de repli' : 'refusé → repli Google', 'job', o.jobId, s.why)
+      if (s.uncertain) throw new Error('le service vidéo n’a pas répondu, réessaie dans un instant')
+    } else console.warn('[mcp] veo kie : image de départ non hébergeable → repli Google', 'job', o.jobId)
+  }
+  if (!GOOGLE_AI_KEY) throw new Error('service vidéo momentanément indisponible, réessaie dans un instant')
+  // Repli Google : image en base64 (calculée seulement ici), MIME lu dans les octets (reframeToAspect annonce « png » même
+  // quand il rend l'image d'origine intacte).
+  let image: { bytesBase64Encoded: string; mimeType: string } | null = null
+  if (o.image) {
+    let bin = ''
+    for (let i = 0; i < o.image.bytes.length; i += 32768) bin += String.fromCharCode(...o.image.bytes.subarray(i, i + 32768))
+    image = { bytesBase64Encoded: btoa(bin), mimeType: kieKindOf('', o.image.bytes.slice(0, 16).buffer)?.mime || o.image.mime }
+  }
+  const mkBody = (withAudio: boolean) => JSON.stringify({
+    instances: [{ prompt: o.prompt, ...(image ? { image } : {}) }],
+    parameters: { durationSeconds: o.duration, sampleCount: 1, aspectRatio: o.aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
+  })
+  return await launchVeo(o.userId, o.jobId, mkBody, o.googleModels, false)
+}
+// op_name posé sur le job (1 réessai : sans lui, le filet 8 min rembourserait une génération pourtant lancée).
+async function setOpName(jobId: string, opName: string): Promise<void> {
+  for (let i = 0; i < 2; i++) {
+    const { error } = await svc.from('mcp_jobs').update({ op_name: opName, updated_at: new Date().toISOString() }).eq('id', jobId)
+    if (!error) return
+    console.warn('[mcp] op_name non posé', jobId, error.message)
+  }
+}
+// Échec pendant le lancement : remboursé UNE fois (failAndRefund) si et seulement si le débit a eu lieu ; sinon simple échec.
+async function failLaunch(userId: string, jobId: string, cost: number, debited: boolean, e: unknown): Promise<void> {
+  const reason = sansMoteur(String((e as Error)?.message || e)) || 'échec au lancement'
+  if (debited) { await failAndRefund(userId, { id: jobId, credits_cost: cost }, reason); return }
+  await svc.from('mcp_jobs').update({ status: 'failed', error: reason, updated_at: new Date().toISOString() }).eq('id', jobId).eq('status', 'running')
+}
+
 async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
-  if (!GOOGLE_AI_KEY) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
+  if (!GOOGLE_AI_KEY && !kieVeoOn(profile)) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
-  const duration = Math.min(10, Math.max(4, Number(args.duration_seconds) || 8))
+  const duration = veoCran(Math.max(4, Number(args.duration_seconds) || 8))   // 4 / 6 / 8 s (crans Veo), facturés tels quels
   const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
-  const cost = Math.round(duration * VIDEO_COST_SEC) // 1,5 cr/s → arrondi (durées impaires)
+  const cost = Math.round(duration * VIDEO_COST_SEC) // 1,5 cr/s → 6 / 9 / 12 crédits
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
@@ -1461,7 +1594,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   if (gate) return gate
 
   // Validation SYNCHRONE et RAPIDE de l'URL image (format + SSRF). Le TÉLÉCHARGEMENT
-  // lourd (≈2,7 Mo + base64) part en tâche de fond AVEC le lancement Veo — sinon la
+  // lourd (≈2,7 Mo) part en tâche de fond AVEC le lancement — sinon la
   // requête tient 5-10 s et le relais connecteur (coupure ~8 s) rend « Impossible de
   // joindre AvatarAds », alors que la vidéo se génère quand même (crédits débités).
   const imageUrl = args.image_url ? String(args.image_url) : ''
@@ -1476,13 +1609,14 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // DB (l'insert). Sur un isolate FROID (Supabase en démarre plusieurs, le keep-warm n'en
   // garde qu'un chaud), empiler débit + insert + téléchargement dépassait la coupure ~8 s du
   // relais claude.ai (« Erreur de connexion ») ET, coupé avant l'insert, ne laissait AUCUN
-  // job à récupérer. Débit atomique + image + lancement Veo passent en tâche de fond ;
+  // job à récupérer. Débit atomique + image + lancement passent en tâche de fond ;
   // /status n'avance le job qu'une fois `op_name` posé (barre de progression en attendant).
   const { data: job, error } = await svc.from('mcp_jobs')
     .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: cost }).select('id').single()
   if (error || !job) return toolErr('Erreur serveur au suivi du job — réessaie.')
 
   bg((async () => {
+    let debited = false
     try {
       // Débit atomique au lancement (remboursé si échec plus bas). Le pré-contrôle de solde
       // plus haut a déjà écarté « pas assez de crédits » ; ici on sécurise la course entre
@@ -1492,8 +1626,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
         await svc.from('mcp_jobs').update({ status: 'failed', error: bal === -1 ? 'Crédits insuffisants' : 'Erreur crédits', updated_at: new Date().toISOString() }).eq('id', job.id)
         return
       }
+      debited = true
       // Image de départ optionnelle — TÉLÉCHARGEMENT lourd, hors de la requête
-      let image: { bytesBase64Encoded: string; mimeType: string } | null = null
+      let image: { bytes: Uint8Array; mime: string } | null = null
       if (imageUrl) {
         const r = await fetchTO(imageUrl, 20_000)
         if (!r || !r.ok) throw new Error("téléchargement de l'image de départ impossible")
@@ -1504,20 +1639,15 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
         // Recadre l'image AU FORMAT demandé (sinon Veo garde le ratio de l'image → pas de 9:16)
         let mime = ct
         try { const rf = await reframeToAspect(buf, aspect); buf = rf.bytes; mime = rf.mimeType } catch (_) { /* recadrage best-effort : sinon image telle quelle */ }
-        let bin = ''
-        for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768))
-        image = { bytesBase64Encoded: btoa(bin), mimeType: mime }
+        image = { bytes: buf, mime }
       }
-      const mkBody = (withAudio: boolean) => JSON.stringify({
-        instances: [{ prompt: prompt + EXPRESS_ENDING, ...(image ? { image } : {}) }],
-        parameters: { durationSeconds: duration, sampleCount: 1, aspectRatio: aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
-      })
-      // FILE D'ATTENTE : étalement anti-rafale + retries transitoires (voir launchVeo).
-      const opName = await launchVeo(userId, job.id, mkBody, VEO_MODELS)
-      await svc.from('mcp_jobs').update({ op_name: opName, updated_at: new Date().toISOString() }).eq('id', job.id)
+      // kie (Veo 3.1 Lite) d'abord, Google Lite en repli si kie refuse — voir « VEO VIA KIE.AI ». Le repli Google ne
+      // passe PLUS sur Fast : une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
+      const opName = await launchVideo({ profile, userId, jobId: job.id, prompt: prompt + EXPRESS_ENDING, image, aspect, duration,
+        kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
+      await setOpName(job.id, opName)
     } catch (e) {
-      await svc.from('mcp_jobs').update({ status: 'failed', error: String((e as Error)?.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
-      await refundCredits(userId, cost)   // échec au lancement → on rend les crédits
+      await failLaunch(userId, job.id, cost, debited, e)   // échec au lancement → crédits rendus (une fois)
     }
   })())
 
@@ -1555,10 +1685,11 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
 
   // ⚠ JAMAIS de boucle de poll ici : le relais claude.ai COUPE la requête à ~8 s
   // (l'ancienne boucle 9×5 s = 40 s garantissait « le serveur ne répond pas »). On
-  // fait UN SEUL passage — advanceVideoJob : un unique GET Veo puis, si prête, livraison
-  // (deliverVideo, claim atomique anti-double-upload) — puis on relit le job. Le suivi
-  // continu est assuré par le widget de la carte, qui sonde /status (→ advanceVideoJob).
-  await advanceVideoJob(job)
+  // fait UN SEUL passage — advanceVideoJob : un unique suivi fournisseur (kie record-info depuis le 25/09, ou GET Veo
+  // Google pour un repli) puis, si prête, livraison (deliverVideo, claim atomique anti-double-upload), BORNÉ à ~6,5 s
+  // (la copie du MP4 continue en tâche de fond au-delà) — puis on relit le job. Le suivi continu est assuré par le
+  // widget de la carte, qui sonde /status (→ advanceVideoJob).
+  await advanceVideoBounded(job)
   const { data: j2 } = await svc.from('mcp_jobs').select('*')
     .eq('id', job.id).eq('user_id', userId).maybeSingle()
   const cur = (j2 || job) as Record<string, unknown>
@@ -1726,7 +1857,7 @@ async function hedraV3StatusUrl(jobId: string): Promise<{ pending?: boolean; fai
 }
 
 async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
-  if (!GOOGLE_AI_KEY) return toolErr('Génération avatar indisponible (configuration serveur incomplète).')
+  if (!GOOGLE_AI_KEY && !kieVeoOn(profile)) return toolErr('Génération avatar indisponible (configuration serveur incomplète).')
   const script = String(args.script || '').trim()
   if (!script) return toolErr('Le paramètre "script" est requis.')
   // VOIX NATIVE Veo : la réplique va dans le prompt, Veo la PARLE + lipsync (plus d'ElevenLabs).
@@ -1773,6 +1904,7 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
   if (jobErr || !job) return toolErr('Erreur serveur au suivi du job — réessaie.')
 
   bg((async () => {
+    let debited = false
     try {
       // Débit atomique au lancement (remboursé si échec plus bas ; pré-contrôle de solde déjà
       // fait plus haut). Échec du débit → job en échec, SANS remboursement (rien débité).
@@ -1781,31 +1913,27 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
         await svc.from('mcp_jobs').update({ status: 'failed', error: bal === -1 ? 'Crédits insuffisants' : 'Erreur crédits', updated_at: new Date().toISOString() }).eq('id', job.id)
         return
       }
+      debited = true
       // Photo optionnelle → recadrée au format (Veo garde sinon le ratio de l'image)
-      let image: { bytesBase64Encoded: string; mimeType: string } | null = null
+      let image: { bytes: Uint8Array; mime: string } | null = null
       if (avatarUrl) {
         const got = await fetchUserFile(avatarUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "la photo d'avatar (avatar_image_url)")
         if (typeof got === 'string') throw new Error(got)
         let buf = got.bytes, mime = got.contentType
         try { const rf = await reframeToAspect(buf, aspect); buf = rf.bytes; mime = rf.mimeType } catch (_) { /* recadrage best-effort */ }
-        let bin = ''
-        for (let i = 0; i < buf.length; i += 32768) bin += String.fromCharCode(...buf.subarray(i, i + 32768))
-        image = { bytesBase64Encoded: btoa(bin), mimeType: mime }
+        image = { bytes: buf, mime }
       }
       // La réplique va DANS le prompt → Veo la PARLE (voix native) + lip-sync (plus d'ElevenLabs/Hedra).
       const vp = `A person looking directly at the camera and speaking naturally to the viewer, saying out loud: "${script.replace(/[\`"]/g, "'")}". Accurate natural lip-sync matching every word, clear audible human voice, warm authentic UGC delivery, subtle expressive facial expressions and small natural head movements, believable lighting, static background.`
-      const mkBody = (withAudio: boolean) => JSON.stringify({
-        instances: [{ prompt: vp, ...(image ? { image } : {}) }],
-        parameters: { durationSeconds: duration, sampleCount: 1, aspectRatio: aspect, resolution: '720p', ...(withAudio ? { generateAudio: true } : {}) },
-      })
-      // Modèle : Pro → Fast (repli Lite si indispo), Standard → Lite.
-      const models = isPro ? ['veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'] : ['veo-3.1-lite-generate-preview']
-      // FILE D'ATTENTE : étalement anti-rafale + retries transitoires (voir launchVeo).
-      const opName = await launchVeo(userId, job.id, mkBody, models)
-      await svc.from('mcp_jobs').update({ op_name: opName, updated_at: new Date().toISOString() }).eq('id', job.id)
+      // kie d'abord (Pro → Veo 3.1 Fast, Standard → Lite ; enableTranslation:false → la réplique reste en français),
+      // Google en repli si kie refuse — voir « VEO VIA KIE.AI ». Repli Google : Pro → Fast (puis Lite si Fast indispo,
+      // comme avant) ; Standard → Lite SEULEMENT (jamais du Fast financé par un débit Lite).
+      const opName = await launchVideo({ profile, userId, jobId: job.id, prompt: vp, image, aspect, duration,
+        kieModel: isPro ? 'veo3_fast' : 'veo3_lite',
+        googleModels: isPro ? ['veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'] : ['veo-3.1-lite-generate-preview'] })
+      await setOpName(job.id, opName)
     } catch (e) {
-      await svc.from('mcp_jobs').update({ status: 'failed', error: String((e as Error)?.message || e).slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
-      await refundCredits(userId, cost)   // échec au lancement → on rend les crédits
+      await failLaunch(userId, job.id, cost, debited, e)   // échec au lancement → crédits rendus (une fois)
     }
   })())
 
@@ -1918,19 +2046,69 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
 // → fin des « Impossible de joindre AvatarAds » (le proxy connecteur tombait sur les
 // check_*). Idempotent : deliverVideo claim atomiquement, failAndRefund ne rembourse
 // qu'une fois. N'émet JAMAIS d'exception (on retentera au prochain poll).
-async function advanceVideoJob(job: Record<string, unknown>): Promise<void> {
+// Un seul « cran » à la fois par job et par isolate : le widget sonde toutes les 2,5 s sans attendre la réponse
+// précédente ; sans ce verrou, chaque sonde re-téléchargeait le MP4 pendant qu'une autre le livrait déjà.
+const _advancing = new Map<string, Promise<void>>()
+function advanceVideoJob(job: Record<string, unknown>): Promise<void> {
+  const id = String(job.id)
+  const cur = _advancing.get(id)
+  if (cur) return cur
+  const p = (String(job.op_name || '').startsWith(KIE_OP_PREFIX) ? advanceKieVideoJob(job) : advanceGoogleVideoJob(job))
+    .finally(() => { _advancing.delete(id) })
+  _advancing.set(id, p)
+  return p
+}
+// Avance BORNÉE dans le temps (check_video, /status) : la livraison — surtout kie (suivi + téléchargement du MP4 depuis
+// l'hébergeur kie + copie) — peut dépasser la coupure ~8 s du relais claude.ai. On attend au plus `ms`, la suite continue
+// en tâche de fond (waitUntil) et la sonde suivante se raccroche à la même promesse.
+async function advanceVideoBounded(job: Record<string, unknown>, ms = 6500): Promise<void> {
+  const p = advanceVideoJob(job)
+  bg(p)
+  let t: number | undefined
+  await Promise.race([p, new Promise<void>((r) => { t = setTimeout(r, ms) })])
+  clearTimeout(t)
+}
+async function advanceGoogleVideoJob(job: Record<string, unknown>): Promise<void> {
   try {
     const userId = String(job.user_id)
     const res = await veoFetch(`/v1beta/${job.op_name}`, { method: 'GET' })
     if (!res.ok) return
     const data = await res.json().catch(() => ({})) as Record<string, unknown>
     if (!data.done) return
-    if (data.error) { await failAndRefund(userId, job, (data.error as { message?: string })?.message || 'Génération refusée par Google'); return }
+    if (data.error) { await failAndRefund(userId, job, (data.error as { message?: string })?.message || 'génération refusée par le service vidéo'); return }
     const { b64, uri } = extractVideo(data)
     const bytes = await fetchVideoBytes(b64, uri)
     if (!bytes) { await failAndRefund(userId, job, 'video_missing'); return }
     await deliverVideo(userId, job, bytes)
   } catch { /* on retente au prochain poll */ }
+}
+// Job Veo lancé chez kie (op_name « kie:<taskId> ») : UN suivi veo/record-info, puis selon l'état :
+//   en file / en cours, panne passagère, clé / solde kie refusés → rien (on retente ; le filet 20 min rembourse sinon) ;
+//   tâche inconnue de kie → remboursée après 10 min de grâce (jamais créée côté kie : rien ne viendra) ;
+//   échec kie (successFlag 2/3, « succès » sans URL) → échec terminal + remboursement (une fois), PAS de repli ;
+//   réussie → MP4 rapatrié (anti-SSRF, format lu dans les octets) puis livré par deliverVideo (claim anti-doublon).
+async function advanceKieVideoJob(job: Record<string, unknown>): Promise<void> {
+  try {
+    const userId = String(job.user_id)
+    const taskId = String(job.op_name).slice(KIE_OP_PREFIX.length)
+    const rec = await kieRecord('veo', taskId)
+    if (rec.transient) return
+    if (!rec.found) {
+      if (Date.now() - new Date(String(job.created_at)).getTime() > 10 * 60_000) await failAndRefund(userId, job, 'génération introuvable chez le service vidéo')
+      return
+    }
+    if (rec.state === 'queue' || rec.state === 'run') return
+    if (rec.state === 'fail' || !rec.urls.length) {
+      console.warn('[mcp] veo kie échec', taskId, 'job', job.id, rec.errType, rec.err.slice(0, 200))
+      await failAndRefund(userId, job, sansMoteur(rec.err) || 'génération refusée par le service vidéo')
+      return
+    }
+    const dl = await kieDownload(rec.urls[0])
+    if (!dl) { console.warn('[mcp] veo kie : rapatriement raté, on retente', taskId); return }
+    const k = kieKindOf(dl.ct, dl.buf)
+    if (!k || k.kind !== 'video') { await failAndRefund(userId, job, 'résultat vidéo illisible'); return }
+    await deliverVideo(userId, job, new Uint8Array(dl.buf))
+  } catch (e) { console.warn('[mcp] veo kie suivi', (e as Error)?.message) /* on retente au prochain poll */ }
 }
 
 async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
@@ -3115,7 +3293,7 @@ serve(async (req) => {
     // marchent SANS que Claude appelle check_* → plus de « Impossible de joindre » (proxy).
     // Images : op_name null (livrées par la tâche de fond) → jamais avancées ici.
     if (j.status !== 'done' && j.status !== 'failed' && j.op_name) {
-      if (j.kind === 'video') await advanceVideoJob(j)
+      if (j.kind === 'video') await advanceVideoBounded(j)
       else if (j.kind === 'avatar') await advanceAvatarJob(j)
       const { data: j2 } = await svc.from('mcp_jobs').select('status, kind, result_url, created_at, error').eq('id', segs[2]).maybeSingle()
       if (j2) j = { ...j, ...j2 }
