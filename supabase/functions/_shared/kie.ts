@@ -1,11 +1,38 @@
 // Briques kie.ai partagées (kie-proxy + reconcile-kie) — suivi normalisé des tâches, rapatriement anti-SSRF,
-// détection du format. La clé reste dans les secrets Supabase (KIEAI_API_KEY), jamais renvoyée ni journalisée.
+// détection du format, facturation liée à la tâche (25/09). La clé reste dans les secrets Supabase (KIEAI_API_KEY),
+// jamais renvoyée ni journalisée.
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isBlockedHost, hostResolvesInternal } from './guard.ts'
 
 export const KIE = 'https://api.kie.ai'
 export const kieKey = () => Deno.env.get('KIEAI_API_KEY') ?? ''
 export const kieHeaders = () => ({ Authorization: `Bearer ${kieKey()}`, 'Content-Type': 'application/json' })
 export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (lecture en flux, abandon au-delà)
+
+// ── Ouverture aux clients payants (Axel 25/09/2026) : EXACTEMENT deux usages. alias → plans autorisés (owner et
+//    developer passent toujours). Tout autre alias (Veo, Kling Motion Control, OmniHuman…) reste developer seulement.
+//    Plans = ceux de l'UI : « Améliorer en 4K » dès Starter ; Omni Flash image→vidéo (Express) = Pro/Élite, comme le gate
+//    fal-proxy de google/gemini-omni-flash/…/image-to-video.
+export const KIE_OPEN: Record<string, string[]> = {
+  'nano-banana-pro': ['starter', 'pro', 'elite', 'byok'],
+  'omni-flash': ['pro', 'elite'],
+}
+// Interrupteur serveur : secret KIE_CLIENTS=0 referme kie aux clients SANS redéploiement (403 AVANT tout tirage → l'app
+// replie sur Google / fal). Lu à chaque requête. Défaut : ouvert. Le compte developer n'est pas concerné.
+export const kieClientsOn = (): boolean => (Deno.env.get('KIE_CLIENTS') ?? '1').trim() !== '0'
+
+// ── Facturation d'une tâche kie (RPC kie_job_bill, migration 20260925130000) : settle | release | refund, EXACTEMENT
+//    une fois (verrou de ligne + garde d'état en SQL). `bill` = état APRÈS l'appel ('none' = aucune réservation liée,
+//    null = erreur technique → l'appelant garde l'état connu). Best-effort : jamais d'exception.
+export type KieBill = 'none' | 'drawn' | 'settled' | 'released' | 'refunded' | 'closed'
+export async function kieBill(db: SupabaseClient, userId: string, rid: string, action: 'settle' | 'release' | 'refund'): Promise<{ ok: boolean; bill: KieBill | null; reason?: string }> {
+  try {
+    const { data, error } = await db.rpc('kie_job_bill', { p_user: userId, p_task: rid, p_action: action })
+    if (error) { console.warn('[kie] kie_job_bill', action, rid, error.message); return { ok: false, bill: null, reason: 'rpc' } }
+    const d = (data || {}) as { ok?: boolean; bill?: KieBill | null; reason?: string }
+    return { ok: !!d.ok, bill: d.bill ?? null, reason: d.reason }
+  } catch (e) { console.warn('[kie] kie_job_bill exception', action, rid, (e as Error)?.message); return { ok: false, bill: null, reason: 'rpc' } }
+}
 
 // Nom affiché dans la Bibliothèque quand le filet range une génération récupérée après coup.
 export const KIE_LABELS: Record<string, string> = {

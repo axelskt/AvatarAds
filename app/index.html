@@ -9276,7 +9276,7 @@ async function _imgMakeRealistic(btn){
       url = await _nbRefine4K(token, dataUrl, aspect);
       if(!url) throw new Error('Nano Banana Pro : aucune image');
     }catch(e){
-      if(e && e._kieStage) throw e;   // compte dev sur kie : pas de repli (Axel 23/09)
+      if(e && e._kieStage) throw e;   // kie : dev (aucun repli, Axel 23/09) ou issue inconnue / crédits rendus (clients 25/09) → pas de repli
       engine='gpt-image';
       console.warn('Nano Banana Pro indispo (améliorer 4K), repli gpt-image :', e);
       const sizeMap={ '1024x1792':'1152x2048','1792x1024':'1536x1024','1024x1024':'1024x1024' };
@@ -9287,7 +9287,7 @@ async function _imgMakeRealistic(btn){
     _imgSaveHistory(url, '4K', dispFmt);
     _imgRenderHistory();
     creditsFlowDone();
-    toast('Amélioré en 4K — '+engine+(engine==='Nano Banana Pro'?_kieTag():''));
+    toast('Amélioré en 4K — '+engine+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
   }catch(e){ await creditsFlowRefund('l\'amélioration 4K a échoué'); toast(''+(e.message||e)); }
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
@@ -9299,10 +9299,12 @@ async function _imgMakeRealistic(btn){
 // Télécharger dès qu'elle est prête (dans l'ordre d'arrivée). Chaque résultat est rangé automatiquement en Bibliothèque.
 // Crédits (clients) : UN débit PAR image, tous passés AVANT de lancer (le verrou de débit interdit les débits simultanés)
 // → une image en échec est remboursée SEULE ; si le solde ne couvre pas tout, les dernières cases restent « non lancées ».
-// En parallèle : compte dev (kie) = toutes les images d'un coup ; clients (Google) = 3 à la fois.
+// En parallèle : kie (compte dev, et clients depuis le 25/09) = toutes les images d'un coup — kie est lent (4K ~9 min) mais
+// encaisse le parallèle ; clients sans kie (Google) = 3 à la fois. Débit toujours image par image (clients).
 async function _imgMakeRealisticBatch(btn){
   const files = _imgRefFiles.slice(), n = files.length, cost = CREDIT_COSTS.imgRealistic;
-  const kie = _kieOn(), par = kie ? n : 3;
+  const kie = _kieOn(), par = (kie || _kieClientOn('4k')) ? n : 3;
+  let viaKie = 0, viaGoogle = 0, fellBack = 0;   // moteur réel de chaque image (toast final : « le toast dit quel moteur a tourné »)
   const orig = btn ? btn.innerHTML : null;
   const singleWrap=document.getElementById('imgResult'), multiWrap=document.getElementById('imgResultMulti'), multiGrid=document.getElementById('imgMultiGrid'), overlay=document.getElementById('imgLoadingOverlay');
   if(window._img4kBusy){ toast('Un lot 4K est déjà en cours — patiente'); return; }
@@ -9377,10 +9379,10 @@ async function _imgMakeRealisticBatch(btn){
       try{
         const aspect = (x.w && x.h) ? _nbAspectFor(x.w, x.h) : (_NB_FMT_ASPECT[_imgSelectedFormat] || '9:16');
         let tk = token; try{ tk = (await sb.auth.getSession()).data.session?.access_token || token; }catch(_){}   // jeton relu : le lot peut durer
-        let url;
-        try{ url = await _nbRefine4K(tk, x.d, aspect, op); if(!url) throw new Error('Nano Banana Pro : aucune image'); }
+        let url; const nm = {};
+        try{ url = await _nbRefine4K(tk, x.d, aspect, op, nm); if(!url) throw new Error('Nano Banana Pro : aucune image'); if(nm.engine==='kie') viaKie++; else { viaGoogle++; if(nm.fellBack) fellBack++; } }
         catch(e){
-          if(e && e._kieStage) throw e;   // compte dev sur kie : pas de repli (Axel 23/09)
+          if(e && e._kieStage) throw e;   // kie : dev (aucun repli, Axel 23/09) ou issue inconnue / crédits rendus (clients 25/09) → pas de repli gpt-image
           console.warn('Nano Banana Pro indispo (4K lot '+(i+1)+'/'+n+'), repli gpt-image :', e);
           const sizeMap={ '1024x1792':'1152x2048','1792x1024':'1536x1024','1024x1024':'1024x1024' };
           url = await _imgEditOne(tk, _IMG_REALISM_EDIT, x.f, sizeMap[fmt]||'1024x1024', { only:true, op });   // SA seule image
@@ -9404,7 +9406,9 @@ async function _imgMakeRealisticBatch(btn){
     const worker = async ()=>{ for(;;){ const i = next++; if(i >= n) return; await one(i); } };
     await Promise.all(Array.from({ length: Math.min(par, n) }, worker));
     _imgRenderHistory();
-    const tag = (kie && ok) ? ' · kie.ai' : '';
+    // Moteur(s) réellement utilisé(s) : « · kie.ai », « · Google », ou le détail quand le lot a mélangé (repli par image).
+    const tag = !(viaKie + viaGoogle) ? '' : !viaGoogle ? ' · kie.ai' : !viaKie ? (' · Google' + (fellBack ? ' (repli : kie.ai indisponible)' : ''))
+      : (' · '+viaKie+' kie.ai, '+viaGoogle+' Google' + (fellBack ? ' (repli)' : ''));
     toast(ok===n ? (n+' images améliorées en 4K — rangées dans ta Bibliothèque'+tag)
                  : ('4K : '+ok+'/'+n+' réussie'+(ok>1?'s':'')+(ko?(' · '+ko+' en échec'+(refunded?(' ('+refunded+' remboursée'+(refunded>1?'s':'')+')'):'')):'')+(skipped?(' · '+skipped+' non lancée'+(skipped>1?'s':'')+' (crédits)'):'')+tag)
                    + (viaGpt ? (' · '+viaGpt+' via gpt-image (Google indisponible)') : ''));
@@ -10256,25 +10260,37 @@ function _nbAspect(w, h){
 // silencieux. Vérifié sur ai.google.dev : modèle gemini-3-pro-image (GA depuis le 28/05/2026),
 // config par responseModalities + imageConfig(imageSize/aspectRatio).
 // Partagé par « Restaurer les détails » (4K) et « Rendre réaliste » (2K).
-async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain){   // chain : upscale du palier 4K (droit payé par l'appel gpt, x-aa-chain)
+async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta){   // chain : upscale du palier 4K (droit payé par l'appel gpt, x-aa-chain) · meta (Axel 25/09) : { kie4k } = « Améliorer en 4K » (ouvert aux clients sur kie) ; reçoit { engine, fellBack }
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
   if(!m) throw new Error('Image illisible pour Nano Banana Pro');
   // #lot6 · img2img = une image d'entrée par construction → consigne de fidélité du texte
   // packaging (anti-doublon : certains prompts — _NB_REFINE_PROMPT / _IMG_REALISM_EDIT — ont déjà leur lock)
   if(String(prompt||'').indexOf(_IMG_TEXT_FIDELITY) < 0) prompt = String(prompt||'') + _IMG_TEXT_FIDELITY;
-  // kie.ai (compte developer) : MÊME modèle, MÊME prompt, même ratio/taille ; seul le fournisseur change.
-  window._aaLastEngine = 'google';
-  if(_kieOn()){
+  // kie.ai : MÊME modèle, MÊME prompt, même ratio/taille ; seul le fournisseur change. Compte developer = tous les appels
+  // Nano, sans repli (inchangé). Clients (25/09) = « Améliorer en 4K » seulement (meta.kie4k, jamais le palier 4K chaîné),
+  // repli Google sur la MÊME réservation quand le serveur l'a rendue (voir _kieCanFallback).
+  window._aaLastEngine = 'google'; window._aaKieFellBack = false;
+  if(meta){ meta.engine = 'google'; meta.fellBack = false; }
+  const _kDev = _kieOn(), _kCli = !_kDev && !chain && !!(meta && meta.kie4k) && _kieClientOn('4k');
+  if(_kDev || _kCli){
     try{
       const _u = await _kieUpload(dataUrl);
-      const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:300 });   // 15 min : kie est lent (4K mesurée à 9 min le 23/09) et il n'y a plus de repli
+      const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:300, op: opHint });   // 15 min : kie est lent (4K mesurée à 9 min le 23/09) ; délai dépassé = jamais de repli (la tâche finit en Bibliothèque)
       const _d = await _kieDataUrl(_r.url);
-      window._aaLastEngine = 'kie'; _kieAck(_r.rid);
+      window._aaLastEngine = 'kie'; if(meta) meta.engine = 'kie'; _kieAck(_r.rid);
       return _d;
     }catch(e){
       console.warn('[kie] Nano Banana Pro : échec kie', e);
-      if(e && e._kieRefus){ const r=new Error('Nano Banana Pro a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
-      if(!_kieCanFallback(e)) throw e;
+      if(_kDev){   // developer : aucun repli (Axel 23/09)
+        if(e && e._kieRefus){ const r=new Error('Nano Banana Pro a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
+        if(!_kieCanFallback(e)) throw e;
+      } else {
+        // Client : erreur AVANT tout appel kie (dépôt de l'image) = rien tiré → repli. Sinon repli seulement si la réservation
+        // est re-tirable ; e._kieStage posé → les appelants ne replient PAS non plus sur gpt-image (issue kie inconnue).
+        if(e && e._kieStage && !_kieCanFallback(e)) throw e;
+        window._aaKieFellBack = true; if(meta) meta.fellBack = true;
+        console.info('[kie] Nano Banana Pro : repli Google (réservation '+((e && e._kieBill) || 'non tirée')+')');
+      }
     }
   }
   const path = '/v1beta/models/' + _NB_MODEL + ':generateContent';
@@ -10377,14 +10393,39 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
   if(!b64){ const _br=(d&&d.promptFeedback&&d.promptFeedback.blockReason)||(d&&d.candidates&&d.candidates[0]&&d.candidates[0].finishReason)||''; throw new Error('Faceswap refusé — Nano Banana n\'a pas renvoyé d\'image'+(_br?' ('+_br+')':'')+'. Essaie d\'autres photos.'); }
   return 'data:image/jpeg;base64,'+b64;
 }
-// ── kie.ai (23/09/2026) — COMPTE DEVELOPER UNIQUEMENT ─────────────────────────────────────────────
-// Mêmes modèles, MÊMES prompts backend : seul le fournisseur change (kie ≈ −20 à −70 %). Le serveur (kie-proxy)
-// revérifie le plan developer. Panne technique kie → repli automatique sur le fournisseur habituel.
-// kie n'a ni DPA ni garantie RGPD → jamais pour les clients tant que ce n'est pas tranché.
-// Réglage (console du compte dev) : localStorage aa_kie='0' coupe kie (retour aux fournisseurs habituels). Aucun repli automatique.
+// ── kie.ai (23/09/2026 ; ouvert aux clients payants le 25/09/2026) ─────────────────────────────────
+// Mêmes modèles, MÊMES prompts backend : seul le fournisseur change (kie ≈ −20 à −70 %). Le serveur (kie-proxy) revérifie
+// le plan, tire la réservation (x-aa-op) AVANT l'appel kie, règle au rapatriement, rend sur échec (voir kie-proxy/handler.ts).
+//   • compte developer : tous les usages kie, AUCUN repli (inchangé) ;
+//   • clients payants (Axel 25/09) : EXACTEMENT deux usages — « Améliorer en 4K » (Nano Banana Pro, dès Starter, via
+//     _nbRefine4K) et Omni Flash image→vidéo (Express, Pro/Élite). Échec kie → REPLI sur le chemin habituel (Google /
+//     fal) SEULEMENT si le serveur a rendu le tirage à la réservation (billing 'released') ou n'a rien tiré ('none') :
+//     la même op est alors re-tirée proprement. Jamais de repli sur un délai dépassé ni une soumission sans réponse
+//     (la tâche peut tourner chez kie → double coût) : la génération arrive en Bibliothèque, ou les crédits sont rendus.
+// kie n'a pas de DPA : ouverture décidée par Axel le 25/09/2026 (politique de confidentialité à mettre à jour).
+// Réglage (console) : localStorage aa_kie='0' coupe kie sur ce navigateur (retour aux fournisseurs habituels).
 const KIE_PROXY = SUPABASE_URL + '/functions/v1/kie-proxy';
 function _kieOn(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer' && localStorage.getItem('aa_kie')!=='0'; }catch(_){ return false; } }
+function _kieDev(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer'; }catch(_){ return false; } }
+// Usages kie ouverts aux clients (mêmes plans que l'UI et que KIE_OPEN côté serveur) : '4k' = « Améliorer en 4K »,
+// 'omni' = Omni Flash image→vidéo d'Express. Owner : comme un client (sans débit). Developer : _kieOn() (inchangé).
+const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['pro','elite'] };
+function _kieClientOn(usage){
+  try{
+    if(typeof currentMember==='undefined' || !currentMember) return false;
+    if(_kieDev()) return _kieOn();
+    if(localStorage.getItem('aa_kie')==='0') return false;
+    return !!KIE_CLIENT_PLANS[usage] && (!!currentMember.is_owner || KIE_CLIENT_PLANS[usage].includes(String(currentMember.plan||'').toLowerCase()));
+  }catch(_){ return false; }
+}
 function _kieTag(){ const t = (window._aaLastEngine==='kie' && _kieOn()) ? ' · kie.ai' : ''; window._aaLastEngine=''; return t; }
+// Toast des 2 usages ouverts (Axel 25/09 : « le toast dit toujours quel moteur a tourné ») : ' · kie.ai', ou le moteur
+// habituel (`other`), suffixé du repli quand kie a échoué. Lit puis remet à zéro l'état du dernier appel.
+function _kieEngineTag(other){
+  const e = window._aaLastEngine, fb = !!window._aaKieFellBack; window._aaLastEngine=''; window._aaKieFellBack=false;
+  if(e==='kie') return ' · kie.ai';
+  return other ? (' · '+other+(fb?' (repli : kie.ai indisponible)':'')) : '';
+}
 // Dépose une entrée (Blob, File ou data-URL) dans render-media/<uid>/kie-in/ → URL signée 1 h lisible par kie.
 async function _kieUpload(src, ext){
   const { data:{ session } } = await sb.auth.getSession();
@@ -10401,6 +10442,9 @@ async function _kieUpload(src, ext){
 }
 // Soumet puis suit une tâche kie → { url (URL signée de NOTRE storage), kind, kie }.
 // Erreur marquée e._kieRefus = refus de CONTENU (inutile de relancer ailleurs) ; sinon panne technique (repli possible).
+// e._kieBill = sort de la réservation côté serveur (clients, 25/09) : 'released' / 'none' = re-tirable → repli possible ;
+// 'refunded' = crédits déjà rendus ; 'drawn' = issue inconnue ; 'unfunded' = réservation absente. opt.op = x-aa-op explicite
+// (lot 4K : une réservation PAR image, sinon le serveur prendrait la dernière pour toutes).
 async function _kieRun(alias, body, opt){
   opt = opt || {};
   const every = opt.every || 4000, maxPolls = opt.maxPolls || 180;
@@ -10409,7 +10453,7 @@ async function _kieRun(alias, body, opt){
   const t0 = Date.now(), maxMs = every * maxPolls;
   // En-têtes relus à CHAQUE requête : le jeton peut expirer pendant 11 min de suivi. 401 → rafraîchit puis 1 réessai.
   const call = async (p, init, retried) => {
-    const H = await getAuthHeader();
+    const H = { ...(await getAuthHeader()), ...(opt.op ? { 'x-aa-op': String(opt.op) } : {}) };
     const r = await fetch(KIE_PROXY+'?path='+encodeURIComponent(p), Object.assign({ headers:{ ...H, 'Content-Type':'application/json' } }, init||{}));
     if(r.status===401 && !retried){ try{ await sb.auth.refreshSession(); }catch(_){} return call(p, init, true); }
     const j = await r.json().catch(()=>({}));
@@ -10417,12 +10461,18 @@ async function _kieRun(alias, body, opt){
   };
   const refusRe = /policy|moderat|safety|sensitive|violat|nsfw|prohibit|flagged|content check|inappropriate|minor/i;
   // _kieStage : 'submit' = rien de lancé chez kie · 'failed' = kie a échoué (non facturé) → repli possible ;
-  //             'pending' = tâche lancée, issue inconnue → JAMAIS de repli (on paierait la même génération deux fois).
-  const fail = (msg, stage, refus) => { const e = new Error(msg); e._kieStage = stage; e._kieRefus = !!refus; return e; };
+  //             'pending' = tâche lancée, issue inconnue → JAMAIS de repli (on paierait la même génération deux fois) ;
+  //             'unknown' = soumission sans réponse de kie (délai) → jamais de repli, crédits rendus par le serveur.
+  const fail = (msg, stage, refus, bill) => { const e = new Error(msg); e._kieStage = stage; e._kieRefus = !!refus; e._kieBill = bill || ''; return e; };
   let rs, sd;
   try{ ({ r:rs, j:sd } = await call('/kie/'+alias, { method:'POST', body: JSON.stringify(body) })); }
-  catch(e){ throw fail('kie : soumission sans réponse ('+((e&&e.message)||e)+')', 'pending'); }
-  if(!rs.ok || !sd.request_id){ const m = sd.error || ('HTTP '+rs.status); throw fail('kie : '+m, 'submit', rs.status===422 && refusRe.test(m)); }
+  catch(e){ throw fail('kie : soumission sans réponse ('+((e&&e.message)||e)+') — si elle a démarré, elle arrivera dans ta Bibliothèque ; sinon tes crédits te seront rendus', 'pending'); }
+  if(!rs.ok || !sd.request_id){
+    const m = sd.error || ('HTTP '+rs.status);
+    if(sd.uncertain) throw fail('kie : '+m+(sd.billing==='refunded' ? ' (crédits rendus)' : ''), 'unknown', false, sd.billing);
+    // 400 / 401 / 403 = refus AVANT tout tirage (paramètres, session, plan) → 'none' même si le serveur ne le dit pas (ancien kie-proxy).
+    throw fail('kie : '+m, 'submit', rs.status===422 && refusRe.test(m), sd.billing || ([400,401,403].includes(rs.status) ? 'none' : ''));
+  }
   const rid = sd.request_id;
   console.log('[kie] tâche', alias, rid);
   for(let i=0; Date.now()-t0 < maxMs; i++){
@@ -10433,14 +10483,14 @@ async function _kieRun(alias, body, opt){
     try{ ({ r:rt, j:st } = await call(sd.status_url)); }catch(_){ continue; }   // coupure réseau : on réessaie au tour suivant
     if(!rt.ok){ if(rt.status===429 || rt.status===401 || rt.status>=500) continue; throw fail('kie : suivi '+(st.error||rt.status)+' (tâche '+rid+')', 'pending'); }
     if(st.status==='IN_QUEUE' || st.status==='IN_PROGRESS') continue;
-    if(st.status==='FAILED'){ const m = st.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m+' '+JSON.stringify(st.detail||''))); }
+    if(st.status==='FAILED'){ const m = st.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m+' '+JSON.stringify(st.detail||'')), st.billing); }
     if(st.status==='COMPLETED'){
       for(let k=0; k<5; k++){   // la route résultat est idempotente côté kie-proxy → on peut la rappeler
         let rr=null, rd={};
         try{ ({ r:rr, j:rd } = await call(sd.response_url)); }catch(_){}
         if(rr && rr.ok && rd.url){ console.log('[kie] terminé', alias, rid, rd.kie||{}); return { url: rd.url, kind: rd.kind, kie: rd.kie||{}, rid }; }
         if(rr && rr.status===409){ try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){} throw fail('kie : '+(rd.error||'déjà rangée dans ta Bibliothèque'), 'pending'); }
-        if(rr && rr.status===422){ const m = rd.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m)); }
+        if(rr && rr.status===422){ const m = rd.error || 'échec'; throw fail('kie : '+m, 'failed', refusRe.test(m), rd.billing); }
         await new Promise(res=>setTimeout(res, 3000*(k+1)));
       }
       throw fail('kie : résultat prêt mais pas encore récupéré — ne relance pas, il arrivera tout seul dans ta Bibliothèque d’ici ~1 h', 'pending');
@@ -10454,8 +10504,15 @@ function _kieAck(rid){
   (async()=>{ try{ const H=await getAuthHeader(); await fetch(KIE_PROXY+'?path='+encodeURIComponent('/kie/requests/'+rid+'/ack'), { method:'POST', headers:{ ...H, 'Content-Type':'application/json' }, body:'{}' }); }catch(_){} })();
 }
 // Axel 23/09 : AUCUN repli sur le compte developer — kie ou l'erreur, jamais Google / fal / gpt-image en secours
-// (plus simple à lire pendant le test, et jamais une génération payée deux fois). Les clients gardent leurs replis.
-function _kieCanFallback(e){ return false; }
+// (plus simple à lire pendant le test, et jamais une génération payée deux fois).
+// Clients (25/09) : repli sur le chemin habituel SEULEMENT si kie a échoué pour de bon ou refusé la soumission
+// ('submit' / 'failed') ET que la réservation est re-tirable proprement ('released' = tirage rendu à la réserve, 'none' =
+// rien tiré). Délai dépassé / soumission sans réponse / crédits déjà rendus / issue inconnue → pas de repli.
+function _kieCanFallback(e){
+  if(_kieDev() || !e) return false;
+  if(e._kieStage!=='submit' && e._kieStage!=='failed') return false;
+  return e._kieBill==='released' || e._kieBill==='none';
+}
 // Récupère le média rapatrié (URL signée de NOTRE storage) : contrôle HTTP + 3 essais.
 async function _kieFetchBlob(url){
   for(let k=0; k<3; k++){
@@ -10469,8 +10526,11 @@ async function _kieDataUrl(url){
   return await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(b); });
 }
 // Restauration 4K (bouton « Restaurer les détails ») — prompt figé, taille max.
-async function _nbRefine4K(token, dataUrl, aspect, opHint){
-  return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K', opHint);
+// « Améliorer en 4K » = l'usage Nano ouvert aux clients sur kie.ai (Axel 25/09) : meta.kie4k. `meta` (facultatif, lot 4K
+// en parallèle) reçoit le moteur réellement utilisé { engine:'kie'|'google', fellBack } — l'état global _aaLastEngine se
+// marcherait dessus entre images parallèles.
+async function _nbRefine4K(token, dataUrl, aspect, opHint, meta){
+  return _nbEdit(token, dataUrl, _NB_REFINE_PROMPT, aspect, '4K', opHint, false, Object.assign(meta || {}, { kie4k:true }));
 }
 // #4k-repli-fal (Axel 31/08) : MÊME modèle Nano Banana Pro mais via fal.ai
 // (fal-ai/nano-banana-pro/edit) au lieu de l'API Google directe — fournisseur différent,
@@ -10776,7 +10836,7 @@ async function _imgUpscaleNano(btn){
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
-    toast('Amélioré en 4K — '+engine+(engine==='Nano Banana Pro'?_kieTag():''));
+    toast('Amélioré en 4K — '+engine+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
   }catch(e){
     try{ await creditsFlowRefund('le 4K Nano a échoué'); }catch(_){}
     toast(''+(e.message||e));
@@ -11279,7 +11339,7 @@ function _imgSlotUpscale(kind, slot, url, size, opt){
       const ext=/^data:image\/png/i.test(finalUrl) ? 'png' : 'jpg';
       // 4K fait → plus de 4K ni de visage sur cette case ; visage fait → le 4K reste possible.
       _imgFillMultiSlot(slot, finalUrl, size, false, { no4K: kind==='nano' || !!opt.no4K, view, dlName:(kind==='nano'?'avatarads-4k.':'avatarads-hd.')+ext });
-      toast((kind==='nano' ? 'Amélioré en 4K — ' : 'Détails du visage appliqués — ')+engine+(engine==='Nano Banana Pro'?_kieTag():''));
+      toast((kind==='nano' ? 'Amélioré en 4K — ' : 'Détails du visage appliqués — ')+engine+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
     }catch(e){
       try{ await creditsFlowRefund(kind==='nano' ? 'le 4K Nano a échoué' : 'la restauration a échoué'); }catch(_){}
       undo();
@@ -18860,7 +18920,7 @@ async function _avGen4K(btn){
     try{
       up = await _nbRefine4K(token, src, await _nbAspectOf(src, '9:16'));
     }catch(nbErr){
-      if(nbErr && nbErr._kieStage) throw nbErr;   // compte dev sur kie : pas de repli fal (Axel 23/09)
+      if(nbErr && nbErr._kieStage) throw nbErr;   // kie : dev (aucun repli, Axel 23/09) ou issue inconnue / crédits rendus (clients 25/09) → pas de repli fal
       // Google (gemini-3-pro-image) saturé → MÊME modèle via fal.ai (fournisseur non saturé).
       // UI neutre : on ne montre PAS « Google saturé/fal.ai » à l'utilisateur (Axel 31/08), le timer continue.
       console.warn('Nano Banana 4K (Google) KO → repli Nano Banana Pro via fal.ai :', nbErr);
@@ -18873,7 +18933,7 @@ async function _avGen4K(btn){
     // la version 4K REMPLACE l'entrée de base dans la Bibliothèque (plus de doublon)
     try{ await _avLibReplace(up, '1024x1792', 'Avatar IA · 4K'); }catch(_){}
     creditsFlowDone();
-    toast('Passé en 4K'+_kieTag());
+    toast('Passé en 4K'+_kieEngineTag(_via==='fal.ai' ? '' : 'Google'));   // kie.ai ou Google ; repli fal gardé neutre (Axel 31/08)
     if (btn){ btn.style.opacity = '.55'; btn.disabled = true; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>4K fait'; }
   }catch(e){
     console.error('avatar 4K:', e);
@@ -31073,19 +31133,30 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   if(sI.error || !(sI.data&&sI.data.signedUrl)) throw new Error('Lien signé Omni indisponible');
   // Prompt backend Omni Flash — IDENTIQUE pour fal et kie.
   const _omniPrompt = "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)";
-  // kie.ai (COMPTE DEVELOPER UNIQUEMENT, via _kieOn) : Gemini Omni 1.1 Flash, MÊME modèle et MÊME prompt. Chez kie le prix
-  // est un forfait par clip identique en 720p et 1080p → 1080p toujours (Axel 23/09). Durées kie : 4/6/8/10 s (arrondi
-  // au-dessus) ; 9:16 / 16:9 seulement (pas de carré chez kie). Aucun repli : kie ou l'erreur. Les clients restent sur fal.
-  if(_kieOn()){
-    if(window._expFormat==='1:1'){ window._expFormat='9:16'; toast('Carré indisponible chez kie — vidéo générée en 9:16'); }   // kie : 9:16 / 16:9 seulement
-    step(42,'Omni Flash (kie.ai) — génération…');
-    const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
-      duration: ([4,6,8,10].find(x=>x>=(Math.round(durSec)||6))||10) }, { every:5000, maxPolls:240,
-      onTick:(i)=>step(Math.min(88,42+i), 'Omni Flash (kie.ai) — génération…') });
-    step(90,'↓ Récupération de la vidéo…');
-    const _vb = await _kieFetchBlob(_kr.url);
-    window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
-    return new Blob([_vb], { type:'video/mp4' });
+  // kie.ai : Gemini Omni 1.1 Flash, MÊME modèle et MÊME prompt. Chez kie le prix est un forfait par clip identique en 720p
+  // et 1080p → 1080p toujours (Axel 23/09). Durées kie : 4/6/8/10 s (arrondi au-dessus) ; 9:16 / 16:9 seulement.
+  //   • compte developer (_kieOn) : kie ou l'erreur, aucun repli ; un carré passe en 9:16 (inchangé) ;
+  //   • clients Pro / Élite (Axel 25/09) : kie d'abord, au prix choisi (720p / 1080p) ; un CARRÉ reste sur fal (kie n'en fait
+  //     pas) ; échec kie → repli fal sur la MÊME réservation quand le serveur l'a rendue (_kieCanFallback), sinon l'erreur
+  //     (délai dépassé = la vidéo arrivera en Bibliothèque ; soumission sans réponse = crédits rendus).
+  window._aaLastEngine='fal'; window._aaKieFellBack=false;
+  const _kDev=_kieOn(), _kCli=!_kDev && _kieClientOn('omni') && window._expFormat!=='1:1';
+  if(_kDev || _kCli){
+    if(_kDev && window._expFormat==='1:1'){ window._expFormat='9:16'; toast('Carré indisponible chez kie — vidéo générée en 9:16'); }   // kie : 9:16 / 16:9 seulement
+    try{
+      step(42,'Omni Flash (kie.ai) — génération…');
+      const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
+        duration: ([4,6,8,10].find(x=>x>=(Math.round(durSec)||6))||10) }, { every:5000, maxPolls:240,
+        onTick:(i)=>step(Math.min(88,42+i), 'Omni Flash (kie.ai) — génération…') });
+      step(90,'↓ Récupération de la vidéo…');
+      const _vb = await _kieFetchBlob(_kr.url);
+      window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
+      return new Blob([_vb], { type:'video/mp4' });
+    }catch(e){
+      if(_kDev || !_kieCanFallback(e)) throw e;   // developer : aucun repli (Axel 23/09) ; client : réservation non re-tirable
+      console.warn('[kie] Omni Flash : échec kie, repli fal (réservation '+(e._kieBill||'?')+')', e);
+      window._aaKieFellBack=true; toast('kie.ai indisponible — repli Omni Flash (fal)');
+    }
   }
   const H=await getAuthHeader();
   const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
@@ -31263,8 +31334,10 @@ async function expressCreate(){
         const _billSec = Math.max(3, Math.min(_dur, Math.round(_realSec||0)));
         if(_realSec>0 && _billSec < _dur && typeof _creditOps!=='undefined' && _creditOps.length){
           const _newCost = Math.round(_billSec * _expRate * _expMult);
-          await creditsFlowRefund('Omni : durée réelle '+_billSec+' s (< '+_dur+' s réservé)');
-          if(_newCost>0) await spendCreditsFor(_newCost, 'express-omni');   // re-débit du réel (solde toujours suffisant : on vient de rembourser plus)
+          const _rf = await creditsFlowRefund('Omni : durée réelle '+_billSec+' s (< '+_dur+' s réservé)');
+          // (Axel 25/09) Re-débit SEULEMENT si le remboursement a eu lieu : le proxy (fal comme kie) RÈGLE l'op dès que la
+          // vidéo est rapatriée → refund_credits répond already_delivered (0) et re-débiter faisait payer la vidéo DEUX fois.
+          if(_rf>0 && _newCost>0) await spendCreditsFor(_newCost, 'express-omni');   // re-débit du réel (solde toujours suffisant : on vient de rembourser plus)
         }
       }catch(_durErr){ console.warn('[omni] ajustement durée réelle:', _durErr); }
     } else {
@@ -31352,8 +31425,9 @@ async function expressCreate(){
     // Coupe à la FIN DE LA PAROLE (compte dev / kie, Axel 24/09) : Omni et Veo remplissent tout le clip → silence final
     // (avatar qui attend). On coupe 0,3 s après le dernier mot, avec un fondu audio de 0,12 s, dans le MÊME passage
     // ffmpeg que le nettoyage audio. Voix native seulement (une voix importée/TTS est posée plus tard dans l'Éditeur).
+    // Clients (25/09) : aussi quand Omni a tourné chez kie — kie arrondit la durée au cran supérieur (4/6/8/10 s) → silence final.
     let _cutAt = null;
-    if(_cutOk){
+    if(_cutOk || (useNativeAudio && _isOmni && window._aaLastEngine==='kie')){
       try{
         const _se = await Promise.race([ _expSpeechEnd(blob), new Promise(r=>setTimeout(()=>r(null), 8000)) ]);
         if(_se && _se.end >= 1.5 && _se.dur - (_se.end + 0.3) >= 0.4) _cutAt = Math.round((_se.end + 0.3)*100)/100;
@@ -31420,7 +31494,7 @@ async function expressCreate(){
       }
     }catch(_sErr){ console.warn('express autosave:', _sErr); }
     if(typeof _hedraIncrement==='function') _hedraIncrement();
-    toast('Vidéo Express générée !'+_kieTag());
+    toast('Vidéo Express générée !'+(_isOmni ? _kieEngineTag('fal') : _kieTag()));   // Omni : moteur réel (kie.ai, ou fal + repli) — Axel 25/09
   } catch(e){
     clearInterval(tick);
     console.error('Express error:', e);
