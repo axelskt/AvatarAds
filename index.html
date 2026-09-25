@@ -8,6 +8,8 @@
      aa_theme=clair pour que tout le chemin (connexion + app) reste clair. Partagé même-origine avec
      /app/. Un choix explicite (toggle Mon compte) prime toujours. -->
 <script>try{if(!localStorage.getItem('aa_theme'))localStorage.setItem('aa_theme','light');}catch(e){}</script>
+<script>/* Attribution Auto-DM Instagram (25/09) : ?aa_ld=<référence CHIFFRÉE du lead, fabriquée par ig-go au clic> gardée 30 j dans aa_lead (jamais remplacée par une plus ancienne) puis retirée de l'URL ; les autres paramètres (?ref= parrainage, ?start=…) et le # restent. L'app l'envoie une fois au serveur après connexion. */
+try{(function(){var L=location,re=/([?&])aa_ld=([^&#]*)&?/,m=re.exec(L.search);if(!m)return;try{var r=decodeURIComponent(m[2]),k=/^1\.([0-9a-z]{1,10})\.[A-Za-z0-9_-]{20,400}$/.exec(r),n=Date.now();if(k){var t=parseInt(k[1],36)*1e3;if(t>0&&n-t<2592e6&&t-n<3e5){var o=null;try{o=JSON.parse(localStorage.getItem('aa_lead')||'null')}catch(e){}if(!(o&&o.t>=t&&o.x>n))localStorage.setItem('aa_lead',JSON.stringify({r:r,t:t,x:t+2592e6}))}}}catch(e){}var q=L.search;while(re.test(q))q=q.replace(re,'$1');q=q.replace(/[?&]$/,'');history.replaceState(history.state,'',L.pathname+q+L.hash)})()}catch(e){}</script>
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
 <script type="text/javascript">/* Clarity chargé APRÈS le rendu (idle) pour ne pas peser sur le thread principal au chargement */
 (function(){function loadClarity(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");}
