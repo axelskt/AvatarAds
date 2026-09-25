@@ -42,11 +42,13 @@ begin
   if p_range is null or p_range not in ('24h', '7j', '30j', '90j', 'all') then return jsonb_build_object('error', 'range'); end if;
 
   select min(created_at), max(created_at) into v_first, v_last from public.ig_dm_log;
-  -- 24 h glissantes par heure ; N jours de Paris entiers, aujourd'hui compris ; 90 j par tranches de 7 jours ;
-  -- all time par mois, depuis le mois du 1er évènement
+  -- 24 h = 24 heures PLEINES de Paris, l'heure en cours comprise ; N jours de Paris entiers, aujourd'hui compris ;
+  -- 90 j par tranches de 7 jours ; all time par mois, depuis le mois du 1er évènement
+  -- (Axel 25/09) 24 h calées sur l'heure : partir de now() - 24 h donnait des groupes HH:MM → HH+1:MM libellés « HH h »
+  -- (un commentaire de 15:10 relevé à 15:27 tombait dans « 14 h–15 h » alors que la carte de chaleur le met à 15 h).
   v_step := case p_range when '24h' then 'hour' when '90j' then 'week' when 'all' then 'month' else 'day' end;
   v_since := case p_range
-    when '24h' then v_now - interval '24 hours'
+    when '24h' then date_trunc('hour', v_now, tz) - interval '23 hours'
     when '7j'  then (v_today - 6)::timestamp at time zone tz
     when '30j' then (v_today - 29)::timestamp at time zone tz
     when '90j' then (v_today - 89)::timestamp at time zone tz
@@ -89,9 +91,9 @@ begin
       from ppl p
     ) q
   ),
-  bk as (    -- groupes de la courbe (tous présents, même vides : « 0 » = mesuré)
+  bk as (    -- groupes de la courbe (tous présents, même vides : « 0 » = mesuré) ; 24 h : 24 heures pleines, la dernière = l'heure en cours
     select g as b0, g + interval '1 hour' as b1
-    from generate_series(v_since, v_now - interval '1 hour', interval '1 hour') g
+    from generate_series(v_since, date_trunc('hour', v_now, tz), interval '1 hour') g
     where v_step = 'hour'
     union all
     select g at time zone tz, (g + interval '1 day') at time zone tz
