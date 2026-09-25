@@ -951,6 +951,13 @@
       + (v == null && why ? '<div class="cf-tile-w">' + esc(why) + '</div>' : '') + '</div>';
   }
   // ── fiche d'une brique (maquette Claude Design) : ses publications Instagram reconnues, vues, courbe ──
+  // ID complet d'une vidéo = sa recette (plan §3.2) : ses briques reconnues, hook → liaison → CTA.
+  function videoId(p) {
+    var a = p.analysis;
+    if (!a || a.status !== 'done' || !a.bricks.length) return null;
+    var order = { hook: 0, liaison: 1, cta: 2 };
+    return a.bricks.slice().sort(function (x, y) { return order[x.kind] - order[y.kind]; }).map(function (b) { return b.id; }).join(' · ');
+  }
   function brickUses(id) {
     var MD = CF.acct.media.data, info = null;
     var uses = (MD ? MD.list : []).filter(function (p) {
@@ -1064,7 +1071,8 @@
       + '<div class="cf-sheet-media">' + (thumb ? '<img src="' + esc(thumb) + '" alt="Miniature de la publication" referrerpolicy="no-referrer" decoding="async">' : '<span class="cf-sheet-none">aperçu indisponible</span>') + '</div>'
       + '<div class="cf-sheet-info">'
       + '<div class="cf-meta">#' + rank + ' en vues · ' + esc(p.trial ? 'réel d’essai (pas sur la grille du profil)' : typeLabel(p.type)) + '</div>'
-      + '<h2 class="cf-h2" id="cfModalTitle">' + esc(d ? 'Publication du ' + dmy(d) : 'Publication') + '</h2>'
+      + '<h2 class="cf-h2" id="cfModalTitle">' + (videoId(p) ? '<span class="cf-vid">' + esc(videoId(p)) + '</span>' + (d ? '<span class="cf-vid-d">' + esc(dmy(d)) + '</span>' : '')
+        : esc(d ? 'Publication du ' + dmy(d) : 'Publication')) + '</h2>'
       + '<p class="cf-sheet-cap">' + esc(capText(p.caption)) + '</p>'
       + (link ? '<a class="cf-link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">voir sur Instagram ' + svg(IC.external, 12) + '</a>' : '')
       + '<div class="cf-tiles">' + tiles + '</div>'
