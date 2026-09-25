@@ -1,0 +1,132 @@
+{
+  "genere_par": "render-worker/test/audio-clean/parite.test.mjs",
+  "chaine": "RNNoise → WAV 16 bits → _acMasterVoice('off') → MP3 192 kbps",
+  "tolerance_parite": 0.00001,
+  "parite": [
+    {
+      "echantillon": "H73.wav",
+      "preset": "off",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "H73.wav",
+      "preset": "natural",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "H73.wav",
+      "preset": "podcast",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "H73.wav",
+      "preset": "punch",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "CTA74.wav",
+      "preset": "off",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "CTA74.wav",
+      "preset": "natural",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "CTA74.wav",
+      "preset": "podcast",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "CTA74.wav",
+      "preset": "punch",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "synthetique-bruite",
+      "preset": "off",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "synthetique-bruite",
+      "preset": "natural",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "synthetique-bruite",
+      "preset": "podcast",
+      "ecart_max": 0
+    },
+    {
+      "echantillon": "synthetique-bruite",
+      "preset": "punch",
+      "ecart_max": 0
+    }
+  ],
+  "mesures": [
+    {
+      "echantillon": "H73.wav",
+      "duree_s": 8.02,
+      "prise": {
+        "dejaDebruite": false,
+        "priseSaine": false,
+        "preset": "off"
+      },
+      "avant": {
+        "lufs": -14.4,
+        "lra": 1.8,
+        "crete_echantillon_dbfs": -1,
+        "crete_vraie_dbfs": -0.5
+      },
+      "apres": {
+        "lufs": -16.3,
+        "lra": 1.3,
+        "crete_echantillon_dbfs": -2.2,
+        "crete_vraie_dbfs": -2
+      }
+    },
+    {
+      "echantillon": "CTA74.wav",
+      "duree_s": 1.73,
+      "prise": {
+        "dejaDebruite": false,
+        "priseSaine": false,
+        "preset": "off"
+      },
+      "avant": {
+        "lufs": -13.8,
+        "lra": 0,
+        "crete_echantillon_dbfs": -1,
+        "crete_vraie_dbfs": -0.1
+      },
+      "apres": {
+        "lufs": -15.3,
+        "lra": 0,
+        "crete_echantillon_dbfs": -2.2,
+        "crete_vraie_dbfs": -1.7
+      }
+    },
+    {
+      "echantillon": "synthetique-bruite",
+      "duree_s": 6,
+      "prise": {
+        "dejaDebruite": false,
+        "priseSaine": false,
+        "preset": "off"
+      },
+      "avant": {
+        "lufs": -14.6,
+        "lra": 8,
+        "crete_echantillon_dbfs": -0.3,
+        "crete_vraie_dbfs": -0.3
+      },
+      "apres": {
+        "lufs": -16.5,
+        "lra": 6.5,
+        "crete_echantillon_dbfs": -2.2,
+        "crete_vraie_dbfs": -2.2
+      }
+    }
+  ]
+}
