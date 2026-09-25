@@ -11,12 +11,17 @@ export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (le
 
 // ── Ouverture aux clients payants (Axel 25/09/2026) : EXACTEMENT deux usages. alias → plans autorisés (owner et
 //    developer passent toujours). Tout autre alias (Veo, Kling Motion Control, OmniHuman…) reste developer seulement.
-//    Plans = ceux de l'UI : « Améliorer en 4K » dès Starter ; Omni Flash image→vidéo (Express) = Pro/Élite, comme le gate
-//    fal-proxy de google/gemini-omni-flash/…/image-to-video.
+//    Plans = ceux de l'UI : « Améliorer en 4K » dès Starter ; Omni Flash image→vidéo (Express « UGC réel » + Voix native
+//    du Générateur) = TOUS les plans payants depuis le 25/09 (Axel : « tout le monde y a droit pareil, Starter inclus »),
+//    comme le gate fal-proxy de google/gemini-omni-flash/…/image-to-video (le carré 1:1, que kie ne fait pas). Free : non.
 export const KIE_OPEN: Record<string, string[]> = {
   'nano-banana-pro': ['starter', 'pro', 'elite', 'byok'],
-  'omni-flash': ['pro', 'elite'],
+  'omni-flash': ['starter', 'pro', 'elite', 'byok'],
 }
+// Usages SANS repli côté app (Axel 25/09 : Omni Flash = « kie directement, pas de fallback ») : un échec kie n'a plus de
+// suite possible sur la même réservation → kie-proxy la rend PUIS la rembourse tout de suite (kie_job_bill release →
+// refund, exactement une fois). Nano 4K garde son repli Google → rendu seulement (l'app re-tire la même op).
+export const KIE_NO_FALLBACK = new Set(['omni-flash'])
 // Interrupteur serveur : secret KIE_CLIENTS=0 referme kie aux clients SANS redéploiement (403 AVANT tout tirage → l'app
 // replie sur Google / fal). Lu à chaque requête. Défaut : ouvert. Le compte developer n'est pas concerné.
 export const kieClientsOn = (): boolean => (Deno.env.get('KIE_CLIENTS') ?? '1').trim() !== '0'

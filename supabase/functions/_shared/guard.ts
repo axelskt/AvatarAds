@@ -85,16 +85,20 @@ async function noDrawableOpGate(userId: string, proxy: string, label?: string): 
 }
 // Applique la réservation dans un proxy : tire `cost`, journalise, 402 seulement si enforce. Puis renvoie
 // une fonction `settle()` à appeler quand la génération a abouti (soumission SYNC réussie, ou poll COMPLETED).
-export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate & { opId?: string }> {
+// `drawn` (Axel 25/09, relecture Omni) = le montant RÉELLEMENT tiré : `cost` si draw_reservation a bien décrémenté la
+// réserve, 0 sinon (réserve insuffisante laissée passer en mode ombre RESERVE_ENFORCE≠1, hoquet DB fail-open, aucune op).
+// Un proxy qui rend / rembourse / lie un job DOIT restaurer ce montant, jamais `cost` : restaurer un tirage qui n'a pas eu
+// lieu rouvrait le refund-and-keep par sur-restauration (fermé le 14/09 pour draw_full via `drawn`, même règle ici).
+export async function applyReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate & { opId?: string; drawn?: number }> {
   const opId = await resolveOp(o.userId, o.req)
-  if (opId === '__ERR__') return { ok: true }   // C1 (14/09) : erreur technique resolve_op → fail-open (ne pas 402 un client légitime)
-  if (!opId) return await noDrawableOpGate(o.userId, o.proxy, o.label)   // C1 : plus de laisser-passer aveugle
+  if (opId === '__ERR__') return { ok: true, drawn: 0 }   // C1 (14/09) : erreur technique resolve_op → fail-open (ne pas 402 un client légitime)
+  if (!opId) return { ...(await noDrawableOpGate(o.userId, o.proxy, o.label)), drawn: 0 }   // C1 : plus de laisser-passer aveugle
   const dr = await drawReservation(o.userId, opId, o.cost)
   if (!dr.ok) {
     console.warn(`[reserve] ${o.proxy} op=${opId} cost=${o.cost} ${o.label ?? ''} INSUFFISANT (enforce=${reserveEnforce()})`)
     if (reserveEnforce()) return { ok: false, status: 402, error: 'Réservation de crédits insuffisante pour cette génération.' }
   }
-  return { ok: true, opId }
+  return { ok: true, opId, drawn: (dr.ok && dr.remaining !== null) ? Math.max(1, Math.ceil(o.cost)) : 0 }
 }
 
 // Tire la réserve ENTIÈRE d'une op (soumission VIDÉO : une op = une génération). Ferme « N générations pour
@@ -128,6 +132,9 @@ export async function applyReservationFull(o: { req: Request; userId: string; pr
 // L'appel gpt marqué `x-aa-chain: nano4k` tire le palier entier (5) et, réussi, crédite l'op d'UN droit d'upscale ;
 // l'appel Nano consomme ce droit (tirage 0) au lieu de ses 5. Nano en échec → droit rendu. RPC service seulement.
 export const CHAIN_NANO_COST = 5
+// ── Omni Flash image→vidéo (Axel 25/09/2026) : 5 cr/s en 1080p, pour TOUS les plans payants (= CREDIT_COSTS.omniFlashPerSec
+// de l'app, à changer ENSEMBLE). kie-proxy (9:16 / 16:9) et fal-proxy (carré 1:1) tirent EXACTEMENT 5 × durée facturée.
+export const OMNI_FLASH_PER_SEC = 5
 export function wantsNanoChain(req: Request): boolean { return (req.headers.get('x-aa-chain') || '').trim().toLowerCase() === 'nano4k' }
 export async function chainCreditAdd(userId: string, opId: string | undefined, n = 1): Promise<boolean> {
   if (!opId) return false
