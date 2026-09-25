@@ -1,5 +1,5 @@
 /*
- * Creative Factory v2 · cf-ui.js · étapes 0, 1 et 2 du plan (onglet Auto-DM : Axel 25/09)
+ * Creative Factory v2 · cf-ui.js · étapes 0 à 3 du plan (Auto-DM et Accueil : Axel 25/09)
  * Rendu seulement : lit window.CF (cf-store.js), se redessine sur « cf-data ». Aucun chiffre calculé ailleurs.
  * Règles d'affichage : « 0 » = mesuré et nul · « — » + raison courte = pas de source · jamais additionner
  * reach ni comptes engagés · tout texte venu d'Instagram passe par esc() · aucun emoji (icônes SVG).
@@ -85,7 +85,11 @@
     pct: 'M19 5 5 19M6.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM17.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
     target: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
     search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35',
-    down: 'M12 5v14M19 12l-7 7-7-7'
+    down: 'M12 5v14M19 12l-7 7-7-7',
+    arrow: 'M5 12h14M13 6l6 6-6 6',
+    check: 'M5 12l5 5L20 7',
+    layers: 'M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+    insta: 'M3 3h18v18H3zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17.5 6.5h.01'
   };
   function svg(path, size) {
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
@@ -168,9 +172,9 @@
   // ── onglets ──
   var TAB_KEYS = ['home', 'prod', 'trackads', 'dm', 'compte'];
   var TAB_STORE = 'cf-dashboard-tab';
+  // Accueil : UNE période pour tous ses chiffres, la période par défaut des onglets Insight et Auto-DM (30 j).
+  var HOME_RANGE = '30j', HOME_DM = '30j';
   var SOON = {
-    home: { h: 'Vue d’ensemble', date: true, step: 3,
-      what: 'Alertes (token Instagram, vidéos à valider, soldes des fournisseurs) et quatre cartes résumé, lues dans le même store que les onglets.' },
     prod: { h: 'Production', step: 4,
       what: 'File de validation et revue, bibliothèque de briques, recettes de hooks, capacité de création et briques qui manquent.' },
     trackads: { h: 'TrackAds', step: 5,
@@ -196,14 +200,16 @@
     var ms = d.getTime() - Date.now();
     return { date: d, expired: ms <= 0, days: Math.max(0, Math.floor(ms / 864e5)) };
   }
-  function igData() {
-    var s = CF.acct.ig[ui.range];
+  // Fenêtre Instagram de référence : celle de l'onglet Insight, ou 30 j sur l'Accueil (période par défaut des onglets).
+  function igRangeNow() { return ui.tab === 'home' ? HOME_RANGE : ui.range; }
+  function igData(range) {
+    var s = CF.acct.ig[range || igRangeNow()];
     if (s && s.data) return s.data;
     for (var i = 0; i < CF.IG_RANGES.length; i++) { var x = CF.acct.ig[CF.IG_RANGES[i]]; if (x && x.data) return x.data; }
     return null;
   }
-  function igState() {
-    var A = CF.acct.accounts, S = CF.acct.ig[ui.range], D = igData(), prim = A.primary;
+  function igState(range) {
+    var A = CF.acct.accounts, S = CF.acct.ig[range || igRangeNow()], D = igData(range), prim = A.primary;
     var u = '@' + ((prim && prim.username) || (D && D.username) || CF.PRIMARY_USERNAME);
     var tok = tokenInfo(prim);
     if (S.kind === 'disconnected') return { tone: 'err', pill: 'Instagram déconnecté', line: 'déconnecté · aucun token lisible par ig-insights' };
@@ -250,6 +256,7 @@
       renderPanel();
       if (ui.tab === 'compte') ensureCompte();
       else if (ui.tab === 'dm') ensureDm();
+      else if (ui.tab === 'home') ensureHome();
     } else if (ui.modal) {
       closeModal();
     }
@@ -260,7 +267,7 @@
     $('cfWho').textContent = CF.user ? CF.user.email : '';
     var pill = $('cfIg');
     if (CF.status !== 'ready') { pill.hidden = true; return; }
-    var s = igState();
+    var s = ui.tab === 'home' ? homeIg() : igState();
     pill.hidden = false;
     pill.className = 'cf-pill is-' + s.tone;
     pill.title = 'Instagram : ' + s.line;
@@ -281,7 +288,7 @@
     panel.setAttribute('aria-labelledby', 'cfTab-' + ui.tab);
     // Recherche des leads : le panneau est redessiné à chaque frappe, on rend le focus et le curseur au champ.
     var a = document.activeElement, keep = a && a.id === 'cfDmQ' ? { s: a.selectionStart, e: a.selectionEnd } : null;
-    setHTML(panel, ui.tab === 'compte' ? compteHTML() : ui.tab === 'dm' ? dmHTML() : soonHTML(ui.tab));
+    setHTML(panel, ui.tab === 'compte' ? compteHTML() : ui.tab === 'dm' ? dmHTML() : ui.tab === 'home' ? homeHTML() : soonHTML(ui.tab));
     var q = keep && $('cfDmQ');
     if (q && q !== document.activeElement) { q.focus(); try { q.setSelectionRange(keep.s, keep.e); } catch (e) { /* type search */ } }
   }
@@ -304,6 +311,277 @@
     CF.loadMedia();
   }
 
+  // ══ Accueil (étape 3, Axel 25/09) : « Qu'est-ce qui demande mon attention aujourd'hui ? Qui dois-je payer ? » ══
+  // Aucun chiffre n'est recalculé ici : chaque valeur vient du modèle de son onglet (model + goalValue pour Insight,
+  // dmModel pour l'Auto-DM, prodModel pour la Production) sur la période par défaut des onglets (30 j), et des MÊMES
+  // cases du store (un appel par source, partagé avec les onglets). TrackAds et paiements : « — », Phase 3 pas construite.
+  function ensureHome() {
+    if (CF.status !== 'ready') return;
+    CF.loadAccounts();
+    CF.loadInsights(HOME_RANGE);
+    CF.loadMedia();
+    CF.loadDm(HOME_DM);
+    CF.loadProd();
+    CF.loadProviders();
+  }
+
+  // État Instagram de l'Accueil : la pastille de l'en-tête et la ligne sous le titre lisent cette seule fonction.
+  function homeIg() {
+    var A = CF.acct.accounts, prim = A.primary, tok = tokenInfo(prim), S = CF.acct.ig[HOME_RANGE], M = CF.acct.media;
+    var u = '@' + ((prim && prim.username) || CF.PRIMARY_USERNAME);
+    if (S.kind === 'disconnected' || M.kind === 'disconnected' || (A.state === 'ready' && !prim)) {
+      return { key: 'off', tone: 'err', pill: 'Instagram déconnecté', line: 'Instagram déconnecté · auto-DM en pause' };
+    }
+    if (tok && tok.expired) return { key: 'expired', tone: 'err', tok: tok, pill: u + ' · token expiré', line: u + ' · token expiré le ' + dmy(tok.date) + ' · auto-DM en pause' };
+    if (!prim) {
+      return A.state === 'error' ? { key: 'unknown', tone: 'mute', pill: 'Instagram · —', line: 'Instagram · comptes reliés illisibles : ' + A.error }
+        : { key: 'loading', tone: 'mute', pill: 'Instagram…', line: 'Instagram · chargement…' };
+    }
+    var soon = !!tok && tok.days < 7;
+    return { key: soon ? 'soon' : 'ok', tone: soon ? 'warn' : 'ok', tok: tok,
+      pill: u + (tok ? ' · token ' + tok.days + NB + 'j' : ' · connecté'),
+      line: u + ' · connecté · auto-DM actif · ' + (tok ? 'token expire le ' + dm(tok.date) + ' (' + tok.days + NB + 'j)' : 'date d’expiration du token pas encore exposée par instagram-auth') };
+  }
+
+  // Alertes RÉELLES seulement, calculées depuis les cases du store. danger puis warn (maquette §14) ; aucune alerte
+  // d'exemple, aucune alerte TrackAds (pas encore branché : dit dans la ligne des sources).
+  var BILLING = { hedra: 'https://www.hedra.com/app/settings/billing', fal: 'https://fal.ai/dashboard/billing', elevenlabs: 'https://elevenlabs.io/app/subscription' };
+  var LVL_ORDER = { danger: 0, warn: 1 };
+  var TAB_NAME = { prod: 'Production', trackads: 'TrackAds', dm: 'Auto-DM', compte: 'Insight' };
+  function homeAlerts(ig) {
+    var out = [];
+    function add(lvl, title, sub, o) { o = o || {}; out.push({ lvl: lvl, title: title, sub: sub || '', tab: o.tab || null, ext: o.ext || null, retry: o.retry || null }); }
+    var A = CF.acct.accounts, S = CF.acct.ig[HOME_RANGE], M = CF.acct.media, DS = CF.dm[HOME_DM], PS = CF.prod, V = CF.prov;
+    var u = '@' + CF.PRIMARY_USERNAME, kept = function (x, what) { return x ? ' · ' + what + ' du ' + hm(new Date(x.fetchedAt)) + ' conservés' : ''; };
+    // Instagram : trois états pilotés par le token (maquette §14)
+    if (ig.key === 'off') add('danger', 'Instagram déconnecté · reconnecte ' + u, 'L’auto-DM est en pause tant que le compte n’est pas reconnecté. Les chiffres Instagram passent à « — » ; ceux de l’Auto-DM (notre base) restent justes.', { tab: 'dm' });
+    else if (ig.key === 'expired') add('danger', 'Token Instagram expiré', 'Expiré le ' + dmy(ig.tok.date) + ' : l’auto-DM est en pause. Reconnecte ' + u + '.', { tab: 'dm' });
+    else if (ig.key === 'soon') add('warn', 'Token Instagram : ' + (ig.tok.days < 1 ? 'expire dans moins d’un jour' : 'expire dans ' + ig.tok.days + ' ' + plural(ig.tok.days, 'jour')), 'Le ' + dmy(ig.tok.date) + ' · reconnecte ' + u + ' pour ne pas couper l’auto-DM.', { tab: 'dm' });
+    if (A.state === 'error') add('warn', 'Comptes Instagram reliés illisibles', 'instagram-auth : ' + A.error, { tab: 'dm' });
+    if (ig.key !== 'off') {
+      if (S.state === 'error') add('warn', 'Insights Instagram · 30' + NB + 'j non chargés', S.error + kept(S.data, 'chiffres'), { tab: 'compte' });
+      else if (S.data && S.data.basicError) add('warn', 'Instagram refuse la lecture du profil', S.data.basicError, { tab: 'compte' });
+      if (M.state === 'error') add('warn', 'Publications Instagram non chargées', M.error + kept(M.data, 'chiffres'), { tab: 'compte' });
+      else if (M.data && M.data.error) add('warn', 'Publications Instagram non chargées', 'ig-insights : ' + M.data.error, { tab: 'compte' });
+      var bad = M.data ? M.data.list.filter(function (p) { return p.analysis && p.analysis.status === 'error'; }) : [];
+      if (bad.length) {
+        var d0 = validDate(bad[0].timestamp);
+        add('warn', bad.length + ' ' + plural(bad.length, 'analyse') + ' des briques en erreur', 'Briques non reconnues dans ' + plural(bad.length, 'cette vidéo', 'ces vidéos')
+          + ' · ex. publication ' + (d0 ? 'du ' + dmy(d0) : 'sans date') + ' : ' + (bad[0].analysis.error || 'erreur inconnue') + '.', { tab: 'compte' });
+      }
+    }
+    // Auto-DM (notre base : juste même si Instagram est déconnecté)
+    if (DS.state === 'error') add('warn', 'Auto-DM : chiffres indisponibles', DS.error + kept(DS.data, 'chiffres'), { tab: 'dm' });
+    if (DS.data) {
+      if (!DS.data.cron) add('warn', 'Relance automatique : état illisible', 'ig_dm_stats_v2 ne renvoie pas l’état du cron ig-followup-hourly.', { tab: 'dm' });
+      else if (!DS.data.cron.active) add('warn', 'Relance automatique arrêtée', 'Le cron ig-followup-hourly est inactif : plus aucune relance ne part.', { tab: 'dm' });
+    }
+    // Production (factory_qc, factory_bricks)
+    if (PS.state === 'error') add('warn', 'Production : lecture impossible', PS.error + kept(PS.data, 'chiffres'), { retry: 'prod' });
+    var Z = PS.data;
+    if (Z) {
+      if (Z.qc.pending) add('warn', Z.qc.pending + ' ' + plural(Z.qc.pending, 'vidéo') + ' à valider', 'File QC : ouvre la revue pour approuver ou refuser.', { tab: 'prod' });
+      if (Z.qc.refused) {
+        var lr = Z.qc.lastRefused;
+        add('warn', Z.qc.refused + ' ' + plural(Z.qc.refused, 'vidéo refusée', 'vidéos refusées') + ' en QC',
+          (lr && lr.at ? 'Dernier refus le ' + dmy(new Date(lr.at)) : 'Refus') + (lr && lr.template ? ' · ' + lr.template : '') + ' · raison notée : '
+          + (lr && lr.reason ? '« ' + lr.reason + ' »' : 'aucune') + '. À reprendre ; le classement des refus arrive avec l’onglet Production.', { tab: 'prod' });
+      }
+      if (Z.bricks.flagged) add('warn', Z.bricks.flagged + ' ' + plural(Z.bricks.flagged, 'brique signalée', 'briques signalées'), 'Statut « signalée » dans la bibliothèque de briques : à revoir avant de l’utiliser.', { tab: 'prod' });
+    }
+    // Soldes fournisseurs (provider-watch : ok / bas, jamais le montant)
+    if (V.state === 'error') add('warn', 'Soldes fournisseurs illisibles', V.error + ' · réessaie dans un instant.', { retry: 'prov' });
+    if (V.data) {
+      V.data.list.forEach(function (p) {
+        if (p.error) add('warn', 'Solde ' + p.label + ' illisible', 'provider-watch : ' + p.error, { retry: 'prov' });
+        else if (p.level !== 'ok') {
+          add(p.level === 'crit' ? 'danger' : 'warn', 'Solde ' + p.label + ' bas', (p.id === 'elevenlabs' ? 'Moins de 5' + NB + '% du quota de caractères du mois' : 'Moins de 5' + NB + '$')
+            + (p.at ? ' · relevé ' + ago(p.at) : '') + ' : recharge avant d’être à zéro, sinon les générations échouent.', { ext: BILLING[p.id] });
+        }
+      });
+    }
+    return out.sort(function (a, b) { return LVL_ORDER[a.lvl] - LVL_ORDER[b.lvl]; });
+  }
+
+  // Sources lues par l'Accueil. « Rien à signaler » n'apparaît que lorsque TOUTES ont répondu, sans alerte.
+  function homeSources(ig) {
+    var off = ig.key === 'off';
+    return [
+      { l: 'comptes Instagram', S: CF.acct.accounts },
+      { l: 'insights 30' + NB + 'j', S: CF.acct.ig[HOME_RANGE], off: off },
+      { l: 'publications', S: CF.acct.media, off: off },
+      { l: 'Auto-DM 30' + NB + 'j', S: CF.dm[HOME_DM] },
+      { l: 'production', S: CF.prod },
+      { l: 'soldes fournisseurs', S: CF.prov }
+    ].map(function (x) {
+      // une source qui répond « liste en erreur » (publications : media_error) n'est pas « vérifiée »
+      var bad = x.S.state === 'error' || !!(x.S.data && x.S.data.error);
+      return { l: x.l, st: x.off ? 'off' : x.S.state === 'idle' ? 'wait' : bad ? 'err' : 'ok' };
+    });
+  }
+
+  function homeHTML() {
+    var ig = homeIg(), alerts = homeAlerts(ig), src = homeSources(ig);
+    var S = CF.acct.ig[HOME_RANGE], off = S.kind === 'disconnected', X = model(S, S.data, off, HOME_RANGE);
+    var DS = CF.dm[HOME_DM], Y = dmModel(DS, DS.data, HOME_DM);
+    return '<section class="cf-title"><h1>Vue d’ensemble</h1><div class="cf-sub">' + esc(longDate(new Date())) + '</div>'
+      + '<div class="cf-hig is-' + ig.tone + '" data-ig="' + ig.key + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(ig.line) + '</span></div></section>'
+      + homeAlertsHTML(alerts, src)
+      + homePayHTML()
+      + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2>'
+      + '<span class="cf-meta">' + esc('chiffres sur 30' + NB + 'j, la période par défaut des onglets : ce sont les mêmes que dans chaque onglet') + '</span></div></div>'
+      + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>';
+  }
+
+  function homeAlertsHTML(alerts, src) {
+    var wait = src.filter(function (x) { return x.st === 'wait'; }), n = alerts.length;
+    var rows = alerts.map(function (a) {
+      var go = a.tab ? '<button type="button" class="cf-alert-go" data-act="home-go" data-tab="' + a.tab + '">' + esc(TAB_NAME[a.tab]) + svg(IC.arrow, 12) + '</button>'
+        : a.retry ? '<button type="button" class="cf-alert-go" data-act="home-retry" data-src="' + a.retry + '">Réessayer' + svg(IC.refresh, 12) + '</button>'
+        : a.ext ? '<a class="cf-alert-go" href="' + esc(a.ext) + '" target="_blank" rel="noopener noreferrer">Recharger' + svg(IC.external, 12) + '</a>' : '';
+      return '<div class="cf-alert is-' + a.lvl + '"><span class="cf-alert-ic">' + svg(a.lvl === 'danger' ? IC.alert : IC.clock, 15) + '</span>'
+        + '<span class="cf-alert-t"><b>' + esc(a.title) + '</b><span>' + esc(a.sub) + '</span></span>' + go + '</div>';
+    }).join('');
+    var tail = '';
+    if (wait.length) tail = '<div class="cf-status" role="status"><span class="cf-spin" aria-hidden="true"></span>' + esc('Chargement… · ' + wait.map(function (x) { return x.l; }).join(', ')) + '</div>';
+    else if (!n) tail = '<div class="cf-alert is-ok"><span class="cf-alert-ic">' + svg(IC.check, 15) + '</span><span class="cf-alert-t"><b>Rien à signaler</b>'
+      + '<span>Toutes les sources ont répondu, aucune alerte.</span></span></div>';
+    var okL = src.filter(function (x) { return x.st === 'ok' || x.st === 'off'; }).map(function (x) { return x.l + (x.st === 'off' ? ' (déconnecté)' : ''); });
+    var errL = src.filter(function (x) { return x.st === 'err'; }).map(function (x) { return x.l; });
+    var V = CF.prov.data, pAt = V ? Math.max.apply(null, V.list.map(function (p) { return p.at || 0; })) : 0;
+    var foot = 'Sources vérifiées : ' + (okL.length ? okL.join(' · ') : '—') + (pAt && src[5].st === 'ok' ? ' (soldes relevés ' + ago(pAt) + ' par provider-watch)' : '')
+      + (errL.length ? ' · en erreur : ' + errL.join(', ') + ' (voir les alertes)' : '')
+      + ' · pas encore surveillé : TrackAds (missions échouées, demandes de paiement), Phase 3 pas encore branchée.';
+    return '<section class="cf-card" aria-labelledby="cfAlT"><div class="cf-alerts-h"><h2 class="cf-h2" id="cfAlT">À surveiller</h2><span class="cf-badge" data-alerts="' + n + '">'
+      + (wait.length && !n ? '…' : n) + '</span></div>'
+      + '<div class="cf-alerts">' + rows + tail + '</div><div class="cf-hsrc">' + esc(foot) + '</div></section>';
+  }
+
+  // Paiements TrackAds : Phase 3 pas encore construite → « — », jamais les montants de la maquette.
+  function homePayHTML() {
+    return '<section class="cf-card" aria-labelledby="cfPayT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfPayT">Demandes de paiement <span class="cf-badge">—</span></h2>'
+      + '<span class="cf-meta">' + esc('users TrackAds · 0,50' + NB + '€ / 1' + NB + '000 vues') + '</span></div>'
+      + '<div class="cf-pay-ks"><div class="cf-pay-k"><b>—</b><span>Solde non demandé</span></div><div class="cf-pay-k"><b>—</b><span>À verser (demandes en attente)</span></div></div></div>'
+      + '<div class="cf-empty-s cf-dashed" data-pay="none">— · pas encore branché : TrackAds (Phase 3) n’est pas lancé, aucune demande de paiement à lire.</div></section>';
+  }
+
+  // ── cartes résumé : 4 chiffres par onglet, repris de son modèle ──
+  function hstat(k, v, label, sub, o) {
+    o = o || {};
+    return '<div class="cf-hstat" data-h="' + k + '"><span class="cf-hstat-v' + (v === '—' ? ' is-na' : o.acc ? ' is-acc' : '') + '">' + esc(v)
+      + (o.small && v !== '—' && v !== '…' ? '<small>' + esc(o.small) + '</small>' : '') + '</span>'
+      + '<span class="cf-hstat-l">' + esc(label) + '</span><span class="cf-hstat-s">' + esc(sub || '') + '</span></div>';
+  }
+  function hcard(k, title, icon, per, stats, extra) {
+    return '<section class="cf-card cf-hcard" data-card="' + k + '" aria-labelledby="cfHc-' + k + '"><div class="cf-hcard-h"><span class="cf-hcard-ic">' + svg(icon, 18) + '</span>'
+      + '<h3 class="cf-h2" id="cfHc-' + k + '">' + esc(title) + '</h3>' + (per ? '<span class="cf-hcard-per">' + esc(per) + '</span>' : '') + '</div>'
+      + '<div class="cf-hstats">' + stats.join('') + '</div>' + (extra || '')
+      + '<button type="button" class="cf-btn is-dark cf-hgo" data-act="home-go" data-tab="' + k + '">Ouvrir le dashboard' + svg(IC.arrow, 13) + '</button></section>';
+  }
+
+  // Production : ce que factory_bricks / factory_recipes / factory_qc contiennent vraiment. Le futur onglet Production
+  // (étape 4) lira ce même modèle.
+  var BRICK_ORDER = ['hook', 'liaison', 'cta', 'contenu', 'transformation', 'avatar', 'musique', 'sous-titre', 'autre'];
+  var KIND_PL = { hook: ['hook', 'hooks'], liaison: ['liaison', 'liaisons'], cta: ['CTA', 'CTA'], contenu: ['contenu', 'contenus'],
+    transformation: ['transformation', 'transformations'], avatar: ['avatar', 'avatars'], musique: ['musique', 'musiques'],
+    'sous-titre': ['style de sous-titres', 'styles de sous-titres'], autre: ['autre', 'autres'] };
+  function prodModel() {
+    var S = CF.prod, D = S.data;
+    return { S: S, D: D, pending: !D && (S.loading || S.state === 'idle'),
+      why: D ? '' : S.kind === 'forbidden' ? 'lecture refusée par la base' : S.kind === 'missing' ? 'table introuvable' : S.state === 'error' ? 'erreur de chargement' : '' };
+  }
+  function homeProdCard() {
+    var Z = prodModel(), D = Z.D;
+    function st(k, label, get, o) {
+      if (Z.pending) return hstat(k, '…', label, 'chargement', o);
+      if (!D) return hstat(k, '—', label, Z.why, o);
+      var r = get(D);
+      return hstat(k, fInt(r.v), label, r.sub, o);
+    }
+    var stats = [
+      st('bricks', 'Briques prêtes', function (d) {
+        var B = d.bricks, nk = Object.keys(B.byKind).length;
+        return { v: B.ready, sub: (nk ? nk + ' ' + plural(nk, 'type') : 'aucune brique') + (B.lastAt ? ' · dernière ajoutée le ' + dm(new Date(B.lastAt)) : '') + (B.retired ? ' · ' + B.retired + ' ' + plural(B.retired, 'retirée') : '') };
+      }, { acc: true }),
+      st('recipes', 'Recettes terminées', function (d) {
+        var R = d.recipes, busy = R.inProgress + R.pending;
+        return { v: R.done, sub: (R.lastAt ? 'dernière le ' + dm(new Date(R.lastAt)) : 'aucune terminée') + (busy ? ' · ' + busy + ' en cours ou en attente' : '') };
+      }),
+      st('qc-pending', 'À valider', function (d) { return { v: d.qc.pending, sub: 'file QC' }; }),
+      st('qc-refused', 'Refusées en QC', function (d) { return { v: d.qc.refused, sub: d.qc.refused ? 'à reprendre' : 'aucun refus' }; })
+    ];
+    var kinds = D ? BRICK_ORDER.filter(function (k) { return D.bricks.byKind[k]; }).map(function (k) {
+      var n = D.bricks.byKind[k];
+      return '<span class="cf-chip" data-kind="' + k + '"><b>' + esc(fInt(n)) + '</b>' + esc(plural(n, KIND_PL[k][0], KIND_PL[k][1])) + '</span>';
+    }).join('') : '';
+    var extra = (kinds ? '<div class="cf-hkinds" role="group" aria-label="Briques prêtes par type">' + kinds + '</div>' : '')
+      + '<div class="cf-hnote">Montages prêts, stock et variantes : — · pas encore branchés (onglet Production, étape 4).</div>';
+    return hcard('prod', 'Production', IC.layers, 'état actuel', stats, extra);
+  }
+  function homeTrackCard() {
+    var why = 'pas encore branché';
+    return hcard('trackads', 'TrackAds', IC.reach, '30' + NB + 'j', [
+      hstat('views', '—', 'Vues gagnées · 30' + NB + 'j', why), hstat('active', '—', 'Users actifs', why),
+      hstat('missions', '—', 'Missions en cours', why), hstat('solde', '—', 'Solde non demandé', why)
+    ], '<div class="cf-hnote">TrackAds (Phase 3) n’est pas encore lancé : aucune mission, vue ni paiement à lire.</div>');
+  }
+  function homeDmCard(Y) {
+    var L = {}; DMS.forEach(function (d) { L[d.k] = d.label; });
+    var v = function (k) { var m = Y.c[k]; return Y.pending ? '…' : m.v == null ? '—' : fInt(m.v); };
+    var s = function (k, txt) { var m = Y.c[k]; return Y.pending ? 'chargement' : m.v == null ? m.why : txt; };
+    var ctr = Y.rates.filter(function (r) { return r.k === 'ctr'; })[0];
+    return hcard('dm', 'Auto-DM Instagram', IC.chat, '30' + NB + 'j', [
+      hstat('leads', v('commented'), L.commented, s('commented', 'personnes uniques · ' + Y.P.per), { acc: true }),
+      hstat('clicks', v('clicked'), L.clicked, s('clicked', Y.P.per)),
+      hstat('ctr', Y.pending ? '…' : ctr.v == null ? '—' : fP1(ctr.v), ctr.label, Y.pending ? 'chargement' : ctr.v == null ? ctr.na : ctr.sub),
+      hstat('users', '—', L.users, DM_NOSRC)
+    ], '');
+  }
+  function homeIgCard(X, off) {
+    var c = X.c, W = goalValue(X, GOAL.watch);
+    function one(k, label, m, sub, o) {
+      if (X.pending) return hstat(k, '…', label, 'chargement', o);
+      return m.v == null ? hstat(k, '—', label, m.why || X.why, o) : hstat(k, fInt(m.v), label, sub, o);
+    }
+    var fol = X.pending ? hstat('followers', '…', 'Abonnés', 'chargement', { acc: true })
+      : X.fol == null ? hstat('followers', '—', 'Abonnés', off ? 'compte déconnecté' : X.why, { acc: true })
+        : hstat('followers', fInt(X.fol), 'Abonnés', 'total actuel · ' + (X.net == null ? 'net —' : fSigned(X.net) + ' net ' + X.per), { acc: true });
+    var watch = W.loading ? hstat('watch', '…', 'Visionnage moyen', 'chargement')
+      : W.v == null ? hstat('watch', '—', 'Visionnage moyen', W.na)
+        : hstat('watch', W.val, 'Visionnage moyen', (W.sub ? W.sub + ' · ' : '') + 'reels publiés ' + X.per, { small: W.dur ? ' / ' + fSec0(W.dur) : '' });
+    return hcard('compte', 'Insight Instagram', IC.insta, '30' + NB + 'j', [
+      fol, one('views', 'Vues', c.views, X.per), watch, one('engaged', 'Comptes engagés', c.engaged, X.per)
+    ], homeTopHTML(off));
+  }
+  // Top post = le n° 1 du « Top publications » de l'onglet Insight (vues à vie), même liste, même tri.
+  function homeTopHTML(off) {
+    var MS = CF.acct.media, MD = off ? null : MS.data, top = MD ? topAll()[0] : null;
+    if (off || MS.kind === 'disconnected') return emptyLine('—', 'top post : compte déconnecté');
+    if (!MD) {
+      return MS.state === 'error' ? emptyLine('—', 'top post : ' + (MS.error || 'publications indisponibles'))
+        : '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement du top post…</div>';
+    }
+    if (!top) return emptyLine('—', MD.error ? 'top post : liste des publications indisponible' : 'top post : aucune publication avec des vues');
+    var vid = videoId(top), thumb = safeUrl(top.thumb);
+    var inner = '<span class="cf-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '')
+      + (isVideo(top) ? '<span class="cf-thumb-play">' + svg(IC.play, 10) + '</span>' : '') + '</span>'
+      + '<span class="cf-htop-b"><span class="cf-meta">' + esc('top post · n° 1 du Top publications · ' + fInt(top.views) + ' ' + plural(top.views, 'vue') + ' à vie') + '</span>'
+      + '<span class="cf-htop-cap">' + esc(capText(top.caption)) + '</span>'
+      + '<span class="cf-htop-id">' + (vid ? '<span class="cf-vid">' + esc(vid) + '</span>' : '<span class="cf-chip is-muted">vidéo non reconnue</span>') + '</span></span>';
+    return top.id ? '<button type="button" class="cf-htop" data-act="home-top" data-pid="' + esc(top.id) + '" aria-label="Ouvrir la fiche du top post">' + inner + '<span class="cf-post-go">' + svg(IC.chevron, 16) + '</span></button>'
+      : '<div class="cf-htop is-static">' + inner + '</div>';
+  }
+  // Carte ou alerte de l'Accueil → l'onglet, sur la MÊME période que la carte (30 j) : on y retrouve les mêmes chiffres.
+  function homeGo(k) {
+    if (TAB_KEYS.indexOf(k) < 0 || k === 'home') return;
+    if (k === 'compte' && ui.range !== HOME_RANGE) { ui.range = HOME_RANGE; evoHide(); }
+    if (k === 'dm' && ui.dmRange !== HOME_DM) { ui.dmRange = HOME_DM; ui.dmAllLeads = false; ui.dmAllPosts = false; dmHide(); }
+    setTab(k);
+    try { window.scrollTo(0, 0); } catch (e) { /* rien */ }
+    var b = $('cfTab-' + k);
+    if (b) { try { b.focus({ preventScroll: true }); } catch (e) { b.focus(); } }
+  }
+
   // ── onglets pas encore branchés ──
   function soonHTML(k) {
     var s = SOON[k];
@@ -318,7 +596,7 @@
   // ── onglet Compte @avataradss ──
   function compteHTML() {
     var S = CF.acct.ig[ui.range], D = S.data, off = S.kind === 'disconnected';
-    var X = model(S, D, off);
+    var X = model(S, D, off, ui.range);
     return '<section class="cf-title"><h1>Insight Instagram</h1></section>'
       + acctHTML(D)
       + insightsHTML(S, D, off, X)
@@ -400,28 +678,34 @@
   }
 
   // ── Objectifs (maquette d'Axel) : moyenne des reels de la période, barre = chemin vers l'objectif ──
+  // Valeur d'un objectif sur la période du modèle X, calculée à UN seul endroit : la section Objectifs et la carte
+  // Insight de l'Accueil lisent cette fonction (jamais deux calculs du même chiffre).
+  function goalValue(X, g) {
+    var R = X.reels, v = null, n = 0, sub = null, na = null;
+    if (g.k === 'perDay') {
+      if (R && X.nDays) { v = R.length / X.nDays; n = R.length; }
+      sub = R ? n + ' ' + plural(n, 'reel') + ' ' + X.per : null;
+    } else if (R) {
+      var vals = R.map(function (p) { return rateOf(p, g); }).filter(function (x) { return x != null; });
+      n = vals.length;
+      v = n ? vals.reduce(function (a, b) { return a + b; }, 0) / n : null;
+      // « moyenne de 14 reels · 1/14 atteint » (l'objectif est dans le titre de la carte)
+      var scored = R.filter(function (p) { return scoreOf(p, g) != null; }), hit = scored.filter(function (p) { return goalOk(g, scoreOf(p, g)); }).length;
+      sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + (g.target != null && scored.length ? ' · ' + hit + '/' + scored.length + ' ' + plural(hit, 'atteint') : '') : '';
+      if (!n) na = R.length ? 'non fourni pour ces reels' : 'aucun reel publié ' + X.per;
+    }
+    if (v == null && !na) na = X.off ? 'compte déconnecté' : (R ? 'aucun reel publié ' + X.per : X.mediaWhy);
+    var dur = g.k === 'watch' && R && v != null ? meanDur(R) : null;   // « sur combien » : durée moyenne des mêmes reels
+    var sc = g.k === 'watch' ? (dur ? v / dur * 100 : null) : v;       // ce qui est comparé à la cible
+    if (dur) sub = fDec(sc, 0) + NB + '% regardé';
+    return { v: v, n: n, sub: sub, na: na, dur: dur, sc: sc, val: v == null ? '—' : g.pct ? fRate(v) : g.sec ? fSec(v) : fDec(v, 1),
+      loading: X.pending || (!R && !X.off && CF.acct.media.state !== 'error' && !(CF.acct.media.data)) };
+  }
   function goalsHTML(X) {
-    var R = X.reels, loading = X.pending || (!R && !X.off && CF.acct.media.state !== 'error' && !(CF.acct.media.data));
     var cards = GOALS.map(function (g) {
-      var v = null, n = 0, sub, na = null;
-      if (g.k === 'perDay') {
-        if (R && X.nDays) { v = R.length / X.nDays; n = R.length; }
-        sub = R ? n + ' ' + plural(n, 'reel') + ' ' + X.per : null;
-      } else if (R) {
-        var vals = R.map(function (p) { return rateOf(p, g); }).filter(function (x) { return x != null; });
-        n = vals.length;
-        v = n ? vals.reduce(function (a, b) { return a + b; }, 0) / n : null;
-        // « moyenne de 14 reels · 1/14 atteint » (l'objectif est dans le titre de la carte)
-        var scored = R.filter(function (p) { return scoreOf(p, g) != null; }), hit = scored.filter(function (p) { return goalOk(g, scoreOf(p, g)); }).length;
-        sub = n ? 'moyenne de ' + n + ' ' + plural(n, 'reel') + (g.target != null && scored.length ? ' · ' + hit + '/' + scored.length + ' ' + plural(hit, 'atteint') : '') : '';
-        if (!n) na = R.length ? 'non fourni pour ces reels' : 'aucun reel publié ' + X.per;
-      }
-      if (v == null && !na) na = X.off ? 'compte déconnecté' : (R ? 'aucun reel publié ' + X.per : X.mediaWhy);
-      var dur = g.k === 'watch' && R && v != null ? meanDur(R) : null;   // « sur combien » : durée moyenne des mêmes reels
-      var sc = g.k === 'watch' ? (dur ? v / dur * 100 : null) : v;       // ce qui est comparé à la cible
+      var G = goalValue(X, g), loading = G.loading, v = G.v, sub = G.sub, na = G.na, dur = G.dur, sc = G.sc;
       var ok = goalOk(g, sc), fill = sc == null || g.target == null ? 0 : g.max ? (sc <= g.target ? 1 : g.target / sc) : Math.min(1, sc / g.target);
-      var val = loading ? '…' : v == null ? '—' : g.pct ? fRate(v) : g.sec ? fSec(v) : fDec(v, 1);
-      if (dur) sub = fDec(sc, 0) + NB + '% regardé';
+      var val = loading ? '…' : G.val;
       var tgt = g.target == null ? '' : 'objectif ' + (g.k === 'perDay' ? g.target + ' / jour' : (g.max ? '≤ ' : '≥ ') + g.target + NB + '%');
       return '<div class="cf-goal' + (ok ? ' is-ok' : '') + '" data-goal="' + g.k + '">'
         + '<span class="cf-goal-tile">' + svg(IC[g.ic], 16) + '</span>'
@@ -431,7 +715,7 @@
         + '<span class="cf-goal-bar' + (g.target == null ? ' is-none' : '') + '"><i style="width:' + (loading ? 0 : Math.round(fill * 1000) / 10) + '%"></i></span>'
         + (loading || v == null || sub ? '<span class="cf-goal-s">' + esc(loading ? 'chargement' : v == null ? na : sub) + '</span>' : '') + '</div>';
     }).join('');
-    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectifs · ' + esc(PERIOD[ui.range].evo) + '</h2></div></div>'
+    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Objectifs · ' + esc(PERIOD[X.range].evo) + '</h2></div></div>'
       + '<div class="cf-goals">' + cards + '</div></section>';
   }
 
@@ -460,9 +744,10 @@
 
   // Tout ce que l'onglet Compte affiche pour la fenêtre active, calculé à UN seul endroit : les cartes, la courbe et
   // sa légende lisent ce modèle (jamais deux calculs du même chiffre).
-  function model(S, D, off) {
+  function model(S, D, off, range) {
+    range = range || ui.range;
     var MS = CF.acct.media, MD = off ? null : MS.data;
-    var P = PERIOD[ui.range], per = P.per, long = !!LONG[ui.range];
+    var P = PERIOD[range], per = P.per, long = !!LONG[range];
     var pending = !D && !off && (S.loading || S.state === 'idle');
     var why = off ? 'compte déconnecté' : (!D && S.state === 'error' ? 'erreur de chargement' : 'non fourni par l’API Instagram');
     var M = D ? D.m : {}, E = D && !off ? D.err : {};
@@ -497,7 +782,7 @@
     var net = netSnap != null ? netSnap : (F ? fin - fout : null);
     var pend = D && !off && D.flowPending;
     var flowTxt = F ? fSigned(fin) + ' ' + plural(fin, 'abonnement') + ' · ' + fSigned(-fout) + ' ' + plural(fout, 'désabonnement') : '';
-    if (ui.range === 'all' && fol != null) {
+    if (range === 'all' && fol != null) {
       // Instagram ne compte les abonnements qu'à l'intérieur de la fenêtre : les abonnés d'avant la 1re publication n'y
       // sont pas. All time = le total, le net de la fenêtre en dessous (la légende de la courbe garde le net).
       card('followers', fol, 'abonnés au total' + (net != null ? ' · ' + fSigned(net) + ' net ' + per : ''), flowTxt,
@@ -545,7 +830,7 @@
     }
     var nDays = D && D.dayFirst && D.dayLast ? Math.round((ymdDate(D.dayLast) - ymdDate(D.dayFirst)) / 864e5) + 1 : null;
     return { c: c, pending: pending, why: why, series: series, missing: D ? D.seriesMissing : 0, per: per, long: long, off: off,
-      reels: reels, nDays: nDays, mediaWhy: mediaWhy };
+      reels: reels, nDays: nDays, mediaWhy: mediaWhy, range: range, fol: fol, net: net };
   }
 
   // Cartes de la maquette : une couleur par métrique ; toucher une carte affiche / masque sa courbe.
@@ -792,10 +1077,14 @@
   }
 
   // ── Top publications : les 5 plus vues de TOUTES les publications (chiffres à vie) ──
-  function topList() {
+  // Toutes les publications qui ont des vues, triées : la seule liste du Top publications (et du top post de l'Accueil).
+  function topAll() {
     var MD = CF.acct.media.data;
     if (!MD) return [];
-    var all = MD.list.filter(function (p) { return p.views != null; }).sort(function (a, b) { return b.views - a.views; });
+    return MD.list.filter(function (p) { return p.views != null; }).sort(function (a, b) { return b.views - a.views; });
+  }
+  function topList() {
+    var all = topAll();
     return ui.allPosts ? all : all.slice(0, 5);
   }
   function topHTML(off) {
@@ -969,8 +1258,8 @@
     return S.kind === 'missing' ? 'fonction ig_dm_stats_v2 pas encore en base' : S.kind === 'forbidden' ? 'accès refusé par la base' : 'erreur de chargement';
   }
   // Tout ce que l'onglet Auto-DM affiche pour la période active, calculé à UN seul endroit.
-  function dmModel(S, D) {
-    var P = DM_PERIOD[ui.dmRange];
+  function dmModel(S, D, range) {
+    var P = DM_PERIOD[range || ui.dmRange];
     var pending = !D && (S.loading || S.state === 'idle');
     var why = D ? 'non renvoyé par ig_dm_stats_v2' : S.state === 'error' ? dmWhy(S) : '';
     var F = D ? D.f : { commented: null, tapped: null, linked: null, clicked: null };
@@ -992,11 +1281,11 @@
         sub: unc == null ? '' : unc + ' ' + plural(unc, 'personne') + ' sans clic · dont ' + (R.doneUnclicked == null ? '—' : R.doneUnclicked) + ' ' + plural(R.doneUnclicked, 'relancée') + ' · ' + P.per }
     ];
     return { P: P, D: D, S: S, pending: pending, why: why, F: F, R: R, c: c, rates: rates, unc: unc, blocked: blocked, pct: pct,
-      step: (D && D.step) || P.step };
+      step: (D && D.step) || P.step, range: range || ui.dmRange };
   }
 
   function dmHTML() {
-    var S = CF.dm[ui.dmRange], D = S.data, X = dmModel(S, D);
+    var S = CF.dm[ui.dmRange], D = S.data, X = dmModel(S, D, ui.dmRange);
     return '<section class="cf-title"><h1>Auto-DM Instagram</h1></section>'
       + dmAcctHTML(D)
       + dmActivityHTML(X)
@@ -1665,6 +1954,9 @@
       else if (act === 'dm-all-leads') { ui.dmAllLeads = !ui.dmAllLeads; render(); }
       else if (act === 'dm-all-posts') { ui.dmAllPosts = !ui.dmAllPosts; render(); }
       else if (act === 'dm-post') openPostById(el.getAttribute('data-pid'), el);
+      else if (act === 'home-go') homeGo(el.getAttribute('data-tab'));
+      else if (act === 'home-top') openPostById(el.getAttribute('data-pid'), el);
+      else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); }
       else if (act === 'otp-send') sendOtp();
       else if (act === 'otp-back') { show('cfLoginOtp', false); show('cfLoginPwd', true); loginMsg(''); }
     });
@@ -1711,12 +2003,16 @@
     // Retour sur l'onglet du navigateur : ne relit que ce qui a plus de 15 min.
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible' && CF.status === 'ready') {
-        CF.refresh({ igRange: ui.tab === 'compte' ? ui.range : null, dmRange: ui.tab === 'dm' ? ui.dmRange : null });
+        CF.refresh({ igRange: ui.tab === 'compte' ? ui.range : null, dmRange: ui.tab === 'dm' ? ui.dmRange : null,
+          home: ui.tab === 'home' ? { ig: HOME_RANGE, dm: HOME_DM } : null });
       }
     });
-    // Auto-DM : notre base, relue toutes les 2 min tant que l'onglet est affiché (le store ignore si c'est encore frais).
+    // Auto-DM et Production : notre base, relue toutes les 2 min tant que l'onglet (ou l'Accueil) est affiché
+    // (le store ignore si c'est encore frais).
     setInterval(function () {
-      if (ui.tab === 'dm' && CF.status === 'ready' && document.visibilityState === 'visible') CF.loadDm(ui.dmRange);
+      if (CF.status !== 'ready' || document.visibilityState !== 'visible') return;
+      if (ui.tab === 'dm') CF.loadDm(ui.dmRange);
+      else if (ui.tab === 'home') { CF.loadDm(HOME_DM); CF.loadProd(); }
     }, CF.DM_TTL_MS || 120000);
 
     $('cfLoginPwd').addEventListener('submit', function (e) {
