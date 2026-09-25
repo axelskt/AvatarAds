@@ -509,6 +509,8 @@ img { max-width: 100%; }
 .cf-fun-s.l2 .cf-fun-bar i { background: #ffb391; }
 .cf-fun-s.l3 .cf-fun-bar i { background: #ff8f61; }
 .cf-fun-s.l4 .cf-fun-bar i { background: #ff6b35; }
+.cf-fun-s.l5 .cf-fun-bar i { background: var(--cf-dm-users); }   /* Devenu user AvatarAds (attribution, 25/09) */
+.cf-dm-exist { margin-top: 8px; overflow-wrap: anywhere; }
 .cf-fun-s.is-none .cf-fun-bar { background: repeating-linear-gradient(90deg, #ebe4d9 0 6px, transparent 6px 10px); }
 .cf-fun-r { display: flex; align-items: center; gap: 6px; padding-left: 4px; color: var(--cf-mute); }
 .cf-fun-ar { display: flex; flex: none; }

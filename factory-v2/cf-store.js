@@ -17,8 +17,9 @@
  *                publications et visionnage moyen par fenêtre, top publications
  *   CF.dm[r]   onglet Auto-DM (étape 2, Axel 25/09) : RPC ig_dm_stats_v2(p_range), r ∈ 24h | 7j | 30j | 90j | all
  *              → { state, loading, at, data, error, kind } ; notre base (pas Instagram) : relue au plus toutes les 2 min.
- *              Personnes uniques (commentaire → « Je suis abonné » → lien → clic), relance en lecture seule,
- *              leads = pseudo + état seulement (jamais d'identifiant Instagram)
+ *              Personnes uniques (commentaire → « Je suis abonné » → lien → clic → devenu user → payant), relance en
+ *              lecture seule, leads = pseudo + état seulement (jamais d'identifiant Instagram) ; attribution
+ *              (f.users, f.paid, attr.existing / existingPaid) = totaux seulement, null tant que la RPC ne les rend pas
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
  *                     { force } ignore les 15 min
@@ -504,11 +505,18 @@
   function normDm(b, range, at) {
     var f = b.funnel && typeof b.funnel === 'object' ? b.funnel : {}, r = b.relance && typeof b.relance === 'object' ? b.relance : {};
     var cr = b.relance_cron && typeof b.relance_cron === 'object' ? b.relance_cron : null;
-    function steps(o) { return { commented: cnt(o.commented), tapped: cnt(o.tapped), linked: cnt(o.linked), clicked: cnt(o.clicked) }; }
+    var at2 = b.attribution && typeof b.attribution === 'object' ? b.attribution : {};
+    // users = « Devenus users » (compte AvatarAds créé après le clic, table ig_lead_links) : null tant que la RPC ne le
+    // renvoie pas (migration 20260925171600 pas encore appliquée) → « — » + raison, jamais 0 inventé.
+    function steps(o) { return { commented: cnt(o.commented), tapped: cnt(o.tapped), linked: cnt(o.linked), clicked: cnt(o.clicked), users: cnt(o.users) }; }
+    var fs = steps(f);
+    fs.paid = fs.users == null ? null : cnt(f.paid);
     return {
       range: range, fetchedAt: at, step: ['hour', 'day', 'week', 'month'].indexOf(b.step) >= 0 ? b.step : null,
       since: ms(b.since), until: ms(b.until), firstAt: ms(b.first_event_at), lastAt: ms(b.last_event_at),
-      f: steps(f),
+      f: fs,
+      // comptes AvatarAds DÉJÀ existants au clic (pas des users) et, parmi eux, passés payants après le clic : totaux seulement
+      attr: { existing: fs.users == null ? null : cnt(at2.existing), existingPaid: fs.users == null ? null : cnt(at2.existing_paid) },
       rel: { unclicked: cnt(r.unclicked), done: cnt(r.done), doneUnclicked: cnt(r.done_unclicked), doneClicked: cnt(r.done_clicked),
         planned: cnt(r.planned), missed: cnt(r.missed) },
       cron: cr ? { active: cr.active === true, schedule: str(cr.schedule) ? cr.schedule.slice(0, 40) : null } : null,
@@ -516,7 +524,8 @@
       series: Array.isArray(b.series) ? b.series.map(function (p) {
         if (!p || typeof p !== 'object' || ms(p.t) == null) return null;
         var s = steps(p);
-        return { t: ms(p.t), d: ymd(p.d), h: cnt(p.h), commented: s.commented, tapped: s.tapped, linked: s.linked, clicked: s.clicked };
+        return { t: ms(p.t), d: ymd(p.d), h: cnt(p.h), commented: s.commented, tapped: s.tapped, linked: s.linked, clicked: s.clicked,
+          users: fs.users == null ? null : s.users };
       }).filter(Boolean) : [],
       posts: Array.isArray(b.by_media) ? b.by_media.map(function (p) {
         var id = p && mediaId(p.media_id);
