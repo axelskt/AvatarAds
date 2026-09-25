@@ -101,6 +101,31 @@ export async function applyReservation(o: { req: Request; userId: string; proxy:
   return { ok: true, opId, drawn: (dr.ok && dr.remaining !== null) ? Math.max(1, Math.ceil(o.cost)) : 0 }
 }
 
+// Omni Flash (Axel 25/09) : comme applyReservation, mais via draw_omni_reservation → tire `cost` (5 × durée) MOINS l'image
+// de départ d'Express déjà tirée sur la même op (image OFFERTE : notée par openai-proxy, omniStartAdd). `drawn` = le montant
+// réellement tiré (c'est lui que les proxys rendent / remboursent, jamais `cost`).
+export async function applyOmniReservation(o: { req: Request; userId: string; proxy: string; cost: number; label?: string }): Promise<Gate & { opId?: string; drawn?: number }> {
+  const opId = await resolveOp(o.userId, o.req)
+  if (opId === '__ERR__') return { ok: true, drawn: 0 }
+  if (!opId) return { ...(await noDrawableOpGate(o.userId, o.proxy, o.label)), drawn: 0 }
+  try {
+    const { data, error } = await svc().rpc('draw_omni_reservation', { p_user: o.userId, p_op: opId, p_cost: Math.max(1, Math.ceil(o.cost)) })
+    if (error) { console.warn('draw_omni err (fail-open):', error.message); return { ok: true, opId, drawn: 0 } }
+    const drawn = Number(data) || 0
+    if (drawn <= 0) {
+      console.warn(`[reserve] ${o.proxy} op=${opId} cost=${o.cost} ${o.label ?? ''} INSUFFISANT (enforce=${reserveEnforce()})`)
+      if (reserveEnforce()) return { ok: false, status: 402, error: 'Réservation de crédits insuffisante pour cette génération.' }
+    }
+    return { ok: true, opId, drawn }
+  } catch { return { ok: true, opId, drawn: 0 } }
+}
+// openai-proxy : image de départ d'Express Omni livrée sur l'op → la vidéo coûtera ce montant de moins (3 max, une fois).
+export function wantsOmniStart(req: Request): boolean { return (req.headers.get('x-aa-chain') || '').trim().toLowerCase() === 'omni-start' }
+export async function omniStartAdd(userId: string, opId: string | undefined, cost: number): Promise<boolean> {
+  if (!opId || !(cost > 0)) return false
+  try { const { data, error } = await svc().rpc('omni_start_add', { p_user: userId, p_op: opId, p_cost: Math.ceil(cost) }); return !error && data === true } catch { return false }
+}
+
 // Tire la réserve ENTIÈRE d'une op (soumission VIDÉO : une op = une génération). Ferme « N générations pour
 // un débit » : une 2e soumission sur la même op trouve réserve 0 → 402. Fail-open sur erreur DB.
 // `minCost` = plancher serveur du modèle (audit métier 14/09) : draw_full REFUSE (renvoie 0 → 402) une

@@ -16,7 +16,7 @@
 // par kie-proxy, sans repli fal) — Starter / Pro / Élite / BYOK, 1080p imposé, tirage EXACT de 5 cr × durée.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -124,8 +124,10 @@ serve(async (req: Request) => {
       }
       // Primaire : plancher serveur = falCost(path) (audit 14/09) → une réserve sous ce plancher (ex.
       // spend_credits(1) devant un OmniHuman à 5) est refusée (402), fin de « 1 crédit = vidéo chère ».
-      const rr = (_aux || omniCost)
-        ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: omniCost || falCost(path), label: path })
+      const rr = omniCost
+        ? await applyOmniReservation({ req, userId: auth.userId, proxy: 'fal', cost: omniCost, label: path })   // − image de départ offerte (25/09)
+        : _aux
+        ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path })
         : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path, minCost: falCost(path) })
       if (!rr.ok) return jsonRes(rr.status, { error: rr.error })
       drawnOp = rr.opId
