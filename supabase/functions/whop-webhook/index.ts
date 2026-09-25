@@ -110,8 +110,11 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // l'owner ne l'a pas approuvée (approve_referral_earning). refProf null (hoquet DB, fail-open) → cap 0 → pas de flag.
     // Prix EXACT du plan du parrain via son whop_plan_id (Élite30=8999 ≠ Élite90=22499) ; repli tier-min sinon.
     const refPlanCap = (PLAN_PRICE_CENTS[String(refProf?.whop_plan_id || '')] ?? REFERRER_PLAN_CAP[String(refProf?.plan || '').toLowerCase()]) ?? 0
+    // Relecture 25/09 : seul auth-otp enregistre l'IP d'inscription → un filleul inscrit par Google n'en a pas et la garde
+    // same-IP ci-dessus ne peut rien vérifier (2e compte Google = 30 % sans signal) → commission en REVUE owner.
     const reviewReason = (refPlanCap > 0 && commission > refPlanCap)
       ? `auto-parrainage possible : commission ${(commission / 100).toFixed(2)}€ > plan parrain ${refProf?.plan} ${(refPlanCap / 100).toFixed(2)}€`
+      : !_sipFilleul ? 'IP d’inscription du filleul inconnue (inscription Google) : auto-parrainage non vérifiable'
       : null
     if (reviewReason) console.warn(`🚩 parrainage ASYMÉTRIQUE (flag revue owner) — ${reviewReason} (parrain ${referrerId}, filleul ${referredEmail})`)
     const { error } = await sb.from('referral_earnings').insert({

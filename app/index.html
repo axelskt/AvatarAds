@@ -7017,21 +7017,22 @@ async function loadProfile(user){
 // Le lien avatarads.fr/?ref=CODE (LP, app ou connexion.html) garde le code dans aa_ref. Avant le 25/09, seul le login
 // intégré à l'app posait le parrain : connexion.html (OTP et Google) ne l'appelait jamais → filleuls perdus. On l'envoie
 // désormais à chaque ouverture de l'app tant que le code est là ; set_referrer tranche (code d'un vrai compte, pas
-// soi-même, compte de 30 j au plus, write-once). Code promo présent = priorité au promo (Axel 11/09) → pas de parrain.
-// Réponse de la base (posé ou refusé) → on oublie le code ; erreur réseau → on le garde pour la prochaine ouverture.
+// soi-même, compte de 24 h au plus — ou rattrapage des perdus du 14 au 25/09 —, write-once). « Parrainage OU promo »
+// (Axel 11/09) est tranché au PAIEMENT par whop-webhook (coupon → pas de commission) : un ancien lien ?promo= ne fait donc
+// plus perdre le parrain. Réponse de la base (posé ou refusé) → on oublie le code ; erreur réseau → gardé.
 async function _aaRefSend(p){
   if(window._aaRefBusy) return;
-  var ref = null, promo = null;
-  try{ ref = localStorage.getItem('aa_ref'); promo = localStorage.getItem('aa_promo'); }catch(e){ return; }
+  var ref = null;
+  try{ ref = localStorage.getItem('aa_ref'); }catch(e){ return; }
   if(!ref) return;
   var drop = function(){ try{ if(localStorage.getItem('aa_ref') === ref) localStorage.removeItem('aa_ref'); }catch(e){} };
-  if(promo || (p && p.referred_by) || !/^[A-Za-z0-9_-]{4,40}$/.test(ref)){ drop(); return; }
+  if((p && p.referred_by) || !/^[A-Za-z0-9_-]{4,40}$/.test(ref)){ drop(); return; }
   var t = p && p.created_at ? new Date(p.created_at).getTime() : NaN;
   if(t && Date.now() - t > 30 * 864e5){ drop(); return; }
   window._aaRefBusy = true;
   try{
     const { data, error } = await sb.rpc('set_referrer', { p_code: ref });
-    if(!error){ drop(); if(data === true && currentMember && currentMember.id === (p && p.id)) currentMember.referred_by = ref; }
+    if(!error){ drop(); if(data === true && currentMember && currentMember.id === (p && p.id)) currentMember.referred_by = ref.slice(0, 10); }
   }catch(e){ /* réseau : on réessaiera à la prochaine ouverture */ }
   finally{ window._aaRefBusy = false; }
 }
@@ -32035,8 +32036,8 @@ function _omniKieErr(e){
   if(!e || e._kieStage==='pending') return e;
   const cause = String((e && e.message) || e || 'échec').replace(/^kie\s*:\s*/i, '').replace(/\s*\(crédits rendus\)\s*$/, '').replace(/\s*—\s*réessaie[^—]*$/i, '').slice(0, 120);
   const out = new Error(e._kieRefus
-    ? 'Omni Flash a refusé ce contenu (' + cause + ') — tes crédits te sont rendus ; change la réplique ou l\'image puis réessaie'
-    : 'Omni Flash a échoué (' + cause + ') — tes crédits te sont rendus, réessaie');
+    ? 'Omni Flash a refusé ce contenu (' + cause + ') — les crédits de la vidéo te sont rendus ; change la réplique ou l\'image puis réessaie'
+    : 'Omni Flash a échoué (' + cause + ') — les crédits de la vidéo te sont rendus, réessaie');
   out._kieStage = e._kieStage; out._kieBill = e._kieBill; out._kieRefus = !!e._kieRefus;
   return out;
 }
@@ -32107,7 +32108,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     // par défaut — ce champ n'existe pas dans le schéma fal (un param inconnu risque un 422).
   });
   const sd=await sub.json().catch(()=>({}));
-  if(!sub.ok) throw new Error('Omni Flash '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160)+' — tes crédits te sont rendus, réessaie');
+  if(!sub.ok) throw new Error('Omni Flash '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160)+' — les crédits de la vidéo te sont rendus, réessaie');
   const pick=(o)=>{ if(!o) return null; return (o.video&&o.video.url)||(o.output&&o.output.video&&o.output.video.url)||(o.videos&&o.videos[0]&&o.videos[0].url)||o.video_url||null; };
   let outUrl=pick(sd);
   if(!outUrl && (sd.status_url||sd.request_id)){
@@ -32130,7 +32131,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
         if(!outUrl) throw new Error('Omni Flash : vidéo prête mais récupération impossible — réessaie dans un instant');
         break;
       }
-      if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):'')+' — tes crédits te sont rendus, réessaie');
+      if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):'')+' — les crédits de la vidéo te sont rendus, réessaie');
       step(Math.min(88,42+i*2),'Omni Flash — génération… ('+Math.min(88,42+i*2)+' %)');
     }
   }

@@ -110,7 +110,12 @@ export async function applyOmniReservation(o: { req: Request; userId: string; pr
   if (!opId) return { ...(await noDrawableOpGate(o.userId, o.proxy, o.label)), drawn: 0 }
   try {
     const { data, error } = await svc().rpc('draw_omni_reservation', { p_user: o.userId, p_op: opId, p_cost: Math.max(1, Math.ceil(o.cost)) })
-    if (error) { console.warn('draw_omni err (fail-open):', error.message); return { ok: true, opId, drawn: 0 } }
+    if (error) {
+      // RPC absente (fonction déployée avant la migration) ou en erreur : JAMAIS de laisser-passer gratuit → tirage normal
+      // au PRIX PLEIN (5 × durée, sans remise) ; seul un hoquet DB de draw_reservation reste fail-open (politique existante).
+      console.warn('draw_omni err → tirage plein prix:', error.message)
+      return await applyReservation(o)
+    }
     const drawn = Number(data) || 0
     if (drawn <= 0) {
       console.warn(`[reserve] ${o.proxy} op=${opId} cost=${o.cost} ${o.label ?? ''} INSUFFISANT (enforce=${reserveEnforce()})`)
