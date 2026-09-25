@@ -9219,12 +9219,12 @@ const _IMG_CORRECT_PRESETS = [
   { ic:'wand', label:'Changer le visage', swap:true, spin:'Faceswap…' },
   { ic:'cards', label:'Créer un référence sheet', spin:'Planche perso… (~30s)', fmt:'1024x1792',
     back:_IMG_REF_SHEET_PROMPT },
-  { ic:'crop', label:'Modifier le format', spin:'Recadrage…',
-    back:'Reframe and extend this exact image to fill the target aspect ratio by naturally continuing (outpainting) the environment on the missing sides. Do NOT distort, stretch, squeeze or crop the person. Keep the exact same person, same clothing, same style, same lighting and same mood; only add believable surrounding scenery to complete the new frame.' },
+  // Axel 25/09 : « Changer d'angle » = commande gpt-image /droneview, « Changer l'arrière-plan » = /newbg (testées par Axel,
+  // envoyées TELLES QUELLES ; une précision tapée dans le champ est ajoutée). Remplacent « Modifier le format » et « Changer le décor ».
+  { ic:'camera', label:'Changer d\'angle', spin:'Nouvel angle…', back:'/droneview' },
   { ic:'hand', label:'Faire tenir un objet', needs:true, hint:'quel objet/produit', spin:'Objet en main…',
     back:'Make the person naturally hold the product/object (described by the user) in their hand: realistic grip with natural fingers and thumb, correct real-world scale, with shadows and reflections consistent with the scene lighting. Keep the exact same person, face, expression, pose and background.' },
-  { ic:'scene', label:'Changer le décor', needs:true, hint:'quel décor', spin:'Nouveau décor…',
-    back:'Replace ONLY the background/scene with the new environment (described by the user), keeping the EXACT same person, identity, face, pose, framing and clothing. IMPORTANT — the new background must look like a REAL, SIMPLE, everyday place, deliberately imperfect and lived-in: an ordinary home, bedroom, kitchen, street or interior with natural clutter and small real-world imperfections (uneven objects, normal wear, casual arrangement), NOT a luxury, staged, showroom or high-end studio setting. Use natural available lighting (real indoor light or daylight, slightly uneven exposure), authentic materials and textures. Match the lighting direction, color temperature, shadows and perspective between the subject and the new background so it looks like a genuine photo actually taken there with a phone. Keep the background SHARP and IN FOCUS — NO artificial bokeh, NO fake depth-of-field blur, NO smoothing. NEVER make it glossy, plastic, CGI, over-saturated, over-polished or "AI-perfect"; it must read as a real, natural, unpretentious photo.' },
+  { ic:'scene', label:'Changer l\'arrière-plan', spin:'Nouvel arrière-plan…', back:'/newbg' },
   { ic:'wand', label:'Autres', action:'_imgCorrectOther' },
 ];
 // « Autres » : laisse l'utilisateur écrire sa propre correction dans le champ prompt.
