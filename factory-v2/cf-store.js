@@ -22,7 +22,8 @@
  *   CF.prod    Accueil (étape 3, 25/09) : factory_bricks / factory_recipes / factory_qc lues en SELECT (RLS owner/dev,
  *              colonnes utiles seulement) → { state, loading, at, data, error, kind } ; notre base : relue au plus toutes les 2 min
  *   CF.prov    Accueil : niveau des soldes fournisseurs (provider-watch, vue utilisateur : ok / low, jamais le montant)
- *              → { state, loading, at, data: { list: [{ id, label, level, at, error }] }, error } ; relu au plus toutes les 15 min
+ *              → { state, loading, at, data: { list: [{ id, label, level, at, error, unconfirmed }] }, error } ; relu au plus
+ *              toutes les 15 min. error = solde non lu / jamais lu / relevé périmé ; unconfirmed = « ok » sans readable
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
  *                     { home: { ig, dm } } tout ce que lit l'Accueil ; { force } ignore les 15 min
@@ -690,15 +691,27 @@
   // provider-watch relit alors TOUS les soldes une seule fois ; fal et ElevenLabs lisent ensuite l'état frais.
   var PROVIDERS = [{ id: 'hedra', label: 'Hedra' }, { id: 'fal', label: 'fal.ai' }, { id: 'elevenlabs', label: 'ElevenLabs' }];
   var PROV_LEVEL = { ok: 'ok', low: 'low', crit: 'crit' };
+  // provider-watch range un solde qu'il n'a PAS pu lire (clé refusée, fournisseur en 500) en level 'ok' : « ok » seul
+  // ne prouve rien. On exige donc un relevé daté, récent, et readable === true (champ ajouté le 25/09). Sans ce champ
+  // (version en ligne pas encore redéployée), un « ok » reste NON CONFIRMÉ : jamais compté comme solde vérifié.
+  // 'low' / 'crit' n'existent que si le solde a été lu : ils sont toujours confirmés.
+  var PROV_STALE_MS = 13 * 3600e3;   // relevé à la demande si > 20 min, et cron toutes les 12 h : au-delà de 13 h, les deux ont échoué
   async function oneProvider(pv) {
-    var out = { id: pv.id, label: pv.label, level: null, at: null, error: null };
+    var out = { id: pv.id, label: pv.label, level: null, at: null, error: null, unconfirmed: false };
     try {
       var res = await callFn('provider-watch?provider=' + pv.id);
-      var b = res.body || {};
+      var b = res.body || {}, at = ms(b.at);
       if (!res.ok || b.error) out.error = b.error ? String(b.error).slice(0, 120) : 'HTTP ' + res.status;
       else if (b.provider !== pv.id) out.error = 'réponse pour un autre fournisseur';
       else if (!PROV_LEVEL[b.level]) out.error = 'niveau illisible';
-      else { out.level = PROV_LEVEL[b.level]; out.at = ms(b.at); }
+      else if (at == null) out.error = 'aucun relevé enregistré : solde jamais lu';
+      else if (b.readable === false) out.error = 'solde non lu au dernier relevé (clé refusée ou fournisseur indisponible)';
+      else if (Date.now() - at > PROV_STALE_MS) { out.error = 'dernier relevé périmé (plus de 13 h)'; out.at = at; }
+      else {
+        out.level = PROV_LEVEL[b.level];
+        out.at = at;
+        out.unconfirmed = b.readable !== true && out.level === 'ok';
+      }
     } catch (e) { out.error = errText(e); }
     return out;
   }

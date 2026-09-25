@@ -333,6 +333,11 @@
       return { key: 'off', tone: 'err', pill: 'Instagram déconnecté', line: 'Instagram déconnecté · auto-DM en pause' };
     }
     if (tok && tok.expired) return { key: 'expired', tone: 'err', tok: tok, pill: u + ' · token expiré', line: u + ' · token expiré le ' + dmy(tok.date) + ' · auto-DM en pause' };
+    // Profil illisible (ex. token invalidé par un changement de mot de passe : ig-insights répond 200 + basic_error) :
+    // même pastille rouge que les onglets Insight et Auto-DM (igState), jamais « connecté · auto-DM actif ».
+    if (S.data && S.data.basicError) {
+      return { key: 'refused', tone: 'err', tok: tok, err: S.data.basicError, pill: u + ' · lecture refusée', line: u + ' · Instagram refuse la lecture du profil · auto-DM à vérifier' };
+    }
     if (!prim) {
       return A.state === 'error' ? { key: 'unknown', tone: 'mute', pill: 'Instagram · —', line: 'Instagram · comptes reliés illisibles : ' + A.error }
         : { key: 'loading', tone: 'mute', pill: 'Instagram…', line: 'Instagram · chargement…' };
@@ -348,6 +353,19 @@
   var BILLING = { hedra: 'https://www.hedra.com/app/settings/billing', fal: 'https://fal.ai/dashboard/billing', elevenlabs: 'https://elevenlabs.io/app/subscription' };
   var LVL_ORDER = { danger: 0, warn: 1 };
   var TAB_NAME = { prod: 'Production', trackads: 'TrackAds', dm: 'Auto-DM', compte: 'Insight' };
+  // Métriques de la fenêtre 30 j refusées par Instagram (part_errors d'ig-insights, normalisées dans D.err), sous les
+  // libellés de l'onglet Insight qui les affiche. Celles de l'Accueil d'abord. reach_by_follow n'est affiché nulle part :
+  // son refus ne rend aucun chiffre faux, il n'est donc pas compté.
+  var IG_PART = [['views', 'vues'], ['engaged', 'comptes engagés'], ['follows', 'abonnements / désabonnements'], ['reach', 'reach'],
+    ['interactions', 'interactions'], ['profileViews', 'vues de profil'], ['bioTaps', 'clics lien en bio'], ['linkTaps', 'clics boutons de contact'],
+    ['viewsByType', 'vues par type de contenu'], ['viewsByFollower', 'vues · abonnés / non-abonnés']];
+  function igRefused(D) {
+    var E = (D && D.err) || {};
+    return IG_PART.filter(function (x) { return E[x[0]]; }).map(function (x) { return { l: x[1], why: E[x[0]] }; });
+  }
+  // Étapes que ig_dm_stats_v2 n'a pas renvoyées (dmModel les affiche « — » · non renvoyé par ig_dm_stats_v2).
+  function dmMissing(D) { return D ? DMS.filter(function (s) { return !s.none && D.f[s.k] == null; }) : []; }
+  function clip(s) { s = String(s || ''); return s.length > 160 ? s.slice(0, 159) + '…' : s; }
   function homeAlerts(ig) {
     var out = [];
     function add(lvl, title, sub, o) { o = o || {}; out.push({ lvl: lvl, title: title, sub: sub || '', tab: o.tab || null, ext: o.ext || null, retry: o.retry || null }); }
@@ -356,11 +374,20 @@
     // Instagram : trois états pilotés par le token (maquette §14)
     if (ig.key === 'off') add('danger', 'Instagram déconnecté · reconnecte ' + u, 'L’auto-DM est en pause tant que le compte n’est pas reconnecté. Les chiffres Instagram passent à « — » ; ceux de l’Auto-DM (notre base) restent justes.', { tab: 'dm' });
     else if (ig.key === 'expired') add('danger', 'Token Instagram expiré', 'Expiré le ' + dmy(ig.tok.date) + ' : l’auto-DM est en pause. Reconnecte ' + u + '.', { tab: 'dm' });
+    // → onglet Insight : même pastille, même ligne rouge sur la carte compte, la raison complète et « Reconnecter »
+    else if (ig.key === 'refused') add('danger', 'Instagram refuse la lecture du profil · reconnecte ' + u, 'ig-insights : ' + clip(ig.err)
+      + ' · l’auto-DM envoie avec ce même token : tant que la lecture est refusée, ses envois ne sont pas garantis.', { tab: 'compte' });
     else if (ig.key === 'soon') add('warn', 'Token Instagram : ' + (ig.tok.days < 1 ? 'expire dans moins d’un jour' : 'expire dans ' + ig.tok.days + ' ' + plural(ig.tok.days, 'jour')), 'Le ' + dmy(ig.tok.date) + ' · reconnecte ' + u + ' pour ne pas couper l’auto-DM.', { tab: 'dm' });
     if (A.state === 'error') add('warn', 'Comptes Instagram reliés illisibles', 'instagram-auth : ' + A.error, { tab: 'dm' });
     if (ig.key !== 'off') {
       if (S.state === 'error') add('warn', 'Insights Instagram · 30' + NB + 'j non chargés', S.error + kept(S.data, 'chiffres'), { tab: 'compte' });
-      else if (S.data && S.data.basicError) add('warn', 'Instagram refuse la lecture du profil', S.data.basicError, { tab: 'compte' });
+      else if (S.data && ig.key !== 'refused' && ig.key !== 'expired') {   // profil refusé ou token expiré : l'alerte rouge en est la cause
+        var ref = igRefused(S.data);
+        if (ref.length) {
+          add('warn', 'Instagram refuse ' + ref.length + ' ' + plural(ref.length, 'métrique') + ' · 30' + NB + 'j', ref.map(function (x) { return x.l; }).join(', ')
+            + ' · ex. ' + ref[0].l + ' : ' + clip(ref[0].why) + ' · détail dans l’onglet Insight.', { tab: 'compte' });
+        }
+      }
       if (M.state === 'error') add('warn', 'Publications Instagram non chargées', M.error + kept(M.data, 'chiffres'), { tab: 'compte' });
       else if (M.data && M.data.error) add('warn', 'Publications Instagram non chargées', 'ig-insights : ' + M.data.error, { tab: 'compte' });
       var bad = M.data ? M.data.list.filter(function (p) { return p.analysis && p.analysis.status === 'error'; }) : [];
@@ -375,6 +402,11 @@
     if (DS.data) {
       if (!DS.data.cron) add('warn', 'Relance automatique : état illisible', 'ig_dm_stats_v2 ne renvoie pas l’état du cron ig-followup-hourly.', { tab: 'dm' });
       else if (!DS.data.cron.active) add('warn', 'Relance automatique arrêtée', 'Le cron ig-followup-hourly est inactif : plus aucune relance ne part.', { tab: 'dm' });
+      var miss = DS.state === 'error' ? [] : dmMissing(DS.data);
+      if (miss.length) {
+        add('warn', 'Auto-DM : ' + miss.length + ' ' + plural(miss.length, 'chiffre') + ' non ' + plural(miss.length, 'renvoyé'), 'ig_dm_stats_v2 ne renvoie pas : '
+          + miss.map(function (s) { return s.label; }).join(', ') + ' · les cartes concernées (et les taux qui en dépendent) affichent « — ».', { tab: 'dm' });
+      }
     }
     // Production (factory_qc, factory_bricks)
     if (PS.state === 'error') add('warn', 'Production : lecture impossible', PS.error + kept(PS.data, 'chiffres'), { retry: 'prod' });
@@ -392,31 +424,39 @@
     // Soldes fournisseurs (provider-watch : ok / bas, jamais le montant)
     if (V.state === 'error') add('warn', 'Soldes fournisseurs illisibles', V.error + ' · réessaie dans un instant.', { retry: 'prov' });
     if (V.data) {
+      var unc = [];
       V.data.list.forEach(function (p) {
         if (p.error) add('warn', 'Solde ' + p.label + ' illisible', 'provider-watch : ' + p.error, { retry: 'prov' });
         else if (p.level !== 'ok') {
           add(p.level === 'crit' ? 'danger' : 'warn', 'Solde ' + p.label + ' bas', (p.id === 'elevenlabs' ? 'Moins de 5' + NB + '% du quota de caractères du mois' : 'Moins de 5' + NB + '$')
             + (p.at ? ' · relevé ' + ago(p.at) : '') + ' : recharge avant d’être à zéro, sinon les générations échouent.', { ext: BILLING[p.id] });
-        }
+        } else if (p.unconfirmed) unc.push(p.label);
       });
+      // « ok » sans readable (provider-watch en ligne pas encore redéployé) : un solde illisible répond « ok » aussi.
+      if (unc.length) {
+        add('warn', 'Soldes non confirmés : ' + unc.join(', '), 'provider-watch répond « ok » sans dire si le solde a été lu (une clé refusée répond « ok » aussi)'
+          + ' · redéploie provider-watch (champ readable) pour le vérifier.');
+      }
     }
     return out.sort(function (a, b) { return LVL_ORDER[a.lvl] - LVL_ORDER[b.lvl]; });
   }
 
   // Sources lues par l'Accueil. « Rien à signaler » n'apparaît que lorsque TOUTES ont répondu, sans alerte.
+  // Une source qui a répondu EN PARTIE (métriques refusées, profil illisible, étape Auto-DM absente, solde non lu ou non
+  // confirmé) est « incomplète » : jamais comptée dans les sources vérifiées (chacune a son alerte).
   function homeSources(ig) {
-    var off = ig.key === 'off';
+    var off = ig.key === 'off', S = CF.acct.ig[HOME_RANGE], DS = CF.dm[HOME_DM], V = CF.prov.data;
     return [
-      { l: 'comptes Instagram', S: CF.acct.accounts },
-      { l: 'insights 30' + NB + 'j', S: CF.acct.ig[HOME_RANGE], off: off },
-      { l: 'publications', S: CF.acct.media, off: off },
-      { l: 'Auto-DM 30' + NB + 'j', S: CF.dm[HOME_DM] },
-      { l: 'production', S: CF.prod },
-      { l: 'soldes fournisseurs', S: CF.prov }
+      { k: 'accounts', l: 'comptes Instagram', S: CF.acct.accounts },
+      { k: 'ig', l: 'insights 30' + NB + 'j', S: S, off: off, part: !!(S.data && (S.data.basicError || igRefused(S.data).length)) },
+      { k: 'media', l: 'publications', S: CF.acct.media, off: off },
+      { k: 'dm', l: 'Auto-DM 30' + NB + 'j', S: DS, part: !!(DS.data && (!DS.data.cron || dmMissing(DS.data).length)) },
+      { k: 'prod', l: 'production', S: CF.prod },
+      { k: 'prov', l: 'soldes fournisseurs', S: CF.prov, part: !!(V && V.list.some(function (p) { return p.error || p.unconfirmed; })) }
     ].map(function (x) {
       // une source qui répond « liste en erreur » (publications : media_error) n'est pas « vérifiée »
       var bad = x.S.state === 'error' || !!(x.S.data && x.S.data.error);
-      return { l: x.l, st: x.off ? 'off' : x.S.state === 'idle' ? 'wait' : bad ? 'err' : 'ok' };
+      return { k: x.k, l: x.l, st: x.off ? 'off' : x.S.state === 'idle' ? 'wait' : bad ? 'err' : x.part ? 'part' : 'ok' };
     });
   }
 
@@ -444,13 +484,19 @@
     }).join('');
     var tail = '';
     if (wait.length) tail = '<div class="cf-status" role="status"><span class="cf-spin" aria-hidden="true"></span>' + esc('Chargement… · ' + wait.map(function (x) { return x.l; }).join(', ')) + '</div>';
-    else if (!n) tail = '<div class="cf-alert is-ok"><span class="cf-alert-ic">' + svg(IC.check, 15) + '</span><span class="cf-alert-t"><b>Rien à signaler</b>'
-      + '<span>Toutes les sources ont répondu, aucune alerte.</span></span></div>';
+    else if (!n && src.every(function (x) { return x.st === 'ok' || x.st === 'off'; })) {
+      tail = '<div class="cf-alert is-ok"><span class="cf-alert-ic">' + svg(IC.check, 15) + '</span><span class="cf-alert-t"><b>Rien à signaler</b>'
+        + '<span>Toutes les sources ont répondu, aucune alerte.</span></span></div>';
+    }
+    var names = function (st) { return src.filter(function (x) { return x.st === st; }).map(function (x) { return x.l; }); };
     var okL = src.filter(function (x) { return x.st === 'ok' || x.st === 'off'; }).map(function (x) { return x.l + (x.st === 'off' ? ' (déconnecté)' : ''); });
-    var errL = src.filter(function (x) { return x.st === 'err'; }).map(function (x) { return x.l; });
+    var partL = names('part'), errL = names('err'), probs = [];
+    if (partL.length) probs.push('incomplètes : ' + partL.join(', '));
+    if (errL.length) probs.push('en erreur : ' + errL.join(', '));
     var V = CF.prov.data, pAt = V ? Math.max.apply(null, V.list.map(function (p) { return p.at || 0; })) : 0;
-    var foot = 'Sources vérifiées : ' + (okL.length ? okL.join(' · ') : '—') + (pAt && src[5].st === 'ok' ? ' (soldes relevés ' + ago(pAt) + ' par provider-watch)' : '')
-      + (errL.length ? ' · en erreur : ' + errL.join(', ') + ' (voir les alertes)' : '')
+    var provOk = src.some(function (x) { return x.k === 'prov' && x.st === 'ok'; });
+    var foot = 'Sources vérifiées : ' + (okL.length ? okL.join(' · ') : '—') + (pAt && provOk ? ' (soldes relevés ' + ago(pAt) + ' par provider-watch)' : '')
+      + (probs.length ? ' · ' + probs.join(' · ') + ' (voir les alertes)' : '')
       + ' · pas encore surveillé : TrackAds (missions échouées, demandes de paiement), Phase 3 pas encore branchée.';
     return '<section class="cf-card" aria-labelledby="cfAlT"><div class="cf-alerts-h"><h2 class="cf-h2" id="cfAlT">À surveiller</h2><span class="cf-badge" data-alerts="' + n + '">'
       + (wait.length && !n ? '…' : n) + '</span></div>'
