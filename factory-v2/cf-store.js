@@ -1,5 +1,5 @@
 /*
- * Creative Factory v2 · cf-store.js · étapes 0, 1 et 2 du plan (préprod, lecture seule)
+ * Creative Factory v2 · cf-store.js · étapes 0 à 3 du plan (préprod, lecture seule)
  *
  * UNE seule source par chiffre : l'interface ne lit que window.CF et se redessine sur l'événement
  * « cf-data » (detail = { ver, key }). Aucune donnée n'est gardée ailleurs (ni localStorage, ni copie).
@@ -20,9 +20,14 @@
  *              Personnes uniques (commentaire → « Je suis abonné » → lien → clic → devenu user → payant), relance en
  *              lecture seule, leads = pseudo + état seulement (jamais d'identifiant Instagram) ; attribution
  *              (f.users, f.paid, attr.existing / existingPaid) = totaux seulement, null tant que la RPC ne les rend pas
+ *   CF.prod    Accueil (étape 3, 25/09) : factory_bricks / factory_recipes / factory_qc lues en SELECT (RLS owner/dev,
+ *              colonnes utiles seulement) → { state, loading, at, data, error, kind } ; notre base : relue au plus toutes les 2 min
+ *   CF.prov    Accueil : niveau des soldes fournisseurs (provider-watch, vue utilisateur : ok / low, jamais le montant)
+ *              → { state, loading, at, data: { list: [{ id, label, level, at, error, unconfirmed }] }, error } ; relu au plus
+ *              toutes les 15 min. error = solde non lu / jamais lu / relevé périmé ; unconfirmed = « ok » sans readable
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
- *                     { force } ignore les 15 min
+ *                     { home: { ig, dm } } tout ce que lit l'Accueil ; { force } ignore les 15 min
  *   CF.net     journal des appels réseau faits par le store (pour vérifier « 3 appels max, puis 0 »)
  *
  * Contrôle d'accès : 1er appel = RPC factory_access(). {error:'forbidden'} ⇒ « Accès réservé ».
@@ -45,6 +50,8 @@
   var SERIES_RETRY_MS = 4000, SERIES_RETRY_MAX = 8;
   var DM_RANGES = ['24h', '7j', '30j', '90j', 'all'];   // Auto-DM : nos propres horodatages, donc 24 h possible (Axel 25/09)
   var DM_TTL_MS = 2 * 60 * 1000;           // RPC légère sur notre base : on peut relire souvent
+  var PROD_TTL_MS = 2 * 60 * 1000;         // factory_* : notre base aussi
+  var PROD_MAX = 2000;                     // lignes lues par table (114 briques le 25/09) ; au-delà : « liste tronquée », jamais un faux total
 
   window.CF_READONLY = true;
 
@@ -66,12 +73,15 @@
     user: null,
     acct: newAcct(),
     dm: newDm(),
+    prod: newSlot(),
+    prov: newSlot(),
     oauth: null,
     net: [],
     IG_RANGES: IG_RANGES.slice(),
     DM_RANGES: DM_RANGES.slice(),
     TTL_MS: TTL_MS,
     DM_TTL_MS: DM_TTL_MS,
+    PROD_TTL_MS: PROD_TTL_MS,
     PRIMARY_USERNAME: PRIMARY_USERNAME,
     refresh: refresh,
     loadAccounts: loadAccounts,
@@ -79,6 +89,8 @@
     loadAudience: loadAudience,
     loadMedia: loadMedia,
     loadDm: loadDm,
+    loadProd: loadProd,
+    loadProviders: loadProviders,
     prefetch: prefetch,
     tagMedia: tagMedia,
     isFresh: isFresh,
@@ -113,7 +125,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.oauth = null; }
+  function resetData() { epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.oauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -593,6 +605,150 @@
     return p;
   }
 
+  // ── Production (Accueil, étape 3) : factory_bricks, factory_recipes, factory_qc en SELECT (RLS owner/dev) ──
+  // Colonnes utiles seulement (jamais meta, fichiers ni vidéos). Statuts en liste blanche (migrations 20260918150000
+  // et factory_qc_status_check) ; un statut inconnu est compté à part, jamais rangé dans « prêt ».
+  var BRICK_KINDS = ['hook', 'liaison', 'cta', 'contenu', 'transformation', 'avatar', 'musique', 'sous-titre'];
+  function rowId(x) { return typeof x === 'string' && /^[A-Za-z0-9._-]{1,40}$/.test(x) ? x : null; }
+  function restFail(res, what) {
+    var err = res && res.error, code = err ? String(err.code || '') : '';
+    if (!err) return null;
+    if (code === '42P01' || code === 'PGRST205' || res.status === 404) return { kind: 'missing', message: 'table ' + what + ' introuvable' };
+    if (code === '42501' || res.status === 403) return { kind: 'forbidden', message: 'lecture de ' + what + ' refusée par la base' };
+    if (res.status === 401 || code === 'PGRST301' || code === 'PGRST303') return { kind: 'auth', message: 'session expirée : reconnecte-toi' };
+    return { kind: 'http', message: what + ' : ' + errText(err) };
+  }
+  function restRows(res, what) {
+    var f = restFail(res, what);
+    if (f) throw f;
+    if (!res || !Array.isArray(res.data)) throw { kind: 'http', message: what + ' : réponse vide' };
+    if (typeof res.count === 'number' && res.count > res.data.length) throw { kind: 'http', message: what + ' : liste tronquée (' + res.data.length + ' / ' + res.count + ')' };
+    return res.data;
+  }
+  function normProd(rb, rr, rq, at) {
+    var B = { total: rb.length, ready: 0, flagged: 0, retired: 0, other: 0, byKind: {}, lastAt: null, lastKind: null };
+    rb.forEach(function (b) {
+      var k = b && BRICK_KINDS.indexOf(b.kind) >= 0 ? b.kind : 'autre', st = b && b.status, t = ms(b && b.created_at);
+      if (st === 'ready') { B.ready += 1; B.byKind[k] = (B.byKind[k] || 0) + 1; }
+      else if (st === 'flagged') B.flagged += 1;
+      else if (st === 'retired') B.retired += 1;
+      else B.other += 1;
+      if (t != null && (B.lastAt == null || t > B.lastAt)) { B.lastAt = t; B.lastKind = k; }
+    });
+    var R = { total: rr.length, done: 0, inProgress: 0, pending: 0, other: 0, lastAt: null, lastId: null };
+    rr.forEach(function (r) {
+      var st = r && r.status, t = ms(r && (r.updated_at || r.created_at));
+      if (st === 'done') {
+        R.done += 1;
+        if (t != null && (R.lastAt == null || t > R.lastAt)) { R.lastAt = t; R.lastId = rowId(r.id); }
+      } else if (st === 'in_progress') R.inProgress += 1;
+      else if (st === 'pending') R.pending += 1;
+      else R.other += 1;
+    });
+    var Q = { total: rq.length, pending: 0, approved: 0, refused: 0, other: 0, lastRefused: null };
+    rq.forEach(function (q) {
+      var st = q && q.status;
+      if (st === 'pending') Q.pending += 1;
+      else if (st === 'approved') Q.approved += 1;
+      else if (st === 'refused') {
+        Q.refused += 1;
+        var t = ms(q.reviewed_at) || ms(q.created_at);
+        if (!Q.lastRefused || (t != null && t > (Q.lastRefused.at || 0))) {
+          Q.lastRefused = { at: t, reason: typeof q.refusal_reason === 'string' && q.refusal_reason.trim() ? q.refusal_reason.trim().slice(0, 160) : null,
+            template: typeof q.template === 'string' && /^[a-z0-9-]{1,40}$/.test(q.template) ? q.template : null };
+        }
+      } else Q.other += 1;
+    });
+    return { fetchedAt: at, bricks: B, recipes: R, qc: Q };
+  }
+  function loadProd(opts) {
+    var force = !!(opts && opts.force), S = CF.prod;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight.prod) return inflight.prod;
+    if (!force && isFresh(S, PROD_TTL_MS)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var patch;
+      logNet('rest factory_bricks, factory_recipes, factory_qc');
+      try {
+        var r = await Promise.all([
+          sb.from('factory_bricks').select('id,kind,status,created_at', { count: 'exact' }).limit(PROD_MAX),
+          sb.from('factory_recipes').select('id,kind,status,created_at,updated_at', { count: 'exact' }).limit(PROD_MAX),
+          sb.from('factory_qc').select('id,status,template,refusal_reason,created_at,reviewed_at', { count: 'exact' }).order('created_at', { ascending: false }).limit(PROD_MAX)
+        ]);
+        patch = { state: 'ready', kind: null, error: null,
+          data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(r[2], 'factory_qc'), Date.now()) };
+      } catch (e) {
+        patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
+        if (e.kind && e.kind !== 'http' && e.kind !== 'error') patch.data = null;   // réseau ou 500 : chiffres précédents gardés, datés
+      }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.prod === p) delete inflight.prod;
+      emit('prod');
+      return S;
+    })();
+    inflight.prod = p;
+    emit('prod');
+    return p;
+  }
+
+  // ── soldes fournisseurs (Accueil) : provider-watch, vue utilisateur { provider, ok, level, at } ──
+  // Même appel que l'app avant de débiter un membre (#hedra-gate). Hedra d'abord : si l'état mémorisé a plus de 20 min,
+  // provider-watch relit alors TOUS les soldes une seule fois ; fal et ElevenLabs lisent ensuite l'état frais.
+  var PROVIDERS = [{ id: 'hedra', label: 'Hedra' }, { id: 'fal', label: 'fal.ai' }, { id: 'elevenlabs', label: 'ElevenLabs' }];
+  var PROV_LEVEL = { ok: 'ok', low: 'low', crit: 'crit' };
+  // provider-watch range un solde qu'il n'a PAS pu lire (clé refusée, fournisseur en 500) en level 'ok' : « ok » seul
+  // ne prouve rien. On exige donc un relevé daté, récent, et readable === true (champ ajouté le 25/09). Sans ce champ
+  // (version en ligne pas encore redéployée), un « ok » reste NON CONFIRMÉ : jamais compté comme solde vérifié.
+  // 'low' / 'crit' n'existent que si le solde a été lu : ils sont toujours confirmés.
+  var PROV_STALE_MS = 13 * 3600e3;   // relevé à la demande si > 20 min, et cron toutes les 12 h : au-delà de 13 h, les deux ont échoué
+  async function oneProvider(pv) {
+    var out = { id: pv.id, label: pv.label, level: null, at: null, error: null, unconfirmed: false };
+    try {
+      var res = await callFn('provider-watch?provider=' + pv.id);
+      var b = res.body || {}, at = ms(b.at);
+      if (!res.ok || b.error) out.error = b.error ? String(b.error).slice(0, 120) : 'HTTP ' + res.status;
+      else if (b.provider !== pv.id) out.error = 'réponse pour un autre fournisseur';
+      else if (!PROV_LEVEL[b.level]) out.error = 'niveau illisible';
+      else if (at == null) out.error = 'aucun relevé enregistré : solde jamais lu';
+      else if (b.readable === false) out.error = 'solde non lu au dernier relevé (clé refusée ou fournisseur indisponible)';
+      else if (Date.now() - at > PROV_STALE_MS) { out.error = 'dernier relevé périmé (plus de 13 h)'; out.at = at; }
+      else {
+        out.level = PROV_LEVEL[b.level];
+        out.at = at;
+        out.unconfirmed = b.readable !== true && out.level === 'ok';
+      }
+    } catch (e) { out.error = errText(e); }
+    return out;
+  }
+  function loadProviders(opts) {
+    var force = !!(opts && opts.force), S = CF.prov;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight.prov) return inflight.prov;
+    if (!force && isFresh(S)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var first = await oneProvider(PROVIDERS[0]);
+      var rest = await Promise.all(PROVIDERS.slice(1).map(oneProvider));
+      var list = [first].concat(rest), patch;
+      if (list.every(function (x) { return x.error; })) patch = { state: 'error', kind: 'http', error: 'provider-watch : ' + first.error };
+      else patch = { state: 'ready', kind: null, error: null, data: { fetchedAt: Date.now(), list: list } };
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.prov === p) delete inflight.prov;
+      emit('prov');
+      return S;
+    })();
+    inflight.prov = p;
+    emit('prov');
+    return p;
+  }
+
   // ── préchargement : une fois la fenêtre affichée prête, les autres se chargent UNE par UNE en arrière-plan →
   //    passer de 30 j à 7 j ou à All time devient instantané (cache 15 min comme le reste) ──
   var pre = { on: false, queue: [], ep: -1 };
@@ -607,7 +763,7 @@
   function pumpPrefetch() {
     if (!pre.on || pre.ep !== epoch || CF.status !== 'ready' || retryWaits > 0) return;
     for (var q = 0; q < IG_RANGES.length; q++) { if (CF.acct.ig[IG_RANGES[q]].kind === 'disconnected') { pre.queue = []; return; } }
-    for (var k in inflight) { if (inflight[k] && k !== 'accounts' && k.indexOf('dm:') !== 0) return; }   // une seule requête Instagram à la fois (l'Auto-DM lit notre base)
+    for (var k in inflight) { if (inflight[k] && k !== 'accounts' && k !== 'prod' && k !== 'prov' && k.indexOf('dm:') !== 0) return; }   // une seule requête Instagram à la fois (Auto-DM, Production et soldes ne sont pas Instagram)
     while (pre.queue.length) {
       var r = pre.queue.shift(), S = CF.acct.ig[r];
       if (S.kind === 'disconnected') { pre.queue = []; return; }
@@ -649,6 +805,8 @@
     var tasks = [loadAccounts({ force: !!opts.force })];
     if (opts.igRange) tasks.push(loadInsights(opts.igRange, { force: !!opts.force }), loadAudience({ force: !!opts.force }), loadMedia({ force: !!opts.force }));
     if (opts.dmRange) tasks.push(loadDm(opts.dmRange, { force: !!opts.force }), loadMedia({ force: !!opts.force }));
+    if (opts.home) tasks.push(loadInsights(opts.home.ig, { force: !!opts.force }), loadMedia({ force: !!opts.force }), loadDm(opts.home.dm, { force: !!opts.force }),
+      loadProd({ force: !!opts.force }), loadProviders({ force: !!opts.force }));
     return Promise.all(tasks);
   }
 
