@@ -9,6 +9,9 @@
 //  · fal.ai (Omni, OmniHuman, faceswap, upscale)  GET api.fal.ai/v1/account/billing        → credits.current_balance en $
 //                                                  ⚠ exige une clé ADMIN fal (secret FAL_ADMIN_KEY) — une clé API normale répond 401/403
 //  · ElevenLabs (voix)                            GET api.elevenlabs.io/v1/user/subscription → caractères restants / quota du mois
+//  · kie.ai (Omni Flash image→vidéo SANS repli, « Améliorer en 4K », tout le compte developer — Axel 25/09)
+//                                                  GET api.kie.ai/api/v1/chat/credit           → { code: 200, data: crédits }
+//                                                  1 crédit kie = 0,005 $ (comme kie-proxy /balance) ; clé KIEAI_API_KEY (kieHeaders)
 // Fournisseurs SANS API de solde (à régler dans LEUR console, une fois) :
 //  · OpenAI (gpt-image)     platform.openai.com → Billing : « Auto recharge » + e-mail de solde bas intégré
 //  · Anthropic (Claude)     console.anthropic.com → Billing : « Auto-reload » + e-mail de solde bas intégré
@@ -22,6 +25,7 @@
 //    ok est TOUJOURS vrai désormais (on n'empêche plus aucune génération) ; l'app ne bloque plus selon le solde.
 //  · GET ?all=1 avec un jeton service_role : tous les états.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { KIE, kieKey, kieHeaders } from '../_shared/kie.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -79,6 +83,16 @@ const PROVIDERS: Provider[] = [
       if (used === null || limit === null) return { balance: null, error: 'quota absent' }
       return { balance: Math.max(0, limit - used), total: limit }
     } },
+  // kie.ai (Axel 25/09) : même règle que Hedra / fal (e-mail sous 5 $). Le code métier est DANS le corps (HTTP 200 possible
+  // sur une clé refusée) → on exige code 200. Crédits → $ au taux kie (0,005 $), arrondi au centime comme kie-proxy /balance.
+  { id: 'kie', key: 'kie_balance', label: 'kie.ai', unit: 'usd', billing: 'https://kie.ai/billing', block: 0,
+    fetch: async () => {
+      if (!kieKey()) return { balance: null, error: 'KIEAI_API_KEY absent' }
+      const { status, body } = await getJson(`${KIE}/api/v1/chat/credit`, kieHeaders())
+      if (status !== 200 || Number(body?.code) !== 200) return { balance: null, error: `HTTP ${status}${body?.code != null ? ' · code ' + Number(body.code) : ''}` }
+      const credits = (body?.data === null || body?.data === undefined || body?.data === '') ? null : num(body.data)   // num(null) vaudrait 0 $ → fausse alerte
+      return credits === null ? { balance: null, error: 'data absent' } : { balance: Math.round(credits * 0.5) / 100 }
+    } },
 ]
 
 function levelOf(p: Provider, f: Fetched): Level {
@@ -112,6 +126,8 @@ async function alert(p: Provider, state: State, prev: State | undefined): Promis
     ? `Recharge avant d'être à zéro : sinon Hedra répond 402 à chaque avatar (c'est ce qui est arrivé le 02/09 à 23 h 28, juste avant la résiliation d'un membre Pro). Les crédits des membres sont remboursés, mais la génération échoue sous leurs yeux.`
     : p.id === 'fal'
     ? `À zéro, fal.ai refuse les jobs : Omni, OmniHuman, changement de visage et upscale échouent (crédits remboursés, mais membres déçus).`
+    : p.id === 'kie'
+    ? `À zéro, kie.ai refuse les tâches : Omni Flash image→vidéo (Express « UGC réel » et Voix native du Générateur) échoue SANS repli (crédits remboursés, mais la vidéo échoue sous leurs yeux) ; « Améliorer en 4K » repasse par Google.`
     : `À zéro, les voix ElevenLabs échouent jusqu'au renouvellement du quota.`
   const html = `
     <p style="font-family:-apple-system,Segoe UI,sans-serif;font-size:15px">Le solde du compte <b>${p.label}</b> est à <b>${v}</b>.</p>
