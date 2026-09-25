@@ -125,6 +125,17 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
   } catch (e) { console.error('⚠️ parrainage :', e) }
 }
 
+// ── ATTRIBUTION AUTO-DM INSTAGRAM (25/09) : un compte relié à un lead Instagram (table ig_lead_links, posée par
+// ig-go) qui passe d'un plan GRATUIT à un abonnement payant → paid_at + plan, 1re fois seulement (idempotent côté SQL :
+// rejeu, renouvellement ou changement pro → élite ne changent rien). Appel ISOLÉ et best-effort : ne touche ni aux
+// crédits ni au plan, ne peut ni bloquer ni faire échouer le traitement du paiement (erreur avalée, jamais de 500).
+async function markIgLeadPaid(sb: any, userId: string, plan: string, prevPlan: string | null | undefined) {
+  try {
+    const { error } = await sb.rpc('ig_lead_mark_paid', { p_user: userId, p_plan: plan, p_prev_plan: prevPlan ?? null })
+    if (error) console.warn('ℹ️ attribution Instagram (non bloquant) :', error.message)
+  } catch (e) { console.warn('ℹ️ attribution Instagram (non bloquant) :', (e as Error)?.message) }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // PACKS one-shot → AJOUTE des crédits (ne touche pas au plan)
 // ─────────────────────────────────────────────────────────────────
@@ -359,6 +370,7 @@ serve(async (req) => {
           first_sub_bonus_used: true,
         }).eq('id', profile.id)
         if (error) { console.error('❌ Update profil:', error); return await failDb() }
+        await markIgLeadPaid(sb, profile.id, sub.plan, profile.plan)   // plan AVANT cette mise à jour (lu par findProfile)
         await creditReferral(sb, profile.id, email, planId, data, 'abonnement')
         console.log(`✅ Plan activé pour ${email}: ${sub.plan} (${sub.credits} crédits${bonus ? ' +' + bonus + ' bonus' : ''}${keep ? ' +' + keep + ' achetés reportés' : ''})`)
         await sendWelcomeEmail(sb, { userId: profile.id, email, firstName: profile.first_name || '', plan: sub.plan, credits: sub.credits + bonus + keep })
@@ -484,6 +496,7 @@ serve(async (req) => {
         whop_cancel_at_period_end: false,
       }).eq('id', profile.id)
       console.log(`🔄 Renouvellement: ${sub.plan} → ${newBalance} (report ${planLeft} + ${sub.credits}, plafond ${2 * sub.credits}${bought ? ` +${bought} achetés` : ''}) — ${profile.id}`)
+      await markIgLeadPaid(sb, profile.id, sub.plan, profile.plan)   // no-op pour un vrai renouvellement (déjà payant)
       await creditReferral(sb, profile.id, email, effPlanId, data, 'renouvellement')
     } else {
       console.warn(`⚠️ Renouvellement sans profil (email=${email || '—'} member=${memberId || '—'} plan=${effPlanId})`)
