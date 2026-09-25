@@ -411,6 +411,10 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .sub-card.on .sub-name{color:var(--orange2)}
 .sub-preview{background:transparent;border-radius:8px;padding:6px 0;align-self:stretch;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
 @media(max-width:768px){ .sub-preview span{font-size:15px !important} .style-card .sub-preview span{font-size:14px !important} }
+/* (Axel 25/09) mobile : la grille 2 colonnes des styles débordait de l'écran (cartes MrBeast / TikTok Pills coupées) — une
+   colonne 1fr ne descend pas sous le texte nowrap de son aperçu. Cartes rétrécissables + aperçu qui passe à la ligne
+   quand la carte est trop étroite (sinon rogné). Desktop inchangé (maquette : aperçus sur une ligne). */
+@media(max-width:768px){ .sub-card{min-width:0} .style-card .sub-preview{flex-wrap:wrap;white-space:normal;row-gap:4px;text-align:center} }
 /* Cartes « Animation des sous-titres » — maquette : compactes, demo dans une puce --panel-1 */
 .anim-card{border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:.15s;background:var(--surface);display:flex;flex-direction:column;gap:9px;text-align:left}
 .anim-card:hover{border-color:var(--border-2)}
@@ -1930,13 +1934,17 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
             </div>
 
-            <!-- SOUS-TITRES ON/OFF — ligne nue (maquette : label + toggle, sans carte) -->
+            <!-- SOUS-TITRES ON/OFF — ligne nue (maquette : label + toggle, sans carte). DÉSACTIVÉS par défaut ; les activer
+                 (ou choisir un style) lance Whisper tout seul — « Synchronisation… » pendant la transcription (Axel 25/09) -->
             <div class="fld" style="margin-bottom:11px">
-              <div onclick="toggleSubtitles()" id="subtitlesToggleRow" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-                <span class="label" style="margin:0">Sous-titres</span>
-                <span id="subtitlesToggleLabel" style="display:none">Activés — style Hormozi</span>
-                <div id="subtitlesSwitch" style="width:42px;height:24px;background:var(--orange);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
-                  <div id="subtitlesThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:21px;transition:all .25s;box-shadow:0 1px 3px rgba(0,0,0,.35)"></div>
+              <div onclick="toggleSubtitles()" id="subtitlesToggleRow" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:10px">
+                <span style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <span class="label" style="margin:0">Sous-titres</span>
+                  <span id="subsWhStatus" class="mono" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--accent-2);white-space:nowrap"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite;flex:0 0 auto"><path d="M7 1.5A5.5 5.5 0 1 1 1.5 7"/></svg>Synchronisation…</span>
+                </span>
+                <span id="subtitlesToggleLabel" style="display:none">Désactivés</span>
+                <div id="subtitlesSwitch" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
+                  <div id="subtitlesThumb" style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:all .25s;box-shadow:0 1px 3px rgba(0,0,0,.35)"></div>
                 </div>
               </div>
             </div>
@@ -12208,6 +12216,9 @@ async function recUseInGenerator(){
   // Injecte dans le générateur en bypassant ElevenLabs (même chemin que MP4 audio)
   window.mp4AudioFile=file;
   window.mp4AudioEnabled=true;
+  // (Axel 25/09) MÊME handler que l'import / l'Enregistreur du Générateur : la variable lue par Whisper et la génération
+  // suit (avant : seul window.* changeait → ancienne voix transcrite), et nouvel audio = sous-titres OFF
+  try{ if(typeof handleMp4AudioFile==='function') handleMp4AudioFile(file); }catch(e){ console.warn('handleMp4AudioFile:', e); }
   // Afficher le nom dans la zone voix
   const fn=document.getElementById('voiceFileName');
   const vdi=document.getElementById('voiceDropContent');
@@ -12569,6 +12580,9 @@ async function reuseLastVideo(){
     // ── Restaurer toutes les variables d'état depuis le cache ──
     results.hedraUrl = cache.url;
     if(cache.script)   results.script = cache.script;
+    // (Axel 25/09) autre vidéo = autre voix : sous-titres OFF + transcription en vol / calée invalidée (règle commune),
+    // AVANT de reprendre la transcription du cache ci-dessous — les réactiver relancera Whisper
+    try{ _genSubsAudioChanged(); }catch(_){}
     if(cache.whisperWordTimestamps?.length) whisperWordTimestamps = cache.whisperWordTimestamps;
     if(cache.wordGroups?.length){ _wordGroups = cache.wordGroups; _renderGroupEditor(); }
     if(cache.silenceKeepSegs?.length) silenceKeepSegs = cache.silenceKeepSegs;
@@ -12577,7 +12591,7 @@ async function reuseLastVideo(){
     if(cache.selSubStyle)  selSubStyle  = cache.selSubStyle;
     if(cache.selAnim)      selAnim      = cache.selAnim;
     if(cache.animEnabled      !== undefined) animEnabled      = cache.animEnabled;
-    if(cache.subtitlesEnabled !== undefined) subtitlesEnabled = cache.subtitlesEnabled;
+    // sous-titres : plus restaurés (Axel 25/09) — restés OFF (_genSubsAudioChanged plus haut)
     splitEnabled = false;   // défaut PLEIN ÉCRAN : réutiliser une vidéo ne réactive plus le split
     if(cache.splitSwapped     !== undefined) splitSwapped     = cache.splitSwapped;
     if(cache.currentPlatform)  currentPlatform  = cache.currentPlatform;
@@ -12697,7 +12711,7 @@ function _genRefreshMusicLabel(){
   const m=window._genMusic;
   l.textContent = (m && m.url) ? (m.name + ' · ' + Math.round((m.volume!=null?m.volume:0.35)*100) + '%') : 'Aucune — mixée sous ta voix';
 }
-function _genSetMusicVol(v){ window._genMusic.volume = Math.max(0, Math.min(1, (+v)/100)); if(window._genPrevAudio){ try{ window._genPrevAudio.volume = window._genMusic.volume; }catch(_){} } const el=document.getElementById('genMusicVolVal'); if(el) el.textContent=Math.round(window._genMusic.volume*100)+'%'; const s=document.getElementById('genMusicVolSlider'); if(s) s.style.setProperty('--aa-fill', Math.round(window._genMusic.volume*100)+'%'); _genRefreshMusicLabel(); }
+function _genSetMusicVol(v){ window._genMusic.volume = Math.max(0, Math.min(1, (+v)/100)); if(window._genPrevAudio){ try{ window._genPrevAudio.volume = window._genMusic.volume; }catch(_){} } try{ if(window._gpm && window._gpm.on) _gpmApplyVol(); }catch(_){}   /* aperçu animé en cours : volume en direct (25/09) */ const el=document.getElementById('genMusicVolVal'); if(el) el.textContent=Math.round(window._genMusic.volume*100)+'%'; const s=document.getElementById('genMusicVolSlider'); if(s) s.style.setProperty('--aa-fill', Math.round(window._genMusic.volume*100)+'%'); _genRefreshMusicLabel(); }
 // icône play↔pause d'une ligne du picker
 function _genPrevIcon(id, playing){
   const b=document.querySelector('#_genMusModal [data-play="'+id+'"]'); if(!b) return;
@@ -12706,13 +12720,14 @@ function _genPrevIcon(id, playing){
     : '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>';
 }
 function _genStopPrev(){ if(window._genPrevAudio){ try{ window._genPrevAudio.pause(); }catch(_){} } if(window._genPrevVoice){ try{ window._genPrevVoice.pause(); }catch(_){} window._genPrevVoice=null; } if(window._genPrevId){ _genPrevIcon(window._genPrevId,false); window._genPrevId=null; } }
-function _genClearMusic(){ try{ if(window._genMusic && window._genMusic.url && window._genMusic.url.startsWith('blob:')) URL.revokeObjectURL(window._genMusic.url); }catch(_){} window._genMusic = { url:'', dyn:'', name:'', volume:(window._genMusic&&window._genMusic.volume)||0.35 }; _genStopPrev(); _genRefreshMusicLabel(); const md=document.getElementById('_genMusModal'); if(md) md.remove(); toast('Musique retirée'); }
+function _genClearMusic(){ try{ if(window._genMusic && window._genMusic.url && window._genMusic.url.startsWith('blob:')) URL.revokeObjectURL(window._genMusic.url); }catch(_){} window._genMusic = { url:'', dyn:'', name:'', volume:(window._genMusic&&window._genMusic.volume)||0.35 }; _genStopPrev(); _genRefreshMusicLabel(); try{ _gpmRefresh(); }catch(_){} const md=document.getElementById('_genMusModal'); if(md) md.remove(); toast('Musique retirée'); }
 // sélection PURE de la musique (état + highlight + label), SANS audio
 function _genSelectMusic(id){
   const m=(window.AA_MUSIC||[]).find(x=>x.id===id); if(!m) return false;
   window._genMusic.url=m.url; window._genMusic.dyn=m.dyn||''; window._genMusic.name=m.name;
   document.querySelectorAll('#_genMusModal [data-mid]').forEach(r=>{ const on=r.getAttribute('data-mid')===id; r.style.borderColor=on?'var(--accent)':'var(--border)'; r.style.background=on?'var(--accent-soft)':'var(--panel-1)'; r.style.boxShadow=on?'inset 0 0 0 1px var(--accent)':'none'; });
   _genRefreshMusicLabel();
+  try{ _gpmRefresh(); }catch(_){}   // aperçu animé en cours : bascule sur la nouvelle piste (25/09)
   return true;
 }
 // Clic sur une ligne = SÉLECTIONNE **et** lance l'écoute (Axel 07/09 : « je clique, ça ne sélectionne pas » —
@@ -12750,6 +12765,7 @@ function _genImportMusic(file){
   const url=URL.createObjectURL(file);
   window._genMusic.url=url; window._genMusic.dyn=''; window._genMusic.name=(file.name||'Ma musique').replace(/\.[^.]+$/,'').slice(0,40);
   _genStopPrev(); _genRefreshMusicLabel();
+  try{ _gpmRefresh(); }catch(_){}   // aperçu animé en cours : ta musique prend le relais (25/09)
   const md=document.getElementById('_genMusModal'); if(md) md.remove();
   toast('« '+window._genMusic.name+' » — ta musique');
 }
@@ -19369,7 +19385,7 @@ async function _gnAdopt(){
   const g = window._gn, v = g.vid; if(!v) return;
   if(!g.adopted){
     g.saved = { lf:mp4AudioFile, le:mp4AudioEnabled, wf:window.mp4AudioFile || null, we:!!window.mp4AudioEnabled,
-                bOn:!!window._bypassHedraOn, bFile:window._bypassHedraFile || null, subs:subtitlesEnabled,
+                bOn:!!window._bypassHedraOn, bFile:window._bypassHedraFile || null,   // (sous-titres : plus mémorisés, OFF au retour — 25/09)
                 sil:_voxSilOn, silUser:!!window._voxSilUserSet, den:(typeof _genDenoiseEnabled !== 'undefined') ? _genDenoiseEnabled : null };   // _voxEnter coupe « Supprimer les silences » pour une vidéo
   }
   g.adopted = true;
@@ -19382,12 +19398,8 @@ async function _gnAdopt(){
   mp4AudioEnabled = false; window.mp4AudioEnabled = false;
   // Nouvelle vidéo = nouveau projet : l'aperçu ne doit pas rejouer une ancienne vidéo générée
   results = { script:'', audioBlob:null, hedraUrl:'' };
-  // Sous-titres DÉSACTIVÉS par défaut sur ce chemin ; transcription remise à zéro (nouvelle voix)
-  whisperWordTimestamps = []; pendingTranscript = '';
-  try{ populateWordEditor(''); }catch(_){}
-  try{ _whisperBtnReset(); }catch(_){}
-  subtitlesEnabled = false; window._reachedStyle = true;   // _reachedStyle : pas d'auto-activation à l'arrivée sur Style
-  try{ _syncSubtitleToggleUI(); }catch(_){}
+  // Nouvelle voix : sous-titres remis sur OFF + transcription remise à zéro (règle commune à tous les chemins, Axel 25/09)
+  _genSubsAudioChanged();
   try{ updateLivePreview(); }catch(_){}
   _gnSyncStyle();
   try{ await pBypass; }catch(e){ console.warn('[voix native] adoption :', e); }
@@ -19417,14 +19429,12 @@ function _gnDeactivate(){
   }
   if(s){
     mp4AudioFile = s.lf; mp4AudioEnabled = s.le; window.mp4AudioFile = s.wf; window.mp4AudioEnabled = s.we;
-    if(typeof s.subs === 'boolean') subtitlesEnabled = s.subs;
     _voxSilOn = s.sil; window._voxSilUserSet = s.silUser; try{ _voxSetSw('voxSil', _voxSilOn); }catch(_){}
     if(typeof s.den === 'boolean' && typeof _genDenoiseEnabled !== 'undefined'){ _genDenoiseEnabled = s.den; try{ _genSetDenoiseSwitch(s.den); }catch(_){} }
   }
-  // la transcription était celle de la vidéo native : elle ne vaut pas pour l'autre voix
-  whisperWordTimestamps = [];
-  try{ populateWordEditor(''); _whisperBtnReset(); }catch(_){}
-  try{ _syncSubtitleToggleUI(); }catch(_){}
+  // la transcription était celle de la vidéo native : elle ne vaut pas pour l'autre voix → sous-titres remis sur OFF
+  // (plus de restauration de l'ancien état ON : réactiver relance Whisper sur la voix rendue — Axel 25/09)
+  _genSubsAudioChanged();
   if(window.mp4AudioFile) try{ _voxReflect(); }catch(_){}
   try{ updateLivePreview(); }catch(_){}
   _gnSyncStyle();
@@ -19459,16 +19469,8 @@ function _gnSyncStyle(){
   if($('genQualFld'))     $('genQualFld').style.display     = on ? 'none' : '';
   if(on && $('genModelFld')) $('genModelFld').style.display = 'none';
 }
-// Sous-titres activés sur une vidéo native → Whisper se lance TOUT SEUL sur l'audio de la vidéo. Même chemin que le
-// clic sur « Whisper IA » (le bouton affiche l'extraction % puis « Transcription en cours… » = chargement lisible).
-function _gnAutoWhisper(){
-  if(!_genNativeActive()) return;
-  if(Array.isArray(whisperWordTimestamps) && whisperWordTimestamps.length) return;   // déjà synchronisé
-  const b = document.getElementById('whisperBtn');
-  if(!b || b.disabled) return;                                                      // en cours, ou « Transcription faite »
-  toast('Synchronisation des sous-titres sur la voix de ta vidéo…');
-  b.click();
-}
+// Sous-titres activés sur une vidéo native → Whisper se lance TOUT SEUL sur l'audio de la vidéo : c'est désormais la
+// règle de TOUS les chemins (_genSubsEnsure, près de toggleSubtitles — Axel 25/09).
 // Musique de fond sur la vidéo native (Axel 25/09) : mixée DANS LE NAVIGATEUR (_genMixMusic, ffmpeg.wasm, image copiée).
 // La vidéo fait ≤ 10 s → pas le gel des gros fichiers (08/09). Avant, on comptait sur le worker, mais son chemin RAPIDE
 // (sous-titres coupés = le défaut ici) ne la mixait pas, et le split passe par le rendu navigateur qui ne la mixe pas
@@ -19823,11 +19825,11 @@ function pickSub(el,style){
   document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
   selSubStyle=style;
-  // Choisir un style ré-active automatiquement les sous-titres (sinon aucun retour visuel — audit UX 04/09)
-  if(typeof subtitlesEnabled!=='undefined' && !subtitlesEnabled){
-    subtitlesEnabled = true;
-    if(typeof _syncSubtitleToggleUI==='function') _syncSubtitleToggleUI();
-    try{ if(typeof _gnAutoWhisper==='function') _gnAutoWhisper(); }catch(_){}   // Voix native : Whisper se lance tout seul (Axel 25/09)
+  // Choisir un style ré-active automatiquement les sous-titres (sinon aucun retour visuel — audit UX 04/09) ET lance
+  // Whisper tout seul sur la voix courante s'il ne l'a pas déjà calée — plus besoin du bouton « Whisper IA » (Axel 25/09)
+  if(typeof subtitlesEnabled!=='undefined'){
+    if(!subtitlesEnabled){ subtitlesEnabled = true; if(typeof _syncSubtitleToggleUI==='function') _syncSubtitleToggleUI(); }
+    try{ if(typeof _genSubsEnsure==='function') _genSubsEnsure(); }catch(_){}
   }
   // ── Met à jour automatiquement les couleurs selon le style choisi ──
   const col = SUB_STYLE_COLORS[style];
@@ -20283,15 +20285,32 @@ function _aaFixBrandText(s){
     return out;
   } catch(_){ return s; }
 }
-async function whisperTranscribe(){
-  // btn capturé AVANT le 1er await : window.event ne survit pas aux continuations async
-  // (garde instanceof : hors clic direct, event.currentTarget peut être window)
-  const btn = (typeof event !== 'undefined' && event?.currentTarget instanceof HTMLElement) ? event.currentTarget : null;
-  const _whBtnIdle = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; } };
+async function whisperTranscribe(opts){
+  const _auto = !!(opts && opts.auto);   // { auto:true } = lancé par l'interrupteur / une carte de style (_genSubsEnsure)
+  // Relance MANUELLE (bouton « Whisper IA », détection du texte) = « je veux des sous-titres » → interrupteur ON (Axel 25/09)
+  if(!_auto && typeof subtitlesEnabled !== 'undefined' && !subtitlesEnabled){ subtitlesEnabled = true; try{ _syncSubtitleToggleUI(); }catch(_){} }
+  // Une seule transcription en vol (interrupteur + carte de style + bouton cliqués vite) — posé AVANT le 1er await
+  if(window._genWhBusy) return;
+  window._genWhBusy = true;
+  try{ _genSubsBusyUI(); }catch(_){}
+  // Audio transcrit + « époque » : l'user change d'audio pendant la transcription → son résultat est JETÉ (ancienne voix)
+  const W = { ok:false, ep:(window._genSubsEpoch || 0), src:_genWhisperSrc() };
+  W.stale = () => (window._genSubsEpoch || 0) !== W.ep || _genWhisperSrc() !== W.src;
+  try{ await _whisperTranscribeRun(W); }
+  finally{
+    window._genWhBusy = false;
+    try{ _genSubsAfterWhisper(W.ok, W.stale(), W.src); }catch(e){ console.warn('[whisper] fin :', e); }
+  }
+}
+async function _whisperTranscribeRun(W){
+  // Toujours LE bouton « Whisper IA » (lancé aussi par l'interrupteur / une carte : event.currentTarget serait la
+  // mauvaise cible). Une transcription devenue caduque (audio changé) ne touche plus au bouton, déjà réarmé.
+  const btn = document.getElementById('whisperBtn');
+  const _btnLive = () => !!btn && !W.stale();
+  const _whBtnIdle = () => { if(_btnLive()){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; } };
   // #gen-dev · après une transcription réussie : bouton FIGÉ « Transcription faite »
   // (vert, disabled) — évite de recliquer et de repayer/relancer Whisper.
-  const _whBtnDone = () => { if(btn){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:600;font-size:14.5px;color:var(--text-2)">Transcription faite</span><span class="faint" style="font-size:12px">Sous-titres calés — régénère un audio pour relancer</span></div>'; btn.disabled = true; btn.style.opacity = '.8'; btn.style.cursor = 'default'; } };
-  let _whOk = false;
+  const _whBtnDone = () => { if(_btnLive()){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:600;font-size:14.5px;color:var(--text-2)">Transcription faite</span><span class="faint" style="font-size:12px">Sous-titres calés — change d\'audio pour relancer</span></div>'; btn.disabled = true; btn.style.opacity = '.8'; btn.style.cursor = 'default'; } };
   // Gate Whisper IA : Starter et + (PAS free) — ouvert à tous les payants (Axel 30/08)
   const plan = currentMember?.plan || 'free';
   if(!['starter','pro','elite','byok','developer'].includes(plan)){
@@ -20299,12 +20318,16 @@ async function whisperTranscribe(){
     toast('Whisper IA disponible dès le plan Starter');
     return;
   }
-  creditsFlowBegin();  // #122 : remboursable si la génération échoue
+  // #122 : remboursable si la transcription échoue. (Axel 25/09) Whisper peut désormais partir tout seul (interrupteur,
+  // carte de style) pendant qu'un autre flux payant tourne : on ne vide plus le flux global (creditsFlowBegin) et on ne
+  // rembourse QUE l'op de CE débit — jamais celles d'une autre génération. Barème inchangé (CREDIT_COSTS.whisper).
   if(!(await spendCreditsFor(CREDIT_COSTS.whisper, 'whisper'))) return;
+  const _whOps = window._aaLastSpendOp ? [window._aaLastSpendOp] : [];
+  const _whRefund = async () => { if(!_whOps.length) return 0; const n = await creditsFlowRefund('transcription échouée', _whOps); try{ _creditOps = _creditOps.filter((id) => !_whOps.includes(id)); }catch(_){} return n; };
 
   // Choisir la source audio : mp4AudioFile OU vidéo bypass (lipsync). Voix native (Axel 25/09) : TOUJOURS la vidéo générée.
-  let audioSrc = ((typeof _genNativeActive==='function' && _genNativeActive()) ? window._bypassHedraFile : null)
-              || mp4AudioFile || (window._bypassHedraOn && window._bypassHedraFile) || null;
+  // (= _genWhisperSrc(), figée au lancement dans W.src : c'est CET audio que la transcription calera)
+  let audioSrc = W.src;
   if(!audioSrc){
     toast('Upload un fichier audio dans l\'étape Voix d\'abord');
     return;
@@ -20317,10 +20340,10 @@ async function whisperTranscribe(){
   {
     const _isVid = /^video\//i.test(audioSrc.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(audioSrc.name || '');
     if(_isVid && window._bypassAudioPromise){
-      if(btn){ btn.disabled = true; btn.style.opacity = '.6'; }
+      if(_btnLive()){ btn.disabled = true; btn.style.opacity = '.6'; }
       // Affiche le % d'extraction en direct (l'extraction a démarré dès l'upload ; si elle n'est pas
       // finie quand on clique, on montre où ça en est au lieu d'un « … » figé — Axel 07/09).
-      const _pTick = setInterval(() => { if(btn){ const p = Math.round(window._bypassAudioProgress || 0); btn.innerHTML = 'Extraction de l\'audio… ' + p + '%'; } }, 300);
+      const _pTick = setInterval(() => { if(_btnLive()){ const p = Math.round(window._bypassAudioProgress || 0); btn.innerHTML = 'Extraction de l\'audio… ' + p + '%'; } }, 300);
       try{ const _pre = await window._bypassAudioPromise; if(_pre && _pre.size > 1024) audioSrc = _pre; }
       catch(_){ /* pré-extraction échouée → chemin _extractAudioForWhisper ci-dessous */ }
       finally{ clearInterval(_pTick); }
@@ -20334,29 +20357,29 @@ async function whisperTranscribe(){
   const MAX_MB = 24; // limite Whisper = 25 MB, on garde 1 MB de marge
   const isVideoSrc = /^video\//i.test(audioSrc.type || '') || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(audioSrc.name || '');
   if(isVideoSrc || audioSrc.size > MAX_MB * 1024 * 1024){
-    if(btn){ btn.innerHTML = 'Extraction de l\'audio…'; btn.disabled = true; btn.style.opacity = '.6'; }
+    if(_btnLive()){ btn.innerHTML = 'Extraction de l\'audio…'; btn.disabled = true; btn.style.opacity = '.6'; }
     toast(isVideoSrc
       ? 'Vidéo détectée — extraction de la piste audio…'
       : 'Fichier lourd (' + Math.round(audioSrc.size/1024/1024) + ' MB) — compression audio en cours…');
     try {
       audioSrc = await _extractAudioForWhisper(audioSrc);
     } catch(e){
-      await creditsFlowRefund();
-      toast(e && e.code === 'no_audio'
+      await _whRefund();
+      if(!W.stale()) toast(e && e.code === 'no_audio'
         ? 'Cette vidéo ne contient pas de piste audio — rien à transcrire. Importe une vidéo avec du son.'
         : 'Extraction audio impossible : ' + String(e.message || e).slice(0, 120));
       _whBtnIdle();
       return;
     }
     if(audioSrc.size > MAX_MB * 1024 * 1024){
-      await creditsFlowRefund();
-      toast('Audio trop long même après compression (' + Math.round(audioSrc.size/1024/1024) + ' MB) — au-delà de la limite Whisper (~1 h de parole).');
+      await _whRefund();
+      if(!W.stale()) toast('Audio trop long même après compression (' + Math.round(audioSrc.size/1024/1024) + ' MB) — au-delà de la limite Whisper (~1 h de parole).');
       _whBtnIdle();
       return;
     }
   }
 
-  if(btn){ btn.innerHTML = 'Transcription en cours...'; btn.disabled = true; btn.style.opacity = '.6'; }
+  if(_btnLive()){ btn.innerHTML = 'Transcription en cours...'; btn.disabled = true; btn.style.opacity = '.6'; }
   try {
     const fd = new FormData();
     fd.append('file', audioSrc, audioSrc.name || 'audio.mp4');
@@ -20390,6 +20413,9 @@ async function whisperTranscribe(){
       throw new Error(errText);
     }
     const data = await resp.json();
+    // (Axel 25/09) L'audio a changé pendant la transcription : ces mots sont ceux de l'ANCIENNE voix → on les jette
+    // (rien n'est écrit : ni timestamps, ni groupes, ni texte). _genSubsAfterWhisper relance sur le nouvel audio si ON.
+    if(W.stale()){ console.info('[whisper] audio changé pendant la transcription → résultat ignoré'); return; }
     const text = (data.text || '').trim();
     // #gen-dev · Whisper AU MOT « propre » (owner) : le libellé vient de data.text
     // (apostrophes/casse/ponctuation), le timing vient des words Whisper RECOLLÉS
@@ -20415,7 +20441,7 @@ async function whisperTranscribe(){
       }
     }
     if(text){
-      _whOk = true;   // transcription réussie → bouton figé « Transcription faite » (finally)
+      W.ok = true;   // transcription réussie → bouton figé « Transcription faite » (finally) + _genSubsFor = CET audio
       if(_whV2){
         _applyWhisperWords(data.words, text);   // aligne + construit les groupes + applique
         pendingTranscript = text;
@@ -20437,7 +20463,7 @@ async function whisperTranscribe(){
       toast('Aucun texte détecté par Whisper');
     }
   } catch(e){
-    await creditsFlowRefund();
+    await _whRefund();
     let raw = String(e.message || e);
     let msg = raw.slice(0, 200);
     // Détection des erreurs fréquentes
@@ -20454,10 +20480,12 @@ async function whisperTranscribe(){
         }
       } catch(_){}
     }
-    toast('Erreur Whisper : ' + msg);
+    if(!W.stale()) toast('Erreur Whisper : ' + msg);
     console.error('Whisper error:', e);
   } finally {
-    if(_whOk) _whBtnDone(); else _whBtnIdle();
+    if(W.ok) _whBtnDone(); else _whBtnIdle();
+    // op de ce débit sortie du flux global (succès) : un échec d'une AUTRE génération ne la « rembourse » pas
+    try{ if(W.ok && _whOps.length) _creditOps = _creditOps.filter((id) => !_whOps.includes(id)); }catch(_){}
   }
 }
 function applyTranscript(){
@@ -20737,13 +20765,78 @@ function updateVoicePresetLabel(name){
 }
 
 // ── SUBTITLES TOGGLE ──
-let subtitlesEnabled = true;
+// Sous-titres = Whisper AUTOMATIQUE, sur TOUS les chemins (Fichier audio, Enregistreur, Voix native, Vidéo existante)
+// (Axel 25/09) : « le slider est DÉSACTIVÉ par défaut ; si l'user l'active, Whisper se lance automatiquement ; s'il
+// sélectionne un style, pareil, sans appuyer sur Whisper IA. S'il change l'audio → remis désactivé, et s'il réactive
+// on relance Whisper. » Le bouton « Whisper IA » reste comme relance manuelle, il n'est plus nécessaire.
+// • _genWhisperSrc()        : l'audio que Whisper transcrit (MÊME choix que whisperTranscribe) = la voix courante.
+// • window._genSubsFor      : l'audio pour lequel la transcription affichée est valable (posé au succès de Whisper).
+//                             Même audio → réactiver ne relance PAS Whisper (ni un 2e débit).
+// • window._genSubsEpoch    : +1 à chaque changement d'audio → une transcription encore en vol pour l'ancien audio est jetée.
+// • window._genWhBusy       : une seule transcription à la fois (interrupteur + carte de style + bouton, clics rapides).
+// • OFF = aucun sous-titre dans l'aperçu (_syncSubsPreviewVisibility) NI au rendu (_genServerCompose / drawFrame).
+let subtitlesEnabled = false;   // DÉSACTIVÉS par défaut (Axel 25/09) — plus d'auto-activation à l'arrivée sur Style
 window._reachedStyle = window._reachedStyle || false; // vrai dès que l'user a atteint l'étape Style (4)
+window._genSubsFor = window._genSubsFor || null;
+window._genSubsEpoch = window._genSubsEpoch || 0;
+window._genWhBusy = false;
 function toggleSubtitles(){
   subtitlesEnabled = !subtitlesEnabled;
   _syncSubtitleToggleUI();
-  // Voix native (Axel 25/09) : activer les sous-titres lance Whisper TOUT SEUL (synchro sur l'audio de la vidéo)
-  if(subtitlesEnabled){ try{ if(typeof _gnAutoWhisper==='function') _gnAutoWhisper(); }catch(_){} }
+  if(subtitlesEnabled) _genSubsEnsure();   // ON → Whisper tout seul sur la voix courante (si pas déjà calé sur CET audio)
+}
+function _genWhisperSrc(){
+  // Voix native : TOUJOURS la vidéo générée ; sinon le fichier audio / l'enregistrement ; sinon la vidéo existante
+  return ((typeof _genNativeActive==='function' && _genNativeActive()) ? window._bypassHedraFile : null)
+      || (typeof mp4AudioFile!=='undefined' ? mp4AudioFile : null) || (window._bypassHedraOn && window._bypassHedraFile) || null;
+}
+// Sous-titres activés → Whisper sur l'audio courant, sauf s'il est déjà calé sur CET audio ou déjà en vol
+function _genSubsEnsure(){
+  if(!subtitlesEnabled) return;
+  const src = _genWhisperSrc();
+  if(src && window._genSubsFor === src) return;   // déjà synchronisé sur cette voix : ni 2e Whisper, ni 2e débit
+  if(window._genWhBusy) return;                     // une transcription est déjà en cours (elle repasse ici à la fin)
+  if(src) toast('Synchronisation des sous-titres sur ta voix…');
+  whisperTranscribe({ auto:true });
+}
+// Changement d'audio (nouveau fichier, nouvel enregistrement, autre carte Voix, nouvelle vidéo) : la transcription de
+// l'ancien audio ne vaut plus → invalidée, interrupteur remis sur OFF. Réactiver relancera Whisper sur le nouvel audio.
+function _genSubsAudioChanged(){
+  window._genSubsEpoch = (window._genSubsEpoch || 0) + 1;
+  window._genSubsFor = null;
+  try{ whisperWordTimestamps = []; }catch(_){}
+  window._whisperWordsPristine = null;
+  try{ pendingTranscript = ''; }catch(_){}
+  try{ populateWordEditor(''); }catch(_){}   // vide aussi transcriptInput / voiceTranscriptTA + les groupes de mots
+  try{ _whisperBtnReset(); }catch(_){}
+  subtitlesEnabled = false;
+  try{ _syncSubtitleToggleUI(); }catch(_){}
+  _genSubsBusyUI();
+}
+// Filet (arrivée sur Style) : l'audio a changé par un chemin sans crochet explicite (ex. onglet de l'étape Avatar)
+function _genSubsCheckAudio(){
+  if(window._genSubsFor && window._genSubsFor !== _genWhisperSrc()) _genSubsAudioChanged();
+}
+// Fin d'une transcription (appelé par whisperTranscribe, succès ou non)
+function _genSubsAfterWhisper(ok, stale, src0){
+  if(stale){
+    // audio changé pendant la transcription → résultat jeté ; si l'user a déjà réactivé pour le NOUVEL audio
+    // (ignoré tant qu'on était occupé), sa transcription part maintenant
+    if(subtitlesEnabled) setTimeout(() => { try{ _genSubsEnsure(); }catch(_){} }, 0);
+  } else if(ok){
+    window._genSubsFor = src0;
+    try{ updateSubPreview(); }catch(_){}
+  } else if(subtitlesEnabled && !(src0 && window._genSubsFor === src0)){
+    // échec (plan, pas d'audio, réseau, rien détecté) : aucun sous-titre calé → interrupteur remis sur OFF
+    subtitlesEnabled = false;
+    try{ _syncSubtitleToggleUI(); }catch(_){}
+  }
+  _genSubsBusyUI();
+}
+// Chargement lisible à côté de l'interrupteur pendant la transcription (le bouton Whisper montre aussi le %)
+function _genSubsBusyUI(){
+  const s = document.getElementById('subsWhStatus'); if(!s) return;
+  s.style.display = window._genWhBusy ? 'inline-flex' : 'none';
 }
 // Met à jour le switch + le label des sous-titres selon subtitlesEnabled, puis la visibilité preview
 function _syncSubtitleToggleUI(){
@@ -20773,11 +20866,12 @@ function _syncSubsPreviewVisibility(){
   if(typeof step !== 'undefined' && step >= 4) window._reachedStyle = true;
   overlay.style.visibility = (window._reachedStyle && subtitlesEnabled) ? 'visible' : 'hidden';
 }
-// Appelé à l'arrivée sur l'étape Style : auto-active les sous-titres (1ère fois) + peuple la preview depuis le vrai script
+// Appelé à l'arrivée sur l'étape Style : peuple la preview depuis le vrai script. Plus d'auto-activation des sous-titres
+// (Axel 25/09 : désactivés par défaut, c'est l'user qui les active → Whisper) ; l'audio a changé depuis la dernière
+// transcription → remis sur OFF.
 function _enterStyleStep(){
-  const firstTime = !window._reachedStyle;
   window._reachedStyle = true;
-  if(firstTime && !subtitlesEnabled) subtitlesEnabled = true; // auto-activation à la 1ère arrivée sur Style
+  _genSubsCheckAudio();
   _syncSubtitleToggleUI();
   if(typeof updateSubPreview === 'function') updateSubPreview();
   _syncSubsPreviewVisibility();
@@ -21050,13 +21144,153 @@ function _previewBtnState(state){
 // relance une lecture PROPRE avec l'audio/les sous-titres de l'étape courante.
 window._previewResetToIdle = function(){
   try{ if(previewAudio) previewAudio.pause(); }catch(_){}
-  try{ if(window._genPreviewMusicEl) window._genPreviewMusicEl.pause(); }catch(_){}
+  try{ _gpmStop(); }catch(_){}
+  try{ _gpvPause(); }catch(_){}   // voix sans silences (élément persistant, 25/09)
   try{ const bpv=document.getElementById('bypassPreviewVid'); if(bpv && !bpv.paused) bpv.pause(); }catch(_){}
   try{ const gpv=document.getElementById('gpVideo'); if(gpv && !gpv.paused) gpv.pause(); }catch(_){}
   try{ stopPreviewAnim(); }catch(_){}
   previewPlaying = false; window._previewPaused = false; previewAudio = null;
   try{ _previewBtnState('idle'); }catch(_){}
 };
+
+// ══ MUSIQUE DE FOND DANS L'APERÇU (Axel 25/09) ═══════════════════════════════════════════════════════════════
+// « J'ai mis une vidéo mais la musique ne se joue pas. » Deux causes : (1) l'élément musique était créé APRÈS des await
+// (attente de la vidéo, audio sans silences) → hors du geste utilisateur, Safari / iOS refusent play() (erreur avalée) ;
+// (2) musique choisie ou changée pendant que l'aperçu était en pause → « Reprendre » relançait l'ANCIEN élément, ou aucun.
+// Désormais UN élément musique persistant, lancé DANS le clic (déverrouillé pour de bon, en silence le temps que la voix
+// parte), puis calé sur l'horloge de la voix (vidéo native / existante / Hedra, fichier audio, enregistrement, audio sans
+// silences) : lecture, pause, reprise, fin, relecture, changement de piste ou de volume pendant la lecture.
+// • Volume = celui du menu Musique, en direct. iOS ignore HTMLMediaElement.volume (toujours 1) → gain Web Audio.
+// • Pas de double musique : la vidéo de l'aperçu contient DÉJÀ la musique (mix navigateur _gnMixMusic / _genMixInto,
+//   repéré par window._genMusicBaked) → on ne joue rien en plus.
+window._gpm = window._gpm || { el:null, src:'', ctx:null, node:null, gain:null, voice:null, off:0, on:false };
+// iOS / iPadOS : volume en lecture seule. (__gpmForceGain : test headless du chemin iOS)
+function _gpmVolLocked(){
+  if(window._gpmVolLockedV === undefined){
+    try{ const a = document.createElement('audio'); a.volume = 0.5; window._gpmVolLockedV = Math.abs(a.volume - 0.5) > 0.01; }catch(_){ window._gpmVolLockedV = false; }
+  }
+  return !!(window._gpmVolLockedV || window.__gpmForceGain);
+}
+function _gpmVol(){ const m = window._genMusic; return Math.max(0, Math.min(1, (m && typeof m.volume === 'number') ? m.volume : 0.35)); }
+// Piste à jouer : '' sans musique, ou si la voix de l'aperçu est une vidéo qui contient DÉJÀ la musique (mixée)
+function _gpmWanted(voiceVid){
+  const src = (typeof _genMusicSrc === 'function') ? _genMusicSrc(window._genMusic) : ((window._genMusic && window._genMusic.url) || '');
+  if(!src) return '';
+  if(voiceVid && voiceVid.src && window._genMusicBaked && window._genMusicBaked.has(voiceVid.src)) return '';
+  return src;
+}
+function _gpmEl(src){
+  const g = window._gpm;
+  if(!g.el){ g.el = new Audio(); g.el.loop = true; g.el.preload = 'auto'; g.el.setAttribute('playsinline', ''); }
+  let abs = src; try{ abs = new URL(src, location.href).href; }catch(_){}
+  if(g.src !== abs){ g.src = abs; g.el.src = abs; }   // changement de piste : MÊME élément (déjà autorisé à jouer)
+  if(_gpmVolLocked() && !g.gain){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      g.ctx = new AC(); g.node = g.ctx.createMediaElementSource(g.el); g.gain = g.ctx.createGain();
+      g.node.connect(g.gain); g.gain.connect(g.ctx.destination);
+    }catch(e){ console.warn('[aperçu] gain musique indisponible :', e); g.gain = null; }
+  }
+  return g.el;
+}
+function _gpmApplyVol(v){
+  const g = window._gpm; if(!g.el) return;
+  const x = (v === undefined) ? _gpmVol() : v;
+  if(g.gain){ try{ g.gain.gain.value = x; g.el.volume = 1; }catch(_){} }
+  else { try{ g.el.volume = x; }catch(_){} }
+}
+function _gpmPlay(){
+  const g = window._gpm; if(!g.el) return;
+  if(g.ctx && g.ctx.state !== 'running'){ try{ g.ctx.resume(); }catch(_){} }
+  try{ const p = g.el.play(); if(p && p.catch) p.catch((e) => console.warn('[aperçu] musique :', e && e.name)); }catch(_){}
+}
+// DANS le geste du clic, avant tout await : la piste part en SILENCE (élément déverrouillé), calée ensuite sur la voix
+function _gpmPrime(src){
+  const g = window._gpm;
+  g.on = false; g.voice = null;
+  if(!src){ if(g.el){ try{ g.el.pause(); }catch(_){} } return; }
+  _gpmEl(src); _gpmApplyVol(0);
+  try{ g.el.currentTime = 0; }catch(_){}
+  _gpmPlay();
+}
+// La voix de l'aperçu (élément + décalage de départ : début du trim pour un fichier audio)
+function _gpmBind(voiceEl, off){ const g = window._gpm; g.voice = voiceEl || null; g.off = off || 0; }
+// La voix joue : la musique la suit (même temps écoulé, bouclée), au volume choisi. Voix pas encore prête → la musique
+// part quand même ici (appel dans le geste = élément déverrouillé) mais muette ; _gpmSync lui rend le son au départ de la voix.
+function _gpmStart(){
+  const g = window._gpm; if(!g.el || !g.src || !g.voice) return;
+  g.on = true;
+  _gpmSync(true);
+  const ready = !g.voice.paused && (g.voice.readyState || 0) >= 3;
+  g.silent = !ready;
+  _gpmApplyVol(ready ? undefined : 0);
+  if(g.el.paused && !g.voice.paused) _gpmPlay();
+  // filet hors boucle d'animation (durée de la voix inconnue → pas de boucle rAF) : le son revient au départ de la voix
+  if(!ready){ const v = g.voice; try{ v.addEventListener('playing', () => { if(g.voice === v && g.on) _gpmSync(); }, { once:true }); }catch(_){} }
+}
+// Calage (boucle d'animation) : voix en pause / en chargement → musique en pause ; dérive > 0,35 s → recalée
+function _gpmSync(force){
+  const g = window._gpm; if(!g.on || !g.el || !g.voice) return;
+  const v = g.voice;
+  if(v.paused || v.ended || (v.readyState || 0) < 3){ if(!force && !g.el.paused){ try{ g.el.pause(); }catch(_){} } if(!force) return; }
+  const d = g.el.duration, el = Math.max(0, (v.currentTime || 0) - (g.off || 0));
+  const want = (d && isFinite(d) && d > 0) ? (el % d) : el;
+  if(force || Math.abs((g.el.currentTime || 0) - want) > 0.35){ try{ g.el.currentTime = want; }catch(_){} }
+  if(force) return;
+  if(g.silent){ g.silent = false; _gpmApplyVol(); }
+  if(g.el.paused) _gpmPlay();
+}
+function _gpmPause(){ const g = window._gpm; if(g.el){ try{ g.el.pause(); }catch(_){} } }
+function _gpmStop(){ const g = window._gpm; g.on = false; g.voice = null; _gpmPause(); }
+// Piste choisie / importée / retirée PENDANT la lecture → bascule en direct (en pause : la reprise prend la nouvelle)
+function _gpmRefresh(){
+  const g = window._gpm;
+  if(!(typeof previewPlaying !== 'undefined' && previewPlaying) || !g.voice) return;
+  const want = _gpmWanted(window._bypassPreviewIsVideo ? document.getElementById('bypassPreviewVid') : null);
+  if(!want){ g.on = false; _gpmPause(); return; }
+  _gpmEl(want); _gpmStart();
+}
+// ── Voix « sans silences » de l'aperçu (Axel 25/09, relecture) ──
+// Fichier audio + « Supprimer les silences » : l'audio nettoyé n'existe qu'APRÈS un await (_getOrBuildCleanBlobUrl) → le
+// new Audio(cleanUrl).play() d'avant tombait hors du geste → refusé par Safari / iOS (erreur avalée) → ni voix, ni musique
+// (la musique amorcée attend le départ de la voix). Désormais UN élément voix persistant, amorcé DANS le clic : l'audio
+// nettoyé s'il est déjà prêt (relecture), sinon 0,25 s de silence. Un élément lancé une fois dans un geste reste autorisé à
+// jouer, même après un changement de source (même principe que la musique _gpmEl).
+function _gpvEl(){
+  const g = window._gpm;
+  if(!g.vEl){ g.vEl = new Audio(); g.vEl.preload = 'auto'; g.vEl.setAttribute('playsinline', ''); g.vSrc = ''; }
+  return g.vEl;
+}
+// Source de l'élément voix ; true = nouvelle source (à charger puis lire depuis 0)
+function _gpvSetSrc(url){
+  const g = window._gpm, el = _gpvEl();
+  let abs = url; try{ abs = new URL(url, location.href).href; }catch(_){}
+  if(g.vSrc === abs) return false;
+  g.vSrc = abs; el.src = abs;
+  return true;
+}
+// 0,25 s de silence (WAV PCM 8 bits mono 8 kHz), fabriqué une seule fois
+function _gpvSilence(){
+  if(window._gpvSilUrl) return window._gpvSilUrl;
+  const n = 2000, b = new Uint8Array(44 + n), dv = new DataView(b.buffer);
+  const tag = (o, s) => { for(let i = 0; i < 4; i++) b[o + i] = s.charCodeAt(i); };
+  tag(0, 'RIFF'); dv.setUint32(4, 36 + n, true); tag(8, 'WAVE'); tag(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, 8000, true);
+  dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); tag(36, 'data'); dv.setUint32(40, n, true);
+  b.fill(128, 44);   // PCM 8 bits non signé : 128 = silence
+  window._gpvSilUrl = URL.createObjectURL(new Blob([b], { type:'audio/wav' }));
+  return window._gpvSilUrl;
+}
+// DANS le geste du clic, avant tout await
+function _gpvPrime(){
+  const el = _gpvEl();
+  el.onended = null;   // la fin du silence ne doit pas déclencher la fin (onended) d'un aperçu PRÉCÉDENT
+  let ready = null; try{ ready = _silenceCleanBlobUrl; }catch(_){}
+  _gpvSetSrc(ready || _gpvSilence());
+  try{ el.currentTime = 0; }catch(_){}
+  try{ const p = el.play(); if(p && p.catch) p.catch((e) => console.warn('[aperçu] voix :', e && e.name)); }catch(_){}
+}
+function _gpvPause(){ const g = window._gpm; if(g.vEl){ try{ g.vEl.pause(); }catch(_){} } }
 async function togglePreviewPlay(){
   // ── Clic pendant la LECTURE → PAUSE : on fige tout SANS remettre à zéro ──
   if(previewPlaying){
@@ -21064,7 +21298,8 @@ async function togglePreviewPlay(){
     window._previewPaused = true;
     if(previewInterval !== null){ try{ cancelAnimationFrame(previewInterval); clearInterval(previewInterval); }catch(_){} previewInterval = null; }
     try{ if(previewAudio) previewAudio.pause(); }catch(_){}
-    try{ if(window._genPreviewMusicEl) window._genPreviewMusicEl.pause(); }catch(_){}
+    try{ window._gpm.on = false; _gpmPause(); }catch(_){}   // musique en pause avec la voix (reprise : recalée dessus)
+    try{ _gpvPause(); }catch(_){}   // voix sans silences amorcée mais encore en chargement (previewAudio pas encore posé)
     const gpvP = document.getElementById('gpVideo');
     if(gpvP && !gpvP.paused) gpvP.pause();
     const bpvP = document.getElementById('bypassPreviewVid');
@@ -21092,7 +21327,13 @@ async function togglePreviewPlay(){
     // (élément Audio suspendu après la pause) → aucun son à la reprise. Si l'élément reste en
     // pause juste après, on relance une lecture PROPRE depuis le début au lieu de laisser un silence.
     setTimeout(()=>{ try{ if(previewPlaying && _pa && _pa.paused){ _restart(); } }catch(_){} }, 240);
-    try{ if(window._genPreviewMusicEl) window._genPreviewMusicEl.play().catch(()=>{}); }catch(_){}
+    // Musique : la piste COURANTE (choisie / changée / retirée pendant la pause), recalée sur la voix — DANS le geste
+    // (avant : l'ancien élément, ou aucun si la musique avait été ajoutée en pause — Axel 25/09)
+    try{
+      const _mw = _gpmWanted(window._bypassPreviewIsVideo ? _pa : null);
+      if(_mw){ _gpmEl(_mw); _gpmBind(_pa, window._gpm.off); _gpmStart(); }
+      else { window._gpm.on = false; _gpmPause(); }
+    }catch(e){ console.warn('[aperçu] musique (reprise) :', e); }
     startPreviewAnim(_pa, true);   // resume=true : relance la boucle sans reseek à 0
     _previewBtnState('playing');
     return;
@@ -21101,9 +21342,9 @@ async function togglePreviewPlay(){
   window._previewPaused = false;
   stopPreviewAnim();
   if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
-  try{ if(window._genPreviewMusicEl){ window._genPreviewMusicEl.pause(); window._genPreviewMusicEl=null; } }catch(_){}
   if(typeof _genStopPrev==='function') _genStopPrev();   // l'écoute du menu Musique s'arrête aussi : un seul son à la fois
   previewPlaying = true;
+  const _pvTok = window._pvTok = (window._pvTok || 0) + 1;   // ce lancement (un clic pendant le chargement le périme)
   const btn = document.getElementById('previewPlayBtn');
   if(previewPlaying){
     _previewBtnState('playing');
@@ -21114,23 +21355,51 @@ async function togglePreviewPlay(){
     const bpv0 = document.getElementById('bypassPreviewVid');
     const hedraVidShown = bpv0 && bpv0.src && bpv0.style.display !== 'none' &&
       ((results && results.hedraUrl) || (window._bypassHedraOn && window._bypassHedraUrl));
+    // Musique de fond : lancée ICI, dans le geste du clic, AVANT tout await (Safari / iOS) — en silence jusqu'au départ
+    // de la voix (Axel 25/09). Rien si la vidéo-voix contient déjà la musique (pas de double).
+    const _mWant = _gpmWanted(hedraVidShown ? bpv0 : null);
+    _gpmPrime(_mWant);
+    // (Axel 25/09) la voix « sans silences » aussi : élément persistant amorcé ICI, dans le geste (_gpvPrime)
+    const _wantClean = !hedraVidShown && silenceKeepSegs.length > 0;
+    if(_wantClean) _gpvPrime(); else _gpvPause();
+    const _stale = () => !previewPlaying || window._pvTok !== _pvTok;   // Pause / autre lancement pendant un await ci-dessous
+    if(hedraVidShown){
+      // (Axel 25/09) la vidéo-voix part elle aussi DANS le geste (play() non muet refusé hors geste par Safari / iOS)
+      bpv0.muted = false; bpv0.loop = false; bpv0.currentTime = 0;
+      try{ const _p0 = bpv0.play(); if(_p0 && _p0.catch) _p0.catch(()=>{}); }catch(_){}
+    }
     // Priorité : audio sans silences (sauf si la vidéo lipsync a déjà sa propre voix bakée)
-    const cleanUrl = (!hedraVidShown && silenceKeepSegs.length > 0) ? await _getOrBuildCleanBlobUrl() : null;
+    const cleanUrl = _wantClean ? await _getOrBuildCleanBlobUrl() : null;
+    if(_wantClean && !cleanUrl && !_stale()) _gpvPause();   // pas d'audio nettoyé (analyse absente) → voix du fichier ci-dessous
     if(hedraVidShown){
       // La vidéo lipsync est sa PROPRE source audio → une seule horloge pour
       // voix + personnage + sous-titres (sinon ils se désynchronisent à la lecture)
-      bpv0.muted = false; bpv0.loop = false; bpv0.currentTime = 0;
       await new Promise(r => { if(bpv0.readyState >= 1) return r(); bpv0.onloadedmetadata = r; bpv0.onerror = r; setTimeout(r, 2000); });
-      bpv0.play().catch(()=>{});
+      if(bpv0.paused && !_stale()) bpv0.play().catch(()=>{});   // « Pause » pendant l'attente : on ne relance rien
       activeAudio = bpv0;
       window._bypassPreviewIsVideo = true;
     } else if(cleanUrl){
-      const cleanEl = new Audio(cleanUrl);
-      // Attendre que la durée soit disponible avant de lancer l'anim
-      await new Promise(r => { cleanEl.onloadedmetadata = r; cleanEl.onerror = r; setTimeout(r, 800); });
-      cleanEl.currentTime = 0; cleanEl.play().catch(()=>{});
+      // Élément voix PERSISTANT, déjà lancé dans le geste (_gpvPrime) : il reste autorisé à jouer après ces await,
+      // là où un new Audio(cleanUrl) créé ici était refusé par Safari / iOS (Axel 25/09)
+      const cleanEl = _gpvEl();
+      if(!_stale()){
+        const fresh = _gpvSetSrc(cleanUrl);   // audio nettoyé pas encore dans l'élément (1re lecture, trim changé…)
+        // Attendre que la durée soit disponible avant de lancer l'anim
+        await new Promise(r => {
+          if(!fresh && cleanEl.readyState >= 1) return r();
+          cleanEl.addEventListener('loadedmetadata', r, { once:true }); cleanEl.addEventListener('error', r, { once:true }); setTimeout(r, 800);
+        });
+        if(!_stale()){
+          // déjà lancé depuis le début dans le geste (relecture, audio nettoyé prêt) → pas de retour à 0 ni de 2e play()
+          if(fresh || cleanEl.paused || cleanEl.ended){ try{ cleanEl.currentTime = 0; }catch(_){} }
+          if(cleanEl.paused) cleanEl.play().catch((e) => console.warn('[aperçu] voix :', e && e.name));
+        }
+      }
       activeAudio = cleanEl;
       _previewUsingCleanAudio = true;
+    } else if(_stale()){
+      // « Pause » / autre lancement pendant la construction de l'audio nettoyé (seul await possible avant ici) : on ne
+      // lance aucune autre voix derrière le dos de l'user — traité juste en dessous
     } else if(mp4AudioEnabled && mp4AudioFile){
       const el = document.getElementById('mp4AudioEl');
       if(el && el.src){ el.currentTime = mp4AudioTrimSt||0; el.play().catch(()=>{}); activeAudio = el; }
@@ -21141,18 +21410,26 @@ async function togglePreviewPlay(){
       const sel = document.querySelector('.voice-row.on audio');
       if(sel && sel.src){ sel.currentTime=0; sel.play().catch(()=>{}); activeAudio=sel; }
     }
+    // Clic « Pause » (ou un autre lancement) PENDANT le chargement ci-dessus : ce lancement est périmé → on n'active
+    // ni voix ni musique derrière le dos de l'user (avant : elles repartaient alors que le bouton affichait « Reprendre »)
+    if(_stale()){
+      if(window._pvTok === _pvTok){
+        try{ if(activeAudio) activeAudio.pause(); }catch(_){}
+        try{ _gpmStop(); }catch(_){}
+        window._previewPaused = false; previewAudio = null; _previewBtnState('idle');
+      }
+      // sinon un lancement plus récent a pris la main : voix (vidéo, fichier audio, voix sans silences persistante) et
+      // musique sont des éléments PARTAGÉS qu'il pilote déjà, et ce lancement périmé n'a rien relancé → on n'y touche pas
+      return;
+    }
     previewAudio = activeAudio;
     // ── LA MUSIQUE DE FOND S'ENTEND DANS L'APERÇU (Axel, 13/08 : « quand je
     // mets une musique je dois pouvoir l'entendre dans le preview ») — elle
-    // joue en parallèle de la voix, au volume du slider, comme au rendu final.
-    const _mSrc = (typeof _genMusicSrc==='function') ? _genMusicSrc(window._genMusic) : (window._genMusic && window._genMusic.url) || '';
-    if(activeAudio && _mSrc){
-      const mA = new Audio(_mSrc);
-      mA.volume = (window._genMusic && typeof window._genMusic.volume==='number') ? window._genMusic.volume : 0.35;
-      mA.loop = true;
-      mA.play().catch(()=>{});
-      window._genPreviewMusicEl = mA;   // (ex window._genPrevMusic : écrasait la FONCTION _genPrevMusic du menu → boutons play morts + 2 musiques en même temps)
-    }
+    // joue PAR-DESSUS la voix, au volume du slider, comme au rendu final (amix : voix pleine + musique × volume).
+    // (25/09) Élément unique _gpm, lancé dans le geste plus haut, calé ici sur l'horloge de la voix.
+    _gpmBind(activeAudio, (activeAudio && activeAudio.id === 'mp4AudioEl') ? (mp4AudioTrimSt || 0) : 0);
+    if(activeAudio && _mWant) _gpmStart();
+    else { window._gpm.on = false; _gpmPause(); }
     // Quand l'audio se termine → tout stopper
     if(activeAudio){
       activeAudio.onended = () => {
@@ -21160,7 +21437,7 @@ async function togglePreviewPlay(){
         window._previewPaused = false;
         stopPreviewAnim();
         if(previewAudio){ try{ previewAudio.pause(); previewAudio.currentTime=0; }catch(e){} previewAudio=null; }
-        try{ if(window._genPreviewMusicEl){ window._genPreviewMusicEl.pause(); window._genPreviewMusicEl=null; } }catch(_){}
+        try{ _gpmStop(); }catch(_){}
         _previewBtnState('idle');
       };
     }
@@ -21274,6 +21551,7 @@ function startPreviewAnim(audioEl, resume){
         const origTime = _cleanTimeToOrigTime(elapsed);
         if(Math.abs(gpVid.currentTime - origTime) > 0.15) gpVid.currentTime = origTime;
       }
+      try{ _gpmSync(); }catch(_){}   // musique de fond calée sur la voix (pause si la voix charge, dérive > 0,35 s) — 25/09
       previewInterval = requestAnimationFrame(rafLoop);
     };
     previewInterval = requestAnimationFrame(rafLoop);
@@ -21569,6 +21847,9 @@ function toggleBypassHedra(){
 async function handleBypassHedraFile(file){
   if(!file || !file.type.startsWith('video/')) return;
   window._bypassHedraFile = file;
+  // Nouvelle vidéo (vidéo existante, voix native adoptée ou rendue) = nouvelle voix : sous-titres OFF + transcription
+  // invalidée (avant, l'ancienne transcription restait calée sur la nouvelle vidéo — Axel 25/09)
+  try{ _genSubsAudioChanged(); }catch(_){}
   try{ _startBypassAudioExtraction(file); }catch(_){}   // extrait l'audio EN TÂCHE DE FOND, DANS le geste d'upload (v.play() autorisé) → Whisper réutilise le résultat (fiable + instantané)
   if(window._bypassHedraUrl) URL.revokeObjectURL(window._bypassHedraUrl);
   window._bypassHedraUrl = URL.createObjectURL(file);
@@ -22073,6 +22354,7 @@ async function analyzeSilences(){
       btn.innerHTML = 'Débruitage…';
       file = await denoiseAudioFile(file0);
       mp4AudioFile = file; window._voiceFileRef = file;
+      if(window._genSubsFor === file0) window._genSubsFor = file;   // même voix débruitée (même timing) : sous-titres toujours calés (Axel 25/09)
       btn.innerHTML = 'Analyse des silences…';
     }
     // Decode audio — fallback FFmpeg pour les .mov/.mkv non supportés nativement
@@ -22884,6 +23166,9 @@ function handleMp4AudioFile(file){
   // sinon le gate audio de génération/preview reste false et l'audio est ignoré.
   mp4AudioEnabled = true; window.mp4AudioEnabled = true; window.mp4AudioFile = file;
   try{ _whisperBtnReset(); }catch(_){}
+  // Nouvel audio (fichier importé OU enregistrement « Utiliser ») : sous-titres remis sur OFF + transcription invalidée ;
+  // les réactiver relancera Whisper sur CE fichier (Axel 25/09)
+  try{ _genSubsAudioChanged(); }catch(_){}
   // #69 · l'option de débruitage est une préférence → on ne la réinitialise PAS au changement de fichier
 
   // ── Reset de l'ancienne source (évite que l'ancien audio reste) ──
@@ -22953,6 +23238,7 @@ function clearMp4AudioFile(){
   silenceAudioBuffer = null;
   silenceKeepSegs = [];
   whisperWordTimestamps = [];
+  try{ _genSubsAudioChanged(); }catch(_){}   // plus d'audio → sous-titres OFF, transcription invalidée (Axel 25/09)
   try{ _idbDelete('mp4audio'); }catch(e){}
   // Reset UI dropzone
   const dropContent = document.getElementById('mp4AudioDropContent');
@@ -25166,7 +25452,8 @@ function _buildSessionState(){
     selSubStyle,
     selAnim,
     animEnabled,
-    subtitlesEnabled,
+    // subtitlesEnabled : PLUS sauvegardé (session ni cache « Réutiliser ») — Axel 25/09 : désactivés par défaut à chaque
+    // audio, les activer = Whisper sur la voix courante (un ON restauré n'aurait aucune transcription calée dessus).
     splitEnabled,
     splitSwapped,
     currentPlatform,
@@ -25504,7 +25791,10 @@ function _restoreSession(){
     if(saved.selSubStyle)  selSubStyle  = saved.selSubStyle;
     if(saved.selAnim)      selAnim      = saved.selAnim;
     if(saved.animEnabled      !== undefined) animEnabled      = saved.animEnabled;
-    if(saved.subtitlesEnabled !== undefined) subtitlesEnabled = saved.subtitlesEnabled;
+    // Sous-titres : JAMAIS restaurés au rechargement (Axel 25/09). Un ON d'une ancienne session (anciennes sauvegardes
+    // comprises : la clé est ignorée) rallumait l'interrupteur sans que l'user l'ait activé, sur la transcription d'un
+    // audio perdu (_genSubsFor vide → 1er clic sur un style = Whisper relancé, ou échec « Upload un fichier audio »).
+    // subtitlesEnabled garde donc son défaut (OFF) ; _syncUIFromState ci-dessous affiche l'interrupteur tel quel.
     splitEnabled = false;   // défaut PLEIN ÉCRAN : on ne restaure plus le split de la session
     if(saved.splitSwapped     !== undefined) splitSwapped     = saved.splitSwapped;
     if(saved.currentPlatform)  currentPlatform  = saved.currentPlatform;
@@ -28587,6 +28877,7 @@ async function recPlayLibraryAudio(libIdx){
   // Inject into generator as voice
   window.mp4AudioFile = file;
   window.mp4AudioEnabled = true;
+  try{ if(typeof handleMp4AudioFile==='function') handleMp4AudioFile(file); }catch(e){ console.warn('handleMp4AudioFile:', e); }   // voix courante + sous-titres OFF (Axel 25/09)
   const fn  = document.getElementById('voiceFileName');
   const vdi = document.getElementById('voiceDropContent');
   const vfi = document.getElementById('voiceFileInfo');
@@ -28833,7 +29124,6 @@ function _saveGeneratorState(){
         subColors: { ...subColors },
         selSubStyle, selAnim, animEnabled, splitEnabled,
         splitSwapped: (typeof splitSwapped!=='undefined') ? splitSwapped : undefined,
-        subtitlesEnabled: (typeof subtitlesEnabled!=='undefined') ? subtitlesEnabled : undefined,
         voiceMode: (typeof voiceMode!=='undefined') ? voiceMode : undefined,
         selVoiceId: (typeof selVoiceId!=='undefined') ? selVoiceId : undefined,
         currentPlatform: (typeof currentPlatform!=='undefined') ? currentPlatform : undefined,
@@ -28913,7 +29203,8 @@ function _restoreGeneratorState(){
     if(s.splitSwapped !== undefined && typeof splitSwapped!=='undefined') splitSwapped = s.splitSwapped;
     // ── Autres réglages mémorisés (21/08) ──
     try{
-      if(s.subtitlesEnabled !== undefined && typeof subtitlesEnabled!=='undefined') subtitlesEnabled = s.subtitlesEnabled;
+      // Sous-titres : PLUS une préférence (Axel 25/09) — désactivés par défaut à chaque audio ; les activer = Whisper.
+      // (Restaurer un ON mémorisé les afficherait sans transcription de la voix courante.)
       if(s.voiceMode && typeof voiceMode!=='undefined') voiceMode = s.voiceMode;
       if(s.selVoiceId !== undefined && typeof selVoiceId!=='undefined') selVoiceId = s.selVoiceId;
       if(s.currentPlatform && typeof currentPlatform!=='undefined') currentPlatform = s.currentPlatform;
