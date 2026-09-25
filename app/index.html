@@ -10442,7 +10442,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta
       // re-tirerait une AUTRE op via resolve_op et générerait l'image deux fois → 'pending' : jamais de repli ; le filet
       // (reconcile-kie) la range en Bibliothèque.
       let e = e0;
-      if(_sent && !(e && e._kieStage)){ e = new Error('kie : image terminée mais illisible sur cet appareil — elle arrivera toute seule dans ta Bibliothèque d’ici ~2\u00a0h, ne relance pas'); e._kieStage = 'pending'; e._kieBill = ''; }
+      if(_sent && !(e && e._kieStage)){ e = new Error(_kieP()+'image terminée mais illisible sur cet appareil — elle arrivera toute seule dans ta Bibliothèque d’ici ~2\u00a0h, ne relance pas'); e._kieStage = 'pending'; e._kieBill = ''; }
       if(_kDev){   // developer : aucun repli (Axel 23/09)
         if(e && e._kieRefus){ const r=new Error('Nano Banana Pro a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
         if(!_kieCanFallback(e)) throw e;
@@ -10588,23 +10588,35 @@ function _kieClientOn(usage){
 function _kieTag(){ const t = (window._aaLastEngine==='kie' && _kieOn()) ? ' · kie.ai' : ''; window._aaLastEngine=''; return t; }
 // Toast des 2 usages ouverts (Axel 25/09 : « le toast dit toujours quel moteur a tourné ») : ' · kie.ai', ou le moteur
 // habituel (`other`), suffixé du repli quand kie a échoué. Lit puis remet à zéro l'état du dernier appel.
+// Nom du fournisseur (kie.ai) = compte developer SEULEMENT (Axel 25/09 : « supprime le toast qui mentionne kie, laisse-le pour
+// le compte dev ») : pour un client, aucun suffixe moteur ni préfixe « kie : » dans les toasts et messages d'erreur.
+function _kieP(){ return _kieDev() ? 'kie : ' : ''; }
+function _kieMsg(m){
+  m = String(m == null ? '' : m);
+  if(_kieDev() || !/kie/i.test(m)) return m;
+  m = m.replace(/\s*\(?repli\s*:\s*kie\.ai[^)]*\)?/gi, '').replace(/\s*·\s*kie\.ai\b/gi, '');
+  while(/^\s*kie(\.ai)?\s*:\s*/i.test(m)) m = m.replace(/^\s*kie(\.ai)?\s*:\s*/i, '');   // « kie : kie.ai : … »
+  if(/(crédits|clé|compte)[^.—]*kie|kie[^.—]*(crédits|clé|compte)/i.test(m)) return 'Service de génération momentanément indisponible, réessaie plus tard';
+  return m.replace(/^\s*kie(\.ai)?\s+/i, 'Service ').replace(/\s+(de |du )?kie(\.ai)?\b/gi, '');
+}
 function _kieEngineTag(other){
   const e = window._aaLastEngine, fb = !!window._aaKieFellBack; window._aaLastEngine=''; window._aaKieFellBack=false;
+  if(!_kieDev()) return '';   // clients : jamais le nom du moteur (kie.ai, Google, fal)
   if(e==='kie') return ' · kie.ai';
   return other ? (' · '+other+(fb?' (repli : kie.ai indisponible)':'')) : '';
 }
 // Dépose une entrée (Blob, File ou data-URL) dans render-media/<uid>/kie-in/ → URL signée 1 h lisible par kie.
 async function _kieUpload(src, ext){
   const { data:{ session } } = await sb.auth.getSession();
-  const uid = session?.user?.id; if(!uid) throw new Error('kie : session requise');
+  const uid = session?.user?.id; if(!uid) throw new Error(_kieP()+'session requise');
   const blob = (typeof src==='string') ? await (await fetch(src)).blob() : src;
   const t = String(blob.type||'');
   const e = ext || (t.includes('png') ? 'png' : t.includes('webp') ? 'webp' : t.includes('wav') ? 'wav' : t.includes('mp4') ? 'mp4' : 'jpg');
   const path = uid + '/kie-in/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + e;
   const up = await sb.storage.from('render-media').upload(path, blob, { contentType: t || undefined, upsert:true });
-  if(up.error) throw new Error('kie : dépôt impossible ('+up.error.message+')');
+  if(up.error) throw new Error(_kieP()+'dépôt impossible ('+up.error.message+')');
   const sg = await sb.storage.from('render-media').createSignedUrl(path, 3600);
-  if(sg.error || !sg.data?.signedUrl) throw new Error('kie : URL signée impossible');
+  if(sg.error || !sg.data?.signedUrl) throw new Error(_kieP()+'URL signée impossible');
   return sg.data.signedUrl;
 }
 // Soumet puis suit une tâche kie → { url (URL signée de NOTRE storage), kind, kie }.
@@ -10630,7 +10642,7 @@ async function _kieRun(alias, body, opt){
   // _kieStage : 'submit' = rien de lancé chez kie · 'failed' = kie a échoué (non facturé) → repli possible ;
   //             'pending' = tâche lancée, issue inconnue → JAMAIS de repli (on paierait la même génération deux fois) ;
   //             'unknown' = soumission sans réponse de kie (délai) → jamais de repli, crédits rendus par le serveur.
-  const fail = (msg, stage, refus, bill) => { const e = new Error(msg); e._kieStage = stage; e._kieRefus = !!refus; e._kieBill = bill || ''; return e; };
+  const fail = (msg, stage, refus, bill) => { const e = new Error(_kieMsg(msg)); e._kieStage = stage; e._kieRefus = !!refus; e._kieBill = bill || ''; return e; };
   let rs, sd;
   try{ ({ r:rs, j:sd } = await call('/kie/'+alias, { method:'POST', body: JSON.stringify(body) })); }
   catch(e){ throw fail('kie : soumission sans réponse ('+((e&&e.message)||e)+') — si elle a démarré, elle arrivera dans ta Bibliothèque ; sinon tes crédits te seront rendus', 'pending'); }
@@ -10689,7 +10701,7 @@ async function _kieFetchBlob(url){
   }
   // Résultat déjà rapatrié + réglé côté serveur (route résultat OK) : le filet le range en Bibliothèque (copie non accusée
   // > 2 h) → le dire, sinon l'utilisateur relance et paie deux fois (Axel 25/09).
-  const e = new Error('kie : média terminé mais téléchargement impossible — il arrivera tout seul dans ta Bibliothèque d’ici ~2\u00a0h, ne relance pas'); e._kieStage = 'pending'; throw e;
+  const e = new Error(_kieP()+'média terminé mais téléchargement impossible — il arrivera tout seul dans ta Bibliothèque d’ici ~2\u00a0h, ne relance pas'); e._kieStage = 'pending'; throw e;
 }
 async function _kieDataUrl(url){
   const b = await _kieFetchBlob(url);
@@ -29370,6 +29382,7 @@ async function _restoreBypassState(){
 function copyText(id){ navigator.clipboard.writeText(document.getElementById(id).textContent); toast('Copié !'); }
 function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function toast(msg){
+  try{ if(typeof _kieMsg==='function') msg = _kieMsg(msg); }catch(_){}   // clients : jamais « kie » dans un toast (dev : inchangé)
   const el=document.getElementById('toastEl');
   document.getElementById('toastMsg').textContent=msg;
   el.classList.add('show');
