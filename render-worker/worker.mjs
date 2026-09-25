@@ -595,6 +595,38 @@ function camOrganiqueFilter(W, H) {
   return `scale=iw*1.08:ih*1.08:flags=lanczos,rotate='${rot}':c=black,crop=${W}:${H}:x='(iw-${W})/2+${dx}':y='(ih-${H})/2+${dy}'`
 }
 
+// #musique-serveur (Axel 08/09) : la musique de fond était mixée CÔTÉ CLIENT (_genMixMusic) et cassait sur
+// les gros fichiers → absente du rendu. On la MUXE côté worker : téléchargée, bouclée+tronquée à la durée, volume
+// réduit, mixée SOUS l'audio d'origine (normalize=0 → la voix reste pleine). URL de la banque = hébergée.
+// Partagé par les DEUX chemins de composeGenSubs (Axel 25/09) : le chemin RAPIDE (aucun sous-titre) l'ignorait
+// → « Sous-titres » coupé = vidéo SANS musique (vidéo existante, voix native). Renvoie le fichier local ou null.
+async function genSubsMusicFile(plan, dir) {
+  if (!(plan.music && plan.music.url)) return null
+  if (!/^https?:/i.test(plan.music.url) || (await _urlBlockedSSRF(plan.music.url))) {   // M5 (audit 14/09) : anti-SSRF (résolution DNS + plages internes)
+    console.warn('gen-subs musique refusée (SSRF/hôte interne):', String(plan.music.url).slice(0, 120))
+    return null
+  }
+  try {
+    const mp = join(dir, 'music.mp3')
+    const ctl = new AbortController(); const _tt = setTimeout(() => ctl.abort(), 20000)   // timeout : pas de hang sur un endpoint lent
+    let resp
+    try { resp = await fetch(plan.music.url, { redirect: 'error', signal: ctl.signal }) } finally { clearTimeout(_tt) }   // pas de redirection vers un hôte interne
+    const clen = Number(resp.headers.get('content-length') || 0)
+    if (resp.ok && clen <= 30 * 1024 * 1024) { const buf = Buffer.from(await resp.arrayBuffer()); if (buf.length > 1024 && buf.length < 30 * 1024 * 1024) { writeFileSync(mp, buf); return mp } }
+    else console.warn('gen-subs musique refusée/HTTP ' + resp.status + ' (clen=' + clen + ')')
+  } catch (e) { console.warn('gen-subs musique download KO:', e && e.message) }
+  return null
+}
+// Volume de la musique (0-1, défaut 0,35 = celui de l'app) + le filtre qui la boucle / tronque à D et la mixe SOUS
+// l'audio d'origine (s'il existe). Entrée musique = index `inIdx` ; sortie = [aout].
+function genSubsMusicVol(plan) { return (plan.music && typeof plan.music.volume === 'number') ? Math.max(0, Math.min(1, plan.music.volume)) : 0.35 }
+function genSubsMusicMix(inIdx, D, musVol, baseHasAudio) {
+  let fc = `[${inIdx}:a]aloop=loop=-1:size=2e9,atrim=0:${D},asetpts=N/SR/TB,volume=${musVol}[mus]`
+  if (baseHasAudio) fc += `;[0:a][mus]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[aout]`
+  else              fc += `;[mus]anull[aout]`
+  return fc
+}
+
 // ── Compose SERVEUR du Générateur (__compose:'gen-subs') ─────────────────────
 // GRAVE les sous-titres sur la vidéo générée EXACTEMENT comme l'aperçu client
 // (_cvSubs porté verbatim dans gen-subs-composition.mjs, rendu par HyperFrames
@@ -657,18 +689,35 @@ async function composeGenSubs(jobDir, outPath, plan) {
       _copyOk = pv.some((l) => /(^|,)h264(,|$)/.test(l) && /(^|,)1080(,|$)/.test(l) && /(^|,)1920(,|$)/.test(l) && /(^|,)yuv420p(,|$)/.test(l))
     } catch (_) { _copyOk = false }
     const camOn = plan.cameraOrganique !== false      // #cam-realiste (03/09) : caméra « à la main » par défaut
-    const argsF = ['-v', 'error', '-y', '-i', orig]
-    if (_copyOk && !camOn) {
-      argsF.push('-c:v', 'copy')
-    } else {
+    // Musique de fond (Axel 25/09) : mixée ICI aussi — avant, ce chemin ne lisait jamais plan.music (sous-titres
+    // coupés = musique perdue). Dossier temporaire : en --local, jobDir est le dossier de l'user (rien n'y traîne).
+    const musDir = (plan.music && plan.music.url) ? mkdtempSync(join(tmpdir(), 'aa-gensubs-mus-')) : null
+    try {
+      const musicPathF = musDir ? await genSubsMusicFile(plan, musDir) : null
+      const musVolF = genSubsMusicVol(plan)
+      const argsF = ['-v', 'error', '-y', '-i', orig]
+      if (musicPathF) argsF.push('-i', musicPathF)                               // input 1 = musique
+      const copyV = _copyOk && !camOn
       const vf = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}` + (camOn ? ',' + camOrganiqueFilter(W, H) : '')
-      argsF.push('-vf', vf, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p')
+      const encV = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p']
+      if (musicPathF) {
+        // UN SEUL graphe (-filter_complex, jamais mêlé à -vf) : même forme que le chemin sous-titres, éprouvée sur Railway
+        const fcF = genSubsMusicMix(1, D, musVolF, baseHasAudioF)
+        if (copyV) argsF.push('-filter_complex', fcF, '-map', '0:v:0', '-c:v', 'copy')
+        else argsF.push('-filter_complex', `[0:v]${vf}[v];` + fcF, '-map', '[v]', ...encV)
+        argsF.push('-map', '[aout]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
+      } else {
+        if (copyV) argsF.push('-c:v', 'copy')
+        else argsF.push('-vf', vf, ...encV)
+        if (baseHasAudioF) argsF.push('-map', '0:v:0', '-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
+        else argsF.push('-an')
+      }
+      argsF.push('-t', String(D), '-movflags', '+faststart', outPath)
+      execFileSync('ffmpeg', argsF, { stdio: 'pipe' })
+      console.log(`✅ gen-subs RAPIDE (${(_copyOk && !camOn) ? 'copie h264 sans ré-encodage' : 'normalisation encodée'}${camOn ? ' + caméra réaliste' : ''} · audio${musicPathF ? ' + musique ' + Math.round(musVolF*100) + '%' : ''} + faststart, ${D}s) → ${outPath}`)
+    } finally {
+      if (musDir) { try { rmSync(musDir, { recursive: true, force: true }) } catch (_) { /* nettoyage best-effort */ } }
     }
-    if (baseHasAudioF) argsF.push('-map', '0:v:0', '-map', '0:a:0?', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
-    else argsF.push('-an')
-    argsF.push('-t', String(D), '-movflags', '+faststart', outPath)
-    execFileSync('ffmpeg', argsF, { stdio: 'pipe' })
-    console.log(`✅ gen-subs RAPIDE (${(_copyOk && !camOn) ? 'copie h264 sans ré-encodage' : 'normalisation encodée'}${camOn ? ' + caméra réaliste' : ''} · audio + faststart, ${D}s) → ${outPath}`)
     return
   }
 
@@ -725,30 +774,15 @@ async function composeGenSubs(jobDir, outPath, plan) {
     const baseChain = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=${genFps}` + (camOnC ? ',' + camOrganiqueFilter(W, H) : '')
     const baseHasAudio = ffprobe(orig, 'stream=codec_type').split('\n').some((l) => l.trim() === 'audio')
 
-    // #musique-serveur (Axel 08/09) : la musique de fond était mixée CÔTÉ CLIENT (_genMixMusic) et cassait sur
-    // les gros fichiers → absente du rendu. On la MUXE ici : téléchargée, bouclée+tronquée à la durée, volume
-    // réduit, mixée SOUS l'audio d'origine (normalize=0 → la voix reste pleine). URL de la banque = hébergée.
-    let musicPath = null
-    if (plan.music && plan.music.url && /^https?:/i.test(plan.music.url) && !(await _urlBlockedSSRF(plan.music.url))) {   // M5 (audit 14/09) : anti-SSRF (résolution DNS + plages internes)
-      try {
-        const mp = join(proj, 'music.mp3')
-        const ctl = new AbortController(); const _tt = setTimeout(() => ctl.abort(), 20000)   // timeout : pas de hang sur un endpoint lent
-        let resp
-        try { resp = await fetch(plan.music.url, { redirect: 'error', signal: ctl.signal }) } finally { clearTimeout(_tt) }   // pas de redirection vers un hôte interne
-        const clen = Number(resp.headers.get('content-length') || 0)
-        if (resp.ok && clen <= 30 * 1024 * 1024) { const buf = Buffer.from(await resp.arrayBuffer()); if (buf.length > 1024 && buf.length < 30 * 1024 * 1024) { writeFileSync(mp, buf); musicPath = mp } }
-        else console.warn('gen-subs musique refusée/HTTP ' + resp.status + ' (clen=' + clen + ')')
-      } catch (e) { console.warn('gen-subs musique download KO:', e && e.message) }
-    } else if (plan.music && plan.music.url) { console.warn('gen-subs musique refusée (SSRF/hôte interne):', String(plan.music.url).slice(0, 120)) }
-    const musVol = (plan.music && typeof plan.music.volume === 'number') ? Math.max(0, Math.min(1, plan.music.volume)) : 0.35
+    // #musique-serveur (Axel 08/09) : musique de fond muxée ici (genSubsMusicFile, mêmes gardes que le chemin rapide).
+    const musicPath = await genSubsMusicFile(plan, proj)
+    const musVol = genSubsMusicVol(plan)
 
     const args = ['-v', 'error', '-y', '-i', orig, '-i', subsVid]
     if (musicPath) args.push('-i', musicPath)                                   // input 2 = musique
     let fc = `[0:v]${baseChain}[b];[b][1:v]overlay=0:0[v]`
     if (musicPath) {
-      fc += `;[2:a]aloop=loop=-1:size=2e9,atrim=0:${D},asetpts=N/SR/TB,volume=${musVol}[mus]`
-      if (baseHasAudio) fc += `;[0:a][mus]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[aout]`
-      else              fc += `;[mus]anull[aout]`
+      fc += ';' + genSubsMusicMix(2, D, musVol, baseHasAudio)
       args.push('-filter_complex', fc, '-map', '[v]', '-map', '[aout]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2')
     } else {
       args.push('-filter_complex', fc, '-map', '[v]')
