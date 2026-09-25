@@ -647,7 +647,12 @@
     if (pubFile(u)) return extRe && !pubFile(u, extRe) ? 'format de fichier inattendu' : null;
     return 'lien vers un dossier, pas vers un fichier';
   }
-  function side(o) { return o && typeof o === 'object' && !Array.isArray(o) ? { label: txt(o.label, 80), file: txt(o.file, 200) } : null; }
+  // avant / après d'une transformation : libellé + vidéo de NOTRE stockage (meta.before.media / meta.after.media)
+  function side(o) {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+    var raw = txt(o.media, 400);
+    return { label: txt(o.label, 80), file: txt(o.file, 200), video: pubFile(raw, VIDEO_EXT), why: raw ? fileWhy(raw, VIDEO_EXT) : 'pas encore en ligne' };
+  }
   function normBrick(b) {
     var id = rowId(b && b.id);
     if (!id) return null;
@@ -681,7 +686,8 @@
   // Recette d'une vidéo finale : nouveau format (usine/publish-qc.mjs) = IDs de briques sous des clés connues ; tout le
   // reste (ex. l'ancien refus « Test » : { cta: 'avatar + CTA28', demo: 'visite guidée OMNI 1', … }) = texte libre, affiché
   // tel quel et jamais compté comme une vidéo produite.
-  var COMBO_KEYS = ['avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'];
+  // voice = mode de voix de la vidéo finale ('axel' par défaut, 'omni' : usine/publish-qc.mjs, usine/coherence.js comboKey)
+  var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'];
   function normCombo(c) {
     if (!c || typeof c !== 'object' || Array.isArray(c)) return { ids: null, legacy: null };
     var keys = Object.keys(c), ids = {}, ok = keys.length > 0;

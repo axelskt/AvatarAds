@@ -4,7 +4,13 @@
 // Route finale : qc technique MANUAL → manual ; cohérence de la recette ≠ 'ok' → manual ; sinon vision 'doubt' → manual ; sinon auto.
 // Cohérence (Axel 25/09, usine/coherence.js = même règle que le dashboard) : toute démo peut suivre tout hook, mais une paire
 // que les tags ne garantissent pas part en REVUE manuelle (Axel accepte ou refuse dans l'onglet Production) ; la raison est
-// écrite dans technical.coherence.reasons. comboJson = { avatar, hook, liaison?, contenu, cta, musique?, sous_titre? } (IDs).
+// écrite dans technical.coherence.reasons. comboJson = { voice?, avatar, hook, liaison?, contenu, cta, musique?, sous_titre? }
+// (IDs de briques, sauf voice). Une liaison hors de la matrice hook × liaison validée (usine/hook-liaison.js) → revue manuelle.
+// voice = mode de voix de la vidéo finale : 'axel' (« Audio d'Axel » : son audio enregistré, lipsync) ou 'omni' (« Voix native
+// Omni » : Omni Flash image→vidéo dit le texte du hook / de la liaison) ; absent = 'axel'. Le dashboard (onglet Production)
+// compte une vidéo déjà produite par clé voice|avatar|hook|liaison (usine/coherence.js, comboKey) : démo et CTA, tirés au
+// hasard, ne font pas une nouvelle vidéo — seule la déclinaison d'un top (declineTop) réutilise hook + liaison avec une
+// autre démo et un autre CTA.
 // Bibliothèque : --bricks <fichier.json> (export factory_bricks) sinon lue avec la clé service ; introuvable → revue manuelle.
 // « Humain d'abord » (Axel) : status = 'pending' au début même si auto (tout passe par la file tant que le
 // template n'est pas diplômé). L'insertion se fait via la clé service (SUPABASE_SERVICE_ROLE_KEY) si présente
@@ -33,6 +39,7 @@ const qcR = run('node', [HERE + 'qc.mjs', video, '--json']);
 const technical = j(qcR.stdout) || { route: 'manual', pass: false, error: 'qc.mjs illisible' };
 
 // 1bis) Cohérence de la recette (hook ↔ démo ↔ liaison) — même règle que le dashboard
+await import(new URL('./hook-liaison.js', import.meta.url).href);   // matrice hook × liaison (globalThis.CF_HOOK_LIAISON)
 await import(new URL('./coherence.js', import.meta.url).href);
 const COH = globalThis.CF_COHERENCE;
 const combo = (comboArg && j(comboArg)) || {};
@@ -50,7 +57,7 @@ let coherence, promise = '';
 if (!bricks) coherence = { level: 'review', reasons: ['bibliothèque de briques non chargée : cohérence non vérifiée'] };
 else {
   const byId = Object.fromEntries(bricks.map(b => [b.id, b]));
-  const c = COH.comboCheck(combo, byId);
+  const c = COH.comboCheck(combo, byId, globalThis.CF_HOOK_LIAISON || null);
   coherence = { level: c.level, reasons: c.reasons };
   if (c.hook && c.demo) {
     const say = (b) => String((b.meta && (b.meta.script || b.meta.text)) || b.label || b.id).slice(0, 240);
