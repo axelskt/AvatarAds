@@ -1,7 +1,7 @@
 # Catalogue Creative Factory — briques HOOK / CTA / CONTENU (Cartoon 12 → 77)
 
 Convention : `H{N}` hook · `CTA…` · `C{N}` contenu (N° de Cartoon). Cartoons **1-11 ignorés**. 🟦 hook · 🟨 CTA.
-**Dédup** : texte identique = 1 brique réutilisée. **Cohérence** : `contenu.subject ∈ hook.compatible_subjects`.
+**Dédup** : texte identique = 1 brique réutilisée. **Cohérence** : voir `coherence.js` — cohérent d'office si `contenu.subject ∈ hook.compatible_subjects` (ou hook générique), sinon revue QC manuelle (jamais écarté).
 Contenu = **vidéo fournie par Axel, notée en bloc** (pas décomposée). Chaque brique : `usage_count`/`score`/`statut`.
 Sujets : `image-ia` (⊇ static-ads, avatar-réel) · `express` · `mcp-claude` · `montage-ia` · `nettoyage-audio` · `motion-control` · `omni` · `static-ads`.
 
