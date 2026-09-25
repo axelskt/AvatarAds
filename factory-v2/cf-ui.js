@@ -364,7 +364,9 @@
     return IG_PART.filter(function (x) { return E[x[0]]; }).map(function (x) { return { l: x[1], why: E[x[0]] }; });
   }
   // Étapes que ig_dm_stats_v2 n'a pas renvoyées (dmModel les affiche « — » · non renvoyé par ig_dm_stats_v2).
-  function dmMissing(D) { return D ? DMS.filter(function (s) { return !s.none && D.f[s.k] == null; }) : []; }
+  // Une étape facultative (opt : « Devenus users ») absente = « pas de source » (DM_NOSRC, migration d'attribution pas
+  // encore appliquée), pas un chiffre manquant : ni alerte, ni source « incomplète » (même règle que dmModel.none).
+  function dmMissing(D) { return D ? DMS.filter(function (s) { return !s.opt && D.f[s.k] == null; }) : []; }
   function clip(s) { s = String(s || ''); return s.length > 160 ? s.slice(0, 159) + '…' : s; }
   function homeAlerts(ig) {
     var out = [];
