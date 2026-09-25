@@ -102,7 +102,9 @@
     captions: 'M3 5h18v14H3zM7 15h4M13 15h4M7 11h10',
     swap: 'M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16',
     mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3',
-    film: 'M4 3h16v18H4zM8 3v18M16 3v18M4 8h4M4 16h4M16 8h4M16 16h4'
+    film: 'M4 3h16v18H4zM8 3v18M16 3v18M4 8h4M4 16h4M16 8h4M16 16h4',
+    wand: 'M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5',   // pipeline (maquette)
+    reel: 'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM7 3v18M17 3v18M3 12h18'
   };
   function svg(path, size) {
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
@@ -201,7 +203,7 @@
     // Auto-DM : période, séries masquées, filtre / recherche des leads, listes dépliées
     dmRange: '30j', dmHidden: {}, dmFilter: 'all', dmQuery: '', dmAllLeads: false, dmAllPosts: false,
     // Production : liste QC dépliée, types des sélecteurs, onglet interne des briques, recherche, écritures « Classer » en cours
-    prodList: null, perfKind: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', qcBusy: {}, qcMsg: null };
+    prodList: null, perfKind: 'hook', perfKindLow: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', recFilter: 'all', recAll: false, qcBusy: {}, qcMsg: null };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -549,7 +551,7 @@
     var M = prodModel(), D = M.D;
     function na(k, label, o) { return M.pending ? hstat(k, '…', label, 'chargement', o) : hstat(k, '—', label, M.why, o); }
     var gen = !D ? na('togen', 'Vidéos à générer', { acc: true })
-      : !M.cap ? hstat('togen', '—', 'Vidéos à générer', 'règle de cohérence absente', { acc: true })
+      : !M.cap ? hstat('togen', '—', 'Vidéos à générer', M.ruleShort, { acc: true })
         : hstat('togen', fInt(M.cap.remaining), 'Vidéos à générer', M.genSub, { acc: true });
     var rec = !D ? na('recipes', 'Recettes terminées') : (function () {
       var R = D.recipes, busy = R.inProgress + R.pending;
@@ -626,19 +628,20 @@
   // (window.CF_COHERENCE), source unique partagée avec usine/publish-qc.mjs. Rythme de publication = « Reels par jour »
   // sur 30 j de l'onglet Insight (goalValue), rien n'est recalculé à côté.
   var COH = window.CF_COHERENCE || null;
+  var MX = window.CF_HOOK_LIAISON || null;   // matrice hook × liaison validée par Axel (usine/hook-liaison.js, générée)
   var PK = [   // les 8 types de la bibliothèque (maquette §13), dans l'ordre de la maquette
     { k: 'hook', t: 'Hook', ic: 'zap', sub: 'hooks' },
     { k: 'liaison', t: 'Liaison', ic: 'link', sub: 'phrases de liaison' },
     { k: 'contenu', t: 'Contenu / Démo', ic: 'video', sub: 'démos vidéo' },
-    { k: 'cta', t: 'CTA', ic: 'cursor', sub: 'CTA' },
+    { k: 'cta', t: 'CTA', ic: 'cursor', sub: 'CTA canoniques' },
     { k: 'musique', t: 'Musique', ic: 'music', sub: 'pistes' },
     { k: 'sous-titre', t: 'Sous-titres', ic: 'captions', sub: 'styles' },
-    { k: 'transformation', t: 'Transformation', ic: 'swap', sub: 'avant / après' },
+    { k: 'transformation', t: 'Transformation', ic: 'swap', sub: 'transformations' },
     { k: 'avatar', t: 'Avatar', ic: 'user', sub: 'avatars' }
   ];
   var PKM = {};
   PK.forEach(function (x) { PKM[x.k] = x; });
-  // Sélecteur des briques plus / moins performantes et de la fraîcheur (maquette). Seules les briques PARLÉES (hook,
+  // Sélecteurs des briques plus / moins performantes et de la fraîcheur (maquette). Seules les briques PARLÉES (hook,
   // liaison, CTA) sont reconnues dans l'audio des reels : les autres ne sont « pas encore mesurables ».
   var PERF_KINDS = [['hook', 'Hooks'], ['avatar', 'Avatars'], ['cta', 'CTA'], ['liaison', 'Liaisons'], ['contenu', 'Démos'], ['musique', 'Musiques'], ['sous-titre', 'Sous-titres']];
   var HEARD = { hook: 1, liaison: 1, cta: 1 };
@@ -646,40 +649,39 @@
   var NOT_YET = 'pas encore mesurable : ces briques ne s’entendent pas dans l’audio des reels (arrivera avec les productions)';
   var MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   var TRACK_NA = 'TrackAds pas encore lancé';
+  var VOICE_SHORT = { axel: 'audio d’Axel', omni: 'voix Omni' };
   function fDays(v) { return v < 1 ? '<' + NB + '1' + NB + 'j' : '≈' + NB + fInt(v) + NB + 'j'; }
   function shorten(s, n) { s = String(s || ''); return s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, '') + '…'; }
   function subjName(s) { return s === 'generique' ? 'générique' : s === 'general' ? 'général' : s; }   // un seul nom par module : l'ID du catalogue (maquette §14)
+  function live(b) { return !!b && b.status !== 'retired'; }   // brique retirée : exclue partout (tuiles, listes, capacité, performance)
+  function fRate2(v) { return fDec(v, v >= 10 ? 0 : v >= 1 ? 1 : 2); }
 
   var pmCache = { ver: -1, m: null };
   function prodModel() {
     if (pmCache.ver === CF.ver && pmCache.m) return pmCache.m;
     var S = CF.prod, D = S.data;
     var M = { S: S, D: D, pending: !D && (S.loading || S.state === 'idle'), cap: null, byId: {},
-      why: D ? '' : S.kind === 'forbidden' ? 'lecture refusée par la base' : S.kind === 'missing' ? 'table introuvable' : S.state === 'error' ? 'erreur de chargement' : '' };
+      why: D ? '' : S.kind === 'forbidden' ? 'lecture refusée par la base' : S.kind === 'missing' ? 'table introuvable' : S.state === 'error' ? 'erreur de chargement' : '',
+      // règle (usine/coherence.js) et matrice hook × liaison (usine/hook-liaison.js) : sans elles, jamais un faux chiffre
+      ruleShort: !COH ? 'règle de cohérence absente' : !MX ? 'matrice hook × liaison absente' : '',
+      ruleWhy: !COH ? 'règle de cohérence absente (usine/coherence.js non chargé)' : !MX ? 'matrice hook × liaison absente (usine/hook-liaison.js non chargé)' : '' };
     if (D) D.bricks.list.forEach(function (b) { M.byId[b.id] = b; });
-    if (D && COH) {
-      var L = COH.library(D.bricks.list), A = L.avatars.length, lib = {};
-      L.avatars.concat(L.hooks, L.demos).forEach(function (b) { lib[b.id] = b; });
-      // Vidéos déjà produites = triples avatar|hook|démo des lignes QC au NOUVEAU format, tout statut (usine/coherence.js).
-      // Un hook alias compte pour son original (H64 = H63) ; un triple dont une brique n'est plus dans la bibliothèque
-      // (retirée, inconnue) n'est pas décompté des vidéos à générer. L'ancien format (texte libre) n'est jamais compté.
-      var seen = {}, done = [], doneOk = 0, doneRev = 0, outside = 0;
+    if (D && COH && MX) {
+      // Vidéos finales (usine/coherence.js, décision d'Axel du 25/09) : court = avatar × hook, long = avatar × hook ×
+      // liaison compatible, dans 2 voix (Audio d'Axel, Voix native Omni). Déjà produites = clés voix|avatar|hook|liaison des
+      // lignes QC au NOUVEAU format (tout statut ; hook alias → son original) ; démo et CTA ne font pas une nouvelle vidéo.
+      var L = COH.library(D.bricks.list), A = L.avatars.length, keys = [], pend = [];
       D.qc.list.forEach(function (q) {
-        var c = q.combo;
-        if (!c || !c.avatar || !c.hook || !c.contenu) return;
-        var hb = M.byId[c.hook], h = hb && hb.meta.alias_of ? hb.meta.alias_of : c.hook;
-        var av = lib[c.avatar], hk = lib[h], dm = lib[c.contenu];
-        if (!av || av.kind !== 'avatar' || !hk || hk.kind !== 'hook' || !dm || dm.kind !== 'contenu') { outside += 1; return; }
-        var key = COH.tripleKey(c.avatar, h, c.contenu);
-        if (seen[key]) return;
-        seen[key] = 1; done.push(key);
-        if (COH.pairLevel(hk, dm) === 'ok') doneOk += 1; else doneRev += 1;
+        var k = q.combo ? COH.comboKey(q.combo, M.byId) : null;
+        if (!k) return;
+        keys.push(k);
+        if (q.status === 'pending') pend.push(k);
       });
-      var cap = COH.capacity(D.bricks.list, done);
-      M.L = L; M.cap = cap; M.done = done.length; M.outside = outside;
-      M.remOk = Math.max(0, cap.ok - doneOk); M.remReview = Math.max(0, cap.review - doneRev);
-      M.genSub = fInt(M.remOk) + ' ' + plural(M.remOk, 'cohérente') + ' · ' + fInt(M.remReview) + ' en revue QC';   // Accueil ET onglet
-      // Variantes lipsync : 1 avatar × 1 brique parlée (hooks sans alias + liaisons + CTA) ; générées = factory_prod_stats
+      var cap = COH.capacity(D.bricks.list, keys, MX);
+      M.L = L; M.cap = cap;
+      M.capPending = pend.length ? COH.capacity(D.bricks.list, pend, MX).done : 0;   // déjà rendues, encore en QC
+      M.genSub = cap.voices.map(function (v) { return fInt(cap.modes[v].remaining) + ' ' + VOICE_SHORT[v]; }).join(' · ');   // Accueil ET onglet
+      // Variantes lipsync (pipeline) : 1 avatar × 1 brique parlée (hooks sans alias + liaisons + CTA) ; générées = factory_prod_stats
       var spoken = {}, avs = {}, St = D.stats, gen = null, out = 0, byBrick = {}, vwhy = '';
       L.hooks.concat(L.liaisons, L.ctas).forEach(function (b) { spoken[b.id] = 1; });
       L.avatars.forEach(function (a) { avs[a.id] = 1; });
@@ -695,16 +697,18 @@
       M.miss = missModel(M);
     }
     // Rythme de publication : MES reels par jour sur 30 j (le « Reels par jour » de l'onglet Insight, goalValue) + les posts
-    // par jour des users TrackAds (pas lancé : 0, dit dans le sous-texte).
+    // par jour des users TrackAds (pas lancé : 0).
     var S30 = CF.acct.ig[HOME_RANGE], off = S30.kind === 'disconnected' || CF.acct.media.kind === 'disconnected';
-    var G = goalValue(model(S30, S30.data, off, HOME_RANGE), GOAL.perDay);
-    M.rate = { v: G.v, n: G.n, loading: !!G.loading, na: G.na, off: off };
+    var G = goalValue(model(S30, S30.data, off, HOME_RANGE), GOAL.perDay), TRACK_PER_DAY = 0;
+    M.rate = { v: G.v == null ? null : G.v + TRACK_PER_DAY, n: G.n, loading: !!G.loading, na: G.na, off: off };
     M.stock = D ? D.qc.approved : null;               // approuvées = en stock (pas d'étape de mise en stock), jamais reliées à un post
     M.toGen = M.cap ? M.cap.remaining : null;
+    // production / jour = vidéos finales rendues (lignes factory_qc) par jour sur 30 j
+    M.prodDay = D ? D.qc.list.filter(function (q) { return q.created != null && Date.now() - q.created <= 30 * 864e5; }).length / 30 : null;
     var d = { v: null, txt: '—', sub: '', wait: false };
     if (M.pending) { d.txt = '…'; d.sub = 'chargement'; d.wait = true; }
     else if (!D) d.sub = M.why;
-    else if (!M.cap) d.sub = 'règle de cohérence absente (usine/coherence.js non chargé)';
+    else if (!M.cap) d.sub = M.ruleWhy;
     else if (off) d.sub = 'Instagram déconnecté : rythme de publication inconnu · ' + TRACK_NA;
     else if (M.rate.loading) { d.txt = '…'; d.sub = 'lecture des publications Instagram'; d.wait = true; }
     else if (M.rate.v == null) d.sub = 'rythme de publication inconnu : ' + (M.rate.na || 'publications indisponibles');
@@ -712,41 +716,27 @@
     else {
       var vids = M.stock + M.toGen;
       d.v = vids / M.rate.v; d.txt = fDays(d.v); d.vids = vids;
-      d.sub = fInt(vids) + ' ' + plural(vids, 'vidéo') + ' ÷ ' + fDec(M.rate.v, 2) + ' post/jour (toi) · TrackAds pas lancé';
-      if (!vids) { d.txt = '0' + NB + 'j'; d.sub = 'aucune vidéo prête ni à générer · TrackAds pas lancé'; }
+      d.sub = 'au rythme de ' + fRate2(M.rate.v) + ' post' + NB + '/' + NB + 'jour';
+      if (!vids) { d.txt = '0' + NB + 'j'; d.sub = 'aucune vidéo prête ni à générer'; }
     }
     M.days = d;
     pmCache = { ver: CF.ver, m: M };
     return M;
   }
 
-  // Briques qui manquent, par impact en VIDÉOS DISTINCTES (avatar × hook × démo) ; liaison, CTA, musique et sous-titres
-  // ne font que varier une vidéo (+0). Par sujet : vidéos cohérentes d'office (au lieu d'en revue QC) gagnées.
+  // Briques qui manquent, par impact en VIDÉOS FINALES (usine/coherence.js, impact) : +1 avatar, +1 liaison, +1 hook ;
+  // démo, CTA et musique sont tirés au hasard : de la variété, +0 vidéo. Au plus 4 lignes (maquette).
   function missModel(M) {
-    var c = M.cap, A = c.avatars, H = c.hooks, Dn = c.demos;
-    var distinct = [
-      { k: 'avatar', t: '+1 avatar', gain: H * Dn, sub: 'se combine avec ' + H + ' ' + plural(H, 'hook') + ' × ' + Dn + ' ' + plural(Dn, 'démo') },
-      { k: 'demo', t: '+1 démo', gain: A * H, sub: A + ' ' + plural(A, 'avatar') + ' × ' + H + ' ' + plural(H, 'hook') },
-      { k: 'hook', t: '+1 hook', gain: A * Dn, sub: A + ' ' + plural(A, 'avatar') + ' × ' + Dn + ' ' + plural(Dn, 'démo') }
+    var c = M.cap, I = COH.impact(c), A = c.avatars, V = c.voices.length;
+    if (!c.avatars && !c.hooks && !c.liaisons) return { rows: [], empty: true };
+    var voices = V + NB + 'voix', avT = A + ' ' + plural(A, 'avatar');
+    var rows = [
+      { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec ' + c.hooks + ' ' + plural(c.hooks, 'hook') + ' et ' + fInt(c.pairs) + ' ' + plural(c.pairs, 'paire') + ' hook × liaison, en ' + voices },
+      { k: 'liaison', t: '+1 liaison', gain: I.liaison, sub: '≈' + NB + fRate2(I.avgHooksPerLiaison) + ' ' + plural(I.avgHooksPerLiaison, 'hook compatible', 'hooks compatibles') + ' × ' + avT + ' × ' + voices },
+      { k: 'hook', t: '+1 hook', gain: I.hook, sub: 'format court + ≈' + NB + fRate2(I.avgLiaisonsPerHook) + ' ' + plural(I.avgLiaisonsPerHook, 'liaison') + ' × ' + avT + ' × ' + voices }
     ].sort(function (a, b) { return b.gain - a.gain; });
-    distinct.push({ k: 'variety', t: '+1 liaison, CTA, musique ou sous-titres', gain: 0, sub: 'variété seulement : même avatar × hook × démo, pas une nouvelle vidéo' });
-    var subj = [];
-    Object.keys(c.bySubject).forEach(function (k) {
-      var s = c.bySubject[k], pairs = s.ok + s.review;
-      subj.push({ k: k, t: '+1 hook qui cite « ' + subjName(k) + ' »', gain: A * s.demos,
-        sub: s.demos + ' ' + plural(s.demos, 'démo') + ' × ' + A + ' ' + plural(A, 'avatar') + ' · aujourd’hui ' + fInt(s.review) + ' ' + plural(s.review, 'paire') + ' sur ' + fInt(pairs) + ' en revue QC' });
-    });
-    // sujets cités par des hooks mais sans aucune démo : +1 démo de ce sujet
-    var cited = {};
-    M.L.hooks.forEach(function (h) { COH.hookSubjects(h).forEach(function (x) { if (x !== 'generique' && !c.bySubject[x]) cited[x] = 1; }); });
-    Object.keys(cited).forEach(function (k) {
-      var fake = { id: 'démo ' + k, subject: k };
-      var n = M.L.hooks.filter(function (h) { return COH.pairLevel(h, fake) === 'ok'; }).length;
-      subj.push({ k: k, t: '+1 démo « ' + subjName(k) + ' »', gain: A * n,
-        sub: 'aucune démo aujourd’hui · ' + n + ' ' + plural(n, 'hook') + ' ' + plural(n, 'la cite', 'la citent') + ' × ' + A + ' ' + plural(A, 'avatar') + ' · +' + fInt(A * H) + ' vidéos distinctes au total' });
-    });
-    subj.sort(function (a, b) { return b.gain - a.gain || (a.k < b.k ? -1 : 1); });
-    return { distinct: distinct, subj: subj };
+    rows.push({ k: 'variety', t: '+1 démo, CTA ou musique', gain: 0, sub: 'tirés au hasard : de la variété, pas une nouvelle vidéo' });
+    return { rows: rows, empty: false };
   }
 
   // Briques reconnues dans l'audio des reels Instagram (même liste que l'onglet Insight) : utilisations, vues, dernière date.
@@ -789,23 +779,24 @@
   }
 
   function phead(n, t, sub) {
-    return '<div class="cf-phead"><span class="cf-pnum">' + n + '</span><h2 class="cf-ph2">' + esc(t) + '</h2><span class="cf-meta">' + esc(sub) + '</span></div>';
+    return '<div class="cf-phead"><span class="cf-pnum">' + n + '</span><h2 class="cf-ph2">' + esc(t) + '</h2>' + (sub ? '<span class="cf-meta">' + esc(sub) + '</span>' : '') + '</div>';
   }
   function chead(t, sub, right) {
     return '<div class="cf-card-h"><div><h3 class="cf-h2">' + esc(t) + '</h3>' + (sub ? '<span class="cf-meta">' + esc(sub) + '</span>' : '') + '</div>' + (right || '') + '</div>';
   }
-  function naBody(M) { return M.pending ? spin('Chargement de la production…') : emptyLine('—', M.why || 'règle de cohérence absente (usine/coherence.js non chargé)'); }
+  function naBody(M) { return M.pending ? spin('Chargement de la production…') : emptyLine('—', M.why || M.ruleWhy); }
 
   function prodHTML() {
     var M = prodModel();
-    return prodTitleHTML(M) + prodBannerHTML(M)
-      + '<section class="cf-psec" aria-label="Vue d’ensemble">' + phead('01', 'Vue d’ensemble', 'capacité · contenu posté · stock · briques qui manquent')
-      + '<div class="cf-pgrid">' + capHTML(M) + postedHTML() + '</div>'
-      + '<div class="cf-pgrid">' + stockHTML(M) + missHTML(M) + '</div></section>'
-      + '<section class="cf-psec" aria-label="Fabrication">' + phead('02', 'Fabrication', 'pipeline · cycle · validation · performance des briques')
-      + pipeHTML(M) + cycleHTML(M) + qcFileHTML(M) + perfHTML() + '</section>'
-      + '<section class="cf-psec" aria-label="Briques">' + phead('03', 'Briques', 'bibliothèque · recettes de hooks · fraîcheur')
-      + bricksTabHTML(M) + '</section>';
+    return '<div class="cf-prod">' + prodTitleHTML(M) + prodBannerHTML(M)
+      + phead('01', 'Vue d’ensemble', 'capacité · contenu posté · stock · briques manquantes')
+      + '<div class="cf-prow2 is-a">' + capHTML(M) + postedHTML() + '</div>'
+      + '<div class="cf-prow2 is-b">' + stockHTML(M) + missHTML(M) + '</div>'
+      + phead('02', 'Fabrication', '')
+      + pipeHTML(M) + cycleHTML(M) + qcFileHTML(M)
+      + '<div class="cf-prow2 is-b">' + perfCardHTML('top') + perfCardHTML('low') + '</div>'
+      + phead('03', 'Briques', 'bibliothèque · assemblages · fraîcheur')
+      + bricksTabHTML(M) + '</div>';
   }
 
   function prodTitleHTML(M) {
@@ -823,32 +814,37 @@
     if (S.state === 'error') out += banner('err', IC.alert, '<b>Production : lecture impossible</b> · ' + esc(S.error) + (D ? ' · chiffres du ' + esc(hm(new Date(D.fetchedAt))) + ' conservés' : ''), retry);
     else if (S.loading && D) out += spin('Actualisation de la production…');
     if (!COH) out += banner('err', IC.alert, '<b>Règle de cohérence absente</b> · usine/coherence.js n’a pas été chargé : vidéos possibles, à générer et jours de contenu restent à « — ».');
+    else if (!MX) out += banner('err', IC.alert, '<b>Matrice hook × liaison absente</b> · usine/hook-liaison.js n’a pas été chargé : vidéos possibles, à générer et jours de contenu restent à « — ».');
     if (D && D.stats && D.stats.state !== 'ready') out += banner('warn', IC.alert, '<b>Variantes et missions : —</b> · ' + esc(D.stats.error) + '.', retry);
     if (D && D.qc.classifyMissing && D.qc.refused) out += banner('warn', IC.alert, '<b>« Classer » indisponible</b> · la colonne factory_qc.classified_at n’existe pas encore (migration 20260925210000 à appliquer) : les refus restent « à classer ».');
     return out;
   }
 
-  // ── 01 · Capacité de création : jauge des variantes lipsync + la ligne des vidéos finales (même modèle que l'Accueil) ──
+  // ── 01 · Capacité de création : vidéos finales générées / possibles (jauge de la maquette) + les 4 nombres par voix ──
   function capHTML(M) {
-    var head = chead('Capacité de création', 'variantes lipsync · avatar × brique parlée (hook, liaison, CTA)');
-    if (!M.cap) return '<section class="cf-card">' + head + naBody(M) + '</section>';
-    var V = M.vars, c = M.cap, pct = V.gen != null && V.possible ? V.gen / V.possible * 100 : null;
-    var L = Math.PI * 80, fill = pct == null ? 0 : Math.max(0, Math.min(1, pct / 100)) * L;
-    var gauge = '<div class="cf-gauge"><svg viewBox="0 0 200 112" aria-hidden="true" focusable="false"><path d="M20 100 A80 80 0 0 1 180 100" class="cf-gauge-bg"/>'
-      + (fill > 0 ? '<path d="M20 100 A80 80 0 0 1 180 100" class="cf-gauge-fg" stroke-dasharray="' + fill.toFixed(1) + ' ' + L.toFixed(1) + '"/>' : '') + '</svg>'
-      + '<div class="cf-gauge-v"><b class="' + (pct == null ? 'is-na' : '') + '">' + esc(pct == null ? '—' : fDec(pct, 1) + NB + '%') + '</b>'
-      + '<span>' + esc(V.gen == null ? 'générées : — · ' + V.why : fInt(V.gen) + ' ' + plural(V.gen, 'générée') + ' sur ' + fInt(V.possible) + ' ' + plural(V.possible, 'possible')) + '</span></div></div>';
-    var stats = '<div class="cf-capst"><div><b>' + esc(V.gen == null ? '—' : fInt(V.gen)) + '</b><span>générées</span></div>'
-      + '<div><b>' + esc(V.gen == null ? '—' : fInt(Math.max(0, V.possible - V.gen))) + '</b><span>restantes</span></div>'
-      + '<div><b>' + esc(fInt(V.possible)) + '</b><span>possibles</span></div></div>'
-      + '<div class="cf-capf">' + esc(V.A + ' ' + plural(V.A, 'avatar') + ' × ' + V.spoken + ' ' + plural(V.spoken, 'brique parlée', 'briques parlées') + ' = ' + fInt(V.possible)) + '</div>'
-      + (V.out ? '<div class="cf-meta">' + esc(V.out + ' ' + plural(V.out, 'variante') + ' hors bibliothèque (avatar ou brique retirés) non ' + plural(V.out, 'comptée')) + '</div>' : '');
-    var vf = '<div class="cf-capvf" data-vf="' + c.total + '|' + c.ok + '|' + c.review + '"><span class="cf-over">Vidéos finales · avatar × hook × démo</span>'
-      + '<span><b>' + esc(fInt(c.total)) + ' ' + plural(c.total, 'possible') + '</b> · ' + esc(fInt(c.ok) + ' ' + plural(c.ok, 'cohérente') + ' · ' + fInt(c.review) + ' en revue QC') + '</span>'
-      + '<span class="cf-meta">' + esc(c.avatars + ' ' + plural(c.avatars, 'avatar') + ' × ' + c.hooks + ' ' + plural(c.hooks, 'hook') + ' × ' + c.demos + ' ' + plural(c.demos, 'démo')
-        + ' · ' + (M.done ? fInt(M.done) + ' déjà ' + plural(M.done, 'produite') + ' · ' : '') + fInt(c.remaining) + ' à générer'
-        + (M.outside ? ' · ' + M.outside + ' ' + plural(M.outside, 'vidéo') + ' hors bibliothèque non ' + plural(M.outside, 'comptée') : '')) + '</span></div>';
-    return '<section class="cf-card" data-block="cap">' + head + gauge + stats + vf + '</section>';
+    var head = chead('Capacité de création', 'vidéos finales · 2 voix');
+    if (!M.cap) return '<section class="cf-card cf-cap" data-block="cap">' + head + naBody(M) + '</section>';
+    var c = M.cap, P = M.capPending, gen = Math.max(0, c.done - P);
+    var pct = c.total ? gen / c.total * 100 : null, pAll = c.total ? c.done / c.total * 100 : 0;
+    var arc = 'M10 62 A50 50 0 0 1 110 62';
+    var gauge = '<div class="cf-gauge"><svg viewBox="0 0 120 68" aria-hidden="true" focusable="false"><path d="' + arc + '" class="cf-gauge-bg"/>'
+      + (pAll > 0 ? '<path d="' + arc + '" class="cf-gauge-pd" pathLength="100" stroke-dasharray="' + pAll.toFixed(1) + ' 100"/>' : '')
+      + (pct > 0 ? '<path d="' + arc + '" class="cf-gauge-fg" pathLength="100" stroke-dasharray="' + pct.toFixed(1) + ' 100"/>' : '') + '</svg>'
+      + '<b class="cf-gauge-v' + (pct == null ? ' is-na' : '') + '">' + esc(pct == null ? '—' : fDec(pct, 1) + NB + '%') + '</b></div>'
+      + '<div class="cf-gauge-l"><b>' + esc(fInt(gen)) + '</b> ' + plural(gen, 'générée') + ' sur <b>' + esc(fInt(c.total)) + '</b> ' + plural(c.total, 'possible') + '</div>';
+    var stats = '<div class="cf-capst">'
+      + '<div><span class="cf-capst-v"><i class="is-gen"></i>' + esc(fInt(gen)) + '</span><span>' + plural(gen, 'générée') + '</span></div>'
+      + '<div><span class="cf-capst-v"><i class="is-pd"></i>' + esc(fInt(P)) + '</span><span>en QC</span></div>'
+      + '<div><span class="cf-capst-v"><i class="is-rest"></i>' + esc(fInt(c.remaining)) + '</span><span>à générer</span></div></div>';
+    var modes = '<div class="cf-capmodes" data-vf="' + c.total + '|' + c.done + '|' + c.remaining + '" data-modes="'
+      + c.voices.map(function (v) { var m = c.modes[v]; return v + ':' + m.short + '|' + m.long + '|' + m.total; }).join(';') + '">'
+      + '<span></span><span class="cf-capmodes-h">avatar × hook</span><span class="cf-capmodes-h">avatar × hook × liaison</span>'
+      + c.voices.map(function (v) {
+        var m = c.modes[v];
+        return '<span class="cf-capmodes-n"><i class="is-' + v + '"></i>' + esc(m.label) + '</span><b data-mode="' + v + '-short">' + esc(fInt(m.short)) + '</b><b data-mode="' + v + '-long">' + esc(fInt(m.long)) + '</b>';
+      }).join('') + '</div>'
+      + (c.outside ? '<div class="cf-meta">' + esc(c.outside + ' ' + plural(c.outside, 'vidéo') + ' hors bibliothèque non ' + plural(c.outside, 'comptée')) + '</div>' : '');
+    return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + stats + modes + '</section>';
   }
 
   // ── 01 · Contenu posté : nos reels par mois (publications Instagram déjà chargées) ; TrackAds « — » ──
@@ -865,98 +861,99 @@
         reels.forEach(function (p) { var d = new Date(p.ms); months.forEach(function (x) { if (x.y === d.getFullYear() && x.m === d.getMonth()) x.n += 1; }); });
       }
     }
-    var right = '<div class="cf-ptot"><span><b>' + esc(total == null ? '—' : fInt(total)) + '</b><i class="cf-sq is-aa"></i>AvatarAds</span>'
-      + '<span title="' + esc(TRACK_NA) + '"><b class="is-na">—</b><i class="cf-sq is-ta"></i>TrackAds</span></div>';
+    var right = '<div class="cf-ptot"><span><b>' + esc(total == null ? '—' : fInt(total)) + '</b><span><i class="cf-pl is-aa"></i>AvatarAds</span></span>'
+      + '<span title="' + esc(TRACK_NA) + '"><b class="is-na">—</b><span><i class="cf-pl is-ta"></i>TrackAds</span></span></div>';
     var body;
     if (ms.st === 'wait') body = spin('Chargement des publications…');
     else if (ms.st !== 'ok') body = emptyLine('—', ms.why);
     else if (!total) body = '<div class="cf-empty-s">Aucun reel publié pour l’instant.</div>';
     else {
       var n = months.length, max = Math.max.apply(null, months.map(function (x) { return x.n; }).concat([1]));
-      var X = function (i) { return n > 1 ? 4 + i / (n - 1) * 92 : 50; }, Y = function (v) { return 14 + (1 - v / max) * 72; };
-      var d = months.map(function (x, i) { return (i ? 'L' : 'M') + (X(i) * 10).toFixed(1) + ',' + Y(x.n).toFixed(1); }).join(' ');
+      var X = function (i) { return n > 1 ? i / (n - 1) * 100 : 50; }, Y = function (v) { return 8 + (1 - v / max) * 84; };
+      var d = months.map(function (x, i) { return (i ? 'L' : 'M') + (X(i) * 10).toFixed(1) + ',' + (Y(x.n) * 2).toFixed(1); }).join(' ');
       var one = months.every(function (x) { return x.y === months[0].y; });
       body = '<div class="cf-pchart" role="img" aria-label="' + esc('Reels publiés par mois sur @' + CF.PRIMARY_USERNAME) + '">'
-        + '<svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + d + '" fill="none" stroke="var(--cf-ink)" stroke-width="2.25" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'
+        + '<span class="cf-pgrid-l"></span><span class="cf-pgrid-l"></span><span class="cf-pgrid-l is-base"></span>'
+        + '<svg viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + d + '" fill="none" stroke="var(--cf-ink)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>'
         + months.map(function (x, i) {
-          return '<span class="cf-pdot" style="left:' + X(i).toFixed(2) + '%;top:' + Y(x.n).toFixed(2) + '%"></span><span class="cf-pval" style="left:' + X(i).toFixed(2) + '%;top:' + Y(x.n).toFixed(2) + '%">' + x.n + '</span>';
+          var pos = 'left:' + X(i).toFixed(2) + '%;top:' + Y(x.n).toFixed(2) + '%';
+          return '<span class="cf-pdot" style="' + pos + '"></span><span class="cf-pval' + (n > 1 && i === 0 ? ' is-first' : n > 1 && i === n - 1 ? ' is-last' : '') + '" style="' + pos + '">' + x.n + '</span>';
         }).join('') + '</div>'
         + '<div class="cf-px">' + months.map(function (x, i) {
-          return '<span class="' + (n > 6 && (n - 1 - i) % 2 ? 'is-alt' : '') + '" style="left:' + X(i).toFixed(2) + '%">' + esc(MONTHS[x.m] + (one ? '' : ' ' + String(x.y).slice(2))) + '</span>';
-        }).join('') + '</div>'
-        + '<div class="cf-meta">reels publiés sur @' + esc(CF.PRIMARY_USERNAME) + ' (réels d’essai compris) · TrackAds : — · pas encore lancé (Phase 3)</div>';
+          return '<span class="' + (n > 6 && (n - 1 - i) % 2 ? 'is-alt' : '') + '">' + esc(MONTHS[x.m] + (one ? '' : ' ' + String(x.y).slice(2))) + '</span>';
+        }).join('') + '</div>';
     }
-    return '<section class="cf-card" data-block="posted">' + chead('Contenu posté', 'reels publiés par mois', right) + body + '</section>';
+    return '<section class="cf-card cf-posted" data-block="posted">' + chead('Contenu posté', 'reels publiés par mois', right) + body + '</section>';
   }
 
   // ── 01 · Prévision de stock : une seule durée, « Jours de contenu », la même que l'Accueil ──
   function stockHTML(M) {
-    var head = chead('Prévision de stock', 'vidéos prêtes et à générer, au rythme de publication actuel');
+    var head = chead('Prévision de stock');
     var D = M.D, d = M.days;
     function tile(k, v, l, s, cls) {
       return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span><span class="cf-stile-s">' + esc(s) + '</span></div>';
     }
     var users = '<div class="cf-susers"><span><b>Users actifs</b><span class="cf-meta">au moins 1 mission sur 30' + NB + 'j · ' + esc(TRACK_NA) + '</span></span><b class="is-na">—</b></div>';
     var wait = M.pending ? '…' : null;
-    var tiles = tile('stock', wait || (D ? fInt(M.stock) : '—'), 'En stock', D ? 'vidéos approuvées, prêtes à poster' : M.why, 'is-acc')
+    var tiles = tile('stock', wait || (D ? fInt(M.stock) : '—'), 'En stock', D ? 'approuvées · prêtes à poster' : M.why, 'is-acc')
       + tile('queue', wait || (D ? fInt(D.qc.pending) : '—'), 'File', D ? 'en QC (à valider)' : M.why)
-      + tile('togen', wait || (M.cap ? fInt(M.toGen) : '—'), 'Vidéos à générer', M.cap ? M.genSub : (M.why || 'règle de cohérence absente'))
+      + tile('togen', wait || (M.cap ? fInt(M.toGen) : '—'), 'Vidéos à générer', M.cap ? M.genSub : (M.why || M.ruleShort))
       + tile('days', d.txt, 'Jours de contenu', d.sub, d.v != null && d.v < 2 ? 'is-err' : '');
-    var need = M.rate.v != null && !M.rate.off
-      ? 'besoin par jour : ' + fDec(M.rate.v, 2) + ' post (tes reels sur 30' + NB + 'j) + — users TrackAds · stock + à générer ÷ besoin = jours de contenu'
-      : 'besoin par jour : tes reels sur 30' + NB + 'j + users TrackAds (pas lancé) · stock + à générer ÷ besoin = jours de contenu';
-    return '<section class="cf-card" data-block="stock">' + head + users + '<div class="cf-stiles">' + tiles + '</div><div class="cf-meta">' + esc(need) + '</div></section>';
+    var need = M.rate.v != null && !M.rate.off ? M.rate.v : null, pd = M.prodDay;
+    var bar = need && pd != null ? Math.min(100, pd / need * 100) : 0;
+    var flow = '<div class="cf-sflow"><div class="cf-sflow-l"><span>besoin' + NB + '/' + NB + 'jour · ' + esc(need == null ? '—' : fRate2(need) + ' ' + plural(need, 'vidéo')) + '</span>'
+      + '<span>production' + NB + '/' + NB + 'jour · ' + esc(pd == null ? '—' : fRate2(pd) + ' ' + plural(pd, 'vidéo')) + '</span></div>'
+      + '<div class="cf-sflow-b"><i class="' + (need != null && pd != null && pd >= need ? 'is-ok' : '') + '" style="width:' + bar.toFixed(1) + '%"></i></div></div>';
+    return '<section class="cf-card cf-stock" data-block="stock">' + head + users + '<div class="cf-stiles">' + tiles + '</div>' + flow + '</section>';
   }
 
-  // ── 01 · Briques qui manquent, classées par impact ──
+  // ── 01 · Briques qui manquent, classées par impact (vidéos finales) ──
   function missHTML(M) {
-    var head = chead('Briques qui manquent', 'classées par impact · vidéos distinctes = avatar × hook × démo');
-    if (!M.cap) return '<section class="cf-card">' + head + naBody(M) + '</section>';
-    var X = M.miss, max = Math.max.apply(null, X.distinct.map(function (r) { return r.gain; }).concat([1]));
-    function row(r, i, unit, mx) {
+    var head = chead('Briques qui manquent', 'classées par impact · nouvelles vidéos possibles');
+    if (!M.cap) return '<section class="cf-card cf-miss" data-block="miss">' + head + naBody(M) + '</section>';
+    var X = M.miss;
+    if (X.empty) return '<section class="cf-card cf-miss" data-block="miss">' + head + '<div class="cf-mlist"><div class="cf-mrow" data-m="none"><span class="cf-mbody"><b>Rien à calculer pour l’instant</b>'
+      + '<span class="cf-msub">se remplit dès que la bibliothèque contient des briques</span></span></div></div></section>';
+    var max = Math.max.apply(null, X.rows.map(function (r) { return r.gain; }).concat([1]));
+    return '<section class="cf-card cf-miss" data-block="miss">' + head + '<div class="cf-mlist">' + X.rows.map(function (r, i) {
       return '<div class="cf-mrow' + (i === 0 && r.gain ? ' is-top' : '') + '" data-m="' + esc(r.k) + '"><span class="cf-mrank">#' + (i + 1) + '</span>'
-        + '<span class="cf-mbody"><b>' + esc(r.t) + '</b><span class="cf-meta">' + esc(r.sub) + '</span>'
-        + '<span class="cf-mbar"><i style="width:' + (r.gain ? Math.max(3, r.gain / mx * 100) : 0).toFixed(1) + '%"></i></span></span>'
-        + '<span class="cf-mgain"><b>+' + esc(fInt(r.gain)) + '</b><span>' + esc(unit) + '</span></span></div>';
-    }
-    var smax = Math.max.apply(null, X.subj.map(function (r) { return r.gain; }).concat([1]));
-    return '<section class="cf-card" data-block="miss">' + head
-      + '<div class="cf-mlist">' + X.distinct.map(function (r, i) { return row(r, i, r.gain ? plural(r.gain, 'vidéo distincte', 'vidéos distinctes') : 'vidéo distincte', max); }).join('') + '</div>'
-      + (X.subj.length ? '<div class="cf-over">Par sujet · vidéos cohérentes d’office (au lieu d’aller en revue QC)</div>'
-        + '<div class="cf-mlist is-subj">' + X.subj.map(function (r, i) { return row(r, i, plural(r.gain, 'cohérente'), smax); }).join('') + '</div>' : '')
-      + '</section>';
+        + '<span class="cf-mbody"><b>' + esc(r.t) + '</b><span class="cf-msub">' + esc(r.sub) + '</span>'
+        + '<span class="cf-mbar"><i style="width:' + (r.gain ? r.gain / max * 100 : 0).toFixed(1) + '%"></i></span></span>'
+        + '<span class="cf-mgain"><b>+' + esc(fInt(r.gain)) + '</b><span>' + plural(r.gain, 'vidéo') + '</span></span></div>';
+    }).join('') + '</div></section>';
   }
 
   // ── 02 · Pipeline, cycle d'une vidéo finale, file de validation ──
   function pipeHTML(M) {
     var D = M.D, V = M.vars;
-    function step(n, ic, v, l, s, pct) {
-      return '<div class="cf-pstep"><span class="cf-over">' + n + '</span><span class="cf-pstep-ic">' + svg(IC[ic], 14) + '</span>'
-        + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-pstep-l">' + esc(l) + '</span><span class="cf-meta">' + esc(s) + '</span>'
-        + '<span class="cf-mbar"><i style="width:' + (pct || 0).toFixed(1) + '%"></i></span></div>';
+    function step(n, ic, v, l, s, pct, col) {
+      return '<div class="cf-pstep"><span class="cf-pstep-t"><span class="cf-pstep-n">' + n + '</span><span class="cf-pstep-ic">' + svg(IC[ic], 14) + '</span></span>'
+        + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-pstep-b"><span class="cf-pstep-l">' + esc(l) + '</span><span class="cf-pstep-s">' + esc(s) + '</span></span>'
+        + '<span class="cf-pstep-bar"><i class="' + col + '" style="width:' + (pct || 0).toFixed(1) + '%"></i></span></div>';
     }
     var wait = M.pending ? '…' : null;
     var genV = wait || (V && V.gen != null ? fInt(V.gen) : '—');
-    var genS = V ? (V.gen != null ? 'sur ' + fInt(V.possible) + ' ' + plural(V.possible, 'possible') : V.why) : (M.why || 'règle de cohérence absente');
-    return '<section class="cf-card" data-block="pipe">' + chead('Pipeline de production', 'variantes lipsync → montages validés')
-      + '<div class="cf-pipe">' + step('01', 'mic', genV, 'Variantes générées', genS, V && V.gen && V.possible ? V.gen / V.possible * 100 : 0)
-      + step('02', 'film', wait || (D ? fInt(D.qc.approved) : '—'), 'Montages prêts', D ? 'approuvés au QC · déjà postés : — (lien vidéo ↔ publication pas encore en base)' : M.why,
-        D && D.qc.total ? D.qc.approved / D.qc.total * 100 : 0) + '</div></section>';
+    var genS = V ? (V.gen != null ? 'sur ' + fInt(V.possible) + ' ' + plural(V.possible, 'possible') + (V.out ? ' · ' + V.out + ' hors bibliothèque' : '') : V.why) : (M.why || M.ruleShort);
+    var sq = function (v, t) { return v && t ? Math.max(3, Math.sqrt(v / t) * 100) : 0; };
+    return '<section class="cf-card cf-pipe-c" data-block="pipe">' + chead('Pipeline de production')
+      + '<div class="cf-pipe">' + step('01', 'wand', genV, 'Variantes générées', genS, V && V.gen ? sq(V.gen, V.possible) : 0, 'is-1')
+      + step('02', 'reel', wait || (D ? fInt(D.qc.approved) : '—'), 'Montages prêts', D ? 'approuvés au QC' : M.why,
+        D && D.qc.total ? sq(D.qc.approved, D.qc.total) : 0, 'is-2') + '</div></section>';
   }
   function cycleHTML(M) {
     var D = M.D, Q = D && D.qc, w = M.pending ? '…' : null;
     function t(n, v, l, s, cls) {
-      return '<div class="cf-ctile' + (cls ? ' ' + cls : '') + '"><span class="cf-over">' + n + '</span><span class="cf-ctile-l">' + esc(l) + '</span>'
-        + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-meta">' + esc(s) + '</span></div>';
+      return '<div class="cf-ctile' + (cls ? ' ' + cls : '') + '"><span class="cf-ctile-n">' + n + '</span><span class="cf-ctile-l">' + esc(l) + '</span>'
+        + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-ctile-s">' + esc(s) + '</span></div>';
     }
     var v = function (x) { return w || (Q ? fInt(x) : '—'); };
     var body = t('Σ', v(Q && Q.total), 'Rendues', Q ? 'somme des statuts' + (Q.other ? ' (dont ' + Q.other + ' au statut inconnu)' : '') : M.why, 'is-sum')
       + t('01', v(Q && Q.pending), 'À valider', 'en QC')
-      + t('02', v(Q && Q.approved), 'Approuvées · en stock', 'téléchargeables · pas d’étape de mise en stock séparée', 'is-acc')
+      + t('02', v(Q && Q.approved), 'Approuvées · en stock', 'téléchargeables', 'is-acc')
       + t('03', v(Q && Q.refused), 'Refusées', 'au QC')
-      + t('04', '—', 'Téléchargées', 'mission · ' + TRACK_NA)
-      + t('05', '—', 'Postées', 'URL validée · lien vidéo ↔ publication pas encore en base');
-    return '<section class="cf-card" data-block="cycle">' + chead('Cycle d’une vidéo finale', 'rendue → à valider → approuvée = en stock → téléchargée → postée')
+      + t('04', '—', 'Téléchargées', 'TrackAds pas lancé')
+      + t('05', '—', 'Postées', 'URL validée');
+    return '<section class="cf-card cf-cycle-c" data-block="cycle"><div class="cf-cycle-h"><h3 class="cf-h2">Cycle d’une vidéo finale</h3><span class="cf-meta">seules les vidéos approuvées sont téléchargeables</span></div>'
       + '<div class="cf-cycle">' + body + '</div></section>';
   }
 
@@ -965,7 +962,7 @@
       var L = { avatar: 'avatar', hook: 'hook', liaison: 'liaison', contenu: 'démo', cta: 'CTA', musique: 'musique', sous_titre: 'sous-titres' };
       return '<span class="cf-combo">' + ['avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'].filter(function (k) { return q.combo[k]; }).map(function (k) {
         return '<button type="button" class="cf-chip is-brick is-btn" data-act="brick-open" data-bid="' + esc(q.combo[k]) + '" title="' + esc(L[k]) + '">' + esc(q.combo[k]) + '</button>';
-      }).join('<span class="cf-plus" aria-hidden="true">+</span>') + '</span>';
+      }).join('<span class="cf-plus" aria-hidden="true">+</span>') + (q.combo.voice === 'omni' ? '<span class="cf-chip is-mod">voix Omni</span>' : '') + '</span>';
     }
     if (q.legacy && q.legacy.length) {
       return '<span class="cf-meta">recette (ancien format, texte libre) : ' + esc(q.legacy.map(function (x) { return x[0] + ' : ' + x[1]; }).join(' · ')) + '</span>';
@@ -977,29 +974,29 @@
   function qcWhen(t, what) { return t != null ? what + ' le ' + dmy(new Date(t)) : what + ' : date inconnue'; }
   function qcFileHTML(M) {
     var D = M.D, Q = D && D.qc;
-    var head = chead('File de validation (QC)', 'revue des vidéos rendues');
-    if (!Q) return '<section class="cf-card" id="cfQcFile">' + head + naBody(M) + '</section>';
+    var head = chead('File de validation', 'revue QC des vidéos rendues');
+    if (!Q) return '<section class="cf-card cf-qcf" id="cfQcFile">' + head + naBody(M) + '</section>';
     var open = ui.prodList;
     function tile(k, n, l, cls) {
       var on = open === k;
       return '<button type="button" class="cf-qtile ' + cls + (on ? ' is-open' : '') + '" data-act="qc-list" data-l="' + k + '" aria-expanded="' + on + '">'
-        + '<b>' + esc(fInt(n)) + '</b><span>' + esc(l) + '</span>' + svg(on ? 'M6 9l6 6 6-6' : IC.chevron, 14) + '</button>';
+        + '<span class="cf-qtile-t"><b>' + esc(fInt(n)) + '</b>' + svg(IC.chevron, 12) + '</span><span class="cf-qtile-l">' + esc(l) + '</span></button>';
     }
     var dec = Q.approved + Q.refused, rate = dec ? Q.approved / dec * 100 : null;
-    var bar = '<div class="cf-qbar" aria-hidden="true">' + (dec ? '<i class="is-ok" style="width:' + (Q.approved / dec * 100).toFixed(2) + '%"></i><i class="is-ko" style="width:' + (Q.refused / dec * 100).toFixed(2) + '%"></i>' : '') + '</div>';
+    var bar = '<div class="cf-qbar" aria-hidden="true">' + (dec ? (Q.approved ? '<i class="is-ok" style="width:' + (Q.approved / dec * 100).toFixed(2) + '%"></i>' : '') + (Q.refused ? '<i class="is-ko" style="width:' + (Q.refused / dec * 100).toFixed(2) + '%"></i>' : '') : '') + '</div>';
     var list = '';
     if (open) {
       var rows = Q.list.filter(function (q) { return q.status === open; });
       if (open === 'pending') rows.sort(function (a, b) { return (a.created || 0) - (b.created || 0); });
       var title = { pending: 'Vidéos à valider', approved: 'Vidéos approuvées', refused: 'Refusées · à classer d’abord' }[open];
       if (open === 'refused') rows.sort(function (a, b) { return (a.classified ? 1 : 0) - (b.classified ? 1 : 0) || (b.reviewed || 0) - (a.reviewed || 0); });
-      list = '<div class="cf-over">' + esc(title) + '</div>' + (rows.length ? '<div class="cf-qlist">' + rows.map(function (q) { return qcRowHTML(q, Q); }).join('') + '</div>'
-        : '<div class="cf-empty-s">Aucune vidéo dans cette liste.</div>');
+      list = '<div class="cf-qlist-w"><div class="cf-over">' + esc(title) + '</div>' + (rows.length ? '<div class="cf-qlist">' + rows.map(function (q) { return qcRowHTML(q, Q); }).join('') + '</div>'
+        : '<div class="cf-empty-s">Aucune vidéo dans cette liste.</div>') + '</div>';
     }
     var msg = ui.qcMsg ? '<div class="cf-acct-msg is-' + (ui.qcMsg.ok ? 'ok' : 'err') + '" role="' + (ui.qcMsg.ok ? 'status' : 'alert') + '">' + esc(ui.qcMsg.text) + '</div>' : '';
-    return '<section class="cf-card" id="cfQcFile" data-block="qc">' + head
+    return '<section class="cf-card cf-qcf" id="cfQcFile" data-block="qc">' + head
       + '<div class="cf-qtiles">' + tile('pending', Q.pending, 'à valider', 'is-pend') + tile('approved', Q.approved, plural(Q.approved, 'approuvée'), 'is-ok') + tile('refused', Q.refused, plural(Q.refused, 'refusée'), 'is-ko') + '</div>'
-      + bar + '<div class="cf-meta" data-rate>' + esc('taux d’approbation · ' + (rate == null ? '— (aucune vidéo revue)' : fDec(rate, 1) + NB + '%' + ' · ' + Q.approved + ' / ' + dec + ' ' + plural(dec, 'revue'))) + '</div>'
+      + '<div class="cf-qrate">' + bar + '<div class="cf-meta" data-rate>' + esc('taux d’approbation · ' + (rate == null ? '— (aucune vidéo revue)' : fDec(rate, 1) + NB + '%' + ' · ' + Q.approved + ' / ' + dec + ' ' + plural(dec, 'revue'))) + '</div></div>'
       + msg + list + '</section>';
   }
   function qcRowHTML(q, Q) {
@@ -1024,61 +1021,63 @@
       + '</div>';
   }
 
-  // ── 02 · Briques les plus / moins performantes (reels Instagram dont les briques sont reconnues) ──
-  function perfSeg(act, cur) {
+  // ── 02 · Briques les plus / moins performantes (reels Instagram dont les briques sont reconnues) : 2 cartes, chacune
+  //    son sélecteur (maquette). Moitié haute / moitié basse d'un même type : jamais la même brique dans les deux listes.
+  function perfSeg(act, cur, side) {
     return '<div class="cf-seg cf-pseg" role="group" aria-label="Type de brique">' + PERF_KINDS.map(function (x) {
       var on = x[0] === cur;
-      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="' + act + '" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="' + act + '" data-k="' + x[0] + '"' + (side ? ' data-side="' + side + '"' : '') + ' aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
     }).join('') + '</div>';
   }
-  function perfHTML() {
-    var k = ui.perfKind, name = PERF_KINDS.filter(function (x) { return x[0] === k; })[0][1], ms = mediaState(), top = null, bot = null, why = null;
-    if (!HEARD[k]) why = NOT_YET;
-    else if (ms.st === 'wait') why = 'wait';
-    else if (ms.st !== 'ok') why = ms.why;
+  function perfRanks(k) {
+    var ms = mediaState();
+    if (!HEARD[k]) return { why: NOT_YET };
+    if (ms.st === 'wait') return { why: 'wait' };
+    if (ms.st !== 'ok') return { why: ms.why };
+    var I = brickIndex(), n = I.postsV[k] || 0, byId = prodModel().byId;
+    if (n < 3) return { why: 'Pas assez de données : ' + n + ' ' + plural(n, 'publication') + ' avec ' + plural(2, KIND_PL[k][0], KIND_PL[k][1]) + ' reconnu' + (k === 'liaison' ? 'es' : 's') + ' (3 minimum)' };
+    var rows = Object.keys(I.by).map(function (id) { return I.by[id]; }).filter(function (r) { return r.kind === k && r.nv > 0 && (!byId[r.id] || live(byId[r.id])); })
+      .map(function (r) { return { id: r.id, avg: r.views / r.nv, nv: r.nv }; }).sort(function (a, b) { return b.avg - a.avg || (a.id < b.id ? -1 : 1); });
+    var half = Math.ceil(rows.length / 2);
+    return { top: rows.slice(0, Math.min(6, half)), low: rows.slice(half).reverse().slice(0, 6) };
+  }
+  function perfCardHTML(side) {
+    var k = side === 'low' ? ui.perfKindLow : ui.perfKind, name = PERF_KINDS.filter(function (x) { return x[0] === k; })[0][1], best = side !== 'low';
+    var R = perfRanks(k), list = best ? R.top : R.low, body;
+    if (R.why === 'wait') body = spin('Chargement des publications…');
+    else if (R.why) body = emptyLine('—', R.why);
+    else if (!list.length) body = emptyLine('—', 'pas assez de briques différentes pour comparer');
     else {
-      var I = brickIndex(), n = I.postsV[k] || 0;
-      if (n < 3) why = 'Pas assez de données : ' + n + ' ' + plural(n, 'publication') + ' avec ' + plural(2, KIND_PL[k][0], KIND_PL[k][1]) + ' reconnu' + (k === 'liaison' ? 'es' : 's') + ' (3 minimum)';
-      else {
-        var rows = Object.keys(I.by).map(function (id) { return I.by[id]; }).filter(function (r) { return r.kind === k && r.nv > 0; })
-          .map(function (r) { return { id: r.id, avg: r.views / r.nv, nv: r.nv }; }).sort(function (a, b) { return b.avg - a.avg || (a.id < b.id ? -1 : 1); });
-        var half = Math.ceil(rows.length / 2);   // moitié haute / moitié basse : jamais la même brique dans les deux listes
-        top = rows.slice(0, Math.min(6, half));
-        bot = rows.slice(half).reverse().slice(0, 6);
-      }
-    }
-    function list(R, best) {
-      if (why === 'wait') return spin('Chargement des publications…');
-      if (why) return emptyLine('—', why);
-      if (!R.length) return emptyLine('—', 'pas assez de briques différentes pour comparer');
-      var mx = Math.max.apply(null, R.map(function (r) { return r.avg; }).concat([1]));
-      return '<div class="cf-perf">' + R.map(function (r, i) {
+      var mx = Math.max.apply(null, list.map(function (r) { return r.avg; }).concat([1]));
+      body = '<div class="cf-perf">' + list.map(function (r, i) {
         return '<div class="cf-prow"><span class="cf-mrank' + (i === 0 ? ' is-acc' : '') + '">#' + (i + 1) + '</span>'
-          + '<button type="button" class="cf-chip is-brick is-btn" data-act="brick-open" data-bid="' + esc(r.id) + '">' + esc(r.id) + '</button>'
+          + '<button type="button" class="cf-pid" data-act="brick-open" data-bid="' + esc(r.id) + '">' + esc(r.id) + '</button>'
           + '<span class="cf-pbar' + (best ? '' : ' is-low') + '"><i style="width:' + Math.max(4, r.avg / mx * 100).toFixed(1) + '%"></i></span>'
-          + '<span class="cf-pv"><b>' + esc(fInt(Math.round(r.avg))) + ' vues</b><span>/ ' + r.nv + ' ' + plural(r.nv, 'publication') + '</span></span></div>';
+          + '<b class="cf-pv">' + esc(fInt(Math.round(r.avg))) + ' vues</b><span class="cf-pn">/ ' + r.nv + ' ' + plural(r.nv, 'publication') + '</span></div>';
       }).join('') + '</div>';
     }
-    var note = '<div class="cf-meta">vues moyennes par publication / nombre de publications qui l’utilisent · reels de @' + esc(CF.PRIMARY_USERNAME) + ' dont les briques sont reconnues à l’audio</div>';
-    return '<section class="cf-card" data-block="perf"><div class="cf-card-h"><div><h3 class="cf-h2">Performance des briques</h3><span class="cf-meta">clique un ID pour ouvrir sa fiche</span></div>' + perfSeg('perf-kind', k) + '</div>'
-      + '<div class="cf-pcols"><div><div class="cf-over">' + esc(name + ' les plus performant' + (FEM[k] ? 'es' : 's')) + '</div>' + list(top || [], true) + '</div>'
-      + '<div><div class="cf-over">' + esc(name + ' les moins performant' + (FEM[k] ? 'es' : 's')) + '</div>' + list(bot || [], false) + '</div></div>' + note + '</section>';
+    var title = name + ' les ' + (best ? 'plus' : 'moins') + ' performant' + (FEM[k] ? 'es' : 's');
+    return '<section class="cf-card cf-perf-c" data-block="perf" data-side="' + (best ? 'top' : 'low') + '">'
+      + chead(title, best ? 'vues moyennes des vidéos qui les utilisent' : 'à remplacer ou retravailler')
+      + perfSeg('perf-kind', k, best ? 'top' : 'low') + body
+      + '<div class="cf-pfoot">vues moyennes par publication / nombre de publications qui l’utilisent</div></section>';
   }
 
-  // ── 03 · Briques : Bibliothèque · Recettes de hooks · Fraîcheur ──
+  // ── 03 · Briques : Bibliothèque · Assemblages (recettes de hooks) · Fraîcheur ──
   function bricksTabHTML(M) {
-    var tabs = [['lib', 'Bibliothèque'], ['rec', 'Recettes de hooks'], ['fresh', 'Fraîcheur']];
-    var seg = '<div class="cf-seg cf-btabs" role="group" aria-label="Briques">' + tabs.map(function (x) {
+    var tabs = [['lib', 'Bibliothèque'], ['rec', 'Assemblages'], ['fresh', 'Fraîcheur']];
+    var seg = '<div class="cf-btabs" role="group" aria-label="Briques">' + tabs.map(function (x) {
       var on = x[0] === ui.brTab;
-      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="br-tab" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
+      return '<button type="button" class="cf-btab' + (on ? ' is-on' : '') + '" data-act="br-tab" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
     }).join('') + '</div>';
     var body = !M.D ? naBody(M) : ui.brTab === 'rec' ? recipesHTML(M) : ui.brTab === 'fresh' ? freshHTML(M) : libHTML(M);
-    return seg + '<section class="cf-card" data-block="bricks-' + ui.brTab + '">' + body + '</section>';
+    var cls = ui.brTab === 'rec' && M.D ? ' cf-asm' : ui.brTab === 'lib' ? ' cf-lib' : '';
+    return '<div class="cf-bricks">' + seg + '<section class="cf-card' + cls + '" data-block="bricks-' + ui.brTab + '">' + body + '</section></div>';
   }
   function libHTML(M) {
-    var D = M.D, list = D.bricks.list, cnt = {}, extra = {};
+    var D = M.D, list = D.bricks.list.filter(live), cnt = {}, flagged = {};
     PK.forEach(function (x) { cnt[x.k] = 0; });
-    list.forEach(function (b) { if (b.status === 'ready' && cnt[b.kind] != null) cnt[b.kind] += 1; else if (b.status !== 'ready' && cnt[b.kind] != null) extra[b.kind] = (extra[b.kind] || 0) + 1; });
+    list.forEach(function (b) { if (cnt[b.kind] == null) return; if (b.status === 'ready') cnt[b.kind] += 1; else flagged[b.kind] = (flagged[b.kind] || 0) + 1; });
     var max = Math.max.apply(null, PK.map(function (x) { return cnt[x.k]; }).concat([1]));
     var alias = list.filter(function (b) { return b.kind === 'hook' && b.status === 'ready' && b.meta.alias_of; }).length;
     var gen = list.filter(function (b) { return b.kind === 'liaison' && b.status === 'ready' && b.subject === 'generique'; }).length;
@@ -1086,10 +1085,10 @@
       var n = cnt[x.k], on = ui.libKind === x.k;
       var sub = x.k === 'hook' ? (n - alias) + ' ' + plural(n - alias, 'hook unique', 'hooks uniques') + (alias ? ' · ' + alias + ' alias' : '')
         : x.k === 'liaison' ? x.sub + (gen ? ' · ' + gen + ' ' + plural(gen, 'générique') : '') : x.sub;
-      if (extra[x.k]) sub += ' · ' + extra[x.k] + ' hors service';
+      if (flagged[x.k]) sub += ' · ' + flagged[x.k] + ' hors service';
       return '<button type="button" class="cf-ltile' + (on ? ' is-on' : '') + '" data-act="lib-kind" data-k="' + x.k + '" aria-pressed="' + on + '">'
-        + '<span class="cf-ltile-h"><span>' + esc(x.t) + '</span>' + svg(IC[x.ic], 15) + '</span><b>' + esc(fInt(n)) + '</b>'
-        + '<span class="cf-mbar"><i style="width:' + (n ? Math.max(4, n / max * 100) : 0).toFixed(1) + '%"></i></span><span class="cf-meta">' + esc(sub) + '</span></button>';
+        + '<span class="cf-ltile-h"><span>' + esc(x.t) + '</span>' + svg(IC[x.ic], 16) + '</span><b>' + esc(fInt(n)) + '</b>'
+        + '<span class="cf-lbar"><i style="width:' + (n ? n / max * 100 : 0).toFixed(1) + '%"></i></span><span class="cf-ltile-s">' + esc(sub) + '</span></button>';
     }).join('');
     var grid = '';
     if (ui.libKind) {
@@ -1098,11 +1097,11 @@
       var hit = all.filter(function (b) {
         return !q || [b.id, b.label, b.meta.script, b.meta.transcript, b.meta.keyword, b.subject].some(function (s) { return s && s.toLowerCase().indexOf(q) >= 0; });
       });
-      grid = '<div class="cf-lgrid-h"><h3 class="cf-h2">' + esc(K.t) + ' <span class="cf-badge">' + esc(fInt(all.length)) + '</span></h3>'
+      grid = '<div class="cf-lgrid-w"><div class="cf-lgrid-h"><h3 class="cf-h2">' + esc(K.t) + ' <span class="cf-badge">' + esc(fInt(all.length)) + '</span></h3>'
         + '<label class="cf-search"><span class="cf-sr">Rechercher un ID ou un texte</span>' + svg(IC.search, 14) + '<input id="cfLibQ" type="search" placeholder="Rechercher un ID ou un texte" value="' + esc(ui.libQuery) + '" autocomplete="off"></label></div>'
-        + (hit.length ? '<div class="cf-lgrid">' + hit.map(libItemHTML).join('') + '</div>' : '<div class="cf-empty-s">' + esc(all.length ? 'Aucune brique ne correspond à « ' + ui.libQuery.trim() + ' ».' : 'Aucune brique de ce type pour l’instant.') + '</div>');
+        + (hit.length ? '<div class="cf-lgrid">' + hit.map(libItemHTML).join('') + '</div>' : '<div class="cf-empty-s">' + esc(all.length ? 'Aucune brique ne correspond à « ' + ui.libQuery.trim() + ' ».' : 'Aucune brique de ce type pour l’instant.') + '</div>') + '</div>';
     }
-    return '<div class="cf-ltiles">' + tiles + '</div>' + (grid ? '<div class="cf-lgrid-w">' + grid + '</div>' : '<div class="cf-meta">touche un type pour voir ses IDs</div>');
+    return '<div class="cf-ltiles">' + tiles + '</div>' + grid;
   }
   function libItemHTML(b) {
     var m = b.meta, tag = '';
@@ -1111,32 +1110,48 @@
     else if (b.kind === 'cta') tag = m.keyword ? 'mot-clé ' + m.keyword : 'sans mot-clé';
     else if (b.kind === 'contenu') tag = subjName(b.subject || '?');
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
-    if (b.status !== 'ready') tag = (b.status === 'flagged' ? 'signalée' : b.status === 'retired' ? 'retirée' : 'statut ' + (b.status || '?')) + (tag ? ' · ' + tag : '');
+    if (b.status !== 'ready') tag = (b.status === 'flagged' ? 'signalée' : 'statut ' + (b.status || '?')) + (tag ? ' · ' + tag : '');
     var text = m.transcript || m.script || b.label || (m.value ? 'style ' + m.value : '');
     return '<button type="button" class="cf-litem' + (b.status !== 'ready' ? ' is-off' : '') + '" data-act="brick-open" data-bid="' + esc(b.id) + '">'
-      + '<span class="cf-litem-h"><b>' + esc(b.id) + '</b><span class="cf-meta">' + esc(tag) + '</span></span>'
+      + '<span class="cf-litem-h"><b>' + esc(b.id) + '</b><span class="cf-litem-m">' + esc(tag) + '</span></span>'
       + '<span class="cf-litem-t">' + esc(shorten(text, 96) || '—') + '</span></button>';
   }
+  // Assemblages = recettes de hooks visuels (factory_recipes : TX-A → TX-B), présentées comme la liste « Assemblages » de la
+  // maquette : barre des statuts, filtres, tableau, 8 lignes puis « Afficher les N assemblages ».
+  var REC_ST = { done: ['terminé', 'is-ok'], in_progress: ['en cours', 'is-pend'], pending: ['à faire', ''], other: ['statut inconnu', 'is-ko'] };
+  var REC_LIM = 8;
   function recipesHTML(M) {
     var R = M.D.recipes.list.slice().sort(function (a, b) { return a.id < b.id ? -1 : 1; });
-    var ST = { done: ['terminé', 'is-ok'], in_progress: ['en cours', 'is-pend'], pending: ['à faire', ''], other: ['statut inconnu', 'is-ko'] };
-    var head = '<div class="cf-card-h"><div><h3 class="cf-h2">Recettes de hooks <span class="cf-badge">' + R.length + '</span></h3><span class="cf-meta">hooks visuels assemblés à partir de transformations (TX-A → TX-B)</span></div></div>';
-    if (!R.length) return head + '<div class="cf-empty-s">Aucune recette pour l’instant.</div>';
-    var rows = R.map(function (r) {
-      var st = ST[r.status] || ST.other;
-      return '<tr><td><span class="cf-vid">' + esc(r.id) + '</span></td><td class="cf-meta">' + esc(subjName(r.subject || '—')) + '</td><td><span class="cf-combo">'
-        + (r.comps.length ? r.comps.map(function (c) { return '<button type="button" class="cf-chip is-brick is-btn" data-act="brick-open" data-bid="' + esc(c.id) + '">' + esc(c.id) + '</button>'; }).join('<span class="cf-arrow" aria-hidden="true">' + svg(IC.arrow, 11) + '</span>') : '<span class="cf-meta">aucun composant</span>')
-        + '</span></td><td><span class="cf-qchip ' + st[1] + '">' + esc(st[0]) + '</span></td><td>'
+    var head = '<div class="cf-asm-h"><h3 class="cf-h2">Assemblages <span class="cf-badge">' + R.length + '</span></h3>';
+    if (!R.length) return head + '</div><div class="cf-asm-empty"><span class="cf-asm-empty-ic">' + svg(IC.layers, 22) + '</span><b>Aucun assemblage pour l’instant</b><span>Aucune recette pour l’instant.</span></div>';
+    var by = {};
+    R.forEach(function (r) { by[r.status] = (by[r.status] || 0) + 1; });
+    var order = ['done', 'in_progress', 'pending', 'other'].filter(function (s) { return by[s]; });
+    var f = ui.recFilter && by[ui.recFilter] ? ui.recFilter : 'all';
+    var segs = '<div class="cf-asm-bar" aria-hidden="true">' + order.map(function (s) { return '<i class="' + (REC_ST[s][1] || 'is-todo') + '" style="width:' + (by[s] / R.length * 100).toFixed(2) + '%"></i>'; }).join('') + '</div>';
+    var chips = '<div class="cf-asm-chips"><button type="button" class="cf-asm-chip' + (f === 'all' ? ' is-on' : '') + '" data-act="rec-filter" data-k="all" aria-pressed="' + (f === 'all') + '">Tous<span>' + R.length + '</span></button>'
+      + order.map(function (s) {
+        return '<button type="button" class="cf-asm-chip' + (f === s ? ' is-on' : '') + '" data-act="rec-filter" data-k="' + s + '" aria-pressed="' + (f === s) + '"><i class="' + (REC_ST[s][1] || 'is-todo') + '"></i>' + esc(REC_ST[s][0]) + '<span>' + by[s] + '</span></button>';
+      }).join('') + '</div>';
+    var rows = R.filter(function (r) { return f === 'all' || r.status === f; }), vis = ui.recAll ? rows : rows.slice(0, REC_LIM);
+    var body = vis.map(function (r) {
+      var st = REC_ST[r.status] || REC_ST.other;
+      return '<div class="cf-arow" data-rid="' + esc(r.id) + '"><span class="cf-arow-id"><span class="cf-vid">' + esc(r.id) + '</span></span><span class="cf-arow-m">' + esc(subjName(r.subject || '—')) + '</span><span class="cf-combo">'
+        + (r.comps.length ? r.comps.map(function (c) { return '<button type="button" class="cf-chip is-brick is-btn" data-act="brick-open" data-bid="' + esc(c.id) + '">' + esc(c.id) + '</button>'; }).join('<span class="cf-arrow" aria-hidden="true">' + svg(IC.arrow, 12) + '</span>') : '<span class="cf-meta">aucun composant</span>')
+        + '</span><span><span class="cf-qchip ' + st[1] + '">' + esc(st[0]) + '</span></span><span class="cf-arow-r">'
         + (r.render ? '<button type="button" class="cf-btn is-sm" data-act="rec-play" data-rid="' + esc(r.id) + '">' + svg(IC.play, 11) + 'voir</button>'
-          : '<span class="cf-meta" title="' + esc(r.renderWhy || '') + '">rendu introuvable</span>') + '</td></tr>';
+          : '<span class="cf-meta" title="' + esc(r.renderWhy || '') + '">rendu introuvable</span>') + '</span></div>';
     }).join('');
-    var missing = R.filter(function (r) { return !r.render; }).length;
-    return head + '<div class="cf-tscroll"><table class="cf-rtab"><thead><tr><th>Recette</th><th>Sujet</th><th>Composants</th><th>Statut</th><th>Rendu</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
-      + (missing ? '<div class="cf-meta">' + esc(missing + ' ' + plural(missing, 'rendu introuvable', 'rendus introuvables') + ' : ' + R.filter(function (r) { return !r.render; })[0].renderWhy + (missing > 1 ? ' (ex. ' + R.filter(function (r) { return !r.render; })[0].id + ')' : '')) + '</div>' : '');
+    var missing = R.filter(function (r) { return !r.render; });
+    return head + segs + chips + '</div>'
+      + '<div class="cf-arow is-head" aria-hidden="true"><span>ID assemblage</span><span>Module</span><span>Composants</span><span>Statut</span><span class="cf-arow-r">Rendu</span></div>'
+      + '<div class="cf-alist">' + body + '</div>'
+      + (rows.length > REC_LIM ? '<button type="button" class="cf-asm-more" data-act="rec-all">' + esc(ui.recAll ? 'Afficher moins' : 'Afficher les ' + rows.length + ' assemblages') + '</button>' : '')
+      + (missing.length ? '<div class="cf-asm-note cf-meta">' + esc(missing.length + ' ' + plural(missing.length, 'rendu introuvable', 'rendus introuvables') + ' : ' + missing[0].renderWhy + (missing.length > 1 ? ' (ex. ' + missing[0].id + ')' : '')) + '</div>' : '');
   }
   function freshHTML(M) {
-    var k = ui.freshKind, name = PERF_KINDS.filter(function (x) { return x[0] === k; })[0][1];
-    var head = '<div class="cf-card-h"><div><h3 class="cf-h2">Fraîcheur des briques</h3><span class="cf-meta">dernière utilisation reconnue dans un reel</span></div>' + perfSeg('fresh-kind', k) + '</div>';
+    var k = ui.freshKind;
+    var head = chead('Fraîcheur des briques', 'dernière utilisation reconnue dans un reel') + perfSeg('fresh-kind', k);
     if (!HEARD[k]) return head + emptyLine('—', NOT_YET);
     var ms = mediaState();
     if (ms.st === 'wait') return head + spin('Chargement des publications…');
@@ -1150,7 +1165,7 @@
       : '<div class="cf-meta">' + esc(k === 'liaison' ? 'aucune liaison jamais utilisée' : 'aucun ' + KIND_PL[k][0] + ' jamais utilisé') + '</div>';
     var rows = used.map(function (b) {
       var r = I.by[b.id], old = r.last != null && Date.now() - r.last > 30 * 864e5;
-      return '<div class="cf-frow"><button type="button" class="cf-chip is-brick is-btn" data-act="brick-open" data-bid="' + esc(b.id) + '">' + esc(b.id) + '</button>'
+      return '<div class="cf-frow"><button type="button" class="cf-pid" data-act="brick-open" data-bid="' + esc(b.id) + '">' + esc(b.id) + '</button>'
         + '<span class="cf-frow-b"><b>' + esc(r.last != null ? ago(r.last) : 'date inconnue') + '</b><span class="cf-meta">' + esc(r.n + ' ' + plural(r.n, 'publication') + ' · ' + (r.nv ? fInt(r.views) + ' ' + plural(r.views, 'vue') : 'vues —')) + '</span></span>'
         + '<span class="cf-qchip ' + (old ? 'is-pend' : 'is-ok') + '">' + (old ? 'à réutiliser' : 'récente') + '</span></div>';
     }).join('');
@@ -2569,9 +2584,16 @@
       media = fb && mediaSrc(fb.image) ? '<div class="cf-sheet-media is-portrait"><img src="' + esc(mediaSrc(fb.image)) + '" alt="' + esc('Portrait de ' + b.id) + '" decoding="async"></div>'
         : ph('avatar · ' + b.id) + miss('portrait');
     } else if (b.kind === 'transformation') {
-      var bf = m.before, af = m.after;
-      media = '<div class="cf-bs-ab"><span><b>avant</b>' + esc((bf && bf.label) || '—') + '</span><span><b>après</b>' + esc((af && af.label) || '—') + '</span></div>'
-        + '<span class="cf-meta">avant / après pas en ligne (fichiers locaux, pas dans factory-media)</span>';
+      // avant / après en vidéo (maquette 28-fiche-transformation) : deux lecteurs 9:16 côte à côte, légende dessous
+      var ab = function (sd, t) {
+        var v = sd && mediaSrc(sd.video);
+        return '<figure class="cf-bs-abf" data-ab="' + (t === 'avant' ? 'before' : 'after') + '"><span class="cf-bs-abv cf-mbox' + (v ? '' : ' is-broken') + (t === 'après' ? ' is-after' : '') + '">'
+          + (v ? '<video autoplay muted loop playsinline preload="auto" src="' + esc(v) + '"' + (sd.label ? ' aria-label="' + esc(t + ' : ' + sd.label) + '"' : '') + '></video>' : '')
+          + '<span class="cf-vmsg' + (v ? '' : ' is-on') + '">' + esc(v ? 'vidéo illisible' : 'fichier manquant' + (sd && sd.why ? ' · ' + sd.why : '')) + '</span></span>'
+          + '<figcaption>' + t + '</figcaption></figure>';
+      };
+      media = '<div class="cf-bs-ab">' + ab(m.before, 'avant') + ab(m.after, 'après') + '</div>';
+      if ((m.before && m.before.label) || (m.after && m.after.label)) b.label = ((m.before && m.before.label) || '—') + ' → ' + ((m.after && m.after.label) || '—');
     } else if (b.kind === 'sous-titre') {
       media = ph('style · ' + (m.value || b.id)) + '<span class="cf-meta">aperçu du style : pas encore en ligne</span>';
     } else {
@@ -2602,7 +2624,10 @@
   var SPOKEN_V = { hook: 1, liaison: 1, cta: 1 };
 
   function renderModal() {
-    var box = document.querySelector('.cf-modal-box'); if (box) box.classList.toggle('is-wide', !!(ui.modal && (ui.modal.brick || ui.modal.qc)));
+    // grande fenêtre : revue QC, et fiche brique ouverte depuis une publication (Insight, inchangé) ; depuis l'onglet
+    // Production, la fiche brique garde les 760 px de la maquette (11, 27, 28-fiche-transformation)
+    var box = document.querySelector('.cf-modal-box');
+    if (box) box.classList.toggle('is-wide', !!(ui.modal && (ui.modal.brick ? ui.modal.post || ui.tab !== 'prod' : ui.modal.qc)));
     if (ui.modal.brick) { setHTML($('cfModalBody'), brickSheetHTML(ui.modal.brick)); return; }
     if (ui.modal.qc) { renderQcModal(); return; }
     if (ui.modal.video) { setHTML($('cfModalBody'), videoModalHTML(ui.modal.video)); return; }
@@ -2731,7 +2756,9 @@
           if (fromTitle) { var qf = $('cfQcFile'); if (qf && qf.scrollIntoView) qf.scrollIntoView({ block: 'start' }); }
         }
       }
-      else if (act === 'perf-kind') { if (PERF_KINDS.some(function (x) { return x[0] === el.getAttribute('data-k'); })) { ui.perfKind = el.getAttribute('data-k'); render(); } }
+      else if (act === 'perf-kind') { if (PERF_KINDS.some(function (x) { return x[0] === el.getAttribute('data-k'); })) { if (el.getAttribute('data-side') === 'low') ui.perfKindLow = el.getAttribute('data-k'); else ui.perfKind = el.getAttribute('data-k'); render(); } }
+      else if (act === 'rec-filter') { if (['all', 'done', 'in_progress', 'pending', 'other'].indexOf(el.getAttribute('data-k')) >= 0) { ui.recFilter = el.getAttribute('data-k'); render(); } }
+      else if (act === 'rec-all') { ui.recAll = !ui.recAll; render(); }
       else if (act === 'fresh-kind') { if (PERF_KINDS.some(function (x) { return x[0] === el.getAttribute('data-k'); })) { ui.freshKind = el.getAttribute('data-k'); render(); } }
       else if (act === 'br-tab') { if (['lib', 'rec', 'fresh'].indexOf(el.getAttribute('data-k')) >= 0) { ui.brTab = el.getAttribute('data-k'); render(); } }
       else if (act === 'lib-kind') { var lk = el.getAttribute('data-k'); if (PKM[lk]) { ui.libKind = ui.libKind === lk ? null : lk; ui.libQuery = ''; render(); } }

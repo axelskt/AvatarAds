@@ -95,4 +95,22 @@ md += `\n> **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 a
 md += `> **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).\n`;
 writeFileSync('usine/coherence-hook-liaison.md', md);
 console.log('écrit usine/coherence-hook-liaison.md');
+
+// Même matrice en DONNÉES, lisible par le navigateur (factory-v2.html la charge avant usine/coherence.js) ET par node
+// (import('./hook-liaison.js') puis globalThis.CF_HOOK_LIAISON, ou require en CommonJS). Clé = ID du hook avec son
+// préfixe H (H74v2 tel quel) ; valeur = IDs des liaisons validées après ce hook, dans l'ordre des colonnes (« L33/L35 » =
+// la brique L33 en base). Fichier GÉNÉRÉ : ne pas le modifier à la main, relancer `node usine/gen-coherence-matrix.mjs`.
+const brickOf = (id) => id === 'L33/L35' ? 'L33' : id;
+const data = Object.fromEntries(hooks.map(([id]) => ['H' + id, compatLiaisons(id).map(brickOf)]));
+let js = `/* Creative Factory — matrice HOOK × LIAISON validée par Axel (usine/coherence-hook-liaison.md).\n`;
+js += ` * GÉNÉRÉ par usine/gen-coherence-matrix.mjs : ne pas modifier à la main.\n`;
+js += ` * globalThis.CF_HOOK_LIAISON = { H12: ['L12', …], … } : liaisons qui s'enchaînent après chaque hook (format long).\n`;
+js += ` * Un hook absent de la matrice n'a droit qu'aux liaisons génériques (subject 'generique', usine/coherence.js). */\n`;
+js += `(function (root, data) {\n  'use strict';\n  Object.keys(data).forEach(function (k) { Object.freeze(data[k]); });\n  Object.freeze(data);\n`;
+js += `  if (typeof module === 'object' && module && module.exports) module.exports = data;\n  root.CF_HOOK_LIAISON = data;\n`;
+js += `})(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this, {\n`;
+js += Object.entries(data).map(([h, ls]) => `  ${JSON.stringify(h)}: [${ls.map(l => JSON.stringify(l)).join(', ')}]`).join(',\n') + '\n});\n';
+writeFileSync('usine/hook-liaison.js', js);
+const nPairs = Object.values(data).reduce((a, ls) => a + ls.length, 0);
+console.log('écrit usine/hook-liaison.js (' + Object.keys(data).length + ' hooks, ' + nPairs + ' paires hook × liaison)');
 console.log('✅ counts: L12',count('ok',L12_ok),'L15',count('no',L15_no),'L16',count('no',L16_no),'L19',count('no',L19_no),'L28',count('ok',L28_ok),'L30',count('ok',L30_ok),'L32',count('ok',L32_ok),'L33/35',count('ok',L33_ok),'L34',count('ok',L34_ok),'L48',count('ok',L48_ok),'L58',count('ok',L58_ok),'L70',count('ok',L70_ok));
