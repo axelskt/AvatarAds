@@ -5849,7 +5849,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-25-1450'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-25-1740'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -11044,9 +11044,17 @@ async function generateImage(){
       // l'utilisateur n'est plus pris pour une description du produit, c'est un BRIEF) ; sans référence, {PRODUCT} = son texte.
       const _prodTxt = _imgRefFile ? 'the exact product shown in the reference image — keep its packaging, shape, colours, logo and label identical and readable' : prompt;
       const _brief   = (_imgRefFile && prompt) ? ' Creative brief from the user (follow it in addition to the format): "' + prompt.replace(/"/g, "'") + '".' : '';
-      _adPromptFor = (f) => 'Static ad, format « ' + f.name + ' ». ' + window.AA_STATIC_ADS_FILL(f.prompt, { PRODUCT: _prodTxt }) + _brief + window.AA_STATIC_ADS_COMMON;
+      // Axel 25/09 : la toile suit le FORMAT CHOISI (un gabarit pensé en carré ne doit plus sortir en petit panneau
+      // perdu dans une image 9:16) — dit en tête ET en fin de prompt.
+      const _adCanvas = size==='1024x1792' ? ' CANVAS: a vertical 9:16 portrait poster — compose the layout for this tall frame and fill it edge to edge; no border, no letterbox bars, no square panel floating in empty space.'
+                      : size==='1792x1024' ? ' CANVAS: a horizontal 16:9 landscape ad — compose the layout for this wide frame and fill it edge to edge; no border, no letterbox bars.'
+                      : ' CANVAS: a square 1:1 ad filling the whole frame edge to edge; no border.';
+      _adPromptFor = (f) => 'Static ad, format « ' + f.name + ' ».' + _adCanvas + ' ' + window.AA_STATIC_ADS_FILL(f.prompt, { PRODUCT: _prodTxt }) + _brief + window.AA_STATIC_ADS_COMMON + _adCanvas;
+      // Axel 25/09 (parfum versé dans un verre) : un format réservé à un produit qui se VERSE (fits 'liquide') n'est
+      // tiré que si le brief parle d'une boisson / d'un aliment liquide ; sinon (parfum, cosmétique, objet, ou brief muet) il est écarté.
+      const _adLiquid = /\b(boisson|drink|jus|juice|soda|caf[ée]|coffee|thé|tea|lait|milk|smoothie|shake|milkshake|energy|[ée]nergisant|sirop|syrup|sauce|huile|oil|bi[èe]re|beer|vin|wine|cocktail|kombucha|limonade|lemonade|prot[ée]ine|whey|yaourt|yogurt|soupe|soup)\b/i.test(prompt || '');
       // plusieurs images = plusieurs FORMATS différents (jamais deux fois le même dans la série)
-      _adPool = window.AA_STATIC_ADS.slice().sort(() => Math.random() - .5);
+      _adPool = window.AA_STATIC_ADS.filter(f => f.fits !== 'liquide' || _adLiquid).sort(() => Math.random() - .5);
       _adFmt = _adPool[0];
       enhancedPrompt = _adPromptFor(_adFmt);
       window._lastAdFormat = _adFmt.id;
