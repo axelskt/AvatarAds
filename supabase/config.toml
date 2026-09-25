@@ -51,7 +51,7 @@ verify_jwt = false
 [functions.auth-otp]
 verify_jwt = false
 
-# provider-watch : soldes Hedra / fal.ai / ElevenLabs — appelée par pg_cron avec x-cron-key (pas de JWT) + GET vérifié dans le code
+# provider-watch : soldes Hedra / fal.ai / ElevenLabs / kie.ai (25/09) — appelée par pg_cron avec x-cron-key (pas de JWT) + GET vérifié dans le code
 [functions.provider-watch]
 verify_jwt = false
 
