@@ -697,8 +697,9 @@
 
   // ── soldes fournisseurs (Accueil) : provider-watch, vue utilisateur { provider, ok, level, at } ──
   // Même appel que l'app avant de débiter un membre (#hedra-gate). Hedra d'abord : si l'état mémorisé a plus de 20 min,
-  // provider-watch relit alors TOUS les soldes une seule fois ; fal et ElevenLabs lisent ensuite l'état frais.
-  var PROVIDERS = [{ id: 'hedra', label: 'Hedra' }, { id: 'fal', label: 'fal.ai' }, { id: 'elevenlabs', label: 'ElevenLabs' }];
+  // provider-watch relit alors TOUS les soldes une seule fois ; fal, ElevenLabs et kie lisent ensuite l'état frais.
+  // kie.ai ajouté le 25/09 : Omni Flash passe par kie SANS repli — un solde à zéro fait échouer toutes les vidéos Omni.
+  var PROVIDERS = [{ id: 'hedra', label: 'Hedra' }, { id: 'fal', label: 'fal.ai' }, { id: 'elevenlabs', label: 'ElevenLabs' }, { id: 'kie', label: 'kie.ai' }];
   var PROV_LEVEL = { ok: 'ok', low: 'low', crit: 'crit' };
   // provider-watch range un solde qu'il n'a PAS pu lire (clé refusée, fournisseur en 500) en level 'ok' : « ok » seul
   // ne prouve rien. On exige donc un relevé daté, récent, et readable === true (champ ajouté le 25/09). Sans ce champ
