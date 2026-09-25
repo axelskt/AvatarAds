@@ -11202,8 +11202,10 @@ function _imgFillMultiSlot(slot, url, size, showFace, opt){
   const outline='flex:1;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .2s';
   const lbl=(ic,txt,cr)=>'<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">'+ic+txt+'</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">'+cr+'&nbsp;cr</span>';
   const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px';
-  if(showFace) row.appendChild(mk(lbl(FC,'Détails du visage','3'), outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgUpscaleBtn'); if(b) _imgUpscaleHD(b); }));
-  if(!opt.no4K) row.appendChild(mk(lbl(K4,'Améliorer en 4K','5'), outline, ()=>{ _imgSelectFromMulti(url,size); const b=document.getElementById('imgNanoBtn'); if(b) _imgUpscaleNano(b); }));
+  // Axel 25/09 : l'amélioration se fait DANS la case — avant, le clic passait en vue simple et les autres images
+  // de la grille disparaissaient. Chaque case garde ses propres boutons (4K / visage faits → retirés de cette case).
+  if(showFace) row.appendChild(mk(lbl(FC,'Détails du visage','3'), outline, ()=>{ _imgSlotUpscale('face', slot, url, size, opt); }));
+  if(!opt.no4K) row.appendChild(mk(lbl(K4,'Améliorer en 4K','5'), outline, ()=>{ _imgSlotUpscale('nano', slot, url, size, opt); }));
   if(row.children.length) slot.appendChild(row);
   // Ligne 2 : Télécharger — plein orange, exactement comme la génération unique
   // Téléchargement FLUIDE (Axel 24/09) : le fichier est préparé en tâche de fond dès l'affichage (fetch → Blob), le clic
@@ -11218,6 +11220,75 @@ function _imgFillMultiSlot(slot, url, size, showFace, opt){
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>{ try{ URL.revokeObjectURL(u); }catch(_){} }, 4000);
     });
   slot.appendChild(dlBtn);
+}
+// ── Amélioration d'UNE case de la grille, sans quitter la grille (Axel 25/09) ──
+// Une case à la fois (file d'attente) : le flux crédits (débit AVANT l'appel, remboursement si échec) et l'en-tête de
+// réservation restent exactement ceux d'une image seule. Les cases cliquées pendant ce temps affichent « en file ».
+let _imgSlotQ = Promise.resolve(), _imgSlotN = 0;
+function _imgSlotUpscale(kind, slot, url, size, opt){
+  const plan=(currentMember?.plan||'free').toLowerCase();
+  if(kind==='face' && !['elite','developer'].includes(plan)){ toast('Restauration HD réservée au plan Élite'); openUpgradeModal(); return; }
+  if(kind==='nano' && !['starter','pro','elite','byok','developer'].includes(plan)){ toast('Améliorer en 4K : disponible dès le plan Starter'); openUpgradeModal(); return; }
+  if(window._img4kBusy && !_imgSlotN){ toast('Lot 4K en cours — patiente'); return; }
+  if(!slot || slot._busy) return;
+  slot._busy = true; _imgSlotN++; window._img4kBusy = true;
+  opt = opt || {};
+  const wrap = slot.firstElementChild, im = wrap && wrap.querySelector('img');
+  slot.querySelectorAll('button').forEach(b=>{ b.disabled=true; b.style.opacity='.55'; });
+  if(wrap){ wrap.style.position='relative'; if(im) im.style.opacity='.25'; }
+  const ov=document.createElement('div');
+  ov.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;pointer-events:none';
+  ov.innerHTML='<div style="width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,107,53,0.2);border-top-color:var(--orange);animation:spin .9s linear infinite"></div>'
+    +'<div class="_slotL" style="font-size:11px;font-weight:700;color:var(--text2)">'+(kind==='nano'?'4K':'Détails du visage')+'</div>'
+    +'<div class="_slotT" style="font-size:10.5px;font-family:var(--mono);color:var(--text3)">en file</div>';
+  if(wrap) wrap.appendChild(ov);
+  let t0=0, tick=null;
+  const undo=()=>{ try{ ov.remove(); }catch(_){} if(im) im.style.opacity='1'; slot.querySelectorAll('button').forEach(b=>{ b.disabled=false; b.style.opacity='1'; }); };
+  const run = async ()=>{
+    const cost = kind==='nano' ? CREDIT_COSTS.imgUpscale4K : CREDIT_COSTS.imgDetailHD;
+    creditsFlowBegin();
+    if(!(await spendCreditsFor(cost, kind==='nano' ? '4K Nano' : 'détails HD'))){ undo(); return; }
+    t0=Date.now(); const tEl=ov.querySelector('._slotT'); if(tEl) tEl.textContent='0:00';
+    tick=setInterval(()=>{ const s=Math.floor((Date.now()-t0)/1000); if(tEl) tEl.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }, 1000);
+    try{
+      const tk=(await sb.auth.getSession()).data.session?.access_token || SUPABASE_KEY;
+      let src=url;
+      if(!/^data:/.test(src)){ const b=await (await fetch(src)).blob(); src=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(b); }); }
+      const toData=async(u)=>{ try{ const b=await (await fetch(u)).blob(); return await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.readAsDataURL(b); }); }catch(_){ return u; } };
+      let finalUrl=null, engine='AuraSR';
+      if(kind==='nano'){
+        let aspect='1:1'; try{ const e=await _loadImgEl(src); aspect=_nbAspectFor(e.naturalWidth, e.naturalHeight); }catch(_){}
+        finalUrl=await _nbRefine4K(tk, src, aspect);
+        if(!finalUrl) throw new Error('Nano Banana : aucune image');
+        engine='Nano Banana Pro';
+        const chk=await _imgFramingMatches(src, finalUrl);   // Nano a recadré ? → AuraSR (cadrage exact), comme l'image seule
+        if(!chk.ok){
+          const cl=await _falAuraSR(src);
+          if(!cl) throw new Error('4K : Nano a recadré l\'image et AuraSR est indisponible — crédit remboursé');
+          finalUrl=await toData(cl); engine='AuraSR (cadrage conservé)';
+        }
+      } else {
+        finalUrl=await _falAuraSR(src);
+        if(!finalUrl) throw new Error('AuraSR : aucune image');
+        finalUrl=await toData(finalUrl);
+      }
+      creditsFlowDone();
+      (window._imgAutoSavedUrls = window._imgAutoSavedUrls || new Set()).add(_imgUrlKey(finalUrl));
+      (window.requestIdleCallback||function(f){ setTimeout(f,80); })(()=>_imgAutoSaveUrl(finalUrl, size, kind==='nano'?'4K':'HD'));
+      let view=null; try{ view=await _imgThumbFromUrl(finalUrl, 1200, 0.88); }catch(_){}
+      const ext=/^data:image\/png/i.test(finalUrl) ? 'png' : 'jpg';
+      // 4K fait → plus de 4K ni de visage sur cette case ; visage fait → le 4K reste possible.
+      _imgFillMultiSlot(slot, finalUrl, size, false, { no4K: kind==='nano' || !!opt.no4K, view, dlName:(kind==='nano'?'avatarads-4k.':'avatarads-hd.')+ext });
+      toast((kind==='nano' ? 'Amélioré en 4K — ' : 'Détails du visage appliqués — ')+engine+(engine==='Nano Banana Pro'?_kieTag():''));
+    }catch(e){
+      try{ await creditsFlowRefund(kind==='nano' ? 'le 4K Nano a échoué' : 'la restauration a échoué'); }catch(_){}
+      undo();
+      toast(''+((e&&e.message)||e));
+    }
+  };
+  _imgSlotQ = _imgSlotQ.then(run).catch(()=>{}).then(()=>{
+    clearInterval(tick); slot._busy=false; _imgSlotN--; if(_imgSlotN<=0){ _imgSlotN=0; window._img4kBusy=false; }
+  });
 }
 function _imgSelectFromMulti(url, size){
   document.getElementById('imgResultMulti').style.display = 'none';
