@@ -57,6 +57,32 @@ create table render_jobs (
 );
 ```
 
+## Nettoyage audio pour Claude (`audio-server.mjs`, 25/09)
+
+Le MCP (outil `clean_audio` et étape 0 du Montage IA) nettoie les voix ICI, avec le
+même traitement que le module « Nettoyage audio » de l'app, au lieu d'ElevenLabs
+(qui reste le secours du MCP si ce serveur ne répond pas) :
+
+- ffmpeg → 48 kHz mono → **RNNoise** (le WASM de l'app, copié dans `vendor/rnnoise/`)
+  → passage 16 bits → **chaîne voix** `voice-chain.mjs` (copie à l'identique des
+  fonctions de `app/index.html`, préréglage par défaut de l'app) → MP3 192 kbps.
+  Pas de coupe des silences.
+- `POST /audio/clean` (octets audio, 15 Mo max, en-tête `x-worker-key` =
+  `AUDIO_CLEAN_KEY`) → `audio/mpeg` + `X-Audio-Duration`. `GET /health` → `{"ok":true}`.
+- Tourne dans un **processus enfant** lancé par `worker.mjs` (les rendus bloquent la
+  boucle d'événements du processus principal), en priorité CPU basse, concurrence 1,
+  file 3, délai 55 s. Sans `AUDIO_CLEAN_KEY` la route répond 503.
+- Variables : `PORT` (8080), `AUDIO_CLEAN_KEY` (≥ 16 caractères), optionnelles
+  `AUDIO_CLEAN_CONCURRENCY`, `AUDIO_CLEAN_QUEUE`, `AUDIO_CLEAN_TIMEOUT_MS`,
+  `AUDIO_CLEAN_MAX_SECONDS` (600), `AUDIO_CLEAN_DISABLED=1` pour ne pas le lancer.
+
+```bash
+npm run test:audio      # parité avec l'app (écart 0), route, auth, taille, concurrence, délai
+```
+
+⚠️ Toute modification de la chaîne voix se fait d'abord dans l'app, puis se reporte
+dans `voice-chain.mjs` : le banc `test/audio-clean/parite.test.mjs` échoue sinon.
+
 ## Hébergement
 
 - **Sur le Mac d'Axel (0 €)** : `npm start` dans un terminal (ou `caffeinate -i npm start`).
