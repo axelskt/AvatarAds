@@ -1,5 +1,5 @@
 /*
- * Creative Factory v2 · cf-ui.js · étapes 0 et 1 du plan
+ * Creative Factory v2 · cf-ui.js · étapes 0, 1 et 2 du plan (onglet Auto-DM : Axel 25/09)
  * Rendu seulement : lit window.CF (cf-store.js), se redessine sur « cf-data ». Aucun chiffre calculé ailleurs.
  * Règles d'affichage : « 0 » = mesuré et nul · « — » + raison courte = pas de source · jamais additionner
  * reach ni comptes engagés · tout texte venu d'Instagram passe par esc() · aucun emoji (icônes SVG).
@@ -79,7 +79,13 @@
     chat: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
     skip: 'M13 19l9-7-9-7zM2 19l9-7-9-7z',
     save: 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
-    send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z'
+    send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
+    click: 'M9 9l5 12 1.8-5.2L21 14zM7.2 2.2 8 5.1M5.1 8l-2.9-.8M14 4.1 12 6.2M6.2 12l-2.1 2',
+    userOk: 'M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 11l2 2 4-4',
+    pct: 'M19 5 5 19M6.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM17.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+    target: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+    search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35',
+    down: 'M12 5v14M19 12l-7 7-7-7'
   };
   function svg(path, size) {
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
@@ -168,9 +174,7 @@
     prod: { h: 'Production', step: 4,
       what: 'File de validation et revue, bibliothèque de briques, recettes de hooks, capacité de création et briques qui manquent.' },
     trackads: { h: 'TrackAds', step: 5,
-      what: 'TrackAds n’est pas encore lancé (Phase 3). L’onglet affichera « — » tant qu’il n’y a pas de missions, jamais de chiffre inventé.' },
-    dm: { h: 'Auto-DM Instagram', step: 2,
-      what: 'Leads, « Je suis abonné », liens reçus et clics comptés en personnes uniques, entonnoir, activité et relances en lecture seule.' }
+      what: 'TrackAds n’est pas encore lancé (Phase 3). L’onglet affichera « — » tant qu’il n’y a pas de missions, jamais de chiffre inventé.' }
   };
   function readTab() {
     try { var t = localStorage.getItem(TAB_STORE); return TAB_KEYS.indexOf(t) >= 0 ? t : 'home'; } catch (e) { return 'home'; }
@@ -178,7 +182,9 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false };
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false,
+    // Auto-DM : période, séries masquées, filtre / recherche des leads, listes dépliées
+    dmRange: '30j', dmHidden: {}, dmFilter: 'all', dmQuery: '', dmAllLeads: false, dmAllPosts: false };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -243,6 +249,7 @@
       renderTabs();
       renderPanel();
       if (ui.tab === 'compte') ensureCompte();
+      else if (ui.tab === 'dm') ensureDm();
     } else if (ui.modal) {
       closeModal();
     }
@@ -272,7 +279,11 @@
   function renderPanel() {
     var panel = $('cfPanel');
     panel.setAttribute('aria-labelledby', 'cfTab-' + ui.tab);
-    setHTML(panel, ui.tab === 'compte' ? compteHTML() : soonHTML(ui.tab));
+    // Recherche des leads : le panneau est redessiné à chaque frappe, on rend le focus et le curseur au champ.
+    var a = document.activeElement, keep = a && a.id === 'cfDmQ' ? { s: a.selectionStart, e: a.selectionEnd } : null;
+    setHTML(panel, ui.tab === 'compte' ? compteHTML() : ui.tab === 'dm' ? dmHTML() : soonHTML(ui.tab));
+    var q = keep && $('cfDmQ');
+    if (q && q !== document.activeElement) { q.focus(); try { q.setSelectionRange(keep.s, keep.e); } catch (e) { /* type search */ } }
   }
 
   // Charge ce que l'onglet Compte affiche. Le store ne fait rien si la case est fraîche (< 15 min) ou déjà en vol.
@@ -284,6 +295,13 @@
     CF.loadMedia();
     // Les autres périodes se chargent ensuite en arrière-plan, une par une : changer de période devient instantané.
     CF.prefetch(ui.range);   // idempotent (une fois par session, relancé après reconnexion)
+  }
+  // Onglet Auto-DM : notre base (RPC, 2 min) + les publications Instagram pour les miniatures (même cache que Compte).
+  function ensureDm() {
+    if (CF.status !== 'ready') return;
+    CF.loadAccounts();
+    CF.loadDm(ui.dmRange);
+    CF.loadMedia();
   }
 
   // ── onglets pas encore branchés ──
@@ -320,17 +338,7 @@
     var notes = [];
     if (!tok) notes.push('date d’expiration pas encore exposée par instagram-auth');
     if (A.state === 'error') notes.push('comptes reliés : ' + A.error);
-    var msg = '', oa = CF.oauth;
-    if (oa && Date.now() - oa.at < 10 * 60 * 1000 && (!ui.recon || oa.at >= ui.recon.at)) {
-      msg = !oa.ok
-        ? '<div class="cf-acct-msg is-err">Reconnexion échouée : ' + esc(oa.error) + '</div>'
-        : (oa.username && oa.username.toLowerCase() !== CF.PRIMARY_USERNAME)
-          ? '<div class="cf-acct-msg is-err">@' + esc(oa.username) + ' relié, mais le tableau de bord lit @' + esc(CF.PRIMARY_USERNAME) + ' : son token n’a pas changé.</div>'
-          : '<div class="cf-acct-msg is-ok">Reconnexion réussie' + (oa.username ? ' : @' + esc(oa.username) : '') + '.'
-            + (CF.acct.accounts.loading || CF.acct.ig[ui.range].loading ? ' Relecture en cours…' : ' Chiffres relus.') + '</div>';
-    } else if (ui.recon) {
-      msg = '<div class="cf-acct-msg is-' + (ui.recon.ok ? 'info' : 'err') + '">' + esc(ui.recon.text) + '</div>';
-    }
+    var msg = reconMsg();
     return '<section class="cf-acct">'
       + '<span class="cf-avatar">' + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async">' : '') + '<span class="cf-avatar-i" aria-hidden="true">AA</span></span>'
       + '<div class="cf-acct-main">'
@@ -342,6 +350,22 @@
       + '<button type="button" class="cf-btn" data-act="reconnect">' + svg(IC.refresh, 14) + '<span>Reconnecter</span></button>'
       + msg
       + '</section>';
+  }
+
+  // Résultat de « Reconnecter » (carte compte des onglets Insight et Auto-DM).
+  function reconMsg() {
+    var msg = '', oa = CF.oauth;
+    if (oa && Date.now() - oa.at < 10 * 60 * 1000 && (!ui.recon || oa.at >= ui.recon.at)) {
+      msg = !oa.ok
+        ? '<div class="cf-acct-msg is-err">Reconnexion échouée : ' + esc(oa.error) + '</div>'
+        : (oa.username && oa.username.toLowerCase() !== CF.PRIMARY_USERNAME)
+          ? '<div class="cf-acct-msg is-err">@' + esc(oa.username) + ' relié, mais le tableau de bord lit @' + esc(CF.PRIMARY_USERNAME) + ' : son token n’a pas changé.</div>'
+          : '<div class="cf-acct-msg is-ok">Reconnexion réussie' + (oa.username ? ' : @' + esc(oa.username) : '') + '.'
+            + (CF.acct.accounts.loading || CF.acct.ig[ui.range].loading ? ' Relecture en cours…' : ' Chiffres relus.') + '</div>';
+    } else if (ui.recon) {
+      msg = '<div class="cf-acct-msg is-' + (ui.recon.ok ? 'info' : 'err') + '">' + esc(ui.recon.text) + '</div>';
+    }
+    return msg;
   }
 
   function periodLine(S, D) {
@@ -891,7 +915,494 @@
     return '<div class="cf-na-line"><span class="cf-na-v">' + esc(v) + '</span><span>' + esc(why) + '</span></div>';
   }
 
+  // ── onglet Auto-DM Instagram (étape 2, Axel 25/09) : RPC ig_dm_stats_v2, PERSONNES UNIQUES ──
+  // commentaire mot-clé → a tapé « Je suis abonné » → lien reçu → clic. Une personne compte une fois dans la période,
+  // rattachée à son 1er commentaire de la période : cartes, courbe, légende, taux, funnel et leads donnent le même total.
+  // Relance : faite par le backend (ig-followup), affichée en lecture seule. Aucun bouton d'écriture ici.
+  var DM_PERIODS = [
+    { k: '24h', label: '24' + NB + 'h', per: 'sur 24' + NB + 'h', step: 'hour' },
+    { k: '7j', label: '7' + NB + 'j', per: 'sur 7' + NB + 'j', step: 'day' },
+    { k: '30j', label: '30' + NB + 'j', per: 'sur 30' + NB + 'j', step: 'day' },
+    { k: '90j', label: '90' + NB + 'j', per: 'sur 90' + NB + 'j', step: 'week' },
+    { k: 'all', label: 'All time', per: 'depuis le lancement', step: 'month' }
+  ];
+  var DM_PERIOD = {};
+  DM_PERIODS.forEach(function (p) { DM_PERIOD[p.k] = p; });
+  var DM_STEP = { hour: 'par heure', day: 'par jour', week: 'par semaine', month: 'par mois' };
+  var DM_STEP_H = { hour: 'heure', day: 'jour', week: 'semaine', month: 'mois' };
+  // UNE table de libellés et de couleurs pour les cartes, la courbe, la légende et la bulle (maquette).
+  var DMS = [
+    { k: 'commented', label: 'Leads', c: 'var(--cf-dm-leads)', ic: IC.users },
+    { k: 'tapped', label: 'Je suis abonné', c: 'var(--cf-dm-tap)', ic: IC.send },
+    { k: 'linked', label: 'Liens reçus', c: 'var(--cf-dm-link)', ic: IC.link },
+    { k: 'clicked', label: 'Clics lien DM', c: 'var(--cf-dm-click)', ic: IC.click },
+    { k: 'users', label: 'Devenus users', c: 'var(--cf-dm-users)', ic: IC.userOk, none: true }
+  ];
+  var DM_NOSRC = 'pas de source : aucun lead Instagram n’est relié à un compte AvatarAds';
+  var DOW = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+  // Heure de Paris (celle des groupes de la RPC), quel que soit le fuseau du navigateur.
+  var PARIS = (function () {
+    try { return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }); } catch (e) { return null; }
+  })();
+  function paris(t) {
+    var d = new Date(t);
+    if (!PARIS) return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate(), H: d.getHours(), M: d.getMinutes() };
+    var o = {};
+    PARIS.formatToParts(d).forEach(function (p) { o[p.type] = p.value; });
+    return { y: +o.year, m: +o.month, d: +o.day, H: +o.hour % 24, M: +o.minute };
+  }
+  function pDm(x) { return p2(x.d) + '/' + p2(x.m); }
+  function pDmy(x) { return pDm(x) + '/' + x.y; }
+  function pHm(x) { return p2(x.H) + ':' + p2(x.M); }
+  function ago(t) {
+    var s = (Date.now() - t) / 1000;
+    if (s < 60) return 'à l’instant';
+    if (s < 3600) return 'il y a ' + Math.floor(s / 60) + NB + 'min';
+    if (s < 86400) return 'il y a ' + Math.floor(s / 3600) + NB + 'h';
+    var d = Math.floor(s / 86400);
+    return d < 60 ? 'il y a ' + d + NB + 'j' : 'le ' + pDmy(paris(t));
+  }
+  function fP1(v) { return fDec(v, 1) + NB + '%'; }
+  function cronTxt(s) { var m = /^(\d{1,2}) \* \* \* \*$/.exec(s || ''); return m ? 'toutes les heures à :' + p2(+m[1]) : (s || 'horaire inconnu'); }
+
+  function dmWhy(S) {
+    return S.kind === 'missing' ? 'fonction ig_dm_stats_v2 pas encore en base' : S.kind === 'forbidden' ? 'accès refusé par la base' : 'erreur de chargement';
+  }
+  // Tout ce que l'onglet Auto-DM affiche pour la période active, calculé à UN seul endroit.
+  function dmModel(S, D) {
+    var P = DM_PERIOD[ui.dmRange];
+    var pending = !D && (S.loading || S.state === 'idle');
+    var why = D ? 'non renvoyé par ig_dm_stats_v2' : S.state === 'error' ? dmWhy(S) : '';
+    var F = D ? D.f : { commented: null, tapped: null, linked: null, clicked: null };
+    var R = D ? D.rel : {};
+    var c = {};
+    DMS.forEach(function (s) {
+      c[s.k] = s.none ? { v: null, why: DM_NOSRC, spark: null }
+        : { v: F[s.k], why: why, spark: D && D.series.length ? D.series.map(function (p) { return p[s.k]; }) : null };
+    });
+    function pct(a, b) { return a == null || b == null || !b ? null : a / b * 100; }
+    function zero(b, what) { return b === 0 ? 'aucun ' + what + ' ' + P.per : why; }
+    var unc = F.linked != null && F.clicked != null ? F.linked - F.clicked : null;
+    var blocked = F.tapped != null && F.linked != null ? Math.max(0, F.tapped - F.linked) : null;
+    var rates = [
+      { k: 'conv', label: 'Taux de conversion', ic: IC.pct, v: pct(F.linked, F.commented), sub: 'liens reçus / leads · ' + P.per, na: zero(F.commented, 'lead') },
+      { k: 'ctr', label: 'CTR', ic: IC.target, v: pct(F.clicked, F.linked), sub: 'clics / liens reçus · ' + P.per, na: zero(F.linked, 'lien reçu') },
+      { k: 'users', label: 'Leads → users', ic: IC.userOk, v: null, sub: '', na: DM_NOSRC },
+      { k: 'unclicked', label: 'Lien reçu, pas cliqué', ic: IC.link, v: pct(unc, F.linked), na: zero(F.linked, 'lien reçu'),
+        sub: unc == null ? '' : unc + ' ' + plural(unc, 'personne') + ' sans clic · dont ' + (R.doneUnclicked == null ? '—' : R.doneUnclicked) + ' ' + plural(R.doneUnclicked, 'relancée') + ' · ' + P.per }
+    ];
+    return { P: P, D: D, S: S, pending: pending, why: why, F: F, R: R, c: c, rates: rates, unc: unc, blocked: blocked, pct: pct,
+      step: (D && D.step) || P.step };
+  }
+
+  function dmHTML() {
+    var S = CF.dm[ui.dmRange], D = S.data, X = dmModel(S, D);
+    return '<section class="cf-title"><h1>Auto-DM Instagram</h1></section>'
+      + dmAcctHTML(D)
+      + dmActivityHTML(X)
+      + dmRatesHTML(X)
+      + dmFunnelHTML(X)
+      + dmPostsHTML(X)
+      + dmHeatHTML(X)
+      + dmLeadsHTML(X);
+  }
+
+  // Carte compte : l'auto-DM tourne avec le token d'ig_accounts ; sans lui, il est en pause (nos chiffres restent justes).
+  function dmAcctState() {
+    var A = CF.acct.accounts, prim = A.primary, tok = tokenInfo(prim);
+    if (A.state === 'idle') return { tone: 'mute', line: 'chargement' };
+    if (A.state === 'error' && !prim) return { tone: 'mute', line: 'comptes indisponibles : ' + A.error };
+    if (!prim) return { tone: 'err', line: 'déconnecté · auto-DM en pause', pause: 'déconnecté' };
+    if (tok && tok.expired) return { tone: 'err', line: 'token expiré le ' + dmy(tok.date) + ' · auto-DM en pause', pause: 'token expiré' };
+    if (tok) return { tone: tok.days < 7 ? 'warn' : 'ok', line: 'connecté · token valide jusqu’au ' + dmy(tok.date) + ' (' + tok.days + NB + 'j)' };
+    return { tone: 'ok', line: 'connecté · date d’expiration du token pas encore exposée par instagram-auth' };
+  }
+  function dmAcctHTML(D) {
+    var st = dmAcctState(), prim = CF.acct.accounts.primary, A = CF.acct.accounts;
+    var uname = (prim && prim.username) || CF.PRIMARY_USERNAME;
+    var notes = [];
+    if (D) notes.push(D.lastAt ? 'dernier évènement Auto-DM ' + ago(D.lastAt) : 'aucun évènement Auto-DM enregistré');
+    if (D) notes.push(!D.cron ? 'relance automatique : état du cron illisible' : D.cron.active ? 'relance automatique active (' + cronTxt(D.cron.schedule) + ')' : 'relance automatique : cron INACTIF');
+    return '<section class="cf-acct">'
+      + '<span class="cf-avatar"><span class="cf-avatar-i" aria-hidden="true">AA</span></span>'
+      + '<div class="cf-acct-main">'
+      + '<div class="cf-acct-name">' + IG_GLYPH + '<span>@' + esc(uname) + '</span></div>'
+      + '<div class="cf-acct-state is-' + st.tone + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(st.line) + '</span></div>'
+      + (notes.length ? '<div class="cf-acct-why">' + esc(notes.join(' · ')) + '</div>' : '')
+      + (A.state === 'error' ? '<button type="button" class="cf-link-btn" data-act="retry-accounts">Réessayer</button>' : '')
+      + '</div>'
+      + '<button type="button" class="cf-btn" data-act="reconnect">' + svg(IC.refresh, 14) + '<span>Reconnecter</span></button>'
+      + reconMsg()
+      + '</section>'
+      + (st.pause ? banner('err', IC.alert, '<b>Auto-DM en pause</b> · Instagram ' + esc(st.pause) + ' : les nouveaux commentaires ne reçoivent plus de DM. Reconnecte @'
+        + esc(CF.PRIMARY_USERNAME) + '. Les chiffres ci-dessous viennent de notre base et restent justes.') : '')
+      + (D && D.cron && !D.cron.active ? banner('warn', IC.alert, '<b>Relance automatique arrêtée</b> · le cron ig-followup-hourly est inactif : plus aucune relance ne part.') : '');
+  }
+
+  function dmPeriodLine(S, D) {
+    var P = DM_PERIOD[ui.dmRange], txt = P.per;
+    if (D && D.since != null && D.until != null) {
+      var a = paris(D.since), b = paris(D.until), n = { '7j': 7, '30j': 30, '90j': 90 }[ui.dmRange];
+      if (ui.dmRange === '24h') txt = pDm(a) + ' ' + pHm(a) + ' → ' + pDm(b) + ' ' + pHm(b) + ' · 24' + NB + 'h glissantes';
+      else if (ui.dmRange === 'all') txt = 'depuis le ' + pDmy(a) + (D.firstAt ? ' · 1er évènement le ' + pDmy(paris(D.firstAt)) : ' · aucun évènement');
+      else txt = pDm(a) + ' → ' + pDmy(b) + ' · ' + n + ' jours, aujourd’hui compris' + (ui.dmRange === '90j' ? ' · par tranches de 7 jours' : '');
+    }
+    var when = D ? ' · heure de Paris · relevé à ' + hm(new Date(D.fetchedAt)) + (S.state === 'error' ? ' (actualisation échouée)' : '') : '';
+    return '<span class="cf-over">Période sélectionnée</span> ' + esc(txt + when);
+  }
+  function dmBanner(S, D) {
+    var retry = '<button type="button" class="cf-btn is-sm" data-act="retry-dm">Réessayer</button>';
+    if (S.state === 'error') {
+      if (S.kind === 'missing') return banner('warn', IC.alert, '<b>Auto-DM pas encore branché</b> · ' + esc(S.error) + '. Les chiffres restent à « — » en attendant.', retry);
+      if (S.kind === 'forbidden') return banner('err', IC.alert, '<b>Accès refusé</b> · ' + esc(S.error));
+      return banner('err', IC.alert, '<b>Erreur de chargement</b> · ' + esc(S.error) + (D ? ' · chiffres du ' + esc(hm(new Date(D.fetchedAt))) + ' conservés' : ''), retry);
+    }
+    if (S.loading) return '<div class="cf-status" role="status"><span class="cf-spin" aria-hidden="true"></span>' + (D ? 'Actualisation ' : 'Chargement de l’Auto-DM ') + esc(DM_PERIOD[ui.dmRange].per) + '…</div>';
+    return '';
+  }
+
+  function dmActivityHTML(X) {
+    var seg = DM_PERIODS.map(function (p) {
+      var on = p.k === ui.dmRange;
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="dm-range" data-range="' + p.k + '" aria-pressed="' + on + '">' + esc(p.label) + '</button>';
+    }).join('');
+    return '<section class="cf-sec" aria-labelledby="cfDmT">'
+      + '<div class="cf-sec-h"><div><h2 class="cf-h2" id="cfDmT">Activité · ' + esc(DM_STEP[X.step]) + '</h2></div>'
+      + '<div class="cf-seg" role="group" aria-label="Période">' + seg + '</div></div>'
+      + '<div class="cf-per">' + dmPeriodLine(X.S, X.D) + '</div>'
+      + dmBanner(X.S, X.D)
+      + '<div class="cf-icards cf-dcards">' + dmCardsHTML(X) + '</div>'
+      + dmChartHTML(X)
+      + '</section>';
+  }
+  function sparkSvg(arr) {
+    var n = arr.length, max = Math.max.apply(null, arr.map(function (v) { return v || 0; }).concat([1]));
+    var y = function (v) { return (22 - (v || 0) / max * 20).toFixed(1); };
+    var d = n === 1 ? 'M0,' + y(arr[0]) + ' L100,' + y(arr[0])
+      : arr.map(function (v, i) { return (i ? 'L' : 'M') + (i / (n - 1) * 100).toFixed(1) + ',' + y(v); }).join(' ');
+    return '<svg class="cf-icard-sp" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + d
+      + '" fill="none" stroke="var(--c)" stroke-width="1.75" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+  }
+  function dmCardsHTML(X) {
+    return DMS.map(function (s) {
+      var m = X.c[s.k], on = !s.none && !ui.dmHidden[s.k], v, sub, na = false;
+      if (s.none) { v = '—'; sub = m.why; na = true; }
+      else if (X.pending) { v = '…'; sub = 'chargement'; }
+      else if (m.v == null) { v = '—'; sub = m.why; na = true; }
+      else { v = fInt(m.v); sub = X.P.per; }
+      var sp = !s.none && !X.pending && m.v != null && m.spark ? sparkSvg(m.spark) : '';
+      var cls = 'cf-icard' + (s.none ? ' is-fixed is-none' : on ? ' is-on' : ' is-off');
+      var inner = '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(s.ic, 14) + '</span><span class="cf-icard-l">' + esc(s.label) + '</span>'
+        + (s.none ? '' : '<span class="cf-icard-ck" aria-hidden="true">' + (on ? svg('M5 12l5 5L20 7', 10) : '') + '</span>') + '</span>'
+        + '<span class="cf-icard-v' + (na ? ' is-na' : '') + '">' + esc(v) + '</span>' + sp
+        + '<span class="cf-icard-s">' + esc(sub) + '</span>';
+      var attrs = ' style="--c:' + s.c + '" data-k="' + s.k + '"';
+      return s.none ? '<div class="' + cls + '"' + attrs + '>' + inner + '</div>'
+        : '<button type="button" class="' + cls + '"' + attrs + ' data-act="dm-toggle" aria-pressed="' + on + '">' + inner + '</button>';
+    }).join('');
+  }
+
+  // ── courbe Activité : échelle linéaire, un point par groupe, total de la période à droite ──
+  var dmCur = null;
+  function niceTop(v) {
+    for (var e = 1; e < 1e9; e *= 10) {
+      var b = [2, 4, 6, 8, 10];
+      for (var i = 0; i < b.length; i++) if (b[i] * e >= Math.max(4, v)) return b[i] * e;
+    }
+    return v;
+  }
+  function dmXLabel(p, step) {
+    if (step === 'hour') return p.h != null ? p.h + NB + 'h' : '';
+    if (!p.d) return '';
+    var d = ymdDate(p.d);
+    return step === 'month' ? d.toLocaleDateString('fr-FR', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2) : dm(d);
+  }
+  function dmTipLabel(s, i, step, until) {
+    var p = s[i];
+    if (!p.d) return '';
+    var d = ymdDate(p.d), wd = d.toLocaleDateString('fr-FR', { weekday: 'short' });
+    if (step === 'hour') return wd + ' ' + dm(d) + ' · ' + p.h + NB + 'h–' + ((p.h + 1) % 24) + NB + 'h';
+    if (step === 'month') return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    if (step === 'week') {
+      var e = s[i + 1] && s[i + 1].d ? new Date(ymdDate(s[i + 1].d).getTime() - 864e5) : (until != null ? (function (x) { return new Date(x.y, x.m - 1, x.d, 12); })(paris(until)) : d);
+      return 'du ' + dm(d) + ' au ' + dm(e);
+    }
+    return wd + ' ' + dm(d);
+  }
+  function dmChartHTML(X) {
+    var D = X.D, S = X.S;
+    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Leads, « Je suis abonné », liens et clics · ' + esc(DM_STEP[X.step]) + '</h3>'
+      + '<span class="cf-meta">une personne compte une fois, au moment de son 1er commentaire de la période</span></div>';
+    if (!D) {
+      dmCur = null;
+      return '<div class="cf-evo">' + head + (S.state === 'error' && !S.loading ? '<div class="cf-evo-msg">' + esc('Courbe indisponible : ' + X.why + '.') + '</div>'
+        : '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement de la courbe…</div>') + '</div>';
+    }
+    var s = D.series, n = s.length;
+    if (!n) { dmCur = null; return '<div class="cf-evo">' + head + '<div class="cf-evo-msg">Courbe indisponible pour cette période.</div></div>'; }
+    var act = DMS.filter(function (d) { return !d.none && !ui.dmHidden[d.k]; }).map(function (d) { return d.k; });
+    var max = 0;
+    act.forEach(function (k) { s.forEach(function (p) { if (p[k] > max) max = p[k]; }); });
+    var top = niceTop(max);
+    var Y = function (v) { return 296 - (v || 0) / top * 284; };
+    var Xp = function (i) { return n > 1 ? i / (n - 1) * 1000 : 500; };
+    var col = {}; DMS.forEach(function (d) { col[d.k] = d.c; });
+    var paths = act.map(function (k) {
+      var d = s.map(function (p, i) { return (i ? ' L' : 'M') + Xp(i).toFixed(1) + ',' + Y(p[k]).toFixed(1); }).join('');
+      return '<path d="' + d + '" style="stroke:' + col[k] + '" fill="none" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    }).join('');
+    var dots = n <= 31 ? act.map(function (k) {
+      return s.map(function (p, i) { return '<span class="cf-dm-pt" style="left:' + (n > 1 ? i / (n - 1) * 100 : 50).toFixed(2) + '%;top:' + (Y(p[k]) / 3).toFixed(2) + '%;background:' + col[k] + '"></span>'; }).join('');
+    }).join('') : '';
+    var ticks = [0, top / 2, top];
+    var yl = ticks.map(function (t) { return '<span style="top:' + (Y(t) / 3).toFixed(2) + '%">' + esc(fInt(t)) + '</span>'; }).join('');
+    var grid = ticks.map(function (t, i) { return '<i class="cf-evo-grid' + (i ? '' : ' is-zero') + '" style="top:' + (Y(t) / 3).toFixed(2) + '%"></i>'; }).join('');
+    var idx = [0, Math.round((n - 1) / 4), Math.round((n - 1) / 2), Math.round(3 * (n - 1) / 4), n - 1].filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var xl = idx.map(function (i) { return '<span>' + esc(dmXLabel(s[i], X.step)) + '</span>'; }).join('');
+    var lg = DMS.map(function (d) {
+      var m = X.c[d.k], hid = !d.none && !!ui.dmHidden[d.k];
+      return '<div class="cf-evo-lg' + (hid || d.none ? ' is-off' : '') + '"><span class="cf-sq" style="background:' + d.c + '"></span><b>' + esc(m.v == null ? '—' : fInt(m.v)) + '</b><span>' + esc(d.label) + '</span></div>';
+    }).join('');
+    var empty = X.F.commented === 0 ? '<div class="cf-dm-empty"><b>Aucune activité sur la période</b><span>se remplit au premier commentaire mot-clé</span></div>' : '';
+    dmCur = { n: n, s: s, act: act, Y: Y, step: X.step, until: D.until, col: col };
+    return '<div class="cf-evo">' + head
+      + '<div class="cf-evo-body">'
+      + '<div class="cf-evo-y" aria-hidden="true">' + yl + '</div>'
+      + '<div class="cf-evo-main">'
+      + '<div class="cf-evo-plot" data-chart="dm" role="img" aria-label="' + esc('Leads, « Je suis abonné », liens et clics ' + DM_STEP[X.step] + ', ' + X.P.per) + '">' + grid
+      + '<svg class="cf-evo-svg" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg>'
+      + dots + empty + '<div class="cf-evo-hover" hidden></div></div>'
+      + '<div class="cf-evo-x" aria-hidden="true">' + xl + '</div>'
+      + '<div class="cf-meta cf-evo-note">heure de Paris · toucher une carte affiche / masque sa courbe</div>'
+      + '</div>'
+      + '<div class="cf-evo-legend"><div class="cf-over">total période</div>' + lg + '</div>'
+      + '</div></div>';
+  }
+  // Bulle : valeurs du groupe + cumul depuis le début de la période (additif : une personne n'est que dans un groupe).
+  function dmHover(plot, clientX) {
+    var ch = dmCur;
+    if (!ch || ch.n < 1 || !plot) return;
+    var r = plot.getBoundingClientRect();
+    if (!r.width) return;
+    var i = ch.n > 1 ? Math.round((clientX - r.left) / r.width * (ch.n - 1)) : 0;
+    i = Math.max(0, Math.min(ch.n - 1, i));
+    var box = plot.querySelector('.cf-evo-hover');
+    if (!box || (box._i === i && !box.hidden)) return;
+    box._i = i;
+    var x = ch.n > 1 ? i / (ch.n - 1) * 100 : 50, dots = '', rows = '';
+    DMS.forEach(function (d) {
+      if (ch.act.indexOf(d.k) < 0) return;
+      var v = ch.s[i][d.k], cum = 0, ok = true;
+      for (var j = 0; j <= i; j++) { if (ch.s[j][d.k] == null) { ok = false; break; } cum += ch.s[j][d.k]; }
+      if (v != null) dots += '<span class="cf-evo-dot" style="left:' + x + '%;top:' + (ch.Y(v) / 3).toFixed(2) + '%;background:' + d.c + '"></span>';
+      rows += '<div class="cf-evo-tr"><span><span class="cf-sq" style="background:' + d.c + '"></span>' + esc(d.label) + '</span><span>' + esc(v == null ? '—' : fInt(v)) + '</span><b>' + esc(ok ? fInt(cum) : '—') + '</b></div>';
+    });
+    box.innerHTML = '<span class="cf-evo-vl" style="left:' + x + '%"></span>' + dots
+      + '<div class="cf-evo-tip"><div class="cf-evo-tr is-h"><span>' + esc(dmTipLabel(ch.s, i, ch.step, ch.until)) + '</span><span>' + esc(DM_STEP_H[ch.step]) + '</span><span>cumul</span></div>' + rows + '</div>';
+    box.hidden = false;
+    var tip = box.querySelector('.cf-evo-tip'), W = r.width, w = tip.offsetWidth, px = x / 100 * W;
+    var left = px + 12 + w <= W ? px + 12 : px - 12 - w;
+    tip.style.left = Math.max(0, Math.min(W - w, left)) + 'px';
+  }
+
+  // ── taux de la période (barres : flex none + hauteur mini, jamais écrasées) ──
+  function dmRatesHTML(X) {
+    return '<section class="cf-rates" aria-label="' + esc('Taux ' + X.P.per) + '">' + X.rates.map(function (r) {
+      var v = X.pending && r.k !== 'users' ? '…' : r.v == null ? '—' : fP1(r.v);
+      var sub = X.pending && r.k !== 'users' ? 'chargement' : r.v == null ? r.na : r.sub;
+      var fill = r.v == null || X.pending ? 0 : Math.max(0, Math.min(100, r.v));
+      return '<div class="cf-rate" data-rate="' + r.k + '"><span class="cf-rate-h"><span class="cf-rate-ic">' + svg(r.ic, 14) + '</span><span class="cf-rate-l">' + esc(r.label) + '</span></span>'
+        + '<span class="cf-rate-v' + (v === '—' ? ' is-na' : '') + '">' + esc(v) + '</span>'
+        + '<span class="cf-rate-bar' + (r.k === 'users' ? ' is-none' : '') + '"><i style="width:' + fill.toFixed(1) + '%"></i></span>'
+        + '<span class="cf-rate-s">' + esc(sub) + '</span></div>';
+    }).join('') + '</section>';
+  }
+
+  // ── funnel en personnes uniques + relance (lecture seule) ──
+  function dmFunnelHTML(X) {
+    var F = X.F, R = X.R, P = X.P, pct = X.pct, top = F.commented;
+    var val = function (v) { return X.pending ? '…' : v == null ? '—' : fInt(v); };
+    var rt = function (v) { return v == null ? '—' : fP1(v); };
+    var rr = function (v, suffix) { return v == null ? '—' : fP1(v) + suffix; };
+    var steps = [
+      { l: 'Commentaire mot-clé', s: 'personnes uniques', v: F.commented },
+      { l: 'A tapé « Je suis abonné »', s: 'bouton du 1er DM', v: F.tapped, r: rr(pct(F.tapped, F.commented), ' des leads') },
+      { l: 'Lien reçu', s: 'abonnement vérifié', v: F.linked,
+        r: rt(pct(F.linked, F.tapped)) + (X.blocked ? ' · ' + X.blocked + ' ' + plural(X.blocked, 'bloquée') + ' : pas encore ' + plural(X.blocked, 'abonnée') : '') },
+      { l: 'Clic sur le lien', s: 'lien tracké ouvert', v: F.clicked, r: rr(pct(F.clicked, F.linked), ' CTR') },
+      { l: 'Devenu user TrackAds', s: 'compte créé', v: null, none: true, r: '— · ' + DM_NOSRC }
+    ];
+    var rows = steps.map(function (st, i) {
+      var w = !st.none && st.v && top ? Math.max(1.5, st.v / top * 100) : 0;
+      return (i ? '<div class="cf-fun-r"><span class="cf-fun-ar">' + svg(IC.down, 12) + '</span><span class="cf-fun-rt">' + esc(X.pending ? '…' : st.r) + '</span></div>' : '')
+        + '<div class="cf-fun-s l' + (i + 1) + (st.none ? ' is-none' : '') + '"><div class="cf-fun-h"><span class="cf-fun-l"><b>' + esc(st.l) + '</b> <span class="cf-meta">' + esc(st.s) + '</span></span>'
+        + '<b class="cf-fun-v' + (st.v == null && !X.pending ? ' is-na' : '') + '">' + esc(st.none ? '—' : val(st.v)) + '</b></div>'
+        + '<div class="cf-fun-bar"><i style="width:' + w.toFixed(1) + '%"></i></div></div>';
+    }).join('');
+    var hit = pct(F.clicked, F.commented);
+    var headR = '<div class="cf-fun-kpi"><b>' + esc(X.pending ? '…' : rt(hit)) + '</b><span>' + esc(hit == null && !X.pending && top === 0 ? 'aucun lead ' + P.per : 'des leads ont cliqué') + '</span></div>';
+    var tile = function (label, v, sub) {
+      return '<div class="cf-tile"><div class="cf-tile-l">' + esc(label) + '</div><div class="cf-tile-v' + (v == null ? ' is-na' : '') + '">' + esc(X.pending ? '…' : v == null ? '—' : fInt(v)) + '</div>'
+        + (sub ? '<div class="cf-tile-w">' + esc(sub) + '</div>' : '') + '</div>';
+    };
+    var rel = '<div class="cf-dmrel"><div class="cf-over">Relance automatique · lecture seule</div>'
+      + '<p class="cf-meta">Le backend relance UNE fois, 12 à 22' + NB + 'h après le lien, les personnes qui n’ont pas cliqué (jamais si déjà relancées ou déjà cliqué). Aucune action ici.</p>'
+      + '<div class="cf-tiles cf-dmrel-t">'
+      + tile('lien reçu, pas cliqué', X.unc, '')
+      + tile('relancées', R.done, R.doneClicked ? 'dont ' + R.doneClicked + ' ' + plural(R.doneClicked, 'a', 'ont') + ' cliqué après' : '')
+      + tile('relance prévue', R.planned, 'lien de moins de 22' + NB + 'h')
+      + tile('sans relance', R.missed, 'fenêtre passée ou déjà relancée avant')
+      + '</div></div>';
+    return '<section class="cf-card"><div class="cf-card-h"><div><h2 class="cf-h2">Funnel de conversion</h2>'
+      + '<span class="cf-meta">' + esc('commentaire → « Je suis abonné » → lien reçu → clic · personnes uniques · ' + P.per) + '</span></div>' + headR + '</div>'
+      + (X.D && X.D.late ? '<div class="cf-meta">' + esc('+ ' + X.D.late + ' ' + plural(X.D.late, 'personne') + ' ' + plural(X.D.late, 'a', 'ont') + ' tapé le bouton pendant la période après un commentaire plus ancien : comptée' + (X.D.late > 1 ? 's' : '') + ' dans la période de ce commentaire') + '</div>' : '')
+      + '<div class="cf-fun">' + rows + '</div>' + rel + '</section>';
+  }
+
+  // ── performance par post (miniature et légende : liste des publications d'ig-insights, même cache que Compte) ──
+  function dmPostsHTML(X) {
+    var D = X.D, P = X.P;
+    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Performance par post</h2><span class="cf-meta">'
+      + esc('leads par publication · ' + P.per + ' · une personne qui commente deux posts compte dans chacun') + '</span></div></div>';
+    var body;
+    if (X.pending) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement…</div>';
+    else if (!D) body = emptyLine('—', X.why);
+    else if (!D.posts.length) body = '<div class="cf-empty-s cf-dashed">Aucun post avec mot-clé ' + esc(P.per) + '.</div>';
+    else {
+      var MS = CF.acct.media, MD = MS.data, byId = {};
+      if (MD) MD.list.forEach(function (p) { if (p.id) byId[p.id] = p; });
+      var maxL = Math.max.apply(null, D.posts.map(function (r) { return r.commented || 0; }).concat([1]));
+      var list = ui.dmAllPosts ? D.posts : D.posts.slice(0, 8);
+      body = '<div class="cf-dmposts">' + list.map(function (r, i) { return dmPostRow(r, i, byId[r.id], maxL, MS); }).join('') + '</div>'
+        + (D.posts.length > 8 ? '<button type="button" class="cf-btn is-sm cf-more" data-act="dm-all-posts">' + esc(ui.dmAllPosts ? 'Afficher seulement les 8 premiers' : 'Afficher les ' + D.posts.length + ' publications') + '</button>' : '');
+    }
+    return '<section class="cf-card">' + head + body + '</section>';
+  }
+  function dmPostRow(r, i, p, maxL, MS) {
+    var thumb = p ? safeUrl(p.thumb) : '', d = p ? validDate(p.timestamp) : null, vid = p ? videoId(p) : null;
+    var meta = p ? (d ? 'posté le ' + dmy(d) : 'date inconnue')
+      : MS.loading || MS.state === 'idle' ? 'chargement de l’aperçu…'
+        : 'aperçu indisponible · ' + (MS.kind === 'disconnected' ? 'Instagram déconnecté' : MS.data ? 'absente de la liste Instagram' : (MS.error || 'publications non chargées'));
+    var n = function (v) { return v == null ? '—' : fInt(v); };
+    var inner = '<span class="cf-post-rank">' + (i + 1) + '</span>'
+      + '<span class="cf-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '')
+      + (p && isVideo(p) ? '<span class="cf-thumb-play">' + svg(IC.play, 10) + '</span>' : '') + '</span>'
+      + '<span class="cf-dmpost-b"><span class="cf-dmpost-id"><b class="' + (vid ? 'cf-vid' : 'cf-dmpost-nr') + '">' + esc(vid || (p ? 'vidéo non reconnue' : 'publication Instagram')) + '</b>'
+      + '<span class="cf-meta">' + esc(meta) + '</span></span>'
+      + (p ? '<span class="cf-dmpost-cap">' + esc(capText(p.caption)) + '</span>' : '') + '</span>'
+      + '<span class="cf-dmpost-m">'
+      + '<span class="cf-dmpost-k is-leads"><span class="cf-over">leads</span><span class="cf-dmpost-kv"><span class="cf-dmpost-lb" aria-hidden="true"><i style="width:' + ((r.commented || 0) / maxL * 100).toFixed(1) + '%"></i></span><b>' + n(r.commented) + '</b></span></span>'
+      + '<span class="cf-dmpost-k"><span class="cf-over">liens</span><b>' + n(r.linked) + '</b></span>'
+      + '<span class="cf-dmpost-k"><span class="cf-over">clics</span><b>' + n(r.clicked) + '</b></span>'
+      + '<span class="cf-dmpost-k"><span class="cf-over">CTR</span><b>' + esc(r.linked ? fDec(r.clicked / r.linked * 100, 0) + NB + '%' : '—') + '</b></span>'
+      + '</span>';
+    return p ? '<button type="button" class="cf-dmpost" data-act="dm-post" data-pid="' + esc(r.id) + '" aria-label="' + esc('Ouvrir la fiche de la publication ' + (i + 1)) + '">' + inner + '</button>'
+      : '<div class="cf-dmpost is-static">' + inner + '</div>';
+  }
+
+  // ── meilleures heures : commentaires mot-clé par jour × heure (heure de Paris), 5 niveaux ──
+  function dmHeatHTML(X) {
+    var D = X.D, P = X.P;
+    var lvls = [0, 1, 2, 3, 4].map(function (l) { return '<i class="l' + l + '"></i>'; }).join('');
+    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Meilleures heures</h2><span class="cf-meta">' + esc('commentaires mot-clé par jour et par heure · ' + P.per + ' · heure de Paris') + '</span></div>'
+      + '<div class="cf-heat-lg" aria-hidden="true"><span>moins</span>' + lvls + '<span>plus</span></div></div>';
+    var body;
+    if (X.pending) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement…</div>';
+    else if (!D) body = emptyLine('—', X.why);
+    else if (!D.heat.length) body = '<div class="cf-empty-s cf-dashed">Pas encore de commentaire ' + esc(P.per) + '.</div>';
+    else {
+      var M = {}, max = 0;
+      D.heat.forEach(function (c) { M[c.dow + ':' + c.h] = c.n; if (c.n > max) max = c.n; });
+      var lvl = function (n) { return !n ? 0 : n / max <= 0.25 ? 1 : n / max <= 0.5 ? 2 : n / max <= 0.75 ? 3 : 4; };
+      var hx = '<div class="cf-heat-r is-x" aria-hidden="true"><span></span>';
+      for (var h = 0; h < 24; h++) hx += '<span>' + (h % 3 ? '' : h) + '</span>';
+      hx += '</div>';
+      var rows = DOW.map(function (dn, di) {
+        var cells = '';
+        for (var hh = 0; hh < 24; hh++) {
+          var v = M[(di + 1) + ':' + hh] || 0;
+          cells += '<i class="l' + lvl(v) + '" title="' + esc(dn + ' ' + hh + NB + 'h · ' + v + ' ' + plural(v, 'commentaire')) + '"></i>';
+        }
+        return '<div class="cf-heat-r"><span class="cf-heat-d">' + esc(dn) + '</span>' + cells + '</div>';
+      }).join('');
+      var best = D.heat.slice().sort(function (a, b) { return b.n - a.n || a.dow - b.dow || a.h - b.h; }).slice(0, 3);
+      var chips = best.map(function (c, i) {
+        return '<span class="cf-heat-b"><b>#' + (i + 1) + '</b> ' + esc(DOW[c.dow - 1] + ' ' + c.h + NB + 'h – ' + ((c.h + 1) % 24) + NB + 'h') + ' <span class="cf-meta">' + esc(c.n + ' comm.') + '</span></span>';
+      }).join('');
+      body = '<div class="cf-heat" role="img" aria-label="' + esc('Carte de chaleur des commentaires mot-clé ' + P.per + ', meilleur créneau : ' + DOW[best[0].dow - 1] + ' ' + best[0].h + ' h') + '">' + hx + rows + '</div>'
+        + '<div class="cf-heat-best">' + chips + '</div>';
+    }
+    return '<section class="cf-card">' + head + body + '</section>';
+  }
+
+  // ── leads récents : pseudo + étape seulement (la RPC ne renvoie rien d'autre) ──
+  var DM_FILTERS = [
+    ['all', 'Tous', function () { return true; }],
+    ['clicked', 'Cliqué', function (l) { return l.clicked; }],
+    ['linked', 'Lien reçu', function (l) { return l.linked; }],
+    ['blocked', 'Pas encore abonné', function (l) { return l.tapped && !l.linked; }],
+    ['planned', 'Relance prévue', function (l) { return l.rel === 'planned'; }],
+    ['done', 'Relancé', function (l) { return l.rel === 'done'; }]
+  ];
+  function dmLeadsHTML(X) {
+    var D = X.D, P = X.P, L = D ? D.leads : [];
+    var q = ui.dmQuery.trim().replace(/^@/, '').toLowerCase();
+    var F = DM_FILTERS.filter(function (f) { return f[0] === ui.dmFilter; })[0] || DM_FILTERS[0];
+    var hitQ = function (l) { return !q || (l.u || '').toLowerCase().indexOf(q) >= 0; };
+    var shownAll = L.filter(function (l) { return F[2](l) && hitQ(l); });
+    var shown = ui.dmAllLeads ? shownAll : shownAll.slice(0, 8);
+    var total = D ? D.leadsTotal : null;
+    var badge = X.pending ? '…' : total == null ? '—' : (shownAll.length !== L.length ? fInt(shownAll.length) + ' / ' : '') + fInt(total);
+    var head = '<div class="cf-card-h"><div><h2 class="cf-h2">Leads récents <span class="cf-badge">' + esc(badge) + '</span></h2>'
+      + '<span class="cf-meta">' + esc(P.per + ' · pseudo Instagram et étape seulement' + (total != null && total > L.length ? ' · les ' + L.length + ' plus récents' : '')) + '</span></div>'
+      + '<label class="cf-search">' + svg(IC.search, 14) + '<input id="cfDmQ" type="search" value="' + esc(ui.dmQuery) + '" placeholder="Rechercher un @pseudo" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Rechercher un lead par pseudo"></label></div>';
+    var chips = '<div class="cf-fchips" role="group" aria-label="Filtrer les leads">' + DM_FILTERS.map(function (f) {
+      var on = f[0] === F[0], nb = L.filter(function (l) { return f[2](l) && hitQ(l); }).length;
+      return '<button type="button" class="cf-fchip' + (on ? ' is-on' : '') + '" data-act="dm-filter" data-f="' + f[0] + '" aria-pressed="' + on + '">' + esc(f[1]) + ' <span>' + (D ? nb : '…') + '</span></button>';
+    }).join('') + '</div>';
+    var body;
+    if (X.pending) body = '<div class="cf-status"><span class="cf-spin" aria-hidden="true"></span>Chargement des leads…</div>';
+    else if (!D) body = emptyLine('—', X.why);
+    else if (!L.length) body = '<div class="cf-dm-none"><span class="cf-soon-ic">' + svg(IC.chat, 18) + '</span><b>Aucun lead ' + esc(P.per) + '</b>'
+      + '<span>Dès qu’une personne commente un mot-clé sous une publication, elle reçoit le DM et apparaît ici.</span></div>';
+    else if (!shownAll.length) body = '<div class="cf-empty-s">Aucun lead ne correspond' + (q ? ' à « ' + esc(ui.dmQuery.trim()) + ' »' : '') + '.</div>';
+    else body = '<div class="cf-leads">' + shown.map(dmLeadRow).join('') + '</div>'
+      + (shownAll.length > 8 ? '<button type="button" class="cf-btn is-sm cf-more" data-act="dm-all-leads">' + esc(ui.dmAllLeads ? 'Afficher seulement les 8 premiers' : 'Afficher les ' + shownAll.length + ' leads') + '</button>' : '');
+    return '<section class="cf-card">' + head + (D && L.length ? chips : '') + body + '</section>';
+  }
+  function dmLeadRow(l) {
+    var ini = l.u ? (l.u.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || '@') : '?';
+    var chips = [];
+    if (!l.tapped) chips.push('<span class="cf-lchip">a commenté</span>');
+    else if (!l.linked) chips.push('<span class="cf-lchip is-block">pas encore abonné</span>');
+    if (l.linked) chips.push('<span class="cf-lchip is-link">lien reçu</span>');
+    if (l.clicked) chips.push('<span class="cf-lchip is-click">cliqué</span>');
+    if (l.rel === 'planned') chips.push('<span class="cf-lchip is-plan" title="le backend relance 12 à 22 h après le lien">relance prévue</span>');
+    else if (l.rel === 'done') chips.push('<span class="cf-lchip is-done">relancé</span>');
+    else if (l.rel === 'missed') chips.push('<span class="cf-lchip is-muted" title="fenêtre de 12 à 22 h passée, ou déjà relancé / cliqué avant">pas de relance</span>');
+    var st = [true, l.tapped, l.linked, l.clicked], names = ['commentaire', 'bouton tapé', 'lien reçu', 'clic'];
+    var path = st.map(function (on, i) { return (i ? '<i class="' + (on ? 'is-on' : '') + '"></i>' : '') + '<b class="' + (on ? 'is-on' : '') + '"></b>'; }).join('');
+    var reached = names.filter(function (n, i) { return st[i]; }).join(', ');
+    var t = paris(l.at);
+    return '<div class="cf-lead"><span class="cf-lead-av" aria-hidden="true">' + esc(ini) + '</span>'
+      + '<span class="cf-lead-u' + (l.u ? '' : ' is-na') + '">' + esc(l.u ? '@' + l.u : 'pseudo inconnu') + '</span>'
+      + '<span class="cf-lead-st">' + chips.join('') + '</span>'
+      + '<span class="cf-lead-path" role="img" aria-label="' + esc('Parcours : ' + reached) + '">' + path + '</span>'
+      + '<span class="cf-lead-at" title="' + esc('1er commentaire de la période le ' + pDmy(t) + ' à ' + pHm(t) + ' (Paris)') + '">' + esc(ago(l.at)) + '</span></div>';
+  }
+
   // ── fiche post (modale) ──
+  function openPostById(pid, trigger) {
+    var MD = CF.acct.media.data, p = MD && MD.list.filter(function (x) { return x.id === pid; })[0];
+    if (!p) return;
+    ui.modal = { post: p, rank: rankOf(p), pid: pid };
+    ui.lastFocus = trigger || null;
+    renderModal();
+    var wrap = document.querySelector('.cf-wrap'); if (wrap) wrap.inert = true;
+    $('cfModal').hidden = false;
+    document.body.classList.add('cf-lock');
+    $('cfModalClose').focus();
+  }
   function openPost(i, trigger) {
     var list = topList();
     if (!list[i]) return;
@@ -905,7 +1416,7 @@
   }
   function closeModal() {
     if (!ui.modal) return;
-    var rank = ui.modal.rank;
+    var rank = ui.modal.rank, pid = ui.modal.pid;
     ui.modal = null;
     var wrap = document.querySelector('.cf-wrap'); if (wrap) wrap.inert = false;
     $('cfModal').hidden = true;
@@ -914,7 +1425,10 @@
     var f = ui.lastFocus;
     ui.lastFocus = null;
     if (f && document.body.contains(f)) f.focus();
-    else { var c = document.querySelector('.cf-post[data-i="' + (rank - 1) + '"]'); if (c) c.focus(); }
+    else {
+      var c = pid ? document.querySelector('.cf-dmpost[data-pid="' + pid + '"]') : document.querySelector('.cf-post[data-i="' + (rank - 1) + '"]');
+      if (c) c.focus();
+    }
   }
   function bricksDetail(p) {
     var a = p.analysis;
@@ -999,7 +1513,7 @@
   function brickPost(pid) {
     var MD = CF.acct.media.data, p = MD && MD.list.filter(function (x) { return x.id === pid; })[0];
     if (!p) return;
-    ui.modal = { post: p, rank: rankOf(p) };
+    ui.modal = { post: p, rank: rankOf(p), pid: ui.modal.pid };   // pid : ouverte depuis l'Auto-DM
     renderModal();
     $('cfModalBody').scrollTop = 0;
     var t = $('cfModalTitle'); if (t) { t.tabIndex = -1; t.focus(); }
@@ -1070,7 +1584,7 @@
       '<div class="cf-sheet">'
       + '<div class="cf-sheet-media">' + (thumb ? '<img src="' + esc(thumb) + '" alt="Miniature de la publication" referrerpolicy="no-referrer" decoding="async">' : '<span class="cf-sheet-none">aperçu indisponible</span>') + '</div>'
       + '<div class="cf-sheet-info">'
-      + '<div class="cf-meta">#' + rank + ' en vues · ' + esc(p.trial ? 'réel d’essai (pas sur la grille du profil)' : typeLabel(p.type)) + '</div>'
+      + '<div class="cf-meta">' + (rank ? '#' + rank + ' en vues · ' : '') + esc(p.trial ? 'réel d’essai (pas sur la grille du profil)' : typeLabel(p.type)) + '</div>'
       + '<h2 class="cf-h2" id="cfModalTitle">' + (videoId(p) ? '<span class="cf-vid">' + esc(videoId(p)) + '</span>' + (d ? '<span class="cf-vid-d">' + esc(dmy(d)) + '</span>' : '')
         : esc(d ? 'Publication du ' + dmy(d) : 'Publication')) + '</h2>'
       + '<p class="cf-sheet-cap">' + esc(capText(p.caption)) + '</p>'
@@ -1093,6 +1607,15 @@
     saveTab(k);
     render();
   }
+  function setDmRange(k) {
+    if (CF.DM_RANGES.indexOf(k) < 0 || k === ui.dmRange) return;
+    ui.dmRange = k;
+    ui.dmAllLeads = false;
+    ui.dmAllPosts = false;
+    dmHide();
+    render();
+  }
+  function dmHide() { dmCur = null; evoHide(); }
   function setRange(k) {
     if (CF.IG_RANGES.indexOf(k) < 0 || k === ui.range) return; // 90 j, 6 mois, All time : jamais envoyés
     ui.range = k;
@@ -1137,6 +1660,13 @@
       else if (act === 'brick-open') openBrick(el.getAttribute('data-bid'));
       else if (act === 'brick-back') brickBack();
       else if (act === 'brick-post') brickPost(el.getAttribute('data-pid'));
+      else if (act === 'dm-range') setDmRange(el.getAttribute('data-range'));
+      else if (act === 'dm-toggle') { var dk = el.getAttribute('data-k'); if (DMS.some(function (d) { return d.k === dk && !d.none; })) { ui.dmHidden[dk] = !ui.dmHidden[dk]; evoHide(); render(); } }
+      else if (act === 'retry-dm') CF.loadDm(ui.dmRange, { force: true });
+      else if (act === 'dm-filter') { ui.dmFilter = el.getAttribute('data-f'); ui.dmAllLeads = false; render(); }
+      else if (act === 'dm-all-leads') { ui.dmAllLeads = !ui.dmAllLeads; render(); }
+      else if (act === 'dm-all-posts') { ui.dmAllPosts = !ui.dmAllPosts; render(); }
+      else if (act === 'dm-post') openPostById(el.getAttribute('data-pid'), el);
       else if (act === 'otp-send') sendOtp();
       else if (act === 'otp-back') { show('cfLoginOtp', false); show('cfLoginPwd', true); loginMsg(''); }
     });
@@ -1153,14 +1683,20 @@
     });
 
 
-    // Bulle de la courbe Évolution : souris et doigt (le survol ne redessine jamais le panneau).
+    // Recherche des leads Auto-DM : filtre à la frappe (le focus est rendu au champ par renderPanel).
+    document.addEventListener('input', function (e) {
+      if (e.target && e.target.id === 'cfDmQ') { ui.dmQuery = String(e.target.value || '').slice(0, 40); ui.dmAllLeads = false; render(); }
+    });
+
+    // Bulle des courbes (Évolution du Compte, Activité de l'Auto-DM) : souris et doigt, sans redessiner le panneau.
+    var hover = function (plot, x) { if (plot.getAttribute('data-chart') === 'dm') dmHover(plot, x); else evoHover(plot, x); };
     document.addEventListener('mousemove', function (e) {
       var plot = e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
-      if (plot) evoHover(plot, e.clientX); else if (evoCur) evoHide();
+      if (plot) hover(plot, e.clientX); else if (evoCur || dmCur) evoHide();
     });
     var onTouch = function (e) {
       var t = e.touches && e.touches[0], plot = t && e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
-      if (plot) evoHover(plot, t.clientX); else if (evoCur) evoHide();
+      if (plot) hover(plot, t.clientX); else if (evoCur || dmCur) evoHide();
     };
     document.addEventListener('touchstart', onTouch, { passive: true });
     document.addEventListener('touchmove', onTouch, { passive: true });
@@ -1177,9 +1713,13 @@
     // Retour sur l'onglet du navigateur : ne relit que ce qui a plus de 15 min.
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible' && CF.status === 'ready') {
-        CF.refresh({ igRange: ui.tab === 'compte' ? ui.range : null });
+        CF.refresh({ igRange: ui.tab === 'compte' ? ui.range : null, dmRange: ui.tab === 'dm' ? ui.dmRange : null });
       }
     });
+    // Auto-DM : notre base, relue toutes les 2 min tant que l'onglet est affiché (le store ignore si c'est encore frais).
+    setInterval(function () {
+      if (ui.tab === 'dm' && CF.status === 'ready' && document.visibilityState === 'visible') CF.loadDm(ui.dmRange);
+    }, CF.DM_TTL_MS || 120000);
 
     $('cfLoginPwd').addEventListener('submit', function (e) {
       e.preventDefault();
