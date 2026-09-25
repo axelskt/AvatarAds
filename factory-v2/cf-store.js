@@ -20,21 +20,25 @@
  *              Personnes uniques (commentaire → « Je suis abonné » → lien → clic → devenu user → payant), relance en
  *              lecture seule, leads = pseudo + état seulement (jamais d'identifiant Instagram) ; attribution
  *              (f.users, f.paid, attr.existing / existingPaid) = totaux seulement, null tant que la RPC ne les rend pas
- *   CF.prod    Accueil (étape 3, 25/09) : factory_bricks / factory_recipes / factory_qc lues en SELECT (RLS owner/dev,
- *              colonnes utiles seulement) → { state, loading, at, data, error, kind } ; notre base : relue au plus toutes les 2 min
+ *   CF.prod    Accueil (étape 3) et onglet Production (étape 4, 25/09) : factory_bricks / factory_recipes / factory_qc lues en
+ *              SELECT (RLS owner/dev, colonnes et clés de meta utiles seulement, listes blanches) + RPC factory_prod_stats()
+ *              (variantes et missions : tables sans policy) → { state, loading, at, data, error, kind } ; relue au plus toutes
+ *              les 2 min. data.stats a son propre état : une RPC absente ne casse pas le reste (« — » + raison).
  *   CF.prov    Accueil : niveau des soldes fournisseurs (provider-watch, vue utilisateur : ok / low, jamais le montant)
  *              → { state, loading, at, data: { list: [{ id, label, level, at, error, unconfirmed }] }, error } ; relu au plus
  *              toutes les 15 min. error = solde non lu / jamais lu / relevé périmé ; unconfirmed = « ok » sans readable
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
- *                     { home: { ig, dm } } tout ce que lit l'Accueil ; { force } ignore les 15 min
+ *                     { home: { ig, dm } } tout ce que lit l'Accueil ; { prod } l'onglet Production ; { force } ignore les 15 min
  *   CF.net     journal des appels réseau faits par le store (pour vérifier « 3 appels max, puis 0 »)
  *
  * Contrôle d'accès : 1er appel = RPC factory_access(). {error:'forbidden'} ⇒ « Accès réservé ».
  * Ses chiffres ne sont PAS gardés (formule des variantes fausse, cf. plan §3.3) : c'est une simple porte.
- * Lecture seule : CF_READONLY = true, SAUF le module d'une publication (tagMedia → RPC ig_media_tag_set, owner/dev) et
+ * Lecture seule : CF_READONLY = true, SAUF le module d'une publication (tagMedia → RPC ig_media_tag_set, owner/dev),
  * « Reconnecter » (igConnect) qui passe par le vrai OAuth Instagram et
- * réécrit ig_accounts en prod (voulu : renouveler le token du compte, plan étape 2).
+ * réécrit ig_accounts en prod (voulu : renouveler le token du compte, plan étape 2), et la revue QC (étape 4) :
+ * qcApprove / qcRefuse / qcClassify = UPDATE de factory_qc SEULEMENT, colonnes status, refusal_reason, reviewed_at et
+ * classified_at SEULEMENT (qcGuard), une ligne à la fois ; chaque écriture vérifie l'erreur ET qu'une ligne a bien changé.
  */
 (function () {
   'use strict';
@@ -93,6 +97,9 @@
     loadProviders: loadProviders,
     prefetch: prefetch,
     tagMedia: tagMedia,
+    qcApprove: function (id) { return qcWrite('approve', id); },
+    qcRefuse: function (id, reason) { return qcWrite('refuse', id, reason); },
+    qcClassify: function (id) { return qcWrite('classify', id); },
     isFresh: isFresh,
     igConnect: igConnect,
     guardWrite: guardWrite,
@@ -605,11 +612,114 @@
     return p;
   }
 
-  // ── Production (Accueil, étape 3) : factory_bricks, factory_recipes, factory_qc en SELECT (RLS owner/dev) ──
-  // Colonnes utiles seulement (jamais meta, fichiers ni vidéos). Statuts en liste blanche (migrations 20260918150000
-  // et factory_qc_status_check) ; un statut inconnu est compté à part, jamais rangé dans « prêt ».
+  // ── Production (Accueil étape 3, onglet Production étape 4) : factory_bricks, factory_recipes, factory_qc en SELECT
+  //    (RLS owner/dev) + RPC factory_prod_stats() (variantes, missions). Clés de meta choisies une par une (jamais tout
+  //    meta : transcript, fichiers locaux…), puis passées en liste blanche. Statuts en liste blanche (migrations
+  //    20260918150000 et factory_qc_status_check) ; un statut inconnu est compté à part, jamais rangé dans « prêt ».
   var BRICK_KINDS = ['hook', 'liaison', 'cta', 'contenu', 'transformation', 'avatar', 'musique', 'sous-titre'];
+  var BRICK_SEL = ['id', 'kind', 'subject', 'label', 'status', 'created_at', 'updated_at',
+    'm_subjects:meta->compatible_subjects', 'm_modules:meta->modules', 'm_alias:meta->>alias_of', 'm_module:meta->>module',
+    'm_variant:meta->>variant', 'm_media:meta->>media', 'm_media_type:meta->>media_type', 'm_keyword:meta->>keyword',
+    'm_script:meta->>script', 'm_transcript:meta->>transcript', 'm_value:meta->>value', 'm_group:meta->>group',
+    'm_duration:meta->duration_s', 'm_cover:meta->>cover', 'm_before:meta->before', 'm_after:meta->after'].join(',');
+  var QC_SEL = ['id', 'status', 'template', 'route', 'video_url', 'poster_url', 'brick_combo', 'refusal_reason', 'created_at', 'reviewed_at',
+    't_route:technical->>route', 't_pass:technical->pass', 't_hard:technical->hard_fails', 't_soft:technical->soft_fails',
+    't_err:technical->>error', 't_coh:technical->coherence', 'v_route:vision->>route', 'v_verdict:vision->verdict'].join(',');
   function rowId(x) { return typeof x === 'string' && /^[A-Za-z0-9._-]{1,40}$/.test(x) ? x : null; }
+  function qcId(x) { return typeof x === 'string' && /^[A-Za-z0-9-]{1,64}$/.test(x) ? x : null; }
+  function txt(x, n) { return typeof x === 'string' && x.trim() ? x.trim().slice(0, n) : null; }
+  function sArr(x, n, len) {
+    return Array.isArray(x) ? x.filter(function (v) { return typeof v === 'string' && v.trim(); }).map(function (v) { return v.trim().slice(0, len || 40); }).slice(0, n || 40) : [];
+  }
+  // Fichier de NOTRE stockage public (seul hôte permis par la CSP media-src) : bucket/…/nom.ext, jamais le seul préfixe
+  // d'un dossier ni un chemin local. Sinon null, et fileWhy dit pourquoi (affiché « fichier manquant · … »).
+  var SB_PUB = SUPABASE_URL + '/storage/v1/object/public/';
+  var AUDIO_EXT = /\.(wav|mp3|m4a|aac|ogg)$/i, VIDEO_EXT = /\.(mp4|mov|m4v|webm)$/i, IMG_EXT = /\.(png|jpe?g|webp)$/i;
+  function pubFile(u, extRe) {
+    if (typeof u !== 'string' || u.indexOf(SB_PUB) !== 0 || /[\s"'<>\\]/.test(u)) return null;
+    var p = u.slice(SB_PUB.length).split(/[?#]/)[0];
+    if (!/^[a-z0-9_-]+\/(?:[^/]+\/)*[^/]+\.[a-z0-9]{2,5}$/i.test(p)) return null;
+    return extRe && !extRe.test(p) ? null : u;
+  }
+  function fileWhy(u, extRe) {
+    if (typeof u !== 'string' || !u.trim()) return 'aucun fichier';
+    if (u.indexOf(SB_PUB) !== 0) return /^https?:/i.test(u) ? 'fichier hors du stockage factory-media' : 'fichier local, pas en ligne';
+    if (pubFile(u)) return extRe && !pubFile(u, extRe) ? 'format de fichier inattendu' : null;
+    return 'lien vers un dossier, pas vers un fichier';
+  }
+  function side(o) { return o && typeof o === 'object' && !Array.isArray(o) ? { label: txt(o.label, 80), file: txt(o.file, 200) } : null; }
+  function normBrick(b) {
+    var id = rowId(b && b.id);
+    if (!id) return null;
+    var media = txt(b.m_media, 400), cover = txt(b.m_cover, 400);
+    return {
+      id: id, kind: BRICK_KINDS.indexOf(b.kind) >= 0 ? b.kind : 'autre', subject: txt(b.subject, 40), label: txt(b.label, 200),
+      status: txt(b.status, 20), created: ms(b.created_at), updated: ms(b.updated_at),
+      // même forme que factory_bricks.meta pour usine/coherence.js (compatible_subjects, alias_of, modules, module)
+      meta: { compatible_subjects: sArr(b.m_subjects), modules: sArr(b.m_modules), alias_of: rowId(b.m_alias), module: txt(b.m_module, 40),
+        variant: txt(b.m_variant, 40), keyword: txt(b.m_keyword, 40), script: txt(b.m_script, 600), transcript: txt(b.m_transcript, 600),
+        value: txt(b.m_value, 60), group: txt(b.m_group, 20), duration: num(b.m_duration), mediaType: txt(b.m_media_type, 20),
+        before: side(b.m_before), after: side(b.m_after) },
+      audio: pubFile(media, AUDIO_EXT), video: pubFile(media, VIDEO_EXT), image: pubFile(cover || media, IMG_EXT),
+      hasMedia: !!(media || cover), mediaWhy: fileWhy(cover || media)
+    };
+  }
+  var REC_ST = { done: 'done', in_progress: 'in_progress', pending: 'pending' };
+  function normRecipe(r) {
+    var id = rowId(r && r.id);
+    if (!id) return null;
+    var raw = txt(r.render_url, 400);
+    return {
+      id: id, kind: txt(r.kind, 20), subject: txt(r.subject, 40), status: REC_ST[r.status] || 'other',
+      comps: Array.isArray(r.components) ? r.components.map(function (c) {
+        return c && typeof c === 'object' && rowId(c.brick_id) ? { slot: txt(c.slot, 4) || '', id: rowId(c.brick_id) } : null;
+      }).filter(Boolean).slice(0, 12) : [],
+      render: pubFile(raw, VIDEO_EXT), renderWhy: raw ? fileWhy(raw, VIDEO_EXT) : 'aucun lien de rendu',
+      created: ms(r.created_at), updated: ms(r.updated_at)
+    };
+  }
+  // Recette d'une vidéo finale : nouveau format (usine/publish-qc.mjs) = IDs de briques sous des clés connues ; tout le
+  // reste (ex. l'ancien refus « Test » : { cta: 'avatar + CTA28', demo: 'visite guidée OMNI 1', … }) = texte libre, affiché
+  // tel quel et jamais compté comme une vidéo produite.
+  var COMBO_KEYS = ['avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'];
+  function normCombo(c) {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return { ids: null, legacy: null };
+    var keys = Object.keys(c), ids = {}, ok = keys.length > 0;
+    keys.forEach(function (k) {
+      if (c[k] == null || c[k] === '') return;
+      if (COMBO_KEYS.indexOf(k) < 0 || !rowId(c[k])) ok = false; else ids[k] = c[k];
+    });
+    if (ok && Object.keys(ids).length) return { ids: ids, legacy: null };
+    return { ids: null, legacy: keys.slice(0, 10).map(function (k) {
+      var v = c[k]; return [String(k).slice(0, 30), typeof v === 'string' ? v.slice(0, 120) : v == null ? '' : JSON.stringify(v).slice(0, 120)];
+    }) };
+  }
+  function normCoh(o) {
+    if (!o || typeof o !== 'object') return null;
+    var lv = o.level === 'ok' || o.level === 'review' ? o.level : null;
+    return lv ? { level: lv, reasons: sArr(o.reasons, 12, 300) } : null;
+  }
+  function normVerdict(v) {
+    if (!v || typeof v !== 'object') return null;
+    var b = function (x) { return typeof x === 'boolean' ? x : null; }, c = num(v.confidence);
+    return { glitch: b(v.glitch), qualityOk: b(v.quality_ok), matches: b(v.matches_words), confidence: c != null && c >= 0 && c <= 1 ? c : null, notes: txt(v.notes, 300) };
+  }
+  var QC_ST = { pending: 'pending', approved: 'approved', refused: 'refused' };
+  function normQc(q) {
+    var id = qcId(q && q.id);
+    if (!id) return null;
+    var cb = normCombo(q.brick_combo), rawV = txt(q.video_url, 400);
+    var r = function (x) { return x === 'auto' || x === 'manual' ? x : null; };
+    return {
+      id: id, status: QC_ST[q.status] || 'other', template: txt(q.template, 40), route: r(q.route),
+      video: pubFile(rawV, VIDEO_EXT), videoWhy: rawV ? fileWhy(rawV, VIDEO_EXT) : 'aucune vidéo', poster: pubFile(txt(q.poster_url, 400), IMG_EXT),
+      combo: cb.ids, legacy: cb.legacy,
+      tech: { route: r(q.t_route), pass: typeof q.t_pass === 'boolean' ? q.t_pass : null, hard: sArr(q.t_hard, 20, 80), soft: sArr(q.t_soft, 20, 80), error: txt(q.t_err, 200) },
+      coh: normCoh(q.t_coh),
+      vis: q.v_route || q.v_verdict ? { route: q.v_route === 'ok' || q.v_route === 'doubt' ? q.v_route : null, verdict: normVerdict(q.v_verdict) } : null,
+      reason: txt(q.refusal_reason, 500), created: ms(q.created_at), reviewed: ms(q.reviewed_at), classified: ms(q.classified_at)
+    };
+  }
   function restFail(res, what) {
     var err = res && res.error, code = err ? String(err.code || '') : '';
     if (!err) return null;
@@ -625,8 +735,25 @@
     if (typeof res.count === 'number' && res.count > res.data.length) throw { kind: 'http', message: what + ' : liste tronquée (' + res.data.length + ' / ' + res.count + ')' };
     return res.data;
   }
-  function normProd(rb, rr, rq, at) {
-    var B = { total: rb.length, ready: 0, flagged: 0, retired: 0, other: 0, byKind: {}, lastAt: null, lastKind: null };
+  // factory_prod_stats() : son propre état (la migration 20260925210000 peut ne pas être appliquée) ; jamais un faux 0.
+  function normStats(res) {
+    var err = res && res.error, d = res && res.data, code = err ? String(err.code || '') : '';
+    var fail = function (kind, message) { return { state: 'error', kind: kind, error: message, rows: null, pairsTotal: null, pairs: [], missions: null }; };
+    if (err && (code === 'PGRST202' || res.status === 404)) return fail('missing', 'la fonction factory_prod_stats n’est pas encore en base (migration 20260925210000 à appliquer)');
+    if (err && (code === '42501' || res.status === 403)) return fail('forbidden', 'lecture refusée par la base (réservée owner / plan developer)');
+    if (err) return fail('http', 'factory_prod_stats : ' + errText(err));
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return fail('http', 'factory_prod_stats : réponse vide');
+    if (d.error) return d.error === 'forbidden' ? fail('forbidden', 'réservé au propriétaire (owner / plan developer)') : fail('http', 'factory_prod_stats : ' + String(d.error).slice(0, 120));
+    var v = d.variants && typeof d.variants === 'object' ? d.variants : {}, m = d.missions && typeof d.missions === 'object' ? d.missions : null;
+    var pairs = Array.isArray(v.pairs) ? v.pairs.map(function (p) { return Array.isArray(p) && rowId(p[0]) && rowId(p[1]) ? [p[0], p[1]] : null; }).filter(Boolean) : [];
+    var byStatus = {};
+    if (m && m.by_status && typeof m.by_status === 'object') Object.keys(m.by_status).slice(0, 20).forEach(function (k) { var n = cnt(m.by_status[k]); if (n != null) byStatus[k.slice(0, 30)] = n; });
+    if (cnt(v.rows) == null || cnt(v.pairs_total) == null) return fail('http', 'factory_prod_stats : variantes illisibles');
+    return { state: 'ready', kind: null, error: null, rows: cnt(v.rows), pairsTotal: cnt(v.pairs_total), pairs: pairs,
+      missions: m && cnt(m.total) != null ? { total: cnt(m.total), byStatus: byStatus } : null };
+  }
+  function normProd(rb, rr, rq, stats, at, classifyMissing) {
+    var B = { total: rb.length, ready: 0, flagged: 0, retired: 0, other: 0, byKind: {}, lastAt: null, lastKind: null, list: rb.map(normBrick).filter(Boolean) };
     rb.forEach(function (b) {
       var k = b && BRICK_KINDS.indexOf(b.kind) >= 0 ? b.kind : 'autre', st = b && b.status, t = ms(b && b.created_at);
       if (st === 'ready') { B.ready += 1; B.byKind[k] = (B.byKind[k] || 0) + 1; }
@@ -635,7 +762,7 @@
       else B.other += 1;
       if (t != null && (B.lastAt == null || t > B.lastAt)) { B.lastAt = t; B.lastKind = k; }
     });
-    var R = { total: rr.length, done: 0, inProgress: 0, pending: 0, other: 0, lastAt: null, lastId: null };
+    var R = { total: rr.length, done: 0, inProgress: 0, pending: 0, other: 0, lastAt: null, lastId: null, list: rr.map(normRecipe).filter(Boolean) };
     rr.forEach(function (r) {
       var st = r && r.status, t = ms(r && (r.updated_at || r.created_at));
       if (st === 'done') {
@@ -645,13 +772,15 @@
       else if (st === 'pending') R.pending += 1;
       else R.other += 1;
     });
-    var Q = { total: rq.length, pending: 0, approved: 0, refused: 0, other: 0, lastRefused: null };
+    var Q = { total: rq.length, pending: 0, approved: 0, refused: 0, unclassified: 0, other: 0, lastRefused: null, classifyMissing: !!classifyMissing, list: rq.map(normQc).filter(Boolean) };
     rq.forEach(function (q) {
       var st = q && q.status;
       if (st === 'pending') Q.pending += 1;
       else if (st === 'approved') Q.approved += 1;
       else if (st === 'refused') {
         Q.refused += 1;
+        if (ms(q.classified_at) != null) return;   // classé : plus « à classer », plus dans l'alerte de l'Accueil (maquette §13)
+        Q.unclassified += 1;
         var t = ms(q.reviewed_at) || ms(q.created_at);
         if (!Q.lastRefused || (t != null && t > (Q.lastRefused.at || 0))) {
           Q.lastRefused = { at: t, reason: typeof q.refusal_reason === 'string' && q.refusal_reason.trim() ? q.refusal_reason.trim().slice(0, 160) : null,
@@ -659,27 +788,42 @@
         }
       } else Q.other += 1;
     });
-    return { fetchedAt: at, bricks: B, recipes: R, qc: Q };
+    return { fetchedAt: at, bricks: B, recipes: R, qc: Q, stats: stats };
+  }
+  function qcQuery(withClassified) {
+    return sb.from('factory_qc').select(QC_SEL + (withClassified ? ',classified_at' : ''), { count: 'exact' }).order('created_at', { ascending: false }).limit(PROD_MAX);
+  }
+  function noClassifiedCol(res) {
+    var e = res && res.error;
+    return !!e && /classified_at/.test(String(e.message || '') + ' ' + String(e.details || '')) && (String(e.code || '') === '42703' || res.status === 400);
   }
   function loadProd(opts) {
     var force = !!(opts && opts.force), S = CF.prod;
     if (CF.status !== 'ready') return Promise.resolve(S);
-    if (inflight.prod) return inflight.prod;
+    // Relecture forcée (après une écriture QC) pendant une lecture déjà en vol : on attend celle-ci puis on relit.
+    if (inflight.prod) return force ? inflight.prod.then(function () { return loadProd({ force: true }); }) : inflight.prod;
     if (!force && isFresh(S, PROD_TTL_MS)) return Promise.resolve(S);
     var ep = epoch;
     S.loading = true;
     var p = (async function () {
       await null;
       var patch;
-      logNet('rest factory_bricks, factory_recipes, factory_qc');
+      logNet('rest factory_bricks, factory_recipes, factory_qc + rpc factory_prod_stats');
       try {
         var r = await Promise.all([
-          sb.from('factory_bricks').select('id,kind,status,created_at', { count: 'exact' }).limit(PROD_MAX),
-          sb.from('factory_recipes').select('id,kind,status,created_at,updated_at', { count: 'exact' }).limit(PROD_MAX),
-          sb.from('factory_qc').select('id,status,template,refusal_reason,created_at,reviewed_at', { count: 'exact' }).order('created_at', { ascending: false }).limit(PROD_MAX)
+          sb.from('factory_bricks').select(BRICK_SEL, { count: 'exact' }).order('id', { ascending: true }).limit(PROD_MAX),
+          sb.from('factory_recipes').select('id,kind,subject,components,status,render_url,created_at,updated_at', { count: 'exact' }).limit(PROD_MAX),
+          qcQuery(true),
+          Promise.resolve().then(function () { return sb.rpc('factory_prod_stats'); }).catch(function (e) { return { error: { message: errText(e) } }; })
         ]);
+        var rq = r[2], missing = false;
+        if (noClassifiedCol(rq)) {   // migration 20260925210000 pas encore appliquée : tout est lu, « Classer » attend la colonne
+          missing = true;
+          logNet('rest factory_qc (sans classified_at)');
+          rq = await qcQuery(false);
+        }
         patch = { state: 'ready', kind: null, error: null,
-          data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(r[2], 'factory_qc'), Date.now()) };
+          data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(rq, 'factory_qc'), normStats(r[3]), Date.now(), missing) };
       } catch (e) {
         patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
         if (e.kind && e.kind !== 'http' && e.kind !== 'error') patch.data = null;   // réseau ou 500 : chiffres précédents gardés, datés
@@ -693,6 +837,44 @@
     inflight.prod = p;
     emit('prod');
     return p;
+  }
+
+  // ── revue QC (étape 4) : SEULE exception d'écriture de l'onglet Production, aussi étroite que possible ──
+  // Table factory_qc seulement, une ligne (id), colonnes de QC_COLS seulement. La ligne doit encore être dans l'état
+  // attendu (à valider pour Valider / Refuser, refusée non classée pour Classer) : sinon 0 ligne modifiée → erreur, jamais
+  // un faux succès (la RLS filtre sans erreur, d'où le .select() qui compte les lignes réellement écrites).
+  var QC_COLS = { status: 1, refusal_reason: 1, reviewed_at: 1, classified_at: 1 };
+  function qcGuard(patch) {
+    Object.keys(patch).forEach(function (k) { if (!QC_COLS[k]) throw new Error('écriture refusée : colonne « ' + k + ' » hors revue QC'); });
+  }
+  async function qcWrite(act, id, reason) {
+    if (!sb || CF.status !== 'ready') return { error: 'tableau de bord pas prêt' };
+    if (!qcId(id)) return { error: 'identifiant de vidéo invalide' };
+    var now = new Date().toISOString(), patch;
+    if (act === 'approve') patch = { status: 'approved', reviewed_at: now };
+    else if (act === 'refuse') {
+      var why = typeof reason === 'string' ? reason.trim().slice(0, 500) : '';
+      if (!why) return { error: 'motif obligatoire pour refuser' };
+      patch = { status: 'refused', refusal_reason: why, reviewed_at: now };
+    } else if (act === 'classify') {
+      if (CF.prod.data && CF.prod.data.qc.classifyMissing) return { error: 'colonne classified_at absente : migration 20260925210000 à appliquer' };
+      patch = { classified_at: now };
+    } else return { error: 'action refusée' };
+    try { qcGuard(patch); } catch (e) { return { error: e.message }; }
+    logNet('update factory_qc ' + act);
+    var res;
+    try {
+      var q = sb.from('factory_qc').update(patch).eq('id', id);
+      q = act === 'classify' ? q.eq('status', 'refused').is('classified_at', null) : q.eq('status', 'pending');
+      res = await q.select('id');
+    } catch (e) { return { error: errText(e) }; }
+    var f = res && res.error ? restFail(res, 'factory_qc') : null;
+    if (f) return { error: f.kind === 'forbidden' ? 'écriture refusée par la base' : f.message };
+    if (!res || !Array.isArray(res.data) || res.data.length !== 1) {
+      return { error: 'rien n’a été enregistré : vidéo déjà revue ailleurs, ou écriture refusée par la base' };
+    }
+    await loadProd({ force: true });   // la file relue ; son éventuel échec s'affiche dans l'onglet, l'écriture, elle, est faite
+    return { ok: true };
   }
 
   // ── soldes fournisseurs (Accueil) : provider-watch, vue utilisateur { provider, ok, level, at } ──
@@ -808,6 +990,8 @@
     if (opts.dmRange) tasks.push(loadDm(opts.dmRange, { force: !!opts.force }), loadMedia({ force: !!opts.force }));
     if (opts.home) tasks.push(loadInsights(opts.home.ig, { force: !!opts.force }), loadMedia({ force: !!opts.force }), loadDm(opts.home.dm, { force: !!opts.force }),
       loadProd({ force: !!opts.force }), loadProviders({ force: !!opts.force }));
+    // onglet Production : notre base + le rythme de publication (reels par jour sur 30 j, mêmes cases que l'Accueil)
+    if (opts.prod) tasks.push(loadProd({ force: !!opts.force }), loadInsights('30j', { force: !!opts.force }), loadMedia({ force: !!opts.force }));
     return Promise.all(tasks);
   }
 
