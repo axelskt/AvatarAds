@@ -319,8 +319,11 @@ export async function handler(req: Request): Promise<Response> {
       if (failed) return jsonRes(422, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], meta: rec.meta, billing })
       if (rec.state !== 'ok') return jsonRes(202, { status: rec.state === 'run' ? 'IN_PROGRESS' : 'IN_QUEUE' })
       // Réservation déjà rendue / remboursée / close (échec antérieur, filet) → on ne livre plus : sinon génération gratuite.
+      // closed (Axel 25/09) = re-tirée / livrée par le repli ou déjà remboursée — jamais « trop vieille » : une op de plus de
+      // 2 h est désormais REMBOURSÉE de ce qui n'a pas été livré (kie_job_bill → refunded), plus close sans crédit rendu.
       if (job?.op_id && ['released', 'refunded', 'closed'].includes(String(job.bill_state)))
-        return jsonRes(422, { status: 'FAILED', error: 'génération close — crédits déjà rendus', detail: [{ type: 'closed', msg: String(job.bill_state) }], billing: job.bill_state })
+        return jsonRes(422, { status: 'FAILED', error: job.bill_state === 'closed' ? 'génération close — déjà livrée par le repli ou crédits déjà rendus' : 'génération close — crédits déjà rendus',
+          detail: [{ type: 'closed', msg: String(job.bill_state) }], billing: job.bill_state })
 
       // Le filet l'a déjà prise (onglet revenu après une veille) → on ne la redonne pas : sinon doublon en Bibliothèque.
       let claimed = false

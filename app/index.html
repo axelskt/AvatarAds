@@ -10273,21 +10273,29 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta
   if(meta){ meta.engine = 'google'; meta.fellBack = false; }
   const _kDev = _kieOn(), _kCli = !_kDev && !chain && !!(meta && meta.kie4k) && _kieClientOn('4k');
   if(_kDev || _kCli){
+    let _sent = false;   // (Axel 25/09) true dès que la soumission part chez kie (avant : dépôt de l'image seul, rien tiré)
     try{
       const _u = await _kieUpload(dataUrl);
+      _sent = true;
       const _r = await _kieRun('nano-banana-pro', { prompt, image_urls:[_u], aspect_ratio: aspect||'auto', resolution: size||'2K' }, { every:3000, maxPolls:300, op: opHint });   // 15 min : kie est lent (4K mesurée à 9 min le 23/09) ; délai dépassé = jamais de repli (la tâche finit en Bibliothèque)
       const _d = await _kieDataUrl(_r.url);
       window._aaLastEngine = 'kie'; if(meta) meta.engine = 'kie'; _kieAck(_r.rid);
       return _d;
-    }catch(e){
-      console.warn('[kie] Nano Banana Pro : échec kie', e);
+    }catch(e0){
+      console.warn('[kie] Nano Banana Pro : échec kie', e0);
+      // (Axel 25/09) Erreur APRÈS la soumission sans _kieStage (ex. image rapatriée illisible sur l'appareil) : côté serveur
+      // l'op est tirée, voire déjà RÉGLÉE (résultat copié). Un repli (Google ici, gpt-image / fal chez les appelants)
+      // re-tirerait une AUTRE op via resolve_op et générerait l'image deux fois → 'pending' : jamais de repli ; le filet
+      // (reconcile-kie) la range en Bibliothèque.
+      let e = e0;
+      if(_sent && !(e && e._kieStage)){ e = new Error('kie : image terminée mais illisible sur cet appareil — elle arrivera toute seule dans ta Bibliothèque d’ici ~2\u00a0h, ne relance pas'); e._kieStage = 'pending'; e._kieBill = ''; }
       if(_kDev){   // developer : aucun repli (Axel 23/09)
         if(e && e._kieRefus){ const r=new Error('Nano Banana Pro a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
         if(!_kieCanFallback(e)) throw e;
       } else {
-        // Client : erreur AVANT tout appel kie (dépôt de l'image) = rien tiré → repli. Sinon repli seulement si la réservation
+        // Client : dépôt de l'image raté (rien lancé chez kie, rien tiré) → repli. Sinon repli seulement si la réservation
         // est re-tirable ; e._kieStage posé → les appelants ne replient PAS non plus sur gpt-image (issue kie inconnue).
-        if(e && e._kieStage && !_kieCanFallback(e)) throw e;
+        if(_sent && !_kieCanFallback(e)) throw e;
         window._aaKieFellBack = true; if(meta) meta.fellBack = true;
         console.info('[kie] Nano Banana Pro : repli Google (réservation '+((e && e._kieBill) || 'non tirée')+')');
       }
@@ -10519,7 +10527,9 @@ async function _kieFetchBlob(url){
     try{ const r = await fetch(url); if(r.ok){ const b = await r.blob(); if(b.size > 1000) return b; } }catch(_){}
     await new Promise(res=>setTimeout(res, 1500*(k+1)));
   }
-  const e = new Error('kie : média terminé mais téléchargement impossible'); e._kieStage = 'pending'; throw e;
+  // Résultat déjà rapatrié + réglé côté serveur (route résultat OK) : le filet le range en Bibliothèque (copie non accusée
+  // > 2 h) → le dire, sinon l'utilisateur relance et paie deux fois (Axel 25/09).
+  const e = new Error('kie : média terminé mais téléchargement impossible — il arrivera tout seul dans ta Bibliothèque d’ici ~2\u00a0h, ne relance pas'); e._kieStage = 'pending'; throw e;
 }
 async function _kieDataUrl(url){
   const b = await _kieFetchBlob(url);

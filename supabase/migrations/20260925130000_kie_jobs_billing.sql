@@ -15,17 +15,19 @@
 --   settled  → résultat rapatrié (livré, non remboursable) ;
 --   released → tirage rendu à la RÉSERVE (échec kie, onglet vivant) : l'app peut re-tirer la MÊME op pour son repli
 --              (Google / fal), ou la rembourser (refund_credits) ;
---   refunded → solde remboursé côté serveur (refund_op_terminal : onglet fermé, ou soumission sans réponse) ;
---   closed   → plus rien à faire (op livrée par le repli, déjà remboursée, trop vieille…).
+--   refunded → solde remboursé côté serveur (refund_op_terminal : onglet fermé, ou soumission sans réponse ; op de plus
+--              de 2 h : ce qui n'a pas été livré, voir kie_job_bill — bill_reason 'too_old') ;
+--   closed   → plus rien à faire (op livrée / re-tirée par le repli, déjà remboursée…) — raison dans bill_reason.
 -- Chaque transition passe par kie_job_bill (verrou de ligne + garde d'état dans la MÊME transaction) → EXACTEMENT UNE
 -- FOIS : un résultat relu deux fois ne règle pas deux fois, un échec relu ne rend pas deux fois.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 alter table public.kie_jobs
-  add column if not exists op_id      uuid,          -- op credit_ops tirée pour cette tâche (NULL = aucune réservation)
-  add column if not exists drawn      integer,       -- montant EXACT tiré par cette tâche (restauration exacte, jamais 9999)
-  add column if not exists bill_state text,          -- drawn → settled | released | refunded | closed
-  add column if not exists billed_at  timestamptz;   -- dernière transition de facturation
+  add column if not exists op_id       uuid,          -- op credit_ops tirée pour cette tâche (NULL = aucune réservation)
+  add column if not exists drawn       integer,       -- montant EXACT tiré par cette tâche (restauration exacte, jamais 9999)
+  add column if not exists bill_state  text,          -- drawn → settled | released | refunded | closed
+  add column if not exists bill_reason text,          -- pourquoi closed (already_delivered, in_progress…) / too_old = remboursement tardif (Axel 25/09)
+  add column if not exists billed_at   timestamptz;   -- dernière transition de facturation
 
 alter table public.kie_jobs drop constraint if exists kie_jobs_bill_state_check;
 alter table public.kie_jobs add constraint kie_jobs_bill_state_check
@@ -43,7 +45,13 @@ create index if not exists kie_jobs_bill_open_idx on public.kie_jobs (bill_state
 --             image de départ Express réglée sur la même op) → release du tiré exact, puis règle ci-dessous ;
 --             released → même règle que refund_credits (ce que l'app aurait fait) : rembourse la RÉSERVE RESTANTE si
 --             personne ne l'a re-tirée (partiel si une autre étape a été livrée) ; re-tirée par le repli / en cours /
---             déjà remboursée / trop vieille → closed.
+--             déjà remboursée → closed.
+--             Op de PLUS DE 2 H (Axel 25/09) : refund_op_terminal / refund_credits la refusent (too_old). Avant, la ligne
+--             passait closed SANS rien rendre, or le filet n'abandonne une tâche qu'après 6 h (en cours), 24 h
+--             (introuvable), 48 h (kie injoignable) ou 6 copies ratées → crédits perdus à chaque fois. La règle
+--             ci-dessous s'applique donc SANS la garde 2 h (bill_reason 'too_old' = remboursement tardif) : sûr, car après
+--             2 h l'op n'est plus tirable (resolve_op / draw_* exigent < 2 h) ni remboursable par personne d'autre, et la
+--             garde bill_state sous FOR UPDATE + refunded_at posé = une seule fois (même à deux tâches sur la même op).
 -- Renvoie { ok, bill, reason?, refunded? } ; `bill` = état APRÈS l'appel (renvoyé tel quel au client).
 create or replace function public.kie_job_bill(p_user uuid, p_task text, p_action text)
 returns jsonb language plpgsql security definer set search_path = public as $$
@@ -82,10 +90,10 @@ begin
     end if;
     v_reason := coalesce(v_r->>'reason', 'refused');
     if v_reason in ('unknown_op', 'already_refunded') then
-      update public.kie_jobs set bill_state = 'closed', billed_at = now() where task_id = p_task;
+      update public.kie_jobs set bill_state = 'closed', bill_reason = v_reason, billed_at = now() where task_id = p_task;
       return jsonb_build_object('ok', false, 'reason', v_reason, 'bill', 'closed');
     end if;
-    -- op multi-étapes / livrée / trop vieille → release du tiré EXACT (comportement des proxys), puis règle refund_credits
+    -- op multi-étapes / livrée / de plus de 2 h → release du tiré EXACT (comportement des proxys), puis règle refund_credits
     if coalesce(v_job.drawn, 0) > 0 then perform public.release_reservation(p_user, v_job.op_id, v_job.drawn); end if;
     update public.kie_jobs set bill_state = 'released', billed_at = now() where task_id = p_task;
   end if;
@@ -93,10 +101,11 @@ begin
   -- Réserve rendue : MÊME règle que refund_credits (ce que l'app aurait remboursé si l'onglet avait survécu). Ligne op
   -- verrouillée → aucun tirage concurrent entre le contrôle et le remboursement. Re-tirée par le repli (réserve 0, ou
   -- tirage en cours non réglé) → rien à rendre, l'étape suivante (Google / fal) a sa propre facturation.
+  -- (Axel 25/09) PAS de garde « op de plus de 2 h » ici (voir l'en-tête) : le filet arrive souvent après 2 h, et une op
+  -- morte n'est plus tirable par personne → sa réserve restante est exactement ce qui n'a pas été livré.
   select * into v_op from public.credit_ops where id = v_job.op_id and user_id = p_user for update;
   if not found then v_reason := 'unknown_op';
   elsif v_op.refunded_at is not null then v_reason := 'already_refunded';
-  elsif v_op.created_at < now() - interval '2 hours' then v_reason := 'too_old';
   else
     v_res := coalesce(v_op.reserved_remaining, v_op.amount);
     if v_res < v_op.amount and v_op.settled_at is null then v_reason := 'in_progress';
@@ -108,11 +117,13 @@ begin
          set credits_remaining = coalesce(credits_remaining, 0) + v_res,
              bought_credits    = coalesce(bought_credits, 0) + v_bought
        where id = p_user;
-      update public.kie_jobs set bill_state = 'refunded', billed_at = now() where task_id = p_task;
-      return jsonb_build_object('ok', true, 'bill', 'refunded', 'refunded', v_res, 'partial', v_res < v_op.amount);
+      update public.kie_jobs set bill_state = 'refunded', billed_at = now(),
+             bill_reason = case when v_op.created_at < now() - interval '2 hours' then 'too_old' end where task_id = p_task;
+      return jsonb_build_object('ok', true, 'bill', 'refunded', 'refunded', v_res, 'partial', v_res < v_op.amount,
+                                'late', v_op.created_at < now() - interval '2 hours');
     end if;
   end if;
-  update public.kie_jobs set bill_state = 'closed', billed_at = now() where task_id = p_task;
+  update public.kie_jobs set bill_state = 'closed', bill_reason = v_reason, billed_at = now() where task_id = p_task;
   return jsonb_build_object('ok', false, 'reason', v_reason, 'bill', 'closed');
 end $$;
 

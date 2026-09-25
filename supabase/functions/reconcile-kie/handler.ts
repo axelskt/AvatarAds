@@ -19,8 +19,9 @@
 //   • 'failed' / 'expired'                    → op REMBOURSÉE côté serveur (refund_op_terminal ; refus → réserve rendue) ;
 //   • C) balayage > 30 min : réserve rendue (échec vu par l'app) jamais re-tirée par son repli NI remboursée (onglet mort)
 //        → remboursée ; règlement / remboursement raté plus haut → rejoué. Tout passe par kie_job_bill : EXACTEMENT une fois.
-//   Limite : refund_op_terminal refuse une op de plus de 2 h (garde anti-abus commune) → une tâche kie restée en cours
-//   plus de 2 h puis expirée n'est pas remboursée automatiquement (cas rare, à rembourser à la main).
+//   Op de plus de 2 h (Axel 25/09) : refund_op_terminal / refund_credits la refusent (too_old) — or ce filet n'abandonne
+//   qu'après 6 h (en cours), 24 h (introuvable), 48 h (kie injoignable) ou 6 copies ratées. kie_job_bill rembourse alors
+//   ce qui n'a pas été livré (règle refund_credits sans la garde 2 h, bill_reason 'too_old') au lieu de clore sans rien rendre.
 // Déclenché par pg_cron (POST + x-cron-key = CRON_SECRET), comme reconcile-fal-orphans. Best-effort, jamais bloquant.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnedBy, kieBill } from '../_shared/kie.ts'
