@@ -1131,8 +1131,7 @@
   }
   function dmChartHTML(X) {
     var D = X.D, S = X.S;
-    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Leads, « Je suis abonné », liens et clics · ' + esc(DM_STEP[X.step]) + '</h3>'
-      + '<span class="cf-meta">une personne compte une fois, au moment de son 1er commentaire de la période</span></div>';
+    var head = '<div class="cf-evo-h"><h3 class="cf-h2">Leads, « Je suis abonné », liens et clics · ' + esc(DM_STEP[X.step]) + '</h3></div>';
     if (!D) {
       dmCur = null;
       return '<div class="cf-evo">' + head + (S.state === 'error' && !S.loading ? '<div class="cf-evo-msg">' + esc('Courbe indisponible : ' + X.why + '.') + '</div>'
@@ -1246,7 +1245,6 @@
         + (sub ? '<div class="cf-tile-w">' + esc(sub) + '</div>' : '') + '</div>';
     };
     var rel = '<div class="cf-dmrel"><div class="cf-over">Relance automatique · lecture seule</div>'
-      + '<p class="cf-meta">Le backend relance UNE fois, 12 à 22' + NB + 'h après le lien, les personnes qui n’ont pas cliqué (jamais si déjà relancées ou déjà cliqué). Aucune action ici.</p>'
       + '<div class="cf-tiles cf-dmrel-t">'
       + tile('lien reçu, pas cliqué', X.unc, '')
       + tile('relancées', R.done, R.doneClicked ? 'dont ' + R.doneClicked + ' ' + plural(R.doneClicked, 'a', 'ont') + ' cliqué après' : '')
