@@ -7,7 +7,9 @@
 // OPENAI_PROXY_URL + un token owner (SUPA_TOKEN) sont fournis (le render-worker a l'un ou l'autre).
 // Sans clé/token → émet juste le bundle (frames b64 + transcript) pour analyse (Claude fait le vision QC
 // à la main quand c'est moi qui tourne l'usine).
-// Usage : node usine/qc-vision.mjs <video.mp4> [--transcript "texte"] [--json] [--frames N]
+// --promise "…" (25/09) : ce que le HOOK annonce et ce que la DÉMO montre (publish-qc le construit depuis la recette) →
+// le modèle juge aussi « la démo tient-elle la promesse du hook ? » ; non → 'doubt' (revue manuelle d'Axel).
+// Usage : node usine/qc-vision.mjs <video.mp4> [--transcript "texte"] [--promise "texte"] [--json] [--frames N]
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,6 +21,7 @@ if (!video || video.startsWith('--')) { console.error('usage: qc-vision.mjs <vid
 const JSON_OUT = args.includes('--json');
 const N = Math.max(2, Math.min(6, parseInt(args[(args.indexOf('--frames')+1)] || '4') || 4));
 const transcript = args.includes('--transcript') ? String(args[args.indexOf('--transcript')+1] || '') : '';
+const promise = args.includes('--promise') ? String(args[args.indexOf('--promise')+1] || '') : '';
 
 const dur = parseFloat(spawnSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0', video], {encoding:'utf8'}).stdout.trim()) || 0;
 const work = mkdtempSync(join(tmpdir(), 'qcv-'));
@@ -36,8 +39,9 @@ On te donne ${frames.length} frames échantillonnées${transcript ? ' + la trans
 - glitch/artefact visible (visage déformé, mains fusionnées, texte de sous-titre illisible/déborde/coupé, frame noire/blanche, doublon d'image) ?
 - le visuel est-il cohérent avec ce qui est dit ${transcript ? '(transcription fournie)' : '(sinon juge la cohérence interne)'} ?
 - qualité globale « prête à poster » ?
+${promise ? '- la démo montrée tient-elle la promesse du hook (le spectateur voit-il ce que le hook annonce) ?\nContexte de la recette : ' + promise.slice(0, 600) : ''}
 ${transcript ? 'Transcription : "' + transcript.slice(0, 1200) + '"' : ''}
-Réponds UNIQUEMENT en JSON : {"glitch":bool,"matches_words":bool,"quality_ok":bool,"confidence":0..1,"notes":"court"}`;
+Réponds UNIQUEMENT en JSON : {"glitch":bool,"matches_words":bool,"quality_ok":bool,${promise ? '"promise_kept":bool,' : ''}"confidence":0..1,"notes":"court"}`;
 
 async function callOpenAI() {
   const key = process.env.OPENAI_API_KEY;
@@ -72,7 +76,7 @@ try {
     console.log(JSON.stringify(out(bundle), null, JSON_OUT ? 2 : 0));
     process.exit(3);
   }
-  const bad = verdict.glitch || verdict.quality_ok === false || (transcript && verdict.matches_words === false);
+  const bad = verdict.glitch || verdict.quality_ok === false || (transcript && verdict.matches_words === false) || (promise && verdict.promise_kept === false);
   const conf = Number(verdict.confidence) || 0;
   const route = (!bad && conf >= 0.75) ? 'ok' : 'doubt';
   const res = out({ video, route, verdict });

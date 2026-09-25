@@ -1,19 +1,25 @@
 #!/usr/bin/env node
 // Creative Factory — BRANCHEMENT QC : après un rendu, lance qc.mjs (technique) + qc-vision.mjs (IA),
 // dépose la vidéo + un poster dans factory-media, et insère une ligne dans factory_qc.
-// Route finale : qc technique MANUAL → manual ; sinon vision 'doubt' → manual ; sinon auto.
+// Route finale : qc technique MANUAL → manual ; cohérence de la recette ≠ 'ok' → manual ; sinon vision 'doubt' → manual ; sinon auto.
+// Cohérence (Axel 25/09, usine/coherence.js = même règle que le dashboard) : toute démo peut suivre tout hook, mais une paire
+// que les tags ne garantissent pas part en REVUE manuelle (Axel accepte ou refuse dans l'onglet Production) ; la raison est
+// écrite dans technical.coherence.reasons. comboJson = { avatar, hook, liaison?, contenu, cta, musique?, sous_titre? } (IDs).
+// Bibliothèque : --bricks <fichier.json> (export factory_bricks) sinon lue avec la clé service ; introuvable → revue manuelle.
 // « Humain d'abord » (Axel) : status = 'pending' au début même si auto (tout passe par la file tant que le
 // template n'est pas diplômé). L'insertion se fait via la clé service (SUPABASE_SERVICE_ROLE_KEY) si présente
 // — sinon on IMPRIME la ligne (à insérer par Claude via le MCP / à câbler dans le render-worker).
-// Usage : node usine/publish-qc.mjs <video.mp4> <template> [comboJson] [--transcript "…"]
+// Usage : node usine/publish-qc.mjs <video.mp4> <template> [comboJson] [--transcript "…"] [--bricks bricks.json]
 import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const [video, template, comboArg] = process.argv.slice(2).filter(a => !a.startsWith('--'));
+const _argv = process.argv.slice(2), _valOf = (f) => { const i = _argv.indexOf(f); return i > -1 ? String(_argv[i + 1] || '') : ''; };
+const [video, template, comboArg] = _argv.filter((a, i) => !a.startsWith('--') && !['--transcript', '--bricks'].includes(_argv[i - 1]));
 if (!video || !template) { console.error('usage: publish-qc.mjs <video> <template> [comboJson] [--transcript "…"]'); process.exit(2); }
-const trIdx = process.argv.indexOf('--transcript');
-const transcript = trIdx > -1 ? String(process.argv[trIdx+1] || '') : '';
+const transcript = _valOf('--transcript');
+const bricksFile = _valOf('--bricks');
 const HERE = fileURLToPath(new URL('.', import.meta.url));   // décode l'espace de « Autre SaaS » (pas de %20)
 const SB_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 const BUCKET = 'factory-media';
@@ -26,9 +32,37 @@ const j = s => { try { return JSON.parse(s); } catch { return null; } };
 const qcR = run('node', [HERE + 'qc.mjs', video, '--json']);
 const technical = j(qcR.stdout) || { route: 'manual', pass: false, error: 'qc.mjs illisible' };
 
+// 1bis) Cohérence de la recette (hook ↔ démo ↔ liaison) — même règle que le dashboard
+await import(new URL('./coherence.js', import.meta.url).href);
+const COH = globalThis.CF_COHERENCE;
+const combo = (comboArg && j(comboArg)) || {};
+async function loadBricks() {
+  if (bricksFile) { try { return JSON.parse(readFileSync(bricksFile, 'utf8')); } catch (e) { console.warn('⚠ --bricks illisible :', e.message); return null; } }
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return null;
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/factory_bricks?select=id,kind,subject,label,status,meta`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+const bricks = await loadBricks();
+let coherence, promise = '';
+if (!bricks) coherence = { level: 'review', reasons: ['bibliothèque de briques non chargée : cohérence non vérifiée'] };
+else {
+  const byId = Object.fromEntries(bricks.map(b => [b.id, b]));
+  const c = COH.comboCheck(combo, byId);
+  coherence = { level: c.level, reasons: c.reasons };
+  if (c.hook && c.demo) {
+    const say = (b) => String((b.meta && (b.meta.script || b.meta.text)) || b.label || b.id).slice(0, 240);
+    promise = `le hook ${c.hook.id} dit « ${say(c.hook)} » ; la démo ${c.demo.id} montre « ${c.demo.label || c.demo.id} » (module ${COH.demoModule(c.demo)})`;
+  }
+}
+technical.coherence = coherence;
+
 // 2) QC visuel (IA) — peut être absent (pas de clé) → on n'échoue pas
 const visArgs = [HERE + 'qc-vision.mjs', video, '--json'];
 if (transcript) visArgs.push('--transcript', transcript);
+if (promise) visArgs.push('--promise', promise);
 const vR = run('node', visArgs);
 const visOut = j(vR.stdout);
 const vision = (visOut && visOut.verdict) ? visOut : null;   // null si bundle-only (pas de clé)
@@ -36,6 +70,7 @@ const vision = (visOut && visOut.verdict) ? visOut : null;   // null si bundle-o
 // 3) route finale
 let route = 'auto';
 if (technical.route === 'manual') route = 'manual';
+else if (coherence.level !== 'ok') route = 'manual';
 else if (vision && vision.route === 'doubt') route = 'manual';
 
 // 4) poster + upload
@@ -50,7 +85,7 @@ up(poster, pPath, 'image/jpeg');
 // 5) ligne factory_qc
 const row = {
   video_url: pub(vPath), poster_url: pub(pPath), template,
-  brick_combo: (comboArg && j(comboArg)) || {},
+  brick_combo: combo,
   technical, vision, route, status: 'pending',   // humain d'abord
 };
 
@@ -61,6 +96,7 @@ if (svc) {
     headers: { 'Content-Type':'application/json', apikey: svc, Authorization:`Bearer ${svc}`, Prefer:'return=representation' },
     body: JSON.stringify(row),
   });
+  if (coherence.level !== 'ok') console.log('↪ revue manuelle — ' + coherence.reasons.join(' · '));
   console.log(r.ok ? `✓ factory_qc inséré (route ${route})` : `✗ insert factory_qc ${r.status} ${(await r.text()).slice(0,140)}`);
 } else {
   console.log('⚠ SUPABASE_SERVICE_ROLE_KEY absent → ligne à insérer (Claude via MCP) :');
