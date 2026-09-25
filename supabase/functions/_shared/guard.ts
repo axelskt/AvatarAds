@@ -128,6 +128,9 @@ export async function applyReservationFull(o: { req: Request; userId: string; pr
 // L'appel gpt marqué `x-aa-chain: nano4k` tire le palier entier (5) et, réussi, crédite l'op d'UN droit d'upscale ;
 // l'appel Nano consomme ce droit (tirage 0) au lieu de ses 5. Nano en échec → droit rendu. RPC service seulement.
 export const CHAIN_NANO_COST = 5
+// ── Omni Flash image→vidéo (Axel 25/09/2026) : 5 cr/s en 1080p, pour TOUS les plans payants (= CREDIT_COSTS.omniFlashPerSec
+// de l'app, à changer ENSEMBLE). kie-proxy (9:16 / 16:9) et fal-proxy (carré 1:1) tirent EXACTEMENT 5 × durée facturée.
+export const OMNI_FLASH_PER_SEC = 5
 export function wantsNanoChain(req: Request): boolean { return (req.headers.get('x-aa-chain') || '').trim().toLowerCase() === 'nano4k' }
 export async function chainCreditAdd(userId: string, opId: string | undefined, n = 1): Promise<boolean> {
   if (!opId) return false
