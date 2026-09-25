@@ -12553,6 +12553,9 @@ async function reuseLastVideo(){
     // ── Restaurer toutes les variables d'état depuis le cache ──
     results.hedraUrl = cache.url;
     if(cache.script)   results.script = cache.script;
+    // (Axel 25/09) autre vidéo = autre voix : sous-titres OFF + transcription en vol / calée invalidée (règle commune),
+    // AVANT de reprendre la transcription du cache ci-dessous — les réactiver relancera Whisper
+    try{ _genSubsAudioChanged(); }catch(_){}
     if(cache.whisperWordTimestamps?.length) whisperWordTimestamps = cache.whisperWordTimestamps;
     if(cache.wordGroups?.length){ _wordGroups = cache.wordGroups; _renderGroupEditor(); }
     if(cache.silenceKeepSegs?.length) silenceKeepSegs = cache.silenceKeepSegs;
@@ -12561,7 +12564,7 @@ async function reuseLastVideo(){
     if(cache.selSubStyle)  selSubStyle  = cache.selSubStyle;
     if(cache.selAnim)      selAnim      = cache.selAnim;
     if(cache.animEnabled      !== undefined) animEnabled      = cache.animEnabled;
-    if(cache.subtitlesEnabled !== undefined) subtitlesEnabled = cache.subtitlesEnabled;
+    // sous-titres : plus restaurés (Axel 25/09) — restés OFF (_genSubsAudioChanged plus haut)
     splitEnabled = false;   // défaut PLEIN ÉCRAN : réutiliser une vidéo ne réactive plus le split
     if(cache.splitSwapped     !== undefined) splitSwapped     = cache.splitSwapped;
     if(cache.currentPlatform)  currentPlatform  = cache.currentPlatform;
@@ -21110,6 +21113,7 @@ function _previewBtnState(state){
 window._previewResetToIdle = function(){
   try{ if(previewAudio) previewAudio.pause(); }catch(_){}
   try{ _gpmStop(); }catch(_){}
+  try{ _gpvPause(); }catch(_){}   // voix sans silences (élément persistant, 25/09)
   try{ const bpv=document.getElementById('bypassPreviewVid'); if(bpv && !bpv.paused) bpv.pause(); }catch(_){}
   try{ const gpv=document.getElementById('gpVideo'); if(gpv && !gpv.paused) gpv.pause(); }catch(_){}
   try{ stopPreviewAnim(); }catch(_){}
@@ -21214,6 +21218,47 @@ function _gpmRefresh(){
   if(!want){ g.on = false; _gpmPause(); return; }
   _gpmEl(want); _gpmStart();
 }
+// ── Voix « sans silences » de l'aperçu (Axel 25/09, relecture) ──
+// Fichier audio + « Supprimer les silences » : l'audio nettoyé n'existe qu'APRÈS un await (_getOrBuildCleanBlobUrl) → le
+// new Audio(cleanUrl).play() d'avant tombait hors du geste → refusé par Safari / iOS (erreur avalée) → ni voix, ni musique
+// (la musique amorcée attend le départ de la voix). Désormais UN élément voix persistant, amorcé DANS le clic : l'audio
+// nettoyé s'il est déjà prêt (relecture), sinon 0,25 s de silence. Un élément lancé une fois dans un geste reste autorisé à
+// jouer, même après un changement de source (même principe que la musique _gpmEl).
+function _gpvEl(){
+  const g = window._gpm;
+  if(!g.vEl){ g.vEl = new Audio(); g.vEl.preload = 'auto'; g.vEl.setAttribute('playsinline', ''); g.vSrc = ''; }
+  return g.vEl;
+}
+// Source de l'élément voix ; true = nouvelle source (à charger puis lire depuis 0)
+function _gpvSetSrc(url){
+  const g = window._gpm, el = _gpvEl();
+  let abs = url; try{ abs = new URL(url, location.href).href; }catch(_){}
+  if(g.vSrc === abs) return false;
+  g.vSrc = abs; el.src = abs;
+  return true;
+}
+// 0,25 s de silence (WAV PCM 8 bits mono 8 kHz), fabriqué une seule fois
+function _gpvSilence(){
+  if(window._gpvSilUrl) return window._gpvSilUrl;
+  const n = 2000, b = new Uint8Array(44 + n), dv = new DataView(b.buffer);
+  const tag = (o, s) => { for(let i = 0; i < 4; i++) b[o + i] = s.charCodeAt(i); };
+  tag(0, 'RIFF'); dv.setUint32(4, 36 + n, true); tag(8, 'WAVE'); tag(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, 8000, true);
+  dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); tag(36, 'data'); dv.setUint32(40, n, true);
+  b.fill(128, 44);   // PCM 8 bits non signé : 128 = silence
+  window._gpvSilUrl = URL.createObjectURL(new Blob([b], { type:'audio/wav' }));
+  return window._gpvSilUrl;
+}
+// DANS le geste du clic, avant tout await
+function _gpvPrime(){
+  const el = _gpvEl();
+  el.onended = null;   // la fin du silence ne doit pas déclencher la fin (onended) d'un aperçu PRÉCÉDENT
+  let ready = null; try{ ready = _silenceCleanBlobUrl; }catch(_){}
+  _gpvSetSrc(ready || _gpvSilence());
+  try{ el.currentTime = 0; }catch(_){}
+  try{ const p = el.play(); if(p && p.catch) p.catch((e) => console.warn('[aperçu] voix :', e && e.name)); }catch(_){}
+}
+function _gpvPause(){ const g = window._gpm; if(g.vEl){ try{ g.vEl.pause(); }catch(_){} } }
 async function togglePreviewPlay(){
   // ── Clic pendant la LECTURE → PAUSE : on fige tout SANS remettre à zéro ──
   if(previewPlaying){
@@ -21222,6 +21267,7 @@ async function togglePreviewPlay(){
     if(previewInterval !== null){ try{ cancelAnimationFrame(previewInterval); clearInterval(previewInterval); }catch(_){} previewInterval = null; }
     try{ if(previewAudio) previewAudio.pause(); }catch(_){}
     try{ window._gpm.on = false; _gpmPause(); }catch(_){}   // musique en pause avec la voix (reprise : recalée dessus)
+    try{ _gpvPause(); }catch(_){}   // voix sans silences amorcée mais encore en chargement (previewAudio pas encore posé)
     const gpvP = document.getElementById('gpVideo');
     if(gpvP && !gpvP.paused) gpvP.pause();
     const bpvP = document.getElementById('bypassPreviewVid');
@@ -21281,27 +21327,47 @@ async function togglePreviewPlay(){
     // de la voix (Axel 25/09). Rien si la vidéo-voix contient déjà la musique (pas de double).
     const _mWant = _gpmWanted(hedraVidShown ? bpv0 : null);
     _gpmPrime(_mWant);
+    // (Axel 25/09) la voix « sans silences » aussi : élément persistant amorcé ICI, dans le geste (_gpvPrime)
+    const _wantClean = !hedraVidShown && silenceKeepSegs.length > 0;
+    if(_wantClean) _gpvPrime(); else _gpvPause();
+    const _stale = () => !previewPlaying || window._pvTok !== _pvTok;   // Pause / autre lancement pendant un await ci-dessous
     if(hedraVidShown){
       // (Axel 25/09) la vidéo-voix part elle aussi DANS le geste (play() non muet refusé hors geste par Safari / iOS)
       bpv0.muted = false; bpv0.loop = false; bpv0.currentTime = 0;
       try{ const _p0 = bpv0.play(); if(_p0 && _p0.catch) _p0.catch(()=>{}); }catch(_){}
     }
     // Priorité : audio sans silences (sauf si la vidéo lipsync a déjà sa propre voix bakée)
-    const cleanUrl = (!hedraVidShown && silenceKeepSegs.length > 0) ? await _getOrBuildCleanBlobUrl() : null;
+    const cleanUrl = _wantClean ? await _getOrBuildCleanBlobUrl() : null;
+    if(_wantClean && !cleanUrl && !_stale()) _gpvPause();   // pas d'audio nettoyé (analyse absente) → voix du fichier ci-dessous
     if(hedraVidShown){
       // La vidéo lipsync est sa PROPRE source audio → une seule horloge pour
       // voix + personnage + sous-titres (sinon ils se désynchronisent à la lecture)
       await new Promise(r => { if(bpv0.readyState >= 1) return r(); bpv0.onloadedmetadata = r; bpv0.onerror = r; setTimeout(r, 2000); });
-      if(bpv0.paused) bpv0.play().catch(()=>{});
+      if(bpv0.paused && !_stale()) bpv0.play().catch(()=>{});   // « Pause » pendant l'attente : on ne relance rien
       activeAudio = bpv0;
       window._bypassPreviewIsVideo = true;
     } else if(cleanUrl){
-      const cleanEl = new Audio(cleanUrl);
-      // Attendre que la durée soit disponible avant de lancer l'anim
-      await new Promise(r => { cleanEl.onloadedmetadata = r; cleanEl.onerror = r; setTimeout(r, 800); });
-      cleanEl.currentTime = 0; cleanEl.play().catch(()=>{});
+      // Élément voix PERSISTANT, déjà lancé dans le geste (_gpvPrime) : il reste autorisé à jouer après ces await,
+      // là où un new Audio(cleanUrl) créé ici était refusé par Safari / iOS (Axel 25/09)
+      const cleanEl = _gpvEl();
+      if(!_stale()){
+        const fresh = _gpvSetSrc(cleanUrl);   // audio nettoyé pas encore dans l'élément (1re lecture, trim changé…)
+        // Attendre que la durée soit disponible avant de lancer l'anim
+        await new Promise(r => {
+          if(!fresh && cleanEl.readyState >= 1) return r();
+          cleanEl.addEventListener('loadedmetadata', r, { once:true }); cleanEl.addEventListener('error', r, { once:true }); setTimeout(r, 800);
+        });
+        if(!_stale()){
+          // déjà lancé depuis le début dans le geste (relecture, audio nettoyé prêt) → pas de retour à 0 ni de 2e play()
+          if(fresh || cleanEl.paused || cleanEl.ended){ try{ cleanEl.currentTime = 0; }catch(_){} }
+          if(cleanEl.paused) cleanEl.play().catch((e) => console.warn('[aperçu] voix :', e && e.name));
+        }
+      }
       activeAudio = cleanEl;
       _previewUsingCleanAudio = true;
+    } else if(_stale()){
+      // « Pause » / autre lancement pendant la construction de l'audio nettoyé (seul await possible avant ici) : on ne
+      // lance aucune autre voix derrière le dos de l'user — traité juste en dessous
     } else if(mp4AudioEnabled && mp4AudioFile){
       const el = document.getElementById('mp4AudioEl');
       if(el && el.src){ el.currentTime = mp4AudioTrimSt||0; el.play().catch(()=>{}); activeAudio = el; }
@@ -21314,14 +21380,14 @@ async function togglePreviewPlay(){
     }
     // Clic « Pause » (ou un autre lancement) PENDANT le chargement ci-dessus : ce lancement est périmé → on n'active
     // ni voix ni musique derrière le dos de l'user (avant : elles repartaient alors que le bouton affichait « Reprendre »)
-    if(!previewPlaying || window._pvTok !== _pvTok){
+    if(_stale()){
       if(window._pvTok === _pvTok){
         try{ if(activeAudio) activeAudio.pause(); }catch(_){}
         try{ _gpmStop(); }catch(_){}
         window._previewPaused = false; previewAudio = null; _previewBtnState('idle');
-      } else if(activeAudio && activeAudio !== bpv0 && activeAudio.id !== 'mp4AudioEl'){
-        try{ activeAudio.pause(); }catch(_){}   // élément PROPRE à ce lancement (audio sans silences) : jamais 2 voix
       }
+      // sinon un lancement plus récent a pris la main : voix (vidéo, fichier audio, voix sans silences persistante) et
+      // musique sont des éléments PARTAGÉS qu'il pilote déjà, et ce lancement périmé n'a rien relancé → on n'y touche pas
       return;
     }
     previewAudio = activeAudio;
@@ -25354,7 +25420,8 @@ function _buildSessionState(){
     selSubStyle,
     selAnim,
     animEnabled,
-    subtitlesEnabled,
+    // subtitlesEnabled : PLUS sauvegardé (session ni cache « Réutiliser ») — Axel 25/09 : désactivés par défaut à chaque
+    // audio, les activer = Whisper sur la voix courante (un ON restauré n'aurait aucune transcription calée dessus).
     splitEnabled,
     splitSwapped,
     currentPlatform,
@@ -25692,7 +25759,10 @@ function _restoreSession(){
     if(saved.selSubStyle)  selSubStyle  = saved.selSubStyle;
     if(saved.selAnim)      selAnim      = saved.selAnim;
     if(saved.animEnabled      !== undefined) animEnabled      = saved.animEnabled;
-    if(saved.subtitlesEnabled !== undefined) subtitlesEnabled = saved.subtitlesEnabled;
+    // Sous-titres : JAMAIS restaurés au rechargement (Axel 25/09). Un ON d'une ancienne session (anciennes sauvegardes
+    // comprises : la clé est ignorée) rallumait l'interrupteur sans que l'user l'ait activé, sur la transcription d'un
+    // audio perdu (_genSubsFor vide → 1er clic sur un style = Whisper relancé, ou échec « Upload un fichier audio »).
+    // subtitlesEnabled garde donc son défaut (OFF) ; _syncUIFromState ci-dessous affiche l'interrupteur tel quel.
     splitEnabled = false;   // défaut PLEIN ÉCRAN : on ne restaure plus le split de la session
     if(saved.splitSwapped     !== undefined) splitSwapped     = saved.splitSwapped;
     if(saved.currentPlatform)  currentPlatform  = saved.currentPlatform;
