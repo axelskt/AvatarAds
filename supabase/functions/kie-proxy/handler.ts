@@ -3,22 +3,27 @@
 //
 // ACCÈS (Axel 25/09/2026) :
 //   • compte developer : tous les alias, aucune réservation, aucun repli (INCHANGÉ) ; service_role : tout (moteur / tests) ;
-//   • clients payants : EXACTEMENT deux usages — nano-banana-pro (« Améliorer en 4K », Starter / Pro / Élite / BYOK) et
+//   • clients payants : EXACTEMENT trois usages — nano-banana-pro (« Améliorer en 4K », Starter / Pro / Élite / BYOK),
 //     omni-flash (Omni Flash image→vidéo : Express + Voix native du Générateur, Starter / Pro / Élite / BYOK depuis le
-//     25/09) — voir KIE_OPEN (../_shared/kie.ts). Tout autre alias (Veo, Kling Motion Control, OmniHuman, faceswap Nano
-//     1K) → 403. Secret KIE_CLIENTS=0 = tout refermer sans redéployer (Omni Flash n'a plus de repli : il est alors
-//     indisponible pour les clients, sauf le carré 1:1 qui passe par fal).
-// RGPD : kie.ai n'a ni DPA ni garantie RGPD. L'ouverture aux clients de ces deux usages est une décision d'Axel du 25/09/2026 ;
+//     25/09) et veo3-lite (Express « Veo Standard », Starter / Pro / Élite / BYOK ; 1080p = Pro / Élite, comme Google) —
+//     voir KIE_OPEN (../_shared/kie.ts). Tout autre alias (Veo Fast, Kling Motion Control, OmniHuman, faceswap Nano 1K)
+//     → 403. Secret KIE_CLIENTS=0 = tout refermer sans redéployer (Omni Flash n'a plus de repli : il est alors
+//     indisponible pour les clients, sauf le carré 1:1 qui passe par fal ; Nano 4K et Veo repassent par Google).
+// RGPD : kie.ai n'a ni DPA ni garantie RGPD. L'ouverture aux clients de ces usages est une décision d'Axel du 25/09/2026 ;
 //        la politique de confidentialité doit lister kie.ai comme sous-traitant. La clé reste dans les secrets (KIEAI_API_KEY).
 //
 // FACTURATION (clients) — identique aux proxys existants (guard.ts) :
 //   • tirage AVANT l'appel kie : Nano = 5 sur l'op x-aa-op (comme google-ai-proxy) ; Omni = EXACTEMENT 5 cr × durée
-//     facturée (Axel 25/09, voir OMNI_FLASH_PER_SEC) ; réservation absente / insuffisante → 402 (RESERVE_ENFORCE /
+//     facturée (Axel 25/09, voir OMNI_FLASH_PER_SEC) ; Veo Lite = EXACTEMENT tarif × durée facturée (1,5 cr/s en 720p,
+//     3 cr/s en 1080p — prix INCHANGÉS, voir kieVeoCost) ; Omni et Veo MOINS l'image de départ d'Express déjà tirée sur
+//     la même op (image OFFERTE, draw_omni_reservation) ; réservation absente / insuffisante → 402 (RESERVE_ENFORCE /
 //     RESERVE_STRICT) ;
 //   • l'op tirée est LIÉE à la tâche (kie_jobs.op_id / drawn / bill_state) → RPC kie_job_bill, exactement une fois :
 //       résultat rapatrié → settle ; échec kie (FAILED, résultat vide) → release (rendu à la RÉSERVE : l'app peut re-tirer
 //       la MÊME op pour son repli Google, ou la rembourser) ; soumission refusée par kie → release ; soumission SANS
 //       réponse (délai, réseau) → refund serveur (taskId inconnu = rien de récupérable) et PAS de repli (double coût) ;
+//       Veo : la remise d'image consommée par le tirage est rendue AVEC lui (release_omni_reservation, kie_jobs.start_img)
+//       → le repli Google (google-ai-proxy, draw_omni_reservation) re-tire la même op au même prix ;
 //   • Omni Flash (Axel 25/09 : « kie directement, pas de fallback ») : plus AUCUN repli fal côté app → tout échec kie est
 //     rendu PUIS remboursé ici même (release → refund, KIE_NO_FALLBACK) : la réservation ne reste jamais tirée et le
 //     client n'a plus rien à rembourser (son refund_credits répond already_refunded) ;
@@ -35,6 +40,8 @@
 // alias : nano-banana-pro · veo3-lite · veo3-fast · kling-2.6-mc · kling-3.0-mc · omnihuman-1.5 · omni-flash
 // `billing` (erreurs et FAILED) : none | released | refunded | drawn | closed | unfunded — l'app ne replie QUE sur
 // released / none (réservation re-tirable proprement), et jamais pour Omni Flash (refunded en temps normal).
+// Veo client (25/09) : image de départ OBLIGATOIRE (Express en a toujours une ; c'est aussi la preuve de propriété du
+// résultat — un texte→vidéo ne contiendrait aucune URL de notre storage et ne serait jamais livrable).
 //
 // Sécurité : le corps kie est RECONSTRUIT côté serveur (jamais de spread du corps client) ; modèle, traduction,
 // filigrane, fond Kling… imposés ici (clients : Nano en 4K, UNE image). Entrées = URL signées de NOTRE storage
@@ -42,8 +49,8 @@
 // exige /render-media/<uid>/ ; clients : la ligne kie_jobs (écrite à la soumission) doit AUSSI être la leur.
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
-import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, applyOmniReservation, refundOpTerminal, releaseOp, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
-import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, KIE_LABELS, KIE_OPEN, KIE_NO_FALLBACK, kieClientsOn } from '../_shared/kie.ts'
+import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, applyOmniReservation, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn } from '../_shared/kie.ts'
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
@@ -53,6 +60,8 @@ const ALLOW = /^\/(health|balance|kie\/(nano-banana-pro|veo3-lite|veo3-fast|klin
 const NB_AR = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9', 'auto']
 // Coûts serveur (= débit légitime de l'app → ne 402 jamais un flux normal) :
 //   Nano Banana Pro = 5 (= google-ai-proxy costFor, = CREDIT_COSTS.imgUpscale4K / imgRealistic) ;
+//   Veo Lite / Fast (25/09) = kieVeoCost : tarif × cran envoyé (4/6/8 s), 1080p ×2 — = CREDIT_COSTS de l'app, = costFor de
+//   google-ai-proxy (le repli) ; image de départ d'Express OFFERTE comme pour Omni (draw_omni_reservation) ;
 //   Omni Flash (Axel 25/09) = EXACTEMENT OMNI_FLASH_PER_SEC (5) × durée facturée, 1080p. Fin du « plancher 3 cr quelle que
 //   soit la durée » (relecture 25/09 : une réserve de 3 cr suffisait pour une vidéo de 10 s). Durée facturée = le cran kie
 //   envoyé (4/6/8/10 s, arrondi au-dessus comme kie) : l'app ne propose QUE ces crans pour Omni, c'est donc exactement la
@@ -96,6 +105,7 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
   if (alias === 'veo3-lite' || alias === 'veo3-fast') {
     const img = b.image_url ? okInput(b.image_url, uid) : null
     if (b.image_url && !img) return { error: 'image_url : URL de notre storage uniquement' }
+    if (!full && !img) return { error: 'image_url requise (image de départ)' }   // client : preuve de propriété du résultat
     const prompt = str(b.prompt, 10000)
     if (!prompt) return { error: 'prompt requis' }
     const d = Number(b.duration) || 8
@@ -183,16 +193,17 @@ export async function handler(req: Request): Promise<Response> {
   const path = v.path
   const sub = path.match(/^\/kie\/([a-z0-9.-]+)$/)
 
-  // ── Accès (25/09) : developer = tout, sans réservation (inchangé) ; clients payants = les 2 usages ouverts (KIE_OPEN)
+  // ── Accès (25/09) : developer = tout, sans réservation (inchangé) ; clients payants = les usages ouverts (KIE_OPEN)
   //    + le suivi de LEURS tâches ; service_role = tout. Doute sur le plan (hoquet DB) → 403 FERMÉ AVANT tout tirage :
-  //    l'app replie alors sur Google (4K, billing 'none'), dont le gate est, lui, ouvert sur hoquet ; Omni Flash (sans
-  //    repli) affiche l'erreur et rembourse son débit (rien n'a été tiré ici).
+  //    l'app replie alors sur Google (4K et Veo, billing 'none'), dont le gate est, lui, ouvert sur hoquet ; Omni Flash
+  //    (sans repli) affiche l'erreur et rembourse son débit (rien n'a été tiré ici).
   const auth = await authUser(req)
-  let uid: string | null = null, isDev = false, noBill = false
+  let uid: string | null = null, isDev = false, noBill = false, plan = '', isOwner = false
   if (!auth.isService) {
     if (!auth.userId) return jsonRes(401, { error: 'Session requise' })
     uid = auth.userId
-    const { plan, isOwner, err } = await userPlan(uid)
+    const up = await userPlan(uid), err = up.err
+    plan = up.plan; isOwner = up.isOwner
     isDev = !err && plan === 'developer'
     noBill = !err && (isDev || isOwner)   // owner / developer : spendCreditsFor ne débite rien → aucune réservation à tirer
     if (!isDev) {
@@ -225,15 +236,24 @@ export async function handler(req: Request): Promise<Response> {
       const b = await req.json().catch(() => ({}))
       const built = build(alias, b && typeof b === 'object' ? b : {}, uid, isDev || !uid)
       if ('error' in built) return jsonRes(400, { error: built.error, billing: 'none' })
+      const isVeo = alias === 'veo3-lite' || alias === 'veo3-fast'
+      // Paliers Veo des clients (25/09), lus sur le corps RECONSTRUIT (= ce qui part chez kie) et AVANT tout tirage : 1080p =
+      // Pro / Élite (gate « Veo 1080p » de google-ai-proxy) ; Veo Fast = Pro / Élite s'il est un jour ouvert. Owner : passe.
+      if (uid && !isDev && isVeo) {
+        if (!isOwner && alias === 'veo3-fast' && !KIE_VEO_FAST_PLANS.includes(plan)) return jsonRes(403, { error: `Veo Fast nécessite un plan ${KIE_VEO_FAST_PLANS.join(' / ')}`, billing: 'none' })
+        if (!isOwner && built.body.resolution === '1080p' && !KIE_VEO_1080_PLANS.includes(plan)) return jsonRes(403, { error: `La 1080p nécessite un plan ${KIE_VEO_1080_PLANS.join(' / ')}`, billing: 'none' })
+      }
 
       // ── Réservation (clients, 25/09) : tirée AVANT l'appel kie, EXACTEMENT comme les proxys historiques ──
       //    Nano 4K = 5 sur l'op x-aa-op (google-ai-proxy) ; Omni = EXACTEMENT 5 × le cran envoyé à kie (Axel 25/09) :
       //    réserve qui ne couvre pas ce montant → 402 AVANT kie (plus de vidéo de 10 s financée par 3 crédits).
-      const cost = alias === 'omni-flash' ? OMNI_FLASH_PER_SEC * omniSecOf(built) : NANO_COST
+      //    Veo (25/09) = EXACTEMENT tarif × cran envoyé (Lite 1,5 cr/s 720p · 3 cr/s 1080p ; Fast 3 / 6), jamais la réserve.
+      const cost = alias === 'omni-flash' ? OMNI_FLASH_PER_SEC * omniSecOf(built)
+        : isVeo ? kieVeoCost(alias, built.body.resolution, built.body.duration) : NANO_COST
       let opId: string | undefined, drawn = 0
       if (uid && !noBill) {
-        // Omni : draw_omni_reservation = 5 × cran MOINS l'image de départ d'Express déjà tirée sur l'op (image OFFERTE, 25/09)
-        const rr = alias === 'omni-flash'
+        // Omni et Veo : draw_omni_reservation = coût MOINS l'image de départ d'Express déjà tirée sur l'op (image OFFERTE, 25/09)
+        const rr = (alias === 'omni-flash' || isVeo)
           ? await applyOmniReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
           : await applyReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
         if (!rr.ok) return jsonRes(rr.status, { error: rr.error, billing: 'unfunded' })
@@ -244,6 +264,9 @@ export async function handler(req: Request): Promise<Response> {
         drawn = (rr as { drawn?: number }).drawn ?? 0
         opId = drawn > 0 ? rr.opId : undefined
       }
+      // Remise d'image consommée par CE tirage (Veo) : rendue avec lui si kie échoue, pour que le repli Google re-tire l'op
+      // au même prix. Omni (sans repli) : inutile, la réserve rendue est aussitôt remboursée.
+      const startImg = (isVeo && opId) ? omniStartUsed(cost, drawn) : 0
       // Soumission ratée : tirage RENDU à la réservation (repli possible sur la même op) ou REMBOURSÉ (sans réponse de kie).
       // Une réserve rendue est notée (ligne 'sub-…', état failed) : si l'onglet meurt avant repli / remboursement, le
       // balayage de reconcile-kie la rembourse (> 30 min, seulement si personne ne l'a re-tirée).
@@ -253,9 +276,9 @@ export async function handler(req: Request): Promise<Response> {
         if (!uid || !opId) return 'none'
         if (refund && await refundOpTerminal(uid, opId, drawn || 1)) return 'refunded'
         if (drawn <= 0) return 'none'
-        await releaseOp(uid, opId, drawn)
+        await releaseOmniOp(uid, opId, drawn, startImg)   // tiré + remise d'image (Veo) rendus ensemble
         const subRid = 'sub-' + crypto.randomUUID()
-        const { error: fErr } = await svc().from('kie_jobs').insert({ task_id: subRid, user_id: uid, alias, label: KIE_LABELS[alias] || 'kie.ai',
+        const { error: fErr } = await svc().from('kie_jobs').insert({ task_id: subRid, user_id: uid, alias, label: kieLabel(alias, isDev),
           state: 'failed', last_error: why.slice(0, 200), op_id: opId, drawn, bill_state: 'released', billed_at: new Date().toISOString() })
         if (fErr) { console.warn('[kie] kie_jobs (soumission ratée)', fErr.message); return 'released' }   // l'app rembourse (refund_credits)
         if (KIE_NO_FALLBACK.has(alias)) return (await kieBill(svc(), uid, subRid, 'refund')).bill ?? 'released'
@@ -283,16 +306,21 @@ export async function handler(req: Request): Promise<Response> {
       const rid = `${fam}-${taskId}`
       console.log('[kie] submit ok', alias, taskId, who, opId ? `op=${opId} tiré=${drawn}` : '')
       if (uid) {
-        const row = { task_id: rid, user_id: uid, alias, label: KIE_LABELS[alias] || 'kie.ai',
-          ...(opId ? { op_id: opId, drawn, bill_state: 'drawn', billed_at: new Date().toISOString() } : {}) }
+        // Libellé Bibliothèque (filet) sans nom de moteur pour un client ; start_img = remise d'image à rendre avec le tirage.
+        const row: Record<string, unknown> = { task_id: rid, user_id: uid, alias, label: kieLabel(alias, isDev),
+          ...(opId ? { op_id: opId, drawn, bill_state: 'drawn', billed_at: new Date().toISOString() } : {}),
+          ...(startImg > 0 ? { start_img: startImg } : {}) }
         let jErr = (await svc().from('kie_jobs').insert(row)).error
+        // Colonne start_img absente (fonction déployée avant la migration 20260925230000) → ligne sans elle : suivi, règlement
+        // et filet intacts ; seul le repli Google après un échec kie manquerait la remise (402 propre, crédits rendus).
+        if (jErr && 'start_img' in row && /start_img|PGRST204|42703/i.test(`${jErr.code || ''} ${jErr.message || ''}`)) { delete row.start_img; jErr = (await svc().from('kie_jobs').insert(row)).error }
         if (jErr && jErr.code !== '23505') jErr = (await svc().from('kie_jobs').insert(row)).error   // 1 réessai (23505 = déjà là)
         if (jErr && jErr.code !== '23505') {
           console.warn('[kie] kie_jobs insert', jErr.message)
           // Client sans ligne = ni suivi (propriété), ni règlement, ni filet → on rend ses crédits tout de suite ; la tâche
           // kie tourne pour rien (coût kie seul). `uncertain` : pas de repli (la tâche existe chez kie). Developer : inchangé.
           if (!isDev) {
-            const billing = !opId ? 'none' : (await refundOpTerminal(uid, opId, drawn || 1)) ? 'refunded' : (drawn > 0 ? (await releaseOp(uid, opId, drawn), 'released') : 'none')
+            const billing = !opId ? 'none' : (await refundOpTerminal(uid, opId, drawn || 1)) ? 'refunded' : (drawn > 0 ? (await releaseOmniOp(uid, opId, drawn, startImg), 'released') : 'none')
             return jsonRes(503, { error: 'suivi de la génération impossible — crédits rendus, réessaie', uncertain: true, billing })
           }
         }

@@ -13,7 +13,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 // 23/09/2026 : `:predict` (Imagen 4, arrêté par Google le 17/08/2026, seul appelant = module Cartoon supprimé) retiré.
@@ -94,6 +94,7 @@ serve(async (req: Request) => {
 
   let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
   let drawnOp: string | undefined
+  let startImg = 0   // Veo d'Express (25/09) : remise « image de départ offerte » consommée par le tirage — rendue AVEC lui
   let chainOp: string | null = null   // droit d'upscale du palier 4K consommé (tirage 0) — rendu si Nano échoue
   let settled = false, gaveBack = false
   // Rend UNE seule fois, jamais après un règlement : le droit s'il a été pris, sinon le tirage (jamais un tirage nul,
@@ -102,7 +103,7 @@ serve(async (req: Request) => {
     if (settled || gaveBack) return
     gaveBack = true
     if (chainOp) await chainCreditGiveBack(uid, chainOp)
-    else if (drawn > 0) await releaseOp(uid, drawnOp, drawn)
+    else if (drawn > 0) await releaseOmniOp(uid, drawnOp, drawn, startImg)   // startImg 0 (Nano, Veo sans image offerte) = releaseOp
   }
   try {
     const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
@@ -128,6 +129,16 @@ serve(async (req: Request) => {
         // nouveau tirage ; pris d'abord sur l'op du palier (x-aa-op). Un Nano non marqué tire ses 5 comme avant.
         if (isSyncBillable && wantsNanoChain(req)) chainOp = await chainCreditTake(uid, opFromReq(req))
         if (chainOp) { drawn = 0; drawnOp = chainOp }
+        else if (/:predictLongRunning$/.test(bare)) {
+          // Veo (25/09, Express : kie par défaut, Google = repli / kie fermé) : tirage EXACT tarif × durée MOINS l'image de
+          // départ d'Express offerte (draw_omni_reservation, notée par openai-proxy — même règle que kie-proxy). `drawn` = le
+          // montant RÉELLEMENT tiré (0 en mode ombre / hoquet DB) : c'est lui qu'on lie au job et qu'on rend, jamais le coût
+          // (restaurer un tirage qui n'a pas eu lieu rouvrait le refund-and-keep). La remise consommée est rendue avec lui
+          // (releaseOmniOp) : l'app relance Veo sur la MÊME op après certains refus (sans audio natif, Fast → Lite).
+          const cost = costFor(bare, rawBody)
+          const r = await applyOmniReservation({ req, userId: uid, proxy: 'google', cost, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error })
+          drawn = r.drawn ?? 0; drawnOp = drawn > 0 ? r.opId : undefined; startImg = omniStartUsed(cost, drawn)
+        }
         else { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId }
       } else if (gated && /:generateContent$/.test(bare) && !/tts/i.test(bare)) {
         // Helper chat non facturant : plafond de tokens de sortie (audit chaînes 15/09).
@@ -158,9 +169,10 @@ serve(async (req: Request) => {
         if (googleRes.ok && !refused) { if (drawnOp) await settleReservation(uid, drawnOp); settled = true }
         else await giveBack()
       } else if (isBillable) {
-        // Veo : soumission async. 2xx → on lie l'op au job ; erreur → on rend l'op tirée.
-        if (googleRes.ok) { const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''; if (name) await bindJob(uid, drawnOp, 'veo:' + name, drawn) }
-        else await releaseOp(uid, drawnOp, drawn)
+        // Veo : soumission async. 2xx → on lie l'op au job (seulement si un tirage a RÉELLEMENT eu lieu : un bind sans montant
+        // rendrait tout au release_by_job) ; erreur → on rend le tiré et la remise d'image consommée.
+        if (googleRes.ok) { const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''; if (name && drawn > 0) await bindJob(uid, drawnOp, 'veo:' + name, drawn) }
+        else if (drawn > 0) { await releaseOmniOp(uid, drawnOp, drawn, startImg); gaveBack = true }
       } else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body)) {
         // Poll d'une opération Veo terminée. Livrée = une VIDÉO est présente (octets, uri ou files/…). « done » sans vidéo
         // (erreur, ou vidéo bloquée par le filtre RAI : raiMediaFilteredCount > 0) = échec NON facturé par Google →

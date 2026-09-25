@@ -10559,11 +10559,12 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
 // Mêmes modèles, MÊMES prompts backend : seul le fournisseur change (kie ≈ −20 à −70 %). Le serveur (kie-proxy) revérifie
 // le plan, tire la réservation (x-aa-op) AVANT l'appel kie, règle au rapatriement, rend sur échec (voir kie-proxy/handler.ts).
 //   • compte developer : tous les usages kie, AUCUN repli (inchangé) ;
-//   • clients payants (Axel 25/09) : EXACTEMENT deux usages — « Améliorer en 4K » (Nano Banana Pro, dès Starter, via
-//     _nbRefine4K) et Omni Flash image→vidéo (Express + Voix native du Générateur, TOUS les plans payants).
-//     « Améliorer en 4K » : échec kie → REPLI Google SEULEMENT si le serveur a rendu le tirage à la réservation (billing
-//     'released') ou n'a rien tiré ('none') : la même op est alors re-tirée proprement. Jamais de repli sur un délai
-//     dépassé ni une soumission sans réponse (la tâche peut tourner chez kie → double coût).
+//   • clients payants (Axel 25/09) : EXACTEMENT trois usages — « Améliorer en 4K » (Nano Banana Pro, dès Starter, via
+//     _nbRefine4K), Omni Flash image→vidéo (Express + Voix native du Générateur, TOUS les plans payants) et Veo 3.1 Lite
+//     (Express « Veo Standard », TOUS les plans payants, 1080p = Pro / Élite comme avant ; voir expressCreate).
+//     « Améliorer en 4K » et Veo : échec kie → REPLI Google SEULEMENT si le serveur a rendu le tirage à la réservation
+//     (billing 'released') ou n'a rien tiré ('none') : la même op est alors re-tirée proprement. Jamais de repli sur un
+//     délai dépassé ni une soumission sans réponse (la tâche peut tourner chez kie → double coût).
 //     Omni Flash (Axel 25/09 : « kie directement, pas de fallback, en 1080p ») : kie ou l'erreur, pour TOUS ; le serveur
 //     rend puis rembourse le tirage lui-même (billing 'refunded') → message « réessaie ». Seule exception : le carré 1:1
 //     (kie n'en fait pas) passe par fal, au même prix (voir _expOmniImageToVideo).
@@ -10574,9 +10575,10 @@ const KIE_PROXY = SUPABASE_URL + '/functions/v1/kie-proxy';
 function _kieOn(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer' && localStorage.getItem('aa_kie')!=='0'; }catch(_){ return false; } }
 function _kieDev(){ try{ return typeof currentMember!=='undefined' && !!currentMember && String(currentMember.plan||'').toLowerCase()==='developer'; }catch(_){ return false; } }
 // Usages kie ouverts aux clients (mêmes plans que l'UI et que KIE_OPEN côté serveur) : '4k' = « Améliorer en 4K »,
-// 'omni' = Omni Flash image→vidéo (Express + Voix native ; tous les plans payants depuis le 25/09). Owner : comme un
+// 'omni' = Omni Flash image→vidéo (Express + Voix native ; tous les plans payants depuis le 25/09), 'veo' = Veo 3.1 Lite
+// d'Express (« Veo Standard », tous les plans payants ; la 1080p reste Pro / Élite, _exp1080Allowed). Owner : comme un
 // client (sans débit). Developer : _kieOn() (inchangé).
-const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['starter','pro','elite','byok'] };
+const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['starter','pro','elite','byok'], 'veo':['starter','pro','elite','byok'] };
 function _kieClientOn(usage){
   try{
     if(typeof currentMember==='undefined' || !currentMember) return false;
@@ -31707,7 +31709,7 @@ function _expRenderImgs(){
 // Veo ET Seedance sont image→vidéo (UNE image de départ). Pour que les 8 références soient
 // vraiment prises en compte (Axel 17/08), on les fusionne d'abord via gpt-image edit multi-images
 // (avatar + produit + perso → une scène cohérente) → cette image sert de frame de départ.
-async function _expComposeRefs(token, prompt, gptSize, op, omniStart){   // op = x-aa-op explicite (l'op d'Express, Axel 25/09) ; omniStart = image offerte (Omni)
+async function _expComposeRefs(token, prompt, gptSize, op, omniStart){   // op = x-aa-op explicite (l'op d'Express, Axel 25/09) ; omniStart = image offerte (Omni et Veo)
   const imgs = window._expImgs || [];
   if(imgs.length < 2) return null;   // 0 ou 1 image → rien à composer
   const toBlob=(durl)=>{ const m=/^data:([^;]+);base64,(.+)$/.exec(durl||''); if(!m) return null; const bin=atob(m[2]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:m[1]||'image/png'}); };
@@ -32091,10 +32093,11 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   const _sec = [4,6,8,10].find(x=>x>=(Math.round(durSec)||6)) || 10;   // cran kie = la durée affichée et facturée
   if(_viaKie){
     try{
-      step(42,'Omni Flash (kie.ai) — génération…');
+      const _oLbl = 'Omni Flash'+(_kieDev() ? ' (kie.ai)' : '')+' — génération…';   // client : jamais le nom du moteur (Axel 25/09)
+      step(42,_oLbl);
       const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
         duration: _sec }, { every:5000, maxPolls:240, op: op || undefined,
-        onTick:(i)=>step(Math.min(88,42+i), 'Omni Flash (kie.ai) — génération…') });
+        onTick:(i)=>step(Math.min(88,42+i), _oLbl) });
       step(90,'↓ Récupération de la vidéo…');
       const _vb = await _kieFetchBlob(_kr.url);
       window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
@@ -32230,7 +32233,7 @@ async function expressCreate(){
       setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
       try{
         const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1152x2048');
-        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize, _expOp, _isOmni);
+        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize, _expOp, true);   // image offerte (Omni ET Veo, 25/09)
         if(_composed){
           _omniImgMade = true;
           if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
@@ -32242,7 +32245,7 @@ async function expressCreate(){
       setP(8,'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1.5A3.5 3.5 0 0021 15.5C21 8.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16.5" cy="11" r="1"/></svg> Création de l\'image…');
       const size = window._expFormat==='16:9' ? '1792x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1024x1792');
       const imgPrompt = prompt + ', ' + styleMeta.prompt + ', no text, no watermark, high quality';
-      const url = await _imgGenerateOne(token, imgPrompt, size, null, { op: _expOp, omniStart: _isOmni });   // Omni : image offerte (remise serveur sur la vidéo)
+      const url = await _imgGenerateOne(token, imgPrompt, size, null, { op: _expOp, omniStart: true });   // image OFFERTE (Omni ET Veo, 25/09) : remise serveur sur la vidéo
       _omniImgMade = true;
       if(url.startsWith('data:')){ imgMime=(url.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=url.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
       else { const b=await (await fetch(url)).blob(); imgMime=b.type||'image/png'; imgB64=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''));fr.readAsDataURL(b);}); }
@@ -32301,22 +32304,39 @@ async function expressCreate(){
     const _startVeo = (model, withAudio) => _cartoonProxyFetch('/v1beta/models/'+model+':predictLongRunning', {
       method:'POST', headers:_aaOp(_expOp), body: JSON.stringify(_veoBody(withAudio, model))
     });
-    // kie.ai (compte developer) : MÊME animPrompt, même image recadrée, même format/résolution/durée ; seul le
-    // fournisseur change. Traduction du prompt coupée côté serveur (la réplique FR reste en FR). Panne → Google.
+    // kie.ai — Veo 3.1 Lite (« Veo Standard ») pour TOUS les clients payants, 720p ET 1080p (Axel 25/09 : « Veo Lite passe
+    // sur kie, 1080p compris ») ; compte developer inchangé (kie si aa_kie≠'0', Lite ou Fast, AUCUN repli). MÊME animPrompt,
+    // même image recadrée, même format / résolution / durée : seul le fournisseur change (traduction du prompt coupée côté
+    // serveur : la réplique FR reste en FR). Prix affiché = débit, inchangé : kie-proxy tire EXACTEMENT tarif × durée sur
+    // l'op d'Express (x-aa-op), image de départ offerte déduite. Repli Google Veo sur la MÊME op seulement si kie a échoué
+    // AVANT tout livrable ET que la réserve est re-tirable (billing 'released' / 'none' : _kieCanFallback) ; JAMAIS sur une
+    // tâche lancée à l'issue inconnue ('pending' / 'unknown' : elle peut encore livrer → on paierait deux fois). Dépôt de
+    // l'image raté = rien lancé, rien tiré → Google. Client : aucun nom de moteur affiché (ni kie, ni Google).
     let _kieBlob = null;
-    if(_kieOn()){
-      try{
-        setP(Math.max(p,30), 'Génération de la vidéo (kie.ai)…');
-        const _kImg = await _kieUpload('data:'+imgMime+';base64,'+imgB64);
-        const _kr = await _kieRun(/fast/.test(_veoModel) ? 'veo3-fast' : 'veo3-lite',
-          { prompt: animPrompt, image_url:_kImg, aspect_ratio: window._expFormat, resolution:_res, duration:_dur }, { every:5000, maxPolls:240 });   // 20 min
-        _kieBlob = await _kieFetchBlob(_kr.url);
-        window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
-      }catch(e){
-        console.warn('[kie] Veo : échec kie', e);
-        if(e && e._kieRefus) throw new Error('Veo (kie.ai) a refusé ce contenu — '+e.message);
-        if(!_kieCanFallback(e)) throw e;
-        toast('kie.ai indisponible — repli Google');
+    const _veoKie = _kieDev() ? _kieOn() : (_kieClientOn('veo') && !/fast/.test(_veoModel));   // Veo Fast : jamais proposé aux clients
+    if(_veoKie){
+      const _kLbl = 'Génération de la vidéo'+(_kieDev() ? ' (kie.ai)' : '')+'…';
+      setP(Math.max(p,30), _kLbl);
+      let _kImg = null;
+      try{ _kImg = await _kieUpload('data:'+imgMime+';base64,'+imgB64); }
+      catch(eu){ console.warn('[kie] Veo : dépôt de l\'image impossible', eu); if(_kieDev()) throw eu; }   // client : rien lancé ni tiré → Google
+      if(_kImg){
+        try{
+          const _kr = await _kieRun(/fast/.test(_veoModel) ? 'veo3-fast' : 'veo3-lite',
+            { prompt: animPrompt, image_url:_kImg, aspect_ratio: window._expFormat, resolution:_res, duration:_dur },
+            { every:5000, maxPolls:240, op: _expOp || undefined });   // 20 min ; op EXACTE d'Express (jamais celle d'un autre flux)
+          _kieBlob = await _kieFetchBlob(_kr.url);
+          window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
+        }catch(e){
+          console.warn('[kie] Veo : échec kie', e);
+          if(e && e._kieRefus){
+            const _c = String(e.message||'refus').replace(/^kie\s*:\s*/i, '').slice(0, 120);
+            const r = new Error((_kieDev() ? 'Veo (kie.ai)' : 'Veo')+' a refusé ce contenu ('+_c+') — les crédits de la vidéo te sont rendus ; change la réplique ou l\'image puis réessaie');
+            r._kieStage = e._kieStage; r._kieBill = e._kieBill; throw r;
+          }
+          if(!_kieCanFallback(e)) throw e;   // 'pending' / 'unknown' / 'drawn' / 'unfunded' / 'refunded' : jamais de 2e génération
+          window._aaKieFellBack = true;      // repli Google silencieux (tag moteur : compte developer seulement)
+        }
       }
     }
     if(_kieBlob){ blob = _kieBlob; } else {
@@ -32435,7 +32455,7 @@ async function expressCreate(){
       }
     }catch(_sErr){ console.warn('express autosave:', _sErr); }
     if(typeof _hedraIncrement==='function') _hedraIncrement();
-    toast('Vidéo Express générée !'+(_isOmni ? _kieEngineTag('fal') : _kieTag()));   // Omni : moteur réel (kie.ai, ou fal + repli) — Axel 25/09
+    toast('Vidéo Express générée !'+_kieEngineTag(_isOmni ? 'fal' : 'Google'));   // moteur réel : compte developer SEULEMENT (client : rien)
   } catch(e){
     clearInterval(tick);
     console.error('Express error:', e);
