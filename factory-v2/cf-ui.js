@@ -208,7 +208,9 @@
     // Auto-DM : période, séries masquées, filtre / recherche des leads, listes dépliées
     dmRange: '30j', dmHidden: {}, dmFilter: 'all', dmQuery: '', dmAllLeads: false, dmAllPosts: false,
     // Production : liste QC dépliée, types des sélecteurs, onglet interne des briques, recherche, écritures « Classer » en cours
-    prodList: null, perfKind: 'hook', perfKindLow: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', recFilter: 'all', recAll: false, qcBusy: {}, qcMsg: null };
+    prodList: null, perfKind: 'hook', perfKindLow: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', recFilter: 'all', recAll: false, qcBusy: {}, qcMsg: null,
+    // Pipeline (Fabrication) : étape ouverte ('gen' | 'ready'), tuile / avatar / module choisis, période de la courbe des montages
+    pipeStage: null, pipeVar: null, pipeAv: null, pipeMod: null, pipePer: '7j' };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -690,7 +692,8 @@
       M.capPending = cap.done - M.capGen;
       M.genSub = cap.voices.map(function (v) { return fInt(cap.modes[v].remaining) + ' ' + VOICE_SHORT[v]; }).join(' · ');   // Accueil ET onglet
       // Variantes lipsync (pipeline) : 1 avatar × 1 brique parlée (hooks sans alias + liaisons + CTA) ; générées = factory_prod_stats
-      var spoken = {}, avs = {}, St = D.stats, gen = null, out = 0, byBrick = {}, vwhy = '';
+      // dictionnaires sans prototype : une paire venue de la base (« constructor », « __proto__ ») ne lit jamais Object.prototype
+      var spoken = Object.create(null), avs = Object.create(null), St = D.stats, gen = null, out = 0, byBrick = Object.create(null), vwhy = '';
       L.hooks.concat(L.liaisons, L.ctas).forEach(function (b) { spoken[b.id] = 1; });
       L.avatars.forEach(function (a) { avs[a.id] = 1; });
       if (St && St.state === 'ready' && St.pairsTotal > St.pairs.length) vwhy = 'variantes : liste tronquée par factory_prod_stats';
@@ -941,22 +944,301 @@
     }).join('') + '</div></section>';
   }
 
-  // ── 02 · Pipeline, cycle d'une vidéo finale, file de validation ──
+  // ── 02 · Pipeline de production (maquette « Pipeline ») : 2 étapes cliquables, le panneau de l'étape ouverte s'affiche
+  //    sous les deux (01 = les vidéos finales de la jauge, 02 = montages prêts = vidéos approuvées au QC). Vraies données
+  //    seulement : factory_qc (rendues, approuvées), factory_prod_stats (variantes par avatar) ; « — » + raison sinon.
   function pipeHTML(M) {
-    var D = M.D, c = M.cap;
-    function step(n, ic, v, l, s, pct, col) {
-      return '<div class="cf-pstep"><span class="cf-pstep-t"><span class="cf-pstep-n">' + n + '</span><span class="cf-pstep-ic">' + svg(IC[ic], 14) + '</span></span>'
+    var D = M.D, c = M.cap, open = ui.pipeStage;
+    montCur = null;   // reposée par le panneau « Montages prêts » s'il est ouvert
+    function step(k, n, ic, v, l, s, pct, col) {
+      var on = open === k;
+      return '<button type="button" class="cf-pstep' + (on ? ' is-on' : '') + '" data-act="pipe-stage" data-k="' + k + '" aria-expanded="' + on + '"' + (on ? ' aria-controls="cfPipeStage"' : '') + '>'
+        + '<span class="cf-pstep-t"><span class="cf-pstep-n">' + n + '</span><span class="cf-pstep-ic">' + svg(IC[ic], 14) + '</span></span>'
         + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-pstep-b"><span class="cf-pstep-l">' + esc(l) + '</span><span class="cf-pstep-s">' + esc(s) + '</span></span>'
-        + '<span class="cf-pstep-bar"><i class="' + col + '" style="width:' + (pct || 0).toFixed(1) + '%"></i></span></div>';
+        + '<span class="cf-pstep-bar"><i class="' + col + '" style="width:' + (pct || 0).toFixed(1) + '%"></i></span></button>';
     }
     var wait = M.pending ? '…' : null;
     var gen = c ? M.capGen : null, ready = D ? D.qc.approved : null;
     var genS = c ? 'sur ' + fInt(c.total) + ' ' + plural(c.total, 'possible') : (M.why || M.ruleShort);
     // barres de la maquette : racine de la valeur rapportée à la plus grande étape
     var mx = Math.max(1, gen || 0, ready || 0), sq = function (v) { return v ? Math.max(3, Math.sqrt(v / mx) * 100) : 0; };
+    var stage = open === 'gen' ? stageGenHTML(M) : open === 'ready' ? stageReadyHTML(M) : '';
     return '<section class="cf-card cf-pipe-c" data-block="pipe">' + chead('Pipeline de production')
-      + '<div class="cf-pipe">' + step('01', 'wand', wait || (gen != null ? fInt(gen) : '—'), 'Vidéos générées', genS, sq(gen), 'is-1')
-      + step('02', 'reel', wait || (D ? fInt(ready) : '—'), 'Montages prêts', D ? 'approuvés au QC' : M.why, sq(ready), 'is-2') + '</div></section>';
+      + '<div class="cf-pipe">' + step('gen', '01', 'wand', wait || (gen != null ? fInt(gen) : '—'), 'Vidéos générées', genS, sq(gen), 'is-1')
+      + step('ready', '02', 'reel', wait || (D ? fInt(ready) : '—'), 'Montages prêts', D ? 'approuvés au QC' : M.why, sq(ready), 'is-2') + '</div>'
+      + (stage ? '<div class="cf-stage" id="cfPipeStage" data-stage="' + open + '">' + stage + '</div>' : '') + '</section>';
+  }
+  // en-tête du panneau d'une étape : titre, description courte, fermeture (maquette)
+  function stageHead(t, d) {
+    return '<div class="cf-stage-h"><div class="cf-stage-tt"><h4 class="cf-stage-t">' + esc(t) + '</h4>' + (d ? '<p class="cf-stage-d">' + esc(d) + '</p>' : '') + '</div>'
+      + '<button type="button" class="cf-stage-x" data-act="pipe-close" aria-label="Fermer le panneau"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>';
+  }
+  function stageChips(label, chips) {
+    return '<div class="cf-schips-w"><div class="cf-over">' + esc(label) + '</div><div class="cf-schips">' + chips.join('') + '</div></div>';
+  }
+  function pctOf(v, tot) { return tot ? fDec(v / tot * 100, 1) + NB + '%' : '—'; }
+  var VOICE_CHIP = { axel: 'Axel', omni: 'Omni' };
+  // clé d'une vidéo finale (voix|avatar|hook|liaison) → « A1 × H14 × L16 · Axel »
+  function keyLabel(k) {
+    var p = String(k).split('|');
+    return p[1] + ' × ' + p[2] + (p[3] ? ' × ' + p[3] : '') + ' · ' + (VOICE_CHIP[p[0]] || p[0]);
+  }
+  function qcWhenMs(q) { return q.reviewed != null ? q.reviewed : q.created != null ? q.created : 0; }
+
+  // Vidéos finales rangées par clé (usine/coherence.js) : possibles énumérés comme capacity() (voix → avatar → hook →
+  // liaison compatible), vidéos de factory_qc au nouveau format rangées sous leur clé. générées = au moins une vidéo revue
+  // (approuvée ou refusée), en QC = aucune encore revue, à générer = aucune vidéo : mêmes comptes que la jauge.
+  var vfCache = { ver: -1, v: null };
+  function vfModel(M) {
+    if (vfCache.ver === CF.ver && vfCache.v) return vfCache.v;
+    var D = M.D, L = M.L;
+    if (!D || !L || !M.cap) return null;
+    var poss = [], inPoss = Object.create(null), byKey = Object.create(null);
+    COH.VOICES.forEach(function (v) {
+      L.avatars.forEach(function (a) {
+        L.hooks.forEach(function (h) {
+          if (!COH.voiceOk(h, v)) return;
+          var k0 = COH.videoKey(v, a.id, h.id, '');
+          if (!inPoss[k0]) { inPoss[k0] = 1; poss.push(k0); }
+          COH.liaisonsFor(h, L.liaisons, MX).forEach(function (l) {
+            if (!COH.voiceOk(l, v)) return;
+            var k = COH.videoKey(v, a.id, h.id, l.id);
+            if (!inPoss[k]) { inPoss[k] = 1; poss.push(k); }
+          });
+        });
+      });
+    });
+    D.qc.list.forEach(function (q) {
+      var k = q.combo ? COH.comboKey(q.combo, M.byId) : null;
+      if (!k || !inPoss[k]) return;   // hors des possibles : déjà signalé sous la jauge, jamais listé ici
+      (byKey[k] = byKey[k] || []).push(q);
+    });
+    var gen = [], pend = [], best = Object.create(null), last = Object.create(null);
+    Object.keys(byKey).forEach(function (k) {
+      var rows = byKey[k], rank = { approved: 3, pending: 2, refused: 1 };
+      rows.sort(function (a, b) { return (rank[b.status] || 0) - (rank[a.status] || 0) || qcWhenMs(b) - qcWhenMs(a); });
+      best[k] = rows[0];
+      last[k] = Math.max.apply(null, rows.map(qcWhenMs));
+      (rows.some(function (q) { return q.status !== 'pending'; }) ? gen : pend).push(k);
+    });
+    var recent = function (a, b) { return last[b] - last[a] || (a < b ? -1 : 1); };
+    gen.sort(recent); pend.sort(recent);
+    var rest = poss.filter(function (k) { return !byKey[k]; });
+    vfCache = { ver: CF.ver, v: { gen: gen, pend: pend, rest: rest, best: best, n: poss.length } };
+    return vfCache.v;
+  }
+
+  // ── panneau 01 · Vidéos générées : barre générées / en QC / à générer, 3 tuiles (clic = la liste des vidéos), variantes
+  //    lipsync par avatar (factory_prod_stats, clic = les briques parlées sans variante) ──
+  function stageGenHTML(M) {
+    var c = M.cap;
+    if (!c) return stageHead('Vidéos générées', '') + naBody(M);
+    var V = vfModel(M), g = M.capGen, p = M.capPending, r = c.remaining, tot = c.total, A = c.avatars;
+    var head = stageHead('Vidéos générées · ' + fInt(g) + ' / ' + fInt(tot),
+      '1 vidéo finale = 1 avatar × 1 hook (+ 1 liaison compatible), en 2 voix. Maximum = ' + A + ' ' + plural(A, 'avatar') + ' × ' + fInt(A ? tot / A : 0) + ' ' + plural(A ? tot / A : 0, 'vidéo') + '.');
+    var segs = [[g, 'is-gen'], [p, 'is-pd'], [r, 'is-rest']].filter(function (x) { return x[0] > 0; }).map(function (x) {
+      return '<i class="' + x[1] + '" style="width:' + (x[0] / Math.max(1, tot) * 100).toFixed(2) + '%"></i>';
+    }).join('');
+    var tiles = [['gen', plural(g, 'générée'), g, 'is-gen'], ['pend', 'en QC', p, 'is-pd'], ['rest', 'à générer', r, 'is-rest']].map(function (x) {
+      var on = ui.pipeVar === x[0];
+      return '<button type="button" class="cf-stile2' + (on ? ' is-on' : '') + '" data-act="pipe-var" data-k="' + x[0] + '" aria-pressed="' + on + '">'
+        + '<span class="cf-stile2-l"><i class="' + x[3] + '"></i>' + esc(x[1]) + '</span><b>' + esc(fInt(x[2])) + '</b>'
+        + '<span class="cf-stile2-s">' + esc(pctOf(x[2], tot) + ' des ' + fInt(tot) + ' ' + plural(tot, 'possible')) + '</span></button>';
+    }).join('');
+    // variantes lipsync par avatar (1 avatar × 1 brique parlée : hooks sans alias, liaisons, CTA), factory_prod_stats
+    var Vr = M.vars, L = M.L, avH;
+    if (!Vr || Vr.gen == null) avH = emptyLine('—', (Vr && Vr.why) || 'variantes indisponibles');
+    else {
+      var spoken = L.hooks.concat(L.liaisons, L.ctas).map(function (b) { return b.id; }), has = Object.create(null);
+      Vr.St.pairs.forEach(function (x) { has[x[0] + '|' + x[1]] = 1; });
+      avH = '<div class="cf-sav">' + L.avatars.map(function (a) {
+        var miss = spoken.filter(function (id) { return !has[a.id + '|' + id]; }).length, done = spoken.length - miss, on = ui.pipeAv === a.id;
+        var pc = spoken.length ? done / spoken.length * 100 : 0;
+        return '<button type="button" class="cf-savt' + (on ? ' is-on' : '') + '" data-act="pipe-av" data-k="' + esc(a.id) + '" aria-pressed="' + on + '">'
+          + '<span class="cf-savt-h"><span class="cf-savt-id"><span class="cf-savt-ic">' + svg(IC.user, 13) + '</span><b>' + esc(a.id) + '</b></span><span class="cf-savt-p">' + Math.round(pc) + NB + '%</span></span>'
+          + '<span class="cf-savt-v"><b>' + esc(fInt(done)) + '</b><span> / ' + esc(fInt(spoken.length)) + '</span></span>'
+          + '<span class="cf-savt-bar"><i style="width:' + pc.toFixed(1) + '%"></i></span>'
+          + '<span class="cf-savt-m">' + esc(miss + ' ' + plural(miss, 'brique parlée manquante', 'briques parlées manquantes')) + '</span></button>';
+      }).join('') + '</div>'
+        + (Vr.out ? '<div class="cf-meta">' + esc(Vr.out + ' ' + plural(Vr.out, 'variante') + ' hors bibliothèque (avatar ou brique parlée absent), non ' + plural(Vr.out, 'comptée')) + '</div>' : '');
+    }
+    var LIM = 90, chips = '';
+    if (ui.pipeVar && V) {
+      var list = V[ui.pipeVar] || [], rest = ui.pipeVar === 'rest';
+      chips = list.length ? stageChips(({ gen: 'vidéos générées', pend: 'vidéos en QC', rest: 'vidéos à générer' })[ui.pipeVar] + ' · ' + fInt(list.length)
+        + (list.length > LIM ? ' · ' + LIM + ' premières affichées' : '') + ' · avatar × hook (× liaison) · voix',
+        list.slice(0, LIM).map(function (k) {
+          // générée / en QC : la vidéo se lit (fiche vidéo finale) ; à générer : la fiche du hook (maquette)
+          return rest ? '<button type="button" class="cf-schip" data-act="brick-open" data-bid="' + esc(String(k).split('|')[2]) + '">' + esc(keyLabel(k)) + '</button>'
+            : '<button type="button" class="cf-schip" data-act="vf-open" data-qid="' + esc(V.best[k].id) + '">' + esc(keyLabel(k)) + '</button>';
+        })) : '<div class="cf-empty-s">Aucune vidéo dans cette liste.</div>';
+    } else if (ui.pipeAv && Vr && Vr.gen != null) {
+      var sp = L.hooks.concat(L.liaisons, L.ctas).map(function (b) { return b.id; }), hv = Object.create(null);
+      Vr.St.pairs.forEach(function (x) { hv[x[0] + '|' + x[1]] = 1; });
+      var mi = sp.filter(function (id) { return !hv[ui.pipeAv + '|' + id]; });
+      chips = mi.length ? stageChips('avatar ' + ui.pipeAv + ' · ' + mi.length + ' ' + plural(mi.length, 'brique parlée', 'briques parlées') + ' sans variante · clique pour voir',
+        mi.map(function (id) { return '<button type="button" class="cf-schip" data-act="brick-open" data-bid="' + esc(id) + '">' + esc(id) + '</button>'; }))
+        : '<div class="cf-empty-s">Toutes les briques parlées ont une variante avec ' + esc(ui.pipeAv) + '.</div>';
+    }
+    return head + '<div class="cf-sseg" aria-hidden="true">' + segs + '</div><div class="cf-stiles2">' + tiles + '</div>'
+      + '<div class="cf-over">variantes par avatar · clique pour voir les briques parlées manquantes</div>' + avH + chips;
+  }
+
+  // ── panneau 02 · Montages prêts : approuvés par période (courbe de la maquette, téléchargés « — » tant que TrackAds
+  //    n'est pas lancé), par module (clic = les vidéos en stock, chacune se lit) ──
+  var MONT_PER = [['24h', '24' + NB + 'h'], ['7j', '7' + NB + 'j'], ['30j', '30' + NB + 'j'], ['6m', '6' + NB + 'mois'], ['all', 'All time']];
+  function montSeries(list, per) {
+    var now = new Date(), B = [], labels = [], unit, perL, i;
+    var dated = list.filter(function (q) { return q.reviewed != null; });
+    if (per === '24h') {
+      var h0 = new Date(now.getTime()); h0.setMinutes(0, 0, 0);
+      for (i = 23; i >= 0; i--) { var s = h0.getTime() - i * 3600e3; B.push([s, s + 3600e3]); labels.push(new Date(s).getHours() + NB + 'h'); }
+      unit = 'heure'; perL = 'sur 24' + NB + 'h';
+    } else if (per === '7j' || per === '30j') {
+      var n = per === '7j' ? 7 : 30;
+      for (i = n - 1; i >= 0; i--) {
+        var sd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i), ed = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1);
+        B.push([sd.getTime(), ed.getTime()]); labels.push(dm(sd));
+      }
+      unit = 'jour'; perL = 'sur ' + n + NB + 'j';
+    } else {
+      var nm = 6;
+      if (per === 'all') {
+        var f = new Date(dated.length ? Math.min.apply(null, dated.map(function (q) { return q.reviewed; })) : now.getTime());
+        nm = Math.max(1, (now.getFullYear() - f.getFullYear()) * 12 + now.getMonth() - f.getMonth() + 1);
+      }
+      var y0 = new Date(now.getFullYear(), now.getMonth() - nm + 1, 1).getFullYear(), multi = y0 !== now.getFullYear();
+      for (i = nm - 1; i >= 0; i--) {
+        var sm = new Date(now.getFullYear(), now.getMonth() - i, 1), em = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+        B.push([sm.getTime(), em.getTime()]); labels.push(MONTHS[sm.getMonth()] + (multi ? ' ' + String(sm.getFullYear()).slice(2) : ''));
+      }
+      unit = 'mois'; perL = per === 'all' ? 'depuis la 1re approbation' : 'sur 6' + NB + 'mois';
+    }
+    var r = B.map(function (b) { return dated.filter(function (q) { return q.reviewed >= b[0] && q.reviewed < b[1]; }).length; });
+    return { r: r, labels: labels, unit: unit, perL: perL, n: B.length, undated: list.length - dated.length };
+  }
+  var montCur = null;   // courbe des montages affichée, lue par la bulle de survol (sans redessiner le panneau)
+  function stageReadyHTML(M) {
+    var D = M.D, Q = D && D.qc;
+    var head = stageHead('Montages prêts' + (Q ? ' · ' + fInt(Q.approved) : ''), 'Vidéos finales approuvées au QC, prêtes à être postées par AvatarAds ou téléchargées en mission.');
+    if (!Q) return head + naBody(M);
+    var appr = Q.list.filter(function (q) { return q.status === 'approved'; });
+    if (!appr.length) return head + '<div class="cf-stage-e">Aucun montage approuvé pour l’instant.</div>';
+    var per = ui.pipePer, S = montSeries(appr, per), NP = S.n, sum = S.r.reduce(function (a, x) { return a + x; }, 0);
+    function kpi(cls, l, v, s) {
+      return '<div class="cf-mkpi"><span class="cf-mkpi-l"><i class="' + cls + '"></i>' + esc(l) + '</span><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-mkpi-s">' + esc(s) + '</span></div>';
+    }
+    var kpis = '<div class="cf-mkpis">' + kpi('is-appr', 'approuvés', fInt(sum), fDec(sum / NP, 1) + ' par ' + S.unit + ' · ' + S.perL
+      + (S.undated ? ' · ' + S.undated + ' sans date d’approbation' : ''))
+      + kpi('is-dl', 'téléchargés', '—', 'TrackAds pas lancé')
+      + kpi('is-gap', 'écart', '—', 'variation du stock · approuvés − téléchargés') + '</div>';
+    // courbe (maquette) : viewBox 1000 × 150, max × 1,2, valeurs affichées jusqu'à 14 points
+    var cmx = Math.max(2, Math.max.apply(null, S.r)) * 1.2;
+    var X = function (k) { return NP > 1 ? k / (NP - 1) * 1000 : 500; }, Y = function (v) { return 150 - v / cmx * 150; };
+    var d = S.r.map(function (v, k) { return (k ? 'L' : 'M') + X(k).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ');
+    var showV = NP <= 14;
+    var dots = S.r.map(function (v, k) {
+      var pos = 'left:' + (X(k) / 10).toFixed(2) + '%;top:' + (Y(v) / 1.5).toFixed(2) + '%';
+      return '<span class="cf-mdot' + (NP > 14 ? ' is-sm' : '') + '" data-i="' + k + '" style="' + pos + '"></span>' + (showV ? '<span class="cf-mval" style="' + pos + '">' + v + '</span>' : '');
+    }).join('');
+    var pick = NP <= 7 ? S.r.map(function (_, k) { return k; }) : [0, Math.round((NP - 1) / 4), Math.round((NP - 1) / 2), Math.round(3 * (NP - 1) / 4), NP - 1].filter(function (k, j, a) { return a.indexOf(k) === j; });
+    var seg = '<div class="cf-mper" role="group" aria-label="Période">' + MONT_PER.map(function (x) {
+      var on = x[0] === per;
+      return '<button type="button" class="cf-mper-b' + (on ? ' is-on' : '') + '" data-act="pipe-per" data-k="' + x[0] + '" aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
+    }).join('') + '</div>';
+    montCur = { n: NP, r: S.r.slice(), labels: S.labels.slice(), hot: false };
+    var chart = '<div class="cf-mchart"><div class="cf-mchart-h"><span class="cf-mchart-t">' + esc('Montages approuvés et téléchargés · par ' + S.unit) + '</span>' + seg + '</div>'
+      + '<div class="cf-mplot" role="img" aria-label="' + esc('Montages approuvés par ' + S.unit + ' ' + S.perL + ' : ' + fInt(sum)) + '">'
+      + '<div class="cf-mgrid" aria-hidden="true"><i></i><i></i><i></i></div>'
+      + '<svg viewBox="0 0 1000 150" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + d + '" fill="none" stroke="#ff6b35" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>'
+      + dots + '<div class="cf-mhover" hidden></div></div>'
+      + '<div class="cf-mx">' + pick.map(function (k) { return '<span>' + esc(S.labels[k]) + '</span>'; }).join('') + '</div></div>';
+    // par module (modèle de rendu de la vidéo, comme la file QC) : vidéos en stock
+    var mods = Object.create(null), keys = [];
+    appr.forEach(function (q) { var m = q.template || 'modèle inconnu'; if (!mods[m]) { mods[m] = []; keys.push(m); } mods[m].push(q); });
+    keys.sort(function (a, b) { return mods[b].length - mods[a].length || (a < b ? -1 : 1); });
+    var mmax = Math.max.apply(null, keys.map(function (k) { return mods[k].length; }).concat([1]));
+    if (ui.pipeMod && !mods[ui.pipeMod]) ui.pipeMod = null;
+    var rows = '<div class="cf-over">clique un module pour voir ses vidéos en stock</div><div class="cf-srows">' + keys.map(function (k) {
+      var n = mods[k].length, on = ui.pipeMod === k;
+      return '<button type="button" class="cf-srow' + (on ? ' is-on' : '') + '" data-act="pipe-mod" data-k="' + esc(k) + '" aria-pressed="' + on + '"><span class="cf-srow-l">' + esc(k) + '</span>'
+        + '<span class="cf-srow-b"><i style="width:' + Math.max(2, n / mmax * 100).toFixed(1) + '%"></i></span><b>' + esc(fInt(n)) + '</b></button>';
+    }).join('') + '</div>';
+    var chips = '';
+    if (ui.pipeMod) {
+      var L0 = mods[ui.pipeMod].slice().sort(function (a, b) { return qcWhenMs(b) - qcWhenMs(a); });
+      chips = stageChips('en stock · ' + ui.pipeMod + ' · clique pour voir', L0.map(function (q) {
+        return '<button type="button" class="cf-schip" data-act="vf-open" data-qid="' + esc(q.id) + '">' + esc(vfName(q) + (q.combo ? ' · ' + (VOICE_CHIP[q.combo.voice || 'axel'] || 'voix ?') : '') + (q.reviewed != null ? ' · ' + dm(new Date(q.reviewed)) : '')) + '</button>';
+      }));
+    }
+    return head + kpis + chart + rows + chips;
+  }
+  // bulle de la courbe des montages : la case survolée (maquette : une case par point)
+  function montHover(plot, clientX) {
+    var ch = montCur;
+    if (!ch || !plot) return;
+    var rc = plot.getBoundingClientRect();
+    if (!rc.width) return;
+    var i = Math.max(0, Math.min(ch.n - 1, Math.floor((clientX - rc.left) / rc.width * ch.n)));
+    var box = plot.querySelector('.cf-mhover');
+    if (!box || (box._i === i && !box.hidden)) return;
+    box._i = i;
+    var x = ch.n > 1 ? i / (ch.n - 1) * 100 : 50;
+    box.innerHTML = '<span class="cf-mvl" style="left:' + x.toFixed(2) + '%"></span><div class="cf-mtip" style="left:' + x.toFixed(2) + '%;transform:translateX(' + (i > ch.n / 2 ? 'calc(-100% - 12px)' : '12px') + ')">'
+      + '<span class="cf-mtip-d">' + esc(ch.labels[i]) + '</span>'
+      + '<span class="cf-mtip-r"><span><i class="is-appr"></i>approuvés</span><b>' + esc(fInt(ch.r[i])) + '</b></span>'
+      + '<span class="cf-mtip-r"><span><i class="is-dl"></i>téléchargés</span><b>—</b></span>'
+      + '<span class="cf-mtip-r is-gap"><span>écart</span><b>—</b></span></div>';
+    box.hidden = false;
+    ch.hot = true;
+    [].forEach.call(plot.querySelectorAll('.cf-mdot'), function (dt) { dt.classList.toggle('is-hot', dt.getAttribute('data-i') === String(i)); });
+  }
+  function montHide() {
+    if (montCur) montCur.hot = false;
+    [].forEach.call(document.querySelectorAll('.cf-mhover'), function (b) { b.hidden = true; b._i = null; });
+    [].forEach.call(document.querySelectorAll('.cf-mdot.is-hot'), function (dt) { dt.classList.remove('is-hot'); });
+  }
+
+  // ── fiche d'une vidéo finale (maquette : fenêtre 560 px, lecteur 9:16 sur fond sombre, composants cliquables) ──
+  function vfName(q) {
+    if (!q.combo) return 'recette libre';
+    return [q.combo.avatar, q.combo.hook, q.combo.liaison].filter(Boolean).join(' × ') || 'recette sans avatar ni hook';
+  }
+  function vfVoice(q) {
+    var v = q.combo && q.combo.voice;
+    return !q.combo ? '' : v == null || v === 'axel' ? 'Audio d’Axel' : v === 'omni' ? 'Voix native Omni' : 'voix inconnue « ' + v + ' »';
+  }
+  function openVf(qid, trigger) {
+    if (!qid || !CF.prod.data) return;
+    if (ui.modal) { ui.modal = { vf: qid }; renderModal(); return; }
+    openModal({ vf: qid }, trigger);
+  }
+  function vfSheetHTML(qid) {
+    var D = CF.prod.data, q = D ? D.qc.list.filter(function (x) { return x.id === qid; })[0] : null;
+    if (!q) return '<div class="cf-vf"><div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">Vidéo finale</h2><span class="cf-meta">introuvable dans la file QC (relue entre-temps)</span></div></div>';
+    var ST = { pending: 'à valider', approved: 'approuvée · en stock', refused: 'refusée' };
+    var meta = ['Vidéo finale', q.template || 'modèle inconnu', ST[q.status] || 'statut inconnu', vfVoice(q)].filter(Boolean).join(' · ');
+    var hist = [[qcWhen(q.created, 'rendue'), '']];
+    if (q.status === 'approved') hist.push([qcWhen(q.reviewed, 'approuvée'), 'is-ok']);
+    else if (q.status === 'refused') { hist.push([qcWhen(q.reviewed, 'refusée'), 'is-ko']); if (q.classified != null) hist.push([qcWhen(q.classified, 'classée'), '']); }
+    else if (q.status === 'pending') hist.push(['à valider', 'is-pend']);
+    var histH = '<div class="cf-vf-hist">' + hist.map(function (x, i) {
+      return (i ? '<span class="cf-vf-arr" aria-hidden="true">' + svg(IC.arrow, 12) + '</span>' : '') + '<span class="cf-vf-hc ' + x[1] + '">' + esc(x[0]) + '</span>';
+    }).join('') + '</div>';
+    var vsrc = mediaSrc(q.video), psrc = mediaSrc(q.poster);
+    var media = '<div class="cf-vf-stage"><div class="cf-vf-frame cf-mbox' + (vsrc ? '' : ' is-broken') + '">'
+      + (vsrc ? '<video controls playsinline preload="metadata" src="' + esc(vsrc) + '"' + (psrc ? ' poster="' + esc(psrc) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible (fichier introuvable ou refusé)</span>'
+        : '<span class="cf-vmsg is-on">vidéo introuvable · ' + esc(q.videoWhy || 'aucune vidéo') + '</span>') + '</div></div>';
+    var LB = { avatar: 'avatar', hook: 'hook', liaison: 'liaison', contenu: 'démo', cta: 'CTA', musique: 'musique', sous_titre: 'sous-titres' };
+    var comps = q.combo ? '<div class="cf-vf-chips">' + ['avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'].filter(function (k) { return q.combo[k]; }).map(function (k) {
+      return '<button type="button" class="cf-vf-chip" data-act="brick-open" data-bid="' + esc(q.combo[k]) + '" title="' + esc(LB[k]) + '">' + esc(q.combo[k]) + '</button>';
+    }).join('') + '</div>'
+      : q.legacy && q.legacy.length ? '<span class="cf-meta">' + esc('recette (ancien format, texte libre) : ' + q.legacy.map(function (x) { return x[0] + ' : ' + x[1]; }).join(' · ')) + '</span>'
+        : '<span class="cf-meta">recette non renseignée</span>';
+    return '<div class="cf-vf" data-qid="' + esc(q.id) + '"><div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">' + esc(vfName(q)) + '</h2><span class="cf-meta">' + esc(meta) + '</span>' + histH
+      + (q.status === 'refused' ? '<span class="cf-vf-why">' + esc(q.reason ? 'motif : « ' + q.reason + ' »' : 'motif : aucun') + '</span>' : '')
+      + (q.status === 'pending' ? '<button type="button" class="cf-btn is-sm cf-vf-rev" data-act="qc-open" data-qid="' + esc(q.id) + '">Ouvrir la revue</button>' : '') + '</div>'
+      + media + '<div class="cf-over">Composants</div>' + comps + '</div>';
   }
   function cycleHTML(M) {
     var D = M.D, Q = D && D.qc, w = M.pending ? '…' : null;
@@ -1033,6 +1315,8 @@
           : '<button type="button" class="cf-btn is-dark is-sm" data-act="qc-classify" data-qid="' + esc(q.id) + '"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Enregistrement…' : 'Classer') + '</button>';
       }
     }
+    // approuvée / refusée : la vidéo se lit aussi (fiche vidéo finale, lecture seule) ; à valider : « Revoir » (revue QC)
+    if (st === 'approved' || st === 'refused') act = '<span class="cf-qrow-a"><button type="button" class="cf-btn is-sm" data-act="vf-open" data-qid="' + esc(q.id) + '">' + svg(IC.play, 11) + 'voir</button>' + act + '</span>';
     var when = st === 'pending' ? qcWhen(q.created, 'rendue') : qcWhen(q.reviewed != null ? q.reviewed : q.created, st === 'approved' ? 'approuvée' : 'refusée');
     return '<div class="cf-qrow" data-qid="' + esc(q.id) + '"><div class="cf-qrow-h"><span class="cf-meta">' + esc((q.template || 'modèle inconnu') + ' · ' + when
       + (st === 'pending' && q.route ? ' · QC technique ' + (q.route === 'manual' ? 'manuel' : 'auto') : '')) + '</span>' + chip + '</div>'
@@ -1044,8 +1328,14 @@
 
   // ── 02 · Briques les plus / moins performantes (reels Instagram dont les briques sont reconnues) : 2 cartes, chacune
   //    son sélecteur (maquette). Moitié haute / moitié basse d'un même type : jamais la même brique dans les deux listes.
-  function perfSeg(act, cur, side) {
-    return '<div class="cf-seg cf-pseg" role="group" aria-label="Type de brique">' + PERF_KINDS.map(function (x) {
+  // Types des cartes de performance : ceux de la maquette, + Format dès qu'une recette factory_qc porte brick_combo.format
+  // (jamais un onglet vide). La fraîcheur garde la liste des briques (un format n'est pas une brique).
+  function perfKinds() {
+    var D = CF.prod.data, fmt = !!(D && D.qc.list.some(function (q) { return q.format; }));
+    return fmt ? PERF_KINDS.concat([['format', 'Formats']]) : PERF_KINDS;
+  }
+  function perfSeg(act, cur, side, kinds) {
+    return '<div class="cf-seg cf-pseg" role="group" aria-label="Type de brique">' + (kinds || PERF_KINDS).map(function (x) {
       var on = x[0] === cur;
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="' + act + '" data-k="' + x[0] + '"' + (side ? ' data-side="' + side + '"' : '') + ' aria-pressed="' + on + '">' + esc(x[1]) + '</button>';
     }).join('') + '</div>';
@@ -1057,13 +1347,23 @@
     if (ms.st !== 'ok') return { why: ms.why };
     var I = brickIndex(), n = I.postsV[k] || 0, byId = prodModel().byId;
     if (n < 3) return { why: 'Pas assez de données : ' + n + ' ' + plural(n, 'publication') + ' avec ' + plural(2, KIND_PL[k][0], KIND_PL[k][1]) + ' reconnu' + (k === 'liaison' ? 'es' : 's') + ' (3 minimum)' };
+    // total = somme des vues des publications où la brique est reconnue, n = ces publications (vues lues), classement à la
+    // moyenne total / n (Axel 26/09 : « 1 000 vues / 2 publications · ≈500 vues moyennes »)
     var rows = Object.keys(I.by).map(function (id) { return I.by[id]; }).filter(function (r) { return r.kind === k && r.nv > 0 && (!byId[r.id] || live(byId[r.id])); })
-      .map(function (r) { return { id: r.id, avg: r.views / r.nv, nv: r.nv }; }).sort(function (a, b) { return b.avg - a.avg || (a.id < b.id ? -1 : 1); });
+      .map(function (r) { return { id: r.id, views: r.views, avg: r.views / r.nv, nv: r.nv }; }).sort(function (a, b) { return b.avg - a.avg || (a.id < b.id ? -1 : 1); });
     var half = Math.ceil(rows.length / 2);
     return { top: rows.slice(0, Math.min(6, half)), low: rows.slice(half).reverse().slice(0, 6) };
   }
+  // « 1 000 vues / 2 publications · ≈500 vues moyennes » (espaces fines des milliers, singulier sous 2)
+  function perfLine(r) {
+    var avg = Math.round(r.avg);
+    return { tot: fInt(r.views) + ' ' + plural(r.views, 'vue'), rest: '/ ' + fInt(r.nv) + ' ' + plural(r.nv, 'publication') + ' · ≈' + fInt(avg) + ' ' + plural(avg, 'vue moyenne', 'vues moyennes') };
+  }
   function perfCardHTML(side) {
-    var k = side === 'low' ? ui.perfKindLow : ui.perfKind, name = PERF_KINDS.filter(function (x) { return x[0] === k; })[0][1], best = side !== 'low';
+    var kinds = perfKinds(), best = side !== 'low';
+    var k = best ? ui.perfKind : ui.perfKindLow;
+    if (!kinds.some(function (x) { return x[0] === k; })) k = 'hook';   // Format disparu à la relecture : retour aux hooks
+    var name = kinds.filter(function (x) { return x[0] === k; })[0][1];
     var R = perfRanks(k), list = best ? R.top : R.low, body;
     if (R.why === 'wait') body = spin('Chargement des publications…');
     else if (R.why) body = emptyLine('—', R.why);
@@ -1071,17 +1371,18 @@
     else {
       var mx = Math.max.apply(null, list.map(function (r) { return r.avg; }).concat([1]));
       body = '<div class="cf-perf">' + list.map(function (r, i) {
-        return '<div class="cf-prow"><span class="cf-mrank' + (i === 0 ? ' is-acc' : '') + '">#' + (i + 1) + '</span>'
+        var t = perfLine(r);
+        return '<div class="cf-prow" data-perf="' + esc(t.tot + ' ' + t.rest) + '"><span class="cf-mrank' + (i === 0 ? ' is-acc' : '') + '">#' + (i + 1) + '</span>'
           + '<button type="button" class="cf-pid" data-act="brick-open" data-bid="' + esc(r.id) + '">' + esc(r.id) + '</button>'
           + '<span class="cf-pbar' + (best ? '' : ' is-low') + '"><i style="width:' + Math.max(4, r.avg / mx * 100).toFixed(1) + '%"></i></span>'
-          + '<b class="cf-pv">' + esc(fInt(Math.round(r.avg))) + ' vues</b><span class="cf-pn">/ ' + r.nv + ' ' + plural(r.nv, 'publication') + '</span></div>';
+          + '<b class="cf-pv">' + esc(t.tot) + '</b><span class="cf-pn">' + esc(t.rest) + '</span></div>';
       }).join('') + '</div>';
     }
     var title = name + ' les ' + (best ? 'plus' : 'moins') + ' performant' + (FEM[k] ? 'es' : 's');
     return '<section class="cf-card cf-perf-c" data-block="perf" data-side="' + (best ? 'top' : 'low') + '">'
       + chead(title, best ? 'vues moyennes des vidéos qui les utilisent' : 'à remplacer ou retravailler')
-      + perfSeg('perf-kind', k, best ? 'top' : 'low') + body
-      + '<div class="cf-pfoot">vues moyennes par publication / nombre de publications qui l’utilisent</div></section>';
+      + perfSeg('perf-kind', k, best ? 'top' : 'low', kinds) + body
+      + '<div class="cf-pfoot">vues totales / publications qui l’utilisent · ≈ vues moyennes par publication (classement)</div></section>';
   }
 
   // ── 03 · Briques : Bibliothèque · Assemblages (recettes de hooks) · Fraîcheur ──
@@ -2698,13 +2999,15 @@
       box.classList.toggle('is-wide', wide);
       // fiche brique / rendu vidéo de la Production : fenêtre de la maquette (padding 22, fermeture 32 px alignée sur le titre,
       // centrée aussi sur téléphone)
-      var sheet = !!(ui.modal && !wide && (ui.modal.brick || ui.modal.video));
+      var sheet = !!(ui.modal && !wide && (ui.modal.brick || ui.modal.video || ui.modal.vf));
       box.classList.toggle('is-sheet', sheet);
+      box.classList.toggle('is-vf', !!(ui.modal && ui.modal.vf && !ui.modal.brick));   // fiche vidéo finale : 560 px (maquette)
       $('cfModal').classList.toggle('is-center', sheet);
     }
     if (ui.modal.brick) { setHTML($('cfModalBody'), brickSheetHTML(ui.modal.brick)); return; }
     if (ui.modal.qc) { renderQcModal(); return; }
     if (ui.modal.video) { setHTML($('cfModalBody'), videoModalHTML(ui.modal.video)); return; }
+    if (ui.modal.vf) { setHTML($('cfModalBody'), vfSheetHTML(ui.modal.vf)); return; }
     var cur = CF.acct.media.data && CF.acct.media.data.list.filter(function (x) { return x.id === ui.modal.post.id; })[0];
     if (cur) ui.modal.post = cur;   // la liste a pu être relue : jamais un module périmé dans la fiche
     var p = ui.modal.post, rank = ui.modal.rank;
@@ -2832,13 +3135,21 @@
           if (fromTitle) { var qf = $('cfQcFile'); if (qf && qf.scrollIntoView) qf.scrollIntoView({ block: 'start' }); }
         }
       }
-      else if (act === 'perf-kind') { if (PERF_KINDS.some(function (x) { return x[0] === el.getAttribute('data-k'); })) { if (el.getAttribute('data-side') === 'low') ui.perfKindLow = el.getAttribute('data-k'); else ui.perfKind = el.getAttribute('data-k'); render(); } }
+      else if (act === 'perf-kind') { if (perfKinds().some(function (x) { return x[0] === el.getAttribute('data-k'); })) { if (el.getAttribute('data-side') === 'low') ui.perfKindLow = el.getAttribute('data-k'); else ui.perfKind = el.getAttribute('data-k'); render(); } }
       else if (act === 'rec-filter') { if (['all', 'done', 'in_progress', 'pending', 'other'].indexOf(el.getAttribute('data-k')) >= 0) { ui.recFilter = el.getAttribute('data-k'); render(); } }
       else if (act === 'rec-all') { ui.recAll = !ui.recAll; render(); }
       else if (act === 'fresh-kind') { if (PERF_KINDS.some(function (x) { return x[0] === el.getAttribute('data-k'); })) { ui.freshKind = el.getAttribute('data-k'); render(); } }
       else if (act === 'br-tab') { if (['lib', 'rec', 'fresh'].indexOf(el.getAttribute('data-k')) >= 0) { ui.brTab = el.getAttribute('data-k'); render(); } }
       else if (act === 'lib-kind') { var lk = el.getAttribute('data-k'); if (PKM[lk]) { ui.libKind = ui.libKind === lk ? null : lk; ui.libQuery = ''; render(); } }
       else if (act === 'rec-play') recPlay(el.getAttribute('data-rid'), el);
+      // pipeline (Fabrication) : étape, tuile, avatar, module, période ; fiche d'une vidéo finale (lecture seule)
+      else if (act === 'pipe-stage') { var pk = el.getAttribute('data-k'); if (pk === 'gen' || pk === 'ready') { ui.pipeStage = ui.pipeStage === pk ? null : pk; ui.pipeVar = null; ui.pipeAv = null; ui.pipeMod = null; montHide(); render(); } }
+      else if (act === 'pipe-close') { var ps = ui.pipeStage; ui.pipeStage = null; ui.pipeVar = null; ui.pipeAv = null; ui.pipeMod = null; montHide(); render(); var pb = document.querySelector('[data-act="pipe-stage"][data-k="' + ps + '"]'); if (pb) pb.focus(); }
+      else if (act === 'pipe-var') { var pv = el.getAttribute('data-k'); if (['gen', 'pend', 'rest'].indexOf(pv) >= 0) { ui.pipeVar = ui.pipeVar === pv ? null : pv; ui.pipeAv = null; render(); } }
+      else if (act === 'pipe-av') { var pa = el.getAttribute('data-k'), PM = prodModel(); if (PM.L && PM.L.avatars.some(function (a) { return a.id === pa; })) { ui.pipeAv = ui.pipeAv === pa ? null : pa; ui.pipeVar = null; render(); } }
+      else if (act === 'pipe-mod') { var pm = el.getAttribute('data-k'); ui.pipeMod = ui.pipeMod === pm ? null : pm; render(); }
+      else if (act === 'pipe-per') { var pp = el.getAttribute('data-k'); if (MONT_PER.some(function (x) { return x[0] === pp; })) { ui.pipePer = pp; montHide(); render(); } }
+      else if (act === 'vf-open') openVf(el.getAttribute('data-qid'), el);
       else if (act === 'otp-send') sendOtp();
       else if (act === 'otp-back') { show('cfLoginOtp', false); show('cfLoginPwd', true); loginMsg(''); }
     });
@@ -2872,10 +3183,14 @@
     document.addEventListener('mousemove', function (e) {
       var plot = e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
       if (plot) hover(plot, e.clientX); else if (evoCur || dmCur) evoHide();
+      var mp = e.target && e.target.closest ? e.target.closest('.cf-mplot') : null;   // courbe des montages (pipeline)
+      if (mp) montHover(mp, e.clientX); else if (montCur && montCur.hot) montHide();
     });
     var onTouch = function (e) {
       var t = e.touches && e.touches[0], plot = t && e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
       if (plot) hover(plot, t.clientX); else if (evoCur || dmCur) evoHide();
+      var mp = t && e.target && e.target.closest ? e.target.closest('.cf-mplot') : null;
+      if (mp) montHover(mp, t.clientX); else if (montCur && montCur.hot) montHide();
     };
     document.addEventListener('touchstart', onTouch, { passive: true });
     document.addEventListener('touchmove', onTouch, { passive: true });
