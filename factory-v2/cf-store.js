@@ -693,6 +693,7 @@
     var keys = Object.keys(c), ids = {}, ok = keys.length > 0;
     keys.forEach(function (k) {
       if (c[k] == null || c[k] === '') return;
+      if (k === 'format') return;   // format de la vidéo (à venir) : lu à part (normQc), ne rend jamais la recette « texte libre »
       if (COMBO_KEYS.indexOf(k) < 0 || !rowId(c[k])) ok = false; else ids[k] = c[k];
     });
     if (ok && Object.keys(ids).length) return { ids: ids, legacy: null };
@@ -720,6 +721,8 @@
       id: id, status: QC_ST[q.status] || 'other', template: txt(q.template, 40), route: r(q.route),
       video: pubFile(rawV, VIDEO_EXT), videoWhy: rawV ? fileWhy(rawV, VIDEO_EXT) : 'aucune vidéo', poster: pubFile(txt(q.poster_url, 400), IMG_EXT),
       combo: cb.ids, legacy: cb.legacy,
+      // brick_combo.format (quand l'usine l'écrira) : ouvre l'onglet « Formats » des cartes de performance, jamais vide
+      format: q.brick_combo && typeof q.brick_combo === 'object' && !Array.isArray(q.brick_combo) ? rowId(q.brick_combo.format) : null,
       tech: { route: r(q.t_route), pass: typeof q.t_pass === 'boolean' ? q.t_pass : null, hard: sArr(q.t_hard, 20, 80), soft: sArr(q.t_soft, 20, 80), error: txt(q.t_err, 200) },
       coh: normCoh(q.t_coh),
       vis: q.v_route || q.v_verdict ? { route: q.v_route === 'ok' || q.v_route === 'doubt' ? q.v_route : null, verdict: normVerdict(q.v_verdict) } : null,
