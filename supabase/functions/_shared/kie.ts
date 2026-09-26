@@ -25,7 +25,7 @@ export const KIE_OPEN: Record<string, string[]> = {
   'nano-banana-pro': ['starter', 'pro', 'elite', 'byok'],
   'omni-flash': ['starter', 'pro', 'elite', 'byok'],
   'veo3-lite': ['starter', 'pro', 'elite', 'byok'],
-  'omnihuman-1.5': ['elite'],   // Axel 25/09 : OmniHuman passe chez kie pour les clients qui l'utilisent — Élite (Générateur + Montage IA) ; repli fal côté app
+  'omnihuman-1.5': ['pro', 'elite'],   // Axel 26/09 : OmniHuman sélectionnable en Pro et Élite (jamais Starter) — Générateur + Montage IA ; repli fal côté app
 }
 export const KIE_VEO_1080_PLANS = ['pro', 'elite']
 export const KIE_VEO_FAST_PLANS = ['pro', 'elite']

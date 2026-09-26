@@ -5857,7 +5857,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-26-2110'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-26-2150'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -10585,7 +10585,7 @@ function _kieDev(){ try{ return typeof currentMember!=='undefined' && !!currentM
 // OmniHuman 1.5 (Générateur + Montage IA, Élite ; repli fal sur la même op, voir _omnihRun). Owner : comme un client
 // (sans débit). Developer : _kieOn() (inchangé).
 const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['starter','pro','elite','byok'], 'veo':['starter','pro','elite','byok'],
-  'omnihuman':['elite'] };   // OmniHuman 1.5 (Axel 25/09, livré le 26/09) : Élite, comme le sélecteur du Générateur et le Montage IA — KIE_OPEN côté serveur
+  'omnihuman':['pro','elite'] };   // OmniHuman 1.5 (Axel 26/09) : Pro et Élite, jamais Starter — comme le sélecteur du Générateur et le Montage IA — KIE_OPEN côté serveur
 function _kieClientOn(usage){
   try{
     if(typeof currentMember==='undefined' || !currentMember) return false;
@@ -25146,7 +25146,7 @@ async function startGeneration(){
     // OmniHuman (fal) : réservé Élite + plafonné à 60 s (au-delà = trop cher / non supporté par fal) — sinon repli Avatar.
     // Sans objet avec une vidéo qui parle déjà (vidéo existante / Voix native) : aucun lipsync n'est généré.
     if(window._genModel==='omnihuman' && !window._bypassHedraOn){
-      if(typeof _genIsElite==='function' && !_genIsElite()){ window._genModel='avatar'; }
+      if(typeof _genOmnihOk==='function' && !_genOmnihOk()){ window._genModel='avatar'; }
       else if(durSecs > 60){ toast('OmniHuman est limité à 60 s — ton audio fait '+durSecs+' s. Repasse sur Avatar pour cette vidéo.'); step=3; updateSteps(); return; }
     }
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
@@ -25617,15 +25617,17 @@ window.probeSeedance = async function(){
 // ── MODÈLE Générateur (Axel 11/09) : 'avatar' = Hedra Character-3 (défaut) · 'omnihuman' = OmniHuman 1.5 (fal, BÊTA) ──
 window._genModel = window._genModel || 'avatar';
 function _genIsElite(){ return !!(currentMember && (['elite','developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner)); }
+// OmniHuman sélectionnable en Pro et Élite, jamais Starter (Axel 26/09) — mêmes plans que KIE_OPEN['omnihuman-1.5'] côté serveur
+function _genOmnihOk(){ return !!(currentMember && (['pro','elite','developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner)); }
 function genSetModel(m, btn){
-  if(m==='omnihuman' && !_genIsElite()){ showPaywall('OmniHuman est réservé au plan Élite','Passe à Élite pour débloquer OmniHuman 1080p dans le Générateur.'); return; }
+  if(m==='omnihuman' && !_genOmnihOk()){ showPaywall('OmniHuman est réservé aux plans Pro et Élite','Passe à Pro ou Élite pour débloquer OmniHuman 1080p dans le Générateur.'); return; }
   window._genModel = m;
   document.querySelectorAll('#genModelBtns .qual-btn').forEach(b=>{ const on=b.dataset.gm===m; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; b.classList.toggle('on',on); });
   if(typeof _majRecap==='function'){ try{ _majRecap(); }catch(_){ } }
 }
 // OmniHuman = Élite uniquement : on masque le sélecteur pour les autres (ils n'ont que l'Avatar par défaut)
 function _genApplyModelGate(){
-  const elite=_genIsElite();
+  const elite=_genOmnihOk();
   // Voix native (Axel 25/09) : lipsync déjà fait → pas de choix de modèle (note « Lipsync déjà fait » à la place, _gnSyncStyle)
   const _gnOn = typeof _genNativeActive==='function' && _genNativeActive();
   const fld=document.getElementById('genModelFld'); if(fld) fld.style.display = (elite && !_gnOn) ? '' : 'none';

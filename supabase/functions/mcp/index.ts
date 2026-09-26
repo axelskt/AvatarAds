@@ -2503,6 +2503,8 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   // lui demandait « no camera movement » sans jamais demander de gestuelle.
   const engine = String(args.engine || 'hedra') === 'omnihuman' ? 'omnihuman' : 'hedra'
   if (engine === 'omnihuman' && !FAL_KEY && !omniKieOn()) return toolErr('OmniHuman indisponible (configuration serveur incomplète).')
+  // Axel 26/09 : OmniHuman réservé aux plans Pro et Élite (jamais Starter), comme l'app et KIE_OPEN
+  if (engine === 'omnihuman' && !isUnlimited(profile) && !['pro', 'elite'].includes(String(profile.plan || '').toLowerCase())) return toolErr(`OmniHuman est réservé aux plans Pro et Élite. Relance sans engine (Hedra, par défaut) ou passe à Pro sur ${APP_URL}. Aucun crédit débité.`)
   // fal refuse une image de plus de 5 Mo (file_too_large) : refus clair AVANT tout débit (un portrait 1152x2048 en PNG
   // peut dépasser cette limite ; Hedra, le moteur par défaut, l'accepte).
   if (engine === 'omnihuman' && img.bytes.length > 5_000_000) return toolErr(`OmniHuman refuse les images de plus de 5 Mo (celle-ci fait ${(img.bytes.length / 1_000_000).toFixed(1)} Mo) : relance sans engine (Hedra, par défaut) ou avec une image plus légère. Aucun crédit débité.`)
