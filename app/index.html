@@ -5857,7 +5857,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-26-2150'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-26-2250'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28991,32 +28991,43 @@ async function _libVThumbGet(k){
   return null;
 }
 async function _libVThumbPut(k, t){ try{ const db = await _idbOpen(); db.transaction(_IDB_STORE,'readwrite').objectStore(_IDB_STORE).put({ thumb:t.src, dur:t.dur }, 'vthumb_'+k); }catch(_){} }
-// Première image d'une vidéo (0,5 s) → JPEG 360×640 ; le lecteur est TOUJOURS vidé et libéré (délai max 8 s).
+// Première image d'une vidéo (0,5 s) → JPEG 360×640 ; le lecteur est TOUJOURS vidé et libéré (délai max 15 s).
+// Safari (retour Axel 26/09 : « plus aucune première image dans la Bibliothèque ») : avec preload='metadata', Safari ne
+// déclenche JAMAIS loadeddata tant que la vidéo n'est pas jouée → la capture attendait 8 s puis abandonnait (⚡ restait).
+// Maintenant : preload='auto', seek dès loadedmetadata, et si l'image n'arrive pas en 2,5 s, lecture muette brève (play →
+// pause) qui force Safari à décoder une image ; capture sur seeked OU loadeddata OU le 1er timeupdate.
 function _libGrabFrame(url, isBlob){
   return new Promise(resolve => {
-    const vid = document.createElement('video'); let fini = false;
+    const vid = document.createElement('video'); let fini = false, kick = null;
     const end = (src) => {
-      if(fini) return; fini = true; clearTimeout(to);
+      if(fini) return; fini = true; clearTimeout(to); clearTimeout(kick);
       const dur = isFinite(vid.duration) ? vid.duration : 0;
-      vid.onloadeddata = vid.onseeked = vid.onerror = null;
+      vid.onloadedmetadata = vid.onloadeddata = vid.onseeked = vid.ontimeupdate = vid.onerror = null;
       try{ vid.pause(); vid.removeAttribute('src'); vid.load(); }catch(_){}   // libère décodeur + tampons
       if(isBlob){ try{ URL.revokeObjectURL(url); }catch(_){} }
       resolve({ src, dur });
     };
-    const to = setTimeout(() => end(null), 8000);
-    if(!isBlob) vid.crossOrigin = 'anonymous';   // canvas propre pour l'URL signée Supabase
-    vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
-    vid.onerror = () => end(null);
-    vid.onloadeddata = () => {
-      vid.onseeked = () => { let src = null; try{
+    const to = setTimeout(() => end(null), 15000);
+    const grab = () => {
+      if(fini || !vid.videoWidth || vid.readyState < 2) return;
+      let src = null; try{
         const c = document.createElement('canvas'); c.width = 360; c.height = 640; const x = c.getContext('2d');
         x.fillStyle = '#0e0e10'; x.fillRect(0,0,360,640);
         const vw = vid.videoWidth, vh = vid.videoHeight, sc = Math.max(360/vw, 640/vh)*0.85;   // cover puis léger dézoom
         x.drawImage(vid, (360-vw*sc)/2, (640-vh*sc)/2, vw*sc, vh*sc);
-        src = c.toDataURL('image/jpeg', 0.8); c.width = c.height = 0; }catch(_){} end(src); };
-      try{ vid.currentTime = Math.min(0.5, (vid.duration||1)/2); }catch(_){ end(null); }
+        src = c.toDataURL('image/jpeg', 0.8); c.width = c.height = 0; }catch(_){}
+      end(src);
     };
+    if(!isBlob) vid.crossOrigin = 'anonymous';   // canvas propre pour l'URL signée Supabase
+    vid.muted = true; vid.playsInline = true; vid.setAttribute('playsinline',''); vid.preload = 'auto';
+    vid.onerror = () => end(null);
+    vid.onloadedmetadata = () => {
+      try{ vid.currentTime = Math.min(0.5, (vid.duration||1)/2); }catch(_){}
+      kick = setTimeout(() => { if(fini) return; try{ const p = vid.play(); if(p && p.then) p.then(()=>{ try{ vid.pause(); }catch(_){} }).catch(()=>{}); }catch(_){} }, 2500);
+    };
+    vid.onseeked = grab; vid.onloadeddata = () => { if(vid.currentTime > 0) grab(); }; vid.ontimeupdate = grab;
     vid.src = url;
+    try{ vid.load(); }catch(_){}
   });
 }
 // Pose une vignette (et la durée) sur l'<img> d'une carte de la grille.
