@@ -3,12 +3,14 @@
 //
 // ACCÈS (Axel 25/09/2026) :
 //   • compte developer : tous les alias, aucune réservation, aucun repli (INCHANGÉ) ; service_role : tout (moteur / tests) ;
-//   • clients payants : EXACTEMENT trois usages — nano-banana-pro (« Améliorer en 4K », Starter / Pro / Élite / BYOK),
+//   • clients payants : EXACTEMENT quatre usages (le 4e, OmniHuman, plus bas) — nano-banana-pro (« Améliorer en 4K », Starter / Pro / Élite / BYOK),
 //     omni-flash (Omni Flash image→vidéo : Express + Voix native du Générateur, Starter / Pro / Élite / BYOK depuis le
 //     25/09) et veo3-lite (Express « Veo Standard », Starter / Pro / Élite / BYOK ; 1080p = Pro / Élite, comme Google) —
-//     voir KIE_OPEN (../_shared/kie.ts). Tout autre alias (Veo Fast, Kling Motion Control, OmniHuman, faceswap Nano 1K)
-//     → 403. Secret KIE_CLIENTS=0 = tout refermer sans redéployer (Omni Flash n'a plus de repli : il est alors
-//     indisponible pour les clients, sauf le carré 1:1 qui passe par fal ; Nano 4K et Veo repassent par Google).
+//     voir KIE_OPEN (../_shared/kie.ts). Tout autre alias (Veo Fast, Kling Motion Control, faceswap Nano 1K) → 403.
+//     Secret KIE_CLIENTS=0 = tout refermer sans redéployer (Omni Flash n'a plus de repli : il est alors indisponible pour
+//     les clients, sauf le carré 1:1 qui passe par fal ; Nano 4K et Veo repassent par Google ; OmniHuman par fal).
+//   • + OmniHuman 1.5 (Axel 25/09, livré le 26/09) : clients Élite (Générateur + Montage IA), tirage EXACT de 5 cr × durée
+//     MESURÉE ici sur l'audio (../_shared/omnihuman-bill.ts), 1080p, prompt ≤ 300 ; échec → rendu (repli fal côté app).
 // RGPD : kie.ai n'a ni DPA ni garantie RGPD. L'ouverture aux clients de ces usages est une décision d'Axel du 25/09/2026 ;
 //        la politique de confidentialité doit lister kie.ai comme sous-traitant. La clé reste dans les secrets (KIEAI_API_KEY).
 //
@@ -51,6 +53,8 @@
 
 import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, applyOmniReservation, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
 import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn } from '../_shared/kie.ts'
+import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
+import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
 
 const BUCKET = 'render-media'
 const STORE_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/`
@@ -147,12 +151,18 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
     return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'google/gemini-omni-flash-1-1', input: {
       prompt, first_frame_url: img, duration, aspect_ratio: pick(b.aspect_ratio, ['9:16', '16:9'] as const, '9:16'), resolution: '1080p' } } }
   }
-  // omnihuman-1.5
+  // omnihuman-1.5 (clients Élite depuis le 26/09, voir KIE_OPEN) : 1080p imposé aux clients (même prix que le 720p chez kie ;
+  // le 720p reste possible pour le compte developer, test A/B), jamais le mode rapide (« sacrifie la qualité »), graine
+  // entière ≥ 0 facultative (-1 = aléatoire), prompt coupé à 300 caractères (limite kie : shared/omnihuman-prompts.json).
+  // L'audio_url est remplacée par la copie serveur MESURÉE dans le handler (omnihumanAudio) avant l'envoi.
   const img = okInput(b.image_url, uid), aud = okInput(b.audio_url, uid)
   if (!img || !aud) return { error: 'image_url / audio_url : URL de notre storage uniquement' }
-  const res = (b.resolution === '720p' || b.output_resolution === '720') ? '720' : '1080'
-  const input: Record<string, unknown> = { image_url: img, audio_url: aud, output_resolution: res, pe_fast_mode: false, seed: -1 }
-  if (b.prompt) input.prompt = str(b.prompt, 1000)
+  const res = full && (b.resolution === '720p' || b.output_resolution === '720') ? '720' : '1080'
+  const seed = Number.isInteger(b.seed) && b.seed >= 0 && b.seed <= 2147483647 ? b.seed : -1
+  const input: Record<string, unknown> = { image_url: img, audio_url: aud, output_resolution: res, pe_fast_mode: false, seed }
+  const prompt = clampOmnihumanPrompt(b.prompt)
+  if (String(b.prompt ?? '').trim().length > OMNIHUMAN_PROMPT_MAX) console.warn(`[kie] omnihuman : prompt coupé à ${OMNIHUMAN_PROMPT_MAX} (${String(b.prompt).length} reçus)`)
+  if (prompt) input.prompt = prompt
   return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'omnihuman-1-5', input } }
 }
 
@@ -250,12 +260,22 @@ export async function handler(req: Request): Promise<Response> {
       //    Veo (25/09) = EXACTEMENT tarif × cran envoyé (Lite 1,5 cr/s 720p · 3 cr/s 1080p ; Fast 3 / 6), jamais la réserve.
       const cost = alias === 'omni-flash' ? OMNI_FLASH_PER_SEC * omniSecOf(built)
         : isVeo ? kieVeoCost(alias, built.body.resolution, built.body.duration) : NANO_COST
+      // OmniHuman (Axel 25/09) : coût = 5 × durée MESURÉE ici sur l'audio (copie serveur servie à kie), jamais un chiffre du
+      // client ; illisible / trop long / inaccessible → 400 AVANT tout tirage. Developer : mesuré aussi (plafond), rien tiré.
+      let omnihCost = 0
+      if (alias === 'omnihuman-1.5' && uid) {
+        const input = built.body.input as Record<string, unknown>
+        const oa = await omnihumanAudio(String(input.audio_url), BUCKET, STORE_SIGN)
+        if (!oa.ok) return jsonRes(oa.status, { error: oa.error, billing: 'none' })
+        input.audio_url = oa.url; omnihCost = oa.cost
+        console.log('[kie] omnihuman audio', who, `envoyé=${oa.envoyeSec}s facturé=${oa.factureSec}s coût=${oa.cost}`)
+      }
       let opId: string | undefined, drawn = 0
       if (uid && !noBill) {
         // Omni et Veo : draw_omni_reservation = coût MOINS l'image de départ d'Express déjà tirée sur l'op (image OFFERTE, 25/09)
         const rr = (alias === 'omni-flash' || isVeo)
           ? await applyOmniReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
-          : await applyReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
+          : await applyReservation({ req, userId: uid, proxy: 'kie', cost: omnihCost || cost, label: alias })   // OmniHuman : tirage EXACT
         if (!rr.ok) return jsonRes(rr.status, { error: rr.error, billing: 'unfunded' })
         // Montant RÉELLEMENT tiré (relecture 25/09), jamais `cost` : en mode ombre (RESERVE_ENFORCE≠1) ou sur hoquet DB, une
         // réserve insuffisante passe avec 0 tiré. Rien tiré = op NON liée à cette tâche → ni release, ni refund, ni règlement

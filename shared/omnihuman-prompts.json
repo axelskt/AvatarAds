@@ -1,0 +1,14 @@
+{
+ "version": "2026-09-26a",
+ "maxLen": 300,
+ "lang": "en",
+ "source": "Recherche OmniHuman 1.5 chez kie du 25/09/2026 (RECOMMANDATION.md) : anglais, court, positif, centré sur le mouvement ; le cadrage de la photo est gardé ; « After the last word, the lips close » dirige la fin. Aucune description de l'apparence, aucune négation, jamais le mot « hands » quand les mains ne sont pas dans la photo.",
+ "choix": "still → courte · alive + hook/cta → vivante_(mains|sans_mains) · sinon → standard_(mains|sans_mains). Mains = détectées sur la photo (_mtDetectHands dans l'app) ; sans détection (worker, MCP) → sans mains.",
+ "prompts": {
+  "standard_mains": "Selfie at arm's length; the camera keeps the photo's framing and distance. The person talks sincerely to the camera, with natural blinks, small head nods and a relaxed gesture of the visible hand on key words. Light and background stay the same. After the last word, the lips close.",
+  "standard_sans_mains": "Selfie close-up at arm's length; the camera keeps the photo's framing and distance. The person talks sincerely to the camera, with natural blinks, small head nods and subtle eyebrow raises on key words. Light and background stay the same. After the last word, the lips close.",
+  "courte": "Selfie close-up, same framing as the photo. The person talks to the camera, calm and sincere, with natural blinks and small head nods. After the last word, the lips close.",
+  "vivante_mains": "Handheld selfie at arm's length with a slight natural sway; the face stays large in frame. The person talks to the camera with conviction, nodding, raising the eyebrows and gesturing with the visible hand on key words. The background stays calm. After the last word, the lips close.",
+  "vivante_sans_mains": "Handheld selfie at arm's length with a slight natural sway; the face stays large in frame. The person talks to the camera with conviction, nodding, leaning in slightly and raising the eyebrows on key words. The background stays calm. After the last word, the lips close."
+ }
+}

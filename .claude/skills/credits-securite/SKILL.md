@@ -66,15 +66,28 @@ Ne jamais « rendre » un job en ré-ajoutant `job_drawn` hors de ces RPC.
 | Image standard / premium / 4K | 1 / 3 / 5 |
 | « Améliorer en 4K », upscale 4K | 5 |
 | Montage IA (plan) / re-rendu d'un plan modifié | 8 / 4 |
-| Lipsync Hedra Character-3 | 1 cr/s |
-| Lipsync OmniHuman 1.5 (fal) | 5 cr/s |
+| Lipsync Hedra (Avatar / Character-3, 1080p) — app, worker, MCP | 2 cr/s |
+| Lipsync OmniHuman 1.5 (kie pour les clients Élite, fal en repli) | 5 cr/s |
 | Voix ElevenLabs (en plus du lipsync) | 0,5 cr/s |
-| Express Veo 3.1 Lite / Fast | 1 / 3 cr/s |
+| Express Veo 3.1 Lite / Fast (kie pour les clients, repli Google ; 1080p ×2) | 1,5 / 3 cr/s |
 | Nettoyage audio, débruitage, transcription | 1 |
 | Export Éditeur, réutilisation d'avatar | 2 |
 
 Le barème est lu depuis la constante partout (boutons compris) : le changer à un
 seul endroit suffit, et l'UI suit.
+
+OmniHuman (26/09, relu le 26/09) : la durée facturée n'est JAMAIS celle du client. kie-proxy et fal-proxy lisent le WAV
+reçu (`_shared/lipsync-audio.ts` : UN seul chunk « fmt », sinon refus), en fabriquent une COPIE CANONIQUE (un seul fmt,
+un seul data = tous les octets présents) déposée dans `render-media/omnih-in/` : c'est elle que le fournisseur lit, il
+décode exactement ce qui est facturé. Tirage EXACT ⌈5 × max(1 s, durée − marge)⌉, marge = min(0,6 s, max(silence
+numérique final, 10 % de la durée)) : le silence ajouté après le dernier mot est gratuit, la suite réelle de la voix ne
+l'est qu'à 10 % (plus de remise par découpage en tranches). fal-proxy : OmniHuman gaté comme `KIE_OPEN` (Élite) et UN
+seul job fal par op (402 sinon). Même formule côté app (`_omnihCout`, `_omnihCoutWav`) : à changer ENSEMBLE.
+
+Montage IA (app, 26/09) : UNE op par scène (montant = ce que le proxy tirera ; Hedra : de quoi couvrir la
+réconciliation sans jamais charger notre marge au client), une op « habillage », et `render-job` reçoit
+`ops: [op du montage, op de l'habillage]` (revérifiées serveur, tirées entières). Aucune op d'un montage livré ne garde
+de réserve remboursable. MCP `lipsync_video` : durée MESURÉE (WAV canonique / trames MP3 comptées), autre format refusé.
 
 ## Les clés d'API ne sont jamais dans le client
 

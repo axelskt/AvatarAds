@@ -9,8 +9,8 @@ export const kieKey = () => Deno.env.get('KIEAI_API_KEY') ?? ''
 export const kieHeaders = () => ({ Authorization: `Bearer ${kieKey()}`, 'Content-Type': 'application/json' })
 export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (lecture en flux, abandon au-delà)
 
-// ── Ouverture aux clients payants (Axel 25/09/2026) : EXACTEMENT trois usages. alias → plans autorisés (owner et
-//    developer passent toujours). Tout autre alias (Veo Fast, Kling Motion Control, OmniHuman…) reste developer seulement.
+// ── Ouverture aux clients payants (Axel 25/09/2026) : EXACTEMENT quatre usages. alias → plans autorisés (owner et
+//    developer passent toujours). Tout autre alias (Veo Fast, Kling Motion Control…) reste developer seulement.
 //    Plans = ceux de l'UI : « Améliorer en 4K » dès Starter ; Omni Flash image→vidéo (Express « UGC réel » + Voix native
 //    du Générateur) = TOUS les plans payants depuis le 25/09 (Axel : « tout le monde y a droit pareil, Starter inclus »),
 //    comme le gate fal-proxy de google/gemini-omni-flash/…/image-to-video (le carré 1:1, que kie ne fait pas). Free : non.
@@ -18,10 +18,14 @@ export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (le
 //    le chemin Google (google-ai-proxy : Lite dès Starter) ; la 1080p reste Pro / Élite (KIE_VEO_1080_PLANS, comme le gate
 //    « Veo 1080p » de google-ai-proxy et _exp1080Allowed de l'app). Veo Fast (veo3-fast) n'est proposé à AUCUN client dans
 //    l'app (carte « Veo Fast » = test du compte developer) → fermé ici ; s'il est ouvert un jour : Pro / Élite (KIE_VEO_FAST_PLANS).
+//    OmniHuman 1.5 (Axel 25/09, livré le 26/09) = Élite (Générateur + Montage IA), tirage EXACT de 5 cr × durée MESURÉE
+//    côté serveur (omnihuman-bill.ts) ; repli fal (même op) côté app seulement si kie échoue sans tâche. (Le MCP
+//    lipsync_video appelle kie avec sa propre clé et facture lui-même : mcp/omnihuman-kie.ts, hors KIE_OPEN.)
 export const KIE_OPEN: Record<string, string[]> = {
   'nano-banana-pro': ['starter', 'pro', 'elite', 'byok'],
   'omni-flash': ['starter', 'pro', 'elite', 'byok'],
   'veo3-lite': ['starter', 'pro', 'elite', 'byok'],
+  'omnihuman-1.5': ['elite'],   // Axel 25/09 : OmniHuman passe chez kie pour les clients qui l'utilisent — Élite (Générateur + Montage IA) ; repli fal côté app
 }
 export const KIE_VEO_1080_PLANS = ['pro', 'elite']
 export const KIE_VEO_FAST_PLANS = ['pro', 'elite']
@@ -65,6 +69,7 @@ export const KIE_CLIENT_LABELS: Record<string, string> = {
   'veo3-lite': 'Vidéo Express',
   'veo3-fast': 'Vidéo Express',
   'omni-flash': 'Vidéo',
+  'omnihuman-1.5': 'Vidéo avatar',   // OmniHuman (26/09) : jamais le nom du moteur ni du fournisseur côté client
 }
 export const kieLabel = (alias: string, dev: boolean): string => dev ? (KIE_LABELS[alias] || 'kie.ai') : (KIE_CLIENT_LABELS[alias] || 'Génération')
 // Métadonnées de la ligne Bibliothèque écrite par le filet. « Compte developer » = le PLAN du propriétaire (lu par le filet),
