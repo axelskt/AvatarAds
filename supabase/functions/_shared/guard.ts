@@ -215,6 +215,20 @@ export async function bindJob(userId: string, opId: string | undefined, job: str
   if (!opId || !job) return
   try { await svc().rpc('bind_reservation_job', { p_user: userId, p_op: opId, p_job: job, p_drawn: (drawn != null && drawn > 0) ? Math.ceil(drawn) : null, p_path: path || null }) } catch { /* best-effort */ }
 }
+// UNE génération asynchrone liée par op (relecture 26/09) : bind_reservation_job n'écrit provider_job que s'il est NULL,
+// donc un 2e job soumis sur une op déjà liée ne serait ni lié, ni réglé, ni rendu par job. Les proxys qui lient (Veo de
+// google-ai-proxy) refusent donc une soumission sur une op déjà liée, AVANT l'appel fournisseur. Erreur DB → false
+// (fail-open : la libération par job reste idempotente côté SQL, migration 20260925233000).
+export async function opHasJob(userId: string, opId: string | undefined): Promise<boolean> {
+  if (!opId) return false
+  try {
+    const { data, error } = await svc().from('credit_ops').select('provider_job').eq('id', opId).eq('user_id', userId).limit(1)
+    if (error) return false
+    return !!(data && data[0] && (data[0] as { provider_job?: string | null }).provider_job)
+  } catch { return false }
+}
+// Libération par job : EXACTEMENT une fois côté SQL (job_bill_state, migration 20260925233000) — relire le suivi d'un job
+// échoué ne rend plus rien de plus (avant : job_drawn ré-ajouté à chaque lecture = refund-and-keep).
 export async function releaseByJob(userId: string, job: string): Promise<void> {
   if (!job) return
   try { await svc().rpc('release_by_job', { p_user: userId, p_job: job, p_cost: 9999 }) } catch { /* best-effort */ }

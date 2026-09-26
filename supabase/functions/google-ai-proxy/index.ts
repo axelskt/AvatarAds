@@ -13,7 +13,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, opHasJob, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 // 23/09/2026 : `:predict` (Imagen 4, arrêté par Google le 17/08/2026, seul appelant = module Cartoon supprimé) retiré.
@@ -138,6 +138,14 @@ serve(async (req: Request) => {
           const cost = costFor(bare, rawBody)
           const r = await applyOmniReservation({ req, userId: uid, proxy: 'google', cost, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error })
           drawn = r.drawn ?? 0; drawnOp = drawn > 0 ? r.opId : undefined; startImg = omniStartUsed(cost, drawn)
+          // UNE vidéo Google liée par op (relecture 26/09) : un 2e Veo sur une op déjà liée à un job ne pourrait être ni lié,
+          // ni réglé, ni rendu par job → refusé AVANT Google, tiré et remise d'image rendus. Aucun flux de l'app ne le fait
+          // (les relances « sans audio » / « Fast → Lite » suivent un refus de soumission, jamais lié ; le repli après kie
+          // n'utilise pas provider_job).
+          if (drawn > 0 && await opHasJob(uid, drawnOp)) {
+            await releaseOmniOp(uid, drawnOp, drawn, startImg); gaveBack = true
+            return jsonRes(409, { error: 'Une vidéo est déjà en cours pour ce débit — relance la génération depuis l’app.' })
+          }
         }
         else { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId }
       } else if (gated && /:generateContent$/.test(bare) && !/tts/i.test(bare)) {
@@ -177,7 +185,9 @@ serve(async (req: Request) => {
         // Poll d'une opération Veo terminée. Livrée = une VIDÉO est présente (octets, uri ou files/…). « done » sans vidéo
         // (erreur, ou vidéo bloquée par le filtre RAI : raiMediaFilteredCount > 0) = échec NON facturé par Google →
         // remboursement SERVEUR (comme fal-proxy : refundByJobTerminal, sinon on rend la réserve) au lieu d'un règlement
-        // qui faisait perdre les crédits au client (revue du 23/09/2026).
+        // qui faisait perdre les crédits au client (revue du 23/09/2026). Relu N fois (le client relit le suivi à volonté) :
+        // la libération par job n'a lieu qu'UNE fois (job_bill_state, migration 20260925233000) — avant, chaque lecture
+        // rajoutait job_drawn à la réserve (remboursement > prix payé, étape livrée gratuite).
         if (opTail) {
           const hasVideo = /"bytesBase64Encoded"\s*:\s*"|"uri"\s*:\s*"|files\/[A-Za-z0-9_-]+/.test(body)
           const filtered = /"raiMediaFilteredCount"\s*:\s*[1-9]/.test(body)

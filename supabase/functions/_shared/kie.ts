@@ -67,11 +67,14 @@ export const KIE_CLIENT_LABELS: Record<string, string> = {
   'omni-flash': 'Vidéo',
 }
 export const kieLabel = (alias: string, dev: boolean): string => dev ? (KIE_LABELS[alias] || 'kie.ai') : (KIE_CLIENT_LABELS[alias] || 'Génération')
-// Métadonnées de la ligne Bibliothèque écrite par le filet : le libellé developer porte « kie.ai » (kieLabel) → tags et
-// style kie ; sinon (client) tags / style neutres, sans nom de moteur.
-export function kieLibMeta(label: string | null): { name: string; tags: string[]; style: string } {
-  const dev = /kie/i.test(String(label || ''))
-  return dev ? { name: String(label), tags: ['kie.ai', 'récupérée'], style: 'kie.ai' } : { name: label || 'Génération', tags: ['récupérée'], style: '' }
+// Métadonnées de la ligne Bibliothèque écrite par le filet. « Compte developer » = le PLAN du propriétaire (lu par le filet),
+// jamais deviné d'après le libellé : les lignes client écrites par l'ancien kie-proxy portent « … · kie.ai » (KIE_LABELS,
+// Omni / 4K ouverts plus tôt le 25/09) → pour un client, un libellé contenant « kie » est remplacé par le libellé neutre de
+// l'alias ; tags / style sans nom de moteur. Developer : libellé, tags et style kie (inchangé).
+export function kieLibMeta(label: string | null, alias: string | null, dev: boolean): { name: string; tags: string[]; style: string } {
+  if (dev) return { name: label || KIE_LABELS[String(alias)] || 'kie.ai', tags: ['kie.ai', 'récupérée'], style: 'kie.ai' }
+  const name = (label && !/kie/i.test(label)) ? label : (KIE_CLIENT_LABELS[String(alias)] || 'Génération')
+  return { name, tags: ['récupérée'], style: '' }
 }
 export const KIE_LABELS: Record<string, string> = {
   'nano-banana-pro': 'Image 4K · kie.ai',
@@ -107,10 +110,20 @@ export async function kieRecord(fam: 'mk' | 'veo', taskId: string): Promise<KieR
   }
   if (fam === 'veo') {
     const f = Number(d.successFlag)
-    const urls = Array.isArray(d.response?.resultUrls) ? d.response.resultUrls : []
+    // Résultat = resultUrls, sinon originUrls (doc kie : rempli dès que le format n'est pas 16:9 — donc en 9:16, le format
+    // d'Express). Un succès avec la seule originUrls est un LIVRABLE (jamais classé « échec » rendu → repli Google = deux
+    // vidéos pour un débit). Aucune URL de résultat dans `meta` : la route résultat (règlement, bill_state) est le SEUL
+    // chemin de livraison (relecture 26/09 : /status livrait originUrls, même sur une tâche remboursée).
+    const list = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v.map((x) => String(x || '')).filter(Boolean)
+      if (typeof v === 'string' && v.trim()) { try { const a = JSON.parse(v); return Array.isArray(a) ? a.map((x) => String(x || '')).filter(Boolean) : [] } catch { return [] } }
+      return []
+    }
+    const res = list(d.response?.resultUrls), orig = list(d.response?.originUrls)
+    const urls = res.length ? res : orig
     return { found: true, state: f === 1 ? 'ok' : (f === 2 || f === 3 ? 'fail' : 'run'), urls,
       err: String(d.errorMessage || ''), errType: String(d.errorCode ?? ''), param: norm(d.paramJson),
-      meta: { resolution: d.response?.resolution ?? null, originUrls: d.response?.originUrls ?? null, fallbackFlag: d.fallbackFlag ?? null } }
+      meta: { resolution: d.response?.resolution ?? null, origin: orig.length > 0, fallbackFlag: d.fallbackFlag ?? null } }
   }
   const st = String(d.state || '')
   let urls: string[] = []
