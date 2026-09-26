@@ -16,8 +16,9 @@
 // par kie-proxy, sans repli fal) — Starter / Pro / Élite / BYOK, 1080p imposé, tirage EXACT de 5 cr × durée.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC, svc } from '../_shared/guard.ts'
 import { omnihumanFalBody } from '../_shared/omnihuman-bill.ts'   // OmniHuman (repli de kie, Axel 25/09) : durée MESURÉE, tirage exact
+import { KIE_OPEN } from '../_shared/kie.ts'   // OmniHuman : mêmes plans que kie-proxy (lecture seule)
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -109,6 +110,11 @@ serve(async (req: Request) => {
     else if (isOmniI2v) {
       const g = await requirePlan(auth.userId, ['starter', 'pro', 'elite', 'byok'], 'Omni Flash'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
+    // OmniHuman (relecture 26/09) : ce chemin n'avait AUCUNE garde de plan — un Starter atteignait par le repli fal ce que
+    // kie-proxy lui refuse. Mêmes plans que KIE_OPEN (Élite ; owner / developer passent), comme le Générateur et le Montage IA.
+    else if (isSubmit && OMNIHUMAN.test(path.split('?')[0])) {
+      const g = await requirePlan(auth.userId, KIE_OPEN['omnihuman-1.5'] || ['elite'], 'OmniHuman'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+    }
     const gate = isSubmit
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
@@ -131,6 +137,16 @@ serve(async (req: Request) => {
       // > 60 s / inaccessible → 400 AVANT tout tirage. Tirage EXACT (per-cost) : partage sûr d'une op (scènes du Montage).
       let omnihCost = 0
       if (OMNIHUMAN.test(path.split('?')[0])) {
+        // UN job fal OmniHuman par op (relecture 26/09) : la liaison op ↔ job (credit_ops.provider_job) n'en garde qu'UN ; un
+        // 2e job sur la même op n'était lié à rien → échec jamais rendu, succès jamais réglé. L'app n'en lance plus qu'un par
+        // op (Montage IA : une op par scène ; Générateur : un seul repli fal pour tout l'audio) → refus AVANT tout tirage.
+        const opH = await resolveOp(auth.userId, req)
+        if (opH && opH !== '__ERR__') {
+          try {
+            const { data: row } = await svc().from('credit_ops').select('provider_job').eq('id', opH).maybeSingle()
+            if (row && row.provider_job) return jsonRes(402, { error: 'Cette réservation porte déjà une génération : relance la génération.' })
+          } catch { /* hoquet DB : on laisse passer (le tirage exact reste la barrière) */ }
+        }
         const oh = await omnihumanFalBody(rawBody ?? '', auth.userId, OMNIH_BUCKET, OMNIH_SIGN)
         if ('error' in oh) return jsonRes(oh.status, { error: oh.error })
         rawBody = oh.body; omnihCost = oh.cost

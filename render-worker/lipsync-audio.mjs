@@ -114,6 +114,15 @@ export function fabriquerAudioLipsync(voix, fenetre, voixInfo, sortie, opts = {}
   return { plan }
 }
 
+// ── L'AUDIO D'AVANT LE 26/09 (relecture) : UNIQUEMENT pour retrouver au cache un clip DÉJÀ PAYÉ ─────────────────────
+// Avant e6fdea4, la clé du cache lipsync portait sur le MP3 EXACT de la fenêtre (plancher 3,3 s, 128 kb/s) ; le nouvel audio
+// (WAV + contexte) change la clé → relancer un montage payé hier le redébitait. Mêmes arguments ffmpeg qu'avant, à l'octet.
+export function audioAncienLipsync(voix, fenetre, sortie) {
+  const dur = Math.max(LIP.MIN, (fenetre.end || 0) - (fenetre.start || 0))
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(fenetre.start), '-t', String(dur),
+    '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', sortie])
+}
+
 // ── COUPE DE LA VIDÉO RENDUE ─────────────────────────────────────────────────────
 // Fin de parole (dans la timeline de la vidéo) + 0,3 s ; null si rien d'utile à couper (moins de 0,1 s gagné)
 // ou si la mesure est suspecte (moins d'1 s de parole).

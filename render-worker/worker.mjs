@@ -28,7 +28,7 @@ import { buildGenSubsComposition } from './gen-subs-composition.mjs'
 import { deriveDynamicSlides, EXIGE_GLOBAL as EXIGE_FINITION, ANIMS as ANIMS_DISPO } from './dynamic-derive.mjs'
 import { deriveClassicSlides } from './classic-derive.mjs'
 import { cleLipsync, cacheLire, cacheEcrire, HEDRA_CR_SEC } from './lipsync-cache.mjs'
-import { analyserVoix, fabriquerAudioLipsync, bornesTranches } from './lipsync-audio.mjs'
+import { analyserVoix, fabriquerAudioLipsync, bornesTranches, audioAncienLipsync } from './lipsync-audio.mjs'
 import { finsAffichageAvatar } from './dynamic-engine.mjs'
 import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs'   // prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300)
 
@@ -2477,6 +2477,15 @@ async function estSelfie(photoAbs) {
   try { return JSON.parse(m[0]).selfie === true } catch (_) { return false }
 }
 
+// Relance d'un montage payé AVANT le 26/09 (relecture) : le clip est rangé au cache sous la clé de l'ANCIEN audio (MP3 exact
+// de la fenêtre). On la recalcule (mêmes arguments ffmpeg) quand la nouvelle clé manque → repris SANS débit.
+async function clipPayeAvant(voix, proj, photo, w, ratio, modele, variante, nom) {
+  const f = join(proj, nom)
+  try { audioAncienLipsync(voix, w, f); return await cacheLire(cleLipsync(photo, readFileSync(f), ratio, modele, variante)) }
+  catch (_) { return null }
+  finally { try { rmSync(f, { force: true }) } catch (_) {} }
+}
+
 async function genererFenetresG(plan, proj, jobDir, avatarClips) {
   const fen = (plan.avatarSegments || []).filter((w) => /^G\d+$/.test(String(w.clip)))
   if (!fen.length) return 0
@@ -2502,6 +2511,9 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
     const cle = cleLipsync(photo, audioBuf, '9:16', HEDRA_SLUG)
     const out = join(proj, 'media', 'av' + w.clip + '.mp4')
     let clip = await cacheLire(cle)
+    // clip payé AVANT le 26/09 (clé de l'ancien audio MP3) : repris tel quel, affiché comme avant (sans lipEnd)
+    let ancien = false
+    if (!clip) { clip = await clipPayeAvant(voix, proj, photo, w, '9:16', HEDRA_SLUG, '', `lsA-${w.clip}.mp3`); ancien = !!clip }
     if (clip) console.log(`♻︎ fenêtre ${w.clip} : ${r2(w.start)}→${r2(w.end)}s reprise du cache — ${Math.round(dur * HEDRA_CR_SEC)} crédits économisés`)
     else {
       if (!startImg) startImg = await hedraV3Upload(photo, 'image/png', 'avatar.png')
@@ -2533,7 +2545,7 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
       rmSync(brut)
     } catch (e) { console.warn(`normalisation ${w.clip} :`, e.message); try { if (!existsSync(out) && existsSync(brut)) renameSync(brut, out) } catch (_) {} }
     avatarClips['av' + w.clip] = 'media/av' + w.clip + '.mp4'
-    if (lip.lipEnd != null) w.lipEnd = lip.lipEnd; else delete w.lipEnd
+    if (lip.lipEnd != null && !ancien) w.lipEnd = lip.lipEnd; else delete w.lipEnd
     faits++
   }
   return faits
@@ -2801,6 +2813,20 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       console.log(`♻︎ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s repris du cache — ${cout} crédits économisés`)
       return true
     }
+    // ── RELANCE D'UN MONTAGE PAYÉ AVANT LE 26/09 (relecture) ──────────────────────────────────────────────────────────
+    // Même photo, même voix, même fenêtre : le clip payé hier est rangé sous la clé de l'ANCIEN audio (MP3 exact). Sans ce
+    // rattrapage, « Détails du montage » / une relance le regénérait ET le redébitait (2 cr/s, 5 en OmniHuman). Repris
+    // SANS débit, affiché comme avant (sans lipEnd : sa matière est la fenêtre exacte).
+    const payeAvant = await clipPayeAvant(voix, proj, photo, w, ratio, omni ? 'omnihuman-1.5' : HEDRA_SLUG, omni ? '' : expressif ? 'expressif' : '', `lsA${i}.mp3`)
+    if (payeAvant) {
+      const grp = join(proj, 'media', `grp${i}.mp4`)
+      writeFileSync(grp, payeAvant)
+      decouperParties(grp, w, parts, modele)
+      for (const pt of parts) delete pt.w.lipEnd
+      economie += cout
+      console.log(`♻︎ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s repris du cache (clip payé avant le 26/09) — ${cout} crédits économisés`)
+      return true
+    }
 
     // ── DÉBIT AVANT L'APPEL FOURNISSEUR (jamais sur un cache hit, remboursé si échec) ──
     const facture = await debiterLipsync(dur, modele)
@@ -2874,15 +2900,18 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
 // L'edge render-job TIRE la réserve de l'op de l'utilisateur à la création et la LIE au job
 // (provider_job = 'render:<id>'). Le worker RÈGLE à la livraison (op non remboursable) et LIBÈRE
 // à l'échec (remboursement partiel possible côté client). Avant : rien → refund après téléchargement.
+// Relecture 26/09 : le Montage IA avatar désigne DEUX ops (montage + habillage) → render-job les lie à 'render:<id>' puis
+// 'render:<id>#1' (#2 au plus) : on règle / libère chaque clé (sans op liée = sans effet). MÊMES clés que render-job (cleRendu).
 async function reservationJob(sb, job, ok) {
-  try {
-    if (!job || !job.user_id) return
-    const key = 'render:' + job.id
-    const { error } = ok
-      ? await sb.rpc('settle_by_job', { p_user: job.user_id, p_job: key })
-      : await sb.rpc('release_by_job', { p_user: job.user_id, p_job: key, p_cost: 9999 })
-    if (error) console.warn('réservation', ok ? 'settle' : 'release', ':', error.message)
-  } catch (e) { console.warn('réservation :', e.message) }
+  if (!job || !job.user_id) return
+  for (const key of ['render:' + job.id, 'render:' + job.id + '#1', 'render:' + job.id + '#2']) {
+    try {
+      const { error } = ok
+        ? await sb.rpc('settle_by_job', { p_user: job.user_id, p_job: key })
+        : await sb.rpc('release_by_job', { p_user: job.user_id, p_job: key, p_cost: 9999 })
+      if (error) console.warn('réservation', ok ? 'settle' : 'release', key, ':', error.message)
+    } catch (e) { console.warn('réservation :', e.message) }
+  }
 }
 
 async function pollLoop() {

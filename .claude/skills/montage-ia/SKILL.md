@@ -85,6 +85,13 @@ Chacune vient d'un rendu raté et d'un retour précis. Ne pas les redécouvrir.
   ensemble. Chaque fenêtre porte alors `lipEnd` (instant absolu jusqu'où les lèvres suivent
   la voix) : le moteur dynamique n'affiche plus le visage au-delà quand la voix continue
   (le panneau suivant entre plus tôt). Facturation = durée utile, jamais la marge.
+  Côté APP (relecture 26/09) : Hedra reçoit au plus +0,5 s de suite de voix et la dernière
+  scène n'est plus couverte jusqu'à la fin de l'audio (la réconciliation de hedra-proxy l'aurait
+  facturée au client) — cette couverture est réservée au render-worker, qui ne réconcilie pas.
+  Une op par scène + une op d'habillage, `render-job` reçoit `ops` (voir `credits-securite`).
+- **Relancer un montage payé avant le 26/09 ne redébite pas** : le worker cherche aussi la clé
+  de cache de l'ANCIEN audio (MP3 exact de la fenêtre, `audioAncienLipsync`) et reprend ce clip
+  sans débit, affiché comme avant (sans `lipEnd`).
 - **HyperFrames refuse le rendu si un clip vidéo est plus court que sa fenêtre**
   (« captured 72 of expected 116 frames »). Découper les clips avatar APRÈS la
   dérivation, avec de la marge.

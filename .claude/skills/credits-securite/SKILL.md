@@ -58,7 +58,7 @@ Toute nouvelle action payante passe par là. Pas de chemin parallèle.
 | Image standard / premium / 4K | 1 / 3 / 5 |
 | « Améliorer en 4K », upscale 4K | 5 |
 | Montage IA (plan) / re-rendu d'un plan modifié | 8 / 4 |
-| Lipsync Hedra Character-3 | 1 cr/s |
+| Lipsync Hedra (Avatar / Character-3, 1080p) — app, worker, MCP | 2 cr/s |
 | Lipsync OmniHuman 1.5 (kie pour les clients Élite, fal en repli) | 5 cr/s |
 | Voix ElevenLabs (en plus du lipsync) | 0,5 cr/s |
 | Express Veo 3.1 Lite / Fast | 1 / 3 cr/s |
@@ -68,11 +68,18 @@ Toute nouvelle action payante passe par là. Pas de chemin parallèle.
 Le barème est lu depuis la constante partout (boutons compris) : le changer à un
 seul endroit suffit, et l'UI suit.
 
-OmniHuman (26/09) : la durée facturée n'est JAMAIS celle du client. kie-proxy et fal-proxy mesurent le WAV reçu
-(`_shared/omnihuman-bill.ts` : octets présents, en-tête ignoré), en déposent une copie dans `render-media/omnih-in/`
-que le fournisseur lit, puis tirent EXACTEMENT ⌈5 × max(1 s, durée − 0,6 s)⌉ sur l'op (per-cost, jamais draw_full :
-les scènes d'un Montage partagent une op). L'app réserve `_omnihResa` par scène et n'envoie jamais plus de 0,6 s
-au-delà de la durée utile (`_omnihPlan`). Même formule côté app (`_omnihCout`) : à changer ENSEMBLE.
+OmniHuman (26/09, relu le 26/09) : la durée facturée n'est JAMAIS celle du client. kie-proxy et fal-proxy lisent le WAV
+reçu (`_shared/lipsync-audio.ts` : UN seul chunk « fmt », sinon refus), en fabriquent une COPIE CANONIQUE (un seul fmt,
+un seul data = tous les octets présents) déposée dans `render-media/omnih-in/` : c'est elle que le fournisseur lit, il
+décode exactement ce qui est facturé. Tirage EXACT ⌈5 × max(1 s, durée − marge)⌉, marge = min(0,6 s, max(silence
+numérique final, 10 % de la durée)) : le silence ajouté après le dernier mot est gratuit, la suite réelle de la voix ne
+l'est qu'à 10 % (plus de remise par découpage en tranches). fal-proxy : OmniHuman gaté comme `KIE_OPEN` (Élite) et UN
+seul job fal par op (402 sinon). Même formule côté app (`_omnihCout`, `_omnihCoutWav`) : à changer ENSEMBLE.
+
+Montage IA (app, 26/09) : UNE op par scène (montant = ce que le proxy tirera ; Hedra : de quoi couvrir la
+réconciliation sans jamais charger notre marge au client), une op « habillage », et `render-job` reçoit
+`ops: [op du montage, op de l'habillage]` (revérifiées serveur, tirées entières). Aucune op d'un montage livré ne garde
+de réserve remboursable. MCP `lipsync_video` : durée MESURÉE (WAV canonique / trames MP3 comptées), autre format refusé.
 
 ## Les clés d'API ne sont jamais dans le client
 
