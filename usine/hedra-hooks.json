@@ -1,0 +1,9 @@
+{
+  "_doc": "Réglage lipsync des hooks de l'usine (Axel 26/09). Base = test 2 (A1 × H70) validé : Character-3 + ce prompt. Le prompt du test H48 (mains exigées « dès la 1re image, sans jamais les baisser ») a tué l'articulation : ne pas surcharger la consigne des mains. Photos actuelles uniquement (pas de photos mains levées). Après rendu : couper à fin de parole + 0,06 s (fondu audio 40 ms), puis usine/selfie-treat.mjs niveau faible (tremblement + grain).",
+  "model": "hedra-character-3",
+  "prompt": "A young man talking to camera, UGC selfie style, very clear and wide articulation: jaw and lips open fully on every vowel, lips close on every b, p, m, each syllable distinct, smooth continuous fluid speech that follows the natural rhythm and short pauses between words, never mumbling. He talks with his hands: his hands rise into frame quickly, within the first half second, then animated natural gestures on every sentence, open palms, pointing at camera on emphasis. Expressive face, eyebrows raise on key words. Static background, no camera movement, hands with five distinct fingers.",
+  "cut_after_speech_s": 0.06,
+  "audio_fade_out_s": 0.04,
+  "silence_detect": { "noise_db": -35, "min_s": 0.12 },
+  "treatment": { "script": "usine/selfie-treat.mjs", "level": "faible" }
+}
