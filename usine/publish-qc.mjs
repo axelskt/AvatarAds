@@ -18,17 +18,23 @@
 // « Humain d'abord » (Axel) : status = 'pending' au début même si auto (tout passe par la file tant que le
 // template n'est pas diplômé). L'insertion se fait via la clé service (SUPABASE_SERVICE_ROLE_KEY) si présente
 // — sinon on IMPRIME la ligne (à insérer par Claude via le MCP / à câbler dans le render-worker).
-// Usage : node usine/publish-qc.mjs <video.mp4> <template> [comboJson] [--transcript "…"] [--bricks bricks.json]
+// FORMAT DE HOOK (26/09, usine/formats.js) : brick_combo.format (F01…) et brick_combo.texte_choc (TH01…) — la variété
+// testée, JAMAIS comptée dans la clé d'une vidéo (voix|avatar|hook|liaison). Lus dans comboJson ou, à défaut, dans le fichier
+// que build.mjs écrit à côté de la vidéo (<video>.format.json, ou --format-meta <fichier>) ; format inconnu / pas rendable,
+// phrase hors banque validée → refus AVANT tout rendu ni upload ; phrase qui ne va pas avec la démo ou placée sur un visage
+// → revue manuelle (raisons ajoutées à technical.coherence, détail dans technical.format).
+// Usage : node usine/publish-qc.mjs <video.mp4> <template> [comboJson] [--transcript "…"] [--bricks bricks.json] [--format-meta f.json]
 import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const _argv = process.argv.slice(2), _valOf = (f) => { const i = _argv.indexOf(f); return i > -1 ? String(_argv[i + 1] || '') : ''; };
-const [video, template, comboArg] = _argv.filter((a, i) => !a.startsWith('--') && !['--transcript', '--bricks'].includes(_argv[i - 1]));
-if (!video || !template) { console.error('usage: publish-qc.mjs <video> <template> [comboJson] [--transcript "…"]'); process.exit(2); }
+const [video, template, comboArg] = _argv.filter((a, i) => !a.startsWith('--') && !['--transcript', '--bricks', '--format-meta'].includes(_argv[i - 1]));
+if (!video || !template) { console.error('usage: publish-qc.mjs <video> <template> [comboJson] [--transcript "…"] [--bricks bricks.json] [--format-meta f.json]'); process.exit(2); }
 const transcript = _valOf('--transcript');
 const bricksFile = _valOf('--bricks');
+const formatMetaFile = _valOf('--format-meta') || (existsSync(video + '.format.json') ? video + '.format.json' : '');
 const HERE = fileURLToPath(new URL('.', import.meta.url));   // décode l'espace de « Autre SaaS » (pas de %20)
 const SB_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 const BUCKET = 'factory-media';
@@ -40,12 +46,26 @@ const j = s => { try { return JSON.parse(s); } catch { return null; } };
 // 0) règle partagée avec le dashboard + contrôle de la recette AVANT tout rendu / upload
 await import(new URL('./hook-liaison.js', import.meta.url).href);   // matrice hook × liaison (globalThis.CF_HOOK_LIAISON)
 await import(new URL('./coherence.js', import.meta.url).href);
-const COH = globalThis.CF_COHERENCE;
+await import(new URL('./formats.js', import.meta.url).href);          // formats de hook (globalThis.CF_FORMATS)
+const COH = globalThis.CF_COHERENCE, FMT = globalThis.CF_FORMATS;
 const combo = comboArg ? j(comboArg) : {};
 if (!combo || typeof combo !== 'object' || Array.isArray(combo)) { console.error('✗ comboJson illisible : ' + String(comboArg).slice(0, 120)); process.exit(2); }
-const badKeys = Object.keys(combo).filter(k => !COH.COMBO_KEYS.includes(k));
-if (badKeys.length) { console.error('✗ recette refusée : clé inconnue ' + badKeys.join(', ') + ' (admises : ' + COH.COMBO_KEYS.join(', ') + ')'); process.exit(2); }
+// format choisi par build.mjs (fichier à côté de la vidéo) → recopié dans la recette ; un désaccord avec comboJson = refus
+const fmtMeta = formatMetaFile ? j((() => { try { return readFileSync(formatMetaFile, 'utf8'); } catch { return ''; } })()) : null;
+if (formatMetaFile && (!fmtMeta || typeof fmtMeta !== 'object')) { console.error('✗ format illisible : ' + formatMetaFile); process.exit(2); }
+if (fmtMeta) {
+  const m = FMT.mergeFormatMeta(combo, fmtMeta);
+  if (m.errors.length) { console.error('✗ recette refusée : ' + m.errors.join(' · ') + ' (' + formatMetaFile + ')'); process.exit(2); }
+  Object.assign(combo, m.combo);
+}
+const KEYS = COH.COMBO_KEYS.concat(FMT.COMBO_KEYS.filter(k => !COH.COMBO_KEYS.includes(k)));
+const badKeys = Object.keys(combo).filter(k => !KEYS.includes(k));
+if (badKeys.length) { console.error('✗ recette refusée : clé inconnue ' + badKeys.join(', ') + ' (admises : ' + KEYS.join(', ') + ')'); process.exit(2); }
 if (!COH.voiceValid(combo.voice)) { console.error('✗ recette refusée : voix « ' + combo.voice + ' » inconnue (axel ou omni)'); process.exit(2); }
+const fmtCheck0 = FMT.comboFormatCheck(combo);
+if (fmtCheck0.errors.length) { console.error('✗ recette refusée : ' + fmtCheck0.errors.join(' · ')); process.exit(2); }
+// la règle de cohérence (usine/coherence.js) ne voit que les briques de la vidéo, jamais les clés du format
+const cohCombo = Object.fromEntries(Object.entries(combo).filter(([k]) => !FMT.COMBO_KEYS.includes(k) || COH.COMBO_KEYS.includes(k)));
 
 // 1) QC technique
 const qcR = run('node', [HERE + 'qc.mjs', video, '--json']);
@@ -66,12 +86,19 @@ let coherence, promise = '';
 if (!bricks) coherence = { level: 'review', reasons: ['bibliothèque de briques non chargée : cohérence non vérifiée'] };
 else {
   const byId = Object.fromEntries(bricks.map(b => [b.id, b]));
-  const c = COH.comboCheck(combo, byId, globalThis.CF_HOOK_LIAISON || null);
+  const c = COH.comboCheck(cohCombo, byId, globalThis.CF_HOOK_LIAISON || null);
   coherence = { level: c.level, reasons: c.reasons };
   if (c.hook && c.demo) {
     const say = (b) => String((b.meta && (b.meta.script || b.meta.text)) || b.label || b.id).slice(0, 240);
     promise = `le hook ${c.hook.id} dit « ${say(c.hook)} » ; la démo ${c.demo.id} montre « ${c.demo.label || c.demo.id} » (module ${COH.demoModule(c.demo)})`;
   }
+}
+// 1ter) Format de hook : phrase choc ↔ démo (module, transformation du hook visuel), placement (visage, zone sûre)
+if (combo.format) {
+  const demoB = Array.isArray(bricks) && combo.contenu ? bricks.find(b => b && b.id === combo.contenu) || null : null;
+  const fr = FMT.formatReview(combo, demoB || (combo.contenu ? '' : undefined), fmtMeta);
+  if (fr && fr.reasons.length) coherence = { level: 'review', reasons: coherence.reasons.concat(fr.reasons) };
+  if (fr) { delete fr.errors; technical.format = fr; }
 }
 technical.coherence = coherence;
 

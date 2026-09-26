@@ -19,6 +19,15 @@
  * du catalogue) ou n'importe laquelle si le hook est générique ('generique' dans ses sujets) ; sinon n'importe quelle démo,
  * et la vidéo part en REVUE QC (Axel accepte ou refuse à la main). Contrôles QC inchangés : pairLevel, liaisonOk, comboCheck.
  *
+ * HOOKS AVANT / APRÈS (Axel, 26/09) : un hook meta.lipsync === false ou meta.hook_mode === 'avant-apres' (H19, H53, H57,
+ * H63, H64, H74) n'est JAMAIS en lipsync : il sort des 2 modes ci-dessus et forme un 3e mode 'aa' « Avant / après » = voix
+ * off d'Axel sur un ASSEMBLAGE visuel (factory_recipes HK-…). Assemblage = suite de 2 ou 3 clips DISTINCTS d'un même GROUPE
+ * de transformations (meta.group = un même original filmé) : l'original (meta.before) et chaque version (meta.after) ;
+ * 2 clips dans tous les sens, 3 clips seulement en partant de l'original ; jamais deux groupes mélangés (assemblies,
+ * assemblyCheck). Court 'aa' = assemblage × hook avant/après du module du groupe (pas d'avatar) ; long = court × liaison
+ * compatible × avatar (la liaison est dite par un avatar). Clé : aa|avatar|hook|liaison|assemblage (avatar vide en court).
+ * Hooks meta.overlay_required (H14, H23, H60) : lipsync seulement avec une incrustation ; comptés, signalés (overlay).
+ *
  * Bibliothèque = briques au statut 'ready' seulement (une brique 'retired' ou 'flagged' n'entre dans aucun compte) ;
  * hooks comptés sans meta.alias_of (H64 = alias de H63).
  * Chargé tel quel par le navigateur (window.CF_COHERENCE) et par node (import / require). Aucune dépendance.
@@ -31,12 +40,15 @@
   root.CF_COHERENCE = api;
 })(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this, function (root) {
   'use strict';
-  var VOICES = ['axel', 'omni'];
+  var VOICES = ['axel', 'omni'];                                // modes lipsync (inchangés)
   var VOICE_LABEL = { axel: 'Audio d’Axel', omni: 'Voix native Omni' };
+  var MODES = ['axel', 'omni', 'aa'];                           // + 'aa' = Avant / après (voix off sur un assemblage)
+  var MODE_LABEL = { axel: 'Audio d’Axel', omni: 'Voix native Omni', aa: 'Avant / après' };
   var AUDIO_RE = /\.(wav|mp3|m4a|aac|ogg)(?:[?#].*)?$/i;
-  // Clés admises dans une recette (factory_qc.brick_combo, écrite par usine/publish-qc.mjs) : IDs de briques, sauf voice.
-  // Toute autre clé rend la recette illisible pour le dashboard (affichée « texte libre », jamais comptée) → refusée.
-  var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'];
+  // Clés admises dans une recette (factory_qc.brick_combo, écrite par usine/publish-qc.mjs) : IDs de briques, sauf voice ;
+  // assemblage = ID d'une recette HK (vidéo avant / après). Toute autre clé rend la recette illisible pour le dashboard
+  // (affichée « texte libre », jamais comptée) → refusée.
+  var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];
   var STATUS_FR = { ready: 'prête', retired: 'retirée', flagged: 'signalée', draft: 'brouillon' };
   // Clés venues de la base (brick_combo) : jamais lues sur le prototype d'un objet (« __proto__ », « constructor »…).
   function has(o, k) { return !!o && Object.prototype.hasOwnProperty.call(o, k); }
@@ -66,6 +78,104 @@
     return (b.kind === 'hook' ? str(meta(b).script) : '') || str(b.label);
   }
   function voiceOk(b, voice) { return voice === 'omni' ? !!voiceText(b) : voice === 'axel' ? hasAudio(b) : false; }
+  // Hook avant / après (Motion Control / Omni) : jamais en lipsync, dit en voix off sur son assemblage visuel.
+  function isAvantApres(h) { var m = meta(h); return m.lipsync === false || m.hook_mode === 'avant-apres'; }
+  // Hook lipsync seulement avec une image incrustée (meta.overlay_required, ex. 'fille') ; '' sinon.
+  function overlayRequired(h) { return str(meta(h).overlay_required); }
+  // Un hook (avant / après) peut habiller un assemblage de ce module (motion-control / omni) : sujet, sujet cité ou générique.
+  function hookFitsModule(h, module) {
+    return !!h && !!module && (String(h.subject || '') === module || hookSubjects(h).indexOf(module) >= 0 || isGenericHook(h));
+  }
+
+  // ── assemblages avant / après (factory_recipes kind 'hook', id HK-…) ──
+  // Groupes de transformations : un groupe = un même original filmé (meta.group, sinon la brique seule). Clips du groupe :
+  // '0' = l'original (meta.before, commun à toutes les versions) et une lettre par version (meta.after), a, b, c… dans
+  // l'ordre des IDs TX (O2 : TX-O02a → a = Porsche, TX-O02b → b = Bugatti). Seules les transformations 'ready' comptent.
+  var LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+  function scene(label) { var m = /\(([^()]+)\)\s*$/.exec(String(label || '')); return m ? m[1].trim() : ''; }
+  function txGroups(bricks) {
+    var by = dict(), order = [];
+    (bricks || []).forEach(function (b) {
+      if (!b || b.kind !== 'transformation' || !ready(b)) return;
+      var g = str(meta(b).group) || String(b.id);
+      if (!has(by, g)) { by[g] = []; order.push(g); }
+      by[g].push(b);
+    });
+    return order.sort().map(function (g) {
+      var tx = by[g].slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }), first = tx[0], bf = meta(first).before || {};
+      var versions = tx.slice(0, LETTERS.length).map(function (t, i) {
+        var af = meta(t).after || {};
+        return { key: LETTERS[i], brick_id: t.id, clip: 'after', label: str(af.label) || t.id, media: str(af.media), file: str(af.file) };
+      });
+      return { group: g, module: String(first.subject || ''), scene: scene(first.label), tx: tx.map(function (t) { return t.id; }),
+        original: { key: '0', brick_id: first.id, clip: 'before', label: str(bf.label) || 'original', media: str(bf.media), file: str(bf.file) },
+        versions: versions };
+    });
+  }
+  // Suites valides d'un groupe : 2 clips distincts dans tous les sens ; 3 clips distincts en partant de l'original
+  // (groupe à ≥ 2 versions). k versions → (k+1)·k + k·(k−1) assemblages (1 version : 2 ; 2 versions : 8).
+  function groupSequences(G) {
+    var keys = ['0'].concat(G.versions.map(function (v) { return v.key; })), out = [];
+    keys.forEach(function (x) { keys.forEach(function (y) { if (x !== y) out.push([x, y]); }); });
+    G.versions.forEach(function (x) { G.versions.forEach(function (y) { if (x !== y) out.push(['0', x.key, y.key]); }); });
+    return out;
+  }
+  function makeAssembly(G, seq) {
+    var byKey = dict();
+    byKey['0'] = G.original;
+    G.versions.forEach(function (v) { byKey[v.key] = v; });
+    var clips = seq.map(function (k, i) {
+      var c = byKey[k];
+      if (k !== '0') return { key: k, brick_id: c.brick_id, clip: 'after', label: c.label, media: c.media };
+      // l'original est rattaché à la version voisine dans la suite (la suivante, sinon la précédente)
+      var nb = seq[i + 1] && seq[i + 1] !== '0' ? seq[i + 1] : seq[i - 1];
+      return { key: '0', brick_id: nb && has(byKey, nb) ? byKey[nb].brick_id : c.brick_id, clip: 'before', label: c.label, media: c.media };
+    });
+    var label = clips.map(function (c) { return c.label; }).join(' → ') + (G.scene ? ' (' + G.scene + ')' : '');
+    return { id: 'HK-' + G.group + '-' + seq.join(''), group: G.group, module: G.module, code: seq.join(''), label: label,
+      components: clips.map(function (c, i) { return { slot: LETTERS[i].toUpperCase(), brick_id: c.brick_id, clip: c.clip }; }),
+      clips: clips };
+  }
+  // Tous les assemblages valides (fonction pure) : groupes dans l'ordre de leur nom, 2 clips puis 3 clips.
+  function assemblies(bricks) {
+    var out = [];
+    txGroups(bricks).forEach(function (G) { groupSequences(G).forEach(function (s) { out.push(makeAssembly(G, s)); }); });
+    return out;
+  }
+  // Contrôle d'une recette factory_recipes existante : { valid, reasons, group, module, code, id (ID canonique), label, legacy }.
+  // Format actuel : components [{slot, brick_id, clip:'before'|'after'}]. Ancien format (sans clip, 18/09) : chaque
+  // composant = une transformation entière (avant → après) ; deux transformations = deux groupes mélangés ou l'original répété.
+  function assemblyCheck(recipe, bricks) {
+    var comps = recipe && Array.isArray(recipe.components) ? recipe.components : [], reasons = [], byTx = dict(), groups = [], seq = [];
+    (bricks || []).forEach(function (b) { if (b && b.kind === 'transformation') byTx[b.id] = b; });
+    var legacy = comps.length > 0 && comps.every(function (c) { return c && c.clip == null; });
+    var G = dict();
+    txGroups(bricks).forEach(function (g) { G[g.group] = g; });
+    comps.forEach(function (c) {
+      var id = c && c.brick_id, b = id && has(byTx, id) ? byTx[id] : null;
+      if (!b) { reasons.push((id || '?') + ' n’est pas une transformation de la bibliothèque'); return; }
+      if (!ready(b)) { reasons.push(id + ' n’est pas prête (' + statusFr(b.status) + ')'); return; }
+      var g = str(meta(b).group) || String(b.id), gg = has(G, g) ? G[g] : null;
+      if (groups.indexOf(g) < 0) groups.push(g);
+      var v = gg ? gg.versions.filter(function (x) { return x.brick_id === id; })[0] : null;
+      if (legacy) { seq.push('0', v ? v.key : '?'); return; }
+      if (c.clip === 'before') seq.push('0');
+      else if (c.clip === 'after') seq.push(v ? v.key : '?');
+      else reasons.push('clip « ' + String(c.clip).slice(0, 20) + ' » inconnu pour ' + id + ' (before ou after)');
+    });
+    if (comps.length < (legacy ? 1 : 2)) reasons.push('au moins 2 clips');
+    if (groups.length > 1) reasons.push('mélange les groupes ' + groups.join(' et ') + ' (un assemblage = un seul original filmé)');
+    else {
+      var dup = seq.filter(function (k, i) { return seq.indexOf(k) !== i; });
+      if (dup.length) reasons.push('clip répété (' + (dup[0] === '0' ? 'l’original' : 'la version ' + dup[0]) + ')');
+      if (seq.length > 3) reasons.push('au plus 3 clips');
+      else if (seq.length === 3 && seq[0] !== '0') reasons.push('une suite de 3 clips part de l’original');
+    }
+    var ok = !reasons.length && groups.length === 1 && has(G, groups[0]);
+    var asm = ok ? makeAssembly(G[groups[0]], seq) : null;
+    return { valid: ok, reasons: reasons, legacy: legacy, group: groups.length === 1 ? groups[0] : null, module: asm ? asm.module : null,
+      code: asm ? asm.code : null, id: asm ? asm.id : null, label: asm ? asm.label : null };
+  }
 
   // ── paires hook × démo (QC) ──
   function pairLevel(hook, demo) {
@@ -105,14 +215,15 @@
   }
 
   // Bibliothèque exploitable, depuis les lignes factory_bricks (ou les briques normalisées du dashboard).
+  // hooks = tous les hooks sans alias ; lipsyncHooks = sans les hooks avant / après ; aaHooks = les hooks avant / après.
   function library(bricks) {
-    var L = { avatars: [], hooks: [], liaisons: [], ctas: [], demos: [], aliases: {} };
+    var L = { avatars: [], hooks: [], lipsyncHooks: [], aaHooks: [], liaisons: [], ctas: [], demos: [], aliases: {} };
     (bricks || []).forEach(function (b) {
       if (!b) return;
       if (b.kind === 'hook' && meta(b).alias_of) L.aliases[b.id] = String(meta(b).alias_of);
       if (!ready(b)) return;
       if (b.kind === 'avatar') L.avatars.push(b);
-      else if (b.kind === 'hook' && !meta(b).alias_of) L.hooks.push(b);
+      else if (b.kind === 'hook' && !meta(b).alias_of) { L.hooks.push(b); (isAvantApres(b) ? L.aaHooks : L.lipsyncHooks).push(b); }
       else if (b.kind === 'liaison') L.liaisons.push(b);
       else if (b.kind === 'cta') L.ctas.push(b);
       else if (b.kind === 'contenu') L.demos.push(b);
@@ -120,16 +231,27 @@
     return L;
   }
 
-  // Clé d'une vidéo finale : voix|avatar|hook|liaison (liaison vide = format court).
-  function videoKey(voice, avatar, hook, liaison) {
+  // Clé d'une vidéo finale : voix|avatar|hook|liaison (liaison vide = format court) — 4 champs, sens inchangé.
+  // Avec un assemblage (5e argument, ou voix 'aa') : aa|avatar|hook|liaison|assemblage — avatar vide en format court
+  // (le hook avant / après n'a pas d'avatar ; en long, l'avatar dit la liaison).
+  function videoKey(voice, avatar, hook, liaison, assemblage) {
+    if (assemblage || voice === 'aa') return aaKey(voice, avatar, hook, liaison, assemblage);
     return [VOICES.indexOf(voice) >= 0 ? voice : 'axel', avatar, hook, liaison].map(function (x) { return String(x || ''); }).join('|');
+  }
+  function aaKey(voice, avatar, hook, liaison, assemblage) {
+    var v = voice == null || voice === '' || voice === 'axel' || voice === 'aa' ? 'aa' : String(voice);   // autre voix → hors des possibles
+    return [v, liaison ? avatar : '', hook, liaison, assemblage].map(function (x) { return String(x || ''); }).join('|');
   }
   // Clé d'une recette factory_qc au nouveau format (brick_combo) : voix 'axel' par défaut, hook alias → son original.
   // null si la recette n'a ni avatar ni hook (ancien format, texte libre : jamais compté). Une voix inconnue (« tts »,
   // « Omni »…) garde sa valeur : la clé tombe hors des possibles (capacity → outside), jamais comptée dans un mode.
+  // Recette avec assemblage (vidéo avant / après, voix 'axel' ou absente) : clé aa|avatar|hook|liaison|assemblage, avatar
+  // facultatif en format court. Les recettes sans assemblage gardent exactement leur clé d'avant.
   function comboKey(combo, byId) {
-    if (!combo || typeof combo !== 'object' || !combo.avatar || !combo.hook) return null;
+    if (!combo || typeof combo !== 'object' || !combo.hook) return null;
     var hb = has(byId, combo.hook) ? byId[combo.hook] : null, h = hb && meta(hb).alias_of ? String(meta(hb).alias_of) : combo.hook;
+    if (combo.assemblage) return aaKey(combo.voice, combo.avatar, h, combo.liaison, combo.assemblage);
+    if (!combo.avatar) return null;
     var v = combo.voice == null || combo.voice === '' ? 'axel' : String(combo.voice);
     return [v, combo.avatar, h, combo.liaison || ''].map(function (x) { return String(x || ''); }).join('|');
   }
@@ -141,6 +263,12 @@
   // hook × liaison compatibles), et ce qu'il en reste une fois retirées celles déjà produites.
   // done = clés videoKey / comboKey déjà rendues (tout statut QC confondu) ; une clé hors des possibles (brique retirée,
   // liaison non validée après ce hook, voix sans audio…) n'est pas décomptée : elle est rendue dans `outside`.
+  //
+  // Modes lipsync (axel, omni) : les hooks avant / après en sont exclus (jamais en lipsync). Mode 'aa' « Avant / après »
+  // (voix off d'Axel : le hook doit avoir son audio ; pas de Voix native Omni) : par groupe de transformations,
+  //   court = assemblages valides du groupe × hooks avant / après du module du groupe ;
+  //   long  = Σ hooks (assemblages × liaisons compatibles avec audio × avatars).
+  // total = axel + omni + aa (vidéos finales possibles). Forme du résultat : usine/README.md et usine/coherence.test.mjs.
   function capacity(bricks, done, matrix) {
     var L = library(bricks), A = L.avatars.length, M = matrixOf(matrix);
     var av = dict(), hk = dict(), modes = dict(), possible = dict(), pairsAll = 0, notInMatrix = [];
@@ -151,46 +279,82 @@
       pairsAll += ls.length;
       if (!inMatrix(h.id, M)) notInMatrix.push(h.id);
     });
+    // hooks lipsync à incrustation obligatoire (meta.overlay_required) : comptés normalement, signalés à part
+    var ov = { count: 0, hooks: [], kinds: {}, videos: {} };
+    L.lipsyncHooks.forEach(function (h) { var o = overlayRequired(h); if (o) { ov.count += 1; ov.hooks.push(h.id); ov.kinds[o] = (ov.kinds[o] || 0) + 1; } });
     VOICES.forEach(function (v) {
-      var H = 0, P = 0, set = dict();
-      L.hooks.forEach(function (h) {
+      var H = 0, P = 0, set = dict(), ovN = 0;
+      L.lipsyncHooks.forEach(function (h) {
         if (!voiceOk(h, v)) return;
+        var p0 = P;
         H += 1; set[h.id] = dict(); set[h.id][''] = 1;
         hk[h.id].forEach(function (l) { if (voiceOk(l, v)) { P += 1; set[h.id][l.id] = 1; } });
+        if (overlayRequired(h)) ovN += A * (1 + P - p0);
       });
       possible[v] = set;
+      ov.videos[v] = ovN;
       modes[v] = { voice: v, label: VOICE_LABEL[v], hooks: H, pairs: P, short: A * H, long: A * P, total: A * (H + P), done: 0, remaining: 0 };
     });
+    // ── Avant / après ──
+    var asm = assemblies(bricks), gs = [], aaSet = dict(), aaH = dict(), aaS = 0, aaL = 0, aaP = 0;
+    txGroups(bricks).forEach(function (G) {
+      var ids = asm.filter(function (a) { return a.group === G.group; }).map(function (a) { return a.id; }), n = ids.length;
+      var hs = L.aaHooks.filter(function (h) { return hasAudio(h) && hookFitsModule(h, G.module); }), s = n * hs.length, l = 0;
+      hs.forEach(function (h) {
+        var ls = hk[h.id].filter(function (x) { return hasAudio(x); });
+        l += n * ls.length * A; aaH[h.id] = 1;
+        ids.forEach(function (id) {
+          var k = id + '|' + h.id;
+          aaSet[k] = dict(); aaSet[k][''] = 1;
+          ls.forEach(function (x) { aaSet[k][x.id] = 1; });
+        });
+      });
+      aaS += s; aaL += l;
+      gs.push({ group: G.group, module: G.module, assemblies: n, hooks: hs.map(function (h) { return h.id; }), short: s, long: l });
+    });
+    modes.aa = { voice: 'aa', label: MODE_LABEL.aa, hooks: Object.keys(aaH).length, assemblies: asm.length, groups: gs,
+      short: aaS, long: aaL, total: aaS + aaL, done: 0, remaining: 0 };
     var seen = dict(), outside = 0;
     (done || []).forEach(function (k) {
       if (!k || seen[k]) return;
       seen[k] = 1;
-      var p = String(k).split('|'), v = p[0], s = has(possible, v) ? possible[v] : null, set = s && has(s, p[2]) ? s[p[2]] : null;
+      var p = String(k).split('|'), v = p[0];
+      if (p.length === 5 && v === 'aa') {   // aa|avatar|hook|liaison|assemblage (avatar vide en court)
+        var e = has(aaSet, p[4] + '|' + p[2]) ? aaSet[p[4] + '|' + p[2]] : null;
+        if (e && has(e, p[3]) && (p[3] ? has(av, p[1]) : p[1] === '')) modes.aa.done += 1; else outside += 1;
+        return;
+      }
+      var s = VOICES.indexOf(v) >= 0 ? possible[v] : null, set = s && has(s, p[2]) ? s[p[2]] : null;
       if (p.length === 4 && has(av, p[1]) && set && has(set, p[3])) modes[v].done += 1; else outside += 1;
     });
     var total = 0, doneN = 0;
-    VOICES.forEach(function (v) { var m = modes[v]; m.remaining = Math.max(0, m.total - m.done); total += m.total; doneN += m.done; });
-    return { avatars: A, hooks: L.hooks.length, liaisons: L.liaisons.length, demos: L.demos.length, ctas: L.ctas.length,
+    MODES.forEach(function (v) { var m = modes[v]; m.remaining = Math.max(0, m.total - m.done); total += m.total; doneN += m.done; });
+    return { avatars: A, hooks: L.hooks.length, lipsyncHooks: L.lipsyncHooks.length, aaHooks: L.aaHooks.map(function (h) { return h.id; }),
+      liaisons: L.liaisons.length, demos: L.demos.length, ctas: L.ctas.length,
       genericLiaisons: L.liaisons.filter(isGenericLiaison).length, pairs: pairsAll, matrix: !!M, notInMatrix: notInMatrix,
-      modes: modes, voices: VOICES.slice(), total: total, done: doneN, remaining: Math.max(0, total - doneN), outside: outside };
+      overlayRequired: ov, modes: modes, voices: VOICES.slice(), modeKeys: MODES.slice(), avantApres: modes.aa,
+      lipsyncTotal: modes.axel.total + modes.omni.total, total: total, done: doneN, remaining: Math.max(0, total - doneN), outside: outside };
   }
 
   // Impact d'une brique de plus, en vidéos finales (Briques qui manquent). Estimations aux moyennes de la bibliothèque :
-  //   +1 avatar  = Σ voix (hooks + paires hook × liaison) ;
-  //   +1 hook    = Σ voix avatars × (1 + liaisons compatibles moyennes par hook) ;
-  //   +1 liaison = Σ voix avatars × hooks compatibles moyens par liaison ;
+  //   +1 avatar  = Σ voix (hooks + paires hook × liaison) + les longs avant / après d'un avatar ;
+  //   +1 hook    = Σ voix avatars × (1 + liaisons compatibles moyennes par hook) (un hook lipsync) ;
+  //   +1 liaison = Σ voix avatars × hooks compatibles moyens par liaison + longs avant / après moyens par liaison ;
   //   +1 démo / CTA / musique / sous-titres = variété (tirés au hasard) : +0 vidéo.
   function impact(cap) {
-    var A = cap.avatars, out = { avatar: 0, hook: 0, liaison: 0, variety: 0, avgLiaisonsPerHook: 0, avgHooksPerLiaison: 0 };
+    var A = cap.avatars, out = { avatar: 0, hook: 0, liaison: 0, variety: 0, avgLiaisonsPerHook: 0, avgHooksPerLiaison: 0, aa: { avatar: 0, liaison: 0 } };
     VOICES.forEach(function (v) {
       var m = cap.modes[v];
       out.avatar += m.hooks + m.pairs;
       out.hook += A * (1 + (m.hooks ? m.pairs / m.hooks : 0));
       out.liaison += A * (cap.liaisons ? m.pairs / cap.liaisons : 0);
     });
+    var aa = cap.modes.aa;
+    if (aa && A) { out.aa.avatar = aa.long / A; out.aa.liaison = cap.liaisons ? aa.long / cap.liaisons : 0; out.avatar += out.aa.avatar; out.liaison += out.aa.liaison; }
     out.avgLiaisonsPerHook = cap.hooks ? cap.pairs / cap.hooks : 0;
     out.avgHooksPerLiaison = cap.liaisons ? cap.pairs / cap.liaisons : 0;
-    out.hook = Math.round(out.hook); out.liaison = Math.round(out.liaison);
+    out.avatar = Math.round(out.avatar); out.hook = Math.round(out.hook); out.liaison = Math.round(out.liaison);
+    out.aa.avatar = Math.round(out.aa.avatar); out.aa.liaison = Math.round(out.aa.liaison);
     return out;
   }
 
@@ -240,6 +404,7 @@
     // rendue À CÔTÉ (from), jamais dans la recette : une clé inconnue la rendrait illisible pour le dashboard.
     var out = { voice: c.voice === 'omni' ? 'omni' : 'axel', avatar: c.avatar, hook: hid, contenu: d.demo.id, cta: cta.id };
     if (c.liaison) out.liaison = c.liaison;
+    if (c.assemblage) out.assemblage = c.assemblage;   // vidéo avant / après : même assemblage
     ['musique', 'sous_titre'].forEach(function (k) { if (c[k]) out[k] = c[k]; });
     return { combo: out, from: opts.from || null, level: d.level, reasons: d.level === 'ok' ? [] : ['cohérence à vérifier : ' + d.why], key: comboKey(out, byId) };
   }
@@ -247,7 +412,8 @@
   // Contrôle d'une recette avant QC (usine/publish-qc.mjs). combo = { voice?, avatar, hook, liaison?, contenu, cta } (IDs) ;
   // byId = factory_bricks indexées par id ; matrix (facultatif) = usine/hook-liaison.js. level 'ok' | 'review' ;
   // reasons = pourquoi la vidéo va en revue manuelle.
-  // Contrôle aussi la voix (inconnue, ou brique parlée sans audio / sans texte pour ce mode) et les clés de la recette.
+  // Contrôle aussi la voix (inconnue, ou brique parlée sans audio / sans texte pour ce mode), les clés de la recette et la
+  // règle avant / après (combo.assemblage = ID d'un assemblage HK valide ; hook avant / après jamais sans assemblage).
   function comboCheck(combo, byId, matrix) {
     combo = combo || {}; byId = byId || {};
     var get = function (k) { return combo[k] && has(byId, combo[k]) ? byId[combo[k]] : null; };
@@ -270,6 +436,18 @@
       if (hook && !voiceOk(hook, v)) reasons.push('hook ' + hook.id + ' ' + need);
       if (liaison && !voiceOk(liaison, v)) reasons.push('liaison ' + liaison.id + ' ' + need);
     }
+    // avant / après : un hook avant / après n'est jamais en lipsync ; avec un assemblage, il faut un assemblage valide
+    // (un seul groupe), un hook avant / après du module de ce groupe et la voix off d'Axel (pas de Voix native Omni)
+    if (combo.assemblage) {
+      var asm = assemblies(Object.keys(byId).map(function (k) { return byId[k]; })).filter(function (a) { return a.id === combo.assemblage; })[0];
+      if (!asm) reasons.push('assemblage ' + String(combo.assemblage).slice(0, 40) + ' inconnu (suite de clips d’un seul groupe de transformations)');
+      if (hook && !isAvantApres(hook)) reasons.push('hook ' + hook.id + ' lipsync sur un assemblage avant / après (hooks avant / après seulement)');
+      else if (hook && asm && !hookFitsModule(hook, asm.module)) reasons.push('hook ' + hook.id + ' hors du module de ' + asm.id + ' (' + asm.module + ')');
+      if (combo.voice === 'omni') reasons.push('pas de Voix native Omni sur un hook avant / après (voix off d’Axel)');
+      if (combo.liaison && !combo.avatar) reasons.push('format long sans avatar (la liaison est dite par un avatar)');
+    } else if (hook && isAvantApres(hook)) reasons.push('hook ' + hook.id + ' avant / après : jamais en lipsync (voix off sur un assemblage HK)');
+    // H14 / H23 / H60 (meta.overlay_required) : lipsync seulement avec une image d'avatar en incrustation → toujours revue manuelle
+    else if (hook && overlayRequired(hook)) reasons.push('hook ' + hook.id + ' : incrustation d’une image d’avatar ' + overlayRequired(hook) + ' obligatoire, à vérifier');
     var extra = Object.keys(combo).filter(function (k) { return COMBO_KEYS.indexOf(k) < 0; });
     if (extra.length) reasons.push('clé inconnue dans la recette : ' + extra.join(', ') + ' (admises : ' + COMBO_KEYS.join(', ') + ')');
     var M = matrixOf(matrix);
@@ -280,7 +458,9 @@
     return { level: reasons.length ? 'review' : 'ok', reasons: reasons, hook: hook, demo: demo, liaison: liaison };
   }
 
-  return { VOICES: VOICES, VOICE_LABEL: VOICE_LABEL, COMBO_KEYS: COMBO_KEYS, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
+  return { VOICES: VOICES, VOICE_LABEL: VOICE_LABEL, MODES: MODES, MODE_LABEL: MODE_LABEL, COMBO_KEYS: COMBO_KEYS,
+    isAvantApres: isAvantApres, overlayRequired: overlayRequired, hookFitsModule: hookFitsModule,
+    txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk,
     videoKey: videoKey, comboKey: comboKey, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
