@@ -34,6 +34,7 @@ try{
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="static-ads-bank.js"></script><!-- #static-ads-bank : 59 formats de pub (généré depuis shared/static-ads-bank.json) -->
+<script src="omnihuman-prompts.js"></script><!-- prompt OmniHuman 1.5 (≤ 300 car., anglais) : généré depuis shared/omnihuman-prompts.json -->
 <!-- Whop embedded checkout (préconnexion = chargement quasi-instantané + monte l'iframe) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
@@ -10576,7 +10577,8 @@ function _kieDev(){ try{ return typeof currentMember!=='undefined' && !!currentM
 // Usages kie ouverts aux clients (mêmes plans que l'UI et que KIE_OPEN côté serveur) : '4k' = « Améliorer en 4K »,
 // 'omni' = Omni Flash image→vidéo (Express + Voix native ; tous les plans payants depuis le 25/09). Owner : comme un
 // client (sans débit). Developer : _kieOn() (inchangé).
-const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['starter','pro','elite','byok'] };
+const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite','byok'], 'omni':['starter','pro','elite','byok'],
+  'omnihuman':['elite'] };   // OmniHuman 1.5 (Axel 25/09, livré le 26/09) : Élite, comme le sélecteur du Générateur et le Montage IA — KIE_OPEN côté serveur
 function _kieClientOn(usage){
   try{
     if(typeof currentMember==='undefined' || !currentMember) return false;
@@ -14510,79 +14512,321 @@ async function _falImageSous5Mo(file){
   const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
   return new File([blob], (file.name||'avatar').replace(/\.[a-z0-9]+$/i,'') + '.jpg', { type:'image/jpeg' });
 }
-async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
-  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
-  const H=await getAuthHeader();
-  const fPost=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-  const fGet =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
-
+// ══ OmniHuman 1.5 : kie pour les CLIENTS (Axel 25/09, livré le 26/09), fal en repli ═════════════════════════════════════
+// Prix client inchangé (5 cr/s = CREDIT_COSTS.omniPerSec). La facture est faite par le SERVEUR (kie-proxy comme fal-proxy,
+// supabase/functions/_shared/omnihuman-bill.ts) : 5 × (durée MESURÉE sur le WAV envoyé − 0,6 s de marge, 1 s minimum),
+// tirée sur l'op en cours (x-aa-op) AVANT le fournisseur. L'app ne décide d'aucun montant : elle RÉSERVE au moins autant
+// (_omnihResa) et n'envoie jamais plus de 0,6 s au-delà de la durée utile (_omnihPlan).
+//   · moteur : kie (clients Élite / owner : _kieClientOn('omnihuman') ; developer : _kieOn()) ; repli fal sur la MÊME op
+//     seulement si kie a échoué SANS tâche lancée et a rendu le tirage (billing 'released' / 'none') — jamais sur une
+//     tâche lancée ('pending') ni une soumission sans réponse ('unknown') : on paierait deux fois ;
+//   · photo : recadrée au ratio de sortie, ≤ 1440×2560, JPEG q95 encodé UNE fois, ≤ 5 Mo (reco ByteDance / limite fal) ;
+//   · audio : WAV mono ; correctif « dernier mot » (26/09) : suite réelle de la voix (+0,6 s) ou silence après le dernier mot ;
+//   · prompt : partagé app / MCP / worker (omnihuman-prompts.js), ≤ 300 caractères, « mains » seulement si la photo en montre ;
+//   · Générateur : tranches ≤ 15 s coupées dans les pauses (reco kie : qualité dégradée au-delà), générées en parallèle puis
+//     raccordées sans ré-encodage (ffmpeg.wasm, flux copiés) ; ffmpeg indisponible → un seul appel (≤ 60 s).
+// Aucun message client ne nomme le fournisseur (_kieMsg).
+const _OMNIH = { PER_SEC:5, MARGE:0.6, MIN:1, MAX:60, TRANCHE:15, TRANCHE_MIN:3 };
+// MÊME formule que omnihumanCout (serveur) : ⌈5 × max(1 s, envoyé − 0,6 s)⌉, arrondi au centième avant le plafond.
+function _omnihCout(envoyeSec){
+  const f = Math.round(Math.max(_OMNIH.MIN, (Number(envoyeSec)||0) - _OMNIH.MARGE) * 1000) / 1000;
+  return Math.ceil(Math.round(_OMNIH.PER_SEC * f * 100) / 100);
+}
+// Réservation d'une génération de `utileSec` secondes utiles : couvre tout audio envoyé ≤ utile + 0,6 s (= ⌈5 × max(1, utile)⌉).
+function _omnihResa(utileSec){ return _omnihCout((Number(utileSec)||0) + _OMNIH.MARGE); }
+// Audio envoyé pour [start,end] : le plan « dernier mot » de _lipPlan SANS le plancher Hedra (3,3 s) ni la couverture de fin de
+// montage, et contexte total (suite de la voix + silence complété) plafonné à 0,6 s : le serveur ne facture jamais plus que
+// la durée utile. ctx:false = extrait exact (tranches internes du Générateur, coupées dans une pause).
+function _omnihPlan(o){
+  const p = _lipPlan({ start:o.start, end:o.end, voixDur:o.voixDur, finParole:o.finParole, min:0, ctx: o.ctx===false ? 0 : _LIP.CTX });
+  const utile = Math.max(0, (Number(o.end)||0) - (Number(o.start)||0));
+  const maxPad = Math.max(0, _lipR3(utile + _OMNIH.MARGE - p.voixSec));
+  if(p.padSec > maxPad){ p.padSec = maxPad; p.envoyeSec = _lipR3(p.voixSec + p.padSec); }
+  return p;
+}
+// Rend un plan en WAV MONO 16 bits (reco : voix mono ; 60 s = 5,3 Mo à 44,1 kHz, sous la limite de 12 Mo du serveur).
+async function _omnihRender(dec, p){
+  const sr = dec.sampleRate;
+  const off = new OfflineAudioContext(1, Math.max(1, Math.round(p.envoyeSec*sr)), sr);
+  const src = off.createBufferSource(); src.buffer = dec;
+  const g = off.createGain(); src.connect(g); g.connect(off.destination);
+  if(p.fadeOut>0 && p.voixSec>p.fadeOut){ g.gain.setValueAtTime(1, p.voixSec-p.fadeOut); g.gain.linearRampToValueAtTime(0, p.voixSec); }
+  src.start(0, p.from, p.voixSec);
+  return _audioBufferToWavBlob(await off.startRendering());
+}
+async function _omnihDecode(blob){
+  const ac = new (window.AudioContext||window.webkitAudioContext)();
+  try{ return await ac.decodeAudioData(await blob.arrayBuffer()); } finally { try{ await ac.close(); }catch(_){} }
+}
+// Montage IA : audio d'une scène OmniHuman → { wav, plan } (plan.lipEnd = jusqu'où les lèvres suivent la voix).
+async function _omnihSceneAudio(file, st, en){
+  const dec = await _omnihDecode(file);
+  const f = _lipFinParole(dec);
+  const p = _omnihPlan({ start:st, end:en, voixDur:dec.duration, finParole: f ? f.end : null });
+  return { wav: await _omnihRender(dec, p), plan: p };
+}
+// Photo envoyée : recadrée au ratio de sortie (9:16, ou 16:9 en paysage ; hauteur coupée par le bas, le visage est en haut),
+// réduite à 1440×2560 au plus, encodée UNE seule fois en JPEG q95 (q plus bas depuis les MÊMES pixels si > 5 Mo). Un JPEG
+// déjà au bon ratio, ≤ 5 Mo et ≤ 4096 px part tel quel (aucune recompression).
+const _omnihImgCache = new WeakMap();   // File source → { portrait|paysage : Promise<File> } (une préparation par photo et format)
+function _omnihImage(file, fmt){
+  const k = fmt === 'paysage' ? 'paysage' : 'portrait';
+  let c = _omnihImgCache.get(file); if(!c){ c = {}; _omnihImgCache.set(file, c); }
+  if(!c[k]) c[k] = _omnihImagePrep(file, k).catch((e)=>{ delete c[k]; throw e; });
+  return c[k];
+}
+async function _omnihImagePrep(file, fmt){
+  const land = fmt === 'paysage', want = land ? 16/9 : 9/16;
+  const bmp = await createImageBitmap(file);
+  const w = bmp.width, h = bmp.height, r = w/h;
+  if(/jpe?g$/i.test(file.type||'') && file.size <= 5e6 && Math.abs(r/want - 1) < 0.01 && Math.max(w, h) <= 4096){ try{ bmp.close(); }catch(_){} return file; }
+  let cw = w, ch = h, cx = 0, cy = 0;
+  if(r > want){ cw = Math.round(h*want); cx = Math.round((w-cw)/2); }
+  else if(r < want){ ch = Math.round(w/want); cy = Math.round((h-ch)*0.3); }
+  const sc = Math.min(1, (land ? 2560 : 1440)/cw, (land ? 1440 : 2560)/ch);
+  const c = document.createElement('canvas'); c.width = Math.max(2, Math.round(cw*sc)); c.height = Math.max(2, Math.round(ch*sc));
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.drawImage(bmp, cx, cy, cw, ch, 0, 0, c.width, c.height); try{ bmp.close(); }catch(_){}
+  let q = 0.95, blob = null;
+  for(;;){ blob = await new Promise(res => c.toBlob(res, 'image/jpeg', q)); if(!blob || blob.size <= 5e6 || q <= 0.8) break; q = Math.round((q-0.05)*100)/100; }
+  if(!blob) throw new Error('préparation de la photo impossible');
+  return new File([blob], (file.name||'avatar').replace(/\.[a-z0-9]+$/i,'') + '-omni.jpg', { type:'image/jpeg' });
+}
+// Dépôt dans render-media/<uid>/omni-… → URL signées 1 h (le serveur en fait sa copie MESURÉE avant de facturer).
+const _omnihImgUrl = new WeakMap();   // photo préparée → { t, p: Promise<URL signée> } : déposée UNE fois (tranches, scènes)
+async function _omnihDepot(imgFile, wavBlob){
   const { data:{ user } } = await sb.auth.getUser();
-  if(!user) throw new Error('Session expirée');
-  imageFile = await _falImageSous5Mo(imageFile);
-  const base=user.id+'/omni-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
-  const imgPath=base+(/\.jpe?g$/i.test(imageFile.name||'') ? '.jpg' : '.png'), audPath=base+'.wav';
-  const upI=await sb.storage.from('render-media').upload(imgPath, imageFile, { contentType:imageFile.type||'image/png', upsert:true });
-  if(upI.error) throw new Error('upload photo OmniHuman : '+upI.error.message);
-  const upA=await sb.storage.from('render-media').upload(audPath, audioWav, { contentType:'audio/wav', upsert:true });
-  if(upA.error) throw new Error('upload audio OmniHuman : '+upA.error.message);
-  const sI=await sb.storage.from('render-media').createSignedUrl(imgPath, 3600);
-  const sA=await sb.storage.from('render-media').createSignedUrl(audPath, 3600);
-  if(sI.error || sA.error || !sI.data?.signedUrl || !sA.data?.signedUrl) throw new Error('Lien signé OmniHuman indisponible');
-
-  // fal : 1080p limité à 30 s d'audio, 720p jusqu'à 60 s. Nos scènes font 2-6 s, mais on
-  // se protège si le chef d'orchestre en pose une longue.
-  const resolution = (Number(segSec)||0) > 28 ? '720p' : '1080p';
-  // kie.ai (compte developer) : MÊME prompt (_mtMotionPrompt), mêmes médias ; seul le fournisseur change. Panne → fal.
-  window._aaLastEngine='fal';
-  if(_kieOn()){
+  if(!user) throw new Error('Session expirée — reconnecte-toi');
+  const rm = sb.storage.from('render-media');
+  const base = user.id+'/omni-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+  let ci = _omnihImgUrl.get(imgFile);
+  if(!ci || Date.now() - ci.t > 45*60000){   // lien signé 1 h : renouvelé au-delà de 45 min
+    ci = { t: Date.now(), p: (async ()=>{
+      const imgPath = base+'.jpg';
+      const upI = await rm.upload(imgPath, imgFile, { contentType:'image/jpeg', upsert:true });
+      if(upI.error) throw new Error('dépôt de la photo impossible : '+upI.error.message);
+      const sI = await rm.createSignedUrl(imgPath, 3600);
+      if(sI.error || !sI.data?.signedUrl) throw new Error('lien signé OmniHuman indisponible');
+      return sI.data.signedUrl;
+    })() };
+    _omnihImgUrl.set(imgFile, ci); ci.p.catch(()=>{ if(_omnihImgUrl.get(imgFile) === ci) _omnihImgUrl.delete(imgFile); });
+  }
+  const img = await ci.p;
+  const audPath = base+'.wav';
+  const upA = await rm.upload(audPath, wavBlob, { contentType:'audio/wav', upsert:true });
+  if(upA.error) throw new Error('dépôt de l’audio impossible : '+upA.error.message);
+  const sA = await rm.createSignedUrl(audPath, 3600);
+  if(sA.error || !sA.data?.signedUrl) throw new Error('lien signé OmniHuman indisponible');
+  return { img, aud: sA.data.signedUrl };
+}
+// UNE génération OmniHuman (photo préparée + WAV) → Blob MP4. o.ack=false : ne pas accuser réception tout de suite (tranches
+// du Générateur : si l'assemblage échoue, le filet serveur range les tranches payées dans la Bibliothèque) → o.acks reçoit l'id.
+// o.fal=false : pas de repli ici — l'erreur repliable est marquée e._omnihRepli (le Générateur décide : relance, ou tout fal).
+async function _omnihRun(imgFile, wavBlob, prompt, o){
+  o = o || {};
+  const u = await _omnihDepot(imgFile, wavBlob);
+  if(_kieOn() || _kieClientOn('omnihuman')){
     try{
-      let _aud = sA.data.signedUrl;
-      if(audioWav.size > 9.5*1024*1024){   // kie refuse un audio > 10 Mo (WAV stéréo 48 kHz ≈ 52 s) → mono, même fréquence
-        const _ac = new (window.AudioContext||window.webkitAudioContext)();
-        const _ab = await _ac.decodeAudioData(await audioWav.arrayBuffer()); try{ _ac.close(); }catch(_){}
-        const _oc = new OfflineAudioContext(1, _ab.length, _ab.sampleRate);
-        const _src = _oc.createBufferSource(); _src.buffer = _ab; _src.connect(_oc.destination); _src.start();
-        _aud = await _kieUpload(_audioBufferToWavBlob(await _oc.startRendering()), 'wav');
-      }
-      const _r = await _kieRun('omnihuman-1.5', { image_url:sI.data.signedUrl, audio_url:_aud, resolution, prompt:_mtMotionPrompt('omnihuman', role) },
-        { every:5000, maxPolls:240 });   // 20 min (kie lent, pas de repli)
-      const _ob = await _kieFetchBlob(_r.url);
-      window._aaLastEngine='kie'; _kieAck(_r.rid);
-      return _ob;
+      const r = await _kieRun('omnihuman-1.5', { image_url:u.img, audio_url:u.aud, resolution:'1080p', prompt }, { every:5000, maxPolls:240 });   // 20 min (kie est lent)
+      const blob = await _kieFetchBlob(r.url);
+      if(o.ack === false && Array.isArray(o.acks)) o.acks.push(r.rid); else _kieAck(r.rid);
+      window._aaLastEngine = 'kie';
+      return blob;
     }catch(e){
-      console.warn('[kie] OmniHuman : échec kie', e);
-      if(e && e._kieRefus) throw new Error('OmniHuman (kie) a refusé ce contenu — '+e.message);
+      console.warn('[omnihuman] échec du moteur principal', e);
+      if(e && e._kieRefus) throw new Error('OmniHuman a refusé ce contenu — '+e.message);   // message déjà nettoyé par _kieMsg
       if(!_kieCanFallback(e)) throw e;
-      window._aaLastEngine='fal';
+      if(o.fal === false){ e._omnihRepli = true; throw e; }
+      window._aaKieFellBack = true;
     }
   }
-  const sub=await fPost(FAL_OMNI, {
-    image_url: sI.data.signedUrl,
-    audio_url: sA.data.signedUrl,
-    resolution,
-    prompt: _mtMotionPrompt('omnihuman', role),
-  });
-  if(!sub.ok){ const t=await sub.text(); throw new Error('OmniHuman '+sub.status+' '+t.slice(0,120)); }
-  const sd=await sub.json().catch(()=>({}));
-  const reqId=sd.request_id||sd.requestId; if(!reqId) throw new Error('OmniHuman : pas d\'identifiant de génération');
-
+  window._aaLastEngine = 'fal';
+  return await _omnihFal(u.img, u.aud, prompt);
+}
+async function _omnihRunFal(imgFile, wavBlob, prompt){
+  const u = await _omnihDepot(imgFile, wavBlob);
+  window._aaLastEngine = 'fal'; window._aaKieFellBack = true;
+  return await _omnihFal(u.img, u.aud, prompt);
+}
+// fal (repli, et chemin des navigateurs où kie est coupé : aa_kie='0') — fal-proxy tire EXACTEMENT le même montant (mesuré).
+async function _omnihFal(imgUrl, audUrl, prompt){
+  const PROXY = SUPABASE_URL+'/functions/v1/fal-proxy';
+  const H = await getAuthHeader();
+  const fPost = (p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
+  const fGet  = (p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
+  const sub = await fPost(FAL_OMNI, { image_url:imgUrl, audio_url:audUrl, resolution:'1080p', prompt });   // fal-proxy repasse en 720p au-delà de 30 s
+  if(!sub.ok){ const t = await sub.text(); let m = ''; try{ m = JSON.parse(t).error || ''; }catch(_){ m = t.slice(0,120); } throw new Error('OmniHuman '+sub.status+(m ? ' — '+String(m).slice(0,120) : '')); }
+  const sd = await sub.json().catch(()=>({}));
+  const reqId = sd.request_id||sd.requestId; if(!reqId) throw new Error('OmniHuman : pas d\'identifiant de génération');
   // polling (jusqu'à 6 min) — la file fal renvoie IN_QUEUE / IN_PROGRESS / COMPLETED
   for(let i=0;i<72;i++){
     await wait(5000);
-    const pr=await fGet(FAL_OMNI_Q+'/requests/'+reqId+'/status'); if(!pr.ok) continue;
-    const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
+    const pr = await fGet(FAL_OMNI_Q+'/requests/'+reqId+'/status'); if(!pr.ok) continue;
+    const pd = await pr.json().catch(()=>({})); const s = String(pd.status||'').toUpperCase();
     if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
     if(s==='COMPLETED'){
-      const rr=await fGet(FAL_OMNI_Q+'/requests/'+reqId);
+      const rr = await fGet(FAL_OMNI_Q+'/requests/'+reqId);
       if(!rr.ok) throw new Error('OmniHuman résultat '+rr.status);
-      const rd=await rr.json().catch(()=>({}));
-      const url=rd?.video?.url||rd?.video_url||'';
+      const rd = await rr.json().catch(()=>({}));
+      const url = rd?.video?.url||rd?.video_url||'';
       if(!url) throw new Error('OmniHuman : URL de scène introuvable');
       return await (await fetch(url)).blob();
     }
     throw new Error('Scène OmniHuman échouée'+(pd.error?' : '+String(pd.error).slice(0,60):''));
   }
   throw new Error('Timeout OmniHuman sur une scène (>6 min)');
+}
+// Montage IA : une scène OmniHuman (l'audio arrive préparé par _omnihSceneAudio ; format = 'portrait' | 'paysage').
+async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
+  const img = await _omnihImage(imageFile, format==='paysage' ? 'paysage' : 'portrait');
+  return await _omnihRun(img, audioWav, _mtMotionPrompt('omnihuman', role));
+}
+
+// ── Générateur : tranches ≤ 15 s ──
+// N = ⌈D / 15⌉ tranches ; chaque coupe est déplacée au milieu de la pause la plus silencieuse à ±2,5 s de sa place (énergie
+// moyenne sur 0,3 puis 0,7 s), sans jamais faire une tranche de plus de 15 s ni de moins de 3 s. → [0, c1, …, D]. D ≤ 15 → [0, D].
+function _omnihTranches(dec){
+  const D = dec.duration;
+  if(!(D > _OMNIH.TRANCHE + 0.05)) return [0, _lipR3(D)];
+  const n = Math.ceil(D / _OMNIH.TRANCHE), sr = dec.sampleRate, W = Math.max(1, Math.round(sr*0.05)), chans = [];
+  for(let k=0;k<dec.numberOfChannels;k++) chans.push(dec.getChannelData(k));
+  const e = [];
+  for(let i=0;i<dec.length;i+=W){ let s=0, c=0; const f=Math.min(dec.length, i+W); for(const d of chans){ for(let j=i;j<f;j++){ s+=d[j]*d[j]; c++; } } e.push(s/Math.max(1,c)); }
+  const energie = (t, r)=>{ const a=Math.max(0, Math.round((t-r)/0.05)), b=Math.min(e.length, Math.round((t+r)/0.05)); let s=0; for(let i=a;i<b;i++) s+=e[i]; return s/Math.max(1, b-a); };
+  const cuts = [0];
+  for(let k=1;k<n;k++){
+    const prev = cuts[k-1], rest = n-k;
+    const lo = Math.max(prev + _OMNIH.TRANCHE_MIN, D - _OMNIH.TRANCHE*rest), hi = Math.min(prev + _OMNIH.TRANCHE, D - _OMNIH.TRANCHE_MIN*rest);
+    const cible = Math.min(hi, Math.max(lo, prev + (D-prev)/(rest+1)));
+    let best = cible, bestE = Infinity;
+    // silence sur ±0,15 s, puis ±0,35 s (le MILIEU de la pause gagne : la tranche finit bouche fermée, la suivante démarre au calme)
+    for(let t=Math.max(lo, cible-2.5); t<=Math.min(hi, cible+2.5)+1e-9; t+=0.05){ const v = (energie(t, 0.15) + 0.5*energie(t, 0.35))*(1 + 0.02*Math.abs(t-cible)); if(v < bestE){ bestE = v; best = t; } }
+    cuts.push(_lipR3(Math.min(hi, best)));
+  }
+  cuts.push(_lipR3(D));
+  return cuts;
+}
+// Boîtes « stsd » (description des flux : codec, SPS/PPS, taille, fréquence) de chaque piste d'un MP4 → { sig (chaîne
+// comparable), w, h, fps (1re piste vidéo avc1/hvc1/hev1 ; fps = échelle mdhd / 1er pas stts, 0 si illisible) } ; structure inattendue → null.
+function _mp4Stsd(bytes){
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), b = bytes;
+  const txt = (o)=>String.fromCharCode(b[o],b[o+1],b[o+2],b[o+3]);
+  const kids = (deb, fin)=>{ const out=[]; let off=deb; while(off+8<=fin){ let size=dv.getUint32(off), hdr=8; if(size===1){ size=Number(dv.getBigUint64(off+8)); hdr=16; } else if(size===0) size=fin-off; if(size<hdr || off+size>fin) return null; out.push({ type:txt(off+4), off, hdr, size }); off+=size; } return out; };
+  const find = (list, t)=> list && list.find((x)=>x.type===t);
+  const top = kids(0, b.length), moov = find(top, 'moov'); if(!moov) return null;
+  const out = []; let w = 0, h = 0, fps = 0;
+  for(const t of (kids(moov.off+moov.hdr, moov.off+moov.size)||[]).filter((x)=>x.type==='trak')){
+    let box = t; const nav = {};
+    for(const name of ['mdia','minf','stbl','stsd']){ box = find(kids(box.off+box.hdr, box.off+box.size), name); if(!box) return null; nav[name] = box; }
+    const e0 = box.off + 16;   // 1re entrée : en-tête stsd (8) + version/flags (4) + nombre d'entrées (4)
+    if(!w && e0+36 <= box.off+box.size && /^(avc1|hvc1|hev1)$/.test(txt(e0+4))){
+      w = dv.getUint16(e0+32); h = dv.getUint16(e0+34);
+      // cadence : mdhd (échelle de temps : +20 en version 0, +28 en version 1) / 1er pas de stts (+20)
+      const md = nav.mdia, sb2 = nav.stbl;
+      const mdhd = find(kids(md.off+md.hdr, md.off+md.size), 'mdhd'), stts = find(kids(sb2.off+sb2.hdr, sb2.off+sb2.size), 'stts');
+      if(mdhd && stts && stts.size >= 24 && mdhd.size >= 32){ const ts = dv.getUint32(mdhd.off + (b[mdhd.off+8] === 1 ? 28 : 20)), d = dv.getUint32(stts.off+20); if(ts > 0 && d > 0) fps = ts/d; }
+    }
+    out.push(Array.from(b.subarray(box.off, box.off+box.size)).join(','));
+  }
+  return out.length ? { sig: out.join('|'), w, h, fps } : null;
+}
+// Raccorde les tranches (ordre = temps) : flux COPIÉS quand toutes ont les mêmes descriptions de flux (même moteur, même
+// réglage : quelques secondes) ; sinon (une tranche passée par le repli en dernier recours) ré-encodage de raccord — LENT
+// dans ffmpeg.wasm (plusieurs minutes pour 60 s), d'où la relance chez kie avant tout mélange (_genOmnihVideo). `outLast` = coupe de la dernière tranche (fin de
+// parole + 0,3 s, relative à son début) ; null = entière. Chaque tranche interne est gardée ENTIÈRE : elle finit dans une pause.
+async function _omnihJoin(blobs, outLast){
+  await _loadFFmpeg(); const ff = _ffmpegInst;
+  const bytes = await Promise.all(blobs.map(async (x)=>new Uint8Array(await x.arrayBuffer())));
+  const st = bytes.map(_mp4Stsd), copie = st.every((x)=>x && st[0] && x.sig===st[0].sig);
+  const W = (st[0] && st[0].w) || 1080, Hh = (st[0] && st[0].h) || 1920;
+  // Cadence IMPOSÉE (celle de la 1re tranche, 25 par défaut) : sans elle, ffmpeg.wasm (4.3) sort le concat de flux à
+  // cadences différentes en base de temps 1/1 000 000 et DUPLIQUE des millions d'images (raccord bloqué, niveau H.264 6.2).
+  const F = (st[0] && st[0].fps >= 10 && st[0].fps <= 60) ? Math.round(st[0].fps*1000)/1000 : 25;
+  const names = bytes.map((_,i)=>'oh'+i+'.mp4'), out = 'ohout.mp4';
+  for(let i=0;i<names.length;i++) await ff.FS('writeFile', names[i], bytes[i]);
+  const cut = (outLast > 0) ? Number(outLast).toFixed(3) : null;
+  try{
+    if(copie){
+      const list = names.map((nm,i)=>"file '"+nm+"'"+(i===names.length-1 && cut ? '\noutpoint '+cut : '')).join('\n')+'\n';
+      await ff.FS('writeFile', 'ohlist.txt', new TextEncoder().encode(list));
+      await ff.run('-f','concat','-safe','0','-i','ohlist.txt','-c','copy','-movflags','+faststart', out);
+    }else{
+      const L = names.length-1, args = [];
+      names.forEach((nm)=>args.push('-i', nm));
+      let fc = '';
+      names.forEach((_,i)=>{ const t = (i===L && cut) ? ',trim=end='+cut : '', ta = (i===L && cut) ? ',atrim=end='+cut : '';
+        fc += '['+i+':v]scale='+W+':'+Hh+',setsar=1,fps='+F+t+',setpts=PTS-STARTPTS[v'+i+'];['+i+':a]aformat=sample_rates=48000:channel_layouts=stereo'+ta+',asetpts=PTS-STARTPTS[a'+i+'];'; });
+      fc += names.map((_,i)=>'[v'+i+'][a'+i+']').join('')+'concat=n='+names.length+':v=1:a=1[v][a]';
+      await ff.run(...args, '-filter_complex', fc, '-map','[v]','-map','[a]','-c:v','libx264','-preset','ultrafast','-crf','18','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart', out);
+    }
+    const data = await ff.FS('readFile', out);
+    if(!data || data.length < 1000) throw new Error('raccord vide');
+    return new Blob([data], { type:'video/mp4' });
+  } finally {
+    for(const nm of [...names, 'ohlist.txt', out]){ try{ await ff.FS('unlink', nm); }catch(_){} }
+  }
+}
+// ffmpeg.wasm chargé (≤ 90 s) ? Sinon on ne découpe pas : un seul appel.
+async function _omnihFfmpegPret(){
+  await Promise.race([ _loadFFmpeg(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('ffmpeg.wasm : délai de chargement')), 90000)) ]);
+  if(!_ffmpegInst) throw new Error('ffmpeg.wasm indisponible');
+}
+// Vidéo OmniHuman complète du Générateur (voix d'origine jamais modifiée) → Blob MP4 coupé à fin de parole + 0,3 s.
+async function _genOmnihVideo(imgFile, audioBlob, fmt){
+  let dec;
+  try{ dec = await _omnihDecode(audioBlob); }catch(_){ throw new Error('audio illisible — réimporte ton audio'); }
+  const D = dec.duration;
+  if(!(D > 0.3)) throw new Error('audio trop court');
+  if(D > _OMNIH.MAX + 0.5) throw new Error('OmniHuman est limité à 60 s — ton audio fait '+Math.round(D)+' s');
+  const fin = _lipFinParole(dec);
+  const img = await _omnihImage(imgFile, fmt);
+  let hands = false; try{ hands = !!(await _mtDetectHands(imgFile)); }catch(_){}
+  const prompt = (typeof window.AA_OMNIHUMAN_PROMPT === 'function') ? window.AA_OMNIHUMAN_PROMPT({ hands, level:'gestures' }) : _mtMotionPrompt('omnihuman', 'mid');
+  let cuts = _omnihTranches(dec);
+  if(cuts.length > 2){ try{ await _omnihFfmpegPret(); }catch(e){ console.warn('[omnihuman] raccord impossible → un seul appel', e); cuts = [0, _lipR3(D)]; } }
+  const n = cuts.length-1, parts = [];
+  for(let k=0;k<n;k++){
+    const p = _omnihPlan({ start:cuts[k], end:cuts[k+1], voixDur:D, finParole: fin ? fin.end : null, ctx: k<n-1 ? false : undefined });
+    parts.push({ p, wav: await _omnihRender(dec, p) });
+  }
+  window._omnihLast = { cuts, envoye: parts.map((x)=>x.p.envoyeSec), prompt, relances: 0, fal: 0 };   // diagnostic (console)
+  const acks = [];
+  const settle = (pr)=>pr.then((value)=>({ status:'fulfilled', value }), (reason)=>({ status:'rejected', reason }));
+  let res = await Promise.all(parts.map((x)=>settle(_omnihRun(img, x.wav, prompt, n > 1 ? { ack:false, acks, fal:false } : {}))));
+  // Tranches : le raccord sans ré-encodage exige des flux IDENTIQUES → jamais de mélange kie / fal si on peut l'éviter.
+  // Aucune tranche lancée chez kie (toutes refusées SANS tâche, tirages rendus) → TOUT passe par fal (même op, tirages exacts).
+  // Sinon, une tranche refusée sans tâche est RELANCÉE chez kie (tirage rendu puis re-tiré : jamais deux fois) ; fal en
+  // dernier recours seulement (raccord ré-encodé, plus lent). Tâche lancée / issue inconnue : aucune relance, aucun repli.
+  const repli = (r)=>r.status === 'rejected' && !!(r.reason && r.reason._omnihRepli);
+  if(n > 1 && res.some(repli)){
+    if(res.every(repli)){ window._omnihLast.fal = n; res = await Promise.all(parts.map((x)=>settle(_omnihRunFal(img, x.wav, prompt)))); }
+    else for(let k=0;k<n;k++){
+      for(let essai=0; essai<2 && repli(res[k]); essai++){
+        await new Promise((ok)=>setTimeout(ok, essai ? 20000 : 5000)); window._omnihLast.relances++;
+        res[k] = await settle(_omnihRun(img, parts[k].wav, prompt, { ack:false, acks, fal:false }));
+      }
+      if(repli(res[k])){ window._omnihLast.fal++; res[k] = await settle(_omnihRunFal(img, parts[k].wav, prompt)); }
+    }
+  }
+  const ko = res.find((r)=>r.status === 'rejected');
+  if(ko){
+    if(n > 1 && res.some((r)=>r.status === 'fulfilled')) console.warn('[omnihuman] tranche en échec : les tranches terminées seront rangées dans ta Bibliothèque');
+    throw ko.reason;
+  }
+  const vids = res.map((r)=>r.value);
+  // coupe finale (timeline de la dernière tranche) : fin de parole + 0,3 s, comme callHedra (_lipCoupeGen)
+  const abs = fin ? _lipCoupeGen({ finParole: fin.end, dur: _lipR3(D) }) : null;
+  const outLast = (abs != null && abs > cuts[n-1]) ? _lipR3(abs - cuts[n-1]) : null;
+  let blob;
+  if(n === 1){
+    blob = vids[0];
+    if(outLast){ try{ blob = await _lipCutVideo(blob, outLast); }catch(e){ console.warn('coupe fin de parole ignorée :', e); } }
+  } else {
+    try{ blob = await _omnihJoin(vids, outLast); }
+    catch(e){ console.warn('[omnihuman] raccord des tranches', e); throw new Error('les parties de ta vidéo sont prêtes mais leur raccord a échoué — elles arriveront dans ta Bibliothèque d’ici ~2 h, ne relance pas'); }
+    acks.forEach((rid)=>_kieAck(rid));   // raccord réussi : le filet n'a plus rien à ranger
+  }
+  return blob;
 }
 /* #125b · L'IA NE POSE PAS DE SON FUN.
    Un bruitage comique mal calé se remarque bien plus qu'il n'apporte, et le bon
@@ -14647,6 +14891,10 @@ function _mtStripFun(plan){
 // de zéro à chaque coupe. Sur Character-3, le fond reste de toute façon figé —
 // on ne promet pas ce que le moteur ne tient pas.
 function _mtMotionPrompt(engine, role){
+  // OmniHuman (26/09) : prompt PARTAGÉ app / MCP / worker (shared/omnihuman-prompts.json → omnihuman-prompts.js) —
+  // anglais, ≤ 300 caractères (limite kie), « mains visibles » seulement si _mtDetectHands les a vues. Hedra : inchangé.
+  if(engine === 'omnihuman' && typeof window.AA_OMNIHUMAN_PROMPT === 'function')
+    return window.AA_OMNIHUMAN_PROMPT({ hands: !!_mt.avatarHasHands, level: (_mt.adv && _mt.adv.motion) || 'gestures', role });
   const base = 'A person talking naturally to camera, UGC style, authentic, direct gaze, '
     + 'precise lip-sync matching every syllable and pause of the audio, clear articulation';
   const level = (_mt.adv && _mt.adv.motion) || 'gestures';
@@ -14841,7 +15089,9 @@ async function _mtSegmentedGenerate(){
     // Mix : chaque scène est facturée à SON modèle (hook/cta = Omni 5 cr/s, reste = Character-3 2 cr/s).
     // La logique de rôle est CALQUÉE sur celle de la boucle de génération (l.+bas) → facturation = ce qui est réellement généré.
     const _segRate=(i,s)=>{ if(_mt.lipModel!=='mix') return rate; const _r = i===0 ? 'hook' : (i===segs.length-1 && (s.start||0) > dur*0.6 ? 'cta' : 'mid'); return (_r==='hook'||_r==='cta') ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec; };
-    const lipCost=segs.reduce((sum,s,i)=> sum + Math.max(0,(s.end||0)-(s.start||0))*_segRate(i,s), 0);
+    // OmniHuman (26/09) : le serveur tire ⌈5 × durée mesurée⌉ PAR SCÈNE (1 s minimum) → on réserve _omnihResa par scène
+    // (= la même somme sur des durées entières ; +1 crédit au plus par scène sinon), jamais moins que ce qu'il tirera.
+    const lipCost=segs.reduce((sum,s,i)=>{ const u=Math.max(0,(s.end||0)-(s.start||0)), r=_segRate(i,s); return sum + (r===CREDIT_COSTS.omniPerSec ? _omnihResa(u) : u*r); }, 0);
     const scenesCost=Math.ceil(lipCost + Math.max(0, dur-avSec)*CREDIT_COSTS.hyperframesPerSec);
     if(!(await spendCreditsFor(scenesCost, 'scènes avatar '+modelLbl))){ _mtProg(-1); return; }
 
@@ -14856,10 +15106,10 @@ async function _mtSegmentedGenerate(){
       const role = i===0 ? 'hook' : (i===segs.length-1 && (s.start||0) > dur*0.6 ? 'cta' : 'mid');
       // Audio ENVOYÉ (26/09) : Hedra reçoit la suite réelle de la voix (+0,6 s) ou 0,5 s de silence en fin d'audio,
       // et `lipEnd` dit au moteur jusqu'où les lèvres suivent la voix (au-delà il n'affiche plus ce visage).
-      // OmniHuman (fal / kie) garde l'extrait exact ; sa matière s'arrête à la fin de la scène. Facturation
-      // inchangée (lipCost = durée utile des scènes) : la marge envoyée est pour nous.
+      // OmniHuman (kie / fal, 26/09) : même correctif, contexte total ≤ 0,6 s et sans plancher 3,3 s (_omnihPlan) — le
+      // serveur facture la durée MESURÉE − 0,6 s, donc jamais plus que la durée utile réservée. Hedra : marge pour nous.
       let segWav;
-      if(_mtSceneIsOmni(role)){ segWav=await _mtAudioSliceWav(_mt.mp3, s.start, s.end); if((s.end||0) < dur-0.05) s.lipEnd=Math.round((s.end||0)*1000)/1000; else delete s.lipEnd; }
+      if(_mtSceneIsOmni(role)){ const _oa=await _omnihSceneAudio(_mt.mp3, s.start, s.end); segWav=_oa.wav; if(_oa.plan.lipEnd!=null) s.lipEnd=_oa.plan.lipEnd; else delete s.lipEnd; }
       else{
         const _dernier = segs.every((o)=>o===s || (o.start||0) < (s.start||0));
         const _la=await _mtLipAudioWav(_mt.mp3, s.start, s.end, _dernier);
@@ -25276,29 +25526,30 @@ function _genApplyModelGate(){
     if(typeof _majRecap==='function'){ try{ _majRecap(); }catch(_){ } }
   }
 }
-// Génère la vidéo via OmniHuman 1.5 (fal) — réutilise _mtOmniScene (Montage IA). Même contrat de retour que
-// callHedra : une blob: URL (ou '' en cas d'échec → le remboursement crédits est géré en amont dans startGeneration).
+// Génère la vidéo via OmniHuman 1.5 — kie pour les clients (26/09), fal en repli : _genOmnihVideo (tranches ≤ 15 s,
+// photo 9:16 JPEG q95, prompt partagé avec les mains détectées sur CETTE photo, « dernier mot », coupe fin de parole + 0,3 s).
+// Même contrat de retour que callHedra : une blob: URL (ou '' en cas d'échec → remboursement géré dans startGeneration).
 async function _genOmniScene(audioBlob){
   let imgFile=null;
   const avatarImgUrl=(document.getElementById('f-avatarimg')||{}).value?.trim()||'';
   if(avatarImgUrl){ try{ imgFile=new File([await fetch(avatarImgUrl).then(r=>r.blob())],'avatar.jpg',{type:'image/jpeg'}); }catch(e){} }
   if(!imgFile && selAvatar && selAvatar.localFile) imgFile=selAvatar.localFile;
   if(!imgFile){ window._lastHedraError='Ajoute une image d\'avatar — obligatoire pour OmniHuman.'; toast('Ajoute une image d\'avatar pour générer la vidéo'); return ''; }
-  let segSec=0; try{ segSec=await new Promise(res=>{ const a=new Audio(); a.preload='metadata'; a.onloadedmetadata=()=>res(a.duration||0); a.onerror=()=>res(0); a.src=URL.createObjectURL(audioBlob); }); }catch(_){}
-  const fmt=(typeof cfg!=='undefined' && cfg && cfg.format==='paysage') ? 'paysage' : 'vertical';   // fal OmniHuman : 9:16 / 16:9 (pas 1:1)
+  const fmt=(typeof cfg!=='undefined' && cfg && cfg.format==='paysage') ? 'paysage' : 'portrait';   // OmniHuman : 9:16 / 16:9 (pas 1:1)
   try{
-    const blob=await _mtOmniScene(imgFile, audioBlob, fmt, segSec, 'hook');
+    const blob=await _genOmnihVideo(imgFile, audioBlob, fmt);
     await _incrementVideosUsed();
     return URL.createObjectURL(blob);
   }catch(err){
-    window._lastHedraError='OmniHuman échoué : '+(err&&err.message||err)+' — OmniHuman est limité à ~60 s ; pour un script plus long, repasse sur Avatar.';
-    toast('OmniHuman : '+String(err&&err.message||err).slice(0,70));
+    const _m=_kieMsg(String(err&&err.message||err));   // jamais le nom du fournisseur pour un client
+    window._lastHedraError='OmniHuman échoué : '+_m+' — OmniHuman est limité à ~60 s ; pour un script plus long, repasse sur Avatar.';
+    toast('OmniHuman : '+_m.slice(0,70));
     console.error('OmniHuman (générateur):', err);
     return '';
   }
 }
 async function callHedra(audioBlob){
-  // MODÈLE OmniHuman sélectionné → route vers fal (tout le chemin Hedra ci-dessous reste inchangé sinon)
+  // MODÈLE OmniHuman sélectionné → kie pour les clients, fal en repli (_genOmniScene) ; le chemin Hedra ci-dessous est inchangé
   if(window._genModel==='omnihuman') return await _genOmniScene(audioBlob);
   // Hedra API — via proxy Supabase Edge Function (clé HEDRA_API_KEY côté serveur)
   // Flow : 1) POST /assets (créer) → 2) POST /assets/{id}/upload (fichier)
