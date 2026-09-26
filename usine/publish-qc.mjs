@@ -102,6 +102,26 @@ if (combo.format) {
 }
 technical.coherence = coherence;
 
+// 1quater) Déclinaisons (Axel 26/09) : 3 versions au plus par vidéo de base, chacune avec une autre démo, musique,
+// sous-titres et format — refus AVANT tout upload. Lit les recettes déjà rendues (non refusées) dans factory_qc.
+{
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let existing = null;
+  if (key) {
+    try {
+      const r = await fetch(`${SB_URL}/rest/v1/factory_qc?select=brick_combo,status&status=neq.refused`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+      if (r.ok) existing = (await r.json()).map(x => x.brick_combo).filter(x => x && typeof x === 'object');
+    } catch {}
+  }
+  if (!existing) console.warn('⚠ déclinaisons non vérifiées (factory_qc illisible ou pas de clé service)');
+  else {
+    const byId = Array.isArray(bricks) ? Object.fromEntries(bricks.map(b => [b.id, b])) : {};
+    const d = COH.declinaisonCheck(combo, existing, byId);
+    if (!d.ok) { console.error('✗ recette refusée (déclinaisons) : ' + d.reasons.join(' · ')); process.exit(2); }
+    technical.declinaison = { key: d.key, version: d.n + 1, max: d.max };
+  }
+}
+
 // 2) QC visuel (IA) — peut être absent (pas de clé) → on n'échoue pas
 const visArgs = [HERE + 'qc-vision.mjs', video, '--json'];
 if (transcript) visArgs.push('--transcript', transcript);

@@ -255,6 +255,23 @@
     var v = combo.voice == null || combo.voice === '' ? 'axel' : String(combo.voice);
     return [v, combo.avatar, h, combo.liaison || ''].map(function (x) { return String(x || ''); }).join('|');
   }
+  // Déclinaisons (Axel 26/09) : une vidéo de base (même clé comboKey = même avatar, hook, liaison, voix ou assemblage) peut
+  // sortir en DECLINAISONS_MAX versions au plus ; chaque version change la démo, la musique, les sous-titres ET le format
+  // (champs contenu, musique, sous_titre, format de brick_combo). Les versions d'une même base se publient espacées dans le
+  // temps (planificateur de publication). existing = brick_combo des vidéos déjà rendues (statut refusé exclu par l'appelant).
+  var DECLINAISONS_MAX = 3, DECLI_FIELDS = ['contenu', 'musique', 'sous_titre', 'format'];
+  function declinaisonCheck(combo, existing, byId) {
+    var k = comboKey(combo, byId), reasons = [];
+    if (!k) return { ok: true, key: null, n: 0, max: DECLINAISONS_MAX, reasons: reasons };
+    var same = (existing || []).filter(function (e) { return e && comboKey(e, byId) === k; });
+    if (same.length >= DECLINAISONS_MAX) reasons.push('déjà ' + same.length + ' versions de ' + k + ' (plafond ' + DECLINAISONS_MAX + ')');
+    DECLI_FIELDS.forEach(function (f) {
+      if (!combo[f]) return;
+      var dup = same.filter(function (e) { return e[f] && String(e[f]) === String(combo[f]); });
+      if (dup.length) reasons.push(f + ' ' + combo[f] + ' déjà utilisé(e) dans une autre version de ' + k);
+    });
+    return { ok: !reasons.length, key: k, n: same.length, max: DECLINAISONS_MAX, reasons: reasons };
+  }
   function voiceValid(v) { return v == null || v === '' || VOICES.indexOf(v) >= 0; }
   // Ancienne clé (avatar × hook × démo) : gardée pour les scripts qui la lisent encore ; la capacité ne l'utilise plus.
   function tripleKey(avatar, hook, demo) { return [avatar, hook, demo].map(function (x) { return String(x || ''); }).join('|'); }
@@ -333,7 +350,8 @@
       liaisons: L.liaisons.length, demos: L.demos.length, ctas: L.ctas.length,
       genericLiaisons: L.liaisons.filter(isGenericLiaison).length, pairs: pairsAll, matrix: !!M, notInMatrix: notInMatrix,
       overlayRequired: ov, modes: modes, voices: VOICES.slice(), modeKeys: MODES.slice(), avantApres: modes.aa,
-      lipsyncTotal: modes.axel.total + modes.omni.total, total: total, done: doneN, remaining: Math.max(0, total - doneN), outside: outside };
+      lipsyncTotal: modes.axel.total + modes.omni.total, total: total, done: doneN, remaining: Math.max(0, total - doneN), outside: outside,
+      declinaisons: { max: DECLINAISONS_MAX, total: total * DECLINAISONS_MAX } };
   }
 
   // Impact d'une brique de plus, en vidéos finales (Briques qui manquent). Estimations aux moyennes de la bibliothèque :
@@ -463,6 +481,6 @@
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk,
-    videoKey: videoKey, comboKey: comboKey, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
+    videoKey: videoKey, comboKey: comboKey, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
     hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });

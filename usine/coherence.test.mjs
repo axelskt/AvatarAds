@@ -338,6 +338,20 @@ test('comboCheck avant / après : hook avant / après sans assemblage → revue 
   assert.equal(d.combo.assemblage, 'HK-O2-0ab'); assert.equal(d.key, 'aa||H74||HK-O2-0ab');
 });
 
+test('déclinaisons : 3 versions au plus par vidéo de base, chacune avec une autre démo, musique, sous-titres et format', () => {
+  const B = byIdOf(library());
+  const v = (c, m, s, f) => ({ voice: 'axel', avatar: 'A1', hook: 'H12', contenu: c, musique: m, sous_titre: s, format: f, cta: 'CTA-1' });
+  const ex = [v('C-IMGIA-01', 'M01', 'S01', 'F01'), v('C-IMGIA-02', 'M02', 'S02', 'F02')];
+  assert.equal(C.DECLINAISONS_MAX, 3);
+  const ok = C.declinaisonCheck(v('C-IMGIA-03', 'M03', 'S03', 'F03'), ex, B);
+  assert.equal(ok.ok, true); assert.equal(ok.n, 2);
+  assert.equal(C.declinaisonCheck(v('C-IMGIA-01', 'M03', 'S03', 'F03'), ex, B).ok, false);   // même démo
+  assert.equal(C.declinaisonCheck(v('C-IMGIA-03', 'M03', 'S01', 'F03'), ex, B).ok, false);   // mêmes sous-titres
+  const full = ex.concat([v('C-IMGIA-03', 'M03', 'S03', 'F03')]);
+  assert.ok(C.declinaisonCheck(v('C-IMGIA-04', 'M04', 'S04', 'F04'), full, B).reasons.some(r => /plafond 3/.test(r)));
+  assert.equal(C.declinaisonCheck({ ...v('C-IMGIA-01', 'M01', 'S01', 'F01'), avatar: 'A2' }, full, B).ok, true);   // autre base
+});
+
 const fails = results.filter(r => r.startsWith('FAIL')).length;
 console.log(results.join('\n'));
 console.log(fails + ' échec(s) sur ' + results.length);

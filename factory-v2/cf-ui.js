@@ -871,7 +871,9 @@
       + (pAll > 0 ? '<path d="' + arc + '" class="cf-gauge-pd" pathLength="100" stroke-dasharray="' + pAll.toFixed(1) + ' 100"/>' : '')
       + (pct > 0 ? '<path d="' + arc + '" class="cf-gauge-fg" pathLength="100" stroke-dasharray="' + pct.toFixed(1) + ' 100"/>' : '') + '</svg>'
       + '<b class="cf-gauge-v' + (pct == null ? ' is-na' : '') + '">' + esc(pct == null ? '—' : fDec(pct, 1) + NB + '%') + '</b></div>'
-      + '<div class="cf-gauge-l"><b>' + esc(fInt(gen)) + '</b> ' + plural(gen, 'générée') + ' sur <b>' + esc(fInt(c.total)) + '</b> ' + plural(c.total, 'possible') + '</div>';
+      + '<div class="cf-gauge-l"><b>' + esc(fInt(gen)) + '</b> ' + plural(gen, 'générée') + ' sur <b>' + esc(fInt(c.total)) + '</b> ' + plural(c.total, 'possible')
+      // déclinaisons (Axel 26/09) : 3 versions au plus par vidéo de base (autre démo, musique, sous-titres, format)
+      + (c.declinaisons ? ' · <b data-mode="decli-total" title="' + esc('chaque vidéo de base en ' + c.declinaisons.max + ' versions au plus : autre démo, musique, sous-titres et format') + '">' + esc(fInt(c.declinaisons.total)) + '</b> avec déclinaisons' : '') + '</div>';
     var stats = '<div class="cf-capst">'
       + '<div><span class="cf-capst-v"><i class="is-gen"></i>' + esc(fInt(gen)) + '</span><span>' + plural(gen, 'générée') + '</span></div>'
       + '<div><span class="cf-capst-v"><i class="is-pd"></i>' + esc(fInt(P)) + '</span><span>en QC</span></div>'
