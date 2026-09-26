@@ -79,14 +79,23 @@ export async function handler(req: Request): Promise<Response> {
     else if (r.bill === 'closed') closed++
     if (!r.ok && r.reason !== 'not_drawn') console.log('[reconcile-kie] facturation', action, j.task_id, r.bill, r.reason)
   }
+  // Compte developer = le PLAN du propriétaire (relu une fois par passage), jamais deviné d'après le libellé. Lecture
+  // impossible → traité comme un client (aucun nom de moteur : le cas sûr).
+  const devOf = new Map<string, boolean>()
+  const isDevUser = async (userId: string): Promise<boolean> => {
+    if (devOf.has(userId)) return devOf.get(userId) as boolean
+    let dev = false
+    try { const { data, error: e } = await svc.from('profiles').select('plan').eq('id', userId).limit(1); dev = !e && String((data && data[0] && (data[0] as { plan?: string }).plan) || '').toLowerCase() === 'developer' } catch { dev = false }
+    devOf.set(userId, dev); return dev
+  }
   // Range un fichier déjà dans NOTRE storage en Bibliothèque (idempotent : réutilise une ligne existante).
-  // Nom / tags / style : « kie.ai » pour le compte developer seulement (libellé écrit par kie-proxy, kieLabel) ; un client
-  // ne voit jamais le nom du moteur dans sa Bibliothèque (Axel 25/09) — kieLibMeta.
-  const toLibrary = async (userId: string, path: string, kind: 'image' | 'video', label: string | null): Promise<string | null> => {
+  // Nom / tags / style : « kie.ai » pour le compte developer seulement ; un client ne voit jamais le nom du moteur dans sa
+  // Bibliothèque (Axel 25/09), y compris pour une ligne écrite par l'ancien kie-proxy (libellé « … · kie.ai ») — kieLibMeta.
+  const toLibrary = async (userId: string, path: string, kind: 'image' | 'video', label: string | null, alias: string | null): Promise<string | null> => {
     const { data: prev, error: pErr } = await svc.from('library_items').select('id').eq('user_id', userId).eq('storage_path', path).limit(1)
     if (pErr) throw new Error('bibliothèque (lecture) : ' + pErr.message)
     if (prev && prev[0]) return prev[0].id
-    const meta = kieLibMeta(label)
+    const meta = kieLibMeta(label, alias, await isDevUser(userId))
     const ins = await svc.from('library_items').insert({ user_id: userId, kind: kind === 'image' ? 'image' : 'video-simple',
       name: meta.name, tags: meta.tags, style: meta.style, emo: '', storage_path: path }).select('id').single()
     if (ins.error) throw new Error('bibliothèque : ' + ins.error.message)
@@ -101,7 +110,7 @@ export async function handler(req: Request): Promise<Response> {
     // B) Copie déjà faite par kie-proxy mais jamais confirmée par l'app → on range CE fichier, sans rien retélécharger.
     if (from === 'fetched' && j.storage_path && j.storage_path.startsWith(j.user_id + '/kie/')) {
       try {
-        const libId = await toLibrary(j.user_id, j.storage_path, /\.(jpg|png|webp)$/i.test(j.storage_path) ? 'image' : 'video', j.label)
+        const libId = await toLibrary(j.user_id, j.storage_path, /\.(jpg|png|webp)$/i.test(j.storage_path) ? 'image' : 'video', j.label, j.alias)
         await setState(j.task_id, 'saving', 'saved', { library_id: libId, last_error: null }); saved++
         await bill(j, 'settle')   // déjà réglée par kie-proxy à la copie en général → no-op
         console.log('[reconcile-kie] copie non confirmée rangée', j.task_id, j.storage_path)
@@ -136,7 +145,7 @@ export async function handler(req: Request): Promise<Response> {
       const up = await svc.storage.from('render-media').upload(path, new Uint8Array(dl.buf), { contentType: k.mime, upsert: true })
       if (up.error) { await later('copie storage : ' + up.error.message); continue }
       let libId: string | null = null
-      try { libId = await toLibrary(j.user_id, path, k.kind, j.label) } catch (e) { await later(String((e as Error)?.message || e).slice(0, 150)); continue }
+      try { libId = await toLibrary(j.user_id, path, k.kind, j.label, j.alias) } catch (e) { await later(String((e as Error)?.message || e).slice(0, 150)); continue }
       await setState(j.task_id, 'saving', 'saved', { storage_path: path, library_id: libId, last_error: null })
       await bill(j, 'settle')   // rangée en Bibliothèque = livrée → op réglée
       console.log('[reconcile-kie] rangée en Bibliothèque', j.task_id, path)

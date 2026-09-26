@@ -51,6 +51,13 @@ remboursement explicite et traçable (`credit_ops`).
 
 Toute nouvelle action payante passe par là. Pas de chemin parallèle.
 
+Côté proxys, un job asynchrone est **lié** à son op (`bind_reservation_job`, la
+première liaison gagne : une op = un job). Sa libération (`release_by_job`), son
+règlement (`settle_by_job`) et son remboursement (`refund_by_job_terminal`) ont
+lieu **exactement une fois** (`credit_ops.job_bill_state`, migration
+20260925233000) : relire le suivi d'un job échoué ne rend plus rien de plus.
+Ne jamais « rendre » un job en ré-ajoutant `job_drawn` hors de ces RPC.
+
 ## Le barème (`CREDIT_COSTS` dans `app/index.html`)
 
 | Action | Coût |

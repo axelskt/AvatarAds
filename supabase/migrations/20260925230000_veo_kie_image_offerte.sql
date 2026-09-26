@@ -19,6 +19,16 @@
 -- Sûreté : la remise ne revient que sur une op Express non remboursée dont la remise est à 0 (donc consommée), plafonnée à
 -- 3 ; elle n'est rendue qu'avec le tirage qui l'a consommée (une transition 'release' par tâche) → jamais deux remises
 -- pour une image. Service_role seulement.
+--
+-- DÉPLOIEMENT — ordre STRICT (relecture 26/09 : des fonctions déployées AVANT cette migration ne « marchent » PAS pour
+-- Express Veo avec image de départ : omni_start_add de prod refuse l'op « express » → aucune remise → kie-proxy tire 12 sur
+-- une réserve de 9 → 402 'unfunded', sans repli côté app) :
+--   1. appliquer CETTE migration puis 20260925233000_release_by_job_idempotent.sql ;
+--   2. vérifier : pg_get_functiondef('public.omni_start_add(uuid,uuid,integer)'::regprocedure) contient 'express' ;
+--      colonnes kie_jobs.start_img et credit_ops.job_bill_state présentes ; puis  NOTIFY pgrst, 'reload schema';
+--      (cache PostgREST non rechargé = insert kie_jobs sans start_img → le repli Google après un échec kie prend un 402) ;
+--   3. déployer ENSEMBLE kie-proxy, google-ai-proxy et reconcile-kie (openai-proxy : commentaire seulement, facultatif) ;
+--   4. l'app (GitHub Pages) en DERNIER.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- 1. Image de départ offerte : op Express Omni (« express-omni ») ET op Express Veo (« express »).

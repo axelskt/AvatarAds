@@ -325,7 +325,7 @@ export async function handler(req: Request): Promise<Response> {
           }
         }
       }
-      return jsonRes(200, { request_id: rid, status_url: `/kie/requests/${rid}/status`, response_url: `/kie/requests/${rid}`, status: 'IN_QUEUE', provider: 'kie' })
+      return jsonRes(200, { request_id: rid, status_url: `/kie/requests/${rid}/status`, response_url: `/kie/requests/${rid}`, status: 'IN_QUEUE', ...((isDev || !uid) ? { provider: 'kie' } : {}) })
     }
 
     // ── ACCUSÉ : l'app a rangé le résultat en Bibliothèque → le filet n'a plus rien à faire ──
@@ -373,11 +373,14 @@ export async function handler(req: Request): Promise<Response> {
         billing = (await kieBill(svc(), uid, rid, 'release')).bill ?? job.bill_state ?? 'drawn'
         if (billing === 'released' && KIE_NO_FALLBACK.has(String(job.alias))) billing = (await kieBill(svc(), uid, rid, 'refund')).bill ?? billing
       }
+      // Détails kie (modèle, résolution, source…) = compte developer / service seulement. Un client ne reçoit ni nom de moteur
+      // ni URL : la route résultat (bill_state vérifié, op réglée) est le SEUL chemin de livraison (relecture 26/09).
+      const pubMeta = (isDev || !uid) ? { meta: rec.meta } : {}
       if (isStatus) {
-        if (failed) return jsonRes(200, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], meta: rec.meta, billing })
-        return jsonRes(200, { status: rec.state === 'ok' ? 'COMPLETED' : rec.state === 'run' ? 'IN_PROGRESS' : 'IN_QUEUE', meta: rec.meta })
+        if (failed) return jsonRes(200, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], ...pubMeta, billing })
+        return jsonRes(200, { status: rec.state === 'ok' ? 'COMPLETED' : rec.state === 'run' ? 'IN_PROGRESS' : 'IN_QUEUE', ...pubMeta })
       }
-      if (failed) return jsonRes(422, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], meta: rec.meta, billing })
+      if (failed) return jsonRes(422, { status: 'FAILED', error: rec.err || 'résultat vide', detail: [{ type: rec.errType || 'failed', msg: rec.err || 'résultat vide' }], ...pubMeta, billing })
       if (rec.state !== 'ok') return jsonRes(202, { status: rec.state === 'run' ? 'IN_PROGRESS' : 'IN_QUEUE' })
       // Réservation déjà rendue / remboursée / close (échec antérieur, filet) → on ne livre plus : sinon génération gratuite.
       // closed (Axel 25/09) = re-tirée / livrée par le repli ou déjà remboursée — jamais « trop vieille » : une op de plus de
@@ -423,7 +426,7 @@ export async function handler(req: Request): Promise<Response> {
       const out = signed.signedUrl
       console.log('[kie] résultat', fam, taskId, kind, dst, host)
       const media = kind === 'image' ? { images: [{ url: out }], image: { url: out } } : { video: { url: out }, video_url: out }
-      return jsonRes(200, { status: 'COMPLETED', url: out, kind, storage_path: dst, rid, ...media, kie: { taskId, source_host: host || null, ...rec.meta } })
+      return jsonRes(200, { status: 'COMPLETED', url: out, kind, storage_path: dst, rid, ...media, ...((isDev || !uid) ? { kie: { taskId, source_host: host || null, ...rec.meta } } : {}) })
     }
     return jsonRes(400, { error: 'requête non prise en charge' })
   } catch (e) {
