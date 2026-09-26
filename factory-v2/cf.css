@@ -1217,3 +1217,21 @@ i.is-gap { background: var(--cf-ink); }
   .cf-frow { grid-template-columns: 92px minmax(0, 1fr); }
   .cf-frow > .cf-qchip { grid-column: 2; justify-self: start; }
 }
+
+/* ── 26/09 : capacité en 3 modes, photos d'avatar, assemblages cliquables, propositions de sous-titres ── */
+.cf-capmodes-n i.is-aa { background: transparent; box-shadow: inset 0 0 0 1.5px var(--cf-ink); }
+.cf-litem-ph { display: flex; flex-wrap: wrap; gap: 3px; }
+.cf-litem-ph img { width: 26px; height: 26px; border-radius: 5px; object-fit: cover; display: block; background: var(--cf-track); }
+.cf-litem.is-prop { border-style: dashed; }
+.cf-lprop-h { margin-top: 4px; }
+.cf-avgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.cf-avth { display: block; padding: 0; border: 1.5px solid transparent; border-radius: 7px; overflow: hidden; background: var(--cf-track); cursor: pointer; aspect-ratio: 1; }
+.cf-avth img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cf-avth:hover { border-color: var(--cf-line); }
+.cf-avth.is-on { border-color: var(--cf-accent); }
+.cf-arow .cf-vid.is-btn { font: inherit; font-family: var(--cf-mono); font-size: 12px; font-weight: 600; color: var(--cf-ink); cursor: pointer; }
+.cf-arow .cf-vid.is-btn:hover { border-color: var(--cf-accent); color: var(--cf-accent-ink); }
+.cf-asm-bar i.is-off, .cf-asm-chip i.is-off { background: #b3aa9f; }
+.cf-qchip.is-off { background: var(--cf-track); color: var(--cf-mute); }
+.cf-asmf-l { font-size: 13px; font-weight: 600; color: var(--cf-ink-2); margin-top: 4px; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .cf-avgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
