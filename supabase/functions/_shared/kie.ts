@@ -139,3 +139,8 @@ export function kieOwnedBy(param: string, uid: string, storeSign: string): boole
   return owners.length > 0 && owners.every((o) => o === String(uid).toLowerCase())
 }
 
+
+// Interrupteur PROPRE à Veo (relecture 26/09) : secret KIE_VEO=0 renvoie les générations Veo des clients sur Google
+// (MCP : repli direct, aucun appel kie) SANS toucher à KIE_CLIENTS — qui fermerait aussi Omni Flash, sans repli.
+// Lu à chaque requête. Défaut : ouvert. Le compte developer n'est pas concerné (kie ou l'erreur).
+export const kieVeoClientsOn = (): boolean => (Deno.env.get('KIE_VEO') ?? '1').trim() !== '0'
