@@ -446,6 +446,8 @@
       if (combo.voice === 'omni') reasons.push('pas de Voix native Omni sur un hook avant / après (voix off d’Axel)');
       if (combo.liaison && !combo.avatar) reasons.push('format long sans avatar (la liaison est dite par un avatar)');
     } else if (hook && isAvantApres(hook)) reasons.push('hook ' + hook.id + ' avant / après : jamais en lipsync (voix off sur un assemblage HK)');
+    // H14 / H23 / H60 (meta.overlay_required) : lipsync seulement avec une image d'avatar en incrustation → toujours revue manuelle
+    else if (hook && overlayRequired(hook)) reasons.push('hook ' + hook.id + ' : incrustation d’une image d’avatar ' + overlayRequired(hook) + ' obligatoire, à vérifier');
     var extra = Object.keys(combo).filter(function (k) { return COMBO_KEYS.indexOf(k) < 0; });
     if (extra.length) reasons.push('clé inconnue dans la recette : ' + extra.join(', ') + ' (admises : ' + COMBO_KEYS.join(', ') + ')');
     var M = matrixOf(matrix);
