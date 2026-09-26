@@ -84,8 +84,10 @@ export async function handler(req: Request): Promise<Response> {
     const { data: prev, error: pErr } = await svc.from('library_items').select('id').eq('user_id', userId).eq('storage_path', path).limit(1)
     if (pErr) throw new Error('bibliothèque (lecture) : ' + pErr.message)
     if (prev && prev[0]) return prev[0].id
+    // Bibliothèque = vue CLIENT (26/09) : jamais le nom du fournisseur (nom, tags et style s'affichent sur les cartes).
+    const name = String(label || '').replace(/\s*·\s*kie(\.ai)?\b/gi, '').replace(/\bkie(\.ai)?\b/gi, '').trim() || 'Génération récupérée'
     const ins = await svc.from('library_items').insert({ user_id: userId, kind: kind === 'image' ? 'image' : 'video-simple',
-      name: label || 'kie.ai', tags: ['kie.ai', 'récupérée'], style: 'kie.ai', emo: '', storage_path: path }).select('id').single()
+      name, tags: ['récupérée'], style: '', emo: '', storage_path: path }).select('id').single()
     if (ins.error) throw new Error('bibliothèque : ' + ins.error.message)
     return ins.data.id
   }
