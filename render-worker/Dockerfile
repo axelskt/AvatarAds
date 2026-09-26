@@ -66,4 +66,8 @@ RUN printf '#!/bin/sh\nexec /usr/bin/ffmpeg -threads "${HF_FFMPEG_THREADS:-2}" "
 RUN chown -R node:node /app
 ENV NODE_ENV=production HOME=/home/node
 USER node
+# Nettoyage audio pour le MCP (25/09) : audio-server.mjs, lancé par worker.mjs en
+# processus enfant, écoute sur $PORT (8080 par défaut ; Railway le fournit).
+# RNNoise est dans vendor/rnnoise/ (copié par COPY . .) : rien à télécharger.
+EXPOSE 8080
 CMD ["node", "worker.mjs"]

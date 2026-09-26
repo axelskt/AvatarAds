@@ -3197,5 +3197,16 @@ if (flag('--batch-blank') != null) {
     setInterval(warm, 45000)
     warm()
   }
+  // ── NETTOYAGE AUDIO POUR CLAUDE (25/09) ───────────────────────────────────
+  // Le MCP nettoie les voix ICI (RNNoise + chaîne voix de l'app, 0 € par minute)
+  // au lieu d'ElevenLabs. Le serveur HTTP tourne dans un PROCESSUS ENFANT : les
+  // rendus bloquent la boucle d'événements de ce processus-ci (execSync), un
+  // serveur logé ici ne répondrait plus pendant un rendu. Voir audio-server.mjs.
+  // AUDIO_CLEAN_DISABLED=1 le coupe (ex. worker lancé sur le Mac d'Axel).
+  if (process.env.AUDIO_CLEAN_DISABLED !== '1') {
+    import('./audio-server.mjs')
+      .then((m) => m.superviserServeurAudio())
+      .catch((e) => console.error('[clean] serveur audio non démarré :', e.message))
+  }
   pollLoop()
 }
