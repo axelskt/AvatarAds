@@ -17,6 +17,7 @@ export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (le
 export const KIE_OPEN: Record<string, string[]> = {
   'nano-banana-pro': ['starter', 'pro', 'elite', 'byok'],
   'omni-flash': ['starter', 'pro', 'elite', 'byok'],
+  'omnihuman-1.5': ['elite'],   // Axel 25/09 : OmniHuman passe chez kie pour les clients qui l'utilisent — Élite (Générateur + Montage IA) ; repli fal côté app
 }
 // Usages SANS repli côté app (Axel 25/09 : Omni Flash = « kie directement, pas de fallback ») : un échec kie n'a plus de
 // suite possible sur la même réservation → kie-proxy la rend PUIS la rembourse tout de suite (kie_job_bill release →
