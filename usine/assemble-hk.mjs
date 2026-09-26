@@ -217,8 +217,11 @@ if (!opt.dry) {
         frames: r.frames, rule: 'assemblage avant / après : clips distincts d’un seul groupe (Axel, 26/09)' })) + '::jsonb'].join(', ') + ')');
     writeFileSync(String(opt.sql), '-- ' + good.length + ' assemblages avant / après (usine/assemble-hk.mjs) — upsert idempotent\n' +
       'insert into public.factory_recipes (id, kind, subject, components, params, status, render_url, meta) values\n' + rows.join(',\n') +
-      '\non conflict (id) do update set kind = excluded.kind, subject = excluded.subject, components = excluded.components, params = excluded.params,\n' +
-      '  status = excluded.status, render_url = excluded.render_url, meta = excluded.meta, updated_at = now();\n');
+      '\n-- rejouable : un assemblage retiré (status « retired ») le reste ; les notes de meta sont gardées ; jamais sur une autre kind\n' +
+      'on conflict (id) do update set subject = excluded.subject, components = excluded.components, params = excluded.params,\n' +
+      '  status = case when factory_recipes.status = \'retired\' then factory_recipes.status else excluded.status end,\n' +
+      '  render_url = excluded.render_url, meta = factory_recipes.meta || excluded.meta, updated_at = now()\n' +
+      '  where factory_recipes.kind = \'hook\';\n');
     console.log('SQL → ' + opt.sql);
   }
   if (opt.tsv && good.length) {
