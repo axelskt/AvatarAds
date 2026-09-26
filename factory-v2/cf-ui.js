@@ -35,6 +35,19 @@
   // Médias de la Production : seulement notre stockage Supabase (CSP media-src), déjà filtrés par le store, revérifiés ici.
   var SB_HOST = /^guvwgiejzkiodghywpwj\.supabase\.co$/;
   function mediaSrc(u) { return safeUrl(u, SB_HOST); }
+  // Vignette d'une image de NOTRE stockage (photos d'avatar ≈ 8 Mo en 4K) : transformation d'image Supabase (render/image) ;
+  // carrée (w × w, recadrée) ou entière (w de large, proportions gardées : hauteur 2w en « contain » — sans hauteur, Supabase
+  // garde la hauteur d'origine). Si elle échoue, l'image d'origine (data-full, écouteur 'error' plus bas)
+  var PUB_P = '/storage/v1/object/public/', REND_P = '/storage/v1/render/image/public/';
+  function thumbSrc(u, w, sq) {
+    u = mediaSrc(u);
+    if (!u || u.indexOf(PUB_P) < 0 || !/\.(png|jpe?g|webp)$/i.test(u.split(/[?#]/)[0])) return u;
+    return u.split(/[?#]/)[0].replace(PUB_P, REND_P) + '?width=' + w + '&height=' + (sq ? w : 2 * w) + '&resize=' + (sq ? 'cover' : 'contain') + '&quality=75';
+  }
+  function thumbImg(u, w, attrs, sq) {
+    var t = thumbSrc(u, w, sq), f = mediaSrc(u);
+    return '<img src="' + esc(t) + '"' + (t !== f ? ' data-full="' + esc(f) + '"' : '') + ' ' + (attrs || '') + '>';
+  }
 
   // ── formats (fr-FR, espace insécable avant les unités) ──
   var NB = '\u00a0';
@@ -1065,7 +1078,8 @@
     var V = vfModel(M), g = M.capGen, p = M.capPending, r = c.remaining, tot = c.total, A = c.avatars;
     var aa = c.modes.aa;
     var head = stageHead('Vidéos générées · ' + fInt(g) + ' / ' + fInt(tot),
-      '1 vidéo finale = 1 avatar × 1 hook (+ 1 liaison compatible), en 2 voix' + (aa ? ' · avant / après = 1 assemblage × 1 hook (+ 1 liaison × 1 avatar)' : '') + '.');
+      '1 vidéo finale = 1 avatar × 1 hook (+ 1 liaison compatible), en 2 voix' + (aa && aa.total ? ' · avant / après = 1 assemblage × 1 hook (+ 1 liaison × 1 avatar).'
+        : '. Maximum = ' + A + ' ' + plural(A, 'avatar') + ' × ' + fInt(A ? tot / A : 0) + ' ' + plural(A ? tot / A : 0, 'vidéo') + '.'));
     var segs = [[g, 'is-gen'], [p, 'is-pd'], [r, 'is-rest']].filter(function (x) { return x[0] > 0; }).map(function (x) {
       return '<i class="' + x[1] + '" style="width:' + (x[0] / Math.max(1, tot) * 100).toFixed(2) + '%"></i>';
     }).join('');
@@ -1484,7 +1498,7 @@
     var ph = b.kind === 'avatar' ? avPhotos(b) : [];
     return '<button type="button" class="cf-litem' + (b.status !== 'ready' && !isProposal(b) ? ' is-off' : '') + (isProposal(b) ? ' is-prop' : '') + '" data-act="brick-open" data-bid="' + esc(b.id) + '">'
       + '<span class="cf-litem-h"><b>' + esc(b.id) + '</b><span class="cf-litem-m">' + esc(tag) + '</span></span>'
-      + (ph.length ? '<span class="cf-litem-ph">' + ph.map(function (u, i) { return '<img src="' + esc(u) + '" alt="" loading="lazy" decoding="async" data-i="' + i + '">'; }).join('') + '</span>' : '')
+      + (ph.length ? '<span class="cf-litem-ph">' + ph.map(function (u, i) { return thumbImg(u, 96, 'alt="" loading="lazy" decoding="async" data-i="' + i + '"', true); }).join('') + '</span>' : '')
       + '<span class="cf-litem-t">' + esc(shorten(text, 96) || '—') + '</span></button>';
   }
   // Assemblages = recettes de hooks visuels (factory_recipes : TX-A → TX-B), présentées comme la liste « Assemblages » de la
@@ -1548,7 +1562,7 @@
     var st = REC_ST[r.status] || REC_ST.other, ck = r.status === 'retired' ? null : recCheck(r);
     var meta = ['Assemblage', subjName(r.subject || '—'), r.group ? 'groupe ' + r.group : '', r.status === 'retired' ? 'retiré' : st[0],
       r.duration != null ? fDec(r.duration, 1) + NB + 's' : ''].filter(Boolean).join(' · ');
-    var cl = recClips(r), line = cl.map(function (c) { return c.t; }).join(' → ');
+    var cl = recClips(r), line = r.label || cl.map(function (c) { return c.t; }).join(' → ');
     var v = mediaSrc(r.render);
     var media = '<div class="cf-vf-stage"><div class="cf-vf-frame cf-mbox' + (v ? '' : ' is-broken') + '">'
       + (v ? '<video controls playsinline preload="metadata" src="' + esc(v) + '"></video><span class="cf-vmsg">rendu illisible (fichier introuvable ou refusé)</span>'
@@ -3018,9 +3032,9 @@
     } else if (b.kind === 'avatar') {
       // toutes les photos de l'avatar : la grande (couverture par défaut) + les vignettes, un clic l'affiche en grand
       var cov = fb && mediaSrc(fb.image), sel = ui.modal.avImg != null && photos[ui.modal.avImg] ? ui.modal.avImg : Math.max(0, photos.indexOf(cov));
-      media = photos.length ? '<div class="cf-sheet-media is-portrait"><img src="' + esc(photos[sel]) + '" alt="' + esc('Photo ' + (sel + 1) + ' de ' + b.id) + '" decoding="async"></div>'
+      media = photos.length ? '<div class="cf-sheet-media is-portrait">' + thumbImg(photos[sel], 800, 'alt="' + esc('Photo ' + (sel + 1) + ' de ' + b.id) + '" decoding="async"') + '</div>'
         + (photos.length > 1 ? '<span class="cf-bs-cap-t">' + photos.length + ' photos</span><div class="cf-avgrid">' + photos.map(function (u, i) {
-          return '<button type="button" class="cf-avth' + (i === sel ? ' is-on' : '') + '" data-act="av-img" data-i="' + i + '" aria-pressed="' + (i === sel) + '" aria-label="' + esc('Photo ' + (i + 1)) + '"><img src="' + esc(u) + '" alt="" loading="lazy" decoding="async"></button>';
+          return '<button type="button" class="cf-avth' + (i === sel ? ' is-on' : '') + '" data-act="av-img" data-i="' + i + '" aria-pressed="' + (i === sel) + '" aria-label="' + esc('Photo ' + (i + 1)) + '">' + thumbImg(u, 160, 'alt="" loading="lazy" decoding="async"', true) + '</button>';
         }).join('') + '</div>' : '')
         : ph('avatar · ' + b.id) + miss('portrait');
     } else if (b.kind === 'transformation') {
@@ -3311,6 +3325,8 @@
     // Image Instagram expirée ou bloquée : on garde le fond neutre, pas d'icône cassée.
     document.addEventListener('error', function (e) {
       var t = e.target;
+      // vignette (render/image) refusée : l'image d'origine, une seule fois
+      if (t && t.tagName === 'IMG' && t.getAttribute('data-full')) { var full = t.getAttribute('data-full'); t.removeAttribute('data-full'); t.src = full; return; }
       if (t && t.tagName === 'IMG' && t.closest && t.closest('.cf-thumb, .cf-avatar, .cf-sheet-media')) t.classList.add('is-broken');
       // vidéo / audio introuvable (rendu, démo, revue QC) : message à la place du lecteur, jamais un lecteur cassé
       if (t && (t.tagName === 'VIDEO' || t.tagName === 'AUDIO') && t.closest && t.closest('.cf-mbox')) t.closest('.cf-mbox').classList.add('is-broken');
