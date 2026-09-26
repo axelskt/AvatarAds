@@ -59,6 +59,8 @@ const byIdOf = rows => Object.fromEntries(rows.map(b => [b.id, b]));
 const seq = (...xs) => { let i = 0; return () => xs[Math.min(i++, xs.length - 1)]; };
 
 // ── matrice ──
+C.setPhotosPerAvatar(1);   // tests historiques : 1 photo par avatar (le test « photos par avatar » passe à 3)
+
 test('matrice : 43 hooks (H74v2 tel quel), « L33/L35 » = L33, 332 paires dont 324 pour les hooks en base', () => {
   assert.equal(Object.keys(MX).length, 43);
   assert.ok(Array.isArray(MX.H74v2));
@@ -79,7 +81,7 @@ test('capacité (vraies données, règle du 26/09) : 2 avatars × 36 hooks lipsy
   for (const v of ['axel', 'omni']) assert.deepEqual([c.modes[v].hooks, c.modes[v].pairs, c.modes[v].short, c.modes[v].long, c.modes[v].total], [36, 302, 72, 604, 676], v);
   assert.deepEqual([c.modes.aa.short, c.modes.aa.long, c.modes.aa.total], [48, 432, 480]);
   assert.equal(c.lipsyncTotal, 1352); assert.equal(c.total, 1832); assert.equal(c.remaining, 1832); assert.equal(c.done, 0); assert.deepEqual(c.notInMatrix, []);
-  assert.deepEqual(c.voices, ['axel', 'omni']); assert.deepEqual(c.modeKeys, ['axel', 'omni', 'aa']); assert.equal(c.avantApres, c.modes.aa);
+  assert.deepEqual(c.voices, ['axel', 'omni']); assert.deepEqual(c.modeKeys, ['axel', 'omni', 'aa', 'muet']); assert.equal(c.modes.muet.total, 0); assert.equal(c.avantApres, c.modes.aa);
 });
 test('capacité : démos et CTA ne font pas de nouvelle vidéo (+1 démo, +1 CTA → 1 832 inchangé)', () => {
   const c = C.capacity(library({ edit: r => r.push({ id: 'C-NEW', kind: 'contenu', subject: 'omni', status: 'ready', meta: {} }, { id: 'CTA-NEW', kind: 'cta', status: 'ready', meta: {} }) }), [], MX);
@@ -350,6 +352,37 @@ test('déclinaisons : 3 versions au plus par vidéo de base, chacune avec une au
   const full = ex.concat([v('C-IMGIA-03', 'M03', 'S03', 'F03')]);
   assert.ok(C.declinaisonCheck(v('C-IMGIA-04', 'M04', 'S04', 'F04'), full, B).reasons.some(r => /plafond 3/.test(r)));
   assert.equal(C.declinaisonCheck({ ...v('C-IMGIA-01', 'M01', 'S01', 'F01'), avatar: 'A2' }, full, B).ok, true);   // autre base
+});
+
+test('photos par avatar : 3 photos différentes par avatar et par brique parlée → ×3 vidéos ; photos distinctes rangées #1..#3, 4e hors des possibles', () => {
+  const rows = library(); C.setPhotosPerAvatar(3);
+  try {
+    const c = C.capacity(rows, [], MX);
+    assert.equal(c.photosPerAvatar, 3); assert.equal(c.avatarSlots, c.avatars * 3);
+    assert.equal(c.modes.axel.short, 3 * 72); assert.equal(c.modes.axel.long, 3 * 604);
+    const B = byIdOf(rows), k = (ph) => C.comboKey({ voice: 'axel', avatar: 'A1', photo: ph, hook: 'H12', contenu: 'C-IMGIA-01', cta: 'CTA-1' }, B);
+    assert.equal(k('A1-7'), 'axel|A1-7|H12|');
+    assert.deepEqual(C.slotKeys([k('A1-7'), k('A1-2'), k('A1-7'), k('A1-1'), k('A1-4')]), ['axel|A1#1|H12|', 'axel|A1#2|H12|', 'axel|A1#1|H12|', 'axel|A1#3|H12|', null]);
+    const d = C.capacity(rows, [k('A1-7'), k('A1-2'), k('A1-1'), k('A1-4')], MX);
+    assert.equal(d.modes.axel.done, 3); assert.equal(d.outside, 1);
+  } finally { C.setPhotosPerAvatar(1); }
+});
+
+test('Texte + musique : texte choc (TH) × emplacements photo, format court seulement ; clé muet|A1#n|TH|; hook parlé refusé ; liaison refusée', () => {
+  const th = (id, sub) => ({ id, kind: 'texte-choc', subject: sub, label: 'phrase ' + id, status: 'ready', meta: { text: 'phrase', compatible_subjects: [sub] } });
+  const rows = library().concat([th('TH01', 'generique'), th('TH13', 'omni')]), B = byIdOf(rows);
+  C.setPhotosPerAvatar(3);
+  try {
+    const c = C.capacity(rows, [], MX);
+    assert.equal(c.modes.muet.short, 2 * 3 * 2); assert.equal(c.modes.muet.long, 0);
+    const k = C.comboKey({ voice: 'muet', avatar: 'A1', photo: 'A1-4', hook: 'TH01', contenu: 'C-IMGIA-01' }, B);
+    assert.equal(k, 'muet|A1-4|TH01|');
+    assert.equal(C.capacity(rows, [k], MX).modes.muet.done, 1);
+  } finally { C.setPhotosPerAvatar(1); }
+  assert.deepEqual(C.comboCheck({ voice: 'muet', avatar: 'A1', hook: 'TH01', contenu: 'C-IMGIA-01' }, B, MX).reasons, []);
+  assert.ok(C.comboCheck({ voice: 'muet', avatar: 'A1', hook: 'H12', contenu: 'C-IMGIA-01' }, B, MX).reasons.some(r => /texte choc/.test(r)));
+  assert.ok(C.comboCheck({ voice: 'muet', avatar: 'A1', hook: 'TH01', liaison: 'L16', contenu: 'C-IMGIA-01' }, B, MX).reasons.some(r => /pas de liaison/.test(r)));
+  assert.ok(C.comboCheck({ voice: 'axel', avatar: 'A1', hook: 'TH01', contenu: 'C-IMGIA-01' }, B, MX).reasons.some(r => /Texte \+ musique seulement/.test(r)));
 });
 
 const fails = results.filter(r => r.startsWith('FAIL')).length;

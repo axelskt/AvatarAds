@@ -32,3 +32,13 @@ Clé d'une vidéo avant / après : `aa|avatar|hook|liaison|assemblage` (`brick_c
 - **Data** : `build.mjs` écrit `<vidéo>.format.json` ; `publish-qc.mjs` le recopie dans `factory_qc.brick_combo.format` (+ `texte_choc`) et met en **revue** une phrase qui ne va pas avec la démo ou posée sur un visage (`technical.format`). Le dashboard lit ces deux clés à part (`q.format`, `q.texteChoc`) : la recette reste comptée.
 
 **Prochaines briques** : (1) tables Supabase (IDs auto + recette + score) ; (2) assembleur `ffmpeg` (hook + contenu + cta, voix -16 LUFS / musique duckée, canevas 9:16) ; (3) **JARVIS** (graphe de nœuds : cliquer un hook illumine ses possibilités compatibles) — à construire au fur et à mesure ; (4) render-on-distribute.
+
+## Photos par avatar et 3 formats de hook (Axel 27/09)
+- Chaque brique parlée (hook, liaison, CTA) existe avec **3 photos différentes par avatar** (A1-1, A1-7… tirées au hasard) :
+  `coherence.js` PHOTOS_PAR_AVATAR = 3, `brick_combo.photo` = la photo utilisée ; les photos distinctes d'une même base
+  remplissent les emplacements A1#1..#3 (`slotKeys`), une 4e est hors des possibles. `factory_variants.avatar_id` = la photo.
+- 3 formats de montage, chacun × 3 photos par avatar : **Audio d'Axel** (lipsync Hedra, `usine/hedra-hooks.json`),
+  **Voix native Omni** (Omni Flash image → vidéo lit le script), **Texte + musique** (voice `muet` : réaction muette tête
+  choquée + texte choc TH01… (briques `texte-choc`) + démo muette avec textes + musique, CTA dans la démo, pas de liaison).
+- Réglage lipsync validé : photos au hasard, audio vérifié (≈ −15 LUFS, sinon nettoyage + chaîne voix « podcast »),
+  coupe à fin de parole + 0,06 s, `selfie-treat.mjs` faible. Audio réenregistré par Axel → `hooks/Hxx-v2.wav` + meta.media.

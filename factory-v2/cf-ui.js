@@ -566,7 +566,7 @@
   // Production : lit prodModel(), LE modèle de l'onglet Production (vidéos à générer, jours de contenu : mêmes chiffres).
   var KIND_PL = { hook: ['hook', 'hooks'], liaison: ['liaison', 'liaisons'], cta: ['CTA', 'CTA'], contenu: ['contenu', 'contenus'],
     transformation: ['transformation', 'transformations'], avatar: ['avatar', 'avatars'], musique: ['musique', 'musiques'],
-    'sous-titre': ['style de sous-titres', 'styles de sous-titres'], autre: ['autre', 'autres'] };
+    'sous-titre': ['style de sous-titres', 'styles de sous-titres'], 'texte-choc': ['texte choc', 'textes choc'], autre: ['autre', 'autres'] };
   function homeProdCard() {
     var M = prodModel(), D = M.D;
     function na(k, label, o) { return M.pending ? hstat(k, '…', label, 'chargement', o) : hstat(k, '—', label, M.why, o); }
@@ -655,7 +655,8 @@
     { k: 'musique', t: 'Musique', ic: 'music', sub: 'pistes' },
     { k: 'sous-titre', t: 'Sous-titres', ic: 'subs', sub: 'styles' },
     { k: 'transformation', t: 'Transformation', ic: 'swap2', sub: 'transformations' },
-    { k: 'avatar', t: 'Avatar', ic: 'user', sub: 'avatars' }
+    { k: 'avatar', t: 'Avatar', ic: 'user', sub: 'avatars' },
+    { k: 'texte-choc', t: 'Texte choc', ic: 'zap', sub: 'phrases choc · Texte + musique' }   // Axel 27/09 (TH01…)
   ];
   var PKM = {};
   PK.forEach(function (x) { PKM[x.k] = x; });
@@ -667,9 +668,10 @@
   var NOT_YET = 'pas encore mesurable';   // briques non parlées : pas reconnues dans l'audio des reels (arrivera avec les productions)
   var MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   var TRACK_NA = 'TrackAds pas encore lancé';
-  var VOICE_SHORT = { axel: 'audio d’Axel', omni: 'voix Omni', aa: 'avant / après' };
+  var VOICE_SHORT = { axel: 'audio d’Axel', omni: 'voix Omni', aa: 'avant / après', muet: 'texte + musique' };
   // modes de la capacité (usine/coherence.js) : Audio d'Axel, Voix native Omni, Avant / après (3e mode, 26/09)
-  function capModes(c) { return c.modeKeys || c.voices; }
+  // 'muet' (Texte + musique, 27/09) : affiché dès qu'au moins un texte choc est prêt
+  function capModes(c) { return (c.modeKeys || c.voices).filter(function (k) { return k !== 'muet' || (c.modes.muet && c.modes.muet.total > 0); }); }
   // hooks lipsync (sans les hooks avant / après, jamais en lipsync) ; ancienne règle sans lipsyncHooks : tous les hooks
   function lipHooks(L) { return L.lipsyncHooks || L.hooks; }
   function fDays(v) { return v < 1 ? '<' + NB + '1' + NB + 'j' : '≈' + NB + fInt(v) + NB + 'j'; }
@@ -720,15 +722,16 @@
       var spoken = Object.create(null), avs = Object.create(null), St = D.stats, gen = null, out = 0, byBrick = Object.create(null), vwhy = '';
       lipHooks(L).concat(L.liaisons, L.ctas).forEach(function (b) { spoken[b.id] = 1; });   // hooks avant / après : jamais de lipsync
       L.avatars.forEach(function (a) { avs[a.id] = 1; });
+      var avOf = function (id) { var p = COH.photoParent ? COH.photoParent(id) : id; return avs[id] ? id : avs[p] ? p : null; };
       if (St && St.state === 'ready' && St.pairsTotal > St.pairs.length) vwhy = 'variantes : liste tronquée par factory_prod_stats';
       else if (St && St.state === 'ready') {
         gen = 0;
         St.pairs.forEach(function (p) {
-          if (avs[p[0]] && spoken[p[1]]) { gen += 1; (byBrick[p[1]] = byBrick[p[1]] || []).push(p[0]); } else out += 1;
+          if (avOf(p[0]) && spoken[p[1]]) { gen += 1; (byBrick[p[1]] = byBrick[p[1]] || []).push(p[0]); } else out += 1;
         });
       } else if (St) vwhy = St.kind === 'missing' ? 'factory_prod_stats pas encore en base (migration 20260925210000)' : St.kind === 'forbidden' ? 'lecture refusée par la base' : St.error;
       var nSpoken = lipHooks(L).length + L.liaisons.length + L.ctas.length;
-      M.vars = { A: A, spoken: nSpoken, possible: A * nSpoken, gen: gen, out: out, byBrick: byBrick, why: vwhy, St: St };
+      M.vars = { A: A, spoken: nSpoken, possible: A * (COH.PHOTOS_PAR_AVATAR || 1) * nSpoken, gen: gen, out: out, byBrick: byBrick, why: vwhy, St: St };
       M.miss = missModel(M);
     }
     // Rythme de publication : MES reels par jour sur 30 j (le « Reels par jour » de l'onglet Insight, goalValue) + les posts
@@ -862,7 +865,7 @@
 
   // ── 01 · Capacité de création : vidéos finales générées / possibles (jauge de la maquette) + les 4 nombres par voix ──
   function capHTML(M) {
-    var head = chead('Capacité de création', 'vidéos finales · ' + (M.cap && M.cap.modeKeys ? M.cap.modeKeys.length + ' modes' : '2 voix'));
+    var head = chead('Capacité de création', 'vidéos finales · ' + (M.cap && M.cap.modeKeys ? capModes(M.cap).length + ' modes' : '2 voix'));
     if (!M.cap) return '<section class="cf-card cf-cap" data-block="cap">' + head + naBody(M) + '</section>';
     var c = M.cap, P = M.capPending, gen = M.capGen;
     var pct = c.total ? gen / c.total * 100 : null, pAll = c.total ? c.done / c.total * 100 : 0;
@@ -881,7 +884,7 @@
     // la barre de la maquette : une ligne par mode (Audio d'Axel, Voix native Omni, Avant / après), format court et
     // format long (usine/coherence.js capacity) ; la jauge et « à générer » portent sur le total des 3
     var OV = c.overlayRequired, TT = {
-      short: { aa: 'format court · assemblage × hook avant / après', def: 'format court · avatar × hook' },
+      short: { aa: 'format court · assemblage × hook avant / après', muet: 'réaction muette × texte choc × photo', def: 'format court · avatar × hook' },
       long: { aa: 'format long · assemblage × hook avant / après × liaison × avatar', def: 'format long · avatar × hook × liaison' } };
     var modes = '<div class="cf-capmodes" data-vf="' + c.total + '|' + c.done + '|' + c.remaining + '" data-modes="'
       + capModes(c).map(function (v) { var m = c.modes[v]; return v + ':' + m.short + '|' + m.long + '|' + m.total; }).join(';') + '">'
@@ -1007,7 +1010,7 @@
     return '<div class="cf-schips-w"><div class="cf-over">' + esc(label) + '</div><div class="cf-schips">' + chips.join('') + '</div></div>';
   }
   function pctOf(v, tot) { return tot ? fDec(v / tot * 100, 1) + NB + '%' : '—'; }
-  var VOICE_CHIP = { axel: 'Axel', omni: 'Omni', aa: 'avant / après' };
+  var VOICE_CHIP = { axel: 'Axel', omni: 'Omni', aa: 'avant / après', muet: 'texte + musique' };
   // clé d'une vidéo finale (voix|avatar|hook|liaison) → « A1 × H14 × L16 · Axel » ; avant / après
   // (aa|avatar|hook|liaison|assemblage) → « HK-O2-0a × H19 · avant / après », « A1 × HK-O2-0a × H19 × L16 · avant / après »
   function keyLabel(k) {
@@ -1027,13 +1030,16 @@
     if (!D || !L || !M.cap) return null;
     var poss = [], inPoss = Object.create(null), byKey = Object.create(null);
     var add = function (k) { if (!inPoss[k]) { inPoss[k] = 1; poss.push(k); } };
+    // photos par avatar (Axel 27/09) : chaque avatar = PHOTOS_PAR_AVATAR emplacements « A1#1 », « A1#2 »… (usine/coherence.js)
+    var NP = COH.PHOTOS_PAR_AVATAR || 1, slots = [];
+    L.avatars.forEach(function (a) { for (var s = 1; s <= NP; s++) slots.push(NP > 1 ? a.id + '#' + s : a.id); });
     COH.VOICES.forEach(function (v) {
-      L.avatars.forEach(function (a) {
+      slots.forEach(function (aid) {
         lipHooks(L).forEach(function (h) {
           if (!COH.voiceOk(h, v)) return;
-          add(COH.videoKey(v, a.id, h.id, ''));
+          add(COH.videoKey(v, aid, h.id, ''));
           COH.liaisonsFor(h, L.liaisons, MX).forEach(function (l) {
-            if (COH.voiceOk(l, v)) add(COH.videoKey(v, a.id, h.id, l.id));
+            if (COH.voiceOk(l, v)) add(COH.videoKey(v, aid, h.id, l.id));
           });
         });
       });
@@ -1047,13 +1053,16 @@
           add(COH.videoKey('aa', '', h.id, '', asm.id));
           COH.liaisonsFor(h, L.liaisons, MX).forEach(function (l) {
             if (!COH.hasAudio(l)) return;
-            L.avatars.forEach(function (a) { add(COH.videoKey('aa', a.id, h.id, l.id, asm.id)); });
+            slots.forEach(function (aid) { add(COH.videoKey('aa', aid, h.id, l.id, asm.id)); });
           });
         });
       });
     }
-    D.qc.list.forEach(function (q) {
-      var k = q.combo ? COH.comboKey(q.combo, M.byId) : null;
+    var qs = D.qc.list.slice().sort(function (a, b) { return (a.created || 0) - (b.created || 0); });
+    var sk = COH.slotKeys ? COH.slotKeys(qs.map(function (q) { return q.combo ? COH.comboKey(q.combo, M.byId) : null; })) : null;
+    qs.forEach(function (q, i) {
+      var k0 = q.combo ? COH.comboKey(q.combo, M.byId) : null, k = sk ? sk[i] : k0;
+      if (k && NP === 1 && /#\d+/.test(String(k).split('|')[1] || '')) k = k0;
       if (!k || !inPoss[k]) return;   // hors des possibles : déjà signalé sous la jauge, jamais listé ici
       (byKey[k] = byKey[k] || []).push(q);
     });
@@ -2998,7 +3007,7 @@
     $('cfModalBody').scrollTop = 0;
     var t = $('cfModalTitle'); if (t) { t.tabIndex = -1; t.focus(); }
   }
-  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook' };
+  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook', 'texte-choc': 'Texte choc' };
   function fMmss(v) { var t = Math.round(v); return p2(Math.floor(t / 60)) + ':' + p2(t % 60); }
   var PLAY_P = 'M7 4l13 8-13 8z', PAUSE_P = 'M6 4h4v16H6zM14 4h4v16h-4z';
   function glyph(p, s) { return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="' + p + '"/></svg>'; }

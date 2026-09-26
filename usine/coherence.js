@@ -42,13 +42,36 @@
   'use strict';
   var VOICES = ['axel', 'omni'];                                // modes lipsync (inchangés)
   var VOICE_LABEL = { axel: 'Audio d’Axel', omni: 'Voix native Omni' };
-  var MODES = ['axel', 'omni', 'aa'];                           // + 'aa' = Avant / après (voix off sur un assemblage)
-  var MODE_LABEL = { axel: 'Audio d’Axel', omni: 'Voix native Omni', aa: 'Avant / après' };
+  var MODES = ['axel', 'omni', 'aa', 'muet'];                   // + 'muet' = Texte + musique (Axel 27/09)                           // + 'aa' = Avant / après (voix off sur un assemblage)
+  var MODE_LABEL = { axel: 'Audio d’Axel', omni: 'Voix native Omni', aa: 'Avant / après', muet: 'Texte + musique' };
   var AUDIO_RE = /\.(wav|mp3|m4a|aac|ogg)(?:[?#].*)?$/i;
   // Clés admises dans une recette (factory_qc.brick_combo, écrite par usine/publish-qc.mjs) : IDs de briques, sauf voice ;
   // assemblage = ID d'une recette HK (vidéo avant / après). Toute autre clé rend la recette illisible pour le dashboard
   // (affichée « texte libre », jamais comptée) → refusée.
-  var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];
+  var COMBO_KEYS = ['voice', 'avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];
+  // Photos par avatar (Axel 27/09) : chaque brique parlée (hook, liaison, CTA) existe avec PHOTOS_PAR_AVATAR photos
+  // différentes de chaque avatar (A1-1, A1-2, A1-7…) → une vidéo finale par emplacement photo. Clé d'une vidéo : l'avatar
+  // devient « A1#n » (n = 1..PHOTOS_PAR_AVATAR, rang d'apparition de la photo pour cette base) ; brick_combo.photo = la
+  // photo réellement utilisée (sinon l'avatar seul = une photo).
+  var PHOTOS_PAR_AVATAR = 3;
+  function setPhotosPerAvatar(n) { PHOTOS_PAR_AVATAR = Math.max(1, Math.floor(Number(n) || 1)); return PHOTOS_PAR_AVATAR; }
+  function photoParent(id) { var m = /^(.+?)(?:-\d+|#\d+)$/.exec(String(id || '')); return m ? m[1] : String(id || ''); }
+  // Range des clés (dans l'ordre donné) en emplacements : même base (voix, avatar parent, hook, liaison[, assemblage]),
+  // photos distinctes → #1, #2, #3 ; au-delà de PHOTOS_PAR_AVATAR → null (hors des possibles). Renvoie un tableau aligné.
+  function slotKeys(keys) {
+    var seen = dict();
+    return (keys || []).map(function (k) {
+      if (!k) return null;
+      var p = String(k).split('|'), i = 1;
+      if (p[i] === '' ) return k;                      // avant / après court : pas d'avatar
+      if (/#\d+$/.test(p[i])) return k;               // déjà rangée
+      var par = photoParent(p[i]), q = p.slice(); q[i] = par; var base = q.join('|');
+      var m = seen[base] || (seen[base] = { ids: dict(), n: 0 });
+      if (!has(m.ids, p[i])) { if (m.n >= PHOTOS_PAR_AVATAR) return null; m.n += 1; m.ids[p[i]] = m.n; }
+      q[i] = par + '#' + m.ids[p[i]];
+      return q.join('|');
+    });
+  }
   var STATUS_FR = { ready: 'prête', retired: 'retirée', flagged: 'signalée', draft: 'brouillon' };
   // Clés venues de la base (brick_combo) : jamais lues sur le prototype d'un objet (« __proto__ », « constructor »…).
   function has(o, k) { return !!o && Object.prototype.hasOwnProperty.call(o, k); }
@@ -217,7 +240,7 @@
   // Bibliothèque exploitable, depuis les lignes factory_bricks (ou les briques normalisées du dashboard).
   // hooks = tous les hooks sans alias ; lipsyncHooks = sans les hooks avant / après ; aaHooks = les hooks avant / après.
   function library(bricks) {
-    var L = { avatars: [], hooks: [], lipsyncHooks: [], aaHooks: [], liaisons: [], ctas: [], demos: [], aliases: {} };
+    var L = { avatars: [], hooks: [], lipsyncHooks: [], aaHooks: [], liaisons: [], ctas: [], demos: [], textes: [], aliases: {} };
     (bricks || []).forEach(function (b) {
       if (!b) return;
       if (b.kind === 'hook' && meta(b).alias_of) L.aliases[b.id] = String(meta(b).alias_of);
@@ -227,6 +250,7 @@
       else if (b.kind === 'liaison') L.liaisons.push(b);
       else if (b.kind === 'cta') L.ctas.push(b);
       else if (b.kind === 'contenu') L.demos.push(b);
+      else if (b.kind === 'texte-choc') L.textes.push(b);
     });
     return L;
   }
@@ -250,10 +274,11 @@
   function comboKey(combo, byId) {
     if (!combo || typeof combo !== 'object' || !combo.hook) return null;
     var hb = has(byId, combo.hook) ? byId[combo.hook] : null, h = hb && meta(hb).alias_of ? String(meta(hb).alias_of) : combo.hook;
-    if (combo.assemblage) return aaKey(combo.voice, combo.avatar, h, combo.liaison, combo.assemblage);
+    var av = combo.photo ? String(combo.photo) : combo.avatar;
+    if (combo.assemblage) return aaKey(combo.voice, av, h, combo.liaison, combo.assemblage);
     if (!combo.avatar) return null;
     var v = combo.voice == null || combo.voice === '' ? 'axel' : String(combo.voice);
-    return [v, combo.avatar, h, combo.liaison || ''].map(function (x) { return String(x || ''); }).join('|');
+    return [v, av, h, combo.liaison || ''].map(function (x) { return String(x || ''); }).join('|');
   }
   // Déclinaisons (Axel 26/09) : une vidéo de base (même clé comboKey = même avatar, hook, liaison, voix ou assemblage) peut
   // sortir en DECLINAISONS_MAX versions au plus ; chaque version change la démo, la musique, les sous-titres ET le format
@@ -272,7 +297,7 @@
     });
     return { ok: !reasons.length, key: k, n: same.length, max: DECLINAISONS_MAX, reasons: reasons };
   }
-  function voiceValid(v) { return v == null || v === '' || VOICES.indexOf(v) >= 0; }
+  function voiceValid(v) { return v == null || v === '' || VOICES.indexOf(v) >= 0 || v === 'muet'; }
   // Ancienne clé (avatar × hook × démo) : gardée pour les scripts qui la lisent encore ; la capacité ne l'utilise plus.
   function tripleKey(avatar, hook, demo) { return [avatar, hook, demo].map(function (x) { return String(x || ''); }).join('|'); }
 
@@ -287,7 +312,7 @@
   //   long  = Σ hooks (assemblages × liaisons compatibles avec audio × avatars).
   // total = axel + omni + aa (vidéos finales possibles). Forme du résultat : usine/README.md et usine/coherence.test.mjs.
   function capacity(bricks, done, matrix) {
-    var L = library(bricks), A = L.avatars.length, M = matrixOf(matrix);
+    var L = library(bricks), A = L.avatars.length * PHOTOS_PAR_AVATAR, M = matrixOf(matrix);
     var av = dict(), hk = dict(), modes = dict(), possible = dict(), pairsAll = 0, notInMatrix = [];
     L.avatars.forEach(function (a) { av[a.id] = 1; });
     L.hooks.forEach(function (h) {
@@ -331,11 +356,24 @@
     });
     modes.aa = { voice: 'aa', label: MODE_LABEL.aa, hooks: Object.keys(aaH).length, assemblies: asm.length, groups: gs,
       short: aaS, long: aaL, total: aaS + aaL, done: 0, remaining: 0 };
+    // Texte + musique (Axel 27/09) : réaction muette de l'avatar (tête choquée) + texte choc (brique texte-choc, TH01…) +
+    // démo muette avec textes + musique, CTA dans la démo : pas de voix, pas de liaison → format court seulement,
+    // une vidéo par texte choc × emplacement photo. Clé : muet|A1#n|TH05|
+    var tset = dict(); L.textes.forEach(function (t) { tset[t.id] = 1; });
+    modes.muet = { voice: 'muet', label: MODE_LABEL.muet, hooks: L.textes.length, pairs: 0, short: A * L.textes.length, long: 0,
+      total: A * L.textes.length, done: 0, remaining: 0 };
     var seen = dict(), outside = 0;
-    (done || []).forEach(function (k) {
-      if (!k || seen[k]) return;
+    var slotted = slotKeys(done || []);
+    slotted.forEach(function (k) {
+      if (!k) { outside += 1; return; }
+      if (seen[k]) return;
       seen[k] = 1;
       var p = String(k).split('|'), v = p[0];
+      if (p[1]) p[1] = photoParent(p[1]);
+      if (v === 'muet') {
+        if (p.length === 4 && p[1] && has(av, p[1]) && has(tset, p[2]) && p[3] === '') modes.muet.done += 1; else outside += 1;
+        return;
+      }
       if (p.length === 5 && v === 'aa') {   // aa|avatar|hook|liaison|assemblage (avatar vide en court)
         var e = has(aaSet, p[4] + '|' + p[2]) ? aaSet[p[4] + '|' + p[2]] : null;
         if (e && has(e, p[3]) && (p[3] ? has(av, p[1]) : p[1] === '')) modes.aa.done += 1; else outside += 1;
@@ -346,7 +384,7 @@
     });
     var total = 0, doneN = 0;
     MODES.forEach(function (v) { var m = modes[v]; m.remaining = Math.max(0, m.total - m.done); total += m.total; doneN += m.done; });
-    return { avatars: A, hooks: L.hooks.length, lipsyncHooks: L.lipsyncHooks.length, aaHooks: L.aaHooks.map(function (h) { return h.id; }),
+    return { avatars: L.avatars.length, photosPerAvatar: PHOTOS_PAR_AVATAR, avatarSlots: A, hooks: L.hooks.length, lipsyncHooks: L.lipsyncHooks.length, aaHooks: L.aaHooks.map(function (h) { return h.id; }),
       liaisons: L.liaisons.length, demos: L.demos.length, ctas: L.ctas.length,
       genericLiaisons: L.liaisons.filter(isGenericLiaison).length, pairs: pairsAll, matrix: !!M, notInMatrix: notInMatrix,
       overlayRequired: ov, modes: modes, voices: VOICES.slice(), modeKeys: MODES.slice(), avantApres: modes.aa,
@@ -449,7 +487,12 @@
     }
     // voix : 'axel' (défaut) = la brique parlée a son fichier audio ; 'omni' = elle a un texte à dire (usine : voiceOk)
     if (!voiceValid(combo.voice)) reasons.push('voix « ' + String(combo.voice).slice(0, 30) + ' » inconnue (axel ou omni)');
+    else if (combo.voice === 'muet') {
+      if (hook && hook.kind !== 'texte-choc') reasons.push('format Texte + musique : le hook doit être un texte choc (TH…), pas ' + hook.id);
+      if (combo.liaison) reasons.push('format Texte + musique : pas de liaison (aucune voix)');
+    }
     else {
+      if (hook && hook.kind === 'texte-choc') reasons.push('texte choc ' + hook.id + ' : format Texte + musique seulement (voice « muet »)');
       var v = combo.voice || 'axel', need = v === 'omni' ? 'sans texte à dire (Voix native Omni)' : 'sans fichier audio (Audio d’Axel)';
       if (hook && !voiceOk(hook, v)) reasons.push('hook ' + hook.id + ' ' + need);
       if (liaison && !voiceOk(liaison, v)) reasons.push('liaison ' + liaison.id + ' ' + need);
@@ -481,6 +524,6 @@
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk,
-    videoKey: videoKey, comboKey: comboKey, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
+    videoKey: videoKey, comboKey: comboKey, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
     hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });
