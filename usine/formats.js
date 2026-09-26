@@ -23,10 +23,10 @@
  * Chargé tel quel par le navigateur (window.CF_FORMATS) et par node (import puis globalThis.CF_FORMATS). Aucune dépendance.
  */
 (function (root, factory) {
-  var api = factory();
+  var api = factory(root);
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   root.CF_FORMATS = api;
-})(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : typeof self !== 'undefined' ? self : this, function (root) {
   'use strict';
   function has(o, k) { return !!o && Object.prototype.hasOwnProperty.call(o, k); }
 
@@ -143,13 +143,26 @@
     var e = f.choc === 'hook' ? +hookDur || 0 : f.chocS;
     return total > 0 ? Math.min(e, total) : e;
   }
-  // Transformations montrées par un hook visuel avant/après d'après son nom (usine/transformations-omni.md) :
-  // « HK-O02a-01 » → ['TX-O02a', 'TX-O01'] ; « HK-M01-02.mp4 » → ['TX-M01', 'TX-M02'] ; autre nom → null (inconnues).
-  function txOfHook(name) {
-    var m = /(?:^|[\\/])HK-([MO])([0-9]{2}[a-z]?)-([0-9]{2}[a-z]?)(?:[-_.]|$)/.exec(String(name || ''));
-    return m ? ['TX-' + m[1] + m[2], 'TX-' + m[1] + m[3]] : null;
+  // Transformations montrées par un hook visuel avant/après d'après son nom (usine/transformations-omni.md).
+  // Assemblage actuel « HK-<groupe>-<clips> » (factory_recipes, usine/coherence.js assemblies) : « HK-O2-0ab.mp4 » →
+  // ['TX-O02a', 'TX-O02b'] ; lu dans la bibliothèque (bricks + CF_COHERENCE chargé), sinon null (inconnues : TH13 part en revue).
+  // Ancien nom du 18/09 : « HK-O02a-01 » → ['TX-O02a', 'TX-O01'] ; « HK-M01-02.mp4 » → ['TX-M01', 'TX-M02']. Autre nom → null.
+  var RE_HK_OLD = /(?:^|[\\/])HK-([MO])([0-9]{2}[a-z]?)-([0-9]{2}[a-z]?)(?:[-_.]|$)/;
+  var RE_HK_ASM = /(?:^|[\\/])(HK-([MO][0-9]{1,2})-([0a-z]{2,3}))(?:[-_.]|$)/;
+  function txOfHook(name, bricks) {
+    var s = String(name || ''), m = RE_HK_OLD.exec(s);
+    if (m) return ['TX-' + m[1] + m[2], 'TX-' + m[1] + m[3]];
+    m = RE_HK_ASM.exec(s);
+    var C = root.CF_COHERENCE;
+    if (!m || !Array.isArray(bricks) || !C || typeof C.assemblies !== 'function') return null;
+    var a = C.assemblies(bricks).filter(function (x) { return x.id === m[1]; })[0];
+    if (!a) return null;
+    var out = [];
+    a.components.forEach(function (c) { if (c && c.brick_id && out.indexOf(c.brick_id) < 0) out.push(c.brick_id); });
+    return out.length ? out : null;
   }
-  function isAvantApres(name) { return !!txOfHook(name); }
+  // Hook visuel avant/après (médaillon « avant » à protéger) : ancien nom ou assemblage HK-<groupe>-<clips>, bibliothèque ou non.
+  function isAvantApres(name) { var s = String(name || ''); return RE_HK_OLD.test(s) || RE_HK_ASM.test(s); }
 
   // Contrôle des clés format de la recette (usine/publish-qc.mjs). errors = recette refusée ; reasons = revue manuelle.
   function comboFormatCheck(combo, demo, tx) {

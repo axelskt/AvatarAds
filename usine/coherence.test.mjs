@@ -201,7 +201,7 @@ test('comboCheck : voix inconnue, hook sans audio (Audio d’Axel) ou sans texte
   assert.equal(C.comboCheck({ ...base, voice: 'Omni' }, B, MX).level, 'review');
   const b = C.comboCheck({ ...base, hook: 'H14' }, B, MX);
   assert.ok(b.reasons.includes('hook H14 sans fichier audio (Audio d’Axel)'));
-  assert.equal(C.comboCheck({ ...base, hook: 'H14', voice: 'omni' }, B, MX).level, 'ok');
+  assert.deepEqual(C.comboCheck({ ...base, hook: 'H14', voice: 'omni' }, B, MX).reasons, ['hook H14 : incrustation d’une image d’avatar fille obligatoire, à vérifier']);   // 26/09 : H14 toujours en revue (incrustation)
   assert.ok(C.comboCheck({ ...base, hook: 'H13', voice: 'omni' }, B, MX).reasons.includes('hook H13 sans texte à dire (Voix native Omni)'));
   const c = C.comboCheck({ ...base, declined_from: '17800000000000001' }, B, MX);
   assert.equal(c.level, 'review'); assert.match(c.reasons[0], /^clé inconnue dans la recette : declined_from/);
@@ -311,6 +311,18 @@ test('clés avant / après : aa|avatar|hook|liaison|assemblage (avatar vide en c
   const c = C.capacity(rows, ok.concat(out), MX);
   assert.equal(c.modes.aa.done, 3); assert.equal(c.modes.axel.done, 1); assert.equal(c.done, 4); assert.equal(c.outside, out.length); assert.equal(c.remaining, 1832 - 4);
   assert.equal(c.modes.aa.remaining, 480 - 3);
+});
+test('comboCheck incrustation : H14 / H23 / H60 en lipsync → toujours revue (image d’avatar fille à incruster) ; autres hooks inchangés', () => {
+  const rows = library(), B = byIdOf(rows);
+  ['H14', 'H23', 'H60'].forEach(h => {
+    assert.equal(C.overlayRequired(B[h]), 'fille', h);
+    ['axel', 'omni'].forEach(v => {
+      const r = C.comboCheck({ voice: v, avatar: 'A1', hook: h, contenu: 'C-IMGIA-01', cta: 'CTA-1' }, B, MX);
+      assert.equal(r.level, 'review', h + ' ' + v);
+      assert.ok(r.reasons.includes('hook ' + h + ' : incrustation d’une image d’avatar fille obligatoire, à vérifier'), h + ' ' + v + ' ' + r.reasons.join(' ; '));
+    });
+  });
+  assert.equal(C.comboCheck({ voice: 'axel', avatar: 'A1', hook: 'H12', contenu: 'C-IMGIA-01', cta: 'CTA-1' }, B, MX).reasons.some(x => /incrustation/.test(x)), false);
 });
 test('comboCheck avant / après : hook avant / après sans assemblage → revue ; assemblage inconnu, hook lipsync, mauvais module, Voix native Omni → revue ; recette valide → ok', () => {
   const rows = library(), B = byIdOf(rows), base = { voice: 'axel', avatar: 'A1', hook: 'H74', contenu: 'C-OMNI-01', cta: 'CTA-1' };

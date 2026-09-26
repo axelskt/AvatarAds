@@ -15,7 +15,7 @@
 //           [--avant-apres | --no-avant-apres] [--faces faces.json] [--done recettes.json] [--bricks bricks.json] [--seed n]
 //   --format : auto (défaut) = rotation ; --done = recettes déjà produites (lignes factory_qc ou leurs brick_combo), sinon
 //   lues avec SUPABASE_SERVICE_ROLE_KEY (lecture seule) ; --bricks = export factory_bricks (formats retirés exclus).
-//   --tx / --avant-apres : déduits du nom d'un hook avant/après « HK-O02a-01 » ; --faces : boîtes imposées (sinon détectées).
+//   --tx / --avant-apres : déduits du nom d'un hook avant/après (assemblage « HK-O2-0ab » lu dans la bibliothèque, ancien « HK-O02a-01 ») ; --faces : boîtes imposées (sinon détectées).
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -23,6 +23,7 @@ import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { faceZones } from './face-zones.mjs';
 
+await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
 const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed'];
@@ -58,7 +59,7 @@ const rand = (() => { if (!OPT.seed) return Math.random; let a = (parseInt(OPT.s
 const hookId = OPT['hook-id'] || ((/^(H\d+[a-z0-9]*?)(?:-audio)?\.[a-z0-9]+$/i.exec(basename(hookVoice || '')) || [])[1]) || null;
 const demoBrick = OPT.demo && Array.isArray(bricks) ? bricks.find(b => b && b.id === OPT.demo) || null : null;
 const demoRef = demoBrick || OPT.demo || '';   // brique (module = meta.module sinon sujet) ou nom de module ; vide = inconnu
-const tx = OPT.tx ? OPT.tx.split(',').map(x => x.trim()).filter(Boolean) : FMT.txOfHook(basename(hook));
+const tx = OPT.tx ? OPT.tx.split(',').map(x => x.trim()).filter(Boolean) : FMT.txOfHook(basename(hook), Array.isArray(bricks) ? bricks : null);
 const avantApres = OPT['no-avant-apres'] ? false : OPT['avant-apres'] ? true : FMT.isAvantApres(basename(hook));
 let format;
 if (!OPT.format || OPT.format === 'auto') {
