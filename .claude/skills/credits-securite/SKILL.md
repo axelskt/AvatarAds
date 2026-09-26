@@ -59,7 +59,7 @@ Toute nouvelle action payante passe par là. Pas de chemin parallèle.
 | « Améliorer en 4K », upscale 4K | 5 |
 | Montage IA (plan) / re-rendu d'un plan modifié | 8 / 4 |
 | Lipsync Hedra Character-3 | 1 cr/s |
-| Lipsync OmniHuman 1.5 (fal) | 5 cr/s |
+| Lipsync OmniHuman 1.5 (kie pour les clients Élite, fal en repli) | 5 cr/s |
 | Voix ElevenLabs (en plus du lipsync) | 0,5 cr/s |
 | Express Veo 3.1 Lite / Fast | 1 / 3 cr/s |
 | Nettoyage audio, débruitage, transcription | 1 |
@@ -67,6 +67,12 @@ Toute nouvelle action payante passe par là. Pas de chemin parallèle.
 
 Le barème est lu depuis la constante partout (boutons compris) : le changer à un
 seul endroit suffit, et l'UI suit.
+
+OmniHuman (26/09) : la durée facturée n'est JAMAIS celle du client. kie-proxy et fal-proxy mesurent le WAV reçu
+(`_shared/omnihuman-bill.ts` : octets présents, en-tête ignoré), en déposent une copie dans `render-media/omnih-in/`
+que le fournisseur lit, puis tirent EXACTEMENT ⌈5 × max(1 s, durée − 0,6 s)⌉ sur l'op (per-cost, jamais draw_full :
+les scènes d'un Montage partagent une op). L'app réserve `_omnihResa` par scène et n'envoie jamais plus de 0,6 s
+au-delà de la durée utile (`_omnihPlan`). Même formule côté app (`_omnihCout`) : à changer ENSEMBLE.
 
 ## Les clés d'API ne sont jamais dans le client
 

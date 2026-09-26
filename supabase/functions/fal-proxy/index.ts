@@ -17,6 +17,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { omnihumanFalBody } from '../_shared/omnihuman-bill.ts'   // OmniHuman (repli de kie, Axel 25/09) : durée MESURÉE, tirage exact
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -44,6 +45,10 @@ function falCost(path: string): number {
 // multiplierait le coût), 1080p IMPOSÉ, durée bornée 3-10 s comme fal (la même que celle qu'on facture). Facturé EXACTEMENT
 // OMNI_FLASH_PER_SEC × durée : fin du plancher 3 cr quelle que soit la durée (réserve de 3 cr pour une vidéo de 10 s).
 const OMNI_I2V = /\/google\/gemini-omni-flash\/[^?]*image-to-video/i
+// OmniHuman 1.5 (26/09) : repli de kie-proxy (app, même op) — tirage EXACT 5 × durée MESURÉE (omnihuman-bill.ts), plus draw_full.
+const OMNIHUMAN = /^\/fal-ai\/bytedance\/omnihuman\//i
+const OMNIH_BUCKET = 'render-media'
+const OMNIH_SIGN = `${Deno.env.get('SUPABASE_URL') ?? ''}/storage/v1/object/sign/${OMNIH_BUCKET}/`
 function omniI2vBody(raw: string): { body: string; sec: number } | { error: string } {
   let b: any = null
   try { b = JSON.parse(raw || '{}') } catch { /* traité juste dessous */ }
@@ -122,10 +127,21 @@ serve(async (req: Request) => {
         if ('error' in ob) return jsonRes(400, { error: ob.error })
         rawBody = ob.body; omniCost = OMNI_FLASH_PER_SEC * ob.sec
       }
+      // OmniHuman (26/09) : corps reconstruit (URL de notre storage, audio WAV mesuré + copie serveur, prompt ≤ 300) ; illisible /
+      // > 60 s / inaccessible → 400 AVANT tout tirage. Tirage EXACT (per-cost) : partage sûr d'une op (scènes du Montage).
+      let omnihCost = 0
+      if (OMNIHUMAN.test(path.split('?')[0])) {
+        const oh = await omnihumanFalBody(rawBody ?? '', auth.userId, OMNIH_BUCKET, OMNIH_SIGN)
+        if ('error' in oh) return jsonRes(oh.status, { error: oh.error })
+        rawBody = oh.body; omnihCost = oh.cost
+        console.log('[fal] omnihuman audio', auth.userId, `envoyé=${oh.envoyeSec}s facturé=${oh.factureSec}s coût=${oh.cost}`)
+      }
       // Primaire : plancher serveur = falCost(path) (audit 14/09) → une réserve sous ce plancher (ex.
       // spend_credits(1) devant un OmniHuman à 5) est refusée (402), fin de « 1 crédit = vidéo chère ».
       const rr = omniCost
         ? await applyOmniReservation({ req, userId: auth.userId, proxy: 'fal', cost: omniCost, label: path })   // − image de départ offerte (25/09)
+        : omnihCost
+        ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: omnihCost, label: path })   // OmniHuman : tirage EXACT (26/09)
         : _aux
         ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path })
         : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path, minCost: falCost(path) })
@@ -133,7 +149,7 @@ serve(async (req: Request) => {
       drawnOp = rr.opId
       // Omni = montant RÉELLEMENT tiré (relecture 25/09), jamais `omniCost` : 0 en mode ombre / hoquet DB → op NON liée
       // (ni bindJob, ni release / refund par job ou par op : rien à restaurer, pas de règlement de l'op d'une autre vidéo).
-      if (omniCost) { drawnAmt = (rr as { drawn?: number }).drawn ?? 0; if (drawnAmt <= 0) drawnOp = undefined }
+      if (omniCost || omnihCost) { drawnAmt = (rr as { drawn?: number }).drawn ?? 0; if (drawnAmt <= 0) drawnOp = undefined }
       else drawnAmt = _aux ? falCost(path) : ((rr as { drawn?: number }).drawn ?? 0)   // aux = coût tiré ; primaire = réserve drainée
     }
   }
