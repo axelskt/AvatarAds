@@ -78,6 +78,13 @@ Chacune vient d'un rendu raté et d'un retour précis. Ne pas les redécouvrir.
   éditer à la main est écrasé au prochain sync.
 - **Grammaire stricte Anthropic** : les champs du schéma sont des lignes
   `"a|b|c"`, jamais des tableaux d'objets — un schéma trop gros fait échouer l'appel.
+- **Le dernier mot d'un clip lipsync n'est articulé que si le modèle a un « contexte
+  droit »** (26/09, mesuré sur CTA28). L'audio ENVOYÉ à Hedra (jamais la voix d'origine)
+  porte la suite réelle de la voix (+0,6 s) ou 0,5 s de silence en fin d'audio —
+  `render-worker/lipsync-audio.mjs` (worker) et `_lipPlan` (app), même règle, à changer
+  ensemble. Chaque fenêtre porte alors `lipEnd` (instant absolu jusqu'où les lèvres suivent
+  la voix) : le moteur dynamique n'affiche plus le visage au-delà quand la voix continue
+  (le panneau suivant entre plus tôt). Facturation = durée utile, jamais la marge.
 - **HyperFrames refuse le rendu si un clip vidéo est plus court que sa fenêtre**
   (« captured 72 of expected 116 frames »). Découper les clips avatar APRÈS la
   dérivation, avec de la marge.

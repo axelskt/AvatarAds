@@ -28,6 +28,8 @@ import { buildGenSubsComposition } from './gen-subs-composition.mjs'
 import { deriveDynamicSlides, EXIGE_GLOBAL as EXIGE_FINITION, ANIMS as ANIMS_DISPO } from './dynamic-derive.mjs'
 import { deriveClassicSlides } from './classic-derive.mjs'
 import { cleLipsync, cacheLire, cacheEcrire, HEDRA_CR_SEC } from './lipsync-cache.mjs'
+import { analyserVoix, fabriquerAudioLipsync, bornesTranches } from './lipsync-audio.mjs'
+import { finsAffichageAvatar } from './dynamic-engine.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -1123,7 +1125,18 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       // d'avancer la première fenêtre avatar jusqu'à 0 pour garantir le hook ;
       // avec des clips, avancer la fenêtre ferait mentir les lèvres — la
       // garantie vient alors d'orchestrate, avant la génération des clips.
+      // `lipEnd` (app, 26/09) : instant ABSOLU jusqu'où le clip de la fenêtre d'ORIGINE suit la voix. Capturé
+      // avant la dérivation (qui déplace/scinde/recrée les fenêtres), puis reposé sur chaque fenêtre finale par
+      // l'indice de son clip — le moteur borne l'affichage du visage à cette matière (dynamic-engine).
+      const _lipSrc = (plan.avatarSegments || []).map((w) => (w && w.lipEnd != null && Number.isFinite(Number(w.lipEnd))) ? Number(w.lipEnd) : null)
       try { deriveDynamicSlides(plan, { assetFiles, assetDims, noFace, hasClips: Object.keys(avatarClips).length > 0 }); plan.__derive = true } catch (e) { console.warn('dérivation:', e.message) }
+      if (_lipSrc.some((x) => x != null)) {
+        for (const w of plan.avatarSegments || []) {
+          const k = w && w.clip
+          if (Number.isInteger(k) && k >= 0 && _lipSrc[k] != null) w.lipEnd = _lipSrc[k]
+          else if (w) delete w.lipEnd
+        }
+      }
       // #24 · et maintenant il RELIT sa copie, sur le montage réel
       try { await passeDeFinition(plan) } catch (e) { console.warn('finitions:', e.message) }
       // ── PASSE SLAM : ce que le chef produit pour ce style, traduit pour le moteur ──
@@ -1482,6 +1495,7 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     let coupesDepuisBase = false
     if (baseW && !Object.keys(avatarClips).length && (plan.avatarSegments || []).length) {
       coupesDepuisBase = true
+      for (const w of plan.avatarSegments) delete w.lipEnd   // ses vraies lèvres : aucune matière à borner
       let n = 0
       plan.avatarSegments.forEach((w, i) => {
         const a = Math.max(0, Number(w.start) || 0)
@@ -2370,13 +2384,11 @@ function trancherFenetres(plan) {
   for (const w of segs) {
     const d = (w.end || 0) - (w.start || 0)
     if (d <= LIPSYNC_MAX + 2) { out.push(w); continue }
-    const n = Math.ceil(d / LIPSYNC_MAX)
-    const pas = d / n
-    for (let i = 0; i < n; i++) {
-      out.push({ ...w, start: r2(w.start + i * pas), end: r2(i === n - 1 ? w.end : w.start + (i + 1) * pas) })
-    }
+    // bornes calées sur le plus grand blanc entre deux mots (±1,5 s du pas régulier), plus au milieu d'un mot
+    const tr = bornesTranches(w.start, w.end, plan.captions || [], LIPSYNC_MAX)
+    for (const t of tr) out.push({ ...w, start: r2(t.start), end: r2(t.end) })
     coupes++
-    console.log(`▶ fenêtre avatar ${r2(w.start)}→${r2(w.end)}s (${r2(d)}s) tranchée en ${n} — Hedra ne rend pas d'un bloc au-delà de ${LIPSYNC_MAX}s`)
+    console.log(`▶ fenêtre avatar ${r2(w.start)}→${r2(w.end)}s (${r2(d)}s) tranchée en ${tr.length} aux silences (${tr.slice(1).map((t) => r2(t.start)).join(', ')} s) — Hedra ne rend pas d'un bloc au-delà de ${LIPSYNC_MAX}s`)
   }
   if (coupes) plan.avatarSegments = out
   return coupes
@@ -2470,16 +2482,20 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
   if (!existsSync(voix)) return 0
   const photo = readFileSync(join(proj, 'media', 'avatar.png'))
   let startImg = null, faits = 0
+  let voixInfo = null, affichage = { fins: [], dernier: -1 }
+  try { voixInfo = analyserVoix(voix) } catch (e) { console.warn('fenêtres G : analyse de la voix impossible —', e.message) }
+  try { affichage = finsAffichageAvatar(plan) } catch (_) { /* sans elle : +0,6 s comme les autres */ }
   for (const w of fen) {
-    // Hedra refuse sous 3,24 s : on étire l'audio vers la droite, le clip sera
-    // recoupé à la fenêtre de toute façon (freeze-pad au recoupage)
-    const dur = Math.max(3.3, w.end - w.start)
-    const mp3 = join(proj, `ls-${w.clip}.mp3`)
-    try {
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(w.start), '-t', String(dur),
-        '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
-    } catch (e) { console.warn(`fenêtre ${w.clip} : découpe impossible`); continue }
+    // Audio ENVOYÉ (jamais la voix d'origine) : Hedra refuse sous 3,24 s → étiré à droite ; + la suite réelle de
+    // la voix (+0,6 s) ou 0,5 s de silence en fin d'audio, sinon le dernier mot n'est pas articulé (26/09)
+    const dur = Math.max(3.3, w.end - w.start)   // durée facturée / journalisée = durée utile (inchangée)
+    const mp3 = join(proj, `ls-${w.clip}.wav`)
+    let lip
+    const k = (plan.avatarSegments || []).indexOf(w)
+    try { lip = fabriquerAudioLipsync(voix, w, voixInfo, mp3, k >= 0 && k === affichage.dernier ? { jusqua: (affichage.fins[k] || w.end) + 0.1 } : {}).plan }
+    catch (e) { console.warn(`fenêtre ${w.clip} : découpe impossible`); continue }
     const audioBuf = readFileSync(mp3)
+    try { rmSync(mp3, { force: true }) } catch (_) {}
     const cle = cleLipsync(photo, audioBuf, '9:16', HEDRA_SLUG)
     const out = join(proj, 'media', 'av' + w.clip + '.mp4')
     let clip = await cacheLire(cle)
@@ -2487,7 +2503,7 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
     else {
       if (!startImg) startImg = await hedraV3Upload(photo, 'image/png', 'avatar.png')
       if (!startImg) { console.warn('fenêtres G : upload de la photo refusé'); break }
-      const audioUp = await hedraV3Upload(audioBuf, 'audio/mpeg', `voice-${w.clip}.mp3`)
+      const audioUp = await hedraV3Upload(audioBuf, 'audio/wav', `voice-${w.clip}.wav`)
       if (!audioUp) { console.warn(`fenêtre ${w.clip} : upload audio refusé`); continue }
       const jobId = await hedraV3Submit(HEDRA_SLUG, {
         prompt: 'A charismatic person speaking straight to camera, highly expressive and animated UGC influencer style — big natural smiles, raised eyebrows, visible enthusiasm and emotion, lively dynamic facial expressions, natural head tilts and movement, expressive hand gestures while speaking, high energy confident delivery, engaging and magnetic, direct eye contact, precise accurate lip-sync with mouth movements exactly matching the audio',
@@ -2514,6 +2530,7 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
       rmSync(brut)
     } catch (e) { console.warn(`normalisation ${w.clip} :`, e.message); try { if (!existsSync(out) && existsSync(brut)) renameSync(brut, out) } catch (_) {} }
     avatarClips['av' + w.clip] = 'media/av' + w.clip + '.mp4'
+    if (lip.lipEnd != null) w.lipEnd = lip.lipEnd; else delete w.lipEnd
     faits++
   }
   return faits
@@ -2541,6 +2558,17 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   }
   const voix = existsSync(join(jobDir, 'voice.wav')) ? join(jobDir, 'voice.wav') : join(jobDir, 'base.mp4')
   if (!existsSync(voix)) return 0
+  // ── L'AUDIO ENVOYÉ AU MODÈLE (26/09, « le dernier mot n'est pas articulé ») ────────────────────
+  // Durée + fin de parole de la voix, mesurées UNE fois (lecture seule). Chaque scène reçoit la suite réelle de
+  // la voix (+0,6 s) ou 0,5 s de silence en fin d'audio ; le dernier panneau du moteur dynamique (étiré jusqu'à
+  // la fin de la vidéo) reçoit la voix jusqu'à la fin de son affichage. Les autres panneaux sont bornés par le
+  // moteur à leur matière (`lipEnd`).
+  let voixInfo = null
+  try { voixInfo = analyserVoix(voix) } catch (e) { console.warn('lipsync : analyse de la voix impossible —', e.message) }
+  let affichage = { fins: [], dernier: -1 }
+  if (plan.slideStyle === 'dynamic' || plan.slideStyle === 'apple' || plan.slideStyle === 'slam') {
+    try { affichage = finsAffichageAvatar(plan) } catch (e) { console.warn('lipsync : fins d\'affichage indisponibles —', e.message) }
+  }
 
   // ── LA PHOTO PART AU RATIO DE SORTIE (Axel 23/08, mesuré) ──────────────────────
   // Hedra IGNORE aspect_ratio et rend au ratio de la photo : TOM en 2:3 → clip 1084×1624,
@@ -2741,15 +2769,15 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // ── HEDRA REFUSE EN DESSOUS DE 3,24 s ────────────────────────────────────
     // Contrainte mesurée et documentée. On étire la tranche vers la DROITE si
     // la vidéo le permet : le clip sera de toute façon recoupé à la fenêtre.
+    // `dur` = durée UTILE facturée (inchangée) ; l'audio ENVOYÉ porte en plus la suite réelle de la voix
+    // (+0,6 s) ou 0,5 s de silence en fin d'audio (26/09) — notre marge, jamais facturée au client.
     const dur = Math.max(3.3, w.end - w.start)
-    const mp3 = join(proj, `ls${i}.mp3`)
-    try {
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(w.start), '-t', String(dur),
-        '-i', voix, '-vn', '-ac', '1', '-ar', '44100', '-b:a', '128k', mp3])
-    } catch (e) { console.warn(`lipsync scène ${i} : découpe impossible`); return false }
-    // Omni reçoit du WAV (format validé chez fal et Hedra) — la clé de cache reste sur le mp3
-    let wavBuf = null
-    if (omni) { const wav = join(proj, `ls${i}.wav`); execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', mp3, '-ac', '1', '-ar', '44100', wav]); wavBuf = readFileSync(wav) }
+    const mp3 = join(proj, `ls${i}.wav`)
+    const dernier = parts.some((pt) => pt.i === affichage.dernier)
+    let lip
+    try { lip = fabriquerAudioLipsync(voix, w, voixInfo, mp3, dernier ? { jusqua: (affichage.fins[affichage.dernier] || w.end) + 0.1 } : {}).plan }
+    catch (e) { console.warn(`lipsync scène ${i} : découpe impossible`); return false }
+    // WAV partout (Hedra, et Omni chez Hedra / fal) : plus de MP3 (retard d'encodeur ≈ 25 ms)
 
     // ── LE CACHE PASSE AVANT LA CAISSE ──────────────────────────────────────
     // Découper l'audio est gratuit et local ; c'est seulement APRÈS qu'on sait
@@ -2757,6 +2785,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // la clé peut être calculée. Un hit rend la scène instantanée ET gratuite.
     const ratio = String(w.format) === 'paysage' ? '16:9' : '9:16'
     const audioBuf = readFileSync(mp3)
+    try { rmSync(mp3, { force: true }) } catch (_) {}   // hors du projet HyperFrames (lint « audio sans élément »)
     const cle = cleLipsync(photo, audioBuf, ratio, omni ? 'omnihuman-1.5' : HEDRA_SLUG, omni ? '' : expressif ? 'expressif' : '')
     const cout = Math.round(dur * (omni ? OMNI_CR_SEC : HEDRA_CR_SEC))
     const dejaPaye = await cacheLire(cle)
@@ -2764,6 +2793,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       const grp = join(proj, 'media', `grp${i}.mp4`)
       writeFileSync(grp, dejaPaye)
       decouperParties(grp, w, parts, modele)
+      for (const pt of parts) { if (lip.lipEnd != null) pt.w.lipEnd = lip.lipEnd; else delete pt.w.lipEnd }
       economie += cout
       console.log(`♻︎ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s repris du cache — ${cout} crédits économisés`)
       return true
@@ -2777,16 +2807,16 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     try {
     if (omni) {
       // OmniHuman : photo recadrée (même ratio de sortie) → Hedra (secours fal)
-      url = await omniGenerer(photo, wavBuf || audioBuf, String(plan.lipsyncPrompt || PROMPT_OMNI), join(proj, 'media'), `s${i}`, startImg, ratio)
+      url = await omniGenerer(photo, audioBuf, String(plan.lipsyncPrompt || PROMPT_OMNI), join(proj, 'media'), `s${i}`, startImg, ratio)
     } else {
-      const audioUp = await hedraV3Upload(audioBuf, 'audio/mpeg', `voice${i}.mp3`)
-      if (!audioUp) { console.warn(`lipsync scène ${i} : upload audio refusé`); return false }
+      const audioUp = await hedraV3Upload(audioBuf, 'audio/wav', `voice${i}.wav`)
+      if (!audioUp) { await rembourserLipsync(facture.local ? 0 : facture.n); console.warn(`lipsync scène ${i} : upload audio refusé (crédits remboursés)`); return false }
       const jobId = await hedraV3Submit(HEDRA_SLUG, {
         prompt: expressif ? PROMPT_EXPRESSIF : PROMPT_SOBRE,
         aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
         resolution: '1080p', start_image: startImg, audio: audioUp,
       })
-      if (!jobId) { console.warn(`lipsync scène ${i} : Hedra submit refusé`); return false }
+      if (!jobId) { await rembourserLipsync(facture.local ? 0 : facture.n); console.warn(`lipsync scène ${i} : Hedra submit refusé (crédits remboursés)`); return false }
       // polling — Avatar rend en 1 à 3 min pour une scène courte
       url = await hedraV3Poll(jobId)
     }
@@ -2802,7 +2832,9 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // la normalisation dépend du fps de rendu, le cache doit rester neutre.
     await cacheEcrire(cle, clip, dur)
     decouperParties(grp, w, parts, modele)
+    for (const pt of parts) { if (lip.lipEnd != null) pt.w.lipEnd = lip.lipEnd; else delete pt.w.lipEnd }
     depense += cout
+    if (lip.envoyeSec > dur + 0.05) console.log(`▶ lipsync scène ${i} : ${lip.envoyeSec} s envoyées (voix ${lip.voixSec} s + silence ${lip.padSec} s) pour ${r2(dur)} s facturées — lèvres vraies jusqu'à ${lip.lipEnd ?? 'la fin'}${lip.lipEnd != null ? ' s' : ''}`)
     console.log(`▶ lipsync scène ${i} : ${r2(w.start)}→${r2(w.end)}s (${w.format || 'portrait'}, ${modele}) — ${cout} crédits`)
     return true
   }
