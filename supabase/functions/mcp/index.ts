@@ -3,6 +3,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé
+import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -1328,6 +1329,14 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     if (job.kind === 'montage') continue
     if (!job.op_name) { await failAndRefund(userId, job, 'timeout'); continue }
 
+    // ── OmniHuman chez kie (Axel 25/09) : livré / échec → réglé ; en cours → on patiente jusqu'à KIE_OMNI_STALE_MIN ──
+    if (job.kind === 'avatar' && estOmniKie(job.op_name)) {
+      const a = await avancerOmniKie(taskDeOp(job.op_name))
+      if (a.etat === 'pret') { await deliverVideo(userId, job, a.bytes); continue }
+      if (a.etat === 'echec') { await failAndRefund(userId, job, a.raison); continue }
+      if (Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
+      await failAndRefund(userId, job, 'timeout'); continue
+    }
     // ── Jobs avatar (Hedra) : op_name = ID de génération Hedra ──
     if (job.kind === 'avatar') {
       try {
@@ -1390,7 +1399,11 @@ async function reconcileAllStale(): Promise<void> {
     const staleIso = new Date(Date.now() - 20 * 60_000).toISOString()
     const { data: stale } = await svc.from('mcp_jobs').select('*')
       .eq('status', 'running').not('op_name', 'is', null).lt('created_at', staleIso).in('kind', ['video', 'avatar', 'image']).limit(30)
-    for (const job of stale || []) await failAndRefund(String(job.user_id), job, 'timeout')
+    for (const job of stale || []) {
+      // OmniHuman chez kie : plus lent → abandonné à KIE_OMNI_STALE_MIN seulement (l'étape 1 l'a déjà avancé / livré)
+      if (estOmniKie(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
+      await failAndRefund(String(job.user_id), job, 'timeout')
+    }
   } catch (e) { console.error('reconcileAllStale:', (e as Error)?.message || e) }
 }
 let _lastReconcile = 0
@@ -1836,6 +1849,20 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   // (les branches fal/Hedra ci-dessous ne concernent plus que d'éventuels jobs 'avatar' hérités.)
   if (job.kind === 'video') return await runCheckVideo(profile, { job_id: job.id })
 
+  // ── OmniHuman chez kie (Axel 25/09) : op_name « kieomni:<tâche>[#cut=…] » → un cran de suivi, rapatriement, livraison ──
+  if (estOmniKie(job.op_name)) {
+    const a = await avancerOmniKie(taskDeOp(job.op_name))
+    if (a.etat === 'echec') {
+      await failAndRefund(userId, job, a.raison)
+      return toolErr(`Génération OmniHuman échouée (${a.raison}). Les ${job.credits_cost} crédits ont été remboursés.`)
+    }
+    if (a.etat === 'attente') return toolText('OmniHuman en cours (compte 2 à 10 minutes) — rappelle check_avatar_video dans environ 30 secondes.')
+    const url = await deliverVideo(userId, job, a.bytes)
+    return url
+      ? toolMedia(url, 'omnihuman.mp4', 'video/mp4', `Clip OmniHuman prêt.\nURL : ${url}`)
+      : toolText('Presque prêt — rappelle check_avatar_video dans quelques secondes.')
+  }
+
   // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
   if (String(job.op_name || '').startsWith('fal:')) {
     const reqId = String(job.op_name).slice(4)
@@ -1941,6 +1968,13 @@ async function advanceVideoJob(job: Record<string, unknown>): Promise<void> {
 async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
   try {
     const userId = String(job.user_id)
+    // OmniHuman chez kie (Axel 25/09) : op_name « kieomni:… » (en cours → rien ; le filet tranche à KIE_OMNI_STALE_MIN)
+    if (estOmniKie(job.op_name)) {
+      const a = await avancerOmniKie(taskDeOp(job.op_name))
+      if (a.etat === 'echec') await failAndRefund(userId, job, a.raison)
+      else if (a.etat === 'pret') await deliverVideo(userId, job, a.bytes)
+      return
+    }
     // OmniHuman (fal) : op_name préfixé « fal: »
     if (String(job.op_name || '').startsWith('fal:')) {
       const reqId = String(job.op_name).slice(4)
@@ -2069,7 +2103,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   // explicite — son rendu figé venait au moins en partie de NOTRE prompt, qui
   // lui demandait « no camera movement » sans jamais demander de gestuelle.
   const engine = String(args.engine || 'hedra') === 'omnihuman' ? 'omnihuman' : 'hedra'
-  if (engine === 'omnihuman' && !FAL_KEY) return toolErr('OmniHuman indisponible (clé fal absente des secrets).')
+  if (engine === 'omnihuman' && !FAL_KEY && !omniKieOn()) return toolErr('OmniHuman indisponible (configuration serveur incomplète).')
   // fal refuse une image de plus de 5 Mo (file_too_large) : refus clair AVANT tout débit (un portrait 1152x2048 en PNG
   // peut dépasser cette limite ; Hedra, le moteur par défaut, l'accepte).
   if (engine === 'omnihuman' && img.bytes.length > 5_000_000) return toolErr(`OmniHuman refuse les images de plus de 5 Mo (celle-ci fait ${(img.bytes.length / 1_000_000).toFixed(1)} Mo) : relance sans engine (Hedra, par défaut) ou avec une image plus légère. Aucun crédit débité.`)
@@ -2099,6 +2133,35 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
       const upA = await svc.storage.from('mcp-media').upload(`${stamp}.${ext}`, aud.bytes, { contentType: aud.contentType, upsert: true })
       if (upI.error || upA.error) return toolErr('Upload vers le stockage échoué — crédits remboursés.')
       const pub = (p: string) => `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${p}`
+      // Prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300 caractères, variante « sans mains » : pas de détection
+      // ici). Fin de la règle « même prompt que Hedra » : AVATAR_PROMPT (879 caractères) dépasse la limite de kie.
+      const omniPrompt = promptOmniMcp(profile.is_owner === true, args.prompt)
+
+      // ── kie d'abord (Axel 25/09 : OmniHuman passe chez kie pour les clients). « Dernier mot » (26/09) : WAV → COPIE
+      //    complétée de silence jusqu'à 0,5 s après le dernier mot, vidéo recoupée à la livraison (#cut=). `secs` (le débit)
+      //    a été mesuré sur l'audio reçu : la marge est pour nous. Refus SANS tâche → repli fal ; sans réponse → remboursé.
+      if (omniKieOn()) {
+        const lipO = ext === 'wav' ? preparerWavHedra(aud.bytes) : null
+        let audioK = `${stamp}.${ext}`, coupeK = lipO && lipO.bytes === aud.bytes ? lipO.coupe : null
+        if (lipO && lipO.bytes !== aud.bytes) {
+          const upL = await svc.storage.from('mcp-media').upload(`${stamp}-lip.wav`, lipO.bytes, { contentType: 'audio/wav', upsert: true })
+          if (!upL.error) { audioK = `${stamp}-lip.wav`; coupeK = lipO.coupe }   // copie refusée → audio reçu, sans coupe
+        }
+        const k = await soumettreOmniKie({ imageUrl: pub(`${stamp}.png`), audioUrl: pub(audioK), prompt: omniPrompt })
+        if (k.ok) {
+          const { data: job, error } = await svc.from('mcp_jobs')
+            .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: opAvecCoupe(OP_KIE_OMNI + k.taskId, coupeK), credits_cost: cost }).select('id').single()
+          if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés.')
+          launchedO = true
+          return toolText(
+            `Lipsync OmniHuman lancé (~${secs} s, ${aspect}, −${cost} crédits).
+job_id : ${job.id}
+Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 10 minutes).`)
+        }
+        if (!k.sansTache) return toolErr('OmniHuman : le service de génération n’a pas répondu — crédits remboursés, réessaie dans un instant.')
+        if (!FAL_KEY) return toolErr(`OmniHuman momentanément indisponible (${k.error}) — crédits remboursés.`)
+        console.warn('[mcp] OmniHuman : refus sans tâche → repli fal', k.error)
+      }
 
       const sub = await falFetch(FAL_OMNI_PATH, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2106,9 +2169,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
           image_url: pub(`${stamp}.png`),
           audio_url: pub(`${stamp}.${ext}`),
           resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
-          // MÊME prompt que Hedra, mot pour mot : sans ça la comparaison de
-          // qualité entre les deux moteurs porte sur deux consignes différentes.
-          prompt: avPrompt,
+          prompt: omniPrompt,   // prompt OmniHuman partagé (≤ 300), le même que chez kie
         }),
       })
       if (!sub.ok) {
