@@ -621,7 +621,14 @@
     'm_subjects:meta->compatible_subjects', 'm_modules:meta->modules', 'm_alias:meta->>alias_of', 'm_module:meta->>module',
     'm_variant:meta->>variant', 'm_media:meta->>media', 'm_media_type:meta->>media_type', 'm_keyword:meta->>keyword',
     'm_script:meta->>script', 'm_transcript:meta->>transcript', 'm_value:meta->>value', 'm_group:meta->>group',
-    'm_duration:meta->duration_s', 'm_cover:meta->>cover', 'm_before:meta->before', 'm_after:meta->after'].join(',');
+    'm_duration:meta->duration_s', 'm_cover:meta->>cover', 'm_before:meta->before', 'm_after:meta->after',
+    // 26/09 : hooks avant / après (jamais en lipsync), incrustation obligatoire, photos d'un avatar, aperçu et propositions
+    // de sous-titres (usine/coherence.js lit lipsync, hook_mode, overlay_required)
+    'm_lipsync:meta->lipsync', 'm_hook_mode:meta->>hook_mode', 'm_overlay:meta->>overlay_required', 'm_images:meta->images',
+    'm_poster:meta->>poster', 'm_proposal:meta->proposal'].join(',');
+  // factory_recipes : meta.label / group / module / code / clips (assemblages avant / après, usine/assemble-hk.mjs)
+  var REC_SEL = ['id', 'kind', 'subject', 'components', 'status', 'render_url', 'created_at', 'updated_at',
+    'm_label:meta->>label', 'm_group:meta->>group', 'm_code:meta->>code', 'm_clips:meta->clips', 'm_duration:meta->duration_s'].join(',');
   var QC_SEL = ['id', 'status', 'template', 'route', 'video_url', 'poster_url', 'brick_combo', 'refusal_reason', 'created_at', 'reviewed_at',
     't_route:technical->>route', 't_pass:technical->pass', 't_hard:technical->hard_fails', 't_soft:technical->soft_fails',
     't_err:technical->>error', 't_coh:technical->coherence', 'v_route:vision->>route', 'v_verdict:vision->verdict'].join(',');
@@ -651,7 +658,8 @@
   function side(o) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
     var raw = txt(o.media, 400);
-    return { label: txt(o.label, 80), file: txt(o.file, 200), video: pubFile(raw, VIDEO_EXT), why: raw ? fileWhy(raw, VIDEO_EXT) : 'pas encore en ligne' };
+    var v = pubFile(raw, VIDEO_EXT);
+    return { label: txt(o.label, 80), file: txt(o.file, 200), video: v, media: v, why: raw ? fileWhy(raw, VIDEO_EXT) : 'pas encore en ligne' };
   }
   function normBrick(b) {
     var id = rowId(b && b.id);
@@ -664,12 +672,17 @@
       meta: { compatible_subjects: sArr(b.m_subjects), modules: sArr(b.m_modules), alias_of: rowId(b.m_alias), module: txt(b.m_module, 40),
         variant: txt(b.m_variant, 40), keyword: txt(b.m_keyword, 40), script: txt(b.m_script, 600), transcript: txt(b.m_transcript, 600),
         value: txt(b.m_value, 60), group: txt(b.m_group, 20), duration: num(b.m_duration), mediaType: txt(b.m_media_type, 20),
-        before: side(b.m_before), after: side(b.m_after) },
+        before: side(b.m_before), after: side(b.m_after),
+        lipsync: b.m_lipsync === false ? false : null, hook_mode: txt(b.m_hook_mode, 20), overlay_required: txt(b.m_overlay, 20),
+        images: Array.isArray(b.m_images) ? b.m_images.map(function (u) { return pubFile(u, IMG_EXT); }).filter(Boolean).slice(0, 40) : [],
+        proposal: b.m_proposal === true },
+      poster: pubFile(txt(b.m_poster, 400), IMG_EXT),
       audio: pubFile(media, AUDIO_EXT), video: pubFile(media, VIDEO_EXT), image: pubFile(cover || media, IMG_EXT),
       hasMedia: !!(media || cover), mediaWhy: fileWhy(cover || media)
     };
   }
-  var REC_ST = { done: 'done', in_progress: 'in_progress', pending: 'pending' };
+  var REC_ST = { done: 'done', in_progress: 'in_progress', pending: 'pending', retired: 'retired' };
+  var CLIP = { before: 'before', after: 'after' };
   function normRecipe(r) {
     var id = rowId(r && r.id);
     if (!id) return null;
@@ -677,7 +690,15 @@
     return {
       id: id, kind: txt(r.kind, 20), subject: txt(r.subject, 40), status: REC_ST[r.status] || 'other',
       comps: Array.isArray(r.components) ? r.components.map(function (c) {
-        return c && typeof c === 'object' && rowId(c.brick_id) ? { slot: txt(c.slot, 4) || '', id: rowId(c.brick_id) } : null;
+        return c && typeof c === 'object' && rowId(c.brick_id) ? { slot: txt(c.slot, 4) || '', id: rowId(c.brick_id), clip: CLIP[c.clip] || null } : null;
+      }).filter(Boolean).slice(0, 12) : [],
+      // même forme que factory_recipes pour usine/coherence.js (assemblyCheck lit components [{brick_id, clip}])
+      components: Array.isArray(r.components) ? r.components.map(function (c) {
+        return c && typeof c === 'object' && rowId(c.brick_id) ? { slot: txt(c.slot, 4) || '', brick_id: rowId(c.brick_id), clip: CLIP[c.clip] || null } : null;
+      }).filter(Boolean).slice(0, 12) : [],
+      label: txt(r.m_label, 200), group: txt(r.m_group, 20), code: txt(r.m_code, 12), duration: num(r.m_duration),
+      clips: Array.isArray(r.m_clips) ? r.m_clips.map(function (c) {
+        return c && typeof c === 'object' && rowId(c.brick_id) ? { key: txt(c.key, 4) || '', id: rowId(c.brick_id), clip: CLIP[c.clip] || null, label: txt(c.label, 80) } : null;
       }).filter(Boolean).slice(0, 12) : [],
       render: pubFile(raw, VIDEO_EXT), renderWhy: raw ? fileWhy(raw, VIDEO_EXT) : 'aucun lien de rendu',
       created: ms(r.created_at), updated: ms(r.updated_at)
@@ -687,7 +708,7 @@
   // reste (ex. l'ancien refus « Test » : { cta: 'avatar + CTA28', demo: 'visite guidée OMNI 1', … }) = texte libre, affiché
   // tel quel et jamais compté comme une vidéo produite.
   // voice = mode de voix de la vidéo finale ('axel' par défaut, 'omni' : usine/publish-qc.mjs, usine/coherence.js comboKey)
-  var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'];
+  var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];   // assemblage = recette HK (avant / après)
   function normCombo(c) {
     if (!c || typeof c !== 'object' || Array.isArray(c)) return { ids: null, legacy: null };
     var keys = Object.keys(c), ids = {}, ok = keys.length > 0;
@@ -771,7 +792,7 @@
       else B.other += 1;
       if (t != null && (B.lastAt == null || t > B.lastAt)) { B.lastAt = t; B.lastKind = k; }
     });
-    var R = { total: rr.length, done: 0, inProgress: 0, pending: 0, other: 0, lastAt: null, lastId: null, list: rr.map(normRecipe).filter(Boolean) };
+    var R = { total: rr.length, done: 0, inProgress: 0, pending: 0, retired: 0, other: 0, lastAt: null, lastId: null, list: rr.map(normRecipe).filter(Boolean) };
     rr.forEach(function (r) {
       var st = r && r.status, t = ms(r && (r.updated_at || r.created_at));
       if (st === 'done') {
@@ -779,6 +800,7 @@
         if (t != null && (R.lastAt == null || t > R.lastAt)) { R.lastAt = t; R.lastId = rowId(r.id); }
       } else if (st === 'in_progress') R.inProgress += 1;
       else if (st === 'pending') R.pending += 1;
+      else if (st === 'retired') R.retired += 1;   // assemblage retiré (règle du 26/09) : gardé pour l'historique, jamais compté
       else R.other += 1;
     });
     var Q = { total: rq.length, pending: 0, approved: 0, refused: 0, unclassified: 0, other: 0, lastRefused: null, classifyMissing: !!classifyMissing, list: rq.map(normQc).filter(Boolean) };
@@ -821,7 +843,7 @@
       try {
         var r = await Promise.all([
           sb.from('factory_bricks').select(BRICK_SEL, { count: 'exact' }).order('id', { ascending: true }).limit(PROD_MAX),
-          sb.from('factory_recipes').select('id,kind,subject,components,status,render_url,created_at,updated_at', { count: 'exact' }).limit(PROD_MAX),
+          sb.from('factory_recipes').select(REC_SEL, { count: 'exact' }).limit(PROD_MAX),
           qcQuery(true),
           Promise.resolve().then(function () { return sb.rpc('factory_prod_stats'); }).catch(function (e) { return { error: { message: errText(e) } }; })
         ]);
