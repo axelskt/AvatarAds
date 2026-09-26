@@ -927,7 +927,7 @@ img { max-width: 100%; }
 .cf-stage .cf-empty-s { text-align: left; font-size: 12.5px; color: var(--cf-mute-2); padding: 0; }
 /* 01 · vidéos générées : barre segmentée, 3 tuiles, variantes par avatar */
 .cf-sseg { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 3px; background: #efe9e1; }
-.cf-sseg i { display: block; height: 100%; }
+.cf-sseg i { display: block; height: 100%; min-width: 3px; }
 .cf-sseg i.is-gen, .cf-stile2-l i.is-gen { background: #ff6b35; }
 .cf-sseg i.is-pd, .cf-stile2-l i.is-pd { background: #ffb391; }
 .cf-sseg i.is-rest, .cf-stile2-l i.is-rest { background: #d6cec3; }
@@ -1063,6 +1063,7 @@ i.is-gap { background: var(--cf-ink); }
 .cf-qchip.is-ok { background: var(--cf-ok-bg); color: var(--cf-ok-fg); }
 .cf-qchip.is-ko { background: var(--cf-err-bg); color: var(--cf-err-fg); }
 .cf-combo { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.cf-arow-sc { font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute-2); margin-left: 4px; }
 .cf-arrow { display: inline-flex; color: var(--cf-accent); }
 
 /* hooks les plus / moins performants */

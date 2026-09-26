@@ -767,7 +767,7 @@
     // sous-titres courts comme la maquette (« 1 variante par avatar »), jamais la formule : A et V restent dans le chiffre
     var per = V > 1 ? ', par avatar et par voix' : ' par avatar', nL = Math.round(I.avgLiaisonsPerHook), nH = Math.round(I.avgHooksPerLiaison);
     var rows = [
-      { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec les ' + c.hooks + ' ' + plural(c.hooks, 'hook') + ' et les ' + c.liaisons + ' ' + plural(c.liaisons, 'liaison') + (V > 1 ? ', en ' + V + NB + 'voix' : '') },
+      { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec les ' + c.lipsyncHooks + ' ' + plural(c.lipsyncHooks, 'hook lipsync', 'hooks lipsync') + ' et les ' + c.liaisons + ' ' + plural(c.liaisons, 'liaison') + (V > 1 ? ', en ' + V + NB + 'voix' : '') + (c.modes && c.modes.aa && c.modes.aa.total ? ', + l’avant / après' : '') },
       { k: 'liaison', t: '+1 liaison', gain: I.liaison, sub: 's’enchaîne avec ≈' + NB + nH + ' ' + plural(nH, 'hook') + per },
       { k: 'hook', t: '+1 hook', gain: I.hook, sub: '1 format court + ≈' + NB + nL + ' ' + plural(nL, 'long', 'longs') + per }
     ].sort(function (a, b) { return b.gain - a.gain; });
@@ -1076,12 +1076,11 @@
     var c = M.cap;
     if (!c) return stageHead('Vidéos générées', '') + naBody(M);
     var V = vfModel(M), g = M.capGen, p = M.capPending, r = c.remaining, tot = c.total, A = c.avatars;
-    var aa = c.modes.aa;
-    var head = stageHead('Vidéos générées · ' + fInt(g) + ' / ' + fInt(tot),
-      '1 vidéo finale = 1 avatar × 1 hook (+ 1 liaison compatible), en 2 voix' + (aa && aa.total ? ' · avant / après = 1 assemblage × 1 hook (+ 1 liaison × 1 avatar).'
-        : '. Maximum = ' + A + ' ' + plural(A, 'avatar') + ' × ' + fInt(A ? tot / A : 0) + ' ' + plural(A ? tot / A : 0, 'vidéo') + '.'));
+    var head = stageHead('Vidéos générées · ' + fInt(g) + ' / ' + fInt(tot), (c.modeKeys || []).map(function (k) {
+      var m = c.modes[k]; return m && m.total ? (m.label || k) + ' ' + fInt(m.total) : '';
+    }).filter(Boolean).join(' · '));
     var segs = [[g, 'is-gen'], [p, 'is-pd'], [r, 'is-rest']].filter(function (x) { return x[0] > 0; }).map(function (x) {
-      return '<i class="' + x[1] + '" style="width:' + (x[0] / Math.max(1, tot) * 100).toFixed(2) + '%"></i>';
+      return '<i class="' + x[1] + '" style="width:max(3px, ' + (x[0] / Math.max(1, tot) * 100).toFixed(2) + '%)"></i>';
     }).join('');
     var tiles = [['gen', plural(g, 'générée'), g, 'is-gen'], ['pend', 'en QC', p, 'is-pd'], ['rest', 'à générer', r, 'is-rest']].map(function (x) {
       var on = ui.pipeVar === x[0];
@@ -1104,13 +1103,13 @@
           + '<span class="cf-savt-bar"><i style="width:' + pc.toFixed(1) + '%"></i></span>'
           + '<span class="cf-savt-m">' + esc(miss + ' ' + plural(miss, 'brique parlée manquante', 'briques parlées manquantes')) + '</span></button>';
       }).join('') + '</div>'
-        + (Vr.out ? '<div class="cf-meta">' + esc(Vr.out + ' ' + plural(Vr.out, 'variante') + ' hors bibliothèque (avatar ou brique parlée absent), non ' + plural(Vr.out, 'comptée')) + '</div>' : '');
+        + (Vr.out ? '<div class="cf-meta">' + esc(Vr.out + ' ' + plural(Vr.out, 'variante') + ' hors bibliothèque') + '</div>' : '');
     }
     var LIM = 90, chips = '';
     if (ui.pipeVar && V) {
       var list = V[ui.pipeVar] || [], rest = ui.pipeVar === 'rest';
       chips = list.length ? stageChips(({ gen: 'vidéos générées', pend: 'vidéos en QC', rest: 'vidéos à générer' })[ui.pipeVar] + ' · ' + fInt(list.length)
-        + (list.length > LIM ? ' · ' + LIM + ' premières affichées' : '') + ' · avatar × hook (× liaison) · voix',
+        + (list.length > LIM ? ' · ' + LIM + ' premières' : ''),
         list.slice(0, LIM).map(function (k) {
           // générée / en QC : la vidéo se lit (fiche vidéo finale) ; à générer : la fiche du hook (maquette)
           return rest ? '<button type="button" class="cf-schip" data-act="brick-open" data-bid="' + esc(String(k).split('|')[2]) + '">' + esc(keyLabel(k)) + '</button>'
@@ -1120,12 +1119,12 @@
       var sp = lipHooks(L).concat(L.liaisons, L.ctas).map(function (b) { return b.id; }), hv = Object.create(null);
       Vr.St.pairs.forEach(function (x) { hv[x[0] + '|' + x[1]] = 1; });
       var mi = sp.filter(function (id) { return !hv[ui.pipeAv + '|' + id]; });
-      chips = mi.length ? stageChips('avatar ' + ui.pipeAv + ' · ' + mi.length + ' ' + plural(mi.length, 'brique parlée', 'briques parlées') + ' sans variante · clique pour voir',
+      chips = mi.length ? stageChips('avatar ' + ui.pipeAv + ' · ' + mi.length + ' ' + plural(mi.length, 'brique parlée', 'briques parlées') + ' sans variante',
         mi.map(function (id) { return '<button type="button" class="cf-schip" data-act="brick-open" data-bid="' + esc(id) + '">' + esc(id) + '</button>'; }))
         : '<div class="cf-empty-s">Toutes les briques parlées ont une variante avec ' + esc(ui.pipeAv) + '.</div>';
     }
     return head + '<div class="cf-sseg" aria-hidden="true">' + segs + '</div><div class="cf-stiles2">' + tiles + '</div>'
-      + '<div class="cf-over">variantes par avatar · clique pour voir les briques parlées manquantes</div>' + avH + chips;
+      + '<div class="cf-over">variantes par avatar</div>' + avH + chips;
   }
 
   // ── panneau 02 · Montages prêts : approuvés par période (courbe de la maquette, téléchargés « — » tant que TrackAds
@@ -1175,7 +1174,7 @@
     var kpis = '<div class="cf-mkpis">' + kpi('is-appr', 'approuvés', fInt(sum), fDec(sum / NP, 1) + ' par ' + S.unit + ' · ' + S.perL
       + (S.undated ? ' · ' + S.undated + ' sans date d’approbation' : ''))
       + kpi('is-dl', 'téléchargés', '—', 'TrackAds pas lancé')
-      + kpi('is-gap', 'écart', '—', 'variation du stock · approuvés − téléchargés') + '</div>';
+      + kpi('is-gap', 'écart', '—', 'TrackAds pas lancé') + '</div>';
     // courbe (maquette) : viewBox 1000 × 150, max × 1,2, valeurs affichées jusqu'à 14 points
     var cmx = Math.max(2, Math.max.apply(null, S.r)) * 1.2;
     var X = function (k) { return NP > 1 ? k / (NP - 1) * 1000 : 500; }, Y = function (v) { return 150 - v / cmx * 150; };
@@ -1203,7 +1202,7 @@
     keys.sort(function (a, b) { return mods[b].length - mods[a].length || (a < b ? -1 : 1); });
     var mmax = Math.max.apply(null, keys.map(function (k) { return mods[k].length; }).concat([1]));
     if (ui.pipeMod && !mods[ui.pipeMod]) ui.pipeMod = null;
-    var rows = '<div class="cf-over">clique un module pour voir ses vidéos en stock</div><div class="cf-srows">' + keys.map(function (k) {
+    var rows = '<div class="cf-over">modules</div><div class="cf-srows">' + keys.map(function (k) {
       var n = mods[k].length, on = ui.pipeMod === k;
       return '<button type="button" class="cf-srow' + (on ? ' is-on' : '') + '" data-act="pipe-mod" data-k="' + esc(k) + '" aria-pressed="' + on + '"><span class="cf-srow-l">' + esc(k) + '</span>'
         + '<span class="cf-srow-b"><i style="width:' + Math.max(2, n / mmax * 100).toFixed(1) + '%"></i></span><b>' + esc(fInt(n)) + '</b></button>';
@@ -1211,7 +1210,7 @@
     var chips = '';
     if (ui.pipeMod) {
       var L0 = mods[ui.pipeMod].slice().sort(function (a, b) { return qcWhenMs(b) - qcWhenMs(a); });
-      chips = stageChips('en stock · ' + ui.pipeMod + ' · clique pour voir', L0.map(function (q) {
+      chips = stageChips('en stock · ' + ui.pipeMod, L0.map(function (q) {
         return '<button type="button" class="cf-schip" data-act="vf-open" data-qid="' + esc(q.id) + '">' + esc(vfName(q) + (q.combo ? ' · ' + (VOICE_CHIP[q.combo.assemblage && !q.combo.voice ? 'aa' : q.combo.voice || 'axel'] || 'voix ?') : '') + (q.reviewed != null ? ' · ' + dm(new Date(q.reviewed)) : '')) + '</button>';
       }));
     }
@@ -1377,7 +1376,8 @@
   // Types des cartes de performance : ceux de la maquette, + Format dès qu'une recette factory_qc porte brick_combo.format
   // (jamais un onglet vide). La fraîcheur garde la liste des briques (un format n'est pas une brique).
   function perfKinds() {
-    var D = CF.prod.data, fmt = !!(D && D.qc.list.some(function (q) { return q.format; }));
+    // onglet Formats seulement quand un format est mesurable (lien publication ↔ vidéo QC, HEARD.format) : jamais vide
+    var D = CF.prod.data, fmt = !!(HEARD.format && D && D.qc.list.some(function (q) { return q.format; }));
     return fmt ? PERF_KINDS.concat([['format', 'Formats']]) : PERF_KINDS;
   }
   function perfSeg(act, cur, side, kinds) {
@@ -1393,17 +1393,17 @@
     if (ms.st !== 'ok') return { why: ms.why };
     var I = brickIndex(), n = I.postsV[k] || 0, byId = prodModel().byId;
     if (n < 3) return { why: 'Pas assez de données : ' + n + ' ' + plural(n, 'publication') + ' avec ' + plural(2, KIND_PL[k][0], KIND_PL[k][1]) + ' reconnu' + (k === 'liaison' ? 'es' : 's') + ' (3 minimum)' };
-    // total = somme des vues des publications où la brique est reconnue, n = ces publications (vues lues), classement à la
-    // moyenne total / n (Axel 26/09 : « 1 000 vues / 2 publications · ≈500 vues moyennes »)
+    // total = somme des vues des publications où la brique est reconnue, n = ces publications (vues lues) ; classement et barre
+    // sur le total, le chiffre en gras (Axel 26/09 : « 1 000 vues / 2 publications · ≈500 vues moyennes »)
     var rows = Object.keys(I.by).map(function (id) { return I.by[id]; }).filter(function (r) { return r.kind === k && r.nv > 0 && (!byId[r.id] || live(byId[r.id])); })
-      .map(function (r) { return { id: r.id, views: r.views, avg: r.views / r.nv, nv: r.nv }; }).sort(function (a, b) { return b.avg - a.avg || (a.id < b.id ? -1 : 1); });
+      .map(function (r) { return { id: r.id, views: r.views, avg: r.views / r.nv, nv: r.nv }; }).sort(function (a, b) { return b.views - a.views || b.avg - a.avg || (a.id < b.id ? -1 : 1); });
     var half = Math.ceil(rows.length / 2);
     return { top: rows.slice(0, Math.min(6, half)), low: rows.slice(half).reverse().slice(0, 6) };
   }
   // « 1 000 vues / 2 publications · ≈500 vues moyennes » (espaces fines des milliers, singulier sous 2)
   function perfLine(r) {
     var avg = Math.round(r.avg);
-    return { tot: fInt(r.views) + ' ' + plural(r.views, 'vue'), rest: '/ ' + fInt(r.nv) + ' ' + plural(r.nv, 'publication') + ' · ≈' + fInt(avg) + ' ' + plural(avg, 'vue moyenne', 'vues moyennes') };
+    return { tot: fInt(r.views) + ' ' + plural(r.views, 'vue'), rest: '/ ' + fInt(r.nv) + ' ' + plural(r.nv, 'publication') + (r.nv > 1 ? ' · ≈' + fInt(avg) + ' ' + plural(avg, 'vue moyenne', 'vues moyennes') : '') };
   }
   function perfCardHTML(side) {
     var kinds = perfKinds(), best = side !== 'low';
@@ -1415,20 +1415,20 @@
     else if (R.why) body = emptyLine('—', R.why);
     else if (!list.length) body = emptyLine('—', 'pas assez de briques différentes pour comparer');
     else {
-      var mx = Math.max.apply(null, list.map(function (r) { return r.avg; }).concat([1]));
+      var mx = Math.max.apply(null, list.map(function (r) { return r.views; }).concat([1]));
       body = '<div class="cf-perf">' + list.map(function (r, i) {
         var t = perfLine(r);
         return '<div class="cf-prow" data-perf="' + esc(t.tot + ' ' + t.rest) + '"><span class="cf-mrank' + (i === 0 ? ' is-acc' : '') + '">#' + (i + 1) + '</span>'
           + '<button type="button" class="cf-pid" data-act="brick-open" data-bid="' + esc(r.id) + '">' + esc(r.id) + '</button>'
-          + '<span class="cf-pbar' + (best ? '' : ' is-low') + '"><i style="width:' + Math.max(4, r.avg / mx * 100).toFixed(1) + '%"></i></span>'
+          + '<span class="cf-pbar' + (best ? '' : ' is-low') + '"><i style="width:' + Math.max(4, r.views / mx * 100).toFixed(1) + '%"></i></span>'
           + '<b class="cf-pv">' + esc(t.tot) + '</b><span class="cf-pn">' + esc(t.rest) + '</span></div>';
       }).join('') + '</div>';
     }
     var title = name + ' les ' + (best ? 'plus' : 'moins') + ' performant' + (FEM[k] ? 'es' : 's');
     return '<section class="cf-card cf-perf-c" data-block="perf" data-side="' + (best ? 'top' : 'low') + '">'
-      + chead(title, best ? 'vues moyennes des vidéos qui les utilisent' : 'à remplacer ou retravailler')
+      + chead(title, best ? 'vues totales des vidéos qui les utilisent' : 'à remplacer ou retravailler')
       + perfSeg('perf-kind', k, best ? 'top' : 'low', kinds) + body
-      + '<div class="cf-pfoot">vues totales / publications qui l’utilisent · ≈ vues moyennes par publication (classement)</div></section>';
+      + '<div class="cf-pfoot">vues totales / publications · ≈ vues moyennes</div></section>';
   }
 
   // ── 03 · Briques : Bibliothèque · Assemblages (recettes de hooks) · Fraîcheur ──
@@ -1537,13 +1537,15 @@
     var chip = function (s) {
       return '<button type="button" class="cf-asm-chip' + (f === s ? ' is-on' : '') + '" data-act="rec-filter" data-k="' + s + '" aria-pressed="' + (f === s) + '"><i class="' + (REC_ST[s][1] || 'is-todo') + '"></i>' + esc(REC_ST[s][0]) + '<span>' + by[s] + '</span></button>';
     };
-    var chips = '<div class="cf-asm-chips"><button type="button" class="cf-asm-chip' + (f === 'all' ? ' is-on' : '') + '" data-act="rec-filter" data-k="all" aria-pressed="' + (f === 'all') + '">Tous<span>' + R.length + '</span></button>'
+    var chips = '<div class="cf-asm-chips"><button type="button" class="cf-asm-chip' + (f === 'all' ? ' is-on' : '') + '" data-act="rec-filter" data-k="all" aria-pressed="' + (f === 'all') + '">Actifs<span>' + R.length + '</span></button>'
       + order.map(chip).join('') + (nRet ? chip('retired') : '') + '</div>';
     var rows = (f === 'all' ? R : All.filter(function (r) { return r.status === f; })), vis = ui.recAll ? rows : rows.slice(0, REC_LIM);
+    var sig = function (r) { return recClips(r).map(function (c) { return c.t; }).join('>'); }, dup = Object.create(null);
+    rows.forEach(function (r) { var k = sig(r); dup[k] = (dup[k] || 0) + 1; });
     var body = vis.map(function (r) {
-      var st = REC_ST[r.status] || REC_ST.other;
+      var st = REC_ST[r.status] || REC_ST.other, sc = dup[sig(r)] > 1 ? (/\(([^()]+)\)\s*$/.exec(r.label || '') || [])[1] : '';
       return '<div class="cf-arow" data-rid="' + esc(r.id) + '"><span class="cf-arow-id"><button type="button" class="cf-vid is-btn" data-act="asm-open" data-rid="' + esc(r.id) + '">' + esc(r.id) + '</button></span><span class="cf-arow-m">' + esc(subjName(r.subject || '—')) + '</span><span class="cf-combo">'
-        + clipChips(r, 'cf-chip is-brick is-btn')
+        + clipChips(r, 'cf-chip is-brick is-btn') + (sc ? '<span class="cf-arow-sc">' + esc(sc) + '</span>' : '')
         + '</span><span><span class="cf-qchip ' + st[1] + '">' + esc(r.status === 'retired' ? 'retiré' : st[0]) + '</span></span><span class="cf-arow-r">'
         + (r.render ? '<button type="button" class="cf-btn is-sm" data-act="rec-play" data-rid="' + esc(r.id) + '">' + svg(IC.play, 11) + 'voir</button>'
           : '<span class="cf-meta" title="' + esc(r.renderWhy || '') + '">rendu introuvable</span>') + '</span></div>';
@@ -1558,7 +1560,7 @@
   // Fiche d'un assemblage (même fenêtre que la fiche vidéo finale) : lecteur du rendu, composants en clair, module, statut
   function asmSheetHTML(rid) {
     var D = CF.prod.data, r = D ? D.recipes.list.filter(function (x) { return x.id === rid; })[0] : null;
-    if (!r) return '<div class="cf-vf"><div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">' + esc(rid || 'Assemblage') + '</h2><span class="cf-meta">introuvable (relu entre-temps)</span></div></div>';
+    if (!r) return '<div class="cf-vf">' + underBack('asm-back') + '<div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">' + esc(rid || 'Assemblage') + '</h2><span class="cf-meta">introuvable (relu entre-temps)</span></div></div>';
     var st = REC_ST[r.status] || REC_ST.other, ck = r.status === 'retired' ? null : recCheck(r);
     var meta = ['Assemblage', subjName(r.subject || '—'), r.group ? 'groupe ' + r.group : '', r.status === 'retired' ? 'retiré' : st[0],
       r.duration != null ? fDec(r.duration, 1) + NB + 's' : ''].filter(Boolean).join(' · ');
@@ -1567,14 +1569,39 @@
     var media = '<div class="cf-vf-stage"><div class="cf-vf-frame cf-mbox' + (v ? '' : ' is-broken') + '">'
       + (v ? '<video controls playsinline preload="metadata" src="' + esc(v) + '"></video><span class="cf-vmsg">rendu illisible (fichier introuvable ou refusé)</span>'
         : '<span class="cf-vmsg is-on">rendu introuvable · ' + esc(r.renderWhy || 'aucun lien') + '</span>') + '</div></div>';
-    return '<div class="cf-vf cf-asmf" data-rid="' + esc(r.id) + '"><div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">' + esc(r.id) + '</h2><span class="cf-meta">' + esc(meta) + '</span>'
+    return '<div class="cf-vf cf-asmf" data-rid="' + esc(r.id) + '">' + underBack('asm-back') + '<div class="cf-vf-h"><h2 class="cf-vf-t" id="cfModalTitle">' + esc(r.id) + '</h2><span class="cf-meta">' + esc(meta) + '</span>'
       + (line ? '<span class="cf-asmf-l">' + esc(line) + '</span>' : '')
       + (ck && !ck.valid && ck.reasons.length ? '<span class="cf-vf-why">' + esc('à revoir : ' + ck.reasons.join(' · ')) + '</span>' : '') + '</div>'
       + media + '<div class="cf-over">Composants</div><div class="cf-vf-chips">' + clipChips(r, 'cf-vf-chip') + '</div></div>';
   }
   function openAsm(rid, trigger) {
     if (!rid || !CF.prod.data) return;
+    // fenêtre déjà ouverte (revue QC, fiche vidéo finale) : l'assemblage se pose par-dessus, comme une brique ; la revue
+    // (position, motif en cours) reste dans ui.modal et le focus d'origine (ui.lastFocus) n'est pas touché
+    if (ui.modal && (ui.modal.qc || ui.modal.vf)) {
+      ui.modal.asm = rid; ui.modal.brick = null;
+      renderModal();
+      $('cfModalBody').scrollTop = 0;
+      var bk = document.querySelector('#cfModalBody [data-act="asm-back"]'); if (bk) bk.focus();
+      return;
+    }
     openModal({ asm: rid }, trigger);
+  }
+  function asmBack() {
+    if (!ui.modal || !ui.modal.asm || !(ui.modal.qc || ui.modal.vf)) return;
+    var rid = ui.modal.asm; ui.modal.asm = null;
+    renderModal();
+    var b = [].slice.call(document.querySelectorAll('#cfModalBody [data-act="asm-open"]')).filter(function (x) { return x.getAttribute('data-rid') === rid; })[0];
+    if (b) b.focus();
+  }
+  // Bouton retour vers la fenêtre d'en dessous (revue QC ou fiche vidéo finale), '' si l'élément est seul
+  function underBack(act) {
+    var M = ui.modal, label = M.qc ? 'Revue QC' : M.vf ? vfTitle(M.vf) : '';
+    return label ? '<button type="button" class="cf-back" data-act="' + act + '">' + svg('M15 18l-6-6 6-6', 14) + esc(label) + '</button>' : '';
+  }
+  function vfTitle(qid) {
+    var D = CF.prod.data, q = D ? D.qc.list.filter(function (x) { return x.id === qid; })[0] : null;
+    return q ? vfName(q) : 'Vidéo finale';
   }
   function freshHTML(M) {
     var k = ui.freshKind;
@@ -3015,8 +3042,8 @@
     var views = uses.map(function (p) { return p.views || 0; }), tot = views.reduce(function (a, x) { return a + x; }, 0);
     var avg = uses.length ? tot / uses.length : null, max = Math.max.apply(null, views.concat([1]));
     var back = ui.modal.post ? '<button type="button" class="cf-back" data-act="brick-back">' + svg('M15 18l-6-6 6-6', 14) + 'Publication' + (ui.modal.rank ? ' #' + ui.modal.rank : '') + '</button>'
-      : ui.modal.qc ? '<button type="button" class="cf-back" data-act="brick-back">' + svg('M15 18l-6-6 6-6', 14) + 'Revue QC</button>'
-        : ui.modal.asm ? '<button type="button" class="cf-back" data-act="brick-back">' + svg('M15 18l-6-6 6-6', 14) + esc(ui.modal.asm) + '</button>' : '';
+      : ui.modal.asm ? '<button type="button" class="cf-back" data-act="brick-back">' + svg('M15 18l-6-6 6-6', 14) + esc(ui.modal.asm) + '</button>'
+        : underBack('brick-back');
     var photos = b.kind === 'avatar' && fb ? avPhotos(fb) : [], prop = isProposal(fb);
     var sub = [SHEET_KIND[b.kind] || 'Brique', photos.length > 1 ? photos.length + ' photos' : '', prop ? 'proposition' : '',
       b.kind === 'sous-titre' && m.value ? 'style ' + m.value : '', m.duration != null ? 'durée ' + fMmss(m.duration) : '', b.keyword ? 'mot-clé ' + b.keyword : '',
@@ -3033,7 +3060,7 @@
       // toutes les photos de l'avatar : la grande (couverture par défaut) + les vignettes, un clic l'affiche en grand
       var cov = fb && mediaSrc(fb.image), sel = ui.modal.avImg != null && photos[ui.modal.avImg] ? ui.modal.avImg : Math.max(0, photos.indexOf(cov));
       media = photos.length ? '<div class="cf-sheet-media is-portrait">' + thumbImg(photos[sel], 800, 'alt="' + esc('Photo ' + (sel + 1) + ' de ' + b.id) + '" decoding="async"') + '</div>'
-        + (photos.length > 1 ? '<span class="cf-bs-cap-t">' + photos.length + ' photos</span><div class="cf-avgrid">' + photos.map(function (u, i) {
+        + (photos.length > 1 ? '<div class="cf-avgrid">' + photos.map(function (u, i) {
           return '<button type="button" class="cf-avth' + (i === sel ? ' is-on' : '') + '" data-act="av-img" data-i="' + i + '" aria-pressed="' + (i === sel) + '" aria-label="' + esc('Photo ' + (i + 1)) + '">' + thumbImg(u, 160, 'alt="" loading="lazy" decoding="async"', true) + '</button>';
         }).join('') + '</div>' : '')
         : ph('avatar · ' + b.id) + miss('portrait');
@@ -3110,21 +3137,23 @@
     // grande fenêtre : revue QC, et fiche brique ouverte depuis une publication (Insight, inchangé) ; depuis l'onglet
     // Production, la fiche brique garde les 760 px de la maquette (11, 27, 28-fiche-transformation)
     // (depuis la revue QC, la fiche garde la largeur de la revue : la fenêtre ne saute pas deux fois)
-    var box = document.querySelector('.cf-modal-box'), wide = !!(ui.modal && (ui.modal.brick ? ui.modal.post || ui.modal.qc || ui.tab !== 'prod' : ui.modal.qc));
+    // (un assemblage ouvert depuis la revue QC se pose par-dessus comme une brique : même largeur que la revue)
+    var over = !!(ui.modal && (ui.modal.brick || (ui.modal.asm && (ui.modal.qc || ui.modal.vf))));
+    var box = document.querySelector('.cf-modal-box'), wide = !!(ui.modal && (over ? ui.modal.post || ui.modal.qc || (ui.modal.brick && ui.tab !== 'prod') : ui.modal.qc));
     if (box) {
       box.classList.toggle('is-wide', wide);
       // fiche brique / rendu vidéo de la Production : fenêtre de la maquette (padding 22, fermeture 32 px alignée sur le titre,
       // centrée aussi sur téléphone)
       var sheet = !!(ui.modal && !wide && (ui.modal.brick || ui.modal.video || ui.modal.vf || ui.modal.asm));
       box.classList.toggle('is-sheet', sheet);
-      box.classList.toggle('is-vf', !!(ui.modal && (ui.modal.vf || ui.modal.asm) && !ui.modal.brick));   // fiche vidéo finale / assemblage : 560 px (maquette)
+      box.classList.toggle('is-vf', !!(ui.modal && !wide && (ui.modal.vf || ui.modal.asm) && !ui.modal.brick));   // fiche vidéo finale / assemblage : 560 px (maquette)
       $('cfModal').classList.toggle('is-center', sheet);
     }
     if (ui.modal.brick) { setHTML($('cfModalBody'), brickSheetHTML(ui.modal.brick)); return; }
+    if (ui.modal.asm) { setHTML($('cfModalBody'), asmSheetHTML(ui.modal.asm)); return; }
     if (ui.modal.qc) { renderQcModal(); return; }
     if (ui.modal.video) { setHTML($('cfModalBody'), videoModalHTML(ui.modal.video)); return; }
     if (ui.modal.vf) { setHTML($('cfModalBody'), vfSheetHTML(ui.modal.vf)); return; }
-    if (ui.modal.asm) { setHTML($('cfModalBody'), asmSheetHTML(ui.modal.asm)); return; }
     var cur = CF.acct.media.data && CF.acct.media.data.list.filter(function (x) { return x.id === ui.modal.post.id; })[0];
     if (cur) ui.modal.post = cur;   // la liste a pu être relue : jamais un module périmé dans la fiche
     var p = ui.modal.post, rank = ui.modal.rank;
@@ -3255,6 +3284,7 @@
       else if (act === 'perf-kind') { if (perfKinds().some(function (x) { return x[0] === el.getAttribute('data-k'); })) { if (el.getAttribute('data-side') === 'low') ui.perfKindLow = el.getAttribute('data-k'); else ui.perfKind = el.getAttribute('data-k'); render(); } }
       else if (act === 'rec-filter') { if (['all', 'done', 'in_progress', 'pending', 'other', 'retired'].indexOf(el.getAttribute('data-k')) >= 0) { ui.recFilter = el.getAttribute('data-k'); render(); } }
       else if (act === 'asm-open') openAsm(el.getAttribute('data-rid'), el);
+      else if (act === 'asm-back') asmBack();
       else if (act === 'av-img') { var ai = parseInt(el.getAttribute('data-i'), 10); if (ui.modal && ui.modal.brick && ai >= 0 && ai < 40) { ui.modal.avImg = ai; renderModal(); var ab = document.querySelector('#cfModalBody [data-act="av-img"][data-i="' + ai + '"]'); if (ab) ab.focus(); } }
       else if (act === 'rec-all') { ui.recAll = !ui.recAll; render(); }
       else if (act === 'fresh-kind') { if (PERF_KINDS.some(function (x) { return x[0] === el.getAttribute('data-k'); })) { ui.freshKind = el.getAttribute('data-k'); render(); } }
@@ -3271,6 +3301,23 @@
       else if (act === 'vf-open') openVf(el.getAttribute('data-qid'), el);
       else if (act === 'otp-send') sendOtp();
       else if (act === 'otp-back') { show('cfLoginOtp', false); show('cfLoginPwd', true); loginMsg(''); }
+    });
+    // Clavier : un sélecteur (étape, tuile, avatar, module, période, type…) re-rendu par render() garde le focus. Avant le
+    // clic (capture), on note le bouton qui a le focus ; après (le rendu est synchrone), s'il a disparu et que le focus est
+    // tombé sur <body>, on le rend au bouton équivalent du nouveau DOM (mêmes data-act / data-k / data-side…).
+    var FOCUS_KEYS = ['data-act', 'data-k', 'data-side', 'data-tab', 'data-range', 'data-i', 'data-bid', 'data-rid', 'data-qid'], keepFocus = null;
+    document.addEventListener('click', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+      keepFocus = el && document.activeElement === el ? { el: el, sel: FOCUS_KEYS.filter(function (a) { return el.hasAttribute(a); }).map(function (a) {
+        return '[' + a + '="' + String(el.getAttribute(a)).replace(/["\\]/g, '\\$&') + '"]';
+      }).join('') } : null;
+    }, true);
+    document.addEventListener('click', function () {
+      var k = keepFocus; keepFocus = null;
+      if (!k || document.body.contains(k.el)) return;
+      var a = document.activeElement;
+      if (a && a !== document.body && a !== document.documentElement) return;
+      var n = document.querySelector(k.sel); if (n) n.focus();
     });
 
     // flèches gauche / droite dans la barre d'onglets
