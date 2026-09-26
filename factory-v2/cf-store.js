@@ -709,18 +709,21 @@
   // tel quel et jamais compté comme une vidéo produite.
   // voice = mode de voix de la vidéo finale ('axel' par défaut, 'omni' : usine/publish-qc.mjs, usine/coherence.js comboKey)
   var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];   // assemblage = recette HK (avant / après)
+  // format de hook testé (F01…) et phrase choc (TH01…) : usine/formats.js, écrits par publish-qc.mjs (26/09) ; gardés À PART
+  // (q.format, q.texteChoc) : ce ne sont pas des briques de la vidéo, jamais dans sa clé voix|avatar|hook|liaison.
+  var COMBO_FMT = { format: /^F[0-9]{2}$/, texte_choc: /^TH[0-9]{2}$/ };
   function normCombo(c) {
-    if (!c || typeof c !== 'object' || Array.isArray(c)) return { ids: null, legacy: null };
-    var keys = Object.keys(c), ids = {}, ok = keys.length > 0;
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return { ids: null, legacy: null, fmt: null };
+    var keys = Object.keys(c), ids = {}, fmt = {}, ok = keys.length > 0;
     keys.forEach(function (k) {
       if (c[k] == null || c[k] === '') return;
-      if (k === 'format') return;   // format de la vidéo (à venir) : lu à part (normQc), ne rend jamais la recette « texte libre »
+      if (Object.prototype.hasOwnProperty.call(COMBO_FMT, k)) { if (typeof c[k] === 'string' && COMBO_FMT[k].test(c[k])) fmt[k] = c[k]; else ok = false; return; }
       if (COMBO_KEYS.indexOf(k) < 0 || !rowId(c[k])) ok = false; else ids[k] = c[k];
     });
-    if (ok && Object.keys(ids).length) return { ids: ids, legacy: null };
+    if (ok && Object.keys(ids).length) return { ids: ids, legacy: null, fmt: fmt };
     return { ids: null, legacy: keys.slice(0, 10).map(function (k) {
       var v = c[k]; return [String(k).slice(0, 30), typeof v === 'string' ? v.slice(0, 120) : v == null ? '' : JSON.stringify(v).slice(0, 120)];
-    }) };
+    }), fmt: null };
   }
   function normCoh(o) {
     if (!o || typeof o !== 'object') return null;
@@ -742,8 +745,8 @@
       id: id, status: QC_ST[q.status] || 'other', template: txt(q.template, 40), route: r(q.route),
       video: pubFile(rawV, VIDEO_EXT), videoWhy: rawV ? fileWhy(rawV, VIDEO_EXT) : 'aucune vidéo', poster: pubFile(txt(q.poster_url, 400), IMG_EXT),
       combo: cb.ids, legacy: cb.legacy,
-      // brick_combo.format (quand l'usine l'écrira) : ouvre l'onglet « Formats » des cartes de performance, jamais vide
-      format: q.brick_combo && typeof q.brick_combo === 'object' && !Array.isArray(q.brick_combo) ? rowId(q.brick_combo.format) : null,
+      // brick_combo.format / texte_choc (usine/formats.js) : ouvre l'onglet « Formats » des cartes de performance
+      format: cb.fmt && cb.fmt.format || null, texteChoc: cb.fmt && cb.fmt.texte_choc || null,
       tech: { route: r(q.t_route), pass: typeof q.t_pass === 'boolean' ? q.t_pass : null, hard: sArr(q.t_hard, 20, 80), soft: sArr(q.t_soft, 20, 80), error: txt(q.t_err, 200) },
       coh: normCoh(q.t_coh),
       vis: q.v_route || q.v_verdict ? { route: q.v_route === 'ok' || q.v_route === 'doubt' ? q.v_route : null, verdict: normVerdict(q.v_verdict) } : null,
