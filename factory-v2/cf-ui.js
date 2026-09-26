@@ -2969,7 +2969,7 @@
     $('cfModalBody').scrollTop = 0;
     var t = $('cfModalTitle'); if (t) { t.tabIndex = -1; t.focus(); }
   }
-  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar' };
+  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook' };
   function fMmss(v) { var t = Math.round(v); return p2(Math.floor(t / 60)) + ':' + p2(t % 60); }
   var PLAY_P = 'M7 4l13 8-13 8z', PAUSE_P = 'M6 4h4v16H6zM14 4h4v16h-4z';
   function glyph(p, s) { return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="' + p + '"/></svg>'; }

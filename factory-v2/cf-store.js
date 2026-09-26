@@ -616,7 +616,9 @@
   //    (RLS owner/dev) + RPC factory_prod_stats() (variantes, missions). Clés de meta choisies une par une (jamais tout
   //    meta : transcript, fichiers locaux…), puis passées en liste blanche. Statuts en liste blanche (migrations
   //    20260918150000 et factory_qc_status_check) ; un statut inconnu est compté à part, jamais rangé dans « prêt ».
-  var BRICK_KINDS = ['hook', 'liaison', 'cta', 'contenu', 'transformation', 'avatar', 'musique', 'sous-titre'];
+  // 'format' (F01…, usine/formats.js) : variante de présentation testée, pas une brique de la vidéo ; hors des tuiles de la
+  // Bibliothèque, ouvert depuis les cartes de performance (onglet Formats)
+  var BRICK_KINDS = ['hook', 'liaison', 'cta', 'contenu', 'transformation', 'avatar', 'musique', 'sous-titre', 'format'];
   var BRICK_SEL = ['id', 'kind', 'subject', 'label', 'status', 'created_at', 'updated_at',
     'm_subjects:meta->compatible_subjects', 'm_modules:meta->modules', 'm_alias:meta->>alias_of', 'm_module:meta->>module',
     'm_variant:meta->>variant', 'm_media:meta->>media', 'm_media_type:meta->>media_type', 'm_keyword:meta->>keyword',
