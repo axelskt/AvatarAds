@@ -137,7 +137,10 @@ test('declineTop : même voix, avatar, hook et liaison ; AUTRE démo et AUTRE CT
   const top = { voice: 'omni', avatar: 'A2', hook: 'H74', liaison: 'L48', contenu: 'C-OMNI-01', cta: 'CTA-1', musique: 'M03' };
   const r = C.declineTop(top, rows, { rand: seq(0), from: 'VF-0101' });
   assert.equal(r.level, 'ok');
-  assert.deepEqual({ ...r.combo, contenu: undefined, cta: undefined }, { voice: 'omni', avatar: 'A2', hook: 'H74', liaison: 'L48', contenu: undefined, cta: undefined, musique: 'M03', declined_from: 'VF-0101' });
+  assert.deepEqual({ ...r.combo, contenu: undefined, cta: undefined }, { voice: 'omni', avatar: 'A2', hook: 'H74', liaison: 'L48', contenu: undefined, cta: undefined, musique: 'M03' });
+  // la publication d'origine est rendue À CÔTÉ de la recette, jamais dedans (clés de brick_combo = COMBO_KEYS seulement)
+  assert.equal(r.from, 'VF-0101'); assert.ok(Object.keys(r.combo).every(k => C.COMBO_KEYS.includes(k)));
+  assert.equal(C.comboCheck(r.combo, byIdOf(rows), MX).reasons.some(x => /clé inconnue/.test(x)), false);
   assert.equal(r.combo.contenu, 'C-OMNI-02'); assert.equal(r.combo.cta, 'CTA-2');
   assert.equal(r.key, C.comboKey(top, byIdOf(rows)));
 });
@@ -160,7 +163,40 @@ test('comboCheck : paire hors tags → revue ; avec la matrice, liaison non vali
   const c = C.comboCheck({ avatar: 'A1', hook: 'H12', liaison: 'L16', contenu: 'C-IMGIA-01', cta: 'CTA-1' }, B, MX);
   assert.equal(c.level, 'ok');
   const d = C.comboCheck({ avatar: 'A1', hook: 'H12', contenu: 'C-CLAUDE-01' }, B);
-  assert.ok(d.reasons.includes('C-CLAUDE-01 n’est pas prête (statut retired)'));
+  assert.ok(d.reasons.includes('C-CLAUDE-01 n’est pas prête (retirée)'));
+});
+test('comboCheck : voix inconnue, hook sans audio (Audio d’Axel) ou sans texte (Omni), clé inconnue → revue avec raison', () => {
+  const rows = library({ edit: r => { delete r.find(b => b.id === 'H14').meta.media; const k = r.find(b => b.id === 'H13'); delete k.meta.script; k.label = ''; } }), B = byIdOf(rows);
+  const base = { avatar: 'A1', hook: 'H12', contenu: 'C-IMGIA-01', cta: 'CTA-1' };
+  assert.equal(C.comboCheck(base, B, MX).level, 'ok');
+  const a = C.comboCheck({ ...base, voice: 'tts' }, B, MX);
+  assert.equal(a.level, 'review'); assert.ok(a.reasons.includes('voix « tts » inconnue (axel ou omni)'));
+  assert.equal(C.comboCheck({ ...base, voice: 'Omni' }, B, MX).level, 'review');
+  const b = C.comboCheck({ ...base, hook: 'H14' }, B, MX);
+  assert.ok(b.reasons.includes('hook H14 sans fichier audio (Audio d’Axel)'));
+  assert.equal(C.comboCheck({ ...base, hook: 'H14', voice: 'omni' }, B, MX).level, 'ok');
+  assert.ok(C.comboCheck({ ...base, hook: 'H13', voice: 'omni' }, B, MX).reasons.includes('hook H13 sans texte à dire (Voix native Omni)'));
+  const c = C.comboCheck({ ...base, declined_from: '17800000000000001' }, B, MX);
+  assert.equal(c.level, 'review'); assert.match(c.reasons[0], /^clé inconnue dans la recette : declined_from/);
+});
+test('comboCheck : liaison hors du module de la démo (paire ok) ≠ paire à revoir', () => {
+  const rows = library({ edit: r => { r.find(b => b.id === 'L33').meta.modules = ['montage-ia', 'mcp-claude']; } }), B = byIdOf(rows);
+  assert.ok(C.comboCheck({ avatar: 'A1', hook: 'H14', liaison: 'L33', contenu: 'C-IMGIA-01' }, B, MX).reasons.includes('liaison L33 hors du module de la démo C-IMGIA-01 (image-ia)'));
+  assert.ok(C.comboCheck({ avatar: 'A1', hook: 'H14', liaison: 'L33', contenu: 'C-OMNI-01' }, B, MX).reasons.includes('liaison L33 non générique sur une paire à revoir'));
+});
+test('capacité : clés venues de la base jamais lues sur le prototype (« __proto__ », « constructor ») ; voix inconnue hors des possibles', () => {
+  const c = C.capacity(library(), ['__proto__|A1|toString|name', 'axel|A1|constructor|name', 'axel|toString|H12|', 'Omni|A1|H12|'], MX);
+  assert.equal(c.done, 0); assert.equal(c.outside, 4); assert.equal(({}).done, undefined); assert.equal(Object.prototype.done, undefined);
+  assert.equal(C.comboKey({ avatar: 'A1', hook: 'constructor' }, {}), 'axel|A1|constructor|');
+});
+test('pickDemo (format long) : préfère une démo que la liaison accepte (module), sinon revue QC avec la raison de la liaison', () => {
+  const rows = library({ edit: r => { r.find(b => b.id === 'L12').meta.modules = ['omni']; } }), B = byIdOf(rows), demos = rows.filter(b => b.kind === 'contenu');
+  assert.equal(C.pickDemo(B.H20, demos, seq(0)).demo.id, 'C-IMGIA-01');   // sans liaison : toutes les démos (hook générique)
+  const a = C.pickDemo(B.H20, demos, seq(0), [], B.L12);
+  assert.equal(a.demo.id, 'C-OMNI-01'); assert.equal(a.level, 'ok'); assert.equal(a.preferred, 4);
+  const b = C.pickDemo(B.H12, demos, seq(0), [], B.L12);   // H12 image-ia : aucune démo image-ia n'est dans le module de L12
+  assert.equal(b.level, 'review'); assert.equal(b.demo.id, 'C-IMGIA-01'); assert.equal(b.why, 'liaison L12 hors du module de la démo C-IMGIA-01 (image-ia)');
+  assert.equal(C.pickDemo(B.H12, demos, seq(0), [], B.L16).level, 'ok');   // liaison générique
 });
 
 const fails = results.filter(r => r.startsWith('FAIL')).length;

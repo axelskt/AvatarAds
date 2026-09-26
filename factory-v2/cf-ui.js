@@ -104,7 +104,12 @@
     mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3',
     film: 'M4 3h16v18H4zM8 3v18M16 3v18M4 8h4M4 16h4M16 8h4M16 16h4',
     wand: 'M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5',   // pipeline (maquette)
-    reel: 'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM7 3v18M17 3v18M3 12h18'
+    reel: 'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM7 3v18M17 3v18M3 12h18',
+    // tuiles de la Bibliothèque : pictogrammes de la maquette (LIB_IC), à part pour ne pas changer les autres usages
+    demo: 'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM10 8l6 4-6 4z',
+    ctaPtr: 'M9 9l5 12 1.8-5.2L21 14 9 9z',
+    subs: 'M3 5h18v14H3zM7 13h4M13 13h4M7 16h10',
+    swap2: 'M4 7h13l-3-3M20 17H7l3 3'
   };
   function svg(path, size) {
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
@@ -550,16 +555,14 @@
   function homeProdCard() {
     var M = prodModel(), D = M.D;
     function na(k, label, o) { return M.pending ? hstat(k, '…', label, 'chargement', o) : hstat(k, '—', label, M.why, o); }
-    var gen = !D ? na('togen', 'Vidéos à générer', { acc: true })
-      : !M.cap ? hstat('togen', '—', 'Vidéos à générer', M.ruleShort, { acc: true })
-        : hstat('togen', fInt(M.cap.remaining), 'Vidéos à générer', M.genSub, { acc: true });
-    var rec = !D ? na('recipes', 'Recettes terminées') : (function () {
-      var R = D.recipes, busy = R.inProgress + R.pending;
-      return hstat('recipes', fInt(R.done), 'Recettes terminées', (R.lastAt ? 'dernière le ' + dm(new Date(R.lastAt)) : 'aucune terminée') + (busy ? ' · ' + busy + ' en cours ou en attente' : ''));
-    })();
+    var gen = !D ? na('togen', 'Vidéos à générer')
+      : !M.cap ? hstat('togen', '—', 'Vidéos à générer', M.ruleShort)
+        : hstat('togen', fInt(M.cap.remaining), 'Vidéos à générer', M.genSub);
+    // places de la maquette (01-accueil) : [En stock (orange) | Jours de contenu] [À valider | Vidéos à générer]
+    var stock = !D ? na('stock', 'En stock', { acc: true }) : hstat('stock', fInt(M.stock), 'En stock', 'approuvées · prêtes à poster', { acc: true });
     var pend = !D ? na('qc-pending', 'À valider') : hstat('qc-pending', fInt(D.qc.pending), 'À valider', 'file QC');
     var days = hstat('days', M.days.txt, 'Jours de contenu', M.days.sub);
-    return hcard('prod', 'Production', IC.layers, 'état actuel', [gen, rec, pend, days], '');
+    return hcard('prod', 'Production', IC.layers, 'état actuel', [stock, days, pend, gen], '');
   }
   function homeTrackCard() {
     var why = 'pas encore branché';
@@ -632,11 +635,11 @@
   var PK = [   // les 8 types de la bibliothèque (maquette §13), dans l'ordre de la maquette
     { k: 'hook', t: 'Hook', ic: 'zap', sub: 'hooks' },
     { k: 'liaison', t: 'Liaison', ic: 'link', sub: 'phrases de liaison' },
-    { k: 'contenu', t: 'Contenu / Démo', ic: 'video', sub: 'démos vidéo' },
-    { k: 'cta', t: 'CTA', ic: 'cursor', sub: 'CTA canoniques' },
+    { k: 'contenu', t: 'Contenu / Démo', ic: 'demo', sub: 'démos vidéo' },
+    { k: 'cta', t: 'CTA', ic: 'ctaPtr', sub: 'CTA canoniques' },
     { k: 'musique', t: 'Musique', ic: 'music', sub: 'pistes' },
-    { k: 'sous-titre', t: 'Sous-titres', ic: 'captions', sub: 'styles' },
-    { k: 'transformation', t: 'Transformation', ic: 'swap', sub: 'transformations' },
+    { k: 'sous-titre', t: 'Sous-titres', ic: 'subs', sub: 'styles' },
+    { k: 'transformation', t: 'Transformation', ic: 'swap2', sub: 'transformations' },
     { k: 'avatar', t: 'Avatar', ic: 'user', sub: 'avatars' }
   ];
   var PKM = {};
@@ -646,7 +649,7 @@
   var PERF_KINDS = [['hook', 'Hooks'], ['avatar', 'Avatars'], ['cta', 'CTA'], ['liaison', 'Liaisons'], ['contenu', 'Démos'], ['musique', 'Musiques'], ['sous-titre', 'Sous-titres']];
   var HEARD = { hook: 1, liaison: 1, cta: 1 };
   var FEM = { liaison: 1, musique: 1, contenu: 1 };   // « Démos les plus performantes »
-  var NOT_YET = 'pas encore mesurable : ces briques ne s’entendent pas dans l’audio des reels (arrivera avec les productions)';
+  var NOT_YET = 'pas encore mesurable';   // briques non parlées : pas reconnues dans l'audio des reels (arrivera avec les productions)
   var MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   var TRACK_NA = 'TrackAds pas encore lancé';
   var VOICE_SHORT = { axel: 'audio d’Axel', omni: 'voix Omni' };
@@ -654,6 +657,8 @@
   function shorten(s, n) { s = String(s || ''); return s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, '') + '…'; }
   function subjName(s) { return s === 'generique' ? 'générique' : s === 'general' ? 'général' : s; }   // un seul nom par module : l'ID du catalogue (maquette §14)
   function live(b) { return !!b && b.status !== 'retired'; }   // brique retirée : exclue partout (tuiles, listes, capacité, performance)
+  function isAlias(b) { return !!(b && b.meta && b.meta.alias_of); }   // H64 = alias de H63 : jamais compté comme un hook de plus
+  function stFr(st) { return COH && COH.statusFr ? COH.statusFr(st) : 'statut inconnu'; }   // jamais le statut brut anglais
   function fRate2(v) { return fDec(v, v >= 10 ? 0 : v >= 1 ? 1 : 2); }
 
   var pmCache = { ver: -1, m: null };
@@ -670,16 +675,19 @@
       // Vidéos finales (usine/coherence.js, décision d'Axel du 25/09) : court = avatar × hook, long = avatar × hook ×
       // liaison compatible, dans 2 voix (Audio d'Axel, Voix native Omni). Déjà produites = clés voix|avatar|hook|liaison des
       // lignes QC au NOUVEAU format (tout statut ; hook alias → son original) ; démo et CTA ne font pas une nouvelle vidéo.
-      var L = COH.library(D.bricks.list), A = L.avatars.length, keys = [], pend = [];
+      var L = COH.library(D.bricks.list), A = L.avatars.length, keys = [], seen = [];
       D.qc.list.forEach(function (q) {
         var k = q.combo ? COH.comboKey(q.combo, M.byId) : null;
         if (!k) return;
         keys.push(k);
-        if (q.status === 'pending') pend.push(k);
+        if (q.status !== 'pending') seen.push(k);
       });
       var cap = COH.capacity(D.bricks.list, keys, MX);
       M.L = L; M.cap = cap;
-      M.capPending = pend.length ? COH.capacity(D.bricks.list, pend, MX).done : 0;   // déjà rendues, encore en QC
+      // générées = clés dont au moins une vidéo est déjà revue (approuvée ou refusée) ; en QC = clés rendues dont AUCUNE
+      // vidéo n'est encore revue (un top décliné en QC ne fait pas disparaître sa version approuvée) ; générées + en QC = done
+      M.capGen = seen.length ? COH.capacity(D.bricks.list, seen, MX).done : 0;
+      M.capPending = cap.done - M.capGen;
       M.genSub = cap.voices.map(function (v) { return fInt(cap.modes[v].remaining) + ' ' + VOICE_SHORT[v]; }).join(' · ');   // Accueil ET onglet
       // Variantes lipsync (pipeline) : 1 avatar × 1 brique parlée (hooks sans alias + liaisons + CTA) ; générées = factory_prod_stats
       var spoken = {}, avs = {}, St = D.stats, gen = null, out = 0, byBrick = {}, vwhy = '';
@@ -729,11 +737,12 @@
   function missModel(M) {
     var c = M.cap, I = COH.impact(c), A = c.avatars, V = c.voices.length;
     if (!c.avatars && !c.hooks && !c.liaisons) return { rows: [], empty: true };
-    var voices = V + NB + 'voix', avT = A + ' ' + plural(A, 'avatar');
+    // sous-titres courts comme la maquette (« 1 variante par avatar »), jamais la formule : A et V restent dans le chiffre
+    var per = V > 1 ? ', par avatar et par voix' : ' par avatar', nL = Math.round(I.avgLiaisonsPerHook), nH = Math.round(I.avgHooksPerLiaison);
     var rows = [
-      { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec ' + c.hooks + ' ' + plural(c.hooks, 'hook') + ' et ' + fInt(c.pairs) + ' ' + plural(c.pairs, 'paire') + ' hook × liaison, en ' + voices },
-      { k: 'liaison', t: '+1 liaison', gain: I.liaison, sub: '≈' + NB + fRate2(I.avgHooksPerLiaison) + ' ' + plural(I.avgHooksPerLiaison, 'hook compatible', 'hooks compatibles') + ' × ' + avT + ' × ' + voices },
-      { k: 'hook', t: '+1 hook', gain: I.hook, sub: 'format court + ≈' + NB + fRate2(I.avgLiaisonsPerHook) + ' ' + plural(I.avgLiaisonsPerHook, 'liaison') + ' × ' + avT + ' × ' + voices }
+      { k: 'avatar', t: '+1 avatar', gain: I.avatar, sub: 'se combine avec les ' + c.hooks + ' ' + plural(c.hooks, 'hook') + ' et les ' + c.liaisons + ' ' + plural(c.liaisons, 'liaison') + (V > 1 ? ', en ' + V + NB + 'voix' : '') },
+      { k: 'liaison', t: '+1 liaison', gain: I.liaison, sub: 's’enchaîne avec ≈' + NB + nH + ' ' + plural(nH, 'hook') + per },
+      { k: 'hook', t: '+1 hook', gain: I.hook, sub: '1 format court + ≈' + NB + nL + ' ' + plural(nL, 'long', 'longs') + per }
     ].sort(function (a, b) { return b.gain - a.gain; });
     rows.push({ k: 'variety', t: '+1 démo, CTA ou musique', gain: 0, sub: 'tirés au hasard : de la variété, pas une nouvelle vidéo' });
     return { rows: rows, empty: false };
@@ -743,15 +752,16 @@
   var biCache = { ver: -1, v: null };
   function brickIndex() {
     if (biCache.ver === CF.ver && biCache.v) return biCache.v;
-    var MD = CF.acct.media.data, by = {}, postsV = {};
+    var MD = CF.acct.media.data, by = {}, postsV = {}, byId = prodModel().byId;
     (MD ? MD.list : []).forEach(function (p) {
       var a = p.analysis;
       if (!a || a.status !== 'done' || !a.bricks.length) return;
       var seen = {}, kinds = {};
       a.bricks.forEach(function (b) {
-        if (seen[b.id]) return;
-        seen[b.id] = 1; kinds[b.kind] = 1;
-        var r = by[b.id] || (by[b.id] = { id: b.id, kind: b.kind, n: 0, nv: 0, views: 0, last: null });
+        var fb = Object.prototype.hasOwnProperty.call(byId, b.id) ? byId[b.id] : null, id = isAlias(fb) ? fb.meta.alias_of : b.id;   // alias → son original
+        if (Object.prototype.hasOwnProperty.call(seen, id)) return;
+        seen[id] = 1; kinds[b.kind] = 1;
+        var r = Object.prototype.hasOwnProperty.call(by, id) ? by[id] : (by[id] = { id: id, kind: b.kind, n: 0, nv: 0, views: 0, last: null });
         r.n += 1;
         if (p.ms != null && (r.last == null || p.ms > r.last)) r.last = p.ms;
         if (p.views != null) { r.nv += 1; r.views += p.views; }
@@ -804,10 +814,13 @@
     var t = M.pending ? '…' : n == null ? '— · file QC illisible' : n ? fInt(n) + ' ' + plural(n, 'vidéo') + ' à valider' : 'Rien à valider';
     var sub = !Q ? (M.pending ? 'chargement' : M.why) : k ? '' : Q.refused ? 'aucun refus à classer' : 'aucun refus';
     var subH = Q && k ? '<button type="button" class="cf-qcbox-k" data-act="qc-list" data-l="refused">' + esc(fInt(k) + ' ' + plural(k, 'refusée') + ' à classer') + '</button>' : esc(sub);
+    // bouton orange toujours présent (maquette) : la revue s'il y a des vidéos à valider, sinon les refus à classer,
+    // sinon la file de validation (jamais une revue vide)
+    var go = n ? 'data-act="qc-open"' : k ? 'data-act="qc-list" data-l="refused"' : 'data-act="qc-goto"';
     return '<section class="cf-title cf-ptitle"><h1>Production</h1>'
       + '<div class="cf-qcbox' + (n ? ' is-on' : '') + '"><span class="cf-qcbox-ic">' + svg(IC.qc, 18) + '</span>'
       + '<span class="cf-qcbox-t"><b data-qc-n="' + (n == null ? '' : n) + '">' + esc(t) + '</b><span>' + subH + '</span></span>'
-      + (n ? '<button type="button" class="cf-btn is-acc" data-act="qc-open">Ouvrir la revue</button>' : '') + '</div></section>';
+      + '<button type="button" class="cf-btn is-acc" ' + go + '>Ouvrir la revue</button></div></section>';
   }
   function prodBannerHTML(M) {
     var S = M.S, D = M.D, out = '', retry = '<button type="button" class="cf-btn is-sm" data-act="retry-prod">Réessayer</button>';
@@ -824,7 +837,7 @@
   function capHTML(M) {
     var head = chead('Capacité de création', 'vidéos finales · 2 voix');
     if (!M.cap) return '<section class="cf-card cf-cap" data-block="cap">' + head + naBody(M) + '</section>';
-    var c = M.cap, P = M.capPending, gen = Math.max(0, c.done - P);
+    var c = M.cap, P = M.capPending, gen = M.capGen;
     var pct = c.total ? gen / c.total * 100 : null, pAll = c.total ? c.done / c.total * 100 : 0;
     var arc = 'M10 62 A50 50 0 0 1 110 62';
     var gauge = '<div class="cf-gauge"><svg viewBox="0 0 120 68" aria-hidden="true" focusable="false"><path d="' + arc + '" class="cf-gauge-bg"/>'
@@ -836,14 +849,17 @@
       + '<div><span class="cf-capst-v"><i class="is-gen"></i>' + esc(fInt(gen)) + '</span><span>' + plural(gen, 'générée') + '</span></div>'
       + '<div><span class="cf-capst-v"><i class="is-pd"></i>' + esc(fInt(P)) + '</span><span>en QC</span></div>'
       + '<div><span class="cf-capst-v"><i class="is-rest"></i>' + esc(fInt(c.remaining)) + '</span><span>à générer</span></div></div>';
+    // les 4 nombres (décision d'Axel) dans la barre de la maquette : une ligne par voix, format court (avatar × hook) et
+    // format long (avatar × hook × liaison compatible)
     var modes = '<div class="cf-capmodes" data-vf="' + c.total + '|' + c.done + '|' + c.remaining + '" data-modes="'
       + c.voices.map(function (v) { var m = c.modes[v]; return v + ':' + m.short + '|' + m.long + '|' + m.total; }).join(';') + '">'
-      + '<span></span><span class="cf-capmodes-h">avatar × hook</span><span class="cf-capmodes-h">avatar × hook × liaison</span>'
       + c.voices.map(function (v) {
         var m = c.modes[v];
-        return '<span class="cf-capmodes-n"><i class="is-' + v + '"></i>' + esc(m.label) + '</span><b data-mode="' + v + '-short">' + esc(fInt(m.short)) + '</b><b data-mode="' + v + '-long">' + esc(fInt(m.long)) + '</b>';
+        return '<div class="cf-capmode"><span class="cf-capmodes-n"><i class="is-' + v + '"></i>' + esc(m.label) + '</span>'
+          + '<span class="cf-capmode-v" title="format court · avatar × hook"><b data-mode="' + v + '-short">' + esc(fInt(m.short)) + '</b> ' + plural(m.short, 'court', 'courts') + '</span>'
+          + '<span class="cf-capmode-v" title="format long · avatar × hook × liaison"><b data-mode="' + v + '-long">' + esc(fInt(m.long)) + '</b> ' + plural(m.long, 'long', 'longs') + '</span></div>';
       }).join('') + '</div>'
-      + (c.outside ? '<div class="cf-meta">' + esc(c.outside + ' ' + plural(c.outside, 'vidéo') + ' hors bibliothèque non ' + plural(c.outside, 'comptée')) + '</div>' : '');
+      + (c.outside ? '<div class="cf-meta">' + esc(c.outside + ' ' + plural(c.outside, 'vidéo') + ' hors des possibles, non ' + plural(c.outside, 'comptée')) + '</div>' : '');
     return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + stats + modes + '</section>';
   }
 
@@ -903,7 +919,9 @@
     var bar = need && pd != null ? Math.min(100, pd / need * 100) : 0;
     var flow = '<div class="cf-sflow"><div class="cf-sflow-l"><span>besoin' + NB + '/' + NB + 'jour · ' + esc(need == null ? '—' : fRate2(need) + ' ' + plural(need, 'vidéo')) + '</span>'
       + '<span>production' + NB + '/' + NB + 'jour · ' + esc(pd == null ? '—' : fRate2(pd) + ' ' + plural(pd, 'vidéo')) + '</span></div>'
-      + '<div class="cf-sflow-b"><i class="' + (need != null && pd != null && pd >= need ? 'is-ok' : '') + '" style="width:' + bar.toFixed(1) + '%"></i></div></div>';
+      + '<div class="cf-sflow-b"><i class="' + (need != null && pd != null && pd >= need ? 'is-ok' : '') + '" style="width:' + bar.toFixed(1) + '%"></i></div>'
+      + (need != null && pd != null ? (pd >= need ? '<div class="cf-sflow-m is-ok">La production suit le rythme de publication.</div>'
+        : '<div class="cf-sflow-m">' + esc('Il manque ' + fRate2(need - pd) + ' ' + plural(need - pd, 'vidéo') + ' par jour.') + '</div>') : '') + '</div>';
     return '<section class="cf-card cf-stock" data-block="stock">' + head + users + '<div class="cf-stiles">' + tiles + '</div>' + flow + '</section>';
   }
 
@@ -925,20 +943,20 @@
 
   // ── 02 · Pipeline, cycle d'une vidéo finale, file de validation ──
   function pipeHTML(M) {
-    var D = M.D, V = M.vars;
+    var D = M.D, c = M.cap;
     function step(n, ic, v, l, s, pct, col) {
       return '<div class="cf-pstep"><span class="cf-pstep-t"><span class="cf-pstep-n">' + n + '</span><span class="cf-pstep-ic">' + svg(IC[ic], 14) + '</span></span>'
         + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-pstep-b"><span class="cf-pstep-l">' + esc(l) + '</span><span class="cf-pstep-s">' + esc(s) + '</span></span>'
         + '<span class="cf-pstep-bar"><i class="' + col + '" style="width:' + (pct || 0).toFixed(1) + '%"></i></span></div>';
     }
     var wait = M.pending ? '…' : null;
-    var genV = wait || (V && V.gen != null ? fInt(V.gen) : '—');
-    var genS = V ? (V.gen != null ? 'sur ' + fInt(V.possible) + ' ' + plural(V.possible, 'possible') + (V.out ? ' · ' + V.out + ' hors bibliothèque' : '') : V.why) : (M.why || M.ruleShort);
-    var sq = function (v, t) { return v && t ? Math.max(3, Math.sqrt(v / t) * 100) : 0; };
+    var gen = c ? M.capGen : null, ready = D ? D.qc.approved : null;
+    var genS = c ? 'sur ' + fInt(c.total) + ' ' + plural(c.total, 'possible') : (M.why || M.ruleShort);
+    // barres de la maquette : racine de la valeur rapportée à la plus grande étape
+    var mx = Math.max(1, gen || 0, ready || 0), sq = function (v) { return v ? Math.max(3, Math.sqrt(v / mx) * 100) : 0; };
     return '<section class="cf-card cf-pipe-c" data-block="pipe">' + chead('Pipeline de production')
-      + '<div class="cf-pipe">' + step('01', 'wand', genV, 'Variantes générées', genS, V && V.gen ? sq(V.gen, V.possible) : 0, 'is-1')
-      + step('02', 'reel', wait || (D ? fInt(D.qc.approved) : '—'), 'Montages prêts', D ? 'approuvés au QC' : M.why,
-        D && D.qc.total ? sq(D.qc.approved, D.qc.total) : 0, 'is-2') + '</div></section>';
+      + '<div class="cf-pipe">' + step('01', 'wand', wait || (gen != null ? fInt(gen) : '—'), 'Vidéos générées', genS, sq(gen), 'is-1')
+      + step('02', 'reel', wait || (D ? fInt(ready) : '—'), 'Montages prêts', D ? 'approuvés au QC' : M.why, sq(ready), 'is-2') + '</div></section>';
   }
   function cycleHTML(M) {
     var D = M.D, Q = D && D.qc, w = M.pending ? '…' : null;
@@ -949,7 +967,7 @@
     var v = function (x) { return w || (Q ? fInt(x) : '—'); };
     var body = t('Σ', v(Q && Q.total), 'Rendues', Q ? 'somme des statuts' + (Q.other ? ' (dont ' + Q.other + ' au statut inconnu)' : '') : M.why, 'is-sum')
       + t('01', v(Q && Q.pending), 'À valider', 'en QC')
-      + t('02', v(Q && Q.approved), 'Approuvées · en stock', 'téléchargeables', 'is-acc')
+      + t('02', v(Q && Q.approved), 'En stock', 'téléchargeables', 'is-acc')   // approuvée = en stock (pas d'étape de mise en stock)
       + t('03', v(Q && Q.refused), 'Refusées', 'au QC')
       + t('04', '—', 'Téléchargées', 'TrackAds pas lancé')
       + t('05', '—', 'Postées', 'URL validée');
@@ -962,7 +980,8 @@
       var L = { avatar: 'avatar', hook: 'hook', liaison: 'liaison', contenu: 'démo', cta: 'CTA', musique: 'musique', sous_titre: 'sous-titres' };
       return '<span class="cf-combo">' + ['avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'].filter(function (k) { return q.combo[k]; }).map(function (k) {
         return '<button type="button" class="cf-chip is-brick is-btn" data-act="brick-open" data-bid="' + esc(q.combo[k]) + '" title="' + esc(L[k]) + '">' + esc(q.combo[k]) + '</button>';
-      }).join('<span class="cf-plus" aria-hidden="true">+</span>') + (q.combo.voice === 'omni' ? '<span class="cf-chip is-mod">voix Omni</span>' : '') + '</span>';
+      }).join('<span class="cf-plus" aria-hidden="true">+</span>') + (q.combo.voice === 'omni' ? '<span class="cf-chip is-mod">voix Omni</span>'
+        : q.combo.voice && q.combo.voice !== 'axel' ? '<span class="cf-chip is-mod is-bad">' + esc('voix inconnue « ' + q.combo.voice + ' »') + '</span>' : '') + '</span>';
     }
     if (q.legacy && q.legacy.length) {
       return '<span class="cf-meta">recette (ancien format, texte libre) : ' + esc(q.legacy.map(function (x) { return x[0] + ' : ' + x[1]; }).join(' · ')) + '</span>';
@@ -970,7 +989,9 @@
     return '<span class="cf-meta">recette non renseignée</span>';
   }
   // raison de usine/coherence.js sans son préfixe (le titre de l'encadré le dit déjà)
-  function cohWhy(x) { return String(x).replace(/^cohérence à vérifier : /, ''); }
+  function cohWhy(x) {   // (raisons déjà écrites en base avant le 26/09 : statut anglais traduit à l'affichage)
+    return String(x).replace(/^cohérence à vérifier : /, '').replace(/\(statut (retired|flagged|draft)\)/g, function (m, s) { return '(' + stFr(s) + ')'; });
+  }
   function qcWhen(t, what) { return t != null ? what + ' le ' + dmy(new Date(t)) : what + ' : date inconnue'; }
   function qcFileHTML(M) {
     var D = M.D, Q = D && D.qc;
@@ -1077,13 +1098,13 @@
   function libHTML(M) {
     var D = M.D, list = D.bricks.list.filter(live), cnt = {}, flagged = {};
     PK.forEach(function (x) { cnt[x.k] = 0; });
-    list.forEach(function (b) { if (cnt[b.kind] == null) return; if (b.status === 'ready') cnt[b.kind] += 1; else flagged[b.kind] = (flagged[b.kind] || 0) + 1; });
+    list.forEach(function (b) { if (cnt[b.kind] == null || isAlias(b)) return; if (b.status === 'ready') cnt[b.kind] += 1; else flagged[b.kind] = (flagged[b.kind] || 0) + 1; });
     var max = Math.max.apply(null, PK.map(function (x) { return cnt[x.k]; }).concat([1]));
     var alias = list.filter(function (b) { return b.kind === 'hook' && b.status === 'ready' && b.meta.alias_of; }).length;
     var gen = list.filter(function (b) { return b.kind === 'liaison' && b.status === 'ready' && b.subject === 'generique'; }).length;
     var tiles = PK.map(function (x) {
       var n = cnt[x.k], on = ui.libKind === x.k;
-      var sub = x.k === 'hook' ? (n - alias) + ' ' + plural(n - alias, 'hook unique', 'hooks uniques') + (alias ? ' · ' + alias + ' alias' : '')
+      var sub = x.k === 'hook' ? n + ' ' + plural(n, 'hook unique', 'hooks uniques') + (alias ? ' · ' + alias + ' alias' : '')
         : x.k === 'liaison' ? x.sub + (gen ? ' · ' + gen + ' ' + plural(gen, 'générique') : '') : x.sub;
       if (flagged[x.k]) sub += ' · ' + flagged[x.k] + ' hors service';
       return '<button type="button" class="cf-ltile' + (on ? ' is-on' : '') + '" data-act="lib-kind" data-k="' + x.k + '" aria-pressed="' + on + '">'
@@ -1093,8 +1114,9 @@
     var grid = '';
     if (ui.libKind) {
       var q = ui.libQuery.trim().toLowerCase(), K = PKM[ui.libKind];
-      var all = list.filter(function (b) { return b.kind === ui.libKind; });
-      var hit = all.filter(function (b) {
+      // grille = briques uniques (la maquette ne liste pas les alias) ; un alias reste trouvable par la recherche
+      var all = list.filter(function (b) { return b.kind === ui.libKind && !isAlias(b); });
+      var hit = list.filter(function (b) { return b.kind === ui.libKind && (!isAlias(b) || q); }).filter(function (b) {
         return !q || [b.id, b.label, b.meta.script, b.meta.transcript, b.meta.keyword, b.subject].some(function (s) { return s && s.toLowerCase().indexOf(q) >= 0; });
       });
       grid = '<div class="cf-lgrid-w"><div class="cf-lgrid-h"><h3 class="cf-h2">' + esc(K.t) + ' <span class="cf-badge">' + esc(fInt(all.length)) + '</span></h3>'
@@ -1110,7 +1132,7 @@
     else if (b.kind === 'cta') tag = m.keyword ? 'mot-clé ' + m.keyword : 'sans mot-clé';
     else if (b.kind === 'contenu') tag = subjName(b.subject || '?');
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
-    if (b.status !== 'ready') tag = (b.status === 'flagged' ? 'signalée' : 'statut ' + (b.status || '?')) + (tag ? ' · ' + tag : '');
+    if (b.status !== 'ready') tag = stFr(b.status) + (tag ? ' · ' + tag : '');
     var text = m.transcript || m.script || b.label || (m.value ? 'style ' + m.value : '');
     return '<button type="button" class="cf-litem' + (b.status !== 'ready' ? ' is-off' : '') + '" data-act="brick-open" data-bid="' + esc(b.id) + '">'
       + '<span class="cf-litem-h"><b>' + esc(b.id) + '</b><span class="cf-litem-m">' + esc(tag) + '</span></span>'
@@ -1156,7 +1178,7 @@
     var ms = mediaState();
     if (ms.st === 'wait') return head + spin('Chargement des publications…');
     if (ms.st !== 'ok') return head + emptyLine('—', ms.why);
-    var I = brickIndex(), all = M.D.bricks.list.filter(function (b) { return b.kind === k && b.status === 'ready'; });
+    var I = brickIndex(), all = M.D.bricks.list.filter(function (b) { return b.kind === k && b.status === 'ready' && !isAlias(b); });
     var never = all.filter(function (b) { return !I.by[b.id]; }), used = all.filter(function (b) { return I.by[b.id]; })
       .sort(function (a, b) { return (I.by[a.id].last || 0) - (I.by[b.id].last || 0); });
     if (!all.length) return head + '<div class="cf-empty-s">' + esc('Aucun' + (k === 'liaison' ? 'e ' : ' ') + KIND_PL[k][0] + ' dans la bibliothèque pour l’instant.') + '</div>';
@@ -1201,7 +1223,12 @@
       var v = body.querySelector('video');
       if (v && v.play) { try { var pr = v.play(); if (pr && pr.catch) pr.catch(function () { /* lecture auto refusée : le bouton suffit */ }); } catch (e) { /* rien */ } }
     }
+    // relecture de fond (toutes les 2 min, retour sur l'onglet) pendant qu'on tape le motif : le champ garde le focus et
+    // la sélection, jamais une frappe perdue
+    var a = document.activeElement, keep = a && a.id === 'cfQcReason' ? { s: a.selectionStart, e: a.selectionEnd } : null;
     setHTML(body.querySelector('.cf-qc-side'), qcSideHTML(R, q));
+    var ta = keep && $('cfQcReason');
+    if (ta && document.activeElement !== ta) { try { ta.focus({ preventScroll: true }); } catch (e) { ta.focus(); } try { ta.setSelectionRange(keep.s, keep.e); } catch (e) { /* rien */ } }
   }
   function qcShellHTML(R, q) {
     var n = R.ids.length, pos = R.i + 1;
@@ -2537,46 +2564,60 @@
     $('cfModalBody').scrollTop = 0;
     var t = $('cfModalTitle'); if (t) { t.tabIndex = -1; t.focus(); }
   }
-  var SHEET_KIND = { hook: 'hook', liaison: 'liaison', cta: 'CTA', contenu: 'démo', musique: 'musique', 'sous-titre': 'style de sous-titres', transformation: 'transformation', avatar: 'avatar' };
+  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar' };
   function fMmss(v) { var t = Math.round(v); return p2(Math.floor(t / 60)) + ':' + p2(t % 60); }
-  // Fiche d'une brique : sa ligne factory_bricks (fichier, texte, mot-clé) quand la Production est chargée, et ses
-  // publications Instagram reconnues (vues, courbe). Jamais de lecteur cassé : un fichier absent = « fichier manquant ».
+  var PLAY_P = 'M7 4l13 8-13 8z', PAUSE_P = 'M6 4h4v16H6zM14 4h4v16h-4z';
+  function glyph(p, s) { return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="' + p + '"/></svg>'; }
+  // Lecteur audio de la maquette (fiche brique) : bouton rond, piste, durée ; l'<audio> reste caché (jamais la barre grise
+  // du navigateur). top = grand lecteur pleine largeur (musique), sinon la tuile 200 px sous la colonne de gauche.
+  function aplayHTML(src, dur, top) {
+    return '<div class="cf-aplay cf-mbox' + (top ? ' is-top' : '') + '">'
+      + '<button type="button" class="cf-aplay-b" data-act="aplay" aria-label="Lire l’audio">' + glyph(PLAY_P, top ? 12 : 10) + '</button>'
+      + (top ? '<span class="cf-aplay-c">00:00</span>' : '')
+      + '<span class="cf-aplay-t"><i></i></span><span class="cf-aplay-d">' + (dur != null ? fMmss(dur) : '--:--') + '</span>'
+      + '<audio preload="metadata" src="' + esc(src) + '"></audio><span class="cf-vmsg">audio illisible</span></div>';
+  }
+  function aplayState(a) {
+    var box = a && a.closest ? a.closest('.cf-aplay') : null;
+    if (!box) return;
+    var b = box.querySelector('.cf-aplay-b'), on = !a.paused && !a.ended, d = isFinite(a.duration) && a.duration > 0 ? a.duration : null;
+    if (b && b.getAttribute('data-on') !== String(on)) {
+      b.setAttribute('data-on', String(on)); b.innerHTML = glyph(on ? PAUSE_P : PLAY_P, box.classList.contains('is-top') ? 12 : 10);
+      b.setAttribute('aria-label', on ? 'Mettre l’audio en pause' : 'Lire l’audio');
+    }
+    var i = box.querySelector('.cf-aplay-t i'); if (i) i.style.width = (d ? Math.min(100, a.currentTime / d * 100) : 0).toFixed(1) + '%';
+    var c = box.querySelector('.cf-aplay-c'); if (c) c.textContent = fMmss(a.currentTime || 0);
+    var t = box.querySelector('.cf-aplay-d'); if (t && d) t.textContent = fMmss(d);
+  }
+  function aplayToggle(btn) {
+    var box = btn.closest('.cf-aplay'), a = box && box.querySelector('audio');
+    if (!a) return;
+    if (a.paused || a.ended) {
+      [].forEach.call(document.querySelectorAll('#cfModalBody audio'), function (x) { if (x !== a && !x.paused) x.pause(); });
+      try { var pr = a.play(); if (pr && pr.catch) pr.catch(function () { box.classList.add('is-broken'); }); } catch (e) { box.classList.add('is-broken'); }
+    } else a.pause();
+  }
+  // Fiche d'une brique (maquette Claude Design 11, 27, 28) : sa ligne factory_bricks (fichier, texte, mot-clé) quand la
+  // Production est chargée, et ses publications Instagram reconnues (vues, courbe). Jamais de lecteur cassé : un fichier
+  // absent = « fichier manquant ».
   function brickSheetHTML(id) {
-    var U = brickUses(id), info = U.info, uses = U.uses, M = prodModel(), fb = M.byId[id] || null, m = fb ? fb.meta : {};
+    var U = brickUses(id), info = U.info, uses = U.uses, M = prodModel(), fb = Object.prototype.hasOwnProperty.call(M.byId, id) ? M.byId[id] : null, m = fb ? fb.meta : {};
     var kind = (fb && fb.kind) || (info && info.kind) || '';
     var b = { id: id, kind: kind, label: (fb && fb.label) || (info && info.label) || id, text: m.transcript || m.script || (info && info.text) || null,
       keyword: m.keyword || (info && info.keyword) || null, subject: (fb && fb.subject) || (info && info.subject) || null,
       audio: (fb && fb.audio) || (info && info.audio) || null };
-    var heard = !kind || !!HEARD[kind];
+    var heard = !kind || !!HEARD[kind], spoken = !!SPOKEN_V[kind];
     var views = uses.map(function (p) { return p.views || 0; }), tot = views.reduce(function (a, x) { return a + x; }, 0);
     var avg = uses.length ? tot / uses.length : null, max = Math.max.apply(null, views.concat([1]));
     var back = ui.modal.post ? '<button type="button" class="cf-back" data-act="brick-back">' + svg('M15 18l-6-6 6-6', 14) + 'Publication' + (ui.modal.rank ? ' #' + ui.modal.rank : '') + '</button>'
       : ui.modal.qc ? '<button type="button" class="cf-back" data-act="brick-back">' + svg('M15 18l-6-6 6-6', 14) + 'Revue QC</button>' : '';
-    var sub = [SHEET_KIND[b.kind] || 'brique', m.duration != null ? 'durée ' + fMmss(m.duration) : '', b.keyword ? 'mot-clé ' + b.keyword : '',
-      b.subject ? 'sujet ' + ((CF.MODULES && CF.MODULES[b.subject]) || subjName(b.subject)) : '', fb && fb.status && fb.status !== 'ready' ? 'statut ' + fb.status : ''].filter(Boolean).join(' · ');
-    var trend = '';
-    if (uses.length >= 2 && views[0] > 0) {
-      var ch = (views[views.length - 1] - views[0]) / views[0] * 100;
-      trend = '<span class="cf-bs-trend' + (ch < 0 ? ' is-down' : '') + '">' + (ch >= 0 ? '+' : '−') + fDec(Math.abs(ch), 0) + NB + '% entre la 1re et la dernière</span>';
-    }
-    var chart = uses.length ? '<div class="cf-bs-chart"><div class="cf-bs-chart-h"><span class="cf-over">Vues par publication</span>' + trend + '</div>'
-      + '<div class="cf-bs-bars">' + (uses.length > 1 ? '<span class="cf-bs-avg" style="bottom:' + (avg / max * 100).toFixed(1) + '%"></span>' : '')
-      + uses.map(function (p) {
-        var d = validDate(p.timestamp);
-        return '<span class="cf-bs-bar' + (p.views < avg ? ' is-low' : '') + '" style="height:' + Math.max(2, (p.views || 0) / max * 100).toFixed(1) + '%" title="' + esc((d ? dm(d) + ' · ' : '') + fInt(p.views) + ' vues') + '"></span>';
-      }).join('') + '</div>'
-      + '<div class="cf-bs-x"><span>' + esc(validDate(uses[0].timestamp) ? dm(validDate(uses[0].timestamp)) : '') + '</span><span>' + esc(uses.length > 1 && validDate(uses[uses.length - 1].timestamp) ? dm(validDate(uses[uses.length - 1].timestamp)) : '') + '</span></div>'
-      + (uses.length > 1 ? '<div class="cf-meta">– – moyenne ' + esc(fInt(Math.round(avg))) + ' vues</div>' : '') + '</div>' : '';
-    var rows = uses.slice().reverse().map(function (p) {
-      var d = validDate(p.timestamp), r = rankOf(p);
-      return '<button type="button" class="cf-bs-row" data-act="brick-post" data-pid="' + esc(p.id) + '"><span class="cf-meta">' + esc(d ? dm(d) : '—') + '</span>'
-        + (r ? '<span class="cf-chip is-brick">#' + r + '</span>' : '') + reelChip(p)
-        + '<span class="cf-bs-cap">' + esc(capText(p.caption)) + '</span><b>' + esc(fInt(p.views) || '—') + ' vues</b></button>';
-    }).join('');
-    // colonne média, selon le type
-    var ph = function (t) { return '<div class="cf-sheet-media cf-bs-ph"><span class="cf-sheet-none">' + svg(IC.play, 18) + '<br>' + esc(t) + '</span></div>'; };
+    var sub = [SHEET_KIND[b.kind] || 'Brique', m.duration != null ? 'durée ' + fMmss(m.duration) : '', b.keyword ? 'mot-clé ' + b.keyword : '',
+      b.subject ? 'sujet ' + ((CF.MODULES && CF.MODULES[b.subject]) || subjName(b.subject)) : '', fb && fb.status && fb.status !== 'ready' ? stFr(fb.status) : ''].filter(Boolean).join(' · ');
     var miss = function (what) { return '<span class="cf-meta cf-bs-miss">' + esc(what + ' · fichier manquant' + (fb && fb.hasMedia && fb.mediaWhy ? ' (' + fb.mediaWhy + ')' : '')) + '</span>'; };
-    var media;
+    var ph = function (t) { return '<div class="cf-sheet-media cf-bs-ph"><span class="cf-sheet-none">' + svg(IC.play, 18) + '<br>' + esc(t) + '</span></div>'; };
+    var asrc = mediaSrc(b.audio);
+    // colonne de gauche (200 px, maquette) selon le type ; la musique a son lecteur pleine largeur au-dessus
+    var top = '', media = null;
     if (b.kind === 'contenu') {
       media = fb && mediaSrc(fb.video) ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(mediaSrc(fb.video)) + '"></video><span class="cf-vmsg">vidéo illisible</span></div>'
         : ph('démo · ' + b.id) + miss('vidéo de démo');
@@ -2596,38 +2637,71 @@
       if ((m.before && m.before.label) || (m.after && m.after.label)) b.label = ((m.before && m.before.label) || '—') + ' → ' + ((m.after && m.after.label) || '—');
     } else if (b.kind === 'sous-titre') {
       media = ph('style · ' + (m.value || b.id)) + '<span class="cf-meta">aperçu du style : pas encore en ligne</span>';
+    } else if (spoken) {
+      // brique parlée : vidéos par avatar (factory_prod_stats), puis la tuile audio de la maquette et sa légende
+      media = '';
+      var V = M.vars, avs = V && V.byBrick[b.id] || [];
+      if (V && V.gen != null && avs.length) media += '<span class="cf-bs-cap-t">vidéos par avatar · ' + avs.length + '</span><span class="cf-bs-avs">' + avs.map(function (a) { return '<span class="cf-chip is-mod">' + esc(a) + '</span>'; }).join('') + '</span>';
+      media += asrc ? aplayHTML(asrc, m.duration, false) : fb ? miss('audio') : '<span class="cf-meta">audio indisponible</span>';
+      // légende de la maquette ; sans la Production chargée (fiche ouverte depuis Insight) : rien d'inventé sur les vidéos
+      var capT = !V ? (asrc ? 'audio' : '') : V.gen == null ? 'audio · vidéos par avatar : — (' + V.why + ')' : avs.length ? 'audio' : 'audio seul · aucune vidéo générée';
+      if (capT) media += '<span class="cf-bs-cap-t">' + esc(capT) + '</span>';
     } else {
-      media = ph((b.kind === 'musique' ? 'musique' : 'audio') + ' · ' + b.id)
-        + (mediaSrc(b.audio) ? '<audio controls preload="none" src="' + esc(mediaSrc(b.audio)) + '"></audio>' : fb ? miss(b.kind === 'musique' ? 'piste' : 'audio') : '<span class="cf-meta">audio indisponible</span>');
+      top = asrc ? aplayHTML(asrc, m.duration, true) : fb ? '<div>' + miss(b.kind === 'musique' ? 'piste' : 'audio') + '</div>' : '<span class="cf-meta">audio indisponible</span>';
     }
-    if (SPOKEN_V[b.kind] && M.vars) {
-      var avs = M.vars.byBrick[b.id] || [];
-      media += M.vars.gen == null ? '<span class="cf-meta">vidéos par avatar : — · ' + esc(M.vars.why) + '</span>'
-        : avs.length ? '<span class="cf-meta">vidéos par avatar · ' + avs.length + '</span><span class="cf-bs-avs">' + avs.map(function (a) { return '<span class="cf-chip is-mod">' + esc(a) + '</span>'; }).join('') + '</span>'
-          : '<span class="cf-meta">audio seul · aucune vidéo générée</span>';
+    var text = spoken ? (b.text || (fb ? 'texte pas encore saisi' : b.label)) : b.label && b.label !== b.id ? b.label + (m.variant ? ' · ' + (m.variant === 'ugc-reel' ? 'UGC réel' : m.variant) : '') : '';
+    var textBox = text ? '<div class="cf-bs-text' + (spoken && !b.text && fb ? ' is-na' : '') + '">' + esc(text) + '</div>' : '';
+    var trend = '';
+    if (uses.length >= 2 && views[0] > 0) {
+      var ch = (views[views.length - 1] - views[0]) / views[0] * 100;
+      trend = '<span class="cf-bs-trend' + (ch < 0 ? ' is-down' : '') + '">' + svg(ch < 0 ? 'M22 17l-8.5-8.5-5 5L2 7M16 17h6v-6' : 'M22 7l-8.5 8.5-5-5L2 17M16 7h6v6', 12)
+        + (ch >= 0 ? '+' : MINUS) + fDec(Math.abs(ch), 0) + NB + '% entre la 1re et la dernière</span>';
     }
-    var textBox = heard ? '<div class="cf-bs-text"><span class="cf-lbl">Texte prononcé</span>' + esc(b.text || (fb ? 'texte pas encore saisi' : b.label) || '—') + '</div>'
-      : '<div class="cf-bs-text"><span class="cf-lbl">Description</span>' + esc(b.label || '—') + (m.variant ? ' · ' + esc(m.variant === 'ugc-reel' ? 'UGC réel' : m.variant) : '') + '</div>';
-    var hist = !heard ? '<div class="cf-empty-s">Historique d’utilisation : ' + esc(NOT_YET) + '.</div>'
+    var many = uses.length > 8;
+    var chart = uses.length ? '<div class="cf-bs-chart"><div class="cf-bs-chart-h"><span class="cf-over">Vues par publication</span>' + trend + '</div>'
+      + '<div class="cf-bs-bars">' + (uses.length > 1 ? '<span class="cf-bs-avg" style="bottom:calc((100% - 14px) * ' + (avg / max).toFixed(3) + ')"></span>' : '')
+      + uses.map(function (p) {
+        var d = validDate(p.timestamp);
+        return '<span class="cf-bs-barw" title="' + esc((d ? dm(d) + ' · ' : '') + fInt(p.views || 0) + ' vues') + '"><span class="cf-bs-bar' + ((p.views || 0) < avg ? ' is-low' : '') + '" style="height:' + Math.max(2, (p.views || 0) / max * 100).toFixed(1) + '%">'
+          + (many ? '' : '<span class="cf-bs-bv">' + esc(fInt(p.views || 0)) + '</span>') + '</span></span>';
+      }).join('') + '</div>'
+      + '<div class="cf-bs-x' + (many ? ' is-ends' : '') + '">' + (many ? [uses[0], uses[uses.length - 1]] : uses).map(function (p) { var d = validDate(p.timestamp); return '<span>' + esc(d ? dm(d) : '') + '</span>'; }).join('') + '</div>'
+      + (uses.length > 1 ? '<span class="cf-bs-avgl">- - moyenne ' + esc(fInt(Math.round(avg))) + ' vues</span>' : '') + '</div>' : '';
+    var rows = uses.slice().reverse().map(function (p) {
+      var d = validDate(p.timestamp), r = rankOf(p);
+      return '<button type="button" class="cf-bs-row" data-act="brick-post" data-pid="' + esc(p.id) + '"><span class="cf-bs-d">' + esc(d ? dm(d) : '—') + '</span>'
+        + (r ? '<span class="cf-chip is-brick">#' + r + '</span>' : '') + reelChip(p)
+        + '<span class="cf-bs-cap">' + esc(capText(p.caption)) + '</span><b>' + esc(fInt(p.views) || '—') + ' vues</b></button>';
+    }).join('');
+    var st = function (v, l) { return '<div class="cf-bs-st"><b>' + esc(v == null ? '—' : v) + '</b><span>' + esc(l) + '</span></div>'; };
+    var hist = !heard ? '<div class="cf-bs-none">Pas encore mesurable dans les reels.</div>'
       : !uses.length ? '<div class="cf-bs-none">Jamais utilisée dans une vidéo pour l’instant.</div>'
-        : '<div class="cf-over">Historique d’utilisation · ' + uses.length + ' ' + plural(uses.length, 'publication') + ' Instagram reconnue' + (uses.length >= 2 ? 's' : '') + '</div>'
-          + '<div class="cf-tiles cf-bs-tiles">' + tile('vues totales', fInt(tot), '') + tile('vues par publication', avg != null ? fInt(Math.round(avg)) : null, '') + tile('utilisée dans', uses.length + ' ' + plural(uses.length, 'vidéo'), '') + '</div>'
-          + chart + '<div class="cf-bs-list">' + rows + '</div>';
+        : '<div class="cf-bs-use"><div class="cf-over">Historique d’utilisation · ' + uses.length + ' ' + plural(uses.length, 'publication') + ' Instagram reconnue' + (uses.length >= 2 ? 's' : '') + '</div>'
+          + '<div class="cf-bs-sts">' + st(fInt(tot), 'vues totales') + st(avg != null ? fInt(Math.round(avg)) : null, 'vues par publication') + st(uses.length + ' ' + plural(uses.length, 'vidéo'), 'utilisée dans') + '</div>'
+          + chart + '<div class="cf-bs-list">' + rows + '</div></div>';
+    var kw = b.keyword ? '<div class="cf-bs-tags"><span class="cf-over">Mot-clé DM</span><span class="cf-bs-tag">' + esc(b.keyword) + '</span></div>' : '';
     return '<div class="cf-bsheet">' + back
-      + '<h2 class="cf-h2 cf-bs-title" id="cfModalTitle">' + esc(b.id) + '</h2><div class="cf-meta">' + esc(sub) + '</div>'
-      + '<div class="cf-sheet cf-bs-grid">'
-      + '<div class="cf-bs-media">' + media + '</div>'
-      + '<div class="cf-sheet-info">' + textBox
-      + (b.keyword ? '<div><span class="cf-over">Mot-clé DM</span> <span class="cf-chip is-mod">' + esc(b.keyword) + '</span></div>' : '')
-      + hist + '</div></div></div>';
+      + '<div class="cf-bs-head"><h2 class="cf-h2 cf-bs-title" id="cfModalTitle">' + esc(b.id) + '</h2><div class="cf-meta">' + esc(sub) + '</div></div>'
+      + top
+      + '<div class="cf-bs-grid">'
+      + (media != null ? '<div class="cf-bs-media">' + media + '</div>' : '')
+      + '<div class="cf-sheet-info">' + textBox + kw + hist + '</div></div></div>';
   }
   var SPOKEN_V = { hook: 1, liaison: 1, cta: 1 };
 
   function renderModal() {
     // grande fenêtre : revue QC, et fiche brique ouverte depuis une publication (Insight, inchangé) ; depuis l'onglet
     // Production, la fiche brique garde les 760 px de la maquette (11, 27, 28-fiche-transformation)
-    var box = document.querySelector('.cf-modal-box');
-    if (box) box.classList.toggle('is-wide', !!(ui.modal && (ui.modal.brick ? ui.modal.post || ui.tab !== 'prod' : ui.modal.qc)));
+    // (depuis la revue QC, la fiche garde la largeur de la revue : la fenêtre ne saute pas deux fois)
+    var box = document.querySelector('.cf-modal-box'), wide = !!(ui.modal && (ui.modal.brick ? ui.modal.post || ui.modal.qc || ui.tab !== 'prod' : ui.modal.qc));
+    if (box) {
+      box.classList.toggle('is-wide', wide);
+      // fiche brique / rendu vidéo de la Production : fenêtre de la maquette (padding 22, fermeture 32 px alignée sur le titre,
+      // centrée aussi sur téléphone)
+      var sheet = !!(ui.modal && !wide && (ui.modal.brick || ui.modal.video));
+      box.classList.toggle('is-sheet', sheet);
+      $('cfModal').classList.toggle('is-center', sheet);
+    }
     if (ui.modal.brick) { setHTML($('cfModalBody'), brickSheetHTML(ui.modal.brick)); return; }
     if (ui.modal.qc) { renderQcModal(); return; }
     if (ui.modal.video) { setHTML($('cfModalBody'), videoModalHTML(ui.modal.video)); return; }
@@ -2748,6 +2822,8 @@
       else if (act === 'qc-refuse-cancel') { if (ui.modal && ui.modal.qc && !ui.modal.qc.busy) { ui.modal.qc.refusing = false; ui.modal.qc.msg = null; renderModal(); var rb = document.querySelector('#cfModalBody [data-act="qc-refuse"]'); if (rb) rb.focus(); } }
       else if (act === 'qc-refuse-ok') qcDo('refuse');
       else if (act === 'qc-classify') qcClassify(el.getAttribute('data-qid'));
+      else if (act === 'qc-goto') { var qg = $('cfQcFile'); if (qg && qg.scrollIntoView) qg.scrollIntoView({ block: 'start' }); }
+      else if (act === 'aplay') aplayToggle(el);
       else if (act === 'qc-list') {
         var l = el.getAttribute('data-l');
         if (['pending', 'approved', 'refused'].indexOf(l) >= 0) {
@@ -2806,6 +2882,11 @@
 
     $('cfModal').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeModal(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ui.modal) closeModal(); });
+
+    // Lecteur audio des fiches (maquette) : bouton, piste et durée suivent l'<audio> caché (événements média, capturés).
+    ['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(function (ev) {
+      document.addEventListener(ev, function (e) { if (e.target && e.target.tagName === 'AUDIO') aplayState(e.target); }, true);
+    });
 
     // Image Instagram expirée ou bloquée : on garde le fond neutre, pas d'icône cassée.
     document.addEventListener('error', function (e) {
