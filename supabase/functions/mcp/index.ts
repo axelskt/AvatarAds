@@ -3,6 +3,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
+import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -78,9 +79,16 @@ const MCP_VOICES: Record<string, string> = {
   homme: 'onwK4e9ZLuTAKqWW03F9',  // Daniel — posé, confiant
   femme: 'XB0fDUnXU5powFXDhCwa',  // Charlotte — chaleureuse, naturelle
 }
-// Nettoyage audio (Voice Isolator ElevenLabs) : ~1 crédit / minute d'audio
+// Nettoyage audio : ~1 crédit / minute d'audio. Depuis le 25/09 il tourne sur NOTRE serveur de
+// rendu (render-worker, route /audio/clean : RNNoise + chaîne voix de l'app, 0 €/min) ; ElevenLabs
+// Voice Isolator ne sert plus que de secours (voir nettoyage-voix.ts).
 const CLEAN_COST_PER_MIN = 1
 const CLEAN_MAX_BYTES    = 15_000_000 // ~15 min de MP3 128 kbps
+const NETTOYAGE: ConfigNettoyage = {
+  workerUrl: Deno.env.get('AUDIO_CLEAN_URL') ?? '',   // domaine public Railway du render-worker
+  workerKey: Deno.env.get('AUDIO_CLEAN_KEY') ?? '',   // même secret que la variable Railway AUDIO_CLEAN_KEY
+  elevenKey: ELEVEN_API_KEY,                          // secours
+}
 // Montage IA via Claude (#125) : chef d'orchestre + rendu serveur (mêmes tarifs que l'app)
 // ⚠️ CE QUI DOIT CORRESPONDRE À L'APP, C'EST LE TOTAL, PAS LE DÉTAIL.
 // Un montage complet coûte 8 crédits ici comme dans l'app (CREDIT_COSTS.montageIA),
@@ -884,7 +892,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'clean_audio',
-      description: `Nettoie un fichier audio (le Nettoyage audio AvatarAds) : supprime bruit de fond, clics et parasites en isolant la voix. Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
+      description: `Nettoie la voix d'un fichier audio (le Nettoyage audio AvatarAds) : voix nettoyée (bruit de fond, souffle, clics). Fait pour une prise de voix — ne sépare pas une voix d'une musique de fond. 10 min d'audio au plus. Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -913,12 +921,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'montage_ia',
-      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, parasites), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (lipsync standard 2 cr/s, lipsync haute résolution 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
+      description: `Le MONTAGE IA d'AvatarAds : à partir d'un simple AUDIO (voix parlée), la voix est d'abord NETTOYÉE (bruit de fond, souffle, clics), puis le chef d'orchestre transcrit, analyse et génère un plan de montage complet (slides motion-design, zooms, sous-titres mot à mot, bruitages), et le moteur de rendu serveur produit le MP4 final 1080×1920. Coût : ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits + ${CLEAN_COST_PER_MIN} crédit par minute de nettoyage, débités au lancement (remboursés si échec) ; avec lipsync, les secondes de visage sont débitées au moment de leur génération (lipsync standard 2 cr/s, lipsync haute résolution 5 cr/s ; jamais pour une scène déjà en cache). Retourne un job_id — appelle ensuite check_montage (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
           audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max. Une prise brute convient — elle est nettoyée automatiquement." },
-          clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : nettoie la voix (isolation, bruit de fond supprimé) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — repasser un fichier propre à l'isolation ne l'améliore pas." },
+          clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : voix nettoyée (bruit de fond, souffle, clics) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — renettoyer un fichier propre ne l'améliore pas." },
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
           avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Aucun crédit en plus." },
           lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (lipsync standard) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte 2 crédits par seconde de visage (débités à la génération). Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
@@ -2380,30 +2388,22 @@ async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
   } catch { /* on retente au prochain poll */ }
 }
 
-// ── Nettoyage audio (ElevenLabs Voice Isolator) ──
-// ── L'ISOLATION DE VOIX, PARTAGÉE ───────────────────────────────────────────
-// Extraite de clean_audio pour que le Montage IA puisse l'appliquer lui-même.
-// Renvoie les octets nettoyés, ou une chaîne d'erreur (jamais d'exception :
-// l'appelant décide s'il abandonne ou s'il continue avec l'audio d'origine).
+// ── Nettoyage audio : serveur de rendu d'abord, ElevenLabs en secours ──
+// ── LE NETTOYAGE DE LA VOIX, PARTAGÉ ────────────────────────────────────────
+// Utilisé par clean_audio ET par le Montage IA (étape 0). Renvoie les octets
+// nettoyés (MP3), ou une chaîne d'erreur (jamais d'exception : l'appelant décide
+// s'il abandonne ou s'il continue avec l'audio d'origine). Le détail — worker
+// Railway (AUDIO_CLEAN_URL / AUDIO_CLEAN_KEY, https, délai de 15 à 40 s selon la taille), repli ElevenLabs
+// journalisé « [clean] repli ElevenLabs » — est dans nettoyage-voix.ts.
 async function isolerVoix(bytes: Uint8Array, contentType: string): Promise<Uint8Array | string> {
-  if (!ELEVEN_API_KEY) return 'configuration serveur incomplète'
-  const fd = new FormData()
-  fd.append('audio', new Blob([bytes as unknown as BlobPart], { type: contentType }), 'input.mp3')
-  const iso = await fetch('https://api.elevenlabs.io/v1/audio-isolation', {
-    method: 'POST', headers: { 'xi-api-key': ELEVEN_API_KEY }, body: fd,
-  })
-  if (!iso.ok) {
-    const err = await iso.text().catch(() => '')
-    return `ElevenLabs ${iso.status}${err ? ' — ' + err.slice(0, 120) : ''}`
-  }
-  return new Uint8Array(await iso.arrayBuffer())
+  return await nettoyerVoix(bytes, contentType, NETTOYAGE)
 }
 
 // Coût du nettoyage pour un fichier donné (~960 Ko/min en MP3 128 kbps).
 const coutNettoyage = (taille: number) => Math.max(1, Math.ceil(taille / 960_000)) * CLEAN_COST_PER_MIN
 
 async function runCleanAudio(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
-  if (!ELEVEN_API_KEY) return toolErr('Nettoyage audio indisponible (configuration serveur incomplète).')
+  if (!nettoyageDisponible(NETTOYAGE)) return toolErr('Nettoyage audio indisponible (configuration serveur incomplète).')
   const audioUrl = String(args.audio_url || '').trim()
   if (!audioUrl) return toolErr('Le paramètre "audio_url" est requis.')
   const got = await fetchUserFile(audioUrl, CLEAN_MAX_BYTES, /^(audio\/|video\/mp4|application\/octet-stream)/, "le fichier audio (audio_url)")
@@ -2423,19 +2423,20 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédit${cost > 1 ? 's' : ''}. Recharge sur ${APP_URL}`)
 
-  let delivered = false
-  try {
-    const cleaned = await isolerVoix(got.bytes, got.contentType)
-    if (typeof cleaned === 'string') return toolErr(`Nettoyage échoué (${cleaned}) — crédits remboursés.`)
-    const url = await uploadMedia(userId, cleaned, 'mp3', 'audio/mpeg')
-    await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'audio_clean', status: 'done', credits_cost: cost, result_url: url })
-    await saveToLibrary(userId, cleaned, 'mp3', 'audio/mpeg', 'audio', 'Audio nettoyé')  // filet Bibliothèque (onglet Audio)
-    delivered = true
-    const balTxt = isUnlimited(profile) ? '∞' : String(bal)
-    return toolMedia(url, 'audio-nettoye.wav', 'audio/wav', `✅ Audio nettoyé (voix isolée, bruit supprimé) !\nURL : ${url}\n−${cost} crédit${cost > 1 ? 's' : ''} · solde : ${balTxt}`)
-  } finally {
-    if (!delivered) await refundCredits(userId, cost)
-  }
+  // tant que la livraison n'a pas abouti, les crédits sont rendus (nettoyage, upload ou suivi en échec)
+  return await nettoyerEtLivrer<ToolContent>({
+    userId, cost, bytes: got.bytes, contentType: got.contentType,
+    nettoyer: isolerVoix,
+    rembourser: refundCredits,
+    erreur: toolErr,
+    livrer: async (cleaned) => {
+      const url = await uploadMedia(userId, cleaned, 'mp3', 'audio/mpeg')
+      await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'audio_clean', status: 'done', credits_cost: cost, result_url: url })
+      await saveToLibrary(userId, cleaned, 'mp3', 'audio/mpeg', 'audio', 'Audio nettoyé')  // filet Bibliothèque (onglet Audio)
+      const balTxt = isUnlimited(profile) ? '∞' : String(bal)
+      return toolMedia(url, 'audio-nettoye.mp3', 'audio/mpeg', `Audio nettoyé : voix nettoyée (bruit de fond, souffle, clics).\nURL : ${url}\n−${cost} crédit${cost > 1 ? 's' : ''} · solde : ${balTxt}`)
+    },
+  })
 }
 
 // ── Lipsync sur audio existant (#149, brique avatar du Montage IA) ──
@@ -2711,7 +2712,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   // le comportement NORMAL, pas une option qu'on pense à cocher.
   // Son coût est ajouté au devis affiché avant le débit (jamais de crédit
   // silencieux), et `clean_audio: false` reste possible pour un audio déjà
-  // traité — repasser un fichier propre à l'isolation ne l'améliore pas.
+  // traité — renettoyer un fichier propre ne l'améliore pas.
   const nettoyer = args.clean_audio !== false
   const coutClean = nettoyer ? coutNettoyage(got.bytes.length) : 0
   const cost = MONTAGE_PLAN_COST + MONTAGE_RENDER_COST + coutClean
@@ -2745,24 +2746,17 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       // 0) LA VOIX, D'ABORD. Le nettoyage précède la transcription : le chef
       // d'orchestre entend alors la même chose que le spectateur, et ses
       // timings de mots sont calés sur l'audio réellement monté.
+      // Échec du nettoyage (serveur de rendu ET secours ElevenLabs) : le montage continue sur
+      // l'audio d'origine, les crédits du nettoyage sont rendus et credits_cost décrémenté
+      // d'autant (audit métier MCP 14/09 : pas de double remboursement si le montage échoue
+      // ensuite) — logique détaillée dans nettoyerAvantMontage (nettoyage-voix.ts).
       if (nettoyer) {
-        const propre = await isolerVoix(got.bytes, got.contentType)
-        if (typeof propre === 'string') {
-          // On ne fait pas échouer le montage pour ça — mais on rend les
-          // crédits du nettoyage et on le DIT dans le job, sinon l'utilisateur
-          // paie un service qu'il n'a pas eu sans jamais le savoir.
-          console.warn('nettoyage voix ignoré :', propre)
-          await refundCredits(userId, coutClean)
-          // Audit métier MCP 14/09 : DÉCRÉMENTER credits_cost du montant partiellement remboursé (DB + objet
-          // en mémoire) → si le montage échoue ensuite, failAndRefund ne rend QUE le reste (plus de double
-          // remboursement du nettoyage = minting). Si le montage aboutit, le solde facturé reste juste.
-          mcpJob.credits_cost = Math.max(0, (Number(mcpJob.credits_cost) || 0) - coutClean)
-          await svc.from('mcp_jobs').update({ credits_cost: mcpJob.credits_cost, error: `voix non nettoyée (${propre}) — ${coutClean} cr remboursés` }).eq('id', mcpJob.id)
-        } else {
-          got.bytes = propre
-          got.contentType = 'audio/mpeg'
-          console.log(`▶ voix isolée avant montage (${(propre.length / 1024).toFixed(0)} Ko)`)
-        }
+        await nettoyerAvantMontage({
+          got, userId, coutClean, mcpJob,
+          nettoyer: isolerVoix,
+          rembourser: refundCredits,
+          noterJob: async (maj) => { await svc.from('mcp_jobs').update(maj).eq('id', mcpJob.id) },
+        })
       }
       // 1) chef d'orchestre — clé anon : passe le gateway, sans lire la mémoire de marque
       const ext = /wav/.test(got.contentType) ? 'wav' : /mp4|m4a|aac/.test(got.contentType) ? 'm4a' : 'mp3'
@@ -2871,14 +2865,14 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   })())
 
   return toolText(
-    `🎬 Montage IA lancé ! (~${Math.round(durEst)} s, style ${style}, −${cost} crédits)
+    `Montage IA lancé (~${Math.round(durEst)} s, style ${style}, −${cost} crédits)
 job_id : ${mj.id}
 Le chef d'orchestre transcrit et prépare le plan (~2 min), puis le moteur rend le MP4.
 Appelle check_montage avec ce job_id dans environ 2 minutes.
 ${nettoyer
-  ? `🔊 La voix est nettoyée avant le montage (isolation, −${coutClean} cr sur le total). Si ton audio est DÉJÀ traité, passe clean_audio: false — le repasser à l'isolation ne l'améliore pas.`
-  : `⚠️ Audio monté TEL QUEL, à ta demande (clean_audio: false). Si le rendu sonne sale, relance sans ce paramètre.`}
-💡 Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
+  ? `La voix est nettoyée avant le montage (bruit de fond, souffle, clics — −${coutClean} cr sur le total). Si ton audio est DÉJÀ traité, passe clean_audio: false — le renettoyer ne l'améliore pas.`
+  : `Attention : audio monté TEL QUEL, à ta demande (clean_audio: false). Si le rendu sonne sale, relance sans ce paramètre.`}
+Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
 }
 
 async function runCheckMontage(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
