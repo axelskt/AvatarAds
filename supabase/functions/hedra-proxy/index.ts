@@ -31,6 +31,10 @@ const HEDRA_BILLABLE = /^\/(generations|v3\/models\/[A-Za-z0-9._-]+)$/   // soum
 // 26/09 (« le dernier mot n'est pas articulé ») : l'app ajoute jusqu'à 0,5 s de silence APRÈS le dernier mot de l'audio
 // envoyé (sinon Hedra ne ferme pas la dernière syllabe), et coupe la vidéo ensuite. Cette marge est pour nous : la
 // réconciliation la retire de la durée rendue avant de la comparer au débit. Constante SERVEUR (jamais lue du client).
+// Retirée à TOUS les jobs (relecture 26/09, accepté en connaissance de cause) : le proxy ne sait pas si l'audio portait du
+// silence ajouté (upload et soumission sont deux requêtes sans état). Effet borné : la tolérance de réconciliation passe de
+// 2 s à 2,5 s par job, soit au plus 1 crédit, sur une op tirée entière (plancher 2) — une génération par débit.
+// ⚠ Ordre de déploiement : CE proxy avant l'app ; jamais de retour arrière de ce proxy seul (skill deploiement).
 const LIPSYNC_PAD_MS = 500
 
 serve(async (req: Request) => {

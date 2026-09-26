@@ -7,17 +7,23 @@
 //     CETTE copie. Remplacer son fichier après la mesure (même chemin, upsert) ne change donc plus ce que kie génère ;
 //   • un chiffre de durée envoyé par le client est ignoré ; un audio illisible (autre chose qu'un WAV PCM) est refusé AVANT tout
 //     tirage (400) ; au-delà de 60 s facturées → 400 (plafond kie / fal).
-// Durée facturée = max(1 s, durée envoyée − 0,6 s) : l'app ajoute au plus 0,6 s de « contexte » après la fin utile de chaque
-// extrait (la suite réelle de la voix, ou le silence qui manque après le dernier mot : correctif « dernier mot » du 26/09) ;
-// cette marge est pour NOUS, comme LIPSYNC_PAD_MS dans hedra-proxy. Constante SERVEUR, jamais lue du client.
+// Durée facturée = max(1 s, durée envoyée − marge). Marge (relecture 26/09, constantes SERVEUR jamais lues du client) :
+//   marge = min(0,6 s, max(silence NUMÉRIQUE en fin de fichier, 10 % de la durée envoyée)).
+//   · le silence que l'app ajoute après le dernier mot (correctif « dernier mot ») est exact (échantillons nuls) : gratuit ;
+//   · la suite réelle de la voix (contexte droit) ne l'est qu'à 10 % près. Avant : 0,6 s offerte à CHAQUE appel → découper
+//     son audio en tranches de 1,6 s via kie-proxy faisait 38 % de remise ; désormais 10 % au plus (et rien sur du silence
+//     ajouté, qui n'a aucune valeur).
 // Coût = ⌈5 × durée facturée⌉ (arrondi au centième avant le plafond : aucun crédit fantôme dû au flottant).
-// Même formule côté app (_omniKieCost) : la réservation de l'app couvre toujours ce que le serveur tire.
-import { lireWav } from './lipsync-audio.ts'
+// Même formule côté app (_omnihCout / _omnihCoutWav) : la réservation de l'app couvre toujours ce que le serveur tire.
+// La durée et le silence sont mesurés sur la COPIE CANONIQUE (lipsync-audio.ts : wavCanonique) — c'est elle, jamais les
+// octets du client, que le fournisseur reçoit : il décode exactement ce qui a été facturé.
+import { lireWav, wavCanonique, zerosFinWav } from './lipsync-audio.ts'
 import { svc } from './guard.ts'
 import { clampOmnihumanPrompt, omnihumanPrompt } from './omnihuman-prompts.ts'
 
 export const OMNIHUMAN_PER_SEC = 5
 export const OMNIHUMAN_MARGE_S = 0.6
+export const OMNIHUMAN_MARGE_PART = 0.1   // part de la durée envoyée offerte au plus hors silence numérique (contexte de voix)
 export const OMNIHUMAN_MIN_S = 1
 export const OMNIHUMAN_MAX_S = 60
 export const OMNIHUMAN_AUDIO_MAX_BYTES = 12 * 1024 * 1024
@@ -29,14 +35,22 @@ const r3 = (n: number) => Math.round(n * 1000) / 1000
 // un champ de taille rétréci à la main ne fait pas payer moins (le décodeur de kie lit le fichier réel), un champ gonflé non
 // plus (on ne compte que les octets présents). Fréquence / canaux hors normes → illisible. null = pas un WAV PCM lisible.
 export function dureeWavSec(bytes: Uint8Array): number | null {
+  const m = mesureWav(bytes)
+  return m ? m.envoyeSec : null
+}
+// Copie canonique + durée + silence numérique final d'un WAV PCM. null = illisible (2e « fmt », format non PCM, vide…).
+export function mesureWav(bytes: Uint8Array): { copie: Uint8Array; envoyeSec: number; zerosSec: number } | null {
   const w = lireWav(bytes)
   if (!w || w.sr < 8000 || w.sr > 192000 || w.ch < 1 || w.ch > 8) return null
-  const present = bytes.length - w.dataOff
-  const frames = Math.floor(present / w.blockAlign)
-  return frames > 0 ? r3(frames / w.sr) : null
+  const c = wavCanonique(bytes, w)
+  if (!c) return null
+  const frames = Math.floor(c.w.dataLen / c.w.blockAlign)
+  return frames > 0 ? { copie: c.bytes, envoyeSec: r3(frames / c.w.sr), zerosSec: zerosFinWav(c.bytes, c.w) } : null
 }
-export const omnihumanFactureSec = (envoyeSec: number): number => r3(Math.max(OMNIHUMAN_MIN_S, (Number(envoyeSec) || 0) - OMNIHUMAN_MARGE_S))
-export const omnihumanCout = (envoyeSec: number): number => Math.ceil(Math.round(OMNIHUMAN_PER_SEC * omnihumanFactureSec(envoyeSec) * 100) / 100)
+export const omnihumanMargeSec = (envoyeSec: number, zerosSec = 0): number =>
+  Math.min(OMNIHUMAN_MARGE_S, Math.max(Number(zerosSec) || 0, OMNIHUMAN_MARGE_PART * (Number(envoyeSec) || 0)))
+export const omnihumanFactureSec = (envoyeSec: number, zerosSec = 0): number => r3(Math.max(OMNIHUMAN_MIN_S, (Number(envoyeSec) || 0) - omnihumanMargeSec(envoyeSec, zerosSec)))
+export const omnihumanCout = (envoyeSec: number, zerosSec = 0): number => Math.ceil(Math.round(OMNIHUMAN_PER_SEC * omnihumanFactureSec(envoyeSec, zerosSec) * 100) / 100)
 
 // Lecture bornée (flux, abandon au-delà de `max`) de NOTRE storage (l'URL a déjà été validée : render-media/<uid>/…).
 async function lireBorne(url: string, max: number): Promise<Uint8Array | 'too_big' | null> {
@@ -66,20 +80,22 @@ export async function omnihumanAudio(audioUrl: string, bucket: string, storeSign
   const bytes = await lireBorne(audioUrl, OMNIHUMAN_AUDIO_MAX_BYTES)
   if (bytes === 'too_big') return { ok: false, status: 400, error: `audio trop lourd (${Math.round(OMNIHUMAN_AUDIO_MAX_BYTES / 1024 / 1024)} Mo maximum)` }
   if (!bytes) return { ok: false, status: 400, error: 'audio inaccessible (lien expiré ou fichier absent) — relance la génération' }
-  const envoyeSec = dureeWavSec(bytes)
-  if (envoyeSec === null) return { ok: false, status: 400, error: 'audio illisible : un WAV PCM est attendu' }
-  const factureSec = omnihumanFactureSec(envoyeSec)
+  const m = mesureWav(bytes)
+  if (m === null) return { ok: false, status: 400, error: 'audio illisible : un WAV PCM est attendu' }
+  const { envoyeSec, zerosSec } = m
+  const factureSec = omnihumanFactureSec(envoyeSec, zerosSec)
   if (factureSec > OMNIHUMAN_MAX_S) return { ok: false, status: 400, error: `audio trop long (${Math.round(factureSec)} s) : ${OMNIHUMAN_MAX_S} secondes maximum par clip` }
   const st = svc().storage.from(bucket)
   const path = `${OMNIHUMAN_IN_DIR}/${crypto.randomUUID()}.wav`
-  const up = await st.upload(path, bytes, { contentType: 'audio/wav', upsert: false })
+  // la COPIE CANONIQUE (jamais les octets du client) : le fournisseur décode exactement ce qui est facturé
+  const up = await st.upload(path, m.copie, { contentType: 'audio/wav', upsert: false })
   if (up.error) return { ok: false, status: 503, error: 'préparation de l’audio impossible — réessaie dans un instant' }
   const sg = await st.createSignedUrl(path, 3600)
   const signed = sg.data?.signedUrl || ''
   // createSignedUrl renvoie une URL absolue ; on la ramène à notre préfixe signé (même forme que les entrées client).
   if (sg.error || !signed.includes('/object/sign/' + bucket + '/' + path)) return { ok: false, status: 503, error: 'préparation de l’audio impossible — réessaie dans un instant' }
   const url = signed.startsWith(storeSign) ? signed : storeSign + signed.slice(signed.indexOf(path))
-  return { ok: true, url, path, envoyeSec, factureSec, cost: omnihumanCout(envoyeSec) }
+  return { ok: true, url, path, envoyeSec, factureSec, cost: omnihumanCout(envoyeSec, zerosSec) }
 }
 
 // Entrée acceptée = URL signée de NOTRE bucket, dans le dossier de l'appelant (même règle que okInput de kie-proxy).

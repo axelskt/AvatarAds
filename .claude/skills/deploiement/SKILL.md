@@ -23,6 +23,26 @@ La CLI est connectée. **Une edge function modifiée et poussée n'est PAS en li
 c'est l'erreur la plus coûteuse du lot, parce que le code source dit une chose et
 la production en fait une autre.
 
+## L'ordre quand une modification touche plusieurs cibles
+
+Les cibles ne partent jamais ensemble (Pages au push, Supabase à la main, Railway au push).
+Ordre par défaut : **migrations → edge functions → render-worker → app**. Le serveur doit
+comprendre ce que l'app va lui envoyer AVANT que l'app ne l'envoie. Vérifier chaque étape en
+ligne avant la suivante.
+
+Cas précis déjà rencontrés (à respecter, sinon un client honnête est chargé) :
+
+- **`hedra-proxy` AVANT l'app** (lipsync « dernier mot », 26/09). L'app ajoute jusqu'à 0,5 s de
+  silence à l'audio envoyé à Hedra ; seul le nouveau `hedra-proxy` retire cette marge
+  (`LIPSYNC_PAD_MS`) de la réconciliation. Nouvelle app + ancien proxy = jusqu'à 4 crédits chargés
+  en trop par vidéo. **Ne jamais revenir en arrière sur `hedra-proxy` seul** : revenir aussi sur l'app.
+- **`render-job` et le render-worker AVANT l'app** (Montage IA, ops désignées, 26/09). L'app envoie
+  `ops: [op du montage, op de l'habillage]` ; `render-job` les tire et les lie à `render:<id>` et
+  `render:<id>#1`, le worker règle / libère les deux clés. Un ancien worker ne libère pas l'op
+  d'habillage sur un rendu raté.
+- **`kie-proxy` / `fal-proxy` / `mcp`** (mesure OmniHuman, 26/09) : indépendants de l'app, à
+  déployer ensemble (même `_shared/omnihuman-bill.ts` et `_shared/lipsync-audio.ts`).
+
 ## Les pièges qui font perdre une heure
 
 - **Le cache Safari.** L'app est un fichier unique servi par Pages : Safari le garde.
