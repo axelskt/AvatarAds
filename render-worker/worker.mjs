@@ -30,6 +30,7 @@ import { deriveClassicSlides } from './classic-derive.mjs'
 import { cleLipsync, cacheLire, cacheEcrire, HEDRA_CR_SEC } from './lipsync-cache.mjs'
 import { analyserVoix, fabriquerAudioLipsync, bornesTranches } from './lipsync-audio.mjs'
 import { finsAffichageAvatar } from './dynamic-engine.mjs'
+import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs'   // prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300)
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -2285,7 +2286,9 @@ async function storageSupprimer(chemins) {
   try { await fetch(`${url}/storage/v1/object/render-media`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key, apikey: key }, body: JSON.stringify({ prefixes: chemins }) }) } catch (_) {}
 }
 const OMNI_CR_SEC = LIPSYNC_CR_SEC.omnihuman
-const PROMPT_OMNI = 'A person talking directly to camera in a candid selfie video, natural and authentic. Precise lip-sync: the mouth shapes match every syllable and pause of the audio exactly, clear articulation, visible teeth and tongue when the sounds call for it. Expressive, lively face: genuine smiles, raised eyebrows, emotion in the eyes, natural blinks and small head movements. Natural hand gestures that illustrate what is said, hands anatomically correct with five fingers. Keep the framing close to the original photo, static background, no camera movement.'
+// Prompt OmniHuman PARTAGÉ app / MCP / worker (26/09, tools/gen-omnihuman-prompts.mjs) : anglais, ≤ 300 caractères (limite kie).
+// Pas de détection des mains ici → variante « sans mains » (on ne les invente pas) ; plan.lipsyncPrompt coupé à 300.
+const PROMPT_OMNI = omnihumanPrompt({ hands: false })
 async function falProxy(path, init = {}) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
   return fetch(`${url}/functions/v1/fal-proxy?path=${encodeURIComponent(path)}`, {
@@ -2807,7 +2810,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     try {
     if (omni) {
       // OmniHuman : photo recadrée (même ratio de sortie) → Hedra (secours fal)
-      url = await omniGenerer(photo, audioBuf, String(plan.lipsyncPrompt || PROMPT_OMNI), join(proj, 'media'), `s${i}`, startImg, ratio)
+      url = await omniGenerer(photo, audioBuf, (clampOmnihumanPrompt(plan.lipsyncPrompt) || PROMPT_OMNI), join(proj, 'media'), `s${i}`, startImg, ratio)
     } else {
       const audioUp = await hedraV3Upload(audioBuf, 'audio/wav', `voice${i}.wav`)
       if (!audioUp) { await rembourserLipsync(facture.local ? 0 : facture.n); console.warn(`lipsync scène ${i} : upload audio refusé (crédits remboursés)`); return false }
