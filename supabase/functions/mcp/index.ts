@@ -4,6 +4,8 @@ import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realI
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
+import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
+import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -72,6 +74,7 @@ const HEDRA_V3_SLUG   = Deno.env.get('HEDRA_SLUG') ?? 'hedra-avatar'
 // dire ce qu'il ne faut PAS faire. Priorité : garder la PHOTO EXACTE + lipsync jusqu'au tout dernier mot.
 const AVATAR_PROMPT   = 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands'
 const AVATAR_COST_SEC = 2.5 // 2 cr/s lipsync Hedra (1080p, barème 23/08) + 0,5 cr/s voix ElevenLabs
+const LIPSYNC_COST_SEC = 2  // lipsync_video Hedra (1080p) : 2 cr/s comme l'app, le worker et hedra-proxy (« 2 cr/s partout », Axel 23/08) — était resté à 1
 const AVATAR_MAX_SEC  = 60
 const CHARS_PER_SEC   = 14  // débit de parole FR moyen pour estimer la durée depuis le script
 // Voix presets (mêmes IDs ElevenLabs que l'app)
@@ -904,13 +907,13 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     },
     {
       name: 'lipsync_video',
-      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale. Deux qualités (paramètre engine) : standard (1 crédit/s, défaut) ou haute résolution (${OMNI_COST_SEC} crédits/s, plan plus large). Débité au lancement, remboursé si échec. Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
+      description: `LIPSYNC sur un audio EXISTANT (brique du mode avatar du Montage IA, #149) : ta photo d'avatar + un segment audio (ta vraie voix) → un clip vidéo où l'avatar parle cet audio, en synchro labiale. Deux qualités (paramètre engine) : standard (${LIPSYNC_COST_SEC} crédits/s, défaut) ou haute résolution (${OMNI_COST_SEC} crédits/s, plan plus large). Débité au lancement, remboursé si échec. Retourne un job_id — appelle ensuite check_avatar_video (compte 2 à 5 minutes).`,
       inputSchema: {
         type: 'object',
         properties: {
           image_url: { type: 'string', description: "URL publique de la photo de l'avatar (PNG/JPEG/WebP)." },
-          audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV/MP3, max 60 s) — le clip sortant a la même durée." },
-          engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `Qualité : 'hedra' = standard (défaut, 1 cr/s) · 'omnihuman' = haute résolution 1088×1920 (${OMNI_COST_SEC} cr/s).` },
+          audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV PCM ou MP3, max 60 s) — le clip sortant a la même durée." },
+          engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `Qualité : 'hedra' = standard (défaut, ${LIPSYNC_COST_SEC} cr/s) · 'omnihuman' = haute résolution 1088×1920 (${OMNI_COST_SEC} cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
           model: { type: 'string', enum: ['hedra-avatar', 'hedra-character-3', 'minimax-h3', 'minimax-h3-max-turbo', 'kling-ai-avatar-v2'], description: "Interne (engine 'hedra' uniquement) : modèle Hedra v3. Défaut hedra-avatar. minimax-h3 (768p, audios[], durée 5-15 s) et kling-ai-avatar-v2 (720p) = alternatives image+audio pour comparaison qualité." },
           ...(isOwner ? { prompt: { type: 'string', description: "Interne/dev : remplace le prompt avatar par défaut (A/B test qualité, ex. préservation cheveux/peau). Vide → prompt par défaut." } } : {}),
@@ -1398,6 +1401,9 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
     const { data: fresh } = await svc.from('mcp_jobs').select('result_url').eq('id', job.id).maybeSingle()
     return fresh?.result_url ?? null
   }
+  // lipsync_video (26/09) : l'audio envoyé portait un silence de fin → vidéo recoupée à fin de parole + 0,3 s
+  // (liste d'éditions, sans ré-encodage). Structure inattendue → livrée entière, comme avant.
+  { const cut = coupeDeOp(job.op_name); if (cut) { const t = couperMp4(bytes, cut); if (t) bytes = t } }
   // Copie ratée APRÈS le claim (25/09) : on repasse le job en « running » au lieu de le laisser « done » sans média
   // (payé, jamais livré, plus remboursable). Le prochain suivi retente la livraison ; le filet 20 min rembourse sinon.
   let url: string
@@ -1426,6 +1432,14 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     if (job.kind === 'montage') continue
     if (!job.op_name) { await failAndRefund(userId, job, 'timeout'); continue }
 
+    // ── OmniHuman chez kie (Axel 25/09) : livré / échec → réglé ; en cours → on patiente jusqu'à KIE_OMNI_STALE_MIN ──
+    if (job.kind === 'avatar' && estOmniKie(job.op_name)) {
+      const a = await avancerOmniKie(taskDeOp(job.op_name))
+      if (a.etat === 'pret') { await deliverVideo(userId, job, a.bytes); continue }
+      if (a.etat === 'echec') { await failAndRefund(userId, job, a.raison); continue }
+      if (Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
+      await failAndRefund(userId, job, 'timeout'); continue
+    }
     // ── Jobs avatar (Hedra) : op_name = ID de génération Hedra ──
     if (job.kind === 'avatar') {
       try {
@@ -1499,7 +1513,11 @@ async function reconcileAllStale(): Promise<void> {
     const staleIso = new Date(Date.now() - 20 * 60_000).toISOString()
     const { data: stale } = await svc.from('mcp_jobs').select('*')
       .eq('status', 'running').not('op_name', 'is', null).lt('created_at', staleIso).in('kind', ['video', 'avatar', 'image']).limit(30)
-    for (const job of stale || []) await failAndRefund(String(job.user_id), job, 'timeout')
+    for (const job of stale || []) {
+      // OmniHuman chez kie : plus lent → abandonné à KIE_OMNI_STALE_MIN seulement (l'étape 1 l'a déjà avancé / livré)
+      if (estOmniKie(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
+      await failAndRefund(String(job.user_id), job, 'timeout')
+    }
   } catch (e) { console.error('reconcileAllStale:', (e as Error)?.message || e) }
 }
 let _lastReconcile = 0
@@ -2030,6 +2048,7 @@ async function hedraV3Upload(name: string, bytes: Uint8Array, contentType: strin
 }
 // Statut d'un job v3 : { pending } tant que ça tourne, { failed, err } en échec, { url } quand livré.
 async function hedraV3StatusUrl(jobId: string): Promise<{ pending?: boolean; failed?: boolean; url?: string; progress?: number; err?: string }> {
+  jobId = jobSansCoupe(jobId)   // op_name « v3:<job>#cut=… » (lipsync_video, 26/09)
   const st = await hedraV3Fetch(`/v3/jobs/${jobId}/status`, { method: 'GET' })
   if (!st.ok) return { pending: true, progress: 0 }
   const d = await st.json().catch(() => ({})) as Record<string, unknown>
@@ -2125,6 +2144,20 @@ async function runCheckAvatarVideo(profile: Record<string, unknown>, args: Recor
   // Avatar Veo natif (kind 'video', op_name = opération Veo) → MÊME vérif que l'Express.
   // (les branches fal/Hedra ci-dessous ne concernent plus que d'éventuels jobs 'avatar' hérités.)
   if (job.kind === 'video') return await runCheckVideo(profile, { job_id: job.id })
+
+  // ── OmniHuman chez kie (Axel 25/09) : op_name « oh1:<tâche>[#cut=…] » → un cran de suivi, rapatriement, livraison ──
+  if (estOmniKie(job.op_name)) {
+    const a = await avancerOmniKie(taskDeOp(job.op_name))
+    if (a.etat === 'echec') {
+      await failAndRefund(userId, job, a.raison)
+      return toolErr(`Génération OmniHuman échouée (${a.raison}). Les ${job.credits_cost} crédits ont été remboursés.`)
+    }
+    if (a.etat === 'attente') return toolText('OmniHuman en cours (compte 2 à 10 minutes) — rappelle check_avatar_video dans environ 30 secondes.')
+    const url = await deliverVideo(userId, job, a.bytes)
+    return url
+      ? toolMedia(url, 'omnihuman.mp4', 'video/mp4', `Clip OmniHuman prêt.\nURL : ${url}`)
+      : toolText('Presque prêt — rappelle check_avatar_video dans quelques secondes.')
+  }
 
   // ── OmniHuman (fal) : op_name préfixé « fal: » → file d'attente fal ──
   if (String(job.op_name || '').startsWith('fal:')) {
@@ -2341,6 +2374,13 @@ async function replierSurGoogle(job: Record<string, unknown>, taskId: string, vp
 async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
   try {
     const userId = String(job.user_id)
+    // OmniHuman chez kie (Axel 25/09) : op_name « oh1:… » (en cours → rien ; le filet tranche à KIE_OMNI_STALE_MIN)
+    if (estOmniKie(job.op_name)) {
+      const a = await avancerOmniKie(taskDeOp(job.op_name))
+      if (a.etat === 'echec') await failAndRefund(userId, job, a.raison)
+      else if (a.etat === 'pret') await deliverVideo(userId, job, a.bytes)
+      return
+    }
     // OmniHuman (fal) : op_name préfixé « fal: »
     if (String(job.op_name || '').startsWith('fal:')) {
       const reqId = String(job.op_name).slice(4)
@@ -2462,17 +2502,26 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   // explicite — son rendu figé venait au moins en partie de NOTRE prompt, qui
   // lui demandait « no camera movement » sans jamais demander de gestuelle.
   const engine = String(args.engine || 'hedra') === 'omnihuman' ? 'omnihuman' : 'hedra'
-  if (engine === 'omnihuman' && !FAL_KEY) return toolErr('OmniHuman indisponible (clé fal absente des secrets).')
+  if (engine === 'omnihuman' && !FAL_KEY && !omniKieOn()) return toolErr('OmniHuman indisponible (configuration serveur incomplète).')
   // fal refuse une image de plus de 5 Mo (file_too_large) : refus clair AVANT tout débit (un portrait 1152x2048 en PNG
   // peut dépasser cette limite ; Hedra, le moteur par défaut, l'accepte).
   if (engine === 'omnihuman' && img.bytes.length > 5_000_000) return toolErr(`OmniHuman refuse les images de plus de 5 Mo (celle-ci fait ${(img.bytes.length / 1_000_000).toFixed(1)} Mo) : relance sans engine (Hedra, par défaut) ou avec une image plus légère. Aucun crédit débité.`)
-  const secs = Math.ceil(Math.max(1, estimateAudioSeconds(aud.bytes, aud.contentType)))
-  if (secs > 60) return toolErr(`Segment audio trop long (~${secs} s) : 60 secondes maximum par clip lipsync.`)
-  const cost = engine === 'omnihuman' ? secs * OMNI_COST_SEC : secs
+  // Durée MESURÉE (relecture 26/09) : WAV PCM → copie canonique (un seul fmt / data), MP3 → somme des trames ; tout autre
+  // format est refusé AVANT tout débit. Avant : offsets fixes 22/24/34 (un chunk JUNK avant « fmt » → ~0 s facturée, plafond
+  // 60 s contourné) et octets ÷ 16 000 pour le MP3 (8 kb/s → 60 s pour 20 crédits). C'est la COPIE mesurée qui part ensuite
+  // chez le fournisseur (aud remplacé) : il génère exactement la durée facturée.
+  const mes = mesurerAudio(aud.bytes)
+  if (!mes.kind) return toolErr(`Audio refusé (${mes.error}). Aucun crédit débité.`)
+  aud.bytes = mes.bytes; aud.contentType = mes.kind === 'wav' ? 'audio/wav' : 'audio/mpeg'
+  const secs = Math.ceil(Math.max(1, Math.round(mes.sec * 1000) / 1000))
+  // plafond sur la durée MESURÉE (un MP3 de 60 s mesure ~60,1-60,3 s : trame d'en-tête + retard d'encodeur)
+  if (mes.sec > 60.5) return toolErr(`Segment audio trop long (~${Math.round(mes.sec)} s) : 60 secondes maximum par clip lipsync. Aucun crédit débité.`)
+  const rate = engine === 'omnihuman' ? OMNI_COST_SEC : LIPSYNC_COST_SEC
+  const cost = secs * rate
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
-    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (~${secs} s × 1), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (~${secs} s × ${rate}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
   const gate = await preSpendGate(profile, ctx, args, cost, `clip lipsync ~${secs} s (${engine}, ${aspect})`, 'lipsync_video')
   if (gate) return gate
@@ -2492,6 +2541,36 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
       const upA = await svc.storage.from('mcp-media').upload(`${stamp}.${ext}`, aud.bytes, { contentType: aud.contentType, upsert: true })
       if (upI.error || upA.error) return toolErr('Upload vers le stockage échoué — crédits remboursés.')
       const pub = (p: string) => `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${p}`
+      // Prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300 caractères, variante « sans mains » : pas de détection
+      // ici). Fin de la règle « même prompt que Hedra » : AVATAR_PROMPT (879 caractères) dépasse la limite de kie.
+      const omniPrompt = promptOmniMcp(profile.is_owner === true, args.prompt)
+
+      // ── kie d'abord (Axel 25/09 : OmniHuman passe chez kie pour les clients). « Dernier mot » (26/09) : WAV → COPIE
+      //    complétée de silence jusqu'à 0,5 s après le dernier mot, vidéo recoupée à la livraison (#cut=). `secs` (le débit)
+      //    a été mesuré sur l'audio reçu : la marge est pour nous. Refus SANS tâche → repli fal ; sans réponse → remboursé.
+      if (omniKieOn()) {
+        // MP3 (relecture 26/09) : 0,5 s de trames de silence ajoutées à la copie, coupe à durée d'origine + 0,3 s
+        const lipO = ext === 'wav' ? preparerWavHedra(aud.bytes) : (mes.kind === 'mp3' ? preparerMp3Lipsync(aud.bytes, mes.mp3) : null)
+        let audioK = `${stamp}.${ext}`, coupeK = lipO && lipO.bytes === aud.bytes ? lipO.coupe : null
+        if (lipO && lipO.bytes !== aud.bytes) {
+          const upL = await svc.storage.from('mcp-media').upload(`${stamp}-lip.${ext}`, lipO.bytes, { contentType: aud.contentType, upsert: true })
+          if (!upL.error) { audioK = `${stamp}-lip.${ext}`; coupeK = lipO.coupe }   // copie refusée → audio reçu, sans coupe
+        }
+        const k = await soumettreOmniKie({ imageUrl: pub(`${stamp}.png`), audioUrl: pub(audioK), prompt: omniPrompt })
+        if (k.ok) {
+          const { data: job, error } = await svc.from('mcp_jobs')
+            .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: opAvecCoupe(OP_KIE_OMNI + k.taskId, coupeK), credits_cost: cost }).select('id').single()
+          if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés.')
+          launchedO = true
+          return toolText(
+            `Lipsync OmniHuman lancé (~${secs} s, ${aspect}, −${cost} crédits).
+job_id : ${job.id}
+Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 10 minutes).`)
+        }
+        if (!k.sansTache) return toolErr('OmniHuman : le service de génération n’a pas répondu — crédits remboursés, réessaie dans un instant.')
+        if (!FAL_KEY) return toolErr(`OmniHuman momentanément indisponible (${k.error}) — crédits remboursés.`)
+        console.warn('[mcp] OmniHuman : refus sans tâche → repli fal', k.error)
+      }
 
       const sub = await falFetch(FAL_OMNI_PATH, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2499,9 +2578,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
           image_url: pub(`${stamp}.png`),
           audio_url: pub(`${stamp}.${ext}`),
           resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
-          // MÊME prompt que Hedra, mot pour mot : sans ça la comparaison de
-          // qualité entre les deux moteurs porte sur deux consignes différentes.
-          prompt: avPrompt,
+          prompt: omniPrompt,   // prompt OmniHuman partagé (≤ 300), le même que chez kie
         }),
       })
       if (!sub.ok) {
@@ -2529,8 +2606,14 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
   try {
     if (!HEDRA_V3_KEY) return toolErr('Lipsync Hedra indisponible (configuration serveur incomplète).')
     const ext = /wav/.test(aud.contentType) ? 'wav' : 'mp3'
+    // 26/09 (« le dernier mot n'est pas articulé ») : Hedra Avatar / Character-3 reçoivent une COPIE du WAV complétée de
+    // silence jusqu'à 0,5 s après le dernier mot ; la vidéo livrée est recoupée à fin de parole + 0,3 s (deliverVideo).
+    // L'audio reçu n'est jamais modifié ; `secs` (donc le débit) a été mesuré AVANT. minimax / kling : inchangé.
+    // MP3 (relecture 26/09) : la chaîne native clean_audio → lipsync_video livre du MP3 → 0,5 s de trames de silence
+    // ajoutées à la copie envoyée, vidéo coupée à durée d'origine + 0,3 s (même règle que le WAV, sans décodage).
+    const lip = /^(minimax|kling)/.test(String(args.model || '')) ? null : (ext === 'wav' ? preparerWavHedra(aud.bytes) : (mes.kind === 'mp3' ? preparerMp3Lipsync(aud.bytes, mes.mp3) : null))
     // Hedra v3 : /v3/files (l'ancienne API web-app/public + /assets est morte → 401/404).
-    const audioRef = await hedraV3Upload('segment.' + ext, aud.bytes, aud.contentType)
+    const audioRef = lip ? await hedraV3Upload('segment.' + ext, lip.bytes, aud.contentType) : await hedraV3Upload('segment.' + ext, aud.bytes, aud.contentType)
     if (!audioRef) return toolErr('Upload audio vers Hedra échoué — crédits remboursés, réessaie.')
     const imageRef = await hedraV3Upload('avatar.jpg', img.bytes, img.contentType)
     if (!imageRef) return toolErr("Upload de la photo vers Hedra échoué — crédits remboursés, réessaie.")
@@ -2565,7 +2648,7 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
 
     // op_name préfixé « v3: » → check_avatar_video / advanceAvatarJob / reconcile pollent en v3.
     const { data: job, error } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: 'v3:' + String(jobId), credits_cost: cost }).select('id').single()
+      .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: opAvecCoupe('v3:' + String(jobId), lip && lip.coupe), credits_cost: cost }).select('id').single()
     if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
     launched = true
     return toolText(

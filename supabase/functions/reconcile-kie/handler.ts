@@ -95,6 +95,8 @@ export async function handler(req: Request): Promise<Response> {
     const { data: prev, error: pErr } = await svc.from('library_items').select('id').eq('user_id', userId).eq('storage_path', path).limit(1)
     if (pErr) throw new Error('bibliothèque (lecture) : ' + pErr.message)
     if (prev && prev[0]) return prev[0].id
+    // Bibliothèque = vue CLIENT (26/09) : jamais le nom du fournisseur (nom, tags et style s'affichent sur les cartes) —
+    // kieLibMeta : libellé neutre de l'alias pour un client (4K, Veo, Omni Flash, OmniHuman), détail kie pour le developer.
     const meta = kieLibMeta(label, alias, await isDevUser(userId))
     const ins = await svc.from('library_items').insert({ user_id: userId, kind: kind === 'image' ? 'image' : 'video-simple',
       name: meta.name, tags: meta.tags, style: meta.style, emo: '', storage_path: path }).select('id').single()

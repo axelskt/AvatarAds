@@ -28,6 +28,14 @@ const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // pas être détourné, mais on borne quand même la surface. Générations = FACTURANT (plafond + débit récent).
 const HEDRA_ALLOW = /^\/(models|assets(\/[A-Za-z0-9._-]+\/upload)?|generations(\/[A-Za-z0-9._-]+\/status)?|v3\/(files|models(\/[A-Za-z0-9._-]+)?|jobs(\/[A-Za-z0-9._-]+(\/status)?)?|assets(\/[A-Za-z0-9._-]+(\/upload)?)?))$/   // audit 06/09 : les job id Hedra v3 contiennent un '_' (job_1f592f28) → les polls /v3/jobs/<id>/status tombaient en 400. safePath (une seule barre de tête, jamais @ \\ .. %2e) reste la garde de sécurité.
 const HEDRA_BILLABLE = /^\/(generations|v3\/models\/[A-Za-z0-9._-]+)$/   // soumission = /generations (ancienne API) ou /v3/models/<slug> (v3)
+// 26/09 (« le dernier mot n'est pas articulé ») : l'app ajoute jusqu'à 0,5 s de silence APRÈS le dernier mot de l'audio
+// envoyé (sinon Hedra ne ferme pas la dernière syllabe), et coupe la vidéo ensuite. Cette marge est pour nous : la
+// réconciliation la retire de la durée rendue avant de la comparer au débit. Constante SERVEUR (jamais lue du client).
+// Retirée à TOUS les jobs (relecture 26/09, accepté en connaissance de cause) : le proxy ne sait pas si l'audio portait du
+// silence ajouté (upload et soumission sont deux requêtes sans état). Effet borné : la tolérance de réconciliation passe de
+// 2 s à 2,5 s par job, soit au plus 1 crédit, sur une op tirée entière (plancher 2) — une génération par débit.
+// ⚠ Ordre de déploiement : CE proxy avant l'app ; jamais de retour arrière de ce proxy seul (skill deploiement).
+const LIPSYNC_PAD_MS = 500
 
 serve(async (req: Request) => {
   // Preflight
@@ -220,7 +228,7 @@ serve(async (req: Request) => {
       if (jobId) {
         let sumMs = 0; const re = /"duration_ms"\s*:\s*([0-9]+)/g; let m: RegExpExecArray | null
         while ((m = re.exec(body))) sumMs += Number(m[1])
-        const realCost = Math.ceil(sumMs / 1000) * 2   // avatarPerSec = 2 cr/s (plat)
+        const realCost = Math.ceil(Math.max(0, sumMs - LIPSYNC_PAD_MS) / 1000) * 2   // avatarPerSec = 2 cr/s (plat), hors silence de fin ajouté
         if ((Deno.env.get('HEDRA_RECONCILE') ?? '0') === '1') {
           const r = await reconcileJob(user.id, 'hedra:' + jobId, realCost)
           console.log(`[hedra-reconcile] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s coût_réel=${realCost} → ${JSON.stringify(r)}`)

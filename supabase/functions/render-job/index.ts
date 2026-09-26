@@ -20,6 +20,8 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
+// Clés de job d'un rendu (une par op tirée, 3 au plus) — MÊMES clés dans render-worker/worker.mjs (reservationJob).
+const cleRendu = (id: string) => ['render:' + id, 'render:' + id + '#1', 'render:' + id + '#2']
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
@@ -85,7 +87,7 @@ serve(async (req: Request) => {
         .select('id')
       // Audit métier 06/09 : un job mort clos ici doit RENDRE sa réservation (sinon reserved=0 tiré à la
       // création reste bloqué → l'utilisateur ne peut plus se faire rembourser une vidéo jamais rendue).
-      for (const m of (morts ?? [])) { try { await service.rpc('release_by_job', { p_user: user.id, p_job: 'render:' + m.id, p_cost: 9999 }) } catch (_) { /* best-effort */ } }
+      for (const m of (morts ?? [])) for (const k of cleRendu(m.id)) { try { await service.rpc('release_by_job', { p_user: user.id, p_job: k, p_cost: 9999 }) } catch (_) { /* best-effort */ } }
 
       const { count } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).in('status', ['queued', 'rendering']).gte('created_at', limite)
@@ -96,33 +98,63 @@ serve(async (req: Request) => {
       // en service_role SANS re-gate → ce tirage est la SEULE barrière. On RÉSOUT puis on TIRE la réserve AVANT
       // de créer le job : draw_full est atomique (UPDATE ... WHERE reserve>0), donc un burst concurrent sur la
       // même op → UN SEUL tirage gagne, les perdants prennent 402 (sinon N montages rendus pour 1 seul débit).
-      let opId: string | null = null
-      try { const { data: _op } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null }); opId = (_op as string | null) || null }
-      catch (e) { console.warn('resolve_op render-job (fail-open technique):', (e as Error).message); opId = '__ERR__' }
+      // Ops DÉSIGNÉES par l'app (relecture 26/09, Montage IA avatar) : body.ops = [op du montage, op de l'habillage]. Avant, la
+      // « dernière op ouverte » était prise : l'op scènes (reliquat habillage) au lieu de l'op montage → les 6 crédits du rendu
+      // restaient remboursables APRÈS la livraison (refund-and-keep). Chaque op désignée est REVÉRIFIÉE ici (resolve_op doit la
+      // renvoyer telle quelle : à l'utilisateur, ouverte, réserve > 0, < 2 h), puis tirée ENTIÈRE. La 1re (le montage) est
+      // obligatoire ; sans désignation (Éditeur, autres flux) : comportement d'avant (dernière op ouverte). Une désignation
+      // DEMANDÉE (tableau non vide) mais illisible ne retombe JAMAIS sur « la dernière op ouverte » : aucune op → 402.
+      const demande = Array.isArray(body.ops) && body.ops.length > 0
+      const designees = [...new Set((demande ? body.ops : []).map((x: unknown) => String(x ?? '').trim()).filter((x: string) => /^[0-9a-f-]{36}$/i.test(x)))].slice(0, 3) as string[]
+      let opIds: string[] = []
+      let opErr = false
+      try {
+        if (demande) {
+          for (const [k, h] of designees.entries()) {
+            const { data: _op, error: _e } = await service.rpc('resolve_op', { p_user: user.id, p_hint: h })
+            if (_e) { if (k === 0) opErr = true; break }   // hoquet sur l'habillage : l'op du montage reste tirée
+            if (_op === h) opIds.push(h)
+            else if (k === 0) { opIds = []; break }   // l'op du montage n'est plus tirable → aucune (jamais une autre op à sa place)
+          }
+        } else {
+          const { data: _op, error: _e } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null })
+          if (_e) opErr = true; else if (_op) opIds = [String(_op)]
+        }
+      } catch (e) { console.warn('resolve_op render-job (fail-open technique):', (e as Error).message); if (!opIds.length) opErr = true }
       const { plan: uplan, isOwner, err: planErr } = await userPlan(user.id)
       const exempt = planErr || isOwner || uplan === 'developer'   // owner/dev ou hoquet DB → fail-open
-      if (!opId && !exempt) {
-        console.warn(`[reserve-strict] render-job user=${user.id} : aucune op tirable (strict=${reserveStrict()})`)
+      if (!opIds.length && !opErr && !exempt) {
+        console.warn(`[reserve-strict] render-job user=${user.id} : aucune op tirable (strict=${reserveStrict()}, désignées=${designees.length})`)
         if (reserveStrict()) return json({ error: 'Aucune réservation de crédits ouverte pour ce rendu.' }, 402)
       }
-      // Tirage AVANT l'insertion + on vérifie le booléen : un perdant du burst (op déjà à 0) → 402, pas de job.
-      let drew = false
-      let drewAmt = 0
-      if (opId && opId !== '__ERR__') {
-        // audit 14/09 : draw_full_reservation renvoie désormais le MONTANT tiré (int, 0 = rien), plus un booléen.
-        try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: opId }); drewAmt = Number(_ok) || 0; drew = drewAmt > 0 }
-        catch (e) { console.warn('draw_full render-job:', (e as Error).message); drew = false }
-        if (!drew && !exempt && reserveEnforce()) return json({ error: 'Réservation de crédits insuffisante pour ce rendu.' }, 402)
+      // Tirage AVANT l'insertion + on vérifie le montant : un perdant du burst (op déjà à 0) → 402, pas de job.
+      const tires: { op: string; amt: number }[] = []
+      if (!opErr) {
+        for (const o of opIds) {
+          // audit 14/09 : draw_full_reservation renvoie le MONTANT tiré (int, 0 = rien).
+          let amt = 0
+          try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: o }); amt = Number(_ok) || 0 }
+          catch (e) { console.warn('draw_full render-job:', (e as Error).message) }
+          if (amt > 0) tires.push({ op: o, amt })
+          else if (o === opIds[0]) break   // l'op principale n'a rien donné : on ne tire pas les autres
+        }
+        const drewMain = tires.length > 0 && tires[0].op === opIds[0]
+        if (opIds.length && !drewMain && !exempt && reserveEnforce()) {
+          for (const t of tires) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: t.op, p_cost: t.amt }) } catch (_) { /* best-effort */ } }
+          return json({ error: 'Réservation de crédits insuffisante pour ce rendu.' }, 402)
+        }
       }
       const { data, error } = await service.from('render_jobs')
         .insert({ user_id: user.id, status: 'queued', plan, input_video: input, assets, avatar_clips })
         .select('id').single()
       if (error) {
-        if (drew) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: opId, p_cost: drewAmt }) } catch (_) { /* best-effort */ } }   // job non créé → rendre EXACTEMENT le tirage
+        for (const t of tires) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: t.op, p_cost: t.amt }) } catch (_) { /* best-effort */ } }   // job non créé → rendre EXACTEMENT les tirages
         return json({ error: error.message }, 500)
       }
-      // lie l'op tirée au job (+ montant tiré) → le worker règle (settle_by_job) à la livraison, libère (release_by_job) à l'échec
-      if (drew) { try { await service.rpc('bind_reservation_job', { p_user: user.id, p_op: opId, p_job: 'render:' + data.id, p_drawn: drewAmt }) } catch (e) { console.warn('bind render:', (e as Error).message) } }
+      // lie chaque op tirée au job (+ montant tiré) → le worker règle (settle_by_job) à la livraison, libère (release_by_job) à
+      // l'échec. Une op par clé de job (provider_job n'en lie qu'une) : 'render:<id>', puis 'render:<id>#1', '#2'.
+      const cles = cleRendu(data.id)
+      for (const [k, t] of tires.entries()) { try { await service.rpc('bind_reservation_job', { p_user: user.id, p_op: t.op, p_job: cles[k], p_drawn: t.amt }) } catch (e) { console.warn('bind render:', (e as Error).message) } }
       return json({ ok: true, job_id: data.id })
     }
 
