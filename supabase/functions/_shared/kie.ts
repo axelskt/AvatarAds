@@ -9,18 +9,37 @@ export const kieKey = () => Deno.env.get('KIEAI_API_KEY') ?? ''
 export const kieHeaders = () => ({ Authorization: `Bearer ${kieKey()}`, 'Content-Type': 'application/json' })
 export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (lecture en flux, abandon au-delà)
 
-// ── Ouverture aux clients payants (Axel 25/09/2026) : EXACTEMENT deux usages. alias → plans autorisés (owner et
-//    developer passent toujours). Tout autre alias (Veo, Kling Motion Control, OmniHuman…) reste developer seulement.
+// ── Ouverture aux clients payants (Axel 25/09/2026) : EXACTEMENT trois usages. alias → plans autorisés (owner et
+//    developer passent toujours). Tout autre alias (Veo Fast, Kling Motion Control, OmniHuman…) reste developer seulement.
 //    Plans = ceux de l'UI : « Améliorer en 4K » dès Starter ; Omni Flash image→vidéo (Express « UGC réel » + Voix native
 //    du Générateur) = TOUS les plans payants depuis le 25/09 (Axel : « tout le monde y a droit pareil, Starter inclus »),
 //    comme le gate fal-proxy de google/gemini-omni-flash/…/image-to-video (le carré 1:1, que kie ne fait pas). Free : non.
+//    Veo 3.1 Lite (Express « Veo Standard », Axel 25/09 : « Veo Lite passe sur kie, 1080p compris ») = les mêmes plans que
+//    le chemin Google (google-ai-proxy : Lite dès Starter) ; la 1080p reste Pro / Élite (KIE_VEO_1080_PLANS, comme le gate
+//    « Veo 1080p » de google-ai-proxy et _exp1080Allowed de l'app). Veo Fast (veo3-fast) n'est proposé à AUCUN client dans
+//    l'app (carte « Veo Fast » = test du compte developer) → fermé ici ; s'il est ouvert un jour : Pro / Élite (KIE_VEO_FAST_PLANS).
 export const KIE_OPEN: Record<string, string[]> = {
   'nano-banana-pro': ['starter', 'pro', 'elite', 'byok'],
   'omni-flash': ['starter', 'pro', 'elite', 'byok'],
+  'veo3-lite': ['starter', 'pro', 'elite', 'byok'],
+}
+export const KIE_VEO_1080_PLANS = ['pro', 'elite']
+export const KIE_VEO_FAST_PLANS = ['pro', 'elite']
+// Tarif Veo facturé au client (crédits / seconde, 25/09 : prix INCHANGÉS par rapport à Google) = CREDIT_COSTS de l'app
+// (expressLitePerSec 1,5 · expressFastPerSec 3 · express1080Mult ×2) et costFor de google-ai-proxy. À changer ENSEMBLE.
+// Coût kie par vidéo (4/6/8 s, pour mémoire) : Lite 720p 0,15 $ · 1080p 0,175 $ ; Fast 720p 0,30 $ · 1080p 0,325 $.
+export const KIE_VEO_PER_SEC: Record<string, { '720p': number; '1080p': number }> = {
+  'veo3-lite': { '720p': 1.5, '1080p': 3 },
+  'veo3-fast': { '720p': 3, '1080p': 6 },
+}
+export function kieVeoCost(alias: string, resolution: unknown, seconds: unknown): number {
+  const r = KIE_VEO_PER_SEC[alias] || KIE_VEO_PER_SEC['veo3-fast']   // alias inconnu → le plus cher (jamais sous-facturer)
+  const sec = [4, 6, 8].includes(Number(seconds)) ? Number(seconds) : 8
+  return Math.ceil(sec * (String(resolution) === '1080p' ? r['1080p'] : r['720p']))
 }
 // Usages SANS repli côté app (Axel 25/09 : Omni Flash = « kie directement, pas de fallback ») : un échec kie n'a plus de
 // suite possible sur la même réservation → kie-proxy la rend PUIS la rembourse tout de suite (kie_job_bill release →
-// refund, exactement une fois). Nano 4K garde son repli Google → rendu seulement (l'app re-tire la même op).
+// refund, exactement une fois). Nano 4K et Veo Lite gardent leur repli Google → rendu seulement (l'app re-tire la même op).
 export const KIE_NO_FALLBACK = new Set(['omni-flash'])
 // Interrupteur serveur : secret KIE_CLIENTS=0 referme kie aux clients SANS redéploiement (403 AVANT tout tirage → l'app
 // replie sur Google / fal). Lu à chaque requête. Défaut : ouvert. Le compte developer n'est pas concerné.
@@ -39,7 +58,24 @@ export async function kieBill(db: SupabaseClient, userId: string, rid: string, a
   } catch (e) { console.warn('[kie] kie_job_bill exception', action, rid, (e as Error)?.message); return { ok: false, bill: null, reason: 'rpc' } }
 }
 
-// Nom affiché dans la Bibliothèque quand le filet range une génération récupérée après coup.
+// Nom affiché dans la Bibliothèque quand le filet range une génération récupérée après coup. Compte developer SEULEMENT :
+// un client ne voit jamais « kie » ni le nom du moteur (Axel 25/09) → KIE_CLIENT_LABELS + kieLibMeta (tags / style neutres).
+export const KIE_CLIENT_LABELS: Record<string, string> = {
+  'nano-banana-pro': 'Image 4K',
+  'veo3-lite': 'Vidéo Express',
+  'veo3-fast': 'Vidéo Express',
+  'omni-flash': 'Vidéo',
+}
+export const kieLabel = (alias: string, dev: boolean): string => dev ? (KIE_LABELS[alias] || 'kie.ai') : (KIE_CLIENT_LABELS[alias] || 'Génération')
+// Métadonnées de la ligne Bibliothèque écrite par le filet. « Compte developer » = le PLAN du propriétaire (lu par le filet),
+// jamais deviné d'après le libellé : les lignes client écrites par l'ancien kie-proxy portent « … · kie.ai » (KIE_LABELS,
+// Omni / 4K ouverts plus tôt le 25/09) → pour un client, un libellé contenant « kie » est remplacé par le libellé neutre de
+// l'alias ; tags / style sans nom de moteur. Developer : libellé, tags et style kie (inchangé).
+export function kieLibMeta(label: string | null, alias: string | null, dev: boolean): { name: string; tags: string[]; style: string } {
+  if (dev) return { name: label || KIE_LABELS[String(alias)] || 'kie.ai', tags: ['kie.ai', 'récupérée'], style: 'kie.ai' }
+  const name = (label && !/kie/i.test(label)) ? label : (KIE_CLIENT_LABELS[String(alias)] || 'Génération')
+  return { name, tags: ['récupérée'], style: '' }
+}
 export const KIE_LABELS: Record<string, string> = {
   'nano-banana-pro': 'Image 4K · kie.ai',
   'veo3-lite': 'Vidéo Veo Lite · kie.ai',
@@ -74,10 +110,20 @@ export async function kieRecord(fam: 'mk' | 'veo', taskId: string): Promise<KieR
   }
   if (fam === 'veo') {
     const f = Number(d.successFlag)
-    const urls = Array.isArray(d.response?.resultUrls) ? d.response.resultUrls : []
+    // Résultat = resultUrls, sinon originUrls (doc kie : rempli dès que le format n'est pas 16:9 — donc en 9:16, le format
+    // d'Express). Un succès avec la seule originUrls est un LIVRABLE (jamais classé « échec » rendu → repli Google = deux
+    // vidéos pour un débit). Aucune URL de résultat dans `meta` : la route résultat (règlement, bill_state) est le SEUL
+    // chemin de livraison (relecture 26/09 : /status livrait originUrls, même sur une tâche remboursée).
+    const list = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v.map((x) => String(x || '')).filter(Boolean)
+      if (typeof v === 'string' && v.trim()) { try { const a = JSON.parse(v); return Array.isArray(a) ? a.map((x) => String(x || '')).filter(Boolean) : [] } catch { return [] } }
+      return []
+    }
+    const res = list(d.response?.resultUrls), orig = list(d.response?.originUrls)
+    const urls = res.length ? res : orig
     return { found: true, state: f === 1 ? 'ok' : (f === 2 || f === 3 ? 'fail' : 'run'), urls,
       err: String(d.errorMessage || ''), errType: String(d.errorCode ?? ''), param: norm(d.paramJson),
-      meta: { resolution: d.response?.resolution ?? null, originUrls: d.response?.originUrls ?? null, fallbackFlag: d.fallbackFlag ?? null } }
+      meta: { resolution: d.response?.resolution ?? null, origin: orig.length > 0, fallbackFlag: d.fallbackFlag ?? null } }
   }
   const st = String(d.state || '')
   let urls: string[] = []
