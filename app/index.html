@@ -14289,6 +14289,130 @@ async function _mtAudioSliceWav(file, st, en){
   return _audioBufferToWavBlob(await off.startRendering());
 }
 
+// ── L'AUDIO ENVOYÉ AU LIPSYNC (26/09 — « le dernier mot n'est pas articulé ») ─────────────────────────────
+// Un audio qui s'arrête NET sur le dernier phonème laisse Hedra (Avatar comme Character-3) sans « contexte droit » :
+// la dernière syllabe n'est pas articulée (mesuré sur CTA28 : le /m/ final ne se ferme jamais). On ne touche JAMAIS
+// à la voix d'origine : on fabrique seulement l'audio ENVOYÉ au modèle —
+//   · la voix continue après la fenêtre → sa suite réelle jusqu'à +0,6 s (fondu de 30 ms à la coupe) ;
+//   · fin de l'audio → silence complété jusqu'à 0,5 s après le dernier mot (jamais plus que nécessaire).
+// Puis la vidéo se coupe à fin de parole + 0,3 s (Générateur) ou le visage n'est affiché que sur la matière
+// réellement lipsynchronisée (Montage IA : `lipEnd`, lu par le moteur du render-worker).
+// MÊME règle que render-worker/lipsync-audio.mjs (planAudioLipsync) : à changer ENSEMBLE.
+const _LIP = { CTX:0.6, PAD:0.5, MIN:3.3, FADE:0.03, COUPE:0.3, FIN_TOL:0.05, DERNIER_MAX:3 };
+const _lipR3 = (n)=>Math.round(n*1000)/1000;
+// fin de parole d'un AudioBuffer (même mesure que _expSpeechEnd : RMS 50 ms, seuil pic −25 dB) → { end, dur } | null
+function _lipFinParole(buf){
+  if(!buf || !buf.length) return null;
+  const sr=buf.sampleRate, n=buf.length, W=Math.max(1, Math.round(sr*0.05)), chans=[];
+  for(let k=0;k<buf.numberOfChannels;k++) chans.push(buf.getChannelData(k));
+  const db=[];
+  for(let i=0;i<n;i+=W){ let sum=0, c=0; const e=Math.min(n, i+W); for(const d of chans){ for(let j=i;j<e;j++){ sum+=d[j]*d[j]; c++; } } db.push(20*Math.log10(Math.sqrt(sum/Math.max(1,c))+1e-9)); }
+  let peak=-Infinity; for(const v of db) if(v>peak) peak=v;
+  if(!(peak > -40)) return null;
+  const thr=Math.max(-60, peak-25);
+  for(let i=db.length-1;i>=0;i--){ if(db[i] > thr) return { end:_lipR3(Math.min(n/sr, (i+1)*0.05)), dur:_lipR3(n/sr) }; }
+  return null;
+}
+// plan de l'audio envoyé pour la fenêtre [start,end] d'une voix de durée voixDur (cf. lipsync-audio.mjs) :
+// { from, to, voixSec, padSec, fadeOut, envoyeSec, lipEnd (absolu ; null = la voix s'arrête), factureSec (= utile) }
+function _lipPlan(o){
+  const min = (o.min!=null) ? o.min : _LIP.MIN, ctx = (o.ctx!=null) ? o.ctx : _LIP.CTX, pad = (o.pad!=null) ? o.pad : _LIP.PAD;
+  const s=Math.max(0, Number(o.start)||0), e=Math.max(s, Number(o.end)||s);
+  const D=Number(o.voixDur)>0 ? Number(o.voixDur) : Infinity;
+  let cible=Math.max(s+min, e+ctx);
+  if(o.jusqua!=null && Number(o.jusqua)>cible) cible=Math.min(Number(o.jusqua), e+_LIP.DERNIER_MAX);
+  const to=Math.max(s, Math.min(D, cible));
+  const finFichier = D-to <= _LIP.FIN_TOL;
+  const voixSec=to-s;
+  const fp = (o.finParole!=null && isFinite(Number(o.finParole))) ? Number(o.finParole) : null;
+  const silenceDeja = (finFichier && fp!=null) ? Math.max(0, D-Math.max(fp, s)) : 0;
+  let padSec = finFichier ? Math.max(0, pad-silenceDeja) : 0;
+  if(voixSec+padSec < min) padSec = min-voixSec;
+  padSec=_lipR3(padSec);
+  return { from:_lipR3(s), to:_lipR3(to), voixSec:_lipR3(voixSec), padSec, fadeOut: finFichier ? 0 : _LIP.FADE,
+           envoyeSec:_lipR3(voixSec+padSec), lipEnd: finFichier ? null : _lipR3(to), factureSec:_lipR3(Math.max(min, e-s)) };
+}
+// rend un plan sur un AudioBuffer décodé → Blob WAV (la voix d'origine n'est que LUE)
+async function _lipRender(dec, p){
+  const sr=dec.sampleRate, nCh=dec.numberOfChannels;
+  const off=new OfflineAudioContext(nCh, Math.max(1, Math.round(p.envoyeSec*sr)), sr);
+  const src=off.createBufferSource(); src.buffer=dec;
+  const g=off.createGain(); src.connect(g); g.connect(off.destination);
+  if(p.fadeOut>0 && p.voixSec>p.fadeOut){ g.gain.setValueAtTime(1, p.voixSec-p.fadeOut); g.gain.linearRampToValueAtTime(0, p.voixSec); }
+  src.start(0, p.from, p.voixSec);   // après voixSec : silence (padSec), rendu tel quel par le contexte
+  return _audioBufferToWavBlob(await off.startRendering());
+}
+// Montage IA : audio de la scène [st,en] envoyé à Hedra → { wav, plan }. `dernier` = dernière scène du montage :
+// la voix est couverte jusqu'à la fin de l'audio (≤ 3 s en plus) — le moteur étire ce panneau jusqu'au bout.
+async function _mtLipAudioWav(file, st, en, dernier){
+  const ac=new (window.AudioContext||window.webkitAudioContext)();
+  const dec=await ac.decodeAudioData(await file.arrayBuffer());
+  try{ await ac.close(); }catch(_){}
+  const f=_lipFinParole(dec);
+  const p=_lipPlan({ start:st, end:en, voixDur:dec.duration, finParole: f ? f.end : null, jusqua: dernier ? dec.duration : null });
+  return { wav: await _lipRender(dec, p), plan: p };
+}
+// Générateur : l'audio ENTIER + le silence qui manque après le dernier mot (0,5 s garantis) → { blob, finParole, pad }.
+// Rien à faire (silence déjà là, audio illisible) → l'audio d'origine tel quel. Pas de plancher 3,3 s ici : la
+// facturation du Générateur est à la durée de l'audio, on ne crée pas de secondes que la réconciliation compterait.
+async function _lipPrepHedra(blob){
+  let dec=null;
+  try{ const ac=new (window.AudioContext||window.webkitAudioContext)(); try{ dec=await ac.decodeAudioData(await blob.arrayBuffer()); } finally { try{ await ac.close(); }catch(_){} } }catch(_){ return { blob, finParole:null, pad:0 }; }
+  const f=_lipFinParole(dec);
+  if(!f) return { blob, finParole:null, pad:0 };
+  const p=_lipPlan({ start:0, end:dec.duration, voixDur:dec.duration, finParole:f.end, min:0 });
+  if(p.padSec < 0.02) return { blob, finParole:f.end, pad:0, dur:_lipR3(dec.duration) };
+  return { blob: await _lipRender(dec, p), finParole:f.end, pad:p.padSec, dur:_lipR3(dec.duration) };
+}
+// Générateur : instant de coupe de la vidéo Hedra (timeline = celle de l'audio envoyé) d'après _lipPrepHedra.
+// Fin de parole + 0,3 s ; si le dernier mot détecté est suivi de plus de 2,5 s (silence voulu, fin très douce),
+// on ne coupe QUE ce qui dépasse l'audio de l'utilisateur (+0,3 s). null = pas de coupe (mesure impossible).
+function _lipCoupeGen(lp){
+  if(!lp || !(lp.finParole > 1) || !(lp.dur > 0)) return null;
+  return _lipR3((lp.dur - lp.finParole) <= 2.5 ? lp.finParole + _LIP.COUPE : lp.dur + _LIP.COUPE);
+}
+// Coupe la vidéo rendue à `sec` par sa LISTE D'ÉDITIONS (edts/elst), sur une copie, à taille égale : aucun octet de
+// média touché, aucun ré-encodage ni ffmpeg.wasm à charger. Les MP4 de Hedra (muxés par ffmpeg) ont une entrée elst par
+// piste — vérifié sur 5 sorties réelles ; ffmpeg (compo serveur), Chrome et QuickTime s'arrêtent à `sec` (vidéo, audio,
+// decodeAudioData). La coupe tombe dans le silence qui suit le dernier mot (≥ 0,2 s après lui) : pas de fondu nécessaire.
+// Structure inattendue → null. MÊME code que supabase/functions/_shared/lipsync-audio.ts (couperMp4).
+function _lipCutMp4(bytes, sec){
+  if(!(sec > 0)) return null;
+  const b=bytes.slice(), dv=new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const txt=(o)=>String.fromCharCode(b[o],b[o+1],b[o+2],b[o+3]);
+  const boites=(deb, fin)=>{ const out=[]; let off=deb;
+    while(off+8<=fin){ let size=dv.getUint32(off), hdr=8;
+      if(size===1){ if(off+16>fin) return null; size=Number(dv.getBigUint64(off+8)); hdr=16; } else if(size===0) size=fin-off;
+      if(size<hdr || off+size>fin) return null; out.push({ type:txt(off+4), off, hdr, size }); off+=size; }
+    return out; };
+  const top=boites(0, b.length), moov=top && top.find((x)=>x.type==='moov'); if(!moov) return null;
+  const kids=boites(moov.off+moov.hdr, moov.off+moov.size), mvhd=kids && kids.find((x)=>x.type==='mvhd'); if(!mvhd) return null;
+  const mv=mvhd.off+mvhd.hdr, v=b[mv], ts=v===1 ? dv.getUint32(mv+20) : dv.getUint32(mv+12), durOff=v===1 ? mv+24 : mv+16;
+  const lireD=(o,ver)=> ver===1 ? Number(dv.getBigUint64(o)) : dv.getUint32(o);
+  const ecrire=(o,ver,val)=>{ if(ver===1) dv.setBigUint64(o, BigInt(val)); else dv.setUint32(o, val); };
+  if(!(ts>0)) return null;
+  const neuf=Math.round(sec*ts); if(!(neuf>0) || neuf>=lireD(durOff, v)) return null;
+  const traks=kids.filter((x)=>x.type==='trak'); if(!traks.length) return null;
+  const ops=[];
+  for(const t of traks){
+    const tk=boites(t.off+t.hdr, t.off+t.size); if(!tk) return null;
+    const tkhd=tk.find((x)=>x.type==='tkhd'), edts=tk.find((x)=>x.type==='edts'); if(!tkhd || !edts) return null;
+    const eb=boites(edts.off+edts.hdr, edts.off+edts.size), elst=eb && eb.find((x)=>x.type==='elst'); if(!elst) return null;
+    const e0=elst.off+elst.hdr, ev=b[e0]; if(dv.getUint32(e0+4)!==1) return null;
+    const segOff=e0+8, mediaTime= ev===1 ? Number(dv.getBigInt64(segOff+8)) : dv.getInt32(segOff+4); if(mediaTime<0) return null;
+    const th=tkhd.off+tkhd.hdr, tv=b[th], tdOff= tv===1 ? th+28 : th+20;
+    ops.push(()=>{ if(lireD(segOff, ev)>neuf) ecrire(segOff, ev, neuf); if(lireD(tdOff, tv)>neuf) ecrire(tdOff, tv, neuf); });
+  }
+  for(const f of ops) f();
+  ecrire(durOff, v, neuf);
+  return b;
+}
+async function _lipCutVideo(blob, sec){
+  const t=_lipCutMp4(new Uint8Array(await blob.arrayBuffer()), sec);
+  if(!t) throw new Error('structure MP4 inattendue');
+  return new Blob([t], { type:'video/mp4' });
+}
+
 // orientation d'une image → 'portrait' | 'paysage' | 'square'
 function _mtImgOrient(file){
   return new Promise((res)=>{
@@ -14560,10 +14684,10 @@ async function _mtDetectHands(imgFile){
 }
 
 // aiguillage : OmniHuman → fal.ai (1080p) · Character-3 → Hedra
+// Mix (Axel 11/09) : hook + CTA en OmniHuman (accroche premium), le reste en Character-3 (Hedra) pour le coût
+function _mtSceneIsOmni(role){ return _mt.lipModel==='omnihuman' || (_mt.lipModel==='mix' && (role==='hook' || role==='cta')); }
 function _mtScene(img, wav, fmt, modelId, segSec, role){
-  // Mix (Axel 11/09) : hook + CTA en OmniHuman (accroche premium), le reste en Character-3 (Hedra) pour le coût
-  const useOmni = _mt.lipModel==='omnihuman' || (_mt.lipModel==='mix' && (role==='hook' || role==='cta'));
-  return useOmni ? _mtOmniScene(img, wav, fmt, segSec, role) : _mtHedraScene(img, wav, fmt, modelId, role);
+  return _mtSceneIsOmni(role) ? _mtOmniScene(img, wav, fmt, segSec, role) : _mtHedraScene(img, wav, fmt, modelId, role);
 }
 
 // base gameplay 9:16 bouclée à la durée de l'audio + la voix en piste audio → Blob mp4
@@ -14641,7 +14765,7 @@ async function _mtSegmentedGenerate(){
     const wav=await _mtAudioSliceWav(_mt.mp3, 0, dur);
     const frames=await _mtFramesFromVideo(baseBlob, 6);
     const fd=new FormData();
-    fd.append('audio', wav, (_mt.video.name || 'source.mp4'));
+    fd.append('audio', wav, ((_mt.video && _mt.video.name) || 'source.mp4'));   // audio + avatar sans vidéo : _mt.video est null (TypeError avant le lipsync)
     fd.append('duration', String(Math.round(dur*100)/100));
     frames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
@@ -14728,9 +14852,19 @@ async function _mtSegmentedGenerate(){
       _mtProg(30 + Math.round(56*(i/Math.max(1,segs.length))), 'Scène '+(i+1)+'/'+segs.length+' — l\'avatar parle en '+modelLbl+' ('+(fmt==='paysage'?'16:9':'9:16')+')…');
       const img=await _mtAvatarInFormat(i, fmt);   // #84 · rotation : image ≠ par scène
       await _mtDetectHands(img);   // mains dans le cadre ? une seule fois par photo
-      const segWav=await _mtAudioSliceWav(_mt.mp3, s.start, s.end);
       // le rôle borne la « scène vivante » : seulement aux extrémités, jamais au milieu
       const role = i===0 ? 'hook' : (i===segs.length-1 && (s.start||0) > dur*0.6 ? 'cta' : 'mid');
+      // Audio ENVOYÉ (26/09) : Hedra reçoit la suite réelle de la voix (+0,6 s) ou 0,5 s de silence en fin d'audio,
+      // et `lipEnd` dit au moteur jusqu'où les lèvres suivent la voix (au-delà il n'affiche plus ce visage).
+      // OmniHuman (fal / kie) garde l'extrait exact ; sa matière s'arrête à la fin de la scène. Facturation
+      // inchangée (lipCost = durée utile des scènes) : la marge envoyée est pour nous.
+      let segWav;
+      if(_mtSceneIsOmni(role)){ segWav=await _mtAudioSliceWav(_mt.mp3, s.start, s.end); if((s.end||0) < dur-0.05) s.lipEnd=Math.round((s.end||0)*1000)/1000; else delete s.lipEnd; }
+      else{
+        const _dernier = segs.every((o)=>o===s || (o.start||0) < (s.start||0));
+        const _la=await _mtLipAudioWav(_mt.mp3, s.start, s.end, _dernier);
+        segWav=_la.wav; if(_la.plan.lipEnd!=null) s.lipEnd=_la.plan.lipEnd; else delete s.lipEnd;
+      }
       clipBlobs.push(await _mtScene(img, segWav, fmt, modelId, Math.max(0,(s.end||0)-(s.start||0)), role));
     }
 
@@ -25232,10 +25366,15 @@ async function callHedra(audioBlob){
     // ── API Hedra v3 : upload audio + image de départ → submit hedra-<slug> → poll ──
     // ⚠ En v3, start_image est OBLIGATOIRE (la v2 tolérait l'audio seul). Le Générateur
     // a toujours un avatar (Avatar / Vidéo existante), donc on l'exige et on le dit clairement.
-    const audioExt = (audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav'
+    // Audio ENVOYÉ (26/09 — « le dernier mot n'est pas articulé ») : la voix d'origine + le silence qui manque après
+    // le dernier mot (0,5 s garantis), sinon Hedra ne ferme pas la dernière syllabe. La voix d'origine (results.audioBlob)
+    // n'est pas touchée ; la vidéo rendue est recoupée à fin de parole + 0,3 s juste après le téléchargement.
+    const _lp = await _lipPrepHedra(audioBlob).catch(() => ({ blob: audioBlob, finParole: null, pad: 0 }));
+    const _sendBlob = _lp.blob || audioBlob;
+    const audioExt = (_sendBlob !== audioBlob || audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav'
                    : (audioBlob.type === 'audio/ogg' || audioBlob.type === 'audio/opus')  ? 'ogg'
                    : 'mp3';
-    const audioUp = await _hedraV3UploadBlob(audioBlob, 'voice.' + audioExt);
+    const audioUp = await _hedraV3UploadBlob(_sendBlob, 'voice.' + audioExt);
 
     // Image de départ (avatar) — URL distante puis fichier local
     let startImg = null;
@@ -25328,7 +25467,14 @@ async function callHedra(audioBlob){
     // Pré-fetch du blob (évite expiration URL + CORS au téléchargement)
     try {
       const vRes = await fetch(out.url);
-      if(vRes.ok){ const vBlob = await vRes.blob(); const localUrl = URL.createObjectURL(vBlob); await _incrementVideosUsed(); return localUrl; }
+      if(vRes.ok){
+        let vBlob = await vRes.blob();
+        // coupe à fin de parole + 0,3 s (queue muette du modèle + silence ajouté) ; jamais dans l'audio de l'utilisateur
+        // au-delà d'une queue de 2,5 s après le dernier mot détecté. Échec → la vidéo entière (rien n'est perdu).
+        const _cut = _lipCoupeGen(_lp);
+        if(_cut){ try{ vBlob = await _lipCutVideo(vBlob, _cut); }catch(e){ console.warn('coupe fin de parole ignorée :', e); } }
+        const localUrl = URL.createObjectURL(vBlob); await _incrementVideosUsed(); return localUrl;
+      }
     } catch(e){ console.warn('Pre-fetch blob failed, using remote URL:', e); }
     await _incrementVideosUsed();
     return out.url;

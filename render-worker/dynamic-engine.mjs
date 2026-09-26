@@ -24,6 +24,8 @@ import { deriveDynamicSlides } from './dynamic-derive.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
 const r2 = (n) => Math.round(n * 100) / 100
+// le clip avatar joue jusqu'à t1 + 0,45 s (il reste visible pendant la poussée du panneau suivant, 0,42 s)
+const LIP_POUSSEE = 0.45
 // ── DURÉE D'UN CLIP VIDÉO : SUR LA GRILLE 0,1 s, ARRONDIE VERS LE BAS ──────
 // Le garde de couverture d'HyperFrames compte `ceil(durée × fps)` images
 // attendues, mais l'extracteur ffmpeg en émet `floor` : sur une fenêtre de
@@ -83,7 +85,8 @@ const fitSize = (text, maxW, lo = 64, hi = 160) =>
   Math.round(Math.min(hi, Math.max(lo, maxW / (CHAR_W * Math.max(1, String(text).length)))))
 
 // ── 1 · SEGMENTATION : slides + phrases → chaîne contiguë ───────────────────
-function buildPanels(plan, D) {
+function buildPanels(plan, D, opts = {}) {
+  const log = opts.silencieux ? () => {} : (m) => console.log(m)
   const words = (plan.captions || [])
     .filter((c) => String(c.text || '').trim())
     .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(Math.max(c.start + 0.08, c.end)), accent: !!c.accent }))
@@ -103,7 +106,7 @@ function buildPanels(plan, D) {
       .map((s) => ({ kind: 'content', t0: r2(s.start), t1: r2(s.end ?? s.start + 2), slide: s })),
     // #149 · fenêtres AVATAR : le visage plein écran entre les animations
     ...(plan.avatarSegments || [])
-      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil, faceP: s.faceP, selfie: s.selfie } })),
+      .map((s, i) => ({ kind: 'avclip', t0: r2(s.start), t1: r2(s.end ?? s.start + 4), slide: { i, duo: s.duo, insets: s.insets, photo: s.photo, split: s.split, clipAt: s.clipAt, clipUntil: s.clipUntil, faceP: s.faceP, selfie: s.selfie, lipEnd: s.lipEnd } })),
   ].sort((a, b) => a.t0 - b.t0)
 
   // ── RÈGLE : DEUX FENÊTRES AVATAR QUI SE SUIVENT = LE MÊME VISAGE/DÉCOR ────────
@@ -184,12 +187,33 @@ function buildPanels(plan, D) {
   // entre plus tôt — son contenu arrive dès l'ouverture, l'écran vit toujours.
   for (let i = 0; i < out.length - 1; i++) {
     const finNat = r2(out[i].t1 ?? out[i + 1].t0)
-    const t0Suiv = r2(Math.min(out[i + 1].t0, Math.max(finNat + 1.6, out[i].t0 + 1.2)))
-    if (t0Suiv < out[i + 1].t0 - 0.05) console.log(`▶ temps mort ${t0Suiv}→${r2(out[i + 1].t0)}s : le panneau suivant entre plus tôt (fini les dégradés nus)`)
+    let t0Suiv = r2(Math.min(out[i + 1].t0, Math.max(finNat + 1.6, out[i].t0 + 1.2)))
+    // ── LE VISAGE NE RESTE PAS APRÈS SA MATIÈRE LIPSYNC (26/09, « le dernier mot n'est pas articulé ») ──
+    // `lipEnd` = instant absolu jusqu'où le clip suit VRAIMENT la voix (fenêtre + suite de voix envoyée au
+    // modèle). Au-delà, les lèvres sont au repos (queue du modèle, puis image gelée) alors que la voix
+    // continue : c'était « la dernière seconde où l'avatar ne dit pas le mot » (étirement +1,6 s, clip joué
+    // jusqu'à t1 + 0,45). Si des mots sont DITS après `lipEnd` pendant que le visage serait encore visible, le
+    // panneau s'arrête à lipEnd − 0,5 (poussée comprise), jamais avant sa propre fin si sa matière la couvre, et
+    // le panneau suivant entre plus tôt, comme pour un temps mort. Voix muette après = rien ne change.
+    // Jamais quand le suivant est lui-même un visage : son clip joue depuis l'ouverture de SON panneau — l'avancer
+    // ferait dire à ses lèvres des mots en avance sur la voix (pire qu'une fin de poussée au repos).
+    const lip = out[i].kind === 'avclip' && out[i].slide && out[i + 1].kind !== 'avclip' ? Number(out[i].slide.lipEnd) : NaN
+    if (Number.isFinite(lip)) {
+      const vu = Math.min(D, t0Suiv + LIP_POUSSEE)
+      if (vu > lip && words.some((w) => w.start < vu && w.end > lip + 0.1)) {
+        const cap = r2(Math.max(out[i].t0 + 1.2, Math.min(finNat, lip), lip - LIP_POUSSEE - 0.05))
+        if (cap < t0Suiv) { log(`▶ visage ${r2(out[i].t0)}→${t0Suiv}s borné à ${cap}s : la matière lipsync s'arrête à ${r2(lip)}s et la voix continue`); t0Suiv = cap }
+      }
+    }
+    if (t0Suiv < out[i + 1].t0 - 0.05) log(`▶ temps mort ${t0Suiv}→${r2(out[i + 1].t0)}s : le panneau suivant entre plus tôt (fini les dégradés nus)`)
     out[i + 1].t0 = t0Suiv
     out[i].t1 = t0Suiv
   }
   out[out.length - 1].t1 = D
+  {
+    const der = out[out.length - 1], lip = der.kind === 'avclip' && der.slide ? Number(der.slide.lipEnd) : NaN
+    if (Number.isFinite(lip) && lip < D - 0.05 && words.some((w) => w.end > lip + 0.1)) log(`⚠ dernier panneau visage : matière lipsync jusqu'à ${r2(lip)}s, la voix continue jusqu'à ${r2(D)}s`)
+  }
 
   // FUSION des scènes courtes voisines : deux panneaux de <1.35 s qui se poussent
   // à la chaîne, « on n'a même pas le temps de voir que ça change déjà » (Axel).
@@ -207,6 +231,20 @@ function buildPanels(plan, D) {
   }
   return merged
 }
+
+// Fin d'AFFICHAGE de chaque fenêtre avatar (indice de plan.avatarSegments) telle que le moteur la jouera :
+// clip visible jusqu'à min(D, t1 + 0,45). `dernier` = indice de la fenêtre qui tient le DERNIER panneau
+// (étiré jusqu'à la fin de la vidéo), -1 sinon. Sert au worker à envoyer assez de voix au modèle pour ce
+// panneau-là (les autres sont bornés à leur matière, cf. `lipEnd` ci-dessus). Pur : ne modifie pas le plan.
+export function finsAffichageAvatar(plan) {
+  const D = r2(Math.max(1, Number(plan && plan.duration) || 0))
+  const panels = buildPanels(plan, D, { silencieux: true })
+  const fins = (plan.avatarSegments || []).map(() => null)
+  panels.forEach((p) => { if (p.kind === 'avclip' && p.slide && Number.isInteger(p.slide.i)) fins[p.slide.i] = r2(Math.min(D, p.t1 + LIP_POUSSEE)) })
+  const der = panels[panels.length - 1]
+  return { D, fins, dernier: der && der.kind === 'avclip' && der.slide && Number.isInteger(der.slide.i) ? der.slide.i : -1 }
+}
+export { buildPanels as _buildPanelsPourTest }
 
 // ── 2 · CONTENU D'UN PANNEAU TYPO : une seule déclaration ───────────────────
 // Accent présent → LE mot en slam (et rien d'autre, ou 2 mots de contexte au-
@@ -930,7 +968,10 @@ export function buildDynamicComposition(plan, opts = {}) {
         // clipAt : la fenêtre étendue par le split auto démarre avant la voix du
         // clip — lui reste calé sur SES mots, la photo porte l'attente
         const cAt = r2(Math.max(liveT0, p.slide.clipAt ?? liveT0))
-        const cEnd = r2(Math.min(D, (p.slide.clipUntil ?? t1) + 0.45))
+        // …et jamais au-delà de sa matière lipsync (`lipEnd`, 26/09) : split en DERNIER panneau (étiré jusqu'à la fin)
+        // alors que la voix continue → la photo porte le bas, comme après `clipUntil` (jamais de lèvres gelées)
+        const lipS = Number(p.slide.lipEnd)
+        const cEnd = r2(Math.min(D, (p.slide.clipUntil ?? t1) + 0.45, Number.isFinite(lipS) ? Math.max(cAt + 0.5, lipS) : Infinity))
         // face-aware (#136) : le worker a détecté le visage → object-position
         // exact ; sans détection, 48 % — calibré sur les portraits 2:3 du pool (Axel
         // 23/08) : 5 % poussait le visage en bas de cadre, 56 % coupait les cheveux ;

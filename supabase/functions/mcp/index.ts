@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
+import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -1304,6 +1305,9 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
     const { data: fresh } = await svc.from('mcp_jobs').select('result_url').eq('id', job.id).maybeSingle()
     return fresh?.result_url ?? null
   }
+  // lipsync_video (26/09) : l'audio envoyé portait un silence de fin → vidéo recoupée à fin de parole + 0,3 s
+  // (liste d'éditions, sans ré-encodage). Structure inattendue → livrée entière, comme avant.
+  { const cut = coupeDeOp(job.op_name); if (cut) { const t = couperMp4(bytes, cut); if (t) bytes = t } }
   const url = await uploadMedia(userId, bytes, 'mp4', 'video/mp4')
   await svc.from('mcp_jobs').update({ result_url: url, updated_at: new Date().toISOString() }).eq('id', job.id)
   await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Vidéo AvatarAds')  // filet Bibliothèque
@@ -1711,6 +1715,7 @@ async function hedraV3Upload(name: string, bytes: Uint8Array, contentType: strin
 }
 // Statut d'un job v3 : { pending } tant que ça tourne, { failed, err } en échec, { url } quand livré.
 async function hedraV3StatusUrl(jobId: string): Promise<{ pending?: boolean; failed?: boolean; url?: string; progress?: number; err?: string }> {
+  jobId = jobSansCoupe(jobId)   // op_name « v3:<job>#cut=… » (lipsync_video, 26/09)
   const st = await hedraV3Fetch(`/v3/jobs/${jobId}/status`, { method: 'GET' })
   if (!st.ok) return { pending: true, progress: 0 }
   const d = await st.json().catch(() => ({})) as Record<string, unknown>
@@ -2131,8 +2136,12 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
   try {
     if (!HEDRA_V3_KEY) return toolErr('Lipsync Hedra indisponible (configuration serveur incomplète).')
     const ext = /wav/.test(aud.contentType) ? 'wav' : 'mp3'
+    // 26/09 (« le dernier mot n'est pas articulé ») : Hedra Avatar / Character-3 reçoivent une COPIE du WAV complétée de
+    // silence jusqu'à 0,5 s après le dernier mot ; la vidéo livrée est recoupée à fin de parole + 0,3 s (deliverVideo).
+    // L'audio reçu n'est jamais modifié ; `secs` (donc le débit) a été mesuré AVANT. Autres modèles / MP3 : inchangé.
+    const lip = /^(minimax|kling)/.test(String(args.model || '')) ? null : preparerWavHedra(aud.bytes)
     // Hedra v3 : /v3/files (l'ancienne API web-app/public + /assets est morte → 401/404).
-    const audioRef = await hedraV3Upload('segment.' + ext, aud.bytes, aud.contentType)
+    const audioRef = lip ? await hedraV3Upload('segment.wav', lip.bytes, 'audio/wav') : await hedraV3Upload('segment.' + ext, aud.bytes, aud.contentType)
     if (!audioRef) return toolErr('Upload audio vers Hedra échoué — crédits remboursés, réessaie.')
     const imageRef = await hedraV3Upload('avatar.jpg', img.bytes, img.contentType)
     if (!imageRef) return toolErr("Upload de la photo vers Hedra échoué — crédits remboursés, réessaie.")
@@ -2167,7 +2176,7 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
 
     // op_name préfixé « v3: » → check_avatar_video / advanceAvatarJob / reconcile pollent en v3.
     const { data: job, error } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: 'v3:' + String(jobId), credits_cost: cost }).select('id').single()
+      .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: opAvecCoupe('v3:' + String(jobId), lip && lip.coupe), credits_cost: cost }).select('id').single()
     if (error || !job) return toolErr('Erreur serveur au suivi du job — crédits remboursés, réessaie.')
     launched = true
     return toolText(
