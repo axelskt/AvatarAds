@@ -19,6 +19,7 @@ rendrait tout le reste inutile.
 | `spend_credits(p_secs, p_reason)` | débite et journalise — le seul chemin de débit côté app |
 | `refund_credits(...)` | rembourse un débit déjà passé |
 | `mcp_spend_credits` / `mcp_refund_credits` | mêmes règles pour le serveur MCP (service role) |
+| `mcp_spend_for_job(p_user, p_job, p_cost)` | MCP : débite ET pose `credits_cost` du job dans la même transaction (job créé à 0 avant le débit) — les filets ne rendent que ce qui a été pris |
 | `use_video_quota` / `ensure_quota_month` | quotas mensuels par plan |
 | `charge_voice_clone` | clonage de voix ElevenLabs |
 | `claim_retention_bonus`, `get_referral_count` | bonus et parrainage |
