@@ -119,14 +119,14 @@ technical.coherence = coherence;
     const d = COH.declinaisonCheck(combo, existing, byId);
     if (!d.ok) { console.error('✗ recette refusée (déclinaisons) : ' + d.reasons.join(' · ')); process.exit(2); }
     technical.declinaison = { key: d.key, version: d.n + 1, max: d.max };
-    // paliers (Axel 27/09, avant / après) : un bloc (transformation) dans 5 vidéos au plus, 10 au-delà de 2 500 vues
-    // cumulées, 15 au-delà de 10 000. Vues par bloc : --vues <json {bloc: vues}> (relevés Instagram), sinon palier 1.
+    // paliers (Axel 27/09, avant / après) : une TRANSFORMATION (plein écran ou médaillon) dans 5 vidéos au plus, 10 au-delà
+    // de 2 500 vues cumulées, 15 au-delà de 10 000. Vues : --vues <json {TX: vues}> (relevés Instagram), sinon palier 1.
     let vues = {};
     const vf = _valOf('--vues') || null;
     if (vf) { try { vues = JSON.parse(readFileSync(vf, 'utf8')); } catch (e) { console.warn('⚠ --vues illisible :', e.message); } }
-    const pc = COH.palierCheck(combo, existing, vues);
+    const pc = COH.palierCheck(combo, existing, vues, bricks || []);
     if (!pc.ok) { console.error('✗ recette refusée (paliers) : ' + pc.reasons.join(' · ')); process.exit(2); }
-    if (pc.blocks.length) technical.paliers = pc.blocks;
+    if (pc.transfos.length) technical.paliers = pc.transfos;
   }
 }
 

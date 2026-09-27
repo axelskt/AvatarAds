@@ -891,6 +891,13 @@
       + capModes(c).map(function (v) {
         var m = c.modes[v], ov = v !== 'aa' && OV && OV.videos && OV.videos[v] ? ' · dont ' + fInt(OV.videos[v]) + ' avec incrustation (' + OV.hooks.join(', ') + ')' : '';
         var hk = v === 'aa' ? m.hooks + ' ' + plural(m.hooks, 'hook') + ' · ' + m.assemblies + ' ' + plural(m.assemblies, 'assemblage') : m.hooks + ' ' + plural(m.hooks, 'hook');
+        // avant / après (27/09) : publiables = Σ paliers des transformations (5 / 10 / 15) ; les combinaisons au survol
+        if (v === 'aa' && m.publiable != null) {
+          var pt = (m.transfos || []).length, pal = (m.transfos || []).map(function (t) { return t.palier; });
+          return '<div class="cf-capmode" data-mode-k="aa"><span class="cf-capmodes-n" title="' + esc(hk + ' · ' + fInt(m.combos.total) + ' combinaisons possibles') + '"><i class="is-aa"></i>' + esc(m.label) + '</span>'
+            + '<span class="cf-capmode-v" title="' + esc(pt + ' transformations × leur palier (5 → 10 → 15 vidéos selon les vues)') + '"><b data-mode="aa-pub">' + esc(fInt(m.total)) + '</b> ' + plural(m.total, 'publiable', 'publiables') + '</span>'
+            + '<span class="cf-capmode-v"><b data-mode="aa-pal">' + (pal.length ? 'palier ' + Math.min.apply(null, pal) + (Math.max.apply(null, pal) > Math.min.apply(null, pal) ? '-' + Math.max.apply(null, pal) : '') : '—') + '</b></span></div>';
+        }
         return '<div class="cf-capmode" data-mode-k="' + v + '"><span class="cf-capmodes-n" title="' + esc(hk + ov) + '"><i class="is-' + v + '"></i>' + esc(m.label) + '</span>'
           + '<span class="cf-capmode-v" title="' + esc(TT.short[v] || TT.short.def) + '"><b data-mode="' + v + '-short">' + esc(fInt(m.short)) + '</b> ' + plural(m.short, 'court', 'courts') + '</span>'
           + '<span class="cf-capmode-v" title="' + esc(TT.long[v] || TT.long.def) + '"><b data-mode="' + v + '-long">' + esc(fInt(m.long)) + '</b> ' + plural(m.long, 'long', 'longs') + '</span></div>';
@@ -1076,8 +1083,17 @@
     });
     var recent = function (a, b) { return last[b] - last[a] || (a < b ? -1 : 1); };
     gen.sort(recent); pend.sort(recent);
-    var rest = poss.filter(function (k) { return !byKey[k]; });
-    vfCache = { ver: CF.ver, v: { gen: gen, pend: pend, rest: rest, best: best, n: poss.length } };
+    var rest = poss.filter(function (k) { return !byKey[k]; }), n = poss.length;
+    // avant / après (27/09) : on ne PUBLIE que dans la limite des paliers des transformations (capacity : modes.aa.total) ;
+    // le reste des combinaisons n'est pas « à générer »
+    var aaM = M.cap.modes && M.cap.modes.aa;
+    if (aaM && aaM.publiable != null) {
+      var isAA = function (k) { return k.indexOf('aa|') === 0; };
+      var made = gen.concat(pend).filter(isAA).length, room = Math.max(0, aaM.total - made), keep = 0;
+      rest = rest.filter(function (k) { if (!isAA(k)) return true; keep += 1; return keep <= room; });
+      n = gen.length + pend.length + rest.length;
+    }
+    vfCache = { ver: CF.ver, v: { gen: gen, pend: pend, rest: rest, best: best, n: n } };
     return vfCache.v;
   }
 

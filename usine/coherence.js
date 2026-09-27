@@ -247,19 +247,35 @@
     return s.slice(3).split('+').filter(Boolean);
   }
   // usage[bloc] = vidéos (non refusées) dont l'assemblage contient ce bloc ; vues[bloc] = vues cumulées de ces vidéos postées
-  function blockUsage(combos) {
+  // Transformations (TX, versions) visibles dans un hook visuel : plein écran ET médaillon, jamais l'original (clip before).
+  function transfosOf(asmId, bricks) {
+    var G = dict(), out = [];
+    txGroups(bricks).forEach(function (g) { G[g.group] = g; });
+    blocksOfId(asmId).forEach(function (b) {
+      var m = /^(.+)-([0a-z])([0a-z])$/.exec(b), g = m && has(G, m[1]) ? G[m[1]] : null;
+      if (!g) return;
+      [m[2], m[3]].forEach(function (k) {
+        if (k === '0') return;
+        var v = g.versions.filter(function (x) { return x.key === k; })[0];
+        if (v && out.indexOf(v.brick_id) < 0) out.push(v.brick_id);
+      });
+    });
+    return out;
+  }
+  // usage[TX] = vidéos (non refusées) où cette transformation est visible
+  function blockUsage(combos, bricks) {
     var u = dict();
-    (combos || []).forEach(function (c) { if (c && c.assemblage) blocksOfId(c.assemblage).forEach(function (b) { u[b] = (u[b] || 0) + 1; }); });
+    (combos || []).forEach(function (c) { if (c && c.assemblage) transfosOf(c.assemblage, bricks).forEach(function (t) { u[t] = (u[t] || 0) + 1; }); });
     return u;
   }
-  function palierCheck(combo, existing, vuesByBlock) {
-    var bl = blocksOfId(combo && combo.assemblage), u = blockUsage(existing), reasons = [], detail = [];
-    bl.forEach(function (b) {
-      var p = palierOf(vuesByBlock && vuesByBlock[b]), n = u[b] || 0;
-      detail.push({ block: b, used: n, max: p.max, palier: p.palier });
-      if (n >= p.max) reasons.push('bloc ' + b + ' déjà dans ' + n + ' vidéos (palier ' + p.palier + ' : ' + p.max + ' max)');
+  function palierCheck(combo, existing, vuesByTx, bricks) {
+    var tx = transfosOf(combo && combo.assemblage, bricks), u = blockUsage(existing, bricks), reasons = [], detail = [];
+    tx.forEach(function (t) {
+      var p = palierOf(vuesByTx && vuesByTx[t]), n = u[t] || 0;
+      detail.push({ transfo: t, used: n, max: p.max, palier: p.palier });
+      if (n >= p.max) reasons.push('transformation ' + t + ' déjà dans ' + n + ' vidéos (palier ' + p.palier + ' : ' + p.max + ' max)');
     });
-    return { ok: !reasons.length, reasons: reasons, blocks: detail };
+    return { ok: !reasons.length, reasons: reasons, transfos: detail };
   }
 
   // ── paires hook × démo (QC) ──
@@ -373,7 +389,8 @@
   //   court = assemblages valides du groupe × hooks avant / après du module du groupe ;
   //   long  = Σ hooks (assemblages × liaisons compatibles avec audio × avatars).
   // total = axel + omni + aa (vidéos finales possibles). Forme du résultat : usine/README.md et usine/coherence.test.mjs.
-  function capacity(bricks, done, matrix) {
+  function capacity(bricks, done, matrix, opts) {
+    opts = opts || {};
     var L = library(bricks), A = L.avatars.length * PHOTOS_PAR_AVATAR, M = matrixOf(matrix);
     var av = dict(), hk = dict(), modes = dict(), possible = dict(), pairsAll = 0, notInMatrix = [];
     L.avatars.forEach(function (a) { av[a.id] = 1; });
@@ -418,8 +435,19 @@
       aaS += s; aaL += l;
       gs.push({ group: mod, module: mod, assemblies: n, hooks: hs.map(function (h) { return h.id; }), short: s, long: l });
     });
+    // PALIERS (Axel 27/09) : ce qu'on PUBLIE en avant / après est borné par transformation (TX : une version, visible en plein
+    // écran ou en médaillon) : 5 vidéos, 10 au-delà de 2 500 vues cumulées, 15 au-delà de 10 000 (opts.vues = {TX: vues}).
+    // Le total avant / après = Σ plafonds des transformations ; les combinaisons (hooks visuels × voix off × liaisons ×
+    // photos) restent dans combos = le réservoir où l'on pioche.
+    var vuesTx = opts.vues || {}, trs = [], pub = 0;
+    (bricks || []).forEach(function (b) {
+      if (!b || b.kind !== 'transformation' || !ready(b)) return;
+      var p = palierOf(vuesTx[b.id]); pub += p.max;
+      trs.push({ id: b.id, module: String(b.subject || ''), palier: p.palier, max: p.max });
+    });
     modes.aa = { voice: 'aa', label: MODE_LABEL.aa, hooks: Object.keys(aaH).length, assemblies: asm.length, groups: gs,
-      short: aaS, long: aaL, total: aaS + aaL, done: 0, remaining: 0 };
+      combos: { short: aaS, long: aaL, total: aaS + aaL }, transfos: trs, publiable: pub,
+      short: aaS, long: aaL, total: Math.min(pub, aaS + aaL), done: 0, remaining: 0 };
     // Texte + musique (Axel 27/09) : réaction muette de l'avatar (tête choquée) + texte choc (brique texte-choc, TH01…) +
     // démo muette avec textes + musique, CTA dans la démo : pas de voix, pas de liaison → format court seulement,
     // une vidéo par texte choc × emplacement photo. Clé : muet|A1#n|TH05|
@@ -453,7 +481,7 @@
       genericLiaisons: L.liaisons.filter(isGenericLiaison).length, pairs: pairsAll, matrix: !!M, notInMatrix: notInMatrix,
       overlayRequired: ov, modes: modes, voices: VOICES.slice(), modeKeys: MODES.slice(), avantApres: modes.aa,
       lipsyncTotal: modes.axel.total + modes.omni.total, total: total, done: doneN, remaining: Math.max(0, total - doneN), outside: outside,
-      declinaisons: { max: DECLINAISONS_MAX, total: total * DECLINAISONS_MAX } };
+      declinaisons: { max: DECLINAISONS_MAX, total: (total - modes.aa.total) * DECLINAISONS_MAX + modes.aa.total } };   // avant / après : les déclinaisons comptent dans le palier de la transformation
   }
 
   // Impact d'une brique de plus, en vidéos finales (Briques qui manquent). Estimations aux moyennes de la bibliothèque :
@@ -470,7 +498,8 @@
       out.liaison += A * (cap.liaisons ? m.pairs / cap.liaisons : 0);
     });
     var aa = cap.modes.aa;
-    if (aa && A) { out.aa.avatar = aa.long / A; out.aa.liaison = cap.liaisons ? aa.long / cap.liaisons : 0; out.avatar += out.aa.avatar; out.liaison += out.aa.liaison; }
+    // avant / après borné par les paliers des transformations (27/09) : un avatar ou une liaison de plus n'y ajoute rien
+    if (aa && A && aa.publiable == null) { out.aa.avatar = aa.long / A; out.aa.liaison = cap.liaisons ? aa.long / cap.liaisons : 0; out.avatar += out.aa.avatar; out.liaison += out.aa.liaison; }
     out.avgLiaisonsPerHook = cap.hooks ? cap.pairs / cap.hooks : 0;
     out.avgHooksPerLiaison = cap.liaisons ? cap.pairs / cap.liaisons : 0;
     out.avatar = Math.round(out.avatar); out.hook = Math.round(out.hook); out.liaison = Math.round(out.liaison);
@@ -588,6 +617,6 @@
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk,
-    videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
+    videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, transfosOf: transfosOf, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
     hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });
