@@ -3895,6 +3895,13 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <div id="expQualRow" class="row" style="gap:8px"></div>
         </div>
 
+        <!-- ③b-bis NOMBRE (Axel 27/09) : 1 à 3 vidéos d'un coup, selon les images importées — sous Qualité ; masqué en mode Seedance -->
+        <div class="exp-section" id="expNombreSection" style="margin-bottom:0">
+          <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Nombre</div>
+          <div id="expCountRow" class="row" style="gap:8px"></div>
+          <div id="expCountHint" class="mono" style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5"></div>
+        </div>
+
         <!-- ③c VOIX -->
         <div class="exp-section" style="margin-bottom:0">
           <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Voix</div>
@@ -3946,6 +3953,11 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           </div>
           <!-- #lot6 · max-height 65vh (au lieu de 100% du stage ≈ 440px) : grand lecteur desktop, ratio conservé -->
           <video id="expResultVid" controls playsinline style="display:none;max-height:65vh;max-width:100%;border-radius:16px;background:#000;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)"></video>
+          <!-- Lot (Nombre, Axel 27/09) : une case par vidéo, comme Images IA — avancement, vidéo au ratio réel, Télécharger -->
+          <div id="expMultiWrap" style="display:none;width:100%;max-width:980px;align-self:flex-start;margin:0 auto">
+            <div id="expMultiGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;align-items:start"></div>
+            <div id="expMultiFoot" style="display:none;justify-content:center;margin-top:14px"><button onclick="expressReset()" class="btn btn-ghost btn-sm">Nouvelle vidéo</button></div>
+          </div>
 
           <!-- Progress overlay -->
           <div id="expProgress" style="display:none;position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;gap:16px">
@@ -4035,6 +4047,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <button onclick="_expPickQual('720p');_mExpSync()" id="mExpQual720" style="flex:1;padding:11px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">720p · rapide</button>
               <button onclick="_expPickQual('1080p');_mExpSync()" id="mExpQual1080" style="flex:1;padding:11px;border:none;border-radius:10px;background:transparent;color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">1080p · dès 8 s</button>
             </div>
+            <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">NOMBRE</div>
+            <div id="mExpCountInline" style="display:flex;gap:6px;margin-bottom:15px"></div>
             <div class="mono" style="font-size:10px;letter-spacing:.12em;color:var(--text-3);margin-bottom:7px">FORMAT</div>
             <div style="display:flex;gap:6px;margin-bottom:15px">
               <button onclick="_expPickFormat('9:16');_mExpSync()" id="mExpFmt916" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border:none;border-radius:10px;background:var(--surface-2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>9:16</button>
@@ -5858,7 +5872,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-27-1532'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-27-2053'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -30351,8 +30365,8 @@ const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 // ②b MODÈLE Veo : Standard (Lite) ou Pro (Fast, meilleure qualité). Pro réservé Pro/Élite ;
 // Starter = Standard seul. Défaut : Élite → Pro, sinon Standard. Le tarif suit (via _expCostCredits).
 const EXP_MODELS = [
-  { v:'standard', name:'Veo Standard', sub:'Rapide · éco' },
-  { v:'omni',     name:'Omni Flash',   sub:'Qualité Max' },
+  { v:'omni',     name:'Flash',        sub:'Qualité Max' },   // Axel 27/09 : « Flash », en premier et sélectionné par défaut
+  { v:'standard', name:'Veo',          sub:'Rapide · éco' },
   { v:'pro',      name:'Veo Fast',     sub:'kie.ai · dev', dev:true },   // test kie.ai : compte developer seulement
 ];
 function _expModelsVisible(){
@@ -30383,7 +30397,7 @@ function _expRenderModels(){
   const row=document.getElementById('expModelRow'); if(!row) return;
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(window._expVeoModel==='pro' && !_expModelAllowed('pro')) window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus (sauf test kie dev)
-  if(!window._expVeoModel) window._expVeoModel='standard';
+  if(!window._expVeoModel) window._expVeoModel='omni';   // Axel 27/09 : Flash sélectionné par défaut
   if(window._expVeoModel==='omni' && !_expModelAllowed('omni')) window._expVeoModel='standard'; // plan sans Omni
   row.innerHTML = _expModelsVisible().map(m=>{
     const on=m.v===window._expVeoModel, locked=!_expModelAllowed(m.v);
@@ -30447,7 +30461,7 @@ function initExpress(){
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display='none';   // plus de durées +8 s (extensions retirées le 23/09)
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint');
-    if(_ah){ const _ov=((!_isOmniDur || _expOmniKie()) && window._expDurAuto && _expEstimateDur().over); _ah.textContent=_ov?(_isOmniDur?'Texte long : Omni Flash s’arrête à 10 s — raccourcis la réplique ou passe par Montage IA':'Texte long : Veo s’arrête à 8 s — passe sur Omni Flash (10 s) ou Montage IA pour une vidéo plus longue'):''; _ah.style.display=_ov?'block':'none'; }
+    if(_ah){ const _ov=((!_isOmniDur || _expOmniKie()) && window._expDurAuto && _expEstimateDur().over); _ah.textContent=_ov?(_isOmniDur?'Texte long : Flash s’arrête à 10 s — raccourcis la réplique ou passe par Montage IA':'Texte long : Veo s’arrête à 8 s — passe sur Flash (10 s) ou Montage IA pour une vidéo plus longue'):''; _ah.style.display=_ov?'block':'none'; }
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
@@ -30467,6 +30481,7 @@ function initExpress(){
         <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${_lock}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
   }
+  _expRenderCount();
   _expRenderModels();
   _expRenderVoices();
   _expSyncSubToggle();
@@ -30474,6 +30489,68 @@ function initExpress(){
   _expHeroSync();
   if(typeof _expInitSeedanceDev==='function') _expInitSeedanceDev();  // carte Seedance si compte dev
   if(typeof _expSetEngine==='function') _expSetEngine(window._expEngine==='motion' ? 'veo' : (window._expEngine||'veo'));
+}
+// ── NOMBRE (Axel 27/09) : 1 à 3 vidéos d'un coup, lancées EN PARALLÈLE ─────────────────────────────────────────────
+// L'user choisit k (1 à min(3, images importées)). Les k premières images = une vidéo chacune (l'avatar) ; les images
+// au-delà de k (ex. le produit) sont ajoutées dans CHAQUE vidéo (fusion en une image de départ, comme avant). k = 1 → toutes
+// combinées en 1 vidéo. UN SEUL prompt : s'il contient « image 1 … image 2 … », chaque vidéo prend sa partie (+ ce qui est
+// écrit avant « image 1 », commun à toutes) ; sinon le même prompt pour toutes. Chaque vidéo = son débit, son op, son
+// remboursement si elle échoue, sa sauvegarde en Bibliothèque.
+const EXP_MAX_VIDEOS = 3;
+window._expCountN = window._expCountN || 1;
+function _expCountMax(){ return Math.max(1, Math.min(EXP_MAX_VIDEOS, (window._expImgs||[]).length)); }
+function _expVideoCount(){ return Math.min(Math.max(1, parseInt(window._expCountN)||1), _expCountMax()); }
+function _expPickCount(k){ window._expCountN=Math.max(1, parseInt(k)||1); initExpress(); if(typeof _mExpSync==='function') _mExpSync(); }
+// « image 1 tu dis ça : X, image 2 tu dis ça : Y » → { commun, parts:{1:'…',2:'…'} } (null si aucun repère « image N »)
+function _expSplitPrompt(txt){
+  const t=String(txt||''), re=/\b(?:image|img)\s*(\d)\b\s*[:\-–—]?/gi, hits=[];
+  let m; while((m=re.exec(t))) hits.push({ n:parseInt(m[1]), at:m.index, end:re.lastIndex });
+  if(!hits.length) return null;
+  const clean=(x)=>x.replace(/^[\s,;.\-–—]+|[\s,;\-–—]+$/g,'').trim();
+  const parts={};
+  hits.forEach((h,i)=>{ const seg=clean(t.slice(h.end, i+1<hits.length ? hits[i+1].at : t.length)); if(seg) parts[h.n]=(parts[h.n] ? parts[h.n]+' ' : '')+seg; });
+  return { commun: clean(t.slice(0, hits[0].at)), parts };
+}
+// Prompt de la vidéo n°i (1…k) : commun + sa partie ; sans partie pour elle → le commun (sinon le prompt entier).
+function _expPromptFor(txt, i){
+  const sp=_expSplitPrompt(txt);
+  if(!sp) return String(txt||'').trim();
+  const own=sp.parts[i];
+  if(own) return (sp.commun ? sp.commun.replace(/[\s.!?…:;,]+$/,'')+'. ' : '')+own;
+  return sp.commun || String(txt||'').trim();
+}
+// Durée d'une vidéo du lot : Libre → estimée sur SON texte ; Veo 1080p = 8 s (limite Google) ; sinon la durée choisie.
+function _expDurFor(txt){
+  let d = window._expDurAuto ? _expEstimateDur(txt).dur : (parseInt(window._expDur)||6);
+  if(window._expVeoModel!=='omni' && window._expQuality==='1080p' && d<8) d=8;
+  return d;
+}
+function _expCostFor(d){
+  if(window._expVeoModel==='omni') return _expOmniCost(d);
+  const rate=(window._expVeoModel==='pro') ? (CREDIT_COSTS.expressFastPerSec||3) : (CREDIT_COSTS.expressLitePerSec||1.5);
+  const mult=(window._expQuality==='1080p') ? (CREDIT_COSTS.express1080Mult||2) : 1;
+  return Math.round(Math.min(8, d) * rate * mult);
+}
+function _expRenderCount(){
+  const nb=(window._expImgs||[]).length, max=_expCountMax(), k=_expVideoCount();
+  window._expCountN=k;
+  const opts=Array.from({length:EXP_MAX_VIDEOS},(_,i)=>i+1);
+  const row=document.getElementById('expCountRow');
+  if(row) row.innerHTML=opts.map(v=>{
+    const on=v===k, off=v>max;
+    return `<div ${off?'':`onclick="_expPickCount(${v})"`} class="exp-card${on?' on':''}" title="${off?'Importe '+v+' images pour créer '+v+' vidéos':''}" style="flex:1;padding:11px 8px;text-align:center;${off?'opacity:.4;cursor:default;':''}">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">${v}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${v>1?'vidéos':'vidéo'}</div></div>`;
+  }).join('');
+  const h=document.getElementById('expCountHint');
+  if(h) h.textContent = nb<2 ? 'Importe 2 ou 3 images pour créer plusieurs vidéos d’un coup.'
+    : k===1 ? nb+' images combinées dans 1 vidéo.'
+    : (k===nb ? '1 vidéo par image.' : 'Images 1 à '+k+' : une vidéo chacune · image'+(nb-k>1?'s ':' ')+(k+1)+(nb-k>1?' à '+nb:'')+' ajoutée'+(nb-k>1?'s':'')+' dans chaque vidéo (ex. le produit) — mets les avatars en premier.')
+      + ' Un texte différent par vidéo : écris « image 1 … image 2 … » dans le prompt.';
+  const mr=document.getElementById('mExpCountInline');
+  if(mr) mr.innerHTML=opts.map(v=>{
+    const on=v===k, off=v>max;
+    return `<button ${off?'disabled':`onclick="_expPickCount(${v});_mExpSync()"`} style="flex:1;padding:11px;border:none;border-radius:10px;background:${on?'var(--surface-2)':'transparent'};color:${on?'var(--text)':'var(--text-3)'};font-family:var(--font);font-size:13px;font-weight:700;cursor:${off?'default':'pointer'};${off?'opacity:.35;':''}">${v}</button>`;
+  }).join('');
 }
 // Omni Flash (Axel 25/09) : 5 cr/s en 1080p pour tous, crans 4/6/8/10 s. L'image de départ qu'Express doit parfois CRÉER
 // (aucune image, ou plusieurs à composer en une) est OFFERTE (Axel 25/09) : gpt-image la tire toujours sur la MÊME op juste
@@ -30496,10 +30573,15 @@ function _expCostCredits(){
 function _expUpdateGenCaption(){
   const c=document.getElementById('expGenCaption');
   const q=(EXP_QUALITIES.find(x=>x.v===window._expQuality)||{l:'720p'}).l.replace(/[^0-9pkK]/g,'')||'720p';
-  if(c){ c.textContent=`1 vidéo IA · ${q} · ${window._expDur||4} s`; }
+  if(c){ const _k=_expVideoCount(); c.textContent=`${_k} vidéo${_k>1?'s':''} IA · ${q} · ${window._expDur||4} s`; }
   // Coût DYNAMIQUE dans le bouton Générer — SOURCE UNIQUE _expCostCredits (= débit réel).
   const cb=document.getElementById('expGenCost');
-  if(cb){
+  const _k=_expVideoCount();
+  if(cb && _k>1){   // Nombre (27/09) : somme des k vidéos (durée de chacune estimée sur SON texte en Libre)
+    const _txt=document.getElementById('expPrompt')?.value||'';
+    let n=0; for(let i=1;i<=_k;i++) n+=_expCostFor(_expDurFor(_expPromptFor(_txt, i)));
+    cb.textContent = (window._expDurAuto?'≈ ':'') + n + ' crédits · ' + _k + ' vidéos';
+  } else if(cb){
     const _d=parseInt(window._expDur)||6;
     if(window._expVeoModel==='omni'){
       const n=_expOmniCost(_d);   // Omni : 1080p 5 cr/s × cran 4/6/8/10 s (+ image de départ à créer) = le débit exact
@@ -30544,8 +30626,8 @@ function _expDurAllowed(){
 // qui laisse un débit NATUREL. Capé à 8 s (un seul clip) tant que le découpage multi-
 // extensions n'est pas livré ; au-delà, un hint prévient (→ Montage IA pour du long propre).
 window._expDurAuto = (window._expDurAuto !== false);
-function _expEstimateDur(){
-  const p=(document.getElementById('expPrompt')?.value||'');
+function _expEstimateDur(txt){
+  const p=(txt!=null) ? String(txt) : (document.getElementById('expPrompt')?.value||'');   // txt : le texte d'UNE vidéo du lot (Nombre, 27/09)
   // GREEDY (Axel 08/09) : capture la réplique ENTIÈRE entre le 1er guillemet ouvrant et le DERNIER fermant,
   // même avec des guillemets imbriqués — ex : `"… commente «SITE» et je te l'envoie"`. L'ancien `[^«»"“”]{3,}`
   // cassait sur le « interne et ne lisait que le marqueur court « SITE » → durée estimée à 4 s au lieu de ~13 s.
@@ -30587,7 +30669,7 @@ function _expPickFormat(v){
 }
 function _exp1080Allowed(){ return ['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase()); }
 function _expPickQual(v){
-  if(v==='720p' && _expOmniKie()){ toast('Omni Flash est toujours en 1080p'); window._expQuality='1080p'; initExpress(); return; }
+  if(v==='720p' && _expOmniKie()){ toast('Flash est toujours en 1080p'); window._expQuality='1080p'; initExpress(); return; }
   // 1080p Veo = Pro/Élite : cadenas dans l'UI + blocage au clic (le clic sur Générer revérifie aussi). Omni : 1080p pour tous.
   if(v==='1080p' && !_expOmniKie() && !_exp1080Allowed()){ toast('La 1080p est réservée aux plans Pro et Élite'); showPaywall(); return; }
   // Choisir 1080p FORCE 8 s minimum (limite Veo). Si on avait forcé le 8 s DEPUIS le mode Libre,
@@ -30630,7 +30712,7 @@ function _expSetEngine(e){
   // Seedance masque les réglages 100% Veo : Modèle (Veo Standard/Veo Pro), Durée slider, Qualité —
   // Seedance a SA durée (dans la scène) et sort en 1080p natif (Axel 17/08).
   const sd = (e==='seedance');
-  ['expModeleSection','expDureeSection','expQualiteSection'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = sd ? 'none' : ''; });
+  ['expModeleSection','expDureeSection','expQualiteSection','expNombreSection'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = sd ? 'none' : ''; });
   if(typeof _expHeroSync==='function') _expHeroSync();
 }
 
@@ -32233,8 +32315,8 @@ function _expRenderImgs(){
 // Veo ET Seedance sont image→vidéo (UNE image de départ). Pour que les 8 références soient
 // vraiment prises en compte (Axel 17/08), on les fusionne d'abord via gpt-image edit multi-images
 // (avatar + produit + perso → une scène cohérente) → cette image sert de frame de départ.
-async function _expComposeRefs(token, prompt, gptSize, op, omniStart){   // op = x-aa-op explicite (l'op d'Express, Axel 25/09) ; omniStart = image offerte (Omni et Veo)
-  const imgs = window._expImgs || [];
+async function _expComposeRefs(token, prompt, gptSize, op, omniStart, imgsOverride){   // op = x-aa-op explicite (l'op d'Express, Axel 25/09) ; omniStart = image offerte (Omni et Veo) ; imgsOverride = images d'UNE vidéo du lot (Nombre)
+  const imgs = imgsOverride || window._expImgs || [];
   if(imgs.length < 2) return null;   // 0 ou 1 image → rien à composer
   const toBlob=(durl)=>{ const m=/^data:([^;]+);base64,(.+)$/.exec(durl||''); if(!m) return null; const bin=atob(m[2]); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i); return new Blob([a],{type:m[1]||'image/png'}); };
   const _rawFiles = imgs.map((im,i)=>{ const b=toBlob(im.url); return b? new File([b],'ref'+(i+1)+'.png',{type:b.type||'image/png'}) : null; }).filter(Boolean);
@@ -32625,7 +32707,8 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
       step(90,'↓ Récupération de la vidéo…');
       const _vb = await _kieFetchBlob(_kr.url);
       window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
-      return new Blob([_vb], { type:'video/mp4' });
+      const _ob=new Blob([_vb], { type:'video/mp4' }); _ob._kieRid=_kr.rid;   // lot en parallèle : l'id kie suit SA vidéo
+      return _ob;
     }catch(e){ throw _omniKieErr(e); }   // plus AUCUN repli fal (Axel 25/09)
   }
   const H={ ...(await getAuthHeader()), ...(op ? { 'x-aa-op': String(op) } : {}) };   // carré 1:1 : même op explicite
@@ -32680,25 +32763,111 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   const vb=await (await fetch(outUrl)).blob();
   return new Blob([vb], { type:'video/mp4' });
 }
+// Nombre (Axel 27/09) : k vidéos EN PARALLÈLE (3 max). Les débits passent l'un après l'autre (verrou de spendCreditsFor),
+// puis chaque vidéo tourne chez kie en même temps ; l'avancement de chacune s'affiche sur sa ligne. Solde vérifié pour le lot.
+// Grille du lot (Axel 27/09 : « comme Images IA, pas de bande noire, 3 écrans distincts, bouton télécharger »)
+const _EXP_DL_IC='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
+function _expMultiOpen(k){
+  const wrap=document.getElementById('expMultiWrap'), grid=document.getElementById('expMultiGrid'), foot=document.getElementById('expMultiFoot');
+  ['expResultPlaceholder','expResultVid','expProgress','expResultActions'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  if(!wrap || !grid) return;
+  const ar = window._expFormat==='16:9' ? '16/9' : (window._expFormat==='1:1' ? '1/1' : '9/16');
+  grid.style.maxWidth = window._expFormat==='16:9' ? '100%' : (k*300)+'px';
+  grid.style.margin = '0 auto';
+  grid.innerHTML = Array.from({length:k},(_,i)=>`<div id="_expSlot${i}" style="display:flex;flex-direction:column;gap:8px;min-width:0">
+      <div id="_expSlotBox${i}" style="width:100%;aspect-ratio:${ar};background:var(--surface-2);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px;box-sizing:border-box">
+        <div style="width:34px;height:34px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div>
+        <div class="mono" style="font-size:11px;color:var(--text2)">Vidéo ${i+1} · <span id="_expSlotPct${i}">0</span> %</div>
+        <div id="_expSlotTxt${i}" class="mono" style="font-size:10px;color:var(--text3);text-align:center;line-height:1.4;min-height:28px">En attente…</div>
+        <div style="width:80%;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="_expSlotBar${i}" style="height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .3s"></div></div>
+      </div></div>`).join('');
+  if(foot) foot.style.display='none';
+  wrap.style.display='block';
+}
+function _expSlotProgress(i, v, t){
+  const b=document.getElementById('_expSlotBar'+i), pc=document.getElementById('_expSlotPct'+i), tx=document.getElementById('_expSlotTxt'+i);
+  if(b) b.style.width=Math.round(v)+'%'; if(pc) pc.textContent=Math.round(v); if(tx && t) tx.innerHTML=t;
+}
+function _expSlotFill(i, url, blob){
+  const slot=document.getElementById('_expSlot'+i), box=document.getElementById('_expSlotBox'+i);
+  if(!slot || !box) return;
+  box.innerHTML=''; box.style.padding='0'; box.style.gap='0'; box.style.display='block'; box.style.background='transparent';
+  const v=document.createElement('video'); v.controls=true; v.playsInline=true; v.muted=false; v.preload='auto'; v.src=url;
+  v.addEventListener('loadeddata', ()=>{ try{ if(v.currentTime===0) v.currentTime=0.05; }catch(_){} }, { once:true });   // 1re image visible tout de suite (Safari n'en peint aucune sinon)
+  v.style.cssText='width:100%;height:100%;display:block;object-fit:contain;background:transparent';
+  // pas de bandes noires : la case prend le ratio RÉEL de la vidéo (comme les images d'Images IA)
+  v.onloadedmetadata=()=>{ if(v.videoWidth && v.videoHeight) box.style.aspectRatio=v.videoWidth+'/'+v.videoHeight; };
+  box.appendChild(v);
+  const dl=document.createElement('button');
+  dl.innerHTML=_EXP_DL_IC+'<span style="margin-left:7px">Télécharger</span>';
+  dl.style.cssText='width:100%;padding:12px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:11px;color:#1A0A02;font-family:var(--font);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center';
+  dl.onclick=()=>{ if(typeof _gateFreeExport==='function' && _gateFreeExport()) return; const a=document.createElement('a'); a.href=url; a.download='avatarads-express-'+(i+1)+'.mp4'; document.body.appendChild(a); a.click(); a.remove(); };
+  slot.appendChild(dl);
+}
+function _expSlotFail(i, msg){
+  const box=document.getElementById('_expSlotBox'+i); if(!box) return;
+  box.innerHTML='<div class="mono" style="font-size:11px;color:var(--text2);text-align:center;line-height:1.5;padding:14px">Vidéo '+(i+1)+' non générée<br><span style="color:var(--text3);font-size:10px">'+_escH(String(msg||'').slice(0,140))+'</span><br><span style="color:var(--text3);font-size:10px">Crédits de cette vidéo rendus.</span></div>';
+}
+let _expFfTail = Promise.resolve();
+function _expFfAcquire(){ let rel; const next=new Promise(r=>{ rel=r; }); const prev=_expFfTail; _expFfTail=prev.then(()=>next); return prev.then(()=>rel); }   // ffmpeg.wasm : une vidéo à la fois
 async function expressCreate(){
-  const prompt = (document.getElementById('expPrompt')?.value || '').trim();
-  if(!prompt && !window._expImgB64){ toast('Décris ta vidéo (ou ajoute une image)'); return; }
-  // Moteur Seedance (dev-only) : chemin auto-contenu, ne touche pas au flux Veo.
-  if(window._expEngine==='seedance' && _expIsDev()){ return _expCreateSeedance(prompt); }
+  const imgs=(window._expImgs||[]).slice(), k=_expVideoCount();
+  if(k<=1 || window._expEngine==='seedance') return _expressCreateOne();
   if(_gateFreeGenerate()) return;
+  if(window._expBatch){ toast('Un lot de vidéos est déjà en cours — patiente'); return; }
+  const main=(document.getElementById('expPrompt')?.value||'').trim(), shared=imgs.slice(k);
+  const jobs=Array.from({length:k},(_,i)=>{ const pr=_expPromptFor(main, i+1); return { idx:i, prompt:pr, dur:_expDurFor(pr), imgs:[imgs[i]].concat(shared) }; });
+  if(jobs.some(j=>!j.prompt)){ toast('Décris ta vidéo dans le prompt (ou « image 1 … image 2 … »)'); return; }
+  const total=jobs.reduce((t,j)=>t+_expCostFor(j.dur),0);
+  const free=['developer'].includes((currentMember?.plan||'').toLowerCase()) || !!currentMember?.is_owner;
+  if(!free && typeof creditsBalance==='function' && creditsBalance()<total){
+    toast('Il faut '+total+' crédits pour '+k+' vidéos — il t\'en reste '+creditsBalance());
+    if(typeof _insufficientCredits==='function') _insufficientCredits(Math.max(1,total-creditsBalance()));
+    return;
+  }
+  const btn=document.getElementById('expGenBtn');
+  if(btn){ btn.disabled=true; btn.style.opacity='.7'; }
+  window._expBatch={ n:k, ok:0 };
+  _expMultiOpen(k);
+  const runs=[];
+  try{
+    for(const j of jobs){
+      let spent; const onSpent=new Promise(r=>{ spent=r; });
+      runs.push(_expressCreateOne({ ...j, onSpent:spent }));
+      if(!(await onSpent)){ for(let r=j.idx; r<k; r++) _expSlotFail(r, 'débit refusé (solde ou génération déjà en cours)'); break; }   // on ne lance pas les suivantes
+    }
+    await Promise.all(runs);
+    const ok=window._expBatch.ok;
+    toast(ok===k ? k+' vidéos prêtes — retrouve-les toutes dans ta Bibliothèque' : ok+'/'+k+' vidéos prêtes (les crédits des autres te sont rendus)');
+  } finally {
+    const prog=document.getElementById('expProgress'); if(prog) prog.style.display='none';
+    const foot=document.getElementById('expMultiFoot'); if(foot) foot.style.display='flex';
+    window._expBatch=null;
+    if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+  }
+}
+async function _expressCreateOne(o){
+  o = o || null;   // o = UNE vidéo d'un lot (Nombre) : { idx, prompt, dur, imgs, onSpent } ; absent = Express classique
+  const _spent=(v)=>{ if(o && o.onSpent){ try{ o.onSpent(v); }catch(_){} o.onSpent=null; } };
+  const _oImgs = o ? o.imgs : (window._expImgs||[]);
+  const prompt = o ? o.prompt : (document.getElementById('expPrompt')?.value || '').trim();
+  if(!prompt && !(o ? (_oImgs[0]&&_oImgs[0].b64) : window._expImgB64)){ _spent(false); toast('Décris ta vidéo (ou ajoute une image)'); return; }
+  // Moteur Seedance (dev-only) : chemin auto-contenu, ne touche pas au flux Veo.
+  if(window._expEngine==='seedance' && _expIsDev()){ _spent(false); return _expCreateSeedance(prompt); }
+  if(_gateFreeGenerate()){ _spent(false); return; }
   window._aaLastEngine=''; window._expKieRid=null;
   const _isOmni = window._expVeoModel==='omni';
   // Omni Flash = TOUS les plans depuis le 25/09 (Axel : « Starter inclus ») : plus de gate Pro/Élite ici (le Free est
   // arrêté juste au-dessus par _gateFreeGenerate ; kie-proxy / fal-proxy refont le contrôle de plan côté serveur).
   // 1080p Veo = Pro et + → sélectionnable par tous, mais paywall au moment de générer. Omni : 1080p pour tous.
   if(!_isOmni && window._expQuality==='1080p' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-    toast('La 1080p est réservée au plan Pro et +');
+    _spent(false); toast('La 1080p est réservée au plan Pro et +');
     showPaywall(); return;
   }
   // ── Durée/résolution RÉELLES + DÉBIT À LA DURÉE GÉNÉRÉE (Axel 07/09 : « payé 174 pour 8 s ») ──
   // Avant, on débitait _expDur×tarif d'un coup (29 s en Libre) même si les extensions échouaient → sur-débit.
   // Maintenant on débite la BASE (4/6/8 s) ici, puis CHAQUE extension seulement quand elle réussit (plus bas).
-  const _reqDur = parseInt(window._expDur)||(_isOmni?6:4);
+  const _reqDur = o ? o.dur : (parseInt(window._expDur)||(_isOmni?6:4));
   let _dur = _reqDur;
   let _res = (window._expQuality==='1080p') ? '1080p' : '720p';
   if(_isOmni){
@@ -32715,7 +32884,7 @@ async function expressCreate(){
   const _omniImgPart = _isOmni ? _expOmniImgPart() : 0;
   let _omniImgMade = false;
   if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
-  if(!(await spendCreditsFor(_isOmni ? _expOmniCost(_dur) : Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))) return;
+  if(!(await spendCreditsFor(_isOmni ? _expOmniCost(_dur) : Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))){ _spent(false); return; }
   // Op EXACTE de ce débit (Axel 25/09, relecture) : chaque appel payant d'Express (image de départ, Omni kie / fal, Veo) la
   // nomme en x-aa-op, et le remboursement ne vise qu'ELLE. Avant, tout passait par _creditOps (global) : une autre génération
   // lancée pendant Express (ex. Voix native du Générateur) le vidait / l'écrasait → vidéo tirée sur l'op de l'autre et
@@ -32723,14 +32892,19 @@ async function expressCreate(){
   const _expOp = window._aaLastSpendOp || null;
   const _expOps = _expOp ? [_expOp] : [];
   const _expOpsDone = () => { try{ _creditOps = _creditOps.filter((id) => !_expOps.includes(id)); }catch(_){} };   // sans toucher aux ops d'un autre flux
+  _spent(true);   // lot : le débit de CETTE vidéo est passé → la suivante peut débiter pendant que celle-ci tourne
+  let _myRid = null;   // id kie de CETTE vidéo (accusé de sauvegarde) — jamais celui d'une autre vidéo du lot
 
   const btn=document.getElementById('expGenBtn');
   const prog=document.getElementById('expProgress'), progBar=document.getElementById('expProgressBar'), progTxt=document.getElementById('expProgressTxt');
   const ph=document.getElementById('expResultPlaceholder'), vid=document.getElementById('expResultVid'), acts=document.getElementById('expResultActions');
   if(btn){ btn.disabled=true; btn.style.opacity='.7'; }
-  if(ph) ph.style.display='none'; if(vid) vid.style.display='none'; if(acts) acts.style.display='none';
-  if(prog) prog.style.display='flex';
-  let p=0; const setP=(v,t)=>{ p=v; if(progBar)progBar.style.width=v+'%'; if(progTxt&&t)progTxt.innerHTML=t; };
+  if(!o){ if(ph) ph.style.display='none'; if(vid) vid.style.display='none'; if(acts) acts.style.display='none'; if(prog) prog.style.display='flex'; }
+  let p=0; const setP=(v,t)=>{
+    p=v;
+    if(o){ _expSlotProgress(o.idx, v, t); return; }   // lot : l'avancement de CETTE vidéo dans SA case
+    if(progBar)progBar.style.width=v+'%'; if(progTxt&&t)progTxt.innerHTML=t;
+  };
   const _t0=Date.now();
   const _fmtT=(ms)=>{ const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
   const _timerEl=document.getElementById('expProgressTimer'); if(_timerEl) _timerEl.textContent='0:00';
@@ -32751,13 +32925,13 @@ async function expressCreate(){
     const _cutOk = useNativeAudio && _kieOn();   // coupe fin de parole (dev / kie), décidée au lancement
 
     // 1) Image de départ : fournie, sinon générée via GPT Image
-    let imgB64=window._expImgB64, imgMime=window._expImgMime||'image/png';
+    let imgB64 = o ? ((_oImgs[0]&&_oImgs[0].b64)||null) : window._expImgB64, imgMime = o ? ((_oImgs[0]&&_oImgs[0].mime)||'image/png') : (window._expImgMime||'image/png');
     // Plusieurs références → TOUTES prises en compte : on les fusionne en une frame de départ.
-    if((window._expImgs||[]).length > 1){
-      setP(Math.max(p,12),'Composition de tes '+(window._expImgs.length)+' images…');
+    if(_oImgs.length > 1){
+      setP(Math.max(p,12),'Composition de tes '+(_oImgs.length)+' images…');
       try{
         const _cSize = window._expFormat==='16:9' ? '1536x1024' : (window._expFormat==='1:1' ? '1024x1024' : '1152x2048');
-        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize, _expOp, true);   // image offerte (Omni ET Veo, 25/09)
+        const _composed = await _expComposeRefs(token, prompt+', '+styleMeta.prompt, _cSize, _expOp, true, _oImgs);   // image offerte (Omni ET Veo, 25/09)
         if(_composed){
           _omniImgMade = true;
           if(_composed.startsWith('data:')){ imgMime=(_composed.match(/^data:(image\/[a-z0-9.+-]+);/i)||[])[1]||'image/png'; imgB64=_composed.replace(/^data:image\/[a-z0-9.+-]+;base64,/i,''); }
@@ -32802,6 +32976,7 @@ async function expressCreate(){
       // ⚡ Omni Flash image→vidéo (image + texte → vidéo + VOIX NATIVE) : kie.ai pour tous, sans repli (carré 1:1 : fal).
       setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni Flash — génération…');
       blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t), _expOp);
+      _myRid = (blob && blob._kieRid) || null;
       // Plus d'« ajustement à la durée réelle » (Axel 25/09) : Omni sort au cran demandé (4/6/8/10 s) et le serveur facture
       // EXACTEMENT ce cran puis règle l'op dès la livraison (un remboursement après coup répondait already_delivered).
       // Image de départ réservée mais finalement NON créée (composition ratée → 1re image gardée) : ce reliquat est resté
@@ -32850,7 +33025,7 @@ async function expressCreate(){
             { prompt: animPrompt, image_url:_kImg, aspect_ratio: window._expFormat, resolution:_res, duration:_dur },
             { every:5000, maxPolls:240, op: _expOp || undefined });   // 20 min ; op EXACTE d'Express (jamais celle d'un autre flux)
           _kieBlob = await _kieFetchBlob(_kr.url);
-          window._aaLastEngine='kie'; window._expKieRid=_kr.rid;
+          window._aaLastEngine='kie'; window._expKieRid=_kr.rid; _myRid=_kr.rid;
         }catch(e){
           console.warn('[kie] Veo : échec kie', e);
           if(e && e._kieRefus){
@@ -32912,7 +33087,7 @@ async function expressCreate(){
     // ffmpeg que le nettoyage audio. Voix native seulement (une voix importée/TTS est posée plus tard dans l'Éditeur).
     // Clients (25/09) : aussi quand Omni a tourné chez kie — kie arrondit la durée au cran supérieur (4/6/8/10 s) → silence final.
     let _cutAt = null;
-    if(_cutOk || (useNativeAudio && _isOmni && window._aaLastEngine==='kie')){
+    if(_cutOk || (useNativeAudio && _isOmni && (_myRid || window._aaLastEngine==='kie'))){
       try{
         const _se = await Promise.race([ _expSpeechEnd(blob), new Promise(r=>setTimeout(()=>r(null), 8000)) ]);
         if(_se && _se.end >= 1.5 && _se.dur - (_se.end + 0.3) >= 0.4) _cutAt = Math.round((_se.end + 0.3)*100)/100;
@@ -32927,6 +33102,8 @@ async function expressCreate(){
         setP(Math.max(p,95), _cutAt ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg> ' + (_texStyle ? 'Texture + coupe' : 'Coupe') + ' à la fin de la parole…' : _texStyle
           ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg> Texture + audio…'
           : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3a9 9 0 000 18M12 3a5 5 0 010 10"/></svg> Nettoyage de l\'audio…');
+        const _ffRel = await _expFfAcquire();   // lot en parallèle : ffmpeg.wasm traite UNE vidéo à la fois
+        try{
         await _loadFFmpeg(); const _ffa=_ffmpegInst;
         try{ await _ffa.FS('unlink','exa_in.mp4'); }catch(_){}
         try{ await _ffa.FS('unlink','exa_out.mp4'); }catch(_){}
@@ -32949,6 +33126,7 @@ async function expressCreate(){
         if(_cleaned.size>50000 && await _mp4Sane(_cleaned) && (!_cutAt || (_dOut>0 && Math.abs(_dOut-_cutAt)<0.4))) blob=_cleaned;   // sinon on garde l'original (jamais une vidéo tronquée ou illisible)
         else console.warn('[express] sortie ffmpeg rejetée — original gardé', { size:_cleaned.size, dOut:_dOut, cutAt:_cutAt });
         try{ await _ffa.FS('unlink','exa_in.mp4'); await _ffa.FS('unlink','exa_out.mp4'); }catch(_){}
+        } finally { _ffRel(); }
       }catch(_ae){ console.warn('express audio cleanup:', _ae); }
     }
     // Bug Express 06/09 : un MP4 corrompu (proxy qui ré-encodait le binaire en texte) donnait un lecteur
@@ -32959,40 +33137,44 @@ async function expressCreate(){
       window._veoDerniereOp = { op: _opN, uri: _vU };
       throw new Error('Vidéo reçue corrompue (' + Math.round(blob.size/1024) + ' Ko)' + (_opN ? ' — opération ' + _opN + ' conservée, réessaie le téléchargement' : ' — réessaie'));
     }
+    if(o){ _expSlotFill(o.idx, URL.createObjectURL(blob), blob); }
+    else {
     if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
     window._expVidUrl=URL.createObjectURL(blob);
     window._expVidBlob=blob;
+    }
     _expOpsDone();   // succès → plus rien à rembourser (seulement SES ops : jamais celles d'une autre génération en cours)
-    window._expVidBlobRaw=null; // nouvelle vidéo → la version "sans sous-titres" repart de celle-ci
-    window._expVoiceBlob = voiceBlob; // voix à ajouter dans l'Éditeur (null si native)
+    if(!o){ window._expVidBlobRaw=null; window._expVoiceBlob = voiceBlob; }   // nouvelle vidéo → version « sans sous-titres » ; voix à ajouter dans l'Éditeur (null si native)
 
     clearInterval(tick); setP(100, voiceBlob ? '✓ Vidéo + voix prêtes !' : '✓ Vidéo prête !');
-    if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
-    if(prog) prog.style.display='none';
-    if(acts) acts.style.display='flex';
+    if(o && window._expBatch) window._expBatch.ok++;
+    if(vid && !o){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
+    if(prog && !o) prog.style.display='none';
+    if(acts && !o) acts.style.display='flex';
     // Auto-enregistrement sur le compte (règle : tout ce qui est généré est dans la Bibliothèque). Avant, seule
     // la version SOUS-TITRÉE était sauvegardée → une vidéo Express brute disparaissait avec l'onglet (06/09).
     try{
       if(typeof _libAutoSaveVideo==='function'){
         const _nm = 'Express ' + new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-        Promise.resolve(_libAutoSaveVideo(blob, _nm, ['Express', window._expFormat==='16:9' ? '16:9' : '9:16'], '⚡', 'EXPRESS')).then(()=>{ if(window._expKieRid){ _kieAck(window._expKieRid); window._expKieRid=null; } }).catch(()=>{});
+        Promise.resolve(_libAutoSaveVideo(blob, _nm + (o ? ' · ' + (o.idx+1) : ''), ['Express', window._expFormat==='16:9' ? '16:9' : '9:16'], '⚡', 'EXPRESS')).then(()=>{ const _r=_myRid || (!o ? window._expKieRid : null); if(_r){ _kieAck(_r); if(window._expKieRid===_r) window._expKieRid=null; } }).catch(()=>{});
       }
     }catch(_sErr){ console.warn('express autosave:', _sErr); }
     if(typeof _hedraIncrement==='function') _hedraIncrement();
-    toast('Vidéo Express générée !'+_kieEngineTag(_isOmni ? 'fal' : 'Google'));   // moteur réel : compte developer SEULEMENT (client : rien)
+    if(!o) toast('Vidéo Express générée !'+_kieEngineTag(_isOmni ? 'fal' : 'Google'));   // moteur réel : compte developer SEULEMENT (client : rien)
   } catch(e){
     clearInterval(tick);
     console.error('Express error:', e);
-    if(prog) prog.style.display='none';
-    if(ph) ph.style.display='flex';   // .col (flex) — surtout PAS 'block' (casse le centrage : icône décalée à gauche)
+    _spent(false);
+    if(o && window._expBatch){ _expSlotFail(o.idx, e.message||e); }
+    else { if(prog) prog.style.display='none'; if(ph) ph.style.display='flex'; }   // .col (flex) — surtout PAS 'block' (casse le centrage : icône décalée à gauche)
     // Express débite EN AMONT (spendCreditsFor). Un échec (Veo refusé, téléchargement raté, vidéo corrompue)
     // ne remboursait rien → l'utilisateur payait pour rien. On rend ce qui est remboursable : refund_credits
     // ne rend que la RÉSERVE RESTANTE (une étape déjà livrée — image, extension — reste facturée à juste titre).
     try{ if(typeof creditsFlowRefund==='function') await creditsFlowRefund('la génération Express a échoué', _expOps); }catch(_r){}
     _expOpsDone();
-    toast('Express : ' + (e.message||e));
+    toast('Express'+(o ? ' (vidéo '+(o.idx+1)+')' : '')+' : ' + (e.message||e));
   } finally {
-    if(btn){ btn.disabled=false; btn.style.opacity='1'; }
+    if(btn && !o){ btn.disabled=false; btn.style.opacity='1'; }
   }
 }
 
@@ -33004,6 +33186,7 @@ function expressReset(){
   // (moteur, format, qualité) restent : ce sont des réglages, pas du brouillon.
   window._expImgB64=null; window._expImgMime=null; window._expVidBlob=null; window._expVidBlobRaw=null; window._expImgs=[]; if(typeof _expRenderImgs==='function') _expRenderImgs();
   window._expVidUrl=null; window._expVoiceBlob=null; window._expSubs=null; window._expSubsBusy=false;
+  { const mw=document.getElementById('expMultiWrap'), mg=document.getElementById('expMultiGrid'); if(mg){ mg.querySelectorAll('video').forEach(v=>{ try{ URL.revokeObjectURL(v.src); }catch(_){} }); mg.innerHTML=''; } if(mw) mw.style.display='none'; }
   window._expAvatarFile=null; window._expAvatarUrl=null; window._expClipId=null; window._expOmniDurLocked=false;   // nouvelle vidéo → l'auto-suit de durée Omni reprend
   const p=document.getElementById('expImgPreview'); if(p){ p.style.display='none'; p.src=''; }
   const ta=document.getElementById('expPrompt'); if(ta) ta.value='';
@@ -41526,6 +41709,7 @@ window._mExpSync=function(){
   if(typeof _expKieQualSync==='function') _expKieQualSync();   // kie : 1080p imposé sur Omni (qualité de l'user rendue ailleurs)
   var q=(window._expQuality||'720p');
   var qv=document.getElementById('mExpQualVal'); if(qv) qv.textContent=q;
+  if(typeof _expRenderCount==='function') _expRenderCount();   // Nombre (27/09) : boutons 1…3 du panneau mobile
   var q720=document.getElementById('mExpQual720'), q1080=document.getElementById('mExpQual1080');
   if(q720) q720.style.display=(typeof _expOmniKie==='function' && _expOmniKie()) ? 'none' : '';
   if(q720&&q1080){
@@ -41579,7 +41763,7 @@ window._mExpPickVoiceInline=function(id){
 window._mExpRenderModelInline=function(){
   var c=document.getElementById('mExpModelInline'); if(!c) return;
   if(window._expVeoModel==='pro' && !(typeof _expModelAllowed==='function' && _expModelAllowed('pro'))) window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus (sauf test kie dev)
-  if(!window._expVeoModel) window._expVeoModel='standard';
+  if(!window._expVeoModel) window._expVeoModel='omni';   // Axel 27/09 : Flash sélectionné par défaut
   if(window._expVeoModel==='omni' && typeof _expModelAllowed==='function' && !_expModelAllowed('omni')) window._expVeoModel='standard';
   c.innerHTML=(typeof _expModelsVisible==='function'?_expModelsVisible():[]).map(function(m){
     var on=(m.v===window._expVeoModel), locked=(typeof _expModelAllowed==='function' && !_expModelAllowed(m.v));
