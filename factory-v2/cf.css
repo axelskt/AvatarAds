@@ -1236,3 +1236,14 @@ i.is-gap { background: var(--cf-ink); }
 .cf-qchip.is-off { background: var(--cf-track); color: var(--cf-mute); }
 .cf-asmf-l { font-size: 13px; font-weight: 600; color: var(--cf-ink-2); margin-top: 4px; overflow-wrap: anywhere; }
 @media (max-width: 480px) { .cf-avgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+/* Fiche brique : vidéos par format (27/09) — 3 emplacements photo par avatar, 9:16 */
+.cf-bsf { display: grid; gap: 14px; margin-bottom: 12px; }
+.cf-bsf-f h4 { margin: 0 0 6px; }
+.cf-bsf-g { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cf-bsf-v { margin: 0; border-radius: 10px; overflow: hidden; background: #0e0e10; aspect-ratio: 9 / 16; position: relative; display: flex; flex-direction: column; }
+.cf-bsf-v video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cf-bsf-v figcaption { position: absolute; left: 6px; top: 6px; }
+.cf-bsf-v.is-wait { background: var(--cf-tile); border: 1px dashed var(--cf-line); align-items: center; justify-content: center; text-align: center; gap: 4px; padding: 6px; }
+.cf-bsf-v.is-wait span { font: 500 10px/1.3 var(--cf-mono); color: var(--cf-mute); }
+.cf-bsf-v.is-wait b { font: 600 11px/1.3 inherit; color: var(--cf-mute); }

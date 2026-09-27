@@ -785,7 +785,13 @@
     var byStatus = {};
     if (m && m.by_status && typeof m.by_status === 'object') Object.keys(m.by_status).slice(0, 20).forEach(function (k) { var n = cnt(m.by_status[k]); if (n != null) byStatus[k.slice(0, 30)] = n; });
     if (cnt(v.rows) == null || cnt(v.pairs_total) == null) return fail('http', 'factory_prod_stats : variantes illisibles');
-    return { state: 'ready', kind: null, error: null, rows: cnt(v.rows), pairsTotal: cnt(v.pairs_total), pairs: pairs,
+    // vidéos par format (27/09) : [photo, brique, format, url] ; format en liste blanche, url gardée telle quelle (l'UI la
+    // repasse par mediaSrc, notre stockage seulement)
+    var videos = Array.isArray(v.videos) ? v.videos.map(function (x) {
+      return Array.isArray(x) && rowId(x[0]) && rowId(x[1]) && ['axel', 'omni', 'muet'].indexOf(x[2]) >= 0 && typeof x[3] === 'string'
+        ? { photo: x[0], brick: x[1], format: x[2], url: x[3].slice(0, 400) } : null;
+    }).filter(Boolean) : [];
+    return { state: 'ready', kind: null, error: null, rows: cnt(v.rows), pairsTotal: cnt(v.pairs_total), pairs: pairs, videos: videos,
       missions: m && cnt(m.total) != null ? { total: cnt(m.total), byStatus: byStatus } : null };
   }
   function normProd(rb, rr, rq, stats, at, classifyMissing) {

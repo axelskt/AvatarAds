@@ -1442,6 +1442,32 @@
       + '<div class="cf-pfoot">vues totales / publications · ≈ vues moyennes</div></section>';
   }
 
+  // Vidéos d'une brique par FORMAT (Axel 27/09) : brique parlée → Audio d'Axel + Voix native Omni ; texte choc → Texte +
+  // musique ; chaque format = PHOTOS_PAR_AVATAR emplacements par avatar, remplis par les vidéos de factory_variants (photo
+  // réelle A1-2…, plus ancienne d'abord) sinon « en attente d'être créée ». Hook avant / après : aucun avatar (voix off).
+  var FMT_ORDER = { spoken: ['axel', 'omni'], 'texte-choc': ['muet'] };
+  var FMT_NAME = { axel: 'Audio d’Axel', omni: 'Voix native Omni', muet: 'Texte + musique' };
+  function fmtVideosHTML(M, b) {
+    var St = M && M.vars && M.vars.St, L = M && M.L;
+    if (!St || St.state !== 'ready' || !L) return '';
+    if (b.kind === 'hook' && COH && COH.isAvantApres && M.byId && M.byId[b.id] && COH.isAvantApres(M.byId[b.id])) return '';
+    var fmts = b.kind === 'texte-choc' ? FMT_ORDER['texte-choc'] : FMT_ORDER.spoken, NP = COH && COH.PHOTOS_PAR_AVATAR || 3;
+    var vids = (St.videos || []).filter(function (x) { return x.brick === b.id; });
+    return '<div class="cf-bsf">' + fmts.map(function (f) {
+      var fv = vids.filter(function (x) { return x.format === f; }), done = 0, total = L.avatars.length * NP;
+      var cells = L.avatars.map(function (a) {
+        var mine = fv.filter(function (x) { return (COH.photoParent ? COH.photoParent(x.photo) : x.photo) === a.id; }).slice(0, NP), out = [];
+        for (var i = 0; i < NP; i++) {
+          var x = mine[i], src = x && mediaSrc(x.url);
+          if (src) { done += 1; out.push('<figure class="cf-bsf-v"><video controls playsinline preload="metadata" src="' + esc(src) + '"></video><figcaption><span class="cf-chip is-mod">' + esc(x.photo) + '</span></figcaption></figure>'); }
+          else out.push('<div class="cf-bsf-v is-wait"><span>' + esc(a.id) + ' · photo ' + (i + 1) + '</span><b>en attente d’être créée</b></div>');
+        }
+        return out.join('');
+      }).join('');
+      return '<section class="cf-bsf-f"><h4 class="cf-bs-cap-t">' + esc(FMT_NAME[f]) + ' · ' + done + ' / ' + total + '</h4><div class="cf-bsf-g">' + cells + '</div></section>';
+    }).join('') + '</div>';
+  }
+
   // ── 03 · Briques : Bibliothèque · Assemblages (recettes de hooks) · Fraîcheur ──
   function bricksTabHTML(M) {
     var tabs = [['lib', 'Bibliothèque'], ['rec', 'Assemblages'], ['fresh', 'Fraîcheur']];
@@ -3092,11 +3118,14 @@
       media = sv ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(sv) + '"' + (sp ? ' poster="' + esc(sp) + '"' : '') + '></video><span class="cf-vmsg">vidéo illisible</span></div>'
         : sp ? '<div class="cf-sheet-media"><img src="' + esc(sp) + '" alt="' + esc('Aperçu du style ' + b.id) + '" decoding="async"></div>'
           : ph('style · ' + (m.value || b.id)) + (fb && fb.hasMedia ? miss('aperçu') : '<span class="cf-meta">aperçu du style : pas encore en ligne</span>');
+    } else if (b.kind === 'texte-choc') {
+      // texte choc (TH…, 27/09) : format Texte + musique, 3 photos par avatar
+      media = fmtVideosHTML(M, b);
     } else if (spoken) {
       // brique parlée : vidéos par avatar (factory_prod_stats), puis la tuile audio de la maquette et sa légende
       media = '';
       var V = M.vars, avs = V && V.byBrick[b.id] || [];
-      if (V && V.gen != null && avs.length) media += '<span class="cf-bs-cap-t">vidéos par avatar · ' + avs.length + '</span><span class="cf-bs-avs">' + avs.map(function (a) { return '<span class="cf-chip is-mod">' + esc(a) + '</span>'; }).join('') + '</span>';
+      media += fmtVideosHTML(M, b);
       media += asrc ? aplayHTML(asrc, m.duration, false) : fb ? miss('audio') : '<span class="cf-meta">audio indisponible</span>';
       // légende de la maquette ; sans la Production chargée (fiche ouverte depuis Insight) : rien d'inventé sur les vidéos
       var capT = !V ? (asrc ? 'audio' : '') : V.gen == null ? 'audio · vidéos par avatar : — (' + V.why + ')' : avs.length ? 'audio' : 'audio seul · aucune vidéo générée';
