@@ -35,6 +35,7 @@ try{
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="static-ads-bank.js"></script><!-- #static-ads-bank : 59 formats de pub (généré depuis shared/static-ads-bank.json) -->
 <script src="omnihuman-prompts.js"></script><!-- prompt OmniHuman 1.5 (≤ 300 car., anglais) : généré depuis shared/omnihuman-prompts.json -->
+<script src="hedra-prompts.js"></script><!-- prompt lipsync Hedra Character-3 validé sur l'usine (27/09) : généré depuis shared/hedra-prompts.json -->
 <!-- Whop embedded checkout (préconnexion = chargement quasi-instantané + monte l'iframe) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
 <link rel="preconnect" href="https://js.whop.com" crossorigin>
@@ -5857,7 +5858,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-26-2250'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-27-1532'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -14315,12 +14316,16 @@ async function _mtAudioSliceWav(file, st, en){
 // à la voix d'origine : on fabrique seulement l'audio ENVOYÉ au modèle —
 //   · la voix continue après la fenêtre → sa suite réelle jusqu'à +0,6 s (fondu de 30 ms à la coupe) ;
 //   · fin de l'audio → silence complété jusqu'à 0,5 s après le dernier mot (jamais plus que nécessaire).
-// Puis la vidéo se coupe à fin de parole + 0,3 s (Générateur) ou le visage n'est affiché que sur la matière
+// Puis la vidéo se coupe au dernier son + 0,06 s (Générateur, 27/09) ou le visage n'est affiché que sur la matière
 // réellement lipsynchronisée (Montage IA : `lipEnd`, lu par le moteur du render-worker).
 // MÊME règle que render-worker/lipsync-audio.mjs (planAudioLipsync) : à changer ENSEMBLE.
-const _LIP = { CTX:0.6, PAD:0.5, MIN:3.3, FADE:0.03, COUPE:0.3, FIN_TOL:0.05, DERNIER_MAX:3 };
+// COUPE (27/09, Axel : « les 0,5 qu'on ajoute et qu'on raccourcit après, c'est parfait, mets-le partout ») : règle VALIDÉE de
+// l'usine — dernier son > −35 dBFS (silencedetect) + 0,06 s — au lieu de fin de parole + 0,3 s. Même règle que le MCP.
+const _LIP = { CTX:0.6, PAD:0.5, MIN:3.3, FADE:0.03, COUPE:0.06, SEUIL_SON:0.01778, FIN_TOL:0.05, DERNIER_MAX:3 };
 const _lipR3 = (n)=>Math.round(n*1000)/1000;
-// fin de parole d'un AudioBuffer (même mesure que _expSpeechEnd : RMS 50 ms, seuil pic −25 dB) → { end, dur } | null
+// fin de parole d'un AudioBuffer (même mesure que _expSpeechEnd : RMS 50 ms, seuil pic −25 dB) → { end, dur, son } | null
+// `son` (27/09) : juste après le DERNIER échantillon > −35 dBFS (= silence_start de silencedetect, la mesure de l'usine),
+// borné à [end − 0,05 ; end + 0,25] : un fond bruité ne repousse jamais la coupe au-delà de l'ancienne. Même code que le MCP.
 function _lipFinParole(buf){
   if(!buf || !buf.length) return null;
   const sr=buf.sampleRate, n=buf.length, W=Math.max(1, Math.round(sr*0.05)), chans=[];
@@ -14330,7 +14335,13 @@ function _lipFinParole(buf){
   let peak=-Infinity; for(const v of db) if(v>peak) peak=v;
   if(!(peak > -40)) return null;
   const thr=Math.max(-60, peak-25);
-  for(let i=db.length-1;i>=0;i--){ if(db[i] > thr) return { end:_lipR3(Math.min(n/sr, (i+1)*0.05)), dur:_lipR3(n/sr) }; }
+  for(let i=db.length-1;i>=0;i--){
+    if(!(db[i] > thr)) continue;
+    const end=_lipR3(Math.min(n/sr, (i+1)*0.05));
+    let son=end;
+    for(let j=n-1;j>=0;j--){ let fort=false; for(const d of chans){ if(Math.abs(d[j]) > _LIP.SEUIL_SON){ fort=true; break; } } if(fort){ son=(j+1)/sr; break; } }
+    return { end, dur:_lipR3(n/sr), son:_lipR3(Math.min(end+0.25, Math.max(end-0.05, son))) };
+  }
   return null;
 }
 // plan de l'audio envoyé pour la fenêtre [start,end] d'une voix de durée voixDur (cf. lipsync-audio.mjs) :
@@ -14373,18 +14384,20 @@ async function _lipPrepHedra(blob){
   const f=_lipFinParole(dec);
   if(!f) return { blob, finParole:null, pad:0 };
   const p=_lipPlan({ start:0, end:dec.duration, voixDur:dec.duration, finParole:f.end, min:0 });
-  if(p.padSec < 0.02) return { blob, finParole:f.end, pad:0, dur:_lipR3(dec.duration) };
-  return { blob: await _lipRender(dec, p), finParole:f.end, pad:p.padSec, dur:_lipR3(dec.duration) };
+  if(p.padSec < 0.02) return { blob, finParole:f.end, finSon:f.son, pad:0, dur:_lipR3(dec.duration) };
+  return { blob: await _lipRender(dec, p), finParole:f.end, finSon:f.son, pad:p.padSec, dur:_lipR3(dec.duration) };
 }
 // Générateur : instant de coupe de la vidéo Hedra (timeline = celle de l'audio envoyé) d'après _lipPrepHedra.
-// Fin de parole + 0,3 s ; si le dernier mot détecté est suivi de plus de 2,5 s (silence voulu, fin très douce),
-// on ne coupe QUE ce qui dépasse l'audio de l'utilisateur (+0,3 s). null = pas de coupe (mesure impossible).
+// Dernier son + 0,06 s (27/09, règle de l'usine ; fin de parole si le son n'est pas mesuré) ; si le dernier mot détecté est
+// suivi de plus de 2,5 s (silence voulu, fin très douce), on ne coupe QUE ce qui dépasse l'audio de l'utilisateur (+0,06 s).
+// null = pas de coupe (mesure impossible).
 // Relecture 26/09 : JAMAIS plus court que la voix de l'utilisateur. Le rendu du Générateur (voix importée) garde la voix
 // d'origine entière et prend max(vidéo, audio) : une vidéo coupée à fin de parole + 0,3 s avant la fin de la voix (0,3 à
 // 2,5 s de silence final) figeait la dernière image jusqu'à 2,2 s. On ne retire que le silence AJOUTÉ (cas CTA28 inchangé).
 function _lipCoupeGen(lp){
   if(!lp || !(lp.finParole > 1) || !(lp.dur > 0)) return null;
-  return _lipR3((lp.dur - lp.finParole) <= 2.5 ? Math.max(lp.dur, lp.finParole + _LIP.COUPE) : lp.dur + _LIP.COUPE);
+  const son = (lp.finSon > 0) ? lp.finSon : lp.finParole;
+  return _lipR3((lp.dur - lp.finParole) <= 2.5 ? Math.max(lp.dur, son + _LIP.COUPE) : lp.dur + _LIP.COUPE);
 }
 // Coupe la vidéo rendue à `sec` par sa LISTE D'ÉDITIONS (edts/elst), sur une copie, à taille égale : aucun octet de
 // média touché, aucun ré-encodage ni ffmpeg.wasm à charger. Les MP4 de Hedra (muxés par ffmpeg) ont une entrée elst par
@@ -14783,8 +14796,8 @@ function _mp4Stsd(bytes){
 }
 // Raccorde les tranches (ordre = temps) : flux COPIÉS quand toutes ont les mêmes descriptions de flux (même moteur, même
 // réglage : quelques secondes) ; sinon (une tranche passée par le repli en dernier recours) ré-encodage de raccord — LENT
-// dans ffmpeg.wasm (plusieurs minutes pour 60 s), d'où la relance chez kie avant tout mélange (_genOmnihVideo). `outLast` = coupe de la dernière tranche (fin de
-// parole + 0,3 s, relative à son début) ; null = entière. Chaque tranche interne est gardée ENTIÈRE : elle finit dans une pause.
+// dans ffmpeg.wasm (plusieurs minutes pour 60 s), d'où la relance chez kie avant tout mélange (_genOmnihVideo). `outLast` = coupe de la dernière tranche (dernier
+// son + 0,06 s, relative à son début) ; null = entière. Chaque tranche interne est gardée ENTIÈRE : elle finit dans une pause.
 async function _omnihJoin(blobs, outLast){
   await _loadFFmpeg(); const ff = _ffmpegInst;
   const bytes = await Promise.all(blobs.map(async (x)=>new Uint8Array(await x.arrayBuffer())));
@@ -14822,7 +14835,7 @@ async function _omnihFfmpegPret(){
   await Promise.race([ _loadFFmpeg(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('ffmpeg.wasm : délai de chargement')), 90000)) ]);
   if(!_ffmpegInst) throw new Error('ffmpeg.wasm indisponible');
 }
-// Vidéo OmniHuman complète du Générateur (voix d'origine jamais modifiée) → Blob MP4 coupé à fin de parole + 0,3 s.
+// Vidéo OmniHuman complète du Générateur (voix d'origine jamais modifiée) → Blob MP4 coupé au dernier son + 0,06 s.
 async function _genOmnihVideo(imgFile, audioBlob, fmt){
   let dec;
   try{ dec = await _omnihDecode(audioBlob); }catch(_){ throw new Error('audio illisible — réimporte ton audio'); }
@@ -14879,8 +14892,8 @@ async function _genOmnihVideo(imgFile, audioBlob, fmt){
     throw ko.reason;
   }
   const vids = res.map((r)=>r.value);
-  // coupe finale (timeline de la dernière tranche) : fin de parole + 0,3 s, comme callHedra (_lipCoupeGen)
-  const abs = fin ? _lipCoupeGen({ finParole: fin.end, dur: _lipR3(D) }) : null;
+  // coupe finale (timeline de la dernière tranche) : dernier son + 0,06 s, comme callHedra (_lipCoupeGen)
+  const abs = fin ? _lipCoupeGen({ finParole: fin.end, finSon: fin.son, dur: _lipR3(D) }) : null;
   const outLast = (abs != null && abs > cuts[n-1]) ? _lipR3(abs - cuts[n-1]) : null;
   let blob;
   if(n === 1){
@@ -14964,6 +14977,9 @@ function _mtMotionPrompt(engine, role){
     + 'precise lip-sync matching every syllable and pause of the audio, clear articulation';
   const level = (_mt.adv && _mt.adv.motion) || 'gestures';
   if(level === 'still') return base + ', still posture, static background, no camera movement, background objects still';
+  // 27/09 (Axel) : Hedra Character-3 = le prompt VALIDÉ sur l'usine, partagé (hedra-prompts.js). Seul « figé » (choix
+  // explicite de l'utilisateur) garde la posture calme ci-dessus.
+  if(engine !== 'omnihuman' && window.AA_HEDRA_PROMPT) return window.AA_HEDRA_PROMPT;
 
   const hands = _mt.avatarHasHands
     ? ', natural hand gestures that illustrate what is being said, hands anatomically correct with five fingers, no extra or fused fingers'
@@ -25546,11 +25562,11 @@ async function _stripSilencesFromBlob(blob){
 // Elite → meilleur modèle (Character-3 / Hedra Omnia)
 // Autres → modèle standard (Character-1 / Hedra Avatar)
 const HEDRA_MODELS = {
-  // #avatar (Axel 02/09) : le Générateur passe sur Hedra AVATAR (v3 « hedra-avatar »), comme le worker Montage IA.
-  // Character-3 (d1dd37a3-…) mettait 14-23 min par clip le 02/09 contre 0,9-2,3 min pour Avatar en août ; même
-  // contrat d'appel (prompt / aspect_ratio / resolution / start_image / audio) et même tarif côté crédits.
-  elite:   '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar (v3 hedra-avatar) — défaut
-  default: '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar (v3 hedra-avatar) — défaut
+  // 27/09 (Axel : « Character-3 fait très bien le taff ») : retour à CHARACTER-3 partout (Générateur, Montage IA, MCP, worker)
+  // avec le prompt validé sur l'usine (hedra-prompts.js). Il rend aujourd'hui en ~3 min (14-23 min le 02/09, raison du
+  // passage sur Avatar) ; même contrat d'appel et même tarif Hedra (0,0625 $/s en 1080p).
+  elite:   'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character-3 (v3 hedra-character-3) — défaut
+  default: 'd1dd37a3-e39a-4854-a298-6510289f9cf2', // Hedra Character-3 (v3 hedra-character-3) — défaut
   omnihuman: '5efced1a-0ca0-4255-87d2-070146842ad9', // OmniHuman 1.5 I2V — qualité max (#107, via Montage IA segmenté)
   // hedraOmnia:   'ab372b84-432f-44f5-bacc-c2542465f712', // Hedra Omnia — 15 cr/s (Elite futur)
   // hedraAvatar:  '26f0fc66-152b-40ab-abed-76c43df99bc8', // Hedra Avatar — 7 cr/s
@@ -25638,7 +25654,7 @@ function _genApplyModelGate(){
   }
 }
 // Génère la vidéo via OmniHuman 1.5 — kie pour les clients (26/09), fal en repli : _genOmnihVideo (tranches ≤ 15 s,
-// photo 9:16 JPEG q95, prompt partagé avec les mains détectées sur CETTE photo, « dernier mot », coupe fin de parole + 0,3 s).
+// photo 9:16 JPEG q95, prompt Hedra partagé (hedra-prompts.js), « dernier mot », coupe au dernier son + 0,06 s).
 // Même contrat de retour que callHedra : une blob: URL (ou '' en cas d'échec → remboursement géré dans startGeneration).
 async function _genOmniScene(audioBlob){
   let imgFile=null;
@@ -25730,7 +25746,7 @@ async function callHedra(audioBlob){
     // a toujours un avatar (Avatar / Vidéo existante), donc on l'exige et on le dit clairement.
     // Audio ENVOYÉ (26/09 — « le dernier mot n'est pas articulé ») : la voix d'origine + le silence qui manque après
     // le dernier mot (0,5 s garantis), sinon Hedra ne ferme pas la dernière syllabe. La voix d'origine (results.audioBlob)
-    // n'est pas touchée ; la vidéo rendue est recoupée à fin de parole + 0,3 s juste après le téléchargement.
+    // n'est pas touchée ; la vidéo rendue est recoupée au dernier son + 0,06 s juste après le téléchargement.
     const _lp = await _lipPrepHedra(audioBlob).catch(() => ({ blob: audioBlob, finParole: null, pad: 0 }));
     const _sendBlob = _lp.blob || audioBlob;
     const audioExt = (_sendBlob !== audioBlob || audioBlob.type === 'audio/wav' || audioBlob.type === 'audio/wave') ? 'wav'
@@ -25758,20 +25774,11 @@ async function callHedra(audioBlob){
     // ── Génération (POST /v3/models/<slug>) ──
     const aspectRatio = cfg.format === 'square' ? '1:1' : '9:16';
     const resolution  = (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080) ? '1080p' : '720p';
-    // #gestes (03/09 — Axel : « l'avatar doit parler avec les mains, se toucher les sourcils, les cheveux »).
-    // Les gestes de mains ne sont demandés QUE si les mains sont DANS le cadre de la photo (sinon le modèle fait
-    // surgir des mains de nulle part). Détection réutilisée du Montage IA (_mtDetectHands : une question Gemini
-    // par photo, mémorisée). Sans mains visibles : buste vivant, sourcils expressifs, mains hors champ.
-    let _handsIn = false;
-    try {
-      const _f = (selAvatar && selAvatar.localFile) || (avatarImgUrl ? new File([await fetch(avatarImgUrl).then(r=>r.blob())], 'avatar.jpg', { type:'image/jpeg' }) : null);
-      if(_f && typeof _mtDetectHands === 'function') _handsIn = await _mtDetectHands(_f);
-    } catch(_){}
-    const _gestes = _handsIn
-      ? ' Natural hand gestures that illustrate what is being said (talks with the hands when explaining a point), an occasional spontaneous micro-action like briefly touching the hair or an eyebrow, hands anatomically correct with five fingers, no extra or fused fingers.'
-      : ' Lively head and shoulder movement, small natural leans and weight shifts, expressive eyebrows and eyes, hands stay out of frame.';
+    // 27/09 (Axel) : le prompt VALIDÉ sur les hooks de l'usine (« TOP PRIORITY lip-sync » + les deux mains dès le début),
+    // partagé avec Montage IA, le MCP et le worker (hedra-prompts.js). Le tremblement « à la main » est ajouté par la
+    // compo serveur (camOrganiqueFilter), pas demandé au modèle — comme sur l'usine. Plus de détection des mains ici.
     const input = {
-      prompt: 'A person talking naturally to camera, authentic UGC selfie held at arm’s length on a phone front camera, SUBTLE natural handheld camera shake and micro-movements as if filming themselves, direct gaze.' + _gestes + ' PRONOUNCED, CLEARLY VISIBLE lip-sync and articulation: the mouth OPENS WIDE and distinctly, the lips and jaw move a lot for every syllable, teeth and tongue become visible when the sounds call for it, energetic expressive speech like a real creator talking to camera — NOT a barely-moving, tight or nearly-closed mouth. Mouth movements exactly match every syllable and pause of the audio, strong clear articulation, realistic natural look, keep the same person and a coherent background (only gentle handheld motion, no big camera moves that would break the face)',
+      prompt: window.AA_HEDRA_PROMPT || 'A person talking to camera, UGC style, perfectly precise lip-sync matching every syllable and pause of the audio, talking with both hands, static background, no camera movement',
       aspect_ratio: aspectRatio,
       resolution,
       start_image: startImg,
@@ -25831,7 +25838,7 @@ async function callHedra(audioBlob){
       const vRes = await fetch(out.url);
       if(vRes.ok){
         let vBlob = await vRes.blob();
-        // coupe à fin de parole + 0,3 s (queue muette du modèle + silence ajouté) ; jamais dans l'audio de l'utilisateur
+        // coupe au dernier son + 0,06 s (queue muette du modèle + silence ajouté) ; jamais dans l'audio de l'utilisateur
         // au-delà d'une queue de 2,5 s après le dernier mot détecté. Échec → la vidéo entière (rien n'est perdu).
         const _cut = _lipCoupeGen(_lp);
         if(_cut){ try{ vBlob = await _lipCutVideo(vBlob, _cut); }catch(e){ console.warn('coupe fin de parole ignorée :', e); } }

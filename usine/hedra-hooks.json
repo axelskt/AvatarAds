@@ -1,7 +1,7 @@
 {
-  "_doc": "Réglage lipsync des hooks de l'usine VALIDÉ par Axel le 26/09 (test A1 × H12) : Character-3 + ce prompt (mains en tête, partie articulation = prompt par défaut du MCP, jamais de consigne d'articulation détaillée : elle a cassé l'articulation). Photos actuelles (A1-2, A2-11). Après rendu : coupe fin de parole + 0,06 s (fondu 40 ms), puis usine/selfie-treat.mjs faible. Déclinaisons : 3 max par vidéo de base.",
+  "_doc": "Réglage lipsync des hooks de l’usine VALIDÉ par Axel (26/09, complété le 27/09 : « TOP PRIORITY lip-sync » en tête, testé et gardé sur ~70 hooks). Character-3 + ce prompt. Après rendu : coupe fin de parole + 0,06 s (fondu 40 ms), puis usine/selfie-treat.mjs faible. Photos : 3 par avatar et par brique (A1 et A2), les moins utilisées d’abord, jamais A1-4. Déclinaisons : 3 max par vidéo de base.",
   "model": "hedra-character-3",
-  "prompt": "IMPORTANT: he talks with BOTH HANDS the whole time. His hands are raised in front of his chest, clearly visible in the lower part of the frame, from the start and during every sentence: open palms, counting on fingers, pointing at the camera, hands moving with each emphasis. A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, expressive face, eyebrows raising on key words, subtle head nods, dynamic delivery, never static. Static background, no camera movement, hands anatomically correct with five separate well-defined fingers, no extra fingers, no deformed hands.",
+  "prompt": "TOP PRIORITY: perfectly precise lip-sync. The lips, jaw and tongue follow the audio exactly, frame by frame, every syllable and every pause, no lag, no mumbling, the mouth closes on silences. IMPORTANT: he talks with BOTH HANDS the whole time. His hands are raised in front of his chest, clearly visible in the lower part of the frame, from the start and during every sentence: open palms, counting on fingers, pointing at the camera, hands moving with each emphasis. A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, clear articulation, expressive face, eyebrows raising on key words, subtle head nods, dynamic delivery, never static. Static background, no camera movement, hands anatomically correct with five separate well-defined fingers, no extra fingers, no deformed hands.",
   "cut_after_speech_s": 0.06,
   "audio_fade_out_s": 0.04,
   "silence_detect": {
@@ -13,7 +13,31 @@
     "level": "faible"
   },
   "photos": {
-    "A1": "factory-media/avatars/A1/A1-2.jpg",
-    "A2": "factory-media/avatars/A2/A2-11.png"
+    "A1": [
+      "A1-1",
+      "A1-2",
+      "A1-3",
+      "A1-5",
+      "A1-6",
+      "A1-7",
+      "A1-8"
+    ],
+    "A2": [
+      "A2-1",
+      "A2-2",
+      "A2-3",
+      "A2-4",
+      "A2-5",
+      "A2-6",
+      "A2-7",
+      "A2-8",
+      "A2-9",
+      "A2-10",
+      "A2-11"
+    ],
+    "retirees": [
+      "A1-4"
+    ],
+    "par_brique": 3
   }
 }

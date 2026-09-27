@@ -3,13 +3,16 @@
 // 26/09 (« le dernier mot n'est pas articulé », mesuré sur CTA28) : un audio qui s'arrête net sur le dernier phonème
 // laisse Hedra (Avatar et Character-3) sans « contexte droit » → la dernière syllabe n'est pas articulée. On ne touche
 // JAMAIS aux octets reçus (la brique de l'usine, la voix de l'utilisateur) : on fabrique une COPIE, complétée de silence
-// jusqu'à 0,5 s après le dernier mot, et la vidéo livrée est recoupée à fin de parole + 0,3 s par sa liste d'éditions
+// jusqu’à 0,5 s après le dernier mot, et la vidéo livrée est recoupée au dernier son + 0,06 s par sa liste d’éditions
 // (edts/elst : aucun ré-encodage, aucun ffmpeg dans une edge function). Même règle que render-worker/lipsync-audio.mjs.
 // WAV PCM (16/24/32 bits, flottant 32) : silence complété après le dernier mot ; MP3 couche III (relecture 26/09) : 0,5 s de
 // trames de silence ajoutées (preparerMp3Lipsync). La MESURE facturée (mesurerAudio) ne lit jamais un en-tête à offset fixe.
 
 const PAD = 0.5          // silence garanti après le dernier mot
-const COUPE = 0.3        // coupe vidéo = fin de parole + 0,3 s
+// 27/09 (Axel : « les 0,5 qu'on ajoute et qu'on raccourcit après, c'est parfait, mets-le partout ») : la coupe suit la
+// règle VALIDÉE de l'usine (silencedetect −35 dB → dernier son + 0,06 s) au lieu de fin de parole + 0,3 s.
+const COUPE = 0.06       // coupe vidéo = dernier son (> −35 dBFS) + 0,06 s
+const SEUIL_SON = 0.01778 // −35 dBFS en amplitude (10^(−35/20)) : le seuil de silencedetect de l'usine
 const QUEUE_MAX = 2.5    // au-delà de 2,5 s de silence après le dernier mot détecté, on ne coupe que ce qui dépasse l'audio
 const r3 = (n: number) => Math.round(n * 1000) / 1000
 
@@ -43,7 +46,9 @@ export function lireWav(b: Uint8Array): WavInfo | null {
 }
 
 // Fin de parole : RMS par fenêtres de 50 ms, seuil relatif au pic (−25 dB, plancher −60 dBFS) — comme _expSpeechEnd.
-export function finParoleWav(b: Uint8Array, w: WavInfo): { end: number; dur: number } | null {
+// `son` (27/09) : juste après le DERNIER échantillon > −35 dBFS (= silence_start de silencedetect, la mesure de l'usine),
+// borné à [end − 0,05 ; end + 0,25] : un fond bruité ne repousse jamais la coupe au-delà de l'ancienne (end + 0,3).
+export function finParoleWav(b: Uint8Array, w: WavInfo): { end: number; dur: number; son: number } | null {
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength)
   const n = Math.floor(w.dataLen / w.blockAlign)
   if (!n) return null
@@ -69,7 +74,18 @@ export function finParoleWav(b: Uint8Array, w: WavInfo): { end: number; dur: num
   for (const v of db) if (v > peak) peak = v
   if (!(peak > -40)) return null
   const thr = Math.max(-60, peak - 25)
-  for (let i = db.length - 1; i >= 0; i--) if (db[i] > thr) return { end: r3(Math.min(n / w.sr, (i + 1) * 0.05)), dur: r3(n / w.sr) }
+  for (let i = db.length - 1; i >= 0; i--) {
+    if (!(db[i] > thr)) continue
+    const end = r3(Math.min(n / w.sr, (i + 1) * 0.05))
+    let son = end
+    for (let j = n - 1; j >= 0; j--) {
+      const base = w.dataOff + j * w.blockAlign
+      let fort = false
+      for (let k = 0; k < w.ch; k++) if (Math.abs(lire(base + k * bps)) > SEUIL_SON) { fort = true; break }
+      if (fort) { son = (j + 1) / w.sr; break }
+    }
+    return { end, dur: r3(n / w.sr), son: r3(Math.min(end + 0.25, Math.max(end - 0.05, son))) }
+  }
   return null
 }
 
@@ -231,7 +247,7 @@ export function mesurerAudio(b: Uint8Array): AudioMesure {
   if (m) { const c = mp3Canonique(b, m); const m2 = lireMp3(c); if (m2) return { kind: 'mp3', sec: m2.sec, bytes: c, mp3: m2 } }
   return { kind: null, error: 'format audio non pris en charge : envoie un WAV (PCM) ou un MP3' }
 }
-// MP3 envoyé à Hedra / OmniHuman (« dernier mot ») : copie + 0,5 s de silence, vidéo coupée à durée d'origine + 0,3 s
+// MP3 envoyé à Hedra / OmniHuman (« dernier mot ») : copie + 0,5 s de silence, vidéo coupée à durée d’origine + 0,06 s
 // (le silence ajouté commence à la durée d'origine). Couche I / II ou copie impossible → null (envoyé tel quel, sans coupe).
 export function preparerMp3Lipsync(b: Uint8Array, m: Mp3Info): { bytes: Uint8Array; coupe: number } | null {
   const out = mp3AvecSilence(b, m, PAD)
@@ -248,7 +264,7 @@ export function preparerWavHedra(b: Uint8Array): { bytes: Uint8Array; padSec: nu
   if (!f) return { bytes: b, padSec: 0, finParole: null, dur, coupe: null }
   const silence = Math.max(0, dur - f.end)
   const padSec = r3(Math.max(0, PAD - silence))
-  const coupe = f.end > 1 ? r3(silence <= QUEUE_MAX ? f.end + COUPE : dur + COUPE) : null
+  const coupe = f.end > 1 ? r3(silence <= QUEUE_MAX ? f.son + COUPE : dur + COUPE) : null
   return { bytes: padSec >= 0.02 ? wavAvecSilence(b, w, padSec) : b, padSec: padSec >= 0.02 ? padSec : 0, finParole: f.end, dur, coupe }
 }
 

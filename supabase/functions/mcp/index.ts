@@ -5,6 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
+import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
@@ -67,12 +68,11 @@ const HEDRA_MODEL_ID  = '26f0fc66-152b-40ab-abed-76c43df99bc8' // Hedra Avatar (
 //    passe désormais par /v3/files → /v3/models/<slug> → /v3/jobs, EXACTEMENT comme le render-worker. ──
 const HEDRA_V3_KEY    = Deno.env.get('HEDRA_V3_KEY') ?? ''
 const HEDRA_V3_BASE   = 'https://api.hedra.com'
-const HEDRA_V3_SLUG   = Deno.env.get('HEDRA_SLUG') ?? 'hedra-avatar'
-// Prompt lipsync (Hedra + OmniHuman). Axel 19/09 : l'ancien prompt « charismatic/expressive/cinematic »
-// poussait le modèle à RECONSTRUIRE le visage (peau lisse plastique, cheveux plastique, filtre) et à
-// lâcher la synchro sur le dernier mot. Leçon réalisme [[image-engine-flux]]/[[images-4k-verrou-cadrage]] :
-// dire ce qu'il ne faut PAS faire. Priorité : garder la PHOTO EXACTE + lipsync jusqu'au tout dernier mot.
-const AVATAR_PROMPT   = 'A charismatic creator talking to camera with high energy, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements exactly matching every syllable and pause of the audio, clear articulation, constantly talking with the hands: animated natural hand gestures on nearly every sentence, open palms, pointing, hands rising on emphasis, expressive face full of emotion matching what is said: eyebrows raising on key words, genuine smiles, surprised or excited expressions on strong statements, subtle head nods and slight lean-ins for emphasis, dynamic varied delivery, never monotone never static, static background, no camera movement, background objects completely still, no scene motion, hands anatomically correct with five separate well-defined fingers at all times, fingers stay distinct and never melt fuse or duplicate, no extra fingers, no deformed hands'
+const HEDRA_V3_SLUG   = Deno.env.get('HEDRA_SLUG') ?? HEDRA_SLUG_DEFAUT   // 27/09 (Axel) : Character-3 partout (était hedra-avatar)
+// Prompt lipsync Hedra. Axel 27/09 : « Character-3 fait très bien le taff, on l'a câblé parfaitement avec le prompt » →
+// le prompt VALIDÉ sur les hooks de l'usine (« TOP PRIORITY lip-sync » + les deux mains dès le début), pronoms neutres,
+// source unique shared/hedra-prompts.json (node tools/gen-hedra-prompts.mjs). OmniHuman garde son prompt court (kie ≤ 300).
+const AVATAR_PROMPT   = HEDRA_PROMPT
 const AVATAR_COST_SEC = 2.5 // 2 cr/s lipsync Hedra (1080p, barème 23/08) + 0,5 cr/s voix ElevenLabs
 const LIPSYNC_COST_SEC = 2  // lipsync_video Hedra (1080p) : 2 cr/s comme l'app, le worker et hedra-proxy (« 2 cr/s partout », Axel 23/08) — était resté à 1
 const AVATAR_MAX_SEC  = 60
@@ -915,7 +915,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           audio_url: { type: 'string', description: "URL publique du SEGMENT audio exact à faire parler (WAV PCM ou MP3, max 60 s) — le clip sortant a la même durée." },
           engine: { type: 'string', enum: ['omnihuman', 'hedra'], description: `Qualité : 'hedra' = standard (défaut, ${LIPSYNC_COST_SEC} cr/s) · 'omnihuman' = haute résolution 1088×1920 (${OMNI_COST_SEC} cr/s).` },
           aspect_ratio: { type: 'string', enum: ['9:16', '1:1', '16:9'], description: '9:16 vertical (défaut).' },
-          model: { type: 'string', enum: ['hedra-avatar', 'hedra-character-3', 'minimax-h3', 'minimax-h3-max-turbo', 'kling-ai-avatar-v2'], description: "Interne (engine 'hedra' uniquement) : modèle Hedra v3. Défaut hedra-avatar. minimax-h3 (768p, audios[], durée 5-15 s) et kling-ai-avatar-v2 (720p) = alternatives image+audio pour comparaison qualité." },
+          model: { type: 'string', enum: ['hedra-avatar', 'hedra-character-3', 'minimax-h3', 'minimax-h3-max-turbo', 'kling-ai-avatar-v2'], description: "Interne (engine 'hedra' uniquement) : modèle Hedra v3. Défaut hedra-character-3. minimax-h3 (768p, audios[], durée 5-15 s) et kling-ai-avatar-v2 (720p) = alternatives image+audio pour comparaison qualité." },
           ...(isOwner ? { prompt: { type: 'string', description: "Interne/dev : remplace le prompt avatar par défaut (A/B test qualité, ex. préservation cheveux/peau). Vide → prompt par défaut." } } : {}),
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
@@ -1401,7 +1401,7 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
     const { data: fresh } = await svc.from('mcp_jobs').select('result_url').eq('id', job.id).maybeSingle()
     return fresh?.result_url ?? null
   }
-  // lipsync_video (26/09) : l'audio envoyé portait un silence de fin → vidéo recoupée à fin de parole + 0,3 s
+  // lipsync_video (26/09) : l'audio envoyé portait un silence de fin → vidéo recoupée au dernier son + 0,06 s (27/09, règle de l’usine)
   // (liste d'éditions, sans ré-encodage). Structure inattendue → livrée entière, comme avant.
   { const cut = coupeDeOp(job.op_name); if (cut) { const t = couperMp4(bytes, cut); if (t) bytes = t } }
   // Copie ratée APRÈS le claim (25/09) : on repasse le job en « running » au lieu de le laisser « done » sans média
@@ -2551,7 +2551,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
       //    complétée de silence jusqu'à 0,5 s après le dernier mot, vidéo recoupée à la livraison (#cut=). `secs` (le débit)
       //    a été mesuré sur l'audio reçu : la marge est pour nous. Refus SANS tâche → repli fal ; sans réponse → remboursé.
       if (omniKieOn()) {
-        // MP3 (relecture 26/09) : 0,5 s de trames de silence ajoutées à la copie, coupe à durée d'origine + 0,3 s
+        // MP3 (relecture 26/09) : 0,5 s de trames de silence ajoutées à la copie, coupe à durée d’origine + 0,06 s
         const lipO = ext === 'wav' ? preparerWavHedra(aud.bytes) : (mes.kind === 'mp3' ? preparerMp3Lipsync(aud.bytes, mes.mp3) : null)
         let audioK = `${stamp}.${ext}`, coupeK = lipO && lipO.bytes === aud.bytes ? lipO.coupe : null
         if (lipO && lipO.bytes !== aud.bytes) {
@@ -2609,10 +2609,10 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
     if (!HEDRA_V3_KEY) return toolErr('Lipsync Hedra indisponible (configuration serveur incomplète).')
     const ext = /wav/.test(aud.contentType) ? 'wav' : 'mp3'
     // 26/09 (« le dernier mot n'est pas articulé ») : Hedra Avatar / Character-3 reçoivent une COPIE du WAV complétée de
-    // silence jusqu'à 0,5 s après le dernier mot ; la vidéo livrée est recoupée à fin de parole + 0,3 s (deliverVideo).
+    // silence jusqu'à 0,5 s après le dernier mot ; la vidéo livrée est recoupée au dernier son + 0,06 s (deliverVideo).
     // L'audio reçu n'est jamais modifié ; `secs` (donc le débit) a été mesuré AVANT. minimax / kling : inchangé.
     // MP3 (relecture 26/09) : la chaîne native clean_audio → lipsync_video livre du MP3 → 0,5 s de trames de silence
-    // ajoutées à la copie envoyée, vidéo coupée à durée d'origine + 0,3 s (même règle que le WAV, sans décodage).
+    // ajoutées à la copie envoyée, vidéo coupée à durée d’origine + 0,06 s (même règle que le WAV, sans décodage).
     const lip = /^(minimax|kling)/.test(String(args.model || '')) ? null : (ext === 'wav' ? preparerWavHedra(aud.bytes) : (mes.kind === 'mp3' ? preparerMp3Lipsync(aud.bytes, mes.mp3) : null))
     // Hedra v3 : /v3/files (l'ancienne API web-app/public + /assets est morte → 401/404).
     const audioRef = lip ? await hedraV3Upload('segment.' + ext, lip.bytes, aud.contentType) : await hedraV3Upload('segment.' + ext, aud.bytes, aud.contentType)

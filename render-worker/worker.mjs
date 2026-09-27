@@ -31,6 +31,7 @@ import { cleLipsync, cacheLire, cacheEcrire, HEDRA_CR_SEC } from './lipsync-cach
 import { analyserVoix, fabriquerAudioLipsync, bornesTranches, audioAncienLipsync } from './lipsync-audio.mjs'
 import { finsAffichageAvatar } from './dynamic-engine.mjs'
 import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs'   // prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300)
+import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from './hedra-prompts.mjs'   // prompt lipsync Hedra PARTAGÉ (shared/hedra-prompts.json, 27/09)
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -2185,8 +2186,12 @@ async function hedraProxy(chemin, init = {}) {
 }
 
 // ── API Hedra v3 (dev) via le proxy : /v3/files → /v3/models/<slug> → /v3/jobs ──
-// Le lipsync du worker tourne sur Hedra AVATAR (validé Axel 10/08). Tout média = {source,url}.
-const HEDRA_SLUG = process.env.HEDRA_SLUG || 'hedra-avatar'
+// 27/09 (Axel : « Character-3 fait très bien le taff ») : le lipsync tourne sur Character-3 avec le prompt VALIDÉ de l'usine
+// (hedra-prompts.mjs), comme le MCP et l'app. Tout média = {source,url}.
+// HEDRA_SLUG_ANCIEN = le modèle d'avant (hedra-avatar, ou l'ancienne variable HEDRA_SLUG) : les clips déjà PAYÉS restent au
+// cache sous son nom → une relance d'un ancien montage les REPREND sans débit au lieu de les regénérer (jamais payer deux fois).
+const HEDRA_SLUG = HEDRA_SLUG_DEFAUT
+const HEDRA_SLUG_ANCIEN = process.env.HEDRA_SLUG || 'hedra-avatar'
 let _hupSeq = 0
 async function hedraV3Upload(buf, mime, nom) {
   // Hedra v3 = max 30 Mo/image ; une photo HD en PNG (sans perte) dépasse. On la réduit via
@@ -2511,9 +2516,11 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
     const cle = cleLipsync(photo, audioBuf, '9:16', HEDRA_SLUG)
     const out = join(proj, 'media', 'av' + w.clip + '.mp4')
     let clip = await cacheLire(cle)
+    // clip payé avec l'ANCIEN modèle (avant le 27/09) pour ce même audio : repris sans débit
+    if (!clip && HEDRA_SLUG_ANCIEN !== HEDRA_SLUG) clip = await cacheLire(cleLipsync(photo, audioBuf, '9:16', HEDRA_SLUG_ANCIEN))
     // clip payé AVANT le 26/09 (clé de l'ancien audio MP3) : repris tel quel, affiché comme avant (sans lipEnd)
     let ancien = false
-    if (!clip) { clip = await clipPayeAvant(voix, proj, photo, w, '9:16', HEDRA_SLUG, '', `lsA-${w.clip}.mp3`); ancien = !!clip }
+    if (!clip) { clip = await clipPayeAvant(voix, proj, photo, w, '9:16', HEDRA_SLUG_ANCIEN, '', `lsA-${w.clip}.mp3`); ancien = !!clip }
     if (clip) console.log(`♻︎ fenêtre ${w.clip} : ${r2(w.start)}→${r2(w.end)}s reprise du cache — ${Math.round(dur * HEDRA_CR_SEC)} crédits économisés`)
     else {
       if (!startImg) startImg = await hedraV3Upload(photo, 'image/png', 'avatar.png')
@@ -2521,7 +2528,7 @@ async function genererFenetresG(plan, proj, jobDir, avatarClips) {
       const audioUp = await hedraV3Upload(audioBuf, 'audio/wav', `voice-${w.clip}.wav`)
       if (!audioUp) { console.warn(`fenêtre ${w.clip} : upload audio refusé`); continue }
       const jobId = await hedraV3Submit(HEDRA_SLUG, {
-        prompt: 'A charismatic person speaking straight to camera, highly expressive and animated UGC influencer style — big natural smiles, raised eyebrows, visible enthusiasm and emotion, lively dynamic facial expressions, natural head tilts and movement, expressive hand gestures while speaking, high energy confident delivery, engaging and magnetic, direct eye contact, precise accurate lip-sync with mouth movements exactly matching the audio',
+        prompt: HEDRA_PROMPT,
         aspect_ratio: '9:16', resolution: '1080p', start_image: startImg, audio: audioUp,
       })
       if (!jobId) { console.warn(`fenêtre ${w.clip} : Hedra submit refusé`); continue }
@@ -2758,9 +2765,8 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   //    avec les mains ») : en slam (ou plan.lipsyncExpressif) le prompt demande un jeu de
   //    visage vivant et des gestes — clé de cache distincte des clips sobres.
   const expressif = plan.lipsyncExpressif === true || (plan.lipsyncExpressif !== false && plan.slideStyle === 'slam')
-  const PROMPT_SOBRE = 'A person talking naturally to camera, UGC style, authentic, direct gaze, precise accurate lip-sync, mouth movements matching the audio'
-  const PROMPT_EXPRESSIF = 'A charismatic person speaking straight to camera, highly expressive and animated UGC influencer style — big natural smiles, raised eyebrows, visible enthusiasm and emotion, lively dynamic facial expressions, natural head tilts and movement, expressive hand gestures while speaking, high energy confident delivery, engaging and magnetic, direct eye contact, precise accurate lip-sync with mouth movements exactly matching the audio'
-  if (expressif) console.log('▶ lipsync : prompt EXPRESSIF (visage vivant + gestes des mains)')
+  // 27/09 : un seul prompt Hedra (validé sur l'usine, les mains dès le début) pour les deux réglages ; `expressif` ne sert
+  // plus qu'à retrouver au cache les clips payés avec l'ancien modèle (clé « expressif » d'avant).
   // découpe d'un clip de GROUPE en un clip par fenêtre (décalage = début de la fenêtre
   // dans le groupe ; +0,3 s de matière, le moteur coupe au panneau)
   function decouperParties(groupClip, w, parts, modele = 'hedra') {
@@ -2801,9 +2807,11 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     const ratio = String(w.format) === 'paysage' ? '16:9' : '9:16'
     const audioBuf = readFileSync(mp3)
     try { rmSync(mp3, { force: true }) } catch (_) {}   // hors du projet HyperFrames (lint « audio sans élément »)
-    const cle = cleLipsync(photo, audioBuf, ratio, omni ? 'omnihuman-1.5' : HEDRA_SLUG, omni ? '' : expressif ? 'expressif' : '')
+    const cle = cleLipsync(photo, audioBuf, ratio, omni ? 'omnihuman-1.5' : HEDRA_SLUG, '')
     const cout = Math.round(dur * (omni ? OMNI_CR_SEC : HEDRA_CR_SEC))
-    const dejaPaye = await cacheLire(cle)
+    let dejaPaye = await cacheLire(cle)
+    // payé avec l'ANCIEN modèle Hedra (avant le 27/09, variante sobre / expressive) pour ce même audio : repris sans débit
+    if (!dejaPaye && !omni && HEDRA_SLUG_ANCIEN !== HEDRA_SLUG) dejaPaye = await cacheLire(cleLipsync(photo, audioBuf, ratio, HEDRA_SLUG_ANCIEN, expressif ? 'expressif' : ''))
     if (dejaPaye) {
       const grp = join(proj, 'media', `grp${i}.mp4`)
       writeFileSync(grp, dejaPaye)
@@ -2817,7 +2825,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
     // Même photo, même voix, même fenêtre : le clip payé hier est rangé sous la clé de l'ANCIEN audio (MP3 exact). Sans ce
     // rattrapage, « Détails du montage » / une relance le regénérait ET le redébitait (2 cr/s, 5 en OmniHuman). Repris
     // SANS débit, affiché comme avant (sans lipEnd : sa matière est la fenêtre exacte).
-    const payeAvant = await clipPayeAvant(voix, proj, photo, w, ratio, omni ? 'omnihuman-1.5' : HEDRA_SLUG, omni ? '' : expressif ? 'expressif' : '', `lsA${i}.mp3`)
+    const payeAvant = await clipPayeAvant(voix, proj, photo, w, ratio, omni ? 'omnihuman-1.5' : HEDRA_SLUG_ANCIEN, omni ? '' : expressif ? 'expressif' : '', `lsA${i}.mp3`)
     if (payeAvant) {
       const grp = join(proj, 'media', `grp${i}.mp4`)
       writeFileSync(grp, payeAvant)
@@ -2841,7 +2849,7 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
       const audioUp = await hedraV3Upload(audioBuf, 'audio/wav', `voice${i}.wav`)
       if (!audioUp) { await rembourserLipsync(facture.local ? 0 : facture.n); console.warn(`lipsync scène ${i} : upload audio refusé (crédits remboursés)`); return false }
       const jobId = await hedraV3Submit(HEDRA_SLUG, {
-        prompt: expressif ? PROMPT_EXPRESSIF : PROMPT_SOBRE,
+        prompt: HEDRA_PROMPT,
         aspect_ratio: String(w.format) === 'paysage' ? '16:9' : '9:16',
         resolution: '1080p', start_image: startImg, audio: audioUp,
       })
