@@ -11,7 +11,7 @@
 // plafond + preuve de débit + RÉSERVATION (draw le coût de l'op x-aa-op, settle à la livraison).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, wantsNanoChain, chainCreditAdd, CHAIN_NANO_COST, wantsOmniStart, omniStartAdd } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, userPlan, applyReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, wantsNanoChain, chainCreditAdd, CHAIN_NANO_COST, wantsOmniStart, omniStartAdd, omniStartClaim, omniStartDone, omniStartFail, omniStartFreeDone } from '../_shared/guard.ts'
 
 const OPENAI_BASE = 'https://api.openai.com'
 const ALLOW = /^\/v1\/(chat\/completions|audio\/transcriptions|images\/(generations|edits))$/
@@ -94,6 +94,7 @@ serve(async (req: Request) => {
   let drawnReal = 0   // montant RÉELLEMENT tiré (0 si fail-open / ombre) : seul lui ouvre la remise Omni et seul lui est rendu
   let imgQ = '', imgN = 0   // qualité / nombre d'images facturés (remise Omni : UNE image low ou medium)
   let drawnOp: string | undefined   // l'op PRÉCISE tirée — resolveOp ne la retrouve plus une fois à réserve 0 (audit 06/09)
+  let startMode = '' as '' | 'paid' | 'free' | 'legacy'   // image de départ d'Express (audit 28/09 #14) : payée, relance gratuite, ou ancien chemin
   // Palier 4K (x-aa-chain: nano4k, plans Pro/Élite comme dans l'app depuis le 24/09) : seulement une image gpt low/medium, n=1 → tire 5 et
   // crée un droit d'upscale Nano. Toute autre combinaison = tirage normal, aucun droit (pas de gpt high + Nano pour 5).
   let chain = false, chainPlanOk = false
@@ -102,6 +103,33 @@ serve(async (req: Request) => {
     chainPlanOk = !err && (isOwner || ['pro', 'byok', 'elite', 'developer'].includes(plan))
   }
   const chainCost = (q: string, n: number) => (chainPlanOk && n === 1 && (q === 'medium' || q === 'low')) ? (chain = true, CHAIN_NANO_COST) : imgCost(q) * n
+  // Tirage d'une image facturée. Image de départ d'Express (x-aa-chain: omni-start, 1 image low/medium) : UNE payée par op
+  // (audit 28/09 #14). Une relance (réponse perdue, 504, image lente) ne retire rien ; au-delà de 2 relances → 409.
+  const drawImg = async (q: string, n: number): Promise<Response | null> => {
+    drawn = chainCost(q, n); imgQ = q; imgN = n
+    const hint = opFromReq(req)
+    if (!chain && wantsOmniStart(req) && n === 1 && (q === 'low' || q === 'medium')) {
+      if (!hint) startMode = 'legacy'
+      else {
+        const m = await omniStartClaim(uid, hint)
+        if (m === 'deny') return jsonRes(409, { error: 'Image de départ déjà générée pour cette vidéo.' })
+        if (m === 'free') { startMode = 'free'; drawnOp = hint; return null }
+        startMode = 'paid'
+      }
+    }
+    const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare })
+    if (!r.ok) { if (startMode === 'paid') { await omniStartFail(uid, hint); startMode = '' } return jsonRes(r.status, { error: r.error }) }
+    drawnOp = r.opId; drawnReal = r.drawn ?? 0
+    // rien tiré (ombre / hoquet DB) ou autre op que celle réclamée : on libère la réclamation, ancien chemin
+    if (startMode === 'paid' && (!(drawnReal > 0) || drawnOp !== hint)) { await omniStartFail(uid, hint); startMode = 'legacy' }
+    return null
+  }
+  // Rend le tiré d'un appel en échec — sauf l'image de départ payée dont une relance déjà livrée dépend (omni_start_fail 'keep').
+  const releaseDrawn = async () => {
+    if (!(drawnReal > 0)) return
+    if (startMode === 'paid' && (await omniStartFail(uid, drawnOp)) === 'keep') return
+    await releaseOp(uid, drawnOp, drawnReal)
+  }
   try {
     const ct = req.headers.get('content-type') ?? ''
     let openaiRes: Response
@@ -124,7 +152,7 @@ serve(async (req: Request) => {
         const kept: Record<string, string> = {}
         for (const [k, v] of Object.entries(text)) if (IMG_TEXT_ALLOW.has(k)) kept[k] = k === 'prompt' ? v.slice(0, IMG_MAX_PROMPT) : v
         for (const [k, v] of Object.entries({ ...kept, ...nm.fields })) outgoing.append(k, v)
-        drawn = chainCost(nm.q, nm.n); imgQ = nm.q; imgN = nm.n; const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId; drawnReal = r.drawn ?? 0
+        { const stop = await drawImg(nm.q, nm.n); if (stop) return stop }
       } else {
         for (const [k, v] of incoming.entries()) outgoing.append(k, v)
       }
@@ -141,8 +169,7 @@ serve(async (req: Request) => {
         const kept: Record<string, unknown> = {}
         for (const k of Object.keys(b)) if (IMG_TEXT_ALLOW.has(k)) kept[k] = k === 'prompt' ? String(b[k]).slice(0, IMG_MAX_PROMPT) : b[k]
         sendBody = JSON.stringify({ ...kept, ...nm.fields, n: nm.n })
-        drawn = chainCost(nm.q, nm.n); imgQ = nm.q; imgN = nm.n
-        const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId; drawnReal = r.drawn ?? 0
+        { const stop = await drawImg(nm.q, nm.n); if (stop) return stop }
       } else if (gated && bare.includes('/chat/completions')) {
         // Helper LLM non facturant : borne le coût (audit chaînes 15/09) — modèle hors allowlist coercé vers le moins cher + plafond tokens.
         if (rawBody.length > HELPER_MAX_BODY) return jsonRes(413, { error: 'requête trop longue' })
@@ -160,22 +187,24 @@ serve(async (req: Request) => {
     const body = await openaiRes.text()
     // Images gpt-image = SYNCHRONE : un 2xx = image livrée → on règle la réservation (op non remboursable).
     if (isBillable && gated && openaiRes.ok) {   // image livrée (synchrone) → op non remboursable
-      if (drawnOp) {
+      if (startMode === 'free') await omniStartFreeDone(uid, drawnOp, drawn)   // relance : l'image n'est payée qu'une fois (#14)
+      else if (drawnOp) {
         await settleReservation(uid, drawnOp)
         if (chain) await chainCreditAdd(uid, drawnOp, 1)
         // Image de départ d'Express OFFERTE (Axel 25/09 : Omni, puis Veo le même jour) : ce qui vient d'être tiré sera déduit
         // du tirage de la vidéo (draw_omni_reservation, kie-proxy / google-ai-proxy / fal-proxy). Seulement une image
         // low/medium (≤ 3), op « express-omni » ou « express », une fois (garde SQL de omni_start_add).
-        else if (wantsOmniStart(req) && drawnReal > 0 && imgN === 1 && (imgQ === 'low' || imgQ === 'medium')) await omniStartAdd(uid, drawnOp, drawnReal)
+        else if (startMode === 'paid' && drawnReal > 0) await omniStartDone(uid, drawnOp, drawnReal)
+        else if (startMode === 'legacy' && drawnReal > 0) await omniStartAdd(uid, drawnOp, drawnReal)
       }
     }
-    if (isBillable && gated && !openaiRes.ok && drawnReal > 0) await releaseOp(uid, drawnOp, drawnReal)   // amont en erreur → on rend l'op TIRÉE (resolveOp ne la retrouverait pas à réserve 0)
+    if (isBillable && gated && !openaiRes.ok) await releaseDrawn()   // amont en erreur → on rend l'op TIRÉE (resolveOp ne la retrouverait pas à réserve 0)
     return new Response(body, {
       status: openaiRes.status,
       headers: { ...CORS, 'Content-Type': openaiRes.headers.get('content-type') ?? 'application/json' },
     })
   } catch (err) {
-    if (isBillable && gated && drawnReal > 0) await releaseOp(uid, drawnOp, drawnReal).catch(() => {})   // exception → rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration)
+    if (isBillable && gated) await releaseDrawn().catch(() => {})   // exception → rendre EXACTEMENT le tiré (drawn hissé), jamais 9999 (sur-restauration)
     console.error('openai-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })
   }

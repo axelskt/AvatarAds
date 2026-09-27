@@ -5877,7 +5877,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-28-0055'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-28-0150'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -6141,6 +6141,39 @@ function _loadLibrary(){
     if(raw){ library = JSON.parse(raw); }
   }catch(e){ library = []; }
 }
+// ── DONNÉES LOCALES PAR COMPTE (audit 28/09 #19) ──────────────────────────────
+// La Bibliothèque locale (aa_library, imgHistory, voix clonées) vivait sous des clés COMMUNES à tous les comptes du
+// navigateur : un 2e compte voyait, et pouvait réutiliser dans Express, les éléments non synchronisés du 1er. Au
+// chargement (une connexion recharge toujours /app/), si le compte connecté n'est pas le propriétaire des données
+// locales, on met de côté celles de l'ancien propriétaire (clé@uid) et on restaure celles du compte courant. Les
+// fichiers restent dans IndexedDB : seule la liste qui y mène change de main. Données d'avant ce correctif = premier compte.
+const _AA_LOCAL_KEYS = ['aa_library', 'imgHistory', 'aa_cloned_voices'];
+function _aaSessionUid(){
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k && /^sb-.*-auth-token$/.test(k)){ const v=JSON.parse(localStorage.getItem(k)||'null'); const u=v && (v.user || (v.currentSession && v.currentSession.user)); if(u && u.id) return String(u.id); }
+    }
+  }catch(_){}
+  return '';
+}
+function _aaLocalOwnerSwap(uid){
+  if(!uid || _isPrivateMode) return;
+  try{
+    const prev = localStorage.getItem('aa_local_owner') || '';
+    if(prev === uid) return;
+    if(prev){
+      for(const k of _AA_LOCAL_KEYS){
+        const v=localStorage.getItem(k); if(v==null) continue;
+        localStorage.removeItem(k);   // d'abord libérer la place : jamais les données d'un autre compte laissées visibles
+        try{ localStorage.setItem(k+'@'+prev, v); }catch(_){ console.warn('données locales : mise de côté impossible (stockage plein)', k); }
+      }
+    }
+    for(const k of _AA_LOCAL_KEYS){ const v=localStorage.getItem(k+'@'+uid); if(v!=null){ localStorage.removeItem(k+'@'+uid); try{ localStorage.setItem(k, v); }catch(_){} } }
+    localStorage.setItem('aa_local_owner', uid);
+  }catch(e){ console.warn('données locales par compte :', e); }
+}
+_aaLocalOwnerSwap(_aaSessionUid());
 _loadLibrary();
 
 // ── Sauvegarde automatique dans la Bibliothèque (audio + vidéo) — nettoyage audio / enregistreur / Express ──
@@ -17772,7 +17805,7 @@ function _mdAskItemsOk(){
 }
 // ── MENU IMAGES (anims à logos : tools / connect / copy) ────────────────────
 // Même esprit que le menu texte, mais l'utilisateur pose SES images. Chaque fente
-// = un <img> de l'anim ; on upload dans le bucket PUBLIC mcp-media (URL stable que
+// = un <img> de l'anim ; on upload dans mcp-media (PRIVÉ depuis le 28/09 : lien signé 1 an, que
 // le worker va chercher au rendu) et on range l'URL dans sc.userImages[i].src.
 function _mdAskImagesOpen(sc){
   const anim=sc.repl||sc.t;
@@ -17824,7 +17857,10 @@ async function _mdUploadAnimImage(file){
   const path=uid+'/anim-img/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
   const up=await sb.storage.from('mcp-media').upload(path, file, { contentType:file.type, upsert:true });
   if(up.error) throw new Error(up.error.message);
-  return SUPABASE_URL+'/storage/v1/object/public/mcp-media/'+path;
+  // mcp-media est privé (audit 28/09) : lien SIGNÉ (1 an) que le moteur de rendu va chercher au rendu du montage
+  const sg=await sb.storage.from('mcp-media').createSignedUrl(path, 365*86400);
+  if(sg.error || !sg.data || !sg.data.signedUrl) throw new Error((sg.error&&sg.error.message)||'lien indisponible');
+  return sg.data.signedUrl;
 }
 function _mdPickAnimImage(i){
   const ai=_md.askImages; if(!ai) return;
@@ -32700,7 +32736,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   if(!outUrl && (sd.status_url||sd.request_id)){
     const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
     const reP=sd.response_url? sd.response_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id;
-    for(let i=0;i<120;i++){
+    for(let i=0;i<220;i++){   // ~11 min : au-delà du temps d'exécution max de fal (audit 28/09)
       await new Promise(r=>setTimeout(r,3000));
       const stR=await fGet(stP); if(!stR.ok) continue;
       const st=await stR.json().catch(()=>({}));
@@ -32721,7 +32757,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
       step(Math.min(88,42+i*2),'Omni Flash — génération… ('+Math.min(88,42+i*2)+' %)');
     }
   }
-  if(!outUrl) throw new Error('Omni Flash : délai dépassé');
+  if(!outUrl){ const e=new Error('Omni Flash : la vidéo prend plus de temps que prévu. Elle arrivera dans ta Bibliothèque, sinon tes crédits seront rendus automatiquement. Ne relance pas.'); e._kieStage='pending'; throw e; }   // filet reconcile-fal-orphans (audit 28/09 #11)
   step(90,'↓ Récupération de la vidéo…');
   const vb=await (await fetch(outUrl)).blob();
   return new Blob([vb], { type:'video/mp4' });
@@ -32767,10 +32803,13 @@ function _expSlotFill(i, url, blob){
   dl.onclick=()=>{ if(typeof _gateFreeExport==='function' && _gateFreeExport()) return; const a=document.createElement('a'); a.href=url; a.download='avatarads-express-'+(i+1)+'.mp4'; document.body.appendChild(a); a.click(); a.remove(); };
   slot.appendChild(dl);
 }
-function _expSlotFail(i, msg, debited){
+function _expSlotFail(i, msg, debited, back, pending){
   const box=document.getElementById('_expSlotBox'+i); if(!box) return;
-  // audit 28/09 : « rendus » seulement s'il y a eu un débit (sinon on poussait à relancer en croyant avoir été remboursé)
-  const cr = debited ? 'Les crédits de cette vidéo te sont rendus.' : 'Aucun crédit débité pour cette vidéo.';
+  // audit 28/09 : on n'annonce un remboursement que s'il a eu lieu (sinon on poussait à relancer et à payer deux fois)
+  const cr = pending ? 'Toujours en cours : elle arrivera dans ta Bibliothèque, sinon tes crédits seront rendus automatiquement.'
+    : (back > 0) ? 'Crédits rendus : '+back+'.'
+    : debited ? 'Si la vidéo n’arrive pas dans ta Bibliothèque, tes crédits seront rendus automatiquement.'
+    : 'Aucun crédit débité pour cette vidéo.';
   box.innerHTML='<div class="mono" style="font-size:11px;color:var(--text2);text-align:center;line-height:1.5;padding:14px">Vidéo '+(i+1)+' non générée<br><span style="color:var(--text3);font-size:10px">'+_escH(String(msg||'').slice(0,140))+'</span><br><span style="color:var(--text3);font-size:10px">'+cr+'</span></div>';
 }
 let _expFfTail = Promise.resolve();
@@ -33131,12 +33170,14 @@ async function _expressCreateOne(o){
     clearInterval(tick);
     console.error('Express error:', e);
     _spent(false);
-    if(o && window._expBatch){ _expSlotFail(o.idx, e.message||e, _expOps.length > 0); }
-    else { if(prog) prog.style.display='none'; if(ph) ph.style.display='flex'; }   // .col (flex) — surtout PAS 'block' (casse le centrage : icône décalée à gauche)
+    if(!(o && window._expBatch)){ if(prog) prog.style.display='none'; if(ph) ph.style.display='flex'; }   // .col (flex) — surtout PAS 'block' (casse le centrage : icône décalée à gauche)
     // Express débite EN AMONT (spendCreditsFor). Un échec (Veo refusé, téléchargement raté, vidéo corrompue)
     // ne remboursait rien → l'utilisateur payait pour rien. On rend ce qui est remboursable : refund_credits
     // ne rend que la RÉSERVE RESTANTE (une étape déjà livrée — image, extension — reste facturée à juste titre).
-    try{ if(typeof creditsFlowRefund==='function') await creditsFlowRefund('la génération Express a échoué', _expOps); }catch(_r){}
+    // Audit 28/09 : remboursement AVANT l'affichage → la case dit ce qui a vraiment été rendu (sinon on poussait à relancer).
+    let _back = 0;
+    try{ if(typeof creditsFlowRefund==='function') _back = (await creditsFlowRefund('la génération Express a échoué', _expOps)) || 0; }catch(_r){}
+    if(o && window._expBatch){ _expSlotFail(o.idx, e.message||e, _expOps.length > 0, _back, !!(e && e._kieStage==='pending')); }
     _expOpsDone();
     toast('Express'+(o ? ' (vidéo '+(o.idx+1)+')' : '')+' : ' + (e.message||e));
   } finally {

@@ -34,6 +34,7 @@ const loadImage = () => import('https://deno.land/x/imagescript@1.3.0/mod.ts').t
 // / mcp_refund_credits (barème #79 : image 3 ou 5, vidéo 1/s).
 
 const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
+const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? ''   // x-cron-key du cron mcp-keepwarm (réconciliation globale, audit 28/09)
 // ── L'URL QU'ON DONNE À L'UTILISATEUR NE PEUT PAS ÊTRE CELLE DE SUPABASE ──
 // Claude sonde l'emplacement RFC 9728 pour savoir si la ressource est protégée :
 //   https://<hôte>/.well-known/oauth-protected-resource/<chemin>
@@ -239,6 +240,26 @@ async function uploadMedia(userId: string, bytes: Uint8Array, ext: string, conte
   if (error) throw new Error('upload: ' + error.message)
   return `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}`
 }
+// ── mcp-media est PRIVÉ (audit 28/09 #28/#36 : visages, voix et vidéos des clients) ─────────────────────────────────
+// La base garde l'adresse CANONIQUE « …/object/public/mcp-media/<chemin> » (anciennes lignes comprises) : elle ne s'ouvre
+// plus telle quelle. On SIGNE au moment de servir (/status, /i/, list_media, toolMedia, vignettes, fournisseurs).
+const MEDIA_PUB = `${SUPABASE_URL}/storage/v1/object/public/mcp-media/`
+const MEDIA_SIGN = `${SUPABASE_URL}/storage/v1/object/sign/mcp-media/`
+function mediaPath(url: string): string | null {
+  const u = String(url || '')
+  const base = u.startsWith(MEDIA_PUB) ? MEDIA_PUB : u.startsWith(MEDIA_SIGN) ? MEDIA_SIGN : ''
+  if (!base) return null
+  try { const p = decodeURIComponent(u.slice(base.length).split('?')[0]); return /^[A-Za-z0-9._\/-]+$/.test(p) && !p.includes('..') ? p : null } catch { return null }
+}
+async function signPath(path: string, ttlS: number): Promise<string | null> {
+  try { const { data, error } = await svc.storage.from('mcp-media').createSignedUrl(path, ttlS); return !error && data?.signedUrl ? data.signedUrl : null } catch { return null }
+}
+// URL mcp-media → lien signé (7 jours par défaut) ; toute autre URL est rendue telle quelle.
+async function signMedia(url: string | null | undefined, ttlS = 7 * 86400): Promise<string> {
+  const u = String(url || ''); const p = mediaPath(u)
+  if (!p) return u
+  return (await signPath(p, ttlS)) || u
+}
 
 // ── FILET : ranger la création dans la BIBLIOTHÈQUE du compte ────────────────
 // Une génération MCP n'apparaît PAS dans l'app (elle vit dans mcp-media public, l'app lit
@@ -252,7 +273,14 @@ async function saveToLibrary(userId: string, bytes: Uint8Array, ext: string, mim
     const path = `${userId}/lib/mcp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
     const { error } = await svc.storage.from('render-media').upload(path, bytes, { contentType: mime, upsert: true })
     if (error) return
-    await svc.from('library_items').insert({ user_id: userId, kind, name, tags: [], storage_path: path, ...(thumb ? { thumb } : {}) })
+    // mcp-media est privé (audit 28/09) : une vignette mcp-media devient une image INTÉGRÉE (data URL), jamais un lien qui expire
+    let th = thumb
+    const tp = th ? mediaPath(th) : null
+    if (tp) {
+      th = undefined
+      try { const d = await svc.storage.from('mcp-media').download(tp); if (!d.error && d.data && d.data.size <= 600_000) th = `data:${d.data.type || 'image/jpeg'};base64,` + b64DepuisOctets(new Uint8Array(await d.data.arrayBuffer())) } catch { /* sans vignette */ }
+    }
+    await svc.from('library_items').insert({ user_id: userId, kind, name, tags: [], storage_path: path, ...(th ? { thumb: th } : {}) })
   } catch (_) { /* la Bibliothèque est un filet, jamais un bloquant */ }
 }
 
@@ -360,6 +388,7 @@ const b64DepuisOctets = (buf: Uint8Array): string => {
 }
 async function blocImage(url: string): Promise<Record<string, unknown> | null> {
   try {
+    url = await signMedia(url, 600)   // mcp-media privé (audit 28/09)
     try { const _u = new URL(url); if (!/^https?:$/.test(_u.protocol) || isBlockedHost(_u.hostname) || await hostResolvesInternal(_u.hostname)) return null } catch { return null }   // SSRF défense en profondeur (06/09 + round3 DNS)
     const r = await fetch(url)
     if (!r.ok) return null
@@ -435,6 +464,14 @@ Montre ce devis à l'utilisateur et attends son accord explicite, puis rappelle 
   }
   return null
 }
+
+// Audit 28/09 #23 : part du plafond 24 h réservée par preSpendGate mais AUCUN débit (refus après la porte) → rendue.
+async function capReleaseUser(userId: string, cost: number | undefined, at?: string): Promise<void> {
+  if (!(cost && cost > 0)) return
+  try { await svc.rpc('mcp_cap_release', { p_user: userId, p_cost: Math.ceil(cost), ...(at ? { p_at: at } : {}) }) } catch { /* best-effort */ }
+}
+const capHeldOf = (profile: Record<string, unknown>, ctx: ToolCtx, cost: number) => (ctx.dailyCap !== null && !isUnlimited(profile)) ? cost : 0
+const capRelease = (profile: Record<string, unknown>, ctx: ToolCtx, cost: number) => capReleaseUser(String(profile.id), capHeldOf(profile, ctx, cost))
 
 // ── Réponses JSON-RPC / contenus d'outils ──
 const rpcResult = (id: unknown, result: unknown) => json(200, { jsonrpc: '2.0', id, result })
@@ -800,6 +837,7 @@ const carteHtml = (url: string, nom: string, mime: string) => {
 // La vidéo n'a pas de bloc MCP : sa VIGNETTE (mcp_jobs.preview_url, 640 px)
 // joue ce rôle, et le fil affiche vignette-image + lien cliquable vers le MP4.
 const toolMedia = async (url: string, nom: string, mime: string, texte: string, apercuUrl?: string): Promise<ToolContent> => {
+  { const brut = url; url = await signMedia(url); if (url !== brut) texte = texte.split(brut).join(url) }   // mcp-media privé (audit 28/09)
   // Bilan 16/08 : le widget ne se rend pas → on garde la VIGNETTE (bloc image),
   // seul visuel fiable, visible en dépliant la carte.
   const contenu: Array<Record<string, unknown>> = []
@@ -1193,9 +1231,9 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   const wantsCard = !directRefUrl && (kind === 'static_ad' || kind === 'ugc' || !!productUrl) && args.no_reference !== true
   if (wantsCard) {
     const { data: pj, error: pjErr } = await svc.from('mcp_jobs')
-      .insert({ user_id: userId, kind: 'image', status: 'pending', credits_cost: cost, params: { args: { ...args, prompt }, format, quality, kind, product_url: productUrl } })
+      .insert({ user_id: userId, kind: 'image', status: 'pending', credits_cost: cost, params: { args: { ...args, prompt }, format, quality, kind, product_url: productUrl, cap_held: capHeldOf(profile, ctx, cost) } })
       .select('id').single()
-    if (pjErr || !pj) return toolErr('Erreur serveur (carte photo) — réessaie.')
+    if (pjErr || !pj) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur (carte photo) — réessaie.') }
     const phrase = productUrl
       ? "Je récupère la photo depuis le lien du produit — si le site la protège, la carte te proposera de la déposer."
       : "Dépose la photo de ton produit dans la carte ci-dessus (ou clique Sans photo), je m'occupe du reste."
@@ -1208,6 +1246,7 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   // Débit AVANT génération (comme la vidéo) : jamais d'image livrée sans débit réel.
   // Si la génération échoue ensuite, le finally rembourse.
   const bal = await spendCredits(userId, cost)
+  if (bal === null || bal === -1) await capRelease(profile, ctx, cost)   // rien débité → part du plafond rendue (audit 28/09)
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
@@ -1331,7 +1370,7 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
 Lien de téléchargement (donne-le en lien cliquable) : ${lien}
 N'affiche PAS l'image en markdown ni en artifact (le bac à sable bloque les URL externes).` }
     return { content: vignette ? [vignette, texte] : [texte],
-      structuredContent: { url: String(job.result_url), kind: 'image', name: 'Image générée' } }
+      structuredContent: { url: await signMedia(String(job.result_url)), kind: 'image', name: 'Image générée' } }
   }
   const ecoule = Math.round((Date.now() - new Date(String(job.created_at)).getTime()) / 1000)
   return toolText(
@@ -1414,7 +1453,11 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
     await svc.from('mcp_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'done').is('result_url', null)
     return null
   }
-  await svc.from('mcp_jobs').update({ result_url: url, updated_at: new Date().toISOString() }).eq('id', job.id)
+  // Audit 28/09 #24 : écriture CONDITIONNELLE. Si le filet a repris le job pendant une copie trop longue (livraison
+  // interrompue, voir reconcileAllStale), cette livraison tardive n'écrit rien et ne range rien : jamais remboursé ET livré.
+  const { data: fin } = await svc.from('mcp_jobs').update({ result_url: url, updated_at: new Date().toISOString() })
+    .eq('id', job.id).eq('status', 'done').is('result_url', null).select('id')
+  if (!fin || !fin.length) return null
   await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Vidéo AvatarAds')  // filet Bibliothèque
   return url
 }
@@ -1498,6 +1541,13 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
 // mangée par le proxy) ; (2) tâches de fond mortes avant de poser op_name (crédits jamais rendus).
 async function reconcileAllStale(): Promise<void> {
   try {
+    // 0) LIVRAISON INTERROMPUE (audit 28/09 #24) : deliverVideo réclame le job « done » AVANT de copier le MP4 ; si l'isolate
+    //    meurt pendant la copie, le job restait « done » sans média, payé, jamais livré ni remboursé. Après 10 min on le
+    //    remet en « running » (conditionnel : done + sans média + récent) → l'étape 1 retente la livraison, l'étape 3
+    //    rembourse si le fournisseur n'a plus le fichier.
+    await svc.from('mcp_jobs').update({ status: 'running', updated_at: new Date().toISOString() })
+      .eq('status', 'done').is('result_url', null).in('kind', ['video', 'avatar']).eq('refunded', false)
+      .lt('updated_at', new Date(Date.now() - 10 * 60_000).toISOString()).gt('updated_at', new Date(Date.now() - 24 * 3600_000).toISOString())
     // 1) LIVRAISON : tout job vidéo/avatar avec op_name → advance (livre si le fournisseur a fini,
     //    laisse « running » sinon, ne rembourse QUE sur erreur fournisseur). Sûr à répéter.
     const { data: live } = await svc.from('mcp_jobs').select('*')
@@ -1518,6 +1568,46 @@ async function reconcileAllStale(): Promise<void> {
       // OmniHuman chez kie : plus lent → abandonné à KIE_OMNI_STALE_MIN seulement (l'étape 1 l'a déjà avancé / livré)
       if (estOmniKie(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
       await failAndRefund(String(job.user_id), job, 'timeout')
+    }
+    // 4) CARTES PHOTO EXPIRÉES (audit 28/09 #23) : une carte jamais utilisée (> 2 h, /start la refuse) gardait sa part du
+    //    plafond 24 h sans aucun débit. Close (credits_cost 0 : rien n'a été pris) et part du plafond rendue.
+    const { data: cartes } = await svc.from('mcp_jobs').update({ status: 'failed', error: 'carte expirée (rien débité)', credits_cost: 0, updated_at: new Date().toISOString() })
+      .eq('status', 'pending').lt('created_at', new Date(Date.now() - 2 * 3600_000).toISOString()).select('user_id, created_at, params')
+    for (const c of cartes || []) {
+      const held = Number(((c.params || {}) as Record<string, unknown>).cap_held) || 0
+      if (held > 0) await svc.rpc('mcp_cap_release', { p_user: String(c.user_id), p_cost: held, p_at: String(c.created_at) })
+    }
+    // 5) MONTAGES (audit 28/09) : sans appel à check_montage, un montage rendu n'était jamais livré, ni remboursé s'il avait
+    //    échoué (vu le 28/09 : un client Pro, 4 crédits, rendu terminé le 21/08). > 20 min : rendu terminé → livré
+    //    (Bibliothèque comprise) ; plan jamais préparé / rendu échoué, disparu, en file > 2 h ou en cours > 6 h → remboursé.
+    //    Comptes illimités (owner / developer) : rien à rendre → un montage de test de plus de 24 h est seulement clos.
+    const { data: mts } = await svc.from('mcp_jobs').select('*').eq('status', 'running').eq('kind', 'montage')
+      .lt('created_at', new Date(Date.now() - 20 * 60_000).toISOString()).gt('created_at', new Date(Date.now() - 60 * 86400_000).toISOString())
+      .order('created_at').limit(5)
+    for (const job of mts || []) {
+      try {
+        const uid = String(job.user_id)
+        const { data: pr } = await svc.from('profiles').select('plan, is_owner').eq('id', uid).maybeSingle()
+        const illimite = !!pr && (pr.is_owner === true || String(pr.plan || '').toLowerCase() === 'developer')
+        if (illimite && Date.now() - new Date(String(job.created_at)).getTime() > 86400_000) {
+          await svc.from('mcp_jobs').update({ status: 'failed', error: 'montage de test abandonné', updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'running')
+          continue
+        }
+        if (!job.op_name) { await failAndRefund(uid, job, 'préparation du plan bloquée'); continue }
+        const { data: rj } = await svc.from('render_jobs').select('status, output_url, created_at').eq('id', String(job.op_name)).maybeSingle()
+        if (!rj) { await failAndRefund(uid, job, 'job de rendu disparu'); continue }
+        if (rj.status === 'failed') { await failAndRefund(uid, job, 'échec du rendu'); continue }
+        if (rj.status === 'done' && rj.output_url) {
+          const dl = await svc.storage.from('render-media').download(String(rj.output_url))
+          if (!dl.error && dl.data) await deliverVideo(uid, job, new Uint8Array(await dl.data.arrayBuffer()))
+          continue
+        }
+        const rAge = Date.now() - new Date(String(rj.created_at)).getTime()
+        if ((rj.status === 'queued' && rAge > 2 * 3600_000) || rAge > 6 * 3600_000) {
+          if (rj.status === 'queued') await svc.from('render_jobs').update({ status: 'failed', error: 'moteur de rendu hors ligne' }).eq('id', String(job.op_name)).eq('status', 'queued')
+          await failAndRefund(uid, job, 'rendu non abouti')
+        }
+      } catch { /* prochain passage */ }
     }
   } catch (e) { console.error('reconcileAllStale:', (e as Error)?.message || e) }
 }
@@ -1746,14 +1836,15 @@ async function failLaunch(userId: string, jobId: string, e: unknown): Promise<vo
 // Tâche de fond commune à generate_video et generate_avatar_video : débit lié au job → image de départ (lecture bornée,
 // dimensions contrôlées AVANT décodage) → lancement → op_name. Jamais d'exception vers l'appelant.
 function runVeoJob(o: {
-  profile: Record<string, unknown>; userId: string; jobId: string; cost: number; imageUrl: string; imageLabel: string
+  profile: Record<string, unknown>; userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; imageLabel: string
   aspect: string; duration: number; prompt: string; kieModel: KieVeoModel; googleModels: string[]
 }): void {
   bg((async () => {
     try {
       const bal = await spendForJob(o.userId, o.jobId, o.cost)
-      if (bal === -2) return   // job déjà clos par un filet : rien débité, rien à lancer
+      if (bal === -2) { await capReleaseUser(o.userId, o.cap); return }   // job déjà clos par un filet : rien débité, rien à lancer
       if (bal === null || bal === -1) {   // null = issue inconnue : failAndRefund ne rend que le credits_cost réellement posé
+        if (bal === -1) await capReleaseUser(o.userId, o.cap)   // rien débité → part du plafond rendue (audit 28/09 #23)
         await failAndRefund(o.userId, { id: o.jobId }, bal === -1 ? 'Crédits insuffisants' : 'Erreur crédits')
         return
       }
@@ -1789,9 +1880,6 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${VIDEO_COST_SEC}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
-  const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url ? ', avec image de départ' : ''})`, 'generate_video')
-  if (gate) return gate
-
   // Validation SYNCHRONE et RAPIDE de l'URL image (format + SSRF). Le TÉLÉCHARGEMENT
   // lourd (≈2,7 Mo) part en tâche de fond AVEC le lancement — sinon la
   // requête tient 5-10 s et le relais connecteur (coupure ~8 s) rend « Impossible de
@@ -1804,6 +1892,10 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
     if (isBlockedHost(parsed.hostname)) return toolErr('image_url doit pointer vers une image publique (adresse interne refusée).')
   }
 
+  // porte APRÈS les contrôles synchrones : un refus d'URL ne réserve plus de plafond 24 h (audit 28/09 #23)
+  const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url ? ', avec image de départ' : ''})`, 'generate_video')
+  if (gate) return gate
+
   // Job créé TOUT DE SUITE → réponse à Claude en un SEUL aller-retour DB (l'insert). Sur un isolate FROID (Supabase en
   // démarre plusieurs, le keep-warm n'en garde qu'un chaud), empiler débit + insert + téléchargement dépassait la coupure
   // ~8 s du relais claude.ai (« Erreur de connexion ») ET, coupé avant l'insert, ne laissait AUCUN job à récupérer.
@@ -1812,11 +1904,11 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // crédits jamais pris. /status n'avance le job qu'une fois `op_name` posé (barre de progression en attendant).
   const { data: job, error } = await svc.from('mcp_jobs')
     .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: 0 }).select('id').single()
-  if (error || !job) return toolErr('Erreur serveur au suivi du job — réessaie.')
+  if (error || !job) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur au suivi du job — réessaie.') }
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  runVeoJob({ profile, userId, jobId: job.id, cost, imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
+  runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
     prompt: prompt + EXPRESS_ENDING, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
   return {
@@ -2090,11 +2182,6 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${rate}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
-  const gate = await preSpendGate(profile, ctx, args, cost,
-    `avatar parlant ${duration} s (${aspect}, Veo ${isPro ? 'Pro' : 'Standard'}${args.avatar_image_url ? ', avec photo' : ''})`,
-    'generate_avatar_video')
-  if (gate) return gate
-
   // Photo d'avatar : validation d'URL RAPIDE seulement. Tout le lourd (download photo,
   // TTS ElevenLabs, uploads Hedra, lancement) tenait 8-15 s en synchrone → le relais
   // connecteur coupait à ~8 s → « Impossible de joindre AvatarAds » à chaque fois, alors
@@ -2108,19 +2195,25 @@ async function runGenerateAvatarVideo(profile: Record<string, unknown>, args: Re
     if (isBlockedHost(parsed.hostname)) return toolErr('avatar_image_url doit pointer vers une image publique (adresse interne refusée).')
   }
 
+  // porte APRÈS les contrôles synchrones (audit 28/09 #23)
+  const gate = await preSpendGate(profile, ctx, args, cost,
+    `avatar parlant ${duration} s (${aspect}, Veo ${isPro ? 'Pro' : 'Standard'}${args.avatar_image_url ? ', avec photo' : ''})`,
+    'generate_avatar_video')
+  if (gate) return gate
+
   // Job kind 'video' : l'avatar est du Veo désormais → /status l'avance via advanceVideoJob.
   // Inséré tout de suite → réponse à Claude en un SEUL aller-retour DB (résiste au cold-start). credits_cost = 0 : le
   // débit ET credits_cost sont posés ensemble par mcp_spend_for_job dans la tâche de fond (relecture 26/09).
   const { data: job, error: jobErr } = await svc.from('mcp_jobs')
     .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: 0 }).select('id').single()
-  if (jobErr || !job) return toolErr('Erreur serveur au suivi du job — réessaie.')
+  if (jobErr || !job) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur au suivi du job — réessaie.') }
 
   // La réplique va DANS le prompt → Veo la PARLE (voix native) + lip-sync (plus d'ElevenLabs/Hedra).
   const vp = `A person looking directly at the camera and speaking naturally to the viewer, saying out loud: "${script.replace(/[\`"]/g, "'")}". Accurate natural lip-sync matching every word, clear audible human voice, warm authentic UGC delivery, subtle expressive facial expressions and small natural head movements, believable lighting, static background.`
   // kie d'abord (Pro → Veo 3.1 Fast, Standard → Lite ; enableTranslation:false → la réplique reste en français),
   // Google en repli — voir « VEO VIA KIE.AI ». Repli Google : Pro → Fast (puis Lite si Fast indispo, comme avant) ;
   // Standard → Lite SEULEMENT (jamais du Fast financé par un débit Lite).
-  runVeoJob({ profile, userId, jobId: job.id, cost, imageUrl: avatarUrl, imageLabel: "la photo d'avatar (avatar_image_url)",
+  runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl: avatarUrl, imageLabel: "la photo d'avatar (avatar_image_url)",
     aspect, duration, prompt: vp, kieModel: isPro ? 'veo3_fast' : 'veo3_lite',
     googleModels: isPro ? ['veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'] : ['veo-3.1-lite-generate-preview'] })
 
@@ -2461,6 +2554,7 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
   if (gate) return gate
 
   const bal = await spendCredits(userId, cost)
+  if (bal === null || bal === -1) await capRelease(profile, ctx, cost)   // rien débité → part du plafond rendue (audit 28/09)
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédit${cost > 1 ? 's' : ''}. Recharge sur ${APP_URL}`)
 
@@ -2530,6 +2624,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   if (gate) return gate
 
   const bal = await spendCredits(userId, cost)
+  if (bal === null || bal === -1) await capRelease(profile, ctx, cost)   // rien débité → part du plafond rendue (audit 28/09)
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
@@ -2543,7 +2638,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
       const upI = await svc.storage.from('mcp-media').upload(`${stamp}.png`, img.bytes, { contentType: img.contentType, upsert: true })
       const upA = await svc.storage.from('mcp-media').upload(`${stamp}.${ext}`, aud.bytes, { contentType: aud.contentType, upsert: true })
       if (upI.error || upA.error) return toolErr('Upload vers le stockage échoué — crédits remboursés.')
-      const pub = (p: string) => `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${p}`
+      const pub = async (p: string) => (await signPath(p, 6 * 3600)) || ''   // mcp-media privé : visage + voix en liens signés 6 h
       // Prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300 caractères, variante « sans mains » : pas de détection
       // ici). Fin de la règle « même prompt que Hedra » : AVATAR_PROMPT (879 caractères) dépasse la limite de kie.
       const omniPrompt = promptOmniMcp(profile.is_owner === true, args.prompt)
@@ -2559,7 +2654,7 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
           const upL = await svc.storage.from('mcp-media').upload(`${stamp}-lip.${ext}`, lipO.bytes, { contentType: aud.contentType, upsert: true })
           if (!upL.error) { audioK = `${stamp}-lip.${ext}`; coupeK = lipO.coupe }   // copie refusée → audio reçu, sans coupe
         }
-        const k = await soumettreOmniKie({ imageUrl: pub(`${stamp}.png`), audioUrl: pub(audioK), prompt: omniPrompt })
+        const k = await soumettreOmniKie({ imageUrl: await pub(`${stamp}.png`), audioUrl: await pub(audioK), prompt: omniPrompt })
         if (k.ok) {
           const { data: job, error } = await svc.from('mcp_jobs')
             .insert({ user_id: userId, kind: 'avatar', status: 'running', op_name: opAvecCoupe(OP_KIE_OMNI + k.taskId, coupeK), credits_cost: cost }).select('id').single()
@@ -2578,8 +2673,8 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 10 
       const sub = await falFetch(FAL_OMNI_PATH, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image_url: pub(`${stamp}.png`),
-          audio_url: pub(`${stamp}.${ext}`),
+          image_url: await pub(`${stamp}.png`),
+          audio_url: await pub(`${stamp}.${ext}`),
           resolution: secs > 28 ? '720p' : '1080p',   // fal : 1080p limité à 30 s
           prompt: omniPrompt,   // prompt OmniHuman partagé (≤ 300), le même que chez kie
         }),
@@ -2813,6 +2908,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   if (gate) return gate
 
   const bal = await spendCredits(userId, cost)
+  if (bal === null || bal === -1) await capRelease(profile, ctx, cost)   // rien débité → part du plafond rendue (audit 28/09)
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
@@ -3083,6 +3179,7 @@ async function runRenderMontagePlan(profile: Record<string, unknown>, args: Reco
   const gate = await preSpendGate(profile, ctx, args, cost, 'nouveau rendu du plan modifié', 'render_montage_plan')
   if (gate) return gate
   const bal = await spendCredits(userId, cost)
+  if (bal === null || bal === -1) await capRelease(profile, ctx, cost)   // rien débité → part du plafond rendue (audit 28/09)
   if (bal === null) return toolErr('Erreur crédits — réessaie.')
   if (bal === -1) return toolErr(`Crédits insuffisants : il faut ${cost} crédits. Recharge sur ${APP_URL}`)
 
@@ -3102,11 +3199,14 @@ Appelle check_montage avec ce job_id dans 1 à 2 minutes.`)
 
 async function runListMedia(profile: Record<string, unknown>): Promise<ToolContent> {
   const userId = String(profile.id)
-  const { data, error } = await svc.storage.from('mcp-media')
+  const { data: brut, error } = await svc.storage.from('mcp-media')
     .list(userId, { limit: 24, sortBy: { column: 'created_at', order: 'desc' } })
   if (error) return toolErr('Erreur lecture médias : ' + error.message)
-  if (!data || !data.length) return toolText('Aucun média généré via Claude pour le moment.')
-  const urlDe = (n: string) => `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${userId}/${n}`
+  const data = (brut || []).filter((f) => !!f.id)   // les sous-dossiers (id null) n'ont pas de lien utile
+  if (!data.length) return toolText('Aucun média généré via Claude pour le moment.')
+  const signes = new Map<string, string>()   // mcp-media privé (audit 28/09) : liens signés 7 jours, en un seul appel
+  try { const { data: sg } = await svc.storage.from('mcp-media').createSignedUrls(data.map((f) => `${userId}/${f.name}`), 7 * 86400); for (const x of sg || []) if (x.signedUrl && x.path) signes.set(x.path, x.signedUrl) } catch { /* liste sans liens */ }
+  const urlDe = (n: string) => signes.get(`${userId}/${n}`) || `${MEDIA_PUB}${userId}/${n}`
   const lines = data.map((f) =>
     `- ${f.name} (${f.created_at ? new Date(f.created_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) : '—'}) : ${urlDe(f.name)}`)
   // GALERIE (réf. intégrations concurrentes) : les dernières images s'affichent
@@ -3562,7 +3662,7 @@ serve(async (req) => {
   // qu'un raccourci propre à la place du long lien supabase brut. Aucune auth.
   if (segs[1] === 'i' && segs[2]) {
     const { data: j } = await svc.from('mcp_jobs').select('result_url, kind').eq('id', segs[2]).maybeSingle()
-    const dest = j?.result_url ? String(j.result_url) : ''
+    const dest = j?.result_url ? await signMedia(String(j.result_url), 3600) : ''   // mcp-media privé : lien signé 1 h
     if (!dest) return new Response('Média introuvable', { status: 404, headers: cors })
     const dl = new URL(req.url).searchParams.get('download')
     // TÉLÉCHARGEMENT d'une IMAGE : on relaie les octets NOUS-MÊMES (single-origin, application/
@@ -3586,13 +3686,17 @@ serve(async (req) => {
     }
     // Vidéo, ou repli : 302 vers le storage (?download forwardé → Content-Disposition:attachment).
     const to = dl ? dest + (dest.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(dl) : dest
-    return new Response(null, { status: 302, headers: { ...cors, Location: to, 'Cache-Control': dl ? 'no-store' : 'public, max-age=3600' } })
+    return new Response(null, { status: 302, headers: { ...cors, Location: to, 'Cache-Control': dl ? 'no-store' : 'private, max-age=600' } })
   }
 
   // Statut d'un job, SONDÉ PAR LE WIDGET lui-même → une seule carte avec barre de
   // progression, plus de spam check_image. UUID = capacité (rien de sensible : l'URL
   // du média est déjà publique). CORS ACAO:* via json(). Progress = estimation temps.
   if (segs[1] === 'status' && segs[2]) {
+    // Audit 28/09 #32 : route anonyme (l'UUID du job sert de capacité). Plafond PAR JOB (une IP partagée par un relais ne
+    // doit pas bloquer tous les widgets) + verrou en base : UNE sonde fournisseur par job toutes les 8 s, tous isolates confondus.
+    if (!/^[0-9a-f-]{36}$/i.test(segs[2])) return json(404, { status: 'unknown' })
+    if (!(await rateHit('mcp-status:' + segs[2].toLowerCase(), 60, 90))) return json(429, { status: 'busy' })
     const r0 = await svc.from('mcp_jobs').select('*').eq('id', segs[2]).maybeSingle()
     let j = r0.data as Record<string, unknown> | null
     if (!j) return json(404, { status: 'unknown' })
@@ -3601,8 +3705,12 @@ serve(async (req) => {
     // marchent SANS que Claude appelle check_* → plus de « Impossible de joindre » (proxy).
     // Images : op_name null (livrées par la tâche de fond) → jamais avancées ici.
     if (j.status !== 'done' && j.status !== 'failed' && j.op_name) {
-      if (j.kind === 'video') await advanceVideoBounded(j)
-      else if (j.kind === 'avatar') await advanceAvatarJob(j)
+      const { data: tour } = await svc.from('mcp_jobs').update({ updated_at: new Date().toISOString() })
+        .eq('id', segs[2]).eq('status', 'running').lt('updated_at', new Date(Date.now() - 8000).toISOString()).select('id')
+      if (tour && tour.length) {
+        if (j.kind === 'video') await advanceVideoBounded(j)
+        else if (j.kind === 'avatar') await advanceAvatarJob(j)
+      }
       const { data: j2 } = await svc.from('mcp_jobs').select('status, kind, result_url, created_at, error').eq('id', segs[2]).maybeSingle()
       if (j2) j = { ...j, ...j2 }
     }
@@ -3611,7 +3719,8 @@ serve(async (req) => {
     const attendu = j.kind === 'image' ? 50000 : j.kind === 'avatar' ? 200000 : 130000
     const done = j.status === 'done' || j.status === 'failed'
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
-    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: j.status === 'done' ? j.result_url : null, progress, error: j.status === 'failed' ? 'failed' : null }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
+    const urlSigne = j.status === 'done' && j.result_url ? await signMedia(String(j.result_url)) : null   // mcp-media privé (audit 28/09)
+    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: urlSigne, progress, error: j.status === 'failed' ? 'failed' : null }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
   }
 
@@ -3660,7 +3769,7 @@ serve(async (req) => {
       const path = `${userId}/ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
       const { error: upErr } = await svc.storage.from('mcp-media').upload(path, bytes, { contentType: m[1] })
       if (upErr) return json(500, { error: 'upload' })
-      refUrl = `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}`
+      refUrl = (await signPath(path, 7 * 86400)) || `${MEDIA_PUB}${path}`   // mcp-media privé (audit 28/09)
       ref = { bytes, contentType: m[1] }
     }
     // pending → running, atomique (deux clics = un seul lancement). credits_cost = 0 jusqu'au débit : mcp_spend_for_job
@@ -3823,7 +3932,7 @@ serve(async (req) => {
     const path = `${user.id}/ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
     const { error: upErr } = await svc.storage.from('mcp-media').upload(path, bytes, { contentType: refMime })
     if (upErr) return json(500, { error: 'upload' })
-    return json(200, { ok: true, url: `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}` })
+    return json(200, { ok: true, url: (await signPath(path, 7 * 86400)) || `${MEDIA_PUB}${path}` })   // mcp-media privé : lien signé 7 jours
   }
   // Routes OAuth (.well-known, register, authorize, oauth/approve, token)
   const repOAuth = await handleOAuth(req, url, segs)
@@ -3848,8 +3957,11 @@ serve(async (req) => {
     // Keep-warm (worker Railway, GET toutes les 4 min) → réconciliation globale des jobs vidéo,
     // INDÉPENDANTE du proxy connecteur/widget. Throttle 2 min pour ne pas la lancer sur chaque
     // sonde SSE de claude. Date.now() est OK ici (fonction edge normale, pas un script workflow).
+    // Audit 28/09 #32 : réservée au GET du cron mcp-keepwarm (x-cron-key = CRON_SECRET) — un GET anonyme ne déclenche
+    // plus de sondes fournisseurs ni de téléchargements pour tous les comptes.
     const _now = Date.now()
-    if (_now - _lastReconcile > 120_000) { _lastReconcile = _now; bg(reconcileAllStale()) }
+    const _cron = !!CRON_SECRET && timingSafeEqual(req.headers.get('x-cron-key') || '', CRON_SECRET)
+    if (_cron && _now - _lastReconcile > 120_000) { _lastReconcile = _now; bg(reconcileAllStale()) }
     // GET ANONYME → 401 + WWW-Authenticate (29/08). Le nouvel écran claude.ai
     // « vérification du serveur » sonde l'URL nue ; un 200 ici contredisait le
     // 401 du POST (claude.ai n'honore JAMAIS WWW-Authenticate sur un 200) →

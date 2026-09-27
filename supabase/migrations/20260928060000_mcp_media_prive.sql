@@ -1,0 +1,12 @@
+-- Audit Express 28/09 (#28/#36) — mcp-media PRIVÉ (appliqué le 28/09 après le déploiement du MCP qui signe tout).
+--
+-- Le bucket contenait les photos de visage, les voix (OmniHuman) et les vidéos des clients sous des URL publiques
+-- permanentes (RGPD). Désormais :
+--   • la base garde l'adresse canonique …/object/public/mcp-media/<chemin> (anciennes lignes comprises), qui ne s'ouvre
+--     plus (400) ; le MCP signe au moment de servir (/status, /i/, list_media, check_*, toolMedia, vignettes) ;
+--   • fournisseurs (OmniHuman kie / fal) : liens signés 6 h ; /ref et la photo déposée dans la carte : 7 jours ;
+--   • vignettes de Bibliothèque : images intégrées (data URL) — les 19 anciennes vignettes mcp-media ont été converties
+--     (360 px, 21-75 Ko) le 28/09 ; saveToLibrary convertit les nouvelles ;
+--   • images d'animation du montage (app, <uid>/anim-img/) : lien signé 1 an, la policy SELECT du dossier existait déjà.
+-- Retour arrière : update storage.buckets set public = true where id = 'mcp-media';
+update storage.buckets set public = false where id = 'mcp-media';

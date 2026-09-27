@@ -168,6 +168,33 @@ export async function omniStartAdd(userId: string, opId: string | undefined, cos
   if (!opId || !(cost > 0)) return false
   try { const { data, error } = await svc().rpc('omni_start_add', { p_user: userId, p_op: opId, p_cost: Math.ceil(cost) }); return !error && data === true } catch { return false }
 }
+// Audit 28/09 (#14) : UNE image de départ payée par op (migration 20260928030000). Une relance (réponse perdue, 504, image
+// lente) ne retire rien : claim 'paid' | 'free' | 'deny' avant le tirage, puis done / fail / free_done selon l'issue.
+// Erreur RPC : claim → 'paid' (tirage normal), fail → 'release', free_done → 'free' ; done retombe sur omni_start_add.
+async function omniStartRpc(fn: string, args: Record<string, unknown>, dflt: string): Promise<{ v: string; err: boolean }> {
+  try {
+    const { data, error } = await svc().rpc(fn, args)
+    return (!error && typeof data === 'string') ? { v: data, err: false } : { v: dflt, err: true }
+  } catch { return { v: dflt, err: true } }
+}
+export async function omniStartClaim(userId: string, opId: string): Promise<'paid' | 'free' | 'deny'> {
+  const r = await omniStartRpc('omni_start_claim', { p_user: userId, p_op: opId }, 'paid')
+  return r.v === 'free' || r.v === 'deny' ? r.v : 'paid'
+}
+export async function omniStartDone(userId: string, opId: string | undefined, cost: number): Promise<string> {
+  if (!opId || !(cost > 0)) return 'na'
+  const r = await omniStartRpc('omni_start_done', { p_user: userId, p_op: opId, p_cost: Math.ceil(cost) }, 'na')
+  if (r.err) return (await omniStartAdd(userId, opId, cost)) ? 'posted' : 'na'
+  return r.v
+}
+export async function omniStartFail(userId: string, opId: string | undefined): Promise<'keep' | 'release'> {
+  if (!opId) return 'release'
+  return (await omniStartRpc('omni_start_fail', { p_user: userId, p_op: opId }, 'release')).v === 'keep' ? 'keep' : 'release'
+}
+export async function omniStartFreeDone(userId: string, opId: string | undefined, cost: number): Promise<string> {
+  if (!opId) return 'free'
+  return (await omniStartRpc('omni_start_free_done', { p_user: userId, p_op: opId, p_cost: Math.ceil(cost) }, 'free')).v
+}
 
 // Tire la réserve ENTIÈRE d'une op (soumission VIDÉO : une op = une génération). Ferme « N générations pour
 // un débit » : une 2e soumission sur la même op trouve réserve 0 → 402. Fail-open sur erreur DB.
@@ -461,9 +488,18 @@ export function isInternalIp(ip: string): boolean {
 export async function hostResolvesInternal(hostname: string): Promise<boolean> {
   const h = String(hostname || '').replace(/^\[|\]$/g, '').replace(/\.+$/, '')
   if (isBlockedHost(h)) return true
+  if (typeof (Deno as unknown as { resolveDns?: unknown }).resolveDns !== 'function') return false   // API absente → fail-open (inchangé)
   try {
     const ips: string[] = []
-    for (const t of ['A', 'AAAA'] as const) { try { ips.push(...(await Deno.resolveDns(h, t))) } catch { /* type absent */ } }
+    let apiKo = false
+    for (const t of ['A', 'AAAA'] as const) {
+      try { ips.push(...(await Deno.resolveDns(h, t))) }
+      catch (e) { const n = (e as Error)?.name || ''; if (n === 'NotSupported' || n === 'PermissionDenied' || n === 'TypeError') apiKo = true }   // sinon : type absent / NXDOMAIN
+    }
+    // Audit 28/09 #26 : RIEN résolu = refusé (fail-closed ; le fetch aurait échoué de toute façon). Avant : liste vide → autorisé.
+    // Résiduel assumé : le fetch refait sa propre résolution (rebinding DNS à TTL 0 entre ce contrôle et la connexion) — Deno
+    // n'offre pas d'épinglage d'IP ; chaque saut de redirection est revalidé, et seul un hôte public peut passer ce contrôle.
+    if (!ips.length) return !apiKo
     return ips.some((ip) => isInternalIp(ip))   // ⚠ PAS isBlockedHost : il refuse toute IP littérale (voir isInternalIp)
   } catch { return false }   // resolveDns indisponible → fail-open
 }

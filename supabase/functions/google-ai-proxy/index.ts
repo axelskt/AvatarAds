@@ -212,7 +212,12 @@ serve(async (req: Request) => {
       } else if (isBillable) {
         // Veo : soumission async. 2xx → on lie l'op au job (seulement si un tirage a RÉELLEMENT eu lieu : un bind sans montant
         // rendrait tout au release_by_job) ; erreur → on rend le tiré et la remise d'image consommée.
-        if (googleRes.ok) { const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''; if (name && drawn > 0) await bindJob(uid, drawnOp, 'veo:' + name, drawn) }
+        if (googleRes.ok) {
+          const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+          // chemin complet de l'opération = de quoi la suivre si l'onglet se ferme (filet reconcile-fal-orphans, audit 28/09 #11)
+          const full = (body.match(/"name"\s*:\s*"(models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+)"/) || [])[1] || ''
+          if (name && drawn > 0) await bindJob(uid, drawnOp, 'veo:' + name, drawn, full ? `${GOOGLE_AI_BASE}/v1beta/${full}` : undefined)
+        }
         else if (drawn > 0) { await releaseOmniOp(uid, drawnOp, drawn, startImg); gaveBack = true }
       } else if (isPoll && googleRes.ok && /"done"\s*:\s*true/.test(body)) {
         // Poll d'une opération Veo terminée. Livrée = une VIDÉO est présente (octets, uri ou files/…). « done » sans vidéo
