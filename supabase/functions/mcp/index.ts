@@ -3296,6 +3296,9 @@ async function resolveCimdClient(clientIdUrl: string): Promise<{ id: string, uri
     }
   } catch (_) { /* pas de cache → on fetche normalement ci-dessous */ }
   if (await hostResolvesInternal(u.hostname)) return null   // round3 : DNS pointant en interne/métadonnées
+  // Audit 28/09 (basse) : /authorize créait un client OAuth par URL CIMD inconnue, sans le plafond de /register (30 / h par IP)
+  // → 20 NOUVEAUX documents CIMD par heure et par hôte (les clients déjà connus, dont Claude, passent par le cache ci-dessus).
+  if (!(await rateHit('mcp-cimd:' + h, 3600, 20))) return null
   const ctl = new AbortController()
   const t = setTimeout(() => ctl.abort(), 5000)
   // deno-lint-ignore no-explicit-any

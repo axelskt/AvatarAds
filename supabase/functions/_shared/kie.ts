@@ -183,10 +183,25 @@ export function kieKindOf(ct: string, buf: ArrayBuffer): { ext: string; mime: st
 // (quelle que soit sa structure : champ d'entrée, tableau, JSON imbriqué…) ; il en faut au moins une, et TOUTES doivent
 // venir du dossier de ce user. Sûr : kie-proxy n'accepte en entrée que des URL du dossier de l'appelant, et un tiers ne
 // peut pas faire apparaître SON uid dans la tâche d'un autre (la tâche d'un autre ne contient que les URL de l'autre).
+// Audit 28/09 : le TEXTE des prompts est écarté — une URL signée d'un autre compte collée dans un prompt rendait la tâche
+// « non livrable » (404 puis remboursement par le filet) alors que kie avait facturé la plateforme. Seuls les champs
+// d'ENTRÉE comptent (param JSON parcouru, clés *prompt* ignorées) ; param illisible → ancien comportement (texte entier).
 export function kieOwnedBy(param: string, uid: string, storeSign: string): boolean {
   const esc = storeSign.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const re = new RegExp(esc + '([0-9a-fA-F-]{36})/', 'g')
-  const owners = [...String(param || '').matchAll(re)].map((m) => m[1].toLowerCase())
+  let hay = String(param || '')
+  try {
+    const parts: string[] = []
+    const walk = (v: unknown, k = ''): void => {
+      if (/prompt/i.test(k)) return
+      if (typeof v === 'string') { if (v.trim().startsWith('{')) { try { walk(JSON.parse(v), k); return } catch { /* texte */ } } parts.push(v) }
+      else if (Array.isArray(v)) v.forEach((x) => walk(x, k))
+      else if (v && typeof v === 'object') for (const [kk, vv] of Object.entries(v as Record<string, unknown>)) walk(vv, kk)
+    }
+    walk(JSON.parse(hay))
+    hay = parts.join('\n')
+  } catch { /* param non JSON : texte entier, comme avant */ }
+  const owners = [...hay.matchAll(re)].map((m) => m[1].toLowerCase())
   return owners.length > 0 && owners.every((o) => o === String(uid).toLowerCase())
 }
 

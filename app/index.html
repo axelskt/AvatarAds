@@ -5877,7 +5877,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-28-0025'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-28-0027'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -32751,9 +32751,11 @@ function _expSlotFill(i, url, blob){
   dl.onclick=()=>{ if(typeof _gateFreeExport==='function' && _gateFreeExport()) return; const a=document.createElement('a'); a.href=url; a.download='avatarads-express-'+(i+1)+'.mp4'; document.body.appendChild(a); a.click(); a.remove(); };
   slot.appendChild(dl);
 }
-function _expSlotFail(i, msg){
+function _expSlotFail(i, msg, debited){
   const box=document.getElementById('_expSlotBox'+i); if(!box) return;
-  box.innerHTML='<div class="mono" style="font-size:11px;color:var(--text2);text-align:center;line-height:1.5;padding:14px">Vidéo '+(i+1)+' non générée<br><span style="color:var(--text3);font-size:10px">'+_escH(String(msg||'').slice(0,140))+'</span><br><span style="color:var(--text3);font-size:10px">Crédits de cette vidéo rendus.</span></div>';
+  // audit 28/09 : « rendus » seulement s'il y a eu un débit (sinon on poussait à relancer en croyant avoir été remboursé)
+  const cr = debited ? 'Les crédits de cette vidéo te sont rendus.' : 'Aucun crédit débité pour cette vidéo.';
+  box.innerHTML='<div class="mono" style="font-size:11px;color:var(--text2);text-align:center;line-height:1.5;padding:14px">Vidéo '+(i+1)+' non générée<br><span style="color:var(--text3);font-size:10px">'+_escH(String(msg||'').slice(0,140))+'</span><br><span style="color:var(--text3);font-size:10px">'+cr+'</span></div>';
 }
 let _expFfTail = Promise.resolve();
 function _expFfAcquire(){ let rel; const next=new Promise(r=>{ rel=r; }); const prev=_expFfTail; _expFfTail=prev.then(()=>next); return prev.then(()=>rel); }   // ffmpeg.wasm : une vidéo à la fois
@@ -32830,7 +32832,8 @@ async function _expressCreateOne(o){
   // _omniImgPart vaut donc 0 : plus de reliquat « image non créée » à rendre.
   const _omniImgPart = _isOmni ? _expOmniImgPart() : 0;
   let _omniImgMade = false;
-  if(typeof creditsFlowBegin==='function') creditsFlowBegin();   // isole les ops d'Express
+  // Audit 28/09 : plus de creditsFlowBegin() ici — il VIDAIT la liste globale des ops, ce qui privait une autre génération en
+  // cours (Générateur…) de son x-aa-op implicite et de son remboursement. Express passe ses ops EXPLICITEMENT partout.
   if(!(await spendCreditsFor(_isOmni ? _expOmniCost(_dur) : Math.round(_dur * _expRate * _expMult), _isOmni?'express-omni':'express'))){ _spent(false); return; }
   // Op EXACTE de ce débit (Axel 25/09, relecture) : chaque appel payant d'Express (image de départ, Omni kie / fal, Veo) la
   // nomme en x-aa-op, et le remboursement ne vise qu'ELLE. Avant, tout passait par _creditOps (global) : une autre génération
@@ -32840,6 +32843,7 @@ async function _expressCreateOne(o){
   const _expOps = _expOp ? [_expOp] : [];
   const _expOpsDone = () => { try{ _creditOps = _creditOps.filter((id) => !_expOps.includes(id)); }catch(_){} };   // sans toucher aux ops d'un autre flux
   _spent(true);   // lot : le débit de CETTE vidéo est passé → la suivante peut débiter pendant que celle-ci tourne
+  _expOpsDone();   // l'op d'Express sort tout de suite de la liste globale (jamais l'op implicite d'un autre flux)
   let _myRid = null;   // id kie de CETTE vidéo (accusé de sauvegarde) — jamais celui d'une autre vidéo du lot
 
   const btn=document.getElementById('expGenBtn');
@@ -33111,7 +33115,7 @@ async function _expressCreateOne(o){
     clearInterval(tick);
     console.error('Express error:', e);
     _spent(false);
-    if(o && window._expBatch){ _expSlotFail(o.idx, e.message||e); }
+    if(o && window._expBatch){ _expSlotFail(o.idx, e.message||e, _expOps.length > 0); }
     else { if(prog) prog.style.display='none'; if(ph) ph.style.display='flex'; }   // .col (flex) — surtout PAS 'block' (casse le centrage : icône décalée à gauche)
     // Express débite EN AMONT (spendCreditsFor). Un échec (Veo refusé, téléchargement raté, vidéo corrompue)
     // ne remboursait rien → l'utilisateur payait pour rien. On rend ce qui est remboursable : refund_credits
