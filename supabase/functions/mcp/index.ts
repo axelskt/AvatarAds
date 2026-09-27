@@ -3470,7 +3470,8 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
       // « Problème de connexion »). L'ancien refresh, lui, meurt tout de suite
       // (écrasé par un hash jamais distribué, la colonne est NOT NULL + unique).
       await svc.from('mcp_oauth_tokens').update({
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        // audit 28/09 : jamais PROLONGER un access déjà expiré (rotation d'un vieux refresh = 10 min de plus)
+        expires_at: new Date(Math.min(Date.parse(String(row.expires_at)) || 0, Date.now() + 10 * 60 * 1000)).toISOString(),
         refresh_hash: await hashKey('dead_' + hexAleatoire(24)),
       }).eq('token_hash', row.token_hash)
       const { error: insErr } = await svc.from('mcp_oauth_tokens').insert({
@@ -3530,6 +3531,10 @@ async function handleKeyManagement(req: Request): Promise<Response> {
   }
   if (body.action === 'revoke') {
     await svc.from('mcp_keys').update({ revoked_at: new Date().toISOString() }).eq('user_id', user.id).is('revoked_at', null)
+    // Audit 28/09 (moyenne) : « Révoquer » coupe AUSSI l'accès OAuth (Claude connecté par OAuth gardait ses jetons à vie :
+    // le refresh ne vérifie que son empreinte). Jetons et codes du compte supprimés = identifiants invalidés.
+    await svc.from('mcp_oauth_tokens').delete().eq('user_id', user.id)
+    await svc.from('mcp_oauth_codes').delete().eq('user_id', user.id)
     return json(200, { ok: true })
   }
   if (body.action === 'set_confirm') {
@@ -3796,13 +3801,24 @@ serve(async (req) => {
     if (error || !user) return json(401, { error: 'unauthorized' })
     let body: Record<string, unknown>
     try { body = await req.json() } catch { return json(400, { error: 'bad_request' }) }
+    // Audit 28/09 (moyenne) : dépôt réservé aux plans qui peuvent générer (Free exclu), 30 / h par compte, et type lu dans
+    // les OCTETS (PNG / JPEG / WebP) — jamais celui annoncé par le client (le bucket mcp-media est public).
+    const { data: prof } = await svc.from('profiles').select('plan, is_owner').eq('id', user.id).maybeSingle()
+    const refPlan = String(prof?.plan || '').toLowerCase()
+    if (!prof?.is_owner && refPlan !== 'developer' && !ALLOWED_PLANS.includes(refPlan)) return json(403, { error: 'plan' })
+    if (!(await rateHit('mcp-ref:' + user.id, 3600, 30))) return json(429, { error: 'rate_limited' })
     const m = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
     if (!m) return json(400, { error: 'bad_image' })
     const bytes = b64ToBytes(m[3])
     if (bytes.length > 10_000_000) return json(413, { error: 'too_large' })
-    const ext = m[2] === 'png' ? 'png' : m[2] === 'webp' ? 'webp' : 'jpg'
+    const isPng = bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+    const isJpg = bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+    const isWebp = bytes.length > 12 && String.fromCharCode(...bytes.subarray(0, 4)) === 'RIFF' && String.fromCharCode(...bytes.subarray(8, 12)) === 'WEBP'
+    if (!isPng && !isJpg && !isWebp) return json(400, { error: 'bad_image' })
+    const ext = isPng ? 'png' : isWebp ? 'webp' : 'jpg'
+    const refMime = isPng ? 'image/png' : isWebp ? 'image/webp' : 'image/jpeg'
     const path = `${user.id}/ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
-    const { error: upErr } = await svc.storage.from('mcp-media').upload(path, bytes, { contentType: m[1] })
+    const { error: upErr } = await svc.storage.from('mcp-media').upload(path, bytes, { contentType: refMime })
     if (upErr) return json(500, { error: 'upload' })
     return json(200, { ok: true, url: `${SUPABASE_URL}/storage/v1/object/public/mcp-media/${path}` })
   }
