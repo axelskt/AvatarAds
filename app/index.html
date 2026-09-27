@@ -5877,7 +5877,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-28-0027'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-28-0055'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -17801,12 +17801,28 @@ function _mdAskImagesHtml(){
         +'<button onclick="_mdAskImagesOk()" class="btn btn-primary" style="flex:1;font-weight:800">Valider</button></div>'
     +'</div></div>';
 }
+// Audit 28/09 : mcp-media (public) n'accepte plus que PNG / JPEG / WebP — plus de SVG hébergé sur le domaine du projet.
+// Un logo SVG, GIF, AVIF ou HEIC est donc redessiné en PNG ici (2048 px max, 1024 px pour un petit SVG) avant l'envoi.
+async function _mdAnimImageToPng(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const im=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('format non lu, utilise un PNG, un JPEG ou un WebP')); i.src=url; });
+    const w0=im.naturalWidth||1024, h0=im.naturalHeight||1024;
+    const k=/svg/.test(file.type||'') ? 1024/Math.max(w0,h0) : Math.min(1, 2048/Math.max(w0,h0));
+    const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(w0*k)); cv.height=Math.max(1,Math.round(h0*k));
+    cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    if(!blob) throw new Error('conversion impossible');
+    return new File([blob],'image.png',{ type:'image/png' });
+  } finally { URL.revokeObjectURL(url); }
+}
 async function _mdUploadAnimImage(file){
   if(typeof sb==='undefined') throw new Error('storage indisponible');
   const uid=(typeof currentMember!=='undefined'&&currentMember&&currentMember.id)?currentMember.id:'anon';
-  const ext=((file.name||'img').split('.').pop()||'png').toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
+  if(!/^image\/(png|jpeg|webp)$/.test(file.type||'')) file=await _mdAnimImageToPng(file);
+  const ext=file.type==='image/jpeg'?'jpg':(file.type==='image/webp'?'webp':'png');
   const path=uid+'/anim-img/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
-  const up=await sb.storage.from('mcp-media').upload(path, file, { contentType:file.type||'image/png', upsert:true });
+  const up=await sb.storage.from('mcp-media').upload(path, file, { contentType:file.type, upsert:true });
   if(up.error) throw new Error(up.error.message);
   return SUPABASE_URL+'/storage/v1/object/public/mcp-media/'+path;
 }
