@@ -89,17 +89,18 @@ test('txOfHook / isAvantApres : nom d’un hook avant/après → ses transformat
   ['H74.mp4', 'HK-X1', 'avatar-HK.mp4', '', null].forEach(n => assert.equal(F.txOfHook(n), null, String(n)));
   assert.equal(F.isAvantApres('HK-M04-01.mp4'), true); assert.equal(F.isAvantApres('H57-A1.mp4'), false);
 });
-test('txOfHook / isAvantApres : assemblages actuels HK-<groupe>-<clips> (18 recettes du 26/09) lus dans la bibliothèque', () => {
+test('txOfHook / isAvantApres : hooks visuels en blocs HK-<bloc>(+<bloc>) lus dans la bibliothèque', () => {
   const tx = (id, group, subject) => ({ id, kind: 'transformation', subject, status: 'ready', label: id, meta: { group, before: { media: 'b.mp4' }, after: { media: id + '.mp4' } } });
   const lib = [tx('TX-O02a', 'O2', 'omni'), tx('TX-O02b', 'O2', 'omni'), tx('TX-O01', 'O1', 'omni'), tx('TX-M01', 'M1', 'motion-control'), tx('TX-O03', 'O3', 'omni')];
-  assert.deepEqual(F.txOfHook('/x/assemblages/HK-O2-0ab.mp4', lib), ['TX-O02a', 'TX-O02b']);
+  assert.equal(F.txOfHook('/x/assemblages/HK-O2-0ab.mp4', lib), null);   // 27/09 : suite de 3 clips d'un même original retirée (règle des blocs)
+  assert.deepEqual(F.txOfHook('/x/assemblages/HK-O2-0b+O3-0a.mp4', lib), ['TX-O02b', 'TX-O03']);   // 2 blocs d'originaux différents
   assert.deepEqual(F.txOfHook('HK-O2-ba.mp4', lib), ['TX-O02b', 'TX-O02a']);
   assert.deepEqual(F.txOfHook('HK-O2-0a.mp4', lib), ['TX-O02a']);
   assert.deepEqual(F.txOfHook('HK-O3-a0.mp4', lib), ['TX-O03']);
   assert.deepEqual(F.txOfHook('HK-M1-0a.mp4', lib), ['TX-M01']);
   assert.equal(F.txOfHook('HK-O2-0ab.mp4'), null);            // sans bibliothèque : inconnues (TH13 part en revue)
   assert.equal(F.txOfHook('HK-O9-0a.mp4', lib), null);        // groupe absent de la bibliothèque
-  ['HK-O2-0ab.mp4', 'HK-M1-0a.mp4', 'HK-O3-a0.mp4', 'x/HK-O2-ba'].forEach(n => assert.equal(F.isAvantApres(n), true, n));
+  ['HK-O2-0ab.mp4', 'HK-M1-0a.mp4', 'HK-O3-a0.mp4', 'x/HK-O2-ba', 'HK-O1-0a+O2-ab+O3-a0.mp4'].forEach(n => assert.equal(F.isAvantApres(n), true, n));
   ['HK-O2-1a.mp4', 'HK-O2.mp4', 'HK-O2-0abcd.mp4'].forEach(n => assert.equal(F.isAvantApres(n), false, n));
   assert.equal(F.chocWhy(F.textChoc('TH13'), 'omni', F.txOfHook('HK-O2-0a.mp4', lib)), '');
   assert.match(F.chocWhy(F.textChoc('TH13'), 'omni', F.txOfHook('HK-O3-0a.mp4', lib)), /exige la transformation TX-O02a/);

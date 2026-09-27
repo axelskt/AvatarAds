@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Assemblages AVANT / APRÈS (hooks visuels HK-…, factory_recipes kind 'hook') rendus en LOCAL avec ffmpeg (gratuit).
-// Les suites valides viennent de usine/coherence.js (assemblies : 2 ou 3 clips DISTINCTS d'un même groupe de
-// transformations, jamais deux groupes mélangés). Recette visuelle = celle des HK du 18/09 (composition HyperFrames
+// Les hooks visuels valides viennent de usine/coherence.js (assemblies, 27/09) : 1 à 3 BLOCS (un bloc = 2 clips distincts
+// d'un même original), d'originaux différents du même module ; rendus À LA DEMANDE (--only HK-…). Recette visuelle = celle des HK du 18/09 (composition HyperFrames
 // scratchpad/omni-hook-1, reproduite ici à l'identique) :
 //   · 1080×1920, 30 i/s, 2,8 s par clip (84 images), muet, H.264 High yuv420p BT.709 ;
 //   · plein écran = le clip en cours, object-fit cover, zoom 1,05 → 1 en 0,8 s (power2.out = cubique) à chaque clip ;
@@ -139,7 +139,9 @@ function run(argv, label) {
 async function render(asm, L) {
   const clips = asm.clips, N = clips.length, srcs = [];
   for (const c of clips) srcs.push(await sourceOf(c));
-  const inset = k => (k === 0 ? 1 : k - 1);   // médaillon : clip suivant pendant le 1er, puis le précédent
+  // médaillon (27/09, blocs) : l'AUTRE clip du même bloc (k ^ 1) — jamais un clip d'un autre original ; ancienne suite
+  // de 3 clips d'un même original (sans blocs) : clip suivant pendant le 1er, puis le précédent
+  const inset = k => (asm.blocks ? (k ^ 1) : (k === 0 ? 1 : k - 1));
   const out = join(OUT, asm.id + '.mp4'), parts = clips.map((_, k) => join(TMP, asm.id + '-' + k + '.mkv'));
   const z = `${n2(ZOOM.from - 1)}*pow(max(0,1-on/${ZOOM.frames}),3)`;
   const layer = f => ['-loop', '1', '-framerate', String(FPS), '-t', String(CLIP_S), '-i', f];

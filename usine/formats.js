@@ -148,7 +148,8 @@
   // ['TX-O02a', 'TX-O02b'] ; lu dans la bibliothèque (bricks + CF_COHERENCE chargé), sinon null (inconnues : TH13 part en revue).
   // Ancien nom du 18/09 : « HK-O02a-01 » → ['TX-O02a', 'TX-O01'] ; « HK-M01-02.mp4 » → ['TX-M01', 'TX-M02']. Autre nom → null.
   var RE_HK_OLD = /(?:^|[\\/])HK-([MO])([0-9]{2}[a-z]?)-([0-9]{2}[a-z]?)(?:[-_.]|$)/;
-  var RE_HK_ASM = /(?:^|[\\/])(HK-([MO][0-9]{1,2})-([0a-z]{2,3}))(?:[-_.]|$)/;
+  // 27/09 : hook visuel en BLOCS « HK-O1-0a+O2-ab » (1 à 3 blocs d'originaux différents, usine/coherence.js)
+  var RE_HK_ASM = /(?:^|[\\/])(HK-[MO][0-9]{1,2}-[0a-z]{2,3}(?:\+[MO][0-9]{1,2}-[0a-z]{2}){0,2})(?:[-_.]|$)/;
   function txOfHook(name, bricks) {
     var s = String(name || ''), m = RE_HK_OLD.exec(s);
     if (m) return ['TX-' + m[1] + m[2], 'TX-' + m[1] + m[3]];

@@ -135,12 +135,11 @@
         versions: versions };
     });
   }
-  // Suites valides d'un groupe : 2 clips distincts dans tous les sens ; 3 clips distincts en partant de l'original
-  // (groupe à ≥ 2 versions). k versions → (k+1)·k + k·(k−1) assemblages (1 version : 2 ; 2 versions : 8).
+  // BLOCS (Axel 27/09) : un bloc = une transformation d'UN original, dans un sens : 2 clips distincts du groupe (original →
+  // version, version → original, version → version). k versions → (k+1)·k blocs (1 version : 2 ; 2 versions : 6).
   function groupSequences(G) {
     var keys = ['0'].concat(G.versions.map(function (v) { return v.key; })), out = [];
     keys.forEach(function (x) { keys.forEach(function (y) { if (x !== y) out.push([x, y]); }); });
-    G.versions.forEach(function (x) { G.versions.forEach(function (y) { if (x !== y) out.push(['0', x.key, y.key]); }); });
     return out;
   }
   function makeAssembly(G, seq) {
@@ -149,55 +148,116 @@
     G.versions.forEach(function (v) { byKey[v.key] = v; });
     var clips = seq.map(function (k, i) {
       var c = byKey[k];
-      if (k !== '0') return { key: k, brick_id: c.brick_id, clip: 'after', label: c.label, media: c.media };
-      // l'original est rattaché à la version voisine dans la suite (la suivante, sinon la précédente)
+      if (k !== '0') return { key: k, brick_id: c.brick_id, clip: 'after', label: c.label, media: c.media, group: G.group };
+      // l'original est rattaché à la version voisine dans le bloc (la suivante, sinon la précédente)
       var nb = seq[i + 1] && seq[i + 1] !== '0' ? seq[i + 1] : seq[i - 1];
-      return { key: '0', brick_id: nb && has(byKey, nb) ? byKey[nb].brick_id : c.brick_id, clip: 'before', label: c.label, media: c.media };
+      return { key: '0', brick_id: nb && has(byKey, nb) ? byKey[nb].brick_id : c.brick_id, clip: 'before', label: c.label, media: c.media, group: G.group };
     });
     var label = clips.map(function (c) { return c.label; }).join(' → ') + (G.scene ? ' (' + G.scene + ')' : '');
     return { id: 'HK-' + G.group + '-' + seq.join(''), group: G.group, module: G.module, code: seq.join(''), label: label,
       components: clips.map(function (c, i) { return { slot: LETTERS[i].toUpperCase(), brick_id: c.brick_id, clip: c.clip }; }),
-      clips: clips };
+      clips: clips, blocks: [G.group + '-' + seq.join('')] };
   }
-  // Tous les assemblages valides (fonction pure) : groupes dans l'ordre de leur nom, 2 clips puis 3 clips.
+  // Hook visuel = 1 à 3 blocs d'ORIGINAUX DIFFÉRENTS du même module (Omni avec Omni, Motion Control avec Motion Control ;
+  // garde-fou : jamais deux blocs du même original). ID : HK-<bloc>(+<bloc>)…, ex. HK-O1-0a+O2-ab ; un seul bloc garde
+  // l'ID des assemblages du 26/09 (HK-O2-0b). Le médaillon « avant » d'un clip montre l'autre clip de SON bloc.
+  var MAX_BLOCS = 3;
+  function joinBlocks(parts) {
+    if (parts.length === 1) return parts[0];
+    return { id: 'HK-' + parts.map(function (p) { return p.id.slice(3); }).join('+'), group: parts.map(function (p) { return p.group; }).join('+'),
+      module: parts[0].module, code: parts.map(function (p) { return p.group + '-' + p.code; }).join('+'),
+      label: parts.map(function (p) { return p.label; }).join(' · puis · '),
+      components: [].concat.apply([], parts.map(function (p) { return p.components; })).map(function (c, i) { return { slot: LETTERS[i].toUpperCase(), brick_id: c.brick_id, clip: c.clip }; }),
+      clips: [].concat.apply([], parts.map(function (p) { return p.clips; })), blocks: parts.map(function (p) { return p.blocks[0]; }) };
+  }
+  // Tous les hooks visuels valides (fonction pure) : par module, 1 bloc, puis 2, puis 3 (originaux distincts).
   function assemblies(bricks) {
-    var out = [];
-    txGroups(bricks).forEach(function (G) { groupSequences(G).forEach(function (s) { out.push(makeAssembly(G, s)); }); });
+    var byMod = dict(), mods = [], out = [];
+    txGroups(bricks).forEach(function (G) {
+      if (!has(byMod, G.module)) { byMod[G.module] = []; mods.push(G.module); }
+      byMod[G.module].push({ G: G, blocks: groupSequences(G).map(function (sq) { return makeAssembly(G, sq); }) });
+    });
+    mods.forEach(function (m) {
+      var gs = byMod[m];
+      for (var k = 1; k <= MAX_BLOCS; k++) {
+        (function rec(chain, used) {
+          if (chain.length === k) { out.push(joinBlocks(chain)); return; }
+          gs.forEach(function (g) {
+            if (used[g.G.group]) return;
+            g.blocks.forEach(function (b) { var u = Object.assign(dict(), used); u[g.G.group] = 1; rec(chain.concat([b]), u); });
+          });
+        })([], dict());
+      }
+    });
     return out;
   }
   // Contrôle d'une recette factory_recipes existante : { valid, reasons, group, module, code, id (ID canonique), label, legacy }.
   // Format actuel : components [{slot, brick_id, clip:'before'|'after'}]. Ancien format (sans clip, 18/09) : chaque
   // composant = une transformation entière (avant → après) ; deux transformations = deux groupes mélangés ou l'original répété.
   function assemblyCheck(recipe, bricks) {
-    var comps = recipe && Array.isArray(recipe.components) ? recipe.components : [], reasons = [], byTx = dict(), groups = [], seq = [];
+    var comps = recipe && Array.isArray(recipe.components) ? recipe.components : [], reasons = [], byTx = dict(), groups = [], parts = [];
     (bricks || []).forEach(function (b) { if (b && b.kind === 'transformation') byTx[b.id] = b; });
     var legacy = comps.length > 0 && comps.every(function (c) { return c && c.clip == null; });
     var G = dict();
     txGroups(bricks).forEach(function (g) { G[g.group] = g; });
-    comps.forEach(function (c) {
+    var keyOf = function (c) {
       var id = c && c.brick_id, b = id && has(byTx, id) ? byTx[id] : null;
-      if (!b) { reasons.push((id || '?') + ' n’est pas une transformation de la bibliothèque'); return; }
-      if (!ready(b)) { reasons.push(id + ' n’est pas prête (' + statusFr(b.status) + ')'); return; }
+      if (!b) { reasons.push((id || '?') + ' n’est pas une transformation de la bibliothèque'); return null; }
+      if (!ready(b)) { reasons.push(id + ' n’est pas prête (' + statusFr(b.status) + ')'); return null; }
       var g = str(meta(b).group) || String(b.id), gg = has(G, g) ? G[g] : null;
-      if (groups.indexOf(g) < 0) groups.push(g);
       var v = gg ? gg.versions.filter(function (x) { return x.brick_id === id; })[0] : null;
-      if (legacy) { seq.push('0', v ? v.key : '?'); return; }
-      if (c.clip === 'before') seq.push('0');
-      else if (c.clip === 'after') seq.push(v ? v.key : '?');
-      else reasons.push('clip « ' + String(c.clip).slice(0, 20) + ' » inconnu pour ' + id + ' (before ou after)');
-    });
-    if (comps.length < (legacy ? 1 : 2)) reasons.push('au moins 2 clips');
-    if (groups.length > 1) reasons.push('mélange les groupes ' + groups.join(' et ') + ' (un assemblage = un seul original filmé)');
+      if (c.clip === 'before') return { g: g, k: '0' };
+      if (c.clip === 'after') return { g: g, k: v ? v.key : '?' };
+      reasons.push('clip « ' + String(c.clip).slice(0, 20) + ' » inconnu pour ' + id + ' (before ou after)'); return null;
+    };
+    if (legacy) reasons.push('ancien format (transformations entières) : mélange des originaux');
+    else if (comps.length < 2 || comps.length % 2) reasons.push('un bloc = 2 clips (avant → après d’un même original)');
     else {
-      var dup = seq.filter(function (k, i) { return seq.indexOf(k) !== i; });
-      if (dup.length) reasons.push('clip répété (' + (dup[0] === '0' ? 'l’original' : 'la version ' + dup[0]) + ')');
-      if (seq.length > 3) reasons.push('au plus 3 clips');
-      else if (seq.length === 3 && seq[0] !== '0') reasons.push('une suite de 3 clips part de l’original');
+      for (var i = 0; i < comps.length; i += 2) {
+        var x = keyOf(comps[i]), y = keyOf(comps[i + 1]);
+        if (!x || !y) continue;
+        if (x.g !== y.g) { reasons.push('bloc ' + (i / 2 + 1) + ' : mélange ' + x.g + ' et ' + y.g + ' (un bloc = un seul original filmé)'); continue; }
+        if (x.k === y.k) { reasons.push('bloc ' + (i / 2 + 1) + ' : même clip deux fois'); continue; }
+        if (groups.indexOf(x.g) >= 0) reasons.push('deux blocs du même original (' + x.g + ')');
+        groups.push(x.g); parts.push({ g: x.g, seq: [x.k, y.k] });
+      }
+      if (parts.length > MAX_BLOCS) reasons.push('au plus ' + MAX_BLOCS + ' blocs');
+      var mods = parts.map(function (p) { return has(G, p.g) ? G[p.g].module : '?'; });
+      if (mods.some(function (m) { return m !== mods[0]; })) reasons.push('mélange les modules ' + mods.join(' et ') + ' (Omni avec Omni, Motion Control avec Motion Control)');
     }
-    var ok = !reasons.length && groups.length === 1 && has(G, groups[0]);
-    var asm = ok ? makeAssembly(G[groups[0]], seq) : null;
-    return { valid: ok, reasons: reasons, legacy: legacy, group: groups.length === 1 ? groups[0] : null, module: asm ? asm.module : null,
-      code: asm ? asm.code : null, id: asm ? asm.id : null, label: asm ? asm.label : null };
+    var ok = !reasons.length && parts.length > 0 && parts.every(function (p) { return has(G, p.g); });
+    var asm = ok ? joinBlocks(parts.map(function (p) { return makeAssembly(G[p.g], p.seq); })) : null;
+    return { valid: ok, reasons: reasons, legacy: legacy, group: asm ? asm.group : groups.length === 1 ? groups[0] : null, module: asm ? asm.module : null,
+      code: asm ? asm.code : null, id: asm ? asm.id : null, label: asm ? asm.label : null, blocks: asm ? asm.blocks : null };
+  }
+
+  // PALIERS (Axel 27/09, avant / après seulement pour l'instant) : un bloc (une transformation) apparaît dans 5 vidéos au
+  // plus ; si ces vidéos postées cumulent plus de 2 500 vues → 10 ; plus de 10 000 vues → 15 (≈ 1 000 vues / vidéo).
+  var PALIERS = [{ max: 5, vues: 0 }, { max: 10, vues: 2500 }, { max: 15, vues: 10000 }];
+  function palierOf(vues) {
+    var p = PALIERS[0], n = 1;
+    PALIERS.forEach(function (x, i) { if ((Number(vues) || 0) > x.vues && i > 0) { p = x; n = i + 1; } });
+    return { palier: n, max: p.max, next: PALIERS[n] || null };
+  }
+  function blocksOfId(asmId) {
+    var s = String(asmId || '');
+    if (!/^HK-/.test(s)) return [];
+    return s.slice(3).split('+').filter(Boolean);
+  }
+  // usage[bloc] = vidéos (non refusées) dont l'assemblage contient ce bloc ; vues[bloc] = vues cumulées de ces vidéos postées
+  function blockUsage(combos) {
+    var u = dict();
+    (combos || []).forEach(function (c) { if (c && c.assemblage) blocksOfId(c.assemblage).forEach(function (b) { u[b] = (u[b] || 0) + 1; }); });
+    return u;
+  }
+  function palierCheck(combo, existing, vuesByBlock) {
+    var bl = blocksOfId(combo && combo.assemblage), u = blockUsage(existing), reasons = [], detail = [];
+    bl.forEach(function (b) {
+      var p = palierOf(vuesByBlock && vuesByBlock[b]), n = u[b] || 0;
+      detail.push({ block: b, used: n, max: p.max, palier: p.palier });
+      if (n >= p.max) reasons.push('bloc ' + b + ' déjà dans ' + n + ' vidéos (palier ' + p.palier + ' : ' + p.max + ' max)');
+    });
+    return { ok: !reasons.length, reasons: reasons, blocks: detail };
   }
 
   // ── paires hook × démo (QC) ──
@@ -339,9 +399,11 @@
     });
     // ── Avant / après ──
     var asm = assemblies(bricks), gs = [], aaSet = dict(), aaH = dict(), aaS = 0, aaL = 0, aaP = 0;
-    txGroups(bricks).forEach(function (G) {
-      var ids = asm.filter(function (a) { return a.group === G.group; }).map(function (a) { return a.id; }), n = ids.length;
-      var hs = L.aaHooks.filter(function (h) { return hasAudio(h) && hookFitsModule(h, G.module); }), s = n * hs.length, l = 0;
+    var mods = [];
+    asm.forEach(function (a) { if (mods.indexOf(a.module) < 0) mods.push(a.module); });
+    mods.forEach(function (mod) {
+      var ids = asm.filter(function (a) { return a.module === mod; }).map(function (a) { return a.id; }), n = ids.length;
+      var hs = L.aaHooks.filter(function (h) { return hasAudio(h) && hookFitsModule(h, mod); }), s = n * hs.length, l = 0;
       hs.forEach(function (h) {
         var ls = hk[h.id].filter(function (x) { return hasAudio(x); });
         l += n * ls.length * A; aaH[h.id] = 1;
@@ -352,7 +414,7 @@
         });
       });
       aaS += s; aaL += l;
-      gs.push({ group: G.group, module: G.module, assemblies: n, hooks: hs.map(function (h) { return h.id; }), short: s, long: l });
+      gs.push({ group: mod, module: mod, assemblies: n, hooks: hs.map(function (h) { return h.id; }), short: s, long: l });
     });
     modes.aa = { voice: 'aa', label: MODE_LABEL.aa, hooks: Object.keys(aaH).length, assemblies: asm.length, groups: gs,
       short: aaS, long: aaL, total: aaS + aaL, done: 0, remaining: 0 };
@@ -524,6 +586,6 @@
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk,
-    videoKey: videoKey, comboKey: comboKey, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
+    videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
     hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });
