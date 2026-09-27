@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Assemblages AVANT / APRÈS (hooks visuels HK-…, factory_recipes kind 'hook') rendus en LOCAL avec ffmpeg (gratuit).
-// Les hooks visuels valides viennent de usine/coherence.js (assemblies, 27/09) : 1 à 3 BLOCS (un bloc = 2 clips distincts
-// d'un même original), d'originaux différents du même module ; rendus À LA DEMANDE (--only HK-…). Recette visuelle = celle des HK du 18/09 (composition HyperFrames
+// Les hooks visuels valides viennent de usine/coherence.js (assemblies, 27/09) : 1 à 3 BLOCS d'originaux différents du
+// même module ; un bloc = UN plan (2,8 s) : une version en plein écran, l'original ou une autre version en médaillon —
+// l'original n'est JAMAIS en plein écran. Rendus À LA DEMANDE (--only HK-…). Recette visuelle = celle des HK du 18/09 (composition HyperFrames
 // scratchpad/omni-hook-1, reproduite ici à l'identique) :
 //   · 1080×1920, 30 i/s, 2,8 s par clip (84 images), muet, H.264 High yuv420p BT.709 ;
 //   · plein écran = le clip en cours, object-fit cover, zoom 1,05 → 1 en 0,8 s (power2.out = cubique) à chaque clip ;
@@ -137,16 +138,18 @@ function run(argv, label) {
 // Un clip (84 images) : plein écran zoomé + ombre + médaillon arrondi + bord → intermédiaire sans perte ; puis les clips
 // sont mis bout à bout avec le flash et encodés une seule fois (un clip à la fois : pas de file d'images en mémoire).
 async function render(asm, L) {
-  const clips = asm.clips, N = clips.length, srcs = [];
+  // blocs (27/09) : UN plan par bloc — plein écran = 2e clip du bloc (une version), médaillon = 1er (original ou autre version)
+  const blocky = !!asm.blocks, N = blocky ? asm.blocks.length : asm.clips.length, srcs = [];
+  const clips = blocky ? asm.blocks.map((_, i) => asm.clips[2 * i + 1]) : asm.clips;
+  const med = blocky ? asm.blocks.map((_, i) => asm.clips[2 * i]) : null;
   for (const c of clips) srcs.push(await sourceOf(c));
-  // médaillon (27/09, blocs) : l'AUTRE clip du même bloc (k ^ 1) — jamais un clip d'un autre original ; ancienne suite
-  // de 3 clips d'un même original (sans blocs) : clip suivant pendant le 1er, puis le précédent
-  const inset = k => (asm.blocks ? (k ^ 1) : (k === 0 ? 1 : k - 1));
+  const msrcs = []; if (blocky) for (const c of med) msrcs.push(await sourceOf(c));
+  const inset = k => (k === 0 ? 1 : k - 1);   // ancien format (sans blocs) : clip suivant pendant le 1er, puis le précédent
   const out = join(OUT, asm.id + '.mp4'), parts = clips.map((_, k) => join(TMP, asm.id + '-' + k + '.mkv'));
   const z = `${n2(ZOOM.from - 1)}*pow(max(0,1-on/${ZOOM.frames}),3)`;
   const layer = f => ['-loop', '1', '-framerate', String(FPS), '-t', String(CLIP_S), '-i', f];
   const seg = k => {
-    const m = srcs[k], s = srcs[inset(k)];
+    const m = srcs[k], s = blocky ? msrcs[k] : srcs[inset(k)];
     const g = [`${norm(3, m, 2 * W, 2 * H)},zoompan=z='1+${z}':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':d=1:s=${W}x${H}:fps=${FPS}[m]`,
       `${norm(4, s, W, H)},scale=${INSET.w}:${INSET.h}:flags=lanczos,format=yuva420p[ia]`,
       `[1:v]format=gray,trim=end_frame=${CLIP_F},setpts=PTS-STARTPTS[mk]`, `[ia][mk]alphamerge[i]`,
@@ -163,7 +166,7 @@ async function render(asm, L) {
   // U' = U·(1−O) + 128·O (saturation 1−O) — une table par image, pas de calcul par pixel
   const fin = [...parts.flatMap(p => ['-i', p]), '-filter_complex',
     `${parts.map((_, k) => `[${k}:v]`).join('')}concat=n=${N}:v=1:a=0,setpts=N/${FPS}/TB,` +
-    `eq=eval=frame:contrast='1-(${O})':brightness='${n2(107 / 256)}*(${O})':saturation='1-(${O})':enable='${en}',` +
+    (bounds.length ? `eq=eval=frame:contrast='1-(${O})':brightness='${n2(107 / 256)}*(${O})':saturation='1-(${O})':enable='${en}',` : '') +   // 1 seul plan : pas de flash
     `format=yuv420p,setparams=range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709[out]`,
     '-map', '[out]', '-an', '-r', String(FPS), '-frames:v', String(CLIP_F * N),
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
@@ -195,7 +198,7 @@ async function worker() {
     try {
       const f = opt.check ? join(OUT, a.id + '.mp4') : await render(a, L);   // --check : contrôle les rendus existants
       if (!f) continue;
-      const c = check(f, a.clips.length);
+      const c = check(f, a.blocks ? a.blocks.length : a.clips.length);
       report.push({ id: a.id, label: a.label, group: a.group, module: a.module, components: a.components, clips: a.clips.map(x => ({ key: x.key, brick_id: x.brick_id, clip: x.clip, label: x.label })), ...c });
       console.log((c.ok ? 'OK   ' : 'FAIL ') + a.id + ' · ' + a.label + ' · ' + c.frames + ' images · ' + c.duration.toFixed(2) + ' s · Y0 ' + c.firstFrameY.toFixed(1) + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
       if (!c.ok) failed += 1;

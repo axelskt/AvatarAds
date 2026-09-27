@@ -96,7 +96,8 @@ test('txOfHook / isAvantApres : hooks visuels en blocs HK-<bloc>(+<bloc>) lus da
   assert.deepEqual(F.txOfHook('/x/assemblages/HK-O2-0b+O3-0a.mp4', lib), ['TX-O02b', 'TX-O03']);   // 2 blocs d'originaux différents
   assert.deepEqual(F.txOfHook('HK-O2-ba.mp4', lib), ['TX-O02b', 'TX-O02a']);
   assert.deepEqual(F.txOfHook('HK-O2-0a.mp4', lib), ['TX-O02a']);
-  assert.deepEqual(F.txOfHook('HK-O3-a0.mp4', lib), ['TX-O03']);
+  assert.deepEqual(F.txOfHook('HK-O3-0a.mp4', lib), ['TX-O03']);
+  assert.equal(F.txOfHook('HK-O3-a0.mp4', lib), null);   // 27/09 : l'original jamais en plein écran
   assert.deepEqual(F.txOfHook('HK-M1-0a.mp4', lib), ['TX-M01']);
   assert.equal(F.txOfHook('HK-O2-0ab.mp4'), null);            // sans bibliothèque : inconnues (TH13 part en revue)
   assert.equal(F.txOfHook('HK-O9-0a.mp4', lib), null);        // groupe absent de la bibliothèque

@@ -75,17 +75,17 @@ test('matrice : génériques ❌ appliqués (L15 absent après H25, L19 absent a
 });
 
 // ── capacité ──
-test('capacité (vraies données, règles du 26-27/09) : 2 avatars × 36 hooks lipsync = 72 court, 2 × 302 paires = 604 long, 676 par mode ; + 7 320 avant / après (288 hooks visuels en blocs) = 8 672', () => {
+test('capacité (vraies données, règles du 26-27/09) : 2 avatars × 36 hooks lipsync = 72 court, 2 × 302 paires = 604 long, 676 par mode ; + 1 560 avant / après (63 hooks visuels en blocs) = 2 912', () => {
   const c = C.capacity(library(), [], MX);
   assert.equal(c.avatars, 2); assert.equal(c.hooks, 41); assert.equal(c.lipsyncHooks, 36); assert.equal(c.liaisons, 12); assert.equal(c.demos, 12); assert.equal(c.ctas, 15); assert.equal(c.pairs, 324);
   for (const v of ['axel', 'omni']) assert.deepEqual([c.modes[v].hooks, c.modes[v].pairs, c.modes[v].short, c.modes[v].long, c.modes[v].total], [36, 302, 72, 604, 676], v);
-  assert.deepEqual([c.modes.aa.short, c.modes.aa.long, c.modes.aa.total], [732, 6588, 7320]);
-  assert.equal(c.lipsyncTotal, 1352); assert.equal(c.total, 8672); assert.equal(c.remaining, 8672); assert.equal(c.done, 0); assert.deepEqual(c.notInMatrix, []);
+  assert.deepEqual([c.modes.aa.short, c.modes.aa.long, c.modes.aa.total], [156, 1404, 1560]);
+  assert.equal(c.lipsyncTotal, 1352); assert.equal(c.total, 2912); assert.equal(c.remaining, 2912); assert.equal(c.done, 0); assert.deepEqual(c.notInMatrix, []);
   assert.deepEqual(c.voices, ['axel', 'omni']); assert.deepEqual(c.modeKeys, ['axel', 'omni', 'aa', 'muet']); assert.equal(c.modes.muet.total, 0); assert.equal(c.avantApres, c.modes.aa);
 });
-test('capacité : démos et CTA ne font pas de nouvelle vidéo (+1 démo, +1 CTA → 8 672 inchangé)', () => {
+test('capacité : démos et CTA ne font pas de nouvelle vidéo (+1 démo, +1 CTA → 2 912 inchangé)', () => {
   const c = C.capacity(library({ edit: r => r.push({ id: 'C-NEW', kind: 'contenu', subject: 'omni', status: 'ready', meta: {} }, { id: 'CTA-NEW', kind: 'cta', status: 'ready', meta: {} }) }), [], MX);
-  assert.equal(c.total, 8672); assert.equal(c.demos, 13);
+  assert.equal(c.total, 2912); assert.equal(c.demos, 13);
 });
 test('capacité : briques retirées exclues (C-CLAUDE-01, C-IMGIA-05) ; hook lipsync retiré → −2 court, −2 × ses liaisons', () => {
   const rows = library({ edit: r => { r.find(b => b.id === 'H32').status = 'retired'; } });
@@ -97,7 +97,7 @@ test('mode Audio d’Axel : un hook sans audio sort du mode Axel seulement ; une
   const c = C.capacity(library({ edit: r => { delete r.find(b => b.id === 'H12').meta.media; r.find(b => b.id === 'L12').meta.media = SB + 'liaisons/L12.txt'; } }), [], MX);
   // H12 : 8 liaisons ; L12 : 6 hooks lipsync (dont H12, déjà compté), aucun hook avant / après
   assert.equal(c.modes.axel.hooks, 35); assert.equal(c.modes.axel.pairs, 302 - 8 - 5);
-  assert.equal(c.modes.omni.hooks, 36); assert.equal(c.modes.omni.pairs, 302); assert.equal(c.modes.aa.total, 7320);
+  assert.equal(c.modes.omni.hooks, 36); assert.equal(c.modes.omni.pairs, 302); assert.equal(c.modes.aa.total, 1560);
 });
 test('mode Voix native Omni : hook = meta.script sinon label ; sans texte → hors mode Omni ; brique normalisée (b.audio) reconnue', () => {
   const c = C.capacity(library({ edit: r => { const h = r.find(b => b.id === 'H13'); delete h.meta.script; const k = r.find(b => b.id === 'H14'); delete k.meta.script; k.label = '  '; } }), [], MX);
@@ -129,7 +129,7 @@ test('clés déjà produites : voix|avatar|hook|liaison, voix « axel » par dé
   // règle du 26/09 : 'omni|A2|H63|' (hook avant / après en lipsync) n'est plus une vidéo possible → hors des possibles
   const done = ['axel|A1|H12|L16', 'axel|A1|H12|L16', 'omni|A2|H12|', 'axel|A1|H12|', 'axel|A1|H12|C-SADS-02'.replace('C-SADS-02', ''), 'omni|A2|H63|'];
   const c = C.capacity(rows, done, MX);
-  assert.equal(c.done, 3); assert.equal(c.modes.axel.done, 2); assert.equal(c.modes.omni.done, 1); assert.equal(c.remaining, 8669); assert.equal(c.outside, 1);
+  assert.equal(c.done, 3); assert.equal(c.modes.axel.done, 2); assert.equal(c.modes.omni.done, 1); assert.equal(c.remaining, 2909); assert.equal(c.outside, 1);
 });
 test('clés hors des possibles non décomptées : avatar inconnu, liaison non validée (L12 après H25), voix inconnue, hook retiré', () => {
   const rows = library({ edit: r => { r.find(b => b.id === 'H32').status = 'retired'; } });
@@ -138,10 +138,10 @@ test('clés hors des possibles non décomptées : avatar inconnu, liaison non va
 });
 
 // ── briques qui manquent ──
-test('impact : +1 avatar 3 970 (676 lipsync + 3 294 longs avant / après), +1 liaison 650 (2 × 2 × 302 / 12 + 6 588 / 12), +1 hook 38, variété 0', () => {
+test('impact : +1 avatar 1 378 (676 lipsync + 702 longs avant / après), +1 liaison 218 (2 × 2 × 302 / 12 + 1 404 / 12), +1 hook 38, variété 0', () => {
   const I = C.impact(C.capacity(library(), [], MX));
-  assert.deepEqual([I.avatar, I.liaison, I.hook, I.variety], [3970, 650, 38, 0]);
-  assert.deepEqual(I.aa, { avatar: 3294, liaison: 549 });
+  assert.deepEqual([I.avatar, I.liaison, I.hook, I.variety], [1378, 218, 38, 0]);
+  assert.deepEqual(I.aa, { avatar: 702, liaison: 117 });
   assert.equal(I.avgHooksPerLiaison, 27);
 });
 
@@ -242,13 +242,16 @@ test('avant / après : H19, H53, H57, H63, H74 (H64 alias) sortent des 2 modes l
   assert.deepEqual(c.overlayRequired, { count: 3, hooks: ['H14', 'H23', 'H60'], kinds: { fille: 3 }, videos: { axel: 62, omni: 62 } });   // 2 × (3 + 8 + 9 + 11)
   assert.ok(C.isAvantApres({ meta: { lipsync: false } }) && C.isAvantApres({ meta: { hook_mode: 'avant-apres' } }) && !C.isAvantApres({ meta: { lipsync: true } }));
 });
-test('blocs (27/09) : un bloc = 2 clips distincts d’un même original ; hook visuel = 1 à 3 blocs d’originaux différents du même module → 288 (Omni 210, Motion Control 78)', () => {
+test('blocs (27/09) : un bloc = une version en plein écran + l’original ou une autre version en médaillon (jamais l’original en plein écran) ; hook visuel = 1 à 3 blocs d’originaux différents du même module → 63 (Omni 48, Motion Control 15)', () => {
   const rows = library(), A = C.assemblies(rows);
-  assert.equal(A.length, 288);
-  const per = {}; A.forEach(a => { per[a.module] = (per[a.module] || 0) + 1; }); assert.deepEqual(per, { 'motion-control': 78, omni: 210 });
+  assert.equal(A.length, 63);
+  const per = {}; A.forEach(a => { per[a.module] = (per[a.module] || 0) + 1; }); assert.deepEqual(per, { 'motion-control': 15, omni: 48 });
+  assert.deepEqual(A.filter(a => a.blocks.length === 1).map(a => a.id).sort(), ['HK-M1-0a', 'HK-M2-0a', 'HK-M4-0a', 'HK-O1-0a', 'HK-O2-0a', 'HK-O2-0b', 'HK-O2-ab', 'HK-O2-ba', 'HK-O3-0a']);
+  for (const a of A) for (let i = 1; i < a.clips.length; i += 2) assert.equal(a.clips[i].clip, 'after', a.id + ' : l’original jamais en plein écran');
   // 1 bloc : IDs du 26/09 inchangés (2 clips)
-  const x = A.find(a => a.id === 'HK-O2-b0');
-  assert.deepEqual(x.components, [{ slot: 'A', brick_id: 'TX-O02b', clip: 'after' }, { slot: 'B', brick_id: 'TX-O02b', clip: 'before' }]);
+  const x = A.find(a => a.id === 'HK-O2-0b');
+  assert.deepEqual(x.components, [{ slot: 'A', brick_id: 'TX-O02b', clip: 'before' }, { slot: 'B', brick_id: 'TX-O02b', clip: 'after' }]);
+  assert.ok(!A.some(a => a.id === 'HK-O2-b0' || a.id === 'HK-O1-a0'), 'jamais l’original en plein écran');
   assert.equal(A.find(a => a.id === 'HK-O2-ab').label, 'Porsche 911 GT3 → Bugatti Chiron');
   assert.equal(A.find(a => a.id === 'HK-M2-0a').label, 'original homme → personnage femme (Spider-Man)');
   // plusieurs blocs : Clio → Bugatti puis bracelet → Patek
@@ -270,7 +273,7 @@ test('blocs (27/09) : un bloc = 2 clips distincts d’un même original ; hook v
   assert.equal(C.assemblyCheck({ components: A[A.length - 1].components }, rows).id, A[A.length - 1].id);
   assert.deepEqual(C.assemblies(library()).map(a => a.id), A.map(a => a.id));   // fonction pure
   const noB = C.assemblies(library({ edit: r => { r.find(b => b.id === 'TX-O02b').status = 'retired'; } }));
-  assert.equal(noB.length, 156);
+  assert.equal(noB.length, 30);
 });
 test('assemblyCheck (blocs) : anciennes recettes du 18/09 et suites de 3 clips d’un même original invalides ; cas invalides expliqués', () => {
   const rows = library();
@@ -280,6 +283,7 @@ test('assemblyCheck (blocs) : anciennes recettes du 18/09 et suites de 3 clips d
   }
   const bad = comps => C.assemblyCheck({ components: comps.map(([b, c], i) => ({ slot: 'ABCDEFG'[i], brick_id: b, clip: c })) }, rows).reasons;
   assert.deepEqual(bad([['TX-O03', 'after'], ['TX-O01', 'after']]), ['bloc 1 : mélange O3 et O1 (un bloc = un seul original filmé)']);
+  assert.deepEqual(bad([['TX-O01', 'after'], ['TX-O01', 'before']]), ['bloc 1 : l’original n’est jamais en plein écran (toujours en médaillon)']);
   assert.deepEqual(bad([['TX-O02a', 'before'], ['TX-O02b', 'before']]), ['bloc 1 : même clip deux fois']);
   assert.deepEqual(bad([['TX-O02a', 'before'], ['TX-O02a', 'after'], ['TX-O02b', 'after']]), ['un bloc = 2 clips (avant → après d’un même original)']);
   assert.deepEqual(bad([['TX-O02a', 'before'], ['TX-O02a', 'after'], ['TX-O02a', 'after'], ['TX-O02b', 'after']]), ['deux blocs du même original (O2)']);
@@ -299,13 +303,13 @@ test('paliers (27/09) : 5 vidéos par bloc au départ ; > 2 500 vues → 10 ; > 
 test('capacité avant / après (blocs) : par module, court = hooks visuels × hooks avant / après ayant un audio ; long = hooks visuels × liaisons compatibles × avatars', () => {
   const c = C.capacity(library(), [], MX), g = {};
   c.modes.aa.groups.forEach(x => { g[x.module] = [x.assemblies, x.hooks.join(','), x.short, x.long]; });
-  assert.deepEqual(g, { 'motion-control': [78, 'H19,H53,H57,H63', 312, 2808], omni: [210, 'H19,H74', 420, 3780] });
-  // motion-control : 78 × (5 + 4 + 3 + 6) liaisons × 2 avatars = 2 808 ; omni : 210 × (5 + 4) × 2 = 3 780
-  assert.deepEqual([c.modes.aa.hooks, c.modes.aa.assemblies, c.modes.aa.short, c.modes.aa.long], [5, 288, 732, 6588]);
+  assert.deepEqual(g, { 'motion-control': [15, 'H19,H53,H57,H63', 60, 540], omni: [48, 'H19,H74', 96, 864] });
+  // motion-control : 15 × (5 + 4 + 3 + 6) liaisons × 2 avatars = 540 ; omni : 48 × (5 + 4) × 2 = 864
+  assert.deepEqual([c.modes.aa.hooks, c.modes.aa.assemblies, c.modes.aa.short, c.modes.aa.long], [5, 63, 156, 1404]);
   const noAudio = C.capacity(library({ edit: r => { delete r.find(b => b.id === 'H74').meta.media; } }), [], MX);
-  assert.deepEqual([noAudio.modes.aa.short, noAudio.modes.aa.long], [522, 4908]);
+  assert.deepEqual([noAudio.modes.aa.short, noAudio.modes.aa.long], [108, 1020]);
   const one = C.capacity(library({ edit: r => { r.find(b => b.id === 'A2').status = 'retired'; } }), [], MX);
-  assert.deepEqual([one.modes.aa.short, one.modes.aa.long], [732, 3294]);   // le court avant / après n'a pas d'avatar
+  assert.deepEqual([one.modes.aa.short, one.modes.aa.long], [156, 702]);   // le court avant / après n'a pas d'avatar
 });
 test('clés avant / après : aa|avatar|hook|liaison|assemblage (avatar vide en court) ; anciennes clés inchangées ; hors des possibles non décomptées', () => {
   const rows = library(), B = byIdOf(rows);
@@ -317,11 +321,11 @@ test('clés avant / après : aa|avatar|hook|liaison|assemblage (avatar vide en c
   assert.equal(C.comboKey({ hook: 'H74', assemblage: 'HK-O1-0a' }, B), 'aa||H74||HK-O1-0a');   // court : avatar facultatif
   assert.equal(C.comboKey({ voice: 'omni', hook: 'H74', assemblage: 'HK-O1-0a' }, B), 'omni||H74||HK-O1-0a');
   assert.equal(C.comboKey({ avatar: 'A1', hook: 'H12' }, B), 'axel|A1|H12|'); assert.equal(C.comboKey({ hook: 'H12' }, B), null);
-  const ok = ['aa||H74||HK-O2-0b+O3-0a', 'aa||H74||HK-O2-0b+O3-0a', 'aa|A1|H74|L16|HK-O2-0b+O3-0a', 'aa|A2|H63|L48|HK-M4-a0', 'axel|A1|H12|'];
+  const ok = ['aa||H74||HK-O2-0b+O3-0a', 'aa||H74||HK-O2-0b+O3-0a', 'aa|A1|H74|L16|HK-O2-0b+O3-0a', 'aa|A2|H63|L48|HK-M4-0a', 'axel|A1|H12|'];
   const out = ['aa||H53||HK-O2-0b+O3-0a', 'aa|A1|H74||HK-O2-0b+O3-0a', 'aa||H74|L16|HK-O2-0b+O3-0a', 'aa|A1|H74|L12|HK-O2-0b+O3-0a', 'aa||H74||HK-O01-02a', 'omni||H74||HK-O1-0a', 'aa||H12||HK-O1-0a', 'aa|A3|H74|L16|HK-O1-0a'];
   const c = C.capacity(rows, ok.concat(out), MX);
-  assert.equal(c.modes.aa.done, 3); assert.equal(c.modes.axel.done, 1); assert.equal(c.done, 4); assert.equal(c.outside, out.length); assert.equal(c.remaining, 8672 - 4);
-  assert.equal(c.modes.aa.remaining, 7320 - 3);
+  assert.equal(c.modes.aa.done, 3); assert.equal(c.modes.axel.done, 1); assert.equal(c.done, 4); assert.equal(c.outside, out.length); assert.equal(c.remaining, 2912 - 4);
+  assert.equal(c.modes.aa.remaining, 1560 - 3);
 });
 test('comboCheck incrustation : H14 / H23 / H60 en lipsync → toujours revue (image d’avatar fille à incruster) ; autres hooks inchangés', () => {
   const rows = library(), B = byIdOf(rows);

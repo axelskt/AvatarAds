@@ -135,11 +135,12 @@
         versions: versions };
     });
   }
-  // BLOCS (Axel 27/09) : un bloc = une transformation d'UN original, dans un sens : 2 clips distincts du groupe (original →
-  // version, version → original, version → version). k versions → (k+1)·k blocs (1 version : 2 ; 2 versions : 6).
+  // BLOCS (Axel 27/09) : un bloc = UN plan d'un même original : une VERSION en plein écran + en médaillon (haut-droite)
+  // l'original ou une autre version. L'ORIGINAL N'EST JAMAIS EN PLEIN ÉCRAN. Code [médaillon, plein écran] : « 0b » =
+  // Bugatti avec la Clio en médaillon, « ab » = Bugatti avec la Porsche en médaillon. k versions → k² blocs.
   function groupSequences(G) {
-    var keys = ['0'].concat(G.versions.map(function (v) { return v.key; })), out = [];
-    keys.forEach(function (x) { keys.forEach(function (y) { if (x !== y) out.push([x, y]); }); });
+    var vs = G.versions.map(function (v) { return v.key; }), out = [];
+    vs.forEach(function (f) { ['0'].concat(vs).forEach(function (m) { if (m !== f) out.push([m, f]); }); });
     return out;
   }
   function makeAssembly(G, seq) {
@@ -218,6 +219,7 @@
         if (!x || !y) continue;
         if (x.g !== y.g) { reasons.push('bloc ' + (i / 2 + 1) + ' : mélange ' + x.g + ' et ' + y.g + ' (un bloc = un seul original filmé)'); continue; }
         if (x.k === y.k) { reasons.push('bloc ' + (i / 2 + 1) + ' : même clip deux fois'); continue; }
+        if (y.k === '0') { reasons.push('bloc ' + (i / 2 + 1) + ' : l’original n’est jamais en plein écran (toujours en médaillon)'); continue; }
         if (groups.indexOf(x.g) >= 0) reasons.push('deux blocs du même original (' + x.g + ')');
         groups.push(x.g); parts.push({ g: x.g, seq: [x.k, y.k] });
       }
