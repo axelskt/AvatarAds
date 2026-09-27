@@ -3897,9 +3897,14 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
         <!-- ③b-bis NOMBRE (Axel 27/09) : 1 à 3 vidéos d'un coup, selon les images importées — sous Qualité ; masqué en mode Seedance -->
         <div class="exp-section" id="expNombreSection" style="margin-bottom:0">
-          <div class="exp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Nombre</div>
-          <div id="expCountRow" class="row" style="gap:8px"></div>
-          <div id="expCountHint" class="mono" style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5"></div>
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div class="row gap8" style="align-items:center">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M7 4l4 0M21 8v10a2 2 0 01-2 2H9"/></svg>
+              <span class="label" style="margin:0">Nombre</span>
+            </div>
+            <span id="expCountCost" class="mono faint" style="font-size:11px"></span>
+          </div>
+          <div id="expCountRow" class="seg" style="width:100%"></div>
         </div>
 
         <!-- ③c VOIX -->
@@ -5872,7 +5877,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-27-2053'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-27-2059'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -30538,14 +30543,19 @@ function _expRenderCount(){
   const row=document.getElementById('expCountRow');
   if(row) row.innerHTML=opts.map(v=>{
     const on=v===k, off=v>max;
-    return `<div ${off?'':`onclick="_expPickCount(${v})"`} class="exp-card${on?' on':''}" title="${off?'Importe '+v+' images pour créer '+v+' vidéos':''}" style="flex:1;padding:11px 8px;text-align:center;${off?'opacity:.4;cursor:default;':''}">
-      <div style="font-size:14px;font-weight:700;color:var(--text)">${v}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${v>1?'vidéos':'vidéo'}</div></div>`;
+    return '<button class="'+(on?'on':'')+'" style="flex:1;'+(off?'opacity:.35;cursor:default;':'')+'" '+(off?'disabled title="Importe '+v+' images pour créer '+v+' vidéos"':'onclick="_expPickCount('+v+')"')+'>'+v+'</button>';
   }).join('');
-  const h=document.getElementById('expCountHint');
-  if(h) h.textContent = nb<2 ? 'Importe 2 ou 3 images pour créer plusieurs vidéos d’un coup.'
-    : k===1 ? nb+' images combinées dans 1 vidéo.'
-    : (k===nb ? '1 vidéo par image.' : 'Images 1 à '+k+' : une vidéo chacune · image'+(nb-k>1?'s ':' ')+(k+1)+(nb-k>1?' à '+nb:'')+' ajoutée'+(nb-k>1?'s':'')+' dans chaque vidéo (ex. le produit) — mets les avatars en premier.')
-      + ' Un texte différent par vidéo : écris « image 1 … image 2 … » dans le prompt.';
+  // coût total du lot à droite, comme « N créd. » d'Images IA
+  const cc=document.getElementById('expCountCost');
+  if(cc){ const _txt=document.getElementById('expPrompt')?.value||''; let n=0; for(let i=1;i<=k;i++) n+=_expCostFor(_expDurFor(k>1 ? _expPromptFor(_txt, i) : _txt)); cc.textContent=(window._expDurAuto?'≈ ':'')+n+' créd.'; }
+  // la règle du lot s'explique dans le prompt (Axel 27/09 : bloc identique à Images IA, sans texte en dessous)
+  const ta=document.getElementById('expPrompt');
+  if(ta){
+    if(!ta.dataset.ph0) ta.dataset.ph0 = ta.getAttribute('placeholder') || '';
+    ta.setAttribute('placeholder', k>1
+      ? 'Un seul prompt pour les '+k+' vidéos — ou un texte par vidéo : « image 1 tu dis : … image 2 tu dis : … »'+(nb>k ? ' (images '+(k+1)+(nb>k+1?' à '+nb:'')+' ajoutées dans chaque vidéo, ex. le produit)' : '')
+      : ta.dataset.ph0);
+  }
   const mr=document.getElementById('mExpCountInline');
   if(mr) mr.innerHTML=opts.map(v=>{
     const on=v===k, off=v>max;
@@ -32286,6 +32296,7 @@ function _expRenderImgs(){
   const imgs=window._expImgs||[];
   if(typeof _expHeroSync==='function') _expHeroSync();
   if(typeof _expUpdateGenCaption==='function') _expUpdateGenCaption();   // Omni : le prix suit l'image de départ à créer (25/09)
+  if(typeof _expRenderCount==='function') _expRenderCount();   // Nombre (27/09) : 2 images importées → « 2 » devient disponible
   const p=document.getElementById('expImgPreview'), d=document.getElementById('expImgDrop'), cnt=document.getElementById('expImgCount');
   // Le bouton « Ajoute tes images » reste un bouton d'ajout (il ne se transforme plus en aperçu
   // plein cadre) : les images vivent en vignettes dans la zone sombre, juste au-dessus du
