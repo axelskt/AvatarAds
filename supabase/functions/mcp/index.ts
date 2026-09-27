@@ -1241,14 +1241,15 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
           const petit = await fabriquerApercu(brut)
           if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg')
         } catch (_) { /* la vignette est un confort, jamais un bloquant */ }
-        await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id)
+        // Audit 28/09 : livraison CONDITIONNELLE (job encore 'running' et non remboursé) — sinon un filet l'a déjà rendu : pas de livraison.
+        const { data: _ok } = await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'running').eq('refunded', false).select('id')
+        if (!_ok || !_ok.length) return
         await saveToLibrary(userId, brut, 'png', 'image/png', 'image', kind === 'static_ad' ? 'Static ad' : 'Image IA', apercu || url)  // filet Bibliothèque (thumb = aperçu public)
         return
       }
       lastErr = out.error
     } catch (e) { lastErr = String((e as Error)?.message || e) }
-    await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
-    await refundCredits(userId, cost)   // échec → on rend les crédits
+    await failAndRefund(userId, { id: job.id, credits_cost: cost }, lastErr.slice(0, 300))   // audit 28/09 : idempotent — jamais un 2e remboursement après un filet
   })())
 
   return {
@@ -3656,7 +3657,10 @@ serve(async (req) => {
     }
     // pending → running, atomique (deux clics = un seul lancement). credits_cost = 0 jusqu'au débit : mcp_spend_for_job
     // débite ET pose credits_cost dans la même transaction (relecture 26/09) → un filet ne rend jamais un débit absent.
-    const { data: took } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, updated_at: new Date().toISOString() })
+    // Audit 28/09 (HAUTE) : created_at REMIS à maintenant — les filets (8 / 20 min) lisent created_at ; une carte vieille de
+    // 2 h passait running avec un created_at ancien → remboursée par le filet pendant que l'image était livrée (refund-and-keep).
+    const _nowIso = new Date().toISOString()
+    const { data: took } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, created_at: _nowIso, updated_at: _nowIso })
       .eq('id', jobId).eq('status', 'pending').select('id')
     if (!took || !took.length) return json(409, { error: 'not_pending' })
     const bal = await spendForJob(userId, jobId, cost)
@@ -3675,14 +3679,15 @@ serve(async (req) => {
           const url = await uploadMedia(userId, brut, 'png', 'image/png')
           let apercu: string | null = null
           try { const petit = await fabriquerApercu(brut); if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg') } catch (_) { /* vignette = confort */ }
-          await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', jobId)
+          // Audit 28/09 : livraison CONDITIONNELLE (job encore 'running' et non remboursé) — sinon un filet l'a déjà rendu : pas de livraison.
+          const { data: _ok } = await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', jobId).eq('status', 'running').eq('refunded', false).select('id')
+          if (!_ok || !_ok.length) return
           await saveToLibrary(userId, brut, 'png', 'image/png', 'image', kind === 'static_ad' ? 'Static ad' : 'Image IA', apercu || url)
           return
         }
         lastErr = out.error
       } catch (e) { lastErr = String((e as Error)?.message || e) }
-      await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', jobId)
-      await refundCredits(userId, cost)
+      await failAndRefund(userId, { id: jobId, credits_cost: cost }, lastErr.slice(0, 300))   // audit 28/09 : idempotent — jamais un 2e remboursement après un filet
     })())
     return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}`, ref: refUrl, prompt: promptFinal })
   }
@@ -3738,14 +3743,15 @@ serve(async (req) => {
           const url = await uploadMedia(userId, brut, 'png', 'image/png')
           let apercu: string | null = null
           try { const petit = await fabriquerApercu(brut); if (petit) apercu = await uploadMedia(userId, petit, 'jpg', 'image/jpeg') } catch (_) { /* vignette = confort */ }
-          await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id)
+          // Audit 28/09 : livraison CONDITIONNELLE (job encore 'running' et non remboursé) — sinon un filet l'a déjà rendu : pas de livraison.
+          const { data: _ok } = await svc.from('mcp_jobs').update({ status: 'done', result_url: url, preview_url: apercu, updated_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'running').eq('refunded', false).select('id')
+          if (!_ok || !_ok.length) return
           await saveToLibrary(userId, brut, 'png', 'image/png', 'image', 'Image IA', apercu || url)  // filet Bibliothèque (regénération)
           return
         }
         lastErr = out.error
       } catch (e) { lastErr = String((e as Error)?.message || e) }
-      await svc.from('mcp_jobs').update({ status: 'failed', error: lastErr.slice(0, 300), updated_at: new Date().toISOString() }).eq('id', job.id)
-      await refundCredits(userId, cost)
+      await failAndRefund(userId, { id: job.id, credits_cost: cost }, lastErr.slice(0, 300))   // audit 28/09 : idempotent — jamais un 2e remboursement après un filet
     })())
     return json(200, { job_id: job.id, cap: await jobCap(job.id), statusUrl: `https://mcp.avatarads.fr/status/${job.id}` })
   }

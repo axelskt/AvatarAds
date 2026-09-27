@@ -21,6 +21,11 @@ const BILLABLE = /^\/v1\/images\/(generations|edits)$/
 // le COÛT par appel : allowlist de modèle (l'app n'utilise que ceux-ci ; hors liste → coercé vers le moins cher) + plafond tokens.
 const OPENAI_HELPER_MODELS = new Set(['gpt-4o', 'gpt-4o-mini'])
 const OPENAI_HELPER_MAX_TOKENS = 4096
+// Audit 28/09 : champs d'image RELAYÉS = liste fermée (un champ annexe comme input_fidelity faisait coûter plus que le tirage) ;
+// fichiers bornés en nombre et en taille ; helper chat : n = 1, sortie plafonnée, entrée bornée, quota réduit pour le plan Free.
+const IMG_TEXT_ALLOW = new Set(['prompt', 'background', 'output_format', 'output_compression', 'moderation', 'user'])
+const IMG_MAX_FILES = 8, IMG_MAX_FILE_BYTES = 25_000_000, IMG_MAX_PROMPT = 32_000
+const HELPER_MAX_BODY = 100_000
 const imgCost = (q: string) => q === 'low' ? 1 : q === 'high' ? 5 : 3   // gpt-image : low 1 / medium 3 / high 5
 // Images facturantes (relecture du 24/09/2026) : ce qui est FACTURÉ est exactement ce qui part chez OpenAI. Modèle et
 // taille bornés à ce que l'app envoie ; qualité hors low/medium/high (absente, auto, xhigh, max) → medium, ÉCRITE dans la
@@ -74,9 +79,14 @@ serve(async (req: Request) => {
         return jsonRes(403, { error: 'La transcription est réservée aux plans payants.' })
       }
     }
+    let helperMax = isTranscribe ? 12 : 20
+    if (!isBillable && !isTranscribe) {   // helper chat : plan Free (comptes jetables) = 6 / 10 min
+      const { plan, isOwner, err } = await userPlan(uid)
+      if (!err && !isOwner && (!plan || plan === 'free')) helperMax = 6
+    }
     const gate = isBillable
       ? await billableGate({ userId: uid, proxy: 'openai', requireDebit: true, rateMax: 40, label: bare })
-      : await helperGate(uid, 'openai', isTranscribe ? 12 : 20)   // round3 (06/09) : GPT-4o/Whisper payants → 20/12 par 10 min (drain réduit)
+      : await helperGate(uid, 'openai', helperMax)   // round3 (06/09) : GPT-4o/Whisper payants → 20/12 par 10 min (drain réduit)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
@@ -101,10 +111,19 @@ serve(async (req: Request) => {
       if (isBillable && gated) {
         // fichiers (image, image[], mask) : tous transmis ; champs texte : UNE valeur chacun, bornée, celle qui est facturée
         const text: Record<string, string> = {}
-        for (const [k, v] of incoming.entries()) { if (typeof v === 'string') text[k] = v; else outgoing.append(k, v) }
+        let nFiles = 0
+        for (const [k, v] of incoming.entries()) {
+          if (typeof v === 'string') { text[k] = v; continue }
+          if (!/^(image|image\[\]|mask)$/.test(k)) continue   // seuls les fichiers attendus par /images/edits
+          if (++nFiles > IMG_MAX_FILES) return jsonRes(400, { error: 'trop d’images de référence (8 max)' })
+          if ((v as File).size > IMG_MAX_FILE_BYTES) return jsonRes(413, { error: 'image de référence trop lourde (25 Mo max)' })
+          outgoing.append(k, v)
+        }
         const nm = normImage(text)
         if ('error' in nm) return jsonRes(400, { error: nm.error })
-        for (const [k, v] of Object.entries({ ...text, ...nm.fields })) outgoing.append(k, v)
+        const kept: Record<string, string> = {}
+        for (const [k, v] of Object.entries(text)) if (IMG_TEXT_ALLOW.has(k)) kept[k] = k === 'prompt' ? v.slice(0, IMG_MAX_PROMPT) : v
+        for (const [k, v] of Object.entries({ ...kept, ...nm.fields })) outgoing.append(k, v)
         drawn = chainCost(nm.q, nm.n); imgQ = nm.q; imgN = nm.n; const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId; drawnReal = r.drawn ?? 0
       } else {
         for (const [k, v] of incoming.entries()) outgoing.append(k, v)
@@ -119,18 +138,22 @@ serve(async (req: Request) => {
         if (!b || typeof b !== 'object') return jsonRes(400, { error: 'corps JSON invalide' })
         const nm = normImage(b)
         if ('error' in nm) return jsonRes(400, { error: nm.error })
-        Object.assign(b, nm.fields, { n: nm.n })
-        sendBody = JSON.stringify(b)
+        const kept: Record<string, unknown> = {}
+        for (const k of Object.keys(b)) if (IMG_TEXT_ALLOW.has(k)) kept[k] = k === 'prompt' ? String(b[k]).slice(0, IMG_MAX_PROMPT) : b[k]
+        sendBody = JSON.stringify({ ...kept, ...nm.fields, n: nm.n })
         drawn = chainCost(nm.q, nm.n); imgQ = nm.q; imgN = nm.n
         const r = await applyReservation({ req, userId: uid, proxy: 'openai', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId; drawnReal = r.drawn ?? 0
       } else if (gated && bare.includes('/chat/completions')) {
         // Helper LLM non facturant : borne le coût (audit chaînes 15/09) — modèle hors allowlist coercé vers le moins cher + plafond tokens.
-        try {
-          const b = JSON.parse(rawBody)
-          if (!OPENAI_HELPER_MODELS.has(String(b?.model || ''))) b.model = 'gpt-4o-mini'
-          b.max_tokens = Math.min(Number(b.max_tokens) || OPENAI_HELPER_MAX_TOKENS, OPENAI_HELPER_MAX_TOKENS)
-          sendBody = JSON.stringify(b)
-        } catch { /* body non-JSON : laissé tel quel (OpenAI le rejettera) */ }
+        if (rawBody.length > HELPER_MAX_BODY) return jsonRes(413, { error: 'requête trop longue' })
+        let b: any = null
+        try { b = JSON.parse(rawBody) } catch { /* traité juste dessous */ }
+        if (!b || typeof b !== 'object' || !Array.isArray(b.messages)) return jsonRes(400, { error: 'corps JSON invalide' })
+        if (!OPENAI_HELPER_MODELS.has(String(b.model || ''))) b.model = 'gpt-4o-mini'
+        b.max_tokens = Math.min(Number(b.max_tokens) || OPENAI_HELPER_MAX_TOKENS, OPENAI_HELPER_MAX_TOKENS)
+        delete b.max_completion_tokens; delete b.logprobs; delete b.top_logprobs; delete b.stream; delete b.tools; delete b.functions
+        b.n = 1
+        sendBody = JSON.stringify(b)
       }
       openaiRes = await fetch(up.url, { method: 'POST', headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' }, body: sendBody })
     }

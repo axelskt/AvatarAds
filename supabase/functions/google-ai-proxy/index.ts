@@ -13,7 +13,7 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, opHasJob, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, userPlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, opHasJob, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 // 23/09/2026 : `:predict` (Imagen 4, arrêté par Google le 17/08/2026, seul appelant = module Cartoon supprimé) retiré.
@@ -41,6 +41,27 @@ function costFor(bare: string, body: string): number {
   return 1
 }
 
+// Audit 28/09 : le corps Veo était relayé BRUT (sampleCount, résolution '4k'/'1080P', personGeneration… passaient, seul
+// durationSeconds et resolution === '1080p' étaient lus pour le coût). Corps RECONSTRUIT avec les seuls champs de l'app.
+function veoBody(raw: string): { body: string } | { error: string } {
+  let b: any = null
+  try { b = JSON.parse(raw || '{}') } catch { /* traité juste dessous */ }
+  const i0 = b && Array.isArray(b.instances) ? b.instances[0] : null
+  if (!i0 || typeof i0 !== 'object' || typeof i0.prompt !== 'string' || !i0.prompt.trim()) return { error: 'corps Veo invalide' }
+  const inst: Record<string, unknown> = { prompt: i0.prompt.slice(0, 8000) }
+  if (i0.image && typeof i0.image === 'object') {
+    const mt = String(i0.image.mimeType || '')
+    if (typeof i0.image.bytesBase64Encoded !== 'string' || !/^image\/(png|jpeg)$/.test(mt)) return { error: 'image de départ invalide (PNG ou JPEG)' }
+    inst.image = { bytesBase64Encoded: i0.image.bytesBase64Encoded, mimeType: mt }
+  }
+  if (i0.video && typeof i0.video === 'object') inst.video = i0.video   // extension (Fast 720p, Élite — gatée plus haut)
+  const pr = (b.parameters && typeof b.parameters === 'object') ? b.parameters : {}
+  const params: Record<string, unknown> = { sampleCount: 1, aspectRatio: pr.aspectRatio === '16:9' ? '16:9' : '9:16', resolution: pr.resolution === '1080p' ? '1080p' : '720p' }
+  if (!inst.video) params.durationSeconds = [4, 6, 8].includes(Number(pr.durationSeconds)) ? Number(pr.durationSeconds) : 8
+  if (pr.generateAudio === true) params.generateAudio = true
+  return { body: JSON.stringify({ instances: [inst], parameters: params }) }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST' && req.method !== 'GET') return jsonRes(405, { error: 'method_not_allowed' })
@@ -58,6 +79,10 @@ serve(async (req: Request) => {
   const up = safeUpstream(GOOGLE_AI_BASE, apiPath, ALLOW)
   if (!up.ok) return jsonRes(400, { error: 'path refusé : ' + up.reason })
   const bare = new URL(up.url).pathname
+  // Audit 28/09 (HAUTE) : la query du client partait telle quelle chez Google — « ?fields=done » vidait la réponse du poll de sa
+  // vidéo → remboursement serveur alors que la vidéo restait téléchargeable. URL amont = chemin nu ; seul « alt=media » d'un
+  // téléchargement (files/<id>:download) est gardé.
+  const upstream = GOOGLE_AI_BASE + bare + (/:download$/.test(bare) ? '?alt=media' : '')
   const isBillable = req.method === 'POST' && isBillablePath(bare)
   if (req.method === 'GET' && /:predictLongRunning$/.test(bare)) return jsonRes(405, { error: 'method_not_allowed' })
   const gated = !auth.isService && !!auth.userId
@@ -68,13 +93,15 @@ serve(async (req: Request) => {
   if (gated) {
     const isTts = req.method === 'POST' && /:generateContent$/.test(bare) && /tts/i.test(bare)
     const isChat = req.method === 'POST' && /:generateContent$/.test(bare) && !isTts && !isBillable   // gemini texte/vision (non facturant)
+    // Audit 28/09 : la voix Gemini (TTS) n'est plus utilisée nulle part (Axel : « supprime la voix Gemini ») → fermée.
+    if (isTts) return jsonRes(403, { error: 'synthèse vocale non disponible' })
+    let chatMax = 40
+    if (isChat) { const { plan, isOwner, err } = await userPlan(uid); if (!err && !isOwner && (!plan || plan === 'free')) chatMax = 10 }   // plan Free : 10 / 10 min
     const gate = isBillable
       ? await billableGate({ userId: uid, proxy: 'google', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
-      : isTts
-        ? await helperGate(uid, 'google-tts', 60, 3600)   // M3 (06/09) : TTS bridé 60/h (au lieu de 900/10min → drain de quota)
-        : isChat
-          ? await helperGate(uid, 'google-chat', 40, 600)   // audit 06/09 : chat gemini plafonné 40/10min (au lieu de 900 → drain)
-          : await helperGate(uid, 'google', 900)   // polling ≤10 min par génération Veo, plusieurs en série
+      : isChat
+        ? await helperGate(uid, 'google-chat', chatMax, 600)   // audit 06/09 : chat gemini plafonné 40/10min (au lieu de 900 → drain)
+        : await helperGate(uid, 'google', 900)   // polling ≤10 min par génération Veo, plusieurs en série
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
   }
 
@@ -109,9 +136,10 @@ serve(async (req: Request) => {
     const headers: Record<string, string> = { 'x-goog-api-key': googleKey }
     let googleRes: Response
     if (req.method === 'GET') {
-      googleRes = await fetch(up.url, { method: 'GET', headers })
+      googleRes = await fetch(upstream, { method: 'GET', headers })
     } else {
-      const rawBody = await req.text()
+      let rawBody = await req.text()
+      if (gated && isBillable && /:predictLongRunning$/.test(bare)) { const vb = veoBody(rawBody); if ('error' in vb) return jsonRes(400, { error: vb.error }); rawBody = vb.body }
       let sendBody = rawBody
       if (isBillable && gated) {
         // Audit 14/09 : paliers Veo PAR BODY-PARAM (non-chemin, donc lus sur le VRAI body → précis, pas de faux 402).
@@ -150,9 +178,14 @@ serve(async (req: Request) => {
         else { drawn = costFor(bare, rawBody); const r = await applyReservation({ req, userId: uid, proxy: 'google', cost: drawn, label: bare }); if (!r.ok) return jsonRes(r.status, { error: r.error }); drawnOp = r.opId }
       } else if (gated && /:generateContent$/.test(bare) && !/tts/i.test(bare)) {
         // Helper chat non facturant : plafond de tokens de sortie (audit chaînes 15/09).
-        try { const b = JSON.parse(rawBody); b.generationConfig = { ...(b.generationConfig || {}), maxOutputTokens: Math.min(Number(b?.generationConfig?.maxOutputTokens) || 4096, 4096) }; sendBody = JSON.stringify(b) } catch { /* body non-JSON : laissé tel quel */ }
+        if (rawBody.length > 12_000_000) return jsonRes(413, { error: 'requête trop longue' })   // une image inline (détection des mains) passe
+        let b: any = null
+        try { b = JSON.parse(rawBody) } catch { /* traité juste dessous */ }
+        if (!b || typeof b !== 'object') return jsonRes(400, { error: 'corps JSON invalide' })
+        b.generationConfig = { ...(b.generationConfig || {}), candidateCount: 1, maxOutputTokens: Math.min(Number(b?.generationConfig?.maxOutputTokens) || 4096, 4096) }
+        sendBody = JSON.stringify(b)
       }
-      googleRes = await fetch(up.url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: sendBody })
+      googleRes = await fetch(upstream, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: sendBody })
     }
     // Le corps amont est relayé en BINAIRE. `.text()` (05/09, réservation) ré-encodait un MP4 Veo
     // (GET /files/<id>:download) en UTF-8 → fichier corrompu (moov absent), lecteur noir, Safari qui plante
@@ -191,8 +224,10 @@ serve(async (req: Request) => {
         if (opTail) {
           const hasVideo = /"bytesBase64Encoded"\s*:\s*"|"uri"\s*:\s*"|files\/[A-Za-z0-9_-]+/.test(body)
           const filtered = /"raiMediaFilteredCount"\s*:\s*[1-9]/.test(body)
-          if (/"error"/.test(body) || filtered || !hasVideo) { if (!(await refundByJobTerminal(uid, 'veo:' + opTail))) await releaseByJob(uid, 'veo:' + opTail) }
-          else await settleByJob(uid, 'veo:' + opTail)
+          // Audit 28/09 : une vidéo PRÉSENTE = livrée → réglée, même avec un échantillon filtré ou un champ "error" à côté
+          // (avant : remboursée en entier alors que la vidéo restait téléchargeable). Rien à télécharger = remboursée.
+          if (hasVideo) await settleByJob(uid, 'veo:' + opTail)
+          else { void filtered; if (!(await refundByJobTerminal(uid, 'veo:' + opTail))) await releaseByJob(uid, 'veo:' + opTail) }
         }
       }
     }

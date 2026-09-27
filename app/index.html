@@ -3913,7 +3913,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <!-- 05/08 : Gemini TTS, ElevenLabs et l'import de voix sont RETIRÉS
                d'Express (trop d'options, personne ne comprenait). Deux choix :
                voix native Veo, ou muet. Le TTS ne survit qu'en repli interne
-               quand Veo refuse l'audio natif (_expTtsFallback). -->
+               quand Veo refuse l’audio natif (retiré le 28/09 : la vidéo est relancée muette). -->
           <div id="expVoiceRows" style="display:grid;gap:5px"></div>
         </div>
 
@@ -5877,7 +5877,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-27-2059'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-28-0020'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -30347,7 +30347,7 @@ const EXP_QUALITIES = [ {v:'720p',l:'720p',note:''}, {v:'1080p',l:'1080p',note:'
 // 05/08 — Axel : « supprime Gemini TTS et ElevenLabs ainsi qu'importer une
 // voix… tu mets juste voix native ou pas d'audio ». Deux modes, point. Le TTS
 // Gemini ne subsiste qu'en repli INTERNE quand Veo refuse l'audio natif
-// (_expTtsFallback) — ce n'est plus un choix offert à l'utilisateur.
+// (voix Gemini de secours retirée le 28/09) — ce n’est plus un choix offert à l’utilisateur.
 const EXP_VOICES = [
   { id:'native', name:'Voix native', desc:'audio généré avec la vidéo' },
   { id:'none',   name:'Pas de voix',        desc:'vidéo muette' },
@@ -32109,21 +32109,6 @@ function _expPickVoice(id){ window._expVoice=id; _expRenderVoices(); }
 // Génère la voix selon le mode choisi — deux modes restants (native/muet), la
 // vidéo Veo porte son audio elle-même : plus rien à fabriquer côté client.
 async function _expBuildVoice(){ return null; }
-// Fallback voix (Gemini TTS) quand Veo natif refuse l'audio — la voix est ajoutée dans l'Éditeur
-async function _expTtsFallback(text){
-  if(!text) return null;
-  const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
-    method:'POST',
-    body:JSON.stringify({ contents:[{parts:[{text}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:(window._selGeminiVoice||window._expGeminiVoice||'Puck') } } } } })
-  });
-  if(!resp.ok) return null;
-  const data=await resp.json();
-  const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
-  const b64=(part?.inlineData||part?.inline_data)?.data;
-  if(!b64) return null;
-  const pcm=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-  return new Blob([_pcmToWav(pcm,24000,1)],{type:'audio/wav'});
-}
 // Réglages sous-titres (passés à l'Éditeur)
 window._expSubStyle = 'punch';
 window._expSubPos   = 'bottom';
@@ -32425,51 +32410,6 @@ function _expSelfieCue(){
     : '';
 }
 
-// ── DIRECTEUR DE PROMPT (Axel 17/08, inspiré Higgsfield) ──────────────────────────────
-// L'avantage n'est pas « j'ai Seedance » mais « mon système SAIT s'en servir ». On ne transmet
-// PLUS le prompt brut de l'user : un LLM le transforme en prompt vidéo structuré
-// SUBJECT → ACTION → ENVIRONMENT → CAMERA → LIGHTING → STYLE → MOTION → PHYSICS → CONTINUITY,
-// avec conservation stricte des références (visage/produit) + selfie tenu à bout de bras.
-// Renvoie null si l'appel échoue → repli sur l'ancien montage de prompt.
-async function _expDirector(userPrompt){
-  try{
-    if(!userPrompt || !userPrompt.trim()) return null;
-    const Hh = (typeof getAuthHeader==='function') ? await getAuthHeader() : {};
-    const styleId = window._expStyle||'realiste';
-    const styleLabel = (EXP_STYLES.find(s=>s.id===styleId)||{}).label || 'Réaliste';
-    const nRefs = (window._expImgs||[]).length;
-    const multiScene = _expWantsScenes(userPrompt);
-    const vertical = (window._expFormat!=='16:9');
-    const styleLine = styleId==='cartoon' ? 'cute polished 3D Pixar-style animation, vibrant.'
-      : styleId==='studio' ? 'premium studio product video, clean elegant lighting, smooth camera motion.'
-      : styleId==='ugc' ? 'authentic imperfect UGC phone selfie, real unretouched skin with visible pores and small blemishes, casual candid amateur look, natural daylight, NO polish, NO cinematic gloss, NO AI look.'
-      : 'ultra realistic real phone footage, natural skin with visible pores and texture, NO plastic or waxy skin, NO airbrush, NO cinematic gloss, NO AI look.';
-    const sys = 'You are a senior AI-video prompt director for an image-to-video model (Seedance / Veo). Turn a short user idea into ONE dense, production-ready video prompt.\n'
-      + 'RULES:\n'
-      + '- Output in English, ready to feed the model: normally ONE dense paragraph (~90-130 words); BUT if the user describes a transition/cut/multi-scene, output a COMPACT TIMELINE (a few lines with time ranges) instead.\n'
-      + '- Weave these in order into prose: SUBJECT, ACTION, ENVIRONMENT, CAMERA, LIGHTING, STYLE, MOTION, PHYSICS, CONTINUITY.\n'
-      + '- SUBJECT: describe the person/product exactly as in the reference image(s); demand the EXACT same face, identity, hair and skin, and for any product the exact shape, branding, colors and proportions. For a real person, demand PHOTO-FAITHFUL skin: keep the reference photo\'s real skin texture, visible pores and fine detail at the same sharpness — explicitly forbid any smoothing, softening, airbrushing, retouching, beautifying, complexion-evening, pore removal, lip/eye enlargement, teeth whitening or beauty filter (she must look like the same real photo, not a polished render).'
-      + (nRefs>1 ? ' There are '+nRefs+' reference images (subjects/products) — feature them together coherently in one scene.' : '') + '\n'
-      + '- ENVIRONMENT: ' + (nRefs>0 ? 'the reference image IS the set. Do NOT describe, embellish or invent a setting, background, props or lighting: state that the environment, background, lighting, framing and camera position are EXACTLY those of the reference image and stay UNCHANGED for the entire clip — one continuous take, no cut, no scene change, no new location, the camera never travels or relocates.' : 'keep the setting the user implies constant for the whole clip — one continuous take, no cut, no scene change.') + (multiScene ? ' EXCEPTION: the user explicitly asked for a transition/multi-scene — follow the TRANSITIONS/TIMELINE rule instead.' : '') + '\n'
-      + '- CAMERA: authentic handheld selfie held at arm’s length on a phone front camera, subtle natural camera shake and micro-jitter, eye-level, the camera gently follows the subject’s face. ' + (vertical?'Vertical 9:16.':'Landscape 16:9.') + '\n'
-      + '- STYLE ("'+styleLabel+'"): '+styleLine+'\n'
-      + '- MOTION & PHYSICS: natural, believable, real-world physics, smooth realistic human movement.\n'
-      + '- CONTINUITY: the person and product stay photographically identical from the first frame to the last; never morph, swap, distort, age or beautify.\n'
-      + '- Keep the user’s idea and scene; do NOT invent a different subject or setting. If the user gives a spoken line in quotes, keep it VERBATIM for lip-sync.\n'
-      + '- VOICE & DELIVERY: if the subject speaks, the ONLY words spoken in the whole clip are the user’s quoted line, VERBATIM and in the user’s language — nothing before it (no greeting, no filler like "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame, natural casual dynamic intonation, never monotone. If the line contains a call-to-action KEYWORD (an ALL-CAPS word, or the word right after "commente / comment / écris / tape"), keep that keyword EXACTLY as written and instruct that she say it as ONE single fluid word (its normal pronunciation, in one breath), clearly emphasized (a bit slower and LOUDER) with a hand gesture and strong facial expression — but NEVER spelled out, NEVER split into letters or syllables, NEVER stuttered or repeated, and never translated, inflected, given an article, or turned into a phrase or a place. CRITICAL ENDING: she COMPLETES the whole sentence and lands its last word about half a second before the clip ends (never cut off mid-word), then STOPS talking, closes her mouth and holds a silent still expression — the last ~0.5s is total silence with a closed mouth, no filler, no trailing sound.\n'
-      + '- TRANSITIONS/TIMELINE: if the user describes a transition, a cut, a finger snap, a zoom/dezoom, or a multi-scene sequence, PRESERVE it and output an explicit compact TIMELINE with time ranges and beats (e.g. "0.0–1.4s: tight close-up then dezoom to a wide shot; ~1.4s: she clearly snaps her fingers CENTERED in frame → fast seamless match cut; 1.4–4.0s: new location, slow push-in to a close-up"). Keep every beat and the scene order, make the snap/gesture clearly VISIBLE and CENTERED, describe each camera move, and shift the lighting on the cut. NEVER collapse a multi-scene or transition prompt into a single static scene.\n'
-      + 'Output ONLY the final prompt (one paragraph, or a compact timeline if there is a transition), nothing else.';
-    const body = { model:'gpt-4o', max_tokens:340, temperature:0.6, messages:[
-      { role:'system', content: sys },
-      { role:'user', content: 'USER IDEA:\n'+userPrompt.trim()+'\n\nReference images provided: '+nRefs }
-    ]};
-    const r = await fetch(SUPABASE_URL+'/functions/v1/openai-proxy?path='+encodeURIComponent('/v1/chat/completions'), { method:'POST', headers:{ 'Content-Type':'application/json', ...Hh }, body: JSON.stringify(body) });
-    if(!r.ok) return null;
-    const d = await r.json().catch(()=>null);
-    const out = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-    return (out && out.trim().length>20) ? out.trim() : null;
-  }catch(e){ console.warn('[expDirector]', e); return null; }
-}
 
 // ── Génération principale ──
 /* ══ SEEDANCE 2.0 via Hedra (dev-only) — même interface que Veo, moteur différent ══ */
@@ -32589,9 +32529,7 @@ async function _expCreateSeedance(prompt){
     if(window._expTransitions && _expIsDev() && (window._expImgs||[]).length>=2){
       const _imgs=(window._expImgs||[]); const _n=_imgs.length-1;
       if(!confirm('Générer '+_n+' clip'+(_n>1?'s':'')+' de transition Seedance (≈ '+(0.86*_n).toFixed(2)+' $, muet) ?\n\nEnchaîne : '+_imgs.map((_,i)=>'image '+(i+1)).join(' → ')+'.')) throw new Error('__abort');
-      setP(20,'Direction du prompt…');
-      const _dir = await _expDirector(prompt);
-      let blob = await _expSeedanceTransitions(_imgs, (_dir||prompt||''), (t)=>setP(Math.max(p,45),t));
+      let blob = await _expSeedanceTransitions(_imgs, (prompt||''), (t)=>setP(Math.max(p,45),t));
       if(window._expVidUrl) URL.revokeObjectURL(window._expVidUrl);
       window._expVidBlob=blob; window._expVidUrl=URL.createObjectURL(blob);
       if(vid){ vid.src=window._expVidUrl; vid.load(); vid.style.display='block'; }
@@ -32609,9 +32547,7 @@ async function _expCreateSeedance(prompt){
     const reqSec = Math.max(2, Math.min(10, parseInt(window._expSeedanceDur)||5));
     const genSec = Math.max(4, reqSec);   // Seedance 2.0 = 4 s mini
     const aspect = window._expFormat==='16:9' ? '16:9' : '9:16';
-    setP(Math.max(p,20),'Direction du prompt…');
-    const _directed = await _expDirector(prompt);   // prompt structuré (SUBJECT→…→CONTINUITY), repli si échec
-    const animPrompt = (_directed ? _directed : (prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_expSelfieCue())) + _EXP_IDLOCK;
+    const animPrompt = ((prompt+', '+styleMeta.prompt+', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render'+_expSelfieCue())) + _EXP_IDLOCK;
     setP(25,'Seedance 2.0 génère… (1 à 3 min)');
     let blob = await _expSeedanceGenerate(animPrompt, imgB64, imgMime, genSec*1000, aspect, (t)=>setP(Math.max(p,55),t), _sdRefs);
     if(reqSec < genSec){ try{ setP(92,'Découpe à '+reqSec+' s…'); blob = await _expTrimVideo(blob, reqSec); }catch(e){ console.warn('trim:',e); } }
@@ -32973,9 +32909,8 @@ async function _expressCreateOne(o){
     // 2) Animation image→vidéo via Veo 3.1 Fast
     setP(Math.max(p,28),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Génération de la vidéo…');
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native).
-    // Direction du prompt (structuré) d'abord, repli sur l'ancien montage si l'appel échoue.
-    const _directed = await _expDirector(prompt);
-    let animPrompt = (_directed ? _directed : (prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
+    // 28/09 (Axel) : plus de « directeur » gpt-4o — le prompt est monté localement (verrous d'environnement, de parole, de texture…).
+    let animPrompt = ((prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
       + _expEnvLock(prompt)
       + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
@@ -33071,7 +33006,7 @@ async function _expressCreateOne(o){
         startResp = await _startVeo(_veoModel, false);
         if(!startResp.ok){ const e2=await startResp.json().catch(()=>({})); throw new Error(e2?.error?.message||('HTTP '+startResp.status)); }
         // …sauf si l'user a demandé « Pas de voix » : on ne lui en fabrique pas une
-        try{ if(window._expVoice!=='none' && !voiceBlob && prompt){ setP(Math.max(p,20),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Génération de la voix…'); voiceBlob = await _expTtsFallback(prompt); window._expVoiceBlob = voiceBlob; } }catch(_){}
+        // 28/09 (Axel) : plus de voix Gemini de secours — si Veo refuse l'audio natif, la vidéo est relancée muette.
       } else { throw new Error(msg); }
     }
     const { name:opName } = await startResp.json();
@@ -34410,259 +34345,6 @@ async function _expressComposeInner(setStage, compFill, compPct, resetBtn){
   a.href=url; a.download='avatarads-express-'+qCfg.label+'.mp4';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   resetBtn();
-}
-
-// ── Voix Gemini : rangées sélectionnables (la voix doit coller au perso) ──
-// Menu complet des voix Gemini TTS (gemini-2.5-flash-preview-tts)
-const _CARTOON_VOICES = [
-  { id:'Puck',       emoji:'⚡', name:'Puck',       desc:'enjoué · jeune',        match:'perso fun / hype' },
-  { id:'Fenrir',     emoji:'🔥', name:'Fenrir',     desc:'punchy · intense',      match:'pub / accroche' },
-  { id:'Charon',     emoji:'🐻', name:'Charon',     desc:'grave · informatif',    match:'mascotte masculine' },
-  { id:'Aoede',      emoji:'🌸', name:'Aoede',      desc:'douce · légère',        match:'perso doux / lifestyle' },
-  { id:'Leda',       emoji:'🧒', name:'Leda',       desc:'jeune · vive',          match:'enfant / cartoon kid' },
-  { id:'Orus',       emoji:'💼', name:'Orus',       desc:'assuré · ferme',        match:'corporate / autorité' },
-  { id:'Callirrhoe', emoji:'😎', name:'Callirrhoe', desc:'décontractée',          match:'casual / vlog' },
-  { id:'Autonoe',    emoji:'✨', name:'Autonoe',    desc:'lumineuse',             match:'beauté / feel-good' },
-  { id:'Enceladus',  emoji:'🌬️', name:'Enceladus',  desc:'soufflé · doux',        match:'ASMR / calme' },
-  { id:'Iapetus',    emoji:'🔷', name:'Iapetus',    desc:'clair · net',           match:'tuto / tech' },
-  { id:'Umbriel',    emoji:'🌙', name:'Umbriel',    desc:'posé · easy',           match:'storytelling' },
-  { id:'Algieba',    emoji:'🎵', name:'Algieba',    desc:'lisse · smooth',        match:'luxe / premium' },
-  { id:'Erinome',    emoji:'💎', name:'Erinome',    desc:'clair · précis',        match:'présentation produit' },
-  { id:'Algenib',    emoji:'🪨', name:'Algenib',    desc:'grave · granuleux',     match:'voix de marque forte' },
-  { id:'Rasalgethi', emoji:'📚', name:'Rasalgethi', desc:'informatif',            match:'éducatif / news' },
-  { id:'Laomedeia',  emoji:'🎉', name:'Laomedeia',  desc:'enjouée',               match:'promo / énergie' },
-  { id:'Gacrux',     emoji:'🎙️', name:'Gacrux',     desc:'mature',                match:'expert / posé' },
-  { id:'Sulafat',    emoji:'🔥', name:'Sulafat',    desc:'chaleureuse',           match:'proximité / DM' },
-];
-// Voix ElevenLabs publiques (IDs stables) + voix clonées de l'utilisateur
-const _ELEVEN_VOICES = [
-  { id:'21m00Tcm4TlvDq8ikWAM', emoji:'👩', name:'Rachel',   desc:'calme · féminine',   match:'narration douce' },
-  { id:'AZnzlk1XvdvUeBnXmlld', emoji:'💪', name:'Domi',     desc:'forte · féminine',   match:'énergie / sport' },
-  { id:'EXAVITQu4vr4xnSDxMaL', emoji:'🌷', name:'Sarah',    desc:'douce · posée',      match:'lifestyle' },
-  { id:'MF3mGyEYCl7XYWbV9V6O', emoji:'🎭', name:'Elli',     desc:'émotive · jeune',    match:'storytelling' },
-  { id:'ErXwobaYiN019PkySvjV', emoji:'🧑', name:'Antoni',   desc:'équilibrée · H',     match:'voix off pro' },
-  { id:'TxGEqnHWrfWFTfGW9XjX', emoji:'🧔', name:'Josh',     desc:'grave · masculine',  match:'pub / autorité' },
-  { id:'VR6AewLTigWG4xSOukaG', emoji:'🎙️', name:'Arnold',   desc:'nette · masculine',  match:'annonceur' },
-  { id:'pNInz6obpgDQGcFmaJgB', emoji:'🔊', name:'Adam',     desc:'profonde · H',       match:'trailer / deep' },
-  { id:'yoZ06aMxZJJ28mfd3POQ', emoji:'🪕', name:'Sam',      desc:'raspy · masculine',  match:'cool / casual' },
-  { id:'jBpfuIE2acCO8z3wKNLl', emoji:'🧒', name:'Gigi',     desc:'enfantine',          match:'cartoon kid' },
-  { id:'XrExE9yKIg1WjnnlVkGX', emoji:'🤗', name:'Matilda',  desc:'chaleureuse · F',    match:'proximité' },
-  { id:'onwK4e9ZLuTAKqWW03F9', emoji:'🇬🇧', name:'Daniel',   desc:'British · grave',    match:'docu / premium' },
-  { id:'pFZP5JQG7iQjIQuC4Bku', emoji:'🌸', name:'Lily',     desc:'British · féminine', match:'élégant' },
-  { id:'piTKgcLEGmPE4e6mEKli', emoji:'🤫', name:'Nicole',   desc:'whisper · F',        match:'ASMR / intime' },
-];
-function _elevenVoiceList(){
-  let cloned=[];
-  try{ cloned=(typeof _getClonedVoices==='function'?_getClonedVoices():[]).map(v=>({ id:v.voice_id, emoji:'⭐', name:v.name||'Ma voix', desc:'voix clonée', match:'ta voix' })); }catch(e){}
-  return cloned.concat(_ELEVEN_VOICES);
-}
-
-// État partagé de la voix Gemini (Cartoon + Express)
-window._selGeminiVoice = window._selGeminiVoice || 'Puck';
-// Met à jour TOUS les labels de voix (Cartoon + Express)
-function _refreshVoiceLabels(){
-  const gid = window._selGeminiVoice || document.getElementById('cartoonTtsVoice')?.value || 'Puck';
-  const gv = _CARTOON_VOICES.find(x=>x.id===gid);
-  const ev = _elevenVoiceList().find(x=>x.id===selVoiceId);
-  ['cartoonGeminiVoiceLabel','expGeminiVoiceLabel'].forEach(id=>{ const e=document.getElementById(id); if(e&&gv) e.textContent=gv.name; });
-  ['cartoonElevenVoiceLabel','expElevenVoiceLabel'].forEach(id=>{ const e=document.getElementById(id); if(e) e.textContent=ev?ev.name:'Rachel'; });
-}
-
-// ═══════════ MENU DE VOIX (preview + favoris) — Gemini & ElevenLabs ═══════════
-const _VOICE_SAMPLE = "Bonjour, voici un aperçu de ma voix.";
-window._voicePreviewCache = {};
-let _voicePreviewAudio = null;
-function _voiceFavs(engine){ try{ return JSON.parse(localStorage.getItem('aa_fav_voices_'+engine)||'[]'); }catch(e){ return []; } }
-function _voiceToggleFav(engine,id){
-  let f=_voiceFavs(engine);
-  f = f.includes(id) ? f.filter(x=>x!==id) : [id,...f];
-  localStorage.setItem('aa_fav_voices_'+engine, JSON.stringify(f));
-  _renderVoicePickerList(engine);
-}
-function openVoicePicker(engine){
-  let ov=document.getElementById('voicePickerOverlay');
-  if(!ov){
-    ov=document.createElement('div'); ov.id='voicePickerOverlay';
-    ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px';
-    ov.onclick=(e)=>{ if(e.target===ov) closeVoicePicker(); };
-    ov.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:440px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)"><div style="font-size:15px;font-weight:800" id="voicePickerTitle">Choisir une voix</div><button onclick="closeVoicePicker()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);width:28px;height:28px;cursor:pointer;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'
-      +'<div id="voicePickerList" style="overflow-y:auto;padding:12px 14px 16px;display:flex;flex-direction:column;gap:6px"></div></div>';
-    document.body.appendChild(ov);
-  }
-  ov.dataset.engine=engine;
-  document.getElementById('voicePickerTitle').innerHTML = engine==='gemini' ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Voix Gemini TTS' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Voix ElevenLabs';
-  ov.style.display='flex';
-  _renderVoicePickerList(engine);
-}
-function closeVoicePicker(){ const ov=document.getElementById('voicePickerOverlay'); if(ov) ov.style.display='none'; if(_voicePreviewAudio){ _voicePreviewAudio.pause(); _voicePreviewAudio=null; } }
-
-// ═══════════ ELEVENLABS VOICE DESIGN — décris ta voix → 3 aperçus → choisis ═══════════
-const _VD_SAMPLE = "Salut ! Voici un aperçu de la voix que je viens de créer. Elle est faite sur mesure pour mes vidéos, naturelle et facile à écouter, parfaite pour capter l'attention dès les premières secondes.";
-window._vdPreviews = [];   // [{generated_voice_id, audioUrl, blob}]
-let _vdAudio = null;
-function openVoiceDesign(){
-  closeVoicePicker();
-  let ov=document.getElementById('voiceDesignOverlay');
-  if(!ov){
-    ov=document.createElement('div'); ov.id='voiceDesignOverlay';
-    ov.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px';
-    ov.onclick=(e)=>{ if(e.target===ov) closeVoiceDesign(); };
-    ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:480px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)"><div style="font-size:15px;font-weight:800"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Créer ma voix · Voice Design</div><button onclick="closeVoiceDesign()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text2);width:28px;height:28px;cursor:pointer;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-      <div style="overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
-        <div>
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;margin-bottom:6px">DÉCRIS LA VOIX (genre, âge, ton, accent…)</div>
-          <textarea id="vdDesc" placeholder="ex : voix d'homme français, grave et chaleureuse, débit posé et rassurant, ton de coach expert, légèrement charismatique" style="width:100%;box-sizing:border-box;min-height:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;padding:10px;outline:none;resize:vertical" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
-        </div>
-        <div>
-          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;margin-bottom:6px">TEXTE D'EXEMPLE (≥ 100 caractères)</div>
-          <textarea id="vdText" style="width:100%;box-sizing:border-box;min-height:64px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:var(--font);font-size:12.5px;padding:10px;outline:none;resize:vertical"></textarea>
-        </div>
-        <button id="vdGenBtn" onclick="_vdGeneratePreviews()" class="btn btn-lg" style="width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 14v-3a9 9 0 0118 0v3"/><rect x="2" y="14" width="4.5" height="7" rx="2"/><rect x="17.5" y="14" width="4.5" height="7" rx="2"/></svg> Générer 3 aperçus</button>
-        <div id="vdResults" style="display:flex;flex-direction:column;gap:8px"></div>
-      </div>
-    </div>`;
-    document.body.appendChild(ov);
-  }
-  document.getElementById('vdText').value=_VD_SAMPLE;
-  document.getElementById('vdResults').innerHTML='';
-  ov.style.display='flex';
-}
-function closeVoiceDesign(){ const ov=document.getElementById('voiceDesignOverlay'); if(ov) ov.style.display='none'; if(_vdAudio){ _vdAudio.pause(); _vdAudio=null; } }
-
-async function _vdGeneratePreviews(){
-  const desc=(document.getElementById('vdDesc')?.value||'').trim();
-  const text=(document.getElementById('vdText')?.value||'').trim();
-  if(desc.length<20){ toast('Décris la voix un peu plus (≥ 20 caractères)'); return; }
-  if(text.length<100){ toast('Le texte d\'exemple doit faire ≥ 100 caractères'); return; }
-  if(_gateFreeGenerate()) return;
-  const btn=document.getElementById('vdGenBtn'); const lbl=btn?btn.innerHTML:'';
-  if(btn){ btn.disabled=true; btn.innerHTML='Génération des aperçus…'; }
-  const res=document.getElementById('vdResults'); if(res) res.innerHTML='';
-  try{
-    const authH=await getAuthHeader();
-    const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-voice/create-previews`,{
-      method:'POST', headers:{...authH,'Content-Type':'application/json'},
-      body:JSON.stringify({ voice_description:desc, text })
-    });
-    if(!resp.ok){ const t=await resp.text().catch(()=>''); throw new Error((resp.status===401?'Abonnement ElevenLabs requis (Voice Design)':'ElevenLabs '+resp.status)+(t?' — '+t.slice(0,80):'')); }
-    const data=await resp.json();
-    const previews=data.previews||data.voice_previews||[];
-    if(!previews.length) throw new Error('Aucun aperçu renvoyé');
-    window._vdPreviews=previews.map((p,i)=>{
-      const b64=p.audio_base_64||p.audio_base64||p.audio;
-      let url=null;
-      try{ const bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); url=URL.createObjectURL(new Blob([bytes],{type:'audio/mpeg'})); }catch(e){}
-      return { gid:p.generated_voice_id, url };
-    });
-    if(res){
-      res.innerHTML='<div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em">ÉCOUTE & CHOISIS</div>'+
-        window._vdPreviews.map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--border2);border-radius:11px;background:var(--bg3)">
-          <button onclick="_vdPlay(${i},this)" style="flex-shrink:0;width:36px;height:36px;border-radius:9px;background:var(--bg4);border:1px solid var(--border2);color:var(--orange2);cursor:pointer;font-size:14px">▶</button>
-          <div style="flex:1;font-size:13px;font-weight:700">Voix ${i+1}</div>
-          <button onclick="_vdSelect(${i},this)" class="btn btn-sm" style="background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800">Choisir</button>
-        </div>`).join('');
-    }
-  }catch(e){ toast(''+(e.message||e)); }
-  finally{ if(btn){ btn.disabled=false; btn.innerHTML=lbl; } }
-}
-function _vdPlay(i,btn){
-  if(_vdAudio){ _vdAudio.pause(); _vdAudio=null; }
-  const p=window._vdPreviews[i]; if(!p||!p.url){ toast('Aperçu indisponible'); return; }
-  _vdAudio=new Audio(p.url); _vdAudio.play().catch(()=>{});
-}
-async function _vdSelect(i,btn){
-  const p=window._vdPreviews[i]; if(!p||!p.gid){ toast('Aperçu invalide'); return; }
-  const desc=(document.getElementById('vdDesc')?.value||'').trim();
-  const lbl=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='…'; }
-  try{
-    const authH=await getAuthHeader();
-    const name='Ma voix — '+new Date().toLocaleDateString('fr-FR');
-    const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-voice/create-voice-from-preview`,{
-      method:'POST', headers:{...authH,'Content-Type':'application/json'},
-      body:JSON.stringify({ voice_name:name, voice_description:desc, generated_voice_id:p.gid })
-    });
-    if(!resp.ok){ const t=await resp.text().catch(()=>''); throw new Error('ElevenLabs '+resp.status+(t?' — '+t.slice(0,80):'')); }
-    const data=await resp.json();
-    const voiceId=data.voice_id||data.voiceId; if(!voiceId) throw new Error('Pas de voice_id renvoyé');
-    // Sauvegarde + sélection
-    const arr=_getClonedVoices(); arr.unshift({ voice_id:voiceId, name, date:new Date().toLocaleDateString('fr-FR') }); _saveClonedVoices(arr);
-    selVoiceId=voiceId;
-    if(typeof _refreshVoiceLabels==='function') _refreshVoiceLabels();
-    closeVoiceDesign();
-    toast('Ta voix est créée et sélectionnée !');
-  }catch(e){ toast(''+(e.message||e)); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent=lbl; } }
-}
-function _renderVoicePickerList(engine){
-  const list=document.getElementById('voicePickerList'); if(!list) return;
-  const all = engine==='gemini' ? _CARTOON_VOICES : _elevenVoiceList();
-  const favs=_voiceFavs(engine);
-  const curId = engine==='gemini' ? (window._selGeminiVoice||'Puck') : selVoiceId;
-  const sorted=[...all].sort((a,b)=> (favs.includes(b.id)?1:0)-(favs.includes(a.id)?1:0));
-  list.innerHTML=sorted.map(v=>{
-    const on=v.id===curId, fav=favs.includes(v.id);
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;border:1px solid ${on?'rgba(168,85,247,.5)':'var(--border2)'};background:${on?'rgba(168,85,247,.1)':'var(--bg3)'}">
-      <span onclick="_voiceToggleFav('${engine}','${v.id}')" style="cursor:pointer;font-size:15px;flex-shrink:0" title="Favori">${fav?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z" fill="currentColor"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>'}</span>
-      <div onclick="_voiceSelectFromPicker('${engine}','${v.id}')" style="flex:1;min-width:0;cursor:pointer">
-        <div style="font-size:13px;font-weight:700;color:${on?'#c4a3f7':'var(--text)'}">${v.emoji} ${v.name || 'Sans titre'} <span style="font-weight:400;color:var(--text3);font-size:10.5px">· ${v.desc}</span></div>
-        <div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">idéal : ${v.match}</div>
-      </div>
-      <button onclick="_voicePreview('${engine}','${v.id}',this)" style="flex-shrink:0;width:34px;height:34px;border-radius:9px;background:var(--bg4);border:1px solid var(--border2);color:#c4a3f7;cursor:pointer;font-size:13px" title="Écouter">▶</button>
-      ${on?'<span style="flex-shrink:0;color:#a855f7;font-size:13px">✓</span>':''}
-    </div>`;
-  }).join('');
-  // ElevenLabs : bouton « Créer ma voix » (Voice Design) en tête
-  if(engine==='eleven'){
-    list.insertAdjacentHTML('afterbegin',
-      `<div onclick="openVoiceDesign()" style="display:flex;align-items:center;gap:10px;padding:11px;border-radius:11px;border:1px solid rgba(255,107,53,.45);background:rgba(255,107,53,.08);cursor:pointer;margin-bottom:4px" onmouseover="this.style.background='rgba(255,107,53,.16)'" onmouseout="this.style.background='rgba(255,107,53,.08)'">
-        <span style="font-size:17px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span>
-        <div style="flex:1"><div style="font-size:13px;font-weight:800;color:var(--orange2)">Créer ma voix (Voice Design)</div><div class="faint" style="font-size:9.5px;font-family:var(--mono);margin-top:1px">décris la voix exacte → 3 aperçus → tu choisis</div></div>
-        <span style="color:var(--orange2);font-size:16px">→</span>
-      </div>`);
-  }
-}
-function _voiceSelectFromPicker(engine,id){
-  if(engine==='gemini'){ window._selGeminiVoice=id; const inp=document.getElementById('cartoonTtsVoice'); if(inp) inp.value=id; }
-  else { selVoiceId=id; }
-  _refreshVoiceLabels();
-  closeVoicePicker();
-  toast('Voix sélectionnée');
-}
-const _SILENT_WAV='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
-async function _voicePreview(engine,id,btn){
-  // ── Déblocage autoplay Safari : on amorce l'élément audio DANS le geste utilisateur ──
-  const a = _voicePreviewAudio || (_voicePreviewAudio = new Audio());
-  try{ a.pause(); a.src=_SILENT_WAV; a.play().catch(()=>{}); }catch(e){}
-  const key=engine+':'+id;
-  const orig=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent=''; }
-  try{
-    let url=window._voicePreviewCache[key];
-    if(!url){
-      let blob;
-      if(engine==='gemini'){
-        const resp=await _cartoonProxyFetch('/v1beta/models/gemini-2.5-flash-preview-tts:generateContent',{
-          method:'POST', body:JSON.stringify({ contents:[{parts:[{text:_VOICE_SAMPLE}]}], generationConfig:{ responseModalities:['AUDIO'], speechConfig:{ voiceConfig:{ prebuiltVoiceConfig:{ voiceName:id } } } } })
-        });
-        if(!resp.ok){ const e=await resp.json().catch(()=>({})); const msg=e?.error?.message||('HTTP '+resp.status); console.error('Gemini preview',id,resp.status,e); throw new Error((resp.status===429?'Quota/limite atteinte — réessaie dans 1 min':msg)); }
-        const data=await resp.json();
-        const part=(data?.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
-        const b64=(part?.inlineData||part?.inline_data)?.data; if(!b64) throw new Error('Pas d\'audio renvoyé (voix '+id+')');
-        blob=new Blob([_pcmToWav(Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),24000,1)],{type:'audio/wav'});
-      } else {
-        const authH=await getAuthHeader();
-        const resp=await fetch(`${EL_PROXY}?path=/v1/text-to-speech/${id}`,{ method:'POST', headers:{...authH,'Content-Type':'application/json'}, body:JSON.stringify({ text:_VOICE_SAMPLE, model_id:'eleven_multilingual_v2', voice_settings:{stability:0.5,similarity_boost:0.75} }) });
-        if(!resp.ok){ const t=await resp.text().catch(()=>''); console.error('ElevenLabs preview',id,resp.status,t); throw new Error(resp.status===401?'Clé ElevenLabs manquante/expirée':('ElevenLabs '+resp.status)); }
-        blob=await resp.blob();
-      }
-      url=URL.createObjectURL(blob); window._voicePreviewCache[key]=url;
-    }
-    // On réutilise l'élément amorcé dans le geste → lecture autorisée dès le 1er clic
-    a.src=url; a.currentTime=0;
-    try{ await a.play(); }catch(_){ toast('▶ Reclique pour écouter'); }
-  }catch(e){ console.error('Voice preview error:',e); toast(''+(e.message||'Aperçu indisponible')); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent=orig||'▶'; } }
 }
 
 function _hedraIncrement(){ if(typeof _incrementVideosUsed==='function') _incrementVideosUsed(); }

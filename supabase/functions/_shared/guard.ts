@@ -32,7 +32,10 @@ export const reserveEnforce = (): boolean => (Deno.env.get('RESERVE_ENFORCE') ??
 // refuse ce cas (fail-closed sauf owner/dev, par le PLAN). Défaut 0 = MODE OMBRE : journalise « would-402 »
 // sans bloquer → observer les logs [reserve-strict] avant de basculer (aucun flux légitime ne doit en émettre).
 export const reserveStrict = (): boolean => (Deno.env.get('RESERVE_STRICT') ?? '0') === '1'
-export function opFromReq(req: Request): string { const v = (req.headers.get('x-aa-op') || '').trim(); return /^[0-9a-f-]{36}$/i.test(v) ? v : '' }
+// Audit 28/09 (CRITIQUE) : l'ancien motif /^[0-9a-f-]{36}$/ laissait passer « ffff…ff » ou « ---…- » (36 car.) ; resolve_op
+// (p_hint uuid) levait alors 22P02, traité en « hoquet » fail-open → AUCUN tirage et vidéo livrée gratis. UUID canonique seul.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export function opFromReq(req: Request): string { const v = (req.headers.get('x-aa-op') || '').trim(); return UUID_RE.test(v) ? v.toLowerCase() : '' }
 // L'en-tête x-aa-op est un simple INDICE (client). La VRAIE source = latest_open_op côté serveur → le
 // settle/draw ne peut plus être contourné en omettant l'en-tête (audit #3 : refund-and-keep async).
 export async function resolveOp(userId: string, req: Request): Promise<string> {
@@ -42,11 +45,19 @@ export async function resolveOp(userId: string, req: Request): Promise<string> {
   const hinted = opFromReq(req)
   // C1 (14/09) : distinguer une ERREUR technique (→ '__ERR__' = fail-open) d'un « aucune op » réel (→ ''
   // = fail-closed sous RESERVE_STRICT). Sinon un simple hoquet DB 402 un client légitime en pleine génération.
-  try {
-    const { data, error } = await svc().rpc('resolve_op', { p_user: userId, p_hint: hinted || null })
-    if (error) { console.warn('resolve_op erreur (fail-open):', error.message); return '__ERR__' }
-    return (data as string | null) || ''
-  } catch (e) { console.warn('resolve_op exception (fail-open):', (e as Error)?.message); return '__ERR__' }
+  // Audit 28/09 : une erreur liée à l'INDICE (fourni par le client) ne doit jamais ouvrir le fail-open → on refait la
+  // résolution SANS indice (dernière op ouverte côté serveur) ; seule une erreur sans indice reste un vrai hoquet DB.
+  const tryResolve = async (hint: string | null): Promise<{ ok: boolean; op: string }> => {
+    try {
+      const { data, error } = await svc().rpc('resolve_op', { p_user: userId, p_hint: hint })
+      if (error) { console.warn('resolve_op erreur' + (hint ? ' (indice écarté, nouvel essai sans indice)' : ' (fail-open)') + ':', error.message); return { ok: false, op: '' } }
+      return { ok: true, op: (data as string | null) || '' }
+    } catch (e) { console.warn('resolve_op exception:', (e as Error)?.message); return { ok: false, op: '' } }
+  }
+  const first = await tryResolve(hinted || null)
+  if (first.ok) return first.op
+  if (hinted) { const again = await tryResolve(null); if (again.ok) return again.op }
+  return '__ERR__'
 }
 // Tire p_cost sur la réservation. ok=false → reste insuffisant (op sous-évaluée). Fail-open sur erreur DB.
 export async function drawReservation(userId: string, opId: string, cost: number): Promise<{ ok: boolean; remaining: number | null }> {

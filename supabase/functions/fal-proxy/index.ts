@@ -31,6 +31,19 @@ const readKey = () => {
 // /fal-ai/<owner>/<model>[/sub…] pour les soumissions et le polling ; /requests/<id>[/status] forme courte
 const ALLOW = /^\/((fal-ai|google)\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*|requests\/[A-Za-z0-9-]+(\/status)?)$/   // + google/ (Gemini Omni Flash : /edit, /image-to-video, /requests/<id>[/status])
 const IS_POLL = /\/requests\/[A-Za-z0-9-]+(\/status)?$/
+// Audit 28/09 (HAUTE) : ALLOW laissait SOUMETTRE n'importe quel modèle fal-ai/* ou google/* ; un modèle non listé retombait à
+// falCost = 1 (réserve du client) → 1 crédit pour un modèle fal cher. SOUMISSION = liste FERMÉE des modèles réellement appelés
+// (app, render-worker) ; le suivi (/requests/<id>…) reste libre (gratuit chez fal, sans tirage).
+const SUBMIT_ALLOW: RegExp[] = [
+  /^\/fal-ai\/kling-video\/(v2\.6|v3)\/(standard|pro)\/motion-control$/i,   // Motion Control 2.6 / 3.0
+  /^\/fal-ai\/bytedance\/omnihuman\/v1\.5$/i,                               // OmniHuman 1.5 (repli de kie, worker)
+  /^\/fal-ai\/nano-banana-pro\/edit$/i,                                      // 4K / faceswap
+  /^\/fal-ai\/aura-sr$/i,                                                     // upscale HD
+  /^\/google\/gemini-omni-flash\/v1\.1\/(edit|image-to-video)$/i,          // Module Omni + Flash (carré 1:1)
+  /^\/fal-ai\/ben\/v2\/video$/i,                                            // matting vidéo (Motion Control)
+  /^\/fal-ai\/birefnet(\/v2)?$/i, /^\/fal-ai\/imageutils\/rembg$/i,        // détourage
+  /^\/fal-ai\/topaz\/upscale\/video$/i,                                     // upscale vidéo
+]
 // Coût serveur (borne basse) : Kling v3=6, Kling pro=4, Kling standard=2, OmniHuman=5, AuraSR=3, Nano=5,
 // Omni edit=3 ; auxiliaires (ben/birefnet/rembg/topaz, couverts par l'op parente) = 1.
 function falCost(path: string): number {
@@ -79,6 +92,7 @@ serve(async (req: Request) => {
   if (!v.ok) return jsonRes(400, { error: 'path refusé : ' + v.reason })
   const path = v.path
   const isSubmit = req.method === 'POST' && !IS_POLL.test(path.split('?')[0])
+  if (isSubmit && !SUBMIT_ALLOW.some((r) => r.test(path.split('?')[0]))) return jsonRes(403, { error: 'modèle fal non autorisé' })
   // Op auxiliaire (matting/utilitaire, tirée per-cost et POTENTIELLEMENT partagée avec l'op parente) : on ne
   // rembourse JAMAIS le solde en son nom (sur-remboursement de la part parente) → seulement release réserve.
   // Hissé ici pour être lisible aussi dans le catch réseau (échec de soumission sans réponse).
