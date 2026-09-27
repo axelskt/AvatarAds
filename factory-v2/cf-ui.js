@@ -1463,6 +1463,36 @@
   // réelle A1-2…, plus ancienne d'abord) sinon « en attente d'être créée ». Hook avant / après : aucun avatar (voix off).
   var FMT_ORDER = { spoken: ['axel', 'omni'], 'texte-choc': ['muet'] };
   var FMT_NAME = { axel: 'Audio d’Axel', omni: 'Voix native Omni', muet: 'Texte + musique' };
+  var FMT_SHORT = { axel: 'lipsync', omni: 'voix native', muet: 'texte + musique' };
+  // Texte choc (TH…) : la phrase telle qu'elle passe à l'écran, émoji de fin compris (meta.full, sinon texte + meta.emoji).
+  // Exception voulue à « aucun emoji » : c'est le CONTENU de la brique (Axel 27/09), jamais une icône d'interface.
+  function thText(m, label) { return m.full || ((m.text || label || '') + (m.emoji ? ' ' + m.emoji : '')); }
+  // Vidéos GÉNÉRÉES / POSSIBLES (Axel 27/09 : « Hook X généré / X possibles ») : mêmes emplacements que la fiche
+  // (fmtVideosHTML : PHOTOS_PAR_AVATAR par avatar et par format), mêmes briques que la capacité — hooks parlés (sans alias ni
+  // avant / après), liaisons, CTA → lipsync + voix native ; textes choc → Texte + musique. Sans factory_prod_stats : null.
+  function genVideos(M) {
+    var St = M && M.vars && M.vars.St, L = M && M.L;
+    if (!St || St.state !== 'ready' || !L || !COH) return null;
+    var NP = COH.PHOTOS_PAR_AVATAR || 3, A = L.avatars.length, avs = Object.create(null), per = Object.create(null), by = Object.create(null), kindOf = Object.create(null);
+    var sets = { hook: lipHooks(L), liaison: L.liaisons, cta: L.ctas, 'texte-choc': L.textes || [] };
+    var fmtsOf = function (k) { return k === 'texte-choc' ? FMT_ORDER['texte-choc'] : FMT_ORDER.spoken; };
+    L.avatars.forEach(function (a) { avs[a.id] = 1; });
+    Object.keys(sets).forEach(function (k) { sets[k].forEach(function (b) { kindOf[b.id] = k; by[b.id] = { fmts: fmtsOf(k) }; }); });
+    (St.videos || []).forEach(function (x) {
+      var k = kindOf[x.brick];
+      if (!k || fmtsOf(k).indexOf(x.format) < 0 || !mediaSrc(x.url)) return;
+      var a = COH.photoParent ? COH.photoParent(x.photo) : x.photo, key = x.brick + '|' + x.format + '|' + a;
+      if (!avs[a] || (per[key] = (per[key] || 0) + 1) > NP) return;
+      by[x.brick][x.format] = (by[x.brick][x.format] || 0) + 1;
+    });
+    var kinds = {};
+    Object.keys(sets).forEach(function (k) {
+      kinds[k] = fmtsOf(k).map(function (f) {
+        return { f: f, done: sets[k].reduce(function (t, b) { return t + (by[b.id][f] || 0); }, 0), total: sets[k].length * A * NP };
+      });
+    });
+    return { by: by, kinds: kinds, slot: A * NP };
+  }
   function fmtVideosHTML(M, b) {
     var St = M && M.vars && M.vars.St, L = M && M.L;
     if (!St || St.state !== 'ready' || !L) return '';
@@ -1506,6 +1536,7 @@
       else flagged[b.kind] = (flagged[b.kind] || 0) + 1;
     });
     var max = Math.max.apply(null, PK.map(function (x) { return cnt[x.k]; }).concat([1]));
+    var G = genVideos(M);
     var alias = list.filter(function (b) { return b.kind === 'hook' && b.status === 'ready' && b.meta.alias_of; }).length;
     var gen = list.filter(function (b) { return b.kind === 'liaison' && b.status === 'ready' && b.subject === 'generique'; }).length;
     var tiles = PK.map(function (x) {
@@ -1517,7 +1548,10 @@
       if (flagged[x.k]) sub += ' · ' + flagged[x.k] + ' hors service';
       return '<button type="button" class="cf-ltile' + (on ? ' is-on' : '') + '" data-act="lib-kind" data-k="' + x.k + '" aria-pressed="' + on + '">'
         + '<span class="cf-ltile-h"><span>' + esc(x.t) + '</span>' + svg(IC[x.ic], 16) + '</span><b>' + esc(fInt(n)) + '</b>'
-        + '<span class="cf-lbar"><i style="width:' + (n ? n / max * 100 : 0).toFixed(1) + '%"></i></span><span class="cf-ltile-s">' + esc(sub) + '</span></button>';
+        + '<span class="cf-lbar"><i style="width:' + (n ? n / max * 100 : 0).toFixed(1) + '%"></i></span><span class="cf-ltile-s">' + esc(sub) + '</span>'
+        + (G && G.kinds[x.k] ? '<span class="cf-ltile-g" title="vidéos générées / possibles (' + esc(fInt(G.slot)) + ' par brique et par format)"><span class="cf-ltile-gh">Vidéos générées</span>'
+          + G.kinds[x.k].map(function (v) { return '<span><span class="cf-gn">' + esc(fInt(v.done)) + '</span> / ' + esc(fInt(v.total)) + ' ' + esc(FMT_SHORT[v.f]) + '</span>'; }).join('') + '</span>' : '')
+        + '</button>';
     }).join('');
     var grid = '';
     if (ui.libKind) {
@@ -1531,13 +1565,13 @@
       var main = hit.filter(function (b) { return !isProposal(b); }), prop = hit.filter(isProposal), nMain = all.filter(function (b) { return !isProposal(b); }).length;
       grid = '<div class="cf-lgrid-w"><div class="cf-lgrid-h"><h3 class="cf-h2">' + esc(K.t) + ' <span class="cf-badge">' + esc(fInt(nMain)) + '</span></h3>'
         + '<label class="cf-search"><span class="cf-sr">Rechercher un ID ou un texte</span>' + svg(IC.search, 14) + '<input id="cfLibQ" type="search" placeholder="Rechercher un ID ou un texte" value="' + esc(ui.libQuery) + '" autocomplete="off"></label></div>'
-        + (main.length ? '<div class="cf-lgrid">' + main.map(libItemHTML).join('') + '</div>' : !prop.length ? '<div class="cf-empty-s">' + esc(all.length ? 'Aucune brique ne correspond à « ' + ui.libQuery.trim() + ' ».' : 'Aucune brique de ce type pour l’instant.') + '</div>' : '')
-        + (prop.length ? '<div class="cf-over cf-lprop-h">Propositions · ' + prop.length + '</div><div class="cf-lgrid is-prop">' + prop.map(libItemHTML).join('') + '</div>' : '') + '</div>';
+        + (main.length ? '<div class="cf-lgrid">' + main.map(function (b) { return libItemHTML(b, G); }).join('') + '</div>' : !prop.length ? '<div class="cf-empty-s">' + esc(all.length ? 'Aucune brique ne correspond à « ' + ui.libQuery.trim() + ' ».' : 'Aucune brique de ce type pour l’instant.') + '</div>' : '')
+        + (prop.length ? '<div class="cf-over cf-lprop-h">Propositions · ' + prop.length + '</div><div class="cf-lgrid is-prop">' + prop.map(function (b) { return libItemHTML(b, G); }).join('') + '</div>' : '') + '</div>';
     }
     return '<div class="cf-ltiles">' + tiles + '</div>' + grid;
   }
-  function libItemHTML(b) {
-    var m = b.meta, tag = '';
+  function libItemHTML(b, G) {
+    var m = b.meta, tag = '', gv = G && G.by[b.id];
     if (b.kind === 'hook') tag = m.alias_of ? 'alias de ' + m.alias_of : m.compatible_subjects.indexOf('generique') >= 0 ? 'générique' : m.compatible_subjects.length + ' ' + plural(m.compatible_subjects.length, 'sujet');
     else if (b.kind === 'liaison') tag = b.subject === 'generique' ? 'générique' : m.modules.length + ' ' + plural(m.modules.length, 'module');
     else if (b.kind === 'cta') tag = m.keyword ? 'mot-clé ' + m.keyword : 'sans mot-clé';
@@ -1546,13 +1580,17 @@
     else if (b.kind === 'avatar') { var np = avPhotos(b).length; tag = np + ' ' + plural(np, 'photo'); }
     if (isProposal(b)) tag = 'proposition';
     else if (b.status !== 'ready') tag = stFr(b.status) + (tag ? ' · ' + tag : '');
-    var text = m.transcript || m.script || b.label || (m.value ? 'style ' + m.value : '');
+    var text = b.kind === 'texte-choc' ? thText(m, b.label) : m.transcript || m.script || b.label || (m.value ? 'style ' + m.value : '');
     // avatar : toutes ses photos en vignettes (la photo = le décor, pas une vidéo de plus)
     var ph = b.kind === 'avatar' ? avPhotos(b) : [];
     return '<button type="button" class="cf-litem' + (b.status !== 'ready' && !isProposal(b) ? ' is-off' : '') + (isProposal(b) ? ' is-prop' : '') + '" data-act="brick-open" data-bid="' + esc(b.id) + '">'
       + '<span class="cf-litem-h"><b>' + esc(b.id) + '</b><span class="cf-litem-m">' + esc(tag) + '</span></span>'
       + (ph.length ? '<span class="cf-litem-ph">' + ph.map(function (u, i) { return thumbImg(u, 96, 'alt="" loading="lazy" decoding="async" data-i="' + i + '"', true); }).join('') + '</span>' : '')
-      + '<span class="cf-litem-t">' + esc(shorten(text, 96) || '—') + '</span></button>';
+      + '<span class="cf-litem-t">' + esc(shorten(text, 96) || '—') + '</span>'
+      + (gv ? '<span class="cf-litem-g">' + gv.fmts.map(function (f) {
+        var d = gv[f] || 0;
+        return '<span class="' + (d >= G.slot ? 'is-full' : d ? 'is-part' : '') + '">' + esc(FMT_SHORT[f]) + ' <span class="cf-gn">' + d + '</span>/' + G.slot + '</span>';
+      }).join('') + '</span>' : '') + '</button>';
   }
   // Assemblages = recettes de hooks visuels (factory_recipes : TX-A → TX-B), présentées comme la liste « Assemblages » de la
   // maquette : barre des statuts, filtres, tableau, 8 lignes puis « Afficher les N assemblages ».
@@ -3149,7 +3187,7 @@
     } else {
       top = asrc ? aplayHTML(asrc, m.duration, true) : fb ? '<div>' + miss(b.kind === 'musique' ? 'piste' : 'audio') + '</div>' : '<span class="cf-meta">audio indisponible</span>';
     }
-    var text = spoken ? (b.text || (fb ? 'texte pas encore saisi' : b.label)) : b.label && b.label !== b.id ? b.label + (m.variant ? ' · ' + (m.variant === 'ugc-reel' ? 'UGC réel' : m.variant) : '') : '';
+    var text = kind === 'texte-choc' ? thText(m, b.label) : spoken ? (b.text || (fb ? 'texte pas encore saisi' : b.label)) : b.label && b.label !== b.id ? b.label + (m.variant ? ' · ' + (m.variant === 'ugc-reel' ? 'UGC réel' : m.variant) : '') : '';
     var textBox = text ? '<div class="cf-bs-text' + (spoken && !b.text && fb ? ' is-na' : '') + '">' + esc(text) + '</div>' : '';
     var trend = '';
     if (uses.length >= 2 && views[0] > 0) {

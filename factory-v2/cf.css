@@ -1103,6 +1103,16 @@ i.is-gap { background: var(--cf-ink); }
 .cf-lbar { display: block; height: 5px; border-radius: 3px; background: #efe9e1; overflow: hidden; }
 .cf-lbar i { display: block; height: 100%; border-radius: 3px; background: var(--cf-accent); }
 .cf-ltile-s { font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute); overflow-wrap: anywhere; }
+.cf-ltile-g { display: flex; flex-direction: column; gap: 2px; font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute); border-top: 1px solid var(--cf-line); padding-top: 8px; overflow-wrap: anywhere; }
+.cf-ltile-gh { font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--cf-mute-2); }
+.cf-ltile-g .cf-gn { color: var(--cf-ink); font-weight: 700; }
+.cf-litem-g { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; font-family: var(--cf-mono); font-size: 10px; color: var(--cf-mute); }
+.cf-litem-g > span { padding: 2px 7px; border-radius: 6px; background: var(--cf-track); white-space: nowrap; }
+.cf-litem-g .cf-gn { font-weight: 700; color: var(--cf-ink-2); }
+.cf-litem-g > .is-part { background: var(--cf-accent-50); color: var(--cf-accent-deep); }
+.cf-litem-g > .is-part .cf-gn { color: var(--cf-accent-deep); }
+.cf-litem-g > .is-full { background: var(--cf-ok-bg); color: var(--cf-ok-fg); }
+.cf-litem-g > .is-full .cf-gn { color: var(--cf-ok-fg); }
 .cf-lgrid-w { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #f1ece5; padding-top: 16px; }
 .cf-lgrid-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .cf-lgrid-h .cf-search { flex: 0 1 240px; height: 34px; }
