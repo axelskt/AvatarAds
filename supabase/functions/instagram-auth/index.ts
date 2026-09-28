@@ -1,6 +1,6 @@
 // Instagram Business Login (OAuth) — AvatarAds Auto-DM (Phase 2 : chaque user branche SON compte)
 //  action=authorize : URL d'autorisation (Instagram Business Login → écran de consentement)
-//  action=exchange  : code → token court → token long (60j) → username → upsert ig_accounts
+//  action=exchange  : code → token court → token long (60j) → username + id pro → upsert ig_accounts → webhooks
 //  action=accounts  : liste des comptes connectés (jamais le token)
 // Le client_secret (IG_APP_SECRET) ne sort JAMAIS du serveur. verify_jwt=false (le callback arrive
 // sans session Supabase). Redirect URI = avatarads.fr/ig-callback.html (enregistré côté Meta).
@@ -34,6 +34,20 @@ async function ownerOk(req: Request): Promise<boolean> {
     if (e2 || !data) return false
     return !!data.is_owner || String(data.plan || '').toLowerCase() === 'developer'
   } catch { return false }
+}
+
+// Abonnement du compte (token) aux champs webhook de l'app. Les champs de repli servent si Meta refusait un champ.
+async function subscribe(token: string): Promise<true | string> {
+  let last = ''
+  for (const fields of ['comments,messages,messaging_postbacks', 'comments,messages']) {
+    try {
+      const r = await fetch(`https://graph.instagram.com/v21.0/me/subscribed_apps?subscribed_fields=${fields}&access_token=${encodeURIComponent(token)}`, { method: 'POST' })
+      const j = await r.json().catch(() => ({}))
+      if (j?.success === true) return true
+      last = String(j?.error?.message || `HTTP ${r.status}`)
+    } catch (e) { last = String(e) }
+  }
+  return last.replace(/access_token=[^&\s"'<>]*/gi, 'access_token=***').slice(0, 160)
 }
 
 Deno.serve(async (req) => {
@@ -95,11 +109,13 @@ Deno.serve(async (req) => {
     //    avec son propre code : c'est ce qu'affichent ig-callback.html et ig-review.html (page du
     //    reviewer Meta), sans passer par ig-insights, qui est réservé au propriétaire.
     let username: string | null = null
+    let igUserId = ''   // id PROFESSIONNEL (= entry.id des webhooks, ig_dm_log.ig_id), ≠ userId app-scoped
     let preview: Record<string, unknown> | null = null
     try {
       const ru = await fetch(`https://graph.instagram.com/v21.0/me?fields=user_id,username,name,profile_picture_url,followers_count,media_count&access_token=${encodeURIComponent(longTok)}`)
       const ju = await ru.json().catch(() => ({}))
       username = ju.username || null
+      igUserId = String(ju.user_id || '').replace(/\D/g, '')
       if (!ju.error) {
         preview = {
           username, name: ju.name ?? null, profile_picture_url: ju.profile_picture_url ?? null,
@@ -113,16 +129,28 @@ Deno.serve(async (req) => {
       }
     } catch { /* non bloquant */ }
 
-    // d) upsert
+    // d) upsert. Avec l'id professionnel, la ligne du compte est retrouvée par lui (l'id app-scoped peut changer
+    //    d'une connexion à l'autre : on ne crée pas un doublon qui garderait un vieux token).
     const now = Date.now()
-    const row = {
+    const row: Record<string, unknown> = {
       ig_id: userId, username, access_token: longTok,
       token_expires_at: new Date(now + expiresIn * 1000).toISOString(),
       updated_at: new Date(now).toISOString(),
     }
-    const { error } = await svc.from('ig_accounts').upsert(row, { onConflict: 'ig_id' })
+    if (igUserId) {
+      row.ig_user_id = igUserId
+      // ligne relié avant le 28/09 (ig_user_id vide) avec ce même id app-scoped : on la complète, sinon l'upsert par
+      // ig_user_id tenterait un 2e INSERT sur la même clé primaire
+      await svc.from('ig_accounts').update({ ig_user_id: igUserId }).eq('ig_id', userId).is('ig_user_id', null)
+    }
+    const { error } = await svc.from('ig_accounts').upsert(row, { onConflict: igUserId ? 'ig_user_id' : 'ig_id' })
     if (error) return json({ error: 'stockage token : ' + error.message }, 500)
-    return json({ ok: true, ig_id: userId, username, preview })
+
+    // e) abonnement du compte aux webhooks (commentaires + DM + tap du bouton) : sans lui, Meta n'envoie rien pour
+    //    un compte relié après coup (28/09 : 2e compte). Non bloquant : le résultat est renvoyé et journalisé.
+    const webhooks = await subscribe(longTok)
+    console.log('[instagram-auth] compte relié', username, 'webhooks', webhooks)
+    return json({ ok: true, ig_id: userId, username, webhooks, preview })
   }
 
   // 3) comptes connectés (jamais le token) — owner/dev uniquement : la liste contiendra les
@@ -130,7 +158,7 @@ Deno.serve(async (req) => {
   if (action === 'accounts') {
     if (!(await ownerOk(req))) return json({ error: 'réservé au propriétaire' }, 401)
     // token_expires_at (date seule, JAMAIS le token) : le dashboard affiche « token valide jusqu'au … » (24/09/2026).
-    const { data } = await svc.from('ig_accounts').select('ig_id, username, updated_at, token_expires_at').order('updated_at', { ascending: false })
+    const { data } = await svc.from('ig_accounts').select('ig_id, ig_user_id, username, updated_at, token_expires_at').order('updated_at', { ascending: false })
     return json({ accounts: data || [] })
   }
 

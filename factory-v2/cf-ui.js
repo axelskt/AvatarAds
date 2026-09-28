@@ -251,7 +251,7 @@
     if (tok && tok.expired) return { tone: 'err', pill: u + ' · token expiré', line: 'token expiré le ' + dmy(tok.date) };
     if (D && D.basicError) return { tone: 'err', pill: u + ' · lecture refusée', line: 'Instagram refuse la lecture du profil' };
     if (!D) {
-      if (A.state === 'ready' && !prim) return { tone: 'err', pill: 'Instagram déconnecté', line: 'aucun compte @' + CF.PRIMARY_USERNAME + ' relié' };
+      if (A.state === 'ready' && !prim) return { tone: 'err', pill: 'Instagram déconnecté', line: 'aucun compte @' + selName() + ' relié' };
       if (A.state === 'error') return { tone: 'mute', pill: 'Instagram · —', line: 'comptes indisponibles' };
       if (A.state === 'idle') return { tone: 'mute', pill: 'Instagram…', line: 'chargement' };
     }
@@ -408,7 +408,7 @@
     var out = [];
     function add(lvl, title, sub, o) { o = o || {}; out.push({ lvl: lvl, title: title, sub: sub || '', tab: o.tab || null, ext: o.ext || null, retry: o.retry || null }); }
     var A = CF.acct.accounts, S = CF.acct.ig[HOME_RANGE], M = CF.acct.media, DS = CF.dm[HOME_DM], PS = CF.prod, V = CF.prov;
-    var u = '@' + CF.PRIMARY_USERNAME, kept = function (x, what) { return x ? ' · ' + what + ' du ' + hm(new Date(x.fetchedAt)) + ' conservés' : ''; };
+    var u = '@' + selName(), kept = function (x, what) { return x ? ' · ' + what + ' du ' + hm(new Date(x.fetchedAt)) + ' conservés' : ''; };
     // Instagram : trois états pilotés par le token (maquette §14)
     if (ig.key === 'off') add('danger', 'Instagram déconnecté · reconnecte ' + u, 'L’auto-DM est en pause tant que le compte n’est pas reconnecté. Les chiffres Instagram passent à « — » ; ceux de l’Auto-DM (notre base) restent justes.', { tab: 'dm' });
     else if (ig.key === 'expired') add('danger', 'Token Instagram expiré', 'Expiré le ' + dmy(ig.tok.date) + ' : l’auto-DM est en pause. Reconnecte ' + u + '.', { tab: 'dm' });
@@ -504,7 +504,8 @@
     var S = CF.acct.ig[HOME_RANGE], off = S.kind === 'disconnected', X = model(S, S.data, off, HOME_RANGE);
     var DS = CF.dm[HOME_DM], Y = dmModel(DS, DS.data, HOME_DM);
     return '<section class="cf-title"><h1>Vue d’ensemble</h1><div class="cf-sub">' + esc(longDate(new Date())) + '</div>'
-      + '<div class="cf-hig is-' + ig.tone + '" data-ig="' + ig.key + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(ig.line) + '</span></div></section>'
+      + '<div class="cf-hig is-' + ig.tone + '" data-ig="' + ig.key + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(ig.line) + '</span></div>'
+      + (igSelHTML() ? '<div class="cf-hsel">' + igSelHTML() + '</div>' : '') + '</section>'
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
@@ -931,7 +932,7 @@
       var X = function (i) { return n > 1 ? i / (n - 1) * 100 : 50; }, Y = function (v) { return 8 + (1 - v / max) * 84; };
       var d = months.map(function (x, i) { return (i ? 'L' : 'M') + (X(i) * 10).toFixed(1) + ',' + (Y(x.n) * 2).toFixed(1); }).join(' ');
       var one = months.every(function (x) { return x.y === months[0].y; });
-      body = '<div class="cf-pchart" role="img" aria-label="' + esc('Reels publiés par mois sur @' + CF.PRIMARY_USERNAME) + '">'
+      body = '<div class="cf-pchart" role="img" aria-label="' + esc('Reels publiés par mois sur @' + selName()) + '">'
         + '<span class="cf-pgrid-l"></span><span class="cf-pgrid-l"></span><span class="cf-pgrid-l is-base"></span>'
         + '<svg viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="' + d + '" fill="none" stroke="var(--cf-ink)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>'
         + months.map(function (x, i) {
@@ -1859,11 +1860,26 @@
       + '<p class="cf-dim">Rien n’est affiché ici tant que la source n’est pas branchée : pas de chiffre d’exemple.</p></div></section>';
   }
 
-  // ── onglet Compte @avataradss ──
+  // ── sélection du compte Instagram (Axel 28/09 : un compte par avatar) ──
+  // Pseudo(s) affiché(s) : « avataradss », « leoadsia » ou « avataradss + @leoadsia » pour « Les deux ».
+  function selName() { var p = CF.acct.accounts.primary; return (p && p.username) || CF.PRIMARY_USERNAME; }
+  // « Les deux · @avataradss · @leoadsia » : seulement quand au moins deux de nos comptes sont reliés.
+  function igSelHTML() {
+    var own = CF.acct.accounts.own || [];
+    if (own.length < 2) return '';
+    var opts = [['all', 'Les deux']].concat(own.map(function (a) { return [a.ig_id, '@' + a.username]; }));
+    return '<div class="cf-seg cf-pseg cf-igsel" role="group" aria-label="Compte Instagram">' + opts.map(function (o) {
+      var on = o[0] === CF.igSel;
+      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="ig-sel" data-k="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>';
+    }).join('') + '</div>';
+  }
+  function titleSel(h) { return '<section class="cf-title cf-title-sel"><h1>' + esc(h) + '</h1>' + igSelHTML() + '</section>'; }
+
+  // ── onglet Compte (compte(s) sélectionné(s)) ──
   function compteHTML() {
     var S = CF.acct.ig[ui.range], D = S.data, off = S.kind === 'disconnected';
     var X = model(S, D, off, ui.range);
-    return '<section class="cf-title"><h1>Insight Instagram</h1></section>'
+    return titleSel('Insight Instagram')
       + acctHTML(D)
       + insightsHTML(S, D, off, X)
       + goalsHTML(X)
@@ -1902,9 +1918,9 @@
     if (oa && Date.now() - oa.at < 10 * 60 * 1000 && (!ui.recon || oa.at >= ui.recon.at)) {
       msg = !oa.ok
         ? '<div class="cf-acct-msg is-err">Reconnexion échouée : ' + esc(oa.error) + '</div>'
-        : (oa.username && oa.username.toLowerCase() !== CF.PRIMARY_USERNAME)
-          ? '<div class="cf-acct-msg is-err">@' + esc(oa.username) + ' relié, mais le tableau de bord lit @' + esc(CF.PRIMARY_USERNAME) + ' : son token n’a pas changé.</div>'
-          : '<div class="cf-acct-msg is-ok">Reconnexion réussie' + (oa.username ? ' : @' + esc(oa.username) : '') + '.'
+        : (oa.username && CF.OWN_USERNAMES.indexOf(oa.username.toLowerCase()) < 0)
+          ? '<div class="cf-acct-msg is-err">@' + esc(oa.username) + ' relié, mais ce n’est pas un de nos comptes (@' + esc(CF.OWN_USERNAMES.join(', @')) + ') : le tableau de bord ne l’affiche pas.</div>'
+          : '<div class="cf-acct-msg is-ok">Connexion réussie' + (oa.username ? ' : @' + esc(oa.username) : '') + '.'
             + (CF.acct.accounts.loading || CF.acct.ig[ui.range].loading ? ' Relecture en cours…' : ' Chiffres relus.') + '</div>';
     } else if (ui.recon) {
       msg = '<div class="cf-acct-msg is-' + (ui.recon.ok ? 'info' : 'err') + '">' + esc(ui.recon.text) + '</div>';
@@ -1988,7 +2004,7 @@
   function slotBanner(S, D) {
     var P = PERIOD[ui.range];
     if (S.kind === 'disconnected') {
-      return banner('err', IC.alert, '<b>Instagram déconnecté</b> · reconnecte @' + esc(CF.PRIMARY_USERNAME) + ' avec le bouton « Reconnecter ». Les chiffres Instagram passent à « — ».');
+      return banner('err', IC.alert, '<b>Instagram déconnecté</b> · reconnecte @' + esc(selName()) + ' avec le bouton « Reconnecter ». Les chiffres Instagram passent à « — ».');
     }
     if (S.state === 'error') {
       return banner('err', IC.alert, '<b>Erreur de chargement</b> · ' + esc(S.error)
@@ -2153,7 +2169,7 @@
     var miss = X.missing > 0 ? '<span class="cf-meta">historique en cours de relevé · ' + X.missing + ' ' + plural(X.missing, 'jour') + ' manquant' + (X.missing > 1 ? 's' : '') + ', relu automatiquement</span>' : '';
     var head = '<div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(P.evo) + '</h3>' + miss + '</div>';
     var msg = '';
-    if (off) msg = 'Instagram déconnecté : reconnecte @' + CF.PRIMARY_USERNAME + ' pour voir les courbes.';
+    if (off) msg = 'Instagram déconnecté : reconnecte @' + selName() + ' pour voir les courbes.';
     else if (!D && S.state === 'error') msg = 'Courbe indisponible : ' + (S.error || 'erreur de chargement') + '.';
     else if (D && !X.series) msg = 'Courbe indisponible pour cette période.';
     if (msg) { evoCur = null; return '<div class="cf-evo">' + head + '<div class="cf-evo-msg">' + esc(msg) + '</div></div>'; }
@@ -2561,7 +2577,7 @@
 
   function dmHTML() {
     var S = CF.dm[ui.dmRange], D = S.data, X = dmModel(S, D, ui.dmRange);
-    return '<section class="cf-title"><h1>Auto-DM Instagram</h1></section>'
+    return titleSel('Auto-DM Instagram')
       + dmAcctHTML(D)
       + dmActivityHTML(X)
       + dmRatesHTML(X)
@@ -2599,7 +2615,7 @@
       + reconMsg()
       + '</section>'
       + (st.pause ? banner('err', IC.alert, '<b>Auto-DM en pause</b> · Instagram ' + esc(st.pause) + ' : les nouveaux commentaires ne reçoivent plus de DM. Reconnecte @'
-        + esc(CF.PRIMARY_USERNAME) + '. Les chiffres ci-dessous viennent de notre base et restent justes.') : '')
+        + esc(selName()) + '. Les chiffres ci-dessous viennent de notre base et restent justes.') : '')
       + (D && D.cron && !D.cron.active ? banner('warn', IC.alert, '<b>Relance automatique arrêtée</b> · le cron ig-followup-hourly est inactif : plus aucune relance ne part.') : '');
   }
 
@@ -3353,6 +3369,7 @@
       else if (act === 'brick-back') brickBack();
       else if (act === 'brick-post') brickPost(el.getAttribute('data-pid'));
       else if (act === 'dm-range') setDmRange(el.getAttribute('data-range'));
+      else if (act === 'ig-sel') { if (CF.setIgSel(el.getAttribute('data-k'))) { ui.allPosts = false; ui.dmAllLeads = false; ui.dmAllPosts = false; dmHide(); render(); } }
       else if (act === 'dm-toggle') { var dk = el.getAttribute('data-k'); if (DMS.some(function (d) { return d.k === dk && !d.none; })) { ui.dmHidden[dk] = !ui.dmHidden[dk]; evoHide(); render(); } }
       else if (act === 'retry-dm') CF.loadDm(ui.dmRange, { force: true });
       else if (act === 'dm-filter') { ui.dmFilter = el.getAttribute('data-f'); ui.dmAllLeads = false; render(); }

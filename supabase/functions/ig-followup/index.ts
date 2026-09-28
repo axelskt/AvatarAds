@@ -4,17 +4,15 @@
 //  Idempotent : dédup via kind='relance'. verify_jwt=false (déclencheur cron). Optionnel : ?key=IG_CRON_SECRET.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { DEFAULT_DEST, trackedLink } from '../_shared/iglink.ts'
+import { accountToken as tokenOf } from '../_shared/igacct.ts'
 
 const GRAPH   = 'https://graph.instagram.com/v21.0'
 const SB_URL  = Deno.env.get('SUPABASE_URL') || ''
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const svc = createClient(SB_URL, SERVICE)
 
-async function accountToken(igId: string): Promise<string | null> {
-  const { data } = await svc.from('ig_accounts').select('access_token').eq('ig_id', igId).single()
-  if (data?.access_token) return data.access_token
-  return Deno.env.get('IG_TOKEN') || null
-}
+// Token du compte qui a envoyé le lien (ig_dm_log.ig_id = id professionnel) : _shared/igacct.ts (28/09 : 2 comptes).
+const accountToken = (igId: string) => tokenOf(svc, igId)
 
 Deno.serve(async (req) => {
   const url = new URL(req.url)

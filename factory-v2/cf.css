@@ -1257,3 +1257,8 @@ i.is-gap { background: var(--cf-ink); }
 .cf-bsf-v.is-wait { background: var(--cf-tile); border: 1px dashed var(--cf-line); align-items: center; justify-content: center; text-align: center; gap: 4px; padding: 6px; }
 .cf-bsf-v.is-wait span { font: 500 10px/1.3 var(--cf-mono); color: var(--cf-mute); }
 .cf-bsf-v.is-wait b { font: 600 11px/1.3 inherit; color: var(--cf-mute); }
+
+/* sélection du compte Instagram (28/09 : un compte par avatar) */
+.cf-title-sel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.cf-hsel { margin-top: 12px; }
+.cf-igsel.cf-seg { max-width: 100%; }

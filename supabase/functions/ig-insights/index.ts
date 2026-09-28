@@ -18,6 +18,7 @@
 //  GET ?part=audience → répartition des abonnés (pays, villes, âge, genre).
 //  Réservé owner/developer. verify_jwt=false. ⚠ « qui regarde mon profil » / vues UNIQUES = NON exposé par l'API IG.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { accountToken, igAccount, ownAccounts, type IgAccount } from '../_shared/igacct.ts'
 import { matchBricks, type Brick, type Seg } from './bricks.ts'
 
 const GRAPH   = 'https://graph.instagram.com/v21.0'
@@ -46,11 +47,6 @@ async function ownerOk(req: Request): Promise<boolean> {
   } catch { return false }
 }
 
-async function accountToken(igId: string): Promise<string | null> {
-  const { data } = await svc.from('ig_accounts').select('access_token').eq('ig_id', igId).single()
-  if (data?.access_token) return data.access_token
-  return Deno.env.get('IG_TOKEN') || null
-}
 
 // Une erreur fetch de Deno contient l'URL COMPLÈTE, access_token compris : tout texte d'erreur renvoyé au
 // dashboard (ou écrit dans les journaux) passe par safeErr (jeton masqué dans l'URL et sous sa forme brute IG…).
@@ -557,28 +553,131 @@ async function fetchAudience(token: string) {
   return { audience, errors }
 }
 
+// ── « Les deux » (ig_id=all, Axel 28/09) : même réponse que pour un compte, chiffres additionnés ──
+// Nombres additionnés (vues, portée, abonnés, interactions…). Portée et comptes engagés sont des comptes UNIQUES :
+// leur somme compte deux fois une personne qui a vu les deux comptes (dit dans merge_note). Publications, top posts et
+// audience fusionnés ; courbe additionnée jour par jour. Une erreur d'un seul compte ne masque pas l'autre : elle reste
+// dans part_errors / audience_errors seulement si TOUS les comptes l'ont (sinon merge_partial la nomme).
+const KEEP_FIRST = new Set(['ig_id', 'range', 'since', 'until', 'day_first', 'day_last', 'part', 'name', 'profile_picture_url', 'username', 'breakdown', 'd', 't', 'h'])
+const AUD_KEYS = new Set(['country', 'city', 'age', 'gender'])
+// Un « inconnu » (null) reste inconnu là où il a un sens : total d'une répartition, chiffre d'un jour de la courbe
+// (jour pas encore publié par Instagram pour un des comptes). Ailleurs, un compte sans valeur n'efface pas l'autre.
+function mergeStrict(a: any, b: any): any {
+  const o: Record<string, unknown> = { ...a }
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (KEEP_FIRST.has(k)) continue
+    const x = a[k], y = b[k]
+    o[k] = typeof x === 'number' && typeof y === 'number' ? x + y : null
+  }
+  return o
+}
+function mergeVal(a: any, b: any, key: string): any {
+  if (key === 'total' && (a == null || b == null)) return null
+  if (a === undefined || a === null) return b
+  if (b === undefined || b === null) return a
+  if (KEEP_FIRST.has(key)) return a
+  if (key === 'follows_pending_days') return Math.max(Number(a) || 0, Number(b) || 0)
+  if (typeof a === 'number' && typeof b === 'number') return a + b
+  if (typeof a === 'boolean' && typeof b === 'boolean') return key === 'complete' ? a && b : a || b
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (key === 'days') {
+      const by = new Map<string, any>()
+      for (const x of [...a, ...b]) { const d = String(x?.d || ''); by.set(d, by.has(d) ? mergeStrict(by.get(d), x) : { ...x }) }
+      return [...by.values()].sort((x, y) => String(x.d).localeCompare(String(y.d)))
+    }
+    if (AUD_KEYS.has(key)) {
+      const by = new Map<string, number>()
+      for (const [k, n] of [...a, ...b]) by.set(String(k), (by.get(String(k)) || 0) + (Number(n) || 0))
+      return [...by.entries()].sort((x, y) => y[1] - x[1]).slice(0, 45)
+    }
+    if (key === 'media') return [...a, ...b].sort((x, y) => String(y.timestamp || '').localeCompare(String(x.timestamp || '')))
+    if (key === 'top_posts') return [...a, ...b].sort((x, y) => (y.views ?? y.reach ?? 0) - (x.views ?? x.reach ?? 0)).slice(0, 5)
+    return [...a, ...b]
+  }
+  if (typeof a === 'object' && typeof b === 'object') {
+    const o: Record<string, unknown> = { ...a }
+    for (const k of Object.keys(b)) o[k] = mergeVal(a[k], b[k], k)
+    return o
+  }
+  return a
+}
+const ERR_MAPS = ['part_errors', 'audience_errors']
+const ERR_STRINGS = ['basic_error', 'media_error', 'top_posts_error']
+function mergeAll(accs: IgAccount[], outs: Record<string, any>[]) {
+  let m: Record<string, any> = {}
+  for (const o of outs) {
+    const x = { ...o }
+    for (const k of [...ERR_MAPS, ...ERR_STRINGS, 'followers_base']) delete x[k]
+    m = mergeVal(m, x, '')
+  }
+  const at = (i: number) => '@' + (accs[i].username || accs[i].ig_id)
+  const partial: string[] = []
+  for (const k of ERR_MAPS) {
+    const keys = new Set(outs.flatMap((o) => Object.keys(o[k] || {})))
+    const all: Record<string, string> = {}
+    for (const e of keys) {
+      const who = outs.map((o, i) => (o[k] || {})[e] ? i : -1).filter((i) => i >= 0)
+      if (who.length === outs.length) all[e] = who.map((i) => at(i) + ' : ' + outs[i][k][e]).join(' · ')
+      else partial.push(e + ' (' + who.map(at).join(', ') + ')')
+    }
+    if (keys.size) m[k] = all
+  }
+  for (const k of ERR_STRINGS) {
+    const msgs = outs.map((o, i) => o[k] ? at(i) + ' : ' + o[k] : '').filter(Boolean)
+    if (msgs.length) m[k] = msgs.join(' · ')
+  }
+  // Net d'abonnés : seulement si le relevé de départ existe pour CHAQUE compte (sinon le compteur d'un compte
+  // entrerait dans le net sans sa base).
+  if (outs.every((o) => o.followers_base)) m.followers_base = outs.map((o) => o.followers_base).reduce((x, y) => mergeVal(x, y, ''))
+  m.ig_id = 'all'
+  m.username = accs.map((a) => a.username).filter(Boolean).join(' + @')
+  m.accounts = accs.map((a, i) => ({ ig_id: a.ig_id, ig_user_id: a.ig_user_id, username: a.username, followers_count: outs[i].followers_count ?? null, media_count: outs[i].media_count ?? null }))
+  m.merge_note = 'somme des comptes ; portée et comptes engagés = comptes uniques additionnés (une personne qui voit les deux comptes compte deux fois)'
+  if (partial.length) m.merge_partial = partial
+  return m
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (!(await ownerOk(req))) return json({ error: 'réservé au propriétaire' }, 401)
   const t0 = Date.now()
   const url = new URL(req.url)
+  const asked = url.searchParams.get('ig_id') || ''
+
+  if (asked === 'all') {
+    const accs = await ownAccounts(svc)
+    if (!accs.length) return json({ error: 'aucun compte connecté / token' }, 400)
+    const outs = await Promise.all(accs.map((a) => build(url, a.ig_id, String(a.access_token), t0)
+      .catch((e) => ({ ig_id: a.ig_id, basic_error: safeErr(e) }) as Record<string, unknown>)))
+    const merged = mergeAll(accs, outs)
+    logIg('deux comptes', { comptes: accs.map((a) => a.username), ms: Date.now() - t0 })
+    return json(merged)
+  }
+
   // Sans ig_id : le compte principal. Surtout PAS « le dernier connecté » : l'échange OAuth est public
   // (page du reviewer Meta, futurs users TrackAds) et changerait sans prévenir le compte affiché.
-  let igId = url.searchParams.get('ig_id') || ''
-  if (!igId) {
-    const { data } = await svc.from('ig_accounts').select('ig_id').eq('username', PRIMARY_USERNAME).order('updated_at', { ascending: false }).limit(1)
-    igId = data?.[0]?.ig_id || ''
+  // ig_id = id app-scoped (clé de ig_accounts et des caches) ou id professionnel : les deux sont acceptés.
+  let acc: IgAccount | null = null
+  if (asked) acc = await igAccount(svc, asked)
+  else {
+    const { data } = await svc.from('ig_accounts').select('ig_id, ig_user_id, username, access_token').eq('username', PRIMARY_USERNAME).order('updated_at', { ascending: false }).limit(1)
+    acc = (data?.[0] as IgAccount) || null
   }
-  const token = await accountToken(igId)
+  const igId = acc?.ig_id || asked
+  const token = acc?.access_token || await accountToken(svc, igId)
   if (!token) return json({ error: 'aucun compte connecté / token' }, 400)
+  return json(await build(url, igId, token, t0))
+})
 
+// Réponse d'UN compte (igId = id app-scoped, clé des caches ig_daily_insights / ig_followers_daily).
+async function build(url: URL, igId: string, token: string, t0: number): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = { ig_id: igId }
   const part = url.searchParams.get('part') || ''
 
   // Audience seule : 4 appels, rechargée à part (elle ne dépend pas de la fenêtre).
   if (part === 'audience') {
     const a = await fetchAudience(token)
-    return json({ ig_id: igId, part: 'audience', audience: a.audience, audience_errors: a.errors })
+    return { ig_id: igId, part: 'audience', audience: a.audience, audience_errors: a.errors }
   }
 
   // Publications : profil + toutes les publications (≤ 200, dédoublonnées) avec leurs chiffres à vie et leur module.
@@ -610,7 +709,7 @@ Deno.serve(async (req) => {
     const notOnFeed = list.filter((m) => m.shared_to_feed === false).length
     logIg('media', { raw: lm.raw, unique: list.length, media_count: out.media_count, types, pas_sur_la_grille: notOnFeed })
     await snapFollowers(igId, out.followers_count)
-    return json(out)
+    return out
   }
 
   // 1) profil (basic)
@@ -704,5 +803,5 @@ Deno.serve(async (req) => {
     } catch (e) { out.top_posts_error = safeErr(e) }
   }
   logIg('done ' + (part || range), { ms: Date.now() - t0 })
-  return json(out)
-})
+  return out
+}

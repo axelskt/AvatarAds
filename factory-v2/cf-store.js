@@ -7,8 +7,13 @@
  *   CF.status  'boot' | 'auth' | 'loading' | 'ready' | 'forbidden' | 'error'
  *   CF.ver     compteur incrémenté à chaque changement du store
  *   CF.user    { id, email } de la session supabase-js (partagée avec l'app, même domaine)
- *   CF.acct    onglet Compte @avataradss
- *     .accounts  instagram-auth?action=accounts  → { state, loading, at, list, primary, error }
+ *   CF.igSel   compte(s) Instagram affiché(s) (Axel 28/09 : un compte par avatar) : 'all' (« Les deux », chiffres
+ *              additionnés côté serveur, ig-insights?ig_id=all) ou l'ig_id d'un de nos comptes (OWN_USERNAMES). Change par
+ *              CF.setIgSel(v) : vide les cases Instagram et Auto-DM (rechargées pour la nouvelle sélection), garde les comptes.
+ *              Mémorisé dans le navigateur (préférence d'affichage seulement, jamais un chiffre).
+ *   CF.acct    onglet Compte (compte(s) sélectionné(s))
+ *     .accounts  instagram-auth?action=accounts  → { state, loading, at, list, own, primary, error } ; own = nos comptes ;
+ *                primary = compte de la sélection (pour « Les deux » : les deux noms et le token qui expire le 1er)
  *     .ig[r]     ig-insights?range=r, r ∈ 3j | 7j | 30j | 90j | 6m | all → { state, loading, at, data, error, kind }
  *                une case de cache par fenêtre, rechargée au plus toutes les 15 min ; data.series = un point par
  *                jour Instagram (courbe Évolution) ; historique incomplet → relu tout seul toutes les 4 s (8 fois max)
@@ -47,6 +52,8 @@
   var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck'; // clé publishable (publique) ; jamais de clé service ici
   var FN = SUPABASE_URL + '/functions/v1/';
   var PRIMARY_USERNAME = 'avataradss';     // même compte par défaut qu'ig-insights (IG_PRIMARY_USERNAME)
+  var OWN_USERNAMES = ['avataradss', 'leoadsia'];   // nos comptes = IG_OWN_USERNAMES côté serveur (_shared/igacct.ts)
+  var SEL_KEY = 'cf_ig_sel';
   var IG_RANGES = ['3j', '7j', '30j', '90j', '6m', 'all'];   // 30 j = la fenêtre de l'app Instagram ; 3 j remplace 24 h (Instagram met ~48 h à tout compter)
   var TTL_MS = 15 * 60 * 1000;             // ~15 appels Graph par fenêtre : un chargement par fenêtre et par 15 min
   var TIMEOUT_MS = 45000;
@@ -63,7 +70,7 @@
   function newDm() { var o = {}; DM_RANGES.forEach(function (r) { o[r] = newSlot(); }); return o; }
   function newAcct() {
     return {
-      accounts: { state: 'idle', loading: false, at: 0, list: [], primary: null, error: null },
+      accounts: { state: 'idle', loading: false, at: 0, list: [], own: [], primary: null, error: null },
       ig: { '3j': newSlot(), '7j': newSlot(), '30j': newSlot(), '90j': newSlot(), '6m': newSlot(), 'all': newSlot() },
       aud: newSlot(),
       media: newSlot()
@@ -87,6 +94,9 @@
     DM_TTL_MS: DM_TTL_MS,
     PROD_TTL_MS: PROD_TTL_MS,
     PRIMARY_USERNAME: PRIMARY_USERNAME,
+    OWN_USERNAMES: OWN_USERNAMES.slice(),
+    igSel: readSel(),
+    setIgSel: setIgSel,
     refresh: refresh,
     loadAccounts: loadAccounts,
     loadInsights: loadInsights,
@@ -214,13 +224,55 @@
   function normAccount(a) {
     if (!a || typeof a !== 'object') return null;
     // Liste blanche : même si l'edge renvoyait un jour access_token, il n'entrerait jamais dans le store.
-    return { ig_id: str(a.ig_id), username: str(a.username), updated_at: str(a.updated_at), token_expires_at: str(a.token_expires_at) };
+    return { ig_id: str(a.ig_id), ig_user_id: str(a.ig_user_id), username: str(a.username), updated_at: str(a.updated_at), token_expires_at: str(a.token_expires_at) };
   }
-  function pickPrimary(list) {
-    for (var i = 0; i < list.length; i++) {
-      if ((list[i].username || '').toLowerCase() === PRIMARY_USERNAME) return list[i];
+  // Nos comptes, dans l'ordre d'OWN_USERNAMES, un par pseudo (la liste arrive du plus récent au plus ancien).
+  function ownOf(list) {
+    var out = [];
+    OWN_USERNAMES.forEach(function (u) {
+      for (var i = 0; i < list.length; i++) { if ((list[i].username || '').toLowerCase() === u) { out.push(list[i]); break; } }
+    });
+    return out;
+  }
+  // Compte de la sélection. « Les deux » : les deux pseudos (« @a + @b ») et le token qui expire le premier (alertes).
+  function pickPrimary(own) {
+    if (CF.igSel !== 'all') {
+      for (var i = 0; i < own.length; i++) { if (own[i].ig_id === CF.igSel) return own[i]; }
+      return null;
     }
-    return null;
+    if (own.length < 2) return own[0] || null;
+    var first = own.slice().sort(function (a, b) { return String(a.token_expires_at || '9') < String(b.token_expires_at || '9') ? -1 : 1; })[0];
+    return { ig_id: 'all', ig_user_id: null, username: own.map(function (a) { return a.username; }).join(' + @'),
+      updated_at: first.updated_at, token_expires_at: first.token_expires_at };
+  }
+
+  // ── sélection du compte (Axel 28/09) ──
+  function readSel() { try { return localStorage.getItem(SEL_KEY) || 'all'; } catch (e) { return 'all'; } }
+  function selParam() { return 'ig_id=' + encodeURIComponent(CF.igSel || 'all'); }
+  // Ids PROFESSIONNELS à compter dans ig_dm_stats_v2 (ig_dm_log.ig_id) ; null = tous (comptes pas encore lus).
+  function dmIgs() {
+    var own = CF.acct.accounts.own || [];
+    if (CF.igSel === 'all') { var ids = own.map(function (a) { return a.ig_user_id; }).filter(Boolean); return ids.length ? ids : null; }
+    for (var i = 0; i < own.length; i++) { if (own[i].ig_id === CF.igSel) return [own[i].ig_user_id || '-']; }
+    return ['-'];   // compte inconnu : rien plutôt que les chiffres d'un autre compte
+  }
+  function setIgSel(v) {
+    v = String(v || '');
+    var own = CF.acct.accounts.own || [];
+    if (v !== 'all' && !own.some(function (a) { return a.ig_id === v; })) return false;
+    if (v === CF.igSel) return false;
+    CF.igSel = v;
+    try { localStorage.setItem(SEL_KEY, v); } catch (e) { /* navigation privée : sélection non mémorisée */ }
+    // Nouvelles cases : une réponse encore en vol pour l'ancienne sélection écrit dans l'ancienne case, détachée.
+    Object.keys(inflight).forEach(function (k) { if (k === 'aud' || k === 'media' || k.indexOf('ig:') === 0 || k.indexOf('dm:') === 0) inflight[k] = null; });
+    retries = {}; mediaPolls = 0; pre.on = false; pre.queue = [];
+    var A = CF.acct.accounts;
+    CF.acct = newAcct();
+    CF.acct.accounts = A;
+    A.primary = pickPrimary(A.own);
+    CF.dm = newDm();
+    emit('igsel');
+    return true;
   }
 
   function loadAccounts(opts) {
@@ -232,19 +284,23 @@
     A.loading = true;
     var p = (async function () {
       await null;
-      var patch;
+      var patch, lost = false;
       try {
         var res = await callFn('instagram-auth?action=accounts');
         var b = res.body || {};
         if (!res.ok || b.error) throw { kind: res.status === 401 ? 'auth' : 'http', message: b.error ? String(b.error) : 'HTTP ' + res.status };
         var list = Array.isArray(b.accounts) ? b.accounts.map(normAccount).filter(Boolean) : [];
-        patch = { state: 'ready', list: list, primary: pickPrimary(list), error: null };
+        var own = ownOf(list);
+        // Sélection mémorisée d'un compte qui n'est plus relié : retour à « Les deux » (cases vidées, voir plus bas).
+        lost = CF.igSel !== 'all' && !own.some(function (a) { return a.ig_id === CF.igSel; });
+        patch = { state: 'ready', list: list, own: own, primary: pickPrimary(own), error: null };
       } catch (e) {
         patch = { state: 'error', error: errText(e) };
       }
       if (ep !== epoch) return A;
       Object.assign(A, patch, { loading: false, at: Date.now() });
       if (inflight.accounts === p) inflight.accounts = null;
+      if (lost) setIgSel('all');
       emit('accounts');
       return A;
     })();
@@ -337,7 +393,7 @@
       await null;
       var patch;
       try {
-        var res = await callFn('ig-insights?range=' + range, SERIES_TIMEOUT_MS);
+        var res = await callFn('ig-insights?range=' + range + '&' + selParam(), SERIES_TIMEOUT_MS);
         var b = res.body || {};
         if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
           patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
@@ -401,7 +457,7 @@
       await null;
       var patch;
       try {
-        var res = await callFn('ig-insights?part=audience');
+        var res = await callFn('ig-insights?part=audience&' + selParam());
         var b = res.body || {};
         if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
           patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
@@ -481,7 +537,7 @@
       await null;
       var patch;
       try {
-        var res = await callFn('ig-insights?part=media', SERIES_TIMEOUT_MS);
+        var res = await callFn('ig-insights?part=media&' + selParam(), SERIES_TIMEOUT_MS);
         var b = res.body || {};
         if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
           patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
@@ -576,7 +632,8 @@
       var patch;
       logNet('rpc ig_dm_stats_v2 ' + range);
       try {
-        var res = await sb.rpc('ig_dm_stats_v2', { p_range: range });
+        await loadAccounts();   // les ids des comptes sélectionnés viennent de la liste des comptes
+        var res = await sb.rpc('ig_dm_stats_v2', { p_range: range, p_ig: dmIgs() });
         var err = res && res.error, d = res && res.data, code = err ? String(err.code || '') : '';
         if (err && (code === 'PGRST202' || res.status === 404)) {
           throw { kind: 'missing', message: 'la fonction ig_dm_stats_v2 n’est pas encore en base (migration 20260925124500 à appliquer)' };

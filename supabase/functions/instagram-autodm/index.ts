@@ -2,9 +2,11 @@
 //  GET  : handshake webhook Meta (hub.challenge). POST : événements comments + messages/postbacks.
 //  Flow (= ManyChat / raph__ai) : commentaire mot-clé (mot entier) → réponse PUBLIQUE variée + carte DM
 //  → tap (postback FOLLOW_CHECK) → profil (abonné ? + username + followers) : true=lien tracké / false=relance.
-//  verify_jwt=false (config.toml). IG_APP_SECRET=signature. Token : table ig_accounts (OAuth) sinon IG_TOKEN.
+//  verify_jwt=false (config.toml). IG_APP_SECRET=signature. Token : ig_accounts retrouvé par l'id PROFESSIONNEL
+//  (entry.id) via _shared/igacct.ts ; secret IG_TOKEN en repli pour le compte principal seulement (28/09 : 2 comptes).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { trackedLink } from '../_shared/iglink.ts'
+import { accountToken as tokenOf } from '../_shared/igacct.ts'
 
 const VERIFY_TOKEN = Deno.env.get('IG_VERIFY_TOKEN') || 'avatarads_ig_2026_dm'
 const APP_SECRET   = Deno.env.get('IG_APP_SECRET') || ''
@@ -46,11 +48,7 @@ async function validSignature(raw: string, header: string | null): Promise<boole
   return ('sha256=' + hex) === header
 }
 
-async function accountToken(igId: string): Promise<string | null> {
-  const { data } = await svc.from('ig_accounts').select('access_token').eq('ig_id', igId).single()
-  if (data?.access_token) return data.access_token           // multi-compte (OAuth → ig_accounts)
-  return Deno.env.get('IG_TOKEN') || null                    // repli dev mono-compte (secret Supabase)
-}
+const accountToken = (igId: string) => tokenOf(svc, igId)
 
 // Règle applicable (la plus spécifique par media_id, sinon la règle par défaut, sinon DEF).
 async function loadRule(igId: string, mediaId?: string) {
