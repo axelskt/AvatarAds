@@ -1268,6 +1268,8 @@ i.is-gap { background: var(--cf-ink); }
 .cf-acard-btn { position: relative; z-index: 2; align-self: flex-start; }
 .cf-acard-pic { overflow: hidden; border-radius: 50%; }
 .cf-acard-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cf-acard-unit { font-size: 13px; font-weight: 500; letter-spacing: 0; color: #7d756b; margin-left: 8px; }
+.cf-acard-s { font-family: var(--cf-mono); font-size: 10.5px; color: var(--cf-mute-2); }
 .cf-acard-tok { font-weight: 400; }
 .cf-acard-tok.is-warn { color: var(--cf-warn-fg); font-weight: 600; }
 .cf-acard-tok.is-err { color: var(--cf-err-fg); font-weight: 600; }

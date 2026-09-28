@@ -1909,9 +1909,8 @@
         + '<span class="cf-icard-h"><span class="cf-icard-tile cf-acard-pic">' + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async">' : svg(IC.insta, 14)) + '</span>'
         + '<span class="cf-icard-l">@' + esc(a.username) + '</span>'
         + '<span class="cf-icard-ck" aria-hidden="true">' + (o ? svg('M5 12l5 5L20 7', 10) : '') + '</span></span>'
-        + '<span class="cf-icard-v' + (st.followers == null ? ' is-na' : '') + '">' + esc(st.followers == null ? '—' : fInt(st.followers)) + '</span>'
-        + '<span class="cf-icard-s">abonnés</span>'
-        + '<span class="cf-icard-x">' + esc(extra) + (tokTxt ? (extra ? ' · ' : '') + '<b class="cf-acard-tok' + tone + '">' + esc(tokTxt) + '</b>' : '') + '</span>'
+        + '<span class="cf-icard-v' + (st.followers == null ? ' is-na' : '') + '">' + esc(st.followers == null ? '—' : fInt(st.followers)) + '<span class="cf-acard-unit">abonnés</span></span>'
+        + '<span class="cf-icard-s cf-acard-s">' + esc(extra) + (tokTxt ? (extra ? ' · ' : '') + '<b class="cf-acard-tok' + tone + '">' + esc(tokTxt) + '</b>' : '') + '</span>'
         + (bad ? '<button type="button" class="cf-btn is-sm cf-acard-btn" data-act="connect-acct" data-k="' + esc(u) + '">' + svg(IC.refresh, 13) + '<span>Reconnecter</span></button>' : '')
         + '</div>';
     }).join('') + '</div></section>';
