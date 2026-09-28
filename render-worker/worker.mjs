@@ -2223,17 +2223,24 @@ async function hedraV3Submit(slug, input) {
   const j = await r.json().catch(() => ({}))
   return j.job_id || j.id || null
 }
-async function hedraV3Poll(jobId, maxTries = 90) {
+async function hedraV3Poll(jobId, maxTries = 45) {
+  // Mail Hedra (28/09) : 60 requêtes / min par clé → une sonde toutes les 8 s (avant 4 s ; même attente max ~6 min), et
+  // hedra-proxy répond « en cours » sans appeler Hedra quand le budget global est atteint.
   for (let k = 0; k < maxTries; k++) {
-    await new Promise((r) => setTimeout(r, 4000))
+    await new Promise((r) => setTimeout(r, 8000))
     const st = await hedraProxy('/v3/jobs/' + jobId + '/status', { method: 'GET' })
     if (!st.ok) continue
     const d = await st.json().catch(() => ({}))
     const s = String(d.status || '').toUpperCase()
     if (s === 'FAILED') return null
     if (s === 'COMPLETED') {
-      const rr = await hedraProxy('/v3/jobs/' + jobId, { method: 'GET' })
-      if (!rr.ok) return null
+      let rr = null
+      for (let t = 0; t < 5; t++) {   // 429 / 5xx sur le résultat : on réessaie au lieu de perdre le clip payé
+        rr = await hedraProxy('/v3/jobs/' + jobId, { method: 'GET' })
+        if (rr.ok || (rr.status !== 429 && rr.status < 500)) break
+        await new Promise((r) => setTimeout(r, 5000 * (t + 1)))
+      }
+      if (!rr || !rr.ok) return null
       const rd = await rr.json().catch(() => ({}))
       const out = (rd.outputs || []).find((o) => o && o.url) || (rd.outputs || [])[0]
       return out && out.url ? out.url : null

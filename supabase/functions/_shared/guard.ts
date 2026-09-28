@@ -388,6 +388,35 @@ export async function rateHit(key: string, windowS: number, max: number): Promis
   } catch { return true }
 }
 
+// ── Hedra : 60 requêtes / min par clé (mail Hedra du 28/09 : la moitié de nos sondes de statut prenaient un 429) ──────
+// Budget GLOBAL des sondes de statut, toutes fonctions confondues (MCP, hedra-proxy pour l'app et le moteur de rendu), au
+// plus UNE sonde par job toutes les 10 s, et pause globale après un 429 (Retry-After respecté). Au-delà : « encore en
+// cours » sans appeler Hedra — le client ne voit jamais d'erreur, il attend quelques secondes de plus.
+export const HEDRA_STATUS_BUDGET = 45   // sondes / min ; le reste de la limite de 60 pour soumissions, fichiers et résultats
+export function retryAfterS(res: Response, dflt = 20): number {
+  const v = (res.headers.get('retry-after') || '').trim()
+  if (!v) return dflt
+  const n = Number(v)
+  if (Number.isFinite(n) && n >= 0) return Math.min(300, Math.max(1, Math.ceil(n)))
+  const t = Date.parse(v)
+  return Number.isFinite(t) ? Math.min(300, Math.max(1, Math.ceil((t - Date.now()) / 1000))) : dflt
+}
+export async function providerPaused(provider: string): Promise<boolean> {
+  try {
+    const { data } = await svc().from('provider_backoff').select('until').eq('provider', provider).maybeSingle()
+    return !!(data && Date.parse(String((data as { until: string }).until)) > Date.now())
+  } catch { return false }
+}
+export async function providerPause(provider: string, seconds: number): Promise<void> {
+  try { await svc().from('provider_backoff').upsert({ provider, until: new Date(Date.now() + seconds * 1000).toISOString() }) } catch { /* best-effort */ }
+}
+// true = on peut sonder le statut de ce job maintenant ; false = répondre « en cours » sans appeler Hedra.
+export async function hedraStatusGate(jobId: string): Promise<boolean> {
+  if (await providerPaused('hedra')) return false
+  if (!(await rateHit('hedra:job:' + jobId, 10, 1))) return false
+  return await rateHit('hedra:v3:status', 60, HEDRA_STATUS_BUDGET)
+}
+
 // ── Preuve de débit récent (RPC has_recent_debit). Fail-open sur erreur technique.
 export async function hasRecentDebit(userId: string, minutes = 30): Promise<boolean> {
   try {

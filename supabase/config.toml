@@ -55,3 +55,7 @@ verify_jwt = false
 [functions.provider-watch]
 verify_jwt = false
 
+
+# purge-mcp-media (28/09, RGPD) : appelée par pg_cron avec x-cron-key (pas de JWT) — conservation 7 j (envoyés) / 30 j (générés)
+[functions.purge-mcp-media]
+verify_jwt = false

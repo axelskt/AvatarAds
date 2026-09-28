@@ -21,7 +21,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob, hedraStatusGate, providerPause, retryAfterS } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -193,10 +193,25 @@ serve(async (req: Request) => {
       })
     } else if (req.method === 'GET') {
       // ── Polling ou récupération asset ──
+      // Mail Hedra (28/09) : 60 requêtes / min par clé. Sondes de statut v3 = budget global partagé + une par job / 10 s +
+      // pause après 429 (hedraStatusGate) ; au-delà, « en cours » SANS appeler Hedra (l'app et le moteur de rendu
+      // continuent simplement d'attendre, aucun statut d'échec, aucune facturation touchée).
+      const stJob = isV3 ? ((hedraPath.split('?')[0].match(/^\/v3\/jobs\/([A-Za-z0-9._-]+)\/status$/) || [])[1] || '') : ''
+      const enCours = () => new Response(JSON.stringify({ status: 'PENDING', throttled: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json', 'Retry-After': '10' } })
+      if (stJob && !(await hedraStatusGate(stJob))) return enCours()
       hedraRes = await fetch(`${base}${hedraPath}`, {
         method: 'GET',
         headers: authHeaders,
       })
+      if (isV3 && hedraRes.status === 429) {
+        const pause = retryAfterS(hedraRes)
+        await providerPause('hedra', pause)
+        await hedraRes.body?.cancel().catch(() => {})
+        if (stJob) return enCours()
+        // résultat / fichier : UNE nouvelle tentative après la pause demandée (≤ 10 s) — sinon le moteur de rendu perdait le clip
+        await new Promise((r) => setTimeout(r, Math.min(10, pause) * 1000))
+        hedraRes = await fetch(`${base}${hedraPath}`, { method: 'GET', headers: authHeaders })
+      }
     } else {
       // ── JSON (POST génération, etc.) ──
       const rawBody = await req.text()

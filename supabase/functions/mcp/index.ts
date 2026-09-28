@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
+import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp, hedraStatusGate, providerPause, retryAfterS } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
@@ -1541,6 +1541,9 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
 // mangée par le proxy) ; (2) tâches de fond mortes avant de poser op_name (crédits jamais rendus).
 async function reconcileAllStale(): Promise<void> {
   try {
+    // UN passage toutes les ~2 min pour TOUTES les instances (avant : 2 min par instance → plusieurs passages par minute,
+    // chacun sondant Hedra pour chaque job en cours : cause principale des 429 signalés par Hedra le 28/09).
+    if (!(await rateHit('mcp:reconcile-all', 110, 1))) return
     // 0) LIVRAISON INTERROMPUE (audit 28/09 #24) : deliverVideo réclame le job « done » AVANT de copier le MP4 ; si l'isolate
     //    meurt pendant la copie, le job restait « done » sans média, payé, jamais livré ni remboursé. Après 10 min on le
     //    remet en « running » (conditionnel : done + sans média + récent) → l'étape 1 retente la livraison, l'étape 3
@@ -2142,7 +2145,11 @@ async function hedraV3Upload(name: string, bytes: Uint8Array, contentType: strin
 // Statut d'un job v3 : { pending } tant que ça tourne, { failed, err } en échec, { url } quand livré.
 async function hedraV3StatusUrl(jobId: string): Promise<{ pending?: boolean; failed?: boolean; url?: string; progress?: number; err?: string }> {
   jobId = jobSansCoupe(jobId)   // op_name « v3:<job>#cut=… » (lipsync_video, 26/09)
+  // Mail Hedra (28/09) : 60 requêtes / min par clé → budget global partagé avec hedra-proxy, une sonde par job / 10 s,
+  // pause après 429 (Retry-After). Au-delà : « en cours » sans appeler Hedra.
+  if (!(await hedraStatusGate(jobId))) return { pending: true, progress: 0 }
   const st = await hedraV3Fetch(`/v3/jobs/${jobId}/status`, { method: 'GET' })
+  if (st.status === 429) { await providerPause('hedra', retryAfterS(st)); return { pending: true, progress: 0 } }
   if (!st.ok) return { pending: true, progress: 0 }
   const d = await st.json().catch(() => ({})) as Record<string, unknown>
   const s = String(d.status || '').toUpperCase()
@@ -2150,6 +2157,7 @@ async function hedraV3StatusUrl(jobId: string): Promise<{ pending?: boolean; fai
   if (['FAILED', 'ERROR', 'ERRORED', 'CANCELLED', 'CANCELED'].includes(s)) return { failed: true, err: String(d.error || d.error_message || s) }
   if (s !== 'COMPLETED') return { pending: true, progress }
   const rr = await hedraV3Fetch(`/v3/jobs/${jobId}`, { method: 'GET' })
+  if (rr.status === 429) { await providerPause('hedra', retryAfterS(rr)); return { pending: true, progress } }
   if (!rr.ok) return { pending: true, progress }
   const rd = await rr.json().catch(() => ({})) as { outputs?: Array<{ url?: string }> }
   const out = (rd.outputs || []).find((o) => o && o.url) || (rd.outputs || [])[0]
@@ -3664,6 +3672,8 @@ serve(async (req) => {
     const { data: j } = await svc.from('mcp_jobs').select('result_url, kind').eq('id', segs[2]).maybeSingle()
     const dest = j?.result_url ? await signMedia(String(j.result_url), 3600) : ''   // mcp-media privé : lien signé 1 h
     if (!dest) return new Response('Média introuvable', { status: 404, headers: cors })
+    // signature impossible = fichier purgé (RGPD, 28/09 : médias créés via Claude conservés 30 jours) → message clair
+    if (dest.startsWith(MEDIA_PUB)) return new Response('Ce média a expiré : les médias créés via Claude sont conservés 30 jours. Retrouve-le dans ta Bibliothèque AvatarAds.', { status: 410, headers: { ...cors, 'Content-Type': 'text/plain; charset=utf-8' } })
     const dl = new URL(req.url).searchParams.get('download')
     // TÉLÉCHARGEMENT d'une IMAGE : on relaie les octets NOUS-MÊMES (single-origin, application/
     // octet-stream) au lieu d'un 302 cross-origin vers Supabase. Le saut cross-origin PENDANT un

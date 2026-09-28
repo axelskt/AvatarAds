@@ -5233,6 +5233,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <button class="btn btn-ghost" onclick="changeSubscription();closeAccountSettings()" style="width:100%;justify-content:flex-start"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg> Changer mon abonnement</button>
       <button id="accountPanelCancelBtn" class="btn btn-ghost" onclick="cancelSubscription()" style="display:none;width:100%;justify-content:flex-start;white-space:normal;text-align:left;line-height:1.4">⏸ Annuler l'abonnement</button>
       <button class="btn" onclick="authLogout()" style="width:100%;justify-content:flex-start;background:rgba(255,70,70,.1);border:1px solid rgba(255,70,70,.25);color:#FF6B6B">⎋ Se déconnecter</button>
+      <!-- RGPD (Axel 28/09) : suppression définitive du compte par son titulaire (edge function delete-account) -->
+      <button class="btn btn-quiet" onclick="openDeleteAccount()" style="width:100%;justify-content:center;font-size:12px;color:var(--text-3);background:none;border:none;padding:6px">Supprimer mon compte</button>
     </div>
 
   </div>
@@ -5877,7 +5879,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-09-28-0150'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-09-28-0300'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -7249,6 +7251,42 @@ async function decrementCredit(durationSecs){
 }
 
 // ── LOGOUT ──
+// ── Suppression du compte (RGPD, Axel 28/09) ────────────────────────────────────
+// Confirmation écrite (SUPPRIMER) → edge function delete-account : fichiers, Bibliothèque, crédits, mémoire de marque,
+// accès de Claude. Refusée tant qu'un abonnement payant est actif (le serveur renvoie le lien de gestion).
+function openDeleteAccount(){
+  if(document.getElementById('delAccOverlay')) return;
+  const ov=document.createElement('div'); ov.id='delAccOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(6,6,9,.8);backdrop-filter:blur(8px);display:grid;place-items:center;padding:16px';
+  ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML='<div style="width:min(420px,100%);background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:20px;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)">'
+    +'<div style="font-weight:800;font-size:16px;margin-bottom:8px;color:#FF6B6B">Supprimer mon compte</div>'
+    +'<p class="faint" style="font-size:12.5px;line-height:1.55;margin:0 0 12px">Tout sera effacé définitivement : ta Bibliothèque, tes vidéos, images et audios, tes crédits restants, ta mémoire de marque et l’accès de Claude à ton compte. Cette action est irréversible.</p>'
+    +'<input class="field" id="delAccInput" placeholder="Tape SUPPRIMER pour confirmer" autocomplete="off" autocapitalize="characters" style="width:100%;margin-bottom:12px">'
+    +'<div id="delAccMsg" style="font-size:12px;line-height:1.5;margin-bottom:10px;display:none;color:#FF6B6B"></div>'
+    +'<div class="row" style="gap:10px"><button class="btn btn-ghost" style="flex:0 0 auto" onclick="document.getElementById(\'delAccOverlay\').remove()">Annuler</button>'
+    +'<button id="delAccBtn" class="btn" disabled style="flex:1;font-weight:800;background:rgba(255,70,70,.14);border:1px solid rgba(255,70,70,.35);color:#FF6B6B;opacity:.5" onclick="confirmDeleteAccount()">Supprimer définitivement</button></div>'
+    +'</div>';
+  document.body.appendChild(ov);
+  const inp=document.getElementById('delAccInput'), b=document.getElementById('delAccBtn');
+  inp.oninput=()=>{ const ok=inp.value.trim().toUpperCase()==='SUPPRIMER'; b.disabled=!ok; b.style.opacity=ok?'1':'.5'; };
+  setTimeout(()=>{ try{ inp.focus(); }catch(_){} }, 50);
+}
+async function confirmDeleteAccount(){
+  const b=document.getElementById('delAccBtn'), msg=document.getElementById('delAccMsg'), inp=document.getElementById('delAccInput');
+  if(!b || !inp || inp.value.trim().toUpperCase()!=='SUPPRIMER') return;
+  const show=(t,link)=>{ if(!msg) return; msg.style.display='block'; msg.innerHTML=_escH(t)+(link?' <a href="'+_safeUrl(link)+'" target="_blank" rel="noopener" style="color:var(--accent-2)">Gérer mon abonnement</a>':''); b.disabled=false; b.textContent='Supprimer définitivement'; };
+  b.disabled=true; b.textContent='Suppression…';
+  try{
+    const H=await getAuthHeader();
+    const r=await fetch(SUPABASE_URL+'/functions/v1/delete-account',{ method:'POST', headers:{ 'Content-Type':'application/json', ...H }, body:JSON.stringify({ confirm:'SUPPRIMER' }) });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok){ show(d.error||('Erreur '+r.status), d.manage_url); return; }
+    // compte supprimé : on efface aussi ses données locales (liste de la Bibliothèque, historique, voix) et la session
+    try{ const uid=(typeof currentMember!=='undefined'&&currentMember&&currentMember.id)||''; for(const k of ['aa_library','imgHistory','aa_cloned_voices']){ localStorage.removeItem(k); if(uid) localStorage.removeItem(k+'@'+uid); } localStorage.removeItem('aa_local_owner'); localStorage.removeItem('aa_login_at'); for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i); if(k && /sb-.*-auth-token/.test(k)) localStorage.removeItem(k); } }catch(_){}
+    window.location.href='/connexion.html';
+  }catch(e){ show('Connexion impossible — réessaie.'); }
+}
 async function authLogout(){
   // Robustesse : si signOut() traîne ou échoue, le bouton semblait « ne rien faire ».
   // On vide la session localement quoi qu'il arrive, puis on recharge sur l'écran de connexion de l'app.
