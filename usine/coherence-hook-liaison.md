@@ -67,18 +67,18 @@ Chaque vidéo = 2 formats : `hook+contenu+CTA` (court) et `hook+liaison+contenu+
 | **H75** · C'est vraiment la façon la plus débile de faire 10 000€ par mois depuis ton téléphone, même un enfant de 10 ans peut le faire. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **H76** · Je te montre comment créer depuis Claude des pubs pour ton produit hyper réaliste comme cela, en 30 secondes top chrono. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | **H77** · Je te montre comment créer des pubs pour ton produit avec un gros taux de retour sur investissement comme cela, en 30 secondes top chrono. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| **H59** · Tu penses encore que je suis réelle ? Faux. Cette femme n'existe pas. J'ai été créée sur AvatarAds.fr. (voix native, femme) | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ |
-| **H78** · Tu peux maintenant créer des vidéos IA 10 fois moins chères qu'avec Higgsfield et avec une meilleure qualité, je te montre ça. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
-| **H79** · On est clairement dans une nouvelle ère IA et si tu ne sais pas comment l'utiliser pour créer du contenu, que ce soit images réalistes ou vidéos, tu passes à côté de beaucoup d'argent. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **H80** · Les influenceurs de Dubaï utilisent tous ça, je te montre comment tu peux transformer n'importe quel objet en ce que tu veux. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **H81** · Tu peux transformer la voiture en bas de chez toi en n'importe quelle voiture de ton choix, ou même un bracelet en montre de luxe. Je te montre comment faire. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **H82** · Tu peux prendre l'apparence de n'importe qui et reproduire ses mouvements à la perfection, je te montre ça. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **H83** · Si t'es e-commerçant et tu dois faire un gros volume de créatives images et vidéos en masse pour ton produit, cet outil est fait pour toi. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **H84** · J'ai trouvé un outil 10 fois moins cher qu'Higgsfield avec une meilleure qualité, je te montre ça. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
-| **H85** · Tout le monde parle d'IA, d'automatisation partout, mais personne ne l'utilise dans ce qui compte vraiment : attirer des clients sur ton site. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **H86** · Ok, t'as créé ton produit, t'as créé ton site, tes réseaux, mais maintenant tu sais pas comment attirer du trafic sur ton site. Je te montre comment tu peux faire. | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **H59** · Tu penses encore que je suis réelle ? Faux. Cette femme n'existe pas. J'ai été créée sur AvatarAds.fr. (voix native, femme) | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H78** · Tu peux maintenant créer des vidéos IA 10 fois moins chères qu'avec Higgsfield et avec une meilleure qualité, je te montre ça. | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H79** · On est clairement dans une nouvelle ère IA et si tu ne sais pas comment l'utiliser pour créer du contenu, que ce soit images réalistes ou vidéos, tu passes à côté de beaucoup d'argent. | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **H80** · Les influenceurs de Dubaï utilisent tous ça, je te montre comment tu peux transformer n'importe quel objet en ce que tu veux. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
+| **H81** · Tu peux transformer la voiture en bas de chez toi en n'importe quelle voiture de ton choix, ou même un bracelet en montre de luxe. Je te montre comment faire. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
+| **H82** · Tu peux prendre l'apparence de n'importe qui et reproduire ses mouvements à la perfection, je te montre ça. | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
+| **H83** · Si t'es e-commerçant et tu dois faire un gros volume de créatives images et vidéos en masse pour ton produit, cet outil est fait pour toi. | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H84** · J'ai trouvé un outil 10 fois moins cher qu'Higgsfield avec une meilleure qualité, je te montre ça. | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **H85** · Tout le monde parle d'IA, d'automatisation partout, mais personne ne l'utilise dans ce qui compte vraiment : attirer des clients sur ton site. | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **H86** · Ok, t'as créé ton produit, t'as créé ton site, tes réseaux, mais maintenant tu sais pas comment attirer du trafic sur ton site. Je te montre comment tu peux faire. | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**✅ par liaison** — L12 7 · L15 48 · L16 49 · L19 52 · L28 25 · L30 34 · L32 41 · L33/L35 32 · L34 34 · L48 41 · L58 20 · L70 34 (sur 53 hooks)
+**✅ par liaison** — L12 12 · L15 46 · L16 48 · L19 52 · L28 22 · L30 30 · L32 37 · L33/L35 27 · L34 30 · L48 42 · L58 23 · L70 37 (sur 53 hooks)
 
 > **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 abandonnées).
 > **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).

@@ -69,13 +69,18 @@ const L48_ok = new Set(['12','13','14','15','17','18','20','21','23','24','25','
 const L58_ok = new Set(['16','17','18','20','24','40','48','58','60','68','69','72','73','75','76','77','79','83','85','86']); // NICHE produit physique
 const L70_ok = new Set(['12','13','14','15','16','19','20','21','23','24','25','30','36','40','48','58','60','63','64','68','69','70','72','73','75','76','77','59','78','79','83','84','85','86']); // GÉNÉRIQUE sans montrer ton visage
 // L69 ABANDONNÉE (trop niche) · L72 ABANDONNÉE
+// Validations EXPLICITES d'Axel (28/09) : pour ces hooks, la liste fait foi (L33 = colonne « L33/L35 »), elle remplace les ensembles ci-dessus.
+const VALIDATED = {'59':['L19','L48','L70','L58'],'78':['L12','L15','L16','L19','L48','L58','L70'],'84':['L12','L15','L16','L19','L48','L58','L70'],'79':['L12','L15','L16','L19','L28','L30','L32','L34','L48','L58','L70'],'80':['L15','L16','L19','L48','L70'],'81':['L15','L16','L19','L48','L70'],'82':['L15','L16','L19','L48','L70'],'83':['L12','L16','L19','L48','L58','L70'],'85':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70'],'86':['L12','L15','L16','L19','L28','L30','L32','L33','L34','L48','L58','L70']};
+const vOk = (hid, col) => VALIDATED[hid] ? VALIDATED[hid].includes(col === 'L33/L35' ? 'L33' : col) : null;
 export const LIAISONS = [
   { id:'L12', ok:L12_ok }, { id:'L15', no:L15_no }, { id:'L16', no:L16_no }, { id:'L19', no:L19_no },
   { id:'L28', ok:L28_ok }, { id:'L30', ok:L30_ok }, { id:'L32', ok:L32_ok }, { id:'L33/L35', ok:L33_ok },
   { id:'L34', ok:L34_ok }, { id:'L48', ok:L48_ok }, { id:'L58', ok:L58_ok }, { id:'L70', ok:L70_ok },
 ];
-export const compatLiaisons = (hid) => LIAISONS.filter(L => L.ok ? L.ok.has(hid) : !L.no.has(hid)).map(L=>L.id);
-const cell = (id, kind, set) => (kind==='ok' ? set.has(id) : !set.has(id)) ? '✅' : '❌';
+export const compatLiaisons = (hid) => LIAISONS.filter(L => { const v = vOk(hid, L.id); return v !== null ? v : (L.ok ? L.ok.has(hid) : !L.no.has(hid)); }).map(L=>L.id);
+const COLS = { L12_ok:'L12', L15_no:'L15', L16_no:'L16', L19_no:'L19', L28_ok:'L28', L30_ok:'L30', L32_ok:'L32', L33_ok:'L33/L35', L34_ok:'L34', L48_ok:'L48', L58_ok:'L58', L70_ok:'L70' };
+const colOf = (set) => COLS[Object.keys({L12_ok,L15_no,L16_no,L19_no,L28_ok,L30_ok,L32_ok,L33_ok,L34_ok,L48_ok,L58_ok,L70_ok}).find(k => ({L12_ok,L15_no,L16_no,L19_no,L28_ok,L30_ok,L32_ok,L33_ok,L34_ok,L48_ok,L58_ok,L70_ok})[k] === set)];
+const cell = (id, kind, set) => { const v = vOk(id, colOf(set)); return (v !== null ? v : (kind==='ok' ? set.has(id) : !set.has(id))) ? '✅' : '❌'; };
 let md = `# Matrice de cohérence HOOK × LIAISON\n\n`;
 md += `Généré depuis les validations d'Axel (volets successifs). ✅ = la liaison s'enchaîne après le hook.\n`;
 md += `Génériques : L15, L16, L19, L48. Spécifiques / niche : L12, L28, L30, L32, L33/L35, L34.\n\n`;
@@ -100,7 +105,7 @@ for (const [id,txt] of hooks){
   md += `| **H${id}** · ${txt} | ${cell(id,'ok',L12_ok)} | ${cell(id,'no',L15_no)} | ${cell(id,'no',L16_no)} | ${cell(id,'no',L19_no)} | ${cell(id,'ok',L28_ok)} | ${cell(id,'ok',L30_ok)} | ${cell(id,'ok',L32_ok)} | ${cell(id,'ok',L33_ok)} | ${cell(id,'ok',L34_ok)} | ${cell(id,'ok',L48_ok)} | ${cell(id,'ok',L58_ok)} | ${cell(id,'ok',L70_ok)} |\n`;
 }
 // compte par liaison
-const count = (kind,set)=>hooks.filter(([id])=> (kind==='ok'?set.has(id):!set.has(id))).length;
+const count = (kind,set)=>hooks.filter(([id])=> cell(id,kind,set)==='✅').length;
 md += `\n**✅ par liaison** — L12 ${count('ok',L12_ok)} · L15 ${count('no',L15_no)} · L16 ${count('no',L16_no)} · L19 ${count('no',L19_no)} · L28 ${count('ok',L28_ok)} · L30 ${count('ok',L30_ok)} · L32 ${count('ok',L32_ok)} · L33/L35 ${count('ok',L33_ok)} · L34 ${count('ok',L34_ok)} · L48 ${count('ok',L48_ok)} · L58 ${count('ok',L58_ok)} · L70 ${count('ok',L70_ok)} (sur ${hooks.length} hooks)\n`;
 md += `\n> **Analyse cohérence : 12 liaisons validées** (L33=L35 ; L69 & L72 abandonnées).\n`;
 md += `> **Étape suivante** : ranger chaque hook dans une ou plusieurs FAMILLES (multi-famille possible) + analyse « pourquoi telle famille et pas telle autre » (générique ≠ 100% des hooks).\n`;

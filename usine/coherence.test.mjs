@@ -65,12 +65,12 @@ const seq = (...xs) => { let i = 0; return () => xs[Math.min(i++, xs.length - 1)
 // ── matrice ──
 C.setPhotosPerAvatar(1);   // tests historiques : 1 photo par avatar (le test « photos par avatar » passe à 3)
 
-test('matrice : 53 hooks (H74v2 tel quel ; + H59, H78-H86 le 28/09), « L33/L35 » = L33, 417 paires', () => {
+test('matrice : 53 hooks (H74v2 tel quel ; + H59, H78-H86 le 28/09), « L33/L35 » = L33, 406 paires (validées par Axel le 28/09)', () => {
   assert.equal(Object.keys(MX).length, 53);
   assert.ok(Array.isArray(MX.H74v2));
   assert.deepEqual([...MX.H32], ['L16', 'L32', 'L34']);
   assert.ok(MX.H14.includes('L33') && !Object.values(MX).some(ls => ls.includes('L33/L35')));
-  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 417);
+  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 406);
   assert.equal(HOOKS_2609.reduce((a, h) => a + MX[h].length, 0) + MX.H74v2.length, 332);   // matrice du 26/09 inchangée
   assert.ok(Object.isFrozen(MX) && Object.isFrozen(MX.H12));
 });
