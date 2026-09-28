@@ -1258,17 +1258,17 @@ i.is-gap { background: var(--cf-ink); }
 .cf-bsf-v.is-wait span { font: 500 10px/1.3 var(--cf-mono); color: var(--cf-mute); }
 .cf-bsf-v.is-wait b { font: 600 11px/1.3 inherit; color: var(--cf-mute); }
 
-/* deux cartes de compte Instagram côte à côte (28/09 : un compte par avatar, cocher / décocher) */
-.cf-acct2s { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.cf-acct2 { align-self: stretch; border: 2px solid var(--cf-line); padding: 12px 14px; transition: border-color .15s, opacity .15s; }
-.cf-acct2.is-on { border-color: var(--cf-accent); }
-.cf-acct2.is-off { opacity: .55; }
-.cf-acct2.is-off:hover { opacity: .8; }
-.cf-acct2.is-missing { border-style: dashed; border-color: var(--cf-line-3); }
-.cf-acct2-sel { display: flex; align-items: center; gap: 12px; flex: 1 1 240px; min-width: 0; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
-.cf-acct2-sel:focus-visible { outline: 2px solid var(--cf-accent); outline-offset: 4px; }
-.cf-acct2-ck { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #d9d1c5; background: #fff; color: #fff; display: flex; align-items: center; justify-content: center; flex: none; align-self: flex-start; }
-.cf-acct2.is-on .cf-acct2-ck { background: var(--cf-accent); border-color: var(--cf-accent); }
-.cf-acct2-ck svg { stroke-width: 3.5; }
+/* cartes de compte Instagram (28/09 : un compte par avatar, pleine largeur, cocher / décocher) */
+.cf-acards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cf-acard { position: relative; }
+.cf-acard-hit { position: absolute; inset: 0; z-index: 1; margin: 0; padding: 0; border: 0; background: transparent; border-radius: 14px; cursor: pointer; }
+.cf-acard-hit:focus-visible { outline: 2px solid var(--c); outline-offset: 3px; }
+.cf-acard.is-off:hover { opacity: .8; }
+.cf-acard.is-none { cursor: default; border-style: dashed; }
+.cf-acard-btn { position: relative; z-index: 2; align-self: flex-start; }
+.cf-acard-pic { overflow: hidden; border-radius: 50%; }
+.cf-acard-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cf-acard-tok { font-weight: 400; }
+.cf-acard-tok.is-warn { color: var(--cf-warn-fg); font-weight: 600; }
+.cf-acard-tok.is-err { color: var(--cf-err-fg); font-weight: 600; }
 .cf-acct2-notes { margin-top: -4px; }
-@media (max-width: 699px) { .cf-acct2s { grid-template-columns: minmax(0, 1fr); } }

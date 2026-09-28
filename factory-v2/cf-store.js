@@ -9,8 +9,9 @@
  *   CF.user    { id, email } de la session supabase-js (partagée avec l'app, même domaine)
  *   CF.igSel   compte(s) Instagram affiché(s) (Axel 28/09 : un compte par avatar) : 'all' (« Les deux », chiffres
  *              additionnés côté serveur, ig-insights?ig_id=all) ou l'ig_id d'un de nos comptes (OWN_USERNAMES). Change par
- *              CF.setIgSel(v) : vide les cases Instagram et Auto-DM (rechargées pour la nouvelle sélection), garde les comptes.
- *              Mémorisé dans le navigateur (préférence d'affichage seulement, jamais un chiffre).
+ *              CF.setIgSel(v, { temp }) : range les cases Instagram et Auto-DM de la sélection quittée (retrouvées telles
+ *              quelles au retour, sans rechargement) et reprend celles de la nouvelle. Mémorisé dans le navigateur (préférence
+ *              d'affichage seulement, jamais un chiffre), sauf { temp: true } (l'Accueil, toujours sur les deux comptes).
  *   CF.acct    onglet Compte (compte(s) sélectionné(s))
  *     .accounts  instagram-auth?action=accounts  → { state, loading, at, list, own, primary, error } ; own = nos comptes ;
  *                primary = compte de la sélection (pour « Les deux » : les deux noms et le token qui expire le 1er)
@@ -98,6 +99,7 @@
     igSel: readSel(),
     acctStats: {},   // par ig_id : { followers, media, picture, at } relevés dans les réponses d'ig-insights (cartes de compte)
     setIgSel: setIgSel,
+    igPick: function () { return readSel(); },   // choix mémorisé d'Insight / Auto-DM (l'Accueil affiche toujours les deux)
     refresh: refresh,
     loadAccounts: loadAccounts,
     loadInsights: loadInsights,
@@ -143,7 +145,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.oauth = null; }
+  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.oauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -272,21 +274,24 @@
     if (Array.isArray(b.accounts)) b.accounts.forEach(function (a) { if (a) put(a.ig_id, a.followers_count, a.media_count, a.profile_picture_url); });
     else if (b.ig_id && b.ig_id !== 'all') put(b.ig_id, b.followers_count, b.media_count, b.profile_picture_url);
   }
-  function setIgSel(v) {
+  var bySel = {};   // cases Instagram + Auto-DM rangées par sélection : revenir à une sélection ne recharge rien
+  function setIgSel(v, opts) {
     v = String(v || '');
     var own = CF.acct.accounts.own || [];
     if (v !== 'all' && !own.some(function (a) { return a.ig_id === v; })) return false;
+    if (!(opts && opts.temp)) { try { localStorage.setItem(SEL_KEY, v); } catch (e) { /* navigation privée : choix non mémorisé */ } }
     if (v === CF.igSel) return false;
-    CF.igSel = v;
-    try { localStorage.setItem(SEL_KEY, v); } catch (e) { /* navigation privée : sélection non mémorisée */ }
-    // Nouvelles cases : une réponse encore en vol pour l'ancienne sélection écrit dans l'ancienne case, détachée.
+    // Une réponse encore en vol pour la sélection quittée finit dans SA case (rangée), jamais dans celle de la nouvelle.
     Object.keys(inflight).forEach(function (k) { if (k === 'aud' || k === 'media' || k.indexOf('ig:') === 0 || k.indexOf('dm:') === 0) inflight[k] = null; });
     retries = {}; mediaPolls = 0; pre.on = false; pre.queue = [];
     var A = CF.acct.accounts;
-    CF.acct = newAcct();
+    bySel[CF.igSel] = { acct: CF.acct, dm: CF.dm };
+    CF.igSel = v;
+    var back = bySel[v];
+    CF.acct = back ? back.acct : newAcct();
     CF.acct.accounts = A;
     A.primary = pickPrimary(A.own);
-    CF.dm = newDm();
+    CF.dm = back ? back.dm : newDm();
     emit('igsel');
     return true;
   }

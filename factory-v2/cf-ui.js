@@ -270,6 +270,7 @@
 
   function render() {
     var st = CF.status;
+    if (st === 'ready') syncSel();
     show('cfBoot', st === 'boot' || st === 'loading');
     var bm = $('cfBootMsg');
     if (bm) bm.textContent = st === 'loading' ? 'Vérification de l’accès…' : 'Chargement…';
@@ -1876,48 +1877,49 @@
     if (!next.length) return false;
     return CF.setIgSel(next.length >= own.length ? 'all' : next[0]);
   }
-  // Deux grandes cartes de compte côte à côte (Axel 28/09 : @avataradss à gauche, @leoadsia à droite), au style de la
-  // carte compte : photo, @pseudo, état du token, abonnés. Toucher une carte la coche / décoche : les deux cochées =
-  // chiffres additionnés, une seule = ce compte uniquement ; la dernière cochée ne se décoche pas. Un compte à nous pas
-  // encore relié a sa carte avec « Connecter @x » ; « Reconnecter » n'apparaît que sur une carte dont le token est
-  // expiré ou expire sous 7 jours (ou si Instagram refuse ce compte seul).
+  // Cartes de compte (Axel 28/09) : une par avatar sur toute la largeur (@avataradss à gauche, @leoadsia à droite), au
+  // style des cartes de chiffres. Toucher une carte la coche / décoche : les deux cochées = chiffres additionnés, une seule
+  // = ce compte uniquement ; la dernière cochée ne se décoche pas. Compte à nous pas encore relié : carte en pointillés +
+  // « Connecter @x ». « Reconnecter » seulement sur un compte au token expiré ou qui expire sous 7 jours (ou refusé par
+  // Instagram quand il est seul affiché). Insight et Auto-DM ; l'Accueil affiche toujours les deux comptes.
+  var ACCT_C = ['var(--cf-accent)', 'var(--cf-c-posts)'];
   var ACCT_AV = { avataradss: 'A1', leoadsia: 'A2' };
-  function acctPairHTML(notes, broken) {
+  function igSelHTML(broken) {
     var A = CF.acct.accounts, own = A.own || [], on = selIds();
-    var cards = CF.OWN_USERNAMES.map(function (u) {
+    if (A.state !== 'ready' && !own.length) return '';
+    return '<section class="cf-accts" aria-label="Comptes Instagram affichés"><div class="cf-icards cf-acards">' + CF.OWN_USERNAMES.map(function (u, i) {
       var a = own.filter(function (x) { return String(x.username || '').toLowerCase() === u; })[0];
-      var av = ACCT_AV[u] ? 'avatar ' + ACCT_AV[u] : '';
+      var c = ACCT_C[i % ACCT_C.length], av = ACCT_AV[u] ? 'avatar ' + ACCT_AV[u] : '';
       if (!a) {
-        var wait = A.state !== 'ready';
-        return '<div class="cf-acct cf-acct2 is-missing">'
-          + '<span class="cf-avatar"><span class="cf-avatar-i" aria-hidden="true">' + esc((ACCT_AV[u] || 'IG')) + '</span></span>'
-          + '<div class="cf-acct-main"><div class="cf-acct-name">' + IG_GLYPH + '<span>@' + esc(u) + '</span></div>'
-          + '<div class="cf-acct-state is-' + (wait ? 'mute' : 'warn') + '"><span class="cf-dot" aria-hidden="true"></span><span>' + (wait ? 'chargement' : 'pas encore relié') + '</span></div>'
-          + (av ? '<div class="cf-acct-why">' + esc(av) + '</div>' : '') + '</div>'
-          + (wait ? '' : '<button type="button" class="cf-btn" data-act="connect-acct" data-k="' + esc(u) + '" title="' + esc('Ouvre Instagram : connecte-toi avec @' + u + ' avant de valider') + '">' + svg(IC.insta, 14) + '<span>Connecter @' + esc(u) + '</span></button>')
+        return '<div class="cf-icard cf-acard is-none" style="--c:' + c + '">'
+          + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(IC.insta, 14) + '</span><span class="cf-icard-l">@' + esc(u) + '</span></span>'
+          + '<span class="cf-icard-v is-na">—</span><span class="cf-icard-s">pas encore relié' + (av ? ' · ' + esc(av) : '') + '</span>'
+          + '<button type="button" class="cf-btn is-sm cf-acard-btn" data-act="connect-acct" data-k="' + esc(u) + '" title="' + esc('Ouvre Instagram : connecte-toi avec @' + u + ' avant de valider') + '">' + svg(IC.insta, 13) + '<span>Connecter @' + esc(u) + '</span></button>'
           + '</div>';
       }
       var o = on.indexOf(a.ig_id) >= 0, last = o && on.length === 1, st = CF.acctStats[a.ig_id] || {}, tok = tokenInfo(a);
-      var pic = safeUrl(st.picture || (CF.igSel === a.ig_id || own.length === 1 ? profilePic() : '') || '');
-      var tone = !tok ? 'ok' : tok.expired ? 'err' : tok.days < 7 ? 'warn' : 'ok';
-      var line = !tok ? 'connecté' : tok.expired ? 'token expiré le ' + dmy(tok.date) : 'connecté · token valide jusqu’au ' + dmy(tok.date) + ' (' + tok.days + NB + 'j)';
-      var why = [av, st.followers != null ? fInt(st.followers) + ' ' + plural(st.followers, 'abonné') : '', st.media != null ? fInt(st.media) + ' ' + plural(st.media, 'publication') : ''].filter(Boolean).join(' · ');
-      var bad = tone !== 'ok' || (broken && CF.igSel === a.ig_id);
-      return '<div class="cf-acct cf-acct2' + (o ? ' is-on' : ' is-off') + '">'
-        + '<button type="button" class="cf-acct2-sel" data-act="ig-sel" data-k="' + esc(a.ig_id) + '" aria-pressed="' + o + '"'
-        + ' title="' + esc(last ? 'Au moins un compte reste affiché' : (o ? 'Retirer' : 'Ajouter') + ' @' + a.username + ' des chiffres') + '">'
-        + '<span class="cf-avatar">' + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async">' : '') + '<span class="cf-avatar-i" aria-hidden="true">' + esc(ACCT_AV[u] || 'AA') + '</span></span>'
-        + '<span class="cf-acct-main"><span class="cf-acct-name">' + IG_GLYPH + '<span>@' + esc(a.username) + '</span></span>'
-        + '<span class="cf-acct-state is-' + tone + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(line) + '</span></span>'
-        + (why ? '<span class="cf-acct-why">' + esc(why) + '</span>' : '') + '</span>'
-        + '<span class="cf-acct2-ck" aria-hidden="true">' + (o ? svg('M5 12l5 5L20 7', 11) : '') + '</span>'
-        + '</button>'
-        + (bad ? '<button type="button" class="cf-btn" data-act="connect-acct" data-k="' + esc(u) + '">' + svg(IC.refresh, 14) + '<span>Reconnecter</span></button>' : '')
+      var pic = safeUrl(st.picture || (CF.igSel === a.ig_id ? profilePic() : '') || '');
+      var tone = !tok ? '' : tok.expired ? ' is-err' : tok.days < 7 ? ' is-warn' : '';
+      var bad = !!tone || (broken && CF.igSel === a.ig_id);
+      var extra = [av, st.media != null ? fInt(st.media) + ' ' + plural(st.media, 'publication') : ''].filter(Boolean).join(' · ');
+      var tokTxt = tok ? (tok.expired ? 'token expiré le ' + dmy(tok.date) : 'token ' + tok.days + NB + 'j') : '';
+      return '<div class="cf-icard cf-acard' + (o ? ' is-on' : ' is-off') + '" style="--c:' + c + '">'
+        + '<button type="button" class="cf-acard-hit" data-act="ig-sel" data-k="' + esc(a.ig_id) + '" aria-pressed="' + o + '"'
+        + ' aria-label="' + esc('@' + a.username + (o ? ' affiché' : ' masqué')) + '" title="' + esc(last ? 'Au moins un compte reste affiché' : (o ? 'Retirer' : 'Ajouter') + ' @' + a.username + ' des chiffres') + '"></button>'
+        + '<span class="cf-icard-h"><span class="cf-icard-tile cf-acard-pic">' + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async">' : svg(IC.insta, 14)) + '</span>'
+        + '<span class="cf-icard-l">@' + esc(a.username) + '</span>'
+        + '<span class="cf-icard-ck" aria-hidden="true">' + (o ? svg('M5 12l5 5L20 7', 10) : '') + '</span></span>'
+        + '<span class="cf-icard-v' + (st.followers == null ? ' is-na' : '') + '">' + esc(st.followers == null ? '—' : fInt(st.followers)) + '</span>'
+        + '<span class="cf-icard-s">abonnés</span>'
+        + '<span class="cf-icard-x">' + esc(extra) + (tokTxt ? (extra ? ' · ' : '') + '<b class="cf-acard-tok' + tone + '">' + esc(tokTxt) + '</b>' : '') + '</span>'
+        + (bad ? '<button type="button" class="cf-btn is-sm cf-acard-btn" data-act="connect-acct" data-k="' + esc(u) + '">' + svg(IC.refresh, 13) + '<span>Reconnecter</span></button>' : '')
         + '</div>';
-    }).join('');
-    return '<section class="cf-acct2s" aria-label="Comptes Instagram affichés">' + cards + '</section>'
-      + (notes && notes.length ? '<div class="cf-acct-why cf-acct2-notes">' + esc(notes.join(' · ')) + '</div>' : '')
-      + reconMsg();
+    }).join('') + '</div></section>';
+  }
+  // Insight / Auto-DM : l'Accueil affiche toujours les deux comptes ; les deux onglets reprennent le choix mémorisé.
+  function syncSel() {
+    var want = ui.tab === 'home' ? 'all' : (CF.igPick() || 'all');
+    if (want !== CF.igSel) CF.setIgSel(want, { temp: ui.tab === 'home' });
   }
   function titleSel(h) { return '<section class="cf-title"><h1>' + esc(h) + '</h1></section>'; }
 
@@ -1941,9 +1943,10 @@
   }
 
   function acctHTML(D) {
-    var A = CF.acct.accounts, st = igState(), notes = [];
-    if (A.state === 'error') notes.push('comptes reliés : ' + A.error);
-    return acctPairHTML(notes, st.tone === 'err' || CF.acct.ig[ui.range].kind === 'disconnected');
+    var A = CF.acct.accounts, st = igState();
+    return igSelHTML(st.tone === 'err' || CF.acct.ig[ui.range].kind === 'disconnected')
+      + (A.state === 'error' ? '<div class="cf-acct-why">comptes reliés : ' + esc(A.error) + ' <button type="button" class="cf-link-btn" data-act="retry-accounts">Réessayer</button></div>' : '')
+      + reconMsg();
   }
 
   // Résultat de « Reconnecter » (carte compte des onglets Insight et Auto-DM).
@@ -2637,7 +2640,9 @@
     if (D) notes.push(D.lastAt ? 'dernier évènement Auto-DM ' + ago(D.lastAt) : 'aucun évènement Auto-DM enregistré');
     if (D) notes.push(!D.cron ? 'relance automatique : état du cron illisible' : D.cron.active ? 'relance automatique active (' + cronTxt(D.cron.schedule) + ')' : 'relance automatique : cron INACTIF');
     if (A.state === 'error') notes.push('comptes reliés : ' + A.error);
-    return acctPairHTML(notes, !!st.pause)
+    return igSelHTML(!!st.pause)
+      + (notes.length ? '<div class="cf-acct-why cf-acct2-notes">' + esc(notes.join(' · ')) + '</div>' : '')
+      + reconMsg()
       + (st.pause ? banner('err', IC.alert, '<b>Auto-DM en pause</b> · Instagram ' + esc(st.pause) + ' : les nouveaux commentaires ne reçoivent plus de DM. Reconnecte @'
         + esc(selName()) + '. Les chiffres ci-dessous viennent de notre base et restent justes.') : '')
       + (D && D.cron && !D.cron.active ? banner('warn', IC.alert, '<b>Relance automatique arrêtée</b> · le cron ig-followup-hourly est inactif : plus aucune relance ne part.') : '');
