@@ -1873,6 +1873,27 @@
       return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="ig-sel" data-k="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>';
     }).join('') + '</div>';
   }
+  // Bouton de la carte compte (Axel 28/09) : « Reconnecter » SEULEMENT si la connexion est vraiment cassée (déconnecté,
+  // token expiré ou qui expire sous 7 jours, lecture refusée) ; sinon « Connecter @x » pour chacun de nos comptes pas
+  // encore relié ; sinon rien. Même fenêtre OAuth dans les deux cas : c'est le compte ouvert sur Instagram qui est relié.
+  function missingOwn() {
+    var A = CF.acct.accounts;
+    if (A.state !== 'ready') return [];
+    var own = (A.own || []).map(function (a) { return String(a.username || '').toLowerCase(); });
+    return CF.OWN_USERNAMES.filter(function (u) { return own.indexOf(u) < 0; });
+  }
+  function acctBtnHTML(broken) {
+    if (broken) return '<button type="button" class="cf-btn" data-act="reconnect">' + svg(IC.refresh, 14) + '<span>Reconnecter</span></button>';
+    return missingOwn().map(function (u) {
+      return '<button type="button" class="cf-btn" data-act="connect-acct" data-k="' + esc(u) + '" title="' + esc('Ouvre Instagram : connecte-toi avec @' + u + ' avant de valider') + '">'
+        + svg(IC.insta, 14) + '<span>Connecter @' + esc(u) + '</span></button>';
+    }).join('');
+  }
+  // Photo du profil : celle des insights ou, à défaut, celle des publications (onglet Auto-DM ouvert en premier).
+  function profilePic() {
+    var D = igData(), M = CF.acct.media.data;
+    return safeUrl((D && D.picture) || (M && M.picture) || '');
+  }
   function titleSel(h) { return '<section class="cf-title cf-title-sel"><h1>' + esc(h) + '</h1>' + igSelHTML() + '</section>'; }
 
   // ── onglet Compte (compte(s) sélectionné(s)) ──
@@ -1891,7 +1912,7 @@
   function acctHTML(D) {
     var A = CF.acct.accounts, prim = A.primary, st = igState();
     var uname = (prim && prim.username) || (D && D.username) || CF.PRIMARY_USERNAME;
-    var pic = D ? safeUrl(D.picture) : '';
+    var pic = profilePic();
     var tok = tokenInfo(prim);
     var tokTxt = tok ? 'token valide jusqu’au ' + dmy(tok.date) + ' (' + tok.days + NB + 'j)' : 'token valide jusqu’au —';
     var off = CF.acct.ig[ui.range].kind === 'disconnected';
@@ -1907,7 +1928,7 @@
       + (notes.length ? '<div class="cf-acct-why">' + esc(notes.join(' · ')) + '</div>' : '')
       + (A.state === 'error' ? '<button type="button" class="cf-link-btn" data-act="retry-accounts">Réessayer</button>' : '')
       + '</div>'
-      + '<button type="button" class="cf-btn" data-act="reconnect">' + svg(IC.refresh, 14) + '<span>Reconnecter</span></button>'
+      + acctBtnHTML(st.tone === 'err' || st.tone === 'warn' || off)
       + msg
       + '</section>';
   }
@@ -2603,15 +2624,16 @@
     var notes = [];
     if (D) notes.push(D.lastAt ? 'dernier évènement Auto-DM ' + ago(D.lastAt) : 'aucun évènement Auto-DM enregistré');
     if (D) notes.push(!D.cron ? 'relance automatique : état du cron illisible' : D.cron.active ? 'relance automatique active (' + cronTxt(D.cron.schedule) + ')' : 'relance automatique : cron INACTIF');
+    var pic = profilePic();
     return '<section class="cf-acct">'
-      + '<span class="cf-avatar"><span class="cf-avatar-i" aria-hidden="true">AA</span></span>'
+      + '<span class="cf-avatar">' + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async">' : '') + '<span class="cf-avatar-i" aria-hidden="true">AA</span></span>'
       + '<div class="cf-acct-main">'
       + '<div class="cf-acct-name">' + IG_GLYPH + '<span>@' + esc(uname) + '</span></div>'
       + '<div class="cf-acct-state is-' + st.tone + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(st.line) + '</span></div>'
       + (notes.length ? '<div class="cf-acct-why">' + esc(notes.join(' · ')) + '</div>' : '')
       + (A.state === 'error' ? '<button type="button" class="cf-link-btn" data-act="retry-accounts">Réessayer</button>' : '')
       + '</div>'
-      + '<button type="button" class="cf-btn" data-act="reconnect">' + svg(IC.refresh, 14) + '<span>Reconnecter</span></button>'
+      + acctBtnHTML(!!st.pause || st.tone === 'err' || st.tone === 'warn')
       + reconMsg()
       + '</section>'
       + (st.pause ? banner('err', IC.alert, '<b>Auto-DM en pause</b> · Instagram ' + esc(st.pause) + ' : les nouveaux commentaires ne reçoivent plus de DM. Reconnecte @'
@@ -3329,12 +3351,14 @@
     ui.range = k;
     render();
   }
-  function reconnect() {
+  function reconnect(who) {
     var at = Date.now();
     CF.igConnect().then(function (r) { // igConnect ouvre la popup avant tout await
       ui.recon = r.ok
-        ? { ok: true, at: at, text: 'Fenêtre Instagram ouverte : termine la connexion, les chiffres seront relus ici.' }
-        : { ok: false, at: at, text: 'Reconnexion impossible : ' + r.error };
+        ? { ok: true, at: at, text: who
+          ? 'Fenêtre Instagram ouverte : connecte-toi avec @' + who + ' (pas un autre compte), puis valide. Les chiffres seront relus ici.'
+          : 'Fenêtre Instagram ouverte : termine la connexion, les chiffres seront relus ici.' }
+        : { ok: false, at: at, text: (who ? 'Connexion impossible : ' : 'Reconnexion impossible : ') + r.error };
       schedule();
     });
   }
@@ -3362,6 +3386,7 @@
       else if (act === 'all-posts') { ui.allPosts = !ui.allPosts; render(); }
       else if (act === 'evo-toggle') { var k = el.getAttribute('data-k'); if (EVO_KEYS.indexOf(k) >= 0) { ui.evoHidden[k] = !ui.evoHidden[k]; evoHide(); render(); } }
       else if (act === 'reconnect') reconnect(); // la popup s'ouvre dans ce clic (Safari)
+      else if (act === 'connect-acct') reconnect(el.getAttribute('data-k'));
       else if (act === 'post') openPost(parseInt(el.getAttribute('data-i'), 10), el);
       else if (act === 'modal-close') closeModal();
       else if (act === 'tag-set') setTag(el);

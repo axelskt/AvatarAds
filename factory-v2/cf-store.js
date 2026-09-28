@@ -521,7 +521,7 @@
   function normMedia(b, at) {
     var list = Array.isArray(b.media) ? b.media.map(normMediaItem).filter(Boolean) : null;
     return {
-      fetchedAt: at, username: str(b.username), followers: num(b.followers_count), mediaCount: num(b.media_count), mediaTotal: num(b.media_total),
+      fetchedAt: at, username: str(b.username), picture: str(b.profile_picture_url), followers: num(b.followers_count), mediaCount: num(b.media_count), mediaTotal: num(b.media_total),
       list: list || [], error: str(b.media_error) || (list ? null : 'liste absente de la réponse'),
       analysisPending: num(b.analysis_pending) || 0
     };
