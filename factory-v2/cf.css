@@ -1258,7 +1258,8 @@ i.is-gap { background: var(--cf-ink); }
 .cf-bsf-v.is-wait span { font: 500 10px/1.3 var(--cf-mono); color: var(--cf-mute); }
 .cf-bsf-v.is-wait b { font: 600 11px/1.3 inherit; color: var(--cf-mute); }
 
-/* sélection du compte Instagram (28/09 : un compte par avatar) */
-.cf-title-sel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
-.cf-hsel { margin-top: 12px; }
-.cf-igsel.cf-seg { max-width: 100%; }
+/* cartes de compte Instagram (28/09 : un compte par avatar, cocher / décocher) */
+.cf-acards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 240px)); }
+.cf-acard-pic { overflow: hidden; border-radius: 50%; }
+.cf-acard-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 699px) { .cf-acards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

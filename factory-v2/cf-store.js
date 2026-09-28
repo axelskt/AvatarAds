@@ -96,6 +96,7 @@
     PRIMARY_USERNAME: PRIMARY_USERNAME,
     OWN_USERNAMES: OWN_USERNAMES.slice(),
     igSel: readSel(),
+    acctStats: {},   // par ig_id : { followers, media, picture, at } relevés dans les réponses d'ig-insights (cartes de compte)
     setIgSel: setIgSel,
     refresh: refresh,
     loadAccounts: loadAccounts,
@@ -256,6 +257,21 @@
     for (var i = 0; i < own.length; i++) { if (own[i].ig_id === CF.igSel) return [own[i].ig_user_id || '-']; }
     return ['-'];   // compte inconnu : rien plutôt que les chiffres d'un autre compte
   }
+  // Chiffres par compte pour les cartes de sélection : réponse d'un compte (ig_id) ou de « deux comptes » (accounts[]).
+  function noteAccounts(b) {
+    if (!b || typeof b !== 'object') return;
+    var put = function (id, f, m, pic) {
+      if (!str(id)) return;
+      var o = CF.acctStats[id] || {};
+      if (num(f) != null) o.followers = num(f);
+      if (num(m) != null) o.media = num(m);
+      if (str(pic)) o.picture = str(pic);
+      o.at = Date.now();
+      CF.acctStats[id] = o;
+    };
+    if (Array.isArray(b.accounts)) b.accounts.forEach(function (a) { if (a) put(a.ig_id, a.followers_count, a.media_count, a.profile_picture_url); });
+    else if (b.ig_id && b.ig_id !== 'all') put(b.ig_id, b.followers_count, b.media_count, b.profile_picture_url);
+  }
   function setIgSel(v) {
     v = String(v || '');
     var own = CF.acct.accounts.own || [];
@@ -395,6 +411,7 @@
       try {
         var res = await callFn('ig-insights?range=' + range + '&' + selParam(), SERIES_TIMEOUT_MS);
         var b = res.body || {};
+        if (res.ok && !b.error) noteAccounts(b);
         if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
           patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
         } else if (!res.ok || b.error) {
@@ -539,6 +556,7 @@
       try {
         var res = await callFn('ig-insights?part=media&' + selParam(), SERIES_TIMEOUT_MS);
         var b = res.body || {};
+        if (res.ok && !b.error) noteAccounts(b);
         if (res.status === 400 && /aucun compte/i.test(String(b.error || ''))) {
           patch = { state: 'error', kind: 'disconnected', error: String(b.error), data: null };
         } else if (!res.ok || b.error) {

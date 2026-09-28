@@ -631,7 +631,8 @@ function mergeAll(accs: IgAccount[], outs: Record<string, any>[]) {
   if (outs.every((o) => o.followers_base)) m.followers_base = outs.map((o) => o.followers_base).reduce((x, y) => mergeVal(x, y, ''))
   m.ig_id = 'all'
   m.username = accs.map((a) => a.username).filter(Boolean).join(' + @')
-  m.accounts = accs.map((a, i) => ({ ig_id: a.ig_id, ig_user_id: a.ig_user_id, username: a.username, followers_count: outs[i].followers_count ?? null, media_count: outs[i].media_count ?? null }))
+  m.accounts = accs.map((a, i) => ({ ig_id: a.ig_id, ig_user_id: a.ig_user_id, username: a.username, followers_count: outs[i].followers_count ?? null,
+    media_count: outs[i].media_count ?? null, profile_picture_url: outs[i].profile_picture_url ?? null }))
   m.merge_note = 'somme des comptes ; portée et comptes engagés = comptes uniques additionnés (une personne qui voit les deux comptes compte deux fois)'
   if (partial.length) m.merge_partial = partial
   return m

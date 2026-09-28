@@ -505,7 +505,7 @@
     var DS = CF.dm[HOME_DM], Y = dmModel(DS, DS.data, HOME_DM);
     return '<section class="cf-title"><h1>Vue d’ensemble</h1><div class="cf-sub">' + esc(longDate(new Date())) + '</div>'
       + '<div class="cf-hig is-' + ig.tone + '" data-ig="' + ig.key + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(ig.line) + '</span></div>'
-      + (igSelHTML() ? '<div class="cf-hsel">' + igSelHTML() + '</div>' : '') + '</section>'
+      + '</section>' + igSelHTML()
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
@@ -1863,16 +1863,46 @@
   // ── sélection du compte Instagram (Axel 28/09 : un compte par avatar) ──
   // Pseudo(s) affiché(s) : « avataradss », « leoadsia » ou « avataradss + @leoadsia » pour « Les deux ».
   function selName() { var p = CF.acct.accounts.primary; return (p && p.username) || CF.PRIMARY_USERNAME; }
-  // « Les deux · @avataradss · @leoadsia » : seulement quand au moins deux de nos comptes sont reliés.
+  // Un bouton par compte, qu'on active ou désactive (Axel 28/09) : les deux actifs = chiffres additionnés (CF.igSel 'all'),
+  // un seul = ce compte uniquement. Le dernier compte actif ne se désactive pas (jamais un tableau vide).
+  // Affiché seulement quand au moins deux de nos comptes sont reliés.
+  function selIds() {
+    var own = CF.acct.accounts.own || [];
+    return CF.igSel === 'all' ? own.map(function (a) { return a.ig_id; }) : [CF.igSel];
+  }
+  function toggleAcct(id) {
+    var own = CF.acct.accounts.own || [], cur = selIds(), next;
+    next = cur.indexOf(id) >= 0 ? cur.filter(function (x) { return x !== id; }) : cur.concat([id]);
+    if (!next.length) return false;
+    return CF.setIgSel(next.length >= own.length ? 'all' : next[0]);
+  }
+  // Cartes de compte (Axel 28/09, même style que les cartes de chiffres) : toucher une carte coche / décoche le compte ;
+  // les chiffres de la page suivent (les deux cochés = additionnés). Affichées dès que deux de nos comptes sont reliés.
+  var ACCT_C = ['var(--cf-accent)', 'var(--cf-c-posts)'];
+  var ACCT_AV = { avataradss: 'A1', leoadsia: 'A2' };
   function igSelHTML() {
     var own = CF.acct.accounts.own || [];
     if (own.length < 2) return '';
-    var opts = [['all', 'Les deux']].concat(own.map(function (a) { return [a.ig_id, '@' + a.username]; }));
-    return '<div class="cf-seg cf-pseg cf-igsel" role="group" aria-label="Compte Instagram">' + opts.map(function (o) {
-      var on = o[0] === CF.igSel;
-      return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="ig-sel" data-k="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>';
-    }).join('') + '</div>';
+    var on = selIds();
+    return '<section class="cf-accts" aria-label="Comptes Instagram affichés"><div class="cf-icards cf-acards">' + own.map(function (a, i) {
+      var o = on.indexOf(a.ig_id) >= 0, last = o && on.length === 1, st = CF.acctStats[a.ig_id] || {}, tok = tokenInfo(a);
+      var pic = safeUrl(st.picture || '');
+      var av = ACCT_AV[String(a.username || '').toLowerCase()];
+      var extra = [av ? 'avatar ' + av : '', st.media != null ? fInt(st.media) + ' ' + plural(st.media, 'publication') : '',
+        tok ? (tok.expired ? 'token expiré' : 'token ' + tok.days + NB + 'j') : ''].filter(Boolean).join(' · ');
+      return '<button type="button" class="cf-icard cf-acard' + (o ? ' is-on' : ' is-off') + '" style="--c:' + ACCT_C[i % ACCT_C.length] + '" data-act="ig-sel" data-k="' + esc(a.ig_id) + '" aria-pressed="' + o + '"'
+        + (last ? ' title="Au moins un compte reste affiché"' : '') + '>'
+        + '<span class="cf-icard-h"><span class="cf-icard-tile cf-acard-pic">' + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async">' : svg(IC.insta, 14)) + '</span>'
+        + '<span class="cf-icard-l">@' + esc(a.username) + '</span>'
+        + '<span class="cf-icard-ck" aria-hidden="true">' + (o ? svg('M5 12l5 5L20 7', 10) : '') + '</span></span>'
+        + '<span class="cf-icard-v' + (st.followers == null ? ' is-na' : '') + '">' + esc(st.followers == null ? '—' : fInt(st.followers)) + '</span>'
+        + '<span class="cf-icard-s">abonnés</span>'
+        + (extra ? '<span class="cf-icard-x">' + esc(extra) + '</span>' : '')
+        + '</button>';
+    }).join('') + '</div></section>';
   }
+  function titleSel(h) { return '<section class="cf-title"><h1>' + esc(h) + '</h1></section>' + igSelHTML(); }
+
   // Bouton de la carte compte (Axel 28/09) : « Reconnecter » SEULEMENT si la connexion est vraiment cassée (déconnecté,
   // token expiré ou qui expire sous 7 jours, lecture refusée) ; sinon « Connecter @x » pour chacun de nos comptes pas
   // encore relié ; sinon rien. Même fenêtre OAuth dans les deux cas : c'est le compte ouvert sur Instagram qui est relié.
@@ -1894,7 +1924,6 @@
     var D = igData(), M = CF.acct.media.data;
     return safeUrl((D && D.picture) || (M && M.picture) || '');
   }
-  function titleSel(h) { return '<section class="cf-title cf-title-sel"><h1>' + esc(h) + '</h1>' + igSelHTML() + '</section>'; }
 
   // ── onglet Compte (compte(s) sélectionné(s)) ──
   function compteHTML() {
@@ -3394,7 +3423,7 @@
       else if (act === 'brick-back') brickBack();
       else if (act === 'brick-post') brickPost(el.getAttribute('data-pid'));
       else if (act === 'dm-range') setDmRange(el.getAttribute('data-range'));
-      else if (act === 'ig-sel') { if (CF.setIgSel(el.getAttribute('data-k'))) { ui.allPosts = false; ui.dmAllLeads = false; ui.dmAllPosts = false; dmHide(); render(); } }
+      else if (act === 'ig-sel') { if (toggleAcct(el.getAttribute('data-k'))) { ui.allPosts = false; ui.dmAllLeads = false; ui.dmAllPosts = false; dmHide(); render(); } }
       else if (act === 'dm-toggle') { var dk = el.getAttribute('data-k'); if (DMS.some(function (d) { return d.k === dk && !d.none; })) { ui.dmHidden[dk] = !ui.dmHidden[dk]; evoHide(); render(); } }
       else if (act === 'retry-dm') CF.loadDm(ui.dmRange, { force: true });
       else if (act === 'dm-filter') { ui.dmFilter = el.getAttribute('data-f'); ui.dmAllLeads = false; render(); }
