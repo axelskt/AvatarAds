@@ -1499,7 +1499,7 @@
   function fmtVideosHTML(M, b) {
     var St = M && M.vars && M.vars.St, L = M && M.L;
     if (!St || St.state !== 'ready' || !L) return '';
-    if (b.kind === 'hook' && COH && COH.isAvantApres && M.byId && M.byId[b.id] && COH.isAvantApres(M.byId[b.id])) return '';
+    if (b.kind === 'hook' && COH && M.byId && M.byId[b.id] && (COH.isLipsyncHook ? !COH.isLipsyncHook(M.byId[b.id]) : COH.isAvantApres && COH.isAvantApres(M.byId[b.id]))) return '';   // 28/09 : un hook aux deux modes (H63) garde ses formats lipsync
     var fmts = b.kind === 'texte-choc' ? FMT_ORDER['texte-choc'] : FMT_ORDER.spoken, NP = COH && COH.PHOTOS_PAR_AVATAR || 3;
     { var al = COH && COH.voicesAllowed && M.byId && M.byId[b.id] ? COH.voicesAllowed(M.byId[b.id]) : null; if (al) fmts = fmts.filter(function (f) { return al.indexOf(f) >= 0; }); }   // 28/09 : voix autorisées
     var vids = (St.videos || []).filter(function (x) { return x.brick === b.id; });

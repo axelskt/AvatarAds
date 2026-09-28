@@ -414,6 +414,17 @@ test('voix autorisées (Axel 28/09) : meta.voices = [omni] → jamais en lipsync
   assert.equal(C.voicesAllowed(h2), null);
 });
 
+test('hook aux deux modes (Axel 28/09 : H63) : avant / après + lipsync explicite → dans les deux listes, lipsync et assemblage acceptés', () => {
+  const lib = C.library([
+    { id: 'A1', kind: 'avatar', status: 'ready', meta: {} },
+    { id: 'HD', kind: 'hook', status: 'ready', label: 'Texte', meta: { media: 'https://x.test/hooks/HD.wav', script: 'Texte', hook_mode: 'avant-apres', lipsync: true } },
+    { id: 'HA', kind: 'hook', status: 'ready', label: 'Texte', meta: { media: 'https://x.test/hooks/HA.wav', script: 'Texte', hook_mode: 'avant-apres' } },
+  ]);
+  assert.deepEqual(lib.lipsyncHooks.map(h => h.id), ['HD']);
+  assert.deepEqual(lib.aaHooks.map(h => h.id).sort(), ['HA', 'HD']);
+  assert.ok(C.isLipsyncHook({ meta: { hook_mode: 'avant-apres', lipsync: true } }) && !C.isLipsyncHook({ meta: { hook_mode: 'avant-apres' } }) && !C.isLipsyncHook({ meta: { lipsync: false } }) && C.isLipsyncHook({ meta: {} }));
+});
+
 const fails = results.filter(r => r.startsWith('FAIL')).length;
 console.log(results.join('\n'));
 console.log(fails + ' échec(s) sur ' + results.length);

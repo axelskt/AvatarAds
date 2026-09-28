@@ -28,7 +28,8 @@
  * compatible × avatar (la liaison est dite par un avatar). Clé : aa|avatar|hook|liaison|assemblage (avatar vide en court).
  * Hooks meta.overlay_required (H14, H23, H60) : lipsync seulement avec une incrustation ; comptés, signalés (overlay).
  * VOIX AUTORISÉES (Axel, 28/09) : meta.voices limite les modes d'une brique parlée — H19 et H74 = ['omni'] (voix native
- * uniquement, jamais en lipsync). H63 est passé en lipsync (plus avant / après) ; H53 et H57 restent en voix off.
+ * uniquement, jamais en lipsync). H63 sert aux DEUX modes (hook_mode 'avant-apres' + meta.lipsync === true, isLipsyncHook) ;
+ * H53 et H57 restent en voix off.
  *
  * Bibliothèque = briques au statut 'ready' seulement (une brique 'retired' ou 'flagged' n'entre dans aucun compte) ;
  * hooks comptés sans meta.alias_of (H64 = alias de H63).
@@ -112,6 +113,9 @@
   }
   // Hook avant / après (Motion Control / Omni) : jamais en lipsync, dit en voix off sur son assemblage visuel.
   function isAvantApres(h) { var m = meta(h); return m.lipsync === false || m.hook_mode === 'avant-apres'; }
+  // Hook utilisable en lipsync (modes axel / omni) : jamais si meta.lipsync === false ; un hook avant / après ne l'est que
+  // s'il le dit EXPLICITEMENT (meta.lipsync === true, Axel 28/09 : H63 sert aux deux) — sinon avant / après seulement.
+  function isLipsyncHook(h) { var m = meta(h); return m.lipsync !== false && (m.hook_mode !== 'avant-apres' || m.lipsync === true); }
   // Hook lipsync seulement avec une image incrustée (meta.overlay_required, ex. 'fille') ; '' sinon.
   function overlayRequired(h) { return str(meta(h).overlay_required); }
   // Un hook (avant / après) peut habiller un assemblage de ce module (motion-control / omni) : sujet, sujet cité ou générique.
@@ -333,7 +337,7 @@
       if (b.kind === 'hook' && meta(b).alias_of) L.aliases[b.id] = String(meta(b).alias_of);
       if (!ready(b)) return;
       if (b.kind === 'avatar') L.avatars.push(b);
-      else if (b.kind === 'hook' && !meta(b).alias_of) { L.hooks.push(b); (isAvantApres(b) ? L.aaHooks : L.lipsyncHooks).push(b); }
+      else if (b.kind === 'hook' && !meta(b).alias_of) { L.hooks.push(b); if (isAvantApres(b)) L.aaHooks.push(b); if (isLipsyncHook(b)) L.lipsyncHooks.push(b); }
       else if (b.kind === 'liaison') L.liaisons.push(b);
       else if (b.kind === 'cta') L.ctas.push(b);
       else if (b.kind === 'contenu') L.demos.push(b);
@@ -608,7 +612,7 @@
       else if (hook && asm && !hookFitsModule(hook, asm.module)) reasons.push('hook ' + hook.id + ' hors du module de ' + asm.id + ' (' + asm.module + ')');
       if (combo.voice === 'omni') reasons.push('pas de Voix native Omni sur un hook avant / après (voix off d’Axel)');
       if (combo.liaison && !combo.avatar) reasons.push('format long sans avatar (la liaison est dite par un avatar)');
-    } else if (hook && isAvantApres(hook)) reasons.push('hook ' + hook.id + ' avant / après : jamais en lipsync (voix off sur un assemblage HK)');
+    } else if (hook && !isLipsyncHook(hook)) reasons.push('hook ' + hook.id + ' avant / après : jamais en lipsync (voix off sur un assemblage HK)');
     // H14 / H23 / H60 (meta.overlay_required) : lipsync seulement avec une image d'avatar en incrustation → toujours revue manuelle
     else if (hook && overlayRequired(hook)) reasons.push('hook ' + hook.id + ' : incrustation d’une image d’avatar ' + overlayRequired(hook) + ' obligatoire, à vérifier');
     var extra = Object.keys(combo).filter(function (k) { return COMBO_KEYS.indexOf(k) < 0; });
@@ -622,7 +626,7 @@
   }
 
   return { VOICES: VOICES, VOICE_LABEL: VOICE_LABEL, MODES: MODES, MODE_LABEL: MODE_LABEL, COMBO_KEYS: COMBO_KEYS,
-    isAvantApres: isAvantApres, overlayRequired: overlayRequired, hookFitsModule: hookFitsModule,
+    isAvantApres: isAvantApres, isLipsyncHook: isLipsyncHook, overlayRequired: overlayRequired, hookFitsModule: hookFitsModule,
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk, voicesAllowed: voicesAllowed,
