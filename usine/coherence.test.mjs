@@ -37,12 +37,16 @@ const OLD_HK = { 'HK-M01-02': ['TX-M01', 'TX-M02'], 'HK-M01-04': ['TX-M01', 'TX-
   'HK-M04-01': ['TX-M04', 'TX-M01'], 'HK-M04-02': ['TX-M04', 'TX-M02'], 'HK-O01-02a': ['TX-O01', 'TX-O02a'], 'HK-O01-02b': ['TX-O01', 'TX-O02b'], 'HK-O01-03': ['TX-O01', 'TX-O03'],
   'HK-O02a-01': ['TX-O02a', 'TX-O01'], 'HK-O02a-03': ['TX-O02a', 'TX-O03'], 'HK-O02b-01': ['TX-O02b', 'TX-O01'], 'HK-O02b-03': ['TX-O02b', 'TX-O03'], 'HK-O03-01': ['TX-O03', 'TX-O01'],
   'HK-O03-02a': ['TX-O03', 'TX-O02a'], 'HK-O03-02b': ['TX-O03', 'TX-O02b'] };
+// Jeu de test FIGÉ sur les hooks du 26/09 (les attentes de capacité en dépendent) : les hooks ajoutés le 28/09 (H59,
+// H78-H86) sont dans la matrice mais pas dans cette bibliothèque de test.
+const NEW_2809 = new Set(['H59', 'H78', 'H79', 'H80', 'H81', 'H82', 'H83', 'H84', 'H85', 'H86']);
+const HOOKS_2609 = Object.keys(MX).filter(h => h !== 'H74v2' && !NEW_2809.has(h));
 function library(o) {
   o = o || {};
   const rows = [
     { id: 'A1', kind: 'avatar', subject: 'generique', status: 'ready', meta: {} },
     { id: 'A2', kind: 'avatar', subject: 'generique', status: 'ready', meta: {} }];
-  Object.keys(MX).filter(h => h !== 'H74v2').forEach(h => rows.push({ id: h, kind: 'hook', subject: (SUBJ[h] || ['image-ia'])[0], status: 'ready', label: 'Accroche ' + h,
+  HOOKS_2609.forEach(h => rows.push({ id: h, kind: 'hook', subject: (SUBJ[h] || ['image-ia'])[0], status: 'ready', label: 'Accroche ' + h,
     meta: { compatible_subjects: SUBJ[h] || ['image-ia'], script: 'Phrase du hook ' + h, media: SB + 'hooks/' + h + '.wav', ...(h === 'H64' ? { alias_of: 'H63' } : {}),
       ...(AA[h] ? { lipsync: false, hook_mode: 'avant-apres' } : { lipsync: true }), ...(OVERLAY[h] ? { overlay_required: OVERLAY[h] } : {}) } }));
   LIAISONS.forEach(l => rows.push({ id: l, kind: 'liaison', subject: GENERIC.includes(l) ? 'generique' : 'montage', status: 'ready', label: 'Phrase de la liaison ' + l, meta: { media: SB + 'liaisons/' + l + '.wav', modules: [] } }));
@@ -61,12 +65,13 @@ const seq = (...xs) => { let i = 0; return () => xs[Math.min(i++, xs.length - 1)
 // ── matrice ──
 C.setPhotosPerAvatar(1);   // tests historiques : 1 photo par avatar (le test « photos par avatar » passe à 3)
 
-test('matrice : 43 hooks (H74v2 tel quel), « L33/L35 » = L33, 332 paires dont 324 pour les hooks en base', () => {
-  assert.equal(Object.keys(MX).length, 43);
+test('matrice : 53 hooks (H74v2 tel quel ; + H59, H78-H86 le 28/09), « L33/L35 » = L33, 417 paires', () => {
+  assert.equal(Object.keys(MX).length, 53);
   assert.ok(Array.isArray(MX.H74v2));
   assert.deepEqual([...MX.H32], ['L16', 'L32', 'L34']);
   assert.ok(MX.H14.includes('L33') && !Object.values(MX).some(ls => ls.includes('L33/L35')));
-  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 332);
+  assert.equal(Object.values(MX).reduce((a, ls) => a + ls.length, 0), 417);
+  assert.equal(HOOKS_2609.reduce((a, h) => a + MX[h].length, 0) + MX.H74v2.length, 332);   // matrice du 26/09 inchangée
   assert.ok(Object.isFrozen(MX) && Object.isFrozen(MX.H12));
 });
 test('matrice : génériques ❌ appliqués (L15 absent après H25, L19 absent après H32 seulement)', () => {

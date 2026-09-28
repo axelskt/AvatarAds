@@ -43,20 +43,31 @@ export const hooks = [
  ['75',"C'est vraiment la façon la plus débile de faire 10 000€ par mois depuis ton téléphone, même un enfant de 10 ans peut le faire."],
  ['76',"Je te montre comment créer depuis Claude des pubs pour ton produit hyper réaliste comme cela, en 30 secondes top chrono."],
  ['77',"Je te montre comment créer des pubs pour ton produit avec un gros taux de retour sur investissement comme cela, en 30 secondes top chrono."],
+  // Axel 28/09 (Miro) : H59 voix native (femme) ; H78-H86 — matrice PROPOSÉE par Claude d'après les validations, à valider
+ ['59',"Tu penses encore que je suis réelle ? Faux. Cette femme n'existe pas. J'ai été créée sur AvatarAds.fr. (voix native, femme)"],
+ ['78',"Tu peux maintenant créer des vidéos IA 10 fois moins chères qu'avec Higgsfield et avec une meilleure qualité, je te montre ça."],
+ ['79',"On est clairement dans une nouvelle ère IA et si tu ne sais pas comment l'utiliser pour créer du contenu, que ce soit images réalistes ou vidéos, tu passes à côté de beaucoup d'argent."],
+ ['80',"Les influenceurs de Dubaï utilisent tous ça, je te montre comment tu peux transformer n'importe quel objet en ce que tu veux."],
+ ['81',"Tu peux transformer la voiture en bas de chez toi en n'importe quelle voiture de ton choix, ou même un bracelet en montre de luxe. Je te montre comment faire."],
+ ['82',"Tu peux prendre l'apparence de n'importe qui et reproduire ses mouvements à la perfection, je te montre ça."],
+ ['83',"Si t'es e-commerçant et tu dois faire un gros volume de créatives images et vidéos en masse pour ton produit, cet outil est fait pour toi."],
+ ['84',"J'ai trouvé un outil 10 fois moins cher qu'Higgsfield avec une meilleure qualité, je te montre ça."],
+ ['85',"Tout le monde parle d'IA, d'automatisation partout, mais personne ne l'utilise dans ce qui compte vraiment : attirer des clients sur ton site."],
+ ['86',"Ok, t'as créé ton produit, t'as créé ton site, tes réseaux, mais maintenant tu sais pas comment attirer du trafic sur ton site. Je te montre comment tu peux faire."],
 ];
 // Génériques : liste des ❌ (tout le reste = ✅). Spécifiques : liste des ✅.
-const L12_ok = new Set(['12','13','14','21','60','73']);        // SPÉCIFIQUE influenceur/avatar
+const L12_ok = new Set(['12','13','14','21','60','73','59']);        // SPÉCIFIQUE influenceur/avatar
 const L15_no = new Set(['25','26','27','28','32']);             // GÉNÉRIQUE réalisme
 const L16_no = new Set(['15','19','28','48']);                  // GÉNÉRIQUE qualité (besoin d'un visuel/avatar)
 const L19_no = new Set(['32']);                                // GÉNÉRIQUE évolution IA
-const L28_ok = new Set(['20','25','26','27','28','29','30','33','34','35','36','48','67','68','69','70','75','76','77']); // NICHE montage + pub/argent/business
-const L30_ok = new Set(['16','17','18','20','21','23','25','26','27','28','29','31','33','34','35','36','40','48','58','60','67','68','69','70','75','76','77']); // audio+avatar / démo-driven
-const L32_ok = new Set(['12','13','14','15','16','17','18','19','20','21','23','24','27','28','29','30','31','32','33','34','35','36','40','48','60','63','67','68','69','70','73','75','76','77']); // algo TikTok / dynamisme
-const L33_ok = new Set(['14','15','16','19','20','23','24','25','26','27','28','29','33','34','35','36','48','53','58','60','67','68','69','70','75']); // recette virale (= L35)
-const L34_ok = new Set(['12','13','20','21','23','25','26','27','28','29','30','31','32','33','34','35','36','40','48','58','60','67','68','69','70','75','76']); // problème de vues
-const L48_ok = new Set(['12','13','14','15','17','18','20','21','23','24','25','26','27','28','29','30','31','36','40','48','58','60','63','67','68','69','70','74','74v2','75','76','77']); // GÉNÉRIQUE visibilité=vente
-const L58_ok = new Set(['16','17','18','20','24','40','48','58','60','68','69','72','73','75','76','77']); // NICHE produit physique
-const L70_ok = new Set(['12','13','14','15','16','19','20','21','23','24','25','30','36','40','48','58','60','63','64','68','69','70','72','73','75','76','77']); // GÉNÉRIQUE sans montrer ton visage
+const L28_ok = new Set(['20','25','26','27','28','29','30','33','34','35','36','48','67','68','69','70','75','76','77','78','79','83','84','85','86']); // NICHE montage + pub/argent/business
+const L30_ok = new Set(['16','17','18','20','21','23','25','26','27','28','29','31','33','34','35','36','40','48','58','60','67','68','69','70','75','76','77','59','78','79','83','84','85','86']); // audio+avatar / démo-driven
+const L32_ok = new Set(['12','13','14','15','16','17','18','19','20','21','23','24','27','28','29','30','31','32','33','34','35','36','40','48','60','63','67','68','69','70','73','75','76','77','59','78','79','83','84','85','86']); // algo TikTok / dynamisme
+const L33_ok = new Set(['14','15','16','19','20','23','24','25','26','27','28','29','33','34','35','36','48','53','58','60','67','68','69','70','75','78','79','82','83','84','85','86']); // recette virale (= L35)
+const L34_ok = new Set(['12','13','20','21','23','25','26','27','28','29','30','31','32','33','34','35','36','40','48','58','60','67','68','69','70','75','76','59','78','79','83','84','85','86']); // problème de vues
+const L48_ok = new Set(['12','13','14','15','17','18','20','21','23','24','25','26','27','28','29','30','31','36','40','48','58','60','63','67','68','69','70','74','74v2','75','76','77','59','78','79','80','81','83','84','85','86']); // GÉNÉRIQUE visibilité=vente
+const L58_ok = new Set(['16','17','18','20','24','40','48','58','60','68','69','72','73','75','76','77','79','83','85','86']); // NICHE produit physique
+const L70_ok = new Set(['12','13','14','15','16','19','20','21','23','24','25','30','36','40','48','58','60','63','64','68','69','70','72','73','75','76','77','59','78','79','83','84','85','86']); // GÉNÉRIQUE sans montrer ton visage
 // L69 ABANDONNÉE (trop niche) · L72 ABANDONNÉE
 export const LIAISONS = [
   { id:'L12', ok:L12_ok }, { id:'L15', no:L15_no }, { id:'L16', no:L16_no }, { id:'L19', no:L19_no },
