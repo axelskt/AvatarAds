@@ -1476,11 +1476,13 @@
     var NP = COH.PHOTOS_PAR_AVATAR || 3, A = L.avatars.length, avs = Object.create(null), per = Object.create(null), by = Object.create(null), kindOf = Object.create(null);
     var sets = { hook: lipHooks(L), liaison: L.liaisons, cta: L.ctas, 'texte-choc': L.textes || [] };
     var fmtsOf = function (k) { return k === 'texte-choc' ? FMT_ORDER['texte-choc'] : FMT_ORDER.spoken; };
+    // 28/09 : voix autorisées par brique (meta.voices, ex. H19 / H74 = voix native uniquement) → formats de CETTE brique
+    var fmtsFor = function (k, b) { var al = COH.voicesAllowed ? COH.voicesAllowed(b) : null, f = fmtsOf(k); return al ? f.filter(function (x) { return al.indexOf(x) >= 0; }) : f; };
     L.avatars.forEach(function (a) { avs[a.id] = 1; });
-    Object.keys(sets).forEach(function (k) { sets[k].forEach(function (b) { kindOf[b.id] = k; by[b.id] = { fmts: fmtsOf(k) }; }); });
+    Object.keys(sets).forEach(function (k) { sets[k].forEach(function (b) { kindOf[b.id] = k; by[b.id] = { fmts: fmtsFor(k, b) }; }); });
     (St.videos || []).forEach(function (x) {
       var k = kindOf[x.brick];
-      if (!k || fmtsOf(k).indexOf(x.format) < 0 || !mediaSrc(x.url)) return;
+      if (!k || by[x.brick].fmts.indexOf(x.format) < 0 || !mediaSrc(x.url)) return;
       var a = COH.photoParent ? COH.photoParent(x.photo) : x.photo, key = x.brick + '|' + x.format + '|' + a;
       if (!avs[a] || (per[key] = (per[key] || 0) + 1) > NP) return;
       by[x.brick][x.format] = (by[x.brick][x.format] || 0) + 1;
@@ -1488,7 +1490,8 @@
     var kinds = {};
     Object.keys(sets).forEach(function (k) {
       kinds[k] = fmtsOf(k).map(function (f) {
-        return { f: f, done: sets[k].reduce(function (t, b) { return t + (by[b.id][f] || 0); }, 0), total: sets[k].length * A * NP };
+        return { f: f, done: sets[k].reduce(function (t, b) { return t + (by[b.id][f] || 0); }, 0),
+          total: sets[k].filter(function (b) { return by[b.id].fmts.indexOf(f) >= 0; }).length * A * NP };
       });
     });
     return { by: by, kinds: kinds, slot: A * NP };
@@ -1498,6 +1501,7 @@
     if (!St || St.state !== 'ready' || !L) return '';
     if (b.kind === 'hook' && COH && COH.isAvantApres && M.byId && M.byId[b.id] && COH.isAvantApres(M.byId[b.id])) return '';
     var fmts = b.kind === 'texte-choc' ? FMT_ORDER['texte-choc'] : FMT_ORDER.spoken, NP = COH && COH.PHOTOS_PAR_AVATAR || 3;
+    { var al = COH && COH.voicesAllowed && M.byId && M.byId[b.id] ? COH.voicesAllowed(M.byId[b.id]) : null; if (al) fmts = fmts.filter(function (f) { return al.indexOf(f) >= 0; }); }   // 28/09 : voix autorisées
     var vids = (St.videos || []).filter(function (x) { return x.brick === b.id; });
     return '<div class="cf-bsf">' + fmts.map(function (f) {
       var fv = vids.filter(function (x) { return x.format === f; }), done = 0, total = L.avatars.length * NP;

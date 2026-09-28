@@ -628,6 +628,7 @@
     // 26/09 : hooks avant / après (jamais en lipsync), incrustation obligatoire, photos d'un avatar, aperçu et propositions
     // de sous-titres (usine/coherence.js lit lipsync, hook_mode, overlay_required)
     'm_lipsync:meta->lipsync', 'm_hook_mode:meta->>hook_mode', 'm_overlay:meta->>overlay_required', 'm_images:meta->images',
+    'm_voices:meta->voices',   // 28/09 : voix autorisées d'une brique parlée (H19 / H74 = ['omni'], voix native uniquement)
     'm_poster:meta->>poster', 'm_proposal:meta->proposal'].join(',');
   // factory_recipes : meta.label / group / module / code / clips (assemblages avant / après, usine/assemble-hk.mjs)
   var REC_SEL = ['id', 'kind', 'subject', 'components', 'status', 'render_url', 'created_at', 'updated_at',
@@ -677,6 +678,7 @@
         value: txt(b.m_value, 60), group: txt(b.m_group, 20), duration: num(b.m_duration), mediaType: txt(b.m_media_type, 20),
         before: side(b.m_before), after: side(b.m_after),
         lipsync: b.m_lipsync === false ? false : null, hook_mode: txt(b.m_hook_mode, 20), overlay_required: txt(b.m_overlay, 20),
+        voices: Array.isArray(b.m_voices) ? b.m_voices.filter(function (v) { return v === 'axel' || v === 'omni'; }) : null,
         images: Array.isArray(b.m_images) ? b.m_images.map(function (u) { return pubFile(u, IMG_EXT); }).filter(Boolean).slice(0, 40) : [],
         proposal: b.m_proposal === true },
       poster: pubFile(txt(b.m_poster, 400), IMG_EXT),

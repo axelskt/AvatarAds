@@ -19,14 +19,16 @@
  * du catalogue) ou n'importe laquelle si le hook est générique ('generique' dans ses sujets) ; sinon n'importe quelle démo,
  * et la vidéo part en REVUE QC (Axel accepte ou refuse à la main). Contrôles QC inchangés : pairLevel, liaisonOk, comboCheck.
  *
- * HOOKS AVANT / APRÈS (Axel, 26/09) : un hook meta.lipsync === false ou meta.hook_mode === 'avant-apres' (H19, H53, H57,
- * H63, H64, H74) n'est JAMAIS en lipsync : il sort des 2 modes ci-dessus et forme un 3e mode 'aa' « Avant / après » = voix
+ * HOOKS AVANT / APRÈS (Axel, 26/09 ; 28/09 : H53, H57 — H64 = alias de H63) : un hook meta.lipsync === false ou
+ * meta.hook_mode === 'avant-apres' n'est JAMAIS en lipsync : il sort des 2 modes ci-dessus et forme un 3e mode 'aa' « Avant / après » = voix
  * off d'Axel sur un ASSEMBLAGE visuel (factory_recipes HK-…). Assemblage = suite de 2 ou 3 clips DISTINCTS d'un même GROUPE
  * de transformations (meta.group = un même original filmé) : l'original (meta.before) et chaque version (meta.after) ;
  * 2 clips dans tous les sens, 3 clips seulement en partant de l'original ; jamais deux groupes mélangés (assemblies,
  * assemblyCheck). Court 'aa' = assemblage × hook avant/après du module du groupe (pas d'avatar) ; long = court × liaison
  * compatible × avatar (la liaison est dite par un avatar). Clé : aa|avatar|hook|liaison|assemblage (avatar vide en court).
  * Hooks meta.overlay_required (H14, H23, H60) : lipsync seulement avec une incrustation ; comptés, signalés (overlay).
+ * VOIX AUTORISÉES (Axel, 28/09) : meta.voices limite les modes d'une brique parlée — H19 et H74 = ['omni'] (voix native
+ * uniquement, jamais en lipsync). H63 est passé en lipsync (plus avant / après) ; H53 et H57 restent en voix off.
  *
  * Bibliothèque = briques au statut 'ready' seulement (une brique 'retired' ou 'flagged' n'entre dans aucun compte) ;
  * hooks comptés sans meta.alias_of (H64 = alias de H63).
@@ -100,7 +102,14 @@
     if (!b) return '';
     return (b.kind === 'hook' ? str(meta(b).script) : '') || str(b.label);
   }
-  function voiceOk(b, voice) { return voice === 'omni' ? !!voiceText(b) : voice === 'axel' ? hasAudio(b) : false; }
+  // Voix AUTORISÉES pour une brique (Axel 28/09 : H19 / H74 = « voix native uniquement ») : meta.voices = ['omni'] ;
+  // absent = toutes les voix qu'elle peut porter (audio pour 'axel', texte pour 'omni').
+  function voicesAllowed(b) { var v = meta(b).voices; return Array.isArray(v) && v.length ? v : null; }
+  function voiceOk(b, voice) {
+    var al = voicesAllowed(b);
+    if (al && al.indexOf(voice) < 0) return false;
+    return voice === 'omni' ? !!voiceText(b) : voice === 'axel' ? hasAudio(b) : false;
+  }
   // Hook avant / après (Motion Control / Omni) : jamais en lipsync, dit en voix off sur son assemblage visuel.
   function isAvantApres(h) { var m = meta(h); return m.lipsync === false || m.hook_mode === 'avant-apres'; }
   // Hook lipsync seulement avec une image incrustée (meta.overlay_required, ex. 'fille') ; '' sinon.
@@ -616,7 +625,7 @@
     isAvantApres: isAvantApres, overlayRequired: overlayRequired, hookFitsModule: hookFitsModule,
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
-    liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk,
+    liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk, voicesAllowed: voicesAllowed,
     videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, transfosOf: transfosOf, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
     hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });

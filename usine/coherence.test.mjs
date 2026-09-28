@@ -404,6 +404,16 @@ test('Texte + musique : texte choc (TH) × emplacements photo, format court seul
   assert.ok(C.comboCheck({ voice: 'axel', avatar: 'A1', hook: 'TH01', contenu: 'C-IMGIA-01' }, B, MX).reasons.some(r => /Texte \+ musique seulement/.test(r)));
 });
 
+test('voix autorisées (Axel 28/09) : meta.voices = [omni] → jamais en lipsync (axel), toujours en voix native ; sans voices = inchangé', () => {
+  const h = { id: 'HV', kind: 'hook', status: 'ready', label: 'Texte du hook', meta: { media: 'https://x.test/hooks/HV.wav', script: 'Texte du hook', voices: ['omni'] } };
+  assert.equal(C.voiceOk(h, 'axel'), false);
+  assert.equal(C.voiceOk(h, 'omni'), true);
+  assert.deepEqual(C.voicesAllowed(h), ['omni']);
+  const h2 = { ...h, meta: { media: h.meta.media, script: h.meta.script } };
+  assert.equal(C.voiceOk(h2, 'axel'), true);
+  assert.equal(C.voicesAllowed(h2), null);
+});
+
 const fails = results.filter(r => r.startsWith('FAIL')).length;
 console.log(results.join('\n'));
 console.log(fails + ' échec(s) sur ' + results.length);
