@@ -47,7 +47,11 @@ function burn(video, output, words, opts = {}) {
   // arrive en pop et repart en fondu ; la voix continue dessous (vidéo muette)
   const broll = (Array.isArray(opts.broll) ? opts.broll : []).filter(b => b && b.file && b.dur > 0.2).map((b, k) => {
     const ext = (b.file.match(/\.[a-z0-9]+$/i) || ['.mp4'])[0].toLowerCase(), name = 'broll' + k + ext;
-    copyFileSync(b.file, join(work, name)); return { ...b, name, k };
+    copyFileSync(b.file, join(work, name));
+    // carte au format du média (plus de bandes blanches autour d'une image) : largeur 460, hauteur ≤ 760
+    let ar = 9 / 16; try { const [w, h] = execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0', b.file]).toString().trim().split(',').map(Number); if (w && h) ar = w / h; } catch {}
+    const W = 460, H = Math.min(760, Math.round(W / ar));
+    return { ...b, name, k, W, H };
   });
   words = words.slice().sort((a,b)=>a.start-b.start);
   // fusion « avatar »+« ads » puis fix marque
@@ -59,7 +63,8 @@ function burn(video, output, words, opts = {}) {
   // captions continues (pas de trou) + lead, bornées à la vidéo
   // mot à mot, SAUF les mots marqués d'un groupe (w.g, posé par build.mjs) : la phrase s'affiche alors en bloc, chaque mot
   // s'allume quand il est dit (Axel 29/09 : groupes aux moments clés, puis retour au mot à mot)
-  const clean = t => t.toUpperCase().replace(/[<>&"«»“”]/g,'').trim();
+  // jamais de ponctuation à l'écran (Axel 30/09) : on retire . , ! ? ; : … en début / fin de mot (le point d'un domaine reste)
+  const clean = t => t.toUpperCase().replace(/[<>&"«»“”]/g,'').replace(/^[.,!?;:…()'’-]+|[.,!?;:…()]+$/g,'').trim();
   let caps = [];
   for (let i = 0; i < words.length; ) {
     const w = words[i];
@@ -74,7 +79,7 @@ function burn(video, output, words, opts = {}) {
     const e = Math.min(dur, next ? Math.max(s, next.start - LEAD) : w.end + 0.35);
     caps.push({ t: clean(w.text), s, e }); i++;
   }
-  caps = caps.filter(c => c.e - c.s >= 0.06);
+  caps = caps.filter(c => c.e - c.s >= 0.06 && (c.grp || c.t));   // un « isolé devient vide : jamais de sous-titre vide
   // 29/09 (Axel : « il y a le texte mais pas de sous-titres ») : les sous-titres tournent AUSSI pendant la phrase choc
   // (elle est en haut, eux en bas) ; « aucun » = pas de sous-titres
   if (subs === 'aucun') caps = [];
@@ -108,11 +113,20 @@ function burn(video, output, words, opts = {}) {
     // visible pleine opacité dès 0 (couverture) ; sortie courte juste avant la fin
     chocAnim = `tl.set('#choc',{autoAlpha:1,scale:1}, 0);\n      tl.to('#choc',{autoAlpha:0,scale:0.96,duration:0.16,ease:'power1.in'}, ${Math.max(0, end - 0.16).toFixed(3)});`;
   }
+  const cardStyle = b => `style="left:${540 - b.W / 2}px;top:${Math.round(800 - b.H / 2)}px;width:${b.W}px;height:${b.H}px"`;
   const brollHtml = broll.map(b => b.image
-    ? `<img class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" alt="">`
-    : `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" muted playsinline></video>`).join('\n      ');
-  const brollAnim = broll.map(b => `tl.fromTo('#br${b.k}',{autoAlpha:0,scale:0.7,y:40},{autoAlpha:1,scale:1,y:0,duration:0.28,ease:'back.out(1.8)'}, ${b.at.toFixed(3)});`
-    + `tl.to('#br${b.k}',{autoAlpha:0,scale:0.92,duration:0.18,ease:'power1.in'}, ${Math.max(b.at, b.at + b.dur - 0.18).toFixed(3)});`).join('\n   ');
+    ? `<img class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${cardStyle(b)} alt="">`
+    : `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" ${cardStyle(b)} muted playsinline></video>`).join('\n      ');
+  // 1re carte : pop au centre ; chaque carte suivante arrive par la droite pendant que la précédente se pousse à gauche
+  // (les deux restent à l'écran, côte à côte) ; toutes repartent ensemble à la fin
+  const brollAnim = broll.map((b, i) => {
+    let a = i === 0
+      ? `tl.fromTo('#br${b.k}',{autoAlpha:0,scale:0.7,y:40},{autoAlpha:1,scale:1,y:0,duration:0.28,ease:'back.out(1.8)'}, ${b.at.toFixed(3)});`
+      : `tl.fromTo('#br${b.k}',{autoAlpha:0,x:560,scale:0.82},{autoAlpha:1,x:250,scale:0.82,duration:0.38,ease:'power3.out'}, ${b.at.toFixed(3)});`
+        + `tl.to('#br${broll[i - 1].k}',{x:-250,scale:0.82,duration:0.38,ease:'power3.inOut'}, ${b.at.toFixed(3)});`;
+    a += `tl.to('#br${b.k}',{autoAlpha:0,scale:0.78,duration:0.18,ease:'power1.in'}, ${Math.max(b.at, b.at + b.dur - 0.18).toFixed(3)});`;
+    return a;
+  }).join('\n   ');
   const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=1080, height=1920">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
@@ -128,9 +142,7 @@ function burn(video, output, words, opts = {}) {
  /* gros sous-titres colorés : même bande basse, mot fort en jaune */
  .cap.big{bottom:440px;font-size:108px;-webkit-text-stroke:11px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
  /* groupe de sous-titres (moments clés) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit */
- .broll{position:absolute;left:50%;top:430px;width:560px;height:760px;margin-left:-280px;z-index:4;object-fit:cover;border-radius:36px;
-   border:7px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:#111}
- img.broll{object-fit:contain;background:#fff}
+ .broll{position:absolute;z-index:4;object-fit:cover;border-radius:34px;border:5px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:transparent}
  .cap.grp{left:70px;right:70px;white-space:normal;font-size:76px;line-height:1.1;-webkit-text-stroke:8px #000}
  .cap.grp .gw{display:inline-block;opacity:0}
  .cap.big.hot{color:${HOT}}

@@ -62,19 +62,20 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
 
 - `--liaison` (format long) : hook + liaison collés en coupe franche, voix traitées séparément par la même chaîne.
 - `--broll a.mp4,b.png` : quand la liaison dit « regarde ça » (ou voici / voilà, `--broll-after`), ce qu'elle annonce
-  apparaît en **CARTE arrondie centrée sur le visage** (560×760, bordure blanche, pop à l'entrée) jusqu'à la fin de la
-  liaison — **jamais plein écran** (Axel 29/09) ; la voix continue dessous. Choisir selon le contexte : produit physique → vidéo produit (ex. fille avec la canette CIAO) et/ou
+  apparaît en **CARTE arrondie centrée** (460 px de large, au format du média, fine bordure blanche, pop à l'entrée)
+  jusqu'à la fin de la liaison — **jamais plein écran**. 2 médias : la 1re carte se pousse à gauche quand la 2e arrive à
+  droite, les deux restent côte à côte. Aucun fond blanc autour d'une image. Choisir selon le contexte : produit physique → vidéo produit (ex. fille avec la canette CIAO) et/ou
   static ad ; « image et vidéo » → les deux. B-roll dispo : `~/Downloads/Creative Factory/cache/broll/`.
 
 ### Ce que build.mjs fait tout seul (réglages validés, ne pas refaire à la main)
 1. **Voix** : hook, démo, CTA à la suite, jamais superposées ; loudnorm −16 LUFS ; 0,5 s de respiration après le hook.
-2. **Transitions simples** : slide (push) de 0,40 s hook → démo et démo → CTA. Pas de fondu au noir.
+2. **Transitions simples et RAPIDES** : slide (push) de **0,25 s** qui part **0,08 s après le dernier mot** (hook ou liaison → démo, démo → CTA). Jamais d'avatar ni d'image figés. Pas de fondu au noir.
    **Le CTA n'arrive qu'APRÈS le dernier mot de la démo** (Axel 29/09) : le glissement part au dernier mot + 0,35 s, le
    CTA joue dans le mouvement (aucune image figée : l'ancienne version tenait la démo puis l'avatar, « horrible »). Hook : léger zoom avant continu 1,00 → 1,07.
 3. **Bruitages** : whoosh (−4 dB) + impact (−7 dB) sur chaque transition (`render-worker/assets/sfx/`).
 4. **Musique de fond pas trop forte** : −11 dB, fondu d'entrée 0,6 s / sortie 0,9 s, **baissée automatiquement sous la
    voix** (sidechain), coupée à la fin de la vidéo ; limiteur final 0,95.
-5. **Sous-titres** mot à mot, blancs contour noir, **y compris pendant le texte du hook** ; **groupes aux moments
+5. **Sous-titres** mot à mot, blancs contour noir, **sans aucune ponctuation** (ni . ni , ni ! ni «»), **y compris pendant le texte du hook** ; **groupes aux moments
    clés** : la dernière phrase avant chaque transition (fin du hook / de la liaison, fin de la démo) et le début du CTA
    jusqu'à « commentaire » (« MARQUE SITE EN COMMENTAIRE ») s'affichent en bloc, chaque mot s'allume quand il est dit,
    puis retour au mot à mot. Dans un groupe, **les mots arrivent un par un** quand ils sont dits, chacun monte du bas et

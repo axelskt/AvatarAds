@@ -115,7 +115,7 @@ function workingDemo(src) {
   return out;
 }
 
-const TS = 0.40;      // durée du slide de raccord
+const TS = 0.25;      // durée du slide de raccord (Axel 30/09 : transition RAPIDE, « boom »)
 const TRANS = 'slideleft';
 // Traitement AVATAR (CTA) pour casser le côté « IA figée » : grain + tremblement selfie tenu à la main
 // (dérive + micro-tremble, repris de camOrganiqueFilter du render-worker). Le hook/la démo = vraie vidéo, pas touchés.
@@ -209,7 +209,8 @@ if (OPT.liaison) {
   if (files.length && t0 != null && t0 < dL - 0.6) {
     // Axel 29/09 : l'illustration n'est PAS plein écran : carte arrondie centrée sur le visage (posée par captions.mjs)
     const seg = (dL - t0) / files.length;
-    files.forEach((f, k) => brollEvents.push({ file: f, at: dH + t0 + k * seg, dur: seg, image: IMG_RE.test(f) }));
+    // chaque carte reste jusqu'à la fin de la liaison : la 2e arrive à droite, la 1re se pousse à gauche (Axel 30/09)
+    files.forEach((f, k) => brollEvents.push({ file: f, at: dH + t0 + k * seg, dur: (dL - t0) - k * seg, image: IMG_RE.test(f) }));
     console.log('  B-roll (carte) sur la liaison à ' + t0.toFixed(2) + ' s : ' + files.map(f => basename(f)).join(' + '));
   } else if (files.length) console.warn('⚠ B-roll ignoré : « regarde ça » introuvable dans la liaison');
   fc += `[h0][ha0][${last}][la0]concat=n=2:v=1:a=1[v][a]`;
@@ -221,18 +222,24 @@ if (OPT.liaison) {
 
 // durées de brique
 const vHook = hookVoice ? Math.min(dur(hookVoice), dur(hook)) : dur(hook);
-const durH = (hookVoice ? vHook : dur(hook)) + GAPH;
+// ── TIMING (Axel 30/09 : « dès qu'il s'arrête, boom, transition rapide », « l'avatar se fige, pas fluide ») ──
+// Le glissement part 0,08 s après le DERNIER MOT (hook ou liaison), dure 0,25 s ; jamais d'avatar figé avant.
+const hookW0 = hookWordsPre || (hookVoice ? emitWords(hookVoice, 0) : []);
+const hookLastEnd = hookW0.length ? hookW0[hookW0.length - 1].end : vHook;
+const O1pre = Math.min(dur(hook), hookLastEnd + 0.08);
+const durH = O1pre + TS;
 const durD = dur(demo);
 const END_MARGIN = 0.35;              // marge après le dernier mot du CTA avant de couper (pas de silence mort)
 // durée CTA = lead + voix (durée du ctaCap) + marge → coupe le silence de fin du clip avatar
 const durC = cta ? (ctaCap ? Math.min(dur(cta), CTA_LEAD + dur(ctaCap) + END_MARGIN) : dur(cta)) : 0;
-const O1 = durH - TS;                 // démo entre ici (start du slide 1)
-// 29/09 (Axel : « le CTA arrive alors que la démo n'a même pas fini ») : le glissement vers le CTA démarre à la FIN de la
-// démo (O2), et la voix du CTA attend que le glissement soit fini + une respiration (CL) ; l'avatar du CTA reste sur sa
-// 1re image pendant CL (lipsync calé sur sa voix).
+const O1 = O1pre;                     // démo entre ici (start du slide 1)
+// démo → CTA : même règle. Le glissement part 0,08 s après le dernier mot de la démo (jamais sur ses mots, jamais
+// d'image figée), le CTA joue dès le glissement (sa voix démarre ~0,1 s dans le clip, en fin de mouvement), le son de
+// la démo s'éteint pendant le glissement.
 const demoLastEnd = (() => { try { const w = emitWords(demo, 0); return w.length ? w[w.length - 1].end : durD; } catch { return durD; } })();
-const O2 = O1 + Math.min(durD + 0.25, Math.max(demoLastEnd + 0.35, durD - TS));
-const CTA_GAP = 0, CL = 0.2;
+const L2 = Math.min(durD, Math.max(0.5, demoLastEnd + 0.08));
+const O2 = O1 + L2;
+const CTA_GAP = 0, CL = 0;
 
 // ── 1) STITCH : slide vidéo + audio positionné (voix séquentielles) ──
 const voice = join(work, 'voice.mp4');
@@ -244,11 +251,11 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
-let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},tpad=stop_mode=clone:stop_duration=${Math.max(0.05, O2 + TS - O1 - durD + 0.05).toFixed(3)}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durD + 0.05).toFixed(3)}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
-af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
+af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,atrim=0:${(L2 + TS).toFixed(3)},afade=t=out:st=${L2.toFixed(3)}:d=${TS},adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
-  vf += `[${iCta}:v]trim=0:${durC.toFixed(3)},setpts=PTS-STARTPTS,${VF},${AV_TREAT},tpad=start_mode=clone:start_duration=${CL.toFixed(3)}[cv];`
+  vf += `[${iCta}:v]trim=0:${durC.toFixed(3)},setpts=PTS-STARTPTS,${VF},${AV_TREAT}[cv];`
       + `[hv][dv]xfade=transition=${TRANS}:duration=${TS}:offset=${O1.toFixed(3)}[vhd];`
       + `[vhd][cv]xfade=transition=${TRANS}:duration=${TS}:offset=${O2.toFixed(3)}[v]`;
   // audio EMBARQUÉ du clip avatar, TRIMMÉ à la voix (pas de silence mort) puis posé à O2
