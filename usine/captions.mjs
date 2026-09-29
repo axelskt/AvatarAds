@@ -43,6 +43,12 @@ function burn(video, output, words, opts = {}) {
   const work = mkdtempSync(join(tmpdir(), 'caps-'));
   const dur = parseFloat(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0', video]).toString().trim());
   copyFileSync(video, join(work, 'src.mp4'));
+  // B-roll en CARTE (Axel 29/09 : « pas en plein écran ») : image / vidéo arrondie, bordure blanche, centrée sur le visage,
+  // arrive en pop et repart en fondu ; la voix continue dessous (vidéo muette)
+  const broll = (Array.isArray(opts.broll) ? opts.broll : []).filter(b => b && b.file && b.dur > 0.2).map((b, k) => {
+    const ext = (b.file.match(/\.[a-z0-9]+$/i) || ['.mp4'])[0].toLowerCase(), name = 'broll' + k + ext;
+    copyFileSync(b.file, join(work, name)); return { ...b, name, k };
+  });
   words = words.slice().sort((a,b)=>a.start-b.start);
   // fusion « avatar »+« ads » puis fix marque
   { const merged=[]; for(let i=0;i<words.length;i++){ const w=words[i], n=words[i+1];
@@ -53,7 +59,7 @@ function burn(video, output, words, opts = {}) {
   // captions continues (pas de trou) + lead, bornées à la vidéo
   // mot à mot, SAUF les mots marqués d'un groupe (w.g, posé par build.mjs) : la phrase s'affiche alors en bloc, chaque mot
   // s'allume quand il est dit (Axel 29/09 : groupes aux moments clés, puis retour au mot à mot)
-  const clean = t => t.toUpperCase().replace(/[<>&"]/g,'');
+  const clean = t => t.toUpperCase().replace(/[<>&"«»“”]/g,'').trim();
   let caps = [];
   for (let i = 0; i < words.length; ) {
     const w = words[i];
@@ -85,8 +91,10 @@ function burn(video, output, words, opts = {}) {
     return `<div class="${cls}" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}"${st}>${c.t}</div>`;
   }).join('\n      ');
   const anim = caps.map((c,i)=> c.grp
-    ? `tl.fromTo('#c${i}',{autoAlpha:0,scale:0.86,y:14},{autoAlpha:1,scale:1,y:0,duration:0.16,ease:'back.out(2)'}, ${c.s.toFixed(3)});`
-      + c.grp.map((x, k) => `tl.to('#c${i}w${k}',{opacity:1,duration:0.07}, ${Math.max(c.s, x.s).toFixed(3)});`).join('')
+    // groupe (Axel 29/09) : les mots arrivent UN PAR UN quand ils sont dits, chacun monte du bas et se pose, et la phrase
+    // se construit ; elle reste entière jusqu'au mot suivant le groupe
+    ? `tl.set('#c${i}',{autoAlpha:1}, ${c.s.toFixed(3)});`
+      + c.grp.map((x, k) => `tl.fromTo('#c${i}w${k}',{opacity:0,y:46},{opacity:1,y:0,duration:0.24,ease:'power3.out'}, ${Math.max(c.s, x.s).toFixed(3)});`).join('')
     : c.s < 0.02 ? `tl.set('#c${i}',{autoAlpha:1,y:0,scale:1}, 0);`
     : big ? `tl.fromTo('#c${i}',{autoAlpha:0,scale:0.82},{autoAlpha:1,scale:1,duration:0.1,ease:'back.out(2.2)'}, ${c.s.toFixed(3)});`
     : `tl.fromTo('#c${i}',{autoAlpha:0,y:10},{autoAlpha:1,y:0,duration:0.09,ease:'power1.out'}, ${c.s.toFixed(3)});`).join('\n      ');
@@ -100,6 +108,11 @@ function burn(video, output, words, opts = {}) {
     // visible pleine opacité dès 0 (couverture) ; sortie courte juste avant la fin
     chocAnim = `tl.set('#choc',{autoAlpha:1,scale:1}, 0);\n      tl.to('#choc',{autoAlpha:0,scale:0.96,duration:0.16,ease:'power1.in'}, ${Math.max(0, end - 0.16).toFixed(3)});`;
   }
+  const brollHtml = broll.map(b => b.image
+    ? `<img class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" alt="">`
+    : `<video class="broll clip" id="br${b.k}" src="${b.name}" data-start="${b.at.toFixed(3)}" data-duration="${b.dur.toFixed(3)}" muted playsinline></video>`).join('\n      ');
+  const brollAnim = broll.map(b => `tl.fromTo('#br${b.k}',{autoAlpha:0,scale:0.7,y:40},{autoAlpha:1,scale:1,y:0,duration:0.28,ease:'back.out(1.8)'}, ${b.at.toFixed(3)});`
+    + `tl.to('#br${b.k}',{autoAlpha:0,scale:0.92,duration:0.18,ease:'power1.in'}, ${Math.max(b.at, b.at + b.dur - 0.18).toFixed(3)});`).join('\n   ');
   const html = `<!doctype html><html lang="fr"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=1080, height=1920">
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
@@ -115,8 +128,11 @@ function burn(video, output, words, opts = {}) {
  /* gros sous-titres colorés : même bande basse, mot fort en jaune */
  .cap.big{bottom:440px;font-size:108px;-webkit-text-stroke:11px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
  /* groupe de sous-titres (moments clés) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit */
+ .broll{position:absolute;left:50%;top:430px;width:560px;height:760px;margin-left:-280px;z-index:4;object-fit:cover;border-radius:36px;
+   border:7px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:#111}
+ img.broll{object-fit:contain;background:#fff}
  .cap.grp{left:70px;right:70px;white-space:normal;font-size:76px;line-height:1.1;-webkit-text-stroke:8px #000}
- .cap.grp .gw{display:inline-block;opacity:.42}
+ .cap.grp .gw{display:inline-block;opacity:0}
  .cap.big.hot{color:${HOT}}
  /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
  .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}
@@ -128,6 +144,7 @@ function burn(video, output, words, opts = {}) {
  <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>
    <audio id="au" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" data-volume="1"></audio>
+      ${brollHtml}
       ${clipsHtml}
       ${chocHtml}
  </div>
@@ -142,6 +159,7 @@ function burn(video, output, words, opts = {}) {
      if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit(); })();
    const tl = gsap.timeline({ paused:true });
    ${chocAnim}
+   ${brollAnim}
    ${anim}
    if(!tl.getChildren().length) tl.to({},{duration:${dur.toFixed(3)}});
    window.__timelines['main'] = tl;
@@ -150,7 +168,7 @@ function burn(video, output, words, opts = {}) {
   writeFileSync(join(work,'index.html'), html);
   console.log(`▶ rendu sous-titres (${caps.length} captions, style ${subs}${choc ? ', phrase choc 0-' + Math.min(choc.end, dur).toFixed(2) + ' s' : ''})…`);
   // fps de la vidéo source (build.mjs passe CF_FPS=60) ; images de fond extraites en jpg (plus rapide que png, sans perte visible)
-  execFileSync('npx', ['--yes','hyperframes','render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg'], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
+  execFileSync('npx', ['--yes','hyperframes','render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg', '--workers', String(process.env.CF_WORKERS || 2), '--no-low-memory-mode'], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
   console.log('OK ->', output);
 }
 

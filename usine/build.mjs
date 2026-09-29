@@ -155,13 +155,51 @@ const VCH = 'highpass=f=75,equalizer=f=220:t=q:w=1:g=-1.5,equalizer=f=3200:t=q:w
 const bare = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
 const IMG_RE = /\.(png|jpe?g|webp)$/i;
 let hookWordsPre = null, hookVoiced = false, liaisonAt = null;
+// ── MOTS EXACTS (Axel 29/09 : « ça écrit influences d'IA alors que je dis influenceuse IA ») : chaque brique parlée a son
+//    texte validé (factory_bricks.meta.transcript, sinon script / label ; CTA : usine/cta-captions.json relu à la main).
+//    Les mots de Whisper gardent leurs TEMPS, mais leur TEXTE vient de ce texte, aligné mot à mot (programmation
+//    dynamique) : un mot mal entendu est remplacé, un mot oublié est inséré, un mot en trop reste.
+const CTA_TXT = (() => { try { return JSON.parse(readFileSync(join(HERE, 'cta-captions.json'), 'utf8')); } catch { return {}; } })();
+const brickOf = id => Array.isArray(bricks) ? bricks.find(b => b && b.id === id) : null;
+// CTA : ce qui est DIT (meta.transcript), pas la légende réécrite pour le post (cta-captions.json) ; seules les erreurs
+// sûres de Whisper sont corrigées (on demande toujours de COMMENTER un mot-clé ; le mot-clé en capitales ; le site).
+const fixCta = t => String(t || '')
+  .replace(/\b[Cc]ommand(e|es|ez)\b/g, (m) => (m[0] === 'C' ? 'C' : 'c') + 'ommente')
+  .replace(/\b(Marque|marque|Écris|écris|Commente|commente|Tape|tape)[- ]cite\b/g, '$1 SITE').replace(/\bcite\b/g, 'SITE')
+  .replace(/\bcommente hier\b/gi, m => m.replace(/hier/i, 'IA'))
+  .replace(/(ommente|arque|cris|ape)\s+(site|go|avatar|guide|plan|ugc|montage|aide|ia)\b/gi, (m, v, k) => m.slice(0, m.length - k.length) + k.toUpperCase())
+  // « Avatar Ads » dit en deux mots reste en deux mots (les sous-titres les fusionnent en AVATARADS) : sinon l'alignement
+  // laisse un « Ads » en trop
+  .replace(/\bavataradis\.fr\b|\bavatarhads\.fr\b|\bavatar ?h?ads\.fr\b/gi, 'avatarads.fr');
+const textOf = id => { if (!id) return null; const b = brickOf(id), m = b && b.meta || {};
+  if (/^CTA/.test(id)) return m.transcript ? fixCta(m.transcript) : (CTA_TXT[id] || null);
+  return m.transcript || m.script || (b && b.label) || null; };
+const idFromFile = f => { const m = /-(H\d+|L\d+|CTA-[A-Za-z-]+?)(?:-v\d+)?\.(?:mp4|mov)$/i.exec(basename(f || '')); return m ? m[1] : null; };
+function exactWords(ws, text) {
+  if (!text || !ws.length) return ws;
+  const toks = text.replace(/[«»"“”]/g, ' ').split(/\s+/).map(t => t.trim()).filter(t => t && bare(t));
+  const A = ws.map(w => bare(w.text)), B = toks.map(bare), n = A.length, m = B.length;
+  const sim = (a, b) => { if (a === b) return 1; const L = Math.max(a.length, b.length); if (!L) return 0; let k = 0; while (k < Math.min(a.length, b.length) && a[k] === b[k]) k++; return k / L; };
+  const D = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => i + j));
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++)
+    D[i][j] = Math.min(D[i - 1][j] + 1, D[i][j - 1] + 1, D[i - 1][j - 1] + (A[i - 1] === B[j - 1] ? 0 : 1.6 - sim(A[i - 1], B[j - 1])));
+  const out = []; let i = n, j = m;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && D[i][j] === D[i - 1][j - 1] + (A[i - 1] === B[j - 1] ? 0 : 1.6 - sim(A[i - 1], B[j - 1]))) { out.push({ ...ws[i - 1], text: toks[j - 1] }); i--; j--; }
+    else if (j > 0 && (i === 0 || D[i][j] === D[i][j - 1] + 1)) { const nb = ws[Math.min(i, n - 1)] || ws[n - 1], pv = i > 0 ? ws[i - 1] : null;
+      const t0 = pv ? pv.end : Math.max(0, nb.start - 0.2), t1 = nb && nb !== pv ? nb.start : t0 + 0.2;
+      out.push({ text: toks[j - 1], start: t0, end: Math.max(t0 + 0.08, t1), inserted: true }); j--; }
+    else { out.push(ws[i - 1]); i--; }
+  }
+  return out.reverse();
+}
 const brollEvents = [];
 // ── LIAISON (format long) gérée ici : hook + liaison collés (coupe franche, même photo), voix traitées séparément par
 //    la même chaîne ; B-roll (vidéo / image) posé sur la liaison après « regarde ça » (--broll a.mp4,b.png ; déclencheur
 //    --broll-after, défaut regarde|voici|voilà) : l'image montre ce que la voix annonce, la voix continue dessous.
 if (OPT.liaison) {
   const hk = hook, li = OPT.liaison, dH = dur(hk), dL = dur(li);
-  const hW = emitWords(hk, 0), lW = emitWords(li, 0);
+  const hW = exactWords(emitWords(hk, 0), textOf(hookId || idFromFile(hk))), lW = exactWords(emitWords(li, 0), textOf(idFromFile(li)));
   const re = new RegExp('^(' + (OPT['broll-after'] || 'regarde|regardez|voici|voila') + ')$');
   const files = OPT.broll ? OPT.broll.split(',').map(x => x.trim()).filter(Boolean) : [];
   let t0 = null;
@@ -169,21 +207,10 @@ if (OPT.liaison) {
   const ins = ['-i', hk, '-i', li];
   let fc = `[0:v]${VF}[h0];[0:a]${AFMT},${VCH}[ha0];[1:a]${AFMT},${VCH}[la0];[1:v]${VF}[lv0];`, last = 'lv0';
   if (files.length && t0 != null && t0 < dL - 0.6) {
+    // Axel 29/09 : l'illustration n'est PAS plein écran : carte arrondie centrée sur le visage (posée par captions.mjs)
     const seg = (dL - t0) / files.length;
-    files.forEach((f, k) => {
-      const at = t0 + k * seg, idx = 2 + k, img = IMG_RE.test(f);
-      if (img) ins.push('-loop', '1', '-framerate', String(FPS), '-t', (seg + 0.1).toFixed(3), '-i', f); else ins.push('-i', f);
-      // image : entière sur fond flouté + léger zoom ; vidéo : plein cadre
-      fc += img
-        ? `[${idx}:v]split=2[bg${k}][fg${k}];[bg${k}]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2[bgb${k}];`
-          + `[fg${k}]scale=1000:-2:flags=lanczos[fgs${k}];[bgb${k}][fgs${k}]overlay=(W-w)/2:(H-h)/2,`
-          + `scale=w='trunc(1080*(1+0.06*t/${seg.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,fps=${FPS},format=yuv420p,setsar=1,setpts=PTS-STARTPTS+${at.toFixed(3)}/TB[b${k}];`
-        : `[${idx}:v]${VF},trim=0:${seg.toFixed(3)},setpts=PTS-STARTPTS+${at.toFixed(3)}/TB[b${k}];`;
-      fc += `[${last}][b${k}]overlay=0:0:eof_action=pass:enable='between(t,${at.toFixed(3)},${(at + seg).toFixed(3)})'[lv${k + 1}];`;
-      last = 'lv' + (k + 1);
-      brollEvents.push({ at: dH + at, image: img });
-    });
-    console.log('  B-roll sur la liaison à ' + t0.toFixed(2) + ' s : ' + files.map(f => basename(f)).join(' + '));
+    files.forEach((f, k) => brollEvents.push({ file: f, at: dH + t0 + k * seg, dur: seg, image: IMG_RE.test(f) }));
+    console.log('  B-roll (carte) sur la liaison à ' + t0.toFixed(2) + ' s : ' + files.map(f => basename(f)).join(' + '));
   } else if (files.length) console.warn('⚠ B-roll ignoré : « regarde ça » introuvable dans la liaison');
   fc += `[h0][ha0][${last}][la0]concat=n=2:v=1:a=1[v][a]`;
   const hl = join(work, 'hook-liaison.mp4');
@@ -203,8 +230,9 @@ const O1 = durH - TS;                 // démo entre ici (start du slide 1)
 // 29/09 (Axel : « le CTA arrive alors que la démo n'a même pas fini ») : le glissement vers le CTA démarre à la FIN de la
 // démo (O2), et la voix du CTA attend que le glissement soit fini + une respiration (CL) ; l'avatar du CTA reste sur sa
 // 1re image pendant CL (lipsync calé sur sa voix).
-const O2 = O1 + durD;
-const CTA_GAP = 0.3, CL = TS + CTA_GAP;
+const demoLastEnd = (() => { try { const w = emitWords(demo, 0); return w.length ? w[w.length - 1].end : durD; } catch { return durD; } })();
+const O2 = O1 + Math.min(durD + 0.25, Math.max(demoLastEnd + 0.35, durD - TS));
+const CTA_GAP = 0, CL = 0.2;
 
 // ── 1) STITCH : slide vidéo + audio positionné (voix séquentielles) ──
 const voice = join(work, 'voice.mp4');
@@ -216,7 +244,7 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
-let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},tpad=stop_mode=clone:stop_duration=${(TS + 0.3).toFixed(2)}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},tpad=stop_mode=clone:stop_duration=${Math.max(0.05, O2 + TS - O1 - durD + 0.05).toFixed(3)}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
@@ -238,9 +266,9 @@ const total = dur(voice);
 
 // ── 2) SOUS-TITRES : manifest (hook/CTA) + Whisper (démo) ──
 const allWords = [];
-const hookW = hookWordsPre || (hookVoice ? (manifestWords(hookVoice, 0) || emitWords(hookVoice, 0)) : []);
+const hookW = hookWordsPre || (hookVoice ? exactWords(manifestWords(hookVoice, 0) || emitWords(hookVoice, 0), textOf(hookId || idFromFile(hook))) : []);
 const demoW = emitWords(demo, O1).filter(w => w.start < O2);
-const ctaW = cta ? ((ctaCap ? manifestWords(ctaCap, O2 + CL + CTA_LEAD) : null) || emitWords(cta, O2 + CL)) : [];
+const ctaW = cta ? exactWords((ctaCap ? manifestWords(ctaCap, O2 + CL + CTA_LEAD) : null) || emitWords(cta, O2 + CL), textOf(idFromFile(cta))) : [];
 // ── GROUPES DE SOUS-TITRES (Axel 29/09) : mot à mot partout SAUF aux moments clés, où la phrase s'affiche en bloc :
 //    la dernière phrase avant chaque transition (fin du hook / de la liaison, fin de la démo) et le début du CTA
 //    jusqu'au mot « commentaire » (ex. « MARQUE SITE EN COMMENTAIRE »), puis retour au mot à mot.
@@ -268,13 +296,14 @@ if (ctaW.length > 1) {
     a0 = st; a1 = Math.min(st + 1, ctaW.length - 1);
     const c = ctaW.findIndex((w, i) => i > st && i <= st + 5 && /^commentaire/.test(bare(w.text)));
     if (c > 0) a1 = c;
+    else { a1 = st; while (a1 + 1 < ctaW.length && a1 - st < 6 && !/[.!?,]$/.test(ctaW[a1].text)) a1++; }
   }
   ctaW.slice(a0, a1 + 1).forEach(w => { w.g = 'g3'; });
 }
 allWords.push(...hookW, ...demoW, ...ctaW);
 const wj = join(work, 'allWords.json'); writeFileSync(wj, JSON.stringify(allWords));
 // format : phrase choc (placée hors visage, zone sûre) + style des sous-titres
-const capOpts = { subs: format.subs };
+const capOpts = { subs: format.subs, broll: brollEvents.map(e => ({ file: e.file, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image })) };
 const sidecar = { format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
 if (FMT.hasChoc(format)) {
@@ -318,10 +347,7 @@ if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', '
   const RULES = [[/^(clique|cliques|cliquer|clic|selectionne|selectionnes|choisis|appuie|appuies|tape|tapes)$/, 'mouse-click.mp3', '-10dB'],
     [/^(genere|generer|generes|lance|lances|creer|cree|crees)$/, 'magic.mp3', '-14dB'],
     [/^(voila|resultat|incroyable|regarde)$/, 'success.mp3', '-15dB']];
-  let lastT = -9, nAct = 0;
-  demoW.forEach(w => { if (nAct >= 5 || w.start - lastT < 2.5) return;
-    const r = RULES.find(x => x[0].test(bare(w.text))); if (!r) return;
-    addSfx(sx(r[1]), w.start, r[2], 'x' + q++); lastT = w.start; nAct++; });
+  void RULES;   // 29/09 : désactivés dans la démo (Axel : « bruitage nul ») ; gardés pour un futur calage sur l'image
   if (q) console.log('  bruitages liés à l\'action : ' + q); }
 
 if (music) {
