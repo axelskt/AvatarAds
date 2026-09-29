@@ -51,13 +51,26 @@ function burn(video, output, words, opts = {}) {
       } else merged.push(w);
     } words = merged.map(w=>({ ...w, text:brandFix(w.text) })); }
   // captions continues (pas de trou) + lead, bornées à la vidéo
-  let caps = words.map((w,i)=>{ const next=words[i+1];
-    const s = Math.max(0, w.start - LEAD);
-    const e = Math.min(dur, next ? Math.max(w.start - LEAD, next.start - LEAD) : w.end + 0.35);
-    return { t:w.text.toUpperCase().replace(/[<>&"]/g,''), s, e };
-  }).filter(c => c.e - c.s >= 0.06);
-  // phrase choc : les sous-titres commencent APRÈS elle (jamais les deux à la fois) ; « aucun » = pas de sous-titres
-  if (choc) caps = FMT.capsAfterChoc(caps, Math.min(choc.end, dur));
+  // mot à mot, SAUF les mots marqués d'un groupe (w.g, posé par build.mjs) : la phrase s'affiche alors en bloc, chaque mot
+  // s'allume quand il est dit (Axel 29/09 : groupes aux moments clés, puis retour au mot à mot)
+  const clean = t => t.toUpperCase().replace(/[<>&"]/g,'');
+  let caps = [];
+  for (let i = 0; i < words.length; ) {
+    const w = words[i];
+    if (w.g) {
+      let j = i; while (j < words.length && words[j].g === w.g) j++;
+      const grp = words.slice(i, j), next = words[j];
+      const s = Math.max(0, w.start - LEAD), e = Math.min(dur, next ? Math.max(s + 0.3, next.start - LEAD) : grp[grp.length - 1].end + 0.45);
+      caps.push({ grp: grp.map(x => ({ t: clean(x.text), s: Math.max(0, x.start - LEAD) })), t: grp.map(x => clean(x.text)).join(' '), s, e });
+      i = j; continue;
+    }
+    const next = words[i + 1], s = Math.max(0, w.start - LEAD);
+    const e = Math.min(dur, next ? Math.max(s, next.start - LEAD) : w.end + 0.35);
+    caps.push({ t: clean(w.text), s, e }); i++;
+  }
+  caps = caps.filter(c => c.e - c.s >= 0.06);
+  // 29/09 (Axel : « il y a le texte mais pas de sous-titres ») : les sous-titres tournent AUSSI pendant la phrase choc
+  // (elle est en haut, eux en bas) ; « aucun » = pas de sous-titres
   if (subs === 'aucun') caps = [];
   // hook : frame 0 jamais vide (couverture TikTok) — sans phrase choc, le 1er mot, s'il tombe dans les 0,3 premières s, est là dès 0
   if (!choc && caps.length && caps[0].s < 0.3) caps[0] = { ...caps[0], s: 0 };
@@ -65,11 +78,16 @@ function burn(video, output, words, opts = {}) {
 
   // frame 0 jamais blanche : un mot qui démarre à 0 est posé tel quel (pas de fondu depuis l'invisible)
   const clipsHtml = caps.map((c,i)=>{
+    if (c.grp) return `<div class="cap clip grp" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
+      + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
     const cls = 'cap clip' + (big ? ' big' + (FMT.isStrong(c.t) ? ' hot' : '') : '');
     const st = big ? ` style="font-size:${FMT.bigCapSize(c.t, 960)}px"` : '';
     return `<div class="${cls}" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}"${st}>${c.t}</div>`;
   }).join('\n      ');
-  const anim = caps.map((c,i)=> c.s < 0.02 ? `tl.set('#c${i}',{autoAlpha:1,y:0,scale:1}, 0);`
+  const anim = caps.map((c,i)=> c.grp
+    ? `tl.fromTo('#c${i}',{autoAlpha:0,scale:0.86,y:14},{autoAlpha:1,scale:1,y:0,duration:0.16,ease:'back.out(2)'}, ${c.s.toFixed(3)});`
+      + c.grp.map((x, k) => `tl.to('#c${i}w${k}',{opacity:1,duration:0.07}, ${Math.max(c.s, x.s).toFixed(3)});`).join('')
+    : c.s < 0.02 ? `tl.set('#c${i}',{autoAlpha:1,y:0,scale:1}, 0);`
     : big ? `tl.fromTo('#c${i}',{autoAlpha:0,scale:0.82},{autoAlpha:1,scale:1,duration:0.1,ease:'back.out(2.2)'}, ${c.s.toFixed(3)});`
     : `tl.fromTo('#c${i}',{autoAlpha:0,y:10},{autoAlpha:1,y:0,duration:0.09,ease:'power1.out'}, ${c.s.toFixed(3)});`).join('\n      ');
   let chocHtml = '', chocAnim = '';
@@ -96,6 +114,9 @@ function burn(video, output, words, opts = {}) {
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
  /* gros sous-titres colorés : même bande basse, mot fort en jaune */
  .cap.big{bottom:440px;font-size:108px;-webkit-text-stroke:11px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
+ /* groupe de sous-titres (moments clés) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit */
+ .cap.grp{left:70px;right:70px;white-space:normal;font-size:76px;line-height:1.1;-webkit-text-stroke:8px #000}
+ .cap.grp .gw{display:inline-block;opacity:.42}
  .cap.big.hot{color:${HOT}}
  /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
  .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}

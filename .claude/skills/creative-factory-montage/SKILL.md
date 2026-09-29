@@ -41,11 +41,8 @@ supabase db query --linked -o json "select coalesce(json_agg(x),'[]'::json) as j
 echo '[]' > done.json
 ```
 
-**Format long : coller hook + liaison AVANT build.mjs** (build.mjs ne connaît que hook → démo → CTA) :
-```bash
-ffmpeg -y -i HOOK.mp4 -i LIAISON.mp4 -filter_complex "[0:v]fps=30,format=yuv420p,setsar=1[a];[1:v]fps=30,format=yuv420p,setsar=1[b];[0:a]aformat=sample_rates=48000:channel_layouts=stereo[x];[1:a]aformat=sample_rates=48000:channel_layouts=stereo[y];[a][x][b][y]concat=n=2:v=1:a=1[v][au]" -map "[v]" -map "[au]" -c:v libx264 -crf 16 -c:a aac -b:a 192k HOOK-LIAISON.mp4
-```
-(même photo → coupe franche, comme un jump cut ; pas de bruitage entre les deux)
+**Format long : la liaison et le B-roll sont gérés par build.mjs** (`--liaison`, `--broll`, voir §3). Ne plus coller
+hook + liaison à la main.
 
 ## 3. Monter (une commande)
 
@@ -53,6 +50,7 @@ ffmpeg -y -i HOOK.mp4 -i LIAISON.mp4 -filter_complex "[0:v]fps=30,format=yuv420p
 cd "Autre SaaS/avatarads-membres"
 export PRODUCER_BROWSER_GPU_MODE=hardware
 node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
+  --liaison LIAISON.mp4 --broll "BROLL1.mp4,BROLL2.png" \
   --hook-id H77 --demo C-SADS-01 --bricks bricks.json --done done.json
 ```
 - 5e argument = **le clip du hook lui-même** comme voix (sinon le hook est muet).
@@ -62,18 +60,35 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
 - Garde-fou : si la piste vidéo ne couvre pas le son (raccords décalés), build.mjs s'arrête (bug du 29/09 : hook plus
   court que voix + respiration → CTA jamais affiché, image figée).
 
+- `--liaison` (format long) : hook + liaison collés en coupe franche, voix traitées séparément par la même chaîne.
+- `--broll a.mp4,b.png` : quand la liaison dit « regarde ça » (ou voici / voilà, `--broll-after`), l'écran montre ce
+  qu'elle annonce jusqu'à la fin de la liaison (vidéo plein cadre ; image entière sur fond flouté + léger zoom), la voix
+  continue dessous. Choisir selon le contexte : produit physique → vidéo produit (ex. fille avec la canette CIAO) et/ou
+  static ad ; « image et vidéo » → les deux. B-roll dispo : `~/Downloads/Creative Factory/cache/broll/`.
+
 ### Ce que build.mjs fait tout seul (réglages validés, ne pas refaire à la main)
 1. **Voix** : hook, démo, CTA à la suite, jamais superposées ; loudnorm −16 LUFS ; 0,5 s de respiration après le hook.
 2. **Transitions simples** : slide (push) de 0,40 s hook → démo et démo → CTA. Pas de fondu au noir.
+   **Le CTA n'arrive qu'APRÈS la fin de la démo** (Axel 29/09) : la démo joue jusqu'au bout (dernière image tenue
+   pendant le glissement), puis la voix du CTA attend la fin du glissement + 0,3 s ; l'avatar reste sur sa 1re image
+   pendant ce temps (lipsync calé). Hook : léger zoom avant continu 1,00 → 1,07.
 3. **Bruitages** : whoosh (−4 dB) + impact (−7 dB) sur chaque transition (`render-worker/assets/sfx/`).
 4. **Musique de fond pas trop forte** : −11 dB, fondu d'entrée 0,6 s / sortie 0,9 s, **baissée automatiquement sous la
    voix** (sidechain), coupée à la fin de la vidéo ; limiteur final 0,95.
-5. **Sous-titres** mot à mot : mots exacts des briques quand un manifest existe, Whisper sinon (démo).
-6. **Hook soigné** (format tiré en rotation pour récolter de la data, `usine/formats.js`) :
+5. **Sous-titres** mot à mot, blancs contour noir, **y compris pendant le texte du hook** ; **groupes aux moments
+   clés** : la dernière phrase avant chaque transition (fin du hook / de la liaison, fin de la démo) et le début du CTA
+   jusqu'à « commentaire » (« MARQUE SITE EN COMMENTAIRE ») s'affichent en bloc, chaque mot s'allume quand il est dit,
+   puis retour au mot à mot. Voix d'avatar (hook, liaison, CTA) : même chaîne (EQ + compression + −16 LUFS) pour un
+   grain homogène entre briques enregistrées à des moments différents.
+6. **Hook soigné** : format **F03 par défaut** (texte choc au-dessus de la tête + sous-titres blancs). **Jamais de
+   jaune** (F02 / F04 écartés : Axel n'aime pas). `--format auto` = ancienne rotation. Détail des formats (format tiré en rotation pour récolter de la data, `usine/formats.js`) :
    F01 sous-titres seuls · F02 texte choc 0-3 s + gros sous-titres colorés · F03 texte choc + sous-titres normaux ·
    F04 gros sous-titres colorés. Texte choc = banque validée TH01–TH19, en zone sûre, **jamais sur un visage**, visible
    dès la frame 0 (= couverture). Forcer : `--format F02 --choc TH05`.
 7. **CTA** : grain + léger tremblement « selfie » (casse le côté IA figé).
+7b. **Bruitages liés à l'action** en plus des transitions : pop quand le texte du hook apparaît, swish quand un groupe
+   de sous-titres s'affiche, woosh (+ déclencheur photo si image) à l'entrée du B-roll, et dans la démo clic / magie /
+   succès d'après les mots dits (clique, sélectionne… / génère, crée… / voilà, résultat…), 2,5 s d'écart mini, 5 maxi.
 8. Écrit `OUT.mp4.format.json` (format, texte choc) → repris par `publish-qc.mjs`.
 
 ## 4. Contrôler avant d'envoyer (toujours regarder, jamais seulement le log)
@@ -98,15 +113,12 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
 - La vidéo approuvée alimente le dashboard (En stock, jours de contenu) puis le kit de publication (`factory_posts`,
   légende = CTA complet de `usine/cta-captions.json` + 3 hashtags max, jamais de fournisseur).
 
-## Pistes d'amélioration demandées par Axel (29/09, pas encore dans build.mjs)
-- **Zoom** léger « punch-in » sur le hook (1,00 → 1,06 sur sa durée) + petit zoom sur les mots forts.
-- **Sous-titres dynamiques aux moments clés** : mot à mot partout SAUF ~2 moments clés (la promesse du hook, la phrase
-  du CTA, + une fois dans la liaison ou la démo) où la phrase s'affiche **en bloc** (groupe de mots, plus gros, mot
-  fort coloré) pour casser la monotonie.
-- **Bruitages cohérents avec l'action** en plus des transitions : clic sur un clic de souris / tap dans la démo, pop
-  à l'apparition d'un texte ou d'un résultat, « ka-ching » quand la voix parle d'argent… Jamais un son sans action à
-  l'écran (règle « le visuel EST le mot » du Montage IA). Banque : `render-worker/assets/sfx/`.
-- Liaison gérée directement par build.mjs (au lieu du collage ffmpeg ci-dessus).
+## Fait le 29/09 (retours d'Axel sur les 2 vidéos test)
+Zoom avant sur le hook, groupes de sous-titres aux moments clés, sous-titres pendant le texte choc, plus de jaune,
+CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde ça » natifs, bruitages liés à l'action.
+
+## Encore à faire
+- B-roll : en faire des briques en base (kind `broll`, tags produit / static ad / UGC) pour les choisir automatiquement.
 - **Stockage : une vidéo POSTÉE est supprimée de Supabase** (Axel 29/09). Seul le MP4 final part ; la recette
   (`brick_combo` : photo, hook, liaison, démo, CTA, format) reste → on peut la ré-assembler à l'identique. Déclencheur =
   confirmation d'Axel dans le kit de publication. Ne JAMAIS toucher aux briques (`variants/`, `hooks/`, `ctas/`, `demos/`).
