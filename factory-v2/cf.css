@@ -1278,3 +1278,8 @@ i.is-gap { background: var(--cf-ink); }
 /* Kit de publication (bas de l'Accueil) */
 .cf-kit { margin-top: 16px; }
 .cf-kit .cf-card-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cf-yt { grid-column: 1 / -1; }
+.cf-yt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--cf-line); padding-top: 10px; }
+.cf-yt-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; min-width: 0; }
+.cf-yt-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cf-yt-n { color: var(--cf-mute); white-space: nowrap; }

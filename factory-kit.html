@@ -12,13 +12,10 @@
      universel → collé sur l'iPhone), programmation à l'heure affichée, « Programmé ». Table factory_posts (RLS owner/dev). -->
 <style>
 :root{
-  --bg:#f6f5f2; --card:#fff; --ink:#15140f; --dim:#6f6c64; --line:#e6e3dc; --soft:#efede7;
+  color-scheme:light;
+  --bg:#fff; --card:#fff; --ink:#15140f; --dim:#6f6c64; --line:#e6e3dc; --soft:#efede7;
   --acc:#ff5a1f; --a2:#6d5dfc; --ok:#16a34a; --okbg:#e8f6ed; --r:16px;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){ --bg:#0f0f0e; --card:#1a1a18; --ink:#f3f2ee; --dim:#9a978f; --line:#2c2b28; --soft:#232320; --okbg:#10291a; }
-}
-:root[data-theme="dark"]{ --bg:#0f0f0e; --card:#1a1a18; --ink:#f3f2ee; --dim:#9a978f; --line:#2c2b28; --soft:#232320; --okbg:#10291a; }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;-webkit-text-size-adjust:100%}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -27,6 +24,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .top h1{font-size:20px;margin:0;letter-spacing:-.01em}
 .top a{color:var(--dim);font-size:13px;text-decoration:none}
 .accts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.demo{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:#fff4ec;color:#9a3a0a;font-size:13px}
 .acct{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:14px}
 .acct[aria-pressed="true"]{border-color:var(--c)}
 .acct .n{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
@@ -178,7 +176,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   async function setStatus(p, status) {
     var prev = { status: p.status, done_at: p.done_at };
     p.status = status; p.done_at = status === 'todo' ? null : new Date().toISOString();
-    if (!DEMO) {
+    if (!S.example) {
       var r = await sb.from('factory_posts').update({ status: p.status, done_at: p.done_at }).eq('id', p.id);
       if (r.error) { p.status = prev.status; p.done_at = prev.done_at; toast('Non enregistré : ' + esc(r.error.message)); render(); return false; }
     }
@@ -241,7 +239,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     if (last) out += '</div>';
     if (!list.length) out = '<div class="card empty" style="margin-top:14px"><b>Aucun post prévu sur @' + esc(S.acct) + '</b>Les posts apparaissent ici dès que les vidéos finales sont assemblées et planifiées.</div>';
     else if (!todo().length) out = '<div class="card empty" style="margin-top:14px"><b>Tout est programmé sur @' + esc(S.acct) + '</b>Rien à faire jusqu’au prochain kit.</div>' + out;
-    app.innerHTML = '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + bulkHTML() + out;
+    app.innerHTML = (S.example ? '<div class="demo"><b>Exemple d’aperçu</b> · ces posts ne sont pas réels (clips déjà faits, légendes fictives). Le vrai planning les remplacera dès que les vidéos finales seront prêtes.</div><div style="height:12px"></div>' : '') + '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + bulkHTML() + out;
   }
 
   document.addEventListener('click', function (e) {
@@ -264,6 +262,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       .eq('platform', 'instagram').gte('scheduled_at', from).lte('scheduled_at', to).order('scheduled_at').order('id');
     if (r.error) { S.err = r.error.message; render(); return; }
     S.posts = r.data || [];
+    if (!S.posts.length) { S.example = true; S.posts = examples(); }   // aperçu de l'écran tant qu'aucun post n'est planifié
     var f = todo()[0]; S.cur = f ? f.id : null;
     render();
   }
@@ -295,11 +294,11 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     load();
   }
 
-  if (DEMO) {
+  function examples() {
     var base = 'https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/variants/';
     var d0 = new Date(); d0.setHours(0, 0, 0, 0);
     var mk = function (d, h, acct, v, cap) { var t = new Date(d0.getTime() + d * 86400000 + h * 3600000); return { id: 'd' + d + h, scheduled_at: t.toISOString(), account: acct, video_url: base + v + '.mp4', caption: cap, status: 'todo' }; };
-    S.posts = [
+    return [
       mk(1, 12, 'avataradss', 'A1-5-H29', 'Tu crées encore tes pubs à la main ?\n\nCommente GO et je t’envoie l’accès.\n\n#ia #ugc #marketing'),
       mk(1, 13, 'leoadsia', 'A2-6-H24-v2', 'Ce que personne ne te dit sur les vidéos IA.\n\nCommente GO pour tester.\n\n#ia #contenu'),
       mk(1, 17, 'avataradss', 'A1-5-CTA-direct', 'J’ai fait 30 vidéos en une après-midi.\n\nCommente GO.\n\n#ia #ugc'),
@@ -308,8 +307,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       mk(2, 12, 'avataradss', 'A1-5-H29', 'Deuxième jour.\n\nCommente GO.'),
       mk(2, 13, 'leoadsia', 'A2-8-L12', 'Deuxième jour.\n\nCommente GO.')
     ];
-    S.cur = todo()[0].id; render(); return;
   }
+  if (DEMO) { S.example = true; S.posts = examples(); S.cur = todo()[0].id; render(); return; }
 
   try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { sb = null; }
   if (!sb) { S.err = 'supabase-js n’a pas pu être chargé.'; return render(); }

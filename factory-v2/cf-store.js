@@ -87,6 +87,7 @@
     dm: newDm(),
     prod: newSlot(),
     prov: newSlot(),
+    yt: newSlot(),
     oauth: null,
     net: [],
     IG_RANGES: IG_RANGES.slice(),
@@ -108,6 +109,7 @@
     loadDm: loadDm,
     loadProd: loadProd,
     loadProviders: loadProviders,
+    loadYt: loadYt,
     prefetch: prefetch,
     tagMedia: tagMedia,
     qcApprove: function (id) { return qcWrite('approve', id); },
@@ -145,7 +147,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.oauth = null; }
+  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.oauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -504,6 +506,43 @@
     })();
     inflight.aud = p;
     emit('aud');
+    return p;
+  }
+
+  // ── YouTube (29/09) : stats publiques de la chaîne via yt-stats (vues, likes) ; relue au plus toutes les 15 min ──
+  function loadYt(opts) {
+    var force = !!(opts && opts.force), S = CF.yt;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight.yt) return inflight.yt;
+    if (!force && isFresh(S)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var patch;
+      try {
+        var res = await callFn('yt-stats');
+        var b = res.body || {};
+        if (!res.ok || b.error || !b.channel) throw { kind: res.status === 401 ? 'auth' : 'http', message: b.error ? String(b.error) : 'HTTP ' + res.status };
+        var num = function (v) { return typeof v === 'number' && isFinite(v) ? v : null; };
+        patch = { state: 'ready', kind: null, error: null, data: {
+          channel: { title: str(b.channel.title), handle: str(b.channel.handle), subscribers: num(b.channel.subscribers), views: num(b.channel.views), videos: num(b.channel.videos) },
+          totals: { views: num(b.totals && b.totals.views), likes: num(b.totals && b.totals.likes), count: num(b.totals && b.totals.count) },
+          videos: (Array.isArray(b.videos) ? b.videos : []).slice(0, 50).map(function (v) {
+            return { id: str(v.id), title: str(v.title), published_at: str(v.published_at), views: num(v.views), likes: num(v.likes) };
+          })
+        } };
+      } catch (e) {
+        patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
+      }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.yt === p) delete inflight.yt;
+      emit('yt');
+      return S;
+    })();
+    inflight.yt = p;
+    emit('yt');
     return p;
   }
 

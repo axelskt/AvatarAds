@@ -360,6 +360,7 @@
     CF.loadDm(HOME_DM);
     CF.loadProd();
     CF.loadProviders();
+    CF.loadYt();
   }
 
   // État Instagram de l'Accueil : la pastille de l'en-tête et la ligne sous le titre lisent cette seule fonction.
@@ -510,7 +511,7 @@
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
-      + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>'
+      + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + homeYtCard() + '</div></section>'
       // Kit de publication (29/09) : page à part, pensée pour programmer à la main dans l'app Instagram.
       + '<section class="cf-card cf-kit" aria-labelledby="cfKitT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfKitT">Kit de publication</h2>'
       + '<div class="cf-dim">Vidéos à envoyer en AirDrop, légendes à copier, heures de programmation · 3 @avataradss + 2 @leoadsia par jour</div></div>'
@@ -621,6 +622,22 @@
     return hcard('compte', 'Insight Instagram', IC.insta, '', [
       fol, one('views', 'Vues', c.views, X.per), watch, homeLikeStat(X)
     ], '');
+  }
+  // YouTube (29/09) : stats publiques de la chaîne (vues, likes), pleine largeur sous les 4 cartes, sans lien d'onglet.
+  function homeYtCard() {
+    var S = CF.yt, D = S.data, pend = !D && (S.state === 'idle' || S.loading), why = S.state === 'error' ? S.error : 'chargement';
+    function st(k, v, label, sub, o) { return D && v != null ? hstat(k, fInt(v), label, sub, o) : hstat(k, pend ? '…' : '—', label, pend ? 'chargement' : why, o); }
+    var C = D ? D.channel : {}, T = D ? D.totals : {};
+    var last = D ? D.videos.slice(0, 5).map(function (v) {
+      return '<li><span class="cf-yt-t">' + esc(v.title) + '</span><span class="cf-yt-n">' + (v.views == null ? '—' : esc(fInt(v.views))) + ' vues · '
+        + (v.likes == null ? '—' : esc(fInt(v.likes))) + ' likes</span></li>';
+    }).join('') : '';
+    return '<section class="cf-card cf-hcard cf-yt" data-card="youtube" aria-labelledby="cfHc-yt"><div class="cf-hcard-h"><span class="cf-hcard-ic">'
+      + svg('M22 8.5a3 3 0 0 0-2.1-2.1C18 6 12 6 12 6s-6 0-7.9.4A3 3 0 0 0 2 8.5 31 31 0 0 0 2 12a31 31 0 0 0 .1 3.5 3 3 0 0 0 2 2.1c1.9.4 7.9.4 7.9.4s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.1-3.5zM10 15V9l5 3z', 18)
+      + '</span><h3 class="cf-h2" id="cfHc-yt">YouTube' + (C.handle ? ' · ' + esc(C.handle) : '') + '</h3></div>'
+      + '<div class="cf-hstats">' + st('yt-subs', C.subscribers, 'Abonnés', 'total actuel', { acc: true }) + st('yt-views', C.views, 'Vues', 'total de la chaîne')
+      + st('yt-likes', T.likes, 'Likes', D ? T.count + ' dernières vidéos' : '') + st('yt-videos', C.videos, 'Vidéos', 'publiées') + '</div>'
+      + (last ? '<ul class="cf-yt-list">' + last + '</ul>' : '') + '</section>';
   }
   // Likes des reels publiés sur la période + like rate moyen (le MÊME calcul que la carte Objectif « Like rate » de l'onglet
   // Insight : goalValue) + l'objectif, vert s'il est atteint, rouge sinon.
