@@ -427,7 +427,11 @@ async function tkSendTest(){
   const name = acc.display_name || acc.open_id;
   res.textContent = 'Envoi en brouillon vers ' + name + '…';
   try{
-    const video_url = SUPABASE_URL + '/storage/v1/object/public/factory-media/test-tiktok/test3.mp4';
+    // Une vraie vidéo 1080×1920 différente à chaque envoi (l'ancienne test3.mp4 faisait 1084×1624 et avait déjà été
+    // envoyée : TikTok peut retenir un doublon ou un format bancal sans rien dire).
+    const TK_SAMPLES = ['A1-5-CTA-GO-site','A2-9-CTA-SITE-lien','A1-6-CTA-GUIDE','A2-3-CTA-AVATAR','A1-3-CTA-cafe','A2-5-CTA-GO-teste','A1-8-CTA-MONTAGE','A2-10-CTA-UGC','A1-2-CTA-AIDE','A2-6-CTA-IA-prive','A1-6-CTA-GO-teste','A2-7-CTA-SITE-lien'];
+    let k = 0; try{ k = (parseInt(localStorage.getItem('tk_sample')||'0',10)||0) % TK_SAMPLES.length; localStorage.setItem('tk_sample', String(k+1)); }catch(e){ k = Math.floor(Math.random()*TK_SAMPLES.length); }
+    const video_url = SUPABASE_URL + '/storage/v1/object/public/factory-media/variants/' + TK_SAMPLES[k] + '.mp4';
     const caption = 'Marque « GO » en commentaire et va sur AvatarAds.fr pour tester par toi-même #AvatarAds';
     const d = await (await fetch(TK_EDGE + '?action=post', { method:'POST', headers:{ 'Content-Type':'application/json', ...(await igAuthHeaders()) }, body: JSON.stringify({ open_id: acc.open_id, video_url, title: caption }) })).json();
     if(!d.ok){ res.textContent = 'Erreur : '+(d.error||'inconnue'); return; }
@@ -443,7 +447,7 @@ async function tkSendTest(){
         return;
       }
       if(s === 'FAILED'){ res.textContent = 'TikTok a refusé la vidéo : ' + (st.data.fail_reason || 'raison non précisée'); return; }
-      res.innerHTML = 'Vidéo envoyée à TikTok pour <b>'+esc(name)+'</b> — TikTok la traite ('+esc(s||'en attente')+')…';
+      res.innerHTML = 'Vidéo envoyée à TikTok pour <b>'+esc(name)+'</b> — TikTok la traite ('+esc(s||(st&&st.error&&st.error.code)||'en attente')+')…';
     }
     res.textContent = 'TikTok traite toujours la vidéo après 2 minutes (limite du mode Sandbox : souvent seul le 1er envoi d\'une série arrive). Réessaie dans quelques minutes.';
   }catch(e){ res.textContent = 'Erreur : '+e.message; }
