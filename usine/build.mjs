@@ -17,7 +17,7 @@
 //   lues avec SUPABASE_SERVICE_ROLE_KEY (lecture seule) ; --bricks = export factory_bricks (formats retirés exclus).
 //   --tx / --avant-apres : déduits du nom d'un hook avant/après (assemblage « HK-O2-0ab » lu dans la bibliothèque, ancien « HK-O02a-01 ») ; --faces : boîtes imposées (sinon détectées).
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, statSync, openSync, readSync, closeSync, renameSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, statSync, openSync, readSync, closeSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { join, dirname, basename } from 'node:path';
@@ -27,7 +27,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after'];
+const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -248,6 +248,20 @@ const demoLastEnd = (() => { try { const w = emitWords(demo, 0); return w.length
 const L2 = Math.min(durD, Math.max(0.5, demoLastEnd + 0.08));
 const O2 = O1 + L2;
 const CTA_GAP = 0, CL = 0;
+// ── ILLUSTRATION DU HOOK (Axel 30/09) : « --hook-broll fichier|mots » : quand le hook dit ces mots (ex. « comme ça »,
+//    « créer »), le résultat arrive par la DROITE en grand, à la place de l'avatar, et repart à GAUCHE à la liaison (ou à la
+//    transition vers la démo). Les sous-titres continuent dessous.
+if (OPT['hook-broll']) {
+  const [hf, trig] = OPT['hook-broll'].split('|');
+  const toks = String(trig || '').split(/\s+/).map(bare).filter(Boolean);
+  const hw = hookW0, endAt = liaisonAt != null ? liaisonAt : O1;
+  let at = null;
+  for (let i = 0; i < hw.length && at == null; i++) if (toks.length && toks.every((t, k) => hw[i + k] && bare(hw[i + k].text) === t)) at = Math.max(0, hw[i].start - 0.05);
+  if (at != null && endAt - at > 0.6) {
+    brollEvents.push({ file: hf, at, dur: endAt - at, image: IMG_RE.test(hf), style: 'hook' });
+    console.log('  illustration du hook à ' + at.toFixed(2) + ' s → ' + endAt.toFixed(2) + ' s : ' + basename(hf));
+  } else console.warn('⚠ illustration du hook ignorée : « ' + trig + ' » introuvable (ou trop tard)');
+}
 
 // ── 1) STITCH : slide vidéo + audio positionné (voix séquentielles) ──
 const voice = join(work, 'voice.mp4');
@@ -318,7 +332,7 @@ if (ctaW.length > 1) {
 allWords.push(...hookW, ...demoW, ...ctaW);
 const wj = join(work, 'allWords.json'); writeFileSync(wj, JSON.stringify(allWords));
 // format : phrase choc (placée hors visage, zone sûre) + style des sous-titres
-const capOpts = { subs: format.subs, broll: brollEvents.map(e => ({ file: e.file, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image })) };
+const capOpts = { subs: format.subs, style: OPT['subs-style'] || 'contour', broll: brollEvents.map(e => ({ file: e.file, at: +e.at.toFixed(3), dur: +e.dur.toFixed(3), image: e.image, style: e.style || 'card' })) };
 const sidecar = { format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
 if (FMT.hasChoc(format)) {
@@ -381,5 +395,8 @@ if (music) {
   ff([...in2, '-filter_complex', filt, '-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-b:a','192k','-shortest', out]);
 }
 writeFileSync(out + '.format.json', JSON.stringify(sidecar, null, 1));
+// mots affichés gardés à côté de la vidéo (relecture), puis dossier de travail supprimé : un rendu 60 i/s laissait ~500 Mo
+// de fichiers temporaires, le disque s'est rempli le 30/09 (rendu refusé faute de place)
+try { writeFileSync(out + '.words.json', readFileSync(join(work, 'allWords.json'))); rmSync(work, { recursive: true, force: true }); } catch { /* sans gravité */ }
 console.log('OK ->', out, '('+dur(out).toFixed(2)+'s)  hook='+durH.toFixed(2)+'s démo='+durD.toFixed(2)+(cta?(' cta='+durC.toFixed(2)+'s'):'')+'  trans='+TRANS
   + '  format='+format.id+(sidecar.texte_choc ? ' choc='+sidecar.texte_choc : '')+'  → '+out+'.format.json (publish-qc.mjs le lit)');

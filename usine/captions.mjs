@@ -11,7 +11,7 @@
 //     `end` s, placée par chocLayout (zone sûre, jamais sur un visage) ; les sous-titres ne commencent qu'après elle.
 //   'normal' = style validé (blanc contour noir 82 px) ; 'gros-colores' = gros mots (108 px), mot fort en jaune.
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, copyFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -50,7 +50,7 @@ function burn(video, output, words, opts = {}) {
     copyFileSync(b.file, join(work, name));
     // carte au format du média (plus de bandes blanches autour d'une image) : largeur 460, hauteur ≤ 760
     let ar = 9 / 16; try { const [w, h] = execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0', b.file]).toString().trim().split(',').map(Number); if (w && h) ar = w / h; } catch {}
-    const W = 460, H = Math.min(760, Math.round(W / ar));
+    const W = b.style === 'hook' ? 720 : 460, H = Math.min(b.style === 'hook' ? 1040 : 760, Math.round(W / ar));
     return { ...b, name, k, W, H };
   });
   words = words.slice().sort((a,b)=>a.start-b.start);
@@ -88,7 +88,11 @@ function burn(video, output, words, opts = {}) {
   const big = subs === 'gros-colores';
 
   // frame 0 jamais blanche : un mot qui démarre à 0 est posé tel quel (pas de fondu depuis l'invisible)
+  const box = opts.style === 'boite';
   const clipsHtml = caps.map((c,i)=>{
+    if (c.grp && box) return `<div class="cap clip grp bx" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
+      + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
+    if (box && !c.grp) return `<div class="cap clip bx" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}"><span class="bw">${c.t}</span></div>`;
     if (c.grp) return `<div class="cap clip grp" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
       + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
     const cls = 'cap clip' + (big ? ' big' + (FMT.isStrong(c.t) ? ' hot' : '') : '');
@@ -120,10 +124,14 @@ function burn(video, output, words, opts = {}) {
   // 1re carte : pop au centre ; chaque carte suivante arrive par la droite pendant que la précédente se pousse à gauche
   // (les deux restent à l'écran, côte à côte) ; toutes repartent ensemble à la fin
   const brollAnim = broll.map((b, i) => {
-    let a = i === 0
+    // illustration du hook : entre par la droite, repart par la gauche
+    if (b.style === 'hook') return `tl.fromTo('#br${b.k}',{autoAlpha:1,x:1100},{x:0,duration:0.34,ease:'power3.out'}, ${b.at.toFixed(3)});`
+      + `tl.to('#br${b.k}',{x:-1100,duration:0.3,ease:'power3.in'}, ${Math.max(b.at + 0.4, b.at + b.dur - 0.3).toFixed(3)});`;
+    const prevs = broll.slice(0, i).filter(x => x.style !== 'hook');
+    let a = !prevs.length
       ? `tl.fromTo('#br${b.k}',{autoAlpha:0,scale:0.7,y:40},{autoAlpha:1,scale:1,y:0,duration:0.28,ease:'back.out(1.8)'}, ${b.at.toFixed(3)});`
       : `tl.fromTo('#br${b.k}',{autoAlpha:0,x:560,scale:0.82},{autoAlpha:1,x:250,scale:0.82,duration:0.38,ease:'power3.out'}, ${b.at.toFixed(3)});`
-        + `tl.to('#br${broll[i - 1].k}',{x:-250,scale:0.82,duration:0.38,ease:'power3.inOut'}, ${b.at.toFixed(3)});`;
+        + `tl.to('#br${prevs[prevs.length - 1].k}',{x:-250,scale:0.82,duration:0.38,ease:'power3.inOut'}, ${b.at.toFixed(3)});`;
     a += `tl.to('#br${b.k}',{autoAlpha:0,scale:0.78,duration:0.18,ease:'power1.in'}, ${Math.max(b.at, b.at + b.dur - 0.18).toFixed(3)});`;
     return a;
   }).join('\n   ');
@@ -145,6 +153,11 @@ function burn(video, output, words, opts = {}) {
  .broll{position:absolute;z-index:4;object-fit:cover;border-radius:34px;border:5px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:transparent}
  .cap.grp{left:70px;right:70px;white-space:normal;font-size:76px;line-height:1.1;-webkit-text-stroke:8px #000}
  .cap.grp .gw{display:inline-block;opacity:0}
+ /* style « boite » : texte noir sur pastille blanche arrondie, sans contour */
+ .cap.bx{-webkit-text-stroke:0;text-shadow:none;color:#111;font-size:66px}
+ .cap.bx .bw,.cap.bx.grp .gw{background:#fff;border-radius:16px;padding:6px 20px 8px;box-shadow:0 8px 24px rgba(0,0,0,.28);line-height:1.15}
+ .cap.bx.grp{font-size:62px;line-height:1.45}
+ .cap.bx.grp .gw{margin:0 2px}
  .cap.big.hot{color:${HOT}}
  /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
  .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}
@@ -182,6 +195,7 @@ function burn(video, output, words, opts = {}) {
   // fps de la vidéo source (build.mjs passe CF_FPS=60) ; images de fond extraites en jpg (plus rapide que png, sans perte visible)
   execFileSync('npx', ['--yes','hyperframes','render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg', '--workers', String(process.env.CF_WORKERS || 2), '--no-low-memory-mode'], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
   console.log('OK ->', output);
+  try { rmSync(work, { recursive: true, force: true }); } catch { /* sans gravité */ }
 }
 
 // ── CLI ──
