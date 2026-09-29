@@ -363,6 +363,7 @@
     CF.loadProd();
     CF.loadProviders();
     CF.loadYt();
+    if (ui.netRange && ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange);
   }
 
   // État Instagram de l'Accueil : la pastille de l'en-tête et la ligne sous le titre lisent cette seule fonction.
@@ -513,7 +514,8 @@
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
-      + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + homeYtCard() + '</div></section>'
+      + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>'
+      + homeNetHTML()
       // Kit de publication (29/09) : page à part, pensée pour programmer à la main dans l'app Instagram.
       + '<section class="cf-card cf-kit" aria-labelledby="cfKitT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfKitT">Kit de publication</h2>'
       + '<div class="cf-dim">Vidéos à envoyer en AirDrop, légendes à copier, heures de programmation · 3 @avataradss + 2 @leoadsia par jour</div></div>'
@@ -625,21 +627,177 @@
       fol, one('views', 'Vues', c.views, X.per), watch, homeLikeStat(X)
     ], '');
   }
-  // YouTube (29/09) : stats publiques de la chaîne (vues, likes), pleine largeur sous les 4 cartes, sans lien d'onglet.
-  function homeYtCard() {
-    var S = CF.yt, D = S.data, pend = !D && (S.state === 'idle' || S.loading), why = S.state === 'error' ? S.error : 'chargement';
-    function st(k, v, label, sub, o) { return D && v != null ? hstat(k, fInt(v), label, sub, o) : hstat(k, pend ? '…' : '—', label, pend ? 'chargement' : why, o); }
-    var C = D ? D.channel : {}, T = D ? D.totals : {};
-    var last = D ? D.videos.slice(0, 5).map(function (v) {
-      return '<li><span class="cf-yt-t">' + esc(v.title) + '</span><span class="cf-yt-n">' + (v.views == null ? '—' : esc(fInt(v.views))) + ' vues · '
-        + (v.likes == null ? '—' : esc(fInt(v.likes))) + ' likes · ' + (v.comments == null ? '—' : esc(fInt(v.comments))) + ' comm.</span></li>';
-    }).join('') : '';
-    return '<section class="cf-card cf-hcard cf-yt" data-card="youtube" aria-labelledby="cfHc-yt"><div class="cf-hcard-h"><span class="cf-hcard-ic">'
-      + svg('M22 8.5a3 3 0 0 0-2.1-2.1C18 6 12 6 12 6s-6 0-7.9.4A3 3 0 0 0 2 8.5 31 31 0 0 0 2 12a31 31 0 0 0 .1 3.5 3 3 0 0 0 2 2.1c1.9.4 7.9.4 7.9.4s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.1-3.5zM10 15V9l5 3z', 18)
-      + '</span><h3 class="cf-h2" id="cfHc-yt">YouTube' + (C.handle ? ' · ' + esc(C.handle) : '') + '</h3></div>'
-      + '<div class="cf-hstats">' + st('yt-subs', C.subscribers, 'Abonnés', 'total actuel', { acc: true }) + st('yt-views', C.views, 'Vues', 'total de la chaîne')
-      + st('yt-likes', T.likes, 'Likes', D ? T.count + ' dernières vidéos' : '') + st('yt-videos', C.videos, 'Vidéos', 'publiées') + st('yt-comments', T.comments, 'Commentaires', D ? T.count + ' dernières vidéos' : '') + '</div>'
-      + (last ? '<ul class="cf-yt-list">' + last + '</ul>' : '') + '</section>';
+  // ── Réseaux (29/09, Axel) : YouTube + Instagram (tous nos comptes) + TikTok (à brancher), cochables comme les comptes ──
+  // Chiffres : abonnés, vidéos, vues, likes, commentaires, chacun avec son % et l'objectif en vert / rouge. Vidéos, vues,
+  // likes et commentaires = vidéos PUBLIÉES dans la période (stats à vie de chaque vidéo) ; abonnés = total actuel, et
+  // sur la courbe le gain par jour (Instagram : historique Insights ; YouTube : relevé quotidien social_daily).
+  var NET_PF = [
+    { k: 'yt', label: 'YouTube', c: '#e0342b', ic: 'M22 8.5a3 3 0 0 0-2.1-2.1C18 6 12 6 12 6s-6 0-7.9.4A3 3 0 0 0 2 8.5 31 31 0 0 0 2 12a31 31 0 0 0 .1 3.5 3 3 0 0 0 2 2.1c1.9.4 7.9.4 7.9.4s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.1-3.5zM10 15V9l5 3z' },
+    { k: 'ig', label: 'Instagram', c: 'var(--cf-c-reach)', ic: IC.insta },
+    { k: 'tt', label: 'TikTok', c: '#1b1814', ic: 'M9 12a4 4 0 1 0 4 4V4c.5 2.5 2.5 4 5 4', soon: true }
+  ];
+  var NET_SER = [
+    { k: 'subs', label: 'Abonnés', c: 'var(--cf-c-followers)', ic: IC.follow },
+    { k: 'videos', label: 'Vidéos', c: 'var(--cf-c-posts)', ic: IC.grid },
+    { k: 'views', label: 'Vues', c: 'var(--cf-c-views)', ic: IC.eye },
+    { k: 'likes', label: 'Likes', c: 'var(--cf-c-reach)', ic: IC.heart },
+    { k: 'comments', label: 'Commentaires', c: 'var(--cf-c-inter)', ic: IC.chat }
+  ];
+  // Objectifs : croissance abonnés ≥ 5 % sur la période, 5 vidéos / jour, 1 000 vues / vidéo, like rate et comment rate
+  // = les objectifs de l'onglet Insight (GOAL.like, GOAL.comment).
+  var NET_GOAL = { subs: 5, videosPerDay: 5, viewsPerVideo: 1000 };
+  var NET_RANGES = [['7j', '7' + NB + 'j', 7], ['30j', '30' + NB + 'j', 30], ['90j', '90' + NB + 'j', 90], ['all', 'All time', null]];
+  function netSel() {
+    var d = { yt: true, ig: true };
+    try { var v = JSON.parse(localStorage.getItem('cf_net') || 'null'); if (v && (v.yt || v.ig)) d = { yt: !!v.yt, ig: !!v.ig }; } catch (e) { /* stockage bloqué */ }
+    return d;
+  }
+  function netToggle(k) {
+    var s = netSel(); if (k !== 'yt' && k !== 'ig') return;
+    s[k] = !s[k]; if (!s.yt && !s.ig) return;   // au moins un réseau reste affiché
+    try { localStorage.setItem('cf_net', JSON.stringify(s)); } catch (e) { /* */ }
+    schedule();
+  }
+  function netRange() { return ui.netRange || '30j'; }
+  function netModel() {
+    var R = netRange(), days = NET_RANGES.filter(function (r) { return r[0] === R; })[0][2], sel = netSel();
+    var now = Date.now(), from = days ? now - days * 864e5 : -Infinity;
+    var Y = CF.yt, M = CF.acct.media, I = CF.acct.ig[R], ytD = sel.yt ? Y.data : null, igM = sel.ig && M.data ? M.data : null, igD = sel.ig ? I.data : null;
+    var pend = (sel.yt && !Y.data && Y.state !== 'error') || (sel.ig && !M.data && M.state !== 'error');
+    var err = [sel.yt && Y.state === 'error' && !Y.data ? 'YouTube : ' + Y.error : '', sel.ig && M.state === 'error' && !M.data ? 'Instagram : ' + M.error : ''].filter(Boolean).join(' · ');
+    var vids = [];
+    if (ytD) ytD.videos.forEach(function (v) { var ms = Date.parse(v.published_at || ''); if (isFinite(ms)) vids.push({ pf: 'yt', ms: ms, views: v.views, likes: v.likes, comments: v.comments, thumb: v.thumb, url: v.id ? 'https://youtube.com/shorts/' + v.id : null }); });
+    if (igM) igM.list.forEach(function (p) { if ((p.type === 'REELS' || p.type === 'VIDEO') && p.ms != null) vids.push({ pf: 'ig', ms: p.ms, views: p.views, likes: p.likes, comments: p.comments, thumb: p.thumb, url: p.permalink }); });
+    vids.sort(function (a, b) { return b.ms - a.ms; });
+    var inP = vids.filter(function (v) { return v.ms >= from; });
+    var sum = function (k) { return inP.reduce(function (a, v) { return a + (v[k] || 0); }, 0); };
+    var views = sum('views'), likes = sum('likes'), comments = sum('comments');
+    // abonnés : total actuel + gain sur la période (Instagram : net des Insights ; YouTube : écart entre relevés)
+    var subs = 0, subsOk = false, gain = 0, gainOk = false;
+    if (ytD && ytD.channel.subscribers != null) {
+      subs += ytD.channel.subscribers; subsOk = true;
+      var H = ytD.history.filter(function (h) { return h.subscribers != null; }), h0 = H.filter(function (h) { return ymdDate(h.day).getTime() >= from; })[0];
+      if (h0 && H.length > 1 && h0 !== H[H.length - 1]) { gain += H[H.length - 1].subscribers - h0.subscribers; gainOk = true; }
+    }
+    if (sel.ig && igD && igD.followers != null) {
+      subs += igD.followers; subsOk = true;
+      var net = igD.followersBase ? igD.followers - igD.followersBase.followers : (igD.flow ? (igD.flow.parts.FOLLOWER || 0) - (igD.flow.parts.NON_FOLLOWER || 0) : null);
+      if (net != null) { gain += net; gainOk = true; }
+    }
+    // courbe : un point par jour (période), par date de publication ; abonnés = gain du jour
+    var nD = days || Math.max(30, Math.ceil((now - (vids.length ? vids[vids.length - 1].ms : now)) / 864e5) + 1);
+    var labels = [], idx = {};
+    for (var i = nD - 1; i >= 0; i--) { var d = new Date(now - i * 864e5), key = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); idx[key] = labels.length; labels.push(key); }
+    var zero = function () { return labels.map(function () { return 0; }); };
+    var S = { labels: labels, videos: zero(), views: zero(), likes: zero(), comments: zero(), subs: labels.map(function () { return null; }) };
+    inP.concat(days ? [] : []).forEach(function (v) {
+      var d = new Date(v.ms), key = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()), j = idx[key];
+      if (j == null) return;
+      S.videos[j] += 1; S.views[j] += v.views || 0; S.likes[j] += v.likes || 0; S.comments[j] += v.comments || 0;
+    });
+    if (igD && igD.series) igD.series.forEach(function (x) { var j = idx[x.d]; if (j != null && x.follows != null) S.subs[j] = (S.subs[j] || 0) + x.follows - (x.unfollows || 0); });
+    if (ytD) { var HH = ytD.history; for (var k = 1; k < HH.length; k++) { var jj = idx[HH[k].day]; if (jj != null && HH[k].subscribers != null && HH[k - 1].subscribers != null) S.subs[jj] = (S.subs[jj] || 0) + HH[k].subscribers - HH[k - 1].subscribers; } }
+    var nDays = days || nD, perDay = inP.length / nDays, vpv = inP.length ? views / inP.length : null;
+    var growth = gainOk && subs - gain > 0 ? gain / (subs - gain) * 100 : null;
+    return { R: R, days: days, sel: sel, pend: pend, err: err, vids: vids, inP: inP, S: S,
+      c: {
+        subs: { v: subsOk ? subs : null, rate: growth, rateTxt: growth == null ? 'croissance : relevé en cours' : (growth >= 0 ? '+' : '') + fDec(growth, 1) + NB + '% sur la période', goal: '≥ +' + NET_GOAL.subs + NB + '%', ok: growth == null ? null : growth >= NET_GOAL.subs, lg: gainOk ? gain : null },
+        videos: { v: inP.length, rate: perDay * 100 / NET_GOAL.videosPerDay, rateTxt: fDec(perDay, 1) + ' / jour · ' + fDec(perDay * 100 / NET_GOAL.videosPerDay, 0) + NB + '% de l’objectif', goal: NET_GOAL.videosPerDay + ' / jour', ok: perDay >= NET_GOAL.videosPerDay },
+        views: { v: views, rateTxt: vpv == null ? 'aucune vidéo sur la période' : fInt(vpv) + ' vues / vidéo · ' + fDec(vpv / NET_GOAL.viewsPerVideo * 100, 0) + NB + '% de l’objectif', goal: '≥ ' + fInt(NET_GOAL.viewsPerVideo) + ' / vidéo', ok: vpv == null ? null : vpv >= NET_GOAL.viewsPerVideo },
+        likes: { v: likes, rateTxt: views ? fDec(likes / views * 100, 1) + NB + '% des vues' : '—', goal: '≥ ' + GOAL.like.target + NB + '%', ok: views ? likes / views * 100 >= GOAL.like.target : null },
+        comments: { v: comments, rateTxt: views ? fDec(comments / views * 100, 1) + NB + '% des vues' : '—', goal: '≥ ' + GOAL.comment.target + NB + '%', ok: views ? comments / views * 100 >= GOAL.comment.target : null }
+      } };
+  }
+  function netPfHTML(M) {
+    var Y = CF.yt.data, ig = CF.acct.accounts.own || [];
+    return '<div class="cf-icards cf-acards cf-net-pf">' + NET_PF.map(function (p) {
+      if (p.soon) return '<div class="cf-icard cf-acard is-none" style="--c:' + p.c + '"><span class="cf-icard-h"><span class="cf-icard-tile">' + svg(p.ic, 14) + '</span><span class="cf-icard-l">' + p.label + '</span></span>'
+        + '<span class="cf-icard-v is-na">—</span><span class="cf-icard-s">à brancher · tous les comptes TikTok</span></div>';
+      var on = !!M.sel[p.k], sub = p.k === 'yt' ? (Y ? Y.channel.handle : '@ialebdaxel') : ig.map(function (a) { return '@' + a.username; }).join(' · ') || '@avataradss · @leoadsia';
+      var subs = p.k === 'yt' ? (Y ? Y.channel.subscribers : null) : (CF.acct.ig[netRange()].data ? CF.acct.ig[netRange()].data.followers : null);
+      return '<div class="cf-icard cf-acard' + (on ? ' is-on' : ' is-off') + '" style="--c:' + p.c + '">'
+        + '<button type="button" class="cf-acard-hit" data-act="net-pf" data-k="' + p.k + '" aria-pressed="' + on + '" aria-label="' + esc(p.label + (on ? ' affiché' : ' masqué')) + '"></button>'
+        + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(p.ic, 14) + '</span><span class="cf-icard-l">' + p.label + '</span>'
+        + '<span class="cf-icard-ck" aria-hidden="true">' + (on ? svg('M5 12l5 5L20 7', 10) : '') + '</span></span>'
+        + '<span class="cf-icard-v' + (subs == null ? ' is-na' : '') + '">' + esc(subs == null ? '—' : fInt(subs)) + '<span class="cf-acard-unit">abonnés</span></span>'
+        + '<span class="cf-icard-s cf-acard-s">' + esc(sub) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function netCardsHTML(M) {
+    return '<div class="cf-icards cf-net-cards">' + NET_SER.map(function (s) {
+      var m = M.c[s.k], on = !(ui.netHidden || {})[s.k];
+      var v = M.pend ? '…' : m.v == null ? '—' : fInt(m.v);
+      var goal = m.ok == null ? '<span class="cf-goal-t">objectif ' + esc(m.goal) + '</span>' : '<span class="cf-goal-t ' + (m.ok ? 'is-ok' : 'is-ko') + '">objectif ' + esc(m.goal) + '</span>';
+      return '<button type="button" class="cf-icard ' + (on ? 'is-on' : 'is-off') + '" style="--c:' + s.c + '" data-act="net-ser" data-k="' + s.k + '" aria-pressed="' + on + '">'
+        + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(s.ic, 14) + '</span><span class="cf-icard-l">' + esc(s.label) + '</span>'
+        + '<span class="cf-icard-ck" aria-hidden="true">' + (on ? svg('M5 12l5 5L20 7', 10) : '') + '</span></span>'
+        + '<span class="cf-icard-v' + (m.v == null && !M.pend ? ' is-na' : '') + '">' + esc(v) + '</span>'
+        + '<span class="cf-icard-s">' + esc(M.pend ? 'chargement' : m.rateTxt) + '</span>'
+        + '<span class="cf-icard-x">' + goal + '</span></button>';
+    }).join('') + '</div>';
+  }
+  function netChartHTML(M) {
+    var S = M.S, n = S.labels.length, hid = ui.netHidden || {}, act = NET_SER.filter(function (s) { return !hid[s.k]; });
+    var max = 1;
+    act.forEach(function (s) { S[s.k].forEach(function (v) { if (v != null && Math.abs(v) > max) max = Math.abs(v); }); });
+    var top = Math.max(2, Math.ceil(Math.log10(max + 1)));
+    var Yf = function (v) { return 300 - (Math.log10(Math.max(0, v) + 1) / top) * 290; };
+    var Xp = function (i) { return n > 1 ? i / (n - 1) * 1000 : 500; };
+    var paths = act.map(function (s) {
+      var d = '', pen = false;
+      S[s.k].forEach(function (v, i) { if (v == null) { pen = false; return; } d += (pen ? ' L' : ' M') + Xp(i).toFixed(1) + ',' + Yf(v).toFixed(1); pen = true; });
+      return d ? '<path d="' + d.trim() + '" style="stroke:' + s.c + '" fill="none" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' : '';
+    }).join('');
+    var ticks = []; for (var e = 0; e <= top; e++) { var tv = e ? Math.pow(10, e) : 0; ticks.push({ label: e ? fK(tv) : '0', top: Yf(tv) / 3 }); }
+    var y = ticks.map(function (t) { return '<span style="top:' + t.top.toFixed(2) + '%">' + esc(t.label) + '</span>'; }).join('');
+    var grid = ticks.map(function (t, i) { return '<i class="cf-evo-grid' + (i ? '' : ' is-zero') + '" style="top:' + t.top.toFixed(2) + '%"></i>'; }).join('');
+    var xi = [0, Math.round((n - 1) / 4), Math.round((n - 1) / 2), Math.round(3 * (n - 1) / 4), n - 1].filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var xl = xi.map(function (i) { return '<span>' + esc(dm(ymdDate(S.labels[i]))) + '</span>'; }).join('');
+    var lg = NET_SER.map(function (s) {
+      var m = M.c[s.k], v = s.k === 'subs' ? (m.lg == null ? '—' : fSigned(m.lg)) : (m.v == null ? '—' : fInt(m.v));
+      return '<div class="cf-evo-lg' + (hid[s.k] ? ' is-off' : '') + '"><span class="cf-sq" style="background:' + s.c + '"></span><b>' + esc(v) + '</b><span>' + esc(s.k === 'subs' ? 'Abonnés (gain)' : s.label) + '</span></div>';
+    }).join('');
+    var P = NET_RANGES.filter(function (r) { return r[0] === M.R; })[0];
+    return '<div class="cf-evo"><div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(P[1]) + '</h3></div>'
+      + '<div class="cf-evo-body"><div class="cf-evo-y" aria-hidden="true">' + y + '</div><div class="cf-evo-main">'
+      + '<div class="cf-evo-plot" role="img" aria-label="Vidéos publiées par jour, échelle logarithmique">' + grid
+      + '<svg class="cf-evo-svg" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg></div>'
+      + '<div class="cf-evo-x" aria-hidden="true">' + xl + '</div>'
+      + '<div class="cf-meta cf-evo-note">un point par jour · vidéos, vues, likes et commentaires des vidéos publiées ce jour-là · abonnés : gain du jour · échelle logarithmique</div>'
+      + '</div><div class="cf-evo-legend"><div class="cf-over">total période</div>' + lg + '</div></div></div>';
+  }
+  // « A marché / n'a pas marché » : vues de la vidéo comparées à la médiane de SA plateforme (vidéos chargées).
+  function netVerdictHTML(M) {
+    var med = {};
+    ['yt', 'ig'].forEach(function (pf) {
+      var v = M.vids.filter(function (x) { return x.pf === pf && x.views != null; }).map(function (x) { return x.views; }).sort(function (a, b) { return a - b; });
+      med[pf] = v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null;
+    });
+    var list = M.inP.slice(0, ui.netAll ? 60 : 10);
+    if (!list.length) return '<div class="cf-empty-s cf-dashed">Aucune vidéo publiée sur la période.</div>';
+    var rows = list.map(function (v) {
+      var m = med[v.pf], ok = v.views != null && m != null ? v.views >= m : null, pf = NET_PF.filter(function (p) { return p.k === v.pf; })[0];
+      var th = safeUrl(v.thumb || ''), u = safeUrl(v.url || '');
+      return '<div class="cf-net-v">'
+        + (th ? '<img class="cf-net-th" src="' + esc(th) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="cf-net-th"></span>')
+        + '<span class="cf-net-pfb" style="--c:' + pf.c + '">' + svg(pf.ic, 12) + esc(pf.label) + '</span>'
+        + '<span class="cf-meta">' + esc(dm(new Date(v.ms))) + '</span>'
+        + '<span class="cf-net-n">' + esc((v.views == null ? '—' : fInt(v.views)) + ' vues · ' + (v.likes == null ? '—' : fInt(v.likes)) + ' likes · ' + (v.comments == null ? '—' : fInt(v.comments)) + ' comm.') + '</span>'
+        + (ok == null ? '' : '<span class="cf-net-verdict ' + (ok ? 'is-ok' : 'is-ko') + '" title="' + esc('médiane ' + pf.label + ' : ' + fInt(m) + ' vues') + '">' + (ok ? 'a marché' : 'n’a pas marché') + '</span>')
+        + (u ? '<a class="cf-net-go" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la vidéo">' + svg(IC.arrow, 13) + '</a>' : '')
+        + '</div>';
+    }).join('');
+    var more = M.inP.length > 10 ? '<button type="button" class="cf-btn is-sm" data-act="net-all">' + (ui.netAll ? 'Réduire' : 'Voir les ' + M.inP.length + ' vidéos') + '</button>' : '';
+    return '<div class="cf-net-list"><div class="cf-over">vidéos de la période · a marché = vues ≥ médiane de sa plateforme</div>' + rows + more + '</div>';
+  }
+  function homeNetHTML() {
+    var M = netModel();
+    var seg = NET_RANGES.map(function (r) { var on = r[0] === M.R; return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="net-range" data-k="' + r[0] + '" aria-pressed="' + on + '">' + esc(r[1]) + '</button>'; }).join('');
+    return '<section class="cf-card cf-net" aria-labelledby="cfNetT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfNetT">Réseaux</h2>'
+      + '<span class="cf-meta">coche les réseaux à additionner · Instagram = tous nos comptes</span></div>'
+      + '<div class="cf-seg" role="group" aria-label="Période">' + seg + '</div></div>'
+      + (M.err ? '<div class="cf-empty-s">' + esc(M.err) + '</div>' : '')
+      + netPfHTML(M) + netCardsHTML(M) + netChartHTML(M) + netVerdictHTML(M) + '</section>';
   }
   // Likes des reels publiés sur la période + like rate moyen (le MÊME calcul que la carte Objectif « Like rate » de l'onglet
   // Insight : goalValue) + l'objectif, vert s'il est atteint, rouge sinon.
@@ -3431,6 +3589,10 @@
       else if (act === 'dm-all-posts') { ui.dmAllPosts = !ui.dmAllPosts; render(); }
       else if (act === 'dm-post') openPostById(el.getAttribute('data-pid'), el);
       else if (act === 'home-go') homeGo(el.getAttribute('data-tab'));
+      else if (act === 'net-pf') netToggle(el.getAttribute('data-k'));
+      else if (act === 'net-range') { ui.netRange = el.getAttribute('data-k'); if (ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange); schedule(); }
+      else if (act === 'net-ser') { ui.netHidden = ui.netHidden || {}; var nk = el.getAttribute('data-k'); ui.netHidden[nk] = !ui.netHidden[nk]; schedule(); }
+      else if (act === 'net-all') { ui.netAll = !ui.netAll; schedule(); }
       else if (act === 'ta-set') { ui.ta[el.getAttribute('data-k')] = el.getAttribute('data-v'); schedule(); }
       else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); }
       // ── onglet Production ──

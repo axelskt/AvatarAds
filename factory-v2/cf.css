@@ -1283,3 +1283,39 @@ i.is-gap { background: var(--cf-ink); }
 .cf-yt-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; min-width: 0; }
 .cf-yt-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .cf-yt-n { color: var(--cf-mute); white-space: nowrap; }
+/* Réseaux (Accueil, 29/09) : YouTube + Instagram + TikTok cochables, 5 chiffres avec objectif, courbe, verdict par vidéo */
+.cf-net { gap: 16px; }
+.cf-net .cf-card-h { align-items: center; }
+.cf-acards.cf-net-pf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cf-net-cards { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.cf-net-list { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--cf-line); padding-top: 12px; }
+.cf-net-list > .cf-btn { align-self: center; margin-top: 4px; }
+.cf-net-v { display: grid; grid-template-columns: 34px auto auto 1fr auto auto; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: var(--cf-tile); min-width: 0; }
+.cf-net-th { width: 34px; height: 46px; border-radius: 6px; object-fit: cover; background: #e9e3da; display: block; }
+.cf-net-pfb { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--c); white-space: nowrap; }
+.cf-net-n { font-size: 13px; font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cf-net-verdict { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.cf-net-verdict.is-ok { color: #1f7a45; background: oklch(0.95 0.04 155); }
+.cf-net-verdict.is-ko { color: #c62828; background: oklch(0.95 0.04 25); }
+.cf-net-go { color: var(--cf-mute); display: inline-flex; padding: 4px; }
+@media (max-width: 900px) { .cf-net-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 639px) {
+  .cf-acards.cf-net-pf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cf-net-pf .cf-icard { padding: 10px; }
+  .cf-net-pf .cf-icard-v { font-size: 20px; }
+  .cf-net-pf .cf-acard-unit { display: none; }
+  .cf-net-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cf-net-v { grid-template-columns: 34px 1fr auto; row-gap: 2px; }
+  .cf-net-v .cf-net-pfb { grid-column: 2; }
+  .cf-net-v .cf-meta { grid-column: 3; justify-self: end; }
+  .cf-net-v .cf-net-n { grid-column: 2 / 4; }
+  .cf-net-v .cf-net-verdict { grid-column: 2; justify-self: start; }
+  .cf-net-v .cf-net-go { grid-column: 3; justify-self: end; }
+  .cf-net-v .cf-net-th { grid-row: 1 / 4; }
+}
+.cf-card-h > .cf-seg { flex-direction: row; gap: 2px; }
+@media (max-width: 639px) {
+  .cf-net-pf .cf-icard-ck { display: none; }
+  .cf-net-pf .cf-icard-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cf-net-pf .cf-icard-tile { flex: none; }
+}

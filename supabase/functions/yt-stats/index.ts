@@ -79,7 +79,15 @@ Deno.serve(async (req) => {
       },
       videos, totals: { views: sum('views'), likes: sum('likes'), comments: sum('comments'), count: videos.length },
       at: new Date().toISOString(),
+      history: [] as { day: string, subscribers: number | null, views: number | null, videos: number | null }[],
     }
+    // Relevé du jour (Europe/Paris) puis historique : la seule façon d'avoir les abonnés dans le temps avec une clé publique.
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
+    await svc.from('social_daily').upsert({ platform: 'youtube', account: handle, day, subscribers: body.channel.subscribers,
+      views: body.channel.views, videos: body.channel.videos, updated_at: body.at }, { onConflict: 'platform,account,day' })
+    const { data: hist } = await svc.from('social_daily').select('day, subscribers, views, videos')
+      .eq('platform', 'youtube').eq('account', handle).order('day').limit(800)
+    body.history = (hist || []) as typeof body.history
     cache.set(handle, { at: Date.now(), body })
     return json(body)
   } catch (e) {

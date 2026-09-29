@@ -529,8 +529,13 @@
           channel: { title: str(b.channel.title), handle: str(b.channel.handle), subscribers: num(b.channel.subscribers), views: num(b.channel.views), videos: num(b.channel.videos) },
           totals: { views: num(b.totals && b.totals.views), likes: num(b.totals && b.totals.likes), comments: num(b.totals && b.totals.comments), count: num(b.totals && b.totals.count) },
           videos: (Array.isArray(b.videos) ? b.videos : []).slice(0, 50).map(function (v) {
-            return { id: str(v.id), title: str(v.title), published_at: str(v.published_at), views: num(v.views), likes: num(v.likes), comments: num(v.comments) };
-          })
+            var t = str(v.thumb);
+            return { id: str(v.id), title: str(v.title), published_at: str(v.published_at), views: num(v.views), likes: num(v.likes), comments: num(v.comments),
+              thumb: t && /^https:\/\/i\.ytimg\.com\//.test(t) ? t : null };
+          }),
+          history: (Array.isArray(b.history) ? b.history : []).map(function (h) {
+            return { day: str(h.day), subscribers: num(h.subscribers), views: num(h.views), videos: num(h.videos) };
+          }).filter(function (h) { return /^\d{4}-\d{2}-\d{2}$/.test(h.day || ''); })
         } };
       } catch (e) {
         patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
