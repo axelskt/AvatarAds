@@ -1322,3 +1322,9 @@ i.is-gap { background: var(--cf-ink); }
 .cf-cap .cf-capmodes-n { flex-wrap: wrap; row-gap: 0; }
 .cf-cap .cf-capmodes-n .cf-meta { font-weight: 400; font-size: 11px; }
 .cf-cap .cf-capmode-v b { font-size: 15px; }
+.cf-net-cols > .cf-net-more { grid-column: 1 / -1; justify-self: center; }
+.cf-stiles-b { margin-top: 4px; }
+.cf-stodo { gap: 4px; }
+.cf-stodo-l { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; font-family: var(--cf-mono); font-size: 11px; color: var(--cf-mute); }
+.cf-stodo-l > span { display: flex; justify-content: space-between; gap: 8px; }
+.cf-stodo-l b { color: var(--cf-ink); font-family: var(--cf-sans); font-size: 12px; font-variant-numeric: tabular-nums; }

@@ -509,7 +509,6 @@
     var S = CF.acct.ig[HOME_RANGE], off = S.kind === 'disconnected', X = model(S, S.data, off, HOME_RANGE);
     var DS = CF.dm[HOME_DM], Y = dmModel(DS, DS.data, HOME_DM);
     return '<section class="cf-title"><h1>Vue d’ensemble</h1><div class="cf-sub">' + esc(longDate(new Date())) + '</div>'
-      + '<div class="cf-hig is-' + ig.tone + '" data-ig="' + ig.key + '"><span class="cf-dot" aria-hidden="true"></span><span>' + esc(ig.line) + '</span></div>'
       + '</section>'
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
@@ -798,7 +797,7 @@
   function netVerdictHTML(M) {
     var L = M.inP.filter(function (v) { return v.views != null; }).slice().sort(function (a, b) { return b.views - a.views; });
     if (!L.length) return '<div class="cf-empty-s cf-dashed">Aucune vidéo publiée sur la période.</div>';
-    var n = Math.min(5, Math.ceil(L.length / 2)), top = L.slice(0, n), low = L.slice(-n).reverse();
+    var half = Math.ceil(L.length / 2), n = Math.min(ui.netN || 5, half), top = L.slice(0, n), low = L.slice(-n).reverse();
     function row(v, i) {
       var pf = NET_PF.filter(function (p) { return p.k === v.pf; })[0], th = safeUrl(v.thumb || ''), u = safeUrl(v.url || '');
       var rate = v.views ? fDec((v.likes || 0) / v.views * 100, 1) + NB + '% likes' : '';
@@ -810,7 +809,8 @@
         + '</div>';
     }
     return '<div class="cf-net-cols"><div class="cf-net-col"><div class="cf-over is-ok">les plus performantes</div>' + top.map(row).join('') + '</div>'
-      + '<div class="cf-net-col"><div class="cf-over is-ko">les moins performantes</div>' + low.map(row).join('') + '</div></div>';
+      + '<div class="cf-net-col"><div class="cf-over is-ko">les moins performantes</div>' + low.map(row).join('') + '</div>'
+      + (n < half ? '<button type="button" class="cf-btn is-sm cf-net-more" data-act="net-more">Voir plus</button>' : '') + '</div>';
   }
   function homeNetHTML() {
     var M = netModel();
@@ -1136,7 +1136,17 @@
       + '<div class="cf-sflow-b"><i class="' + (need != null && pd != null && pd >= need ? 'is-ok' : '') + '" style="width:' + bar.toFixed(1) + '%"></i></div>'
       + (need != null && pd != null ? (pd >= need ? '<div class="cf-sflow-m is-ok">La production suit le rythme de publication.</div>'
         : '<div class="cf-sflow-m">' + esc('Il manque ' + fRate2(need - pd) + ' ' + plural(need - pd, 'vidéo') + ' par jour.') + '</div>') : '') + '</div>';
-    return '<section class="cf-card cf-stock" data-block="stock">' + head + '<div class="cf-stiles is-2">' + tiles + '</div>' + flow + '</section>';
+    // briques restantes à générer (clips pas encore faits, par format) · jours de contenu si tout le possible était généré
+    var G = genVideos(M), NAME = { hook: 'Hooks', liaison: 'Liaisons', cta: 'CTA', 'texte-choc': 'Textes choc' }, left = [];
+    if (G) Object.keys(G.kinds).forEach(function (k) { G.kinds[k].forEach(function (x) { var r = x.total - x.done; if (r > 0) left.push({ t: NAME[k] + ' · ' + FMT_SHORT[x.f], r: r }); }); });
+    left.sort(function (a, b) { return b.r - a.r; });
+    var sumLeft = left.reduce(function (a, x) { return a + x.r; }, 0);
+    var todo = '<div class="cf-stile cf-stodo" data-s="left"><b class="' + (G ? '' : 'is-na') + '">' + esc(G ? fInt(sumLeft) : (wait || '—')) + '</b><span class="cf-stile-l">Briques restantes à générer</span>'
+      + (G ? (left.length ? '<span class="cf-stodo-l">' + left.map(function (x) { return '<span><span>' + esc(x.t) + '</span><b>' + esc(fInt(x.r)) + '</b></span>'; }).join('') + '</span>' : '<span class="cf-stile-s">tout est généré</span>') : '<span class="cf-stile-s">' + esc(M.why || 'chargement') + '</span>') + '</div>';
+    var pd2 = M.cap ? M.cap.total / GOAL.perDay.target : null;
+    var poss = tile('possible', wait || (pd2 == null ? '—' : fDays(pd2)), 'Jours de contenu possibles', M.cap ? 'si les ' + fInt(M.cap.total) + ' vidéos possibles étaient générées · ' + GOAL.perDay.target + ' posts' + NB + '/' + NB + 'jour' : (M.why || ''));
+    return '<section class="cf-card cf-stock" data-block="stock">' + head + '<div class="cf-stiles is-2">' + tiles + '</div>' + flow
+      + '<div class="cf-stiles is-2 cf-stiles-b">' + todo + poss + '</div></section>';
   }
 
   // ── 01 · Briques qui manquent, classées par impact (vidéos finales) ──
@@ -2789,8 +2799,7 @@
   function dmAcctHTML(D) {
     var st = dmAcctState(), A = CF.acct.accounts;
     var notes = [];
-    if (D) notes.push(D.lastAt ? 'dernier évènement Auto-DM ' + ago(D.lastAt) : 'aucun évènement Auto-DM enregistré');
-    if (D) notes.push(!D.cron ? 'relance automatique : état du cron illisible' : D.cron.active ? 'relance automatique active (' + cronTxt(D.cron.schedule) + ')' : 'relance automatique : cron INACTIF');
+    if (D && !D.cron) notes.push('relance automatique : état du cron illisible');
     if (A.state === 'error') notes.push('comptes reliés : ' + A.error);
     return igSelHTML(!!st.pause)
       + (notes.length ? '<div class="cf-acct-why cf-acct2-notes">' + esc(notes.join(' · ')) + '</div>' : '')
@@ -3564,7 +3573,7 @@
       else if (act === 'net-pf') netToggle(el.getAttribute('data-k'));
       else if (act === 'net-range') { ui.netRange = el.getAttribute('data-k'); if (ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange); schedule(); }
       else if (act === 'net-ser') { ui.netHidden = ui.netHidden || {}; var nk = el.getAttribute('data-k'); ui.netHidden[nk] = !ui.netHidden[nk]; schedule(); }
-      else if (act === 'net-all') { ui.netAll = !ui.netAll; schedule(); }
+      else if (act === 'net-more') { ui.netN = (ui.netN || 5) + 10; schedule(); }
       else if (act === 'ta-set') { ui.ta[el.getAttribute('data-k')] = el.getAttribute('data-v'); schedule(); }
       else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); }
       // ── onglet Production ──
