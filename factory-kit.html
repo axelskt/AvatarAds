@@ -58,9 +58,14 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 .tabs{display:flex;gap:6px;margin:14px 0 0;flex-wrap:wrap}
 .tab{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:8px 14px;font-size:13.5px;font-weight:600}
 .tab[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
-.lots{display:flex;flex-direction:column;gap:8px;width:100%}
-.lot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.lot b{min-width:130px;font-size:13.5px}
+.send{margin:14px 0 4px;border:1px solid var(--line);border-radius:var(--r);background:var(--card);overflow:hidden}
+.send-h{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;flex-wrap:wrap}
+.send-h b{display:block;font-size:16px}
+.send-h .meta{margin-top:2px}
+.lot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.lot .l{font-weight:650;font-size:14px}
+.lot .l span{color:var(--dim);font-weight:500;margin-left:6px}
+.lot .b{display:flex;gap:8px;flex-wrap:wrap}
 .post .act{display:flex;flex-direction:column;gap:6px}
 @media (max-width:640px){
   .post{grid-template-columns:24px 56px 1fr}
@@ -145,6 +150,20 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   function fileName(p) {
     return pad(num(p)) + '-' + p.account + '-' + fmt(p.scheduled_at, { weekday: 'short' }).replace('.', '') + '-' + fmt(p.scheduled_at, { day: '2-digit' }) + '-' + hour(p.scheduled_at).replace(':', 'h') + '.mp4';
   }
+  // Photos (iPhone) trie les vidéos reçues par leur date de création interne (atome mvhd du MP4), pas par nom de fichier :
+  // on la réécrit avant l'envoi, n°01 la plus ancienne puis une minute d'écart, toutes « récentes » (en bas de la galerie).
+  function stampDate(buf, when) {
+    var u = new Uint8Array(buf), dv = new DataView(buf), t = Math.floor(when / 1000) + 2082844800;   // secondes depuis 1904
+    for (var i = 4; i < u.length - 24; i++) {
+      if (u[i] === 0x6d && u[i + 1] === 0x76 && u[i + 2] === 0x68 && u[i + 3] === 0x64) {        // 'mvhd'
+        var o = i + 4, v = u[o];
+        if (v === 1) { dv.setUint32(o + 4, 0); dv.setUint32(o + 8, t); dv.setUint32(o + 12, 0); dv.setUint32(o + 16, t); }
+        else { dv.setUint32(o + 4, t); dv.setUint32(o + 8, t); }
+        break;
+      }
+    }
+    return buf;
+  }
   function lots() { var t = todo(), out = []; for (var i = 0; i < t.length; i += LOT) out.push(t.slice(i, i + LOT)); return out; }
   function lotKey(list) { return S.acct + ':' + list.map(function (p) { return p.id; }).join(','); }
 
@@ -159,7 +178,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       for (var j = 0; j < list.length; j++) {
         var r = await fetch(list[j].video_url);
         if (!r.ok) throw new Error('vidéo ' + pad(num(list[j])) + ' : HTTP ' + r.status);
-        P.files.push(new File([await r.blob()], fileName(list[j]), { type: 'video/mp4' }));
+        var when = Date.now() - (list.length - j) * 60000;
+        P.files.push(new File([stampDate(await r.arrayBuffer(), when)], fileName(list[j]), { type: 'video/mp4' }));
         P.got = j + 1;
         render();
       }
@@ -233,20 +253,20 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   }
 
   function bulkHTML() {
-    var L = lots();
+    var L = lots(), T = todo();
     if (S.view !== 'todo' || !L.length) return '';
     var rows = L.map(function (list, i) {
-      var P = S.pack[lotKey(list)], a = pad(num(list[0])), b = pad(num(list[list.length - 1])), btns;
-      if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep" data-i="' + i + '">' + IC.dl + 'Préparer</button>';
+      var P = S.pack[lotKey(list)], btns;
+      if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep" data-i="' + i + '">' + IC.dl + (P ? 'Réessayer' : 'Préparer l’envoi') + '</button>';
       else if (P.state === 'loading') btns = '<button type="button" class="btn dark" disabled>Préparation ' + P.got + ' / ' + P.total + '…</button>';
-      else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + 'Partager (AirDrop)</button>'
+      else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + 'Envoyer en AirDrop</button>'
         + '<button type="button" class="btn ghost" data-act="dlall" data-i="' + i + '">' + IC.dl + 'Télécharger</button>';
-      return '<div class="lot"><b>Lot ' + (i + 1) + ' · n° ' + a + ' à ' + b + '</b>' + btns
-        + (P && P.state === 'error' ? '<span class="meta">Échec : ' + esc(P.error) + '</span>' : '') + '</div>';
+      return '<div class="lot"><span class="l">' + (L.length > 1 ? 'Lot ' + (i + 1) + ' · ' : '') + 'n° ' + pad(num(list[0])) + ' → ' + pad(num(list[list.length - 1]))
+        + '<span>' + list.length + ' vidéo' + (list.length > 1 ? 's' : '') + (P && P.state === 'error' ? ' · échec : ' + esc(P.error) : '') + '</span></span><span class="b">' + btns + '</span></div>';
     }).join('');
-    return '<div class="bulk"><span class="meta" style="flex-basis:100%">' + todo().length + ' vidéos à programmer sur @' + S.acct
-      + ', par lots de ' + LOT + ' pour AirDrop. Fichiers nommés dans l’ordre (01, 02…) comme ci-dessous.</span><div class="lots">' + rows + '</div>'
-      + '<button type="button" class="btn ok" data-act="alldone">' + IC.check + 'Tout est programmé</button></div>';
+    return '<div class="send"><div class="send-h"><div><b>' + T.length + ' vidéo' + (T.length > 1 ? 's' : '') + ' à programmer</b>'
+      + '<div class="meta">Elles arrivent sur l’iPhone dans l’ordre de la liste' + (L.length > 1 ? ', par lots de ' + LOT : '') + '.</div></div>'
+      + '<button type="button" class="btn ghost" data-act="alldone">' + IC.check + 'Tout est programmé</button></div>' + rows + '</div>';
   }
 
   function postHTML(p) {
