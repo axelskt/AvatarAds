@@ -758,37 +758,59 @@
       return '<div class="cf-evo-lg' + (hid[s.k] ? ' is-off' : '') + '"><span class="cf-sq" style="background:' + s.c + '"></span><b>' + esc(v) + '</b><span>' + esc(s.k === 'subs' ? 'Abonnés (gain)' : s.label) + '</span></div>';
     }).join('');
     var P = NET_RANGES.filter(function (r) { return r[0] === M.R; })[0];
+    netCur = { S: S, n: n, act: act, Y: Yf };
     return '<div class="cf-evo"><div class="cf-evo-h"><h3 class="cf-h2">Évolution · ' + esc(P[1]) + '</h3></div>'
       + '<div class="cf-evo-body"><div class="cf-evo-y" aria-hidden="true">' + y + '</div><div class="cf-evo-main">'
-      + '<div class="cf-evo-plot" role="img" aria-label="Vidéos publiées par jour, échelle logarithmique">' + grid
-      + '<svg class="cf-evo-svg" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg></div>'
+      + '<div class="cf-evo-plot" data-chart="net" role="img" aria-label="Vidéos publiées par jour, échelle logarithmique">' + grid
+      + '<svg class="cf-evo-svg" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true" focusable="false">' + paths + '</svg>'
+      + '<div class="cf-evo-hover" hidden></div></div>'
       + '<div class="cf-evo-x" aria-hidden="true">' + xl + '</div>'
       + '<div class="cf-meta cf-evo-note">un point par jour · vidéos, vues, likes et commentaires des vidéos publiées ce jour-là · abonnés : gain du jour · échelle logarithmique</div>'
       + '</div><div class="cf-evo-legend"><div class="cf-over">total période</div>' + lg + '</div></div></div>';
   }
-  // « A marché / n'a pas marché » : vues de la vidéo comparées à la médiane de SA plateforme (vidéos chargées).
-  function netVerdictHTML(M) {
-    var med = {};
-    ['yt', 'ig'].forEach(function (pf) {
-      var v = M.vids.filter(function (x) { return x.pf === pf && x.views != null; }).map(function (x) { return x.views; }).sort(function (a, b) { return a - b; });
-      med[pf] = v.length ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : null;
+  // Bulle de survol de la courbe Réseaux : valeur du jour + cumul depuis le début de la période.
+  var netCur = null;
+  function netHover(plot, clientX) {
+    var ch = netCur;
+    if (!ch || ch.n < 1) return;
+    var r = plot.getBoundingClientRect();
+    if (!r.width) return;
+    var i = Math.max(0, Math.min(ch.n - 1, ch.n > 1 ? Math.round((clientX - r.left) / r.width * (ch.n - 1)) : 0));
+    var box = plot.querySelector('.cf-evo-hover');
+    if (!box || (box._i === i && !box.hidden)) return;
+    box._i = i;
+    var x = ch.n > 1 ? i / (ch.n - 1) * 100 : 50, dots = '', rows = '';
+    ch.act.forEach(function (s) {
+      var arr = ch.S[s.k], v = arr[i], cum = 0;
+      for (var q = 0; q <= i; q++) cum += arr[q] || 0;
+      var fmtV = function (n) { return s.k === 'subs' ? fSigned(n) : fInt(n); };
+      if (v != null) dots += '<span class="cf-evo-dot" style="left:' + x + '%;top:' + (ch.Y(v) / 3).toFixed(2) + '%;background:' + s.c + '"></span>';
+      rows += '<div class="cf-evo-tr"><span><span class="cf-sq" style="background:' + s.c + '"></span>' + esc(s.label) + '</span><span>' + esc(v == null ? '—' : fmtV(v)) + '</span><b>' + esc(fmtV(cum)) + '</b></div>';
     });
-    var list = M.inP.slice(0, ui.netAll ? 60 : 10);
-    if (!list.length) return '<div class="cf-empty-s cf-dashed">Aucune vidéo publiée sur la période.</div>';
-    var rows = list.map(function (v) {
-      var m = med[v.pf], ok = v.views != null && m != null ? v.views >= m : null, pf = NET_PF.filter(function (p) { return p.k === v.pf; })[0];
-      var th = safeUrl(v.thumb || ''), u = safeUrl(v.url || '');
-      return '<div class="cf-net-v">'
+    var d = ymdDate(ch.S.labels[i]);
+    box.innerHTML = '<span class="cf-evo-vl" style="left:' + x + '%"></span>' + dots
+      + '<div class="cf-evo-tip"><div class="cf-evo-tr is-h"><span>' + esc(d.toLocaleDateString('fr-FR', { weekday: 'short' }) + ' ' + dm(d)) + '</span><span>jour</span><span>cumul</span></div>' + rows + '</div>';
+    box.hidden = false;
+    var tip = box.querySelector('.cf-evo-tip'), W = r.width, w = tip.offsetWidth, px = x / 100 * W;
+    tip.style.left = Math.max(0, Math.min(W - w, px + 12 + w <= W ? px + 12 : px - 12 - w)) + 'px';
+  }
+  // Les vidéos de la période classées par vues : les plus performantes à gauche, les moins performantes à droite.
+  function netVerdictHTML(M) {
+    var L = M.inP.filter(function (v) { return v.views != null; }).slice().sort(function (a, b) { return b.views - a.views; });
+    if (!L.length) return '<div class="cf-empty-s cf-dashed">Aucune vidéo publiée sur la période.</div>';
+    var n = Math.min(5, Math.ceil(L.length / 2)), top = L.slice(0, n), low = L.slice(-n).reverse();
+    function row(v, i) {
+      var pf = NET_PF.filter(function (p) { return p.k === v.pf; })[0], th = safeUrl(v.thumb || ''), u = safeUrl(v.url || '');
+      var rate = v.views ? fDec((v.likes || 0) / v.views * 100, 1) + NB + '% likes' : '';
+      return '<div class="cf-net-v"><span class="cf-net-rk">#' + (i + 1) + '</span>'
         + (th ? '<img class="cf-net-th" src="' + esc(th) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="cf-net-th"></span>')
-        + '<span class="cf-net-pfb" style="--c:' + pf.c + '">' + svg(pf.ic, 12) + esc(pf.label) + '</span>'
-        + '<span class="cf-meta">' + esc(dm(new Date(v.ms))) + '</span>'
-        + '<span class="cf-net-n">' + esc((v.views == null ? '—' : fInt(v.views)) + ' vues · ' + (v.likes == null ? '—' : fInt(v.likes)) + ' likes · ' + (v.comments == null ? '—' : fInt(v.comments)) + ' comm.') + '</span>'
-        + (ok == null ? '' : '<span class="cf-net-verdict ' + (ok ? 'is-ok' : 'is-ko') + '" title="' + esc('médiane ' + pf.label + ' : ' + fInt(m) + ' vues') + '">' + (ok ? 'a marché' : 'n’a pas marché') + '</span>')
+        + '<span class="cf-net-b"><b>' + esc(fInt(v.views)) + ' vues</b><span class="cf-meta">' + esc([(v.likes == null ? '—' : fInt(v.likes)) + ' likes', (v.comments == null ? '—' : fInt(v.comments)) + ' comm.', rate].filter(Boolean).join(' · ')) + '</span>'
+        + '<span class="cf-net-pfb" style="--c:' + pf.c + '">' + svg(pf.ic, 12) + esc(pf.label + ' · ' + dm(new Date(v.ms))) + '</span></span>'
         + (u ? '<a class="cf-net-go" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la vidéo">' + svg(IC.arrow, 13) + '</a>' : '')
         + '</div>';
-    }).join('');
-    var more = M.inP.length > 10 ? '<button type="button" class="cf-btn is-sm" data-act="net-all">' + (ui.netAll ? 'Réduire' : 'Voir les ' + M.inP.length + ' vidéos') + '</button>' : '';
-    return '<div class="cf-net-list"><div class="cf-over">vidéos de la période · a marché = vues ≥ médiane de sa plateforme</div>' + rows + more + '</div>';
+    }
+    return '<div class="cf-net-cols"><div class="cf-net-col"><div class="cf-over is-ok">les plus performantes</div>' + top.map(row).join('') + '</div>'
+      + '<div class="cf-net-col"><div class="cf-over is-ko">les moins performantes</div>' + low.map(row).join('') + '</div></div>';
   }
   function homeNetHTML() {
     var M = netModel();
@@ -926,20 +948,12 @@
     M.toGen = M.cap ? M.cap.remaining : null;
     // production / jour = vidéos finales rendues (lignes factory_qc) par jour sur 30 j
     M.prodDay = D ? D.qc.list.filter(function (q) { return q.created != null && Date.now() - q.created <= 30 * 864e5; }).length / 30 : null;
-    var d = { v: null, txt: '—', sub: '', wait: false };
+    // Jours de contenu (Axel 29/09 : simple) = vidéos PRÊTES (en stock) ÷ l'objectif de 5 posts / jour. Les vidéos seulement
+    // « possibles » n'entrent plus dedans : elles donnaient des milliers de jours qui ne veulent rien dire.
+    var d = { v: null, txt: '—', sub: '', wait: false }, goalDay = GOAL.perDay.target;
     if (M.pending) { d.txt = '…'; d.sub = 'chargement'; d.wait = true; }
     else if (!D) d.sub = M.why;
-    else if (!M.cap) d.sub = M.ruleWhy;
-    else if (off) d.sub = 'Instagram déconnecté : rythme de publication inconnu · ' + TRACK_NA;
-    else if (M.rate.loading) { d.txt = '…'; d.sub = 'lecture des publications Instagram'; d.wait = true; }
-    else if (M.rate.v == null) d.sub = 'rythme de publication inconnu : ' + (M.rate.na || 'publications indisponibles');
-    else if (M.rate.v === 0) d.sub = 'aucun reel publié sur 30' + NB + 'j : pas de rythme, pas de durée · ' + TRACK_NA;
-    else {
-      var vids = M.stock + M.toGen;
-      d.v = vids / M.rate.v; d.txt = fDays(d.v); d.vids = vids;
-      d.sub = 'au rythme de ' + fRate2(M.rate.v) + ' post' + NB + '/' + NB + 'jour';
-      if (!vids) { d.txt = '0' + NB + 'j'; d.sub = 'aucune vidéo prête ni à générer'; }
-    }
+    else { d.v = M.stock / goalDay; d.txt = M.stock ? fDays(d.v) : '0' + NB + 'j'; d.sub = 'vidéos prêtes ÷ ' + goalDay + ' posts' + NB + '/' + NB + 'jour'; }
     M.days = d;
     pmCache = { ver: CF.ver, m: M };
     return M;
@@ -1012,11 +1026,11 @@
   function prodHTML() {
     var M = prodModel();
     return '<div class="cf-prod">' + prodTitleHTML(M) + prodBannerHTML(M)
-      + phead('01', 'Vue d’ensemble', 'capacité · contenu posté · stock · briques manquantes')
+      + phead('01', 'Vue d’ensemble', 'vidéos possibles · contenu posté · stock · briques manquantes')
       + '<div class="cf-prow2 is-a">' + capHTML(M) + postedHTML() + '</div>'
       + '<div class="cf-prow2 is-b">' + stockHTML(M) + missHTML(M) + '</div>'
       + phead('02', 'Fabrication', '')
-      + pipeHTML(M) + cycleHTML(M) + qcFileHTML(M)
+      + pipeHTML(M) + qcFileHTML(M)
       + '<div class="cf-prow2 is-b">' + perfCardHTML('top') + perfCardHTML('low') + '</div>'
       + phead('03', 'Briques', 'bibliothèque · assemblages · fraîcheur')
       + bricksTabHTML(M) + '</div>';
@@ -1048,45 +1062,22 @@
 
   // ── 01 · Capacité de création : vidéos finales générées / possibles (jauge de la maquette) + les 4 nombres par voix ──
   function capHTML(M) {
-    var head = chead('Capacité de création', 'vidéos finales · ' + (M.cap && M.cap.modeKeys ? capModes(M.cap).length + ' modes' : '2 voix'));
+    var head = chead('Vidéos possibles', 'avec les briques qu’on a aujourd’hui');
     if (!M.cap) return '<section class="cf-card cf-cap" data-block="cap">' + head + naBody(M) + '</section>';
-    var c = M.cap, P = M.capPending, gen = M.capGen;
-    var pct = c.total ? gen / c.total * 100 : null, pAll = c.total ? c.done / c.total * 100 : 0;
+    var c = M.cap, gen = M.capGen, pct = c.total ? gen / c.total * 100 : null;
     var arc = 'M10 62 A50 50 0 0 1 110 62';
     var gauge = '<div class="cf-gauge"><svg viewBox="0 0 120 68" aria-hidden="true" focusable="false"><path d="' + arc + '" class="cf-gauge-bg"/>'
-      + (pAll > 0 ? '<path d="' + arc + '" class="cf-gauge-pd" pathLength="100" stroke-dasharray="' + pAll.toFixed(1) + ' 100"/>' : '')
       + (pct > 0 ? '<path d="' + arc + '" class="cf-gauge-fg" pathLength="100" stroke-dasharray="' + pct.toFixed(1) + ' 100"/>' : '') + '</svg>'
-      + '<b class="cf-gauge-v' + (pct == null ? ' is-na' : '') + '">' + esc(pct == null ? '—' : fDec(pct, 1) + NB + '%') + '</b></div>'
-      + '<div class="cf-gauge-l"><b>' + esc(fInt(gen)) + '</b> ' + plural(gen, 'générée') + ' sur <b>' + esc(fInt(c.total)) + '</b> ' + plural(c.total, 'possible')
-      // déclinaisons (Axel 26/09) : 3 versions au plus par vidéo de base (autre démo, musique, sous-titres, format)
-      + (c.declinaisons ? ' · <b data-mode="decli-total" title="' + esc('chaque vidéo de base en ' + c.declinaisons.max + ' versions au plus : autre démo, musique, sous-titres et format') + '">' + esc(fInt(c.declinaisons.total)) + '</b> avec déclinaisons' : '') + '</div>';
-    var stats = '<div class="cf-capst">'
-      + '<div><span class="cf-capst-v"><i class="is-gen"></i>' + esc(fInt(gen)) + '</span><span>' + plural(gen, 'générée') + '</span></div>'
-      + '<div><span class="cf-capst-v"><i class="is-pd"></i>' + esc(fInt(P)) + '</span><span>en QC</span></div>'
-      + '<div><span class="cf-capst-v"><i class="is-rest"></i>' + esc(fInt(c.remaining)) + '</span><span>à générer</span></div></div>';
-    // la barre de la maquette : une ligne par mode (Audio d'Axel, Voix native Omni, Avant / après), format court et
-    // format long (usine/coherence.js capacity) ; la jauge et « à générer » portent sur le total des 3
-    var OV = c.overlayRequired, TT = {
-      short: { aa: 'format court · assemblage × hook avant / après', muet: 'réaction muette × texte choc × photo', def: 'format court · avatar × hook' },
-      long: { aa: 'format long · assemblage × hook avant / après × liaison × avatar', def: 'format long · avatar × hook × liaison' } };
-    var modes = '<div class="cf-capmodes" data-vf="' + c.total + '|' + c.done + '|' + c.remaining + '" data-modes="'
-      + capModes(c).map(function (v) { var m = c.modes[v]; return v + ':' + m.short + '|' + m.long + '|' + m.total; }).join(';') + '">'
-      + capModes(c).map(function (v) {
-        var m = c.modes[v], ov = v !== 'aa' && OV && OV.videos && OV.videos[v] ? ' · dont ' + fInt(OV.videos[v]) + ' avec incrustation (' + OV.hooks.join(', ') + ')' : '';
-        var hk = v === 'aa' ? m.hooks + ' ' + plural(m.hooks, 'hook') + ' · ' + m.assemblies + ' ' + plural(m.assemblies, 'assemblage') : m.hooks + ' ' + plural(m.hooks, 'hook');
-        // avant / après (27/09) : publiables = Σ paliers des transformations (5 / 10 / 15) ; les combinaisons au survol
-        if (v === 'aa' && m.publiable != null) {
-          var pt = (m.transfos || []).length, pal = (m.transfos || []).map(function (t) { return t.palier; });
-          return '<div class="cf-capmode" data-mode-k="aa"><span class="cf-capmodes-n" title="' + esc(hk + ' · ' + fInt(m.combos.total) + ' combinaisons possibles') + '"><i class="is-aa"></i>' + esc(m.label) + '</span>'
-            + '<span class="cf-capmode-v" title="' + esc(pt + ' transformations × leur palier (5 → 10 → 15 vidéos selon les vues)') + '"><b data-mode="aa-pub">' + esc(fInt(m.total)) + '</b> ' + plural(m.total, 'publiable', 'publiables') + '</span>'
-            + '<span class="cf-capmode-v"><b data-mode="aa-pal">' + (pal.length ? 'palier ' + Math.min.apply(null, pal) + (Math.max.apply(null, pal) > Math.min.apply(null, pal) ? '-' + Math.max.apply(null, pal) : '') : '—') + '</b></span></div>';
-        }
-        return '<div class="cf-capmode" data-mode-k="' + v + '"><span class="cf-capmodes-n" title="' + esc(hk + ov) + '"><i class="is-' + v + '"></i>' + esc(m.label) + '</span>'
-          + '<span class="cf-capmode-v" title="' + esc(TT.short[v] || TT.short.def) + '"><b data-mode="' + v + '-short">' + esc(fInt(m.short)) + '</b> ' + plural(m.short, 'court', 'courts') + '</span>'
-          + '<span class="cf-capmode-v" title="' + esc(TT.long[v] || TT.long.def) + '"><b data-mode="' + v + '-long">' + esc(fInt(m.long)) + '</b> ' + plural(m.long, 'long', 'longs') + '</span></div>';
-      }).join('') + '</div>'
-      + (c.outside ? '<div class="cf-meta">' + esc(c.outside + ' ' + plural(c.outside, 'vidéo') + ' hors des possibles, non ' + plural(c.outside, 'comptée')) + '</div>' : '');
-    return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + stats + modes + '</section>';
+      + '<b class="cf-gauge-v">' + esc(fInt(c.total)) + '</b></div>'
+      + '<div class="cf-gauge-l">vidéos finales possibles · <b>' + esc(fInt(gen)) + '</b> déjà ' + plural(gen, 'générée') + '</div>';
+    // une ligne par format, un seul nombre (court + long, ou vidéos publiables pour l'avant / après)
+    var DESC = { axel: 'tes audios en lipsync', omni: 'voix générée par Omni', aa: 'transformations avant / après', muet: 'texte à l’écran + musique, sans voix' };
+    var modes = '<div class="cf-capmodes">' + capModes(c).map(function (v) {
+      var m = c.modes[v], d = DESC[v] || (/omni/i.test(m.label) ? DESC.omni : /axel/i.test(m.label) ? DESC.axel : /musique/i.test(m.label) ? DESC.muet : '');
+      return '<div class="cf-capmode" data-mode-k="' + v + '"><span class="cf-capmodes-n"><i class="is-' + v + '"></i>' + esc(m.label)
+        + (d ? '<span class="cf-meta"> · ' + esc(d) + '</span>' : '') + '</span><span class="cf-capmode-v"><b>' + esc(fInt(m.total)) + '</b></span></div>';
+    }).join('') + '</div>';
+    return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + modes + '</section>';
   }
 
   // ── 01 · Contenu posté : nos reels par mois (publications Instagram déjà chargées) ; TrackAds « — » ──
@@ -1135,20 +1126,17 @@
     function tile(k, v, l, s, cls) {
       return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span><span class="cf-stile-s">' + esc(s) + '</span></div>';
     }
-    var users = '<div class="cf-susers"><span><b>Users actifs</b><span class="cf-meta">au moins 1 mission sur 30' + NB + 'j</span></span><b>0</b></div>';
     var wait = M.pending ? '…' : null;
     var tiles = tile('stock', wait || (D ? fInt(M.stock) : '—'), 'En stock', D ? 'approuvées · prêtes à poster' : M.why, 'is-acc')
-      + tile('queue', wait || (D ? fInt(D.qc.pending) : '—'), 'File', D ? 'en QC (à valider)' : M.why)
-      + tile('togen', wait || (M.cap ? fInt(M.toGen) : '—'), 'Vidéos à générer', M.cap ? M.genSub : (M.why || M.ruleShort))
       + tile('days', d.txt, 'Jours de contenu', d.sub, d.v != null && d.v < 2 ? 'is-err' : '');
-    var need = M.rate.v != null && !M.rate.off ? M.rate.v : null, pd = M.prodDay;
+    var need = GOAL.perDay.target, pd = M.prodDay;   // besoin = l'objectif de publication (5 / jour)
     var bar = need && pd != null ? Math.min(100, pd / need * 100) : 0;
     var flow = '<div class="cf-sflow"><div class="cf-sflow-l"><span>besoin' + NB + '/' + NB + 'jour · ' + esc(need == null ? '—' : fRate2(need) + ' ' + plural(need, 'vidéo')) + '</span>'
       + '<span>production' + NB + '/' + NB + 'jour · ' + esc(pd == null ? '—' : fRate2(pd) + ' ' + plural(pd, 'vidéo')) + '</span></div>'
       + '<div class="cf-sflow-b"><i class="' + (need != null && pd != null && pd >= need ? 'is-ok' : '') + '" style="width:' + bar.toFixed(1) + '%"></i></div>'
       + (need != null && pd != null ? (pd >= need ? '<div class="cf-sflow-m is-ok">La production suit le rythme de publication.</div>'
         : '<div class="cf-sflow-m">' + esc('Il manque ' + fRate2(need - pd) + ' ' + plural(need - pd, 'vidéo') + ' par jour.') + '</div>') : '') + '</div>';
-    return '<section class="cf-card cf-stock" data-block="stock">' + head + users + '<div class="cf-stiles">' + tiles + '</div>' + flow + '</section>';
+    return '<section class="cf-card cf-stock" data-block="stock">' + head + '<div class="cf-stiles is-2">' + tiles + '</div>' + flow + '</section>';
   }
 
   // ── 01 · Briques qui manquent, classées par impact (vidéos finales) ──
@@ -1494,22 +1482,6 @@
       + (q.status === 'refused' ? '<span class="cf-vf-why">' + esc(q.reason ? 'motif : « ' + q.reason + ' »' : 'motif : aucun') + '</span>' : '')
       + (q.status === 'pending' ? '<button type="button" class="cf-btn is-sm cf-vf-rev" data-act="qc-open" data-qid="' + esc(q.id) + '">Ouvrir la revue</button>' : '') + '</div>'
       + media + '<div class="cf-over">Composants</div>' + comps + '</div>';
-  }
-  function cycleHTML(M) {
-    var D = M.D, Q = D && D.qc, w = M.pending ? '…' : null;
-    function t(n, v, l, s, cls) {
-      return '<div class="cf-ctile' + (cls ? ' ' + cls : '') + '"><span class="cf-ctile-n">' + n + '</span><span class="cf-ctile-l">' + esc(l) + '</span>'
-        + '<b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-ctile-s">' + esc(s) + '</span></div>';
-    }
-    var v = function (x) { return w || (Q ? fInt(x) : '—'); };
-    var body = t('Σ', v(Q && Q.total), 'Rendues', Q ? 'somme des statuts' + (Q.other ? ' (dont ' + Q.other + ' au statut inconnu)' : '') : M.why, 'is-sum')
-      + t('01', v(Q && Q.pending), 'À valider', 'en QC')
-      + t('02', v(Q && Q.approved), 'En stock', 'téléchargeables', 'is-acc')   // approuvée = en stock (pas d'étape de mise en stock)
-      + t('03', v(Q && Q.refused), 'Refusées', 'au QC')
-      + t('04', '0', 'Téléchargées', 'missions TrackAds')
-      + t('05', '—', 'Postées', 'URL validée');
-    return '<section class="cf-card cf-cycle-c" data-block="cycle"><div class="cf-cycle-h"><h3 class="cf-h2">Cycle d’une vidéo finale</h3><span class="cf-meta">seules les vidéos approuvées sont téléchargeables</span></div>'
-      + '<div class="cf-cycle">' + body + '</div></section>';
   }
 
   function comboChips(q) {
@@ -3677,7 +3649,7 @@
     });
 
     // Bulle des courbes (Évolution du Compte, Activité de l'Auto-DM) : souris et doigt, sans redessiner le panneau.
-    var hover = function (plot, x) { if (plot.getAttribute('data-chart') === 'dm') dmHover(plot, x); else evoHover(plot, x); };
+    var hover = function (plot, x) { var t = plot.getAttribute('data-chart'); if (t === 'dm') dmHover(plot, x); else if (t === 'net') netHover(plot, x); else evoHover(plot, x); };
     document.addEventListener('mousemove', function (e) {
       var plot = e.target && e.target.closest ? e.target.closest('.cf-evo-plot') : null;
       if (plot) hover(plot, e.clientX); else if (evoCur || dmCur) evoHide();
