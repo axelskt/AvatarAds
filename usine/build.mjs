@@ -173,22 +173,30 @@ const fixCta = t => String(t || '')
   .replace(/\bavataradis\.fr\b|\bavatarhads\.fr\b|\bavatar ?h?ads\.fr\b/gi, 'avatarads.fr');
 const textOf = id => { if (!id) return null; const b = brickOf(id), m = b && b.meta || {};
   if (/^CTA/.test(id)) return m.transcript ? fixCta(m.transcript) : (CTA_TXT[id] || null);
-  return m.transcript || m.script || (b && b.label) || null; };
+  const t = m.transcript || m.script || (b && b.label) || null;
+  // le nom de la marque mal transcrit (« Avatar Hasse », « Avatar Hats »…) → AvatarAds
+  // (en DEUX mots : les sous-titres fusionnent « Avatar » + « Ads » ; un seul mot laisserait un « Ads » en trop)
+  return t ? t.replace(/\bavatar[ -]?(hasse|hass|hats|hat|had|hads|haz)\b/gi, 'Avatar Ads') : null; };
 const idFromFile = f => { const m = /-(H\d+|L\d+|CTA-[A-Za-z-]+?)(?:-v\d+)?\.(?:mp4|mov)$/i.exec(basename(f || '')); return m ? m[1] : null; };
 function exactWords(ws, text) {
   if (!text || !ws.length) return ws;
   const toks = text.replace(/[«»"“”]/g, ' ').split(/\s+/).map(t => t.trim()).filter(t => t && bare(t));
   const A = ws.map(w => bare(w.text)), B = toks.map(bare), n = A.length, m = B.length;
-  const sim = (a, b) => { if (a === b) return 1; const L = Math.max(a.length, b.length); if (!L) return 0; let k = 0; while (k < Math.min(a.length, b.length) && a[k] === b[k]) k++; return k / L; };
+  // ressemblance = 1 − distance d'édition / longueur (« dia »≈« ia », « influences »≈« influenceuses », « montre »≠« demande »)
+  const sim = (a, b) => { if (a === b) return 1; const L = Math.max(a.length, b.length); if (!L) return 0;
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) { const cur = [i]; for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+    return 1 - prev[b.length] / L; };
   const D = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => i + j));
   for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++)
     D[i][j] = Math.min(D[i - 1][j] + 1, D[i][j - 1] + 1, D[i - 1][j - 1] + (A[i - 1] === B[j - 1] ? 0 : 1.6 - sim(A[i - 1], B[j - 1])));
   const out = []; let i = n, j = m;
   while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && D[i][j] === D[i - 1][j - 1] + (A[i - 1] === B[j - 1] ? 0 : 1.6 - sim(A[i - 1], B[j - 1]))) { out.push({ ...ws[i - 1], text: toks[j - 1] }); i--; j--; }
-    else if (j > 0 && (i === 0 || D[i][j] === D[i][j - 1] + 1)) { const nb = ws[Math.min(i, n - 1)] || ws[n - 1], pv = i > 0 ? ws[i - 1] : null;
-      const t0 = pv ? pv.end : Math.max(0, nb.start - 0.2), t1 = nb && nb !== pv ? nb.start : t0 + 0.2;
-      out.push({ text: toks[j - 1], start: t0, end: Math.max(t0 + 0.08, t1), inserted: true }); j--; }
+    if (i > 0 && j > 0 && D[i][j] === D[i - 1][j - 1] + (A[i - 1] === B[j - 1] ? 0 : 1.6 - sim(A[i - 1], B[j - 1]))) {
+      // même mot ou mot RESSEMBLANT → le texte de la brique (orthographe, ponctuation) ; mot très différent → ce qui est DIT
+      const ok = A[i - 1] === B[j - 1] || sim(A[i - 1], B[j - 1]) >= 0.6;
+      out.push(ok ? { ...ws[i - 1], text: toks[j - 1] } : ws[i - 1]); i--; j--; }
+    else if (j > 0 && (i === 0 || D[i][j] === D[i][j - 1] + 1)) { j--; }   // mot du texte jamais entendu : pas ajouté (textes parfois faux)
     else { out.push(ws[i - 1]); i--; }
   }
   return out.reverse();
