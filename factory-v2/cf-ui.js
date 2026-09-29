@@ -510,7 +510,11 @@
       + homeAlertsHTML(alerts, src)
       + homePayHTML()
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
-      + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>';
+      + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>'
+      // Kit de publication (29/09) : page à part, pensée pour programmer à la main dans l'app Instagram.
+      + '<section class="cf-card cf-kit" aria-labelledby="cfKitT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfKitT">Kit de publication</h2>'
+      + '<div class="cf-dim">Vidéos à envoyer en AirDrop, légendes à copier, heures de programmation · 3 @avataradss + 2 @leoadsia par jour</div></div>'
+      + '<a class="cf-btn is-dark" href="factory-kit.html" style="text-decoration:none">Ouvrir le kit</a></div></section>';
   }
 
   function homeAlertsHTML(alerts, src) {

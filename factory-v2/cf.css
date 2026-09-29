@@ -755,7 +755,7 @@ img { max-width: 100%; }
   .cf-icard-s { font-size: 11.5px; padding-top: 8px; }
 }
 @media (max-width: 639px) {
-  .cf-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+  .cf-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
   .cf-tab { padding: 8px 1px 7px; border-radius: 14px; align-items: center; text-align: center; gap: 5px; }
   .cf-tab-top { justify-content: center; }
   .cf-tab-ic { width: 34px; height: 34px; border-radius: 10px; }
@@ -1274,3 +1274,7 @@ i.is-gap { background: var(--cf-ink); }
 .cf-acard-tok.is-warn { color: var(--cf-warn-fg); font-weight: 600; }
 .cf-acard-tok.is-err { color: var(--cf-err-fg); font-weight: 600; }
 .cf-acct2-notes { margin-top: -4px; }
+
+/* Kit de publication (bas de l'Accueil) */
+.cf-kit { margin-top: 16px; }
+.cf-kit .cf-card-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
