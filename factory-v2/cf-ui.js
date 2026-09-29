@@ -645,6 +645,7 @@
   // Objectifs : croissance abonnés ≥ 5 % sur la période, 5 vidéos / jour, 1 000 vues / vidéo, like rate et comment rate
   // = les objectifs de l'onglet Insight (GOAL.like, GOAL.comment).
   var NET_GOAL = { subs: 5, videosPerDay: 5, viewsPerVideo: 1000 };
+  var NET_ALL_FROM = new Date(2026, 6, 15).getTime();   // « All time » = depuis le 15/07/2026
   var NET_RANGES = [['7j', '7' + NB + 'j', 7], ['30j', '30' + NB + 'j', 30], ['90j', '90' + NB + 'j', 90], ['all', 'All time', null]];
   function netSel() {
     var d = { yt: true, ig: true };
@@ -660,7 +661,7 @@
   function netRange() { return ui.netRange || '30j'; }
   function netModel() {
     var R = netRange(), days = NET_RANGES.filter(function (r) { return r[0] === R; })[0][2], sel = netSel();
-    var now = Date.now(), from = days ? now - days * 864e5 : -Infinity;
+    var now = Date.now(), from = days ? now - days * 864e5 : NET_ALL_FROM;
     var Y = CF.yt, M = CF.acct.media, I = CF.acct.ig[R], ytD = sel.yt ? Y.data : null, igM = sel.ig && M.data ? M.data : null, igD = sel.ig ? I.data : null;
     var pend = (sel.yt && !Y.data && Y.state !== 'error') || (sel.ig && !M.data && M.state !== 'error');
     var err = [sel.yt && Y.state === 'error' && !Y.data ? 'YouTube : ' + Y.error : '', sel.ig && M.state === 'error' && !M.data ? 'Instagram : ' + M.error : ''].filter(Boolean).join(' · ');
@@ -684,7 +685,7 @@
       if (net != null) { gain += net; gainOk = true; }
     }
     // courbe : un point par jour (période), par date de publication ; abonnés = gain du jour
-    var nD = days || Math.max(30, Math.ceil((now - (vids.length ? vids[vids.length - 1].ms : now)) / 864e5) + 1);
+    var nD = days || Math.max(30, Math.ceil((now - NET_ALL_FROM) / 864e5) + 1);
     var labels = [], idx = {};
     for (var i = nD - 1; i >= 0; i--) { var d = new Date(now - i * 864e5), key = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); idx[key] = labels.length; labels.push(key); }
     var zero = function () { return labels.map(function () { return 0; }); };
@@ -1074,7 +1075,7 @@
     var DESC = { axel: 'tes audios en lipsync', omni: 'voix générée par Omni', aa: 'transformations avant / après', muet: 'texte à l’écran + musique, sans voix' };
     var modes = '<div class="cf-capmodes">' + capModes(c).map(function (v) {
       var m = c.modes[v], d = DESC[v] || (/omni/i.test(m.label) ? DESC.omni : /axel/i.test(m.label) ? DESC.axel : /musique/i.test(m.label) ? DESC.muet : '');
-      return '<div class="cf-capmode" data-mode-k="' + v + '"><span class="cf-capmodes-n"><i class="is-' + v + '"></i>' + esc(m.label)
+      return '<div class="cf-capmode" data-mode-k="' + v + '"><span class="cf-capmodes-n"><i class="is-' + v + '"></i>' + esc(v === 'omni' ? 'Omni' : m.label)
         + (d ? '<span class="cf-meta"> · ' + esc(d) + '</span>' : '') + '</span><span class="cf-capmode-v"><b>' + esc(fInt(m.total)) + '</b></span></div>';
     }).join('') + '</div>';
     return '<section class="cf-card cf-cap" data-block="cap">' + head + gauge + modes + '</section>';
@@ -1144,7 +1145,10 @@
     var todo = '<div class="cf-stile cf-stodo" data-s="left"><b class="' + (G ? '' : 'is-na') + '">' + esc(G ? fInt(sumLeft) : (wait || '—')) + '</b><span class="cf-stile-l">Briques restantes à générer</span>'
       + (G ? (left.length ? '<span class="cf-stodo-l">' + left.map(function (x) { return '<span><span>' + esc(x.t) + '</span><b>' + esc(fInt(x.r)) + '</b></span>'; }).join('') + '</span>' : '<span class="cf-stile-s">tout est généré</span>') : '<span class="cf-stile-s">' + esc(M.why || 'chargement') + '</span>') + '</div>';
     var pd2 = M.cap ? M.cap.total / GOAL.perDay.target : null;
-    var poss = tile('possible', wait || (pd2 == null ? '—' : fDays(pd2)), 'Jours de contenu possibles', M.cap ? 'si les ' + fInt(M.cap.total) + ' vidéos possibles étaient générées · ' + GOAL.perDay.target + ' posts' + NB + '/' + NB + 'jour' : (M.why || ''));
+    // objectif (Axel 29/09) : 1 an de contenu d'avance ; au-delà, on produit et on poste (et on recrute des posteurs)
+    var mo = pd2 == null ? null : pd2 / 30.4, okY = mo != null && mo >= 12;
+    var poss = '<div class="cf-stile" data-s="possible"><b class="' + (mo == null ? 'is-na' : '') + '">' + esc(wait || (pd2 == null ? '—' : fDays(pd2))) + '</b><span class="cf-stile-l">Jours de contenu possibles</span>'
+      + '<span class="cf-stile-s">' + (mo == null ? esc(M.why || '') : '≈' + NB + esc(fDec(mo, 0)) + NB + 'mois · <span class="cf-goal-t ' + (okY ? 'is-ok' : 'is-ko') + '">objectif 12' + NB + 'mois</span>') + '</span></div>';
     return '<section class="cf-card cf-stock" data-block="stock">' + head + '<div class="cf-stiles is-2">' + tiles + '</div>' + flow
       + '<div class="cf-stiles is-2 cf-stiles-b">' + todo + poss + '</div></section>';
   }
@@ -1459,7 +1463,7 @@
   function vfVoice(q) {
     var v = q.combo && q.combo.voice;
     if (q.combo && q.combo.assemblage && (v == null || v === 'axel')) return 'Avant / après';   // voix off d'Axel sur un assemblage
-    return !q.combo ? '' : v == null || v === 'axel' ? 'Audio d’Axel' : v === 'omni' ? 'Voix native Omni' : 'voix inconnue « ' + v + ' »';
+    return !q.combo ? '' : v == null || v === 'axel' ? 'Audio d’Axel' : v === 'omni' ? 'Omni' : 'voix inconnue « ' + v + ' »';
   }
   function openVf(qid, trigger) {
     if (!qid || !CF.prod.data) return;
@@ -1627,8 +1631,8 @@
   // musique ; chaque format = PHOTOS_PAR_AVATAR emplacements par avatar, remplis par les vidéos de factory_variants (photo
   // réelle A1-2…, plus ancienne d'abord) sinon « en attente d'être créée ». Hook avant / après : aucun avatar (voix off).
   var FMT_ORDER = { spoken: ['axel', 'omni'], 'texte-choc': ['muet'] };
-  var FMT_NAME = { axel: 'Audio d’Axel', omni: 'Voix native Omni', muet: 'Texte + musique' };
-  var FMT_SHORT = { axel: 'lipsync', omni: 'voix native', muet: 'texte + musique' };
+  var FMT_NAME = { axel: 'Audio d’Axel', omni: 'Omni', muet: 'Texte + musique' };
+  var FMT_SHORT = { axel: 'lipsync', omni: 'Omni', muet: 'texte + musique' };
   // Texte choc (TH…) : la phrase telle qu'elle passe à l'écran, émoji de fin compris (meta.full, sinon texte + meta.emoji).
   // Exception voulue à « aucun emoji » : c'est le CONTENU de la brique (Axel 27/09), jamais une icône d'interface.
   function thText(m, label) { return m.full || ((m.text || label || '') + (m.emoji ? ' ' + m.emoji : '')); }
