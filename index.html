@@ -998,6 +998,24 @@ main>.pw-sec{border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);
   .foot-col[open]>summary::after{content:'−'}
   .foot-col .col{padding:0 2px 16px}
 }
+/* ── FOOTER (Axel 29/09 : « pas hyper sexy quand on ouvre ») : logo à gauche, rubriques repliables à droite, liens rangés
+   en colonnes une fois ouverts (avant : « display:block » les collait sur une ligne), titres sobres, chevron qui pivote ── */
+footer .foot-col>summary{color:var(--text)!important;font-weight:650;font-size:15px;letter-spacing:-.005em;transition:color .15s}
+footer .foot-col>summary:hover{color:var(--violet)!important}
+footer .foot-col>summary::after{content:''!important;width:7px;height:7px;border-right:2px solid var(--text-3);border-bottom:2px solid var(--text-3);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s;margin-right:6px;flex:none}
+footer .foot-col[open]>summary::after{content:''!important;transform:rotate(-135deg) translate(-2px,-2px)}
+footer .foot-col[open]>.col{display:grid!important;grid-template-columns:1fr;gap:11px;padding:2px 2px 18px!important}
+footer .foot-col .foot-link{display:inline-flex;align-items:center;gap:8px;width:fit-content;font-size:14px}
+footer .foot-col .foot-link::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--text-3);opacity:.45;flex:none;transition:.15s}
+footer .foot-col .foot-link:hover::before{background:var(--violet);opacity:1}
+footer .foot-wordmark{background:linear-gradient(180deg,rgba(16,24,32,.16),rgba(16,24,32,.03))!important;-webkit-background-clip:text!important;background-clip:text!important}
+@media(min-width:761px){
+  footer .foot-grid{display:grid!important;grid-template-columns:minmax(240px,.9fr) minmax(0,1.6fr)!important;column-gap:72px!important;row-gap:0!important;max-width:none!important;align-items:start}
+  footer .foot-grid>div:first-child{grid-column:1;grid-row:1 / span 6;position:sticky;top:110px}
+  footer .foot-col{grid-column:2}
+  footer .foot-col:last-of-type{border-bottom:1px solid var(--border)}
+  footer .foot-col[open]>.col{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px}
+}
 /* mobile : les étoiles décoratives chevauchaient le titre « Tout en un » (colonne unique, texte à gauche) */
 @media (max-width:760px){ .lp-sparkles{display:none !important} }
 /* ── LP · Features, mobile (handoff §5) ─────────────────────────────────────
