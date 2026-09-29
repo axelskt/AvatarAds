@@ -32,7 +32,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .acct .m{color:var(--dim);font-size:13px}
 .bar{height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .35s}
-.bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 4px;padding:12px;border-radius:var(--r);background:var(--card);border:1px solid var(--line)}
+.bulk{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0 4px;padding:12px;border-radius:var(--r);background:var(--card);border:1px solid var(--line)}
 .bulk .meta{flex:1 1 220px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:11px 14px;font-weight:650;font-size:14px;background:var(--soft);white-space:nowrap}
 .btn svg{flex:none}
@@ -44,7 +44,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .meta{color:var(--dim);font-size:13px}
 h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transform:uppercase;letter-spacing:.04em}
 .list{display:flex;flex-direction:column;gap:8px}
-.post{display:grid;grid-template-columns:28px 64px 1fr auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.post{display:grid;grid-template-columns:28px 64px 1fr auto;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
 .post.cur{border-color:var(--ink)}
 .post.is-done{opacity:.55}
 .post .no{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--soft);font-weight:700;font-size:13px}
@@ -52,7 +52,15 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 .post video{width:64px;height:114px;border-radius:9px;object-fit:cover;background:#000;display:block}
 .post .t{font-size:22px;font-weight:750;letter-spacing:-.02em;line-height:1.1}
 .post .d{color:var(--dim);font-size:13px;margin-bottom:6px}
-.post .c{font-size:13.5px;color:var(--dim);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.post .c{font-size:13.5px;white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;user-select:text;-webkit-user-select:text}
+.post .id{display:flex;align-items:center;gap:6px;margin-top:6px;font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);word-break:break-all}
+.post .id button{border:0;background:none;padding:2px;color:var(--dim)}
+.tabs{display:flex;gap:6px;margin:14px 0 0;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:8px 14px;font-size:13.5px;font-weight:600}
+.tab[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.lots{display:flex;flex-direction:column;gap:8px;width:100%}
+.lot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lot b{min-width:130px;font-size:13.5px}
 .post .act{display:flex;flex-direction:column;gap:6px}
 @media (max-width:640px){
   .post{grid-template-columns:24px 56px 1fr}
@@ -99,7 +107,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   };
 
   var sb = null;
-  var S = { posts: [], acct: 'avataradss', cur: null, busy: false, err: '', pack: {} };  // pack[acct] = { state, got, total, files }
+  var S = { posts: [], acct: 'avataradss', view: 'todo', cur: null, busy: false, err: '', pack: {} };  // pack[lot] = { state, got, total, files }
   try { var saved = localStorage.getItem('kit_acct'); if (saved) S.acct = saved; } catch (e) { /* stockage bloqué */ }
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); };
@@ -118,47 +126,61 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     toast.h = setTimeout(function () { t.hidden = true; }, undo ? 6000 : 2200);
   }
 
+  var LOT = 25;   // AirDrop d'un coup : 25 vidéos (~400 Mo) passent bien, 100 non
+  var VIEWS = [['todo', 'À programmer'], ['sched', 'Programmées'], ['old', 'Anciennes']];
+  var now = function () { return new Date().toISOString(); };
   function mine(a) { return S.posts.filter(function (p) { return p.account === (a || S.acct); }); }
   function todo(a) { return mine(a).filter(function (p) { return p.status === 'todo'; }); }
-  // Numéro d'ordre dans le compte : le même que dans le nom du fichier envoyé au téléphone.
+  // Programmées = validées et encore à venir ; Anciennes = validées dont l'heure est passée (déjà en ligne).
+  function inView(p, v) {
+    if (v === 'todo') return p.status === 'todo';
+    if (p.status === 'todo' || p.status === 'skipped') return false;
+    return v === 'sched' ? p.scheduled_at > now() : p.scheduled_at <= now();
+  }
+  function viewList(v) { var l = mine().filter(function (p) { return inView(p, v || S.view); }); return (v || S.view) === 'old' ? l.reverse() : l; }
+  // Numéro d'ordre dans le compte, fixé par la date prévue : le même que dans le nom du fichier envoyé au téléphone.
   function num(p) { return mine(p.account).indexOf(p) + 1; }
+  // Identifiant complet de la vidéo = nom du fichier final (avatar-hook-liaison-démo-CTA) : c'est lui qu'on recherche plus tard.
+  function vidId(p) { return decodeURIComponent(String(p.video_url || '').split('?')[0].split('/').pop().replace(/\.mp4$/i, '')); }
   function fileName(p) {
     return pad(num(p)) + '-' + p.account + '-' + fmt(p.scheduled_at, { weekday: 'short' }).replace('.', '') + '-' + fmt(p.scheduled_at, { day: '2-digit' }) + '-' + hour(p.scheduled_at).replace(':', 'h') + '.mp4';
   }
+  function lots() { var t = todo(), out = []; for (var i = 0; i < t.length; i += LOT) out.push(t.slice(i, i + LOT)); return out; }
+  function lotKey(list) { return S.acct + ':' + list.map(function (p) { return p.id; }).join(','); }
 
-  // ── envoi groupé vers l'iPhone ──
-  // 1er clic : on télécharge les vidéos à faire du compte (progression affichée). 2e clic : feuille de partage du Mac
-  // (AirDrop) avec tous les fichiers. Le partage doit partir d'un clic : il ne peut pas suivre un long téléchargement.
-  async function preparePack() {
-    var a = S.acct, list = todo(a);
-    if (!list.length) return;
-    var P = S.pack[a] = { state: 'loading', got: 0, total: list.length, files: [] };
+  // ── envoi groupé vers l'iPhone, par lots de 25 ──
+  // 1er clic : on télécharge les vidéos du lot (progression). 2e clic : feuille de partage du Mac (AirDrop).
+  // Le partage doit partir d'un clic : il ne peut pas suivre un long téléchargement.
+  async function preparePack(i) {
+    var list = lots()[i]; if (!list) return;
+    var k = lotKey(list), P = S.pack[k] = { state: 'loading', got: 0, total: list.length, files: [] };
     render();
     try {
-      for (var i = 0; i < list.length; i++) {
-        var r = await fetch(list[i].video_url);
-        if (!r.ok) throw new Error('vidéo ' + pad(num(list[i])) + ' : HTTP ' + r.status);
-        P.files.push(new File([await r.blob()], fileName(list[i]), { type: 'video/mp4' }));
-        P.got = i + 1;
+      for (var j = 0; j < list.length; j++) {
+        var r = await fetch(list[j].video_url);
+        if (!r.ok) throw new Error('vidéo ' + pad(num(list[j])) + ' : HTTP ' + r.status);
+        P.files.push(new File([await r.blob()], fileName(list[j]), { type: 'video/mp4' }));
+        P.got = j + 1;
         render();
       }
       P.state = 'ready';
     } catch (e) { P.state = 'error'; P.error = String(e.message || e); }
     render();
   }
-  function sharePack() {
-    var P = S.pack[S.acct];
+  function packOf(i) { var l = lots()[i]; return l && S.pack[lotKey(l)]; }
+  function sharePack(i) {
+    var P = packOf(i);
     if (!P || P.state !== 'ready') return;
     if (navigator.canShare && navigator.canShare({ files: P.files })) {
       navigator.share({ files: P.files }).then(function () { toast(P.files.length + ' vidéos envoyées'); }, function () {});
-    } else toast('Partage de fichiers indisponible ici : utilise « Tout télécharger »');
+    } else toast('Partage de fichiers indisponible ici : utilise « Télécharger »');
   }
-  async function downloadPack() {
-    var P = S.pack[S.acct];
+  async function downloadPack(i) {
+    var P = packOf(i);
     if (!P || P.state !== 'ready') return;
-    for (var i = 0; i < P.files.length; i++) {
+    for (var j = 0; j < P.files.length; j++) {
       var a = document.createElement('a');
-      a.href = URL.createObjectURL(P.files[i]); a.download = P.files[i].name;
+      a.href = URL.createObjectURL(P.files[j]); a.download = P.files[j].name;
       document.body.appendChild(a); a.click(); a.remove();
       (function (u) { setTimeout(function () { URL.revokeObjectURL(u); }, 10000); })(a.href);
       await new Promise(function (r) { setTimeout(r, 350); });
@@ -166,58 +188,75 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     toast(P.files.length + ' vidéos téléchargées');
   }
 
-  async function copyCaption(p) {
-    S.cur = p.id;
-    try { await navigator.clipboard.writeText(p.caption || ''); toast('Légende n°' + num(p) + ' copiée'); }
-    catch (e) { toast('Copie refusée par le navigateur'); }
-    render();
+  async function copyText(txt, msg) {
+    try { await navigator.clipboard.writeText(txt || ''); toast(msg); } catch (e) { toast('Copie refusée par le navigateur'); }
   }
 
-  async function setStatus(p, status) {
-    var prev = { status: p.status, done_at: p.done_at };
-    p.status = status; p.done_at = status === 'todo' ? null : new Date().toISOString();
-    if (!S.example) {
-      var r = await sb.from('factory_posts').update({ status: p.status, done_at: p.done_at }).eq('id', p.id);
-      if (r.error) { p.status = prev.status; p.done_at = prev.done_at; toast('Non enregistré : ' + esc(r.error.message)); render(); return false; }
+  // Écrit le statut de plusieurs posts d'un coup ; revient en arrière si la base refuse.
+  async function setStatus(list, status) {
+    var prev = list.map(function (p) { return { p: p, status: p.status, done_at: p.done_at }; });
+    var at = status === 'todo' ? null : now();
+    list.forEach(function (p) { p.status = status; p.done_at = at; });
+    if (!S.example && list.length) {
+      var r = await sb.from('factory_posts').update({ status: status, done_at: at }).in('id', list.map(function (p) { return p.id; }));
+      if (r.error) { prev.forEach(function (x) { x.p.status = x.status; x.p.done_at = x.done_at; }); toast('Non enregistré : ' + esc(r.error.message)); render(); return false; }
     }
     return true;
   }
   async function toggleDone(p) {
     if (S.busy) return;
     S.busy = true;
-    var was = p.status, ok = await setStatus(p, was === 'todo' ? 'scheduled' : 'todo');
+    var was = p.status, ok = await setStatus([p], was === 'todo' ? 'scheduled' : 'todo');
     S.busy = false;
     if (!ok) return;
-    if (was === 'todo') { var n = todo()[0]; S.cur = n ? n.id : null; toast('N°' + num(p) + ' programmé', function () { setStatus(p, 'todo').then(function () { S.cur = p.id; render(); }); }); }
+    if (was === 'todo') { var n = todo()[0]; S.cur = n ? n.id : null; toast('N°' + num(p) + ' programmé', function () { setStatus([p], 'todo').then(function () { S.cur = p.id; render(); }); }); }
+    render();
+  }
+  async function allDone() {
+    var list = todo();
+    if (!list.length || S.busy) return;
+    if (!confirm('Marquer les ' + list.length + ' vidéos à programmer de @' + S.acct + ' comme programmées ?')) return;
+    S.busy = true;
+    var ok = await setStatus(list, 'scheduled');
+    S.busy = false;
+    if (!ok) return;
+    S.cur = null;
+    toast(list.length + ' vidéos marquées programmées', function () { setStatus(list, 'todo').then(render); });
     render();
   }
 
   function acctCard(A) {
-    var all = mine(A.id), done = all.length - todo(A.id).length;
+    var all = mine(A.id), left = todo(A.id).length;
     return '<button type="button" class="acct" style="--c:' + A.c + '" data-act="acct" data-a="' + A.id + '" aria-pressed="' + (S.acct === A.id) + '">'
-      + '<span class="n"><i></i>@' + A.id + '</span><span class="m">' + done + ' / ' + all.length + ' programmés</span>'
-      + '<span class="bar"><i style="width:' + (all.length ? Math.round(done / all.length * 100) : 0) + '%"></i></span></button>';
+      + '<span class="n"><i></i>@' + A.id + '</span><span class="m">' + (all.length - left) + ' / ' + all.length + ' programmées · ' + left + ' à programmer</span>'
+      + '<span class="bar"><i style="width:' + (all.length ? Math.round((all.length - left) / all.length * 100) : 0) + '%"></i></span></button>';
   }
 
   function bulkHTML() {
-    var n = todo().length, P = S.pack[S.acct];
-    if (!n) return '';
-    var btns;
-    if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep">' + IC.dl + 'Préparer les ' + n + ' vidéos</button>';
-    else if (P.state === 'loading') btns = '<button type="button" class="btn dark" disabled>Préparation ' + P.got + ' / ' + P.total + '…</button>';
-    else btns = '<button type="button" class="btn dark" data-act="share">' + IC.send + 'Tout partager (AirDrop)</button>'
-      + '<button type="button" class="btn ghost" data-act="dlall">' + IC.dl + 'Tout télécharger</button>';
-    return '<div class="bulk"><span class="meta">' + (P && P.state === 'error' ? 'Échec : ' + esc(P.error) + '. Réessaie.'
-      : 'Les ' + n + ' vidéos à programmer sur @' + S.acct + ', nommées dans l’ordre (01, 02…) comme ci-dessous.') + '</span>' + btns + '</div>';
+    var L = lots();
+    if (S.view !== 'todo' || !L.length) return '';
+    var rows = L.map(function (list, i) {
+      var P = S.pack[lotKey(list)], a = pad(num(list[0])), b = pad(num(list[list.length - 1])), btns;
+      if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep" data-i="' + i + '">' + IC.dl + 'Préparer</button>';
+      else if (P.state === 'loading') btns = '<button type="button" class="btn dark" disabled>Préparation ' + P.got + ' / ' + P.total + '…</button>';
+      else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + 'Partager (AirDrop)</button>'
+        + '<button type="button" class="btn ghost" data-act="dlall" data-i="' + i + '">' + IC.dl + 'Télécharger</button>';
+      return '<div class="lot"><b>Lot ' + (i + 1) + ' · n° ' + a + ' à ' + b + '</b>' + btns
+        + (P && P.state === 'error' ? '<span class="meta">Échec : ' + esc(P.error) + '</span>' : '') + '</div>';
+    }).join('');
+    return '<div class="bulk"><span class="meta" style="flex-basis:100%">' + todo().length + ' vidéos à programmer sur @' + S.acct
+      + ', par lots de ' + LOT + ' pour AirDrop. Fichiers nommés dans l’ordre (01, 02…) comme ci-dessous.</span><div class="lots">' + rows + '</div>'
+      + '<button type="button" class="btn ok" data-act="alldone">' + IC.check + 'Tout est programmé</button></div>';
   }
 
   function postHTML(p) {
-    var done = p.status !== 'todo';
+    var done = p.status !== 'todo', id = vidId(p);
     return '<div class="post' + (done ? ' is-done' : '') + (p.id === S.cur ? ' cur' : '') + '">'
       + '<span class="no">' + num(p) + '</span>'
       + '<video src="' + esc(p.video_url) + '#t=0.8" muted playsinline preload="metadata" data-act="play"></video>'
-      + '<div><div class="t">' + hour(p.scheduled_at) + '</div><div class="d">' + esc(dayLabel(p.scheduled_at)) + '</div>'
-      + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div></div>'
+      + '<div style="min-width:0"><div class="t">' + hour(p.scheduled_at) + '</div><div class="d">' + esc(dayLabel(p.scheduled_at)) + '</div>'
+      + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div>'
+      + '<div class="id">ID ' + esc(id) + '<button type="button" data-act="copyid" data-id="' + esc(p.id) + '" title="Copier l’ID">' + IC.copy + '</button></div></div>'
       + '<div class="act"><button type="button" class="btn ghost" data-act="copy" data-id="' + esc(p.id) + '">' + IC.copy + 'Copier la légende</button>'
       + '<button type="button" class="btn ' + (done ? 'done' : 'ok') + '" data-act="done" data-id="' + esc(p.id) + '">' + IC.check + (done ? 'Programmé' : 'C’est programmé') + '</button></div>'
       + '</div>';
@@ -226,39 +265,48 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   function render() {
     var app = $('app');
     if (S.err) { app.innerHTML = '<div class="card empty"><b>Impossible de charger</b>' + esc(S.err) + '</div>'; return; }
-    var list = mine(), out = '', last = '';
+    var list = viewList(), out = '', last = '';
     list.forEach(function (p) {
       var k = dayKey(p.scheduled_at);
       if (k !== last) {
         var dd = list.filter(function (x) { return dayKey(x.scheduled_at) === k; });
-        out += (last ? '</div>' : '') + '<h2>' + esc(dayLabel(p.scheduled_at)) + ' · ' + dd.filter(function (x) { return x.status !== 'todo'; }).length + '/' + dd.length + '</h2><div class="list">';
+        out += (last ? '</div>' : '') + '<h2>' + esc(dayLabel(p.scheduled_at)) + ' · ' + dd.length + '</h2><div class="list">';
         last = k;
       }
       out += postHTML(p);
     });
     if (last) out += '</div>';
-    if (!list.length) out = '<div class="card empty" style="margin-top:14px"><b>Aucun post prévu sur @' + esc(S.acct) + '</b>Les posts apparaissent ici dès que les vidéos finales sont assemblées et planifiées.</div>';
-    else if (!todo().length) out = '<div class="card empty" style="margin-top:14px"><b>Tout est programmé sur @' + esc(S.acct) + '</b>Rien à faire jusqu’au prochain kit.</div>' + out;
-    app.innerHTML = (S.example ? '<div class="demo"><b>Exemple d’aperçu</b> · ces posts ne sont pas réels (clips déjà faits, légendes fictives). Le vrai planning les remplacera dès que les vidéos finales seront prêtes.</div><div style="height:12px"></div>' : '') + '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + bulkHTML() + out;
+    var EMPTY = { todo: mine().length ? 'Tout est programmé sur @' + S.acct : 'Aucun post prévu sur @' + S.acct,
+      sched: 'Aucune vidéo programmée à venir', old: 'Aucune vidéo déjà passée' };
+    if (!list.length) out = '<div class="card empty" style="margin-top:14px"><b>' + esc(EMPTY[S.view]) + '</b>'
+      + (S.view === 'todo' && !mine().length ? 'Les posts apparaissent ici dès que les vidéos finales sont assemblées et planifiées.' : '') + '</div>';
+    var tabs = '<div class="tabs">' + VIEWS.map(function (v) {
+      return '<button type="button" class="tab" data-act="view" data-v="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' + v[1] + ' · ' + mine().filter(function (p) { return inView(p, v[0]); }).length + '</button>';
+    }).join('') + '</div>';
+    app.innerHTML = (S.example ? '<div class="demo"><b>Exemple d’aperçu</b> · ces posts ne sont pas réels (clips déjà faits, légendes fictives). Le vrai planning les remplacera dès que les vidéos finales seront prêtes.</div><div style="height:12px"></div>' : '')
+      + '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + tabs + bulkHTML() + out;
   }
 
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-act]'); if (!el) return;
-    var act = el.getAttribute('data-act'), id = el.getAttribute('data-id');
+    var act = el.getAttribute('data-act'), id = el.getAttribute('data-id'), i = +el.getAttribute('data-i');
     var p = id && S.posts.find(function (x) { return x.id === id; });
     if (act === 'acct') { S.acct = el.getAttribute('data-a'); try { localStorage.setItem('kit_acct', S.acct); } catch (x) { /* */ } var f = todo()[0]; S.cur = f ? f.id : null; render(); }
-    else if (act === 'prep') preparePack();
-    else if (act === 'share') sharePack();
-    else if (act === 'dlall') downloadPack();
-    else if (act === 'copy' && p) copyCaption(p);
+    else if (act === 'view') { S.view = el.getAttribute('data-v'); render(); }
+    else if (act === 'prep') preparePack(i);
+    else if (act === 'share') sharePack(i);
+    else if (act === 'dlall') downloadPack(i);
+    else if (act === 'alldone') allDone();
+    else if (act === 'copy' && p) { S.cur = p.id; copyText(p.caption, 'Légende n°' + num(p) + ' copiée'); render(); }
+    else if (act === 'copyid' && p) copyText(vidId(p), 'ID copié');
     else if (act === 'done' && p) toggleDone(p);
     else if (act === 'play') { if (el.paused) { el.muted = false; el.play(); } else el.pause(); }
   });
 
   async function load() {
-    // D'hier (un post du soir pas encore validé) à +14 jours.
-    var from = new Date(Date.now() - 86400000).toISOString(), to = new Date(Date.now() + 14 * 86400000).toISOString();
-    var r = await sb.from('factory_posts').select('id, scheduled_at, platform, account, video_url, caption, status, done_at')
+    // 90 derniers jours (onglet Anciennes) à +30 jours.
+    var from = new Date(Date.now() - 90 * 86400000).toISOString(), to = new Date(Date.now() + 30 * 86400000).toISOString();
+    var r = await sb.from('factory_posts').select('id, scheduled_at, platform, account, video_url, caption, status, done_at, combo')
       .eq('platform', 'instagram').gte('scheduled_at', from).lte('scheduled_at', to).order('scheduled_at').order('id');
     if (r.error) { S.err = r.error.message; render(); return; }
     S.posts = r.data || [];
@@ -297,15 +345,17 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   function examples() {
     var base = 'https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/variants/';
     var d0 = new Date(); d0.setHours(0, 0, 0, 0);
-    var mk = function (d, h, acct, v, cap) { var t = new Date(d0.getTime() + d * 86400000 + h * 3600000); return { id: 'd' + d + h, scheduled_at: t.toISOString(), account: acct, video_url: base + v + '.mp4', caption: cap, status: 'todo' }; };
+    var mk = function (d, h, acct, v, cap, st) { var t = new Date(d0.getTime() + d * 86400000 + h * 3600000); return { id: 'd' + d + h + acct, scheduled_at: t.toISOString(), account: acct, video_url: base + v + '.mp4', caption: cap, status: st || 'todo' }; };
     return [
-      mk(1, 12, 'avataradss', 'A1-5-H29', 'Tu crées encore tes pubs à la main ?\n\nCommente GO et je t’envoie l’accès.\n\n#ia #ugc #marketing'),
-      mk(1, 13, 'leoadsia', 'A2-6-H24-v2', 'Ce que personne ne te dit sur les vidéos IA.\n\nCommente GO pour tester.\n\n#ia #contenu'),
-      mk(1, 17, 'avataradss', 'A1-5-CTA-direct', 'J’ai fait 30 vidéos en une après-midi.\n\nCommente GO.\n\n#ia #ugc'),
-      mk(1, 19, 'leoadsia', 'A2-8-L12', 'Mon avatar parle mieux que moi.\n\nCommente GO.\n\n#ia'),
-      mk(1, 21, 'avataradss', 'A2-2-CTA-UGC', 'Arrête de payer des créateurs UGC.\n\nCommente GO.\n\n#ugc #ia'),
-      mk(2, 12, 'avataradss', 'A1-5-H29', 'Deuxième jour.\n\nCommente GO.'),
-      mk(2, 13, 'leoadsia', 'A2-8-L12', 'Deuxième jour.\n\nCommente GO.')
+      mk(-2, 12, 'avataradss', 'A1-8-H24-v2', 'Tu peux créer des vidéos directement dans Claude.\n\nLe lien est en bio.\n\n#ia #claude #ugc', 'scheduled'),
+      mk(-2, 13, 'leoadsia', 'A2-3-H24-v2', 'Créer une vidéo depuis Claude, en 30 secondes.\n\nLe lien est en bio.\n\n#ia #claude', 'scheduled'),
+      mk(1, 12, 'avataradss', 'A1-5-H29', 'Tu crées encore tes pubs à la main ?\n\nÉcris-moi « GO » en DM, je t’envoie l’accès.\n\n#ia #ugc #marketing', 'scheduled'),
+      mk(1, 13, 'leoadsia', 'A2-8-L12', 'Ce que personne ne te dit sur les vidéos IA.\n\nÉcris-moi « GO » en DM pour tester.\n\n#ia #contenu'),
+      mk(1, 17, 'avataradss', 'A1-5-CTA-direct', 'J’ai fait 30 vidéos en une après-midi.\n\nÉcris-moi « GO » en DM.\n\n#ia #ugc'),
+      mk(1, 19, 'leoadsia', 'A2-2-CTA-UGC', 'Mon avatar parle mieux que moi.\n\nLe lien est en bio.\n\n#ia'),
+      mk(1, 21, 'avataradss', 'A1-2-H24-v2', 'Arrête de payer des créateurs UGC.\n\nLe lien est en bio.\n\n#ugc #ia'),
+      mk(2, 12, 'avataradss', 'A1-5-H29', 'Deuxième jour.\n\nÉcris-moi « GO » en DM.'),
+      mk(2, 13, 'leoadsia', 'A2-7-H24-v2', 'Deuxième jour.\n\nLe lien est en bio.')
     ];
   }
   if (DEMO) { S.example = true; S.posts = examples(); S.cur = todo()[0].id; render(); return; }
