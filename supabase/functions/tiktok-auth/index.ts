@@ -22,12 +22,32 @@ const CORS = {
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
+// Session owner/developer exigée pour tout sauf authorize/exchange (audit 29/09 : accounts, status, post et
+// poststatus étaient ouverts — n'importe qui pouvait lister nos comptes et pousser une vidéo en brouillon sur eux,
+// en nous faisant télécharger l'URL de son choix). Fermé par défaut.
+async function ownerOk(req: Request): Promise<boolean> {
+  const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim()
+  if (!jwt) return false
+  try {
+    const { data: { user }, error } = await svc.auth.getUser(jwt)
+    if (error || !user) return false
+    const { data, error: e2 } = await svc.from('profiles').select('plan, is_owner').eq('id', user.id).maybeSingle()
+    if (e2 || !data) return false
+    return !!data.is_owner || String(data.plan || '').toLowerCase() === 'developer'
+  } catch { return false }
+}
+// Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
+const MEDIA_PREFIX = `${SB_URL}/storage/v1/object/public/factory-media/`
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (!CLIENT_KEY || !CLIENT_SECRET) return json({ error: 'TikTok non configuré (secrets manquants).' }, 500)
 
   const url = new URL(req.url)
   const action = url.searchParams.get('action') || (req.method === 'POST' ? 'exchange' : 'authorize')
+  if (['status', 'accounts', 'post', 'poststatus'].includes(action) && !(await ownerOk(req))) {
+    return json({ error: 'réservé au propriétaire' }, 401)
+  }
 
   // 1) URL d'autorisation à ouvrir côté app
   if (action === 'authorize') {
@@ -110,6 +130,7 @@ Deno.serve(async (req) => {
     const video_url = String(body.video_url || '')
     const title = String(body.title || '').slice(0, 2200)   // légende pré-remplie (max TikTok ~2200)
     if (!open_id || !video_url) return json({ error: 'open_id et video_url requis' }, 400)
+    if (!SB_URL || !video_url.startsWith(MEDIA_PREFIX) || video_url.includes('..')) return json({ error: 'video_url non autorisée' }, 400)
 
     const { data: acc } = await svc.from('tiktok_accounts').select('access_token').eq('open_id', open_id).single()
     if (!acc?.access_token) return json({ error: 'compte TikTok non connecté (open_id inconnu)' }, 400)

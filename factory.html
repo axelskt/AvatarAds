@@ -151,6 +151,15 @@
   <div id="app" style="display:none">
     <h2 style="font-size:15px">À valider</h2>
     <div id="qcBanner"></div>
+    <h2 style="font-size:15px">Comptes TikTok <span style="font-weight:400;font-size:12px;color:var(--text-3)">— publication en brouillon (anti-shadowban)</span></h2>
+    <div class="card" id="tkCard"><div class="cbody">
+      <div id="tkAccounts" class="note">Chargement…</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-primary" onclick="tkConnect()">Connecter TikTok</button>
+        <button class="btn" onclick="tkSendTest()">Envoyer une vidéo en brouillon sur TikTok</button>
+      </div>
+      <div id="tkResult" class="note" style="margin-top:10px"></div>
+    </div></div>
     <h2 style="font-size:15px">Auto-DM Instagram <span style="font-weight:400;font-size:12px;color:var(--text-3)">— commentaire → DM · machine à data</span></h2>
     <div class="card"><div class="cbody" style="height:auto">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
@@ -284,6 +293,7 @@ async function loadAll(){
   renderCharts(bricks, recipes||[]);
   qcLoad();
   igLoad();
+  tkLoadAccounts();
 }
 
 // ── Auto-DM Instagram : bouton connexion (OAuth) + dashboard data (dev/owner) ──
@@ -374,6 +384,51 @@ async function igLoadInsights(){
       + (d.username ? ' <span class="muted" style="font-weight:400;font-size:12px;margin-left:auto">@'+esc(d.username)+'</span>' : '')
       + '</div><div class="kpis" style="margin-bottom:4px">'+cards.join('')+'</div>';
   }catch(e){ $('igInsights').innerHTML=''; }
+}
+// ── TikTok (Login Kit + Content Posting API, mode brouillon) : remis le 29/09 pour la vidéo de review ──
+// Les actions accounts / post exigent la session owner/developer (edge tiktok-auth, audit 29/09).
+const TK_EDGE = SUPABASE_URL + '/functions/v1/tiktok-auth';
+let TK_ACCOUNTS = [];
+async function tkLoadAccounts(){
+  const el = $('tkAccounts'); if(!el) return;
+  try{
+    const d = await (await fetch(TK_EDGE + '?action=accounts', { headers: await igAuthHeaders() })).json();
+    if(d.error){ el.textContent = 'Accès refusé (session expirée ?) — reconnecte-toi.'; return; }
+    TK_ACCOUNTS = d.accounts || [];
+    el.innerHTML = TK_ACCOUNTS.length
+      ? '<b>'+TK_ACCOUNTS.length+' compte'+(TK_ACCOUNTS.length>1?'s':'')+' TikTok connecté'+(TK_ACCOUNTS.length>1?'s':'')+' :</b> '
+        + TK_ACCOUNTS.map(a=>'<span style="display:inline-flex;align-items:center;gap:6px;margin-right:10px">'
+          + (a.avatar_url ? '<img src="'+esc(a.avatar_url)+'" alt="" referrerpolicy="no-referrer" style="width:22px;height:22px;border-radius:50%">' : '')
+          + esc(a.display_name||a.open_id)+'</span>').join('')
+      : 'Aucun compte connecté — clique « Connecter TikTok ».';
+  }catch(e){ el.textContent = 'Erreur chargement des comptes.'; }
+}
+async function tkConnect(){
+  const res = $('tkResult');
+  const w = window.open('about:blank', 'tiktok_oauth', 'width=540,height=760');   // ouvert dans le clic (Safari)
+  try{
+    const d = await (await fetch(TK_EDGE + '?action=authorize')).json();
+    if(!d.authorize_url){ if(w) w.close(); res.textContent = 'URL d\'autorisation indisponible.'; return; }
+    if(!w){ res.textContent = 'Popup bloquée : autorise les popups pour avatarads.fr.'; return; }
+    w.location.href = d.authorize_url;
+    res.textContent = 'Fenêtre TikTok ouverte — autorise ton compte…';
+    const iv = setInterval(()=>{ if(w.closed){ clearInterval(iv); res.textContent=''; setTimeout(tkLoadAccounts, 800); } }, 1000);
+  }catch(e){ if(w) w.close(); res.textContent = 'Erreur : '+e.message; }
+}
+async function tkSendTest(){
+  const res = $('tkResult');
+  if(!TK_ACCOUNTS.length){ res.textContent = 'Connecte au moins 1 compte d\'abord.'; return; }
+  const acc = TK_ACCOUNTS[Math.floor(Math.random()*TK_ACCOUNTS.length)];   // répartition aléatoire (anti-shadowban)
+  const name = acc.display_name || acc.open_id;
+  res.textContent = 'Envoi en brouillon vers ' + name + '…';
+  try{
+    const video_url = SUPABASE_URL + '/storage/v1/object/public/factory-media/test-tiktok/test3.mp4';
+    const caption = 'Marque « GO » en commentaire et va sur AvatarAds.fr pour tester par toi-même #AvatarAds';
+    const d = await (await fetch(TK_EDGE + '?action=post', { method:'POST', headers:{ 'Content-Type':'application/json', ...(await igAuthHeaders()) }, body: JSON.stringify({ open_id: acc.open_id, video_url, title: caption }) })).json();
+    res.innerHTML = d.ok
+      ? 'Vidéo envoyée en brouillon sur <b>'+esc(name)+'</b>. Ouvre TikTok : notification « Ton contenu de AvatarAds est prêt », touche-la, puis colle la légende :<br><code>'+esc(caption)+'</code>'
+      : 'Erreur : '+esc(d.error||'inconnue');
+  }catch(e){ res.textContent = 'Erreur : '+e.message; }
 }
 // NB : l'intégration TikTok (edge tiktok-auth + table tiktok_accounts + 4 comptes connectés)
 // reste en place côté backend. Le panneau « Connecter TikTok » était temporaire (vérif app +
