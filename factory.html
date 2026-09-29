@@ -154,8 +154,9 @@
     <h2 style="font-size:15px">Comptes TikTok <span style="font-weight:400;font-size:12px;color:var(--text-3)">— publication en brouillon (anti-shadowban)</span></h2>
     <div class="card" id="tkCard"><div class="cbody">
       <div id="tkAccounts" class="note">Chargement…</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center">
         <button class="btn btn-primary" onclick="tkConnect()">Connecter TikTok</button>
+        <select id="tkWho" class="btn" style="max-width:260px" aria-label="Compte TikTok destinataire"></select>
         <button class="btn" onclick="tkSendTest()">Envoyer une vidéo en brouillon sur TikTok</button>
       </div>
       <div id="tkResult" class="note" style="margin-top:10px"></div>
@@ -394,7 +395,9 @@ async function tkLoadAccounts(){
   try{
     const d = await (await fetch(TK_EDGE + '?action=accounts', { headers: await igAuthHeaders() })).json();
     if(d.error){ el.textContent = 'Accès refusé (session expirée ?) — reconnecte-toi.'; return; }
-    TK_ACCOUNTS = d.accounts || [];
+    TK_ACCOUNTS = d.accounts || [];   // du plus récent au plus ancien : le dernier connecté est choisi par défaut
+    const sel = $('tkWho');
+    if(sel) sel.innerHTML = TK_ACCOUNTS.map(a=>'<option value="'+esc(a.open_id)+'">'+esc(a.display_name||a.open_id)+'</option>').join('');
     el.innerHTML = TK_ACCOUNTS.length
       ? '<b>'+TK_ACCOUNTS.length+' compte'+(TK_ACCOUNTS.length>1?'s':'')+' TikTok connecté'+(TK_ACCOUNTS.length>1?'s':'')+' :</b> '
         + TK_ACCOUNTS.map(a=>'<span style="display:inline-flex;align-items:center;gap:6px;margin-right:10px">'
@@ -418,7 +421,8 @@ async function tkConnect(){
 async function tkSendTest(){
   const res = $('tkResult');
   if(!TK_ACCOUNTS.length){ res.textContent = 'Connecte au moins 1 compte d\'abord.'; return; }
-  const acc = TK_ACCOUNTS[Math.floor(Math.random()*TK_ACCOUNTS.length)];   // répartition aléatoire (anti-shadowban)
+  const pick = ($('tkWho')||{}).value;
+  const acc = TK_ACCOUNTS.find(a=>a.open_id===pick) || TK_ACCOUNTS[0];   // compte choisi (le plus récent par défaut)
   const name = acc.display_name || acc.open_id;
   res.textContent = 'Envoi en brouillon vers ' + name + '…';
   try{

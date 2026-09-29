@@ -36,6 +36,30 @@ async function ownerOk(req: Request): Promise<boolean> {
     return !!data.is_owner || String(data.plan || '').toLowerCase() === 'developer'
   } catch { return false }
 }
+// Token d'accès valide d'un compte : l'access_token TikTok vit 24 h ; au-delà (ou à 5 min de la fin) on le renouvelle
+// avec le refresh_token (365 j) et on enregistre le nouveau couple. null = compte inconnu ou refresh refusé.
+async function freshToken(open_id: string): Promise<{ token: string } | { error: string }> {
+  const { data: acc } = await svc.from('tiktok_accounts').select('access_token, refresh_token, expires_at').eq('open_id', open_id).maybeSingle()
+  if (!acc?.access_token) return { error: 'compte TikTok non connecté (open_id inconnu)' }
+  const exp = acc.expires_at ? Date.parse(acc.expires_at) : 0
+  if (exp && exp - Date.now() > 5 * 60 * 1000) return { token: acc.access_token }
+  if (!acc.refresh_token) return { error: 'session TikTok expirée : reconnecte ce compte' }
+  const r = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_key: CLIENT_KEY, client_secret: CLIENT_SECRET, grant_type: 'refresh_token', refresh_token: acc.refresh_token }).toString(),
+  })
+  const t = await r.json().catch(() => ({}))
+  if (!r.ok || t.error || !t.access_token) return { error: 'session TikTok expirée : reconnecte ce compte (' + String(t.error_description || t.error || r.status).slice(0, 80) + ')' }
+  const now = Date.now()
+  await svc.from('tiktok_accounts').update({
+    access_token: t.access_token, refresh_token: t.refresh_token ?? acc.refresh_token,
+    expires_at: new Date(now + (Number(t.expires_in) || 86400) * 1000).toISOString(),
+    ...(t.refresh_expires_in ? { refresh_expires_at: new Date(now + Number(t.refresh_expires_in) * 1000).toISOString() } : {}),
+    updated_at: new Date(now).toISOString(),
+  }).eq('open_id', open_id)
+  return { token: t.access_token }
+}
+
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
 const MEDIA_PREFIX = `${SB_URL}/storage/v1/object/public/factory-media/`
 
@@ -132,8 +156,9 @@ Deno.serve(async (req) => {
     if (!open_id || !video_url) return json({ error: 'open_id et video_url requis' }, 400)
     if (!SB_URL || !video_url.startsWith(MEDIA_PREFIX) || video_url.includes('..')) return json({ error: 'video_url non autorisée' }, 400)
 
-    const { data: acc } = await svc.from('tiktok_accounts').select('access_token').eq('open_id', open_id).single()
-    if (!acc?.access_token) return json({ error: 'compte TikTok non connecté (open_id inconnu)' }, 400)
+    const ft = await freshToken(open_id)
+    if ('error' in ft) return json({ error: ft.error }, 400)
+    const acc = { access_token: ft.token }
 
     const vr = await fetch(video_url)
     if (!vr.ok) return json({ error: `téléchargement vidéo échoué (HTTP ${vr.status})` }, 400)
@@ -177,8 +202,9 @@ Deno.serve(async (req) => {
     const open_id = String(body.open_id || '')
     const publish_id = String(body.publish_id || '')
     if (!open_id || !publish_id) return json({ error: 'open_id et publish_id requis' }, 400)
-    const { data: acc } = await svc.from('tiktok_accounts').select('access_token').eq('open_id', open_id).single()
-    if (!acc?.access_token) return json({ error: 'compte non connecté' }, 400)
+    const ft = await freshToken(open_id)
+    if ('error' in ft) return json({ error: ft.error }, 400)
+    const acc = { access_token: ft.token }
     const r = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
       method: 'POST',
       headers: { Authorization: `Bearer ${acc.access_token}`, 'Content-Type': 'application/json; charset=UTF-8' },
