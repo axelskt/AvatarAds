@@ -397,7 +397,8 @@ async function tkLoadAccounts(){
     if(d.error){ el.textContent = 'Accès refusé (session expirée ?) — reconnecte-toi.'; return; }
     TK_ACCOUNTS = d.accounts || [];   // du plus récent au plus ancien : le dernier connecté est choisi par défaut
     const sel = $('tkWho');
-    if(sel) sel.innerHTML = TK_ACCOUNTS.map(a=>'<option value="'+esc(a.open_id)+'">'+esc(a.display_name||a.open_id)+'</option>').join('');
+    // deux comptes peuvent porter le même nom affiché : on ajoute l'heure de connexion et la fin de l'identifiant
+    if(sel) sel.innerHTML = TK_ACCOUNTS.map(a=>'<option value="'+esc(a.open_id)+'">'+esc((a.display_name||'Compte')+' · connecté le '+new Date(a.updated_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' · …'+String(a.open_id).slice(-4))+'</option>').join('');
     el.innerHTML = TK_ACCOUNTS.length
       ? '<b>'+TK_ACCOUNTS.length+' compte'+(TK_ACCOUNTS.length>1?'s':'')+' TikTok connecté'+(TK_ACCOUNTS.length>1?'s':'')+' :</b> '
         + TK_ACCOUNTS.map(a=>'<span style="display:inline-flex;align-items:center;gap:6px;margin-right:10px">'
@@ -429,9 +430,22 @@ async function tkSendTest(){
     const video_url = SUPABASE_URL + '/storage/v1/object/public/factory-media/test-tiktok/test3.mp4';
     const caption = 'Marque « GO » en commentaire et va sur AvatarAds.fr pour tester par toi-même #AvatarAds';
     const d = await (await fetch(TK_EDGE + '?action=post', { method:'POST', headers:{ 'Content-Type':'application/json', ...(await igAuthHeaders()) }, body: JSON.stringify({ open_id: acc.open_id, video_url, title: caption }) })).json();
-    res.innerHTML = d.ok
-      ? 'Vidéo envoyée en brouillon sur <b>'+esc(name)+'</b>. Ouvre TikTok : notification « Ton contenu de AvatarAds est prêt », touche-la, puis colle la légende :<br><code>'+esc(caption)+'</code>'
-      : 'Erreur : '+esc(d.error||'inconnue');
+    if(!d.ok){ res.textContent = 'Erreur : '+(d.error||'inconnue'); return; }
+    res.innerHTML = 'Vidéo envoyée à TikTok pour <b>'+esc(name)+'</b> — vérification de la livraison…';
+    // Statut réel côté TikTok : PROCESSING_UPLOAD → SEND_TO_USER_INBOX (arrivée dans la boîte de réception) ou FAILED.
+    for(let i=0;i<24;i++){
+      await new Promise(r=>setTimeout(r,5000));
+      let st=null;
+      try{ st = await (await fetch(TK_EDGE + '?action=poststatus', { method:'POST', headers:{ 'Content-Type':'application/json', ...(await igAuthHeaders()) }, body: JSON.stringify({ open_id: acc.open_id, publish_id: d.publish_id }) })).json(); }catch(e){}
+      const s = st && st.data && st.data.status;
+      if(s === 'SEND_TO_USER_INBOX' || s === 'PUBLISH_COMPLETE'){
+        res.innerHTML = 'Vidéo livrée en brouillon sur <b>'+esc(name)+'</b>. Ouvre TikTok : notification « Ton contenu de AvatarAds est prêt », touche-la, puis colle la légende :<br><code>'+esc(caption)+'</code>';
+        return;
+      }
+      if(s === 'FAILED'){ res.textContent = 'TikTok a refusé la vidéo : ' + (st.data.fail_reason || 'raison non précisée'); return; }
+      res.innerHTML = 'Vidéo envoyée à TikTok pour <b>'+esc(name)+'</b> — TikTok la traite ('+esc(s||'en attente')+')…';
+    }
+    res.textContent = 'TikTok traite toujours la vidéo après 2 minutes (limite du mode Sandbox : souvent seul le 1er envoi d\'une série arrive). Réessaie dans quelques minutes.';
   }catch(e){ res.textContent = 'Erreur : '+e.message; }
 }
 // NB : l'intégration TikTok (edge tiktok-auth + table tiktok_accounts + 4 comptes connectés)
