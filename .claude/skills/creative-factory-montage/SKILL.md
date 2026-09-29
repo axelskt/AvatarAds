@@ -1,0 +1,112 @@
+---
+name: creative-factory-montage
+description: Monter une VIDÉO FINALE Creative Factory (hook → liaison → démo → CTA) prête à poster, avec sous-titres, bruitages, transitions, musique de fond et hook soigné. À lire AVANT tout montage de vidéo finale (test ou série), pour ne rien rechercher : choix des briques, téléchargement, commande exacte, réglages validés, contrôle, enregistrement QC.
+---
+
+# Monter une vidéo finale (Creative Factory)
+
+Une vidéo finale = **HOOK (+ LIAISON) → DÉMO → CTA**, 9:16 1080×1920, **60 i/s** (Axel 29/09 : les démos sont tournées en 60 i/s ;
+1080×1920 = le maximum affiché par Reels / TikTok, la source 4K reste intacte). Tout se fait en local, **zéro crédit**
+(lipsync déjà produits dans `factory_variants`, transcription Whisper locale, rendu HyperFrames local).
+
+## 1. Choisir les briques (cohérence, jamais au hasard total)
+
+| Brique | Où | Règle |
+|---|---|---|
+| Hook | `factory_bricks` kind `hook`, clips `factory_variants` (format `axel`) | `meta.compatible_subjects` contient le **sujet de la démo** |
+| Liaison (format long) | `usine/hook-liaison.js` (`CF_HOOK_LIAISON[Hxx]`) | seulement une liaison **de la matrice** du hook ; même **photo** que le hook |
+| Démo | `factory_bricks` kind `contenu`, status `ready` | sujet ∈ sujets du hook ; `retired` exclues |
+| CTA | clips `factory_variants` `…-CTA-…` | **même photo** que le hook si possible, sinon même avatar |
+| Musique | `~/Downloads/Creative Factory/musique/beds/` (pistes complètes) | plus longue que la vidéo ; les `music/Mxx.mp3` du bucket ne font que 15 s → ne pas les utiliser |
+
+- Une photo = un compte : **A1-x → @avataradss**, **A2-x → @leoadsia**.
+- Photos à éviter pour les mains : A1-1, A1-2, A1-7 ; jamais A1-4 ; A2-6 a déjà tordu les doigts (H24).
+- Requête utile (hooks compatibles avec les démos dispo + photos qui ont le clip) :
+  ```sql
+  select b.id, b.meta->'compatible_subjects', left(b.label,70), string_agg(v.avatar_id,' ' order by v.avatar_id)
+  from factory_bricks b join factory_variants v on v.brick_id=b.id and v.format='axel'
+  where b.kind='hook' and b.status='ready' and (b.meta->'compatible_subjects')::text ~ '(omni|image-ia|static-ads)'
+  group by 1,2,3 order by 1;
+  ```
+- Clips disponibles pour une photo : `select avatar_id, string_agg(brick_id,' ') from factory_variants where format='axel' and avatar_id='A2-9' group by 1;`
+
+## 2. Préparer (dossier de travail dans le scratchpad)
+
+```bash
+# URLs exactes (ne jamais reconstruire un nom de fichier : certains ont -v2)
+supabase db query --linked -o csv "select avatar_id||'|'||brick_id||'|'||video_url from factory_variants where format='axel' and avatar_id='A2-9' and brick_id in ('H77','L16','CTA-SITE-teste')"
+curl -s -o A2-9-H77.mp4 "<video_url>"          # idem liaison, CTA, démo (meta->>'media' de la brique contenu)
+# export des briques pour build.mjs (pas de clé service en local) + aucune recette déjà faite
+supabase db query --linked -o json "select coalesce(json_agg(x),'[]'::json) as j from (select id,kind,subject,label,status,meta from factory_bricks) x"  # → bricks.json (extraire rows[0].j)
+echo '[]' > done.json
+```
+
+**Format long : coller hook + liaison AVANT build.mjs** (build.mjs ne connaît que hook → démo → CTA) :
+```bash
+ffmpeg -y -i HOOK.mp4 -i LIAISON.mp4 -filter_complex "[0:v]fps=30,format=yuv420p,setsar=1[a];[1:v]fps=30,format=yuv420p,setsar=1[b];[0:a]aformat=sample_rates=48000:channel_layouts=stereo[x];[1:a]aformat=sample_rates=48000:channel_layouts=stereo[y];[a][x][b][y]concat=n=2:v=1:a=1[v][au]" -map "[v]" -map "[au]" -c:v libx264 -crf 16 -c:a aac -b:a 192k HOOK-LIAISON.mp4
+```
+(même photo → coupe franche, comme un jump cut ; pas de bruitage entre les deux)
+
+## 3. Monter (une commande)
+
+```bash
+cd "Autre SaaS/avatarads-membres"
+export PRODUCER_BROWSER_GPU_MODE=hardware
+node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
+  --hook-id H77 --demo C-SADS-01 --bricks bricks.json --done done.json
+```
+- 5e argument = **le clip du hook lui-même** comme voix (sinon le hook est muet).
+- Caches (`~/Downloads/Creative Factory/cache/`) : démo convertie UNE fois en 1080×1920 60 i/s (`demos/`), mots Whisper
+  d'une brique gardés par empreinte (`words/`) → au 2e montage avec les mêmes briques, plus de conversion ni de
+  transcription. Encodage VideoToolbox (matériel du Mac) 20 Mb/s. Lancer en arrière-plan, une vidéo à la fois.
+- Garde-fou : si la piste vidéo ne couvre pas le son (raccords décalés), build.mjs s'arrête (bug du 29/09 : hook plus
+  court que voix + respiration → CTA jamais affiché, image figée).
+
+### Ce que build.mjs fait tout seul (réglages validés, ne pas refaire à la main)
+1. **Voix** : hook, démo, CTA à la suite, jamais superposées ; loudnorm −16 LUFS ; 0,5 s de respiration après le hook.
+2. **Transitions simples** : slide (push) de 0,40 s hook → démo et démo → CTA. Pas de fondu au noir.
+3. **Bruitages** : whoosh (−4 dB) + impact (−7 dB) sur chaque transition (`render-worker/assets/sfx/`).
+4. **Musique de fond pas trop forte** : −11 dB, fondu d'entrée 0,6 s / sortie 0,9 s, **baissée automatiquement sous la
+   voix** (sidechain), coupée à la fin de la vidéo ; limiteur final 0,95.
+5. **Sous-titres** mot à mot : mots exacts des briques quand un manifest existe, Whisper sinon (démo).
+6. **Hook soigné** (format tiré en rotation pour récolter de la data, `usine/formats.js`) :
+   F01 sous-titres seuls · F02 texte choc 0-3 s + gros sous-titres colorés · F03 texte choc + sous-titres normaux ·
+   F04 gros sous-titres colorés. Texte choc = banque validée TH01–TH19, en zone sûre, **jamais sur un visage**, visible
+   dès la frame 0 (= couverture). Forcer : `--format F02 --choc TH05`.
+7. **CTA** : grain + léger tremblement « selfie » (casse le côté IA figé).
+8. Écrit `OUT.mp4.format.json` (format, texte choc) → repris par `publish-qc.mjs`.
+
+## 4. Contrôler avant d'envoyer (toujours regarder, jamais seulement le log)
+
+```bash
+for t in 0.1 1.5 3 6 12 20 28; do ffmpeg -v error -y -ss $t -i OUT.mp4 -vframes 1 -vf scale=270:-1 f$t.jpg; done   # planche
+ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                                                          # ≈ −14 à −16 LUFS
+```
+- Frame 0 jamais blanche ni noire (c'est la couverture TikTok / Reels).
+- Sous-titres lisibles, pas sur la bouche ni hors zone sûre ; pas de mot fantôme.
+- Mains propres sur le hook et le CTA (doigts tordus → refaire la brique sur une autre photo).
+- Musique audible mais sous la voix ; whoosh calé sur la transition, pas après.
+- Fin propre : le CTA finit sa phrase, pas de silence mort.
+
+## 5. Livrer
+
+- Copier dans `~/Downloads/Creative Factory/rendus/VF-…mp4` et l'envoyer à Axel pour validation.
+- Validé → `node usine/publish-qc.mjs … --bricks bricks.json` : QC technique (`qc.mjs`) + vision, dépose la vidéo et un
+  poster dans factory-media, et prépare la ligne `factory_qc` (status `pending`, comboJson = { voice, avatar, hook,
+  liaison?, contenu, cta, musique? } + format / texte_choc lus dans `OUT.mp4.format.json`). Sans clé service en local, le
+  script IMPRIME la ligne : l'insérer avec `supabase db query --linked`. Axel valide ensuite dans Production › revue QC.
+- La vidéo approuvée alimente le dashboard (En stock, jours de contenu) puis le kit de publication (`factory_posts`,
+  légende = CTA complet de `usine/cta-captions.json` + 3 hashtags max, jamais de fournisseur).
+
+## Pistes d'amélioration demandées par Axel (29/09, pas encore dans build.mjs)
+- **Zoom** léger « punch-in » sur le hook (1,00 → 1,06 sur sa durée) + petit zoom sur les mots forts.
+- **Sous-titres dynamiques aux moments clés** : mot à mot partout SAUF ~2 moments clés (la promesse du hook, la phrase
+  du CTA, + une fois dans la liaison ou la démo) où la phrase s'affiche **en bloc** (groupe de mots, plus gros, mot
+  fort coloré) pour casser la monotonie.
+- **Bruitages cohérents avec l'action** en plus des transitions : clic sur un clic de souris / tap dans la démo, pop
+  à l'apparition d'un texte ou d'un résultat, « ka-ching » quand la voix parle d'argent… Jamais un son sans action à
+  l'écran (règle « le visuel EST le mot » du Montage IA). Banque : `render-worker/assets/sfx/`.
+- Liaison gérée directement par build.mjs (au lieu du collage ffmpeg ci-dessus).
+- **Stockage : une vidéo POSTÉE est supprimée de Supabase** (Axel 29/09). Seul le MP4 final part ; la recette
+  (`brick_combo` : photo, hook, liaison, démo, CTA, format) reste → on peut la ré-assembler à l'identique. Déclencheur =
+  confirmation d'Axel dans le kit de publication. Ne JAMAIS toucher aux briques (`variants/`, `hooks/`, `ctas/`, `demos/`).

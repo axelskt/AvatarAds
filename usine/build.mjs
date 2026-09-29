@@ -17,8 +17,9 @@
 //   lues avec SUPABASE_SERVICE_ROLE_KEY (lecture seule) ; --bricks = export factory_bricks (formats retirés exclus).
 //   --tx / --avant-apres : déduits du nom d'un hook avant/après (assemblage « HK-O2-0ab » lu dans la bibliothèque, ancien « HK-O02a-01 ») ; --faces : boîtes imposées (sinon détectées).
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, statSync, openSync, readSync, closeSync, renameSync } from 'node:fs';
+import { tmpdir, homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { faceZones } from './face-zones.mjs';
@@ -39,8 +40,9 @@ for (let i = 0; i < ARGV.length; i++) {
 
 // cta = clip AVATAR (audio embarqué : l'avatar parle). ctaCap = audio d'origine (CTA28-audio.wav) pour les
 // captions-manifest. ctaLead = silence de tête baké dans le clip avatar (l'avatar attend puis parle).
-const [hook, demo, out, music, hookVoice, cta, ctaCap, ctaLeadArg] = POS;
-if (!hook || !demo || !out) { console.error('usage: build.mjs <hook> <demo> <out> [music] [hookVoice] [cta] [ctaCap] [ctaLead] [--format …]'); process.exit(1); }
+const [hook, demoSrc, out, music, hookVoice, cta, ctaCap, ctaLeadArg] = POS;
+let demo = demoSrc;
+if (!hook || !demoSrc || !out) { console.error('usage: build.mjs <hook> <demo> <out> [music] [hookVoice] [cta] [ctaCap] [ctaLead] [--format …]'); process.exit(1); }
 const CTA_LEAD = parseFloat(ctaLeadArg || '0') || 0;
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SB_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
@@ -81,9 +83,36 @@ const facesForced = OPT.faces ? readJson(OPT.faces, '--faces') : undefined;
 console.log('▶ format ' + format.id + ' « ' + format.label + ' »' + (hookId ? ' · hook ' + hookId : '') + (tx ? ' · ' + tx.join('+') : ''));
 const SFX = join(HERE, '..', 'render-worker', 'assets', 'sfx');
 const work = mkdtempSync(join(tmpdir(), 'build-'));
-const VF = 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,format=yuv420p';
+// 60 i/s (Axel 29/09 : les démos sont tournées en 60 i/s, on garde leur fluidité ; hook / CTA Hedra 25 i/s dupliqués)
+const FPS = 60;
+const VF = `scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=${FPS},setsar=1,format=yuv420p`;
 const dur = f => parseFloat(execFileSync('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0', f]).toString().trim());
 const ff = args => execFileSync('ffmpeg', ['-v','error','-y', ...args], { stdio:'inherit' });
+// ── VITESSE (29/09) : ce qui ne change pas d'une vidéo à l'autre n'est calculé qu'UNE fois ──
+//  • démo : version de travail 1080×1920 30 i/s mise en cache (les sources font 190 Mo en 4K 60 i/s : les décoder à
+//    chaque montage prenait ~5 min) ;
+//  • mots Whisper d'une brique : mis en cache par empreinte du fichier (plus de transcription au 2e montage) ;
+//  • encodage : VideoToolbox (matériel du Mac), repli libx264 si indisponible.
+const CACHE = process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Factory', 'cache');
+mkdirSync(join(CACHE, 'demos'), { recursive: true }); mkdirSync(join(CACHE, 'words'), { recursive: true });
+let HW = true;
+try { execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','color=c=black:s=64x64:d=0.1','-c:v','h264_videotoolbox','-f','null','-'], { stdio:'ignore' }); } catch { HW = false; }
+const VENC = HW ? ['-c:v','h264_videotoolbox','-b:v','20M','-maxrate','26M','-bufsize','40M','-profile:v','high'] : ['-c:v','libx264','-crf','20','-preset','medium'];
+const fileKey = f => { const st = statSync(f), fd = openSync(f, 'r'), h = createHash('sha1'), n = Math.min(st.size, 4 << 20), b = Buffer.alloc(n);
+  readSync(fd, b, 0, n, 0); h.update(b); readSync(fd, b, 0, n, Math.max(0, st.size - n)); h.update(b); closeSync(fd); h.update(String(st.size)); return h.digest('hex').slice(0, 16); };
+function workingDemo(src) {
+  const pr = execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=width,height,r_frame_rate','-of','csv=p=0', src]).toString().trim().split(',');
+  const [w, h] = [+pr[0], +pr[1]], fps = (() => { const [a, b] = String(pr[2] || '30/1').split('/').map(Number); return b ? a / b : a; })();
+  if (w === 1080 && h === 1920 && Math.abs(fps - FPS) < 0.02) return src;
+  const out = join(CACHE, 'demos', basename(src).replace(/\.[^.]+$/, '') + '-' + fileKey(src) + '-' + FPS + 'fps.mp4');
+  if (!existsSync(out)) {
+    console.log('  démo : version de travail 1080×1920 ' + FPS + ' i/s (une seule fois) → ' + basename(out));
+    const tmp = out + '.part.mp4';
+    ff(['-i', src, '-vf', VF, ...VENC, '-g', String(FPS), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', tmp]);
+    renameSync(tmp, out);
+  }
+  return out;
+}
 
 const TS = 0.40;      // durée du slide de raccord
 const TRANS = 'slideleft';
@@ -99,6 +128,8 @@ const GAPH = 0.50;    // respiration après la voix du hook (phrase finie AVANT 
 const AFMT = 'aformat=sample_rates=48000:channel_layouts=stereo';
 const LN = 'loudnorm=I=-16:TP=-1.5';
 
+demo = workingDemo(demoSrc);
+
 // captions-manifest : une brique connaît ses mots (0 erreur, 0 coût)
 function manifestWords(voicePath, offset) {
   try {
@@ -111,9 +142,11 @@ function manifestWords(voicePath, offset) {
   } catch (e) {}
   return null;
 }
-const emitWords = (audio, offset) => { const j = join(work, 'w'+Math.round(offset*1000)+'.json');
-  execFileSync('node', [join(HERE,'captions.mjs'), 'emit', audio, String(offset), j], { stdio:'inherit' });
-  return JSON.parse(readFileSync(j, 'utf8')); };
+const emitWords = (audio, offset) => {
+  const c = join(CACHE, 'words', fileKey(audio) + '.json');   // mots à l'offset 0, puis décalés
+  if (!existsSync(c)) execFileSync('node', [join(HERE,'captions.mjs'), 'emit', audio, '0', c], { stdio:'inherit' });
+  else console.log('  mots en cache : ' + basename(audio));
+  return JSON.parse(readFileSync(c, 'utf8')).map(w => ({ ...w, start: w.start + offset, end: w.end + offset })); };
 
 // durées de brique
 const vHook = hookVoice ? Math.min(dur(hookVoice), dur(hook)) : dur(hook);
@@ -133,7 +166,7 @@ if (hookVoice) { inputs.push('-i', hookVoice); iHookA=n++; }
 inputs.push('-i', demo); iDemo=n++;
 if (cta) { inputs.push('-i', cta); iCta=n++; }
 
-let vf = `[0:v]trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,${VF}[hv];[${iDemo}:v]${VF}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS[hv];[${iDemo}:v]${VF}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${LN}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
@@ -148,8 +181,10 @@ if (cta) {
   af += `[ha][da]amix=inputs=2:duration=longest:normalize=0[a]`;
 }
 ff([...inputs, '-filter_complex', vf + ';' + af, '-map','[v]','-map','[a]',
-    '-c:v','libx264','-pix_fmt','yuv420p','-crf','20','-r','30','-g','30','-c:a','aac','-b:a','192k', voice]);   // -g 30 : images clés serrées (HyperFrames se cale dessus)
+    ...VENC,'-pix_fmt','yuv420p','-r',String(FPS),'-g',String(FPS),'-c:a','aac','-b:a','192k', voice]);   // -g 30 : images clés serrées (HyperFrames se cale dessus)
 const total = dur(voice);
+{ const vd = parseFloat(execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=duration','-of','csv=p=0', voice]).toString().trim());
+  if (!(vd >= total - 0.3)) { console.error('✗ piste vidéo ' + vd.toFixed(2) + ' s < son ' + total.toFixed(2) + ' s : raccords décalés, rendu arrêté'); process.exit(3); } }
 
 // ── 2) SOUS-TITRES : manifest (hook/CTA) + Whisper (démo) ──
 const allWords = [];
@@ -182,7 +217,7 @@ if (FMT.hasChoc(format)) {
 sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
 const oj = join(work, 'capOpts.json'); writeFileSync(oj, JSON.stringify(capOpts));
 const capt = join(work, 'capt.mp4');
-execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], { stdio:'inherit' });
+execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], { stdio:'inherit', env: { ...process.env, CF_FPS: String(FPS) } });
 
 // ── 3) MUSIQUE (plus longue que la vidéo → coupée à la fin) duckée + BRUITAGES ──
 if (music && dur(music) < total) console.warn(`⚠ musique (${dur(music).toFixed(1)}s) plus courte que la vidéo (${total.toFixed(1)}s) → elle bouclera ; prends une piste plus longue.`);

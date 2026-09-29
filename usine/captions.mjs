@@ -128,7 +128,8 @@ function burn(video, output, words, opts = {}) {
 </body></html>`;
   writeFileSync(join(work,'index.html'), html);
   console.log(`▶ rendu sous-titres (${caps.length} captions, style ${subs}${choc ? ', phrase choc 0-' + Math.min(choc.end, dur).toFixed(2) + ' s' : ''})…`);
-  execFileSync('npx', ['--yes','hyperframes','render','--output', output], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
+  // fps de la vidéo source (build.mjs passe CF_FPS=60) ; images de fond extraites en jpg (plus rapide que png, sans perte visible)
+  execFileSync('npx', ['--yes','hyperframes','render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg'], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
   console.log('OK ->', output);
 }
 
