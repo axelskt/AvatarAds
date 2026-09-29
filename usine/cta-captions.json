@@ -1,0 +1,18 @@
+{
+  "_regle": "Légende d'un post (Axel 29/09) = UNIQUEMENT le CTA complet de la vidéo + au plus 3 hashtags liés au sujet de la vidéo. Jamais de nom de fournisseur (ni en texte ni en hashtag). Texte relu à la main : les transcriptions Whisper des CTA ont des fautes (« commande » pour « commente », « cite » pour « SITE »).",
+  "CTA-AIDE": "Commente « AIDE » et va sur avatarads.fr pour tester par toi-même.",
+  "CTA-AVATAR": "Si tu veux apprendre la méthode complète, écris « AVATAR » en commentaire et je t'envoie le tutoriel gratuit en privé.",
+  "CTA-cafe": "Tu peux toi aussi faire la même chose pour seulement un café par jour. Commente « SITE » et je t'envoie le lien en privé.",
+  "CTA-direct": "Va sur avatarads.fr et teste par toi-même.",
+  "CTA-GO-site": "Commente « GO » sous la vidéo et va sur avatarads.fr pour tester par toi-même.",
+  "CTA-GO-teste": "Commente « GO » et va sur avatarads.fr pour tester par toi-même.",
+  "CTA-GUIDE": "Si tu veux recevoir un tuto complet sur l'outil, commente « GUIDE » et je te l'envoie.",
+  "CTA-IA-prive": "Si tu veux la méthode complète, commente « IA » et je te l'envoie.",
+  "CTA-libre-DM": "Commente ce que tu veux sous cette vidéo et je t'envoie le lien en DM.",
+  "CTA-MONTAGE": "Commente « MONTAGE » et je t'envoie tout.",
+  "CTA-PLAN": "Commente « PLAN » et je t'envoie la configuration exacte que j'utilise.",
+  "CTA-SITE-lien": "Tu peux maintenant créer du contenu en deux clics, sans te filmer, pour seulement un café par jour. Commente « SITE » et je t'envoie le lien pour faire la même chose.",
+  "CTA-SITE-teste": "Commente « SITE » et va sur avatarads.fr pour tester par toi-même.",
+  "CTA-SITE-tuto": "Écris « SITE » en commentaire et je t'envoie le tutoriel complet gratuitement pour faire la même chose.",
+  "CTA-UGC": "Commente « UGC » et je t'envoie un guide complet pour faire la même chose."
+}

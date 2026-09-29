@@ -303,8 +303,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     var tabs = '<div class="tabs">' + VIEWS.map(function (v) {
       return '<button type="button" class="tab" data-act="view" data-v="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' + v[1] + ' · ' + mine().filter(function (p) { return inView(p, v[0]); }).length + '</button>';
     }).join('') + '</div>';
-    app.innerHTML = (S.example ? '<div class="demo"><b>Exemple d’aperçu</b> · ces posts ne sont pas réels (clips déjà faits, légendes fictives). Le vrai planning les remplacera dès que les vidéos finales seront prêtes.</div><div style="height:12px"></div>' : '')
-      + '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + tabs + bulkHTML() + out;
+    app.innerHTML = '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + tabs + bulkHTML() + out;
   }
 
   document.addEventListener('click', function (e) {
@@ -366,16 +365,23 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     var base = 'https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/variants/';
     var d0 = new Date(); d0.setHours(0, 0, 0, 0);
     var mk = function (d, h, acct, v, cap, st) { var t = new Date(d0.getTime() + d * 86400000 + h * 3600000); return { id: 'd' + d + h + acct, scheduled_at: t.toISOString(), account: acct, video_url: base + v + '.mp4', caption: cap, status: st || 'todo' }; };
+    var C = {
+      direct: 'Va sur avatarads.fr et teste par toi-même.',
+      ugc: 'Commente « UGC » et je t’envoie un guide complet pour faire la même chose.',
+      lien: 'Tu peux maintenant créer du contenu en deux clics, sans te filmer, pour seulement un café par jour. Commente « SITE » et je t’envoie le lien pour faire la même chose.',
+      dm: 'Commente ce que tu veux sous cette vidéo et je t’envoie le lien en DM.',
+      plan: 'Commente « PLAN » et je t’envoie la configuration exacte que j’utilise.'
+    };
     return [
-      mk(-2, 12, 'avataradss', 'A1-8-H24-v2', 'Tu peux créer des vidéos directement dans Claude.\n\nLe lien est en bio.\n\n#ia #claude #ugc', 'scheduled'),
-      mk(-2, 13, 'leoadsia', 'A2-3-H24-v2', 'Créer une vidéo depuis Claude, en 30 secondes.\n\nLe lien est en bio.\n\n#ia #claude', 'scheduled'),
-      mk(1, 12, 'avataradss', 'A1-5-H29', 'Tu crées encore tes pubs à la main ?\n\nÉcris-moi « GO » en DM, je t’envoie l’accès.\n\n#ia #ugc #marketing', 'scheduled'),
-      mk(1, 13, 'leoadsia', 'A2-8-L12', 'Ce que personne ne te dit sur les vidéos IA.\n\nÉcris-moi « GO » en DM pour tester.\n\n#ia #contenu'),
-      mk(1, 17, 'avataradss', 'A1-5-CTA-direct', 'J’ai fait 30 vidéos en une après-midi.\n\nÉcris-moi « GO » en DM.\n\n#ia #ugc'),
-      mk(1, 19, 'leoadsia', 'A2-2-CTA-UGC', 'Mon avatar parle mieux que moi.\n\nLe lien est en bio.\n\n#ia'),
-      mk(1, 21, 'avataradss', 'A1-2-H24-v2', 'Arrête de payer des créateurs UGC.\n\nLe lien est en bio.\n\n#ugc #ia'),
-      mk(2, 12, 'avataradss', 'A1-5-H29', 'Deuxième jour.\n\nÉcris-moi « GO » en DM.'),
-      mk(2, 13, 'leoadsia', 'A2-7-H24-v2', 'Deuxième jour.\n\nLe lien est en bio.')
+      mk(-2, 12, 'avataradss', 'A1-8-H24-v2', C.lien + '\n\n#ia #contenu #video', 'scheduled'),
+      mk(-2, 13, 'leoadsia', 'A2-3-H24-v2', C.dm + '\n\n#ia #video #createur', 'scheduled'),
+      mk(1, 12, 'avataradss', 'A1-5-H29', C.plan + '\n\n#ia #ugc #marketing', 'scheduled'),
+      mk(1, 13, 'leoadsia', 'A2-8-L12', C.ugc + '\n\n#ugc #ia #pub'),
+      mk(1, 17, 'avataradss', 'A1-5-CTA-direct', C.direct + '\n\n#ia #contenu'),
+      mk(1, 19, 'leoadsia', 'A2-2-CTA-UGC', C.ugc + '\n\n#ugc #ia #createur'),
+      mk(1, 21, 'avataradss', 'A1-2-H24-v2', C.lien + '\n\n#ia #video #contenu'),
+      mk(2, 12, 'avataradss', 'A1-5-H29', C.plan + '\n\n#ia #marketing'),
+      mk(2, 13, 'leoadsia', 'A2-1-H24-v2', C.dm + '\n\n#ia #video')
     ];
   }
   if (DEMO) { S.example = true; S.posts = examples(); S.cur = todo()[0].id; render(); return; }
