@@ -223,7 +223,9 @@
     // Production : liste QC dépliée, types des sélecteurs, onglet interne des briques, recherche, écritures « Classer » en cours
     prodList: null, perfKind: 'hook', perfKindLow: 'hook', freshKind: 'hook', brTab: 'lib', libKind: null, libQuery: '', recFilter: 'all', recAll: false, qcBusy: {}, qcMsg: null,
     // Pipeline (Fabrication) : étape ouverte ('gen' | 'ready'), tuile / avatar / module choisis, période de la courbe des montages
-    pipeStage: null, pipeVar: null, pipeAv: null, pipeMod: null, pipePer: '7j' };
+    pipeStage: null, pipeVar: null, pipeAv: null, pipeMod: null, pipePer: '7j',
+    // TrackAds (étape 5) : période, vue du graphique, croissance, tri du classement
+    ta: { range: '28j', view: 'comb', grow: 'all', sort: 'fiab' } };
 
   function show(id, on) { var el = $(id); if (el) el.hidden = !on; }
   function setHTML(el, html) { if (el && el._cfHtml !== html) { el.innerHTML = html; el._cfHtml = html; } }
@@ -325,7 +327,7 @@
     panel.setAttribute('aria-labelledby', 'cfTab-' + ui.tab);
     // Recherche des leads : le panneau est redessiné à chaque frappe, on rend le focus et le curseur au champ.
     var a = document.activeElement, keep = a && (a.id === 'cfDmQ' || a.id === 'cfLibQ') ? { id: a.id, s: a.selectionStart, e: a.selectionEnd } : null;
-    setHTML(panel, ui.tab === 'compte' ? compteHTML() : ui.tab === 'dm' ? dmHTML() : ui.tab === 'home' ? homeHTML() : ui.tab === 'prod' ? prodHTML() : soonHTML(ui.tab));
+    setHTML(panel, ui.tab === 'compte' ? compteHTML() : ui.tab === 'dm' ? dmHTML() : ui.tab === 'home' ? homeHTML() : ui.tab === 'prod' ? prodHTML() : ui.tab === 'trackads' && window.CF_TRACKADS ? window.CF_TRACKADS(ui.ta) : soonHTML(ui.tab));
     var q = keep && $(keep.id);
     if (q && q !== document.activeElement) { q.focus(); try { q.setSelectionRange(keep.s, keep.e); } catch (e) { /* type search */ } }
   }
@@ -550,10 +552,10 @@
 
   // Paiements TrackAds : Phase 3 pas encore construite → « — », jamais les montants de la maquette.
   function homePayHTML() {
-    return '<section class="cf-card" aria-labelledby="cfPayT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfPayT">Demandes de paiement <span class="cf-badge">—</span></h2>'
+    return '<section class="cf-card" aria-labelledby="cfPayT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfPayT">Demandes de paiement <span class="cf-badge">0</span></h2>'
       + '<span class="cf-meta">' + esc('users TrackAds · 0,50' + NB + '€ / 1' + NB + '000 vues') + '</span></div>'
-      + '<div class="cf-pay-ks"><div class="cf-pay-k"><b>—</b><span>Solde non demandé</span></div><div class="cf-pay-k"><b>—</b><span>À verser (demandes en attente)</span></div></div></div>'
-      + '<div class="cf-empty-s cf-dashed" data-pay="none">— · pas encore branché : TrackAds (Phase 3) n’est pas lancé, aucune demande de paiement à lire.</div></section>';
+      + '<div class="cf-pay-ks"><div class="cf-pay-k"><b>0,00' + NB + '€</b><span>Solde non demandé</span></div><div class="cf-pay-k"><b>0,00' + NB + '€</b><span>À verser (demandes en attente)</span></div></div></div>'
+      + '<div class="cf-empty-s cf-dashed" data-pay="none">Aucune demande de paiement.</div></section>';
   }
 
   // ── cartes résumé : 4 chiffres par onglet, repris de son modèle ──
@@ -587,11 +589,11 @@
     return hcard('prod', 'Production', IC.layers, 'état actuel', [stock, days, pend, gen], '');
   }
   function homeTrackCard() {
-    var why = 'pas encore branché';
+    // TrackAds pas encore lancé : aucune donnée → 0 partout (Axel 29/09), mêmes zéros que l'onglet TrackAds
     return hcard('trackads', 'TrackAds', IC.reach, '30' + NB + 'j', [
-      hstat('views', '—', 'Vues gagnées · 30' + NB + 'j', why), hstat('active', '—', 'Users actifs', why),
-      hstat('missions', '—', 'Missions en cours', why), hstat('solde', '—', 'Solde non demandé', why)
-    ], '<div class="cf-hnote">TrackAds (Phase 3) n’est pas encore lancé : aucune mission, vue ni paiement à lire.</div>');
+      hstat('views', '0', 'Vues gagnées · 30' + NB + 'j', 'sur 30' + NB + 'j', { acc: true }), hstat('active', '0', 'Users actifs', 'sur 0 inscrit'),
+      hstat('missions', '0', 'Missions en cours', '24' + NB + 'h pour publier'), hstat('solde', '0,00' + NB + '€', 'Solde non demandé', 'aucun user')
+    ], '');
   }
   function homeDmCard(Y) {
     var L = {}; DMS.forEach(function (d) { L[d.k] = d.label; });
@@ -944,7 +946,7 @@
       }
     }
     var right = '<div class="cf-ptot"><span><b>' + esc(total == null ? '—' : fInt(total)) + '</b><span><i class="cf-pl is-aa"></i>AvatarAds</span></span>'
-      + '<span title="' + esc(TRACK_NA) + '"><b class="is-na">—</b><span><i class="cf-pl is-ta"></i>TrackAds</span></span></div>';
+      + '<span><b>0</b><span><i class="cf-pl is-ta"></i>TrackAds</span></span></div>';
     var body;
     if (ms.st === 'wait') body = spin('Chargement des publications…');
     else if (ms.st !== 'ok') body = emptyLine('—', ms.why);
@@ -975,7 +977,7 @@
     function tile(k, v, l, s, cls) {
       return '<div class="cf-stile' + (cls ? ' ' + cls : '') + '" data-s="' + k + '"><b class="' + (v === '—' ? 'is-na' : '') + '">' + esc(v) + '</b><span class="cf-stile-l">' + esc(l) + '</span><span class="cf-stile-s">' + esc(s) + '</span></div>';
     }
-    var users = '<div class="cf-susers"><span><b>Users actifs</b><span class="cf-meta">au moins 1 mission sur 30' + NB + 'j · ' + esc(TRACK_NA) + '</span></span><b class="is-na">—</b></div>';
+    var users = '<div class="cf-susers"><span><b>Users actifs</b><span class="cf-meta">au moins 1 mission sur 30' + NB + 'j</span></span><b>0</b></div>';
     var wait = M.pending ? '…' : null;
     var tiles = tile('stock', wait || (D ? fInt(M.stock) : '—'), 'En stock', D ? 'approuvées · prêtes à poster' : M.why, 'is-acc')
       + tile('queue', wait || (D ? fInt(D.qc.pending) : '—'), 'File', D ? 'en QC (à valider)' : M.why)
@@ -1223,8 +1225,8 @@
     }
     var kpis = '<div class="cf-mkpis">' + kpi('is-appr', 'approuvés', fInt(sum), fDec(sum / NP, 1) + ' par ' + S.unit + ' · ' + S.perL
       + (S.undated ? ' · ' + S.undated + ' sans date d’approbation' : ''))
-      + kpi('is-dl', 'téléchargés', '—', 'TrackAds pas lancé')
-      + kpi('is-gap', 'écart', '—', 'TrackAds pas lancé') + '</div>';
+      + kpi('is-dl', 'téléchargés', '0', 'missions TrackAds')
+      + kpi('is-gap', 'écart', fInt(sum), 'approuvés − téléchargés') + '</div>';
     // courbe (maquette) : viewBox 1000 × 150, max × 1,2, valeurs affichées jusqu'à 14 points
     var cmx = Math.max(2, Math.max.apply(null, S.r)) * 1.2;
     var X = function (k) { return NP > 1 ? k / (NP - 1) * 1000 : 500; }, Y = function (v) { return 150 - v / cmx * 150; };
@@ -1346,7 +1348,7 @@
       + t('01', v(Q && Q.pending), 'À valider', 'en QC')
       + t('02', v(Q && Q.approved), 'En stock', 'téléchargeables', 'is-acc')   // approuvée = en stock (pas d'étape de mise en stock)
       + t('03', v(Q && Q.refused), 'Refusées', 'au QC')
-      + t('04', '—', 'Téléchargées', 'TrackAds pas lancé')
+      + t('04', '0', 'Téléchargées', 'missions TrackAds')
       + t('05', '—', 'Postées', 'URL validée');
     return '<section class="cf-card cf-cycle-c" data-block="cycle"><div class="cf-cycle-h"><h3 class="cf-h2">Cycle d’une vidéo finale</h3><span class="cf-meta">seules les vidéos approuvées sont téléchargeables</span></div>'
       + '<div class="cf-cycle">' + body + '</div></section>';
@@ -3429,6 +3431,7 @@
       else if (act === 'dm-all-posts') { ui.dmAllPosts = !ui.dmAllPosts; render(); }
       else if (act === 'dm-post') openPostById(el.getAttribute('data-pid'), el);
       else if (act === 'home-go') homeGo(el.getAttribute('data-tab'));
+      else if (act === 'ta-set') { ui.ta[el.getAttribute('data-k')] = el.getAttribute('data-v'); schedule(); }
       else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); }
       // ── onglet Production ──
       else if (act === 'retry-prod') CF.loadProd({ force: true });
