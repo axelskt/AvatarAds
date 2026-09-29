@@ -47,6 +47,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 .post{display:grid;grid-template-columns:28px 64px 1fr auto;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
 .post.cur{border-color:var(--ink)}
 .post.is-done{opacity:.55}
+.post .gone{width:64px;height:114px;border-radius:9px;background:var(--soft);color:var(--dim);font-size:9.5px;line-height:1.3;display:grid;place-items:center;text-align:center}
 .post .no{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--soft);font-weight:700;font-size:13px}
 .post.is-done .no{background:var(--ok);color:#fff}
 .post video{width:64px;height:114px;border-radius:9px;object-fit:cover;background:#000;display:block}
@@ -223,13 +224,29 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     }
     return true;
   }
+  // Stockage (Axel 30/09 : disque plein) : une vidéo programmée n'a plus besoin d'être gardée → son MP4 est supprimé de
+  // Supabase 6,5 s après « C'est programmé » (le temps d'« Annuler ») ; la recette reste pour la ré-assembler.
+  function releaseLater(list) {
+    if (S.example) return;
+    setTimeout(async function () {
+      var ids = list.filter(function (p) { return p.status !== 'todo' && !p.video_deleted_at; }).map(function (p) { return p.id; });
+      if (!ids.length) return;
+      try {
+        var tok = (await sb.auth.getSession()).data.session.access_token;
+        var r = await fetch(SUPABASE_URL + '/functions/v1/factory-release', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, apikey: SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ids }) });
+        var b = await r.json().catch(function () { return {}; });
+        (b.done || []).forEach(function (id) { var p = S.posts.find(function (x) { return x.id === id; }); if (p) p.video_deleted_at = new Date().toISOString(); });
+        if (b.released) { toast(b.released + ' vidéo' + (b.released > 1 ? 's' : '') + ' retirée' + (b.released > 1 ? 's' : '') + ' du stockage'); render(); }
+      } catch (e) { /* on réessaiera au prochain clic */ }
+    }, 6500);
+  }
   async function toggleDone(p) {
     if (S.busy) return;
     S.busy = true;
     var was = p.status, ok = await setStatus([p], was === 'todo' ? 'scheduled' : 'todo');
     S.busy = false;
     if (!ok) return;
-    if (was === 'todo') { var n = todo()[0]; S.cur = n ? n.id : null; toast('N°' + num(p) + ' programmé', function () { setStatus([p], 'todo').then(function () { S.cur = p.id; render(); }); }); }
+    if (was === 'todo') { var n = todo()[0]; S.cur = n ? n.id : null; toast('N°' + num(p) + ' programmé', function () { setStatus([p], 'todo').then(function () { S.cur = p.id; render(); }); }); releaseLater([p]); }
     render();
   }
   async function allDone() {
@@ -242,6 +259,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     if (!ok) return;
     S.cur = null;
     toast(list.length + ' vidéos marquées programmées', function () { setStatus(list, 'todo').then(render); });
+    releaseLater(list);
     render();
   }
 
@@ -273,7 +291,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     var done = p.status !== 'todo', id = vidId(p);
     return '<div class="post' + (done ? ' is-done' : '') + (p.id === S.cur ? ' cur' : '') + '">'
       + '<span class="no">' + num(p) + '</span>'
-      + '<video src="' + esc(p.video_url) + '#t=0.8" muted playsinline preload="metadata" data-act="play"></video>'
+      + (p.video_deleted_at ? '<div class="gone">vidéo<br>retirée du<br>stockage</div>'
+        : '<video src="' + esc(p.video_url) + '#t=0.8" muted playsinline preload="metadata" data-act="play"></video>')
       + '<div style="min-width:0"><div class="t">' + hour(p.scheduled_at) + '</div><div class="d">' + esc(dayLabel(p.scheduled_at)) + '</div>'
       + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div>'
       + '<div class="id">ID ' + esc(id) + '<button type="button" data-act="copyid" data-id="' + esc(p.id) + '" title="Copier l’ID">' + IC.copy + '</button></div></div>'
@@ -325,7 +344,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   async function load() {
     // 90 derniers jours (onglet Anciennes) à +30 jours.
     var from = new Date(Date.now() - 90 * 86400000).toISOString(), to = new Date(Date.now() + 30 * 86400000).toISOString();
-    var r = await sb.from('factory_posts').select('id, scheduled_at, platform, account, video_url, caption, status, done_at, combo')
+    var r = await sb.from('factory_posts').select('id, scheduled_at, platform, account, video_url, caption, status, done_at, combo, video_deleted_at')
       .eq('platform', 'instagram').gte('scheduled_at', from).lte('scheduled_at', to).order('scheduled_at').order('id');
     if (r.error) { S.err = r.error.message; render(); return; }
     S.posts = r.data || [];
