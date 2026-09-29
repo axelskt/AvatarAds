@@ -7,12 +7,13 @@
 <title>Kit de publication</title>
 <link rel="icon" href="/favicon.png">
 <!-- Kit de publication (29/09/2026). Axel programme lui-même ses reels dans l'app Instagram (programmation native :
-     musique tendance possible, jamais d'API de publication). Un post à la fois : enregistrer la vidéo, coller la
-     légende, régler l'heure, valider « programmé » → post suivant. Table factory_posts (RLS owner/dev). -->
+     musique tendance possible, jamais d'API de publication). Son flux, depuis l'ordi : un compte à la fois, toutes les
+     vidéos à faire envoyées d'un coup en AirDrop vers l'iPhone, puis pour chaque post « Copier la légende » (presse-papiers
+     universel → collé sur l'iPhone), programmation à l'heure affichée, « Programmé ». Table factory_posts (RLS owner/dev). -->
 <style>
 :root{
   --bg:#f6f5f2; --card:#fff; --ink:#15140f; --dim:#6f6c64; --line:#e6e3dc; --soft:#efede7;
-  --acc:#ff5a1f; --ok:#16a34a; --okbg:#e8f6ed; --warn:#b45309; --r:18px;
+  --acc:#ff5a1f; --a2:#6d5dfc; --ok:#16a34a; --okbg:#e8f6ed; --r:16px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){ --bg:#0f0f0e; --card:#1a1a18; --ink:#f3f2ee; --dim:#9a978f; --line:#2c2b28; --soft:#232320; --okbg:#10291a; }
@@ -21,53 +22,56 @@
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;-webkit-text-size-adjust:100%}
 button{font:inherit;color:inherit;cursor:pointer}
-.wrap{max-width:560px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
-.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-.top h1{font-size:19px;margin:0;letter-spacing:-.01em}
+.wrap{max-width:900px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.top h1{font-size:20px;margin:0;letter-spacing:-.01em}
 .top a{color:var(--dim);font-size:13px;text-decoration:none}
-.bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden;margin:6px 0 4px}
+.accts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acct{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:14px}
+.acct[aria-pressed="true"]{border-color:var(--c)}
+.acct .n{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+.acct .n i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.acct .m{color:var(--dim);font-size:13px}
+.bar{height:6px;border-radius:99px;background:var(--soft);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .35s}
-.meta{color:var(--dim);font-size:13px}
-.chips{display:flex;gap:8px;margin:12px 0;overflow-x:auto;scrollbar-width:none}
-.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:7px 13px;font-size:13px}
-.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-.when{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.when b{font-size:26px;letter-spacing:-.02em}
-.acct{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:14px}
-.acct i{width:9px;height:9px;border-radius:50%;background:var(--acc)}
-.acct.a2 i{background:#6d5dfc}
-.day{color:var(--dim);font-size:14px;margin-top:2px}
-.vid{margin:12px 0;border-radius:14px;overflow:hidden;background:#000;height:40vh;max-height:420px;display:flex;justify-content:center}
-.vid video{height:100%;width:100%;object-fit:contain;background:#000}
-.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;border:0;border-radius:14px;padding:15px;font-weight:650;font-size:16px;background:var(--soft)}
+.bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 4px;padding:12px;border-radius:var(--r);background:var(--card);border:1px solid var(--line)}
+.bulk .meta{flex:1 1 220px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:11px 14px;font-weight:650;font-size:14px;background:var(--soft);white-space:nowrap}
 .btn svg{flex:none}
 .btn.dark{background:var(--ink);color:var(--bg)}
 .btn.ok{background:var(--ok);color:#fff}
-.btn.okbg{background:var(--okbg)}
-.btn.ghost{background:transparent;border:1px solid var(--line);font-weight:500;font-size:14px;padding:11px}
+.btn.done{background:var(--okbg);color:var(--ok)}
+.btn.ghost{background:transparent;border:1px solid var(--line);font-weight:550}
 .btn[disabled]{opacity:.5;cursor:default}
-.row{display:flex;gap:8px;margin-top:8px}
-.row .btn{flex:1}
-.cap{margin-top:12px;border:1px solid var(--line);border-radius:14px;padding:12px;white-space:pre-wrap;font-size:14px;max-height:170px;overflow:auto;background:var(--bg)}
-.step{display:flex;gap:8px;align-items:center;color:var(--dim);font-size:12.5px;margin:12px 0 6px}
-.step span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--soft);font-weight:700;font-size:11px;color:var(--ink)}
-.done-tag{color:var(--ok);font-weight:650}
+.meta{color:var(--dim);font-size:13px}
+h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+.list{display:flex;flex-direction:column;gap:8px}
+.post{display:grid;grid-template-columns:28px 64px 1fr auto;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.post.cur{border-color:var(--ink)}
+.post.is-done{opacity:.55}
+.post .no{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--soft);font-weight:700;font-size:13px}
+.post.is-done .no{background:var(--ok);color:#fff}
+.post video{width:64px;height:114px;border-radius:9px;object-fit:cover;background:#000;display:block}
+.post .t{font-size:22px;font-weight:750;letter-spacing:-.02em;line-height:1.1}
+.post .d{color:var(--dim);font-size:13px;margin-bottom:6px}
+.post .c{font-size:13.5px;color:var(--dim);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.post .act{display:flex;flex-direction:column;gap:6px}
+@media (max-width:640px){
+  .post{grid-template-columns:24px 56px 1fr}
+  .post .act{grid-column:1/-1;flex-direction:row}
+  .post .act .btn{flex:1;min-width:0;white-space:normal;padding:10px 8px}
+  .bulk .btn{flex:1 1 100%}
+  .accts .acct{padding:12px;min-width:0}
+  .acct .n{font-size:14px;overflow:hidden;text-overflow:ellipsis}
+  .post video{width:56px;height:100px}
+}
 .empty{text-align:center;padding:34px 18px;color:var(--dim)}
 .empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:6px}
-h2{font-size:14px;margin:22px 0 8px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-.list{display:flex;flex-direction:column;gap:6px}
-.li{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-.li.cur{border-color:var(--ink)}
-.li .t{font-weight:650;min-width:46px}
-.li .a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:13.5px}
-.dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--line);flex:none}
-.dot.scheduled,.dot.published{background:var(--ok);border-color:var(--ok)}
-.dot.skipped{background:var(--line)}
-.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:14px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
 .toast span{white-space:nowrap}
 .toast button{background:none;border:0;color:var(--acc);font-weight:700;padding:0}
-.login{display:flex;flex-direction:column;gap:10px}
+.login{display:flex;flex-direction:column;gap:10px;max-width:420px;margin:0 auto}
 .login input{font:inherit;padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 [hidden]{display:none!important}
 </style>
@@ -86,21 +90,26 @@ h2{font-size:14px;margin:22px 0 8px;color:var(--dim);font-weight:600;text-transf
   var SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck'; // clé publishable (publique)
   var TZ = 'Europe/Paris';
+  var ACCTS = [{ id: 'avataradss', c: 'var(--acc)' }, { id: 'leoadsia', c: 'var(--a2)' }];   // un compte à la fois, jamais mélangés
   var DEMO = /[?&]demo=1\b/.test(location.search);   // aperçu sans base (vérification de l'écran)
 
   var IC = {
-    save: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
-    copy: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
-    check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
+    send: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg>',
+    dl: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+    copy: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
+    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
   };
 
-  var sb = null, S = { posts: [], cur: null, acct: 'all', blobs: {}, busy: false, err: '' };
+  var sb = null;
+  var S = { posts: [], acct: 'avataradss', cur: null, busy: false, err: '', pack: {} };  // pack[acct] = { state, got, total, files }
+  try { var saved = localStorage.getItem('kit_acct'); if (saved) S.acct = saved; } catch (e) { /* stockage bloqué */ }
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); };
   var fmt = function (iso, o) { return new Intl.DateTimeFormat('fr-FR', Object.assign({ timeZone: TZ }, o)).format(new Date(iso)); };
   var hour = function (iso) { return fmt(iso, { hour: '2-digit', minute: '2-digit' }); };
   var dayKey = function (iso) { return fmt(iso, { year: 'numeric', month: '2-digit', day: '2-digit' }); };
   var dayLabel = function (iso) { var s = fmt(iso, { weekday: 'long', day: 'numeric', month: 'long' }); return s.charAt(0).toUpperCase() + s.slice(1); };
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
 
   function toast(html, undo) {
     var t = $('toast');
@@ -111,47 +120,59 @@ h2{font-size:14px;margin:22px 0 8px;color:var(--dim);font-weight:600;text-transf
     toast.h = setTimeout(function () { t.hidden = true; }, undo ? 6000 : 2200);
   }
 
-  function visible() { return S.posts.filter(function (p) { return S.acct === 'all' || p.account === S.acct; }); }
-  function nextTodo(after) {
-    var v = visible().filter(function (p) { return p.status === 'todo'; });
-    if (after) { var i = v.findIndex(function (p) { return p.scheduled_at > after.scheduled_at || (p.scheduled_at === after.scheduled_at && p.id > after.id); }); if (i > -1) return v[i]; }
-    return v[0] || null;
+  function mine(a) { return S.posts.filter(function (p) { return p.account === (a || S.acct); }); }
+  function todo(a) { return mine(a).filter(function (p) { return p.status === 'todo'; }); }
+  // Numéro d'ordre dans le compte : le même que dans le nom du fichier envoyé au téléphone.
+  function num(p) { return mine(p.account).indexOf(p) + 1; }
+  function fileName(p) {
+    return pad(num(p)) + '-' + p.account + '-' + fmt(p.scheduled_at, { weekday: 'short' }).replace('.', '') + '-' + fmt(p.scheduled_at, { day: '2-digit' }) + '-' + hour(p.scheduled_at).replace(':', 'h') + '.mp4';
   }
 
-  // La vidéo est téléchargée dès que la carte s'affiche : au tap, le partage part tout de suite (Safari n'autorise
-  // navigator.share que pendant le geste, pas après un téléchargement de plusieurs secondes).
-  function prefetch(p) {
-    if (!p || S.blobs[p.id]) return;
-    S.blobs[p.id] = fetch(p.video_url).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
-      .then(function (b) { S.blobs[p.id] = b; render(); return b; })
-      .catch(function () { delete S.blobs[p.id]; });
-  }
-  function fileName(p) { return p.account + '-' + fmt(p.scheduled_at, { month: '2-digit', day: '2-digit' }).replace('/', '-') + '-' + hour(p.scheduled_at).replace(':', 'h') + '.mp4'; }
-
-  async function copyCaption(p, quiet) {
-    try { await navigator.clipboard.writeText(p.caption || ''); if (!quiet) toast('Légende copiée'); return true; }
-    catch (e) { if (!quiet) toast('Copie refusée : sélectionne le texte à la main'); return false; }
-  }
-
-  // Un seul tap : la légende part dans le presse-papiers ET la vidéo s'ouvre dans la feuille de partage
-  // (« Enregistrer la vidéo » sur iPhone). Sans partage de fichiers (ordinateur) : simple téléchargement.
-  function saveVideo(p) {
-    var b = S.blobs[p.id];
-    copyCaption(p, true);
-    if (b instanceof Blob) {
-      var f = new File([b], fileName(p), { type: 'video/mp4' });
-      if (navigator.canShare && navigator.canShare({ files: [f] })) {
-        navigator.share({ files: [f] }).then(function () { toast('Vidéo prête · légende copiée'); }, function () {});
-        return;
+  // ── envoi groupé vers l'iPhone ──
+  // 1er clic : on télécharge les vidéos à faire du compte (progression affichée). 2e clic : feuille de partage du Mac
+  // (AirDrop) avec tous les fichiers. Le partage doit partir d'un clic : il ne peut pas suivre un long téléchargement.
+  async function preparePack() {
+    var a = S.acct, list = todo(a);
+    if (!list.length) return;
+    var P = S.pack[a] = { state: 'loading', got: 0, total: list.length, files: [] };
+    render();
+    try {
+      for (var i = 0; i < list.length; i++) {
+        var r = await fetch(list[i].video_url);
+        if (!r.ok) throw new Error('vidéo ' + pad(num(list[i])) + ' : HTTP ' + r.status);
+        P.files.push(new File([await r.blob()], fileName(list[i]), { type: 'video/mp4' }));
+        P.got = i + 1;
+        render();
       }
+      P.state = 'ready';
+    } catch (e) { P.state = 'error'; P.error = String(e.message || e); }
+    render();
+  }
+  function sharePack() {
+    var P = S.pack[S.acct];
+    if (!P || P.state !== 'ready') return;
+    if (navigator.canShare && navigator.canShare({ files: P.files })) {
+      navigator.share({ files: P.files }).then(function () { toast(P.files.length + ' vidéos envoyées'); }, function () {});
+    } else toast('Partage de fichiers indisponible ici : utilise « Tout télécharger »');
+  }
+  async function downloadPack() {
+    var P = S.pack[S.acct];
+    if (!P || P.state !== 'ready') return;
+    for (var i = 0; i < P.files.length; i++) {
       var a = document.createElement('a');
-      a.href = URL.createObjectURL(b); a.download = fileName(p); document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
-      toast('Vidéo téléchargée · légende copiée');
-      return;
+      a.href = URL.createObjectURL(P.files[i]); a.download = P.files[i].name;
+      document.body.appendChild(a); a.click(); a.remove();
+      (function (u) { setTimeout(function () { URL.revokeObjectURL(u); }, 10000); })(a.href);
+      await new Promise(function (r) { setTimeout(r, 350); });
     }
-    window.open(p.video_url, '_blank', 'noopener');
-    toast('Vidéo ouverte · légende copiée');
+    toast(P.files.length + ' vidéos téléchargées');
+  }
+
+  async function copyCaption(p) {
+    S.cur = p.id;
+    try { await navigator.clipboard.writeText(p.caption || ''); toast('Légende n°' + num(p) + ' copiée'); }
+    catch (e) { toast('Copie refusée par le navigateur'); }
+    render();
   }
 
   async function setStatus(p, status) {
@@ -163,96 +184,87 @@ h2{font-size:14px;margin:22px 0 8px;color:var(--dim);font-weight:600;text-transf
     }
     return true;
   }
-
-  async function markDone(p) {
+  async function toggleDone(p) {
     if (S.busy) return;
     S.busy = true;
-    var ok = await setStatus(p, 'scheduled');
+    var was = p.status, ok = await setStatus(p, was === 'todo' ? 'scheduled' : 'todo');
     S.busy = false;
     if (!ok) return;
-    var n = nextTodo(p);
-    S.cur = n ? n.id : null;
+    if (was === 'todo') { var n = todo()[0]; S.cur = n ? n.id : null; toast('N°' + num(p) + ' programmé', function () { setStatus(p, 'todo').then(function () { S.cur = p.id; render(); }); }); }
     render();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    toast('Programmé · ' + esc(dayLabel(p.scheduled_at).split(' ')[0]) + ' ' + hour(p.scheduled_at), function () { setStatus(p, 'todo').then(function () { S.cur = p.id; render(); }); });
   }
 
-  function focusHTML(p) {
-    if (!p) {
-      var left = visible().filter(function (x) { return x.status === 'todo'; }).length;
-      return '<div class="card empty"><b>' + (S.posts.length ? 'Tout est programmé' : 'Aucun post prévu pour l’instant') + '</b>'
-        + (S.posts.length ? (left ? left + ' post(s) restent sur l’autre compte.' : 'Rien à faire, le prochain kit arrive avec les nouvelles vidéos.')
-          : 'Les posts apparaissent ici dès que les vidéos finales sont assemblées et planifiées.') + '</div>';
-    }
-    var b = S.blobs[p.id], ready = b instanceof Blob, done = p.status !== 'todo';
-    return '<div class="card">'
-      + '<div class="when"><div><span class="acct' + (p.account === 'leoadsia' ? ' a2' : '') + '"><i></i>@' + esc(p.account) + '</span>'
-      + '<div class="day">' + esc(dayLabel(p.scheduled_at)) + '</div></div><b>' + hour(p.scheduled_at) + '</b></div>'
-      + '<div class="vid"><video src="' + esc(p.video_url) + '" controls playsinline muted preload="metadata"></video></div>'
-      + '<div class="step"><span>1</span>Enregistre la vidéo, la légende se copie en même temps</div>'
-      + '<button type="button" class="btn dark" data-act="save">' + IC.save + (ready ? 'Enregistrer la vidéo' : 'Préparation de la vidéo…') + '</button>'
-      + '<div class="step"><span>2</span>Dans Instagram : colle la légende, programme à ' + hour(p.scheduled_at) + '</div>'
-      + '<div class="cap" id="cap">' + esc(p.caption || '(pas de légende)') + '</div>'
-      + '<div class="row"><button type="button" class="btn ghost" data-act="copy">' + IC.copy + 'Recopier la légende</button></div>'
-      + '<div class="step"><span>3</span>Une fois programmé dans l’app</div>'
-      + (done ? '<div class="row"><div class="btn okbg done-tag">' + IC.check + 'Déjà programmé</div></div><div class="row"><button type="button" class="btn ghost" data-act="undo">Remettre à faire</button><button type="button" class="btn ghost" data-act="next">Suivant</button></div>'
-        : '<button type="button" class="btn ok" data-act="done">' + IC.check + 'C’est programmé</button>'
-          + '<div class="row"><button type="button" class="btn ghost" data-act="skip">Plus tard</button></div>')
+  function acctCard(A) {
+    var all = mine(A.id), done = all.length - todo(A.id).length;
+    return '<button type="button" class="acct" style="--c:' + A.c + '" data-act="acct" data-a="' + A.id + '" aria-pressed="' + (S.acct === A.id) + '">'
+      + '<span class="n"><i></i>@' + A.id + '</span><span class="m">' + done + ' / ' + all.length + ' programmés</span>'
+      + '<span class="bar"><i style="width:' + (all.length ? Math.round(done / all.length * 100) : 0) + '%"></i></span></button>';
+  }
+
+  function bulkHTML() {
+    var n = todo().length, P = S.pack[S.acct];
+    if (!n) return '';
+    var btns;
+    if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep">' + IC.dl + 'Préparer les ' + n + ' vidéos</button>';
+    else if (P.state === 'loading') btns = '<button type="button" class="btn dark" disabled>Préparation ' + P.got + ' / ' + P.total + '…</button>';
+    else btns = '<button type="button" class="btn dark" data-act="share">' + IC.send + 'Tout partager (AirDrop)</button>'
+      + '<button type="button" class="btn ghost" data-act="dlall">' + IC.dl + 'Tout télécharger</button>';
+    return '<div class="bulk"><span class="meta">' + (P && P.state === 'error' ? 'Échec : ' + esc(P.error) + '. Réessaie.'
+      : 'Les ' + n + ' vidéos à programmer sur @' + S.acct + ', nommées dans l’ordre (01, 02…) comme ci-dessous.') + '</span>' + btns + '</div>';
+  }
+
+  function postHTML(p) {
+    var done = p.status !== 'todo';
+    return '<div class="post' + (done ? ' is-done' : '') + (p.id === S.cur ? ' cur' : '') + '">'
+      + '<span class="no">' + num(p) + '</span>'
+      + '<video src="' + esc(p.video_url) + '#t=0.8" muted playsinline preload="metadata" data-act="play"></video>'
+      + '<div><div class="t">' + hour(p.scheduled_at) + '</div><div class="d">' + esc(dayLabel(p.scheduled_at)) + '</div>'
+      + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div></div>'
+      + '<div class="act"><button type="button" class="btn ghost" data-act="copy" data-id="' + esc(p.id) + '">' + IC.copy + 'Copier la légende</button>'
+      + '<button type="button" class="btn ' + (done ? 'done' : 'ok') + '" data-act="done" data-id="' + esc(p.id) + '">' + IC.check + (done ? 'Programmé' : 'C’est programmé') + '</button></div>'
       + '</div>';
-  }
-
-  function listHTML() {
-    var v = visible(), out = '', last = '';
-    v.forEach(function (p) {
-      var k = dayKey(p.scheduled_at);
-      if (k !== last) {
-        var dd = v.filter(function (x) { return dayKey(x.scheduled_at) === k; });
-        out += (last ? '</div>' : '') + '<h2>' + esc(dayLabel(p.scheduled_at)) + ' · ' + dd.filter(function (x) { return x.status !== 'todo'; }).length + '/' + dd.length + '</h2><div class="list">';
-        last = k;
-      }
-      out += '<button type="button" class="li' + (p.id === S.cur ? ' cur' : '') + '" data-act="open" data-id="' + esc(p.id) + '"><span class="dot ' + esc(p.status) + '"></span>'
-        + '<span class="t">' + hour(p.scheduled_at) + '</span><span class="a">@' + esc(p.account) + ' · ' + esc((p.caption || '').split('\n')[0]) + '</span></button>';
-    });
-    return out + (last ? '</div>' : '');
   }
 
   function render() {
     var app = $('app');
     if (S.err) { app.innerHTML = '<div class="card empty"><b>Impossible de charger</b>' + esc(S.err) + '</div>'; return; }
-    var v = visible(), done = v.filter(function (p) { return p.status !== 'todo'; }).length;
-    var cur = S.posts.find(function (p) { return p.id === S.cur; }) || null;
-    var accts = ['all'].concat(Array.from(new Set(S.posts.map(function (p) { return p.account; }))));
-    var per = function (a) { var x = S.posts.filter(function (p) { return p.account === a; }); return x.filter(function (p) { return p.status !== 'todo'; }).length + '/' + x.length; };
-    app.innerHTML = '<div class="meta">' + done + ' / ' + v.length + ' programmés' + (v.length ? ' · jusqu’au ' + esc(fmt(v[v.length - 1].scheduled_at, { day: 'numeric', month: 'long' })) : '') + '</div>'
-      + '<div class="bar"><i style="width:' + (v.length ? Math.round(done / v.length * 100) : 0) + '%"></i></div>'
-      + (accts.length > 2 ? '<div class="chips">' + accts.map(function (a) {
-        return '<button type="button" class="chip" data-act="acct" data-a="' + esc(a) + '" aria-pressed="' + (S.acct === a) + '">' + (a === 'all' ? 'Tous' : '@' + esc(a) + ' · ' + per(a)) + '</button>';
-      }).join('') + '</div>' : '<div style="height:10px"></div>')
-      + focusHTML(cur) + listHTML();
-    prefetch(cur);
-    var n = cur && nextTodo(cur); if (n && S.blobs[cur.id] instanceof Blob) prefetch(n);   // la suivante se prépare pendant qu'il programme
+    var list = mine(), out = '', last = '';
+    list.forEach(function (p) {
+      var k = dayKey(p.scheduled_at);
+      if (k !== last) {
+        var dd = list.filter(function (x) { return dayKey(x.scheduled_at) === k; });
+        out += (last ? '</div>' : '') + '<h2>' + esc(dayLabel(p.scheduled_at)) + ' · ' + dd.filter(function (x) { return x.status !== 'todo'; }).length + '/' + dd.length + '</h2><div class="list">';
+        last = k;
+      }
+      out += postHTML(p);
+    });
+    if (last) out += '</div>';
+    if (!list.length) out = '<div class="card empty" style="margin-top:14px"><b>Aucun post prévu sur @' + esc(S.acct) + '</b>Les posts apparaissent ici dès que les vidéos finales sont assemblées et planifiées.</div>';
+    else if (!todo().length) out = '<div class="card empty" style="margin-top:14px"><b>Tout est programmé sur @' + esc(S.acct) + '</b>Rien à faire jusqu’au prochain kit.</div>' + out;
+    app.innerHTML = '<div class="accts">' + ACCTS.map(acctCard).join('') + '</div>' + bulkHTML() + out;
   }
 
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-act]'); if (!el) return;
-    var act = el.getAttribute('data-act'), cur = S.posts.find(function (p) { return p.id === S.cur; });
-    if (act === 'save' && cur) saveVideo(cur);
-    else if (act === 'copy' && cur) copyCaption(cur);
-    else if (act === 'done' && cur) markDone(cur);
-    else if (act === 'undo' && cur) setStatus(cur, 'todo').then(render);
-    else if (act === 'skip' || act === 'next') { var n = cur && nextTodo(cur); if (n) { S.cur = n.id; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); } else toast('C’était le dernier'); }
-    else if (act === 'open') { S.cur = el.getAttribute('data-id'); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-    else if (act === 'acct') { S.acct = el.getAttribute('data-a'); var f = nextTodo(); S.cur = f ? f.id : (visible()[0] || {}).id || null; render(); }
+    var act = el.getAttribute('data-act'), id = el.getAttribute('data-id');
+    var p = id && S.posts.find(function (x) { return x.id === id; });
+    if (act === 'acct') { S.acct = el.getAttribute('data-a'); try { localStorage.setItem('kit_acct', S.acct); } catch (x) { /* */ } var f = todo()[0]; S.cur = f ? f.id : null; render(); }
+    else if (act === 'prep') preparePack();
+    else if (act === 'share') sharePack();
+    else if (act === 'dlall') downloadPack();
+    else if (act === 'copy' && p) copyCaption(p);
+    else if (act === 'done' && p) toggleDone(p);
+    else if (act === 'play') { if (el.paused) { el.muted = false; el.play(); } else el.pause(); }
   });
 
   async function load() {
-    // Semaine glissante : d'hier (un post du soir pas encore validé) à +14 jours.
+    // D'hier (un post du soir pas encore validé) à +14 jours.
     var from = new Date(Date.now() - 86400000).toISOString(), to = new Date(Date.now() + 14 * 86400000).toISOString();
     var r = await sb.from('factory_posts').select('id, scheduled_at, platform, account, video_url, caption, status, done_at')
       .eq('platform', 'instagram').gte('scheduled_at', from).lte('scheduled_at', to).order('scheduled_at').order('id');
     if (r.error) { S.err = r.error.message; render(); return; }
     S.posts = r.data || [];
-    var f = nextTodo(); S.cur = f ? f.id : null;
+    var f = todo()[0]; S.cur = f ? f.id : null;
     render();
   }
 
@@ -292,9 +304,11 @@ h2{font-size:14px;margin:22px 0 8px;color:var(--dim);font-weight:600;text-transf
       mk(1, 13, 'leoadsia', 'A2-6-H24-v2', 'Ce que personne ne te dit sur les vidéos IA.\n\nCommente GO pour tester.\n\n#ia #contenu'),
       mk(1, 17, 'avataradss', 'A1-5-CTA-direct', 'J’ai fait 30 vidéos en une après-midi.\n\nCommente GO.\n\n#ia #ugc'),
       mk(1, 19, 'leoadsia', 'A2-8-L12', 'Mon avatar parle mieux que moi.\n\nCommente GO.\n\n#ia'),
-      mk(1, 21, 'avataradss', 'A2-2-CTA-UGC', 'Arrête de payer des créateurs UGC.\n\nCommente GO.\n\n#ugc #ia')
+      mk(1, 21, 'avataradss', 'A2-2-CTA-UGC', 'Arrête de payer des créateurs UGC.\n\nCommente GO.\n\n#ugc #ia'),
+      mk(2, 12, 'avataradss', 'A1-5-H29', 'Deuxième jour.\n\nCommente GO.'),
+      mk(2, 13, 'leoadsia', 'A2-8-L12', 'Deuxième jour.\n\nCommente GO.')
     ];
-    S.cur = S.posts[0].id; render(); return;
+    S.cur = todo()[0].id; render(); return;
   }
 
   try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { sb = null; }
