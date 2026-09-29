@@ -527,9 +527,9 @@
         var num = function (v) { return typeof v === 'number' && isFinite(v) ? v : null; };
         patch = { state: 'ready', kind: null, error: null, data: {
           channel: { title: str(b.channel.title), handle: str(b.channel.handle), subscribers: num(b.channel.subscribers), views: num(b.channel.views), videos: num(b.channel.videos) },
-          totals: { views: num(b.totals && b.totals.views), likes: num(b.totals && b.totals.likes), count: num(b.totals && b.totals.count) },
+          totals: { views: num(b.totals && b.totals.views), likes: num(b.totals && b.totals.likes), comments: num(b.totals && b.totals.comments), count: num(b.totals && b.totals.count) },
           videos: (Array.isArray(b.videos) ? b.videos : []).slice(0, 50).map(function (v) {
-            return { id: str(v.id), title: str(v.title), published_at: str(v.published_at), views: num(v.views), likes: num(v.likes) };
+            return { id: str(v.id), title: str(v.title), published_at: str(v.published_at), views: num(v.views), likes: num(v.likes), comments: num(v.comments) };
           })
         } };
       } catch (e) {

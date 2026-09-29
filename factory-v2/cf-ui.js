@@ -630,13 +630,13 @@
     var C = D ? D.channel : {}, T = D ? D.totals : {};
     var last = D ? D.videos.slice(0, 5).map(function (v) {
       return '<li><span class="cf-yt-t">' + esc(v.title) + '</span><span class="cf-yt-n">' + (v.views == null ? '—' : esc(fInt(v.views))) + ' vues · '
-        + (v.likes == null ? '—' : esc(fInt(v.likes))) + ' likes</span></li>';
+        + (v.likes == null ? '—' : esc(fInt(v.likes))) + ' likes · ' + (v.comments == null ? '—' : esc(fInt(v.comments))) + ' comm.</span></li>';
     }).join('') : '';
     return '<section class="cf-card cf-hcard cf-yt" data-card="youtube" aria-labelledby="cfHc-yt"><div class="cf-hcard-h"><span class="cf-hcard-ic">'
       + svg('M22 8.5a3 3 0 0 0-2.1-2.1C18 6 12 6 12 6s-6 0-7.9.4A3 3 0 0 0 2 8.5 31 31 0 0 0 2 12a31 31 0 0 0 .1 3.5 3 3 0 0 0 2 2.1c1.9.4 7.9.4 7.9.4s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.1-3.5zM10 15V9l5 3z', 18)
       + '</span><h3 class="cf-h2" id="cfHc-yt">YouTube' + (C.handle ? ' · ' + esc(C.handle) : '') + '</h3></div>'
       + '<div class="cf-hstats">' + st('yt-subs', C.subscribers, 'Abonnés', 'total actuel', { acc: true }) + st('yt-views', C.views, 'Vues', 'total de la chaîne')
-      + st('yt-likes', T.likes, 'Likes', D ? T.count + ' dernières vidéos' : '') + st('yt-videos', C.videos, 'Vidéos', 'publiées') + '</div>'
+      + st('yt-likes', T.likes, 'Likes', D ? T.count + ' dernières vidéos' : '') + st('yt-videos', C.videos, 'Vidéos', 'publiées') + st('yt-comments', T.comments, 'Commentaires', D ? T.count + ' dernières vidéos' : '') + '</div>'
       + (last ? '<ul class="cf-yt-list">' + last + '</ul>' : '') + '</section>';
   }
   // Likes des reels publiés sur la période + like rate moyen (le MÊME calcul que la carte Objectif « Like rate » de l'onglet
