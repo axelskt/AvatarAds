@@ -78,9 +78,9 @@ async function claim() {
 let busy = 0;
 async function loop() {
   if (busy >= MAX || !(await ready) || !KEY) return;
+  busy++;   // réservé AVANT la prise (sinon deux tours prenaient chacun un rendu : 2 vidéos sur une machine → ffmpeg tué, mémoire)
   let row = null; try { row = await claim(); } catch (e) { console.error('file :', e.message); }
-  if (!row) return;
-  busy++;
+  if (!row) { busy--; return; }
   const job = { id: row.id, recipe: row.recipe };
   try {
     await run(job);
