@@ -52,7 +52,9 @@ function burn(video, output, words, opts = {}) {
     copyFileSync(b.file, join(work, name));
     // carte au format du média (plus de bandes blanches autour d'une image) : largeur 460, hauteur ≤ 760
     let ar = 9 / 16; try { const [w, h] = execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0', b.file]).toString().trim().split(',').map(Number); if (w && h) ar = w / h; } catch {}
-    const W = b.style === 'hook' ? 720 : 460, H = Math.min(b.style === 'hook' ? 1040 : 760, Math.round(W / ar));
+    // carte au format EXACT du média : si la hauteur est plafonnée, la largeur suit (VF-0017 : static ad 9:16 coupée en haut)
+    const Wmax = b.style === 'hook' ? 720 : 460, Hmax = b.style === 'hook' ? 1040 : 760;
+    const H = Math.min(Hmax, Math.round(Wmax / ar)), W = Math.round(H * ar) > Wmax ? Wmax : Math.round(H * ar);
     return { ...b, name, k, W, H };
   });
   words = words.slice().sort((a,b)=>a.start-b.start);
