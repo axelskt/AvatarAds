@@ -7,16 +7,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 xdg-utils \
   && rm -rf /var/lib/apt/lists/*
 ENV HYPERFRAMES_BROWSER_PATH=/usr/bin/chromium PUPPETEER_SKIP_DOWNLOAD=1
-WORKDIR /app/render-worker
-COPY render-worker/package.json render-worker/package-lock.json ./
-RUN npm ci --omit=dev
-COPY render-worker/patch-hyperframes.mjs ./
-RUN node patch-hyperframes.mjs node_modules/hyperframes/dist/cli.js
-COPY render-worker/assets/sfx ./assets/sfx
+# HyperFrames : MÊME version que sur le Mac d'Axel (npx → 0.8.96), pas celle épinglée du render-worker (0.7.60, options
+# différentes : « Invalid quality », « Unknown flag --timeout »).
+WORKDIR /app/hf
+RUN npm init -y >/dev/null && npm install --omit=dev hyperframes@0.8.96
+COPY render-worker/assets/sfx /app/render-worker/assets/sfx
 WORKDIR /app
 COPY usine ./usine
 RUN chown -R node:node /app
-ENV NODE_ENV=production HOME=/home/node CF_HF_BIN=/app/render-worker/node_modules/.bin/hyperframes CF_CACHE=/tmp/cf-cache CF_FPS=60 HYPERFRAMES_EXTRACT_CACHE_DIR=off
+ENV NODE_ENV=production HOME=/home/node CF_HF_BIN=/app/hf/node_modules/.bin/hyperframes CF_CACHE=/tmp/cf-cache CF_FPS=60 HYPERFRAMES_EXTRACT_CACHE_DIR=off
 USER node
 EXPOSE 8080
 CMD ["node", "usine/railway-render.mjs"]

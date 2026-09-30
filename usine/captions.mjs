@@ -30,7 +30,7 @@ const brandFix = t => { const b=bareOf(t); if(/atarhat|avatarad|atarad|avatarhat
 function transcribeWords(audio, offset) {
   const work = mkdtempSync(join(tmpdir(), 'caps-tr-'));
   execFileSync('ffmpeg', ['-v','error','-y','-i', audio, '-vn','-ac','1','-ar','16000', join(work,'audio.wav')]);
-  execFileSync(HF, [...HF_PRE,'transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','large-v3','--language','fr', ...(process.env.CF_HF_BIN ? [] : ['--timeout','300000'])], { stdio:'inherit' });
+  execFileSync(HF, [...HF_PRE,'transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','300000'], { stdio:'inherit' });
   const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
   return (Array.isArray(tr) ? tr : (tr.words||tr.segments||[]))
     .map(w => ({ text:String(w.text||w.word||'').trim(), start:+w.start + offset, end:+w.end + offset }))
