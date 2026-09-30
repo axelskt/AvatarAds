@@ -893,7 +893,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'generate_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : ${VIDEO_COST_SEC} crédit/seconde, débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Pour partir de LA photo de l'utilisateur (son visage, un UGC de lui), il te faut une URL publique : dis-lui de la déposer via « Glisse la photo pour Claude » sur ${APP_URL} (ça lui rend un lien) puis de coller ce lien, que tu passes dans image_url. Sans URL, ne bloque pas : propose de générer la scène décrite (sans sa photo). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
+      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : ${VIDEO_COST_SEC} crédit/seconde SANS image de départ (4, 6 ou 8 s) ; AVEC image de départ (image_url : UGC réel à partir d'une photo) : 5 crédits/seconde, en 4, 6, 8 ou 10 s, 1080p. Annonce TOUJOURS le bon tarif avant de lancer. Débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Pour partir de LA photo de l'utilisateur (son visage, un UGC de lui), il te faut une URL publique : dis-lui de la déposer via « Glisse la photo pour Claude » sur ${APP_URL} (ça lui rend un lien) puis de coller ce lien, que tu passes dans image_url. Sans URL, ne bloque pas : propose de générer la scène décrite (sans sa photo). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -1637,8 +1637,8 @@ let _lastReconcile = 0
 // FIN PROPRE (02/09, Axel) — ajoutée côté serveur à TOUT prompt Express : la personne finit sa phrase et la
 // vidéo s'arrête là ; jamais une nouvelle phrase/un nouveau geste entamé dans la dernière seconde, jamais coupé au milieu.
 // PRODUIT (Axel 30/09, vidéo SVR : étiquette réécrite de travers, pompe actionnée sans que rien ne sorte) : écriture du
-// produit à l'identique et nette, jamais de geste d'utilisation « à vide ». Ajoutée à tout prompt Express.
-const EXPRESS_PRODUCT = ' PRODUCT RULE: if a product is visible, its packaging stays EXACTLY as in the source image for the whole clip — same label, same logo, same colours, every word of printed text letter-for-letter, sharp and legible, never redrawn, never blurred, warped, morphed or re-spelled; keep the label facing the camera and steady, do not rotate or wave the product in a way that would force the text to be re-generated. USAGE RULE: never mime using the product — no pumping, squeezing, spraying, pouring or opening unless the product visibly comes out (real gel, cream, liquid or foam landing in the hand); if that cannot be shown convincingly, the person simply holds the product, shows it and points at it.'
+// produit à l'identique et nette. (Le « jamais de geste à vide » attendra : décision d'Axel.) Ajoutée quand une image de départ est fournie.
+const EXPRESS_PRODUCT = ' PRODUCT RULE: if a product is visible, its packaging stays EXACTLY as in the source image for the whole clip — same label, same logo, same colours, every word of printed text letter-for-letter, sharp and legible, never redrawn, blurred, warped or re-spelled.'
 const EXPRESS_ENDING = ' ENDING RULE: the clip must end cleanly — the person finishes their current sentence, closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or a new gesture in the final second, never cut mid-word or mid-motion.'
 
 // ── FILE D'ATTENTE DES SOUMISSIONS VEO (11/09, Axel : « la file d'attente, fais-le proprement ») ──
@@ -1892,17 +1892,63 @@ function runVeoJob(o: {
 }
 
 
+// ── EXPRESS « UGC RÉEL » AVEC IMAGE DE DÉPART = OMNI FLASH image→vidéo (Axel 30/09 : « je ne veux pas Veo, je veux Omni
+// Flash image → vidéo pour les UGC réels »). Même moteur et même barème que l'Express de l'app (5 cr/s, 1080p, 4 / 6 / 8 /
+// 10 s, voix native), SANS repli : refus ou silence du fournisseur → échec + remboursement. Suivi : op_name « oh1:<tâche> »
+// sur un job kind 'avatar' → chemins existants (advanceAvatarJob / filets 60 min / deliverVideo), rien de nouveau à suivre.
+const OMNI_FLASH_SEC = 5
+const omniFlashCran = (n: number): number => (n <= 4 ? 4 : n <= 6 ? 6 : n <= 8 ? 8 : 10)
+function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; aspect: string; duration: number; prompt: string }): void {
+  bg((async () => {
+    try {
+      const bal = await spendForJob(o.userId, o.jobId, o.cost)
+      if (bal === -2) { await capReleaseUser(o.userId, o.cap); return }
+      if (bal === null || bal === -1) {
+        if (bal === -1) await capReleaseUser(o.userId, o.cap)
+        await failAndRefund(o.userId, { id: o.jobId }, bal === -1 ? 'Crédits insuffisants' : 'Erreur crédits')
+        return
+      }
+      const got = await fetchUserFile(o.imageUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "l'image de départ (image_url)")
+      if (typeof got === 'string') throw new ErrClient(got)
+      if (tailleImage(got.bytes) === 'trop_grande') throw new ErrClient(`l'image de départ (image_url) : ${MSG_IMG_TROP_GRANDE}`)
+      let buf = got.bytes
+      try { const rf = await reframeToAspect(buf, o.aspect); buf = rf.bytes } catch (_) { /* recadrage best-effort */ }
+      const staged = await stageKieImage(o.userId, o.jobId, buf)
+      if (!staged) throw new ErrClient('image de départ illisible — envoie un PNG, un JPG ou un WebP')
+      let r: Response
+      try {
+        r = await fetch(`${KIE}/api/v1/jobs/createTask`, { method: 'POST', headers: kieHeaders(), signal: AbortSignal.timeout(30_000),
+          body: JSON.stringify({ model: 'google/gemini-omni-flash-1-1', input: { prompt: o.prompt.slice(0, 20000), first_frame_url: staged.url, duration: String(o.duration), aspect_ratio: o.aspect === '16:9' ? '16:9' : '9:16', resolution: '1080p' } }) })
+      } catch (e) { console.warn('[mcp] omni flash : soumission sans réponse', o.jobId, (e as Error)?.message); throw new ErrClient(MSG_VEO_SANS_REPONSE) }
+      // deno-lint-ignore no-explicit-any
+      const j: any = await r.json().catch(() => ({}))
+      const taskId = String(j?.data?.taskId || '')
+      if (!(j?.code === 200 && /^[A-Za-z0-9_-]{6,120}$/.test(taskId))) {
+        console.warn('[mcp] omni flash : soumission refusée', o.jobId, j?.code ?? r.status, String(j?.msg || '').slice(0, 200))
+        throw new ErrClient(msgVeo(String(j?.msg || '')))
+      }
+      console.log('[mcp] omni flash lancé', taskId, 'job', o.jobId)
+      await setOpName(o.jobId, OP_KIE_OMNI + taskId)
+    } catch (e) {
+      await failLaunch(o.userId, o.jobId, e)
+    }
+  })())
+}
+
 async function runGenerateVideo(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!GOOGLE_AI_KEY && !kieVeoOn(profile)) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
-  const duration = veoCran(Math.max(4, Number(args.duration_seconds) || 8))   // 4 / 6 / 8 s (crans Veo), facturés tels quels
+  // image de départ → Omni Flash (5 cr/s, 4 / 6 / 8 / 10 s) ; sans image → Veo Lite (1,5 cr/s, 4 / 6 / 8 s)
+  const omni = !!String(args.image_url || '').trim() && !!kieKey() && (isDevPlan(profile) || kieClientsOn())
+  const duration = omni ? omniFlashCran(Math.max(4, Number(args.duration_seconds) || 6)) : veoCran(Math.max(4, Number(args.duration_seconds) || 8))
   const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
-  const cost = Math.round(duration * VIDEO_COST_SEC) // 1,5 cr/s → 6 / 9 / 12 crédits
+  const perSec = omni ? OMNI_FLASH_SEC : VIDEO_COST_SEC
+  const cost = Math.round(duration * perSec)
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
-    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${VIDEO_COST_SEC}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+    return toolErr(`Crédits insuffisants : il faut ${cost} crédits (${duration} s × ${perSec}), il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
   }
   // Validation SYNCHRONE et RAPIDE de l'URL image (format + SSRF). Le TÉLÉCHARGEMENT
   // lourd (≈2,7 Mo) part en tâche de fond AVEC le lancement — sinon la
@@ -1927,13 +1973,14 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // ENSEMBLE par mcp_spend_for_job dans la tâche de fond (runVeoJob) → si l'isolate meurt avant, aucun filet ne rend des
   // crédits jamais pris. /status n'avance le job qu'une fois `op_name` posé (barre de progression en attendant).
   const { data: job, error } = await svc.from('mcp_jobs')
-    .insert({ user_id: userId, kind: 'video', status: 'running', credits_cost: 0 }).select('id').single()
+    .insert({ user_id: userId, kind: omni ? 'avatar' : 'video', status: 'running', credits_cost: 0 }).select('id').single()
   if (error || !job) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur au suivi du job — réessaie.') }
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
-    prompt: prompt + EXPRESS_PRODUCT + EXPRESS_ENDING, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: prompt + EXPRESS_PRODUCT + EXPRESS_ENDING })
+  else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
+    prompt: prompt + EXPRESS_ENDING, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
   return {
     content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
