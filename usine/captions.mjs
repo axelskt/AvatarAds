@@ -207,6 +207,9 @@ function burn(video, output, words, opts = {}) {
   execFileSync('npx', ['--yes','hyperframes','render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg', '--workers', String(process.env.CF_WORKERS || 2), '--no-low-memory-mode'], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
   console.log('OK ->', output);
   try { rmSync(work, { recursive: true, force: true }); } catch { /* sans gravité */ }
+  // cache d'extraction d'images de HyperFrames (≈ 1 Go par rendu 60 i/s, jamais vidé : 5 Go après 5 vidéos le 30/09) :
+  // il ne sert qu'à re-rendre la MÊME source → supprimé après chaque rendu (disque d'Axel)
+  try { const uid = typeof process.getuid === 'function' ? process.getuid() : ''; rmSync(join(tmpdir(), 'hyperframes-extract-cache-' + uid), { recursive: true, force: true }); } catch { /* sans gravité */ }
 }
 
 // ── CLI ──
