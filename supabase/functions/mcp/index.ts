@@ -558,13 +558,14 @@ function aaPollStatus(u){
     if(j.status==='pending' && j.link_failed){ aaProductUrl=''; aaAskPhoto(); var pe2=document.getElementById('pe'); if(pe2) pe2.textContent=j.link_failed==='no_image_in_link'?'Photo non récupérable depuis le lien (site protégé) — dépose-la ici.':j.link_failed==='daily_cap'?'Plafond 24 h atteint':(j.link_failed==='no_credits'||j.link_failed==='credits')?'Crédits épuisés — recharge sur avatarads.fr':'Lien illisible — dépose la photo ici.'; }
   }).catch(function(){});
 }
+var aaPollN=0;
 function aaStartPoll(u){
   aaStart=Date.now();
   var b=document.getElementById('b'); if(b) b.style.display='none';
   var m=document.getElementById('m');
   m.style.opacity=''; m.innerHTML='<div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
   aaSetPct(6); aaKick(); aaPollStatus(u);
-  aaPollT=setInterval(function(){ if(Date.now()-aaStart>240000){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } return; } aaPollStatus(u); }, 2500);
+  aaPollT=setInterval(function(){ var el=Date.now()-aaStart; if(el>900000){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } return; } if(el>240000 && (aaPollN=(aaPollN||0)+1)%4) return; aaPollStatus(u); }, 2500);   // 15 min ; au-delà de 4 min : une sonde toutes les 10 s
 }
 function aaShow(out){
   try{
@@ -1635,6 +1636,9 @@ let _lastReconcile = 0
 
 // FIN PROPRE (02/09, Axel) — ajoutée côté serveur à TOUT prompt Express : la personne finit sa phrase et la
 // vidéo s'arrête là ; jamais une nouvelle phrase/un nouveau geste entamé dans la dernière seconde, jamais coupé au milieu.
+// PRODUIT (Axel 30/09, vidéo SVR : étiquette réécrite de travers, pompe actionnée sans que rien ne sorte) : écriture du
+// produit à l'identique et nette, jamais de geste d'utilisation « à vide ». Ajoutée à tout prompt Express.
+const EXPRESS_PRODUCT = ' PRODUCT RULE: if a product is visible, its packaging stays EXACTLY as in the source image for the whole clip — same label, same logo, same colours, every word of printed text letter-for-letter, sharp and legible, never redrawn, never blurred, warped, morphed or re-spelled; keep the label facing the camera and steady, do not rotate or wave the product in a way that would force the text to be re-generated. USAGE RULE: never mime using the product — no pumping, squeezing, spraying, pouring or opening unless the product visibly comes out (real gel, cream, liquid or foam landing in the hand); if that cannot be shown convincingly, the person simply holds the product, shows it and points at it.'
 const EXPRESS_ENDING = ' ENDING RULE: the clip must end cleanly — the person finishes their current sentence, closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or a new gesture in the final second, never cut mid-word or mid-motion.'
 
 // ── FILE D'ATTENTE DES SOUMISSIONS VEO (11/09, Axel : « la file d'attente, fais-le proprement ») ──
@@ -1929,7 +1933,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
   runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
-    prompt: prompt + EXPRESS_ENDING, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
+    prompt: prompt + EXPRESS_PRODUCT + EXPRESS_ENDING, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
   return {
     content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
