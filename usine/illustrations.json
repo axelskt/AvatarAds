@@ -48,7 +48,11 @@
       "avatar-ia-garcon-4k-d.jpg"
     ],
     "video-image-ia": [
-      "avatar-ia-fille-video.mp4"
+      "avatar-ia-fille-video.mp4",
+      "avatar-ia-garcon-video.mp4",
+      "avatar-ia-fille-video-b.mp4",
+      "avatar-ia-fille-video-c.mp4",
+      "avatar-ia-fille-video-d.mp4"
     ]
   },
   "demo": {

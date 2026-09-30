@@ -88,7 +88,9 @@ function burn(video, output, words, opts = {}) {
   const big = subs === 'gros-colores';
 
   // frame 0 jamais blanche : un mot qui démarre à 0 est posé tel quel (pas de fondu depuis l'invisible)
-  const box = opts.style === 'boite';
+  // styles (Axel 30/09 : tirés au hasard) : contour S02 · boite S21 · bleu S03 · rouge S07 (pastilles) · white S10 · neon S12
+  const box = ['boite', 'bleu', 'rouge'].includes(opts.style);
+  const stCls = ['bleu', 'rouge', 'white', 'neon'].includes(opts.style) ? 'st-' + opts.style : '';
   const clipsHtml = caps.map((c,i)=>{
     if (c.grp && box) return `<div class="cap clip grp bx" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
       + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
@@ -168,6 +170,11 @@ function burn(video, output, words, opts = {}) {
  .cap.bx .bw,.cap.bx.grp .gw{background:#fff;border-radius:16px;padding:6px 20px 8px;box-shadow:0 8px 24px rgba(0,0,0,.28);line-height:1.15}
  .cap.bx.grp{font-size:62px;line-height:1.45}
  .cap.bx.grp .gw{margin:0 2px}
+ .st-bleu .cap.bx,.st-rouge .cap.bx{color:#fff}
+ .st-bleu .cap.bx .bw,.st-bleu .cap.bx.grp .gw{background:#1d6bff}
+ .st-rouge .cap.bx .bw,.st-rouge .cap.bx.grp .gw{background:#e11d2e}
+ .st-white .cap{-webkit-text-stroke:0;text-shadow:0 4px 18px rgba(0,0,0,.75),0 1px 3px rgba(0,0,0,.6)}
+ .st-neon .cap{-webkit-text-stroke:3px #2a0a1c;text-shadow:0 0 18px #ff3da6,0 0 42px rgba(255,61,166,.75),0 4px 14px rgba(0,0,0,.5)}
  .cap.big.hot{color:${HOT}}
  /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
  .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}
@@ -177,7 +184,7 @@ function burn(video, output, words, opts = {}) {
  .choc .em{font-family:'Noto Color Emoji',sans-serif;font-weight:400}
  .choc .emj{height:1.08em;width:auto;vertical-align:-0.2em;margin-left:.12em}
 </style></head><body>
- <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
+ <div id="root" class="${stCls}" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>
    <audio id="au" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" data-volume="1"></audio>
       ${brollHtml}

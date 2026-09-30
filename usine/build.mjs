@@ -45,16 +45,21 @@ let demo = demoSrc;
 // MUSIQUE et SOUS-TITRES au hasard (Axel 30/09 : « bien changer la musique de fond ainsi que les sous-titres… aléatoirement
 // à chaque fois ») : musique « auto » = une piste VALIDÉE (jamais M04, trop sombre), --subs-style auto = contour ou boîte ;
 // jamais le même choix que la vidéo précédente (fichier <cache>/dernier.json).
-const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_OK = ['M01', 'M06', 'M07', 'M08'];
+const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_OK = Array.from({ length: 20 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04');
+const SUBS = { contour: 'S02', boite: 'S21', bleu: 'S03', rouge: 'S07', white: 'S10', neon: 'S12' };
 const LASTF = join(process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Factory', 'cache'), 'dernier.json');
 const lastPick = (() => { try { return JSON.parse(readFileSync(LASTF, 'utf8')); } catch { return {}; } })();
 const draw = (list, prev) => { const l = list.filter(x => x !== prev); return (l.length ? l : list)[Math.floor(Math.random() * (l.length || list.length))]; };
 if (music === 'auto') {
   const id = draw(MUSIC_OK, lastPick.musique), f = readdirSync(BEDS).find(n => n.startsWith(id + '_'));
-  if (!f) { console.error('✗ musique ' + id + ' introuvable dans ' + BEDS); process.exit(2); }
-  music = join(BEDS, f); lastPick.musique = id; console.log('  musique tirée : ' + id);
+  if (f) music = join(BEDS, f);
+  else {   // pas de piste longue en local : celle de la banque (factory-media/music), téléchargée dans le dossier temporaire
+    music = join(tmpdir(), 'cf-' + id + '_banque.mp3');
+    try { execFileSync('curl', ['-sfL', '-o', music, 'https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/music/' + id + '.mp3']); }
+    catch { console.error('✗ musique ' + id + ' introuvable'); process.exit(2); }
+  } lastPick.musique = id; console.log('  musique tirée : ' + id);
 }
-if (OPT['subs-style'] === 'auto') { OPT['subs-style'] = draw(['contour', 'boite'], lastPick.sous_titre); lastPick.sous_titre = OPT['subs-style']; console.log('  sous-titres tirés : ' + OPT['subs-style']); }
+if (OPT['subs-style'] === 'auto') { OPT['subs-style'] = draw(Object.keys(SUBS), lastPick.sous_titre); lastPick.sous_titre = OPT['subs-style']; console.log('  sous-titres tirés : ' + OPT['subs-style']); }
 try { mkdirSync(dirname(LASTF), { recursive: true }); writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
 if (!hook || !demoSrc || !out) { console.error('usage: build.mjs <hook> <demo> <out> [music] [hookVoice] [cta] [ctaCap] [ctaLead] [--format …]'); process.exit(1); }
 const CTA_LEAD = parseFloat(ctaLeadArg || '0') || 0;
@@ -451,7 +456,7 @@ if (FMT.hasChoc(format)) {
 }
 sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
 if (illusLog.length) sidecar.illustrations = illusLog;
-sidecar.musique = music ? (/(M\d+)_/.exec(basename(music)) || [])[1] || basename(music) : null; sidecar.sous_titre = (OPT['subs-style'] || 'contour') === 'boite' ? 'S21' : 'S02';
+sidecar.musique = music ? (/(M\d+)_/.exec(basename(music)) || [])[1] || basename(music) : null; sidecar.sous_titre = SUBS[OPT['subs-style'] || 'contour'] || 'S02';
 const oj = join(work, 'capOpts.json'); writeFileSync(oj, JSON.stringify(capOpts));
 const capt = join(work, 'capt.mp4');
 execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], { stdio:'inherit', env: { ...process.env, CF_FPS: String(FPS) } });
