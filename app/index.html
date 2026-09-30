@@ -41339,6 +41339,17 @@ lastY=y;
         +'<b style="font-size:14.5px">'+name+'</b></button>';
     });
     h+='</div>';
+    // Creative Factory + kit de publication (Axel 30/09 : « sur mon téléphone je ne vois pas le Creative Factory ») : compte
+    // dev / owner SEULEMENT — même porte que l'entrée de la barre latérale (#navFactory, affichée par le gating du profil) ;
+    // les deux pages revérifient l'accès côté serveur (factory_access).
+    var _fac=document.getElementById('navFactory');
+    if(_fac && _fac.style.display==='flex'){
+      var FAC_IC='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l6 4V10l6 4V6l6 4v11z"/></svg>';
+      var KIT_IC='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+      h+='<h2 class="display" style="font-size:17px;font-weight:800;margin:22px 0 12px">Dev</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+        +'<button class="mm-tool" data-act="factory"><span class="mm-ic">'+FAC_IC+'</span><b style="font-size:14.5px">Creative Factory</b></button>'
+        +'<button class="mm-tool" data-act="kit"><span class="mm-ic">'+KIT_IC+'</span><b style="font-size:14.5px">Kit de publication</b></button></div>';
+    }
     h+='<div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">'
       /* 🔌 Connecter Claude (#73) — même place que dans la sidebar : juste au-dessus de « Mon compte » */
       +'<button class="mm-ghost" data-act="claude"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg> Connecter Claude</button>'
@@ -41375,6 +41386,8 @@ lastY=y;
         else if(a==='credits'){ hideMore(); paint(); openCreditsModal(undefined, true); }
         else if(a==='logout'){ authLogout(); }
         else if(a==='navopen'){ navOpen=!navOpen; renderMore(); }
+        else if(a==='factory'){ window.location.href='/factory-v2.html'; }
+        else if(a==='kit'){ window.location.href='/factory-kit.html'; }
       };
     });
     m.querySelectorAll('[data-toggle]').forEach(function(b){
