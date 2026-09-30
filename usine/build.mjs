@@ -164,7 +164,11 @@ function manifestWords(voicePath, offset) {
   return null;
 }
 const emitWords = (audio, offset) => {
-  const c = join(CACHE, 'words', fileKey(audio) + '.json');   // mots à l'offset 0, puis décalés
+  let c = join(CACHE, 'words', fileKey(audio) + '.json');   // mots à l'offset 0, puis décalés
+  // démo convertie : son nom porte l'empreinte de l'ORIGINAL → mots retrouvés par le nom (serveur : la conversion diffère
+  // octet pour octet de celle du Mac, mais pas les mots ni leurs temps)
+  const byName = join(CACHE, 'words', 'n-' + basename(audio) + '.json');
+  if (!existsSync(c) && existsSync(byName)) c = byName;
   if (!existsSync(c)) execFileSync('node', [join(HERE,'captions.mjs'), 'emit', audio, '0', c], { stdio:'inherit' });
   else console.log('  mots en cache : ' + basename(audio));
   return JSON.parse(readFileSync(c, 'utf8')).map(w => ({ ...w, start: w.start + offset, end: w.end + offset })); };
