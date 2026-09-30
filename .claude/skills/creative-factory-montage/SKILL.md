@@ -72,6 +72,22 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
   « Vidéos IA comme ça » → un avant / après Omni (assemblage `HK-O2-0a`) ; « avatar / influenceuse IA » → une fille 4K
   (`avatar-ia-fille-4k.jpg`, `avatar-ia-fille-4k-b.jpg`). **Le texte choc s'efface quand l'illustration arrive**
   (0,8 s mini) : il gênait la vidéo (VF-0003).
+- **`--illus auto` (à mettre sur CHAQUE montage, Axel 30/09)** : ce que le hook / la liaison NOMME arrive à l'écran,
+  toujours le même mouvement (grande carte, entre par la droite, repart par la gauche) et le même bruitage (woosh +
+  déclencheur photo si image + glissé de sortie). Matrice = `usine/illustrations.json` : par hook et par liaison, mots
+  d'entrée / de sortie + type de média (fille, garcon, avatar, pub, produit, demo). `demo` / `avatar` / `pub` montrent le
+  MÊME résultat que la démo (`demoMedia`) : C-IMGIA-02/03 = garçons, 06/07 = filles, C-OMNI-01/02/03 = Clio → Porsche
+  (HK-O2-0a), C-SADS-01 = CIAO, C-SADS-02 = parfum. Un hook « influenceuse » (H12, H13, H21) ne va qu'avec une démo de
+  filles. Nouvelle brique ou nouvelle démo → compléter le JSON. Vérifier dans le log les lignes « illustration (…) » et
+  les « ⚠ illustration ignorée » (mot introuvable = Whisper a entendu autre chose → corriger les mots d'entrée).
+  À la main : `--illus "fichier|entrée|sortie;fichier|entrée"`.
+  Garde-fous (30/09) : l'avatar OUVRE toujours (aucune illustration avant 0,8 s) ; durée mini à l'écran 1,5 s (image) /
+  2,6 s (vidéo) ; deux illustrations qui se suivent = la première repart quand la seconde arrive ; le texte choc ne se
+  pose jamais sur la bande des sous-titres.
+- Mots affichés : un mot-outil « éclair » (≤ 3 lettres, ≤ 0,05 s) absent du texte = invention de Whisper, retiré (« Si TU
+  t'es ») ; un mot court du texte avalé par Whisper entre deux mots reconnus est remis (« nouvelle ÈRE IA » entendu
+  « nouvelle RIA »). Toujours relire `OUT.mp4.words.json` contre le texte de la brique.
+- Niveau sonore : calage final automatique à −16 LUFS (ligne « niveau sonore » du log).
 - `--choc-size 62` : taille du texte choc forcée (défaut 45-52 px ; VF-0004 : « plus gros »).
 - `--subs-style boite` : sous-titres en pastilles blanches texte noir (brique S21) ; défaut `contour` (S02).
 

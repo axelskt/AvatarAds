@@ -16,7 +16,7 @@
 //   --format : auto (défaut) = rotation ; --done = recettes déjà produites (lignes factory_qc ou leurs brick_combo), sinon
 //   lues avec SUPABASE_SERVICE_ROLE_KEY (lecture seule) ; --bricks = export factory_bricks (formats retirés exclus).
 //   --tx / --avant-apres : déduits du nom d'un hook avant/après (assemblage « HK-O2-0ab » lu dans la bibliothèque, ancien « HK-O02a-01 ») ; --faces : boîtes imposées (sinon détectées).
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, statSync, openSync, readSync, closeSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -27,7 +27,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-size'];
+const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-size', '--illus'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -154,7 +154,7 @@ const emitWords = (audio, offset) => {
 const VCH = 'highpass=f=75,equalizer=f=220:t=q:w=1:g=-1.5,equalizer=f=3200:t=q:w=1.4:g=1.5,acompressor=threshold=-21dB:ratio=3:attack=6:release=90:makeup=1.5,' + LN;
 const bare = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
 const IMG_RE = /\.(png|jpe?g|webp)$/i;
-let hookWordsPre = null, hookVoiced = false, liaisonAt = null;
+let hookWordsPre = null, hookVoiced = false, liaisonAt = null, nHookW = null;
 // ── MOTS EXACTS (Axel 29/09 : « ça écrit influences d'IA alors que je dis influenceuse IA ») : chaque brique parlée a son
 //    texte validé (factory_bricks.meta.transcript, sinon script / label ; CTA : usine/cta-captions.json relu à la main).
 //    Les mots de Whisper gardent leurs TEMPS, mais leur TEXTE vient de ce texte, aligné mot à mot (programmation
@@ -195,11 +195,28 @@ function exactWords(ws, text) {
     if (i > 0 && j > 0 && D[i][j] === D[i - 1][j - 1] + (A[i - 1] === B[j - 1] ? 0 : 1.6 - sim(A[i - 1], B[j - 1]))) {
       // même mot ou mot RESSEMBLANT → le texte de la brique (orthographe, ponctuation) ; mot très différent → ce qui est DIT
       const ok = A[i - 1] === B[j - 1] || sim(A[i - 1], B[j - 1]) >= 0.6;
-      out.push(ok ? { ...ws[i - 1], text: toks[j - 1] } : ws[i - 1]); i--; j--; }
-    else if (j > 0 && (i === 0 || D[i][j] === D[i][j - 1] + 1)) { j--; }   // mot du texte jamais entendu : pas ajouté (textes parfois faux)
-    else { out.push(ws[i - 1]); i--; }
+      out.push(ok ? { ...ws[i - 1], text: toks[j - 1], _x: A[i - 1] === B[j - 1] ? 2 : 1 } : ws[i - 1]); i--; j--; }
+    else if (j > 0 && (i === 0 || D[i][j] === D[i][j - 1] + 1)) { out.push({ _ins: toks[j - 1] }); j--; }   // mot du texte jamais entendu : voir plus bas
+    else {
+      // mot entendu absent du texte : gardé (le texte est parfois faux), SAUF un mot-outil éclair (≤ 3 lettres, ≤ 0,05 s) =
+      // invention de Whisper (VF-0007 : « Si TU t'es e-commerçant », « tu » de 30 ms)
+      const w = ws[i - 1]; if (!(bare(w.text).length <= 3 && w.end - w.start <= 0.05)) out.push(w); i--; }
   }
-  return out.reverse();
+  out.reverse();
+  // Mot du texte jamais entendu : en général PAS ajouté (les textes sont parfois faux). Exception : un mot COURT (≤ 4
+  // lettres) coincé entre deux mots reconnus à l'identique = élision de Whisper (VF-0010 : « nouvelle ère IA » entendu
+  // « nouvelle IA », « ère » fondu dans « nouvelle ») → remis, sur la fin du mot précédent (temps partagé au prorata).
+  const res = [];
+  out.forEach((w, k) => {
+    if (!w._ins) { res.push(w); return; }
+    const prev = res[res.length - 1], next = out[k + 1];
+    // voisins reconnus (à l'identique = 2, ressemblant = 1), dont au moins un à l'identique : « nouvelle RIA » = « nouvelle ère IA »
+    if (bare(w._ins).length <= 4 && prev && prev._x && next && next._x && prev._x + next._x >= 3) {
+      const a = bare(prev.text).length, b = bare(w._ins).length, cut = prev.start + (prev.end - prev.start) * a / (a + b), end = prev.end;
+      prev.end = cut; res.push({ text: w._ins, start: cut, end, _x: 2 });
+    }
+  });
+  return res.map(({ _x, _ins, ...w }) => w);
 }
 const brollEvents = [];
 // ── LIAISON (format long) gérée ici : hook + liaison collés (coupe franche, même photo), voix traitées séparément par
@@ -225,7 +242,7 @@ if (OPT.liaison) {
   const hl = join(work, 'hook-liaison.mp4');
   ff([...ins, '-filter_complex', fc, '-map', '[v]', '-map', '[a]', ...VENC, '-pix_fmt', 'yuv420p', '-r', String(FPS), '-c:a', 'aac', '-b:a', '192k', '-t', (dH + dL).toFixed(3), hl]);
   hook = hl; hookVoice = hl; hookVoiced = true; liaisonAt = dH;
-  hookWordsPre = hW.concat(lW.map(w => ({ ...w, start: w.start + dH, end: w.end + dH })));
+  hookWordsPre = hW.concat(lW.map(w => ({ ...w, start: w.start + dH, end: w.end + dH }))); nHookW = hW.length;
 }
 
 // durées de brique
@@ -264,6 +281,64 @@ if (OPT['hook-broll']) {
     brollEvents.push({ file: hf, at, dur: endAt - at, image: IMG_RE.test(hf), style: 'hook' });
     console.log('  illustration du hook à ' + at.toFixed(2) + ' s → ' + endAt.toFixed(2) + ' s : ' + basename(hf));
   } else console.warn('⚠ illustration du hook ignorée : « ' + trig + ' » introuvable (ou trop tard)');
+}
+
+// ── ILLUSTRATIONS AUTOMATIQUES (Axel 30/09 : « selon ce que je dis dans le hook et la liaison, une image / vidéo / static
+//    doit arriver, et toujours le même mouvement / animation, avec bruitage ») : --illus auto lit usine/illustrations.json
+//    (mots d'entrée / de sortie et type de média par hook et par liaison ; type « demo » = le résultat du module de la
+//    démo). --illus "fichier|entrée|sortie;fichier|entrée" = liste à la main. Toutes : grande carte qui entre par la droite
+//    et repart par la gauche (style 'hook'), woosh à l'entrée, glissé à la sortie.
+const illusLog = [];
+if (OPT.illus) {
+  const BANK = readJson(join(HERE, 'illustrations.json'), 'illustrations.json');
+  const BR = process.env.CF_BROLL || join(CACHE, 'broll');
+  const toksOf = t => String(t || '').split(/\s+/).map(bare).filter(Boolean);
+  const findW = (toks, from, to) => { for (let i = from; i < to; i++) if (toks.length && toks.every((t, k) => i + k < to && bare(hookW0[i + k].text) === t)) return i; return -1; };
+  const nH = nHookW != null ? nHookW : hookW0.length, liaisonId = OPT.liaison ? idFromFile(OPT.liaison) : null;
+  const mod = demoBrick ? ((demoBrick.meta && demoBrick.meta.module) || demoBrick.subject || '') : (OPT.demo || '');
+  const seedN = [...basename(out)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7), used = new Set(brollEvents.map(e => basename(e.file)));
+  // média d'un type : jamais deux fois le même dans une vidéo ; rotation d'une vidéo à l'autre (graine = nom de sortie)
+  const pick = type => {
+    // « avatar » (genre non précisé) = le résultat de la démo si elle génère des avatars, sinon une fille
+    if (type === 'avatar') type = mod === 'image-ia' ? 'demo' : 'fille';
+    const direct = (type === 'demo' || (type === 'pub' && mod === 'static-ads')) && BANK.demoMedia && BANK.demoMedia[OPT.demo], t = type === 'demo' ? (BANK.demo || {})[mod] : type;
+    const pool = (direct && direct.filter(f => !used.has(basename(f))).length ? direct : (BANK.pools || {})[t]) || [];
+    const free = pool.filter(f => !used.has(basename(f)));
+    if (!free.length) return null;
+    const ref = free[(seedN + used.size) % free.length]; used.add(basename(ref));
+    if (!/^https?:/.test(ref)) return join(BR, ref);
+    const f = join(work, 'illus-' + basename(ref));                     // média distant (assemblage avant / après) : copie de travail
+    try { execFileSync('curl', ['-sfL', '-o', f, ref]); return f; } catch { return null; }
+  };
+  const want = [];   // { file|type, in, out, from, to, endDef }
+  if (OPT.illus === 'auto') {
+    if (hookId && !avantApres) (BANK.bricks[hookId] || []).forEach(e => want.push({ ...e, from: 0, to: nH, endDef: liaisonAt != null ? liaisonAt : O1, src: hookId }));
+    if (liaisonId) (BANK.bricks[liaisonId] || []).forEach(e => want.push({ ...e, from: nH, to: hookW0.length, endDef: O1, src: liaisonId }));
+  } else OPT.illus.split(';').map(x => x.trim()).filter(Boolean).forEach(x => { const [file, i, o] = x.split('|'); want.push({ file, in: i, out: o, from: 0, to: hookW0.length, endDef: O1, src: 'manuel' }); });
+  let cursor = 0;
+  for (const e of want) {
+    const iIn = findW(toksOf(e.in), Math.max(e.from, cursor), e.to);
+    if (iIn < 0) { console.warn('⚠ illustration ignorée (' + e.src + ') : « ' + e.in + ' » introuvable'); continue; }
+    // l'avatar OUVRE toujours la vidéo (frame 0 = couverture, texte choc lisible) : jamais d'illustration avant 0,8 s
+    const at = Math.max(0.8, hookW0[iIn].start - 0.05);
+    let endAt = e.endDef;
+    if (e.out) { const iOut = findW(toksOf(e.out), iIn + 1, e.to); if (iOut >= 0) endAt = hookW0[iOut].start + 0.3; }   // la sortie DÉMARRE sur ces mots
+    endAt = Math.min(endAt, O1);
+    const file = e.file || pick(e.type);
+    // durée mini à l'écran (VF-0008 : « comme ça et attirer » ne laissait que 0,9 s à un avant / après) : 1,5 s pour une
+    // image, 2,6 s pour une vidéo, dans la limite de la fin du hook / de la liaison
+    if (file) endAt = Math.min(O1, Math.max(endAt, at + (IMG_RE.test(file) ? 1.5 : 2.6)));
+    if (endAt - at < 0.7) { console.warn('⚠ illustration ignorée (' + e.src + ') : fenêtre trop courte (' + (endAt - at).toFixed(2) + ' s)'); continue; }
+    if (!file || !existsSync(file)) { console.warn('⚠ illustration ignorée (' + e.src + ') : aucun média « ' + (e.type || e.file) + ' » (module de la démo : ' + (mod || 'inconnu') + ')'); continue; }
+    brollEvents.push({ file, at, dur: endAt - at, image: IMG_RE.test(file), style: 'hook' });
+    illusLog.push({ brique: e.src, mots: e.in, sortie: e.out || null, media: basename(file), de: +at.toFixed(2), a: +endAt.toFixed(2) });
+    cursor = iIn + 1;
+  }
+  // deux illustrations qui se suivent : la première repart quand la suivante arrive (jamais deux grandes cartes empilées)
+  const hk = brollEvents.filter(e => e.style === 'hook').sort((a, b) => a.at - b.at);
+  hk.forEach((e, i) => { const n = hk[i + 1]; if (n && e.at + e.dur > n.at + 0.3) e.dur = Math.max(0.5, n.at + 0.3 - e.at); });
+  illusLog.forEach(l => console.log('  illustration (' + l.brique + ') « ' + l.mots + ' » ' + l.de.toFixed(2) + ' s → ' + l.a.toFixed(2) + ' s : ' + l.media));
+  if (!illusLog.length) console.log('  aucune illustration (rien de montrable dans ce hook / cette liaison)');
 }
 
 // ── 1) STITCH : slide vidéo + audio positionné (voix séquentielles) ──
@@ -344,7 +419,9 @@ if (FMT.hasChoc(format)) {
   let fz;
   if (facesForced !== undefined) fz = { faces: Array.isArray(facesForced) ? facesForced : (facesForced && facesForced.faces) || null, frames: 0, error: null, forced: true };
   else fz = faceZones(voice, 0, end, 0.5);
-  const lay = { faces: fz.faces, avantApres, sizes: OPT['choc-size'] ? [parseInt(OPT['choc-size'], 10)] : null };
+  // bande des sous-titres réservée (VF-0006 : le texte posé au « milieu » touchait les sous-titres) : jamais l'un sur l'autre
+  const lay = { faces: fz.faces, avantApres, sizes: OPT['choc-size'] ? [parseInt(OPT['choc-size'], 10)] : null,
+    reserved: format.subs !== 'aucun' ? [{ x: 0, y: 1370, w: 1080, h: 140, why: 'bande des sous-titres' }] : [] };
   const p = chocForced || FMT.pickChoc({ demo: demoRef, tx, done, hook: hookId, rand, fits: q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok' });
   if (!p) { console.error('✗ aucune phrase choc compatible avec la démo (' + (sidecar.demo || 'démo inconnue') + ')'); process.exit(2); }
   const text = FMT.chocString(p), layout = FMT.chocLayout(text, lay);
@@ -356,6 +433,7 @@ if (FMT.hasChoc(format)) {
   console.log(`  phrase choc ${p.id} (${layout.zone}, ${layout.size} px, ${layout.lines.length} ligne(s)) 0-${end.toFixed(2)} s` + (layout.level !== 'ok' ? ' ⚠ revue : ' + layout.reasons.join(' · ') : ''));
 }
 sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
+if (illusLog.length) sidecar.illustrations = illusLog;
 const oj = join(work, 'capOpts.json'); writeFileSync(oj, JSON.stringify(capOpts));
 const capt = join(work, 'capt.mp4');
 execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], { stdio:'inherit', env: { ...process.env, CF_FPS: String(FPS) } });
@@ -375,7 +453,8 @@ if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', '
   const gs = {}; allWords.forEach(w => { if (w.g && !(w.g in gs)) gs[w.g] = w.start; });
   Object.values(gs).forEach(t => addSfx(sx('ed-swish-1.mp3'), Math.max(0, t - 0.1), '-14dB', 'x' + q++));       // groupe de sous-titres
   brollEvents.forEach(e => { addSfx(sx('woosh.mp3'), Math.max(0, e.at - 0.15), '-9dB', 'x' + q++);            // image qui entre
-    if (e.image) addSfx(sx('camera-shutter.mp3'), e.at + 0.02, '-12dB', 'x' + q++); });
+    if (e.image) addSfx(sx('camera-shutter.mp3'), e.at + 0.02, '-12dB', 'x' + q++);
+    if (e.style === 'hook') addSfx(sx('mo-swipe-1.mp3'), Math.max(0, e.at + e.dur - 0.3), '-16dB', 'x' + q++); });   // … et qui repart
   // démo : clic / génération / résultat d'après les mots dits (2,5 s d'écart au moins, 5 au plus)
   const RULES = [[/^(clique|cliques|cliquer|clic|selectionne|selectionnes|choisis|appuie|appuies|tape|tapes)$/, 'mouse-click.mp3', '-10dB'],
     [/^(genere|generer|generes|lance|lances|creer|cree|crees)$/, 'magic.mp3', '-14dB'],
@@ -398,6 +477,18 @@ if (music) {
   const filt = sf.join(';')+`;`+`[0:a]${sfxLabels.join('')}amix=inputs=${1+sfxLabels.length}:duration=first:normalize=0,alimiter=limit=0.95[a]`;
   ff([...in2, '-filter_complex', filt, '-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-b:a','192k','-shortest', out]);
 }
+// CALAGE FINAL à −16 LUFS (VF-0010 sortait à −17,3) : mesure du mix terminé, gain d'appoint si l'écart dépasse 0,5 dB
+// (son seul ré-encodé, image copiée) ; le limiteur garde les crêtes sous 0,95.
+try {
+  const lufsOf = f => { try { const r = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', f, '-map', '0:a', '-af', 'ebur128', '-f', 'null', '-'], { encoding: 'utf8' }); const all = [...String(r.stderr || '').matchAll(/I:\s+(-?[0-9.]+) LUFS/g)]; return all.length ? parseFloat(all[all.length - 1][1]) : null; } catch { return null; } };
+  const I = lufsOf(out);
+  if (I != null && Math.abs(I + 16) > 0.5 && Math.abs(I + 16) < 8) {
+    const g = (-16 - I).toFixed(2), tmp = out.replace(/\.mp4$/, '') + '.lufs.mp4';
+    ff(['-i', out, '-map', '0:v', '-map', '0:a', '-c:v', 'copy', '-af', `volume=${g}dB,alimiter=limit=0.95:level=disabled`, '-c:a', 'aac', '-b:a', '192k', tmp]);
+    renameSync(tmp, out);
+    console.log('  niveau sonore ' + I.toFixed(1) + ' → ' + (lufsOf(out) || 0).toFixed(1) + ' LUFS (gain ' + g + ' dB)');
+  } else if (I != null) console.log('  niveau sonore ' + I.toFixed(1) + ' LUFS');
+} catch (e) { console.warn('⚠ calage du niveau sonore ignoré : ' + e.message); }
 writeFileSync(out + '.format.json', JSON.stringify(sidecar, null, 1));
 // mots affichés gardés à côté de la vidéo (relecture), puis dossier de travail supprimé : un rendu 60 i/s laissait ~500 Mo
 // de fichiers temporaires, le disque s'est rempli le 30/09 (rendu refusé faute de place)

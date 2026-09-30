@@ -1,0 +1,288 @@
+{
+  "_doc": [
+    "Creative Factory — ILLUSTRATIONS du hook et de la liaison (Axel 30/09/2026).",
+    "Règle : quand le hook ou la liaison NOMME quelque chose de montrable (« comme ça », « influenceuse IA », « regarde ça »,",
+    "« pubs pour ton produit »…), le média correspondant arrive. TOUJOURS le même mouvement (entre par la droite en grande",
+    "carte, repart par la gauche) et le même bruitage (woosh à l'entrée, déclencheur photo si image, glissé à la sortie).",
+    "bricks.<id> = liste d'illustrations : in = mots qui la font entrer, out = mots sur lesquels sa sortie démarre (absent =",
+    "fin du hook / de la liaison), type = pool de médias. type « demo » = le résultat du module de la démo (demo.<module>),",
+    "ou les médias précis d'une démo (demoMedia.<id de démo>). Une brique absente = rien de montrable (pas d'illustration).",
+    "Les mots sont comparés sans accent ni ponctuation (« d'image » = un seul mot). Lu par usine/build.mjs --illus auto.",
+    "type « avatar » = un avatar IA sans genre précisé : le résultat de la démo si elle est du module image-ia, sinon une fille.",
+    "type « fille » = le hook dit « influenceuse » : toujours une fille → ne l'associer qu'à une démo qui génère des filles",
+    "(C-IMGIA-06 / 07) ; C-IMGIA-02 / 03 génèrent des garçons. demoMedia sert aux types « demo », « avatar » et « pub »",
+    "(module static-ads) : l'illustration montre le MÊME résultat que la démo (même produit, même transformation)."
+  ],
+  "pools": {
+    "fille": [
+      "avatar-ia-fille-4k.jpg",
+      "avatar-ia-fille-4k-b.jpg",
+      "avatar-ia-fille-4k-c.jpg",
+      "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-fille-4k-e.jpg"
+    ],
+    "pub": [
+      "ciao-energy-peche.png",
+      "pub-ciao-naturelle.png",
+      "pub-ciao-boost.png",
+      "pub-ciao-sucre.png",
+      "pub-ciao-ugc.png",
+      "pub-parfum-desoles.png",
+      "pub-parfum-offre.png"
+    ],
+    "produit": [
+      "ciao-fille-canette.mp4"
+    ],
+    "omni": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4",
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O1-0a.mp4",
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O3-0a.mp4",
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0b.mp4"
+    ],
+    "garcon": [
+      "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
+      "avatar-ia-garcon-4k-d.jpg"
+    ]
+  },
+  "demo": {
+    "image-ia": "fille",
+    "omni": "omni",
+    "static-ads": "pub"
+  },
+  "demoMedia": {
+    "C-IMGIA-02": [
+      "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
+      "avatar-ia-garcon-4k-d.jpg"
+    ],
+    "C-IMGIA-03": [
+      "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
+      "avatar-ia-garcon-4k-d.jpg"
+    ],
+    "C-IMGIA-06": [
+      "avatar-ia-fille-4k.jpg",
+      "avatar-ia-fille-4k-b.jpg",
+      "avatar-ia-fille-4k-c.jpg",
+      "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-fille-4k-e.jpg"
+    ],
+    "C-IMGIA-07": [
+      "avatar-ia-fille-4k.jpg",
+      "avatar-ia-fille-4k-b.jpg",
+      "avatar-ia-fille-4k-c.jpg",
+      "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-fille-4k-e.jpg"
+    ],
+    "C-OMNI-01": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4"
+    ],
+    "C-OMNI-02": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4"
+    ],
+    "C-OMNI-03": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4"
+    ],
+    "C-SADS-01": [
+      "ciao-energy-peche.png",
+      "pub-ciao-naturelle.png",
+      "pub-ciao-boost.png",
+      "pub-ciao-sucre.png",
+      "pub-ciao-ugc.png"
+    ],
+    "C-SADS-02": [
+      "pub-parfum-desoles.png",
+      "pub-parfum-offre.png"
+    ]
+  },
+  "bricks": {
+    "H12": [
+      {
+        "in": "cette influenceuse",
+        "out": "et la",
+        "type": "fille"
+      }
+    ],
+    "H13": [
+      {
+        "in": "cette influenceuse",
+        "out": "et la",
+        "type": "fille"
+      }
+    ],
+    "H14": [
+      {
+        "in": "creer",
+        "type": "avatar"
+      }
+    ],
+    "H21": [
+      {
+        "in": "faire",
+        "out": "je vais",
+        "type": "fille"
+      }
+    ],
+    "H23": [
+      {
+        "in": "comme ca",
+        "type": "demo"
+      }
+    ],
+    "H30": [
+      {
+        "in": "comme ca",
+        "out": "et attirer",
+        "type": "demo"
+      }
+    ],
+    "H31": [
+      {
+        "in": "comme ca",
+        "out": "puis",
+        "type": "avatar"
+      }
+    ],
+    "H40": [
+      {
+        "in": "comme ca",
+        "out": "utilise",
+        "type": "demo"
+      },
+      {
+        "in": "ce niveau",
+        "type": "demo"
+      }
+    ],
+    "H58": [
+      {
+        "in": "publicites",
+        "out": "et les",
+        "type": "pub"
+      }
+    ],
+    "H60": [
+      {
+        "in": "comme ceci",
+        "out": "alors",
+        "type": "avatar"
+      }
+    ],
+    "H68": [
+      {
+        "in": "publicite",
+        "out": "en moins",
+        "type": "produit"
+      }
+    ],
+    "H73": [
+      {
+        "in": "influenceur",
+        "out": "et en",
+        "type": "avatar"
+      }
+    ],
+    "H76": [
+      {
+        "in": "pubs",
+        "out": "et en",
+        "type": "pub"
+      }
+    ],
+    "H77": [
+      {
+        "in": "pubs",
+        "out": "et en",
+        "type": "pub"
+      }
+    ],
+    "H78": [
+      {
+        "in": "meilleure qualite",
+        "out": "je te",
+        "type": "demo"
+      }
+    ],
+    "H79": [
+      {
+        "in": "images realistes",
+        "out": "tu passes",
+        "type": "avatar"
+      }
+    ],
+    "H83": [
+      {
+        "in": "creatives",
+        "out": "cet outil",
+        "type": "pub"
+      }
+    ],
+    "H84": [
+      {
+        "in": "meilleure qualite",
+        "out": "je te",
+        "type": "demo"
+      }
+    ],
+    "L12": [
+      {
+        "in": "influenceur",
+        "out": "ensuite",
+        "type": "avatar"
+      },
+      {
+        "in": "produit",
+        "out": "des que",
+        "type": "pub"
+      }
+    ],
+    "L15": [
+      {
+        "in": "realisme",
+        "out": "et sache",
+        "type": "demo"
+      }
+    ],
+    "L16": [
+      {
+        "in": "regarde",
+        "type": "demo"
+      },
+      {
+        "in": "dimage",
+        "type": "demo"
+      }
+    ],
+    "L19": [
+      {
+        "in": "ce niveau",
+        "out": "il a",
+        "type": "demo"
+      }
+    ],
+    "L30": [
+      {
+        "in": "avatar",
+        "type": "avatar"
+      }
+    ],
+    "L58": [
+      {
+        "in": "integrer",
+        "out": "je vais",
+        "type": "produit"
+      }
+    ],
+    "L70": [
+      {
+        "in": "creer",
+        "out": "je te",
+        "type": "demo"
+      }
+    ]
+  }
+}
