@@ -555,6 +555,7 @@ function aaPollStatus(u){
     if(typeof j.progress==='number') aaSetPct(j.progress);
     if(j.status==='done' && j.url){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaMedia(j.url, j.kind||'image', ''); }, 350); return; }
     if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent='Échec de la génération — réessaie.'; }
+    if(j.status==='pending' && j.link_failed){ aaProductUrl=''; aaAskPhoto(); var pe2=document.getElementById('pe'); if(pe2) pe2.textContent=j.link_failed==='no_image_in_link'?'Photo non récupérable depuis le lien (site protégé) — dépose-la ici.':j.link_failed==='daily_cap'?'Plafond 24 h atteint':(j.link_failed==='no_credits'||j.link_failed==='credits')?'Crédits épuisés — recharge sur avatarads.fr':'Lien illisible — dépose la photo ici.'; }
   }).catch(function(){});
 }
 function aaStartPoll(u){
@@ -634,7 +635,8 @@ function aaStartJob(dataUrl, link){
     .then(function(x){
       if(x.ok&&x.j&&x.j.statusUrl){ if(x.j.ref) aaRef=x.j.ref; if(x.j.prompt) aaPrompt=x.j.prompt; aaRaw=true; aaOk=false; aaPct=5; aaStartPoll(x.j.statusUrl); return; }
       var er=(x.j&&x.j.error)||'';
-      if(pe) pe.textContent = er==='daily_cap'?'Plafond 24 h atteint':(er==='no_credits'||er==='credits')?'Crédits épuisés — recharge sur avatarads.fr':er==='expired'?'Carte expirée — redemande à Claude':er==='not_pending'?'Déjà lancé':er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='no_image_in_link'?'Photo non récupérable depuis ce lien (site protégé) — dépose-la ci-dessus, ou colle le lien DIRECT de l\\'image':'Échec ('+(er||'réseau')+') — réessaie';
+      if(er==='not_pending'&&aaJobId){ aaOk=false; aaPct=5; aaStartPoll('https://mcp.avatarads.fr/status/'+aaJobId); return; }   // déjà lancé (carte rechargée) : on suit la génération
+      if(pe) pe.textContent = er==='daily_cap'?'Plafond 24 h atteint':(er==='no_credits'||er==='credits')?'Crédits épuisés — recharge sur avatarads.fr':er==='expired'?'Carte expirée — redemande à Claude':er==='not_pending'?'':er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='no_image_in_link'?'Photo non récupérable depuis ce lien (site protégé) — dépose-la ci-dessus, ou colle le lien DIRECT de l\\'image':'Échec ('+(er||'réseau')+') — réessaie';
       if(pk) pk.disabled=false; if(sk) sk.disabled=false;
     })
     .catch(function(){ if(pe) pe.textContent='Réseau indisponible — réessaie.'; if(pk) pk.disabled=false; if(sk) sk.disabled=false; });
@@ -1234,12 +1236,27 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
       .insert({ user_id: userId, kind: 'image', status: 'pending', credits_cost: cost, params: { args: { ...args, prompt }, format, quality, kind, product_url: productUrl, cap_held: capHeldOf(profile, ctx, cost) } })
       .select('id').single()
     if (pjErr || !pj) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur (carte photo) — réessaie.') }
-    const phrase = productUrl
-      ? "Je récupère la photo depuis le lien du produit — si le site la protège, la carte te proposera de la déposer."
-      : "Dépose la photo de ton produit dans la carte ci-dessus (ou clique Sans photo), je m'occupe du reste."
+    // LIEN PRODUIT → lancé ICI, côté serveur (Axel 30/09 : « ça doit être fait en backend, pas montré à tout le monde » ;
+    // une carte dont l'iframe ne se chargeait pas ne lançait jamais son image : 4 reçues sur 5). La carte ne montre que la
+    // progression. Si le site protège sa photo, params.link_failed → la carte propose alors seulement le dépôt.
+    const _cap = await jobCap(pj.id)
+    if (productUrl) {
+      bg((async () => {
+        try {
+          const r = await fetch('https://mcp.avatarads.fr/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job: pj.id, product_url: productUrl, data_url: '', skip: false, cap: _cap }) })
+          if (!r.ok) {
+            const e = await r.json().catch(() => ({})) as Record<string, unknown>
+            if (String(e.error || '') !== 'not_pending') {
+              const { data: cur } = await svc.from('mcp_jobs').select('params, status').eq('id', pj.id).maybeSingle()
+              if (cur && cur.status === 'pending') await svc.from('mcp_jobs').update({ params: { ...(cur.params as Record<string, unknown> || {}), link_failed: String(e.error || 'erreur') } }).eq('id', pj.id).eq('status', 'pending')
+            }
+          }
+        } catch (_) { /* la carte retombera sur le dépôt après son délai */ }
+      })())
+    }
     return {
-      content: [{ type: 'text', text: `${adFormat ? `[système] Format de pub choisi : « ${adFormat.name} ». ` : ''}[système] La carte gère la photo du produit${productUrl ? " (récupération depuis le lien, repli dépôt si site protégé)" : " (dépôt par l'utilisateur, ou « Sans photo »)"}, puis génère. Aucun crédit débité pour l'instant.\nRÉPONSE À ÉCRIRE MAINTENANT : AUCUNE — n'écris rien, la carte parle d'elle-même. N'appelle aucun autre outil.` }],
-      structuredContent: { job_id: pj.id, cap: await jobCap(pj.id), statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'image', pending: true, productUrl: productUrl || '', prompt: promptFinal, format, raw: true, ad_format: adFormat ? adFormat.name : undefined },
+      content: [{ type: 'text', text: `${adFormat ? `[système] Format de pub choisi : « ${adFormat.name} ». ` : ''}[système] La carte gère la photo du produit${productUrl ? " (récupérée depuis le lien côté serveur, génération déjà lancée ; repli dépôt seulement si le site est protégé)" : " (dépôt par l'utilisateur, ou « Sans photo »)"}, puis génère. Aucun crédit débité pour l'instant.\nRÉPONSE À ÉCRIRE MAINTENANT : AUCUNE — n'écris rien, la carte parle d'elle-même. N'appelle aucun autre outil.` }],
+      structuredContent: { job_id: pj.id, cap: _cap, statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'image', pending: !productUrl, productUrl: '', prompt: promptFinal, format, raw: true, ad_format: adFormat ? adFormat.name : undefined },
     }
   }
 
@@ -3724,7 +3741,7 @@ serve(async (req) => {
       const { data: j2 } = await svc.from('mcp_jobs').select('status, kind, result_url, created_at, error').eq('id', segs[2]).maybeSingle()
       if (j2) j = { ...j, ...j2 }
     }
-    if (j.status === 'pending') return new Response(JSON.stringify({ status: 'pending', kind: j.kind, url: null, progress: 0, error: null }), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
+    if (j.status === 'pending') return new Response(JSON.stringify({ status: 'pending', kind: j.kind, url: null, progress: 0, error: null, link_failed: ((j.params as Record<string, unknown> | null) || {}).link_failed || null }), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
     const elapsed = Date.now() - new Date(String(j.created_at)).getTime()
     const attendu = j.kind === 'image' ? 50000 : j.kind === 'avatar' ? 200000 : 130000
     const done = j.status === 'done' || j.status === 'failed'
