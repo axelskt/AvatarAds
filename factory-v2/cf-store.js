@@ -560,7 +560,7 @@
     ['avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'texte_choc', 'transformation', 'assemblage', 'hook_broll'].forEach(function (k) {
       String(r[k] == null ? '' : r[k]).split('+').forEach(function (v) { v = ok(v.trim()); if (v && ids.indexOf(v) < 0) ids.push(v); });
     });
-    return ids.length ? { id: ok(r.id_complet) || ok(r.vf), vf: ok(r.vf), ids: ids } : null;
+    return ids.length ? { id: ok(r.id_complet) || ok(r.vf), vf: ok(r.vf), photo: ok(r.photo), ids: ids } : null;
   }
   function normMediaItem(p) {
     if (!p || typeof p !== 'object') return null;

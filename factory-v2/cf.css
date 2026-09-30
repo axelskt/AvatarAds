@@ -1332,3 +1332,7 @@ i.is-gap { background: var(--cf-ink); }
 /* fiche brique : ID complet de la vidéo publiée, sur sa propre ligne, jamais coupé (30/09) */
 .cf-bs-row{flex-wrap:wrap}
 .cf-bs-cap.is-id{order:9;flex-basis:100%;white-space:normal;overflow:visible;word-break:break-all;font-family:var(--cf-mono,ui-monospace,Menlo,monospace);font-size:12px;opacity:.8;text-align:left}
+
+.cf-bs-photos{display:flex;flex-direction:column;gap:6px;margin:14px 0 4px}
+.cf-bs-prow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cf-line,rgba(0,0,0,.08))}
+.cf-bs-prow .cf-meta{flex:1;min-width:0}

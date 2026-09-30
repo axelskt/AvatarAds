@@ -3260,7 +3260,8 @@
       var hit = p.analysis && p.analysis.status === 'done' && p.analysis.bricks.filter(function (b) { return b.id === id; })[0];
       if (hit && !info) info = hit;
       // recette du kit (toutes les briques : musique, sous-titres, avatar, démo, texte choc, transformation…)
-      return !!hit || !!(p.recipe && p.recipe.ids.indexOf(id) >= 0);
+      // Axel 30/09 : « ignore les anciens reels, on le fait à partir de maintenant » → seuls les reels reliés au kit comptent
+      return !!(p.recipe && p.recipe.ids.indexOf(id) >= 0);
     }).sort(function (a, b) { return (a.ms || 0) - (b.ms || 0); });
     return { info: info, uses: uses };
   }
@@ -3429,12 +3430,23 @@
         + '<span class="cf-meta">' + esc([p.likes != null ? fInt(p.likes) + NB + 'j’aime' : '', p.comments != null ? fInt(p.comments) + NB + 'com.' : '', p.shares != null ? fInt(p.shares) + NB + 'partages' : ''].filter(Boolean).join(' · ')) + '</span>'
         + '<b>' + esc(fInt(p.views) || '—') + ' vues</b></button>';
     }).join('');
+    // avatar : détail PAR PHOTO (A1-6, A1-8…) — reels, vues totales, vues par reel, meilleure d'abord
+    var byPhoto = '';
+    if (b.kind === 'avatar' && uses.length) {
+      var ph2 = {}; uses.forEach(function (p) { var k = (p.recipe && p.recipe.photo) || 'photo inconnue'; (ph2[k] = ph2[k] || []).push(p); });
+      byPhoto = '<div class="cf-bs-photos"><div class="cf-over">Par photo</div>' + Object.keys(ph2).map(function (k) {
+        var l = ph2[k], tv = l.reduce(function (a, p) { return a + (p.views || 0); }, 0), tl = l.reduce(function (a, p) { return a + (p.likes || 0); }, 0), tc = l.reduce(function (a, p) { return a + (p.comments || 0); }, 0);
+        return { k: k, n: l.length, tv: tv, avg: tv / l.length, tl: tl, tc: tc };
+      }).sort(function (a, c) { return c.avg - a.avg; }).map(function (x) {
+        return '<div class="cf-bs-prow"><span class="cf-chip is-brick">' + esc(x.k) + '</span><span class="cf-meta">' + esc(x.n + NB + plural(x.n, 'reel') + ' · ' + fInt(x.tv) + NB + 'vues · ' + fInt(x.tl) + NB + 'j’aime · ' + fInt(x.tc) + NB + 'com.') + '</span><b>' + esc(fInt(Math.round(x.avg))) + ' vues / reel</b></div>';
+      }).join('') + '</div>';
+    }
     var st = function (v, l) { return '<div class="cf-bs-st"><b>' + esc(v == null ? '—' : v) + '</b><span>' + esc(l) + '</span></div>'; };
     var hist = !heard ? '<div class="cf-bs-none">Pas encore mesurable dans les reels.</div>'
       : !uses.length ? '<div class="cf-bs-none">Pas encore dans un reel publié.</div>'
-        : '<div class="cf-bs-use"><div class="cf-over">Historique d’utilisation · ' + uses.length + ' ' + plural(uses.length, 'publication') + ' Instagram reconnue' + (uses.length >= 2 ? 's' : '') + '</div>'
+        : '<div class="cf-bs-use"><div class="cf-over">Historique d’utilisation · ' + uses.length + ' ' + plural(uses.length, 'publication') + ' Instagram reconnue' + (uses.length >= 2 ? 's' : '') + ' (kit de publication)</div>'
           + '<div class="cf-bs-sts">' + st(fInt(tot), 'vues totales') + st(avg != null ? fInt(Math.round(avg)) : null, 'vues par publication') + st(uses.length + ' ' + plural(uses.length, 'vidéo'), 'utilisée dans') + '</div>'
-          + chart + '<div class="cf-bs-list">' + rows + '</div></div>';
+          + chart + byPhoto + '<div class="cf-bs-list">' + rows + '</div></div>';
     var kw = b.keyword ? '<div class="cf-bs-tags"><span class="cf-over">Mot-clé DM</span><span class="cf-bs-tag">' + esc(b.keyword) + '</span></div>' : '';
     return '<div class="cf-bsheet">' + back
       + '<div class="cf-bs-head"><h2 class="cf-h2 cf-bs-title" id="cfModalTitle">' + esc(b.id) + '</h2><div class="cf-meta">' + esc(sub) + '</div></div>'
