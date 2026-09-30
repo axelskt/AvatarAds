@@ -321,7 +321,7 @@
     [wide, core].some(function (faces) {
       var obstacles = fixed.concat(faces);
       return TIERS.some(function (t) {
-        return SIZES.some(function (size) {
+        return (o.sizes && o.sizes.length ? o.sizes : SIZES).some(function (size) {
           return cols.some(function (c) { if (t.zones.indexOf(c.zone) < 0) return false; hit = scan(c, size, t.maxLines, obstacles); return !!hit; });
         });
       });
@@ -329,7 +329,7 @@
     if (!hit) {                                            // aucun endroit libre : moindre recouvrement du visage → revue QC
       var bestA = Infinity;
       cols.forEach(function (c) {
-        var b0 = box(c, SIZES[SIZES.length - 1]);
+        var b0 = box(c, (o.sizes && o.sizes.length ? o.sizes : SIZES)[(o.sizes && o.sizes.length ? o.sizes : SIZES).length - 1]);
         if (!b0) return;
         var y0 = c.top ? TOP_MIN : HAUT_MAX - 40, y1 = c.top ? HAUT_MAX - b0.h / 2 : BOTTOM_MAX - b0.h;
         for (var y = y0; y <= y1; y += 10) {
@@ -339,7 +339,7 @@
           if (a < bestA) { bestA = a; hit = Object.assign({}, b0, { y: y, zone: c.zone, align: c.align }); }
         }
       });
-      if (!hit) { hit = Object.assign(box(cols[0], SIZES[SIZES.length - 1]) || { x: 90, w: 840, h: 300, size: 45, lineH: 54, padX: 19, padY: 5, lines: words, maxW: 800 }, { y: TOP_MIN, zone: 'haut', align: 'center' }); }
+      if (!hit) { hit = Object.assign(box(cols[0], (o.sizes && o.sizes.length ? o.sizes : SIZES)[(o.sizes && o.sizes.length ? o.sizes : SIZES).length - 1]) || { x: 90, w: 840, h: 300, size: 45, lineH: 54, padX: 19, padY: 5, lines: words, maxW: 800 }, { y: TOP_MIN, zone: 'haut', align: 'center' }); }
       reasons.push('texte choc sur un visage : aucune zone libre dans la zone sûre');
     }
     if (o.faces == null) reasons.push('visages non vérifiés (détection indisponible)');

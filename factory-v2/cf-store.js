@@ -837,7 +837,8 @@
   // reste (ex. l'ancien refus « Test » : { cta: 'avatar + CTA28', demo: 'visite guidée OMNI 1', … }) = texte libre, affiché
   // tel quel et jamais compté comme une vidéo produite.
   // voice = mode de voix de la vidéo finale ('axel' par défaut, 'omni' : usine/publish-qc.mjs, usine/coherence.js comboKey)
-  var COMBO_KEYS = ['voice', 'avatar', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];   // assemblage = recette HK (avant / après)
+  // photo = photo de l'avatar réellement utilisée (A1-6…) : même liste que usine/coherence.js, sinon la recette passait en « texte libre »
+  var COMBO_KEYS = ['voice', 'avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];   // assemblage = recette HK (avant / après)
   // format de hook testé (F01…) et phrase choc (TH01…) : usine/formats.js, écrits par publish-qc.mjs (26/09) ; gardés À PART
   // (q.format, q.texteChoc) : ce ne sont pas des briques de la vidéo, jamais dans sa clé voix|avatar|hook|liaison.
   var COMBO_FMT = { format: /^F[0-9]{2}$/, texte_choc: /^TH[0-9]{2}$/ };
@@ -920,7 +921,17 @@
     return { state: 'ready', kind: null, error: null, rows: cnt(v.rows), pairsTotal: cnt(v.pairs_total), pairs: pairs, videos: videos,
       missions: m && cnt(m.total) != null ? { total: cnt(m.total), byStatus: byStatus } : null };
   }
-  function normProd(rb, rr, rq, stats, at, classifyMissing) {
+  // Vidéos finales déjà programmées / postées (kit de publication, Axel 30/09) : factory_posts.combo.vf = factory_qc.template
+  // (« VF-0001 »). Elles sortent du stock. Lecture en échec → null : le stock retombe sur les approuvées (jamais un faux 0).
+  function postedVfs(res) {
+    if (!res || res.error || !Array.isArray(res.data)) return null;
+    var set = {};
+    res.data.forEach(function (p) {
+      if (p && (p.status === 'scheduled' || p.status === 'published') && typeof p.vf === 'string' && /^VF-[0-9]{4}$/.test(p.vf)) set[p.vf] = 1;
+    });
+    return set;
+  }
+  function normProd(rb, rr, rq, stats, at, classifyMissing, posted) {
     var B = { total: rb.length, ready: 0, flagged: 0, retired: 0, other: 0, byKind: {}, lastAt: null, lastKind: null, list: rb.map(normBrick).filter(Boolean) };
     rb.forEach(function (b) {
       var k = b && BRICK_KINDS.indexOf(b.kind) >= 0 ? b.kind : 'autre', st = b && b.status, t = ms(b && b.created_at);
@@ -957,6 +968,9 @@
         }
       } else Q.other += 1;
     });
+    // en stock = approuvées pas encore programmées / postées (template = identifiant VF de la vidéo finale)
+    Q.posted = posted ? rq.filter(function (q) { return q && q.status === 'approved' && typeof q.template === 'string' && posted[q.template] === 1; }).length : 0;
+    Q.stock = Q.approved - Q.posted;
     return { fetchedAt: at, bricks: B, recipes: R, qc: Q, stats: stats };
   }
   function qcQuery(withClassified) {
@@ -977,13 +991,14 @@
     var p = (async function () {
       await null;
       var patch;
-      logNet('rest factory_bricks, factory_recipes, factory_qc + rpc factory_prod_stats');
+      logNet('rest factory_bricks, factory_recipes, factory_qc, factory_posts + rpc factory_prod_stats');
       try {
         var r = await Promise.all([
           sb.from('factory_bricks').select(BRICK_SEL, { count: 'exact' }).order('id', { ascending: true }).limit(PROD_MAX),
           sb.from('factory_recipes').select(REC_SEL, { count: 'exact' }).limit(PROD_MAX),
           qcQuery(true),
-          Promise.resolve().then(function () { return sb.rpc('factory_prod_stats'); }).catch(function (e) { return { error: { message: errText(e) } }; })
+          Promise.resolve().then(function () { return sb.rpc('factory_prod_stats'); }).catch(function (e) { return { error: { message: errText(e) } }; }),
+          Promise.resolve().then(function () { return sb.from('factory_posts').select('status,vf:combo->>vf').limit(PROD_MAX); }).catch(function (e) { return { error: { message: errText(e) } }; })
         ]);
         var rq = r[2], missing = false;
         if (noClassifiedCol(rq)) {   // migration 20260925210000 pas encore appliquée : tout est lu, « Classer » attend la colonne
@@ -992,7 +1007,7 @@
           rq = await qcQuery(false);
         }
         patch = { state: 'ready', kind: null, error: null,
-          data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(rq, 'factory_qc'), normStats(r[3]), Date.now(), missing) };
+          data: normProd(restRows(r[0], 'factory_bricks'), restRows(r[1], 'factory_recipes'), restRows(rq, 'factory_qc'), normStats(r[3]), Date.now(), missing, postedVfs(r[4])) };
       } catch (e) {
         patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
         if (e.kind && e.kind !== 'http' && e.kind !== 'error') patch.data = null;   // réseau ou 500 : chiffres précédents gardés, datés

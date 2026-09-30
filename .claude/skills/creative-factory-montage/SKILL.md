@@ -66,6 +66,14 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
   jusqu'à la fin de la liaison — **jamais plein écran**. 2 médias : la 1re carte se pousse à gauche quand la 2e arrive à
   droite, les deux restent côte à côte. Aucun fond blanc autour d'une image. Choisir selon le contexte : produit physique → vidéo produit (ex. fille avec la canette CIAO) et/ou
   static ad ; « image et vidéo » → les deux. B-roll dispo : `~/Downloads/Creative Factory/cache/broll/`.
+- `--hook-broll "fichier|mots d'entrée|mots de sortie"` : illustration du HOOK (Axel 30/09). Quand le hook dit les mots
+  d'entrée (« comme ça », « créer », « faire »), le média arrive par la DROITE en grand (720 px), à la place de l'avatar ;
+  sa sortie vers la GAUCHE (0,3 s) DÉMARRE sur les mots de sortie (« je vais »), sinon à la liaison / transition.
+  « Vidéos IA comme ça » → un avant / après Omni (assemblage `HK-O2-0a`) ; « avatar / influenceuse IA » → une fille 4K
+  (`avatar-ia-fille-4k.jpg`, `avatar-ia-fille-4k-b.jpg`). **Le texte choc s'efface quand l'illustration arrive**
+  (0,8 s mini) : il gênait la vidéo (VF-0003).
+- `--choc-size 62` : taille du texte choc forcée (défaut 45-52 px ; VF-0004 : « plus gros »).
+- `--subs-style boite` : sous-titres en pastilles blanches texte noir (brique S21) ; défaut `contour` (S02).
 
 ### Ce que build.mjs fait tout seul (réglages validés, ne pas refaire à la main)
 1. **Voix** : hook, démo, CTA à la suite, jamais superposées ; loudnorm −16 LUFS ; 0,5 s de respiration après le hook.
@@ -86,6 +94,8 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
    F01 sous-titres seuls · F02 texte choc 0-3 s + gros sous-titres colorés · F03 texte choc + sous-titres normaux ·
    F04 gros sous-titres colorés. Texte choc = banque validée TH01–TH19, en zone sûre, **jamais sur un visage**, visible
    dès la frame 0 (= couverture). Forcer : `--format F02 --choc TH05`.
+   **Emojis = ceux d'Apple, jamais d'autres** (Axel 30/09) : captions.mjs remplace chaque emoji par l'image officielle
+   (`emoji-datasource-apple@15.1.2`, 64 px, jsDelivr) ; Noto seulement si le téléchargement échoue.
 7. **CTA** : grain + léger tremblement « selfie » (casse le côté IA figé).
 7b. **Bruitages liés à l'action** en plus des transitions : pop quand le texte du hook apparaît, swish quand un groupe
    de sous-titres s'affiche, woosh (+ déclencheur photo si image) à l'entrée du B-roll, et dans la démo clic / magie /
@@ -116,7 +126,17 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
 
 ## 5. Livrer
 
-- Copier dans `~/Downloads/Creative Factory/rendus/VF-…mp4` et l'envoyer à Axel pour validation.
+- **Aucune vidéo sur le Mac d'Axel** (disque plein 30/09) : rendu dans le scratchpad → upload `factory-media/final/` →
+  `rm` du fichier local. Axel regarde via le kit ou le lien public Supabase.
+- **Nom = ID complet de la recette** (Axel 30/09), dans cet ordre, les parties absentes sautées :
+  `VF-0001_<photo>_<hook>_<liaison>_<démo>_<CTA>_<musique>_<sous-titres>_<texte choc>_<transformation>` →
+  `VF-0004_A2-8_H14_L70_C-IMGIA-07_CTA-AVATAR_M01_S21_TH15`, `VF-0003_A1-8_H23_C-OMNI-01_CTA-PLAN_M06_S02_TH07_HK-O2-0a`.
+  Sous-titres = ID de brique (S02 contour, S21 boîte). Le kit affiche ce nom tel quel.
+- Données : `factory_posts` (kit : video_url + combo complet : vf, photo, hook, liaison, contenu, cta, musique,
+  sous_titre, format, texte_choc, transformation, broll) ET `factory_qc` (status `approved`, route `manual`,
+  **template = VF-xxxx**, brick_combo = clés de COMBO_KEYS seulement : voice, avatar, photo, hook, liaison, contenu, cta,
+  musique, sous_titre, assemblage + format / texte_choc ; poster = frame 0 dans `final/`). Le dashboard compte en stock
+  les approuvées dont le VF n'est pas encore programmé / posté dans le kit.
 - Validé → `node usine/publish-qc.mjs … --bricks bricks.json` : QC technique (`qc.mjs`) + vision, dépose la vidéo et un
   poster dans factory-media, et prépare la ligne `factory_qc` (status `pending`, comboJson = { voice, avatar, hook,
   liaison?, contenu, cta, musique? } + format / texte_choc lus dans `OUT.mp4.format.json`). Sans clé service en local, le
@@ -130,6 +150,6 @@ CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde
 
 ## Encore à faire
 - B-roll : en faire des briques en base (kind `broll`, tags produit / static ad / UGC) pour les choisir automatiquement.
-- **Stockage : une vidéo POSTÉE est supprimée de Supabase** (Axel 29/09). Seul le MP4 final part ; la recette
-  (`brick_combo` : photo, hook, liaison, démo, CTA, format) reste → on peut la ré-assembler à l'identique. Déclencheur =
-  confirmation d'Axel dans le kit de publication. Ne JAMAIS toucher aux briques (`variants/`, `hooks/`, `ctas/`, `demos/`).
+- ~~Stockage : vidéo programmée / postée supprimée de Supabase~~ FAIT 30/09 : le kit appelle `factory-release` quand
+  Axel confirme (MP4 de `final/` seulement, la recette reste). Ne JAMAIS toucher aux briques (`variants/`, `hooks/`, `ctas/`, `demos/`).
+- Commande A→Z en lot (choix des briques, musique validée au hasard, rendu, QC auto, upload, kit) ; rendu sur Railway.

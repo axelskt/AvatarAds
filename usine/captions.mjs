@@ -110,7 +110,17 @@ function burn(video, output, words, opts = {}) {
   let chocHtml = '', chocAnim = '';
   if (choc) {
     const L = choc.layout, end = Math.min(choc.end, dur);
-    const line = l => esc(l).replace(EMOJI, '<span class="em">$1</span>');
+    // emojis APPLE (Axel 30/09 : « bien prendre ceux d'Apple ») : image officielle (emoji-datasource-apple, 64 px) posée
+    // dans le texte ; si le téléchargement échoue, repli sur la police Noto
+    const appleEmoji = e => {
+      const cps = [...e].map(c => c.codePointAt(0).toString(16)), names = [cps.join('-'), cps.filter(c => c !== 'fe0f').join('-')];
+      for (const n of names) {
+        const f = 'emj-' + n + '.png';
+        try { execFileSync('curl', ['-sf', '-o', join(work, f), 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/' + n + '.png']); return f; } catch { /* nom suivant */ }
+      }
+      return null;
+    };
+    const line = l => esc(l).replace(EMOJI, m => { const f = appleEmoji(m); return f ? `<img class="emj" src="${f}" alt="">` : `<span class="em">${m}</span>`; });
     chocHtml = `<div class="choc clip" id="choc" data-start="0" data-duration="${end.toFixed(3)}" data-maxw="${L.maxW}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;`
       + `--jc:${L.align === 'left' ? 'flex-start' : 'center'};font-size:${L.size}px;line-height:${L.lineH}px;--px:${L.padX}px;--py:${L.padY}px">`
       + L.lines.map(l => `<div class="cl"><span>${line(l)}</span></div>`).join('') + `</div>`;
@@ -165,6 +175,7 @@ function burn(video, output, words, opts = {}) {
  .choc .cl>span{display:inline-block;background:#fff;border-radius:14px;padding:var(--py) var(--px);white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18)}
  /* emoji : Noto Color Emoji (police Google, embarquée par HyperFrames) — JAMAIS Apple Color Emoji (183 Mo embarqués → rendu à court de mémoire) */
  .choc .em{font-family:'Noto Color Emoji',sans-serif;font-weight:400}
+ .choc .emj{height:1.08em;width:auto;vertical-align:-0.2em;margin-left:.12em}
 </style></head><body>
  <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>

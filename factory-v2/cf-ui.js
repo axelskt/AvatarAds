@@ -945,7 +945,7 @@
     var S30 = CF.acct.ig[HOME_RANGE], off = S30.kind === 'disconnected' || CF.acct.media.kind === 'disconnected';
     var G = goalValue(model(S30, S30.data, off, HOME_RANGE), GOAL.perDay), TRACK_PER_DAY = 0;
     M.rate = { v: G.v == null ? null : G.v + TRACK_PER_DAY, n: G.n, loading: !!G.loading, na: G.na, off: off };
-    M.stock = D ? D.qc.approved : null;               // approuvées = en stock (pas d'étape de mise en stock), jamais reliées à un post
+    M.stock = D ? D.qc.stock : null;                  // approuvées PAS encore programmées / postées (kit : factory_posts.combo.vf = template)
     M.toGen = M.cap ? M.cap.remaining : null;
     // production / jour = vidéos finales rendues (lignes factory_qc) par jour sur 30 j
     M.prodDay = D ? D.qc.list.filter(function (q) { return q.created != null && Date.now() - q.created <= 30 * 864e5; }).length / 30 : null;
@@ -1458,7 +1458,7 @@
   var COMBO_ORDER = ['avatar', 'assemblage', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre'];
   function vfName(q) {
     if (!q.combo) return 'recette libre';
-    return [q.combo.avatar, q.combo.assemblage, q.combo.hook, q.combo.liaison].filter(Boolean).join(' × ') || 'recette sans avatar ni hook';
+    return [q.combo.photo || q.combo.avatar, q.combo.assemblage, q.combo.hook, q.combo.liaison].filter(Boolean).join(' × ') || 'recette sans avatar ni hook';
   }
   function vfVoice(q) {
     var v = q.combo && q.combo.voice;

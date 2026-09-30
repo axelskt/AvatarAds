@@ -27,7 +27,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style'];
+const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-size'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -252,11 +252,14 @@ const CTA_GAP = 0, CL = 0;
 //    « créer »), le résultat arrive par la DROITE en grand, à la place de l'avatar, et repart à GAUCHE à la liaison (ou à la
 //    transition vers la démo). Les sous-titres continuent dessous.
 if (OPT['hook-broll']) {
-  const [hf, trig] = OPT['hook-broll'].split('|');
-  const toks = String(trig || '').split(/\s+/).map(bare).filter(Boolean);
-  const hw = hookW0, endAt = liaisonAt != null ? liaisonAt : O1;
-  let at = null;
-  for (let i = 0; i < hw.length && at == null; i++) if (toks.length && toks.every((t, k) => hw[i + k] && bare(hw[i + k].text) === t)) at = Math.max(0, hw[i].start - 0.05);
+  // « fichier|mots d'entrée|mots de sortie » : sans mots de sortie, elle repart à la liaison (ou à la transition)
+  const [hf, trig, trigOut] = OPT['hook-broll'].split('|');
+  const toksOf = t => String(t || '').split(/\s+/).map(bare).filter(Boolean);
+  const findW = (toks, from) => { for (let i = from || 0; i < hookW0.length; i++) if (toks.length && toks.every((t, k) => hookW0[i + k] && bare(hookW0[i + k].text) === t)) return i; return -1; };
+  const hw = hookW0, iIn = findW(toksOf(trig));
+  let at = iIn >= 0 ? Math.max(0, hw[iIn].start - 0.05) : null;
+  let endAt = liaisonAt != null ? liaisonAt : O1;
+  if (trigOut && iIn >= 0) { const iOut = findW(toksOf(trigOut), iIn + 1); if (iOut >= 0) endAt = Math.max(at + 0.6, hw[iOut].start + 0.3); }   // la sortie (0,3 s) DÉMARRE sur ces mots
   if (at != null && endAt - at > 0.6) {
     brollEvents.push({ file: hf, at, dur: endAt - at, image: IMG_RE.test(hf), style: 'hook' });
     console.log('  illustration du hook à ' + at.toFixed(2) + ' s → ' + endAt.toFixed(2) + ' s : ' + basename(hf));
@@ -336,11 +339,12 @@ const capOpts = { subs: format.subs, style: OPT['subs-style'] || 'contour', brol
 const sidecar = { format: format.id, label: format.label, subs: format.subs, texte_choc: null, texte: null, choc_end: 0, hook: hookId,
   demo: demoBrick ? demoBrick.id : (OPT.demo || null), tx, avant_apres: avantApres, faces: null, layout: null };
 if (FMT.hasChoc(format)) {
-  const end = FMT.chocEnd(format, durH, total);
+  const firstIll = brollEvents.filter(e => e.style === 'hook').map(e => e.at).sort((a, b) => a - b)[0];
+  const end = Math.min(FMT.chocEnd(format, durH, total), firstIll != null ? Math.max(0.8, firstIll) : 1e9);
   let fz;
   if (facesForced !== undefined) fz = { faces: Array.isArray(facesForced) ? facesForced : (facesForced && facesForced.faces) || null, frames: 0, error: null, forced: true };
   else fz = faceZones(voice, 0, end, 0.5);
-  const lay = { faces: fz.faces, avantApres };
+  const lay = { faces: fz.faces, avantApres, sizes: OPT['choc-size'] ? [parseInt(OPT['choc-size'], 10)] : null };
   const p = chocForced || FMT.pickChoc({ demo: demoRef, tx, done, hook: hookId, rand, fits: q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok' });
   if (!p) { console.error('✗ aucune phrase choc compatible avec la démo (' + (sidecar.demo || 'démo inconnue') + ')'); process.exit(2); }
   const text = FMT.chocString(p), layout = FMT.chocLayout(text, lay);
