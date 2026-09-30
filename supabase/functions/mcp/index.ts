@@ -514,7 +514,7 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'' };
+  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -573,7 +573,7 @@ function aaShow(out){
     if(d.prompt) aaPrompt=d.prompt;
     if(d.job_id) aaJobId=d.job_id;
     if(d.format) aaFormat=d.format;
-    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap;
+    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap; if(d.forVideo) aaForVideo=true;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.pending){ aaAskPhoto(); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
@@ -582,6 +582,7 @@ function aaShow(out){
 // ── PHOTO DU PRODUIT DANS LA CARTE (21/08) : claude.ai ne transmet pas les images jointes aux outils →
 //    l'utilisateur la dépose ICI (glisser / choisir / coller), le widget l'envoie à /start qui lance la
 //    génération avec le produit à l'identique, dans la MÊME carte. « Sans photo » = génération libre. ──
+var aaForVideo=false;
 function aaAskPhoto(){
   aaOk=true; if(aaPollT){ clearInterval(aaPollT); aaPollT=null; }
   var b=document.getElementById('b'); if(b) b.style.display='none';
@@ -603,6 +604,12 @@ function aaAskPhoto(){
   document.addEventListener('paste',function(e){ var it=e.clipboardData&&e.clipboardData.items; if(!it) return; for(var i=0;i<it.length;i++){ if(it[i].type&&it[i].type.indexOf('image/')===0){ var f=it[i].getAsFile(); if(f){ aaSendPhoto(f); break; } } } });
   document.getElementById('skip').onclick=function(){ aaStartJob(''); };
   var pl=document.getElementById('pl'), go=document.getElementById('go');
+  if(aaForVideo){   // vidéo : la photo de départ seulement (pas de « Sans photo », pas de lien produit)
+    var _t=dz.querySelector('div'); if(_t) _t.textContent='Dépose ta photo de départ';
+    var _s=dz.querySelectorAll('div')[1]; if(_s) _s.textContent='Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — la vidéo se lance dès qu\'elle est déposée';
+    var _sk=document.getElementById('skip'); if(_sk) _sk.style.display='none';
+    if(pl&&pl.parentNode) pl.parentNode.style.display='none';
+  }
   if(aaProductUrl){ pl.value=aaProductUrl; var _pe=document.getElementById('pe'); if(_pe) _pe.textContent='Lecture de la page produit…'; aaStartJob('', aaProductUrl); }
   var _go2=null;
   var sendLink=function(){ var v=(pl.value||'').trim(); if(!(new RegExp('^https?://','i')).test(v)){ var pe=document.getElementById('pe'); if(pe) pe.textContent='Colle un lien complet (https://…)'; return; } aaStartJob('', v); };
@@ -893,12 +900,13 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'generate_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : ${VIDEO_COST_SEC} crédit/seconde SANS image de départ (4, 6 ou 8 s) ; AVEC image de départ (image_url : UGC réel à partir d'une photo) : 5 crédits/seconde, en 4, 6, 8 ou 10 s, 1080p. Annonce TOUJOURS le bon tarif avant de lancer. Débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Pour partir de LA photo de l'utilisateur (son visage, un UGC de lui), il te faut une URL publique : dis-lui de la déposer via « Glisse la photo pour Claude » sur ${APP_URL} (ça lui rend un lien) puis de coller ce lien, que tu passes dans image_url. Sans URL, ne bloque pas : propose de générer la scène décrite (sans sa photo). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
+      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : ${VIDEO_COST_SEC} crédit/seconde SANS image de départ (4, 6 ou 8 s) ; AVEC image de départ (image_url : UGC réel à partir d'une photo) : 5 crédits/seconde, en 4, 6, 8 ou 10 s, 1080p. Annonce TOUJOURS le bon tarif avant de lancer. Débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Si l'utilisateur a joint une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true (UN appel par vidéo, sans image_url) — la CARTE affiche une zone où il dépose sa photo, puis la vidéo se lance toute seule (tarif avec image : 5 crédits/seconde). Ne l'envoie PAS sur le site, ne lui demande pas de lien. Si tu as déjà une URL (image générée par generate_image dans cette conversation, lien collé) : passe-la dans image_url, sans user_photo. ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
       inputSchema: {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: 'Description de la vidéo : scène, mouvement, ambiance, dialogues éventuels.' },
-          duration_seconds: { type: 'integer', enum: [4, 6, 8], description: 'Durée en secondes : 4, 6 ou 8 (défaut 8). Une autre valeur est arrondie au cran supérieur (8 max) et facturée à ce cran.' },
+          duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6 ou 8 sans image (défaut 8) ; 4, 6, 8 ou 10 avec image de départ ou photo déposée (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
+          user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           image_url: { type: 'string', description: "URL publique http(s) d'une image de départ (optionnel) : une image de generate_image, ou une photo que l'utilisateur a déposée via « Glisse la photo pour Claude » sur le site. ⚠️ claude.ai ne transmet PAS les images jointes au chat — il FAUT une vraie URL, une photo collée dans la conversation ne compte pas." },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
@@ -1940,7 +1948,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
   // image de départ → Omni Flash (5 cr/s, 4 / 6 / 8 / 10 s) ; sans image → Veo Lite (1,5 cr/s, 4 / 6 / 8 s)
-  const omni = !!String(args.image_url || '').trim() && !!kieKey() && (isDevPlan(profile) || kieClientsOn())
+  const omniOn = !!kieKey() && (isDevPlan(profile) || kieClientsOn())
+  const wantsPhoto = args.user_photo === true && !String(args.image_url || '').trim() && omniOn
+  const omni = (!!String(args.image_url || '').trim() || wantsPhoto) && omniOn
   const duration = omni ? omniFlashCran(Math.max(4, Number(args.duration_seconds) || 6)) : veoCran(Math.max(4, Number(args.duration_seconds) || 8))
   const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
   const perSec = omni ? OMNI_FLASH_SEC : VIDEO_COST_SEC
@@ -1963,8 +1973,21 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   }
 
   // porte APRÈS les contrôles synchrones : un refus d'URL ne réserve plus de plafond 24 h (audit 28/09 #23)
-  const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url ? ', avec image de départ' : ''})`, 'generate_video')
+  const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url || wantsPhoto ? ', avec image de départ' : ''})`, 'generate_video')
   if (gate) return gate
+
+  // PHOTO JOINTE AU CHAT (Axel 30/09) : claude.ai ne la transmet pas → carte de dépôt DANS la conversation (même mécanique
+  // que les images : job « pending », rien débité, /start lance Omni Flash dès que la photo est déposée).
+  if (wantsPhoto) {
+    const { data: pj, error: pjErr } = await svc.from('mcp_jobs')
+      .insert({ user_id: userId, kind: 'avatar', status: 'pending', credits_cost: cost, params: { video: true, prompt, aspect, duration, cap_held: capHeldOf(profile, ctx, cost) } })
+      .select('id').single()
+    if (pjErr || !pj) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur (carte photo) — réessaie.') }
+    return {
+      content: [{ type: 'text', text: `[système] La carte ci-dessous demande à l'utilisateur de déposer sa photo de départ, puis lance la vidéo (${duration} s, ${aspect}, ${cost} crédits, débités seulement au lancement).\nRÉPONSE À ÉCRIRE MAINTENANT : une seule phrase courte du type « Dépose ta photo dans la carte, la vidéo se lance toute seule. » N'appelle aucun autre outil pour cette vidéo.` }],
+      structuredContent: { job_id: pj.id, cap: await jobCap(pj.id), statusUrl: `https://mcp.avatarads.fr/status/${pj.id}`, kind: 'video', pending: true, forVideo: true, prompt, format: aspect === '16:9' ? 'landscape' : 'portrait' },
+    }
+  }
 
   // Job créé TOUT DE SUITE → réponse à Claude en un SEUL aller-retour DB (l'insert). Sur un isolate FROID (Supabase en
   // démarre plusieurs, le keep-warm n'en garde qu'un chaud), empiler débit + insert + téléchargement dépassait la coupure
@@ -3815,6 +3838,36 @@ serve(async (req) => {
     if (pj.status !== 'pending') return json(409, { error: 'not_pending' })
     if (Date.now() - new Date(String(pj.created_at)).getTime() > 2 * 3600 * 1000) return json(403, { error: 'expired' })
     const params = (pj.params || {}) as Record<string, unknown>
+    // ── CARTE VIDÉO (photo de départ déposée → Omni Flash image→vidéo) ──
+    if (params.video === true) {
+      const userIdV = String(pj.user_id)
+      const { data: profV } = await svc.from('profiles').select('*').eq('id', userIdV).maybeSingle()
+      if (!profV) return json(404, { error: 'no_profile' })
+      if (!isUnlimited(profV) && !ALLOWED_PLANS.includes(String(profV.plan || '').toLowerCase())) return json(403, { error: 'plan' })
+      const durV = omniFlashCran(Number(params.duration) || 6), costV = Math.round(durV * OMNI_FLASH_SEC)
+      const mV = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
+      if (!mV) return json(400, { error: 'bad_image' })
+      const bytesV = b64ToBytes(mV[3])
+      if (bytesV.length > 10_000_000) return json(413, { error: 'too_large' })
+      if (!isUnlimited(profV)) {
+        const capV = DAILY_CAPS[String(profV.plan || '').toLowerCase()] ?? 100
+        const { data: capRV } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: costV, p_cap: capV })
+        if (typeof capRV === 'number' && capRV < 0) return json(429, { error: 'daily_cap' })
+        if ((Number(profV.credits_remaining) || 0) < costV) return json(402, { error: 'no_credits' })
+      }
+      const extV = mV[2] === 'png' ? 'png' : mV[2] === 'webp' ? 'webp' : 'jpg'
+      const pathV = `${userIdV}/ref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${extV}`
+      const { error: upV } = await svc.storage.from('mcp-media').upload(pathV, bytesV, { contentType: mV[1] })
+      if (upV) return json(500, { error: 'upload' })
+      const urlV = (await signPath(pathV, 6 * 3600)) || `${MEDIA_PUB}${pathV}`
+      const nowV = new Date().toISOString()
+      const { data: tookV } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, created_at: nowV, updated_at: nowV })
+        .eq('id', jobId).eq('status', 'pending').select('id')
+      if (!tookV || !tookV.length) return json(409, { error: 'not_pending' })
+      runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: urlV, aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
+        prompt: String(params.prompt || '') + EXPRESS_PRODUCT + EXPRESS_ENDING })
+      return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
+    }
     const pArgs = (params.args || {}) as Record<string, unknown>
     const format = ['portrait', 'square', 'landscape'].includes(String(params.format)) ? String(params.format) : 'portrait'
     const quality: 'standard' | 'high' = params.quality === 'high' ? 'high' : 'standard'

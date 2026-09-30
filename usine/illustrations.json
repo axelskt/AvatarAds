@@ -219,7 +219,7 @@
       {
         "in": "publicite",
         "out": "en moins",
-        "type": "produit"
+        "type": "pub"
       }
     ],
     "H73": [
@@ -325,7 +325,7 @@
       {
         "in": "integrer",
         "out": "je vais",
-        "type": "produit"
+        "type": "pub"
       }
     ],
     "L70": [
