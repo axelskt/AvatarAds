@@ -552,6 +552,16 @@
   }
 
   // ── publications (hors fenêtre : ig-insights?part=media) ──
+  // Recette du reel (ig-insights applyRecipes, 30/09) : ID complet de la vidéo publiée + toutes ses briques (avatar, photo,
+  // hook, liaison, démo, CTA, musique, sous-titres, texte choc, transformation) → fiche de chaque brique.
+  function normReelRecipe(r) {
+    if (!r || typeof r !== 'object') return null;
+    var ok = function (x) { return typeof x === 'string' && /^[A-Za-z0-9._-]{1,120}$/.test(x) ? x : null; }, ids = [];
+    ['avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'texte_choc', 'transformation', 'assemblage', 'hook_broll'].forEach(function (k) {
+      String(r[k] == null ? '' : r[k]).split('+').forEach(function (v) { v = ok(v.trim()); if (v && ids.indexOf(v) < 0) ids.push(v); });
+    });
+    return ids.length ? { id: ok(r.id_complet) || ok(r.vf), vf: ok(r.vf), ids: ids } : null;
+  }
   function normMediaItem(p) {
     if (!p || typeof p !== 'object') return null;
     var t = str(p.timestamp), ms = t ? Date.parse(t) : NaN;
@@ -563,7 +573,7 @@
       skipRate: num(p.skip_rate), totalWatchS: num(p.total_watch_s), durationS: num(p.duration_s), durationManual: p.duration_src === 'manual',
       trial: p.shared_to_feed === false,   // pas sur la grille du profil = réel d'essai (16 = 42 − 26 le 24/09)
       module: typeof p.module === 'string' && MODULES[p.module] ? p.module : null,
-      analysis: normAnalysis(p.analysis)
+      analysis: normAnalysis(p.analysis), recipe: normReelRecipe(p.recipe)
     };
   }
   // Audio d'une brique : seulement depuis notre bucket public factory-media (lu par <audio>, CSP media-src).

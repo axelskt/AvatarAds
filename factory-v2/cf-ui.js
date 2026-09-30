@@ -3259,7 +3259,8 @@
     var uses = (MD ? MD.list : []).filter(function (p) {
       var hit = p.analysis && p.analysis.status === 'done' && p.analysis.bricks.filter(function (b) { return b.id === id; })[0];
       if (hit && !info) info = hit;
-      return !!hit;
+      // recette du kit (toutes les briques : musique, sous-titres, avatar, démo, texte choc, transformation…)
+      return !!hit || !!(p.recipe && p.recipe.ids.indexOf(id) >= 0);
     }).sort(function (a, b) { return (a.ms || 0) - (b.ms || 0); });
     return { info: info, uses: uses };
   }
@@ -3280,6 +3281,7 @@
   }
   function openBrick(id, trigger) {
     if (!id) return;
+    if (CF.acct.media.state !== 'ready' && !CF.acct.media.loading) CF.loadMedia().then(function () { if (ui.modal && ui.modal.brick === id) renderModal(); });   // publications : pour l'historique de la brique
     if (!ui.modal) { openModal({ brick: id, solo: true }, trigger); return; }   // depuis l'onglet Production : la fiche seule
     ui.modal.brick = id; ui.modal.avImg = null;
     renderModal();
@@ -3343,7 +3345,7 @@
     var b = { id: id, kind: kind, label: (fb && fb.label) || (info && info.label) || id, text: m.transcript || m.script || (info && info.text) || null,
       keyword: m.keyword || (info && info.keyword) || null, subject: (fb && fb.subject) || (info && info.subject) || null,
       audio: (fb && fb.audio) || (info && info.audio) || null };
-    var heard = !kind || !!HEARD[kind], spoken = !!SPOKEN_V[kind];
+    var heard = true, spoken = !!SPOKEN_V[kind];   // 30/09 : toute brique se mesure par la recette du reel (kit de publication)
     var views = uses.map(function (p) { return p.views || 0; }), tot = views.reduce(function (a, x) { return a + x; }, 0);
     var avg = uses.length ? tot / uses.length : null, max = Math.max.apply(null, views.concat([1]));
     var back = ui.modal.post ? '<button type="button" class="cf-back" data-act="brick-back">' + svg('M15 18l-6-6 6-6', 14) + 'Publication' + (ui.modal.rank ? ' #' + ui.modal.rank : '') + '</button>'
@@ -3423,11 +3425,13 @@
       var d = validDate(p.timestamp), r = rankOf(p);
       return '<button type="button" class="cf-bs-row" data-act="brick-post" data-pid="' + esc(p.id) + '"><span class="cf-bs-d">' + esc(d ? dm(d) : '—') + '</span>'
         + (r ? '<span class="cf-chip is-brick">#' + r + '</span>' : '') + reelChip(p)
-        + '<span class="cf-bs-cap">' + esc(capText(p.caption)) + '</span><b>' + esc(fInt(p.views) || '—') + ' vues</b></button>';
+        + '<span class="cf-bs-cap' + (p.recipe && p.recipe.id ? ' is-id' : '') + '"' + (p.recipe && p.recipe.id ? ' title="' + esc(capText(p.caption)) + '"' : '') + '>' + esc(p.recipe && p.recipe.id ? p.recipe.id : capText(p.caption)) + '</span>'
+        + '<span class="cf-meta">' + esc([p.likes != null ? fInt(p.likes) + NB + 'j’aime' : '', p.comments != null ? fInt(p.comments) + NB + 'com.' : '', p.shares != null ? fInt(p.shares) + NB + 'partages' : ''].filter(Boolean).join(' · ')) + '</span>'
+        + '<b>' + esc(fInt(p.views) || '—') + ' vues</b></button>';
     }).join('');
     var st = function (v, l) { return '<div class="cf-bs-st"><b>' + esc(v == null ? '—' : v) + '</b><span>' + esc(l) + '</span></div>'; };
     var hist = !heard ? '<div class="cf-bs-none">Pas encore mesurable dans les reels.</div>'
-      : !uses.length ? '<div class="cf-bs-none">Jamais utilisée dans une vidéo pour l’instant.</div>'
+      : !uses.length ? '<div class="cf-bs-none">Pas encore dans un reel publié.</div>'
         : '<div class="cf-bs-use"><div class="cf-over">Historique d’utilisation · ' + uses.length + ' ' + plural(uses.length, 'publication') + ' Instagram reconnue' + (uses.length >= 2 ? 's' : '') + '</div>'
           + '<div class="cf-bs-sts">' + st(fInt(tot), 'vues totales') + st(avg != null ? fInt(Math.round(avg)) : null, 'vues par publication') + st(uses.length + ' ' + plural(uses.length, 'vidéo'), 'utilisée dans') + '</div>'
           + chart + '<div class="cf-bs-list">' + rows + '</div></div>';

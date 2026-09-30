@@ -1328,3 +1328,7 @@ i.is-gap { background: var(--cf-ink); }
 .cf-stodo-l { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; font-family: var(--cf-mono); font-size: 11px; color: var(--cf-mute); }
 .cf-stodo-l > span { display: flex; justify-content: space-between; gap: 8px; }
 .cf-stodo-l b { color: var(--cf-ink); font-family: var(--cf-sans); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* fiche brique : ID complet de la vidéo publiée, sur sa propre ligne, jamais coupé (30/09) */
+.cf-bs-row{flex-wrap:wrap}
+.cf-bs-cap.is-id{order:9;flex-basis:100%;white-space:normal;overflow:visible;word-break:break-all;font-family:var(--cf-mono,ui-monospace,Menlo,monospace);font-size:12px;opacity:.8;text-align:left}
