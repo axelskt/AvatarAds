@@ -46,6 +46,7 @@ let demo = demoSrc;
 // à chaque fois ») : musique « auto » = une piste VALIDÉE (jamais M04, trop sombre), --subs-style auto = contour ou boîte ;
 // jamais le même choix que la vidéo précédente (fichier <cache>/dernier.json).
 const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_OK = Array.from({ length: 20 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04');
+const SUBS_ALL = Array.from({ length: 19 }, (_, i) => 'S' + String(i + 1).padStart(2, '0')).concat('S21');   // les 19 de la banque + boîte blanche
 const SUBS = { contour: 'S02', boite: 'S21', bleu: 'S03', rouge: 'S07', white: 'S10', neon: 'S12' };
 const LASTF = join(process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Factory', 'cache'), 'dernier.json');
 const lastPick = (() => { try { return JSON.parse(readFileSync(LASTF, 'utf8')); } catch { return {}; } })();
@@ -59,7 +60,7 @@ if (music === 'auto') {
     catch { console.error('✗ musique ' + id + ' introuvable'); process.exit(2); }
   } lastPick.musique = id; console.log('  musique tirée : ' + id);
 }
-if (OPT['subs-style'] === 'auto') { OPT['subs-style'] = draw(Object.keys(SUBS), lastPick.sous_titre); lastPick.sous_titre = OPT['subs-style']; console.log('  sous-titres tirés : ' + OPT['subs-style']); }
+if (OPT['subs-style'] === 'auto') { OPT['subs-style'] = draw(SUBS_ALL, lastPick.sous_titre); lastPick.sous_titre = OPT['subs-style']; console.log('  sous-titres tirés : ' + OPT['subs-style']); }
 try { mkdirSync(dirname(LASTF), { recursive: true }); writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
 if (!hook || !demoSrc || !out) { console.error('usage: build.mjs <hook> <demo> <out> [music] [hookVoice] [cta] [ctaCap] [ctaLead] [--format …]'); process.exit(1); }
 const CTA_LEAD = parseFloat(ctaLeadArg || '0') || 0;
@@ -456,7 +457,7 @@ if (FMT.hasChoc(format)) {
 }
 sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
 if (illusLog.length) sidecar.illustrations = illusLog;
-sidecar.musique = music ? (/(M\d+)_/.exec(basename(music)) || [])[1] || basename(music) : null; sidecar.sous_titre = SUBS[OPT['subs-style'] || 'contour'] || 'S02';
+sidecar.musique = music ? (/(M\d+)_/.exec(basename(music)) || [])[1] || basename(music) : null; sidecar.sous_titre = SUBS[OPT['subs-style'] || 'contour'] || (/^S\d{2}$/.test(OPT['subs-style']) ? OPT['subs-style'] : 'S02');
 const oj = join(work, 'capOpts.json'); writeFileSync(oj, JSON.stringify(capOpts));
 const capt = join(work, 'capt.mp4');
 execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], { stdio:'inherit', env: { ...process.env, CF_FPS: String(FPS) } });

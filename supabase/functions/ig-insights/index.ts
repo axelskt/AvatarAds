@@ -383,6 +383,36 @@ async function applyTags(list: any[]) {
 }
 
 // Durée saisie dans la fiche (reels sans fichier : musique sous droits) — seulement si elle n'a pas été mesurée.
+// RECETTE de chaque reel (Axel 30/09 : « actualiser les datas quand je poste, pour chaque avatar, hook, musique, sous-titres… ») :
+// un reel publié est relié à sa ligne du kit (factory_posts) — même compte, même légende, date de publication à moins de
+// 48 h de l'heure prévue, la plus proche d'abord. La ligne reçoit media_id et passe « published » ; le reel porte m.recipe
+// (ID complet + photo, hook, liaison, démo, CTA, musique, sous-titres, texte choc, transformation, illustrations).
+async function applyRecipes(list: any[], username: unknown) {
+  try {
+    const acct = String(username || '').replace(/^@/, '')
+    if (!acct || !list.length) return
+    const { data: posts, error } = await svc.from('factory_posts').select('id, scheduled_at, caption, combo, status, media_id, video_url')
+      .eq('platform', 'instagram').eq('account', acct).neq('status', 'skipped').limit(1000)
+    if (error || !posts) return
+    const norm = (t: unknown) => String(t || '').replace(/\s+/g, ' ').trim()
+    const byMedia = new Map(posts.filter((p: any) => p.media_id).map((p: any) => [String(p.media_id), p]))
+    const free = posts.filter((p: any) => !p.media_id)
+    for (const m of list) {
+      let p: any = byMedia.get(String(m.id))
+      if (!p) {
+        const t = Date.parse(m.timestamp || ''), cap = norm(m.caption)
+        if (!cap || !isFinite(t)) continue
+        const c = free.filter((x: any) => !x._used && norm(x.caption) === cap && Math.abs(Date.parse(x.scheduled_at) - t) < 48 * 3600e3)
+          .sort((a: any, b: any) => Math.abs(Date.parse(a.scheduled_at) - t) - Math.abs(Date.parse(b.scheduled_at) - t))[0]
+        if (!c) continue
+        c._used = true; p = c
+        await svc.from('factory_posts').update({ media_id: String(m.id), status: 'published', done_at: c.done_at || new Date().toISOString() }).eq('id', c.id).is('media_id', null)
+      }
+      const file = String(p.video_url || '').split('/final/')[1] || ''
+      m.recipe = { ...(p.combo && typeof p.combo === 'object' ? p.combo : {}), id_complet: file.replace(/\.mp4$/, '') || null }
+    }
+  } catch (e) { logIg('recettes', safeErr(e)) }
+}
 async function applyDurations(list: any[]) {
   try {
     const { data } = await svc.from('ig_media_durations').select('ig_media_id, duration_s').in('ig_media_id', list.map((m) => String(m.id)))
@@ -693,6 +723,7 @@ async function build(url: URL, igId: string, token: string, t0: number): Promise
     normSkip(list)
     normTotal(list)
     await applyTags(list)
+    await applyRecipes(list, out.username)
     const pending = await attachAnalysis(list)
     await applyDurations(list)
     if (pending.length && OPENAI_KEY) {

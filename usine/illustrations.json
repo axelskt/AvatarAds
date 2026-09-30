@@ -29,8 +29,17 @@
       "pub-ciao-boost.png",
       "pub-ciao-sucre.png",
       "pub-ciao-ugc.png",
+      "pub-ciao-10.png",
+      "pub-ciao-11.png",
+      "pub-ciao-12.png",
+      "pub-ciao-13.png",
+      "pub-ciao-15.png",
       "pub-parfum-desoles.png",
-      "pub-parfum-offre.png"
+      "pub-parfum-offre.png",
+      "pub-parfum-3.png",
+      "pub-parfum-4.png",
+      "pub-parfum-5.png",
+      "pub-lune.png"
     ],
     "produit": [
       "ciao-fille-canette.mp4"
@@ -119,11 +128,19 @@
       "pub-ciao-naturelle.png",
       "pub-ciao-boost.png",
       "pub-ciao-sucre.png",
-      "pub-ciao-ugc.png"
+      "pub-ciao-ugc.png",
+      "pub-ciao-10.png",
+      "pub-ciao-11.png",
+      "pub-ciao-12.png",
+      "pub-ciao-13.png",
+      "pub-ciao-15.png"
     ],
     "C-SADS-02": [
       "pub-parfum-desoles.png",
-      "pub-parfum-offre.png"
+      "pub-parfum-offre.png",
+      "pub-parfum-3.png",
+      "pub-parfum-4.png",
+      "pub-parfum-5.png"
     ]
   },
   "bricks": {

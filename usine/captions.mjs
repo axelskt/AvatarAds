@@ -88,9 +88,11 @@ function burn(video, output, words, opts = {}) {
   const big = subs === 'gros-colores';
 
   // frame 0 jamais blanche : un mot qui démarre à 0 est posé tel quel (pas de fondu depuis l'invisible)
-  // styles (Axel 30/09 : tirés au hasard) : contour S02 · boite S21 · bleu S03 · rouge S07 (pastilles) · white S10 · neon S12
-  const box = ['boite', 'bleu', 'rouge'].includes(opts.style);
-  const stCls = ['bleu', 'rouge', 'white', 'neon'].includes(opts.style) ? 'st-' + opts.style : '';
+  // styles = les 19 de la banque + S21 (Axel 30/09 : « mets les 19 en aléatoire ») ; anciens noms gardés en alias
+  const ALIAS = { contour: 'S02', boite: 'S21', bleu: 'S03', rouge: 'S07', white: 'S10', neon: 'S12' };
+  const sid = ALIAS[opts.style] || (/^S\d{2}$/.test(opts.style || '') ? opts.style : 'S02');
+  const box = ['S03', 'S05', 'S07', 'S21'].includes(sid);
+  const stCls = 'st-' + sid;
   const clipsHtml = caps.map((c,i)=>{
     if (c.grp && box) return `<div class="cap clip grp bx" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
       + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
@@ -170,19 +172,26 @@ function burn(video, output, words, opts = {}) {
  .cap.bx .bw,.cap.bx.grp .gw{background:#fff;border-radius:16px;padding:6px 20px 8px;box-shadow:0 8px 24px rgba(0,0,0,.28);line-height:1.15}
  .cap.bx.grp{font-size:62px;line-height:1.45}
  .cap.bx.grp .gw{margin:0 2px}
- .st-bleu .cap.bx,.st-rouge .cap.bx{color:#fff}
- .st-bleu .cap.bx .bw,.st-bleu .cap.bx.grp .gw{background:#1d6bff}
- .st-rouge .cap.bx .bw,.st-rouge .cap.bx.grp .gw{background:#e11d2e}
- .st-white .cap{-webkit-text-stroke:0;text-shadow:0 4px 18px rgba(0,0,0,.75),0 1px 3px rgba(0,0,0,.6)}
- .st-neon .cap{-webkit-text-stroke:3px #2a0a1c;text-shadow:0 0 18px #ff3da6,0 0 42px rgba(255,61,166,.75),0 4px 14px rgba(0,0,0,.5)}
- .cap.big.hot{color:${HOT}}
- /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
- .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}
- .choc .cl{display:flex;justify-content:var(--jc,center);margin:0}
- .choc .cl>span{display:inline-block;background:#fff;border-radius:14px;padding:var(--py) var(--px);white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18)}
- /* emoji : Noto Color Emoji (police Google, embarquée par HyperFrames) — JAMAIS Apple Color Emoji (183 Mo embarqués → rendu à court de mémoire) */
- .choc .em{font-family:'Noto Color Emoji',sans-serif;font-weight:400}
- .choc .emj{height:1.08em;width:auto;vertical-align:-0.2em;margin-left:.12em}
+ .st-S03 .cap.bx,.st-S07 .cap.bx,.st-S05 .cap.bx{color:#fff}
+ .st-S03 .cap.bx .bw,.st-S03 .cap.bx.grp .gw{background:#1d6bff}
+ .st-S07 .cap.bx .bw,.st-S07 .cap.bx.grp .gw{background:#e11d2e}
+ .st-S05 .cap.bx .bw,.st-S05 .cap.bx.grp .gw{background:#ff2d8a;border-radius:40px}
+ .st-S05 .cap.bx.grp .gw:nth-child(even){background:#ffe600;color:#111}
+ .st-S01 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:96px;letter-spacing:.02em;-webkit-text-stroke:5px #000}
+ .st-S04 .cap{color:#e9fff0;-webkit-text-stroke:2px #0b2a14;text-shadow:0 0 16px #39ff88,0 0 40px #8a4dff,0 4px 12px rgba(0,0,0,.5)}
+ .st-S06 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:98px;color:#ffe600;-webkit-text-stroke:7px #000}
+ .st-S08 .cap{font-size:98px;-webkit-text-stroke:10px #000}
+ .st-S09 .cap{font-family:'Inter',sans-serif;font-weight:800;text-transform:none;-webkit-text-stroke:0;font-size:74px;text-shadow:0 3px 16px rgba(0,0,0,.8)}
+ .st-S10 .cap{-webkit-text-stroke:0;text-shadow:0 4px 18px rgba(0,0,0,.75),0 1px 3px rgba(0,0,0,.6)}
+ .st-S11 .cap{font-size:96px;color:#ff6a1a;-webkit-text-stroke:9px #000}
+ .st-S12 .cap{-webkit-text-stroke:3px #2a0a1c;text-shadow:0 0 18px #ff3da6,0 0 42px rgba(255,61,166,.75),0 4px 14px rgba(0,0,0,.5)}
+ .st-S13 .cap{font-family:'Inter',sans-serif;font-weight:600;text-transform:none;-webkit-text-stroke:0;font-size:64px;letter-spacing:0;text-shadow:0 2px 12px rgba(0,0,0,.85)}
+ .st-S14 .cap{font-family:'Playfair Display',serif;font-weight:700;font-style:italic;text-transform:none;-webkit-text-stroke:0;font-size:78px;text-shadow:0 3px 16px rgba(0,0,0,.85)}
+ .st-S15 .cap{-webkit-text-stroke:6px #000;text-shadow:5px 6px 0 #ff6a1a}
+ .st-S16 .cap{color:#ffe600;-webkit-text-stroke:6px #000;text-shadow:5px 6px 0 #000}
+ .st-S17 .cap{-webkit-text-stroke:0;text-shadow:0 0 14px #ff1a1a,0 0 38px rgba(255,26,26,.85),0 3px 10px rgba(0,0,0,.6)}
+ .st-S18 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:96px;color:#ffd24a;-webkit-text-stroke:5px #7a0c0c;text-shadow:0 5px 0 #b3121a,0 8px 18px rgba(0,0,0,.5)}
+ .st-S19 .cap{font-family:'Montserrat',sans-serif;font-weight:900;color:#ffe600;-webkit-text-stroke:7px #000}
 </style></head><body>
  <div id="root" class="${stCls}" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>
