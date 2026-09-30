@@ -184,6 +184,7 @@ const brickOf = id => Array.isArray(bricks) ? bricks.find(b => b && b.id === id)
 // CTA : ce qui est DIT (meta.transcript), pas la légende réécrite pour le post (cta-captions.json) ; seules les erreurs
 // sûres de Whisper sont corrigées (on demande toujours de COMMENTER un mot-clé ; le mot-clé en capitales ; le site).
 const fixCta = t => String(t || '')
+  .replace(/\b[Cc]ommand[- ](go|site|guide|plan|ugc|avatar|montage|aide|ia)\b/gi, (m, k) => (m[0] === 'C' ? 'C' : 'c') + 'ommente ' + k.toUpperCase())   // « Command-Go » (VF-0013)
   .replace(/\b[Cc]ommand(e|es|ez)\b/g, (m) => (m[0] === 'C' ? 'C' : 'c') + 'ommente')
   .replace(/\b(Marque|marque|Écris|écris|Commente|commente|Tape|tape)[- ]cite\b/g, '$1 SITE').replace(/\bcite\b/g, 'SITE')
   .replace(/\bcommente hier\b/gi, m => m.replace(/hier/i, 'IA'))
@@ -201,7 +202,12 @@ const idFromFile = f => { const m = /-(H\d+|L\d+|CTA-[A-Za-z-]+?)(?:-v\d+)?\.(?:
 function exactWords(ws, text) {
   if (!text || !ws.length) return ws;
   const toks = text.replace(/[«»"“”]/g, ' ').split(/\s+/).map(t => t.trim()).filter(t => t && bare(t));
-  const A = ws.map(w => bare(w.text)), B = toks.map(bare), n = A.length, m = B.length;
+  // « Command-Go » entendu en UN mot (VF-0013) = « Commente GO » : coupé en deux avant l'alignement
+  ws = ws.flatMap(w => { const m = /^command[e]?-([a-z]+)$/i.exec(String(w.text).replace(/[.,!?]/g, '')); if (!m) return [w];
+    const mid = w.start + (w.end - w.start) * 0.6; return [{ ...w, text: 'Commente', end: mid }, { ...w, text: m[1].toUpperCase(), start: mid }]; });
+  // noms propres que Whisper déforme trop pour être reconnus (VF-0015 : « Xfield » = Higgsfield)
+  const HEARD_AS = { xfield: 'higgsfield', hixfield: 'higgsfield', higsfield: 'higgsfield', igsfield: 'higgsfield' };
+  const A = ws.map(w => HEARD_AS[bare(w.text)] || bare(w.text)), B = toks.map(bare), n = A.length, m = B.length;
   // ressemblance = 1 − distance d'édition / longueur (« dia »≈« ia », « influences »≈« influenceuses », « montre »≠« demande »)
   const sim = (a, b) => { if (a === b) return 1; const L = Math.max(a.length, b.length); if (!L) return 0;
     let prev = Array.from({ length: b.length + 1 }, (_, j) => j);

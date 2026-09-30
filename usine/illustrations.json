@@ -124,16 +124,11 @@
       "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4"
     ],
     "C-SADS-01": [
-      "ciao-energy-peche.png",
-      "pub-ciao-naturelle.png",
-      "pub-ciao-boost.png",
-      "pub-ciao-sucre.png",
-      "pub-ciao-ugc.png",
-      "pub-ciao-10.png",
-      "pub-ciao-11.png",
-      "pub-ciao-12.png",
-      "pub-ciao-13.png",
-      "pub-ciao-15.png"
+      "pub-parfum-desoles.png",
+      "pub-parfum-offre.png",
+      "pub-parfum-3.png",
+      "pub-parfum-4.png",
+      "pub-parfum-5.png"
     ],
     "C-SADS-02": [
       "pub-parfum-desoles.png",
@@ -189,6 +184,10 @@
         "in": "comme ca",
         "out": "puis",
         "type": "avatar"
+      },
+      {
+        "in": "video",
+        "type": "video"
       }
     ],
     "H40": [

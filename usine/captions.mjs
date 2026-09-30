@@ -192,6 +192,13 @@ function burn(video, output, words, opts = {}) {
  .st-S17 .cap{-webkit-text-stroke:0;text-shadow:0 0 14px #ff1a1a,0 0 38px rgba(255,26,26,.85),0 3px 10px rgba(0,0,0,.6)}
  .st-S18 .cap{font-family:'Anton',sans-serif;font-weight:400;font-size:96px;color:#ffd24a;-webkit-text-stroke:5px #7a0c0c;text-shadow:0 5px 0 #b3121a,0 8px 18px rgba(0,0,0,.5)}
  .st-S19 .cap{font-family:'Montserrat',sans-serif;font-weight:900;color:#ffe600;-webkit-text-stroke:7px #000}
+ /* phrase choc : texte « natif » TikTok, bandeau blanc par ligne, placée par chocLayout (zone sûre, hors visage) */
+ .choc{position:absolute;z-index:6;font-family:'Inter',sans-serif;font-weight:700;color:#111;transform-origin:50% 50%}
+ .choc .cl{display:flex;justify-content:var(--jc,center);margin:0}
+ .choc .cl>span{display:inline-block;background:#fff;border-radius:14px;padding:var(--py) var(--px);white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+ /* emoji : Noto Color Emoji (police Google, embarquée par HyperFrames) — JAMAIS Apple Color Emoji (183 Mo embarqués → rendu à court de mémoire) */
+ .choc .em{font-family:'Noto Color Emoji',sans-serif;font-weight:400}
+ .choc .emj{height:1.08em;width:auto;vertical-align:-0.2em;margin-left:.12em}
 </style></head><body>
  <div id="root" class="${stCls}" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>
