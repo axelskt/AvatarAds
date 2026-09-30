@@ -1,0 +1,22 @@
+# Creative Factory — rendu des vidéos finales sur Railway (usine/railway-render.mjs). Même base que render-worker :
+# Node 22 + ffmpeg + Chromium embarqué, HyperFrames installé dans l'image (jamais npx au rendu).
+FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg ca-certificates curl fonts-liberation fonts-noto-color-emoji unzip chromium \
+    libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdrm2 libgbm1 libgtk-3-0 \
+    libnss3 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 xdg-utils \
+  && rm -rf /var/lib/apt/lists/*
+ENV HYPERFRAMES_BROWSER_PATH=/usr/bin/chromium PUPPETEER_SKIP_DOWNLOAD=1
+WORKDIR /app/render-worker
+COPY render-worker/package.json render-worker/package-lock.json ./
+RUN npm ci --omit=dev
+COPY render-worker/patch-hyperframes.mjs ./
+RUN node patch-hyperframes.mjs node_modules/hyperframes/dist/cli.js
+COPY render-worker/assets/sfx ./assets/sfx
+WORKDIR /app
+COPY usine ./usine
+RUN chown -R node:node /app
+ENV NODE_ENV=production HOME=/home/node CF_HF_BIN=/app/render-worker/node_modules/.bin/hyperframes CF_CACHE=/tmp/cf-cache CF_FPS=60 HYPERFRAMES_EXTRACT_CACHE_DIR=off
+USER node
+EXPOSE 8080
+CMD ["node", "usine/railway-render.mjs"]

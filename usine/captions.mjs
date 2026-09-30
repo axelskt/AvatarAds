@@ -22,13 +22,15 @@ const esc = t => String(t).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', 
 const EMOJI = /(\p{Extended_Pictographic}(?:\u200d\p{Extended_Pictographic}|\ufe0f)*)/gu;
 
 const LEAD = 0.12;
+// CLI HyperFrames : npx sur le Mac ; sur le serveur (Railway) le binaire installé dans l'image (CF_HF_BIN)
+const HF = process.env.CF_HF_BIN || 'npx', HF_PRE = process.env.CF_HF_BIN ? [] : ['--yes', 'hyperframes'];
 const bareOf = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
 const brandFix = t => { const b=bareOf(t); if(/atarhat|avatarad|atarad|avatarhat|avataraad/.test(b)) return (/fr$/.test(b)||/\.?fr\b/i.test(t))?'avatarads.fr':'avatarads'; return t; };
 
 function transcribeWords(audio, offset) {
   const work = mkdtempSync(join(tmpdir(), 'caps-tr-'));
   execFileSync('ffmpeg', ['-v','error','-y','-i', audio, '-vn','-ac','1','-ar','16000', join(work,'audio.wav')]);
-  execFileSync('npx', ['--yes','hyperframes','transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','300000'], { stdio:'inherit' });
+  execFileSync(HF, [...HF_PRE,'transcribe', join(work,'audio.wav'), '-d', work, '--json','--model','large-v3','--language','fr','--timeout','300000'], { stdio:'inherit' });
   const tr = JSON.parse(readFileSync(join(work,'transcript.json'),'utf8'));
   return (Array.isArray(tr) ? tr : (tr.words||tr.segments||[]))
     .map(w => ({ text:String(w.text||w.word||'').trim(), start:+w.start + offset, end:+w.end + offset }))
@@ -227,7 +229,7 @@ function burn(video, output, words, opts = {}) {
   writeFileSync(join(work,'index.html'), html);
   console.log(`▶ rendu sous-titres (${caps.length} captions, style ${subs}${choc ? ', phrase choc 0-' + Math.min(choc.end, dur).toFixed(2) + ' s' : ''})…`);
   // fps de la vidéo source (build.mjs passe CF_FPS=60) ; images de fond extraites en jpg (plus rapide que png, sans perte visible)
-  execFileSync('npx', ['--yes','hyperframes','render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg', '--workers', String(process.env.CF_WORKERS || 2), '--no-low-memory-mode'], { cwd: work, stdio:'inherit', env:{...process.env, PRODUCER_BROWSER_GPU_MODE:'hardware'} });
+  execFileSync(HF, [...HF_PRE,'render','--output', output, '--fps', String(process.env.CF_FPS || 30), '--quality', 'delivery', '--video-frame-format', 'jpg', '--workers', String(process.env.CF_WORKERS || 2), '--no-low-memory-mode'], { cwd: work, stdio:'inherit', env:{...process.env, ...(process.platform === 'darwin' ? { PRODUCER_BROWSER_GPU_MODE:'hardware' } : {})} });
   console.log('OK ->', output);
   try { rmSync(work, { recursive: true, force: true }); } catch { /* sans gravité */ }
   // cache d'extraction d'images de HyperFrames (≈ 1 Go par rendu 60 i/s, jamais vidé : 5 Go après 5 vidéos le 30/09) :

@@ -52,7 +52,7 @@ const LASTF = join(process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creativ
 const lastPick = (() => { try { return JSON.parse(readFileSync(LASTF, 'utf8')); } catch { return {}; } })();
 const draw = (list, prev) => { const l = list.filter(x => x !== prev); return (l.length ? l : list)[Math.floor(Math.random() * (l.length || list.length))]; };
 if (music === 'auto') {
-  const id = draw(MUSIC_OK, lastPick.musique), f = readdirSync(BEDS).find(n => n.startsWith(id + '_'));
+  const id = draw(MUSIC_OK, lastPick.musique), f = (() => { try { return readdirSync(BEDS).find(n => n.startsWith(id + '_')); } catch { return null; } })();   // serveur : pas de dossier beds → piste de la banque
   if (f) music = join(BEDS, f);
   else {   // pas de piste longue en local : celle de la banque (factory-media/music), téléchargée dans le dossier temporaire
     music = join(tmpdir(), 'cf-' + id + '_banque.mp3');
