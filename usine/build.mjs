@@ -211,7 +211,8 @@ function exactWords(ws, text) {
     const mid = w.start + (w.end - w.start) * 0.6; return [{ ...w, text: 'Commente', end: mid }, { ...w, text: m[1].toUpperCase(), start: mid }]; });
   // noms propres que Whisper déforme trop pour être reconnus (VF-0015 : « Xfield » = Higgsfield)
   const HEARD_AS = { xfield: 'higgsfield', hixfield: 'higgsfield', higsfield: 'higgsfield', igsfield: 'higgsfield' };
-  const A = ws.map(w => HEARD_AS[bare(w.text)] || bare(w.text)), B = toks.map(bare), n = A.length, m = B.length;
+  const heard = t => { const b = bare(t), k = Object.keys(HEARD_AS).find(x => b.endsWith(x)); return k ? HEARD_AS[k] : b; };   // « qu'Xfield » aussi
+  const A = ws.map(w => heard(w.text)), B = toks.map(bare), n = A.length, m = B.length;
   // ressemblance = 1 − distance d'édition / longueur (« dia »≈« ia », « influences »≈« influenceuses », « montre »≠« demande »)
   const sim = (a, b) => { if (a === b) return 1; const L = Math.max(a.length, b.length); if (!L) return 0;
     let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
@@ -325,7 +326,9 @@ if (OPT.illus) {
   const toksOf = t => String(t || '').split(/\s+/).map(bare).filter(Boolean);
   const findW = (toks, from, to) => { for (let i = from; i < to; i++) if (toks.length && toks.every((t, k) => i + k < to && bare(hookW0[i + k].text) === t)) return i; return -1; };
   const nH = nHookW != null ? nHookW : hookW0.length, liaisonId = OPT.liaison ? idFromFile(OPT.liaison) : null;
-  const mod = demoBrick ? ((demoBrick.meta && demoBrick.meta.module) || demoBrick.subject || '') : (OPT.demo || '');
+  // module de la démo : son SUJET d'abord (static-ads, omni, image-ia) — meta.module vaut « image-ia » pour les démos static ads
+  // (elles passent par Images IA) et faisait tirer une pub d'un AUTRE produit (VF-0017 : pub Lune sur une démo parfum)
+  const mod = demoBrick ? (demoBrick.subject || (demoBrick.meta && demoBrick.meta.module) || '') : (OPT.demo || '');
   const seedN = [...basename(out)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7), used = new Set(brollEvents.map(e => basename(e.file)));
   // média d'un type : jamais deux fois le même dans une vidéo ; rotation d'une vidéo à l'autre (graine = nom de sortie)
   const pick = type => {
