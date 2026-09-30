@@ -225,7 +225,9 @@ function exactWords(ws, text) {
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && D[i][j] === D[i - 1][j - 1] + (A[i - 1] === B[j - 1] ? 0 : 1.6 - sim(A[i - 1], B[j - 1]))) {
       // même mot ou mot RESSEMBLANT → le texte de la brique (orthographe, ponctuation) ; mot très différent → ce qui est DIT
-      const ok = A[i - 1] === B[j - 1] || sim(A[i - 1], B[j - 1]) >= 0.6;
+      // 30/09 : TOUS les textes de briques ont été vérifiés à l'écoute (transcription d'avance + corrections d'Axel) → un mot
+      // aligné prend TOUJOURS le texte de la brique, même très différent (VF-0016 : « je te DEMANDE ça » entendu, « montre » dit)
+      const ok = true;
       out.push(ok ? { ...ws[i - 1], text: toks[j - 1], _x: A[i - 1] === B[j - 1] ? 2 : 1 } : ws[i - 1]); i--; j--; }
     else if (j > 0 && (i === 0 || D[i][j] === D[i][j - 1] + 1)) { out.push({ _ins: toks[j - 1] }); j--; }   // mot du texte jamais entendu : voir plus bas
     else {
