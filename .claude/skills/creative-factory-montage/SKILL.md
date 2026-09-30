@@ -88,6 +88,9 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
   t'es ») ; un mot court du texte avalé par Whisper entre deux mots reconnus est remis (« nouvelle ÈRE IA » entendu
   « nouvelle RIA »). Toujours relire `OUT.mp4.words.json` contre le texte de la brique.
 - Niveau sonore : calage final automatique à −16 LUFS (ligne « niveau sonore » du log).
+- **Musique et sous-titres au hasard** (Axel 30/09) : passer `auto` à la place du fichier musique (piste validée M01 / M06 /
+  M07 / M08, jamais M04) et `--subs-style auto` (contour S02 ou boîte S21) ; jamais le même choix que la vidéo d'avant.
+  Le choix est écrit dans `OUT.mp4.format.json` (musique, sous_titre) → le reprendre dans le nom du fichier.
 - `--choc-size 62` : taille du texte choc forcée (défaut 45-52 px ; VF-0004 : « plus gros »).
 - `--subs-style boite` : sous-titres en pastilles blanches texte noir (brique S21) ; défaut `contour` (S02).
 

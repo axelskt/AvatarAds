@@ -11,7 +11,9 @@
     "type « avatar » = un avatar IA sans genre précisé : le résultat de la démo si elle est du module image-ia, sinon une fille.",
     "type « fille » = le hook dit « influenceuse » : toujours une fille → ne l'associer qu'à une démo qui génère des filles",
     "(C-IMGIA-06 / 07) ; C-IMGIA-02 / 03 génèrent des garçons. demoMedia sert aux types « demo », « avatar » et « pub »",
-    "(module static-ads) : l'illustration montre le MÊME résultat que la démo (même produit, même transformation)."
+    "(module static-ads) : l'illustration montre le MÊME résultat que la démo (même produit, même transformation).",
+    "Axel 30/09 : avatars = filles ET garçons mélangés (jamais deux du même genre de suite) ; quand la voix dit « image et",
+    "vidéo », une IMAGE puis une VIDÉO (type « video » = pool video.<module de la démo>). H12 / H13 / H21 (« influenceuse ») restent en filles."
   ],
   "pools": {
     "fille": [
@@ -44,6 +46,9 @@
       "avatar-ia-garcon-4k-b.jpg",
       "avatar-ia-garcon-4k-c.jpg",
       "avatar-ia-garcon-4k-d.jpg"
+    ],
+    "video-image-ia": [
+      "avatar-ia-fille-video.mp4"
     ]
   },
   "demo": {
@@ -53,29 +58,47 @@
   },
   "demoMedia": {
     "C-IMGIA-02": [
+      "avatar-ia-fille-4k.jpg",
       "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-fille-4k-b.jpg",
       "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-fille-4k-c.jpg",
       "avatar-ia-garcon-4k-c.jpg",
-      "avatar-ia-garcon-4k-d.jpg"
+      "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-garcon-4k-d.jpg",
+      "avatar-ia-fille-4k-e.jpg"
     ],
     "C-IMGIA-03": [
+      "avatar-ia-fille-4k.jpg",
       "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-fille-4k-b.jpg",
       "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-fille-4k-c.jpg",
       "avatar-ia-garcon-4k-c.jpg",
-      "avatar-ia-garcon-4k-d.jpg"
+      "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-garcon-4k-d.jpg",
+      "avatar-ia-fille-4k-e.jpg"
     ],
     "C-IMGIA-06": [
       "avatar-ia-fille-4k.jpg",
+      "avatar-ia-garcon-4k.jpg",
       "avatar-ia-fille-4k-b.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
       "avatar-ia-fille-4k-c.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
       "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-garcon-4k-d.jpg",
       "avatar-ia-fille-4k-e.jpg"
     ],
     "C-IMGIA-07": [
       "avatar-ia-fille-4k.jpg",
+      "avatar-ia-garcon-4k.jpg",
       "avatar-ia-fille-4k-b.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
       "avatar-ia-fille-4k-c.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
       "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-garcon-4k-d.jpg",
       "avatar-ia-fille-4k-e.jpg"
     ],
     "C-OMNI-01": [
@@ -210,15 +233,23 @@
     "H79": [
       {
         "in": "images realistes",
-        "out": "tu passes",
         "type": "avatar"
+      },
+      {
+        "in": "videos",
+        "out": "tu passes",
+        "type": "video"
       }
     ],
     "H83": [
       {
         "in": "creatives",
-        "out": "cet outil",
         "type": "pub"
+      },
+      {
+        "in": "videos",
+        "out": "cet outil",
+        "type": "video"
       }
     ],
     "H84": [
@@ -253,8 +284,8 @@
         "type": "demo"
       },
       {
-        "in": "dimage",
-        "type": "demo"
+        "in": "video",
+        "type": "video"
       }
     ],
     "L19": [
@@ -284,5 +315,10 @@
         "type": "demo"
       }
     ]
+  },
+  "video": {
+    "image-ia": "video-image-ia",
+    "static-ads": "produit",
+    "omni": "omni"
   }
 }

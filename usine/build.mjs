@@ -42,6 +42,20 @@ for (let i = 0; i < ARGV.length; i++) {
 // captions-manifest. ctaLead = silence de tête baké dans le clip avatar (l'avatar attend puis parle).
 let [hook, demoSrc, out, music, hookVoice, cta, ctaCap, ctaLeadArg] = POS;
 let demo = demoSrc;
+// MUSIQUE et SOUS-TITRES au hasard (Axel 30/09 : « bien changer la musique de fond ainsi que les sous-titres… aléatoirement
+// à chaque fois ») : musique « auto » = une piste VALIDÉE (jamais M04, trop sombre), --subs-style auto = contour ou boîte ;
+// jamais le même choix que la vidéo précédente (fichier <cache>/dernier.json).
+const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_OK = ['M01', 'M06', 'M07', 'M08'];
+const LASTF = join(process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Factory', 'cache'), 'dernier.json');
+const lastPick = (() => { try { return JSON.parse(readFileSync(LASTF, 'utf8')); } catch { return {}; } })();
+const draw = (list, prev) => { const l = list.filter(x => x !== prev); return (l.length ? l : list)[Math.floor(Math.random() * (l.length || list.length))]; };
+if (music === 'auto') {
+  const id = draw(MUSIC_OK, lastPick.musique), f = readdirSync(BEDS).find(n => n.startsWith(id + '_'));
+  if (!f) { console.error('✗ musique ' + id + ' introuvable dans ' + BEDS); process.exit(2); }
+  music = join(BEDS, f); lastPick.musique = id; console.log('  musique tirée : ' + id);
+}
+if (OPT['subs-style'] === 'auto') { OPT['subs-style'] = draw(['contour', 'boite'], lastPick.sous_titre); lastPick.sous_titre = OPT['subs-style']; console.log('  sous-titres tirés : ' + OPT['subs-style']); }
+try { mkdirSync(dirname(LASTF), { recursive: true }); writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
 if (!hook || !demoSrc || !out) { console.error('usage: build.mjs <hook> <demo> <out> [music] [hookVoice] [cta] [ctaCap] [ctaLead] [--format …]'); process.exit(1); }
 const CTA_LEAD = parseFloat(ctaLeadArg || '0') || 0;
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -301,11 +315,14 @@ if (OPT.illus) {
   const pick = type => {
     // « avatar » (genre non précisé) = le résultat de la démo si elle génère des avatars, sinon une fille
     if (type === 'avatar') type = mod === 'image-ia' ? 'demo' : 'fille';
+    if (type === 'video') type = (BANK.video || {})[mod] || 'produit';
     const direct = (type === 'demo' || (type === 'pub' && mod === 'static-ads')) && BANK.demoMedia && BANK.demoMedia[OPT.demo], t = type === 'demo' ? (BANK.demo || {})[mod] : type;
     const pool = (direct && direct.filter(f => !used.has(basename(f))).length ? direct : (BANK.pools || {})[t]) || [];
     const free = pool.filter(f => !used.has(basename(f)));
     if (!free.length) return null;
-    const ref = free[(seedN + used.size) % free.length]; used.add(basename(ref));
+    // filles et garçons mélangés : jamais deux avatars du même genre de suite (Axel 30/09)
+    const genre = f => /garcon/.test(f) ? 'g' : /fille/.test(f) ? 'f' : '', rot = free.map((_, i) => free[(seedN + used.size + i) % free.length]);
+    const ref = rot.find(f => !genre(f) || genre(f) !== pick.last) || rot[0]; used.add(basename(ref)); if (genre(ref)) pick.last = genre(ref);
     if (!/^https?:/.test(ref)) return join(BR, ref);
     const f = join(work, 'illus-' + basename(ref));                     // média distant (assemblage avant / après) : copie de travail
     try { execFileSync('curl', ['-sfL', '-o', f, ref]); return f; } catch { return null; }
@@ -434,6 +451,7 @@ if (FMT.hasChoc(format)) {
 }
 sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
 if (illusLog.length) sidecar.illustrations = illusLog;
+sidecar.musique = music ? (/(M\d+)_/.exec(basename(music)) || [])[1] || basename(music) : null; sidecar.sous_titre = (OPT['subs-style'] || 'contour') === 'boite' ? 'S21' : 'S02';
 const oj = join(work, 'capOpts.json'); writeFileSync(oj, JSON.stringify(capOpts));
 const capt = join(work, 'capt.mp4');
 execFileSync('node', [join(HERE,'captions.mjs'), 'burn', voice, capt, wj, oj], { stdio:'inherit', env: { ...process.env, CF_FPS: String(FPS) } });
