@@ -20020,6 +20020,7 @@ async function _gnGenerate(){
     let blob;
     try{ blob = await _expOmniImageToVideo(img.b64, img.mime, fullPrompt, dur, '1080p', (v, t) => _gnProg(v, t), op); }   // 1080p (Axel 25/09) ; op exacte
     finally{ if(fmt0 !== '9:16') window._expFormat = fmt0; }
+    blob = await _expRetouche(blob, img.b64, img.mime, (v, t) => _gnProg(v, t));   // retouche forte (02/10)
     if(!blob || blob.size < 50000 || (typeof _mp4Sane === 'function' && !(await _mp4Sane(blob)))) throw new Error('vidéo reçue illisible — réessaie');
     _gnProg(96, 'Vidéo prête');
     // Succès : ces ops ne sont plus remboursables (sans toucher au flux d'une autre génération)
@@ -32711,6 +32712,32 @@ function _omniKieErr(e){
 // x-aa-op à kie-proxy comme à fal-proxy. Sans elle, le serveur prenait « la dernière op ouverte » du compte : deux générations
 // payantes en parallèle (Express + Voix native) → la vidéo tirait EXACTEMENT 5 × durée sur l'op de l'autre (402, ou crédits
 // tirés jamais remboursés). Absente (developer / owner : aucun débit) → comportement d'avant (dernière op du flux).
+// RETOUCHE « FORTE » (Axel 02/10, validée sur une vidéo AXE) : Omni Flash lisse la peau (~25 % de grain en moins que la photo).
+// La vidéo + SA photo de départ partent au render-worker (render-job action 'retouche', ~10 s, gratuit) qui recale couleurs,
+// netteté et grain sur la photo. Tout échec / délai (> 150 s) → la vidéo d'origine est gardée : jamais de vidéo payée perdue.
+async function _expRetouche(blob, imgB64, imgMime, onStep){
+  try{
+    if(!blob || !imgB64) return blob;
+    const { data:{ user } } = await sb.auth.getUser(); if(!user) return blob;
+    const base = user.id+'/retouche-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+    const vPath = base+'.mp4', pPath = base+(/png/i.test(imgMime||'')?'.png':'.jpg');
+    const pBlob = await (await fetch('data:'+(imgMime||'image/png')+';base64,'+imgB64)).blob();
+    const u1 = await sb.storage.from('render-media').upload(vPath, blob, { contentType:'video/mp4', upsert:true }); if(u1.error) return blob;
+    const u2 = await sb.storage.from('render-media').upload(pPath, pBlob, { contentType:pBlob.type||imgMime||'image/png', upsert:true }); if(u2.error) return blob;
+    const call = async (b) => (await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify(b) })).json();
+    const r = await call({ action:'retouche', input_video:vPath, photo:pPath });
+    if(!r || !r.job_id) return blob;
+    try{ onStep && onStep(97, 'Retouche de la peau…'); }catch(_){}
+    const t0 = Date.now();
+    while(Date.now() - t0 < 150000){
+      await new Promise(res => setTimeout(res, 3000));
+      const s = await call({ action:'status', job_id:r.job_id }).catch(() => null);
+      if(s && s.status === 'done' && s.url){ const b = await (await fetch(s.url)).blob(); return (b && b.size > 50000) ? b : blob; }
+      if(s && s.status === 'failed') return blob;
+    }
+  }catch(e){ console.warn('[retouche] vidéo d\'origine gardée', e); }
+  return blob;
+}
 async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep, op){
   const step=(v,t)=>{ try{ onStep && onStep(v,t); }catch(_){} };
   const { data:{ user } } = await sb.auth.getUser();
@@ -33029,6 +33056,7 @@ async function _expressCreateOne(o){
       setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni Flash — génération…');
       blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t), _expOp);
       _myRid = (blob && blob._kieRid) || null;
+      blob = await _expRetouche(blob, imgB64, imgMime, (v,t)=>setP(Math.max(p,v),t));   // retouche forte (02/10)
       // Plus d'« ajustement à la durée réelle » (Axel 25/09) : Omni sort au cran demandé (4/6/8/10 s) et le serveur facture
       // EXACTEMENT ce cran puis règle l'op dès la livraison (un remboursement après coup répondait already_delivered).
       // Image de départ réservée mais finalement NON créée (composition ratée → 1re image gardée) : ce reliquat est resté

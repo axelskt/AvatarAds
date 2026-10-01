@@ -158,6 +158,21 @@ serve(async (req: Request) => {
       return json({ ok: true, job_id: data.id })
     }
 
+    // RETOUCHE « FORTE » d'une vidéo Omni Flash (Axel 02/10) : couleurs, netteté et grain recalés sur la photo de départ par le
+    // render-worker (retouche.mjs, ~10 s, prioritaire). GRATUITE (la vidéo est déjà payée) mais BORNÉE : un débit récent exigé
+    // (une génération vient d'être payée), plafond de cadence, fichiers obligatoirement dans le dossier de l'utilisateur.
+    if (body.action === 'retouche') {
+      const _g = await billableGate({ userId: user.id, proxy: 'render-job-retouche', requireDebit: true, debitMinutes: 60, rateMax: 30 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
+      const input = String(body.input_video || ''), photo = String(body.photo || '')
+      if (!input.startsWith(user.id + '/') || !/\.mp4$/i.test(input) || input.includes('..')) return json({ error: 'input_video invalide' }, 400)
+      if (!photo.startsWith(user.id + '/') || !/\.(png|jpe?g|webp)$/i.test(photo) || photo.includes('..')) return json({ error: 'photo invalide' }, 400)
+      const { data, error } = await service.from('render_jobs')
+        .insert({ user_id: user.id, status: 'queued', plan: { __compose: 'retouche' }, input_video: input, assets: [{ id: 'photo', path: photo }], avatar_clips: [] })
+        .select('id').single()
+      if (error || !data) return json({ error: 'creation impossible' }, 500)
+      return json({ ok: true, job_id: data.id })
+    }
+
     if (body.action === 'last') {
       // le dernier montage TERMINÉ du compte — l'entrée dev « Détails montage »
       // ouvre l'écran de révision dessus sans relancer un rendu.
