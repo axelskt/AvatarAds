@@ -554,6 +554,7 @@ function aaPollStatus(u){
   fetch(u, { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
     if(!j) return;
     if(typeof j.progress==='number') aaSetPct(j.progress);
+    if(j.preview){ var pv=document.getElementById('pv'); if(pv && !pv.firstChild){ pv.innerHTML='<img src="'+j.preview+'" alt="" style="display:block;max-width:100%;max-height:420px;margin:12px auto 4px;border-radius:12px">'; var pt0=document.getElementById('pt'); if(pt0) pt0.textContent='Photo prête — vidéo en cours…'; var im=pv.querySelector('img'); if(im) im.addEventListener('load', aaKick); aaKick(); } }
     if(j.status==='done' && j.url){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaMedia(j.url, j.kind||'image', ''); }, 350); return; }
     if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent='Échec de la génération — réessaie.'; }
     if(j.status==='pending' && j.link_failed){ aaProductUrl=''; aaAskPhoto(); var pe2=document.getElementById('pe'); if(pe2) pe2.textContent=j.link_failed==='no_image_in_link'?'Photo non récupérable depuis le lien (site protégé) — dépose-la ici.':j.link_failed==='daily_cap'?'Plafond 24 h atteint':(j.link_failed==='no_credits'||j.link_failed==='credits')?'Crédits épuisés — recharge sur avatarads.fr':'Lien illisible — dépose la photo ici.'; }
@@ -564,7 +565,7 @@ function aaStartPoll(u){
   aaStart=Date.now();
   var b=document.getElementById('b'); if(b) b.style.display='none';
   var m=document.getElementById('m');
-  m.style.opacity=''; m.innerHTML='<div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
+  m.style.opacity=''; m.innerHTML='<div id="pv"></div><div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
   aaSetPct(6); aaKick(); aaPollStatus(u);
   aaPollT=setInterval(function(){ var el=Date.now()-aaStart; if(el>900000){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } return; } if(el>240000 && (aaPollN=(aaPollN||0)+1)%4) return; aaPollStatus(u); }, 2500);   // 15 min ; au-delà de 4 min : une sonde toutes les 10 s
 }
@@ -709,7 +710,7 @@ window.parent.postMessage({ jsonrpc:'2.0', id:1, method:'ui/initialize', params:
 window.parent.postMessage({ type:'ui-lifecycle-iframe-ready' }, '*');
 setInterval(aaMeasure, 1000);
 setTimeout(aaFinalize, 1200);
-setTimeout(function(){ if(!aaOk && !aaPollT){ try{ document.getElementById('m').textContent='AvatarAds — génération en cours…'; }catch(e){} } }, 6000);
+setTimeout(function(){ if(!aaOk && !aaPollT){ try{ var m=document.getElementById('m'); m.innerHTML='<div class="aa-pt" id="pt">AvatarAds — génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>'; aaSetPct(8); var t0=Date.now(); var iv=setInterval(function(){ if(aaOk||aaPollT){ clearInterval(iv); return; } var e=(Date.now()-t0)/1000; aaSetPct(Math.min(92, 8+Math.round(84*(1-Math.exp(-e/70))))); }, 1500); aaKick(); }catch(e){} } }, 6000);   // Axel 01/10 : barre de progression sous le texte
 `
 
 const UI_VIEWER_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -907,6 +908,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         properties: {
           prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français)." },
           duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6, 8 ou 10 (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
+          product_url: { type: 'string', description: "Lien de la PAGE PRODUIT quand l'utilisateur veut une vidéo d'une personne qui présente ce produit : passe-le ici, dans CE seul appel (pas de generate_image avant). La photo du produit est récupérée côté serveur, la photo de départ est générée avec le produit en main (+3 crédits), puis la vidéo se lance — tout s'affiche dans la même carte. Si le site bloque la récupération, la vidéo se fait quand même d'après la description." },
           user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           image_url: { type: 'string', description: "URL publique http(s) d'une image de départ (optionnel) : une image de generate_image, ou un lien collé par l'utilisateur. ⚠️ claude.ai ne transmet PAS les images jointes au chat : pour une photo JOINTE, n'utilise pas image_url, mets user_photo:true (la carte la lui fait déposer)." },
@@ -1263,6 +1265,12 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
           const r = await fetch('https://mcp.avatarads.fr/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job: pj.id, product_url: productUrl, data_url: '', skip: false, cap: _cap }) })
           if (!r.ok) {
             const e = await r.json().catch(() => ({})) as Record<string, unknown>
+            // Axel 01/10 : site qui bloque les robots (Louis Vuitton…) → on NE bloque PLUS sur le dépôt : génération lancée
+            // sans photo, d'après la description du produit (le flacon peut différer ; déposer la photo reste possible ensuite).
+            if (String(e.error || '') === 'no_image_in_link') {
+              const r2 = await fetch('https://mcp.avatarads.fr/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job: pj.id, product_url: '', data_url: '', skip: true, cap: _cap }) })
+              if (r2.ok) return
+            }
             if (String(e.error || '') !== 'not_pending') {
               const { data: cur } = await svc.from('mcp_jobs').select('params, status').eq('id', pj.id).maybeSingle()
               if (cur && cur.status === 'pending') await svc.from('mcp_jobs').update({ params: { ...(cur.params as Record<string, unknown> || {}), link_failed: String(e.error || 'erreur') } }).eq('id', pj.id).eq('status', 'pending')
@@ -1920,7 +1928,7 @@ const OMNI_START_IMG = IMG_COST.standard   // photo de départ générée (vidé
 const omniFlashCran = (n: number): number => (n <= 4 ? 4 : n <= 6 ? 6 : n <= 8 ? 8 : 10)
 // imageUrl vide + genImage = PHOTO DE DÉPART GÉNÉRÉE d'abord (Axel 01/10 : vidéo sans image de référence = photo facturée
 // OMNI_START_IMG crédits, comprise dans o.cost ; échec de la photo = tout remboursé par failLaunch).
-function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; aspect: string; duration: number; prompt: string; genImage?: string }): void {
+function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; aspect: string; duration: number; prompt: string; genImage?: string; productUrl?: string }): void {
   bg((async () => {
     try {
       const bal = await spendForJob(o.userId, o.jobId, o.cost)
@@ -1932,7 +1940,17 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
       }
       let buf: Uint8Array
       if (!o.imageUrl && o.genImage) {
-        const gi = await genererImageAt(o.genImage, o.aspect === '16:9' ? '1536x1024' : '1152x2048', 'standard')
+        // lien produit (Axel 01/10 : « crée une vidéo … ce produit + lien ») : sa photo sert de RÉFÉRENCE à la photo de départ ;
+        // site qui bloque les robots → photo de départ générée d'après la description seule (jamais de blocage)
+        let ref: { bytes: Uint8Array; contentType: string } | null = null
+        if (o.productUrl) {
+          try {
+            const iu = await extraireImageProduit(o.productUrl)
+            if (iu) { const g = await fetchUserFile(iu, 10_000_000, /^image\/(png|jpe?g|webp)$/, 'la photo du produit'); if (typeof g !== 'string') ref = g }
+          } catch (_) { /* sans référence */ }
+        }
+        const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image — same bottle/packaging shape, colours, logo and label, identical and legible.' : ''),
+          o.aspect === '16:9' ? '1536x1024' : '1152x2048', 'standard', ref)
         if (!('bytes' in gi)) throw new ErrClient('photo de départ : ' + (gi.error || 'génération impossible') + ' — rien débité, réessaie')
         buf = gi.bytes
       } else {
@@ -1944,6 +1962,9 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
       try { const rf = await reframeToAspect(buf, o.aspect); buf = rf.bytes } catch (_) { /* recadrage best-effort */ }
       const staged = await stageKieImage(o.userId, o.jobId, buf)
       if (!staged) throw new ErrClient('image de départ illisible — envoie un PNG, un JPG ou un WebP')
+      if (!o.imageUrl && o.genImage) {   // la photo de départ générée s'affiche dans la carte pendant la vidéo (/status → preview)
+        try { const { data: cj } = await svc.from('mcp_jobs').select('params').eq('id', o.jobId).maybeSingle(); await svc.from('mcp_jobs').update({ params: { ...((cj?.params as Record<string, unknown>) || {}), preview: staged.url } }).eq('id', o.jobId) } catch (_) { /* aperçu facultatif */ }
+      }
       let r: Response
       try {
         r = await fetch(`${KIE}/api/v1/jobs/createTask`, { method: 'POST', headers: kieHeaders(), signal: AbortSignal.timeout(30_000),
@@ -1975,6 +1996,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   const wantsPhoto = args.user_photo === true && !String(args.image_url || '').trim() && omniOn
   const omni = omniOn
   const genStart = omni && !wantsPhoto && !String(args.image_url || '').trim()
+  const productUrlV = /^https?:\/\//i.test(String(args.product_url || '').trim()) ? String(args.product_url).trim() : ''
   const duration = omni ? omniFlashCran(Math.max(4, Number(args.duration_seconds) || 6)) : veoCran(Math.max(4, Number(args.duration_seconds) || 8))
   const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
   const perSec = omni ? OMNI_FLASH_SEC : VIDEO_COST_SEC
@@ -2025,7 +2047,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? expressImagePrompt(prompt) : undefined })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? expressImagePrompt(prompt) : undefined, productUrl: genStart ? productUrlV : undefined })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
     prompt: expressVeoPrompt(prompt), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
@@ -3857,7 +3879,8 @@ serve(async (req) => {
     const done = j.status === 'done' || j.status === 'failed'
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
     const urlSigne = j.status === 'done' && j.result_url ? await signMedia(String(j.result_url)) : null   // mcp-media privé (audit 28/09)
-    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: urlSigne, progress, error: j.status === 'failed' ? 'failed' : null }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
+    const preview = !done ? (((j.params as Record<string, unknown> | null) || {}).preview as string | undefined) || null : null   // photo de départ générée (vidéo Express)
+    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: urlSigne, progress, preview, error: j.status === 'failed' ? 'failed' : null }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
   }
 
@@ -4259,7 +4282,7 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon-256.png?v=2', mimeType: 'image/png', sizes: ['256x256'] },
           ],
         },
-        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. ⚡ VIDÉO UGC — une personne qui PRÉSENTE / PARLE à partir d'une PHOTO (ou une « vidéo UGC », « vidéo qui présente », « avatar qui parle ») : utilise TOUJOURS generate_video (Express) avec un prompt style UGC RÉEL (selfie authentique tenu à bout de bras, la personne parle face caméra d'un ton naturel et improvise sa présentation du produit ; enchaîne les phrases, pas de « euh »). Durée 4-10 s, aspect 9:16 par défaut. 📷 LA PHOTO : claude.ai ne te transmet PAS les images jointes au chat — tu n'as JAMAIS accès à la photo déposée dans la conversation. Si l'utilisateur a JOINT une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true, UN appel par vidéo, sans image_url — la carte lui fait déposer sa photo et lance la vidéo toute seule. Ne l'envoie JAMAIS sur le site et ne lui demande pas de lien. Tarif avec photo ou image de départ : 5 crédits/seconde (4, 6, 8 ou 10 s) ; sans image : 1,5 crédit/seconde. Annonce le BON tarif. C'est LE SEUL et LE BON outil pour une vidéo d'une personne qui parle — il n'y a pas d'outil « générateur d'avatar » ici (ça reste manuel sur le site). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent (dis « le module Express d'AvatarAds »). Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video (⚡ le SEUL outil pour une VIDÉO d'une personne — voir la règle UGC ci-dessous) · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION AUTOMATIQUE (TRÈS IMPORTANT) : « Impossible de joindre AvatarAds », « Connecteur inconnu », « Connecteur introuvable », « le serveur n'a pas répondu » ou une erreur 502 sur generate_* = le RELAIS de claude.ai a lâché (souvent avant même d'atteindre le serveur) — ce n'est ni une panne du serveur ni la preuve que la génération a démarré. Fais alors, dans le MÊME tour et sans rien demander : (1) UN seul nouvel appel du MÊME outil generate_* ; (2) si ça échoue encore, appelle check_video / check_image SANS aucun argument — ça retrouve et affiche la dernière génération du compte si elle a bien été créée (c'est CE rappel qui fait apparaître la carte), sinon ça répond clairement qu'il n'y a rien. Si aucune carte ne s'affiche après ça, DIS-LE en une phrase (« le relais de claude.ai a coupé, rien n'a été lancé ») — n'écris JAMAIS « ton visuel est en cours dans la carte ci-dessus » sans un résultat d'outil reçu dans ce tour. Quand un résultat est reçu mais que la carte ne s'affiche pas, donne le lien de téléchargement présent dans le résultat (https://mcp.avatarads.fr/i/<job_id>). Ne relance JAMAIS generate plus d'une fois (2ᵉ débit)." + (ctx.requireConfirm
+        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. 🎬 DEMANDE DE VIDÉO (même avec un lien ou une photo de produit) : UN SEUL appel generate_video — avec product_url pour un lien produit — JAMAIS generate_image avant : la photo de départ puis la vidéo s'enchaînent toutes seules dans la même carte. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. ⚡ VIDÉO UGC — une personne qui PRÉSENTE / PARLE à partir d'une PHOTO (ou une « vidéo UGC », « vidéo qui présente », « avatar qui parle ») : utilise TOUJOURS generate_video (Express) avec un prompt style UGC RÉEL (selfie authentique tenu à bout de bras, la personne parle face caméra d'un ton naturel et improvise sa présentation du produit ; enchaîne les phrases, pas de « euh »). Durée 4-10 s, aspect 9:16 par défaut. 📷 LA PHOTO : claude.ai ne te transmet PAS les images jointes au chat — tu n'as JAMAIS accès à la photo déposée dans la conversation. Si l'utilisateur a JOINT une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true, UN appel par vidéo, sans image_url — la carte lui fait déposer sa photo et lance la vidéo toute seule. Ne l'envoie JAMAIS sur le site et ne lui demande pas de lien. Tarif avec photo ou image de départ : 5 crédits/seconde (4, 6, 8 ou 10 s) ; sans image : 1,5 crédit/seconde. Annonce le BON tarif. C'est LE SEUL et LE BON outil pour une vidéo d'une personne qui parle — il n'y a pas d'outil « générateur d'avatar » ici (ça reste manuel sur le site). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent (dis « le module Express d'AvatarAds »). Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video (⚡ le SEUL outil pour une VIDÉO d'une personne — voir la règle UGC ci-dessous) · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION AUTOMATIQUE (TRÈS IMPORTANT) : « Impossible de joindre AvatarAds », « Connecteur inconnu », « Connecteur introuvable », « le serveur n'a pas répondu » ou une erreur 502 sur generate_* = le RELAIS de claude.ai a lâché (souvent avant même d'atteindre le serveur) — ce n'est ni une panne du serveur ni la preuve que la génération a démarré. Fais alors, dans le MÊME tour et sans rien demander : (1) UN seul nouvel appel du MÊME outil generate_* ; (2) si ça échoue encore, appelle check_video / check_image SANS aucun argument — ça retrouve et affiche la dernière génération du compte si elle a bien été créée (c'est CE rappel qui fait apparaître la carte), sinon ça répond clairement qu'il n'y a rien. Si aucune carte ne s'affiche après ça, DIS-LE en une phrase (« le relais de claude.ai a coupé, rien n'a été lancé ») — n'écris JAMAIS « ton visuel est en cours dans la carte ci-dessus » sans un résultat d'outil reçu dans ce tour. Quand un résultat est reçu mais que la carte ne s'affiche pas, donne le lien de téléchargement présent dans le résultat (https://mcp.avatarads.fr/i/<job_id>). Ne relance JAMAIS generate plus d'une fois (2ᵉ débit)." + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })
