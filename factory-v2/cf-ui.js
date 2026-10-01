@@ -576,7 +576,7 @@
   // Production : lit prodModel(), LE modèle de l'onglet Production (vidéos à générer, jours de contenu : mêmes chiffres).
   var KIND_PL = { hook: ['hook', 'hooks'], liaison: ['liaison', 'liaisons'], cta: ['CTA', 'CTA'], contenu: ['contenu', 'contenus'],
     transformation: ['transformation', 'transformations'], avatar: ['avatar', 'avatars'], musique: ['musique', 'musiques'],
-    'sous-titre': ['style de sous-titres', 'styles de sous-titres'], 'texte-choc': ['texte choc', 'textes choc'], autre: ['autre', 'autres'] };
+    'sous-titre': ['style de sous-titres', 'styles de sous-titres'], 'texte-choc': ['texte choc', 'textes choc'], 'style-choc': ['style de texte choc', 'styles de texte choc'], autre: ['autre', 'autres'] };
   function homeProdCard() {
     var M = prodModel(), D = M.D;
     function na(k, label, o) { return M.pending ? hstat(k, '…', label, 'chargement', o) : hstat(k, '—', label, M.why, o); }
@@ -862,13 +862,14 @@
     { k: 'sous-titre', t: 'Sous-titres', ic: 'subs', sub: 'styles' },
     { k: 'transformation', t: 'Transformation', ic: 'swap2', sub: 'transformations' },
     { k: 'avatar', t: 'Avatar', ic: 'user', sub: 'avatars' },
-    { k: 'texte-choc', t: 'Texte choc', ic: 'zap', sub: 'phrases choc · Texte + musique' }   // Axel 27/09 (TH01…)
+    { k: 'texte-choc', t: 'Texte choc', ic: 'zap', sub: 'phrases choc · Texte + musique' },   // Axel 27/09 (TH01…)
+    { k: 'style-choc', t: 'Style texte choc', ic: 'subs', sub: 'styles tirés au hasard' }   // Axel 01/10 (CS01…)
   ];
   var PKM = {};
   PK.forEach(function (x) { PKM[x.k] = x; });
   // Sélecteurs des briques plus / moins performantes et de la fraîcheur (maquette). Seules les briques PARLÉES (hook,
   // liaison, CTA) sont reconnues dans l'audio des reels : les autres ne sont « pas encore mesurables ».
-  var PERF_KINDS = [['hook', 'Hooks'], ['avatar', 'Avatars'], ['cta', 'CTA'], ['liaison', 'Liaisons'], ['contenu', 'Démos'], ['musique', 'Musiques'], ['sous-titre', 'Sous-titres']];
+  var PERF_KINDS = [['hook', 'Hooks'], ['avatar', 'Avatars'], ['cta', 'CTA'], ['liaison', 'Liaisons'], ['contenu', 'Démos'], ['musique', 'Musiques'], ['sous-titre', 'Sous-titres'], ['style-choc', 'Styles choc']];
   var HEARD = { hook: 1, liaison: 1, cta: 1 };
   var FEM = { liaison: 1, musique: 1, contenu: 1 };   // « Démos les plus performantes »
   var NOT_YET = 'pas encore mesurable';   // briques non parlées : pas reconnues dans l'audio des reels (arrivera avec les productions)
@@ -3304,7 +3305,7 @@
     $('cfModalBody').scrollTop = 0;
     var t = $('cfModalTitle'); if (t) { t.tabIndex = -1; t.focus(); }
   }
-  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook', 'texte-choc': 'Texte choc' };
+  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook', 'texte-choc': 'Texte choc', 'style-choc': 'Style de texte choc' };
   function fMmss(v) { var t = Math.round(v); return p2(Math.floor(t / 60)) + ':' + p2(t % 60); }
   var PLAY_P = 'M7 4l13 8-13 8z', PAUSE_P = 'M6 4h4v16H6zM14 4h4v16h-4z';
   function glyph(p, s) { return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="' + p + '"/></svg>'; }
@@ -3383,6 +3384,10 @@
       };
       media = '<div class="cf-bs-ab">' + ab(m.before, 'avant') + ab(m.after, 'après') + '</div>';
       if ((m.before && m.before.label) || (m.after && m.after.label)) b.label = ((m.before && m.before.label) || '—') + ' → ' + ((m.after && m.after.label) || '—');
+    } else if (b.kind === 'style-choc') {
+      // style du texte choc (CSxx, 01/10) : vignette d'aperçu (meta.cover)
+      var cp = fb && (mediaSrc(fb.poster) || mediaSrc(fb.image));
+      media = cp ? '<div class="cf-sheet-media"><img src="' + esc(cp) + '" alt="' + esc('Aperçu du style ' + b.id) + '" decoding="async"></div>' : ph('style · ' + b.id);
     } else if (b.kind === 'sous-titre') {
       // aperçu vidéo du style (meta.media) et sa vignette (meta.poster / cover)
       var sv = fb && mediaSrc(fb.video), sp = fb && (mediaSrc(fb.poster) || mediaSrc(fb.image));

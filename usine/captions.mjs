@@ -223,6 +223,11 @@ function burn(video, output, words, opts = {}) {
  .cs-CS13 .cl>span{border-radius:14px;box-shadow:0 3px 0 #111}
  .cs-CS16{font-weight:900;color:#fff;text-shadow:0 3px 10px rgba(0,0,0,.55)}
  .cs-CS16 .cl>span{background:linear-gradient(transparent 52%,#E8261C 52%,#E8261C 90%,transparent 90%);box-shadow:none;border-radius:0}
+ /* CS17 Snapchat (Axel 01/10) : bandeau noir translucide PLEINE LARGEUR, texte blanc qui se ré-enchaîne en 1-2 lignes */
+ .cs-CS17{left:0!important;width:1080px!important;background:rgba(0,0,0,.6);color:#fff;font-family:'Inter',sans-serif;font-weight:500;font-size:58px!important;line-height:72px!important;padding:14px 40px;box-sizing:border-box;text-align:center}
+ .cs-CS17 .cl{display:inline}
+ .cs-CS17 .cl>span{display:inline;background:none;box-shadow:none;border-radius:0;padding:0;white-space:normal}
+ .cs-CS17 .cl:not(:last-child)>span::after{content:' '}
  .cs-CS15{font-weight:800;color:#fff}
  .cs-CS15 .cl>span{background:#111;border-left:.22em solid #E8261C;border-radius:4px}
 </style></head><body>
@@ -236,7 +241,7 @@ function burn(video, output, words, opts = {}) {
  <script>
    // filet de sécurité : une ligne de la phrase choc plus large que prévu → police réduite (jamais hors de sa boîte),
    // mesurée une fois les polices chargées (toujours depuis la taille prévue)
-   (function(){ const c=document.getElementById('choc'); if(!c) return; const max=+c.dataset.maxw||0, fs0=parseFloat(c.style.fontSize), lh0=parseFloat(c.style.lineHeight);
+   (function(){ const c=document.getElementById('choc'); if(!c || c.classList.contains('cs-CS17')) return;   // Snapchat : taille fixe, le texte se ré-enchaîne const max=+c.dataset.maxw||0, fs0=parseFloat(c.style.fontSize), lh0=parseFloat(c.style.lineHeight);
      const fit=()=>{ c.style.fontSize=fs0+'px'; c.style.lineHeight=lh0+'px'; let w=0;
        c.querySelectorAll('.cl>span').forEach(s=>{ w=Math.max(w, s.getBoundingClientRect().width); });
        const pad=parseFloat(getComputedStyle(c).getPropertyValue('--px'))*2||0;

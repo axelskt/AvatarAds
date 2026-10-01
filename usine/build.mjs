@@ -60,9 +60,9 @@ if (music === 'auto') {
     catch { console.error('✗ musique ' + id + ' introuvable'); process.exit(2); }
   } lastPick.musique = id; console.log('  musique tirée : ' + id);
 }
-// STYLE DU TEXTE CHOC (Axel 01/10) : 11 styles validés (CS06 néon retiré, CS16 surligneur rouge ajouté), tiré au hasard par défaut (--choc-style CSxx pour forcer), jamais
+// STYLE DU TEXTE CHOC (Axel 01/10) : 12 styles validés (CS06 néon retiré ; CS16 surligneur rouge, CS17 Snapchat ajoutés), tiré au hasard par défaut (--choc-style CSxx pour forcer), jamais
 // le même que la vidéo précédente ; noté dans le sidecar (style_choc) → ID complet de la vidéo (…_THxx_CSxx…) et recette.
-const CHOC_STYLES = ['CS01', 'CS02', 'CS03', 'CS05', 'CS07', 'CS08', 'CS10', 'CS11', 'CS13', 'CS15', 'CS16'];
+const CHOC_STYLES = ['CS01', 'CS02', 'CS03', 'CS05', 'CS07', 'CS08', 'CS10', 'CS11', 'CS13', 'CS15', 'CS16', 'CS17'];
 if (OPT['choc-style'] && !CHOC_STYLES.includes(OPT['choc-style'])) { console.error('✗ --choc-style inconnu : ' + OPT['choc-style'] + ' (' + CHOC_STYLES.join(' ') + ')'); process.exit(2); }
 const chocStyle = OPT['choc-style'] || draw(CHOC_STYLES, lastPick.style_choc);
 if (OPT['subs-style'] === 'auto') { OPT['subs-style'] = draw(SUBS_ALL, lastPick.sous_titre); lastPick.sous_titre = OPT['subs-style']; console.log('  sous-titres tirés : ' + OPT['subs-style']); }
