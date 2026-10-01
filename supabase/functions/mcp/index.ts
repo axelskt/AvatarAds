@@ -909,7 +909,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         properties: {
           prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français)." },
           duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6, 8 ou 10 (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
-          product_url: { type: 'string', description: "Lien de la PAGE PRODUIT quand l'utilisateur veut une vidéo d'une personne qui présente ce produit : passe-le ici, dans CE seul appel (pas de generate_image avant). La photo du produit est récupérée côté serveur, la photo de départ est générée avec le produit en main (+3 crédits), puis la vidéo se lance — tout s'affiche dans la même carte. Si le site bloque la récupération, la vidéo se fait quand même d'après la description." },
+          product_url: { type: 'string', description: "Lien de la PAGE PRODUIT quand l'utilisateur veut une vidéo d'une personne qui présente ce produit : passe-le ici, dans CE seul appel (pas de generate_image avant). La photo du produit est récupérée côté serveur, la photo de départ est générée avec le produit en main (+3 crédits), puis la vidéo se lance — tout s'affiche dans la même carte. Beaucoup de grandes marques (Louis Vuitton, Dior, Chanel…) bloquent la récupération : DÉCRIS TOUJOURS le produit visuellement dans prompt (marque, nom, forme du flacon / emballage, couleur, bouchon, inscriptions), d'après ce que tu sais de lui — c'est cette description qui sert si la photo est bloquée." },
           user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           image_url: { type: 'string', description: "URL publique http(s) d'une image de départ (optionnel) : une image de generate_image, ou un lien collé par l'utilisateur. ⚠️ claude.ai ne transmet PAS les images jointes au chat : pour une photo JOINTE, n'utilise pas image_url, mets user_photo:true (la carte la lui fait déposer)." },
@@ -1950,7 +1950,20 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
             if (iu) { const g = await fetchUserFile(iu, 10_000_000, /^image\/(png|jpe?g|webp)$/, 'la photo du produit'); if (typeof g !== 'string') ref = g }
           } catch (_) { /* sans référence */ }
         }
-        const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image — same bottle/packaging shape, colours, logo and label, identical and legible.' : ''),
+        // Sans référence (site qui bloque, Axel 01/10 : un parfum Louis Vuitton est sorti en flacon Chanel) : nom du produit tiré du
+        // lien + INTERDIT absolu d'afficher le produit / logo d'une AUTRE marque.
+        let sansRef = ''
+        if (!ref && o.productUrl) {
+          let nom = '', marque = ''
+          try {
+            const pu = new URL(o.productUrl)
+            marque = pu.hostname.replace(/^(www|fr|en|us|uk|eu|shop|store)\./i, '').split('.')[0]
+            const seg = pu.pathname.split('/').filter((x) => /[a-z]{3,}/i.test(x) && !/^(fr|en|fra-fr|produits?|products?|p|item|shop)$/i.test(x)).sort((a, b) => b.length - a.length)[0] || ''
+            nom = decodeURIComponent(seg).replace(/\.[a-z]+$/i, '').split(/[-_]+/).filter((w) => !/\d/.test(w)).join(' ').slice(0, 80)
+          } catch (_) { /* lien illisible */ }
+          sansRef = ` PRODUCT: the product is « ${nom || 'the product described above'} » by the brand of ${marque || 'the request'}; render it ONLY as described in the request above (shape, colour, cap, engraving). NEVER show another brand's product, bottle, logo or label (no Chanel, Dior, YSL or any other brand) — if a detail is unknown, keep any printed text minimal and generic rather than inventing a different brand.`
+        }
+        const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image — same bottle/packaging shape, colours, logo and label, identical and legible.' : sansRef),
           o.aspect === '16:9' ? '1536x1024' : '1152x2048', 'standard', ref)
         if (!('bytes' in gi)) throw new ErrClient('photo de départ : ' + (gi.error || 'génération impossible') + ' — rien débité, réessaie')
         buf = gi.bytes
