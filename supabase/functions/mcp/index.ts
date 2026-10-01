@@ -606,7 +606,7 @@ function aaAskPhoto(){
   var pl=document.getElementById('pl'), go=document.getElementById('go');
   if(aaForVideo){   // vidéo : la photo de départ seulement (pas de « Sans photo », pas de lien produit)
     var _t=dz.querySelector('div'); if(_t) _t.textContent='Dépose ta photo de départ';
-    var _s=dz.querySelectorAll('div')[1]; if(_s) _s.textContent='Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — la vidéo se lance dès qu\'elle est déposée';
+    var _s=dz.querySelectorAll('div')[1]; if(_s) _s.textContent='Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — la vidéo se lance dès que tu la déposes';
     var _sk=document.getElementById('skip'); if(_sk) _sk.style.display='none';
     if(pl&&pl.parentNode) pl.parentNode.style.display='none';
   }
