@@ -5,6 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
+import { expressOmniPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompt Omni Flash « UGC réel » IDENTIQUE à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
@@ -904,7 +905,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
       inputSchema: {
         type: 'object',
         properties: {
-          prompt: { type: 'string', description: 'Description de la vidéo : scène, mouvement, ambiance, dialogues éventuels.' },
+          prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français)." },
           duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6 ou 8 sans image (défaut 8) ; 4, 6, 8 ou 10 avec image de départ ou photo déposée (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
           user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
@@ -2004,7 +2005,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: EXPRESS_FRENCH + prompt + EXPRESS_PRODUCT + EXPRESS_ENDING + EXPRESS_FRENCH_END })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: EXPRESS_FRENCH + expressOmniPrompt(prompt) + EXPRESS_FRENCH_END })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
     prompt: EXPRESS_FRENCH + prompt + EXPRESS_ENDING + EXPRESS_FRENCH_END, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
@@ -3868,7 +3869,7 @@ serve(async (req) => {
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookV || !tookV.length) return json(409, { error: 'not_pending' })
       runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: urlV, aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-        prompt: EXPRESS_FRENCH + String(params.prompt || '') + EXPRESS_PRODUCT + EXPRESS_ENDING + EXPRESS_FRENCH_END })
+        prompt: EXPRESS_FRENCH + expressOmniPrompt(String(params.prompt || '')) + EXPRESS_FRENCH_END })
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
     }
     const pArgs = (params.args || {}) as Record<string, unknown>
