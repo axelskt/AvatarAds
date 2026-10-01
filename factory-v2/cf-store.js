@@ -557,7 +557,7 @@
   function normReelRecipe(r) {
     if (!r || typeof r !== 'object') return null;
     var ok = function (x) { return typeof x === 'string' && /^[A-Za-z0-9._-]{1,120}$/.test(x) ? x : null; }, ids = [];
-    ['avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'texte_choc', 'transformation', 'assemblage', 'hook_broll'].forEach(function (k) {
+    ['avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'texte_choc', 'style_choc', 'transformation', 'assemblage', 'hook_broll'].forEach(function (k) {
       String(r[k] == null ? '' : r[k]).split('+').forEach(function (v) { v = ok(v.trim()); if (v && ids.indexOf(v) < 0) ids.push(v); });
     });
     return ids.length ? { id: ok(r.id_complet) || ok(r.vf), vf: ok(r.vf), photo: ok(r.photo), ids: ids } : null;
@@ -851,7 +851,7 @@
   var COMBO_KEYS = ['voice', 'avatar', 'photo', 'hook', 'liaison', 'contenu', 'cta', 'musique', 'sous_titre', 'assemblage'];   // assemblage = recette HK (avant / après)
   // format de hook testé (F01…) et phrase choc (TH01…) : usine/formats.js, écrits par publish-qc.mjs (26/09) ; gardés À PART
   // (q.format, q.texteChoc) : ce ne sont pas des briques de la vidéo, jamais dans sa clé voix|avatar|hook|liaison.
-  var COMBO_FMT = { format: /^F[0-9]{2}$/, texte_choc: /^TH[0-9]{2}$/ };
+  var COMBO_FMT = { format: /^F[0-9]{2}$/, texte_choc: /^TH[0-9]{2}$/, style_choc: /^CS[0-9]{2}$/ };   // style_choc : style du texte choc (01/10)
   function normCombo(c) {
     if (!c || typeof c !== 'object' || Array.isArray(c)) return { ids: null, legacy: null, fmt: null };
     var keys = Object.keys(c), ids = {}, fmt = {}, ok = keys.length > 0;

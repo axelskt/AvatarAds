@@ -129,7 +129,8 @@ function burn(video, output, words, opts = {}) {
       return null;
     };
     const line = l => esc(l).replace(EMOJI, m => { const f = appleEmoji(m); return f ? `<img class="emj" src="${f}" alt="">` : `<span class="em">${m}</span>`; });
-    chocHtml = `<div class="choc clip" id="choc" data-start="0" data-duration="${end.toFixed(3)}" data-maxw="${L.maxW}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;`
+    const cs = /^CS\d{2}$/.test(String(choc.style || '')) ? choc.style : 'CS01';   // style du texte choc (Axel 01/10, 11 styles validés)
+    chocHtml = `<div class="choc clip cs-${cs}" id="choc" data-start="0" data-duration="${end.toFixed(3)}" data-maxw="${L.maxW}" style="left:${L.x}px;top:${L.y}px;width:${L.w}px;`
       + `--jc:${L.align === 'left' ? 'flex-start' : 'center'};font-size:${L.size}px;line-height:${L.lineH}px;--px:${L.padX}px;--py:${L.padY}px">`
       + L.lines.map(l => `<div class="cl"><span>${line(l)}</span></div>`).join('') + `</div>`;
     // visible pleine opacité dès 0 (couverture) ; sortie courte juste avant la fin
@@ -203,6 +204,27 @@ function burn(video, output, words, opts = {}) {
  /* emoji : Noto Color Emoji (police Google, embarquée par HyperFrames) — JAMAIS Apple Color Emoji (183 Mo embarqués → rendu à court de mémoire) */
  .choc .em{font-family:'Noto Color Emoji',sans-serif;font-weight:400}
  .choc .emj{height:1.08em;width:auto;vertical-align:-0.2em;margin-left:.12em}
+ /* 11 styles de texte choc validés par Axel le 01/10 (planche CS01-CS15 ; refusés : CS04 orange, CS09 carte unique,
+    CS12 dégradé, CS14 sticker penché ; JAMAIS de jaune). CS01 = la base ci-dessus (bandeau blanc natif TikTok). */
+ .cs-CS02 .cl>span{background:#111;color:#fff}
+ .cs-CS03 .cl>span{background:#E8261C;color:#fff;font-weight:800}
+ .cs-CS05{font-family:'Montserrat',sans-serif;font-weight:900;color:#fff}
+ .cs-CS05 .cl>span{background:none;box-shadow:none;-webkit-text-stroke:.14em #000;paint-order:stroke fill;padding:0 .1em}
+ .cs-CS06{font-weight:900;color:#fff}
+ .cs-CS06 .cl>span{background:none;box-shadow:none;text-shadow:0 0 .12em #fff,0 0 .35em #ff2a3d,0 0 .7em #ff2a3d,0 0 1.2em #ff2a3d}
+ .cs-CS07{color:#fff;font-weight:800}
+ .cs-CS07 .cl>span{background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.45);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);text-shadow:0 2px 8px rgba(0,0,0,.35)}
+ .cs-CS08{color:#fff;font-weight:600}
+ .cs-CS08 .cl>span{background:#0A84FF;border-radius:.62em}
+ .cs-CS08 .cl:last-child>span{border-bottom-right-radius:.12em}
+ .cs-CS10{font-weight:900;color:#fff;text-shadow:0 3px 10px rgba(0,0,0,.55)}
+ .cs-CS10 .cl>span{background:linear-gradient(transparent 52%,#1FCB6A 52%,#1FCB6A 90%,transparent 90%);box-shadow:none;border-radius:0}
+ .cs-CS11{font-family:'Anton',sans-serif;font-weight:400;color:#fff;letter-spacing:.01em;text-transform:uppercase}
+ .cs-CS11 .cl>span{background:none;box-shadow:none;text-shadow:.07em .07em 0 #000}
+ .cs-CS13{font-family:'Courier Prime',monospace;font-weight:700}
+ .cs-CS13 .cl>span{border-radius:4px;box-shadow:0 3px 0 #111}
+ .cs-CS15{font-weight:800;color:#fff}
+ .cs-CS15 .cl>span{background:#111;border-left:.22em solid #E8261C;border-radius:4px}
 </style></head><body>
  <div id="root" class="${stCls}" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>

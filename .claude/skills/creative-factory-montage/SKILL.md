@@ -95,6 +95,7 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
   = S01-S19 + S21 (tous en CSS dans captions.mjs). Suivi des perfs : ig-insights relie chaque reel publié à sa ligne
   `factory_posts` (même compte + même légende + ±48 h) → `media_id`, statut `published`, `m.recipe` (ID complet + briques).
 - `--choc-size N` : taille du texte choc forcée. Par défaut (01/10) la plus grande de 78 → 41 px qui tient dans la zone sûre ; hook avant/après = rectangle large qui peut mordre sur la moitié gauche du médaillon (Axel : jamais une colonne étroite).
+- `--choc-style CSxx` : style du texte choc forcé ; par défaut TIRÉ AU HASARD parmi les 11 validés (CS01 natif blanc, CS02 natif noir, CS03 rouge, CS05 contour, CS06 néon rouge, CS07 verre dépoli, CS08 bulle iMessage, CS10 surligneur vert, CS11 capitales Anton, CS13 machine à écrire, CS15 bandeau info), jamais le même que la vidéo d'avant. Noté `style_choc` dans le sidecar → dans l'ID (après THxx) et la recette (factory_posts.combo / factory_qc.brick_combo).
 - Briques à refaire avant réemploi : `factory_bricks.meta.a_refaire` (ex. L48 × A1-8, lipsync raté) → ne pas les assembler.
 - `--subs-style boite` : sous-titres en pastilles blanches texte noir (brique S21) ; défaut `contour` (S02).
 
@@ -152,7 +153,7 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
 - **Aucune vidéo sur le Mac d'Axel** (disque plein 30/09) : rendu dans le scratchpad → upload `factory-media/final/` →
   `rm` du fichier local. Axel regarde via le kit ou le lien public Supabase.
 - **Nom = ID complet de la recette** (Axel 30/09), dans cet ordre, les parties absentes sautées :
-  `VF-0001_<photo>_<hook>_<liaison>_<démo>_<CTA>_<musique>_<sous-titres>_<texte choc>_<transformation>` →
+  `VF-0001_<photo>_<hook>_<liaison>_<démo>_<CTA>_<musique>_<sous-titres>_<texte choc>_<style choc CSxx>_<transformation>` →
   `VF-0004_A2-8_H14_L70_C-IMGIA-07_CTA-AVATAR_M01_S21_TH15`, `VF-0003_A1-8_H23_C-OMNI-01_CTA-PLAN_M06_S02_TH07_HK-O2-0a`.
   Sous-titres = ID de brique (S02 contour, S21 boîte). Le kit affiche ce nom tel quel.
 - Données : `factory_posts` (kit : video_url + combo complet : vf, photo, hook, liaison, contenu, cta, musique,

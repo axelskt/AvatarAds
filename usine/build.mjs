@@ -27,7 +27,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-size', '--illus'];
+const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -60,6 +60,11 @@ if (music === 'auto') {
     catch { console.error('✗ musique ' + id + ' introuvable'); process.exit(2); }
   } lastPick.musique = id; console.log('  musique tirée : ' + id);
 }
+// STYLE DU TEXTE CHOC (Axel 01/10) : 11 styles validés, tiré au hasard par défaut (--choc-style CSxx pour forcer), jamais
+// le même que la vidéo précédente ; noté dans le sidecar (style_choc) → ID complet de la vidéo (…_THxx_CSxx…) et recette.
+const CHOC_STYLES = ['CS01', 'CS02', 'CS03', 'CS05', 'CS06', 'CS07', 'CS08', 'CS10', 'CS11', 'CS13', 'CS15'];
+if (OPT['choc-style'] && !CHOC_STYLES.includes(OPT['choc-style'])) { console.error('✗ --choc-style inconnu : ' + OPT['choc-style'] + ' (' + CHOC_STYLES.join(' ') + ')'); process.exit(2); }
+const chocStyle = OPT['choc-style'] || draw(CHOC_STYLES, lastPick.style_choc);
 if (OPT['subs-style'] === 'auto') { OPT['subs-style'] = draw(SUBS_ALL, lastPick.sous_titre); lastPick.sous_titre = OPT['subs-style']; console.log('  sous-titres tirés : ' + OPT['subs-style']); }
 try { mkdirSync(dirname(LASTF), { recursive: true }); writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
 if (!hook || !demoSrc || !out) { console.error('usage: build.mjs <hook> <demo> <out> [music] [hookVoice] [cta] [ctaCap] [ctaLead] [--format …]'); process.exit(1); }
@@ -467,8 +472,9 @@ if (FMT.hasChoc(format)) {
   if (why) layout.reasons = layout.reasons.concat('texte choc : ' + why), layout.level = 'review';
   Object.assign(sidecar, { texte_choc: p.id, texte: text, choc_end: +end.toFixed(3), layout,
     faces: { n: fz.faces ? fz.faces.length : null, frames: fz.frames, error: fz.error || null, boxes: fz.faces, forced: !!fz.forced } });
-  capOpts.choc = { text, end, layout };
-  console.log(`  phrase choc ${p.id} (${layout.zone}, ${layout.size} px, ${layout.lines.length} ligne(s)) 0-${end.toFixed(2)} s` + (layout.level !== 'ok' ? ' ⚠ revue : ' + layout.reasons.join(' · ') : ''));
+  capOpts.choc = { text, end, layout, style: chocStyle }; sidecar.style_choc = chocStyle; lastPick.style_choc = chocStyle;
+  try { writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
+  console.log(`  phrase choc ${p.id} style ${chocStyle} (${layout.zone}, ${layout.size} px, ${layout.lines.length} ligne(s)) 0-${end.toFixed(2)} s` + (layout.level !== 'ok' ? ' ⚠ revue : ' + layout.reasons.join(' · ') : ''));
 }
 sidecar.combo = { format: format.id, ...(sidecar.texte_choc ? { texte_choc: sidecar.texte_choc } : {}) };
 if (illusLog.length) sidecar.illustrations = illusLog;
