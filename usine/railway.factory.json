@@ -6,7 +6,7 @@
     "watchPatterns": [
       "usine/**",
       "Dockerfile.factory",
-      "railway.json"
+      "usine/railway.factory.json"
     ]
   },
   "deploy": {
