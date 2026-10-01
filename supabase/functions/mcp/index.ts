@@ -479,7 +479,7 @@ const rpcResult = (id: unknown, result: unknown) => json(200, { jsonrpc: '2.0', 
 const rpcError = (id: unknown, code: number, message: string) =>
   json(200, { jsonrpc: '2.0', id, error: { code, message } })
 type ToolContent = { content: Array<Record<string, unknown>>; isError?: boolean; structuredContent?: Record<string, unknown> }
-const toolText = (t: string): ToolContent => ({ content: [{ type: 'text', text: t }] })
+const toolText = (t: string, sc?: Record<string, unknown>): ToolContent => ({ content: [{ type: 'text', text: t }], ...(sc ? { structuredContent: sc } : {}) })
 const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t }], isError: true })
 
 // ── ANNONCER UN MÉDIA, PAS SEULEMENT SON URL ────────────────────────────────
@@ -515,7 +515,7 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo };
+  return { waiting:!!sc.waiting, url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -577,6 +577,7 @@ function aaShow(out){
     if(d.format) aaFormat=d.format;
     if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap; if(d.forVideo) aaForVideo=true;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
+    if(d.waiting){ aaOk=true; var mw=document.getElementById('m'); if(mw){ mw.style.opacity='.75'; mw.textContent='En attente de la photo dans la carte au-dessus \u2014 rien n\u2019est en cours.'; } aaKick(); return; }   // Axel 01/10 : jamais de fausse barre
     if(d.pending){ aaAskPhoto(); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
@@ -1403,7 +1404,7 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
   if (job.status === 'pending') {
     const lf = String(((job.params as Record<string, unknown> | null) || {}).link_failed || '')
     return toolText(`📷 Rien n'est en cours : la carte attend la PHOTO du produit${lf ? " (le site du lien bloque la récupération de l'image)" : ''}. Rien n'a été débité.
-RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose la photo du produit dans la carte, l'image se génère toute seule. » N'appelle PLUS check_image ni aucun autre outil pour cette image : la carte lance et affiche la génération elle-même.`)
+RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose la photo du produit dans la carte, l'image se génère toute seule. » N'appelle PLUS check_image ni aucun autre outil pour cette image : la carte lance et affiche la génération elle-même.`, { waiting: true, kind: 'image' })
   }
   if (job.status === 'done' && job.result_url) {
     // blocImage réduit désormais À LA VOLÉE (768 px JPEG) : l'image s'affiche
@@ -2087,7 +2088,7 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   const job = found && (found.kind === 'video' || isFlash) ? found : null
   if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
   if (job.status === 'pending') return toolText(`📷 Rien n'est en cours : la carte attend la PHOTO de départ. Rien n'a été débité.
-RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose ta photo dans la carte, la vidéo se lance toute seule. » N'appelle PLUS check_video ni aucun autre outil pour cette vidéo.`)
+RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose ta photo dans la carte, la vidéo se lance toute seule. » N'appelle PLUS check_video ni aucun autre outil pour cette vidéo.`, { waiting: true, kind: 'video' })
   if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
   if (isFlash) return {   // Omni Flash : le widget de la carte suit /status (qui avance le job) et affiche la vidéo
