@@ -17,7 +17,7 @@ function _expEnvLock(p){
 function _expSpeechLock(p){
   const line=_expQuotedLine(p);
   const kw=_expCommentKeyword(line);
-  const _noEnd = (window._expVeoModel==='omni');   // Omni Flash clôt la fin naturellement → pas de verrou de fin
+  const _noEnd = false;   // Axel 02/10 : Omni Flash NE clôt PAS proprement (l'avatar parlait jusqu'à la coupe) → verrou de fin pour TOUS les moteurs
   // « SITE » en MAJUSCULES pousse Veo à ÉPELER (« S-site »). Dans la ligne PARLÉE on met le mot-clé en
   // minuscule → prononciation naturelle ; l'emphase (geste/voix) reste imposée par l'instruction plus bas.
   const lineSpoken = (kw && /^[A-ZÀ-Ÿ0-9]{2,}$/.test(kw)) ? line.split(kw).join(kw.toLowerCase()) : line;

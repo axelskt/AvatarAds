@@ -547,7 +547,7 @@ function aaMedia(url, kind, name){
     : '<img src="'+url+'" alt="" class="aa-m"/>';
   if(v && aaPrev){   // Axel 01/10 : la photo de départ (payée) reste livrée au-dessus de la vidéo
     m.insertAdjacentHTML('afterbegin', '<div style="text-align:center;margin:0 0 10px"><img src="'+aaPrev+'" alt="" class="aa-m" style="max-height:420px"><div style="margin-top:6px"><button class="aa-a aa-rg" id="dlp" type="button" style="border:none;cursor:pointer">Télécharger la photo</button></div></div>');
-    var dlp=document.getElementById('dlp'); if(dlp) dlp.onclick=function(){ aaSend('ui/open-link', { url:aaPrev }); };
+    var dlp=document.getElementById('dlp'); if(dlp) dlp.onclick=function(){ aaSend('ui/open-link', { url: aaJobId ? ('https://mcp.avatarads.fr/i/'+aaJobId+'?photo=1&download=photo-depart.png') : aaPrev }); };
   }
   var media=m.querySelector('video');
   if(!media) media=m.querySelector('img');
@@ -913,7 +913,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
       inputSchema: {
         type: 'object',
         properties: {
-          prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français)." },
+          prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français). ⏱ Elle DOIT tenir dans la durée avec une demi-seconde de silence à la fin : 2 mots par seconde AU MAXIMUM — 4 s ≈ 7 mots, 6 s ≈ 11 mots, 8 s ≈ 15 mots, 10 s ≈ 19 mots. Trop longue = coupée en pleine phrase : raccourcis-la ou choisis une durée plus longue." },
           duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6, 8 ou 10 (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
           product_url: { type: 'string', description: "Lien de la PAGE PRODUIT quand l'utilisateur veut une vidéo d'une personne qui présente ce produit : passe-le ici, dans CE seul appel (pas de generate_image avant). La photo OFFICIELLE du produit est récupérée côté serveur, la photo de départ est générée avec ce produit en main (+3 crédits), puis la vidéo se lance — tout dans la même carte. Si le site bloque la récupération (Louis Vuitton, Dior, Chanel…), la carte le dit et demande de déposer la photo du produit : on n'invente JAMAIS le produit." },
           user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
@@ -1960,15 +1960,19 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
       if (!o.imageUrl && o.genImage) {   // la photo de départ générée s'affiche dans la carte pendant la vidéo (/status → preview)
         // Axel 01/10 : tout ce qui est PAYÉ est LIVRÉ — la photo de départ (3 cr) reste dans la carte avec son « Télécharger »,
         // au-dessus de la vidéo, et part dans la Bibliothèque du compte.
-        let prevUrl = staged.url
+        let prevUrl = staged.url, fullUrl = ''
         try {
           const png = buf[0] === 0x89 && buf[1] === 0x50, ext = png ? 'png' : 'jpg', mime = png ? 'image/png' : 'image/jpeg'
           const pth = `${o.userId}/start-${o.jobId}.${ext}`
           const { error: upE } = await svc.storage.from('mcp-media').upload(pth, buf, { contentType: mime, upsert: true })
           if (!upE) prevUrl = `${MEDIA_PUB}${pth}`
+          fullUrl = prevUrl
+          // aperçu LÉGER pour la carte (Axel 01/10 : la photo pleine résolution, 2-3 Mo, n'apparaissait qu'avec la vidéo)
+          const petit = await fabriquerApercu(buf)
+          if (petit) { const pa = `${o.userId}/start-${o.jobId}-apercu.jpg`; const { error: paE } = await svc.storage.from('mcp-media').upload(pa, petit, { contentType: 'image/jpeg', upsert: true }); if (!paE) prevUrl = `${MEDIA_PUB}${pa}` }
           await saveToLibrary(o.userId, buf, ext, mime, 'image', 'Photo de départ (vidéo Express)')
         } catch (_) { /* filet */ }
-        try { const { data: cj } = await svc.from('mcp_jobs').select('params').eq('id', o.jobId).maybeSingle(); await svc.from('mcp_jobs').update({ params: { ...((cj?.params as Record<string, unknown>) || {}), preview: prevUrl } }).eq('id', o.jobId) } catch (_) { /* aperçu facultatif */ }
+        try { const { data: cj } = await svc.from('mcp_jobs').select('params').eq('id', o.jobId).maybeSingle(); await svc.from('mcp_jobs').update({ params: { ...((cj?.params as Record<string, unknown>) || {}), preview: prevUrl, start_full: fullUrl } }).eq('id', o.jobId) } catch (_) { /* aperçu facultatif */ }
       }
       let r: Response
       try {
@@ -3850,7 +3854,11 @@ serve(async (req) => {
   // média. L'URL storage est déjà publique (bucket mcp-media public) : on ne fait
   // qu'un raccourci propre à la place du long lien supabase brut. Aucune auth.
   if (segs[1] === 'i' && segs[2]) {
-    const { data: j } = await svc.from('mcp_jobs').select('result_url, kind').eq('id', segs[2]).maybeSingle()
+    const { data: j0 } = await svc.from('mcp_jobs').select('result_url, kind, params').eq('id', segs[2]).maybeSingle()
+    // ?photo=1 (Axel 01/10) : la PHOTO DE DÉPART d'une vidéo Express, téléchargée via ce lien de marque (jamais un lien Supabase)
+    const photo = new URL(req.url).searchParams.get('photo') === '1'
+    const startFull = String(((j0?.params as Record<string, unknown> | null) || {}).start_full || ((j0?.params as Record<string, unknown> | null) || {}).preview || '')
+    const j = photo ? (startFull ? { result_url: startFull, kind: 'image' } : null) : j0
     const dest = j?.result_url ? await signMedia(String(j.result_url), 3600) : ''   // mcp-media privé : lien signé 1 h
     if (!dest) return new Response('Média introuvable', { status: 404, headers: cors })
     // signature impossible = fichier purgé (RGPD, 28/09 : médias créés via Claude conservés 30 jours) → message clair
