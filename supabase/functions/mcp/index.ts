@@ -1647,6 +1647,9 @@ let _lastReconcile = 0
 // PRODUIT (Axel 30/09, vidéo SVR : étiquette réécrite de travers, pompe actionnée sans que rien ne sorte) : écriture du
 // produit à l'identique et nette. (Le « jamais de geste à vide » attendra : décision d'Axel.) Ajoutée quand une image de départ est fournie.
 const EXPRESS_PRODUCT = ' PRODUCT RULE: if a product is visible, its packaging stays EXACTLY as in the source image for the whole clip — same label, same logo, same colours, every word of printed text letter-for-letter, sharp and legible, never redrawn, blurred, warped or re-spelled.'
+// Axel 01/10 : les avatars parlaient ANGLAIS (Omni Flash) → français imposé, langue par défaut ET unique, en tête ET en fin de prompt.
+const EXPRESS_FRENCH = 'LANGUAGE RULE (absolute priority): every spoken word in this video is in FRENCH (France), native accent, natural spoken French — never English, never any other language, even if the description below is written in English; translate any dialogue into natural French before speaking it. '
+const EXPRESS_FRENCH_END = ' REMINDER: the person speaks ONLY French (France) — no English word at all.'
 const EXPRESS_ENDING = ' ENDING RULE: the clip must end cleanly — the person finishes their current sentence, closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or a new gesture in the final second, never cut mid-word or mid-motion.'
 
 // ── FILE D'ATTENTE DES SOUMISSIONS VEO (11/09, Axel : « la file d'attente, fais-le proprement ») ──
@@ -2001,9 +2004,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: prompt + EXPRESS_PRODUCT + EXPRESS_ENDING })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: EXPRESS_FRENCH + prompt + EXPRESS_PRODUCT + EXPRESS_ENDING + EXPRESS_FRENCH_END })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
-    prompt: prompt + EXPRESS_ENDING, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
+    prompt: EXPRESS_FRENCH + prompt + EXPRESS_ENDING + EXPRESS_FRENCH_END, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
   return {
     content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
@@ -3865,7 +3868,7 @@ serve(async (req) => {
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookV || !tookV.length) return json(409, { error: 'not_pending' })
       runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: urlV, aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-        prompt: String(params.prompt || '') + EXPRESS_PRODUCT + EXPRESS_ENDING })
+        prompt: EXPRESS_FRENCH + String(params.prompt || '') + EXPRESS_PRODUCT + EXPRESS_ENDING + EXPRESS_FRENCH_END })
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
     }
     const pArgs = (params.args || {}) as Record<string, unknown>
