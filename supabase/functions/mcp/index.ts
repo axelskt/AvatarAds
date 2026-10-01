@@ -181,6 +181,8 @@ const DAILY_CAPS: Record<string, number> = { starter: 50, pro: 100, elite: 200 }
 // Axel 02/10 : « supprime les limites pour Starter, Pro et Élite, c'est inutile » → plus AUCUN plafond 24 h via le MCP
 // (la seule limite = le solde de crédits). Remettre true réactive tout le mécanisme (réservation atomique mcp_cap_reserve).
 const MCP_CAP_ON = false
+// Axel 02/10 : plus de connexion par clé dans l'URL (aa_…) — uniquement OAuth (jetons aat_…)
+const KEY_MODE_OFF = true
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -3851,6 +3853,8 @@ async function handleKeyManagement(req: Request): Promise<Response> {
     })
   }
   if (body.action === 'create') {
+    // Axel 02/10 : connexion par CLÉ DANS L'URL supprimée — OAuth uniquement (aucun lien secret qui puisse fuiter)
+    return json(410, { error: 'key_mode_disabled', message: 'La connexion par clé a été remplacée par la connexion sécurisée OAuth : utilise « Relier à Claude ».' })
     if (!planAllowed) return json(403, { error: 'plan_required' }) // réservé Pro/Élite
     const raw = new Uint8Array(24)
     crypto.getRandomValues(raw)
@@ -4321,6 +4325,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { ...cors,
       'Content-Type': 'application/json',
       'WWW-Authenticate': `Bearer resource_metadata="${oauthBase(req)}/.well-known/oauth-protected-resource"` } })
+  } else if (KEY_MODE_OFF) {
+    // Axel 02/10 : ancien mode « clé dans l'URL » COUPÉ (3 clés restantes révoquées, inutilisées depuis le 24/08) → OAuth seul
+    keyErr = 'Ce lien de connexion n’est plus valable : AvatarAds se connecte désormais à Claude via OAuth. Retire ce connecteur et ajoute https://mcp.avatarads.fr (bouton « Relier à Claude » sur ' + APP_URL + ').'
   } else {
     const { data } = await svc.from('mcp_keys').select('id, user_id, require_confirm')
       .eq('key_hash', await hashKey(key)).is('revoked_at', null).maybeSingle()
