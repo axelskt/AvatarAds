@@ -1998,6 +1998,8 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
       try { const rf = await reframeToAspect(buf, o.aspect); buf = rf.bytes } catch (_) { /* recadrage best-effort */ }
       const staged = await stageKieImage(o.userId, o.jobId, buf)
       if (!staged) throw new ErrClient('image de départ illisible — envoie un PNG, un JPG ou un WebP')
+      // photo de départ EXACTE envoyée au moteur (cadrée) → référence de la retouche après génération (Axel 02/10)
+      try { const { data: c0 } = await svc.from('mcp_jobs').select('params').eq('id', o.jobId).maybeSingle(); await svc.from('mcp_jobs').update({ params: { ...((c0?.params as Record<string, unknown>) || {}), video: true, stage_path: staged.path } }).eq('id', o.jobId) } catch (_) { /* sans retouche */ }
       if (!o.imageUrl && o.genImage) {   // la photo de départ générée s'affiche dans la carte pendant la vidéo (/status → preview)
         // Axel 01/10 : tout ce qui est PAYÉ est LIVRÉ — la photo de départ (3 cr) reste dans la carte avec son « Télécharger »,
         // au-dessus de la vidéo, et part dans la Bibliothèque du compte.
@@ -2699,14 +2701,47 @@ async function replierSurGoogle(job: Record<string, unknown>, taskId: string, vp
   }
 }
 
+// ── RETOUCHE « FORTE » APRÈS GÉNÉRATION (Axel 02/10, validée sur la vidéo AXE) ─────────────────────────────────────
+// Omni Flash lisse la peau (~25 % de grain en moins que la photo). La vidéo brute est déposée dans render-media puis un job
+// render_jobs { __compose:'retouche' } recale couleurs + netteté + grain sur la PHOTO DE DÉPART (render-worker/retouche.mjs,
+// prioritaire dans la file, ~5 s). Échec ou > 4 min → la vidéo d'origine est livrée : JAMAIS de vidéo payée perdue.
+async function lancerRetouche(userId: string, job: Record<string, unknown>, pj: Record<string, unknown>, bytes: Uint8Array): Promise<boolean> {
+  try {
+    const brut = `${userId}/mcp-retouche/${job.id}-brut.mp4`
+    const { error: upE } = await svc.storage.from('render-media').upload(brut, bytes, { contentType: 'video/mp4', upsert: true })
+    if (upE) return false
+    const { data: rj, error: rjE } = await svc.from('render_jobs').insert({ user_id: userId, status: 'queued', plan: { __compose: 'retouche' },
+      input_video: brut, assets: [{ id: 'photo', path: String(pj.stage_path) }], avatar_clips: [] }).select('id').single()
+    if (rjE || !rj) return false
+    await svc.from('mcp_jobs').update({ params: { ...pj, retouche_job: rj.id, retouche_brut: brut, retouche_at: new Date().toISOString() }, updated_at: new Date().toISOString() }).eq('id', job.id)
+    return true
+  } catch (_) { return false }
+}
+async function suivreRetouche(userId: string, job: Record<string, unknown>, pj: Record<string, unknown>): Promise<void> {
+  const { data: rj } = await svc.from('render_jobs').select('status, output_url').eq('id', String(pj.retouche_job)).maybeSingle()
+  const trop = Date.now() - new Date(String(pj.retouche_at || job.updated_at)).getTime() > 4 * 60_000
+  let chemin = ''
+  if (rj && rj.status === 'done' && rj.output_url) chemin = String(rj.output_url)
+  else if (!rj || rj.status === 'failed' || trop) { chemin = String(pj.retouche_brut || ''); console.warn('[mcp] retouche ignorée', job.id, rj?.status || 'introuvable') }
+  if (!chemin) return   // encore en file / en cours
+  const { data: f, error } = await svc.storage.from('render-media').download(chemin)
+  if (error || !f) return
+  await deliverVideo(userId, job, new Uint8Array(await f.arrayBuffer()))
+}
 async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
   try {
     const userId = String(job.user_id)
     // OmniHuman chez kie (Axel 25/09) : op_name « oh1:… » (en cours → rien ; le filet tranche à KIE_OMNI_STALE_MIN)
     if (estOmniKie(job.op_name)) {
+      const pj = (job.params || {}) as Record<string, unknown>
+      // RETOUCHE en cours (vidéo Express Omni Flash) : on attend le serveur de rendu, sans redemander la vidéo à kie
+      if (pj.retouche_job) { await suivreRetouche(userId, job, pj); return }
       const a = await avancerOmniKie(taskDeOp(job.op_name))
       if (a.etat === 'echec') await failAndRefund(userId, job, a.raison)
-      else if (a.etat === 'pret') await deliverVideo(userId, job, a.bytes)
+      else if (a.etat === 'pret') {
+        if (pj.video && pj.stage_path && !(await lancerRetouche(userId, job, pj, a.bytes))) await deliverVideo(userId, job, a.bytes)
+        else if (!(pj.video && pj.stage_path)) await deliverVideo(userId, job, a.bytes)
+      }
       return
     }
     // OmniHuman (fal) : op_name préfixé « fal: »

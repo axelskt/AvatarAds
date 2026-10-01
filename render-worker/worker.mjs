@@ -13,6 +13,7 @@
 //       télécharge les entrées du storage, rend, uploade le MP4, marque done.
 //       Env requis (.env) : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
+import { retoucheVideo } from './retouche.mjs'
 import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, readdirSync, statSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -813,6 +814,15 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
   if (plan.__compose === 'motion-bg') { await composeMotionBg(jobDir, outPath, plan); return }
   // Générateur : grave les sous-titres (aperçu _cvSubs) sur la vidéo + mux audio d'origine.
   if (plan.__compose === 'gen-subs') { await composeGenSubs(jobDir, outPath, plan); return }
+  // Vidéo Omni Flash (MCP / Express) : retouche « forte » validée par Axel le 02/10 — couleurs, netteté et grain recalés sur
+  // la PHOTO DE DÉPART (assets/photo.*). Voir retouche.mjs.
+  if (plan.__compose === 'retouche') {
+    const dir = join(jobDir, 'assets'), f = existsSync(dir) ? readdirSync(dir).find((n) => /^photo\./.test(n)) : null
+    if (!f) throw new Error('photo de départ manquante (retouche)')
+    const r = retoucheVideo(join(jobDir, 'base.mp4'), join(dir, f), outPath)
+    console.log('✓ retouche', JSON.stringify({ grainPhoto: r.grainPhoto, grainVideo: r.grainVideo, bruit: r.bruit }))
+    return
+  }
 
   const basePath = join(jobDir, 'base.mp4')
   if (!existsSync(basePath)) throw new Error('base.mp4 manquant dans ' + jobDir)
@@ -2973,7 +2983,10 @@ async function pollLoop() {
 
   for (;;) {
     try {
-      const { data: jobs } = await sb.from('render_jobs').select('*').eq('status', 'queued')
+      // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
+      const { data: prio } = await sb.from('render_jobs').select('*').eq('status', 'queued')
+        .contains('plan', { __compose: 'retouche' }).order('created_at').limit(1)
+      const { data: jobs } = prio && prio.length ? { data: prio } : await sb.from('render_jobs').select('*').eq('status', 'queued')
         .order('created_at').limit(1)
       const job = jobs && jobs[0]
       if (!job) { await new Promise((r) => setTimeout(r, 2000)); continue }   // #vitesse (02/09) : 5 s → 2 s de latence de prise
