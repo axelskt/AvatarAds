@@ -1,3 +1,4 @@
+// Déployé par Railway au push (watch render-worker/**) — 02/10 : le railway.json racine de factory-render bloquait ces déploiements depuis le 30/09.
 // ── RETOUCHE « FORTE » DES VIDÉOS OMNI FLASH (Axel 02/10, validée sur la vidéo AXE) ─────────────────────────────
 // Le moteur vidéo redessine chaque image : peau ~25 % plus lisse que la photo de départ (« effet plastique / filtre »).
 // Après génération, on rapproche la vidéo de SA photo de départ, sans rien inventer :
