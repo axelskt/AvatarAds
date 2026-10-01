@@ -1225,14 +1225,7 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
   const size = sizeMap[format]
   const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
 
-  // ⚠️ HIGH = plus cher + long → on DEMANDE TOUJOURS confirmation à l'utilisateur d'abord.
-  // Standard passe direct (pas de friction). Règle voulue par Axel.
-  if (quality === 'high' && args.confirm !== true) {
-    return toolText(`⚠️ Qualité HIGH = ${IMG_COST.high} crédits et 1 à 2 minutes (vs ${IMG_COST.standard} cr et ~45 s en standard).
-NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment la qualité HIGH ou préfère STANDARD.
-• S'il confirme HIGH → rappelle generate_image avec quality:"high" ET confirm:true.
-• Sinon → quality:"standard".`)
-  }
+  // (02/10) plus de demande de confirmation pour la qualité HIGH non plus : Axel ne veut AUCUN accord demandé avant génération.
 
   const userId = String(profile.id)
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
