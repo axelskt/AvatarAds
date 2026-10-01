@@ -95,7 +95,7 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
   = S01-S19 + S21 (tous en CSS dans captions.mjs). Suivi des perfs : ig-insights relie chaque reel publié à sa ligne
   `factory_posts` (même compte + même légende + ±48 h) → `media_id`, statut `published`, `m.recipe` (ID complet + briques).
 - `--choc-size N` : taille du texte choc forcée. Par défaut (01/10) la plus grande de 78 → 41 px qui tient dans la zone sûre ; hook avant/après = rectangle large qui peut mordre sur la moitié gauche du médaillon (Axel : jamais une colonne étroite).
-- `--choc-style CSxx` : style du texte choc forcé ; par défaut TIRÉ AU HASARD parmi les 11 validés (CS01 natif blanc, CS02 natif noir, CS03 rouge, CS05 contour, CS06 néon rouge, CS07 verre dépoli, CS08 bulle iMessage, CS10 surligneur vert, CS11 capitales Anton, CS13 machine à écrire, CS15 bandeau info), jamais le même que la vidéo d'avant. Noté `style_choc` dans le sidecar → dans l'ID (après THxx) et la recette (factory_posts.combo / factory_qc.brick_combo).
+- `--choc-style CSxx` : style du texte choc forcé ; par défaut TIRÉ AU HASARD parmi les 11 validés (CS01 natif blanc, CS02 natif noir, CS03 rouge, CS05 contour, CS07 verre dépoli, CS08 bulle iMessage, CS10 surligneur vert, CS11 capitales Anton, CS13 machine à écrire arrondie, CS15 bandeau info, CS16 surligneur rouge), jamais le même que la vidéo d'avant. Noté `style_choc` dans le sidecar → dans l'ID (après THxx) et la recette (factory_posts.combo / factory_qc.brick_combo).
 - Briques à refaire avant réemploi : `factory_bricks.meta.a_refaire` (ex. L48 × A1-8, lipsync raté) → ne pas les assembler.
 - `--subs-style boite` : sous-titres en pastilles blanches texte noir (brique S21) ; défaut `contour` (S02).
 
