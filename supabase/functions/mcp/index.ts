@@ -545,7 +545,12 @@ function aaMedia(url, kind, name){
   m.innerHTML = v
     ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
     : '<img src="'+url+'" alt="" class="aa-m"/>';
-  var media=m.querySelector('video,img');
+  if(v && aaPrev){   // Axel 01/10 : la photo de départ (payée) reste livrée au-dessus de la vidéo
+    m.insertAdjacentHTML('afterbegin', '<div style="text-align:center;margin:0 0 10px"><img src="'+aaPrev+'" alt="" class="aa-m" style="max-height:420px"><div style="margin-top:6px"><button class="aa-a aa-rg" id="dlp" type="button" style="border:none;cursor:pointer">Télécharger la photo</button></div></div>');
+    var dlp=document.getElementById('dlp'); if(dlp) dlp.onclick=function(){ aaSend('ui/open-link', { url:aaPrev }); };
+  }
+  var media=m.querySelector('video');
+  if(!media) media=m.querySelector('img');
   if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
   m.style.padding='0'; m.style.opacity=''; m.style.fontSize=''; aaBtns(); aaKick(); // 02/09 : plus AUCUN voile hérité de l'état « chargement » sur l'image finale
 }
@@ -554,6 +559,7 @@ function aaPollStatus(u){
   fetch(u, { cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){
     if(!j) return;
     if(typeof j.progress==='number') aaSetPct(j.progress);
+    if(j.preview) aaPrev=j.preview;
     if(j.preview){ var pv=document.getElementById('pv'); if(pv && !pv.firstChild){ pv.innerHTML='<img src="'+j.preview+'" alt="" style="display:block;max-width:100%;max-height:420px;margin:12px auto 4px;border-radius:12px">'; var pt0=document.getElementById('pt'); if(pt0) pt0.textContent='Photo prête — vidéo en cours…'; var im=pv.querySelector('img'); if(im) im.addEventListener('load', aaKick); aaKick(); } }
     if(j.status==='done' && j.url){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaMedia(j.url, j.kind||'image', ''); }, 350); return; }
     if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent='Échec de la génération — réessaie.'; }
@@ -585,7 +591,7 @@ function aaShow(out){
 // ── PHOTO DU PRODUIT DANS LA CARTE (21/08) : claude.ai ne transmet pas les images jointes aux outils →
 //    l'utilisateur la dépose ICI (glisser / choisir / coller), le widget l'envoie à /start qui lance la
 //    génération avec le produit à l'identique, dans la MÊME carte. « Sans photo » = génération libre. ──
-var aaForVideo=false, aaForProduct=false;
+var aaForVideo=false, aaForProduct=false, aaPrev='';
 function aaAskPhoto(){
   aaOk=true; if(aaPollT){ clearInterval(aaPollT); aaPollT=null; }
   var b=document.getElementById('b'); if(b) b.style.display='none';
@@ -1952,7 +1958,17 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
       const staged = await stageKieImage(o.userId, o.jobId, buf)
       if (!staged) throw new ErrClient('image de départ illisible — envoie un PNG, un JPG ou un WebP')
       if (!o.imageUrl && o.genImage) {   // la photo de départ générée s'affiche dans la carte pendant la vidéo (/status → preview)
-        try { const { data: cj } = await svc.from('mcp_jobs').select('params').eq('id', o.jobId).maybeSingle(); await svc.from('mcp_jobs').update({ params: { ...((cj?.params as Record<string, unknown>) || {}), preview: staged.url } }).eq('id', o.jobId) } catch (_) { /* aperçu facultatif */ }
+        // Axel 01/10 : tout ce qui est PAYÉ est LIVRÉ — la photo de départ (3 cr) reste dans la carte avec son « Télécharger »,
+        // au-dessus de la vidéo, et part dans la Bibliothèque du compte.
+        let prevUrl = staged.url
+        try {
+          const png = buf[0] === 0x89 && buf[1] === 0x50, ext = png ? 'png' : 'jpg', mime = png ? 'image/png' : 'image/jpeg'
+          const pth = `${o.userId}/start-${o.jobId}.${ext}`
+          const { error: upE } = await svc.storage.from('mcp-media').upload(pth, buf, { contentType: mime, upsert: true })
+          if (!upE) prevUrl = `${MEDIA_PUB}${pth}`
+          await saveToLibrary(o.userId, buf, ext, mime, 'image', 'Photo de départ (vidéo Express)')
+        } catch (_) { /* filet */ }
+        try { const { data: cj } = await svc.from('mcp_jobs').select('params').eq('id', o.jobId).maybeSingle(); await svc.from('mcp_jobs').update({ params: { ...((cj?.params as Record<string, unknown>) || {}), preview: prevUrl } }).eq('id', o.jobId) } catch (_) { /* aperçu facultatif */ }
       }
       let r: Response
       try {
@@ -3895,7 +3911,8 @@ serve(async (req) => {
     const done = j.status === 'done' || j.status === 'failed'
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
     const urlSigne = j.status === 'done' && j.result_url ? await signMedia(String(j.result_url)) : null   // mcp-media privé (audit 28/09)
-    const preview = !done ? (((j.params as Record<string, unknown> | null) || {}).preview as string | undefined) || null : null   // photo de départ générée (vidéo Express)
+    const prevRaw = (((j.params as Record<string, unknown> | null) || {}).preview as string | undefined) || null
+    const preview = prevRaw && j.status !== 'failed' ? await signMedia(prevRaw) : null   // photo de départ générée (vidéo Express) — gardée après la vidéo
     return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: urlSigne, progress, preview, error: j.status === 'failed' ? 'failed' : null }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
   }
