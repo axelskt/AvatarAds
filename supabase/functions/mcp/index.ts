@@ -5,7 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
-import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, EXP_PRODUCT_REF_LOCK, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
+import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
@@ -1985,7 +1985,7 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
         // produit (Axel 01/10) : la PHOTO OFFICIELLE (lien produit lu côté serveur, ou photo déposée dans la carte) sert de
         // référence à la photo de départ. JAMAIS de produit inventé : sans photo, la carte la demande (voir /start, params.product).
         const ref = o.productRef || null
-        const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image.' + EXP_PRODUCT_REF_LOCK : ''),
+        const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image — same bottle/packaging shape, colours, logo and label, identical and legible, never redrawn or re-lettered.' : ''),
           o.aspect === '16:9' ? '1536x1024' : '1152x2048', 'standard', ref)
         if (!('bytes' in gi)) throw new ErrClient('photo de départ : ' + (gi.error || 'génération impossible') + ' — rien débité, réessaie')
         buf = gi.bytes
