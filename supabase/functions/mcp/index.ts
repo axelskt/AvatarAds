@@ -178,6 +178,9 @@ function augmenterPortrait(prompt: string): string {
 // Axel 19/09 : le connecteur Claude n'est plus un premium Pro/Élite — le Starter y a droit aussi.
 const ALLOWED_PLANS   = ['starter', 'pro', 'elite']
 const DAILY_CAPS: Record<string, number> = { starter: 50, pro: 100, elite: 200 }
+// Axel 02/10 : « supprime les limites pour Starter, Pro et Élite, c'est inutile » → plus AUCUN plafond 24 h via le MCP
+// (la seule limite = le solde de crédits). Remettre true réactive tout le mécanisme (réservation atomique mcp_cap_reserve).
+const MCP_CAP_ON = false
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -3992,7 +3995,7 @@ serve(async (req) => {
         } else return json(400, { error: 'bad_image' })
         if (!isUnlimited(profV)) {
           const capP = DAILY_CAPS[String(profV.plan || '').toLowerCase()] ?? 100
-          const { data: capRP } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: Math.max(0, costV - (Number(params.cap_held) || 0)), p_cap: capP })   // part déjà réservée à la création de la carte : jamais comptée deux fois (02/10)
+          const { data: capRP } = MCP_CAP_ON ? await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: Math.max(0, costV - (Number(params.cap_held) || 0)), p_cap: capP }) : { data: null }   // part déjà réservée à la création de la carte : jamais comptée deux fois (02/10)
           if (typeof capRP === 'number' && capRP < 0) return json(429, { error: 'daily_cap' })
           if ((Number(profV.credits_remaining) || 0) < costV) return json(402, { error: 'no_credits' })
         }
@@ -4010,7 +4013,7 @@ serve(async (req) => {
       if (bytesV.length > 10_000_000) return json(413, { error: 'too_large' })
       if (!isUnlimited(profV)) {
         const capV = DAILY_CAPS[String(profV.plan || '').toLowerCase()] ?? 100
-        const { data: capRV } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: Math.max(0, costV - (Number(params.cap_held) || 0)), p_cap: capV })   // part déjà réservée à la création de la carte : jamais comptée deux fois (02/10)
+        const { data: capRV } = MCP_CAP_ON ? await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: Math.max(0, costV - (Number(params.cap_held) || 0)), p_cap: capV }) : { data: null }   // part déjà réservée à la création de la carte : jamais comptée deux fois (02/10)
         if (typeof capRV === 'number' && capRV < 0) return json(429, { error: 'daily_cap' })
         if ((Number(profV.credits_remaining) || 0) < costV) return json(402, { error: 'no_credits' })
       }
@@ -4038,7 +4041,7 @@ serve(async (req) => {
     const cost = IMG_COST[quality]
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
-      const { data: capR } = await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: Math.max(0, cost - (Number(params.cap_held) || 0)), p_cap: cap })   // F1 : plafond atomique — part déjà réservée à la création de la carte non recomptée (02/10)
+      const { data: capR } = MCP_CAP_ON ? await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: Math.max(0, cost - (Number(params.cap_held) || 0)), p_cap: cap }) : { data: null }   // F1 : plafond atomique — part déjà réservée à la création de la carte non recomptée (02/10)
       if (typeof capR === 'number' && capR < 0) return json(429, { error: 'daily_cap' })
       if ((Number(profile.credits_remaining) || 0) < cost) return json(402, { error: 'no_credits' })
     }
@@ -4129,7 +4132,7 @@ serve(async (req) => {
     const cost = IMG_COST.standard
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
-      const { data: capR } = await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: cost, p_cap: cap })   // F1 : plafond atomique
+      const { data: capR } = MCP_CAP_ON ? await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: cost, p_cap: cap }) : { data: null }   // F1 : plafond atomique
       if (typeof capR === 'number' && capR < 0) return json(429, { error: 'daily_cap' })
       if ((Number(profile.credits_remaining) || 0) < cost) return json(402, { error: 'no_credits' })
     }
@@ -4340,8 +4343,8 @@ serve(async (req) => {
   const planKey = String(profile?.plan || '').toLowerCase()
   const planAllowed = profile ? (isUnlimited(profile) || ALLOWED_PLANS.includes(planKey)) : false
   const ctx: ToolCtx = {
-    requireConfirm: false,   // Axel 01/10 : PLUS de devis ni d'accord demandé avant une génération (le plafond 24 h reste le garde-fou)
-    dailyCap: profile && isUnlimited(profile) ? null : (DAILY_CAPS[planKey] ?? 100),
+    requireConfirm: false,   // Axel 01/10 : PLUS de devis ni d'accord demandé avant une génération ; 02/10 : plus de plafond 24 h non plus (MCP_CAP_ON)
+    dailyCap: !MCP_CAP_ON || (profile && isUnlimited(profile)) ? null : (DAILY_CAPS[planKey] ?? 100),
   }
 
   let msg: Record<string, unknown>
