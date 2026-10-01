@@ -2,6 +2,7 @@
 // (supabase/functions/_shared/express-prompts.ts). Axel 01/10 : « le MCP doit être prompté pareil que dans l'app ».
 // Le code de l'app est EXTRAIT tel quel (fonctions _exp*, verrous _EXP_*, style ugc, enveloppe « CLEAN SHOT ») puis
 // rejoué avec les réglages du MCP : style ugc, voix native, moteur Omni (image → vidéo).
+// Exporte expressOmniPrompt (photo → vidéo, Omni Flash), expressVeoPrompt (sans photo, Veo Lite) et IMG_REALISM_SUFFIX (images).
 // Usage : node tools/gen-express-prompts.mjs            (écrit le fichier)
 //         node tools/gen-express-prompts.mjs --check    (vérifie seulement qu'il est à jour ; code 1 sinon)
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -27,9 +28,9 @@ function ugcStyle() {
 function stmt(re, what) { const m = app.match(re); if (!m) throw new Error(what + ' introuvable dans app/index.html'); return m[0]; }
 
 const FNS = ['_expQuotedLine', '_expCommentKeyword', '_expWantsScenes', '_expEnvLock', '_expSpeechLock', '_expSelfieCue'].map(fn);
-const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK'];
-const anim = stmt(/let animPrompt = \(\(prompt \+[\s\S]*?_EXP_PRODUCTLOCK;/, 'assemblage animPrompt').replace(/^let /, 'const ');
-const wrap = stmt(/const _omniPrompt = "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
+const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END'];
+const anim = stmt(/let animPrompt = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage animPrompt').replace(/^let /, 'const ');
+const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
 for (const k of ['_expSelfieCue()', '_expEnvLock(prompt)', '_expSpeechLock(prompt)', '_EXP_TEXLOCK_OMNI', '_EXP_PRODUCTLOCK']) if (!anim.includes(k)) throw new Error('assemblage : ' + k + ' absent');
 
 const ts = `// @ts-nocheck — GÉNÉRÉ par tools/gen-express-prompts.mjs depuis app/index.html — ne pas éditer à la main.
@@ -38,10 +39,19 @@ const window = { _expStyle: 'ugc', _expVoice: 'native', _expVeoModel: 'omni' }
 ${FNS.join('\n')}
 ${LOCKS.map(k => `const ${k} = ${JSON.stringify(cst(k))}`).join('\n')}
 const styleMeta = { prompt: ${JSON.stringify(ugcStyle())} }
-const _isOmni = true
+// Omni Flash image → vidéo (photo de départ) : assemblage Express + enveloppe « CLEAN SHOT » de _expOmniImageToVideo.
 export function expressOmniPrompt(prompt: string): string {
+  window._expVeoModel = 'omni'; const _isOmni = true
   ${anim}
   return (function (prompt) { ${wrap} return _omniPrompt })(animPrompt)
+}
+// Images de PERSONNE réalistes : bloc réalisme de l'app (photo amateur + tenue correcte SFW), mot pour mot.
+export const IMG_REALISM_SUFFIX = ${JSON.stringify(cst('_IMG_REALISM_SUFFIX'))}
+// Veo 3.1 Lite (sans photo) : même assemblage Express que l'app, moteur Veo (verrou de fin de parole compris).
+export function expressVeoPrompt(prompt: string): string {
+  window._expVeoModel = 'lite'; const _isOmni = false
+  ${anim}
+  return animPrompt
 }
 `;
 const OUT = new URL('../supabase/functions/_shared/express-prompts.ts', import.meta.url);

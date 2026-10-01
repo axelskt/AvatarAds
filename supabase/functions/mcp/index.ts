@@ -5,7 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
-import { expressOmniPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompt Omni Flash « UGC réel » IDENTIQUE à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
+import { expressOmniPrompt, expressVeoPrompt, IMG_REALISM_SUFFIX } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
@@ -128,7 +128,7 @@ const veoCran = (s: number): number => (s <= 4 ? 4 : s <= 6 ? 6 : 8)
 // le MCP → rendu photo Instagram réelle, plus de « random IA ». Leçon clé : le bloc
 // porte le détail ET les INTERDITS (jamais lisser/plastifier/filtre beauté) — c'est
 // l'interdit qui tue l'effet « peau de cire ». JAMAIS sur un produit (packshot).
-const IMG_REALISM_SUFFIX = '. Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter.'
+// → désormais IMG_REALISM_SUFFIX de ../_shared/express-prompts.ts, recopié de l'app (01/10 : il manquait la clause tenue correcte / SFW).
 const RE_PERSONNE = /\b(femmes?|filles?|hommes?|gar[çc]ons?|meufs?|nanas?|influenceu\w*|mannequins?|mod[eè]les?|models?|selfies?|portraits?|personnes?|gens|visages?|humains?|humans?|women|woman|man|men|girls?|boys?|guys?|ladies|lady|people|persons?|faces?|influencers?|creators?|avatars?|ugc)\b/i
 // Genre (Axel 11/09) : influenceur = HOMME, influenceuse = FEMME. gpt-image ignore parfois le genre
 // (biais « influenceuse » par défaut) → on l'ANCRE explicitement quand le prompt le désigne. Le féminin
@@ -1167,7 +1167,12 @@ function composerPromptImage(args: Record<string, unknown>, avecRef: boolean): s
         BULLETS: Array.isArray(args.bullets) ? (args.bullets as unknown[]).map(TXT).filter(Boolean).slice(0, 12) : [],
         CTA: TXT(args.cta), QUOTE: TXT(args.quote), NUMBER: TXT(args.number),
       })
-      return `Static ad, format « ${fmt.name} ». ` + filled + STATIC_AD_COMMON + refTxt + TXT_INTEGRITY
+      // Axel 25/09 (app) : la toile suit le FORMAT CHOISI, dit en tête ET en fin — MÊME texte que _adCanvas de l'app (01/10)
+      const fmtArg = String(args.format || 'portrait')
+      const canvas = fmtArg === 'landscape' ? ' CANVAS: a horizontal 16:9 landscape ad — compose the layout for this wide frame and fill it edge to edge; no border, no letterbox bars.'
+        : fmtArg === 'square' ? ' CANVAS: a square 1:1 ad filling the whole frame edge to edge; no border.'
+        : ' CANVAS: a vertical 9:16 portrait poster — compose the layout for this tall frame and fill it edge to edge; no border, no letterbox bars, no square panel floating in empty space.'
+      return `Static ad, format « ${fmt.name} ».` + canvas + ' ' + filled + STATIC_AD_COMMON + refTxt + TXT_INTEGRITY + canvas
     }
     const bullets = Array.isArray(args.bullets) ? (args.bullets as unknown[]).map(TXT).filter(Boolean).slice(0, 4) : []
     const headline = TXT(args.headline), sub = TXT(args.subheadline), brand = TXT(args.brand), cta = TXT(args.cta)
@@ -1234,7 +1239,9 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
   const productUrl = String(args.product_url || '').trim()
   const hasRefSource = !!directRefUrl || !!productUrl
   // #static-ads-bank : compte développeur/owner → « static_ad » pioche un des 59 formats (ou celui demandé via ad_format).
-  const adFormat: StaticAdFormat | null = (kind === 'static_ad') ? pickStaticAdFormat(STATIC_AD_FORMATS, 'random') : null   // Axel 18/09 : banque des 59 formats validés ouverte à tous (Pro/Élite) — un format au hasard/image
+  // Axel 25/09 (app) : un format réservé à un produit qui se VERSE (fits 'liquide') n'est tiré que si le brief parle d'une boisson / d'un liquide — même filtre que l'app (01/10)
+  const adLiquid = /\b(boisson|drink|jus|juice|soda|caf[ée]|coffee|thé|tea|lait|milk|smoothie|shake|milkshake|energy|[ée]nergisant|sirop|syrup|sauce|huile|oil|bi[èe]re|beer|vin|wine|cocktail|kombucha|limonade|lemonade|prot[ée]ine|whey|yaourt|yogurt|soupe|soup)\b/i.test(prompt)
+  const adFormat: StaticAdFormat | null = (kind === 'static_ad') ? pickStaticAdFormat(STATIC_AD_FORMATS.filter((f) => f.fits !== 'liquide' || adLiquid), 'random') : null   // Axel 18/09 : banque des 59 formats validés ouverte à tous (Pro/Élite) — un format au hasard/image
   if (adFormat) args = { ...args, ad_format: adFormat.id }   // mémorisé → « Regénérer » / carte photo gardent le même format
   const promptFinal = composerPromptImage({ ...args, prompt, __adFormat: adFormat }, hasRefSource)   // source présente → prompt « produit à l'identique »
   // CARTE (dépôt / lien) : static ad ou UGC SANS URL d'image directe (avec ou sans lien produit). La carte
@@ -1643,15 +1650,8 @@ async function reconcileAllStale(): Promise<void> {
 }
 let _lastReconcile = 0
 
-// FIN PROPRE (02/09, Axel) — ajoutée côté serveur à TOUT prompt Express : la personne finit sa phrase et la
-// vidéo s'arrête là ; jamais une nouvelle phrase/un nouveau geste entamé dans la dernière seconde, jamais coupé au milieu.
-// PRODUIT (Axel 30/09, vidéo SVR : étiquette réécrite de travers, pompe actionnée sans que rien ne sorte) : écriture du
-// produit à l'identique et nette. (Le « jamais de geste à vide » attendra : décision d'Axel.) Ajoutée quand une image de départ est fournie.
-const EXPRESS_PRODUCT = ' PRODUCT RULE: if a product is visible, its packaging stays EXACTLY as in the source image for the whole clip — same label, same logo, same colours, every word of printed text letter-for-letter, sharp and legible, never redrawn, blurred, warped or re-spelled.'
-// Axel 01/10 : les avatars parlaient ANGLAIS (Omni Flash) → français imposé, langue par défaut ET unique, en tête ET en fin de prompt.
-const EXPRESS_FRENCH = 'LANGUAGE RULE (absolute priority): every spoken word in this video is in FRENCH (France), native accent, natural spoken French — never English, never any other language, even if the description below is written in English; translate any dialogue into natural French before speaking it. '
-const EXPRESS_FRENCH_END = ' REMINDER: the person speaks ONLY French (France) — no English word at all.'
-const EXPRESS_ENDING = ' ENDING RULE: the clip must end cleanly — the person finishes their current sentence, closes their mouth with a brief natural pause, and the video ends right there; never start a new sentence or a new gesture in the final second, never cut mid-word or mid-motion.'
+// Prompts Express (fin propre, produit à l'identique, français seul, verrous de l'app) : expressOmniPrompt / expressVeoPrompt
+// de ../_shared/express-prompts.ts, GÉNÉRÉ depuis app/index.html (node tools/gen-express-prompts.mjs) — rien à ajouter ici.
 
 // ── FILE D'ATTENTE DES SOUMISSIONS VEO (11/09, Axel : « la file d'attente, fais-le proprement ») ──
 // Lancer plusieurs générations EN MÊME TEMPS télescopait leurs POST predictLongRunning chez Google
@@ -2005,9 +2005,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: EXPRESS_FRENCH + expressOmniPrompt(prompt) + EXPRESS_FRENCH_END })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt) })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
-    prompt: EXPRESS_FRENCH + prompt + EXPRESS_ENDING + EXPRESS_FRENCH_END, kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
+    prompt: expressVeoPrompt(prompt), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
   return {
     content: [{ type: 'text', text: `🎬 Vidéo lancée (${duration} s, ${aspect}, −${cost} crédits). L'aperçu s'affiche DANS LA CARTE ci-dessous : une barre de progression puis la vidéo (compte 1 à 3 min), avec le bouton Télécharger. NE rappelle PAS check_video — le widget suit la génération et affiche la vidéo tout seul. Dis juste à l'utilisateur que la vidéo apparaît dans la carte.` }],
@@ -3869,7 +3869,7 @@ serve(async (req) => {
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookV || !tookV.length) return json(409, { error: 'not_pending' })
       runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: urlV, aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-        prompt: EXPRESS_FRENCH + expressOmniPrompt(String(params.prompt || '')) + EXPRESS_FRENCH_END })
+        prompt: expressOmniPrompt(String(params.prompt || '')) })
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
     }
     const pArgs = (params.args || {}) as Record<string, unknown>

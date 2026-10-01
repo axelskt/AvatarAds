@@ -32448,6 +32448,11 @@ const _EXP_ENERGYLOCK = '. DELIVERY: the person speaks FAST, punchy and high-ene
 // Verrou PRODUIT (Axel 12/09 : « dans la vidéo l'objet se déforme »). Le produit/objet montré doit rester
 // STRICTEMENT identique à l'image de référence uploadée : forme, texture, matière, couleurs, logos — aucune déformation ni transformation.
 const _EXP_PRODUCTLOCK = '. PRODUCT FIDELITY (CRITICAL): if a product, object or item is shown, it must stay STRICTLY IDENTICAL to the uploaded reference image — the exact same shape, silhouette, proportions, geometry, materials, surface texture and finish, colors, patterns, logos, branding, labels and any text on it. Do NOT deform, warp, morph, melt, bend, stretch, squash, reshape, redesign, restyle, regenerate, re-texture, swap or transform the product in any way, and do NOT change its size, its details or any writing on it; keep every detail photographically faithful to the source image in EVERY frame. Only the person and the camera may move — the product itself never changes, distorts or transforms from the first frame to the last.';
+// Axel 01/10 : FRANÇAIS = langue par défaut ET unique de toute vidéo qui parle (Express Veo / Omni Flash, Voix native du
+// Générateur). En TÊTE et en FIN de prompt (les avatars parlaient anglais côté MCP). Repris tel quel par le MCP
+// (tools/gen-express-prompts.mjs) : ne pas dupliquer ailleurs.
+const _EXP_FRENCH = 'LANGUAGE RULE (absolute priority): every spoken word in this video is in FRENCH (France), native accent, natural spoken French — never English, never any other language, even if the description below is written in English; translate any dialogue into natural French before speaking it. ';
+const _EXP_FRENCH_END = ' REMINDER: the person speaks ONLY French (France) — no English word at all.';
 // Verrou TEXTURE (Axel 07/09 : « Express lisse trop la peau, il faut garder l'image de référence en 1:1 »).
 // Les modèles i2v re-rendent le visage et LISSENT. On exige la fidélité pixel + on INTERDIT explicitement
 // tout embellissement (leçon Images IA : le détail dit ce qu'on veut, l'interdit dit comment ne pas lisser).
@@ -32721,7 +32726,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   const sI=await sb.storage.from('render-media').createSignedUrl(imgPath, 3600);
   if(sI.error || !(sI.data&&sI.data.signedUrl)) throw new Error('Lien signé Omni indisponible');
   // Prompt backend Omni Flash — IDENTIQUE pour fal et kie.
-  const _omniPrompt = "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)";
+  const _omniPrompt = _EXP_FRENCH + "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)" + _EXP_FRENCH_END;
   // kie.ai : Gemini Omni 1.1 Flash, MÊME modèle et MÊME prompt. Chez kie le prix est un forfait par clip identique en 720p
   // et 1080p → 1080p toujours (Axel 23/09). Durées kie : 4/6/8/10 s (arrondi au-dessus) ; 9:16 / 16:9 seulement.
   // Axel 25/09 : « tout le monde y a droit pareil, Starter inclus ; kie directement, pas de fallback, en 1080p » :
@@ -33007,12 +33012,13 @@ async function _expressCreateOne(o){
     setP(Math.max(p,28),'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Génération de la vidéo…');
     // Le prompt contient déjà la réplique → Veo fait le lip-sync nativement (voix native).
     // 28/09 (Axel) : plus de « directeur » gpt-4o — le prompt est monté localement (verrous d'environnement, de parole, de texture…).
-    let animPrompt = ((prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
+    let animPrompt = (_isOmni ? '' : _EXP_FRENCH) + ((prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
       + _expEnvLock(prompt)
       + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
-      + _EXP_IDLOCK + _EXP_HOLDLOCK + _EXP_ENERGYLOCK + _EXP_PRODUCTLOCK;
+      + _EXP_IDLOCK + _EXP_HOLDLOCK + _EXP_ENERGYLOCK + _EXP_PRODUCTLOCK
+      + (_isOmni ? '' : _EXP_FRENCH_END);   // Omni : français ajouté par _expOmniImageToVideo (Express ET Voix native)
     // (durée _dur, base débitée, résolution _res, tarifs _expRate/_expMult calculés en amont)
     let blob;
     if(_isOmni){
