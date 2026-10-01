@@ -901,7 +901,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'generate_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : 5 crédits/seconde, en 4, 6, 8 ou 10 s (défaut 6), 1080p. Avec une image de départ (image_url, ou photo déposée via user_photo) : c'est tout. SANS aucune image : une photo de départ est d'abord générée d'après le prompt (+3 crédits), puis animée — ex. 6 s sans image = 33 crédits. Annonce TOUJOURS le bon tarif avant de lancer. Débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Si l'utilisateur a joint une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true (UN appel par vidéo, sans image_url) — la CARTE affiche une zone où il dépose sa photo, puis la vidéo se lance toute seule (tarif avec image : 5 crédits/seconde). Ne l'envoie PAS sur le site, ne lui demande pas de lien. Si tu as déjà une URL (image générée par generate_image dans cette conversation, lien collé) : passe-la dans image_url, sans user_photo. ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
+      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : 5 crédits/seconde, en 4, 6, 8 ou 10 s (défaut 6), 1080p. Avec une image de départ (image_url, ou photo déposée via user_photo) : c'est tout. SANS aucune image : une photo de départ est d'abord générée d'après le prompt (+3 crédits), puis animée — ex. 6 s sans image = 33 crédits. Lance DIRECTEMENT, sans devis ni demande d'accord ; le coût peut être cité en une phrase après le lancement. Débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Si l'utilisateur a joint une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true (UN appel par vidéo, sans image_url) — la CARTE affiche une zone où il dépose sa photo, puis la vidéo se lance toute seule (tarif avec image : 5 crédits/seconde). Ne l'envoie PAS sur le site, ne lui demande pas de lien. Si tu as déjà une URL (image générée par generate_image dans cette conversation, lien collé) : passe-la dans image_url, sans user_photo. ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -1390,6 +1390,13 @@ async function runCheckImage(profile: Record<string, unknown>, args: Record<stri
     job = j
   }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
+  // Axel 01/10 : job « pending » = la carte ATTEND LA PHOTO (lien produit illisible, site protégé) — rien ne tourne. Avant, on
+  // répondait « en cours, rappelle check_image » → Claude bouclait sans fin. Réponse finale : stop, l'utilisateur dépose la photo.
+  if (job.status === 'pending') {
+    const lf = String(((job.params as Record<string, unknown> | null) || {}).link_failed || '')
+    return toolText(`📷 Rien n'est en cours : la carte attend la PHOTO du produit${lf ? " (le site du lien bloque la récupération de l'image)" : ''}. Rien n'a été débité.
+RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose la photo du produit dans la carte, l'image se génère toute seule. » N'appelle PLUS check_image ni aucun autre outil pour cette image : la carte lance et affiche la génération elle-même.`)
+  }
   if (job.status === 'done' && job.result_url) {
     // blocImage réduit désormais À LA VOLÉE (768 px JPEG) : l'image s'affiche
     // TOUJOURS dans la carte de l'outil, comme chez les intégrations concurrentes.
@@ -2013,7 +2020,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // ENSEMBLE par mcp_spend_for_job dans la tâche de fond (runVeoJob) → si l'isolate meurt avant, aucun filet ne rend des
   // crédits jamais pris. /status n'avance le job qu'une fois `op_name` posé (barre de progression en attendant).
   const { data: job, error } = await svc.from('mcp_jobs')
-    .insert({ user_id: userId, kind: omni ? 'avatar' : 'video', status: 'running', credits_cost: 0 }).select('id').single()
+    .insert({ user_id: userId, kind: omni ? 'avatar' : 'video', status: 'running', credits_cost: 0, ...(omni ? { params: { video: true } } : {}) }).select('id').single()   // params.video = vidéo Express Omni Flash (check_video la retrouve)
   if (error || !job) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur au suivi du job — réessaie.') }
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
@@ -2033,10 +2040,13 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 // jamais reçu le job_id) → il rappelle check_video/check_avatar_video SANS argument. PAS de
 // long-poll ici (une réponse lente est justement ce que le proxy coupe) : on rend la carte, vite.
 async function latestVideoCard(userId: string): Promise<ToolContent> {
-  const { data: j } = await svc.from('mcp_jobs').select('*')
-    .eq('user_id', userId).eq('kind', 'video')
+  const { data: rows } = await svc.from('mcp_jobs').select('*')
+    .eq('user_id', userId).in('kind', ['video', 'avatar'])
     .gt('created_at', new Date(Date.now() - 20 * 60_000).toISOString())
-    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    .order('created_at', { ascending: false }).limit(10)
+  // deno-lint-ignore no-explicit-any
+  const j: any = (rows || []).find((r: Record<string, unknown>) => r.kind === 'video' || !!((r.params as Record<string, unknown> | null) || {}).video) || null   // Express = Veo OU Omni Flash (params.video)
+  if (j && j.status === 'pending') return toolText("📷 La carte attend la PHOTO de départ (rien n'a été débité). RÉPONSE : « Dépose ta photo dans la carte, la vidéo se lance toute seule. » N'appelle plus aucun outil pour cette vidéo.")
   if (!j) return toolErr('Aucune génération vidéo récente à afficher sur ce compte. Relance la génération.')
   if (j.status === 'done' && j.result_url) { const dl = `https://mcp.avatarads.fr/i/${j.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(j.preview_url || '') || undefined) }
   if (j.status === 'failed') return toolErr(`Génération échouée : ${j.error || 'erreur inconnue'} (crédits remboursés).`)
@@ -2048,11 +2058,20 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   const userId = String(profile.id)
   // Appel SANS job_id (récupération après « Impossible de joindre ») → dernière vidéo, en carte.
   if (!/^[0-9a-f-]{36}$/i.test(jobId)) return await latestVideoCard(userId)
-  const { data: job } = await svc.from('mcp_jobs').select('*')
-    .eq('id', jobId).eq('user_id', userId).eq('kind', 'video').maybeSingle()
+  const { data: found } = await svc.from('mcp_jobs').select('*')
+    .eq('id', jobId).eq('user_id', userId).in('kind', ['video', 'avatar']).maybeSingle()
+  // Axel 01/10 : les vidéos Express sont désormais des jobs Omni Flash (kind 'avatar' + params.video) → check_video les retrouve
+  const isFlash = !!found && found.kind === 'avatar' && !!((found.params as Record<string, unknown> | null) || {}).video
+  const job = found && (found.kind === 'video' || isFlash) ? found : null
   if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
+  if (job.status === 'pending') return toolText(`📷 Rien n'est en cours : la carte attend la PHOTO de départ. Rien n'a été débité.
+RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose ta photo dans la carte, la vidéo se lance toute seule. » N'appelle PLUS check_video ni aucun autre outil pour cette vidéo.`)
   if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
   if (job.status === 'failed') return toolErr(`Génération échouée : ${job.error || 'erreur inconnue'} (crédits remboursés).`)
+  if (isFlash) return {   // Omni Flash : le widget de la carte suit /status (qui avance le job) et affiche la vidéo
+    content: [{ type: 'text', text: `⏳ Ta vidéo se génère — elle s'affiche dans la carte ci-dessous (compte 1 à 3 min). N'appelle plus check_video. Lien dès qu'elle est prête : https://mcp.avatarads.fr/i/${job.id}` }],
+    structuredContent: { job_id: job.id, statusUrl: `https://mcp.avatarads.fr/status/${job.id}`, kind: 'video', format: 'portrait' },
+  }
 
   // ⚠ JAMAIS de boucle de poll ici : le relais claude.ai COUPE la requête à ~8 s
   // (l'ancienne boucle 9×5 s = 40 s garantissait « le serveur ne répond pas »). On
@@ -3744,7 +3763,7 @@ async function handleKeyManagement(req: Request): Promise<Response> {
     // confirmation » disparaît de l'UI (Anthropic confirme déjà côté client).
     // Explicite ici + défaut colonne passé à false ; les clés existantes
     // gardent leur réglage, et set_confirm reste fonctionnel pour qui l'a.
-    const { error: insErr } = await svc.from('mcp_keys').insert({ user_id: user.id, key_hash: await hashKey(key), require_confirm: true })   // audit 05/09 : confirmation avant dépense, par défaut (l'user peut décocher ensuite)
+    const { error: insErr } = await svc.from('mcp_keys').insert({ user_id: user.id, key_hash: await hashKey(key), require_confirm: false })   // Axel 01/10 : plus de devis (le serveur ne le réclame plus de toute façon)
     if (insErr) return json(500, { error: 'server_error' })
     return json(200, { ok: true, url: `${MCP_PUBLIC_BASE}/${key}` })
   }
@@ -4198,7 +4217,7 @@ serve(async (req) => {
   const planKey = String(profile?.plan || '').toLowerCase()
   const planAllowed = profile ? (isUnlimited(profile) || ALLOWED_PLANS.includes(planKey)) : false
   const ctx: ToolCtx = {
-    requireConfirm: keyRow ? keyRow.require_confirm !== false : true,
+    requireConfirm: false,   // Axel 01/10 : PLUS de devis ni d'accord demandé avant une génération (le plafond 24 h reste le garde-fou)
     dailyCap: profile && isUnlimited(profile) ? null : (DAILY_CAPS[planKey] ?? 100),
   }
 
