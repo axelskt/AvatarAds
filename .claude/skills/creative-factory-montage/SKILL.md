@@ -94,7 +94,8 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
 - Tirages (30/09) : musique `auto` = M01-M20 sauf M04 (piste longue de `beds/` sinon celle de la banque) ; `--subs-style auto`
   = S01-S19 + S21 (tous en CSS dans captions.mjs). Suivi des perfs : ig-insights relie chaque reel publié à sa ligne
   `factory_posts` (même compte + même légende + ±48 h) → `media_id`, statut `published`, `m.recipe` (ID complet + briques).
-- `--choc-size 62` : taille du texte choc forcée (défaut 45-52 px ; VF-0004 : « plus gros »).
+- `--choc-size N` : taille du texte choc forcée. Par défaut (01/10) la plus grande de 78 → 41 px qui tient dans la zone sûre ; hook avant/après = rectangle large qui peut mordre sur la moitié gauche du médaillon (Axel : jamais une colonne étroite).
+- Briques à refaire avant réemploi : `factory_bricks.meta.a_refaire` (ex. L48 × A1-8, lipsync raté) → ne pas les assembler.
 - `--subs-style boite` : sous-titres en pastilles blanches texte noir (brique S21) ; défaut `contour` (S02).
 
 ### Ce que build.mjs fait tout seul (réglages validés, ne pas refaire à la main)

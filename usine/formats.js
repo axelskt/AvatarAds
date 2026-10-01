@@ -225,8 +225,12 @@
   ];
   // Médaillon « avant » des hooks avant/après (gabarit usine/transformations-omni.md : bord mesuré 588–1039 × 90–888) + marge.
   var INSET_AVANT_APRES = { x: 566, y: 68, w: 496, h: 842, why: 'médaillon « avant » du hook avant/après' };
+  // Axel 01/10 (VF-0022 / 0025) : la phrase en colonne étroite à gauche du médaillon, « pas fan ». Elle doit former un RECTANGLE
+  // large, quitte à mordre sur la moitié gauche du médaillon → seule sa moitié droite reste interdite à la phrase choc.
+  var INSET_AVANT_APRES_CHOC = { x: 814, y: 68, w: 248, h: 842, why: 'moitié droite du médaillon « avant »' };
   var TOP_MIN = 230, BOTTOM_MAX = 1440, HAUT_MAX = 780;   // centre de la phrase au-dessus de HAUT_MAX = « en haut »
-  var SIZES = [62, 56, 50, 45, 41];
+  // Axel 01/10 (VF-0023 / 0028 / 0030) : phrase trop petite → plus gros, toujours dans la zone sûre (62 px au plus avant).
+  var SIZES = [78, 72, 66, 60, 54, 48, 44, 41];   // la plus grande qui tient ; 44 / 41 = repli quand les visages prennent toute la place
   // largeur approchée d'un caractère (em) — police de la phrase : Inter 700 ; filet de sécurité à l'affichage (fit).
   function charEm(ch) {
     if (/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(ch)) return 1.2;
@@ -284,7 +288,7 @@
   function chocLayout(text, o) {
     o = o || {};
     var words = String(text || '').trim().split(/\s+/).filter(Boolean);
-    var fixed = UI_RESERVED.concat(o.avantApres ? [INSET_AVANT_APRES] : []).concat(o.reserved || []);
+    var fixed = UI_RESERVED.concat(o.avantApres ? [INSET_AVANT_APRES_CHOC] : []).concat(o.reserved || []);
     var wide = faceRects(o.faces, true), core = faceRects(o.faces, false);
     // colonnes : pleine largeur centrée ; à gauche d'un obstacle du haut (médaillon, visage à droite)
     var leftEdge = CANVAS.w;
@@ -384,7 +388,7 @@
     return caps.filter(function (c) { return c.e > chocEnd + 0.06; }).map(function (c) { return c.s < chocEnd ? Object.assign({}, c, { s: chocEnd }) : c; });
   }
 
-  return { FORMATS: FORMATS, TEXTES_CHOC: TEXTES_CHOC, COMBO_KEYS: COMBO_KEYS, CANVAS: CANVAS, UI_RESERVED: UI_RESERVED, INSET_AVANT_APRES: INSET_AVANT_APRES,
+  return { FORMATS: FORMATS, TEXTES_CHOC: TEXTES_CHOC, COMBO_KEYS: COMBO_KEYS, CANVAS: CANVAS, UI_RESERVED: UI_RESERVED, INSET_AVANT_APRES: INSET_AVANT_APRES, INSET_AVANT_APRES_CHOC: INSET_AVANT_APRES_CHOC,
     resolveFormat: resolveFormat, hasChoc: hasChoc, textChoc: textChoc, chocString: chocString, chocWhy: chocWhy, eligibleFormats: eligibleFormats,
     pickFormat: pickFormat, pickChoc: pickChoc, chocEnd: chocEnd, txOfHook: txOfHook, isAvantApres: isAvantApres, comboFormatCheck: comboFormatCheck,
     mergeFormatMeta: mergeFormatMeta, formatReview: formatReview,
