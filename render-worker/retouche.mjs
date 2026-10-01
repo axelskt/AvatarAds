@@ -44,7 +44,7 @@ export function retoucheVideo(base, photo, out) {
   const gp = grain(raw(photo, W, H, 'gray16le', 0, false), raw(photo, W, H, 'gray16le', 1.2, false))
   const gv = grain(raw(base, W, H, 'gray16le', 0, true), raw(base, W, H, 'gray16le', 1.2, true))
   const ajout = 1.2 * 1.6 * Math.sqrt(Math.max(0, gp * gp - gv * gv))   // ×1,2 : gblur ffmpeg mesure ~20 % plus bas que le flou de l essai validé (1,42/1,04 vs 1,77/1,33)
-  const S = Math.max(0, Math.min(12, Math.round((ajout + 0.55) / 0.67)))   // force ffmpeg noise → écart-type (calibré : 4 → 2,23)
+  const S = ajout < 0.3 ? 0 : Math.max(0, Math.min(12, Math.round((ajout + 0.55) / 0.67)))   // vidéo déjà aussi granuleuse que la photo → AUCUN grain ajouté (02/10 : S valait 1 à tort)   // force ffmpeg noise → écart-type (calibré : 4 → 2,23)
   const lut = ['r', 'g', 'b'].map((c, i) => {
     const k = Math.min(1.15, Math.max(0.87, P[i].sd / V[i].sd)), off = Math.max(-25, Math.min(25, P[i].m - V[i].m))
     return `${c}='clip((val-${V[i].m.toFixed(2)})*${k.toFixed(4)}+${(V[i].m + off).toFixed(2)},0,255)'`

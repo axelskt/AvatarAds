@@ -28,7 +28,7 @@ function ugcStyle() {
 function stmt(re, what) { const m = app.match(re); if (!m) throw new Error(what + ' introuvable dans app/index.html'); return m[0]; }
 
 const FNS = ['_expQuotedLine', '_expCommentKeyword', '_expWantsScenes', '_expEnvLock', '_expSpeechLock', '_expSelfieCue'].map(fn);
-const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END', '_EXP_PIXEL_LOCK'];
+const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END', '_EXP_PIXEL_LOCK', '_EXP_PIXEL_END'];
 const imgP = stmt(/const imgPrompt = prompt \+ ', ' \+ styleMeta\.prompt[^\n]*;/, 'prompt image de départ');
 const anim = stmt(/let animPrompt = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage animPrompt').replace(/^let /, 'const ');
 const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ _EXP_PIXEL_LOCK \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
