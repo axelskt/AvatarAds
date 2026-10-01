@@ -51,6 +51,10 @@ export function expressImagePrompt(prompt: string): string {
   ${imgP}
   return imgPrompt
 }
+// Qualité HAUTE = palier « 4K » de l'app (Axel 02/10) : image Premium puis Nano Banana Pro 4K avec CES consignes, mot pour mot.
+export const IMG_REALISM_EDIT = ${JSON.stringify(cst('_IMG_REALISM_EDIT'))}
+export const IMG_TEXT_FIDELITY = ${JSON.stringify(cst('_IMG_TEXT_FIDELITY'))}
+export const NB_MODEL = ${JSON.stringify(cst('_NB_MODEL'))}
 // Images de PERSONNE réalistes : bloc réalisme de l'app (photo amateur + tenue correcte SFW), mot pour mot.
 export const IMG_REALISM_SUFFIX = ${JSON.stringify(cst('_IMG_REALISM_SUFFIX'))}
 // Veo 3.1 Lite (sans photo) : même assemblage Express que l'app, moteur Veo (verrou de fin de parole compris).

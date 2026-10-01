@@ -5,7 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
-import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
+import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
@@ -60,7 +60,11 @@ const APP_URL         = 'https://avatarads.fr/app/'
 // redirige au lieu de l'app lourde : la carte s'affiche en < 0,5 s → Claude ne relance pas un 2ᵉ
 // /authorize → plus de code périmé → token fiable à tous les coups.
 const CONSENT_URL     = 'https://avatarads.fr/mcp-consent.html'
-const IMG_COST        = { standard: 3, high: 5 }
+// Qualités (Axel 02/10, mêmes paliers que l'app) : low = « Standard » éco (gpt low, 1 cr) · standard = « Premium » (gpt medium,
+// 3 cr, DÉFAUT) · high = « Haute qualité » (gpt high, 5 cr). On ne quitte Premium QUE si l'utilisateur le demande.
+const IMG_COST        = { low: 1, standard: 3, high: 5 }
+type ImgQ = 'low' | 'standard' | 'high'
+const qualiteImage = (v: unknown): ImgQ => { const q = String(v || '').toLowerCase(); return /^(high|haute|hd|4k|max)/.test(q) ? 'high' : /^(standard|eco|éco|low|basse)/.test(q) ? 'low' : 'standard' }
 const VIDEO_COST_SEC  = 1.5 // Veo 3.1 Lite 720p (« Veo Standard ») = 0,05 $/s API (audio inclus)
 const VIDEO_COST_SEC_PRO = 3 // Veo 3.1 Fast (« Veo Pro », qualité max) = 0,10 $/s API — modèle au choix
 // ── Générateur (avatar parlant) via Claude : mêmes briques que l'app ──
@@ -157,6 +161,8 @@ function castingAleatoire(): string {
 // (angle marketing inventé RETIRÉ le 18/09 — la variété des static ads vient des 59 formats VALIDÉS
 //  de la banque, désormais ouverte à tous ; on n'invente pas d'angle.)
 // N'augmente QUE si le prompt parle d'une personne (sinon on casserait un packshot produit).
+// (02/10) appliqué AUSSI à la photo de départ des vidéos Express : sans ce bloc, la personne sortait « mannequin de pub »
+// (Axel : « hyper IA, beaucoup trop artificiel, pas le même rendu que l'app »).
 function augmenterPortrait(prompt: string): string {
   if (!RE_PERSONNE.test(prompt)) return prompt
   const g = genreIndice(prompt)
@@ -899,7 +905,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           quote: { type: 'string', description: "static_ad : témoignage / message / paragraphe en FRANÇAIS pour les formats qui en ont un (avis, reddit, message, email, story, annonce…)." },
           number: { type: 'string', description: "static_ad : chiffre clé (ex. « 85% », « 10 ») pour les formats statistiques / X signes." },
           format: { type: 'string', enum: ['portrait', 'square', 'landscape'], description: 'portrait 9:16 (défaut, idéal TikTok/Reels), square 1:1, landscape 16:9' },
-          quality: { type: 'string', enum: ['standard', 'high'], description: `'standard' = DÉFAUT OBLIGATOIRE (${IMG_COST.standard} crédits). N'utilise 'high' (${IMG_COST.high} crédits) QUE si l'utilisateur écrit explicitement « haute qualité »/« high »/« 4K ». NE choisis PAS 'high' parce que le prompt dit « détaillé », « réaliste » ou « ultra » — ça décrit l'image voulue, pas la qualité du moteur.` },
+          quality: { type: 'string', enum: ['premium', 'standard', 'high'], description: `'premium' = DÉFAUT (${IMG_COST.standard} crédits) — OMETS ce paramètre ou mets 'premium' dans tous les autres cas. Change-le UNIQUEMENT si l'utilisateur le demande lui-même : 'standard' (${IMG_COST.low} crédit, éco) s'il dit « standard / éco / moins cher », 'high' (${IMG_COST.high} crédits) s'il dit « haute qualité / HD / 4K ». Ne choisis jamais un autre niveau parce que le prompt dit « détaillé », « réaliste » ou « ultra ».` },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['prompt'],
@@ -1100,7 +1106,7 @@ async function runGetAccount(profile: Record<string, unknown>): Promise<ToolCont
 - Plan : ${profile.plan || 'free'}
 - Crédits restants : ${credits}
 
-Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${OMNI_FLASH_SEC} crédits/s (4, 6, 8 ou 10 s ; +${OMNI_START_IMG} crédits pour la photo de départ si aucune image n'est fournie) · avatar parlant (voix native) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
+Barème : image Premium (défaut) ${IMG_COST.standard} crédits · Standard éco ${IMG_COST.low} crédit · Haute qualité ${IMG_COST.high} crédits · vidéo Express ${OMNI_FLASH_SEC} crédits/s (4, 6, 8 ou 10 s ; +${OMNI_START_IMG} crédits pour la photo de départ si aucune image n'est fournie) · avatar parlant (voix native) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
@@ -1110,12 +1116,43 @@ Recharger / changer de plan : ${APP_URL}`)
 // manquait le 20/08 : Claude décrivait le produit en mots → une bouteille « générique ».
 // Portrait 9:16 en 2K (1152x2048, Axel 24/09) : si OpenAI refusait cette taille, UNE relance en 1024x1536 (un refus
 // de validation n'est pas facturé).
-async function genererImage(prompt: string, size: string, quality: 'standard' | 'high', ref?: { bytes: Uint8Array; contentType: string } | null): Promise<{ bytes: Uint8Array } | { error: string }> {
+// QUALITÉ HAUTE = le palier « 4K » de l'app (Axel 02/10, « c'est important ») : image Premium (gpt medium) puis agrandissement
+// Nano Banana Pro en 4K avec _IMG_REALISM_EDIT (+ fidélité du texte) de l'app, mot pour mot. Échec du 4K = l'image Premium
+// est livrée (comme l'app). Google en direct : 3 essais si le modèle est surchargé.
+const NB_ASPECT: Record<string, string> = { '1152x2048': '9:16', '1024x1536': '2:3', '1024x1024': '1:1', '1536x1024': '3:2' }
+async function agrandir4K(bytes: Uint8Array, size: string): Promise<Uint8Array | null> {
+  if (!GOOGLE_AI_KEY) return null
+  const mime = bytes[0] === 0x89 && bytes[1] === 0x50 ? 'image/png' : 'image/jpeg'
+  const prompt = IMG_REALISM_EDIT.includes(IMG_TEXT_FIDELITY) ? IMG_REALISM_EDIT : IMG_REALISM_EDIT + IMG_TEXT_FIDELITY
+  const body = JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: b64DepuisOctets(bytes) } }] }],
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { imageSize: '4K', aspectRatio: NB_ASPECT[size] || '9:16' } } })
+  for (let a = 0; a < 3; a++) {
+    if (a > 0) await new Promise((r) => setTimeout(r, 1800 * a))
+    try {
+      const r = await veoFetch(`/v1beta/models/${NB_MODEL}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(170_000) })
+      // deno-lint-ignore no-explicit-any
+      const j: any = await r.json().catch(() => ({}))
+      // deno-lint-ignore no-explicit-any
+      const part = (j?.candidates?.[0]?.content?.parts || []).find((p: any) => p?.inlineData?.data || p?.inline_data?.data)
+      const data = part?.inlineData?.data || part?.inline_data?.data
+      if (data) return b64ToBytes(String(data))
+      if (![408, 429, 500, 502, 503, 504].includes(r.status)) return null
+    } catch (_) { /* réessai */ }
+  }
+  return null
+}
+async function genererImage(prompt: string, size: string, quality: ImgQ, ref?: { bytes: Uint8Array; contentType: string } | null): Promise<{ bytes: Uint8Array } | { error: string }> {
+  if (quality === 'high') {
+    const base = await genererImage(prompt, size, 'standard', ref)
+    if ('error' in base) return base
+    const up = await agrandir4K(base.bytes, size)
+    return up ? { bytes: up } : base
+  }
   const r = await genererImageAt(prompt, size, quality, ref)
   if ('error' in r && size === '1152x2048' && /\bsize\b|1152x2048|dimension/i.test(r.error)) return genererImageAt(prompt, '1024x1536', quality, ref)
   return r
 }
-async function genererImageAt(prompt: string, size: string, quality: 'standard' | 'high', ref?: { bytes: Uint8Array; contentType: string } | null): Promise<{ bytes: Uint8Array } | { error: string }> {
+async function genererImageAt(prompt: string, size: string, quality: ImgQ, ref?: { bytes: Uint8Array; contentType: string } | null): Promise<{ bytes: Uint8Array } | { error: string }> {
   let lastErr = 'Erreur génération'
   for (const model of GPT_IMG_MODELS) {
     try {
@@ -1125,7 +1162,7 @@ async function genererImageAt(prompt: string, size: string, quality: 'standard' 
         const build = (fidelity: boolean) => {
           const fd = new FormData()
           fd.append('model', model); fd.append('prompt', prompt); fd.append('n', '1'); fd.append('size', size)
-          fd.append('quality', quality === 'high' ? 'high' : 'medium')
+          fd.append('quality', quality === 'high' ? 'high' : quality === 'low' ? 'low' : 'medium')
           if (fidelity) fd.append('input_fidelity', 'high')
           fd.append('image', new Blob([ref.bytes as unknown as BlobPart], { type: ref.contentType }), 'reference.' + ext)
           return fd
@@ -1139,7 +1176,7 @@ async function genererImageAt(prompt: string, size: string, quality: 'standard' 
       } else {
         const res = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : 'medium', moderation: 'low' }),
+          body: JSON.stringify({ model, prompt, n: 1, size, quality: quality === 'high' ? 'high' : quality === 'low' ? 'low' : 'medium', moderation: 'low' }),
         })
         data = await res.json().catch(() => ({}))
       }
@@ -1219,11 +1256,11 @@ async function runGenerateImage(profile: Record<string, unknown>, args: Record<s
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
   if (prompt.length > 4000) return toolErr('Prompt trop long (4000 caractères max).')
-  const quality = args.quality === 'high' ? 'high' : 'standard'
+  const quality = qualiteImage(args.quality)
   const format = ['portrait', 'square', 'landscape'].includes(String(args.format)) ? String(args.format) : 'portrait'
   const sizeMap: Record<string, string> = { portrait: '1152x2048', square: '1024x1024', landscape: '1536x1024' }
   const size = sizeMap[format]
-  const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
+  const cost = IMG_COST[quality]
 
   // (02/10) plus de demande de confirmation pour la qualité HIGH non plus : Axel ne veut AUCUN accord demandé avant génération.
 
@@ -2076,7 +2113,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? expressImagePrompt(prompt) : undefined })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? augmenterPortrait(expressImagePrompt(prompt)) : undefined })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
     prompt: expressVeoPrompt(prompt), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
@@ -3958,7 +3995,7 @@ serve(async (req) => {
           .eq('id', jobId).eq('status', 'pending').select('id')
         if (!tookP || !tookP.length) return json(409, { error: 'not_pending' })
         runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: '', aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
-          prompt: expressOmniPrompt(String(params.prompt || '')), genImage: expressImagePrompt(String(params.prompt || '')), productRef: refP })
+          prompt: expressOmniPrompt(String(params.prompt || '')), genImage: augmenterPortrait(expressImagePrompt(String(params.prompt || ''))), productRef: refP })
         return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
       }
       const mV = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
@@ -3986,13 +4023,13 @@ serve(async (req) => {
     }
     const pArgs = (params.args || {}) as Record<string, unknown>
     const format = ['portrait', 'square', 'landscape'].includes(String(params.format)) ? String(params.format) : 'portrait'
-    const quality: 'standard' | 'high' = params.quality === 'high' ? 'high' : 'standard'
+    const quality: ImgQ = (['low', 'standard', 'high'] as string[]).includes(String(params.quality)) ? params.quality as ImgQ : 'standard'
     const kind = String(params.kind || 'free')
     const userId = String(pj.user_id)
     const { data: profile } = await svc.from('profiles').select('*').eq('id', userId).maybeSingle()
     if (!profile) return json(404, { error: 'no_profile' })
     if (!isUnlimited(profile) && !ALLOWED_PLANS.includes(String(profile.plan || '').toLowerCase())) return json(403, { error: 'plan' })
-    const cost = quality === 'high' ? IMG_COST.high : IMG_COST.standard
+    const cost = IMG_COST[quality]
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
       const { data: capR } = await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: cost, p_cap: cap })   // F1 : plafond atomique
