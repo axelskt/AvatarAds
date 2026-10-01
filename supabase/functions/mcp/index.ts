@@ -549,13 +549,19 @@ function aaMedia(url, kind, name){
   var v=kind==='video'||/\\.(mp4|mov|webm|m4v)(\\?|#|$)/i.test(url); aaKindNow=v?'video':'image';
   var m=document.getElementById('m');
   m.innerHTML = v
-    ? '<video src="'+url+'#t=0.1" controls playsinline preload="metadata" class="aa-m"></video>'
+    ? '<video src="'+url+'#t=0.1" playsinline preload="metadata" class="aa-m"></video>'
     : '<img src="'+url+'" alt="" class="aa-m"/>';
   if(v && aaPrev){   // Axel 01/10 : la photo de départ (payée) reste livrée au-dessus de la vidéo
     m.insertAdjacentHTML('afterbegin', '<div style="text-align:center;margin:0 0 10px"><img src="'+aaPrev+'" alt="" class="aa-m" style="max-height:420px"><div style="margin-top:6px"><button class="aa-a aa-rg" id="dlp" type="button" style="border:none;cursor:pointer">Télécharger la photo</button></div></div>');
     var dlp=document.getElementById('dlp'); if(dlp) dlp.onclick=function(){ aaSend('ui/open-link', { url: aaJobId ? ('https://mcp.avatarads.fr/i/'+aaJobId+'?photo=1&download=photo-depart.png') : aaPrev }); };
   }
-  var media=m.querySelector('video');
+  // Axel 02/10 : vidéo PROPRE — aucune commande affichée tant que la souris n'est pas dessus (aussi à l'arrivée) ;
+  // survol / toucher / clic → commandes visibles, sortie → masquées.
+  var vd=m.querySelector('video');
+  if(vd){ var _on=function(){ vd.controls=true; }, _off=function(){ vd.controls=false; };
+    vd.controls=false; vd.addEventListener('mouseenter',_on); vd.addEventListener('mouseleave',_off);
+    vd.addEventListener('touchstart',_on,{passive:true}); vd.addEventListener('click',function(){ if(!vd.controls){ vd.controls=true; vd.play().catch(function(){}); } }); }
+  var media=vd;
   if(!media) media=m.querySelector('img');
   if(media){ media.addEventListener(v?'loadeddata':'load', aaKick); }
   m.style.padding='0'; m.style.opacity=''; m.style.fontSize=''; aaBtns(); aaKick(); // 02/09 : plus AUCUN voile hérité de l'état « chargement » sur l'image finale

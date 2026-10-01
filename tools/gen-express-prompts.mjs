@@ -18,7 +18,7 @@ function fn(name) {
 function cst(name) {
   const m = app.match(new RegExp('\\nconst ' + name + '\\s*=\\s*([\'"`])([\\s\\S]*?)\\1\\s*;'));
   if (!m) throw new Error('constante introuvable dans app/index.html : ' + name);
-  return m[2];
+  return m[2].replace(/\\'/g, "'");   // apostrophes échappées du JS de l'app → texte propre
 }
 function ugcStyle() {
   const m = app.match(/\{ id:'ugc',[^\n]*?prompt:'((?:[^'\\]|\\.)*)'/);
@@ -28,10 +28,10 @@ function ugcStyle() {
 function stmt(re, what) { const m = app.match(re); if (!m) throw new Error(what + ' introuvable dans app/index.html'); return m[0]; }
 
 const FNS = ['_expQuotedLine', '_expCommentKeyword', '_expWantsScenes', '_expEnvLock', '_expSpeechLock', '_expSelfieCue'].map(fn);
-const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END'];
+const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END', '_EXP_PIXEL_LOCK'];
 const imgP = stmt(/const imgPrompt = prompt \+ ', ' \+ styleMeta\.prompt[^\n]*;/, 'prompt image de départ');
 const anim = stmt(/let animPrompt = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage animPrompt').replace(/^let /, 'const ');
-const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
+const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ _EXP_PIXEL_LOCK \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
 for (const k of ['_expSelfieCue()', '_expEnvLock(prompt)', '_expSpeechLock(prompt)', '_EXP_TEXLOCK_OMNI', '_EXP_PRODUCTLOCK']) if (!anim.includes(k)) throw new Error('assemblage : ' + k + ' absent');
 
 const ts = `// @ts-nocheck — GÉNÉRÉ par tools/gen-express-prompts.mjs depuis app/index.html — ne pas éditer à la main.
