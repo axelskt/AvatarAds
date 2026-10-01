@@ -28,7 +28,7 @@ function ugcStyle() {
 function stmt(re, what) { const m = app.match(re); if (!m) throw new Error(what + ' introuvable dans app/index.html'); return m[0]; }
 
 const FNS = ['_expQuotedLine', '_expCommentKeyword', '_expWantsScenes', '_expEnvLock', '_expSpeechLock', '_expSelfieCue'].map(fn);
-const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END', '_EXP_PIXEL_LOCK', '_EXP_PIXEL_END'];
+const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END', '_EXP_PIXEL_LOCK'];
 const imgP = stmt(/const imgPrompt = prompt \+ ', ' \+ styleMeta\.prompt[^\n]*;/, 'prompt image de départ');
 const anim = stmt(/let animPrompt = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage animPrompt').replace(/^let /, 'const ');
 const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ _EXP_PIXEL_LOCK \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
@@ -55,6 +55,8 @@ export function expressImagePrompt(prompt: string): string {
 export const IMG_REALISM_EDIT = ${JSON.stringify(cst('_IMG_REALISM_EDIT'))}
 export const IMG_TEXT_FIDELITY = ${JSON.stringify(cst('_IMG_TEXT_FIDELITY'))}
 export const NB_MODEL = ${JSON.stringify(cst('_NB_MODEL'))}
+// Produit identique à SA photo de référence (couleurs, matière, texture, finition, textes) — photo de départ composée avec le produit.
+export const EXP_PRODUCT_REF_LOCK = ${JSON.stringify(cst('_EXP_PRODUCT_REF_LOCK'))}
 // Images de PERSONNE réalistes : bloc réalisme de l'app (photo amateur + tenue correcte SFW), mot pour mot.
 export const IMG_REALISM_SUFFIX = ${JSON.stringify(cst('_IMG_REALISM_SUFFIX'))}
 // Veo 3.1 Lite (sans photo) : même assemblage Express que l'app, moteur Veo (verrou de fin de parole compris).
