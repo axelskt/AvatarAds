@@ -515,7 +515,7 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { waiting:!!sc.waiting, url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo };
+  return { waiting:!!sc.waiting, url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo, forProduct:!!sc.forProduct };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -575,7 +575,7 @@ function aaShow(out){
     if(d.prompt) aaPrompt=d.prompt;
     if(d.job_id) aaJobId=d.job_id;
     if(d.format) aaFormat=d.format;
-    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap; if(d.forVideo) aaForVideo=true;
+    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap; if(d.forVideo) aaForVideo=true; if(d.forProduct) aaForProduct=true;
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.waiting){ aaOk=true; var mw=document.getElementById('m'); if(mw){ mw.style.opacity='.75'; mw.textContent='En attente de la photo dans la carte au-dessus \u2014 rien n\u2019est en cours.'; } aaKick(); return; }   // Axel 01/10 : jamais de fausse barre
     if(d.pending){ aaAskPhoto(); return; }
@@ -585,7 +585,7 @@ function aaShow(out){
 // ── PHOTO DU PRODUIT DANS LA CARTE (21/08) : claude.ai ne transmet pas les images jointes aux outils →
 //    l'utilisateur la dépose ICI (glisser / choisir / coller), le widget l'envoie à /start qui lance la
 //    génération avec le produit à l'identique, dans la MÊME carte. « Sans photo » = génération libre. ──
-var aaForVideo=false;
+var aaForVideo=false, aaForProduct=false;
 function aaAskPhoto(){
   aaOk=true; if(aaPollT){ clearInterval(aaPollT); aaPollT=null; }
   var b=document.getElementById('b'); if(b) b.style.display='none';
@@ -608,8 +608,8 @@ function aaAskPhoto(){
   document.getElementById('skip').onclick=function(){ aaStartJob(''); };
   var pl=document.getElementById('pl'), go=document.getElementById('go');
   if(aaForVideo){   // vidéo : la photo de départ seulement (pas de « Sans photo », pas de lien produit)
-    var _t=dz.querySelector('div'); if(_t) _t.textContent='Dépose ta photo de départ';
-    var _s=dz.querySelectorAll('div')[1]; if(_s) _s.textContent='Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — la vidéo se lance dès que tu la déposes';
+    var _t=dz.querySelector('div'); if(_t) _t.textContent=aaForProduct?'Dépose la photo de ton produit':'Dépose ta photo de départ';
+    var _s=dz.querySelectorAll('div')[1]; if(_s) _s.textContent=aaForProduct?'Glisse la photo officielle du produit ici, choisis-la ou colle-la (⌘V) — la photo puis la vidéo se lancent ensuite':'Glisse-la ici, choisis-la ou colle-la (⌘V) · PNG, JPG, WebP — la vidéo se lance dès que tu la déposes';
     var _sk=document.getElementById('skip'); if(_sk) _sk.style.display='none';
     if(pl&&pl.parentNode) pl.parentNode.style.display='none';
   }
@@ -909,7 +909,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
         properties: {
           prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français)." },
           duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6, 8 ou 10 (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
-          product_url: { type: 'string', description: "Lien de la PAGE PRODUIT quand l'utilisateur veut une vidéo d'une personne qui présente ce produit : passe-le ici, dans CE seul appel (pas de generate_image avant). La photo du produit est récupérée côté serveur, la photo de départ est générée avec le produit en main (+3 crédits), puis la vidéo se lance — tout s'affiche dans la même carte. Beaucoup de grandes marques (Louis Vuitton, Dior, Chanel…) bloquent la récupération : DÉCRIS TOUJOURS le produit visuellement dans prompt (marque, nom, forme du flacon / emballage, couleur, bouchon, inscriptions), d'après ce que tu sais de lui — c'est cette description qui sert si la photo est bloquée." },
+          product_url: { type: 'string', description: "Lien de la PAGE PRODUIT quand l'utilisateur veut une vidéo d'une personne qui présente ce produit : passe-le ici, dans CE seul appel (pas de generate_image avant). La photo OFFICIELLE du produit est récupérée côté serveur, la photo de départ est générée avec ce produit en main (+3 crédits), puis la vidéo se lance — tout dans la même carte. Si le site bloque la récupération (Louis Vuitton, Dior, Chanel…), la carte le dit et demande de déposer la photo du produit : on n'invente JAMAIS le produit." },
           user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           image_url: { type: 'string', description: "URL publique http(s) d'une image de départ (optionnel) : une image de generate_image, ou un lien collé par l'utilisateur. ⚠️ claude.ai ne transmet PAS les images jointes au chat : pour une photo JOINTE, n'utilise pas image_url, mets user_photo:true (la carte la lui fait déposer)." },
@@ -1266,12 +1266,6 @@ NE lance PAS tout de suite : DEMANDE d'abord à l'utilisateur s'il veut vraiment
           const r = await fetch('https://mcp.avatarads.fr/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job: pj.id, product_url: productUrl, data_url: '', skip: false, cap: _cap }) })
           if (!r.ok) {
             const e = await r.json().catch(() => ({})) as Record<string, unknown>
-            // Axel 01/10 : site qui bloque les robots (Louis Vuitton…) → on NE bloque PLUS sur le dépôt : génération lancée
-            // sans photo, d'après la description du produit (le flacon peut différer ; déposer la photo reste possible ensuite).
-            if (String(e.error || '') === 'no_image_in_link') {
-              const r2 = await fetch('https://mcp.avatarads.fr/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job: pj.id, product_url: '', data_url: '', skip: true, cap: _cap }) })
-              if (r2.ok) return
-            }
             if (String(e.error || '') !== 'not_pending') {
               const { data: cur } = await svc.from('mcp_jobs').select('params, status').eq('id', pj.id).maybeSingle()
               if (cur && cur.status === 'pending') await svc.from('mcp_jobs').update({ params: { ...(cur.params as Record<string, unknown> || {}), link_failed: String(e.error || 'erreur') } }).eq('id', pj.id).eq('status', 'pending')
@@ -1929,7 +1923,7 @@ const OMNI_START_IMG = IMG_COST.standard   // photo de départ générée (vidé
 const omniFlashCran = (n: number): number => (n <= 4 ? 4 : n <= 6 ? 6 : n <= 8 ? 8 : 10)
 // imageUrl vide + genImage = PHOTO DE DÉPART GÉNÉRÉE d'abord (Axel 01/10 : vidéo sans image de référence = photo facturée
 // OMNI_START_IMG crédits, comprise dans o.cost ; échec de la photo = tout remboursé par failLaunch).
-function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; aspect: string; duration: number; prompt: string; genImage?: string; productUrl?: string }): void {
+function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; aspect: string; duration: number; prompt: string; genImage?: string; productRef?: { bytes: Uint8Array; contentType: string } | null }): void {
   bg((async () => {
     try {
       const bal = await spendForJob(o.userId, o.jobId, o.cost)
@@ -1941,29 +1935,10 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
       }
       let buf: Uint8Array
       if (!o.imageUrl && o.genImage) {
-        // lien produit (Axel 01/10 : « crée une vidéo … ce produit + lien ») : sa photo sert de RÉFÉRENCE à la photo de départ ;
-        // site qui bloque les robots → photo de départ générée d'après la description seule (jamais de blocage)
-        let ref: { bytes: Uint8Array; contentType: string } | null = null
-        if (o.productUrl) {
-          try {
-            const iu = await extraireImageProduit(o.productUrl)
-            if (iu) { const g = await fetchUserFile(iu, 10_000_000, /^image\/(png|jpe?g|webp)$/, 'la photo du produit'); if (typeof g !== 'string') ref = g }
-          } catch (_) { /* sans référence */ }
-        }
-        // Sans référence (site qui bloque, Axel 01/10 : un parfum Louis Vuitton est sorti en flacon Chanel) : nom du produit tiré du
-        // lien + INTERDIT absolu d'afficher le produit / logo d'une AUTRE marque.
-        let sansRef = ''
-        if (!ref && o.productUrl) {
-          let nom = '', marque = ''
-          try {
-            const pu = new URL(o.productUrl)
-            marque = pu.hostname.replace(/^(www|fr|en|us|uk|eu|shop|store)\./i, '').split('.')[0]
-            const seg = pu.pathname.split('/').filter((x) => /[a-z]{3,}/i.test(x) && !/^(fr|en|fra-fr|produits?|products?|p|item|shop)$/i.test(x)).sort((a, b) => b.length - a.length)[0] || ''
-            nom = decodeURIComponent(seg).replace(/\.[a-z]+$/i, '').split(/[-_]+/).filter((w) => !/\d/.test(w)).join(' ').slice(0, 80)
-          } catch (_) { /* lien illisible */ }
-          sansRef = ` PRODUCT: the product is « ${nom || 'the product described above'} » by the brand of ${marque || 'the request'}; render it ONLY as described in the request above (shape, colour, cap, engraving). NEVER show another brand's product, bottle, logo or label (no Chanel, Dior, YSL or any other brand) — if a detail is unknown, keep any printed text minimal and generic rather than inventing a different brand.`
-        }
-        const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image — same bottle/packaging shape, colours, logo and label, identical and legible.' : sansRef),
+        // produit (Axel 01/10) : la PHOTO OFFICIELLE (lien produit lu côté serveur, ou photo déposée dans la carte) sert de
+        // référence à la photo de départ. JAMAIS de produit inventé : sans photo, la carte la demande (voir /start, params.product).
+        const ref = o.productRef || null
+        const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image — same bottle/packaging shape, colours, logo and label, identical and legible, never redrawn or re-lettered.' : ''),
           o.aspect === '16:9' ? '1536x1024' : '1152x2048', 'standard', ref)
         if (!('bytes' in gi)) throw new ErrClient('photo de départ : ' + (gi.error || 'génération impossible') + ' — rien débité, réessaie')
         buf = gi.bytes
@@ -2036,6 +2011,33 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url || wantsPhoto ? ', avec image de départ' : genStart ? `, photo de départ générée ${OMNI_START_IMG} cr comprise` : ''})`, 'generate_video')
   if (gate) return gate
 
+  // LIEN PRODUIT (Axel 01/10) : la photo OFFICIELLE du produit est lue côté serveur (/start, params.product) puis la photo de
+  // départ est générée avec le produit en main → Omni Flash. Site qui bloque (Louis Vuitton…) → la carte le DIT et demande la
+  // photo officielle : rien n'est inventé, rien n'est débité avant.
+  if (genStart && productUrlV) {
+    const { data: pp, error: ppErr } = await svc.from('mcp_jobs')
+      .insert({ user_id: userId, kind: 'avatar', status: 'pending', credits_cost: cost, params: { video: true, product: true, prompt, aspect, duration, product_url: productUrlV, cap_held: capHeldOf(profile, ctx, cost) } })
+      .select('id').single()
+    if (ppErr || !pp) { await capRelease(profile, ctx, cost); return toolErr('Erreur serveur — réessaie.') }
+    const capP = await jobCap(pp.id)
+    bg((async () => {
+      try {
+        const r = await fetch('https://mcp.avatarads.fr/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job: pp.id, product_url: productUrlV, data_url: '', cap: capP }) })
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({})) as Record<string, unknown>
+          if (String(e.error || '') !== 'not_pending') {
+            const { data: cur } = await svc.from('mcp_jobs').select('params, status').eq('id', pp.id).maybeSingle()
+            if (cur && cur.status === 'pending') await svc.from('mcp_jobs').update({ params: { ...(cur.params as Record<string, unknown> || {}), link_failed: String(e.error || 'erreur') } }).eq('id', pp.id).eq('status', 'pending')
+          }
+        }
+      } catch (_) { /* la carte proposera le dépôt */ }
+    })())
+    return {
+      content: [{ type: 'text', text: `[système] La carte récupère la photo OFFICIELLE du produit depuis le lien, puis génère la photo de départ (produit en main) et la vidéo (${duration} s, ${cost} crédits, débités au lancement). Si le site bloque la récupération, la carte le dit et demande de déposer la photo du produit : rien n'est inventé.\nRÉPONSE À ÉCRIRE MAINTENANT : une phrase courte, par ex. « Je récupère la photo officielle du produit depuis le lien ; si le site la bloque, dépose-la dans la carte et la vidéo se lance. » N'appelle aucun autre outil pour cette vidéo.` }],
+      structuredContent: { job_id: pp.id, cap: capP, statusUrl: `https://mcp.avatarads.fr/status/${pp.id}`, kind: 'video', forVideo: true, forProduct: true, prompt, format: aspect === '16:9' ? 'landscape' : 'portrait' },
+    }
+  }
+
   // PHOTO JOINTE AU CHAT (Axel 30/09) : claude.ai ne la transmet pas → carte de dépôt DANS la conversation (même mécanique
   // que les images : job « pending », rien débité, /start lance Omni Flash dès que la photo est déposée).
   if (wantsPhoto) {
@@ -2061,7 +2063,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? expressImagePrompt(prompt) : undefined, productUrl: genStart ? productUrlV : undefined })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? expressImagePrompt(prompt) : undefined })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
     prompt: expressVeoPrompt(prompt), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
@@ -3917,7 +3919,30 @@ serve(async (req) => {
       const { data: profV } = await svc.from('profiles').select('*').eq('id', userIdV).maybeSingle()
       if (!profV) return json(404, { error: 'no_profile' })
       if (!isUnlimited(profV) && !ALLOWED_PLANS.includes(String(profV.plan || '').toLowerCase())) return json(403, { error: 'plan' })
-      const durV = omniFlashCran(Number(params.duration) || 6), costV = Math.round(durV * OMNI_FLASH_SEC)
+      const durV = omniFlashCran(Number(params.duration) || 6), costV = Math.round(durV * OMNI_FLASH_SEC) + (params.product === true ? OMNI_START_IMG : 0)
+      // PRODUIT (Axel 01/10) : photo officielle = lien produit lu ici, OU photo déposée dans la carte → référence de la photo de départ
+      if (params.product === true) {
+        let refP: { bytes: Uint8Array; contentType: string } | null = null
+        const mP = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
+        if (mP) { const bP = b64ToBytes(mP[3]); if (bP.length > 10_000_000) return json(413, { error: 'too_large' }); refP = { bytes: bP, contentType: mP[1] } }
+        else if (/^https?:\/\//i.test(String(body.product_url || ''))) {
+          try { const iu = await extraireImageProduit(String(body.product_url)); if (iu) { const g = await fetchUserFile(iu, 10_000_000, /^image\/(png|jpe?g|webp)$/, 'la photo du produit'); if (typeof g !== 'string') refP = g } } catch (_) { /* bloqué */ }
+          if (!refP) return json(422, { error: 'no_image_in_link' })
+        } else return json(400, { error: 'bad_image' })
+        if (!isUnlimited(profV)) {
+          const capP = DAILY_CAPS[String(profV.plan || '').toLowerCase()] ?? 100
+          const { data: capRP } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: costV, p_cap: capP })
+          if (typeof capRP === 'number' && capRP < 0) return json(429, { error: 'daily_cap' })
+          if ((Number(profV.credits_remaining) || 0) < costV) return json(402, { error: 'no_credits' })
+        }
+        const nowP = new Date().toISOString()
+        const { data: tookP } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, created_at: nowP, updated_at: nowP })
+          .eq('id', jobId).eq('status', 'pending').select('id')
+        if (!tookP || !tookP.length) return json(409, { error: 'not_pending' })
+        runOmniFlashJob({ userId: userIdV, jobId, cost: costV, imageUrl: '', aspect: params.aspect === '16:9' ? '16:9' : '9:16', duration: durV,
+          prompt: expressOmniPrompt(String(params.prompt || '')), genImage: expressImagePrompt(String(params.prompt || '')), productRef: refP })
+        return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
+      }
       const mV = /^data:(image\/(png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data_url || ''))
       if (!mV) return json(400, { error: 'bad_image' })
       const bytesV = b64ToBytes(mV[3])
