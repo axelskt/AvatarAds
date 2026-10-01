@@ -3992,7 +3992,7 @@ serve(async (req) => {
         } else return json(400, { error: 'bad_image' })
         if (!isUnlimited(profV)) {
           const capP = DAILY_CAPS[String(profV.plan || '').toLowerCase()] ?? 100
-          const { data: capRP } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: costV, p_cap: capP })
+          const { data: capRP } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: Math.max(0, costV - (Number(params.cap_held) || 0)), p_cap: capP })   // part déjà réservée à la création de la carte : jamais comptée deux fois (02/10)
           if (typeof capRP === 'number' && capRP < 0) return json(429, { error: 'daily_cap' })
           if ((Number(profV.credits_remaining) || 0) < costV) return json(402, { error: 'no_credits' })
         }
@@ -4010,7 +4010,7 @@ serve(async (req) => {
       if (bytesV.length > 10_000_000) return json(413, { error: 'too_large' })
       if (!isUnlimited(profV)) {
         const capV = DAILY_CAPS[String(profV.plan || '').toLowerCase()] ?? 100
-        const { data: capRV } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: costV, p_cap: capV })
+        const { data: capRV } = await svc.rpc('mcp_cap_reserve', { p_user: userIdV, p_cost: Math.max(0, costV - (Number(params.cap_held) || 0)), p_cap: capV })   // part déjà réservée à la création de la carte : jamais comptée deux fois (02/10)
         if (typeof capRV === 'number' && capRV < 0) return json(429, { error: 'daily_cap' })
         if ((Number(profV.credits_remaining) || 0) < costV) return json(402, { error: 'no_credits' })
       }
@@ -4038,7 +4038,7 @@ serve(async (req) => {
     const cost = IMG_COST[quality]
     if (!isUnlimited(profile)) {
       const cap = DAILY_CAPS[String(profile.plan || '').toLowerCase()] ?? 100
-      const { data: capR } = await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: cost, p_cap: cap })   // F1 : plafond atomique
+      const { data: capR } = await svc.rpc('mcp_cap_reserve', { p_user: userId, p_cost: Math.max(0, cost - (Number(params.cap_held) || 0)), p_cap: cap })   // F1 : plafond atomique — part déjà réservée à la création de la carte non recomptée (02/10)
       if (typeof capR === 'number' && capR < 0) return json(429, { error: 'daily_cap' })
       if ((Number(profile.credits_remaining) || 0) < cost) return json(402, { error: 'no_credits' })
     }
