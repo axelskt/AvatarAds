@@ -2,7 +2,7 @@
 // (supabase/functions/_shared/express-prompts.ts). Axel 01/10 : « le MCP doit être prompté pareil que dans l'app ».
 // Le code de l'app est EXTRAIT tel quel (fonctions _exp*, verrous _EXP_*, style ugc, enveloppe « CLEAN SHOT ») puis
 // rejoué avec les réglages du MCP : style ugc, voix native, moteur Omni (image → vidéo).
-// Exporte expressOmniPrompt (photo → vidéo, Omni Flash), expressVeoPrompt (sans photo, Veo Lite) et IMG_REALISM_SUFFIX (images).
+// Exporte expressOmniPrompt (photo → vidéo, Omni Flash), expressVeoPrompt (sans photo, Veo Lite) expressImagePrompt (photo de départ générée) et IMG_REALISM_SUFFIX (images).
 // Usage : node tools/gen-express-prompts.mjs            (écrit le fichier)
 //         node tools/gen-express-prompts.mjs --check    (vérifie seulement qu'il est à jour ; code 1 sinon)
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -29,6 +29,7 @@ function stmt(re, what) { const m = app.match(re); if (!m) throw new Error(what 
 
 const FNS = ['_expQuotedLine', '_expCommentKeyword', '_expWantsScenes', '_expEnvLock', '_expSpeechLock', '_expSelfieCue'].map(fn);
 const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END'];
+const imgP = stmt(/const imgPrompt = prompt \+ ', ' \+ styleMeta\.prompt[^\n]*;/, 'prompt image de départ');
 const anim = stmt(/let animPrompt = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage animPrompt').replace(/^let /, 'const ');
 const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
 for (const k of ['_expSelfieCue()', '_expEnvLock(prompt)', '_expSpeechLock(prompt)', '_EXP_TEXLOCK_OMNI', '_EXP_PRODUCTLOCK']) if (!anim.includes(k)) throw new Error('assemblage : ' + k + ' absent');
@@ -44,6 +45,11 @@ export function expressOmniPrompt(prompt: string): string {
   window._expVeoModel = 'omni'; const _isOmni = true
   ${anim}
   return (function (prompt) { ${wrap} return _omniPrompt })(animPrompt)
+}
+// Photo de départ générée quand il n'y a pas d'image (Express : prompt + style ugc + « no text… »), texte de l'app.
+export function expressImagePrompt(prompt: string): string {
+  ${imgP}
+  return imgPrompt
 }
 // Images de PERSONNE réalistes : bloc réalisme de l'app (photo amateur + tenue correcte SFW), mot pour mot.
 export const IMG_REALISM_SUFFIX = ${JSON.stringify(cst('_IMG_REALISM_SUFFIX'))}

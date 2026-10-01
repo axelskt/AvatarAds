@@ -5,7 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
-import { expressOmniPrompt, expressVeoPrompt, IMG_REALISM_SUFFIX } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
+import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
@@ -901,12 +901,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
     {
       name: 'generate_video',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // widget : barre de progression → vidéo EN GRAND inline + Télécharger. Le widget SONDE statusUrl et /status avance le job → plus besoin de check_video (donc plus de « Impossible de joindre » via le proxy)
-      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : ${VIDEO_COST_SEC} crédit/seconde SANS image de départ (4, 6 ou 8 s) ; AVEC image de départ (image_url : UGC réel à partir d'une photo) : 5 crédits/seconde, en 4, 6, 8 ou 10 s, 1080p. Annonce TOUJOURS le bon tarif avant de lancer. Débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Si l'utilisateur a joint une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true (UN appel par vidéo, sans image_url) — la CARTE affiche une zone où il dépose sa photo, puis la vidéo se lance toute seule (tarif avec image : 5 crédits/seconde). Ne l'envoie PAS sur le site, ne lui demande pas de lien. Si tu as déjà une URL (image générée par generate_image dans cette conversation, lien collé) : passe-la dans image_url, sans user_photo. ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
+      description: `Le module EXPRESS d'AvatarAds : génère une vidéo IA (audio et dialogues inclus) à partir d'un prompt et, en option, d'une image de départ (image_url). Coût : 5 crédits/seconde, en 4, 6, 8 ou 10 s (défaut 6), 1080p. Avec une image de départ (image_url, ou photo déposée via user_photo) : c'est tout. SANS aucune image : une photo de départ est d'abord générée d'après le prompt (+3 crédits), puis animée — ex. 6 s sans image = 33 crédits. Annonce TOUJOURS le bon tarif avant de lancer. Débité au lancement (remboursé si échec). La vidéo s'affiche TOUTE SEULE dans la carte (barre de progression puis lecteur) — n'appelle PAS check_video. 📷 PHOTO DE DÉPART : claude.ai NE TRANSMET PAS les images jointes au chat — tu ne reçois jamais la photo déposée dans la conversation. Si l'utilisateur a joint une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true (UN appel par vidéo, sans image_url) — la CARTE affiche une zone où il dépose sa photo, puis la vidéo se lance toute seule (tarif avec image : 5 crédits/seconde). Ne l'envoie PAS sur le site, ne lui demande pas de lien. Si tu as déjà une URL (image générée par generate_image dans cette conversation, lien collé) : passe-la dans image_url, sans user_photo. ⛔ Ne nomme JAMAIS le moteur technique sous-jacent à l'utilisateur : parle du « module Express d'AvatarAds ».`,
       inputSchema: {
         type: 'object',
         properties: {
           prompt: { type: 'string', description: "Description de la vidéo : scène, mouvement, ambiance. La réplique parlée s'écrit EN FRANÇAIS entre guillemets « … » (c'est exactement ce que la personne dira, mot pour mot ; l'avatar parle toujours français)." },
-          duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6 ou 8 sans image (défaut 8) ; 4, 6, 8 ou 10 avec image de départ ou photo déposée (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
+          duration_seconds: { type: 'integer', enum: [4, 6, 8, 10], description: 'Durée en secondes : 4, 6, 8 ou 10 (défaut 6). Une autre valeur est arrondie au cran supérieur et facturée à ce cran.' },
           user_photo: { type: 'boolean', description: "true quand l'utilisateur veut partir d'une photo qu'il a JOINTE AU CHAT (que tu ne peux pas transmettre) : la carte lui propose de la déposer, puis lance la vidéo. Un appel par photo / par vidéo. Ne l'utilise pas si tu as déjà une URL (image_url)." },
           aspect_ratio: { type: 'string', enum: ['9:16', '16:9'], description: '9:16 vertical (défaut) ou 16:9 paysage.' },
           image_url: { type: 'string', description: "URL publique http(s) d'une image de départ (optionnel) : une image de generate_image, ou un lien collé par l'utilisateur. ⚠️ claude.ai ne transmet PAS les images jointes au chat : pour une photo JOINTE, n'utilise pas image_url, mets user_photo:true (la carte la lui fait déposer)." },
@@ -1091,7 +1091,7 @@ async function runGetAccount(profile: Record<string, unknown>): Promise<ToolCont
 - Plan : ${profile.plan || 'free'}
 - Crédits restants : ${credits}
 
-Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${VIDEO_COST_SEC} crédit/s (4, 6 ou 8 s) · avatar parlant (voix native) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
+Barème : image standard ${IMG_COST.standard} crédits · image high ${IMG_COST.high} crédits · vidéo Express ${OMNI_FLASH_SEC} crédits/s (4, 6, 8 ou 10 s ; +${OMNI_START_IMG} crédits pour la photo de départ si aucune image n'est fournie) · avatar parlant (voix native) Standard ${VIDEO_COST_SEC} / Pro ${VIDEO_COST_SEC_PRO} crédit/s (4 à 8 s) · nettoyage audio ${CLEAN_COST_PER_MIN} crédit/min · Montage IA ${MONTAGE_PLAN_COST + MONTAGE_RENDER_COST} crédits · re-rendu d'un plan modifié ${MONTAGE_RENDER_COST} crédits.
 Recharger / changer de plan : ${APP_URL}`)
 }
 
@@ -1909,8 +1909,11 @@ function runVeoJob(o: {
 // 10 s, voix native), SANS repli : refus ou silence du fournisseur → échec + remboursement. Suivi : op_name « oh1:<tâche> »
 // sur un job kind 'avatar' → chemins existants (advanceAvatarJob / filets 60 min / deliverVideo), rien de nouveau à suivre.
 const OMNI_FLASH_SEC = 5
+const OMNI_START_IMG = IMG_COST.standard   // photo de départ générée (vidéo sans image de référence) : 3 cr, Axel 01/10
 const omniFlashCran = (n: number): number => (n <= 4 ? 4 : n <= 6 ? 6 : n <= 8 ? 8 : 10)
-function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; aspect: string; duration: number; prompt: string }): void {
+// imageUrl vide + genImage = PHOTO DE DÉPART GÉNÉRÉE d'abord (Axel 01/10 : vidéo sans image de référence = photo facturée
+// OMNI_START_IMG crédits, comprise dans o.cost ; échec de la photo = tout remboursé par failLaunch).
+function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?: number; imageUrl: string; aspect: string; duration: number; prompt: string; genImage?: string }): void {
   bg((async () => {
     try {
       const bal = await spendForJob(o.userId, o.jobId, o.cost)
@@ -1920,10 +1923,17 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
         await failAndRefund(o.userId, { id: o.jobId }, bal === -1 ? 'Crédits insuffisants' : 'Erreur crédits')
         return
       }
-      const got = await fetchUserFile(o.imageUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "l'image de départ (image_url)")
-      if (typeof got === 'string') throw new ErrClient(got)
-      if (tailleImage(got.bytes) === 'trop_grande') throw new ErrClient(`l'image de départ (image_url) : ${MSG_IMG_TROP_GRANDE}`)
-      let buf = got.bytes
+      let buf: Uint8Array
+      if (!o.imageUrl && o.genImage) {
+        const gi = await genererImageAt(o.genImage, o.aspect === '16:9' ? '1536x1024' : '1152x2048', 'standard')
+        if (!('bytes' in gi)) throw new ErrClient('photo de départ : ' + (gi.error || 'génération impossible') + ' — rien débité, réessaie')
+        buf = gi.bytes
+      } else {
+        const got = await fetchUserFile(o.imageUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "l'image de départ (image_url)")
+        if (typeof got === 'string') throw new ErrClient(got)
+        if (tailleImage(got.bytes) === 'trop_grande') throw new ErrClient(`l'image de départ (image_url) : ${MSG_IMG_TROP_GRANDE}`)
+        buf = got.bytes
+      }
       try { const rf = await reframeToAspect(buf, o.aspect); buf = rf.bytes } catch (_) { /* recadrage best-effort */ }
       const staged = await stageKieImage(o.userId, o.jobId, buf)
       if (!staged) throw new ErrClient('image de départ illisible — envoie un PNG, un JPG ou un WebP')
@@ -1951,14 +1961,17 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   if (!GOOGLE_AI_KEY && !kieVeoOn(profile)) return toolErr('Génération vidéo indisponible (configuration serveur incomplète).')
   const prompt = String(args.prompt || '').trim()
   if (!prompt) return toolErr('Le paramètre "prompt" est requis.')
-  // image de départ → Omni Flash (5 cr/s, 4 / 6 / 8 / 10 s) ; sans image → Veo Lite (1,5 cr/s, 4 / 6 / 8 s)
+  // Omni Flash (5 cr/s, 4 / 6 / 8 / 10 s) PARTOUT comme l'app (Flash par défaut, Axel 27/09) : image de départ fournie, photo
+  // déposée dans la carte, ou — sans rien — PHOTO DE DÉPART GÉNÉRÉE d'abord (+OMNI_START_IMG cr, Axel 01/10).
+  // Veo Lite (1,5 cr/s) seulement si Omni n'est pas ouvert sur ce compte.
   const omniOn = !!kieKey() && (isDevPlan(profile) || kieClientsOn())
   const wantsPhoto = args.user_photo === true && !String(args.image_url || '').trim() && omniOn
-  const omni = (!!String(args.image_url || '').trim() || wantsPhoto) && omniOn
+  const omni = omniOn
+  const genStart = omni && !wantsPhoto && !String(args.image_url || '').trim()
   const duration = omni ? omniFlashCran(Math.max(4, Number(args.duration_seconds) || 6)) : veoCran(Math.max(4, Number(args.duration_seconds) || 8))
   const aspect = args.aspect_ratio === '16:9' ? '16:9' : '9:16'
   const perSec = omni ? OMNI_FLASH_SEC : VIDEO_COST_SEC
-  const cost = Math.round(duration * perSec)
+  const cost = Math.round(duration * perSec) + (genStart ? OMNI_START_IMG : 0)
   const userId = String(profile.id)
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
@@ -1977,7 +1990,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   }
 
   // porte APRÈS les contrôles synchrones : un refus d'URL ne réserve plus de plafond 24 h (audit 28/09 #23)
-  const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url || wantsPhoto ? ', avec image de départ' : ''})`, 'generate_video')
+  const gate = await preSpendGate(profile, ctx, args, cost, `vidéo ${duration} s (${aspect}${args.image_url || wantsPhoto ? ', avec image de départ' : genStart ? `, photo de départ générée ${OMNI_START_IMG} cr comprise` : ''})`, 'generate_video')
   if (gate) return gate
 
   // PHOTO JOINTE AU CHAT (Axel 30/09) : claude.ai ne la transmet pas → carte de dépôt DANS la conversation (même mécanique
@@ -2005,7 +2018,7 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
 
   // kie (Veo 3.1 Lite) d'abord, Google Lite en repli — voir « VEO VIA KIE.AI ». Le repli Google ne passe PLUS sur Fast :
   // une génération Fast (2× plus chère) ne doit jamais être financée par un débit Lite.
-  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt) })
+  if (omni) runOmniFlashJob({ userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, aspect, duration, prompt: expressOmniPrompt(prompt), genImage: genStart ? expressImagePrompt(prompt) : undefined })
   else runVeoJob({ profile, userId, jobId: job.id, cost, cap: capHeldOf(profile, ctx, cost), imageUrl, imageLabel: "l'image de départ (image_url)", aspect, duration,
     prompt: expressVeoPrompt(prompt), kieModel: 'veo3_lite', googleModels: ['veo-3.1-lite-generate-preview'] })
 
