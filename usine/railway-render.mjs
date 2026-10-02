@@ -27,7 +27,9 @@ async function dl(url, file) {
 async function prepare() {
   mkdirSync(join(CACHE, 'words'), { recursive: true }); mkdirSync(join(CACHE, 'demos'), { recursive: true });
   try { execFileSync('sh', ['-c', `cp ${JSON.stringify(join(HERE, 'words-cache'))}/*.json ${JSON.stringify(join(CACHE, 'words'))}/`]); } catch { /* aucun mot en cache */ }
-  if (!existsSync(join(CACHE, 'broll'))) { const t = join(tmpdir(), 'broll.tgz'); await dl(PUB + 'cache/broll.tgz', t); execFileSync('tar', ['-xzf', t, '-C', CACHE]); rmSync(t, { force: true }); }
+  // version du lot d'illustrations (02/10 : + vidéos UGC, photos AXE / LV) : un cache plus ancien est complété
+  const BROLL_V = '2026-10-02';
+  if (!existsSync(join(CACHE, 'broll', '.v-' + BROLL_V))) { const t = join(tmpdir(), 'broll.tgz'); await dl(PUB + 'cache/broll-' + BROLL_V + '.tgz', t); execFileSync('tar', ['-xzf', t, '-C', CACHE]); rmSync(t, { force: true }); writeFileSync(join(CACHE, 'broll', '.v-' + BROLL_V), ''); }
 }
 async function upload(file, path, type) {
   const r = await fetch(SB + '/storage/v1/object/factory-media/' + path, { method: 'POST', headers: { Authorization: 'Bearer ' + KEY, apikey: KEY, 'Content-Type': type, 'x-upsert': 'true' }, body: readFileSync(file) });
