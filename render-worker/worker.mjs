@@ -824,6 +824,27 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     return
   }
 
+  // MCP Motion Control / Omni (Axel 02/10) : vidéo déposée dans la carte Claude → MP4 accepté partout par les moteurs
+  // (même règles que _mcNormalizeRef de l'app, qui le fait au navigateur avec ffmpeg.wasm) : H.264 yuv420p (une vidéo iPhone
+  // HEVC est refusée par Kling en 422), coupée à plan.maxDur, prolongée à 3,6 s sous 3,3 s si plan.minDur (Kling : 3 s
+  // minimum), côtés ramenés dans 340–1920 px. Ré-encodée à chaque fois : quelques secondes, jamais de surprise de codec.
+  if (plan.__compose === 'mc-ref') {
+    const src = join(jobDir, 'base.mp4')
+    const [w, h] = (ffprobe(src, 'stream=width,height').split('\n').find((l) => /^\d+,\d+/.test(l.trim())) || '0,0').split(',').map(Number)
+    const dur = parseFloat(ffprobe(src, 'format=duration')) || 0
+    const maxDur = Number(plan.maxDur) || 30, pad = plan.minDur && dur > 0 && dur < 3.3 ? Math.max(0.4, 3.6 - dur) : 0
+    const mn = Math.min(w || 720, h || 1280), mx = Math.max(w || 720, h || 1280)
+    const k = mn < 340 ? 720 / mn : mx > 1920 ? 1920 / mx : 1
+    const sw = Math.round((w || 720) * k / 2) * 2, sh = Math.round((h || 1280) * k / 2) * 2
+    const hasA = !!ffprobe(src, 'stream=codec_type').split('\n').find((l) => l.trim() === 'audio')
+    const args = ['-y', '-i', src, '-t', String(maxDur), '-vf', `scale=${sw}:${sh},format=yuv420p${pad ? `,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}` : ''}`]
+    if (hasA) args.push('-af', pad ? `apad=pad_dur=${pad.toFixed(2)}` : 'anull', '-c:a', 'aac', '-b:a', '128k'); else args.push('-an')
+    args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-movflags', '+faststart', outPath)
+    execFileSync('ffmpeg', args, { stdio: 'pipe' })
+    console.log(`✓ mc-ref ${w}x${h} ${dur.toFixed(2)}s → ${sw}x${sh}${pad ? ' +' + pad.toFixed(2) + 's' : ''}${dur > maxDur + 0.5 ? ' coupée à ' + maxDur + 's' : ''}`)
+    return
+  }
+
   const basePath = join(jobDir, 'base.mp4')
   if (!existsSync(basePath)) throw new Error('base.mp4 manquant dans ' + jobDir)
 
@@ -2985,7 +3006,7 @@ async function pollLoop() {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
       const { data: prio } = await sb.from('render_jobs').select('*').eq('status', 'queued')
-        .contains('plan', { __compose: 'retouche' }).order('created_at').limit(1)
+        .in('plan->>__compose', ['retouche', 'mc-ref']).order('created_at').limit(1)   // + préparation des vidéos MCP (02/10)
       const { data: jobs } = prio && prio.length ? { data: prio } : await sb.from('render_jobs').select('*').eq('status', 'queued')
         .order('created_at').limit(1)
       const job = jobs && jobs[0]

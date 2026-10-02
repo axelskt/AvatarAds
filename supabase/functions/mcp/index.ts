@@ -5,7 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
-import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
+import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL, omniEditPrompt, motionControlPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
@@ -516,7 +516,7 @@ const toolErr = (t: string): ToolContent => ({ content: [{ type: 'text', text: t
 const WIDGET_ORIGIN = 'https://mcp.avatarads.fr'
 // Le corps du widget, servi tel quel à GET /widget.js (hors sandbox → autorisé).
 const UI_WIDGET_JS = `
-var aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='', aaJobId='', aaFormat='portrait', aaRef='', aaRaw=false, aaProductUrl='', aaCap='';
+var aaLong=false, aaOk=false, aaSeen=[], aaHugW=0, aaId=100, aaUrlNow='', aaKindNow='', aaNameNow='', aaPollT=null, aaPct=5, aaStart=0, aaPrompt='', aaJobId='', aaFormat='portrait', aaRef='', aaRaw=false, aaProductUrl='', aaCap='';
 // Requête vers l'HÔTE (claude.ai) — protocole MCP Apps : télécharger un fichier
 // (ui/download-file), ouvrir un lien (ui/open-link), ou envoyer un message au chat
 // (ui/message = régénérer). Le sandbox bloque download+popups DIRECTS depuis l'iframe,
@@ -526,7 +526,7 @@ function aaUrlFrom(out){
   var sc=(out&&(out.structuredContent||out))||{};
   var url=sc.url||'';
   if(!url&&out&&out.content){ for(var i=0;i<out.content.length;i++){ var t=(out.content[i]&&out.content[i].text)||''; var mm=/https?:[^\\s)\\]]+/.exec(t); if(mm){ url=mm[0]; break; } } }
-  return { waiting:!!sc.waiting, url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo, forProduct:!!sc.forProduct };
+  return { waiting:!!sc.waiting, url:url, kind:sc.kind||'', name:sc.name||'', statusUrl:sc.statusUrl||sc.status_url||'', prompt:sc.prompt||'', job_id:sc.job_id||'', format:sc.format||'', ref:sc.ref||'', raw:!!sc.raw, pending:!!sc.pending, productUrl:sc.productUrl||'', cap:sc.cap||'', forVideo:!!sc.forVideo, forProduct:!!sc.forProduct, tool:sc.tool||'', rate:sc.rate||0, charSrc:sc.charSrc||'', refSrc:sc.refSrc||'' };
 }
 function aaBtns(){
   var b=document.getElementById('b'); if(b) b.style.display='flex';
@@ -579,7 +579,7 @@ function aaPollStatus(u){
     if(j.preview) aaPrev=j.preview;
     if(j.preview){ var pv=document.getElementById('pv'); if(pv && !pv.firstChild){ pv.innerHTML='<img src="'+j.preview+'" alt="" style="display:block;max-width:100%;max-height:420px;margin:12px auto 4px;border-radius:12px">'; var pt0=document.getElementById('pt'); if(pt0) pt0.textContent='Photo prête — vidéo en cours…'; var im=pv.querySelector('img'); if(im) im.addEventListener('load', aaKick); aaKick(); } }
     if(j.status==='done' && j.url){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } aaSetPct(100); setTimeout(function(){ aaMedia(j.url, j.kind||'image', ''); }, 350); return; }
-    if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent='Échec de la génération — réessaie.'; }
+    if(j.status==='failed'){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } var pt=document.getElementById('pt'); if(pt) pt.textContent=j.msg||'Échec de la génération — réessaie.'; aaKick(); }
     if(j.status==='pending' && j.link_failed){ aaProductUrl=''; aaAskPhoto(); var pe2=document.getElementById('pe'); if(pe2) pe2.textContent=j.link_failed==='no_image_in_link'?'Photo non récupérable depuis le lien (site protégé) — dépose-la ici.':j.link_failed==='daily_cap'?'Plafond 24 h atteint':(j.link_failed==='no_credits'||j.link_failed==='credits')?'Crédits épuisés — recharge sur avatarads.fr':'Lien illisible — dépose la photo ici.'; }
   }).catch(function(){});
 }
@@ -590,7 +590,7 @@ function aaStartPoll(u){
   var m=document.getElementById('m');
   m.style.opacity=''; m.innerHTML='<div id="pv"></div><div class="aa-pt" id="pt">Génération en cours…</div><div class="aa-pw"><div class="aa-pb" id="pb"></div></div>';
   aaSetPct(6); aaKick(); aaPollStatus(u);
-  aaPollT=setInterval(function(){ var el=Date.now()-aaStart; if(el>900000){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } return; } if(el>240000 && (aaPollN=(aaPollN||0)+1)%4) return; aaPollStatus(u); }, 2500);   // 15 min ; au-delà de 4 min : une sonde toutes les 10 s
+  aaPollT=setInterval(function(){ var el=Date.now()-aaStart; if(el>(aaLong?1800000:900000)){ if(aaPollT){ clearInterval(aaPollT); aaPollT=null; } return; } if(el>240000 && (aaPollN=(aaPollN||0)+1)%4) return; aaPollStatus(u); }, 2500);   // 15 min ; au-delà de 4 min : une sonde toutes les 10 s
 }
 function aaShow(out){
   try{
@@ -598,10 +598,10 @@ function aaShow(out){
     if(d.prompt) aaPrompt=d.prompt;
     if(d.job_id) aaJobId=d.job_id;
     if(d.format) aaFormat=d.format;
-    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap; if(d.forVideo) aaForVideo=true; if(d.forProduct) aaForProduct=true;
+    if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap; if(d.forVideo) aaForVideo=true; if(d.forProduct) aaForProduct=true; if(d.tool){ aaTool=d.tool; aaRate=d.rate; aaCharSrc=d.charSrc; aaRefSrc=d.refSrc; aaLong=true; }
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.waiting){ aaOk=true; var mw=document.getElementById('m'); if(mw){ mw.style.opacity='.75'; mw.textContent='En attente de la photo dans la carte au-dessus \u2014 rien n\u2019est en cours.'; } aaKick(); return; }   // Axel 01/10 : jamais de fausse barre
-    if(d.pending){ aaAskPhoto(); return; }
+    if(d.pending){ if(aaTool) aaAskMedia(); else aaAskPhoto(); return; }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
 }
@@ -674,6 +674,137 @@ function aaStartJob(dataUrl, link){
       if(pk) pk.disabled=false; if(sk) sk.disabled=false;
     })
     .catch(function(){ if(pe) pe.textContent='Réseau indisponible — réessaie.'; if(pk) pk.disabled=false; if(sk) sk.disabled=false; });
+}
+// ── OUTILS VIDÉO (Omni « edit » / Motion Control « motion », Axel 02/10) : dépôt DANS la carte → envoi direct au stockage
+//    (lien signé, progression), cadrage du personnage comme l’app (_mcPrepChar : ratio de la vidéo de réf + visage), lancement.
+var aaTool='', aaRate=0, aaCharSrc='', aaRefSrc='', aaVid=null, aaVidDur=0, aaVidW=0, aaVidH=0, aaChar=null, aaBusy=false;
+function aaEl(id){ return document.getElementById(id); }
+function aaMsg(t){ var pe=aaEl('pe'); if(pe) pe.textContent=t||''; aaKick(); }
+function aaZone(id, titre, sous, accept){
+  return '<div id="'+id+'" style="margin:12px;padding:16px;text-align:center;border:1.5px dashed var(--aa-line);border-radius:12px;transition:border-color .15s">'
+    +'<div style="font-size:14.5px;font-weight:700;margin-bottom:4px">'+titre+'</div>'
+    +'<div id="'+id+'s" style="font-size:12px;opacity:.72;margin-bottom:12px">'+sous+'</div>'
+    +'<input type="file" id="'+id+'f" accept="'+accept+'" style="display:none">'
+    +'<button class="aa-a aa-dl" id="'+id+'b" type="button" style="border:none;cursor:pointer">Choisir</button></div>';
+}
+function aaWire(id, onFile){
+  var z=aaEl(id), f=aaEl(id+'f'), b=aaEl(id+'b'); if(!z) return;
+  b.onclick=function(){ try{ f.click(); }catch(e){ aaMsg('Glisse le fichier directement dans la carte.'); } };
+  f.onchange=function(){ if(f.files&&f.files[0]) onFile(f.files[0]); };
+  z.addEventListener('dragover',function(e){ e.preventDefault(); z.style.borderColor='#FF5A1F'; });
+  z.addEventListener('dragleave',function(){ z.style.borderColor=''; });
+  z.addEventListener('drop',function(e){ e.preventDefault(); z.style.borderColor=''; var x=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(x) onFile(x); });
+}
+function aaDone(id, txt){ var s=aaEl(id+'s'), b=aaEl(id+'b'), z=aaEl(id); if(s) s.textContent=txt; if(b) b.textContent='Changer'; if(z) z.style.borderStyle='solid'; aaKick(); }
+function aaAskMedia(){
+  aaOk=true; if(aaPollT){ clearInterval(aaPollT); aaPollT=null; }
+  var b=aaEl('b'); if(b) b.style.display='none';
+  var m=aaEl('m'); m.style.padding='0';
+  var h='';
+  if(aaTool==='motion'){
+    h+= aaCharSrc ? '' : aaZone('zc','1. Photo du personnage','La personne qui va bouger · PNG, JPG, WebP','image/png,image/jpeg,image/webp');
+    h+= aaRefSrc ? '' : aaZone('zv',(aaCharSrc?'':'2. ')+'Vidéo de référence','Le mouvement à copier · 3 à 30 s · MP4 ou MOV','video/mp4,video/quicktime,video/webm');
+  } else h+= aaRefSrc ? '' : aaZone('zv','Dépose ta vidéo','1 à 10 s · MP4 ou MOV — la transformation se lance dès qu’elle est déposée','video/mp4,video/quicktime,video/webm');
+  h+='<div id="pe" style="font-size:12px;margin:0 14px 14px;min-height:16px;opacity:.85"></div>';
+  m.innerHTML=h;
+  aaWire('zc', aaPickChar); aaWire('zv', aaPickVid);
+  aaHugW=Math.max(320, Math.min(560, Math.ceil(window.innerWidth||420))); aaMeasure();
+  if(aaCharSrc){ var ic=new Image(); ic.crossOrigin='anonymous'; ic.onload=function(){ aaChar=ic; aaMaybeGo(); }; ic.onerror=function(){ aaMsg('Photo du personnage illisible — redemande à Claude.'); }; ic.src=aaCharSrc; }
+  if(aaRefSrc){ aaLoadVid(aaRefSrc, null); }
+}
+function aaPickChar(file){
+  if(aaBusy) return;
+  if(!file||!(new RegExp('^image/(png|jpe?g|webp)$')).test(file.type||'')){ aaMsg('Photo : PNG, JPG ou WebP uniquement.'); return; }
+  var u=URL.createObjectURL(file), im=new Image();
+  im.onload=function(){ aaChar=im; aaDone('zc', (file.name||'photo')+' · '+im.naturalWidth+'×'+im.naturalHeight); aaMaybeGo(); };
+  im.onerror=function(){ aaMsg('Image illisible — essaie un JPG ou un PNG.'); };
+  im.src=u;
+}
+function aaPickVid(file){
+  if(aaBusy) return;
+  if(!file||!(new RegExp('^video/(mp4|quicktime|webm|x-m4v)$')).test(file.type||'')){ aaMsg('Vidéo : MP4, MOV ou WebM uniquement.'); return; }
+  if(file.size>200000000){ aaMsg('Vidéo trop lourde (200 Mo maximum).'); return; }
+  aaLoadVid(URL.createObjectURL(file), file);
+}
+function aaLoadVid(src, file){
+  var v=document.createElement('video'); v.muted=true; v.playsInline=true; v.preload='auto'; if(!file) v.crossOrigin='anonymous';
+  var fini=false, ok=function(){
+    if(fini) return; fini=true;
+    var d=v.duration||0;
+    var mx=aaTool==='edit'?10.5:300, mn=aaTool==='edit'?0.8:1;
+    if(d && d>mx){ aaMsg('Vidéo trop longue — 10 s maximum. Coupe-la et redépose-la.'); return; }
+    if(d && d<mn){ aaMsg('Vidéo trop courte ('+(aaTool==='edit'?'1':'1')+' s minimum).'); return; }
+    aaVid={ el:v, file:file, src:src }; aaVidDur=d; aaVidW=v.videoWidth||0; aaVidH=v.videoHeight||0;
+    var bill=aaTool==='edit'?Math.max(1,Math.ceil(d)):Math.min(30,Math.ceil(d<3.3?3.6:d));
+    var txt=(file?(file.name||'vidéo'):'vidéo fournie')+(d?' · '+d.toFixed(1)+' s · ≈ '+(bill*aaRate)+' crédits':'')+(aaTool==='motion'&&d>30.5?' (coupée à 30 s)':'');
+    if(aaEl('zv')) aaDone('zv', txt); else aaMsg(txt);
+    aaMaybeGo();
+  };
+  v.onloadedmetadata=ok; v.onerror=function(){ if(fini) return; fini=true; aaVid={ el:null, file:file, src:src }; aaVidDur=0; if(aaEl('zv')) aaDone('zv',(file?(file.name||'vidéo'):'vidéo')+' · format lu par le serveur'); aaMaybeGo(); };
+  setTimeout(function(){ if(!fini){ v.onerror(); } }, 8000);
+  v.src=src;
+}
+function aaMaybeGo(){
+  if(aaBusy||!aaVid) return;
+  if(aaTool==='motion'&&!aaChar){ aaMsg('Il manque la photo du personnage.'); return; }
+  aaBusy=true; aaGo().catch(function(e){ aaBusy=false; aaMsg(String(e&&e.message||e)); });
+}
+function aaPost(path, body){ return fetch('https://mcp.avatarads.fr/'+path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j||{} }; }); }); }
+function aaPut(url, blob, type, label){
+  return new Promise(function(res, rej){
+    var x=new XMLHttpRequest(); x.open('PUT', url); x.setRequestHeader('Content-Type', type); x.setRequestHeader('x-upsert','true');
+    x.upload.onprogress=function(e){ if(e.lengthComputable) aaMsg(label+' '+Math.round(e.loaded/e.total*100)+' %'); };
+    x.onload=function(){ if(x.status>=200&&x.status<300) res(); else rej(new Error('Envoi refusé ('+x.status+') — réessaie.')); };
+    x.onerror=function(){ rej(new Error('Réseau coupé pendant l’envoi — réessaie.')); };
+    x.send(blob);
+  });
+}
+function aaUrl(slot, type, size){ return aaPost('upload-url', { job:aaJobId, cap:aaCap, slot:slot, type:type, size:size }).then(function(x){ if(!x.ok||!x.j.url){ var er=x.j.error||''; throw new Error(er==='expired'?'Carte expirée — redemande à Claude.':er==='too_large'?'Fichier trop lourd.':er==='bad_type'?'Format non accepté.':er==='not_pending'?'Déjà lancé.':'Envoi impossible ('+(er||'réseau')+').'); } return x.j.url; }); }
+function aaJpeg(cv, q){ return new Promise(function(r){ cv.toBlob(function(b){ r(b); }, 'image/jpeg', q||0.9); }); }
+function aaSmall(src, w, h){ var k=Math.min(1, 768/Math.max(w||1,h||1)), cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round((w||1)*k)); cv.height=Math.max(1,Math.round((h||1)*k)); cv.getContext('2d').drawImage(src,0,0,cv.width,cv.height); return cv.toDataURL('image/jpeg',0.85); }
+function aaFrame(){   // image de la vidéo de référence (~0,6 s) pour mesurer le visage — échec = cadrage standard
+  return new Promise(function(res){
+    var v=aaVid&&aaVid.el; if(!v||!aaVidW){ res(''); return; }
+    var t=Math.min(0.6, (aaVidDur||1)/2), done=false, fin=function(){ if(done) return; done=true; try{ res(aaSmall(v, aaVidW, aaVidH)); }catch(e){ res(''); } };
+    v.onseeked=fin; try{ v.currentTime=t; }catch(e){ fin(); } setTimeout(fin, 4000);
+  });
+}
+// = _mcPrepChar de l’app : ratio de la vidéo de réf (0,4–2,5), tête à la même fraction de hauteur que dans la réf
+// (0,12–0,42 ; sinon 22 % centrée à 32 %), jamais de pixels inventés, côtés ≤ 2560 et ≥ 400.
+function aaCrop(img, box, ref){
+  var W=img.naturalWidth||1, H=img.naturalHeight||1;
+  var ratio=Math.max(0.4, Math.min(2.5, (aaVidW>0&&aaVidH>0)?aaVidW/aaVidH:W/H));
+  var cw=W, ch=Math.round(W/ratio); if(ch>H){ ch=H; cw=Math.round(H*ratio); }
+  var sx=Math.round((W-cw)/2), sy=Math.min(Math.round((H-ch)/2), Math.round(H*0.08));
+  if(box){
+    var fcx=(box.x+box.w/2)*W, fcy=(box.y+box.h/2)*H, fpx=Math.max(8, box.h*H), hasRef=!!(ref&&ref.h>0);
+    var headT=hasRef?Math.max(0.12,Math.min(0.42,ref.h)):0.22, cxT=hasRef?Math.max(0,Math.min(1,ref.x+ref.w/2)):0.5, cyT=hasRef?Math.max(0,Math.min(1,ref.y+ref.h/2)):0.32;
+    var ch2=Math.round(fpx/headT); if(ch2>H) ch2=H;
+    var cw2=Math.round(ch2*ratio); if(cw2>W){ cw2=W; ch2=Math.round(W/ratio); }
+    sx=Math.max(0, Math.min(W-cw2, Math.round(fcx-cw2*cxT))); sy=Math.max(0, Math.min(H-ch2, Math.round(fcy-ch2*cyT))); cw=cw2; ch=ch2;
+  }
+  var k=Math.min(1, 2560/Math.max(cw,ch)); if(Math.min(cw,ch)*k<400) k=400/Math.min(cw,ch);
+  var cv=document.createElement('canvas'); cv.width=Math.max(2,Math.round(cw*k)); cv.height=Math.max(2,Math.round(ch*k));
+  cv.getContext('2d').drawImage(img, sx, sy, cw, ch, 0, 0, cv.width, cv.height);
+  return aaJpeg(cv, 0.92);
+}
+function aaGo(){
+  var p=Promise.resolve();
+  if(aaTool==='motion'){
+    p=p.then(function(){ aaMsg('Cadrage du personnage…'); return aaFrame(); })
+      .then(function(refShot){ var cs=''; try{ cs=aaSmall(aaChar, aaChar.naturalWidth, aaChar.naturalHeight); }catch(e){ throw new Error('Photo illisible ici — dépose-la depuis ton ordinateur.'); } return aaPost('mc-face', { job:aaJobId, cap:aaCap, char:cs, ref:refShot }).catch(function(){ return { j:{} }; }); })
+      .then(function(x){ return aaCrop(aaChar, x.j&&x.j.char, x.j&&x.j.ref); })
+      .then(function(blob){ if(!blob) throw new Error('Préparation de la photo impossible.'); return aaUrl('char','image/jpeg',blob.size).then(function(u){ return aaPut(u, blob, 'image/jpeg', 'Envoi de la photo'); }); });
+  }
+  if(aaVid&&aaVid.file){ var f=aaVid.file, ty=f.type||'video/mp4'; p=p.then(function(){ return aaUrl(aaTool==='motion'?'ref':'video', ty, f.size); }).then(function(u){ return aaPut(u, f, ty, 'Envoi de la vidéo'); }); }
+  return p.then(function(){ aaMsg('Lancement…'); return aaPost('start', { job:aaJobId, cap:aaCap, duration:aaVidDur||0 }); })
+    .then(function(x){
+      if(x.ok&&x.j.statusUrl){ aaOk=false; aaPct=5; aaLong=true; aaStartPoll(x.j.statusUrl); return; }
+      var er=x.j.error||'';
+      if(er==='not_pending'&&aaJobId){ aaOk=false; aaPct=5; aaLong=true; aaStartPoll('https://mcp.avatarads.fr/status/'+aaJobId); return; }
+      aaBusy=false;
+      throw new Error(er==='plan'?'Réservé aux plans Starter, Pro et Élite':er==='expired'?'Carte expirée — redemande à Claude.':er==='no_video'?'La vidéo n’est pas arrivée — redépose-la.':er==='no_char'?'La photo n’est pas arrivée — redépose-la.':'Échec ('+(er||'réseau')+') — réessaie.');
+    });
 }
 function aaLikely(p){ return p&&(p.structuredContent||(p.content&&p.content.length)); }
 function aaTheme(t){ try{ document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light'); }catch(e){} }
@@ -939,6 +1070,36 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['prompt'],
+      },
+    },
+    {
+      name: 'edit_video',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // carte : dépôt de la vidéo → progression → vidéo transformée + Télécharger
+      description: `Le module OMNI d'AvatarAds : transforme une VIDÉO EXISTANTE avec un prompt (« change la voiture en Bugatti », « mets-lui une veste en cuir », « transforme le décor en plage »…) — le reste de la vidéo (personnes, mouvement, son, cadrage) est gardé à l'identique. UN seul changement par appel (les prompts simples marchent le mieux). Vidéo de 1 à 10 s. Coût : ${OMNI_EDIT_SEC['720p']} crédits/seconde en 720p (défaut), ${OMNI_EDIT_SEC['1080p']} en 1080p ; durée arrondie à la seconde supérieure ; débité au lancement (rendu si échec). 🎬 LA VIDÉO : claude.ai NE TRANSMET PAS les vidéos jointes au chat → appelle l'outil SANS video_url : la CARTE demande à l'utilisateur de déposer sa vidéo et lance la transformation toute seule. video_url seulement pour une vidéo déjà en ligne (ex. une vidéo AvatarAds générée dans cette conversation). Lance DIRECTEMENT, sans devis ; n'appelle aucun check ensuite (la carte suit la génération). ⛔ Ne nomme JAMAIS le moteur technique : parle du « module Omni d'AvatarAds ».`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: "LA transformation à faire, en une phrase simple (français ou anglais) : quoi changer et en quoi. Ex. « Transforme la voiture en Lamborghini Huracán jaune. » Ne décris pas ce qui doit rester identique (c'est ajouté automatiquement)." },
+          quality: { type: 'string', enum: ['720p', '1080p'], description: `'720p' = DÉFAUT (${OMNI_EDIT_SEC['720p']} cr/s) — mets '1080p' (${OMNI_EDIT_SEC['1080p']} cr/s) UNIQUEMENT si l'utilisateur demande la HD / 1080p.` },
+          video_url: { type: 'string', description: "Optionnel : URL http(s) d'une vidéo DÉJÀ en ligne (MP4/MOV ≤ 10 s), ex. une vidéo AvatarAds de cette conversation. Pour une vidéo jointe au chat : ne mets rien, la carte la fait déposer." },
+        },
+        required: ['prompt'],
+      },
+    },
+    {
+      name: 'motion_control',
+      _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // carte : photo + vidéo de référence → progression → vidéo + Télécharger
+      description: `Le module MOTION CONTROL d'AvatarAds : un PERSONNAGE (une photo) reproduit EXACTEMENT les mouvements, gestes, expressions et mouvements de caméra d'une VIDÉO DE RÉFÉRENCE (danse, trend TikTok, présentation produit filmée par l'utilisateur…), avec le son de la référence. Le visage, la tenue et le décor viennent de la PHOTO. Vidéo de référence de 3 à 30 s. Coût par seconde de la référence : Motion 2.6 en 720p = ${MC_SEC.std} cr/s (DÉFAUT), Motion 2.6 en 1080p = ${MC_SEC.std + MC_SEC.topaz} cr/s, Motion 3.0 (1080p natif, meilleur rendu) = ${MC_SEC.v3} cr/s — 1080p et 3.0 réservés aux plans Pro & Élite. Débité au lancement (rendu si échec). Compte 3 à 10 min. 📷🎬 LES FICHIERS : claude.ai NE TRANSMET PAS les photos ni les vidéos jointes au chat → appelle l'outil SANS image_url ni video_url : la CARTE demande la photo du personnage et la vidéo de référence, ajuste le cadrage toute seule et lance la génération. image_url seulement pour une image déjà en ligne (ex. un avatar créé avec generate_image dans cette conversation — très bon combo : créer l'avatar puis l'animer). Lance DIRECTEMENT, sans devis ; n'appelle aucun check ensuite. ⛔ Ne nomme JAMAIS le moteur technique : parle du « module Motion Control d'AvatarAds ».`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          model: { type: 'string', enum: ['2.6', '3.0'], description: `'2.6' = DÉFAUT. '3.0' (${MC_SEC.v3} cr/s, 1080p natif, Pro & Élite) UNIQUEMENT si l'utilisateur demande « Motion 3.0 » ou la meilleure qualité.` },
+          quality: { type: 'string', enum: ['720p', '1080p'], description: "Pour Motion 2.6 : '720p' = DÉFAUT ; '1080p' (+1 cr/s, Pro & Élite) seulement si l'utilisateur demande la HD. Motion 3.0 est toujours en 1080p." },
+          instruction: { type: 'string', description: "Optionnel, rarement utile : consigne de mouvement en anglais qui REMPLACE la consigne par défaut (« reproduis exactement le mouvement et la caméra de la référence »). Laisse vide sauf demande précise de l'utilisateur." },
+          realistic_camera: { type: 'boolean', description: "Caméra tenue à la main, légèrement vivante, façon selfie (DÉFAUT true, comme l'app). false = plan plus stable." },
+          image_url: { type: 'string', description: "Optionnel : URL http(s) d'une photo DÉJÀ en ligne du personnage (ex. résultat de generate_image). Pour une photo jointe au chat : ne mets rien, la carte la fait déposer." },
+          video_url: { type: 'string', description: "Optionnel : URL http(s) DIRECTE d'un fichier vidéo MP4/MOV déjà en ligne (pas un lien TikTok/Instagram : ceux-là ne se téléchargent pas — l'utilisateur dépose alors la vidéo dans la carte)." },
+        },
       },
     },
     {
@@ -1567,6 +1728,12 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     if (job.kind === 'montage') continue
     if (!job.op_name) { await failAndRefund(userId, job, 'timeout'); continue }
 
+    // ── Omni / Motion Control (02/10) : un cran de plus ; toujours en cours après VT_STALE_MIN → remboursé ──
+    if (estOutilVideo(job.op_name)) {
+      await advanceVideoTool(job)
+      if (Date.now() - new Date(String(job.created_at)).getTime() > VT_STALE_MIN * 60_000) await failAndRefund(userId, job, 'timeout')
+      continue
+    }
     // ── OmniHuman chez kie (Axel 25/09) : livré / échec → réglé ; en cours → on patiente jusqu'à KIE_OMNI_STALE_MIN ──
     if (job.kind === 'avatar' && estOmniKie(job.op_name)) {
       const a = await avancerOmniKie(taskDeOp(job.op_name))
@@ -1661,6 +1828,7 @@ async function reconcileAllStale(): Promise<void> {
     for (const job of stale || []) {
       // OmniHuman chez kie : plus lent → abandonné à KIE_OMNI_STALE_MIN seulement (l'étape 1 l'a déjà avancé / livré)
       if (estOmniKie(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
+      if (estOutilVideo(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < VT_STALE_MIN * 60_000) continue   // Motion Control : jusqu'à ~25 min (Kling + repli + Topaz)
       await failAndRefund(String(job.user_id), job, 'timeout')
     }
     // 4) CARTES PHOTO EXPIRÉES (audit 28/09 #23) : une carte jamais utilisée (> 2 h, /start la refuse) gardait sa part du
@@ -2728,9 +2896,289 @@ async function suivreRetouche(userId: string, job: Record<string, unknown>, pj: 
   if (error || !f) return
   await deliverVideo(userId, job, new Uint8Array(await f.arrayBuffer()))
 }
+
+// ═══ OMNI (édition vidéo par prompt) + MOTION CONTROL depuis Claude (Axel 02/10) ══════════════════════════════════════
+// Mêmes moteurs, mêmes prompts (omniEditPrompt / motionControlPrompt, extraits de l'app) et mêmes tarifs que l'app.
+// claude.ai ne transmet pas les fichiers joints : la vidéo (et la photo du personnage) se déposent DANS LA CARTE, qui les
+// envoie directement au stockage (lien d'envoi signé, rien ne transite par le relais). Puis, côté serveur, dans le job :
+//   vn:<render_job>  préparation de la vidéo par le serveur de rendu (H.264, durée bornée, côtés 340–1920 : __compose mc-ref)
+//   ve:<requête>     Omni (fal google/gemini-omni-flash v1.1 edit)          — débit AVANT, à la durée MESURÉE (atome mvhd)
+//   vm:<requête>     Motion Control (fal Kling 2.6 standard / 3.0 pro)       — 3.0 refusé par la modération → repli 2.6 pro
+//   vu:<requête>     upscale 1080p (fal Topaz ×1,5) de Motion 2.6 en 1080p    — échec → 720p livré, +1 cr/s rendu
+// Préfixes neutres (le client lit ses lignes mcp_jobs) : jamais le nom d'un fournisseur.
+const OMNI_EDIT_SEC: Record<string, number> = { '720p': 3, '1080p': 4 }   // = CREDIT_COSTS.omniEditPerSec / omniEdit1080PerSec
+const MC_SEC = { std: 2, topaz: 1, v3: 6, v26pro: 4 }                      // = _mcRate de l'app (2 · 2+1 Topaz · 6) ; repli 3.0 → 2.6 pro = 4
+const MC_PRO_PLANS = ['pro', 'elite']                                       // 1080p et Motion 3.0 : Pro & Élite (comme l'app)
+const VT_OP = /^(vn|ve|vm|vu):/
+const VT_STALE_MIN = 45                                                     // Kling 11 min + repli + Topaz : jamais remboursé en cours de route
+const FAL_OMNI_EDIT = 'google/gemini-omni-flash/v1.1/edit'
+const FAL_TOPAZ = 'fal-ai/topaz/upscale/video'
+const falKling = (ver: 'v3' | 'v2.6', pro: boolean) => `fal-ai/kling-video/${ver}/${pro ? 'pro' : 'standard'}/motion-control`
+const estOutilVideo = (op: unknown) => VT_OP.test(String(op || ''))
+
+// Durée d'un MP4 = atome mvhd (timescale + durée). null si introuvable.
+function mp4Duree(b: Uint8Array): number | null {
+  for (let i = 4; i < b.length - 32; i++) {
+    if (b[i] !== 0x6d || b[i + 1] !== 0x76 || b[i + 2] !== 0x68 || b[i + 3] !== 0x64) continue   // « mvhd »
+    const dv = new DataView(b.buffer, b.byteOffset + i + 4), v = dv.getUint8(0)
+    const ts = v === 1 ? dv.getUint32(20) : dv.getUint32(12)
+    const du = v === 1 ? Number(dv.getBigUint64(24)) : dv.getUint32(16)
+    if (ts > 0 && du > 0) return du / ts
+  }
+  return null
+}
+
+// Erreur Kling en français (= _mcFalErr de l'app) + drapeau modération (= _mcIsModeration).
+function erreurKling(rd: Record<string, unknown>, status: number): { msg: string; moderation: boolean } {
+  const d0 = rd?.detail, d = (Array.isArray(d0) ? d0[0] : d0) as Record<string, unknown> | string | undefined
+  const type = String((typeof d === 'object' && d?.type) || '')
+  const msg = String((typeof d === 'object' && d?.msg) || (typeof d === 'string' ? d : '') || rd?.error || '')
+  const s = type + ' ' + msg
+  const moderation = /policy|moderat|content check|flagged|could not be processed|sensitive|risk/i.test(s)
+  if (/image_too_large/i.test(type || msg)) return { moderation, msg: 'Image du personnage trop grande pour le moteur — réessaie avec une photo plus petite.' }
+  if (/duration|too long|too short|seconds/i.test(s)) return { moderation, msg: 'Durée de la vidéo de référence refusée (3 à 30 s).' }
+  if (/hevc|h\.?265|codec/i.test(s)) return { moderation, msg: 'Format vidéo refusé — réexporte la vidéo en MP4.' }
+  if (/unsupported|not supported|invalid (video|image|file)|format|resolution|dimension|too small|too large/i.test(s)) return { moderation, msg: 'Fichier non supporté (format, dimensions 340–3850 px, ratio 0,4–2,5).' }
+  if (moderation || /celebrit/i.test(s)) return { moderation: true, msg: 'Contenu refusé par la modération — souvent un élément du décor (poster, logo, marque, personnage). Essaie une photo à fond neutre.' }
+  return { moderation, msg: `Génération refusée${status ? ` (code ${status})` : ''} — crédits rendus.` }
+}
+
+// Détection du visage (= _detectFaceBox de l'app, même modèle, même consigne) : box 0..1 ou null.
+async function detecterVisage(dataUrl: string): Promise<{ x: number; y: number; w: number; h: number } | null> {
+  if (!OPENAI_API_KEY || !/^data:image\/(png|jpe?g|webp);base64,/.test(dataUrl) || dataUrl.length > 2_000_000) return null
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'gpt-4o', max_tokens: 80, temperature: 0, messages: [{ role: 'user', content: [
+        { type: 'text', text: 'Give ONLY a compact JSON object with keys x, y, w, h = the bounding box of the MAIN person face and head as fractions from 0 to 1 (x,y = top-left corner, w,h = width and height). Example: {"x":0.42,"y":0.30,"w":0.16,"h":0.20}. If there is no clear human face, output {"none":true}. Output JSON only, no other text.' },
+        { type: 'image_url', image_url: { url: dataUrl } }] }] }),
+    })
+    if (!r.ok) return null
+    const d = await r.json() as Record<string, any>
+    const m = String(d?.choices?.[0]?.message?.content || '').match(/\{[\s\S]*\}/)
+    if (!m) return null
+    const j = JSON.parse(m[0])
+    if (j.none || typeof j.x !== 'number' || typeof j.h !== 'number' || j.h > 1 || j.w > 1) return null
+    return { x: Math.max(0, j.x), y: Math.max(0, j.y), w: Math.min(1, j.w || 0.15), h: Math.min(1, j.h) }
+  } catch { return null }
+}
+
+// Lien signé render-media (vidéo préparée / source) — 3 h : la file du moteur peut attendre avant de télécharger.
+async function signRender(path: string, ttl = 3 * 3600): Promise<string | null> {
+  const { data, error } = await svc.storage.from('render-media').createSignedUrl(path, ttl)
+  return !error && data?.signedUrl ? data.signedUrl : null
+}
+// Fichier présent dans le stockage ? (sans le télécharger)
+async function fichierPresent(bucket: string, path: string): Promise<boolean> {
+  const i = path.lastIndexOf('/'), dir = path.slice(0, i), name = path.slice(i + 1)
+  const { data } = await svc.storage.from(bucket).list(dir, { search: name, limit: 5 })
+  return !!(data || []).find((o: { name: string }) => o.name === name)
+}
+// État d'un job outil vidéo : met à jour op_name + params (et rien d'autre), seulement s'il tourne encore.
+async function vtEtape(job: Record<string, unknown>, op: string, patch: Record<string, unknown>): Promise<void> {
+  const pj = (job.params || {}) as Record<string, unknown>
+  await svc.from('mcp_jobs').update({ op_name: op, params: { ...pj, ...patch }, updated_at: new Date().toISOString() }).eq('id', String(job.id)).eq('status', 'running')
+}
+async function vtEchec(job: Record<string, unknown>, msg: string): Promise<void> {
+  const pj = (job.params || {}) as Record<string, unknown>
+  await svc.from('mcp_jobs').update({ params: { ...pj, user_msg: msg } }).eq('id', String(job.id)).eq('status', 'running')
+  await failAndRefund(String(job.user_id), job, msg)
+}
+// Remboursement PARTIEL (repli 3.0 → 2.6, Topaz en échec) : rend `amt` et baisse credits_cost d'autant (un filet ne
+// rendra ensuite jamais plus que ce qui reste réellement débité).
+async function vtRendrePartiel(job: Record<string, unknown>, amt: number): Promise<void> {
+  if (amt <= 0) return
+  const { data } = await svc.from('mcp_jobs').select('credits_cost').eq('id', String(job.id)).maybeSingle()
+  const cur = Number(data?.credits_cost) || 0, rend = Math.min(cur, amt)
+  if (rend <= 0) return
+  const { data: ok } = await svc.from('mcp_jobs').update({ credits_cost: cur - rend }).eq('id', String(job.id)).eq('credits_cost', cur).select('id')
+  if (ok && ok.length) await refundCredits(String(job.user_id), rend)
+}
+async function falSoumettre(path: string, body: Record<string, unknown>): Promise<{ ok: boolean; status: number; d: Record<string, unknown> }> {
+  const r = await falFetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const d = await r.json().catch(() => ({})) as Record<string, unknown>
+  return { ok: r.ok && !!(d.status_url || d.request_id), status: r.status, d }
+}
+const falSuivi = (url: string) => fetch(url, { headers: { Authorization: `Key ${FAL_KEY}` } })
+const falUrls = (path: string, d: Record<string, unknown>) => ({
+  status_url: String(d.status_url || `${FAL_QUEUE}/${path}/requests/${d.request_id}/status`),
+  response_url: String(d.response_url || `${FAL_QUEUE}/${path}/requests/${d.request_id}`),
+})
+
+// Soumission Motion Control (= runKlingFal de l'app : mêmes champs ; 3.0 = liaison d'identité faciale « elements »,
+// renvoi sans elements si refusés).
+async function soumettreKling(ver: 'v3' | 'v2.6', pro: boolean, charUrl: string, refUrl: string, prompt: string) {
+  const path = falKling(ver, pro)
+  const body = { image_url: charUrl, video_url: refUrl, character_orientation: 'video', keep_original_sound: true, prompt }
+  let s = ver === 'v3' ? await falSoumettre(path, { ...body, elements: [{ frontal_image_url: charUrl, reference_image_urls: [charUrl] }] }) : await falSoumettre(path, body)
+  if (ver === 'v3' && !s.ok && (s.status === 400 || s.status === 422)) s = await falSoumettre(path, body)
+  return { ...s, path }
+}
+
+// Fait avancer un job Omni / Motion Control d'UN cran (appelé par /status, check_video et les filets). Sûr à répéter.
+async function advanceVideoTool(job: Record<string, unknown>): Promise<void> {
+  const userId = String(job.user_id), op = String(job.op_name || ''), pj = (job.params || {}) as Record<string, unknown>
+  const outil = String(pj.tool)
+  // 1) PRÉPARATION de la vidéo par le serveur de rendu → durée mesurée → débit → soumission au moteur
+  if (op.startsWith('vn:')) {
+    const { data: rj } = await svc.from('render_jobs').select('status, output_url, error').eq('id', op.slice(3)).maybeSingle()
+    if (!rj || rj.status === 'failed') { await vtEchec(job, 'Vidéo illisible — réexporte-la en MP4 et réessaie.'); return }
+    if (rj.status !== 'done' || !rj.output_url) return
+    const prep = String(rj.output_url)
+    const dl = await svc.storage.from('render-media').download(prep)
+    if (dl.error || !dl.data) return
+    const dur = mp4Duree(new Uint8Array(await dl.data.arrayBuffer())) || Number(pj.dur_hint) || 0
+    if (!(dur > 0.5)) { await vtEchec(job, 'Vidéo illisible — réexporte-la en MP4 et réessaie.'); return }
+    const refUrl = await signRender(prep)
+    if (!refUrl) return
+    let cost = 0, sub: { ok: boolean; status: number; d: Record<string, unknown>; path: string }, prochain = ''
+    const extra: Record<string, unknown> = { prep_path: prep, dur: Math.round(dur * 100) / 100 }
+    if (outil === 'omni_edit') {
+      const res = pj.resolution === '1080p' ? '1080p' : '720p'
+      cost = Math.max(1, Math.ceil(dur - 0.05) * OMNI_EDIT_SEC[res])   // = _omniCost (−0,05 s : l'encodage ajoute quelques ms)
+      const bal = await spendForJob(userId, String(job.id), cost)
+      if (bal === -2) return
+      if (bal === null || bal === -1) { await vtEchec(job, `Crédits insuffisants : il en faut ${cost}. Recharge sur avatarads.fr`); return }
+      const p = FAL_OMNI_EDIT
+      sub = { ...(await falSoumettre(p, { video_url: refUrl, prompt: omniEditPrompt(String(pj.prompt || '')), resolution: res })), path: p }
+      prochain = 've:'
+    } else {
+      const billDur = Math.min(30, Math.ceil(dur - 0.05))   // vidéo déjà prolongée à 3,6 s si besoin (= _mcRefDurEff)
+      const v3 = pj.model === '3.0', hd = pj.quality === '1080p'
+      cost = billDur * (v3 ? MC_SEC.v3 : MC_SEC.std + (hd ? MC_SEC.topaz : 0))
+      const bal = await spendForJob(userId, String(job.id), cost)
+      if (bal === -2) return
+      if (bal === null || bal === -1) { await vtEchec(job, `Crédits insuffisants : il en faut ${cost}. Recharge sur avatarads.fr`); return }
+      const charUrl = await signPath(String(pj.char_path), 3 * 3600)
+      if (!charUrl) { await vtEchec(job, 'Photo du personnage introuvable — redépose-la.'); return }
+      sub = await soumettreKling(v3 ? 'v3' : 'v2.6', v3, charUrl, refUrl, motionControlPrompt({ instruction: String(pj.instruction || ''), camFollow: pj.cam !== false }))
+      extra.bill_dur = billDur; extra.ver = v3 ? 'v3' : 'v2.6'; extra.char_url = charUrl; extra.ref_url = refUrl
+      prochain = 'vm:'
+    }
+    if (!sub.ok) {
+      console.warn('[mcp] outil vidéo : soumission refusée', job.id, sub.status, JSON.stringify(sub.d).slice(0, 300))
+      await vtEchec(job, sub.status === 402 ? 'Service vidéo momentanément indisponible — crédits rendus, réessaie dans quelques minutes.' : erreurKling(sub.d, sub.status).msg); return
+    }
+    await vtEtape({ ...job, params: pj }, prochain + String(sub.d.request_id || ''), { ...extra, fal: falUrls(sub.path, sub.d), bill: cost })
+    return
+  }
+  // 2) SUIVI du moteur (Omni, Kling ou Topaz)
+  const fal = (pj.fal || {}) as { status_url?: string; response_url?: string }
+  if (!fal.status_url || !fal.response_url) return
+  const st = await falSuivi(fal.status_url).catch(() => null)
+  if (!st || !st.ok) return
+  const sd = await st.json().catch(() => ({})) as Record<string, unknown>
+  const s = String(sd.status || '').toUpperCase()
+  if (s === 'IN_QUEUE' || s === 'IN_PROGRESS' || !s) return
+  let rd: Record<string, unknown> = {}, rOk = false, rStatus = 0
+  if (s === 'COMPLETED') { const rr = await falSuivi(fal.response_url).catch(() => null); if (!rr) return; rStatus = rr.status; rOk = rr.ok; rd = await rr.json().catch(() => ({})) as Record<string, unknown> }
+  else rd = sd
+  const vu = String((rd?.video as { url?: string })?.url || rd?.video_url || (rd?.output as { video?: { url?: string } })?.video?.url || '')
+  if (s === 'COMPLETED' && rOk && vu) {
+    // Motion 2.6 en 1080p : upscale Topaz (comme l'app) ; échec de soumission → 720p livré, supplément rendu
+    if (op.startsWith('vm:') && pj.quality === '1080p' && pj.ver === 'v2.6' && pj.model !== '3.0') {
+      const t = await falSoumettre(FAL_TOPAZ, { video_url: vu, upscale_factor: 1.5, H264_output: true })
+      if (t.ok) { await vtEtape(job, 'vu:' + String(t.d.request_id || ''), { kling_url: vu, fal: falUrls(FAL_TOPAZ, t.d) }); return }
+      await vtRendrePartiel(job, MC_SEC.topaz * (Number(pj.bill_dur) || 0))
+    }
+    const v = await fetch(vu).catch(() => null)
+    if (!v || !v.ok) return
+    await deliverVideo(userId, job, new Uint8Array(await v.arrayBuffer()))
+    return
+  }
+  // échec du moteur
+  if (op.startsWith('vu:')) {   // Topaz raté → le rendu Kling (payé) est livré en 720p, le supplément 1080p rendu
+    await vtRendrePartiel(job, MC_SEC.topaz * (Number(pj.bill_dur) || 0))
+    const v = pj.kling_url ? await fetch(String(pj.kling_url)).catch(() => null) : null
+    if (v && v.ok) { await deliverVideo(userId, job, new Uint8Array(await v.arrayBuffer())); return }
+    await vtEchec(job, 'Livraison impossible — crédits rendus.'); return
+  }
+  const e = erreurKling(rd, rStatus)
+  console.warn('[mcp] outil vidéo : échec moteur', job.id, s, rStatus, JSON.stringify(rd).slice(0, 300))
+  // Motion 3.0 : faux positifs de modération fréquents → UNE reprise en 2.6 pro, refacturée au tarif 2.6 (6 → 4 cr/s)
+  if (op.startsWith('vm:') && pj.ver === 'v3' && e.moderation) {
+    const k = await soumettreKling('v2.6', true, String(pj.char_url), String(pj.ref_url), motionControlPrompt({ instruction: String(pj.instruction || ''), camFollow: pj.cam !== false }))
+    if (k.ok) {
+      await vtRendrePartiel(job, (MC_SEC.v3 - MC_SEC.v26pro) * (Number(pj.bill_dur) || 0))
+      await vtEtape(job, 'vm:' + String(k.d.request_id || ''), { ver: 'v2.6-pro', repli: true, fal: falUrls(k.path, k.d) })
+      return
+    }
+  }
+  await vtEchec(job, op.startsWith('ve:') ? (e.moderation ? 'Transformation refusée par la modération (souvent une marque ou un logo) — reformule et réessaie.' : 'La transformation a échoué — crédits rendus, réessaie.') : e.msg)
+}
+
+// ── Outils edit_video (module Omni) et motion_control (module Motion Control) ──
+// Job créé « pending » (rien débité) + carte de dépôt ; une vidéo/photo déjà en ligne (video_url / image_url, ex. un
+// résultat AvatarAds de cette conversation) est copiée côté serveur et pré-remplie dans la carte.
+async function vtCopierSource(userId: string, jobId: string, url: string, quoi: 'video' | 'image'): Promise<{ bucket: string; path: string } | string> {
+  let parsed: URL | null = null
+  try { parsed = new URL(url) } catch { /* invalide */ }
+  if (!parsed || !/^https?:$/.test(parsed.protocol) || isBlockedHost(parsed.hostname)) return `${quoi === 'video' ? 'video_url' : 'image_url'} doit être une URL http(s) publique.`
+  const got = await fetchUserFile(url, quoi === 'video' ? 200_000_000 : 15_000_000, quoi === 'video' ? /^(video\/(mp4|quicktime|webm|x-m4v)|application\/octet-stream)/ : /^image\/(png|jpe?g|webp)$/, quoi === 'video' ? 'la vidéo (video_url)' : 'la photo (image_url)')
+  if (typeof got === 'string') return got
+  const ext = quoi === 'video' ? (/webm/.test(got.contentType) ? 'webm' : /quicktime/.test(got.contentType) ? 'mov' : 'mp4') : (/png/.test(got.contentType) ? 'png' : /webp/.test(got.contentType) ? 'webp' : 'jpg')
+  const bucket = quoi === 'video' ? 'render-media' : 'mcp-media'
+  const path = `${userId}/mcp-src/${jobId}-${quoi === 'video' ? 'src' : 'char-src'}.${ext}`
+  const { error } = await svc.storage.from(bucket).upload(path, got.bytes, { contentType: got.contentType, upsert: true })
+  return error ? 'Copie du fichier impossible — réessaie.' : { bucket, path }
+}
+async function vtCarte(profile: Record<string, unknown>, tool: 'omni_edit' | 'motion', params: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent | { job: string; cap: string; extra: Record<string, unknown> }> {
+  const userId = String(profile.id)
+  const { data: pj, error } = await svc.from('mcp_jobs').insert({ user_id: userId, kind: 'avatar', status: 'pending', credits_cost: 0, params: { video: true, tool, ...params } }).select('id').single()
+  if (error || !pj) return toolErr('Erreur serveur — réessaie.')
+  const extra: Record<string, unknown> = {}
+  const vUrl = String(args.video_url || '').trim()
+  if (vUrl) {
+    const c = await vtCopierSource(userId, pj.id, vUrl, 'video')
+    if (typeof c === 'string') { await svc.from('mcp_jobs').update({ status: 'failed', error: 'source refusée' }).eq('id', pj.id); return toolErr(c) }
+    await svc.from('mcp_jobs').update({ params: { video: true, tool, ...params, src_path: c.path } }).eq('id', pj.id)
+    params.src_path = c.path; extra.refSrc = await signRender(c.path, 2 * 3600)
+  }
+  const iUrl = tool === 'motion' ? String(args.image_url || '').trim() : ''
+  if (iUrl) {
+    const c = await vtCopierSource(userId, pj.id, iUrl, 'image')
+    if (typeof c === 'string') { await svc.from('mcp_jobs').update({ status: 'failed', error: 'source refusée' }).eq('id', pj.id); return toolErr(c) }
+    extra.charSrc = await signPath(c.path, 2 * 3600)
+  }
+  return { job: pj.id, cap: await jobCap(pj.id), extra }
+}
+
+async function runEditVideo(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+  if (!FAL_KEY) return toolErr('Édition vidéo indisponible (configuration serveur incomplète).')
+  const prompt = String(args.prompt || '').trim()
+  if (!prompt) return toolErr('Le paramètre "prompt" est requis : décris LA transformation (une seule à la fois).')
+  const resolution = args.quality === '1080p' ? '1080p' : '720p'
+  const rate = OMNI_EDIT_SEC[resolution]
+  const c = await vtCarte(profile, 'omni_edit', { prompt: prompt.slice(0, 2000), resolution }, args)
+  if ('content' in c) return c
+  return {
+    content: [{ type: 'text', text: `[système] Carte Omni prête : ${c.extra.refSrc ? 'la vidéo fournie est déjà chargée, la transformation part toute seule' : "l'utilisateur dépose sa vidéo (1 à 10 s) dans la carte, la transformation se lance aussitôt"} (${resolution}, ${rate} crédits/seconde, durée arrondie à la seconde supérieure — ex. 8 s = ${8 * rate} crédits ; débités au lancement, rendus si échec).\nRÉPONSE À ÉCRIRE MAINTENANT : une seule phrase courte, par ex. « Dépose ta vidéo dans la carte, la transformation se lance toute seule. » N'appelle aucun autre outil pour cette vidéo.` }],
+    structuredContent: { job_id: c.job, cap: c.cap, statusUrl: `https://mcp.avatarads.fr/status/${c.job}`, kind: 'video', pending: true, tool: 'edit', rate, prompt, ...c.extra },
+  }
+}
+
+async function runMotionControl(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
+  if (!FAL_KEY) return toolErr('Motion Control indisponible (configuration serveur incomplète).')
+  const model = args.model === '3.0' ? '3.0' : '2.6'
+  const quality = model === '3.0' || args.quality === '1080p' ? '1080p' : '720p'
+  const plan = String(profile.plan || '').toLowerCase()
+  if ((model === '3.0' || quality === '1080p') && !isUnlimited(profile) && !MC_PRO_PLANS.includes(plan)) {
+    return toolErr(`${model === '3.0' ? 'Motion 3.0' : 'Le 1080p'} est réservé aux plans Pro et Élite (plan actuel : ${plan || 'free'}). Relance en Motion 2.6 720p, ou passe en Pro sur ${APP_URL}`)
+  }
+  const rate = model === '3.0' ? MC_SEC.v3 : MC_SEC.std + (quality === '1080p' ? MC_SEC.topaz : 0)
+  const instruction = String(args.instruction || '').trim().slice(0, 800)
+  const c = await vtCarte(profile, 'motion', { model, quality, instruction, cam: args.realistic_camera !== false }, args)
+  if ('content' in c) return c
+  return {
+    content: [{ type: 'text', text: `[système] Carte Motion Control prête (Motion ${model}, ${quality}, ${rate} crédits/seconde de la vidéo de référence, 3 à 30 s — ex. 10 s = ${10 * rate} crédits ; débités au lancement, rendus si échec). L'utilisateur dépose dans la carte ${c.extra.charSrc ? '' : 'la photo du personnage puis '}${c.extra.refSrc ? '' : 'la vidéo de référence (le mouvement à copier)'} ; le cadrage est ajusté automatiquement et la génération se lance toute seule (compte 3 à 10 min).\nRÉPONSE À ÉCRIRE MAINTENANT : une seule phrase courte, par ex. « Dépose la photo du personnage et la vidéo de référence dans la carte, la vidéo se lance toute seule. » N'appelle aucun autre outil pour cette vidéo.` }],
+    structuredContent: { job_id: c.job, cap: c.cap, statusUrl: `https://mcp.avatarads.fr/status/${c.job}`, kind: 'video', pending: true, tool: 'motion', rate, ...c.extra },
+  }
+}
+
 async function advanceAvatarJob(job: Record<string, unknown>): Promise<void> {
   try {
     const userId = String(job.user_id)
+    if (estOutilVideo(job.op_name)) { await advanceVideoTool(job); return }   // Omni / Motion Control (02/10)
     // OmniHuman chez kie (Axel 25/09) : op_name « oh1:… » (en cours → rien ; le filet tranche à KIE_OMNI_STALE_MIN)
     if (estOmniKie(job.op_name)) {
       const pj = (job.params || {}) as Record<string, unknown>
@@ -3993,19 +4441,55 @@ serve(async (req) => {
     }
     if (j.status === 'pending') return new Response(JSON.stringify({ status: 'pending', kind: j.kind, url: null, progress: 0, error: null, link_failed: ((j.params as Record<string, unknown> | null) || {}).link_failed || null }), { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
     const elapsed = Date.now() - new Date(String(j.created_at)).getTime()
-    const attendu = j.kind === 'image' ? 50000 : j.kind === 'avatar' ? 200000 : 130000
+    const outilV = String(((j.params as Record<string, unknown> | null) || {}).tool || '')
+    const attendu = j.kind === 'image' ? 50000 : outilV === 'motion' ? 480000 : outilV === 'omni_edit' ? 150000 : j.kind === 'avatar' ? 200000 : 130000
     const done = j.status === 'done' || j.status === 'failed'
     const progress = done ? 100 : Math.min(94, Math.max(5, Math.round((elapsed / attendu) * 100)))
     const urlSigne = j.status === 'done' && j.result_url ? await signMedia(String(j.result_url)) : null   // mcp-media privé (audit 28/09)
     const prevRaw = (((j.params as Record<string, unknown> | null) || {}).preview as string | undefined) || null
     const preview = prevRaw && j.status !== 'failed' ? await signMedia(prevRaw) : null   // photo de départ générée (vidéo Express) — gardée après la vidéo
-    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: urlSigne, progress, preview, error: j.status === 'failed' ? 'failed' : null }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
+    // message lisible SEULEMENT pour les outils vidéo (texte écrit par nous, jamais l'erreur brute d'un fournisseur)
+    const msgV = j.status === 'failed' && outilV ? String(((j.params as Record<string, unknown> | null) || {}).user_msg || '') : ''
+    return new Response(JSON.stringify({ status: j.status, kind: j.kind, url: urlSigne, progress, preview, error: j.status === 'failed' ? 'failed' : null, ...(msgV ? { msg: msgV } : {}) }),   // audit 05/09 : ne pas divulguer l'erreur interne (endpoint public par job_id)
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
   }
 
   // Lancer un job IMAGE « en attente de la photo produit » depuis la carte : {job, data_url} (photo déposée
   // dans la carte → mcp-media/<uid>/ref-…) ou {job, skip:true}. Capacité = job_id (status pending, ≤2 h),
   // passage pending→running ATOMIQUE (un seul lancement), mêmes garde-fous que /regenerate.
+  // ── OUTILS VIDÉO (Omni / Motion Control, 02/10) : la carte envoie ses fichiers DIRECTEMENT au stockage ──────────────
+  // /upload-url {job, cap, slot, type, size} → lien d'envoi signé (vidéo → render-media, photo → mcp-media), jamais via
+  // le relais (vidéos de dizaines de Mo). /mc-face {job, cap, char, ref} → boxes visage (cadrage de l'app). Capacité
+  // signée obligatoire, job « pending » de moins de 2 h.
+  if ((segs[1] === 'upload-url' || segs[1] === 'mc-face') && req.method === 'POST') {
+    const body = await req.json().catch(() => ({})) as Record<string, unknown>
+    const jobId = String(body.job || '')
+    if (!/^[0-9a-f-]{36}$/i.test(jobId)) return json(400, { error: 'bad_request' })
+    if (!(await rateHit('mcp-vt:' + jobId.toLowerCase(), 60, 30))) return json(429, { error: 'busy' })
+    if (!(await capOk(jobId, body.cap))) return json(403, { error: 'forbidden' })
+    const { data: pj } = await svc.from('mcp_jobs').select('id, user_id, status, created_at, params').eq('id', jobId).maybeSingle()
+    if (!pj) return json(404, { error: 'not_found' })
+    const pp = (pj.params || {}) as Record<string, unknown>
+    if (pj.status !== 'pending' || !['omni_edit', 'motion'].includes(String(pp.tool))) return json(409, { error: 'not_pending' })
+    if (Date.now() - new Date(String(pj.created_at)).getTime() > 2 * 3600 * 1000) return json(403, { error: 'expired' })
+    if (segs[1] === 'mc-face') {
+      const [c, r] = await Promise.all([detecterVisage(String(body.char || '')), detecterVisage(String(body.ref || ''))])
+      return json(200, { char: c, ref: r })
+    }
+    const slot = String(body.slot || ''), type = String(body.type || '').toLowerCase(), size = Number(body.size) || 0
+    const okSlot = pp.tool === 'omni_edit' ? slot === 'video' : (slot === 'ref' || slot === 'char')
+    if (!okSlot) return json(400, { error: 'bad_slot' })
+    const video = slot !== 'char'
+    if (video ? !/^video\/(mp4|quicktime|webm|x-m4v)$/.test(type) : type !== 'image/jpeg') return json(415, { error: 'bad_type' })
+    if (!(size > 0) || size > (video ? 200_000_000 : 15_000_000)) return json(413, { error: 'too_large' })
+    const ext = !video ? 'jpg' : /webm/.test(type) ? 'webm' : /quicktime/.test(type) ? 'mov' : 'mp4'
+    const bucket = video ? 'render-media' : 'mcp-media'
+    const path = `${pj.user_id}/mcp-src/${jobId}-${video ? 'src' : 'char'}.${ext}`
+    const { data: su, error: suE } = await svc.storage.from(bucket).createSignedUploadUrl(path, { upsert: true })
+    if (suE || !su?.signedUrl) return json(500, { error: 'upload_url' })
+    await svc.from('mcp_jobs').update({ params: { ...pp, [video ? 'src_path' : 'char_path']: path } }).eq('id', jobId).eq('status', 'pending')
+    return json(200, { url: su.signedUrl })
+  }
   if (segs[1] === 'start' && req.method === 'POST') {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>
     const jobId = String(body.job || '')
@@ -4016,6 +4500,26 @@ serve(async (req) => {
     if (pj.status !== 'pending') return json(409, { error: 'not_pending' })
     if (Date.now() - new Date(String(pj.created_at)).getTime() > 2 * 3600 * 1000) return json(403, { error: 'expired' })
     const params = (pj.params || {}) as Record<string, unknown>
+    // ── OUTILS VIDÉO (Omni / Motion Control) : fichiers déjà envoyés par la carte → préparation par le serveur de rendu.
+    //    Rien n'est débité ici : le débit a lieu quand la durée RÉELLE est mesurée (advanceVideoTool), avant le moteur.
+    if (params.tool === 'omni_edit' || params.tool === 'motion') {
+      const uid = String(pj.user_id)
+      const { data: profT } = await svc.from('profiles').select('*').eq('id', uid).maybeSingle()
+      if (!profT) return json(404, { error: 'no_profile' })
+      if (!isUnlimited(profT) && !ALLOWED_PLANS.includes(String(profT.plan || '').toLowerCase())) return json(403, { error: 'plan' })
+      const src = String(params.src_path || ''), chr = String(params.char_path || '')
+      if (!src.startsWith(uid + '/mcp-src/' + jobId) || !(await fichierPresent('render-media', src))) return json(400, { error: 'no_video' })
+      if (params.tool === 'motion' && (!chr.startsWith(uid + '/mcp-src/' + jobId) || !(await fichierPresent('mcp-media', chr)))) return json(400, { error: 'no_char' })
+      const nowT = new Date().toISOString()
+      const { data: tookT } = await svc.from('mcp_jobs').update({ status: 'running', credits_cost: 0, created_at: nowT, updated_at: nowT, params: { ...params, dur_hint: Number(body.duration) || 0 } })
+        .eq('id', jobId).eq('status', 'pending').select('id')
+      if (!tookT || !tookT.length) return json(409, { error: 'not_pending' })
+      const { data: rj, error: rjE } = await svc.from('render_jobs').insert({ user_id: uid, status: 'queued', input_video: src, assets: [], avatar_clips: [],
+        plan: { __compose: 'mc-ref', maxDur: params.tool === 'omni_edit' ? 10 : 30, minDur: params.tool === 'motion' } }).select('id').single()
+      if (rjE || !rj) { await failAndRefund(uid, { id: jobId }, 'préparation impossible'); return json(500, { error: 'prep' }) }
+      await svc.from('mcp_jobs').update({ op_name: 'vn:' + rj.id }).eq('id', jobId).eq('status', 'running')
+      return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })
+    }
     // ── CARTE VIDÉO (photo de départ déposée → Omni Flash image→vidéo) ──
     if (params.video === true) {
       const userIdV = String(pj.user_id)
@@ -4427,7 +4931,7 @@ serve(async (req) => {
             { src: 'https://mcp.avatarads.fr/icon-256.png?v=2', mimeType: 'image/png', sizes: ['256x256'] },
           ],
         },
-        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. 🎬 DEMANDE DE VIDÉO (même avec un lien ou une photo de produit) : UN SEUL appel generate_video — avec product_url pour un lien produit — JAMAIS generate_image avant : la photo de départ puis la vidéo s'enchaînent toutes seules dans la même carte. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. ⚡ VIDÉO UGC — une personne qui PRÉSENTE / PARLE à partir d'une PHOTO (ou une « vidéo UGC », « vidéo qui présente », « avatar qui parle ») : utilise TOUJOURS generate_video (Express) avec un prompt style UGC RÉEL (selfie authentique tenu à bout de bras, la personne parle face caméra d'un ton naturel et improvise sa présentation du produit ; enchaîne les phrases, pas de « euh »). Durée 4-10 s, aspect 9:16 par défaut. 📷 LA PHOTO : claude.ai ne te transmet PAS les images jointes au chat — tu n'as JAMAIS accès à la photo déposée dans la conversation. Si l'utilisateur a JOINT une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true, UN appel par vidéo, sans image_url — la carte lui fait déposer sa photo et lance la vidéo toute seule. Ne l'envoie JAMAIS sur le site et ne lui demande pas de lien. Tarif avec photo ou image de départ : 5 crédits/seconde (4, 6, 8 ou 10 s) ; sans image : 1,5 crédit/seconde. Annonce le BON tarif. C'est LE SEUL et LE BON outil pour une vidéo d'une personne qui parle — il n'y a pas d'outil « générateur d'avatar » ici (ça reste manuel sur le site). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent (dis « le module Express d'AvatarAds »). Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video (⚡ le SEUL outil pour une VIDÉO d'une personne — voir la règle UGC ci-dessous) · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION AUTOMATIQUE (TRÈS IMPORTANT) : « Impossible de joindre AvatarAds », « Connecteur inconnu », « Connecteur introuvable », « le serveur n'a pas répondu » ou une erreur 502 sur generate_* = le RELAIS de claude.ai a lâché (souvent avant même d'atteindre le serveur) — ce n'est ni une panne du serveur ni la preuve que la génération a démarré. Fais alors, dans le MÊME tour et sans rien demander : (1) UN seul nouvel appel du MÊME outil generate_* ; (2) si ça échoue encore, appelle check_video / check_image SANS aucun argument — ça retrouve et affiche la dernière génération du compte si elle a bien été créée (c'est CE rappel qui fait apparaître la carte), sinon ça répond clairement qu'il n'y a rien. Si aucune carte ne s'affiche après ça, DIS-LE en une phrase (« le relais de claude.ai a coupé, rien n'a été lancé ») — n'écris JAMAIS « ton visuel est en cours dans la carte ci-dessus » sans un résultat d'outil reçu dans ce tour. Quand un résultat est reçu mais que la carte ne s'affiche pas, donne le lien de téléchargement présent dans le résultat (https://mcp.avatarads.fr/i/<job_id>). Ne relance JAMAIS generate plus d'une fois (2ᵉ débit)." + (ctx.requireConfirm
+        instructions: "⛔ MODE SILENCIEUX ABSOLU (priorité n°1, avant tout le reste) : pour une demande de visuel/static ad/UGC, ta réponse ne contient QUE des appels generate_image et ZÉRO texte — pas une phrase avant, pas une phrase après, pas de préambule, pas de récap, pas de liste d'angles, pas de « je lance », pas de script, pas de question, pas d'emoji. 🎬 DEMANDE DE VIDÉO (même avec un lien ou une photo de produit) : UN SEUL appel generate_video — avec product_url pour un lien produit — JAMAIS generate_image avant : la photo de départ puis la vidéo s'enchaînent toutes seules dans la même carte. Ne CONSULTE PAS la page toi-même (pas de web fetch / recherche) : passe l'URL du produit DIRECTEMENT dans product_url — l'outil récupère la photo et génère. Compose headline/subheadline/bullets/brand/cta toi-même de façon concise SANS les écrire dans le chat. Pour PLUSIEURS visuels : un appel APRÈS l'autre (jamais en parallèle). La carte affiche tout ; l'utilisateur ne veut RIEN lire d'autre. PHOTO PRODUIT (ordre de préférence) : (1) si tu as consulté la page produit et vois l'URL de l'image principale (og:image, souvent cdn.shopify.com) → reference_image_url (fiable même si la page bloque notre serveur) ; (2) l'utilisateur colle le lien de page → product_url (extraction auto + repli dépôt) ; (3) rien → appelle quand même generate_image (kind static_ad/ugc), la carte gère. Jamais de questions en rafale. STATIC AD : utilise kind:'static_ad' avec headline/subheadline/bullets/brand/cta en français. ⚡ VIDÉO UGC — une personne qui PRÉSENTE / PARLE à partir d'une PHOTO (ou une « vidéo UGC », « vidéo qui présente », « avatar qui parle ») : utilise TOUJOURS generate_video (Express) avec un prompt style UGC RÉEL (selfie authentique tenu à bout de bras, la personne parle face caméra d'un ton naturel et improvise sa présentation du produit ; enchaîne les phrases, pas de « euh »). Durée 4-10 s, aspect 9:16 par défaut. 📷 LA PHOTO : claude.ai ne te transmet PAS les images jointes au chat — tu n'as JAMAIS accès à la photo déposée dans la conversation. Si l'utilisateur a JOINT une ou plusieurs photos et veut en faire des vidéos : appelle generate_video avec user_photo:true, UN appel par vidéo, sans image_url — la carte lui fait déposer sa photo et lance la vidéo toute seule. Ne l'envoie JAMAIS sur le site et ne lui demande pas de lien. Tarif avec photo ou image de départ : 5 crédits/seconde (4, 6, 8 ou 10 s) ; sans image : 1,5 crédit/seconde. Annonce le BON tarif. C'est LE SEUL et LE BON outil pour une vidéo d'une personne qui parle — il n'y a pas d'outil « générateur d'avatar » ici (ça reste manuel sur le site). ⛔ Ne nomme JAMAIS le moteur technique sous-jacent (dis « le module Express d'AvatarAds »). Serveur MCP AvatarAds (avatarads.fr) — les modules de l'app pilotés depuis Claude : Images IA = generate_image · Express = generate_video puis check_video (⚡ le SEUL outil pour une VIDÉO d'une personne — voir la règle UGC ci-dessous) · Omni (modifier une vidéo existante par un prompt) = edit_video · Motion Control (une photo reproduit les mouvements d'une vidéo de référence) = motion_control — pour ces deux-là, appelle l'outil SANS fichier : la carte fait déposer la vidéo (et la photo) · Nettoyage audio = clean_audio · MONTAGE IA (audio → vidéo motion-design complète) = montage_ia puis check_montage · Éditeur = get_montage_plan (lire le plan) et render_montage_plan (re-rendre le plan modifié). Tout consomme les crédits du compte connecté. ⚠️ RÉCUPÉRATION AUTOMATIQUE (TRÈS IMPORTANT) : « Impossible de joindre AvatarAds », « Connecteur inconnu », « Connecteur introuvable », « le serveur n'a pas répondu » ou une erreur 502 sur generate_* = le RELAIS de claude.ai a lâché (souvent avant même d'atteindre le serveur) — ce n'est ni une panne du serveur ni la preuve que la génération a démarré. Fais alors, dans le MÊME tour et sans rien demander : (1) UN seul nouvel appel du MÊME outil generate_* ; (2) si ça échoue encore, appelle check_video / check_image SANS aucun argument — ça retrouve et affiche la dernière génération du compte si elle a bien été créée (c'est CE rappel qui fait apparaître la carte), sinon ça répond clairement qu'il n'y a rien. Si aucune carte ne s'affiche après ça, DIS-LE en une phrase (« le relais de claude.ai a coupé, rien n'a été lancé ») — n'écris JAMAIS « ton visuel est en cours dans la carte ci-dessus » sans un résultat d'outil reçu dans ce tour. Quand un résultat est reçu mais que la carte ne s'affiche pas, donne le lien de téléchargement présent dans le résultat (https://mcp.avatarads.fr/i/<job_id>). Ne relance JAMAIS generate plus d'une fois (2ᵉ débit)." + (ctx.requireConfirm
           ? "Avant toute génération, un devis en crédits peut être retourné : montre-le à l'utilisateur et attends son accord avant de rappeler l'outil avec confirm: true. "
           : "L'utilisateur a DÉSACTIVÉ la demande de confirmation : lance les générations directement, sans demander son accord ni annoncer le coût au préalable. ") + "get_account donne le solde.",
       })
@@ -4479,6 +4983,8 @@ serve(async (req) => {
       if (name === 'get_account') out = await runGetAccount(profile)
       else if (name === 'generate_image') out = await runGenerateImage(profile, args, ctx)
       else if (name === 'generate_video') out = await runGenerateVideo(profile, args, ctx)
+      else if (name === 'edit_video') out = await runEditVideo(profile, args)
+      else if (name === 'motion_control') out = await runMotionControl(profile, args)
       else if (name === 'check_image') out = await runCheckImage(profile, args)
       else if (name === 'check_video') out = await runCheckVideo(profile, args)
       else if (name === 'generate_avatar_video') out = await runGenerateAvatarVideo(profile, args, ctx)

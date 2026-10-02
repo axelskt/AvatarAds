@@ -66,6 +66,49 @@ export const IMG_TEXT_FIDELITY = " Preserve ALL visible text from the reference 
 export const NB_MODEL = "gemini-3-pro-image"
 // Images de PERSONNE réalistes : bloc réalisme de l'app (photo amateur + tenue correcte SFW), mot pour mot.
 export const IMG_REALISM_SUFFIX = ". Shot as a real candid amateur photo taken on a phone — NOT a professional studio portrait, no beauty retouching. Natural realistic human skin with fine natural texture and normal pores, subtle imperfections and slightly uneven skin tone, fine peach fuzz, a natural hairline with a few flyaways, individual eyebrow hairs and eyelashes, natural facial asymmetry, an authentic relaxed candid expression, believable natural lighting and true-to-life colors. The ENTIRE background is sharp and in focus (deep depth of field, no background blur, no bokeh, no lens blur). Frame the person fairly close so the face is large, prominent and richly detailed in the frame — a chest-up shot or closer, never a tiny or far-away face — unless a clearly wider or full-body composition is requested. Keep it natural, clean and flattering — never plastic, waxy, airbrushed, over-smoothed, over-sharpened, blotchy or over-textured, no exaggerated or enlarged pores, no heavy blemishes. It must look like a genuine unedited real photograph, clearly NOT AI-generated, NOT 3D, NOT CGI, no digital-art look, no beauty filter. Keep it strictly SFW and modest: the person stays fully and tastefully dressed with the chest, cleavage and torso covered by normal clothing — no nudity, no lingerie or underwear, no swimwear or cleavage emphasis and no sexualized or suggestive posing, even if the request contains words like \"sexy\", \"hot\" or \"belle\"."
+// OMNI — édition vidéo par prompt (module Omni de l'app) : _omniBuildPrompt mot pour mot, kill-switch logo compris.
+const _OMNI_LOGO_FIDELITY = true;
+export function omniEditPrompt(p: string): string{
+  let s=String(p||'').trim();
+  const hasKeep=/(keep everything|reste (identique|inchang)|le reste (identique|inchang)|garde le reste|inchang[ée]|sans (rien )?(d\'autre|autre) chang|only change|ne change (que|rien d))/i.test(s);
+  if(!hasKeep){
+    if(!/[.!?…]$/.test(s)) s+='.';
+    // Anglais : la formule exacte documentée par Google, la plus fiable. Gemini est
+    // multilingue, donc un prompt FR + cette clause EN cohabitent sans souci.
+    s+=' Keep everything else in the video exactly the same.';
+  }
+  // Préservations CIBLÉES (retours Axel 13/09) : la POSITION/placement et le CADRAGE ne changent pas
+  // (il mettait le sujet côté conducteur au lieu de passager), et rien d'inventé.
+  // ⚠️ Diagnostic 15/09 : la phrase « reproduce a real brand's authentic name and logo… » ajoutée le
+  // 13/09 18h10 (commit e3a890d) était collée à CHAQUE prompt → le filtre marques/trademark de Gemini
+  // (« sensitive words violate Google's Prohibited Use policy ») bloquait TOUTES les requêtes, même sans
+  // marque (montre, voiture, porte-clés…). On RETIRE tout langage marque/logo/badge et on neutralise
+  // l'anti-hallucination (texte/graphismes génériques, sans « logo »). Court, ajouté une seule fois.
+  if(!/(same (seat|position|side|placement)|do not (add|invent)|n'invente|sans inventer)/i.test(s)){
+    s+=' Keep every subject and object in their EXACT original position, side, seat and placement — never move the subject to a different seat or the opposite side — and keep the same camera angle and framing.';
+    s+=' Do NOT add, invent, fabricate or hallucinate any extra logo, emblem, badge or written text that is not in the source OR implied by the request.';
+    // ⚠️ FIDÉLITÉ LOGO (Axel 15/09, choix C assumé — testé OK avec Patek Philippe). Gaté par _OMNI_LOGO_FIDELITY (kill-switch).
+    if(_OMNI_LOGO_FIDELITY) s+=' Any lettering, badge, model name, emblem or logo that DOES appear (including one the request asks for) MUST use its EXACT official correct spelling and be rendered crisp, sharp, straight and fully legible — never garbled, misspelled, warped, blurred, doubled, gibberish or made-up fantasy characters. If a real brand or model is requested, reproduce ONLY its authentic real name and logo exactly as officially written; when unsure of the exact wording, leave that text out rather than invent it.';
+  }
+  return s;
+}
+// MOTION CONTROL (module de l'app) : instruction de mouvement (celle de l'utilisateur, sinon celle de l'app) + verrous
+// identité / geste / cadrage / décor / caméra / réalisme, tronqué à 2 400 caractères comme dans _mcGenerate.
+export function motionControlPrompt(o: { instruction?: string; camFollow?: boolean; keepVidBg?: boolean }): string {
+  const window = { _mcPrompt: String(o.instruction || '').trim(), _mcCamFollow: o.camFollow !== false, _mcKeepVidBg: !!o.keepVidBg }
+  const _mcMotion = window._mcPrompt || 'The character reproduces the EXACT motion, gestures, head and body movement AND the CAMERA MOVEMENT of the reference video — follow the reference camera work faithfully: match its angle (low-angle / high-angle), its tilt and its real camera moves. Natural, realistic.';
+  const _mcBgTxt = window._mcKeepVidBg
+      ? ' Keep the EXACT same background, scene and environment as the REFERENCE VIDEO: only replace the person with the provided character — everything behind them stays identical to the original video.'
+      : ' Keep the EXACT same background, scene and environment as the provided image: do not change, replace, blur, crop out or regenerate anything behind the character — the decor must stay identical.';
+  const _mcCamTxt = window._mcCamFollow
+      ? ' Handheld camera held at arm\'s length, with subtle organic shake, micro-jitter and natural breathing motion that reacts to the character\'s movements — a realistic hand-held selfie feel, slightly unstable and alive, NOT a locked tripod nor a smooth gimbal.'
+      : '';
+  const _mcRealTxt = ' Photorealistic UGC quality: REAL skin — visible pores, fine peach fuzz, natural body hair, small blemishes, freckles and moles exactly where they are, natural hairline with baby hairs, uneven skin tone and slight shine; never plastic, smoothed or airbrushed. Natural hair strands and fabric detail, correct hands and fingers, consistent lighting and shadows, sharp 4K detail, no warping, no flicker.';
+  const _mcGestTxt = ' GESTURE REPLICATION: reproduce the reference HAND poses EXACTLY — same fingers extended or curled, same gesture, trajectory and timing. If the reference points with an index finger, the character points with the index finger — never a fist, a pinch or an invented gesture. Hands anatomically correct.';
+  const _mcSafeTxt = ' FRAMING: the face stays inside the frame edges (never cropped out by the frame). Hands may pass close to or in front of the face whenever the reference does — reproduce that exactly. DISTANCE RULE: the subject-to-camera distance and the on-screen head size must match the REFERENCE VIDEO at every moment — the head keeps the SAME fraction of the frame as in the reference; never zoom in closer than the reference, never enlarge the face or crop tighter than the reference does. Follow the reference camera movement (including its real push-in) without ever exceeding it; do NOT force a static, perfectly centered, locked shot.';
+  const _mcId = ' CRUCIAL: keep the EXACT same identity as the provided character image — same face, hairstyle, skin tone, body and clothing. Same person throughout: never morph, swap, beautify or change the face or the outfit.' + _mcGestTxt + _mcSafeTxt + _mcBgTxt + _mcCamTxt + _mcRealTxt;
+  return (_mcMotion + _mcId).slice(0, 2400)
+}
 // Veo 3.1 Lite (sans photo) : même assemblage Express que l'app, moteur Veo (verrou de fin de parole compris).
 export function expressVeoPrompt(prompt: string): string {
   window._expVeoModel = 'lite'; const _isOmni = false
