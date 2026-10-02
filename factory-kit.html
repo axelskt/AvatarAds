@@ -70,7 +70,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
 .post .act{display:flex;flex-direction:column;gap:6px}
 @media (max-width:640px){
   .post{grid-template-columns:24px 56px 1fr}
-  .post .act{grid-column:1/-1;flex-direction:row}
+  .post .act{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+  .post .act .btn[data-act="one"]{flex:1 1 100%}
   .post .act .btn{flex:1;min-width:0;white-space:normal;padding:10px 8px}
   .bulk .btn{flex:1 1 100%}
   .accts .acct{padding:12px;min-width:0}
@@ -113,7 +114,10 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   };
 
   var sb = null;
-  var S = { posts: [], acct: 'avataradss', view: 'todo', cur: null, busy: false, err: '', pack: {} };  // pack[lot] = { state, got, total, files }
+  var S = { posts: [], acct: 'avataradss', view: 'todo', cur: null, busy: false, err: '', pack: {}, one: {} };  // pack[lot] = { state, got, total, files } ; one[post] = vidéo seule (téléphone)
+  // Téléphone : une vidéo finale pèse ~110 Mo (02/10) ; un lot de 25 (~2,7 Go) en mémoire fait planter Safari iOS.
+  // Sur téléphone, pas de lots : chaque vidéo s'enregistre seule (bouton Enregistrer → Photos).
+  var PHONE = (function () { try { return matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) < 820; } catch (e) { return false; } })();
   try { var saved = localStorage.getItem('kit_acct'); if (saved) S.acct = saved; } catch (e) { /* stockage bloqué */ }
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); };
@@ -132,7 +136,8 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     toast.h = setTimeout(function () { t.hidden = true; }, undo ? 6000 : 2200);
   }
 
-  var LOT = 25;   // AirDrop d'un coup : 25 vidéos (~400 Mo) passent bien, 100 non
+  var LOT_PHONE = 5;   // téléphone (Axel 02/10 : 5 par 5) : ~550 Mo en mémoire, lot libéré une fois enregistré
+  var LOT = 10;   // AirDrop depuis le Mac : 10 vidéos (~1,1 Go, ~110 Mo chacune depuis le 60 i/s) ; 25 = 2,7 Go en mémoire, trop
   var VIEWS = [['todo', 'À programmer'], ['sched', 'Programmées'], ['old', 'Anciennes']];
   var now = function () { return new Date().toISOString(); };
   function mine(a) { return S.posts.filter(function (p) { return p.account === (a || S.acct); }); }
@@ -165,7 +170,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     }
     return buf;
   }
-  function lots() { var t = todo(), out = []; for (var i = 0; i < t.length; i += LOT) out.push(t.slice(i, i + LOT)); return out; }
+  function lots() { var t = todo(), n = PHONE ? LOT_PHONE : LOT, out = []; for (var i = 0; i < t.length; i += n) out.push(t.slice(i, i + n)); return out; }
   function lotKey(list) { return S.acct + ':' + list.map(function (p) { return p.id; }).join(','); }
 
   // ── envoi groupé vers l'iPhone, par lots de 25 ──
@@ -173,14 +178,20 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   // Le partage doit partir d'un clic : il ne peut pas suivre un long téléchargement.
   async function preparePack(i) {
     var list = lots()[i]; if (!list) return;
+    if (PHONE) { S.pack = {}; Object.keys(S.one).forEach(function (k) { if (S.one[k].state === 'ready') delete S.one[k]; }); }   // téléphone : un seul lot (ou une seule vidéo) en mémoire
     var k = lotKey(list), P = S.pack[k] = { state: 'loading', got: 0, total: list.length, files: [] };
     render();
     try {
       for (var j = 0; j < list.length; j++) {
-        var r = await fetch(list[j].video_url);
-        if (!r.ok) throw new Error('vidéo ' + pad(num(list[j])) + ' : HTTP ' + r.status);
+        // 5G instable : 3 essais par vidéo avant d'abandonner le lot (les vidéos déjà reçues ne sont pas retéléchargées)
+        var buf = null, err = null;
+        for (var essai = 0; essai < 3 && !buf; essai++) {
+          try { var r = await fetch(list[j].video_url, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); buf = await r.arrayBuffer(); }
+          catch (x) { err = x; await new Promise(function (ok) { setTimeout(ok, 1500); }); }
+        }
+        if (!buf) throw new Error('vidéo ' + pad(num(list[j])) + ' : ' + String(err && err.message || err));
         var when = Date.now() - (list.length - j) * 60000;
-        P.files.push(new File([stampDate(await r.arrayBuffer(), when)], fileName(list[j]), { type: 'video/mp4' }));
+        P.files.push(new File([stampDate(buf, when)], fileName(list[j]), { type: 'video/mp4' })); buf = null;
         P.got = j + 1;
         render();
       }
@@ -193,9 +204,60 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     var P = packOf(i);
     if (!P || P.state !== 'ready') return;
     if (navigator.canShare && navigator.canShare({ files: P.files })) {
-      navigator.share({ files: P.files }).then(function () { toast(P.files.length + ' vidéos envoyées'); }, function () {});
+      navigator.share({ files: P.files }).then(function () { toast(P.files.length + ' vidéos envoyées'); if (PHONE) { P.state = 'sent'; P.files = []; render(); } }, function () {});
     } else toast('Partage de fichiers indisponible ici : utilise « Télécharger »');
   }
+  // ── une vidéo seule (téléphone) : 1er appui = téléchargement avec progression ; 2e appui = feuille de partage
+  //    iOS → « Enregistrer la vidéo » (Photos). Le partage doit partir d'un appui : il ne peut pas suivre le téléchargement.
+  //    Une seule vidéo gardée en mémoire à la fois.
+  async function prepareOne(p) {
+    Object.keys(S.one).forEach(function (k) { if (k !== p.id && S.one[k].state === 'ready') delete S.one[k]; });
+    if (PHONE) Object.keys(S.pack).forEach(function (k) { if (S.pack[k].state === 'ready') delete S.pack[k]; });
+    var O = S.one[p.id] = { state: 'loading', pct: 0 };
+    render();
+    try {
+      var r = await fetch(p.video_url, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var total = +r.headers.get('content-length') || 0, got = 0, parts = [], rd = r.body && r.body.getReader && r.body.getReader();
+      if (rd) {
+        for (;;) {
+          var c = await rd.read(); if (c.done) break;
+          parts.push(c.value); got += c.value.length;
+          var pc = total ? Math.floor(got / total * 100) : 0;
+          if (pc !== O.pct) { O.pct = pc; paintOne(p); }
+        }
+      } else parts.push(new Uint8Array(await r.arrayBuffer()));
+      var buf = await new Blob(parts).arrayBuffer(); parts = null;
+      if (total && buf.byteLength < total) throw new Error('connexion coupée (' + Math.round(buf.byteLength / 1e6) + ' / ' + Math.round(total / 1e6) + ' Mo)');
+      O.file = new File([stampDate(buf, Date.now())], fileName(p), { type: 'video/mp4' });
+      O.state = 'ready';
+    } catch (e) { O.state = 'error'; O.error = String(e.message || e); }
+    render();
+  }
+  function paintOne(p) {   // progression sans tout redessiner (la liste garde son défilement)
+    var b = document.querySelector('[data-act="one"][data-id="' + p.id + '"]');
+    if (b) b.lastChild.textContent = 'Téléchargement ' + S.one[p.id].pct + ' %';
+  }
+  function saveOne(p) {
+    var O = S.one[p.id]; if (!O || O.state !== 'ready') return;
+    if (navigator.canShare && navigator.canShare({ files: [O.file] })) {
+      navigator.share({ files: [O.file] }).then(function () { O.state = 'saved'; O.file = null; render(); toast('Vidéo n°' + num(p) + ' enregistrée'); }, function () {});
+    } else {
+      var a = document.createElement('a'); a.href = URL.createObjectURL(O.file); a.download = O.file.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+      O.state = 'saved'; O.file = null; render();
+    }
+  }
+  function oneBtn(p) {
+    if (p.video_deleted_at) return '';
+    var O = S.one[p.id];
+    if (O && O.state === 'loading') return '<button type="button" class="btn dark" data-act="one" data-id="' + esc(p.id) + '" disabled>' + IC.dl + '<span>Téléchargement ' + O.pct + ' %</span></button>';
+    if (O && O.state === 'ready') return '<button type="button" class="btn dark" data-act="one" data-id="' + esc(p.id) + '">' + IC.send + '<span>Enregistrer dans Photos</span></button>';
+    if (O && O.state === 'error') return '<button type="button" class="btn ghost" data-act="one" data-id="' + esc(p.id) + '" title="' + esc(O.error) + '">' + IC.dl + '<span>Réessayer</span></button>';
+    return '<button type="button" class="btn ghost" data-act="one" data-id="' + esc(p.id) + '">' + IC.dl + '<span>' + (O && O.state === 'saved' ? 'Enregistrée · refaire' : 'Enregistrer') + '</span></button>';
+  }
+
   async function downloadPack(i) {
     var P = packOf(i);
     if (!P || P.state !== 'ready') return;
@@ -277,13 +339,14 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       var P = S.pack[lotKey(list)], btns;
       if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep" data-i="' + i + '">' + IC.dl + (P ? 'Réessayer' : 'Préparer l’envoi') + '</button>';
       else if (P.state === 'loading') btns = '<button type="button" class="btn dark" disabled>Préparation ' + P.got + ' / ' + P.total + '…</button>';
-      else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + 'Envoyer en AirDrop</button>'
-        + '<button type="button" class="btn ghost" data-act="dlall" data-i="' + i + '">' + IC.dl + 'Télécharger</button>';
+      else if (P.state === 'sent') btns = '<button type="button" class="btn ghost" data-act="prep" data-i="' + i + '">' + IC.check + 'Enregistrées · refaire</button>';
+      else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + (PHONE ? 'Enregistrer dans Photos' : 'Envoyer en AirDrop') + '</button>'
+        + (PHONE ? '' : '<button type="button" class="btn ghost" data-act="dlall" data-i="' + i + '">' + IC.dl + 'Télécharger</button>');
       return '<div class="lot"><span class="l">' + (L.length > 1 ? 'Lot ' + (i + 1) + ' · ' : '') + 'n° ' + pad(num(list[0])) + ' → ' + pad(num(list[list.length - 1]))
         + '<span>' + list.length + ' vidéo' + (list.length > 1 ? 's' : '') + (P && P.state === 'error' ? ' · échec : ' + esc(P.error) : '') + '</span></span><span class="b">' + btns + '</span></div>';
     }).join('');
     return '<div class="send"><div class="send-h"><div><b>' + T.length + ' vidéo' + (T.length > 1 ? 's' : '') + ' à programmer</b>'
-      + '<div class="meta">Elles arrivent sur l’iPhone dans l’ordre de la liste' + (L.length > 1 ? ', par lots de ' + LOT : '') + '.</div></div>'
+      + '<div class="meta">' + (PHONE ? 'Par lots de ' + LOT_PHONE + ' : « Préparer », puis « Enregistrer dans Photos » → Enregistrer les vidéos. Un lot à la fois.' : 'Elles arrivent sur l’iPhone dans l’ordre de la liste' + (L.length > 1 ? ', par lots de ' + LOT : '') + '.') + '</div></div>'
       + '<button type="button" class="btn ghost" data-act="alldone">' + IC.check + 'Tout est programmé</button></div>' + rows + '</div>';
   }
 
@@ -296,7 +359,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       + '<div style="min-width:0"><div class="t">' + hour(p.scheduled_at) + '</div><div class="d">' + esc(dayLabel(p.scheduled_at)) + '</div>'
       + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div>'
       + '<div class="id">ID ' + esc(id) + '<button type="button" data-act="copyid" data-id="' + esc(p.id) + '" title="Copier l’ID">' + IC.copy + '</button></div></div>'
-      + '<div class="act"><button type="button" class="btn ghost" data-act="copy" data-id="' + esc(p.id) + '">' + IC.copy + 'Copier la légende</button>'
+      + '<div class="act">' + oneBtn(p) + '<button type="button" class="btn ghost" data-act="copy" data-id="' + esc(p.id) + '">' + IC.copy + 'Copier la légende</button>'
       + '<button type="button" class="btn ' + (done ? 'done' : 'ok') + '" data-act="done" data-id="' + esc(p.id) + '">' + IC.check + (done ? 'Programmé' : 'C’est programmé') + '</button></div>'
       + '</div>';
   }
@@ -334,6 +397,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     else if (act === 'prep') preparePack(i);
     else if (act === 'share') sharePack(i);
     else if (act === 'dlall') downloadPack(i);
+    else if (act === 'one' && p) { var O = S.one[p.id]; S.cur = p.id; if (O && O.state === 'ready') saveOne(p); else if (!O || O.state !== 'loading') prepareOne(p); }
     else if (act === 'alldone') allDone();
     else if (act === 'copy' && p) { S.cur = p.id; copyText(p.caption, 'Légende n°' + num(p) + ' copiée'); render(); }
     else if (act === 'copyid' && p) copyText(vidId(p), 'ID copié');
