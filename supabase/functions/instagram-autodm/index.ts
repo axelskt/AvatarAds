@@ -17,7 +17,7 @@ const svc = createClient(SB_URL, SERVICE)
 
 // Défauts si aucune règle ig_rules. Mots-clés = ceux des CTA (factory_bricks kind=cta, meta.keyword).
 const DEF = {
-  keywords: ['go', 'site', 'guide', 'plan', 'montage', 'avatar', 'aide', 'ia', 'ugc', 'direct', 'cafe', 'libre', 'lien', 'link', 'test'],
+  keywords: ['go', 'site', 'guide', 'plan', 'montage', 'avatar', 'aide', 'ia', 'ugc', 'direct', 'cafe', 'libre', 'lien', 'link', 'test', 'claude'],
   link: 'https://avatarads.fr',
   askTitle: "Réservé aux abonnés 👀 Abonne-toi, clique le bouton et je te l'envoie direct",   // ≤ 80 car. (titre seul)
   askSub: '',

@@ -14,7 +14,8 @@
     "(module static-ads) : l'illustration montre le MÊME résultat que la démo (même produit, même transformation).",
     "Axel 30/09 : avatars = filles ET garçons mélangés (jamais deux du même genre de suite) ; quand la voix dit « image et",
     "vidéo », une IMAGE puis une VIDÉO (type « video » = pool video.<module de la démo>). H12 / H13 / H21 (« influenceuse ») restent en filles.",
-    "Axel 30/09 : les static ads / vidéos produit montrées dans le hook peuvent être d'AUTRES produits que celui de la démo (CIAO, parfum, Lune, créatine, SVR) → pool « pub » complet, plus de demoMedia pour C-SADS."
+    "Axel 30/09 : les static ads / vidéos produit montrées dans le hook peuvent être d'AUTRES produits que celui de la démo (CIAO, parfum, Lune, créatine, SVR) → pool « pub » complet, plus de demoMedia pour C-SADS.",
+    "Axel 02/10 : + 10 vidéos UGC (Vidéo/Vidéo UGC : SVR, parfum LV, AXE, Lune, crème ; filles et garçons) dans « produit » et « video-image-ia », + 4 photos avatar produit (AXE, parfum LV) dans « fille » / « garcon ». Doublons déjà présents ignorés (vido ciao, Avatar IA 1/3, vidéo fille 2, express copie 2)."
   ],
   "pools": {
     "fille": [
@@ -22,7 +23,9 @@
       "avatar-ia-fille-4k-b.jpg",
       "avatar-ia-fille-4k-c.jpg",
       "avatar-ia-fille-4k-d.jpg",
-      "avatar-ia-fille-4k-e.jpg"
+      "avatar-ia-fille-4k-e.jpg",
+      "avatar-ia-fille-axe.jpg",
+      "avatar-ia-fille-parfum.jpg"
     ],
     "pub": [
       "ciao-energy-peche.png",
@@ -53,7 +56,15 @@
     ],
     "produit": [
       "ciao-fille-canette.mp4",
-      "produit-svr.mp4"
+      "produit-svr.mp4",
+      "produit-svr-fille-b.mp4",
+      "produit-svr-garcon.mp4",
+      "produit-parfum-fille.mp4",
+      "produit-parfum-garcon.mp4",
+      "produit-axe-fille.mp4",
+      "produit-axe-garcon.mp4",
+      "produit-lune-fille.mp4",
+      "produit-creme-fille.mp4"
     ],
     "omni": [
       "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4",
@@ -65,14 +76,26 @@
       "avatar-ia-garcon-4k.jpg",
       "avatar-ia-garcon-4k-b.jpg",
       "avatar-ia-garcon-4k-c.jpg",
-      "avatar-ia-garcon-4k-d.jpg"
+      "avatar-ia-garcon-4k-d.jpg",
+      "avatar-ia-garcon-axe.jpg",
+      "avatar-ia-garcon-parfum.jpg"
     ],
     "video-image-ia": [
       "avatar-ia-fille-video.mp4",
       "avatar-ia-garcon-video.mp4",
       "avatar-ia-fille-video-b.mp4",
       "avatar-ia-fille-video-c.mp4",
-      "avatar-ia-fille-video-d.mp4"
+      "avatar-ia-fille-video-d.mp4",
+      "avatar-ia-fille-video-e.mp4",
+      "avatar-ia-garcon-video-b.mp4",
+      "produit-svr-fille-b.mp4",
+      "produit-svr-garcon.mp4",
+      "produit-parfum-fille.mp4",
+      "produit-parfum-garcon.mp4",
+      "produit-axe-fille.mp4",
+      "produit-axe-garcon.mp4",
+      "produit-lune-fille.mp4",
+      "produit-creme-fille.mp4"
     ]
   },
   "demo": {
@@ -133,6 +156,31 @@
     ],
     "C-OMNI-03": [
       "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0a.mp4"
+    ],
+    "C-OMNI-04": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O3-0a.mp4"
+    ],
+    "C-IMGIA-01": [
+      "avatar-ia-fille-4k.jpg",
+      "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-fille-4k-b.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-fille-4k-c.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
+      "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-garcon-4k-d.jpg",
+      "avatar-ia-fille-4k-e.jpg"
+    ],
+    "C-IMGIA-04": [
+      "avatar-ia-fille-4k.jpg",
+      "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-fille-4k-b.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-fille-4k-c.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
+      "avatar-ia-fille-4k-d.jpg",
+      "avatar-ia-garcon-4k-d.jpg",
+      "avatar-ia-fille-4k-e.jpg"
     ]
   },
   "bricks": {

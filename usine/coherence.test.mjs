@@ -430,6 +430,16 @@ test('hook aux deux modes (Axel 28/09 : H63) : avant / après + lipsync explicit
   assert.ok(C.isLipsyncHook({ meta: { hook_mode: 'avant-apres', lipsync: true } }) && !C.isLipsyncHook({ meta: { hook_mode: 'avant-apres' } }) && !C.isLipsyncHook({ meta: { lipsync: false } }) && C.isLipsyncHook({ meta: {} }));
 });
 
+test('démo MCP (Axel 02/10) : meta.features filtre les hooks qui citent un module (H76 pubs produit → démo avec static-ads)', () => {
+  const H76 = { id: 'H76', meta: { compatible_subjects: ['mcp-claude', 'static-ads'] } }, H24 = { id: 'H24', meta: { compatible_subjects: ['mcp-claude'] } };
+  const exp = { id: 'C-MCP-01', subject: 'mcp-claude', meta: { features: ['express', 'image-ia'] } };
+  const sta = { id: 'C-MCP-04', subject: 'mcp-claude', meta: { features: ['static-ads'] } };
+  assert.equal(C.pairLevel(H76, exp), 'review');
+  assert.equal(C.pairLevel(H76, sta), 'ok');
+  assert.equal(C.pairLevel(H24, exp), 'ok');
+  assert.equal(C.pairLevel({ id: 'X', meta: { compatible_subjects: ['image-ia'] } }, { id: 'C-IMGIA-02', subject: 'image-ia', meta: {} }), 'ok');
+});
+
 const fails = results.filter(r => r.startsWith('FAIL')).length;
 console.log(results.join('\n'));
 console.log(fails + ' échec(s) sur ' + results.length);

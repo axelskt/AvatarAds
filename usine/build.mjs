@@ -417,7 +417,9 @@ const total = dur(voice);
 // ── 2) SOUS-TITRES : manifest (hook/CTA) + Whisper (démo) ──
 const allWords = [];
 const hookW = hookWordsPre || (hookVoice ? exactWords(manifestWords(hookVoice, 0) || emitWords(hookVoice, 0), textOf(hookId || idFromFile(hook))) : []);
-const demoW = emitWords(demo, O1).filter(w => w.start < O2);
+// démo : texte relu (meta.transcript de la brique contenu, Axel 02/10 : « cloud » → Claude…) ; jamais le libellé
+const demoTxt = ((brickOf(OPT.demo) || {}).meta || {}).transcript || null;
+const demoW = exactWords(emitWords(demo, O1), demoTxt).filter(w => w.start < O2);
 const ctaW = cta ? exactWords((ctaCap ? manifestWords(ctaCap, O2 + CL + CTA_LEAD) : null) || emitWords(cta, O2 + CL), textOf(idFromFile(cta))) : [];
 // ── GROUPES DE SOUS-TITRES (Axel 29/09) : mot à mot partout SAUF aux moments clés, où la phrase s'affiche en bloc :
 //    la dernière phrase avant chaque transition (fin du hook / de la liaison, fin de la démo) et le début du CTA

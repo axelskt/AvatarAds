@@ -295,13 +295,19 @@
   function pairLevel(hook, demo) {
     if (!hook || !demo) return 'review';
     if (isGenericHook(hook)) return 'ok';
-    return hookSubjects(hook).indexOf(String(demo.subject || '')) >= 0 ? 'ok' : 'review';
+    var hs = hookSubjects(hook);
+    if (hs.indexOf(String(demo.subject || '')) < 0) return 'review';
+    // Démo MCP (Axel 02/10) : meta.features = modules qu'on y VOIT générer depuis Claude (express, image-ia, static-ads).
+    // Un hook qui cite aussi un module (H73 influenceur UGC, H76 pubs produit) ne va qu'avec une démo qui le montre.
+    var f = meta(demo).features, extra = hs.filter(function (s) { return s !== demo.subject && s !== 'generique'; });
+    if (Array.isArray(f) && extra.length && !extra.some(function (s) { return f.indexOf(s) >= 0; })) return 'review';
+    return 'ok';
   }
   function pairWhy(hook, demo) {
     if (pairLevel(hook, demo) === 'ok') return '';
     var s = hookSubjects(hook);
     return (hook && hook.id || '?') + ' (' + (s.length ? s.join(', ') : 'aucun sujet') + ') ne cite pas le sujet de '
-      + (demo && demo.id || '?') + ' (' + (demo && demo.subject || '?') + ')';
+      + (demo && demo.id || '?') + ' (' + (demo && demo.subject || '?') + (Array.isArray(meta(demo).features) ? ' : ' + meta(demo).features.join(', ') : '') + ')';
   }
   function liaisonOk(liaison, hook, demo) {
     if (!liaison) return true;                              // format court : hook + démo + CTA
