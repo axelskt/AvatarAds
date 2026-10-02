@@ -832,16 +832,18 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     const src = join(jobDir, 'base.mp4')
     const [w, h] = (ffprobe(src, 'stream=width,height').split('\n').find((l) => /^\d+,\d+/.test(l.trim())) || '0,0').split(',').map(Number)
     const dur = parseFloat(ffprobe(src, 'format=duration')) || 0
-    const maxDur = Number(plan.maxDur) || 30, pad = plan.minDur && dur > 0 && dur < 3.3 ? Math.max(0.4, 3.6 - dur) : 0
+    const maxDur = Number(plan.maxDur) || 30, garde = Math.min(dur, maxDur), pad = plan.minDur && garde > 0 && garde < 3.3 ? Math.max(0.4, 3.6 - garde) : 0
     const mn = Math.min(w || 720, h || 1280), mx = Math.max(w || 720, h || 1280)
     const k = mn < 340 ? 720 / mn : mx > 1920 ? 1920 / mx : 1
-    const sw = Math.round((w || 720) * k / 2) * 2, sh = Math.round((h || 1280) * k / 2) * 2
     const hasA = !!ffprobe(src, 'stream=codec_type').split('\n').find((l) => l.trim() === 'audio')
-    const args = ['-y', '-i', src, '-t', String(maxDur), '-vf', `scale=${sw}:${sh},format=yuv420p${pad ? `,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}` : ''}`]
+    // échelle relative (iw/ih) : ffmpeg redresse d'abord une vidéo de téléphone tournée (rotation dans les métadonnées) → une
+    // vidéo portrait reste portrait (audit 02/10 : l'ancien scale=largeur:hauteur lisait les dimensions codées, avant rotation, et
+    // écrasait un portrait iPhone en paysage). k ne dépend que du plus petit / plus grand côté : invariant par rotation.
+    const args = ['-y', '-i', src, '-t', String(maxDur + pad), '-vf', `scale=trunc(iw*${k.toFixed(6)}/2)*2:trunc(ih*${k.toFixed(6)}/2)*2,setsar=1,format=yuv420p${pad ? `,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}` : ''}`]
     if (hasA) args.push('-af', pad ? `apad=pad_dur=${pad.toFixed(2)}` : 'anull', '-c:a', 'aac', '-b:a', '128k'); else args.push('-an')
     args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-movflags', '+faststart', outPath)
     execFileSync('ffmpeg', args, { stdio: 'pipe' })
-    console.log(`✓ mc-ref ${w}x${h} ${dur.toFixed(2)}s → ${sw}x${sh}${pad ? ' +' + pad.toFixed(2) + 's' : ''}${dur > maxDur + 0.5 ? ' coupée à ' + maxDur + 's' : ''}`)
+    console.log(`✓ mc-ref ${w}x${h} (codé) ${dur.toFixed(2)}s → ×${k.toFixed(3)}${pad ? ' +' + pad.toFixed(2) + 's' : ''}${dur > maxDur + 0.5 ? ' coupée à ' + maxDur + 's' : ''}`)
     return
   }
 
@@ -3025,7 +3027,13 @@ async function pollLoop() {
       // (re)génère les aperçus d'anims blanches pour l'éditeur, puis se marque
       // terminé. Inséré à la main (SQL : render_jobs {status:'queued',
       // plan:{__batchBlank:true}}). Idempotent — upsert dans le bucket public.
+      // audit 02/10 : seulement pour un job du compte PROPRIÉTAIRE / developer (inséré à la main), jamais pour un client
+      let batchOk = false
       if (job.plan && job.plan.__batchBlank) {
+        try { const { data: pr } = await sb.from('profiles').select('is_owner, plan').eq('id', job.user_id).maybeSingle(); batchOk = !!pr && (pr.is_owner === true || String(pr.plan || '').toLowerCase() === 'developer') } catch (_) { batchOk = false }
+        if (!batchOk) { console.warn('__batchBlank refusé : job d\'un compte client', job.id); delete job.plan.__batchBlank }
+      }
+      if (job.plan && job.plan.__batchBlank && batchOk) {
         try {
           await batchBlankPreviews({ list: job.plan.anims || null, draft: job.plan.draft !== false, style: job.plan.style || 'auto', prefix: job.plan.prefix || 'blank' })
           await sb.from('render_jobs').update({ status: 'done', updated_at: new Date().toISOString() }).eq('id', job.id)
@@ -3052,6 +3060,10 @@ async function pollLoop() {
         }
         await dl(job.input_video, join(jobDir, 'base.mp4'))
         // #montage-audio : son optionnel fourni par l'utilisateur (musique / bruitages) → mixé au montage
+        // audit 02/10 : un son utilisateur n'est lu que dans le dossier du propriétaire du job (jamais celui d'un autre compte)
+        if (job.plan && job.plan.userAudioPath && job.user_id && !(String(job.plan.userAudioPath).startsWith(job.user_id + '/') && !String(job.plan.userAudioPath).includes('..'))) {
+          console.warn('son utilisateur hors du dossier du compte : ignoré'); delete job.plan.userAudioPath
+        }
         if (job.plan && job.plan.userAudioPath) {
           try {
             const aext = (String(job.plan.userAudioPath).match(/\.(\w{2,4})$/) || [])[1] || 'mp3'

@@ -374,18 +374,23 @@ async function fetchSiteContext(url: string): Promise<string> {
 // ou la session pose problème, on monte la vidéo sans mémoire.
 type BrandMemory = { text: string; siteUrl: string; siteCache: string }
 
-async function loadBrandMemory(token: string): Promise<BrandMemory> {
+// Appel SERVICE (MCP → orchestrate, 02/10) : la clé service contourne la RLS → JAMAIS de lecture sans filtre (elle
+// renverrait la fiche d'un AUTRE compte dès qu'il n'en reste qu'une) ; on lit seulement la fiche de `serviceUid`, sinon rien.
+async function loadBrandMemory(token: string, isService = false, serviceUid: string | null = null): Promise<BrandMemory> {
   const empty: BrandMemory = { text: '', siteUrl: '', siteCache: '' }
   if (!token) return empty
+  if (isService && !serviceUid) return empty
   try {
-    const sb = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: `Bearer ${token}` } } },
-    )
-    const { data } = await sb.from('brand_memory')
-      .select('summary, facts, site_url, site_cache, site_fetched_at')
-      .maybeSingle()
+    const sb = isService
+      ? createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+      : createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: `Bearer ${token}` } } },
+      )
+    let q = sb.from('brand_memory').select('summary, facts, site_url, site_cache, site_fetched_at')
+    if (isService) q = q.eq('user_id', serviceUid as string)
+    const { data } = await q.maybeSingle()
     if (!data) return empty
 
     const f = (data.facts || {}) as Record<string, unknown>
@@ -2598,7 +2603,10 @@ serve(async (req: Request) => {
 
     // 1. mémoire de marque (#124) : sa fiche + le cache de son site
     const token = (req.headers.get('Authorization') ?? '').replace('Bearer ', '').trim()
-    const mem = await loadBrandMemory(token)
+    // appel service (MCP) : l'utilisateur est désigné par le champ user_id (réservé au rôle service)
+    const _svcUidRaw = String(form.get('user_id') || '')
+    const svcUid = _auth.isService && /^[0-9a-f-]{36}$/i.test(_svcUidRaw) ? _svcUidRaw : null
+    const mem = await loadBrandMemory(token, _auth.isService, svcUid)
     const siteToRead = website || mem.siteUrl
     // le site n'est re-crawlé que si le cache est vide ou porte sur une AUTRE url
     const siteJob = (mem.siteCache && (!website || website === mem.siteUrl))
@@ -2711,8 +2719,8 @@ serve(async (req: Request) => {
           Deno.env.get('SUPABASE_URL') ?? '',
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
         )
-        let uid: string | null = null
-        if (token) {
+        let uid: string | null = _auth.isService ? svcUid : null
+        if (token && !_auth.isService) {
           const { data: u } = await createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
