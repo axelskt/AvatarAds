@@ -601,7 +601,13 @@ function aaShow(out){
     if(d.ref) aaRef=d.ref; if(d.raw) aaRaw=true; if(d.productUrl) aaProductUrl=d.productUrl; if(d.cap) aaCap=d.cap; if(d.forVideo) aaForVideo=true; if(d.forProduct) aaForProduct=true; if(d.tool){ aaTool=d.tool; aaRate=d.rate; aaCharSrc=d.charSrc; aaRefSrc=d.refSrc; aaLong=true; }
     if(d.url){ aaMedia(d.url, d.kind, d.name); return; }
     if(d.waiting){ aaOk=true; var mw=document.getElementById('m'); if(mw){ mw.style.opacity='.75'; mw.textContent='En attente de la photo dans la carte au-dessus \u2014 rien n\u2019est en cours.'; } aaKick(); return; }   // Axel 01/10 : jamais de fausse barre
-    if(d.pending){ if(aaTool) aaAskMedia(); else aaAskPhoto(); return; }
+    if(d.pending){
+      if(!aaTool){ aaAskPhoto(); return; }
+      // carte réaffichée (reconnexion) : si la génération est déjà partie, on suit sa progression au lieu de redemander le fichier
+      var su=d.statusUrl||('https://mcp.avatarads.fr/status/'+aaJobId);
+      fetch(su,{ cache:'no-store' }).then(function(r){ return r.json(); }).then(function(j){ if(j&&(j.status==='running'||j.status==='done'||j.status==='failed')){ aaOk=false; aaPct=5; aaStartPoll(su); } else aaAskMedia(); }).catch(function(){ aaAskMedia(); });
+      return;
+    }
     if(d.statusUrl){ aaStartPoll(d.statusUrl); return; }
   }catch(e){}
 }
@@ -2333,6 +2339,9 @@ async function runCheckVideo(profile: Record<string, unknown>, args: Record<stri
   const isFlash = !!found && found.kind === 'avatar' && !!((found.params as Record<string, unknown> | null) || {}).video
   const job = found && (found.kind === 'video' || isFlash) ? found : null
   if (!job) return toolErr('Job introuvable sur ce compte (pour une vidéo avatar, utilise check_avatar_video).')
+  const outilJ = String(((job.params as Record<string, unknown> | null) || {}).tool || '')
+  if (job.status === 'pending' && outilJ) return toolText(`🎬 Rien n'est en cours : la carte attend ${outilJ === 'motion' ? 'la photo du personnage et la vidéo de référence' : 'la vidéo à transformer'}. Rien n'a été débité.
+RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose ${outilJ === 'motion' ? 'la photo et la vidéo' : 'ta vidéo'} dans la carte, la génération se lance toute seule. » N'appelle PLUS check_video ni aucun autre outil pour cette vidéo.`, { waiting: true, kind: 'video' })
   if (job.status === 'pending') return toolText(`📷 Rien n'est en cours : la carte attend la PHOTO de départ. Rien n'a été débité.
 RÉPONSE À ÉCRIRE MAINTENANT : une seule phrase — « Dépose ta photo dans la carte, la vidéo se lance toute seule. » N'appelle PLUS check_video ni aucun autre outil pour cette vidéo.`, { waiting: true, kind: 'video' })
   if (job.status === 'done') { const dl = `https://mcp.avatarads.fr/i/${job.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`, String(job.preview_url || '') || undefined) }
@@ -2995,9 +3004,12 @@ async function vtRendrePartiel(job: Record<string, unknown>, amt: number): Promi
   if (ok && ok.length) await refundCredits(String(job.user_id), rend)
 }
 async function falSoumettre(path: string, body: Record<string, unknown>): Promise<{ ok: boolean; status: number; d: Record<string, unknown> }> {
-  const r = await falFetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-  const d = await r.json().catch(() => ({})) as Record<string, unknown>
-  return { ok: r.ok && !!(d.status_url || d.request_id), status: r.status, d }
+  // panne réseau = { ok:false, status:0 } : l'appelant rend les crédits au lieu de laisser le job bloqué jusqu'au filet
+  try {
+    const r = await falFetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const d = await r.json().catch(() => ({})) as Record<string, unknown>
+    return { ok: r.ok && !!(d.status_url || d.request_id), status: r.status, d }
+  } catch { return { ok: false, status: 0, d: {} } }
 }
 const falSuivi = (url: string) => fetch(url, { headers: { Authorization: `Key ${FAL_KEY}` } })
 const falUrls = (path: string, d: Record<string, unknown>) => ({
@@ -3057,7 +3069,7 @@ async function advanceVideoTool(job: Record<string, unknown>): Promise<void> {
     }
     if (!sub.ok) {
       console.warn('[mcp] outil vidéo : soumission refusée', job.id, sub.status, JSON.stringify(sub.d).slice(0, 300))
-      await vtEchec(job, sub.status === 402 ? 'Service vidéo momentanément indisponible — crédits rendus, réessaie dans quelques minutes.' : erreurKling(sub.d, sub.status).msg); return
+      await vtEchec(job, (sub.status === 0 || sub.status === 402 || sub.status >= 500) ? 'Service vidéo momentanément indisponible — crédits rendus, réessaie dans quelques minutes.' : erreurKling(sub.d, sub.status).msg); return
     }
     await vtEtape({ ...job, params: pj }, prochain + String(sub.d.request_id || ''), { ...extra, fal: falUrls(sub.path, sub.d), bill: cost })
     return
