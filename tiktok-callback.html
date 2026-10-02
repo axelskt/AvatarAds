@@ -32,7 +32,13 @@
   var card = document.getElementById('card');
   function okSvg(){ return '<div class="ic" style="background:rgba(62,207,106,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3ecf6a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>'; }
   function errSvg(){ return '<div class="ic" style="background:rgba(224,85,77,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e0554d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>'; }
-  function show(icon, title, msg){ card.innerHTML = icon + '<h1>' + title + '</h1><p>' + msg + '</p>'; }
+  // Audit 02/10 : titre et message passent en textContent — `error` vient de l'URL (jamais d'innerHTML sur une donnée externe).
+  function show(icon, title, msg){
+    card.innerHTML = icon;
+    var h = document.createElement('h1'); h.textContent = String(title);
+    var p = document.createElement('p'); p.textContent = String(msg).slice(0, 300);
+    card.appendChild(h); card.appendChild(p);
+  }
   (async function(){
     if (err){ show(errSvg(), 'Autorisation refusée', String(err)); return; }
     if (!code){ show(errSvg(), 'Rien à faire ici', 'Ouvre cette page depuis le bouton « Connecter TikTok » de l\'app.'); return; }

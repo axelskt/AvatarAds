@@ -38,14 +38,29 @@ const pick = (arr: string[], seed: string) =>
   arr[[...seed].reduce((a, c) => a + c.charCodeAt(0), 0) % arr.length]
 
 // ── Signature Meta (X-Hub-Signature-256 = HMAC-SHA256 du corps brut) ──
+// Audit 02/10 : ÉCHEC FERMÉ. Avant, une signature invalide était seulement journalisée puis l'événement traité
+// (« on continue (dev) ») → n'importe qui pouvait faire répondre / écrire en DM depuis nos comptes et fausser les stats.
+// Secret absent = refus (jamais « tout passe »). Comparaison en temps constant. IG_WEBHOOK_SECRET (optionnel) = 2e secret
+// accepté, au cas où Meta signerait avec le secret de l'app Facebook plutôt qu'avec celui de l'app Instagram.
+const WEBHOOK_SECRETS = [APP_SECRET, Deno.env.get('IG_WEBHOOK_SECRET') || ''].filter(Boolean)
+function ctEq(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b)
+  let d = x.length ^ y.length
+  for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x[i] ?? 0) ^ (y[i] ?? 0)
+  return d === 0
+}
 async function validSignature(raw: string, header: string | null): Promise<boolean> {
-  if (!APP_SECRET) return true
+  if (!WEBHOOK_SECRETS.length) return false
   if (!header || !header.startsWith('sha256=')) return false
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(APP_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw))
-  const hex = [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
-  return ('sha256=' + hex) === header
+  let ok = false
+  for (const secret of WEBHOOK_SECRETS) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw))
+    const hex = [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
+    if (ctEq('sha256=' + hex, header)) ok = true
+  }
+  return ok
 }
 
 const accountToken = (igId: string) => tokenOf(svc, igId)
@@ -139,8 +154,14 @@ Deno.serve(async (req) => {
 
   if (req.method === 'POST') {
     const raw = await req.text()
+    if (raw.length > 512_000) return new Response('too large', { status: 413 })
+    if (!WEBHOOK_SECRETS.length) {
+      console.log('[ig-autodm] IG_APP_SECRET absent — événement refusé')
+      return new Response('misconfigured', { status: 500 })
+    }
     if (!(await validSignature(raw, req.headers.get('x-hub-signature-256')))) {
-      console.log('[ig-autodm] signature invalide — on continue (dev)')
+      console.log('[ig-autodm] signature refusée — événement ignoré')
+      return new Response('forbidden', { status: 401 })
     }
     let body: any = {}
     try { body = JSON.parse(raw) } catch { /* ignore */ }

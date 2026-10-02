@@ -1,10 +1,17 @@
 // Follow-up Auto-DM — AvatarAds
 //  Relance les leads qui ont reçu le lien mais NE l'ont PAS cliqué (dans la fenêtre 12–22h,
 //  donc encore dans la fenêtre de messagerie 24h). Appelé par un cron horaire (pg_cron → net.http_post).
-//  Idempotent : dédup via kind='relance'. verify_jwt=false (déclencheur cron). Optionnel : ?key=IG_CRON_SECRET.
+//  Idempotent : dédup via kind='relance'. verify_jwt=false (déclencheur cron).
+//  Audit 02/10 : ÉCHEC FERMÉ — en-tête x-cron-key = CRON_SECRET obligatoire (comparé en temps constant), comme
+//  reconcile-kie. Avant, la clé n'était vérifiée que si IG_CRON_SECRET existait (absent en prod) → n'importe qui
+//  déclenchait les relances, et des appels simultanés envoyaient la même relance plusieurs fois. + verrou : un seul
+//  passage toutes les 5 min (rate_events), donc jamais deux envois concurrents.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { DEFAULT_DEST, trackedLink } from '../_shared/iglink.ts'
 import { accountToken as tokenOf } from '../_shared/igacct.ts'
+import { rateHit, timingSafeEqual } from '../_shared/guard.ts'
+
+const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? ''
 
 const GRAPH   = 'https://graph.instagram.com/v21.0'
 const SB_URL  = Deno.env.get('SUPABASE_URL') || ''
@@ -15,9 +22,9 @@ const svc = createClient(SB_URL, SERVICE)
 const accountToken = (igId: string) => tokenOf(svc, igId)
 
 Deno.serve(async (req) => {
-  const url = new URL(req.url)
-  const need = Deno.env.get('IG_CRON_SECRET')
-  if (need && url.searchParams.get('key') !== need) return new Response('forbidden', { status: 403 })
+  if (!CRON_SECRET) return new Response('misconfigured', { status: 500 })
+  if (!timingSafeEqual(req.headers.get('x-cron-key') || '', CRON_SECRET)) return new Response('forbidden', { status: 403 })
+  if (!(await rateHit('ig-followup:run', 300, 1))) return new Response(JSON.stringify({ ok: true, skipped: 'déjà lancé' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
   const { data } = await svc.rpc('ig_followup_candidates')
   const cands = Array.isArray(data) ? data : []
