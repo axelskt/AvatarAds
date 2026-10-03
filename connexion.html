@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-jix6/Ru6t9+GVbNveGAN9VEIBebOPUK6r8MNLDH8f5U=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-oDwTBcnguhvpZUlLBnLAnUPwV4qx4BTpnhxMv8KmuDQ=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -345,7 +345,7 @@ function Login({ go }) {
       React.createElement("p", { style: { fontSize: 13.5, color: D.sub } }, "Code envoyé. Entre les 6 chiffres reçus."),
       React.createElement("div", { id: "otpbox", className: "row", style: { gap: 8 } },
       [0, 1, 2, 3, 4, 5].map((k) =>
-      React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { flex: 1, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + D.line, background: D.field, color: D.ink, outline: "none" },
+      React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { flex: 1, minWidth: 0, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + D.line, background: D.field, color: D.ink, outline: "none" },
         onInput: onOtpInput, onKeyDown: onOtpKey, onPaste: onOtpPaste })
       )
       ),
