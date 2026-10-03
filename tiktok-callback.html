@@ -17,6 +17,11 @@
   .spin{width:52px;height:52px;border:4px solid var(--border);border-top-color:var(--acc);border-radius:50%;
         margin:0 auto 18px;animation:r .8s linear infinite}
   @keyframes r{to{transform:rotate(360deg)}}
+  .links{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+  .btn{display:block;padding:12px 16px;border-radius:12px;background:#fff;color:#0f0f12;font-size:15px;font-weight:600;
+       text-decoration:none;border:1px solid #fff}
+  .btn.alt{background:transparent;color:var(--tx);border-color:var(--border)}
+  .btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -29,15 +34,55 @@
   var EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/tiktok-auth';
   var q = new URLSearchParams(location.search);
   var code = q.get('code'), state = q.get('state') || '', err = q.get('error') || q.get('error_description');
+  // Audit 02/10 : le code TikTok (usage unique) ne reste ni dans l'historique ni dans l'URL : un rechargement de la page
+  // ne relance pas un échange voué à l'échec, il affiche « Rien à faire ici » et les liens de retour.
+  try { if (location.search) history.replaceState(null, '', location.pathname); } catch(_) {}
   var card = document.getElementById('card');
   function okSvg(){ return '<div class="ic" style="background:rgba(62,207,106,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3ecf6a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>'; }
   function errSvg(){ return '<div class="ic" style="background:rgba(224,85,77,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e0554d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>'; }
+  // Audit 02/10 : retour au tableau de bord. Factory V2 range la page d'où part la connexion (localStorage
+  // 'aa_tk_return', même domaine) ; on ne la suit que si elle est récente (30 min), en https sur avatarads.fr, au même
+  // domaine que cette page et parmi les pages du tableau de bord (liste blanche, sans paramètre ni ancre). Sinon :
+  // « Retour à Factory V2 » seulement (lien relatif, jamais une adresse venue de l'extérieur).
+  var BACK_HOSTS = { 'avatarads.fr': 1, 'www.avatarads.fr': 1 };
+  var BACK_PAGES = { '/factory-v2.html': 'Factory V2', '/factory.html': 'Factory (ancienne version)' };
+  function backTarget(){
+    try {
+      var o = JSON.parse(localStorage.getItem('aa_tk_return') || 'null');
+      if (!o || typeof o.url !== 'string' || typeof o.at !== 'number') return null;
+      if (!(Date.now() - o.at < 30 * 60 * 1000) || o.at > Date.now() + 60 * 1000) return null;
+      var u = new URL(o.url);
+      if (u.protocol !== 'https:' || !BACK_HOSTS.hasOwnProperty(u.hostname) || u.origin !== location.origin) return null;
+      if (!BACK_PAGES.hasOwnProperty(u.pathname)) return null;
+      return { href: u.origin + u.pathname, path: u.pathname, label: BACK_PAGES[u.pathname] };
+    } catch(_) { return null; }
+  }
+  function backLinks(){
+    var box = document.createElement('div'); box.className = 'links';
+    function add(href, label, alt){
+      var a = document.createElement('a'); a.className = alt ? 'btn alt' : 'btn'; a.href = href; a.textContent = label; box.appendChild(a);
+    }
+    var t = backTarget();
+    if (t && t.path !== '/factory-v2.html') add(t.href, 'Retour à la page d’origine (' + t.label + ')', false);
+    add(t && t.path === '/factory-v2.html' ? t.href : '/factory-v2.html', 'Retour à Factory V2', !!(t && t.path !== '/factory-v2.html'));
+    return box;
+  }
   // Audit 02/10 : titre et message passent en textContent — `error` vient de l'URL (jamais d'innerHTML sur une donnée externe).
   function show(icon, title, msg){
     card.innerHTML = icon;
     var h = document.createElement('h1'); h.textContent = String(title);
     var p = document.createElement('p'); p.textContent = String(msg).slice(0, 300);
-    card.appendChild(h); card.appendChild(p);
+    card.appendChild(h); card.appendChild(p); card.appendChild(backLinks());
+  }
+  // Audit 02/10 : prévient Factory V2 du résultat (succès comme échec) pour qu'elle relise la liste des comptes. Deux
+  // canaux : window.opener (popup) et BroadcastChannel 'tk-oauth' (même origine), qui marche même si TikTok a coupé le
+  // lien opener (COOP) ou si la connexion s'est faite dans un autre onglet. Jamais de jeton dans le message.
+  function notify(ok, openId, error){
+    var msg = { source: 'tk-oauth', ok: !!ok,
+      open_id: (typeof openId === 'string' && /^[\w.:=+\/-]{4,200}$/.test(openId)) ? openId : null,
+      error: ok ? null : String(error || 'connexion échouée').slice(0, 200) };
+    if (window.opener) { try { window.opener.postMessage(msg, location.origin); } catch(_) {} }
+    try { var bc = new BroadcastChannel('tk-oauth'); bc.postMessage(msg); bc.close(); } catch(_) {}
   }
   // Audit 02/10 : l'échange exige le state signé renvoyé par TikTok ET la session owner avatarads.fr (même domaine
   // que le tableau de bord) : on envoie son jeton d'accès s'il existe (jamais stocké ici).
@@ -49,19 +94,26 @@
     } catch(_) { return ''; }
   }
   (async function(){
-    if (err){ show(errSvg(), 'Autorisation refusée', String(err)); return; }
-    if (!code){ show(errSvg(), 'Rien à faire ici', 'Ouvre cette page depuis le bouton « Connecter TikTok » de l\'app.'); return; }
+    if (err){ notify(false, null, 'autorisation refusée sur TikTok (' + String(err).slice(0, 120) + ')'); show(errSvg(), 'Autorisation refusée', String(err)); return; }
+    if (!code){ show(errSvg(), 'Rien à faire ici', 'Ouvre cette page depuis le bouton « Connecter un compte TikTok » de Factory V2.'); return; }
     try{
       var tok = sbToken();
-      if (!tok){ show(errSvg(), 'Session requise', 'Termine la connexion dans le navigateur où tu es connecté au tableau de bord, puis relance « Connecter TikTok ».'); return; }
+      if (!tok){
+        notify(false, null, 'session du tableau de bord absente dans ce navigateur');
+        show(errSvg(), 'Session requise', 'Termine la connexion dans le navigateur (ou la fenêtre privée) où tu es connecté à Factory V2, puis relance « Connecter un compte TikTok ».');
+        return;
+      }
       var r = await fetch(EDGE + '?action=exchange', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify({ code: code, state: state })
       });
       var d = await r.json();
-      if (d && d.ok){ show(okSvg(), 'TikTok connecté', 'Ton compte est lié à AvatarAds. Tu peux fermer cette page.'); }
-      else { show(errSvg(), 'Erreur', (d && d.error) ? d.error : 'Échange du token impossible.'); }
-    } catch(e){ show(errSvg(), 'Erreur réseau', e && e.message ? e.message : 'Réessaie.'); }
+      if (d && d.ok){
+        notify(true, d.open_id, null);
+        show(okSvg(), 'TikTok connecté', 'Ton compte est lié à AvatarAds. Factory V2 met sa liste à jour toute seule : tu peux fermer cette page.');
+      }
+      else { var m = (d && d.error) ? d.error : 'Échange du token impossible.'; notify(false, null, m); show(errSvg(), 'Erreur', m); }
+    } catch(e){ notify(false, null, 'erreur réseau'); show(errSvg(), 'Erreur réseau', e && e.message ? e.message : 'Réessaie.'); }
   })();
 </script>
 </body>

@@ -5134,38 +5134,36 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       </div>
     </div>
 
-    <!-- 🔐 Modale changement de mot de passe : vérification (ancien mdp OU code e-mail) → double saisie -->
+    <!-- 🔐 Modale changement de mot de passe. Audit 02/10 (P3) : la preuve d'identité est faite CÔTÉ SERVEUR — code à 6 chiffres
+         envoyé à l'adresse du compte (edge auth-otp → Resend), puis code + nouveau mot de passe (double saisie) vérifiés et posés
+         par le serveur. Plus d'ancien mot de passe relu côté client ni de sb.auth.updateUser({ password }). -->
     <div id="pwdModal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(8,4,2,.82);backdrop-filter:blur(6px);place-items:center;padding:20px">
-      <div class="card" style="width:min(400px,94vw);padding:22px;text-align:left">
+      <div class="card" style="width:min(400px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;padding:22px;text-align:left">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
           <div class="display" style="font-size:18px;font-weight:800">Mot de passe</div>
           <button class="btn btn-quiet" onclick="closePwdModal()" style="border:none;cursor:pointer;font-size:16px;padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
         <p id="pwdModalSub" class="faint" style="font-size:11.5px;line-height:1.5;margin-bottom:16px">Confirme d'abord que c'est bien toi.</p>
 
-        <!-- étape 1 · ancien mot de passe -->
+        <!-- étape 1 · code envoyé à l'adresse du compte -->
         <div id="pwdStepVerify">
-          <div class="setup-label" style="margin-bottom:6px">Mot de passe actuel</div>
-          <input class="field" type="password" id="pwdCurrent" autocomplete="current-password" placeholder="Ton mot de passe actuel" onkeydown="if(event.key==='Enter')pwdVerifyCurrent()">
-          <button onclick="pwdVerifyCurrent()" class="btn btn-primary" style="width:100%;margin-top:12px">Continuer</button>
-          <button onclick="pwdSendCode()" class="btn btn-quiet btn-sm" style="width:100%;margin-top:10px;background:transparent;border:none;cursor:pointer;font-family:var(--font);font-size:12px;text-decoration:underline">Je ne le connais pas — recevoir un code par e-mail</button>
+          <p style="font-size:12.5px;color:var(--text-3);margin:0 0 14px;line-height:1.6">Pour protéger ton compte, un code à 6 chiffres est envoyé à <b id="pwdEmailLbl" style="color:var(--text-2);overflow-wrap:anywhere">ton adresse e-mail</b>. Il te servira à enregistrer ton nouveau mot de passe.</p>
+          <button id="pwdSendBtn" onclick="pwdSendCode()" class="btn btn-primary" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Recevoir un code par e-mail</button>
         </div>
 
-        <!-- étape 1 bis · code e-mail -->
-        <div id="pwdStepCode" style="display:none">
-          <div class="setup-label" style="margin-bottom:6px">Code reçu par e-mail</div>
-          <input class="field mono" id="pwdCode" inputmode="numeric" maxlength="6" placeholder="123456" style="letter-spacing:.35em;text-align:center;font-size:18px" onkeydown="if(event.key==='Enter')pwdVerifyCode()">
-          <button onclick="pwdVerifyCode()" class="btn btn-primary" style="width:100%;margin-top:12px">Vérifier le code</button>
-        </div>
-
-        <!-- étape 2 · nouveau mot de passe (double saisie) -->
+        <!-- étape 2 · code + nouveau mot de passe (double saisie) -->
         <div id="pwdStepNew" style="display:none">
-          <div class="setup-label" style="margin-bottom:6px">Nouveau mot de passe</div>
+          <div class="setup-label" style="margin-bottom:6px">Code reçu par e-mail</div>
+          <input class="field mono" id="pwdCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" style="letter-spacing:.35em;text-align:center;font-size:18px" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')document.getElementById('pwdNew1').focus()">
+          <div class="setup-label" style="margin:12px 0 6px">Nouveau mot de passe</div>
           <input class="field" type="password" id="pwdNew1" autocomplete="new-password" placeholder="8 caractères minimum" oninput="_pwdCheckMatch()">
           <div class="setup-label" style="margin:12px 0 6px">Confirme le nouveau mot de passe</div>
           <input class="field" type="password" id="pwdNew2" autocomplete="new-password" placeholder="Retape-le" oninput="_pwdCheckMatch()" onkeydown="if(event.key==='Enter')pwdSaveNew()">
           <div id="pwdMatchHint" class="mono" style="font-size:10.5px;margin-top:7px;height:13px;color:var(--text-3)"></div>
-          <button onclick="pwdSaveNew()" class="btn btn-primary" style="width:100%;margin-top:10px">Enregistrer le mot de passe</button>
+          <button id="pwdSaveBtn" onclick="pwdSaveNew()" class="btn btn-primary" style="width:100%;margin-top:10px">Enregistrer le mot de passe</button>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px">
+            <span id="pwdResend" onclick="pwdResendCode()" style="cursor:pointer;color:var(--accent-2);font-family:var(--mono);font-size:11px;letter-spacing:.08em">RENVOYER LE CODE</span>
+          </div>
         </div>
 
         <div id="pwdModalMsg" style="display:none;font-size:12px;margin-top:12px;padding:10px 12px;border-radius:var(--r-sm)"></div>
@@ -6832,7 +6830,7 @@ function _accountAutoSave(now){
 }
 
 // ── 🔐 Changement de mot de passe sécurisé ──
-// 1) on prouve que c'est bien l'user : ancien mot de passe OU code e-mail (Resend)
+// 1) on prouve que c'est bien l'user : code e-mail envoyé à l'adresse DU COMPTE, vérifié CÔTÉ SERVEUR (Audit 02/10, P3)
 // 2) nouveau mot de passe saisi DEUX fois (évite de se verrouiller sur une faute de frappe)
 // 🇫🇷 Supabase renvoie ses erreurs en ANGLAIS → on les traduit avant tout affichage.
 // Le message brut part en console pour le debug, jamais à l'écran.
@@ -6852,7 +6850,25 @@ function _frAuthErr(e){
   if(raw) try{ console.warn('auth error (brut):', raw); }catch(_){}
   return 'Une erreur est survenue — réessaie.';
 }
-let _pwdVerified = false;
+// Audit 02/10 (P3) : l'ancienne revérification (ancien mot de passe relu par signInWithPassword, ou code de CONNEXION) ne
+// vivait que dans l'app, puis sb.auth.updateUser({ password }) — appel que la seule session suffit à faire. Désormais :
+// password_change_send (code à l'adresse du compte, edge auth-otp → Resend) puis password_change_verify { code, password }
+// qui pose le mot de passe côté serveur ; en base, tout autre changement de mot de passe est ignoré. Le serveur ferme alors
+// TOUTES les sessions du compte : on se reconnecte aussitôt avec le nouveau mot de passe. Appels via _emailChgCall
+// (Bearer de session, un refreshSession sur 401) et messages d'erreur partagés avec le changement d'adresse.
+let _pwdTimer = null;
+function _pwdErr(res){
+  const e = res && res.error;
+  if(e === 'weak_password'){
+    const r = (res.reasons || []);
+    if(r.indexOf('pwned') >= 0) return 'Ce mot de passe figure dans une fuite de données connue — choisis-en un autre.';
+    if(r.indexOf('characters') >= 0) return 'Mot de passe trop simple — mélange lettres, chiffres et symboles.';
+    return 'Mot de passe trop court ou trop simple — 8 caractères minimum.';
+  }
+  if(e === 'password_too_long') return 'Mot de passe trop long — 72 caractères maximum.';
+  if(e === 'invalid_email') return 'Ton compte n\'a pas d\'adresse e-mail valide — écris-nous à bonjour@avatarads.fr.';
+  return _emailChgErr(res);
+}
 function _pwdMsg(t, ok){
   const m=document.getElementById('pwdModalMsg'); if(!m) return;
   if(!t){ m.style.display='none'; return; }
@@ -6862,65 +6878,69 @@ function _pwdMsg(t, ok){
   m.style.border      = '1px solid ' + (ok ? 'rgba(40,199,149,.25)' : 'rgba(255,71,87,0.2)');
 }
 function _pwdStep(step){
-  ['pwdStepVerify','pwdStepCode','pwdStepNew'].forEach(function(id){
+  ['pwdStepVerify','pwdStepNew'].forEach(function(id){
     const el=document.getElementById(id); if(el) el.style.display = (id===step) ? 'block' : 'none';
   });
   const sub=document.getElementById('pwdModalSub');
   if(sub) sub.textContent = step==='pwdStepNew'
-    ? 'Choisis ton nouveau mot de passe et retape-le pour confirmer.'
-    : (step==='pwdStepCode' ? 'Entre le code à 6 chiffres reçu par e-mail.' : 'Confirme d\'abord que c\'est bien toi.');
+    ? 'Entre le code reçu par e-mail, puis ton nouveau mot de passe deux fois.'
+    : 'Confirme d\'abord que c\'est bien toi.';
 }
-// skipVerify = l'identité vient déjà d'être prouvée (connexion par code « mot de passe oublié »)
-function openPwdModal(skipVerify){
+function _pwdCooldown(secs){
+  const el=document.getElementById('pwdResend'); if(!el) return;
+  let s=Math.max(0, Math.ceil(secs || 0));
+  clearInterval(_pwdTimer);
+  const tick=function(){
+    if(s <= 0){ clearInterval(_pwdTimer); el.textContent='RENVOYER LE CODE'; el.style.opacity='1'; el.style.pointerEvents='auto'; return; }
+    el.textContent='RENVOYER LE CODE (' + s + 'S)'; el.style.opacity='.45'; el.style.pointerEvents='none'; s--;
+  };
+  tick();
+  _pwdTimer=setInterval(tick, 1000);
+}
+// autoSend = l'utilisateur vient de « Mot de passe oublié » (connexion par code) : le code de confirmation part tout de suite
+function openPwdModal(autoSend){
   const m=document.getElementById('pwdModal'); if(!m) return;
   m.style.display='grid';
-  _pwdMsg(''); _pwdVerified = !!skipVerify;
-  ['pwdCurrent','pwdCode','pwdNew1','pwdNew2'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
+  _pwdMsg(''); clearInterval(_pwdTimer);
+  ['pwdCode','pwdNew1','pwdNew2'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
   const hint=document.getElementById('pwdMatchHint'); if(hint) hint.textContent='';
-  _pwdStep(skipVerify ? 'pwdStepNew' : 'pwdStepVerify');
-  setTimeout(function(){ const f=document.getElementById(skipVerify?'pwdNew1':'pwdCurrent'); if(f) f.focus(); }, 80);
+  const lbl=document.getElementById('pwdEmailLbl'); if(lbl) lbl.textContent=(currentMember && currentMember.email) || 'ton adresse e-mail';
+  _pwdStep('pwdStepVerify');
+  if(autoSend) pwdSendCode();
 }
-function closePwdModal(){ const m=document.getElementById('pwdModal'); if(m) m.style.display='none'; }
-// Vérif par l'ancien mot de passe : on re-authentifie (preuve que c'est bien lui)
-async function pwdVerifyCurrent(){
-  const cur=document.getElementById('pwdCurrent')?.value||'';
-  if(!cur){ _pwdMsg('Entre ton mot de passe actuel'); return; }
-  const email=(currentMember && currentMember.email) || (await sb.auth.getUser()).data?.user?.email;
-  if(!email){ _pwdMsg('Session expirée — reconnecte-toi'); return; }
-  _pwdMsg('Vérification…', true);
-  const { error } = await sb.auth.signInWithPassword({ email, password: cur });
-  if(error){ _pwdMsg('Mot de passe incorrect — ou utilise le code e-mail'); return; }
-  _pwdVerified = true; _pwdMsg('');
-  _pwdStep('pwdStepNew');
-  setTimeout(function(){ const f=document.getElementById('pwdNew1'); if(f) f.focus(); }, 80);
-}
-// Vérif par code e-mail (edge auth-otp → Resend), pour qui a oublié son mot de passe
+function closePwdModal(){ clearInterval(_pwdTimer); const m=document.getElementById('pwdModal'); if(m) m.style.display='none'; }
+// Envoi du code à l'adresse du compte (le serveur la lit dans la session, jamais dans la requête)
 async function pwdSendCode(){
-  const email=(currentMember && currentMember.email) || (await sb.auth.getUser()).data?.user?.email;
-  if(!email){ _pwdMsg('Session expirée — reconnecte-toi'); return; }
-  _pwdMsg('Envoi du code…', true);
+  const btn=document.getElementById('pwdSendBtn');
+  if(btn && btn.disabled) return;
+  if(!currentMember){ _pwdMsg('Session expirée — reconnecte-toi'); return; }
+  const email=String(currentMember.email||'');
+  const label=btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled=true; btn.textContent='Envoi du code…'; }
+  _pwdMsg('');
   try{
-    const res = await _otpCall({ action:'send', mode:'login', email });
-    if(res.error){ _pwdMsg(_OTP_ERRORS[res.error] || 'Erreur. Réessaie.'); return; }
-    _otpCtx = { email, mode:'login', firstName:'' };
-    _pwdMsg('Code envoyé à '+email, true);
-    _pwdStep('pwdStepCode');
-    setTimeout(function(){ const f=document.getElementById('pwdCode'); if(f) f.focus(); }, 80);
-  }catch(e){ _pwdMsg('Erreur réseau — réessaie'); }
-}
-async function pwdVerifyCode(){
-  const code=(document.getElementById('pwdCode')?.value||'').trim();
-  if(code.length!==6){ _pwdMsg('Entre les 6 chiffres du code'); return; }
-  _pwdMsg('Vérification…', true);
-  try{
-    const res = await _otpCall({ action:'verify', email:_otpCtx.email, code });
-    if(res.error || !res.token_hash){ _pwdMsg('Code invalide ou expiré'); return; }
-    const { error } = await sb.auth.verifyOtp({ type:'magiclink', token_hash: res.token_hash });
-    if(error){ _pwdMsg('Code invalide — redemande-en un'); return; }
-    _pwdVerified = true; _pwdMsg('');
+    const res = await _emailChgCall({ action:'password_change_send' });
+    if(res.error && res.error !== 'cooldown'){ _pwdMsg(_pwdErr(res)); return; }
+    // cooldown = un code vient déjà de partir (modale rouverte) : il reste valable, on passe à la saisie
     _pwdStep('pwdStepNew');
-    setTimeout(function(){ const f=document.getElementById('pwdNew1'); if(f) f.focus(); }, 80);
-  }catch(e){ _pwdMsg('Erreur réseau — réessaie'); }
+    _pwdCooldown(res.error === 'cooldown' ? res.wait : 30);
+    _pwdMsg(res.error === 'cooldown'
+      ? 'Un code vient déjà de partir à ' + email + ' — il reste valable 10 minutes.'
+      : 'Code envoyé à ' + email + ' — regarde aussi les spams.', true);
+    setTimeout(function(){ const f=document.getElementById('pwdCode'); if(f) f.focus(); }, 80);
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML=label; }
+  }
+}
+async function pwdResendCode(){
+  const res = await _emailChgCall({ action:'password_change_send' });
+  if(res.error){
+    _pwdMsg(_pwdErr(res));
+    if(res.error === 'cooldown' && res.wait) _pwdCooldown(res.wait);
+    return;
+  }
+  _pwdMsg('Nouveau code envoyé à ' + String((currentMember && currentMember.email) || ''), true);
+  _pwdCooldown(30);
 }
 // Les deux saisies doivent correspondre — retour visuel en direct
 function _pwdCheckMatch(){
@@ -6934,17 +6954,34 @@ function _pwdCheckMatch(){
   h.style.color = ok ? 'var(--green)' : 'var(--red)';
 }
 async function pwdSaveNew(){
+  const btn=document.getElementById('pwdSaveBtn');
+  if(btn && btn.disabled) return;   // évite le double envoi (clic + Entrée)
+  const code=(document.getElementById('pwdCode')?.value||'').trim();
   const a=document.getElementById('pwdNew1')?.value||'', b=document.getElementById('pwdNew2')?.value||'';
+  if(!/^\d{6}$/.test(code)){ _pwdMsg('Entre le code à 6 chiffres reçu par e-mail'); return; }
   if(a.length < 8){ _pwdMsg('8 caractères minimum'); return; }
   if(a !== b){ _pwdMsg('Les deux mots de passe ne correspondent pas'); return; }
-  if(!_pwdVerified){ _pwdMsg('Confirme d\'abord ton identité'); _pwdStep('pwdStepVerify'); return; }
-  _pwdMsg('Enregistrement…', true);
+  if(new TextEncoder().encode(a).length > 72){ _pwdMsg('Mot de passe trop long — 72 caractères maximum.'); return; }
+  const label=btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled=true; btn.textContent='Enregistrement…'; }
+  _pwdMsg('');
   try{
-    const { error } = await sb.auth.updateUser({ password: a });
-    if(error){ _pwdMsg(_frAuthErr(error)); return; }
+    const res = await _emailChgCall({ action:'password_change_verify', code, password: a });
+    if(res.error){
+      _pwdMsg(_pwdErr(res));
+      const c=document.getElementById('pwdCode');
+      if(res.error === 'expired' || res.error === 'too_many_attempts'){ if(c) c.value=''; }
+      else if(res.error === 'wrong_code' && c){ try{ c.select(); }catch(_){} }
+      return;
+    }
+    // Le serveur a fermé toutes les sessions du compte (celle-ci comprise) : reconnexion immédiate avec le nouveau mot de passe.
+    const email=String(res.email || (currentMember && currentMember.email) || '').toLowerCase();
+    let relog=false;
+    if(email){ try{ const { error } = await sb.auth.signInWithPassword({ email, password: a }); relog = !error; }catch(_){} }
     closePwdModal();
-    toast('Mot de passe enregistré — tu peux maintenant te connecter avec');
+    toast(relog ? 'Mot de passe enregistré — tu peux maintenant te connecter avec' : 'Mot de passe enregistré — reconnecte-toi avec ton nouveau mot de passe');
   }catch(e){ _pwdMsg('Erreur réseau — réessaie'); }
+  finally{ if(btn){ btn.disabled=false; btn.innerHTML=label; } }
 }
 // Mon compte : définir/changer le mot de passe (active la connexion sans code)
 // (accountSetPassword retiré : remplacé par la modale sécurisée openPwdModal → pwdSaveNew)
@@ -7060,9 +7097,9 @@ function _finishPwdReset(){
   if(!window._pwdResetFlow) return;
   window._pwdResetFlow = false;
   setTimeout(function(){
-    // le code e-mail vient de prouver l'identité → on saute la vérification
+    // Audit 02/10 (P3) : le mot de passe se pose côté serveur avec un code de confirmation dédié → envoyé tout de suite
     try{ openPwdModal(true); }catch(_){}
-    toast('Choisis ton nouveau mot de passe (deux fois pour confirmer)');
+    toast('Dernière étape : entre le code de confirmation reçu par e-mail et ton nouveau mot de passe');
   }, 700);
 }
 

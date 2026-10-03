@@ -122,7 +122,8 @@
     demo: 'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM10 8l6 4-6 4z',
     ctaPtr: 'M9 9l5 12 1.8-5.2L21 14 9 9z',
     subs: 'M3 5h18v14H3zM7 13h4M13 13h4M7 16h10',
-    swap2: 'M4 7h13l-3-3M20 17H7l3 3'
+    swap2: 'M4 7h13l-3-3M20 17H7l3 3',
+    tiktok: 'M9 12a4 4 0 1 0 4 4V4c.5 2.5 2.5 4 5 4'   // Audit 02/10 : comptes TikTok (même tracé que la tuile Réseaux)
   };
   function svg(path, size) {
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
@@ -217,7 +218,7 @@
   function saveTab(t) { try { localStorage.setItem(TAB_STORE, t); } catch (e) { /* navigation privée : sans importance */ } }
 
   // ── état d'interface (pas de données ici) ──
-  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false,
+  var ui = { tab: readTab(), range: '30j', modal: null, lastFocus: null, recon: null, tkRecon: null, lastStatus: null, evoHidden: {}, allPosts: false, tagMsg: null, prefetched: false,
     // Auto-DM : période, séries masquées, filtre / recherche des leads, listes dépliées
     dmRange: '30j', dmHidden: {}, dmFilter: 'all', dmQuery: '', dmAllLeads: false, dmAllPosts: false,
     // Production : liste QC dépliée, types des sélecteurs, onglet interne des briques, recherche, écritures « Classer » en cours
@@ -363,6 +364,7 @@
     CF.loadProd();
     CF.loadProviders();
     CF.loadYt();
+    CF.loadTk();   // Audit 02/10 : comptes TikTok (section et alerte de l'Accueil)
     if (ui.netRange && ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange);
   }
 
@@ -411,7 +413,7 @@
   function clip(s) { s = String(s || ''); return s.length > 160 ? s.slice(0, 159) + '…' : s; }
   function homeAlerts(ig) {
     var out = [];
-    function add(lvl, title, sub, o) { o = o || {}; out.push({ lvl: lvl, title: title, sub: sub || '', tab: o.tab || null, ext: o.ext || null, retry: o.retry || null }); }
+    function add(lvl, title, sub, o) { o = o || {}; out.push({ lvl: lvl, title: title, sub: sub || '', tab: o.tab || null, ext: o.ext || null, retry: o.retry || null, tk: !!o.tk }); }
     var A = CF.acct.accounts, S = CF.acct.ig[HOME_RANGE], M = CF.acct.media, DS = CF.dm[HOME_DM], PS = CF.prod, V = CF.prov;
     var u = '@' + selName(), kept = function (x, what) { return x ? ' · ' + what + ' du ' + hm(new Date(x.fetchedAt)) + ' conservés' : ''; };
     // Instagram : trois états pilotés par le token (maquette §14)
@@ -465,6 +467,21 @@
       }
       if (Z.bricks.flagged) add('warn', Z.bricks.flagged + ' ' + plural(Z.bricks.flagged, 'brique signalée', 'briques signalées'), 'Statut « signalée » dans la bibliothèque de briques : à revoir avant de l’utiliser.', { tab: 'prod' });
     }
+    // Audit 02/10 : comptes TikTok (brouillons impossibles sur un compte au jeton Sandbox, expiré ou sans « envoi de vidéos »)
+    var T = CF.tk;
+    if (T.state === 'error') add('warn', 'Comptes TikTok illisibles', T.error + (T.data ? ' · liste du ' + hm(new Date(T.data.fetchedAt)) + ' conservée' : ''), { retry: 'tk' });
+    if (T.data) {
+      var tLive = T.data.list.filter(function (a) { return a.state !== 'replaced'; });
+      var tTodo = tLive.filter(function (a) { return a.state === 'reconnect' || a.state === 'expired'; });
+      var tOk = tLive.filter(function (a) { return a.state === 'valid'; }).length;
+      var tSoon = tLive.filter(function (a) { return a.state === 'valid' && a.reason === 'soon'; });
+      if (!tLive.length) add('warn', 'Aucun compte TikTok relié', 'Les brouillons TikTok sont impossibles : connecte nos comptes dans « Comptes TikTok ».', { tk: true });
+      else if (tTodo.length) {
+        add(tOk ? 'warn' : 'danger', tTodo.length + ' ' + plural(tTodo.length, 'compte TikTok', 'comptes TikTok') + ' à reconnecter', tTodo.map(tkName).join(', ')
+          + ' · ' + (tOk ? 'leurs brouillons TikTok échouent' : 'aucun compte TikTok utilisable : tous les brouillons TikTok échouent') + ' tant qu’ils ne sont pas reconnectés.', { tk: true });
+      }
+      if (tSoon.length) add('warn', 'Jeton TikTok bientôt expiré', tSoon.map(function (a) { return tkName(a) + ' (' + dmy(new Date(a.refreshExp)) + ')'; }).join(', ') + ' · reconnecte avant cette date.', { tk: true });
+    }
     // Soldes fournisseurs (provider-watch : ok / bas, jamais le montant)
     if (V.state === 'error') add('warn', 'Soldes fournisseurs illisibles', V.error + ' · réessaie dans un instant.', { retry: 'prov' });
     if (V.data) {
@@ -496,7 +513,8 @@
       { k: 'media', l: 'publications', S: CF.acct.media, off: off },
       { k: 'dm', l: 'Auto-DM 30' + NB + 'j', S: DS, part: !!(DS.data && (!DS.data.cron || dmMissing(DS.data).length)) },
       { k: 'prod', l: 'production', S: CF.prod },
-      { k: 'prov', l: 'soldes fournisseurs', S: CF.prov, part: !!(V && V.list.some(function (p) { return p.error || p.unconfirmed; })) }
+      { k: 'prov', l: 'soldes fournisseurs', S: CF.prov, part: !!(V && V.list.some(function (p) { return p.error || p.unconfirmed; })) },
+      { k: 'tk', l: 'comptes TikTok', S: CF.tk }   // Audit 02/10
     ].map(function (x) {
       // une source qui répond « liste en erreur » (publications : media_error) n'est pas « vérifiée »
       var bad = x.S.state === 'error' || !!(x.S.data && x.S.data.error);
@@ -515,6 +533,7 @@
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
       + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>'
       + homeNetHTML()
+      + tkHTML()   // Audit 02/10 : comptes TikTok (brouillons), avant le kit de publication
       // Kit de publication (29/09) : page à part, pensée pour programmer à la main dans l'app Instagram.
       + '<section class="cf-card cf-kit" aria-labelledby="cfKitT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfKitT">Kit de publication</h2>'
       + '<div class="cf-dim">Vidéos à envoyer en AirDrop, légendes à copier, heures de programmation · 3 @avataradss + 2 @leoadsia par jour</div></div>'
@@ -525,6 +544,7 @@
     var wait = src.filter(function (x) { return x.st === 'wait'; }), n = alerts.length;
     var rows = alerts.map(function (a) {
       var go = a.tab ? '<button type="button" class="cf-alert-go" data-act="home-go" data-tab="' + a.tab + '">' + esc(TAB_NAME[a.tab]) + svg(IC.arrow, 12) + '</button>'
+        : a.tk ? '<button type="button" class="cf-alert-go" data-act="tk-goto">Comptes TikTok' + svg(IC.arrow, 12) + '</button>'
         : a.retry ? '<button type="button" class="cf-alert-go" data-act="home-retry" data-src="' + a.retry + '">Réessayer' + svg(IC.refresh, 12) + '</button>'
         : a.ext ? '<a class="cf-alert-go" href="' + esc(a.ext) + '" target="_blank" rel="noopener noreferrer">Recharger' + svg(IC.external, 12) + '</a>' : '';
       return '<div class="cf-alert is-' + a.lvl + '"><span class="cf-alert-ic">' + svg(a.lvl === 'danger' ? IC.alert : IC.clock, 15) + '</span>'
@@ -835,6 +855,83 @@
       + '<span class="cf-hstat-s">' + (G.v != null ? '<span class="cf-goal-t ' + (ok ? 'is-ok' : 'is-ko') + '">' + esc(goalTxt(g)) + '</span> · ' : '')
       + esc(L.length + ' ' + plural(L.length, 'reel') + ' ' + X.per) + '</span></div>';
   }
+  // ══ Comptes TikTok (Audit 02/10 : app TikTok passée en production le 03/10) ══
+  // Liste de CF.tk (colonnes sans secret de tiktok_accounts, état du jeton calculé par le store), « Connecter un compte
+  // TikTok » (OAuth, popup ouverte dans le clic) et « Reconnecter » par compte à traiter. Jamais un jeton à l'écran.
+  var TK_ST = { valid: ['valide', 'is-ok'], reconnect: ['à reconnecter', 'is-warn'], expired: ['expiré', 'is-ko'], replaced: ['remplacé', ''] };
+  function tkName(a) { return a.name || 'compte …' + a.openId.slice(-4); }
+  function tkWhy(a) {
+    if (a.state === 'replaced') return 'ancienne connexion, compte reconnecté le ' + dmy(new Date(a.replacedAt)) + ' : plus utilisée pour les brouillons';
+    if (a.state === 'expired') return 'jeton de rafraîchissement expiré le ' + dmy(new Date(a.refreshExp)) + ' : les brouillons échouent, reconnecte ce compte';
+    if (a.state === 'reconnect') {
+      return a.reason === 'scope' ? 'autorisation « envoi de vidéos » non accordée : reconnecte en acceptant toutes les autorisations'
+        : 'relié avec l’app TikTok de test (Sandbox), avant le passage en production du ' + dmy(new Date(CF.TK_PROD_SINCE)) + ' : jeton refusé, reconnecte ce compte';
+    }
+    if (a.reason === 'soon') return 'à reconnecter avant le ' + dmy(new Date(a.refreshExp)) + ' (fin du jeton de rafraîchissement)';
+    return 'jeton renouvelé tout seul à chaque envoi' + (a.refreshExp != null ? ' · reconnexion à prévoir avant le ' + dmy(new Date(a.refreshExp)) : '');
+  }
+  function tkRowHTML(a) {
+    var st = TK_ST[a.state] || ['—', ''], pic = safeUrl(a.avatar || ''), when = a.updated != null ? new Date(a.updated) : null;
+    var soon = a.state === 'valid' && a.reason === 'soon', act = a.state === 'reconnect' || a.state === 'expired' || soon;
+    return '<div class="cf-tk-row' + (a.state === 'replaced' ? ' is-old' : '') + '" data-tk="' + esc(a.state) + '">'
+      + '<span class="cf-tk-pic" aria-hidden="true">' + svg(IC.tiktok, 16) + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async" loading="lazy">' : '') + '</span>'
+      + '<span class="cf-tk-main"><b>' + esc(tkName(a)) + '</b><span class="cf-meta">' + esc('identifiant …' + a.openId.slice(-4) + (when ? ' · relié le ' + dmy(when) + ' à ' + hm(when) : '')) + '</span></span>'
+      + '<span class="cf-tk-st"><span class="cf-tk-chips"><span class="cf-qchip ' + st[1] + '">' + esc(st[0]) + '</span>'
+      + (a.own ? '' : '<span class="cf-qchip">hors de nos comptes</span>') + '</span>'
+      + '<span class="cf-tk-why' + (soon ? ' is-warn' : '') + '">' + esc(tkWhy(a)) + '</span></span>'
+      + (act ? '<button type="button" class="cf-btn is-sm cf-tk-btn" data-act="tk-connect" data-k="' + esc(a.name || '') + '">' + svg(IC.refresh, 13) + 'Reconnecter</button>' : '')
+      + '</div>';
+  }
+  // Message de la dernière connexion : fenêtre ouverte, échec, compte relié (et lequel : TikTok relie le compte ouvert
+  // dans le navigateur, pas forcément celui qu'on voulait reconnecter).
+  function tkMsg() {
+    var oa = CF.tkOauth, r = ui.tkRecon, D = CF.tk.data;
+    if (oa && Date.now() - oa.at < 10 * 60 * 1000 && (!r || oa.at >= r.at)) {
+      if (!oa.ok) return '<div class="cf-acct-msg is-err">Connexion TikTok échouée : ' + esc(oa.error) + '</div>';
+      var a = D && oa.openId ? D.list.filter(function (x) { return x.openId === oa.openId; })[0] : null;
+      var norm = function (s) { return String(s || '').toLowerCase().replace(/\s*\|\s*/g, '|').replace(/\s+/g, ' ').trim(); };   // = tkNorm du store
+      if (a && r && r.who && a.name && norm(r.who) !== norm(a.name)) {
+        return '<div class="cf-acct-msg is-err">' + esc('« ' + a.name + ' » a été relié au lieu de « ' + r.who + ' » (compte ouvert dans TikTok). Déconnecte-toi de TikTok, ou passe par une fenêtre privée, puis reconnecte « ' + r.who + ' ».') + '</div>';
+      }
+      if (a && !a.own) return '<div class="cf-acct-msg is-err">' + esc('« ' + tkName(a) + ' » relié, mais ce nom ne fait pas partie de nos comptes TikTok (' + CF.TK_OWN_NAMES.join(', ') + ').') + '</div>';
+      return '<div class="cf-acct-msg is-ok">' + esc('Compte TikTok relié' + (a ? ' : « ' + tkName(a) + ' »' : '') + '.' + (CF.tk.loading || !a ? ' Relecture de la liste…' : '')) + '</div>';
+    }
+    return r ? '<div class="cf-acct-msg' + (r.ok ? '' : ' is-err') + '">' + esc(r.text) + '</div>' : '';
+  }
+  function tkHTML() {
+    var S = CF.tk, D = S.data, L = D ? D.list : [];
+    var live = L.filter(function (a) { return a.state !== 'replaced'; }), ok = live.filter(function (a) { return a.state === 'valid'; }).length;
+    var sub = D ? (live.length ? 'comptes prêts pour les brouillons : ' + ok + ' / ' + live.length : 'aucun compte relié')
+      : S.state === 'error' ? 'liste illisible' : 'chargement…';
+    var body = '';
+    if (S.state === 'error') {
+      body += '<div class="cf-acct-msg is-err">Comptes TikTok illisibles : ' + esc(S.error) + (D ? esc(' · liste du ' + hm(new Date(D.fetchedAt)) + ' conservée') : '')
+        + ' <button type="button" class="cf-link-btn" data-act="retry-tk">Réessayer</button></div>';
+    }
+    if (!D && S.state !== 'error') body += '<div class="cf-status" role="status"><span class="cf-spin" aria-hidden="true"></span>Chargement des comptes TikTok…</div>';
+    else if (D && !L.length) body += '<div class="cf-empty-s cf-dashed">Aucun compte TikTok relié : clique « Connecter un compte TikTok ».</div>';
+    else if (D) body += '<div class="cf-tk-list">' + L.map(tkRowHTML).join('') + '</div>' + (D.capped ? '<div class="cf-meta">liste limitée aux 100 connexions les plus récentes</div>' : '');
+    return '<section class="cf-card cf-tk" id="cfTkSec" aria-labelledby="cfTkT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfTkT">Comptes TikTok</h2>'
+      + '<div class="cf-dim">' + esc('Brouillons TikTok (anti-shadowban) · ' + sub) + '</div></div>'
+      + '<button type="button" class="cf-btn is-dark" data-act="tk-connect" data-k="">' + svg(IC.tiktok, 14) + 'Connecter un compte TikTok</button></div>'
+      + tkMsg() + body
+      + '<div class="cf-tk-hint">' + svg(IC.info, 14) + '<span>Plusieurs comptes : TikTok relie le compte déjà ouvert dans ce navigateur. Entre deux comptes, '
+      + 'déconnecte-toi de TikTok (tiktok.com, profil, Se déconnecter), ou utilise une fenêtre privée : ouvre-y Factory V2, connecte-toi au tableau de bord, '
+      + 'puis « Connecter un compte TikTok ». Jamais de jeton affiché ici : seulement son état.</span></div></section>';
+  }
+  function tkStart(who) {
+    var at = Date.now();
+    who = String(who || '').slice(0, 80);
+    CF.tkConnect().then(function (r) {   // tkConnect ouvre la popup avant tout await
+      ui.tkRecon = r.ok
+        ? { ok: true, at: at, who: who || null, text: who
+          ? 'Fenêtre TikTok ouverte : connecte-toi avec « ' + who + ' » (pas un autre compte), puis autorise AvatarAds. La liste se met à jour toute seule.'
+          : 'Fenêtre TikTok ouverte : connecte-toi avec le compte à relier, puis autorise AvatarAds. La liste se met à jour toute seule.' }
+        : { ok: false, at: at, who: who || null, text: 'Connexion TikTok impossible : ' + r.error };
+      schedule();
+    });
+  }
+
   // Carte ou alerte de l'Accueil → l'onglet, sur la MÊME période que la carte (30 j) : on y retrouve les mêmes chiffres.
   function homeGo(k) {
     if (TAB_KEYS.indexOf(k) < 0 || k === 'home') return;
@@ -3600,7 +3697,11 @@
       else if (act === 'net-ser') { ui.netHidden = ui.netHidden || {}; var nk = el.getAttribute('data-k'); ui.netHidden[nk] = !ui.netHidden[nk]; schedule(); }
       else if (act === 'net-more') { ui.netN = (ui.netN || 5) + 10; schedule(); }
       else if (act === 'ta-set') { ui.ta[el.getAttribute('data-k')] = el.getAttribute('data-v'); schedule(); }
-      else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); }
+      else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); else if (src === 'tk') CF.loadTk({ force: true }); }
+      // ── comptes TikTok (Audit 02/10) ──
+      else if (act === 'tk-connect') tkStart(el.getAttribute('data-k'));   // la popup s'ouvre dans ce clic (Safari)
+      else if (act === 'retry-tk') CF.loadTk({ force: true });
+      else if (act === 'tk-goto') { var tg = $('cfTkSec'); if (tg && tg.scrollIntoView) tg.scrollIntoView({ block: 'start' }); }
       // ── onglet Production ──
       else if (act === 'retry-prod') CF.loadProd({ force: true });
       else if (act === 'qc-open') qcOpen(el.getAttribute('data-qid'), el);
@@ -3712,7 +3813,7 @@
       var t = e.target;
       // vignette (render/image) refusée : l'image d'origine, une seule fois
       if (t && t.tagName === 'IMG' && t.getAttribute('data-full')) { var full = t.getAttribute('data-full'); t.removeAttribute('data-full'); t.src = full; return; }
-      if (t && t.tagName === 'IMG' && t.closest && t.closest('.cf-thumb, .cf-avatar, .cf-sheet-media')) t.classList.add('is-broken');
+      if (t && t.tagName === 'IMG' && t.closest && t.closest('.cf-thumb, .cf-avatar, .cf-sheet-media, .cf-tk-pic')) t.classList.add('is-broken');
       // vidéo / audio introuvable (rendu, démo, revue QC) : message à la place du lecteur, jamais un lecteur cassé
       if (t && (t.tagName === 'VIDEO' || t.tagName === 'AUDIO') && t.closest && t.closest('.cf-mbox')) t.closest('.cf-mbox').classList.add('is-broken');
     }, true);

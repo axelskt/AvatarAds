@@ -1336,3 +1336,26 @@ i.is-gap { background: var(--cf-ink); }
 .cf-bs-photos{display:flex;flex-direction:column;gap:6px;margin:14px 0 4px}
 .cf-bs-prow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cf-line,rgba(0,0,0,.08))}
 .cf-bs-prow .cf-meta{flex:1;min-width:0}
+
+/* Audit 02/10 : comptes TikTok (Accueil, app TikTok en production le 03/10) — une ligne par compte, état du jeton, Reconnecter */
+.cf-tk .cf-card-h { align-items: center; }
+.cf-tk-list { display: flex; flex-direction: column; gap: 8px; }
+.cf-tk-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1.4fr) auto; align-items: center; gap: 8px 12px; border: 1px solid var(--cf-line-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.cf-tk-row.is-old { opacity: .6; }
+.cf-tk-pic { position: relative; width: 36px; height: 36px; border-radius: 50%; background: var(--cf-ink); color: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+.cf-tk-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cf-tk-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cf-tk-main b { font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.cf-tk-st { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.cf-tk-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.cf-tk .cf-qchip.is-warn { background: var(--cf-warn-bg); color: var(--cf-warn-fg); }
+.cf-tk-why { font-size: 12px; color: var(--cf-ink-3); overflow-wrap: anywhere; }
+.cf-tk-why.is-warn { color: var(--cf-warn-fg); font-weight: 600; }
+.cf-tk-hint { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--cf-ink-3); background: var(--cf-tile); border: 1px solid var(--cf-line-2); border-radius: 10px; padding: 9px 11px; overflow-wrap: anywhere; }
+.cf-tk-hint svg { flex: none; margin-top: 2px; color: var(--cf-mute); }
+@media (max-width: 639px) {
+  .cf-tk .cf-card-h > .cf-btn { width: 100%; }
+  .cf-tk-row { grid-template-columns: 36px minmax(0, 1fr); }
+  .cf-tk-st, .cf-tk-btn { grid-column: 2; }
+  .cf-tk-btn { justify-self: start; }
+}

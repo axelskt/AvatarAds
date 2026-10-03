@@ -2338,14 +2338,27 @@ async function debiterLipsync(secs, modele) {
 }
 async function rembourserLipsync(n) { if (RENDER_USER && n > 0) await rpcCredits('mcp_refund_credits', n).catch(() => {}) }
 // MIX (Omni+Hedra) = compte dev/owner seulement pour le moment (Axel 23/08). Local (pas de user) = dev = autorisé.
-async function estOwner(userId) {
-  if (!userId) return true
+// Audit 02/10 : droits du compte DU JOB sur les modèles de lipsync, revérifiés ici (le plan vient du client : render-job,
+// render_montage_plan) — mix = propriétaire seul ; omnihuman = Pro / Élite ou compte illimité (owner, developer), la règle
+// de lipsync_video et du MCP. Profil illisible → aucun des deux (repli hedra, jamais plus cher que le défaut).
+async function droitsLipsync(userId) {
+  if (!userId) return { owner: true, omni: true }
   try {
     const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const r = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=is_owner`, { headers: { Authorization: 'Bearer ' + key, apikey: key } })
+    const r = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=is_owner,plan`, { headers: { Authorization: 'Bearer ' + key, apikey: key } })
     const d = await r.json().catch(() => [])
-    return Array.isArray(d) && d[0] && d[0].is_owner === true
-  } catch (_) { return false }
+    const p = Array.isArray(d) ? d[0] : null
+    if (!p) return { owner: false, omni: false }
+    const owner = p.is_owner === true, plan = String(p.plan || '').toLowerCase()
+    return { owner, omni: owner || ['developer', 'pro', 'elite'].includes(plan) }
+  } catch (_) { return { owner: false, omni: false } }
+}
+// Modèle (plan ou fenêtre) autorisé par ces droits ? Valeur inconnue = hedra pour modeleDe → laissée.
+function lipsyncAutorise(droits, m) {
+  const v = String(m ?? '').toLowerCase()
+  if (v === 'mix') return droits.owner
+  if (v === 'omnihuman' || v === 'omni') return droits.omni
+  return true
 }
 async function storageSupprimer(chemins) {
   const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -2625,8 +2638,16 @@ async function genererLipsync(plan, proj, jobDir, avatarClips) {
   const segs = (plan.avatarSegments || []).filter((w) => (w.end - w.start) >= 1)
   if (!segs.length) return 0
   // MIX réservé au compte dev/owner pour le moment : sinon on retombe sur Hedra (le défaut).
-  if (String(plan.lipsyncModel || '').toLowerCase() === 'mix' && !(await estOwner(RENDER_USER))) {
-    console.log('▶ lipsync : mode mix réservé au compte dev → repli hedra'); plan.lipsyncModel = 'hedra'
+  // Audit 02/10 : OmniHuman aussi (Pro / Élite), et les surcharges PAR FENÊTRE (w.lipsyncModel) passent le même contrôle —
+  // un « mix » ou un « omnihuman » posé sur une fenêtre échappait au contrôle du plan. Non autorisée → retirée (plan → hedra).
+  const droits = await droitsLipsync(RENDER_USER)
+  if (plan.lipsyncModel !== undefined && !lipsyncAutorise(droits, plan.lipsyncModel)) {
+    console.log(`▶ lipsync : modèle ${String(plan.lipsyncModel).slice(0, 20)} non autorisé pour ce compte → repli hedra`); plan.lipsyncModel = 'hedra'
+  }
+  for (const w of plan.avatarSegments || []) {
+    if (w && w.lipsyncModel !== undefined && !lipsyncAutorise(droits, w.lipsyncModel)) {
+      console.log(`▶ lipsync : surcharge ${String(w.lipsyncModel).slice(0, 20)} d'une fenêtre non autorisée → retirée`); delete w.lipsyncModel
+    }
   }
   // #84 · répartir les visages du pool sur les scènes (rotation) : chaque fenêtre
   // parle sur une image TOM différente. On lit le pool sur le disque (media/

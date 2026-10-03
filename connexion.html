@@ -2,11 +2,15 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<!-- Audit 02/10 : CSP (scripts : cette page, unpkg (React, Babel) et jsDelivr (supabase-js) ; appels réseau : notre Supabase
-     seulement ; images et vidéos de la vitrine). La connexion Google est une NAVIGATION vers Supabase puis Google : aucune
-     source à ouvrir pour elle. frame-ancestors est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) →
-     filet JS anti-iframe juste dessous, comme app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<!-- Audit 02/10 : CSP (scripts : PLUS de 'unsafe-inline' depuis que le JSX est précompilé (Babel retiré) — les 5 scripts
+     inline sont autorisés par leur empreinte sha256, dans l'ordre de la page : anti-iframe, thème, ressources, parrainage,
+     page ; scripts externes = les 3 fichiers exacts React, ReactDOM, supabase-js ; appels réseau : notre Supabase
+     seulement ; images et vidéos de la vitrine). Modifier un script inline ou une version de script externe = mettre à
+     jour la CSP (Chrome donne l'empreinte attendue dans la console ; deploy.yml la vérifie et refuse de publier sinon).
+     La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
+     est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
+     app/index.html. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-jix6/Ru6t9+GVbNveGAN9VEIBebOPUK6r8MNLDH8f5U=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -80,318 +84,321 @@ a{color:inherit;text-decoration:none}
      SRI ; même code) ; 2.117.2 = la version que servait @2 au 03/10/2026. -->
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <script>window.__resources={brandLogo:"assets/avatarads-logo.png"};</script>
 <script>/* parrainage / code promo : ?ref=CODE et ?promo=CODE gardés pour l'app (même origine) — posés par l'app après la connexion */
 try{var _q=new URLSearchParams(location.search),_r=_q.get('ref'),_p=_q.get('promo');if(_r&&/^[A-Za-z0-9_-]{4,40}$/.test(_r))localStorage.setItem('aa_ref',_r.toUpperCase());if(_p&&/^[A-Za-z0-9_-]{2,40}$/.test(_p.trim()))localStorage.setItem('aa_promo',_p.trim().toUpperCase());}catch(e){}</script>
 
-<script type="text/babel" data-presets="react">
+<script>
+/* Audit 02/10 : JSX PRÉCOMPILÉ en JS ordinaire (React.createElement, même rendu) : plus de Babel dans le navigateur
+   (650 Ko compressés et une compilation avant l'affichage) ni de 'unsafe-inline' dans la CSP. On l'édite directement
+   (JSX d'origine : git show 78bcb221:connexion.html). Toute modification d'un script inline de cette page change son
+   empreinte : mettre à jour le 'sha256-…' de la CSP en tête de page (le déploiement refuse sinon et donne la valeur). */
 /* ── icônes + logo (extrait du handoff) ── */
-const Ic = ({d, size=20, fill=false, sw=1.8, children, ...p}) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill?"currentColor":"none"}
-       stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" {...p}>
-    {d ? <path d={d}/> : children}
-  </svg>
+const Ic = ({ d, size = 20, fill = false, sw = 1.8, children, ...p }) =>
+React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: fill ? "currentColor" : "none",
+  stroke: "currentColor", strokeWidth: sw, strokeLinecap: "round", strokeLinejoin: "round", ...p },
+d ? React.createElement("path", { d: d }) : children
 );
-const Logo = ({size=22}) => (
-  <img src={(window.__resources&&window.__resources.brandLogo)||"assets/avatarads-logo.png"} alt="AvatarAds" width={size} height={size}
-    style={{borderRadius:size*0.26,display:"block",flex:"0 0 auto"}}/>
-);
+
+const Logo = ({ size = 22 }) =>
+React.createElement("img", { src: window.__resources && window.__resources.brandLogo || "assets/avatarads-logo.png", alt: "AvatarAds", width: size, height: size,
+  style: { borderRadius: size * 0.26, display: "block", flex: "0 0 auto" } });
+
 const Icons = {
-  star:(p)=><Ic {...p} fill sw={0}><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z"/></Ic>,
-  arrow:(p)=><Ic {...p} d="M5 12h14M13 6l6 6-6 6"/>,
-  lock:(p)=><Ic {...p}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></Ic>,
+  star: (p) => React.createElement(Ic, { ...p, fill: true, sw: 0 }, React.createElement("path", { d: "M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.6 6.1 21.7l1.2-6.6L2.5 9.5l6.6-.9z" })),
+  arrow: (p) => React.createElement(Ic, { ...p, d: "M5 12h14M13 6l6 6-6 6" }),
+  lock: (p) => React.createElement(Ic, { ...p }, React.createElement("rect", { x: "4", y: "11", width: "16", height: "10", rx: "2" }), React.createElement("path", { d: "M8 11V7a4 4 0 018 0v4" }))
 };
 
 /* ── useIsMobile (extrait de app.jsx) ── */
-function useIsMobile(bp=760){
-  const force = typeof window!=="undefined" && (localStorage.getItem("aa_force_mobile")==="1" || /[?&]mobile=1/.test(location.search));
-  const [m,setM]=React.useState(()=> force || (typeof window!=="undefined" && window.innerWidth<=bp));
-  React.useEffect(()=>{
-    const on=()=>setM(force || window.innerWidth<=bp);
-    window.addEventListener("resize",on); on();
-    return ()=>window.removeEventListener("resize",on);
-  },[bp,force]);
+function useIsMobile(bp = 760) {
+  const force = typeof window !== "undefined" && (localStorage.getItem("aa_force_mobile") === "1" || /[?&]mobile=1/.test(location.search));
+  const [m, setM] = React.useState(() => force || typeof window !== "undefined" && window.innerWidth <= bp);
+  React.useEffect(() => {
+    const on = () => setM(force || window.innerWidth <= bp);
+    window.addEventListener("resize", on);on();
+    return () => window.removeEventListener("resize", on);
+  }, [bp, force]);
   return m;
 }
 window.useIsMobile = useIsMobile;
-const { useState:useStateA } = React;
+const { useState: useStateA } = React;
 /* Thème de la connexion : sombre si on arrive du tunnel v2 (aa_theme=dark), clair sinon.
    Lu une fois — l'utilisateur ne bascule pas le thème sur l'écran de login. */
-const _AA_DARK = (()=>{ try{ return localStorage.getItem('aa_theme')==='dark'; }catch(e){ return false; } })();
+const _AA_DARK = (() => {try {return localStorage.getItem('aa_theme') === 'dark';} catch (e) {return false;}})();
 
 /* ── Auth réelle (même projet Supabase que /app/, session partagée same-origin) ── */
 const SUPABASE_URL = "https://guvwgiejzkiodghywpwj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const AUTH_OTP_FN = SUPABASE_URL + "/functions/v1/auth-otp";
-async function otpCall(payload){
-  try{ const r = await fetch(AUTH_OTP_FN, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) }); return await r.json(); }
-  catch(e){ return { error:"network" }; }
+async function otpCall(payload) {
+  try {const r = await fetch(AUTH_OTP_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });return await r.json();}
+  catch (e) {return { error: "network" };}
 }
 
-function GoogleG({size=18}){
+function GoogleG({ size = 18 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48">
-      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.4-3.5z"/>
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 16.3 4.5 9.7 8.9 6.3 14.7z"/>
-      <path fill="#4CAF50" d="M24 43.5c5.5 0 10.3-1.9 13.8-5.1l-6.4-5.4C29.4 34.6 26.9 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.6 39 16.2 43.5 24 43.5z"/>
-      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.4 5.4C41 36.9 43.5 31 43.5 24c0-1.2-.1-2.3-.4-3.5z"/>
-    </svg>
-  );
+    React.createElement("svg", { width: size, height: size, viewBox: "0 0 48 48" },
+    React.createElement("path", { fill: "#FFC107", d: "M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.4-3.5z" }),
+    React.createElement("path", { fill: "#FF3D00", d: "M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.6 4.5 24 4.5 16.3 4.5 9.7 8.9 6.3 14.7z" }),
+    React.createElement("path", { fill: "#4CAF50", d: "M24 43.5c5.5 0 10.3-1.9 13.8-5.1l-6.4-5.4C29.4 34.6 26.9 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.6 39 16.2 43.5 24 43.5z" }),
+    React.createElement("path", { fill: "#1976D2", d: "M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.4 5.4C41 36.9 43.5 31 43.5 24c0-1.2-.1-2.3-.4-3.5z" })
+    ));
+
 }
 
 /* vitrine plein cadre : le rendu d'un modèle, carrousel en bas (vidéos réelles) */
-function ShowcaseVideo({ mob }){
+function ShowcaseVideo({ mob }) {
   const models = [
-    // ordre voulu par Axel (25/09) : Express, Omni, Motion Control, Image IA, Montage IA
-    { n:"EXPRESS", d:"Ton avatar qui parle face caméra, ton produit en main", hue:18, vid:"assets/lp/v2/connexion/express.mp4?v=8" },
-    { n:"OMNI", d:"Transforme n'importe quel objet en un clic", hue:200, vid:"assets/lp/v2/connexion/omni.mp4?v=1" },
-    { n:"MOTION CONTROL", d:"Ton personnage reproduit le mouvement d'une vidéo", hue:150, vid:"assets/lp/v2/connexion/motion-control.mp4?v=3" },
-    { n:"IMAGE IA", d:"Hyper-réalisme, qualité 4K naturel", hue:330, src:"assets/lp/v2/connexion/image-ia.jpg", pos:"50% 20%" },
-    { n:"MONTAGE IA", d:"Ta vidéo originale devient une vidéo montée, sous-titrée et rythmée", hue:265, vid:"assets/lp/v2/connexion/montage.mp4?v=5" },
-  ];
-  const [i,setI] = useStateA(0);
+  // ordre voulu par Axel (25/09) : Express, Omni, Motion Control, Image IA, Montage IA
+  { n: "EXPRESS", d: "Ton avatar qui parle face caméra, ton produit en main", hue: 18, vid: "assets/lp/v2/connexion/express.mp4?v=8" },
+  { n: "OMNI", d: "Transforme n'importe quel objet en un clic", hue: 200, vid: "assets/lp/v2/connexion/omni.mp4?v=1" },
+  { n: "MOTION CONTROL", d: "Ton personnage reproduit le mouvement d'une vidéo", hue: 150, vid: "assets/lp/v2/connexion/motion-control.mp4?v=3" },
+  { n: "IMAGE IA", d: "Hyper-réalisme, qualité 4K naturel", hue: 330, src: "assets/lp/v2/connexion/image-ia.jpg", pos: "50% 20%" },
+  { n: "MONTAGE IA", d: "Ta vidéo originale devient une vidéo montée, sous-titrée et rythmée", hue: 265, vid: "assets/lp/v2/connexion/montage.mp4?v=5" }];
+
+  const [i, setI] = useStateA(0);
   // auto-rotation : le timer se RÉINITIALISE à chaque changement de slide (clic inclus) → chaque vidéo a ses 4,2 s pleines
-  React.useEffect(()=>{ const t=setInterval(()=>setI(v=>(v+1)%models.length),4200); return ()=>clearInterval(t); },[i]);
+  React.useEffect(() => {const t = setInterval(() => setI((v) => (v + 1) % models.length), 4200);return () => clearInterval(t);}, [i]);
   const m = models[i];
   return (
-    <div style={{position:"relative",height:"100%",minHeight:mob?300:520,borderRadius:20,overflow:"hidden",border:"1px solid var(--border-2)",
-      background:`radial-gradient(120% 90% at 70% 10%, oklch(0.42 0.14 ${m.hue}), #0b0910 72%)`,transition:"background .8s"}}>
-      {m.src && <img src={m.src} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:m.pos||"50% 50%"}}/>}
-      {m.vid && !m.phone && <video key={m.vid} src={m.vid} autoPlay muted loop playsInline preload="auto" onLoadedData={e=>e.target.play&&e.target.play().catch(()=>{})} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:m.pos||"50% 50%",background:"#000"}}/>}
-      {!m.src && !m.vid && <div style={{position:"absolute",inset:0,opacity:.5,transition:"opacity .8s",
-        background:`repeating-linear-gradient(${45+i*20}deg, rgba(255,255,255,.06) 0 22px, transparent 22px 44px)`}}></div>}
-      {!m.src && !m.vid && <div style={{position:"absolute",right:"-8%",top:"14%",width:"52%",aspectRatio:"1",borderRadius:"50%",
-        background:`radial-gradient(circle at 40% 35%, oklch(0.7 0.16 ${m.hue}), transparent 68%)`,filter:"blur(6px)",transition:"all .8s"}}></div>}
-      <div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 45%, rgba(0,0,0,.72))"}}></div>
-      {m.vid && m.phone && <div style={{position:"absolute",top:"6%",left:"50%",transform:"translateX(-50%)",height:"70%",aspectRatio:"9/16",borderRadius:26,overflow:"hidden",background:"#000",boxShadow:"0 26px 60px -16px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.09)"}}>
-        <video key={m.vid} src={m.vid} autoPlay muted loop playsInline preload="auto" onLoadedData={e=>e.target.play&&e.target.play().catch(()=>{})} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-      </div>}
+    React.createElement("div", { style: { position: "relative", height: "100%", minHeight: mob ? 300 : 520, borderRadius: 20, overflow: "hidden", border: "1px solid var(--border-2)",
+        background: `radial-gradient(120% 90% at 70% 10%, oklch(0.42 0.14 ${m.hue}), #0b0910 72%)`, transition: "background .8s" } },
+    m.src && React.createElement("img", { src: m.src, alt: "", style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: m.pos || "50% 50%" } }),
+    m.vid && !m.phone && React.createElement("video", { key: m.vid, src: m.vid, autoPlay: true, muted: true, loop: true, playsInline: true, preload: "auto", onLoadedData: (e) => e.target.play && e.target.play().catch(() => {}), style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: m.pos || "50% 50%", background: "#000" } }),
+    !m.src && !m.vid && React.createElement("div", { style: { position: "absolute", inset: 0, opacity: .5, transition: "opacity .8s",
+        background: `repeating-linear-gradient(${45 + i * 20}deg, rgba(255,255,255,.06) 0 22px, transparent 22px 44px)` } }),
+    !m.src && !m.vid && React.createElement("div", { style: { position: "absolute", right: "-8%", top: "14%", width: "52%", aspectRatio: "1", borderRadius: "50%",
+        background: `radial-gradient(circle at 40% 35%, oklch(0.7 0.16 ${m.hue}), transparent 68%)`, filter: "blur(6px)", transition: "all .8s" } }),
+    React.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(transparent 45%, rgba(0,0,0,.72))" } }),
+    m.vid && m.phone && React.createElement("div", { style: { position: "absolute", top: "6%", left: "50%", transform: "translateX(-50%)", height: "70%", aspectRatio: "9/16", borderRadius: 26, overflow: "hidden", background: "#000", boxShadow: "0 26px 60px -16px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.09)" } },
+    React.createElement("video", { key: m.vid, src: m.vid, autoPlay: true, muted: true, loop: true, playsInline: true, preload: "auto", onLoadedData: (e) => e.target.play && e.target.play().catch(() => {}), style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" } })
+    ),
 
-      <div style={{position:"absolute",left:mob?18:28,right:mob?18:28,bottom:mob?58:70}}>
-        <div className="display" style={{fontSize:mob?"26px":"clamp(30px,3vw,46px)",fontWeight:800,color:"#fff",letterSpacing:"-.01em"}}>{m.n}</div>
-        <div style={{fontSize:mob?13:15,color:"rgba(255,255,255,.7)",marginTop:6}}>{m.d}</div>
-      </div>
+    React.createElement("div", { style: { position: "absolute", left: mob ? 18 : 28, right: mob ? 18 : 28, bottom: mob ? 58 : 70 } },
+    React.createElement("div", { className: "display", style: { fontSize: mob ? "26px" : "clamp(30px,3vw,46px)", fontWeight: 800, color: "#fff", letterSpacing: "-.01em" } }, m.n),
+    React.createElement("div", { style: { fontSize: mob ? 13 : 15, color: "rgba(255,255,255,.7)", marginTop: 6 } }, m.d)
+    ),
 
-      <div className="row" style={{position:"absolute",left:mob?14:20,right:mob?14:20,bottom:mob?14:20,gap:mob?8:14}}>
-        {models.map((x,j)=>(
-          <button key={j} onClick={()=>setI(j)} className="col" style={{flex:1,gap:7,alignItems:"stretch",textAlign:"left"}}>
-            <div style={{height:3,borderRadius:3,background:j===i?"#fff":"rgba(255,255,255,.22)",transition:".3s"}}></div>
-            {!mob && <span style={{fontSize:11.5,fontWeight:600,color:j===i?"#fff":"rgba(255,255,255,.5)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.n}</span>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+    React.createElement("div", { className: "row", style: { position: "absolute", left: mob ? 14 : 20, right: mob ? 14 : 20, bottom: mob ? 14 : 20, gap: mob ? 8 : 14 } },
+    models.map((x, j) =>
+    React.createElement("button", { key: j, onClick: () => setI(j), className: "col", style: { flex: 1, gap: 7, alignItems: "stretch", textAlign: "left" } },
+    React.createElement("div", { style: { height: 3, borderRadius: 3, background: j === i ? "#fff" : "rgba(255,255,255,.22)", transition: ".3s" } }),
+    !mob && React.createElement("span", { style: { fontSize: 11.5, fontWeight: 600, color: j === i ? "#fff" : "rgba(255,255,255,.5)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, x.n)
+    )
+    )
+    )
+    ));
+
 }
 
-function Login({ go }){
+function Login({ go }) {
   const mob = window.useIsMobile ? window.useIsMobile() : false;
   const [email, setEmail] = useStateA("");
-  const [pw, setPw] = useStateA(false);      // mode mot de passe
+  const [pw, setPw] = useStateA(false); // mode mot de passe
   const [pwVal, setPwVal] = useStateA("");
-  const [sent, setSent] = useStateA(false);  // code OTP envoyé
-  const [show, setShow] = useStateA(false);  // visibilité mot de passe
+  const [sent, setSent] = useStateA(false); // code OTP envoyé
+  const [show, setShow] = useStateA(false); // visibilité mot de passe
   const [busy, setBusy] = useStateA(false);
   const [err, setErr] = useStateA("");
 
-  const validEmail = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
-  async function authGoogle(){
+  const validEmail = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+  async function authGoogle() {
     setErr("");
-    try{ const { error } = await sb.auth.signInWithOAuth({ provider:"google", options:{ redirectTo: location.origin+"/app/", queryParams:{ access_type:"offline", prompt:"consent" } } }); if(error) setErr("Google indisponible, réessaie."); }
-    catch(e){ setErr("Google indisponible, réessaie."); }
+    try {const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + "/app/", queryParams: { access_type: "offline", prompt: "consent" } } });if (error) setErr("Google indisponible, réessaie.");}
+    catch (e) {setErr("Google indisponible, réessaie.");}
   }
-  async function authSend(){
-    const e = (email||"").trim().toLowerCase();
-    if(!validEmail(e)){ setErr("Entre un email valide."); return; }
-    setBusy(true); setErr("");
-    const res = await otpCall({ action:"send", mode:"login", email:e, firstName:"" });
+  async function authSend() {
+    const e = (email || "").trim().toLowerCase();
+    if (!validEmail(e)) {setErr("Entre un email valide.");return;}
+    setBusy(true);setErr("");
+    const res = await otpCall({ action: "send", mode: "login", email: e, firstName: "" });
     setBusy(false);
-    if(res && res.error){ setErr("Envoi impossible, réessaie dans un instant."); return; }
+    if (res && res.error) {setErr("Envoi impossible, réessaie dans un instant.");return;}
     setSent(true);
   }
-  async function authVerify(codeStr){
-    const c = (codeStr||"").replace(/\D/g,"").slice(0,6);
-    if(c.length!==6){ setErr("Entre les 6 chiffres reçus."); return; }
-    setBusy(true); setErr("");
-    const res = await otpCall({ action:"verify", email:(email||"").trim().toLowerCase(), code:c });
-    if(!res || res.error || !res.token_hash){ setBusy(false); setErr("Code invalide ou expiré."); return; }
-    const { error } = await sb.auth.verifyOtp({ type:"magiclink", token_hash: res.token_hash });
-    if(error){ setBusy(false); setErr("Code invalide ou expiré."); return; }
+  async function authVerify(codeStr) {
+    const c = (codeStr || "").replace(/\D/g, "").slice(0, 6);
+    if (c.length !== 6) {setErr("Entre les 6 chiffres reçus.");return;}
+    setBusy(true);setErr("");
+    const res = await otpCall({ action: "verify", email: (email || "").trim().toLowerCase(), code: c });
+    if (!res || res.error || !res.token_hash) {setBusy(false);setErr("Code invalide ou expiré.");return;}
+    const { error } = await sb.auth.verifyOtp({ type: "magiclink", token_hash: res.token_hash });
+    if (error) {setBusy(false);setErr("Code invalide ou expiré.");return;}
     location.href = "/app/";
   }
-  async function authPassword(){
-    const e = (email||"").trim().toLowerCase();
-    if(!validEmail(e)){ setErr("Entre un email valide."); return; }
-    if(!pwVal){ setErr("Entre ton mot de passe."); return; }
-    setBusy(true); setErr("");
-    const { error } = await sb.auth.signInWithPassword({ email:e, password:pwVal });
+  async function authPassword() {
+    const e = (email || "").trim().toLowerCase();
+    if (!validEmail(e)) {setErr("Entre un email valide.");return;}
+    if (!pwVal) {setErr("Entre ton mot de passe.");return;}
+    setBusy(true);setErr("");
+    const { error } = await sb.auth.signInWithPassword({ email: e, password: pwVal });
     setBusy(false);
-    if(error){ setErr("Email ou mot de passe incorrect."); return; }
+    if (error) {setErr("Email ou mot de passe incorrect.");return;}
     location.href = "/app/";
   }
-  function onOtpInput(e){
-    e.target.value = e.target.value.replace(/\D/g,"").slice(0,1);
-    if(e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus();
-    const c = [...e.target.parentElement.children].filter(x=>x.tagName==="INPUT").map(b=>b.value).join("");
-    if(c.length===6) authVerify(c);
+  function onOtpInput(e) {
+    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 1);
+    if (e.target.value && e.target.nextElementSibling) e.target.nextElementSibling.focus();
+    const c = [...e.target.parentElement.children].filter((x) => x.tagName === "INPUT").map((b) => b.value).join("");
+    if (c.length === 6) authVerify(c);
   }
-  function onOtpKey(e){ if(e.key==="Backspace" && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus(); }
-  function onOtpPaste(e){ const t=(e.clipboardData.getData("text")||"").replace(/\D/g,"").slice(0,6); if(!t) return; e.preventDefault(); const boxes=[...e.target.parentElement.children].filter(x=>x.tagName==="INPUT"); boxes.forEach((b,i)=>{ b.value=t[i]||""; }); (boxes[Math.min(t.length,5)]||e.target).focus(); if(t.length===6) authVerify(t); }
-  const errLine = err ? <p className="center" style={{fontSize:12.5,color:"#c0341d",marginTop:2,width:"100%"}}>{err}</p> : null;
+  function onOtpKey(e) {if (e.key === "Backspace" && !e.target.value && e.target.previousElementSibling) e.target.previousElementSibling.focus();}
+  function onOtpPaste(e) {const t = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6);if (!t) return;e.preventDefault();const boxes = [...e.target.parentElement.children].filter((x) => x.tagName === "INPUT");boxes.forEach((b, i) => {b.value = t[i] || "";});(boxes[Math.min(t.length, 5)] || e.target).focus();if (t.length === 6) authVerify(t);}
+  const errLine = err ? React.createElement("p", { className: "center", style: { fontSize: 12.5, color: "#c0341d", marginTop: 2, width: "100%" } }, err) : null;
 
-  const L = _AA_DARK
-    ? { ink:"#F6F4F1", sub:"#A7A39E", line:"rgba(255,255,255,.12)", field:"#171519", fieldLine:"rgba(255,255,255,.18)", btn:"#1E1B21" }
-    : { ink:"#141013", sub:"#5b5750", line:"rgba(0,0,0,.1)", field:"#fff", fieldLine:"rgba(0,0,0,.14)", btn:"#fff" };
-  const panel = (
-    <div className="rise col" style={{width:"100%",maxWidth:380,alignItems:"center"}}>
-      <div className="brandmark" style={{marginBottom:22,color:L.ink}}><Logo size={40}/></div>
-      <h2 className="display center" style={{fontSize:mob?24:28,fontWeight:800,color:L.ink}}>Connexion à AvatarAds</h2>
-      <p className="center" style={{marginTop:9,fontSize:14.5,maxWidth:320,color:L.sub}}>Choisis ta méthode de connexion pour commencer.</p>
+  const L = _AA_DARK ?
+  { ink: "#F6F4F1", sub: "#A7A39E", line: "rgba(255,255,255,.12)", field: "#171519", fieldLine: "rgba(255,255,255,.18)", btn: "#1E1B21" } :
+  { ink: "#141013", sub: "#5b5750", line: "rgba(0,0,0,.1)", field: "#fff", fieldLine: "rgba(0,0,0,.14)", btn: "#fff" };
+  const panel =
+  React.createElement("div", { className: "rise col", style: { width: "100%", maxWidth: 380, alignItems: "center" } },
+  React.createElement("div", { className: "brandmark", style: { marginBottom: 22, color: L.ink } }, React.createElement(Logo, { size: 40 })),
+  React.createElement("h2", { className: "display center", style: { fontSize: mob ? 24 : 28, fontWeight: 800, color: L.ink } }, "Connexion à AvatarAds"),
+  React.createElement("p", { className: "center", style: { marginTop: 9, fontSize: 14.5, maxWidth: 320, color: L.sub } }, "Choisis ta méthode de connexion pour commencer."),
 
-      <button className="btn" style={{width:"100%",marginTop:26,background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={authGoogle}>
-        <GoogleG/> Continuer avec Google
-      </button>
+  React.createElement("button", { className: "btn", style: { width: "100%", marginTop: 26, background: "#fff", color: "#1a1a1a", fontWeight: 600, fontSize: 15, padding: "15px 20px", border: "1.5px solid rgba(0,0,0,.28)" }, onClick: authGoogle },
+  React.createElement(GoogleG, null), " Continuer avec Google"
+  ),
 
-      <div className="row gap16" style={{width:"100%",margin:"20px 0",alignItems:"center"}}>
-        <div style={{flex:1,height:1,background:L.line}}></div>
-        <span className="mono" style={{fontSize:10.5,letterSpacing:".14em",color:L.sub}}>OU AVEC EMAIL</span>
-        <div style={{flex:1,height:1,background:L.line}}></div>
-      </div>
+  React.createElement("div", { className: "row gap16", style: { width: "100%", margin: "20px 0", alignItems: "center" } },
+  React.createElement("div", { style: { flex: 1, height: 1, background: L.line } }),
+  React.createElement("span", { className: "mono", style: { fontSize: 10.5, letterSpacing: ".14em", color: L.sub } }, "OU AVEC EMAIL"),
+  React.createElement("div", { style: { flex: 1, height: 1, background: L.line } })
+  ),
 
-      {sent ? (
-        <div className="col rise" style={{width:"100%",gap:11,alignItems:"center"}}>
-          <p className="center" style={{fontSize:13.5,maxWidth:300,color:L.sub}}>Code envoyé à ton email. Entre les 6 chiffres reçus.</p>
-          <div id="otpbox" className="row" style={{gap:8,justifyContent:"center"}}>
-            {[0,1,2,3,4,5].map(k=>(
-              <input key={k} maxLength={1} inputMode="numeric" style={{width:44,height:52,textAlign:"center",fontSize:20,fontWeight:800,padding:0,borderRadius:12,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,outline:"none"}}
-                onInput={onOtpInput} onKeyDown={onOtpKey} onPaste={onOtpPaste}/>
-            ))}
-          </div>
-          <button className="btn btn-primary" style={{width:"100%",marginTop:6,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=>authVerify([...document.querySelectorAll('#otpbox input')].map(b=>b.value).join(''))}>
-            Entrer dans l'app <Icons.arrow size={16}/>
-          </button>
-          <button className="btn btn-quiet btn-sm" style={{fontSize:13,color:L.sub}} onClick={()=>setSent(false)}>← Changer d'email</button>
-          <span style={{fontSize:12,color:L.sub}}>Pas reçu ? <span className="accent" style={{cursor:"pointer",fontWeight:600}} onClick={authSend}>Renvoyer</span></span>
-        </div>
-      ) : (<>
-        <input type="email" placeholder="ton@email.com" value={email} onChange={e=>setEmail(e.target.value)}style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
-        {pw && (
-          <div style={{position:"relative",width:"100%",marginTop:11}}>
-            <input type={show?"text":"password"} placeholder="••••••••" value={pwVal} onChange={e=>setPwVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")authPassword();}}style={{width:"100%",padding:"14px 16px",borderRadius:14,border:"1px solid "+L.fieldLine,background:L.field,color:L.ink,fontSize:15,outline:"none"}}/>
-            <button onClick={()=>setShow(!show)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",fontSize:12,fontWeight:600,color:L.sub}}>{show?"Cacher":"Voir"}</button>
-          </div>
-        )}
-        <button className="btn btn-primary" style={{width:"100%",marginTop:11,padding:"15px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? authPassword() : authSend()}>
-          {pw ? "Se connecter" : "Recevoir mon code"} <Icons.arrow size={16}/>
-        </button>
-        <button className="btn" style={{width:"100%",marginTop:9,padding:"13px 20px",fontSize:13.5,background:L.btn,border:"1px solid "+L.fieldLine,color:L.ink,fontWeight:600}} onClick={()=>{setPw(!pw);setErr("");}}>
-          {pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"}
-        </button>
-      </>)}
-      {errLine}
+  sent ?
+  React.createElement("div", { className: "col rise", style: { width: "100%", gap: 11, alignItems: "center" } },
+  React.createElement("p", { className: "center", style: { fontSize: 13.5, maxWidth: 300, color: L.sub } }, "Code envoyé à ton email. Entre les 6 chiffres reçus."),
+  React.createElement("div", { id: "otpbox", className: "row", style: { gap: 8, justifyContent: "center" } },
+  [0, 1, 2, 3, 4, 5].map((k) =>
+  React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { width: 44, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, outline: "none" },
+    onInput: onOtpInput, onKeyDown: onOtpKey, onPaste: onOtpPaste })
+  )
+  ),
+  React.createElement("button", { className: "btn btn-primary", style: { width: "100%", marginTop: 6, padding: "15px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => authVerify([...document.querySelectorAll('#otpbox input')].map((b) => b.value).join('')) }, "Entrer dans l'app ",
+  React.createElement(Icons.arrow, { size: 16 })
+  ),
+  React.createElement("button", { className: "btn btn-quiet btn-sm", style: { fontSize: 13, color: L.sub }, onClick: () => setSent(false) }, "← Changer d'email"),
+  React.createElement("span", { style: { fontSize: 12, color: L.sub } }, "Pas reçu ? ", React.createElement("span", { className: "accent", style: { cursor: "pointer", fontWeight: 600 }, onClick: authSend }, "Renvoyer"))
+  ) :
+  React.createElement(React.Fragment, null,
+  React.createElement("input", { type: "email", placeholder: "ton@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
+  pw &&
+  React.createElement("div", { style: { position: "relative", width: "100%", marginTop: 11 } },
+  React.createElement("input", { type: show ? "text" : "password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), onKeyDown: (e) => {if (e.key === "Enter") authPassword();}, style: { width: "100%", padding: "14px 16px", borderRadius: 14, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, fontSize: 15, outline: "none" } }),
+  React.createElement("button", { onClick: () => setShow(!show), style: { position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: L.sub } }, show ? "Cacher" : "Voir")
+  ),
 
-      <p className="center" style={{marginTop:26,fontSize:12.5,lineHeight:1.6,maxWidth:320,color:L.sub}}>
-        En continuant, tu acceptes les <span style={{textDecoration:"underline",cursor:"pointer"}}>Conditions</span> et la <span style={{textDecoration:"underline",cursor:"pointer"}}>Confidentialité</span>.
-      </p>
-      <div className="row gap16" style={{alignItems:"center",marginTop:22}}>
-        <span className="row gap6" style={{padding:"7px 13px",borderRadius:999,border:"1px solid "+L.fieldLine,background:L.btn,alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:L.ink}}>4,9/5</b></span>
-        <span className="row gap8" style={{fontSize:13,color:L.sub}}><Icons.lock size={13}/> Connexion sécurisée</span>
-      </div>
-    </div>
+  React.createElement("button", { className: "btn btn-primary", style: { width: "100%", marginTop: 11, padding: "15px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
+  pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
+  ),
+  React.createElement("button", { className: "btn", style: { width: "100%", marginTop: 9, padding: "13px 20px", fontSize: 13.5, background: L.btn, border: "1px solid " + L.fieldLine, color: L.ink, fontWeight: 600 }, onClick: () => {setPw(!pw);setErr("");} },
+  pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"
+  )
+  ),
+  errLine,
+
+  React.createElement("p", { className: "center", style: { marginTop: 26, fontSize: 12.5, lineHeight: 1.6, maxWidth: 320, color: L.sub } }, "En continuant, tu acceptes les ",
+  React.createElement("span", { style: { textDecoration: "underline", cursor: "pointer" } }, "Conditions"), " et la ", React.createElement("span", { style: { textDecoration: "underline", cursor: "pointer" } }, "Confidentialité"), "."
+  ),
+  React.createElement("div", { className: "row gap16", style: { alignItems: "center", marginTop: 22 } },
+  React.createElement("span", { className: "row gap6", style: { padding: "7px 13px", borderRadius: 999, border: "1px solid " + L.fieldLine, background: L.btn, alignItems: "center" } }, React.createElement(Icons.star, { size: 13, style: { color: "var(--amber)" } }), " ", React.createElement("b", { style: { color: L.ink } }, "4,9/5")),
+  React.createElement("span", { className: "row gap8", style: { fontSize: 13, color: L.sub } }, React.createElement(Icons.lock, { size: 13 }), " Connexion sécurisée")
+  )
   );
 
-  const back = (
-    <button onClick={()=>go("landing")}
-      style={{position:"absolute",top:24,left:24,zIndex:2,width:40,height:40,borderRadius:12,padding:0,border:"1px solid "+L.fieldLine,background:L.btn,color:L.ink,display:"grid",placeItems:"center"}}>
-      <Icons.arrow size={17} style={{transform:"rotate(180deg)"}}/>
-    </button>
+
+  const back =
+  React.createElement("button", { onClick: () => go("landing"),
+    style: { position: "absolute", top: 24, left: 24, zIndex: 2, width: 40, height: 40, borderRadius: 12, padding: 0, border: "1px solid " + L.fieldLine, background: L.btn, color: L.ink, display: "grid", placeItems: "center" } },
+  React.createElement(Icons.arrow, { size: 17, style: { transform: "rotate(180deg)" } })
   );
 
-  const lightBg = _AA_DARK
-    ? "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.12), transparent 60%), linear-gradient(160deg,#0B0B0D,#151319)"
-    : "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)";
 
-  if(mob){
-    const D = _AA_DARK
-      ? { card:"rgba(22,20,25,.72)", line:"rgba(255,255,255,.12)", ink:"#F6F4F1", sub:"#A7A39E", field:"#171519", btn:"#1E1B21" }
-      : { card:"rgba(255,255,255,.72)", line:"rgba(0,0,0,.12)", ink:"#141013", sub:"#5b5750", field:"#fff", btn:"#fff" };
+  const lightBg = _AA_DARK ?
+  "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.12), transparent 60%), linear-gradient(160deg,#0B0B0D,#151319)" :
+  "radial-gradient(680px 520px at 24% 12%, rgba(255,90,31,.10), transparent 60%), linear-gradient(160deg,#ffffff,#eceaf0)";
+
+  if (mob) {
+    const D = _AA_DARK ?
+    { card: "rgba(22,20,25,.72)", line: "rgba(255,255,255,.12)", ink: "#F6F4F1", sub: "#A7A39E", field: "#171519", btn: "#1E1B21" } :
+    { card: "rgba(255,255,255,.72)", line: "rgba(0,0,0,.12)", ink: "#141013", sub: "#5b5750", field: "#fff", btn: "#fff" };
     return (
-      <div style={{minHeight:"100dvh",display:"flex",flexDirection:"column",justifyContent:"center",padding:"64px 16px 28px",position:"relative",
-        background: _AA_DARK ? "radial-gradient(120% 80% at 50% 0%, #17151b, #0e0d10 55%, #0b0b0d)" : "radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)"}}>
-        <button onClick={()=>go("landing")} className="row gap8" style={{position:"absolute",top:22,left:18,zIndex:2,color:D.sub,fontSize:15,fontWeight:600,alignItems:"center"}}>
-          <Icons.arrow size={17} style={{transform:"rotate(180deg)"}}/> Retour
-        </button>
-        <div style={{background:D.card,backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",border:"1px solid "+D.line,borderRadius:26,padding:"30px 22px 26px"}}>
-          <div className="brandmark" style={{marginBottom:20,color:D.ink}}><Logo size={34}/></div>
-          <h1 className="display" style={{fontSize:34,fontWeight:800,lineHeight:1.02,color:D.ink}}>Connexion à<br/><span style={{color:D.sub}}>AvatarAds</span></h1>
-          <div className="mono" style={{fontSize:11.5,letterSpacing:".12em",color:D.sub,margin:"16px 0 20px"}}>+50 000 CRÉATEURS DÉJÀ INSCRITS</div>
+      React.createElement("div", { style: { minHeight: "100dvh", display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px 16px 28px", position: "relative",
+          background: _AA_DARK ? "radial-gradient(120% 80% at 50% 0%, #17151b, #0e0d10 55%, #0b0b0d)" : "radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)" } },
+      React.createElement("button", { onClick: () => go("landing"), className: "row gap8", style: { position: "absolute", top: 22, left: 18, zIndex: 2, color: D.sub, fontSize: 15, fontWeight: 600, alignItems: "center" } },
+      React.createElement(Icons.arrow, { size: 17, style: { transform: "rotate(180deg)" } }), " Retour"
+      ),
+      React.createElement("div", { style: { background: D.card, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid " + D.line, borderRadius: 26, padding: "30px 22px 26px" } },
+      React.createElement("div", { className: "brandmark", style: { marginBottom: 20, color: D.ink } }, React.createElement(Logo, { size: 34 })),
+      React.createElement("h1", { className: "display", style: { fontSize: 34, fontWeight: 800, lineHeight: 1.02, color: D.ink } }, "Connexion à", React.createElement("br", null), React.createElement("span", { style: { color: D.sub } }, "AvatarAds")),
+      React.createElement("div", { className: "mono", style: { fontSize: 11.5, letterSpacing: ".12em", color: D.sub, margin: "16px 0 20px" } }, "+50 000 CRÉATEURS DÉJÀ INSCRITS"),
 
-          <button className="btn" style={{width:"100%",background:"#fff",color:"#1a1a1a",fontWeight:600,fontSize:15,padding:"15px 20px",border:"1.5px solid rgba(0,0,0,.28)"}} onClick={authGoogle}>
-            <GoogleG/> Continuer avec Google
-          </button>
+      React.createElement("button", { className: "btn", style: { width: "100%", background: "#fff", color: "#1a1a1a", fontWeight: 600, fontSize: 15, padding: "15px 20px", border: "1.5px solid rgba(0,0,0,.28)" }, onClick: authGoogle },
+      React.createElement(GoogleG, null), " Continuer avec Google"
+      ),
 
-          {sent ? (
-            <div className="col" style={{gap:11,marginTop:14}}>
-              <p style={{fontSize:13.5,color:D.sub}}>Code envoyé. Entre les 6 chiffres reçus.</p>
-              <div id="otpbox" className="row" style={{gap:8}}>
-                {[0,1,2,3,4,5].map(k=>(
-                  <input key={k} maxLength={1} inputMode="numeric" style={{flex:1,height:52,textAlign:"center",fontSize:20,fontWeight:800,padding:0,borderRadius:12,border:"1px solid "+D.line,background:D.field,color:D.ink,outline:"none"}}
-                    onInput={onOtpInput} onKeyDown={onOtpKey} onPaste={onOtpPaste}/>
-                ))}
-              </div>
-              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=>authVerify([...document.querySelectorAll('#otpbox input')].map(b=>b.value).join(''))}>Entrer dans l'app <Icons.arrow size={16}/></button>
-              <button onClick={()=>setSent(false)} style={{fontSize:13,color:D.sub,fontWeight:600}}>← Changer d'email</button>
-            </div>
-          ) : (
-            <div className="col" style={{gap:11,marginTop:14}}>
-              <input type="email" placeholder="ton@email.com" value={email} onChange={e=>setEmail(e.target.value)}style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
-              {pw && (
-                <div style={{position:"relative"}}>
-                  <input type={show?"text":"password"} placeholder="••••••••" value={pwVal} onChange={e=>setPwVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")authPassword();}}style={{width:"100%",padding:"15px 18px",borderRadius:14,border:"1px solid "+D.line,background:D.field,color:D.ink,fontSize:15,outline:"none"}}/>
-                  <button onClick={()=>setShow(!show)} style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",fontSize:12,fontWeight:600,color:D.sub}}>{show?"Cacher":"Voir"}</button>
-                </div>
-              )}
-              <button className="btn btn-primary" style={{width:"100%",padding:"16px 20px",fontSize:15,fontWeight:800}} onClick={()=> pw ? authPassword() : authSend()}>
-                {pw ? "Se connecter" : "Recevoir mon code"} <Icons.arrow size={16}/>
-              </button>
-              <button onClick={()=>{setPw(!pw);setErr("");}} className="btn" style={{width:"100%",padding:"13px 20px",fontSize:13.5,background:D.field,border:"1px solid "+D.line,color:D.ink,fontWeight:600}}>
-                {pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"}
-              </button>
-            </div>
-          )}
-          {errLine}
+      sent ?
+      React.createElement("div", { className: "col", style: { gap: 11, marginTop: 14 } },
+      React.createElement("p", { style: { fontSize: 13.5, color: D.sub } }, "Code envoyé. Entre les 6 chiffres reçus."),
+      React.createElement("div", { id: "otpbox", className: "row", style: { gap: 8 } },
+      [0, 1, 2, 3, 4, 5].map((k) =>
+      React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { flex: 1, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + D.line, background: D.field, color: D.ink, outline: "none" },
+        onInput: onOtpInput, onKeyDown: onOtpKey, onPaste: onOtpPaste })
+      )
+      ),
+      React.createElement("button", { className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => authVerify([...document.querySelectorAll('#otpbox input')].map((b) => b.value).join('')) }, "Entrer dans l'app ", React.createElement(Icons.arrow, { size: 16 })),
+      React.createElement("button", { onClick: () => setSent(false), style: { fontSize: 13, color: D.sub, fontWeight: 600 } }, "← Changer d'email")
+      ) :
 
-          <p style={{fontSize:12.5,lineHeight:1.6,color:D.sub,marginTop:20}}>
-            En continuant, tu acceptes les <span style={{textDecoration:"underline"}}>Conditions</span> et la <span style={{textDecoration:"underline"}}>Confidentialité</span>.
-          </p>
-          <div className="row" style={{alignItems:"center",marginTop:18,gap:16,justifyContent:"space-between"}}>
-            <span className="row gap6" style={{padding:"6px 12px",borderRadius:999,border:"1px solid "+D.line,background:D.btn,alignItems:"center"}}><Icons.star size={13} style={{color:"var(--amber)"}}/> <b style={{color:D.ink,fontSize:13}}>4,9/5</b></span>
-            <span className="row gap8" style={{fontSize:13,color:D.sub}}><Icons.lock size={13}/> Connexion sécurisée</span>
-          </div>
-        </div>
-      </div>
-    );
+      React.createElement("div", { className: "col", style: { gap: 11, marginTop: 14 } },
+      React.createElement("input", { type: "email", placeholder: "ton@email.com", value: email, onChange: (e) => setEmail(e.target.value), style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
+      pw &&
+      React.createElement("div", { style: { position: "relative" } },
+      React.createElement("input", { type: show ? "text" : "password", placeholder: "••••••••", value: pwVal, onChange: (e) => setPwVal(e.target.value), onKeyDown: (e) => {if (e.key === "Enter") authPassword();}, style: { width: "100%", padding: "15px 18px", borderRadius: 14, border: "1px solid " + D.line, background: D.field, color: D.ink, fontSize: 15, outline: "none" } }),
+      React.createElement("button", { onClick: () => setShow(!show), style: { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, fontWeight: 600, color: D.sub } }, show ? "Cacher" : "Voir")
+      ),
+
+      React.createElement("button", { className: "btn btn-primary", style: { width: "100%", padding: "16px 20px", fontSize: 15, fontWeight: 800 }, onClick: () => pw ? authPassword() : authSend() },
+      pw ? "Se connecter" : "Recevoir mon code", " ", React.createElement(Icons.arrow, { size: 16 })
+      ),
+      React.createElement("button", { onClick: () => {setPw(!pw);setErr("");}, className: "btn", style: { width: "100%", padding: "13px 20px", fontSize: 13.5, background: D.field, border: "1px solid " + D.line, color: D.ink, fontWeight: 600 } },
+      pw ? "Recevoir un code par email" : "Je préfère entrer mon mot de passe"
+      )
+      ),
+
+      errLine,
+
+      React.createElement("p", { style: { fontSize: 12.5, lineHeight: 1.6, color: D.sub, marginTop: 20 } }, "En continuant, tu acceptes les ",
+      React.createElement("span", { style: { textDecoration: "underline" } }, "Conditions"), " et la ", React.createElement("span", { style: { textDecoration: "underline" } }, "Confidentialité"), "."
+      ),
+      React.createElement("div", { className: "row", style: { alignItems: "center", marginTop: 18, gap: 16, justifyContent: "space-between" } },
+      React.createElement("span", { className: "row gap6", style: { padding: "6px 12px", borderRadius: 999, border: "1px solid " + D.line, background: D.btn, alignItems: "center" } }, React.createElement(Icons.star, { size: 13, style: { color: "var(--amber)" } }), " ", React.createElement("b", { style: { color: D.ink, fontSize: 13 } }, "4,9/5")),
+      React.createElement("span", { className: "row gap8", style: { fontSize: 13, color: D.sub } }, React.createElement(Icons.lock, { size: 13 }), " Connexion sécurisée")
+      )
+      )
+      ));
+
   }
 
   return (
-    <div style={{minHeight:"100vh",display:"grid",gridTemplateColumns:"1fr 1.15fr",background:lightBg}}>
-      <div style={{position:"relative",display:"grid",placeItems:"center",padding:"40px 48px"}}>
-        {back}{panel}
-      </div>
-      <div style={{padding:16}}><ShowcaseVideo/></div>
-    </div>
-  );
+    React.createElement("div", { style: { minHeight: "100vh", display: "grid", gridTemplateColumns: "1fr 1.15fr", background: lightBg } },
+    React.createElement("div", { style: { position: "relative", display: "grid", placeItems: "center", padding: "40px 48px" } },
+    back, panel
+    ),
+    React.createElement("div", { style: { padding: 16 } }, React.createElement(ShowcaseVideo, null))
+    ));
+
 }
 
 /* ── routing : retour LP = /v2.html · app = studio ── */
-function go(view){
-  if(view==="landing"){ location.href = "/"; }   // la LP (ex-v2) est désormais la page principale à la racine
-  else { location.href = "/app/"; }
+function go(view) {
+  if (view === "landing") {location.href = "/";} // la LP (ex-v2) est désormais la page principale à la racine
+  else {location.href = "/app/";}
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<Login go={go}/>);
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Login, { go: go }));
 </script>
 </body>
 </html>

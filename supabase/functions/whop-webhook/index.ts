@@ -237,18 +237,64 @@ async function neutralisePendingSub(sb: any, email: string, expiringMember: stri
   }
   return n
 }
-// Remboursement / litige : supprime TOUTES les lignes en attente de l'acheteur (e-mail ET abonnement), comme la branche
-// avec profil remet tout à zéro. Avec ou sans profil (même raison que ci-dessus). null = échec DB (fail-closed : 500).
-async function purgePendingRows(sb: any, email: string, memberId: string | null): Promise<number | null> {
-  let n = 0
-  const keys: [string, string | null][] = [['email', email || null], ['whop_member_id', memberId ? String(memberId) : null]]
-  for (const [col, val] of keys) {
-    if (!val) continue
-    const { data: gone, error } = await sb.from('pending_activations').delete().eq(col, val).select('email')
+
+// Audit 02/10 (P3) : remboursement CIBLÉ. Un remboursement / litige remettait plan free, crédits 0 et abonnement Whop à
+// null, même pour un petit pack ou pour un AUTRE abonnement (ancien abonnement après un changement de palier) : un
+// paiement valide était effacé. On identifie désormais ce qui est remboursé :
+//   • plan du payload ; à défaut, plan de l'abonnement qui porte ce membership (profil ou ligne en attente) ; à défaut,
+//     plan de l'activation signée de ce membership dans le journal webhook_events (seul endroit où un PACK laisse son
+//     plan : ni le profil ni la ligne en attente ne gardent l'identifiant d'un pack) ;
+//   • pack → seuls SES crédits sont retirés (plancher 0), une fois par paiement remboursé (verrou dans webhook_events) ;
+//   • abonnement → remise à zéro (règle du 06/09 inchangée) SEULEMENT si le membership de l'événement est celui du
+//     profil (repli sur le plan pour un profil payant sans membership enregistré, comme la résiliation). Sinon : aucun
+//     changement, alerte à Axel pour vérification à la main.
+// Lecture best-effort : '' si introuvable ou si la base ne répond pas (le remboursement retombe alors sur la règle stricte).
+async function planFromJournal(sb: any, memberId: string): Promise<string> {
+  try {
+    const since = new Date(Date.now() - 400 * 86_400_000).toISOString()
+    const { data, error } = await sb.from('webhook_events').select('body')
+      .eq('body->data->>id', memberId).gte('received_at', since).order('received_at', { ascending: false }).limit(20)
+    if (error) { console.warn('ℹ️ journal (plan du remboursement, non bloquant) :', error.message); return '' }
+    for (const e of data || []) {
+      const b = e?.body || {}; const a = String(b.action ?? b.event ?? b.type ?? '').toLowerCase()
+      if (!/membership[._](went[._]valid|activated)/.test(a)) continue
+      const p = String(b.data?.plan?.id ?? b.data?.plan_id ?? '')
+      if (p) return p
+    }
+  } catch (e) { console.warn('ℹ️ journal (plan du remboursement, non bloquant) :', (e as Error)?.message) }
+  return ''
+}
+// Lignes en attente touchées par un remboursement (achat SANS compte), lues par findPendingRows (e-mail ET membership).
+// null = échec DB (l'appelant rend 500, Whop rejoue : fail-closed, comme avant).
+//   • 'pack' : crédits du pack retirés de la ligne de l'ADRESSE de l'achat (plancher 0) ; ligne de pack seul vidée →
+//     supprimée. L'appelant ne l'utilise que sans profil (avec profil, les crédits du pack sont sur le profil).
+//   • 'abo' : supprimées seulement les lignes de CE membership (ou ligne d'abonnement sans membership enregistré et de
+//     même plan connu). Un pack seul ou un AUTRE abonnement en attente restent intacts.
+async function clawbackPendingRows(sb: any, rows: any[], email: string, memberId: string | null, refPlan: string, mode: 'pack' | 'abo'):
+    Promise<{ removed: number; reduced: number } | null> {
+  const pack = PACK_MAP[refPlan], sub = SUB_MAP[refPlan]
+  let removed = 0, reduced = 0
+  for (const pa of rows) {
+    if (mode === 'pack') {
+      if (!pack || !email || String(pa.email).toLowerCase() !== email) continue
+      const credits = Math.max(0, (pa.credits || 0) - (pack.credits || 0))
+      const img = Math.max(0, (pa.img_credits || 0) - (pack.imgCredits || 0))
+      const vide = (!pa.plan || pa.plan === 'free') && credits === 0 && img === 0
+      const { error } = vide
+        ? await sb.from('pending_activations').delete().eq('email', pa.email)
+        : await sb.from('pending_activations').update({ credits, img_credits: img }).eq('email', pa.email)
+      if (error) { console.error('❌ pending_activations (clawback pack) :', error); return null }
+      if (vide) removed++; else reduced++
+      continue
+    }
+    const memeAbo = !!(memberId && pa.whop_member_id && String(pa.whop_member_id) === String(memberId))
+    const legacy = !pa.whop_member_id && !!sub && !!pa.plan && pa.plan !== 'free' && (!pa.whop_plan_id || pa.whop_plan_id === refPlan)
+    if (!memeAbo && !legacy) continue
+    const { error } = await sb.from('pending_activations').delete().eq('email', pa.email)
     if (error) { console.error('❌ pending_activations (clawback) :', error); return null }
-    n += (gone || []).length
+    removed++
   }
-  return n
+  return { removed, reduced }
 }
 
 // Audit 02/10 (PAY-6) : toute valeur venant d'un utilisateur ou du payload est échappée avant d'entrer dans un e-mail
@@ -694,49 +740,137 @@ serve(async (req) => {
     }
   }
 
-  // ─── remboursement / litige / chargeback → clawback des crédits ──
+  // ─── remboursement / litige / chargeback → clawback CIBLÉ (Audit 02/10 P3, voir planFromJournal) ──
   else if (isClawback) {
     const profile = await findProfile()
     // Audit 02/10 : lecture en échec → 500, Whop rejoue (même raison que la résiliation).
     if (lookup.failed) return await failDb()
-    // Audit 02/10 (PAY-1) : remboursement / litige d'un achat fait SANS compte → la ligne en attente restait et
-    // handle_new_user appliquait plan + crédits à l'inscription (plan payant gardé à vie). Toutes les lignes en attente
-    // de l'acheteur (e-mail ET abonnement) sont supprimées AVANT tout autre effet, avec ou sans profil : l'adresse de
-    // l'achat peut être portée par un autre compte après un changement d'e-mail (relecture 02/10). Échec DB → 500 :
-    // Whop rejoue, la ligne ne doit pas survivre (fail-closed).
-    const removed = await purgePendingRows(sb, email, memberId)
-    if (removed === null) return await failDb()
+    const memberKey = memberId ? String(memberId) : null
+    // Audit 02/10 (PAY-1) : un achat fait SANS compte vit dans pending_activations (appliqué par handle_new_user à
+    // l'inscription). Lignes de l'acheteur (e-mail ET membership) lues et traitées AVANT tout autre effet, avec ou sans
+    // profil : l'adresse de l'achat peut être portée par un autre compte après un changement d'e-mail (relecture 02/10).
+    // Échec DB → 500 : Whop rejoue, une ligne remboursée ne doit pas survivre (fail-closed).
+    const pend = await findPendingRows(sb, email, memberKey)
+    if (pend.error) { console.error('❌ pending_activations (clawback) :', pend.error); return await failDb() }
+
+    // Audit 02/10 (P3) : CE qui est remboursé — plan du paiement ; sinon plan de l'abonnement qui porte ce membership
+    // (compte, puis ligne en attente) ; sinon activation de ce membership dans le journal (packs).
+    const profMember = profile?.whop_member_id ? String(profile.whop_member_id) : null
+    let refPlan = String(planId || ''), planSource = refPlan ? 'paiement remboursé' : ''
+    if (!refPlan && memberKey && profMember === memberKey && profile?.whop_plan_id) { refPlan = String(profile.whop_plan_id); planSource = 'abonnement du compte' }
+    if (!refPlan && memberKey) {
+      const r = pend.rows.find((x: any) => x.whop_member_id && String(x.whop_member_id) === memberKey && x.whop_plan_id)
+      if (r) { refPlan = String(r.whop_plan_id); planSource = 'abonnement en attente' }
+    }
+    if (!refPlan && memberKey) { refPlan = await planFromJournal(sb, memberKey); if (refPlan) planSource = 'activation de ce membership (journal)' }
+    const pack = PACK_MAP[refPlan]
+    const sub  = SUB_MAP[refPlan]
+    const rembourse = (pack ? `pack de ${pack.credits || 0} crédits` : sub ? `abonnement ${PLAN_LABEL[sub.plan] ?? sub.plan}` : 'achat non identifié')
+      + (refPlan ? ` (${refPlan}, d’après : ${planSource})` : '')
+
+    // Pack : retiré UNE fois par paiement remboursé (un même remboursement peut arriver par plusieurs événements :
+    // paiement remboursé, remboursement, mises à jour d'un litige). Verrou = ligne synthétique du journal (index unique sur
+    // event_id, même principe que lemonsqueezy-webhook), rendu si le retrait échoue (Whop rejoue et retire alors vraiment).
+    const payKey = String(data.payment?.id ?? data.payment_id ?? data.id ?? '').trim()
+    const packLock = pack && payKey ? `whop-clawback-pack:${payKey}` : null
+    let packDeja = false
+    if (packLock) {
+      const { error: lkErr } = await sb.from('webhook_events').insert({ event_id: packLock, body: { action: 'audit.clawback_pack', data: { payment: payKey, plan: refPlan } } })
+      if (lkErr) {
+        if (String(lkErr.code) !== '23505') { console.error('❌ verrou clawback pack :', lkErr); return await failDb() }
+        packDeja = true
+      }
+    } else if (pack) console.warn(`⚠️ Clawback pack sans identifiant de paiement (${action}) : retrait non dédoublonnable`)
+    const releasePackLock = async () => { if (packLock) { try { await sb.from('webhook_events').delete().eq('event_id', packLock) } catch (_) { /* best-effort */ } } }
+
+    // Lignes en attente : un pack n'y est retiré que SANS compte (avec compte, ses crédits sont sur le profil).
+    let removed = 0, reduced = 0
+    if (!(pack && (profile || packDeja))) {
+      const r = await clawbackPendingRows(sb, pend.rows, email, memberKey, refPlan, pack ? 'pack' : 'abo')
+      if (r === null) { await releasePackLock(); return await failDb() }
+      removed = r.removed; reduced = r.reduced
+    }
+    const pendingRows: [string, string][] = [
+      ...(removed ? [['Achats en attente supprimés', String(removed)] as [string, string]] : []),
+      ...(reduced ? [['Achats en attente réduits', String(reduced)] as [string, string]] : []),
+    ]
+    const NOTE_COMMISSIONS = ' Les commissions du filleul ne sont plus retirables ; si l’une d’elles a déjà été virée, pense à la réverser dans « Tes gains ».'
+
     if (profile) {
-      const { error: clawErr } = await sb.from('profiles').update({
-        plan: 'free', credits_remaining: 0, bought_credits: 0,
-        whop_member_id: null, whop_plan_id: null, whop_manage_url: null, whop_cancel_at_period_end: false,
-      }).eq('id', profile.id)
-      console.log(`💸 Clawback (${action}) pour ${email || profile.id} → free, crédits remis à zéro`)
-      if (!clawErr) await unmarkIgLeadPaid(sb, profile.id)   // plus compté « payant » (seulement si le profil est bien repassé free)
+      // Le remboursement concerne l'abonnement de CE compte : même membership ; ou compte payant SANS membership enregistré
+      // (ancien), abonnement remboursé connu, même plan (ou aucun plan enregistré) et membership qui n'est pas celui d'un
+      // achat en attente (règle de la résiliation). Sinon (pack, autre abonnement, identifiant absent) : pas de remise à zéro.
+      const profPaid = String(profile.plan || 'free').toLowerCase() !== 'free'
+      const memberEnAttente = !!memberKey && pend.rows.some((x: any) => String(x.whop_member_id || '') === memberKey)
+      const concerne = !pack && (
+        (!!memberKey && !!profMember && profMember === memberKey) ||
+        (!profMember && profPaid && !!sub && !memberEnAttente && (!profile.whop_plan_id || profile.whop_plan_id === refPlan)))
+      let effet: string, note: string
+      if (pack) {
+        if (packDeja) {
+          effet = 'aucun : crédits de ce pack déjà retirés (même paiement)'
+          note = 'Événement en double pour un pack déjà traité : rien n’a été retiré une deuxième fois.'
+        } else {
+          const before = profile.credits_remaining || 0
+          const after  = Math.max(0, before - (pack.credits || 0))
+          const { error: pkErr } = await sb.from('profiles').update({
+            credits_remaining: after,
+            bought_credits:    Math.min(after, Math.max(0, boughtLeft(profile) - (pack.credits || 0))),
+            img_bonus_credits: Math.max(0, (profile.img_bonus_credits || 0) - (pack.imgCredits || 0)),
+          }).eq('id', profile.id)
+          if (pkErr) { console.error('❌ Clawback pack :', pkErr); await releasePackLock(); return await failDb() }
+          console.log(`💸 Clawback pack (${action}) pour ${email || profile.id} : ${before} → ${after} crédits, plan ${profile.plan} inchangé`)
+          effet = `${before - after} crédits retirés (solde ${before} → ${after}), plan et abonnement inchangés`
+          note = 'Seuls les crédits du pack remboursé ont été retirés (plancher 0).' + NOTE_COMMISSIONS
+        }
+      } else if (concerne) {
+        const { error: clawErr } = await sb.from('profiles').update({
+          plan: 'free', credits_remaining: 0, bought_credits: 0,
+          whop_member_id: null, whop_plan_id: null, whop_manage_url: null, whop_cancel_at_period_end: false,
+        }).eq('id', profile.id)
+        console.log(`💸 Clawback (${action}) pour ${email || profile.id} → free, crédits remis à zéro`)
+        if (!clawErr) await unmarkIgLeadPaid(sb, profile.id)   // plus compté « payant » (seulement si le profil est bien repassé free)
+        effet = 'plan remis à free, crédits à zéro'
+        // Audit 02/10 : compte retrouvé par l'e-mail et sans abonnement Whop enregistré → l'abonnement remboursé peut
+        // être porté par un autre compte (adresse changée puis ancienne adresse réinscrite).
+        const parEmailSansAbo = lookup.by === 'email' && !profile.whop_member_id
+        note = 'Plan remis à free, crédits à zéro.' + NOTE_COMMISSIONS
+          + (parEmailSansAbo ? ' Ce compte a été retrouvé par l’e-mail et n’avait pas d’abonnement Whop enregistré : s’il s’agit du remboursement d’un abonnement, vérifie qu’aucun autre compte ne le porte (adresse changée) et remets-le à free à la main le cas échéant.' : '')
+      } else {
+        console.log(`ℹ️ Clawback (${action}) sans effet sur ${profile.id} : membership remboursé ${memberKey || '—'} (${refPlan || 'plan inconnu'}), abonnement du compte ${profMember || '—'} (${profile.whop_plan_id || '—'})`)
+        effet = 'aucun changement'
+        note = (memberKey
+          ? 'Ce remboursement ne concerne pas l’abonnement actif du compte (autre abonnement, ancien abonnement après un changement de palier, ou achat non identifié).'
+          : 'Le paiement remboursé ne porte pas d’identifiant d’abonnement : impossible de vérifier qu’il s’agit de l’abonnement actif du compte.')
+          + ' Vérifie dans Whop ce qui a été remboursé et ajuste le plan ou les crédits à la main si besoin.' + NOTE_COMMISSIONS
+      }
       // Audit 02/10 (PAY-3) : les commissions récentes du filleul passent en revue → plus retirables. Une commission
       // DÉJÀ virée reste à réverser À LA MAIN (l'accounting des payouts est trop sensible pour un revert automatique).
       const flagged = await flagReferralClawback(sb, profile.id, email, action)
-      if (removed) console.log(`💸 Clawback (${action}) : ${removed} ligne(s) en attente supprimée(s) pour ${email || memberId}`)
-      // Audit 02/10 : compte retrouvé par l'e-mail et sans abonnement Whop enregistré → si c'est un ABONNEMENT qui est
-      // remboursé, il peut être porté par un autre compte (adresse changée puis ancienne adresse réinscrite).
-      const parEmailSansAbo = lookup.by === 'email' && !profile.whop_member_id
+      if (removed || reduced) console.log(`💸 Clawback (${action}) : ${removed} ligne(s) en attente supprimée(s), ${reduced} réduite(s) pour ${email || memberId}`)
       await alertOwner(`⚠️ Clawback AvatarAds — ${email || profile.id}`, 'Remboursement / litige', [
         ['Événement', action], ['Membre', email || profile.id],
         ['Compte retrouvé par', lookup.by === 'abonnement' ? 'abonnement Whop' : 'e-mail'],
-        ...(removed ? [['Achats en attente supprimés', String(removed)] as [string, string]] : []),
+        ['Remboursé', rembourse],
+        ['Abonnement remboursé / abonnement du compte', `${memberKey || '—'} / ${profMember || '—'}`],
+        ['Effet sur le compte', effet],
+        ...pendingRows,
         ['Commissions de parrainage mises en revue (90 j)', flagged === null ? 'échec, à vérifier à la main' : String(flagged)],
-      ], 'Plan remis à free, crédits à zéro. Les commissions du filleul ne sont plus retirables ; si l’une d’elles a déjà été virée, pense à la réverser dans « Tes gains ».'
-        + (parEmailSansAbo ? ' Ce compte a été retrouvé par l’e-mail et n’avait pas d’abonnement Whop enregistré : s’il s’agit du remboursement d’un abonnement, vérifie qu’aucun autre compte ne le porte (adresse changée) et remets-le à free à la main le cas échéant.' : ''))
+      ], note)
     } else {
-      console.log(`ℹ️ Clawback ${action} sans profil (${email || '—'}) : ${removed} ligne(s) en attente supprimée(s)`)
+      console.log(`ℹ️ Clawback ${action} sans profil (${email || '—'}) : ${removed} ligne(s) en attente supprimée(s), ${reduced} réduite(s)`)
       const flagged = email ? await flagReferralClawback(sb, null, email, action) : 0
       await alertOwner(`⚠️ Clawback AvatarAds (sans compte) — ${email || memberId || '—'}`, 'Remboursement / litige sans compte', [
         ['Événement', action], ['E-mail Whop', email || '—'], ['Abonnement', String(memberId || '—')],
+        ['Remboursé', rembourse],
         ['Achats en attente supprimés', String(removed)],
+        ...(reduced ? [['Achats en attente réduits', String(reduced)] as [string, string]] : []),
         ['Commissions de parrainage mises en revue (90 j)', flagged === null ? 'échec, à vérifier à la main' : String(flagged)],
-      ], removed
-        ? 'Le plan et les crédits ne seront pas appliqués si cette personne crée un compte.'
-        : 'Aucun achat en attente trouvé : si cette personne a un compte sous une autre adresse, remets son plan à free à la main.')
+      ], packDeja
+        ? 'Événement en double pour un pack déjà traité : rien n’a été retiré une deuxième fois.'
+        : (removed || reduced)
+          ? 'Le plan et les crédits remboursés ne seront pas appliqués si cette personne crée un compte.'
+          : 'Aucun achat en attente concerné : si cette personne a un compte sous une autre adresse, ou si l’achat remboursé n’a pas pu être identifié, vérifie et ajuste à la main.')
     }
   }
 

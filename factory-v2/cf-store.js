@@ -33,9 +33,16 @@
  *   CF.prov    Accueil : niveau des soldes fournisseurs (provider-watch, vue utilisateur : ok / low, jamais le montant)
  *              → { state, loading, at, data: { list: [{ id, label, level, at, error, unconfirmed }] }, error } ; relu au plus
  *              toutes les 15 min. error = solde non lu / jamais lu / relevé périmé ; unconfirmed = « ok » sans readable
+ *   CF.tk      Accueil, « Comptes TikTok » (Audit 02/10, app TikTok passée en production le 03/10) : tiktok_accounts lue en
+ *              SELECT, colonnes SANS secret seulement (les seules accordées au rôle authenticated, RLS owner/dev) → { state,
+ *              loading, at, data: { fetchedAt, list: [{ openId, name, avatar, scope, refreshExp, updated, own, state,
+ *              reason, replacedAt }] }, error } ; état du jeton calculé ici (tkState) ; relue au plus toutes les 15 min,
+ *              et tout de suite après une connexion (message 'tk-oauth' de tiktok-callback.html ou popup refermée)
+ *   CF.tkOauth résultat renvoyé par tiktok-callback.html : { ok, openId, error, at }
  *   CF.refresh(opts)  { gate } relance le contrôle d'accès ; sinon ne recharge que ce qui est périmé
  *                     { igRange } fenêtre Instagram à rafraîchir si périmée ; { dmRange } période Auto-DM ;
  *                     { home: { ig, dm } } tout ce que lit l'Accueil ; { prod } l'onglet Production ; { force } ignore les 15 min
+ *                     { tk } comptes TikTok (aussi lus avec home)
  *   CF.net     journal des appels réseau faits par le store (pour vérifier « 3 appels max, puis 0 »)
  *
  * Contrôle d'accès : 1er appel = RPC factory_access(). {error:'forbidden'} ⇒ « Accès réservé ».
@@ -45,6 +52,8 @@
  * réécrit ig_accounts en prod (voulu : renouveler le token du compte, plan étape 2), et la revue QC (étape 4) :
  * qcApprove / qcRefuse / qcClassify = UPDATE de factory_qc SEULEMENT, colonnes status, refusal_reason, reviewed_at et
  * classified_at SEULEMENT (qcGuard), une ligne à la fois ; chaque écriture vérifie l'erreur ET qu'une ligne a bien changé.
+ * Audit 02/10 : « Connecter un compte TikTok » / « Reconnecter » (tkConnect) passe par le vrai OAuth TikTok ; la page
+ * n'écrit rien elle-même : tiktok_accounts est écrite par l'edge tiktok-auth (exchange, appelé par tiktok-callback.html).
  */
 (function () {
   'use strict';
@@ -64,6 +73,13 @@
   var DM_TTL_MS = 2 * 60 * 1000;           // RPC légère sur notre base : on peut relire souvent
   var PROD_TTL_MS = 2 * 60 * 1000;         // factory_* : notre base aussi
   var PROD_MAX = 2000;                     // lignes lues par table (114 briques le 25/09) ; au-delà : « liste tronquée », jamais un faux total
+  // Audit 02/10 : comptes TikTok. Passage de l'app en production = secrets Supabase remplacés le 03/10 (avant le commit
+  // 78bcb221 de 15 h 16, qui nettoie la clé collée « au passage en production ») : toute écriture de tiktok_accounts
+  // antérieure vient de l'app Sandbox ; après, un jeton Sandbox ne peut plus être renouvelé (autre client_key), donc
+  // aucune ligne Sandbox n'a un updated_at plus récent. Une ligne plus ancienne = « à reconnecter ».
+  var TK_PROD_SINCE = Date.parse('2026-10-03T15:30:00+02:00');
+  // Nos comptes TikTok par nom affiché (même liste que TK_OWN_NAMES de factory.html) : un autre nom est signalé.
+  var TK_OWN_NAMES = ['Tom|Contenu IA', 'Louis|SaaS IA', 'Axel|SaaS IA'];
 
   window.CF_READONLY = true;
 
@@ -88,7 +104,9 @@
     prod: newSlot(),
     prov: newSlot(),
     yt: newSlot(),
+    tk: newSlot(),
     oauth: null,
+    tkOauth: null,
     net: [],
     IG_RANGES: IG_RANGES.slice(),
     DM_RANGES: DM_RANGES.slice(),
@@ -110,6 +128,10 @@
     loadProd: loadProd,
     loadProviders: loadProviders,
     loadYt: loadYt,
+    loadTk: loadTk,
+    tkConnect: tkConnect,
+    TK_OWN_NAMES: TK_OWN_NAMES.slice(),
+    TK_PROD_SINCE: TK_PROD_SINCE,
     prefetch: prefetch,
     tagMedia: tagMedia,
     qcApprove: function (id) { return qcWrite('approve', id); },
@@ -147,7 +169,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.oauth = null; }
+  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.oauth = null; CF.tkOauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -1140,7 +1162,7 @@
   function pumpPrefetch() {
     if (!pre.on || pre.ep !== epoch || CF.status !== 'ready' || retryWaits > 0) return;
     for (var q = 0; q < IG_RANGES.length; q++) { if (CF.acct.ig[IG_RANGES[q]].kind === 'disconnected') { pre.queue = []; return; } }
-    for (var k in inflight) { if (inflight[k] && k !== 'accounts' && k !== 'prod' && k !== 'prov' && k.indexOf('dm:') !== 0) return; }   // une seule requête Instagram à la fois (Auto-DM, Production et soldes ne sont pas Instagram)
+    for (var k in inflight) { if (inflight[k] && k !== 'accounts' && k !== 'prod' && k !== 'prov' && k !== 'tk' && k.indexOf('dm:') !== 0) return; }   // une seule requête Instagram à la fois (Auto-DM, Production, soldes et comptes TikTok ne sont pas Instagram)
     while (pre.queue.length) {
       var r = pre.queue.shift(), S = CF.acct.ig[r];
       if (S.kind === 'disconnected') { pre.queue = []; return; }
@@ -1186,6 +1208,9 @@
       loadProd({ force: !!opts.force }), loadProviders({ force: !!opts.force }));
     // onglet Production : notre base + le rythme de publication (reels par jour sur 30 j, mêmes cases que l'Accueil)
     if (opts.prod) tasks.push(loadProd({ force: !!opts.force }), loadInsights('30j', { force: !!opts.force }), loadMedia({ force: !!opts.force }));
+    // Audit 02/10 : comptes TikTok (Accueil) ; relus d'office au retour sur la page dans les 15 min d'une connexion lancée
+    // (téléphone : la connexion TikTok s'ouvre dans un autre onglet)
+    if (opts.home || opts.tk) tasks.push(loadTk({ force: !!opts.force || (tkStarted > 0 && Date.now() - tkStarted < TK_WATCH_MS) }));
     return Promise.all(tasks);
   }
 
@@ -1242,6 +1267,146 @@
     emit('oauth');
   }
 
+  // ── Comptes TikTok (Audit 02/10 : app « AvatarAds » validée, passée en production le 03/10) ──
+  // Liste : SELECT de tiktok_accounts, colonnes SANS secret seulement (les seules que le rôle authenticated peut lire depuis
+  // la migration 20261003080000 ; la RLS ne rend les lignes qu'à l'owner / plan developer). Jamais access_token ni
+  // refresh_token (un « * » serait d'ailleurs refusé par la base). L'edge tiktok-auth?action=accounts ne renvoie pas les
+  // dates d'expiration, d'où la lecture directe. État du jeton, calculé ICI une seule fois :
+  //   reconnect  relié avant le passage en production (jeton Sandbox, refusé par l'app de production) ou autorisation
+  //              « envoi de vidéos » (video.upload) absente du scope
+  //   expired    jeton de rafraîchissement (365 j) expiré : tiktok-auth ne peut plus renouveler le jeton d'accès
+  //   valid      tiktok-auth renouvelle seul le jeton d'accès (24 h) à chaque envoi ; reason 'soon' = rafraîchissement qui
+  //              expire sous 14 jours, 'nodate' = date inconnue
+  //   replaced   ancienne connexion (Sandbox, expirée…) d'un compte reconnecté depuis (même nom affiché, ligne valide plus
+  //              récente) : la ligne reste en base (aucune suppression côté client), elle n'est plus à traiter
+  // Un jeton d'accès (expires_at) dépassé n'est PAS une alerte : freshToken le renouvelle à chaque envoi.
+  var TK_COLS = 'open_id,display_name,avatar_url,scope,expires_at,refresh_expires_at,created_at,updated_at';
+  var TK_MAX = 100;
+  var TK_SOON_MS = 14 * 864e5;
+  var TK_WATCH_MS = 15 * 60 * 1000;
+  var TK_AUTH_URL = /^https:\/\/www\.tiktok\.com\/v2\/auth\/authorize\/\?/;
+  var TK_RETURN_KEY = 'aa_tk_return';   // page à rouvrir après tiktok-callback.html (liste blanche avatarads.fr côté callback)
+  var tkStarted = 0, tkTimer = null;
+  function tkNorm(s) { return String(s || '').toLowerCase().replace(/\s*\|\s*/g, '|').replace(/\s+/g, ' ').trim(); }
+  function tkOwnRank(name) {
+    var n = tkNorm(name);
+    for (var i = 0; n && i < TK_OWN_NAMES.length; i++) { if (tkNorm(TK_OWN_NAMES[i]) === n) return i; }
+    return -1;
+  }
+  function tkOpenId(x) { return typeof x === 'string' && /^[\w.:=+\/-]{4,200}$/.test(x) ? x : null; }
+  function normTk(a) {
+    var id = tkOpenId(a && a.open_id);
+    if (!id) return null;
+    var av = str(a.avatar_url);
+    return { openId: id, name: txt(a.display_name, 80), scope: txt(a.scope, 200),
+      avatar: av && /^https:\/\//.test(av) && !/[\s"'<>\\]/.test(av) ? av.slice(0, 1500) : null,
+      accessExp: ms(a.expires_at), refreshExp: ms(a.refresh_expires_at), created: ms(a.created_at), updated: ms(a.updated_at),
+      own: tkOwnRank(a.display_name) >= 0 };
+  }
+  function tkState(a, now) {
+    if (a.updated == null || a.updated < TK_PROD_SINCE) return { state: 'reconnect', reason: 'sandbox' };
+    if (a.refreshExp != null && a.refreshExp <= now) return { state: 'expired', reason: 'refresh' };
+    if (a.scope && !/(^|[\s,])video\.upload([\s,]|$)/.test(a.scope)) return { state: 'reconnect', reason: 'scope' };
+    return { state: 'valid', reason: a.refreshExp == null ? 'nodate' : a.refreshExp - now < TK_SOON_MS ? 'soon' : null };
+  }
+  function tkList(rows, now) {
+    var L = rows.map(normTk).filter(Boolean);
+    L.forEach(function (a) { var s = tkState(a, now); a.state = s.state; a.reason = s.reason; a.replacedAt = null; });
+    L.forEach(function (a) {
+      if (a.state === 'valid' || !a.name) return;
+      var by = L.filter(function (b) { return b !== a && b.state === 'valid' && tkNorm(b.name) === tkNorm(a.name) && (b.updated || 0) > (a.updated || 0); })[0];
+      if (by) { a.state = 'replaced'; a.replacedAt = by.updated; }
+    });
+    // nos comptes d'abord (ordre TK_OWN_NAMES), puis les autres, puis les anciennes connexions remplacées ; le plus récent d'abord
+    var grp = function (a) { return a.state === 'replaced' ? 2 : a.own ? 0 : 1; };
+    return L.sort(function (x, y) {
+      var gx = grp(x), gy = grp(y);
+      if (gx !== gy) return gx - gy;
+      if (gx === 0 && tkOwnRank(x.name) !== tkOwnRank(y.name)) return tkOwnRank(x.name) - tkOwnRank(y.name);
+      return (y.updated || 0) - (x.updated || 0);
+    });
+  }
+  function loadTk(opts) {
+    var force = !!(opts && opts.force), S = CF.tk;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    // relecture forcée (retour de connexion) pendant une lecture en vol : on attend celle-ci puis on relit
+    if (inflight.tk) return force ? inflight.tk.then(function () { return loadTk({ force: true }); }) : inflight.tk;
+    if (!force && isFresh(S)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var patch;
+      logNet('rest tiktok_accounts (colonnes sans secret)');
+      try {
+        var res = await sb.from('tiktok_accounts').select(TK_COLS).order('updated_at', { ascending: false }).limit(TK_MAX);
+        var rows = restRows(res, 'tiktok_accounts');
+        patch = { state: 'ready', kind: null, error: null, data: { fetchedAt: Date.now(), list: tkList(rows, Date.now()), capped: rows.length >= TK_MAX } };
+      } catch (e) {
+        patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
+        if (e.kind && e.kind !== 'http' && e.kind !== 'error') patch.data = null;   // réseau ou 500 : liste précédente gardée, datée
+      }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.tk === p) delete inflight.tk;
+      emit('tk');
+      return S;
+    })();
+    inflight.tk = p;
+    emit('tk');
+    return p;
+  }
+  // Connecter / reconnecter (même schéma qu'igConnect) : à appeler DIRECTEMENT dans le gestionnaire de clic, la popup
+  // s'ouvre avant tout await (sinon Safari la bloque). authorize exige la session owner (state signé lié à elle) ; seule
+  // une URL d'autorisation tiktok.com est suivie. tiktok-callback.html fait l'échange avec la session du même domaine,
+  // puis prévient cette page (postMessage + BroadcastChannel 'tk-oauth') : la liste est relue.
+  function tkConnect() {
+    var w = window.open('about:blank', 'tiktok_oauth', 'width=540,height=760');
+    if (!w) return Promise.resolve({ ok: false, error: 'Popup bloquée : autorise les popups pour avatarads.fr puis réessaie.' });
+    logNet('tiktok-auth?action=authorize');
+    var fail = function (m) { try { w.close(); } catch (e) { /* rien */ } return { ok: false, error: m }; };
+    return (sb ? sb.auth.getSession() : Promise.resolve(null))
+      .then(function (r) {
+        var tok = r && r.data && r.data.session && r.data.session.access_token;
+        if (!tok) return { status: 401, d: { error: 'session absente : reconnecte-toi au tableau de bord' } };
+        return fetch(FN + 'tiktok-auth?action=authorize', { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' })
+          .then(function (resp) { return resp.json().catch(function () { return {}; }).then(function (d) { return { status: resp.status, d: d || {} }; }); });
+      })
+      .then(function (x) {
+        var u = x.d && typeof x.d.authorize_url === 'string' ? x.d.authorize_url : '';
+        if (!TK_AUTH_URL.test(u)) return fail(x.d && x.d.error ? String(x.d.error).slice(0, 200) : 'URL d’autorisation TikTok absente (HTTP ' + x.status + ')');
+        try { localStorage.setItem(TK_RETURN_KEY, JSON.stringify({ url: location.origin + location.pathname, at: Date.now() })); } catch (e) { /* navigation privée bloquée : retour par défaut vers Factory V2 */ }
+        tkStarted = Date.now();
+        w.location.href = u;
+        tkWatch(w);
+        return { ok: true };
+      })
+      .catch(function () { return fail('réseau indisponible'); });
+  }
+  // Popup refermée (ou 15 min écoulées) : on relit la liste, même si le message du callback n'est pas arrivé.
+  function tkWatch(w) {
+    if (tkTimer) clearInterval(tkTimer);
+    var t0 = Date.now();
+    tkTimer = setInterval(function () {
+      var closed = true;
+      try { closed = !!w.closed; } catch (e) { /* lien coupé par la page TikTok : traité comme fermé */ }
+      if (!closed && Date.now() - t0 < TK_WATCH_MS) return;
+      clearInterval(tkTimer); tkTimer = null;
+      setTimeout(function () { if (CF.status === 'ready') loadTk({ force: true }); }, 800);
+    }, 1000);
+  }
+  var lastTk = { key: '', t: 0 };
+  function onTkOauth(msg) {
+    if (!msg || typeof msg !== 'object' || msg.source !== 'tk-oauth') return;
+    var key = (msg.ok ? '1' : '0') + '|' + String(msg.open_id || '') + '|' + String(msg.error || '');
+    if (key === lastTk.key && Date.now() - lastTk.t < 5000) return;   // les deux canaux livrent le même message
+    lastTk = { key: key, t: Date.now() };
+    CF.tkOauth = { ok: !!msg.ok, openId: msg.ok ? tkOpenId(msg.open_id) : null,
+      error: msg.ok ? null : String(msg.error || 'connexion échouée').slice(0, 200), at: Date.now() };
+    emit('tk-oauth');
+    if (CF.status === 'ready') loadTk({ force: true });
+  }
+
   // ── connexion (mot de passe ou code, shouldCreateUser:false) ──
   async function signInPwd(email, password) {
     if (!sb) return { error: 'supabase-js indisponible' };
@@ -1284,9 +1449,13 @@
     function (r) { onSession(r && r.data && r.data.session); },
     function (e) { setStatus('error', 'Session illisible : ' + errText(e)); }
   );
-  window.addEventListener('message', function (e) { if (e.origin === location.origin) onOauth(e.data); });
+  window.addEventListener('message', function (e) { if (e.origin === location.origin) { onOauth(e.data); onTkOauth(e.data); } });
   try {
     var bc = new BroadcastChannel('ig-oauth');
     bc.onmessage = function (e) { onOauth(e.data); };
   } catch (e) { /* BroadcastChannel absent : postMessage suffit */ }
+  try {
+    var bcTk = new BroadcastChannel('tk-oauth');   // Audit 02/10 : tiktok-callback.html (le lien opener peut être coupé par TikTok)
+    bcTk.onmessage = function (e) { onTkOauth(e.data); };
+  } catch (e) { /* BroadcastChannel absent : postMessage, popup refermée ou retour sur la page */ }
 })();

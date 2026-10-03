@@ -5,6 +5,7 @@ import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
+import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Audit 02/10 : durée MESURÉE des M4A / MP4 (clean_audio, montage_ia)
 import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL, omniEditPrompt, motionControlPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
@@ -422,6 +423,16 @@ async function blocImage(url: string): Promise<Record<string, unknown> | null> {
 
 const isUnlimited = (p: Record<string, unknown>) =>
   (String(p.plan || '').toLowerCase() === 'developer') || !!p.is_owner
+// Audit 02/10 : OmniHuman (lipsync haute résolution) = Pro & Élite ou compte illimité — la règle de lipsync_video (Axel 26/09),
+// appliquée aussi au Montage IA (montage_ia, render_montage_plan). 'mix' (Omni au hook) = propriétaire seul (Axel 23/08).
+const droitOmniHuman = (p: Record<string, unknown>) => isUnlimited(p) || ['pro', 'elite'].includes(String(p.plan || '').toLowerCase())
+const modeleLipsyncAutorise = (p: Record<string, unknown>, m: unknown): boolean => {
+  const v = String(m ?? '').toLowerCase()
+  if (v === 'hedra') return true
+  if (v === 'omnihuman' || v === 'omni') return droitOmniHuman(p)   // 'omni' = alias lu par le moteur de rendu
+  if (v === 'mix') return p.is_owner === true
+  return false   // valeur inconnue : retirée (le moteur prend hedra, le défaut)
+}
 
 async function spendCredits(userId: string, n: number): Promise<number | null> {
   const { data, error } = await svc.rpc('mcp_spend_credits', { p_user: userId, p_secs: n })
@@ -3452,10 +3463,27 @@ async function isolerVoix(bytes: Uint8Array, contentType: string): Promise<Uint8
   return await nettoyerVoix(bytes, contentType, NETTOYAGE)
 }
 
-// Coût du nettoyage pour un fichier donné (~960 Ko/min en MP3 128 kbps).
-// minutes facturées : durée MESURÉE pour WAV / MP3 (audit 02/10), sinon ~960 Ko/min (MP3 128 kbit/s)
-const minutesNettoyage = (b: Uint8Array) => { const m = mesurerAudio(b); return Math.max(1, m.kind ? Math.ceil(m.sec / 60) : Math.ceil(b.length / 960_000)) }
-const coutNettoyage = (b: Uint8Array) => minutesNettoyage(b) * CLEAN_COST_PER_MIN
+// Audit 02/10 : durée MESURÉE d'un audio reçu, en secondes — WAV PCM / MP3 (mesurerAudio : copie canonique, trames comptées)
+// et M4A / MP4 / MOV (dureeMp4Octets : la plus longue des durées déclarées, pistes vues comme ffmpeg) ; la plus longue des
+// deux si les deux lectures réussissent. null = format non mesurable (AAC brut, OGG, WebM, FLAC…) : jamais la durée annoncée.
+function dureeAudioMesuree(b: Uint8Array): number | null {
+  const m = mesurerAudio(b), mp4 = dureeMp4Octets(b)
+  if (!m.kind && mp4 === null) return null
+  return Math.max(m.kind ? m.sec : 0, mp4 ?? 0)
+}
+// Audit 02/10 : au-delà de ces tailles, un format non mesurable est refusé (sa durée ne serait qu'une estimation) —
+// nettoyage : 1,2 Mo ≈ 10 min à 16 kbit/s (voix Opus / AAC-HE), ~75 s à 128 kbit/s : la limite de 10 min ne se dépasse plus
+// qu'en dessous de 16 kbit/s ; Montage IA : 3 Mo (l'estimation sur la taille borne déjà à ~90 s × 128 kbit/s ≈ 1,4 Mo).
+const CLEAN_NON_MESURE_MAX = 1_200_000
+const MONTAGE_NON_MESURE_MAX = 3_000_000
+const CLEAN_MAX_SEC = 10 * 60   // limite annoncée de clean_audio (10 min), sur la durée MESURÉE
+
+// Coût du nettoyage pour un fichier donné.
+// minutes facturées : durée MESURÉE pour WAV / MP3 / M4A / MP4 (audit 02/10 ; 0,5 s de tolérance en faveur du client : retard
+// d'encodeur AAC), sinon ~960 Ko/min (MP3 128 kbit/s). `sec` déjà mesuré : passé tel quel (null = non mesurable).
+const minutesNettoyage = (b: Uint8Array, sec: number | null = dureeAudioMesuree(b)) =>
+  Math.max(1, sec !== null ? Math.ceil(Math.max(0, sec - 0.5) / 60) : Math.ceil(b.length / 960_000))
+const coutNettoyage = (b: Uint8Array, sec: number | null = dureeAudioMesuree(b)) => minutesNettoyage(b, sec) * CLEAN_COST_PER_MIN
 
 async function runCleanAudio(profile: Record<string, unknown>, args: Record<string, unknown>, ctx: ToolCtx): Promise<ToolContent> {
   if (!nettoyageDisponible(NETTOYAGE)) return toolErr('Nettoyage audio indisponible (configuration serveur incomplète).')
@@ -3465,8 +3493,16 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
   if (typeof got === 'string') return toolErr(got)
 
   // Durée MESURÉE quand on sait la lire (WAV PCM, MP3 : trames comptées) — audit 02/10 : estimée sur la taille, un MP3 de
-  // 10 min à 16 kbit/s coûtait 2 crédits au lieu de 10. Autres formats (m4a, mp4…) : estimation sur la taille, comme avant.
-  const estMin = minutesNettoyage(got.bytes)
+  // 10 min à 16 kbit/s coûtait 2 crédits au lieu de 10. Audit 02/10 : M4A / MP4 mesurés aussi (dureeMp4Octets) ; un format
+  // non mesurable n'est accepté que petit (estimation sur la taille, comme avant) ; la limite de 10 min est appliquée.
+  const mesSec = dureeAudioMesuree(got.bytes)
+  if (mesSec === null && got.bytes.length > CLEAN_NON_MESURE_MAX) {
+    return toolErr(`Format audio non pris en charge au-delà de ${(CLEAN_NON_MESURE_MAX / 1_000_000).toFixed(1).replace('.', ',')} Mo : sa durée ne peut pas être mesurée. Envoie un MP3, un WAV ou un M4A. Aucun crédit débité.`)
+  }
+  if (mesSec !== null && mesSec > CLEAN_MAX_SEC + 0.5) {
+    return toolErr(`Audio trop long (~${Math.ceil(mesSec / 60)} min) : le nettoyage accepte 10 minutes d'audio au plus. Découpe-le puis relance. Aucun crédit débité.`)
+  }
+  const estMin = minutesNettoyage(got.bytes, mesSec)
   const cost = estMin * CLEAN_COST_PER_MIN
   const userId = String(profile.id)
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
@@ -3522,6 +3558,12 @@ async function runLipsyncVideo(profile: Record<string, unknown>, args: Record<st
   if (engine === 'omnihuman' && !FAL_KEY && !omniKieOn()) return toolErr('OmniHuman indisponible (configuration serveur incomplète).')
   // Axel 26/09 : OmniHuman réservé aux plans Pro et Élite (jamais Starter), comme l'app et KIE_OPEN
   if (engine === 'omnihuman' && !isUnlimited(profile) && !['pro', 'elite'].includes(String(profile.plan || '').toLowerCase())) return toolErr(`OmniHuman est réservé aux plans Pro et Élite. Relance sans engine (Hedra, par défaut) ou passe à Pro sur ${APP_URL}. Aucun crédit débité.`)
+  // Audit 02/10 : minimax-h3 / kling-ai-avatar-v2 (« Interne » dans le schéma : comparaisons de qualité) = compte propriétaire
+  // seul, comme `prompt`. Au tarif unique de 2 cr/s, minimax générait 5 s au minimum (un segment de 1 s payait 2 crédits) et
+  // coupait au-delà de 15 s ; Kling Avatar a été écarté (qualité). Aucun appel client légitime : refus net, avant tout débit.
+  if (engine === 'hedra' && /^(minimax|kling)/.test(String(args.model || '')) && profile.is_owner !== true) {
+    return toolErr('Ce modèle de lipsync est réservé aux tests internes. Relance sans le paramètre model (lipsync standard, le défaut). Aucun crédit débité.')
+  }
   // fal refuse une image de plus de 5 Mo (file_too_large) : refus clair AVANT tout débit (un portrait 1152x2048 en PNG
   // peut dépasser cette limite ; Hedra, le moteur par défaut, l'accepte).
   if (engine === 'omnihuman' && img.bytes.length > 5_000_000) return toolErr(`OmniHuman refuse les images de plus de 5 Mo (celle-ci fait ${(img.bytes.length / 1_000_000).toFixed(1)} Mo) : relance sans engine (Hedra, par défaut) ou avec une image plus légère. Aucun crédit débité.`)
@@ -3803,12 +3845,36 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     medias.push({ id, name: nom, kind: /^video\//.test(f.contentType) ? 'video' : 'image', bytes: f.bytes, contentType: f.contentType,
       thumb: await miniature(f.bytes, f.contentType) })
   }
-  const durRaw = Number(args.duration_seconds) > 0 ? Number(args.duration_seconds) : estimateAudioSeconds(got.bytes, got.contentType)
+  // Audit 02/10 : durée MESURÉE (WAV / MP3 / M4A / MP4, dureeAudioMesuree). duration_seconds de l'appelant ne la remplace
+  // plus (« 30 » faisait passer un audio de 20 min sous le plafond de 90 s) : il ne compte que s'il est plus LONG. Format non
+  // mesurable : refusé au-delà de 3 Mo, sinon estimé sur la taille, jamais sous 16 Ko/s (un en-tête WAV forgé ne la baisse plus).
+  const mesSec = dureeAudioMesuree(got.bytes)
+  if (mesSec === null && got.bytes.length > MONTAGE_NON_MESURE_MAX) {
+    return toolErr(`Format audio non pris en charge au-delà de ${MONTAGE_NON_MESURE_MAX / 1_000_000} Mo : sa durée ne peut pas être mesurée. Envoie un WAV, un MP3 ou un M4A. Aucun crédit débité.`)
+  }
+  const durAnnoncee = Number(args.duration_seconds)
+  const durRaw = Math.max(
+    mesSec ?? Math.max(estimateAudioSeconds(got.bytes, got.contentType), got.bytes.length / 16_000),
+    Number.isFinite(durAnnoncee) && durAnnoncee > 0 ? durAnnoncee : 0)
   // format court assumé : au-delà de 90 s le montage perd son rythme (et coûte cher à rendre)
   if (durRaw > 90.5) {
-    return toolErr(`Audio trop long (~${Math.round(durRaw)} s) : le Montage IA accepte 90 secondes maximum. Raccourcis l'audio (ou découpe-le en plusieurs vidéos courtes) puis relance.`)
+    return toolErr(`Audio trop long (~${Math.round(durRaw)} s${mesSec === null ? ', estimé d\'après la taille du fichier' : ''}) : le Montage IA accepte 90 secondes maximum. Raccourcis l'audio (ou découpe-le en plusieurs vidéos courtes) puis relance.${mesSec === null ? ' Pour une durée exacte, envoie un WAV, un MP3 ou un M4A.' : ''}`)
   }
   const durEst = Math.max(5, durRaw)
+  // ── LE MODÈLE DU LIPSYNC, DÉCIDÉ AVANT LE DÉBIT ─────────────────────────────
+  // modèle du lipsync (23/08) : hedra (défaut) | omnihuman | mix — param OU marqueur de brief ([OMNI] / [MIX]), pour les
+  // mêmes raisons de schéma en cache que [LIPSYNC] (voir plus bas). Audit 02/10 : aux droits du compte (modeleLipsyncAutorise)
+  // — 'omnihuman' passait pour un Starter alors que lipsync_video le réserve à Pro / Élite ; MIX (Omni au hook + Hedra
+  // ensuite) = propriétaire seul (Axel 23/08). Non autorisé ou inconnu → hedra, et la réponse le dit.
+  const veutLipsync = args.lipsync === true || /\[LIPSYNC\]/i.test(brief)
+  let modeleLip = String(args.lipsync_model || (/\[MIX\]/i.test(brief) ? 'mix' : /\[OMNI\]/i.test(brief) ? 'omnihuman' : 'hedra')).toLowerCase()
+  let lipRepli = ''
+  if (!modeleLipsyncAutorise(profile, modeleLip)) {
+    console.log(`▶ lipsync : modèle ${modeleLip.slice(0, 20)} non autorisé pour ce compte → repli hedra`)
+    if (veutLipsync && (modeleLip === 'omnihuman' || modeleLip === 'omni')) lipRepli = `Lipsync haute résolution réservé aux plans Pro et Élite : le visage parle en lipsync standard (${LIPSYNC_COST_SEC} crédits/s).`
+    else if (veutLipsync && modeleLip === 'mix') lipRepli = `Mode mix indisponible sur ce compte : le visage parle en lipsync standard (${LIPSYNC_COST_SEC} crédits/s).`
+    modeleLip = 'hedra'
+  }
   // ── ON NETTOIE AVANT TOUT, TOUJOURS ─────────────────────────────────────────
   // Règle d'Axel (02/08), après un montage rendu sur une prise brute : « ajoute
   // la règle par défaut de nettoyer chaque audio avant toute chose ». Une voix
@@ -3819,7 +3885,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   // silencieux), et `clean_audio: false` reste possible pour un audio déjà
   // traité — renettoyer un fichier propre ne l'améliore pas.
   const nettoyer = args.clean_audio !== false
-  const coutClean = nettoyer ? coutNettoyage(got.bytes) : 0
+  const coutClean = nettoyer ? coutNettoyage(got.bytes, mesSec) : 0   // durée déjà mesurée (audit 02/10)
   const cost = MONTAGE_PLAN_COST + MONTAGE_RENDER_COST + coutClean
   const userId = String(profile.id)
 
@@ -3944,13 +4010,8 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       // silence. Un marqueur dans le brief passe partout, quel que soit l'âge du
       // schéma côté client. Ceinture et bretelles, pour une option qui coûte des
       // crédits : mieux vaut deux chemins qu'un qui échoue sans le dire.
-      const veutLipsync = args.lipsync === true || /\[LIPSYNC\]/i.test(brief)
+      // (veutLipsync et modeleLip : décidés avant le débit, aux droits du compte — audit 02/10)
       if (veutLipsync) (plan as Record<string, unknown>).__lipsync = true
-      // modèle du lipsync (23/08) : hedra (défaut) | omnihuman | mix — param OU marqueur de brief
-      // ([OMNI] / [MIX]), pour les mêmes raisons de schéma en cache que [LIPSYNC].
-      let modeleLip = String(args.lipsync_model || (/\[MIX\]/i.test(brief) ? 'mix' : /\[OMNI\]/i.test(brief) ? 'omnihuman' : 'hedra')).toLowerCase()
-      // MIX (Omni au hook + Hedra ensuite) = compte DEV/owner UNIQUEMENT pour le moment (Axel 23/08).
-      if (modeleLip === 'mix' && profile.is_owner !== true) { modeleLip = 'hedra'; console.log('▶ lipsync : mode mix réservé au compte dev → repli hedra') }
       if (veutLipsync && modeleLip !== 'hedra') { (plan as Record<string, unknown>).lipsyncModel = modeleLip; console.log(`▶ lipsync : modèle ${modeleLip}`) }
       console.log(`▶ lipsync demandé : ${veutLipsync} (param ${args.lipsync}, brief ${/\[LIPSYNC\]/i.test(brief)})`)
 
@@ -3986,7 +4047,7 @@ Le chef d'orchestre transcrit et prépare le plan (~2 min), puis le moteur rend 
 Appelle check_montage avec ce job_id dans environ 2 minutes.
 ${nettoyer
   ? `La voix est nettoyée avant le montage (bruit de fond, souffle, clics — −${coutClean} cr sur le total). Si ton audio est DÉJÀ traité, passe clean_audio: false — le renettoyer ne l'améliore pas.`
-  : `Attention : audio monté TEL QUEL, à ta demande (clean_audio: false). Si le rendu sonne sale, relance sans ce paramètre.`}
+  : `Attention : audio monté TEL QUEL, à ta demande (clean_audio: false). Si le rendu sonne sale, relance sans ce paramètre.`}${lipRepli ? '\n' + lipRepli : ''}
 Une fois prêt : get_montage_plan → ajuste le plan → render_montage_plan pour une variante.`)
 }
 
@@ -4124,6 +4185,16 @@ async function runRenderMontagePlan(profile: Record<string, unknown>, args: Reco
     // jamais de l'appelant, userAudioVol borné (interpolé dans un filtre ffmpeg)
     nettoyerSonUtilisateur(userId, pl)
     const d = Number(pl.duration); if (Number.isFinite(d)) pl.duration = d
+    // Audit 02/10 : modèle du lipsync aux droits du compte (modeleLipsyncAutorise), celui du plan ET les surcharges par fenêtre
+    // (avatarSegments[].lipsyncModel, qu'aucun écran ne pose) : 'omnihuman' passait pour un Starter, 'mix' pour tous. Non
+    // autorisé → retiré (le moteur prend hedra, le défaut ; il revérifie aussi les droits du compte du job).
+    if (pl.lipsyncModel !== undefined && !modeleLipsyncAutorise(profile, pl.lipsyncModel)) delete pl.lipsyncModel
+    if (Array.isArray(pl.avatarSegments)) {
+      for (const w of pl.avatarSegments as unknown[]) {
+        const f = w as Record<string, unknown> | null
+        if (f && typeof f === 'object' && f.lipsyncModel !== undefined && !modeleLipsyncAutorise(profile, f.lipsyncModel)) delete f.lipsyncModel
+      }
+    }
   }
 
   const cost = MONTAGE_RENDER_COST

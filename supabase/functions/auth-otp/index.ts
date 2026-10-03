@@ -17,6 +17,18 @@ import { rateHit, realIp, timingSafeEqual, tokenRole } from '../_shared/guard.ts
 //   POST { action:'email_change_verify', new_email, code }  → auth.admin.updateUserById(email, email_confirm) puis
 //     e-mail d'information à l'ANCIENNE adresse. Remplace sb.auth.updateUser({ email }) (confirmation Supabase active,
 //     aucun SMTP configuré dans Supabase → plus aucun lien n'arrivait). Codes dans email_change_codes (≠ otp_codes).
+//
+// Audit 02/10 (P3) : changement de MOT DE PASSE (Mon compte), SESSION EXIGÉE. La revérification de l'identité n'existait
+// que côté client (ancien mot de passe relu par l'app, puis sb.auth.updateUser({ password }) : appel que la seule session
+// suffit à faire). Désormais :
+//   POST { action:'password_change_send' }                   → code 6 chiffres envoyé à l'adresse DU COMPTE (Resend)
+//   POST { action:'password_change_verify', code, password } → code vérifié → autorisation à usage unique
+//     (password_change_grants) → auth.admin.updateUserById(password) → e-mail d'information au compte.
+//     Réponse { ok:true, email } : le serveur Auth ferme TOUTES les sessions du compte, l'app se reconnecte avec le
+//     nouveau mot de passe. En base, tout changement de mot de passe sans autorisation est ignoré (trigger
+//     guard_password_change, migration 20261003100000). Codes dans password_change_codes.
+// Audit 02/10 (P3) : connexion par code — plafond QUOTIDIEN d'envoi par e-mail, et compteur de vérifications par couple
+// (e-mail, IP) : un tiers ne peut plus bloquer à lui seul la connexion d'une victime en épuisant son compteur.
 
 const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -28,6 +40,17 @@ const COOLDOWN_S       = 30   // délai mini entre deux envois pour un même e-m
 const MAX_PER_EMAIL_H  = 6    // codes par e-mail et par heure
 const MAX_PER_IP_H     = 30   // codes par IP et par heure
 const MAX_ATTEMPTS     = 5    // essais de vérification par code
+// Audit 02/10 (P3) : anti bombardement d'une boîte (6 / h laissait 144 codes / jour) et vérifications par couple.
+const MAX_PER_EMAIL_DAY      = 15   // codes de connexion par e-mail sur 24 h glissantes
+const VERIFY_WIN_S           = 600  // fenêtre des compteurs de vérification (10 min)
+const MAX_VERIFY_EMAIL_IP    = 12   // vérifications par couple (e-mail, IP) — l'ancien plafond par e-mail seul
+const MAX_VERIFY_EMAIL       = 60   // plafond GLOBAL par e-mail, toutes IP confondues (5 IP saturées pour l'atteindre)
+const MAX_VERIFY_IP          = 40   // vérifications par IP, tous e-mails confondus (inchangé)
+// Audit 02/10 (P3) : changement de mot de passe — même validité / cooldown / essais que la connexion.
+const PWD_MAX_PER_USER_H = 5    // codes de changement de mot de passe par compte et par heure
+const PWD_MIN_LEN        = 8    // comme l'app (Mon compte)
+const PWD_MAX_BYTES      = 72   // limite de bcrypt (GoTrue refuse au-delà)
+const PWD_GRANT_TTL_S    = 120  // durée de l'autorisation serveur posée juste avant updateUserById
 // Audit 02/10 : changement d'adresse — même validité / cooldown / essais que la connexion (constantes ci-dessus).
 const CHG_MAX_PER_USER_H = 5  // codes de changement par compte et par heure
 const CHG_MAX_PER_DEST_H = 5  // codes de changement par adresse cible et par heure
@@ -263,6 +286,133 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
   return json(200, { ok: true, email: newEmail })
 }
 
+// ── Audit 02/10 (P3) : CHANGEMENT DE MOT DE PASSE ──
+// Preuve d'identité = code reçu à l'adresse DU COMPTE (lue dans la session vérifiée, jamais fournie par le client).
+// Même mécanique que le changement d'adresse (cooldown, plafonds, essais atomiques, usage unique conditionnel).
+function passwordCodeEmail(code: string): string {
+  return mailLayout('Ton code pour changer de mot de passe', `<div style="font-size:15px;color:#44403c;line-height:1.65">Entre ce code dans Mon compte sur AvatarAds pour enregistrer ton nouveau mot de passe :</div>
+      <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:20px 8px;margin-top:20px;text-align:center;white-space:nowrap;font-size:30px;font-weight:800;letter-spacing:8px;color:#111;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${code}</div>
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Ce code expire dans ${CODE_TTL_MIN} minutes et ne peut être utilisé qu'une fois.<br>Si tu n'es pas à l'origine de cette demande, ignore cet e-mail : ton mot de passe ne change pas. Par prudence, déconnecte-toi des appareils que tu ne reconnais pas.</div>`)
+}
+
+function passwordChangedNotice(): string {
+  return mailLayout('Ton mot de passe a été modifié', `<div style="font-size:15px;color:#44403c;line-height:1.65">Le mot de passe de ton compte AvatarAds vient d'être modifié depuis Mon compte. Toutes les sessions ouvertes ont été déconnectées.</div>
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Si ce n'est pas toi, connecte-toi tout de suite par code e-mail, change ton mot de passe et écris-nous à <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a>.</div>`)
+}
+
+// Hash lié au compte : un code de changement de mot de passe ne vaut ni pour une connexion, ni pour un changement d'adresse.
+const pwdHash = (userId: string, code: string) => hashCode(`pwd:${userId}`, code)
+
+async function passwordChange(req: Request, body: Record<string, unknown>, action: string): Promise<Response> {
+  const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+  const user = await sessionUser(sb, req)
+  if (!user) return json(401, { error: 'unauthorized' })
+  // Compte sans adresse exploitable (ne devrait pas exister : comptes nés par code ou par Google) → pas de preuve possible.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(user.email) || user.email.length > 254) return json(400, { error: 'invalid_email' })
+  const purgeOld = () => sb.from('password_change_codes').delete().lt('created_at', new Date(Date.now() - 86_400_000).toISOString())
+
+  // ── ENVOI D'UN CODE À L'ADRESSE DU COMPTE ──
+  if (action === 'password_change_send') {
+    if (!RESEND_API_KEY) return json(503, { error: 'email_unavailable' })
+    const hourAgo = new Date(Date.now() - 3600_000).toISOString()
+    const { data: recent } = await sb.from('password_change_codes').select('created_at')
+      .eq('user_id', user.id).gte('created_at', hourAgo).order('created_at', { ascending: false }).limit(1)
+    if (recent && recent.length) {
+      const waitS = Math.ceil((new Date(recent[0].created_at).getTime() + COOLDOWN_S * 1000 - Date.now()) / 1000)
+      if (waitS > 0) return json(429, { error: 'cooldown', wait: waitS })
+    }
+    const ip = realIp(req)
+    if (ip && !(await rateHit(`pwdchg:send:ip:${ip}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`pwdchg:send:user:${user.id}`, 3600, PWD_MAX_PER_USER_H))) return json(429, { error: 'too_many_codes' })
+
+    // Un seul code vivant par compte : les précédents (non utilisés) sont supprimés.
+    await sb.from('password_change_codes').delete().eq('user_id', user.id).is('used_at', null)
+    const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000))
+    const { data: ins, error: insErr } = await sb.from('password_change_codes').insert({
+      user_id: user.id, code_hash: await pwdHash(user.id, code),
+      expires_at: new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString(),
+    }).select('id').single()
+    if (insErr || !ins) return json(500, { error: 'server_error' })
+
+    const sent = await sendMail(user.email, `${code} — ton code pour changer de mot de passe AvatarAds`, passwordCodeEmail(code))
+    if (!sent) {
+      await sb.from('password_change_codes').delete().eq('id', ins.id)
+      return json(502, { error: 'send_failed' })
+    }
+    try { await purgeOld() } catch { /* ménage best-effort */ }
+    return json(200, { ok: true })
+  }
+
+  // ── VÉRIFICATION DU CODE PUIS NOUVEAU MOT DE PASSE ──
+  const code = String(body.code ?? '').trim()
+  const password = typeof body.password === 'string' ? body.password : ''
+  if (!/^\d{6}$/.test(code)) return json(400, { error: 'wrong_code' })
+  if (password.length < PWD_MIN_LEN) return json(400, { error: 'weak_password', reasons: ['length'] })
+  if (new TextEncoder().encode(password).length > PWD_MAX_BYTES) return json(400, { error: 'password_too_long' })
+
+  const vip = realIp(req)
+  if (vip && !(await rateHit(`pwdchg:verify:ip:${vip}`, VERIFY_WIN_S, MAX_VERIFY_IP))) return json(400, { error: 'too_many_attempts' })
+  if (!(await rateHit(`pwdchg:verify:user:${user.id}`, VERIFY_WIN_S, 12))) return json(400, { error: 'too_many_attempts' })   // comme le changement d'adresse
+
+  const nowIso = new Date().toISOString()
+  const { data: row, error: rowErr } = await sb.from('password_change_codes').select('id, code_hash')
+    .eq('user_id', user.id).is('used_at', null).gt('expires_at', nowIso)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (rowErr) return json(500, { error: 'server_error' })
+  if (!row) return json(400, { error: 'expired' })
+
+  // Essai consommé ATOMIQUEMENT avant la comparaison (même modèle qu'email_change_take_attempt).
+  const { data: att, error: attErr } = await sb.rpc('password_change_take_attempt', { p_id: row.id, p_user: user.id, p_max: MAX_ATTEMPTS })
+  if (attErr) return json(500, { error: 'server_error' })
+  if (att === null || att === undefined) {
+    await sb.from('password_change_codes').delete().eq('id', row.id)   // plafond atteint → le code est brûlé
+    return json(400, { error: 'too_many_attempts' })
+  }
+  if (!timingSafeEqual(String(row.code_hash), await pwdHash(user.id, code))) {
+    const left = MAX_ATTEMPTS - Number(att)
+    if (left <= 0) { await sb.from('password_change_codes').delete().eq('id', row.id); return json(400, { error: 'too_many_attempts' }) }
+    return json(400, { error: 'wrong_code', remaining: left })
+  }
+
+  // Code correct → réservé CONDITIONNELLEMENT (un seul gagnant sous concurrence). Rendu si le mot de passe est refusé
+  // (trop simple, fuite connue…) : le client corrige sans redemander de code ; les essais restent comptés.
+  const { data: used } = await sb.from('password_change_codes').update({ used_at: nowIso }).eq('id', row.id).is('used_at', null).select('id')
+  if (!used || !used.length) return json(400, { error: 'expired' })
+  const release = async () => { try { await sb.from('password_change_codes').update({ used_at: null }).eq('id', row.id) } catch { /* best-effort */ } }
+
+  // Autorisation à usage unique lue par le trigger guard_password_change : sans elle, la base garde l'ancien mot de passe.
+  const { error: gErr } = await sb.from('password_change_grants').upsert(
+    { user_id: user.id, expires_at: new Date(Date.now() + PWD_GRANT_TTL_S * 1000).toISOString() }, { onConflict: 'user_id' })
+  if (gErr) { await release(); console.error('password_change grant:', gErr.message); return json(500, { error: 'server_error' }) }
+
+  const { error: upErr } = await sb.auth.admin.updateUserById(user.id, { password })
+  // Autorisation encore là = le trigger ne l'a pas consommée = mot de passe NON appliqué (ou état inconnu si la lecture échoue).
+  const { data: left, error: leftErr } = await sb.from('password_change_grants').delete().eq('user_id', user.id).select('user_id')
+  if (upErr) {
+    await release()
+    const e = upErr as { code?: string; message?: string; reasons?: string[] }
+    if (/longer than|too long/i.test(e.message || '')) return json(400, { error: 'password_too_long' })
+    if (e.code === 'weak_password' || /weak|pwned|leaked|at least|characters/i.test(e.message || '')) {
+      return json(400, { error: 'weak_password', reasons: Array.isArray(e.reasons) ? e.reasons.slice(0, 3) : [] })
+    }
+    console.error('password_change updateUserById:', e.code || '', e.message || '')
+    return json(500, { error: 'server_error' })
+  }
+  if (leftErr || (left && left.length)) {
+    await release()
+    console.error('password_change : autorisation non consommée par guard_password_change' + (leftErr ? ` (${leftErr.message})` : ''))
+    return json(500, { error: 'server_error' })
+  }
+
+  // Information au compte (best-effort : le changement est fait, un échec d'envoi ne le défait pas).
+  try {
+    const ok = await sendMail(user.email, 'Ton mot de passe AvatarAds a été modifié', passwordChangedNotice())
+    if (!ok) console.warn('password_change : e-mail d\'information non parti')
+  } catch { /* best-effort */ }
+  try { await purgeOld() } catch { /* ménage best-effort */ }
+  return json(200, { ok: true, email: user.email })
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
@@ -274,6 +424,8 @@ serve(async (req) => {
   // Audit 02/10 : changement d'adresse (contrat C1) — aiguillé AVANT la validation de `email` (ces actions portent
   // `new_email` + une session) ; send / verify ci-dessous restent strictement inchangés.
   if (action === 'email_change_send' || action === 'email_change_verify') return await emailChange(req, body, action)
+  // Audit 02/10 (P3) : changement de mot de passe (session exigée, aucun `email` dans la requête : l'adresse est celle du compte).
+  if (action === 'password_change_send' || action === 'password_change_verify') return await passwordChange(req, body, action)
   const email = (body.email || '').trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) return json(400, { error: 'invalid_email' })
 
@@ -304,8 +456,11 @@ serve(async (req) => {
     // IP réelle = DERNIER segment de x-forwarded-for (le premier est forgeable par le client — L2)
     const ip = realIp(req) || null
     // Plafonds horaires AUTORITAIRES sur rate_events (non réinitialisables via une suppression d'otp_codes) :
-    if (!(await rateHit(`otp:send:email:${email}`, 3600, MAX_PER_EMAIL_H))) return json(429, { error: 'too_many_codes' })
+    // Audit 02/10 (P3) : l'IP d'abord — une demande refusée pour son IP n'entame plus les compteurs de l'adresse visée.
+    // Puis l'heure, puis le jour (24 h glissantes) : une demande refusée par l'heure ne compte pas dans le jour.
     if (ip && !(await rateHit(`otp:send:ip:${ip}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`otp:send:email:${email}`, 3600, MAX_PER_EMAIL_H))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`otp:send:email:day:${email}`, 86_400, MAX_PER_EMAIL_DAY))) return json(429, { error: 'too_many_codes' })
 
     // NB : on ne supprime pas les anciens codes ici — verify ne lit que le plus
     // récent (les précédents sont donc invalidés de fait) et les garder permet
@@ -332,9 +487,15 @@ serve(async (req) => {
 
     // ── Anti brute-force (H1) : plafond de vérifications INDÉPENDANT du compteur par code — par e-mail
     //    et par IP réelle — avant même de lire le code.
+    // Audit 02/10 (P3) : le compteur par e-mail SEUL (12 / 10 min) était partagé avec n'importe qui → 12 essais bidon
+    //    depuis une seule IP bloquaient la connexion par code de la victime. Désormais : IP (tous e-mails), puis couple
+    //    (e-mail, IP) au même plafond de 12, puis plafond GLOBAL par e-mail plus large (60) contre un essai distribué.
+    //    Ordre voulu : un essai refusé pour son IP ou son couple n'entame pas le plafond global de l'adresse. Le
+    //    brute-force reste borné en amont par code (5 essais, otp_take_attempt) et par les plafonds d'envoi.
     const vip = realIp(req)
-    if (!(await rateHit(`otp:verify:email:${email}`, 600, 12))) return json(429, { error: 'too_many_attempts' })
-    if (vip && !(await rateHit(`otp:verify:ip:${vip}`, 600, 40))) return json(429, { error: 'too_many_attempts' })
+    if (vip && !(await rateHit(`otp:verify:ip:${vip}`, VERIFY_WIN_S, MAX_VERIFY_IP))) return json(429, { error: 'too_many_attempts' })
+    if (!(await rateHit(`otp:verify:email-ip:${email}|${vip || '-'}`, VERIFY_WIN_S, MAX_VERIFY_EMAIL_IP))) return json(429, { error: 'too_many_attempts' })
+    if (!(await rateHit(`otp:verify:email:${email}`, VERIFY_WIN_S, MAX_VERIFY_EMAIL))) return json(429, { error: 'too_many_attempts' })
 
     const { data: row } = await sb.from('otp_codes').select('*')
       .eq('email', email).is('used_at', null).gt('expires_at', nowIso)

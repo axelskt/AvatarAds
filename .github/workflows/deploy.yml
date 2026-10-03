@@ -32,18 +32,93 @@ jobs:
       # sur un site web. Un artefact de cette taille finit par échouer côté service
       # d'artefacts (run #451 : « Upload artifact » en erreur, le même contenu étant
       # passé au run précédent). On assemble donc un `_site/` avec ce qui est
-      # réellement servi : trois fois plus léger, et plus rien qui traîne en public.
+      # réellement servi : trois fois plus léger, et plus rien d'interne sur avatarads.fr.
+      # Audit 02/10 : LISTE BLANCHE. La liste d'exclusions laissait passer tout le reste
+      # (usine/ et ses briefs, Dockerfile.factory, notes .md, .gitignore, .railwayignore,
+      # landing_old.html, promo.html…). On ne publie plus sur avatarads.fr que ce que le site
+      # sert : un fichier ou dossier nouveau n'y apparaît pas tant qu'il n'est pas ajouté ici.
+      # ATTENTION : le dépôt GitHub axelskt/AvatarAds est PUBLIC. Tout fichier commité, publié
+      # ici ou non, reste lisible par tous sur github.com et raw.githubusercontent.com : n'y
+      # mettre ni secret ni donnée personnelle. rsync applique la PREMIÈRE règle qui correspond :
+      # l'ordre compte.
       - name: Assembler le site
         run: |
           mkdir -p _site
-          rsync -a --exclude='.git' --exclude='.github' --exclude='_site' \
-                --exclude='render-worker' --exclude='supabase' --exclude='tools' \
-                --exclude='.agents' --exclude='.claude' --exclude='.anim-check' \
-                --exclude='clips' --exclude='Musique' --exclude='stories' \
-                --exclude='deploy-orchestrate.sh' --exclude='.DS_Store' \
-                --exclude='mcp-proxy' --exclude='skills-lock.json' \
+          # usine/ : seuls les 2 scripts chargés par factory-v2.html (règle de cohérence et
+          # matrice hook × liaison) ; le reste (briefs, scripts node, registres) n'est plus servi
+          # par avatarads.fr, mais reste lisible sur GitHub (dépôt public, voir plus haut).
+          rsync -a \
+                --exclude='.DS_Store' --exclude='*.md' \
+                --exclude='/landing_old.html' --exclude='/promo.html' \
+                --include='/app/' --include='/app/**' \
+                --include='/assets/' --include='/assets/**' \
+                --include='/images/' --include='/images/**' \
+                --include='/factory-v2/' --include='/factory-v2/**' \
+                --include='/v2/' --include='/v2/**' \
+                --include='/.well-known/' --include='/.well-known/**' \
+                --include='/usine/' --include='/usine/coherence.js' --include='/usine/hook-liaison.js' \
+                --include='/*.html' --include='/CNAME' --include='/.nojekyll' \
+                --include='/robots.txt' --include='/sitemap.xml' --include='/llms.txt' \
+                --include='/favicon.*' --include='/apple-touch-icon.png' --include='/og-image.*' \
+                --include='/tiktok*.txt' \
+                --exclude='*' \
                 ./ _site/
+          # Garde-fou 1 : un fichier vital absent = on s'arrête AVANT d'écraser le site en ligne
+          # (le run échoue, Pages garde la version précédente).
+          for f in CNAME index.html connexion.html r.html app/index.html app/version.txt \
+                   factory-v2.html factory-v2/cf-ui.js usine/coherence.js usine/hook-liaison.js; do
+            [ -f "_site/$f" ] || { echo "::error::$f absent de _site : liste blanche de deploy.yml à corriger"; exit 1; }
+          done
+          # Garde-fou 2 : un élément suivi à la racine, ni publié ni connu comme interne, est
+          # signalé (nouvelle page, fichier de vérification…) au lieu de disparaître en silence.
+          internes=' .DS_Store .claude .github .gitignore .railwayignore Dockerfile.factory deploy-orchestrate.sh hedra-motion-control-email.md landing_old.html promo.html mcp-proxy render-worker shared supabase tools '
+          git -c core.quotePath=false ls-files | cut -d/ -f1 | sort -u | while IFS= read -r e; do
+            [ -e "_site/$e" ] && continue
+            case "$internes" in *" $e "*) continue ;; esac
+            echo "::warning title=Non publié::« $e » est suivi par git mais absent du site (liste blanche de deploy.yml)"
+          done
           echo "poids publié : $(du -sh _site | cut -f1)"
+      # Audit 02/10 : une page dont la CSP autorise ses scripts par EMPREINTE (sha256, sans 'unsafe-inline' :
+      # connexion.html) casse en silence si on modifie un script inline ou une version de script externe sans
+      # mettre la CSP à jour (page de connexion blanche). On refuse alors de publier, en donnant l'empreinte à poser.
+      - name: Vérifier les CSP par empreinte
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, html, pathlib, re, sys
+          bad = 0
+          for p in sorted(pathlib.Path('_site').glob('*.html')):
+              s = p.read_text(encoding='utf-8')
+              m = re.search(r'<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]*)"', s, re.I)
+              if not m or "'sha256-" not in m.group(1): continue
+              d = {x.split()[0]: x.split()[1:] for x in html.unescape(m.group(1)).split(';') if x.strip()}
+              ok = set(d.get('script-src', d.get('default-src', [])))
+              def permis(u):
+                  u = u.split('#')[0].split('?')[0]
+                  if not re.match(r'https?://', u): return "'self'" in ok
+                  for x in ok:
+                      if x.startswith("'"): continue
+                      if x.endswith(':') and u.startswith(x): return True
+                      if '/' not in x.split('://', 1)[-1] and (u == x or u.startswith(x + '/')): return True
+                      if u == x or (x.endswith('/') and u.startswith(x)): return True
+                  return False
+              n = 0
+              for t in re.finditer(r'<!--.*?-->|<script\b([^>]*)>(.*?)</script\s*>', s, re.S | re.I):
+                  if t.group(0).startswith('<!--'): continue
+                  a = t.group(1) or ''
+                  src = re.search(r'\bsrc\s*=\s*["\']([^"\']+)', a, re.I)
+                  if src:
+                      if not permis(src.group(1)):
+                          bad += 1; print(f"::error file={p.name}::script externe {src.group(1)} absent de script-src (CSP) : il serait bloqué")
+                      continue
+                  typ = re.search(r'\btype\s*=\s*["\']?([^"\'\s>]+)', a, re.I)
+                  if typ and typ.group(1).lower() not in ('text/javascript', 'application/javascript', 'module'): continue
+                  n += 1
+                  h = "'sha256-" + base64.b64encode(hashlib.sha256(t.group(2).encode('utf-8')).digest()).decode() + "'"
+                  if h not in ok:
+                      bad += 1; print(f"::error file={p.name}::script inline n°{n} modifié : mettre {h} dans script-src (CSP), sinon il est bloqué")
+              print(f'{p.name} : CSP par empreinte vérifiée ({n} scripts inline)')
+          sys.exit(1 if bad else 0)
+          PY
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
