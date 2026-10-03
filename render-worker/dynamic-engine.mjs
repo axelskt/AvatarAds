@@ -20,6 +20,8 @@
 import { uiScene } from './ui-scenes.mjs'
 import { screenSize } from './screen-spots.mjs'
 import { SAFE, fontFaceCss } from './visual-styles.mjs'
+// Audit 02/10 : échappements, CSP et GSAP embarqué partagés par tous les builders (voir securite.mjs)
+import { jsonPourScript, escAttr, urlCss, cspComposition, GSAP_SCRIPT } from './securite.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
@@ -472,7 +474,7 @@ function screenContent(id, s, tone, liveT0, t1, W) {
         <div id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;opacity:0">
           <div style="position:absolute;inset:0;border-radius:26px;overflow:hidden;box-shadow:0 46px 120px rgba(13,13,18,.45)">
             <div id="${id}ci" style="position:absolute;left:${Math.round((cw - iw) / 2)}px;top:${Math.round((ch - ih) / 2)}px;width:${iw}px;height:${ih}px">
-              <img src="${file}" style="position:absolute;left:0;top:0;width:${iw}px;height:${ih}px" />
+              <img src="${escAttr(file)}" style="position:absolute;left:0;top:0;width:${iw}px;height:${ih}px" />
               ${boxes}
             </div>
             <div id="${id}cu" style="position:absolute;left:0;top:0;width:0;height:0;opacity:0">
@@ -493,7 +495,7 @@ function screenContent(id, s, tone, liveT0, t1, W) {
         <div id="${id}cw" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;opacity:0">
           <div style="position:absolute;inset:0;border-radius:26px;overflow:hidden;box-shadow:0 46px 120px rgba(13,13,18,.4)">
             <div id="${id}ci" style="position:absolute;inset:0">
-              <img src="${file}" style="position:absolute;left:0;top:0;width:${cw}px;height:${ch}px" />
+              <img src="${escAttr(file)}" style="position:absolute;left:0;top:0;width:${cw}px;height:${ch}px" />
             </div>
           </div>
         </div>`
@@ -735,7 +737,7 @@ export function buildDynamicComposition(plan, opts = {}) {
       const s = p.slide, mark = s.title || 'avatarads.fr'
       const fz = 178
       const tw = Math.round(fz * CHAR_W * mark.length)
-      const logoImg = logoFile ? `<img id="${id}lg" src="${logoFile}" style="position:absolute;left:${(W - 150) / 2}px;top:600px;width:150px;height:150px;border-radius:34px;opacity:0" />` : ''
+      const logoImg = logoFile ? `<img id="${id}lg" src="${escAttr(logoFile)}" style="position:absolute;left:${(W - 150) / 2}px;top:600px;width:150px;height:150px;border-radius:34px;opacity:0" />` : ''
       inner += logoImg + `
         <div class="disp" id="${id}mk" style="position:absolute;left:0;top:${logoFile ? 880 : 850}px;white-space:nowrap;font-size:${fz}px;color:${tone.ink};opacity:0">${esc(mark)}</div>
         <div id="${id}un" style="position:absolute;left:120px;top:${logoFile ? 1130 : 1100}px;width:${W - 240}px;height:14px;background:${ACC}"></div>`
@@ -934,7 +936,7 @@ export function buildDynamicComposition(plan, opts = {}) {
           const sp = { src: spSrc, isVid: /\.(mp4|mov|webm|m4v)(\?|$)/i.test(spSrc) }
           topEl = sp.isVid
             ? `<video id="${id}spt" class="clip" src="${esc(sp.src)}" data-start="${liveT0}" data-duration="${dvid(t1 - liveT0)}" data-track-index="10" muted playsinline style="position:absolute;left:0;top:${cTop}px;width:${W}px;height:${cH}px;object-fit:cover;object-position:50% 30%"></video>`
-            : `<div id="${id}spt" style="position:absolute;left:0;top:${cTop}px;width:${W}px;height:${cH}px;background:url('${esc(sp.src)}') 50% 30%/cover"></div>`
+            : `<div id="${id}spt" style="position:absolute;left:0;top:${cTop}px;width:${W}px;height:${cH}px;background:url('${urlCss(sp.src)}') 50% 30%/cover"></div>`
         } else {
           // ANIMATION au-dessus (A/B d'Axel : « mieux quand y'a une animation en
           // haut plutôt [qu'un média] ») : le pack joue dans la moitié haute,
@@ -980,10 +982,10 @@ export function buildDynamicComposition(plan, opts = {}) {
         const still = String(p.slide.photo || '') || avatarStill
         const botEl = src
           ? (camOn ? `<div style="position:absolute;left:0;top:${aTop}px;width:${W}px;height:${aH}px;overflow:hidden"><div id="${id}cam" style="position:absolute;inset:0"><div id="${id}camj" style="position:absolute;inset:0">` : '')
-            + `<div id="${id}avp" style="position:absolute;left:0;top:${camOn ? 0 : aTop}px;width:${W}px;height:${aH}px;background:url('${esc(still)}') 50% ${fp}%/cover"></div>
+            + `<div id="${id}avp" style="position:absolute;left:0;top:${camOn ? 0 : aTop}px;width:${W}px;height:${aH}px;background:url('${urlCss(still)}') 50% ${fp}%/cover"></div>
         <video id="${id}av" class="clip" src="${esc(src)}" data-start="${cAt}" data-duration="${dvid(cEnd - cAt)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:${camOn ? 0 : aTop}px;width:${W}px;height:${aH}px;object-fit:cover;object-position:50% ${fp}%"></video>`
             + (camOn ? '</div></div></div>' : '')
-          : `<div id="${id}avw" style="position:absolute;left:0;top:${aTop}px;width:${W}px;height:${aH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') 50% ${fp}%/cover"></div></div>`
+          : `<div id="${id}avw" style="position:absolute;left:0;top:${aTop}px;width:${W}px;height:${aH}px;overflow:hidden"><div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${urlCss(still)}') 50% ${fp}%/cover"></div></div>`
         inner += topEl + botEl
           + `<div style="position:absolute;left:0;top:${divY - 3}px;width:${W}px;height:6px;background:#0D0D12;box-shadow:0 0 18px rgba(0,0,0,.5)"></div>`
         if (camOn && src) pjs += camOrganique(`#${id}cam`, `#${id}camj`, liveT0, t1, p.slide.i, 0.7)
@@ -1003,9 +1005,9 @@ export function buildDynamicComposition(plan, opts = {}) {
         // avant la fin de la poussée (fenêtre vidéo < fenêtre panneau), c'est
         // le visage qui affleure — jamais un noir (le « blink » sombre de v11)
         const bot = (src
-          ? `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>
+          ? `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${urlCss(avatarStill)}') center 38%/cover"></div>
              <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>`
-          : `<div id="${id}av" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(avatarStill)}') center 38%/cover"></div>`)
+          : `<div id="${id}av" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${urlCss(avatarStill)}') center 38%/cover"></div>`)
         inner += bot
         const cw = Math.round(W * 0.64), ch = Math.round(cw * 9 / 16)
         const cx2 = Math.round((W - cw) / 2), cy = Math.round(H * 0.05)
@@ -1018,7 +1020,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // l'écran jusqu'à la fin du hook malgré le tween de sortie).
         const btOut = r2(Math.min(liveT0 + 2.35, t1 - 0.4))
         if (duo.src && /\.(png|jpe?g|webp)(\?|$)/i.test(duo.src)) {
-          inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#000 url('${esc(duo.src)}') center/cover;box-shadow:0 26px 60px rgba(0,0,0,.55)"></div>`
+          inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#000 url('${urlCss(duo.src)}') center/cover;box-shadow:0 26px 60px rgba(0,0,0,.55)"></div>`
         } else if (duo.src) {
           inner += `<div class="an-p" id="${id}bt" style="left:${cx2}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#000;box-shadow:0 26px 60px rgba(0,0,0,.55)">
             <video class="clip" src="${esc(duo.src)}" data-start="${liveT0}" data-duration="${dvid(btOut - liveT0)}" data-track-index="7" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video></div>`
@@ -1046,7 +1048,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // Hedra (mcp/index.ts) ; ici on rend l'image telle qu'il l'a composée.
         // …et la PHOTO reste posée dessous : un clip qui s'éteint un souffle
         // avant la fin de la poussée laisse le visage, jamais un noir.
-        inner += camOpen + `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${esc(String(p.slide.photo || '') || avatarStill)}') center 38%/cover"></div>
+        inner += camOpen + `<div style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:url('${urlCss(String(p.slide.photo || '') || avatarStill)}') center 38%/cover"></div>
           <video id="${id}av" class="clip" src="${esc(src)}" data-start="${liveT0}" data-duration="${dvid(Math.min(D, t1 + 0.45) - liveT0)}" data-track-index="${9 + (p.slide.i % 2)}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;object-fit:cover"></video>` + camClose
         if (camOn) pjs += camOrganique(`#${id}cam`, `#${id}camj`, liveT0, t1, p.slide.i)
       } else {
@@ -1055,7 +1057,7 @@ export function buildDynamicComposition(plan, opts = {}) {
         // le même visage figé aux deux bouts donne l'impression d'un seul plan
         // recollé. `photo` sur le segment prime, `avatarStill` reste le défaut.
         const still = String(p.slide.photo || '') || avatarStill
-        inner += camOpen + `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(still)}') center/cover"></div>` + camClose
+        inner += camOpen + `<div id="${id}av" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${urlCss(still)}') center/cover"></div>` + camClose
         pjs += `\n  tl.fromTo('#${id}av',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
         if (camOn) pjs += camOrganique(`#${id}cam`, `#${id}camj`, liveT0, t1, p.slide.i, 0.8)
       }
@@ -1389,7 +1391,7 @@ export function buildDynamicComposition(plan, opts = {}) {
     // lent (règle : un trou se remplit par le visage, jamais par un écran vide).
     if (inner.length === innerFond) {
       console.log(`▶ panneau ${i} (${p.kind}) sans contenu → visage plein cadre (${p.t0}s → ${p.t1}s)`)
-      inner += `<div id="${id}avf" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${esc(avatarStill)}') center 38%/cover"></div>`
+      inner += `<div id="${id}avf" style="position:absolute;left:-3%;top:-3%;width:106%;height:106%;background:url('${urlCss(avatarStill)}') center 38%/cover"></div>`
       pjs += `\n  tl.fromTo('#${id}avf',{scale:1},{scale:1.07,duration:${r2(Math.max(0.8, t1 - liveT0))},ease:'none'},${liveT0});`
     }
     html += `\n  <div id="${id}" class="pnl" style="z-index:${i + 1};background:${fondPanneau};${i > 0 ? 'opacity:0' : ''}"><div class="pin" id="${id}in">${inner}</div></div>`
@@ -1413,7 +1415,7 @@ export function buildDynamicComposition(plan, opts = {}) {
       const to = dir === 'right' ? { x: -W } : dir === 'bottom' ? { y: -H } : dir === 'top' ? { y: H } : { x: W }
       js += `
   tl.set('#${id}',{opacity:1},${t0});
-  tl.fromTo('#${id}',${JSON.stringify(from)},{x:0,y:0,duration:${PUSH},ease:'power2.inOut'},${t0});
+  tl.fromTo('#${id}',${jsonPourScript(from)},{x:0,y:0,duration:${PUSH},ease:'power2.inOut'},${t0});
   tl.fromTo('#${id}in',{filter:'blur(7px)'},{filter:'blur(0px)',duration:${r2(PUSH + 0.1)},ease:'power2.out'},${t0});
   tl.to('#pn${i - 1}',{${Object.entries(to).map(([k, v]) => `${k}:${v}`).join(',')},duration:${PUSH},ease:'power2.inOut'},${t0});
   tl.set('#pn${i - 1}',{autoAlpha:0},${r2(t0 + PUSH + 0.04)});`
@@ -1888,7 +1890,8 @@ export function buildDynamicComposition(plan, opts = {}) {
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+${cspComposition()}
+${GSAP_SCRIPT}
 <style>
   /* Sans ces @font-face, 'Inter' et 'Archivo Black' retombaient sur Liberation
      Sans (conteneur) / Helvetica (Mac) : le moteur dynamique n'injectait pas les

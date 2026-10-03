@@ -16,6 +16,8 @@ import {
 import { ANIMS, animHtml, animJs, animCss } from './anim-pack.mjs'
 import { buildDynamicComposition } from './dynamic-engine.mjs'
 import { uiScene } from './ui-scenes.mjs'
+// Audit 02/10 : échappements, CSP et GSAP embarqué partagés par tous les builders (voir securite.mjs)
+import { escAttr, cspComposition, GSAP_SCRIPT } from './securite.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -664,7 +666,7 @@ export function buildComposition(plan, opts = {}) {
     String(c.text || '').length >= 11 ? ' data-long' : ''} id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
 
   const emojiHtml = emojiDefs.map((e) => `
-      <div class="clip emo" id="${e.id}" data-start="${e.start}" data-duration="${e.dur}" data-track-index="5"><img src="${e.file}" alt="" /></div>`).join('')
+      <div class="clip emo" id="${e.id}" data-start="${e.start}" data-duration="${e.dur}" data-track-index="5"><img src="${escAttr(e.file)}" alt="" /></div>`).join('')   // Audit 02/10 : emoji = valeur du plan
 
   // ── scènes plein cadre + bandeaux (scene-pack.mjs) ──
   // UNE SCÈNE PLEIN CADRE QUI PORTE UNE ANIMATION EST RENDUE PAR L'ANIMATION.
@@ -1064,8 +1066,9 @@ export function buildComposition(plan, opts = {}) {
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
+    ${cspComposition()}
     <meta name="viewport" content="width=${W}, height=${H}" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    ${GSAP_SCRIPT}
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: ${W}px; height: ${H}px; overflow: hidden; background: #0d0d0f; }

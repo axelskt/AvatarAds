@@ -14,11 +14,19 @@
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 // Omni Flash IMAGE→VIDÉO (Axel 25/09) : ici = le seul CARRÉ 1:1 d'Express (kie ne fait pas de carré ; tout le reste passe
 // par kie-proxy, sans repli fal) — Starter / Pro / Élite / BYOK, 1080p imposé, tirage EXACT de 5 cr × durée.
+// Audit 02/10 (PRX-1) : Motion Control (Kling 2.6 / 3.0) et Omni ÉDITION sont facturés à la seconde de la vidéo du CLIENT.
+// Le proxy n'acceptait qu'un plancher fixe (2 / 4 / 6 / 3) et relayait le corps tel quel → 2 crédits réservés = 15 s de Kling.
+// Désormais (clients, jamais le moteur de rendu) : vidéo de NOTRE stockage dans le dossier de l'appelant, COPIE serveur
+// (render-media/fal-in/<uid>/) mesurée par lecture partielle, corps réécrit vers cette copie, réserve ≥ tarif/s × durée
+// (même arrondi que l'app, 1 s de tolérance + 0,25 s de gigue pour le client), moins les étapes annexes déjà payées sur la
+// même op (fond effacé + détourage de Motion, ≤ 6) — voir _shared/mp4-duree.ts. Illisible → 400.
+// Audit 02/10 (PRX-3) : le suivi d'un job LIÉ à l'op d'un AUTRE utilisateur (credit_ops.provider_job) répond 404.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC, svc } from '../_shared/guard.ts'
 import { omnihumanFalBody } from '../_shared/omnihuman-bill.ts'   // OmniHuman (repli de kie, Axel 25/09) : durée MESURÉE, tirage exact
 import { KIE_OPEN } from '../_shared/kie.ts'   // OmniHuman : mêmes plans que kie-proxy (lecture seule)
+import { preparerVideoFal, tarifVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR } from '../_shared/mp4-duree.ts'   // PRX-1 : vidéo client mesurée
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -46,6 +54,8 @@ const SUBMIT_ALLOW: RegExp[] = [
 ]
 // Coût serveur (borne basse) : Kling v3=6, Kling pro=4, Kling standard=2, OmniHuman=5, AuraSR=3, Nano=5,
 // Omni edit=3 ; auxiliaires (ben/birefnet/rembg/topaz, couverts par l'op parente) = 1.
+// Audit 02/10 : pour Kling et l'Omni édition d'un CLIENT, ce plancher n'est plus la borne : la réserve exigée est tarif/s ×
+// durée MESURÉE (preparerVideoFal). Il ne reste que le repli du chemin réseau (catch) et les autres modèles.
 function falCost(path: string): number {
   if (/\/kling-video\/v3\//i.test(path)) return 6
   if (/\/kling-video\//i.test(path)) return /\/pro\//i.test(path) ? 4 : 2
@@ -62,7 +72,39 @@ const OMNI_I2V = /\/google\/gemini-omni-flash\/[^?]*image-to-video/i
 // OmniHuman 1.5 (26/09) : repli de kie-proxy (app, même op) — tirage EXACT 5 × durée MESURÉE (omnihuman-bill.ts), plus draw_full.
 const OMNIHUMAN = /^\/fal-ai\/bytedance\/omnihuman\//i
 const OMNIH_BUCKET = 'render-media'
-const OMNIH_SIGN = `${Deno.env.get('SUPABASE_URL') ?? ''}/storage/v1/object/sign/${OMNIH_BUCKET}/`
+const SUPA_URL = Deno.env.get('SUPABASE_URL') ?? ''
+const OMNIH_SIGN = `${SUPA_URL}/storage/v1/object/sign/${OMNIH_BUCKET}/`
+// Audit 02/10 (PRX-3) : à qui est ce job fal ? Seul un job LIÉ à l'op d'un AUTRE utilisateur est refusé : les jobs liés à
+// aucune op restent lisibles par leur lanceur (owner / developer sans réservation, auxiliaires qui partagent l'op parente —
+// birefnet / rembg / ben —, Kling lancé après un détourage sur la même op, tirage en fail-open). Les id fal sont des UUID.
+// 'inconnue' = lecture impossible → ni 404 ni corps fal : « en cours » au suivi de statut, 503 au résultat (fermé, sans casser
+// un suivi légitime : l'app sonde de nouveau).
+async function proprieteJob(job: string, uid: string): Promise<'ok' | 'autrui' | 'inconnue'> {
+  for (let essai = 0; essai < 2; essai++) {   // un hoquet isolé ne fait pas échouer un résultat déjà prêt : 2e lecture
+    if (essai) await new Promise((r) => setTimeout(r, 250))
+    try {
+      const { data, error } = await svc().from('credit_ops').select('user_id').eq('provider_job', job).neq('user_id', uid).limit(1)
+      if (error) { console.warn('[fal] propriété du job illisible:', error.message); continue }
+      return data && data.length ? 'autrui' : 'ok'
+    } catch { /* nouvel essai */ }
+  }
+  return 'inconnue'
+}
+// Audit 02/10 (PRX-1) : crédits que l'op a DÉJÀ payés avant cette vidéo (montant − réserve restante : fond effacé + détourage
+// de Motion « Glisse un fond », tirés sur la même op). Même op que celle que tirera applyReservationFull (resolveOp). Pas d'op
+// → 0 (le tirage tranchera) ; hoquet DB → le plafond (le tirage lui-même laisse passer sur hoquet, voir guard.ts).
+async function dejaTireOp(uid: string, req: Request): Promise<number> {
+  const op = await resolveOp(uid, req)
+  if (!op) return 0
+  if (op === '__ERR__') return ANNEXES_MAX_CR
+  try {
+    const { data, error } = await svc().from('credit_ops').select('amount, reserved_remaining').eq('id', op).eq('user_id', uid).maybeSingle()
+    if (error) return ANNEXES_MAX_CR
+    if (!data) return 0
+    const a = Number(data.amount) || 0, r = data.reserved_remaining == null ? a : (Number(data.reserved_remaining) || 0)
+    return Math.max(0, a - r)
+  } catch { return ANNEXES_MAX_CR }
+}
 function omniI2vBody(raw: string): { body: string; sec: number } | { error: string } {
   let b: any = null
   try { b = JSON.parse(raw || '{}') } catch { /* traité juste dessous */ }
@@ -109,6 +151,9 @@ serve(async (req: Request) => {
 
   let drawnOp: string | undefined
   let drawnAmt = 0   // audit 14/09 : montant réellement tiré → restauration EXACTE au release (plus de falCost/9999)
+  // Audit 02/10 (PRX-1) : copie serveur de la vidéo (Kling / Omni édition) — supprimée si aucun job fal n'a été créé.
+  let videoCost = 0, videoCopie = ''
+  const jeterCopie = async () => { if (videoCopie) { try { await svc().storage.from(OMNIH_BUCKET).remove([videoCopie]) } catch { /* best-effort */ } videoCopie = '' } }
   if (!auth.isService && auth.userId) {
     // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite (0,168 $/s) ──
     if (isSubmit && /\/fal-ai\/kling-video\/v3\//i.test(path)) {
@@ -133,6 +178,15 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
     if (!gate.ok) return jsonRes(gate.status, { error: gate.error })
+    // Audit 02/10 (PRX-3) : suivi / résultat d'un job lié à l'op d'un autre utilisateur → 404, AVANT tout appel à fal.
+    if (!isSubmit) {
+      const jid = (path.split('?')[0].match(/\/requests\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+      if (jid) {
+        const p = await proprieteJob('fal:' + jid, auth.userId)
+        if (p === 'autrui') return jsonRes(404, { error: 'Génération introuvable.' })
+        if (p === 'inconnue') return /\/status$/.test(path.split('?')[0]) ? jsonRes(200, { status: 'IN_PROGRESS', throttled: true }) : jsonRes(503, { error: 'Suivi momentanément indisponible — réessaie dans un instant.' })
+      }
+    }
     if (isSubmit) {
       // H2 (audit 14/09) : AUXILIAIRES connus (matting/utilitaires « couverts par l'op parente ») = tirage
       // per-cost → plusieurs peuvent PARTAGER une op (corrige « garder le fond vidéo » : 2 mattings en parallèle
@@ -166,16 +220,28 @@ serve(async (req: Request) => {
         rawBody = oh.body; omnihCost = oh.cost
         console.log('[fal] omnihuman audio', auth.userId, `envoyé=${oh.envoyeSec}s facturé=${oh.factureSec}s coût=${oh.cost}`)
       }
+      // Audit 02/10 (PRX-1) : Motion Control / Omni édition — vidéo du client COPIÉE puis MESURÉE (voir en-tête) AVANT tout
+      // tirage ; entrée hors de son stockage, illisible ou trop longue → 400, stockage indisponible → 503 (rien de tiré).
+      if (tarifVideoFal(path)) {
+        const pv = await preparerVideoFal({ path, raw: rawBody ?? '', uid: auth.userId, base: SUPA_URL, bucket: OMNIH_BUCKET, st: svc().storage.from(OMNIH_BUCKET) })
+        if (!pv.ok) return jsonRes(pv.status, { error: pv.error })
+        rawBody = pv.body; videoCopie = pv.copie
+        const deja = await dejaTireOp(auth.userId, req)
+        videoCost = minimumSurReserve(pv.cost, deja)
+        console.log('[fal] vidéo à la seconde', auth.userId, `mesuré=${pv.mesureSec}s facturé=${pv.factureSec}s coût=${pv.cost} annexes=${deja} minimum=${videoCost}`)
+      }
       // Primaire : plancher serveur = falCost(path) (audit 14/09) → une réserve sous ce plancher (ex.
       // spend_credits(1) devant un OmniHuman à 5) est refusée (402), fin de « 1 crédit = vidéo chère ».
+      // Kling / Omni édition (02/10) : plancher = tarif/s × durée mesurée (− annexes déjà payées sur l'op, ≤ 6) ; toujours
+      // draw_full (une op = une vidéo).
       const rr = omniCost
         ? await applyOmniReservation({ req, userId: auth.userId, proxy: 'fal', cost: omniCost, label: path })   // − image de départ offerte (25/09)
         : omnihCost
         ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: omnihCost, label: path })   // OmniHuman : tirage EXACT (26/09)
         : _aux
         ? await applyReservation({ req, userId: auth.userId, proxy: 'fal', cost: falCost(path), label: path })
-        : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path, minCost: falCost(path) })
-      if (!rr.ok) return jsonRes(rr.status, { error: rr.error })
+        : await applyReservationFull({ req, userId: auth.userId, proxy: 'fal', label: path, minCost: videoCost || falCost(path) })
+      if (!rr.ok) { await jeterCopie(); return jsonRes(rr.status, { error: rr.error }) }
       drawnOp = rr.opId
       // Omni = montant RÉELLEMENT tiré (relecture 25/09), jamais `omniCost` : 0 en mode ombre / hoquet DB → op NON liée
       // (ni bindJob, ni release / refund par job ou par op : rien à restaurer, pas de règlement de l'op d'une autre vidéo).
@@ -230,6 +296,12 @@ serve(async (req: Request) => {
       // Refus (op partagée/multi-étapes/livrée) → repli release_by_job inchangé. (Échec TERMINAL only.)
       else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }
       else if (isResult && res.ok && hasOutput) { if (jobId) await settleByJob(auth.userId, 'fal:' + jobId) }                                                                         // livré → op LIÉE non remboursable
+      // Audit 02/10 (PRX-1) : copie de la vidéo — gardée tant que fal peut la lire (job créé) ; sinon supprimée tout de suite.
+      // Une soumission réussie supprime aussi les copies de CET utilisateur dont le lien signé a expiré (best-effort).
+      if (isSubmit && videoCopie) {
+        if (res.ok || submitRid) { videoCopie = ''; await nettoyerCopiesFal(svc().storage.from(OMNIH_BUCKET), auth.userId) }
+        else await jeterCopie()
+      }
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {
@@ -242,6 +314,7 @@ serve(async (req: Request) => {
     // soumission », point 1) ; aux ou refus → repli release réserve. Best-effort (jamais bloquant).
     if (isSubmit && !auth.isService && auth.userId) {
       try { if (!(!isAuxPath && await refundOpTerminal(auth.userId, drawnOp, drawnAmt || 1))) await releaseOp(auth.userId, drawnOp, drawnAmt || 1) } catch { /* best-effort */ }
+      await jeterCopie()   // aucune réponse fal → aucun job : la copie de la vidéo ne sert plus (02/10)
     }
     console.error('fal-proxy error:', err)
     return jsonRes(502, { error: 'upstream_error' })

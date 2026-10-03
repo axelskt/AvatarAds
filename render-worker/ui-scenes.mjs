@@ -19,6 +19,8 @@ const r2 = (n) => Math.round(n * 100) / 100
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const ACC = '#FF5A36'
 import { claudeBurst } from './anim-pack.mjs'
+// Audit 02/10 (WRK-2) : la capture (tuto/<screen>.png) ou le fichier de l'utilisateur vient du plan → échappé
+import { jsonPourScript, escAttr } from './securite.mjs'
 // géométrie de la barre de commentaire — le zoom du CTA s'y réfère
 const BAR_Y = 1150, BAR_H = 132
 
@@ -193,7 +195,7 @@ export const UI_SCENES = {
   ${cursorClick(id, sel, Math.round(x0 + selIdx * (cw + gap) + cw / 2 + 20), 800 + Math.round(cw * 0.43) + 20, tPick - 0.4, tPick)}
   tl.to('${sel}',{borderColor:'${ACC}',duration:0.18},${r2(tPick)});
   tl.to('${sel}',{scale:1.06,y:-14,duration:0.3,ease:'back.out(1.8)'},${r2(tPick + 0.1)});
-  tl.to(${JSON.stringify(items.map((_, k) => '#' + id + 'k' + k).filter((_, k) => k !== selIdx))},{autoAlpha:0.35,scale:0.94,duration:0.3,ease:'power2.inOut'},${r2(tPick + 0.1)});`
+  tl.to(${jsonPourScript(items.map((_, k) => '#' + id + 'k' + k).filter((_, k) => k !== selIdx))},{autoAlpha:0.35,scale:0.94,duration:0.3,ease:'power2.inOut'},${r2(tPick + 0.1)});`
     return { html: html + CURSOR(id), js, sfx: [{ kind: 'mo-tap-1', t: r2(tPick), vol: 0.8 }] }
   },
 
@@ -259,8 +261,8 @@ export const UI_SCENES = {
           </span>
         </div>
         <div id="${id}vp" style="position:absolute;left:0;top:96px;width:${W}px;height:${H - 96}px;overflow:hidden;background:${tone.dark ? '#0E0E13' : '#fff'}">
-          ${s.preview ? `<img src="${file}" style="position:absolute;left:0;top:0;width:${W}px;height:auto;opacity:.22;filter:blur(6px)" />` : ''}
-          <img id="${id}pg" src="${file}" style="position:absolute;left:0;top:0;width:${W}px;height:auto;opacity:0" />
+          ${s.preview ? `<img src="${escAttr(file)}" style="position:absolute;left:0;top:0;width:${W}px;height:auto;opacity:.22;filter:blur(6px)" />` : ''}
+          <img id="${id}pg" src="${escAttr(file)}" style="position:absolute;left:0;top:0;width:${W}px;height:auto;opacity:0" />
         </div>
       </div>`
     let js = `
@@ -393,7 +395,7 @@ export const UI_SCENES = {
     const pw = 840, ph = 1180
     const html = `
       <div id="${id}fr" style="position:absolute;left:${(1080 - pw) / 2}px;top:340px;width:${pw}px;height:${ph}px;border-radius:38px;overflow:hidden;box-shadow:0 70px 160px rgba(13,13,18,.5);opacity:0">
-        <img id="${id}im" src="${file}" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover" />
+        <img id="${id}im" src="${escAttr(file)}" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover" />
       </div>
       <div id="${id}tag" style="position:absolute;left:${(1080 - pw) / 2 + 34}px;top:${340 + ph - 118}px;height:76px;padding:0 34px;background:rgba(13,13,18,.55);border-radius:38px;display:flex;align-items:center;gap:14px;font-size:33px;font-weight:650;color:#fff;opacity:0;backdrop-filter:blur(6px)">
         <span style="width:16px;height:16px;border-radius:50%;background:${ACC}"></span>100 % généré par IA</div>`
@@ -456,7 +458,7 @@ export const UI_SCENES = {
     const html = `
       <div id="${id}ph" style="position:absolute;left:${(1080 - pw) / 2}px;top:420px;width:${pw}px;height:${ph}px;background:#0D0D12;border-radius:64px;padding:16px;box-sizing:border-box;box-shadow:0 60px 150px rgba(13,13,18,.45);opacity:0">
         <div style="position:absolute;inset:16px;border-radius:50px;overflow:hidden">
-          <img id="${id}im" src="${file}" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover" />
+          <img id="${id}im" src="${escAttr(file)}" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover" />
           <div style="position:absolute;left:24px;bottom:26px;display:flex;flex-direction:column;gap:10px">
             <span style="width:210px;height:16px;border-radius:8px;background:rgba(255,255,255,.85)"></span>
             <span style="width:150px;height:16px;border-radius:8px;background:rgba(255,255,255,.5)"></span></div>

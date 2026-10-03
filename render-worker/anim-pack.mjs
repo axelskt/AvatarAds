@@ -12,6 +12,9 @@ import { SAFE, SAFE_CENTERED_W, WORD_SHAPES, SANS } from './visual-styles.mjs'
 // LE SUJET OUVERT — l'animation dont le sujet vient du mot prononcé, pour les
 // domaines que la banque fermée ne couvre pas (cf. sujet-pack.mjs).
 import { sujetHtml, sujetJs } from './sujet-pack.mjs'
+// Audit 02/10 (WRK-2) : échappements partagés — toute valeur du plan posée dans un src, un url('…') ou un
+// <script> passe par eux (voir securite.mjs).
+import { jsonPourScript, escAttr, urlCss, NOM_CATALOGUE } from './securite.mjs'
 
 // Emojis 3D utilisés par les scènes ci-dessous — exporté pour que le worker n'embarque
 // dans le projet de rendu que les fichiers réellement nécessaires.
@@ -129,7 +132,7 @@ export function animHtml(name, s, W, H, vs) {
     if (s._blank) return ''
     const it = (s.items || [])[i]
     const custom = it && (it.src || it.image || it.url)
-    return `<img src="${custom || hardSrc}" style="width:100%;height:100%;object-fit:${fit || 'cover'};display:block"/>`
+    return `<img src="${escAttr(custom || hardSrc)}" style="width:100%;height:100%;object-fit:${fit || 'cover'};display:block"/>`   // Audit 02/10 : src perso = valeur du plan
   }
   // Dégradé de marque : l'accent EST la couleur, le dégradé n'est qu'un voile.
   // `acc2` vaut le bleu du set « word » hors style apple — les cartes pleines
@@ -208,7 +211,8 @@ export function animHtml(name, s, W, H, vs) {
       // AVEC un visage (s.photo), on montre la VRAIE différence : la même image
       // dégradée/glitchée à gauche, nette à droite. Axel : « quand je dis fake ça
       // met ça » — deux rectangles de couleur ne veulent rien dire.
-      if (s.photo) {
+      // Audit 02/10 (WRK-2) : s.photo = nom du catalogue (fille-compare, lena…), jamais un chemin ni du HTML
+      if (s.photo && NOM_CATALOGUE.test(String(s.photo))) {
         const src = `tuto/${s.photo}.png`
         const badge = (ok) => `<span style="position:absolute;right:${Math.round(cw * 0.07)}px;top:${Math.round(cw * 0.07)}px;width:${Math.round(cw * 0.24)}px;height:${Math.round(cw * 0.24)}px;border-radius:50%;background:${ok ? '#22C55E' : '#FF3B30'};display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(0,0,0,.4)">
           <svg viewBox="0 0 24 24" width="58%" height="58%">${ok
@@ -217,11 +221,11 @@ export function animHtml(name, s, W, H, vs) {
         const tag = (txt, col) => `<span style="position:absolute;left:50%;transform:translateX(-50%);bottom:${Math.round(cw * 0.08)}px;padding:${Math.round(cw * 0.05)}px ${Math.round(cw * 0.13)}px;border-radius:99px;background:${col};color:#fff;font-family:'Archivo Black',sans-serif;font-size:${Math.round(cw * 0.13)}px;letter-spacing:.02em;white-space:nowrap">${txt}</span>`
         const card = (k, inner) => `<div class="an-p" id="${id}c${k}" style="left:${k === 1 ? 0 : f.w - cw}px;top:0;width:${cw}px;height:${ch}px;border-radius:${rd}px;overflow:hidden;background:#141418;box-shadow:0 30px 70px rgba(0,0,0,.45)">${inner}</div>`
         return box(
-          card(1, `<img src="${src}" style="position:absolute;left:-8%;top:0;width:116%;height:100%;object-fit:cover;filter:saturate(.28) contrast(1.75) brightness(.82) blur(1.5px)"/>
-            <span id="${id}gl" style="position:absolute;left:3%;top:0;width:100%;height:100%;background:url('${src}') center/cover;opacity:.42;mix-blend-mode:screen;filter:hue-rotate(150deg) saturate(3)"></span>
+          card(1, `<img src="${escAttr(src)}" style="position:absolute;left:-8%;top:0;width:116%;height:100%;object-fit:cover;filter:saturate(.28) contrast(1.75) brightness(.82) blur(1.5px)"/>
+            <span id="${id}gl" style="position:absolute;left:3%;top:0;width:100%;height:100%;background:url('${urlCss(src)}') center/cover;opacity:.42;mix-blend-mode:screen;filter:hue-rotate(150deg) saturate(3)"></span>
             <span style="position:absolute;inset:0;background:repeating-linear-gradient(180deg,rgba(0,0,0,.30) 0 3px,rgba(0,0,0,0) 3px 8px)"></span>
             ${badge(false)}${tag('FAKE', '#FF3B30')}`) +
-          card(2, `<img src="${src}" style="position:absolute;left:-8%;top:0;width:116%;height:100%;object-fit:cover"/>
+          card(2, `<img src="${escAttr(src)}" style="position:absolute;left:-8%;top:0;width:116%;height:100%;object-fit:cover"/>
             ${badge(true)}${tag('RÉEL', '#22C55E')}`))
       }
       // sans visage : deux blocs, l'un tombe et l'autre monte — un avant/après
@@ -490,7 +494,7 @@ export function animHtml(name, s, W, H, vs) {
           <path id="${id}tl" d="${d}" stroke="${P.acc}" stroke-width="${Math.max(5, Math.round(bw * 0.22))}" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
           <polygon id="${id}ta" points="${tri}" fill="${P.acc}" opacity="0"/></svg>
         <div class="an-p" id="${id}tp" style="left:${Math.min(f.w - tw - 4, tip[0] - Math.round(tw * 0.1))}px;top:${Math.max(0, tip[1] - tw - Math.round(f.h * 0.12))}px;width:${tw}px;height:${tw}px;border-radius:${Math.round(tw * 0.24)}px;overflow:hidden;background:${P.soft};box-shadow:0 14px 32px rgba(0,0,0,.28);opacity:0">
-          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>
+          ${s.logoFile ? `<img src="${escAttr(s.logoFile)}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>
         <span class="an-p" id="${id}tn" style="left:0;top:${Math.round(f.h * 0.12)}px;width:100%;text-align:center;font-family:'Archivo Black',sans-serif;font-size:${Math.round(f.h * 0.11)}px;color:${P.acc};opacity:0">${txt(0, '')}</span>`)   // jamais de pourcentage inventé : vide si rien n'est dit
     }
     case 'template': {
@@ -590,8 +594,8 @@ export function animHtml(name, s, W, H, vs) {
       // trois rendus SIMULTANÉS → trois pistes (40, 41, 42) : HyperFrames refuse deux clips
       // qui se chevauchent sur la même piste. 40+ = réservé aux médias des animations.
       const mediaEl = (src) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(String(src))
-        ? `<video id="${id}pmv${_pmv}" class="clip" src="${src}" data-start="${s.start}" data-duration="${Math.max(0.5, (s.dur || 2)).toFixed(2)}" data-track-index="${40 + (_pmv++)}" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
-        : `<img src="${src}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+        ? `<video id="${id}pmv${_pmv}" class="clip" src="${escAttr(src)}" data-start="${s.start}" data-duration="${Math.max(0.5, (s.dur || 2)).toFixed(2)}" data-track-index="${40 + (_pmv++)}" muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>`
+        : `<img src="${escAttr(src)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`   // Audit 02/10 : média du plan échappé
       if (medias.length >= 3) {
         // trois rendus, alignés sous les trois réseaux — chacun monte vers le sien
         const mw = Math.round(td * 0.92), mh = Math.round(mw * 1.62)
@@ -696,7 +700,7 @@ export function animHtml(name, s, W, H, vs) {
             stroke-dasharray="180" stroke-dashoffset="180" />
         </svg>${puff}
         <div class="an-p" id="${id}hd" style="left:${x + w2 - Math.round(tw * 0.75)}px;top:${y - Math.round(tw * 0.25)}px;width:${tw}px;height:${tw}px;border-radius:${Math.round(tw * 0.24)}px;overflow:hidden;background:${P.soft};box-shadow:0 16px 38px rgba(0,0,0,.28);opacity:0">
-          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>`)
+          ${s.logoFile ? `<img src="${escAttr(s.logoFile)}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</div>`)
     }
     case 'lowcost': {
       // Un VRAI graphe qui descend. Axel avait refuse la fleche : « je veux un
@@ -927,7 +931,7 @@ export function animHtml(name, s, W, H, vs) {
       return `<div class="an-stage" id="${id}rm">
         <div class="an-3d" id="${id}sc" style="left:${Math.round((W - w) / 2)}px;top:${wide ? Math.round(H * 0.30 - h / 2) : Math.round(f.y + (f.h - h) / 2)}px;width:${w}px;height:${h}px">
           <div class="an-3di">
-            <div class="an-3dz" id="${id}z"><img src="${s.screenFile}" alt="" />${b1}${b2}${cur}${tz}</div>
+            <div class="an-3dz" id="${id}z"><img src="${escAttr(s.screenFile)}" alt="" />${b1}${b2}${cur}${tz}</div>
           </div>
         </div>
       </div>`
@@ -945,7 +949,7 @@ export function animHtml(name, s, W, H, vs) {
       const ph = wideR ? Math.round(H * 0.46) : Math.round(f.h * 0.96)
       const pw = Math.round(ph * 0.6667)
       return `<div class="an-stage"><div class="an-res" id="${id}rs" style="left:${Math.round((W - pw) / 2)}px;top:${wideR ? Math.round(H * 0.30 - ph / 2) : Math.round(f.y + (f.h - ph) / 2)}px;width:${pw}px;height:${ph}px">
-        <img src="${s.screenFile}" alt="" />
+        <img src="${escAttr(s.screenFile)}" alt="" />
         <span class="an-res-flash" id="${id}fl"></span>
         <span class="an-res-save" id="${id}sv" style="background:${P.acc}">
           <svg width="${Math.round(pw * 0.11)}" height="${Math.round(pw * 0.11)}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -1167,7 +1171,7 @@ export function animHtml(name, s, W, H, vs) {
       const d = Math.min(Math.round(f.w * 0.92), Math.round(f.h * 1.0))
       return box(`<div class="an-lg" id="${id}lg" style="left:${Math.round((f.w - d) / 2)}px;top:${Math.round((f.h - d) / 2)}px;width:${d}px;height:${d}px">
         <span class="an-halo" id="${id}ha" style="border:${Math.round(d * 0.02)}px solid ${P.acc}"></span>
-        <img src="${s.logoFile}" alt="" id="${id}im" />
+        <img src="${escAttr(s.logoFile)}" alt="" id="${id}im" />
       </div>`)
     }
     case 'avatar': {
@@ -2833,7 +2837,7 @@ export function animHtml(name, s, W, H, vs) {
       const px = Math.round((f.w - pw) / 2), py = Math.round(f.h * 0.05)
       return box(`
         <div class="an-p" id="${id}vw" style="left:${px}px;top:${py}px;width:${pw}px;height:${ph}px;border-radius:${Math.round(pw * 0.12)}px;overflow:hidden;background:${P.soft};border:2px solid ${P.line};box-shadow:0 20px 46px rgba(0,0,0,.24)">
-          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}
+          ${s.logoFile ? `<img src="${escAttr(s.logoFile)}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}
           <span style="position:absolute;left:0;bottom:0;width:100%;height:${Math.max(4, Math.round(ph * 0.02))}px;background:rgba(255,255,255,.3)">
             <span class="an-p" id="${id}vwp" style="left:0;top:0;width:100%;height:100%;background:${P.acc};transform-origin:0% 50%;transform:scaleX(0)"></span></span>
           <svg class="an-p" id="${id}vwt" viewBox="0 0 24 24" style="left:50%;margin-left:${-Math.round(pw * 0.13)}px;top:50%;margin-top:${-Math.round(pw * 0.13)}px;width:${Math.round(pw * 0.26)}px;height:${Math.round(pw * 0.26)}px" fill="#FFFFFF" opacity=".9"><path d="M8 5v14l11-7z"/></svg></div>
@@ -2849,7 +2853,7 @@ export function animHtml(name, s, W, H, vs) {
       const ly = Math.round(f.h * 0.52), lh = Math.round(f.h * 0.12)
       return box(`
         <span class="an-p" id="${id}lba" style="left:${Math.round((f.w - av) / 2)}px;top:${Math.round(f.h * 0.05)}px;width:${av}px;height:${av}px;border-radius:50%;overflow:hidden;background:${P.soft};border:3px solid ${P.line}">
-          ${s.logoFile ? `<img src="${s.logoFile}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</span>
+          ${s.logoFile ? `<img src="${escAttr(s.logoFile)}" style="width:100%;height:100%;object-fit:cover;display:block"/>` : `<span style="position:absolute;inset:0;background:${grad(150)}"></span>`}</span>
         <span class="an-p" id="${id}lbn" style="left:0;top:${Math.round(f.h * 0.05) + av + Math.round(f.h * 0.025)}px;width:100%;text-align:center;font-family:${SANS};font-weight:800;font-size:${Math.round(f.h * 0.055)}px;color:${P.ink}">${txt(1, '@TONCOMPTE')}</span>
         <span class="an-p" id="${id}lbb" style="left:${x + Math.round(w * 0.14)}px;top:${Math.round(f.h * 0.4)}px;width:${Math.round(w * 0.72)}px;height:${Math.max(3, Math.round(f.h * 0.022))}px;border-radius:99px;background:${P.line};opacity:.55"></span>
         <span class="an-p" id="${id}lbl" style="left:${x}px;top:${ly}px;width:${w}px;height:${lh}px;border-radius:${Math.round(lh * 0.32)}px;background:${P.soft};border:2px solid ${P.line};display:flex;align-items:center;justify-content:center;gap:${Math.round(lh * 0.2)}px;font-family:${SANS};font-weight:800;font-size:${Math.round(lh * 0.32)}px;color:${P.acc}">
@@ -3450,7 +3454,7 @@ export function animJs(name, s, r2) {
       // en pas discrets (pas de repeat -1 : le rendu doit rester deterministe).
       tl.fromTo('#${id}tp', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, ${r2(t0 + 0.9)});
       (function(){
-        var full = ${JSON.stringify(String(s.screenText))};
+        var full = ${jsonPourScript(String(s.screenText))};
         var n = ${String(s.screenText).length}, T = ${r2(Math.max(0.9, Math.min(dur - 1.7, String(s.screenText).length * 0.045)))};
         // la frappe demarre APRES le clic du curseur (t0+1.0) : on clique le
         // champ, PUIS on tape — l'ordre du vrai geste
@@ -3507,7 +3511,7 @@ export function animJs(name, s, r2) {
       for (let k = 1; k <= steps; k++) {
         const v = (target * Math.pow(k / steps, 0.62)).toFixed(dec)
         const txt = Number(v).toLocaleString('fr-FR')
-        js += `\n      tl.set('#${id}cun', { textContent: ${JSON.stringify(txt)} }, ${r2(t0 + 0.2 + (k / steps) * T)});`
+        js += `\n      tl.set('#${id}cun', { textContent: ${jsonPourScript(txt)} }, ${r2(t0 + 0.2 + (k / steps) * T)});`
       }
       return js
     }
@@ -3638,7 +3642,7 @@ export function animJs(name, s, r2) {
         // l'inverse de power1.inOut, pour que le nombre colle a la barre
         const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2
         js += `
-      tl.set('#${id}rn',{ textContent: ${JSON.stringify(String(Math.round(e * 100)))} },${r2(t0 + 0.15 + T * u)});`
+      tl.set('#${id}rn',{ textContent: ${jsonPourScript(String(Math.round(e * 100)))} },${r2(t0 + 0.15 + T * u)});`
       }
       // 100 % ATTEINT : la pastille claque. C'est le moment qui vend.
       js += `
@@ -4162,7 +4166,7 @@ export function animJs(name, s, r2) {
         const u = k / steps
         // exponentiel : ça part vite et ça finit en s'installant sur le gros chiffre
         const v = Math.round(dep * Math.pow(arr / dep, Math.pow(u, 0.72)))
-        js += `\n      tl.set('#${id}vwn', { textContent: ${JSON.stringify(v.toLocaleString('fr-FR'))} }, ${r2(t0 + 0.4 + T * u)});`
+        js += `\n      tl.set('#${id}vwn', { textContent: ${jsonPourScript(v.toLocaleString('fr-FR'))} }, ${r2(t0 + 0.4 + T * u)});`
       }
       js += `
       tl.to('#${id}vwn',{scale:1.16,duration:0.15,yoyo:true,repeat:1,ease:'power2.out',transformOrigin:'50% 50%'},${r2(t0 + 0.4 + T)});`

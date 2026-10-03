@@ -38,6 +38,11 @@ const PLAN_PRICE_CENTS: Record<string, number> = {
   plan_hR0u4VHoeszbu: 1999, plan_GLoKHMqZtNbLK: 3999, plan_iRh99E5F2g4XU: 7499,
 }
 const REFERRAL_RATE = 0.30
+// Audit 02/10 (PAY-4) : plans ANNUELS (bloc « Annuel » de SUB_MAP) — leur PLAN_PRICE_CENTS est le prix de l'ANNÉE.
+// Le plafond anti auto-parrainage est ce que le parrain paie PAR MOIS : un plan annuel est ramené à son équivalent
+// mensuel (÷ 12). Les packs (paiement unique) restent tels quels. Synchro avec handle_new_user (migration 03/10).
+const ANNUAL_PLAN_IDS = new Set(['plan_cNydK89X39PLE', 'plan_P7WIywSa6YrxT', 'plan_OvRwm5CW3xcNh', 'plan_uWTkJDl1GvxNR', 'plan_x2kDWR6ur2W5E'])
+const monthlyCents = (cents: number, planId: string) => ANNUAL_PLAN_IDS.has(planId) ? Math.round(cents / 12) : cents
 // Prix mensuel (centimes) du plan du PARRAIN par tier — sert de plafond économique anti auto-parrainage ASYMÉTRIQUE
 // (audit 14/09) : si la commission (30% du plan DU FILLEUL) dépasse ce que le parrain paie lui-même, c'est le signal
 // typique d'un compte-leurre petit-plan qui parraine un gros filleul → on FLAGUE la commission pour revue owner
@@ -109,11 +114,18 @@ async function creditReferral(sb: any, referredId: string, referredEmail: string
     // la commission est enregistrée mais N'ENTRE PAS dans le disponible (get_referral_summary l'exclut) tant que
     // l'owner ne l'a pas approuvée (approve_referral_earning). refProf null (hoquet DB, fail-open) → cap 0 → pas de flag.
     // Prix EXACT du plan du parrain via son whop_plan_id (Élite30=8999 ≠ Élite90=22499) ; repli tier-min sinon.
-    const refPlanCap = (PLAN_PRICE_CENTS[String(refProf?.whop_plan_id || '')] ?? REFERRER_PLAN_CAP[String(refProf?.plan || '').toLowerCase()]) ?? 0
+    // Audit 02/10 (PAY-4) : plafond = prix MENSUEL du plan du parrain. Un parrain ANNUEL était jugé sur le prix de son
+    // ANNÉE (Starter annuel 249,99 €) → une commission jusqu'à ~250 € (filleul Élite30 annuel : 240 €) n'était jamais
+    // flaguée. La commission, elle, n'est PAS divisée : celle d'un filleul annuel est versée d'un coup (30 % de l'année)
+    // et c'est ce montant qui est en jeu (cas fermé le 15/09 : filleul Pro annuel 135 € > parrain Élite30 89,99 €).
+    const refPlanId = String(refProf?.whop_plan_id || '')
+    const refPlanCap = (PLAN_PRICE_CENTS[refPlanId] !== undefined
+      ? monthlyCents(PLAN_PRICE_CENTS[refPlanId], refPlanId)
+      : REFERRER_PLAN_CAP[String(refProf?.plan || '').toLowerCase()]) ?? 0
     // Relecture 25/09 : seul auth-otp enregistre l'IP d'inscription → un filleul inscrit par Google n'en a pas et la garde
     // same-IP ci-dessus ne peut rien vérifier (2e compte Google = 30 % sans signal) → commission en REVUE owner.
     const reviewReason = (refPlanCap > 0 && commission > refPlanCap)
-      ? `auto-parrainage possible : commission ${(commission / 100).toFixed(2)}€ > plan parrain ${refProf?.plan} ${(refPlanCap / 100).toFixed(2)}€`
+      ? `auto-parrainage possible : commission ${(commission / 100).toFixed(2)}€ > plan parrain ${refProf?.plan} ${(refPlanCap / 100).toFixed(2)}€/mois`
       : !_sipFilleul ? 'IP d’inscription du filleul inconnue (inscription Google) : auto-parrainage non vérifiable'
       : null
     if (reviewReason) console.warn(`🚩 parrainage ASYMÉTRIQUE (flag revue owner) — ${reviewReason} (parrain ${referrerId}, filleul ${referredEmail})`)
@@ -146,6 +158,115 @@ async function unmarkIgLeadPaid(sb: any, userId: string) {
     const { error } = await sb.rpc('ig_lead_unmark_paid', { p_user: userId })
     if (error) console.warn('ℹ️ attribution Instagram, remboursement (non bloquant) :', error.message)
   } catch (e) { console.warn('ℹ️ attribution Instagram, remboursement (non bloquant) :', (e as Error)?.message) }
+}
+
+// Audit 02/10 (PAY-3) : remboursement / litige d'un filleul → ses commissions des 90 derniers jours passent en REVUE
+// owner (review_reason posé, rien n'est supprimé). get_referral_summary exclut du disponible toute commission en revue :
+// plus de retrait d'une commission sur un paiement repris. L'owner la ré-approuve (approve_referral_earning) si le
+// litige est gagné. Le motif existant (ex. IP inconnue) est conservé derrière le nouveau. Recherche par compte ET par
+// e-mail du filleul (compte supprimé ou e-mail changé). Best-effort : ne bloque jamais le traitement du webhook.
+// Renvoie le nombre de commissions mises en revue, ou null si la base n'a pas répondu (signalé dans l'alerte owner).
+const CLAWBACK_REVIEW_PREFIX = 'remboursement ou litige du filleul'
+async function flagReferralClawback(sb: any, referredId: string | null, referredEmail: string, action: string): Promise<number | null> {
+  try {
+    const since = new Date(Date.now() - 90 * 86_400_000).toISOString()
+    const rows = new Map<string, string | null>()
+    const keys: [string, string | null][] = [['referred_id', referredId], ['referred_email', referredEmail || null]]
+    for (const [col, val] of keys) {
+      if (!val) continue
+      const { data, error } = await sb.from('referral_earnings').select('id, review_reason').eq(col, val).gte('created_at', since)
+      if (error) { console.error('⚠️ parrainage (clawback) :', error.message); return null }
+      for (const r of data || []) rows.set(String(r.id), r.review_reason ?? null)
+    }
+    let n = 0
+    for (const [id, prev] of rows) {
+      if (String(prev || '').startsWith(CLAWBACK_REVIEW_PREFIX)) continue   // déjà contestée (remboursement PUIS litige)
+      const reason = `${CLAWBACK_REVIEW_PREFIX} (${action.slice(0, 60)})` + (prev ? ` · ${prev}` : '')
+      const { error } = await sb.from('referral_earnings').update({ review_reason: reason }).eq('id', id)
+      if (error) { console.error('⚠️ parrainage (clawback) :', error.message); return null }
+      n++
+    }
+    if (n) console.warn(`🚩 parrainage : ${n} commission(s) du filleul ${referredId || referredEmail} mise(s) en revue (${action})`)
+    return n
+  } catch (e) { console.error('⚠️ parrainage (clawback) :', e); return null }
+}
+
+// Audit 02/10 (PAY-1) : un achat fait SANS compte vit dans pending_activations (appliqué par handle_new_user à
+// l'inscription). Résiliation, remboursement ou litige n'y touchaient pas → plan payant gardé à vie après remboursement.
+// Lignes retrouvées par e-mail (clé primaire) ET par abonnement Whop (un paiement / remboursement peut arriver sans
+// e-mail). Dédoublonnées par e-mail.
+const PENDING_COLS = 'email, plan, credits, img_credits, whop_member_id, whop_plan_id, paid_at'
+async function findPendingRows(sb: any, email: string, memberId: string | null): Promise<{ rows: any[]; error: unknown }> {
+  const rows = new Map<string, any>()
+  const keys: [string, string | null][] = [['email', email || null], ['whop_member_id', memberId ? String(memberId) : null]]
+  for (const [col, val] of keys) {
+    if (!val) continue
+    const { data, error } = await sb.from('pending_activations').select(PENDING_COLS).eq(col, val)
+    if (error) return { rows: [], error }
+    for (const r of data || []) rows.set(String(r.email), r)
+  }
+  return { rows: [...rows.values()], error: null }
+}
+// Part « pack » d'une ligne d'abonnement en attente : credits = crédits du plan + bonus 1er abonnement + packs achetés
+// sans compte (cf. upserts de l'activation). Plan Whop hors catalogue → part inconnue → 0 (prudence).
+function pendingPackLeft(pa: any): number {
+  const sub = SUB_MAP[String(pa?.whop_plan_id || '')]
+  if (!sub) return 0
+  return Math.max(0, (pa?.credits || 0) - sub.credits - (FIRST_SUB_BONUS[sub.plan] ?? 0))
+}
+// Résiliation : retire de pending_activations l'abonnement QUI EXPIRE (même identifiant d'abonnement ; repli sur le plan
+// si aucun n'est stocké, même règle que la branche avec profil). Les crédits de packs achetés sans compte restent en
+// attente (ligne repassée en plan free), sinon la ligne est supprimée. Appelée AVEC OU SANS profil : après un changement
+// d'e-mail, l'adresse de l'achat peut être portée par un autre compte (relecture 02/10). Renvoie le nombre de lignes
+// neutralisées, ou null si la base n'a pas répondu (l'appelant rend 500 → Whop rejoue).
+async function neutralisePendingSub(sb: any, email: string, expiringMember: string | null, planId: string): Promise<number | null> {
+  const { rows, error } = await findPendingRows(sb, email, expiringMember)
+  if (error) { console.error('❌ pending_activations (résiliation) :', error); return null }
+  let n = 0
+  for (const pa of rows) {
+    if (!pa.plan || pa.plan === 'free') continue   // pack seul : l'expiration d'un abonnement ne le concerne pas
+    const memeAbo = (pa.whop_member_id && expiringMember && String(pa.whop_member_id) === String(expiringMember)) ||
+      (!pa.whop_member_id && (!pa.whop_plan_id || pa.whop_plan_id === planId))
+    if (!memeAbo) continue
+    const packLeft = pendingPackLeft(pa)
+    const { error: e2 } = (packLeft > 0 || (pa.img_credits || 0) > 0)
+      ? await sb.from('pending_activations').update({ plan: 'free', credits: packLeft, whop_member_id: null, whop_plan_id: null }).eq('email', pa.email)
+      : await sb.from('pending_activations').delete().eq('email', pa.email)
+    if (e2) { console.error('❌ pending_activations (résiliation) :', e2); return null }
+    n++
+  }
+  return n
+}
+// Remboursement / litige : supprime TOUTES les lignes en attente de l'acheteur (e-mail ET abonnement), comme la branche
+// avec profil remet tout à zéro. Avec ou sans profil (même raison que ci-dessus). null = échec DB (fail-closed : 500).
+async function purgePendingRows(sb: any, email: string, memberId: string | null): Promise<number | null> {
+  let n = 0
+  const keys: [string, string | null][] = [['email', email || null], ['whop_member_id', memberId ? String(memberId) : null]]
+  for (const [col, val] of keys) {
+    if (!val) continue
+    const { data: gone, error } = await sb.from('pending_activations').delete().eq(col, val).select('email')
+    if (error) { console.error('❌ pending_activations (clawback) :', error); return null }
+    n += (gone || []).length
+  }
+  return n
+}
+
+// Audit 02/10 (PAY-6) : toute valeur venant d'un utilisateur ou du payload est échappée avant d'entrer dans un e-mail
+// HTML (même échappement que whop-cancel, + guillemets).
+const escHtml = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+// Alerte owner (remboursement, litige, résiliation d'un achat sans compte). Best-effort : jamais bloquant.
+async function alertOwner(subject: string, title: string, rows: [string, string][], note: string) {
+  if (!RESEND_API_KEY) return
+  try {
+    const html = `<div style="font-family:sans-serif;line-height:1.6"><h2>${escHtml(title)}</h2>`
+      + rows.map(([k, v]) => `<p><b>${escHtml(k)} :</b> ${escHtml(v)}</p>`).join('')
+      + `<p>${escHtml(note)}</p></div>`
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST', headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'AvatarAds <bonjour@avatarads.fr>', to: ['axel@iamanager.fr'], subject, html }),
+    })
+  } catch (e) { console.error('alerte owner', e) }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -223,7 +344,9 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
       if (error) return // déjà envoyé (ex. upgrade de plan)
     }
     const label = PLAN_LABEL[opts.plan] ?? opts.plan
-    const name = opts.firstName ? `${opts.firstName}, ` : ''
+    // Audit 02/10 (PAY-6) : le prénom est modifiable par l'utilisateur → échappé (sinon HTML/liens injectés dans un
+    // e-mail envoyé depuis bonjour@avatarads.fr).
+    const name = opts.firstName ? `${escHtml(opts.firstName)}, ` : ''
     const body = opts.pending
       ? `${name}ton paiement est bien enregistré ✅<br><br>Il ne reste qu'une étape : <b>crée ton compte sur avatarads.fr avec cette adresse e-mail</b> — ton plan ${label} et tes crédits s'activeront automatiquement à la connexion.`
       : `${name}bienvenue dans AvatarAds 🎉<br><br>Ton plan <b>${label}</b> est actif avec <b>${opts.credits} crédits</b> ce mois-ci (1 crédit = 1 seconde de vidéo).<br><br>Pour ta première vidéo :<br>1️⃣ Décris ton produit dans le Générateur<br>2️⃣ Choisis un avatar et une voix<br>3️⃣ Clique sur Générer — l'IA fait le reste 🎬<br><br>Une question ? Réponds simplement à cet e-mail.`
@@ -415,12 +538,16 @@ serve(async (req) => {
       } else {
         // Pack payé sans compte → stocké en attente (cumulatif, plan inchangé)
         const { data: pa } = await sb.from('pending_activations').select('plan, credits, img_credits').eq('email', email).maybeSingle()
+        // Audit 02/10 (PAY-1) : sur une ligne d'ABONNEMENT, paid_at = dernier paiement de l'abonnement (handle_new_user
+        // ignore un abonnement en attente périmé) → un pack acheté par-dessus ne la rafraîchit pas (colonne omise :
+        // l'upsert ne la touche pas). Ligne de pack seul ou nouvelle ligne : inchangé.
+        const subPending = !!(pa?.plan && pa.plan !== 'free')
         const { error } = await sb.from('pending_activations').upsert({
           email, product: 'avatarads',
           plan:        pa?.plan || 'free',
           credits:     (pa?.credits || 0) + (pack.credits || 0),
           img_credits: (pa?.img_credits || 0) + (pack.imgCredits || 0),
-          paid_at:     new Date().toISOString(),
+          ...(subPending ? {} : { paid_at: new Date().toISOString() }),
         }, { onConflict: 'email' })
         if (error) { console.error('❌ pending pack:', error); return await failDb() }
         console.log(`⏳ Pack en attente pour ${email}`)
@@ -439,6 +566,12 @@ serve(async (req) => {
     // (audit 06/09 : comparer le plan id cassait l'upgrade vers le MÊME palier — l'ancien membership expirait avec
     // le même plan id et rétrogradait le nouveau). Repli sur le plan id seulement si aucun member id n'est stocké.
     const expiringMember = data.id ?? memberId ?? null
+    // Audit 02/10 (PAY-1) : un abonnement payé SANS compte puis résilié restait dans pending_activations et
+    // handle_new_user appliquait quand même le plan à l'inscription. Neutralisé AVANT tout autre effet (échec DB → 500,
+    // Whop rejoue), avec ou sans profil : l'adresse de l'achat peut être portée par un autre compte (changement d'e-mail).
+    const neutralised = await neutralisePendingSub(sb, email, expiringMember, planId)
+    if (neutralised === null) return await failDb()
+    if (neutralised) console.log(`⛔ Résiliation (${email}) : ${neutralised} abonnement(s) en attente retiré(s)`)
     const estActif = profile && (
       (profile.whop_member_id && expiringMember && String(profile.whop_member_id) === String(expiringMember)) ||
       (!profile.whop_member_id && (!profile.whop_plan_id || profile.whop_plan_id === planId))
@@ -456,6 +589,17 @@ serve(async (req) => {
       }).eq('id', profile.id)
       console.log(`⛔ Plan résilié pour ${email} → free${keep ? ` (${keep} crédits achetés conservés)` : ''}`)
     }
+    // Audit 02/10 (PAY-1) : alerte owner pour toute résiliation SANS compte, et pour un abonnement en attente retiré
+    // alors qu'un compte porte l'adresse (cas inhabituel : changement d'e-mail). Une résiliation ordinaire avec compte
+    // reste silencieuse (inchangé).
+    if (!profile || neutralised) {
+      await alertOwner(`⚠️ Résiliation ${profile ? 'd’un achat en attente' : 'sans compte'} AvatarAds — ${email}`,
+        profile ? 'Résiliation d’un abonnement en attente (adresse portée par un compte)' : 'Résiliation d’un abonnement sans compte', [
+          ['Événement', action], ['E-mail Whop', email], ['Abonnement', String(expiringMember || '—')], ['Abonnements en attente retirés', String(neutralised)],
+        ], neutralised
+          ? 'Le plan en attente ne sera pas appliqué si cette personne crée un compte (les crédits de packs éventuels restent en attente).'
+          : 'Aucun abonnement en attente trouvé : si cette personne a un compte sous une autre adresse, vérifie son plan à la main.')
+    }
   }
 
   // ─── membership.renewed → renouvellement mensuel ──────────────
@@ -463,7 +607,12 @@ serve(async (req) => {
     // Paiement réussi / renouvellement. L'e-mail peut manquer du payload d'un paiement → on retrouve le profil
     // par l'abonnement Whop (memberId), et on déduit le plan du profil si le payload ne le porte pas.
     const profile = await findProfile()
-    const effPlanId = planId || profile?.whop_plan_id || ''
+    // Audit 02/10 (PAY-1) : sans compte, l'abonnement en attente sert à rafraîchir paid_at (voir plus bas) et, si le
+    // paiement ne porte pas le plan, à le déduire. Lecture best-effort : un hoquet DB ne bloque pas le webhook.
+    const pend = profile ? null : await findPendingRows(sb, email, memberId)
+    if (pend?.error) console.warn('ℹ️ pending_activations (renouvellement, non bloquant) :', pend.error)
+    const pendSub = (pend?.rows || []).find((r: any) => r.plan && r.plan !== 'free') ?? null
+    const effPlanId = planId || profile?.whop_plan_id || pendSub?.whop_plan_id || ''
     const sub = SUB_MAP[effPlanId]
     if (!sub) return new Response('OK', { status: 200 })
     // Ignore le renouvellement d'un ANCIEN abonnement (après upgrade) → ne doit pas écraser le plan actif
@@ -512,12 +661,30 @@ serve(async (req) => {
       await creditReferral(sb, profile.id, email, effPlanId, data, 'renouvellement')
     } else {
       console.warn(`⚠️ Renouvellement sans profil (email=${email || '—'} member=${memberId || '—'} plan=${effPlanId})`)
+      // Audit 02/10 (PAY-1) : handle_new_user ignore désormais un abonnement en attente dont le DERNIER paiement
+      // (paid_at) a plus d'une période + marge. Un acheteur toujours sans compte qui continue de payer garde donc une
+      // ligne fraîche : paid_at est rafraîchi à chaque paiement du MÊME abonnement (identifiant, sinon plan).
+      const memeAbo = pendSub && ((pendSub.whop_member_id && memberId)
+        ? String(pendSub.whop_member_id) === String(memberId)
+        : (!pendSub.whop_plan_id || pendSub.whop_plan_id === effPlanId))
+      if (memeAbo) {
+        const { error: touchErr } = await sb.from('pending_activations').update({ paid_at: new Date().toISOString() }).eq('email', pendSub.email)
+        if (touchErr) console.warn('ℹ️ pending_activations (renouvellement, non bloquant) :', touchErr.message)
+        else console.log(`⏳ Abonnement en attente prolongé (${pendSub.email}, ${effPlanId})`)
+      }
     }
   }
 
   // ─── remboursement / litige / chargeback → clawback des crédits ──
   else if (isClawback) {
     const profile = await findProfile()
+    // Audit 02/10 (PAY-1) : remboursement / litige d'un achat fait SANS compte → la ligne en attente restait et
+    // handle_new_user appliquait plan + crédits à l'inscription (plan payant gardé à vie). Toutes les lignes en attente
+    // de l'acheteur (e-mail ET abonnement) sont supprimées AVANT tout autre effet, avec ou sans profil : l'adresse de
+    // l'achat peut être portée par un autre compte après un changement d'e-mail (relecture 02/10). Échec DB → 500 :
+    // Whop rejoue, la ligne ne doit pas survivre (fail-closed).
+    const removed = await purgePendingRows(sb, email, memberId)
+    if (removed === null) return await failDb()
     if (profile) {
       const { error: clawErr } = await sb.from('profiles').update({
         plan: 'free', credits_remaining: 0, bought_credits: 0,
@@ -525,24 +692,25 @@ serve(async (req) => {
       }).eq('id', profile.id)
       console.log(`💸 Clawback (${action}) pour ${email || profile.id} → free, crédits remis à zéro`)
       if (!clawErr) await unmarkIgLeadPaid(sb, profile.id)   // plus compté « payant » (seulement si le profil est bien repassé free)
-      // E-mail à Axel : la commission de parrainage éventuelle doit être réversée À LA MAIN (l'accounting des
-      // payouts est trop sensible pour un revert automatique — double-réversion, commission déjà virée…).
-      try {
-        const rk = Deno.env.get('RESEND_API_KEY') ?? ''
-        if (rk) await fetch('https://api.resend.com/emails', {
-          method: 'POST', headers: { 'Authorization': `Bearer ${rk}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            from: 'AvatarAds <bonjour@avatarads.fr>', to: ['axel@iamanager.fr'],
-            subject: `⚠️ Clawback AvatarAds — ${email || profile.id}`,
-            html: `<div style="font-family:sans-serif;line-height:1.6"><h2>Remboursement / litige</h2>`
-              + `<p><b>Événement :</b> ${String(action)}</p><p><b>Membre :</b> ${email || profile.id}</p>`
-              + `<p>Plan remis à <b>free</b>, crédits <b>à zéro</b>. Si une <b>commission de parrainage</b> a été`
-              + ` versée sur ce paiement, pense à la réverser dans « Tes gains ».</p></div>`,
-          }),
-        })
-      } catch (e) { console.error('clawback email', e) }
+      // Audit 02/10 (PAY-3) : les commissions récentes du filleul passent en revue → plus retirables. Une commission
+      // DÉJÀ virée reste à réverser À LA MAIN (l'accounting des payouts est trop sensible pour un revert automatique).
+      const flagged = await flagReferralClawback(sb, profile.id, email, action)
+      if (removed) console.log(`💸 Clawback (${action}) : ${removed} ligne(s) en attente supprimée(s) pour ${email || memberId}`)
+      await alertOwner(`⚠️ Clawback AvatarAds — ${email || profile.id}`, 'Remboursement / litige', [
+        ['Événement', action], ['Membre', email || profile.id],
+        ...(removed ? [['Achats en attente supprimés', String(removed)] as [string, string]] : []),
+        ['Commissions de parrainage mises en revue (90 j)', flagged === null ? 'échec, à vérifier à la main' : String(flagged)],
+      ], 'Plan remis à free, crédits à zéro. Les commissions du filleul ne sont plus retirables ; si l’une d’elles a déjà été virée, pense à la réverser dans « Tes gains ».')
     } else {
-      console.log(`ℹ️ Clawback ${action} sans profil (${email || '—'})`)
+      console.log(`ℹ️ Clawback ${action} sans profil (${email || '—'}) : ${removed} ligne(s) en attente supprimée(s)`)
+      const flagged = email ? await flagReferralClawback(sb, null, email, action) : 0
+      await alertOwner(`⚠️ Clawback AvatarAds (sans compte) — ${email || memberId || '—'}`, 'Remboursement / litige sans compte', [
+        ['Événement', action], ['E-mail Whop', email || '—'], ['Abonnement', String(memberId || '—')],
+        ['Achats en attente supprimés', String(removed)],
+        ['Commissions de parrainage mises en revue (90 j)', flagged === null ? 'échec, à vérifier à la main' : String(flagged)],
+      ], removed
+        ? 'Le plan et les crédits ne seront pas appliqués si cette personne crée un compte.'
+        : 'Aucun achat en attente trouvé : si cette personne a un compte sous une autre adresse, remets son plan à free à la main.')
     }
   }
 

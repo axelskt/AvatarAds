@@ -6,6 +6,7 @@ import { mkdirSync, writeFileSync, copyFileSync, existsSync, readdirSync } from 
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildComposition } from '../build-composition.mjs'
+import { installerGsap } from '../securite.mjs'   // Audit 02/10 : GSAP embarqué, plus de CDN
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = join(HERE, 'styles')
@@ -56,6 +57,7 @@ for (const st of styles) {
     for (const f of readdirSync(fdir)) copyFileSync(join(fdir, f), join(dir, 'fonts', f))
   }
   writeFileSync(join(dir, 'index.html'), buildComposition({ ...plan, slideStyle: st }, {}))
+  installerGsap(dir)
   console.log('✓', st, '→', join(dir, 'index.html'))
 }
 // planche de contact : une ligne par style, une vignette par instant.

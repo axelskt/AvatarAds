@@ -8,6 +8,7 @@ import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesu
 import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL, omniEditPrompt, motionControlPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
 import { KIE_OMNI_STALE_MIN, OP_KIE_OMNI, omniKieOn, estOmniKie, taskDeOp, promptOmniMcp, soumettreOmniKie, avancerOmniKie } from './omnihuman-kie.ts'   // OmniHuman → kie (Axel 25/09)
+import { cheminSur, clePrepMcp, controlerTaillePlan, nettoyerSonUtilisateur } from '../_shared/storage-path.ts'   // audit 02/10 : chemins render-media et plans de rendu
 // ImageScript : décodeur/redimensionneur PNG-JPEG en WASM. Indispensable ici —
 // le chef d'orchestre REFUSE les miniatures au-dessus de 400 Ko, et une photo
 // d'utilisateur en pèse 2 à 3. Sans réduction, il reçoit le nom du média mais
@@ -1058,7 +1059,9 @@ const toolMedia = async (url: string, nom: string, mime: string, texte: string, 
 }
 
 // ── Définition des outils ──
-function toolDefs(isOwner: boolean, requireConfirm = true) {
+// `isOwner` = compte illimité (owner OU plan developer) : options internes de test. `isAdmin` = is_owner seul (audit 02/10) :
+// les outils ADMIN (fiche d'un autre utilisateur, backlog des animations) ne sont plus montrés au plan developer.
+function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
   const tools: Array<Record<string, unknown>> = [
     {
       name: 'get_account',
@@ -1270,7 +1273,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true) {
       inputSchema: { type: 'object', properties: {} },
     },
   ]
-  if (isOwner) {
+  if (isAdmin) {
     tools.push({
       name: 'admin_find_user',
       description: "ADMIN (SAV) — fiche d'un utilisateur AvatarAds par e-mail : plan, crédits, quotas, parrainage, Whop, derniers e-mails envoyés. Lecture seule.",
@@ -1787,7 +1790,8 @@ async function reconcileStaleJobs(userId: string): Promise<void> {
     // ── Omni / Motion Control (02/10) : un cran de plus ; toujours en cours après VT_STALE_MIN → remboursé ──
     if (estOutilVideo(job.op_name)) {
       await advanceVideoTool(job)
-      if (Date.now() - new Date(String(job.created_at)).getTime() > VT_STALE_MIN * 60_000) await failAndRefund(userId, job, 'timeout')
+      // audit 02/10 : clos par le filet → fichiers de la carte ET vidéo préparée (mcp-prep/, hors purge 7 jours) supprimés
+      if (Date.now() - new Date(String(job.created_at)).getTime() > VT_STALE_MIN * 60_000) { if ((await failAndRefund(userId, job, 'timeout')) >= 0) await vtNettoyer((job.params || {}) as Record<string, unknown>) }
       continue
     }
     // ── OmniHuman chez kie (Axel 25/09) : livré / échec → réglé ; en cours → on patiente jusqu'à KIE_OMNI_STALE_MIN ──
@@ -1885,7 +1889,8 @@ async function reconcileAllStale(): Promise<void> {
       // OmniHuman chez kie : plus lent → abandonné à KIE_OMNI_STALE_MIN seulement (l'étape 1 l'a déjà avancé / livré)
       if (estOmniKie(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < KIE_OMNI_STALE_MIN * 60_000) continue
       if (estOutilVideo(job.op_name) && Date.now() - new Date(String(job.created_at)).getTime() < VT_STALE_MIN * 60_000) continue   // Motion Control : jusqu'à ~25 min (Kling + repli + Topaz)
-      await failAndRefund(String(job.user_id), job, 'timeout')
+      const rendu = await failAndRefund(String(job.user_id), job, 'timeout')
+      if (rendu >= 0 && estOutilVideo(job.op_name)) await vtNettoyer((job.params || {}) as Record<string, unknown>)   // audit 02/10 : mcp-prep/ n'est purgé par rien d'autre
     }
     // 4) CARTES PHOTO EXPIRÉES (audit 28/09 #23) : une carte jamais utilisée (> 2 h, /start la refuse) gardait sa part du
     //    plafond 24 h sans aucun débit. Close (credits_cost 0 : rien n'a été pris) et part du plafond rendue.
@@ -2211,7 +2216,11 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
         const ref = o.productRef || null
         const gi = await genererImageAt(o.genImage + (ref ? ' PRODUCT: the person holds and shows THE EXACT product from the reference image — same bottle/packaging shape, colours, logo and label, identical and legible, never redrawn or re-lettered.' : ''),
           o.aspect === '16:9' ? '1536x1024' : '1152x2048', 'standard', ref)
-        if (!('bytes' in gi)) throw new ErrClient('photo de départ : ' + (gi.error || 'génération impossible') + ' — crédits rendus, réessaie')
+        // audit 02/10 : le texte brut du fournisseur part au journal, jamais au client (ErrClient est affiché tel quel)
+        if (!('bytes' in gi)) {
+          console.warn('[mcp] photo de départ refusée', o.jobId, String(gi.error || '').slice(0, 300))
+          throw new ErrClient('photo de départ : ' + (/moderat|safety|policy|sensitive|prohibited|flagged|rejected/i.test(String(gi.error || '')) ? 'refusée par la modération' : 'génération impossible') + ' — crédits rendus, réessaie')
+        }
         buf = gi.bytes
       } else {
         const got = await fetchUserFile(o.imageUrl, 10_000_000, /^image\/(png|jpe?g|webp)$/, "l'image de départ (image_url)")
@@ -2968,11 +2977,14 @@ async function replierSurGoogle(job: Record<string, unknown>, taskId: string, vp
 // prioritaire dans la file, ~5 s). Échec ou > 4 min → la vidéo d'origine est livrée : JAMAIS de vidéo payée perdue.
 async function lancerRetouche(userId: string, job: Record<string, unknown>, pj: Record<string, unknown>, bytes: Uint8Array): Promise<boolean> {
   try {
-    const brut = `${userId}/mcp-retouche/${job.id}-brut.mp4`
+    // audit 02/10 (WRK-1) : chemins du job de rendu validés comme ceux d'un client (motif fermé, dossier du compte) —
+    // la photo de départ vit dans <uid>/mcp-veo/ ; un chemin inattendu → pas de retouche, la vidéo d'origine est livrée
+    const brut = cheminSur(userId, `${userId}/mcp-retouche/${job.id}-brut.mp4`), photo = cheminSur(userId, pj.stage_path)
+    if (!brut || !photo) { console.warn('[mcp] retouche : chemin invalide, vidéo livrée telle quelle', job.id); return false }
     const { error: upE } = await svc.storage.from('render-media').upload(brut, bytes, { contentType: 'video/mp4', upsert: true })
     if (upE) return false
     const { data: rj, error: rjE } = await svc.from('render_jobs').insert({ user_id: userId, status: 'queued', plan: { __compose: 'retouche' },
-      input_video: brut, assets: [{ id: 'photo', path: String(pj.stage_path) }], avatar_clips: [] }).select('id').single()
+      input_video: brut, assets: [{ id: 'photo', path: photo }], avatar_clips: [] }).select('id').single()
     if (rjE || !rj) return false
     await svc.from('mcp_jobs').update({ params: { ...pj, retouche_job: rj.id, retouche_brut: brut, retouche_at: new Date().toISOString() }, updated_at: new Date().toISOString() }).eq('id', job.id)
     return true
@@ -2982,8 +2994,12 @@ async function suivreRetouche(userId: string, job: Record<string, unknown>, pj: 
   const { data: rj } = await svc.from('render_jobs').select('status, output_url').eq('id', String(pj.retouche_job)).maybeSingle()
   const trop = Date.now() - new Date(String(pj.retouche_at || job.updated_at)).getTime() > 4 * 60_000
   let chemin = ''
-  if (rj && rj.status === 'done' && rj.output_url) chemin = String(rj.output_url)
-  else if (!rj || rj.status === 'failed' || trop) { chemin = String(pj.retouche_brut || ''); console.warn('[mcp] retouche ignorée', job.id, rj?.status || 'introuvable') }
+  // audit 02/10 (WRK-1) : seule une sortie dans le dossier du compte (ou la clé mcp-prep/ du job) est relue ; sinon → la
+  // vidéo d'origine, elle aussi relue seulement si son chemin est sûr
+  const sortieOk = (o: unknown) => !!o && (cheminSur(userId, o) === String(o) || String(o) === clePrepMcp(userId, String(pj.retouche_job)))
+  const brut = cheminSur(userId, pj.retouche_brut) || ''
+  if (rj && rj.status === 'done' && rj.output_url && sortieOk(rj.output_url)) chemin = String(rj.output_url)
+  else if (!rj || rj.status === 'failed' || trop || (rj.status === 'done' && rj.output_url)) { chemin = brut; console.warn('[mcp] retouche ignorée', job.id, rj?.status || 'introuvable') }
   if (!chemin) return   // encore en file / en cours
   const { data: f, error } = await svc.storage.from('render-media').download(chemin)
   if (error || !f) return
@@ -3167,7 +3183,15 @@ async function advanceVideoTool(job: Record<string, unknown>): Promise<void> {
     const { data: rj } = await svc.from('render_jobs').select('status, output_url').eq('id', op.slice(3)).maybeSingle()
     if (!rj || rj.status === 'failed') { await vtEchec(job, 'Vidéo illisible — réexporte-la en MP4 et réessaie.'); return }
     if (rj.status !== 'done' || !rj.output_url) return
-    const prep = String(rj.output_url)
+    // Audit 02/10 (MCPB-1) — CONTRAT render-worker : la vidéo préparée vit dans mcp-prep/<user_id>/<job>.mp4, HORS du dossier
+    // <uid>/ que l'utilisateur peut réécrire avec sa session. Avant, elle était dans <uid>/ : remplacée entre la mesure
+    // (débit) et la lecture par le moteur, une vidéo plus longue était traitée au prix de la courte. On mesure, signe et
+    // envoie EXACTEMENT cette clé ; toute autre valeur → échec, rien n'est débité à ce stade (message neutre).
+    const prep = clePrepMcp(userId, op.slice(3))
+    if (!prep || String(rj.output_url) !== prep) {
+      console.warn('[mcp] outil vidéo : sortie de préparation inattendue', job.id, String(rj.output_url).slice(0, 120))
+      await vtEchec(job, 'Préparation de la vidéo impossible — réessaie dans quelques minutes.'); return
+    }
     const essaisPrep = (Number(pj.prep_try) || 0) + 1
     if (!(await vtPasser(job, op, 'vns:' + op.slice(3), { prep_path: prep, prep_try: essaisPrep }))) return   // un seul suivi débite et soumet
     const dur = await vtDuree(prep)
@@ -3564,7 +3588,7 @@ job_id : ${job.id}
 Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 10 minutes).`)
         }
         if (!k.sansTache) return toolErr('OmniHuman : le service de génération n’a pas répondu — crédits remboursés, réessaie dans un instant.')
-        if (!FAL_KEY) return toolErr(`OmniHuman momentanément indisponible (${k.error}) — crédits remboursés.`)
+        if (!FAL_KEY) { console.warn('[mcp] OmniHuman indisponible', String(k.error || '').slice(0, 300)); return toolErr('OmniHuman momentanément indisponible — crédits remboursés, réessaie dans un instant.') }   // audit 02/10 : pas d'erreur brute
         console.warn('[mcp] OmniHuman : refus sans tâche → repli fal', k.error)
       }
 
@@ -3579,7 +3603,8 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 10 
       })
       if (!sub.ok) {
         const t = await sub.text().catch(() => '')
-        return toolErr(`OmniHuman ${sub.status}${t ? ' — ' + t.slice(0, 140) : ''} — crédits remboursés.`)
+        console.warn('[mcp] OmniHuman : soumission refusée', sub.status, t.slice(0, 300))   // audit 02/10 : le corps brut au journal seulement
+        return toolErr(`Lancement du lipsync refusé (code ${sub.status}) — crédits remboursés, réessaie.`)
       }
       const sd = await sub.json().catch(() => ({}))
       const reqId = sd.request_id || sd.requestId
@@ -3636,7 +3661,8 @@ Appelle check_avatar_video avec ce job_id dans environ 1 minute (compte 2 à 5 m
     })
     if (!sub.ok) {
       const t = await sub.text().catch(() => '')
-      return toolErr(`Lancement Hedra échoué (${sub.status}${t ? ' — ' + t.slice(0, 140) : ''}) — crédits remboursés.`)
+      console.warn('[mcp] lipsync : soumission refusée', slug, sub.status, t.slice(0, 300))   // audit 02/10 : le corps brut au journal seulement
+      return toolErr(`Lancement du lipsync refusé (code ${sub.status}) — crédits remboursés, réessaie.`)
     }
     const sd = await sub.json().catch(() => ({})) as { job_id?: string; id?: string }
     const jobId = sd.job_id || sd.id
@@ -3939,6 +3965,10 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       }
 
       // 3) job de rendu, puis lien op_name → le job devient suivable de bout en bout
+      // audit 02/10 (WRK-1) : chemins revalidés comme ceux d'un client avant d'entrer dans render_jobs (défense en profondeur)
+      if (cheminSur(userId, inputPath) !== inputPath || assets.some((a) => cheminSur(userId, a.path) !== a.path)) {
+        await failAndRefund(userId, mcpJob, 'chemin de stockage invalide'); return
+      }
       const { data: rj, error: rjErr } = await svc.from('render_jobs')
         .insert({ user_id: userId, status: 'queued', plan, input_video: inputPath, assets })
         .select('id').single()
@@ -4066,6 +4096,8 @@ async function runRenderMontagePlan(profile: Record<string, unknown>, args: Reco
     return toolErr('plan invalide (champ duration manquant) — repars du JSON de get_montage_plan.')
   }
   if (Number((plan as Record<string, unknown>).duration) > 300) return toolErr('plan trop long (max 5 min).')
+  // audit 02/10 (WRK-4) : mêmes bornes que render-job (512 Ko, tableaux) — un plan démesuré n'entre pas dans la file
+  { const refus = controlerTaillePlan(plan); if (refus) return toolErr(refus.status === 413 ? 'Plan trop volumineux — repars du JSON de get_montage_plan.' : 'Plan invalide — repars du JSON de get_montage_plan.') }
 
   const userId = String(profile.id)
   const { data: src } = await svc.from('mcp_jobs').select('op_name')
@@ -4074,6 +4106,11 @@ async function runRenderMontagePlan(profile: Record<string, unknown>, args: Reco
   const { data: srcRj } = await svc.from('render_jobs').select('input_video, assets, plan')
     .eq('id', src.op_name).maybeSingle()
   if (!srcRj?.input_video) return toolErr("Audio du montage d'origine introuvable.")
+  // audit 02/10 (WRK-1) : la source et les médias réutilisés restent dans le dossier du compte (motif fermé)
+  const srcInput = cheminSur(userId, srcRj.input_video)
+  if (!srcInput) return toolErr("Audio du montage d'origine introuvable.")
+  const srcAssets = (Array.isArray(srcRj.assets) ? srcRj.assets : [])
+    .filter((a: Record<string, unknown>) => a && cheminSur(userId, a.path) === a.path)
   // Audit 02/10 : le plan vient de l'appelant → AUCUNE clé interne du moteur n'est acceptée de lui (__batchBlank régénérait
   // les aperçus publics, __compose doublait la file, etc.). Les seules clés internes utiles (__lipsync, __brief) sont
   // reprises du plan D'ORIGINE ; un son utilisateur n'est accepté que dans le dossier du compte.
@@ -4083,7 +4120,10 @@ async function runRenderMontagePlan(profile: Record<string, unknown>, args: Reco
     for (const k of Object.keys(pl)) if (k.startsWith('__')) delete pl[k]
     if (gardeLip && orig.__lipsync !== undefined) pl.__lipsync = orig.__lipsync
     if (orig.__brief !== undefined) pl.__brief = orig.__brief
-    for (const k of ['userAudioPath', 'userAudio']) if (pl[k] !== undefined && !(typeof pl[k] === 'string' && String(pl[k]).startsWith(userId + '/') && !String(pl[k]).includes('..'))) delete pl[k]
+    // son utilisateur : userAudioPath dans le dossier du compte (motif fermé, audit 02/10), userAudio (fichier local du worker)
+    // jamais de l'appelant, userAudioVol borné (interpolé dans un filtre ffmpeg)
+    nettoyerSonUtilisateur(userId, pl)
+    const d = Number(pl.duration); if (Number.isFinite(d)) pl.duration = d
   }
 
   const cost = MONTAGE_RENDER_COST
@@ -4099,7 +4139,7 @@ async function runRenderMontagePlan(profile: Record<string, unknown>, args: Reco
 
   let launched = false
   try {
-    const made = await createMontageJobs(userId, plan as Record<string, unknown>, String(srcRj.input_video), srcRj.assets || [], cost)
+    const made = await createMontageJobs(userId, plan as Record<string, unknown>, srcInput, srcAssets, cost)
     if (typeof made === 'string') return toolErr(made)
     launched = true
     return toolText(
@@ -4115,7 +4155,7 @@ async function runListMedia(profile: Record<string, unknown>): Promise<ToolConte
   const userId = String(profile.id)
   const { data: brut, error } = await svc.storage.from('mcp-media')
     .list(userId, { limit: 24, sortBy: { column: 'created_at', order: 'desc' } })
-  if (error) return toolErr('Erreur lecture médias : ' + error.message)
+  if (error) { console.warn('[mcp] list_media', error.message); return toolErr('Lecture des médias impossible pour le moment — réessaie.') }   // audit 02/10 : jamais le message brut du stockage
   const data = (brut || []).filter((f) => !!f.id)   // les sous-dossiers (id null) n'ont pas de lien utile
   if (!data.length) return toolText('Aucun média généré via Claude pour le moment.')
   const signes = new Map<string, string>()   // mcp-media privé (audit 28/09) : liens signés 7 jours, en un seul appel
@@ -4156,7 +4196,7 @@ async function runListMedia(profile: Record<string, unknown>): Promise<ToolConte
 // enregistrée avec le mot, la phrase et le nom qu'il proposerait.
 // Ici on la lit, classée par fréquence : c'est l'ordre dans lequel fabriquer.
 async function runAnimationsDemandees(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
-  if (!isUnlimited(profile)) return toolErr('Outil réservé au compte administrateur.')
+  if (profile.is_owner !== true) return toolErr('Outil réservé au compte administrateur.')   // audit 02/10 : propriétaire seul (plus le plan developer)
   const limite = Math.max(1, Math.min(60, Number(args.limite) || 20))
   const jours = Number(args.depuis_jours) || 0
   let q = svc.from('anim_demandes_top').select('*').limit(limite)
@@ -4182,7 +4222,7 @@ async function runAnimationsDemandees(profile: Record<string, unknown>, args: Re
 }
 
 async function runAdminFindUser(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
-  if (!isUnlimited(profile)) return toolErr('Outil réservé au compte administrateur.')
+  if (profile.is_owner !== true) return toolErr('Outil réservé au compte administrateur.')   // audit 02/10 : propriétaire seul (plus le plan developer)
   const email = String(args.email || '').trim().toLowerCase()
   if (!email) return toolErr('Le paramètre "email" est requis.')
   const { data: u } = await svc.from('profiles').select(
@@ -4688,6 +4728,11 @@ serve(async (req) => {
     const ext = !video ? 'jpg' : /webm/.test(type) ? 'webm' : /quicktime/.test(type) ? 'mov' : 'mp4'
     const bucket = video ? 'render-media' : 'mcp-media'
     const path = `${pj.user_id}/mcp-src/${jobId}-${video ? 'src' : 'char'}.${ext}`
+    // upsert GARDÉ (audit 02/10, MCPB-1) : un nouvel essai depuis la carte (« redépose-la », envoi coupé, photo envoyée puis
+    // vidéo refusée) réécrit le MÊME chemin, et la carte envoie x-upsert. Sans risque désormais : ce fichier n'est que
+    // l'ENTRÉE de la préparation ; la vidéo mesurée, facturée et lue par le moteur est la copie du worker dans
+    // mcp-prep/<uid>/ (hors du dossier que l'utilisateur peut réécrire), cf. advanceVideoTool. La photo du personnage
+    // (mcp-media) n'est pas facturée à la taille et /start revérifie taille et type réels.
     const { data: su, error: suE } = await svc.storage.from(bucket).createSignedUploadUrl(path, { upsert: true })
     if (suE || !su?.signedUrl) return json(500, { error: 'upload_url' })
     await svc.from('mcp_jobs').update({ params: { ...pp, [video ? 'src_path' : 'char_path']: path } }).eq('id', jobId).eq('status', 'pending')
@@ -4697,9 +4742,10 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>
     const jobId = String(body.job || '')
     if (!/^[0-9a-f-]{36}$/i.test(jobId)) return json(400, { error: 'bad_request' })
+    // capacité signée (H4/M5) vérifiée AVANT toute lecture (audit 02/10) : sans elle, 404/403 disait si le job existe
+    if (!(await capOk(jobId, body.cap))) return json(403, { error: 'forbidden' })
     const { data: pj } = await svc.from('mcp_jobs').select('*').eq('id', jobId).maybeSingle()
     if (!pj) return json(404, { error: 'not_found' })
-    if (!(await capOk(jobId, body.cap))) return json(403, { error: 'forbidden' })   // capacité signée (H4/M5)
     if (pj.status !== 'pending') return json(409, { error: 'not_pending' })
     if (Date.now() - new Date(String(pj.created_at)).getTime() > 2 * 3600 * 1000) return json(403, { error: 'expired' })
     const params = (pj.params || {}) as Record<string, unknown>
@@ -4710,7 +4756,8 @@ serve(async (req) => {
       const { data: profT } = await svc.from('profiles').select('*').eq('id', uid).maybeSingle()
       if (!profT) return json(404, { error: 'no_profile' })
       if (!isUnlimited(profT) && !ALLOWED_PLANS.includes(String(profT.plan || '').toLowerCase())) return json(403, { error: 'plan' })
-      const src = String(params.src_path || ''), chr = String(params.char_path || '')
+      // audit 02/10 (WRK-1) : chemins posés par /upload-url, revalidés (motif fermé) avant d'entrer dans render_jobs
+      const src = cheminSur(uid, params.src_path) || '', chr = cheminSur(uid, params.char_path) || ''
       // taille et type RÉELS des fichiers envoyés (le lien signé ne les borne pas) — audit 02/10
       const infoV = src.startsWith(uid + '/mcp-src/' + jobId) ? await fichierInfo('render-media', src) : null
       if (!infoV) return json(400, { error: 'no_video' })
@@ -4876,9 +4923,10 @@ serve(async (req) => {
     const refUrl = String(body.ref || '').trim()
     const raw = body.raw === true || body.raw === 'true'   // prompt déjà composé par generate_image → ne pas le ré-augmenter
     if (!/^[0-9a-f-]{36}$/i.test(origId) || !prompt) return json(400, { error: 'bad_request' })
-    const { data: orig } = await svc.from('mcp_jobs').select('user_id, created_at, params').eq('id', origId).maybeSingle()
-    if (!orig) return json(404, { error: 'not_found' })
-    if (!(await capOk(origId, body.cap))) return json(403, { error: 'forbidden' })   // capacité signée (H4) : un job_id fuité ne suffit plus
+    if (!(await capOk(origId, body.cap))) return json(403, { error: 'forbidden' })   // capacité signée (H4) : un job_id fuité ne suffit plus — vérifiée AVANT toute lecture (audit 02/10)
+    const { data: orig } = await svc.from('mcp_jobs').select('user_id, created_at, params, kind').eq('id', origId).maybeSingle()
+    // audit 02/10 : la capacité d'un job VIDÉO / montage / lipsync ne régénère pas d'image (le bouton n'existe que sur une image)
+    if (!orig || orig.kind !== 'image') return json(404, { error: 'not_found' })
     // audit 02/10 : 30 régénérations par heure et par compte au plus (le plafond 24 h est désactivé, il ne bornait plus ce chemin)
     if (!(await rateHit('mcp-regen:' + String(orig.user_id), 3600, 30))) return json(429, { error: 'busy' })
     // F2 (audit MCP 14/09) : fraîcheur ancrée à la RACINE, pas au parent chaînable. Un job régénéré hérite du root_ts ;
@@ -5157,7 +5205,7 @@ serve(async (req) => {
       })
     }
     if (method === 'ping') return rpcResult(id, {})
-    if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm) })
+    if (method === 'tools/list') return rpcResult(id, { tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm, profile?.is_owner === true) })
     // ── server/discover (01/09) : le client d'INTERFACE de claude.ai (UA « Claude-User »)
     // utilise CETTE méthode — hors spec MCP standard — pour peupler la carte du connecteur.
     // Constat sur les logs : quand Claude prend cette branche, il reçoit notre -32601 puis
@@ -5173,7 +5221,7 @@ serve(async (req) => {
         protocolVersion: '2025-06-18',
         capabilities: { tools: { listChanged: true }, resources: { listChanged: true } },
         serverInfo: { name: 'AvatarAds', title: 'AvatarAds', version: '1.4.1', websiteUrl: 'https://avatarads.fr' },
-        tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm),
+        tools: toolDefs(profile ? isUnlimited(profile) : false, ctx.requireConfirm, profile?.is_owner === true),
         resources: UI_RESOURCES,
         prompts: [],
       })

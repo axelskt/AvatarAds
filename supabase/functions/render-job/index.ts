@@ -14,6 +14,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { billableGate, userPlan, reserveStrict, reserveEnforce } from '../_shared/guard.ts'
+import { cheminSur, planClientRenderJob } from '../_shared/storage-path.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -41,31 +42,58 @@ serve(async (req: Request) => {
     if (!user) return json({ error: 'Non authentifie' }, 401)
 
     const service = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
+    // Audit 02/10 (WRK-4) : corps borné AVANT décodage (le plus gros plan réel fait ~150 Ko, le plan est plafonné à 512 Ko).
+    if (Number(req.headers.get('content-length') || 0) > 1024 * 1024) return json({ error: 'requête trop volumineuse' }, 413)
     const body = await req.json().catch(() => ({}))
 
     if (body.action === 'create') {
       // Audit #3 : rendu serveur = coût worker. Exiger un débit récent (le client débite AVANT) + plafond.
       const _g = await billableGate({ userId: user.id, proxy: 'render-job', requireDebit: true, debitMinutes: 60, rateMax: 20 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
       const plan = body.plan
-      if (!plan || typeof plan !== 'object' || !Number(plan.duration)) return json({ error: 'plan invalide (duration manquante)' }, 400)
+      if (!plan || typeof plan !== 'object' || Array.isArray(plan) || !Number(plan.duration)) return json({ error: 'plan invalide (duration manquante)' }, 400)
       if (Number(plan.duration) > 300) return json({ error: 'video trop longue (max 5 min)' }, 400)
-      const input = String(body.input_video || '')
-      if (!input.startsWith(user.id + '/')) return json({ error: 'input_video invalide' }, 400)
-      // #montage-audio : son optionnel de l'utilisateur (dans le plan) — doit rester sous <uid>/,
-      // sinon on l'ignore (empeche de referencer le fichier d'un autre compte).
-      if (plan.userAudioPath && !String(plan.userAudioPath).startsWith(user.id + '/')) delete plan.userAudioPath
-      const assets = (Array.isArray(body.assets) ? body.assets : []).slice(0, 8)
-        .map((a: { id?: string; path?: string; kind?: string }) => ({
-          id: String(a.id || '').slice(0, 40),
-          path: String(a.path || ''),
-          kind: a.kind === 'video' ? 'video' : 'image',
-        }))
-        .filter((a: { id: string; path: string }) => a.id && !/[\/\\]|\.\./.test(a.id) && a.path.startsWith(user.id + '/'))   // C2 (audit 14/09) : jamais de / \ .. dans a.id (path traversal → RCE dans le worker)
+      // Audit 02/10 (WRK-1) : « commence par <uid>/ » ne suffisait pas — un segment parent (« .. », « %2e%2e ») visait le
+      // fichier d'un autre compte ou un autre bucket (la clé service signe et télécharge sans RLS). Motif fermé : cheminSur.
+      const input = cheminSur(user.id, body.input_video)
+      if (!input) return json({ error: 'chemin invalide' }, 400)
+      // Audit 02/10 (WRK-4) : plan borné (taille, tableaux) et clés internes du moteur filtrées — liste blanche et
+      // recensement des producteurs dans _shared/storage-path.ts. __lipsync / __brief ne passent QUE s'ils reprennent la
+      // valeur d'un job précédent du compte sur la MÊME source (régénération « Détails du montage » d'un montage lancé
+      // depuis Claude) : un client peut les retirer, jamais les ajouter. Hoquet DB → pas d'héritage (drapeaux retirés).
+      // #montage-audio : le son optionnel (plan.userAudioPath) reste sous <uid>/, sinon il est ignoré (comme avant).
+      let herite: Record<string, unknown> | null = null
+      if (plan.__lipsync !== undefined || plan.__brief !== undefined) {
+        try {
+          const { data: prev, error: prevErr } = await service.from('render_jobs').select('plan')
+            .eq('user_id', user.id).eq('input_video', input).order('created_at', { ascending: false }).limit(10)
+          if (!prevErr) herite = ((prev ?? []).map((r: { plan: Record<string, unknown> | null }) => r.plan)
+            .find((p: Record<string, unknown> | null) => !!p && (p.__lipsync != null || p.__brief != null))) ?? null
+        } catch (_) { herite = null }
+      }
+      const verdict = planClientRenderJob(user.id, plan as Record<string, unknown>, herite)
+      if ('error' in verdict) return json({ error: verdict.error }, verdict.status)
+      if (verdict.retirees.length) console.warn(`[render-job] clés internes retirées du plan client user=${user.id} : ${verdict.retirees.map((k) => k.slice(0, 40).replace(/[^\w-]/g, '?')).join(',')}`)
+      // Médias b-roll : un chemin invalide est REFUSÉ (400). Seules exceptions, ignorées comme avant : une entrée sans chemin,
+      // et un média « _local » (blob du navigateur qu'un ancien client renvoyait sans l'avoir déposé au stockage).
+      const assets: { id: string; path: string; kind: string }[] = []
+      for (const a of (Array.isArray(body.assets) ? body.assets : []).slice(0, 8) as { id?: unknown; path?: unknown; kind?: unknown; _local?: unknown }[]) {
+        if (!a || typeof a !== 'object' || a._local === true || a.path == null || a.path === '') continue
+        const id = String(a.id || '').slice(0, 40)
+        if (!id || /[\/\\]|\.\./.test(id)) continue   // C2 (audit 14/09) : jamais de / \ .. dans a.id (path traversal → RCE dans le worker)
+        const path = cheminSur(user.id, a.path)
+        if (!path) return json({ error: 'chemin invalide' }, 400)
+        assets.push({ id, path, kind: a.kind === 'video' ? 'video' : 'image' })
+      }
 
-      // #119 lipsync segmenté : clips avatar (ordre = plan.avatarSegments), chemins <uid>/…
-      const avatar_clips = (Array.isArray(body.avatar_clips) ? body.avatar_clips : []).slice(0, 8)
-        .map((p: string) => String(p || ''))
-        .filter((p: string) => p.startsWith(user.id + '/'))
+      // #119 lipsync segmenté : clips avatar (ordre = plan.avatarSegments), chemins <uid>/… — un chemin invalide est refusé
+      // (l'ignorer décalerait les clips suivants sur la mauvaise scène)
+      const avatar_clips: string[] = []
+      for (const p of (Array.isArray(body.avatar_clips) ? body.avatar_clips : []).slice(0, 8)) {
+        if (p == null || p === '') continue
+        const c = cheminSur(user.id, p)
+        if (!c) return json({ error: 'chemin invalide' }, 400)
+        avatar_clips.push(c)
+      }
 
     // ── UN JOB MORT NE BLOQUE PLUS LA FILE ──────────────────────────────────
     // Axel, 03/08 : « pourquoi ça met ça wtf ? je n'ai pas de rendu en cours ».
@@ -163,9 +191,11 @@ serve(async (req: Request) => {
     // (une génération vient d'être payée), plafond de cadence, fichiers obligatoirement dans le dossier de l'utilisateur.
     if (body.action === 'retouche') {
       const _g = await billableGate({ userId: user.id, proxy: 'render-job-retouche', requireDebit: true, debitMinutes: 60, rateMax: 30 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
-      const input = String(body.input_video || ''), photo = String(body.photo || '')
-      if (!input.startsWith(user.id + '/') || !/\.mp4$/i.test(input) || input.includes('..')) return json({ error: 'input_video invalide' }, 400)
-      if (!photo.startsWith(user.id + '/') || !/\.(png|jpe?g|webp)$/i.test(photo) || photo.includes('..')) return json({ error: 'photo invalide' }, 400)
+      // Audit 02/10 (WRK-1) : le seul refus de « .. » littéral laissait passer « %2e%2e » → motif fermé (cheminSur).
+      const input = cheminSur(user.id, body.input_video), photo = cheminSur(user.id, body.photo)
+      if (!input || !photo) return json({ error: 'chemin invalide' }, 400)
+      if (!/\.mp4$/i.test(input)) return json({ error: 'input_video invalide' }, 400)
+      if (!/\.(png|jpe?g|webp)$/i.test(photo)) return json({ error: 'photo invalide' }, 400)
       const { data, error } = await service.from('render_jobs')
         .insert({ user_id: user.id, status: 'queued', plan: { __compose: 'retouche' }, input_video: input, assets: [{ id: 'photo', path: photo }], avatar_clips: [] })
         .select('id').single()
@@ -214,7 +244,9 @@ serve(async (req: Request) => {
       // On signe la source pour que l'aperçu montre ce que le rendu montrera
       // vraiment dans les trous : sa vidéo, à sa seconde, en mouvement.
       let source_url: string | null = null
-      if (job.input_video) {
+      // Audit 02/10 (WRK-1) : jamais signer (1 h) une source hors du dossier du compte — défense en profondeur pour les
+      // lignes créées avant le durcissement de 'create' (« commence par <uid>/ » laissait passer un segment parent).
+      if (job.input_video && cheminSur(user.id, job.input_video) === job.input_video) {
         const { data: ssigned } = await service.storage.from('render-media')
           .createSignedUrl(job.input_video, 3600)
         source_url = ssigned?.signedUrl ?? null

@@ -6,6 +6,7 @@
 // Sécurité :
 //   - JWT Supabase obligatoire (anon key seule refusée)
 //   - Plan BYOK sans clé user → 403 (ne tombe PAS sur la clé plateforme)
+//   - Audit 02/10 (PRX-3) : un client ne lit que /models, /v3/models, et le suivi de SES jobs (404 sinon)
 //
 // Appel : POST ?path=/assets          (multipart → upload image)
 //         POST ?path=/assets/ID/upload (multipart → upload audio)
@@ -21,7 +22,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob, hedraStatusGate, providerPause, retryAfterS } from '../_shared/guard.ts'
+import { safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob, hedraStatusGate, providerPause, retryAfterS, svc } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -36,6 +37,25 @@ const HEDRA_BILLABLE = /^\/(generations|v3\/models\/[A-Za-z0-9._-]+)$/   // soum
 // 2 s à 2,5 s par job, soit au plus 1 crédit, sur une op tirée entière (plancher 2) — une génération par débit.
 // ⚠ Ordre de déploiement : CE proxy avant l'app ; jamais de retour arrière de ce proxy seul (skill deploiement).
 const LIPSYNC_PAD_MS = 500
+// Audit 02/10 (PRX-3) — lectures d'un CLIENT. La clé Hedra plateforme est COMMUNE à tous les comptes : un GET /v3/jobs,
+// /v3/files, /v3/assets[/<id>], /assets ou /generations listerait / lirait les médias de n'importe qui. Recensement des
+// lectures réelles (app/index.html : _hedraV3Poll, reprise _hedraLastJob, _expSeedanceModel ; le moteur de rendu est
+// service_role, exempté) : /models, /v3/models[/<slug>], /v3/jobs/<id>[/status], /generations/<id>/status (ancienne API).
+// Tout autre GET d'un client → 404. Et un job LIÉ à l'op d'un autre utilisateur (credit_ops.provider_job) → 404.
+const HEDRA_LECTURE_CLIENT = /^\/(models|v3\/models(\/[A-Za-z0-9._-]+)?|v3\/jobs\/[A-Za-z0-9._-]+(\/status)?|generations\/[A-Za-z0-9._-]+\/status)$/
+// Seul un job lié à l'op d'un AUTRE utilisateur est refusé : un job lié à aucune op reste lisible par son lanceur (owner /
+// developer sans réservation, tirage en fail-open). 'inconnue' = lecture impossible → « en cours » au statut, 503 au résultat.
+async function proprieteJob(job: string, uid: string): Promise<'ok' | 'autrui' | 'inconnue'> {
+  for (let essai = 0; essai < 2; essai++) {   // un hoquet isolé ne fait pas échouer un résultat déjà prêt : 2e lecture
+    if (essai) await new Promise((r) => setTimeout(r, 250))
+    try {
+      const { data, error } = await svc().from('credit_ops').select('user_id').eq('provider_job', job).neq('user_id', uid).limit(1)
+      if (error) { console.warn('[hedra] propriété du job illisible:', error.message); continue }
+      return data && data.length ? 'autrui' : 'ok'
+    } catch { /* nouvel essai */ }
+  }
+  return 'inconnue'
+}
 
 serve(async (req: Request) => {
   // Preflight
@@ -131,6 +151,17 @@ serve(async (req: Request) => {
       ? await billableGate({ userId: user.id, proxy: 'hedra', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
       : await helperGate(user.id, 'hedra', 900)   // uploads + polling multi-scènes (Montage IA)
     if (!gate.ok) return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    // Audit 02/10 (PRX-3) : lectures bornées au recensement + propriété du job, AVANT tout appel à Hedra (voir en-tête).
+    const introuvable = () => new Response(JSON.stringify({ error: 'Génération introuvable.' }), { status: 404, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    if (req.method === 'GET' && !HEDRA_LECTURE_CLIENT.test(bare)) return introuvable()
+    const jidLu = HEDRA_BILLABLE.test(bare) ? '' : ((bare.match(/^\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || '')
+    if (jidLu) {
+      const p = await proprieteJob('hedra:' + jidLu, user.id)
+      if (p === 'autrui') return introuvable()
+      if (p === 'inconnue') return /\/status$/.test(bare)
+        ? new Response(JSON.stringify({ status: 'PENDING', throttled: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json', 'Retry-After': '10' } })
+        : new Response(JSON.stringify({ error: 'Suivi momentanément indisponible — réessaie dans un instant.' }), { status: 503, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    }
     // Audit métier 14/09 (Phase 2) : Seedance 2.0 = moteur DEV-only (tourne sur la clé dev HEDRA_V3_KEY). Le
     // client ne l'offre qu'aux dev, mais le serveur ne gatait rien → un non-dev pouvait forger le chemin. Fermé.
     if (req.method === 'POST' && HEDRA_BILLABLE.test(bare) && /\/v3\/models\/seedance/i.test(bare)) {

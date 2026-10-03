@@ -33,6 +33,8 @@ import { analyserVoix, fabriquerAudioLipsync, bornesTranches, audioAncienLipsync
 import { finsAffichageAvatar } from './dynamic-engine.mjs'
 import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs'   // prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from './hedra-prompts.mjs'   // prompt lipsync Hedra PARTAGÉ (shared/hedra-prompts.json, 27/09)
+// Audit 02/10 : garde-fous partagés (chemins de stockage, plan assaini, GSAP embarqué) — voir securite.mjs
+import { cheminSur, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX } from './securite.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -743,6 +745,7 @@ async function composeGenSubs(jobDir, outPath, plan) {
     //    superposé ensuite sur la base par ffmpeg (natif, rapide). ~3-5× plus rapide, et fini les warnings
     //    lint « video frozen » / « overlapping clips ».
     writeFileSync(join(proj, 'index.html'), buildGenSubsComposition(plan, { overlayOnly: true }))
+    installerGsap(proj)   // Audit 02/10 : GSAP embarqué (vendor/gsap.min.js), plus de CDN au rendu
     writeFileSync(join(proj, 'meta.json'), JSON.stringify({ id: 'aa-gensubs', name: 'aa-gensubs', createdAt: new Date().toISOString() }))
     writeFileSync(join(proj, 'hyperframes.json'), JSON.stringify({
       $schema: 'https://hyperframes.heygen.com/schema/hyperframes.json',
@@ -807,6 +810,12 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
   RENDER_USER = userId || null
   const t0 = Date.now()
   const plan = JSON.parse(readFileSync(join(jobDir, 'plan.json'), 'utf8'))
+  // Audit 02/10 (WRK-2) : le plan vient du client. Les champs qui désignent un fichier du catalogue ou du
+  // projet (screen, photo, emoji, assets, photo des fenêtres avatar, bruitages) sont vérifiés UNE fois ici,
+  // avant toute dérivation : hors motif, ils sont écartés (aucun fichier légitime ne porte un autre nom). Toute
+  // référence de média qui REMONTE hors du projet (« ../x.png » dans un src d'item, de scène, d'incrustation…)
+  // est retirée aussi : la compilation HyperFrames copiait ce fichier du serveur dans le rendu.
+  { const ecartes = assainirPlan(plan); if (ecartes) console.warn(`▶ plan : ${ecartes} référence(s) de fichier invalide(s) écartée(s)`) }
 
   // Motion Control (#34) : composition légère original + motion, pas de montage.
   if (plan.__compose === 'motion-split') { await composeMotionSplit(jobDir, outPath, plan); return }
@@ -1041,6 +1050,7 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     if (wanted.size) {
       mkdirSync(join(proj, 'emoji'), { recursive: true })
       for (const name of wanted) {
+        if (!NOM_EMOJI.test(String(name))) continue   // Audit 02/10 : nom du catalogue seulement (jamais « ../ » joint à un chemin)
         const f = join(HERE, 'assets', 'emoji', name + '.png')
         if (existsSync(f)) copyFileSync(f, join(proj, 'emoji', name + '.png'))
       }
@@ -1634,6 +1644,10 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     if (wantedScreens.size) {
       mkdirSync(join(proj, 'tuto'), { recursive: true })
       for (const name of wantedScreens) {
+        // Audit 02/10 (WRK-2) : le nom vient du plan. Hors motif du catalogue (01-imagesia, hook-qualite,
+        // logo-claude… → ^[a-z0-9-]{1,60}$), il n'a aucun fichier : ignoré en silence — jamais joint à un chemin
+        // (« ../ » lisait hors de assets/tuto et ÉCRIVAIT hors du projet de rendu).
+        if (!NOM_CATALOGUE.test(String(name))) continue
         const f = join(HERE, 'assets', 'tuto', name + '.png')
         if (existsSync(f)) copyFileSync(f, join(proj, 'tuto', name + '.png'))
       }
@@ -1735,6 +1749,7 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     } catch (e) { console.warn('Mask Glitch : détourage impossible →', String(e && e.message || e).slice(0, 120), '(repli glitch)') }
 
     writeFileSync(join(proj, 'index.html'), buildComposition(plan, { assetFiles, avatarClips, avatarPhoto, fonds, maskSil, logoFile: jobLogo ? 'brand/logo' + extname(jobLogo) : '' }))
+    installerGsap(proj)   // Audit 02/10 : GSAP embarqué (vendor/gsap.min.js), plus de CDN au rendu
 
     // LES BRUITAGES DE « DÉTAILS DU MONTAGE » ONT LE DERNIER MOT. L'utilisateur
     // a construit cette liste en ÉCOUTANT le rendu précédent (supprimé, déplacé,
@@ -1848,10 +1863,15 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // #montage-audio (04/09) : piste audio optionnelle de l'utilisateur (musique / bruitages),
     // téléchargée par l'intake sous `plan.userAudio`. Jouée une fois depuis le début, alignée sur
     // la vidéo, avec un fondu de sortie. ADDITIVE : absente si l'utilisateur n'en fournit pas → mix inchangé.
-    const userAudioPath = plan.userAudio ? join(jobDir, plan.userAudio) : null
+    // Audit 02/10 : nom local posé par l'intake (useraudio.<ext>) — jamais un chemin qui sort du dossier du job
+    const userAudioPath = plan.userAudio && /^useraudio\.\w{2,4}$/.test(String(plan.userAudio)) ? join(jobDir, plan.userAudio) : null
     if (userAudioPath && existsSync(userAudioPath)) {
       inputs.push('-i', userAudioPath)
-      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${plan.userAudioVol || 0.7},afade=t=out:st=${Math.max(0, plan.duration - 0.8)}:d=0.8[usr]`)
+      // Audit 02/10 : userAudioVol est INTERPOLÉ dans le graphe de filtres ffmpeg — une chaîne pouvait y ajouter un
+      // filtre (amovie=… lit un fichier ou une URL). Nombre borné 0–2 (bornes de render-job), sinon le défaut 0,7.
+      const volU = Number(plan.userAudioVol)
+      const volUser = typeof plan.userAudioVol === 'number' && Number.isFinite(volU) && volU > 0 && volU <= 2 ? volU : 0.7
+      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${volUser},afade=t=out:st=${Math.max(0, plan.duration - 0.8)}:d=0.8[usr]`)
       mixIns.push('[usr]')
       idx++
       console.log('▶ audio utilisateur (musique/bruitages) ajouté au mix')
@@ -1861,6 +1881,7 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       // Axel a retiré boom/impact de la banque (01/08) mais le chef d'orchestre
       // les propose encore dans ses plans : ils jouent leur jumeau gardé.
       const SFX_ALIAS = { boom: 'cinematic-impact', impact: 'hit' }
+      if (!NOM_SFX.test(String(s && s.kind))) continue   // Audit 02/10 : nom de la banque seulement, jamais « ../ » joint à un chemin
       if (SFX_ALIAS[s.kind] && !existsSync(join(HERE, 'assets', 'sfx', `${s.kind}.mp3`))) s = { ...s, kind: SFX_ALIAS[s.kind] }
       const f = join(HERE, 'assets', 'sfx', `${s.kind}.mp3`)
       if (!existsSync(f)) continue
@@ -3053,7 +3074,19 @@ async function pollLoop() {
       console.log('▶ job', job.id)
       const jobDir = mkdtempSync(join(tmpdir(), 'aa-job-'))
       try {
+        // Audit 02/10 (WRK-1) : les chemins d'entrée viennent de la base et la clé service ignore la RLS du
+        // stockage. « <uid>/../<autre uid>/x.mp4 » (ou %2e%2e) commençait bien par l'uid mais, normalisé par
+        // l'URL de l'API, visait le fichier d'un AUTRE compte. Chaque chemin est vérifié contre job.user_id
+        // AVANT tout téléchargement (cheminSur) ; un seul chemin suspect = job en échec, message neutre (le
+        // chemin n'est jamais recopié). Les producteurs légitimes (app, render-job, MCP) passent tous.
+        const MSG_ENTREE_REFUSEE = 'Fichier d\'entrée refusé : il doit appartenir à ton compte.'
+        const uidJob = String(job.user_id || '')
+        if (!entreesJobSures(job)) {
+          console.warn('✗ job', job.id, ': chemin d\'entrée hors du dossier du compte — refusé')
+          throw new Error(MSG_ENTREE_REFUSEE)
+        }
         const dl = async (path, dest) => {
+          if (!cheminSur(uidJob, path)) throw new Error(MSG_ENTREE_REFUSEE)   // défense en profondeur : même règle au point de téléchargement
           const { data, error } = await sb.storage.from('render-media').download(path)
           if (error) throw new Error('download ' + path + ': ' + error.message)
           writeFileSync(dest, Buffer.from(await data.arrayBuffer()))
@@ -3061,7 +3094,11 @@ async function pollLoop() {
         await dl(job.input_video, join(jobDir, 'base.mp4'))
         // #montage-audio : son optionnel fourni par l'utilisateur (musique / bruitages) → mixé au montage
         // audit 02/10 : un son utilisateur n'est lu que dans le dossier du propriétaire du job (jamais celui d'un autre compte)
-        if (job.plan && job.plan.userAudioPath && job.user_id && !(String(job.plan.userAudioPath).startsWith(job.user_id + '/') && !String(job.plan.userAudioPath).includes('..'))) {
+        // Audit 02/10 (WRK-1) : même règle stricte que les autres entrées (cheminSur) — optionnel, donc ignoré, pas fatal
+        // userAudio = nom du fichier LOCAL que le worker pose lui-même après le téléchargement (joint à jobDir au mix) :
+        // jamais repris du plan reçu (« ../../x » aurait fait lire un fichier du serveur par ffmpeg).
+        if (job.plan && typeof job.plan === 'object') delete job.plan.userAudio
+        if (job.plan && job.plan.userAudioPath && !cheminSur(uidJob, job.plan.userAudioPath)) {
           console.warn('son utilisateur hors du dossier du compte : ignoré'); delete job.plan.userAudioPath
         }
         if (job.plan && job.plan.userAudioPath) {
@@ -3133,7 +3170,12 @@ async function pollLoop() {
             console.log(`▶ compressé → ${(statSync(petit).size / 1048576).toFixed(1)} Mo`)
           } catch (e) { console.warn('compression:', e.message) }
         }
-        const outKey = `${job.user_id}/${job.id}.mp4`
+        // Audit 02/10 (contrat MCP) : la vidéo PRÉPARÉE d'un job mc-ref est mesurée par le MCP puis envoyée au
+        // fournisseur. Rangée sous <uid>/, son propriétaire pouvait la remplacer entre la mesure et l'envoi (les
+        // policies storage l'autorisent à écrire dans son dossier) → durée facturée ≠ vidéo traitée. Elle part
+        // donc sous mcp-prep/<uid>/<job>.mp4, préfixe qu'aucun utilisateur ne peut écrire ; output_url vaut
+        // exactement cette clé (le poster suit : <clé>.poster.jpg). Rien ne change pour les autres jobs.
+        const outKey = cleSortieJob(job)
         const { error: upErr } = await sb.storage.from('render-media')
           .upload(outKey, readFileSync(outFinal), { contentType: 'video/mp4', upsert: true })
         if (upErr) throw new Error('upload: ' + upErr.message)

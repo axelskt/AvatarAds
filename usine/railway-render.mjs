@@ -10,13 +10,18 @@ import { mkdirSync, existsSync, readFileSync, writeFileSync, rmSync, statSync, c
 import { tmpdir, cpus, totalmem } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash, timingSafeEqual } from 'node:crypto';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SB = process.env.SUPABASE_URL || 'https://guvwgiejzkiodghywpwj.supabase.co', KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const PUB = SB + '/storage/v1/object/public/factory-media/', SECRET = process.env.FACTORY_KEY || '';
 const MAX = Math.max(1, parseInt(process.env.FACTORY_MAX || '1', 10)), CACHE = process.env.CF_CACHE || '/tmp/cf-cache';
 const ID = x => typeof x === 'string' && /^[A-Za-z0-9._-]{1,60}$/.test(x) ? x : null;
+// Audit 02/10 (WRK-6) : la clé x-factory-key se compare à TEMPS CONSTANT. Un `!==` s'arrête au premier caractère
+// différent : la durée de la réponse trahissait la longueur du préfixe juste. On compare les hachés SHA-256 (même
+// longueur quelle que soit l'entrée) avec timingSafeEqual. Sans FACTORY_KEY configurée : tout est refusé, comme avant.
+const H_SECRET = SECRET ? createHash('sha256').update(SECRET).digest() : null;
+const cleOk = v => !!H_SECRET && typeof v === 'string' && timingSafeEqual(createHash('sha256').update(v).digest(), H_SECRET);
 
 async function dl(url, file) {
   const r = await fetch(url); if (!r.ok) throw new Error('téléchargement ' + r.status + ' ' + url.split('/').slice(-2).join('/'));
@@ -100,7 +105,7 @@ http.createServer(async (req, res) => {
   const send = (s, o) => { res.writeHead(s, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
   const u = new URL(req.url, 'http://x');
   if (u.pathname === '/health') return send(200, { ok: await ready, machine: ME, cpus: cpus().length, max: MAX, busy });
-  if (!SECRET || req.headers['x-factory-key'] !== SECRET) return send(401, { error: 'clé' });
+  if (!cleOk(req.headers['x-factory-key'])) return send(401, { error: 'clé' });
   if (req.method === 'POST' && u.pathname === '/render') {
     let b = ''; for await (const c of req) { b += c; if (b.length > 20000) return send(413, { error: 'trop gros' }); }
     let r; try { r = JSON.parse(b); } catch { return send(400, { error: 'json' }); }

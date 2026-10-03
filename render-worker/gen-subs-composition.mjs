@@ -11,7 +11,8 @@
 //
 // Contrat HyperFrames repris à build-composition.mjs :
 //   #root[data-composition-id="montage"] · <video class="clip" src="media/base.mp4">
-//   · window.__timelines['montage'] = timeline GSAP paused · GSAP depuis le CDN.
+//   · window.__timelines['montage'] = timeline GSAP paused · GSAP EMBARQUÉ (vendor/gsap.min.js,
+//   copié dans le projet par le worker — audit 02/10, plus de CDN au rendu).
 // Le canvas est piloté par onUpdate de la timeline (fire à chaque seek de frame).
 //
 // Polices : le look client utilise Impact / Arial Black (polices SYSTÈME du Mac)
@@ -24,6 +25,9 @@
 // _cvSubs + helpers : COPIE VERBATIM du client (app/index.html). Ne PAS diverger
 // sans re-synchroniser — c'est la source de vérité du pixel. Toute retouche du
 // look doit se faire des deux côtés à la fois.
+// Audit 02/10 : échappement JSON, CSP et GSAP partagés avec les autres builders (voir securite.mjs)
+import { jsonPourScript, cspComposition, GSAP_SCRIPT } from './securite.mjs'
+
 const CV_SUBS_SRC = String.raw`
 function _splitSubLines(widths, maxW){
   const lines = [];
@@ -415,7 +419,8 @@ export function buildGenSubsComposition(plan, opts = {}) {
   // n'échappe PAS `<` → un mot de sous-titre contenant `</script>` fermait la balise (le parseur HTML termine
   // <script> quel que soit le contexte JS) et injectait du markup dans la page rendue par Chromium. On
   // neutralise `<`/`>` et les séparateurs de ligne JS U+2028/U+2029.
-  const subsJson = JSON.stringify(subsPayload).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  // Audit 02/10 : le correctif est factorisé (jsonPourScript, + `&`) et partagé par TOUS les builders.
+  const subsJson = jsonPourScript(subsPayload);
 
   // #vitesse-overlay (Axel 08/09) : mode « sous-titres seuls » — fond TRANSPARENT + PAS de vidéo de base
   // dans la composition. HyperFrames ne re-décode/compose plus la vidéo frame par frame (le vrai goulot :
@@ -437,8 +442,9 @@ export function buildGenSubsComposition(plan, opts = {}) {
 
   return `<!doctype html><html lang="fr"><head>
 <meta charset="utf-8" />
+${cspComposition()}
 <meta name="viewport" content="width=${W}, height=${H}" />
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"><\/script>
+${GSAP_SCRIPT}
 <style>
   ${fontFace}
   *{margin:0;padding:0;box-sizing:border-box}
