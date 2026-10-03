@@ -565,3 +565,158 @@ export function timingSafeEqual(a: string, b: string): boolean {
   for (let i = 0; i < x.length; i++) r |= x.charCodeAt(i) ^ y.charCodeAt(i)
   return r === 0
 }
+
+// ── Audit 02/10 (P2, fal-reconcile) : réconciliation à la durée de la vidéo PRODUITE par fal ───────────────────────────
+// fal-proxy facture Motion Control (Kling 2.6 / 3.0) et l'édition Omni à la durée MESURÉE de la vidéo d'ENTRÉE (P1,
+// _shared/mp4-duree.ts) : un MP4 forgé peut encore y paraître plus court que ce que lit le décodeur de fal. La vidéo
+// PRODUITE sort de l'encodeur du fournisseur : sa durée fait foi. Comme reconcile_hedra_job pour Hedra, l'écart (coût réel
+// − montant de l'op qui a financé le job, moins les autres jobs à la seconde déjà réglés sur cette op ; op remboursée → 0)
+// est débité UNE fois par job à la livraison (fal-proxy à la lecture du résultat, reconcile-fal-orphans
+// pour une vidéo récupérée par le filet), plafonné au solde, journalisé (credit_ops 'fal-reconcile') — RPC reconcile_fal_job,
+// migration 20261003040000. Jamais de remboursement ici : une sortie plus courte laisse le minimum d'entrée de P1.
+// Le TARIF est posé par fal-proxy à la soumission dans la FACTURE du job (table fal_job_bills, RPC fal_job_bill_open), jamais
+// déduit du chemin de suivi que fournit le client (un job Kling 3.0 relu par un chemin 2.6 ou « /requests/<id> »). Relecture
+// adverse 02/10 : la facture ne dépend PAS de la liaison op ↔ job (bind_reservation_job garde la 1re liaison : un détourage
+// birefnet soumis avant Kling sur la même op la prenait, et le job Kling échappait à la réconciliation). Owner / developer
+// exemptés dans la RPC ; le moteur de rendu (service_role) n'a ni réserve ni facture : jamais concerné.
+// Interrupteur : secret FAL_RECONCILE=0 → mode ombre (écart journalisé « SHADOW », job réglé sans charge) ; défaut = actif.
+// Tout échec (tarif illisible, sortie illisible ou injoignable, RPC absente) → règlement simple settle_by_job, comme avant.
+export const falReconcileEnforce = (): boolean => (Deno.env.get('FAL_RECONCILE') ?? '1') !== '0'
+
+// Fichier PRODUIT par fal : CDN *.fal.media (ou l'ancien stockage falserverless). https seul, sans port ni identifiants.
+// URL normalisée, ou null (jamais lue).
+export function urlSortieFal(u: unknown): string | null {
+  const s = String(u ?? '')
+  if (!s || s.length > 2048) return null
+  let x: URL
+  try { x = new URL(s) } catch { return null }
+  if (x.protocol !== 'https:' || x.port || x.username || x.password) return null
+  const h = x.hostname.toLowerCase()
+  if (h === 'fal.media' || /^([a-z0-9-]+\.)+fal\.media$/.test(h)) return x.href
+  if (h === 'storage.googleapis.com' && x.pathname.startsWith('/falserverless/')) return x.href
+  return null
+}
+// Vidéo d'un RÉSULTAT fal (Kling et Omni édition : { video: { url } } ; variantes lues par l'app : output.video.url,
+// video_url). null = aucune vidéo d'un hôte fal.
+export function videoSortieFal(text: string): string | null {
+  let d: Record<string, unknown> | null = null
+  try { const p = JSON.parse(text); if (p && typeof p === 'object' && !Array.isArray(p)) d = p } catch { return null }
+  if (!d) return null
+  const url = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>).url : null)
+  const out = d.output && typeof d.output === 'object' ? (d.output as Record<string, unknown>).video : null
+  for (const c of [url(d.video), url(out), d.video_url]) if (typeof c === 'string') { const ok = urlSortieFal(c); if (ok) return ok }
+  return null
+}
+// Lecteur par plages (même contrat que LecteurPlage de mp4-duree.ts) de la sortie fal : hôte revérifié à chaque lecture,
+// redirections REFUSÉES (le CDN de fal sert 206 en direct), seule la fenêtre demandée est gardée en mémoire.
+export type PlageLue = { octets: Uint8Array; total: number } | null
+export function lecteurSortieFal(url: string, timeoutMs = 10000): (debut: number, fin: number) => Promise<PlageLue> {
+  return async (debut, fin) => {
+    if (!urlSortieFal(url) || !(debut >= 0) || !(fin >= debut)) return null
+    let r: Response
+    try { r = await fetch(url, { headers: { Range: `bytes=${debut}-${fin}` }, redirect: 'manual', signal: AbortSignal.timeout(timeoutMs) }) } catch { return null }
+    const garder = async (sauter: number, max: number): Promise<Uint8Array | null> => {
+      if (!r.body) return null
+      const rd = r.body.getReader(), out = new Uint8Array(max)
+      let vu = 0, o = 0
+      try {
+        while (o < max) {
+          const { done, value } = await rd.read()
+          if (done) break
+          const deb = Math.max(0, sauter - vu)
+          vu += value.byteLength
+          if (deb >= value.byteLength) continue
+          const k = Math.min(value.byteLength - deb, max - o)
+          out.set(value.subarray(deb, deb + k), o); o += k
+        }
+      } catch { return null } finally { try { await rd.cancel() } catch { /* */ } }
+      return out.subarray(0, o)
+    }
+    if (r.status === 206) {
+      const m = (r.headers.get('content-range') || '').match(/^bytes\s+(\d+)-(\d+)\/(\d+)$/i)
+      if (!m || Number(m[1]) !== debut) { try { await r.body?.cancel() } catch { /* */ } return null }
+      const o = await garder(0, fin - debut + 1)
+      return o ? { octets: o, total: Number(m[3]) } : null
+    }
+    if (r.status === 200) {   // Range ignoré : parcours en flux jusqu'à la fenêtre (jamais tout le fichier en mémoire)
+      const total = Number(r.headers.get('content-length') || 0)
+      if (!(total > debut)) { try { await r.body?.cancel() } catch { /* */ } return null }
+      const o = await garder(debut, Math.min(fin - debut + 1, total - debut))
+      return o ? { octets: o, total } : null
+    }
+    try { await r.body?.cancel() } catch { /* */ }
+    return null
+  }
+}
+// Borne une attente : null au-delà de `ms` (ou si la promesse échoue).
+export function avecDelai<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  let t: number | undefined
+  return Promise.race([p.catch(() => null), new Promise<null>((r) => { t = setTimeout(() => r(null), ms) })]).finally(() => clearTimeout(t))
+}
+// Soumission d'un job à la seconde (Kling / Omni édition / Topaz) : ouvre sa FACTURE (tarif du job, op qui l'a financé, ce
+// qu'il a payé, URL de suivi fal), une seule fois, QUE le job ait pu être lié à l'op ou non (bindJob garde la 1re liaison de
+// l'op). `paye` = tirage du job + annexes déjà tirées sur l'op (≤ 6) ; null = tirage nul / inconnu (la RPC retombe alors sur
+// le montant de l'op). false = rien posé (op inconnue de l'appelant, migration absente, hoquet DB après une nouvelle
+// tentative) → pas de réconciliation.
+export async function ouvrirFactureFal(userId: string, opId: string | undefined, job: string, perSec: number, maxSec: number, path?: string, paye?: number | null): Promise<boolean> {
+  if (!opId || !job || !(perSec > 0) || !(maxSec > 0)) return false
+  const p = paye != null && paye > 0 ? Math.ceil(paye) : null
+  for (let essai = 0; essai < 2; essai++) {
+    try {
+      const { data, error } = await svc().rpc('fal_job_bill_open', { p_user: userId, p_op: opId, p_job: job, p_per_sec: Math.ceil(perSec), p_max_sec: Math.ceil(maxSec), p_path: path || null, p_paid: p })
+      if (!error) return data === true
+      console.warn('[fal-reconcile] facture non ouverte:', error.message)
+      if (/PGRST202|42883|could not find the function|does not exist/i.test(`${(error as { code?: string }).code || ''} ${error.message || ''}`)) return false
+    } catch { /* nouvelle tentative */ }
+  }
+  return false
+}
+// Tarif d'un job dont la facture est ENCORE OUVERTE. null = rien à réconcilier (job hors facturation à la seconde, facture
+// close, job d'un autre utilisateur) ou lecture impossible (table absente, hoquet DB) → règlement simple.
+export async function tarifJobFal(userId: string, job: string): Promise<{ perSec: number; maxSec: number } | null> {
+  try {
+    const { data, error } = await svc().from('fal_job_bills').select('per_sec, max_sec, state')
+      .eq('job', job).eq('user_id', userId).limit(1)
+    if (error) { console.warn('[fal-reconcile] facture illisible:', error.message); return null }
+    const r = (data && data[0]) as { per_sec?: number | null; max_sec?: number | null; state?: string | null } | undefined
+    if (!r || r.state != null) return null
+    const perSec = Number(r.per_sec), maxSec = Number(r.max_sec)
+    return perSec > 0 && maxSec > 0 ? { perSec, maxSec } : null
+  } catch { return null }
+}
+// Filet : échec CONFIRMÉ par fal (statut FAILED, résultat 422) → facture close, sans charge ni remboursement. Best-effort.
+export async function fermerFactureFal(userId: string, job: string): Promise<boolean> {
+  try { const { data, error } = await svc().rpc('fal_job_bill_close', { p_user: userId, p_job: job }); return !error && data === true } catch { return false }
+}
+// Livraison d'un job fal : réconcilie à la durée de SORTIE si sa facture est ouverte, sinon settle_by_job (inchangé).
+// `mesurer` = durée de la vidéo produite (s) ou null ; `cout` = MÊMES tarif et arrondi que la réserve d'entrée (P1).
+// Sortie illisible → facture close SANS charge (p_real_cost null) et job réglé. Jamais bloquant : détail pour le journal.
+export async function reglerJobFal(o: {
+  userId: string; job: string; mesurer: () => Promise<number | null>; cout: (sec: number, perSec: number, maxSec: number) => number
+  essais?: number; source?: string
+}): Promise<Record<string, unknown>> {
+  const src = o.source || 'proxy'
+  const t = await tarifJobFal(o.userId, o.job)
+  if (!t) { await settleByJob(o.userId, o.job); return { mode: 'settle' } }
+  let sec: number | null = null
+  for (let i = 0; i < Math.max(1, o.essais ?? 2) && !(sec && sec > 0); i++) { try { sec = await o.mesurer() } catch { sec = null } }
+  const lisible = !!(sec && sec > 0 && Number.isFinite(sec))
+  if (!lisible) console.warn(`[fal-reconcile] job=${o.job} source=${src} : durée de sortie illisible → réglé sans réconciliation`)
+  const realCost = lisible ? Math.max(0, Math.ceil(o.cout(sec as number, t.perSec, t.maxSec))) : null
+  const enforce = falReconcileEnforce()
+  try {
+    const { data, error } = await svc().rpc('reconcile_fal_job', { p_user: o.userId, p_job: o.job, p_real_cost: realCost, p_out_sec: lisible ? Math.round((sec as number) * 1000) / 1000 : null, p_enforce: enforce })
+    if (error) {
+      console.warn(`[fal-reconcile] job=${o.job} source=${src} : RPC en erreur (${error.message}) → réglé sans réconciliation`)
+      await settleByJob(o.userId, o.job)
+      return { mode: 'rpc_err' }
+    }
+    const d = (data || {}) as Record<string, unknown>
+    if (lisible) console.log(`[fal-reconcile${enforce ? '' : ' SHADOW'}] job=${o.job} source=${src} sortie=${(sec as number).toFixed(2)}s tarif=${t.perSec}/s coût_réel=${realCost} → ${JSON.stringify(d)}`)
+    if (d.ok !== true) await settleByJob(o.userId, o.job)   // facture disparue entre-temps… : règlement simple (idempotent)
+    return lisible ? { mode: 'reconcile', ...d } : { mode: 'illisible' }
+  } catch {
+    await settleByJob(o.userId, o.job)
+    return { mode: 'rpc_err' }
+  }
+}

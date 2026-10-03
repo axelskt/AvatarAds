@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://js.whop.com https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
+<script>/* Audit 02/10 — anti-clickjacking : la LP (checkout Whop) ne doit jamais être encadrée par un autre site ; frame-ancestors est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête). */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- LP PRINCIPALE = porte CLAIRE (chemin v1). À la 1re venue (aucune préférence), on ensemence
      aa_theme=clair pour que tout le chemin (connexion + app) reste clair. Partagé même-origine avec

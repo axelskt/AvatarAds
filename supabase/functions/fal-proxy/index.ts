@@ -21,12 +21,18 @@
 // (même arrondi que l'app, 1 s de tolérance + 0,25 s de gigue pour le client), moins les étapes annexes déjà payées sur la
 // même op (fond effacé + détourage de Motion, ≤ 6) — voir _shared/mp4-duree.ts. Illisible → 400.
 // Audit 02/10 (PRX-3) : le suivi d'un job LIÉ à l'op d'un AUTRE utilisateur (credit_ops.provider_job) répond 404.
+// Audit 02/10 (P2, fal-reconcile) : la mesure d'entrée reste le MINIMUM de réservation, mais un MP4 forgé peut encore y
+// paraître plus court qu'au décodeur de fal. À la soumission, la FACTURE du job est ouverte (fal_job_bills : tarif, op qui l'a
+// financé), que le job soit lié à l'op ou non (relecture adverse : un détourage birefnet soumis avant sur la même op garde la
+// liaison) ; à la lecture du RÉSULTAT, la vidéo PRODUITE par fal est mesurée (Range, hôtes fal seulement) et l'écart débité
+// une fois, plafonné au solde (reconcile_fal_job, voir _shared/guard.ts « fal-reconcile »). Jamais de remboursement ici ;
+// réponse inchangée.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC, svc } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC, svc, ouvrirFactureFal, reglerJobFal, videoSortieFal, lecteurSortieFal, avecDelai } from '../_shared/guard.ts'
 import { omnihumanFalBody } from '../_shared/omnihuman-bill.ts'   // OmniHuman (repli de kie, Axel 25/09) : durée MESURÉE, tirage exact
 import { KIE_OPEN } from '../_shared/kie.ts'   // OmniHuman : mêmes plans que kie-proxy (lecture seule)
-import { preparerVideoFal, tarifVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR } from '../_shared/mp4-duree.ts'   // PRX-1 : vidéo client mesurée
+import { preparerVideoFal, tarifVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4, secondesFacturees, type TarifVideo } from '../_shared/mp4-duree.ts'   // PRX-1 : vidéo client mesurée ; P2 : vidéo PRODUITE mesurée
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -71,6 +77,7 @@ function falCost(path: string): number {
 const OMNI_I2V = /\/google\/gemini-omni-flash\/[^?]*image-to-video/i
 // OmniHuman 1.5 (26/09) : repli de kie-proxy (app, même op) — tirage EXACT 5 × durée MESURÉE (omnihuman-bill.ts), plus draw_full.
 const OMNIHUMAN = /^\/fal-ai\/bytedance\/omnihuman\//i
+const TOPAZ = /^\/fal-ai\/topaz\/upscale\/video$/i   // P2 : réconcilié à la sortie, 1 cr/s comme l'app (_mcGenerate : spendCreditsFor(dur, 'motion-topaz'))
 const OMNIH_BUCKET = 'render-media'
 const SUPA_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const OMNIH_SIGN = `${SUPA_URL}/storage/v1/object/sign/${OMNIH_BUCKET}/`
@@ -104,6 +111,13 @@ async function dejaTireOp(uid: string, req: Request): Promise<number> {
     const a = Number(data.amount) || 0, r = data.reserved_remaining == null ? a : (Number(data.reserved_remaining) || 0)
     return Math.max(0, a - r)
   } catch { return ANNEXES_MAX_CR }
+}
+// Audit 02/10 (P2) : coût réel d'une vidéo PRODUITE = MÊMES tarif et arrondi que la réserve d'entrée (secondesFacturees,
+// mp4-duree.ts) ; durée lue par plages sur le CDN de fal (≤ 15 s par essai : au-delà, règlement simple).
+const coutSortie = (sec: number, parSec: number, maxSec: number) => parSec * secondesFacturees(sec, maxSec)
+const mesurerSortie = (text: string) => (): Promise<number | null> => {
+  const u = videoSortieFal(text)
+  return u ? avecDelai(dureeMp4(lecteurSortieFal(u)), 15000) : Promise.resolve(null)
 }
 function omniI2vBody(raw: string): { body: string; sec: number } | { error: string } {
   let b: any = null
@@ -153,6 +167,8 @@ serve(async (req: Request) => {
   let drawnAmt = 0   // audit 14/09 : montant réellement tiré → restauration EXACTE au release (plus de falCost/9999)
   // Audit 02/10 (PRX-1) : copie serveur de la vidéo (Kling / Omni édition) — supprimée si aucun job fal n'a été créé.
   let videoCost = 0, videoCopie = ''
+  let videoTarif: Pick<TarifVideo, 'parSec' | 'maxSec'> | null = null   // P2 : tarif du job à la seconde → sa facture (fal_job_bill_open)
+  let annexesOp = 0   // P2 : étapes annexes déjà tirées sur l'op avant ce job (dejaTireOp) → « payé » de la facture, ≤ ANNEXES_MAX_CR
   const jeterCopie = async () => { if (videoCopie) { try { await svc().storage.from(OMNIH_BUCKET).remove([videoCopie]) } catch { /* best-effort */ } videoCopie = '' } }
   if (!auth.isService && auth.userId) {
     // ── Gate serveur : Motion 3.0 = Kling 3.0 (fal-ai/kling-video/v3/…) réservé Pro/Élite (0,168 $/s) ──
@@ -226,10 +242,16 @@ serve(async (req: Request) => {
         const pv = await preparerVideoFal({ path, raw: rawBody ?? '', uid: auth.userId, base: SUPA_URL, bucket: OMNIH_BUCKET, st: svc().storage.from(OMNIH_BUCKET) })
         if (!pv.ok) return jsonRes(pv.status, { error: pv.error })
         rawBody = pv.body; videoCopie = pv.copie
+        // P2 : tarif du corps RECONSTRUIT (résolution Omni 720p / 1080p imposée par preparerVideoFal), pas celui du client.
+        try { videoTarif = tarifVideoFal(path, (JSON.parse(pv.body) as { resolution?: unknown }).resolution) } catch { videoTarif = tarifVideoFal(path) }
         const deja = await dejaTireOp(auth.userId, req)
-        videoCost = minimumSurReserve(pv.cost, deja)
+        videoCost = minimumSurReserve(pv.cost, deja); annexesOp = deja
         console.log('[fal] vidéo à la seconde', auth.userId, `mesuré=${pv.mesureSec}s facturé=${pv.factureSec}s coût=${pv.cost} annexes=${deja} minimum=${videoCost}`)
       }
+      // Audit 02/10 (P2) : upscale Topaz (Motion 1080p depuis Standard : l'app débite 1 cr/s de la vidéo Kling, op
+      // « motion-topaz ») — aucune mesure d'entrée possible (la vidéo vient du CDN de fal) et un plancher de 1 : l'écart sur
+      // la vidéo PRODUITE est la seule borne. Max 60 s (l'app n'y envoie que des sorties Kling ≤ 30 s).
+      if (TOPAZ.test(path.split('?')[0])) videoTarif = { parSec: 1, maxSec: 60 }
       // Primaire : plancher serveur = falCost(path) (audit 14/09) → une réserve sous ce plancher (ex.
       // spend_credits(1) devant un OmniHuman à 5) est refusée (402), fin de « 1 crédit = vidéo chère ».
       // Kling / Omni édition (02/10) : plancher = tarif/s × durée mesurée (− annexes déjà payées sur l'op, ≤ 6) ; toujours
@@ -279,9 +301,13 @@ serve(async (req: Request) => {
       //   (voir submitRid), donc il ne peut RIEN récupérer → aucun refund-and-keep possible même si fal a mis un
       //   job en file (504). On REMBOURSE donc le solde côté serveur (synchrone → l'onglet peut mourir, c'est déjà fait).
       const submitRetryable = res.status === 400 || res.status === 408 || res.status === 422 || res.status === 425 || res.status === 429
-      if (isSubmit && res.ok) { if (submitRid) await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase) }   // lie l'op au job créé + tiré + URL de suivi fal (réconciliation)
+      // Audit 02/10 (P2) : + FACTURE du job à la seconde (Kling / Omni édition / Topaz) pour la réconciliation à la durée de
+      // SORTIE — ouverte sur l'op TIRÉE même si bindJob n'a rien lié (op déjà liée à un détourage birefnet / rembg). Payé =
+      // tirage du job + annexes de l'op plafonnées (jamais l'op entière : des auxiliaires tirés avant ne couvrent pas le Kling).
+      const paye = drawnAmt > 0 ? drawnAmt + Math.min(Math.max(0, annexesOp), ANNEXES_MAX_CR) : null
+      if (isSubmit && res.ok) { if (submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase); if (videoTarif) await ouvrirFactureFal(auth.userId, drawnOp, 'fal:' + submitRid, videoTarif.parSec, videoTarif.maxSec, falBase, paye) } }   // lie l'op au job créé + tiré + URL de suivi fal (réconciliation)
       // Soumission NON-2xx AVEC un request_id (rare : erreur mais job créé) → on LIE (le poll gèrera), jamais de refund.
-      else if (isSubmit && !res.ok && submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase) }
+      else if (isSubmit && !res.ok && submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase); if (videoTarif) await ouvrirFactureFal(auth.userId, drawnOp, 'fal:' + submitRid, videoTarif.parSec, videoTarif.maxSec, falBase, paye) }
       // Soumission échouée SANS job récupérable : définitif+primaire → REMBOURSE le solde serveur (couvre 5xx/timeout,
       // ferme « onglet fermé = crédits perdus », point 1) ; retryable OU aux OU refus (op partagée/multi-étapes/livrée)
       // → repli release réserve inchangé (préserve le renvoi même-op de MC v3).
@@ -295,7 +321,11 @@ serve(async (req: Request) => {
       // débite une op FRAÎCHE, cf. app _mcGenerate) → le 2.6 ne ré-utilise plus cette op (refundée) → pas de 402.
       // Refus (op partagée/multi-étapes/livrée) → repli release_by_job inchangé. (Échec TERMINAL only.)
       else if (isResult && (res.status === 422 || /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text))) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }
-      else if (isResult && res.ok && hasOutput) { if (jobId) await settleByJob(auth.userId, 'fal:' + jobId) }                                                                         // livré → op LIÉE non remboursable
+      // livré → op LIÉE non remboursable. Audit 02/10 (P2) : résultat VIDÉO d'un job dont la facture est ouverte (tarif posé à
+      // la soumission, jamais lu dans ce chemin de suivi) → durée de la vidéo PRODUITE mesurée, écart débité une fois, plafonné
+      // au solde ; pas de facture → settle_by_job comme avant ; sortie illisible ou hors CDN fal → facture close sans charge +
+      // settle_by_job (résultat image : détourage, 4K… → settle_by_job direct). Le corps renvoyé au client ne change pas.
+      else if (isResult && res.ok && hasOutput) { if (jobId) { if (videoSortieFal(text) || /"video(_url)?"\s*:/.test(text)) await reglerJobFal({ userId: auth.userId, job: 'fal:' + jobId, mesurer: mesurerSortie(text), cout: coutSortie, source: 'proxy' }); else await settleByJob(auth.userId, 'fal:' + jobId) } }
       // Audit 02/10 (PRX-1) : copie de la vidéo — gardée tant que fal peut la lire (job créé) ; sinon supprimée tout de suite.
       // Une soumission réussie supprime aussi les copies de CET utilisateur dont le lien signé a expiré (best-effort).
       if (isSubmit && videoCopie) {

@@ -1,4 +1,4 @@
-import { authUser, helperGate } from '../_shared/guard.ts'
+import { authUser, helperGate, requirePlan, rateHit, realIp } from '../_shared/guard.ts'
 // ─────────────────────────────────────────────────────────────────────────────
 // #159 · LIRE UNE CAPTURE D'ÉCRAN : où la rogner, et que contient-elle.
 //
@@ -34,6 +34,22 @@ const json = (b: unknown, s = 200) =>
 
 const MODEL = 'claude-opus-4-8'
 const MAX_BYTES = 8 * 1024 * 1024
+
+// Audit 02/10 : Claude Opus vision SANS débit de crédits → plans payants seulement (owner/developer exemptés par
+// requirePlan ; byok = ancien plan encore porté par des profils). Recensé : AUCUN appelant dans app/index.html,
+// render-worker, mcp ni tools → aucun parcours Free légitime. Plafonds EN PLUS des 8 / 10 min par compte, sur 1 h :
+// usage visé = une analyse par capture déposée (≤ 8 par montage) → 30 par IP ≈ 4 montages d'un même réseau,
+// 80 pour toute la plateforme. Le moteur de rendu (service_role, clé du seul back-end) n'est pas compté.
+const PAID_PLANS = ['starter', 'pro', 'elite', 'byok']
+const IP_MAX_H = 30, GLOBAL_MAX_H = 80
+// IP puis GLOBAL : rate_hit n'incrémente que s'il accepte → un appel refusé par l'IP ne consomme rien du budget
+// global (un seul réseau ne peut pas l'épuiser). IP absente → seul le global s'applique (comme auth-otp).
+async function capsGate(req: Request): Promise<string | null> {
+  const ip = realIp(req)
+  if (ip && !(await rateHit(`proxy:screen-zones:ip:${ip}`, 3600, IP_MAX_H))) return 'Trop de requêtes depuis ce réseau — réessaie dans un moment.'
+  if (!(await rateHit('proxy:screen-zones:global', 3600, GLOBAL_MAX_H))) return 'Service très demandé en ce moment — réessaie dans quelques minutes.'
+  return null
+}
 
 // Le schéma est VOLONTAIREMENT plat (lignes « nom|label|x|y|w|h »). Une grammaire
 // à tableaux d'objets avait déjà mis le Montage IA à l'arrêt en mode strict :
@@ -92,7 +108,12 @@ serve(async (req: Request) => {
   // Audit offensif 05/09 : atteignable avec la seule clé anon publique → Claude Opus vision facturé.
   const _a = await authUser(req)
   if (!_a.isService && !_a.userId) return json({ error: 'unauthorized' }, 401)
-  if (_a.userId) { const _g = await helperGate(_a.userId, 'screen-zones', 8); if (!_g.ok) return json({ error: _g.error }, _g.status) }
+  if (_a.userId) {
+    // Audit 02/10 : le plan AVANT tout compteur → un compte Free ne consomme aucun budget partagé.
+    const _p = await requirePlan(_a.userId, PAID_PLANS, 'Lecture des captures')
+    if (!_p.ok) return json({ error: 'La lecture automatique des captures est réservée aux abonnés (Starter, Pro ou Élite).' }, _p.status)
+    const _g = await helperGate(_a.userId, 'screen-zones', 8); if (!_g.ok) return json({ error: _g.error }, _g.status)
+  }
 
   try {
     const key = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
@@ -102,6 +123,8 @@ serve(async (req: Request) => {
     const file = form.get('image')
     if (!(file instanceof File)) return json({ error: 'Champ "image" manquant' }, 400)
     if (file.size > MAX_BYTES) return json({ error: 'Image trop lourde (max 8 Mo)' }, 400)
+    // Audit 02/10 : IP + global comptés seulement pour un appel qui part VRAIMENT chez Claude (requête valide).
+    if (_a.userId) { const _c = await capsGate(req); if (_c) return json({ error: _c }, 429) }
 
     const media = file.type === 'image/jpeg' ? 'image/jpeg'
       : file.type === 'image/webp' ? 'image/webp' : 'image/png'

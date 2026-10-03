@@ -28,7 +28,7 @@
 <script>
   var EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/tiktok-auth';
   var q = new URLSearchParams(location.search);
-  var code = q.get('code'), err = q.get('error') || q.get('error_description');
+  var code = q.get('code'), state = q.get('state') || '', err = q.get('error') || q.get('error_description');
   var card = document.getElementById('card');
   function okSvg(){ return '<div class="ic" style="background:rgba(62,207,106,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3ecf6a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>'; }
   function errSvg(){ return '<div class="ic" style="background:rgba(224,85,77,.14)"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e0554d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>'; }
@@ -39,13 +39,24 @@
     var p = document.createElement('p'); p.textContent = String(msg).slice(0, 300);
     card.appendChild(h); card.appendChild(p);
   }
+  // Audit 02/10 : l'échange exige le state signé renvoyé par TikTok ET la session owner avatarads.fr (même domaine
+  // que le tableau de bord) : on envoie son jeton d'accès s'il existe (jamais stocké ici).
+  function sbToken(){
+    try {
+      var s = JSON.parse(localStorage.getItem('sb-guvwgiejzkiodghywpwj-auth-token') || 'null');
+      var t = s && (s.access_token || (s.currentSession && s.currentSession.access_token));
+      return (typeof t === 'string' && t.split('.').length === 3) ? t : '';
+    } catch(_) { return ''; }
+  }
   (async function(){
     if (err){ show(errSvg(), 'Autorisation refusée', String(err)); return; }
     if (!code){ show(errSvg(), 'Rien à faire ici', 'Ouvre cette page depuis le bouton « Connecter TikTok » de l\'app.'); return; }
     try{
+      var tok = sbToken();
+      if (!tok){ show(errSvg(), 'Session requise', 'Termine la connexion dans le navigateur où tu es connecté au tableau de bord, puis relance « Connecter TikTok ».'); return; }
       var r = await fetch(EDGE + '?action=exchange', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code })
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+        body: JSON.stringify({ code: code, state: state })
       });
       var d = await r.json();
       if (d && d.ok){ show(okSvg(), 'TikTok connecté', 'Ton compte est lié à AvatarAds. Tu peux fermer cette page.'); }

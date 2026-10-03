@@ -272,7 +272,16 @@ export default async (request: Request): Promise<Response> => {
   let res: Response | null = null
   let err = ''
   try { res = await handle(request, probe); return res }
-  catch (e) { err = String((e as Error)?.message || e); res = j({ error: 'edge_exception', message: err }, 500); return res }
+  catch (e) {
+    // Audit 02/10 : le détail de l'exception (URL amont, message interne) n'est plus renvoyé au client : message
+    // générique, détail journalisé (console Netlify + colonne extra.err de mcp_edge_log via logReq).
+    err = String((e as Error)?.message || e)
+    let chemin = ''
+    try { chemin = new URL(request.url).pathname.replace(/aa_[A-Za-z0-9]+/g, 'aa_***') } catch { /* journal seulement */ }
+    console.error('[proxy] exception', request.method, chemin, err)
+    res = j({ error: 'edge_exception', message: 'Erreur interne du relais AvatarAds : réessaie dans un instant.' }, 500)
+    return res
+  }
   finally { await logReq(request, res, probe, err, Date.now() - t0) }
 }
 

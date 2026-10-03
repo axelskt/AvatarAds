@@ -101,6 +101,18 @@
   function fmtN(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n); }
   const $ = id => document.getElementById(id);
 
+  // Audit 02/10 : exception explicite et bornée du flux OAuth réservé au propriétaire. ?mode=review : sans session
+  // owner (relecteur Meta), l'échange renvoie l'aperçu du compte qui vient de s'authentifier SANS rien enregistrer
+  // (ni compte relié, ni webhooks). Si le visiteur est connecté à avatarads.fr en owner, son jeton est joint et la
+  // connexion est enregistrée comme depuis le tableau de bord (ig-callback.html renvoie la même session).
+  function sbToken(){
+    try {
+      const s = JSON.parse(localStorage.getItem('sb-guvwgiejzkiodghywpwj-auth-token') || 'null');
+      const t = s && (s.access_token || (s.currentSession && s.currentSession.access_token));
+      return (typeof t === 'string' && t.split('.').length === 3) ? t : '';
+    } catch(_) { return ''; }
+  }
+
   // Le popup est ouvert TOUT DE SUITE dans le clic (Safari le bloque si on attend la réponse de la
   // fonction pour l'ouvrir), puis on y charge l'URL d'autorisation.
   async function connect(){
@@ -109,7 +121,8 @@
     $('connectCard').style.display = 'none';
     $('loadingCard').style.display = 'block';
     try{
-      const d = await (await fetch(IG_AUTH + '?action=authorize')).json();
+      const tok = sbToken();
+      const d = await (await fetch(IG_AUTH + '?action=authorize&mode=review', tok ? { headers: { Authorization: 'Bearer ' + tok } } : {})).json();
       if(!d.authorize_url) throw new Error(d.error || 'URL d’autorisation indisponible');
       w.location.href = d.authorize_url;
     }catch(e){ try{ w.close(); }catch(_){} showRetry(String((e && e.message) || e)); }

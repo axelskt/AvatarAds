@@ -2,6 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Audit 02/10 : CSP (script de cette page seulement ; appel réseau : ig-go sur notre Supabase seulement). frame-ancestors
+     est ignoré dans une balise meta → filet JS anti-iframe juste dessous. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<script>/* Audit 02/10 — anti-clickjacking : la page de redirection ne doit jamais être encadrée */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>AvatarAds · Générateur de vidéos et images par IA</title>

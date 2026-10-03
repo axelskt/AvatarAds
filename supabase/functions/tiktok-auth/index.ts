@@ -2,12 +2,17 @@
 //  action=authorize : renvoie l'URL d'autorisation TikTok (client_key public, redirect vérifié)
 //  action=exchange  : échange le `code` reçu sur le callback contre un access_token, le stocke
 //  action=status    : y a-t-il un compte TikTok connecté ? (open_id + display_name, JAMAIS le token)
-// Le client_secret ne sort JAMAIS du serveur : l'échange se fait ici. verify_jwt=false (le callback
-// TikTok arrive sans session Supabase). Voir aussi la page publique tiktok-callback.html.
+// Le client_secret ne sort JAMAIS du serveur : l'échange se fait ici. verify_jwt=false (session vérifiée ICI).
+// Voir aussi la page publique tiktok-callback.html.
+// Audit 02/10 : TOUTES les actions exigent une session owner/developer. authorize émet un state signé lié à cette
+// session (10 min) ; exchange exige ce state ET la même session (Bearer envoyé par tiktok-callback.html, lu dans la
+// session avatarads.fr du même domaine). Avant, n'importe qui pouvait relier son compte TikTok (qui devenait « le
+// plus récent », choisi par défaut pour l'envoi des brouillons) ou faire relier le sien depuis le navigateur d'Axel.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const CLIENT_KEY    = Deno.env.get('TIKTOK_CLIENT_KEY') || ''
-const CLIENT_SECRET = Deno.env.get('TIKTOK_CLIENT_SECRET') || ''
+// trim : un copier-coller depuis la console TikTok peut ajouter un retour à la ligne (vécu le 03/10 au passage en production).
+const CLIENT_KEY    = (Deno.env.get('TIKTOK_CLIENT_KEY') || '').trim()
+const CLIENT_SECRET = (Deno.env.get('TIKTOK_CLIENT_SECRET') || '').trim()
 const REDIRECT_URI  = 'https://avatarads.fr/tiktok-callback.html'
 const SCOPE         = 'user.info.basic,video.upload'
 const SB_URL        = Deno.env.get('SUPABASE_URL') || ''
@@ -22,19 +27,49 @@ const CORS = {
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-// Session owner/developer exigée pour tout sauf authorize/exchange (audit 29/09 : accounts, status, post et
-// poststatus étaient ouverts — n'importe qui pouvait lister nos comptes et pousser une vidéo en brouillon sur eux,
-// en nous faisant télécharger l'URL de son choix). Fermé par défaut.
-async function ownerOk(req: Request): Promise<boolean> {
+// Session owner/developer exigée (audit 29/09 : accounts, status, post et poststatus étaient ouverts — n'importe qui
+// pouvait lister nos comptes et pousser une vidéo en brouillon sur eux, en nous faisant télécharger l'URL de son
+// choix ; audit 02/10 : authorize et exchange aussi). Fermé par défaut. Renvoie l'uid de l'owner ('' = refus).
+async function ownerUid(req: Request): Promise<string> {
   const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim()
-  if (!jwt) return false
+  if (!jwt) return ''
   try {
     const { data: { user }, error } = await svc.auth.getUser(jwt)
-    if (error || !user) return false
+    if (error || !user?.id) return ''
     const { data, error: e2 } = await svc.from('profiles').select('plan, is_owner').eq('id', user.id).maybeSingle()
-    if (e2 || !data) return false
-    return !!data.is_owner || String(data.plan || '').toLowerCase() === 'developer'
-  } catch { return false }
+    if (e2 || !data) return ''
+    return (!!data.is_owner || String(data.plan || '').toLowerCase() === 'developer') ? user.id : ''
+  } catch { return '' }
+}
+
+// Audit 02/10 : state OAuth signé (HMAC-SHA256 avec le secret de l'app et un préfixe dédié ; même schéma
+// qu'instagram-auth, préfixe différent). Format : 1.o.<expiration en s, base 36>.<nonce>.<signature>. La signature
+// couvre AUSSI l'uid de la session owner qui l'a demandé (jamais écrit en clair dans l'URL vue par TikTok) :
+// l'échange n'aboutit qu'avec cette même session. Valable 10 minutes. Pas de mode relecteur ici.
+const STATE_TTL_S = 600
+const STATE_RE = /^1\.o\.([0-9a-z]{1,10})\.([A-Za-z0-9_-]{16})\.([A-Za-z0-9_-]{43})$/
+const b64u = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+async function stateSig(body: string, uid: string): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(CLIENT_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  return b64u(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('aa-oauth-state|tk|' + body + '|' + uid))))
+}
+async function stateMint(uid: string): Promise<string> {
+  const body = '1.o.' + (Math.floor(Date.now() / 1000) + STATE_TTL_S).toString(36) + '.' + b64u(crypto.getRandomValues(new Uint8Array(12)))
+  return body + '.' + await stateSig(body, uid)
+}
+// State bien formé, non expiré, signé pour CETTE session owner.
+async function stateOk(state: string, uid: string): Promise<boolean> {
+  const m = STATE_RE.exec(state)
+  if (!m || !uid) return false
+  const exp = parseInt(m[1], 36) * 1000
+  if (!(exp > Date.now()) || exp - Date.now() > (STATE_TTL_S + 300) * 1000) return false
+  const i = state.lastIndexOf('.')
+  const expected = await stateSig(state.slice(0, i), uid)
+  const got = state.slice(i + 1)
+  if (expected.length !== got.length) return false
+  let d = 0
+  for (let k = 0; k < got.length; k++) d |= expected.charCodeAt(k) ^ got.charCodeAt(k)   // temps constant
+  return d === 0
 }
 // Token d'accès valide d'un compte : l'access_token TikTok vit 24 h ; au-delà (ou à 5 min de la fin) on le renouvelle
 // avec le refresh_token (365 j) et on enregistre le nouveau couple. null = compte inconnu ou refresh refusé.
@@ -69,20 +104,24 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url)
   const action = url.searchParams.get('action') || (req.method === 'POST' ? 'exchange' : 'authorize')
-  if (['status', 'accounts', 'post', 'poststatus'].includes(action) && !(await ownerOk(req))) {
-    return json({ error: 'réservé au propriétaire' }, 401)
+  // Audit 02/10 : toutes les actions (authorize et exchange compris) exigent la session owner/developer.
+  const uid = await ownerUid(req)
+  if (!uid) {
+    return json({ error: action === 'exchange'
+      ? 'Session propriétaire requise : termine la connexion TikTok dans le navigateur où tu es connecté au tableau de bord.'
+      : 'réservé au propriétaire' }, 401)
   }
 
-  // 1) URL d'autorisation à ouvrir côté app
+  // 1) URL d'autorisation à ouvrir côté app (state signé lié à la session owner)
   if (action === 'authorize') {
-    const state = crypto.randomUUID()
+    const state = await stateMint(uid)
     const authorize = 'https://www.tiktok.com/v2/auth/authorize/'
       + `?client_key=${encodeURIComponent(CLIENT_KEY)}`
       + `&scope=${encodeURIComponent(SCOPE)}`
       + `&response_type=code`
       + `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`
-      + `&state=${state}`
-    return json({ authorize_url: authorize, state })
+      + `&state=${encodeURIComponent(state)}`
+    return json({ authorize_url: authorize })
   }
 
   // 2) échange du code contre un token (appelé par tiktok-callback.html)
@@ -91,6 +130,11 @@ Deno.serve(async (req) => {
     try { body = await req.json() } catch { /* ignore */ }
     const code = String(body.code || url.searchParams.get('code') || '')
     if (!code) return json({ error: 'code manquant' }, 400)
+    // Audit 02/10 : state signé pour cette session owner, vérifié AVANT d'utiliser le code.
+    const state = String(body.state || url.searchParams.get('state') || '')
+    if (!(await stateOk(state, uid))) {
+      return json({ error: 'Lien de connexion expiré ou invalide (autre session ou lien modifié) : relance « Connecter TikTok » depuis le tableau de bord.' }, 403)
+    }
 
     const form = new URLSearchParams({
       client_key: CLIENT_KEY,

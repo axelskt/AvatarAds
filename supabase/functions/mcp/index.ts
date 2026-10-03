@@ -4272,8 +4272,30 @@ function oauthBase(req: Request): string {
     .split(',')[0].trim().toLowerCase()
   return OAUTH_HOSTS.includes(fwd) ? 'https://' + fwd : OAUTH_BASE
 }
-const TOKEN_TTL_MS = 30 * 24 * 3600 * 1000       // 30 jours ; refresh sans limite
+const TOKEN_TTL_MS = 30 * 24 * 3600 * 1000       // 30 jours (plafonné à la fin de la famille)
 const CODE_TTL_MS = 10 * 60 * 1000
+// Audit 02/10 : refresh en FAMILLES (migration 20261003070000) — fin absolue 90 jours après la première émission,
+// réutilisation d'un refresh déjà tourné = famille révoquée, sauf dans les 60 s (rafraîchissements simultanés).
+const FAMILY_TTL_MS = 90 * 24 * 3600 * 1000
+const REFRESH_GRACE_S = 60
+const OLD_ACCESS_S = 10 * 60                     // rotation douce : l'ancien accès vit encore 10 min au plus
+// Audit 02/10 : bornes de /register et format PKCE (RFC 7636 : base64url sans remplissage, 43 à 128 caractères)
+const MAX_REDIRECT_URIS = 10, MAX_URI_LEN = 2048, MAX_CLIENT_NAME = 120
+const CODE_CHALLENGE_RE = /^[A-Za-z0-9_-]{43,128}$/
+const OAUTH_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Audit 02/10 : identité « Claude » décidée CÔTÉ SERVEUR sur des listes EXACTES, relevées en prod le 03/10
+// (mcp_oauth_clients.cimd_url / redirect_uris) et confirmées par les documents CIMD publiés par claude.ai.
+// Ajouter une valeur ici seulement après l'avoir observée chez un vrai client Anthropic.
+const CLAUDE_CIMD: Record<string, string> = {
+  'https://claude.ai/oauth/mcp-oauth-client-metadata': 'Claude',
+  'https://claude.ai/oauth/claude-code-client-metadata': 'Claude Code',
+}
+const CLAUDE_REDIRECTS = ['https://claude.ai/api/mcp/auth_callback']
+// Hôtes Anthropic : réservés au flux CIMD officiel (aucun client /register ni CIMD tiers ne peut y renvoyer le code).
+const hoteAnthropic = (h: string) => /(^|\.)(claude\.ai|claude\.com|anthropic\.com)$/i.test(String(h || '').replace(/\.+$/, ''))
+const hoteUriAnthropic = (uri: string) => { try { return hoteAnthropic(new URL(uri).hostname) } catch { return true } }
+// Nom affichable : sans caractères de contrôle ni d'inversion de sens (usurpation visuelle), 120 caractères au plus.
+const nomClientPropre = (v: unknown) => String(v ?? '').replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '').trim().slice(0, MAX_CLIENT_NAME)
 
 const hexAleatoire = (n: number) => {
   const b = new Uint8Array(n)
@@ -4353,6 +4375,9 @@ async function resolveCimdClient(clientIdUrl: string): Promise<{ id: string, uri
   // Audit 28/09 (basse) : /authorize créait un client OAuth par URL CIMD inconnue, sans le plafond de /register (30 / h par IP)
   // → 20 NOUVEAUX documents CIMD par heure et par hôte (les clients déjà connus, dont Claude, passent par le cache ci-dessus).
   if (!(await rateHit('mcp-cimd:' + h, 3600, 20))) return null
+  // Audit 02/10 : plafond GLOBAL en plus du plafond par hôte (des milliers de sous-domaines jetables = autant de
+  // plafonds de 20). Les 2 clients CIMD réels (claude.ai) passent par le cache ci-dessus et n'y sont jamais comptés.
+  if (!(await rateHit('mcp-cimd:global', 3600, 60))) return null
   const ctl = new AbortController()
   const t = setTimeout(() => ctl.abort(), 5000)
   // deno-lint-ignore no-explicit-any
@@ -4368,13 +4393,39 @@ async function resolveCimdClient(clientIdUrl: string): Promise<{ id: string, uri
   if (!doc || typeof doc !== 'object') return null
   if (String(doc.client_id || '') !== clientIdUrl) return null
   const uris = Array.isArray(doc.redirect_uris) ? doc.redirect_uris.map(String).slice(0, 16) : []
-  if (!uris.length || uris.some((x: string) => !/^https:\/\//.test(x) && !loopbackUrl(x))) return null
+  if (!uris.length || uris.some((x: string) => x.length > MAX_URI_LEN || (!/^https:\/\//.test(x) && !loopbackUrl(x)))) return null
+  // Audit 02/10 : un document CIMD hébergé HORS d'un domaine Anthropic ne peut pas déclarer un retour claude.ai /
+  // claude.com / anthropic.com (il passerait pour « Claude » sur la page de consentement).
+  if (!hoteAnthropic(h) && uris.some((x: string) => hoteUriAnthropic(x))) return null
   const { data: row, error } = await svc.from('mcp_oauth_clients')
-    .upsert({ cimd_url: clientIdUrl, client_name: String(doc.client_name || u.hostname).slice(0, 120), redirect_uris: uris },
+    .upsert({ cimd_url: clientIdUrl, client_name: nomClientPropre(doc.client_name || u.hostname) || u.hostname, redirect_uris: uris },
       { onConflict: 'cimd_url' })
     .select('client_id').single()
   if (error || !row) return null
   return { id: String(row.client_id), uris }
+}
+
+// Audit 02/10 (contrat C2) : identité affichée sur la page de consentement. trusted = document CIMD officiel de
+// claude.ai, ou retour EXACT sur le callback claude.ai (client /register historique de claude.ai) ; le redirect_uri
+// doit déjà avoir été validé contre le client. Jamais d'expression régulière sur le domaine ici.
+function identiteClient(c: { cimd_url?: unknown, client_name?: unknown }, redirectUri: string): { name: string, host: string, trusted: boolean } {
+  const cimd = String(c.cimd_url || '')
+  const officiel = Object.prototype.hasOwnProperty.call(CLAUDE_CIMD, cimd)
+  const trusted = officiel || CLAUDE_REDIRECTS.includes(redirectUri)
+  let host = ''
+  try { host = new URL(redirectUri).host } catch { host = '' }
+  const name = trusted ? (officiel ? CLAUDE_CIMD[cimd] : 'Claude') : (nomClientPropre(c.client_name) || host)
+  return { name, host, trusted }
+}
+// Audit 02/10 : client_id reçu par /token → uuid interne d'un client EXISTANT (URL CIMD résolue SANS fetch : le client
+// existe depuis /authorize). null = client inconnu.
+async function clientUuidDe(clientId: string): Promise<string | null> {
+  if (!clientId) return null
+  const cimd = isCimdClientId(clientId)
+  if (!cimd && !OAUTH_UUID_RE.test(clientId)) return null
+  const { data } = await svc.from('mcp_oauth_clients').select('client_id')
+    .eq(cimd ? 'cimd_url' : 'client_id', clientId).maybeSingle()
+  return data ? String(data.client_id).toLowerCase() : null
 }
 
 // Toutes les routes OAuth ; renvoie null si la requête n'en est pas une.
@@ -4402,17 +4453,33 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     if (!(await rateHit('mcp-register:' + realIp(req), 3600, 30))) return json(429, { error: 'rate_limited' })
     let body: Record<string, unknown>
     try { body = await req.json() } catch { return json(400, { error: 'invalid_client_metadata' }) }
-    const uris = Array.isArray(body.redirect_uris) ? body.redirect_uris.map(String).slice(0, 8) : []
-    if (!uris.length || uris.some((u) => !/^https:\/\//.test(u))) {
-      return json(400, { error: 'invalid_redirect_uri' })
+    // Audit 02/10 : 10 adresses de retour au plus (refus, plus de troncature silencieuse), 2048 caractères chacune,
+    // https uniquement, et JAMAIS un hôte claude.ai / claude.com / anthropic.com : le vrai Claude s'identifie par son
+    // document CIMD (aucun client /register créé depuis le 07/09) ; un client tiers qui renvoie là passerait pour Claude.
+    const brut = Array.isArray(body.redirect_uris) ? body.redirect_uris : []
+    if (!brut.length) return json(400, { error: 'invalid_redirect_uri', error_description: 'redirect_uris requis.' })
+    if (brut.length > MAX_REDIRECT_URIS) {
+      return json(400, { error: 'invalid_redirect_uri', error_description: `${MAX_REDIRECT_URIS} adresses de retour au plus.` })
     }
+    const uris = brut.map(String)
+    for (const u of uris) {
+      let p: URL
+      try { p = new URL(u) } catch { return json(400, { error: 'invalid_redirect_uri', error_description: 'Adresse de retour illisible.' }) }
+      if (u.length > MAX_URI_LEN || p.protocol !== 'https:' || !/^https:\/\//.test(u)) {
+        return json(400, { error: 'invalid_redirect_uri', error_description: `Adresse de retour https de ${MAX_URI_LEN} caractères au plus.` })
+      }
+      if (hoteAnthropic(p.hostname)) {
+        return json(400, { error: 'invalid_redirect_uri', error_description: 'Adresse de retour réservée (claude.ai, claude.com, anthropic.com) : le client officiel Claude se connecte par son document de métadonnées (client_id = URL), pas par /register.' })
+      }
+    }
+    const clientName = nomClientPropre(body.client_name) || 'client'
     const { data: client, error } = await svc.from('mcp_oauth_clients')
-      .insert({ client_name: String(body.client_name || 'client'), redirect_uris: uris })
+      .insert({ client_name: clientName, redirect_uris: uris })
       .select('client_id').single()
     if (error || !client) return json(500, { error: 'server_error' })
     return json(201, {
       client_id: String(client.client_id),
-      client_name: String(body.client_name || 'client'),
+      client_name: clientName,
       redirect_uris: uris,
       token_endpoint_auth_method: 'none',
       grant_types: ['authorization_code', 'refresh_token'],
@@ -4430,8 +4497,12 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     if (!clientId || !redirectUri || !challenge || method !== 'S256') {
       return json(400, { error: 'invalid_request', error_description: 'client_id, redirect_uri, code_challenge (S256) requis' })
     }
-    // CIMD : client_id = URL → on résout vers l'uuid interne (le relai, les
-    // codes et les tokens ne voient QUE l'uuid ; /token n'exige pas client_id).
+    // Audit 02/10 : challenge S256 = base64url de 43 à 128 caractères (sinon on stockait n'importe quoi dans le relais)
+    if (!CODE_CHALLENGE_RE.test(challenge)) {
+      return json(400, { error: 'invalid_request', error_description: 'code_challenge invalide (base64url, 43 à 128 caractères)' })
+    }
+    // CIMD : client_id = URL → on résout vers l'uuid interne (le relai et les codes ne voient QUE l'uuid ;
+    // /token résout de nouveau l'URL pour comparer au client du code — audit 02/10).
     let effClientId = clientId
     let uris: string[] = []
     if (isCimdClientId(clientId)) {
@@ -4440,6 +4511,7 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
       effClientId = cimd.id
       uris = cimd.uris
     } else {
+      if (!OAUTH_UUID_RE.test(clientId)) return json(400, { error: 'invalid_client' })
       const { data: client } = await svc.from('mcp_oauth_clients')
         .select('client_id, redirect_uris').eq('client_id', clientId).maybeSingle()
       if (!client) return json(400, { error: 'invalid_client' })
@@ -4453,6 +4525,21 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     return new Response(null, { status: 302, headers: { ...cors, Location: `${CONSENT_URL}?mcp_oauth=${relai}` } })
   }
 
+  // ── identité du client pour la page de consentement (contrat C2, audit 02/10) ──
+  // GET public (aucune donnée de compte : seulement l'enregistrement du client). trusted est calculé ICI et nulle part
+  // ailleurs ; client_id = uuid du relais (ou URL CIMD déjà connue, sans fetch). Client inconnu ou retour non
+  // enregistré pour ce client → 404 (la page garde alors le bandeau « Application externe »).
+  if (p1 === 'oauth' && segs[2] === 'client-info' && req.method === 'GET') {
+    const clientId = String(url.searchParams.get('client_id') || ''), redirectUri = String(url.searchParams.get('redirect_uri') || '')
+    const absent = () => json(404, { ok: false, error: 'not_found' })
+    if (!clientId || !redirectUri || clientId.length > MAX_URI_LEN || redirectUri.length > MAX_URI_LEN) return absent()
+    const sel = svc.from('mcp_oauth_clients').select('client_id, client_name, redirect_uris, cimd_url')
+    const { data: c } = isCimdClientId(clientId) ? await sel.eq('cimd_url', clientId).maybeSingle()
+      : OAUTH_UUID_RE.test(clientId) ? await sel.eq('client_id', clientId).maybeSingle() : { data: null }
+    if (!c || !redirectUriAllowed(redirectUri, (c.redirect_uris as string[]) || [])) return absent()
+    return json(200, { ok: true, ...identiteClient(c, redirectUri) })
+  }
+
   // ── consentement approuvé par l'app (JWT utilisateur) → code ──
   if (p1 === 'oauth' && segs[2] === 'approve' && req.method === 'POST') {
     const jwt = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
@@ -4460,15 +4547,21 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: `Bearer ${jwt}` } } })
     const { data: { user }, error } = await userClient.auth.getUser()
     if (error || !user) return json(401, { error: 'unauthorized' })
+    // Audit 02/10 : 30 approbations par heure et par compte (une connexion normale en demande une)
+    if (!(await rateHit('mcp-approve:' + user.id, 3600, 30))) {
+      return json(429, { error: 'rate_limited', error_description: 'Trop d’autorisations demandées en une heure : réessaie plus tard.' })
+    }
     let body: Record<string, unknown>
     try { body = await req.json() } catch { return json(400, { error: 'bad_request' }) }
     const clientId = String(body.client_id || ''), redirectUri = String(body.redirect_uri || '')
     const challenge = String(body.code_challenge || ''), state = String(body.state || '')
+    // Audit 02/10 : challenge au format S256 (base64url, 43 à 128) et client_id uuid avant toute requête
+    if (!CODE_CHALLENGE_RE.test(challenge) || !OAUTH_UUID_RE.test(clientId)) return json(400, { error: 'invalid_request' })
     const { data: client } = await svc.from('mcp_oauth_clients')
       .select('client_id, redirect_uris').eq('client_id', clientId).maybeSingle()
     // redirectUriAllowed (et non .includes) : port éphémère des redirections
     // loopback des clients CIMD type Claude Code (RFC 8252 §7.3).
-    if (!client || !redirectUriAllowed(redirectUri, (client.redirect_uris as string[]) || []) || !challenge) {
+    if (!client || !redirectUriAllowed(redirectUri, (client.redirect_uris as string[]) || [])) {
       return json(400, { error: 'invalid_request' })
     }
     const code = 'aac_' + hexAleatoire(24)
@@ -4496,17 +4589,32 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
 
     if (grant === 'authorization_code') {
       const code = form.get('code') || '', verifier = form.get('code_verifier') || ''
-      const redirectUri = form.get('redirect_uri') || ''
+      const redirectUri = form.get('redirect_uri') || '', clientIdIn = form.get('client_id') || ''
       if (!code || !verifier) return json(400, { error: 'invalid_request' })
+      // Audit 02/10 : client_id ET redirect_uri EXIGÉS (OAuth 2.1 §4.1.3 pour un client public ; les SDK MCP de
+      // claude.ai / Claude Code envoient les deux). Soupape d'urgence sans redéploiement : secret MCP_TOKEN_LAX=1
+      // tolère leur ABSENCE (jamais une valeur différente) — lu à chaque requête.
+      const lax = (Deno.env.get('MCP_TOKEN_LAX') ?? '') === '1'
+      if (!lax && (!clientIdIn || !redirectUri)) {
+        console.warn('[oauth/token] échange refusé : ' + (!clientIdIn ? 'client_id' : 'redirect_uri') + ' absent')
+        return json(400, { error: 'invalid_request', error_description: 'client_id et redirect_uri requis' })
+      }
+      // client_id résolu AVANT de consommer le code (URL CIMD → uuid interne) : un client inconnu ne brûle pas le code
+      const clientUuid = clientIdIn ? await clientUuidDe(clientIdIn) : null
+      if (clientIdIn && !clientUuid) return json(400, { error: 'invalid_client' })
       // audit 02/10 : code consommé ATOMIQUEMENT (delete … returning) — deux échanges concurrents du même code ne
       // donnent plus deux jetons
       const { data: used } = await svc.from('mcp_oauth_codes').delete().eq('code_hash', await hashKey(code)).select('*')
       const row = used && used.length === 1 ? used[0] : null
       if (!row) return json(400, { error: 'invalid_grant' })
       if (new Date(String(row.expires_at)).getTime() < Date.now()) return json(400, { error: 'invalid_grant', error_description: 'code expiré' })
+      // Audit 02/10 : le code appartient à UN client et à UN retour — toute différence le brûle (déjà supprimé ci-dessus)
       if (redirectUri && redirectUri !== row.redirect_uri) return json(400, { error: 'invalid_grant' })
+      if (clientUuid && clientUuid !== String(row.client_id).toLowerCase()) return json(400, { error: 'invalid_grant' })
       if (await sha256b64url(verifier) !== String(row.code_challenge)) return json(400, { error: 'invalid_grant', error_description: 'PKCE' })
       const access = 'aat_' + hexAleatoire(24), refresh = 'aar_' + hexAleatoire(24)
+      // Nouvelle FAMILLE de refresh : family_id / family_started_at posés par les DEFAULT de la table (migration
+      // 20261003070000) → cette insertion marche aussi avant la migration.
       const { error: insErr } = await svc.from('mcp_oauth_tokens').insert({
         token_hash: await hashKey(access), refresh_hash: await hashKey(refresh),
         client_id: row.client_id, user_id: row.user_id,
@@ -4520,21 +4628,42 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     if (grant === 'refresh_token') {
       const refresh = form.get('refresh_token') || ''
       if (!refresh) return json(400, { error: 'invalid_request' })
+      const access = 'aat_' + hexAleatoire(24), refresh2 = 'aar_' + hexAleatoire(24)
+      // Audit 02/10 : rotation par FAMILLE, atomique en base (mcp_oauth_rotate) — fin absolue 90 jours, refresh déjà
+      // tourné présenté hors des 60 s de grâce = famille entière révoquée (vol probable), accès plafonné à la fin de famille.
+      const { data: rot, error: rotErr } = await svc.rpc('mcp_oauth_rotate', {
+        p_refresh_hash: await hashKey(refresh), p_new_token_hash: await hashKey(access), p_new_refresh_hash: await hashKey(refresh2),
+        p_access_ttl_s: Math.floor(TOKEN_TTL_MS / 1000), p_family_ttl_s: Math.floor(FAMILY_TTL_MS / 1000),
+        p_grace_s: REFRESH_GRACE_S, p_old_access_s: OLD_ACCESS_S,
+      })
+      // RPC absente (fonction déployée avant la migration) → ancienne rotation ci-dessous, pour ne déconnecter personne.
+      const rpcAbsente = !!rotErr && ['PGRST202', '42883'].includes(String(rotErr.code || ''))
+      if (rotErr && !rpcAbsente) { console.error('[oauth/token] rotation : ' + rotErr.message); return json(500, { error: 'server_error' }) }
+      if (!rotErr) {
+        const r = (rot || {}) as { ok?: boolean, error?: string, expires_in?: number, revoked?: number }
+        if (!r.ok) {
+          if (r.error === 'reuse') console.warn('[oauth/token] refresh déjà tourné présenté : famille révoquée (' + (r.revoked ?? 0) + ' jeton(s))')
+          if (r.error === 'expired') return json(400, { error: 'invalid_grant', error_description: 'Connexion expirée (90 jours) : reconnecte AvatarAds dans Claude.' })
+          return json(400, { error: 'invalid_grant' })
+        }
+        return json(200, { access_token: access, token_type: 'Bearer',
+          expires_in: Math.max(1, Math.floor(Number(r.expires_in) || 0)), refresh_token: refresh2, scope: 'avatarads' })
+      }
+      console.error('[oauth/token] RPC mcp_oauth_rotate absente : appliquer la migration 20261003070000 (ancienne rotation utilisée)')
       const { data: row } = await svc.from('mcp_oauth_tokens').select('*')
         .eq('refresh_hash', await hashKey(refresh)).maybeSingle()
       if (!row) return json(400, { error: 'invalid_grant' })
-      const access = 'aat_' + hexAleatoire(24), refresh2 = 'aar_' + hexAleatoire(24)
       // Rotation DOUCE : l'ancien access reste valable 10 min (une autre session
       // claude.ai peut encore l'avoir en main — un delete sec la mettait en 401
       // « Problème de connexion »). L'ancien refresh, lui, meurt tout de suite
       // (écrasé par un hash jamais distribué, la colonne est NOT NULL + unique).
       // audit 02/10 : rotation ATOMIQUE — l'ancien refresh n'est consommé qu'une fois (compare-and-swap sur refresh_hash)
-      const { data: rot } = await svc.from('mcp_oauth_tokens').update({
+      const { data: rotAncien } = await svc.from('mcp_oauth_tokens').update({
         // audit 28/09 : jamais PROLONGER un access déjà expiré (rotation d'un vieux refresh = 10 min de plus)
         expires_at: new Date(Math.min(Date.parse(String(row.expires_at)) || 0, Date.now() + 10 * 60 * 1000)).toISOString(),
         refresh_hash: await hashKey('dead_' + hexAleatoire(24)),
       }).eq('token_hash', row.token_hash).eq('refresh_hash', await hashKey(refresh)).select('token_hash')
-      if (!rot || rot.length !== 1) return json(400, { error: 'invalid_grant' })
+      if (!rotAncien || rotAncien.length !== 1) return json(400, { error: 'invalid_grant' })
       const { error: insErr } = await svc.from('mcp_oauth_tokens').insert({
         token_hash: await hashKey(access), refresh_hash: await hashKey(refresh2),
         client_id: row.client_id, user_id: row.user_id,

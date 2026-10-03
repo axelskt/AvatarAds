@@ -4,8 +4,10 @@
 //  domaine) qui appelle ceci (?log=1) et lit la réponse JSON.
 //  - Destination en liste blanche (safeDest) : plus de redirection ouverte.
 //  - Clic enregistré seulement si la signature s est valide (lien réellement envoyé par nos DM).
-//    Liens envoyés AVANT la signature (23/09/2026, sans s) : clic accepté seulement si ce sender_id a
-//    vraiment reçu un lien ('link' ou 'relance').
+//    Audit 02/10 : l'ancien chemin SANS signature (liens d'avant le 23/09) est supprimé : sans s, la redirection
+//    passe mais aucun clic n'est enregistré. La signature porte la date d'émission (_shared/iglink.ts) : lien valable
+//    30 jours. Liens v1 (signés sans date, 23/09 → déploiement) : acceptés jusqu'au LEGACY_V1_UNTIL ET seulement si ce
+//    lead a reçu un lien ('link' ou 'relance') de ce compte il y a 30 jours au plus.
 //  - Attribution (Axel 25/09) : un clic enregistré renvoie une RÉFÉRENCE CHIFFRÉE du lead (_shared/leadref.ts,
 //    jamais l'identifiant Instagram en clair) : { ok, ref } en JSON pour r.html, qui la garde 30 jours dans le
 //    navigateur. Le 302 direct (aucun DM ne l'utilise : tous les liens passent par r.html) ne transporte JAMAIS de
@@ -17,7 +19,7 @@
 // verify_jwt=false (lien public cliqué par le lead ; la session de /attach est vérifiée ICI auprès de l'auth).
 // ig_dm_log et ig_lead_links restent verrouillés (service role ici).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { safeDest, verifyClick } from '../_shared/iglink.ts'
+import { checkClick, LINK_TTL_MS, safeDest } from '../_shared/iglink.ts'
 import { mintLeadRef, openLeadRef } from '../_shared/leadref.ts'
 
 const SB_URL  = Deno.env.get('SUPABASE_URL') || ''
@@ -33,9 +35,16 @@ const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 async function clickAllowed(u: string, ig: string, s: string): Promise<boolean> {
-  if (s) return verifyClick(u, ig, s)
-  const { data } = await svc.from('ig_dm_log').select('id').eq('sender_id', u).in('kind', ['link', 'relance']).limit(1)
-  return !!data?.length
+  if (!s) return false   // Audit 02/10 : plus de clic sans signature
+  const c = await checkClick(u, ig, s)
+  if (!c.ok) { console.log('[ig-go] clic non enregistré :', c.reason); return false }
+  if (!c.legacy) return true
+  // Lien v1 (sans date) : ce lead doit avoir reçu un lien de ce compte il y a 30 jours au plus. Base muette → refus.
+  let q = svc.from('ig_dm_log').select('id').eq('sender_id', u).in('kind', ['link', 'relance'])
+    .gte('created_at', new Date(Date.now() - LINK_TTL_MS).toISOString())
+  if (ig) q = q.eq('ig_id', ig)
+  const { data, error } = await q.limit(1)
+  return !error && !!data?.length
 }
 
 function bearer(req: Request): string {

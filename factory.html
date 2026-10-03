@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Audit 02/10 : CSP (scripts : cette page + jsDelivr seulement ; appels réseau : notre Supabase seulement ; médias et
+     images https). 'unsafe-inline' reste nécessaire pour les onclick de la page. frame-ancestors est ignoré dans une
+     balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme app/index.html. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script>/* Audit 02/10 — anti-clickjacking : le tableau de bord owner (QC, envoi TikTok, connexions) ne doit jamais être encadré. */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="robots" content="noindex, nofollow">
 <title>Creative Factory — Tableau des IDs</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -234,14 +239,17 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<!-- Audit 02/10 : versions exactes + intégrité (SRI) : un fichier modifié sur le CDN n'est pas exécuté. supabase-js =
+     même fichier que factory-v2.html ; chart.js 4.5.1 = la version que servait chart.js@4 au 03/10/2026. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js" integrity="sha384-K1nraABOP/zFehpLIUksXebbs7jMpB8gYMlb+uhVKZcWT/9Vkq1+qhv6ndC+1Yuz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
 <script>
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
-const esc = s => String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+// Audit 02/10 : guillemets échappés aussi (valeurs placées dans des attributs : src, value, title, href).
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const KIND_LABEL = {transformation:'Transformations',contenu:'Contenus / démos',musique:'Musiques',"sous-titre":'Sous-titres',avatar:'Avatars',hook:'Hooks',liaison:'Phrases de liaison',cta:'CTA'};
 const badge = st => st==='done'?'<span class="badge b-done">done</span>':st==='in_progress'?'<span class="badge b-prog">in_progress</span>':st==='flagged'?'<span class="badge b-flag">à faire</span>':'<span class="badge b-pend">'+esc(st||'pending')+'</span>';
 let BRICKS = {};
@@ -319,8 +327,10 @@ async function igConnect(){
   const w = window.open('about:blank', 'ig_oauth', 'width=560,height=760');
   if(!w){ $('igAccounts').textContent = 'Popup bloqué : autorise les popups pour avatarads.fr puis réessaie.'; return; }
   try{
-    const d = await (await fetch(IG_AUTH + '?action=authorize')).json();
-    if(d.authorize_url) w.location.href = d.authorize_url; else w.close();
+    // Audit 02/10 : authorize exige la session owner (le state signé est lié à elle ; ig-callback.html la renvoie).
+    const d = await (await fetch(IG_AUTH + '?action=authorize', { headers: await igAuthHeaders() })).json();
+    if(d.authorize_url) w.location.href = d.authorize_url;
+    else { w.close(); $('igAccounts').textContent = d.error || 'URL d\'autorisation indisponible.'; }
   }catch(e){ try{ w.close(); }catch(_){} }
 }
 async function igLoad(){
@@ -390,15 +400,30 @@ async function igLoadInsights(){
 // Les actions accounts / post exigent la session owner/developer (edge tiktok-auth, audit 29/09).
 const TK_EDGE = SUPABASE_URL + '/functions/v1/tiktok-auth';
 let TK_ACCOUNTS = [];
+// Audit 02/10 : nos comptes TikTok, par nom affiché (seul nom lisible avec le scope user.info.basic ; l'équivalent
+// d'OWN_USERNAMES côté Instagram), dans l'ordre de préférence. Le menu ne présélectionne PLUS « le dernier compte
+// connecté » (un compte relié par erreur ou par un tiers serait devenu la cible par défaut des brouillons) : il
+// présélectionne le 1er de nos comptes trouvé, sinon rien (choix explicite obligatoire). Un nom renommé côté TikTok
+// = à mettre à jour ici ; en attendant, il faut juste le choisir à la main.
+const TK_OWN_NAMES = ['Tom|Contenu IA', 'Louis|SaaS IA', 'Axel|SaaS IA'];
+const tkNorm = s => String(s||'').toLowerCase().replace(/\s*\|\s*/g,'|').replace(/\s+/g,' ').trim();
+const tkOwnRank = a => TK_OWN_NAMES.findIndex(n => tkNorm(n) === tkNorm(a && a.display_name));
 async function tkLoadAccounts(){
   const el = $('tkAccounts'); if(!el) return;
   try{
     const d = await (await fetch(TK_EDGE + '?action=accounts', { headers: await igAuthHeaders() })).json();
     if(d.error){ el.textContent = 'Accès refusé (session expirée ?) — reconnecte-toi.'; return; }
-    TK_ACCOUNTS = d.accounts || [];   // du plus récent au plus ancien : le dernier connecté est choisi par défaut
+    TK_ACCOUNTS = d.accounts || [];   // du plus récent au plus ancien (ordre de l'edge)
     const sel = $('tkWho');
+    // Nos comptes d'abord (ordre TK_OWN_NAMES), puis les autres, marqués « non reconnu ».
+    const sorted = TK_ACCOUNTS.map((a,i)=>({ a, i, r: tkOwnRank(a) }))
+      .sort((x,y)=> (x.r<0) - (y.r<0) || (x.r<0 ? x.i-y.i : x.r-y.r || x.i-y.i));
+    const def = sorted.find(x=>x.r>=0);
     // deux comptes peuvent porter le même nom affiché : on ajoute l'heure de connexion et la fin de l'identifiant
-    if(sel) sel.innerHTML = TK_ACCOUNTS.map(a=>'<option value="'+esc(a.open_id)+'">'+esc((a.display_name||'Compte')+' · connecté le '+new Date(a.updated_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' · …'+String(a.open_id).slice(-4))+'</option>').join('');
+    if(sel){
+      sel.innerHTML = '<option value="">Choisis le compte TikTok…</option>' + sorted.map(({a,r})=>'<option value="'+esc(a.open_id)+'">'+esc((a.display_name||'Compte')+' · connecté le '+new Date(a.updated_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' · …'+String(a.open_id).slice(-4)+(r<0?' · non reconnu':''))+'</option>').join('');
+      sel.value = def ? def.a.open_id : '';
+    }
     el.innerHTML = TK_ACCOUNTS.length
       ? '<b>'+TK_ACCOUNTS.length+' compte'+(TK_ACCOUNTS.length>1?'s':'')+' TikTok connecté'+(TK_ACCOUNTS.length>1?'s':'')+' :</b> '
         + TK_ACCOUNTS.map(a=>'<span style="display:inline-flex;align-items:center;gap:6px;margin-right:10px">'
@@ -411,8 +436,9 @@ async function tkConnect(){
   const res = $('tkResult');
   const w = window.open('about:blank', 'tiktok_oauth', 'width=540,height=760');   // ouvert dans le clic (Safari)
   try{
-    const d = await (await fetch(TK_EDGE + '?action=authorize')).json();
-    if(!d.authorize_url){ if(w) w.close(); res.textContent = 'URL d\'autorisation indisponible.'; return; }
+    // Audit 02/10 : authorize exige la session owner (le state signé est lié à elle ; tiktok-callback.html la renvoie).
+    const d = await (await fetch(TK_EDGE + '?action=authorize', { headers: await igAuthHeaders() })).json();
+    if(!d.authorize_url){ if(w) w.close(); res.textContent = d.error || 'URL d\'autorisation indisponible.'; return; }
     if(!w){ res.textContent = 'Popup bloquée : autorise les popups pour avatarads.fr.'; return; }
     w.location.href = d.authorize_url;
     res.textContent = 'Fenêtre TikTok ouverte — autorise ton compte…';
@@ -423,8 +449,11 @@ async function tkSendTest(){
   const res = $('tkResult');
   if(!TK_ACCOUNTS.length){ res.textContent = 'Connecte au moins 1 compte d\'abord.'; return; }
   const pick = ($('tkWho')||{}).value;
-  const acc = TK_ACCOUNTS.find(a=>a.open_id===pick) || TK_ACCOUNTS[0];   // compte choisi (le plus récent par défaut)
+  // Audit 02/10 : plus de repli sur « le premier de la liste » : le compte doit être choisi (présélection = un des nôtres).
+  const acc = pick ? TK_ACCOUNTS.find(a=>a.open_id===pick) : null;
+  if(!acc){ res.textContent = 'Choisis le compte TikTok destinataire.'; return; }
   const name = acc.display_name || acc.open_id;
+  if(tkOwnRank(acc) < 0 && !confirm('« '+name+' » ne fait pas partie de nos comptes TikTok connus. Envoyer quand même la vidéo dans ses brouillons ?')) return;
   res.textContent = 'Envoi en brouillon vers ' + name + '…';
   try{
     // Une vraie vidéo 1080×1920 différente à chaque envoi (l'ancienne test3.mp4 faisait 1084×1624 et avait déjà été

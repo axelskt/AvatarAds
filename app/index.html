@@ -32,7 +32,11 @@ try{
 <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Audit 02/10 : scripts tiers en version EXACTE + intégrité (SRI) : un fichier modifié sur le CDN n'est pas exécuté.
+     supabase.js = le fichier du paquet npm (le .min.js de jsDelivr est généré à la volée, donc impropre au SRI ; même
+     code) ; 2.117.2 = la version que servait @2 au 03/10/2026. Le loader Whop (non versionné, mis à jour par Whop) et
+     Clarity restent sans SRI : une empreinte figée casserait le paiement au premier déploiement de Whop. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <script src="static-ads-bank.js"></script><!-- #static-ads-bank : 59 formats de pub (généré depuis shared/static-ads-bank.json) -->
 <script src="omnihuman-prompts.js"></script><!-- prompt OmniHuman 1.5 (≤ 300 car., anglais) : généré depuis shared/omnihuman-prompts.json -->
 <script src="hedra-prompts.js"></script><!-- prompt lipsync Hedra Character-3 validé sur l'usine (27/09) : généré depuis shared/hedra-prompts.json -->
@@ -2978,6 +2982,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div class="card center" style="padding:18px 14px;flex:1;min-width:130px;background:var(--accent-soft);border-color:var(--accent-line)">
               <div class="display accent" style="font-size:28px;font-weight:800" id="affStatAvail">—</div>
               <div class="faint mono" style="font-size:11px;margin-top:6px">Disponible</div>
+              <!-- Audit 02/10 : commissions de moins de 30 jours (hold_cents / hold_days de get_referral_summary), pas encore retirables -->
+              <div class="faint mono" id="affStatHold" style="display:none;font-size:10.5px;margin-top:4px;line-height:1.4"></div>
             </div>
           </div>
           <div class="row gap12" style="margin-top:16px;align-items:center;flex-wrap:wrap">
@@ -5174,12 +5180,30 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <div class="setup-label" style="margin-bottom:8px">Email actuel</div>
       <div id="accountCurrentEmail" class="field" style="font-weight:600">—</div>
     </div>
-    <div style="margin-bottom:10px">
-      <div class="setup-label" style="margin-bottom:8px">Nouvel email</div>
-      <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com">
+    <!-- Audit 02/10 (contrat C1) : changement d'adresse en 2 étapes par CODE e-mail (edge auth-otp → Resend), mêmes
+         composants que l'écran de code de connexion. L'ancien lien Supabase (updateUser) n'arrivait plus : aucun SMTP. -->
+    <div id="emailChgStep1">
+      <div style="margin-bottom:10px">
+        <div class="setup-label" style="margin-bottom:8px">Nouvel email</div>
+        <input class="field" type="email" id="accountNewEmail" placeholder="nouveau@email.com" autocomplete="email" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')saveAccountEmail()">
+      </div>
+      <p style="font-size:12px;color:var(--text-3);margin:0 0 18px;line-height:1.6">Un code à 6 chiffres sera envoyé à la <b style="color:var(--text-2)">nouvelle adresse</b>. L'ancien email reste actif jusqu'à la saisie du code.</p>
+      <button id="emailChgSendBtn" class="btn btn-ghost" onclick="saveAccountEmail()" style="width:100%;white-space:normal"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex:0 0 auto"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Recevoir un code par e-mail</button>
     </div>
-    <p style="font-size:12px;color:var(--text-3);margin:0 0 18px;line-height:1.6">Un lien de confirmation sera envoyé à la <b style="color:var(--text-2)">nouvelle adresse</b>. L'ancien email reste actif jusqu'à confirmation.</p>
-    <button class="btn btn-ghost" onclick="saveAccountEmail()" style="width:100%;margin-bottom:26px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Envoyer le lien de confirmation</button>
+    <div id="emailChgStep2" style="display:none">
+      <p id="emailChgSub" style="font-size:12px;color:var(--text-3);margin:0 0 14px;line-height:1.6"></p>
+      <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:9px">Code à 6 chiffres</div>
+      <input type="text" id="emailChgCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="––––––" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6);if(this.value.length===6)verifyAccountEmailCode()" onkeydown="if(event.key==='Enter')verifyAccountEmailCode()" style="width:100%;background:var(--panel-1);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:.38em;text-align:center;padding:14px 0 14px 8px;outline:none;transition:border-color .2s,box-shadow .2s" onfocus="this.style.borderColor='var(--accent-line)';this.style.boxShadow='0 0 0 4px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+      <button onclick="verifyAccountEmailCode()" id="emailChgVerifyBtn" style="width:100%;margin-top:14px;padding:14px 20px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:var(--r);color:#1A0A02;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 12px 30px -10px var(--accent-glow)">
+        Valider la nouvelle adresse <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 8.5h10M9 4l4.5 4.5L9 13"/></svg>
+      </button>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap">
+        <span onclick="emailChgBack()" style="cursor:pointer;color:var(--text-3);font-family:var(--mono);font-size:11px;letter-spacing:.08em">← CHANGER D'ADRESSE</span>
+        <span id="emailChgResend" onclick="emailChgResend()" style="cursor:pointer;color:var(--accent-2);font-family:var(--mono);font-size:11px;letter-spacing:.08em">RENVOYER LE CODE</span>
+      </div>
+    </div>
+    <div id="emailChgMsg" style="display:none;font-size:12px;margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);line-height:1.5"></div>
+    <div style="height:26px"></div>
 
     <div style="height:1px;background:var(--border);margin-bottom:26px"></div>
 
@@ -5896,6 +5920,10 @@ const REMOVEBG_PROXY = SUPABASE_URL + '/functions/v1/removebg-proxy';
 //    localStorage). _safeUrl n'accepte que http(s)/blob/data:image ; _safeCss borne une couleur/dégradé.
 function _escH(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function _safeUrl(u){ const s=String(u||'').trim(); return /^(https?:\/\/|blob:|data:image\/(png|jpe?g|webp|gif);base64,)/i.test(s) ? s.replace(/"/g,'%22') : ''; }
+// Audit 02/10 : src d'un média inséré par innerHTML quand la valeur peut être un chemin RELATIF de l'app (avatars de la
+// banque « Avatar/….jpg », session restaurée) : _safeUrl, ou chemin sans schéma ni « // » (donc jamais javascript:).
+// Échappé pour un attribut entre guillemets ; tout le reste → '' (image vide plutôt qu'un attribut cassé).
+function _safeSrc(u){ const s=String(u||'').trim(); return _escH(_safeUrl(s) || (/^(?![a-z][a-z0-9+.\-]*:|\/\/)[^\s"'<>\\]+$/i.test(s) ? s : '')); }
 function _safeCss(v){ const s=String(v||''); return (/^[#a-zA-Z0-9(),.%\s\-\/]*$/.test(s) && !/url|expression|javascript|import/i.test(s)) ? s : ''; }
 
 async function getAuthHeader(){
@@ -6149,7 +6177,8 @@ function _loadLibrary(){
 // chargement (une connexion recharge toujours /app/), si le compte connecté n'est pas le propriétaire des données
 // locales, on met de côté celles de l'ancien propriétaire (clé@uid) et on restaure celles du compte courant. Les
 // fichiers restent dans IndexedDB : seule la liste qui y mène change de main. Données d'avant ce correctif = premier compte.
-const _AA_LOCAL_KEYS = ['aa_library', 'imgHistory', 'aa_cloned_voices'];
+// Audit 02/10 : + presets d'avatar (photo du visage en data URL) et de sous-titres — même isolation par compte.
+const _AA_LOCAL_KEYS = ['aa_library', 'imgHistory', 'aa_cloned_voices', 'aa_avatar_presets', 'aa_sub_presets'];
 function _aaSessionUid(){
   try{
     for(let i=0;i<localStorage.length;i++){
@@ -7282,17 +7311,49 @@ async function confirmDeleteAccount(){
     const r=await fetch(SUPABASE_URL+'/functions/v1/delete-account',{ method:'POST', headers:{ 'Content-Type':'application/json', ...H }, body:JSON.stringify({ confirm:'SUPPRIMER' }) });
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok){ show(d.error||('Erreur '+r.status), d.manage_url); return; }
-    // compte supprimé : on efface aussi ses données locales (liste de la Bibliothèque, historique, voix) et la session
-    try{ const uid=(typeof currentMember!=='undefined'&&currentMember&&currentMember.id)||''; for(const k of ['aa_library','imgHistory','aa_cloned_voices']){ localStorage.removeItem(k); if(uid) localStorage.removeItem(k+'@'+uid); } localStorage.removeItem('aa_local_owner'); localStorage.removeItem('aa_login_at'); for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i); if(k && /sb-.*-auth-token/.test(k)) localStorage.removeItem(k); } }catch(_){}
+    // compte supprimé : on efface aussi ses données locales (liste de la Bibliothèque, historique, voix, presets, jetons,
+    // réglages du compte) et la session — Audit 02/10 : recensement complet dans _aaPurgeAccountStorage
+    window._resetting = true;   // plus aucune sauvegarde auto ne ré-écrit ce qu'on efface
+    _aaPurgeAccountStorage(true, (typeof currentMember!=='undefined'&&currentMember&&currentMember.id)||_aaSessionUid());
     window.location.href='/connexion.html';
   }catch(e){ show('Connexion impossible — réessaie.'); }
+}
+// ── Audit 02/10 : effacement des données LOCALES du compte (déconnexion, suppression du compte) ──────────────────────
+// Recensement (grep localStorage / sessionStorage du 03/10). EFFACÉ : session Supabase (sb-*-auth-token*), YouTube (yt_* :
+// jeton d'accès, chaîne, expiration, Client ID, OAuth en cours), webhooks (aa_wh_*), coordonnées de virement
+// (aff_payment_*), session du générateur et derniers jobs (avatarads_session, avatarads_tapSync, avatarads_lastHedra,
+// aa_hedra_last_job, aa_bypass_resume), site / marque / hashtags (aa_user_site, aa_user_site_ts, aa_bizname, aa_pub_tags),
+// réglages du compte (aa_gen_state, aa_mp4audio_on, aa_mc_opts, aa_ac_*, avatarads_voice, aa_sub_preset, aa_kie,
+// aa_google_ai_key), alerte owner (aa_hedra_alert_at), relais OAuth MCP (aa_mcp_oauth) et date de connexion (aa_login_at).
+// GARDÉ : préférences purement visuelles (aa_theme, aa_navtabs, aa_force_mobile), attribution d'avant inscription
+// (aa_ref, aa_promo, aa_lead, aa_tool, aa_lp_prompt), compteurs mensuels anonymes (aa_img_AAAA_M, aa_bypass_AAAA_M : les
+// effacer remettrait un quota local à zéro) et garde-fous techniques (aa_rl_*, aa_full_reset, _aa_test).
+// Listes locales de la Bibliothèque et presets (_AA_LOCAL_KEYS) : une partie n'a AUCUNE copie serveur → conservées à la
+// déconnexion (isolées par compte via _aaLocalOwnerSwap, les effacer perdrait des créations), effacées à la suppression
+// du compte (full = true, avec leur copie mise de côté « clé@uid » de CE compte).
+const _AA_ACCOUNT_KEYS = ['aa_login_at', 'avatarads_session', 'avatarads_tapSync', 'avatarads_lastHedra', 'avatarads_voice',
+  'aa_hedra_last_job', 'aa_bypass_resume', 'aa_hedra_alert_at', 'aa_user_site', 'aa_user_site_ts', 'aa_bizname', 'aa_pub_tags',
+  'aa_gen_state', 'aa_mp4audio_on', 'aa_mc_opts', 'aa_sub_preset', 'aa_kie', 'aa_google_ai_key', 'aa_mcp_oauth'];
+const _AA_ACCOUNT_PREFIXES = ['yt_', 'aa_wh_', 'aff_payment_', 'aa_ac_'];
+function _aaPurgeAccountStorage(full, uid){
+  const hit = (k) => !!k && (/^sb-.*-auth-token/.test(k) || _AA_ACCOUNT_KEYS.includes(k) || _AA_ACCOUNT_PREFIXES.some(p => k.startsWith(p))
+    || (!!full && (k === 'aa_local_owner' || _AA_LOCAL_KEYS.includes(k) || (!!uid && _AA_LOCAL_KEYS.some(b => k === b + '@' + uid)))));
+  for(const nom of ['localStorage', 'sessionStorage']){
+    try{
+      const st = window[nom];   // l'accès lui-même peut lever (stockage bloqué, navigation privée)
+      for(let i = st.length - 1; i >= 0; i--){ const k = st.key(i); if(hit(k)) st.removeItem(k); }
+    }catch(_){}
+  }
 }
 async function authLogout(){
   // Robustesse : si signOut() traîne ou échoue, le bouton semblait « ne rien faire ».
   // On vide la session localement quoi qu'il arrive, puis on recharge sur l'écran de connexion de l'app.
   try{ localStorage.removeItem('aa_login_at'); }catch(e){}
   try{ await Promise.race([ sb.auth.signOut(), new Promise(function(r){ setTimeout(r, 1500); }) ]); }catch(e){}
-  try{ for(var i=localStorage.length-1;i>=0;i--){ var k=localStorage.key(i); if(k && /sb-.*-auth-token/.test(k)) localStorage.removeItem(k); } }catch(e){}
+  // Audit 02/10 : APRÈS signOut (qui a besoin du jeton) → toutes les données locales propres au compte, pas seulement la
+  // session. _resetting neutralise les sauvegardes auto (session du générateur, aa_gen_state) qui les ré-écriraient.
+  window._resetting = true;
+  _aaPurgeAccountStorage(false);
   // On revient sur la page de connexion dédiée (connexion.html), qui s'affiche dans le thème du
   // tunnel (aa_theme conservé) → cohérent clair↔clair / sombre↔sombre. (Avant : reload = login
   // intégré, que le thème pouvait rendre incohérent avec le tunnel.)
@@ -8510,6 +8571,7 @@ function openAccountSettings(){
     if(phoneInp) phoneInp.value = currentMember.phone || '';
     const newEmailInp = document.getElementById('accountNewEmail');
     if(newEmailInp) newEmailInp.value = '';
+    _emailChgReset();   // Audit 02/10 : toujours rouvrir sur l'étape 1 (saisie de l'adresse)
   }
   _syncCancelBtn();
   _aaSyncThemeSeg();
@@ -8757,22 +8819,152 @@ async function saveAccountProfile(){
   toast('Profil mis à jour');
 }
 
+// ── Changement d'adresse e-mail (Audit 02/10, contrat C1) ──
+// Étape 1 : saveAccountEmail() → auth-otp { action:'email_change_send', new_email } envoie un code à la NOUVELLE adresse.
+// Étape 2 : verifyAccountEmailCode() → { action:'email_change_verify', new_email, code } change l'adresse côté serveur,
+// puis refreshSession() pour que le jeton porte la nouvelle adresse. Session exigée (Bearer), plus de sb.auth.updateUser({email}).
+let _emailChg = null;          // { email } pendant l'étape code
+let _emailChgTimer = null;
+const _EMAIL_CHG_ERRORS = {
+  invalid_email:     'Adresse email invalide.',
+  email_taken:       'Cette adresse est déjà utilisée par un autre compte.',
+  unauthorized:      'Session expirée — reconnecte-toi puis recommence.',
+  too_many_codes:    'Trop de demandes de code. Réessaie dans une heure.',
+  wrong_code:        'Code incorrect.',
+  expired:           'Code expiré ou déjà utilisé. Clique sur « Renvoyer le code ».',
+  too_many_attempts: 'Trop d\'essais avec ce code. Demande un nouveau code.',
+  email_unavailable: 'Envoi d\'e-mails momentanément indisponible. Réessaie dans quelques minutes.',
+  send_failed:       'L\'e-mail n\'a pas pu partir. Vérifie l\'adresse et réessaie.',
+  server_error:      'Erreur serveur. Réessaie dans un instant.',
+  network:           'Connexion impossible. Vérifie ton réseau et réessaie.',
+};
+function _emailChgErr(res){
+  const e = res && res.error;
+  if(e === 'email_taken' && res.same) return 'C\'est déjà ton adresse email.';
+  if(e === 'cooldown') return 'Un code vient de partir' + (res.wait ? ' — patiente ' + res.wait + ' s avant d\'en redemander un' : '') + '. Regarde aussi les spams.';
+  let m = _EMAIL_CHG_ERRORS[e] || 'Erreur. Réessaie.';
+  if(e === 'wrong_code' && res.remaining) m += ' Encore ' + res.remaining + ' essai' + (res.remaining > 1 ? 's' : '') + '.';
+  return m;
+}
+function _emailChgMsg(t, ok){
+  const m = document.getElementById('emailChgMsg'); if(!m) return;
+  if(!t){ m.style.display = 'none'; return; }
+  m.style.display = 'block'; m.textContent = t;
+  m.style.color      = ok ? 'var(--green)' : 'var(--red)';
+  m.style.background = ok ? 'rgba(40,199,149,.08)' : 'rgba(255,71,87,0.08)';
+  m.style.border     = '1px solid ' + (ok ? 'rgba(40,199,149,.25)' : 'rgba(255,71,87,0.2)');
+}
+function _emailChgStep(n){
+  const s1 = document.getElementById('emailChgStep1'), s2 = document.getElementById('emailChgStep2');
+  if(s1) s1.style.display = n === 1 ? 'block' : 'none';
+  if(s2) s2.style.display = n === 2 ? 'block' : 'none';
+}
+function _emailChgReset(){
+  clearInterval(_emailChgTimer); _emailChg = null;
+  const c = document.getElementById('emailChgCode'); if(c) c.value = '';
+  _emailChgMsg(''); _emailChgStep(1);
+}
+// Appel auth-otp avec le jeton de session ; un 401 (jeton expiré) → un seul refreshSession puis nouvel essai.
+async function _emailChgCall(payload, retried){
+  let token = '';
+  try{ token = (await sb.auth.getSession()).data?.session?.access_token || ''; }catch(_){}
+  if(!token) return { error:'unauthorized' };
+  let r;
+  try{
+    r = await fetch(AUTH_OTP_FN, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token }, body: JSON.stringify(payload) });
+  }catch(e){ return { error:'network' }; }
+  const out = await r.json().catch(() => ({ error:'server_error' }));
+  if(r.status === 401 && !retried){
+    try{ const { data } = await sb.auth.refreshSession(); if(data && data.session) return _emailChgCall(payload, true); }catch(_){}
+  }
+  if(!r.ok && !out.error) out.error = 'server_error';
+  return out;
+}
+function _emailChgCooldown(secs){
+  const el = document.getElementById('emailChgResend'); if(!el) return;
+  let s = Math.max(0, Math.ceil(secs || 0));
+  clearInterval(_emailChgTimer);
+  const tick = function(){
+    if(s <= 0){ clearInterval(_emailChgTimer); el.textContent = 'RENVOYER LE CODE'; el.style.opacity = '1'; el.style.pointerEvents = 'auto'; return; }
+    el.textContent = 'RENVOYER LE CODE (' + s + 'S)'; el.style.opacity = '.45'; el.style.pointerEvents = 'none'; s--;
+  };
+  tick();
+  _emailChgTimer = setInterval(tick, 1000);
+}
 async function saveAccountEmail(){
   if(!currentMember){ toast('Non connecté'); return; }
+  const btn = document.getElementById('emailChgSendBtn');
+  if(btn && btn.disabled) return;
   const newEmail = (document.getElementById('accountNewEmail')?.value||'').trim().toLowerCase();
-  if(!newEmail || !newEmail.includes('@')){ toast('Saisis un email valide'); return; }
-  if(newEmail === currentMember.email){ toast('C\'est déjà ton adresse email'); return; }
-  const btn = document.querySelector('#accountOverlay button[onclick*="saveAccountEmail"]');
-  if(btn){ btn.textContent = 'Envoi…'; btn.disabled = true; }
-  try {
-    const { error } = await sb.auth.updateUser({ email: newEmail });
-    if(error) throw error;
-    toast('Lien de confirmation envoyé à ' + newEmail + ' — clique dessus pour valider');
-    document.getElementById('accountNewEmail').value = '';
-  } catch(e){
-    toast('' + (e.message || 'Erreur lors du changement d\'email'));
+  if(!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(newEmail)){ _emailChgMsg('Saisis une adresse email valide.'); return; }
+  if(newEmail === String(currentMember.email||'').toLowerCase()){ _emailChgMsg('C\'est déjà ton adresse email.'); return; }
+  _emailChgMsg('');
+  const label = btn ? btn.innerHTML : '';
+  if(btn){ btn.textContent = 'Envoi du code…'; btn.disabled = true; }
+  try{
+    const res = await _emailChgCall({ action:'email_change_send', new_email: newEmail });
+    if(res.error){ _emailChgMsg(_emailChgErr(res)); return; }
+    _emailChg = { email: newEmail };
+    const sub = document.getElementById('emailChgSub');
+    if(sub) sub.innerHTML = 'Code envoyé à <b style="color:var(--text-2)">' + _escH(newEmail) + '</b> — regarde aussi les spams. Il est valable 10 minutes.';
+    const c = document.getElementById('emailChgCode'); if(c) c.value = '';
+    _emailChgStep(2);
+    _emailChgCooldown(30);
+    setTimeout(function(){ try{ document.getElementById('emailChgCode').focus(); }catch(_){} }, 80);
   } finally {
-    if(btn){ btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Envoyer le lien de confirmation'; btn.disabled = false; }
+    if(btn){ btn.innerHTML = label; btn.disabled = false; }
+  }
+}
+async function emailChgResend(){
+  if(!_emailChg) return;
+  _emailChgMsg('');
+  const res = await _emailChgCall({ action:'email_change_send', new_email: _emailChg.email });
+  if(res.error){
+    _emailChgMsg(_emailChgErr(res));
+    if(res.error === 'cooldown' && res.wait) _emailChgCooldown(res.wait);
+    return;
+  }
+  toast('Nouveau code envoyé à ' + _emailChg.email);
+  _emailChgCooldown(30);
+}
+function emailChgBack(){
+  clearInterval(_emailChgTimer);
+  _emailChgMsg(''); _emailChgStep(1);
+  const inp = document.getElementById('accountNewEmail');
+  if(inp){ if(_emailChg) inp.value = _emailChg.email; setTimeout(function(){ try{ inp.focus(); }catch(_){} }, 80); }
+  _emailChg = null;
+}
+async function verifyAccountEmailCode(){
+  const btn = document.getElementById('emailChgVerifyBtn');
+  if(!btn || btn.disabled || !_emailChg) return;   // évite le double déclenchement oninput + Entrée
+  const inp = document.getElementById('emailChgCode');
+  const code = (inp?.value||'').trim();
+  if(!/^\d{6}$/.test(code)){ _emailChgMsg('Entre le code à 6 chiffres reçu par e-mail.'); return; }
+  _emailChgMsg('');
+  const label = btn.innerHTML;
+  btn.disabled = true; btn.textContent = 'Vérification…';
+  try{
+    const res = await _emailChgCall({ action:'email_change_verify', new_email: _emailChg.email, code });
+    if(res.error){
+      _emailChgMsg(_emailChgErr(res));
+      if(res.error === 'email_taken'){ emailChgBack(); _emailChgMsg(_emailChgErr(res)); return; }
+      if(res.error === 'expired' || res.error === 'too_many_attempts'){ if(inp) inp.value = ''; }
+      else if(inp){ try{ inp.select(); }catch(_){} }
+      return;
+    }
+    const email = String(res.email || _emailChg.email).toLowerCase();
+    btn.textContent = 'Mise à jour…';
+    // le jeton porte encore l'ancienne adresse : on le renouvelle avant de rafraîchir l'affichage
+    try{ await sb.auth.refreshSession(); }catch(_){}
+    currentMember.email = email;
+    ['accountCurrentEmail','accountOverlayEmail'].forEach(function(id){ const el = document.getElementById(id); if(el) el.textContent = email; });
+    try{ updateAccountMenu(currentMember); }catch(_){}
+    const ne = document.getElementById('accountNewEmail'); if(ne) ne.value = '';
+    _emailChgReset();
+    _emailChgMsg('Adresse mise à jour : ' + email + '. Utilise-la désormais pour te connecter.', true);
+    toast('Adresse email mise à jour');
+  } finally {
+    btn.disabled = false; btn.innerHTML = label;
   }
 }
 function loadKeysToInputs(){ openSetup(); } // compat alias
@@ -8897,6 +9089,7 @@ async function affRefreshSummary(){
     const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
     set('affStatRefs', data.signups||0); set('affStatPaying', data.paying||0);
     set('affStatEarnings', _eur(data.earned_cents)); set('affStatAvail', _eur(data.available_cents));
+    _affShowHold(data);
     const btn=document.getElementById('affPayoutBtn');
     if(btn){ btn.disabled=false; btn.textContent=''; btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg> '+(data.pending_cents>0 ? 'Virement en cours · '+_eur(data.pending_cents) : 'Demander un virement'); }
   }catch(e){
@@ -8904,11 +9097,22 @@ async function affRefreshSummary(){
     sb.rpc('get_referral_count').then(({data})=>{ const el=document.getElementById('affStatRefs'); if(el) el.textContent=data||0; });
   }
 }
+// Audit 02/10 : une commission ne devient retirable que hold_days (30) jours après le paiement du filleul (remboursement
+// ou litige possible d'ici là). On montre ce montant « en attente » à côté du disponible, sans l'y ajouter.
+function _affShowHold(s){
+  const hold = Math.max(0, Math.round(Number(s && s.hold_cents) || 0)), days = Math.max(1, Math.round(Number(s && s.hold_days) || 30));
+  const txt = hold > 0 ? '+ ' + _eur(hold) + ' en attente (' + days + ' j)' : '';
+  const a = document.getElementById('affStatHold');
+  if(a){ a.textContent = txt; a.style.display = hold > 0 ? 'block' : 'none'; a.title = hold > 0 ? 'Une commission devient retirable ' + days + ' jours après le paiement du filleul.' : ''; }
+  const b = document.getElementById('affPayoutHold');
+  if(b){ b.textContent = hold > 0 ? ' En attente : ' + _eur(hold) + ' (une commission devient retirable ' + days + ' jours après le paiement du filleul).' : ''; b.style.display = hold > 0 ? '' : 'none'; }
+}
 function affOpenPayout(){
   const s=window._affSummary || { available_cents:0, pending_cents:0, min_payout_cents:5000 };
   const m=document.getElementById('affPayoutModal'); if(!m) return;
   const min=s.min_payout_cents||5000, avail=s.available_cents||0;
   document.getElementById('affPayoutAvail').textContent=_eur(avail);
+  _affShowHold(s);
   const em=document.getElementById('affPayEmail'); if(em && !em.value) em.value=(currentMember&&currentMember.email)||'';
   const am=document.getElementById('affPayAmount'); if(am){ am.max=(avail/100).toFixed(2); am.value=(Math.max(avail,0)/100).toFixed(2); }
   const sub=document.getElementById('affPaySubmit');
@@ -15633,7 +15837,7 @@ function _mtBonusHtml(){
     +'<div class="mt-eyebrow" style="text-align:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7M2 8h20v4H2zM12 8v13M7.5 8a2.5 2.5 0 010-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 010 5"/></svg> Offert — ton avatar recadré par l\'IA</div>'
     +'<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">'
     + b.map((x,i)=>'<button onclick="_mtBonusSave('+i+')" style="background:var(--surface);border:1px solid var(--border-2);border-radius:14px;padding:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;font-family:var(--font)">'
-        +'<img src="'+x.url+'" alt="" style="width:74px;height:74px;object-fit:cover;border-radius:9px;display:block">'
+        +'<img src="'+_safeUrl(x.url)+'" alt="" style="width:74px;height:74px;object-fit:cover;border-radius:9px;display:block">'
         +'<span class="faint" style="font-size:11px">'+x.fmt+' · télécharger</span></button>').join('')
     +'</div>'
     +'<p class="faint center" style="font-size:11.5px;margin-top:10px">Générées pour ta vidéo, en pleine définition — elles sont à toi.</p></div>';
@@ -15763,7 +15967,7 @@ function _mtReviewRender(keepText){
               +(_mtReview.media.length
                 ? '<div class="row" style="gap:10px;flex-wrap:wrap;margin-top:12px">'
                   +_mtReview.media.map((m,i)=>'<div style="position:relative;width:60px;height:60px;border-radius:11px;overflow:hidden;border:1px solid var(--border-2);background:#14121a">'
-                    +(m.url?'<img src="'+m.url+'" style="width:100%;height:100%;object-fit:cover;display:block">':'')
+                    +(m.url?'<img src="'+_safeUrl(m.url)+'" style="width:100%;height:100%;object-fit:cover;display:block">':'')
                     +'<button onclick="_mtRevDel('+i+')" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:6px;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:11px;line-height:1;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>').join('')
                   +'</div>'
                 : '')
@@ -17134,8 +17338,8 @@ function _mdRequestAdd(nature){
 function _mdPlaceHtml(){
   const P=_md.place, mob=_mdIsMob();
   const media=P.isVid
-    ? '<video src="'+P.url+'" muted playsinline autoplay loop style="width:100%;height:100%;object-fit:cover;display:block"></video>'
-    : '<img src="'+P.url+'" style="width:100%;height:100%;object-fit:cover;display:block">';
+    ? '<video src="'+_safeUrl(P.url)+'" muted playsinline autoplay loop style="width:100%;height:100%;object-fit:cover;display:block"></video>'
+    : '<img src="'+_safeUrl(P.url)+'" style="width:100%;height:100%;object-fit:cover;display:block">';
   return '<div style="position:fixed;inset:0;z-index:6700;background:rgba(6,6,9,.85);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px">'
     +'<div class="row" style="gap:9px;align-items:center;width:min(300px,80vw)">'+_mdIco('image',15,'var(--amber)')
       +'<span style="font-weight:700;font-size:14.5px">Place ton média</span>'
@@ -17705,7 +17909,7 @@ function _mdCreerJouer(){
     +'.an-p{position:absolute;will-change:transform,opacity}'
     +'*{font-family:Inter,-apple-system,Helvetica,Arial,sans-serif}</style></head>'
     +'<body><div class="scene" id="sc">'+html+'</div>'
-    +'<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"><\/script>'
+    +'<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js" integrity="sha384-sG0Hv1tP1lZCk9KQmrIbY/XNwi+OY84GQqhMscbnsoBFqAz8KNCil1kvfL3Hbbk2" crossorigin="anonymous"><\/script>'   // Audit 02/10 : SRI
     +'<script>(function(){'
     +'var sc=document.getElementById("sc");'
     +'var k=Math.min(innerWidth/930,innerHeight/600);sc.style.transform="scale("+k+")";'
@@ -18427,12 +18631,12 @@ function _mdPaintSplit(t){
     // (WebKit/iOS ne decode/joue qu'UNE video a la fois -> la 2e reste figee sur le poster), on
     // DEPLACE la vraie #mdVid deja en lecture (demarree par geste, deja decodee) dans cette moitie.
     // Ici on ne pose qu'un HOTE (avec le still en repli) ; #mdVid y est re-attachee apres l'innerHTML.
-    const stillImg=_md.avatarStill?'<img src="'+_md.avatarStill+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%">':'';
+    const stillImg=_md.avatarStill?'<img src="'+_safeUrl(_md.avatarStill)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%">':'';
     const avatarHtml='<div data-avhost style="position:absolute;inset:0;background:#111318">'+stillImg+'</div>';
     // anim/média EN HAUT : pas de loop (elle se joue UNE fois puis fige), synchronisée à la lecture
     const contentHtml = sp.anim
       ? '<video data-anv src="'+animSrc+'" muted playsinline preload="auto" style="'+cover+'"></video>'
-      : (mb ? (mb.isVid?'<video data-anv src="'+mb.url+'" muted playsinline style="'+cover+'"></video>':'<img src="'+mb.url+'" style="'+cover+'">')
+      : (mb ? (mb.isVid?'<video data-anv src="'+_safeUrl(mb.url)+'" muted playsinline style="'+cover+'"></video>':'<img src="'+_safeUrl(mb.url)+'" style="'+cover+'">')
             : '<div style="'+cover+';display:grid;place-items:center;background:linear-gradient(150deg,#1c1a22,#0d0c10)"><span class="mono" style="color:#fff;font-size:11px;opacity:.8">ton média</span></div>');
     const topH=Math.round(r*100), botH=100-topH;
     const topEl='<div style="position:absolute;left:0;right:0;top:0;height:'+(inv?botH:topH)+'%;overflow:hidden">'+(inv?avatarHtml:contentHtml)+'</div>';
@@ -19459,7 +19663,7 @@ function _avReflect(){
   const z = document.getElementById('avPhotoZone');
   if (!z || !(selAvatar && selAvatar.localUrl)) return;
   z.style.borderStyle = 'solid'; z.style.borderColor = 'var(--accent-line)';
-  z.innerHTML = '<img src="' + selAvatar.localUrl + '" style="width:96px;height:96px;object-fit:cover;border-radius:12px;display:block">'
+  z.innerHTML = '<img src="' + _safeSrc(selAvatar.localUrl) + '" style="width:96px;height:96px;object-fit:cover;border-radius:12px;display:block">'
     + '<div style="font-weight:700;font-size:14px;color:var(--text)">Photo chargée</div>'
     + '<button type="button" onclick="event.stopPropagation();document.getElementById(\'avPhotoIn2\').click()" class="btn btn-sm" '
     + 'style="background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)">Changer</button>';
@@ -23334,7 +23538,13 @@ function _triggerDownload(blob, filename){
 // FS est désormais ASYNCHRONE (Worker oblige) : toujours `await`.
 const _FF_WORKER_SRC = `
   self.document = { currentScript: { src: 'https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js' } }; // la glue lit document.currentScript au chargement
-  importScripts('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js');
+  // Audit 02/10 : importScripts n'a pas d'intégrité → la glue est téléchargée par fetch({ integrity }) (fichier npm exact,
+  // contenu différent = rejet) puis exécutée depuis une URL blob:. Le core (ffmpeg-core.js + .wasm, version exacte 0.11.1)
+  // est chargé par la glue elle-même, sans SRI.
+  const glueP = fetch('https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js', { integrity:'sha384-m5or9sW5FUT2WQbj3UthGceVpwo9zSgHKdCugYKHl19lyXPvwO/oQcmq8Fw0FfaA', mode:'cors', credentials:'omit' })
+    .then((r) => { if(!r.ok) throw new Error('FFmpeg : HTTP ' + r.status); return r.text(); })
+    .then((src) => { importScripts(URL.createObjectURL(new Blob([src], { type:'text/javascript' }))); });
+  glueP.catch(() => {});   // l'erreur remonte par la commande « load » (await glueP), pas en rejet orphelin
   let ff = null, ranOnce = false;
   const inputs = new Map();
   const mk = () => FFmpeg.createFFmpeg({ log:false, mainName:'main',
@@ -23345,7 +23555,7 @@ const _FF_WORKER_SRC = `
   const handle = async (m) => {
     const { id, cmd, a } = m;
     try {
-      if(cmd==='load'){ if(!ff){ ff = mk(); await ff.load(); } postMessage({id, ok:true}); }
+      if(cmd==='load'){ await glueP; if(!ff){ ff = mk(); await ff.load(); } postMessage({id, ok:true}); }
       else if(cmd==='write'){ if(ranOnce) await reset();
         inputs.set(a.name, a.bytes); ff.FS('writeFile', a.name, a.bytes); postMessage({id, ok:true}); }
       else if(cmd==='run'){ if(ranOnce) await reset();
@@ -27329,7 +27539,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
         console.warn('WebCodecs: isConfigSupported a tout rejeté, tentative directe avec', qCfg.codec);
       }
 
-      const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
+      const { Muxer, ArrayBufferTarget } = await _aaImportSri(..._AA_MP4MUXER);   // Audit 02/10 : SRI
       const muxTarget = new ArrayBufferTarget();
 
       // ── Audio : décoder PCM puis tester AudioEncoder AVANT de créer le muxer ──
@@ -28105,6 +28315,21 @@ function _startRealtimeCaptureInGesture(file){
 // réel (~30-40 s de la capture MediaRecorder). Sortie = WAV 16 kHz mono (accepté par OpenAI whisper-1,
 // petit, timing/pitch EXACTS car reconstruit par échantillons — jamais de playbackRate). REPLI STRICT
 // sur la capture temps réel à la moindre anomalie : le pire cas reste = comportement actuel. (Axel 07/09)
+// Audit 02/10 : module ES externe chargé AVEC vérification d'intégrité (SRI). import() n'a pas d'option integrity : on
+// télécharge le fichier exact par fetch({ integrity }) — le navigateur rejette tout contenu différent — puis on l'importe
+// depuis une URL blob: (autorisée en script-src par la CSP). Promesse mémorisée par URL ; un échec permet de retenter.
+const _AA_MP4MUXER = ['https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs', 'sha384-+6KS/Sm6GkvsY+cwAmIo7ozeT92hs0f4ygVOR5g112KcvPqCLrm0fDCqBBx+F0SV'];
+const _aaSriMods = new Map();
+function _aaImportSri(url, integrity){
+  if(!_aaSriMods.has(url)){
+    const p = fetch(url, { integrity, mode:'cors', credentials:'omit' })
+      .then(r => { if(!r.ok) throw new Error('module ' + url + ' : HTTP ' + r.status); return r.text(); })
+      .then(src => import(URL.createObjectURL(new Blob([src], { type:'text/javascript' }))));
+    p.catch(() => _aaSriMods.delete(url));
+    _aaSriMods.set(url, p);
+  }
+  return _aaSriMods.get(url);
+}
 let _mp4boxLoading = null;
 function _loadMp4Box(){
   if(window.MP4Box) return Promise.resolve(window.MP4Box);
@@ -28112,6 +28337,7 @@ function _loadMp4Box(){
   _mp4boxLoading = new Promise((res, rej) => {
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js';  // UMD → window.MP4Box (cdnjs n'héberge PAS mp4box ; 2.x = ESM sans global)
+    s.integrity = 'sha384-9oK16t6TCKqCB5OpB/LwRkNa48prlRFQPTYw8tb9uj699JvQ1wjxIq7YO8Z4hn3a'; s.crossOrigin = 'anonymous';   // Audit 02/10 : SRI (fichier npm exact)
     s.onload = () => window.MP4Box ? res(window.MP4Box) : rej(new Error('MP4Box absent'));
     s.onerror = () => { _mp4boxLoading = null; rej(new Error('mp4box CDN indisponible')); };
     document.head.appendChild(s);
@@ -28314,7 +28540,7 @@ async function _extractAudioViaRemux(file, baseName){
   const isMp4 = /^(video|audio)\/(mp4|quicktime|x-m4a|m4a)/i.test(file.type||'') || /\.(mp4|mov|m4v|m4a)$/i.test(file.name||'');
   if(!isMp4) throw new Error('conteneur non MP4/MOV/M4A');
   const MP4Box = await _loadMp4Box();
-  const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.mjs');
+  const { Muxer, ArrayBufferTarget } = await _aaImportSri(..._AA_MP4MUXER);   // Audit 02/10 : SRI
   const CHUNK = 16*1024*1024;
   const mp4 = MP4Box.createFile();
   let muxer = null, audioTrackId = -1, count = 0;
@@ -31140,7 +31366,7 @@ function _mcShowResult(url, render, fullUrl){
   // ratio du fichier, plus aucun fond visible autour ; fond panneau (jamais
   // noir) seulement pendant le chargement. Desktop + mobile : mêmes contraintes
   // max-width/max-height qu'avant, la boîte est simplement ajustée au ratio.
-  m.innerHTML='<div class="col" style="gap:12px;align-items:center;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:6px 2px"><video src="'+url+'" controls autoplay playsinline onloadedmetadata="if(this.videoWidth)this.style.aspectRatio=this.videoWidth+\' / \'+this.videoHeight" style="max-height:'+(isSplit?'46vh':'70vh')+';width:auto;max-width:100%;aspect-ratio:9/16;object-fit:contain;border-radius:16px;background:var(--panel-1);box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
+  m.innerHTML='<div class="col" style="gap:12px;align-items:center;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:6px 2px"><video src="'+_safeUrl(url)+'" controls autoplay playsinline onloadedmetadata="if(this.videoWidth)this.style.aspectRatio=this.videoWidth+\' / \'+this.videoHeight" style="max-height:'+(isSplit?'46vh':'70vh')+';width:auto;max-width:100%;aspect-ratio:9/16;object-fit:contain;border-radius:16px;background:var(--panel-1);box-shadow:0 24px 60px -20px rgba(0,0,0,.7)"></video>'
     +(lbl?'<div class="faint mono" style="font-size:11px">'+lbl+'</div>':'')
     +(isSplit?_mcReframePanel(render):'')
     +'<div class="row" style="gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button>'
@@ -32268,7 +32494,7 @@ function openExpLibPicker(){
     +'<div style="font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14M4 19a2 2 0 002 2h12a2 2 0 002-2M4 19h16M9 7h6M9 11h6"/></svg>Images de la bibliothèque</div>'
     +'<button onclick="document.getElementById(\'_explpModal\').remove()" style="background:var(--bg4);border:none;border-radius:50%;width:28px;height:28px;color:var(--text3);cursor:pointer;font-size:14px;line-height:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
-    +hist.map((im,i)=>'<div onclick="_expPickFromLib('+i+')" title="Utiliser" style="aspect-ratio:9/16;border-radius:12px;overflow:hidden;cursor:pointer;border:1.5px solid var(--border2);background:var(--bg4);transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--orange2)\'" onmouseout="this.style.borderColor=\'var(--border2)\'"><img src="'+im.url+'" style="width:100%;height:100%;object-fit:cover"></div>').join('')
+    +hist.map((im,i)=>'<div onclick="_expPickFromLib('+i+')" title="Utiliser" style="aspect-ratio:9/16;border-radius:12px;overflow:hidden;cursor:pointer;border:1.5px solid var(--border2);background:var(--bg4);transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--orange2)\'" onmouseout="this.style.borderColor=\'var(--border2)\'"><img src="'+_safeSrc(im.url)+'" style="width:100%;height:100%;object-fit:cover"></div>').join('')
     +'</div></div>';
   document.body.appendChild(modal);
 }
@@ -33446,6 +33672,8 @@ async function _mcpOAuthConsent(){
     console.log('[mcp-oauth] garde — carte déjà ouverte, second lancement ignoré')
     return
   }
+  // Audit 02/10 (contrat C2) : identité du client demandée au serveur EN PARALLÈLE de l'attente de session.
+  const _infoP = _mcpClientInfo(params)
   // On patiente que la session arrive AVANT d'afficher quoi que ce soit (elle peut
   // arriver après le login OTP : jusqu'à 5 min). Jamais ouvrir-puis-fermer.
   console.log('[mcp-oauth] vérification de la session…')
@@ -33455,6 +33683,7 @@ async function _mcpOAuthConsent(){
     if(!session) await new Promise(r => setTimeout(r, 500))
   }
   if(!session){ console.warn('[mcp-oauth] session absente après attente — carte non ouverte'); return }
+  const _info = await _infoP   // borné à 5 s ; null = identité inconnue → bandeau « Application externe »
   // Une autre exécution a pu ouvrir la carte pendant l'attente : re-vérif idempotence.
   if(document.getElementById('mcpOAuthModal') || window._mcpOAuthModalOpen){
     console.log('[mcp-oauth] garde — carte déjà ouverte pendant l’attente')
@@ -33464,26 +33693,45 @@ async function _mcpOAuthConsent(){
   // l'URL n'est nettoyée qu'ICI, juste avant l'affichage, donc elle survit à un
   // éventuel re-route/reload de boot en amont (fix nav privée, 30/08).
   try { history.replaceState(null, '', location.pathname) } catch(_){}
-  _mcpOpenConsentModal(params, session)
+  _mcpOpenConsentModal(params, session, _info)
+}
+// Audit 02/10 (contrat C2) : identité du client OAuth calculée par le SERVEUR (GET /oauth/client-info, même base que
+// /oauth/approve). Échec réseau, 404, délai dépassé (5 s) ou réponse inattendue → null : comportement PRUDENT.
+async function _mcpClientInfo(params){
+  let t = null
+  try {
+    const q = new URLSearchParams({ client_id: String(params.client_id || ''), redirect_uri: String(params.redirect_uri || '') })
+    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null
+    t = setTimeout(() => { try { ctl && ctl.abort() } catch(_){} }, 5000)
+    const r = await fetch(SUPABASE_URL + '/functions/v1/mcp/oauth/client-info?' + q.toString(), { signal: ctl ? ctl.signal : undefined, cache: 'no-store' })
+    if(!r.ok){ console.warn('[mcp-oauth] identité du client inconnue (' + r.status + ') — bandeau « Application externe »'); return null }
+    const d = await r.json()
+    return (d && d.ok === true && typeof d.trusted === 'boolean') ? d : null
+  } catch(e) {
+    console.warn('[mcp-oauth] identité du client indisponible — bandeau « Application externe »')
+    return null
+  } finally { clearTimeout(t) }
 }
 // Ouvre la carte UNE fois et la garde jusqu'à l'action utilisateur. Le MutationObserver
 // la ré-ancre si un re-render la détache — aucune fermeture automatique possible.
-function _mcpOpenConsentModal(params, session){
+function _mcpOpenConsentModal(params, session, info){
   if(document.getElementById('mcpOAuthModal')){ console.log('[mcp-oauth] garde — ouverture ignorée (carte déjà présente)'); return }
   window._mcpOAuthModalOpen = true
   window._mcpOAuthDone = false           // true uniquement sur action utilisateur (autoriser / refuser)
   // Hameçonnage du consentement (audit 06/09) : la carte disait TOUJOURS « Claude » quel que soit le client.
   // /register est ouvert → un attaquant enregistre son client et fait cliquer la victime sur « Autoriser Claude »
-  // alors que le code part chez lui. On affiche l'IDENTITÉ RÉELLE (domaine de redirection) ; « Claude » n'apparaît
-  // que pour un domaine Anthropic de confiance.
-  const _esc = (x)=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
-  const _trustedClaude = (()=>{ try{ return /(^|\.)(claude\.ai|claude\.com|anthropic\.com)$/i.test(new URL(params.redirect_uri).hostname) }catch(_){ return false } })()
-  const _cliHost = (()=>{ try{ return new URL(params.redirect_uri).host }catch(_){ return params.redirect_uri } })()
-  const _ttl = _trustedClaude ? 'Autoriser Claude ?' : 'Application externe'
+  // alors que le code part chez lui. On affiche l'IDENTITÉ RÉELLE (domaine de redirection).
+  // Audit 02/10 (contrat C2) : « Claude » ne dépend plus d'un test de domaine fait ici : il n'apparaît QUE si le
+  // serveur répond trusted === true (/oauth/client-info). Toute autre réponse → bandeau « Application externe ».
+  const _esc = (x)=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+  const _trustedClaude = !!(info && info.trusted === true)
+  const _nom = _trustedClaude ? (String(info.name || '').trim().slice(0, 40) || 'Claude') : ''
+  const _cliHost = (info && info.host) ? String(info.host) : (()=>{ try{ return new URL(params.redirect_uri).host }catch(_){ return params.redirect_uri } })()
+  const _ttl = _trustedClaude ? 'Autoriser ' + _esc(_nom) + ' ?' : 'Application externe'
   const _ttlColor = _trustedClaude ? '' : ';color:#ffb020'
   const _desc = _trustedClaude
-    ? 'Claude demande l\u2019acc\u00e8s \u00e0 ton compte AvatarAds pour g\u00e9n\u00e9rer des images, vid\u00e9os et montages avec tes cr\u00e9dits.'
-    : 'Une application externe (<b>' + _esc(_cliHost) + '</b>) \u2014 <b>ce n\u2019est PAS Claude</b> \u2014 demande l\u2019acc\u00e8s \u00e0 ton compte AvatarAds et pourra d\u00e9penser tes cr\u00e9dits. N\u2019autorise que si tu es toi-m\u00eame \u00e0 l\u2019origine de cette demande.'
+    ? _esc(_nom) + ' demande l’accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.'
+    : 'Une application externe (<b>' + _esc(_cliHost) + '</b>) — <b>ce n’est PAS Claude</b> — demande l’accès à ton compte AvatarAds et pourra dépenser tes crédits. N’autorise que si tu es toi-même à l’origine de cette demande.'
   const div = document.createElement('div')
   div.id = 'mcpOAuthModal'
   div.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(8,8,10,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px'
@@ -33491,7 +33739,7 @@ function _mcpOpenConsentModal(params, session){
     + '<div style="width:56px;height:56px;border-radius:16px;margin:0 auto 14px;display:grid;place-items:center;background:rgba(255,107,53,.12);border:1px solid rgba(255,107,53,.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
     + '<div class="display" style="font-size:20px;font-weight:800;margin-bottom:8px' + _ttlColor + '">' + _ttl + '</div>'
     + '<div class="faint" style="font-size:13px;line-height:1.6;margin-bottom:6px">' + _desc + '</div>'
-    + '<div class="faint" style="font-size:11.5px;margin-bottom:20px">Compte : <b style="color:var(--text,#eee)">' + String((session.user && session.user.email) || '') + '</b></div>'
+    + '<div class="faint" style="font-size:11.5px;margin-bottom:20px">Compte : <b style="color:var(--text,#eee)">' + _esc((session.user && session.user.email) || '') + '</b></div>'
     + '<button id="mcpOAuthOk" style="width:100%;padding:13px;background:linear-gradient(180deg,#FF8A5C,#FF6B35);border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14.5px;font-weight:800;cursor:pointer">Autoriser</button>'
     + '<button id="mcpOAuthNo" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:none;color:var(--text-3,#888);font-family:var(--font);font-size:12.5px;cursor:pointer">Refuser</button>'
     + '</div>'
@@ -39409,7 +39657,7 @@ function _mtRenderMedia(){
   const files=_edAi.files||[];
   let html=files.map(a=>
     '<div class="mt-thumb" style="background:var(--surface-2)">'
-    +(a.url?'<img src="'+a.url+'" style="width:100%;height:100%;object-fit:cover;display:block">':'')
+    +(a.url?'<img src="'+_safeUrl(a.url)+'" style="width:100%;height:100%;object-fit:cover;display:block">':'')
     +'<button onclick="edAiRemoveFile(\''+a.id+'\');_mtRenderMedia()" style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:10px;cursor:pointer;border:none;display:grid;place-items:center;line-height:1;padding:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
     +'</div>'
   ).join('');
@@ -41174,7 +41422,8 @@ function edBandDrag(ov,track,e,mode){
   #upgradeModalTestRow{flex-wrap:wrap}
   /* connexion : 16px mini sinon iOS Safari zoome au focus et le zoom persiste après login */
   #auth-email,#signup-email,#signup-firstname{font-size:16px !important}
-  #otp-code{font-size:24px !important}
+  #otp-code,#emailChgCode{font-size:24px !important}
+  #accountNewEmail{font-size:16px !important}   /* Audit 02/10 : changement d'adresse — pas de zoom iOS au focus */
   /* Éditeur : première page fixe (plus de zone de glisser géante) */
   #edEmpty div[ondrop]{min-height:0 !important;border-style:solid !important;padding:26px 16px !important}
   /* Images IA : formulaire puis résultat, empilés */
@@ -41581,7 +41830,7 @@ window.mPreviewClose=function(){
           <h3 class="display" style="font-size:21px;font-weight:700;margin:0">Demander un virement</h3>
           <button class="btn btn-quiet" onclick="affClosePayout()" style="border:none;background:none;cursor:pointer;padding:4px 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
-        <p class="faint" style="font-size:13px;line-height:1.5;margin:0 0 16px">Virement SEPA effectué à la main le <b style="color:var(--text-2)">1er du mois</b>. Disponible : <b id="affPayoutAvail" style="color:var(--accent-2)">—</b>.</p>
+        <p class="faint" style="font-size:13px;line-height:1.5;margin:0 0 16px">Virement SEPA effectué à la main le <b style="color:var(--text-2)">1er du mois</b>. Disponible : <b id="affPayoutAvail" style="color:var(--accent-2)">—</b>.<span id="affPayoutHold" style="display:none"></span></p>
         <div style="margin-bottom:12px"><div class="label">E-mail de contact</div><input id="affPayEmail" class="field" type="email" placeholder="toi@exemple.fr"></div>
         <div style="margin-bottom:12px"><div class="label">Titulaire du compte</div><input id="affPayHolder" class="field" type="text" placeholder="Prénom Nom"></div>
         <div style="margin-bottom:12px"><div class="label">IBAN</div><input id="affPayIban" class="field mono" type="text" placeholder="FR76 1234 5678 9012 3456 7890 123" autocomplete="off" spellcheck="false"></div>

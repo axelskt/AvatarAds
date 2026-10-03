@@ -24,7 +24,23 @@
 // et l'aperçu tourne dans une iframe isolée, côté navigateur, gratuitement.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { helperGate } from '../_shared/guard.ts'
+import { helperGate, requirePlan, rateHit, realIp } from '../_shared/guard.ts'
+
+// Audit 02/10 : deux passes Claude Sonnet (gros prompt d'exemples) par création ; seules les créations hors quota
+// débitent 1 crédit → plans payants seulement (owner/developer exemptés par requirePlan ; byok = ancien plan encore
+// porté par des profils, quota 999 ci-dessous). Recensé dans app/index.html : le seul bouton (_mdCreerOpen) n'est
+// affiché que si _mdEstDev() (developer / owner) → aucun parcours Free légitime. Plafonds EN PLUS des 20 / h par
+// compte, sur 1 h : une séance active ≈ 10 créations / h → 30 par IP, 60 pour toute la plateforme.
+const PAID_PLANS = ['starter', 'pro', 'elite', 'byok']
+const IP_MAX_H = 30, GLOBAL_MAX_H = 60
+// IP puis GLOBAL : rate_hit n'incrémente que s'il accepte → un appel refusé par l'IP ne consomme rien du budget
+// global (un seul réseau ne peut pas l'épuiser). IP absente → seul le global s'applique (comme auth-otp).
+async function capsGate(req: Request): Promise<string | null> {
+  const ip = realIp(req)
+  if (ip && !(await rateHit(`proxy:anim-creer:ip:${ip}`, 3600, IP_MAX_H))) return 'Trop de requêtes depuis ce réseau — réessaie dans un moment.'
+  if (!(await rateHit('proxy:anim-creer:global', 3600, GLOBAL_MAX_H))) return 'Service très demandé en ce moment — réessaie dans quelques minutes.'
+  return null
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -522,7 +538,11 @@ Deno.serve(async (req: Request) => {
   const sbUser = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${jeton}` } } })
   const { data: { user } } = await sbUser.auth.getUser()
   if (!user) return json({ ok: false, erreur: 'Reconnecte-toi puis réessaie.' }, 401)
+  // Audit 02/10 : le plan AVANT tout compteur → un compte Free ne consomme aucun budget partagé.
+  { const p = await requirePlan(user.id, PAID_PLANS, 'Création d\'animation'); if (!p.ok) return json({ ok: false, erreur: 'La création d\'animation est réservée aux abonnés (Starter, Pro ou Élite).' }, p.status) }
   { const g = await helperGate(user.id, 'anim-creer', 20, 3600); if (!g.ok) return json({ ok: false, erreur: g.error }, g.status) }
+  // Audit 02/10 : IP + global AVANT le quota et le débit → un appel refusé ne consomme ni création gratuite ni crédit.
+  { const c = await capsGate(req); if (c) return json({ ok: false, erreur: c }, 429) }
 
   const sbAdmin = createClient(url, srv, { auth: { persistSession: false } })
   const { data: profil } = await sbAdmin.from('profiles').select('plan').eq('id', user.id).single()

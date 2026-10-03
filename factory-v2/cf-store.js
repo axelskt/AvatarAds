@@ -1195,7 +1195,12 @@
     var w = window.open('about:blank', 'ig_oauth', 'width=560,height=760');
     if (!w) return Promise.resolve({ ok: false, error: 'Popup bloquée : autorise les popups pour avatarads.fr puis réessaie.' });
     logNet('instagram-auth?action=authorize');
-    return fetch(FN + 'instagram-auth?action=authorize')
+    // Audit 02/10 : authorize exige la session owner (C3) ; garde sb pour ne jamais laisser la popup ouverte sur une exception.
+    return (sb ? sb.auth.getSession() : Promise.resolve(null))
+      .then(function (r) {
+        var tok = r && r.data && r.data.session && r.data.session.access_token;
+        return fetch(FN + 'instagram-auth?action=authorize', tok ? { headers: { Authorization: 'Bearer ' + tok } } : {});
+      })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         var u = d && typeof d.authorize_url === 'string' ? d.authorize_url : '';

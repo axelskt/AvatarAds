@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Autoriser Claude — AvatarAds</title>
+<!-- Audit 02/10 : CSP (scripts : cette page + jsDelivr seulement ; appels réseau : notre Supabase seulement). frame-ancestors
+     est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous : une carte
+     « Autoriser » encadrée par un autre site serait un clic volé (clickjacking). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script>/* Audit 02/10 — anti-clickjacking : la page de consentement OAuth ne doit jamais être encadrée. */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
+<title>Autoriser une application — AvatarAds</title>
 <meta name="robots" content="noindex">
 <!-- Page de CONSENTEMENT OAuth MCP dédiée + INSTANTANÉE (01/09). Remplace la redirection vers
      l'app lourde (/app/?mcp_oauth=…) qui mettait ~2 s à afficher la carte → Claude relançait un
@@ -46,22 +51,25 @@
     </div>
     <div id="loading"><div class="spin"></div><div class="sub" style="margin-top:14px">Chargement…</div></div>
     <div id="consent" class="hide">
-      <h1>Autoriser Claude ?</h1>
-      <div class="sub">Claude demande l'accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.</div>
+      <h1>Autorisation</h1>
+      <div class="sub"></div>
       <div class="acct">Compte&nbsp;: <b id="email"></b></div>
       <button class="btn-ok" id="ok">Autoriser</button>
       <button class="btn-no" id="no">Refuser</button>
     </div>
     <div id="login" class="hide">
       <h1>Connexion AvatarAds</h1>
-      <div class="sub" style="margin-bottom:18px">Connecte-toi pour autoriser Claude.</div>
+      <div class="sub" id="lsub" style="margin-bottom:18px">Connecte-toi pour continuer.</div>
       <div class="err" id="lerr"></div>
       <input id="lemail" type="email" placeholder="E-mail" autocomplete="email">
       <input id="lpwd" type="password" placeholder="Mot de passe" autocomplete="current-password">
       <button class="btn-ok" id="lbtn">Se connecter</button>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- Audit 02/10 : version exacte + intégrité (SRI) : un fichier modifié sur le CDN n'est pas exécuté. supabase.js est le
+       fichier du paquet npm (le .min.js de jsDelivr est généré à la volée, donc impropre au SRI) ; 2.117.2 = la version
+       que servait @2 au 03/10/2026. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
   <script>
     var SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
     var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
@@ -84,17 +92,24 @@
     try { var _u = new URL(params.redirect_uri); if (!/^https?:$/.test(_u.protocol)) throw 0; }
     catch (e) { document.querySelector('.card').innerHTML = '<h1>Lien invalide</h1><div class="sub" style="margin-top:8px">Redirection non autorisée.</div>'; throw new Error('redirect_uri non-http'); }
 
-    // Client de confiance = Claude (callback sur un domaine Anthropic). Pour lui on approuve
-    // AUTOMATIQUEMENT dès que la session est là : aucun clic humain dans le chemin critique,
-    // donc le code est frappé en < 1 s après /authorize et le flux de Claude n'a pas le temps
-    // de périmer (cause racine du « code créé mais jamais de /token » → ofid). La sécurité tient :
-    // le redirect_uri est validé côté serveur contre le CIMD du client, donc le code ne peut
-    // partir que vers claude.ai, et claude.ai ne le complète que si c'est LUI qui a lancé le flux
-    // (state lié à sa session). Un client tiers inconnu, lui, garde le consentement manuel.
-    function isTrustedClaude(uri){
-      try { var h = new URL(uri).hostname; return /(^|\.)(claude\.ai|claude\.com|anthropic\.com)$/i.test(h); }
-      catch(e){ return false; }
-    }
+    // Audit 02/10 (contrat C2) : l'identité du client (« Claude » ou non) est calculée par le SERVEUR
+    // (GET /oauth/client-info, même base que /oauth/approve) et plus d'après le domaine lu ici dans le navigateur.
+    // On ne dit « Claude » que si trusted === true ; échec réseau, 404, délai dépassé (5 s) ou réponse inattendue →
+    // bandeau prudent « Application externe ». Demandée dès le chargement, en parallèle de la session.
+    var _clientInfo = null;
+    var infoP = new Promise(function(resolve){
+      var done = false, fin = function(d){ if (done) return; done = true; _clientInfo = d; resolve(d); };
+      setTimeout(function(){ fin(null); }, 5000);
+      try {
+        var q = new URLSearchParams({ client_id: String(params.client_id), redirect_uri: String(params.redirect_uri) });
+        fetch(SUPABASE_URL + '/functions/v1/mcp/oauth/client-info?' + q.toString(), { cache: 'no-store' })
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(d){ fin((d && d.ok === true && typeof d.trusted === 'boolean') ? d : null); })
+          .catch(function(){ fin(null); });
+      } catch (e) { fin(null); }
+    });
+    function isTrustedClaude(){ return !!(_clientInfo && _clientInfo.trusted === true); }
+    function _trustedName(){ return String((_clientInfo && _clientInfo.name) || '').trim().slice(0, 40) || 'Claude'; }
     var _approving = false;
     function approve(session){
       if (_approving) return; _approving = true;
@@ -122,19 +137,21 @@
       return;
     }
     function _esc(x){ return String(x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-    function _clientHost(){ try { return new URL(params.redirect_uri).host; } catch(e){ return params.redirect_uri; } }
+    function _clientHost(){ if (_clientInfo && _clientInfo.host) return String(_clientInfo.host); try { return new URL(params.redirect_uri).host; } catch(e){ return params.redirect_uri; } }
     // Hameçonnage du consentement (audit 06/09) : la carte disait TOUJOURS « Claude » quel que soit le client
     // réel. N'importe qui peut enregistrer un client (/register ouvert) → un attaquant faisait cliquer la victime
     // sur une carte « Autoriser Claude » alors que le code partait chez lui. On affiche donc l'IDENTITÉ RÉELLE
-    // (le domaine de redirection) ; « Claude » n'apparaît que pour un domaine Anthropic de confiance.
+    // (le domaine de redirection) ; « Claude » n'apparaît que si le serveur répond trusted === true (Audit 02/10).
     function _renderIdentity(){
-      var trusted = isTrustedClaude(params.redirect_uri);
+      var trusted = isTrustedClaude();
       var h1 = document.querySelector('#consent h1');
       var sub = document.querySelector('#consent .sub');
       if (trusted) {
-        h1.textContent = 'Autoriser Claude ?';
+        var nom = _trustedName();
+        document.title = 'Autoriser ' + nom + ' — AvatarAds';
+        h1.textContent = 'Autoriser ' + nom + ' ?';
         h1.style.color = '';
-        sub.textContent = "Claude demande l'accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.";
+        sub.textContent = nom + " demande l'accès à ton compte AvatarAds pour générer des images, vidéos et montages avec tes crédits.";
       } else {
         h1.textContent = 'Application externe';
         h1.style.color = '#ffb020';
@@ -150,7 +167,9 @@
       show('consent');
     }
 
-    sb.auth.getSession().then(function(res){
+    // Audit 02/10 : on attend aussi l'identité du client (≤ 5 s) avant d'afficher quoi que ce soit.
+    Promise.all([sb.auth.getSession(), infoP]).then(function(all){
+      var res = all[0];
       var session = res.data.session;
       if (session && session.user) {
         // Consentement MANUEL (l'utilisateur clique « Autoriser ») — RÉTABLI le 01/09 : l'auto-approve
@@ -176,6 +195,7 @@
         });
       };
       $('lpwd').onkeydown = function(e){ if (e.key === 'Enter') $('lbtn').click(); };
+      if (isTrustedClaude()) $('lsub').textContent = 'Connecte-toi pour autoriser ' + _trustedName() + '.';
       show('login');
     });
   </script>

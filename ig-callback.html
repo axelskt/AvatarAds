@@ -29,6 +29,7 @@
   const EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/instagram-auth';
   const p = new URLSearchParams(location.search);
   const code = p.get('code');
+  const state = p.get('state') || '';
   const err = p.get('error_description') || p.get('error');
   const c = document.getElementById('c');
   const CHECK = '<div class="ic" style="background:rgba(52,199,89,.14)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>';
@@ -39,6 +40,16 @@
   // vient de l'échange lui-même : seul celui qui vient de s'authentifier le reçoit.
   // Deux canaux : window.opener (cas normal) + BroadcastChannel (même origine), qui fonctionne même si
   // une page de connexion (ex. facebook.com) a coupé le lien opener via COOP.
+  // Audit 02/10 : l'échange exige le state signé renvoyé par Instagram ET, pour une connexion owner, la session
+  // avatarads.fr (même domaine que le tableau de bord) : on envoie son jeton d'accès s'il existe (jamais stocké ici).
+  // Sans session owner, seul le state « relecteur » d'ig-review.html aboutit (aperçu, rien n'est enregistré).
+  function sbToken(){
+    try {
+      const s = JSON.parse(localStorage.getItem('sb-guvwgiejzkiodghywpwj-auth-token') || 'null');
+      const t = s && (s.access_token || (s.currentSession && s.currentSession.access_token));
+      return (typeof t === 'string' && t.split('.').length === 3) ? t : '';
+    } catch(_) { return ''; }
+  }
   function notify(msg){
     msg = Object.assign({ source:'ig-oauth' }, msg);
     if (window.opener) { try { window.opener.postMessage(msg, location.origin); } catch(_){} }
@@ -51,7 +62,10 @@
     notify({ ok:false, error:'Aucun code d’autorisation reçu.' });
     show(CROSS + '<h1>Lien invalide</h1><p class="muted">Aucun code d’autorisation reçu.</p>');
   } else {
-    fetch(EDGE + '?action=exchange', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code }) })
+    const tok = sbToken();
+    const headers = { 'Content-Type':'application/json' };
+    if (tok) headers.Authorization = 'Bearer ' + tok;
+    fetch(EDGE + '?action=exchange', { method:'POST', headers, body: JSON.stringify({ code, state }) })
       .then(r => r.json())
       .then(d => {
         notify({ ok:!!d.ok, ig_id:d.ig_id, username:d.username, preview:d.preview || null, error:d.error });
@@ -61,7 +75,11 @@
             ? '<p class="muted" style="margin-top:10px">' + fmtN(pv.followers_count) + ' abonnés · ' + (pv.media_count ?? '—') + ' publications'
               + (pv.reach_28j != null ? ' · reach 28 j : ' + fmtN(pv.reach_28j) : '') + '</p>'
             : '';
-          show(CHECK + '<h1>Compte connecté</h1><p class="muted"><b>@' + esc(d.username || d.ig_id) + '</b> est branché à AvatarAds. Tu peux fermer cette fenêtre.</p>' + stats);
+          // saved === false : relecteur Meta (aperçu seulement, compte non enregistré)
+          const line = d.saved === false
+            ? '<b>@' + esc(d.username || d.ig_id) + '</b> : autorisation reçue. Tu peux fermer cette fenêtre.'
+            : '<b>@' + esc(d.username || d.ig_id) + '</b> est branché à AvatarAds. Tu peux fermer cette fenêtre.';
+          show(CHECK + '<h1>Compte connecté</h1><p class="muted">' + line + '</p>' + stats);
         }
         else show(CROSS + '<h1>Erreur</h1><p class="muted">' + esc(d.error || 'inconnue') + '</p>');
       })

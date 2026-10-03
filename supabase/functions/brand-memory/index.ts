@@ -47,7 +47,23 @@ const MAX_SUMMARY = 1400
 
 // ---------- scrape du site (même extraction que orchestrate) ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée (redirections revalidées, IP/metadata bloqués).
-import { safeFetchHtml, helperGate } from '../_shared/guard.ts'
+import { safeFetchHtml, helperGate, requirePlan, rateHit, realIp } from '../_shared/guard.ts'
+
+// Audit 02/10 : Claude Sonnet (+ crawl) SANS débit de crédits → plans payants seulement (owner/developer exemptés par
+// requirePlan ; byok = ancien plan encore porté par des profils). Recensé dans app/index.html : les 3 appels
+// (mtMemFromSite, mtMemLearnFromShots via _brandGate → paywall ; mtMemLearn après un montage) sortent déjà sur Free
+// → aucun parcours Free légitime. Plafonds EN PLUS des 15 / 10 min par compte, sur 1 h : un utilisateur actif fait
+// ~15 appels / h au plus (site, captures, 1 apprentissage par montage) → 60 par IP, 240 pour toute la plateforme.
+const PAID_PLANS = ['starter', 'pro', 'elite', 'byok']
+const IP_MAX_H = 60, GLOBAL_MAX_H = 240
+// IP puis GLOBAL : rate_hit n'incrémente que s'il accepte → un appel refusé par l'IP ne consomme rien du budget
+// global (un seul réseau ne peut pas l'épuiser). IP absente → seul le global s'applique (comme auth-otp).
+async function capsGate(req: Request): Promise<string | null> {
+  const ip = realIp(req)
+  if (ip && !(await rateHit(`proxy:brand-memory:ip:${ip}`, 3600, IP_MAX_H))) return 'Trop de requêtes depuis ce réseau — réessaie dans un moment.'
+  if (!(await rateHit('proxy:brand-memory:global', 3600, GLOBAL_MAX_H))) return 'Service très demandé en ce moment — réessaie dans quelques minutes.'
+  return null
+}
 async function fetchSite(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 7000)
@@ -134,6 +150,8 @@ serve(async (req: Request) => {
   )
   const { data: { user }, error: authErr } = await sb.auth.getUser()
   if (authErr || !user) return json({ error: 'Unauthorized — session invalide ou expirée' }, 401)
+  // Audit 02/10 : le plan AVANT tout compteur → un compte Free ne consomme aucun budget partagé.
+  { const _p = await requirePlan(user.id, PAID_PLANS, 'Mémoire de marque'); if (!_p.ok) return json({ error: 'La mémoire de marque est réservée aux abonnés (Starter, Pro ou Élite).' }, _p.status) }
   { const _g = await helperGate(user.id, 'brand-memory', 15); if (!_g.ok) return json({ error: _g.error }, _g.status) }
 
   try {
@@ -144,6 +162,8 @@ serve(async (req: Request) => {
     // fiche actuelle (RLS : forcément la sienne)
     const { data: cur } = await sb.from('brand_memory').select('*').eq('user_id', user.id).maybeSingle()
     if (action === 'learn' && cur && cur.auto_learn === false) return json({ ok: true, skipped: 'auto_learn désactivé' })
+    // Audit 02/10 : IP + global comptés seulement quand l'appel va VRAIMENT crawler / appeler Claude.
+    { const _c = await capsGate(req); if (_c) return json({ error: _c }, 429) }
 
     const website = str(body.website, 300) || str(cur?.site_url, 300)
     const brief = str(body.brief, 900)

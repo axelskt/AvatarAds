@@ -440,15 +440,25 @@ serve(async (req) => {
     return new Response('Erreur interne — réessai attendu', { status: 500 })
   }
 
+  // Audit 02/10 : profil cherché par l'ABONNEMENT Whop d'abord, l'e-mail en repli. Depuis que le changement d'adresse
+  // remarche (auth-otp, contrat C1), l'ancienne adresse peut être réinscrite (compte gratuit) : chercher par e-mail
+  // d'abord envoyait remboursement, litige, résiliation ou renouvellement sur ce compte gratuit, et le compte abonné
+  // gardait son plan. whop_member_id n'est jamais écrit par le client (profiles_guard) : il vient des seuls webhooks
+  // signés. Pas d'index unique dessus : plusieurs lignes (PGRST116) = clé ambiguë → repli e-mail, comme avant.
+  // lookup : clé qui a trouvé le profil + échec de lecture (hors PGRST116), lus par résiliation et remboursement.
+  const lookup: { by: 'abonnement' | 'email' | null; failed: boolean } = { by: null, failed: false }
   const findProfile = async () => {
     const cols = 'id, plan, first_name, credits_remaining, bought_credits, img_bonus_credits, whop_plan_id, whop_member_id, first_sub_bonus_used'
-    if (email) {
-      const { data: p } = await sb.from('profiles').select(cols).eq('email', email).maybeSingle()
-      if (p) return p
+    lookup.by = null; lookup.failed = false
+    if (memberId) {
+      const { data: p, error } = await sb.from('profiles').select(cols).eq('whop_member_id', memberId).maybeSingle()
+      if (error && error.code !== 'PGRST116') lookup.failed = true
+      if (p) { lookup.by = 'abonnement'; return p }
     }
-    if (memberId) {   // renouvellement sans e-mail dans le payload : on retrouve le profil par l'abonnement Whop
-      const { data: p } = await sb.from('profiles').select(cols).eq('whop_member_id', memberId).maybeSingle()
-      if (p) return p
+    if (email) {
+      const { data: p, error } = await sb.from('profiles').select(cols).eq('email', email).maybeSingle()
+      if (error && error.code !== 'PGRST116') lookup.failed = true
+      if (p) { lookup.by = 'email'; return p }
     }
     return null
   }
@@ -562,6 +572,8 @@ serve(async (req) => {
     if (PACK_MAP[planId] || !SUB_MAP[planId]) return new Response('OK', { status: 200 })
 
     const profile = await findProfile()
+    // Audit 02/10 : lecture en échec → 500, Whop rejoue (un repli silencieux sur l'e-mail pourrait viser le mauvais compte).
+    if (lookup.failed) return await failDb()
     // Downgrade uniquement si l'abonnement QUI EXPIRE est BIEN l'actif du profil — par IDENTIFIANT D'ABONNEMENT
     // (audit 06/09 : comparer le plan id cassait l'upgrade vers le MÊME palier — l'ancien membership expirait avec
     // le même plan id et rétrogradait le nouveau). Repli sur le plan id seulement si aucun member id n'est stocké.
@@ -599,6 +611,13 @@ serve(async (req) => {
         ], neutralised
           ? 'Le plan en attente ne sera pas appliqué si cette personne crée un compte (les crédits de packs éventuels restent en attente).'
           : 'Aucun abonnement en attente trouvé : si cette personne a un compte sous une autre adresse, vérifie son plan à la main.')
+    } else if (lookup.by === 'email' && !profile.whop_member_id && String(profile.plan || 'free').toLowerCase() === 'free') {
+      // Audit 02/10 : aucun compte ne porte cet abonnement et le compte de l'adresse Whop est déjà gratuit → la résiliation
+      // n'a rien retiré. Normal juste après un remboursement ; sinon l'abonnement peut être porté par un compte dont
+      // l'adresse a changé (ancienne adresse réinscrite) → vérification à la main.
+      await alertOwner(`⚠️ Résiliation sans effet AvatarAds — ${email}`, 'Résiliation reçue pour un compte déjà gratuit', [
+        ['Événement', action], ['E-mail Whop', email], ['Abonnement', String(expiringMember || '—')], ['Compte de cette adresse', String(profile.id)],
+      ], 'Aucun compte n’est relié à cet abonnement et le compte de cette adresse est déjà gratuit. Normal juste après un remboursement ; sinon, l’abonnement est peut-être porté par un compte dont l’adresse a changé : vérifie son plan à la main.')
     }
   }
 
@@ -678,6 +697,8 @@ serve(async (req) => {
   // ─── remboursement / litige / chargeback → clawback des crédits ──
   else if (isClawback) {
     const profile = await findProfile()
+    // Audit 02/10 : lecture en échec → 500, Whop rejoue (même raison que la résiliation).
+    if (lookup.failed) return await failDb()
     // Audit 02/10 (PAY-1) : remboursement / litige d'un achat fait SANS compte → la ligne en attente restait et
     // handle_new_user appliquait plan + crédits à l'inscription (plan payant gardé à vie). Toutes les lignes en attente
     // de l'acheteur (e-mail ET abonnement) sont supprimées AVANT tout autre effet, avec ou sans profil : l'adresse de
@@ -696,11 +717,16 @@ serve(async (req) => {
       // DÉJÀ virée reste à réverser À LA MAIN (l'accounting des payouts est trop sensible pour un revert automatique).
       const flagged = await flagReferralClawback(sb, profile.id, email, action)
       if (removed) console.log(`💸 Clawback (${action}) : ${removed} ligne(s) en attente supprimée(s) pour ${email || memberId}`)
+      // Audit 02/10 : compte retrouvé par l'e-mail et sans abonnement Whop enregistré → si c'est un ABONNEMENT qui est
+      // remboursé, il peut être porté par un autre compte (adresse changée puis ancienne adresse réinscrite).
+      const parEmailSansAbo = lookup.by === 'email' && !profile.whop_member_id
       await alertOwner(`⚠️ Clawback AvatarAds — ${email || profile.id}`, 'Remboursement / litige', [
         ['Événement', action], ['Membre', email || profile.id],
+        ['Compte retrouvé par', lookup.by === 'abonnement' ? 'abonnement Whop' : 'e-mail'],
         ...(removed ? [['Achats en attente supprimés', String(removed)] as [string, string]] : []),
         ['Commissions de parrainage mises en revue (90 j)', flagged === null ? 'échec, à vérifier à la main' : String(flagged)],
-      ], 'Plan remis à free, crédits à zéro. Les commissions du filleul ne sont plus retirables ; si l’une d’elles a déjà été virée, pense à la réverser dans « Tes gains ».')
+      ], 'Plan remis à free, crédits à zéro. Les commissions du filleul ne sont plus retirables ; si l’une d’elles a déjà été virée, pense à la réverser dans « Tes gains ».'
+        + (parEmailSansAbo ? ' Ce compte a été retrouvé par l’e-mail et n’avait pas d’abonnement Whop enregistré : s’il s’agit du remboursement d’un abonnement, vérifie qu’aucun autre compte ne le porte (adresse changée) et remets-le à free à la main le cas échéant.' : ''))
     } else {
       console.log(`ℹ️ Clawback ${action} sans profil (${email || '—'}) : ${removed} ligne(s) en attente supprimée(s)`)
       const flagged = email ? await flagReferralClawback(sb, null, email, action) : 0
