@@ -436,7 +436,7 @@
       + '<div class="t">' + esc(c.text) + '</div>'
       + '<div class="acts">'
       + (isReply ? '' : '<button class="btn quiet" onclick="toggle(\'r' + id + '\')" title="Post a public reply under this comment">' + ic('i-reply') + 'Reply</button>')
-      + (mine ? '' : '<button class="btn quiet" onclick="hideCmt(this,\'' + id + '\',' + (!c.hidden) + ')" title="' + (c.hidden ? 'Show this comment to everyone again' : 'Hide this comment from other people') + '">' + ic(c.hidden ? 'i-eye' : 'i-eyeoff') + (c.hidden ? 'Unhide' : 'Hide') + '</button>')
+      + ((mine && !c.hidden) ? '' : '<button class="btn quiet" onclick="hideCmt(this,\'' + id + '\',' + (!c.hidden) + ')" title="' + (c.hidden ? 'Show this comment to everyone again' : 'Hide this comment from other people') + '">' + ic(c.hidden ? 'i-eye' : 'i-eyeoff') + (c.hidden ? 'Unhide' : 'Hide') + '</button>')
       + '<button class="btn quiet danger" onclick="delCmt(this,\'' + id + '\')" title="Permanently delete this comment from Instagram">' + ic('i-trash') + 'Delete</button>'
       + (isReply || mine ? '' : '<button class="btn quiet" onclick="toggle(\'p' + id + '\')" title="Send a direct message to the author of this comment">' + ic('i-dm') + 'Message</button>')
       + '</div>'

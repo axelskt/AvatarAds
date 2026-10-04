@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
       // Règle Instagram : un commentaire du propriétaire de la publication reste TOUJOURS affiché, même « masqué » — refusé
       // ici avec l'explication plutôt qu'un faux succès. Après l'action, l'état est RELU chez Instagram (jamais supposé).
       const who = await g(T, `/${cid}?fields=username`).catch(() => ({} as Record<string, unknown>))
-      if (s.username && String(who.username || '').toLowerCase() === String(s.username).toLowerCase())
+      if (b.hide === true && s.username && String(who.username || '').toLowerCase() === String(s.username).toLowerCase())   // Unhide reste permis (remise au propre)
         return json(400, { error: 'Instagram always shows comments written by the post owner — Hide works on other people\'s comments.' })
       await g(T, `/${cid}?hide=${b.hide === true ? 'true' : 'false'}`, { method: 'POST' })
       const now = await g(T, `/${cid}?fields=hidden`).catch(() => ({ hidden: b.hide === true } as Record<string, unknown>))
