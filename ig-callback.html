@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AvatarAds · Connexion Instagram</title>
+<title>AvatarAds · Instagram connection</title>
 <style>
   :root{ --bg:#0f0f11; --panel:#17171b; --text:#fff; --muted:#9a9aa2; --ok:#34c759; --accent:#ff6b35; --border:#26262c }
   *{ box-sizing:border-box }
@@ -22,8 +22,8 @@
 <body>
   <div class="card" id="c">
     <div class="spin"></div>
-    <h1>Connexion Instagram…</h1>
-    <p class="muted">Un instant, on branche ton compte.</p>
+    <h1>Connecting Instagram…</h1>
+    <p class="muted">One moment, we are connecting your account.</p>
   </div>
 <script>
   const EDGE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/instagram-auth';
@@ -56,11 +56,11 @@
     try { const bc = new BroadcastChannel('ig-oauth'); bc.postMessage(msg); bc.close(); } catch(_){}
   }
   if (err) {
-    notify({ ok:false, error:'Connexion annulée : ' + err });
-    show(CROSS + '<h1>Connexion annulée</h1><p class="muted">' + esc(err) + '</p>');
+    notify({ ok:false, error:'Connection cancelled: ' + err });
+    show(CROSS + '<h1>Connection cancelled</h1><p class="muted">' + esc(err) + '</p>');
   } else if (!code) {
-    notify({ ok:false, error:'Aucun code d’autorisation reçu.' });
-    show(CROSS + '<h1>Lien invalide</h1><p class="muted">Aucun code d’autorisation reçu.</p>');
+    notify({ ok:false, error:'No authorization code received.' });
+    show(CROSS + '<h1>Invalid link</h1><p class="muted">No authorization code received.</p>');
   } else {
     const tok = sbToken();
     const headers = { 'Content-Type':'application/json' };
@@ -68,24 +68,25 @@
     fetch(EDGE + '?action=exchange', { method:'POST', headers, body: JSON.stringify({ code, state }) })
       .then(r => r.json())
       .then(d => {
-        notify({ ok:!!d.ok, ig_id:d.ig_id, username:d.username, preview:d.preview || null, error:d.error });
+        // console_token : session de la console d'ig-review.html (commentaires + messages du compte qui vient de se connecter)
+        notify({ ok:!!d.ok, ig_id:d.ig_id, username:d.username, preview:d.preview || null, console_token:d.console_token || null, error:d.error });
         if (d.ok) {
           const pv = d.preview || {};
           const stats = (pv.followers_count != null)
-            ? '<p class="muted" style="margin-top:10px">' + fmtN(pv.followers_count) + ' abonnés · ' + (pv.media_count ?? '—') + ' publications'
-              + (pv.reach_28j != null ? ' · reach 28 j : ' + fmtN(pv.reach_28j) : '') + '</p>'
+            ? '<p class="muted" style="margin-top:10px">' + fmtN(pv.followers_count) + ' followers · ' + (pv.media_count ?? '—') + ' posts'
+              + (pv.reach_28j != null ? ' · 28-day reach: ' + fmtN(pv.reach_28j) : '') + '</p>'
             : '';
           // saved === false : relecteur Meta (aperçu seulement, compte non enregistré)
           const line = d.saved === false
-            ? '<b>@' + esc(d.username || d.ig_id) + '</b> : autorisation reçue. Tu peux fermer cette fenêtre.'
-            : '<b>@' + esc(d.username || d.ig_id) + '</b> est branché à AvatarAds. Tu peux fermer cette fenêtre.';
-          show(CHECK + '<h1>Compte connecté</h1><p class="muted">' + line + '</p>' + stats);
+            ? '<b>@' + esc(d.username || d.ig_id) + '</b>: access granted. You can close this window.'
+            : '<b>@' + esc(d.username || d.ig_id) + '</b> is connected to AvatarAds. You can close this window.';
+          show(CHECK + '<h1>Account connected</h1><p class="muted">' + line + '</p>' + stats);
         }
-        else show(CROSS + '<h1>Erreur</h1><p class="muted">' + esc(d.error || 'inconnue') + '</p>');
+        else show(CROSS + '<h1>Error</h1><p class="muted">' + esc(d.error || 'unknown') + '</p>');
       })
       .catch(e => {
         notify({ ok:false, error:e.message });
-        show(CROSS + '<h1>Erreur</h1><p class="muted">' + esc(e.message) + '</p>');
+        show(CROSS + '<h1>Error</h1><p class="muted">' + esc(e.message) + '</p>');
       });
   }
   function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }

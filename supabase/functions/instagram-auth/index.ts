@@ -190,10 +190,25 @@ Deno.serve(async (req) => {
       }
     } catch { /* non bloquant */ }
 
-    // Relecteur Meta (state « r ») : l'aperçu seulement, rien n'est enregistré ni abonné aux webhooks.
+    // Console de la page ig-review.html (App Review Meta, 04/10) : commentaires et messages du compte qui VIENT de se
+    // connecter. Session de 3 h (table ig_review_sessions, jeton gardé côté serveur), identifiant aléatoire remis au seul
+    // navigateur qui termine l'OAuth (ig-callback.html → opener / BroadcastChannel). Échec → pas de console, rien d'autre.
+    let consoleToken: string | null = null
+    try {
+      const sid = b64u(crypto.getRandomValues(new Uint8Array(32)))
+      await svc.from('ig_review_sessions').delete().lt('expires_at', new Date().toISOString())
+      const { error: se } = await svc.from('ig_review_sessions').insert({
+        id: sid, ig_user_id: igUserId || null, username, access_token: longTok,
+        expires_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
+      })
+      if (!se) consoleToken = sid
+      else console.warn('[instagram-auth] session console :', se.message)
+    } catch (e) { console.warn('[instagram-auth] session console :', String(e)) }
+
+    // Relecteur Meta (state « r ») : l'aperçu (et la console) seulement, rien n'est enregistré ni abonné aux webhooks.
     if (!save) {
       console.log('[instagram-auth] aperçu relecteur (non enregistré)', username)
-      return json({ ok: true, ig_id: userId, username, preview, saved: false })
+      return json({ ok: true, ig_id: userId, username, preview, saved: false, console_token: consoleToken })
     }
 
     // d) upsert. Avec l'id professionnel, la ligne du compte est retrouvée par lui (l'id app-scoped peut changer
@@ -217,7 +232,7 @@ Deno.serve(async (req) => {
     //    un compte relié après coup (28/09 : 2e compte). Non bloquant : le résultat est renvoyé et journalisé.
     const webhooks = await subscribe(longTok)
     console.log('[instagram-auth] compte relié', username, 'webhooks', webhooks)
-    return json({ ok: true, ig_id: userId, username, webhooks, preview, saved: true })
+    return json({ ok: true, ig_id: userId, username, webhooks, preview, saved: true, console_token: consoleToken })
   }
 
   // 3) comptes connectés (jamais le token) — owner/dev uniquement : la liste contiendra les

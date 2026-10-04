@@ -1,110 +1,200 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AvatarAds · App Review — Connexion Instagram</title>
+<title>AvatarAds · Instagram App Review console</title>
+<!-- Page du relecteur Meta (App Review). 04/10/2026 : Meta a refusé instagram_business_manage_messages et
+     instagram_business_manage_comments (la vidéo ne montrait pas l'app qui envoie un message ni qui crée / modifie /
+     supprime un commentaire). Interface EN ANGLAIS (exigence Meta) avec une explication sous chaque bouton.
+     Après l'OAuth, ig-callback.html remet un jeton de console (session de 3 h, edge ig-console) : toutes les actions
+     visent le SEUL compte qui vient de se connecter dans ce navigateur. -->
 <style>
   :root{
-    --bg:#faf7f2; --panel:#ffffff; --ink:#141414; --muted:#6b6b73; --line:#ececec;
-    --accent:#ff6b35; --ok:#1f9d55; --okbg:rgba(31,157,85,.10);
+    --bg:#faf7f2; --panel:#ffffff; --ink:#141414; --muted:#6b6b73; --line:#ececec; --soft:#faf9f6;
+    --accent:#ff6b35; --ok:#1f9d55; --okbg:rgba(31,157,85,.10); --warn:#b54708; --warnbg:#fff4e5; --err:#c2461a;
   }
   *{ box-sizing:border-box }
-  body{ margin:0; min-height:100vh; padding:32px 16px; background:var(--bg); color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; line-height:1.5;
-    display:flex; align-items:flex-start; justify-content:center }
-  .wrap{ width:100%; max-width:560px }
-  .brand{ font-size:22px; font-weight:800; letter-spacing:-.02em; margin:0 0 4px }
+  body{ margin:0; min-height:100vh; padding:28px 16px 60px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; line-height:1.5 }
+  .wrap{ width:100%; max-width:760px; margin:0 auto }
+  .brand{ font-size:22px; font-weight:800; letter-spacing:-.02em; margin:0 0 2px }
   .brand b{ color:var(--accent) }
-  .sub{ color:var(--muted); font-size:13px; margin:0 0 22px }
-  .card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:26px; margin-bottom:16px }
-  h2{ font-size:16px; margin:0 0 10px }
-  p{ margin:0 0 12px; font-size:14px }
-  .en{ color:var(--muted); font-size:13px }
-  .btn{ display:inline-flex; align-items:center; gap:9px; background:var(--accent); color:#fff; border:0;
-    font-size:15px; font-weight:700; padding:13px 22px; border-radius:12px; cursor:pointer; text-decoration:none }
-  .btn:active{ transform:translateY(1px) }
-  .steps{ margin:14px 0 0; padding:0; list-style:none; font-size:13px; color:var(--muted) }
-  .steps li{ padding:6px 0 6px 26px; position:relative }
-  .steps li::before{ content:attr(data-n); position:absolute; left:0; top:5px; width:18px; height:18px;
-    background:#f0ede7; border-radius:50%; font-size:11px; font-weight:700; color:var(--ink);
-    display:grid; place-items:center }
-  /* état connecté */
-  .result{ display:none }
-  .okrow{ display:flex; align-items:center; gap:12px; margin-bottom:18px }
-  .okic{ width:44px; height:44px; border-radius:50%; background:var(--okbg); display:grid; place-items:center; flex:0 0 auto }
-  .okrow h2{ margin:0; font-size:16px }
-  .okrow .u{ color:var(--muted); font-size:13px }
-  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
-  .stat{ background:#faf9f6; border:1px solid var(--line); border-radius:12px; padding:14px 12px }
-  .stat .n{ font-size:24px; font-weight:800; letter-spacing:-.02em }
+  .sub{ color:var(--muted); font-size:13px; margin:0 0 20px }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px; margin-bottom:16px }
+  .step{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); margin:0 0 4px }
+  h2{ font-size:17px; margin:0 0 6px }
+  p{ margin:0 0 10px; font-size:14px }
+  .help{ color:var(--muted); font-size:12.5px; margin:6px 0 0 }
+  .perm{ display:inline-block; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; background:#f3f0ea;
+    border:1px solid var(--line); border-radius:6px; padding:1px 7px; margin:2px 4px 2px 0; color:#3d3d44 }
+  .btn{ display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:0; font:inherit;
+    font-size:14px; font-weight:700; padding:11px 18px; border-radius:11px; cursor:pointer; text-decoration:none }
+  .btn.sec{ background:#fff; color:var(--ink); border:1px solid #dcdcdc }
+  .btn.sm{ font-size:12.5px; padding:7px 11px; border-radius:9px }
+  .btn.danger{ background:#fff; color:var(--err); border:1px solid #f0c8b9 }
+  .btn:disabled{ opacity:.55; cursor:default }
+  .btn:active:not(:disabled){ transform:translateY(1px) }
+  .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+  textarea,input[type=text]{ width:100%; font:inherit; font-size:14px; border:1px solid #dcdcdc; border-radius:10px; padding:10px 12px; background:#fff; color:var(--ink); resize:vertical }
+  .legend{ display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:12.5px; color:var(--muted); background:var(--soft);
+    border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:12px 0 }
+  .legend b{ color:var(--ink); white-space:nowrap }
+  .steps{ margin:12px 0 0; padding:0; list-style:none; font-size:13px; color:var(--muted) }
+  .steps li{ padding:5px 0 5px 26px; position:relative }
+  .steps li::before{ content:attr(data-n); position:absolute; left:0; top:5px; width:18px; height:18px; background:#f0ede7;
+    border-radius:50%; font-size:11px; font-weight:700; color:var(--ink); display:grid; place-items:center }
+  .okrow{ display:flex; align-items:center; gap:12px; margin-bottom:14px }
+  .okic{ width:42px; height:42px; border-radius:50%; background:var(--okbg); display:grid; place-items:center; flex:0 0 auto }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
+  .stat{ background:var(--soft); border:1px solid var(--line); border-radius:12px; padding:12px }
+  .stat .n{ font-size:22px; font-weight:800; letter-spacing:-.02em }
   .stat .l{ font-size:11px; color:var(--muted); margin-top:2px }
-  .foot{ font-size:11px; color:var(--muted); margin-top:16px }
-  .spin{ width:26px; height:26px; border:3px solid var(--line); border-top-color:var(--accent);
-    border-radius:50%; animation:r .8s linear infinite; display:inline-block; vertical-align:middle }
+  .posts{ display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; margin-top:10px }
+  .post{ border:2px solid transparent; border-radius:12px; overflow:hidden; background:var(--soft); cursor:pointer; text-align:left; padding:0; font:inherit; color:inherit }
+  .post.on{ border-color:var(--accent) }
+  .post .th{ aspect-ratio:1; background:#ece9e3 center/cover no-repeat; display:grid; place-items:center; color:var(--muted); font-size:11px }
+  .post .cap{ font-size:11px; padding:5px 7px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .cmt{ border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:8px; background:#fff }
+  .cmt.hid{ background:#f6f6f6 }
+  .cmt .who{ font-size:13px; font-weight:700 }
+  .cmt .when{ font-size:11px; color:var(--muted); font-weight:400; margin-left:6px }
+  .cmt .t{ font-size:14px; margin:3px 0 8px; word-break:break-word }
+  .badge{ display:inline-block; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:20px; background:#e9e9ec; color:#55555c; margin-left:6px }
+  .rep{ margin:8px 0 0 16px; padding-left:10px; border-left:2px solid var(--line) }
+  .sub-form{ margin-top:8px; display:none }
+  .status{ font-size:13px; margin-top:10px; min-height:18px }
+  .status.ok{ color:var(--ok) } .status.err{ color:var(--err) }
+  .conv{ display:flex; justify-content:space-between; gap:10px; align-items:center; border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; margin-top:8px; cursor:pointer; background:#fff; width:100%; font:inherit; color:inherit; text-align:left }
+  .conv.on{ border-color:var(--accent) }
+  .thread{ background:var(--soft); border:1px solid var(--line); border-radius:12px; padding:10px; margin:10px 0; max-height:260px; overflow:auto }
+  .msg{ max-width:80%; font-size:13.5px; padding:7px 11px; border-radius:14px; margin:4px 0; background:#fff; border:1px solid var(--line) }
+  .msg.me{ margin-left:auto; background:#ffe9df; border-color:#ffd3bf }
+  .msg .m{ font-size:10.5px; color:var(--muted) }
+  .hidden{ display:none }
+  .spin{ width:22px; height:22px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%;
+    animation:r .8s linear infinite; display:inline-block; vertical-align:middle }
   @keyframes r{ to{ transform:rotate(360deg) } }
+  @media (max-width:520px){ .grid3{ grid-template-columns:1fr 1fr 1fr } .stat .n{ font-size:18px } .legend{ grid-template-columns:1fr } }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <p class="brand">Avatar<b>Ads</b></p>
-    <p class="sub">App Review — Instagram professional account connection &amp; profile display</p>
+<div class="wrap">
+  <p class="brand">Avatar<b>Ads</b></p>
+  <p class="sub">Instagram Auto-DM — App Review console. Every button on this page calls the Instagram API for the professional account you connect.</p>
 
-    <!-- avant connexion -->
-    <div class="card" id="connectCard">
-      <h2>Connectez un compte Instagram professionnel</h2>
-      <p>Cliquez sur le bouton ci-dessous pour autoriser AvatarAds via Instagram Business Login. Après
-         autorisation, les informations de profil (nom d'utilisateur, abonnés, publications) et les
-         statistiques (portée sur 28 jours) de VOTRE compte s'affichent ci-dessous.</p>
-      <p class="en">Click the button to authorize AvatarAds via Instagram Business Login. After you approve,
-         your Instagram professional account's profile info (username, followers, media count) and insights
-         (28-day reach) are displayed below — inside the app.</p>
-      <button class="btn" id="connectBtn" onclick="connect()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-        Connecter Instagram
-      </button>
-      <ul class="steps">
-        <li data-n="1">Une fenêtre Instagram s'ouvre — connectez-vous à votre compte professionnel.</li>
-        <li data-n="2">Autorisez les accès demandés (profil, commentaires, messages, statistiques).</li>
-        <li data-n="3">Revenez sur cette page — votre profil et vos insights s'affichent automatiquement.</li>
-      </ul>
+  <!-- STEP 1 — connexion -->
+  <div class="card" id="connectCard">
+    <p class="step">Step 1 · Instagram Business Login</p>
+    <h2>Connect your Instagram professional account</h2>
+    <p>AvatarAds uses Instagram Business Login. You will be asked to grant these permissions:</p>
+    <p><span class="perm">instagram_business_basic</span> read your username, profile picture, followers and posts</p>
+    <p><span class="perm">instagram_business_manage_insights</span> show your account insights (28-day reach)</p>
+    <p><span class="perm">instagram_business_manage_comments</span> read, post, reply to, hide and delete comments on your posts</p>
+    <p><span class="perm">instagram_business_manage_messages</span> send direct messages to people who commented or messaged you</p>
+    <button class="btn" id="connectBtn" onclick="connect()" title="Opens the Instagram login and permission screen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      Connect Instagram
+    </button>
+    <ul class="steps">
+      <li data-n="1">An Instagram window opens — log in to your professional account.</li>
+      <li data-n="2">Review and allow the permissions listed above.</li>
+      <li data-n="3">Come back to this page — your profile, insights, comments and messages appear below.</li>
+    </ul>
+  </div>
+
+  <div class="card hidden" id="loadingCard">
+    <h2><span class="spin"></span>&nbsp;&nbsp;Waiting for Instagram…</h2>
+    <p class="help">Finish the login in the Instagram window, then come back here.</p>
+  </div>
+
+  <!-- STEP 2 — profil + insights -->
+  <div class="card hidden" id="profileCard">
+    <p class="step">Step 2 · Profile &amp; insights</p>
+    <div class="okrow">
+      <div class="okic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1f9d55" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div><h2 style="margin:0">Account connected</h2><div class="help" id="rUser" style="margin:0">@—</div></div>
     </div>
-
-    <!-- pendant -->
-    <div class="card" id="loadingCard" style="display:none">
-      <h2><span class="spin"></span>&nbsp;&nbsp;Récupération de votre profil…</h2>
-      <p class="en">Fetching your professional account profile &amp; insights…</p>
+    <div class="grid3">
+      <div class="stat"><div class="n" id="rFollowers">—</div><div class="l">Followers</div></div>
+      <div class="stat"><div class="n" id="rMedia">—</div><div class="l">Posts</div></div>
+      <div class="stat"><div class="n" id="rReach">—</div><div class="l">28-day reach</div></div>
     </div>
+    <p class="help">Followers and posts come from <span class="perm">instagram_business_basic</span>; the 28-day reach comes from <span class="perm">instagram_business_manage_insights</span>.</p>
+  </div>
 
-    <!-- après connexion -->
-    <div class="card result" id="resultCard">
-      <div class="okrow">
-        <div class="okic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1f9d55" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-        <div>
-          <h2>Compte connecté</h2>
-          <div class="u" id="rUser">@—</div>
-        </div>
+  <!-- STEP 3 — commentaires -->
+  <div class="card hidden" id="commentsCard">
+    <p class="step">Step 3 · Comments</p>
+    <h2>Manage comments on your posts <span class="perm">instagram_business_manage_comments</span></h2>
+    <p class="help">Select one of your posts. Every action below is applied on Instagram right away — open the post in the Instagram app to see the result.</p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sec sm" onclick="loadMedia()" title="Reload your latest posts">Refresh posts</button>
+    </div>
+    <div class="posts" id="posts"></div>
+
+    <div id="postPanel" class="hidden" style="margin-top:14px">
+      <h2 style="font-size:15px">Add a new comment</h2>
+      <textarea id="newComment" rows="2" maxlength="300">Thanks for watching! (posted from AvatarAds)</textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" id="postBtn" onclick="postComment()" title="Publishes this text as a new comment from your account">Post comment</button>
+        <a class="btn sec sm" id="openPost" href="#" target="_blank" rel="noopener" title="Opens this post on Instagram">Open post on Instagram</a>
       </div>
-      <div class="grid">
-        <div class="stat"><div class="n" id="rFollowers">—</div><div class="l">Abonnés · Followers</div></div>
-        <div class="stat"><div class="n" id="rMedia">—</div><div class="l">Publications · Media</div></div>
-        <div class="stat"><div class="n" id="rReach">—</div><div class="l">Reach 28 j · Insights</div></div>
+      <p class="help">“Post comment” publishes the text above as a new comment on the selected post, from your account.</p>
+      <div class="status" id="cStatus"></div>
+
+      <div class="legend">
+        <b>Reply</b><span>posts a public reply under the comment.</span>
+        <b>Hide / Unhide</b><span>updates the comment's visibility: a hidden comment is only visible to you and its author.</span>
+        <b>Delete</b><span>permanently removes the comment from Instagram.</span>
+        <b>Send private reply</b><span>sends a direct message to the person who wrote the comment (it appears in their Instagram inbox). This is what our Auto-DM does automatically when someone comments a keyword such as “GO”.</span>
       </div>
-      <p class="foot" id="rFoot">Ces informations proviennent de votre compte Instagram professionnel via l'API
-        Instagram (instagram_business_basic pour le profil, instagram_business_manage_insights pour la portée).</p>
+      <div class="row" style="justify-content:space-between">
+        <h2 style="font-size:15px;margin:0">Comments</h2>
+        <button class="btn sec sm" onclick="loadComments()" title="Reload the comments of this post">Refresh comments</button>
+      </div>
+      <div id="comments"></div>
     </div>
   </div>
 
+  <!-- STEP 4 — messages -->
+  <div class="card hidden" id="messagesCard">
+    <p class="step">Step 4 · Direct messages</p>
+    <h2>Send a direct message <span class="perm">instagram_business_manage_messages</span></h2>
+    <p class="help">Instagram lets a business message people who contacted it first: a direct message in the last 24 hours (listed below), or a comment in the last 7 days (use “Send private reply” in Step 3). Messages sent here appear in the person's Instagram inbox.</p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sec sm" onclick="loadConvs()" title="Reload your latest conversations">Refresh conversations</button>
+    </div>
+    <div id="convs"></div>
+    <div id="threadPanel" class="hidden">
+      <div class="thread" id="thread"></div>
+      <textarea id="dmText" rows="2" maxlength="1000">Hi! Thanks for your message — here is the link you asked for: https://avatarads.fr</textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" id="sendBtn" onclick="sendDm()" title="Sends this text as a direct message to the selected person">Send message</button>
+      </div>
+      <p class="help">“Send message” delivers the text above to the selected person's Instagram inbox, from your account.</p>
+    </div>
+    <div class="status" id="mStatus"></div>
+  </div>
+
+  <p class="help" style="text-align:center">AvatarAds · <a href="https://avatarads.fr/confidentialite.html" style="color:inherit">Privacy policy</a> · Your access token never leaves our server; this console session expires after 3 hours.</p>
+</div>
+
 <script>
   const IG_AUTH = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/instagram-auth';
-
-  function fmtN(n){ n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n); }
+  const IG_CONSOLE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/ig-console';
   const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmtN = n => { n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n); };
+  const ago = t => { const s=Math.max(0,(Date.now()-Date.parse(t))/1000); return s<60?'just now':s<3600?Math.floor(s/60)+' min ago':s<86400?Math.floor(s/3600)+' h ago':Math.floor(s/86400)+' d ago'; };
+  let SID = '', ME = '', MEDIA = null, CONV = null;
 
-  // Audit 02/10 : exception explicite et bornée du flux OAuth réservé au propriétaire. ?mode=review : sans session
-  // owner (relecteur Meta), l'échange renvoie l'aperçu du compte qui vient de s'authentifier SANS rien enregistrer
-  // (ni compte relié, ni webhooks). Si le visiteur est connecté à avatarads.fr en owner, son jeton est joint et la
-  // connexion est enregistrée comme depuis le tableau de bord (ig-callback.html renvoie la même session).
+  // Session de console (3 h) gardée pour cet onglet seulement : un rechargement ne refait pas l'OAuth.
+  try { const o = JSON.parse(sessionStorage.getItem('aa_igc') || 'null'); if (o && o.s && o.exp > Date.now()) { SID = o.s; ME = o.u || ''; } } catch(_){}
+
+  // Audit 02/10 : la page du relecteur passe ?mode=review (aperçu, rien n'est enregistré). Si le visiteur est connecté à
+  // avatarads.fr en owner, son jeton est joint et la connexion est enregistrée comme depuis le tableau de bord.
   function sbToken(){
     try {
       const s = JSON.parse(localStorage.getItem('sb-guvwgiejzkiodghywpwj-auth-token') || 'null');
@@ -112,60 +202,168 @@
       return (typeof t === 'string' && t.split('.').length === 3) ? t : '';
     } catch(_) { return ''; }
   }
-
-  // Le popup est ouvert TOUT DE SUITE dans le clic (Safari le bloque si on attend la réponse de la
-  // fonction pour l'ouvrir), puis on y charge l'URL d'autorisation.
+  // Popup ouvert TOUT DE SUITE dans le clic (Safari bloque un popup ouvert après une requête).
   async function connect(){
     const w = window.open('about:blank', 'ig_oauth', 'width=560,height=760');
-    if(!w){ showRetry('Votre navigateur a bloqué la fenêtre Instagram : autorisez les popups pour ce site, puis réessayez. / Your browser blocked the Instagram window: please allow pop-ups for this site and try again.'); return; }
-    $('connectCard').style.display = 'none';
-    $('loadingCard').style.display = 'block';
+    if(!w){ showRetry('Your browser blocked the Instagram window: please allow pop-ups for this site and try again.'); return; }
+    show('loadingCard'); hide('connectCard');
     try{
       const tok = sbToken();
       const d = await (await fetch(IG_AUTH + '?action=authorize&mode=review', tok ? { headers: { Authorization: 'Bearer ' + tok } } : {})).json();
-      if(!d.authorize_url) throw new Error(d.error || 'URL d’autorisation indisponible');
+      if(!d.authorize_url) throw new Error(d.error || 'Authorization link unavailable');
       w.location.href = d.authorize_url;
     }catch(e){ try{ w.close(); }catch(_){} showRetry(String((e && e.message) || e)); }
   }
-
-  // Retour au bouton « Connecter Instagram » avec un message (échec, annulation, popup bloqué).
+  function show(id){ $(id).classList.remove('hidden'); }
+  function hide(id){ $(id).classList.add('hidden'); }
   function showRetry(msg){
-    $('loadingCard').style.display = 'none';
-    $('resultCard').style.display = 'none';
-    $('connectCard').style.display = 'block';
+    hide('loadingCard'); show('connectCard');
     let el = $('connectErr');
-    if(!el){
-      el = document.createElement('p');
-      el.id = 'connectErr';
-      el.style.cssText = 'color:#c2461a;font-size:13px;margin:12px 0 0';
-      $('connectBtn').insertAdjacentElement('afterend', el);
-    }
+    if(!el){ el = document.createElement('p'); el.id = 'connectErr'; el.style.cssText = 'color:#c2461a;font-size:13px;margin:12px 0 0'; $('connectBtn').insertAdjacentElement('afterend', el); }
     el.textContent = msg;
   }
 
-  // Le callback (ig-callback.html, même origine) renvoie le compte qui vient de se connecter et son
-  // aperçu (profil + reach 28 j), calculé par l'échange OAuth lui-même. Aucune autre source : les
-  // insights complets (ig-insights) sont réservés au propriétaire.
-  // Deux canaux, même traitement : window.opener (cas normal) et BroadcastChannel (si une page de
-  // connexion a coupé le lien opener).
-  window.addEventListener('message', (e)=>{ if(e.origin === location.origin) onOAuth(e.data); });
-  let igChannel = null;
-  try { igChannel = new BroadcastChannel('ig-oauth'); igChannel.onmessage = (e)=> onOAuth(e.data); } catch(_){}
-
+  // Retour de l'OAuth (ig-callback.html, même origine) : opener + BroadcastChannel.
+  window.addEventListener('message', e => { if(e.origin === location.origin) onOAuth(e.data); });
+  try { const bc = new BroadcastChannel('ig-oauth'); bc.onmessage = e => onOAuth(e.data); } catch(_){}
   function onOAuth(m){
     if(!m || m.source !== 'ig-oauth') return;
-    if(!m.ok){
-      showRetry('Connexion non aboutie / Connection failed : ' + String(m.error || 'erreur inconnue'));
-      return;
-    }
+    if(!m.ok){ showRetry('Connection failed: ' + String(m.error || 'unknown error')); return; }
     const pv = m.preview || {};
-    $('rUser').textContent = '@' + (pv.username || m.username || m.ig_id || '');
+    ME = pv.username || m.username || '';
+    fillProfile(pv, m);
+    if(m.console_token){
+      SID = m.console_token;
+      try { sessionStorage.setItem('aa_igc', JSON.stringify({ s: SID, u: ME, exp: Date.now() + 2.9*3600*1000 })); } catch(_){}
+      startConsole();
+    }
+  }
+  function fillProfile(pv, m){
+    $('rUser').textContent = '@' + (pv.username || (m && m.username) || ME || '');
     $('rFollowers').textContent = pv.followers_count != null ? fmtN(pv.followers_count) : '—';
     $('rMedia').textContent = pv.media_count != null ? pv.media_count : '—';
-    $('rReach').textContent = pv.reach_28j != null ? fmtN(pv.reach_28j) : 'n/a';
-    $('loadingCard').style.display = 'none';
-    $('connectCard').style.display = 'none';
-    $('resultCard').style.display = 'block';
+    if(pv.reach_28j !== undefined) $('rReach').textContent = pv.reach_28j != null ? fmtN(pv.reach_28j) : 'n/a';
+    hide('loadingCard'); hide('connectCard'); show('profileCard');
+  }
+
+  async function api(a, extra){
+    const r = await fetch(IG_CONSOLE, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(Object.assign({ s: SID, a }, extra || {})) });
+    const d = await r.json().catch(() => ({}));
+    if(r.status === 401){ try{ sessionStorage.removeItem('aa_igc'); }catch(_){} }
+    if(!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    return d;
+  }
+  function status(id, msg, ok){ const el = $(id); el.textContent = msg || ''; el.className = 'status' + (msg ? (ok ? ' ok' : ' err') : ''); }
+
+  function startConsole(){ show('commentsCard'); show('messagesCard'); loadMedia(); loadConvs(); }
+
+  // ── Step 3 : publications + commentaires ──
+  async function loadMedia(){
+    $('posts').innerHTML = '<span class="spin"></span>';
+    try{
+      const d = await api('media');
+      const list = d.media || [];
+      if(!list.length){ $('posts').innerHTML = '<p class="help">No posts found on this account.</p>'; return; }
+      $('posts').innerHTML = list.map(m => '<button class="post' + (MEDIA && MEDIA.id === m.id ? ' on' : '') + '" data-id="' + esc(m.id) + '" title="Select this post">'
+        + '<div class="th">' + (m.thumb ? '' : esc(m.type || 'POST')) + '</div>'
+        + '<div class="cap">' + esc(m.comments_count) + (+m.comments_count === 1 ? ' comment' : ' comments') + ' · ' + esc(m.caption || '') + '</div></button>').join('');
+      $('posts').querySelectorAll('.post').forEach((el, i) => {
+        el.onclick = () => selectMedia(list[i]);
+        if(list[i].thumb) el.querySelector('.th').style.backgroundImage = 'url(' + JSON.stringify(String(list[i].thumb)) + ')';   // posé par le DOM, jamais dans le HTML
+      });
+      if(!MEDIA) selectMedia(list[0]);
+    }catch(e){ $('posts').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+  }
+  function selectMedia(m){
+    MEDIA = m;
+    $('posts').querySelectorAll('.post').forEach(el => el.classList.toggle('on', el.getAttribute('data-id') === m.id));
+    $('openPost').href = m.permalink || '#';
+    show('postPanel'); status('cStatus', ''); loadComments();
+  }
+  async function loadComments(){
+    if(!MEDIA) return;
+    $('comments').innerHTML = '<span class="spin"></span>';
+    try{
+      const d = await api('comments', { media_id: MEDIA.id });
+      const list = d.comments || [];
+      $('comments').innerHTML = list.length ? list.map(c => cmtHtml(c, false)).join('') : '<p class="help">No comments yet on this post.</p>';
+    }catch(e){ $('comments').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+  }
+  function cmtHtml(c, isReply){
+    const id = esc(c.id), mine = ME && String(c.username || '').toLowerCase() === ME.toLowerCase();
+    return '<div class="cmt' + (c.hidden ? ' hid' : '') + '" id="c' + id + '">'
+      + '<div class="who">@' + esc(c.username || '—') + '<span class="when">' + esc(ago(c.timestamp)) + '</span>' + (c.hidden ? '<span class="badge">Hidden</span>' : '') + '</div>'
+      + '<div class="t">' + esc(c.text) + '</div>'
+      + '<div class="row">'
+      + (isReply ? '' : '<button class="btn sec sm" onclick="toggleForm(\'r' + id + '\')" title="Post a public reply under this comment">Reply</button>')
+      + (mine ? '' : '<button class="btn sec sm" onclick="hideCmt(\'' + id + '\',' + (!c.hidden) + ')" title="' + (c.hidden ? 'Make this comment visible to everyone again' : 'Hide this comment from other people') + '">' + (c.hidden ? 'Unhide' : 'Hide') + '</button>')
+      + '<button class="btn danger sm" onclick="delCmt(\'' + id + '\')" title="Permanently delete this comment from Instagram">Delete</button>'
+      + (isReply || mine ? '' : '<button class="btn sec sm" onclick="toggleForm(\'p' + id + '\')" title="Send a direct message to the author of this comment">Send private reply</button>')
+      + '</div>'
+      + (isReply ? '' : '<div class="sub-form" id="fr' + id + '"><textarea rows="2" maxlength="300" id="tr' + id + '">Thanks for your comment!</textarea><div class="row" style="margin-top:6px"><button class="btn sm" onclick="replyCmt(\'' + id + '\')" title="Publishes this public reply">Post reply</button></div></div>'
+        + '<div class="sub-form" id="fp' + id + '"><textarea rows="2" maxlength="1000" id="tp' + id + '">Hi! Here is the link you asked for: https://avatarads.fr</textarea><div class="row" style="margin-top:6px"><button class="btn sm" onclick="privReply(\'' + id + '\')" title="Sends this text as a direct message to the comment author">Send direct message</button></div><p class="help">Delivered to @' + esc(c.username || '') + '\'s Instagram inbox.</p></div>')
+      + ((c.replies && c.replies.length) ? '<div class="rep">' + c.replies.map(r => cmtHtml(r, true)).join('') + '</div>' : '')
+      + '</div>';
+  }
+  function toggleForm(k){ const el = $('f' + k); if(el) el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+  async function run(btn, statusId, fn, okMsg, reload){
+    if(btn) btn.disabled = true; status(statusId, 'Sending to Instagram…', true);
+    try{ await fn(); status(statusId, okMsg, true); if(reload) await reload(); }
+    catch(e){ status(statusId, e.message, false); }
+    finally{ if(btn) btn.disabled = false; }
+  }
+  function postComment(){
+    const t = $('newComment').value.trim(); if(!t) return status('cStatus', 'Write a comment first.', false);
+    run($('postBtn'), 'cStatus', () => api('comment', { media_id: MEDIA.id, text: t }), 'Comment posted on Instagram.', loadComments);
+  }
+  function replyCmt(id){
+    const t = ($('tr' + id) || {}).value || ''; if(!t.trim()) return status('cStatus', 'Write a reply first.', false);
+    run(null, 'cStatus', () => api('reply', { comment_id: id, text: t }), 'Reply posted on Instagram.', loadComments);
+  }
+  function hideCmt(id, h){
+    run(null, 'cStatus', () => api('hide', { comment_id: id, hide: h }), h ? 'Comment hidden on Instagram.' : 'Comment visible again on Instagram.', loadComments);
+  }
+  function delCmt(id){
+    if(!confirm('Delete this comment on Instagram? This cannot be undone.')) return;
+    run(null, 'cStatus', () => api('delete', { comment_id: id }), 'Comment deleted from Instagram.', loadComments);
+  }
+  function privReply(id){
+    const t = ($('tp' + id) || {}).value || ''; if(!t.trim()) return status('cStatus', 'Write a message first.', false);
+    run(null, 'cStatus', () => api('private_reply', { comment_id: id, text: t }), 'Direct message sent — it is now in the person\'s Instagram inbox.', loadConvs);
+  }
+
+  // ── Step 4 : conversations ──
+  async function loadConvs(){
+    $('convs').innerHTML = '<span class="spin"></span>';
+    try{
+      const d = await api('conversations');
+      const list = (d.conversations || []).filter(c => c.user_id);
+      if(!list.length){ $('convs').innerHTML = '<p class="help">No conversations yet. Send your account a direct message from another Instagram account (or use “Send private reply” on a comment), then click “Refresh conversations”.</p>'; return; }
+      $('convs').innerHTML = list.map((c, i) => '<button class="conv' + (CONV && CONV.id === c.id ? ' on' : '') + '" data-i="' + i + '" title="Open this conversation"><b>@' + esc(c.username || c.user_id) + '</b><span class="help" style="margin:0">' + esc(c.updated_time ? ago(c.updated_time) : '') + '</span></button>').join('');
+      $('convs').querySelectorAll('.conv').forEach(el => el.onclick = () => openConv(list[+el.getAttribute('data-i')], +el.getAttribute('data-i')));
+    }catch(e){ $('convs').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+  }
+  async function openConv(c, i){
+    CONV = c; if(i != null) CONV.i = i;
+    $('convs').querySelectorAll('.conv').forEach(el => el.classList.toggle('on', +el.getAttribute('data-i') === CONV.i));
+    show('threadPanel'); $('thread').innerHTML = '<span class="spin"></span>'; status('mStatus', '');
+    try{
+      const d = await api('thread', { conversation_id: c.id });
+      const msgs = d.messages || [];
+      $('thread').innerHTML = msgs.length ? msgs.map(m => '<div class="msg' + (ME && String(m.from || '').toLowerCase() === ME.toLowerCase() ? ' me' : '') + '"><div class="m">@' + esc(m.from || '') + ' · ' + esc(m.created_time ? ago(m.created_time) : '') + '</div>' + esc(m.text || '(attachment)') + '</div>').join('') : '<p class="help">No messages to show.</p>';
+      $('thread').scrollTop = $('thread').scrollHeight;
+    }catch(e){ $('thread').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+  }
+  function sendDm(){
+    if(!CONV) return status('mStatus', 'Select a conversation first.', false);
+    const t = $('dmText').value.trim(); if(!t) return status('mStatus', 'Write a message first.', false);
+    run($('sendBtn'), 'mStatus', () => api('send', { recipient_id: CONV.user_id, text: t }), 'Message sent — it is now in @' + (CONV.username || 'the person') + '\'s Instagram inbox.', () => openConv(CONV));
+  }
+
+  // Rechargement de l'onglet avec une session encore valide : la console revient sans refaire l'OAuth.
+  if(SID){
+    api('me').then(me => { ME = me.username || ME; fillProfile({ username: me.username, followers_count: me.followers_count, media_count: me.media_count }, null); startConsole(); })
+      .catch(() => { SID = ''; });
   }
 </script>
 </body>
