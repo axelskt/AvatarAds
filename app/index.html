@@ -5900,7 +5900,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-04-2130'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-04-2215'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -31821,7 +31821,7 @@ function _mcIsModeration(rd){
   }catch(_){ return false; }
 }
 /* ══ OMNI — édition vidéo par prompt (Gemini Omni Flash edit via fal-proxy) · owner-gated ══ */
-let _omniFile=null, _omniDur=0, _omniOutUrl=null, _omniRes='720p';
+let _omniFile=null, _omniDur=0, _omniOutUrl=null, _omniRes='720p', _omniVW=0, _omniVH=0;
 function initOmni(){
   // Omni ouvert à tous (08/09) : le gating de plan est géré à l'action par spendCreditsFor
   // (pas de membre → paywall, Free → showPlansSheet, developer/owner → illimité).
@@ -31877,7 +31877,7 @@ function _omniPickFile(file){
     // 10 s maximum pour TOUS (durée native du moteur, Axel 02/10 : la rallonge dev par découpage jusqu'à 60 s est retirée)
     if(d>10.5){ toast('Vidéo trop longue — 10 s maximum'); _omniFile=null; _omniDur=0; showEmpty(); _omniUpdateCost(); return; }
     if(d<0.8){ toast('Vidéo trop courte (1 s minimum)'); _omniFile=null; _omniDur=0; showEmpty(); _omniUpdateCost(); return; }
-    _omniFile=file; _omniDur=d; _omniUpdateCost();
+    _omniFile=file; _omniDur=d; _omniVW=v.videoWidth||0; _omniVH=v.videoHeight||0; _omniUpdateCost();
     v.style.display='block'; if(empty) empty.style.display='none';
     if(lbl){ lbl.textContent=(file.name||'vidéo')+' · '+d.toFixed(1)+' s'; lbl.style.display='block'; }
     if(chg) chg.style.display='inline-flex';
@@ -31951,6 +31951,36 @@ function _omniBuildPrompt(p){
   return s;
 }
 function _omniErr(d){ try{ let m=d&&(d.detail||(d.error&&(d.error.message||d.error))||d.message); if(Array.isArray(m)) m=m.map(x=>(x&&(x.msg||x.message))||x).join(' · '); return String(m||'Erreur'); }catch(_){ return 'Erreur'; } }
+// Omni rend TOUJOURS du 9:16 (ou du 16:9) : une vidéo d'un autre format (3:4 d'iPhone…) était recadrée par le modèle lui-même
+// → cadrage décalé, bords inventés, trajectoire de caméra moins fidèle (Axel 04/10). Elle est donc recadrée AU CENTRE au format
+// qu'Omni va rendre (portrait / carré → 9:16, paysage → 16:9), grand côté ramené à 1920 px, AVANT l'envoi — ffmpeg.wasm, comme la
+// référence de Motion Control. Déjà au bon format (à 2 % près) ou dimensions inconnues → fichier intact, aucun traitement.
+// Échec du traitement → fichier intact (Omni recadre alors lui-même, comme avant). Même règle que la carte Claude (mc-ref crop916).
+function _omniCropFor(w, h){
+  if(!(w>0 && h>0)) return null;
+  const R = w<=h ? 9/16 : 16/9;
+  if(Math.abs(w/h - R)/R < 0.02) return null;
+  let cw=Math.min(w, Math.round(h*R)), ch=Math.min(h, Math.round(w/R)); cw-=cw%2; ch-=ch%2;
+  if(cw<2 || ch<2) return null;
+  const x=Math.round((w-cw)/4)*2, y=Math.round((h-ch)/4)*2;
+  return { w:cw, h:ch, x, y };
+}
+async function _omniPrep(file){
+  const c=_omniCropFor(_omniVW, _omniVH); if(!c) return file;
+  try{
+    await _loadFFmpeg(); const ff=_ffmpegInst;
+    try{ await ff.FS('unlink','omni_in.mp4'); }catch(_){}
+    try{ await ff.FS('unlink','omni_out.mp4'); }catch(_){}
+    await ff.FS('writeFile','omni_in.mp4', await window._ffFetchFile(file));
+    const k=Math.min(1, 1920/Math.max(c.w, c.h)), sw=Math.round(c.w*k/2)*2, sh=Math.round(c.h*k/2)*2;
+    await ff.run('-i','omni_in.mp4','-t','10.5','-vf','crop='+c.w+':'+c.h+':'+c.x+':'+c.y+',scale='+sw+':'+sh+',setsar=1,format=yuv420p',
+      '-c:v','libx264','-preset','veryfast','-crf','20','-c:a','aac','-b:a','128k','-movflags','+faststart','omni_out.mp4');
+    const data=await ff.FS('readFile','omni_out.mp4');
+    try{ await ff.FS('unlink','omni_in.mp4'); await ff.FS('unlink','omni_out.mp4'); }catch(_){}
+    if(data && data.length>1000) return new Blob([data.buffer], { type:'video/mp4' });
+  }catch(e){ console.warn('[omni] recadrage 9:16 impossible — vidéo envoyée telle quelle', e); }
+  return file;
+}
 async function _omniGenerate(){
   if(!_omniFile){ toast('Upload une vidéo d\'abord'); return; }
   if(!_omniFormatOk(_omniFile)){ toast('Format vidéo non pris en charge — réexporte-la en MP4 (H.264) ou en MOV'); return; }   // Audit 04/10 (OMNI-R1) : avant tout débit
@@ -31964,13 +31994,15 @@ async function _omniGenerate(){
   try{
     const res=document.getElementById('omniResult'); if(res) res.style.display='none';
     const _form=document.getElementById('omniForm'); if(_form) _form.style.display='none';   // le chargement/résultat PREND la place du formulaire
+    let _oSrc=_omniFile;
+    if(_omniCropFor(_omniVW, _omniVH)){ _omniProg('Préparation de la vidéo…',6); _oSrc=await _omniPrep(_omniFile); }
     _omniProg('Envoi de la vidéo…',10);
     const { data:{ user } } = await sb.auth.getUser();
     if(!user) throw new Error('Session expirée — reconnecte-toi');
     const path=user.id+'/omni-'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.mp4';
     // Audit 04/10 (OMNI-R1/STO-1) : un fichier accepté sur son extension (type vide) est ré-étiqueté — supabase-js envoie le
     // type DU FICHIER (multipart), sinon application/octet-stream, refusé par la liste des types du stockage.
-    const _oBody=_omniFile.type ? _omniFile : new Blob([_omniFile], { type: /\.mov$/i.test(_omniFile.name||'') ? 'video/quicktime' : 'video/mp4' });
+    const _oBody=_oSrc.type ? _oSrc : new Blob([_oSrc], { type: /\.mov$/i.test(_omniFile.name||'') ? 'video/quicktime' : 'video/mp4' });
     const up=await sb.storage.from('render-media').upload(path,_oBody,{contentType:_oBody.type||'video/mp4',upsert:true});
     if(up.error) throw new Error('upload : '+_aaStoMsg(up.error));
     const sg=await sb.storage.from('render-media').createSignedUrl(path,3600);

@@ -5099,7 +5099,8 @@ serve(async (req) => {
         .eq('id', jobId).eq('status', 'pending').select('id')
       if (!tookT || !tookT.length) return json(409, { error: 'not_pending' })
       const { data: rj, error: rjE } = await svc.from('render_jobs').insert({ user_id: uid, status: 'queued', input_video: src, assets: [], avatar_clips: [],
-        plan: { __compose: 'mc-ref', maxDur: Math.min(params.tool === 'omni_edit' ? 10 : 30, Number(params.max_dur) || 30), minDur: params.tool === 'motion' } }).select('id').single()
+        plan: { __compose: 'mc-ref', maxDur: Math.min(params.tool === 'omni_edit' ? 10 : 30, Number(params.max_dur) || 30), minDur: params.tool === 'motion',
+          crop916: params.tool === 'omni_edit' } }).select('id').single()   // Omni : recadrée au format rendu (9:16 / 16:9), Axel 04/10
       if (rjE || !rj) { await failAndRefund(uid, { id: jobId }, 'préparation impossible'); return json(500, { error: 'prep' }) }
       await svc.from('mcp_jobs').update({ op_name: 'vn:' + rj.id }).eq('id', jobId).eq('status', 'running')
       return json(200, { job_id: jobId, statusUrl: `https://mcp.avatarads.fr/status/${jobId}` })

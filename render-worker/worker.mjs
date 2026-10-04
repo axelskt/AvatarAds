@@ -886,11 +886,19 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // échelle relative (iw/ih) : ffmpeg redresse d'abord une vidéo de téléphone tournée (rotation dans les métadonnées) → une
     // vidéo portrait reste portrait (audit 02/10 : l'ancien scale=largeur:hauteur lisait les dimensions codées, avant rotation, et
     // écrasait un portrait iPhone en paysage). k ne dépend que du plus petit / plus grand côté : invariant par rotation.
-    const args = ['-y', '-i', src, '-t', String(maxDur + pad), '-vf', `scale=trunc(iw*${k.toFixed(6)}/2)*2:trunc(ih*${k.toFixed(6)}/2)*2,setsar=1,format=yuv420p${pad ? `,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}` : ''}`]
+    // Omni (Axel 04/10, plan.crop916) : Omni rend TOUJOURS du 9:16 ou du 16:9 et recadrait seul une vidéo 3:4 (cadrage et
+    // trajectoire décalés, bords inventés). La vidéo est donc recadrée AU CENTRE au format qu'Omni va rendre (portrait ou carré
+    // → 9:16, paysage → 16:9), puis ramenée dans 340–1920 px APRÈS la coupe. Dimensions lues après redressement (iw/ih des
+    // filtres) : une vidéo de téléphone tournée reste juste. Déjà au bon format → coupe nulle.
+    const R = 'if(lte(iw,ih),9/16,16/9)', K = 'if(lt(min(iw,ih),340),720/min(iw,ih),if(gt(max(iw,ih),1920),1920/max(iw,ih),1))'
+    const geo = plan.crop916
+      ? `crop=w='trunc(min(iw,ih*${R})/2)*2':h='trunc(min(ih,iw/${R})/2)*2',scale=w='trunc(iw*${K}/2)*2':h='trunc(ih*${K}/2)*2'`
+      : `scale=trunc(iw*${k.toFixed(6)}/2)*2:trunc(ih*${k.toFixed(6)}/2)*2`
+    const args = ['-y', '-i', src, '-t', String(maxDur + pad), '-vf', `${geo},setsar=1,format=yuv420p${pad ? `,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}` : ''}`]
     if (hasA) args.push('-af', pad ? `apad=pad_dur=${pad.toFixed(2)}` : 'anull', '-c:a', 'aac', '-b:a', '128k'); else args.push('-an')
     args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-movflags', '+faststart', outPath)
     execFileSync('ffmpeg', args, { stdio: 'pipe' })
-    console.log(`✓ mc-ref ${w}x${h} (codé) ${dur.toFixed(2)}s → ×${k.toFixed(3)}${pad ? ' +' + pad.toFixed(2) + 's' : ''}${dur > maxDur + 0.5 ? ' coupée à ' + maxDur + 's' : ''}`)
+    console.log(`✓ mc-ref ${w}x${h} (codé) ${dur.toFixed(2)}s → ${plan.crop916 ? 'recadrée 9:16/16:9' : '×' + k.toFixed(3)}${pad ? ' +' + pad.toFixed(2) + 's' : ''}${dur > maxDur + 0.5 ? ' coupée à ' + maxDur + 's' : ''}`)
     return
   }
 
