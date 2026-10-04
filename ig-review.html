@@ -427,11 +427,12 @@
     }catch(e){ $('comments').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
   }
   function cmtHtml(c, isReply){
-    const id = esc(c.id), mine = !!ME && String(c.username || '').toLowerCase() === ME.toLowerCase();
+    // mine = commentaire du compte connecté (calculé par le serveur) : Instagram l'affiche toujours → ni Hide ni Message.
+    const id = esc(c.id), mine = !!c.mine || (!!ME && String(c.username || '').toLowerCase() === ME.toLowerCase()), who = c.username || 'Instagram user';
     return '<div class="cmt' + (c.hidden ? ' hid' : '') + '">'
-      + '<span class="av">' + initial(c.username) + '</span>'
+      + '<span class="av">' + initial(who) + '</span>'
       + '<div class="body">'
-      + '<div class="who">' + esc(c.username || '—') + '<span class="when">' + esc(ago(c.timestamp)) + '</span>' + (c.hidden ? '<span class="badge">' + ic('i-eyeoff', 11) + 'Hidden</span>' : '') + '</div>'
+      + '<div class="who">' + esc(who) + '<span class="when">' + esc(ago(c.timestamp)) + '</span>' + (c.hidden ? '<span class="badge">' + ic('i-eyeoff', 11) + 'Hidden</span>' : '') + '</div>'
       + '<div class="t">' + esc(c.text) + '</div>'
       + '<div class="acts">'
       + (isReply ? '' : '<button class="btn quiet" onclick="toggle(\'r' + id + '\')" title="Post a public reply under this comment">' + ic('i-reply') + 'Reply</button>')
@@ -440,8 +441,8 @@
       + (isReply || mine ? '' : '<button class="btn quiet" onclick="toggle(\'p' + id + '\')" title="Send a direct message to the author of this comment">' + ic('i-dm') + 'Message</button>')
       + '</div>'
       + (isReply ? '' :
-          '<div class="inline hidden" id="fr' + id + '"><div class="composer"><textarea rows="1" maxlength="300" id="tr' + id + '">Thanks for your comment!</textarea><button class="btn primary" onclick="replyCmt(this,\'' + id + '\')" title="Publishes this public reply">' + ic('i-send') + 'Reply</button></div><div class="hint">Posted publicly under @' + esc(c.username || '') + '\'s comment.</div></div>'
-        + '<div class="inline hidden" id="fp' + id + '"><div class="composer"><textarea rows="2" maxlength="1000" id="tp' + id + '">Hi! Here is the link you asked for: https://avatarads.fr</textarea><button class="btn primary" onclick="privReply(this,\'' + id + '\')" title="Sends this text as a direct message to the comment author">' + ic('i-send') + 'Send</button></div><div class="hint">Private message — delivered to @' + esc(c.username || '') + '\'s Instagram inbox.</div></div>')
+          '<div class="inline hidden" id="fr' + id + '"><div class="composer"><textarea rows="1" maxlength="300" id="tr' + id + '">Thanks for your comment!</textarea><button class="btn primary" onclick="replyCmt(this,\'' + id + '\')" title="Publishes this public reply">' + ic('i-send') + 'Reply</button></div><div class="hint">Posted publicly under ' + esc(c.username ? '@' + c.username + '\'s' : 'this') + ' comment.</div></div>'
+        + '<div class="inline hidden" id="fp' + id + '"><div class="composer"><textarea rows="2" maxlength="1000" id="tp' + id + '">Hi! Here is the link you asked for: https://avatarads.fr</textarea><button class="btn primary" onclick="privReply(this,\'' + id + '\')" title="Sends this text as a direct message to the comment author">' + ic('i-send') + 'Send</button></div><div class="hint">Private message — delivered to ' + esc(c.username ? '@' + c.username + '\'s' : 'the author\'s') + ' Instagram inbox.</div></div>')
       + ((c.replies && c.replies.length) ? '<div class="reply-list">' + c.replies.map(r => cmtHtml(r, true)).join('') + '</div>' : '')
       + '</div></div>';
   }
@@ -454,7 +455,13 @@
     const t = (($('tr' + id) || {}).value || '').trim(); if(!t) return toast('Write a reply first.', false);
     act(btn, () => api('reply', { comment_id: id, text: t }), 'Reply posted on Instagram', loadComments);
   }
-  function hideCmt(btn, id, h){ act(btn, () => api('hide', { comment_id: id, hide: h }), h ? 'Comment hidden on Instagram' : 'Comment visible again on Instagram', loadComments); }
+  // L'état affiché est celui RELU chez Instagram après l'action (jamais supposé).
+  async function hideCmt(btn, id, h){
+    if(btn) btn.disabled = true;
+    try{ const d = await api('hide', { comment_id: id, hide: h }); toast(d.hidden ? 'Comment hidden on Instagram' : 'Comment visible again on Instagram', true); await loadComments(); }
+    catch(e){ toast(e.message, false); }
+    finally{ if(btn) btn.disabled = false; }
+  }
   function delCmt(btn, id){
     if(!confirm('Delete this comment from Instagram? This cannot be undone.')) return;
     act(btn, () => api('delete', { comment_id: id }), 'Comment deleted from Instagram', loadComments);

@@ -79,10 +79,41 @@ Deno.serve(async (req) => {
     }
     if (a === 'comments') {
       const mid = String(b.media_id || ''); if (!ID_RE.test(mid)) return json(400, { error: 'Invalid post.' })
-      const r = await g(T, `/${mid}/comments?fields=id,text,username,timestamp,hidden,like_count,replies{id,text,username,timestamp,hidden}&limit=50`)
-      return json(200, { comments: (r.data || []).map((c: Record<string, unknown>) => ({
-        id: c.id, text: c.text, username: c.username, timestamp: c.timestamp, hidden: !!c.hidden,
-        replies: (((c.replies as Record<string, unknown>)?.data as Record<string, unknown>[]) || []).map((x) => ({ id: x.id, text: x.text, username: x.username, timestamp: x.timestamp, hidden: !!x.hidden })) })) })
+      // 04/10 (test d'Axel) : (1) Instagram renvoie certaines RÉPONSES aussi dans la liste principale, avec auteur et état masqué
+      // complets, alors que l'arête replies{} les donne sans auteur ni état → fusion, la version complète gagne ; (2) l'auteur
+      // vient de username, sinon de from{username} ; (3) « mine » (commentaire du compte) est calculé ici : Instagram affiche
+      // TOUJOURS les commentaires du propriétaire de la publication, même masqués → pas de Hide ni de Message sur eux.
+      const F = 'id,text,username,from{id,username},timestamp,hidden,parent_id'
+      let r: Record<string, unknown>
+      try { r = await g(T, `/${mid}/comments?fields=${F},replies{${F}}&limit=50`) }
+      catch { r = await g(T, `/${mid}/comments?fields=id,text,username,timestamp,hidden,parent_id,replies{id,text,username,timestamp,hidden,parent_id}&limit=50`) }
+      const me = String(s.username || '').toLowerCase(), meId = String(s.ig_user_id || '')
+      type C = { id: string; text: string; username: string | null; timestamp: string; hidden: boolean; parent_id: string | null; mine: boolean; replies: C[] }
+      const norm = (c: Record<string, unknown>): C => {
+        const f = (c.from as Record<string, unknown>) || {}
+        const u = (c.username || f.username || null) as string | null, fid = f.id ? String(f.id) : ''
+        return { id: String(c.id), text: String(c.text ?? ''), username: u, timestamp: String(c.timestamp || ''), hidden: !!c.hidden,
+          parent_id: c.parent_id ? String(c.parent_id) : null, mine: (!!me && String(u || '').toLowerCase() === me) || (!!meId && fid === meId), replies: [] }
+      }
+      const raw = ((r.data as Record<string, unknown>[]) || [])
+      const top = raw.map(norm), byId = new Map(top.map((c) => [c.id, c])), nested = new Set<string>()
+      raw.forEach((rc, i) => {
+        for (const x of (((rc.replies as Record<string, unknown>)?.data as Record<string, unknown>[]) || [])) {
+          const n = norm(x), full = byId.get(n.id)
+          const rep = full ? { ...n, username: full.username || n.username, hidden: full.hidden || n.hidden, mine: full.mine || n.mine } : n
+          top[i].replies.push(rep); nested.add(rep.id)
+        }
+      })
+      for (const c of top) { const p = c.parent_id && byId.get(c.parent_id); if (p && !nested.has(c.id)) { p.replies.push(c); nested.add(c.id) } }
+      // auteur encore inconnu sur une réponse (arête sans username) : relu une à une, 15 au plus
+      const sans = top.flatMap((c) => c.replies).filter((x) => !x.username).slice(0, 15)
+      await Promise.all(sans.map(async (x) => { try {
+        const d = await g(T, `/${x.id}?fields=username,hidden`); x.username = (d.username as string) || null; x.hidden = !!d.hidden
+        x.mine = !!me && String(x.username || '').toLowerCase() === me
+      } catch { /* garde la version sans auteur */ } }))
+      const list = top.filter((c) => !nested.has(c.id))
+      list.forEach((c) => c.replies.sort((x, y) => Date.parse(x.timestamp) - Date.parse(y.timestamp)))
+      return json(200, { comments: list })
     }
     if (a === 'comment') {
       const mid = String(b.media_id || ''), t = txt(b.text, 300)
@@ -98,8 +129,14 @@ Deno.serve(async (req) => {
     }
     if (a === 'hide') {
       const cid = String(b.comment_id || ''); if (!ID_RE.test(cid)) return json(400, { error: 'Invalid comment.' })
+      // Règle Instagram : un commentaire du propriétaire de la publication reste TOUJOURS affiché, même « masqué » — refusé
+      // ici avec l'explication plutôt qu'un faux succès. Après l'action, l'état est RELU chez Instagram (jamais supposé).
+      const who = await g(T, `/${cid}?fields=username`).catch(() => ({} as Record<string, unknown>))
+      if (s.username && String(who.username || '').toLowerCase() === String(s.username).toLowerCase())
+        return json(400, { error: 'Instagram always shows comments written by the post owner — Hide works on other people\'s comments.' })
       await g(T, `/${cid}?hide=${b.hide === true ? 'true' : 'false'}`, { method: 'POST' })
-      return json(200, { ok: true, hidden: b.hide === true })
+      const now = await g(T, `/${cid}?fields=hidden`).catch(() => ({ hidden: b.hide === true } as Record<string, unknown>))
+      return json(200, { ok: true, hidden: !!now.hidden })
     }
     if (a === 'delete') {
       const cid = String(b.comment_id || ''); if (!ID_RE.test(cid)) return json(400, { error: 'Invalid comment.' })
