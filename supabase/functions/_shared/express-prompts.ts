@@ -14,7 +14,8 @@ function _expEnvLock(p){
   if(_expWantsScenes(p)) return '';
   return '. ENVIRONMENT LOCK: the setting, background, lighting, framing and camera position are EXACTLY those of the reference image and stay UNCHANGED for the entire clip — one continuous take, no cut, no scene change, no new location, no camera travel, nothing appears or disappears in the background';
 }
-function _expSpeechLock(p){
+function _expSpeechLock(p, seg){
+  if(seg && seg.mute) return '. VOICE: she says NOTHING in this part — no new word, no sound from her mouth; natural silent continuation, mouth closed, small natural movements and expressions.';
   const line=_expQuotedLine(p);
   const kw=_expCommentKeyword(line);
   const _noEnd = false;   // Axel 02/10 : Omni Flash NE clôt PAS proprement (l'avatar parlait jusqu'à la coupe) → verrou de fin pour TOUS les moteurs
@@ -25,7 +26,8 @@ function _expSpeechLock(p){
     + (line ? ' THE ONLY WORDS SPOKEN IN THE ENTIRE CLIP, VERBATIM AND IN THIS LANGUAGE: « '+lineSpoken+' ».' : ' The person says ONLY the requested line, verbatim.')
     + (kw ? ' CALL-TO-ACTION KEYWORD « '+kw.toLowerCase()+' »: this is a keyword the viewer must TYPE in the comments. She says « '+kw.toLowerCase()+' » as ONE single, whole, FLUID word — its normal natural pronunciation, spoken smoothly in one breath — clearly and a bit LOUDER and a touch slower than the rest for emphasis, with a deliberate hand gesture (pointing down toward the comments) and a strong expressive face. NEVER spell it out, NEVER separate, announce or repeat its letters, NEVER split it into syllables, NEVER stutter, hesitate on it or repeat it (do NOT say it as separate letters, do NOT put a pause or an extra consonant before it, e.g. never « '+kw[0]+'… '+kw.toLowerCase()+' » nor « '+kw[0]+'-'+kw.toLowerCase()+' »); it comes out as one clean confident word. Never translate it, inflect it, pluralize it, add an article, or turn « '+kw+' » into a phrase or a place (do NOT say "un '+kw.toLowerCase()+'").' : '')
     + ' Nothing is said before the line (no greeting, no "euh", no intro, no invented word) and nothing after it (no extra sentence, no ad-lib, no trailing sound). Speech starts right at the first frame.'
-    + (_noEnd ? '' : ' CRITICAL ENDING: she must COMPLETE the whole sentence and land its final word BEFORE the clip ends (never cut off mid-word); pace the delivery so the last word finishes with about half a second to spare, then she STOPS talking, closes her mouth and holds a natural still, silent expression until the very end. The last ~0.5 second contains ABSOLUTELY no speech, no extra word, no filler and no trailing mouth movement or sound — total silence with a closed mouth.');
+    + ((seg && seg.i < seg.n-1) ? ' PACING: this is NOT the end of what she says — she delivers these words at a natural pace that fills the whole clip and keeps the flow going at the end (at most a short natural breath): no closing pause, no long silence, no wrap-up.'
+      : _noEnd ? '' : ' CRITICAL ENDING: she must COMPLETE the whole sentence and land its final word BEFORE the clip ends (never cut off mid-word); pace the delivery so the last word finishes with about half a second to spare, then she STOPS talking, closes her mouth and holds a natural still, silent expression until the very end. The last ~0.5 second contains ABSOLUTELY no speech, no extra word, no filler and no trailing mouth movement or sound — total silence with a closed mouth.');
 }
 function _expSelfieCue(){
   return (window._expStyle==='realiste' || window._expStyle==='ugc')
@@ -46,13 +48,16 @@ const styleMeta = { prompt: "authentic UGC selfie video, handheld front phone ca
 // Omni Flash image → vidéo (photo de départ) : assemblage Express + enveloppe « CLEAN SHOT » de _expOmniImageToVideo.
 export function expressOmniPrompt(prompt: string): string {
   window._expVeoModel = 'omni'; const _isOmni = true
-  const animPrompt = (_isOmni ? '' : _EXP_FRENCH) + ((prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
-      + _expEnvLock(prompt)
-      + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
+  const _mkAnim = (pr, seg) => (_isOmni ? '' : _EXP_FRENCH)
+      + ((seg && seg.i > 0) ? 'CONTINUATION OF THE PREVIOUS CLIP: this extends the SAME continuous take seamlessly from its last frame — same person, same face, same outfit, same place, same light, same framing and camera; no cut, no restart, no new greeting; she simply carries on in the same voice and tone. ' : '')
+      + ((pr + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
+      + _expEnvLock(pr)
+      + (window._expVoice==='native' ? _expSpeechLock(pr, seg) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
       + _EXP_IDLOCK + _EXP_HOLDLOCK + _EXP_ENERGYLOCK + _EXP_PRODUCTLOCK
       + (_isOmni ? '' : _EXP_FRENCH_END);
+  const animPrompt = _mkAnim(prompt, null)
   return (function (prompt) { const _omniPrompt = _EXP_FRENCH + _EXP_PIXEL_LOCK + _EXP_PRODUCT_VIDEO_LOCK + "CLEAN SHOT, ZERO TEXT. Never render, write, print, spell out, display or overlay ANY text, letters, words, captions, subtitles, labels or watermarks anywhere in the frame — not on the clothing, not on the product, not floating in the air, not in the background, nowhere. Every word from the script is SPOKEN OUT LOUD only and must NEVER appear as writing on screen. " + prompt + " (Hard rule, do not break: absolutely no on-screen text, captions or written words — audio speech only, clean visuals only.)" + _EXP_FRENCH_END; return _omniPrompt })(animPrompt)
 }
 // Photo de départ générée quand il n'y a pas d'image (Express : prompt + style ugc + « no text… »), texte de l'app.
@@ -76,6 +81,12 @@ export function omniEditPrompt(p: string): string{
     // Anglais : la formule exacte documentée par Google, la plus fiable. Gemini est
     // multilingue, donc un prompt FR + cette clause EN cohabitent sans souci.
     s+=' Keep everything else in the video exactly the same.';
+  }
+  // MOUVEMENT (Axel 04/10, avant/après « Clio → GT3 RS ») : un panoramique ALLER-RETOUR de la source ressortait en UN seul
+  // panoramique, avec un départ et une arrivée différents. La trajectoire de caméra est donc imposée moment par moment — en
+  // une phrase (doc Google : prompts simples), sauf si l'utilisateur l'a déjà demandé lui-même.
+  if(!/(same (camera )?(motion|movement|trajectory|path)|m[êe]me mouvement|m[êe]me trajectoire)/i.test(s)){
+    s+=' The camera motion must match the source video EXACTLY, moment by moment: same starting view, same pans, turns and direction changes at the same times and the same speed, same ending view — follow the original camera path 1:1, never a new or simplified one.';
   }
   // Préservations CIBLÉES (retours Axel 13/09) : la POSITION/placement et le CADRAGE ne changent pas
   // (il mettait le sujet côté conducteur au lieu de passager), et rien d'inventé.
@@ -112,12 +123,15 @@ export function motionControlPrompt(o: { instruction?: string; camFollow?: boole
 // Veo 3.1 Lite (sans photo) : même assemblage Express que l'app, moteur Veo (verrou de fin de parole compris).
 export function expressVeoPrompt(prompt: string): string {
   window._expVeoModel = 'lite'; const _isOmni = false
-  const animPrompt = (_isOmni ? '' : _EXP_FRENCH) + ((prompt + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
-      + _expEnvLock(prompt)
-      + (window._expVoice==='native' ? _expSpeechLock(prompt) : '')
+  const _mkAnim = (pr, seg) => (_isOmni ? '' : _EXP_FRENCH)
+      + ((seg && seg.i > 0) ? 'CONTINUATION OF THE PREVIOUS CLIP: this extends the SAME continuous take seamlessly from its last frame — same person, same face, same outfit, same place, same light, same framing and camera; no cut, no restart, no new greeting; she simply carries on in the same voice and tone. ' : '')
+      + ((pr + ', ' + styleMeta.prompt + ', natural realistic motion, authentic real handheld footage, believable physics, looks like a real phone video, NOT an AI render' + _expSelfieCue()))
+      + _expEnvLock(pr)
+      + (window._expVoice==='native' ? _expSpeechLock(pr, seg) : '')
       + ((window._expStyle==='realiste' || window._expStyle==='ugc') ? _EXP_TEXLOCK : '')
       + ((_isOmni && (window._expStyle==='realiste' || window._expStyle==='ugc')) ? _EXP_TEXLOCK_OMNI : '')   // Omni i2v : verrou 1:1 renforcé (photo = 1re frame, on anime, on ne redessine pas)
       + _EXP_IDLOCK + _EXP_HOLDLOCK + _EXP_ENERGYLOCK + _EXP_PRODUCTLOCK
       + (_isOmni ? '' : _EXP_FRENCH_END);
+  const animPrompt = _mkAnim(prompt, null)
   return animPrompt
 }

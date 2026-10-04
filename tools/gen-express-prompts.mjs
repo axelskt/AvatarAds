@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const app = readFileSync(new URL('../app/index.html', import.meta.url), 'utf8');
 function fn(name) {
-  const m = app.match(new RegExp('\\nfunction ' + name + '\\(p?[a-z]*\\)\\s*\\{[\\s\\S]*?\\n\\}\\n'));
+  const m = app.match(new RegExp('\\nfunction ' + name + '\\([a-z, ]*\\)\\s*\\{[\\s\\S]*?\\n\\}\\n'));   // (p) ou (p, seg) — _expSpeechLock prend la passe d'une vidéo prolongée (04/10)
   const one = app.match(new RegExp('\\nfunction ' + name + '\\([^)]*\\)\\{[^\\n]*\\}\\n'));
   const r = one || m;
   if (!r) throw new Error('fonction introuvable dans app/index.html : ' + name);
@@ -31,9 +31,10 @@ function stmt(re, what) { const m = app.match(re); if (!m) throw new Error(what 
 const FNS = ['_expQuotedLine', '_expCommentKeyword', '_expWantsScenes', '_expEnvLock', '_expSpeechLock', '_expSelfieCue'].map(fn);
 const LOCKS = ['_EXP_TEXLOCK', '_EXP_TEXLOCK_OMNI', '_EXP_IDLOCK', '_EXP_HOLDLOCK', '_EXP_ENERGYLOCK', '_EXP_PRODUCTLOCK', '_EXP_FRENCH', '_EXP_FRENCH_END', '_EXP_PIXEL_LOCK', '_EXP_PRODUCT_VIDEO_LOCK'];
 const imgP = stmt(/const imgPrompt = prompt \+ ', ' \+ styleMeta\.prompt[^\n]*;/, 'prompt image de départ');
-const anim = stmt(/let animPrompt = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage animPrompt').replace(/^let /, 'const ');
+// Depuis le 04/10 (extensions Veo), l'app assemble le prompt par PASSE (_mkAnim) ; le MCP rejoue la passe unique (seg null).
+const anim = stmt(/const _mkAnim = [\s\S]*?_EXP_FRENCH_END\);/, 'assemblage _mkAnim') + '\n  const animPrompt = _mkAnim(prompt, null)';
 const wrap = stmt(/const _omniPrompt = _EXP_FRENCH \+ _EXP_PIXEL_LOCK \+ _EXP_PRODUCT_VIDEO_LOCK \+ "CLEAN SHOT[^\n]*;/, 'enveloppe _omniPrompt');
-for (const k of ['_expSelfieCue()', '_expEnvLock(prompt)', '_expSpeechLock(prompt)', '_EXP_TEXLOCK_OMNI', '_EXP_PRODUCTLOCK']) if (!anim.includes(k)) throw new Error('assemblage : ' + k + ' absent');
+for (const k of ['_expSelfieCue()', '_expEnvLock(pr)', '_expSpeechLock(pr, seg)', '_EXP_TEXLOCK_OMNI', '_EXP_PRODUCTLOCK']) if (!anim.includes(k)) throw new Error('assemblage : ' + k + ' absent');
 // ── Omni (édition vidéo par prompt) et Motion Control : MÊMES prompts que l'app (Axel 02/10, outils MCP edit_video / motion_control)
 const omniFn = fn('_omniBuildPrompt');
 const omniLogo = stmt(/const _OMNI_LOGO_FIDELITY = (true|false);/, 'kill-switch _OMNI_LOGO_FIDELITY');

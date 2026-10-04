@@ -5900,7 +5900,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-04-2000'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-04-2130'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -30908,9 +30908,12 @@ const EXP_MODELS = [
   { v:'standard', name:'Veo',          sub:'Rapide · éco' },
   { v:'pro',      name:'Veo Fast',     sub:'kie.ai · dev', dev:true },   // test kie.ai : compte developer seulement
 ];
+// Flash (Omni) n'est proposé que pour les styles photo réels : « UGC réel » et « Réaliste » (Axel 04/10). Cartoon 3D et Studio
+// produit = Veo seulement (la carte Flash disparaît, Veo est sélectionné à sa place).
+function _expFlashStyle(){ return ['ugc','realiste'].includes(window._expStyle||'ugc'); }
 function _expModelsVisible(){
   const kie=_kieOn();
-  return EXP_MODELS.filter(m=>!m.dev || kie).map(m=>{
+  return EXP_MODELS.filter(m=>(!m.dev || kie) && (m.v!=='omni' || _expFlashStyle())).map(m=>{
     if(!kie) return m;   // clients : cartes inchangées
     if(m.v==='standard') return { ...m, sub:'kie.ai · dev' };
     if(m.v==='omni')     return { ...m, sub:'kie.ai · 1080p' };
@@ -30936,7 +30939,8 @@ function _expRenderModels(){
   const row=document.getElementById('expModelRow'); if(!row) return;
   const plan=(currentMember?.plan||'free').toLowerCase();
   if(window._expVeoModel==='pro' && !_expModelAllowed('pro')) window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus (sauf test kie dev)
-  if(!window._expVeoModel) window._expVeoModel='omni';   // Axel 27/09 : Flash sélectionné par défaut
+  if(!window._expVeoModel) window._expVeoModel=_expFlashStyle() ? 'omni' : 'standard';   // Axel 27/09 : Flash par défaut (styles photo réels seulement, 04/10)
+  if(window._expVeoModel==='omni' && !_expFlashStyle()) window._expVeoModel='standard';
   if(window._expVeoModel==='omni' && !_expModelAllowed('omni')) window._expVeoModel='standard'; // plan sans Omni
   row.innerHTML = _expModelsVisible().map(m=>{
     const on=m.v===window._expVeoModel, locked=!_expModelAllowed(m.v);
@@ -30947,7 +30951,8 @@ function _expRenderModels(){
   }).join('');
 }
 function _expPickModel(v){
-  if(!_expModelAllowed(v)) return;   // seul « Veo Fast » (test kie du compte developer) peut être fermé ; Omni = tous (25/09)
+  if(!_expModelAllowed(v)) return;
+  if(v==='omni' && !_expFlashStyle()) return;   // Flash : UGC réel et Réaliste seulement   // seul « Veo Fast » (test kie du compte developer) peut être fermé ; Omni = tous (25/09)
   window._expVeoModel=v; if(v!=='omni' && window._expFormat==='1:1') window._expFormat='9:16';
   _expKieQualSync();
   if(v==='omni' && window._exp1080Forced){ window._exp1080Forced=false; window._expDurAuto=true; }   // le 8 s forcé était une limite Veo → Omni repasse en Libre
@@ -30958,6 +30963,8 @@ function _expPickModel(v){
 }
 
 function initExpress(){
+  // Style sans Flash (Cartoon 3D, Studio produit) : Veo prend la place AVANT tout calcul (qualité, crans de durée, coût).
+  if(window._expVeoModel==='omni' && !_expFlashStyle()){ window._expVeoModel='standard'; if(window._expFormat==='1:1') window._expFormat='9:16'; }
   _expKieQualSync();   // AVANT la durée : la règle Veo « 1080p dès 8 s » doit lire la vraie qualité de l'user
   // Style grid
   const sg = document.getElementById('expStyleGrid');
@@ -31239,6 +31246,7 @@ function _expSetDur(v){
 function _expPickStyle(id){ window._expStyle=id; initExpress(); }
 function _expPickFormat(v){
   // Le carré (1:1) est natif sur Omni Flash uniquement (Veo ne fait pas le 1:1) → on bascule sur Omni.
+  if(v==='1:1' && !_expFlashStyle()) return;   // carré = Flash seulement, et Flash = styles photo réels (04/10)
   if(v==='1:1') window._expVeoModel='omni';   // carré = Omni Flash (via fal : kie n'en fait pas), ouvert à tous depuis le 25/09
   window._expFormat=v; initExpress();
 }
@@ -31920,6 +31928,12 @@ function _omniBuildPrompt(p){
     // Anglais : la formule exacte documentée par Google, la plus fiable. Gemini est
     // multilingue, donc un prompt FR + cette clause EN cohabitent sans souci.
     s+=' Keep everything else in the video exactly the same.';
+  }
+  // MOUVEMENT (Axel 04/10, avant/après « Clio → GT3 RS ») : un panoramique ALLER-RETOUR de la source ressortait en UN seul
+  // panoramique, avec un départ et une arrivée différents. La trajectoire de caméra est donc imposée moment par moment — en
+  // une phrase (doc Google : prompts simples), sauf si l'utilisateur l'a déjà demandé lui-même.
+  if(!/(same (camera )?(motion|movement|trajectory|path)|m[êe]me mouvement|m[êe]me trajectoire)/i.test(s)){
+    s+=' The camera motion must match the source video EXACTLY, moment by moment: same starting view, same pans, turns and direction changes at the same times and the same speed, same ending view — follow the original camera path 1:1, never a new or simplified one.';
   }
   // Préservations CIBLÉES (retours Axel 13/09) : la POSITION/placement et le CADRAGE ne changent pas
   // (il mettait le sujet côté conducteur au lieu de passager), et rien d'inventé.
@@ -42155,7 +42169,8 @@ window._mExpPickVoiceInline=function(id){
 window._mExpRenderModelInline=function(){
   var c=document.getElementById('mExpModelInline'); if(!c) return;
   if(window._expVeoModel==='pro' && !(typeof _expModelAllowed==='function' && _expModelAllowed('pro'))) window._expVeoModel='standard';   // l'ancien « Veo Pro » n'existe plus (sauf test kie dev)
-  if(!window._expVeoModel) window._expVeoModel='omni';   // Axel 27/09 : Flash sélectionné par défaut
+  if(!window._expVeoModel) window._expVeoModel=(typeof _expFlashStyle==='function' && !_expFlashStyle()) ? 'standard' : 'omni';   // Flash par défaut, styles photo réels seulement (04/10)
+  if(window._expVeoModel==='omni' && typeof _expFlashStyle==='function' && !_expFlashStyle()) window._expVeoModel='standard';
   if(window._expVeoModel==='omni' && typeof _expModelAllowed==='function' && !_expModelAllowed('omni')) window._expVeoModel='standard';
   c.innerHTML=(typeof _expModelsVisible==='function'?_expModelsVisible():[]).map(function(m){
     var on=(m.v===window._expVeoModel), locked=(typeof _expModelAllowed==='function' && !_expModelAllowed(m.v));
