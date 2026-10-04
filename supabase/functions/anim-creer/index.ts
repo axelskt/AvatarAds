@@ -27,11 +27,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { helperGate, requirePlan, rateHit, realIp } from '../_shared/guard.ts'
 
 // Audit 02/10 : deux passes Claude Sonnet (gros prompt d'exemples) par création ; seules les créations hors quota
-// débitent 1 crédit → plans payants seulement (owner/developer exemptés par requirePlan ; byok = ancien plan encore
-// porté par des profils, quota 999 ci-dessous). Recensé dans app/index.html : le seul bouton (_mdCreerOpen) n'est
+// débitent 1 crédit → plans payants seulement (owner/developer exemptés par requirePlan ). Recensé dans app/index.html : le seul bouton (_mdCreerOpen) n'est
 // affiché que si _mdEstDev() (developer / owner) → aucun parcours Free légitime. Plafonds EN PLUS des 20 / h par
 // compte, sur 1 h : une séance active ≈ 10 créations / h → 30 par IP, 60 pour toute la plateforme.
-const PAID_PLANS = ['starter', 'pro', 'elite', 'byok']
+const PAID_PLANS = ['starter', 'pro', 'elite']
 const IP_MAX_H = 30, GLOBAL_MAX_H = 60
 // IP puis GLOBAL : rate_hit n'incrémente que s'il accepte → un appel refusé par l'IP ne consomme rien du budget
 // global (un seul réseau ne peut pas l'épuiser). IP absente → seul le global s'applique (comme auth-otp).
@@ -530,7 +529,7 @@ Deno.serve(async (req: Request) => {
   //
   // Tout se décide ici, jamais côté client : le navigateur peut mentir sur le
   // plan comme sur le compteur. Même principe que les crédits.
-  const QUOTA: Record<string, number> = { starter: 2, pro: 5, elite: 8, developer: 999, byok: 999 }
+  const QUOTA: Record<string, number> = { starter: 2, pro: 5, elite: 8, developer: 999 }
   const url = Deno.env.get('SUPABASE_URL') ?? ''
   const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
   const srv = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''

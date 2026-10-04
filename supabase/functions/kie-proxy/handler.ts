@@ -3,9 +3,9 @@
 //
 // ACCÈS (Axel 25/09/2026) :
 //   • compte developer : tous les alias, aucune réservation, aucun repli (INCHANGÉ) ; service_role : tout (moteur / tests) ;
-//   • clients payants : EXACTEMENT quatre usages (le 4e, OmniHuman, plus bas) — nano-banana-pro (« Améliorer en 4K », Starter / Pro / Élite / BYOK),
-//     omni-flash (Omni Flash image→vidéo : Express + Voix native du Générateur, Starter / Pro / Élite / BYOK depuis le
-//     25/09) et veo3-lite (Express « Veo Standard », Starter / Pro / Élite / BYOK ; 1080p = Pro / Élite, comme Google) —
+//   • clients payants : EXACTEMENT quatre usages (le 4e, OmniHuman, plus bas) — nano-banana-pro (« Améliorer en 4K », Starter / Pro / Élite),
+//     omni-flash (Omni Flash image→vidéo : Express + Voix native du Générateur, Starter / Pro / Élite depuis le
+//     25/09) et veo3-lite (Express « Veo Standard », Starter / Pro / Élite ; 1080p = Pro / Élite, comme Google) —
 //     voir KIE_OPEN (../_shared/kie.ts). Tout autre alias (Veo Fast, Kling Motion Control, faceswap Nano 1K) → 403.
 //     Secret KIE_CLIENTS=0 = tout refermer sans redéployer (Omni Flash n'a plus de repli : il est alors indisponible pour
 //     les clients, sauf le carré 1:1 qui passe par fal ; Nano 4K et Veo repassent par Google ; OmniHuman par fal).
@@ -51,7 +51,7 @@
 // exige /render-media/<uid>/ ; clients : la ligne kie_jobs (écrite à la soumission) doit AUSSI être la leur.
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
-import { CORS, jsonRes, authUser, userPlan, billableGate, helperGate, applyReservation, applyOmniReservation, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, userPlan, refusPlan, billableGate, helperGate, applyReservation, applyOmniReservation, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
 import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn } from '../_shared/kie.ts'
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
@@ -222,7 +222,7 @@ export async function handler(req: Request): Promise<Response> {
         const allowed = KIE_OPEN[sub[1]]
         if (!allowed) return jsonRes(403, { error: 'kie.ai est réservé au compte développeur pour ce modèle', billing: 'none' })
         if (!kieClientsOn()) return jsonRes(403, { error: 'kie.ai momentanément fermé aux clients', billing: 'none' })
-        if (err || !(isOwner || allowed.includes(plan))) return jsonRes(403, { error: `kie.ai (${sub[1]}) nécessite un plan ${allowed.join(' / ')}`, billing: 'none' })
+        if (err || !(isOwner || allowed.includes(plan))) return jsonRes(403, { error: refusPlan(kieLabel(sub[1], false), allowed), billing: 'none' })
       }
     }
   }
@@ -250,8 +250,8 @@ export async function handler(req: Request): Promise<Response> {
       // Paliers Veo des clients (25/09), lus sur le corps RECONSTRUIT (= ce qui part chez kie) et AVANT tout tirage : 1080p =
       // Pro / Élite (gate « Veo 1080p » de google-ai-proxy) ; Veo Fast = Pro / Élite s'il est un jour ouvert. Owner : passe.
       if (uid && !isDev && isVeo) {
-        if (!isOwner && alias === 'veo3-fast' && !KIE_VEO_FAST_PLANS.includes(plan)) return jsonRes(403, { error: `Veo Fast nécessite un plan ${KIE_VEO_FAST_PLANS.join(' / ')}`, billing: 'none' })
-        if (!isOwner && built.body.resolution === '1080p' && !KIE_VEO_1080_PLANS.includes(plan)) return jsonRes(403, { error: `La 1080p nécessite un plan ${KIE_VEO_1080_PLANS.join(' / ')}`, billing: 'none' })
+        if (!isOwner && alias === 'veo3-fast' && !KIE_VEO_FAST_PLANS.includes(plan)) return jsonRes(403, { error: refusPlan('Veo Fast', KIE_VEO_FAST_PLANS), billing: 'none' })
+        if (!isOwner && built.body.resolution === '1080p' && !KIE_VEO_1080_PLANS.includes(plan)) return jsonRes(403, { error: refusPlan('1080p', KIE_VEO_1080_PLANS), billing: 'none' })
       }
 
       // ── Réservation (clients, 25/09) : tirée AVANT l'appel kie, EXACTEMENT comme les proxys historiques ──

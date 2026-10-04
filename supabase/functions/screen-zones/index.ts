@@ -36,11 +36,11 @@ const MODEL = 'claude-opus-4-8'
 const MAX_BYTES = 8 * 1024 * 1024
 
 // Audit 02/10 : Claude Opus vision SANS débit de crédits → plans payants seulement (owner/developer exemptés par
-// requirePlan ; byok = ancien plan encore porté par des profils). Recensé : AUCUN appelant dans app/index.html,
+// requirePlan ). Recensé : AUCUN appelant dans app/index.html,
 // render-worker, mcp ni tools → aucun parcours Free légitime. Plafonds EN PLUS des 8 / 10 min par compte, sur 1 h :
 // usage visé = une analyse par capture déposée (≤ 8 par montage) → 30 par IP ≈ 4 montages d'un même réseau,
 // 80 pour toute la plateforme. Le moteur de rendu (service_role, clé du seul back-end) n'est pas compté.
-const PAID_PLANS = ['starter', 'pro', 'elite', 'byok']
+const PAID_PLANS = ['starter', 'pro', 'elite']
 const IP_MAX_H = 30, GLOBAL_MAX_H = 80
 // IP puis GLOBAL : rate_hit n'incrémente que s'il accepte → un appel refusé par l'IP ne consomme rien du budget
 // global (un seul réseau ne peut pas l'épuiser). IP absente → seul le global s'applique (comme auth-otp).

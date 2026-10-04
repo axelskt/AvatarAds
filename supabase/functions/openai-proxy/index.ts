@@ -154,7 +154,7 @@ serve(async (req: Request) => {
     // On aligne le serveur sur le produit : Starter+ / owner / dev (comme derush-transcribe pour Scribe).
     if (isTranscribe) {
       const { plan, isOwner, err } = await userPlan(uid)
-      if (!err && !isOwner && !['starter', 'pro', 'elite', 'developer', 'byok'].includes(plan)) {   // err = hoquet DB → fail-open (ne pas 403 un abonné pendant un incident)
+      if (!err && !isOwner && !['starter', 'pro', 'elite', 'developer'].includes(plan)) {   // err = hoquet DB → fail-open (ne pas 403 un abonné pendant un incident)
         return jsonRes(403, { error: 'La transcription est réservée aux plans payants.' })
       }
       whisperExempt = !err && (isOwner || plan === 'developer')
@@ -182,7 +182,7 @@ serve(async (req: Request) => {
   let chain = false, chainPlanOk = false
   if (isBillable && gated && wantsNanoChain(req)) {
     const { plan, isOwner, err } = await userPlan(uid)
-    chainPlanOk = !err && (isOwner || ['pro', 'byok', 'elite', 'developer'].includes(plan))
+    chainPlanOk = !err && (isOwner || ['pro', 'elite', 'developer'].includes(plan))
   }
   const chainCost = (q: string, n: number) => (chainPlanOk && n === 1 && (q === 'medium' || q === 'low')) ? (chain = true, CHAIN_NANO_COST) : imgCost(q) * n
   // Tirage d'une image facturée. Image de départ d'Express (x-aa-chain: omni-start, 1 image low/medium) : UNE payée par op

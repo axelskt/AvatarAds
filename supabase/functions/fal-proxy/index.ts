@@ -13,7 +13,7 @@
 // `?path=` validé (allowlist, jamais d'`@`/`..`) ; soumissions plafonnées par utilisateur + preuve de
 // débit récent (H3) ; gate de plan serveur sur Kling 3.0 (Pro/Élite).
 // Omni Flash IMAGE→VIDÉO (Axel 25/09) : ici = le seul CARRÉ 1:1 d'Express (kie ne fait pas de carré ; tout le reste passe
-// par kie-proxy, sans repli fal) — Starter / Pro / Élite / BYOK, 1080p imposé, tirage EXACT de 5 cr × durée.
+// par kie-proxy, sans repli fal) — Starter / Pro / Élite, 1080p imposé, tirage EXACT de 5 cr × durée.
 // Audit 02/10 (PRX-1) : Motion Control (Kling 2.6 / 3.0) et Omni ÉDITION sont facturés à la seconde de la vidéo du CLIENT.
 // Le proxy n'acceptait qu'un plancher fixe (2 / 4 / 6 / 3) et relayait le corps tel quel → 2 crédits réservés = 15 s de Kling.
 // Désormais (clients, jamais le moteur de rendu) : vidéo de NOTRE stockage dans le dossier de l'appelant, COPIE serveur
@@ -273,14 +273,14 @@ serve(async (req: Request) => {
       const g = await requirePlan(auth.userId, ['pro', 'elite'], 'Motion 3.0 (Kling 3.0)'); if (!g.ok) return jsonRes(g.status, { error: g.error })   // via requirePlan → fail-open sur hoquet DB (audit 14/09)
     }
     // Audit métier 14/09 (Phase 2) — entitlement serveur des modèles à palier supérieur. Union client la plus
-    // LARGE par chemin (voir matrice) → aucun 403 d'un flux légitime. AuraSR HD + Nano Banana Pro (fal) = Pro/Élite/BYOK.
+    // LARGE par chemin (voir matrice) → aucun 403 d'un flux légitime. AuraSR HD + Nano Banana Pro (fal) = Pro/Élite.
     else if (isSubmit && (/\/fal-ai\/aura-sr/i.test(path) || /\/fal-ai\/nano-banana-pro/i.test(path))) {
-      const g = await requirePlan(auth.userId, ['pro', 'elite', 'byok'], 'HD / 4K'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+      const g = await requirePlan(auth.userId, ['pro', 'elite'], 'HD / 4K'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
     // Omni Flash IMAGE→VIDÉO = tous les plans payants depuis le 25/09 (Axel : « Starter inclus ») ; Free → 403. L'EDIT
     // (/edit, Module Omni) reste Starter+ → ne PAS gater sur le nom seul.
     else if (isOmniI2v) {
-      const g = await requirePlan(auth.userId, ['starter', 'pro', 'elite', 'byok'], 'Omni Flash'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+      const g = await requirePlan(auth.userId, ['starter', 'pro', 'elite'], 'Omni Flash'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
     // OmniHuman (relecture 26/09) : ce chemin n'avait AUCUNE garde de plan — un Starter atteignait par le repli fal ce que
     // kie-proxy lui refuse. Mêmes plans que KIE_OPEN (Élite ; owner / developer passent), comme le Générateur et le Montage IA.

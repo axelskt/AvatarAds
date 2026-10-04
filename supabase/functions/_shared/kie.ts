@@ -22,9 +22,9 @@ export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (le
 //    côté serveur (omnihuman-bill.ts) ; repli fal (même op) côté app seulement si kie échoue sans tâche. (Le MCP
 //    lipsync_video appelle kie avec sa propre clé et facture lui-même : mcp/omnihuman-kie.ts, hors KIE_OPEN.)
 export const KIE_OPEN: Record<string, string[]> = {
-  'nano-banana-pro': ['starter', 'pro', 'elite', 'byok'],
-  'omni-flash': ['starter', 'pro', 'elite', 'byok'],
-  'veo3-lite': ['starter', 'pro', 'elite', 'byok'],
+  'nano-banana-pro': ['starter', 'pro', 'elite'],
+  'omni-flash': ['starter', 'pro', 'elite'],
+  'veo3-lite': ['starter', 'pro', 'elite'],
   'omnihuman-1.5': ['pro', 'elite'],   // Axel 26/09 : OmniHuman sélectionnable en Pro et Élite (jamais Starter) — Générateur + Montage IA ; repli fal côté app
 }
 export const KIE_VEO_1080_PLANS = ['pro', 'elite']

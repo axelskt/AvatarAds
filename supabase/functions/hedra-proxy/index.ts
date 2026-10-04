@@ -5,7 +5,7 @@
 //
 // Sécurité :
 //   - JWT Supabase obligatoire (anon key seule refusée)
-//   - Plan BYOK sans clé user → 403 (ne tombe PAS sur la clé plateforme)
+//   - Clé Hedra toujours côté serveur (BYOK retiré le 04/10 : aucun en-tête de clé client accepté)
 //   - Audit 02/10 (PRX-3) : un client ne lit que /models, /v3/models, et le suivi de SES jobs (404 sinon)
 //   - Audit 04/10 (GEN-3) : un client ne soumet que hedra-character-3 / hedra-avatar, corps reconstruit (403 / 400 sinon) ;
 //     il n'écrit que /v3/files et /v3/models/<slug> (GET / POST seulement, sans paramètres d'URL) — 403 / 405 sinon
@@ -21,7 +21,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-hedra-key, x-aa-op',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
@@ -197,8 +197,7 @@ serve(async (req: Request) => {
   // ── Récupérer le plan de l'utilisateur ──
   // Le moteur de rendu n'a pas de profil : il travaille pour un job déjà payé,
   // et le contrôle de plan a eu lieu au lancement du montage. Il passe donc en
-  // « developer » — jamais en BYOK, qui exigerait une clé personnelle qu'il n'a
-  // pas et ne doit pas avoir.
+  // « developer ».
   const { data: profile } = estLeMoteur || !user
     ? { data: null }
     : await supabase.from('profiles').select('plan, is_owner').eq('id', user.id).single()
@@ -287,22 +286,10 @@ serve(async (req: Request) => {
     }
   }
 
-  // ── Clé Hedra : user BYOK ou plateforme ──
-  const userKey    = req.headers.get('x-user-hedra-key') ?? ''
+  // ── Clé Hedra : toujours celle de la plateforme (clé dev en v3) — BYOK retiré le 04/10 ──
   const platformKey = Deno.env.get('HEDRA_API_KEY') ?? ''
   const v3Key      = Deno.env.get('HEDRA_V3_KEY') ?? ''
-
-  // Le plan BYOK n'exige une clé perso que sur l'ANCIENNE API. La v3 tourne sur la clé dev
-  // plateforme (Seedance = dev-only ; aucun user BYOK ne l'atteint).
-  if (!isV3 && userPlan === 'byok' && !userKey) {
-    return new Response(JSON.stringify({ error: 'Plan BYOK : configure ta clé Hedra dans Connexions → Clé API Hedra' }), {
-      status: 403,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
-  }
-
-  // Sélection de la clé : BYOK user key prioritaire, sinon clé plateforme (dev key en v3)
-  const hedraKey = isV3 ? (userKey || v3Key) : (userKey || platformKey)
+  const hedraKey = isV3 ? v3Key : platformKey
   if (!hedraKey) {
     return new Response(JSON.stringify({ error: isV3 ? 'Clé Hedra v3 manquante (HEDRA_V3_KEY)' : 'Aucune clé Hedra configurée' }), {
       status: 402,

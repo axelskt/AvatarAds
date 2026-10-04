@@ -50,11 +50,11 @@ const MAX_SUMMARY = 1400
 import { safeFetchHtml, helperGate, requirePlan, rateHit, realIp } from '../_shared/guard.ts'
 
 // Audit 02/10 : Claude Sonnet (+ crawl) SANS débit de crédits → plans payants seulement (owner/developer exemptés par
-// requirePlan ; byok = ancien plan encore porté par des profils). Recensé dans app/index.html : les 3 appels
+// requirePlan ). Recensé dans app/index.html : les 3 appels
 // (mtMemFromSite, mtMemLearnFromShots via _brandGate → paywall ; mtMemLearn après un montage) sortent déjà sur Free
 // → aucun parcours Free légitime. Plafonds EN PLUS des 15 / 10 min par compte, sur 1 h : un utilisateur actif fait
 // ~15 appels / h au plus (site, captures, 1 apprentissage par montage) → 60 par IP, 240 pour toute la plateforme.
-const PAID_PLANS = ['starter', 'pro', 'elite', 'byok']
+const PAID_PLANS = ['starter', 'pro', 'elite']
 const IP_MAX_H = 60, GLOBAL_MAX_H = 240
 // IP puis GLOBAL : rate_hit n'incrémente que s'il accepte → un appel refusé par l'IP ne consomme rien du budget
 // global (un seul réseau ne peut pas l'épuiser). IP absente → seul le global s'applique (comme auth-otp).

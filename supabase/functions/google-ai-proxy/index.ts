@@ -209,8 +209,8 @@ serve(async (req: Request) => {
     return jsonRes(403, { error: 'modèle non autorisé sur cet endpoint (famille flash uniquement)' })
   }
 
-  // Audit 04/10 (EXP-3) : Veo (Lite comme Fast) = plans payants, comme kie-proxy (KIE_OPEN['veo3-lite'] : Starter, Pro, Élite,
-  // byok) et fal-proxy pour Omni. Avant, seul Fast était gaté : un compte Free avec des crédits (pack acheté sans abonnement,
+  // Audit 04/10 (EXP-3) : Veo (Lite comme Fast) = plans payants, comme kie-proxy (KIE_OPEN['veo3-lite'] : Starter, Pro, Élite)
+  // et fal-proxy pour Omni. Avant, seul Fast était gaté : un compte Free avec des crédits (pack acheté sans abonnement,
   // abonnement résilié) générait du Veo Lite en appelant le proxy directement. L'app réserve déjà Express aux abonnés.
   if (gated && isBillable && /:predictLongRunning$/.test(bare)) {
     const g = await requirePlan(uid, KIE_OPEN['veo3-lite'], 'Vidéo Express')

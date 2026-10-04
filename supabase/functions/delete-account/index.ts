@@ -8,7 +8,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { CORS, jsonRes, authUser, svc, rateHit } from '../_shared/guard.ts'
 
-const PAID = ['starter', 'pro', 'elite', 'byok']
+const PAID = ['starter', 'pro', 'elite']
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })

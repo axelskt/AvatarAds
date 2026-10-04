@@ -14,11 +14,11 @@ import { CORS, jsonRes, authUser, helperGate, requirePlan, rateHit, realIp } fro
 const MAX_BODY = 16_000_000   // image en base64 ≤ ~12 Mo
 
 // Audit 02/10 : remove.bg facturé SANS débit de crédits → plans payants seulement (owner/developer exemptés par
-// requirePlan ; byok = ancien plan encore porté par des profils). Recensé : l'app ne l'appelle plus (_imgRemoveBgRun
+// requirePlan ). Recensé : l'app ne l'appelle plus (_imgRemoveBgRun
 // n'est relié à aucun bouton d'app/index.html), ni render-worker, ni mcp → aucun parcours Free légitime. Plafonds EN
 // PLUS des 20 / h par compte, sur 1 h : usage visé = 3 images par génération, ~5 générations / h → 40 par IP,
 // 120 pour toute la plateforme. Le moteur de rendu (service_role, clé du seul back-end) n'est pas compté.
-const PAID_PLANS = ['starter', 'pro', 'elite', 'byok']
+const PAID_PLANS = ['starter', 'pro', 'elite']
 const IP_MAX_H = 40, GLOBAL_MAX_H = 120
 // IP puis GLOBAL : rate_hit n'incrémente que s'il accepte → un appel refusé par l'IP ne consomme rien du budget
 // global (un seul réseau ne peut pas l'épuiser). IP absente → seul le global s'applique (comme auth-otp).

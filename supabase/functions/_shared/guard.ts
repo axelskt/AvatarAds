@@ -372,11 +372,20 @@ export async function userPlan(userId: string): Promise<{ plan: string; isOwner:
 //    (qui passent toujours). FAIL-OPEN sur erreur DB (err) — ne JAMAIS 403 un client payant pendant un incident.
 //    N'ajouter un gate QUE sur un chemin dont TOUS les points d'entrée client exigent au moins `needed` (union la
 //    plus large), sinon on 403 un flux légitime (ex. OmniHuman = Élite au Générateur mais Starter+ en Montage IA).
+// Refus de plan lisible par le client (Axel 04/10) : les noms des plans tels qu'il les voit (« Starter, Pro et Élite »),
+// jamais les clés internes (« starter / pro / elite »).
+const PLAN_NOMS: Record<string, string> = { starter: 'Starter', pro: 'Pro', elite: 'Élite' }
+export function refusPlan(label: string, needed: string[]): string {
+  const n = needed.map((x) => PLAN_NOMS[x]).filter(Boolean)
+  if (!n.length) return `« ${label} » est réservé.`
+  const liste = n.length > 1 ? n.slice(0, -1).join(', ') + ' et ' + n[n.length - 1] : n[0]
+  return `« ${label} » est inclus ${n.length > 1 ? 'dans les plans' : 'dans le plan'} ${liste}.`
+}
 export async function requirePlan(userId: string, needed: string[], label: string): Promise<Gate> {
   const { plan, isOwner, err } = await userPlan(userId)
   if (err || isOwner || plan === 'developer') return { ok: true }   // hoquet DB → laisser passer ; owner/dev illimités
   if (needed.includes(plan)) return { ok: true }
-  return { ok: false, status: 403, error: needed.length ? `« ${label} » nécessite un plan ${needed.join(' / ')}.` : `« ${label} » est réservé.` }
+  return { ok: false, status: 403, error: refusPlan(label, needed) }
 }
 
 // ── Limiteur serveur (RPC rate_hit, service_role only). true = accepté. Fail-open sur erreur technique.
@@ -725,7 +734,7 @@ export async function reglerJobFal(o: {
 // Compositions « sans tirage » (contrat K2) : le Générateur (gen-subs) et Motion Control (motion-split / motion-bg) ne
 // débitent RIEN pour le rendu (la vidéo est déjà payée à la génération) → render-job ne leur exige plus une op tirable
 // (402 pour tout client depuis RESERVE_STRICT, 14/09), mais : plan payant, chemins du flux, cadence, « 2 en cours ».
-export const PLANS_PAYANTS = ['starter', 'pro', 'elite', 'byok']   // = PAID_PLANS des autres fonctions
+export const PLANS_PAYANTS = ['starter', 'pro', 'elite']   // = PAID_PLANS des autres fonctions
 export const COMPOSE_SANS_TIRAGE = ['gen-subs', 'motion-split', 'motion-bg']
 export const RENDU_MONTAGE_MIN = 4       // MONT-1 : plancher du tirage de l'op principale d'un montage (= CREDIT_COSTS.montageRender)
 export const MONTAGE_DUREE_MAX = 180     // MONT-1 : = MAX_DURATION d'orchestrate (l'app plafonne à 90 s ; historique prod ≤ 66 s)
