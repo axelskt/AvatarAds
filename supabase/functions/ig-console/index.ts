@@ -4,7 +4,7 @@
 // l'app Instagram). Cette fonction fait ces actions sur le compte qui vient de se connecter dans le navigateur :
 //   session = identifiant aléatoire remis par instagram-auth à la fin de l'OAuth (table ig_review_sessions, 3 h, jeton côté
 //   serveur seulement). Toutes les requêtes en POST (la session ne passe jamais dans une URL).
-// Actions : me · media · comments · comment · reply · hide · delete · private_reply · conversations · thread · send.
+// Actions : me · media · comments · comment · reply · hide · delete · private_reply · conversations · thread · send · logout.
 // Garde-fous : identifiants au format strict, textes bornés, débit limité par session ; Instagram n'autorise de toute façon
 // que les commentaires des publications du compte et les messages aux personnes qui l'ont contacté (fenêtre de 24 h,
 // 7 jours pour une réponse privée à un commentaire). Messages d'erreur en anglais (interface de la page en anglais).
@@ -57,6 +57,8 @@ Deno.serve(async (req) => {
   const s = await session(String(b.s || ''))
   if (!s) return json(401, { error: 'Session expired — please click “Connect Instagram” again.' })
   const a = String(b.a || '')
+  // Déconnexion : la session est supprimée côté serveur (le jeton du compte n'est plus utilisable par la console).
+  if (a === 'logout') { await svc().from('ig_review_sessions').delete().eq('id', s.id); return json(200, { ok: true }) }
   const write = ['comment', 'reply', 'hide', 'delete', 'private_reply', 'send'].includes(a)
   if (!(await rateHit('ig-console:' + s.id, 60, 40))) return json(429, { error: 'Too many requests — wait a few seconds.' })
   if (write && !(await rateHit('ig-console-w:' + s.id, 3600, 60))) return json(429, { error: 'Action limit reached for this session.' })

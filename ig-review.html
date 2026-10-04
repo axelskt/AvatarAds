@@ -3,198 +3,320 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AvatarAds · Instagram App Review console</title>
-<!-- Page du relecteur Meta (App Review). 04/10/2026 : Meta a refusé instagram_business_manage_messages et
-     instagram_business_manage_comments (la vidéo ne montrait pas l'app qui envoie un message ni qui crée / modifie /
-     supprime un commentaire). Interface EN ANGLAIS (exigence Meta) avec une explication sous chaque bouton.
-     Après l'OAuth, ig-callback.html remet un jeton de console (session de 3 h, edge ig-console) : toutes les actions
-     visent le SEUL compte qui vient de se connecter dans ce navigateur. -->
+<title>AvatarAds · Auto-DM for Instagram</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!-- Page du relecteur Meta (App Review) — console Auto-DM. 04/10/2026 : Meta a refusé instagram_business_manage_messages
+     et instagram_business_manage_comments (la vidéo ne montrait pas l'app qui envoie un message ni qui crée / modifie /
+     supprime un commentaire). Interface EN ANGLAIS (exigence Meta), une explication sous chaque action.
+     Après l'OAuth, ig-callback.html remet un jeton de console (session de 3 h, edge ig-console) : toutes les actions visent
+     le SEUL compte qui vient de se connecter dans ce navigateur. Contenus Instagram toujours échappés ; images posées par
+     le DOM (jamais concaténées dans le HTML). -->
 <style>
   :root{
-    --bg:#faf7f2; --panel:#ffffff; --ink:#141414; --muted:#6b6b73; --line:#ececec; --soft:#faf9f6;
-    --accent:#ff6b35; --ok:#1f9d55; --okbg:rgba(31,157,85,.10); --warn:#b54708; --warnbg:#fff4e5; --err:#c2461a;
+    --bg:#f6f4f0; --panel:#fff; --ink:#15151a; --ink2:#3d3d46; --muted:#73737d; --line:#e9e6e1; --soft:#faf9f7;
+    --accent:#ff6b35; --accent2:#e8551f; --accentSoft:#fff1ea; --err:#c2410c; --errSoft:#fdecea;
+    --r:16px; --shadow:0 1px 2px rgba(20,20,26,.04),0 8px 24px -12px rgba(20,20,26,.10);
   }
   *{ box-sizing:border-box }
-  body{ margin:0; min-height:100vh; padding:28px 16px 60px; background:var(--bg); color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; line-height:1.5 }
-  .wrap{ width:100%; max-width:760px; margin:0 auto }
-  .brand{ font-size:22px; font-weight:800; letter-spacing:-.02em; margin:0 0 2px }
-  .brand b{ color:var(--accent) }
-  .sub{ color:var(--muted); font-size:13px; margin:0 0 20px }
-  .card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px; margin-bottom:16px }
-  .step{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); margin:0 0 4px }
-  h2{ font-size:17px; margin:0 0 6px }
-  p{ margin:0 0 10px; font-size:14px }
-  .help{ color:var(--muted); font-size:12.5px; margin:6px 0 0 }
-  .perm{ display:inline-block; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; background:#f3f0ea;
-    border:1px solid var(--line); border-radius:6px; padding:1px 7px; margin:2px 4px 2px 0; color:#3d3d44 }
-  .btn{ display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#fff; border:0; font:inherit;
-    font-size:14px; font-weight:700; padding:11px 18px; border-radius:11px; cursor:pointer; text-decoration:none }
-  .btn.sec{ background:#fff; color:var(--ink); border:1px solid #dcdcdc }
-  .btn.sm{ font-size:12.5px; padding:7px 11px; border-radius:9px }
-  .btn.danger{ background:#fff; color:var(--err); border:1px solid #f0c8b9 }
-  .btn:disabled{ opacity:.55; cursor:default }
+  html,body{ margin:0 }
+  body{ background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif; font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased }
+  a{ color:inherit }
+  .hidden{ display:none !important }
+  svg{ flex:0 0 auto }
+
+  .top{ position:sticky; top:0; z-index:5; background:rgba(246,244,240,.88); backdrop-filter:saturate(1.4) blur(10px); -webkit-backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--line) }
+  .top-in{ max-width:1080px; margin:0 auto; padding:12px 20px; display:flex; align-items:center; gap:12px }
+  .logo{ display:flex; align-items:center; gap:10px; font-weight:800; font-size:17px; letter-spacing:-.02em; text-decoration:none }
+  .logo svg{ border-radius:9px }
+  .tag{ font-size:11.5px; font-weight:600; color:var(--accent2); background:var(--accentSoft); border-radius:20px; padding:3px 10px }
+  .spacer{ flex:1 }
+  .chip{ display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:30px; padding:4px 12px 4px 4px; font-weight:600; font-size:13px }
+  .av{ width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#ffb38f,#ff6b35); color:#fff; display:grid; place-items:center; font-size:12px; font-weight:800; overflow:hidden; flex:0 0 auto }
+  .av img{ width:100%; height:100%; object-fit:cover }
+  .av.lg{ width:64px; height:64px; font-size:24px }
+
+  main{ max-width:1080px; margin:0 auto; padding:28px 20px 72px }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow) }
+  .pad{ padding:22px }
+  h1{ font-size:30px; line-height:1.15; letter-spacing:-.03em; margin:0 0 10px }
+  h2{ font-size:17px; letter-spacing:-.01em; margin:0 }
+  h3{ font-size:14px; margin:0 }
+  .muted{ color:var(--muted) }
+  .small{ font-size:12.5px }
+  .perm{ display:inline-flex; align-items:center; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; font-weight:500; color:var(--ink2); background:#f2efea; border:1px solid var(--line); border-radius:6px; padding:1px 7px; white-space:nowrap; vertical-align:2px }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; font:inherit; font-weight:650; font-size:13.5px; border-radius:10px; padding:9px 14px; border:1px solid transparent; cursor:pointer; text-decoration:none; transition:background .15s,border-color .15s,transform .05s; white-space:nowrap }
   .btn:active:not(:disabled){ transform:translateY(1px) }
-  .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center }
-  textarea,input[type=text]{ width:100%; font:inherit; font-size:14px; border:1px solid #dcdcdc; border-radius:10px; padding:10px 12px; background:#fff; color:var(--ink); resize:vertical }
-  .legend{ display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:12.5px; color:var(--muted); background:var(--soft);
-    border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:12px 0 }
-  .legend b{ color:var(--ink); white-space:nowrap }
-  .steps{ margin:12px 0 0; padding:0; list-style:none; font-size:13px; color:var(--muted) }
-  .steps li{ padding:5px 0 5px 26px; position:relative }
-  .steps li::before{ content:attr(data-n); position:absolute; left:0; top:5px; width:18px; height:18px; background:#f0ede7;
-    border-radius:50%; font-size:11px; font-weight:700; color:var(--ink); display:grid; place-items:center }
-  .okrow{ display:flex; align-items:center; gap:12px; margin-bottom:14px }
-  .okic{ width:42px; height:42px; border-radius:50%; background:var(--okbg); display:grid; place-items:center; flex:0 0 auto }
-  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
-  .stat{ background:var(--soft); border:1px solid var(--line); border-radius:12px; padding:12px }
-  .stat .n{ font-size:22px; font-weight:800; letter-spacing:-.02em }
-  .stat .l{ font-size:11px; color:var(--muted); margin-top:2px }
-  .posts{ display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:8px; margin-top:10px }
-  .post{ border:2px solid transparent; border-radius:12px; overflow:hidden; background:var(--soft); cursor:pointer; text-align:left; padding:0; font:inherit; color:inherit }
+  .btn:disabled{ opacity:.5; cursor:default }
+  .btn.primary{ background:var(--accent); color:#fff }
+  .btn.primary:hover:not(:disabled){ background:var(--accent2) }
+  .btn.ghost{ background:var(--panel); color:var(--ink); border-color:var(--line) }
+  .btn.ghost:hover:not(:disabled){ border-color:#d6d2cb }
+  .btn.quiet{ background:transparent; color:var(--ink2); padding:6px 9px; font-size:12.5px; border-radius:8px }
+  .btn.quiet:hover:not(:disabled){ background:#f3f1ed }
+  .btn.quiet.danger{ color:var(--err) }
+  .btn.quiet.danger:hover:not(:disabled){ background:var(--errSoft) }
+  .btn.ig{ background:linear-gradient(90deg,#f58529,#dd2a7b 55%,#8134af); color:#fff; font-size:15px; padding:13px 22px; border-radius:12px }
+  .btn.ig:hover:not(:disabled){ filter:brightness(1.05) }
+
+  .hero{ display:grid; grid-template-columns:1.1fr .9fr; gap:28px; align-items:start; padding-top:18px }
+  .lead{ font-size:15.5px; color:var(--ink2); margin:0 0 22px; max-width:520px }
+  .perms{ padding:6px }
+  .prow{ display:flex; gap:12px; padding:13px 14px }
+  .prow + .prow{ border-top:1px solid var(--line) }
+  .pic{ width:34px; height:34px; border-radius:10px; background:var(--accentSoft); color:var(--accent2); display:grid; place-items:center; flex:0 0 auto }
+  .prow b{ display:block; font-size:13.5px }
+  .prow .perm{ margin-top:5px }
+  .note{ display:flex; gap:8px; align-items:flex-start; font-size:12.5px; color:var(--muted); margin-top:16px; max-width:520px }
+  .err{ color:var(--err); font-size:13px; margin-top:12px }
+
+  .tabs{ display:flex; gap:4px; background:#ece9e4; border-radius:12px; padding:4px; width:max-content; max-width:100%; overflow-x:auto; margin:0 0 18px }
+  .tab{ display:flex; align-items:center; gap:7px; font:inherit; font-weight:650; font-size:13.5px; border:0; background:transparent; color:var(--ink2); padding:8px 14px; border-radius:9px; cursor:pointer; white-space:nowrap }
+  .tab.on{ background:var(--panel); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.08) }
+  .sechead{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px }
+  .sechead p{ margin:4px 0 0; max-width:640px }
+
+  .prof{ display:flex; align-items:center; gap:16px; margin-bottom:18px }
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px }
+  .stat{ background:var(--soft); border:1px solid var(--line); border-radius:14px; padding:14px 16px }
+  .stat .n{ font-size:26px; font-weight:800; letter-spacing:-.03em }
+  .stat .l{ font-size:12px; color:var(--muted) }
+
+  .cols{ display:grid; grid-template-columns:300px 1fr; gap:18px; align-items:start }
+  .side h3{ margin-bottom:10px; display:flex; justify-content:space-between; align-items:center }
+  .posts{ display:grid; grid-template-columns:1fr 1fr; gap:8px }
+  .post{ position:relative; border:2px solid transparent; border-radius:12px; overflow:hidden; background:#ece9e4; cursor:pointer; padding:0; font:inherit; color:inherit; aspect-ratio:4/5 }
   .post.on{ border-color:var(--accent) }
-  .post .th{ aspect-ratio:1; background:#ece9e3 center/cover no-repeat; display:grid; place-items:center; color:var(--muted); font-size:11px }
-  .post .cap{ font-size:11px; padding:5px 7px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-  .cmt{ border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:8px; background:#fff }
-  .cmt.hid{ background:#f6f6f6 }
-  .cmt .who{ font-size:13px; font-weight:700 }
-  .cmt .when{ font-size:11px; color:var(--muted); font-weight:400; margin-left:6px }
-  .cmt .t{ font-size:14px; margin:3px 0 8px; word-break:break-word }
-  .badge{ display:inline-block; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:20px; background:#e9e9ec; color:#55555c; margin-left:6px }
-  .rep{ margin:8px 0 0 16px; padding-left:10px; border-left:2px solid var(--line) }
-  .sub-form{ margin-top:8px; display:none }
-  .status{ font-size:13px; margin-top:10px; min-height:18px }
-  .status.ok{ color:var(--ok) } .status.err{ color:var(--err) }
-  .conv{ display:flex; justify-content:space-between; gap:10px; align-items:center; border:1px solid var(--line); border-radius:12px;
-    padding:10px 12px; margin-top:8px; cursor:pointer; background:#fff; width:100%; font:inherit; color:inherit; text-align:left }
-  .conv.on{ border-color:var(--accent) }
-  .thread{ background:var(--soft); border:1px solid var(--line); border-radius:12px; padding:10px; margin:10px 0; max-height:260px; overflow:auto }
-  .msg{ max-width:80%; font-size:13.5px; padding:7px 11px; border-radius:14px; margin:4px 0; background:#fff; border:1px solid var(--line) }
-  .msg.me{ margin-left:auto; background:#ffe9df; border-color:#ffd3bf }
-  .msg .m{ font-size:10.5px; color:var(--muted) }
-  .hidden{ display:none }
-  .spin{ width:22px; height:22px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%;
-    animation:r .8s linear infinite; display:inline-block; vertical-align:middle }
+  .post img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block }
+  .post .ph{ position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); font-size:11px; font-weight:600 }
+  .post .cnt{ position:absolute; left:6px; bottom:6px; display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#fff; background:rgba(0,0,0,.55); border-radius:20px; padding:2px 8px }
+  .composer{ display:flex; gap:8px; align-items:flex-end }
+  textarea{ width:100%; font:inherit; font-size:14px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; color:var(--ink); resize:none; outline:none; transition:border-color .15s, box-shadow .15s }
+  textarea:focus{ border-color:#ffb08f; box-shadow:0 0 0 3px rgba(255,107,53,.12) }
+  .postbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px }
+  .postcap{ font-size:13px; color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1 }
+  .legend{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px 18px; background:var(--soft); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:14px 0 6px; font-size:12.5px; color:var(--muted) }
+  .legend div{ display:flex; gap:8px; align-items:flex-start }
+  .legend b{ color:var(--ink); font-weight:650 }
+  .lic{ width:22px; height:22px; border-radius:7px; background:#fff; border:1px solid var(--line); display:grid; place-items:center; color:var(--ink2); flex:0 0 auto }
+  .cmt{ display:flex; gap:10px; padding:12px 0; border-top:1px solid var(--line) }
+  .cmt:first-child{ border-top:0 }
+  .cmt .body{ flex:1; min-width:0 }
+  .cmt .who{ font-weight:700; font-size:13.5px }
+  .cmt .when{ font-weight:400; color:var(--muted); font-size:12px; margin-left:6px }
+  .cmt .t{ margin:2px 0 4px; word-break:break-word }
+  .cmt.hid > .body > .t{ color:var(--muted) }
+  .badge{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; padding:1px 8px; border-radius:20px; background:#ecebef; color:#55555f; margin-left:6px; vertical-align:1px }
+  .acts{ display:flex; flex-wrap:wrap; gap:2px; margin-left:-9px }
+  .reply-list{ margin-top:4px; padding-left:12px; border-left:2px solid var(--line) }
+  .reply-list .cmt{ padding:8px 0 }
+  .inline{ margin-top:8px }
+  .inline .hint{ font-size:12px; color:var(--muted); margin-top:6px }
+  .empty{ text-align:center; color:var(--muted); padding:28px 12px; font-size:13px }
+  .empty svg{ display:block; margin:0 auto 8px; color:#c9c4bc }
+
+  .inbox{ display:grid; grid-template-columns:280px 1fr; min-height:460px; overflow:hidden }
+  .convs{ border-right:1px solid var(--line); padding:10px; display:flex; flex-direction:column; gap:4px }
+  .conv{ display:flex; align-items:center; gap:10px; border:0; background:transparent; padding:9px 10px; border-radius:12px; cursor:pointer; font:inherit; color:inherit; text-align:left; width:100% }
+  .conv:hover{ background:#f6f4f1 }
+  .conv.on{ background:var(--accentSoft) }
+  .conv .nm{ font-weight:650 }
+  .chat{ display:flex; flex-direction:column; min-width:0 }
+  .chathead{ display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line); min-height:57px }
+  .thread{ flex:1; padding:16px; overflow:auto; max-height:380px; min-height:220px; display:flex; flex-direction:column; gap:6px; background:var(--soft) }
+  .msg{ max-width:78%; padding:8px 12px; border-radius:18px; background:#fff; border:1px solid var(--line); word-break:break-word; align-self:flex-start }
+  .msg.me{ align-self:flex-end; background:var(--accent); border-color:var(--accent); color:#fff }
+  .msg .m{ font-size:10.5px; opacity:.75; margin-top:2px }
+  .chatbar{ display:flex; gap:8px; padding:12px; border-top:1px solid var(--line); align-items:flex-end }
+  .chatnote{ font-size:12px; color:var(--muted); padding:0 14px 12px }
+
+  .toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); opacity:0; pointer-events:none; display:flex; align-items:center; gap:9px; background:#15151a; color:#fff; padding:11px 16px; border-radius:12px; font-size:13.5px; font-weight:550; box-shadow:0 12px 30px -10px rgba(0,0,0,.4); transition:opacity .2s, transform .2s; z-index:20; max-width:calc(100vw - 32px) }
+  .toast.on{ opacity:1; transform:translateX(-50%) translateY(0) }
+  .toast .dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; background:#3ddc84 }
+  .toast.err .dot{ background:#ff6b6b }
+  .spin{ width:20px; height:20px; border:2.5px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:r .8s linear infinite; display:inline-block }
+  .center{ display:grid; place-items:center; padding:26px }
   @keyframes r{ to{ transform:rotate(360deg) } }
-  @media (max-width:520px){ .grid3{ grid-template-columns:1fr 1fr 1fr } .stat .n{ font-size:18px } .legend{ grid-template-columns:1fr } }
+  footer{ text-align:center; color:var(--muted); font-size:12px; margin-top:26px }
+
+  @media (max-width:860px){
+    .hero,.cols,.inbox{ grid-template-columns:1fr }
+    .convs{ border-right:0; border-bottom:1px solid var(--line); flex-direction:row; overflow-x:auto }
+    .conv{ width:auto; flex:0 0 auto }
+    .posts{ grid-template-columns:repeat(3,1fr) }
+    .legend{ grid-template-columns:1fr }
+    h1{ font-size:25px }
+  }
+  @media (max-width:520px){
+    .top-in{ padding:10px 14px } .tag{ display:none } #chipUser{ display:none } .chip{ padding:3px }
+    main{ padding:20px 14px 64px } .stats{ gap:8px } .stat{ padding:12px } .stat .n{ font-size:20px }
+    .composer,.chatbar{ flex-direction:column; align-items:stretch } .postbar .btn{ padding:8px 10px }
+    .tabs{ width:100% } .tab{ flex:1; justify-content:center; padding:8px 6px; font-size:13px }
+  }
+  @media (max-width:380px){ .tab svg{ display:none } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <p class="brand">Avatar<b>Ads</b></p>
-  <p class="sub">Instagram Auto-DM — App Review console. Every button on this page calls the Instagram API for the professional account you connect.</p>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r=".9" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-cmt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.6A8 8 0 1 1 21 12Z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></symbol>
+  <symbol id="i-reply" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 5 5v6"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.9 3.9M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></symbol>
+  <symbol id="i-dm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+</svg>
 
-  <!-- STEP 1 — connexion -->
-  <div class="card" id="connectCard">
-    <p class="step">Step 1 · Instagram Business Login</p>
-    <h2>Connect your Instagram professional account</h2>
-    <p>AvatarAds uses Instagram Business Login. You will be asked to grant these permissions:</p>
-    <p><span class="perm">instagram_business_basic</span> read your username, profile picture, followers and posts</p>
-    <p><span class="perm">instagram_business_manage_insights</span> show your account insights (28-day reach)</p>
-    <p><span class="perm">instagram_business_manage_comments</span> read, post, reply to, hide and delete comments on your posts</p>
-    <p><span class="perm">instagram_business_manage_messages</span> send direct messages to people who commented or messaged you</p>
-    <button class="btn" id="connectBtn" onclick="connect()" title="Opens the Instagram login and permission screen">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-      Connect Instagram
+<header class="top">
+  <div class="top-in">
+    <a class="logo" href="https://avatarads.fr" target="_blank" rel="noopener">
+      <svg viewBox="0 0 36 36" width="30" height="30" fill="none" aria-hidden="true"><rect width="36" height="36" fill="#0a0a0a"/><path fill-rule="evenodd" fill="#fff" d="M18 8C14.5 8 2.5 11.5 2.5 18.5C2.5 23.5 7 27.5 13 27.5C15.8 27.5 17.3 25 18 23.8C18.7 25 20.2 27.5 23 27.5C29 27.5 33.5 23.5 33.5 18.5C33.5 11.5 21.5 8 18 8ZM7.5 18.5C7.5 16.2 9.5 14.5 12 14.5C14.5 14.5 16.5 16.2 16.5 18.5C16.5 20.8 14.5 22.5 12 22.5C9.5 22.5 7.5 20.8 7.5 18.5ZM19.5 18.5C19.5 16.2 21.5 14.5 24 14.5C26.5 14.5 28.5 16.2 28.5 18.5C28.5 20.8 26.5 22.5 24 22.5C21.5 22.5 19.5 20.8 19.5 18.5Z"/></svg>
+      AvatarAds
+    </a>
+    <span class="tag">Auto-DM for Instagram</span>
+    <span class="spacer"></span>
+    <div class="chip hidden" id="acctChip"><span class="av" id="chipAv"></span><span id="chipUser"></span></div>
+    <button class="btn ghost hidden" id="logoutBtn" onclick="logout()" title="Ends this session: AvatarAds stops acting on this account from this page">
+      <svg width="16" height="16"><use href="#i-out"/></svg>Disconnect
     </button>
-    <ul class="steps">
-      <li data-n="1">An Instagram window opens — log in to your professional account.</li>
-      <li data-n="2">Review and allow the permissions listed above.</li>
-      <li data-n="3">Come back to this page — your profile, insights, comments and messages appear below.</li>
-    </ul>
   </div>
+</header>
 
-  <div class="card hidden" id="loadingCard">
-    <h2><span class="spin"></span>&nbsp;&nbsp;Waiting for Instagram…</h2>
-    <p class="help">Finish the login in the Instagram window, then come back here.</p>
-  </div>
-
-  <!-- STEP 2 — profil + insights -->
-  <div class="card hidden" id="profileCard">
-    <p class="step">Step 2 · Profile &amp; insights</p>
-    <div class="okrow">
-      <div class="okic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1f9d55" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-      <div><h2 style="margin:0">Account connected</h2><div class="help" id="rUser" style="margin:0">@—</div></div>
+<main>
+  <section id="connectView" class="hero">
+    <div>
+      <h1>Turn Instagram comments into conversations</h1>
+      <p class="lead">Connect your Instagram professional account to see your insights, manage the comments on your posts and reply to your audience by direct message — all from AvatarAds.</p>
+      <button class="btn ig" id="connectBtn" onclick="connect()" title="Opens Instagram to log in and review the permissions requested by AvatarAds">
+        <svg width="20" height="20"><use href="#i-ig"/></svg>Connect with Instagram
+      </button>
+      <div class="note"><svg width="15" height="15" style="margin-top:2px"><use href="#i-lock"/></svg><span>You log in on Instagram and choose which permissions to grant. You can remove AvatarAds' access at any time in Instagram → Settings → Website permissions.</span></div>
+      <p class="err hidden" id="connectErr"></p>
+      <div class="center hidden" id="waiting" style="justify-items:start;padding:18px 0 0"><span class="spin"></span><p class="muted small" style="margin:10px 0 0">Waiting for Instagram — finish the login in the Instagram window.</p></div>
     </div>
-    <div class="grid3">
-      <div class="stat"><div class="n" id="rFollowers">—</div><div class="l">Followers</div></div>
-      <div class="stat"><div class="n" id="rMedia">—</div><div class="l">Posts</div></div>
-      <div class="stat"><div class="n" id="rReach">—</div><div class="l">28-day reach</div></div>
+    <div class="card perms">
+      <div class="prow"><span class="pic"><svg width="18" height="18"><use href="#i-user"/></svg></span><div><b>Profile</b><span class="muted small">Your username, profile picture, followers and posts.</span><div><span class="perm">instagram_business_basic</span></div></div></div>
+      <div class="prow"><span class="pic"><svg width="18" height="18"><use href="#i-chart"/></svg></span><div><b>Insights</b><span class="muted small">Your account reach over the last 28 days.</span><div><span class="perm">instagram_business_manage_insights</span></div></div></div>
+      <div class="prow"><span class="pic"><svg width="18" height="18"><use href="#i-cmt"/></svg></span><div><b>Comments</b><span class="muted small">Read, post, reply to, hide and delete comments on your posts.</span><div><span class="perm">instagram_business_manage_comments</span></div></div></div>
+      <div class="prow"><span class="pic"><svg width="18" height="18"><use href="#i-dm"/></svg></span><div><b>Direct messages</b><span class="muted small">Message people who commented on your posts or wrote to you.</span><div><span class="perm">instagram_business_manage_messages</span></div></div></div>
     </div>
-    <p class="help">Followers and posts come from <span class="perm">instagram_business_basic</span>; the 28-day reach comes from <span class="perm">instagram_business_manage_insights</span>.</p>
-  </div>
+  </section>
 
-  <!-- STEP 3 — commentaires -->
-  <div class="card hidden" id="commentsCard">
-    <p class="step">Step 3 · Comments</p>
-    <h2>Manage comments on your posts <span class="perm">instagram_business_manage_comments</span></h2>
-    <p class="help">Select one of your posts. Every action below is applied on Instagram right away — open the post in the Instagram app to see the result.</p>
-    <div class="row" style="margin-top:10px">
-      <button class="btn sec sm" onclick="loadMedia()" title="Reload your latest posts">Refresh posts</button>
-    </div>
-    <div class="posts" id="posts"></div>
+  <section id="appView" class="hidden">
+    <nav class="tabs" role="tablist">
+      <button class="tab on" data-tab="overview" onclick="tab('overview')" title="Your profile and insights"><svg width="16" height="16"><use href="#i-chart"/></svg>Overview</button>
+      <button class="tab" data-tab="comments" onclick="tab('comments')" title="Manage the comments on your posts"><svg width="16" height="16"><use href="#i-cmt"/></svg>Comments</button>
+      <button class="tab" data-tab="messages" onclick="tab('messages')" title="Send direct messages"><svg width="16" height="16"><use href="#i-dm"/></svg>Messages</button>
+    </nav>
 
-    <div id="postPanel" class="hidden" style="margin-top:14px">
-      <h2 style="font-size:15px">Add a new comment</h2>
-      <textarea id="newComment" rows="2" maxlength="300">Thanks for watching! (posted from AvatarAds)</textarea>
-      <div class="row" style="margin-top:8px">
-        <button class="btn sm" id="postBtn" onclick="postComment()" title="Publishes this text as a new comment from your account">Post comment</button>
-        <a class="btn sec sm" id="openPost" href="#" target="_blank" rel="noopener" title="Opens this post on Instagram">Open post on Instagram</a>
+    <div id="tab-overview" class="card pad">
+      <div class="prof">
+        <span class="av lg" id="profAv"></span>
+        <div><h2 id="profName">—</h2><div class="muted" id="profUser">@—</div></div>
       </div>
-      <p class="help">“Post comment” publishes the text above as a new comment on the selected post, from your account.</p>
-      <div class="status" id="cStatus"></div>
-
-      <div class="legend">
-        <b>Reply</b><span>posts a public reply under the comment.</span>
-        <b>Hide / Unhide</b><span>updates the comment's visibility: a hidden comment is only visible to you and its author.</span>
-        <b>Delete</b><span>permanently removes the comment from Instagram.</span>
-        <b>Send private reply</b><span>sends a direct message to the person who wrote the comment (it appears in their Instagram inbox). This is what our Auto-DM does automatically when someone comments a keyword such as “GO”.</span>
+      <div class="stats">
+        <div class="stat"><div class="n" id="rFollowers">—</div><div class="l">Followers</div></div>
+        <div class="stat"><div class="n" id="rMedia">—</div><div class="l">Posts</div></div>
+        <div class="stat"><div class="n" id="rReach">—</div><div class="l">28-day reach</div></div>
       </div>
-      <div class="row" style="justify-content:space-between">
-        <h2 style="font-size:15px;margin:0">Comments</h2>
-        <button class="btn sec sm" onclick="loadComments()" title="Reload the comments of this post">Refresh comments</button>
-      </div>
-      <div id="comments"></div>
+      <p class="muted small" style="margin:14px 0 0">Profile data comes from <span class="perm">instagram_business_basic</span> · the 28-day reach comes from <span class="perm">instagram_business_manage_insights</span>.</p>
     </div>
-  </div>
 
-  <!-- STEP 4 — messages -->
-  <div class="card hidden" id="messagesCard">
-    <p class="step">Step 4 · Direct messages</p>
-    <h2>Send a direct message <span class="perm">instagram_business_manage_messages</span></h2>
-    <p class="help">Instagram lets a business message people who contacted it first: a direct message in the last 24 hours (listed below), or a comment in the last 7 days (use “Send private reply” in Step 3). Messages sent here appear in the person's Instagram inbox.</p>
-    <div class="row" style="margin-top:10px">
-      <button class="btn sec sm" onclick="loadConvs()" title="Reload your latest conversations">Refresh conversations</button>
-    </div>
-    <div id="convs"></div>
-    <div id="threadPanel" class="hidden">
-      <div class="thread" id="thread"></div>
-      <textarea id="dmText" rows="2" maxlength="1000">Hi! Thanks for your message — here is the link you asked for: https://avatarads.fr</textarea>
-      <div class="row" style="margin-top:8px">
-        <button class="btn sm" id="sendBtn" onclick="sendDm()" title="Sends this text as a direct message to the selected person">Send message</button>
+    <div id="tab-comments" class="hidden">
+      <div class="sechead">
+        <div><h2>Comments <span class="perm">instagram_business_manage_comments</span></h2>
+          <p class="muted">Pick one of your posts. Every action is applied on Instagram immediately — open the post in the Instagram app to see the result.</p></div>
       </div>
-      <p class="help">“Send message” delivers the text above to the selected person's Instagram inbox, from your account.</p>
+      <div class="cols">
+        <div class="card pad side">
+          <h3>Your posts <button class="btn quiet" onclick="loadMedia()" title="Reload your latest posts"><svg width="15" height="15"><use href="#i-refresh"/></svg>Refresh</button></h3>
+          <div class="posts" id="posts"></div>
+        </div>
+        <div class="card pad">
+          <div class="postbar">
+            <span class="postcap" id="postCap">Select a post</span>
+            <a class="btn ghost" id="openPost" href="#" target="_blank" rel="noopener" title="Opens this post on Instagram"><svg width="15" height="15"><use href="#i-ext"/></svg>Open on Instagram</a>
+          </div>
+          <div class="composer">
+            <textarea id="newComment" rows="1" maxlength="300" placeholder="Write a comment…">Thanks for watching! (posted from AvatarAds)</textarea>
+            <button class="btn primary" id="postBtn" onclick="postComment()" title="Publishes this text as a new comment from your account"><svg width="16" height="16"><use href="#i-send"/></svg>Post comment</button>
+          </div>
+          <p class="muted small" style="margin:6px 0 0"><b>Post comment</b> publishes the text as a new comment on the selected post, from your account.</p>
+          <div class="legend">
+            <div><span class="lic"><svg width="13" height="13"><use href="#i-reply"/></svg></span><span><b>Reply</b> posts a public reply under the comment.</span></div>
+            <div><span class="lic"><svg width="13" height="13"><use href="#i-eyeoff"/></svg></span><span><b>Hide / Unhide</b> updates the comment's visibility. A hidden comment is only visible to you and its author.</span></div>
+            <div><span class="lic"><svg width="13" height="13"><use href="#i-trash"/></svg></span><span><b>Delete</b> permanently removes the comment from Instagram.</span></div>
+            <div><span class="lic"><svg width="13" height="13"><use href="#i-dm"/></svg></span><span><b>Message</b> sends a private reply to the comment's author — it arrives in their Instagram inbox. Our Auto-DM does this automatically when someone comments a keyword such as “GO”.</span></div>
+          </div>
+          <div class="postbar" style="margin:8px 0 0">
+            <h3 id="cmtTitle">Comments</h3>
+            <button class="btn quiet" onclick="loadComments()" title="Reload the comments of this post"><svg width="15" height="15"><use href="#i-refresh"/></svg>Refresh</button>
+          </div>
+          <div id="comments"></div>
+        </div>
+      </div>
     </div>
-    <div class="status" id="mStatus"></div>
-  </div>
 
-  <p class="help" style="text-align:center">AvatarAds · <a href="https://avatarads.fr/confidentialite.html" style="color:inherit">Privacy policy</a> · Your access token never leaves our server; this console session expires after 3 hours.</p>
-</div>
+    <div id="tab-messages" class="hidden">
+      <div class="sechead">
+        <div><h2>Messages <span class="perm">instagram_business_manage_messages</span></h2>
+          <p class="muted">Reply by direct message to people who contacted your account. Messages sent here arrive in the person's Instagram inbox.</p></div>
+        <button class="btn ghost" onclick="loadConvs()" title="Reload your latest conversations"><svg width="15" height="15"><use href="#i-refresh"/></svg>Refresh</button>
+      </div>
+      <div class="card inbox">
+        <div class="convs" id="convs"></div>
+        <div class="chat">
+          <div class="chathead" id="chatHead"><span class="muted">Select a conversation</span></div>
+          <div class="thread" id="thread"><div class="empty"><svg width="36" height="36"><use href="#i-dm"/></svg>Your conversation will appear here.</div></div>
+          <div class="chatbar">
+            <textarea id="dmText" rows="1" maxlength="1000" placeholder="Write a message…">Hi! Thanks for your message — here is the link you asked for: https://avatarads.fr</textarea>
+            <button class="btn primary" id="sendBtn" onclick="sendDm()" title="Sends this text as a direct message to the selected person"><svg width="16" height="16"><use href="#i-send"/></svg>Send</button>
+          </div>
+          <div class="chatnote"><b>Send</b> delivers the message to the selected person's Instagram inbox. Instagram lets a business message someone who wrote to it in the last 24 hours, or who commented on its posts in the last 7 days (use <b>Message</b> on a comment).</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Your Instagram access token stays on AvatarAds' servers and is never shown on this page · This session ends after 3 hours or when you click Disconnect · <a href="https://avatarads.fr/confidentialite.html" target="_blank" rel="noopener">Privacy policy</a></footer>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span class="dot"></span><span id="toastTxt"></span></div>
 
 <script>
   const IG_AUTH = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/instagram-auth';
   const IG_CONSOLE = 'https://guvwgiejzkiodghywpwj.supabase.co/functions/v1/ig-console';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const fmtN = n => { n=+n||0; return n>=1000 ? (n/1000).toFixed(n>=10000?0:1).replace('.0','')+'k' : String(n); };
-  const ago = t => { const s=Math.max(0,(Date.now()-Date.parse(t))/1000); return s<60?'just now':s<3600?Math.floor(s/60)+' min ago':s<86400?Math.floor(s/3600)+' h ago':Math.floor(s/86400)+' d ago'; };
+  const fmtN = n => { n = +n || 0; return n >= 1000 ? (n/1000).toFixed(n >= 10000 ? 0 : 1).replace('.0','') + 'k' : String(n); };
+  const ago = t => { const s = (Date.now() - Date.parse(t)) / 1000; return !isFinite(s) ? '' : s < 60 ? 'now' : s < 3600 ? Math.floor(s/60) + 'm' : s < 86400 ? Math.floor(s/3600) + 'h' : Math.floor(s/86400) + 'd'; };
+  const ic = (id, n) => '<svg width="' + (n||15) + '" height="' + (n||15) + '"><use href="#' + id + '"/></svg>';
+  const initial = n => esc(String(n || '?').charAt(0).toUpperCase());
+  const loading = '<div class="center"><span class="spin"></span></div>';
   let SID = '', ME = '', MEDIA = null, CONV = null;
+
+  // Avatar : photo de profil (posée par le DOM) sinon initiale.
+  function setAv(el, url, name){
+    el.textContent = String(name || '?').charAt(0).toUpperCase();
+    if(url){ const im = new Image(); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.onload = () => { el.textContent = ''; el.appendChild(im); }; im.src = url; }
+  }
+  let toastT = null;
+  function toast(msg, ok){
+    $('toastTxt').textContent = msg; $('toast').className = 'toast on' + (ok ? '' : ' err');
+    clearTimeout(toastT); toastT = setTimeout(() => { $('toast').className = 'toast'; }, ok ? 3200 : 5200);
+  }
 
   // Session de console (3 h) gardée pour cet onglet seulement : un rechargement ne refait pas l'OAuth.
   try { const o = JSON.parse(sessionStorage.getItem('aa_igc') || 'null'); if (o && o.s && o.exp > Date.now()) { SID = o.s; ME = o.u || ''; } } catch(_){}
 
-  // Audit 02/10 : la page du relecteur passe ?mode=review (aperçu, rien n'est enregistré). Si le visiteur est connecté à
-  // avatarads.fr en owner, son jeton est joint et la connexion est enregistrée comme depuis le tableau de bord.
+  // Audit 02/10 : ?mode=review = aperçu du relecteur (rien enregistré) ; owner connecté à avatarads.fr → jeton joint.
   function sbToken(){
     try {
       const s = JSON.parse(localStorage.getItem('sb-guvwgiejzkiodghywpwj-auth-token') || 'null');
@@ -205,22 +327,18 @@
   // Popup ouvert TOUT DE SUITE dans le clic (Safari bloque un popup ouvert après une requête).
   async function connect(){
     const w = window.open('about:blank', 'ig_oauth', 'width=560,height=760');
-    if(!w){ showRetry('Your browser blocked the Instagram window: please allow pop-ups for this site and try again.'); return; }
-    show('loadingCard'); hide('connectCard');
+    if(!w){ connectError('Your browser blocked the Instagram window. Please allow pop-ups for avatarads.fr and try again.'); return; }
+    $('connectErr').classList.add('hidden'); $('connectBtn').disabled = true; $('waiting').classList.remove('hidden');
     try{
       const tok = sbToken();
       const d = await (await fetch(IG_AUTH + '?action=authorize&mode=review', tok ? { headers: { Authorization: 'Bearer ' + tok } } : {})).json();
       if(!d.authorize_url) throw new Error(d.error || 'Authorization link unavailable');
       w.location.href = d.authorize_url;
-    }catch(e){ try{ w.close(); }catch(_){} showRetry(String((e && e.message) || e)); }
+    }catch(e){ try{ w.close(); }catch(_){} connectError(String((e && e.message) || e)); }
   }
-  function show(id){ $(id).classList.remove('hidden'); }
-  function hide(id){ $(id).classList.add('hidden'); }
-  function showRetry(msg){
-    hide('loadingCard'); show('connectCard');
-    let el = $('connectErr');
-    if(!el){ el = document.createElement('p'); el.id = 'connectErr'; el.style.cssText = 'color:#c2461a;font-size:13px;margin:12px 0 0'; $('connectBtn').insertAdjacentElement('afterend', el); }
-    el.textContent = msg;
+  function connectError(msg){
+    $('waiting').classList.add('hidden'); $('connectBtn').disabled = false;
+    $('connectErr').textContent = msg; $('connectErr').classList.remove('hidden');
   }
 
   // Retour de l'OAuth (ig-callback.html, même origine) : opener + BroadcastChannel.
@@ -228,22 +346,36 @@
   try { const bc = new BroadcastChannel('ig-oauth'); bc.onmessage = e => onOAuth(e.data); } catch(_){}
   function onOAuth(m){
     if(!m || m.source !== 'ig-oauth') return;
-    if(!m.ok){ showRetry('Connection failed: ' + String(m.error || 'unknown error')); return; }
+    if(!m.ok){ connectError('Connection failed: ' + String(m.error || 'unknown error')); return; }
+    if(!m.console_token){ connectError('Your account is connected, but the session could not be opened. Please try again.'); return; }
     const pv = m.preview || {};
     ME = pv.username || m.username || '';
-    fillProfile(pv, m);
-    if(m.console_token){
-      SID = m.console_token;
-      try { sessionStorage.setItem('aa_igc', JSON.stringify({ s: SID, u: ME, exp: Date.now() + 2.9*3600*1000 })); } catch(_){}
-      startConsole();
-    }
+    SID = m.console_token;
+    try { sessionStorage.setItem('aa_igc', JSON.stringify({ s: SID, u: ME, exp: Date.now() + 2.9*3600*1000 })); } catch(_){}
+    openApp(pv);
   }
-  function fillProfile(pv, m){
-    $('rUser').textContent = '@' + (pv.username || (m && m.username) || ME || '');
+  function openApp(pv){
+    const u = pv.username || ME;
+    $('connectView').classList.add('hidden'); $('appView').classList.remove('hidden');
+    $('acctChip').classList.remove('hidden'); $('logoutBtn').classList.remove('hidden');
+    $('chipUser').textContent = '@' + u;
+    setAv($('chipAv'), pv.profile_picture_url, u);
+    setAv($('profAv'), pv.profile_picture_url, u);
+    $('profName').textContent = pv.name || u;
+    $('profUser').textContent = '@' + u;
     $('rFollowers').textContent = pv.followers_count != null ? fmtN(pv.followers_count) : '—';
     $('rMedia').textContent = pv.media_count != null ? pv.media_count : '—';
     if(pv.reach_28j !== undefined) $('rReach').textContent = pv.reach_28j != null ? fmtN(pv.reach_28j) : 'n/a';
-    hide('loadingCard'); hide('connectCard'); show('profileCard');
+    loadMedia(); loadConvs();
+  }
+  function tab(name){
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.getAttribute('data-tab') === name));
+    ['overview','comments','messages'].forEach(n => $('tab-' + n).classList.toggle('hidden', n !== name));
+  }
+  async function logout(){
+    try { await api('logout'); } catch(_){}
+    try { sessionStorage.removeItem('aa_igc'); } catch(_){}
+    location.reload();
   }
 
   async function api(a, extra){
@@ -253,116 +385,127 @@
     if(!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
     return d;
   }
-  function status(id, msg, ok){ const el = $(id); el.textContent = msg || ''; el.className = 'status' + (msg ? (ok ? ' ok' : ' err') : ''); }
+  async function act(btn, fn, okMsg, after){
+    if(btn) btn.disabled = true;
+    try{ await fn(); toast(okMsg, true); if(after) await after(); }
+    catch(e){ toast(e.message, false); }
+    finally{ if(btn) btn.disabled = false; }
+  }
 
-  function startConsole(){ show('commentsCard'); show('messagesCard'); loadMedia(); loadConvs(); }
-
-  // ── Step 3 : publications + commentaires ──
+  // ── Comments ──
   async function loadMedia(){
-    $('posts').innerHTML = '<span class="spin"></span>';
+    $('posts').innerHTML = loading;
     try{
       const d = await api('media');
       const list = d.media || [];
-      if(!list.length){ $('posts').innerHTML = '<p class="help">No posts found on this account.</p>'; return; }
-      $('posts').innerHTML = list.map(m => '<button class="post' + (MEDIA && MEDIA.id === m.id ? ' on' : '') + '" data-id="' + esc(m.id) + '" title="Select this post">'
-        + '<div class="th">' + (m.thumb ? '' : esc(m.type || 'POST')) + '</div>'
-        + '<div class="cap">' + esc(m.comments_count) + (+m.comments_count === 1 ? ' comment' : ' comments') + ' · ' + esc(m.caption || '') + '</div></button>').join('');
+      if(!list.length){ $('posts').innerHTML = '<div class="empty" style="grid-column:1/-1">No posts on this account yet.</div>'; return; }
+      $('posts').innerHTML = list.map(m => '<button class="post" data-id="' + esc(m.id) + '" title="Select this post"><span class="ph">' + (m.type === 'VIDEO' ? 'Reel' : 'Post') + '</span><span class="cnt">' + ic('i-cmt', 12) + esc(m.comments_count) + '</span></button>').join('');
       $('posts').querySelectorAll('.post').forEach((el, i) => {
-        el.onclick = () => selectMedia(list[i]);
-        if(list[i].thumb) el.querySelector('.th').style.backgroundImage = 'url(' + JSON.stringify(String(list[i].thumb)) + ')';   // posé par le DOM, jamais dans le HTML
+        const m = list[i];
+        el.onclick = () => selectMedia(m);
+        if(m.thumb){ const im = new Image(); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.onload = () => { const ph = el.querySelector('.ph'); if(ph) ph.remove(); }; im.src = m.thumb; el.insertBefore(im, el.firstChild); }
       });
-      if(!MEDIA) selectMedia(list[0]);
-    }catch(e){ $('posts').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+      const keep = MEDIA && list.find(m => m.id === MEDIA.id);
+      selectMedia(keep || list[0]);
+    }catch(e){ $('posts').innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(e.message) + '</div>'; }
   }
   function selectMedia(m){
     MEDIA = m;
-    $('posts').querySelectorAll('.post').forEach(el => el.classList.toggle('on', el.getAttribute('data-id') === m.id));
+    $('posts').querySelectorAll('.post').forEach(el => el.classList.toggle('on', el.getAttribute('data-id') === String(m.id)));
+    $('postCap').textContent = m.caption || (m.type === 'VIDEO' ? 'Reel' : 'Post');
     $('openPost').href = m.permalink || '#';
-    show('postPanel'); status('cStatus', ''); loadComments();
+    loadComments();
   }
   async function loadComments(){
     if(!MEDIA) return;
-    $('comments').innerHTML = '<span class="spin"></span>';
+    $('comments').innerHTML = loading;
     try{
       const d = await api('comments', { media_id: MEDIA.id });
       const list = d.comments || [];
-      $('comments').innerHTML = list.length ? list.map(c => cmtHtml(c, false)).join('') : '<p class="help">No comments yet on this post.</p>';
-    }catch(e){ $('comments').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+      $('cmtTitle').textContent = 'Comments (' + list.length + ')';
+      $('comments').innerHTML = list.length ? list.map(c => cmtHtml(c, false)).join('') : '<div class="empty">' + ic('i-cmt', 36) + 'No comments on this post yet.</div>';
+    }catch(e){ $('comments').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
   }
   function cmtHtml(c, isReply){
-    const id = esc(c.id), mine = ME && String(c.username || '').toLowerCase() === ME.toLowerCase();
-    return '<div class="cmt' + (c.hidden ? ' hid' : '') + '" id="c' + id + '">'
-      + '<div class="who">@' + esc(c.username || '—') + '<span class="when">' + esc(ago(c.timestamp)) + '</span>' + (c.hidden ? '<span class="badge">Hidden</span>' : '') + '</div>'
+    const id = esc(c.id), mine = !!ME && String(c.username || '').toLowerCase() === ME.toLowerCase();
+    return '<div class="cmt' + (c.hidden ? ' hid' : '') + '">'
+      + '<span class="av">' + initial(c.username) + '</span>'
+      + '<div class="body">'
+      + '<div class="who">' + esc(c.username || '—') + '<span class="when">' + esc(ago(c.timestamp)) + '</span>' + (c.hidden ? '<span class="badge">' + ic('i-eyeoff', 11) + 'Hidden</span>' : '') + '</div>'
       + '<div class="t">' + esc(c.text) + '</div>'
-      + '<div class="row">'
-      + (isReply ? '' : '<button class="btn sec sm" onclick="toggleForm(\'r' + id + '\')" title="Post a public reply under this comment">Reply</button>')
-      + (mine ? '' : '<button class="btn sec sm" onclick="hideCmt(\'' + id + '\',' + (!c.hidden) + ')" title="' + (c.hidden ? 'Make this comment visible to everyone again' : 'Hide this comment from other people') + '">' + (c.hidden ? 'Unhide' : 'Hide') + '</button>')
-      + '<button class="btn danger sm" onclick="delCmt(\'' + id + '\')" title="Permanently delete this comment from Instagram">Delete</button>'
-      + (isReply || mine ? '' : '<button class="btn sec sm" onclick="toggleForm(\'p' + id + '\')" title="Send a direct message to the author of this comment">Send private reply</button>')
+      + '<div class="acts">'
+      + (isReply ? '' : '<button class="btn quiet" onclick="toggle(\'r' + id + '\')" title="Post a public reply under this comment">' + ic('i-reply') + 'Reply</button>')
+      + (mine ? '' : '<button class="btn quiet" onclick="hideCmt(this,\'' + id + '\',' + (!c.hidden) + ')" title="' + (c.hidden ? 'Show this comment to everyone again' : 'Hide this comment from other people') + '">' + ic(c.hidden ? 'i-eye' : 'i-eyeoff') + (c.hidden ? 'Unhide' : 'Hide') + '</button>')
+      + '<button class="btn quiet danger" onclick="delCmt(this,\'' + id + '\')" title="Permanently delete this comment from Instagram">' + ic('i-trash') + 'Delete</button>'
+      + (isReply || mine ? '' : '<button class="btn quiet" onclick="toggle(\'p' + id + '\')" title="Send a direct message to the author of this comment">' + ic('i-dm') + 'Message</button>')
       + '</div>'
-      + (isReply ? '' : '<div class="sub-form" id="fr' + id + '"><textarea rows="2" maxlength="300" id="tr' + id + '">Thanks for your comment!</textarea><div class="row" style="margin-top:6px"><button class="btn sm" onclick="replyCmt(\'' + id + '\')" title="Publishes this public reply">Post reply</button></div></div>'
-        + '<div class="sub-form" id="fp' + id + '"><textarea rows="2" maxlength="1000" id="tp' + id + '">Hi! Here is the link you asked for: https://avatarads.fr</textarea><div class="row" style="margin-top:6px"><button class="btn sm" onclick="privReply(\'' + id + '\')" title="Sends this text as a direct message to the comment author">Send direct message</button></div><p class="help">Delivered to @' + esc(c.username || '') + '\'s Instagram inbox.</p></div>')
-      + ((c.replies && c.replies.length) ? '<div class="rep">' + c.replies.map(r => cmtHtml(r, true)).join('') + '</div>' : '')
-      + '</div>';
+      + (isReply ? '' :
+          '<div class="inline hidden" id="fr' + id + '"><div class="composer"><textarea rows="1" maxlength="300" id="tr' + id + '">Thanks for your comment!</textarea><button class="btn primary" onclick="replyCmt(this,\'' + id + '\')" title="Publishes this public reply">' + ic('i-send') + 'Reply</button></div><div class="hint">Posted publicly under @' + esc(c.username || '') + '\'s comment.</div></div>'
+        + '<div class="inline hidden" id="fp' + id + '"><div class="composer"><textarea rows="2" maxlength="1000" id="tp' + id + '">Hi! Here is the link you asked for: https://avatarads.fr</textarea><button class="btn primary" onclick="privReply(this,\'' + id + '\')" title="Sends this text as a direct message to the comment author">' + ic('i-send') + 'Send</button></div><div class="hint">Private message — delivered to @' + esc(c.username || '') + '\'s Instagram inbox.</div></div>')
+      + ((c.replies && c.replies.length) ? '<div class="reply-list">' + c.replies.map(r => cmtHtml(r, true)).join('') + '</div>' : '')
+      + '</div></div>';
   }
-  function toggleForm(k){ const el = $('f' + k); if(el) el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
-  async function run(btn, statusId, fn, okMsg, reload){
-    if(btn) btn.disabled = true; status(statusId, 'Sending to Instagram…', true);
-    try{ await fn(); status(statusId, okMsg, true); if(reload) await reload(); }
-    catch(e){ status(statusId, e.message, false); }
-    finally{ if(btn) btn.disabled = false; }
-  }
+  function toggle(k){ const el = $('f' + k); if(el) el.classList.toggle('hidden'); }
   function postComment(){
-    const t = $('newComment').value.trim(); if(!t) return status('cStatus', 'Write a comment first.', false);
-    run($('postBtn'), 'cStatus', () => api('comment', { media_id: MEDIA.id, text: t }), 'Comment posted on Instagram.', loadComments);
+    const t = $('newComment').value.trim(); if(!t) return toast('Write a comment first.', false);
+    act($('postBtn'), () => api('comment', { media_id: MEDIA.id, text: t }), 'Comment posted on Instagram', loadComments);
   }
-  function replyCmt(id){
-    const t = ($('tr' + id) || {}).value || ''; if(!t.trim()) return status('cStatus', 'Write a reply first.', false);
-    run(null, 'cStatus', () => api('reply', { comment_id: id, text: t }), 'Reply posted on Instagram.', loadComments);
+  function replyCmt(btn, id){
+    const t = (($('tr' + id) || {}).value || '').trim(); if(!t) return toast('Write a reply first.', false);
+    act(btn, () => api('reply', { comment_id: id, text: t }), 'Reply posted on Instagram', loadComments);
   }
-  function hideCmt(id, h){
-    run(null, 'cStatus', () => api('hide', { comment_id: id, hide: h }), h ? 'Comment hidden on Instagram.' : 'Comment visible again on Instagram.', loadComments);
+  function hideCmt(btn, id, h){ act(btn, () => api('hide', { comment_id: id, hide: h }), h ? 'Comment hidden on Instagram' : 'Comment visible again on Instagram', loadComments); }
+  function delCmt(btn, id){
+    if(!confirm('Delete this comment from Instagram? This cannot be undone.')) return;
+    act(btn, () => api('delete', { comment_id: id }), 'Comment deleted from Instagram', loadComments);
   }
-  function delCmt(id){
-    if(!confirm('Delete this comment on Instagram? This cannot be undone.')) return;
-    run(null, 'cStatus', () => api('delete', { comment_id: id }), 'Comment deleted from Instagram.', loadComments);
-  }
-  function privReply(id){
-    const t = ($('tp' + id) || {}).value || ''; if(!t.trim()) return status('cStatus', 'Write a message first.', false);
-    run(null, 'cStatus', () => api('private_reply', { comment_id: id, text: t }), 'Direct message sent — it is now in the person\'s Instagram inbox.', loadConvs);
+  function privReply(btn, id){
+    const t = (($('tp' + id) || {}).value || '').trim(); if(!t) return toast('Write a message first.', false);
+    act(btn, () => api('private_reply', { comment_id: id, text: t }), 'Message sent — it is in their Instagram inbox', () => { toggle('p' + id); return loadConvs(); });
   }
 
-  // ── Step 4 : conversations ──
+  // ── Messages ──
   async function loadConvs(){
-    $('convs').innerHTML = '<span class="spin"></span>';
+    $('convs').innerHTML = loading;
     try{
       const d = await api('conversations');
       const list = (d.conversations || []).filter(c => c.user_id);
-      if(!list.length){ $('convs').innerHTML = '<p class="help">No conversations yet. Send your account a direct message from another Instagram account (or use “Send private reply” on a comment), then click “Refresh conversations”.</p>'; return; }
-      $('convs').innerHTML = list.map((c, i) => '<button class="conv' + (CONV && CONV.id === c.id ? ' on' : '') + '" data-i="' + i + '" title="Open this conversation"><b>@' + esc(c.username || c.user_id) + '</b><span class="help" style="margin:0">' + esc(c.updated_time ? ago(c.updated_time) : '') + '</span></button>').join('');
-      $('convs').querySelectorAll('.conv').forEach(el => el.onclick = () => openConv(list[+el.getAttribute('data-i')], +el.getAttribute('data-i')));
-    }catch(e){ $('convs').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+      if(!list.length){ $('convs').innerHTML = '<div class="empty">No conversations yet. When someone writes to your account, or after you message a commenter, the conversation appears here.</div>'; return; }
+      $('convs').innerHTML = list.map(c => '<button class="conv" data-id="' + esc(c.id) + '" title="Open this conversation"><span class="av">' + initial(c.username) + '</span><span><span class="nm">' + esc(c.username || c.user_id) + '</span><br><span class="muted small">' + esc(c.updated_time ? ago(c.updated_time) : '') + '</span></span></button>').join('');
+      $('convs').querySelectorAll('.conv').forEach((el, i) => el.onclick = () => openConv(list[i]));
+      const keep = CONV && list.find(c => c.id === CONV.id);
+      if(keep) openConv(keep);
+    }catch(e){ $('convs').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
   }
-  async function openConv(c, i){
-    CONV = c; if(i != null) CONV.i = i;
-    $('convs').querySelectorAll('.conv').forEach(el => el.classList.toggle('on', +el.getAttribute('data-i') === CONV.i));
-    show('threadPanel'); $('thread').innerHTML = '<span class="spin"></span>'; status('mStatus', '');
+  async function openConv(c){
+    CONV = c;
+    $('convs').querySelectorAll('.conv').forEach(el => el.classList.toggle('on', el.getAttribute('data-id') === String(c.id)));
+    $('chatHead').innerHTML = '<span class="av">' + initial(c.username) + '</span><b>' + esc(c.username || c.user_id) + '</b>';
+    $('thread').innerHTML = loading;
     try{
       const d = await api('thread', { conversation_id: c.id });
       const msgs = d.messages || [];
-      $('thread').innerHTML = msgs.length ? msgs.map(m => '<div class="msg' + (ME && String(m.from || '').toLowerCase() === ME.toLowerCase() ? ' me' : '') + '"><div class="m">@' + esc(m.from || '') + ' · ' + esc(m.created_time ? ago(m.created_time) : '') + '</div>' + esc(m.text || '(attachment)') + '</div>').join('') : '<p class="help">No messages to show.</p>';
+      $('thread').innerHTML = msgs.length ? msgs.map(m => { const me = !!ME && String(m.from || '').toLowerCase() === ME.toLowerCase();
+        return '<div class="msg' + (me ? ' me' : '') + '">' + esc(m.text || '(attachment)') + '<div class="m">' + esc(me ? 'You' : (m.from || '')) + ' · ' + esc(m.created_time ? ago(m.created_time) : '') + '</div></div>'; }).join('')
+        : '<div class="empty">No messages to show.</div>';
       $('thread').scrollTop = $('thread').scrollHeight;
-    }catch(e){ $('thread').innerHTML = '<p class="status err">' + esc(e.message) + '</p>'; }
+    }catch(e){ $('thread').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
   }
   function sendDm(){
-    if(!CONV) return status('mStatus', 'Select a conversation first.', false);
-    const t = $('dmText').value.trim(); if(!t) return status('mStatus', 'Write a message first.', false);
-    run($('sendBtn'), 'mStatus', () => api('send', { recipient_id: CONV.user_id, text: t }), 'Message sent — it is now in @' + (CONV.username || 'the person') + '\'s Instagram inbox.', () => openConv(CONV));
+    if(!CONV) return toast('Select a conversation first.', false);
+    const t = $('dmText').value.trim(); if(!t) return toast('Write a message first.', false);
+    act($('sendBtn'), () => api('send', { recipient_id: CONV.user_id, text: t }), 'Message sent to @' + (CONV.username || 'the person') + ' on Instagram', () => openConv(CONV));
   }
 
-  // Rechargement de l'onglet avec une session encore valide : la console revient sans refaire l'OAuth.
+  // Champs de texte : hauteur ajustée au contenu (le texte pré-rempli reste lisible, jusqu'à 160 px).
+  function autosize(el){ if(!el || el.tagName !== 'TEXTAREA' || !el.offsetParent) return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight + 2, 160) + 'px'; }
+  document.addEventListener('input', e => autosize(e.target));
+  new MutationObserver(() => document.querySelectorAll('textarea').forEach(autosize)).observe(document.body, { subtree:true, childList:true, attributes:true, attributeFilter:['class'] });
+  window.addEventListener('resize', () => document.querySelectorAll('textarea').forEach(autosize));
+
+  // Rechargement avec une session encore valide : la console revient sans refaire l'OAuth.
   if(SID){
-    api('me').then(me => { ME = me.username || ME; fillProfile({ username: me.username, followers_count: me.followers_count, media_count: me.media_count }, null); startConsole(); })
+    api('me').then(me => { ME = me.username || ME; openApp({ username: me.username, profile_picture_url: me.profile_picture_url, followers_count: me.followers_count, media_count: me.media_count }); })
       .catch(() => { SID = ''; });
   }
 </script>
