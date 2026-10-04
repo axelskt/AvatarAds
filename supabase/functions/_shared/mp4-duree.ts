@@ -10,7 +10,8 @@
 //   4. il réécrit le corps (champs de l'app seulement) vers une URL signée de la copie, et réserve tarif/s × durée.
 // Durée illisible → 400 (jamais de repli au plancher). Même arrondi que l'app (seconde supérieure) avec 1 s de tolérance
 // (+ 0,25 s de gigue de ré-encodage) en faveur du client, moins les étapes annexes déjà payées sur la même op (≤ 6 crédits,
-// minimumSurReserve) : le minimum serveur ne dépasse jamais ce que l'app débite.
+// minimumSurReserve) : le minimum serveur ne dépasse jamais ce que l'app débite. Audit 04/10 : Omni (fichier original, sans
+// ré-encodage) = 0,5 s de marge et aucune remise d'étapes annexes (OMNI-S1 / OMNI-S2).
 //
 // DURÉE RETENUE = la PLUS LONGUE des durées de présentation déclarées : mvhd, et pour chaque piste vidéo / son : tkhd, la
 // liste d'éditions (elst) si elle existe, sinon la durée du média (mdhd, somme des stts). Un MP4 fragmenté ajoute mehd et
@@ -434,6 +435,13 @@ export const TOLERANCE_S = 1   // en faveur du client : écarts de mesure naviga
 // + gigue de ré-encodage (ffmpeg.wasm de _mcNormalizeRef : HEVC → H.264 + AAC, quelques centièmes de plus que la durée lue
 // par le navigateur) et piste son un peu plus longue que l'image (le navigateur affiche parfois la seule piste vidéo).
 export const GIGUE_S = 0.25
+// Audit 04/10 (OMNI-S2) : l'Omni édition envoie le fichier ORIGINAL (aucun ré-encodage, contrairement à Motion) et le parseur
+// colle à la durée que lit le navigateur (écart ≤ 45 ms sur 36 fichiers iPhone et exports MP4 relus le 04/10 ; Android non
+// testé) : 1,25 s de marge laissait le MINIMUM D'ENTRÉE 1 à 2 s sous le prix de l'app. 0,5 s pour Omni, 1,25 s pour Kling.
+// La réconciliation de SORTIE garde 1,25 s pour tous : le minimum d'entrée est déjà le prix de l'app, et une sortie Omni un
+// peu plus longue que le fichier envoyé ne doit pas faire payer (ni retenir) un client honnête.
+export const TOLERANCE_OMNI_S = 0.5
+export const OMNI_MAX_SEC = 10
 // Étapes ANNEXES que l'app paie sur la MÊME op juste avant Kling (Motion « Glisse un fond », ouvert à tous) : effacement de
 // la personne du fond par gpt-image medium (3 crédits, openai-proxy, x-aa-op = l'op motion) + détourage birefnet / rembg
 // (1 crédit par modèle resté tiré, 3 au plus). Le prix Motion de l'app = tarif × durée, ces étapes COMPRISES : la réserve
@@ -445,21 +453,21 @@ export function minimumSurReserve(cout: number, dejaTire: number): number {
   const d = Number.isFinite(dejaTire) && dejaTire > 0 ? Math.min(Math.floor(dejaTire), ANNEXES_MAX_CR) : 0
   return Math.max(1, Math.ceil(cout) - d)
 }
-export type TarifVideo = { parSec: number; maxSec: number; modele: 'kling' | 'omni-edit' }
+export type TarifVideo = { parSec: number; maxSec: number; modele: 'kling' | 'omni-edit'; tol: number }
 export function tarifVideoFal(path: string, resolution?: unknown): TarifVideo | null {
   const p = path.split('?')[0]
   const k = p.match(/^\/fal-ai\/kling-video\/(v2\.6|v3)\/(standard|pro)\/motion-control$/i)
-  if (k) return { parSec: k[1].toLowerCase() === 'v3' ? 6 : (k[2].toLowerCase() === 'pro' ? 4 : 2), maxSec: 30, modele: 'kling' }
-  if (/^\/google\/gemini-omni-flash\/v1\.1\/edit$/i.test(p)) return { parSec: resolution === '1080p' ? 4 : 3, maxSec: 10, modele: 'omni-edit' }
+  if (k) return { parSec: k[1].toLowerCase() === 'v3' ? 6 : (k[2].toLowerCase() === 'pro' ? 4 : 2), maxSec: 30, modele: 'kling', tol: TOLERANCE_S + GIGUE_S }
+  if (/^\/google\/gemini-omni-flash\/v1\.1\/edit$/i.test(p)) return { parSec: resolution === '1080p' ? 4 : 3, maxSec: OMNI_MAX_SEC, modele: 'omni-edit', tol: TOLERANCE_OMNI_S }
   return null
 }
 // App : ⌈durée⌉ × tarif (Omni : ⌈durée⌉ ; Motion : ⌈durée effective⌉ bornée à 30). Serveur : ⌈min(durée mesurée, durée max
 // du modèle) − 1 s − gigue⌉, au moins 1 s → toujours ≤ ce que l'app a débité pour le même fichier ; les étapes annexes tirées
 // sur la même op (fond effacé + détourage) sont retirées ensuite du minimum par minimumSurReserve (tests p1).
 // La durée est bornée AVANT la tolérance : une vidéo de 30,1 s que l'app facture 30 s (elle ne coupe qu'au-delà de 30,5 s)
-// exige 29 s, comme une vidéo de 30 s.
-export function secondesFacturees(sec: number, maxSec: number): number {
-  return Math.max(1, Math.ceil(Math.min(r3(sec), maxSec) - TOLERANCE_S - GIGUE_S))
+// exige 29 s, comme une vidéo de 30 s. Audit 04/10 (OMNI-S2) : `tol` = marge du modèle (Omni 0,5 s, défaut 1,25 s).
+export function secondesFacturees(sec: number, maxSec: number, tol: number = TOLERANCE_S + GIGUE_S): number {
+  return Math.max(1, Math.ceil(Math.min(r3(sec), maxSec) - tol))
 }
 // Au-delà de la durée max + la marge de l'app (0,5 s) + la tolérance : le fournisseur refuserait (Kling 422) ou facturerait
 // plus que la réserve → refus clair AVANT tout tirage.
@@ -496,9 +504,21 @@ export type VideoFal = { ok: true; body: string; cost: number; mesureSec: number
 
 const str = (v: unknown, max: number) => String(v ?? '').slice(0, max)
 
+// Audit 04/10 (OMNI-R1) : conteneur reconnu à son en-tête quand la durée est illisible — un WebM / MKV (EBML) ou un AVI
+// n'est pas un fichier abîmé mais un format que la mesure ne lit pas : le dire au client (l'app n'accepte plus que MP4 / MOV,
+// un ancien onglet ou un fichier renommé peut encore en envoyer). null = format non identifié (message générique).
+export function formatNonIso(tete: Uint8Array | null): string | null {
+  if (!tete || tete.length < 12) return null
+  if (tete[0] === 0x1a && tete[1] === 0x45 && tete[2] === 0xdf && tete[3] === 0xa3) return 'WebM / MKV'
+  if (txt(tete, 0) === 'RIFF' && txt(tete, 8) === 'AVI ') return 'AVI'
+  if (tete[0] === 0x46 && tete[1] === 0x4c && tete[2] === 0x56 && tete[3] === 0x01) return 'FLV'
+  return null
+}
+const sonderTete = async (url: string): Promise<Uint8Array | null> => (await lecteurUrl(url, 8000)(0, 15))?.octets ?? null
+
 export async function preparerVideoFal(o: {
   path: string; raw: string; uid: string; base: string; bucket: string; st: StockageFal
-  mesurer?: (url: string) => Promise<number | null>; maintenant?: number
+  mesurer?: (url: string) => Promise<number | null>; maintenant?: number; sonder?: (url: string) => Promise<Uint8Array | null>
 }): Promise<VideoFal> {
   let b: Record<string, unknown> | null = null
   try { b = JSON.parse(o.raw || '{}') } catch { /* traité juste dessous */ }
@@ -550,9 +570,13 @@ export async function preparerVideoFal(o: {
   // createSignedUrl renvoie une URL absolue (ou relative selon la version du client) : ramenée à NOTRE préfixe signé.
   const url = signed.startsWith(signPre) ? signed : signPre + signed.slice(signed.indexOf(copie))
   const mesureSec = await (o.mesurer ?? dureeMp4Url)(url).catch(() => null)
-  if (!(mesureSec && mesureSec > 0)) { await jeter(); return { ok: false, status: 400, error: 'vidéo illisible : durée introuvable — réexporte-la en MP4 (H.264) et réessaie' } }
+  if (!(mesureSec && mesureSec > 0)) {
+    const fmt = formatNonIso(await (o.sonder ?? sonderTete)(url).catch(() => null))   // Audit 04/10 (OMNI-R1), avant la suppression
+    await jeter()
+    return { ok: false, status: 400, error: fmt ? `vidéo au format ${fmt} : non prise en charge — réexporte-la en MP4 (H.264) ou en MOV et réessaie` : 'vidéo illisible : durée introuvable — réexporte-la en MP4 (H.264) et réessaie' }
+  }
   if (tropLongue(mesureSec, tarif.maxSec)) { await jeter(); return { ok: false, status: 400, error: `vidéo trop longue (${Math.round(mesureSec)} s) : ${tarif.maxSec} secondes maximum` } }
-  const factureSec = secondesFacturees(mesureSec, tarif.maxSec)
+  const factureSec = secondesFacturees(mesureSec, tarif.maxSec, tarif.tol)   // Audit 04/10 (OMNI-S2) : marge du modèle
   corps.video_url = url
   return { ok: true, body: JSON.stringify(corps), cost: tarif.parSec * factureSec, mesureSec, factureSec, copie }
 }

@@ -4,9 +4,12 @@
 //  → tap (postback FOLLOW_CHECK) → profil (abonné ? + username + followers) : true=lien tracké / false=relance.
 //  verify_jwt=false (config.toml). IG_APP_SECRET=signature. Token : ig_accounts retrouvé par l'id PROFESSIONNEL
 //  (entry.id) via _shared/igacct.ts ; secret IG_TOKEN en repli pour le compte principal seulement (28/09 : 2 comptes).
+//  Audit 04/10 (CF-SEC-1) : plafonds PAR PERSONNE (voir handleEvent) — un même lead ne déclenche plus une réponse, un DM,
+//  une lecture de profil et une ligne de journal à chaque commentaire ou à chaque tap.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { trackedLink } from '../_shared/iglink.ts'
 import { accountToken as tokenOf } from '../_shared/igacct.ts'
+import { rateHit } from '../_shared/guard.ts'
 
 const VERIFY_TOKEN = Deno.env.get('IG_VERIFY_TOKEN') || 'avatarads_ig_2026_dm'
 const APP_SECRET   = Deno.env.get('IG_APP_SECRET') || ''
@@ -138,6 +141,23 @@ async function alreadyDone(field: 'comment_id' | 'sender_id', value: string, kin
 async function logDm(row: Record<string, unknown>) {
   try { await svc.from('ig_dm_log').insert(row) } catch (e) { console.log('[ig-autodm] log err', String(e)) }
 }
+// Audit 04/10 (CF-SEC-1) : ce lead a-t-il déjà reçu `kind` de ce compte depuis `ms` (et, pour 'ask', sur ce post) ?
+// Fail-open (base muette → false) : en cas d'incident on retombe sur le comportement d'avant, jamais un lead ignoré.
+async function sentWithin(igId: string, sender: string, kind: string, ms: number, mediaId?: string | null): Promise<boolean> {
+  try {
+    let q = svc.from('ig_dm_log').select('id').eq('sender_id', sender).eq('kind', kind).eq('ig_id', igId)
+      .gte('created_at', new Date(Date.now() - ms).toISOString())
+    if (mediaId !== undefined) q = mediaId ? q.eq('media_id', mediaId) : q.is('media_id', null)
+    const { data, error } = await q.limit(1)
+    return !error && !!data?.length
+  } catch { return false }
+}
+// Plafonds par personne et par compte. Un parcours normal (1 commentaire → carte → 1 ou 2 taps) n'en approche aucun.
+const ASK_SAME_POST_MS = 24 * 3600_000   // une seule réponse par personne et par post sur 24 h
+const ASK_MAX_PER_H    = 5               // réponses à une même personne, tous posts confondus, par heure
+const TAP_MAX_PER_10M  = 5               // taps « Je suis abonné » traités par personne en 10 min (au-delà : ignorés)
+const LINK_EVERY_MS    = 10 * 60_000     // lien renvoyé au plus toutes les 10 min (le précédent est dans la conversation)
+const NOTYET_EVERY_MS  = 5 * 60_000      // carte « pas encore abonné » au plus toutes les 5 min
 
 Deno.serve(async (req) => {
   const url = new URL(req.url)
@@ -165,7 +185,13 @@ Deno.serve(async (req) => {
     }
     let body: any = {}
     try { body = JSON.parse(raw) } catch { /* ignore */ }
-    ;(async () => { try { await handleEvent(body) } catch (e) { console.log('[ig-autodm] handle error', String(e)) } })()
+    const job = (async () => { try { await handleEvent(body) } catch (e) { console.log('[ig-autodm] handle error', String(e)) } })()
+    // Audit 04/10 (relecture CF-SEC-1) : le traitement tourne APRÈS le 200 (Meta exige une réponse rapide) et fait
+    // désormais 2 à 3 allers-retours base de plus (plafonds par personne) : on demande au runtime de garder l'isolate
+    // jusqu'à sa fin (EdgeRuntime.waitUntil, comme reconcile-fal-orphans / mcp). Runtime sans waitUntil : comme avant.
+    // job ne rejette jamais (erreur attrapée ci-dessus) ; la réponse part immédiatement dans les deux cas.
+    const ru = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime
+    if (ru && typeof ru.waitUntil === 'function') { try { ru.waitUntil(job) } catch { /* comme avant : promesse libre */ } }
     return new Response('EVENT_RECEIVED', { status: 200 })
   }
 
@@ -189,6 +215,16 @@ async function handleEvent(body: any) {
       const rule = await loadRule(igId, v.media?.id)
       if (!rule.keywords.some((k: string) => words.has(k))) continue
       if (await alreadyDone('comment_id', commentId, 'ask')) continue   // dédup : 1 réponse / commentaire
+      // Audit 04/10 (CF-SEC-1) : la même personne déjà servie sur ce post (24 h), ou trop de réponses en une heure → rien
+      // (ni réponse publique, ni DM, ni ligne). Sans expéditeur connu : seule la dédup par commentaire s'applique.
+      if (fromId) {
+        if (await sentWithin(igId, fromId, 'ask', ASK_SAME_POST_MS, v.media?.id ? String(v.media.id) : null)) {
+          console.log('[ig-autodm] déjà servi sur ce post, commentaire ignoré', commentId); continue
+        }
+        if (!(await rateHit('igdm:ask:' + igId + ':' + fromId, 3600, ASK_MAX_PER_H))) {
+          console.log('[ig-autodm] plafond horaire de réponses atteint pour', fromId); continue
+        }
+      }
       await replyToComment(commentId, token, pick(PUBLIC_REPLIES, commentId))
       await sendMessage(igId, token, { comment_id: commentId }, askMsg(rule))
       await logDm({ ig_id: igId, comment_id: commentId, sender_id: fromId, username: v.from?.username || null, media_id: v.media?.id || null, kind: 'ask' })
@@ -201,15 +237,21 @@ async function handleEvent(body: any) {
       if (!sender || sender === igId) continue
       const payload = m.postback?.payload || m.message?.quick_reply?.payload
       if (payload !== 'FOLLOW_CHECK') continue
+      // Audit 04/10 (CF-SEC-1) : taps en rafale → ignorés AVANT toute lecture Graph (profil) et tout envoi.
+      if (!(await rateHit('igdm:tap:' + igId + ':' + sender, 600, TAP_MAX_PER_10M))) {
+        console.log('[ig-autodm] taps en rafale ignorés pour', sender); continue
+      }
       const rule = await loadRule(igId)
       const prof = await getProfile(sender, token)
       const follows = prof.follows
       const meta = { username: prof.username, follower_count: prof.follower_count, follows }
       if (follows === true) {
+        if (await sentWithin(igId, sender, 'link', LINK_EVERY_MS)) { console.log('[ig-autodm] lien déjà envoyé il y a moins de 10 min à', sender); continue }
         await sendMessage(igId, token, { id: sender }, linkMsg(await trackedLink(igId, sender, rule.link)))
         await logDm({ ig_id: igId, sender_id: sender, kind: 'link', ...meta })
         console.log('[ig-autodm] LIEN envoyé à', sender)
       } else {
+        if (await sentWithin(igId, sender, 'notyet', NOTYET_EVERY_MS)) { console.log('[ig-autodm] relance « pas encore abonné » déjà envoyée à', sender); continue }
         await sendMessage(igId, token, { id: sender }, notYetMsg(rule))
         await logDm({ ig_id: igId, sender_id: sender, kind: 'notyet', ...meta })
         console.log('[ig-autodm] pas encore abonné', sender, '(follows=', follows, ')')

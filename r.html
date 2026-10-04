@@ -2,6 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Audit 04/10 (SITE-01) : référent réduit à l'ORIGINE (https://avatarads.fr/), jamais le chemin ni la requête. Sans cette
+     balise, la redirection vers avatarads.fr (même origine) transmettait l'URL complète r.html?u=<identifiant Instagram du
+     lead>&ig=…&s=<signature> comme document.referrer de la LP, donc à tout script tiers de la page d'arrivée. « origin » et
+     pas « no-referrer » : trackads.fr et ig-go reçoivent exactement ce qu'ils recevaient déjà (l'origine seule). -->
+<meta name="referrer" content="origin">
 <!-- Audit 02/10 : CSP (script de cette page seulement ; appel réseau : ig-go sur notre Supabase seulement). frame-ancestors
      est ignoré dans une balise meta → filet JS anti-iframe juste dessous. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
@@ -46,7 +51,9 @@
     if (t.protocol === 'https:' && ALLOWED.some(a => h === a || h.endsWith('.' + a))) to = t.href;
   } catch (e) { /* destination par défaut */ }
   let gone = false;
-  const go = () => { if (!gone) { gone = true; location.replace(to); } };
+  // Audit 04/10 (SITE-01) : l'URL de la page (u, ig, s) est effacée avant de partir — ceinture et bretelles avec la
+  // balise referrer ci-dessus (navigateurs qui l'ignoreraient, historique de l'onglet).
+  const go = () => { if (!gone) { gone = true; try { history.replaceState(null, '', location.pathname); } catch (e) { /* sans effet */ } location.replace(to); } };
   const keep = (r) => {
     try {
       const m = /^1\.([0-9a-z]{1,10})\.[A-Za-z0-9_-]{20,400}$/.exec(r || ''); if (!m) return;

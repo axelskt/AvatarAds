@@ -8,11 +8,9 @@
      aa_theme=sombre pour que connexion + app suivent en sombre. Partagé même-origine ; le choix
      explicite (toggle Mon compte) prime toujours. -->
 <script>try{if(!localStorage.getItem('aa_theme'))localStorage.setItem('aa_theme','dark');}catch(e){}</script>
-<!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
-<script type="text/javascript">/* Clarity chargé APRÈS le rendu (idle) pour ne pas peser sur le thread principal au chargement */
-(function(){function loadClarity(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");}
-function sched(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(loadClarity);}
-if(document.readyState==='complete')sched();else window.addEventListener('load',sched);})();</script>
+<!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Audit 04/10 (SITE-03) : chargé par /app/consent.js comme sur la LP (refus
+     enregistré depuis /confidentialite.html respecté, aucun consentement déclaré sans « Accepter ») ; data-lazy : après le rendu (load + idle). -->
+<script src="/app/consent.js?v=2026-10-04-3" defer data-lazy="1"></script>
 <title>AvatarAds · Générateur de vidéos et images par IA</title>
 <meta name="description" content="Crée des vidéos sans montrer ton visage : générateur de vidéos virales par IA, avatar IA et UGC prêts à poster en quelques minutes. Sans caméra, sans montage.">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">

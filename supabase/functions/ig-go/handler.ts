@@ -7,7 +7,8 @@
 //    Audit 02/10 : l'ancien chemin SANS signature (liens d'avant le 23/09) est supprimé : sans s, la redirection
 //    passe mais aucun clic n'est enregistré. La signature porte la date d'émission (_shared/iglink.ts) : lien valable
 //    30 jours. Liens v1 (signés sans date, 23/09 → déploiement) : acceptés jusqu'au LEGACY_V1_UNTIL ET seulement si ce
-//    lead a reçu un lien ('link' ou 'relance') de ce compte il y a 30 jours au plus.
+//    lead a reçu un lien ('link' ou 'relance') de ce compte il y a 30 jours au plus. Audit 04/10 : un clic enregistré au
+//    plus par lead et par compte toutes les 10 min (CLICK_DEDUP_MS), la redirection passe toujours.
 //  - Attribution (Axel 25/09) : un clic enregistré renvoie une RÉFÉRENCE CHIFFRÉE du lead (_shared/leadref.ts,
 //    jamais l'identifiant Instagram en clair) : { ok, ref } en JSON pour r.html, qui la garde 30 jours dans le
 //    navigateur. Le 302 direct (aucun DM ne l'utilise : tous les liens passent par r.html) ne transporte JAMAIS de
@@ -33,6 +34,23 @@ const CORS = {
 }
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+
+// Audit 04/10 (CF-SEC-2) : un lien signé reste valable 30 jours et se rejoue → au plus UN clic enregistré par lead et par
+// compte toutes les 10 min. Un rejeu dans la fenêtre est redirigé comme avant, sans nouvelle ligne ; sa référence
+// d'attribution reprend l'heure du clic DÉJÀ enregistré (un compte relié a donc toujours un clic dans ig_dm_log).
+// Renvoie l'heure (ms) du dernier clic enregistré dans la fenêtre, ou null (aucun, ou base muette → on enregistre).
+export const CLICK_DEDUP_MS = 10 * 60_000
+async function recentClickAt(u: string, ig: string): Promise<number | null> {
+  try {
+    let q = svc.from('ig_dm_log').select('created_at').eq('sender_id', u).eq('kind', 'click')
+      .gte('created_at', new Date(Date.now() - CLICK_DEDUP_MS).toISOString())
+    q = ig ? q.eq('ig_id', ig) : q.is('ig_id', null)
+    const { data, error } = await q.order('created_at', { ascending: false }).limit(1)
+    if (error || !data?.length) return null
+    const t = Date.parse(String((data[0] as { created_at: string }).created_at))
+    return Number.isFinite(t) ? t : null
+  } catch { return null }
+}
 
 async function clickAllowed(u: string, ig: string, s: string): Promise<boolean> {
   if (!s) return false   // Audit 02/10 : plus de clic sans signature
@@ -109,11 +127,16 @@ export async function handler(req: Request): Promise<Response> {
   if (u) {
     try {
       if (await clickAllowed(u, ig, s)) {
-        const clickedAt = Date.now()
-        const { error } = await svc.from('ig_dm_log').insert({ ig_id: ig || null, sender_id: u, kind: 'click' })
-        // Référence seulement pour un clic ENREGISTRÉ (un compte relié a donc toujours un clic dans ig_dm_log), et
-        // seulement dans la réponse JSON lue par r.html (seule page qui l'écrit dans le navigateur).
-        if (!error && wantsJson) ref = await mintLeadRef(u, clickedAt)
+        const prev = await recentClickAt(u, ig)
+        if (prev !== null) {
+          if (wantsJson) ref = await mintLeadRef(u, prev)   // rejeu < 10 min : rien d'enregistré
+        } else {
+          const clickedAt = Date.now()
+          const { error } = await svc.from('ig_dm_log').insert({ ig_id: ig || null, sender_id: u, kind: 'click' })
+          // Référence seulement pour un clic ENREGISTRÉ (un compte relié a donc toujours un clic dans ig_dm_log), et
+          // seulement dans la réponse JSON lue par r.html (seule page qui l'écrit dans le navigateur).
+          if (!error && wantsJson) ref = await mintLeadRef(u, clickedAt)
+        }
       }
     } catch (_) { /* non bloquant : la redirection passe quand même */ }
   }

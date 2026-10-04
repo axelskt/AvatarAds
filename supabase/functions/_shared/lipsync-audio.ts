@@ -247,6 +247,312 @@ export function mesurerAudio(b: Uint8Array): AudioMesure {
   if (m) { const c = mp3Canonique(b, m); const m2 = lireMp3(c); if (m2) return { kind: 'mp3', sec: m2.sec, bytes: c, mp3: m2 } }
   return { kind: null, error: 'format audio non pris en charge : envoie un WAV (PCM) ou un MP3' }
 }
+// ── Audit 04/10 (MCP-4) : DURÉE MESURÉE des autres formats audio courants ─────────────────────────────────────────────
+// clean_audio / montage_ia (MCP) : FLAC, Ogg Opus (notes vocales WhatsApp, Telegram), WebM Opus (enregistreur des
+// navigateurs) et AAC brut (ADTS) étaient « non mesurables » depuis le 03/10 → refusés au-delà de 1,2 / 3 Mo. On compte ce
+// qu'un décodeur DÉCODE — trames FLAC validées par leurs deux CRC, paquets Opus d'après leur octet TOC (pages Ogg validées
+// par leur CRC), trames ADTS chaînées — jamais une durée DÉCLARÉE seule (STREAMINFO, granule, Duration), qu'un fichier
+// forgé peut raccourcir. Les octets hors trames reconnues doivent rester marginaux (< 10 %), sinon null : jamais au jugé.
+// N'est PAS utilisée par la facturation du lipsync (mesurerAudio reste WAV / MP3 seulement).
+export type AudioAutre = { kind: 'flac' | 'ogg-opus' | 'webm-opus' | 'aac'; sec: number }
+export function dureeAudioAutres(b: Uint8Array): AudioAutre | null {
+  try {
+    const debut = finId3(b)
+    if (b.length >= debut + 4 && txt(b, debut, 4) === 'fLaC') { const s = dureeFlac(b, debut + 4); return s === null ? null : { kind: 'flac', sec: s } }
+    if (b.length >= 4 && txt(b, 0, 4) === 'OggS') { const s = dureeOggOpus(b); return s === null ? null : { kind: 'ogg-opus', sec: s } }
+    if (b.length >= 4 && b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3) { const s = dureeWebmOpus(b); return s === null ? null : { kind: 'webm-opus', sec: s } }
+    const s = dureeAdts(b, debut)
+    return s === null ? null : { kind: 'aac', sec: s }
+  } catch { return null }
+}
+// Fin d'un tag ID3v2 en tête (0 s'il n'y en a pas) — même calcul que lireMp3.
+function finId3(b: Uint8Array): number {
+  if (b.length < 10 || txt(b, 0, 3) !== 'ID3') return 0
+  return Math.min(b.length, 10 + (((b[6] & 0x7f) << 21) | ((b[7] & 0x7f) << 14) | ((b[8] & 0x7f) << 7) | (b[9] & 0x7f)) + ((b[5] & 0x10) ? 10 : 0))
+}
+
+// FLAC : blocs de métadonnées, puis trames. Une trame compte si son en-tête (CRC-8) ET son contenu (CRC-16) sont valides et
+// qu'elle est suivie d'une autre trame, d'un tag ou de la fin : c'est aussi ce que garde ffmpeg (err_detect=crccheck).
+const CRC8 = (() => { const t = new Uint8Array(256); for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = (c & 0x80) ? ((c << 1) ^ 0x07) & 0xff : (c << 1) & 0xff; t[i] = c } return t })()
+const CRC16 = (() => { const t = new Uint16Array(256); for (let i = 0; i < 256; i++) { let c = i << 8; for (let k = 0; k < 8; k++) c = (c & 0x8000) ? ((c << 1) ^ 0x8005) & 0xffff : (c << 1) & 0xffff; t[i] = c } return t })()
+const FLAC_SR = [0, 88200, 176400, 192000, 8000, 16000, 22050, 24000, 32000, 44100, 48000, 96000]
+const FLAC_TRAME_MAX = 1 << 20   // fin de trame cherchée sur 1 Mio au plus (une trame réelle pèse quelques Ko)
+function flacEntete(b: Uint8Array, p: number, srInfo: number): { len: number; bs: number; sr: number } | null {
+  if (p + 6 > b.length || b[p] !== 0xFF || (b[p + 1] & 0xFE) !== 0xF8) return null
+  const bsc = b[p + 2] >> 4, src = b[p + 2] & 0x0F, ch = b[p + 3] >> 4, ssc = (b[p + 3] >> 1) & 7
+  if (bsc === 0 || src === 15 || ch > 10 || ssc === 3 || (b[p + 3] & 1)) return null   // valeurs réservées
+  let q = p + 4
+  const c0 = b[q]   // numéro de trame / d'échantillon, codé façon UTF-8 (1 à 7 octets)
+  const n = c0 < 0x80 ? 0 : (c0 & 0xE0) === 0xC0 ? 1 : (c0 & 0xF0) === 0xE0 ? 2 : (c0 & 0xF8) === 0xF0 ? 3
+    : (c0 & 0xFC) === 0xF8 ? 4 : (c0 & 0xFE) === 0xFC ? 5 : c0 === 0xFE ? 6 : -1
+  if (n < 0 || q + 1 + n > b.length) return null
+  for (let k = 1; k <= n; k++) if ((b[q + k] & 0xC0) !== 0x80) return null
+  q += 1 + n
+  let bs: number
+  if (bsc === 1) bs = 192
+  else if (bsc <= 5) bs = 576 << (bsc - 2)
+  else if (bsc === 6) { if (q + 1 > b.length) return null; bs = b[q] + 1; q += 1 }
+  else if (bsc === 7) { if (q + 2 > b.length) return null; bs = ((b[q] << 8) | b[q + 1]) + 1; q += 2 }
+  else bs = 256 << (bsc - 8)
+  let sr: number
+  if (src === 0) sr = srInfo
+  else if (src <= 11) sr = FLAC_SR[src]
+  else if (src === 12) { if (q + 1 > b.length) return null; sr = b[q] * 1000; q += 1 }
+  else { if (q + 2 > b.length) return null; sr = ((b[q] << 8) | b[q + 1]) * (src === 14 ? 10 : 1); q += 2 }
+  if (!(sr > 0) || q + 1 > b.length) return null
+  let crc = 0
+  for (let k = p; k < q; k++) crc = CRC8[crc ^ b[k]]
+  return crc === b[q] ? { len: q + 1 - p, bs, sr } : null
+}
+function dureeFlac(b: Uint8Array, p: number): number | null {
+  let srInfo = 0, derniere = false
+  while (!derniere) {   // blocs de métadonnées (STREAMINFO = type 0, toujours le premier)
+    if (p + 4 > b.length) return null
+    const type = b[p] & 0x7F, len = (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3]
+    derniere = (b[p] & 0x80) !== 0
+    if (type === 127) return null
+    if (type === 0) { if (len < 34 || p + 4 + 13 > b.length) return null; srInfo = (b[p + 14] << 12) | (b[p + 15] << 4) | (b[p + 16] >> 4) }
+    p += 4 + len
+  }
+  const audio = b.length - p
+  if (!(audio > 0)) return null
+  // budget de lecture : un fichier forgé (faux en-têtes en rafale) ne fait jamais relire chaque octet des millions de fois
+  let sec = 0, couverts = 0, budget = 4 * b.length + 4 * FLAC_TRAME_MAX
+  while (p + 6 <= b.length) {
+    const h = flacEntete(b, p, srInfo)
+    if (!h) { p++; continue }   // resynchronisation : ces octets restent « non couverts »
+    let crc = 0, q = p, fin = -1
+    for (; q < p + h.len; q++) crc = ((crc << 8) & 0xffff) ^ CRC16[((crc >> 8) ^ b[q]) & 0xff]
+    const borne = Math.min(b.length, p + FLAC_TRAME_MAX), q0 = q
+    for (; q + 2 <= borne; q++) {
+      if (((b[q] << 8) | b[q + 1]) === crc && (q + 2 === b.length || estTag(b, q + 2) || flacEntete(b, q + 2, srInfo))) { fin = q + 2; break }
+      crc = ((crc << 8) & 0xffff) ^ CRC16[((crc >> 8) ^ b[q]) & 0xff]
+    }
+    budget -= q - q0
+    if (budget < 0) return null
+    if (fin < 0) { p++; continue }
+    sec += h.bs / h.sr
+    couverts += fin - p
+    p = fin
+  }
+  return sec > 0 && couverts >= 0.9 * audio ? r3(sec) : null
+}
+
+// Opus : échantillons (à 48 kHz) d'un paquet d'après son octet TOC (RFC 6716 §3.1) — 120 ms au plus par paquet.
+function opusEchantillons(b: Uint8Array, o: number, len: number): number {
+  if (len < 1) return 0
+  const toc = b[o], cfg = toc >> 3, c = toc & 3
+  const taille = cfg < 12 ? [480, 960, 1920, 2880][cfg & 3] : cfg < 16 ? [480, 960][cfg & 1] : [120, 240, 480, 960][cfg & 3]
+  const n = c === 0 ? 1 : c < 3 ? 2 : (len >= 2 ? (b[o + 1] & 0x3F) : 0)
+  return Math.min(5760, n * taille)
+}
+const lirePreskip = (b: Uint8Array, o: number, len: number) => (len >= 19 && txt(b, o, 8) === 'OpusHead') ? (b[o + 10] | (b[o + 11] << 8)) : -1
+
+// Ogg : pages validées par leur CRC-32 (sinon sautées, comme ffmpeg), paquets réassemblés par flux. Un seul flux admis, en
+// Opus (paquet OpusHead en tête) : somme des paquets audio − pré-saut (audit 04/10, relecture : plusieurs flux → null).
+const CRC32_OGG = (() => { const t = new Uint32Array(256); for (let i = 0; i < 256; i++) { let c = i << 24; for (let k = 0; k < 8; k++) c = (c & 0x80000000) ? ((c << 1) ^ 0x04C11DB7) >>> 0 : (c << 1) >>> 0; t[i] = c >>> 0 } return t })()
+function oggPage(b: Uint8Array, p: number, budget: { n: number }): { len: number; serial: number; flags: number; nseg: number } | null {
+  if (p + 27 > b.length || b[p] !== 0x4F || txt(b, p, 4) !== 'OggS' || b[p + 4] !== 0) return null
+  const nseg = b[p + 26]
+  if (p + 27 + nseg > b.length) return null
+  let dlen = 0
+  for (let k = 0; k < nseg; k++) dlen += b[p + 27 + k]
+  const len = 27 + nseg + dlen
+  if (p + len > b.length) return null
+  budget.n -= len
+  if (budget.n < 0) return null
+  let crc = 0
+  for (let k = 0; k < len; k++) crc = ((crc << 8) >>> 0) ^ CRC32_OGG[((crc >>> 24) ^ (k >= 22 && k < 26 ? 0 : b[p + k])) & 0xff]
+  const lu = (b[p + 22] | (b[p + 23] << 8) | (b[p + 24] << 16) | (b[p + 25] << 24)) >>> 0
+  if ((crc >>> 0) !== lu) return null
+  return { len, serial: (b[p + 14] | (b[p + 15] << 8) | (b[p + 16] << 16) | (b[p + 17] << 24)) >>> 0, flags: b[p + 5], nseg }
+}
+function dureeOggOpus(b: Uint8Array): number | null {
+  // par flux : paquet en cours (début + longueur), rang du paquet, pré-saut (−1 = pas Opus), échantillons
+  type Flux = { debut: number; len: number; enCours: boolean; perdu: boolean; rang: number; preskip: number; ech: number }
+  const actifs = new Map<number, Flux>(), tous: Flux[] = []
+  let p = 0, couverts = 0
+  const budget = { n: 4 * b.length + 4 * 65_307 }   // CRC calculés : borné (faux en-têtes « OggS » en rafale)
+  while (p + 27 <= b.length) {
+    const pg = oggPage(b, p, budget)
+    if (!pg) { if (budget.n < 0) return null; p++; continue }
+    couverts += pg.len
+    let f = actifs.get(pg.serial)
+    // début de flux (BOS) ou flux inconnu : nouveau flux (un flux sans OpusHead en tête n'est jamais compté)
+    if (!f || (pg.flags & 2)) {
+      f = { debut: 0, len: 0, enCours: false, perdu: !(pg.flags & 2) && !!(pg.flags & 1), rang: (pg.flags & 2) ? 0 : 1, preskip: -1, ech: 0 }
+      actifs.set(pg.serial, f); tous.push(f)
+    }
+    // suite d'un paquet commencé dans une page perdue : ignorée jusqu'à sa fin
+    if ((pg.flags & 1) && !f.enCours) f.perdu = true
+    if (!(pg.flags & 1) && f.enCours) { f.enCours = false; f.len = 0 }   // paquet inachevé abandonné
+    let o = p + 27 + pg.nseg
+    for (let k = 0; k < pg.nseg; k++) {
+      const s = b[p + 27 + k]
+      if (!f.enCours && !f.perdu) { f.debut = o; f.len = 0; f.enCours = true }
+      if (f.enCours) f.len += s
+      o += s
+      if (s < 255) {
+        if (f.perdu) { f.perdu = false; continue }
+        f.enCours = false
+        if (f.rang === 0) f.preskip = lirePreskip(b, f.debut, f.len)
+        else if (f.rang >= 2 && f.preskip >= 0) f.ech += opusEchantillons(b, f.debut, f.len)
+        f.rang++
+      }
+    }
+    p += pg.len
+  }
+  // Audit 04/10 (relecture MCP-4) : UN seul flux, et en Opus. Un 2e flux (Vorbis, Opus multiplexé, chaîne) n'est pas
+  // compté ici alors que ffmpeg le décode (vu : Vorbis 300 s + Opus 3 s mesuré 3 s) → null, le refus d'avant s'applique.
+  if (tous.length !== 1) return null
+  let ech = 0, opus = false
+  for (const f of tous) if (f.preskip >= 0) { opus = true; ech += Math.max(0, f.ech - f.preskip) }
+  if (!opus || !(ech > 0) || couverts < 0.9 * b.length) return null
+  return r3(ech / 48000)
+}
+
+// WebM / Matroska : UNE piste audio, A_OPUS (audit 04/10, relecture ; pistes vidéo admises, non comptées), somme des paquets (SimpleBlock / Block, laçages compris) − CodecDelay (ou pré-saut
+// d'OpusHead). Lecture STRICTE : un élément illisible → null. Taille inconnue admise pour Segment et Cluster (MediaRecorder).
+function ebml(b: Uint8Array, p: number, id: boolean): { v: number; len: number; inconnu: boolean } | null {
+  if (p >= b.length) return null
+  const c = b[p]
+  if (c === 0) return null
+  let len = 1, m = 0x80
+  while (!(c & m)) { m >>= 1; len++ }
+  if (len > (id ? 4 : 8) || p + len > b.length) return null
+  let v = id ? c : (c & (m - 1)), tousUn = (c & (m - 1)) === m - 1
+  for (let k = 1; k < len; k++) { v = v * 256 + b[p + k]; if (b[p + k] !== 0xFF) tousUn = false }
+  return { v, len, inconnu: !id && tousUn }
+}
+const MKV_NIVEAU1 = new Set([0x1F43B675, 0x1C53BB6B, 0x1254C367, 0x1043A770, 0x1941A469, 0x114D9B74, 0x1549A966, 0x1654AE6B, 0x1A45DFA3])
+function dureeWebmOpus(b: Uint8Array): number | null {
+  const elem = (p: number) => {
+    const i = ebml(b, p, true); if (!i) return null
+    const s = ebml(b, p + i.len, false); if (!s) return null
+    return { id: i.v, deb: p + i.len + s.len, taille: s.v, inconnu: s.inconnu }
+  }
+  const hd = elem(0)
+  if (!hd || hd.id !== 0x1A45DFA3 || hd.inconnu) return null
+  const sg = elem(hd.deb + hd.taille)
+  if (!sg || sg.id !== 0x18538067) return null
+  const fin = sg.inconnu ? b.length : Math.min(b.length, sg.deb + sg.taille)
+  if (b.length - fin > 0.1 * b.length) return null   // données hors du segment : jamais lues ici
+  let piste = -1, delai = -1, preskip = -1, ech = 0, pistesLues = false
+  let audios = 0, audioNonOpus = false   // audit 04/10 (relecture MCP-4) : pistes audio déclarées
+  const bloc = (o: number, len: number): boolean => {
+    const t = ebml(b, o, false); if (!t || t.inconnu) return false
+    let q = o + t.len + 3
+    const lim = o + len
+    if (q > lim) return false
+    if (t.v !== piste) return true
+    const lacage = (b[o + t.len + 2] >> 1) & 3
+    if (lacage === 0) { ech += opusEchantillons(b, q, lim - q); return true }
+    if (q >= lim) return false
+    const nb = b[q] + 1; q++
+    const tailles: number[] = []
+    if (lacage === 1) {
+      for (let k = 0; k < nb - 1; k++) { let s = 0, v = 255; while (v === 255) { if (q >= lim) return false; v = b[q++]; s += v } tailles.push(s) }
+    } else if (lacage === 3) {
+      const t0 = ebml(b, q, false); if (!t0 || t0.inconnu) return false
+      tailles.push(t0.v); q += t0.len
+      for (let k = 1; k < nb - 1; k++) {
+        const d = ebml(b, q, false); if (!d) return false
+        const s = tailles[k - 1] + d.v - (Math.pow(2, 7 * d.len - 1) - 1)
+        if (s < 0) return false
+        tailles.push(s); q += d.len
+      }
+    } else {
+      if ((lim - q) % nb) return false
+      for (let k = 0; k < nb - 1; k++) tailles.push((lim - q) / nb)
+    }
+    const reste = lim - q - tailles.reduce((a, x) => a + x, 0)
+    if (reste < 0) return false
+    tailles.push(reste)
+    for (const s of tailles) { ech += opusEchantillons(b, q, s); q += s }
+    return true
+  }
+  let p = sg.deb
+  while (p < fin) {
+    const e = elem(p)
+    if (!e) return null
+    if (e.id === 0x1654AE6B) {   // Tracks → TrackEntry
+      if (e.inconnu) return null
+      for (let q = e.deb; q < e.deb + e.taille;) {
+        const te = elem(q); if (!te || te.inconnu) return null
+        if (te.id === 0xAE) {
+          let num = -1, codec = '', cd = -1, ps = -1, type = -1
+          for (let r = te.deb; r < te.deb + te.taille;) {
+            const x = elem(r); if (!x || x.inconnu) return null
+            if (x.id === 0xD7) { num = 0; for (let k = 0; k < x.taille; k++) num = num * 256 + b[x.deb + k] }
+            else if (x.id === 0x83) { type = 0; for (let k = 0; k < x.taille; k++) type = type * 256 + b[x.deb + k] }
+            else if (x.id === 0x86) codec = txt(b, x.deb, Math.min(x.taille, 32))
+            else if (x.id === 0x56AA) { cd = 0; for (let k = 0; k < x.taille; k++) cd = cd * 256 + b[x.deb + k] }
+            else if (x.id === 0x63A2) ps = lirePreskip(b, x.deb, x.taille)
+            r = x.deb + x.taille
+          }
+          // Audit 04/10 (relecture MCP-4) : piste audio = TrackType 2 ou codec A_* ; une 2e piste audio, ou une piste audio
+          // qui n'est pas de l'Opus, n'est pas comptée ici alors que ffmpeg la décode (vu : Vorbis 300 s + Opus 3 s → 3 s).
+          if (type === 2 || codec.startsWith('A_')) { audios++; if (codec !== 'A_OPUS') audioNonOpus = true }
+          if (codec === 'A_OPUS' && piste < 0) { piste = num; delai = cd; preskip = ps }
+        }
+        q = te.deb + te.taille
+      }
+      pistesLues = true
+      p = e.deb + e.taille
+    } else if (e.id === 0x1F43B675) {   // Cluster
+      if (!pistesLues) return null
+      const cFin = e.inconnu ? fin : Math.min(fin, e.deb + e.taille)
+      let q = e.deb
+      while (q < cFin) {
+        const x = elem(q)
+        if (!x) return null
+        if (e.inconnu && MKV_NIVEAU1.has(x.id)) break   // taille inconnue : le cluster s'arrête au prochain élément de niveau 1
+        if (x.inconnu || x.deb + x.taille > b.length) return null
+        if (x.id === 0xA3) { if (!bloc(x.deb, x.taille)) return null }
+        else if (x.id === 0xA0) {
+          for (let r = x.deb; r < x.deb + x.taille;) {
+            const y = elem(r); if (!y || y.inconnu) return null
+            if (y.id === 0xA1 && !bloc(y.deb, y.taille)) return null
+            r = y.deb + y.taille
+          }
+        }
+        q = x.deb + x.taille
+      }
+      p = q
+    } else {
+      if (e.inconnu) return null
+      p = e.deb + e.taille
+    }
+  }
+  if (piste < 0 || audios !== 1 || audioNonOpus || !(ech > 0)) return null   // une seule piste audio, en Opus (relecture)
+  const saut = delai >= 0 ? Math.round(delai * 48000 / 1e9) : Math.max(0, preskip)
+  return r3(Math.max(0, ech - saut) / 48000)
+}
+
+// AAC brut (ADTS) : trames chaînées (en-tête valide suivi d'une autre trame, d'un tag ou de la fin), 1 024 échantillons par
+// bloc de données ; ≥ 90 % des octets dans des trames (même règle que le MP3). Couche ≠ 0 = MP3 (jamais confondus).
+const AAC_SR = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350]
+function adtsTrame(b: Uint8Array, i: number): { len: number; ech: number; sr: number } | null {
+  if (i + 7 > b.length || b[i] !== 0xFF || (b[i + 1] & 0xF6) !== 0xF0) return null
+  const sfi = (b[i + 2] >> 2) & 0x0F
+  if (sfi > 12) return null
+  const len = ((b[i + 3] & 0x03) << 11) | (b[i + 4] << 3) | (b[i + 5] >> 5)
+  if (len < ((b[i + 1] & 1) ? 7 : 9)) return null
+  return { len, ech: 1024 * ((b[i + 6] & 3) + 1), sr: AAC_SR[sfi] }
+}
+function dureeAdts(b: Uint8Array, debut: number): number | null {
+  let i = debut, sec = 0, octets = 0, n = 0
+  while (i + 7 <= b.length) {
+    const f = adtsTrame(b, i)
+    if (f && i + f.len <= b.length) {
+      const nxt = i + f.len
+      if (nxt === b.length || nxt + 7 > b.length || adtsTrame(b, nxt) || estTag(b, nxt)) { sec += f.ech / f.sr; octets += f.len; n++; i = nxt; continue }
+    }
+    i++
+  }
+  return n >= 2 && octets >= 0.9 * (b.length - debut) ? r3(sec) : null
+}
+
 // MP3 envoyé à Hedra / OmniHuman (« dernier mot ») : copie + 0,5 s de silence, vidéo coupée à durée d’origine + 0,06 s
 // (le silence ajouté commence à la durée d'origine). Couche I / II ou copie impossible → null (envoyé tel quel, sans coupe).
 export function preparerMp3Lipsync(b: Uint8Array, m: Mp3Info): { bytes: Uint8Array; coupe: number } | null {

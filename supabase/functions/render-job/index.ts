@@ -13,7 +13,9 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { billableGate, userPlan, reserveStrict, reserveEnforce } from '../_shared/guard.ts'
+import { billableGate, userPlan, reserveStrict, reserveEnforce, requirePlan, PLANS_PAYANTS, COMPOSE_SANS_TIRAGE, RENDU_MONTAGE_MIN,
+  MONTAGE_DUREE_MAX, RENDU_DUREE_MAX, RETOUCHE_OCTETS_MAX, RETOUCHE_EN_COURS_MAX, MOTION_ASSETS, fichierDuFlux, opMotionRecente,
+  opFondVideo, opRenduMontage, tailleObjet } from '../_shared/guard.ts'
 import { cheminSur, planClientRenderJob } from '../_shared/storage-path.ts'
 
 const CORS = {
@@ -47,15 +49,32 @@ serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}))
 
     if (body.action === 'create') {
+      // Audit 04/10 (GEN-1, MC-2 — contrat K2) : le Générateur (gen-subs) et Motion Control (motion-split / motion-bg) ne
+      // débitent RIEN pour ce rendu (vidéo déjà payée) : depuis RESERVE_STRICT (14/09), l'exigence d'un débit récent puis d'une
+      // op tirable les refusait (402) pour tout client — Voix native et Vidéo existante bloquées, split Motion Control livré en
+      // plein écran. Ces compositions passent SANS tirage, sous contrôles serveur : plan payant, chemins du flux, cadence,
+      // « 2 en cours », op Motion Control récente (motion-*). La composition est lue ici, le plan complet est contrôlé plus bas
+      // (planClientRenderJob refuse toute autre valeur de __compose).
+      const bp = body.plan
+      const composeDemande = (bp && typeof bp === 'object' && !Array.isArray(bp) && typeof bp.__compose === 'string') ? String(bp.__compose) : ''
+      const sansTirage = COMPOSE_SANS_TIRAGE.includes(composeDemande)
+      if (sansTirage) { const _p = await requirePlan(user.id, PLANS_PAYANTS, 'Le rendu serveur'); if (!_p.ok) return json({ error: _p.error }, _p.status) }
       // Audit #3 : rendu serveur = coût worker. Exiger un débit récent (le client débite AVANT) + plafond.
-      const _g = await billableGate({ userId: user.id, proxy: 'render-job', requireDebit: true, debitMinutes: 60, rateMax: 20 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
+      const _g = await billableGate({ userId: user.id, proxy: 'render-job', requireDebit: !sansTirage, debitMinutes: 60, rateMax: 20 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
       const plan = body.plan
       if (!plan || typeof plan !== 'object' || Array.isArray(plan) || !Number(plan.duration)) return json({ error: 'plan invalide (duration manquante)' }, 400)
-      if (Number(plan.duration) > 300) return json({ error: 'video trop longue (max 5 min)' }, 400)
+      if (Number(plan.duration) > RENDU_DUREE_MAX) return json({ error: 'video trop longue (max 5 min)' }, 400)
+      // Audit 04/10 (MONT-1) : un MONTAGE (plan sans __compose) ne dépasse jamais la durée analysée par orchestrate (180 s ;
+      // l'app et le MCP plafonnent à 90 s) — avant, 300 s passaient pour le prix d'un rendu.
+      if (!composeDemande && Number(plan.duration) > MONTAGE_DUREE_MAX) return json({ error: 'montage trop long (max 3 min)' }, 400)
       // Audit 02/10 (WRK-1) : « commence par <uid>/ » ne suffisait pas — un segment parent (« .. », « %2e%2e ») visait le
       // fichier d'un autre compte ou un autre bucket (la clé service signe et télécharge sans RLS). Motif fermé : cheminSur.
       const input = cheminSur(user.id, body.input_video)
       if (!input) return json({ error: 'chemin invalide' }, 400)
+      // Audit 04/10 : chaque composition sans tirage ne lit que les fichiers de SON flux (seuls producteurs : l'app,
+      // _genServerCompose → <uid>/gen-<ts>.mp4, Motion Control → <uid>/mc-<ts>-<rnd>….mp4).
+      if (composeDemande === 'gen-subs' && !fichierDuFlux(user.id, input, 'gen-', true)) return json({ error: 'chemin invalide' }, 400)
+      if (composeDemande.startsWith('motion-') && !fichierDuFlux(user.id, input, 'mc-', true)) return json({ error: 'chemin invalide' }, 400)
       // Audit 02/10 (WRK-4) : plan borné (taille, tableaux) et clés internes du moteur filtrées — liste blanche et
       // recensement des producteurs dans _shared/storage-path.ts. __lipsync / __brief ne passent QUE s'ils reprennent la
       // valeur d'un job précédent du compte sur la MÊME source (régénération « Détails du montage » d'un montage lancé
@@ -73,26 +92,41 @@ serve(async (req: Request) => {
       const verdict = planClientRenderJob(user.id, plan as Record<string, unknown>, herite)
       if ('error' in verdict) return json({ error: verdict.error }, verdict.status)
       if (verdict.retirees.length) console.warn(`[render-job] clés internes retirées du plan client user=${user.id} : ${verdict.retirees.map((k) => k.slice(0, 40).replace(/[^\w-]/g, '?')).join(',')}`)
+      const compose = typeof plan.__compose === 'string' ? plan.__compose : ''
+      if (compose !== composeDemande) return json({ error: 'plan invalide' }, 400)   // défense en profondeur (lu avant / après contrôle)
       // Médias b-roll : un chemin invalide est REFUSÉ (400). Seules exceptions, ignorées comme avant : une entrée sans chemin,
       // et un média « _local » (blob du navigateur qu'un ancien client renvoyait sans l'avoir déposé au stockage).
+      // Audit 04/10 (GEN-4, MC-2) : gen-subs ne lit AUCUN média (le worker les téléchargeait quand même) → ignorés ; motion-*
+      // ne lit que ses médias nommés (motion, matted, refmask, bgclean), dans les fichiers de son flux (<uid>/mc-…).
       const assets: { id: string; path: string; kind: string }[] = []
       for (const a of (Array.isArray(body.assets) ? body.assets : []).slice(0, 8) as { id?: unknown; path?: unknown; kind?: unknown; _local?: unknown }[]) {
+        if (compose === 'gen-subs') break
         if (!a || typeof a !== 'object' || a._local === true || a.path == null || a.path === '') continue
         const id = String(a.id || '').slice(0, 40)
         if (!id || /[\/\\]|\.\./.test(id)) continue   // C2 (audit 14/09) : jamais de / \ .. dans a.id (path traversal → RCE dans le worker)
+        if (compose.startsWith('motion-') && !MOTION_ASSETS.includes(id)) continue
         const path = cheminSur(user.id, a.path)
         if (!path) return json({ error: 'chemin invalide' }, 400)
+        if (compose.startsWith('motion-') && !fichierDuFlux(user.id, path, 'mc-')) return json({ error: 'chemin invalide' }, 400)
         assets.push({ id, path, kind: a.kind === 'video' ? 'video' : 'image' })
       }
 
       // #119 lipsync segmenté : clips avatar (ordre = plan.avatarSegments), chemins <uid>/… — un chemin invalide est refusé
-      // (l'ignorer décalerait les clips suivants sur la mauvaise scène)
+      // (l'ignorer décalerait les clips suivants sur la mauvaise scène). Audit 04/10 : seul un MONTAGE en lit (compositions : ignorés).
       const avatar_clips: string[] = []
-      for (const p of (Array.isArray(body.avatar_clips) ? body.avatar_clips : []).slice(0, 8)) {
+      for (const p of (Array.isArray(body.avatar_clips) && !compose ? body.avatar_clips : []).slice(0, 8)) {
         if (p == null || p === '') continue
         const c = cheminSur(user.id, p)
         if (!c) return json({ error: 'chemin invalide' }, 400)
         avatar_clips.push(c)
+      }
+
+      // Audit 04/10 (MC-2) : une composition Motion Control suit une génération Motion Control RÉCENTE du compte (op « motion »,
+      // « motion-topaz » ou « motion-fond-video » non remboursée de moins de 6 h : « Appliquer le cadrage » peut venir plus tard).
+      const { plan: uplan, isOwner, err: planErr } = await userPlan(user.id)
+      const exempt = planErr || isOwner || uplan === 'developer'   // owner/dev ou hoquet DB → fail-open
+      if (compose.startsWith('motion-') && !exempt && !(await opMotionRecente(user.id))) {
+        return json({ error: 'Aucune génération Motion Control récente pour cette composition — relance la génération.' }, 402)
       }
 
     // ── UN JOB MORT NE BLOQUE PLUS LA FILE ──────────────────────────────────
@@ -132,44 +166,63 @@ serve(async (req: Request) => {
       // renvoyer telle quelle : à l'utilisateur, ouverte, réserve > 0, < 2 h), puis tirée ENTIÈRE. La 1re (le montage) est
       // obligatoire ; sans désignation (Éditeur, autres flux) : comportement d'avant (dernière op ouverte). Une désignation
       // DEMANDÉE (tableau non vide) mais illisible ne retombe JAMAIS sur « la dernière op ouverte » : aucune op → 402.
-      const demande = Array.isArray(body.ops) && body.ops.length > 0
-      const designees = [...new Set((demande ? body.ops : []).map((x: unknown) => String(x ?? '').trim()).filter((x: string) => /^[0-9a-f-]{36}$/i.test(x)))].slice(0, 3) as string[]
-      let opIds: string[] = []
-      let opErr = false
-      try {
-        if (demande) {
-          for (const [k, h] of designees.entries()) {
-            const { data: _op, error: _e } = await service.rpc('resolve_op', { p_user: user.id, p_hint: h })
-            if (_e) { if (k === 0) opErr = true; break }   // hoquet sur l'habillage : l'op du montage reste tirée
-            if (_op === h) opIds.push(h)
-            else if (k === 0) { opIds = []; break }   // l'op du montage n'est plus tirable → aucune (jamais une autre op à sa place)
-          }
-        } else {
-          const { data: _op, error: _e } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null })
-          if (_e) opErr = true; else if (_op) opIds = [String(_op)]
-        }
-      } catch (e) { console.warn('resolve_op render-job (fail-open technique):', (e as Error).message); if (!opIds.length) opErr = true }
-      const { plan: uplan, isOwner, err: planErr } = await userPlan(user.id)
-      const exempt = planErr || isOwner || uplan === 'developer'   // owner/dev ou hoquet DB → fail-open
-      if (!opIds.length && !opErr && !exempt) {
-        console.warn(`[reserve-strict] render-job user=${user.id} : aucune op tirable (strict=${reserveStrict()}, désignées=${designees.length})`)
-        if (reserveStrict()) return json({ error: 'Aucune réservation de crédits ouverte pour ce rendu.' }, 402)
-      }
-      // Tirage AVANT l'insertion + on vérifie le montant : un perdant du burst (op déjà à 0) → 402, pas de job.
+      // Audit 04/10 (GEN-1, MC-2) : gen-subs et motion-split ne tirent AUCUNE op (ni « la dernière op ouverte » du compte, qui
+      // vidait celle d'une autre fonctionnalité en cours) ; motion-bg ne tire que SON op « motion-fond-video », si elle existe.
       const tires: { op: string; amt: number }[] = []
-      if (!opErr) {
-        for (const o of opIds) {
-          // audit 14/09 : draw_full_reservation renvoie le MONTANT tiré (int, 0 = rien).
-          let amt = 0
-          try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: o }); amt = Number(_ok) || 0 }
-          catch (e) { console.warn('draw_full render-job:', (e as Error).message) }
-          if (amt > 0) tires.push({ op: o, amt })
-          else if (o === opIds[0]) break   // l'op principale n'a rien donné : on ne tire pas les autres
+      if (!sansTirage) {
+        const demande = Array.isArray(body.ops) && body.ops.length > 0
+        const designees = [...new Set((demande ? body.ops : []).map((x: unknown) => String(x ?? '').trim()).filter((x: string) => /^[0-9a-f-]{36}$/i.test(x)))].slice(0, 3) as string[]
+        let opIds: string[] = []
+        let opErr = false
+        try {
+          if (demande) {
+            for (const [k, h] of designees.entries()) {
+              const { data: _op, error: _e } = await service.rpc('resolve_op', { p_user: user.id, p_hint: h })
+              if (_e) { if (k === 0) opErr = true; break }   // hoquet sur l'habillage : l'op du montage reste tirée
+              if (_op === h) opIds.push(h)
+              else if (k === 0) { opIds = []; break }   // l'op du montage n'est plus tirable → aucune (jamais une autre op à sa place)
+            }
+          } else {
+            // Audit 04/10 (MONT-1) : sans désignation, l'op d'un débit de MONTAGE qui couvre le plancher d'abord (opRenduMontage) ;
+            // à défaut, l'ancienne résolution (dernière op ouverte, revérifiée par resolve_op).
+            const _m = await opRenduMontage(user.id)
+            if (_m) opIds = [_m]
+            else {
+              const { data: _op, error: _e } = await service.rpc('resolve_op', { p_user: user.id, p_hint: null })
+              if (_e) opErr = true; else if (_op) opIds = [String(_op)]
+            }
+          }
+        } catch (e) { console.warn('resolve_op render-job (fail-open technique):', (e as Error).message); if (!opIds.length) opErr = true }
+        if (!opIds.length && !opErr && !exempt) {
+          console.warn(`[reserve-strict] render-job user=${user.id} : aucune op tirable (strict=${reserveStrict()}, désignées=${designees.length})`)
+          if (reserveStrict()) return json({ error: 'Aucune réservation de crédits ouverte pour ce rendu.' }, 402)
         }
-        const drewMain = tires.length > 0 && tires[0].op === opIds[0]
-        if (opIds.length && !drewMain && !exempt && reserveEnforce()) {
-          for (const t of tires) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: t.op, p_cost: t.amt }) } catch (_) { /* best-effort */ } }
-          return json({ error: 'Réservation de crédits insuffisante pour ce rendu.' }, 402)
+        // Tirage AVANT l'insertion + on vérifie le montant : un perdant du burst (op déjà à 0) → 402, pas de job.
+        if (!opErr) {
+          for (const o of opIds) {
+            // audit 14/09 : draw_full_reservation renvoie le MONTANT tiré (int, 0 = rien).
+            // Audit 04/10 (MONT-1) : l'op PRINCIPALE doit porter au moins le prix du rendu (RENDU_MONTAGE_MIN = montageRender) —
+            // avant, le plancher valait 1 : spend_credits(1) finançait un rendu serveur. Flux légitimes : montage IA (8 − 2 tirés
+            // par orchestrate = 6), Éditeur et régénération (4). L'habillage (2e op désignée) reste tiré entier, sans plancher.
+            let amt = 0
+            try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: o, p_min: o === opIds[0] ? RENDU_MONTAGE_MIN : 1 }); amt = Number(_ok) || 0 }
+            catch (e) { console.warn('draw_full render-job:', (e as Error).message) }
+            if (amt > 0) tires.push({ op: o, amt })
+            else if (o === opIds[0]) break   // l'op principale n'a rien donné : on ne tire pas les autres
+          }
+          const drewMain = tires.length > 0 && tires[0].op === opIds[0]
+          if (opIds.length && !drewMain && !exempt) console.warn(`[reserve-full] render-job user=${user.id} : op principale sous le plancher (${RENDU_MONTAGE_MIN}) ou vide (enforce=${reserveEnforce()})`)
+          if (opIds.length && !drewMain && !exempt && reserveEnforce()) {
+            for (const t of tires) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: t.op, p_cost: t.amt }) } catch (_) { /* best-effort */ } }
+            return json({ error: 'Réservation de crédits insuffisante pour ce rendu.' }, 402)
+          }
+        }
+      } else if (compose === 'motion-bg' && !exempt) {
+        // le supplément « fond vidéo » est réglé à la livraison (settle_by_job), rendu à l'échec (release_by_job) — comme avant
+        const fv = await opFondVideo(user.id)
+        if (fv) {
+          try { const { data: _ok } = await service.rpc('draw_full_reservation', { p_user: user.id, p_op: fv, p_min: 1 }); const amt = Number(_ok) || 0; if (amt > 0) tires.push({ op: fv, amt }) }
+          catch (e) { console.warn('draw_full motion-bg:', (e as Error).message) }
         }
       }
       const { data, error } = await service.from('render_jobs')
@@ -196,6 +249,19 @@ serve(async (req: Request) => {
       if (!input || !photo) return json({ error: 'chemin invalide' }, 400)
       if (!/\.mp4$/i.test(input)) return json({ error: 'input_video invalide' }, 400)
       if (!/\.(png|jpe?g|webp)$/i.test(photo)) return json({ error: 'photo invalide' }, 400)
+      // Audit 04/10 (EXP-1, GEN-4) : la retouche passe DEVANT la file du moteur — fichiers de SON flux seulement (seul producteur :
+      // _expRetouche → <uid>/retouche-<ts>-<rnd>.mp4|.png|.jpg ; le MCP insère ses retouches lui-même), bornée en taille (une
+      // vidéo Omni / Veo de 10 s pèse ~70 Mo au plus ; le bucket en accepte 500) et à 2 retouches en cours par compte (Express +
+      // Voix native). Le moteur borne aussi la durée et la résolution. Tout refus garde la vidéo d'origine côté app.
+      if (!fichierDuFlux(user.id, input, 'retouche-', true) || !fichierDuFlux(user.id, photo, 'retouche-')) return json({ error: 'chemin invalide' }, 400)
+      const taille = await tailleObjet('render-media', input)
+      if (taille !== null && taille > RETOUCHE_OCTETS_MAX) return json({ error: 'Vidéo trop lourde pour la retouche.' }, 413)
+      {
+        const { count, error: cErr } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id).in('status', ['queued', 'rendering']).eq('plan->>__compose', 'retouche')
+          .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
+        if (!cErr && (count ?? 0) >= RETOUCHE_EN_COURS_MAX) return json({ error: 'Une retouche est déjà en cours — patiente quelques secondes.' }, 429)
+      }
       const { data, error } = await service.from('render_jobs')
         .insert({ user_id: user.id, status: 'queued', plan: { __compose: 'retouche' }, input_video: input, assets: [{ id: 'photo', path: photo }], avatar_clips: [] })
         .select('id').single()

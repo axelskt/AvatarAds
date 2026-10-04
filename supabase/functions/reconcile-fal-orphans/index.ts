@@ -23,11 +23,19 @@
 // titre. 2e passe (billsPass) : factures encore ouvertes que list_open_jobs ne reprend pas — job Kling NON lié (l'op portait
 // déjà le détourage de « Glisse un fond »), op liée déjà réglée par l'image de fond — livrées et réconciliées de la même façon ;
 // échec confirmé par fal → facture close sans charge (aucun remboursement ici, comme avant pour ces jobs).
+// Audit 04/10 (P4, chantier « fal ») :
+//   • MC-5 : une vidéo dont l'écart de sortie n'est pas couvert par le solde n'est NI déposée en Bibliothèque NI réglée (devis
+//     sans effet fal_job_quote AVANT le dépôt) ; nouvel essai à chaque passage — livrée dès que le solde couvre l'écart. Jamais
+//     remboursée au-delà de 24 h (la vidéo existe : la rembourser rendrait gratuit un job forgé) ; durée mesurée par plages sur
+//     le CDN de fal AVANT tout téléchargement (une vidéo retenue n'est pas retéléchargée à chaque passage).
+//   • MC-3 : le job Kling de « Glisse un fond » est désormais LIÉ à son op (le détourage ne lie plus, il règle l'op) ; son échec
+//     confirmé par fal, client parti, est remboursé ici (refund_job_open : le tirage du job, étapes annexes payées) au lieu de
+//     fermer la facture sans rien rendre.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { kieDownload, kieKindOf } from '../_shared/kie.ts'
-import { reglerJobFal, fermerFactureFal } from '../_shared/guard.ts'
-import { dureeMp4Octets, secondesFacturees } from '../_shared/mp4-duree.ts'
+import { reglerJobFal, fermerFactureFal, tarifJobFal, falReconcileEnforce, urlSortieFal, lecteurSortieFal, avecDelai } from '../_shared/guard.ts'
+import { dureeMp4, dureeMp4Octets, secondesFacturees } from '../_shared/mp4-duree.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -53,23 +61,59 @@ const refund = async (o: Job, t: Tally) => {
   if (!error && d.ok) t.refunded++
   else { t.unresolved++; console.log('[reconcile] remboursement refusé', o.provider_job, error?.message || d.reason) }
 }
-// Range la vidéo en Bibliothèque (idempotent) puis règle le job. false = à retenter au prochain passage.
-const deliver = async (o: Job, buf: ArrayBuffer, ct: string, t: Tally): Promise<boolean> => {
+// Audit 04/10 (MC-5) : la lecture de ce job fal serait-elle RETENUE (écart de sortie non couvert par le solde) ? Devis sans effet
+// (fal_job_quote) avec les MÊMES tarif, arrondi et coût que reglerJobFal. Sortie illisible, pas de facture ouverte, migration
+// absente ou hoquet → false : comportement d'avant (dépôt puis règlement, facture close sans charge si illisible).
+const retenu = async (o: Job, sec: number | null, tarif?: { perSec: number; maxSec: number }): Promise<boolean> => {
+  if (!(sec && sec > 0)) return false
+  const tf = tarif ?? await tarifJobFal(o.user_id, o.provider_job); if (!tf) return false
+  const { data, error } = await svc.rpc('fal_job_quote', { p_user: o.user_id, p_job: o.provider_job, p_real_cost: Math.max(0, Math.ceil(coutSortie(sec, tf.perSec, tf.maxSec))), p_enforce: falReconcileEnforce() })
+  if (error) { console.log('[reconcile] devis fal indisponible', o.provider_job, error.message); return false }
+  return !!(data && (data as { held?: boolean }).held === true)
+}
+// Audit 04/10 (MC-5) : même devis AVANT le téléchargement, durée lue par plages sur le CDN de fal (comme fal-proxy). Lecture
+// impossible ou hors CDN fal → false : le téléchargement et le devis sur le fichier entier (deliver) tranchent.
+// Audit 04/10 (relecture) : facture lue AVANT la mesure — un job sans facture ouverte (Omni image→vidéo, Express…) ne peut
+// pas être retenu : aucune lecture réseau (jusqu'à 15 s) à chaque passage du filet.
+const retenuAvantCopie = async (o: Job, url: string): Promise<boolean> => {
+  const u = o.provider_job.startsWith('fal:') ? urlSortieFal(url) : null
+  if (!u) return false
+  const tf = await tarifJobFal(o.user_id, o.provider_job); if (!tf) return false
+  return await retenu(o, await avecDelai(dureeMp4(lecteurSortieFal(u)), 15000), tf)
+}
+// Range la vidéo en Bibliothèque (idempotent) puis règle le job. false = à retenter au prochain passage ; 'retenu' (MC-5) = écart
+// non couvert, à retenter aussi mais JAMAIS remboursé.
+const deliver = async (o: Job, buf: ArrayBuffer, ct: string, t: Tally): Promise<boolean | 'retenu'> => {
   const k = kieKindOf(ct, buf)
   if (!k || k.kind !== 'video') { console.log('[reconcile] sortie non vidéo', o.provider_job, ct); return false }
+  // Audit 04/10 (MC-5) : écart non couvert → ni dépôt ni règlement (le dépôt PRÉCÈDE le règlement : un dépôt raté est retenté)
+  const fal = o.provider_job.startsWith('fal:')
+  const sec = fal ? dureeMp4Octets(new Uint8Array(buf)) : null
+  if (fal && await retenu(o, sec)) { t.held = (t.held || 0) + 1; console.log('[reconcile] vidéo retenue (écart non couvert)', o.provider_job); return 'retenu' }
   const path = `${o.user_id}/lib/${o.provider_job.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 90)}.${k.ext}`
   const up = await svc.storage.from('render-media').upload(path, new Uint8Array(buf), { contentType: k.mime, upsert: true })
   if (up.error) { console.log('[reconcile] upload', o.provider_job, up.error.message); return false }
   const { data: prev, error: pErr } = await svc.from('library_items').select('id').eq('user_id', o.user_id).eq('storage_path', path).limit(1)
   if (pErr) return false
+  let insere = false
   if (!(prev && prev[0])) {
     // vue CLIENT : jamais le nom du moteur ni du fournisseur (Axel 25/09)
     const ins = await svc.from('library_items').insert({ user_id: o.user_id, kind: 'video-simple', name: /^express/.test(String(o.reason || '')) ? 'Vidéo Express' : 'Vidéo récupérée', tags: ['récupérée'], style: '', emo: '', storage_path: path })
     if (ins.error) { console.log('[reconcile] bibliothèque', o.provider_job, ins.error.message); return false }
+    insere = true
   }
   // Audit 02/10 (P2) : job fal → réconciliation à la durée de la vidéo produite (fichier déjà téléchargé) ; Veo → inchangé.
-  if (o.provider_job.startsWith('fal:')) {
-    const r = await reglerJobFal({ userId: o.user_id, job: o.provider_job, mesurer: async () => dureeMp4Octets(new Uint8Array(buf)), cout: coutSortie, essais: 1, source: 'filet' })
+  if (fal) {
+    const r = await reglerJobFal({ userId: o.user_id, job: o.provider_job, mesurer: async () => sec, cout: coutSortie, essais: 1, source: 'filet' })
+    // Audit 04/10 (MC-5) : solde baissé entre le devis et le règlement → retenu : le dépôt de CE passage est retiré.
+    if (r.held === true) {
+      if (insere) {
+        try { await svc.from('library_items').delete().eq('user_id', o.user_id).eq('storage_path', path) } catch { /* best-effort */ }
+        try { await svc.storage.from('render-media').remove([path]) } catch { /* best-effort */ }
+      }
+      t.held = (t.held || 0) + 1
+      return 'retenu'
+    }
     if (r.mode === 'reconcile') { t.reconciled = (t.reconciled || 0) + 1; t.charged = (t.charged || 0) + (Number(r.charged) || 0) }
   } else await svc.rpc('settle_by_job', { p_user: o.user_id, p_job: o.provider_job })
   t.delivered++
@@ -126,8 +170,12 @@ async function falPass(minAge: number, maxAge: number, limit: number): Promise<T
         if (/"(image|images|url)"\s*:/.test(reText)) { await svc.rpc('settle_by_job', { p_user: o.user_id, p_job: o.provider_job }); t.settled++ } else t.unresolved++
         continue
       }
+      // Audit 04/10 (MC-5) : vidéo retenue (écart non couvert par le solde) → ni téléchargée, ni déposée, ni remboursée.
+      if (await retenuAvantCopie(o, vid.url)) { t.held = (t.held || 0) + 1; continue }
       const dl = await kieDownload(vid.url)   // https seulement, hôtes internes refusés, redirections vérifiées
-      if (!(dl && await deliver(o, dl.buf, dl.ct, t))) { if (age > DAY) await refund(o, t); else t.unresolved++ }
+      const livre = dl ? await deliver(o, dl.buf, dl.ct, t) : false
+      if (livre === 'retenu') continue
+      if (!livre) { if (age > DAY) await refund(o, t); else t.unresolved++ }
     } catch (e) { t.errors++; console.error('[reconcile] fal', o.provider_job, (e as Error)?.message) }
   }
   return t
@@ -142,7 +190,16 @@ async function billsPass(minAge: number, maxAge: number, limit: number): Promise
   const { data, error } = await svc.rpc('list_open_fal_bills', { p_min_age_min: minAge, p_max_age_min: maxAge, p_limit: limit })
   if (error) { console.error('[reconcile] factures fal', error.message); return t }
   const falAuth = { 'Authorization': `Key ${FAL_KEY}` }
-  const fermer = async (f: Facture) => { if (await fermerFactureFal(f.user_id, f.job)) t.failed++; else t.unresolved++ }
+  // Audit 04/10 (MC-3) : échec CONFIRMÉ par fal d'un job LIÉ à une op déjà réglée (« Glisse un fond » : le détourage règle l'op
+  // dès sa soumission) → refund_job_open rend le tirage du job et la réserve restante (étapes annexes payées). Job non lié,
+  // déjà livré ou sans tirage noté → refus de la RPC : facture close sans charge, comme avant.
+  const fermer = async (f: Facture) => {
+    const { data, error } = await svc.rpc('refund_job_open', { p_user: f.user_id, p_job: f.job })
+    const d = (data || {}) as { ok?: boolean; reason?: string }
+    if (!error && d.ok) t.refunded = (t.refunded || 0) + 1
+    else if (error || (d.reason && d.reason !== 'no_op')) console.log('[reconcile] facture fal : remboursement refusé', f.job, error?.message || d.reason)
+    if (await fermerFactureFal(f.user_id, f.job)) t.failed++; else t.unresolved++
+  }
   for (const f of (data as Facture[]) || []) {
     t.scanned++
     try {
@@ -161,9 +218,11 @@ async function billsPass(minAge: number, maxAge: number, limit: number): Promise
       let parsed: unknown = null; try { parsed = JSON.parse(reText) } catch { /* illisible */ }
       const vid = findVideo(parsed)
       if (!vid || !vid.url) { t.unresolved++; continue }
-      const dl = await kieDownload(vid.url)   // https seulement, hôtes internes refusés, redirections vérifiées
       const o: Job = { id: f.op_id, user_id: f.user_id, reason: null, provider_job: f.job, provider_path: base, job_bill_state: null, created_at: f.created_at }
-      if (!(dl && await deliver(o, dl.buf, dl.ct, t))) t.unresolved++
+      if (await retenuAvantCopie(o, vid.url)) { t.held = (t.held || 0) + 1; continue }   // Audit 04/10 (MC-5)
+      const dl = await kieDownload(vid.url)   // https seulement, hôtes internes refusés, redirections vérifiées
+      const livre = dl ? await deliver(o, dl.buf, dl.ct, t) : false
+      if (!livre) t.unresolved++
     } catch (e) { t.errors++; console.error('[reconcile] facture fal', f.job, (e as Error)?.message) }
   }
   return t

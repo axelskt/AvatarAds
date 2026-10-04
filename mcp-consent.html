@@ -57,13 +57,25 @@
       <button class="btn-ok" id="ok">Autoriser</button>
       <button class="btn-no" id="no">Refuser</button>
     </div>
+    <!-- Audit 04/10 (MCP-5) : connexion par CODE e-mail d'abord (comptes nés par code ou par Google : aucun mot de passe),
+         le mot de passe reste en option. -->
     <div id="login" class="hide">
       <h1>Connexion AvatarAds</h1>
       <div class="sub" id="lsub" style="margin-bottom:18px">Connecte-toi pour continuer.</div>
       <div class="err" id="lerr"></div>
-      <input id="lemail" type="email" placeholder="E-mail" autocomplete="email">
-      <input id="lpwd" type="password" placeholder="Mot de passe" autocomplete="current-password">
-      <button class="btn-ok" id="lbtn">Se connecter</button>
+      <div id="lstep1">
+        <input id="lemail" type="email" placeholder="E-mail" autocomplete="email">
+        <input id="lpwd" class="hide" type="password" placeholder="Mot de passe" autocomplete="current-password">
+        <button class="btn-ok" id="lbtn">Recevoir un code par e-mail</button>
+        <button class="btn-no" id="lmode">J'ai un mot de passe</button>
+      </div>
+      <div id="lstep2" class="hide">
+        <div class="sub" id="lcodemsg" style="margin-bottom:14px">Code envoyé. Entre les 6 chiffres reçus par e-mail.</div>
+        <input id="lcode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Code à 6 chiffres" style="text-align:center;letter-spacing:6px;font-size:18px;font-weight:700">
+        <button class="btn-ok" id="lverify">Se connecter</button>
+        <button class="btn-no" id="lresend">Renvoyer le code</button>
+        <button class="btn-no" id="lback" style="margin-top:0">Changer d'e-mail</button>
+      </div>
     </div>
   </div>
   <!-- Audit 02/10 : version exacte + intégrité (SRI) : un fichier modifié sur le CDN n'est pas exécuté. supabase.js est le
@@ -180,21 +192,81 @@
         return;
       }
       // Pas de session sur ce navigateur → mini-login (rare : l'user est en général déjà connecté)
-      $('lbtn').onclick = function(){
-        var email = ($('lemail').value || '').trim().toLowerCase();
-        var pwd = $('lpwd').value || '';
-        if (!email || !pwd) { $('lerr').textContent = 'Entre ton e-mail et ton mot de passe'; $('lerr').style.display = 'block'; return; }
-        var b = $('lbtn'); b.disabled = true; b.innerHTML = '<span class="spin"></span>';
-        sb.auth.signInWithPassword({ email: email, password: pwd }).then(function(r2){
-          if (r2.error || !r2.data.session) {
-            b.disabled = false; b.textContent = 'Se connecter';
-            $('lerr').textContent = 'E-mail ou mot de passe incorrect'; $('lerr').style.display = 'block';
+      // Audit 04/10 (MCP-5) : par CODE e-mail d'abord, comme connexion.html (auth-otp send → verify → verifyOtp) : les
+      // comptes nés par code ou par Google n'ont pas de mot de passe, signInWithPassword seul les bloquait ici. Le mot de
+      // passe reste possible (« J'ai un mot de passe »).
+      var AUTH_OTP = SUPABASE_URL + '/functions/v1/auth-otp';
+      function otp(payload){
+        return fetch(AUTH_OTP, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+          .then(function(r){ return r.json(); }).catch(function(){ return { error: 'network' }; });
+      }
+      var modePwd = false, verifEnCours = false;
+      function lerr(t){ $('lerr').textContent = t || ''; $('lerr').style.display = t ? 'block' : 'none'; }
+      function occupe(b, on, label){ b.disabled = on; if (on) b.innerHTML = '<span class="spin"></span>'; else b.textContent = label; }
+      function lemail(){ return ($('lemail').value || '').trim().toLowerCase(); }
+      function etape(n){
+        $('lstep1').classList.toggle('hide', n !== 1); $('lstep2').classList.toggle('hide', n !== 2);
+        if (n === 2) setTimeout(function(){ $('lcode').focus(); }, 30);
+      }
+      function envoyer(b){
+        var email = lemail();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { lerr('Entre ton e-mail'); return; }
+        var label = b.textContent; occupe(b, true); lerr('');
+        otp({ action: 'send', mode: 'login', email: email }).then(function(d){
+          occupe(b, false, label);
+          // plafond atteint ou code parti il y a moins de 30 s : l'écran du code s'ouvre quand même (un code de moins de 10 min vaut)
+          if (d && d.error === 'too_many_codes') { $('lcodemsg').textContent = 'Trop de codes demandés pour cette adresse. Si tu as reçu un code il y a moins de 10 minutes, entre-le ici ; sinon, réessaie plus tard.'; etape(2); return; }
+          if (d && d.error === 'cooldown') { $('lcodemsg').textContent = 'Un code vient de partir : entre les 6 chiffres reçus par e-mail.'; etape(2); return; }
+          if (!d || d.error) { lerr('Envoi impossible, réessaie dans un instant.'); return; }
+          $('lcodemsg').textContent = 'Code envoyé à ' + email + '. Entre les 6 chiffres reçus.'; etape(2);
+        });
+      }
+      function verifier(){
+        if (verifEnCours) return;
+        var code = ($('lcode').value || '').replace(/\D/g, '');
+        if (code.length !== 6) { lerr('Entre les 6 chiffres reçus.'); return; }
+        var b = $('lverify'); verifEnCours = true; occupe(b, true); lerr('');
+        var echec = function(t){ verifEnCours = false; occupe(b, false, 'Se connecter'); lerr(t); };
+        otp({ action: 'verify', email: lemail(), code: code }).then(function(d){
+          if (!d || !d.token_hash) {
+            var e = d && d.error, n = Number(d && d.remaining) || 0;
+            echec(e === 'wrong_code' ? 'Code incorrect' + (n > 0 ? ' (' + n + ' essai' + (n > 1 ? 's' : '') + ' restant' + (n > 1 ? 's' : '') + ')' : '') + '.'
+              : e === 'too_many_attempts' ? "Trop d'essais : attends quelques minutes puis demande un nouveau code."
+              : e === 'email_recently_changed' ? "Cette adresse vient d'être retirée d'un compte AvatarAds. Si tu n'as pas fait ce changement, ouvre le lien « Ce n'est pas moi » reçu par e-mail ; sinon, écris-nous à bonjour@avatarads.fr."
+              : 'Code invalide ou expiré.');
             return;
           }
+          return sb.auth.verifyOtp({ type: 'magiclink', token_hash: d.token_hash }).then(function(r2){
+            if (r2.error || !r2.data || !r2.data.session) { echec('Code invalide ou expiré.'); return; }
+            verifEnCours = false;
+            toConsent(r2.data.session);
+          });
+        }).catch(function(){ echec('Connexion impossible, réessaie.'); });
+      }
+      function motDePasse(){
+        var email = lemail(), pwd = $('lpwd').value || '';
+        if (!email || !pwd) { lerr('Entre ton e-mail et ton mot de passe'); return; }
+        var b = $('lbtn'); occupe(b, true); lerr('');
+        sb.auth.signInWithPassword({ email: email, password: pwd }).then(function(r2){
+          if (r2.error || !r2.data.session) { occupe(b, false, 'Se connecter'); lerr('E-mail ou mot de passe incorrect'); return; }
           toConsent(r2.data.session);
         });
+      }
+      $('lbtn').onclick = function(){ if (modePwd) motDePasse(); else envoyer($('lbtn')); };
+      $('lmode').onclick = function(){
+        modePwd = !modePwd; lerr('');
+        $('lpwd').classList.toggle('hide', !modePwd);
+        $('lbtn').textContent = modePwd ? 'Se connecter' : 'Recevoir un code par e-mail';
+        $('lmode').textContent = modePwd ? 'Recevoir un code par e-mail' : "J'ai un mot de passe";
+        if (modePwd) $('lpwd').focus();
       };
+      $('lemail').onkeydown = function(e){ if (e.key === 'Enter') $('lbtn').click(); };
       $('lpwd').onkeydown = function(e){ if (e.key === 'Enter') $('lbtn').click(); };
+      $('lcode').oninput = function(){ var v = this.value.replace(/\D/g, '').slice(0, 6); if (v !== this.value) this.value = v; if (v.length === 6) verifier(); };
+      $('lcode').onkeydown = function(e){ if (e.key === 'Enter') verifier(); };
+      $('lverify').onclick = verifier;
+      $('lresend').onclick = function(){ envoyer($('lresend')); };
+      $('lback').onclick = function(){ lerr(''); $('lcode').value = ''; etape(1); };
       if (isTrustedClaude()) $('lsub').textContent = 'Connecte-toi pour autoriser ' + _trustedName() + '.';
       show('login');
     });

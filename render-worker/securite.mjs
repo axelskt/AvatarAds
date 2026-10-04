@@ -156,26 +156,57 @@ export function remonteHorsProjet(v) {
   return formes.some((x) => x.split(/[\\/]/).some((g) => g.trim() === '..'))
 }
 
+// Audit 04/10 (MONT-2) : ADRESSE ABSOLUE dans une référence de média. La compilation HyperFrames
+// télécharge côté Node (avant Chromium, donc hors CSP) toute URL https d'un src d'<img>/<video>
+// ou d'un url() de fond — vers n'importe quel hôte, redirections suivies, sans plafond de taille.
+// Recensement des producteurs légitimes : les seules adresses absolues d'un plan sont les liens du
+// stockage Supabase du projet (image perso d'une animation : lien signé mcp-media, _mdUploadAnimImage ;
+// anciens liens publics) et des data: (aucun téléchargement). Tout le reste (http(s)://, //, blob:…)
+// est retiré : la scène retombe sur son image de repli. `env` : SUPABASE_URL du moteur (tests : injecté).
+const STOCKAGE_CHEMIN = /^\/storage\/v1\/object\/(sign|public)\//
+export function origineStockage(env = process.env) {
+  try { const u = new URL(String((env && env.SUPABASE_URL) || '')); return u.protocol === 'https:' ? u.origin : '' } catch (_) { return '' }
+}
+export function adresseExterne(v, env = process.env) {
+  if (typeof v !== 'string') return false   // non-chaîne : déjà retirée par remonteHorsProjet
+  const s = v.trim()
+  if (!s) return false
+  const absolue = /^[a-z][a-z0-9+.-]*:/i.test(s) || /^[\\/]{2}/.test(s)
+  if (!absolue) return false                // chemin du projet (media/x.jpg, tuto/x.png, assets/…)
+  if (/^data:/i.test(s)) return false       // contenu embarqué : jamais téléchargé
+  const sto = origineStockage(env)
+  try {
+    const u = new URL(s)
+    if (sto && u.origin === sto && STOCKAGE_CHEMIN.test(u.pathname) && !u.username && !u.password) return false
+  } catch (_) { /* adresse illisible : retirée */ }
+  return true
+}
+
 // Assainit le plan À LA SOURCE, avant toute dérivation : les champs qui désignent un
 // fichier du catalogue ou du projet sont vérifiés une fois, et TOUS les builders en
 // profitent (src="tuto/<screen>.png", copie de assets/tuto/<nom>.png, lecture de la
 // photo d'une fenêtre). Rend le nombre de valeurs écartées (journal).
-export function assainirPlan(plan) {
+export function assainirPlan(plan, env = process.env) {
   if (!plan || typeof plan !== 'object') return 0
   let n = 0
   // Références de média qui remontent hors du projet, à n'importe quelle profondeur du plan
   // (scènes, items, splits, incrustations…) : retirées — la scène retombe sur son repli.
-  const pile = [[plan, 0]]
+  // Audit 04/10 (MONT-2) : idem pour une adresse absolue hors du stockage du projet. Exception : la
+  // clé « url » d'une SCÈNE est le texte de la barre d'adresse (ui-scenes : « avatarads.fr », le site
+  // du client) — jamais téléchargée ; seule celle d'un ITEM (items[].url, image perso de imgSlot) l'est.
+  const pile = [[plan, 0, '']]
   let vus = 0
   while (pile.length && vus < 200000) {
-    const [o, prof] = pile.pop()
+    const [o, prof, parent] = pile.pop()
     vus++
     if (!o || typeof o !== 'object' || prof > 24) continue
-    if (Array.isArray(o)) { for (const x of o) if (x && typeof x === 'object') pile.push([x, prof + 1]); continue }
+    if (Array.isArray(o)) { for (const x of o) if (x && typeof x === 'object') pile.push([x, prof + 1, parent]); continue }
     for (const k of Object.keys(o)) {
       const v = o[k]
+      const media = CLES_MEDIA.has(k) && (k !== 'url' || parent === 'items')
       if (CLES_MEDIA.has(k) && remonteHorsProjet(v)) { delete o[k]; n++ }
-      else if (v && typeof v === 'object') pile.push([v, prof + 1])
+      else if (media && adresseExterne(v, env)) { delete o[k]; n++ }
+      else if (v && typeof v === 'object') pile.push([v, prof + 1, k])
     }
   }
   const nom = (o, k, re) => {
@@ -253,4 +284,55 @@ export function installerGsap(proj) {
   if (!existsSync(GSAP_SOURCE)) throw new Error('GSAP embarqué introuvable (render-worker/vendor/gsap/gsap.min.js)')
   mkdirSync(join(proj, 'vendor'), { recursive: true })
   copyFileSync(GSAP_SOURCE, join(proj, 'vendor', 'gsap.min.js'))
+}
+
+// ── 4. CE QUE LE MOTEUR ACCEPTE DE TRAITER (Audit 04/10) ────────────────────────
+// GEN-5 : musique de fond du Générateur (plan.music.url). Seule source légitime : la banque du
+// site, résolue par l'app (_genServerCompose : new URL('../assets/music/<nom>.mp3', location)) →
+// https://avatarads.fr/assets/music/<nom>.mp3. Une musique perso reste un blob: du navigateur,
+// jamais envoyée. Le contrôle DNS anti-SSRF puis le fetch faisaient deux résolutions séparées
+// (rebinding) : avec un hôte FIXE qui nous appartient, il n'y a plus rien à résoudre côté client.
+const MUSIQUE_BANQUE = /^https:\/\/(www\.)?avatarads\.fr\/assets\/music\/[a-z0-9][a-z0-9-]{0,60}\.mp3$/
+export function musiqueBanqueSure(u) { return typeof u === 'string' && MUSIQUE_BANQUE.test(u) }
+
+// GEN-4 / EXP-1 : bornes du travail par composition, sur la vidéo RÉELLEMENT reçue (ffprobe) — le
+// hint client (plan.duration) n'en est pas une. Marges au-dessus de l'usage légitime :
+//   gen-subs : vidéo existante ≤ 5 min (render-job), 4K accepté (gros fichiers, 07/09) ;
+//   retouche : Omni Flash / Veo d'Express = 4 à 10 s, 1080p ;
+//   motion   : référence Kling ≤ 30 s, rendus ≤ 1080p (on borne large : 5 min, 4K).
+// Mesure illisible (durée ou côtés à 0 / NaN) : pas de refus ici — le traitement d'origine garde
+// son repli (durée déclarée ≤ 300 s, contrôlée par render-job). Rend un message français ou null.
+export const BORNES_MEDIA = {
+  'gen-subs': { dureeMax: 305, coteMax: 4096 },
+  retouche: { dureeMax: 15, coteMax: 2160 },
+  motion: { dureeMax: 305, coteMax: 4096 },
+}
+export function horsBornes(mesure, bornes) {
+  if (!mesure || !bornes) return null
+  const d = Number(mesure.duree), w = Number(mesure.largeur), h = Number(mesure.hauteur)
+  if (Number.isFinite(d) && d > bornes.dureeMax) return `Vidéo trop longue pour ce rendu (${Math.round(d)} s, ${Math.floor(bornes.dureeMax / 60) ? Math.floor(bornes.dureeMax / 60) + ' min' : bornes.dureeMax + ' s'} maximum).`
+  if ((Number.isFinite(w) && w > bornes.coteMax) || (Number.isFinite(h) && h > bornes.coteMax)) return `Résolution trop grande pour ce rendu (${bornes.coteMax} px maximum par côté).`
+  return null
+}
+
+// MCP-3 : prochain job de la file, ÉQUITABLE entre comptes (pollLoop). Classe prioritaire (`prioritaires` : compositions courtes)
+// d'abord, puis le reste. Dans une classe : le plus ancien job ; s'il appartient au compte servi juste avant, le plus ancien
+// d'un AUTRE compte passe devant (requête dédiée : aucune fenêtre, un compte qui empile 50 jobs n'en masque aucun autre). Un
+// seul compte en file : ordre chronologique inchangé. File vide : deux lectures, comme avant. `sb` = client Supabase (injecté :
+// le module reste sans accès réseau à l'import). Rend { id, user_id } ou null (erreur de lecture = null, comme avant).
+export async function prochainJob(sb, dernierCompte, prioritaires) {
+  const plusAncien = async (prio, autreQue) => {
+    let q = sb.from('render_jobs').select('id, user_id').eq('status', 'queued')
+    if (prio) q = q.in('plan->>__compose', prioritaires)
+    if (autreQue) q = q.neq('user_id', autreQue)
+    const { data } = await q.order('created_at').limit(1)
+    return (Array.isArray(data) && data[0]) || null
+  }
+  for (const prio of [true, false]) {
+    const premier = await plusAncien(prio, null)
+    if (!premier) continue
+    if (!dernierCompte || premier.user_id !== dernierCompte) return premier
+    return (await plusAncien(prio, dernierCompte)) || premier
+  }
+  return null
 }

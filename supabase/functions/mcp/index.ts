@@ -4,7 +4,7 @@ import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realI
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
 import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
-import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture)
+import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync, dureeAudioAutres } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture) ; audit 04/10 (MCP-4) : FLAC / Opus / AAC mesurés
 import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Audit 02/10 : durée MESURÉE des M4A / MP4 (clean_audio, montage_ia)
 import { expressOmniPrompt, expressVeoPrompt, expressImagePrompt, IMG_REALISM_SUFFIX, IMG_REALISM_EDIT, IMG_TEXT_FIDELITY, NB_MODEL, omniEditPrompt, motionControlPrompt } from '../_shared/express-prompts.ts'   // 01/10 : prompts Express (Omni Flash + Veo, français seul) IDENTIQUES à l'app (généré depuis app/index.html : node tools/gen-express-prompts.mjs)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from '../_shared/hedra-prompts.ts'   // 27/09 : Character-3 + prompt validé de l'usine, PARTAGÉ app / MCP / worker (shared/hedra-prompts.json)
@@ -207,6 +207,9 @@ async function hashKey(key: string): Promise<string> {
   const mac = new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(key)))
   return Array.from(mac).map(b => b.toString(16).padStart(2, '0')).join('')
 }
+// Audit 04/10 (relecture, esprit de CC-4) : clé de plafond par IP sans l'IP en clair dans rate_events — empreinte HMAC
+// (clé service, préfixe propre aux plafonds), tronquée à 32 caractères hexa (128 bits : aucune collision utile).
+const cleIp = async (req: Request): Promise<string> => (await hashKey('rate-ip:' + realIp(req))).slice(0, 32)
 
 // ── Capacité SIGNÉE d'un job (audit 05/09, H4/M5) ──────────────────────────────────────────────
 // /regenerate et /start sont tapés par le widget (iframe claude.ai, AUCUN identifiant) avec le seul
@@ -1186,11 +1189,11 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
     },
     {
       name: 'clean_audio',
-      description: `Nettoie la voix d'un fichier audio (le Nettoyage audio AvatarAds) : voix nettoyée (bruit de fond, souffle, clics). Fait pour une prise de voix — ne sépare pas une voix d'une musique de fond. 10 min d'audio au plus. Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (estimée sur la taille du fichier). Retourne l'URL du MP3 nettoyé.`,
+      description: `Nettoie la voix d'un fichier audio (le Nettoyage audio AvatarAds) : voix nettoyée (bruit de fond, souffle, clics). Fait pour une prise de voix — ne sépare pas une voix d'une musique de fond. 10 min d'audio au plus. Coût : ${CLEAN_COST_PER_MIN} crédit par minute d'audio (durée mesurée sur le fichier). Retourne l'URL du MP3 nettoyé.`,
       inputSchema: {
         type: 'object',
         properties: {
-          audio_url: { type: 'string', description: 'URL publique du fichier audio à nettoyer (MP3, WAV, M4A… — 15 Mo max).' },
+          audio_url: { type: 'string', description: 'URL publique du fichier audio à nettoyer (MP3, WAV, M4A, FLAC, OGG / Opus, WebM ou AAC — 15 Mo max).' },
           confirm: { type: 'boolean', description: "Mets true UNIQUEMENT après avoir montré le devis (coût en crédits) à l'utilisateur et obtenu son accord explicite." },
         },
         required: ['audio_url'],
@@ -1219,7 +1222,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
       inputSchema: {
         type: 'object',
         properties: {
-          audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3 ou M4A, 20 Mo max. Une prise brute convient — elle est nettoyée automatiquement." },
+          audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3, M4A, FLAC, OGG / Opus, WebM ou AAC, 20 Mo max. Une prise brute convient — elle est nettoyée automatiquement." },
           clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : voix nettoyée (bruit de fond, souffle, clics) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — renettoyer un fichier propre ne l'améliore pas." },
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
           avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Aucun crédit en plus." },
@@ -2250,13 +2253,17 @@ function runOmniFlashJob(o: { userId: string; jobId: string; cost: number; cap?:
         let prevUrl = staged.url, fullUrl = ''
         try {
           const png = buf[0] === 0x89 && buf[1] === 0x50, ext = png ? 'png' : 'jpg', mime = png ? 'image/png' : 'image/jpeg'
-          const pth = `${o.userId}/start-${o.jobId}.${ext}`
+          // Audit 04/10 (MCP-2) : nommée comme les autres médias générés (<horodatage>-<suffixe>.<ext>, cf. uploadMedia) →
+          // couverte par la conservation de 30 jours de list_media_purge (« start-<job> » ne l'était par aucun motif : la photo
+          // restait servie sans fin par /i/<job>?photo=1). Le chemin voyage dans params.start_full / preview, rien ne le recalcule.
+          const nomMedia = () => `${o.userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+          const pth = `${nomMedia()}.${ext}`
           const { error: upE } = await svc.storage.from('mcp-media').upload(pth, buf, { contentType: mime, upsert: true })
           if (!upE) prevUrl = `${MEDIA_PUB}${pth}`
           fullUrl = prevUrl
           // aperçu LÉGER pour la carte (Axel 01/10 : la photo pleine résolution, 2-3 Mo, n'apparaissait qu'avec la vidéo)
           const petit = await fabriquerApercu(buf)
-          if (petit) { const pa = `${o.userId}/start-${o.jobId}-apercu.jpg`; const { error: paE } = await svc.storage.from('mcp-media').upload(pa, petit, { contentType: 'image/jpeg', upsert: true }); if (!paE) prevUrl = `${MEDIA_PUB}${pa}` }
+          if (petit) { const pa = `${nomMedia()}.jpg`; const { error: paE } = await svc.storage.from('mcp-media').upload(pa, petit, { contentType: 'image/jpeg', upsert: true }); if (!paE) prevUrl = `${MEDIA_PUB}${pa}` }
           await saveToLibrary(o.userId, buf, ext, mime, 'image', 'Photo de départ (vidéo Express)')
           // photo LIVRÉE (carte + Bibliothèque) = due, comme dans l'app (migration 20260925201000) : un échec de la vidéo
           // ensuite ne rend plus que la part vidéo (audit 02/10 — avant, la photo était remboursée ET gardée)
@@ -3465,11 +3472,13 @@ async function isolerVoix(bytes: Uint8Array, contentType: string): Promise<Uint8
 
 // Audit 02/10 : durée MESURÉE d'un audio reçu, en secondes — WAV PCM / MP3 (mesurerAudio : copie canonique, trames comptées)
 // et M4A / MP4 / MOV (dureeMp4Octets : la plus longue des durées déclarées, pistes vues comme ffmpeg) ; la plus longue des
-// deux si les deux lectures réussissent. null = format non mesurable (AAC brut, OGG, WebM, FLAC…) : jamais la durée annoncée.
+// lectures qui réussissent. null = format non mesurable : jamais la durée annoncée.
+// Audit 04/10 (MCP-4) : + FLAC, Ogg Opus (notes vocales), WebM Opus (enregistreur des navigateurs) et AAC brut (ADTS),
+// mesurés sur les trames réellement décodables (dureeAudioAutres) — refusés au-delà de 1,2 / 3 Mo depuis le 03/10.
 function dureeAudioMesuree(b: Uint8Array): number | null {
-  const m = mesurerAudio(b), mp4 = dureeMp4Octets(b)
-  if (!m.kind && mp4 === null) return null
-  return Math.max(m.kind ? m.sec : 0, mp4 ?? 0)
+  const m = mesurerAudio(b), mp4 = dureeMp4Octets(b), autre = dureeAudioAutres(b)
+  if (!m.kind && mp4 === null && !autre) return null
+  return Math.max(m.kind ? m.sec : 0, mp4 ?? 0, autre ? autre.sec : 0)
 }
 // Audit 02/10 : au-delà de ces tailles, un format non mesurable est refusé (sa durée ne serait qu'une estimation) —
 // nettoyage : 1,2 Mo ≈ 10 min à 16 kbit/s (voix Opus / AAC-HE), ~75 s à 128 kbit/s : la limite de 10 min ne se dépasse plus
@@ -3497,7 +3506,7 @@ async function runCleanAudio(profile: Record<string, unknown>, args: Record<stri
   // non mesurable n'est accepté que petit (estimation sur la taille, comme avant) ; la limite de 10 min est appliquée.
   const mesSec = dureeAudioMesuree(got.bytes)
   if (mesSec === null && got.bytes.length > CLEAN_NON_MESURE_MAX) {
-    return toolErr(`Format audio non pris en charge au-delà de ${(CLEAN_NON_MESURE_MAX / 1_000_000).toFixed(1).replace('.', ',')} Mo : sa durée ne peut pas être mesurée. Envoie un MP3, un WAV ou un M4A. Aucun crédit débité.`)
+    return toolErr(`Format audio non pris en charge au-delà de ${(CLEAN_NON_MESURE_MAX / 1_000_000).toFixed(1).replace('.', ',')} Mo : sa durée ne peut pas être mesurée. Envoie un MP3, un WAV, un M4A, un FLAC, un OGG / Opus, un WebM ou un AAC. Aucun crédit débité.`)
   }
   if (mesSec !== null && mesSec > CLEAN_MAX_SEC + 0.5) {
     return toolErr(`Audio trop long (~${Math.ceil(mesSec / 60)} min) : le nettoyage accepte 10 minutes d'audio au plus. Découpe-le puis relance. Aucun crédit débité.`)
@@ -3746,11 +3755,40 @@ function estimateAudioSeconds(bytes: Uint8Array, contentType: string): number {
   return bytes.length / bps
 }
 
+// Audit 04/10 (MCP-3) : MÊME plafond que render-job pour l'app — 2 rendus en file ou en cours par compte, toutes compositions
+// confondues, jobs de moins de 45 min (au-delà : morts, render-job les clôt) — compté AVANT le débit de montage_ia /
+// render_montage_plan, puis revérifié à l'insertion du render_job (crédits rendus). Les montages MCP encore en préparation
+// (chef d'orchestre, render_job pas encore créé) comptent aussi : sinon N montage_ia lancés d'un coup passaient tous.
+// null = lecture impossible → refus (aucun crédit débité à ce stade).
+const MAX_RENDUS_EN_COURS = 2
+const RENDUS_EN_COURS_MSG = "Tu as déjà 2 rendus de montage en cours sur ton compte : attends qu'un des deux se termine (check_montage), puis relance."
+// Audit 04/10 (relecture) : une préparation ne compte que 20 min — au-delà elle est morte (isolate tué, op_name jamais
+// posé) et check_montage / le filet de réconciliation la clôturent (« préparation du plan bloquée », crédits rendus) ;
+// une vraie préparation dure ~2 min. Avant : un fantôme bloquait montage_ia jusqu'à 45 min.
+async function rendusEnCours(userId: string, avecPreparations = true): Promise<number | null> {
+  const limite = new Date(Date.now() - 45 * 60 * 1000).toISOString()
+  const limitePrep = new Date(Date.now() - 20 * 60 * 1000).toISOString()
+  try {
+    const { count: rendus, error: e1 } = await svc.from('render_jobs').select('id', { count: 'exact', head: true })
+      .eq('user_id', userId).in('status', ['queued', 'rendering']).gte('created_at', limite)
+    if (e1) { console.error('[mcp] rendus en cours : ' + e1.message); return null }
+    if (!avecPreparations) return rendus ?? 0
+    const { count: preps, error: e2 } = await svc.from('mcp_jobs').select('id', { count: 'exact', head: true })
+      .eq('user_id', userId).eq('kind', 'montage').eq('status', 'running').is('op_name', null).gte('created_at', limitePrep)
+    if (e2) { console.error('[mcp] montages en préparation : ' + e2.message); return null }
+    return (rendus ?? 0) + (preps ?? 0)
+  } catch (e) { console.error('[mcp] rendus en cours : ' + ((e as Error)?.message || e)); return null }
+}
+
 // Crée la paire (render_jobs + mcp_jobs) — op_name du mcp_job = id du render_job.
 async function createMontageJobs(
   userId: string, plan: Record<string, unknown>, inputPath: string,
   assets: unknown[], cost: number,
 ): Promise<{ jobId: string } | string> {
+  // Audit 04/10 (MCP-3) : revérifié juste avant l'insertion (deux appels simultanés) — l'appelant rend les crédits.
+  const enCours = await rendusEnCours(userId, false)
+  if (enCours === null) return 'Erreur serveur à la création du job de rendu — crédits remboursés.'
+  if (enCours >= MAX_RENDUS_EN_COURS) return RENDUS_EN_COURS_MSG + ' Crédits remboursés.'
   const { data: rj, error } = await svc.from('render_jobs')
     .insert({ user_id: userId, status: 'queued', plan, input_video: inputPath, assets })
     .select('id').single()
@@ -3850,7 +3888,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
   // mesurable : refusé au-delà de 3 Mo, sinon estimé sur la taille, jamais sous 16 Ko/s (un en-tête WAV forgé ne la baisse plus).
   const mesSec = dureeAudioMesuree(got.bytes)
   if (mesSec === null && got.bytes.length > MONTAGE_NON_MESURE_MAX) {
-    return toolErr(`Format audio non pris en charge au-delà de ${MONTAGE_NON_MESURE_MAX / 1_000_000} Mo : sa durée ne peut pas être mesurée. Envoie un WAV, un MP3 ou un M4A. Aucun crédit débité.`)
+    return toolErr(`Format audio non pris en charge au-delà de ${MONTAGE_NON_MESURE_MAX / 1_000_000} Mo : sa durée ne peut pas être mesurée. Envoie un WAV, un MP3, un M4A, un FLAC, un OGG / Opus, un WebM ou un AAC. Aucun crédit débité.`)
   }
   const durAnnoncee = Number(args.duration_seconds)
   const durRaw = Math.max(
@@ -3858,7 +3896,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     Number.isFinite(durAnnoncee) && durAnnoncee > 0 ? durAnnoncee : 0)
   // format court assumé : au-delà de 90 s le montage perd son rythme (et coûte cher à rendre)
   if (durRaw > 90.5) {
-    return toolErr(`Audio trop long (~${Math.round(durRaw)} s${mesSec === null ? ', estimé d\'après la taille du fichier' : ''}) : le Montage IA accepte 90 secondes maximum. Raccourcis l'audio (ou découpe-le en plusieurs vidéos courtes) puis relance.${mesSec === null ? ' Pour une durée exacte, envoie un WAV, un MP3 ou un M4A.' : ''}`)
+    return toolErr(`Audio trop long (~${Math.round(durRaw)} s${mesSec === null ? ', estimé d\'après la taille du fichier' : ''}) : le Montage IA accepte 90 secondes maximum. Raccourcis l'audio (ou découpe-le en plusieurs vidéos courtes) puis relance.${mesSec === null ? ' Pour une durée exacte, envoie un WAV, un MP3, un M4A, un FLAC, un OGG / Opus, un WebM ou un AAC.' : ''}`)
   }
   const durEst = Math.max(5, durRaw)
   // ── LE MODÈLE DU LIPSYNC, DÉCIDÉ AVANT LE DÉBIT ─────────────────────────────
@@ -3891,6 +3929,12 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
 
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  // Audit 04/10 (MCP-3) : plafond de rendus simultanés, AVANT le devis et le débit.
+  {
+    const enCours = await rendusEnCours(userId)
+    if (enCours === null) return toolErr('Erreur serveur — réessaie dans un instant. Aucun crédit débité.')
+    if (enCours >= MAX_RENDUS_EN_COURS) return toolErr(RENDUS_EN_COURS_MSG + ' Aucun crédit débité.')
   }
   const gate = await preSpendGate(profile, ctx, args, cost,
     `Montage IA ~${Math.round(durEst)} s (style ${style})` + (nettoyer ? ` + nettoyage de la voix (${coutClean} cr)` : ''),
@@ -4029,6 +4073,12 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       // audit 02/10 (WRK-1) : chemins revalidés comme ceux d'un client avant d'entrer dans render_jobs (défense en profondeur)
       if (cheminSur(userId, inputPath) !== inputPath || assets.some((a) => cheminSur(userId, a.path) !== a.path)) {
         await failAndRefund(userId, mcpJob, 'chemin de stockage invalide'); return
+      }
+      // Audit 04/10 (MCP-3) : revérifié à l'insertion (d'autres rendus ont pu partir pendant la préparation, ~2 min) —
+      // plafond atteint → montage clos et crédits rendus (failAndRefund), comme render-job côté app.
+      const enCours = await rendusEnCours(userId, false)
+      if (enCours === null || enCours >= MAX_RENDUS_EN_COURS) {
+        await failAndRefund(userId, mcpJob, enCours === null ? 'création du job de rendu impossible' : RENDUS_EN_COURS_MSG); return
       }
       const { data: rj, error: rjErr } = await svc.from('render_jobs')
         .insert({ user_id: userId, status: 'queued', plan, input_video: inputPath, assets })
@@ -4200,6 +4250,12 @@ async function runRenderMontagePlan(profile: Record<string, unknown>, args: Reco
   const cost = MONTAGE_RENDER_COST
   if (!isUnlimited(profile) && (Number(profile.credits_remaining) || 0) < cost) {
     return toolErr(`Crédits insuffisants : il faut ${cost} crédits, il en reste ${profile.credits_remaining ?? 0}. Recharge sur ${APP_URL}`)
+  }
+  // Audit 04/10 (MCP-3) : plafond de rendus simultanés, AVANT le devis et le débit (revérifié dans createMontageJobs).
+  {
+    const enCours = await rendusEnCours(userId)
+    if (enCours === null) return toolErr('Erreur serveur — réessaie dans un instant. Aucun crédit débité.')
+    if (enCours >= MAX_RENDUS_EN_COURS) return toolErr(RENDUS_EN_COURS_MSG + ' Aucun crédit débité.')
   }
   const gate = await preSpendGate(profile, ctx, args, cost, 'nouveau rendu du plan modifié', 'render_montage_plan')
   if (gate) return gate
@@ -4384,6 +4440,10 @@ const DOC_AS = (base: string) => ({
   authorization_endpoint: `${base}/authorize`,
   token_endpoint: `${base}/token`,
   registration_endpoint: `${base}/register`,
+  // Audit 04/10 (MCP-1) : révocation RFC 7009 (« Déconnecter » côté client). NB : mcp.avatarads.fr sert ses propres
+  // métadonnées statiques (mcp-proxy/.well-known) — l'y ajouter pour que claude.ai l'utilise.
+  revocation_endpoint: `${base}/revoke`,
+  revocation_endpoint_auth_methods_supported: ['none'],
   response_types_supported: ['code'],
   grant_types_supported: ['authorization_code', 'refresh_token'],
   code_challenge_methods_supported: ['S256'],
@@ -4521,7 +4581,8 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
   if (p1 === 'register' && req.method === 'POST') {
     // Audit 06/09 : /register est ouvert (spec OAuth dynamique) → throttle par IP contre l'enregistrement en masse
     // de clients (chaque client sert au hameçonnage du consentement, déjà atténué par l'affichage d'identité).
-    if (!(await rateHit('mcp-register:' + realIp(req), 3600, 30))) return json(429, { error: 'rate_limited' })
+    // Audit 04/10 (relecture, esprit de CC-4) : IP en EMPREINTE dans rate_events, jamais en clair (cleIp).
+    if (!(await rateHit('mcp-register:' + (await cleIp(req)), 3600, 30))) return json(429, { error: 'rate_limited' })
     let body: Record<string, unknown>
     try { body = await req.json() } catch { return json(400, { error: 'invalid_client_metadata' }) }
     // Audit 02/10 : 10 adresses de retour au plus (refus, plus de troncature silencieuse), 2048 caractères chacune,
@@ -4748,6 +4809,40 @@ async function handleOAuth(req: Request, url: URL, segs: string[]): Promise<Resp
     return json(400, { error: 'unsupported_grant_type' })
   }
 
+  // ── Audit 04/10 (MCP-1) : révocation d'un jeton par le client (RFC 7009) ──
+  // Client public (aucun secret) : détenir le jeton suffit à le révoquer. Accès (aat_) ou refresh (aar_) → toute la FAMILLE
+  // (accès + refresh issus du même consentement) est supprimée. Réponse 200 identique que le jeton existe ou non (§2.2) ;
+  // client_id fourni → le jeton doit être le sien, sinon rien n'est révoqué (même réponse).
+  if (p1 === 'revoke' && req.method === 'POST') {
+    if (!(await rateHit('mcp-revoke:' + (await cleIp(req)), 3600, 60))) return json(429, { error: 'rate_limited' })   // IP en empreinte (relecture)
+    let form: URLSearchParams
+    try {
+      if ((req.headers.get('content-type') || '').includes('application/json')) {
+        const j = await req.json()
+        form = new URLSearchParams(Object.entries((j && typeof j === 'object') ? j : {}).map(([k, v]) => [k, String(v)]))
+      } else form = new URLSearchParams(await req.text())
+    } catch { return json(400, { error: 'invalid_request' }) }
+    const token = String(form.get('token') || '').trim()
+    if (!token) return json(400, { error: 'invalid_request' })
+    if (/^aa[tr]_[0-9a-f]{48}$/.test(token)) {
+      const col = token.startsWith('aat_') ? 'token_hash' : 'refresh_hash'
+      const h = await hashKey(token)
+      const clientIn = String(form.get('client_id') || '')
+      const clientUuid = clientIn ? await clientUuidDe(clientIn) : null
+      const { data: row, error: rowErr } = await svc.from('mcp_oauth_tokens').select('token_hash, client_id, family_id').eq(col, h).maybeSingle()
+      if (rowErr) {
+        console.error('[oauth/revoke] lecture : ' + rowErr.message)
+        if (!clientIn) await svc.from('mcp_oauth_tokens').delete().eq(col, h)   // repli sans famille (colonne absente)
+      } else if (row && (!clientIn || (clientUuid !== null && clientUuid === String(row.client_id).toLowerCase()))) {
+        const { error: delErr } = row.family_id
+          ? await svc.from('mcp_oauth_tokens').delete().eq('family_id', row.family_id)
+          : await svc.from('mcp_oauth_tokens').delete().eq('token_hash', row.token_hash)
+        if (delErr) { console.error('[oauth/revoke] suppression : ' + delErr.message); return json(503, { error: 'server_error' }) }
+      }
+    }
+    return new Response(null, { status: 200, headers: { ...cors, 'Cache-Control': 'no-store' } })
+  }
+
   return null
 }
 
@@ -4769,11 +4864,24 @@ async function handleKeyManagement(req: Request): Promise<Response> {
     const { data } = await svc.from('mcp_keys').select('created_at, last_used_at, require_confirm')
       .eq('user_id', user.id).is('revoked_at', null)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    // Audit 04/10 (MCP-1, CC-2) : connexions Claude par OAuth encore vivantes (jeton non tourné, famille de moins de 90 jours)
+    // → l'app peut dire « Claude est relié » à côté de « Déconnecter Claude ». Champs AJOUTÉS (anciens clients : ignorés).
+    let oauthConnexions = 0, oauthDernier: string | null = null
+    try {
+      const { data: toks } = await svc.from('mcp_oauth_tokens').select('last_used_at, created_at')
+        .eq('user_id', user.id).is('rotated_at', null).gt('family_started_at', new Date(Date.now() - FAMILY_TTL_MS).toISOString()).limit(100)
+      for (const t of (toks || []) as { last_used_at: string | null, created_at: string | null }[]) {
+        oauthConnexions++
+        const d = t.last_used_at || t.created_at
+        if (d && (!oauthDernier || d > oauthDernier)) oauthDernier = d
+      }
+    } catch (_) { /* information de confort */ }
     return json(200, {
       exists: !!data, created_at: data?.created_at ?? null, last_used_at: data?.last_used_at ?? null,
       // défaut false (29/08) : l'option confirmation quitte l'UI, les nouvelles
       // clés partent sans devis ; une clé existante garde sa valeur stockée.
       require_confirm: data?.require_confirm ?? true, plan_allowed: planAllowed,
+      oauth_connections: oauthConnexions, oauth_last_used_at: oauthDernier,
     })
   }
   if (body.action === 'create') {

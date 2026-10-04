@@ -559,6 +559,25 @@ Deno.serve(async (req: Request) => {
   const dejaFaites = count ?? 0
   const doitPayer = dejaFaites >= gratuites
 
+  // Audit 04/10 (MONT-3) : l'op créée par spend_credits gardait sa réserve (1) et n'était jamais réglée → le client la
+  // remboursait par refund_credits dans les 2 h (création payante gratuite), et resolveOp pouvait la tirer pour une autre
+  // génération. Elle est désormais TIRÉE tout de suite par le serveur (clé service), puis RÉGLÉE à l'issue (animation livrée,
+  // ou refusée / illisible : la tentative compte, règle d'Axel du 03/08) — sauf panne de Claude (erreur HTTP, réseau) : le
+  // crédit est alors rendu côté serveur (refund_op_terminal). Owner / developer : op à 0 crédit, rien à tirer.
+  let opPayee: string | null = null
+  const regler = async () => {
+    if (!opPayee) return
+    const op = opPayee; opPayee = null
+    try { await sbAdmin.rpc('settle_reservation', { p_user: user.id, p_op: op }) } catch { /* best-effort : op déjà tirée, non remboursable */ }
+  }
+  const rendre = async (): Promise<boolean> => {
+    if (!opPayee) return false
+    const op = opPayee; opPayee = null
+    try {
+      const { data } = await sbAdmin.rpc('refund_op_terminal', { p_user: user.id, p_op: op, p_restore: 1 })
+      return !!(data as { ok?: boolean } | null)?.ok
+    } catch { return false }
+  }
   if (doitPayer) {
     // Audit 06/09 : l'ancien appel visait `spend_credits(p_user, p_amount, p_reason)` — une signature qui
     // n'existe pas (seules `spend_credits(p_secs)` et `spend_credits(p_secs, p_reason)`, sur auth.uid()).
@@ -567,6 +586,29 @@ Deno.serve(async (req: Request) => {
     const { data: spent, error: eSpend } = await sbUser.rpc('spend_credits', { p_secs: 1, p_reason: 'création d\'animation' })
     if (eSpend || !(spent as { ok?: boolean } | null)?.ok) {
       return json({ ok: false, erreur: `Tes ${gratuites} créations gratuites du mois sont utilisées, et il te faut 1 crédit pour continuer.` }, 402)
+    }
+    const op = String((spent as { op_id?: string | null }).op_id || '')
+    if (/^[0-9a-f-]{36}$/i.test(op)) {
+      let tire = false, rienATirer = false
+      for (let essai = 0; essai < 2 && !tire; essai++) {
+        try {
+          const { data: reste, error: eDraw } = await sbAdmin.rpc('draw_reservation', { p_user: user.id, p_op: op, p_cost: 1 })
+          tire = !eDraw && typeof reste === 'number'   // null = rien à tirer (op owner / developer à 0 crédit)
+          if (!eDraw) { rienATirer = !tire; break }
+        } catch { /* nouvel essai */ }
+      }
+      // Audit 04/10 (MONT-3, relecture) : « rien à tirer » sur une op PAYÉE (montant > 0) = elle a été remboursée
+      // (refund_credits) ou prise par une autre génération entre le débit et ce tirage → la création n'est pas payée :
+      // 402, rien n'est lancé ni compté. Op à 0 crédit (owner / developer) → continue comme avant. Lecture impossible →
+      // continue (même règle que le hoquet DB ci-dessous).
+      if (rienATirer) {
+        let montant = 0
+        try { const { data: r0 } = await sbAdmin.from('credit_ops').select('amount').eq('id', op).eq('user_id', user.id).maybeSingle(); montant = Number((r0 as { amount?: number } | null)?.amount) || 0 } catch { /* continue */ }
+        if (montant > 0) return json({ ok: false, erreur: 'Ton crédit pour cette création n\'est plus disponible — relance la création.' }, 402)
+      }
+      // non tirée (op à 0, ou hoquet DB deux fois) : rien à régler ni à rendre ici, l'op garde sa réserve comme avant
+      if (tire) opPayee = op
+      else console.warn('[anim-creer] op non tirée (owner / developer, ou hoquet DB)')
     }
   }
   // on inscrit la tentative AVANT de générer : un échec de Claude a quand même
@@ -590,13 +632,16 @@ Deno.serve(async (req: Request) => {
         messages: [{ role: 'user', content: userPrompt }],
       }),
     })
-    if (!res.ok) return json({ ok: false, erreur: `Claude ${res.status}` })
+    if (!res.ok) {
+      const rendu = await rendre()
+      return json({ ok: false, erreur: `Claude ${res.status}` + (rendu ? ' — ton crédit t\'a été rendu, réessaie dans un instant.' : '') })
+    }
     const data = await res.json()
     const texte = String((data?.content || []).map((c: { text?: string }) => c?.text || '').join('\n'))
     const m = texte.match(/\{[\s\S]*\}/)
-    if (!m) return json({ ok: false, erreur: 'réponse illisible', brut: texte.slice(0, 500), stop: data?.stop_reason })
+    if (!m) { await regler(); return json({ ok: false, erreur: 'réponse illisible', brut: texte.slice(0, 500), stop: data?.stop_reason }) }
     let a: Record<string, unknown>
-    try { a = JSON.parse(m[0]) } catch { return json({ ok: false, erreur: 'JSON illisible' }) }
+    try { a = JSON.parse(m[0]) } catch { await regler(); return json({ ok: false, erreur: 'JSON illisible' }) }
 
     // ── LA DEUXIÈME PASSE — c'est elle qui fait la différence ───────────────
     // Axel : « ce qui manque, c'est la boucle. Quand j'écris une animation, je
@@ -643,13 +688,15 @@ Réécris l'animation en corrigeant ce que tu viens de trouver. Même format JSO
     const html = recentrer(String(brut.html || ''))
     const js = tenirJusquAuBout(String(brut.js || ''))
     const faute = verifier(html, js)
-    if (faute) return json({ ok: false, erreur: `animation refusée : ${faute}` })
+    if (faute) { await regler(); return json({ ok: false, erreur: `animation refusée : ${faute}` }) }
 
     const nom = String(brut.nom || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40) || 'sans-nom'
     const mots = (Array.isArray(brut.mots) ? brut.mots : []).map((x) => String(x).toLowerCase().trim())
       .filter((x) => x.length >= 3).slice(0, 8)
+    await regler()
     return json({ ok: true, anim: { nom, mots, montre: String(brut.montre || '').slice(0, 160), html, js } })
   } catch (e) {
-    return json({ ok: false, erreur: String(e).slice(0, 200) })
+    const rendu = await rendre()   // panne réseau / réponse illisible de l'API : rien de livré
+    return json({ ok: false, erreur: String(e).slice(0, 200) + (rendu ? ' — ton crédit t\'a été rendu.' : '') })
   }
 })

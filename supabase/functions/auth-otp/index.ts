@@ -29,6 +29,18 @@ import { rateHit, realIp, timingSafeEqual, tokenRole } from '../_shared/guard.ts
 //     guard_password_change, migration 20261003100000). Codes dans password_change_codes.
 // Audit 02/10 (P3) : connexion par code — plafond QUOTIDIEN d'envoi par e-mail, et compteur de vérifications par couple
 // (e-mail, IP) : un tiers ne peut plus bloquer à lui seul la connexion d'une victime en épuisant son compteur.
+//
+// Audit 04/10 (P4, migration 20261004050000) :
+//   · CC-3 : les plafonds d'ENVOI de code comptent aussi par couple (e-mail, IP) — 6 / h et 15 / 24 h, comme avant mais par
+//     demandeur — avec un plafond GLOBAL par adresse plus large (40 / 24 h) : une seule IP ne bloque plus une adresse ~22 h.
+//   · CC-4 : les clés de rate_events ne contiennent plus ni l'adresse ni l'IP en clair (empreinte HMAC, rk()).
+//   · CC-1 : chaque changement d'adresse est journalisé (email_change_events) ; l'ancienne adresse reçoit un lien « Ce n'est
+//     pas moi » valable 72 h → POST { action:'email_change_revert', token } (SANS session) rétablit l'adresse et verrouille
+//     le compte (sessions fermées, identités / MFA / mot de passe ajoutés depuis retirés, accès Claude coupé). Un mot de
+//     passe changé pendant la fenêtre est signalé aussi à l'ancienne adresse ; l'ancienne adresse ne peut pas ouvrir un
+//     NOUVEAU compte pendant 72 h (verify → 409 email_recently_changed).
+//   · CC-2 / MCP-1 (contrat K3) : tout changement de mot de passe ou d'adresse validé révoque l'accès Claude (jetons et
+//     codes OAuth MCP, clés aa_) du compte.
 
 const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -54,6 +66,12 @@ const PWD_GRANT_TTL_S    = 120  // durée de l'autorisation serveur posée juste
 // Audit 02/10 : changement d'adresse — même validité / cooldown / essais que la connexion (constantes ci-dessus).
 const CHG_MAX_PER_USER_H = 5  // codes de changement par compte et par heure
 const CHG_MAX_PER_DEST_H = 5  // codes de changement par adresse cible et par heure
+// Audit 04/10 (CC-3) : 6 / h et 15 / 24 h comptés par couple (e-mail, IP) ; ce plafond-ci, toutes IP confondues, borne le
+// bombardement d'une boîte (3 IP au moins pour l'atteindre).
+const MAX_PER_EMAIL_DAY_GLOBAL = 40
+// Audit 04/10 (CC-1) : fenêtre d'annulation d'un changement d'adresse (lien « Ce n'est pas moi » envoyé à l'ancienne adresse).
+const REVERT_TTL_H = 72
+const REVERT_PAGE  = 'https://avatarads.fr/connexion.html'   // le jeton voyage dans le fragment (#) : jamais envoyé à un serveur
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -68,6 +86,29 @@ async function hashCode(email: string, code: string): Promise<string> {
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
   const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${email}:${code}`)))
   return Array.from(mac).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// Audit 04/10 (CC-4) : empreinte d'une adresse ou d'une IP pour les clés de rate_events (HMAC, clé service, 128 bits) —
+// le compteur reste exact, la table ne contient plus de donnée personnelle lisible. Préfixe « e: » / « ip: » à l'appel.
+const rk = async (v: string) => (await hashCode('rl', v)).slice(0, 32)
+
+// Audit 04/10 (CC-1) : jeton d'annulation d'un changement d'adresse — 256 bits aléatoires, seule l'empreinte est stockée.
+const hexAleatoire = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n))).map(b => b.toString(16).padStart(2, '0')).join('')
+const revertHash = (jeton: string) => hashCode('revert', jeton)
+// Table / RPC de la migration 20261004050000 absente (fonction déployée avant la migration) : on retombe sur l'ancien
+// comportement au lieu de casser le changement d'adresse.
+const tableAbsente = (e: { code?: string } | null | undefined) => !!e && ['PGRST205', '42P01', 'PGRST202', '42883'].includes(String(e.code || ''))
+
+// Audit 04/10 (CC-2, MCP-1, contrat K3) : accès Claude coupé — jetons et codes OAuth MCP supprimés, clés aa_ révoquées
+// (même effet que POST /mcp/key { action:'revoke' }). Best-effort : journalisé, ne défait jamais le changement déjà fait.
+async function couperClaude(sb: SupabaseClient, userId: string): Promise<void> {
+  try {
+    const r1 = await sb.from('mcp_oauth_tokens').delete().eq('user_id', userId)
+    const r2 = await sb.from('mcp_oauth_codes').delete().eq('user_id', userId)
+    const r3 = await sb.from('mcp_keys').update({ revoked_at: new Date().toISOString() }).eq('user_id', userId).is('revoked_at', null)
+    const e = r1.error || r2.error || r3.error
+    if (e) console.error('révocation de l\'accès Claude incomplète :', e.message)
+  } catch (e) { console.error('révocation de l\'accès Claude impossible :', (e as Error)?.message || e) }
 }
 
 function otpEmail(code: string): string {
@@ -131,9 +172,26 @@ function emailChangeCodeEmail(code: string): string {
       <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Ce code expire dans ${CODE_TTL_MIN} minutes et ne peut être utilisé qu'une fois.<br>Si tu n'es pas à l'origine de cette demande, ignore simplement cet e-mail : rien ne change sur ton compte.</div>`)
 }
 
-function emailChangedNotice(newEmailMasked: string): string {
-  return mailLayout('Ton adresse de connexion a été changée', `<div style="font-size:15px;color:#44403c;line-height:1.65">L'adresse e-mail de connexion de ton compte AvatarAds vient d'être remplacée par <b>${esc(newEmailMasked)}</b>. Cette adresse-ci ne permet plus de te connecter.</div>
-      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Si ce n'est pas toi, contacte-nous tout de suite à <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a>.</div>`)
+// Audit 04/10 (CC-1) : lien « Ce n'est pas moi » (vide = journal indisponible : l'e-mail d'avant, sans lien).
+function emailChangedNotice(newEmailMasked: string, lienAnnulation = ''): string {
+  const lien = lienAnnulation
+    ? `<div style="margin-top:22px"><a href="${esc(lienAnnulation)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 20px;border-radius:12px">Ce n'est pas moi : rétablir mon adresse</a></div>
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:14px">Ce lien est valable ${REVERT_TTL_H} heures et ne sert qu'une fois. Il rétablit cette adresse, déconnecte toutes les sessions ouvertes et coupe l'accès de Claude à ton compte.</div>`
+    : ''
+  return mailLayout('Ton adresse de connexion a été changée', `<div style="font-size:15px;color:#44403c;line-height:1.65">L'adresse e-mail de connexion de ton compte AvatarAds vient d'être remplacée par <b>${esc(newEmailMasked)}</b>. Cette adresse-ci ne permet plus de te connecter.</div>${lien}
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Si ce n'est pas toi${lienAnnulation ? ' et que le lien ne fonctionne plus' : ''}, contacte-nous tout de suite à <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a>.</div>`)
+}
+
+// Audit 04/10 (CC-1) : confirmation envoyée à l'adresse rétablie.
+function emailRevertedNotice(): string {
+  return mailLayout('Ton adresse de connexion a été rétablie', `<div style="font-size:15px;color:#44403c;line-height:1.65">Cette adresse est de nouveau l'adresse de connexion de ton compte AvatarAds. Toutes les sessions ouvertes ont été déconnectées et l'accès de Claude à ton compte a été coupé.</div>
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Reconnecte-toi par code e-mail sur avatarads.fr. Si tu utilisais AvatarAds dans Claude, relie-le de nouveau depuis « Connecter Claude ». Une question : <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a>.</div>`)
+}
+
+// Audit 04/10 (CC-1) : mot de passe changé dans les 72 h qui suivent un changement d'adresse → l'ancienne adresse est prévenue.
+function passwordChangedOldNotice(): string {
+  return mailLayout('Mot de passe modifié sur ton compte AvatarAds', `<div style="font-size:15px;color:#44403c;line-height:1.65">Le mot de passe du compte AvatarAds qui utilisait cette adresse jusqu'à récemment vient d'être modifié.</div>
+      <div style="font-size:13px;color:#78716c;line-height:1.6;margin-top:18px">Si tu n'as changé ni ton adresse ni ton mot de passe, ouvre le lien « Ce n'est pas moi » de l'e-mail « Ton adresse de connexion AvatarAds a été changée » (valable ${REVERT_TTL_H} heures) : il rétablit ton adresse et retire ce mot de passe. Sinon, écris-nous à <a href="mailto:bonjour@avatarads.fr" style="color:#111">bonjour@avatarads.fr</a>.</div>`)
 }
 
 // « jean.dupont@gmail.com » → « j***t@gmail.com » : l'ancienne adresse reconnaît le changement sans recevoir l'adresse entière.
@@ -201,11 +259,11 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
     // l'existence d'adresses à volonté (5 / h). Puis plafond par adresse cible (pas de bombardement d'une boîte).
     const ip = realIp(req)
     if (!(await rateHit(`emailchg:send:user:${user.id}`, 3600, CHG_MAX_PER_USER_H))) return json(429, { error: 'too_many_codes' })
-    if (ip && !(await rateHit(`emailchg:send:ip:${ip}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
+    if (ip && !(await rateHit(`emailchg:send:ip:${await rk('ip:' + ip)}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })   // Audit 04/10 (CC-4) : empreintes
     const taken = await targetTaken(sb, user.id, newEmail)
     if (taken === null) return json(500, { error: 'server_error' })
     if (taken) return json(409, { error: 'email_taken' })
-    if (!(await rateHit(`emailchg:send:to:${newEmail}`, 3600, CHG_MAX_PER_DEST_H))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`emailchg:send:to:${await rk('e:' + newEmail)}`, 3600, CHG_MAX_PER_DEST_H))) return json(429, { error: 'too_many_codes' })
 
     // Un seul code vivant par compte : les précédents (non utilisés) sont supprimés.
     await sb.from('email_change_codes').delete().eq('user_id', user.id).is('used_at', null)
@@ -232,7 +290,7 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
   // Plafond de vérifications INDÉPENDANT du compteur par code (par compte et par IP), avant même de lire le code.
   const vip = realIp(req)
   if (!(await rateHit(`emailchg:verify:user:${user.id}`, 600, 12))) return json(400, { error: 'too_many_attempts' })
-  if (vip && !(await rateHit(`emailchg:verify:ip:${vip}`, 600, 40))) return json(400, { error: 'too_many_attempts' })
+  if (vip && !(await rateHit(`emailchg:verify:ip:${await rk('ip:' + vip)}`, 600, 40))) return json(400, { error: 'too_many_attempts' })
 
   const nowIso = new Date().toISOString()
   const { data: row, error: rowErr } = await sb.from('email_change_codes').select('id, new_email, code_hash')
@@ -260,14 +318,42 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
   if (taken === null) return json(500, { error: 'server_error' })
   if (taken) return json(409, { error: 'email_taken' })
 
+  // Audit 04/10 (CC-1) : journal + jeton d'annulation posés AVANT de consommer le code (un échec ici laisse le code
+  // utilisable). Échec FERMÉ, sauf migration 20261004050000 absente : changement sans lien d'annulation, comme avant.
+  let evId = '', jeton = ''
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(user.email)) {
+    // RETOUR à une adresse quittée il y a moins de 72 h (changement ni annulé ni invalidé) : l'adresse qu'on quitte a
+    // elle-même été posée pendant la fenêtre → aucun lien d'annulation pour elle (sinon, après une prise de contrôle, le
+    // titulaire qui remet son adresse donnerait à l'attaquant un lien pour la lui reprendre). Journalisé quand même.
+    const depuis = new Date(Date.now() - REVERT_TTL_H * 3600_000).toISOString()
+    const { data: retour, error: rErr } = await sb.from('email_change_events').select('id')
+      .eq('user_id', user.id).eq('old_email', newEmail).gt('changed_at', depuis).is('reverted_at', null).is('voided_at', null).limit(1)
+    // Audit 04/10 (relecture) : journal illisible pour une autre raison qu'une table absente → échec FERMÉ (avant, le
+    // changement passait sans lien d'annulation). Le code n'est pas encore consommé : il resservira.
+    if (rErr && !tableAbsente(rErr)) { console.error('email_change : journal illisible :', rErr.message); return json(500, { error: 'server_error' }) }
+    const avecLien = !rErr && !(retour && retour.length)
+    jeton = avecLien ? hexAleatoire(32) : ''
+    const { data: ev, error: evErr } = await sb.from('email_change_events').insert({
+      user_id: user.id, old_email: user.email, new_email: newEmail, revert_hash: jeton ? await revertHash(jeton) : null,
+      revert_expires_at: new Date(Date.now() + (jeton ? REVERT_TTL_H * 3600_000 : 0)).toISOString(),
+    }).select('id').single()
+    if (evErr || !ev) {
+      jeton = ''
+      if (!tableAbsente(evErr)) { console.error('email_change : journal impossible :', evErr?.message || ''); return json(500, { error: 'server_error' }) }
+      console.error('email_change : table email_change_events absente (migration 20261004050000) — changement sans lien d\'annulation')
+    } else evId = String(ev.id)
+  }
+  const oublierEvenement = async () => { if (evId) { try { await sb.from('email_change_events').delete().eq('id', evId) } catch { /* best-effort */ } } }
+
   // Code correct → usage unique, CONDITIONNEL (un seul gagnant même sous concurrence).
   const { data: used } = await sb.from('email_change_codes').update({ used_at: nowIso }).eq('id', row.id).is('used_at', null).select('id')
-  if (!used || !used.length) return json(400, { error: 'expired' })
+  if (!used || !used.length) { await oublierEvenement(); return json(400, { error: 'expired' }) }
 
   // Adresse posée côté Auth, déjà confirmée (la preuve de possession vient d'être faite par le code). Le trigger
   // sync_profile_email recopie dans profiles.email ; GoTrue refuse lui-même une adresse déjà portée (index unique).
   const { error: upErr } = await sb.auth.admin.updateUserById(user.id, { email: newEmail, email_confirm: true })
   if (upErr) {
+    await oublierEvenement()
     const e = upErr as { code?: string; message?: string }
     if (e.code === 'email_exists' || /already|exists|registered|duplicate|unique|rattach/i.test(e.message || '')) return json(409, { error: 'email_taken' })
     if (e.code === 'email_address_invalid' || e.code === 'validation_failed') return json(400, { error: 'invalid_email' })
@@ -275,15 +361,104 @@ async function emailChange(req: Request, body: Record<string, string>, action: s
     return json(500, { error: 'server_error' })
   }
 
-  // Information à l'ANCIENNE adresse (best-effort : le changement est fait, un échec d'envoi ne le défait pas).
+  // Audit 04/10 (CC-2, MCP-1, contrat K3) : adresse changée = accès Claude coupé (Claude se relie de nouveau en un clic).
+  await couperClaude(sb, user.id)
+
+  // Information à l'ANCIENNE adresse (best-effort : le changement est fait, un échec d'envoi ne le défait pas), avec le
+  // lien d'annulation (audit 04/10, CC-1) : le jeton voyage dans le fragment de l'URL, connexion.html exige un clic.
   if (user.email && user.email !== newEmail) {
     try {
-      const ok = await sendMail(user.email, 'Ton adresse de connexion AvatarAds a été changée', emailChangedNotice(maskEmail(newEmail)))
+      const lien = jeton ? `${REVERT_PAGE}#annuler-adresse=${jeton}` : ''
+      const ok = await sendMail(user.email, 'Ton adresse de connexion AvatarAds a été changée', emailChangedNotice(maskEmail(newEmail), lien))
       if (!ok) console.warn('email_change : e-mail d\'information à l\'ancienne adresse non parti')
     } catch { /* best-effort */ }
   }
   try { await purgeOld() } catch { /* ménage best-effort */ }
   return json(200, { ok: true, email: newEmail })
+}
+
+// ── Audit 04/10 (CC-1) : ANNULATION D'UN CHANGEMENT D'ADRESSE (lien « Ce n'est pas moi », SANS session) ──
+// La preuve = le jeton reçu à l'ANCIENNE adresse (256 bits, usage unique, 72 h). L'adresse est rétablie PUIS le compte est
+// verrouillé (email_change_lockdown). Adresse reprise entre-temps par un autre compte → rien n'est touché (409, support).
+async function emailChangeRevert(req: Request, body: Record<string, string>): Promise<Response> {
+  const jeton = String(body.token ?? '').trim().toLowerCase()
+  if (!/^[0-9a-f]{64}$/.test(jeton)) return json(400, { error: 'expired' })
+  const ip = realIp(req)
+  if (ip && !(await rateHit(`emailchg:revert:ip:${await rk('ip:' + ip)}`, 3600, 20))) return json(429, { error: 'too_many_attempts' })
+
+  const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
+  const nowIso = new Date().toISOString()
+  const { data: ev, error: evErr } = await sb.from('email_change_events').select('id, user_id, old_email')
+    .eq('revert_hash', await revertHash(jeton)).is('reverted_at', null).is('voided_at', null).gt('revert_expires_at', nowIso)
+    .maybeSingle()
+  if (evErr) return tableAbsente(evErr) ? json(400, { error: 'expired' }) : json(500, { error: 'server_error' })
+  if (!ev) return json(400, { error: 'expired' })
+  const userId = String(ev.user_id), oldEmail = String(ev.old_email || '').trim().toLowerCase()
+  if (!oldEmail) return json(400, { error: 'expired' })
+
+  const taken = await targetTaken(sb, userId, oldEmail)
+  if (taken === null) return json(500, { error: 'server_error' })
+  if (taken) return json(409, { error: 'email_taken' })
+
+  // Usage unique, CONDITIONNEL ; rendu si l'adresse ne peut pas être rétablie (le lien resservira).
+  const { data: pris } = await sb.from('email_change_events').update({ reverted_at: nowIso })
+    .eq('id', ev.id).is('reverted_at', null).is('voided_at', null).select('id')
+  if (!pris || !pris.length) return json(400, { error: 'expired' })
+  const rendre = async () => { try { await sb.from('email_change_events').update({ reverted_at: null }).eq('id', ev.id) } catch { /* best-effort */ } }
+
+  const { data: cur, error: curErr } = await sb.auth.admin.getUserById(userId)
+  if (curErr || !cur?.user) { await rendre(); console.error('email_change_revert getUserById:', curErr?.message || 'compte introuvable'); return json(500, { error: 'server_error' }) }
+  if (String(cur.user.email || '').trim().toLowerCase() !== oldEmail) {
+    const { error: upErr } = await sb.auth.admin.updateUserById(userId, { email: oldEmail, email_confirm: true })
+    if (upErr) {
+      await rendre()
+      const e = upErr as { code?: string; message?: string }
+      if (e.code === 'email_exists' || /already|exists|registered|duplicate|unique/i.test(e.message || '')) return json(409, { error: 'email_taken' })
+      console.error('email_change_revert updateUserById:', e.code || '', e.message || '')
+      return json(500, { error: 'server_error' })
+    }
+  }
+
+  // Verrouillage : sessions, identités / MFA / mot de passe ajoutés depuis le changement, accès Claude, codes en attente.
+  const { data: lock, error: lockErr } = await sb.rpc('email_change_lockdown', { p_user: userId, p_event: ev.id })
+  const verrou = !lockErr && (lock as { ok?: boolean } | null)?.ok === true
+  if (!verrou) {
+    console.error('email_change_revert : verrouillage incomplet —', lockErr?.message || JSON.stringify(lock))
+    await couperClaude(sb, userId)   // au moins l'accès Claude
+  }
+  try {
+    const ok = await sendMail(oldEmail, 'Ton adresse de connexion AvatarAds a été rétablie', emailRevertedNotice())
+    if (!ok) console.warn('email_change_revert : e-mail de confirmation non parti')
+  } catch { /* best-effort */ }
+  return json(200, { ok: true, email: maskEmail(oldEmail), sessions_closed: verrou })
+}
+
+// Audit 04/10 (CC-1) : adresses remplacées depuis moins de 72 h (changement ni annulé ni invalidé) — marquées « mot de passe
+// changé » (l'annulation retirera ce mot de passe) et renvoyées pour être prévenues. Journal absent → [].
+async function anciennesAdressesRecentes(sb: SupabaseClient, userId: string, courante: string): Promise<string[]> {
+  try {
+    const depuis = new Date(Date.now() - REVERT_TTL_H * 3600_000).toISOString()
+    const { data, error } = await sb.from('email_change_events').select('id, old_email')
+      .eq('user_id', userId).gt('changed_at', depuis).is('reverted_at', null).is('voided_at', null)
+    if (error) { if (!tableAbsente(error)) console.error('password_change : journal illisible :', error.message); return [] }
+    const rows = (data || []) as { id: string; old_email: string }[]
+    if (!rows.length) return []
+    const { error: mErr } = await sb.from('email_change_events').update({ password_changed_at: new Date().toISOString() }).in('id', rows.map(r => r.id))
+    if (mErr) console.error('password_change : marquage du journal impossible :', mErr.message)
+    return [...new Set(rows.map(r => String(r.old_email || '').toLowerCase()))].filter(a => a && a !== courante)
+  } catch (e) { console.error('password_change : journal :', (e as Error)?.message || e); return [] }
+}
+
+// Audit 04/10 (CC-1) : l'adresse a quitté un compte il y a moins de 72 h (changement ni annulé ni invalidé) → elle ne
+// peut pas ouvrir un NOUVEAU compte (l'annulation deviendrait impossible : adresse prise). Journal absent → false.
+async function adresseRetireeRecemment(sb: SupabaseClient, email: string): Promise<boolean> {
+  try {
+    const depuis = new Date(Date.now() - REVERT_TTL_H * 3600_000).toISOString()
+    const { data, error } = await sb.from('email_change_events').select('id')
+      .eq('old_email', email).gt('changed_at', depuis).is('reverted_at', null).is('voided_at', null).limit(1)
+    if (error) { if (!tableAbsente(error)) console.error('verify : journal illisible :', error.message); return false }
+    return !!(data && data.length)
+  } catch { return false }
 }
 
 // ── Audit 02/10 (P3) : CHANGEMENT DE MOT DE PASSE ──
@@ -322,7 +497,7 @@ async function passwordChange(req: Request, body: Record<string, unknown>, actio
       if (waitS > 0) return json(429, { error: 'cooldown', wait: waitS })
     }
     const ip = realIp(req)
-    if (ip && !(await rateHit(`pwdchg:send:ip:${ip}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
+    if (ip && !(await rateHit(`pwdchg:send:ip:${await rk('ip:' + ip)}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })   // Audit 04/10 (CC-4)
     if (!(await rateHit(`pwdchg:send:user:${user.id}`, 3600, PWD_MAX_PER_USER_H))) return json(429, { error: 'too_many_codes' })
 
     // Un seul code vivant par compte : les précédents (non utilisés) sont supprimés.
@@ -351,7 +526,7 @@ async function passwordChange(req: Request, body: Record<string, unknown>, actio
   if (new TextEncoder().encode(password).length > PWD_MAX_BYTES) return json(400, { error: 'password_too_long' })
 
   const vip = realIp(req)
-  if (vip && !(await rateHit(`pwdchg:verify:ip:${vip}`, VERIFY_WIN_S, MAX_VERIFY_IP))) return json(400, { error: 'too_many_attempts' })
+  if (vip && !(await rateHit(`pwdchg:verify:ip:${await rk('ip:' + vip)}`, VERIFY_WIN_S, MAX_VERIFY_IP))) return json(400, { error: 'too_many_attempts' })
   if (!(await rateHit(`pwdchg:verify:user:${user.id}`, VERIFY_WIN_S, 12))) return json(400, { error: 'too_many_attempts' })   // comme le changement d'adresse
 
   const nowIso = new Date().toISOString()
@@ -404,11 +579,22 @@ async function passwordChange(req: Request, body: Record<string, unknown>, actio
     return json(500, { error: 'server_error' })
   }
 
+  // Audit 04/10 (CC-2, MCP-1, contrat K3) : mot de passe changé = accès Claude coupé (Claude se relie de nouveau en un clic).
+  await couperClaude(sb, user.id)
+
   // Information au compte (best-effort : le changement est fait, un échec d'envoi ne le défait pas).
   try {
     const ok = await sendMail(user.email, 'Ton mot de passe AvatarAds a été modifié', passwordChangedNotice())
     if (!ok) console.warn('password_change : e-mail d\'information non parti')
   } catch { /* best-effort */ }
+  // Audit 04/10 (CC-1) : adresse changée il y a moins de 72 h → l'ANCIENNE adresse est prévenue aussi (son lien
+  // d'annulation retirera ce mot de passe).
+  for (const ancienne of await anciennesAdressesRecentes(sb, user.id, user.email)) {
+    try {
+      const ok = await sendMail(ancienne, 'Mot de passe modifié sur ton compte AvatarAds', passwordChangedOldNotice())
+      if (!ok) console.warn('password_change : e-mail à l\'ancienne adresse non parti')
+    } catch { /* best-effort */ }
+  }
   try { await purgeOld() } catch { /* ménage best-effort */ }
   return json(200, { ok: true, email: user.email })
 }
@@ -426,6 +612,8 @@ serve(async (req) => {
   if (action === 'email_change_send' || action === 'email_change_verify') return await emailChange(req, body, action)
   // Audit 02/10 (P3) : changement de mot de passe (session exigée, aucun `email` dans la requête : l'adresse est celle du compte).
   if (action === 'password_change_send' || action === 'password_change_verify') return await passwordChange(req, body, action)
+  // Audit 04/10 (CC-1) : lien « Ce n'est pas moi » (aucune session : la preuve est le jeton reçu à l'ancienne adresse).
+  if (action === 'email_change_revert') return await emailChangeRevert(req, body)
   const email = (body.email || '').trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) return json(400, { error: 'invalid_email' })
 
@@ -458,9 +646,14 @@ serve(async (req) => {
     // Plafonds horaires AUTORITAIRES sur rate_events (non réinitialisables via une suppression d'otp_codes) :
     // Audit 02/10 (P3) : l'IP d'abord — une demande refusée pour son IP n'entame plus les compteurs de l'adresse visée.
     // Puis l'heure, puis le jour (24 h glissantes) : une demande refusée par l'heure ne compte pas dans le jour.
-    if (ip && !(await rateHit(`otp:send:ip:${ip}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
-    if (!(await rateHit(`otp:send:email:${email}`, 3600, MAX_PER_EMAIL_H))) return json(429, { error: 'too_many_codes' })
-    if (!(await rateHit(`otp:send:email:day:${email}`, 86_400, MAX_PER_EMAIL_DAY))) return json(429, { error: 'too_many_codes' })
+    // Audit 04/10 (CC-3) : l'heure et le jour se comptent par COUPLE (e-mail, IP) — 15 demandes depuis une seule IP ne
+    // bloquent plus l'adresse ~22 h pour tout le monde — puis un plafond GLOBAL par adresse plus large (40 / 24 h).
+    // Audit 04/10 (CC-4) : adresse et IP réduites à une empreinte HMAC dans les clés.
+    const ipK = ip ? await rk('ip:' + ip) : '-', eK = await rk('e:' + email)
+    if (ip && !(await rateHit(`otp:send:ip:${ipK}`, 3600, MAX_PER_IP_H))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`otp:send:email-ip:${eK}|${ipK}`, 3600, MAX_PER_EMAIL_H))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`otp:send:email-ip:day:${eK}|${ipK}`, 86_400, MAX_PER_EMAIL_DAY))) return json(429, { error: 'too_many_codes' })
+    if (!(await rateHit(`otp:send:email:day:${eK}`, 86_400, MAX_PER_EMAIL_DAY_GLOBAL))) return json(429, { error: 'too_many_codes' })
 
     // NB : on ne supprime pas les anciens codes ici — verify ne lit que le plus
     // récent (les précédents sont donc invalidés de fait) et les garder permet
@@ -493,9 +686,10 @@ serve(async (req) => {
     //    Ordre voulu : un essai refusé pour son IP ou son couple n'entame pas le plafond global de l'adresse. Le
     //    brute-force reste borné en amont par code (5 essais, otp_take_attempt) et par les plafonds d'envoi.
     const vip = realIp(req)
-    if (vip && !(await rateHit(`otp:verify:ip:${vip}`, VERIFY_WIN_S, MAX_VERIFY_IP))) return json(429, { error: 'too_many_attempts' })
-    if (!(await rateHit(`otp:verify:email-ip:${email}|${vip || '-'}`, VERIFY_WIN_S, MAX_VERIFY_EMAIL_IP))) return json(429, { error: 'too_many_attempts' })
-    if (!(await rateHit(`otp:verify:email:${email}`, VERIFY_WIN_S, MAX_VERIFY_EMAIL))) return json(429, { error: 'too_many_attempts' })
+    const vipK = vip ? await rk('ip:' + vip) : '-', eK = await rk('e:' + email)   // Audit 04/10 (CC-4) : empreintes
+    if (vip && !(await rateHit(`otp:verify:ip:${vipK}`, VERIFY_WIN_S, MAX_VERIFY_IP))) return json(429, { error: 'too_many_attempts' })
+    if (!(await rateHit(`otp:verify:email-ip:${eK}|${vipK}`, VERIFY_WIN_S, MAX_VERIFY_EMAIL_IP))) return json(429, { error: 'too_many_attempts' })
+    if (!(await rateHit(`otp:verify:email:${eK}`, VERIFY_WIN_S, MAX_VERIFY_EMAIL))) return json(429, { error: 'too_many_attempts' })
 
     const { data: row } = await sb.from('otp_codes').select('*')
       .eq('email', email).is('used_at', null).gt('expires_at', nowIso)
@@ -528,6 +722,11 @@ serve(async (req) => {
     const { data: prof } = await sb.from('profiles').select('id').eq('email', email).maybeSingle()
     let created = false
     if (!prof) {
+      // Audit 04/10 (CC-1) : adresse retirée d'un compte il y a moins de 72 h → pas de NOUVEAU compte avec elle (la demande
+      // vient de son titulaire : le code vient d'être vérifié). Sinon le lien « Ce n'est pas moi » deviendrait inutilisable.
+      if (await adresseRetireeRecemment(sb, email)) {
+        return json(409, { error: 'email_recently_changed', message: "Cette adresse vient d'être retirée d'un compte AvatarAds. Si tu n'as pas fait ce changement, ouvre le lien « Ce n'est pas moi » reçu par e-mail à cette adresse ; sinon, écris-nous à bonjour@avatarads.fr." })
+      }
       const firstName = (body.firstName || '').trim().slice(0, 60)
       const { error: cuErr } = await sb.auth.admin.createUser({
         email, email_confirm: true, user_metadata: { first_name: firstName },

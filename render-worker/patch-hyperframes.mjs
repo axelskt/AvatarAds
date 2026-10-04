@@ -21,6 +21,10 @@
 // EXACTEMENT une fois, idempotent (relance = no-op). Tout écart fait échouer
 // le build — mieux vaut une image qui ne construit pas qu'un patch silencieux
 // qui n'est plus appliqué.
+//
+// Audit 04/10 (MONT-2) : un 2e patch, indépendant (sa propre marque), limite les
+// téléchargements de la compilation aux origines AA_HF_DL_ALLOW posées par
+// worker.mjs (le stockage du projet), sans redirection. Voir plus bas.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
@@ -33,26 +37,63 @@ if (pkg.version !== '0.7.60') {
   process.exit(1)
 }
 
-const src = readFileSync(cible, 'utf8')
-const MARQUE = '[hyperframes:extract-errors]'
-if (src.includes(MARQUE)) { console.log('✓ hyperframes déjà patché — rien à faire'); process.exit(0) }
-
-// L'ancre : l'appel (unique) au garde de couverture, dans le pipeline de rendu.
-const ANCRE = '    assertVideoFrameCoverage(coverageReports, coverageThreshold);'
-const morceaux = src.split(ANCRE)
-if (morceaux.length !== 2) {
-  console.error(`✗ ancre trouvée ${morceaux.length - 1} fois (attendu : 1) — la CLI a changé, patch à revoir`)
-  process.exit(1)
+let src = readFileSync(cible, 'utf8')
+let modifie = false
+// Une ancre doit apparaître EXACTEMENT une fois, sinon le build échoue (la CLI a changé : patch à revoir).
+const unique = (texte, ancre, nom) => {
+  const n = texte.split(ancre).length - 1
+  if (n !== 1) { console.error(`✗ ${nom} : ancre trouvée ${n} fois (attendu : 1) — la CLI a changé, patch à revoir`); process.exit(1) }
 }
 
-// Sur stdout (streamée en direct dans les logs Railway), queue de 500 chars :
-// hyperframes met déjà la fin de la stderr ffmpeg dans le message, et c'est à
-// la fin que ffmpeg écrit la cause réelle.
-const LOG = `    if (extractionResult && Array.isArray(extractionResult.errors)) {
+// ── Patch 1 : les erreurs d'extraction se logguent avant le garde de couverture ──
+const MARQUE = '[hyperframes:extract-errors]'
+if (src.includes(MARQUE)) console.log('✓ patch 1 (erreurs d\'extraction) déjà appliqué')
+else {
+  // L'ancre : l'appel (unique) au garde de couverture, dans le pipeline de rendu.
+  const ANCRE = '    assertVideoFrameCoverage(coverageReports, coverageThreshold);'
+  unique(src, ANCRE, 'patch 1')
+  // Sur stdout (streamée en direct dans les logs Railway), queue de 500 chars :
+  // hyperframes met déjà la fin de la stderr ffmpeg dans le message, et c'est à
+  // la fin que ffmpeg écrit la cause réelle.
+  const LOG = `    if (extractionResult && Array.isArray(extractionResult.errors)) {
       for (const hfErr of extractionResult.errors) {
         process.stdout.write("${MARQUE} video=" + hfErr.videoId + " :: " + String(hfErr.error).replace(/\\s+/g, " ").slice(-500) + "\\n");
       }
     }
 `
-writeFileSync(cible, morceaux[0] + LOG + ANCRE + morceaux[1])
-console.log('✓ hyperframes 0.7.60 patché : les erreurs d\'extraction se logguent avant le garde de couverture')
+  src = src.replace(ANCRE, () => LOG + ANCRE)
+  modifie = true
+  console.log('✓ patch 1 : les erreurs d\'extraction se logguent avant le garde de couverture')
+}
+
+// ── Patch 2 (Audit 04/10, MONT-2) : téléchargements de la compilation limités au stockage du projet ──
+// La compilation (côté Node, AVANT Chromium et sa CSP) télécharge toute URL https trouvée dans un src d'<img>/<video>/<audio>
+// ou un url() de fond — y compris dans le TEXTE d'un sous-titre (« background:url(https://…) » sort intact de l'échappement
+// HTML) — vers n'importe quel hôte : seul l'hôte littéral était contrôlé, redirections suivies (http interne compris), 300 s,
+// sans plafond. Le moteur passe AA_HF_DL_ALLOW (origines permises, séparées par des virgules : l'origine Supabase du projet,
+// celle des liens signés des images perso) : toute autre origine est refusée et les redirections sont interdites. Variable
+// absente (rendu local) : comportement d'origine. Un téléchargement refusé n'arrête pas le rendu (la compilation garde l'URL,
+// que la CSP de la page bloque) : seule une URL étrangère au projet est concernée.
+const MARQUE2 = '__aaDlAutorise'
+if (src.includes(MARQUE2)) console.log('✓ patch 2 (origines de téléchargement) déjà appliqué')
+else {
+  const ANCRE_A = 'async function downloadToTemp(url, destDir, timeoutMs = 3e5) {\n  assertPublicHttpsUrl(url);'
+  const ANCRE_B = '      const response = await fetch(url, { signal: controller.signal });'
+  unique(src, ANCRE_A, 'patch 2 (entrée de downloadToTemp)')
+  unique(src, ANCRE_B, 'patch 2 (fetch de downloadToTemp)')
+  const GARDE = `function ${MARQUE2}(url) {
+  const permis = String(process.env.AA_HF_DL_ALLOW || "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (!permis.length) return;
+  let origine = "";
+  try { origine = new URL(url).origin; } catch {}
+  if (!permis.includes(origine)) throw new Error("[URLDownloader] origine non autorisée par le moteur de rendu : " + origine);
+}
+`
+  src = src.replace(ANCRE_A, () => GARDE + ANCRE_A + `\n  ${MARQUE2}(url);`)
+  src = src.replace(ANCRE_B, () => '      const response = await fetch(url, { signal: controller.signal, redirect: process.env.AA_HF_DL_ALLOW ? "error" : "follow" });')
+  modifie = true
+  console.log('✓ patch 2 : téléchargements de la compilation limités aux origines AA_HF_DL_ALLOW, sans redirection')
+}
+
+if (modifie) writeFileSync(cible, src)
+else console.log('✓ hyperframes déjà patché — rien à faire')

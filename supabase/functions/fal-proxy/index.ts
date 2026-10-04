@@ -27,12 +27,24 @@
 // liaison) ; à la lecture du RÉSULTAT, la vidéo PRODUITE par fal est mesurée (Range, hôtes fal seulement) et l'écart débité
 // une fois, plafonné au solde (reconcile_fal_job, voir _shared/guard.ts « fal-reconcile »). Jamais de remboursement ici ;
 // réponse inchangée.
+// Audit 04/10 (P4, chantier « fal ») :
+//   • MC-1 / MC-4 : détourage vidéo ben = owner / developer seuls (option « garder le fond vidéo » dev-only dans l'app) ;
+//     upscale Topaz et Kling 2.6 pro = Pro / Élite ; Topaz : corps reconstruit, vidéo = une SORTIE fal mesurée AVANT la
+//     soumission, réserve exigée = 1 cr/s × durée (fin du plancher de 1 crédit pour une vidéo quelconque).
+//   • IMG-1 : Nano Banana Pro / AuraSR — corps reconstruit (1 image, liste fermée de réglages, images de l'app seulement).
+//   • MC-3 : les détourages (birefnet / rembg / ben) ne LIENT plus l'op : le job Kling garde la liaison, donc son échec est
+//     rendu (release_by_job, puis refund_credits partiel) ; l'op est réglée dès la soumission du détourage (étape livrée).
+//   • OMNI-S1 : la remise « étapes annexes » ne vaut que pour Kling ; OMNI-S2 : marge d'entrée Omni 0,5 s (mp4-duree.ts).
+//   • MC-5 : écart de sortie NON couvert par le solde → résultat RETENU (402) au lieu d'un débit plafonné ; il est livré
+//     (Bibliothèque, filet reconcile-fal-orphans) dès que le solde couvre l'écart. Rien n'est débité tant qu'il est retenu.
+//   • Relecture MC-5 : forme du chemin verrouillée (aucun segment « . », GET = …/requests/<id>[/status] à id canonique,
+//     POST = soumission) — sinon un même résultat fal se lisait par une URL que ni la réconciliation ni PRX-3 ne reconnaissaient.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC, svc, ouvrirFactureFal, reglerJobFal, videoSortieFal, lecteurSortieFal, avecDelai } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safePath, billableGate, helperGate, requirePlan, userPlan, applyReservationFull, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, refundOpTerminal, refundByJobTerminal, OMNI_FLASH_PER_SEC, svc, ouvrirFactureFal, reglerJobFal, videoSortieFal, urlSortieFal, lecteurSortieFal, avecDelai } from '../_shared/guard.ts'
 import { omnihumanFalBody } from '../_shared/omnihuman-bill.ts'   // OmniHuman (repli de kie, Axel 25/09) : durée MESURÉE, tirage exact
 import { KIE_OPEN } from '../_shared/kie.ts'   // OmniHuman : mêmes plans que kie-proxy (lecture seule)
-import { preparerVideoFal, tarifVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4, secondesFacturees, type TarifVideo } from '../_shared/mp4-duree.ts'   // PRX-1 : vidéo client mesurée ; P2 : vidéo PRODUITE mesurée
+import { preparerVideoFal, tarifVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4, secondesFacturees, tropLongue, type TarifVideo } from '../_shared/mp4-duree.ts'   // PRX-1 : vidéo client mesurée ; P2 : vidéo PRODUITE mesurée
 
 // file d'attente fal : soumission + polling (les générations vidéo durent ~1 min)
 const FAL_QUEUE = 'https://queue.fal.run'
@@ -78,6 +90,11 @@ const OMNI_I2V = /\/google\/gemini-omni-flash\/[^?]*image-to-video/i
 // OmniHuman 1.5 (26/09) : repli de kie-proxy (app, même op) — tirage EXACT 5 × durée MESURÉE (omnihuman-bill.ts), plus draw_full.
 const OMNIHUMAN = /^\/fal-ai\/bytedance\/omnihuman\//i
 const TOPAZ = /^\/fal-ai\/topaz\/upscale\/video$/i   // P2 : réconcilié à la sortie, 1 cr/s comme l'app (_mcGenerate : spendCreditsFor(dur, 'motion-topaz'))
+// Audit 04/10 (MC-1) : l'app n'envoie à Topaz que le rendu Kling (≤ 30 s, CDN fal) et le facture 1 cr/s ; la facture de sortie
+// passe de 60 à 30 s max (même borne que Kling).
+const TOPAZ_PER_SEC = 1, TOPAZ_MAX_S = 30
+const BEN = /^\/fal-ai\/ben\/v2\/video$/i
+const KLING_26_PRO = /^\/fal-ai\/kling-video\/v2\.6\/pro\//i
 const OMNIH_BUCKET = 'render-media'
 const SUPA_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const OMNIH_SIGN = `${SUPA_URL}/storage/v1/object/sign/${OMNIH_BUCKET}/`
@@ -129,6 +146,62 @@ function omniI2vBody(raw: string): { body: string; sec: number } | { error: stri
   const aspect_ratio = ['9:16', '16:9', '1:1'].includes(String(b.aspect_ratio)) ? String(b.aspect_ratio) : '9:16'
   return { body: JSON.stringify({ image_url: b.image_url, prompt: b.prompt.slice(0, 20000), aspect_ratio, duration: sec, resolution: '1080p' }), sec }
 }
+// Audit 04/10 (IMG-1) : Nano Banana Pro (édition 4K) et AuraSR partaient chez fal avec le corps du CLIENT pour un tirage fixe
+// de 5 / 3 crédits — num_images jusqu'à 4 (4K facturée à l'image), safety_tolerance, limit_generations… Corps RECONSTRUIT
+// avec les seuls champs de l'app (_nbProFalEdit, _falAuraSR) : 1 image, réglages en liste fermée. Images d'entrée = ce que
+// l'app envoie (data:image, toujours), ou notre stockage / une sortie fal ; jamais une URL quelconque relayée telle quelle.
+// Tout data URL en base64 : l'app le fabrique par FileReader / canvas, et le type vient du serveur d'origine de l'image (un
+// stockage S3 sert parfois « binary/octet-stream ») — le refuser casserait un 4K légitime ; seul le contenu compte pour fal.
+const IMG_DATA = /^data:([a-z0-9.+-]{1,40}\/[a-z0-9.+-]{1,80})?(;[a-z0-9=._+-]{1,60})*;base64,/i
+const IMG_MAX = 40 * 1024 * 1024   // octets des data URL (≈ 30 Mo d'image) ; l'app y met une image ≤ 2560 px (AuraSR) ou l'avatar
+function imageEntree(u: unknown): string | null {
+  const s = typeof u === 'string' ? u : ''
+  if (!s || s.length > IMG_MAX) return null
+  if (IMG_DATA.test(s)) return s
+  if (s.length <= 4096 && SUPA_URL && s.startsWith(`${SUPA_URL}/storage/v1/object/`) && !/[\s"'<>\\]/.test(s)) return s
+  return urlSortieFal(s)
+}
+const NANO_RATIOS = new Set(['auto', '21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16'])
+const NANO_PATH = /^\/fal-ai\/nano-banana-pro\/edit$/i, AURA_PATH = /^\/fal-ai\/aura-sr$/i
+function imageFalBody(bare: string, raw: string): { body: string } | { error: string } | null {
+  const nano = NANO_PATH.test(bare), aura = AURA_PATH.test(bare)
+  if (!nano && !aura) return null
+  let b: Record<string, unknown> | null = null
+  try { const p = JSON.parse(raw || '{}'); if (p && typeof p === 'object' && !Array.isArray(p)) b = p } catch { /* traité juste dessous */ }
+  if (!b) return { error: 'corps JSON invalide' }
+  const refus = 'image : celle de l’app uniquement (data:image ou ton stockage) — relance depuis l’app'
+  if (aura) { const img = imageEntree(b.image_url); return img ? { body: JSON.stringify({ image_url: img }) } : { error: refus } }
+  const prompt = typeof b.prompt === 'string' ? b.prompt : ''
+  if (!prompt.trim()) return { error: 'prompt requis' }
+  const lst = Array.isArray(b.image_urls) ? b.image_urls : []
+  if (!lst.length || lst.length > 4) return { error: 'image_urls : 1 à 4 images' }
+  const imgs = lst.map(imageEntree)
+  if (imgs.some((x) => !x) || imgs.reduce((n, x) => n + (x as string).length, 0) > IMG_MAX) return { error: refus }
+  const res = ['1K', '2K', '4K'].includes(String(b.resolution)) ? String(b.resolution) : '4K'
+  const ar = NANO_RATIOS.has(String(b.aspect_ratio)) ? String(b.aspect_ratio) : 'auto'
+  const fmt = ['jpeg', 'png', 'webp'].includes(String(b.output_format)) ? String(b.output_format) : 'png'
+  return { body: JSON.stringify({ prompt: prompt.slice(0, 20000), image_urls: imgs, num_images: 1, resolution: res, aspect_ratio: ar, output_format: fmt }) }
+}
+// Audit 04/10 (MC-1) : upscale Topaz — l'app n'y envoie que le rendu Kling ({ video_url, upscale_factor: 1.5, H264_output })
+// et débite 1 cr/s de sa durée. Le proxy relayait n'importe quelle vidéo, de n'importe quelle durée, pour 1 crédit tiré.
+// Corps reconstruit ; vidéo = une SORTIE fal (CDN fal), MESURÉE avant la soumission ; coût = 1 × ⌈durée − marge⌉ (même
+// arrondi que Kling). Owner / developer (`libre`, sans réservation) : rendu Kling de kie accepté, sans mesure.
+async function topazBody(raw: string, libre: boolean): Promise<{ body: string; cost: number } | { status: number; error: string }> {
+  let b: Record<string, unknown> | null = null
+  try { const p = JSON.parse(raw || '{}'); if (p && typeof p === 'object' && !Array.isArray(p)) b = p } catch { /* traité juste dessous */ }
+  if (!b) return { status: 400, error: 'corps JSON invalide' }
+  const corps = (u: string) => JSON.stringify({ video_url: u, upscale_factor: 1.5, H264_output: true })
+  const u = urlSortieFal(b.video_url)
+  if (!u) {
+    const s = typeof b.video_url === 'string' ? b.video_url : ''
+    if (libre && /^https:\/\/[^\s"'<>\\]+$/i.test(s) && s.length <= 2048) return { body: corps(s), cost: 0 }
+    return { status: 400, error: 'video_url : rendu Motion Control uniquement — relance l’upscale depuis l’app' }
+  }
+  const sec = await avecDelai(dureeMp4(lecteurSortieFal(u)), 15000)
+  if (!(sec && sec > 0)) return { status: 503, error: 'vidéo à agrandir momentanément illisible — réessaie dans un instant' }
+  if (tropLongue(sec, TOPAZ_MAX_S)) return { status: 400, error: `vidéo trop longue (${Math.round(sec)} s) : ${TOPAZ_MAX_S} secondes maximum` }
+  return { body: corps(u), cost: TOPAZ_PER_SEC * secondesFacturees(sec, TOPAZ_MAX_S) }
+}
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -148,11 +221,34 @@ serve(async (req: Request) => {
   if (!v.ok) return jsonRes(400, { error: 'path refusé : ' + v.reason })
   const path = v.path
   const isSubmit = req.method === 'POST' && !IS_POLL.test(path.split('?')[0])
+  // Audit 04/10 (relecture MC-5) : FORME du chemin verrouillée AVANT tout appel. safePath refuse « .. » mais pas un segment
+  // « . », que fetch normalise : GET …/requests/./<id> partait chez fal sur l'URL canonique du RÉSULTAT sans être classé
+  // résultat (ni réconciliation P2 ni retenue MC-5 : 15 s de Kling pour 4 crédits) et avec un id « . » (PRX-3 sautait).
+  //   • aucun segment « . » / « .. » ;
+  //   • GET = suivi seulement : …/requests/<id>[/status] avec UN seul segment « requests » (l'id lu par PRX-3 et par la
+  //     réconciliation est alors celui que fal sert) ;
+  //   • id au format UUID → forme canonique seulement (minuscules, 8-4-4-4-12) : une variante (majuscules, tirets déplacés
+  //     ou absents) que fal relirait comme le même job ne correspondrait ni à sa facture ni à son op ;
+  //   • POST = soumission seulement, jamais un chemin de suivi.
+  // Appelants légitimes inchangés : app (status_url / response_url de fal, ou modèle + '/requests/' + id), worker
+  // (OMNI_QUEUE/requests/<id>[/status]) ; ids fal en prod = UUID minuscules (24 sur 24, agrégat en lecture seule du 04/10).
+  const bare0 = path.split('?')[0], segs0 = bare0.split('/')
+  const pollId = (bare0.match(/\/requests\/([A-Za-z0-9._-]+)(?:\/status)?$/) || [])[1] || ''
+  const hex0 = pollId.replace(/-/g, '').toLowerCase()
+  const idNonCanonique = /^[0-9a-f]{32}$/.test(hex0) && pollId !== `${hex0.slice(0, 8)}-${hex0.slice(8, 12)}-${hex0.slice(12, 16)}-${hex0.slice(16, 20)}-${hex0.slice(20)}`
+  if (segs0.some((s) => s === '.' || s === '..') || (req.method === 'GET'
+    ? (!pollId || segs0.filter((s) => s === 'requests').length !== 1 || idNonCanonique)
+    : IS_POLL.test(bare0))) {
+    return jsonRes(400, { error: 'path refusé : soumission (POST) = un modèle, suivi (GET) = …/requests/<id>[/status] uniquement' })
+  }
   if (isSubmit && !SUBMIT_ALLOW.some((r) => r.test(path.split('?')[0]))) return jsonRes(403, { error: 'modèle fal non autorisé' })
   // Op auxiliaire (matting/utilitaire, tirée per-cost et POTENTIELLEMENT partagée avec l'op parente) : on ne
   // rembourse JAMAIS le solde en son nom (sur-remboursement de la part parente) → seulement release réserve.
   // Hissé ici pour être lisible aussi dans le catch réseau (échec de soumission sans réponse).
-  const isAuxPath = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(path.split('?')[0])
+  // Audit 04/10 (MC-3) : « /fal-ai/birefnet » (v1, 3e repli de « Glisse un fond ») finit le chemin, sans « / » derrière : il
+  // passait pour une génération PRIMAIRE (draw_full → toute la réserve de l'op Motion vidée, Kling ensuite à 402).
+  const AUX_RE = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)(\/|$)/i
+  const isAuxPath = AUX_RE.test(path.split('?')[0])
   // Corps lu UNE fois ici (relayé tel quel plus bas) : Omni Flash image→vidéo doit connaître sa durée AVANT le tirage.
   let rawBody = req.method === 'POST' ? await req.text() : undefined
   const isOmniI2v = isSubmit && OMNI_I2V.test(path)
@@ -165,6 +261,7 @@ serve(async (req: Request) => {
 
   let drawnOp: string | undefined
   let drawnAmt = 0   // audit 14/09 : montant réellement tiré → restauration EXACTE au release (plus de falCost/9999)
+  let auxTire = 0    // Audit 04/10 (MC-3) : tirage RÉEL d'un détourage (0 = hoquet DB laissé passer, owner / developer)
   // Audit 02/10 (PRX-1) : copie serveur de la vidéo (Kling / Omni édition) — supprimée si aucun job fal n'a été créé.
   let videoCost = 0, videoCopie = ''
   let videoTarif: Pick<TarifVideo, 'parSec' | 'maxSec'> | null = null   // P2 : tarif du job à la seconde → sa facture (fal_job_bill_open)
@@ -190,6 +287,20 @@ serve(async (req: Request) => {
     else if (isSubmit && OMNIHUMAN.test(path.split('?')[0])) {
       const g = await requirePlan(auth.userId, KIE_OPEN['omnihuman-1.5'] || ['elite'], 'OmniHuman'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
+    // Audit 04/10 (MC-4) : Kling 2.6 « pro » (1080p, 4 cr/s) = repli modération de Motion 3.0 dans l'app, donc Pro / Élite
+    // comme Motion 3.0 (_mcGenerate, MC_PRO_PLANS du MCP). Seul Kling 3.0 était gardé côté serveur.
+    else if (isSubmit && KLING_26_PRO.test(path.split('?')[0])) {
+      const g = await requirePlan(auth.userId, ['pro', 'elite'], 'Motion 1080p (Kling 2.6 pro)'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+    }
+    // Audit 04/10 (MC-1) : détourage vidéo (ben) = option « garder le fond de la vidéo », réservée au compte dev dans l'app
+    // (_aaIsDev = developer ou owner, forcée à non pour les autres) ; facturé 1 crédit sans mesure → owner / developer seuls.
+    else if (isSubmit && BEN.test(path.split('?')[0])) {
+      const g = await requirePlan(auth.userId, [], 'Fond vidéo (Motion Control)'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+    }
+    // Audit 04/10 (MC-1) : upscale Topaz = le 1080p de Motion Standard, réservé Pro / Élite dans l'app (_mcGenerate).
+    else if (isSubmit && TOPAZ.test(path.split('?')[0])) {
+      const g = await requirePlan(auth.userId, ['pro', 'elite'], 'Motion 1080p (upscale)'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+    }
     const gate = isSubmit
       ? await billableGate({ userId: auth.userId, proxy: 'fal', requireDebit: true, debitMinutes: 120, rateMax: 40, label: path })
       : await helperGate(auth.userId, 'fal', 900)   // polling 4 s × 11 min Kling + 2 mattings en parallèle (traçage 05/09)
@@ -209,7 +320,7 @@ serve(async (req: Request) => {
       // sur 1 débit se 402-aient mutuellement avec draw_full). TOUT LE RESTE (générations primaires ET modèles
       // NON listés) = draw_full : 1 op = 1 génération → ni refund-and-keep (reliquat remboursable) ni
       // sous-facturation d'un modèle inconnu retombé à falCost=1.
-      const _aux = /\/(ben|birefnet|rembg|remove-background|bria|imageutils)\//i.test(path)
+      const _aux = isAuxPath   // Audit 04/10 (MC-3) : même motif que isAuxPath (birefnet v1 compris)
       // Omni Flash image→vidéo (25/09) : corps reconstruit + coût EXACT 5 × durée (tirage exact, comme kie-proxy).
       let omniCost = 0
       if (isOmniI2v) {
@@ -238,20 +349,33 @@ serve(async (req: Request) => {
       }
       // Audit 02/10 (PRX-1) : Motion Control / Omni édition — vidéo du client COPIÉE puis MESURÉE (voir en-tête) AVANT tout
       // tirage ; entrée hors de son stockage, illisible ou trop longue → 400, stockage indisponible → 503 (rien de tiré).
-      if (tarifVideoFal(path)) {
+      // Audit 04/10 (IMG-1) : Nano Banana Pro / AuraSR — corps reconstruit AVANT tout tirage (refus = 400, rien de tiré).
+      const ib = imageFalBody(path.split('?')[0], rawBody ?? '')
+      if (ib) { if ('error' in ib) return jsonRes(400, { error: ib.error }); rawBody = ib.body }
+      const tv = tarifVideoFal(path)
+      if (tv) {
         const pv = await preparerVideoFal({ path, raw: rawBody ?? '', uid: auth.userId, base: SUPA_URL, bucket: OMNIH_BUCKET, st: svc().storage.from(OMNIH_BUCKET) })
         if (!pv.ok) return jsonRes(pv.status, { error: pv.error })
         rawBody = pv.body; videoCopie = pv.copie
         // P2 : tarif du corps RECONSTRUIT (résolution Omni 720p / 1080p imposée par preparerVideoFal), pas celui du client.
         try { videoTarif = tarifVideoFal(path, (JSON.parse(pv.body) as { resolution?: unknown }).resolution) } catch { videoTarif = tarifVideoFal(path) }
-        const deja = await dejaTireOp(auth.userId, req)
+        // Audit 04/10 (OMNI-S1) : la remise « étapes annexes » (fond effacé + détourage de « Glisse un fond ») n'existe que pour
+        // Motion. L'Omni édition n'en a aucune : un petit tirage (détourage à 1, image gpt) visant l'op Omni par x-aa-op baissait
+        // le minimum ET comptait comme « payé » dans sa facture → minimum = coût mesuré entier, payé = le seul tirage.
+        const deja = tv.modele === 'kling' ? await dejaTireOp(auth.userId, req) : 0
         videoCost = minimumSurReserve(pv.cost, deja); annexesOp = deja
         console.log('[fal] vidéo à la seconde', auth.userId, `mesuré=${pv.mesureSec}s facturé=${pv.factureSec}s coût=${pv.cost} annexes=${deja} minimum=${videoCost}`)
       }
       // Audit 02/10 (P2) : upscale Topaz (Motion 1080p depuis Standard : l'app débite 1 cr/s de la vidéo Kling, op
-      // « motion-topaz ») — aucune mesure d'entrée possible (la vidéo vient du CDN de fal) et un plancher de 1 : l'écart sur
-      // la vidéo PRODUITE est la seule borne. Max 60 s (l'app n'y envoie que des sorties Kling ≤ 30 s).
-      if (TOPAZ.test(path.split('?')[0])) videoTarif = { parSec: 1, maxSec: 60 }
+      // « motion-topaz »), réconcilié sur la vidéo PRODUITE. Audit 04/10 (MC-1) : la vidéo d'ENTRÉE (sortie fal) est aussi
+      // mesurée avant la soumission → minimum = 1 × durée au lieu du plancher de 1 ; 30 s max comme Kling.
+      if (TOPAZ.test(path.split('?')[0])) {
+        const up = await userPlan(auth.userId)
+        const tz = await topazBody(rawBody ?? '', up.isOwner || up.plan === 'developer')
+        if ('error' in tz) return jsonRes(tz.status, { error: tz.error })
+        rawBody = tz.body; videoCost = tz.cost
+        videoTarif = { parSec: TOPAZ_PER_SEC, maxSec: TOPAZ_MAX_S }
+      }
       // Primaire : plancher serveur = falCost(path) (audit 14/09) → une réserve sous ce plancher (ex.
       // spend_credits(1) devant un OmniHuman à 5) est refusée (402), fin de « 1 crédit = vidéo chère ».
       // Kling / Omni édition (02/10) : plancher = tarif/s × durée mesurée (− annexes déjà payées sur l'op, ≤ 6) ; toujours
@@ -269,10 +393,12 @@ serve(async (req: Request) => {
       // (ni bindJob, ni release / refund par job ou par op : rien à restaurer, pas de règlement de l'op d'une autre vidéo).
       if (omniCost || omnihCost) { drawnAmt = (rr as { drawn?: number }).drawn ?? 0; if (drawnAmt <= 0) drawnOp = undefined }
       else drawnAmt = _aux ? falCost(path) : ((rr as { drawn?: number }).drawn ?? 0)   // aux = coût tiré ; primaire = réserve drainée
+      if (_aux) auxTire = (rr as { drawn?: number }).drawn ?? 0
     }
   }
 
   // ── relais vers fal ──
+  let retenu: { manque: number; sec: number } | null = null   // Audit 04/10 (MC-5) : résultat retenu (écart non couvert)
   try {
     const target = `${FAL_QUEUE}${path}`
     const init: RequestInit = { method: req.method, headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' } }
@@ -305,13 +431,23 @@ serve(async (req: Request) => {
       // SORTIE — ouverte sur l'op TIRÉE même si bindJob n'a rien lié (op déjà liée à un détourage birefnet / rembg). Payé =
       // tirage du job + annexes de l'op plafonnées (jamais l'op entière : des auxiliaires tirés avant ne couvrent pas le Kling).
       const paye = drawnAmt > 0 ? drawnAmt + Math.min(Math.max(0, annexesOp), ANNEXES_MAX_CR) : null
-      if (isSubmit && res.ok) { if (submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase); if (videoTarif) await ouvrirFactureFal(auth.userId, drawnOp, 'fal:' + submitRid, videoTarif.parSec, videoTarif.maxSec, falBase, paye) } }   // lie l'op au job créé + tiré + URL de suivi fal (réconciliation)
+      // Audit 04/10 (MC-3) : un détourage (birefnet / rembg / ben) ne LIE plus l'op. bind_reservation_job garde la 1re liaison :
+      // le détourage de « Glisse un fond » la prenait, le job Kling n'était lié à rien et son échec (modération, refus) n'était
+      // jamais rendu — refund_credits répondait « already_delivered ». Le détourage soumis est une étape LIVRÉE de l'op : il la
+      // RÈGLE (settle_reservation) ; Kling, lié, rend alors son tirage à l'échec (release_by_job) et refund_credits rembourse
+      // la réserve (remboursement partiel : les étapes annexes restent payées) ; client parti → filet reconcile-fal-orphans.
+      // Seulement si le détourage a VRAIMENT tiré sur cette op (jamais le règlement d'une op qu'il n'a pas payée).
+      if (isSubmit && res.ok && isAuxPath) { if (drawnOp && auxTire > 0) await settleReservation(auth.userId, drawnOp) }
+      else if (isSubmit && res.ok) { if (submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase); if (videoTarif) await ouvrirFactureFal(auth.userId, drawnOp, 'fal:' + submitRid, videoTarif.parSec, videoTarif.maxSec, falBase, paye) } }   // lie l'op au job créé + tiré + URL de suivi fal (réconciliation)
       // Soumission NON-2xx AVEC un request_id (rare : erreur mais job créé) → on LIE (le poll gèrera), jamais de refund.
+      // Détourage (04/10) : jamais lié → l'app passe au modèle suivant, son tirage est rendu à la réserve.
+      else if (isSubmit && !res.ok && submitRid && isAuxPath) { if (auxTire > 0) await releaseOp(auth.userId, drawnOp, auxTire) }
       else if (isSubmit && !res.ok && submitRid) { await bindJob(auth.userId, drawnOp, 'fal:' + submitRid, drawnAmt, falBase); if (videoTarif) await ouvrirFactureFal(auth.userId, drawnOp, 'fal:' + submitRid, videoTarif.parSec, videoTarif.maxSec, falBase, paye) }
       // Soumission échouée SANS job récupérable : définitif+primaire → REMBOURSE le solde serveur (couvre 5xx/timeout,
       // ferme « onglet fermé = crédits perdus », point 1) ; retryable OU aux OU refus (op partagée/multi-étapes/livrée)
       // → repli release réserve inchangé (préserve le renvoi même-op de MC v3).
-      else if (isSubmit && !res.ok) { if (!(!submitRetryable && !isAuxPath && await refundOpTerminal(auth.userId, drawnOp, drawnAmt))) await releaseOp(auth.userId, drawnOp, drawnAmt) }
+      // Audit 04/10 (MC-3) : un détourage ne rend que ce qu'il a RÉELLEMENT tiré (auxTire), jamais un crédit non tiré.
+      else if (isSubmit && !res.ok) { if (isAuxPath) { if (auxTire > 0) await releaseOp(auth.userId, drawnOp, auxTire) } else if (!(!submitRetryable && await refundOpTerminal(auth.userId, drawnOp, drawnAmt))) await releaseOp(auth.userId, drawnOp, drawnAmt) }
       // Poll de STATUT (GET .../status, 200 body FAILED) → job mort : REMBOURSE le solde de l'op LIÉE (cas propre,
       // idempotent ; refus → repli release_by_job). Aucun flux ne ré-utilise la même op après un statut FAILED.
       else if (req.method === 'GET' && res.ok && /"status"\s*:\s*"(FAILED|ERROR|CANCELLED|CANCELED)"/i.test(text)) { if (jobId) { if (!(await refundByJobTerminal(auth.userId, 'fal:' + jobId))) await releaseByJob(auth.userId, 'fal:' + jobId) } }
@@ -325,13 +461,21 @@ serve(async (req: Request) => {
       // la soumission, jamais lu dans ce chemin de suivi) → durée de la vidéo PRODUITE mesurée, écart débité une fois, plafonné
       // au solde ; pas de facture → settle_by_job comme avant ; sortie illisible ou hors CDN fal → facture close sans charge +
       // settle_by_job (résultat image : détourage, 4K… → settle_by_job direct). Le corps renvoyé au client ne change pas.
-      else if (isResult && res.ok && hasOutput) { if (jobId) { if (videoSortieFal(text) || /"video(_url)?"\s*:/.test(text)) await reglerJobFal({ userId: auth.userId, job: 'fal:' + jobId, mesurer: mesurerSortie(text), cout: coutSortie, source: 'proxy' }); else await settleByJob(auth.userId, 'fal:' + jobId) } }
+      // Audit 04/10 (MC-5) : écart NON couvert par le solde (reconcile_fal_job → held) → rien débité, job NON réglé, facture
+      // ouverte, résultat RETENU (402 plus bas). Avant : débit plafonné au solde puis vidéo rendue — il suffisait de « garer » son
+      // solde sur une op neuve (spend_credits) le temps de lire le résultat, puis de la rembourser (refund_credits).
+      else if (isResult && res.ok && hasOutput) { if (jobId) { if (videoSortieFal(text) || /"video(_url)?"\s*:/.test(text)) { const rj = await reglerJobFal({ userId: auth.userId, job: 'fal:' + jobId, mesurer: mesurerSortie(text), cout: coutSortie, source: 'proxy' }); if (rj && rj.held === true) retenu = { manque: Math.max(1, Math.ceil(Number(rj.missing) || 0)), sec: Number(rj.out_sec) || 0 } } else await settleByJob(auth.userId, 'fal:' + jobId) } }
       // Audit 02/10 (PRX-1) : copie de la vidéo — gardée tant que fal peut la lire (job créé) ; sinon supprimée tout de suite.
       // Une soumission réussie supprime aussi les copies de CET utilisateur dont le lien signé a expiré (best-effort).
       if (isSubmit && videoCopie) {
         if (res.ok || submitRid) { videoCopie = ''; await nettoyerCopiesFal(svc().storage.from(OMNIH_BUCKET), auth.userId) }
         else await jeterCopie()
       }
+    }
+    // Audit 04/10 (MC-5) : résultat retenu tant que l'écart n'est pas couvert — jamais le corps fal (il contient l'URL).
+    if (retenu) {
+      const s = retenu.sec > 0 ? ` (${Math.round(retenu.sec * 10) / 10} s)` : ''
+      return jsonRes(402, { held: true, error: `Il manque ${retenu.manque} crédit${retenu.manque > 1 ? 's' : ''} pour couvrir la durée réelle de cette vidéo${s}. Recharge tes crédits dans les 24 h : elle sera ensuite ajoutée à ta Bibliothèque (sous une heure environ).` })
     }
     // fal renvoie 403/402 quand le compte n'a plus de crédit : message explicite côté app
     if (res.status === 402 || /insufficient|balance|quota/i.test(text)) {
@@ -343,7 +487,10 @@ serve(async (req: Request) => {
     // rien à récupérer → pas de refund-and-keep) : primaire → REMBOURSE le solde serveur (couvre le « timeout de
     // soumission », point 1) ; aux ou refus → repli release réserve. Best-effort (jamais bloquant).
     if (isSubmit && !auth.isService && auth.userId) {
-      try { if (!(!isAuxPath && await refundOpTerminal(auth.userId, drawnOp, drawnAmt || 1))) await releaseOp(auth.userId, drawnOp, drawnAmt || 1) } catch { /* best-effort */ }
+      try {
+        if (isAuxPath) { if (auxTire > 0) await releaseOp(auth.userId, drawnOp, auxTire) }   // Audit 04/10 (MC-3) : tirage réel seulement
+        else if (!(await refundOpTerminal(auth.userId, drawnOp, drawnAmt || 1))) await releaseOp(auth.userId, drawnOp, drawnAmt || 1)
+      } catch { /* best-effort */ }
       await jeterCopie()   // aucune réponse fal → aucun job : la copie de la vidéo ne sert plus (02/10)
     }
     console.error('fal-proxy error:', err)

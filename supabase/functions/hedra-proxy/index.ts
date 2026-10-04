@@ -7,6 +7,9 @@
 //   - JWT Supabase obligatoire (anon key seule refusée)
 //   - Plan BYOK sans clé user → 403 (ne tombe PAS sur la clé plateforme)
 //   - Audit 02/10 (PRX-3) : un client ne lit que /models, /v3/models, et le suivi de SES jobs (404 sinon)
+//   - Audit 04/10 (GEN-3) : un client ne soumet que hedra-character-3 / hedra-avatar, corps reconstruit (403 / 400 sinon) ;
+//     il n'écrit que /v3/files et /v3/models/<slug> (GET / POST seulement, sans paramètres d'URL) — 403 / 405 sinon
+//   - Audit 04/10 (GEN-2) : facture par job au tarif de la résolution demandée (2 cr/s, 2,5 en 1080p) — migration p4_hedra
 //
 // Appel : POST ?path=/assets          (multipart → upload image)
 //         POST ?path=/assets/ID/upload (multipart → upload audio)
@@ -55,6 +58,79 @@ async function proprieteJob(job: string, uid: string): Promise<'ok' | 'autrui' |
     } catch { /* nouvel essai */ }
   }
   return 'inconnue'
+}
+
+// Audit 04/10 (GEN-3) — soumission d'un CLIENT. La clé v3 plateforme ouvre tout l'agrégateur Hedra (Veo, Sora, Kling…) :
+// un client ne soumet que les modèles de lipsync de l'app, avec un corps RECONSTRUIT (seuls les champs de l'app ; ni
+// webhook, ni num_outputs, ni durée). Recensement (app/index.html) : callHedra / retryHedraAuto (Générateur) et
+// _mtHedraScene (Montage IA) → _hedraSlug = hedra-character-3 | hedra-avatar, input { prompt, aspect_ratio, resolution,
+// start_image, audio } ; Seedance = owner / developer (gate ci-dessous). Ancienne API POST /generations : plus aucun appel
+// client depuis la v3 (le MCP parle à Hedra directement, le moteur de rendu est service_role) → owner / developer seuls.
+// Owner / developer : corps relayé tel quel (tests).
+// Écritures d'un client : les seuls POST de l'app sont /v3/files (upload multipart, _hedraV3UploadBlob) et /v3/models/<slug>
+// (_hedraV3Submit), sans paramètre d'URL. Les autres routes de HEDRA_ALLOW (/v3/jobs, /v3/assets, /assets…) et les autres
+// méthodes (DELETE, PUT…) partaient telles quelles avec la clé plateforme commune à tous les comptes → refusées.
+const HEDRA_ECRITURE_CLIENT = /^\/(v3\/files|v3\/models\/[A-Za-z0-9._-]+)$/
+const HEDRA_SLUGS_CLIENT = new Set(['hedra-character-3', 'hedra-avatar'])
+const HEDRA_RATIOS = new Set(['9:16', '16:9', '1:1'])          // Générateur 9:16 | 1:1, Montage IA 9:16 | 16:9
+const HEDRA_RESOLUTIONS = new Set(['720p', '1080p'])
+const CORPS_MAX = 64 * 1024
+type MediaHedra = { source: 'url'; url: string }
+function mediaHedra(m: unknown): MediaHedra | null {
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return null
+  const o = m as Record<string, unknown>
+  // URL de /v3/files (signée, longue) : forme seule — l'hôte n'est pas présumé (non documenté), jamais un autre schéma.
+  // { source: 'asset' } : jamais envoyé par l'app (recensement) → refusé (pas de réemploi d'un média Hedra par son id).
+  if (o.source === 'url' && typeof o.url === 'string' && o.url.length <= 4096 && /^https?:\/\/[^\s"'<>\\]+$/i.test(o.url)) return { source: 'url', url: o.url }
+  return null
+}
+function corpsLipsyncClient(raw: string): { ok: true; corps: string; hd: boolean } | { ok: false } {
+  let j: unknown
+  try { j = JSON.parse(raw) } catch { return { ok: false } }
+  const input = (j && typeof j === 'object' && !Array.isArray(j)) ? (j as Record<string, unknown>).input : null
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return { ok: false }
+  const i = input as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  if (i.prompt != null) {
+    if (typeof i.prompt !== 'string' || i.prompt.length > 4000) return { ok: false }
+    if (i.prompt.trim()) out.prompt = i.prompt
+  }
+  if (typeof i.aspect_ratio !== 'string' || !HEDRA_RATIOS.has(i.aspect_ratio)) return { ok: false }
+  if (typeof i.resolution !== 'string' || !HEDRA_RESOLUTIONS.has(i.resolution)) return { ok: false }
+  const img = mediaHedra(i.start_image), aud = mediaHedra(i.audio)
+  if (!img || !aud) return { ok: false }
+  out.aspect_ratio = i.aspect_ratio; out.resolution = i.resolution; out.start_image = img; out.audio = aud
+  return { ok: true, corps: JSON.stringify({ input: out }), hd: i.resolution === '1080p' }
+}
+
+// Audit 04/10 (GEN-2, contrat K1) — FACTURE du job à la soumission (migration 20261004040000_p4_hedra) : tarif de la
+// résolution DEMANDÉE (2 cr/s, 2,5 en 1080p hors scène du Montage IA), op tirée, montant tiré. Best-effort : sans
+// facture, la réconciliation retombe sur reconcile_hedra_job (comportement d'avant).
+async function factureOuvre(userId: string, opId: string, job: string, hd: boolean, paid: number): Promise<Record<string, unknown> | null> {
+  try {
+    const { data, error } = await svc().rpc('hedra_job_bill_open', { p_user: userId, p_op: opId, p_job: job, p_hd: hd, p_paid: paid > 0 ? Math.ceil(paid) : null })
+    if (error) { console.warn('[hedra-facture] ouverture impossible:', error.message); return null }
+    return (data as Record<string, unknown>) || null
+  } catch (e) { console.warn('[hedra-facture] exception:', (e as Error)?.message); return null }
+}
+// Réconciliation au tarif de la facture. 'repli' = aucune facture (job soumis avant le déploiement) ou fonction absente
+// (migration pas encore appliquée) → reconcile_hedra_job, comme avant. 'erreur' = hoquet : rien n'est réglé maintenant (la
+// facture reste ouverte, l'op tirée n'est pas remboursable) — jamais de repli ici, qui pourrait charger deux fois.
+async function reconcileTarif(userId: string, job: string, secs: number, enforce: boolean): Promise<{ k: 'ok'; r: Record<string, unknown> } | { k: 'repli' } | { k: 'erreur' }> {
+  for (let essai = 0; essai < 2; essai++) {
+    if (essai) await new Promise((r) => setTimeout(r, 250))
+    try {
+      const { data, error } = await svc().rpc('reconcile_hedra_job_tarif', { p_user: userId, p_job: job, p_secs: Math.max(0, Math.ceil(secs)), p_enforce: enforce })
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883') return { k: 'repli' }
+        console.warn('[hedra-reconcile] erreur:', error.message); continue
+      }
+      const r = (data as Record<string, unknown>) || {}
+      if (r.reason === 'no_bill' || r.reason === 'bad_args') return { k: 'repli' }   // bad_args : id hors format de la facture → jamais facturé
+      return { k: 'ok', r }
+    } catch (e) { console.warn('[hedra-reconcile] exception:', (e as Error)?.message) }
+  }
+  return { k: 'erreur' }
 }
 
 serve(async (req: Request) => {
@@ -145,12 +221,27 @@ serve(async (req: Request) => {
   //    (uploads, polling) est seulement plafonné. Le moteur de rendu (service_role) passe.
   let drawnOp: string | undefined
   let drawnAmt = 0   // audit 14/09 : montant réellement tiré → restauration EXACTE au release (plus de 2/9999)
+  let corpsSoumis: string | null = null   // audit 04/10 (GEN-3) : corps relayé à Hedra pour une soumission client (reconstruit)
+  let demandeHd = false                   // audit 04/10 (GEN-2) : 1080p demandé dans ce corps → tarif de la facture
+  let cheminAmont = hedraPath0            // audit 04/10 (GEN-3) : chemin envoyé à Hedra (sans paramètres d'URL pour un POST client)
   if (!estLeMoteur && user) {
     const bare = hedraPath0.split('?')[0]
+    const libre = !!profile?.is_owner || userPlan === 'developer'   // owner / developer : tests d'Axel, rien de borné ici
     const gate = (req.method === 'POST' && HEDRA_BILLABLE.test(bare))
       ? await billableGate({ userId: user.id, proxy: 'hedra', requireDebit: true, debitMinutes: 120, rateMax: 30, label: bare })
       : await helperGate(user.id, 'hedra', 900)   // uploads + polling multi-scènes (Montage IA)
     if (!gate.ok) return new Response(JSON.stringify({ error: gate.error }), { status: gate.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    // Audit 04/10 (GEN-3) : un client n'écrit que l'upload et la soumission (voir HEDRA_ECRITURE_CLIENT), sans paramètres d'URL.
+    if (!libre && req.method !== 'GET' && req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Méthode non disponible.' }), { status: 405, headers: { ...CORS, 'Content-Type': 'application/json', Allow: 'GET, POST, OPTIONS' } })
+    }
+    if (!libre && req.method === 'POST') {
+      if (!HEDRA_ECRITURE_CLIENT.test(bare)) {
+        const msg = HEDRA_BILLABLE.test(bare) ? 'Cette ancienne API Hedra n\'est plus disponible — mets la page à jour.' : 'Cette opération n\'est pas disponible.'
+        return new Response(JSON.stringify({ error: msg }), { status: 403, headers: { ...CORS, 'Content-Type': 'application/json' } })
+      }
+      cheminAmont = bare
+    }
     // Audit 02/10 (PRX-3) : lectures bornées au recensement + propriété du job, AVANT tout appel à Hedra (voir en-tête).
     const introuvable = () => new Response(JSON.stringify({ error: 'Génération introuvable.' }), { status: 404, headers: { ...CORS, 'Content-Type': 'application/json' } })
     if (req.method === 'GET' && !HEDRA_LECTURE_CLIENT.test(bare)) return introuvable()
@@ -166,6 +257,23 @@ serve(async (req: Request) => {
     // client ne l'offre qu'aux dev, mais le serveur ne gatait rien → un non-dev pouvait forger le chemin. Fermé.
     if (req.method === 'POST' && HEDRA_BILLABLE.test(bare) && /\/v3\/models\/seedance/i.test(bare)) {
       const g = await requirePlan(user.id, [], 'Seedance'); if (!g.ok) return new Response(JSON.stringify({ error: g.error }), { status: g.status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    }
+    // Audit 04/10 (GEN-3) : modèle + corps d'une soumission client, AVANT toute réservation (voir corpsLipsyncClient).
+    if (req.method === 'POST' && HEDRA_BILLABLE.test(bare)) {
+      const refus = (status: number, error: string) => new Response(JSON.stringify({ error }), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+      const slug = (bare.match(/^\/v3\/models\/([A-Za-z0-9._-]+)$/) || [])[1] || ''   // /generations (ancienne API) : refusé plus haut
+      if (!libre && !HEDRA_SLUGS_CLIENT.has(slug)) return refus(403, 'Ce modèle vidéo n\'est pas disponible.')
+      const raw = await req.text()
+      if (raw.length > CORPS_MAX) return refus(413, 'Requête de génération trop volumineuse.')
+      if (libre) {
+        corpsSoumis = raw
+        try { demandeHd = (JSON.parse(raw)?.input?.resolution) === '1080p' } catch { demandeHd = false }
+      } else {
+        const c = corpsLipsyncClient(raw)
+        if (!c.ok) return refus(400, 'Paramètres de génération invalides — mets la page à jour puis relance.')
+        corpsSoumis = c.corps
+        demandeHd = c.hd
+      }
     }
     // Réservation : la génération (POST /v3/models/<slug> ou /generations) tire son coût (borne basse 2 = avatarPerSec × 1 s).
     if (req.method === 'POST' && HEDRA_BILLABLE.test(bare)) {
@@ -203,14 +311,21 @@ serve(async (req: Request) => {
   }
 
   try {
-    const hedraPath = hedraPath0   // déjà validé (allowlist) plus haut
+    const hedraPath = cheminAmont   // déjà validé (allowlist) plus haut ; POST client : sans paramètres d'URL (audit 04/10, GEN-3)
     const ct        = req.headers.get('content-type') ?? ''
     const base      = isV3 ? 'https://api.hedra.com' : HEDRA_BASE
     const authHeaders: Record<string, string> = isV3 ? { Authorization: `Key ${hedraKey}` } : { 'X-API-Key': hedraKey }
 
     let hedraRes: Response
 
-    if (ct.includes('multipart/form-data')) {
+    if (corpsSoumis !== null) {
+      // ── Soumission d'un client (audit 04/10, GEN-3) : le corps lu et contrôlé plus haut, toujours en JSON ──
+      hedraRes = await fetch(`${base}${hedraPath}`, {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: corpsSoumis,
+      })
+    } else if (ct.includes('multipart/form-data')) {
       // ── Transfert de fichier (upload audio / image) ──
       const incoming = await req.formData()
       const outgoing = new FormData()
@@ -261,7 +376,14 @@ serve(async (req: Request) => {
       // path des polls (/v3/jobs/<id>/status, /generations/<id>/status). On LIE l'op au job à la soumission, puis
       // règle/libère PAR JOB → un poll d'un id étranger ne rend plus la réserve d'une autre op (refund-and-keep).
       const jobId = (bare2.match(/\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || ''
-      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && hedraRes.ok) { const jid = (body.match(/"job_id"\s*:\s*"([^"]+)"/) || body.match(/"id"\s*:\s*"([^"]+)"/) || [])[1] || ''; if (jid) await bindJob(user.id, drawnOp, 'hedra:' + jid, drawnAmt) }   // lie l'op au job créé + mémorise le tiré
+      if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && hedraRes.ok) {
+        const jid = (body.match(/"job_id"\s*:\s*"([^"]+)"/) || body.match(/"id"\s*:\s*"([^"]+)"/) || [])[1] || ''
+        if (jid) {
+          await bindJob(user.id, drawnOp, 'hedra:' + jid, drawnAmt)   // lie l'op au job créé + mémorise le tiré
+          // Audit 04/10 (GEN-2) : facture du job (tarif de la résolution demandée), lue à la réconciliation
+          if (drawnOp) { const f = await factureOuvre(user.id, drawnOp, 'hedra:' + jid, demandeHd, drawnAmt); if (f) console.log(`[hedra-facture] job=${jid} ${JSON.stringify(f)}`) }
+        }
+      }
       else if (req.method === 'POST' && HEDRA_BILLABLE.test(bare2) && !hedraRes.ok) await releaseOp(user.id, drawnOp, drawnAmt)                                                                              // soumission refusée → rend EXACTEMENT le tiré
       else if (req.method === 'GET' && hedraRes.ok && /"status"\s*:\s*"(failed|error|errored|cancelled|canceled)"/i.test(body)) { if (jobId) await releaseByJob(user.id, 'hedra:' + jobId) }                // job échoué → rend l'op LIÉE
     }
@@ -269,17 +391,27 @@ serve(async (req: Request) => {
     // porte outputs[].duration_ms ; tarif avatarPerSec = 2 cr/s). On ne règle QUE sur la réponse qui contient la
     // durée (la réponse complète, pas /status) pour ne pas régler avant d'avoir pu charger le manque. Le manque
     // (coût réel − débit) est débité par reconcile_hedra_job (tolérance 2s, plafonné au solde, une seule fois).
+    // Audit 04/10 (GEN-2, contrat K1) : au tarif de la FACTURE du job (2,5 cr/s si 1080p demandé, hors scène du Montage
+    // IA), contre ce que la soumission a tiré — plus l'op « avatar » sœur d'une ancienne app (2 ops). Job sans facture
+    // (soumis avant le déploiement) → reconcile_hedra_job à 2 cr/s, comme avant.
     if (!estLeMoteur && user && req.method === 'GET' && hedraRes.ok && /"duration_ms"\s*:/.test(body)) {
       const jobId = (hedraPath0.split('?')[0].match(/\/(?:v3\/jobs|generations)\/([A-Za-z0-9._-]+)/) || [])[1] || ''
       if (jobId) {
         let sumMs = 0; const re = /"duration_ms"\s*:\s*([0-9]+)/g; let m: RegExpExecArray | null
         while ((m = re.exec(body))) sumMs += Number(m[1])
-        const realCost = Math.ceil(Math.max(0, sumMs - LIPSYNC_PAD_MS) / 1000) * 2   // avatarPerSec = 2 cr/s (plat), hors silence de fin ajouté
-        if ((Deno.env.get('HEDRA_RECONCILE') ?? '0') === '1') {
+        const secs = Math.ceil(Math.max(0, sumMs - LIPSYNC_PAD_MS) / 1000)   // hors silence de fin ajouté
+        const realCost = secs * 2   // repli sans facture : avatarPerSec = 2 cr/s (plat)
+        const enforce = (Deno.env.get('HEDRA_RECONCILE') ?? '0') === '1'
+        const t = await reconcileTarif(user.id, 'hedra:' + jobId, secs, enforce)
+        if (t.k === 'ok') {
+          console.log(`[hedra-reconcile${enforce ? '' : ' SHADOW'}] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s facture → ${JSON.stringify(t.r)}`)
+        } else if (t.k === 'erreur') {
+          console.warn(`[hedra-reconcile] job=${jobId} facture illisible — rien réglé (prochaine lecture du résultat)`)
+        } else if (enforce) {
           const r = await reconcileJob(user.id, 'hedra:' + jobId, realCost)
-          console.log(`[hedra-reconcile] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s coût_réel=${realCost} → ${JSON.stringify(r)}`)
+          console.log(`[hedra-reconcile] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s coût_réel=${realCost} (sans facture) → ${JSON.stringify(r)}`)
         } else {
-          console.log(`[hedra-reconcile SHADOW] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s coût_réel=${realCost} (enforce=0, réglé sans charge)`) 
+          console.log(`[hedra-reconcile SHADOW] job=${jobId} durée=${(sumMs / 1000).toFixed(2)}s coût_réel=${realCost} (enforce=0, réglé sans charge)`)
           await settleByJob(user.id, 'hedra:' + jobId)
         }
       }

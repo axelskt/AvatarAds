@@ -9,13 +9,19 @@
 //      la médiane |image − flou σ1,2| × 1,4826 (essai : photo 1,77, vidéo 1,33 → +1,86).
 // ffmpeg seul (pas de Python sur l'image Railway). Aucun crédit : la vidéo est déjà payée.
 import { execFileSync } from 'node:child_process'
+import { horsBornes, BORNES_MEDIA } from './securite.mjs'
 
-const ff = (args, opts = {}) => execFileSync('ffmpeg', ['-v', 'error', ...args], { maxBuffer: 1 << 30, ...opts })
+// Audit 04/10 (EXP-1, GEN-4) : la retouche passe DEVANT la file du moteur — chaque ffmpeg est borné dans le temps (tué au-delà :
+// le job échoue, l'app et le MCP livrent la vidéo d'origine). Une vidéo de 10 s se retouche en ~10 s ; 3 min = large marge.
+const RETOUCHE_FFMPEG_MS = 180000
+const ff = (args, opts = {}) => execFileSync('ffmpeg', ['-v', 'error', ...args], { maxBuffer: 1 << 30, timeout: RETOUCHE_FFMPEG_MS, ...opts })
 
 function probe(file) {
-  const out = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,r_frame_rate', '-of', 'csv=p=0', file]).toString().trim()
+  const out = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,r_frame_rate', '-of', 'csv=p=0', file], { timeout: 30000 }).toString().trim()
   const [w, h, fr] = out.split(',')
-  return { W: +w, H: +h, fps: fr || '24/1' }
+  let duree = NaN
+  try { duree = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { timeout: 30000 }).toString().trim()) } catch (_) { /* illisible */ }
+  return { W: +w, H: +h, fps: fr || '24/1', duree }
 }
 // image brute (rgb24 ou gray) à la taille W×H, éventuellement floutée
 function raw(input, W, H, fmt, blur, isVideo) {
@@ -39,7 +45,13 @@ function grain(g, b) {   // g, b : gray16le (0..65535) ; résultat en niveaux 8 
 }
 
 export function retoucheVideo(base, photo, out) {
-  const { W, H, fps } = probe(base)
+  const { W, H, fps, duree } = probe(base)
+  // Audit 04/10 (EXP-1) : seule une vidéo d'Express (Omni Flash / Veo : 4 à 10 s, 1080p) est retouchée — n'importe quel MP4 du
+  // dossier du compte (jusqu'à 500 Mo) était ré-encodé en entier, en priorité sur toute la file. Côtés lus AVANT d'allouer les
+  // images brutes (W × H × 3 octets par lecture).
+  if (!(W > 0 && H > 0)) throw new Error('vidéo illisible (retouche)')
+  const refus = horsBornes({ duree, largeur: W, hauteur: H }, BORNES_MEDIA.retouche)
+  if (refus) throw new Error(refus)
   const P = rgbStats(raw(photo, W, H, 'rgb24', 0, false)), V = rgbStats(raw(base, W, H, 'rgb24', 0, true))
   const gp = grain(raw(photo, W, H, 'gray16le', 0, false), raw(photo, W, H, 'gray16le', 1.2, false))
   const gv = grain(raw(base, W, H, 'gray16le', 0, true), raw(base, W, H, 'gray16le', 1.2, true))
@@ -50,7 +62,8 @@ export function retoucheVideo(base, photo, out) {
     return `${c}='clip((val-${V[i].m.toFixed(2)})*${k.toFixed(4)}+${(V[i].m + off).toFixed(2)},0,255)'`
   }).join(':')
   const vf = `lutrgb=${lut},unsharp=7:7:0.8:7:7:0.8,format=yuv444p${S > 0 ? `,noise=c0s=${S}:c0f=t` : ''},format=yuv420p`
+  // -t : la durée lue plus haut vient de l'en-tête du fichier (falsifiable) — l'encodage s'arrête de toute façon à la borne.
   ff(['-y', '-i', base, '-vf', vf, '-map', '0:v', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-r', fps,
-    '-c:a', 'copy', '-movflags', '+faststart', out])
+    '-c:a', 'copy', '-t', String(BORNES_MEDIA.retouche.dureeMax), '-movflags', '+faststart', out])
   return { grainPhoto: +gp.toFixed(2), grainVideo: +gv.toFixed(2), bruit: S, vf }
 }

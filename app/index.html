@@ -17,8 +17,8 @@ try{
   if(!_hasTok && !_recent && !_oauth && !_cap){ location.replace('/connexion.html'); }
 }catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<!-- Microsoft Clarity — AvatarAds (wt9womnpnq) -->
-<script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","wt9womnpnq");</script>
+<!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html) ; et jamais tant que l'URL porte un jeton de connexion (SITE-02). -->
+<script src="consent.js?v=2026-10-04-3" defer data-place="app"></script>
 <title>AvatarAds — Créateur de vidéos IA</title>
 <meta name="description" content="Crée du contenu faceless viral en quelques minutes : avatar IA, voix clonée, sous-titres automatiques.">
 <meta property="og:title" content="AvatarAds — Créateur de vidéos IA">
@@ -547,6 +547,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 .lib-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .vid-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;cursor:pointer;transition:all .2s;display:flex;flex-direction:column}
 .vid-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+:root{--lib-vid-bg:#0e0e10}:root[data-theme="light"]{--lib-vid-bg:var(--bg2)}
 .vid-thumb{aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;overflow:hidden}
 .vid-thumb:hover .vid-play-overlay{opacity:1!important}
 .vid-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65),transparent 55%)}
@@ -847,7 +848,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
       <div class="nav-i" id="navOmni" onclick="nav('omni',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
         Omni
-        <span style="margin-left:auto;font-size:8px;font-weight:800;font-family:var(--mono);background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);color:var(--orange2);padding:1px 6px;border-radius:10px;flex-shrink:0">BÊTA</span>
+
       </div>
       <div class="nav-i" onclick="nav('montage',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/></svg>
@@ -2184,19 +2185,8 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
             </div>
 
-            <!-- MODÈLE (Axel 11/09) : Avatar (Hedra Character-3, défaut) / Omni Human (fal, 1080p natif, BÊTA, Élite uniquement) -->
-            <div class="fld" id="genModelFld" style="margin-bottom:8px">
-              <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Modèle d'avatar</div>
-              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px" id="genModelBtns">
-                <button type="button" onclick="genSetModel('avatar',this)" class="qual-btn on" data-gm="avatar" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:12px;border:2px solid var(--accent);background:var(--accent-soft);color:var(--text);font-family:var(--font);cursor:pointer;transition:.15s;position:relative">
-                  <span style="font-weight:700;font-size:14.5px">Avatar</span><span class="faint mono" style="font-size:10.5px">Économique · 2 cr/s</span>
-                </button>
-                <button type="button" onclick="genSetModel('omnihuman',this)" class="qual-btn" data-gm="omnihuman" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);cursor:pointer;transition:.15s;position:relative">
-                  <span style="font-weight:700;font-size:14.5px">Omni Human</span><span class="faint mono" style="font-size:10.5px">Meilleure qualité · ≤ 60 s · 5 cr/s</span>
-                </button>
-              </div>
-              <input type="hidden" id="modelBtn-character3" value="character3">
-            </div>
+            <!-- Audit 04/10 (Axel) : choix du modèle d'avatar retiré — Character-3 (Hedra) seul, moins cher et meilleur rendu. -->
+            <input type="hidden" id="modelBtn-character3" value="character3">
             <!-- Voix native (Axel 25/09) : le modèle d'avatar DÉTECTE que le lipsync est déjà fait → pas de choix Avatar / Omni Human,
                  la vidéo est utilisée telle quelle (pas de Hedra, 0 crédit de lipsync). Affiché par _gnSyncStyle(). -->
             <div class="fld" id="gnModelNote" style="display:none;margin-bottom:8px">
@@ -3775,7 +3765,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div id="omniDropLabel" class="mono faint" style="display:none;font-size:11.5px"></div>
               <button type="button" id="omniChange" onclick="event.stopPropagation();document.getElementById('omniFileIn').click()" class="btn btn-ghost btn-sm" style="display:none;font-size:11.5px;padding:6px 12px;border-radius:9px;align-items:center;justify-content:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>Changer la vidéo</button>
             </div>
-            <input type="file" id="omniFileIn" accept="video/*" style="display:none" onchange="_omniPickFile(this.files[0]);this.value=''">
+            <input type="file" id="omniFileIn" accept=".mp4,.mov,.m4v,video/mp4,video/quicktime,video/x-m4v" style="display:none" onchange="_omniPickFile(this.files[0]);this.value=''">
 
             <div class="card" style="padding:0;overflow:hidden;border-color:var(--accent-line)">
               <textarea id="omniPrompt" oninput="_omniCharCount()" style="width:100%;box-sizing:border-box;min-height:120px;resize:vertical;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.55;padding:16px 16px 8px;font-family:inherit" placeholder="Décris la transformation : « transforme la voiture en Bugatti noire », « change le fond en plage au coucher de soleil », « habille-le en costume »…"></textarea>
@@ -4677,6 +4667,17 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 01-10 0z"/></svg>
               Relier à Claude
             </button>
+            <!-- Audit 04/10 (MCP-1, CC-2) : coupure VISIBLE de l'accès de Claude. Le seul bouton qui révoquait les jetons OAuth
+                 (#mcpKeyRevokeBtn) dormait dans le bloc « clé » masqué : l'utilisateur ne pouvait rien couper lui-même. -->
+            <div id="mcpDisconnectBox" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+              <button type="button" id="mcpDisconnectBtn" class="btn btn-ghost btn-sm" onclick="mcpOauthDisconnect()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;color:var(--red);font-weight:600">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
+                Déconnecter Claude
+              </button>
+              <p class="faint" style="font-size:11.5px;line-height:1.5;margin:8px 0 0">Coupe tout de suite l'accès de Claude à ton compte, sur tous les appareils. Pour l'utiliser de nouveau, relie-le une nouvelle fois.</p>
+              <!-- état des connexions OAuth (champs oauth_* de /mcp/key status) — rempli par _mcpConnInfo, caché si le serveur ne le donne pas -->
+              <p id="mcpConnState" class="faint" style="display:none;font-size:11.5px;line-height:1.5;margin:6px 0 0"></p>
+            </div>
 
             <!-- alternative : connexion par clé — UI RETIRÉE de la vue (Axel 28/08).
                  Les nœuds restent en display:none : mcpKeyRefresh() / _mcpState()
@@ -5901,7 +5902,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
 // marqueur de version : si tu ne vois PAS ce log dans la console, ton Safari sert l'ancien cache
-const AA_BUILD = '2026-10-04-0030'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
+const AA_BUILD = '2026-10-04-1600'; window.__AA_BUILD = AA_BUILD;   // ⚠ anti-cache : bumper AA_BUILD **et** app/version.txt à chaque déploiement app
 try{ console.log('%c AvatarAds · '+AA_BUILD+' ','background:#FF6B35;color:#1A0A02;font-weight:800;padding:2px 7px;border-radius:5px'); }catch(_){}
 const SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -6252,6 +6253,37 @@ async function _libAutoSaveVideo(blob, name, tags, emo, style){
 // user_id=auth.uid()). Au chargement, on FUSIONNE les lignes serveur absentes du
 // local → les vidéos suivent le compte, tous appareils. Best-effort : si le
 // réseau/serveur échoue, la biblio locale fonctionne comme avant.
+// Audit 04/10 (IMG-2, LIB-1, STO-1) : la base borne le stockage du compte (quota, types de fichiers, nombre de lignes et
+// taille des champs de library_items — migration « données » du même audit). Côté app : on envoie des valeurs déjà dans
+// les bornes, on ne laisse plus de fichier orphelin quand la ligne est refusée, et on DIT pourquoi (avant : console.warn).
+// Message clair (français) pour un refus de stockage ou de ligne. Un message de trigger en français est repris tel quel.
+function _aaStoMsg(err){
+  const m = String((err && (err.message || err.error || err.msg)) || err || '');
+  const code = String((err && (err.statusCode || err.status || err.code)) || '');
+  if(/limite|plafond|quota|maximum|réservé|espace/i.test(m) && /[àâçéèêëîïôûùüÿœ]|\b(le|la|les|du|des|ton|ta|tes)\b/i.test(m)) return m.slice(0, 160);
+  if(/mime|content.?type|file type|not (allowed|supported)|invalid_mime/i.test(m)) return 'type de fichier non accepté par le stockage';
+  if(/maximum allowed size|too large|payload|entity too large|413/i.test(m) || code === '413') return 'fichier trop lourd pour le stockage du compte';
+  if(/check constraint|value too long/i.test(m)) return 'informations trop longues pour être enregistrées';
+  if(/row-level security|violates|policy|unauthori[sz]ed|forbidden|quota|403/i.test(m) || code === '403') return 'espace de stockage du compte plein, ou non inclus dans ton plan';
+  return 'enregistrement impossible pour le moment';
+}
+// Un seul avertissement par session et par motif : la sauvegarde automatique ne doit pas empiler les toasts.
+function _libSrvWarn(err){
+  try{
+    const msg = _aaStoMsg(err); window._libSrvWarned = window._libSrvWarned || {};
+    if(window._libSrvWarned[msg]) return; window._libSrvWarned[msg] = 1;
+    toast('Bibliothèque du compte : ' + msg.replace(/[\s.]+$/, '') + '. La création reste disponible sur cet appareil.');
+  }catch(_){}
+}
+// Champs texte bornés (le serveur refuse au-delà) ; tags = 12 chaînes courtes au plus. Coupe par caractère (Array.from) :
+// une coupe au milieu d'un émoji laissait une moitié de paire UTF-16, que la base refuse (JSON invalide).
+function _libRowBound(v, n){ const s = String(v == null ? '' : v); return s.length <= n ? s : Array.from(s).slice(0, n).join(''); }
+async function _libThumbBound(t){
+  if(!t || typeof t !== 'string') return '';
+  if(t.length <= 280000) return t;   // vignette de l'app (512 px JPEG) ≈ 40-110 k caractères
+  try{ const t2 = await _imgThumbFromUrl(t, 384, 0.6); if(t2 && t2.length <= 280000) return t2; }catch(_){}
+  return '';   // sans vignette : l'image complète reste lisible par son URL signée
+}
 async function _libPersistServer(entry, blob, opts){
   try{
     if(!blob || typeof sb==='undefined') return;
@@ -6264,11 +6296,21 @@ async function _libPersistServer(entry, blob, opts){
     const key  = entry.hedraIdbKey || entry.idbKey || entry.id || ('v-'+Date.now());
     const path = user.id + '/lib/' + key + '.' + ext;
     const up = await sb.storage.from('render-media').upload(path, new File([blob],'f.'+ext,{type:mime}), { contentType:mime, upsert:true });
-    if(up.error){ console.warn('lib storage:', up.error.message); return; }
-    const row = { kind, name:entry.name||'', tags:Array.isArray(entry.tags)?entry.tags:[], style:entry.style||entry.styleLabel||'', emo:entry.emo||'', storage_path:path };
-    if(opts.thumb) row.thumb = opts.thumb;
+    if(up.error){ console.warn('lib storage:', up.error.message); _libSrvWarn(up.error); return; }
+    const tags = (Array.isArray(entry.tags) ? entry.tags : []).filter(function(t){ return t != null && t !== ''; }).slice(0, 12).map(function(t){ return _libRowBound(t, 40); });
+    const row = { kind, name:_libRowBound(entry.name, 120), tags, style:_libRowBound(entry.style||entry.styleLabel, 60), emo:_libRowBound(entry.emo, 16), storage_path:path };
+    if(opts.thumb){ const th = await _libThumbBound(opts.thumb); if(th) row.thumb = th; }
     const ins = await sb.from('library_items').insert(row).select('id').single();
-    if(ins.error){ console.warn('lib row:', ins.error.message); return; }
+    if(ins.error){
+      console.warn('lib row:', ins.error.message);
+      // Ligne refusée (plafond du compte…) : le fichier tout juste déposé ne doit pas rester orphelin dans le stockage —
+      // sauf s'il remplaçait (upsert) le fichier d'une ligne déjà enregistrée (même clé, ex. image remplacée à l'upscale).
+      try{
+        const ex = await sb.from('library_items').select('id').eq('storage_path', path).limit(1);
+        if(!ex.error && !(ex.data && ex.data.length)) await sb.storage.from('render-media').remove([path]);
+      }catch(_){}
+      _libSrvWarn(ins.error); return;
+    }
     entry.srvId = ins.data.id; entry.srvPath = path;
     if(typeof opts.onSaved === 'function') opts.onSaved(ins.data.id, path);
     else if(typeof _saveLibrary==='function') _saveLibrary();
@@ -6724,6 +6766,8 @@ const _OTP_ERRORS = {
   email_unavailable: 'Envoi d\'e-mails momentanément indisponible. Réessaie dans quelques minutes.',
   send_failed:       'L\'e-mail n\'a pas pu partir. Vérifie l\'adresse et réessaie.',
   server_error:      'Erreur serveur. Réessaie dans un instant.',
+  // Audit 04/10 (CC-1, auth-otp) : adresse retirée d'un compte il y a moins de 72 h → pas de nouveau compte avec elle (409).
+  email_recently_changed: 'Cette adresse vient d\'être retirée d\'un compte AvatarAds. Si tu n\'as pas fait ce changement, ouvre le lien « Ce n\'est pas moi » reçu par e-mail à cette adresse ; sinon, écris-nous à bonjour@avatarads.fr.',
 };
 
 async function _otpCall(payload){
@@ -8675,6 +8719,7 @@ async function mcpKeyRefresh(){
   const lockNote  = document.getElementById('mcpLockNote');
   if(!createBtn) return;
   const res = await _mcpKeyCall('status');
+  _mcpConnInfo(res);
   if(!res){
     _mcpState('A');
     if(lockNote){ lockNote.style.display = 'block'; lockNote.textContent = '⚠ Impossible de vérifier la clé — réessaie.'; }
@@ -8787,6 +8832,36 @@ function _mcpCopyDone(){
   }, 1600);
 }
 
+// Audit 04/10 (CC-2) : dit s'il existe un accès Claude actif (oauth_connections / oauth_last_used_at, champs ajoutés au
+// statut de /mcp/key). Serveur pas encore à jour (champ absent) ou statut illisible → ligne masquée, rien d'inventé.
+function _mcpConnInfo(res){
+  const el = document.getElementById('mcpConnState');
+  if(!el) return;
+  const n = res && typeof res.oauth_connections === 'number' ? res.oauth_connections : null;
+  if(n === null){ el.style.display = 'none'; el.textContent = ''; return; }
+  let t = 'Aucun accès de Claude actif sur ton compte.';
+  if(n > 0){
+    let d = '';
+    try{ if(res.oauth_last_used_at) d = new Date(res.oauth_last_used_at).toLocaleDateString('fr-FR'); }catch(_){}
+    t = 'Claude a accès à ton compte' + (n > 1 ? ' (' + n + ' connexions)' : '') + (d ? ' · dernière utilisation le ' + d : '') + '.';
+  }
+  el.textContent = t; el.style.display = 'block';
+}
+// Audit 04/10 (MCP-1, CC-2) : « Déconnecter Claude » — même action serveur que la révocation de clé (POST /mcp/key
+// {action:'revoke'}) : clés aa_, jetons OAuth (accès 30 j, rafraîchissement 90 j) et codes du compte supprimés.
+async function mcpOauthDisconnect(){
+  if(!confirm('Déconnecter Claude ? Claude n\'aura plus accès à ton compte AvatarAds. Pour l\'utiliser de nouveau, il faudra le relier une nouvelle fois.')) return;
+  const btn = document.getElementById('mcpDisconnectBtn');
+  if(btn) btn.disabled = true;
+  try{
+    const { data:{ session } } = await sb.auth.getSession();
+    if(!session){ toast('Session expirée — reconnecte-toi puis réessaie'); return; }
+    const res = await _mcpKeyCall('revoke');
+    if(!res || !res.ok){ toast('Déconnexion impossible — vérifie ta connexion et réessaie'); return; }
+    try{ mcpKeyRefresh(); }catch(_){}
+    toast('Claude est déconnecté de ton compte. Tu peux aussi retirer le connecteur dans Claude → Paramètres → Connecteurs.');
+  } finally { if(btn) btn.disabled = false; }
+}
 async function mcpKeyRevoke(){
   if(!confirm('Révoquer la clé ? Claude ne pourra plus accéder à ton compte AvatarAds.')) return;
   const res = await _mcpKeyCall('revoke');
@@ -10959,8 +11034,12 @@ async function _kieUpload(src, ext){
   const t = String(blob.type||'');
   const e = ext || (t.includes('png') ? 'png' : t.includes('webp') ? 'webp' : t.includes('wav') ? 'wav' : t.includes('mp4') ? 'mp4' : 'jpg');
   const path = uid + '/kie-in/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + e;
-  const up = await sb.storage.from('render-media').upload(path, blob, { contentType: t || undefined, upsert:true });
-  if(up.error) throw new Error(_kieP()+'dépôt impossible ('+up.error.message+')');
+  // Audit 04/10 (STO-1) : type TOUJOURS explicite et motif de refus lisible. supabase-js envoie un Blob en multipart : c'est
+  // le type DU BLOB qui compte (l'option contentType est ignorée) ; un blob sans type partait en application/octet-stream,
+  // refusé par la liste des types du stockage → on le ré-étiquette d'après l'extension.
+  const ct = t || ({ png:'image/png', webp:'image/webp', wav:'audio/wav', mp4:'video/mp4', jpg:'image/jpeg', jpeg:'image/jpeg', mp3:'audio/mpeg' })[e] || 'image/jpeg';
+  const up = await sb.storage.from('render-media').upload(path, t ? blob : new Blob([blob], { type: ct }), { contentType: ct, upsert:true });
+  if(up.error) throw new Error(_kieP()+'dépôt impossible ('+_aaStoMsg(up.error)+')');
   const sg = await sb.storage.from('render-media').createSignedUrl(path, 3600);
   if(sg.error || !sg.data?.signedUrl) throw new Error(_kieP()+'URL signée impossible');
   return sg.data.signedUrl;
@@ -13927,22 +14006,31 @@ async function mtLibUpload(list, kind){
   if(!currentMember) return;
   if(!_brandGate()) return;
   const files=Array.from(list||[]); if(!files.length) return;
+  let ok=0;
   for(const f of files){
     if(f.size > 25*1024*1024){ toast(''+f.name+' dépasse 25 Mo'); continue; }
     const isSnd = kind==='audio' || (f.type||'').startsWith('audio/');
     const ext=(f.name.split('.').pop()||'bin').toLowerCase().slice(0,5);
     const path=currentMember.id+'/'+(crypto.randomUUID ? crypto.randomUUID() : Date.now()+''+Math.random().toString(36).slice(2))+'.'+ext;
+    // Audit 04/10 (STO-1) : le fichier partait AVANT la ligne ; une ligne refusée (40 visuels max, plan) laissait le fichier
+    // orphelin dans brand-assets. Il est maintenant retiré, et le refus est expliqué en clair.
+    let deposed=false;
     try{
       const up=await sb.storage.from('brand-assets').upload(path, f, { contentType:f.type||'application/octet-stream', upsert:false });
       if(up.error) throw up.error;
+      deposed=true;
       const row={ user_id: currentMember.id, path, name: String(f.name||'').slice(0,120),
         kind: isSnd ? 'audio' : ((f.type||'').startsWith('video/') ? 'video' : 'image') };
       const ins=await sb.from('brand_assets').insert(row);
       if(ins.error) throw ins.error;
-    }catch(e){ toast('Envoi impossible : '+(e.message||e)); }
+      ok++;
+    }catch(e){
+      if(deposed){ try{ await sb.storage.from('brand-assets').remove([path]); }catch(_){} }
+      toast('Envoi impossible ('+String(f.name||'fichier').slice(0,40)+') : '+_aaStoMsg(e));
+    }
   }
   await mtLibLoad();
-  toast('Ajouté à ta bibliothèque');
+  if(ok) toast(ok>1 ? (ok+' fichiers ajoutés à ta bibliothèque') : 'Ajouté à ta bibliothèque');
 }
 
 // « Ce que ça montre » : Montage IA, Express, Images IA… c'est le lien entre
@@ -14189,7 +14277,7 @@ function mtClearAvatar(){
 }
 // #119 · modèle des scènes avatar : Character-3 (économe) ou OmniHuman 1.5 (qualité max)
 function mtSetLipModel(m){
-  _mt.lipModel = (m==='omnihuman') ? 'omnihuman' : (m==='mix') ? 'mix' : 'character3';
+  _mt.lipModel = 'character3';   // Audit 04/10 (Axel) : Character-3 seul (OmniHuman et Mix retirés de l'interface)
   const c3=document.getElementById('mtModelC3'), om=document.getElementById('mtModelOmni'), mx=document.getElementById('mtModelMix');
   if(c3) c3.classList.toggle('on', _mt.lipModel==='character3');
   if(mx) mx.classList.toggle('on', _mt.lipModel==='mix');
@@ -19398,7 +19486,9 @@ async function _mdRegen(){
         const r2=await fetch(SUPABASE_URL+'/functions/v1/render-job',{method:'POST',headers:{...(await getAuthHeader()),'Content-Type':'application/json'},
           body:JSON.stringify({action:'status',job_id:d.job_id})});
         const st=await r2.json().catch(()=>({}));
-        if(st.status==='error'){ clearInterval(iv); (function(){ try{ _mdRegenHorloge(false); }catch(_){} })(), ro.remove(); await creditsFlowRefund('le rendu a échoué'); toast('Rendu : '+String(st.error||'inconnu').slice(0,110)); return; }
+        // Audit 04/10 (MONT-4) : render-job et le worker écrivent 'failed' (jamais 'error') — l'échec restait invisible
+        // 12 min derrière l'overlay. 'error' gardé par compatibilité.
+        if(st.status==='failed'||st.status==='error'){ clearInterval(iv); (function(){ try{ _mdRegenHorloge(false); }catch(_){} })(), ro.remove(); await creditsFlowRefund('le rendu a échoué'); toast('Rendu : '+String(st.error||'inconnu').slice(0,110)); return; }
         if(st.status==='done'&&st.url){ clearInterval(iv); _mdRegenPaint(100);
           window._mtLastJobId=d.job_id;
           setTimeout(()=>{ const o=document.getElementById('mdRegenOv'); if(o) o.remove();
@@ -25534,21 +25624,24 @@ async function startGeneration(){
     // La surveillance reste (alerte e-mail à Axel sous 5 $) ; si le fournisseur répond 402, le message
     // « momentanément indisponible » s'affiche et les crédits sont remboursés — mais on ne bloque pas en amont.
     creditsFlowBegin();
-    if(_rate > 0){
-      const ok = await spendCreditsFor(durSecs * _rate, _hasAvatarSel ? 'avatar' : 'voix sur gameplay');
-      if(!ok) return;
-    }
     // 📐 1080p facturé à la seconde (720p gratuit) — même durée que la vidéo,
     // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
-    if(typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman' && !_gnOnDebit){   // OmniHuman = 1080p natif inclus dans les 5 cr/s ; Voix native = rien à générer
-      const surcout = Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec);
-      // Si le surcoût 1080p ne passe pas, l'avatar déjà débité doit repartir (sinon perte). #122
-      if(!(await spendCreditsFor(surcout, '1080p (' + durSecs + ' s)'))){ try{ await creditsFlowRefund('crédits insuffisants pour le 1080p'); }catch(_){} return; }
+    // OmniHuman = 1080p natif inclus dans les 5 cr/s ; Voix native = rien à générer.
+    const _surHD = (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman' && !_gnOnDebit) ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0;
+    // Audit 04/10 (GEN-2) : UNE seule op pour avatar + 1080p. Avec deux ops, x-aa-op portait la DERNIÈRE (le 1080p) :
+    // hedra-proxy la tirait et la réconciliait seule contre le coût réel → ~1,5 cr/s rechargés en « hedra-reconcile »
+    // alors que l'op avatar restait payée à côté. hedra-proxy réconcilie maintenant (2 + 0,5 si 1080p) × durée rendue
+    // contre CETTE op. Même montant total qu'avant ; retryHedraAuto rejoue déjà une op unique (results._retryCost).
+    if(_rate > 0){
+      const ok = await spendCreditsFor(durSecs * _rate + _surHD, _surHD > 0 ? ('avatar + 1080p (' + durSecs + ' s)') : (_hasAvatarSel ? 'avatar' : 'voix sur gameplay'));
+      if(!ok) return;
+    } else if(_surHD > 0){
+      // Sans lipsync (vidéo existante, gameplay) : le 1080p seul, comme avant.
+      if(!(await spendCreditsFor(_surHD, '1080p (' + durSecs + ' s)'))) return;
     }
     // Audit 05/09 : montant à RE-DÉBITER si l'utilisateur relance après un échec (retryHedraAuto). Avant, le
     // nouvel essai était GRATUIT : le 1er débit avait été remboursé et le retry ne débitait rien.
-    results._retryCost = (_rate > 0 ? Math.max(1, Math.ceil(durSecs * _rate)) : 0)
-      + ((typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman' && !_gnOnDebit) ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0);
+    results._retryCost = (_rate > 0 ? Math.max(1, Math.ceil(durSecs * _rate)) : 0) + _surHD;
   }
 
   step=5; updateSteps();
@@ -25988,10 +26081,11 @@ window.probeSeedance = async function(){
 
 
 // ── MODÈLE Générateur (Axel 11/09) : 'avatar' = Hedra Character-3 (défaut) · 'omnihuman' = OmniHuman 1.5 (fal, BÊTA) ──
-window._genModel = window._genModel || 'avatar';
+window._genModel = 'avatar';
 function _genIsElite(){ return !!(currentMember && (['elite','developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner)); }
 // OmniHuman sélectionnable en Pro et Élite, jamais Starter (Axel 26/09) — mêmes plans que KIE_OPEN['omnihuman-1.5'] côté serveur
-function _genOmnihOk(){ return !!(currentMember && (['pro','elite','developer'].includes((currentMember.plan||'').toLowerCase()) || currentMember.is_owner)); }
+// Audit 04/10 (Axel) : OmniHuman masqué dans le Générateur et le Montage IA — Character-3 seul pour tout le monde.
+function _genOmnihOk(){ return false; }
 function genSetModel(m, btn){
   if(m==='omnihuman' && !_genOmnihOk()){ showPaywall('OmniHuman est réservé aux plans Pro et Élite','Passe à Pro ou Élite pour débloquer OmniHuman 1080p dans le Générateur.'); return; }
   window._genModel = m;
@@ -29302,10 +29396,16 @@ async function _libSendAudioToExpress(libIdx){
 // #146 · Rétention : les créations non-favorites sont purgées après 30 jours (le
 // storage gonfle vite) ; les favoris ⭐ sont gardés à vie. Renvoie le nombre purgé.
 const _LIB_RETENTION_DAYS = 30;
+// Audit 04/10 (LIB-3) : le favori n'existe que dans CE navigateur. Une entrée fusionnée depuis le compte (créée sur un
+// autre appareil, ou via Claude) arrive sans favori : la purger ici effaçait définitivement un favori d'ailleurs. On ne
+// purge donc que ce dont CET appareil connaît le favori : créé ici (copie locale idbKey / hedraIdbKey / audioIdbKey),
+// purement local (jamais envoyé au compte) ou favori réglé ici (favSet). Le reste est purgé par l'appareil qui l'a créé.
+// Favori côté compte (colonne fav de library_items) + purge serveur = à faire côté base (voir le rapport d'audit).
+function _libFavConnu(e){ return !!(e && (e.hedraIdbKey || e.idbKey || e.audioIdbKey || e.favSet || !(e.srvId || e.srvPath))); }
 async function _libPurgeExpired(){
   let n=0; const cutoff=Date.now() - _LIB_RETENTION_DAYS*86400000;
   try{
-    for(let i=library.length-1;i>=0;i--){ const e=library[i]; if(e && !e.fav && e.ts && e.ts<cutoff){
+    for(let i=library.length-1;i>=0;i--){ const e=library[i]; if(e && !e.fav && e.ts && e.ts<cutoff && _libFavConnu(e)){
       for(const k of [e.hedraIdbKey,e.audioIdbKey,e.idbKey].filter(Boolean)){ try{ await _idbDelete(k); }catch(_){} }
       if((e.srvId||e.srvPath) && typeof _libDeleteServer==='function'){ try{ _libDeleteServer(e); }catch(_){} }
       library.splice(i,1); n++;
@@ -29313,9 +29413,11 @@ async function _libPurgeExpired(){
     if(n) _saveLibrary();
     let hist=[]; try{ hist=JSON.parse(localStorage.getItem('imgHistory')||'[]'); }catch(_){}
     const h0=hist.length;
-    for(let i=hist.length-1;i>=0;i--){ const e=hist[i]; if(e && !e.fav && e.ts && e.ts<cutoff){
+    for(let i=hist.length-1;i>=0;i--){ const e=hist[i]; if(e && !e.fav && e.ts && e.ts<cutoff && _libFavConnu(e)){
       if(e.idbKey){ try{ await _idbDelete(e.idbKey); }catch(_){} }
-      if(e.srvPath && typeof sb!=='undefined'){ try{ await sb.storage.from('render-media').remove([e.srvPath]); }catch(_){} }
+      // Audit 04/10 (RGPD-1) : fichier ET ligne library_items (avant : le fichier seul → la vignette, jusqu'à 1,5 Mo,
+      // restait en base et l'image réapparaissait au chargement suivant).
+      if((e.srvId||e.srvPath) && typeof _libDeleteServer==='function'){ try{ await _libDeleteServer(e); }catch(_){} }
       hist.splice(i,1); n++;
     } }
     if(hist.length!==h0) localStorage.setItem('imgHistory', JSON.stringify(hist));
@@ -29324,7 +29426,7 @@ async function _libPurgeExpired(){
 }
 // Badge « expire dans X j » pour les non-favoris qui approchent des 30 jours (≤ 7 j).
 function _libExpTag(v){
-  try{ if(!v || v.fav || !v.ts) return '';
+  try{ if(!v || v.fav || !v.ts || !_libFavConnu(v)) return '';   // Audit 04/10 (LIB-3) : jamais purgé ici → pas de badge
     const left=Math.ceil((v.ts + _LIB_RETENTION_DAYS*86400000 - Date.now())/86400000);
     if(left>7 || left<0) return '';
     return `<span class="vid-tag" style="color:var(--accent-2);opacity:.9" title="Ajoute aux favoris pour la garder — sinon supprimée après 30 jours">expire ${left>1?('dans '+left+' j'):'demain'}</span>`;
@@ -29367,10 +29469,10 @@ const _libVKey = (e) => (e && (e.srvPath || e.hedraIdbKey)) || '';
 async function _libVThumbGet(k){
   if(!k) return null;
   if(_libVThumbs.has(k)) return _libVThumbs.get(k);
-  try{ const r = await _idbLoad('vthumb_'+k); if(r && r.thumb){ const t = { src:r.thumb, dur:r.dur||0 }; _libVThumbs.set(k, t); return t; } }catch(_){}
+  try{ const r = await _idbLoad('vthumb2_'+k); if(r && r.thumb){ const t = { src:r.thumb, dur:r.dur||0 }; _libVThumbs.set(k, t); return t; } }catch(_){}
   return null;
 }
-async function _libVThumbPut(k, t){ try{ const db = await _idbOpen(); db.transaction(_IDB_STORE,'readwrite').objectStore(_IDB_STORE).put({ thumb:t.src, dur:t.dur }, 'vthumb_'+k); }catch(_){} }
+async function _libVThumbPut(k, t){ try{ const db = await _idbOpen(); db.transaction(_IDB_STORE,'readwrite').objectStore(_IDB_STORE).put({ thumb:t.src, dur:t.dur }, 'vthumb2_'+k); }catch(_){} }
 // Première image d'une vidéo (0,5 s) → JPEG 360×640 ; le lecteur est TOUJOURS vidé et libéré (délai max 15 s).
 // Safari (retour Axel 26/09 : « plus aucune première image dans la Bibliothèque ») : avec preload='metadata', Safari ne
 // déclenche JAMAIS loadeddata tant que la vidéo n'est pas jouée → la capture attendait 8 s puis abandonnait (⚡ restait).
@@ -29391,10 +29493,12 @@ function _libGrabFrame(url, isBlob){
     const grab = () => {
       if(fini || !vid.videoWidth || vid.readyState < 2) return;
       let src = null; try{
-        const c = document.createElement('canvas'); c.width = 360; c.height = 640; const x = c.getContext('2d');
-        x.fillStyle = '#0e0e10'; x.fillRect(0,0,360,640);
-        const vw = vid.videoWidth, vh = vid.videoHeight, sc = Math.max(360/vw, 640/vh)*0.85;   // cover puis léger dézoom
-        x.drawImage(vid, (360-vw*sc)/2, (640-vh*sc)/2, vw*sc, vh*sc);
+        // Axel 04/10 : image ENTIÈRE au ratio de la vidéo, sans dézoom ni fond noir incrusté (bandes noires en thème
+        // clair) : la case affiche ensuite la vignette en « contain » sur le fond du thème.
+        const vw = vid.videoWidth, vh = vid.videoHeight, k = Math.min(1, 640/Math.max(vw, vh));   // grand côté ≤ 640 px
+        const cw = Math.max(2, Math.round(vw*k)), ch = Math.max(2, Math.round(vh*k));
+        const c = document.createElement('canvas'); c.width = cw; c.height = ch; const x = c.getContext('2d');
+        x.drawImage(vid, 0, 0, cw, ch);
         src = c.toDataURL('image/jpeg', 0.8); c.width = c.height = 0; }catch(_){}
       end(src);
     };
@@ -29461,6 +29565,32 @@ async function _loadLibThumbnails(){
     _libThumbIO.observe(target);
   });
 }
+// Repli (Axel 04/10 : « la première image de la vidéo ne se charge toujours pas », Safari en 5G) : quand la capture sur
+// canvas échoue (délai de 15 s dépassé, décodage refusé…), la carte affiche la vidéo elle-même, calée sur 0,1 s par le
+// fragment #t : Safari ne télécharge alors que le début du fichier et peint cette image, sans lecture. Lecteur muet, sans
+// contrôles, non cliquable (le clic reste celui de la carte → aperçu plein écran).
+// Audit 04/10 (relecture) : une URL blob par entrée et par session (réutilisée à chaque re-rendu de la grille, au lieu
+// d'en créer une nouvelle jamais révoquée à chaque fois).
+const _libRepliBlobUrls = new Map();
+async function _libVThumbRepli(el, entry){
+  if(!el || !el.isConnected || !entry) return;
+  const box = el.parentElement; if(!box || box.querySelector('video[data-lib-repli]')) return;
+  const rk = _libVKey(entry) || '';
+  let url = (rk && _libRepliBlobUrls.get(rk)) || '';
+  try{
+    if(!url && entry.hedraIdbKey){ const r = await _idbLoad(entry.hedraIdbKey); const b = r && (r.blob || (r instanceof Blob ? r : null)); if(b){ url = URL.createObjectURL(b); if(rk) _libRepliBlobUrls.set(rk, url); } }
+    if(!url) url = await _libVideoUrl(entry);
+  }catch(_){ url = ''; }
+  if(!url || !el.isConnected) return;
+  const v = document.createElement('video');
+  v.setAttribute('data-lib-repli', '1'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
+  v.style.cssText = 'width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--lib-vid-bg)';
+  // Source blob : pas de fragment #t → on se cale sur 0,1 s dès les métadonnées (sinon image noire avec preload=metadata).
+  if(/^blob:/.test(url)) v.addEventListener('loadedmetadata', () => { try{ if(v.currentTime < 0.05) v.currentTime = Math.min(0.1, (v.duration || 1) / 2); }catch(_){} }, { once:true });
+  v.src = /^blob:/.test(url) ? url : url + (url.includes('#') ? '' : '#t=0.1');
+  const emo = box.querySelector('.lib-emoji'); if(emo) emo.style.display = 'none';
+  box.appendChild(v);
+}
 // Génère la miniature/waveform d'UNE carte (appelé quand elle devient visible). Idempotent.
 async function _libGenThumbOne(el){
   if(el._libThumbDone) return; el._libThumbDone = true;
@@ -29471,7 +29601,7 @@ async function _libGenThumbOne(el){
     if(!entry) return;
     try{
       const t = await _libVThumbFor(entry, () => el.isConnected);
-      if(!t) return;
+      if(!t){ await _libVThumbRepli(el, entry); return; }
       // re-ciblé par CLÉ : la carte a pu être re-rendue (autre élément) pendant la capture
       const k = _libVKey(entry);
       document.querySelectorAll('#libGrid img[data-lib-key]').forEach(x => { if(x.getAttribute('data-lib-key') === k) _libApplyVThumb(x, t); });
@@ -29645,7 +29775,7 @@ function renderLibrary(){
     const ri = v._realIdx;
     const _hasVid = v.hedraIdbKey || v.srvPath;   // #65 · local (IDB) OU serveur (Storage)
     return `<div class="vid-card">
-      <div class="vid-thumb" style="background:${_safeCss(v.bg)};cursor:${_hasVid?'pointer':'default'};position:relative;overflow:hidden" onclick="${_hasVid?`event.stopPropagation();_libPreviewVideo(${ri})`:''}">
+      <div class="vid-thumb" style="background:var(--lib-vid-bg);cursor:${_hasVid?'pointer':'default'};position:relative;overflow:hidden" onclick="${_hasVid?`event.stopPropagation();_libPreviewVideo(${ri})`:''}">
         ${_hasVid ? `<img id="lib-thumb-${ri}" data-lib-vid="${ri}" data-lib-key="${_escH(v.srvPath||v.hedraIdbKey||'')}" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0;z-index:1" alt="">` : ''}
         <div class="lib-emoji" style="font-size:40px;z-index:2;position:relative">${_escH(v.emo)}</div>
         ${_hasVid ? `<div style="position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;background:rgba(0,0,0,0.35)" class="vid-play-overlay"><div style="width:44px;height:44px;border-radius:50%;background:rgba(255,107,53,0.9);display:flex;align-items:center;justify-content:center;font-size:18px">▶</div></div>` : ''}
@@ -29749,10 +29879,11 @@ async function _libSwapFullImages(){
 }
 
 function toggleLibFav(src, idx){
+  // favSet (audit 04/10, LIB-3) : le favori de cette entrée est désormais CONNU sur cet appareil (voir _libFavConnu).
   if(src === 'img'){
-    try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); if(h[idx]){ h[idx].fav=!h[idx].fav; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(e){}
+    try{ const h=JSON.parse(localStorage.getItem('imgHistory')||'[]'); if(h[idx]){ h[idx].fav=!h[idx].fav; h[idx].favSet=true; localStorage.setItem('imgHistory', JSON.stringify(h)); } }catch(e){}
   } else {
-    if(library[idx]){ library[idx].fav = !library[idx].fav; _saveLibrary(); }
+    if(library[idx]){ library[idx].fav = !library[idx].fav; library[idx].favSet = true; _saveLibrary(); }
   }
   renderLibrary();
 }
@@ -29773,7 +29904,7 @@ async function deleteLibItem(src, idx){
     if(!entry) return;
     // Nettoie les blobs IndexedDB associés
     const keysToDelete = [entry.hedraIdbKey, entry.audioIdbKey, entry.idbKey].filter(Boolean);
-    for(const vk of [entry.srvPath, entry.hedraIdbKey].filter(Boolean)){ keysToDelete.push('vthumb_'+vk); _libVThumbs.delete(vk); }
+    for(const vk of [entry.srvPath, entry.hedraIdbKey].filter(Boolean)){ keysToDelete.push('vthumb_'+vk, 'vthumb2_'+vk); _libVThumbs.delete(vk); }
     for(const k of keysToDelete){
       try { await _idbDelete(k); } catch(e){}
     }
@@ -31223,13 +31354,57 @@ function _mcProbeRef(b64){
   }catch(_){}
   return out;
 }
+// Audit 04/10 (Motion Control, format 1:1 / 16:9 / 9:16) : Kling SUIT le ratio de la VIDÉO DE RÉFÉRENCE (mesuré 28/08).
+// Un format choisi ne recadrait que la photo du personnage (_mcPrepChar) → une réf verticale donnait toujours une vidéo
+// verticale. Un format explicite recadre donc AUSSI la référence (_mcNormalizeRef). Rectangle de recadrage, en pixels de la
+// réf telle qu'affichée (rotation iPhone appliquée, comme videoWidth/videoHeight) : centré et biaisé vers le HAUT comme la
+// photo (haut du cadre à 8 % de la hauteur au plus) ; visage détecté sur la réf (face = {cx,cy} normalisés) → centré sur
+// lui horizontalement, son centre à 36 % de la hauteur du cadre (marge au-dessus de la tête), borné aux bords — jamais de
+// pixel inventé. null = rien à recadrer : « Auto », ratio déjà bon (à 2 % près), dimensions de la réf inconnues, ou
+// recadrage fort (moins de la moitié de la hauteur gardée) sans visage détecté (voir plus bas).
+function _mcRefCrop(F, w, h, face){
+  const R = F==='1:1' ? 1 : F==='16:9' ? 16/9 : F==='9:16' ? 9/16 : 0;
+  if(!R || !(w>0 && h>0)) return null;
+  if(Math.abs(w/h - R)/R < 0.02) return null;
+  let cw=w, ch=Math.round(w/R); if(ch>h){ ch=h; cw=Math.round(h*R); }
+  cw-=cw%2; ch-=ch%2;   // H.264 4:2:0 : dimensions paires
+  if(cw<2 || ch<2) return null;
+  const hasFace = !!(face && isFinite(face.cx) && isFinite(face.cy));
+  // Sans visage détecté, un recadrage qui garde moins de la moitié de la HAUTEUR (réf verticale → 16:9) est un pari :
+  // tête en haut (danse) ou au milieu (selfie) — testé sur une vraie réf selfie : visage coupé. On garde alors le
+  // comportement d'avant (réf non recadrée) plutôt que de risquer une génération payée sans visage.
+  if(!hasFace && ch < h*0.5){ console.warn('[mc] format '+F+' : visage introuvable sur la réf → réf non recadrée (recadrage trop fort à l\'aveugle)'); return null; }
+  let sx=(w-cw)/2, sy=Math.min((h-ch)/2, h*0.08);
+  if(hasFace){
+    sx=face.cx*w - cw/2; sy=face.cy*h - ch*0.36;
+    // tête entière quand c'est possible : le haut du visage détecté reste à ≥ 8 % du haut du cadre (sinon, en 16:9 depuis
+    // un selfie vertical, le front et les cheveux sortaient du cadre — vu sur une vraie réf)
+    if(isFinite(face.headFrac) && face.headFrac>0) sy=Math.min(sy, (face.cy - face.headFrac/2)*h - ch*0.08);
+  }
+  sx=Math.max(0, Math.min(w-cw, Math.round(sx))); sy=Math.max(0, Math.min(h-ch, Math.round(sy)));
+  sx-=sx%2; sy-=sy%2;
+  return { x:sx, y:sy, w:cw, h:ch, W:w, H:h };
+}
+// Cible de cadrage du visage (refTarget de _mcGenerate, mesurée sur la réf ENTIÈRE) ramenée dans la réf RECADRÉE : même
+// boîte de visage, exprimée en fractions du cadre recadré — exactement ce qu'une détection sur la réf recadrée donnerait,
+// sans second appel de détection (payant). Sans recadrage → inchangée.
+function _mcRefTargetCrop(t, c){
+  if(!t || !c || !(c.w>0 && c.h>0)) return t;
+  const cl=(v)=>Math.max(0, Math.min(1, v));
+  return { headFrac: t.headFrac*c.H/c.h, cx: cl((t.cx*c.W - c.x)/c.w), cy: cl((t.cy*c.H - c.y)/c.h) };
+}
 // Normalise la référence AVANT l'envoi à Kling : coupe à 30 s, ré-encode en H.264 si HEVC/WebM,
 // ramène les dimensions dans 340–3850 px (doc fal : image ET vidéo 340–3850, ratio 0,4–2,5).
 // Sans ré-encodage quand tout est déjà bon (-c copy = instantané). Repli : fichier intact.
-async function _mcNormalizeRef(b64){
+// Audit 04/10 : crop (= _mcRefCrop) → recadrage au format choisi, dans le même passage ffmpeg ; renvoie cropped:true
+// seulement si la vidéo produite est bien recadrée (repli = fichier intact, cropped:false → comportement d'avant).
+async function _mcNormalizeRef(b64, crop){
   const toBlob=(x)=>{ const [meta,data]=String(x).split(','); const mime=(meta.match(/:(.*?);/)||[])[1]||'video/mp4'; const bin=atob(data); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:mime}); };
   const src=toBlob(b64);
-  const dur=window._mcRefDur||0, w=window._mcRefW||0, h=window._mcRefH||0;
+  const dur=window._mcRefDur||0;
+  const doCrop = !!(crop && crop.w>0 && crop.h>0);
+  // dimensions APRÈS recadrage : c'est d'elles que dépendent les bornes Kling (340–3850 px)
+  const w = doCrop ? crop.w : (window._mcRefW||0), h = doCrop ? crop.h : (window._mcRefH||0);
   const probe=_mcProbeRef(b64);
   const tooLong = dur > _MC_MAX_REF_S+0.5;
   // Kling exige STRICTEMENT ≥ 3 s (« Video duration can not less than 3s » sur un clip de 2,97 s, 21/08) :
@@ -31239,18 +31414,18 @@ async function _mcNormalizeRef(b64){
   const badCodec = probe.hevc || probe.webm || (!probe.h264 && !probe.mp4);
   const mn=Math.min(w,h), mx=Math.max(w,h);
   const badSize = (w&&h) && (mn<340 || mx>3850);
-  if(!tooLong && !tooShort && !badCodec && !badSize) return { blob:src, note:'' };
+  if(!tooLong && !tooShort && !badCodec && !badSize && !doCrop) return { blob:src, note:'', cropped:false };
   try{
     await _loadFFmpeg(); const ff=_ffmpegInst;
     await ff.FS('writeFile','mcref_in.mp4', await window._ffFetchFile(src));
     const args=['-i','mcref_in.mp4'];
     if(tooLong) args.push('-t', String(_MC_MAX_REF_S));
-    if(badCodec || badSize || tooShort){
+    if(badCodec || badSize || tooShort || doCrop){
       // dimensions cibles : ≥720 de petit côté si trop petit, ≤1920 de grand côté si trop grand, paires
       let sw=w||720, sh=h||1280; let k=1;
       if(mn<340) k=720/mn; else if(mx>1920) k=1920/mx;
       sw=Math.round(sw*k/2)*2; sh=Math.round(sh*k/2)*2;
-      const vf='scale='+sw+':'+sh+',format=yuv420p'+(tooShort?(',tpad=stop_mode=clone:stop_duration='+padSec.toFixed(2)):'');
+      const vf=(doCrop?('crop='+crop.w+':'+crop.h+':'+crop.x+':'+crop.y+','):'')+'scale='+sw+':'+sh+',format=yuv420p'+(tooShort?(',tpad=stop_mode=clone:stop_duration='+padSec.toFixed(2)):'');
       args.push('-vf',vf);
       if(tooShort) args.push('-af','apad=pad_dur='+padSec.toFixed(2));
       args.push('-c:v','libx264','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k');
@@ -31259,9 +31434,9 @@ async function _mcNormalizeRef(b64){
     await ff.run(...args);
     const data=await ff.FS('readFile','mcref_out.mp4');
     try{ await ff.FS('unlink','mcref_in.mp4'); await ff.FS('unlink','mcref_out.mp4'); }catch(_){}
-    if(data && data.length>1000) return { blob:new Blob([data.buffer],{type:'video/mp4'}), note:(badCodec?'ré-encodée en H.264':'')+(badSize?' · redimensionnée':'')+(tooLong?' · coupée à 30 s':'')+(tooShort?' · prolongée à 3,6 s (Kling : 3 s minimum)':'') };
+    if(data && data.length>1000) return { blob:new Blob([data.buffer],{type:'video/mp4'}), cropped:doCrop, note:(doCrop?' · recadrée au format '+(window._mcFormat||''):'')+(badCodec?' · ré-encodée en H.264':'')+(badSize?' · redimensionnée':'')+(tooLong?' · coupée à 30 s':'')+(tooShort?' · prolongée à 3,6 s (Kling : 3 s minimum)':'') };
   }catch(e){ console.warn('[mc] normalisation réf :', e); }
-  return { blob:src, note:'' };   // repli : fichier intact (Kling tranchera, l'erreur réelle remonte)
+  return { blob:src, note:'', cropped:false };   // repli : fichier intact (Kling tranchera, l'erreur réelle remonte)
 }
 // jour au choix du forfait/qualité et quand la vidéo réf est chargée.
 function _mcUpdateCost(){
@@ -31469,7 +31644,9 @@ async function _mcPrepChar(b64, refTarget){
   // ratio est aussi celui de la réf normalisée envoyée à Kling. Clamp Kling
   // 0,4–2,5 ; repli = ratio naturel de l'image si les dimensions de la réf
   // sont indisponibles. 9:16 / 1:1 / 16:9 restent prioritaires quand
-  // l'utilisateur les choisit explicitement.
+  // l'utilisateur les choisit explicitement — et depuis l'audit 04/10 la réf
+  // est alors recadrée au MÊME ratio (_mcRefCrop dans _mcNormalizeRef), donc
+  // Kling reçoit là aussi deux entrées cohérentes.
   const refRatio=(window._mcRefW>0 && window._mcRefH>0) ? (window._mcRefW/window._mcRefH) : 0;
   const ratio = F==='1:1' ? 1 : F==='16:9' ? 16/9 : F==='9:16' ? 9/16 : Math.max(0.4, Math.min(2.5, refRatio>0 ? refRatio : (W/H)));
   let cw=W, ch=Math.round(W/ratio); if(ch>H){ ch=H; cw=Math.round(H*ratio); }
@@ -31519,6 +31696,18 @@ async function _mcPrepChar(b64, refTarget){
   const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.92));
   if(!blob) throw new Error('préparation de l\'image impossible');
   return blob;
+}
+/* Audit 04/10 (MC-5, chantier fal) : fal-proxy RETIENT le résultat d'une vidéo plus longue que sa réserve quand le solde ne
+   couvre pas l'écart → 402 { held:true, error:"Il manque N crédits… Recharge tes crédits dans les 24 h…" }, sans l'URL.
+   On affiche ce message du serveur tel quel (Motion, Omni, Topaz) au lieu d'une erreur générique. '' si ce n'est pas ce cas. */
+function _falHeldMsg(rd, status){
+  try{
+    if(Number(status) === 402 && rd && rd.held === true){
+      const m = String(rd.error || '').trim();
+      return (m || 'Il manque des crédits pour couvrir la durée réelle de cette vidéo. Recharge tes crédits dans les 24 h : elle sera ensuite ajoutée à ta Bibliothèque.').slice(0, 300);
+    }
+  }catch(_){}
+  return '';
 }
 /* La VRAIE erreur Kling, en français — au lieu du « délai dépassé » menteur. */
 function _mcFalErr(rd, status){
@@ -31577,9 +31766,19 @@ function _omniUpdateCost(){
   // calculé en direct dès l'upload et re-calculé au changement de qualité (720p/1080p).
   el.textContent = _omniDur>0 ? (' · '+_omniCost()+' crédits') : '';
 }
+// Audit 04/10 (OMNI-R1) : MP4 / MOV / M4V seulement. Le serveur mesure la durée facturée dans le conteneur ISO-BMFF
+// (fal-proxy → mp4-duree) : un WebM / MKV y était refusé APRÈS débit et envoi (remboursé, mais jamais utilisable).
+// Type vide ou générique (certains navigateurs pour un .mov / .m4v) → l'extension décide ; un autre type vidéo est refusé.
+function _omniFormatOk(file){
+  if(!file) return false;
+  const t=String(file.type||'').toLowerCase();
+  if(/^video\/(mp4|quicktime|x-m4v)$/.test(t)) return true;
+  if(/^video\//.test(t)) return false;   // video/webm, video/x-matroska, video/avi…
+  return /\.(mp4|mov|m4v)$/i.test(String(file.name||''));
+}
 function _omniPickFile(file){
   if(!file) return;
-  if(!/^video\//.test(file.type||'')){ toast('Choisis une vidéo (MP4/MOV)'); return; }
+  if(!_omniFormatOk(file)){ toast(/^video\//.test(file.type||'') ? 'Format vidéo non pris en charge — réexporte-la en MP4 (H.264) ou en MOV' : 'Choisis une vidéo (MP4/MOV)'); return; }
   const v=document.getElementById('omniPreview'), empty=document.getElementById('omniDropEmpty'), lbl=document.getElementById('omniDropLabel'), chg=document.getElementById('omniChange');
   try{ if(v.src) URL.revokeObjectURL(v.src); }catch(_){}
   const showEmpty=()=>{ v.style.display='none'; if(empty) empty.style.display='flex'; if(lbl) lbl.style.display='none'; if(chg) chg.style.display='none'; };
@@ -31659,6 +31858,7 @@ function _omniBuildPrompt(p){
 function _omniErr(d){ try{ let m=d&&(d.detail||(d.error&&(d.error.message||d.error))||d.message); if(Array.isArray(m)) m=m.map(x=>(x&&(x.msg||x.message))||x).join(' · '); return String(m||'Erreur'); }catch(_){ return 'Erreur'; } }
 async function _omniGenerate(){
   if(!_omniFile){ toast('Upload une vidéo d\'abord'); return; }
+  if(!_omniFormatOk(_omniFile)){ toast('Format vidéo non pris en charge — réexporte-la en MP4 (H.264) ou en MOV'); return; }   // Audit 04/10 (OMNI-R1) : avant tout débit
   const prompt=((document.getElementById('omniPrompt')||{}).value||'').trim();
   if(!prompt){ toast('Décris la transformation'); return; }
   const cost=_omniCost();   // durée arrondie à la seconde supérieure × tarif/s (720p 3 · 1080p 4)
@@ -31673,8 +31873,11 @@ async function _omniGenerate(){
     const { data:{ user } } = await sb.auth.getUser();
     if(!user) throw new Error('Session expirée — reconnecte-toi');
     const path=user.id+'/omni-'+Date.now()+'-'+Math.random().toString(36).slice(2,7)+'.mp4';
-    const up=await sb.storage.from('render-media').upload(path,_omniFile,{contentType:_omniFile.type||'video/mp4',upsert:true});
-    if(up.error) throw new Error('upload : '+up.error.message);
+    // Audit 04/10 (OMNI-R1/STO-1) : un fichier accepté sur son extension (type vide) est ré-étiqueté — supabase-js envoie le
+    // type DU FICHIER (multipart), sinon application/octet-stream, refusé par la liste des types du stockage.
+    const _oBody=_omniFile.type ? _omniFile : new Blob([_omniFile], { type: /\.mov$/i.test(_omniFile.name||'') ? 'video/quicktime' : 'video/mp4' });
+    const up=await sb.storage.from('render-media').upload(path,_oBody,{contentType:_oBody.type||'video/mp4',upsert:true});
+    if(up.error) throw new Error('upload : '+_aaStoMsg(up.error));
     const sg=await sb.storage.from('render-media').createSignedUrl(path,3600);
     if(sg.error||!sg.data||!sg.data.signedUrl) throw new Error('lien signé indisponible');
     const H=await getAuthHeader();
@@ -31804,11 +32007,16 @@ async function _mcGenerate(){
         else console.warn('[mc] cadrage ref : aucun visage détecté sur la frame de référence — cadrage standard');
       }catch(e){ console.warn('[mc] cadrage ref indisponible :', e); }
     }
-    const charBlob=await _mcPrepChar(window._mcCharB64, refTarget);   // recadre format + ≤2560 px (Kling refuse >3850)
+    // Audit 04/10 (format explicite 9:16 / 1:1 / 16:9) : Kling suit le ratio de la VIDÉO DE RÉFÉRENCE → la réf est recadrée
+    // au format choisi (_mcRefCrop), AVANT la photo, pour que la cible de cadrage du visage (refTarget) soit celle de la réf
+    // RECADRÉE réellement envoyée. « Auto » ou ratio déjà bon : crop null, tout est comme avant. Recadrage raté (ffmpeg) :
+    // cropped:false → refTarget d'origine, comportement d'avant.
+    const refCrop=_mcRefCrop(String(window._mcFormat||'auto'), window._mcRefW||0, window._mcRefH||0, refTarget);
     _mcProg('Vérification de la vidéo de référence…', 7);
-    const norm = await _mcNormalizeRef(window._mcRefB64);   // HEVC→H.264, 340–3850 px, ≤30 s
+    const norm = await _mcNormalizeRef(window._mcRefB64, refCrop);   // format choisi, HEVC→H.264, 340–3850 px, ≤30 s
     if(norm.note){ toast('Vidéo de référence '+norm.note.replace(/^ · /,'')); console.warn('[mc] réf normalisée :', norm.note); }
     const refBlob = norm.blob;
+    const charBlob=await _mcPrepChar(window._mcCharB64, norm.cropped ? _mcRefTargetCrop(refTarget, refCrop) : refTarget);   // recadre format + ≤2560 px (Kling refuse >3850)
     const uv=await sb.storage.from('render-media').upload(vPath, refBlob, { contentType:'video/mp4', upsert:true });
     const ui=await sb.storage.from('render-media').upload(iPath, charBlob, { contentType:'image/jpeg', upsert:true });
     if(uv.error||ui.error) throw new Error('upload : '+((uv.error||ui.error).message));
@@ -31922,6 +32130,7 @@ async function _mcGenerate(){
           // vraie raison. L'ignorer laissait `out` vide → « Délai dépassé » menteur
           // au bout de 10 s (mesuré le 13/08, image 3392×5056 refusée).
           const rr=await fGet(reP); const rd=await rr.json().catch(()=>({}));
+          { const hm=_falHeldMsg(rd, rr.status); if(hm){ const er=new Error(hm); er._held=true; throw er; } }   // Audit 04/10 (MC-5) : vidéo retenue
           if(!rr.ok){ const er=new Error(_mcFalErr(rd, rr.status)); er._moderation=_mcIsModeration(rd); throw er; }
           const u=rd?.video?.url||rd?.video_url||'';
           if(!u){ const er=new Error(_mcFalErr(rd, rr.status)); er._moderation=_mcIsModeration(rd); throw er; }
@@ -32000,7 +32209,7 @@ async function _mcGenerate(){
           _mcProg('Upscale 1080p (Topaz)…', 90);
           out = await _mcUpscaleTopaz(out, H);
         }catch(e){
-          console.error('topaz:',e); toast('Upscale 1080p indispo — 720p livré');
+          console.error('topaz:',e); toast(e && e._held ? ('Upscale 1080p : '+e.message+' En attendant, la version 720p est livrée.') : 'Upscale 1080p indispo — 720p livré');
           try{ const tops=_creditOps.splice(_opsAvantTopaz); const reste=_creditOps; _creditOps=tops; await creditsFlowRefund('l\'upscale 1080p a échoué'); _creditOps=reste; }catch(_){}
         }
       } else toast('Upscale 1080p non débité — 720p livré');
@@ -32145,7 +32354,7 @@ async function _mcGenerate(){
     _mcProgHide();
     // audit 05/09 : le débit a eu lieu AVANT Kling → tout échec rend les crédits de ce flux
     try{ await creditsFlowRefund('Motion Control a échoué'); }catch(_){}
-    toast('Motion Control : '+(e && e.message ? e.message : e));
+    toast(e && e._held ? e.message : ('Motion Control : '+(e && e.message ? e.message : e)));   // Audit 04/10 (MC-5) : message du serveur tel quel
   }
 }
 /* #139 · Une frame de la vidéo de référence (~0,6 s) → dataURL jpeg. Sert de
@@ -32277,7 +32486,9 @@ async function _mcUpscaleTopaz(videoUrl, H){
     const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
     _mcProg('Upscale 1080p (Topaz)…', Math.min(93, 90+Math.floor(i/6)));
     if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
-    if(s==='COMPLETED'){ const rr=await get(reP); const rd=await rr.json().catch(()=>({})); const u=rd?.video?.url||rd?.video_url; if(!u) throw new Error('Topaz : pas d\'URL'); return u; }
+    if(s==='COMPLETED'){ const rr=await get(reP); const rd=await rr.json().catch(()=>({}));
+      { const hm=_falHeldMsg(rd, rr.status); if(hm){ const er=new Error(hm); er._held=true; throw er; } }   // Audit 04/10 (MC-5) : 1080p retenu
+      const u=rd?.video?.url||rd?.video_url; if(!u) throw new Error('Topaz : pas d\'URL'); return u; }
     throw new Error('Topaz : '+(pd.error?String(pd.error).slice(0,80):s));
   }
   throw new Error('Topaz : délai dépassé');
@@ -41920,14 +42131,7 @@ window.mPreviewClose=function(){
 
         <div class="col" style="gap:13px;margin-bottom:24px">
           <div><div class="mz-lbl">Musique</div><div class="seg" id="mzSegMusic" style="width:100%;flex-wrap:wrap"></div></div>
-          <div><div class="mz-lbl">Modèle du lipsync · avatar</div>
-            <div class="seg" id="mzSegModel" style="width:100%;flex-wrap:wrap">
-              <button type="button" id="mtModelC3" onclick="mtSetLipModel('character3')">Économique · 2 cr/s</button>
-              <button type="button" id="mtModelMix" onclick="mtSetLipModel('mix')">Mix · hook Omni</button>
-              <button type="button" id="mtModelOmni" onclick="mtSetLipModel('omnihuman')">Qualité max · 5 cr/s</button>
-            </div>
-            <p class="faint" style="font-size:11px;margin-top:7px">Mix = le hook en OmniHuman (1080p), le reste en Character-3. S'applique quand tu ajoutes une photo d'avatar.</p>
-          </div>
+          <!-- Audit 04/10 (Axel) : modèle du lipsync retiré — Character-3 seul. -->
         </div>
         <!-- Retirés (Axel 11/09) : Rythme, Transitions, Mouvement de l'avatar — gérés par le chef d'orchestre, vars gardées à leur défaut. -->
 

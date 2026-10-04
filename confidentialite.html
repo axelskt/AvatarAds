@@ -24,6 +24,15 @@ ul{padding-left:20px;margin-bottom:14px}
 li{font-size:14px;color:#8b92a0;margin-bottom:6px}
 a{color:#ff6b35;text-decoration:none}
 footer{text-align:center;padding:40px;font-size:12px;color:#45505e;border-top:1px solid rgba(255,255,255,0.06)}
+/* Audit 04/10 (SITE-03) : choix de mesure d'audience — deux boutons identiques (refuser aussi simple qu'accepter) */
+.cc-box{border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:16px;margin:4px 0 18px;background:#101114}
+.cc-box p{margin-bottom:12px}
+.cc-state{color:#eef0f4;font-weight:600}
+.cc-btns{display:flex;gap:10px;flex-wrap:wrap}
+.cc-btns button{appearance:none;-webkit-appearance:none;cursor:pointer;flex:1 1 180px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.28);background:#26282e;color:#fff;font-family:inherit;font-size:14px;font-weight:600}
+.cc-btns button:hover{background:#30333a}
+.cc-btns button:focus-visible{outline:2px solid #ff6b35;outline-offset:2px}
+@media (max-width:520px){nav{padding:14px 16px}.container{padding:40px 16px}}
 </style>
 </head>
 <body>
@@ -37,7 +46,7 @@ footer{text-align:center;padding:40px;font-size:12px;color:#45505e;border-top:1p
 
 <div class="container">
   <h1>Politique de confidentialité</h1>
-  <p class="meta">Dernière mise à jour : 28 septembre 2026 · AvatarAds by IA Manager</p>
+  <p class="meta">Dernière mise à jour : 4 octobre 2026 · AvatarAds by IA Manager</p>
 
   <h2>1. Données collectées</h2>
   <p>Lors de votre inscription, nous collectons :</p>
@@ -54,6 +63,7 @@ footer{text-align:center;padding:40px;font-size:12px;color:#45505e;border-top:1p
     <li>Gérer votre accès à l'outil AvatarAds</li>
     <li>Suivre votre quota de crédits</li>
     <li>Vous contacter en cas de problème avec votre compte</li>
+    <li>Mesurer l'audience du site et de l'application (vous pouvez la refuser, voir section 5)</li>
   </ul>
   <p>Nous ne vendons ni ne partageons vos données avec des tiers à des fins publicitaires.</p>
   <p><strong>Inscriptions venues d'Instagram</strong> : si vous arrivez sur AvatarAds par le lien reçu en message privé Instagram de @avataradss, une référence chiffrée de ce clic est gardée 30 jours dans votre navigateur (stockage local, pas un cookie) ; si vous créez un compte ou vous connectez pendant ce délai, elle relie votre compte à l'identifiant Instagram qui nous a écrit, uniquement pour compter combien de personnes venues d'Instagram s'inscrivent puis s'abonnent (statistiques internes consultées en totaux, jamais partagées, supprimées avec votre compte).</p>
@@ -63,13 +73,23 @@ footer{text-align:center;padding:40px;font-size:12px;color:#45505e;border-top:1p
 
   <h2>4. Durée de conservation</h2>
   <ul>
-    <li><strong>Photos et voix envoyées pour une génération via Claude</strong> (photo produit, photo de visage, enregistrement de voix) : supprimées automatiquement au bout de <strong>7 jours</strong>.</li>
-    <li><strong>Images, vidéos et audios générés via Claude</strong> : conservés <strong>30 jours</strong>, puis supprimés automatiquement. La copie rangée dans votre Bibliothèque suit les règles de la Bibliothèque (les éléments non mis en favoris sont supprimés au bout de 30 jours).</li>
+    <li><strong>Photos et voix envoyées pour une génération via Claude</strong> (photo produit, photo de visage, enregistrement de voix) : utilisées uniquement pour la génération demandée. Celles envoyées pour l'édition vidéo et le Motion Control sont supprimées à la fin du traitement ; les autres restent dans votre espace privé jusqu'à la suppression de votre compte. Vous pouvez en demander la suppression à tout moment à <a href="mailto:axel@iamanager.fr">axel@iamanager.fr</a>.</li>
+    <li><strong>Images, vidéos et audios générés via Claude</strong> : conservés dans votre espace privé tant que votre compte existe. La copie rangée dans votre Bibliothèque peut être supprimée à tout moment depuis la Bibliothèque ; pour faire supprimer l'original plus tôt, écrivez à <a href="mailto:axel@iamanager.fr">axel@iamanager.fr</a>.</li>
+    <li><strong>Bibliothèque</strong> : les créations que vous ne mettez pas en favori sont supprimées au bout de 30 jours par l'application, quand vous ouvrez la Bibliothèque sur l'appareil qui les a créées ; à défaut, elles sont conservées tant que votre compte existe. Les favoris sont gardés. Vous pouvez supprimer une création à tout moment depuis la Bibliothèque.</li>
     <li><strong>Données de votre compte</strong> (profil, crédits, Bibliothèque, mémoire de marque) : conservées tant que votre compte existe, supprimées définitivement quand vous le supprimez.</li>
+    <li><strong>Mesure d'audience</strong> : conservée par Microsoft 13 mois au plus.</li>
   </ul>
 
-  <h2>5. Cookies</h2>
-  <p>AvatarAds utilise uniquement les cookies nécessaires au fonctionnement de l'authentification (session Supabase). Aucun cookie publicitaire ou de tracking tiers n'est utilisé.</p>
+  <h2 id="cookies">5. Cookies et traceurs</h2>
+  <p><strong>Nécessaires au service (sans consentement)</strong> : votre session de connexion et vos préférences (thème, choix ci-dessous) sont gardées dans le stockage local de votre navigateur. Quand vous ouvrez le paiement, il est affiché par Whop, qui utilise ses propres cookies nécessaires au paiement.</p>
+  <p><strong>Mesure d'audience</strong> : Microsoft Clarity (Microsoft Corporation) enregistre de façon pseudonymisée votre navigation sur le site et dans l'application (pages vues, clics, défilement, enregistrement des sessions) pour nous aider à améliorer AvatarAds. Aucun identifiant de votre compte ne lui est transmis, et le contenu des champs de saisie est masqué dans les enregistrements. Sans accord de votre part, Clarity fonctionne sans cookie pour les visiteurs situés dans l'Union européenne, au Royaume-Uni et en Suisse ; si vous l'acceptez ci-dessous, il dépose notamment les cookies <code>_clck</code> (1 an) et <code>_clsk</code> (1 jour), sans cookie publicitaire. Les données peuvent être traitées aux États-Unis. Vous pouvez la refuser ci-dessous à tout moment : Clarity n'est alors plus chargé, ses cookies sont effacés, et refuser ne change rien à l'utilisation du service. Votre choix est gardé 6 mois sur cet appareil.</p>
+  <div class="cc-box" role="group" aria-label="Choix de mesure d'audience">
+    <p>Votre choix actuel : <span id="ccState" class="cc-state">aucun choix enregistré (mesure d'audience active, vous pouvez la refuser)</span></p>
+    <div class="cc-btns">
+      <button type="button" data-cc-set="denied">Refuser la mesure d'audience</button>
+      <button type="button" data-cc-set="granted">Accepter la mesure d'audience</button>
+    </div>
+  </div>
 
   <h2>6. Vos droits (RGPD)</h2>
   <p>Conformément au RGPD, vous disposez des droits suivants :</p>
@@ -78,11 +98,13 @@ footer{text-align:center;padding:40px;font-size:12px;color:#45505e;border-top:1p
     <li>Droit de rectification</li>
     <li>Droit à l'effacement : depuis l'app, <strong>Mon compte → Supprimer mon compte</strong>. La suppression est immédiate et définitive (fichiers, Bibliothèque, crédits restants, mémoire de marque, accès de Claude à votre compte). Un abonnement en cours doit d'abord être résilié.</li>
     <li>Droit à la portabilité</li>
+    <li>Couper l'accès de Claude à votre compte : depuis l'app, <strong>Connecter Claude → Déconnecter Claude</strong> (effet immédiat).</li>
+    <li>Refuser la mesure d'audience : section 5 ci-dessus, à tout moment.</li>
   </ul>
   <p>Pour exercer ces droits : <a href="mailto:axel@iamanager.fr">axel@iamanager.fr</a></p>
 
   <h2>7. Services tiers</h2>
-  <p>Pour produire les contenus que vous demandez, AvatarAds fait appel à des prestataires techniques soumis à des engagements de confidentialité : fournisseurs de modèles d'intelligence artificielle (génération d'images, de vidéos, de voix et de texte, transcription audio), hébergement, traitement des paiements et envoi des e-mails du service. Seules les données nécessaires à la réalisation de votre demande leur sont transmises. La liste détaillée des prestataires est communiquée sur simple demande à <a href="mailto:axel@iamanager.fr">axel@iamanager.fr</a>.</p>
+  <p>Pour produire les contenus que vous demandez, AvatarAds fait appel à des prestataires techniques soumis à des engagements de confidentialité : fournisseurs de modèles d'intelligence artificielle (génération d'images, de vidéos, de voix et de texte, transcription audio), hébergement, traitement des paiements, envoi des e-mails du service et mesure d'audience (Microsoft Clarity, que vous pouvez refuser, voir section 5). Seules les données nécessaires à la réalisation de votre demande leur sont transmises. La liste détaillée des prestataires est communiquée sur simple demande à <a href="mailto:axel@iamanager.fr">axel@iamanager.fr</a>.</p>
   <p>Certains de ces prestataires sont situés hors de l'Union européenne, notamment aux États-Unis : les contenus nécessaires à une génération (images, audio, texte de la demande) peuvent y être transférés, uniquement pour réaliser la génération que vous avez demandée. Le résultat est ensuite rapatrié et conservé sur notre hébergement Supabase.</p>
 
   <h2>8. Contact</h2>
@@ -90,5 +112,22 @@ footer{text-align:center;padding:40px;font-size:12px;color:#45505e;border-top:1p
 </div>
 
 <footer>© 2026 AvatarAds · IA Manager · <a href="/cgv.html">CGV</a></footer>
+<!-- Le refus de la mesure d'audience se fait ici (pas de bandeau, Axel 04/10). data-clarity="off" : cette page ne charge jamais Clarity. -->
+<script src="/app/consent.js?v=2026-10-04-3" data-clarity="off"></script>
+<script>
+(function(){
+  function maj(){
+    var c = window.AAConsent ? window.AAConsent.get() : null, el = document.getElementById('ccState');
+    if(el) el.textContent = c === 'granted' ? "mesure d'audience acceptée" : (c === 'denied' ? "mesure d'audience refusée" : "aucun choix enregistré (mesure d'audience active, vous pouvez la refuser)");
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('[data-cc-set]') : null;
+    if(!b || !window.AAConsent) return;
+    window.AAConsent.set(b.getAttribute('data-cc-set')); maj();
+  });
+  document.addEventListener('aa-consent', maj);
+  maj();
+})();
+</script>
 </body>
 </html>

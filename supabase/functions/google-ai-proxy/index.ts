@@ -13,7 +13,8 @@
 // les modèles d'IMAGE (Nano) ; gemini-2.5-flash (helper) et *tts* (voix, débit couvert par Express) exemptés.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, userPlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, opHasJob, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain } from '../_shared/guard.ts'
+import { CORS, jsonRes, authUser, safeUpstream, billableGate, helperGate, requirePlan, userPlan, applyReservation, applyOmniReservation, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, releaseOmniOp, omniStartUsed, opHasJob, bindJob, releaseByJob, settleByJob, refundByJobTerminal, chainCreditTake, chainCreditGiveBack, wantsNanoChain, svc } from '../_shared/guard.ts'
+import { KIE_OPEN } from '../_shared/kie.ts'
 
 const GOOGLE_AI_BASE = 'https://generativelanguage.googleapis.com'
 // 23/09/2026 : `:predict` (Imagen 4, arrêté par Google le 17/08/2026, seul appelant = module Cartoon supprimé) retiré.
@@ -62,6 +63,101 @@ function veoBody(raw: string): { body: string } | { error: string } {
   return { body: JSON.stringify({ instances: [inst], parameters: params }) }
 }
 
+// Audit 04/10 (IMG-1) : le corps Nano Banana Pro (generateContent d'un modèle d'image, tirage fixe de 5) partait TEL QUEL
+// chez Google : generationConfig (candidateCount, thinkingConfig…), safetySettings (filtres abaissés), tools (recherche
+// Google, facturée en plus), systemInstruction, plusieurs tours, pièces jointes vidéo / audio / PDF… Corps RECONSTRUIT avec
+// les seuls champs de l'app (_nbEdit, _nbHeadSwap), comme veoBody pour Veo et kie-proxy / fal-proxy pour le même modèle :
+//   • UN message « user » ; ses parties dans l'ordre reçu : texte (10 000 caractères au total, l'app en envoie ~3 000) et
+//     images inline (type image/*, 4 au plus : l'app en envoie 1 ou 2), écrites au format de l'app (inline_data) ;
+//   • responseModalities TEXT + IMAGE (ce que l'app envoie toujours) ; imageConfig : imageSize 1K / 2K / 4K et aspectRatio de
+//     la liste de Gemini (= _NB_RATIOS de l'app) ; une valeur hors liste est écartée (Google prend alors sa valeur par
+//     défaut, comme pour les replis de l'app sans imageConfig) ; candidateCount absent = UNE réponse.
+// Messages d'erreur choisis pour ne déclencher ni le repli « config rejetée » ni les nouvelles tentatives de _nbEdit.
+const NB_MAX_IMAGES = 4, NB_MAX_TEXTE = 10_000
+const NB_TAILLES = new Set(['1K', '2K', '4K'])
+const NB_RATIOS = new Set(['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'])
+function nanoBody(raw: string): { body: string } | { error: string } {
+  let b: any = null
+  try { b = JSON.parse(raw || '{}') } catch { /* traité juste dessous */ }
+  const c0 = b && Array.isArray(b.contents) && b.contents.length === 1 ? b.contents[0] : null
+  if (!c0 || typeof c0 !== 'object' || !Array.isArray(c0.parts) || !c0.parts.length) return { error: 'Requête image illisible : un seul message attendu.' }
+  const parts: Record<string, unknown>[] = []
+  let texte = 0, images = 0
+  for (const p of c0.parts) {
+    if (!p || typeof p !== 'object') return { error: 'Requête image illisible.' }
+    if (typeof p.text === 'string') {
+      const t = p.text.slice(0, Math.max(0, NB_MAX_TEXTE - texte))
+      texte += t.length
+      if (t) parts.push({ text: t })
+      continue
+    }
+    const d = (p.inline_data && typeof p.inline_data === 'object') ? p.inline_data : (p.inlineData && typeof p.inlineData === 'object') ? p.inlineData : null
+    if (!d) return { error: 'Requête image : seuls du texte et des images sont acceptés.' }
+    let mt = String(d.mime_type ?? d.mimeType ?? '').toLowerCase()
+    if (mt === 'image/jpg') mt = 'image/jpeg'
+    if (!/^image\/[a-z0-9.+-]{1,40}$/.test(mt) || typeof d.data !== 'string' || !d.data) return { error: 'Requête image : pièce jointe refusée (une image est attendue).' }
+    if (++images > NB_MAX_IMAGES) return { error: `Requête image : ${NB_MAX_IMAGES} images au maximum.` }
+    parts.push({ inline_data: { mime_type: mt, data: d.data } })
+  }
+  if (!parts.length) return { error: 'Requête image vide.' }
+  const gc0 = (b.generationConfig && typeof b.generationConfig === 'object') ? b.generationConfig : {}
+  const ic0 = (gc0.imageConfig && typeof gc0.imageConfig === 'object') ? gc0.imageConfig : null
+  const gc: Record<string, unknown> = { responseModalities: ['TEXT', 'IMAGE'] }
+  if (ic0) {
+    const ic: Record<string, string> = {}
+    if (NB_TAILLES.has(String(ic0.imageSize))) ic.imageSize = String(ic0.imageSize)
+    if (NB_RATIOS.has(String(ic0.aspectRatio))) ic.aspectRatio = String(ic0.aspectRatio)
+    if (Object.keys(ic).length) gc.imageConfig = ic
+  }
+  return { body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: gc }) }
+}
+
+// Audit 04/10 (EXP-4) : à qui est cette opération / ce fichier Veo ? Le suivi (operations/<id>) et le téléchargement
+// (files/<id>:download) étaient relayés à Google avec la clé de la plateforme pour N'IMPORTE QUEL identifiant (fal-proxy et
+// kie-proxy vérifient la propriété depuis le 02/10). Le propriétaire est noté dans veo_refs (migration 20261004030000) :
+// 'op:<id>' à la soumission (même sans tirage : owner, developer, hoquet), 'file:<id>' de chaque fichier livré au suivi
+// terminé. Repli pour une opération soumise avant ce correctif : l'op de crédits liée au job (credit_ops.provider_job).
+// Inconnu → 404 pour un client (owner / developer : toléré) ; lecture impossible → 503 (l'app re-sonde le suivi).
+// Table absente (fonction déployée avant la migration) → contrôle d'avant (aucun), jamais un suivi légitime bloqué.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const tableAbsente = (e: { code?: string; message?: string } | null) =>
+  !!e && /42P01|PGRST205|does not exist|could not find the table/i.test(`${e.code || ''} ${e.message || ''}`)
+async function veoNoter(uid: string, refs: string[]): Promise<boolean> {
+  const rows = [...new Set(refs)].filter((r) => /^(op|file):[A-Za-z0-9._-]{1,200}$/.test(r)).map((ref) => ({ ref, user_id: uid }))
+  if (!rows.length) return true
+  for (let essai = 0; essai < 2; essai++) {
+    if (essai) await sleep(250)
+    try {
+      const { error } = await svc().from('veo_refs').upsert(rows, { onConflict: 'ref', ignoreDuplicates: true })
+      if (!error) return true
+      if (tableAbsente(error)) { console.warn('[veo] table veo_refs absente : propriétaire non noté (migration 20261004030000 à appliquer)'); return true }
+      console.warn('[veo] propriétaire non noté:', error.message)
+    } catch { /* nouvel essai */ }
+  }
+  return false
+}
+async function veoProprio(uid: string, ref: string, job?: string): Promise<'moi' | 'autrui' | 'inconnu' | 'erreur' | 'absente'> {
+  for (let essai = 0; essai < 2; essai++) {   // un hoquet isolé ne fait pas échouer un suivi légitime : 2e lecture
+    if (essai) await sleep(250)
+    try {
+      const { data, error } = await svc().from('veo_refs').select('user_id').eq('ref', ref).limit(1)
+      if (tableAbsente(error)) { console.warn('[veo] table veo_refs absente : propriété non contrôlée (migration 20261004030000 à appliquer)'); return 'absente' }
+      if (error) { console.warn('[veo] propriété illisible:', error.message); continue }
+      if (data && data.length) return (data[0] as { user_id: string }).user_id === uid ? 'moi' : 'autrui'
+      if (!job) return 'inconnu'
+      const { data: ops, error: e2 } = await svc().from('credit_ops').select('user_id').eq('provider_job', job).limit(5)
+      if (e2) { console.warn('[veo] propriété illisible:', e2.message); continue }
+      if (!ops || !ops.length) return 'inconnu'
+      return (ops as { user_id: string }[]).every((o) => o.user_id === uid) ? 'moi' : 'autrui'
+    } catch { /* nouvel essai */ }
+  }
+  return 'erreur'
+}
+// Identifiants de fichiers livrés dans la réponse d'un suivi terminé (uri « …/files/<id>:download », ou « files/<id> » ;
+// barre oblique éventuellement échappée « files\/<id> » dans le JSON).
+const veoFichiers = (body: string): string[] =>
+  [...body.matchAll(/files\\?\/([A-Za-z0-9._-]+)/g)].map((m) => 'file:' + m[1].replace(/[.]+$/, '')).filter((r) => r.length > 5)
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST' && req.method !== 'GET') return jsonRes(405, { error: 'method_not_allowed' })
@@ -89,6 +185,7 @@ serve(async (req: Request) => {
   const uid = auth.userId as string
   const isSyncBillable = isBillable && /:generateContent$/.test(bare)   // Nano = synchrone
   const isPoll = req.method === 'GET' && /\/operations\/[A-Za-z0-9._-]+$/.test(bare)
+  const isDownload = req.method === 'GET' && /\/files\/[A-Za-z0-9._-]+:download$/.test(bare)
 
   if (gated) {
     const isTts = req.method === 'POST' && /:generateContent$/.test(bare) && /tts/i.test(bare)
@@ -112,11 +209,34 @@ serve(async (req: Request) => {
     return jsonRes(403, { error: 'modèle non autorisé sur cet endpoint (famille flash uniquement)' })
   }
 
-  // Audit métier 14/09 (Phase 2) : Veo 3.1 FAST (Express « Pro ») = Pro/Élite. Veo Lite reste Starter+ → on
-  // ne gate QUE le modèle 'fast' (pas la famille veo-3.1). Résolution 1080p / extensions >8 s sont des paliers
+  // Audit 04/10 (EXP-3) : Veo (Lite comme Fast) = plans payants, comme kie-proxy (KIE_OPEN['veo3-lite'] : Starter, Pro, Élite,
+  // byok) et fal-proxy pour Omni. Avant, seul Fast était gaté : un compte Free avec des crédits (pack acheté sans abonnement,
+  // abonnement résilié) générait du Veo Lite en appelant le proxy directement. L'app réserve déjà Express aux abonnés.
+  if (gated && isBillable && /:predictLongRunning$/.test(bare)) {
+    const g = await requirePlan(uid, KIE_OPEN['veo3-lite'], 'Vidéo Express')
+    if (!g.ok) return jsonRes(g.status, { error: 'La vidéo Express est réservée aux abonnés (Starter, Pro ou Élite).' })
+  }
+  // Audit métier 14/09 (Phase 2) : Veo 3.1 FAST (Express « Pro ») = Pro/Élite. Veo Lite reste Starter+ (porte EXP-3
+  // ci-dessus) → on ne gate ici QUE le modèle 'fast' (pas la famille veo-3.1). Résolution 1080p / extensions >8 s sont des paliers
   // par PARAMÈTRE de body (non-chemin) et NE sont PAS gatés ici (risque de 402 l'extension légitime).
   if (gated && isBillable && /:predictLongRunning$/.test(bare) && /veo-3\.1-fast/i.test(bare)) {
     const g = await requirePlan(uid, ['pro', 'elite'], 'Veo Pro (rapide)'); if (!g.ok) return jsonRes(g.status, { error: g.error })
+  }
+
+  // Audit 04/10 (EXP-4) : suivi / téléchargement d'une opération ou d'un fichier Veo d'un autre compte → 404, AVANT Google.
+  if (gated && (isPoll || isDownload)) {
+    const id = isPoll ? ((bare.match(/operations\/([A-Za-z0-9._-]+)$/) || [])[1] || '') : ((bare.match(/files\/([A-Za-z0-9._-]+):download$/) || [])[1] || '')
+    const p = await veoProprio(uid, (isPoll ? 'op:' : 'file:') + id, isPoll ? 'veo:' + id : undefined)
+    // Base illisible : le suivi répond 503 (l'app re-sonde toutes les 5 s) ; le téléchargement, lui, n'est pas relancé par
+    // l'app (vidéo déjà réglée, perdue sur une erreur) → il passe, l'identifiant n'étant connu que de son propriétaire.
+    if (p === 'erreur' && isPoll) return jsonRes(503, { error: 'Suivi momentanément indisponible — réessaie dans un instant.' })
+    if (p === 'erreur') console.warn('[veo] propriété du fichier illisible : téléchargement laissé passer')
+    if (p === 'autrui') return jsonRes(404, { error: 'Vidéo introuvable.' })
+    if (p === 'inconnu') {
+      const { plan, isOwner, err } = await userPlan(uid)
+      if (err) return jsonRes(503, { error: 'Suivi momentanément indisponible — réessaie dans un instant.' })
+      if (!isOwner && plan !== 'developer') return jsonRes(404, { error: 'Vidéo introuvable.' })
+    }
   }
 
   let drawn = 0   // L1 (audit 14/09) : hissé HORS du try — le catch le référence (sinon ReferenceError → réserve non rendue + 500 sans CORS)
@@ -140,6 +260,8 @@ serve(async (req: Request) => {
     } else {
       let rawBody = await req.text()
       if (gated && isBillable && /:predictLongRunning$/.test(bare)) { const vb = veoBody(rawBody); if ('error' in vb) return jsonRes(400, { error: vb.error }); rawBody = vb.body }
+      // Audit 04/10 (IMG-1) : corps Nano reconstruit AVANT tout tirage (un refus ne coûte rien).
+      if (gated && isSyncBillable) { const nb = nanoBody(rawBody); if ('error' in nb) return jsonRes(400, { error: nb.error }); rawBody = nb.body }
       let sendBody = rawBody
       if (isBillable && gated) {
         // Audit 14/09 : paliers Veo PAR BODY-PARAM (non-chemin, donc lus sur le VRAI body → précis, pas de faux 402).
@@ -151,6 +273,23 @@ serve(async (req: Request) => {
           // AVANT toute réservation (gratuit) au lieu d'un échec Google payé en temps et en réserve.
           if (_ext && (/lite/i.test(bare) || (_res !== '' && _res !== '720p'))) return jsonRes(400, { error: 'Extension Veo : Veo 3.1 Fast en 720p uniquement (Lite et 1080p non pris en charge par Google).' })
           if (_ext) { const g = await requirePlan(uid, ['elite'], 'Extension vidéo (>8 s)'); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
+          // Audit 04/10 (EXP-4, même règle que le téléchargement) : une extension qui désigne une vidéo Veo par son fichier
+          // Google (video.uri) prolongerait la vidéo d'un autre compte → seul son propriétaire peut la prolonger (owner /
+          // developer : identifiant inconnu toléré). L'app ne propose plus d'extension depuis le 23/09.
+          if (_ext) {
+            let vuri = ''
+            try { vuri = String(JSON.parse(rawBody)?.instances?.[0]?.video?.uri || '') } catch { /* corps déjà validé par veoBody */ }
+            if (vuri) {
+              const fid = (vuri.match(/files\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+              const p = fid ? await veoProprio(uid, 'file:' + fid) : 'autrui'
+              if (p === 'erreur') return jsonRes(503, { error: 'Vérification momentanément indisponible — réessaie dans un instant.' })
+              if (p === 'autrui') return jsonRes(404, { error: 'Vidéo à prolonger introuvable.' })
+              if (p === 'inconnu') {
+                const { plan, isOwner, err } = await userPlan(uid)
+                if (err || (!isOwner && plan !== 'developer')) return jsonRes(404, { error: 'Vidéo à prolonger introuvable.' })
+              }
+            }
+          }
           else if (_res === '1080p') { const g = await requirePlan(uid, ['pro', 'elite'], 'Veo 1080p'); if (!g.ok) return jsonRes(g.status, { error: g.error }) }
         }
         // Nano marqué x-aa-chain (upscale du palier 4K) : le droit déjà payé (5 tirés par openai-proxy) passe avant un
@@ -214,6 +353,7 @@ serve(async (req: Request) => {
         // rendrait tout au release_by_job) ; erreur → on rend le tiré et la remise d'image consommée.
         if (googleRes.ok) {
           const name = (body.match(/operations\/([A-Za-z0-9._-]+)/) || [])[1] || ''
+          if (name) await veoNoter(uid, ['op:' + name])   // Audit 04/10 (EXP-4) : propriétaire noté, même sans tirage
           // chemin complet de l'opération = de quoi la suivre si l'onglet se ferme (filet reconcile-fal-orphans, audit 28/09 #11)
           const full = (body.match(/"name"\s*:\s*"(models\/[A-Za-z0-9._-]+\/operations\/[A-Za-z0-9._-]+)"/) || [])[1] || ''
           if (name && drawn > 0) await bindJob(uid, drawnOp, 'veo:' + name, drawn, full ? `${GOOGLE_AI_BASE}/v1beta/${full}` : undefined)
@@ -231,7 +371,12 @@ serve(async (req: Request) => {
           const filtered = /"raiMediaFilteredCount"\s*:\s*[1-9]/.test(body)
           // Audit 28/09 : une vidéo PRÉSENTE = livrée → réglée, même avec un échantillon filtré ou un champ "error" à côté
           // (avant : remboursée en entier alors que la vidéo restait téléchargeable). Rien à télécharger = remboursée.
-          if (hasVideo) await settleByJob(uid, 'veo:' + opTail)
+          if (hasVideo) {
+            await settleByJob(uid, 'veo:' + opTail)
+            // Audit 04/10 (EXP-4) : le fichier livré n'est téléchargeable que par ce compte. Propriétaire non noté (hoquet DB) →
+            // 503 au lieu de la réponse : l'app re-sonde (règlement idempotent) et le note au passage suivant.
+            if (!(await veoNoter(uid, veoFichiers(body)))) return jsonRes(503, { error: 'Suivi momentanément indisponible — réessaie dans un instant.' })
+          }
           else { void filtered; if (!(await refundByJobTerminal(uid, 'veo:' + opTail))) await releaseByJob(uid, 'veo:' + opTail) }
         }
       }

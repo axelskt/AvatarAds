@@ -10,7 +10,7 @@
      La connexion Google est une NAVIGATION vers Supabase puis Google : aucune source à ouvrir pour elle. frame-ancestors
      est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête) → filet JS anti-iframe juste dessous, comme
      app/index.html. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-oDwTBcnguhvpZUlLBnLAnUPwV4qx4BTpnhxMv8KmuDQ=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AJKdpVhKgxH6msuV6bOSQnuXqKWKh3WHnZ8axroQenA=' 'sha256-HDQqyGtLl7S1DQCSIst8dzJYWa5dF8GQviWx43/7Iw0=' 'sha256-RXIV016/V/9TvyeE9vXZf72Q6oE5AIkx2fazFT9ZbOc=' 'sha256-zbxw603KSo3Ub+BiJpRKU7K4V+gzl0OHXt0cQpX+biU=' 'sha256-T8+ladCrz/1m62OhV2Nbrgof6XHLi1LQaTWqufc356w=' https://unpkg.com/react@18.3.1/umd/react.production.min.js https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : l'écran de connexion (code, mot de passe) ne doit jamais être encadré */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
@@ -128,6 +128,11 @@ const { useState: useStateA } = React;
    Lu une fois — l'utilisateur ne bascule pas le thème sur l'écran de login. */
 const _AA_DARK = (() => {try {return localStorage.getItem('aa_theme') === 'dark';} catch (e) {return false;}})();
 
+/* Audit 04/10 (CC-1) : lien « Ce n'est pas moi » envoyé à l'ANCIENNE adresse après un changement d'adresse
+   (#annuler-adresse=<jeton>). Jeton lu puis retiré tout de suite de l'URL (historique, capture d'écran) ; rien ne part
+   sans un clic sur le bouton (les robots qui ouvrent les liens des e-mails ne déclenchent rien). */
+const _REVERT_TOKEN = (() => {try {const m = /^#annuler-adresse=([0-9a-f]{64})$/i.exec(location.hash || "");if (!m) return "";history.replaceState(null, "", location.pathname + location.search);return m[1].toLowerCase();} catch (e) {return "";}})();
+
 /* ── Auth réelle (même projet Supabase que /app/, session partagée same-origin) ── */
 const SUPABASE_URL = "https://guvwgiejzkiodghywpwj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck";
@@ -203,11 +208,15 @@ function Login({ go }) {
   const [show, setShow] = useStateA(false); // visibilité mot de passe
   const [busy, setBusy] = useStateA(false);
   const [err, setErr] = useStateA("");
+  const [sentInfo, setSentInfo] = useStateA(""); // Audit 04/10 (CC-3) : écran du code ouvert sans nouvel envoi
 
   const validEmail = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
   async function authGoogle() {
     setErr("");
-    try {const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + "/app/", queryParams: { access_type: "offline", prompt: "consent" } } });if (error) setErr("Google indisponible, réessaie.");}
+    /* Audit 04/10 (SITE-02) : plus d'access_type « offline » (ni prompt « consent », qui ne servait qu'à l'obtenir) : le
+       retour sur /app/ ne porte plus de jeton de rafraîchissement Google (provider_refresh_token, jamais utilisé par
+       AvatarAds) dans l'URL. « select_account » garde le choix du compte Google à chaque connexion. */
+    try {const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + "/app/", queryParams: { prompt: "select_account" } } });if (error) setErr("Google indisponible, réessaie.");}
     catch (e) {setErr("Google indisponible, réessaie.");}
   }
   async function authSend() {
@@ -216,14 +225,21 @@ function Login({ go }) {
     setBusy(true);setErr("");
     const res = await otpCall({ action: "send", mode: "login", email: e, firstName: "" });
     setBusy(false);
+    /* Audit 04/10 (CC-3) : plafond d'envoi atteint (ou code parti il y a moins de 30 s) → l'écran du code s'ouvre quand
+       même : un code reçu il y a moins de 10 minutes reste valable. Message explicite au lieu de « Envoi impossible ». */
+    if (res && res.error === "too_many_codes") {setSentInfo("Trop de codes demandés pour cette adresse. Si tu as reçu un code il y a moins de 10 minutes, entre-le ici ; sinon, réessaie plus tard ou continue avec Google.");setSent(true);return;}
+    if (res && res.error === "cooldown") {setSentInfo("Un code vient de partir vers ton email : entre les 6 chiffres reçus" + (res.wait > 0 ? " (nouvel envoi possible dans " + Math.ceil(res.wait) + " s)." : "."));setSent(true);return;}
     if (res && res.error) {setErr("Envoi impossible, réessaie dans un instant.");return;}
-    setSent(true);
+    setSentInfo("");setSent(true);
   }
   async function authVerify(codeStr) {
     const c = (codeStr || "").replace(/\D/g, "").slice(0, 6);
     if (c.length !== 6) {setErr("Entre les 6 chiffres reçus.");return;}
     setBusy(true);setErr("");
     const res = await otpCall({ action: "verify", email: (email || "").trim().toLowerCase(), code: c });
+    /* Audit 04/10 (CC-1) : adresse retirée d'un compte il y a moins de 72 h → pas de nouveau compte avec elle. */
+    if (res && res.error === "email_recently_changed") {setBusy(false);setErr("Cette adresse vient d'être retirée d'un compte AvatarAds. Si tu n'as pas fait ce changement, ouvre le lien « Ce n'est pas moi » reçu par email à cette adresse ; sinon, écris-nous à bonjour@avatarads.fr.");return;}
+    if (res && res.error === "too_many_attempts") {setBusy(false);setErr("Trop d'essais : attends quelques minutes puis demande un nouveau code.");return;}
     if (!res || res.error || !res.token_hash) {setBusy(false);setErr("Code invalide ou expiré.");return;}
     const { error } = await sb.auth.verifyOtp({ type: "magiclink", token_hash: res.token_hash });
     if (error) {setBusy(false);setErr("Code invalide ou expiré.");return;}
@@ -270,7 +286,7 @@ function Login({ go }) {
 
   sent ?
   React.createElement("div", { className: "col rise", style: { width: "100%", gap: 11, alignItems: "center" } },
-  React.createElement("p", { className: "center", style: { fontSize: 13.5, maxWidth: 300, color: L.sub } }, "Code envoyé à ton email. Entre les 6 chiffres reçus."),
+  React.createElement("p", { className: "center", style: { fontSize: 13.5, maxWidth: 300, color: L.sub } }, sentInfo || "Code envoyé à ton email. Entre les 6 chiffres reçus."),
   React.createElement("div", { id: "otpbox", className: "row", style: { gap: 8, justifyContent: "center" } },
   [0, 1, 2, 3, 4, 5].map((k) =>
   React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { width: 44, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + L.fieldLine, background: L.field, color: L.ink, outline: "none" },
@@ -342,7 +358,7 @@ function Login({ go }) {
 
       sent ?
       React.createElement("div", { className: "col", style: { gap: 11, marginTop: 14 } },
-      React.createElement("p", { style: { fontSize: 13.5, color: D.sub } }, "Code envoyé. Entre les 6 chiffres reçus."),
+      React.createElement("p", { style: { fontSize: 13.5, color: D.sub } }, sentInfo || "Code envoyé. Entre les 6 chiffres reçus."),
       React.createElement("div", { id: "otpbox", className: "row", style: { gap: 8 } },
       [0, 1, 2, 3, 4, 5].map((k) =>
       React.createElement("input", { key: k, maxLength: 1, inputMode: "numeric", style: { flex: 1, minWidth: 0, height: 52, textAlign: "center", fontSize: 20, fontWeight: 800, padding: 0, borderRadius: 12, border: "1px solid " + D.line, background: D.field, color: D.ink, outline: "none" },
@@ -393,12 +409,65 @@ function Login({ go }) {
 
 }
 
+/* Audit 04/10 (CC-1) : écran « Ce n'est pas moi » — rétablit l'adresse de connexion (POST auth-otp email_change_revert,
+   sans session : la preuve est le jeton reçu à l'ancienne adresse). Le serveur rétablit l'adresse, ferme toutes les
+   sessions, retire mot de passe / compte Google / double authentification ajoutés depuis le changement et coupe Claude. */
+function Revert({ token }) {
+  const mob = window.useIsMobile ? window.useIsMobile() : false;
+  const [etat, setEtat] = useStateA("idle"); // idle | busy | done | fin (lien inutilisable)
+  const [msg, setMsg] = useStateA("");
+  const [adr, setAdr] = useStateA("");
+  const [verrou, setVerrou] = useStateA(true); // Audit 04/10 (relecture) : sessions_closed renvoyé par le serveur
+  const C = _AA_DARK ?
+  { card: "rgba(22,20,25,.78)", line: "rgba(255,255,255,.12)", ink: "#F6F4F1", sub: "#A7A39E", btn: "#1E1B21" } :
+  { card: "rgba(255,255,255,.82)", line: "rgba(0,0,0,.12)", ink: "#141013", sub: "#5b5750", btn: "#fff" };
+  async function retablir() {
+    if (etat === "busy") return;
+    setEtat("busy");setMsg("");
+    const res = await otpCall({ action: "email_change_revert", token: token });
+    if (res && res.ok) {
+      setAdr(typeof res.email === "string" ? res.email : "");
+      // Audit 04/10 (relecture) : verrouillage non confirmé (sessions_closed:false) → ne jamais affirmer que tout est déconnecté.
+      if (res.sessions_closed === false) {setVerrou(false);setMsg("La déconnexion des sessions ouvertes n'a pas pu être confirmée. Écris-nous tout de suite à bonjour@avatarads.fr pour qu'on sécurise ton compte.");}
+      try {await sb.auth.signOut({ scope: "local" });} catch (e) {}
+      setEtat("done");return;
+    }
+    const e = res && res.error;
+    if (e === "expired") {setMsg("Ce lien a expiré (il est valable 72 heures) ou a déjà servi. Si quelqu'un a pris ton compte, écris-nous tout de suite à bonjour@avatarads.fr.");setEtat("fin");return;}
+    if (e === "email_taken") {setMsg("Ton ancienne adresse est déjà utilisée par un autre compte : écris-nous à bonjour@avatarads.fr, on rétablit ton accès.");setEtat("fin");return;}
+    setMsg(e === "too_many_attempts" ? "Trop de tentatives depuis ce réseau : réessaie dans une heure." : "Le rétablissement n'a pas abouti. Réessaie dans un instant ; si ça persiste, écris-nous à bonjour@avatarads.fr.");
+    setEtat("idle");
+  }
+  const titre = etat === "done" ? "Adresse rétablie" : "Rétablir ton adresse de connexion";
+  const texte = etat === "done" ? verrou ?
+  "Ton adresse de connexion est de nouveau " + (adr || "ton ancienne adresse") + ". Toutes les sessions ouvertes ont été déconnectées et l'accès de Claude à ton compte a été coupé. Reconnecte-toi par code email." :
+  "Ton adresse de connexion est de nouveau " + (adr || "ton ancienne adresse") + ". Reconnecte-toi par code email." :
+  "L'adresse email de ton compte AvatarAds vient d'être changée. Si ce n'est pas toi, rétablis ton adresse : toutes les sessions ouvertes seront déconnectées, un mot de passe ou un compte Google ajouté depuis sera retiré, et l'accès de Claude à ton compte sera coupé.";
+  const card =
+  React.createElement("div", { className: "rise col", style: { width: "100%", maxWidth: 400, alignItems: "center", background: C.card, border: "1px solid " + C.line, borderRadius: 24, padding: mob ? "28px 20px 24px" : "34px 30px 28px", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" } },
+  React.createElement("div", { className: "brandmark", style: { marginBottom: 20, color: C.ink } }, React.createElement(Logo, { size: 36 })),
+  React.createElement("h1", { className: "display center", style: { fontSize: mob ? 24 : 27, fontWeight: 800, color: C.ink, lineHeight: 1.1 } }, titre),
+  React.createElement("p", { className: "center", style: { marginTop: 12, fontSize: 14.5, lineHeight: 1.6, color: C.sub } }, texte),
+  etat === "fin" ? null :
+  React.createElement("button", { className: "btn btn-primary", disabled: etat === "busy", style: { width: "100%", marginTop: 22, padding: "15px 20px", fontSize: 15, fontWeight: 800, opacity: etat === "busy" ? .7 : 1 },
+    onClick: () => etat === "done" ? location.href = "/connexion.html" : retablir() },
+  etat === "done" ? "Me connecter" : etat === "busy" ? "Rétablissement…" : "Rétablir mon adresse", " ", React.createElement(Icons.arrow, { size: 16 })),
+  msg ? React.createElement("p", { className: "center", style: { fontSize: 13, lineHeight: 1.55, color: "#c0341d", marginTop: 14 } }, msg) : null,
+  etat === "idle" || etat === "fin" ?
+  React.createElement("button", { className: "btn", style: { width: "100%", marginTop: 10, padding: "13px 20px", fontSize: 13.5, background: C.btn, border: "1px solid " + C.line, color: C.ink, fontWeight: 600 }, onClick: () => {location.href = "/connexion.html";} },
+  etat === "fin" ? "Aller à la connexion" : "C'est bien moi : ignorer") : null
+  );
+  return (
+    React.createElement("div", { style: { minHeight: "100dvh", display: "grid", placeItems: "center", padding: mob ? "40px 16px" : "48px 24px",
+        background: _AA_DARK ? "radial-gradient(120% 80% at 50% 0%, #17151b, #0e0d10 55%, #0b0b0d)" : "radial-gradient(120% 80% at 50% 0%, #ffffff, #eceaf0 55%, #e2e0e6)" } }, card));
+}
+
 /* ── routing : retour LP = /v2.html · app = studio ── */
 function go(view) {
   if (view === "landing") {location.href = "/";} // la LP (ex-v2) est désormais la page principale à la racine
   else {location.href = "/app/";}
 }
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Login, { go: go }));
+ReactDOM.createRoot(document.getElementById('root')).render(_REVERT_TOKEN ? React.createElement(Revert, { token: _REVERT_TOKEN }) : React.createElement(Login, { go: go }));
 </script>
 </body>
 </html>

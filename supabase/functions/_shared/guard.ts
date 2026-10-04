@@ -720,3 +720,84 @@ export async function reglerJobFal(o: {
     return { mode: 'rpc_err' }
   }
 }
+
+// ── RENDU SERVEUR (render-job) — Audit 04/10 (GEN-1, MC-2, MONT-1, EXP-1) ──────────────────────────────────────────────
+// Compositions « sans tirage » (contrat K2) : le Générateur (gen-subs) et Motion Control (motion-split / motion-bg) ne
+// débitent RIEN pour le rendu (la vidéo est déjà payée à la génération) → render-job ne leur exige plus une op tirable
+// (402 pour tout client depuis RESERVE_STRICT, 14/09), mais : plan payant, chemins du flux, cadence, « 2 en cours ».
+export const PLANS_PAYANTS = ['starter', 'pro', 'elite', 'byok']   // = PAID_PLANS des autres fonctions
+export const COMPOSE_SANS_TIRAGE = ['gen-subs', 'motion-split', 'motion-bg']
+export const RENDU_MONTAGE_MIN = 4       // MONT-1 : plancher du tirage de l'op principale d'un montage (= CREDIT_COSTS.montageRender)
+export const MONTAGE_DUREE_MAX = 180     // MONT-1 : = MAX_DURATION d'orchestrate (l'app plafonne à 90 s ; historique prod ≤ 66 s)
+export const RENDU_DUREE_MAX = 300       // compositions (gen-subs : vidéo existante jusqu'à 5 min)
+export const RETOUCHE_OCTETS_MAX = 150 * 1024 * 1024   // EXP-1 : Omni / Veo ≤ 10 s ≈ 70 Mo au plus (~55 Mbit/s)
+export const RETOUCHE_EN_COURS_MAX = 2   // EXP-1 : Express + Voix native en parallèle
+export const MOTION_ASSETS = ['motion', 'matted', 'refmask', 'bgclean']   // seuls médias joints par l'app (_mcRunSplit, fond vidéo)
+const MOTION_RAISONS = ['motion', 'motion-topaz', 'motion-fond-video']     // libellés spendCreditsFor de _mcGenerate
+// MONT-1 : libellés des débits qui PAIENT un rendu de montage (app : Montage IA « montage IA » 8 − 2 tirés par orchestrate,
+// régénération « montage » 4, Éditeur « rendu final serveur » 4). Le MCP insère ses jobs lui-même, sans render-job.
+const MONTAGE_RAISONS = ['montage IA', 'montage', 'rendu final serveur']
+
+// Fichier d'un flux précis, chemin DÉJÀ normalisé par cheminSur : « <uid>/gen-<…>.mp4 » (Générateur, _genServerCompose),
+// « <uid>/mc-<…> » (Motion Control : réf, clip motion, détourages) ou « <uid>/retouche-<…> » (Express, _expRetouche).
+// Un seul segment sous le dossier du compte.
+export function fichierDuFlux(uid: string, chemin: string | null, prefixe: 'gen-' | 'mc-' | 'retouche-', mp4 = false): boolean {
+  if (!chemin || !uid || !chemin.startsWith(uid + '/')) return false
+  const nom = chemin.slice(uid.length + 1)
+  if (nom.includes('/') || !nom.startsWith(prefixe) || !/^[A-Za-z0-9._-]{4,160}$/.test(nom)) return false
+  return mp4 ? /\.mp4$/i.test(nom) : true
+}
+
+// MC-2 : une génération Motion Control récente du compte (op « motion* » non remboursée de moins de `heures`). Fail-open sur
+// erreur DB (ne jamais 402 un client payant pendant un incident) ; owner / developer sont exemptés par l'appelant.
+export async function opMotionRecente(userId: string, heures = 6): Promise<boolean> {
+  try {
+    const { data, error } = await svc().from('credit_ops').select('id').eq('user_id', userId).is('refunded_at', null)
+      .in('reason', MOTION_RAISONS).gt('created_at', new Date(Date.now() - heures * 3600_000).toISOString()).limit(1)
+    if (error) { console.warn('opMotionRecente erreur (fail-open):', error.message); return true }
+    return !!(data && data.length)
+  } catch { return true }
+}
+
+// motion-bg : l'op « motion-fond-video » (supplément +1 cr/s débité juste avant la composition) est la SEULE op que ce rendu
+// peut tirer — jamais « la dernière op ouverte » du compte (MC-2 : celle d'une autre fonctionnalité était vidée). null = aucune.
+export async function opFondVideo(userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await svc().from('credit_ops').select('id, amount, reserved_remaining').eq('user_id', userId)
+      .eq('reason', 'motion-fond-video').is('refunded_at', null).gt('created_at', new Date(Date.now() - 2 * 3600_000).toISOString())
+      .order('created_at', { ascending: false }).limit(1)
+    if (error || !data || !data.length) return null
+    const o = data[0] as { id: string; amount: number; reserved_remaining: number | null }
+    return (o.reserved_remaining ?? o.amount) > 0 ? o.id : null
+  } catch { return null }
+}
+
+// MONT-1 : op qui paie un rendu de montage SANS désignation (« Ma vidéo », Éditeur, régénération) — la plus récente op d'un
+// libellé de montage, ouverte, de moins de 2 h, dont la réserve couvre le plancher. Avant, render-job prenait « la dernière
+// op ouverte » quelle qu'elle soit : un débruitage à 1 crédit fait pendant la relecture du plan aurait payé le rendu (et,
+// avec le plancher, l'aurait refusé). null = aucune (ou erreur) → l'appelant garde l'ancienne résolution (resolve_op).
+export async function opRenduMontage(userId: string, min = RENDU_MONTAGE_MIN): Promise<string | null> {
+  try {
+    const { data, error } = await svc().from('credit_ops').select('id, amount, reserved_remaining').eq('user_id', userId)
+      .in('reason', MONTAGE_RAISONS).is('refunded_at', null).gt('created_at', new Date(Date.now() - 2 * 3600_000).toISOString())
+      .order('created_at', { ascending: false }).limit(5)
+    if (error || !data) return null
+    const o = (data as { id: string; amount: number; reserved_remaining: number | null }[]).find((x) => (x.reserved_remaining ?? x.amount) >= min)
+    return o ? o.id : null
+  } catch { return null }
+}
+
+// EXP-1 : taille d'un objet du stockage (octets), lue avec la clé service. null = inconnue (absent, erreur) → l'appelant
+// laisse passer (fail-open : le moteur de rendu borne de toute façon la durée et la résolution).
+export async function tailleObjet(bucket: string, chemin: string): Promise<number | null> {
+  const i = chemin.lastIndexOf('/')
+  if (i <= 0) return null
+  const dossier = chemin.slice(0, i), nom = chemin.slice(i + 1)
+  try {
+    const { data, error } = await svc().storage.from(bucket).list(dossier, { limit: 20, search: nom })
+    if (error || !data) return null
+    const f = (data as { name: string; metadata?: { size?: number } | null }[]).find((x) => x.name === nom)
+    const n = Number(f?.metadata?.size)
+    return f && Number.isFinite(n) && n >= 0 ? n : null
+  } catch { return null }
+}

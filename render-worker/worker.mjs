@@ -34,7 +34,8 @@ import { finsAffichageAvatar } from './dynamic-engine.mjs'
 import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs'   // prompt OmniHuman PARTAGÉ (shared/omnihuman-prompts.json, ≤ 300)
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from './hedra-prompts.mjs'   // prompt lipsync Hedra PARTAGÉ (shared/hedra-prompts.json, 27/09)
 // Audit 02/10 : garde-fous partagés (chemins de stockage, plan assaini, GSAP embarqué) — voir securite.mjs
-import { cheminSur, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX } from './securite.mjs'
+import { cheminSur, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX,
+  musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob } from './securite.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -44,6 +45,8 @@ const HYPERFRAMES = 'hyperframes@0.7.60' // épinglé : mêmes rendus dans le te
 // Le worker tourne en service_role avec les clés fournisseurs en env → une SSRF ici est à fort impact. On
 // RÉSOUT le DNS et on bloque si une IP résolue est interne (ferme le cas domaine→IP interne statique, ex.
 // 169.254.169.254.nip.io). Le rebinding TOCTOU reste un résidu assumé, identique à guard.ts.hostResolvesInternal.
+// Audit 04/10 (GEN-5) : son seul appelant (musique du Générateur) n'accepte plus que la banque du site (musiqueBanqueSure) —
+// hôte fixe qui nous appartient : le rebinding ne vise plus rien. Ce contrôle reste en seconde barrière.
 function _ipInternal(ip) {
   ip = String(ip || '').toLowerCase()
   if (!ip) return true
@@ -190,9 +193,16 @@ function sh(cmd, cwd, extraEnv = {}) {
     // qui échoue est AVALÉE en silence par la CLI, et le garde de couverture
     // la déguise en clip fantôme. Sans cache on a une cause de moins, c'est
     // tout ; le patch de l'image et la relance font le reste.
+    // Audit 04/10 (MONT-2) : la compilation HyperFrames ne télécharge plus que depuis le stockage du projet (liens signés des
+    // images perso), sans redirection — patch 2 de patch-hyperframes.mjs, appliqué au build de l'image. Sans SUPABASE_URL
+    // (rendu local) : variable absente, comportement d'origine.
+    // Audit 04/10 (GEN-4) : délai maximal d'un rendu HyperFrames — un montage de 65 s se rend en 9 min au plus (l'app et le MCP
+    // plafonnent à 90 s), des sous-titres sur 5 min de vidéo en ~10 min ; au-delà de 40 min (sous le seuil de 45 min où
+    // render-job déclare un job mort) le processus reçoit SIGTERM et le job échoue au lieu de bloquer toute la file.
+    const _dl = origineStockage()
     execSync(cmd, {
-      cwd, stdio: ['ignore', 'inherit', 'pipe'], maxBuffer: 32 * 1024 * 1024,
-      env: { ...process.env, HYPERFRAMES_EXTRACT_CACHE_DIR: 'off', ...extraEnv },
+      cwd, stdio: ['ignore', 'inherit', 'pipe'], maxBuffer: 32 * 1024 * 1024, timeout: HF_RENDU_MAX_MS,
+      env: { ...process.env, HYPERFRAMES_EXTRACT_CACHE_DIR: 'off', ...(_dl ? { AA_HF_DL_ALLOW: _dl } : {}), ...extraEnv },
     })
   } catch (e) {
     const err = String((e && e.stderr) || '').trim()
@@ -203,6 +213,27 @@ function sh(cmd, cwd, extraEnv = {}) {
 function ffprobe(file, entries) {
   return execFileSync('ffprobe', ['-v', 'error', '-show_entries', entries, '-of', 'csv=p=0', file]).toString().trim()
 }
+// Audit 04/10 (GEN-4, EXP-1, MC-2) : durée et côtés RÉELS d'un média reçu, pour borner le travail avant de le lancer (voir
+// BORNES_MEDIA, securite.mjs). Lecture impossible → NaN (pas de refus : le traitement garde son repli d'origine).
+function mesurerMedia(file) {
+  let duree = NaN, largeur = NaN, hauteur = NaN
+  try { duree = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { timeout: 30000 }).toString().trim()) } catch (_) { /* illisible */ }
+  try {
+    const l = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', file], { timeout: 30000 })
+      .toString().trim().split('\n')[0] || ''
+    const [w, h] = l.split(',').map(Number); largeur = w; hauteur = h
+  } catch (_) { /* illisible */ }
+  return { duree, largeur, hauteur }
+}
+function exigerBornes(file, quoi) {
+  const refus = horsBornes(mesurerMedia(file), BORNES_MEDIA[quoi])
+  if (refus) throw new Error(refus)
+}
+// Audit 04/10 (GEN-4) : un ffmpeg de composition (gen-subs, Motion Control) qui dépasse ce délai est tué → job en échec au lieu
+// de bloquer la file (un seul job à la fois). Les vidéos sont bornées en amont (5 min, 4096 px) : une vidéo 4K de 5 min se
+// compose en quelques minutes — ce délai n'est qu'un filet contre un fichier pathologique.
+const FFMPEG_MAX_MS = 30 * 60 * 1000
+const HF_RENDU_MAX_MS = 40 * 60 * 1000
 
 // sonie intégrée d'un fichier (LUFS) — sert à savoir combien il MANQUE, plutôt
 // que de laisser loudnorm re-traiter une voix déjà masterisée par l'app.
@@ -338,6 +369,7 @@ async function composeMotionSplit(jobDir, outPath, plan) {
   const orig0 = join(jobDir, 'base.mp4')
   const motion = join(jobDir, 'assets', 'motion.mp4')
   if (!existsSync(motion)) throw new Error('clip motion manquant (assets/motion.mp4)')
+  exigerBornes(orig0, 'motion'); exigerBornes(motion, 'motion')   // Audit 04/10 (MC-2) : rendu sans tirage → travail borné
   // ⚠ VIDÉO TÉLÉPHONE : une vidéo filmée à l'iPhone embarque souvent un 3e flux
   // DATA (métadonnées « mebx », codec « none ») que ffmpeg REFUSE de décoder
   // (« Decoder (codec none) not found for input stream #0:2 ») → le split
@@ -386,7 +418,7 @@ async function composeMotionSplit(jobDir, outPath, plan) {
       '-filter_complex', fc, '-map', '[v]', '-map', '0:a?',
       '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
       '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
-      '-movflags', '+faststart', outPath], { stdio: 'pipe' })
+      '-movflags', '+faststart', outPath], { stdio: 'pipe', timeout: FFMPEG_MAX_MS })
   } catch (e) {
     const err = (e.stderr ? e.stderr.toString() : '') || String(e.message || e)
     throw new Error('motion-split ffmpeg : ' + err.trim().slice(-300))
@@ -421,9 +453,11 @@ async function composeMotionBg(jobDir, outPath, plan) {
   let alpha = true
   if (!existsSync(matted)) { matted = join(jobDir, 'assets', 'matted.mp4'); alpha = false }
   if (!existsSync(matted)) throw new Error('personnage détouré manquant (assets/matted.webm|.mp4)')
+  exigerBornes(orig0, 'motion'); exigerBornes(matted, 'motion')   // Audit 04/10 (MC-2) : rendu sans tirage → travail borné
   const refmask = join(jobDir, 'assets', 'refmask.webm')
   const bgclean = join(jobDir, 'assets', 'bgclean.jpg')
   const patchOK = existsSync(refmask) && existsSync(bgclean)   // les DEUX, sinon v1
+  if (patchOK) exigerBornes(refmask, 'motion')
   // même remux anti-flux-DATA que motion-split : les vidéos iPhone embarquent un
   // flux « mebx » que ffmpeg refuse de décoder → on garde vidéo+audio seulement.
   // ⚠ 0:a:0 (PREMIÈRE piste audio seulement) et pas 0:a : certaines captures iPhone
@@ -565,7 +599,7 @@ async function composeMotionBg(jobDir, outPath, plan) {
       '-r', '30', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19',
       '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest',
       '-movflags', '+faststart', outPath)
-    execFileSync('ffmpeg', args, { stdio: 'pipe' })
+    execFileSync('ffmpeg', args, { stdio: 'pipe', timeout: FFMPEG_MAX_MS })
   }
   let usedPatch = patchOK
   try {
@@ -609,8 +643,11 @@ function camOrganiqueFilter(W, H) {
 // → « Sous-titres » coupé = vidéo SANS musique (vidéo existante, voix native). Renvoie le fichier local ou null.
 async function genSubsMusicFile(plan, dir) {
   if (!(plan.music && plan.music.url)) return null
-  if (!/^https?:/i.test(plan.music.url) || (await _urlBlockedSSRF(plan.music.url))) {   // M5 (audit 14/09) : anti-SSRF (résolution DNS + plages internes)
-    console.warn('gen-subs musique refusée (SSRF/hôte interne):', String(plan.music.url).slice(0, 120))
+  // Audit 04/10 (GEN-5) : seule la banque du site (https://avatarads.fr/assets/music/<nom>.mp3) est téléchargée — le contrôle
+  // DNS puis le fetch résolvaient deux fois (rebinding vers le réseau privé). Une autre adresse → vidéo SANS musique, jamais
+  // un échec du rendu. Le contrôle anti-SSRF reste en seconde barrière.
+  if (!musiqueBanqueSure(plan.music.url) || (await _urlBlockedSSRF(plan.music.url))) {   // M5 (audit 14/09) : anti-SSRF (résolution DNS + plages internes)
+    console.warn('gen-subs musique refusée (hors banque du site):', String(plan.music.url).slice(0, 120).replace(/[^\w:/.%-]/g, '?'))
     return null
   }
   try {
@@ -647,6 +684,7 @@ function genSubsMusicMix(inIdx, D, musVol, baseHasAudio) {
 async function composeGenSubs(jobDir, outPath, plan) {
   const orig = join(jobDir, 'base.mp4')
   if (!existsSync(orig)) throw new Error('base.mp4 manquant (compose gen-subs)')
+  exigerBornes(orig, 'gen-subs')   // Audit 04/10 (GEN-4) : la durée réelle fait foi → bornée, comme la résolution
   const W = 1080, H = 1920
   const baseDur = parseFloat(ffprobe(orig, 'format=duration')) || Number(plan.duration) || 5
   // #dur-fix (Axel 30/08) : la VRAIE durée de la vidéo uploadée (ffprobe base.mp4) FAIT FOI, POINT.
@@ -720,7 +758,7 @@ async function composeGenSubs(jobDir, outPath, plan) {
         else argsF.push('-an')
       }
       argsF.push('-t', String(D), '-movflags', '+faststart', outPath)
-      execFileSync('ffmpeg', argsF, { stdio: 'pipe' })
+      execFileSync('ffmpeg', argsF, { stdio: 'pipe', timeout: FFMPEG_MAX_MS })
       console.log(`✅ gen-subs RAPIDE (${(_copyOk && !camOn) ? 'copie h264 sans ré-encodage' : 'normalisation encodée'}${camOn ? ' + caméra réaliste' : ''} · audio${musicPathF ? ' + musique ' + Math.round(musVolF*100) + '%' : ''} + faststart, ${D}s) → ${outPath}`)
     } finally {
       if (musDir) { try { rmSync(musDir, { recursive: true, force: true }) } catch (_) { /* nettoyage best-effort */ } }
@@ -799,7 +837,7 @@ async function composeGenSubs(jobDir, outPath, plan) {
     }
     args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p',
       '-t', String(D), '-movflags', '+faststart', outPath)
-    execFileSync('ffmpeg', args, { stdio: 'pipe' })
+    execFileSync('ffmpeg', args, { stdio: 'pipe', timeout: FFMPEG_MAX_MS })
     console.log(`✅ gen-subs OVERLAY (sous-titres + audio d'origine${musicPath ? ' + musique ' + Math.round(musVol*100) + '%' : ''}, ${D}s) → ${outPath}`)
   } finally {
     try { rmSync(proj, { recursive: true, force: true }) } catch (_) { /* nettoyage best-effort */ }
@@ -3046,15 +3084,21 @@ async function pollLoop() {
   process.on('SIGINT', () => { rendreLaMain('SIGINT') })
   console.log('🎼 render-worker en écoute (poll 5 s)…')
 
+  // Audit 04/10 (MCP-3) : FILE ÉQUITABLE entre comptes. Le moteur rend un job à la fois, le plus ancien d'abord : un compte qui
+  // empilait des rendus (le MCP insère ses jobs sans le plafond « 2 en cours » de render-job) faisait attendre tous les autres
+  // derrière lui. Dans chaque classe (prioritaire, puis normale), si le plus ancien job est celui du compte servi juste avant, le
+  // plus ancien d'un AUTRE compte passe devant (prochainJob, securite.mjs). Un seul compte en file : ordre inchangé. Seuls id et
+  // compte sont lus pour choisir (les plans pèsent jusqu'à 512 Ko), puis le job retenu est relu en entier.
+  let dernierCompte = null
+
   for (;;) {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
-      const { data: prio } = await sb.from('render_jobs').select('*').eq('status', 'queued')
-        .in('plan->>__compose', ['retouche', 'mc-ref']).order('created_at').limit(1)   // + préparation des vidéos MCP (02/10)
-      const { data: jobs } = prio && prio.length ? { data: prio } : await sb.from('render_jobs').select('*').eq('status', 'queued')
-        .order('created_at').limit(1)
-      const job = jobs && jobs[0]
-      if (!job) { await new Promise((r) => setTimeout(r, 2000)); continue }   // #vitesse (02/09) : 5 s → 2 s de latence de prise
+      // + préparation des vidéos MCP (02/10)
+      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref'])
+      if (!cand) { await new Promise((r) => setTimeout(r, 2000)); continue }   // #vitesse (02/09) : 5 s → 2 s de latence de prise
+      const { data: job } = await sb.from('render_jobs').select('*').eq('id', cand.id).eq('status', 'queued').maybeSingle()
+      if (!job) { await new Promise((r) => setTimeout(r, 500)); continue }   // pris par un autre moteur entre-temps (ou hoquet DB)
 
       // claim atomique : queued → rendering (un seul worker gagne)
       const { data: claimed } = await sb.from('render_jobs')
@@ -3063,6 +3107,7 @@ async function pollLoop() {
       if (!claimed || !claimed.length) continue
 
       jobEnCours = job.id
+      dernierCompte = job.user_id
 
       // ── DÉCLENCHEUR « ANIMS BLANCHES » ────────────────────────────────────
       // Un job dont le plan porte __batchBlank ne rend pas un montage : il
