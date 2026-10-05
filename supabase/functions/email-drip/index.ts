@@ -22,6 +22,10 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const CRON_SECRET    = Deno.env.get('CRON_SECRET') ?? ''   // OBLIGATOIRE : verrouille le déclenchement
 const APP_URL        = 'https://avatarads.fr/app/'
 const MAX_SENDS      = 40     // par exécution (rate-limit Resend)
+// Quota Resend : plan gratuit = 100 e-mails / 24 h TOUS envois confondus (codes de connexion OTP, paiements…).
+// Les séquences n'en prennent jamais plus de DAILY_CAP sur 24 h glissantes : le reste est gardé pour les OTP.
+// Avec le plan Resend à 20 $ (50 000 / mois, sans limite quotidienne), remonter à 1000.
+const DAILY_CAP      = 60
 const Z0_LIVE        = true   // e-mail « 0 crédit » validé par Axel le 06/10
 const DAY            = 86400_000
 
@@ -69,6 +73,14 @@ serve(async (req) => {
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
   const now = Date.now()
   let sent = 0
+  // Budget de l'exécution : MAX_SENDS, borné par ce qu'il reste du quota quotidien des séquences
+  const { count: used } = await sb.from('email_log').select('id', { count: 'exact', head: true })
+    .gte('sent_at', new Date(now - DAY).toISOString()).or('kind.like.v2_*,kind.eq.welcome')
+  const budget = Math.min(MAX_SENDS, DAILY_CAP - (used ?? DAILY_CAP))
+  if (budget <= 0) {
+    console.log(`📬 email-drip: quota du jour atteint (${used}/${DAILY_CAP} sur 24 h), rien envoyé`)
+    return json({ ok: true, sent: 0, skipped: `quota du jour atteint (${used}/${DAILY_CAP})` })
+  }
   const report: Record<string, number> = {}
 
   // Journalise AVANT d'envoyer (contrainte unique = anti-doublon même en cas d'appels concurrents)
@@ -124,7 +136,7 @@ serve(async (req) => {
     const last = await logsFor(list.map((u) => u.id))
     const today = new Date(now)
     for (const u of list) {
-      if (sent >= MAX_SENDS) break
+      if (sent >= budget) break
       const age = now - Date.parse(u.drip_anchor)
       const l = last.get(u.id) ?? { at: 0, legacyAt: 0 }
       // Transition : après un e-mail de l'ancienne série, on attend 20 h (jamais deux e-mails le même jour)
@@ -142,7 +154,7 @@ serve(async (req) => {
 
   // ── 2) Clients : première vidéo, relance d'inactivité, 0 crédit, l'idée de la semaine ──
   // Point de départ = bienvenue envoyée par whop-webhook (email_log 'welcome'), sinon création du compte.
-  if (sent < MAX_SENDS) {
+  if (sent < budget) {
     const { data: users } = await sb.from('profiles')
       .select('id, email, first_name, plan, created_at, credits_remaining, whop_cancel_at_period_end')
       .in('plan', ['starter', 'pro', 'elite']).eq('email_optout', false)
@@ -161,7 +173,7 @@ serve(async (req) => {
     }
     const month = new Date(now).toISOString().slice(0, 7).replace('-', '')
     for (const u of list) {
-      if (sent >= MAX_SENDS) break
+      if (sent >= budget) break
       const l = last.get(u.id) ?? { at: 0, legacyAt: 0 }
       if (now - l.at < CLIENT_GAP) continue
       const start = welcomeAt.get(u.id) ?? Date.parse(u.created_at)
