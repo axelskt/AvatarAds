@@ -76,11 +76,8 @@ serve(async (req) => {
   // Budget de l'exécution : MAX_SENDS, borné par ce qu'il reste du quota quotidien des séquences
   const { count: used } = await sb.from('email_log').select('id', { count: 'exact', head: true })
     .gte('sent_at', new Date(now - DAY).toISOString()).or('kind.like.v2_*,kind.eq.welcome')
-  const budget = Math.min(MAX_SENDS, DAILY_CAP - (used ?? DAILY_CAP))
-  if (budget <= 0) {
-    console.log(`📬 email-drip: quota du jour atteint (${used}/${DAILY_CAP} sur 24 h), rien envoyé`)
-    return json({ ok: true, sent: 0, skipped: `quota du jour atteint (${used}/${DAILY_CAP})` })
-  }
+  // Seule exception : l'e-mail d'inscription (p0, fenêtre de 2 h, un par nouvel inscrit) part même quota atteint.
+  const budget = Math.max(0, Math.min(MAX_SENDS, DAILY_CAP - (used ?? DAILY_CAP)))
   const report: Record<string, number> = {}
 
   // Journalise AVANT d'envoyer (contrainte unique = anti-doublon même en cas d'appels concurrents)
@@ -124,6 +121,7 @@ serve(async (req) => {
   // donc toute trace d'achat (whop_member_id posé ou bought_credits > 0). drip_anchor = created_at par défaut ;
   // le remettre à now() REDÉMARRE la série pour un compte.
   {
+    if (budget === 0) console.log(`📬 email-drip: quota du jour atteint (${used}/${DAILY_CAP} sur 24 h) — seul p0 part`)
     const { data: users } = await sb.from('profiles')
       .select('id, email, first_name, drip_anchor')
       .eq('plan', 'free').eq('email_optout', false)
@@ -136,13 +134,17 @@ serve(async (req) => {
     const last = await logsFor(list.map((u) => u.id))
     const today = new Date(now)
     for (const u of list) {
-      if (sent >= budget) break
+      if (sent >= MAX_SENDS) break
       const age = now - Date.parse(u.drip_anchor)
       const l = last.get(u.id) ?? { at: 0, legacyAt: 0 }
       // Transition : après un e-mail de l'ancienne série, on attend 20 h (jamais deux e-mails le même jour)
       if (now - l.legacyAt < 20 * 3600_000) continue
       const step = PROSPECT_STEPS.find((s) => age >= s.from && age < s.to)
-      if (step) { await sendV2(u, BY_ID[step.id], `v2_${step.id}`); continue }
+      if (step) {
+        if (step.id === 'p0' || sent < budget) await sendV2(u, BY_ID[step.id], `v2_${step.id}`)
+        continue
+      }
+      if (sent >= budget) continue
       if (age >= LONG_START) {
         if (now - l.at < CLIENT_GAP) continue
         const k = Math.floor((age - LONG_START) / LONG_EVERY)
