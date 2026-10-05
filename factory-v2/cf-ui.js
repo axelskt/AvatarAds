@@ -859,7 +859,7 @@
   // Liste de CF.tk (colonnes sans secret de tiktok_accounts, état du jeton calculé par le store), « Connecter un compte
   // TikTok » (OAuth, popup ouverte dans le clic) et « Reconnecter » par compte à traiter. Jamais un jeton à l'écran.
   var TK_ST = { valid: ['valide', 'is-ok'], reconnect: ['à reconnecter', 'is-warn'], expired: ['expiré', 'is-ko'], replaced: ['remplacé', ''] };
-  function tkName(a) { return a.name || 'compte …' + a.openId.slice(-4); }
+  function tkName(a) { return a.handle ? '@' + a.handle : a.name || 'compte …' + a.openId.slice(-4); }
   function tkWhy(a) {
     if (a.state === 'replaced') return 'ancienne connexion, compte reconnecté le ' + dmy(new Date(a.replacedAt)) + ' : plus utilisée pour les brouillons';
     if (a.state === 'expired') return 'jeton de rafraîchissement expiré le ' + dmy(new Date(a.refreshExp)) + ' : les brouillons échouent, reconnecte ce compte';
@@ -875,7 +875,8 @@
     var soon = a.state === 'valid' && a.reason === 'soon', act = a.state === 'reconnect' || a.state === 'expired' || soon;
     return '<div class="cf-tk-row' + (a.state === 'replaced' ? ' is-old' : '') + '" data-tk="' + esc(a.state) + '">'
       + '<span class="cf-tk-pic" aria-hidden="true">' + svg(IC.tiktok, 16) + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async" loading="lazy">' : '') + '</span>'
-      + '<span class="cf-tk-main"><b>' + esc(tkName(a)) + '</b><span class="cf-meta">' + esc('identifiant …' + a.openId.slice(-4) + (when ? ' · relié le ' + dmy(when) + ' à ' + hm(when) : '')) + '</span></span>'
+      + '<span class="cf-tk-main"><b>' + esc(tkName(a)) + '</b><span class="cf-meta">' + esc((a.handle && a.name ? a.name + ' · ' : '') + 'identifiant …' + a.openId.slice(-4) + (when ? ' · relié le ' + dmy(when) + ' à ' + hm(when) : ''))
+        + ' · <button type="button" class="cf-link-btn" data-act="tk-handle" data-k="' + esc(a.openId) + '">' + (a.handle ? 'modifier le @' : 'ajouter le @') + '</button></span></span>'
       + '<span class="cf-tk-st"><span class="cf-tk-chips"><span class="cf-qchip ' + st[1] + '">' + esc(st[0]) + '</span>'
       + (a.own ? '' : '<span class="cf-qchip">hors de nos comptes</span>') + '</span>'
       + '<span class="cf-tk-why' + (soon ? ' is-warn' : '') + '">' + esc(tkWhy(a)) + '</span></span>'
@@ -918,6 +919,20 @@
       + '<div class="cf-tk-hint">' + svg(IC.info, 14) + '<span>Plusieurs comptes : TikTok relie le compte déjà ouvert dans ce navigateur. Entre deux comptes, '
       + 'déconnecte-toi de TikTok (tiktok.com, profil, Se déconnecter), ou utilise une fenêtre privée : ouvre-y Factory V2, connecte-toi au tableau de bord, '
       + 'puis « Connecter un compte TikTok ». Jamais de jeton affiché ici : seulement son état.</span></div></section>';
+  }
+  // @ saisi à la main (06/10) : l'app TikTok ne donne que le nom affiché, pas le @
+  function tkHandle(openId) {
+    var a = (CF.tk.data ? CF.tk.data.list : []).filter(function (x) { return x.openId === openId; })[0];
+    if (!a) return;
+    var v = window.prompt('@ TikTok de « ' + (a.name || 'ce compte') + ' » (vide pour l’effacer) :', a.handle ? '@' + a.handle : '@');
+    if (v === null) return;
+    v = String(v).trim().replace(/^@+/, '');
+    if (v && !/^[A-Za-z0-9._]{2,24}$/.test(v)) { ui.tkRecon = { ok: false, at: Date.now(), text: '@ invalide : lettres, chiffres, points et _ uniquement (2 à 24).' }; schedule(); return; }
+    CF.tkSetHandle(openId, v).then(function (r) {
+      ui.tkRecon = r.ok ? { ok: true, at: Date.now(), text: v ? '@' + v + ' enregistré pour « ' + (a.name || 'ce compte') + ' ».' : '@ effacé.' }
+        : { ok: false, at: Date.now(), text: 'Enregistrement du @ impossible : ' + r.error };
+      schedule();
+    });
   }
   function tkStart(who) {
     var at = Date.now();
@@ -3700,6 +3715,7 @@
       else if (act === 'home-retry') { var src = el.getAttribute('data-src'); if (src === 'prod') CF.loadProd({ force: true }); else if (src === 'prov') CF.loadProviders({ force: true }); else if (src === 'tk') CF.loadTk({ force: true }); }
       // ── comptes TikTok (Audit 02/10) ──
       else if (act === 'tk-connect') tkStart(el.getAttribute('data-k'));   // la popup s'ouvre dans ce clic (Safari)
+      else if (act === 'tk-handle') tkHandle(el.getAttribute('data-k'));
       else if (act === 'retry-tk') CF.loadTk({ force: true });
       else if (act === 'tk-goto') { var tg = $('cfTkSec'); if (tg && tg.scrollIntoView) tg.scrollIntoView({ block: 'start' }); }
       // ── onglet Production ──

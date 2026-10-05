@@ -183,9 +183,29 @@ Deno.serve(async (req) => {
     return json({ connected: !!(data && data.length), account: data?.[0] || null })
   }
 
+  // 3a) @ d'un compte, saisi à la main dans Factory V2 (06/10) : l'app n'a pas le scope user.info.profile (username).
+  //     body { open_id, handle } ; reporté sur les autres lignes du même nom affiché (ancienne connexion Sandbox et
+  //     nouvelle connexion production n'ont pas le même open_id). handle vide = effacé.
+  if (action === 'handle') {
+    if (req.method !== 'POST') return json({ error: 'POST requis' }, 405)
+    let body: Record<string, unknown> = {}
+    try { body = await req.json() } catch { /* ignore */ }
+    const openId = String(body.open_id || '')
+    const handle = String(body.handle || '').trim().replace(/^@+/, '')
+    if (!/^[\w.:=+\/-]{4,200}$/.test(openId)) return json({ error: 'compte invalide' }, 400)
+    if (handle && !/^[A-Za-z0-9._]{2,24}$/.test(handle)) return json({ error: '@ invalide : lettres, chiffres, points et _ uniquement (2 à 24)' }, 400)
+    const { data: acc } = await svc.from('tiktok_accounts').select('display_name').eq('open_id', openId).maybeSingle()
+    if (!acc) return json({ error: 'compte introuvable' }, 404)
+    let q = svc.from('tiktok_accounts').update({ handle: handle || null })
+    q = acc.display_name ? q.eq('display_name', acc.display_name) : q.eq('open_id', openId)
+    const { error } = await q
+    if (error) return json({ error: 'enregistrement impossible' }, 500)
+    return json({ ok: true, handle: handle || null })
+  }
+
   // 3b) liste des comptes connectés (pour l'UI — jamais les tokens)
   if (action === 'accounts') {
-    const { data } = await svc.from('tiktok_accounts').select('open_id, display_name, avatar_url, updated_at').order('updated_at', { ascending: false })
+    const { data } = await svc.from('tiktok_accounts').select('open_id, display_name, handle, avatar_url, updated_at').order('updated_at', { ascending: false })
     return json({ accounts: data || [] })
   }
 

@@ -130,6 +130,7 @@
     loadYt: loadYt,
     loadTk: loadTk,
     tkConnect: tkConnect,
+    tkSetHandle: tkSetHandle,
     TK_OWN_NAMES: TK_OWN_NAMES.slice(),
     TK_PROD_SINCE: TK_PROD_SINCE,
     prefetch: prefetch,
@@ -1280,7 +1281,7 @@
   //   replaced   ancienne connexion (Sandbox, expirée…) d'un compte reconnecté depuis (même nom affiché, ligne valide plus
   //              récente) : la ligne reste en base (aucune suppression côté client), elle n'est plus à traiter
   // Un jeton d'accès (expires_at) dépassé n'est PAS une alerte : freshToken le renouvelle à chaque envoi.
-  var TK_COLS = 'open_id,display_name,avatar_url,scope,expires_at,refresh_expires_at,created_at,updated_at';
+  var TK_COLS = 'open_id,display_name,handle,avatar_url,scope,expires_at,refresh_expires_at,created_at,updated_at';
   var TK_MAX = 100;
   var TK_SOON_MS = 14 * 864e5;
   var TK_WATCH_MS = 15 * 60 * 1000;
@@ -1298,7 +1299,8 @@
     var id = tkOpenId(a && a.open_id);
     if (!id) return null;
     var av = str(a.avatar_url);
-    return { openId: id, name: txt(a.display_name, 80), scope: txt(a.scope, 200),
+    var h = str(a.handle);
+    return { openId: id, name: txt(a.display_name, 80), handle: h && /^[A-Za-z0-9._]{2,24}$/.test(h) ? h : null, scope: txt(a.scope, 200),
       avatar: av && /^https:\/\//.test(av) && !/[\s"'<>\\]/.test(av) ? av.slice(0, 1500) : null,
       accessExp: ms(a.expires_at), refreshExp: ms(a.refresh_expires_at), created: ms(a.created_at), updated: ms(a.updated_at),
       own: tkOwnRank(a.display_name) >= 0 };
@@ -1312,6 +1314,13 @@
   function tkList(rows, now) {
     var L = rows.map(normTk).filter(Boolean);
     L.forEach(function (a) { var s = tkState(a, now); a.state = s.state; a.reason = s.reason; a.replacedAt = null; });
+    // @ saisi à la main (06/10) : une connexion sans @ reprend celui d'une autre connexion du même nom affiché
+    // (Sandbox puis production = deux open_id pour le même compte TikTok)
+    L.forEach(function (a) {
+      if (a.handle || !a.name) return;
+      var w = L.filter(function (b) { return b.handle && tkNorm(b.name) === tkNorm(a.name); })[0];
+      if (w) a.handle = w.handle;
+    });
     L.forEach(function (a) {
       if (a.state === 'valid' || !a.name) return;
       var by = L.filter(function (b) { return b !== a && b.state === 'valid' && tkNorm(b.name) === tkNorm(a.name) && (b.updated || 0) > (a.updated || 0); })[0];
@@ -1382,6 +1391,23 @@
         return { ok: true };
       })
       .catch(function () { return fail('réseau indisponible'); });
+  }
+  // @ d'un compte (06/10) : écrit par l'edge tiktok-auth?action=handle (session owner), puis relecture de la liste.
+  function tkSetHandle(openId, handle) {
+    logNet('tiktok-auth?action=handle');
+    return (sb ? sb.auth.getSession() : Promise.resolve(null))
+      .then(function (r) {
+        var tok = r && r.data && r.data.session && r.data.session.access_token;
+        if (!tok) return { ok: false, error: 'session absente : reconnecte-toi au tableau de bord' };
+        return fetch(FN + 'tiktok-auth?action=handle', { method: 'POST', cache: 'no-store',
+          headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ open_id: openId, handle: handle }) })
+          .then(function (resp) { return resp.json().catch(function () { return {}; }).then(function (d) {
+            return resp.ok && d && d.ok ? { ok: true } : { ok: false, error: (d && d.error ? String(d.error) : 'HTTP ' + resp.status).slice(0, 200) };
+          }); });
+      })
+      .then(function (x) { if (x.ok) return loadTk({ force: true }).then(function () { return x; }); return x; })
+      .catch(function () { return { ok: false, error: 'réseau indisponible' }; });
   }
   // Popup refermée (ou 15 min écoulées) : on relit la liste, même si le message du callback n'est pas arrivé.
   function tkWatch(w) {
