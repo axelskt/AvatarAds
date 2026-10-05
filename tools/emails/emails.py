@@ -230,7 +230,7 @@ ZERO = [
        preheader='Plutôt bon signe : ça veut dire que tu publies.', titre='Tu as tout utilisé ce mois-ci',
        corps=[
          'Tes crédits du mois sont épuisés. C’est plutôt bon signe : ça veut dire que tu produis, et c’est la régularité qui fait les vues.',
-         'Une série comme celle-ci, trois visuels pour le même produit, c’est ce qui fait tourner un compte semaine après semaine :',
+         'Deux vidéos UGC et un visuel produit, chacun pour un produit différent : c’est ce genre de contenu, publié chaque semaine, qui fait tourner un compte :',
          VISUEL,
          'Pour ne pas casser ton rythme, deux options :',
          ('liste', [
@@ -284,6 +284,6 @@ VISUELS = {
          'À gauche la vidéo brute, à droite après Montage IA : une animation qui illustre ce qu’il dit, en split screen.'),
   'w5': ('imagesia-createurs.jpg', 'Trois créatrices UGC générées avec Images IA',
          'Trois créatrices générées avec Images IA à partir d’une seule phrase.'),
-  'z0': ('credits-serie.jpg', 'Trois visuels publicitaires pour la même canette à la pêche',
-         'Trois visuels pour la même canette, trois angles différents, générés avec Images IA.'),
+  'z0': ('credits-trio.jpg', 'Un créateur avec un parfum, une créatrice avec un sérum et un visuel publicitaire pour une canette',
+         'Un parfum, un sérum, une canette : deux vidéos UGC et un visuel produit, générés avec AvatarAds.'),
 }

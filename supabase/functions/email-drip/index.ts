@@ -22,7 +22,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const CRON_SECRET    = Deno.env.get('CRON_SECRET') ?? ''   // OBLIGATOIRE : verrouille le déclenchement
 const APP_URL        = 'https://avatarads.fr/app/'
 const MAX_SENDS      = 40     // par exécution (rate-limit Resend)
-const Z0_LIVE        = false  // e-mail « 0 crédit » : en attente de validation d'Axel (06/10)
+const Z0_LIVE        = true   // e-mail « 0 crédit » validé par Axel le 06/10
 const DAY            = 86400_000
 
 const BY_ID: Record<string, Mail> = Object.fromEntries([...PROSPECTS, ...LONGUE, ...CLIENTS, ...ROTATION, ...ZERO].map((m) => [m.id, m]))

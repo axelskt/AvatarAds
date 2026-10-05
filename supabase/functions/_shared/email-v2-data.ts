@@ -436,7 +436,7 @@ export const ZERO: Mail[] = [
   "titre": "Tu as tout utilisé ce mois-ci",
   "corps": [
    "Tes crédits du mois sont épuisés. C’est plutôt bon signe : ça veut dire que tu produis, et c’est la régularité qui fait les vues.",
-   "Une série comme celle-ci, trois visuels pour le même produit, c’est ce qui fait tourner un compte semaine après semaine :",
+   "Deux vidéos UGC et un visuel produit, chacun pour un produit différent : c’est ce genre de contenu, publié chaque semaine, qui fait tourner un compte :",
    {
     "visuel": true
    },
@@ -449,9 +449,9 @@ export const ZERO: Mail[] = [
    },
    "<b>Recharge maintenant</b> et reprends là où tu t’es arrêté."
   ],
-  "image": "credits-serie.jpg",
-  "alt": "Trois visuels publicitaires pour la même canette à la pêche",
-  "legende": "Trois visuels pour la même canette, trois angles différents, générés avec Images IA.",
+  "image": "credits-trio.jpg",
+  "alt": "Un créateur avec un parfum, une créatrice avec un sérum et un visuel publicitaire pour une canette",
+  "legende": "Un parfum, un sérum, une canette : deux vidéos UGC et un visuel produit, générés avec AvatarAds.",
   "cta": "Recharger mes crédits",
   "url": "https://avatarads.fr/app/?start=recharge"
  }

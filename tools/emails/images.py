@@ -161,8 +161,10 @@ monte_split = frame(f'{DL}/Contenue AvatarAds/Cartoon 15/montage-CARTOON15-slam-
 clio_b = blur(frame(f'{DL}/Vidéo/OMNI/Vidéo 2.mp4', 2.0), (930, 1180, 1080, 1370))
 bugatti = blur(frame(f'{DL}/Vidéo/OMNI/Vidéo 2.2.mp4', 2.0), (1040, 1180, 1080, 1400))
 imgia_ugc = region(frame(f'{DEMOS}/Image IA LP (web 1080p).mp4', 5.2), (300, 150, 1620, 930))
-# Abonnés à 0 crédit : une série de 3 visuels pour le même produit (campagne pêche, utilisée nulle part ailleurs)
-z_serie = region(frame(IM, 13.86), (30, 200, 1350, 880))   # 3 pubs de la même canette pêche
+# Abonnés à 0 crédit : 2 créateurs UGC + 1 visuel produit, 3 produits différents (Axel 06/10), utilisés nulle part ailleurs
+z_parfum = frame(f'{UGC}/Homme/avatarads-6.mp4', 2.0)                                   # créateur + parfum
+z_serum = photo(f'{DL}/Image IA /Fille/avatarads-ugc-serum-autobronzant-1a478391.png')  # créatrice + sérum autobronzant
+z_canette = region(frame(IM, 13.86), (470, 220, 910, 860), pad=0)                       # visuel produit « Ton boost naturel »
 # Démos LP
 influ4 = region(frame(IM, 22.26), (60, 200, 1800, 870))                   # 4 influenceurs UGC
 ads_campagne = region(frame(IM, 14.4), (110, 225, 1420, 870))            # « Attention, la saison arrive »
@@ -197,4 +199,4 @@ save(pair(clio_b, bugatti, 'Avant', 'Après Omni', fy=(.45, .45)), 'omni-bugatti
 save(row([cover(ugc_lvw, 2/3, .3), cover(ugc_axew, 2/3, .3), cover(ugc_svrm, 2/3, .3)]), 'ugc-createurs.jpg')  # w3 Express
 save(pair(brute, monte_split, 'Vidéo brute', 'Après Montage IA', ratio=9/16), 'montage-brute-split.jpg')  # w4 Montage IA
 save(imgia_ugc, 'imagesia-createurs.jpg')                                # w5 Images IA
-save(z_serie, 'credits-serie.jpg')                                         # z0 (0 crédit)
+save(row([cover(z_parfum, 2/3, .15), cover(z_serum, 2/3, .3), cover(z_canette, 2/3, 0)]), 'credits-trio.jpg')  # z0 (0 crédit)
