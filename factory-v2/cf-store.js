@@ -1316,14 +1316,16 @@
     L.forEach(function (a) { var s = tkState(a, now); a.state = s.state; a.reason = s.reason; a.replacedAt = null; });
     // @ saisi à la main (06/10) : une connexion sans @ reprend celui d'une autre connexion du même nom affiché
     // (Sandbox puis production = deux open_id pour le même compte TikTok)
+    // … seulement si ce nom ne porte qu'un seul @ (deux comptes peuvent avoir le même nom : @ia.axel et @ia.axl)
     L.forEach(function (a) {
       if (a.handle || !a.name) return;
-      var w = L.filter(function (b) { return b.handle && tkNorm(b.name) === tkNorm(a.name); })[0];
-      if (w) a.handle = w.handle;
+      var hs = L.filter(function (b) { return b.handle && tkNorm(b.name) === tkNorm(a.name); })
+        .map(function (b) { return b.handle; }).filter(function (h, i, arr) { return arr.indexOf(h) === i; });
+      if (hs.length === 1) a.handle = hs[0];
     });
     L.forEach(function (a) {
       if (a.state === 'valid' || !a.name) return;
-      var by = L.filter(function (b) { return b !== a && b.state === 'valid' && tkNorm(b.name) === tkNorm(a.name) && (b.updated || 0) > (a.updated || 0); })[0];
+      var by = L.filter(function (b) { return b !== a && b.state === 'valid' && (a.handle && b.handle ? a.handle === b.handle : tkNorm(b.name) === tkNorm(a.name)) && (b.updated || 0) > (a.updated || 0); })[0];   // même @ si les deux en ont un, sinon même nom
       if (by) { a.state = 'replaced'; a.replacedAt = by.updated; }
     });
     // nos comptes d'abord (ordre TK_OWN_NAMES), puis les autres, puis les anciennes connexions remplacées ; le plus récent d'abord

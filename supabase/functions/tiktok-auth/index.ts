@@ -191,8 +191,20 @@ Deno.serve(async (req) => {
       const uj = await ui.json().catch(() => ({}))
       const u = uj?.data?.user
       if (u?.display_name) {
+        // @ : une reconnexion (Sandbox → production = nouvel open_id) reprend celui de l'ancienne connexion qui a la même
+        // photo — la clé d'image du lien TikTok ne change pas tant que la photo de profil ne change pas
+        const key = String(u.avatar_url || '').match(/\/tos-[^/]+\/([0-9a-f]{32})/)?.[1]
+        let handle: string | null = null
+        if (key) {
+          const { data: prev } = await svc.from('tiktok_accounts').select('handle')
+            .neq('open_id', t.open_id).not('handle', 'is', null).like('avatar_url', `%${key}%`).limit(1)
+          handle = prev?.[0]?.handle ?? null
+        }
         const avatar = u.avatar_url ? (await keepAvatar(t.open_id, u.avatar_url)) ?? u.avatar_url : null
-        await svc.from('tiktok_accounts').update({ display_name: u.display_name, avatar_url: avatar }).eq('open_id', t.open_id)
+        const upd: Record<string, unknown> = { display_name: u.display_name, avatar_url: avatar }
+        const { data: cur } = await svc.from('tiktok_accounts').select('handle').eq('open_id', t.open_id).maybeSingle()
+        if (handle && !cur?.handle) upd.handle = handle
+        await svc.from('tiktok_accounts').update(upd).eq('open_id', t.open_id)
       }
     } catch { /* non bloquant */ }
 
@@ -218,10 +230,15 @@ Deno.serve(async (req) => {
     if (handle && !/^[A-Za-z0-9._]{2,24}$/.test(handle)) return json({ error: '@ invalide : lettres, chiffres, points et _ uniquement (2 à 24)' }, 400)
     const { data: acc } = await svc.from('tiktok_accounts').select('display_name').eq('open_id', openId).maybeSingle()
     if (!acc) return json({ error: 'compte introuvable' }, 404)
-    let q = svc.from('tiktok_accounts').update({ handle: handle || null })
-    q = acc.display_name ? q.eq('display_name', acc.display_name) : q.eq('open_id', openId)
-    const { error } = await q
+    const { error } = await svc.from('tiktok_accounts').update({ handle: handle || null }).eq('open_id', openId)
     if (error) return json({ error: 'enregistrement impossible' }, 500)
+    // Report sur les autres connexions du même nom, sauf si ce nom porte déjà un autre @ (deux comptes peuvent
+    // avoir le même nom affiché, ex. « Axel | SaaS IA » = @ia.axel et @ia.axl)
+    if (handle && acc.display_name) {
+      const { data: same } = await svc.from('tiktok_accounts').select('open_id, handle').eq('display_name', acc.display_name).neq('open_id', openId)
+      const others = new Set((same || []).map((r) => r.handle).filter((h) => h && h !== handle))
+      if (!others.size) await svc.from('tiktok_accounts').update({ handle }).eq('display_name', acc.display_name).is('handle', null)
+    }
     return json({ ok: true, handle: handle || null })
   }
 
