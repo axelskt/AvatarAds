@@ -6,3 +6,8 @@
 # L3 (06/09) : artefacts de build Netlify (générés au deploy, pas de source)
 mcp-proxy/.netlify/
 .detour-work/
+
+# Emails : visuels sources et aperçu générés (les visuels publiés sont dans assets/mail/v2)
+tools/emails/images/
+tools/emails/apercu.html
+tools/emails/__pycache__/

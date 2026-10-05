@@ -1,11 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { type Mail, render, subject, imageUrl, unsubUrl, sendResend, PROSPECT_STEPS, LONG_START, LONG_EVERY,
+  LONG_ROTATION, isBlackFridaySeason, CLIENT_GAP, ROTATION_IDS } from '../_shared/email-v2.ts'
+import { PROSPECTS, LONGUE, CLIENTS, ROTATION } from '../_shared/email-v2-data.ts'
 
 // ── Relances e-mail automatiques (Resend) ──
 // Appelée toutes les heures par le cron GitHub Actions (.github/workflows/email-drip.yml).
 // Idempotente : chaque envoi est journalisé dans email_log (unique user+kind), donc
 // des appels répétés ne renvoient jamais deux fois le même e-mail.
-//   · Non-payeurs (plan free) : +2h / +24h / +3j / +5j / +7j après l'inscription
+//   · v2 (05/10/2026, textes validés par Axel, _shared/email-v2*.ts) :
+//       - prospects (plan free) : inscription, H+2, J+1, J+3, J+5, J+7, J+10, J+14, puis une idée toutes les
+//         2 semaines dès J+28 jusqu'à l'abonnement (Black Friday en novembre) ;
+//       - clients : première vidéo (J+2 sans création), relance après 7 jours sans création, l'idée de la
+//         semaine (5 fonctionnalités en boucle), 1 e-mail tous les 2 jours au plus. La bienvenue (c0) part de whop-webhook.
 //   · Abonnés à 0 crédit : 1 relance max par mois (sauf annulation en cours)
 // Sans RESEND_API_KEY dans les secrets → no-op silencieux (déploiement dormant).
 
@@ -56,93 +63,14 @@ ${files.map(([f, alt], k) => `    <td width="33.33%" style="${k === 0 ? 'padding
   </tr></table>
   <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:8px">${legend}</div>`
 
-const GAL_CLAUDE = gallery([
-  ['feat-claude', 'AvatarAds connecté à Claude'],
-  ['step-05', 'Une vidéo diffusée sur tous les réseaux'],
-  ['gen-fan-1', 'Vidéo générée, prête à poster'],
-], 'Tu demandes, Claude génère, tu publies ✨')
-
-const GAL_MONTAGE = gallery([
-  ['feat-split', 'Vidéo en split screen'],
-  ['feat-soustitres', 'Sous-titres animés sur la vidéo montée'],
-  ['feat-editeur', 'Montage récupérable dans l\'Éditeur'],
-], 'Ton rush entre brut, il ressort monté ✨')
-
-const GAL_IMAGES = gallery([
-  ['demo-basket', 'Scène de sport ultra-réaliste générée en 4K'],
-  ['hero-bacteria', 'Personnage 3D généré par IA'],
-  ['demo-paris', 'Scène de rue générée par IA'],
-], 'Images 4K — un prompt, quelques secondes ✨')
-
 const GAL_LIPSYNC = gallery([
   ['lipsync', 'Avatar IA en lipsync, indétectable'],
   ['gen-fan-5', 'Avatar IA indiscernable d\'une vraie personne'],
   ['hero-center', 'Rendu réaliste en plein écran'],
 ], 'Ton visage, ta voix — sans jamais te filmer ✨')
 
-const GAL_EXPRESS = gallery([
-  ['gen-veo', 'Scène générée avec Veo 3.1'],
-  ['express-veo', 'Vidéo Express prête en 30 secondes'],
-  ['hero-strawberry', 'Personnage IA dans une vidéo verticale'],
-], 'Express × Veo 3.1 — une idée, une vidéo ✨')
-
-const quoteBlock = (q: string, who: string, tag: string) => `
-  <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:18px 20px;margin-top:22px">
-    <div style="color:#f59e0b;font-size:13px;letter-spacing:2px;margin-bottom:8px">★★★★★</div>
-    <div style="font-size:14px;color:#44403c;line-height:1.6;font-style:italic">« ${q} »</div>
-    <div style="font-size:12.5px;color:#78716c;margin-top:10px"><b>${who}</b> — ${tag}</div>
-  </div>`
-// Visuels de RESULTATS (ceux de la landing page) : ce que l'outil produit,
-// pas des captures d'interface.
-
-const Q_CLAUDE  = quoteBlock("J'ai lancé une boutique et une chaîne faceless en parallèle. 5 vidéos avatar le matin, je publie, je passe à autre chose.", "Karim Z.", "Dropshipping · 5 vidéos/jour")
-const Q_MONTAGE = quoteBlock("Tout est inclus, je me connecte et je génère. Avant je payais 4 abonnements séparés, là c'est tout en un. Game changer.", "Mehdi R.", "Créateur de contenu · Stack IA complète")
-const Q_IMAGES  = quoteBlock("De 2k à 60k vues de moyenne en un mois. La régularité a tout changé — je poste 3× par jour sans y penser.", "Inès B.", "Nutrition & fitness · ×30 sur les vues")
-const Q_LIPSYNC = quoteBlock("Les sous-titres et le lipsync sont bluffants. On dirait vraiment un vrai créateur qui parle. Personne ne capte que c'est IA.", "Yasmine A.", "Beauté & lifestyle · Lipsync indétectable")
-const Q_EXPRESS = quoteBlock("3 vidéos TikTok en une heure. L'une d'elles fait déjà 80k vues. 40 leads en DM le lendemain.", "Lucas M.", "E-commerce · +80k vues · 40 leads")
-
-type Stage = { kind: string; subject: string; title: string; body: (name: string) => string; cta: string; ctaUrl: string; minH: number; maxH: number; extra?: string }
 const hi = (n: string) => n ? `${n}, ` : ''
-const DRIP: Stage[] = [
-  // (a) Bienvenue immédiate des comptes Free (avant, un Free n'avait AUCUN mail de bienvenue :
-  // celui-ci ne partait que sur un paiement Whop). Fenêtre 0-2h → envoyé dès la 1ʳᵉ exécution
-  // du cron après l'inscription (≤ 1h). Dédup email_log comme les autres.
-  { kind: 'welcome_free', minH: 0, maxH: 2,
-    subject: 'Bienvenue sur AvatarAds 🎬',
-    title: 'Bienvenue à bord 🚀',
-    body: n => `${hi(n)}ton compte est prêt. AvatarAds transforme une idée, un audio ou une image en vidéo verticale montée et prête à poster — sans jamais te filmer.<br><br>Pour ta première vidéo :<br>1. Décris ton idée dans le Générateur<br>2. Choisis un avatar et pose ta voix<br>3. Clique sur Générer, l'IA s'occupe du reste.<br><br>Une question ? Réponds simplement à cet e-mail, on lit tout.`,
-    cta: 'Créer ma première vidéo →', ctaUrl: APP_URL, extra: GAL_LIPSYNC },
-
-  { kind: 'drip_2h', minH: 2, maxH: 24,
-    subject: 'Demande tes vidéos à Claude, il les fait 🤖',
-    title: 'Ils publient 10 fois pendant que tu publies une fois',
-    body: n => `${hi(n)}AvatarAds se branche directement sur Claude : tu lui demandes tes vidéos en langage normal, il les génère en série pendant que tu fais autre chose. L'algorithme récompense le volume — plus tu postes, plus tu multiplies tes chances de tomber sur la bonne audience. Résultat : tu occupes le terrain tous les jours, et ce sont tes vidéos qui remontent.`,
-    cta: 'Connecter Claude →', ctaUrl: APP_URL, extra: Q_CLAUDE + GAL_CLAUDE },
-
-  { kind: 'drip_24h', minH: 24, maxH: 72,
-    subject: 'Ton rush entre brut, il ressort monté 🎬',
-    title: 'Le montage, c\'est ce qui te prend le plus de temps',
-    body: n => `${hi(n)}tu enregistres, tu déposes, et le Montage IA fait le reste : il écoute ce que tu dis, place les zooms sur les mots forts, ajoute les sous-titres, les bruitages et les visuels au bon moment. Ce qui te prenait une soirée sur un logiciel te prend le temps d'un café — et tu récupères tout dans l'Éditeur si tu veux ajuster.`,
-    cta: 'Monter ma vidéo →', ctaUrl: APP_URL, extra: Q_MONTAGE + GAL_MONTAGE },
-
-  { kind: 'drip_3d', minH: 72, maxH: 120,
-    subject: 'Des visuels 4K qu\'on ne prend pas pour de l\'IA 🎨',
-    title: 'La qualité qui fait qu\'on regarde jusqu\'au bout',
-    body: n => `${hi(n)}Images IA sort en 4K, avec un rendu de peau qui tient le plein écran — là où la plupart des générateurs trahissent l'IA au premier zoom. C'est ce détail qui fait la différence entre une créa qu'on scrolle et une créa qu'on regarde : personne ne s'arrête sur une image qui sent la machine.`,
-    cta: 'Générer mes visuels →', ctaUrl: APP_URL, extra: Q_IMAGES + GAL_IMAGES },
-
-  { kind: 'drip_5d', minH: 120, maxH: 168,
-    subject: 'Ta voix, ton visage — sans jamais te filmer 🎙️',
-    title: 'Personne ne voit que c\'est une IA',
-    body: n => `${hi(n)}30 secondes d'enregistrement suffisent à cloner ta voix. Ton avatar parle ensuite avec TON timbre, et le lipsync est calé au mot près — tes abonnés ne font pas la différence. Plus besoin de te maquiller, de trouver la lumière ou de refaire dix prises : tu écris, il parle.`,
-    cta: 'Cloner ma voix →', ctaUrl: APP_URL, extra: Q_LIPSYNC + GAL_LIPSYNC },
-
-  { kind: 'drip_7d', minH: 168, maxH: 336,
-    subject: 'Une idée le matin, la vidéo à midi ⚡',
-    title: 'Express : de l\'idée à la vidéo, en une phrase',
-    body: n => `${hi(n)}tu écris ce que tu veux montrer, Express le fabrique avec Veo 3.1 — décor, mouvement, ambiance, tout est généré. Pas de tournage, pas de banque d'images, pas de montage. Pour moins qu'un café par jour, tu as de quoi alimenter tes réseaux toute la semaine. Si AvatarAds n'est pas pour toi, aucun souci : cet e-mail est le dernier de la série.`,
-    cta: 'Essayer Express →', ctaUrl: APP_URL, extra: Q_EXPRESS + GAL_EXPRESS },
-]
+const BY_ID: Record<string, Mail> = Object.fromEntries([...PROSPECTS, ...LONGUE, ...CLIENTS, ...ROTATION].map((m) => [m.id, m]))
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const r = await fetch('https://api.resend.com/emails', {
@@ -175,35 +103,31 @@ serve(async (req) => {
   }
   if (!RESEND_API_KEY) return new Response(JSON.stringify({ ok: true, skipped: 'RESEND_API_KEY manquant' }), { status: 200 })
 
-  // Mode APERCU : { test_to: "adresse" } envoie les 5 mails du drip a cette seule
-  // adresse, sans lire la base ni journaliser — sert a verifier le rendu reel dans
-  // une boite mail (images, largeurs, mode sombre) avant de les envoyer a de vrais
-  // inscrits. Protege par la meme cle cron que le reste.
-  let testTo = ''
-  try { testTo = String((await req.clone().json())?.test_to || '') } catch (_) { /* pas de corps JSON */ }
+  // Mode APERCU : { test_to: "adresse", test_ids?: ["p0", "w2", …] } envoie la série v2 (ou une sélection)
+  // à cette seule adresse, préfixée [TEST], sans lire la base ni journaliser. Protégé par la clé cron.
+  let testTo = '', testIds: string[] = []
+  try {
+    const j = await req.clone().json()
+    testTo = String(j?.test_to || ''); testIds = Array.isArray(j?.test_ids) ? j.test_ids.map(String) : []
+  } catch (_) { /* pas de corps JSON */ }
   if (testTo) {
-    // Garde-fou : on a déjà envoyé cinq mails dont les images n'étaient pas encore
-    // en ligne (recadrées mais jamais poussées). On vérifie donc CHAQUE URL avant
-    // d'écrire à qui que ce soit, et on refuse l'envoi s'il en manque une.
-    const html = DRIP.map((st) => String(st.extra || '')).join('')
-    const urls = [...new Set([...html.matchAll(/src="([^"]+)"/g)].map((m) => m[1]))]
+    const mails = testIds.length ? testIds.map((id) => BY_ID[id]).filter(Boolean) : Object.values(BY_ID)
+    // Garde-fou : on vérifie CHAQUE visuel avant d'écrire à qui que ce soit (images pas encore en ligne = rien envoyé)
     const broken: string[] = []
-    for (const u of urls) {
-      try {
-        const r = await fetch(u, { method: 'HEAD' })
-        if (!r.ok) broken.push(`${u} → ${r.status}`)
-      } catch (_) { broken.push(`${u} → injoignable`) }
+    for (const u of [...new Set(mails.map(imageUrl))]) {
+      try { const r = await fetch(u, { method: 'HEAD' }); if (!r.ok) broken.push(`${u} → ${r.status}`) }
+      catch (_) { broken.push(`${u} → injoignable`) }
     }
     if (broken.length) {
       return new Response(JSON.stringify({ ok: false, error: 'images cassées, rien envoyé', broken }), {
         status: 200, headers: { 'Content-Type': 'application/json' },
       })
     }
-
     const results: Record<string, boolean> = {}
-    for (const st of DRIP) {
-      results[st.kind] = await sendEmail(testTo, '[TEST] ' + st.subject,
-        tpl({ title: st.title, body: st.body('Axel'), cta: st.cta, ctaUrl: st.ctaUrl, unsubUrl: APP_URL, extra: st.extra }))
+    for (const m of mails) {
+      results[m.id] = await sendResend(RESEND_API_KEY, testTo, '[TEST] ' + subject(m, 'starter'),
+        render(m, { prenom: 'Axel', plan: 'starter', unsub: APP_URL }), APP_URL)
+      await new Promise((r) => setTimeout(r, 600))
     }
     return new Response(JSON.stringify({ ok: true, test_to: testTo, results }), {
       status: 200, headers: { 'Content-Type': 'application/json' },
@@ -221,35 +145,99 @@ serve(async (req) => {
     return !error // erreur 23505 (duplicate) → déjà envoyé
   }
 
-  // ── 1) Drip non-payeurs (free) ──
-  for (const st of DRIP) {
-    if (sent >= MAX_SENDS) break
-    const from = new Date(now - st.maxH * 3600_000).toISOString()
-    const to   = new Date(now - st.minH * 3600_000).toISOString()
-    // ── UN CLIENT QUI A PAYÉ NE REÇOIT PAS LA SÉRIE « NON-PAYEURS » (07/08) ──
-    // Les PACKS one-shot ne changent pas le plan (whop-webhook : « ne touche pas
-    // au plan ») : un acheteur de pack restait `free` et recevait les relances.
-    // On exclut donc toute trace d'achat : whop_member_id posé (paiement Whop
-    // rattaché au compte) ou bought_credits > 0.
+  // Dernier envoi (toutes séquences) et kinds déjà reçus, par compte
+  const logsFor = async (ids: string[]) => {
+    const last = new Map<string, { at: number; legacyAt: number }>()
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data } = await sb.from('email_log').select('user_id, kind, sent_at').in('user_id', ids.slice(i, i + 200))
+      for (const r of data ?? []) {
+        const t = Date.parse(r.sent_at), cur = last.get(r.user_id) ?? { at: 0, legacyAt: 0 }
+        cur.at = Math.max(cur.at, t)
+        if (!String(r.kind).startsWith('v2_')) cur.legacyAt = Math.max(cur.legacyAt, t)
+        last.set(r.user_id, cur)
+      }
+    }
+    return last
+  }
+  const sendV2 = async (u: { id: string; email: string; first_name?: string | null; plan?: string }, m: Mail, kind: string, also?: string) => {
+    if (!(await claim(u.id, u.email, kind))) return false
+    if (also) await claim(u.id, u.email, also)
+    const unsub = await unsubUrl(SUPABASE_URL, SERVICE_KEY, u.id)
+    const ok = await sendResend(RESEND_API_KEY, u.email, subject(m, u.plan || ''),
+      render(m, { prenom: u.first_name || '', plan: u.plan || '', unsub }), unsub)
+    if (ok) { sent++; report[kind.replace(/_\d+$/, '')] = (report[kind.replace(/_\d+$/, '')] || 0) + 1 }
+    await new Promise((r) => setTimeout(r, 600))
+    return ok
+  }
+
+  // ── 1) Prospects : plan free sans aucun achat ──
+  // ── UN CLIENT QUI A PAYÉ NE REÇOIT PAS LA SÉRIE « NON-PAYEURS » (07/08) ── Les packs one-shot ne changent pas
+  // le plan : on exclut toute trace d'achat (whop_member_id posé ou bought_credits > 0).
+  // drip_anchor = created_at par défaut ; le remettre à now() REDÉMARRE la série pour un compte.
+  {
     const { data: users } = await sb.from('profiles')
-      .select('id, email, first_name')
+      .select('id, email, first_name, drip_anchor')
       .eq('plan', 'free').eq('email_optout', false)
       .is('whop_member_id', null)
       .or('bought_credits.is.null,bought_credits.eq.0')
-      // 23/08 : la séquence se cale sur drip_anchor (= created_at par défaut). Remettre
-      // drip_anchor à now() REDÉMARRE la série pour un compte — c'est ce qui a rattrapé
-      // les 13 comptes privés de drip pendant la panne du cron (09→23/08).
-      .gte('drip_anchor', from).lte('drip_anchor', to)
-      .limit(MAX_SENDS)
-    for (const u of users ?? []) {
+      .not('drip_anchor', 'is', null)
+      .order('drip_anchor', { ascending: false })
+      .limit(2000)
+    const list = (users ?? []).filter((u) => u.email)
+    const last = await logsFor(list.map((u) => u.id))
+    const today = new Date(now)
+    for (const u of list) {
       if (sent >= MAX_SENDS) break
-      if (!u.email || !(await claim(u.id, u.email, st.kind))) continue
-      const unsubUrl = `${UNSUB_BASE}?u=${u.id}&k=${await unsubKey(u.id)}`
-      const ok = await sendEmail(u.email, st.subject, tpl({
-        title: st.title, body: st.body(u.first_name || ''), cta: st.cta, ctaUrl: st.ctaUrl, unsubUrl, extra: st.extra,
-      }))
-      if (ok) { sent++; report[st.kind] = (report[st.kind] || 0) + 1 }
-      await new Promise(r => setTimeout(r, 600))
+      const age = now - Date.parse(u.drip_anchor)
+      const l = last.get(u.id) ?? { at: 0, legacyAt: 0 }
+      // Transition : un compte qui a reçu un e-mail de l'ancienne série dans les 20 dernières heures attend
+      // le créneau suivant (jamais deux e-mails le même jour).
+      if (now - l.legacyAt < 20 * 3600_000) continue
+      const step = PROSPECT_STEPS.find((s) => age >= s.from && age < s.to)
+      if (step) { await sendV2(u, BY_ID[step.id], `v2_${step.id}`); continue }
+      if (age >= LONG_START) {
+        if (now - l.at < CLIENT_GAP) continue   // pas collé à un autre envoi (win-back, etc.)
+        const k = Math.floor((age - LONG_START) / LONG_EVERY)
+        if (isBlackFridaySeason(today)) await sendV2(u, BY_ID['l4'], `v2_l4_${today.getUTCFullYear()}`, `v2_l_${k}`)
+        else await sendV2(u, BY_ID[LONG_ROTATION[k % LONG_ROTATION.length]], `v2_l_${k}`)
+      }
+    }
+  }
+
+  // ── 1 bis) Clients : première vidéo, relance d'inactivité, l'idée de la semaine ──
+  // Point de départ = bienvenue envoyée par whop-webhook (email_log 'welcome'), sinon création du compte.
+  if (sent < MAX_SENDS) {
+    const { data: users } = await sb.from('profiles')
+      .select('id, email, first_name, plan, created_at')
+      .in('plan', ['starter', 'pro', 'elite']).eq('email_optout', false)
+      .limit(2000)
+    const list = (users ?? []).filter((u) => u.email)
+    const ids = list.map((u) => u.id)
+    const last = await logsFor(ids)
+    const welcomeAt = new Map<string, number>(), lastMade = new Map<string, number>()
+    if (ids.length) {
+      const { data: w } = await sb.from('email_log').select('user_id, sent_at').eq('kind', 'welcome').in('user_id', ids)
+      for (const r of w ?? []) welcomeAt.set(r.user_id, Date.parse(r.sent_at))
+      // Une création = un élément de la Bibliothèque (tout ce qui est généré y est enregistré)
+      const { data: li } = await sb.from('library_items').select('user_id, created_at').in('user_id', ids)
+        .gte('created_at', new Date(now - 60 * 86400_000).toISOString())
+      for (const r of li ?? []) lastMade.set(r.user_id, Math.max(lastMade.get(r.user_id) ?? 0, Date.parse(r.created_at)))
+    }
+    const DAY = 86400_000
+    for (const u of list) {
+      if (sent >= MAX_SENDS) break
+      const l = last.get(u.id) ?? { at: 0, legacyAt: 0 }
+      if (now - l.at < CLIENT_GAP) continue
+      const start = welcomeAt.get(u.id) ?? Date.parse(u.created_at)
+      const age = now - start
+      const made = lastMade.get(u.id) ?? 0
+      if (age >= 2 * DAY && age < 5 * DAY && made < start) { await sendV2(u, BY_ID['c1'], 'v2_c1'); continue }
+      const active = Math.max(made, start)
+      if (age >= 7 * DAY && now - active >= 7 * DAY) {
+        if (await sendV2(u, BY_ID['c2'], `v2_c2_${new Date(active).toISOString().slice(0, 10)}`)) continue
+      }
+      const week = Math.floor(age / (7 * DAY))
+      if (week >= 1) await sendV2(u, BY_ID[ROTATION_IDS[(week - 1) % ROTATION_IDS.length]], `v2_w_${week}`)
     }
   }
 

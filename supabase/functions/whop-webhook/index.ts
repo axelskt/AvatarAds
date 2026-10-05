@@ -1,6 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { crypto } from 'https://deno.land/std@0.168.0/crypto/mod.ts'
+import { render as renderV2, subject as subjectV2, unsubUrl as unsubUrlV2, sendResend } from '../_shared/email-v2.ts'
+import { CLIENTS as CLIENTS_V2 } from '../_shared/email-v2-data.ts'
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -388,6 +390,16 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
     if (opts.userId) {
       const { error } = await sb.from('email_log').insert({ user_id: opts.userId, email: opts.email, kind: 'welcome' })
       if (error) return // déjà envoyé (ex. upgrade de plan)
+    }
+    // 05/10/2026 : bienvenue v2 (c0, textes validés par Axel) — conseil pour la première heure, aucune mention
+    // de crédits. La variante « paiement reçu, compte à créer » (pending) garde l'ancien e-mail ci-dessous.
+    if (!opts.pending && opts.userId) {
+      const c0 = CLIENTS_V2.find((m) => m.id === 'c0')!
+      const unsub = await unsubUrlV2(SUPABASE_URL, SUPABASE_SERVICE_KEY, opts.userId)
+      const ok = await sendResend(RESEND_API_KEY, opts.email, subjectV2(c0, opts.plan),
+        renderV2(c0, { prenom: opts.firstName || '', plan: opts.plan, unsub }), unsub)
+      console.log(ok ? `📧 Bienvenue v2 envoyée à ${opts.email}` : `⚠️ Bienvenue v2 non envoyée à ${opts.email}`)
+      return
     }
     const label = PLAN_LABEL[opts.plan] ?? opts.plan
     // Audit 02/10 (PAY-6) : le prénom est modifiable par l'utilisateur → échappé (sinon HTML/liens injectés dans un
