@@ -180,27 +180,53 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   // ── envoi groupé vers l'iPhone, par lots de 25 ──
   // 1er clic : on télécharge les vidéos du lot (progression). 2e clic : feuille de partage du Mac (AirDrop).
   // Le partage doit partir d'un clic : il ne peut pas suivre un long téléchargement.
+  // Axel 06/10 : « très lent » en Wi-Fi → 3 vidéos en parallèle (un seul flux plafonne sur le téléphone) et progression en
+  // Mo avec la vitesse, pour voir tout de suite si c'est la connexion qui limite. 3 essais par vidéo (5G instable).
+  var PAR = 3;
+  async function fetchVideo(url, onBytes) {
+    var r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var total = +r.headers.get('content-length') || 0, got = 0, parts = [], rd = r.body && r.body.getReader && r.body.getReader();
+    if (rd) { for (;;) { var c = await rd.read(); if (c.done) break; parts.push(c.value); got += c.value.length; onBytes(c.value.length); } }
+    else { var b = new Uint8Array(await r.arrayBuffer()); parts.push(b); got = b.length; onBytes(b.length); }
+    if (total && got < total) throw new Error('connexion coupée (' + Math.round(got / 1e6) + ' / ' + Math.round(total / 1e6) + ' Mo)');
+    var buf = await new Blob(parts).arrayBuffer(); parts = null;
+    return buf;
+  }
+  function packTxt(P) {
+    var s = (Date.now() - P.t0) / 1000, sp = s > 1 ? P.mb / s : 0;
+    return 'Téléchargement ' + P.got + ' / ' + P.total + ' · ' + Math.round(P.mb) + ' Mo' + (sp ? ' · ' + sp.toFixed(1).replace('.', ',') + ' Mo/s' : '');
+  }
+  function paintPack() {   // progression sans tout redessiner (la liste garde son défilement)
+    var b = document.querySelector('[data-packprog]'), k = b && b.getAttribute('data-packprog'), P = k && S.pack[k];
+    if (P && P.state === 'loading') b.textContent = packTxt(P);
+  }
   async function preparePack(i) {
     var list = lots()[i]; if (!list) return;
     if (PHONE) { S.pack = {}; Object.keys(S.one).forEach(function (k) { if (S.one[k].state === 'ready') delete S.one[k]; }); }   // téléphone : un seul lot (ou une seule vidéo) en mémoire
-    var k = lotKey(list), P = S.pack[k] = { state: 'loading', got: 0, total: list.length, files: [] };
+    var k = lotKey(list), P = S.pack[k] = { state: 'loading', got: 0, total: list.length, files: new Array(list.length), mb: 0, t0: Date.now() };
     render();
-    try {
-      for (var j = 0; j < list.length; j++) {
-        // 5G instable : 3 essais par vidéo avant d'abandonner le lot (les vidéos déjà reçues ne sont pas retéléchargées)
-        var buf = null, err = null;
-        for (var essai = 0; essai < 3 && !buf; essai++) {
-          try { var r = await fetch(list[j].video_url, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); buf = await r.arrayBuffer(); }
-          catch (x) { err = x; await new Promise(function (ok) { setTimeout(ok, 1500); }); }
+    var base = Date.now(), next = 0, failed = null, painted = 0;
+    var tick = function (n) { P.mb += n / 1e6; if (Date.now() - painted > 400) { painted = Date.now(); paintPack(); } };
+    async function worker() {
+      while (!failed && next < list.length) {
+        var j = next++, p = list[j], buf = null, err = null;
+        for (var essai = 0; essai < 3 && !buf && !failed; essai++) {
+          var own = 0;
+          try { buf = await fetchVideo(p.video_url, function (n) { own += n; tick(n); }); }
+          catch (x) { err = x; tick(-own); await new Promise(function (ok) { setTimeout(ok, 1500); }); }
         }
-        if (!buf) throw new Error('vidéo ' + pad(num(list[j])) + ' : ' + String(err && err.message || err));
-        var when = Date.now() - (list.length - j) * 60000;
-        P.files.push(new File([stampDate(buf, when)], fileName(list[j]), { type: 'video/mp4' })); buf = null;
-        P.got = j + 1;
-        render();
+        if (!buf) { failed = failed || 'vidéo ' + pad(num(p)) + ' : ' + String(err && err.message || err); return; }
+        // Photos trie par date interne : n°01 la plus ancienne, une minute d'écart (ordre du lot, pas d'arrivée)
+        P.files[j] = new File([stampDate(buf, base - (list.length - j) * 60000)], fileName(p), { type: 'video/mp4' }); buf = null;
+        P.got++; paintPack();
       }
+    }
+    try {
+      await Promise.all(Array.from({ length: Math.min(PAR, list.length) }, worker));
+      if (failed) throw new Error(failed);
       P.state = 'ready';
-    } catch (e) { P.state = 'error'; P.error = String(e.message || e); }
+    } catch (e) { P.state = 'error'; P.error = String(e.message || e); P.files = []; }
     render();
   }
   function packOf(i) { var l = lots()[i]; return l && S.pack[lotKey(l)]; }
@@ -342,7 +368,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     var rows = L.map(function (list, i) {
       var P = S.pack[lotKey(list)], btns;
       if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep" data-i="' + i + '">' + IC.dl + (P ? 'Réessayer' : 'Préparer l’envoi') + '</button>';
-      else if (P.state === 'loading') btns = '<button type="button" class="btn dark" disabled>Préparation ' + P.got + ' / ' + P.total + '…</button>';
+      else if (P.state === 'loading') btns = '<button type="button" class="btn dark" data-packprog="' + esc(lotKey(list)) + '" disabled>' + esc(packTxt(P)) + '</button>';
       else if (P.state === 'sent') btns = '<button type="button" class="btn ghost" data-act="prep" data-i="' + i + '">' + IC.check + 'Enregistrées · refaire</button>';
       else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + (PHONE ? 'Enregistrer dans Photos' : 'Envoyer en AirDrop') + '</button>'
         + (PHONE ? '' : '<button type="button" class="btn ghost" data-act="dlall" data-i="' + i + '">' + IC.dl + 'Télécharger</button>');
