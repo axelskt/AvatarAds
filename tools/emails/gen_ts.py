@@ -10,7 +10,7 @@ E = importlib.util.module_from_spec(spec); spec.loader.exec_module(E)
 
 # Les CTA de l'aperçu pointent vers #module ; l'app ouvre un module via ?start= (_applyStartTool dans app/index.html)
 START = {'express': 'express', 'motion': 'motion', 'images': 'images', 'montage': 'montage',
-         'generateur': 'gen', 'omni': 'omni', 'audio': 'audio'}
+         'generateur': 'gen', 'omni': 'omni', 'audio': 'audio', 'recharge': 'recharge'}
 
 def url(u):
     m = re.match(r'^(https://avatarads\.fr/app/)#(\w+)$', u)
@@ -30,14 +30,14 @@ def mail(m):
 out = ['// GÉNÉRÉ par tools/emails/gen_ts.py depuis tools/emails/emails.py — ne pas éditer à la main.',
        '// Textes et visuels validés par Axel le 05/10/2026. {plan} est remplacé à l\'envoi.',
        "import type { Mail } from './email-v2.ts'", '']
-for name in ('PROSPECTS', 'LONGUE', 'CLIENTS', 'ROTATION'):
+for name in ('PROSPECTS', 'LONGUE', 'CLIENTS', 'ROTATION', 'ZERO'):
     data = [mail(m) for m in getattr(E, name)]
     out.append(f'export const {name}: Mail[] = ' + json.dumps(data, ensure_ascii=False, indent=1) + '\n')
 dst = os.path.join(REPO, 'supabase', 'functions', '_shared', 'email-v2-data.ts')
 open(dst, 'w', encoding='utf-8').write('\n'.join(out))
 
 os.makedirs(os.path.join(REPO, 'assets', 'mail', 'v2'), exist_ok=True)
-used = {E.VISUELS[m['id']][0] for n in ('PROSPECTS', 'LONGUE', 'CLIENTS', 'ROTATION') for m in getattr(E, n)}
+used = {E.VISUELS[m['id']][0] for n in ('PROSPECTS', 'LONGUE', 'CLIENTS', 'ROTATION', 'ZERO') for m in getattr(E, n)}
 for f in used:
     shutil.copy2(os.path.join(HERE, 'images', f), os.path.join(REPO, 'assets', 'mail', 'v2', f))
 print('ok', dst, len(used), 'visuels')

@@ -81,6 +81,7 @@ page = f'''<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name
 {section("2. Prospects : la suite, toutes les deux semaines", "Rotation de fonctionnalités, plus une idée de saison selon le mois.", E.LONGUE)}
 {section("3. Clients : prise en main", "Bienvenue, première vidéo, et une relance après 7 jours sans création. Uniquement du conseil.", E.CLIENTS)}
 {section("4. Clients : l’idée de la semaine", "Une fonctionnalité par semaine, chaque e-mail annonce la suivante, puis la boucle recommence. Un e-mail tous les deux jours au plus, toutes séquences confondues.", E.ROTATION)}
+{section("5. Abonnés à 0 crédit", "Remplace « Plus de crédits ⚡ Recharge en 1 clic ». Une fois par mois au plus, jamais pendant une annulation en cours.", E.ZERO)}
 </main></body></html>'''
 open(os.path.join(os.path.dirname(__file__), 'apercu.html'), 'w', encoding='utf-8').write(page)
-print('ok', len(E.PROSPECTS) + len(E.LONGUE) + len(E.CLIENTS) + len(E.ROTATION), 'e-mails')
+print('ok', len(E.PROSPECTS) + len(E.LONGUE) + len(E.CLIENTS) + len(E.ROTATION) + len(E.ZERO), 'e-mails')

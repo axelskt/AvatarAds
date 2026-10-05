@@ -71,18 +71,21 @@ export function render(m: Mail, o: { prenom?: string; plan?: string; unsub: stri
 </body></html>`
 }
 
-// Envoi Resend avec en-têtes de désinscription en un clic (Gmail / Apple Mail)
-export async function sendResend(apiKey: string, to: string, subj: string, html: string, unsub: string): Promise<boolean> {
+// Envoi Resend avec en-têtes de désinscription en un clic (Gmail / Apple Mail) et un tag « mail » (p0, w3…)
+// pour retrouver l'e-mail dans Resend. Renvoie l'identifiant Resend (clé des statistiques), ou null en cas d'échec.
+export async function sendResend(apiKey: string, to: string, subj: string, html: string, unsub: string, tag = ''): Promise<string | null> {
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: FROM, to: [to], subject: subj, html,
       headers: { 'List-Unsubscribe': `<${unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+      ...(tag ? { tags: [{ name: 'mail', value: tag.replace(/[^A-Za-z0-9_-]/g, '_') }] } : {}),
     }),
   })
-  if (!r.ok) console.error(`❌ Resend ${r.status} pour ${to}:`, (await r.text().catch(() => '')).slice(0, 300))
-  return r.ok
+  if (!r.ok) { console.error(`❌ Resend ${r.status} pour ${to}:`, (await r.text().catch(() => '')).slice(0, 300)); return null }
+  const j = await r.json().catch(() => ({}))
+  return typeof j?.id === 'string' ? j.id : 'sans-id'
 }
 
 // ── Calendrier ──

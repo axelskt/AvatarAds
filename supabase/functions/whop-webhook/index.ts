@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { crypto } from 'https://deno.land/std@0.168.0/crypto/mod.ts'
-import { render as renderV2, subject as subjectV2, unsubUrl as unsubUrlV2, sendResend } from '../_shared/email-v2.ts'
+import { type Mail as MailV2, render as renderV2, subject as subjectV2, unsubUrl as unsubUrlV2, sendResend } from '../_shared/email-v2.ts'
 import { CLIENTS as CLIENTS_V2 } from '../_shared/email-v2-data.ts'
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!
@@ -391,40 +391,34 @@ async function sendWelcomeEmail(sb: any, opts: { userId?: string; email: string;
       const { error } = await sb.from('email_log').insert({ user_id: opts.userId, email: opts.email, kind: 'welcome' })
       if (error) return // déjà envoyé (ex. upgrade de plan)
     }
-    // 05/10/2026 : bienvenue v2 (c0, textes validés par Axel) — conseil pour la première heure, aucune mention
-    // de crédits. La variante « paiement reçu, compte à créer » (pending) garde l'ancien e-mail ci-dessous.
+    // 05/10/2026 : bienvenue v2 (c0, textes validés par Axel) — conseil pour la première heure, aucune mention de
+    // crédits. L'identifiant Resend est rangé dans email_log (statistiques, vue email_stats).
     if (!opts.pending && opts.userId) {
       const c0 = CLIENTS_V2.find((m) => m.id === 'c0')!
       const unsub = await unsubUrlV2(SUPABASE_URL, SUPABASE_SERVICE_KEY, opts.userId)
-      const ok = await sendResend(RESEND_API_KEY, opts.email, subjectV2(c0, opts.plan),
-        renderV2(c0, { prenom: opts.firstName || '', plan: opts.plan, unsub }), unsub)
-      console.log(ok ? `📧 Bienvenue v2 envoyée à ${opts.email}` : `⚠️ Bienvenue v2 non envoyée à ${opts.email}`)
+      const id = await sendResend(RESEND_API_KEY, opts.email, subjectV2(c0, opts.plan),
+        renderV2(c0, { prenom: opts.firstName || '', plan: opts.plan, unsub }), unsub, 'c0')
+      if (id) await sb.from('email_log').update({ resend_id: id, mail: 'c0' }).eq('user_id', opts.userId).eq('kind', 'welcome')
+      console.log(id ? `📧 Bienvenue v2 envoyée à ${opts.email}` : `⚠️ Bienvenue v2 non envoyée à ${opts.email}`)
       return
     }
+    // Paiement reçu, compte pas encore créé : même gabarit que les e-mails v2 (06/10), sans visuel.
     const label = PLAN_LABEL[opts.plan] ?? opts.plan
-    // Audit 02/10 (PAY-6) : le prénom est modifiable par l'utilisateur → échappé (sinon HTML/liens injectés dans un
-    // e-mail envoyé depuis bonjour@avatarads.fr).
-    const name = opts.firstName ? `${escHtml(opts.firstName)}, ` : ''
-    const body = opts.pending
-      ? `${name}ton paiement est bien enregistré ✅<br><br>Il ne reste qu'une étape : <b>crée ton compte sur avatarads.fr avec cette adresse e-mail</b> — ton plan ${label} et tes crédits s'activeront automatiquement à la connexion.`
-      : `${name}bienvenue dans AvatarAds 🎉<br><br>Ton plan <b>${label}</b> est actif avec <b>${opts.credits} crédits</b> ce mois-ci (1 crédit = 1 seconde de vidéo).<br><br>Pour ta première vidéo :<br>1️⃣ Décris ton produit dans le Générateur<br>2️⃣ Choisis un avatar et une voix<br>3️⃣ Clique sur Générer — l'IA fait le reste 🎬<br><br>Une question ? Réponds simplement à cet e-mail.`
-    const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f5f5f4;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
-      <div style="max-width:520px;margin:0 auto;padding:32px 20px">
-        <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:22px">🎬 AvatarAds</div>
-        <div style="background:#fff;border-radius:16px;padding:30px 28px;border:1px solid #e7e5e4">
-          <div style="font-size:21px;font-weight:800;color:#111;line-height:1.3;margin-bottom:14px">${opts.pending ? 'Ton plan t’attend !' : 'Bienvenue à bord 🚀'}</div>
-          <div style="font-size:15px;color:#44403c;line-height:1.65">${body}</div>
-          <img src="https://avatarads.fr/assets/mail/avatars-podium.jpg" alt="Les avatars IA d'AvatarAds" width="100%" style="display:block;border-radius:12px;border:1px solid #e7e5e4;margin-top:22px">
-          <a href="https://avatarads.fr/app/" style="display:block;text-align:center;background:#FF6B35;color:#fff;font-weight:700;font-size:15px;text-decoration:none;padding:14px 20px;border-radius:12px;margin-top:24px">${opts.pending ? 'Créer mon compte →' : 'Créer ma première vidéo →'}</a>
-        </div>
-        <div style="font-size:11.5px;color:#a8a29e;text-align:center;margin-top:18px">AvatarAds · avatarads.fr</div>
-      </div></body></html>`
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'AvatarAds <bonjour@avatarads.fr>', to: [opts.email], subject: opts.pending ? 'Ton plan AvatarAds t’attend — une dernière étape' : `Bienvenue sur AvatarAds 🎉 Ton plan ${label} est actif`, html }),
-    })
-    console.log(r.ok ? `📧 Bienvenue envoyé à ${opts.email}` : `⚠️ Resend ${r.status} pour ${opts.email}`)
+    const pendingMail: MailV2 = {
+      id: 'pending', quand: '', image: '', alt: '', legende: '',
+      objet: 'Ton plan AvatarAds t’attend, une dernière étape',
+      preheader: 'Crée ton compte avec cette adresse e-mail pour activer ton plan.',
+      titre: 'Ton plan t’attend',
+      corps: [
+        'Ton paiement est bien enregistré.',
+        `Il ne reste qu’une étape : <b>crée ton compte sur avatarads.fr avec cette adresse e-mail</b>. Ton plan ${label} s’activera automatiquement à la connexion.`,
+        '<b>Si tu bloques, réponds à ce mail</b> : je t’aide directement.',
+      ],
+      cta: 'Créer mon compte', url: 'https://avatarads.fr/app/',
+    }
+    const id = await sendResend(RESEND_API_KEY, opts.email, pendingMail.objet,
+      renderV2(pendingMail, { prenom: opts.firstName || '', plan: opts.plan, unsub: 'https://avatarads.fr/app/' }), 'https://avatarads.fr/app/', 'pending')
+    console.log(id ? `📧 E-mail « plan en attente » envoyé à ${opts.email}` : `⚠️ E-mail « plan en attente » non envoyé à ${opts.email}`)
   } catch (e) { console.error('⚠️ welcome email:', e) }
 }
 

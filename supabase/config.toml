@@ -36,6 +36,11 @@ verify_jwt = false
 [functions.ig-console]
 verify_jwt = false
 
+# Webhook Resend (statistiques e-mails, 06/10) : appelé sans jeton ; n'accepte que des événements dont
+# l'identifiant Resend existe dans email_log (un envoi à nous), rien d'autre n'est écrit.
+[functions.email-events]
+verify_jwt = false
+
 # Filets appelés par pg_cron (x-cron-key vérifié DANS la fonction, pas de JWT)
 [functions.reconcile-fal-orphans]
 verify_jwt = false

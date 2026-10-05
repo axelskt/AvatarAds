@@ -426,3 +426,33 @@ export const ROTATION: Mail[] = [
   "url": "https://avatarads.fr/app/?start=images"
  }
 ]
+
+export const ZERO: Mail[] = [
+ {
+  "id": "z0",
+  "quand": "Abonné à 0 crédit (une fois par mois au plus)",
+  "objet": "Tu as utilisé tous tes crédits du mois",
+  "preheader": "Plutôt bon signe : ça veut dire que tu publies.",
+  "titre": "Tu as tout utilisé ce mois-ci",
+  "corps": [
+   "Tes crédits du mois sont épuisés. C’est plutôt bon signe : ça veut dire que tu produis, et c’est la régularité qui fait les vues.",
+   "Une série comme celle-ci, trois visuels pour le même produit, c’est ce qui fait tourner un compte semaine après semaine :",
+   {
+    "visuel": true
+   },
+   "Pour ne pas casser ton rythme, deux options :",
+   {
+    "liste": [
+     "<b>un pack de crédits</b>, en un clic, sans changer d’abonnement ;",
+     "<b>le plan au-dessus</b>, si tu arrives à zéro chaque mois."
+    ]
+   },
+   "<b>Recharge maintenant</b> et reprends là où tu t’es arrêté."
+  ],
+  "image": "credits-serie.jpg",
+  "alt": "Trois visuels publicitaires pour la même canette à la pêche",
+  "legende": "Trois visuels pour la même canette, trois angles différents, générés avec Images IA.",
+  "cta": "Recharger mes crédits",
+  "url": "https://avatarads.fr/app/?start=recharge"
+ }
+]

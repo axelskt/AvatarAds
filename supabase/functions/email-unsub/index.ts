@@ -38,5 +38,12 @@ serve(async (req) => {
   }
   const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
   await sb.from('profiles').update({ email_optout: true }).eq('id', u)
+  // Statistiques (06/10) : la désinscription est rattachée au dernier e-mail reçu
+  try {
+    const { data: lastLog } = await sb.from('email_log').select('resend_id').eq('user_id', u)
+      .not('resend_id', 'is', null).order('sent_at', { ascending: false }).limit(1)
+    const rid = lastLog?.[0]?.resend_id
+    if (rid) await sb.from('email_events').upsert({ resend_id: rid, type: 'unsubscribed' }, { onConflict: 'resend_id,type', ignoreDuplicates: true })
+  } catch (_) { /* la désinscription elle-même est déjà enregistrée */ }
   return page('C’est noté !', 'Tu ne recevras plus nos e-mails de conseils. Les e-mails liés à ton compte (paiements, sécurité) continueront de te parvenir.')
 })
