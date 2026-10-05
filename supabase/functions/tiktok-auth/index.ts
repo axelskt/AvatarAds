@@ -27,6 +27,25 @@ const CORS = {
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
+// Photo de profil (06/10) : l'avatar_url de TikTok est un lien CDN signé qui expire ~2 jours après la connexion (403
+// ensuite) ; on en garde une copie dans le bucket public factory-media (tiktok-avatars/<hash>.jpg), lien stable.
+async function keepAvatar(openId: string, src: string): Promise<string | null> {
+  try {
+    if (!/^https:\/\/[\w.-]+\.(tiktokcdn(-eu|-us)?\.com|ibyteimg\.com|byteimg\.com)\//.test(src)) return null
+    const r = await fetch(src, { signal: AbortSignal.timeout(8000) })
+    const type = r.headers.get('content-type') || ''
+    if (!r.ok || !type.startsWith('image/')) return null
+    const buf = new Uint8Array(await r.arrayBuffer())
+    if (!buf.length || buf.length > 2_000_000) return null
+    const h = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(openId))))
+      .map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 24)
+    const path = `tiktok-avatars/${h}.jpg`
+    const { error } = await svc.storage.from('factory-media').upload(path, buf, { contentType: type, upsert: true })
+    if (error) return null
+    return `${SB_URL}/storage/v1/object/public/factory-media/${path}?v=${Date.now()}`
+  } catch { return null }
+}
+
 // Session owner/developer exigée (audit 29/09 : accounts, status, post et poststatus étaient ouverts — n'importe qui
 // pouvait lister nos comptes et pousser une vidéo en brouillon sur eux, en nous faisant télécharger l'URL de son
 // choix ; audit 02/10 : authorize et exchange aussi). Fermé par défaut. Renvoie l'uid de l'owner ('' = refus).
@@ -171,7 +190,10 @@ Deno.serve(async (req) => {
       })
       const uj = await ui.json().catch(() => ({}))
       const u = uj?.data?.user
-      if (u?.display_name) await svc.from('tiktok_accounts').update({ display_name: u.display_name, avatar_url: u.avatar_url ?? null }).eq('open_id', t.open_id)
+      if (u?.display_name) {
+        const avatar = u.avatar_url ? (await keepAvatar(t.open_id, u.avatar_url)) ?? u.avatar_url : null
+        await svc.from('tiktok_accounts').update({ display_name: u.display_name, avatar_url: avatar }).eq('open_id', t.open_id)
+      }
     } catch { /* non bloquant */ }
 
     return json({ ok: true, open_id: t.open_id, scope: t.scope })
