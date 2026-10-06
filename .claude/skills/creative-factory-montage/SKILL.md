@@ -93,7 +93,9 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
 - **Musique et sous-titres au hasard** (Axel 30/09) : passer `auto` à la place du fichier musique (piste validée M01 / M06 /
   M07 / M08, jamais M04) et `--subs-style auto` (contour S02 ou boîte S21) ; jamais le même choix que la vidéo d'avant.
   Le choix est écrit dans `OUT.mp4.format.json` (musique, sous_titre) → le reprendre dans le nom du fichier.
-- Tirages (30/09) : musique `auto` = M01-M20 sauf M04 (piste longue de `beds/` sinon celle de la banque) ; `--subs-style auto`
+- Tirages (30/09) : musique `auto` = M01-M20 sauf M04 (piste longue de `beds/` sinon celle de la banque). ⚠ Les pistes de la
+  banque M09-M20 font 14 à 60 s (M09 15 s, M17 14 s, M12 22 s) : depuis le 06/10, une piste tirée plus courte que la vidéo
+  est remplacée par une autre assez longue (« musique retirée » dans le log) ; avant, elle repartait du début. `--subs-style auto`
   = S01-S19 + S21 (tous en CSS dans captions.mjs). Suivi des perfs : ig-insights relie chaque reel publié à sa ligne
   `factory_posts` (même compte + même légende + ±48 h) → `media_id`, statut `published`, `m.recipe` (ID complet + briques).
 - `--choc-size N` : taille du texte choc forcée. Par défaut (01/10) la plus grande de 78 → 41 px qui tient dans la zone sûre ; hook avant/après = rectangle large qui peut mordre sur la moitié gauche du médaillon (Axel : jamais une colonne étroite).
