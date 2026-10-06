@@ -243,9 +243,10 @@ function exactWords(ws, text) {
       out.push(ok ? { ...ws[i - 1], text: toks[j - 1], _x: A[i - 1] === B[j - 1] ? 2 : 1 } : ws[i - 1]); i--; j--; }
     else if (j > 0 && (i === 0 || D[i][j] === D[i][j - 1] + 1)) { out.push({ _ins: toks[j - 1] }); j--; }   // mot du texte jamais entendu : voir plus bas
     else {
-      // mot entendu absent du texte : gardé (le texte est parfois faux), SAUF un mot-outil éclair (≤ 3 lettres, ≤ 0,05 s) =
-      // invention de Whisper (VF-0007 : « Si TU t'es e-commerçant », « tu » de 30 ms)
-      const w = ws[i - 1]; if (!(bare(w.text).length <= 3 && w.end - w.start <= 0.05)) out.push(w); i--; }
+      // mot entendu absent du texte : gardé (le texte est parfois faux), SAUF un mot-outil éclair (≤ 3 lettres) =
+      // invention de Whisper (VF-0007 : « Si TU t'es e-commerçant », « tu » de 30 ms). Seuil 0,05 → 0,10 s le 06/10 (textes
+      // vérifiés à l'écoute) : « depuis LE Claude » (VF-0045, 80 ms), « entre LE l'avant-après » (VF-0041, 60 ms)
+      const w = ws[i - 1]; if (!(bare(w.text).length <= 3 && w.end - w.start <= 0.10)) out.push(w); i--; }
   }
   out.reverse();
   // Mot du texte jamais entendu : en général PAS ajouté (les textes sont parfois faux). Exception : un mot COURT (≤ 4
