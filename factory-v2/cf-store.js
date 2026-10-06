@@ -62,7 +62,7 @@
   var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck'; // clé publishable (publique) ; jamais de clé service ici
   var FN = SUPABASE_URL + '/functions/v1/';
   var PRIMARY_USERNAME = 'avataradss';     // même compte par défaut qu'ig-insights (IG_PRIMARY_USERNAME)
-  var OWN_USERNAMES = ['avataradss', 'leoadsia'];   // nos comptes = IG_OWN_USERNAMES côté serveur (_shared/igacct.ts)
+  var OWN_USERNAMES = ['avataradss', 'leoadsia', 'ialebd.axel'];   // nos comptes = IG_OWN_USERNAMES côté serveur (_shared/igacct.ts)
   var SEL_KEY = 'cf_ig_sel';
   var IG_RANGES = ['3j', '7j', '30j', '90j', '6m', 'all'];   // 30 j = la fenêtre de l'app Instagram ; 3 j remplace 24 h (Instagram met ~48 h à tout compter)
   var TTL_MS = 15 * 60 * 1000;             // ~15 appels Graph par fenêtre : un chargement par fenêtre et par 15 min

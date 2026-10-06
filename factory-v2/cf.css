@@ -1259,7 +1259,7 @@ i.is-gap { background: var(--cf-ink); }
 .cf-bsf-v.is-wait b { font: 600 11px/1.3 inherit; color: var(--cf-mute); }
 
 /* cartes de compte Instagram (28/09 : un compte par avatar, pleine largeur, cocher / décocher) */
-.cf-acards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cf-acards { grid-template-columns: repeat(3, minmax(0, 1fr)); }   /* 06/10 : 3e compte @ialebd.axel */
 .cf-acard { position: relative; }
 .cf-acard-hit { position: absolute; inset: 0; z-index: 1; margin: 0; padding: 0; border: 0; background: transparent; border-radius: 14px; cursor: pointer; }
 .cf-acard-hit:focus-visible { outline: 2px solid var(--c); outline-offset: 3px; }
@@ -1303,7 +1303,15 @@ i.is-gap { background: var(--cf-ink); }
 .cf-stiles.is-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 900px) { .cf-net-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 639px) {
-  .cf-acards.cf-net-pf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cf-acards.cf-net-pf, .cf-accts .cf-acards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cf-accts .cf-icard { padding: 10px; min-width: 0; }
+  .cf-accts .cf-icard-v { font-size: 20px; }
+  .cf-accts .cf-acard-unit { display: none; }
+  .cf-accts .cf-icard-h { flex-wrap: wrap; row-gap: 6px; }
+  .cf-accts .cf-icard-l { order: 3; flex: 1 0 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cf-accts .cf-acard-u { display: none; }
+  .cf-accts .cf-acard-btn { max-width: 100%; }
+  .cf-accts .cf-acard-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .cf-net-pf .cf-icard { padding: 10px; }
   .cf-net-pf .cf-icard-v { font-size: 20px; }
   .cf-net-pf .cf-acard-unit { display: none; }

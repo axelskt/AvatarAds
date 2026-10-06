@@ -1,4 +1,4 @@
-// Comptes Instagram reliés (Axel 28/09 : un compte par avatar, A1 = @avataradss, A2 = @leoadsia).
+// Comptes Instagram reliés (Axel 28/09 : un compte par avatar, A1 = @avataradss, A2 = @leoadsia ; 06/10 : @ialebd.axel = A1 + A2).
 //
 // Deux identifiants par compte, à ne jamais confondre :
 //  - ig_user_id = id PROFESSIONNEL : celui des webhooks (entry.id) et de ig_dm_log.ig_id ;
@@ -10,7 +10,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 export const PRIMARY_IG_USER_ID = Deno.env.get('IG_PRIMARY_USER_ID') || '17841465864328479'   // @avataradss
 // Nos comptes (ceux du dashboard et de « Les deux »). Un compte relié par quelqu'un d'autre (reviewer Meta, futurs
 // users TrackAds) n'entre jamais dans nos chiffres.
-export const OWN_USERNAMES = (Deno.env.get('IG_OWN_USERNAMES') || 'avataradss,leoadsia')
+export const OWN_USERNAMES = (Deno.env.get('IG_OWN_USERNAMES') || 'avataradss,leoadsia,ialebd.axel')
   .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
 
 export type IgAccount = { ig_id: string, ig_user_id: string | null, username: string | null, access_token: string | null }

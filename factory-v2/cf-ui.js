@@ -536,7 +536,7 @@
       + tkHTML()   // Audit 02/10 : comptes TikTok (brouillons), avant le kit de publication
       // Kit de publication (29/09) : page à part, pensée pour programmer à la main dans l'app Instagram.
       + '<section class="cf-card cf-kit" aria-labelledby="cfKitT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfKitT">Kit de publication</h2>'
-      + '<div class="cf-dim">Vidéos à envoyer en AirDrop, légendes à copier, heures de programmation · 3 @avataradss + 2 @leoadsia par jour</div></div>'
+      + '<div class="cf-dim">Vidéos à envoyer en AirDrop, légendes à copier, heures de programmation · 5 @avataradss + 3 @leoadsia + 3 @ialebd.axel par jour</div></div>'
       + '<a class="cf-btn is-dark" href="factory-kit.html" style="text-decoration:none">Ouvrir le kit</a></div></section>';
   }
 
@@ -2180,8 +2180,8 @@
   // = ce compte uniquement ; la dernière cochée ne se décoche pas. Compte à nous pas encore relié : carte en pointillés +
   // « Connecter @x ». « Reconnecter » seulement sur un compte au token expiré ou qui expire sous 7 jours (ou refusé par
   // Instagram quand il est seul affiché). Insight et Auto-DM ; l'Accueil affiche toujours les deux comptes.
-  var ACCT_C = ['var(--cf-accent)', 'var(--cf-c-posts)'];
-  var ACCT_AV = { avataradss: 'A1', leoadsia: 'A2' };
+  var ACCT_C = ['var(--cf-accent)', 'var(--cf-c-posts)', 'var(--cf-c-inter)'];
+  var ACCT_AV = { avataradss: 'A1', leoadsia: 'A2', 'ialebd.axel': 'A1 + A2' };
   function igSelHTML(broken) {
     var A = CF.acct.accounts, own = A.own || [], on = selIds();
     if (A.state !== 'ready' && !own.length) return '';
@@ -2192,7 +2192,7 @@
         return '<div class="cf-icard cf-acard is-none" style="--c:' + c + '">'
           + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(IC.insta, 14) + '</span><span class="cf-icard-l">@' + esc(u) + '</span></span>'
           + '<span class="cf-icard-v is-na">—</span><span class="cf-icard-s">pas encore relié' + (av ? ' · ' + esc(av) : '') + '</span>'
-          + '<button type="button" class="cf-btn is-sm cf-acard-btn" data-act="connect-acct" data-k="' + esc(u) + '" title="' + esc('Ouvre Instagram : connecte-toi avec @' + u + ' avant de valider') + '">' + svg(IC.insta, 13) + '<span>Connecter @' + esc(u) + '</span></button>'
+          + '<button type="button" class="cf-btn is-sm cf-acard-btn" data-act="connect-acct" data-k="' + esc(u) + '" title="' + esc('Ouvre Instagram : connecte-toi avec @' + u + ' avant de valider') + '">' + svg(IC.insta, 13) + '<span>Connecter<span class="cf-acard-u"> @' + esc(u) + '</span></span></button>'
           + '</div>';
       }
       var o = on.indexOf(a.ig_id) >= 0, last = o && on.length === 1, st = CF.acctStats[a.ig_id] || {}, tok = tokenInfo(a);
