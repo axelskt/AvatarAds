@@ -344,10 +344,14 @@
         return Object.assign(hit, { level: reasons.length ? 'review' : 'ok', reasons: reasons });
       }
     }
-    [wide, core].some(function (faces) {
-      var obstacles = fixed.concat(faces);
+    // 06/10 (VF-0062) : d'abord une taille LISIBLE (≥ 54 px) — hors visage élargi, sinon hors visage strict (la phrase peut
+    // alors passer sur les cheveux, jamais sur le visage) — ; les petites tailles (48 → 41) seulement en dernier recours.
+    // Avant : une phrase courte restait à 41 px au-dessus des cheveux alors qu'elle tenait en 60+ px sur les cheveux.
+    var ALL = o.sizes && o.sizes.length ? o.sizes : SIZES, BIG = ALL.filter(function (z) { return z >= 54; });
+    [[wide, BIG], [core, BIG], [wide, ALL], [core, ALL]].some(function (pass) {
+      var obstacles = fixed.concat(pass[0]);
       return TIERS.some(function (t) {
-        return (o.sizes && o.sizes.length ? o.sizes : SIZES).some(function (size) {
+        return pass[1].some(function (size) {
           return cols.some(function (c) { if (t.zones.indexOf(c.zone) < 0) return false; hit = scan(c, size, t.maxLines, obstacles); return !!hit; });
         });
       });
