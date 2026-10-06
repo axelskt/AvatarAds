@@ -240,8 +240,18 @@ Deno.serve(async (req) => {
   if (action === 'accounts') {
     if (!(await ownerUid(req))) return json({ error: 'réservé au propriétaire' }, 401)
     // token_expires_at (date seule, JAMAIS le token) : le dashboard affiche « token valide jusqu'au … » (24/09/2026).
-    const { data } = await svc.from('ig_accounts').select('ig_id, ig_user_id, username, updated_at, token_expires_at').order('updated_at', { ascending: false })
-    return json({ accounts: data || [] })
+    const { data } = await svc.from('ig_accounts').select('ig_id, ig_user_id, username, updated_at, token_expires_at, access_token').order('updated_at', { ascending: false })
+    // 06/10 : abonnés / publications / photo de chaque compte pour ses cartes, même non coché (le token reste ici)
+    const accounts = await Promise.all(((data || []) as Record<string, unknown>[]).map(async ({ access_token, ...pub }) => {
+      if (!access_token) return pub
+      try {
+        const r = await fetch(`https://graph.instagram.com/v21.0/me?fields=followers_count,media_count,profile_picture_url&access_token=${encodeURIComponent(String(access_token))}`, { signal: AbortSignal.timeout(5000) })
+        if (!r.ok) return pub
+        const p = await r.json()
+        return { ...pub, followers_count: p.followers_count ?? null, media_count: p.media_count ?? null, profile_picture_url: p.profile_picture_url ?? null }
+      } catch { return pub }   // profil indisponible : la carte garde « — »
+    }))
+    return json({ accounts })
   }
 
   return json({ error: 'action inconnue' }, 400)

@@ -2167,13 +2167,14 @@
   // Affiché seulement quand au moins deux de nos comptes sont reliés.
   function selIds() {
     var own = CF.acct.accounts.own || [];
-    return CF.igSel === 'all' ? own.map(function (a) { return a.ig_id; }) : [CF.igSel];
+    return CF.igSel === 'all' ? own.map(function (a) { return a.ig_id; }) : String(CF.igSel).split(',').filter(Boolean);
   }
   function toggleAcct(id) {
     var own = CF.acct.accounts.own || [], cur = selIds(), next;
-    next = cur.indexOf(id) >= 0 ? cur.filter(function (x) { return x !== id; }) : cur.concat([id]);
+    // 06/10 : n'importe quel sous-ensemble des 3 comptes (« id1,id2 »), dans l'ordre des cartes
+    next = own.map(function (a) { return a.ig_id; }).filter(function (x) { return x === id ? cur.indexOf(id) < 0 : cur.indexOf(x) >= 0; });
     if (!next.length) return false;
-    return CF.setIgSel(next.length >= own.length ? 'all' : next[0]);
+    return CF.setIgSel(next.length >= own.length ? 'all' : next.join(','));
   }
   // Cartes de compte (Axel 28/09) : une par avatar sur toute la largeur (@avataradss à gauche, @leoadsia à droite), au
   // style des cartes de chiffres. Toucher une carte la coche / décoche : les deux cochées = chiffres additionnés, une seule

@@ -676,13 +676,16 @@ Deno.serve(async (req) => {
   const url = new URL(req.url)
   const asked = url.searchParams.get('ig_id') || ''
 
-  if (asked === 'all') {
-    const accs = await ownAccounts(svc)
+  // « all » = nos comptes ; « id1,id2 » = un sous-ensemble (06/10 : 3 comptes, le dashboard en coche 2 sur 3)
+  const list = asked.includes(',') ? asked.split(',').map((s) => s.replace(/\D/g, '')).filter(Boolean) : null
+  if (asked === 'all' || list) {
+    const accs = (await ownAccounts(svc)).filter((a) => !list || list.includes(String(a.ig_id)) || list.includes(String(a.ig_user_id)))
     if (!accs.length) return json({ error: 'aucun compte connecté / token' }, 400)
     const outs = await Promise.all(accs.map((a) => build(url, a.ig_id, String(a.access_token), t0)
       .catch((e) => ({ ig_id: a.ig_id, basic_error: safeErr(e) }) as Record<string, unknown>)))
     const merged = mergeAll(accs, outs)
-    logIg('deux comptes', { comptes: accs.map((a) => a.username), ms: Date.now() - t0 })
+    if (list) merged.ig_id = accs.map((a) => a.ig_id).join(',')
+    logIg('plusieurs comptes', { comptes: accs.map((a) => a.username), ms: Date.now() - t0 })
     return json(merged)
   }
 

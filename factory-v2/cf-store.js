@@ -253,7 +253,8 @@
   function normAccount(a) {
     if (!a || typeof a !== 'object') return null;
     // Liste blanche : même si l'edge renvoyait un jour access_token, il n'entrerait jamais dans le store.
-    return { ig_id: str(a.ig_id), ig_user_id: str(a.ig_user_id), username: str(a.username), updated_at: str(a.updated_at), token_expires_at: str(a.token_expires_at) };
+    return { ig_id: str(a.ig_id), ig_user_id: str(a.ig_user_id), username: str(a.username), updated_at: str(a.updated_at), token_expires_at: str(a.token_expires_at),
+      followers_count: num(a.followers_count), media_count: num(a.media_count), profile_picture_url: str(a.profile_picture_url) };
   }
   // Nos comptes, dans l'ordre d'OWN_USERNAMES, un par pseudo (la liste arrive du plus récent au plus ancien).
   function ownOf(list) {
@@ -265,25 +266,31 @@
   }
   // Compte de la sélection. « Les deux » : les deux pseudos (« @a + @b ») et le token qui expire le premier (alertes).
   function pickPrimary(own) {
-    if (CF.igSel !== 'all') {
+    var multi = CF.igSel === 'all' || String(CF.igSel).indexOf(',') >= 0;
+    if (!multi) {
       for (var i = 0; i < own.length; i++) { if (own[i].ig_id === CF.igSel) return own[i]; }
       return null;
     }
-    if (own.length < 2) return own[0] || null;
-    var first = own.slice().sort(function (a, b) { return String(a.token_expires_at || '9') < String(b.token_expires_at || '9') ? -1 : 1; })[0];
-    return { ig_id: 'all', ig_user_id: null, username: own.map(function (a) { return a.username; }).join(' + @'),
+    // 06/10 : 3 comptes → « tous » ou un sous-ensemble (« id1,id2 », chiffres additionnés côté serveur)
+    var sub = CF.igSel === 'all' ? own : own.filter(function (a) { return selIdsOf(CF.igSel).indexOf(a.ig_id) >= 0; });
+    if (sub.length < 2) return sub[0] || null;
+    var first = sub.slice().sort(function (a, b) { return String(a.token_expires_at || '9') < String(b.token_expires_at || '9') ? -1 : 1; })[0];
+    return { ig_id: CF.igSel === 'all' ? 'all' : CF.igSel, ig_user_id: null, username: sub.map(function (a) { return a.username; }).join(' + @'),
       updated_at: first.updated_at, token_expires_at: first.token_expires_at };
   }
 
   // ── sélection du compte (Axel 28/09) ──
   function readSel() { try { return localStorage.getItem(SEL_KEY) || 'all'; } catch (e) { return 'all'; } }
   function selParam() { return 'ig_id=' + encodeURIComponent(CF.igSel || 'all'); }
+  // Sélection = 'all', un ig_id, ou plusieurs (« id1,id2 », 06/10 : 3 comptes) ; valide si chaque id est un de nos comptes.
+  function selIdsOf(v) { return String(v || '').split(',').filter(Boolean); }
+  function selValid(v, own) { return v === 'all' || (selIdsOf(v).length > 0 && selIdsOf(v).every(function (id) { return own.some(function (a) { return a.ig_id === id; }); })); }
   // Ids PROFESSIONNELS à compter dans ig_dm_stats_v2 (ig_dm_log.ig_id) ; null = tous (comptes pas encore lus).
   function dmIgs() {
     var own = CF.acct.accounts.own || [];
     if (CF.igSel === 'all') { var ids = own.map(function (a) { return a.ig_user_id; }).filter(Boolean); return ids.length ? ids : null; }
-    for (var i = 0; i < own.length; i++) { if (own[i].ig_id === CF.igSel) return [own[i].ig_user_id || '-']; }
-    return ['-'];   // compte inconnu : rien plutôt que les chiffres d'un autre compte
+    var want = selIdsOf(CF.igSel), out = own.filter(function (a) { return want.indexOf(a.ig_id) >= 0; }).map(function (a) { return a.ig_user_id || '-'; });
+    return out.length ? out : ['-'];   // compte inconnu : rien plutôt que les chiffres d'un autre compte
   }
   // Chiffres par compte pour les cartes de sélection : réponse d'un compte (ig_id) ou de « deux comptes » (accounts[]).
   function noteAccounts(b) {
@@ -304,7 +311,7 @@
   function setIgSel(v, opts) {
     v = String(v || '');
     var own = CF.acct.accounts.own || [];
-    if (v !== 'all' && !own.some(function (a) { return a.ig_id === v; })) return false;
+    if (!selValid(v, own)) return false;
     if (!(opts && opts.temp)) { try { localStorage.setItem(SEL_KEY, v); } catch (e) { /* navigation privée : choix non mémorisé */ } }
     if (v === CF.igSel) return false;
     // Une réponse encore en vol pour la sélection quittée finit dans SA case (rangée), jamais dans celle de la nouvelle.
@@ -339,7 +346,8 @@
         var list = Array.isArray(b.accounts) ? b.accounts.map(normAccount).filter(Boolean) : [];
         var own = ownOf(list);
         // Sélection mémorisée d'un compte qui n'est plus relié : retour à « Les deux » (cases vidées, voir plus bas).
-        lost = CF.igSel !== 'all' && !own.some(function (a) { return a.ig_id === CF.igSel; });
+        lost = !selValid(CF.igSel, own);
+        noteAccounts({ accounts: list });   // abonnés / publications / photo de CHAQUE compte, même non coché (06/10)
         patch = { state: 'ready', list: list, own: own, primary: pickPrimary(own), error: null };
       } catch (e) {
         patch = { state: 'error', error: errText(e) };
