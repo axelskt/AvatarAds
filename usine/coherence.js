@@ -445,6 +445,12 @@
     var asm = assemblies(bricks), gs = [], aaSet = dict(), aaH = dict(), aaS = 0, aaL = 0, aaP = 0;
     var mods = [];
     asm.forEach(function (a) { if (mods.indexOf(a.module) < 0) mods.push(a.module); });
+    // Axel 07/10 : un module sans AUCUNE démo prête (ex. motion-control) ne compte pas — ni ses assemblages ni ses
+    // transformations — tant qu'on ne peut pas finir la vidéo ; il revient tout seul avec sa première démo.
+    var demoMods = dict(), sansDemo = [];
+    L.demos.forEach(function (d) { demoMods[String(d.subject || '')] = 1; });
+    var demoRule = !!opts.demoRequired && L.demos.length > 0;   // opt-in (dashboard) ; les tests gardent l'ancien calcul
+    mods = mods.filter(function (m) { if (!demoRule || has(demoMods, m)) return true; sansDemo.push(m); return false; });
     mods.forEach(function (mod) {
       var ids = asm.filter(function (a) { return a.module === mod; }).map(function (a) { return a.id; }), n = ids.length;
       var hs = L.aaHooks.filter(function (h) { return hasAudio(h) && hookFitsModule(h, mod); }), s = n * hs.length, l = 0;
@@ -467,11 +473,12 @@
     var vuesTx = opts.vues || {}, trs = [], pub = 0;
     (bricks || []).forEach(function (b) {
       if (!b || b.kind !== 'transformation' || !ready(b)) return;
+      if (demoRule && !has(demoMods, String(b.subject || ''))) return;   // module sans démo : hors du stock (voir plus haut)
       var p = palierOf(vuesTx[b.id]); pub += p.max;
       trs.push({ id: b.id, module: String(b.subject || ''), palier: p.palier, max: p.max });
     });
     modes.aa = { voice: 'aa', label: MODE_LABEL.aa, hooks: Object.keys(aaH).length, assemblies: asm.length, groups: gs,
-      combos: { short: aaS, long: aaL, total: aaS + aaL }, transfos: trs, publiable: pub,
+      combos: { short: aaS, long: aaL, total: aaS + aaL }, transfos: trs, publiable: pub, sansDemo: sansDemo,
       short: aaS, long: aaL, total: Math.min(pub, aaS + aaL), done: 0, remaining: 0 };
     // Texte + musique (Axel 27/09) : réaction muette de l'avatar (tête choquée) + texte choc (brique texte-choc, TH01…) +
     // démo muette avec textes + musique, CTA dans la démo : pas de voix, pas de liaison → format court seulement,

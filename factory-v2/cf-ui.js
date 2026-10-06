@@ -1048,11 +1048,11 @@
         keys.push(k);
         if (q.status !== 'pending') seen.push(k);
       });
-      var cap = COH.capacity(D.bricks.list, keys, MX);
+      var cap = COH.capacity(D.bricks.list, keys, MX, { demoRequired: true });   // 07/10 : module sans démo (motion-control) hors du stock avant / après
       M.L = L; M.cap = cap;
       // générées = clés dont au moins une vidéo est déjà revue (approuvée ou refusée) ; en QC = clés rendues dont AUCUNE
       // vidéo n'est encore revue (un top décliné en QC ne fait pas disparaître sa version approuvée) ; générées + en QC = done
-      M.capGen = seen.length ? COH.capacity(D.bricks.list, seen, MX).done : 0;
+      M.capGen = seen.length ? COH.capacity(D.bricks.list, seen, MX, { demoRequired: true }).done : 0;
       M.capPending = cap.done - M.capGen;
       M.genSub = capModes(cap).map(function (v) { return fInt(cap.modes[v].remaining) + ' ' + VOICE_SHORT[v]; }).join(' · ');   // Accueil ET onglet
       // Variantes lipsync (pipeline) : 1 avatar × 1 brique parlée (hooks sans alias + liaisons + CTA) ; générées = factory_prod_stats
