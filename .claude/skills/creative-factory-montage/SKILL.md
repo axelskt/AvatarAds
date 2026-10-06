@@ -200,6 +200,8 @@ CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde
   → texte choc pendant toute la réaction (placement usine), glissement 0,25 s + pop / whoosh / impact, musique seule à −16 LUFS,
   noir de fin de démo coupé ; ~30 s de rendu par vidéo. Musique assez longue obligatoire (beds M01-M08, M14/M19 60 s, M15 44 s,
   M20 41 s ; M13/M16 ≤ 30 s ; M10/M18 ≤ 25 s ; M09/M11/M12/M17 trop courtes).
+  **Jamais de musique douce sur F05 (Axel 07/10)** : seules M08, M10, M13, M14, M20 (mesurées énergiques) ; M01-M03, M05-M07,
+  M15, M16, M18, M19 refusées par build-f05.mjs. Manque de pistes énergiques longues → en demander à Axel.
 - Lot du 06/10 : 8 réactions × 3 (texte choc, démo, musique tous différents par réaction) = VF-0079 → VF-0102.
 
 ## Encore à faire

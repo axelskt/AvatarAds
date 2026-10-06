@@ -83,6 +83,9 @@ if (/^M\d\d$/.test(musicArg)) {
   if (f) music = join(BEDS, f);
   else { music = join(work, musicArg + '.mp3'); execFileSync('curl', ['-sfL', '-o', music, 'https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/music/' + musicArg + '.mp3']); }
 }
+// Axel 07/10 : PAS de musique douce sur ce format (la musique est le seul son). Énergiques mesurées : M08 M10 M13 M14 M20.
+const DOUCES = ['M01', 'M02', 'M03', 'M05', 'M06', 'M07', 'M15', 'M16', 'M18', 'M19'];
+if (DOUCES.includes(musicId)) { console.error(`✗ ${musicId} = musique douce, refusée pour F05 (énergiques : M08 M10 M13 M14 M20)`); process.exit(3); }
 if (dur(music) < total + 0.3) { console.error(`✗ musique ${musicId || music} trop courte (${dur(music).toFixed(1)} s pour ${total.toFixed(1)} s)`); process.exit(3); }
 
 // ── 4) montage : glissement 0,25 s (comme build.mjs), musique seule à −16 LUFS, pop + whoosh + impact ──
