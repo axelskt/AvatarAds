@@ -1027,6 +1027,8 @@
   // proposition de style (sous-titres S20–S24 : brouillon, meta.proposal) : montrée à part, jamais comptée comme prête
   function isProposal(b) { return !!(b && b.meta && b.meta.proposal && b.status !== 'ready'); }
   // photos d'un avatar (meta.images, A1-1…A1-8) ; sinon son portrait seul
+  // Vidéos qui utilisent un texte choc (recettes factory_qc, tous formats et statuts) ; null tant que la Production n'est pas lue
+  function chocUses(id) { var D = CF.prod && CF.prod.data; return D && D.qc ? D.qc.list.filter(function (q) { return q.texteChoc === id; }).length : null; }
   function avPhotos(b) {
     noteThumbs(b);
     var im = (b && b.meta && b.meta.images || []).map(mediaSrc).filter(Boolean);
@@ -1783,7 +1785,8 @@
     var St = M && M.vars && M.vars.St, L = M && M.L;
     if (!St || St.state !== 'ready' || !L || !COH) return null;
     var NP = COH.PHOTOS_PAR_AVATAR || 3, A = L.avatars.length, avs = Object.create(null), per = Object.create(null), by = Object.create(null), kindOf = Object.create(null);
-    var sets = { hook: lipHooks(L), liaison: L.liaisons, cta: L.ctas, 'texte-choc': L.textes || [] };
+    // 07/10 (Axel) : un texte choc n'a pas d'emplacements à remplir (pas de limite) → hors de ce calcul ; sa fiche montre combien de fois il a servi
+    var sets = { hook: lipHooks(L), liaison: L.liaisons, cta: L.ctas };
     var fmtsOf = function (k) { return k === 'texte-choc' ? FMT_ORDER['texte-choc'] : FMT_ORDER.spoken; };
     // 28/09 : voix autorisées par brique (meta.voices, ex. H19 / H74 = voix native uniquement) → formats de CETTE brique
     var fmtsFor = function (k, b) { var al = COH.voicesAllowed ? COH.voicesAllowed(b) : null, f = fmtsOf(k); return al ? f.filter(function (x) { return al.indexOf(x) >= 0; }) : f; };
@@ -1889,6 +1892,7 @@
     else if (b.kind === 'liaison') tag = b.subject === 'generique' ? 'générique' : m.modules.length + ' ' + plural(m.modules.length, 'module');
     else if (b.kind === 'cta') tag = m.keyword ? 'mot-clé ' + m.keyword : 'sans mot-clé';
     else if (b.kind === 'contenu') tag = subjName(b.subject || '?');
+    else if (b.kind === 'texte-choc') { var nC = chocUses(b.id); tag = nC == null ? '' : 'utilisé ' + fInt(nC) + NB + 'fois'; }
     else if (b.kind === 'reaction') tag = (/veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · 3 s';
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
     else if (b.kind === 'avatar') { var np = avPhotos(b).length; tag = np + ' ' + plural(np, 'photo'); }
@@ -3446,7 +3450,7 @@
     $('cfModalBody').scrollTop = 0;
     var t = $('cfModalTitle'); if (t) { t.tabIndex = -1; t.focus(); }
   }
-  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook', 'texte-choc': 'Texte choc', 'style-choc': 'Style de texte choc' };
+  var SHEET_KIND = { hook: 'Hook', liaison: 'Liaison', cta: 'CTA', contenu: 'Contenu / Démo', musique: 'Musique', 'sous-titre': 'Sous-titres', transformation: 'Transformation', avatar: 'Avatar', format: 'Format de hook', 'texte-choc': 'Texte choc', 'style-choc': 'Style de texte choc', reaction: 'Tête choquée' };
   function fMmss(v) { var t = Math.round(v); return p2(Math.floor(t / 60)) + ':' + p2(t % 60); }
   var PLAY_P = 'M7 4l13 8-13 8z', PAUSE_P = 'M6 4h4v16H6zM14 4h4v16h-4z';
   function glyph(p, s) { return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="' + p + '"/></svg>'; }
@@ -3536,8 +3540,10 @@
         : sp ? '<div class="cf-sheet-media"><img src="' + esc(sp) + '" alt="' + esc('Aperçu du style ' + b.id) + '" decoding="async"></div>'
           : ph('style · ' + (m.value || b.id)) + (fb && fb.hasMedia ? miss('aperçu') : '<span class="cf-meta">aperçu du style : pas encore en ligne</span>');
     } else if (b.kind === 'texte-choc') {
-      // texte choc (TH…, 27/09) : format Texte + musique, 3 photos par avatar
-      media = fmtVideosHTML(M, b);
+      // texte choc (TH…) : aucune limite (Axel 07/10) → nombre de vidéos qui l'ont déjà utilisé (recettes QC, tous formats)
+      var nU = chocUses(b.id);
+      media = '<div class="cf-sheet-media cf-bs-ph"><span class="cf-sheet-none"><b style="font-size:28px">' + esc(nU == null ? '—' : fInt(nU)) + '</b><br>'
+        + esc(nU == null ? 'production pas encore chargée' : plural(nU, 'vidéo') + ' avec ce texte') + '<br><span class="cf-meta">pas de limite</span></span></div>';
     } else if (spoken) {
       // brique parlée : vidéos par avatar (factory_prod_stats), puis la tuile audio de la maquette et sa légende
       media = '';
