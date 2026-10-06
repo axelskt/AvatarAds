@@ -105,9 +105,8 @@ test('txOfHook / isAvantApres : hooks visuels en blocs HK-<bloc>(+<bloc>) lus da
   ['HK-O2-1a.mp4', 'HK-O2.mp4', 'HK-O2-0abcd.mp4'].forEach(n => assert.equal(F.isAvantApres(n), false, n));
   assert.equal(F.chocWhy(F.textChoc('TH13'), 'omni', F.txOfHook('HK-O2-0a.mp4', lib)), '');
   assert.match(F.chocWhy(F.textChoc('TH13'), 'omni', F.txOfHook('HK-O3-0a.mp4', lib)), /exige la transformation TX-O02a/);
-  // moitié droite du médaillon « avant » réservée (Axel 01/10 : la phrase peut mordre sur sa moitié gauche)
-  const I = F.INSET_AVANT_APRES_CHOC, cross = r => r.x < I.x + I.w && r.x + r.w > I.x && r.y < I.y + I.h && r.y + r.h > I.y;
-  F.TEXTES_CHOC.forEach(p => { const L = F.chocLayout(F.chocString(p), { faces: [], avantApres: F.isAvantApres('HK-O2-0ab.mp4') }); assert.equal(cross(L), false, p.id); });
+  // Axel 06/10 : sous le médaillon « avant » (il peut toucher son bas), jamais dessus ni à côté
+  F.TEXTES_CHOC.forEach(p => { const L = F.chocLayout(F.chocString(p), { faces: [], avantApres: F.isAvantApres('HK-O2-0ab.mp4') }); assert.ok(L.y >= F.SOUS_MEDAILLON.top, p.id + ' y ' + L.y); });
 });
 
 // ── rotation (A/B) ──
@@ -202,9 +201,10 @@ function checkBox(L, text, extra) {
 test('chocLayout sans visage : EN HAUT (y = 230), zone sûre TikTok/Reels, 19 phrases, niveau ok', () => {
   ALL_TEXTS.forEach(t => { const L = F.chocLayout(t, { faces: [] }); checkBox(L, t); assert.equal(L.zone, 'haut'); assert.equal(L.y, 230); assert.equal(L.level, 'ok'); });
 });
-test('chocLayout hook avant/après : rectangle large, jamais sur la moitié droite du médaillon « avant »', () => {
-  ALL_TEXTS.forEach(t => { const L = F.chocLayout(t, { faces: [], avantApres: true }); checkBox(L, t, [F.INSET_AVANT_APRES_CHOC]); assert.ok(L.lines.length <= 4, 'rectangle, pas une colonne : ' + L.lines.length + ' lignes'); assert.equal(L.level, 'ok'); assert.ok(['haut-gauche', 'milieu'].includes(L.zone)); });
-  assert.equal(F.chocLayout(F.chocString(F.textChoc('TH13')), { faces: [], avantApres: true }).zone, 'haut-gauche');
+test('chocLayout hook avant/après : CENTRÉ juste sous le médaillon « avant » (Axel 06/10), rectangle large, zone sûre', () => {
+  ALL_TEXTS.forEach(t => { const L = F.chocLayout(t, { faces: [], avantApres: true }); checkBox(L, t); assert.ok(L.lines.length <= 4, 'rectangle, pas une colonne : ' + L.lines.length + ' lignes'); assert.equal(L.level, 'ok');
+    assert.equal(L.zone, 'sous-medaillon'); assert.equal(L.y, F.SOUS_MEDAILLON.top, 'touche le bas du médaillon'); assert.ok(Math.abs(L.x + L.w / 2 - 510) <= 1, 'centré'); });
+  assert.equal(F.chocLayout(F.chocString(F.textChoc('TH13')), { faces: [], avantApres: true }).zone, 'sous-medaillon');
 });
 const FACES = {
   selfie: [[0.3, 0.2, 0.4, 0.22]],                                                              // visage d'avatar au tiers haut
@@ -214,7 +214,8 @@ const FACES = {
 test('chocLayout : JAMAIS sur un visage (visage élargi : front, cheveux) — selfie, hook HK-M01-02 réel, visage en bas', () => {
   Object.entries(FACES).forEach(([k, faces]) => ALL_TEXTS.forEach(t => {
     const L = F.chocLayout(t, { faces, avantApres: k === 'hkM0102' });
-    checkBox(L, t, faces.map(px).concat(k === 'hkM0102' ? [F.INSET_AVANT_APRES_CHOC] : []));
+    checkBox(L, t, faces.map(px));
+    if (k === 'hkM0102' && L.zone === 'sous-medaillon') assert.ok(L.y >= F.SOUS_MEDAILLON.top);
     assert.equal(L.level, 'ok', k + ' ' + t);
   }));
   assert.equal(F.chocLayout(ALL_TEXTS[1], { faces: FACES.bas }).zone, 'haut');

@@ -229,6 +229,9 @@
   // large, quitte à mordre sur la moitié gauche du médaillon → seule sa moitié droite reste interdite à la phrase choc.
   var INSET_AVANT_APRES_CHOC = { x: 814, y: 68, w: 248, h: 842, why: 'moitié droite du médaillon « avant »' };
   var TOP_MIN = 230, BOTTOM_MAX = 1440, HAUT_MAX = 780;   // centre de la phrase au-dessus de HAUT_MAX = « en haut »
+  // Axel 06/10 (VF-0043) : sur un avant / après, la phrase est CENTRÉE (dans la zone sûre) juste SOUS le médaillon — elle peut
+  // toucher son bas (bord à 889 px) —, plus jamais en haut à gauche contre le médaillon.
+  var SOUS_MEDAILLON = { zone: 'sous-medaillon', align: 'center', left: 90, right: 930, top: 889 - 16 };
   // Axel 01/10 (VF-0023 / 0028 / 0030) : phrase trop petite → plus gros, toujours dans la zone sûre (62 px au plus avant).
   var SIZES = [78, 72, 66, 60, 54, 48, 44, 41];   // la plus grande qui tient ; 44 / 41 = repli quand les visages prennent toute la place
   // largeur approchée d'un caractère (em) — police de la phrase : Inter 700 ; filet de sécurité à l'affichage (fit).
@@ -322,6 +325,25 @@
     // sans toucher le visage élargi (front, cheveux), puis sans toucher le visage lui-même.
     var TIERS = [{ zones: ['haut', 'haut-gauche'], maxLines: 4 }, { zones: ['milieu'], maxLines: 4 }, { zones: ['haut', 'haut-gauche', 'milieu'], maxLines: 6 }];
     var reasons = [], hit = null;
+    if (o.avantApres) {                                    // avant / après : d'abord centré sous le médaillon, 4 lignes au plus
+      var SM = SOUS_MEDAILLON;
+      [wide, core].some(function (faces) {
+        var obstacles = UI_RESERVED.concat(o.reserved || []).concat(faces);
+        return (o.sizes && o.sizes.length ? o.sizes : SIZES).some(function (size) {
+          var b = box(SM, size);
+          if (!b || b.lines.length > 4) return false;
+          for (var y = SM.top; y + b.h <= BOTTOM_MAX; y += 10) {
+            var r = { x: b.x, y: y, w: b.w, h: b.h };
+            if (!obstacles.some(function (ob) { return inter(r, ob) > 0; })) { hit = Object.assign(b, { y: y, zone: SM.zone, align: SM.align }); return true; }
+          }
+          return false;
+        });
+      });
+      if (hit) {
+        if (o.faces == null) reasons.push('visages non vérifiés (détection indisponible)');
+        return Object.assign(hit, { level: reasons.length ? 'review' : 'ok', reasons: reasons });
+      }
+    }
     [wide, core].some(function (faces) {
       var obstacles = fixed.concat(faces);
       return TIERS.some(function (t) {
@@ -388,7 +410,7 @@
     return caps.filter(function (c) { return c.e > chocEnd + 0.06; }).map(function (c) { return c.s < chocEnd ? Object.assign({}, c, { s: chocEnd }) : c; });
   }
 
-  return { FORMATS: FORMATS, TEXTES_CHOC: TEXTES_CHOC, COMBO_KEYS: COMBO_KEYS, CANVAS: CANVAS, UI_RESERVED: UI_RESERVED, INSET_AVANT_APRES: INSET_AVANT_APRES, INSET_AVANT_APRES_CHOC: INSET_AVANT_APRES_CHOC,
+  return { FORMATS: FORMATS, TEXTES_CHOC: TEXTES_CHOC, COMBO_KEYS: COMBO_KEYS, CANVAS: CANVAS, UI_RESERVED: UI_RESERVED, INSET_AVANT_APRES: INSET_AVANT_APRES, INSET_AVANT_APRES_CHOC: INSET_AVANT_APRES_CHOC, SOUS_MEDAILLON: SOUS_MEDAILLON,
     resolveFormat: resolveFormat, hasChoc: hasChoc, textChoc: textChoc, chocString: chocString, chocWhy: chocWhy, eligibleFormats: eligibleFormats,
     pickFormat: pickFormat, pickChoc: pickChoc, chocEnd: chocEnd, txOfHook: txOfHook, isAvantApres: isAvantApres, comboFormatCheck: comboFormatCheck,
     mergeFormatMeta: mergeFormatMeta, formatReview: formatReview,
