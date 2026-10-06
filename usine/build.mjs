@@ -261,7 +261,13 @@ function exactWords(ws, text) {
       prev.end = cut; res.push({ text: w._ins, start: cut, end, _x: 2 });
     }
   });
-  return res.map(({ _x, _ins, ...w }) => w);
+  const fin = res.map(({ _x, _ins, ...w }) => w);
+  // « AvatarAds » entendu en DEUX mots (VF-0042 : « Avatar » + « As ») alors que le texte l'écrit en un : le morceau en trop,
+  // collé à la marque, y est fondu (sinon un « AS » seul s'affichait à l'écran)
+  for (let k = fin.length - 2; k >= 0; k--)
+    if (bare(fin[k].text) === 'avatarads' && /^(as|ads|ad|hads|hats|hat|az|ass)$/.test(bare(fin[k + 1].text)) && fin[k + 1].start - fin[k].end < 0.15) {
+      fin[k].end = fin[k + 1].end; fin.splice(k + 1, 1); }
+  return fin;
 }
 const brollEvents = [];
 // ── LIAISON (format long) gérée ici : hook + liaison collés (coupe franche, même photo), voix traitées séparément par
