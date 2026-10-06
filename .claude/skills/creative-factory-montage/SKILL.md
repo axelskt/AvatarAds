@@ -109,7 +109,7 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
    **Le CTA n'arrive qu'APRÈS le dernier mot de la démo** (Axel 29/09) : le glissement part au dernier mot + 0,35 s, le
    CTA joue dans le mouvement (aucune image figée : l'ancienne version tenait la démo puis l'avatar, « horrible »). Hook : léger zoom avant continu 1,00 → 1,07.
 3. **Bruitages** : whoosh (−4 dB) + impact (−7 dB) sur chaque transition (`render-worker/assets/sfx/`).
-4. **Musique de fond pas trop forte** : −11 dB, fondu d'entrée 0,6 s / sortie 0,9 s, **baissée automatiquement sous la
+4. **Musique de fond pas trop forte** : −9 dB (−11 dB jusqu'au 06/10, Axel : « un peu plus fort, pas trop »), fondu d'entrée 0,6 s / sortie 0,9 s, **baissée automatiquement sous la
    voix** (sidechain), coupée à la fin de la vidéo ; limiteur final 0,95.
 5. **Sous-titres** mot à mot, blancs contour noir, **sans aucune ponctuation** (ni . ni , ni ! ni «»), **y compris pendant le texte du hook** ; **groupes aux moments
    clés** : la dernière phrase avant chaque transition (fin du hook / de la liaison, fin de la démo) et le début du CTA

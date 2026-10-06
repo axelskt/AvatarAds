@@ -532,8 +532,9 @@ if (cta) { addSfx(wh, B2 - 0.20, '-4dB', 'w2'); addSfx(imp, B2 + 0.06, '-7dB', '
 if (music) {
   const in2 = ['-i', capt, '-stream_loop','-1','-i', music, ...sfxIn];
   let idx = 2; const sf = sfxFilt.map(f => f.replace('[SFXIDX]', `[${idx++}:a]`));
+  // musique de fond : −11 dB jusqu'au 06/10, −9 dB depuis (Axel : « un peu plus fort, pas trop »), toujours baissée sous la voix
   const filt =
-    `[1:a]${AFMT},volume=-11dB,afade=t=in:st=0:d=0.6,afade=t=out:st=${(total-0.9).toFixed(3)}:d=0.9[m];`+
+    `[1:a]${AFMT},volume=-9dB,afade=t=in:st=0:d=0.6,afade=t=out:st=${(total-0.9).toFixed(3)}:d=0.9[m];`+
     `[m][0:a]sidechaincompress=threshold=0.03:ratio=8:attack=5:release=260[mduck];`+
     sf.join(';')+`;`+
     `[0:a][mduck]${sfxLabels.join('')}amix=inputs=${2+sfxLabels.length}:duration=first:normalize=0,alimiter=limit=0.95[a]`;
