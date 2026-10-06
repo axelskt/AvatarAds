@@ -68,6 +68,7 @@
       var p = String(k).split('|'), i = 1;
       if (p[i] === '' ) return k;                      // avant / après court : pas d'avatar
       if (/#\d+$/.test(p[i])) return k;               // déjà rangée
+      if (p[0] === 'muet' && /^R-/.test(p[i])) return k;   // Texte + musique réel (07/10) : une réaction, pas une photo d'avatar
       var par = photoParent(p[i]), q = p.slice(); q[i] = par; var base = q.join('|');
       var m = seen[base] || (seen[base] = { ids: dict(), n: 0 });
       if (!has(m.ids, p[i])) { if (m.n >= PHOTOS_PAR_AVATAR) return null; m.n += 1; m.ids[p[i]] = m.n; }
@@ -336,8 +337,10 @@
 
   // Bibliothèque exploitable, depuis les lignes factory_bricks (ou les briques normalisées du dashboard).
   // hooks = tous les hooks sans alias ; lipsyncHooks = sans les hooks avant / après ; aaHooks = les hooks avant / après.
+  // Démo muette (texte + CTA incrustés, format Texte + musique) : C-MCPM-xx ou meta.voice faux.
+  function isMuette(b) { var v = meta(b).voice; return /^C-[A-Z]+M-/.test(String(b && b.id || '')) || v === false || v === 'False' || v === 'false'; }
   function library(bricks) {
-    var L = { avatars: [], hooks: [], lipsyncHooks: [], aaHooks: [], liaisons: [], ctas: [], demos: [], textes: [], aliases: {} };
+    var L = { avatars: [], hooks: [], lipsyncHooks: [], aaHooks: [], liaisons: [], ctas: [], demos: [], textes: [], reactions: [], demosMuettes: [], aliases: {} };
     (bricks || []).forEach(function (b) {
       if (!b) return;
       if (b.kind === 'hook' && meta(b).alias_of) L.aliases[b.id] = String(meta(b).alias_of);
@@ -346,7 +349,8 @@
       else if (b.kind === 'hook' && !meta(b).alias_of) { L.hooks.push(b); if (isAvantApres(b)) L.aaHooks.push(b); if (isLipsyncHook(b)) L.lipsyncHooks.push(b); }
       else if (b.kind === 'liaison') L.liaisons.push(b);
       else if (b.kind === 'cta') L.ctas.push(b);
-      else if (b.kind === 'contenu') L.demos.push(b);
+      else if (b.kind === 'contenu') { L.demos.push(b); if (isMuette(b)) L.demosMuettes.push(b); }
+      else if (b.kind === 'reaction') L.reactions.push(b);   // tête choquée muette (format Texte + musique, 07/10)
       else if (b.kind === 'texte-choc') L.textes.push(b);
     });
     return L;
@@ -373,6 +377,8 @@
     var hb = has(byId, combo.hook) ? byId[combo.hook] : null, h = hb && meta(hb).alias_of ? String(meta(hb).alias_of) : combo.hook;
     var av = combo.photo ? String(combo.photo) : combo.avatar;
     if (combo.assemblage) return aaKey(combo.voice, av, h, combo.liaison, combo.assemblage);
+    // Texte + musique réel (07/10) : une vidéo = une réaction (tête choquée) × une démo muette → muet|R-F1|C-MCPM-07|
+    if (combo.voice === 'muet' && combo.reaction) return ['muet', combo.reaction, combo.contenu, ''].map(function (x) { return String(x || ''); }).join('|');
     if (!combo.avatar) return null;
     var v = combo.voice == null || combo.voice === '' ? 'axel' : String(combo.voice);
     return [v, av, h, combo.liaison || ''].map(function (x) { return String(x || ''); }).join('|');
@@ -471,8 +477,12 @@
     // démo muette avec textes + musique, CTA dans la démo : pas de voix, pas de liaison → format court seulement,
     // une vidéo par texte choc × emplacement photo. Clé : muet|A1#n|TH05|
     var tset = dict(); L.textes.forEach(function (t) { tset[t.id] = 1; });
-    modes.muet = { voice: 'muet', label: MODE_LABEL.muet, hooks: L.textes.length, pairs: 0, short: A * L.textes.length, long: 0,
-      total: A * L.textes.length, done: 0, remaining: 0 };
+    // 07/10 : dès qu'il existe des réactions (briques « reaction ») et des démos muettes, le format compte ce qu'on produit
+    // vraiment (usine/build-f05.mjs) : réactions × démos muettes ; sinon l'ancienne estimation (photos × textes choc).
+    var rset = dict(), mset = dict(); L.reactions.forEach(function (r) { rset[r.id] = 1; }); L.demosMuettes.forEach(function (d) { mset[d.id] = 1; });
+    var realMuet = L.reactions.length > 0 && L.demosMuettes.length > 0, muetN = realMuet ? L.reactions.length * L.demosMuettes.length : A * L.textes.length;
+    modes.muet = { voice: 'muet', label: MODE_LABEL.muet, hooks: L.textes.length, reactions: L.reactions.length, demos: L.demosMuettes.length,
+      pairs: 0, short: muetN, long: 0, total: muetN, done: 0, remaining: 0 };
     var seen = dict(), outside = 0;
     var slotted = slotKeys(done || []);
     slotted.forEach(function (k) {
@@ -480,6 +490,7 @@
       if (seen[k]) return;
       seen[k] = 1;
       var p = String(k).split('|'), v = p[0];
+      if (v === 'muet' && realMuet) { if (p.length === 4 && has(rset, p[1]) && has(mset, p[2])) modes.muet.done += 1; else outside += 1; return; }
       if (p[1]) p[1] = photoParent(p[1]);
       if (v === 'muet') {
         if (p.length === 4 && p[1] && has(av, p[1]) && has(tset, p[2]) && p[3] === '') modes.muet.done += 1; else outside += 1;

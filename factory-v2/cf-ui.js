@@ -993,7 +993,8 @@
     { k: 'transformation', t: 'Transformation', ic: 'swap2', sub: 'transformations' },
     { k: 'avatar', t: 'Avatar', ic: 'user', sub: 'avatars' },
     { k: 'texte-choc', t: 'Texte choc', ic: 'zap', sub: 'phrases choc · Texte + musique' },   // Axel 27/09 (TH01…)
-    { k: 'style-choc', t: 'Style texte choc', ic: 'subs', sub: 'styles tirés au hasard' }   // Axel 01/10 (CS01…)
+    { k: 'style-choc', t: 'Style texte choc', ic: 'subs', sub: 'styles tirés au hasard' },   // Axel 01/10 (CS01…)
+    { k: 'reaction', t: 'Tête choquée', ic: 'user', sub: 'réactions muettes · Texte + musique' }   // Axel 07/10 (R-F1…, Omni Flash 3 s)
   ];
   var PKM = {};
   PK.forEach(function (x) { PKM[x.k] = x; });
@@ -1880,6 +1881,7 @@
     else if (b.kind === 'liaison') tag = b.subject === 'generique' ? 'générique' : m.modules.length + ' ' + plural(m.modules.length, 'module');
     else if (b.kind === 'cta') tag = m.keyword ? 'mot-clé ' + m.keyword : 'sans mot-clé';
     else if (b.kind === 'contenu') tag = subjName(b.subject || '?');
+    else if (b.kind === 'reaction') tag = (/veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · 3 s';
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
     else if (b.kind === 'avatar') { var np = avPhotos(b).length; tag = np + ' ' + plural(np, 'photo'); }
     if (isProposal(b)) tag = 'proposition';
@@ -3493,7 +3495,7 @@
     var asrc = mediaSrc(b.audio);
     // colonne de gauche (200 px, maquette) selon le type ; la musique a son lecteur pleine largeur au-dessus
     var top = '', media = null;
-    if (b.kind === 'contenu') {
+    if (b.kind === 'contenu' || b.kind === 'reaction') {   // réaction (07/10) : même lecteur que la démo
       media = fb && mediaSrc(fb.video) ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(mediaSrc(fb.video)) + '"></video><span class="cf-vmsg">vidéo illisible</span></div>'
         : ph('démo · ' + b.id) + miss('vidéo de démo');
     } else if (b.kind === 'avatar') {
