@@ -405,7 +405,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     return '<div class="post' + (done ? ' is-done' : '') + (p.id === S.cur ? ' cur' : '') + '">'
       + '<span class="no">' + num(p) + '</span>'
       + (p.video_deleted_at ? '<div class="gone">vidéo<br>retirée du<br>stockage</div>'
-        : '<video src="' + esc(p.video_url) + '#t=0.8" muted playsinline preload="metadata" data-act="play"></video>')
+        : '<video src="' + esc(p.video_url) + '" poster="' + esc(String(p.video_url).replace(/\.mp4$/, '-poster.jpg')) + '" muted playsinline preload="none" data-act="play"></video>')   // 07/10 : affiche JPEG (Safari laissait des cases noires en chargeant 70 vidéos)
       + '<div style="min-width:0"><div class="t">' + hour(p.scheduled_at) + '</div><div class="d">' + esc(dayLabel(p.scheduled_at)) + '</div>'
       + '<div class="c">' + esc(p.caption || '(pas de légende)') + '</div>'
       + '<div class="id">ID ' + esc(id) + '<button type="button" data-act="copyid" data-id="' + esc(p.id) + '" title="Copier l’ID">' + IC.copy + '</button></div></div>'

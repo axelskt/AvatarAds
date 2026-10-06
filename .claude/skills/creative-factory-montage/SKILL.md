@@ -171,7 +171,7 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
   liaison?, contenu, cta, musique? } + format / texte_choc lus dans `OUT.mp4.format.json`). Sans clé service en local, le
   script IMPRIME la ligne : l'insérer avec `supabase db query --linked`. Axel valide ensuite dans Production › revue QC.
 - La vidéo approuvée alimente le dashboard (En stock, jours de contenu) puis le kit de publication (`factory_posts`,
-  légende = CTA complet de `usine/cta-captions.json` + 3 hashtags max, jamais de fournisseur).
+  légende = CTA complet de `usine/cta-captions.json`, SANS hashtag (Axel 07/10), jamais de fournisseur).
 
 ## Fait le 29/09 (retours d'Axel sur les 2 vidéos test)
 Zoom avant sur le hook, groupes de sous-titres aux moments clés, sous-titres pendant le texte choc, plus de jaune,
