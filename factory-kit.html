@@ -230,12 +230,31 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
     render();
   }
   function packOf(i) { var l = lots()[i]; return l && S.pack[lotKey(l)]; }
+  // Axel 06/10 : « Enregistrer dans Photos » ne faisait rien après le téléchargement du lot. L'iPhone peut refuser 5 vidéos
+  // (~550 Mo) d'un coup, et l'erreur était avalée. Désormais : raison affichée, et repli automatique « une par une »
+  // (chaque appui enregistre la suivante). L'ordre dans Photos ne bouge pas : chaque vidéo garde sa date interne.
   function sharePack(i) {
     var P = packOf(i);
     if (!P || P.state !== 'ready') return;
-    if (navigator.canShare && navigator.canShare({ files: P.files })) {
-      navigator.share({ files: P.files }).then(function () { toast(P.files.length + ' vidéos envoyées'); if (PHONE) { P.state = 'sent'; P.files = []; render(); } }, function () {});
-    } else toast('Partage de fichiers indisponible ici : utilise « Télécharger »');
+    var files = P.each != null ? [P.files[P.each]] : P.files, n = P.files.length;
+    var oneByOne = function (why) { P.each = 0; render(); toast('L’iPhone n’a pas pris les ' + n + ' vidéos d’un coup' + (why ? ' (' + esc(why) + ')' : '') + ' : appuie sur « Enregistrer 1 / ' + n + ' », puis la suivante'); };
+    if (!(navigator.canShare && navigator.canShare({ files: files }))) {
+      if (PHONE && P.each == null && n > 1) return oneByOne('');
+      toast('Partage de fichiers indisponible ici : utilise « Télécharger »'); return;
+    }
+    navigator.share({ files: files }).then(function () {
+      if (P.each != null) {
+        P.each++;
+        toast('Vidéo ' + P.each + ' / ' + n + ' enregistrée');
+        if (P.each >= n) { P.state = 'sent'; P.files = []; P.each = null; }
+        render(); return;
+      }
+      toast(n + ' vidéos envoyées'); if (PHONE) { P.state = 'sent'; P.files = []; render(); }
+    }, function (e) {
+      if (e && e.name === 'AbortError') return;   // feuille de partage fermée par l'utilisateur
+      if (PHONE && P.each == null && n > 1) return oneByOne(e && e.name);
+      toast('Partage impossible : ' + esc(e && (e.name + ' ' + (e.message || '')) || 'erreur inconnue'));
+    });
   }
   // ── une vidéo seule (téléphone) : 1er appui = téléchargement avec progression ; 2e appui = feuille de partage
   //    iOS → « Enregistrer la vidéo » (Photos). Le partage doit partir d'un appui : il ne peut pas suivre le téléchargement.
@@ -370,7 +389,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
       if (!P || P.state === 'error') btns = '<button type="button" class="btn dark" data-act="prep" data-i="' + i + '">' + IC.dl + (P ? 'Réessayer' : 'Préparer l’envoi') + '</button>';
       else if (P.state === 'loading') btns = '<button type="button" class="btn dark" data-packprog="' + esc(lotKey(list)) + '" disabled>' + esc(packTxt(P)) + '</button>';
       else if (P.state === 'sent') btns = '<button type="button" class="btn ghost" data-act="prep" data-i="' + i + '">' + IC.check + 'Enregistrées · refaire</button>';
-      else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + (PHONE ? 'Enregistrer dans Photos' : 'Envoyer en AirDrop') + '</button>'
+      else btns = '<button type="button" class="btn dark" data-act="share" data-i="' + i + '">' + IC.send + (P.each != null ? 'Enregistrer ' + (P.each + 1) + ' / ' + P.files.length + ' dans Photos' : PHONE ? 'Enregistrer dans Photos' : 'Envoyer en AirDrop') + '</button>'
         + (PHONE ? '' : '<button type="button" class="btn ghost" data-act="dlall" data-i="' + i + '">' + IC.dl + 'Télécharger</button>');
       return '<div class="lot"><span class="l">' + (L.length > 1 ? 'Lot ' + (i + 1) + ' · ' : '') + 'n° ' + pad(num(list[0])) + ' → ' + pad(num(list[list.length - 1]))
         + '<span>' + list.length + ' vidéo' + (list.length > 1 ? 's' : '') + (P && P.state === 'error' ? ' · échec : ' + esc(P.error) : '') + '</span></span><span class="b">' + btns + '</span></div>';
