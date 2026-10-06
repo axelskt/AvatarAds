@@ -263,19 +263,21 @@ Deno.serve(async (req) => {
     if ('error' in ft) return json({ error: ft.error }, 400)
     const acc = { access_token: ft.token }
 
-    const vr = await fetch(video_url)
-    if (!vr.ok) return json({ error: `téléchargement vidéo échoué (HTTP ${vr.status})` }, 400)
-    const bytes = new Uint8Array(await vr.arrayBuffer())
-    const size = bytes.length
-    if (!size) return json({ error: 'vidéo vide' }, 400)
-
-    // init inbox : FILE_UPLOAD en 1 seul chunk (OK jusqu'à 64 Mo). ⚠ l'inbox VIDÉO n'accepte QUE
-    // source_info — ajouter post_info (titre) fait échouer la livraison SILENCIEUSEMENT (init ok mais
-    // la vidéo n'arrive jamais dans l'inbox). La légende est donc renvoyée pour un copier-coller côté app.
+    // 06/10 : les vidéos finales font 70 à 150 Mo, au-delà des 64 Mo d'un envoi en un seul morceau. On découpe en morceaux
+    // de 10 Mo (TikTok : 5 à 64 Mo par morceau, le dernier absorbe le reste), lus un par un dans le stockage (Range) :
+    // jamais la vidéo entière en mémoire.
+    // ⚠ l'inbox VIDÉO n'accepte QUE source_info — ajouter post_info (titre) fait échouer la livraison SILENCIEUSEMENT (init ok
+    // mais la vidéo n'arrive jamais dans l'inbox). La légende est donc renvoyée pour un copier-coller côté app.
+    const head = await fetch(video_url, { method: 'HEAD' })
+    const size = Number(head.headers.get('content-length') || 0)
+    if (!head.ok || !size) return json({ error: `vidéo introuvable (HTTP ${head.status})` }, 400)
+    const CHUNK = 10_000_000
+    const chunks = size < 5_000_000 ? 1 : Math.floor(size / CHUNK)
+    const chunkSize = chunks === 1 ? size : CHUNK
     const init = await fetch('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
       method: 'POST',
       headers: { Authorization: `Bearer ${acc.access_token}`, 'Content-Type': 'application/json; charset=UTF-8' },
-      body: JSON.stringify({ source_info: { source: 'FILE_UPLOAD', video_size: size, chunk_size: size, total_chunk_count: 1 } }),
+      body: JSON.stringify({ source_info: { source: 'FILE_UPLOAD', video_size: size, chunk_size: chunkSize, total_chunk_count: chunks } }),
     })
     const ij = await init.json().catch(() => ({}))
     if (!init.ok || (ij.error && ij.error.code && ij.error.code !== 'ok')) {
@@ -285,15 +287,21 @@ Deno.serve(async (req) => {
     const upload_url = ij?.data?.upload_url
     if (!upload_url) return json({ error: 'pas d\'upload_url renvoyé par TikTok', detail: ij }, 400)
 
-    // upload des octets
-    const put = await fetch(upload_url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'video/mp4', 'Content-Range': `bytes 0-${size - 1}/${size}` },
-      body: bytes,
-    })
-    if (![200, 201, 206].includes(put.status)) {
-      const t = await put.text().catch(() => '')
-      return json({ error: `upload HTTP ${put.status} ${t.slice(0, 140)}` }, 400)
+    for (let k = 0; k < chunks; k++) {
+      const start = k * chunkSize, end = k === chunks - 1 ? size - 1 : start + chunkSize - 1
+      const part = await fetch(video_url, { headers: { Range: `bytes=${start}-${end}` } })
+      if (part.status !== 206 && !(chunks === 1 && part.ok)) return json({ error: `lecture vidéo morceau ${k + 1}/${chunks} (HTTP ${part.status})` }, 400)
+      const bytes = new Uint8Array(await part.arrayBuffer())
+      if (bytes.length !== end - start + 1) return json({ error: `morceau ${k + 1}/${chunks} incomplet` }, 400)
+      const put = await fetch(upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'video/mp4', 'Content-Range': `bytes ${start}-${end}/${size}` },
+        body: bytes,
+      })
+      if (![200, 201, 206].includes(put.status)) {
+        const t = await put.text().catch(() => '')
+        return json({ error: `envoi morceau ${k + 1}/${chunks} : HTTP ${put.status} ${t.slice(0, 140)}` }, 400)
+      }
     }
     return json({ ok: true, publish_id, size, caption: title, note: 'Vidéo envoyée dans les brouillons TikTok (inbox). Colle la légende dans l\'éditeur.' })
   }

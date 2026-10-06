@@ -881,6 +881,7 @@
       + (a.own ? '' : '<span class="cf-qchip">hors de nos comptes</span>') + '</span>'
       + '<span class="cf-tk-why' + (soon ? ' is-warn' : '') + '">' + esc(tkWhy(a)) + '</span></span>'
       + (act ? '<button type="button" class="cf-btn is-sm cf-tk-btn" data-act="tk-connect" data-k="' + esc(a.name || '') + '">' + svg(IC.refresh, 13) + 'Reconnecter</button>' : '')
+      + (a.state === 'valid' ? '<button type="button" class="cf-btn is-sm cf-tk-btn" data-act="tk-test" data-k="' + esc(a.openId) + '"' + (ui.tkBusy ? ' disabled' : '') + '>' + svg(IC.tiktok, 13) + 'Tester un brouillon</button>' : '')
       + '</div>';
   }
   // Message de la dernière connexion : fenêtre ouverte, échec, compte relié (et lequel : TikTok relie le compte ouvert
@@ -897,7 +898,9 @@
       if (a && !a.own) return '<div class="cf-acct-msg is-err">' + esc('« ' + tkName(a) + ' » relié, mais ce nom ne fait pas partie de nos comptes TikTok (' + CF.TK_OWN_NAMES.join(', ') + ').') + '</div>';
       return '<div class="cf-acct-msg is-ok">' + esc('Compte TikTok relié' + (a ? ' : « ' + tkName(a) + ' »' : '') + '.' + (CF.tk.loading || !a ? ' Relecture de la liste…' : '')) + '</div>';
     }
-    return r ? '<div class="cf-acct-msg' + (r.ok ? '' : ' is-err') + '">' + esc(r.text) + '</div>' : '';
+    return r ? '<div class="cf-acct-msg' + (r.ok ? '' : ' is-err') + '">' + esc(r.text)
+      + (r.caption ? '<div class="cf-meta" style="margin-top:6px;white-space:pre-wrap">' + esc(r.caption) + '</div><button type="button" class="cf-link-btn" data-act="tk-copy">' + (r.copied ? 'Légende copiée' : 'Copier la légende') + '</button>' : '')
+      + '</div>' : '';
   }
   function tkHTML() {
     var S = CF.tk, D = S.data, L = D ? D.list : [];
@@ -931,6 +934,21 @@
     CF.tkSetHandle(openId, v).then(function (r) {
       ui.tkRecon = r.ok ? { ok: true, at: Date.now(), text: v ? '@' + v + ' enregistré pour « ' + (a.name || 'ce compte') + ' ».' : '@ effacé.' }
         : { ok: false, at: Date.now(), text: 'Enregistrement du @ impossible : ' + r.error };
+      schedule();
+    });
+  }
+  // Test « brouillon TikTok » (06/10) : prochaine vidéo du kit → brouillons du compte, légende à copier-coller
+  function tkTest(openId) {
+    var a = (CF.tk.data ? CF.tk.data.list : []).filter(function (x) { return x.openId === openId; })[0];
+    if (!a || ui.tkBusy) return;
+    if (!window.confirm('Envoyer la prochaine vidéo du kit dans les brouillons TikTok de ' + tkName(a) + ' ?')) return;
+    ui.tkBusy = true;
+    ui.tkRecon = { ok: true, at: Date.now(), text: 'Préparation de l’envoi vers ' + tkName(a) + '…' }; schedule();
+    CF.tkSendTest(openId, function (t) { ui.tkRecon = { ok: true, at: Date.now(), text: t }; schedule(); }).then(function (r) {
+      ui.tkBusy = false;
+      ui.tkRecon = r.ok
+        ? { ok: true, at: Date.now(), caption: r.caption, text: 'Vidéo livrée dans les brouillons de ' + tkName(a) + ' (' + r.mb + ' Mo). Ouvre TikTok : notification « Ton contenu de AvatarAds est prêt », touche-la, puis colle la légende :' }
+        : { ok: false, at: Date.now(), text: 'Brouillon TikTok non livré : ' + r.error };
       schedule();
     });
   }
@@ -3716,6 +3734,10 @@
       // ── comptes TikTok (Audit 02/10) ──
       else if (act === 'tk-connect') tkStart(el.getAttribute('data-k'));   // la popup s'ouvre dans ce clic (Safari)
       else if (act === 'tk-handle') tkHandle(el.getAttribute('data-k'));
+      else if (act === 'tk-test') tkTest(el.getAttribute('data-k'));
+      else if (act === 'tk-copy' && ui.tkRecon && ui.tkRecon.caption) {
+        navigator.clipboard.writeText(ui.tkRecon.caption).then(function () { ui.tkRecon.copied = true; schedule(); }, function () { /* presse-papiers refusé */ });
+      }
       else if (act === 'retry-tk') CF.loadTk({ force: true });
       else if (act === 'tk-goto') { var tg = $('cfTkSec'); if (tg && tg.scrollIntoView) tg.scrollIntoView({ block: 'start' }); }
       // ── onglet Production ──

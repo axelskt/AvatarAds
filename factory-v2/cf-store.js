@@ -131,6 +131,7 @@
     loadTk: loadTk,
     tkConnect: tkConnect,
     tkSetHandle: tkSetHandle,
+    tkSendTest: tkSendTest,
     TK_OWN_NAMES: TK_OWN_NAMES.slice(),
     TK_PROD_SINCE: TK_PROD_SINCE,
     prefetch: prefetch,
@@ -1410,6 +1411,38 @@
       })
       .then(function (x) { if (x.ok) return loadTk({ force: true }).then(function () { return x; }); return x; })
       .catch(function () { return { ok: false, error: 'réseau indisponible' }; });
+  }
+  // Test « brouillon TikTok » (06/10) : la prochaine vidéo à programmer du kit part dans les brouillons du compte choisi
+  // (tiktok-auth?action=post, envoi découpé en morceaux), puis suivi de la livraison (poststatus). TikTok refuse la légende
+  // sur un brouillon : elle est renvoyée pour un copier-coller.
+  function tkSendTest(openId, onStep) {
+    var call = function (tok, action, body) {
+      return fetch(FN + 'tiktok-auth?action=' + action, { method: 'POST', cache: 'no-store',
+        headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { http: r.status, d: d || {} }; }); });
+    };
+    var step = function (t) { try { if (onStep) onStep(t); } catch (e) { /* rien */ } };
+    logNet('tiktok-auth?action=post (test brouillon)');
+    return (sb ? sb.auth.getSession() : Promise.resolve(null)).then(async function (r) {
+      var tok = r && r.data && r.data.session && r.data.session.access_token;
+      if (!tok) return { ok: false, error: 'session absente : reconnecte-toi au tableau de bord' };
+      var q = await sb.from('factory_posts').select('video_url, caption, account, scheduled_at').eq('status', 'todo')
+        .is('video_deleted_at', null).order('scheduled_at').limit(1);
+      var p = q && q.data && q.data[0];
+      if (!p) return { ok: false, error: 'aucune vidéo à programmer dans le kit' };
+      step('Envoi vers TikTok de la prochaine vidéo du kit (@' + p.account + '), découpée en morceaux : environ 1 minute…');
+      var s = await call(tok, 'post', { open_id: openId, video_url: p.video_url, title: p.caption || '' });
+      if (!s.d.ok) return { ok: false, error: String(s.d.error || 'HTTP ' + s.http).slice(0, 200) };
+      for (var i = 0; i < 30; i++) {
+        await new Promise(function (ok) { setTimeout(ok, 5000); });
+        var st = await call(tok, 'poststatus', { open_id: openId, publish_id: s.d.publish_id });
+        var v = st.d && st.d.data && st.d.data.status;
+        if (v === 'SEND_TO_USER_INBOX' || v === 'PUBLISH_COMPLETE') return { ok: true, caption: p.caption || '', mb: Math.round((s.d.size || 0) / 1e6) };
+        if (v === 'FAILED') return { ok: false, error: 'TikTok a refusé la vidéo : ' + String(st.d.data.fail_reason || 'raison non précisée').slice(0, 160) };
+        step('TikTok traite la vidéo (' + (v || 'en attente') + ')…');
+      }
+      return { ok: false, error: 'TikTok traite encore la vidéo après 2 min 30 : regarde tes brouillons TikTok dans quelques minutes' };
+    }).catch(function () { return { ok: false, error: 'réseau indisponible' }; });
   }
   // Popup refermée (ou 15 min écoulées) : on relit la liste, même si le message du callback n'est pas arrivé.
   function tkWatch(w) {
