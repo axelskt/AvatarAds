@@ -2315,7 +2315,9 @@ async function runGenerateVideo(profile: Record<string, unknown>, args: Record<s
   // Veo Lite (1,5 cr/s) seulement si Omni n'est pas ouvert sur ce compte.
   const omniOn = !!kieKey() && (isDevPlan(profile) || kieClientsOn())
   const wantsPhoto = args.user_photo === true && !String(args.image_url || '').trim() && omniOn
-  const omni = omniOn
+  // Test d'usine (Axel 06/10) : engine 'veo-lite' (compte développeur SEULEMENT) force Veo 3.1 Lite 720p au lieu d'Omni Flash
+  const veoTest = isDevPlan(profile) && String(args.engine || '') === 'veo-lite'
+  const omni = omniOn && !veoTest
   const genStart = omni && !wantsPhoto && !String(args.image_url || '').trim()
   const productUrlV = /^https?:\/\//i.test(String(args.product_url || '').trim()) ? String(args.product_url).trim() : ''
   const duration = omni ? omniFlashCran(Math.max(4, Number(args.duration_seconds) || 6)) : veoCran(Math.max(4, Number(args.duration_seconds) || 8))
