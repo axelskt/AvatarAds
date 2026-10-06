@@ -14,7 +14,7 @@ Une vidéo finale = **HOOK (+ LIAISON) → DÉMO → CTA**, 9:16 1080×1920, **6
 | Brique | Où | Règle |
 |---|---|---|
 | Hook | `factory_bricks` kind `hook`, clips `factory_variants` (format `axel`) | `meta.compatible_subjects` contient le **sujet de la démo** |
-| Liaison (format long) | `usine/hook-liaison.js` (`CF_HOOK_LIAISON[Hxx]`) | seulement une liaison **de la matrice** du hook ; même **photo** que le hook |
+| Liaison (format long) | `usine/hook-liaison.js` (`CF_HOOK_LIAISON[Hxx]`) | seulement une liaison **de la matrice** du hook ; même **avatar** que le hook, **photo libre** (Axel 07/10 : hook A1-1 + liaison A1-5 = plan de coupe, OK) |
 | Démo | `factory_bricks` kind `contenu`, status `ready` | sujet ∈ sujets du hook ; `retired` exclues |
 
 Démos (02/10) : `meta.transcript` = texte RELU (« Cloud » → Claude…) ; build.mjs l'aligne sur les mots Whisper de la démo comme pour le hook / CTA. Démos MCP `C-MCP-01…08` (sujet `mcp-claude`, `meta.features` = modules montrés : un hook qui cite aussi `static-ads` / `image-ia` / `express` ne va qu'avec une démo qui le montre, coherence.js) ; C-MCP-03/07/08 commencent par leur propre phrase d'accroche (`meta.intro_hook`). `C-MCPM-01…06` = démos MUETTES (texte incrusté, « Commente CLAUDE ») en `draft` pour le format F05 Texte + musique, pas encore utilisables (réactions muettes à générer).
