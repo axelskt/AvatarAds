@@ -356,6 +356,7 @@ if (OPT.illus) {
   // (elles passent par Images IA) et faisait tirer une pub d'un AUTRE produit (VF-0017 : pub Lune sur une démo parfum)
   const mod = demoBrick ? (demoBrick.subject || (demoBrick.meta && demoBrick.meta.module) || '') : (OPT.demo || '');
   const seedN = [...basename(out)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7), used = new Set(brollEvents.map(e => basename(e.file)));
+  const usedBrands = new Set(brollEvents.map(e => (/(ciao|svr|parfum|axe|lune|creatine|creme)/.exec(basename(e.file)) || [])[1]).filter(Boolean));
   // média d'un type : jamais deux fois le même dans une vidéo ; rotation d'une vidéo à l'autre (graine = nom de sortie)
   const pick = type => {
     // « avatar » (genre non précisé) = le résultat de la démo si elle génère des avatars, sinon une fille
@@ -363,11 +364,17 @@ if (OPT.illus) {
     if (type === 'video') type = (BANK.video || {})[mod] || 'produit';
     const direct = (type === 'demo' || (type === 'pub' && mod === 'static-ads')) && BANK.demoMedia && BANK.demoMedia[OPT.demo], t = type === 'demo' ? (BANK.demo || {})[mod] : type;
     const pool = (direct && direct.filter(f => !used.has(basename(f))).length ? direct : (BANK.pools || {})[t]) || [];
-    const free = pool.filter(f => !used.has(basename(f)));
+    let free = pool.filter(f => !used.has(basename(f)));
     if (!free.length) return null;
+    // Axel 06/10 (VF-0044) : « un NOUVEAU produit à chaque mot » → jamais deux fois la même marque dans une vidéo tant
+    // qu'il en reste une autre (CIAO, SVR, parfum, AXE, Lune, créatine, crème)
+    const brand = f => (/(ciao|svr|parfum|axe|lune|creatine|creme)/.exec(basename(f)) || [])[1] || '';
+    const fresh = free.filter(f => !brand(f) || !usedBrands.has(brand(f)));
+    if (fresh.length) free = fresh;
     // filles et garçons mélangés : jamais deux avatars du même genre de suite (Axel 30/09)
     const genre = f => /garcon/.test(f) ? 'g' : /fille/.test(f) ? 'f' : '', rot = free.map((_, i) => free[(seedN + used.size + i) % free.length]);
     const ref = rot.find(f => !genre(f) || genre(f) !== pick.last) || rot[0]; used.add(basename(ref)); if (genre(ref)) pick.last = genre(ref);
+    if (brand(ref)) usedBrands.add(brand(ref));
     if (!/^https?:/.test(ref)) return join(BR, ref);
     const f = join(work, 'illus-' + basename(ref));                     // média distant (assemblage avant / après) : copie de travail
     try { execFileSync('curl', ['-sfL', '-o', f, ref]); return f; } catch { return null; }
