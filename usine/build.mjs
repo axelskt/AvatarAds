@@ -51,14 +51,20 @@ const SUBS = { contour: 'S02', boite: 'S21', bleu: 'S03', rouge: 'S07', white: '
 const LASTF = join(process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Factory', 'cache'), 'dernier.json');
 const lastPick = (() => { try { return JSON.parse(readFileSync(LASTF, 'utf8')); } catch { return {}; } })();
 const draw = (list, prev) => { const l = list.filter(x => x !== prev); return (l.length ? l : list)[Math.floor(Math.random() * (l.length || list.length))]; };
-if (music === 'auto') {
-  const id = draw(MUSIC_OK, lastPick.musique), f = (() => { try { return readdirSync(BEDS).find(n => n.startsWith(id + '_')); } catch { return null; } })();   // serveur : pas de dossier beds → piste de la banque
-  if (f) music = join(BEDS, f);
-  else {   // pas de piste longue en local : celle de la banque (factory-media/music), téléchargée dans le dossier temporaire
-    music = join(tmpdir(), 'cf-' + id + '_banque.mp3');
-    try { execFileSync('curl', ['-sfL', '-o', music, 'https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/music/' + id + '.mp3']); }
-    catch { console.error('✗ musique ' + id + ' introuvable'); process.exit(2); }
-  } lastPick.musique = id; console.log('  musique tirée : ' + id);
+// piste longue de beds/ si elle existe, sinon celle de la banque (factory-media/music), téléchargée dans le dossier temporaire
+// (serveur : pas de dossier beds). Lève une erreur si la piste est introuvable.
+const musicFile = id => {
+  const f = (() => { try { return readdirSync(BEDS).find(n => n.startsWith(id + '_')); } catch { return null; } })();
+  if (f) return join(BEDS, f);
+  const p = join(tmpdir(), 'cf-' + id + '_banque.mp3');
+  execFileSync('curl', ['-sfL', '-o', p, 'https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/music/' + id + '.mp3']);
+  return p;
+};
+const musicAuto = music === 'auto';
+if (musicAuto) {
+  const id = draw(MUSIC_OK, lastPick.musique);
+  try { music = musicFile(id); } catch { console.error('✗ musique ' + id + ' introuvable'); process.exit(2); }
+  lastPick.musique = id; console.log('  musique tirée : ' + id);
 }
 // STYLE DU TEXTE CHOC (Axel 01/10) : 12 styles validés (CS06 néon retiré ; CS16 surligneur rouge, CS17 Snapchat ajoutés), tiré au hasard par défaut (--choc-style CSxx pour forcer), jamais
 // le même que la vidéo précédente ; noté dans le sidecar (style_choc) → ID complet de la vidéo (…_THxx_CSxx…) et recette.
@@ -411,6 +417,19 @@ if (cta) {
 ff([...inputs, '-filter_complex', vf + ';' + af, '-map','[v]','-map','[a]',
     ...VENC,'-pix_fmt','yuv420p','-r',String(FPS),'-g',String(FPS),'-c:a','aac','-b:a','192k', voice]);   // -g 30 : images clés serrées (HyperFrames se cale dessus)
 const total = dur(voice);
+// 06/10 : la piste « auto » est tirée AVANT de connaître la durée de la vidéo, et les pistes de la banque (M09-M20 en local,
+// toutes sur le serveur) sont souvent plus courtes → la musique repartait du début avant la fin (VF-0032 : 40,6 s pour 41,5 s ;
+// VF-0033 : 21,9 s pour 28,9 s). Une piste tirée trop courte est remplacée par une autre, assez longue.
+if (musicAuto && dur(music) < total + 0.5) {
+  const pool = MUSIC_OK.filter(m => m !== lastPick.musique).sort(() => Math.random() - 0.5);
+  for (const id of pool) {
+    let f; try { f = musicFile(id); } catch { continue; }
+    if (dur(f) < total + 0.5) continue;
+    console.log('  musique retirée : ' + id + ' (' + dur(f).toFixed(1) + ' s ; la première était trop courte)');
+    music = f; lastPick.musique = id; try { writeFileSync(LASTF, JSON.stringify(lastPick)); } catch { /* sans gravité */ }
+    break;
+  }
+}
 { const vd = parseFloat(execFileSync('ffprobe', ['-v','error','-select_streams','v:0','-show_entries','stream=duration','-of','csv=p=0', voice]).toString().trim());
   if (!(vd >= total - 0.3)) { console.error('✗ piste vidéo ' + vd.toFixed(2) + ' s < son ' + total.toFixed(2) + ' s : raccords décalés, rendu arrêté'); process.exit(3); } }
 
