@@ -11,7 +11,8 @@
  *   F04 Gros sous-titres colorés                   pas de phrase choc ; gros sous-titres, mot fort en jaune (isole l'effet
  *                                                  des sous-titres : F01/F02/F03/F04 = plan 2 × 2 phrase choc × style)
  *   F05 Texte + musique                            hook UGC muet (tête choquée) + phrase, démo muette, musique seule, pas de
- *                                                  voix : MODÉLISÉ, pas encore rendu (attend les démos muettes d'Axel)
+ *                                                  voix : rendu par usine/build-f05.mjs (06/10 : réaction Omni Flash 3 s +
+ *                                                  texte choc, démo muette C-MCPM-xx, musique) — pas tiré par build.mjs
  *
  * Phrases choc = banque TH01–TH19 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
  * quelle, jamais inventée (usine/formats.test.mjs vérifie la copie). Générique = toute démo ; sinon seulement la démo de son

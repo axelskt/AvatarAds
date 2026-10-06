@@ -188,6 +188,20 @@ CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde
 - Écran du Mac FERMÉ = veille = rendu coupé (VF-0046 « ffmpegEncodeTimeout ») : relancer la vidéo.
 - Remplacer une vidéo déjà dans le kit : nouveau rendu → NOUVEAU nom (le cp n'écrase pas) → update factory_posts.video_url/combo + factory_qc (scratchpad replace.py).
 
+## Format F05 « Texte + musique » (06/10)
+- **Réaction** = tête choquée muette de 3 s : photo 9:16 (dossier ~/Downloads/Choqué) → MCP `generate_video` 4 s avec `image_url`
+  (= Omni Flash image → vidéo, ~0,32 $ le clip, son inclus sans supplément : couper l'audio ne baisse pas le prix) → 3 premières
+  secondes, 60 i/s, muette → `factory-media/choque/R-<id>-3s.mp4`. Prompt : selfie amateur, main(s) devant la bouche, yeux qui
+  s'écarquillent, une fois un clignement, léger bougé, « aucune parole ». Veo 3.1 Lite (`engine: 'veo-lite'`, dev seulement) =
+  moitié prix mais presque figé : garder pour tests (R-H1V).
+- **Démo** = démo muette déjà montée (texte + CTA « Commente CLAUDE » incrustés) : C-MCPM-01 → 12 (01-06 Express / Images IA /
+  Static ads, 07-12 Omni).
+- **Assemblage** : `node usine/build-f05.mjs REACTION.mp4 DEMO.mp4 OUT.mp4 Mxx --choc THxx --choc-style CSxx --reaction R-x --demo C-MCPM-xx`
+  → texte choc pendant toute la réaction (placement usine), glissement 0,25 s + pop / whoosh / impact, musique seule à −16 LUFS,
+  noir de fin de démo coupé ; ~30 s de rendu par vidéo. Musique assez longue obligatoire (beds M01-M08, M14/M19 60 s, M15 44 s,
+  M20 41 s ; M13/M16 ≤ 30 s ; M10/M18 ≤ 25 s ; M09/M11/M12/M17 trop courtes).
+- Lot du 06/10 : 8 réactions × 3 (texte choc, démo, musique tous différents par réaction) = VF-0079 → VF-0102.
+
 ## Encore à faire
 - B-roll : en faire des briques en base (kind `broll`, tags produit / static ad / UGC) pour les choisir automatiquement.
 - ~~Stockage : vidéo programmée / postée supprimée de Supabase~~ FAIT 30/09 : le kit appelle `factory-release` quand
