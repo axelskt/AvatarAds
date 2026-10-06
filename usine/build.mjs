@@ -217,14 +217,17 @@ const textOf = id => { if (!id) return null; const b = brickOf(id), m = b && b.m
 const idFromFile = f => { const m = /-(H\d+|L\d+|CTA-[A-Za-z-]+?)(?:-v\d+)?\.(?:mp4|mov)$/i.exec(basename(f || '')); return m ? m[1] : null; };
 function exactWords(ws, text) {
   if (!text || !ws.length) return ws;
-  const toks = text.replace(/[«»"“”]/g, ' ').split(/\s+/).map(t => t.trim()).filter(t => t && bare(t));
+  // 06/10 (VF-0048) : les CHIFFRES comptent dans la comparaison (« Donne-moi 30 secondes » perdait son « 30 », remplacé par « moi »)
+  const bareN = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  // « 10 000€ » se dit « 10 000 euros » : le symbole devient le mot (sinon « 10 000€ EUROS » à l'écran)
+  const toks = text.replace(/[«»"“”]/g, ' ').replace(/(\d)\s*€/g, '$1 euros').split(/\s+/).map(t => t.trim()).filter(t => t && bareN(t));
   // « Command-Go » entendu en UN mot (VF-0013) = « Commente GO » : coupé en deux avant l'alignement
   ws = ws.flatMap(w => { const m = /^command[e]?-([a-z]+)$/i.exec(String(w.text).replace(/[.,!?]/g, '')); if (!m) return [w];
     const mid = w.start + (w.end - w.start) * 0.6; return [{ ...w, text: 'Commente', end: mid }, { ...w, text: m[1].toUpperCase(), start: mid }]; });
   // noms propres que Whisper déforme trop pour être reconnus (VF-0015 : « Xfield » = Higgsfield)
   const HEARD_AS = { xfield: 'higgsfield', hixfield: 'higgsfield', higsfield: 'higgsfield', igsfield: 'higgsfield' };
-  const heard = t => { const b = bare(t), k = Object.keys(HEARD_AS).find(x => b.endsWith(x)); return k ? HEARD_AS[k] : b; };   // « qu'Xfield » aussi
-  const A = ws.map(w => heard(w.text)), B = toks.map(bare), n = A.length, m = B.length;
+  const heard = t => { const b = bareN(t), k = Object.keys(HEARD_AS).find(x => b.endsWith(x)); return k ? HEARD_AS[k] : b; };   // « qu'Xfield » aussi
+  const A = ws.map(w => heard(w.text)), B = toks.map(bareN), n = A.length, m = B.length;
   // ressemblance = 1 − distance d'édition / longueur (« dia »≈« ia », « influences »≈« influenceuses », « montre »≠« demande »)
   const sim = (a, b) => { if (a === b) return 1; const L = Math.max(a.length, b.length); if (!L) return 0;
     let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
@@ -246,7 +249,7 @@ function exactWords(ws, text) {
       // mot entendu absent du texte : gardé (le texte est parfois faux), SAUF un mot-outil éclair (≤ 3 lettres) =
       // invention de Whisper (VF-0007 : « Si TU t'es e-commerçant », « tu » de 30 ms). Seuil 0,05 → 0,10 s le 06/10 (textes
       // vérifiés à l'écoute) : « depuis LE Claude » (VF-0045, 80 ms), « entre LE l'avant-après » (VF-0041, 60 ms)
-      const w = ws[i - 1]; if (!(bare(w.text).length <= 3 && w.end - w.start <= 0.10)) out.push(w); i--; }
+      const w = ws[i - 1], b = bareN(w.text); if (!(b.length <= 3 && !/\d/.test(b) && w.end - w.start <= 0.10)) out.push(w); i--; }   // un nombre n'est jamais un mot-outil
   }
   out.reverse();
   // Mot du texte jamais entendu : en général PAS ajouté (les textes sont parfois faux). Exception : un mot COURT (≤ 4
@@ -257,8 +260,10 @@ function exactWords(ws, text) {
     if (!w._ins) { res.push(w); return; }
     const prev = res[res.length - 1], next = out[k + 1];
     // voisins reconnus (à l'identique = 2, ressemblant = 1), dont au moins un à l'identique : « nouvelle RIA » = « nouvelle ère IA »
-    if (bare(w._ins).length <= 4 && prev && prev._x && next && next._x && prev._x + next._x >= 3) {
-      const a = bare(prev.text).length, b = bare(w._ins).length, cut = prev.start + (prev.end - prev.start) * a / (a + b), end = prev.end;
+    // 06/10 (VF-0048 : « TikTok POUSSE à fond » entendu « TikTok, ça fond ») : textes vérifiés à l'écoute → un mot de toute
+    // longueur coincé entre deux mots reconnus est remis (avant : 4 lettres au plus)
+    if (bareN(w._ins).length <= 14 && prev && prev._x && next && next._x && prev._x + next._x >= 3) {
+      const a = Math.max(1, bareN(prev.text).length), b = Math.max(1, bareN(w._ins).length), cut = prev.start + (prev.end - prev.start) * a / (a + b), end = prev.end;
       prev.end = cut; res.push({ text: w._ins, start: cut, end, _x: 2 });
     }
   });
