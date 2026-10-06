@@ -177,6 +177,17 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
 Zoom avant sur le hook, groupes de sous-titres aux moments clés, sous-titres pendant le texte choc, plus de jaune,
 CTA après la fin de la démo, chaîne voix commune, liaison + B-roll « regarde ça » natifs, bruitages liés à l'action.
 
+## Fait le 06/10 (lot VF-0064 → 0078)
+- Texte choc : le tirage prend d'abord une phrase qui tient LISIBLE (≥ 54 px) ; une phrase trop longue pour la place au-dessus de la tête est écartée (VF-0064 à 48 px).
+- Démo qui finit sur du NOIR (C-IMGIA-01, C-MCP-12, C-MCP-14) : build.mjs coupe ce noir avant de prolonger la dernière image (log « démo : x s de noir en fin coupées »). Sinon le CTA glissait sur un écran noir (VF-0065). Contrôle : `ffmpeg -i OUT.mp4 -vf blackdetect=d=0.01:pix_th=0.1 -an -f null -` doit ne rien sortir.
+- C-MCP-12 / C-MCP-14 réparées à la source (`demos/C-MCP-12-v2.mp4`, `-14-v2`) : 2 images noires au milieu retirées ; la fin noire de C-MCP-12 remplacée par la fin de C-MCP-09 (même vidéo résultat).
+- Sous-titres : montants en UN bloc (« 10 000€ », « 1000€ », Axel 06/10) ; « 3h » → « 3 heures » ; un « ne » ajouté par Whisper (« Je NE vais pas ») n'est jamais affiché.
+- Toujours relire le DÉBUT du texte d'un hook jamais utilisé : H17 portait « Avatars » au lieu de « AvatarAds » (corrigé).
+- Ne jamais tirer deux fois la même phrase choc pour deux posts qui se suivent sur un compte (forcer `--choc` à la reprise).
+- 3e compte Instagram **@ialebd.axel** (A1 + A2 mélangés) : 3 posts/jour 13h-15h-17h depuis le jeudi 08/10 (VF-0064 → 0078) ; kit à 3 comptes ; vidéos uniques par compte. TikTok : Axel s'en occupe, rien dans le kit.
+- Écran du Mac FERMÉ = veille = rendu coupé (VF-0046 « ffmpegEncodeTimeout ») : relancer la vidéo.
+- Remplacer une vidéo déjà dans le kit : nouveau rendu → NOUVEAU nom (le cp n'écrase pas) → update factory_posts.video_url/combo + factory_qc (scratchpad replace.py).
+
 ## Encore à faire
 - B-roll : en faire des briques en base (kind `broll`, tags produit / static ad / UGC) pour les choisir automatiquement.
 - ~~Stockage : vidéo programmée / postée supprimée de Supabase~~ FAIT 30/09 : le kit appelle `factory-release` quand
