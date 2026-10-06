@@ -18,7 +18,7 @@
 :root{
   color-scheme:light;
   --bg:#fff; --card:#fff; --ink:#15140f; --dim:#6f6c64; --line:#e6e3dc; --soft:#efede7;
-  --acc:#ff5a1f; --a2:#6d5dfc; --ok:#16a34a; --okbg:#e8f6ed; --r:16px;
+  --acc:#ff5a1f; --a2:#6d5dfc; --a3:#0891b2; --ok:#16a34a; --okbg:#e8f6ed; --r:16px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,sans-serif;-webkit-text-size-adjust:100%}
@@ -27,7 +27,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
 .top h1{font-size:20px;margin:0;letter-spacing:-.01em}
 .top a{color:var(--dim);font-size:13px;text-decoration:none}
-.accts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.accts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .demo{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:#fff4ec;color:#9a3a0a;font-size:13px}
 .acct{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:14px}
 .acct[aria-pressed="true"]{border-color:var(--c)}
@@ -78,6 +78,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   .post .act .btn[data-act="one"]{flex:1 1 100%}
   .post .act .btn{flex:1;min-width:0;white-space:normal;padding:10px 8px}
   .bulk .btn{flex:1 1 100%}
+  .accts{grid-template-columns:1fr}
   .accts .acct{padding:12px;min-width:0}
   .acct .n{font-size:14px;overflow:hidden;text-overflow:ellipsis}
   .post video{width:56px;height:100px}
@@ -107,7 +108,7 @@ h2{font-size:13px;margin:22px 0 8px;color:var(--dim);font-weight:650;text-transf
   var SUPABASE_URL = 'https://guvwgiejzkiodghywpwj.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_Y8a0bHB-noCva13tLH26zQ_DjKC29Ck'; // clé publishable (publique)
   var TZ = 'Europe/Paris';
-  var ACCTS = [{ id: 'avataradss', c: 'var(--acc)' }, { id: 'leoadsia', c: 'var(--a2)' }];   // un compte à la fois, jamais mélangés
+  var ACCTS = [{ id: 'avataradss', c: 'var(--acc)' }, { id: 'leoadsia', c: 'var(--a2)' }, { id: 'ialebd.axel', c: 'var(--a3)' }];   // un compte à la fois ; @ialebd.axel = A1 + A2 mélangés (Axel 06/10)
   var DEMO = /[?&]demo=1\b/.test(location.search);   // aperçu sans base (vérification de l'écran)
 
   var IC = {

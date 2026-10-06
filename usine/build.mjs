@@ -222,8 +222,9 @@ function exactWords(ws, text) {
   if (!text || !ws.length) return ws;
   // 06/10 (VF-0048) : les CHIFFRES comptent dans la comparaison (« Donne-moi 30 secondes » perdait son « 30 », remplacé par « moi »)
   const bareN = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-  // « 10 000€ » se dit « 10 000 euros » : le symbole devient le mot (sinon « 10 000€ EUROS » à l'écran)
-  const toks = text.replace(/[«»"“”]/g, ' ').replace(/(\d)\s*€/g, '$1 euros').split(/\s+/).map(t => t.trim()).filter(t => t && bareN(t));
+  // « 10 000€ » se dit « 10 000 euros » : le symbole devient le mot (sinon « 10 000€ EUROS » à l'écran) ; idem « 3h » →
+  // « 3 heures » (VF-0074 : « 3H HEURES »)
+  const toks = text.replace(/[«»"“”]/g, ' ').replace(/(\d)\s*€/g, '$1 euros').replace(/(\d)\s*h\b/gi, '$1 heures').split(/\s+/).map(t => t.trim()).filter(t => t && bareN(t));
   // « Command-Go » entendu en UN mot (VF-0013) = « Commente GO » : coupé en deux avant l'alignement
   ws = ws.flatMap(w => { const m = /^command[e]?-([a-z]+)$/i.exec(String(w.text).replace(/[.,!?]/g, '')); if (!m) return [w];
     const mid = w.start + (w.end - w.start) * 0.6; return [{ ...w, text: 'Commente', end: mid }, { ...w, text: m[1].toUpperCase(), start: mid }]; });
@@ -252,7 +253,9 @@ function exactWords(ws, text) {
       // mot entendu absent du texte : gardé (le texte est parfois faux), SAUF un mot-outil éclair (≤ 3 lettres) =
       // invention de Whisper (VF-0007 : « Si TU t'es e-commerçant », « tu » de 30 ms). Seuil 0,05 → 0,10 s le 06/10 (textes
       // vérifiés à l'écoute) : « depuis LE Claude » (VF-0045, 80 ms), « entre LE l'avant-après » (VF-0041, 60 ms)
-      const w = ws[i - 1], b = bareN(w.text); if (!(b.length <= 3 && !/\d/.test(b) && w.end - w.start <= 0.10)) out.push(w); i--; }   // un nombre n'est jamais un mot-outil
+      // « ne » absent du texte relu = Whisper qui remet la négation à l'écrit (VF-0076 : « Je NE vais pas » pour « Je vais
+      // pas », 110 ms) : jamais affiché, quelle que soit sa durée
+      const w = ws[i - 1], b = bareN(w.text); if (!(b.length <= 3 && !/\d/.test(b) && w.end - w.start <= 0.10) && b !== 'ne' && b !== 'n') out.push(w); i--; }   // un nombre n'est jamais un mot-outil
   }
   out.reverse();
   // Mot du texte jamais entendu : en général PAS ajouté (les textes sont parfois faux). Exception : un mot COURT (≤ 4
@@ -276,6 +279,14 @@ function exactWords(ws, text) {
   for (let k = fin.length - 2; k >= 0; k--)
     if (bare(fin[k].text) === 'avatarads' && /^(as|ads|ad|hads|hats|hat|az|ass)$/.test(bare(fin[k + 1].text)) && fin[k + 1].start - fin[k].end < 0.15) {
       fin[k].end = fin[k + 1].end; fin.splice(k + 1, 1); }
+  // un montant s'affiche en UN bloc (Axel 06/10 : « 10 », puis « 000 », puis « € » arrivaient l'un après l'autre) :
+  // tranches de milliers recollées (« 10 000 ») et devise collée au nombre (« 10 000€ », « 1000€ »)
+  for (let k = fin.length - 2; k >= 0; k--) {
+    const a = fin[k], b = fin[k + 1], ta = String(a.text).trim(), tb = String(b.text).trim();
+    const join = /^\d{1,3}$/.test(ta) && /^\d{3}\b/.test(tb) ? ta + ' ' + tb
+      : /^\d[\d ]*$/.test(ta) && /^(€|euros?)([.,!?…]*)$/i.test(tb) ? ta + '€' + tb.replace(/^(€|euros?)/i, '') : null;
+    if (join) { a.text = join; a.end = b.end; fin.splice(k + 1, 1); }
+  }
   return fin;
 }
 const brollEvents = [];
@@ -314,6 +325,24 @@ const hookLastEnd = hookW0.length ? hookW0[hookW0.length - 1].end : vHook;
 const O1pre = Math.min(dur(hook), hookLastEnd + 0.08);
 const durH = O1pre + TS;
 const durD = dur(demo);
+// fin VISIBLE de la démo (VF-0065, 06/10) : certains exports finissent sur des images NOIRES (C-IMGIA-01 : 2, C-MCP-12 :
+// 1,8 s) ; le clone de fin (tpad) figeait alors du noir pendant le glissement vers le CTA. On coupe ce noir, puis on
+// prolonge la dernière vraie image.
+const demoBlackTail = (() => {
+  try {
+    const [rate, vdur] = String(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate,duration', '-of', 'csv=p=0', demo])).trim().split(',');
+    const fr = rate.split('/'), fps = +fr[0] / (+fr[1] || 1) || FPS;
+    const r = spawnSync('ffmpeg', ['-v', 'error', '-sseof', '-3', '-i', demo, '-an', '-vf', 'signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 24 });
+    const y = (String(r.stdout).match(/YAVG=[0-9.]+/g) || []).map(s => +s.slice(5));
+    if (!y.length) return 0;
+    const th = Math.max(...y) > 300 ? 80 : 20;   // noir = 16 en 8 bits, 64 en 10 bits
+    let n = 0; while (n < y.length && y[y.length - 1 - n] < th) n++;
+    // la piste vidéo peut finir avant la durée du fichier (son plus long) : le noir se compte depuis la fin de la VIDÉO
+    return n && n < y.length ? durD - (+vdur || durD) + (n + 0.5) / fps : 0;
+  } catch { return 0; }
+})();
+const durDv = durD - demoBlackTail;
+if (demoBlackTail) console.log('  démo : ' + demoBlackTail.toFixed(2) + ' s de noir en fin coupées (dernière vraie image prolongée)');
 const END_MARGIN = 0.35;              // marge après le dernier mot du CTA avant de couper (pas de silence mort)
 // durée CTA = lead + voix (durée du ctaCap) + marge → coupe le silence de fin du clip avatar
 const durC = cta ? (ctaCap ? Math.min(dur(cta), CTA_LEAD + dur(ctaCap) + END_MARGIN) : dur(cta)) : 0;
@@ -423,7 +452,7 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
-let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durD + 0.05).toFixed(3)}[dv];`;
+let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
 let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,atrim=0:${(L2 + TS).toFixed(3)},afade=t=out:st=${L2.toFixed(3)}:d=${TS},adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
@@ -509,7 +538,12 @@ if (FMT.hasChoc(format)) {
   // bande des sous-titres réservée (VF-0006 : le texte posé au « milieu » touchait les sous-titres) : jamais l'un sur l'autre
   const lay = { faces: fz.faces, avantApres, sizes: OPT['choc-size'] ? [parseInt(OPT['choc-size'], 10)] : null,
     reserved: format.subs !== 'aucun' ? [{ x: 0, y: 1370, w: 1080, h: 140, why: 'bande des sous-titres' }] : [] };
-  const p = chocForced || FMT.pickChoc({ demo: demoRef, tx, done, hook: hookId, rand, fits: q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok' });
+  // tirage : d'abord une phrase qui tient LISIBLE (≥ 54 px, Axel 06/10 : 41-48 px trop petit), sinon n'importe laquelle qui tient
+  const fitsOk = q => FMT.chocLayout(FMT.chocString(q), lay).level === 'ok';
+  const fitsBig = q => { const l = FMT.chocLayout(FMT.chocString(q), lay); return l.level === 'ok' && l.size >= 54; };
+  const pickArgs = { demo: demoRef, tx, done, hook: hookId, rand };
+  let p = chocForced || FMT.pickChoc({ ...pickArgs, fits: fitsBig });
+  if (!chocForced && p && !fitsBig(p)) p = FMT.pickChoc({ ...pickArgs, fits: fitsOk });
   if (!p) { console.error('✗ aucune phrase choc compatible avec la démo (' + (sidecar.demo || 'démo inconnue') + ')'); process.exit(2); }
   const text = FMT.chocString(p), layout = FMT.chocLayout(text, lay);
   const why = FMT.chocWhy(p, demoRef, tx);
