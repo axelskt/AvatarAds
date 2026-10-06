@@ -15,7 +15,8 @@
     "Axel 30/09 : avatars = filles ET garçons mélangés (jamais deux du même genre de suite) ; quand la voix dit « image et",
     "vidéo », une IMAGE puis une VIDÉO (type « video » = pool video.<module de la démo>). H12 / H13 / H21 (« influenceuse ») restent en filles.",
     "Axel 30/09 : les static ads / vidéos produit montrées dans le hook peuvent être d'AUTRES produits que celui de la démo (CIAO, parfum, Lune, créatine, SVR) → pool « pub » complet, plus de demoMedia pour C-SADS.",
-    "Axel 02/10 : + 10 vidéos UGC (Vidéo/Vidéo UGC : SVR, parfum LV, AXE, Lune, crème ; filles et garçons) dans « produit » et « video-image-ia », + 4 photos avatar produit (AXE, parfum LV) dans « fille » / « garcon ». Doublons déjà présents ignorés (vido ciao, Avatar IA 1/3, vidéo fille 2, express copie 2)."
+    "Axel 02/10 : + 10 vidéos UGC (Vidéo/Vidéo UGC : SVR, parfum LV, AXE, Lune, crème ; filles et garçons) dans « produit » et « video-image-ia », + 4 photos avatar produit (AXE, parfum LV) dans « fille » / « garcon ». Doublons déjà présents ignorés (vido ciao, Avatar IA 1/3, vidéo fille 2, express copie 2).",
+    "Axel 06/10 (VF-0044) : une brique qui ÉNUMÈRE = une image PAR MOT, pile sur le mot (L12 : homme → garçon, femme → fille, coach sportif → coach, puis un NOUVEAU produit à chaque mot : produit à vendre, produit physique, coaching, formation — UGC, UGC produit ou static ad). Chaque carte pousse la précédente."
   ],
   "pools": {
     "fille": [
@@ -96,6 +97,9 @@
       "produit-axe-garcon.mp4",
       "produit-lune-fille.mp4",
       "produit-creme-fille.mp4"
+    ],
+    "coach": [
+      "avatar-ia-garcon-4k-d.jpg"
     ]
   },
   "demo": {
@@ -326,14 +330,33 @@
     ],
     "L12": [
       {
-        "in": "influenceur",
-        "out": "ensuite",
-        "type": "avatar"
+        "in": "homme",
+        "type": "garcon"
       },
       {
-        "in": "produit",
-        "out": "des que",
+        "in": "femme",
+        "type": "fille"
+      },
+      {
+        "in": "coach sportif",
+        "type": "coach"
+      },
+      {
+        "in": "produit a vendre",
+        "type": "produit"
+      },
+      {
+        "in": "produit physique",
         "type": "pub"
+      },
+      {
+        "in": "coaching",
+        "type": "pub"
+      },
+      {
+        "in": "formation",
+        "out": "des que",
+        "type": "produit"
       }
     ],
     "L15": [
