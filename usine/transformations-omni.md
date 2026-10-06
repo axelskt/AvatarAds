@@ -15,10 +15,14 @@ bord 3 px, rayon 28, ombre, flash 0,72 ; points d'entrée des clips du 18/09).
 | `TX-O02a` | omni | Clio → **Porsche 911 GT3** (extérieur) | `OMNI/Vidéo 2.1.mp4` | `OMNI/Vidéo 2.mp4` | même plaque/cadrage, top |
 | `TX-O02b` | omni | Clio → **Bugatti Chiron** (extérieur) | `OMNI/Vidéo 2.2.mp4` | `OMNI/Vidéo 2.mp4` | 2ᵉ résultat de la même Clio (corrigé le 26/09 : pas une Mustang ; feux arrière ronds façon Veyron = artefact IA) |
 | `TX-O03`  | omni | bracelet fitness → **Patek Philippe Nautilus** | `OMNI/Vidéo 3.1.mp4` | `OMNI/Vidéo 3.MOV` | inset rotation **-90°**, source 4K |
+| `TX-O02c` | omni | Clio → **Char d'assaut** | `OMNI/vidéo 2.3.mp4` | `OMNI/Vidéo 2.mp4` | 3ᵉ version de la même Clio (06/10) ; plaque de la Clio lisible sur le char |
+| `TX-O10`  | omni | Peugeot 207 → **Porsche 911 GT3** (intérieur) | `OMNI/vidéo 10.1.mp4` | `OMNI/vidéo 10.mp4` | original 3:4 (06/10), départ 0 s |
+| `TX-O12`  | omni | Peugeot 207 → **Hélicoptère militaire** | `OMNI/vidéo 12.1.mp4` | `OMNI/vidéo 12.mp4` | original 3:4 (06/10), départ 0 s |
 
 > Convention fichiers (Axel 18/09) : `Vidéo N` = original filmé, `Vidéo N.M` = résultats OMNI.
 > Mapping brique = **par contenu** (luxe = plein écran), pas par nom (ex. `TX-O01` : le luxe est dans `Vidéo 1.mp4`).
-> `OMNI/Vidéo 5.MOV` = pas de paire → non utilisable en transformation pour l'instant.
+> Sans version Omni (06/10) : `OMNI/Vidéo 5.MOV`, `vidéo 4`, `6`, `7`, `8`, `9`, `11` → non utilisables en transformation tant qu'il n'y a pas de `N.1`.
+> Dossier source depuis le 06/10 : `~/Downloads/Vidéo/OMNI/` → `node usine/assemble-hk.mjs … --src ~/Downloads/Vidéo`.
 
 ## Assemblages avant / après — RÈGLE (Axel, 26/09)
 
@@ -44,6 +48,9 @@ précédent** (la frame 0 montre déjà l'avant et l'après), flash blanc entre 
 | `HK-O2-0ab` | O2 | Renault Clio → Porsche 911 GT3 → Bugatti Chiron | 8,4 s |
 | `HK-O2-0ba` | O2 | Renault Clio → Bugatti Chiron → Porsche 911 GT3 | 8,4 s |
 | `HK-O3-0a` / `HK-O3-a0` | O3 | Bracelet fitness → Patek Philippe Nautilus / l'inverse | 5,6 s |
+| `HK-O2-0c`, `-ac`, `-bc`, `-ca`, `-cb` | O2 | Clio / Porsche / Bugatti ↔ Char d'assaut (blocs d'un plan, 06/10) | 2,8 s |
+| `HK-O10-0a` | O10 | Peugeot 207 → Porsche 911 GT3 (intérieur), 06/10 | 2,8 s |
+| `HK-O12-0a` | O12 | Peugeot 207 → Hélicoptère militaire, 06/10 | 2,8 s |
 
 **18 assemblages** (M1, M2, M4, O1, O3 : 2 chacun ; O2 : 8), fichiers `factory-media/assemblages/<ID>.mp4`.
 Les 16 recettes du 18/09 (`HK-O01-02a` … `HK-M04-02`, 2 transformations de groupes différents) sont au statut **`retired`**.
