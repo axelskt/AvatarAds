@@ -39,8 +39,15 @@
   // carrée (w × w, recadrée) ou entière (w de large, proportions gardées : hauteur 2w en « contain » — sans hauteur, Supabase
   // garde la hauteur d'origine). Si elle échoue, l'image d'origine (data-full, écouteur 'error' plus bas)
   var PUB_P = '/storage/v1/object/public/', REND_P = '/storage/v1/render/image/public/';
+  // 07/10 : miniature JPEG déjà rangée dans le stockage (photo d'avatar → meta.thumbs) : prise telle quelle, sans render/image
+  var THUMB_OF = Object.create(null);
+  function noteThumbs(b) {
+    var im = b && b.meta && b.meta.images || [], th = b && b.meta && b.meta.thumbs || [];
+    im.forEach(function (u, i) { var t = mediaSrc(th[i]); if (t && mediaSrc(u)) THUMB_OF[mediaSrc(u)] = t; });
+  }
   function thumbSrc(u, w, sq) {
     u = mediaSrc(u);
+    if (u && THUMB_OF[u]) return THUMB_OF[u];
     if (!u || u.indexOf(PUB_P) < 0 || !/\.(png|jpe?g|webp)$/i.test(u.split(/[?#]/)[0])) return u;
     return u.split(/[?#]/)[0].replace(PUB_P, REND_P) + '?width=' + w + '&height=' + (sq ? w : 2 * w) + '&resize=' + (sq ? 'cover' : 'contain') + '&quality=75';
   }
@@ -1021,6 +1028,7 @@
   function isProposal(b) { return !!(b && b.meta && b.meta.proposal && b.status !== 'ready'); }
   // photos d'un avatar (meta.images, A1-1…A1-8) ; sinon son portrait seul
   function avPhotos(b) {
+    noteThumbs(b);
     var im = (b && b.meta && b.meta.images || []).map(mediaSrc).filter(Boolean);
     return im.length ? im : b && mediaSrc(b.image) ? [mediaSrc(b.image)] : [];
   }
