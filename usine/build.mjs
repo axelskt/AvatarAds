@@ -46,7 +46,9 @@ let demo = demoSrc;
 // à chaque fois ») : musique « auto » = une piste VALIDÉE (jamais M04, trop sombre), --subs-style auto = contour ou boîte ;
 // jamais le même choix que la vidéo précédente (fichier <cache>/dernier.json).
 const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_OK = Array.from({ length: 20 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04');
-const SUBS_ALL = Array.from({ length: 19 }, (_, i) => 'S' + String(i + 1).padStart(2, '0')).concat('S21');   // les 19 de la banque + boîte blanche
+// 06/10 : S14 (serif italique) retiré du tirage, Axel « pas fan » (VF-0059)
+const SUBS_OUT = ['S14'];
+const SUBS_ALL = Array.from({ length: 19 }, (_, i) => 'S' + String(i + 1).padStart(2, '0')).concat('S21').filter(s => !SUBS_OUT.includes(s));   // la banque + boîte blanche, sans les retirés
 const SUBS = { contour: 'S02', boite: 'S21', bleu: 'S03', rouge: 'S07', white: 'S10', neon: 'S12' };
 const LASTF = join(process.env.CF_CACHE || join(homedir(), 'Downloads', 'Creative Factory', 'cache'), 'dernier.json');
 const lastPick = (() => { try { return JSON.parse(readFileSync(LASTF, 'utf8')); } catch { return {}; } })();

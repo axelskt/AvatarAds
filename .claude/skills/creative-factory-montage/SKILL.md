@@ -97,7 +97,7 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
 - Tirages (30/09) : musique `auto` = M01-M20 sauf M04 (piste longue de `beds/` sinon celle de la banque). ⚠ Les pistes de la
   banque M09-M20 font 14 à 60 s (M09 15 s, M17 14 s, M12 22 s) : depuis le 06/10, une piste tirée plus courte que la vidéo
   est remplacée par une autre assez longue (« musique retirée » dans le log) ; avant, elle repartait du début. `--subs-style auto`
-  = S01-S19 + S21 (tous en CSS dans captions.mjs). Suivi des perfs : ig-insights relie chaque reel publié à sa ligne
+  = S01-S19 + S21 sauf S14 (serif italique, retiré le 06/10) (tous en CSS dans captions.mjs). Suivi des perfs : ig-insights relie chaque reel publié à sa ligne
   `factory_posts` (même compte + même légende + ±48 h) → `media_id`, statut `published`, `m.recipe` (ID complet + briques).
 - `--choc-size N` : taille du texte choc forcée. Par défaut (01/10) la plus grande de 78 → 41 px qui tient dans la zone sûre ; hook avant/après = rectangle large qui peut mordre sur la moitié gauche du médaillon (Axel : jamais une colonne étroite).
 - `--choc-style CSxx` : style du texte choc forcé ; par défaut TIRÉ AU HASARD parmi les 8 validés (CS01 natif blanc, CS02 natif noir, CS03 rouge, CS05 contour, CS07 verre dépoli, CS08 bulle iMessage, CS11 capitales Anton, CS17 Snapchat ; RETIRÉS le 06/10, « pas naturel » : CS13 machine à écrire, CS15 bandeau info, CS10 / CS16 surligneurs), jamais le même que la vidéo d'avant. Noté `style_choc` dans le sidecar → dans l'ID (après THxx) et la recette (factory_posts.combo / factory_qc.brick_combo).
