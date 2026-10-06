@@ -100,6 +100,13 @@
     ],
     "coach": [
       "avatar-ia-garcon-4k-d.jpg"
+    ],
+    "homme": [
+      "avatar-ia-garcon-4k.jpg",
+      "avatar-ia-garcon-4k-b.jpg",
+      "avatar-ia-garcon-4k-c.jpg",
+      "avatar-ia-garcon-axe.jpg",
+      "avatar-ia-garcon-parfum.jpg"
     ]
   },
   "demo": {
@@ -331,7 +338,7 @@
     "L12": [
       {
         "in": "homme",
-        "type": "garcon"
+        "type": "homme"
       },
       {
         "in": "femme",
