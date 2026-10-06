@@ -16,7 +16,8 @@
     "vidéo », une IMAGE puis une VIDÉO (type « video » = pool video.<module de la démo>). H12 / H13 / H21 (« influenceuse ») restent en filles.",
     "Axel 30/09 : les static ads / vidéos produit montrées dans le hook peuvent être d'AUTRES produits que celui de la démo (CIAO, parfum, Lune, créatine, SVR) → pool « pub » complet, plus de demoMedia pour C-SADS.",
     "Axel 02/10 : + 10 vidéos UGC (Vidéo/Vidéo UGC : SVR, parfum LV, AXE, Lune, crème ; filles et garçons) dans « produit » et « video-image-ia », + 4 photos avatar produit (AXE, parfum LV) dans « fille » / « garcon ». Doublons déjà présents ignorés (vido ciao, Avatar IA 1/3, vidéo fille 2, express copie 2).",
-    "Axel 06/10 (VF-0044) : une brique qui ÉNUMÈRE = une image PAR MOT, pile sur le mot (L12 : homme → garçon, femme → fille, coach sportif → coach, puis un NOUVEAU produit à chaque mot : produit à vendre, produit physique, coaching, formation — UGC, UGC produit ou static ad). Chaque carte pousse la précédente."
+    "Axel 06/10 (VF-0044) : une brique qui ÉNUMÈRE = une image PAR MOT, pile sur le mot (L12 : homme → garçon, femme → fille, coach sportif → coach, puis un NOUVEAU produit à chaque mot : produit à vendre, produit physique, coaching, formation — UGC, UGC produit ou static ad). Chaque carte pousse la précédente.",
+    "06/10 : démos Omni MCP C-MCP-09…16 (voix) + C-MCPM-07…12 (muettes, draft) → demoMedia = leur avant / après (O10 intérieur Porsche, O12 hélicoptère, O2-0c char)."
   ],
   "pools": {
     "fille": [
@@ -192,6 +193,30 @@
       "avatar-ia-fille-4k-d.jpg",
       "avatar-ia-garcon-4k-d.jpg",
       "avatar-ia-fille-4k-e.jpg"
+    ],
+    "C-MCP-09": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4"
+    ],
+    "C-MCP-12": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O10-0a.mp4"
+    ],
+    "C-MCP-10": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4"
+    ],
+    "C-MCP-13": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4"
+    ],
+    "C-MCP-15": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O12-0a.mp4"
+    ],
+    "C-MCP-11": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0c.mp4"
+    ],
+    "C-MCP-14": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0c.mp4"
+    ],
+    "C-MCP-16": [
+      "https://guvwgiejzkiodghywpwj.supabase.co/storage/v1/object/public/factory-media/assemblages/v3/HK-O2-0c.mp4"
     ]
   },
   "bricks": {
