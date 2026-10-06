@@ -299,7 +299,7 @@
     fixed.concat(wide).forEach(function (r) { if (r.y < HAUT_MAX && r.y + r.h > TOP_MIN && r.x > CANVAS.w * 0.4) leftEdge = Math.min(leftEdge, r.x); });
     var cols = [{ zone: 'haut', align: 'center', left: 90, right: 930, top: true },
       { zone: 'haut-gauche', align: 'left', left: 70, right: Math.min(CANVAS.w - 70, leftEdge - 24), top: true },
-      { zone: 'milieu', align: 'center', left: 150, right: 930, top: false }];
+      { zone: 'milieu', align: 'center', left: 150, right: 930, top: false }].filter(function (c) { return !o.center || c.align === 'center'; });   // o.center (F05, Axel 07/10) : toujours centré
     function box(col, size) {
       var colW = col.right - col.left;
       if (colW < 360) return null;

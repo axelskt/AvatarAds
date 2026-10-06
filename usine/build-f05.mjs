@@ -49,7 +49,7 @@ const hook = join(work, 'hook.mp4');
 ff(['-i', reaction, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-t', H.toFixed(3), '-map', '0:v', '-map', '1:a', '-vf', VF,
   '-c:v', 'libx264', '-crf', '16', '-preset', 'fast', '-c:a', 'aac', '-b:a', '128k', '-shortest', hook]);
 const fz = faceZones(hook, 0, H, 0.5);
-const layout = FMT.chocLayout(text, { faces: fz.faces, avantApres: false, sizes: null, reserved: [] });
+const layout = FMT.chocLayout(text, { faces: fz.faces, avantApres: false, sizes: null, reserved: [], center: true })   // Axel 07/10 : texte toujours centré;
 console.log(`  phrase choc ${OPT.choc} style ${OPT['choc-style']} (${layout.zone}, ${layout.size} px, ${layout.lines.length} ligne(s)) 0-${H.toFixed(2)} s`
   + (layout.size < 54 ? ' ⚠ moins de 54 px' : '') + (layout.level !== 'ok' ? ' ⚠ revue : ' + layout.reasons.join(' · ') : ''));
 writeFileSync(join(work, 'w.json'), '[]');
