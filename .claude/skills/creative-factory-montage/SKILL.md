@@ -121,7 +121,7 @@ node usine/build.mjs HOOK.mp4 DEMO.mp4 OUT.mp4 "MUSIQUE.mp3" HOOK.mp4 CTA.mp4 \
 6. **Hook soigné** : format **F03 par défaut** (texte choc au-dessus de la tête + sous-titres blancs). **Jamais de
    jaune** (F02 / F04 écartés : Axel n'aime pas). `--format auto` = ancienne rotation. Détail des formats (format tiré en rotation pour récolter de la data, `usine/formats.js`) :
    F01 sous-titres seuls · F02 texte choc 0-3 s + gros sous-titres colorés · F03 texte choc + sous-titres normaux ·
-   F04 gros sous-titres colorés. Texte choc = banque validée TH01–TH19, en zone sûre, **jamais sur un visage**, visible
+   F04 gros sous-titres colorés. Texte choc = banque validée TH01–TH23 (TH20-23 ajoutées le 07/10, deux émojis), en zone sûre, **jamais sur un visage**, visible
    dès la frame 0 (= couverture). Forcer : `--format F02 --choc TH05`.
    **Emojis = ceux d'Apple, jamais d'autres** (Axel 30/09) : captions.mjs remplace chaque emoji par l'image officielle
    (`emoji-datasource-apple@15.1.2`, 64 px, jsDelivr) ; Noto seulement si le téléchargement échoue.
