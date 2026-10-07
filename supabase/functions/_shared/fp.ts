@@ -126,10 +126,13 @@ export function fpCoverCoarse(gray: ArrayLike<number>, W: number, H: number, coa
 // ── Signature de style (07/10, idée d'Axel) ──
 // Couleur de l'encadré du texte choc, couleur / effet des sous-titres, tons de la pièce : stables pendant tout le hook,
 // même quand la tête bouge ou que le mot change (ce qui fait varier la vignette en luminance). Histogramme YCbCr
-// (Y 4 × Cb 6 × Cr 6 = 144 cases) sur 3 bandes horizontales (35 / 30 / 35 %), sur une image réduite à 54 de large.
+// (Y 4 × Cb 5 × Cr 5 = 100 cases) sur 3 bandes horizontales (35 / 30 / 35 %), sur une image réduite à 54 de large.
+// ⚠ Cases CENTRÉES sur le gris neutre (Cb = Cr = 128) et vote réparti entre cases voisines : la 1re version avait une
+// frontière de case à 128, et un écart de décodage invisible (0,8 / 255 entre ffmpeg et jpeg-js) faisait passer la
+// bonne vidéo de 0,07 à 0,155 (t-shirts noirs, murs gris).
 // Stocké pour 4 fenêtres : 9:16 entière + 3 fenêtres 3:4 (haut, centre, bas), parce que TikTok sert aussi des
-// couvertures 3:4 recadrées. Mesuré sur les vraies couvertures du 07/10 : bonne vidéo 0,06-0,07, vidéos hors usine ≥ 0,20.
-export const ST_BINS = 144, ST_LEN = ST_BINS * 3
+// couvertures 3:4 recadrées. Mesuré sur les vraies couvertures du 07/10 : bonne vidéo 0,035-0,04, vidéos hors usine ≥ 0,156.
+export const ST_BINS = 100, ST_LEN = ST_BINS * 3
 function rgbThumb(rgba: ArrayLike<number>, W: number, H: number, step: number, ow: number, oh: number): Float64Array[] {
   // réduction par moyenne de cases, canal par canal (step = 3 pour du RGB, 4 pour du RGBA)
   const ch = [0, 1, 2].map(() => new Float64Array(ow * oh))
@@ -151,11 +154,20 @@ function bandSig(ch: Float64Array[], ow: number, r0: number, r1: number): Uint8A
   bands.forEach(([a, b], k) => {
     const h = new Float64Array(ST_BINS)
     let n = 0
+    // position fractionnaire sur les centres de cases → poids partagés entre les 2 cases voisines de chaque axe
+    const split = (v: number, c0: number, step: number, nb: number): [number, number, number] => {
+      const f = Math.min(nb - 1, Math.max(0, (v - c0) / step)), i = Math.min(nb - 2, Math.floor(f))
+      return [i, 1 - (f - i), f - i]
+    }
     for (let r = a; r < b; r++) for (let c = 0; c < ow; c++) {
       const i = r * ow + c, R = ch[0][i], G = ch[1][i], B = ch[2][i]
       const Y = 0.299 * R + 0.587 * G + 0.114 * B, Cb = 128 - 0.1687 * R - 0.3313 * G + 0.5 * B, Cr = 128 + 0.5 * R - 0.4187 * G - 0.0813 * B
-      const yi = Math.min(3, Math.max(0, Math.floor(Y / 64))), bi = Math.min(5, Math.max(0, Math.floor((Cb - 64) / 128 * 6))), ri = Math.min(5, Math.max(0, Math.floor((Cr - 64) / 128 * 6)))
-      h[yi * 36 + bi * 6 + ri]++; n++
+      const [y0, ya, yb] = split(Y, 32, 64, 4), [b0, ba, bb] = split(Cb, 76.8, 25.6, 5), [q0, qa, qb] = split(Cr, 76.8, 25.6, 5)
+      for (const [yy, wy] of [[y0, ya], [y0 + 1, yb]]) for (const [cb, wb] of [[b0, ba], [b0 + 1, bb]]) for (const [cr, wr] of [[q0, qa], [q0 + 1, qb]]) {
+        const w = wy * wb * wr
+        if (w > 0) h[yy * 25 + cb * 5 + cr] += w
+      }
+      n++
     }
     for (let j = 0; j < ST_BINS; j++) out[k * ST_BINS + j] = Math.round(h[j] / (n || 1) * 255)
   })
@@ -190,10 +202,10 @@ export function fpStyleDist(cover: { sig: Uint8Array, crop: boolean }, set: Uint
 //  - image exacte (la couverture tombe sur une image échantillonnée) : même vidéo ≤ 10-17, autre vidéo ≥ 20 ;
 //  - image entre deux échantillons : la bonne vidéo sort à 25-66 mais reste loin devant (2e ≥ 1,7 × 1re) ; sur 70 vraies
 //    couvertures hors usine, la 1re n'est jamais nettement devant (rapport ≤ 1,34, et ≥ 80 dès qu'il dépasse 1,2).
-// Style (d) : bonne vidéo 0,06-0,08 ; hors usine ≥ 0,19 (proposition dès 0,15). Légende (cap) : la légende du kit de la vidéo ; simple indice
+// Style (d), cases centrées (rejoué avec les décodeurs de l'edge) : bonne vidéo 0,035-0,04 (2e à 0,05-0,06) ; hors usine ≥ 0,156. Légende (cap) : la légende du kit de la vidéo ; simple indice
 // (Axel ne colle pas toujours la même légende sur TikTok : « UGC » sur la vidéo VF-0026 en CTA-GUIDE).
 // auto = sûr ; unsure = propositions (5 au plus) ; none = pas une vidéo de l'usine.
-export const FP_AUTO = 18, FP_GAP = 6, FP_MAYBE = 45, FP_FAR = 70, FP_RATIO = 1.6, ST_SURE = 0.12, ST_GAP = 0.03, ST_MAYBE = 0.15
+export const FP_AUTO = 18, FP_GAP = 6, FP_MAYBE = 45, FP_FAR = 70, FP_RATIO = 1.6, ST_SURE = 0.10, ST_GAP = 0.02, ST_MAYBE = 0.13
 export type FpCand = { vf: string, score: number, style: number | null, cap: boolean }
 export function fpDecide(list: FpCand[]): { vf: string | null, state: 'auto' | 'unsure' | 'none', score: number | null, candidates: { vf: string, score: number }[] } {
   if (!list.length) return { vf: null, state: 'none', score: null, candidates: [] }
@@ -214,8 +226,7 @@ export function fpDecide(list: FpCand[]): { vf: string | null, state: 'auto' | '
     if (!s2 || (s2.style as number) - (s1.style as number) >= ST_GAP) return auto(s1)
     // style net mais serré : il faut que la luminance (à 10 % près de la meilleure) et la légende le confirment…
     if (s1.score <= g1.score * 1.1 && s1.cap) return auto(s1)
-    // …ou que la même vidéo soit AUSSI la meilleure en luminance, avec 20 % d'avance sur la 2e (VF-0026 sur @avatarads :
-    // style 0,07 contre 0,10, luminance 38 contre 51 ; le décodeur JPEG de l'edge donne des couleurs à peine différentes)
+    // …ou que la même vidéo soit AUSSI la meilleure en luminance, avec 20 % d'avance sur la 2e
     if (s1.vf === g1.vf && (!g2 || g2.score >= g1.score * 1.2)) return auto(s1)
   }
   if (cands.length && (g1.score <= FP_MAYBE || (g1.score <= FP_FAR && g2 && g2.score >= g1.score * 1.3) || (s1 && (s1.style as number) <= ST_MAYBE))) {
