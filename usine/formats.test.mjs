@@ -270,6 +270,8 @@ test('build.mjs : format inconnu, F05 pas rendable, phrase hors banque, option i
   writeFileSync(retired, JSON.stringify(['F01', 'F02', 'F03', 'F04', 'F05'].map(id => ({ id, kind: 'format', status: 'retired' }))));
   r = node([join(HERE, 'build.mjs'), join(tmp, 'h.mp4'), join(tmp, 'd.mp4'), join(tmp, 'o.mp4'), '--bricks', retired, '--done', bricksF]);
   assert.equal(r.status, 2); assert.match(r.stderr, /aucun format tirable/);
+  r = node([join(HERE, 'build.mjs'), join(tmp, 'h.mp4'), join(tmp, 'd.mp4'), join(tmp, 'o.mp4'), '--bricks', retired, '--done', bricksF, '--format', 'F02']);
+  assert.equal(r.status, 2); assert.match(r.stderr, /format F02 retiré dans Production/);   // demandé mais retiré : jamais rendu
   assert.ok(!existsSync(join(tmp, 'o.mp4')) && !existsSync(join(tmp, 'o.mp4.format.json')));
 });
 test('publish-qc.mjs : format inconnu / F05 / phrase sans format / désaccord avec le rendu / clé inconnue → refus (code 2) avant QC ni upload', () => {

@@ -13,8 +13,10 @@
 // Usage : node usine/build.mjs <hook.mp4> <demo.mp4> <out.mp4> [music] [hookVoice] [cta.mp4] [ctaCap] [ctaLead]
 //           [--format F01…|auto] [--choc TH01…|auto] [--hook-id H74] [--demo C-OMNI-01|omni] [--tx TX-O02a,TX-O01]
 //           [--avant-apres | --no-avant-apres] [--faces faces.json] [--done recettes.json] [--bricks bricks.json] [--seed n]
-//   --format : auto (défaut) = rotation ; --done = recettes déjà produites (lignes factory_qc ou leurs brick_combo), sinon
-//   lues avec SUPABASE_SERVICE_ROLE_KEY (lecture seule) ; --bricks = export factory_bricks (formats retirés exclus).
+//   --format : F03 par défaut (Axel 29/09), auto = rotation ; un format RETIRÉ dans Production (factory_bricks kind
+//   'format', statut ≠ ready) n'est jamais rendu : demandé → refus, F03 par défaut retiré → rotation parmi les autres.
+//   --done = recettes déjà produites (lignes factory_qc ou leurs brick_combo), sinon lues avec SUPABASE_SERVICE_ROLE_KEY
+//   (lecture seule) ; --bricks = export factory_bricks.
 //   --tx / --avant-apres : déduits du nom d'un hook avant/après (assemblage « HK-O2-0ab » lu dans la bibliothèque, ancien « HK-O02a-01 ») ; --faces : boîtes imposées (sinon détectées).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync, statSync, openSync, readSync, closeSync, renameSync, rmSync } from 'node:fs';
@@ -99,14 +101,21 @@ const demoRef = demoBrick || OPT.demo || '';   // brique (module = meta.module s
 const tx = OPT.tx ? OPT.tx.split(',').map(x => x.trim()).filter(Boolean) : FMT.txOfHook(basename(hook), Array.isArray(bricks) ? bricks : null);
 const avantApres = OPT['no-avant-apres'] ? false : OPT['avant-apres'] ? true : FMT.isAvantApres(basename(hook));
 let format;
-if (OPT.format === 'auto') {
-  format = FMT.pickFormat({ bricks: Array.isArray(bricks) ? bricks : [], done, hook: hookId, rand });
+// Statut des formats dans Production : avant le 07/10, seul « auto » le lisait — F03 par défaut ou un format demandé
+// était rendu même retiré (formats.test.mjs, cas « tous retirés »). Sans base lisible (ni --bricks ni clé) : tous tirables.
+const fmtRows = Array.isArray(bricks) ? bricks : [];
+const tirable = id => FMT.eligibleFormats({ bricks: fmtRows }).some(f => f.id === id);
+const defRetired = !OPT.format && !tirable('F03');
+if (OPT.format === 'auto' || defRetired) {
+  if (defRetired) console.warn('⚠ F03 (format par défaut) retiré dans Production → rotation parmi les formats encore actifs');
+  format = FMT.pickFormat({ bricks: fmtRows, done, hook: hookId, rand });
   if (!format) { console.error('✗ aucun format tirable (tous retirés ?)'); process.exit(2); }
 } else {
   OPT.format = OPT.format || 'F03';
   format = FMT.resolveFormat(OPT.format);
   if (!format || format.id !== OPT.format) { console.error('✗ format « ' + OPT.format + ' » inconnu (' + FMT.FORMATS.map(f => f.id).join(', ') + ')'); process.exit(2); }
   if (!format.renderable) { console.error('✗ format ' + format.id + ' (' + format.label + ') pas encore rendable'); process.exit(2); }
+  if (!tirable(format.id)) { console.error('✗ format ' + format.id + ' retiré dans Production (statut ≠ ready) : --format auto ou un autre format'); process.exit(2); }
 }
 let chocForced = null;
 if (FMT.hasChoc(format) && OPT.choc && OPT.choc !== 'auto') {
