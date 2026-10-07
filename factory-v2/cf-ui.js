@@ -3506,7 +3506,7 @@
     var ph = function (t) { return '<div class="cf-sheet-media cf-bs-ph"><span class="cf-sheet-none">' + svg(IC.play, 18) + '<br>' + esc(t) + '</span></div>'; };
     var asrc = mediaSrc(b.audio);
     // colonne de gauche (200 px, maquette) selon le type ; la musique a son lecteur pleine largeur au-dessus
-    var top = '', media = null;
+    var top = '', media = null, chocUseLine = '';
     if (b.kind === 'contenu' || b.kind === 'reaction') {   // réaction (07/10) : même lecteur que la démo
       media = fb && mediaSrc(fb.video) ? '<div class="cf-sheet-media cf-mbox"><video controls playsinline preload="metadata" src="' + esc(mediaSrc(fb.video)) + '"></video><span class="cf-vmsg">vidéo illisible</span></div>'
         : ph('démo · ' + b.id) + miss('vidéo de démo');
@@ -3541,9 +3541,14 @@
           : ph('style · ' + (m.value || b.id)) + (fb && fb.hasMedia ? miss('aperçu') : '<span class="cf-meta">aperçu du style : pas encore en ligne</span>');
     } else if (b.kind === 'texte-choc') {
       // texte choc (TH…) : aucune limite (Axel 07/10) → nombre de vidéos qui l'ont déjà utilisé (recettes QC, tous formats)
+      // aperçu de la phrase telle qu'à l'écran (pastilles blanches, style natif) ; le compte d'utilisation passe à droite
+      var phr = thText(m, b.label), wl = [], cur = '';
+      phr.split(/\s+/).forEach(function (w) { if (cur && (cur + ' ' + w).length > 18) { wl.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; });
+      if (cur) wl.push(cur);
+      media = '<div class="cf-sheet-media" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px">'
+        + wl.map(function (l) { return '<span style="background:#fff;color:#111;font-weight:700;font-size:13px;line-height:1.25;padding:3px 8px;border-radius:7px;text-align:center">' + esc(l) + '</span>'; }).join('') + '</div>';
       var nU = chocUses(b.id);
-      media = '<div class="cf-sheet-media cf-bs-ph"><span class="cf-sheet-none"><b style="font-size:28px">' + esc(nU == null ? '—' : fInt(nU)) + '</b><br>'
-        + esc(nU == null ? 'production pas encore chargée' : plural(nU, 'vidéo') + ' avec ce texte') + '<br><span class="cf-meta">pas de limite</span></span></div>';
+      chocUseLine = '<div class="cf-meta" style="margin:8px 0 2px">' + esc(nU == null ? 'Utilisation : production pas encore chargée' : 'Utilisé dans ' + fInt(nU) + NB + plural(nU, 'vidéo générée', 'vidéos générées') + ' · pas de limite') + '</div>';
     } else if (spoken) {
       // brique parlée : vidéos par avatar (factory_prod_stats), puis la tuile audio de la maquette et sa légende
       media = '';
@@ -3605,7 +3610,7 @@
       + top
       + '<div class="cf-bs-grid">'
       + (media != null ? '<div class="cf-bs-media">' + media + '</div>' : '')
-      + '<div class="cf-sheet-info">' + textBox + kw + hist + '</div></div></div>';
+      + '<div class="cf-sheet-info">' + textBox + chocUseLine + kw + hist + '</div></div></div>';
   }
   var SPOKEN_V = { hook: 1, liaison: 1, cta: 1 };
 

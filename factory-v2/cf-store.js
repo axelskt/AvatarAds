@@ -793,7 +793,7 @@
     'm_duration:meta->duration_s', 'm_cover:meta->>cover', 'm_before:meta->before', 'm_after:meta->after',
     // 26/09 : hooks avant / après (jamais en lipsync), incrustation obligatoire, photos d'un avatar, aperçu et propositions
     // de sous-titres (usine/coherence.js lit lipsync, hook_mode, overlay_required)
-    'm_lipsync:meta->lipsync', 'm_hook_mode:meta->>hook_mode', 'm_overlay:meta->>overlay_required', 'm_images:meta->images', 'm_thumbs:meta->thumbs',
+    'm_lipsync:meta->lipsync', 'm_hook_mode:meta->>hook_mode', 'm_overlay:meta->>overlay_required', 'm_images:meta->images', 'm_thumbs:meta->thumbs', 'm_emoji:meta->>emoji', 'm_full:meta->>full',
     'm_voices:meta->voices',   // 28/09 : voix autorisées d'une brique parlée (H19 / H74 = ['omni'], voix native uniquement)
     'm_poster:meta->>poster', 'm_proposal:meta->proposal'].join(',');
   // factory_recipes : meta.label / group / module / code / clips (assemblages avant / après, usine/assemble-hk.mjs)
@@ -847,6 +847,8 @@
         voices: Array.isArray(b.m_voices) ? b.m_voices.filter(function (v) { return v === 'axel' || v === 'omni'; }) : null,
         images: Array.isArray(b.m_images) ? b.m_images.map(function (u) { return pubFile(u, IMG_EXT); }).filter(Boolean).slice(0, 40) : [],
         // 07/10 : miniatures JPEG 720 px alignées sur images (Safari refusait la transformation render/image)
+        // texte choc : émoji(s) de fin et phrase complète telle qu'à l'écran (Axel 07/10 : « ajoute les émojis »)
+        emoji: txt(b.m_emoji, 24), full: txt(b.m_full, 300),
         thumbs: Array.isArray(b.m_thumbs) ? b.m_thumbs.map(function (u) { return pubFile(u, IMG_EXT); }).slice(0, 40) : [],
         proposal: b.m_proposal === true },
       poster: pubFile(txt(b.m_poster, 400), IMG_EXT),
