@@ -212,8 +212,11 @@ export function fpDecide(list: FpCand[]): { vf: string | null, state: 'auto' | '
   if (g1.score <= FP_FAR && (!g2 || (g2.score >= g1.score * FP_RATIO && g2.score - g1.score >= 20))) return auto(g1)
   if (s1 && (s1.style as number) <= ST_SURE) {
     if (!s2 || (s2.style as number) - (s1.style as number) >= ST_GAP) return auto(s1)
-    // style net mais serré : il faut que la luminance (à 10 % près de la meilleure) et la légende le confirment
+    // style net mais serré : il faut que la luminance (à 10 % près de la meilleure) et la légende le confirment…
     if (s1.score <= g1.score * 1.1 && s1.cap) return auto(s1)
+    // …ou que la même vidéo soit AUSSI la meilleure en luminance, avec 20 % d'avance sur la 2e (VF-0026 sur @avatarads :
+    // style 0,07 contre 0,10, luminance 38 contre 51 ; le décodeur JPEG de l'edge donne des couleurs à peine différentes)
+    if (s1.vf === g1.vf && (!g2 || g2.score >= g1.score * 1.2)) return auto(s1)
   }
   if (cands.length && (g1.score <= FP_MAYBE || (g1.score <= FP_FAR && g2 && g2.score >= g1.score * 1.3) || (s1 && (s1.style as number) <= ST_MAYBE))) {
     return { vf: null, state: 'unsure', score: g1.score, candidates: cands }

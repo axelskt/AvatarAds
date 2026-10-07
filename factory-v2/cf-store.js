@@ -206,11 +206,11 @@
     logNet('rpc factory_access');
     var deadline = function (p, ms) { return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej({ message: 'délai dépassé (' + Math.round(ms / 1000) + ' s)' }); }, ms); })]); };
     return Promise.resolve()
-      .then(function () { return deadline(sb.rpc('factory_access'), 12000).catch(function (e) {
+      .then(function () { return deadline(sb.rpc('factory_access'), 8000).catch(function (e) {
         // une seule nouvelle tentative silencieuse (réseau lent, réveil de l'onglet) avant d'afficher l'erreur
         if (!e || !/délai/.test(String(e.message))) throw e;
         logNet('rpc factory_access (2e essai)');
-        return deadline(sb.rpc('factory_access'), 15000);
+        return deadline(sb.rpc('factory_access'), 10000);
       }); })
       .then(function (res) {
         if (my !== gateSeq || ep !== epoch) return;
@@ -1607,14 +1607,17 @@
   }
 
   // ── démarrage ──
-  // 07/10 (Axel : « Vérification de l'accès… » à l'infini) : supabase-js prend un verrou navigator.locks partagé par TOUS
-  // les onglets avatarads.fr (app, kit, dashboard) ; un onglet en arrière-plan qui le garde (Safari le gèle) bloquait
-  // getSession() pour toujours. Verrou attendu 4 s au plus, puis on continue sans lui.
+  // 07/10 (Axel : « Vérification de l'accès… » à chaque actualisation) : supabase-js prend par défaut un verrou
+  // navigator.locks partagé par TOUS les onglets avatarads.fr (app, kit, dashboard). Un onglet en arrière-plan que Safari
+  // gèle le garde : la 1re correction (attendre 4 s puis passer outre) faisait encore attendre 4 s CHAQUE opération de
+  // session (lecture de session, contrôle d'accès, chaque appel d'edge) → écran d'accès très long. Verrou propre à la
+  // page (file d'attente en mémoire) : plus rien ne dépend des autres onglets. Le jeton de rafraîchissement supporte une
+  // réutilisation proche par deux onglets (fenêtre de réutilisation Supabase), donc pas de déconnexion croisée.
+  var lockChain = Promise.resolve();
   function authLock(name, acquireTimeout, fn) {
-    if (!navigator.locks || !navigator.locks.request) return fn();
-    var ac = typeof AbortController === 'function' ? new AbortController() : null, t = ac ? setTimeout(function () { ac.abort(); }, 4000) : 0;
-    return navigator.locks.request(name, ac ? { signal: ac.signal } : {}, function () { if (t) clearTimeout(t); return fn(); })
-      .catch(function (e) { if (e && e.name === 'AbortError') return fn(); throw e; });
+    var run = lockChain.then(function () { return fn(); });
+    lockChain = run.catch(function () { /* l'erreur reste à l'appelant ; la file continue */ });
+    return run;
   }
   try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: authLock } }); } catch (e) { sb = null; }
   if (!sb) {
