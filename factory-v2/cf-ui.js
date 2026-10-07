@@ -975,7 +975,8 @@
   function ttsK(v) { return v >= 1e6 ? fDec(v / 1e6, 1) + NB + 'M' : v >= 1e4 ? Math.round(v / 1e3) + 'k' : v >= 1e3 ? fDec(v / 1e3, 1) + 'k' : String(v); }
   function ttsVidHTML(v) {
     var th = safeUrl(v.thumb || ''), u = safeUrl(v.url || '', TT_HOST);
-    var inner = (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="cf-tts-ph">' + svg(IC.tiktok, 18) + '</span>')
+    // jamais de loading="lazy" ici : l'Accueil se redessine à chaque donnée reçue et Safari relançait l'attente à chaque fois
+    var inner = (th ? '<img src="' + esc(th) + '" alt="" decoding="async" referrerpolicy="no-referrer">' : '<span class="cf-tts-ph">' + svg(IC.tiktok, 18) + '</span>')
       + '<span class="cf-tts-vv">' + svg(IC.eye, 11) + esc(v.views == null ? '—' : ttsK(v.views)) + '</span>';
     var st = [['likes', IC.heart, v.likes], ['commentaires', IC.chat, v.comments], ['partages', TT_SHARE, v.shares]].map(function (x) {
       return '<span title="' + esc(x[0]) + '">' + svg(x[1], 11) + esc(x[2] == null ? '—' : ttsK(x[2])) + '</span>';
@@ -992,7 +993,7 @@
       }).join('') + '</span>';
     var vids = a.videos.slice(0, 6);
     return '<div class="cf-tts-acct"><div class="cf-tk-row">'
-      + '<span class="cf-tk-pic" aria-hidden="true">' + svg(IC.tiktok, 16) + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async" loading="lazy">' : '') + '</span>'
+      + '<span class="cf-tk-pic" aria-hidden="true">' + svg(IC.tiktok, 16) + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async">' : '') + '</span>'
       + '<span class="cf-tk-main"><b>' + esc(name) + '</b><span class="cf-meta">' + esc((a.username && a.name ? a.name + ' · ' : '') + (a.env === 'sandbox' ? 'app de test (Sandbox)' : 'app en production')) + '</span></span>'
       + (a.error ? '<span class="cf-tk-st"><span class="cf-qchip is-ko">illisible</span><span class="cf-tk-why">' + esc(a.error) + '</span></span>' : nums)
       + (a.error ? '<button type="button" class="cf-btn is-sm cf-tk-btn" data-act="tts-connect">' + svg(IC.refresh, 13) + 'Reconnecter</button>' : '')

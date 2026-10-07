@@ -613,6 +613,7 @@
         if (!res.ok || b.error || !Array.isArray(b.accounts)) throw { kind: res.status === 401 ? 'auth' : 'http', message: b.error ? String(b.error) : 'HTTP ' + res.status };
         var hd = function (v) { return typeof v === 'string' && /^[A-Za-z0-9._]{2,24}$/.test(v) ? v : null; };
         var avPre = SUPABASE_URL + '/storage/v1/object/public/factory-media/tiktok-avatars/';   // copie gardée par tiktok-auth (keepAvatar)
+        var covPre = SUPABASE_URL + '/storage/v1/object/public/factory-media/tiktok-covers/';   // copies des couvertures (keepCover)
         var pic = function (v) { return typeof v === 'string' && !/[\s"'<>]/.test(v) && (TT_IMG.test(v) || v.indexOf(avPre) === 0) ? v : null; };
         patch = { state: 'ready', kind: null, error: null, data: {
           fetchedAt: Date.now(),
@@ -623,7 +624,7 @@
               videos: (Array.isArray(a.videos) ? a.videos : []).slice(0, 60).map(function (v) {
                 var t = str(v.published_at), ms = t ? Date.parse(t) : NaN;
                 return { id: str(v.id), title: str(v.title), ms: isFinite(ms) ? ms : null, duration: num(v.duration),
-                  thumb: typeof v.thumb === 'string' && TT_IMG.test(v.thumb) ? v.thumb : null, url: typeof v.url === 'string' && TT_VID.test(v.url) ? v.url : null,
+                  thumb: typeof v.thumb === 'string' && !/[\s"'<>]/.test(v.thumb) && (TT_IMG.test(v.thumb) || v.thumb.indexOf(covPre) === 0) ? v.thumb : null, url: typeof v.url === 'string' && TT_VID.test(v.url) ? v.url : null,
                   views: num(v.views), likes: num(v.likes), comments: num(v.comments), shares: num(v.shares) };
               }) };
           }),

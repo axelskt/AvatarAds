@@ -133,6 +133,26 @@ async function freshToken(open_id: string, env: Env = 'prod'): Promise<{ token: 
 // Stats TikTok (07/10) : dernière réponse gardée 5 min par instance (le dashboard relit à chaque ouverture).
 let statsCache: { at: number, body: unknown } | null = null
 
+// Couvertures (07/10) : le lien renvoyé par TikTok est signé, expire, et une partie ne s'affichait pas dans Safari. On en
+// garde UNE copie par vidéo dans factory-media/tiktok-covers/<id>.<ext> (lien stable, mis en cache), que le dashboard
+// affiche ; les octets servent aussi à l'empreinte de rapprochement. Le lien vient de l'API TikTok (jamais du client) :
+// https seulement, image seulement, 3 Mo au plus.
+async function keepCover(id: string, src: string): Promise<string | null> {
+  try {
+    if (!/^\d{5,25}$/.test(id) || !/^https:\/\/[\w.-]+\//.test(src)) return null
+    const r = await fetch(src, { headers: { Accept: 'image/jpeg,image/png;q=0.9,image/webp;q=0.8,image/*;q=0.5' }, signal: AbortSignal.timeout(8000) })
+    const type = (r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+    if (!r.ok || !type.startsWith('image/')) { console.log('couverture', id, r.status, type, new URL(src).hostname); return null }
+    const bytes = new Uint8Array(await r.arrayBuffer())
+    if (!bytes.length || bytes.length > 3_000_000) return null
+    const ext = ({ 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/avif': 'avif' } as Record<string, string>)[type] || 'jpg'
+    const path = `tiktok-covers/${id}.${ext}`
+    const { error } = await svc.storage.from('factory-media').upload(path, bytes, { contentType: type, upsert: true })
+    if (error) { console.log('couverture upload', id, error.message); return null }
+    return `${SB_URL}/storage/v1/object/public/factory-media/${path}`
+  } catch (e) { console.log('couverture', id, String((e as Error)?.message || e).slice(0, 120)); return null }
+}
+
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
 const MEDIA_PREFIX = `${SB_URL}/storage/v1/object/public/factory-media/`
 
@@ -291,6 +311,29 @@ Deno.serve(async (req) => {
           }
           if (!vj.data?.has_more || !vj.data?.cursor) break
           cursor = Number(vj.data.cursor)
+        }
+        // vidéos gardées en base (tiktok_videos) + copie des couvertures pas encore copiées (30 au plus par lecture)
+        if (username && vids.length) {
+          const ids = vids.map((v) => String(v.id)).filter(Boolean)
+          const { data: known } = await svc.from('tiktok_videos').select('id, cover_copy, vf, match_state').in('id', ids)
+          const K = new Map((known || []).map((k: any) => [String(k.id), k]))
+          await svc.from('tiktok_videos').upsert(vids.map((v) => ({ id: v.id, account: username, env: r.env,
+            created: v.published_at, duration: v.duration, title: v.title, share_url: v.url, cover_src: v.thumb,
+            views: v.views, likes: v.likes, comments: v.comments, shares: v.shares, updated_at: new Date().toISOString() })), { onConflict: 'id' })
+          const todo = vids.filter((v) => v.thumb && !K.get(String(v.id))?.cover_copy).slice(0, 30)
+          for (let i = 0; i < todo.length; i += 6) {
+            await Promise.all(todo.slice(i, i + 6).map(async (v) => {
+              const url = await keepCover(String(v.id), String(v.thumb))
+              if (!url) return
+              await svc.from('tiktok_videos').update({ cover_copy: url }).eq('id', v.id)
+              K.set(String(v.id), { ...(K.get(String(v.id)) || {}), cover_copy: url })
+            }))
+          }
+          for (const v of vids) {
+            const k: any = K.get(String(v.id))
+            if (k?.cover_copy) v.thumb = k.cover_copy
+            if (k?.vf) v.recipe = { vf: k.vf, state: k.match_state }
+          }
         }
         a.videos = vids
         if (username) {
