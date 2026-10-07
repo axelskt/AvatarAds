@@ -2,6 +2,10 @@
 //  action=authorize : renvoie l'URL d'autorisation TikTok (client_key public, redirect vérifié)
 //  action=exchange  : échange le `code` reçu sur le callback contre un access_token, le stocke
 //  action=status    : y a-t-il un compte TikTok connecté ? (open_id + display_name, JAMAIS le token)
+//  action=stats     : @, abonnés, likes et vues de chaque vidéo des comptes qui ont donné les scopes de stats (07/10)
+// env=sandbox (07/10) : même chose avec l'app de TEST (clés TIKTOK_SANDBOX_*) et la table tiktok_sandbox_accounts, pour
+// les scopes de stats pas encore revus en production (user.info.profile, user.info.stats, video.list). Le state signé
+// porte l'environnement (1.o. production, 1.s. Sandbox) : la page de retour n'a rien à savoir.
 // Le client_secret ne sort JAMAIS du serveur : l'échange se fait ici. verify_jwt=false (session vérifiée ICI).
 // Voir aussi la page publique tiktok-callback.html.
 // Audit 02/10 : TOUTES les actions exigent une session owner/developer. authorize émet un state signé lié à cette
@@ -14,7 +18,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const CLIENT_KEY    = (Deno.env.get('TIKTOK_CLIENT_KEY') || '').trim()
 const CLIENT_SECRET = (Deno.env.get('TIKTOK_CLIENT_SECRET') || '').trim()
 const REDIRECT_URI  = 'https://avatarads.fr/tiktok-callback.html'
+// Après la revue TikTok des scopes de stats (07/10, révision à soumettre) : ajouter ici user.info.profile,user.info.stats,video.list
+// puis reconnecter les comptes. JAMAIS avant : un scope non accordé à l'app de production fait échouer l'autorisation.
 const SCOPE         = 'user.info.basic,video.upload'
+const SBX_KEY       = (Deno.env.get('TIKTOK_SANDBOX_CLIENT_KEY') || '').trim()
+const SBX_SECRET    = (Deno.env.get('TIKTOK_SANDBOX_CLIENT_SECRET') || '').trim()
+const SBX_SCOPE     = 'user.info.basic,user.info.profile,user.info.stats,video.list'
+type Env = 'prod' | 'sandbox'
+const CFG: Record<Env, { key: string, secret: string, table: string, scope: string }> = {
+  prod:    { key: CLIENT_KEY, secret: CLIENT_SECRET, table: 'tiktok_accounts', scope: SCOPE },
+  sandbox: { key: SBX_KEY, secret: SBX_SECRET, table: 'tiktok_sandbox_accounts', scope: SBX_SCOPE },
+}
 const SB_URL        = Deno.env.get('SUPABASE_URL') || ''
 const SERVICE       = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const svc = createClient(SB_URL, SERVICE)
@@ -65,47 +79,49 @@ async function ownerUid(req: Request): Promise<string> {
 // qu'instagram-auth, préfixe différent). Format : 1.o.<expiration en s, base 36>.<nonce>.<signature>. La signature
 // couvre AUSSI l'uid de la session owner qui l'a demandé (jamais écrit en clair dans l'URL vue par TikTok) :
 // l'échange n'aboutit qu'avec cette même session. Valable 10 minutes. Pas de mode relecteur ici.
+// 07/10 : 1.s. = connexion Sandbox (la lettre est couverte par la signature, toujours faite avec le secret de production).
 const STATE_TTL_S = 600
-const STATE_RE = /^1\.o\.([0-9a-z]{1,10})\.([A-Za-z0-9_-]{16})\.([A-Za-z0-9_-]{43})$/
+const STATE_RE = /^1\.([os])\.([0-9a-z]{1,10})\.([A-Za-z0-9_-]{16})\.([A-Za-z0-9_-]{43})$/
 const b64u = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 async function stateSig(body: string, uid: string): Promise<string> {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(CLIENT_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
   return b64u(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('aa-oauth-state|tk|' + body + '|' + uid))))
 }
-async function stateMint(uid: string): Promise<string> {
-  const body = '1.o.' + (Math.floor(Date.now() / 1000) + STATE_TTL_S).toString(36) + '.' + b64u(crypto.getRandomValues(new Uint8Array(12)))
+async function stateMint(uid: string, env: Env): Promise<string> {
+  const body = '1.' + (env === 'sandbox' ? 's' : 'o') + '.' + (Math.floor(Date.now() / 1000) + STATE_TTL_S).toString(36) + '.' + b64u(crypto.getRandomValues(new Uint8Array(12)))
   return body + '.' + await stateSig(body, uid)
 }
-// State bien formé, non expiré, signé pour CETTE session owner.
-async function stateOk(state: string, uid: string): Promise<boolean> {
+// State bien formé, non expiré, signé pour CETTE session owner → son environnement (null = refus).
+async function stateOk(state: string, uid: string): Promise<Env | null> {
   const m = STATE_RE.exec(state)
-  if (!m || !uid) return false
-  const exp = parseInt(m[1], 36) * 1000
-  if (!(exp > Date.now()) || exp - Date.now() > (STATE_TTL_S + 300) * 1000) return false
+  if (!m || !uid) return null
+  const exp = parseInt(m[2], 36) * 1000
+  if (!(exp > Date.now()) || exp - Date.now() > (STATE_TTL_S + 300) * 1000) return null
   const i = state.lastIndexOf('.')
   const expected = await stateSig(state.slice(0, i), uid)
   const got = state.slice(i + 1)
-  if (expected.length !== got.length) return false
+  if (expected.length !== got.length) return null
   let d = 0
   for (let k = 0; k < got.length; k++) d |= expected.charCodeAt(k) ^ got.charCodeAt(k)   // temps constant
-  return d === 0
+  return d === 0 ? (m[1] === 's' ? 'sandbox' : 'prod') : null
 }
 // Token d'accès valide d'un compte : l'access_token TikTok vit 24 h ; au-delà (ou à 5 min de la fin) on le renouvelle
 // avec le refresh_token (365 j) et on enregistre le nouveau couple. null = compte inconnu ou refresh refusé.
-async function freshToken(open_id: string): Promise<{ token: string } | { error: string }> {
-  const { data: acc } = await svc.from('tiktok_accounts').select('access_token, refresh_token, expires_at').eq('open_id', open_id).maybeSingle()
+async function freshToken(open_id: string, env: Env = 'prod'): Promise<{ token: string } | { error: string }> {
+  const C = CFG[env]
+  const { data: acc } = await svc.from(C.table).select('access_token, refresh_token, expires_at').eq('open_id', open_id).maybeSingle()
   if (!acc?.access_token) return { error: 'compte TikTok non connecté (open_id inconnu)' }
   const exp = acc.expires_at ? Date.parse(acc.expires_at) : 0
   if (exp && exp - Date.now() > 5 * 60 * 1000) return { token: acc.access_token }
   if (!acc.refresh_token) return { error: 'session TikTok expirée : reconnecte ce compte' }
   const r = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_key: CLIENT_KEY, client_secret: CLIENT_SECRET, grant_type: 'refresh_token', refresh_token: acc.refresh_token }).toString(),
+    body: new URLSearchParams({ client_key: C.key, client_secret: C.secret, grant_type: 'refresh_token', refresh_token: acc.refresh_token }).toString(),
   })
   const t = await r.json().catch(() => ({}))
   if (!r.ok || t.error || !t.access_token) return { error: 'session TikTok expirée : reconnecte ce compte (' + String(t.error_description || t.error || r.status).slice(0, 80) + ')' }
   const now = Date.now()
-  await svc.from('tiktok_accounts').update({
+  await svc.from(C.table).update({
     access_token: t.access_token, refresh_token: t.refresh_token ?? acc.refresh_token,
     expires_at: new Date(now + (Number(t.expires_in) || 86400) * 1000).toISOString(),
     ...(t.refresh_expires_in ? { refresh_expires_at: new Date(now + Number(t.refresh_expires_in) * 1000).toISOString() } : {}),
@@ -113,6 +129,9 @@ async function freshToken(open_id: string): Promise<{ token: string } | { error:
   }).eq('open_id', open_id)
   return { token: t.access_token }
 }
+
+// Stats TikTok (07/10) : dernière réponse gardée 5 min par instance (le dashboard relit à chaque ouverture).
+let statsCache: { at: number, body: unknown } | null = null
 
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
 const MEDIA_PREFIX = `${SB_URL}/storage/v1/object/public/factory-media/`
@@ -131,12 +150,14 @@ Deno.serve(async (req) => {
       : 'réservé au propriétaire' }, 401)
   }
 
-  // 1) URL d'autorisation à ouvrir côté app (state signé lié à la session owner)
+  // 1) URL d'autorisation à ouvrir côté app (state signé lié à la session owner ; &env=sandbox = app de test, stats)
   if (action === 'authorize') {
-    const state = await stateMint(uid)
+    const env: Env = url.searchParams.get('env') === 'sandbox' ? 'sandbox' : 'prod'
+    if (!CFG[env].key || !CFG[env].secret) return json({ error: 'TikTok Sandbox non configuré (secrets TIKTOK_SANDBOX_* manquants).' }, 500)
+    const state = await stateMint(uid, env)
     const authorize = 'https://www.tiktok.com/v2/auth/authorize/'
-      + `?client_key=${encodeURIComponent(CLIENT_KEY)}`
-      + `&scope=${encodeURIComponent(SCOPE)}`
+      + `?client_key=${encodeURIComponent(CFG[env].key)}`
+      + `&scope=${encodeURIComponent(CFG[env].scope)}`
       + `&response_type=code`
       + `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`
       + `&state=${encodeURIComponent(state)}`
@@ -151,13 +172,16 @@ Deno.serve(async (req) => {
     if (!code) return json({ error: 'code manquant' }, 400)
     // Audit 02/10 : state signé pour cette session owner, vérifié AVANT d'utiliser le code.
     const state = String(body.state || url.searchParams.get('state') || '')
-    if (!(await stateOk(state, uid))) {
+    const env = await stateOk(state, uid)
+    if (!env) {
       return json({ error: 'Lien de connexion expiré ou invalide (autre session ou lien modifié) : relance « Connecter TikTok » depuis le tableau de bord.' }, 403)
     }
+    const C = CFG[env]
+    if (!C.key || !C.secret) return json({ error: 'TikTok Sandbox non configuré (secrets TIKTOK_SANDBOX_* manquants).' }, 500)
 
     const form = new URLSearchParams({
-      client_key: CLIENT_KEY,
-      client_secret: CLIENT_SECRET,
+      client_key: C.key,
+      client_secret: C.secret,
       code,
       grant_type: 'authorization_code',
       redirect_uri: REDIRECT_URI,
@@ -180,17 +204,22 @@ Deno.serve(async (req) => {
       refresh_expires_at: new Date(now + (Number(t.refresh_expires_in) || 0) * 1000).toISOString(),
       updated_at: new Date(now).toISOString(),
     }
-    const { error } = await svc.from('tiktok_accounts').upsert(row, { onConflict: 'open_id' })
+    const { error } = await svc.from(C.table).upsert(row, { onConflict: 'open_id' })
     if (error) return json({ error: 'stockage token : ' + error.message }, 500)
 
-    // (optionnel) récupérer le display_name pour l'affichage
+    // (optionnel) récupérer le display_name pour l'affichage ; le @ (username) si le scope user.info.profile est donné
+    const hasProfile = String(t.scope || '').split(',').includes('user.info.profile')
     try {
-      const ui = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url', {
+      const ui = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url' + (hasProfile ? ',username' : ''), {
         headers: { Authorization: `Bearer ${t.access_token}` },
       })
       const uj = await ui.json().catch(() => ({}))
       const u = uj?.data?.user
-      if (u?.display_name) {
+      if (u?.display_name && env === 'sandbox') {
+        const handle = /^[A-Za-z0-9._]{2,24}$/.test(String(u.username || '')) ? String(u.username) : null
+        const avatar = u.avatar_url ? (await keepAvatar(t.open_id, u.avatar_url)) ?? u.avatar_url : null
+        await svc.from(C.table).update({ display_name: u.display_name, avatar_url: avatar, ...(handle ? { handle } : {}) }).eq('open_id', t.open_id)
+      } else if (u?.display_name) {
         // @ : une reconnexion (Sandbox → production = nouvel open_id) reprend celui de l'ancienne connexion qui a la même
         // photo — la clé d'image du lien TikTok ne change pas tant que la photo de profil ne change pas
         const key = String(u.avatar_url || '').match(/\/tos-[^/]+\/([0-9a-f]{32})/)?.[1]
@@ -204,11 +233,83 @@ Deno.serve(async (req) => {
         const upd: Record<string, unknown> = { display_name: u.display_name, avatar_url: avatar }
         const { data: cur } = await svc.from('tiktok_accounts').select('handle').eq('open_id', t.open_id).maybeSingle()
         if (handle && !cur?.handle) upd.handle = handle
+        if (/^[A-Za-z0-9._]{2,24}$/.test(String(u.username || ''))) upd.handle = String(u.username)   // scope profil revu : le vrai @
         await svc.from('tiktok_accounts').update(upd).eq('open_id', t.open_id)
       }
     } catch { /* non bloquant */ }
 
-    return json({ ok: true, open_id: t.open_id, scope: t.scope })
+    return json({ ok: true, open_id: t.open_id, scope: t.scope, env })
+  }
+
+  // 2b) stats (07/10) : pour chaque compte qui a donné user.info.stats (Sandbox aujourd'hui, production après la revue),
+  //     profil (@, abonnés, likes, nombre de vidéos) + ses 60 dernières vidéos (vues, likes, commentaires, partages).
+  //     Un même @ n'est lu qu'une fois (production d'abord). Relevé du jour dans social_daily (courbe des abonnés).
+  //     Jamais de jeton dans la réponse. Cache 5 min (?force=1 pour relire tout de suite).
+  if (action === 'stats') {
+    const force = url.searchParams.get('force') === '1'
+    if (!force && statsCache && Date.now() - statsCache.at < 5 * 60 * 1000) return json(statsCache.body)
+    const rows: { env: Env, open_id: string, display_name: string | null, handle: string | null, avatar_url: string | null }[] = []
+    for (const env of ['prod', 'sandbox'] as Env[]) {
+      if (!CFG[env].key || !CFG[env].secret) continue
+      const { data } = await svc.from(CFG[env].table).select('open_id, display_name, handle, avatar_url, scope').order('updated_at', { ascending: false })
+      for (const r of data || []) if (String(r.scope || '').split(',').includes('user.info.stats')) rows.push({ env, ...r })
+    }
+    const n = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : null)
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
+    const seen = new Set<string>(), accounts: Record<string, unknown>[] = []
+    for (const r of rows) {
+      const a: Record<string, unknown> = { env: r.env, open_id: r.open_id, username: r.handle, display_name: r.display_name, avatar: r.avatar_url, videos: [] }
+      try {
+        const ft = await freshToken(r.open_id, r.env)
+        if ('error' in ft) throw new Error(ft.error)
+        const H = { Authorization: `Bearer ${ft.token}` }
+        const ui = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,username,avatar_url,follower_count,following_count,likes_count,video_count,is_verified', { headers: H, signal: AbortSignal.timeout(10000) })
+        const uj = await ui.json().catch(() => ({}))
+        if (!ui.ok || (uj.error?.code && uj.error.code !== 'ok')) throw new Error('profil : ' + String(uj.error?.message || uj.error?.code || `HTTP ${ui.status}`).slice(0, 140))
+        const u = uj.data?.user || {}
+        const username = /^[A-Za-z0-9._]{2,24}$/.test(String(u.username || '')) ? String(u.username) : r.handle
+        if (username && seen.has(username)) continue
+        if (username) seen.add(username)
+        Object.assign(a, { username, display_name: u.display_name ?? r.display_name, followers: n(u.follower_count), following: n(u.following_count),
+          likes: n(u.likes_count), video_count: n(u.video_count), verified: !!u.is_verified })
+        if (username && username !== r.handle) await svc.from(CFG[r.env].table).update({ handle: username }).eq('open_id', r.open_id)
+        // vidéos : 3 pages de 20 au plus (les plus récentes d'abord)
+        const vids: Record<string, unknown>[] = []
+        let cursor: number | null = null
+        for (let page = 0; page < 3; page++) {
+          const vr: Response = await fetch('https://open.tiktokapis.com/v2/video/list/?fields=id,title,video_description,create_time,cover_image_url,share_url,duration,view_count,like_count,comment_count,share_count', {
+            method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10000),
+            body: JSON.stringify(cursor ? { max_count: 20, cursor } : { max_count: 20 }),
+          })
+          const vj: any = await vr.json().catch(() => ({}))
+          if (!vr.ok || (vj.error?.code && vj.error.code !== 'ok')) { a.videos_error = 'vidéos : ' + String(vj.error?.message || vj.error?.code || `HTTP ${vr.status}`).slice(0, 140); break }
+          for (const v of vj.data?.videos || []) {
+            vids.push({ id: String(v.id || ''), title: String(v.title || v.video_description || '').slice(0, 300),
+              published_at: v.create_time ? new Date(Number(v.create_time) * 1000).toISOString() : null,
+              thumb: typeof v.cover_image_url === 'string' ? v.cover_image_url : null, url: typeof v.share_url === 'string' ? v.share_url : null,
+              duration: n(v.duration), views: n(v.view_count), likes: n(v.like_count), comments: n(v.comment_count), shares: n(v.share_count) })
+          }
+          if (!vj.data?.has_more || !vj.data?.cursor) break
+          cursor = Number(vj.data.cursor)
+        }
+        a.videos = vids
+        if (username) {
+          await svc.from('social_daily').upsert({ platform: 'tiktok', account: username, day, subscribers: a.followers ?? null,
+            views: vids.reduce((s, v) => s + (Number(v.views) || 0), 0), videos: a.video_count ?? null, updated_at: new Date().toISOString() },
+            { onConflict: 'platform,account,day' })
+        }
+      } catch (e) {
+        a.error = String((e as Error)?.message || e).slice(0, 200)
+      }
+      accounts.push(a)
+    }
+    const names = accounts.map((a) => a.username).filter(Boolean) as string[]
+    const { data: hist } = names.length
+      ? await svc.from('social_daily').select('account, day, subscribers').eq('platform', 'tiktok').in('account', names).order('day').limit(2000)
+      : { data: [] }
+    const body = { accounts, history: hist || [], at: new Date().toISOString() }
+    statsCache = { at: Date.now(), body }
+    return json(body)
   }
 
   // 3) état de connexion (sans jamais exposer le token)

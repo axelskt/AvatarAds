@@ -77,8 +77,9 @@
   // Audit 02/10 : prévient Factory V2 du résultat (succès comme échec) pour qu'elle relise la liste des comptes. Deux
   // canaux : window.opener (popup) et BroadcastChannel 'tk-oauth' (même origine), qui marche même si TikTok a coupé le
   // lien opener (COOP) ou si la connexion s'est faite dans un autre onglet. Jamais de jeton dans le message.
-  function notify(ok, openId, error){
-    var msg = { source: 'tk-oauth', ok: !!ok,
+  // 07/10 : env = 'sandbox' pour une connexion « stats » (app de test), 'prod' sinon, null si inconnu (échec avant l'échange).
+  function notify(ok, openId, error, env){
+    var msg = { source: 'tk-oauth', ok: !!ok, env: env === 'sandbox' || env === 'prod' ? env : null,
       open_id: (typeof openId === 'string' && /^[\w.:=+\/-]{4,200}$/.test(openId)) ? openId : null,
       error: ok ? null : String(error || 'connexion échouée').slice(0, 200) };
     if (window.opener) { try { window.opener.postMessage(msg, location.origin); } catch(_) {} }
@@ -109,8 +110,9 @@
       });
       var d = await r.json();
       if (d && d.ok){
-        notify(true, d.open_id, null);
-        show(okSvg(), 'TikTok connecté', 'Ton compte est lié à AvatarAds. Factory V2 met sa liste à jour toute seule : tu peux fermer cette page.');
+        notify(true, d.open_id, null, d.env);
+        if (d.env === 'sandbox') show(okSvg(), 'Statistiques TikTok reliées', 'Ton compte partage ses statistiques avec AvatarAds. Factory V2 les affiche toute seule : tu peux fermer cette page.');
+        else show(okSvg(), 'TikTok connecté', 'Ton compte est lié à AvatarAds. Factory V2 met sa liste à jour toute seule : tu peux fermer cette page.');
       }
       else { var m = (d && d.error) ? d.error : 'Échange du token impossible.'; notify(false, null, m); show(errSvg(), 'Erreur', m); }
     } catch(e){ notify(false, null, 'erreur réseau'); show(errSvg(), 'Erreur réseau', e && e.message ? e.message : 'Réessaie.'); }

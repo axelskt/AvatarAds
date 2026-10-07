@@ -372,6 +372,7 @@
     CF.loadProviders();
     CF.loadYt();
     CF.loadTk();   // Audit 02/10 : comptes TikTok (section et alerte de l'Accueil)
+    CF.loadTts();   // 07/10 : statistiques TikTok (section et carte Réseaux)
     if (ui.netRange && ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange);
   }
 
@@ -541,6 +542,7 @@
       + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>'
       + homeNetHTML()
       + tkHTML()   // Audit 02/10 : comptes TikTok (brouillons), avant le kit de publication
+      + ttsHTML()   // 07/10 : statistiques TikTok (comptes reliés avec les scopes de stats)
       // Kit de publication (29/09) : page à part, pensée pour programmer à la main dans l'app Instagram.
       + '<section class="cf-card cf-kit" aria-labelledby="cfKitT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfKitT">Kit de publication</h2>'
       + '<div class="cf-dim">Vidéos à envoyer en AirDrop, légendes à copier, heures de programmation · 5 @avataradss + 3 @leoadsia + 3 @ialebd.axel par jour</div></div>'
@@ -653,14 +655,14 @@
       fol, one('views', 'Vues', c.views, X.per), watch, homeLikeStat(X)
     ], '');
   }
-  // ── Réseaux (29/09, Axel) : YouTube + Instagram (tous nos comptes) + TikTok (à brancher), cochables comme les comptes ──
+  // ── Réseaux (29/09, Axel) : YouTube + Instagram (tous nos comptes) + TikTok (07/10 : comptes reliés pour les stats), cochables ──
   // Chiffres : abonnés, vidéos, vues, likes, commentaires, chacun avec son % et l'objectif en vert / rouge. Vidéos, vues,
   // likes et commentaires = vidéos PUBLIÉES dans la période (stats à vie de chaque vidéo) ; abonnés = total actuel, et
   // sur la courbe le gain par jour (Instagram : historique Insights ; YouTube : relevé quotidien social_daily).
   var NET_PF = [
     { k: 'yt', label: 'YouTube', c: '#e0342b', ic: 'M22 8.5a3 3 0 0 0-2.1-2.1C18 6 12 6 12 6s-6 0-7.9.4A3 3 0 0 0 2 8.5 31 31 0 0 0 2 12a31 31 0 0 0 .1 3.5 3 3 0 0 0 2 2.1c1.9.4 7.9.4 7.9.4s6 0 7.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.1-3.5zM10 15V9l5 3z' },
     { k: 'ig', label: 'Instagram', c: 'var(--cf-c-reach)', ic: IC.insta },
-    { k: 'tt', label: 'TikTok', c: '#1b1814', ic: 'M9 12a4 4 0 1 0 4 4V4c.5 2.5 2.5 4 5 4', soon: true }
+    { k: 'tt', label: 'TikTok', c: '#1b1814', ic: 'M9 12a4 4 0 1 0 4 4V4c.5 2.5 2.5 4 5 4' }
   ];
   var NET_SER = [
     { k: 'subs', label: 'Abonnés', c: 'var(--cf-c-followers)', ic: IC.follow },
@@ -675,13 +677,15 @@
   var NET_ALL_FROM = new Date(2026, 6, 15).getTime();   // « All time » = depuis le 15/07/2026
   var NET_RANGES = [['7j', '7' + NB + 'j', 7], ['30j', '30' + NB + 'j', 30], ['90j', '90' + NB + 'j', 90], ['all', 'All time', null]];
   function netSel() {
-    var d = { yt: true, ig: true };
-    try { var v = JSON.parse(localStorage.getItem('cf_net') || 'null'); if (v && (v.yt || v.ig)) d = { yt: !!v.yt, ig: !!v.ig }; } catch (e) { /* stockage bloqué */ }
+    var d = { yt: true, ig: true, tt: true };
+    try { var v = JSON.parse(localStorage.getItem('cf_net') || 'null'); if (v && (v.yt || v.ig || v.tt)) d = { yt: !!v.yt, ig: !!v.ig, tt: v.tt == null ? true : !!v.tt }; } catch (e) { /* stockage bloqué */ }
     return d;
   }
+  // Comptes TikTok lisibles (07/10) : ceux dont le profil a répondu (un compte en erreur n'additionne rien).
+  function ttLive() { var D = CF.tts.data; return D ? D.accounts.filter(function (a) { return !a.error; }) : []; }
   function netToggle(k) {
-    var s = netSel(); if (k !== 'yt' && k !== 'ig') return;
-    s[k] = !s[k]; if (!s.yt && !s.ig) return;   // au moins un réseau reste affiché
+    var s = netSel(); if (k !== 'yt' && k !== 'ig' && k !== 'tt') return;
+    s[k] = !s[k]; if (!s.yt && !s.ig && !s.tt) return;   // au moins un réseau reste affiché
     try { localStorage.setItem('cf_net', JSON.stringify(s)); } catch (e) { /* */ }
     schedule();
   }
@@ -690,11 +694,14 @@
     var R = netRange(), days = NET_RANGES.filter(function (r) { return r[0] === R; })[0][2], sel = netSel();
     var now = Date.now(), from = days ? now - days * 864e5 : NET_ALL_FROM;
     var Y = CF.yt, M = CF.acct.media, I = CF.acct.ig[R], ytD = sel.yt ? Y.data : null, igM = sel.ig && M.data ? M.data : null, igD = sel.ig ? I.data : null;
-    var pend = (sel.yt && !Y.data && Y.state !== 'error') || (sel.ig && !M.data && M.state !== 'error');
-    var err = [sel.yt && Y.state === 'error' && !Y.data ? 'YouTube : ' + Y.error : '', sel.ig && M.state === 'error' && !M.data ? 'Instagram : ' + M.error : ''].filter(Boolean).join(' · ');
+    var T = CF.tts, ttA = sel.tt ? ttLive() : [];
+    var pend = (sel.yt && !Y.data && Y.state !== 'error') || (sel.ig && !M.data && M.state !== 'error') || (sel.tt && !T.data && T.state !== 'error');
+    var err = [sel.yt && Y.state === 'error' && !Y.data ? 'YouTube : ' + Y.error : '', sel.ig && M.state === 'error' && !M.data ? 'Instagram : ' + M.error : '',
+      sel.tt && T.state === 'error' && !T.data ? 'TikTok : ' + T.error : ''].filter(Boolean).join(' · ');
     var vids = [];
     if (ytD) ytD.videos.forEach(function (v) { var ms = Date.parse(v.published_at || ''); if (isFinite(ms)) vids.push({ pf: 'yt', ms: ms, views: v.views, likes: v.likes, comments: v.comments, thumb: v.thumb, url: v.id ? 'https://youtube.com/shorts/' + v.id : null }); });
     if (igM) igM.list.forEach(function (p) { if ((p.type === 'REELS' || p.type === 'VIDEO') && p.ms != null) vids.push({ pf: 'ig', ms: p.ms, views: p.views, likes: p.likes, comments: p.comments, thumb: p.thumb, url: p.permalink }); });
+    ttA.forEach(function (a) { a.videos.forEach(function (v) { if (v.ms != null) vids.push({ pf: 'tt', ms: v.ms, views: v.views, likes: v.likes, comments: v.comments, thumb: v.thumb, url: v.url, who: a.username ? '@' + a.username : null }); }); });
     vids.sort(function (a, b) { return b.ms - a.ms; });
     var inP = vids.filter(function (v) { return v.ms >= from; });
     var sum = function (k) { return inP.reduce(function (a, v) { return a + (v[k] || 0); }, 0); };
@@ -706,6 +713,14 @@
       var H = ytD.history.filter(function (h) { return h.subscribers != null; }), h0 = H.filter(function (h) { return ymdDate(h.day).getTime() >= from; })[0];
       if (h0 && H.length > 1 && h0 !== H[H.length - 1]) { gain += H[H.length - 1].subscribers - h0.subscribers; gainOk = true; }
     }
+    // TikTok (07/10) : abonnés actuels de chaque compte + écart entre relevés quotidiens (social_daily, écrit par tiktok-auth)
+    var ttH = T.data ? T.data.history : [];
+    ttA.forEach(function (a) {
+      if (a.followers == null) return;
+      subs += a.followers; subsOk = true;
+      var H = ttH.filter(function (h) { return h.account === a.username && h.subscribers != null; }), h0 = H.filter(function (h) { return ymdDate(h.day).getTime() >= from; })[0];
+      if (h0 && H.length > 1 && h0 !== H[H.length - 1]) { gain += H[H.length - 1].subscribers - h0.subscribers; gainOk = true; }
+    });
     if (sel.ig && igD && igD.followers != null) {
       subs += igD.followers; subsOk = true;
       var net = igD.followersBase ? igD.followers - igD.followersBase.followers : (igD.flow ? (igD.flow.parts.FOLLOWER || 0) - (igD.flow.parts.NON_FOLLOWER || 0) : null);
@@ -724,6 +739,10 @@
     });
     if (igD && igD.series) igD.series.forEach(function (x) { var j = idx[x.d]; if (j != null && x.follows != null) S.subs[j] = (S.subs[j] || 0) + x.follows - (x.unfollows || 0); });
     if (ytD) { var HH = ytD.history; for (var k = 1; k < HH.length; k++) { var jj = idx[HH[k].day]; if (jj != null && HH[k].subscribers != null && HH[k - 1].subscribers != null) S.subs[jj] = (S.subs[jj] || 0) + HH[k].subscribers - HH[k - 1].subscribers; } }
+    ttA.forEach(function (a) {
+      var TH = ttH.filter(function (h) { return h.account === a.username && h.subscribers != null; });
+      for (var q = 1; q < TH.length; q++) { var tj = idx[TH[q].day]; if (tj != null) S.subs[tj] = (S.subs[tj] || 0) + TH[q].subscribers - TH[q - 1].subscribers; }
+    });
     var nDays = days || nD, perDay = inP.length / nDays, vpv = inP.length ? views / inP.length : null;
     var growth = gainOk && subs - gain > 0 ? gain / (subs - gain) * 100 : null;
     return { R: R, days: days, sel: sel, pend: pend, err: err, vids: vids, inP: inP, S: S,
@@ -737,11 +756,19 @@
   }
   function netPfHTML(M) {
     var Y = CF.yt.data, ig = CF.acct.accounts.own || [];
+    var tt = ttLive();
     return '<div class="cf-icards cf-acards cf-net-pf">' + NET_PF.map(function (p) {
-      if (p.soon) return '<div class="cf-icard cf-acard is-none" style="--c:' + p.c + '"><span class="cf-icard-h"><span class="cf-icard-tile">' + svg(p.ic, 14) + '</span><span class="cf-icard-l">' + p.label + '</span></span>'
-        + '<span class="cf-icard-v is-na">—</span><span class="cf-icard-s">à brancher · tous les comptes TikTok</span></div>';
-      var on = !!M.sel[p.k], sub = p.k === 'yt' ? (Y ? Y.channel.handle : '@ialebdaxel') : ig.map(function (a) { return '@' + a.username; }).join(' · ') || '@avataradss · @leoadsia';
-      var subs = p.k === 'yt' ? (Y ? Y.channel.subscribers : null) : (CF.acct.ig[netRange()].data ? CF.acct.ig[netRange()].data.followers : null);
+      // TikTok sans compte relié pour les stats : carte inerte qui renvoie vers « Statistiques TikTok »
+      if (p.k === 'tt' && !tt.length) return '<div class="cf-icard cf-acard is-none" style="--c:' + p.c + '"><span class="cf-icard-h"><span class="cf-icard-tile">' + svg(p.ic, 14) + '</span><span class="cf-icard-l">' + p.label + '</span></span>'
+        + '<span class="cf-icard-v is-na">' + (CF.tts.loading && !CF.tts.data ? '…' : '—') + '</span><span class="cf-icard-s">'
+        + (CF.tts.state === 'error' ? 'stats illisibles' : CF.tts.data ? 'aucun compte relié pour les stats' : 'chargement') + '</span></div>';
+      var on = !!M.sel[p.k], sub = p.k === 'yt' ? (Y ? Y.channel.handle : '@ialebdaxel')
+        : p.k === 'tt' ? tt.map(function (a) { return a.username ? '@' + a.username : a.name || 'compte TikTok'; }).join(' · ')
+        : ig.map(function (a) { return '@' + a.username; }).join(' · ') || '@avataradss · @leoadsia';
+      var ttSubs = tt.filter(function (a) { return a.followers != null; });
+      var subs = p.k === 'yt' ? (Y ? Y.channel.subscribers : null)
+        : p.k === 'tt' ? (ttSubs.length ? ttSubs.reduce(function (s, a) { return s + a.followers; }, 0) : null)
+        : (CF.acct.ig[netRange()].data ? CF.acct.ig[netRange()].data.followers : null);
       return '<div class="cf-icard cf-acard' + (on ? ' is-on' : ' is-off') + '" style="--c:' + p.c + '">'
         + '<button type="button" class="cf-acard-hit" data-act="net-pf" data-k="' + p.k + '" aria-pressed="' + on + '" aria-label="' + esc(p.label + (on ? ' affiché' : ' masqué')) + '"></button>'
         + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(p.ic, 14) + '</span><span class="cf-icard-l">' + p.label + '</span>'
@@ -832,7 +859,7 @@
       return '<div class="cf-net-v"><span class="cf-net-rk">#' + (i + 1) + '</span>'
         + (th ? '<img class="cf-net-th" src="' + esc(th) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="cf-net-th"></span>')
         + '<span class="cf-net-b"><b>' + esc(fInt(v.views)) + ' vues</b><span class="cf-meta">' + esc([(v.likes == null ? '—' : fInt(v.likes)) + ' likes', (v.comments == null ? '—' : fInt(v.comments)) + ' comm.', rate].filter(Boolean).join(' · ')) + '</span>'
-        + '<span class="cf-net-pfb" style="--c:' + pf.c + '">' + svg(pf.ic, 12) + esc(pf.label + ' · ' + dm(new Date(v.ms))) + '</span></span>'
+        + '<span class="cf-net-pfb" style="--c:' + pf.c + '">' + svg(pf.ic, 12) + esc(pf.label + (v.who ? ' ' + v.who : '') + ' · ' + dm(new Date(v.ms))) + '</span></span>'
         + (u ? '<a class="cf-net-go" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la vidéo">' + svg(IC.arrow, 13) + '</a>' : '')
         + '</div>';
     }
@@ -844,7 +871,7 @@
     var M = netModel();
     var seg = NET_RANGES.map(function (r) { var on = r[0] === M.R; return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="net-range" data-k="' + r[0] + '" aria-pressed="' + on + '">' + esc(r[1]) + '</button>'; }).join('');
     return '<section class="cf-card cf-net" aria-labelledby="cfNetT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfNetT">Réseaux</h2>'
-      + '<span class="cf-meta">coche les réseaux à additionner · Instagram = tous nos comptes</span></div>'
+      + '<span class="cf-meta">coche les réseaux à additionner · Instagram = tous nos comptes · TikTok = comptes reliés pour les stats</span></div>'
       + '<div class="cf-seg" role="group" aria-label="Période">' + seg + '</div></div>'
       + (M.err ? '<div class="cf-empty-s">' + esc(M.err) + '</div>' : '')
       + netPfHTML(M) + netCardsHTML(M) + netChartHTML(M) + netVerdictHTML(M) + '</section>';
@@ -929,6 +956,80 @@
       + '<div class="cf-tk-hint">' + svg(IC.info, 14) + '<span>Plusieurs comptes : TikTok relie le compte déjà ouvert dans ce navigateur. Entre deux comptes, '
       + 'déconnecte-toi de TikTok (tiktok.com, profil, Se déconnecter), ou utilise une fenêtre privée : ouvre-y Factory V2, connecte-toi au tableau de bord, '
       + 'puis « Connecter un compte TikTok ». Jamais de jeton affiché ici : seulement son état.</span></div></section>';
+  }
+  // ══ Statistiques TikTok (07/10) ══
+  // Comptes reliés avec les scopes de stats (user.info.profile : le @ ; user.info.stats : abonnés, likes, nombre de vidéos ;
+  // video.list : vues, likes, commentaires et partages de chaque vidéo). Tant que la revue TikTok de ces scopes n'est pas
+  // passée, la connexion se fait avec l'app de test (Sandbox) : seuls les comptes ajoutés comme utilisateurs test peuvent
+  // l'autoriser. Ces comptes ne servent jamais aux brouillons (table à part). Jamais de jeton à l'écran.
+  function ttsMsg() {
+    var oa = CF.ttsOauth, r = ui.ttsRecon;
+    if (oa && Date.now() - oa.at < 10 * 60 * 1000 && (!r || oa.at >= r.at)) {
+      return oa.ok ? '<div class="cf-acct-msg is-ok">' + esc('Statistiques TikTok reliées.' + (CF.tts.loading ? ' Lecture des chiffres…' : '')) + '</div>'
+        : '<div class="cf-acct-msg is-err">' + esc('Connexion TikTok (stats) échouée : ' + oa.error) + '</div>';
+    }
+    return r ? '<div class="cf-acct-msg' + (r.ok ? '' : ' is-err') + '">' + esc(r.text) + '</div>' : '';
+  }
+  var TT_HOST = /(^|\.)tiktok\.com$/i;
+  var TT_SHARE = 'M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13';
+  function ttsK(v) { return v >= 1e6 ? fDec(v / 1e6, 1) + NB + 'M' : v >= 1e4 ? Math.round(v / 1e3) + 'k' : v >= 1e3 ? fDec(v / 1e3, 1) + 'k' : String(v); }
+  function ttsVidHTML(v) {
+    var th = safeUrl(v.thumb || ''), u = safeUrl(v.url || '', TT_HOST);
+    var inner = (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="cf-tts-ph">' + svg(IC.tiktok, 18) + '</span>')
+      + '<span class="cf-tts-vv">' + svg(IC.eye, 11) + esc(v.views == null ? '—' : ttsK(v.views)) + '</span>';
+    var st = [['likes', IC.heart, v.likes], ['commentaires', IC.chat, v.comments], ['partages', TT_SHARE, v.shares]].map(function (x) {
+      return '<span title="' + esc(x[0]) + '">' + svg(x[1], 11) + esc(x[2] == null ? '—' : ttsK(x[2])) + '</span>';
+    }).join('');
+    return '<div class="cf-tts-v">' + (u ? '<a class="cf-tts-cov" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la vidéo sur TikTok">' + inner + '</a>' : '<span class="cf-tts-cov">' + inner + '</span>')
+      + '<span class="cf-tts-st" aria-label="' + esc([(v.likes == null ? '—' : fInt(v.likes)) + ' likes', (v.comments == null ? '—' : fInt(v.comments)) + ' commentaires', (v.shares == null ? '—' : fInt(v.shares)) + ' partages'].join(', ')) + '">' + st + '</span>'
+      + (v.ms != null ? '<span class="cf-meta">' + esc(dm(new Date(v.ms))) + '</span>' : '') + '</div>';
+  }
+  function ttsAcctHTML(a) {
+    var pic = safeUrl(a.avatar || ''), name = a.username ? '@' + a.username : a.name || 'compte TikTok';
+    var nums = a.error ? '' : '<span class="cf-tts-nums">'
+      + [['abonnés', a.followers], ['likes', a.likes], ['vidéos', a.videoCount], ['abonnements', a.following]].map(function (x) {
+        return '<span><b>' + esc(x[1] == null ? '—' : fInt(x[1])) + '</b>' + esc(x[0]) + '</span>';
+      }).join('') + '</span>';
+    var vids = a.videos.slice(0, 6);
+    return '<div class="cf-tts-acct"><div class="cf-tk-row">'
+      + '<span class="cf-tk-pic" aria-hidden="true">' + svg(IC.tiktok, 16) + (pic ? '<img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async" loading="lazy">' : '') + '</span>'
+      + '<span class="cf-tk-main"><b>' + esc(name) + '</b><span class="cf-meta">' + esc((a.username && a.name ? a.name + ' · ' : '') + (a.env === 'sandbox' ? 'app de test (Sandbox)' : 'app en production')) + '</span></span>'
+      + (a.error ? '<span class="cf-tk-st"><span class="cf-qchip is-ko">illisible</span><span class="cf-tk-why">' + esc(a.error) + '</span></span>' : nums)
+      + (a.error ? '<button type="button" class="cf-btn is-sm cf-tk-btn" data-act="tts-connect">' + svg(IC.refresh, 13) + 'Reconnecter</button>' : '')
+      + '</div>'
+      + (a.error ? '' : a.videosError ? '<div class="cf-meta">' + esc(a.videosError) + '</div>'
+        : vids.length ? '<div class="cf-tts-vids">' + vids.map(ttsVidHTML).join('') + '</div>'
+        : '<div class="cf-empty-s cf-dashed">Aucune vidéo publique sur ce compte.</div>')
+      + '</div>';
+  }
+  function ttsHTML() {
+    var S = CF.tts, D = S.data, L = D ? D.accounts : [];
+    var sub = D ? (L.length ? L.length + ' ' + plural(L.length, 'compte relié', 'comptes reliés') + ' · lu à ' + hm(new Date(D.fetchedAt)) : 'aucun compte relié')
+      : S.state === 'error' ? 'stats illisibles' : 'chargement…';
+    var body = '';
+    if (S.state === 'error') {
+      body += '<div class="cf-acct-msg is-err">Statistiques TikTok illisibles : ' + esc(S.error) + (D ? esc(' · chiffres de ' + hm(new Date(D.fetchedAt)) + ' conservés') : '')
+        + ' <button type="button" class="cf-link-btn" data-act="retry-tts">Réessayer</button></div>';
+    }
+    if (!D && S.state !== 'error') body += '<div class="cf-status" role="status"><span class="cf-spin" aria-hidden="true"></span>Lecture des statistiques TikTok…</div>';
+    else if (D && !L.length) body += '<div class="cf-empty-s cf-dashed">Aucun compte relié pour les stats : clique « Connecter pour les stats ».</div>';
+    else if (D) body += '<div class="cf-tk-list">' + L.map(ttsAcctHTML).join('') + '</div>';
+    return '<section class="cf-card cf-tk cf-tts" id="cfTtsSec" aria-labelledby="cfTtsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfTtsT">Statistiques TikTok</h2>'
+      + '<div class="cf-dim">' + esc('@, abonnés, likes et vues de chaque vidéo · ' + sub) + '</div></div>'
+      + '<div class="cf-tts-acts">' + (D && L.length ? '<button type="button" class="cf-btn is-sm" data-act="retry-tts"' + (S.loading ? ' disabled' : '') + '>' + svg(IC.refresh, 13) + 'Actualiser</button>' : '')
+      + '<button type="button" class="cf-btn is-dark" data-act="tts-connect">' + svg(IC.tiktok, 14) + 'Connecter pour les stats</button></div></div>'
+      + ttsMsg() + body
+      + '<div class="cf-tk-hint">' + svg(IC.info, 14) + '<span>Autorisations demandées : profil (le @), statistiques du compte (abonnés, likes) et liste des vidéos (vues, likes, commentaires, partages). '
+      + 'En attendant la validation de TikTok, la connexion passe par l’app de test (Sandbox) : seuls les comptes ajoutés comme utilisateurs test peuvent l’autoriser. '
+      + 'Ces comptes ne servent jamais aux brouillons. Jamais de jeton affiché ici.</span></div></section>';
+  }
+  function ttsStart() {
+    var at = Date.now();
+    CF.tkConnect('sandbox').then(function (r) {   // la popup s'ouvre avant tout await
+      ui.ttsRecon = r.ok ? { ok: true, at: at, text: 'Fenêtre TikTok ouverte : connecte-toi avec le compte à relier, puis autorise AvatarAds. Les chiffres s’affichent tout seuls.' }
+        : { ok: false, at: at, text: 'Connexion TikTok impossible : ' + r.error };
+      schedule();
+    });
   }
   // @ saisi à la main (06/10) : l'app TikTok ne donne que le nom affiché, pas le @
   function tkHandle(openId) {
@@ -3766,6 +3867,8 @@
         navigator.clipboard.writeText(ui.tkRecon.caption).then(function () { ui.tkRecon.copied = true; schedule(); }, function () { /* presse-papiers refusé */ });
       }
       else if (act === 'retry-tk') CF.loadTk({ force: true });
+      else if (act === 'tts-connect') ttsStart();   // 07/10 : connexion « stats » (Sandbox), popup ouverte dans ce clic
+      else if (act === 'retry-tts') CF.loadTts({ force: true });
       else if (act === 'tk-goto') { var tg = $('cfTkSec'); if (tg && tg.scrollIntoView) tg.scrollIntoView({ block: 'start' }); }
       // ── onglet Production ──
       else if (act === 'retry-prod') CF.loadProd({ force: true });

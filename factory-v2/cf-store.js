@@ -105,8 +105,10 @@
     prov: newSlot(),
     yt: newSlot(),
     tk: newSlot(),
+    tts: newSlot(),   // 07/10 : stats TikTok (tiktok-auth?action=stats) — @, abonnés, likes, vues de chaque vidéo
     oauth: null,
     tkOauth: null,
+    ttsOauth: null,   // 07/10 : résultat de la dernière connexion « stats » (app Sandbox) : { ok, error, at }
     net: [],
     IG_RANGES: IG_RANGES.slice(),
     DM_RANGES: DM_RANGES.slice(),
@@ -129,6 +131,7 @@
     loadProviders: loadProviders,
     loadYt: loadYt,
     loadTk: loadTk,
+    loadTts: loadTts,
     tkConnect: tkConnect,
     tkSetHandle: tkSetHandle,
     tkSendTest: tkSendTest,
@@ -171,7 +174,7 @@
     return /failed to fetch|networkerror|load failed|network request failed/i.test(m) ? 'réseau indisponible' : m;
   }
   function isFresh(slot, ttl) { return !!slot && slot.state !== 'idle' && Date.now() - slot.at < (ttl || TTL_MS); }
-  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.oauth = null; CF.tkOauth = null; }
+  function resetData() { if (typeof bySel !== 'undefined') bySel = {}; epoch += 1; inflight = {}; retries = {}; mediaPolls = 0; if (typeof pre !== 'undefined') { pre.on = false; pre.queue = []; } CF.acct = newAcct(); CF.dm = newDm(); CF.prod = newSlot(); CF.prov = newSlot(); CF.yt = newSlot(); CF.tk = newSlot(); CF.tts = newSlot(); CF.oauth = null; CF.tkOauth = null; CF.ttsOauth = null; }
 
   // Garde pour les étapes suivantes (Valider, Refuser, Classer…) : tant que CF_READONLY est vrai, rien ne s'écrit.
   function guardWrite(label) {
@@ -586,6 +589,59 @@
     })();
     inflight.yt = p;
     emit('yt');
+    return p;
+  }
+
+  // ── Stats TikTok (07/10) : tiktok-auth?action=stats — comptes qui ont donné les scopes de stats (app Sandbox tant que la
+  // revue TikTok n'est pas passée, production ensuite), profil + 60 dernières vidéos. Liste blanche des champs : jamais
+  // de jeton, liens d'image et de vidéo seulement vers TikTok. Relue au plus toutes les 15 min (force après une connexion).
+  var TT_IMG = /^https:\/\/[\w.-]+\.(tiktokcdn(-eu|-us)?\.com|ibyteimg\.com|byteimg\.com)\//;
+  var TT_VID = /^https:\/\/(www\.|vm\.|m\.)?tiktok\.com\//;
+  function loadTts(opts) {
+    var force = !!(opts && opts.force), S = CF.tts;
+    if (CF.status !== 'ready') return Promise.resolve(S);
+    if (inflight.tts) return force ? inflight.tts.then(function () { return loadTts({ force: true }); }) : inflight.tts;
+    if (!force && isFresh(S)) return Promise.resolve(S);
+    var ep = epoch;
+    S.loading = true;
+    var p = (async function () {
+      await null;
+      var patch;
+      try {
+        var res = await callFn('tiktok-auth?action=stats' + (force ? '&force=1' : ''), 45000);
+        var b = res.body || {};
+        if (!res.ok || b.error || !Array.isArray(b.accounts)) throw { kind: res.status === 401 ? 'auth' : 'http', message: b.error ? String(b.error) : 'HTTP ' + res.status };
+        var hd = function (v) { return typeof v === 'string' && /^[A-Za-z0-9._]{2,24}$/.test(v) ? v : null; };
+        var avPre = SUPABASE_URL + '/storage/v1/object/public/factory-media/tiktok-avatars/';   // copie gardée par tiktok-auth (keepAvatar)
+        var pic = function (v) { return typeof v === 'string' && !/[\s"'<>]/.test(v) && (TT_IMG.test(v) || v.indexOf(avPre) === 0) ? v : null; };
+        patch = { state: 'ready', kind: null, error: null, data: {
+          fetchedAt: Date.now(),
+          accounts: b.accounts.slice(0, 12).map(function (a) {
+            return { env: a.env === 'sandbox' ? 'sandbox' : 'prod', username: hd(a.username), name: str(a.display_name), avatar: pic(a.avatar),
+              followers: num(a.followers), following: num(a.following), likes: num(a.likes), videoCount: num(a.video_count), verified: a.verified === true,
+              error: a.error ? String(a.error).slice(0, 200) : null, videosError: a.videos_error ? String(a.videos_error).slice(0, 200) : null,
+              videos: (Array.isArray(a.videos) ? a.videos : []).slice(0, 60).map(function (v) {
+                var t = str(v.published_at), ms = t ? Date.parse(t) : NaN;
+                return { id: str(v.id), title: str(v.title), ms: isFinite(ms) ? ms : null, duration: num(v.duration),
+                  thumb: typeof v.thumb === 'string' && TT_IMG.test(v.thumb) ? v.thumb : null, url: typeof v.url === 'string' && TT_VID.test(v.url) ? v.url : null,
+                  views: num(v.views), likes: num(v.likes), comments: num(v.comments), shares: num(v.shares) };
+              }) };
+          }),
+          history: (Array.isArray(b.history) ? b.history : []).map(function (h) {
+            return { account: hd(h.account), day: str(h.day), subscribers: num(h.subscribers) };
+          }).filter(function (h) { return h.account && /^\d{4}-\d{2}-\d{2}$/.test(h.day || ''); })
+        } };
+      } catch (e) {
+        patch = { state: 'error', kind: e.kind || 'error', error: errText(e) };
+      }
+      if (ep !== epoch) return S;
+      Object.assign(S, patch, { loading: false, at: Date.now() });
+      if (inflight.tts === p) delete inflight.tts;
+      emit('tts');
+      return S;
+    })();
+    inflight.tts = p;
+    emit('tts');
     return p;
   }
 
@@ -1306,7 +1362,7 @@
   var TK_WATCH_MS = 15 * 60 * 1000;
   var TK_AUTH_URL = /^https:\/\/www\.tiktok\.com\/v2\/auth\/authorize\/\?/;
   var TK_RETURN_KEY = 'aa_tk_return';   // page à rouvrir après tiktok-callback.html (liste blanche avatarads.fr côté callback)
-  var tkStarted = 0, tkTimer = null;
+  var tkStarted = 0, tkTimer = null, tkEnv = 'prod';
   function tkNorm(s) { return String(s || '').toLowerCase().replace(/\s*\|\s*/g, '|').replace(/\s+/g, ' ').trim(); }
   function tkOwnRank(name) {
     var n = tkNorm(name);
@@ -1390,7 +1446,10 @@
   // s'ouvre avant tout await (sinon Safari la bloque). authorize exige la session owner (state signé lié à elle) ; seule
   // une URL d'autorisation tiktok.com est suivie. tiktok-callback.html fait l'échange avec la session du même domaine,
   // puis prévient cette page (postMessage + BroadcastChannel 'tk-oauth') : la liste est relue.
-  function tkConnect() {
+  // 07/10 : tkConnect('sandbox') = connexion « stats » avec l'app de test (scopes pas encore revus en production) ; le compte
+  // part dans tiktok_sandbox_accounts, jamais dans la liste des brouillons.
+  function tkConnect(env) {
+    var sbx = env === 'sandbox';
     var w = window.open('about:blank', 'tiktok_oauth', 'width=540,height=760');
     if (!w) return Promise.resolve({ ok: false, error: 'Popup bloquée : autorise les popups pour avatarads.fr puis réessaie.' });
     logNet('tiktok-auth?action=authorize');
@@ -1399,14 +1458,14 @@
       .then(function (r) {
         var tok = r && r.data && r.data.session && r.data.session.access_token;
         if (!tok) return { status: 401, d: { error: 'session absente : reconnecte-toi au tableau de bord' } };
-        return fetch(FN + 'tiktok-auth?action=authorize', { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' })
+        return fetch(FN + 'tiktok-auth?action=authorize' + (sbx ? '&env=sandbox' : ''), { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' })
           .then(function (resp) { return resp.json().catch(function () { return {}; }).then(function (d) { return { status: resp.status, d: d || {} }; }); });
       })
       .then(function (x) {
         var u = x.d && typeof x.d.authorize_url === 'string' ? x.d.authorize_url : '';
         if (!TK_AUTH_URL.test(u)) return fail(x.d && x.d.error ? String(x.d.error).slice(0, 200) : 'URL d’autorisation TikTok absente (HTTP ' + x.status + ')');
         try { localStorage.setItem(TK_RETURN_KEY, JSON.stringify({ url: location.origin + location.pathname, at: Date.now() })); } catch (e) { /* navigation privée bloquée : retour par défaut vers Factory V2 */ }
-        tkStarted = Date.now();
+        tkStarted = Date.now(); tkEnv = sbx ? 'sandbox' : 'prod';
         w.location.href = u;
         tkWatch(w);
         return { ok: true };
@@ -1471,7 +1530,7 @@
       try { closed = !!w.closed; } catch (e) { /* lien coupé par la page TikTok : traité comme fermé */ }
       if (!closed && Date.now() - t0 < TK_WATCH_MS) return;
       clearInterval(tkTimer); tkTimer = null;
-      setTimeout(function () { if (CF.status === 'ready') loadTk({ force: true }); }, 800);
+      setTimeout(function () { if (CF.status === 'ready') { if (tkEnv === 'sandbox') loadTts({ force: true }); else loadTk({ force: true }); } }, 800);
     }, 1000);
   }
   var lastTk = { key: '', t: 0 };
@@ -1480,6 +1539,13 @@
     var key = (msg.ok ? '1' : '0') + '|' + String(msg.open_id || '') + '|' + String(msg.error || '');
     if (key === lastTk.key && Date.now() - lastTk.t < 5000) return;   // les deux canaux livrent le même message
     lastTk = { key: key, t: Date.now() };
+    // 07/10 : connexion « stats » (Sandbox) — le callback le dit (env), sinon la dernière connexion lancée d'ici
+    if (msg.env === 'sandbox' || (msg.env == null && tkEnv === 'sandbox')) {
+      CF.ttsOauth = { ok: !!msg.ok, error: msg.ok ? null : String(msg.error || 'connexion échouée').slice(0, 200), at: Date.now() };
+      emit('tk-oauth');
+      if (CF.status === 'ready') loadTts({ force: true });
+      return;
+    }
     CF.tkOauth = { ok: !!msg.ok, openId: msg.ok ? tkOpenId(msg.open_id) : null,
       error: msg.ok ? null : String(msg.error || 'connexion échouée').slice(0, 200), at: Date.now() };
     emit('tk-oauth');

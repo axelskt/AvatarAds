@@ -1370,3 +1370,28 @@ i.is-gap { background: var(--cf-ink); }
 
 /* 07/10 (Axel) : en plein écran, une vidéo 9:16 s'affiche ENTIÈRE (le object-fit: cover des vignettes la recadrait) */
 video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; width: 100% !important; height: 100% !important; background: #000; }
+
+/* 07/10 : Statistiques TikTok (comptes reliés pour les stats) — chiffres du compte + 6 dernières vidéos avec leurs vues */
+.cf-card-h > .cf-tts-acts, .cf-tts-acts { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center; flex: none; }   /* .cf-card-h > div est en colonne */
+.cf-tts-acct { display: flex; flex-direction: column; gap: 8px; }
+.cf-tts .cf-tk-row { grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1.6fr) auto; }
+.cf-tts-nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; min-width: 0; }
+.cf-tts-nums span { display: flex; flex-direction: column; font-size: 11.5px; color: var(--cf-ink-3); min-width: 0; }
+.cf-tts-nums b { font-size: 16px; font-weight: 700; color: var(--cf-ink); font-variant-numeric: tabular-nums; }
+.cf-tts-vids { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.cf-tts-v { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cf-tts-v .cf-meta { font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.cf-tts-cov { position: relative; display: block; aspect-ratio: 9 / 16; border-radius: 8px; overflow: hidden; background: #e9e3da; }
+.cf-tts-cov img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cf-tts-ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--cf-mute); }
+.cf-tts-vv { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 999px; background: rgba(0, 0, 0, .62); color: #fff; font-size: 11px; font-weight: 650; }
+@media (max-width: 899px) { .cf-tts-vids { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 639px) {
+  .cf-tts .cf-tk-row { grid-template-columns: 36px minmax(0, 1fr); }
+  .cf-tts-nums { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cf-tts-acts { width: 100%; }
+  .cf-tts-acts .cf-btn { flex: 1; }
+}
+.cf-tts-st { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 11.5px; font-weight: 600; color: var(--cf-ink-2, var(--cf-ink)); font-variant-numeric: tabular-nums; }
+.cf-tts-st span { display: inline-flex; align-items: center; gap: 3px; }
+.cf-tts-st svg { color: var(--cf-mute); }
