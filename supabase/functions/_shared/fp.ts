@@ -222,7 +222,9 @@ export function fpDecide(list: FpCand[]): { vf: string | null, state: 'auto' | '
   const auto = (c: FpCand) => ({ vf: c.vf, state: 'auto' as const, score: c.score, candidates: cands })
   if (g1.score <= FP_AUTO && (!g2 || g2.score - g1.score >= FP_GAP)) return auto(g1)
   if (g1.score <= FP_FAR && (!g2 || (g2.score >= g1.score * FP_RATIO && g2.score - g1.score >= 20))) return auto(g1)
-  if (s1 && (s1.style as number) <= ST_SURE) {
+  // style sûr ET image pas trop éloignée (07/10 : « DUBAÏ » sur @ia.axel donnait VF-0033 au style 0,099 — même plan Omni
+  // de la voiture que la vraie vidéo VF-0025, poster seul — alors que l'image était à 95 : faux positif)
+  if (s1 && (s1.style as number) <= ST_SURE && s1.score <= FP_FAR) {
     if (!s2 || (s2.style as number) - (s1.style as number) >= ST_GAP) return auto(s1)
     // style net mais serré : il faut que la luminance (à 10 % près de la meilleure) et la légende le confirment…
     if (s1.score <= g1.score * 1.1 && s1.cap) return auto(s1)
