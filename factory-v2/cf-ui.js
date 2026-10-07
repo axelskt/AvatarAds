@@ -385,7 +385,6 @@
     CF.loadProd();
     CF.loadProviders();
     CF.loadYt();
-    CF.loadTk();   // Audit 02/10 : comptes TikTok (section et alerte de l'Accueil)
     CF.loadTts();   // 07/10 : statistiques TikTok (section et carte Réseaux)
     if (ui.netRange && ui.netRange !== HOME_RANGE) CF.loadInsights(ui.netRange);
   }
@@ -489,21 +488,7 @@
       }
       if (Z.bricks.flagged) add('warn', Z.bricks.flagged + ' ' + plural(Z.bricks.flagged, 'brique signalée', 'briques signalées'), 'Statut « signalée » dans la bibliothèque de briques : à revoir avant de l’utiliser.', { tab: 'prod' });
     }
-    // Audit 02/10 : comptes TikTok (brouillons impossibles sur un compte au jeton Sandbox, expiré ou sans « envoi de vidéos »)
-    var T = CF.tk;
-    if (T.state === 'error') add('warn', 'Comptes TikTok illisibles', T.error + (T.data ? ' · liste du ' + hm(new Date(T.data.fetchedAt)) + ' conservée' : ''), { retry: 'tk' });
-    if (T.data) {
-      var tLive = T.data.list.filter(function (a) { return a.state !== 'replaced'; });
-      var tTodo = tLive.filter(function (a) { return a.state === 'reconnect' || a.state === 'expired'; });
-      var tOk = tLive.filter(function (a) { return a.state === 'valid'; }).length;
-      var tSoon = tLive.filter(function (a) { return a.state === 'valid' && a.reason === 'soon'; });
-      if (!tLive.length) add('warn', 'Aucun compte TikTok relié', 'Les brouillons TikTok sont impossibles : connecte nos comptes dans « Comptes TikTok ».', { tk: true });
-      else if (tTodo.length) {
-        add(tOk ? 'warn' : 'danger', tTodo.length + ' ' + plural(tTodo.length, 'compte TikTok', 'comptes TikTok') + ' à reconnecter', tTodo.map(tkName).join(', ')
-          + ' · ' + (tOk ? 'leurs brouillons TikTok échouent' : 'aucun compte TikTok utilisable : tous les brouillons TikTok échouent') + ' tant qu’ils ne sont pas reconnectés.', { tk: true });
-      }
-      if (tSoon.length) add('warn', 'Jeton TikTok bientôt expiré', tSoon.map(function (a) { return tkName(a) + ' (' + dmy(new Date(a.refreshExp)) + ')'; }).join(', ') + ' · reconnecte avant cette date.', { tk: true });
-    }
+    // 07/10 (Axel) : plus de brouillons TikTok (publication à la main) → plus d'alerte « comptes TikTok »
     // Soldes fournisseurs (provider-watch : ok / bas, jamais le montant)
     if (V.state === 'error') add('warn', 'Soldes fournisseurs illisibles', V.error + ' · réessaie dans un instant.', { retry: 'prov' });
     if (V.data) {
@@ -535,8 +520,7 @@
       { k: 'media', l: 'publications', S: CF.acct.media, off: off },
       { k: 'dm', l: 'Auto-DM 30' + NB + 'j', S: DS, part: !!(DS.data && (!DS.data.cron || dmMissing(DS.data).length)) },
       { k: 'prod', l: 'production', S: CF.prod },
-      { k: 'prov', l: 'soldes fournisseurs', S: CF.prov, part: !!(V && V.list.some(function (p) { return p.error || p.unconfirmed; })) },
-      { k: 'tk', l: 'comptes TikTok', S: CF.tk }   // Audit 02/10
+      { k: 'prov', l: 'soldes fournisseurs', S: CF.prov, part: !!(V && V.list.some(function (p) { return p.error || p.unconfirmed; })) }
     ].map(function (x) {
       // une source qui répond « liste en erreur » (publications : media_error) n'est pas « vérifiée »
       var bad = x.S.state === 'error' || !!(x.S.data && x.S.data.error);
@@ -555,7 +539,6 @@
       + '<section class="cf-hsum" aria-labelledby="cfHsT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfHsT">Résumé des onglets</h2></div></div>'
       + '<div class="cf-hcards">' + homeProdCard() + homeTrackCard() + homeDmCard(Y) + homeIgCard(X, off) + '</div></section>'
       + homeNetHTML()
-      + tkHTML()   // Audit 02/10 : comptes TikTok (brouillons), avant le kit de publication
       + ttsHTML()   // 07/10 : statistiques TikTok (comptes reliés avec les scopes de stats)
       // Kit de publication (29/09) : page à part, pensée pour programmer à la main dans l'app Instagram.
       + '<section class="cf-card cf-kit" aria-labelledby="cfKitT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfKitT">Kit de publication</h2>'

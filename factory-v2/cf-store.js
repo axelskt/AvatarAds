@@ -1321,7 +1321,8 @@
     if (opts.prod) tasks.push(loadProd({ force: !!opts.force }), loadInsights('30j', { force: !!opts.force }), loadMedia({ force: !!opts.force }));
     // Audit 02/10 : comptes TikTok (Accueil) ; relus d'office au retour sur la page dans les 15 min d'une connexion lancée
     // (téléphone : la connexion TikTok s'ouvre dans un autre onglet)
-    if (opts.home || opts.tk) tasks.push(loadTk({ force: !!opts.force || (tkStarted > 0 && Date.now() - tkStarted < TK_WATCH_MS) }));
+    // 07/10 (Axel) : plus de section « Comptes TikTok » sur l'Accueil (brouillons abandonnés) → relue seulement sur demande
+    if (opts.tk) tasks.push(loadTk({ force: !!opts.force || (tkStarted > 0 && Date.now() - tkStarted < TK_WATCH_MS) }));
     return Promise.all(tasks);
   }
 

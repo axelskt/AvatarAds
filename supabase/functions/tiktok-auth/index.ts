@@ -12,7 +12,8 @@
 // session (10 min) ; exchange exige ce state ET la même session (Bearer envoyé par tiktok-callback.html, lu dans la
 // session avatarads.fr du même domaine). Avant, n'importe qui pouvait relier son compte TikTok (qui devenait « le
 // plus récent », choisi par défaut pour l'envoi des brouillons) ou faire relier le sien depuis le navigateur d'Axel.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// 07/10 : version épinglée — esm.sh servait une 2.117.3 cassée (module auth-js introuvable), déploiement refusé
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2'
 import jpeg from 'https://esm.sh/jpeg-js@0.4.4'
 import webpDecode, { init as webpInit } from 'https://esm.sh/@jsquash/webp@1.4.0/decode'
 import { WEBP_DEC_WASM } from '../_shared/webp-dec-wasm.ts'
@@ -34,6 +35,16 @@ const CFG: Record<Env, { key: string, secret: string, table: string, scope: stri
   sandbox: { key: SBX_KEY, secret: SBX_SECRET, table: 'tiktok_sandbox_accounts', scope: SBX_SCOPE },
 }
 const SB_URL        = Deno.env.get('SUPABASE_URL') || ''
+// 07/10 : relecture automatique des stats toutes les heures (pg_cron « tiktok-stats-hourly », clé du coffre Vault)
+const CRON_SECRET   = Deno.env.get('CRON_SECRET') || ''
+// comparaison à temps constant (même code que _shared/guard.ts, non importé : il tire supabase-js@2 non épinglé)
+function timingSafeEqual(a: string, b: string): boolean {
+  const x = String(a ?? ''), y = String(b ?? '')
+  if (x.length !== y.length) return false
+  let r = 0
+  for (let i = 0; i < x.length; i++) r |= x.charCodeAt(i) ^ y.charCodeAt(i)
+  return r === 0
+}
 const SERVICE       = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const svc = createClient(SB_URL, SERVICE)
 
@@ -254,7 +265,9 @@ Deno.serve(async (req) => {
   const url = new URL(req.url)
   const action = url.searchParams.get('action') || (req.method === 'POST' ? 'exchange' : 'authorize')
   // Audit 02/10 : toutes les actions (authorize et exchange compris) exigent la session owner/developer.
-  const uid = await ownerUid(req)
+  // 07/10 : seule exception, action=stats appelée par pg_cron avec x-cron-key (aucune donnée renvoyée n'est un secret).
+  const isCron = action === 'stats' && !!CRON_SECRET && timingSafeEqual(req.headers.get('x-cron-key') || '', CRON_SECRET)
+  const uid = isCron ? 'cron' : await ownerUid(req)
   if (!uid) {
     return json({ error: action === 'exchange'
       ? 'Session propriétaire requise : termine la connexion TikTok dans le navigateur où tu es connecté au tableau de bord.'
@@ -357,7 +370,7 @@ Deno.serve(async (req) => {
   //     Un même @ n'est lu qu'une fois (production d'abord). Relevé du jour dans social_daily (courbe des abonnés).
   //     Jamais de jeton dans la réponse. Cache 5 min (?force=1 pour relire tout de suite).
   if (action === 'stats') {
-    const force = url.searchParams.get('force') === '1'
+    const force = isCron || url.searchParams.get('force') === '1'
     if (!force && statsCache && Date.now() - statsCache.at < 5 * 60 * 1000) return json(statsCache.body)
     const rows: { env: Env, open_id: string, display_name: string | null, handle: string | null, avatar_url: string | null }[] = []
     for (const env of ['prod', 'sandbox'] as Env[]) {
