@@ -58,7 +58,9 @@ writeFileSync(join(work, 'index.html'), `<!doctype html><html lang="fr"><head><m
  /* zone sûre : x 80 → 880 (200 px libres à droite pour les icônes), y ≤ 1480 */
  .card{position:absolute;left:80px;width:800px;z-index:5;text-align:center;transform-origin:50% 50%}
  .card .l{display:block;margin:0;white-space:nowrap}
- .emj{height:1.05em;width:auto;vertical-align:-0.18em;margin-left:.12em}
+ .card .l>span{display:inline-block}
+ /* largeur fixée (PNG Apple carrés) : la mesure de la zone sûre ne dépend pas du chargement de l'image */
+ .emj{height:1.05em;width:1.05em;vertical-align:-0.18em;margin-left:.12em}
  .em{font-family:'Noto Color Emoji',sans-serif}
  /* consigne : comme les démos MCP muettes (blanc cerné de noir, centre-bas) */
  .step{top:1300px;font-family:'Montserrat','Arial Black',sans-serif;font-weight:900;font-size:62px;line-height:1.12;color:#fff;
@@ -75,11 +77,14 @@ writeFileSync(join(work, 'index.html'), `<!doctype html><html lang="fr"><head><m
    ${html}
  </div>
  <script>
-   // une ligne plus large que la zone sûre (800 px) → police réduite pour la carte entière, mesurée une fois les polices chargées
+   // une ligne plus large que la zone sûre (800 px) → police réduite pour la carte entière. offsetWidth et non
+   // getBoundingClientRect : la carte est encore à scale 0,86 (entrée GSAP), la mesure transformée sous-estimait de 14 %
+   // et « Résultat en quelques secondes 🤯 » débordait sur les icônes (C-OMNIM-02, 07/10). Mesure tout de suite (polices
+   // système) puis à nouveau une fois les polices prêtes.
    (function(){ const fit=()=>document.querySelectorAll('.card').forEach(c=>{ const fs=parseFloat(getComputedStyle(c).fontSize); let w=0;
-     c.querySelectorAll('.l>span').forEach(s=>{ w=Math.max(w, s.getBoundingClientRect().width); });
+     c.querySelectorAll('.l>span').forEach(s=>{ w=Math.max(w, s.offsetWidth); });
      if(w>800) c.style.fontSize=(fs*800/w).toFixed(1)+'px'; });
-     if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit(); })();
+     fit(); if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); })();
    const tl = gsap.timeline({ paused:true });
    ${anim}
    if(!tl.getChildren().length) tl.to({},{duration:${dur.toFixed(3)}});
