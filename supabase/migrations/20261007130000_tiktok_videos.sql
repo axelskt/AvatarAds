@@ -58,3 +58,6 @@ create table if not exists public.factory_fp_frames (
 );
 alter table public.factory_fp_frames enable row level security;
 revoke all on table public.factory_fp_frames from anon, authenticated, public;
+
+-- (même jour) signatures de style couleur (fpStyleSet : histogrammes YCbCr, 4 fenêtres), base64, une par instant
+alter table public.factory_fp add column if not exists styles text[];
