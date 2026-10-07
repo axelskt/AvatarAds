@@ -395,7 +395,8 @@ async function applyRecipes(list: any[], username: unknown) {
       .eq('platform', 'instagram').eq('account', acct).neq('status', 'skipped').limit(1000)
     if (error || !posts) return
     // la légende du reel est déjà coupée à 90 caractères (mediaInsights) : comparaison sur les 85 premiers
-    const norm = (t: unknown) => String(t || '').replace(/\s+/g, ' ').trim()
+    // 07/10 : hashtags ignorés des deux côtés (légendes du kit nettoyées le 07/10, reels déjà programmés AVEC les #)
+    const norm = (t: unknown) => String(t || '').replace(/#[^\s#]+/g, ' ').replace(/\s+/g, ' ').trim()
     const byMedia = new Map(posts.filter((p: any) => p.media_id).map((p: any) => [String(p.media_id), p]))
     const free = posts.filter((p: any) => !p.media_id)
     for (const m of list) {
@@ -403,7 +404,7 @@ async function applyRecipes(list: any[], username: unknown) {
       if (!p) {
         const t = Date.parse(m.timestamp || ''), cap = norm(m.caption)
         if (!cap || !isFinite(t)) continue
-        const c = free.filter((x: any) => !x._used && norm(x.caption).slice(0, 85) === cap.slice(0, 85) && Math.abs(Date.parse(x.scheduled_at) - t) < 48 * 3600e3)
+        const c = free.filter((x: any) => !x._used && norm(x.caption).slice(0, 80) === cap.slice(0, 80) && Math.abs(Date.parse(x.scheduled_at) - t) < 48 * 3600e3)
           .sort((a: any, b: any) => Math.abs(Date.parse(a.scheduled_at) - t) - Math.abs(Date.parse(b.scheduled_at) - t))[0]
         if (!c) continue
         c._used = true; p = c
