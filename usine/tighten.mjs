@@ -5,11 +5,15 @@
 // le cadre alterne entre 100 % et ZOOM (léger recadrage centré) pour que le raccord se lise comme un choix de montage.
 // Silences mesurés sur le son (pas sur la transcription). Début et fin coupés au premier / dernier son.
 //
-// usage : node usine/tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.10] [--pad 0.04] [--zoom 1.06] [--rel 12 | --db -34]
+// FIN GARDÉE (Axel 08/10 : « laisse la fin pour pas que ça coupe trop tôt, garde la fin du clip complet ») : on ne coupe
+// que les blancs ENTRE les mots et avant le premier ; après le dernier mot, le clip va jusqu'au bout (la bouche se referme,
+// le geste se termine). --keepend 0 pour couper aussi la fin au dernier son.
+//
+// usage : node usine/tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.10] [--pad 0.04] [--zoom 1.06] [--rel 12 | --db -34] [--keepend 0]
 import { execFileSync, spawnSync } from 'node:child_process';
 
 const [src, out, ...rest] = process.argv.slice(2);
-if (!src || !out) { console.error('usage: tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.10] [--pad 0.04] [--zoom 1.06] [--rel 12 | --db -34]'); process.exit(1); }
+if (!src || !out) { console.error('usage: tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.10] [--pad 0.04] [--zoom 1.06] [--rel 12 | --db -34] [--keepend 0]'); process.exit(1); }
 const OPT = {}; for (let i = 0; i < rest.length; i += 2) OPT[rest[i].replace(/^--/, '')] = parseFloat(rest[i + 1]);
 const MIN = OPT.min ?? 0.10, PAD = OPT.pad ?? 0.04, ZOOM = OPT.zoom ?? 1.06, DB = OPT.db;
 
@@ -32,6 +36,7 @@ for (const [a, b] of sil) { if (a > t) keep.push([t, a]); t = b; }
 if (t < dur) keep.push([t, dur]);
 const segs = keep.map(([a, b], i) => [Math.max(0, a - (i === 0 ? 0.02 : PAD)), Math.min(dur, b + PAD)]).filter(([a, b]) => b - a > 0.08);
 for (let i = 1; i < segs.length; i++) if (segs[i][0] < segs[i - 1][1]) segs[i][0] = segs[i - 1][1];
+if ((OPT.keepend ?? 1) && segs.length) segs[segs.length - 1][1] = dur;   // fin du clip gardée en entier
 const cut = segs.reduce((s, [a, b]) => s + (b - a), 0);
 console.log(`${segs.length} morceau(x) de parole · ${dur.toFixed(2)} s → ${cut.toFixed(2)} s (${(dur - cut).toFixed(2)} s de blancs retirés)`);
 if (segs.length <= 1 && dur - cut < 0.08) { execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-c', 'copy', out]); process.exit(0); }
