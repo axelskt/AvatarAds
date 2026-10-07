@@ -866,9 +866,10 @@ async function snapshotAll(): Promise<Record<string, unknown>> {
     const lm = await listMedia(token, MEDIA_FIELDS, 100)
     if (lm.error) { (out.comptes as any)[who] = { erreur: lm.error }; continue }
     const recent = lm.list.filter((m) => Date.parse(m.timestamp || '') >= since)
-    const rows: Record<string, unknown>[] = []
+    const rows: Record<string, unknown>[] = [], thumbs = new Map<string, string>()
     for (let i = 0; i < recent.length; i += 5) {   // 5 à la fois : on reste loin des limites Graph
       const part = await Promise.all(recent.slice(i, i + 5).map((m) => mediaInsights(token, m).catch(() => null)))
+      for (const x of part) if (x && x.thumbnail) thumbs.set(String(x.id), String(x.thumbnail))
       for (const x of part) if (x) rows.push({ media_id: String(x.id), day, account: who, posted_at: x.timestamp || null,
         media_type: x.media_type || null, permalink: x.permalink || null, caption: x.caption || null, views: x.views, reach: x.reach,
         likes: x.likes, comments: x.comments, shares: x.shares, saved: x.saved, interactions: x.interactions,
@@ -879,10 +880,49 @@ async function snapshotAll(): Promise<Record<string, unknown>> {
     await applyRecipes(ins, who)
     const rec = new Map(ins.filter((m) => m.recipe).map((m) => [String(m.id), m.recipe]))
     for (const r of rows) { const x: any = rec.get(String(r.media_id)); if (x) { r.vf = x.id_complet || null; r.combo = x } }
+    // légende différente du kit → reel mis en file pour être reconnu par sa COUVERTURE (part=match, même outil que TikTok)
+    const nb = await queueByCover(rows.filter((r) => !r.vf && /REELS|VIDEO/.test(String(r.media_type || ''))), thumbs, who)
     const { error } = rows.length ? await svc.from('ig_media_stats').upsert(rows, { onConflict: 'media_id,day' }) : { error: null }
-    ;(out.comptes as any)[who] = error ? { erreur: safeErr(error.message) } : { publications: rows.length }
+    ;(out.comptes as any)[who] = error ? { erreur: safeErr(error.message) } : { publications: rows.length, reliees: rows.filter((r) => r.vf).length, en_file: nb }
   }
   out.ms = Date.now() - t0
   logIg('relevé quotidien', out)
   return out
+}
+
+// ── Reel → vidéo de l'usine par sa couverture (07/10, Axel : « fais-le ») ──
+// Le relevé quotidien ne fait que METTRE EN FILE (ig_media_match, state 'pending', avec le lien de la couverture) : décoder
+// des couvertures 1080 × 1920 en plus des statistiques dépassait la limite de calcul de l'edge (WORKER_RESOURCE_LIMIT,
+// 07/10) : la reconnaissance tourne sur le serveur de l'usine (usine/cover-match.mjs, Railway, toutes les 5 min). Seuls
+// les reels publiés depuis la 1re programmation de l'usine sur le compte ; auto / horaire / manual définitifs ; unsure /
+// none retentés une fois par jour pendant 14 jours.
+// Auto → ID complet + recette gardés avec les vues, et la ligne du kit (factory_posts, même compte, même vidéo) reçoit
+// media_id : le dashboard affiche alors la recette comme pour un reel relié par sa légende.
+async function queueByCover(rows: Record<string, unknown>[], thumbs: Map<string, string>, who: string): Promise<number> {
+  if (!rows.length) return 0
+  let queued = 0
+  try {
+    const { data: first } = await svc.from('factory_posts').select('scheduled_at').eq('platform', 'instagram').eq('account', who).order('scheduled_at').limit(1)
+    const from = first?.[0]?.scheduled_at ? Date.parse(first[0].scheduled_at) - 86400e3 : Infinity
+    rows = rows.filter((r) => Date.parse(String(r.posted_at || '')) >= from)
+    if (!rows.length) return 0
+    const { data: cache } = await svc.from('ig_media_match').select('media_id, state, vf, updated_at').in('media_id', rows.map((r) => String(r.media_id)))
+    const cm = new Map((cache || []).map((c: any) => [String(c.media_id), c]))
+    for (const r of rows) {
+      const id = String(r.media_id), c: any = cm.get(id)
+      if (c && (c.state === 'auto' || c.state === 'horaire' || c.state === 'manual') && c.vf) { await withRecipe(r, String(c.vf)); continue }
+      if (c && c.state === 'pending') continue
+      if (c && (Date.now() - Date.parse(String(r.posted_at || '')) > 14 * 86400e3 || Date.now() - Date.parse(c.updated_at) < 20 * 3600e3)) continue
+      const thumb = thumbs.get(id) || ''
+      if (!/^https:\/\/[\w.-]+\//.test(thumb)) continue
+      await svc.from('ig_media_match').upsert({ media_id: id, account: who, state: 'pending', thumb, caption: String(r.caption || ''), posted_at: r.posted_at || null, updated_at: new Date().toISOString() })
+      queued++
+    }
+  } catch (e) { logIg('file couvertures', safeErr(e)) }
+  return queued
+}
+async function withRecipe(r: Record<string, unknown>, vfFull: string) {
+  r.vf = vfFull
+  const { data: q } = await svc.from('factory_qc').select('brick_combo').eq('video_url', `${SB_URL}/storage/v1/object/public/factory-media/final/${vfFull}.mp4`).limit(1)
+  if (q?.[0]?.brick_combo) r.combo = { ...q[0].brick_combo, id_complet: vfFull }
 }

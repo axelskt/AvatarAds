@@ -14,10 +14,8 @@
 // plus récent », choisi par défaut pour l'envoi des brouillons) ou faire relier le sien depuis le navigateur d'Axel.
 // 07/10 : version épinglée — esm.sh servait une 2.117.3 cassée (module auth-js introuvable), déploiement refusé
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2'
-import jpeg from 'https://esm.sh/jpeg-js@0.4.4'
-import webpDecode, { init as webpInit } from 'https://esm.sh/@jsquash/webp@1.4.0/decode'
-import { WEBP_DEC_WASM } from '../_shared/webp-dec-wasm.ts'
-import { toGray, fpCoverScore, fpCoverCoarse, fpCoarse, b64ToBytes, fpDecide, fpStyleCover, fpStyleDist, type FpCand } from '../_shared/fp.ts'
+import { coverMatcher } from '../_shared/cover-match.ts'
+import { decodeCover } from '../_shared/cover-decode.ts'
 
 // trim : un copier-coller depuis la console TikTok peut ajouter un retour à la ligne (vécu le 03/10 au passage en production).
 const CLIENT_KEY    = (Deno.env.get('TIKTOK_CLIENT_KEY') || '').trim()
@@ -168,92 +166,8 @@ async function keepCover(id: string, src: string): Promise<{ url: string, bytes:
   } catch (e) { console.log('couverture', id, String((e as Error)?.message || e).slice(0, 120)); return null }
 }
 
-// ── Rapprochement vidéo TikTok → vidéo de l'usine (07/10) ──
-// La couverture TikTok est une image du HOOK, pas forcément la première (constaté sur @avatarads le 07/10). On la compare
-// aux empreintes de chaque vidéo finale (usine/fingerprint.mjs) avec le code partagé _shared/fp.ts : factory_fp (images à
-// 0 / 0,5 / 1 s, ou le poster seul pour une vidéo supprimée) + factory_fp_frames (4 images par seconde sur les 10
-// premières secondes). Pré-tri rapide sur 18 × 32, puis score fin sur les meilleures images des 8 vidéos les plus proches.
-// Durée TikTok (secondes entières) à 1,5 s près quand celle de la vidéo est connue. auto = sûr ; unsure = 1-3 propositions
-// à choisir dans Factory V2 ; none = pas une vidéo de l'usine (ancienne vidéo, autre montage).
-let webpReady: Promise<void> | null = null
-async function decodeCover(bytes: Uint8Array): Promise<{ w: number, h: number, gray: Uint8Array, rgba: ArrayLike<number> } | null> {
-  try {
-    let img: { width: number, height: number, data: ArrayLike<number> }
-    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57 && bytes[9] === 0x45) {   // RIFF....WEBP
-      if (!webpReady) webpReady = webpInit(new WebAssembly.Module(b64ToBytes(WEBP_DEC_WASM) as Uint8Array<ArrayBuffer>))
-      await webpReady
-      img = await webpDecode(bytes.slice().buffer)
-    } else if (bytes[0] === 0xff && bytes[1] === 0xd8) {
-      img = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 96 })
-    } else return null
-    return { w: img.width, h: img.height, gray: toGray(img.data, img.width * img.height), rgba: img.data }
-  } catch (e) { console.log('décodage couverture', String((e as Error)?.message || e).slice(0, 120)); return null }
-}
-type Fp = { vf: string, url: string, duration: number | null, thumbs: Uint8Array[], coarse: Uint8Array[], styles: Uint8Array[], cap: string }
-let fpCache: { at: number, rows: Fp[] } | null = null
-async function loadFp(): Promise<Fp[]> {
-  if (fpCache && Date.now() - fpCache.at < 10 * 60 * 1000) return fpCache.rows
-  const { data, error } = await svc.from('factory_fp').select('vf, video_url, duration, thumbs, styles').not('thumbs', 'is', null).limit(3000)
-  if (error) { console.log('empreintes', error.message); return [] }
-  // légende du kit de chaque vidéo (indice seulement : Axel ne colle pas toujours la même sur TikTok)
-  const { data: posts } = await svc.from('factory_posts').select('video_url, caption').not('video_url', 'is', null).limit(5000)
-  const capOf = new Map((posts || []).map((p: any) => [String(p.video_url), capNorm(p.caption)]))
-  const rows = (data || []).filter((r: any) => r.vf && Array.isArray(r.thumbs) && r.thumbs.length).map((r: any) => {
-    const thumbs = r.thumbs.map((t: string) => b64ToBytes(t))
-    return { vf: String(r.vf), url: String(r.video_url), duration: r.duration == null ? null : Number(r.duration), thumbs, coarse: thumbs.map(fpCoarse),
-      styles: Array.isArray(r.styles) ? r.styles.map((t: string) => b64ToBytes(t)) : [], cap: capOf.get(String(r.video_url)) || '' }
-  })
-  fpCache = { at: Date.now(), rows }
-  return rows
-}
-// légende comparée sur ses 50 premiers caractères, sans hashtags ni casse
-const capNorm = (t: unknown) => String(t || '').replace(/#[^\s#]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 50)
-type Fr = { t: number, coarse: Uint8Array }
-let frCache: { at: number, by: Map<string, Fr[]> } | null = null
-async function loadFrames(): Promise<Map<string, Fr[]>> {
-  if (frCache && Date.now() - frCache.at < 10 * 60 * 1000) return frCache.by
-  const by = new Map<string, Fr[]>()
-  for (let from = 0; from < 100000; from += 1000) {   // PostgREST : 1 000 lignes par page
-    const { data, error } = await svc.from('factory_fp_frames').select('video_url, t, coarse').order('video_url').order('t').range(from, from + 999)
-    if (error) { console.log('images du hook', error.message); break }
-    for (const r of data || []) {
-      const k = String(r.video_url)
-      if (!by.has(k)) by.set(k, [])
-      by.get(k)!.push({ t: Number(r.t), coarse: b64ToBytes(String(r.coarse)) })
-    }
-    if (!data || data.length < 1000) break
-  }
-  frCache = { at: Date.now(), by }
-  return by
-}
-async function matchCover(bytes: Uint8Array, duration: number | null, title: string): Promise<{ vf: string | null, state: string, score: number | null, candidates: { vf: string, score: number }[] } | null> {
-  const img = await decodeCover(bytes)
-  if (!img) return null
-  const style = fpStyleCover(img.rgba, img.w, img.h), cap = capNorm(title)
-  const fps = (await loadFp()).filter((f) => f.duration == null || duration == null || Math.abs(f.duration - duration) <= 1.5)
-  if (!fps.length) return { vf: null, state: 'none', score: null, candidates: [] }
-  const frames = await loadFrames()
-  // pré-tri : meilleure image (grossière) de chaque vidéo, en gardant les 3 meilleures images du hook pour le score fin
-  const all = fps.map((f) => {
-    const own = Math.min(...f.coarse.map((t) => fpCoverCoarse(img.gray, img.w, img.h, t)))
-    const fr = (frames.get(f.url) || []).map((x) => ({ t: x.t, c: fpCoverCoarse(img.gray, img.w, img.h, x.coarse) })).sort((a, b) => a.c - b.c)
-    const st = f.styles.length ? Math.min(...f.styles.map((x) => fpStyleDist(style, x))) : null
-    return { f, c: Math.min(own, fr[0]?.c ?? Infinity), ts: fr.slice(0, 3).map((x) => x.t), st }
-  })
-  // score fin pour les 8 plus proches en luminance + les 3 plus proches en style
-  const byC = [...all].sort((a, b) => a.c - b.c).slice(0, 8)
-  const byS = all.filter((x) => x.st != null).sort((a, b) => (a.st as number) - (b.st as number)).slice(0, 3)
-  const pick = [...new Set([...byC, ...byS])]
-  const list: FpCand[] = await Promise.all(pick.map(async ({ f, ts, st }) => {
-    let best = Math.min(...f.thumbs.map((t) => fpCoverScore(img.gray, img.w, img.h, t)))
-    if (ts.length) {
-      const { data } = await svc.from('factory_fp_frames').select('thumb').eq('video_url', f.url).in('t', ts)
-      for (const r of data || []) best = Math.min(best, fpCoverScore(img.gray, img.w, img.h, b64ToBytes(String(r.thumb))))
-    }
-    return { vf: f.vf, score: +best.toFixed(1), style: st == null ? null : +st.toFixed(3), cap: !!cap && f.cap === cap }
-  }))
-  return fpDecide(list)
-}
+// ── Rapprochement vidéo TikTok → vidéo de l'usine (07/10) : code commun dans _shared/cover-match.ts (Instagram aussi) ──
+const { matchCover } = coverMatcher(svc, decodeCover)
 
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
 const MEDIA_PREFIX = `${SB_URL}/storage/v1/object/public/factory-media/`

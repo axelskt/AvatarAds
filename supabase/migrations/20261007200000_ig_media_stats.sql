@@ -51,3 +51,30 @@ select cron.schedule('ig-media-stats-daily', '40 21 * * *', $$
     timeout_milliseconds := 120000
   );
 $$);
+
+-- Rapprochement reel Instagram → vidéo de l'usine par sa COUVERTURE (même outil que TikTok, _shared/cover-match.ts) quand
+-- la légende ne correspond pas au kit (Axel colle souvent une autre légende). Cache par reel : auto / manual définitifs,
+-- unsure / none retentés chaque jour pendant 14 jours (l'empreinte d'une vidéo peut arriver après sa publication).
+create table if not exists public.ig_media_match (
+  media_id    text primary key,
+  account     text,
+  state       text not null,                  -- auto | unsure | none | caption (relié par la légende) | manual
+  vf          text,                           -- ID complet de la vidéo de l'usine
+  score       numeric,
+  candidates  jsonb,
+  updated_at  timestamptz not null default now()
+);
+alter table public.ig_media_match enable row level security;
+drop policy if exists ig_media_match_owner_read on public.ig_media_match;
+create policy ig_media_match_owner_read on public.ig_media_match for select using (
+  exists (select 1 from public.profiles p where p.id = auth.uid() and (coalesce(p.is_owner, false) or lower(coalesce(p.plan, '')) = 'developer'))
+);
+revoke all on public.ig_media_match from anon;
+grant select on public.ig_media_match to authenticated;
+
+-- file d'attente : le relevé quotidien met les reels à reconnaître en 'pending' ; le serveur de l'usine les reconnaît
+alter table public.ig_media_match add column if not exists thumb text, add column if not exists caption text, add column if not exists posted_at timestamptz;
+create index if not exists ig_media_match_pending on public.ig_media_match (updated_at) where state = 'pending';
+-- (07/10) la reconnaissance tourne sur le serveur de l'usine (usine/cover-match.mjs, toutes les 5 min) : sur l'edge elle
+-- dépassait le budget CPU → pas de pg_cron ici
+select cron.unschedule('ig-cover-match') where exists (select 1 from cron.job where jobname = 'ig-cover-match');

@@ -7,7 +7,8 @@
       "usine/**",
       "Dockerfile.factory",
       "usine/railway.factory.json",
-      "supabase/functions/_shared/fp.ts"
+      "supabase/functions/_shared/fp.ts",
+      "supabase/functions/_shared/cover-match.ts"
     ]
   },
   "deploy": {
