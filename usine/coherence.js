@@ -388,6 +388,24 @@
   // (champs contenu, musique, sous_titre, format de brick_combo). Les versions d'une même base se publient espacées dans le
   // temps (planificateur de publication). existing = brick_combo des vidéos déjà rendues (statut refusé exclu par l'appelant).
   var DECLINAISONS_MAX = 3, DECLI_FIELDS = ['contenu', 'musique', 'sous_titre', 'format'];
+  // Texte + musique (Axel 07/10) : une réaction (tête choquée) part avec 5 démos muettes AU PLUS — la même tête sur
+  // 22 démos = vidéos trop semblables, shadowban. Capacité = réactions × min(5, démos) ; une 6e démo est refusée.
+  var REACTION_DEMOS_MAX = 5;
+  // Démos muettes déjà montées avec cette réaction (recettes existantes) ; '' si la démo demandée passe, sinon la raison.
+  function reactionDemos(reaction, existing) {
+    var seen = dict(), out = [];
+    (existing || []).forEach(function (c) {
+      if (c && c.voice === 'muet' && c.reaction === reaction && c.contenu && !seen[c.contenu]) { seen[c.contenu] = 1; out.push(String(c.contenu)); }
+    });
+    return out;
+  }
+  function reactionCheck(reaction, demo, existing) {
+    if (!reaction || !demo) return '';
+    var used = reactionDemos(reaction, existing);
+    if (used.indexOf(demo) >= 0 || used.length < REACTION_DEMOS_MAX) return '';
+    return 'réaction ' + reaction + ' déjà montée avec ' + used.length + ' démos (' + used.join(', ') + ') : ' + REACTION_DEMOS_MAX
+      + ' au plus par réaction (anti-shadowban), prends une autre réaction';
+  }
   function declinaisonCheck(combo, existing, byId) {
     var k = comboKey(combo, byId), reasons = [];
     if (!k) return { ok: true, key: null, n: 0, max: DECLINAISONS_MAX, reasons: reasons };
@@ -489,9 +507,11 @@
     // une vidéo par texte choc × emplacement photo. Clé : muet|A1#n|TH05|
     var tset = dict(); L.textes.forEach(function (t) { tset[t.id] = 1; });
     // 07/10 : dès qu'il existe des réactions (briques « reaction ») et des démos muettes, le format compte ce qu'on produit
-    // vraiment (usine/build-f05.mjs) : réactions × démos muettes ; sinon l'ancienne estimation (photos × textes choc).
-    var rset = dict(), mset = dict(); L.reactions.forEach(function (r) { rset[r.id] = 1; }); L.demosMuettes.forEach(function (d) { mset[d.id] = 1; });
-    var realMuet = L.reactions.length > 0 && L.demosMuettes.length > 0, muetN = realMuet ? L.reactions.length * L.demosMuettes.length : A * L.textes.length;
+    // vraiment (usine/build-f05.mjs) : réactions × min(REACTION_DEMOS_MAX, démos muettes) ; sinon l'ancienne estimation
+    // (photos × textes choc).
+    var rset = dict(), mset = dict(), perR = dict(); L.reactions.forEach(function (r) { rset[r.id] = 1; }); L.demosMuettes.forEach(function (d) { mset[d.id] = 1; });
+    var realMuet = L.reactions.length > 0 && L.demosMuettes.length > 0;
+    var muetN = realMuet ? L.reactions.length * Math.min(REACTION_DEMOS_MAX, L.demosMuettes.length) : A * L.textes.length;
     modes.muet = { voice: 'muet', label: MODE_LABEL.muet, hooks: L.textes.length, reactions: L.reactions.length, demos: L.demosMuettes.length,
       pairs: 0, short: muetN, long: 0, total: muetN, done: 0, remaining: 0 };
     var seen = dict(), outside = 0;
@@ -501,7 +521,10 @@
       if (seen[k]) return;
       seen[k] = 1;
       var p = String(k).split('|'), v = p[0];
-      if (v === 'muet' && realMuet) { if (p.length === 4 && has(rset, p[1]) && has(mset, p[2])) modes.muet.done += 1; else outside += 1; return; }
+      if (v === 'muet' && realMuet) {   // au-delà de 5 démos pour une même réaction : hors capacité
+        if (p.length === 4 && has(rset, p[1]) && has(mset, p[2]) && (perR[p[1]] || 0) < REACTION_DEMOS_MAX) { perR[p[1]] = (perR[p[1]] || 0) + 1; modes.muet.done += 1; } else outside += 1;
+        return;
+      }
       if (p[1]) p[1] = photoParent(p[1]);
       if (v === 'muet') {
         if (p.length === 4 && p[1] && has(av, p[1]) && has(tset, p[2]) && p[3] === '') modes.muet.done += 1; else outside += 1;
@@ -658,6 +681,6 @@
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk, voicesAllowed: voicesAllowed,
-    videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, transfosOf: transfosOf, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
+    videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, transfosOf: transfosOf, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, REACTION_DEMOS_MAX: REACTION_DEMOS_MAX, reactionDemos: reactionDemos, reactionCheck: reactionCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
     hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });

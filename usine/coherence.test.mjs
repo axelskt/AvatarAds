@@ -392,6 +392,18 @@ test('photos par avatar : 3 photos différentes par avatar et par brique parlée
   } finally { C.setPhotosPerAvatar(1); }
 });
 
+test('Texte + musique réel (Axel 07/10) : 5 démos au plus par réaction — capacité réactions × min(5, démos), 6e démo refusée', () => {
+  const rows = [{ id: 'R-F1', kind: 'reaction', status: 'ready', meta: {} }, { id: 'R-H3', kind: 'reaction', status: 'ready', meta: {} },
+    ...Array.from({ length: 7 }, (_, i) => ({ id: 'C-OMNIM-0' + (i + 1), kind: 'contenu', status: 'ready', subject: 'omni', meta: { voice: false } }))];
+  assert.equal(C.REACTION_DEMOS_MAX, 5);
+  assert.equal(C.capacity(rows, [], MX).modes.muet.total, 2 * 5);   // 2 réactions × min(5, 7 démos)
+  const ex = [1, 2, 3, 4, 5].map(i => ({ voice: 'muet', hook: 'TH01', reaction: 'R-F1', contenu: 'C-OMNIM-0' + i }));
+  assert.equal(C.reactionCheck('R-F1', 'C-OMNIM-03', ex), '');                         // démo déjà montée avec R-F1 : ok
+  assert.match(C.reactionCheck('R-F1', 'C-OMNIM-06', ex), /5 au plus par réaction/);   // 6e démo : refus
+  assert.equal(C.reactionCheck('R-H3', 'C-OMNIM-06', ex), '');                         // autre réaction : libre
+  const keys = ex.concat([{ voice: 'muet', hook: 'TH01', reaction: 'R-F1', contenu: 'C-OMNIM-06' }]).map(x => C.comboKey(x, {}));
+  assert.equal(C.capacity(rows, keys, MX).modes.muet.done, 5);                        // la 6e ne compte pas dans la capacité
+});
 test('Texte + musique : texte choc (TH) × emplacements photo, format court seulement ; clé muet|A1#n|TH|; hook parlé refusé ; liaison refusée', () => {
   const th = (id, sub) => ({ id, kind: 'texte-choc', subject: sub, label: 'phrase ' + id, status: 'ready', meta: { text: 'phrase', compatible_subjects: [sub] } });
   const rows = library().concat([th('TH01', 'generique'), th('TH13', 'omni')]), B = byIdOf(rows);

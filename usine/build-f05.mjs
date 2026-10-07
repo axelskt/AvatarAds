@@ -5,10 +5,12 @@
 // sous-titre. Placement du texte choc = celui de l'usine (formats.js : zone sûre, jamais sur un visage).
 //
 // usage : node usine/build-f05.mjs REACTION.mp4 DEMO.mp4 OUT.mp4 Mxx|musique.mp3 --choc THxx --choc-style CSxx
-//                                  [--reaction R-F1] [--demo C-MCPM-07] [--hook-s 3]
+//                                  [--reaction R-F1] [--demo C-MCPM-07] [--hook-s 3] [--done recettes.json]
+// Règle Axel 07/10 (anti-shadowban) : une réaction part avec 5 démos muettes au plus. Avec --reaction et --demo, les
+// recettes déjà produites (--done, sinon factory_qc lue avec SUPABASE_SERVICE_ROLE_KEY) sont contrôlées AVANT le rendu.
 // Écrit OUT.mp4.format.json (format F05, réaction, démo, musique, texte choc, style) pour le kit / la QC.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +18,8 @@ import { faceZones } from './face-zones.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 await import(new URL('./formats.js', import.meta.url).href);
-const FMT = globalThis.CF_FORMATS;
+await import(new URL('./coherence.js', import.meta.url).href);
+const FMT = globalThis.CF_FORMATS, COH = globalThis.CF_COHERENCE;
 const SFX = join(HERE, '..', 'render-worker', 'assets', 'sfx');
 const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds');
 const FPS = 60, TS = 0.25;
@@ -41,6 +44,21 @@ const work = mkdtempSync(join(tmpdir(), 'f05-'));
 // texte choc : banque validée + règle de cohérence avec la démo (chocWhy)
 const p = FMT.textChoc(OPT.choc);
 if (!p) { console.error('✗ texte choc inconnu : ' + OPT.choc); process.exit(2); }
+// 5 démos au plus par réaction (Axel 07/10) — recettes refusées en QC ignorées
+if (OPT.reaction && OPT.demo) {
+  let rows = null;
+  if (OPT.done) { try { rows = JSON.parse(readFileSync(OPT.done, 'utf8')); } catch (e) { console.error('✗ --done illisible : ' + e.message); process.exit(2); } }
+  else if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    try { const r = await fetch('https://guvwgiejzkiodghywpwj.supabase.co/rest/v1/factory_qc?select=status,brick_combo', { headers: { apikey: key, Authorization: `Bearer ${key}` } }); rows = r.ok ? await r.json() : null; } catch { rows = null; }
+  }
+  if (!Array.isArray(rows)) console.warn('⚠ recettes existantes illisibles (ni --done ni clé) : règle des 5 démos par réaction NON contrôlée');
+  else {
+    const combos = rows.filter(r => !(r && r.status === 'rejected')).map(r => (r && r.brick_combo) || r).filter(c => c && typeof c === 'object');
+    const why = COH.reactionCheck(OPT.reaction, OPT.demo, combos);
+    if (why) { console.error('✗ ' + why); process.exit(2); }
+  }
+}
 const text = FMT.chocString(p);
 
 // ── 1) réaction : les 3 premières secondes, muette (piste silencieuse : le rendu HyperFrames attend un son) ──
