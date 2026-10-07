@@ -3,10 +3,20 @@
 //  GET ?handle=ialebdaxel → { channel: {title, handle, subscribers, views, videos, thumb}, videos: [{id, title, published_at,
 //  views, likes, comments, thumb}] (50 dernières), totals: {views, likes, comments} sur ces vidéos }
 // Owner/dev uniquement. Coût quota : ~3 unités par appel (10 000/jour gratuits) ; cache mémoire 10 min par chaîne.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// 07/10 : version épinglée — esm.sh servait une 2.117.3 cassée (module auth-js introuvable), déploiement refusé
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2'
 
 const KEY = Deno.env.get('YT_API_KEY') || ''
 const DEFAULT_HANDLE = Deno.env.get('YT_HANDLE') || 'ialebdaxel'
+// 07/10 (Axel) : relecture automatique toutes les heures (pg_cron « yt-stats-hourly », clé x-cron-key du coffre Vault) :
+// relevé du jour dans social_daily même dashboard fermé. Comparaison à temps constant.
+const CRON_SECRET = Deno.env.get('CRON_SECRET') || ''
+function sameKey(a: string, b: string): boolean {
+  if (!a || a.length !== b.length) return false
+  let r = 0
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return r === 0
+}
 const svc = createClient(Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '')
 const API = 'https://www.googleapis.com/youtube/v3/'
 const TTL = 10 * 60 * 1000
@@ -45,11 +55,12 @@ const n = (v: unknown) => (v == null || v === '' ? null : Number(v))
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
-  if (!(await ownerOk(req))) return json({ error: 'réservé au propriétaire' }, 401)
+  const isCron = !!CRON_SECRET && sameKey(req.headers.get('x-cron-key') || '', CRON_SECRET)
+  if (!isCron && !(await ownerOk(req))) return json({ error: 'réservé au propriétaire' }, 401)
   if (!KEY) return json({ error: 'YT_API_KEY manquant (secret Supabase)' }, 500)
 
   const handle = (new URL(req.url).searchParams.get('handle') || DEFAULT_HANDLE).replace(/^@/, '').replace(/[^\w.-]/g, '').slice(0, 60)
-  const hit = cache.get(handle)
+  const hit = isCron ? null : cache.get(handle)
   if (hit && Date.now() - hit.at < TTL) return json(hit.body)
 
   try {
