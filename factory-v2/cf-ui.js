@@ -697,8 +697,10 @@
       sel.tt && T.state === 'error' && !T.data ? 'TikTok : ' + T.error : ''].filter(Boolean).join(' · ');
     var vids = [];
     if (ytD) ytD.videos.forEach(function (v) { var ms = Date.parse(v.published_at || ''); if (isFinite(ms)) vids.push({ pf: 'yt', ms: ms, views: v.views, likes: v.likes, comments: v.comments, thumb: v.thumb, url: v.id ? 'https://youtube.com/shorts/' + v.id : null }); });
-    if (igM) igM.list.forEach(function (p) { if ((p.type === 'REELS' || p.type === 'VIDEO') && p.ms != null) vids.push({ pf: 'ig', ms: p.ms, views: p.views, likes: p.likes, comments: p.comments, thumb: p.thumb, url: p.permalink }); });
-    ttA.forEach(function (a) { a.videos.forEach(function (v) { if (v.ms != null) vids.push({ pf: 'tt', ms: v.ms, views: v.views, likes: v.likes, comments: v.comments, thumb: v.thumb, url: v.url, who: a.username ? '@' + a.username : null }); }); });
+    // 07/10 (Axel) : Instagram et TikTok = vidéos CONFIRMÉES de l'usine seulement (classement, vidéos, vues, likes,
+    // commentaires, courbe). Instagram : reel rattaché à sa ligne du kit (recette) ; TikTok : reconnue ou reliée à la main.
+    if (igM) igM.list.forEach(function (p) { if ((p.type === 'REELS' || p.type === 'VIDEO') && p.ms != null && p.recipe) vids.push({ pf: 'ig', ms: p.ms, views: p.views, likes: p.likes, comments: p.comments, thumb: p.thumb, url: p.permalink, vf: p.recipe.vf }); });
+    ttA.forEach(function (a) { a.videos.forEach(function (v) { if (v.ms != null && v.recipe && v.recipe.vf && (v.recipe.state === 'auto' || v.recipe.state === 'manual')) vids.push({ pf: 'tt', ms: v.ms, views: v.views, likes: v.likes, comments: v.comments, thumb: v.thumb, url: v.url, who: a.username ? '@' + a.username : null, vf: v.recipe.vf }); }); });
     vids.sort(function (a, b) { return b.ms - a.ms; });
     var inP = vids.filter(function (v) { return v.ms >= from; });
     var sum = function (k) { return inP.reduce(function (a, v) { return a + (v[k] || 0); }, 0); };
@@ -864,7 +866,7 @@
       return '<div class="cf-net-v"><span class="cf-net-rk">#' + (i + 1) + '</span>'
         + (th ? '<img class="cf-net-th" src="' + esc(th) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="cf-net-th"></span>')
         + '<span class="cf-net-b"><b>' + esc(fInt(v.views)) + ' vues</b><span class="cf-meta">' + esc([(v.likes == null ? '—' : fInt(v.likes)) + ' likes', (v.comments == null ? '—' : fInt(v.comments)) + ' comm.', rate].filter(Boolean).join(' · ')) + '</span>'
-        + '<span class="cf-net-pfb" style="--c:' + pf.c + '">' + svg(pf.ic, 12) + esc(pf.label + (v.who ? ' ' + v.who : '') + ' · ' + dm(new Date(v.ms))) + '</span></span>'
+        + '<span class="cf-net-pfb" style="--c:' + pf.c + '">' + svg(pf.ic, 12) + esc(pf.label + (v.who ? ' ' + v.who : '') + ' · ' + dm(new Date(v.ms)) + (v.vf ? ' · ' + v.vf : '')) + '</span></span>'
         + (u ? '<a class="cf-net-go" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la vidéo">' + svg(IC.arrow, 13) + '</a>' : '')
         + '</div>';
     }
@@ -876,7 +878,7 @@
     var M = netModel();
     var seg = NET_RANGES.map(function (r) { var on = r[0] === M.R; return '<button type="button" class="cf-seg-b' + (on ? ' is-on' : '') + '" data-act="net-range" data-k="' + r[0] + '" aria-pressed="' + on + '">' + esc(r[1]) + '</button>'; }).join('');
     return '<section class="cf-card cf-net" aria-labelledby="cfNetT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfNetT">Réseaux</h2>'
-      + '<span class="cf-meta">coche les réseaux à additionner · Instagram = tous nos comptes · TikTok = comptes reliés pour les stats</span></div>'
+      + '<span class="cf-meta">coche les réseaux à additionner · Instagram et TikTok : vidéos de l’usine seulement (abonnés : comptes entiers)</span></div>'
       + '<div class="cf-seg" role="group" aria-label="Période">' + seg + '</div></div>'
       + (M.err ? '<div class="cf-empty-s">' + esc(M.err) + '</div>' : '')
       + netPfHTML(M) + netCardsHTML(M) + netChartHTML(M) + netVerdictHTML(M) + '</section>';
