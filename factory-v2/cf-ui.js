@@ -983,7 +983,32 @@
     }).join('');
     return '<div class="cf-tts-v">' + (u ? '<a class="cf-tts-cov" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la vidéo sur TikTok">' + inner + '</a>' : '<span class="cf-tts-cov">' + inner + '</span>')
       + '<span class="cf-tts-st" aria-label="' + esc([(v.likes == null ? '—' : fInt(v.likes)) + ' likes', (v.comments == null ? '—' : fInt(v.comments)) + ' commentaires', (v.shares == null ? '—' : fInt(v.shares)) + ' partages'].join(', ')) + '">' + st + '</span>'
-      + (v.ms != null ? '<span class="cf-meta">' + esc(dm(new Date(v.ms))) + '</span>' : '') + '</div>';
+      + (v.ms != null ? '<span class="cf-meta">' + esc(dm(new Date(v.ms))) + '</span>' : '') + ttsRecipeHTML(v) + '</div>';
+  }
+  // Recette de la vidéo TikTok (07/10) : vidéo de l'usine reconnue par sa couverture (première image), ou 2-3 propositions
+  // à départager d'un clic (posters côte à côte), ou « hors usine » (ancienne vidéo, autre montage).
+  function ttsRecipeHTML(v) {
+    var R = v.recipe;
+    if (!R) return '<span class="cf-tts-rc is-wait">rapprochement en cours</span>';
+    if (R.state === 'none') return '<span class="cf-tts-rc is-none" title="Couverture différente de toutes les vidéos de l’usine">hors usine</span>';
+    if (R.vf) {
+      var why = R.state === 'auto' ? 'reconnue par sa couverture' + (R.score != null ? ' (écart ' + fDec(R.score, 1) + ')' : '') : 'choisie à la main';
+      return '<span class="cf-tts-rc is-ok" title="' + esc((R.file || R.vf) + ' · ' + why) + '">' + svg(IC.check, 11) + esc(R.vf) + '</span>';
+    }
+    return '<span class="cf-tts-rc is-warn">à vérifier : laquelle ?</span><span class="cf-tts-cands">' + R.candidates.map(function (c) {
+      var po = safeUrl(c.poster || '');
+      return '<button type="button" class="cf-tts-cand" data-act="tts-link" data-id="' + esc(v.id) + '" data-vf="' + esc(c.vf) + '"'
+        + ' title="' + esc((c.file || c.vf) + ' · écart ' + (c.score == null ? '—' : fDec(c.score, 1))) + '"' + (ui.ttsBusy ? ' disabled' : '') + '>'
+        + (po ? '<img src="' + esc(po) + '" alt="" decoding="async">' : '') + '<span>' + esc(c.vf) + '</span></button>';
+    }).join('') + '<button type="button" class="cf-tts-cand is-none" data-act="tts-link" data-id="' + esc(v.id) + '" data-vf=""' + (ui.ttsBusy ? ' disabled' : '') + '>aucune</button></span>';
+  }
+  function ttsLink(id, vf) {
+    ui.ttsBusy = true; schedule();
+    CF.ttLink(id, vf).then(function (r) {
+      ui.ttsBusy = false;
+      if (!r.ok) ui.ttsRecon = { ok: false, at: Date.now(), text: 'Rattachement impossible : ' + r.error };
+      schedule();
+    });
   }
   function ttsAcctHTML(a) {
     var pic = safeUrl(a.avatar || ''), name = a.username ? '@' + a.username : a.name || 'compte TikTok';
@@ -3870,6 +3895,7 @@
       else if (act === 'retry-tk') CF.loadTk({ force: true });
       else if (act === 'tts-connect') ttsStart();   // 07/10 : connexion « stats » (Sandbox), popup ouverte dans ce clic
       else if (act === 'retry-tts') CF.loadTts({ force: true });
+      else if (act === 'tts-link') ttsLink(el.getAttribute('data-id'), el.getAttribute('data-vf'));   // 07/10 : vidéo TikTok → vidéo de l'usine
       else if (act === 'tk-goto') { var tg = $('cfTkSec'); if (tg && tg.scrollIntoView) tg.scrollIntoView({ block: 'start' }); }
       // ── onglet Production ──
       else if (act === 'retry-prod') CF.loadProd({ force: true });

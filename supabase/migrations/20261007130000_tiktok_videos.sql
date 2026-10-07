@@ -42,3 +42,6 @@ revoke all on table public.factory_fp from anon, authenticated, public;
 
 -- (même jour) lien de couverture renvoyé par TikTok, gardé pour diagnostic (signé, expire)
 alter table public.tiktok_videos add column if not exists cover_src text;
+
+-- (même jour) vignettes 54 × 96 en luminance, base64 (fpThumb), une par instant
+alter table public.factory_fp add column if not exists thumbs text[];

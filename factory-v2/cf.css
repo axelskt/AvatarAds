@@ -1395,3 +1395,14 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 .cf-tts-st { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 11.5px; font-weight: 600; color: var(--cf-ink-2, var(--cf-ink)); font-variant-numeric: tabular-nums; }
 .cf-tts-st span { display: inline-flex; align-items: center; gap: 3px; }
 .cf-tts-st svg { color: var(--cf-mute); }
+/* 07/10 : recette d'une vidéo TikTok (vidéo de l'usine reconnue par sa couverture, ou propositions à départager) */
+.cf-tts-rc { align-self: flex-start; display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 650; padding: 2px 7px; border-radius: 999px; background: var(--cf-tile); color: var(--cf-ink-3); }
+.cf-tts-rc.is-ok { background: var(--cf-ok-bg, #e6f4ea); color: var(--cf-ok-fg, #1e7a3c); }
+.cf-tts-rc.is-warn { background: var(--cf-warn-bg); color: var(--cf-warn-fg); }
+.cf-tts-rc.is-none, .cf-tts-rc.is-wait { font-weight: 500; }
+.cf-tts-cands { display: flex; flex-wrap: wrap; gap: 4px; }
+.cf-tts-cand { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--cf-line-2); border-radius: 8px; background: var(--cf-card, #fff); font: inherit; font-size: 10.5px; font-weight: 650; color: var(--cf-ink); cursor: pointer; }
+.cf-tts-cand img { width: 30px; height: 53px; object-fit: cover; border-radius: 4px; display: block; }
+.cf-tts-cand.is-none { justify-content: center; min-height: 64px; font-weight: 500; color: var(--cf-ink-3); }
+.cf-tts-cand:hover:not(:disabled) { border-color: var(--cf-ink); }
+.cf-tts-cand:disabled { opacity: .5; cursor: default; }

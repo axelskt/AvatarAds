@@ -13,6 +13,10 @@
 // session avatarads.fr du même domaine). Avant, n'importe qui pouvait relier son compte TikTok (qui devenait « le
 // plus récent », choisi par défaut pour l'envoi des brouillons) ou faire relier le sien depuis le navigateur d'Axel.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import jpeg from 'https://esm.sh/jpeg-js@0.4.4'
+import webpDecode, { init as webpInit } from 'https://esm.sh/@jsquash/webp@1.4.0/decode'
+import { WEBP_DEC_WASM } from '../_shared/webp-dec-wasm.ts'
+import { toGray, fpCoverScore, fpCoverCoarse, fpCoarse, b64ToBytes, FP_AUTO, FP_GAP, FP_MAYBE } from '../_shared/fp.ts'
 
 // trim : un copier-coller depuis la console TikTok peut ajouter un retour à la ligne (vécu le 03/10 au passage en production).
 const CLIENT_KEY    = (Deno.env.get('TIKTOK_CLIENT_KEY') || '').trim()
@@ -137,7 +141,7 @@ let statsCache: { at: number, body: unknown } | null = null
 // garde UNE copie par vidéo dans factory-media/tiktok-covers/<id>.<ext> (lien stable, mis en cache), que le dashboard
 // affiche ; les octets servent aussi à l'empreinte de rapprochement. Le lien vient de l'API TikTok (jamais du client) :
 // https seulement, image seulement, 3 Mo au plus.
-async function keepCover(id: string, src: string): Promise<string | null> {
+async function keepCover(id: string, src: string): Promise<{ url: string, bytes: Uint8Array, type: string } | null> {
   try {
     if (!/^\d{5,25}$/.test(id) || !/^https:\/\/[\w.-]+\//.test(src)) return null
     const r = await fetch(src, { headers: { Accept: 'image/jpeg,image/png;q=0.9,image/webp;q=0.8,image/*;q=0.5' }, signal: AbortSignal.timeout(8000) })
@@ -149,8 +153,57 @@ async function keepCover(id: string, src: string): Promise<string | null> {
     const path = `tiktok-covers/${id}.${ext}`
     const { error } = await svc.storage.from('factory-media').upload(path, bytes, { contentType: type, upsert: true })
     if (error) { console.log('couverture upload', id, error.message); return null }
-    return `${SB_URL}/storage/v1/object/public/factory-media/${path}`
+    return { url: `${SB_URL}/storage/v1/object/public/factory-media/${path}`, bytes, type }
   } catch (e) { console.log('couverture', id, String((e as Error)?.message || e).slice(0, 120)); return null }
+}
+
+// ── Rapprochement vidéo TikTok → vidéo de l'usine (07/10) ──
+// La couverture par défaut de TikTok = la première image de la vidéo. On la compare aux empreintes factory_fp (vignettes
+// 54 × 96 des images à 0 / 0,5 / 1 s de chaque vidéo finale, usine/fingerprint.mjs) avec le code partagé _shared/fp.ts :
+// pré-tri rapide sur 18 × 32, puis score fin sur les 10 plus proches. Durée TikTok (secondes entières) à 1,5 s près quand
+// celle de la vidéo est connue. auto = sûr ; unsure = 2-3 propositions à choisir dans Factory V2 ; none = pas une vidéo
+// de l'usine (ancienne vidéo, autre montage).
+let webpReady: Promise<void> | null = null
+async function decodeCover(bytes: Uint8Array): Promise<{ w: number, h: number, gray: Uint8Array } | null> {
+  try {
+    let img: { width: number, height: number, data: ArrayLike<number> }
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[8] === 0x57 && bytes[9] === 0x45) {   // RIFF....WEBP
+      if (!webpReady) webpReady = webpInit(new WebAssembly.Module(b64ToBytes(WEBP_DEC_WASM) as Uint8Array<ArrayBuffer>))
+      await webpReady
+      img = await webpDecode(bytes.slice().buffer)
+    } else if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+      img = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 96 })
+    } else return null
+    return { w: img.width, h: img.height, gray: toGray(img.data, img.width * img.height) }
+  } catch (e) { console.log('décodage couverture', String((e as Error)?.message || e).slice(0, 120)); return null }
+}
+type Fp = { vf: string, url: string, duration: number | null, thumbs: Uint8Array[], coarse: Uint8Array[] }
+let fpCache: { at: number, rows: Fp[] } | null = null
+async function loadFp(): Promise<Fp[]> {
+  if (fpCache && Date.now() - fpCache.at < 10 * 60 * 1000) return fpCache.rows
+  const { data, error } = await svc.from('factory_fp').select('vf, video_url, duration, thumbs').not('thumbs', 'is', null).limit(3000)
+  if (error) { console.log('empreintes', error.message); return [] }
+  const rows = (data || []).filter((r: any) => r.vf && Array.isArray(r.thumbs) && r.thumbs.length).map((r: any) => {
+    const thumbs = r.thumbs.map((t: string) => b64ToBytes(t))
+    return { vf: String(r.vf), url: String(r.video_url), duration: r.duration == null ? null : Number(r.duration), thumbs, coarse: thumbs.map(fpCoarse) }
+  })
+  fpCache = { at: Date.now(), rows }
+  return rows
+}
+async function matchCover(bytes: Uint8Array, duration: number | null): Promise<{ vf: string | null, state: string, score: number | null, candidates: { vf: string, score: number }[] } | null> {
+  const img = await decodeCover(bytes)
+  if (!img) return null
+  const fps = (await loadFp()).filter((f) => f.duration == null || duration == null || Math.abs(f.duration - duration) <= 1.5)
+  if (!fps.length) return { vf: null, state: 'none', score: null, candidates: [] }
+  const pre = fps.map((f) => ({ f, c: Math.min(...f.coarse.map((t) => fpCoverCoarse(img.gray, img.w, img.h, t))) }))
+    .sort((a, b) => a.c - b.c).slice(0, 10)
+  const sc = pre.map(({ f }) => ({ vf: f.vf, score: +Math.min(...f.thumbs.map((t) => fpCoverScore(img.gray, img.w, img.h, t))).toFixed(1) }))
+    .sort((a, b) => a.score - b.score)
+  const best = sc[0], second = sc[1]
+  const candidates = sc.slice(0, 3).filter((c) => c.score <= FP_MAYBE)
+  if (best.score <= FP_AUTO && (!second || second.score - best.score >= FP_GAP)) return { vf: best.vf, state: 'auto', score: best.score, candidates }
+  if (best.score <= FP_MAYBE) return { vf: null, state: 'unsure', score: best.score, candidates }
+  return { vf: null, state: 'none', score: best.score, candidates: [] }
 }
 
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
@@ -315,24 +368,53 @@ Deno.serve(async (req) => {
         // vidéos gardées en base (tiktok_videos) + copie des couvertures pas encore copiées (30 au plus par lecture)
         if (username && vids.length) {
           const ids = vids.map((v) => String(v.id)).filter(Boolean)
-          const { data: known } = await svc.from('tiktok_videos').select('id, cover_copy, vf, match_state').in('id', ids)
+          const { data: known } = await svc.from('tiktok_videos').select('id, cover_copy, vf, match_state, match_score, candidates').in('id', ids)
           const K = new Map((known || []).map((k: any) => [String(k.id), k]))
           await svc.from('tiktok_videos').upsert(vids.map((v) => ({ id: v.id, account: username, env: r.env,
             created: v.published_at, duration: v.duration, title: v.title, share_url: v.url, cover_src: v.thumb,
             views: v.views, likes: v.likes, comments: v.comments, shares: v.shares, updated_at: new Date().toISOString() })), { onConflict: 'id' })
           const todo = vids.filter((v) => v.thumb && !K.get(String(v.id))?.cover_copy).slice(0, 30)
+          const got = new Map<string, Uint8Array>()
           for (let i = 0; i < todo.length; i += 6) {
             await Promise.all(todo.slice(i, i + 6).map(async (v) => {
-              const url = await keepCover(String(v.id), String(v.thumb))
-              if (!url) return
-              await svc.from('tiktok_videos').update({ cover_copy: url }).eq('id', v.id)
-              K.set(String(v.id), { ...(K.get(String(v.id)) || {}), cover_copy: url })
+              const kc = await keepCover(String(v.id), String(v.thumb))
+              if (!kc) return
+              got.set(String(v.id), kc.bytes)
+              await svc.from('tiktok_videos').update({ cover_copy: kc.url }).eq('id', v.id)
+              K.set(String(v.id), { ...(K.get(String(v.id)) || {}), cover_copy: kc.url })
             }))
+          }
+          // rapprochement des vidéos jamais rapprochées (12 au plus par lecture : temps de calcul de l'edge limité)
+          const unmatched = vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && !k.match_state }).slice(0, 12)
+          for (const v of unmatched) {
+            const k: any = K.get(String(v.id))
+            let bytes = got.get(String(v.id))
+            if (!bytes) {
+              const r2 = await fetch(String(k.cover_copy), { signal: AbortSignal.timeout(8000) }).catch(() => null)
+              if (r2?.ok) bytes = new Uint8Array(await r2.arrayBuffer())
+            }
+            if (!bytes) continue
+            const m = await matchCover(bytes, typeof v.duration === 'number' ? v.duration : null)
+            if (!m) continue
+            const upd = { vf: m.vf, match_state: m.state, match_score: m.score, candidates: m.candidates }
+            await svc.from('tiktok_videos').update(upd).eq('id', v.id).is('match_state', null)
+            K.set(String(v.id), { ...k, ...upd })
+          }
+          // recette des vidéos rapprochées : la ligne du kit (factory_posts) de la même vidéo finale
+          const vfs = [...new Set([...K.values()].flatMap((k: any) => [k.vf, ...((k.candidates || []).map((c: any) => c.vf))]).filter(Boolean))]
+          const files = new Map<string, { file: string, poster: string }>()   // nom complet (= ID de la recette) + poster (première image)
+          if (vfs.length) {
+            const { data: fr } = await svc.from('factory_fp').select('vf, video_url').in('vf', vfs)
+            for (const r3 of fr || []) {
+              const u = String(r3.video_url)
+              files.set(String(r3.vf), { file: u.split('/final/')[1]?.replace(/\.mp4$/, '') || '', poster: u.replace(/\.mp4$/, '-poster.jpg') })
+            }
           }
           for (const v of vids) {
             const k: any = K.get(String(v.id))
             if (k?.cover_copy) v.thumb = k.cover_copy
-            if (k?.vf) v.recipe = { vf: k.vf, state: k.match_state }
+            if (k?.match_state) v.recipe = { vf: k.vf || null, state: k.match_state, score: k.match_score ?? null, ...(k.vf ? files.get(k.vf) || {} : {}),
+              candidates: (k.candidates || []).map((c: any) => ({ vf: c.vf, score: c.score, ...(files.get(c.vf) || {}) })) }
           }
         }
         a.videos = vids
@@ -353,6 +435,24 @@ Deno.serve(async (req) => {
     const body = { accounts, history: hist || [], at: new Date().toISOString() }
     statsCache = { at: Date.now(), body }
     return json(body)
+  }
+
+  // 2c) rattachement choisi à la main (07/10) : body { id, vf } (vf vide = « pas une vidéo de l'usine »)
+  if (action === 'link') {
+    if (req.method !== 'POST') return json({ error: 'POST requis' }, 405)
+    let body: Record<string, unknown> = {}
+    try { body = await req.json() } catch { /* ignore */ }
+    const id = String(body.id || ''), vf = String(body.vf || '')
+    if (!/^\d{5,25}$/.test(id)) return json({ error: 'vidéo invalide' }, 400)
+    if (vf && !/^VF-\d{4}$/.test(vf)) return json({ error: 'VF invalide' }, 400)
+    if (vf) {
+      const { data: f } = await svc.from('factory_fp').select('vf').eq('vf', vf).limit(1)
+      if (!f?.length) return json({ error: 'vidéo de l’usine inconnue : ' + vf }, 404)
+    }
+    const { data: row, error } = await svc.from('tiktok_videos').update({ vf: vf || null, match_state: vf ? 'manual' : 'none' }).eq('id', id).select('id').maybeSingle()
+    if (error || !row) return json({ error: 'vidéo TikTok introuvable' }, 404)
+    statsCache = null
+    return json({ ok: true, id, vf: vf || null })
   }
 
   // 3) état de connexion (sans jamais exposer le token)

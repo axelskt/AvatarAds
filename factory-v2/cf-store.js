@@ -132,6 +132,7 @@
     loadYt: loadYt,
     loadTk: loadTk,
     loadTts: loadTts,
+    ttLink: ttLink,
     tkConnect: tkConnect,
     tkSetHandle: tkSetHandle,
     tkSendTest: tkSendTest,
@@ -597,6 +598,31 @@
   // de jeton, liens d'image et de vidéo seulement vers TikTok. Relue au plus toutes les 15 min (force après une connexion).
   var TT_IMG = /^https:\/\/[\w.-]+\.(tiktokcdn(-eu|-us)?\.com|ibyteimg\.com|byteimg\.com)\//;
   var TT_VID = /^https:\/\/(www\.|vm\.|m\.)?tiktok\.com\//;
+  // Recette d'une vidéo TikTok (07/10) : vidéo de l'usine reconnue par sa couverture (auto), choisie à la main (manual),
+  // à vérifier parmi 2-3 propositions (unsure), ou pas une vidéo de l'usine (none). Posters seulement depuis factory-media/final/.
+  function ttRecipe(r) {
+    if (!r || typeof r !== 'object' || ['auto', 'manual', 'unsure', 'none'].indexOf(r.state) < 0) return null;
+    var finPre = SUPABASE_URL + '/storage/v1/object/public/factory-media/final/';
+    var vfOk = function (x) { return typeof x === 'string' && /^VF-\d{4}$/.test(x) ? x : null; };
+    var fileOk = function (x) { return typeof x === 'string' && /^[A-Za-z0-9._-]{1,160}$/.test(x) ? x : null; };
+    var posterOk = function (x) { return typeof x === 'string' && x.indexOf(finPre) === 0 && !/[\s"'<>]/.test(x) ? x : null; };
+    return { vf: vfOk(r.vf), state: r.state, score: num(r.score), file: fileOk(r.file), poster: posterOk(r.poster),
+      candidates: (Array.isArray(r.candidates) ? r.candidates : []).slice(0, 3).map(function (c) {
+        return c && typeof c === 'object' ? { vf: vfOk(c.vf), score: num(c.score), file: fileOk(c.file), poster: posterOk(c.poster) } : null;
+      }).filter(function (c) { return c && c.vf; }) };
+  }
+  // Rattachement choisi à la main (07/10) : tiktok-auth?action=link { id, vf } (vf vide = pas une vidéo de l'usine)
+  function ttLink(id, vf) {
+    logNet('tiktok-auth?action=link');
+    return (sb ? sb.auth.getSession() : Promise.resolve(null)).then(function (r) {
+      var tok = r && r.data && r.data.session && r.data.session.access_token;
+      if (!tok) return { ok: false, error: 'session absente : reconnecte-toi au tableau de bord' };
+      return fetch(FN + 'tiktok-auth?action=link', { method: 'POST', cache: 'no-store',
+        headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ id: String(id || ''), vf: String(vf || '') }) })
+        .then(function (resp) { return resp.json().catch(function () { return {}; }).then(function (d) { return d && d.ok ? { ok: true } : { ok: false, error: String((d && d.error) || 'HTTP ' + resp.status).slice(0, 200) }; }); });
+    }).then(function (x) { if (x.ok) return loadTts({ force: true }).then(function () { return x; }); return x; })
+      .catch(function () { return { ok: false, error: 'réseau indisponible' }; });
+  }
   function loadTts(opts) {
     var force = !!(opts && opts.force), S = CF.tts;
     if (CF.status !== 'ready') return Promise.resolve(S);
@@ -625,7 +651,7 @@
                 var t = str(v.published_at), ms = t ? Date.parse(t) : NaN;
                 return { id: str(v.id), title: str(v.title), ms: isFinite(ms) ? ms : null, duration: num(v.duration),
                   thumb: typeof v.thumb === 'string' && !/[\s"'<>]/.test(v.thumb) && (TT_IMG.test(v.thumb) || v.thumb.indexOf(covPre) === 0) ? v.thumb : null, url: typeof v.url === 'string' && TT_VID.test(v.url) ? v.url : null,
-                  views: num(v.views), likes: num(v.likes), comments: num(v.comments), shares: num(v.shares) };
+                  views: num(v.views), likes: num(v.likes), comments: num(v.comments), shares: num(v.shares), recipe: ttRecipe(v.recipe) };
               }) };
           }),
           history: (Array.isArray(b.history) ? b.history : []).map(function (h) {

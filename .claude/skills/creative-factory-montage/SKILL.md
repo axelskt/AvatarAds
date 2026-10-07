@@ -166,6 +166,10 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
   **template = VF-xxxx**, brick_combo = clés de COMBO_KEYS seulement : voice, avatar, photo, hook, liaison, contenu, cta,
   musique, sous_titre, assemblage + format / texte_choc ; poster = frame 0 dans `final/`). Le dashboard compte en stock
   les approuvées dont le VF n'est pas encore programmé / posté dans le kit.
+- **Empreinte TikTok (07/10), à chaque vidéo livrée** : `node usine/fingerprint.mjs --sql --as <URL publiée .mp4>
+  <fichier local> > /tmp/fp.sql && supabase db query --linked -f /tmp/fp.sql` AVANT de supprimer le fichier local
+  (images 0 / 0,5 / 1 s + durée → `factory_fp`). Sans elle, la vidéo n'est jamais reconnue dans « Statistiques TikTok »
+  (l'API TikTok ne donne que la couverture = première image). Vidéo déjà supprimée : passer son `-poster.jpg`.
 - Validé → `node usine/publish-qc.mjs … --bricks bricks.json` : QC technique (`qc.mjs`) + vision, dépose la vidéo et un
   poster dans factory-media, et prépare la ligne `factory_qc` (status `pending`, comboJson = { voice, avatar, hook,
   liaison?, contenu, cta, musique? } + format / texte_choc lus dans `OUT.mp4.format.json`). Sans clé service en local, le
