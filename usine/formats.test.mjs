@@ -50,12 +50,12 @@ test('chocEnd : fixe = 3 s bornées à la vidéo ; hook = durée du hook ; sans 
 });
 
 // ── banque de phrases choc ──
-test('banque : 19 phrases TH01…TH19, modules connus, TH13 exige TX-O02a', () => {
-  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 19 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
+test('banque : 25 phrases TH01…TH25, modules connus, TH13 exige TX-O02a', () => {
+  assert.deepEqual(F.TEXTES_CHOC.map(p => p.id), Array.from({ length: 25 }, (_, i) => 'TH' + String(i + 1).padStart(2, '0')));
   F.TEXTES_CHOC.forEach(p => assert.ok(['generique', 'mcp-claude', 'omni', 'montage-ia'].includes(p.module), p.id));
-  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14']);
+  assert.deepEqual(F.TEXTES_CHOC.filter(p => p.module !== 'generique').map(p => p.id), ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24']);
   assert.equal(F.textChoc('TH13').tx, 'TX-O02a');
-  assert.equal(F.textChoc('TH20'), null); assert.equal(F.textChoc('__proto__'), null);
+  assert.equal(F.textChoc('TH99'), null); assert.equal(F.textChoc('__proto__'), null);
 });
 const BANK = join(homedir(), 'Downloads', 'Creative Factory', 'banque-phrases-hook.md');
 test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.md, section VALIDÉES)' + (existsSync(BANK) ? '' : ' — fichier absent, contrôle sauté'), () => {
@@ -63,7 +63,7 @@ test('banque = copie EXACTE des phrases validées par Axel (banque-phrases-hook.
   const md = readFileSync(BANK, 'utf8'), sec = md.split(/^## /m).find(x => /^VALIDÉES/.test(x));
   assert.ok(sec, 'section VALIDÉES');
   const lines = sec.split('\n').filter(l => /^TH\d{2} /.test(l));
-  assert.equal(lines.length, 19);
+  assert.equal(lines.length, 25);
   lines.forEach(l => {
     const m = /^(TH\d{2}) (.+?)\s{2,}\((.+)\)\s*$/.exec(l);
     assert.ok(m, l);
@@ -136,8 +136,8 @@ test('pickFormat en série : 12 vidéos sur 3 hooks → chaque format 3 fois, ch
 });
 test('pickChoc : phrases compatibles avec la démo, la moins utilisée d’abord, préférence aux phrases qui tiennent (fits)', () => {
   const ids = new Set(); for (let i = 0; i < 40; i++) ids.add(F.pickChoc({ demo: DEMO.omni, rand: () => i / 40 }).id);
-  assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14'].includes(id)), [...ids].join(','));
-  assert.equal(ids.size, 14);
+  assert.ok(![...ids].some(id => ['TH10', 'TH11', 'TH12', 'TH13', 'TH14', 'TH24'].includes(id)), [...ids].join(','));
+  assert.equal(ids.size, 19);   // phrases génériques (TH10-14 et TH24 = autres modules)
   const idsTx = new Set(); for (let i = 0; i < 60; i++) idsTx.add(F.pickChoc({ demo: DEMO.omni, tx: ['TX-O02a', 'TX-O01'], rand: () => i / 60 }).id);
   assert.ok(idsTx.has('TH13'));
   const done = F.TEXTES_CHOC.filter(p => p.module === 'generique' && p.id !== 'TH18').map(p => ({ hook: 'H74', texte_choc: p.id }));

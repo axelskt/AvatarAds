@@ -14,7 +14,7 @@
  *                                                  voix : rendu par usine/build-f05.mjs (06/10 : réaction Omni Flash 3 s +
  *                                                  texte choc, démo muette C-MCPM-xx, musique) — pas tiré par build.mjs
  *
- * Phrases choc = banque TH01–TH23 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
+ * Phrases choc = banque TH01–TH25 VALIDÉE par Axel (~/Downloads/Creative Factory/banque-phrases-hook.md) : copiée ici telle
  * quelle, jamais inventée (usine/formats.test.mjs vérifie la copie). Générique = toute démo ; sinon seulement la démo de son
  * module (règle de la banque) ; TH13 (« ma Clio en Porsche ») seulement si le hook visuel montre TX-O02a.
  *
@@ -80,7 +80,10 @@
     { id: 'TH20', text: 'Pourquoi personne ne m\'a montré ça avant ???', emoji: '😭😭', module: 'generique' },
     { id: 'TH21', text: 'Pourquoi j\'apprends ça que maintenant ????', emoji: '😩🤯', module: 'generique' },
     { id: 'TH22', text: 'WTF c\'est quoi ce truc de fou ????', emoji: '🤯🔥', module: 'generique' },
-    { id: 'TH23', text: 'Montre surtout pas ça à ton collègue', emoji: '🤫🤫', module: 'generique' }
+    { id: 'TH23', text: 'Montre surtout pas ça à ton collègue', emoji: '🤫🤫', module: 'generique' },
+    // 07/10 (Axel) : en MAJUSCULES avec émojis ; TH24 nomme Claude → seulement avec une démo MCP Claude
+    { id: 'TH24', text: 'CLAUDE PEUT FAIRE QUOI MAINTENANT ?!??', emoji: '🤯😳', module: 'mcp-claude' },
+    { id: 'TH25', text: 'PQ ON M\'A PAS MONTRÉ ÇA AVANT ?!?', emoji: '😭🤯', module: 'generique' }
   ];
   var TH = Object.create(null);
   TEXTES_CHOC.forEach(function (p) { TH[p.id] = p; });
@@ -182,7 +185,7 @@
     }
     if (combo.texte_choc != null && combo.texte_choc !== '') {
       var p = textChoc(combo.texte_choc);
-      if (!p) errors.push('texte choc « ' + String(combo.texte_choc).slice(0, 30) + ' » absent de la banque validée (TH01–TH23)');
+      if (!p) errors.push('texte choc « ' + String(combo.texte_choc).slice(0, 30) + ' » absent de la banque validée (TH01–TH25)');
       else if (f && !hasChoc(f)) errors.push('texte choc ' + p.id + ' sur le format ' + f.id + ' qui n’en a pas');
       else if (!f) errors.push('texte choc ' + p.id + ' sans format');
       else if (demo !== undefined) { var w = chocWhy(p, demo, tx); if (w) reasons.push('texte choc : ' + w); }

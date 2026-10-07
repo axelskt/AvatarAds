@@ -6,7 +6,7 @@
 //  3) MUSIQUE (plus longue que la vidéo → coupée à la fin) duckée + BRUITAGES (whoosh+impact) sur chaque raccord.
 //  4) FORMAT DE HOOK (Axel 26/09 : « tester différents formats et récolter de la data », usine/formats.js) : tiré à
 //     l'assemblage (le moins testé pour ce hook, puis en tout) — sous-titres seuls, phrase choc 0-3 s + gros sous-titres
-//     colorés, phrase choc + sous-titres normaux, gros sous-titres colorés seuls. Phrase choc = banque VALIDÉE TH01–TH23,
+//     colorés, phrase choc + sous-titres normaux, gros sous-titres colorés seuls. Phrase choc = banque VALIDÉE TH01–TH25,
 //     compatible avec la démo, placée en zone sûre TikTok/Reels JAMAIS sur un visage (usine/face-zones.mjs), visible dès la
 //     frame 0. Le choix est écrit à côté de la vidéo (<out>.format.json) : usine/publish-qc.mjs le reporte dans
 //     factory_qc.brick_combo.format / .texte_choc pour comparer la perf des formats. Variété à tester, pas un multiplicateur.
@@ -111,7 +111,7 @@ if (OPT.format === 'auto') {
 let chocForced = null;
 if (FMT.hasChoc(format) && OPT.choc && OPT.choc !== 'auto') {
   chocForced = FMT.textChoc(OPT.choc);
-  if (!chocForced) { console.error('✗ texte choc « ' + OPT.choc + ' » absent de la banque validée (TH01–TH23)'); process.exit(2); }
+  if (!chocForced) { console.error('✗ texte choc « ' + OPT.choc + ' » absent de la banque validée (TH01–TH25)'); process.exit(2); }
   const why = FMT.chocWhy(chocForced, demoRef, tx);
   if (why) console.warn('⚠ ' + why + ' → la vidéo partira en revue QC');
 }

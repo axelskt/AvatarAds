@@ -104,7 +104,7 @@ function burn(video, output, words, opts = {}) {
     if (c.grp) return `<div class="cap clip grp" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}">`
       + c.grp.map((x, k) => `<span class="gw" id="c${i}w${k}">${x.t}</span>`).join(' ') + `</div>`;
     const cls = 'cap clip' + (big ? ' big' + (FMT.isStrong(c.t) ? ' hot' : '') : '');
-    const st = big ? ` style="font-size:${FMT.bigCapSize(c.t, 960)}px"` : '';
+    const st = big ? ` style="font-size:${FMT.bigCapSize(c.t, 800)}px"` : '';   // 800 = largeur de la zone sûre
     return `<div class="${cls}" id="c${i}" data-start="${c.s.toFixed(3)}" data-duration="${(c.e-c.s).toFixed(3)}"${st}>${c.t}</div>`;
   }).join('\n      ');
   const anim = caps.map((c,i)=> c.grp
@@ -161,16 +161,18 @@ function burn(video, output, words, opts = {}) {
  body{margin:0;background:#000}
  #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000;font-family:'Arial Black','Archivo Black',system-ui,sans-serif}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
- /* SAFE ZONE (tracé Axel) : bande basse ~430px du bas (remontée) ; PLEINE LARGEUR + text-align:center */
- .cap{position:absolute;left:0;right:0;bottom:430px;z-index:5;text-align:center;
+ /* ZONE SÛRE (Axel 07/10, capture TikTok : « ça touche l'icône commentaire, les sous-titres sont trop gros ») :
+    x 80 → 880 (200 px libres à droite pour j'aime / commentaire / favoris), bas du texte au-dessus de 1 470 px (légende) ;
+    un mot ou une ligne plus large que 800 px est réduit (script plus bas), jamais coupé ni débordant */
+ .cap{position:absolute;left:80px;width:800px;bottom:450px;z-index:5;text-align:center;
    font-weight:900;font-size:82px;letter-spacing:.005em;color:#fff;text-transform:uppercase;
    -webkit-text-stroke:8px #000;paint-order:stroke fill;
    text-shadow:0 5px 16px rgba(0,0,0,.5);white-space:nowrap;line-height:1}
  /* gros sous-titres colorés : même bande basse, mot fort en jaune */
- .cap.big{bottom:440px;font-size:108px;-webkit-text-stroke:11px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
+ .cap.big{bottom:450px;font-size:108px;-webkit-text-stroke:11px #000;text-shadow:0 6px 18px rgba(0,0,0,.55)}
  /* groupe de sous-titres (moments clés) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit */
  .broll{position:absolute;z-index:4;object-fit:cover;border-radius:34px;border:5px solid #fff;box-shadow:0 22px 60px rgba(0,0,0,.45);background:transparent}
- .cap.grp{left:70px;right:70px;white-space:normal;font-size:76px;line-height:1.1;-webkit-text-stroke:8px #000}
+ .cap.grp{white-space:normal;font-size:76px;line-height:1.1;-webkit-text-stroke:8px #000}
  .cap.grp .gw{display:inline-block;opacity:0}
  /* style « boite » : texte noir sur pastille blanche arrondie, sans contour */
  .cap.bx{-webkit-text-stroke:0;text-shadow:none;color:#111;font-size:66px}
@@ -247,6 +249,13 @@ function burn(video, output, words, opts = {}) {
        const pad=parseFloat(getComputedStyle(c).getPropertyValue('--px'))*2||0;
        if(max && w-pad>max){ const k=max/(w-pad); c.style.fontSize=(fs0*k).toFixed(1)+'px'; c.style.lineHeight=(lh0*k).toFixed(1)+'px'; } };
      if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit(); })();
+   // zone sûre des sous-titres : largeur mesurée hors transformation (offsetWidth / scrollWidth : les entrées GSAP
+   // sont à scale 0,82 ou décalées), police réduite au besoin pour ce sous-titre seulement ; tout de suite puis polices prêtes
+   (function(){ const fit=()=>document.querySelectorAll('.cap').forEach(c=>{ if(!c.dataset.fs) c.dataset.fs=parseFloat(getComputedStyle(c).fontSize);
+       const fs=+c.dataset.fs; c.style.fontSize=fs+'px';
+       const w=c.classList.contains('grp') ? Math.max(0, ...Array.from(c.querySelectorAll('.gw'), s=>s.offsetWidth)) : c.scrollWidth;
+       if(w>800) c.style.fontSize=(fs*800/w).toFixed(1)+'px'; });
+     fit(); if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); })();
    const tl = gsap.timeline({ paused:true });
    ${chocAnim}
    ${brollAnim}
