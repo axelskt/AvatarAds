@@ -23,7 +23,7 @@ Démos (02/10) : `meta.transcript` = texte RELU (« Cloud » → Claude…) ; bu
 
 - **Varier les démos (Axel 06/10)** : prendre d'abord les démos les MOINS utilisées (`select brick_combo->>'contenu', count(*) from factory_qc group by 1`), jamais deux fois la même démo dans un lot.
 - Une photo = un compte : **A1-x → @avataradss**, **A2-x → @leoadsia**. Grille depuis le 12/10 : @avataradss 5/jour (12-14-16-18-20h), @leoadsia 3/jour (14-16-18h).
-- Photos à éviter pour les mains : A1-1, A1-2, A1-7 ; jamais A1-4 ; A2-6 a déjà tordu les doigts (H24).
+- Photos à éviter pour les mains : A1-1 ; jamais A1-4 ; A2-6 a déjà tordu les doigts (H24). A1-2 et A1-7 REVALIDÉES par Axel le 07/10 (« très bien, remets-les »).
 - Requête utile (hooks compatibles avec les démos dispo + photos qui ont le clip) :
   ```sql
   select b.id, b.meta->'compatible_subjects', left(b.label,70), string_agg(v.avatar_id,' ' order by v.avatar_id)
