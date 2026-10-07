@@ -1367,3 +1367,6 @@ i.is-gap { background: var(--cf-ink); }
   .cf-tk-st, .cf-tk-btn { grid-column: 2; }
   .cf-tk-btn { justify-self: start; }
 }
+
+/* 07/10 (Axel) : en plein écran, une vidéo 9:16 s'affiche ENTIÈRE (le object-fit: cover des vignettes la recadrait) */
+video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; width: 100% !important; height: 100% !important; background: #000; }
