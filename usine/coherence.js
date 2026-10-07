@@ -349,7 +349,9 @@
       else if (b.kind === 'hook' && !meta(b).alias_of) { L.hooks.push(b); if (isAvantApres(b)) L.aaHooks.push(b); if (isLipsyncHook(b)) L.lipsyncHooks.push(b); }
       else if (b.kind === 'liaison') L.liaisons.push(b);
       else if (b.kind === 'cta') L.ctas.push(b);
-      else if (b.kind === 'contenu') { L.demos.push(b); if (isMuette(b)) L.demosMuettes.push(b); }
+      // 08/10 (Axel : « range correctement les démos no voice ») : une démo SANS voix (texte + CTA incrustés) ne sert qu'au
+      // format Texte + musique — jamais tirée pour un format parlé (hook + démo avec la voix d'Axel + CTA)
+      else if (b.kind === 'contenu') { if (isMuette(b)) L.demosMuettes.push(b); else L.demos.push(b); }
       else if (b.kind === 'reaction') L.reactions.push(b);   // tête choquée muette (format Texte + musique, 07/10)
       else if (b.kind === 'texte-choc') L.textes.push(b);
     });
@@ -682,5 +684,5 @@
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
     liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk, voicesAllowed: voicesAllowed,
     videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, transfosOf: transfosOf, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, REACTION_DEMOS_MAX: REACTION_DEMOS_MAX, reactionDemos: reactionDemos, reactionCheck: reactionCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
-    hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
+    isMuette: isMuette, hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });

@@ -1132,7 +1132,8 @@
   var PK = [   // les 8 types de la bibliothèque (maquette §13), dans l'ordre de la maquette
     { k: 'hook', t: 'Hook', ic: 'zap', sub: 'hooks' },
     { k: 'liaison', t: 'Liaison', ic: 'link', sub: 'phrases de liaison' },
-    { k: 'contenu', t: 'Contenu / Démo', ic: 'demo', sub: 'démos vidéo' },
+    { k: 'contenu', t: 'Contenu / Démo', ic: 'demo', sub: 'démos avec la voix d’Axel' },
+    { k: 'demo-muette', t: 'Démo sans voix', ic: 'demo', sub: 'texte + CTA incrustés · Texte + musique' },   // 08/10 (Axel : « range correctement les démos no voice »)
     { k: 'cta', t: 'CTA', ic: 'ctaPtr', sub: 'CTA canoniques' },
     { k: 'musique', t: 'Musique', ic: 'music', sub: 'pistes' },
     { k: 'sous-titre', t: 'Sous-titres', ic: 'subs', sub: 'styles' },
@@ -1144,6 +1145,8 @@
   ];
   var PKM = {};
   PK.forEach(function (x) { PKM[x.k] = x; });
+  // case de la bibliothèque d'une brique : une démo SANS voix (C-xxM-…, meta.voice false) a la sienne, à côté des démos parlées
+  function tileKind(b) { return b.kind === 'contenu' && (/^C-[A-Z]+M-/.test(String(b.id || '')) || (b.meta && (b.meta.voice === false || b.meta.muette === true))) ? 'demo-muette' : b.kind; }
   // Sélecteurs des briques plus / moins performantes et de la fraîcheur (maquette). Seules les briques PARLÉES (hook,
   // liaison, CTA) sont reconnues dans l'audio des reels : les autres ne sont « pas encore mesurables ».
   var PERF_KINDS = [['hook', 'Hooks'], ['avatar', 'Avatars'], ['cta', 'CTA'], ['liaison', 'Liaisons'], ['contenu', 'Démos'], ['musique', 'Musiques'], ['sous-titre', 'Sous-titres'], ['style-choc', 'Styles choc']];
@@ -1985,10 +1988,11 @@
     PK.forEach(function (x) { cnt[x.k] = 0; });
     var props = {}, photos = 0;
     list.forEach(function (b) {
-      if (cnt[b.kind] == null || isAlias(b)) return;
-      if (b.status === 'ready') { cnt[b.kind] += 1; if (b.kind === 'avatar') photos += avPhotos(b).length; }
-      else if (isProposal(b)) props[b.kind] = (props[b.kind] || 0) + 1;   // proposition (brouillon) : à part, jamais « prête »
-      else flagged[b.kind] = (flagged[b.kind] || 0) + 1;
+      var tk = tileKind(b);
+      if (cnt[tk] == null || isAlias(b)) return;
+      if (b.status === 'ready') { cnt[tk] += 1; if (b.kind === 'avatar') photos += avPhotos(b).length; }
+      else if (isProposal(b)) props[tk] = (props[tk] || 0) + 1;   // proposition (brouillon) : à part, jamais « prête »
+      else flagged[tk] = (flagged[tk] || 0) + 1;
     });
     var max = Math.max.apply(null, PK.map(function (x) { return cnt[x.k]; }).concat([1]));
     var G = genVideos(M);
@@ -2012,8 +2016,8 @@
     if (ui.libKind) {
       var q = ui.libQuery.trim().toLowerCase(), K = PKM[ui.libKind];
       // grille = briques uniques (la maquette ne liste pas les alias) ; un alias reste trouvable par la recherche
-      var all = list.filter(function (b) { return b.kind === ui.libKind && !isAlias(b); });
-      var hit = list.filter(function (b) { return b.kind === ui.libKind && (!isAlias(b) || q); }).filter(function (b) {
+      var all = list.filter(function (b) { return tileKind(b) === ui.libKind && !isAlias(b); });
+      var hit = list.filter(function (b) { return tileKind(b) === ui.libKind && (!isAlias(b) || q); }).filter(function (b) {
         return !q || [b.id, b.label, b.meta.script, b.meta.transcript, b.meta.keyword, b.subject].some(function (s) { return s && s.toLowerCase().indexOf(q) >= 0; });
       });
       // propositions (sous-titres en brouillon, meta.proposal) : à part, sous la grille, jamais comptées comme prêtes
