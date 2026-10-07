@@ -718,6 +718,10 @@
       var H = ttH.filter(function (h) { return h.account === a.username && h.subscribers != null; }), h0 = H.filter(function (h) { return ymdDate(h.day).getTime() >= from; })[0];
       if (h0 && H.length > 1 && h0 !== H[H.length - 1]) { gain += H[H.length - 1].subscribers - h0.subscribers; gainOk = true; }
     });
+    // 07/10 (Axel : « — abonnés » sur Instagram en All time) : le total d'abonnés est une valeur ACTUELLE, la même quelle
+    // que soit la période → repli sur la fenêtre de l'Accueil (30 j, toujours chargée) ; le gain, lui, reste celui de la période
+    var igNow = sel.ig ? [igD, CF.acct.ig[HOME_RANGE].data].filter(function (d) { return d && d.followers != null; })[0] : null;
+    if (igNow && !(igD && igD.followers != null)) { subs += igNow.followers; subsOk = true; }
     if (sel.ig && igD && igD.followers != null) {
       subs += igD.followers; subsOk = true;
       var net = igD.followersBase ? igD.followers - igD.followersBase.followers : (igD.flow ? (igD.flow.parts.FOLLOWER || 0) - (igD.flow.parts.NON_FOLLOWER || 0) : null);
@@ -751,6 +755,10 @@
         comments: { v: comments, rateTxt: views ? fDec(comments / views * 100, 1) + NB + '% des vues' : '—', goal: '≥ ' + GOAL.comment.target + NB + '%', ok: views ? comments / views * 100 >= GOAL.comment.target : null }
       } };
   }
+  function igFollowersNow() {
+    var L = [CF.acct.ig[netRange()].data, CF.acct.ig[HOME_RANGE].data].filter(function (d) { return d && d.followers != null; });
+    return L.length ? L[0].followers : null;
+  }
   function netPfHTML(M) {
     var Y = CF.yt.data, ig = CF.acct.accounts.own || [];
     var tt = ttLive();
@@ -765,7 +773,7 @@
       var ttSubs = tt.filter(function (a) { return a.followers != null; });
       var subs = p.k === 'yt' ? (Y ? Y.channel.subscribers : null)
         : p.k === 'tt' ? (ttSubs.length ? ttSubs.reduce(function (s, a) { return s + a.followers; }, 0) : null)
-        : (CF.acct.ig[netRange()].data ? CF.acct.ig[netRange()].data.followers : null);
+        : igFollowersNow();   // 07/10 : total actuel, repli sur la fenêtre de l'Accueil
       return '<div class="cf-icard cf-acard' + (on ? ' is-on' : ' is-off') + '" style="--c:' + p.c + '">'
         + '<button type="button" class="cf-acard-hit" data-act="net-pf" data-k="' + p.k + '" aria-pressed="' + on + '" aria-label="' + esc(p.label + (on ? ' affiché' : ' masqué')) + '"></button>'
         + '<span class="cf-icard-h"><span class="cf-icard-tile">' + svg(p.ic, 14) + '</span><span class="cf-icard-l">' + p.label + '</span>'

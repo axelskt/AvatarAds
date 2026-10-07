@@ -1651,9 +1651,10 @@
     var url = typeof input === 'string' ? input : (input && input.url) || '';
     var path = String(url).replace(SUPABASE_URL, '').split('?')[0].slice(0, 60), rec = { path: path, at: Date.now() };
     if (CF.status === 'boot' || CF.status === 'loading') { CF.boot.net = rec; emit('boot'); }
-    // jamais une requête sans fin : 15 s au plus quand supabase-js n'a pas posé sa propre limite
+    // jamais une requête sans fin PENDANT LE DÉMARRAGE : 15 s au plus. Après (status ready), aucune limite ajoutée : la
+    // 1re version la posait partout et coupait les lectures longues (Auto-DM, briques de Production : « AbortError »).
     var opt = init || {};
-    if (!opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
+    if ((CF.status === 'boot' || CF.status === 'loading') && !opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
     return fetch(input, opt).finally(function () { if (CF.boot.net === rec) { CF.boot.net = null; emit('boot'); } });
   }
   try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: authLock }, global: { fetch: bootFetch } }); } catch (e) { sb = null; }
