@@ -282,7 +282,7 @@
   // seconde tant que le démarrage dure (bootTick).
   var bootTick = null;
   function bootInfo(st) {
-    var on = st === 'boot' || st === 'loading', B = CF.boot, el = $('cfBootInfo'), bt = $('cfBootRetry');
+    var on = st === 'boot' || st === 'loading', B = CF.boot, el = $('cfBootInfo'), bt = $('cfBootActs');
     if (!on) { if (bootTick) { clearInterval(bootTick); bootTick = null; } if (el) el.hidden = true; if (bt) bt.hidden = true; return; }
     if (!bootTick) bootTick = setInterval(function () { if (CF.status === 'boot' || CF.status === 'loading') bootInfo(CF.status); }, 1000);
     var now = Date.now(), sec = function (ms) { return fDec(ms / 1000, 1) + NB + 's'; };
@@ -3881,6 +3881,7 @@
       else if (act === 'range') setRange(el.getAttribute('data-range'));
       else if (act === 'retry') CF.refresh({ gate: true });
       else if (act === 'boot-retry') location.reload();   // 07/10 : démarrage trop long → on recharge la page
+      else if (act === 'relogin') CF.relogin();   // 07/10 (Axel) : session de ce navigateur effacée → formulaire e-mail + mot de passe
       else if (act === 'retry-ig') CF.loadInsights(ui.range, { force: true });
       else if (act === 'retry-accounts') CF.loadAccounts({ force: true });
       else if (act === 'retry-aud') CF.loadAudience({ force: true });

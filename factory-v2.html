@@ -8,7 +8,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; media-src https://guvwgiejzkiodghywpwj.supabase.co; connect-src 'self' https://guvwgiejzkiodghywpwj.supabase.co wss://guvwgiejzkiodghywpwj.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Creative Factory · préprod</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="stylesheet" href="factory-v2/cf.css?v=56">
+<link rel="stylesheet" href="factory-v2/cf.css?v=57">
 </head>
 <body>
 <div class="cf-wrap">
@@ -25,7 +25,10 @@
     <span class="cf-spin" aria-hidden="true"></span>
     <p id="cfBootMsg">Chargement…</p>
     <p id="cfBootInfo" class="cf-meta cf-boot-info" hidden></p>
-    <button type="button" id="cfBootRetry" class="cf-btn is-sm" data-act="boot-retry" hidden>Réessayer</button>
+    <div id="cfBootActs" class="cf-gate-acts" hidden>
+      <button type="button" class="cf-btn is-sm" data-act="boot-retry">Réessayer</button>
+      <button type="button" class="cf-btn is-sm is-dark" data-act="relogin">Se reconnecter</button>
+    </div>
   </section>
 
   <section id="cfLogin" class="cf-card cf-gate cf-login" hidden aria-labelledby="cfLoginT">
@@ -60,7 +63,10 @@
     <span class="cf-gate-ic is-warn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
     <h1 id="cfErrorT">Erreur de chargement</h1>
     <p id="cfErrMsg" class="cf-dim"></p>
-    <button type="button" class="cf-btn is-dark" data-act="retry">Réessayer</button>
+    <div class="cf-gate-acts">
+      <button type="button" class="cf-btn is-dark" data-act="retry">Réessayer</button>
+      <button type="button" class="cf-btn" data-act="relogin">Se reconnecter</button>
+    </div>
   </section>
 
   <div id="cfApp" class="cf-app" hidden>
@@ -102,12 +108,12 @@
 
 <!-- supabase-js 2.117.1, version exacte, empreinte SRI calculée sur le fichier servi (identique à l'archive npm) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js" integrity="sha384-K1nraABOP/zFehpLIUksXebbs7jMpB8gYMlb+uhVKZcWT/9Vkq1+qhv6ndC+1Yuz" crossorigin="anonymous"></script>
-<script src="factory-v2/cf-store.js?v=57"></script>
+<script src="factory-v2/cf-store.js?v=58"></script>
 <!-- vidéos finales : matrice hook × liaison validée (générée par usine/gen-coherence-matrix.mjs, window.CF_HOOK_LIAISON) puis
      règle de cohérence et capacité, source unique partagée avec usine/publish-qc.mjs (window.CF_COHERENCE) -->
 <script src="usine/hook-liaison.js?v=3"></script>
 <script src="usine/coherence.js?v=17"></script>
 <script src="factory-v2/cf-trackads.js?v=1"></script>
-<script src="factory-v2/cf-ui.js?v=69"></script>
+<script src="factory-v2/cf-ui.js?v=70"></script>
 </body>
 </html>

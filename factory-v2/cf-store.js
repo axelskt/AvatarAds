@@ -133,6 +133,7 @@
     loadYt: loadYt,
     loadTk: loadTk,
     loadTts: loadTts,
+    relogin: relogin,
     ttLink: ttLink,
     tkConnect: tkConnect,
     tkSetHandle: tkSetHandle,
@@ -238,7 +239,9 @@
         loadAccounts();
       }, function (e) {
         if (my !== gateSeq || ep !== epoch) return;
-        setStatus('error', errText(e));
+        var msg = errText(e);
+        if (!/délai/.test(msg)) return setStatus('error', msg);
+        return probe().then(function (p) { if (my === gateSeq && ep === epoch) setStatus('error', msg + ' · ' + p); });
       });
   }
 
@@ -1582,6 +1585,21 @@
       error: msg.ok ? null : String(msg.error || 'connexion échouée').slice(0, 200), at: Date.now() };
     emit('tk-oauth');
     if (CF.status === 'ready') loadTk({ force: true });
+  }
+
+  // 07/10 (Axel : « mets l'écran pour que je me reconnecte directement ») : efface la session enregistrée dans CE
+  // navigateur (clé locale de supabase-js, sans appel réseau : c'est justement le réseau qui bloque) puis recharge → écran
+  // de connexion e-mail + mot de passe. Les autres onglets avatarads.fr partagent cette session : ils seront déconnectés aussi.
+  function relogin() {
+    try { Object.keys(localStorage).filter(function (k) { return /^sb-guvwgiejzkiodghywpwj-auth-token/.test(k); }).forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* stockage bloqué */ }
+    location.reload();
+  }
+  // Après un contrôle d'accès sans réponse : le serveur est-il joignable depuis CETTE page ? (requête minuscule, 4 s)
+  function probe() {
+    var t = Date.now();
+    return fetch(SUPABASE_URL + '/auth/v1/health', { headers: { apikey: SUPABASE_KEY }, cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined })
+      .then(function () { return 'le serveur répond (' + (Date.now() - t) + ' ms) : c’est la session de ce navigateur qui bloque → « Se reconnecter »'; },
+        function () { return 'le serveur ne répond pas depuis cette page (autres onglets avatarads.fr / vidéos Supabase ouverts ?) : ferme-les puis « Réessayer »'; });
   }
 
   // ── connexion (mot de passe ou code, shouldCreateUser:false) ──

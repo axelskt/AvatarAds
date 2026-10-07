@@ -1411,3 +1411,4 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 /* 07/10 : détail du démarrage sous le rond (étape, temps, requête en attente) */
 .cf-boot-info { margin-top: 6px; font-size: 12px; text-align: center; overflow-wrap: anywhere; max-width: 420px; }
 #cfBootRetry { margin-top: 10px; }
+.cf-gate-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
