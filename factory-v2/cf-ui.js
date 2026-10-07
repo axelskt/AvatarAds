@@ -1903,7 +1903,7 @@
     var ph = b.kind === 'avatar' ? avPhotos(b) : [];
     return '<button type="button" class="cf-litem' + (b.status !== 'ready' && !isProposal(b) ? ' is-off' : '') + (isProposal(b) ? ' is-prop' : '') + '" data-act="brick-open" data-bid="' + esc(b.id) + '">'
       + '<span class="cf-litem-h"><b>' + esc(b.id) + '</b><span class="cf-litem-m">' + esc(tag) + '</span></span>'
-      + (ph.length ? '<span class="cf-litem-ph">' + ph.map(function (u, i) { return thumbImg(u, 96, 'alt="" loading="lazy" decoding="async" data-i="' + i + '"', true); }).join('') + '</span>' : '')
+      + (ph.length ? '<span class="cf-litem-ph">' + ph.map(function (u, i) { var nm = (String(u).split(/[?#]/)[0].match(/\/([A-Za-z0-9]+-\d+)\.(?:jpe?g|png|webp)$/i) || [])[1] || ''; return thumbImg(u, 96, 'alt="' + esc(nm) + '" title="' + esc(nm) + '" loading="lazy" decoding="async" data-i="' + i + '"', true); }).join('') + '</span>' : '')
       + '<span class="cf-litem-t">' + esc(shorten(text, 96) || '—') + '</span>'
       + (gv ? '<span class="cf-litem-g">' + gv.fmts.map(function (f) {
         var d = gv[f] || 0;
@@ -3513,9 +3513,14 @@
     } else if (b.kind === 'avatar') {
       // toutes les photos de l'avatar : la grande (couverture par défaut) + les vignettes, un clic l'affiche en grand
       var cov = fb && mediaSrc(fb.image), sel = ui.modal.avImg != null && photos[ui.modal.avImg] ? ui.modal.avImg : Math.max(0, photos.indexOf(cov));
-      media = photos.length ? '<div class="cf-sheet-media is-portrait">' + thumbImg(photos[sel], 800, 'alt="' + esc('Photo ' + (sel + 1) + ' de ' + b.id) + '" decoding="async"') + '</div>'
+      // 07/10 (Axel) : chaque photo porte son nom de la bibliothèque (A1-1, A1-2…), celui des recettes et des vidéos
+      var pn = function (u) { var m0 = String(u || '').split(/[?#]/)[0].match(/\/([A-Za-z0-9]+-\d+)\.(?:jpe?g|png|webp)$/i); return m0 ? m0[1] : ''; };
+      var tagS = 'position:absolute;left:6px;top:6px;background:rgba(0,0,0,.62);color:#fff;font:600 11px/1 var(--cf-mono, monospace);padding:4px 6px;border-radius:6px';
+      media = photos.length ? '<div class="cf-sheet-media is-portrait">' + thumbImg(photos[sel], 800, 'alt="' + esc('Photo ' + (pn(photos[sel]) || sel + 1) + ' de ' + b.id) + '" decoding="async"') + (pn(photos[sel]) ? '<span style="' + tagS + '">' + esc(pn(photos[sel])) + '</span>' : '') + '</div>'
         + (photos.length > 1 ? '<div class="cf-avgrid">' + photos.map(function (u, i) {
-          return '<button type="button" class="cf-avth' + (i === sel ? ' is-on' : '') + '" data-act="av-img" data-i="' + i + '" aria-pressed="' + (i === sel) + '" aria-label="' + esc('Photo ' + (i + 1)) + '">' + thumbImg(u, 160, 'alt="" loading="lazy" decoding="async"', true) + '</button>';
+          var nm = pn(u);
+          return '<button type="button" class="cf-avth' + (i === sel ? ' is-on' : '') + '" data-act="av-img" data-i="' + i + '" aria-pressed="' + (i === sel) + '" aria-label="' + esc(nm || 'Photo ' + (i + 1)) + '" title="' + esc(nm) + '" style="position:relative">' + thumbImg(u, 160, 'alt="" loading="lazy" decoding="async"', true)
+            + (nm ? '<span style="position:absolute;left:2px;bottom:2px;background:rgba(0,0,0,.62);color:#fff;font:600 9px/1 var(--cf-mono, monospace);padding:2px 3px;border-radius:4px">' + esc(nm) + '</span>' : '') + '</button>';
         }).join('') + '</div>' : '')
         : ph('avatar · ' + b.id) + miss('portrait');
     } else if (b.kind === 'transformation') {
