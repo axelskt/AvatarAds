@@ -11,6 +11,7 @@ import { tmpdir, cpus, totalmem } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, createHash, timingSafeEqual } from 'node:crypto';
+import { fingerprint, denseFrames } from './fingerprint.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SB = process.env.SUPABASE_URL || 'https://guvwgiejzkiodghywpwj.supabase.co', KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -40,6 +41,21 @@ async function upload(file, path, type) {
   const r = await fetch(SB + '/storage/v1/object/factory-media/' + path, { method: 'POST', headers: { Authorization: 'Bearer ' + KEY, apikey: KEY, 'Content-Type': type, 'x-upsert': 'true' }, body: readFileSync(file) });
   if (!r.ok) throw new Error('dépôt ' + r.status + ' ' + (await r.text()).slice(0, 120));
 }
+// 07/10 : empreinte TikTok de la vidéo (factory_fp + factory_fp_frames, usine/fingerprint.mjs) calculée sur le fichier
+// rendu AVANT qu'il soit effacé : l'API TikTok ne donne que la couverture (une image du hook) et la durée. Un échec ici
+// ne fait pas échouer le rendu (la vidéo est déjà déposée) : il est signalé dans le job (empreinte = false).
+async function saveFingerprint(file, url, vf) {
+  try {
+    const fp = fingerprint(file), fr = denseFrames(file);
+    const rest = (table, q, init) => fetch(SB + '/rest/v1/' + table + q, { ...init, headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json', ...(init.headers || {}) } })
+      .then(async (r) => { if (!r.ok) throw new Error(table + ' ' + r.status + ' ' + (await r.text()).slice(0, 120)); });
+    await rest('factory_fp', '?on_conflict=video_url', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ video_url: url, vf: ID(vf), duration: fp.duration, hashes: fp.hashes, thumbs: fp.thumbs, styles: fp.styles, updated_at: new Date().toISOString() }) });
+    await rest('factory_fp_frames', '?video_url=eq.' + encodeURIComponent(url), { method: 'DELETE' });
+    await rest('factory_fp_frames', '', { method: 'POST', body: JSON.stringify(fr.map((f) => ({ video_url: url, t: f.t, coarse: f.coarse, thumb: f.thumb }))) });
+    return true;
+  } catch (e) { console.error('empreinte :', String(e.message || e).slice(0, 200)); return false; }
+}
 async function run(job) {
   const r = job.recipe, W = join(tmpdir(), 'cf-' + job.id); mkdirSync(W, { recursive: true });
   const t0 = Date.now(), T = {};
@@ -65,6 +81,7 @@ async function run(job) {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '0', '-i', out, '-frames:v', '1', '-vf', 'scale=540:-1', '-q:v', '3', poster]);
     await upload(out, 'final/' + name + '.mp4', 'video/mp4'); await upload(poster, 'final/' + name + '-poster.jpg', 'image/jpeg');
     T.depot = (Date.now() - t0) / 1000 - T.telechargement - T.rendu;
+    job.empreinte = await saveFingerprint(out, PUB + 'final/' + name + '.mp4', r.vf);
     Object.assign(job, { status: 'done', name, machine: process.env.RAILWAY_REPLICA_ID || '', url: PUB + 'final/' + name + '.mp4', sidecar: f, words: JSON.parse(readFileSync(out + '.words.json', 'utf8')).map(w => w.text).join(' '), size: statSync(out).size });
   } catch (e) { Object.assign(job, { status: 'failed', error: String(e.message || e).slice(0, 400) }); }
   job.seconds = Object.fromEntries(Object.entries({ ...T, total: (Date.now() - t0) / 1000 }).map(([k, x]) => [k, Math.round(x)]));

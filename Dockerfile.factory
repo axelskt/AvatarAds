@@ -14,8 +14,10 @@ RUN npm init -y >/dev/null && npm install --omit=dev hyperframes@0.8.96
 COPY render-worker/assets/sfx /app/render-worker/assets/sfx
 WORKDIR /app
 COPY usine ./usine
+# 07/10 : calcul d'empreinte TikTok partagé avec l'edge tiktok-auth (TypeScript lu tel quel par Node, --experimental-strip-types)
+COPY supabase/functions/_shared/fp.ts ./supabase/functions/_shared/fp.ts
 RUN chown -R node:node /app
 ENV NODE_ENV=production HOME=/home/node CF_HF_BIN=/app/hf/node_modules/.bin/hyperframes CF_CACHE=/tmp/cf-cache CF_FPS=60 HYPERFRAMES_EXTRACT_CACHE_DIR=off
 USER node
 EXPOSE 8080
-CMD ["node", "usine/railway-render.mjs"]
+CMD ["node", "--experimental-strip-types", "usine/railway-render.mjs"]

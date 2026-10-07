@@ -6,7 +6,8 @@
     "watchPatterns": [
       "usine/**",
       "Dockerfile.factory",
-      "usine/railway.factory.json"
+      "usine/railway.factory.json",
+      "supabase/functions/_shared/fp.ts"
     ]
   },
   "deploy": {
