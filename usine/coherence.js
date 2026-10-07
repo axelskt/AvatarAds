@@ -428,10 +428,14 @@
     // hooks lipsync à incrustation obligatoire (meta.overlay_required) : comptés normalement, signalés à part
     var ov = { count: 0, hooks: [], kinds: {}, videos: {} };
     L.lipsyncHooks.forEach(function (h) { var o = overlayRequired(h); if (o) { ov.count += 1; ov.hooks.push(h.id); ov.kinds[o] = (ov.kinds[o] || 0) + 1; } });
+    // Axel 07/10 (opts.demoRequired) : un hook sans AUCUNE démo compatible (Montage IA, nettoyage audio, Motion Control…)
+    // ne compte pas tant qu'on ne peut pas finir la vidéo ; il revient tout seul avec sa première démo.
+    var demoOk = function (h) { return !opts.demoRequired || !L.demos.length || L.demos.some(function (d) { return pairLevel(h, d) === 'ok'; }); };
+    var sansDemoHooks = L.lipsyncHooks.filter(function (h) { return !demoOk(h); }).map(function (h) { return h.id; });
     VOICES.forEach(function (v) {
       var H = 0, P = 0, set = dict(), ovN = 0;
       L.lipsyncHooks.forEach(function (h) {
-        if (!voiceOk(h, v)) return;
+        if (!voiceOk(h, v) || !demoOk(h)) return;
         var p0 = P;
         H += 1; set[h.id] = dict(); set[h.id][''] = 1;
         hk[h.id].forEach(function (l) { if (voiceOk(l, v)) { P += 1; set[h.id][l.id] = 1; } });
@@ -439,7 +443,7 @@
       });
       possible[v] = set;
       ov.videos[v] = ovN;
-      modes[v] = { voice: v, label: VOICE_LABEL[v], hooks: H, pairs: P, short: A * H, long: A * P, total: A * (H + P), done: 0, remaining: 0 };
+      modes[v] = { voice: v, label: VOICE_LABEL[v], hooks: H, pairs: P, short: A * H, long: A * P, total: A * (H + P), done: 0, remaining: 0, sansDemo: sansDemoHooks };
     });
     // ── Avant / après ──
     var asm = assemblies(bricks), gs = [], aaSet = dict(), aaH = dict(), aaS = 0, aaL = 0, aaP = 0;
