@@ -9,8 +9,12 @@
 // Emojis = images Apple (comme captions.mjs). Sortie 1080 × 1920, 60 i/s, piste son SILENCIEUSE (la musique est posée
 // par build-f05.mjs), faststart.
 //
+// ZONE SÛRE (Axel 07/10 : « que le texte ne se cache pas derrière l'icône commentaire ou like ») : 80 px à gauche,
+// 200 px libres à droite (colonne j'aime / commentaire / partage de TikTok, Reels, Shorts), jamais sous 1 480 px (nom +
+// légende en bas) ; une ligne trop large rétrécit (jamais hors de la zone). Placement par défaut SOUS l'écran filmé, sur le
+// haut du clavier : le texte ne cache jamais ce qu'il décrit (« Choisis la qualité » posé sur le sélecteur, VF démo Omni).
 // usage : node usine/demo-muette.mjs <demo-avec-voix.mp4> <cartes.json> <sortie.mp4>
-//   cartes.json = [{ "start": 0, "end": 3.6, "text": "Va sur AvatarAds.fr", "style": "step" }, …]
+//   cartes.json = [{ "start": 0, "end": 3.6, "text": "Va sur AvatarAds.fr", "style": "step", "top": 1300 (optionnel) }, …]
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -40,7 +44,7 @@ const appleEmoji = e => {
   return null;
 };
 const line = t => esc(t).replace(EMOJI, m => { const f = appleEmoji(m); return f ? `<img class="emj" src="${f}" alt="">` : `<span class="em">${m}</span>`; });
-const html = cards.map((c, i) => `<div class="card ${c.style || 'step'} clip" id="c${i}" data-start="${c.start.toFixed(3)}" data-duration="${(c.end - c.start).toFixed(3)}">`
+const html = cards.map((c, i) => `<div class="card ${c.style || 'step'} clip" id="c${i}" data-start="${c.start.toFixed(3)}" data-duration="${(c.end - c.start).toFixed(3)}"${Number.isFinite(c.top) ? ` style="top:${Math.min(1480 - 80, Math.max(220, c.top))}px"` : ''}>`
   + String(c.text).split('\n').map(l => `<div class="l"><span>${line(l)}</span></div>`).join('') + `</div>`).join('\n   ');
 const anim = cards.map((c, i) => `tl.fromTo('#c${i}',{autoAlpha:0,scale:0.86},{autoAlpha:1,scale:1,duration:0.16,ease:'back.out(2)'}, ${c.start.toFixed(3)});`).join('\n   ');
 
@@ -51,25 +55,31 @@ writeFileSync(join(work, 'index.html'), `<!doctype html><html lang="fr"><head><m
  body{margin:0;background:#000}
  #root{position:relative;width:1080px;height:1920px;overflow:hidden;background:#000}
  #bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
- .card{position:absolute;left:60px;right:60px;z-index:5;text-align:center;transform-origin:50% 50%}
- .card .l{display:block;margin:0}
+ /* zone sûre : x 80 → 880 (200 px libres à droite pour les icônes), y ≤ 1480 */
+ .card{position:absolute;left:80px;width:800px;z-index:5;text-align:center;transform-origin:50% 50%}
+ .card .l{display:block;margin:0;white-space:nowrap}
  .emj{height:1.05em;width:auto;vertical-align:-0.18em;margin-left:.12em}
  .em{font-family:'Noto Color Emoji',sans-serif}
  /* consigne : comme les démos MCP muettes (blanc cerné de noir, centre-bas) */
- .step{top:1130px;font-family:'Montserrat','Arial Black',sans-serif;font-weight:900;font-size:66px;line-height:1.12;color:#fff;
+ .step{top:1300px;font-family:'Montserrat','Arial Black',sans-serif;font-weight:900;font-size:62px;line-height:1.12;color:#fff;
    -webkit-text-stroke:9px #000;paint-order:stroke fill;text-shadow:0 4px 14px rgba(0,0,0,.45)}
  /* encadrés noirs : résultat et CTA */
  .punch,.cta{font-family:'Inter','Arial',sans-serif;font-weight:800;color:#fff}
  .punch .l>span,.cta .l>span{display:inline-block;background:#111;border-radius:16px;padding:10px 24px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
  .punch .l:not(:first-child)>span,.cta .l:not(:first-child)>span{margin-top:-6px}
- .punch{top:1250px;font-size:56px;line-height:1.18}
- .cta{top:1470px;font-size:42px;line-height:1.2}
+ .punch{top:1235px;font-size:52px;line-height:1.18}
+ .cta{top:1405px;font-size:36px;line-height:1.2}
 </style></head><body>
  <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="${dur.toFixed(3)}">
    <video id="bg" src="src.mp4" data-start="0" data-duration="${dur.toFixed(3)}" muted playsinline></video>
    ${html}
  </div>
  <script>
+   // une ligne plus large que la zone sûre (800 px) → police réduite pour la carte entière, mesurée une fois les polices chargées
+   (function(){ const fit=()=>document.querySelectorAll('.card').forEach(c=>{ const fs=parseFloat(getComputedStyle(c).fontSize); let w=0;
+     c.querySelectorAll('.l>span').forEach(s=>{ w=Math.max(w, s.getBoundingClientRect().width); });
+     if(w>800) c.style.fontSize=(fs*800/w).toFixed(1)+'px'; });
+     if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit); else fit(); })();
    const tl = gsap.timeline({ paused:true });
    ${anim}
    if(!tl.getChildren().length) tl.to({},{duration:${dur.toFixed(3)}});
