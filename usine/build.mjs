@@ -47,7 +47,8 @@ let demo = demoSrc;
 // MUSIQUE et SOUS-TITRES au hasard (Axel 30/09 : « bien changer la musique de fond ainsi que les sous-titres… aléatoirement
 // à chaque fois ») : musique « auto » = une piste VALIDÉE (jamais M04, trop sombre), --subs-style auto = contour ou boîte ;
 // jamais le même choix que la vidéo précédente (fichier <cache>/dernier.json).
-const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_OK = Array.from({ length: 20 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04');
+const BEDS = join(homedir(), 'Downloads', 'Creative Factory', 'musique', 'beds'), MUSIC_DOUCES = ['M01', 'M02', 'M03', 'M05', 'M06', 'M07', 'M15', 'M16', 'M18', 'M19'],   // Axel 07/10 : « les musiques douces je ne suis pas fan » (même liste que build-f05.mjs)
+  MUSIC_OK = Array.from({ length: 20 }, (_, i) => 'M' + String(i + 1).padStart(2, '0')).filter(m => m !== 'M04' && !MUSIC_DOUCES.includes(m));
 // 06/10 : S14 (serif italique) retiré du tirage, Axel « pas fan » (VF-0059)
 const SUBS_OUT = ['S14'];
 const SUBS_ALL = Array.from({ length: 19 }, (_, i) => 'S' + String(i + 1).padStart(2, '0')).concat('S21').filter(s => !SUBS_OUT.includes(s));   // la banque + boîte blanche, sans les retirés
@@ -195,7 +196,10 @@ const emitWords = (audio, offset) => {
   if (!existsSync(c) && existsSync(byName)) c = byName;
   if (!existsSync(c)) execFileSync('node', [join(HERE,'captions.mjs'), 'emit', audio, '0', c], { stdio:'inherit' });
   else console.log('  mots en cache : ' + basename(audio));
-  return JSON.parse(readFileSync(c, 'utf8')).map(w => ({ ...w, start: w.start + offset, end: w.end + offset })); };
+  // hallucinations connues de Whisper sur du silence (« Sous-titrage Société Radio-Canada », amara.org) : jamais à l'écran
+  const ws = JSON.parse(readFileSync(c, 'utf8')), ghost = /^(sous-?titr\S*|radio-canada\S*|amara\.org\S*)$/i;
+  const keep = ws.filter((w, i) => !ghost.test(String(w.text || '').replace(/[.,!?]+$/, '')) && !(/^soci[ée]t[ée]/i.test(String(w.text || '')) && i > 0 && ghost.test(String(ws[i - 1].text || '').replace(/[.,!?]+$/, ''))));
+  return keep.map(w => ({ ...w, start: w.start + offset, end: w.end + offset })); };
 
 // ── VOIX (29/09) : même chaîne pour toutes les voix d'avatar (hook, liaison, CTA) → grain plus homogène d'une brique
 //    à l'autre (enregistrées à des moments différents) : coupe-bas, léger creux 220 Hz, présence 3,2 kHz, compression douce.
@@ -370,7 +374,10 @@ const O1 = O1pre;                     // démo entre ici (start du slide 1)
 // démo → CTA : même règle. Le glissement part 0,08 s après le dernier mot de la démo (jamais sur ses mots, jamais
 // d'image figée), le CTA joue dès le glissement (sa voix démarre ~0,1 s dans le clip, en fin de mouvement), le son de
 // la démo s'éteint pendant le glissement.
-const demoLastEnd = (() => { try { const w = emitWords(demo, 0); return w.length ? w[w.length - 1].end : durD; } catch { return durD; } })();
+// démo SANS VOIX (C-xxM-…, meta.voice false : texte + CTA déjà incrustés) : rien à transcrire — sur son silence, Whisper
+// inventait « Sous-titrage Société… » (07/10, test A3) ; elle passe en entier, sans sous-titres par-dessus.
+const demoMuette = (() => { const b = brickOf(OPT.demo); const v = b && b.meta ? b.meta.voice : undefined; return /^C-[A-Z]+M-/.test(String(OPT.demo || '')) || v === false || v === 'false'; })();
+const demoLastEnd = demoMuette ? durD : (() => { try { const w = emitWords(demo, 0); return w.length ? w[w.length - 1].end : durD; } catch { return durD; } })();
 const L2 = Math.min(durD, Math.max(0.5, demoLastEnd + 0.08));
 const O2 = O1 + L2;
 const CTA_GAP = 0, CL = 0;
@@ -510,7 +517,7 @@ const allWords = [];
 const hookW = hookWordsPre || (hookVoice ? exactWords(manifestWords(hookVoice, 0) || emitWords(hookVoice, 0), textOf(hookId || idFromFile(hook))) : []);
 // démo : texte relu (meta.transcript de la brique contenu, Axel 02/10 : « cloud » → Claude…) ; jamais le libellé
 const demoTxt = ((brickOf(OPT.demo) || {}).meta || {}).transcript || null;
-const demoW = exactWords(emitWords(demo, O1), demoTxt).filter(w => w.start < O2);
+const demoW = demoMuette ? [] : exactWords(emitWords(demo, O1), demoTxt).filter(w => w.start < O2);
 const ctaW = cta ? exactWords((ctaCap ? manifestWords(ctaCap, O2 + CL + CTA_LEAD) : null) || emitWords(cta, O2 + CL), textOf(idFromFile(cta))) : [];
 // ── GROUPES DE SOUS-TITRES (Axel 29/09) : mot à mot partout SAUF aux moments clés, où la phrase s'affiche en bloc :
 //    la dernière phrase avant chaque transition (fin du hook / de la liaison, fin de la démo) et le début du CTA

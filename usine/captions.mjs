@@ -22,6 +22,9 @@ const esc = t => String(t).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', 
 const EMOJI = /(\p{Extended_Pictographic}(?:\u200d\p{Extended_Pictographic}|\ufe0f)*)/gu;
 
 const LEAD = 0.12;
+// 07/10 (test A3, démo SANS voix) : un sous-titre restait affiché jusqu'au mot SUIVANT, donc pendant les 20 s de la démo
+// muette, par-dessus ses propres textes. Au-delà de GAP_HOLD s de silence, il disparaît 0,45 s après son dernier mot.
+const GAP_HOLD = 1.0;
 // CLI HyperFrames : npx sur le Mac ; sur le serveur (Railway) le binaire installé dans l'image (CF_HF_BIN)
 const HF = process.env.CF_HF_BIN || 'npx', HF_PRE = process.env.CF_HF_BIN ? [] : ['--yes', 'hyperframes'];
 const bareOf = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
@@ -75,12 +78,13 @@ function burn(video, output, words, opts = {}) {
     if (w.g) {
       let j = i; while (j < words.length && words[j].g === w.g) j++;
       const grp = words.slice(i, j), next = words[j];
-      const s = Math.max(0, w.start - LEAD), e = Math.min(dur, next ? Math.max(s + 0.3, next.start - LEAD) : grp[grp.length - 1].end + 0.45);
+      const last = grp[grp.length - 1].end;
+      const s = Math.max(0, w.start - LEAD), e = Math.min(dur, next && next.start - last <= GAP_HOLD ? Math.max(s + 0.3, next.start - LEAD) : last + 0.45);
       caps.push({ grp: grp.map(x => ({ t: clean(x.text), s: Math.max(0, x.start - LEAD) })), t: grp.map(x => clean(x.text)).join(' '), s, e });
       i = j; continue;
     }
     const next = words[i + 1], s = Math.max(0, w.start - LEAD);
-    const e = Math.min(dur, next ? Math.max(s, next.start - LEAD) : w.end + 0.35);
+    const e = Math.min(dur, next && next.start - w.end <= GAP_HOLD ? Math.max(s, next.start - LEAD) : w.end + (next ? 0.45 : 0.35));
     caps.push({ t: clean(w.text), s, e }); i++;
   }
   caps = caps.filter(c => c.e - c.s >= 0.06 && (c.grp || c.t));   // un « isolé devient vide : jamais de sous-titre vide
@@ -243,7 +247,9 @@ function burn(video, output, words, opts = {}) {
  <script>
    // filet de sécurité : une ligne de la phrase choc plus large que prévu → police réduite (jamais hors de sa boîte),
    // mesurée une fois les polices chargées (toujours depuis la taille prévue)
-   (function(){ const c=document.getElementById('choc'); if(!c || c.classList.contains('cs-CS17')) return;   // Snapchat : taille fixe, le texte se ré-enchaîne const max=+c.dataset.maxw||0, fs0=parseFloat(c.style.fontSize), lh0=parseFloat(c.style.lineHeight);
+   (function(){ const c=document.getElementById('choc'); if(!c || c.classList.contains('cs-CS17')) return;   // Snapchat : taille fixe, le texte se ré-enchaîne
+     // (07/10 : cette déclaration était collée derrière le commentaire → « fs0 is not defined », filet jamais exécuté)
+     const max=+c.dataset.maxw||0, fs0=parseFloat(c.style.fontSize), lh0=parseFloat(c.style.lineHeight);
      const fit=()=>{ c.style.fontSize=fs0+'px'; c.style.lineHeight=lh0+'px'; let w=0;
        c.querySelectorAll('.cl>span').forEach(s=>{ w=Math.max(w, s.getBoundingClientRect().width); });
        const pad=parseFloat(getComputedStyle(c).getPropertyValue('--px'))*2||0;
