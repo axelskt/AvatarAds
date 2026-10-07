@@ -45,3 +45,16 @@ alter table public.tiktok_videos add column if not exists cover_src text;
 
 -- (même jour) vignettes 54 × 96 en luminance, base64 (fpThumb), une par instant
 alter table public.factory_fp add column if not exists thumbs text[];
+
+-- (même jour) TikTok ne prend PAS la première image comme couverture (constaté sur @avatarads le 07/10 : avant/après déjà
+-- ouvert, image incrustée, 3e mot du sous-titre) → empreintes sur les 10 premières secondes, 4 images par seconde.
+-- coarse = vignette 18 × 32 (pré-tri), thumb = vignette 54 × 96 (score fin), base64.
+create table if not exists public.factory_fp_frames (
+  video_url  text not null,
+  t          real not null,
+  coarse     text not null,
+  thumb      text not null,
+  primary key (video_url, t)
+);
+alter table public.factory_fp_frames enable row level security;
+revoke all on table public.factory_fp_frames from anon, authenticated, public;

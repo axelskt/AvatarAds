@@ -123,9 +123,23 @@ export function fpCoverCoarse(gray: ArrayLike<number>, W: number, H: number, coa
   return best
 }
 
-// Décision (calibrée le 07/10 sur 34 couvertures simulées, 9:16 réencodées et 3:4 recadrées : 34/34 en tête ; même vidéo
-// ≤ 10,3 en 9:16 et ≤ 17,3 en 3:4 ; autre vidéo la plus proche ≥ 20). À recaler sur les vraies couvertures TikTok.
-export const FP_AUTO = 18, FP_GAP = 6, FP_MAYBE = 32
+// Décision (calibrée le 07/10). Deux cas :
+//  - image exacte (la couverture tombe sur une image échantillonnée) : même vidéo ≤ 10-17, autre vidéo ≥ 20 ;
+//  - image entre deux échantillons (4 par seconde) : le mot du sous-titre a changé, la bonne vidéo sort à 25-66 mais reste
+//    loin devant (2e ≥ 1,7 × 1re) ; sur 70 vraies couvertures hors usine (@ia.axl, @avatarads), la 1re n'est jamais
+//    nettement devant (rapport ≤ 1,34, et ≥ 80 dès qu'il dépasse 1,2).
+// auto = sûr ; unsure = propositions (vidéos à ≤ 1,3 × la meilleure, 5 au plus) ; none = pas une vidéo de l'usine.
+export const FP_AUTO = 18, FP_GAP = 6, FP_MAYBE = 45, FP_FAR = 70, FP_RATIO = 1.6
+export function fpDecide(sc: { vf: string, score: number }[]): { vf: string | null, state: 'auto' | 'unsure' | 'none', score: number | null, candidates: { vf: string, score: number }[] } {
+  const b = sc[0], b2 = sc[1]
+  if (!b) return { vf: null, state: 'none', score: null, candidates: [] }
+  // 5 au plus : une démo partagée par plusieurs vidéos F05 donne des ex aequo (couverture prise dans la démo)
+  const cands = sc.filter((c) => c.score <= Math.max(FP_MAYBE, b.score * 1.3)).slice(0, 5)
+  if (b.score <= FP_AUTO && (!b2 || b2.score - b.score >= FP_GAP)) return { vf: b.vf, state: 'auto', score: b.score, candidates: cands }
+  if (b.score <= FP_FAR && (!b2 || (b2.score >= b.score * FP_RATIO && b2.score - b.score >= 20))) return { vf: b.vf, state: 'auto', score: b.score, candidates: cands }
+  if (b.score <= FP_MAYBE || (b.score <= FP_FAR && b2 && b2.score >= b.score * 1.3)) return { vf: null, state: 'unsure', score: b.score, candidates: cands }
+  return { vf: null, state: 'none', score: b.score, candidates: [] }
+}
 
 // base64 ↔ octets (vignettes stockées en base64 dans factory_fp.thumbs)
 export function b64ToBytes(s: string): Uint8Array {

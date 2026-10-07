@@ -1406,3 +1406,5 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 .cf-tts-cand.is-none { justify-content: center; min-height: 64px; font-weight: 500; color: var(--cf-ink-3); }
 .cf-tts-cand:hover:not(:disabled) { border-color: var(--cf-ink); }
 .cf-tts-cand:disabled { opacity: .5; cursor: default; }
+.cf-tts-rcl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.cf-tts-relink { font-size: 11px; }

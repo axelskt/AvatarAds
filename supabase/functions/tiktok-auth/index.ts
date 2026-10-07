@@ -16,7 +16,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import jpeg from 'https://esm.sh/jpeg-js@0.4.4'
 import webpDecode, { init as webpInit } from 'https://esm.sh/@jsquash/webp@1.4.0/decode'
 import { WEBP_DEC_WASM } from '../_shared/webp-dec-wasm.ts'
-import { toGray, fpCoverScore, fpCoverCoarse, fpCoarse, b64ToBytes, FP_AUTO, FP_GAP, FP_MAYBE } from '../_shared/fp.ts'
+import { toGray, fpCoverScore, fpCoverCoarse, fpCoarse, b64ToBytes, fpDecide } from '../_shared/fp.ts'
 
 // trim : un copier-coller depuis la console TikTok peut ajouter un retour à la ligne (vécu le 03/10 au passage en production).
 const CLIENT_KEY    = (Deno.env.get('TIKTOK_CLIENT_KEY') || '').trim()
@@ -158,11 +158,12 @@ async function keepCover(id: string, src: string): Promise<{ url: string, bytes:
 }
 
 // ── Rapprochement vidéo TikTok → vidéo de l'usine (07/10) ──
-// La couverture par défaut de TikTok = la première image de la vidéo. On la compare aux empreintes factory_fp (vignettes
-// 54 × 96 des images à 0 / 0,5 / 1 s de chaque vidéo finale, usine/fingerprint.mjs) avec le code partagé _shared/fp.ts :
-// pré-tri rapide sur 18 × 32, puis score fin sur les 10 plus proches. Durée TikTok (secondes entières) à 1,5 s près quand
-// celle de la vidéo est connue. auto = sûr ; unsure = 2-3 propositions à choisir dans Factory V2 ; none = pas une vidéo
-// de l'usine (ancienne vidéo, autre montage).
+// La couverture TikTok est une image du HOOK, pas forcément la première (constaté sur @avatarads le 07/10). On la compare
+// aux empreintes de chaque vidéo finale (usine/fingerprint.mjs) avec le code partagé _shared/fp.ts : factory_fp (images à
+// 0 / 0,5 / 1 s, ou le poster seul pour une vidéo supprimée) + factory_fp_frames (4 images par seconde sur les 10
+// premières secondes). Pré-tri rapide sur 18 × 32, puis score fin sur les meilleures images des 8 vidéos les plus proches.
+// Durée TikTok (secondes entières) à 1,5 s près quand celle de la vidéo est connue. auto = sûr ; unsure = 1-3 propositions
+// à choisir dans Factory V2 ; none = pas une vidéo de l'usine (ancienne vidéo, autre montage).
 let webpReady: Promise<void> | null = null
 async function decodeCover(bytes: Uint8Array): Promise<{ w: number, h: number, gray: Uint8Array } | null> {
   try {
@@ -190,20 +191,46 @@ async function loadFp(): Promise<Fp[]> {
   fpCache = { at: Date.now(), rows }
   return rows
 }
+type Fr = { t: number, coarse: Uint8Array }
+let frCache: { at: number, by: Map<string, Fr[]> } | null = null
+async function loadFrames(): Promise<Map<string, Fr[]>> {
+  if (frCache && Date.now() - frCache.at < 10 * 60 * 1000) return frCache.by
+  const by = new Map<string, Fr[]>()
+  for (let from = 0; from < 100000; from += 1000) {   // PostgREST : 1 000 lignes par page
+    const { data, error } = await svc.from('factory_fp_frames').select('video_url, t, coarse').order('video_url').order('t').range(from, from + 999)
+    if (error) { console.log('images du hook', error.message); break }
+    for (const r of data || []) {
+      const k = String(r.video_url)
+      if (!by.has(k)) by.set(k, [])
+      by.get(k)!.push({ t: Number(r.t), coarse: b64ToBytes(String(r.coarse)) })
+    }
+    if (!data || data.length < 1000) break
+  }
+  frCache = { at: Date.now(), by }
+  return by
+}
 async function matchCover(bytes: Uint8Array, duration: number | null): Promise<{ vf: string | null, state: string, score: number | null, candidates: { vf: string, score: number }[] } | null> {
   const img = await decodeCover(bytes)
   if (!img) return null
   const fps = (await loadFp()).filter((f) => f.duration == null || duration == null || Math.abs(f.duration - duration) <= 1.5)
   if (!fps.length) return { vf: null, state: 'none', score: null, candidates: [] }
-  const pre = fps.map((f) => ({ f, c: Math.min(...f.coarse.map((t) => fpCoverCoarse(img.gray, img.w, img.h, t))) }))
-    .sort((a, b) => a.c - b.c).slice(0, 10)
-  const sc = pre.map(({ f }) => ({ vf: f.vf, score: +Math.min(...f.thumbs.map((t) => fpCoverScore(img.gray, img.w, img.h, t))).toFixed(1) }))
-    .sort((a, b) => a.score - b.score)
-  const best = sc[0], second = sc[1]
-  const candidates = sc.slice(0, 3).filter((c) => c.score <= FP_MAYBE)
-  if (best.score <= FP_AUTO && (!second || second.score - best.score >= FP_GAP)) return { vf: best.vf, state: 'auto', score: best.score, candidates }
-  if (best.score <= FP_MAYBE) return { vf: null, state: 'unsure', score: best.score, candidates }
-  return { vf: null, state: 'none', score: best.score, candidates: [] }
+  const frames = await loadFrames()
+  // pré-tri : meilleure image (grossière) de chaque vidéo, en gardant les 3 meilleures images du hook pour le score fin
+  const pre = fps.map((f) => {
+    const own = Math.min(...f.coarse.map((t) => fpCoverCoarse(img.gray, img.w, img.h, t)))
+    const fr = (frames.get(f.url) || []).map((x) => ({ t: x.t, c: fpCoverCoarse(img.gray, img.w, img.h, x.coarse) })).sort((a, b) => a.c - b.c)
+    return { f, c: Math.min(own, fr[0]?.c ?? Infinity), ts: fr.slice(0, 3).map((x) => x.t) }
+  }).sort((a, b) => a.c - b.c).slice(0, 8)
+  const sc = await Promise.all(pre.map(async ({ f, ts }) => {
+    let best = Math.min(...f.thumbs.map((t) => fpCoverScore(img.gray, img.w, img.h, t)))
+    if (ts.length) {
+      const { data } = await svc.from('factory_fp_frames').select('thumb').eq('video_url', f.url).in('t', ts)
+      for (const r of data || []) best = Math.min(best, fpCoverScore(img.gray, img.w, img.h, b64ToBytes(String(r.thumb))))
+    }
+    return { vf: f.vf, score: +best.toFixed(1) }
+  }))
+  sc.sort((a, b) => a.score - b.score)
+  return fpDecide(sc)
 }
 
 // Vidéos envoyables : seulement celles de notre stockage public factory-media (jamais une URL quelconque).
@@ -384,8 +411,8 @@ Deno.serve(async (req) => {
               K.set(String(v.id), { ...(K.get(String(v.id)) || {}), cover_copy: kc.url })
             }))
           }
-          // rapprochement des vidéos jamais rapprochées (12 au plus par lecture : temps de calcul de l'edge limité)
-          const unmatched = vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && !k.match_state }).slice(0, 12)
+          // rapprochement des vidéos jamais rapprochées (8 au plus par lecture : temps de calcul de l'edge limité)
+          const unmatched = vids.filter((v) => { const k: any = K.get(String(v.id)); return k?.cover_copy && !k.match_state }).slice(0, 8)
           for (const v of unmatched) {
             const k: any = K.get(String(v.id))
             let bytes = got.get(String(v.id))

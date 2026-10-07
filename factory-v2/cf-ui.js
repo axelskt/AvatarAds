@@ -990,10 +990,13 @@
   function ttsRecipeHTML(v) {
     var R = v.recipe;
     if (!R) return '<span class="cf-tts-rc is-wait">rapprochement en cours</span>';
-    if (R.state === 'none') return '<span class="cf-tts-rc is-none" title="Couverture différente de toutes les vidéos de l’usine">hors usine</span>';
+    // « relier… » (07/10) : taper le VF à la main — vidéo supprimée du stockage (poster seul) ou reconnaissance à corriger
+    var relink = '<button type="button" class="cf-link-btn cf-tts-relink" data-act="tts-relink" data-id="' + esc(v.id) + '"' + (ui.ttsBusy ? ' disabled' : '') + '>'
+      + (R.state === 'none' ? 'relier…' : 'corriger') + '</button>';
+    if (R.state === 'none') return '<span class="cf-tts-rcl"><span class="cf-tts-rc is-none" title="Couverture différente de toutes les vidéos de l’usine">hors usine</span>' + relink + '</span>';
     if (R.vf) {
       var why = R.state === 'auto' ? 'reconnue par sa couverture' + (R.score != null ? ' (écart ' + fDec(R.score, 1) + ')' : '') : 'choisie à la main';
-      return '<span class="cf-tts-rc is-ok" title="' + esc((R.file || R.vf) + ' · ' + why) + '">' + svg(IC.check, 11) + esc(R.vf) + '</span>';
+      return '<span class="cf-tts-rcl"><span class="cf-tts-rc is-ok" title="' + esc((R.file || R.vf) + ' · ' + why) + '">' + svg(IC.check, 11) + esc(R.vf) + '</span>' + relink + '</span>';
     }
     return '<span class="cf-tts-rc is-warn">à vérifier : laquelle ?</span><span class="cf-tts-cands">' + R.candidates.map(function (c) {
       var po = safeUrl(c.poster || '');
@@ -1001,6 +1004,13 @@
         + ' title="' + esc((c.file || c.vf) + ' · écart ' + (c.score == null ? '—' : fDec(c.score, 1))) + '"' + (ui.ttsBusy ? ' disabled' : '') + '>'
         + (po ? '<img src="' + esc(po) + '" alt="" decoding="async">' : '') + '<span>' + esc(c.vf) + '</span></button>';
     }).join('') + '<button type="button" class="cf-tts-cand is-none" data-act="tts-link" data-id="' + esc(v.id) + '" data-vf=""' + (ui.ttsBusy ? ' disabled' : '') + '>aucune</button></span>';
+  }
+  function ttsRelink(id) {
+    var v = window.prompt('Numéro de la vidéo de l’usine (ex. VF-0026 ou 26). Vide = pas une vidéo de l’usine.', '');
+    if (v == null) return;
+    v = String(v).trim().toUpperCase().replace(/^VF-?/, '');
+    if (v && !/^\d{1,4}$/.test(v)) { ui.ttsRecon = { ok: false, at: Date.now(), text: 'Numéro invalide : tape par exemple VF-0026 ou 26.' }; schedule(); return; }
+    ttsLink(id, v ? 'VF-' + ('000' + v).slice(-4) : '');
   }
   function ttsLink(id, vf) {
     ui.ttsBusy = true; schedule();
@@ -3896,6 +3906,7 @@
       else if (act === 'tts-connect') ttsStart();   // 07/10 : connexion « stats » (Sandbox), popup ouverte dans ce clic
       else if (act === 'retry-tts') CF.loadTts({ force: true });
       else if (act === 'tts-link') ttsLink(el.getAttribute('data-id'), el.getAttribute('data-vf'));   // 07/10 : vidéo TikTok → vidéo de l'usine
+      else if (act === 'tts-relink') ttsRelink(el.getAttribute('data-id'));
       else if (act === 'tk-goto') { var tg = $('cfTkSec'); if (tg && tg.scrollIntoView) tg.scrollIntoView({ block: 'start' }); }
       // ── onglet Production ──
       else if (act === 'retry-prod') CF.loadProd({ force: true });

@@ -168,8 +168,10 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
   les approuvées dont le VF n'est pas encore programmé / posté dans le kit.
 - **Empreinte TikTok (07/10), à chaque vidéo livrée** : `node usine/fingerprint.mjs --sql --as <URL publiée .mp4>
   <fichier local> > /tmp/fp.sql && supabase db query --linked -f /tmp/fp.sql` AVANT de supprimer le fichier local
-  (images 0 / 0,5 / 1 s + durée → `factory_fp`). Sans elle, la vidéo n'est jamais reconnue dans « Statistiques TikTok »
-  (l'API TikTok ne donne que la couverture = première image). Vidéo déjà supprimée : passer son `-poster.jpg`.
+  (images 0 / 0,5 / 1 s + durée → `factory_fp`, et 4 images/s sur les 10 premières secondes → `factory_fp_frames`).
+  Sans elle, la vidéo n'est jamais reconnue dans « Statistiques TikTok » : l'API TikTok ne donne que la COUVERTURE, et
+  TikTok la prend dans le hook, PAS à la première image (constaté le 07/10). Vidéo déjà supprimée : passer son
+  `-poster.jpg` (première image seule → reconnaissance faible, Axel relie à la main avec « relier… »).
 - Validé → `node usine/publish-qc.mjs … --bricks bricks.json` : QC technique (`qc.mjs`) + vision, dépose la vidéo et un
   poster dans factory-media, et prépare la ligne `factory_qc` (status `pending`, comboJson = { voice, avatar, hook,
   liaison?, contenu, cta, musique? } + format / texte_choc lus dans `OUT.mp4.format.json`). Sans clé service en local, le

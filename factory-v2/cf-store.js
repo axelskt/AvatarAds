@@ -607,7 +607,7 @@
     var fileOk = function (x) { return typeof x === 'string' && /^[A-Za-z0-9._-]{1,160}$/.test(x) ? x : null; };
     var posterOk = function (x) { return typeof x === 'string' && x.indexOf(finPre) === 0 && !/[\s"'<>]/.test(x) ? x : null; };
     return { vf: vfOk(r.vf), state: r.state, score: num(r.score), file: fileOk(r.file), poster: posterOk(r.poster),
-      candidates: (Array.isArray(r.candidates) ? r.candidates : []).slice(0, 3).map(function (c) {
+      candidates: (Array.isArray(r.candidates) ? r.candidates : []).slice(0, 5).map(function (c) {
         return c && typeof c === 'object' ? { vf: vfOk(c.vf), score: num(c.score), file: fileOk(c.file), poster: posterOk(c.poster) } : null;
       }).filter(function (c) { return c && c.vf; }) };
   }
