@@ -200,8 +200,14 @@
     var my = ++gateSeq, ep = epoch;
     setStatus('loading');
     logNet('rpc factory_access');
+    var deadline = function (p, ms) { return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej({ message: 'délai dépassé (' + Math.round(ms / 1000) + ' s)' }); }, ms); })]); };
     return Promise.resolve()
-      .then(function () { return sb.rpc('factory_access'); })
+      .then(function () { return deadline(sb.rpc('factory_access'), 12000).catch(function (e) {
+        // une seule nouvelle tentative silencieuse (réseau lent, réveil de l'onglet) avant d'afficher l'erreur
+        if (!e || !/délai/.test(String(e.message))) throw e;
+        logNet('rpc factory_access (2e essai)');
+        return deadline(sb.rpc('factory_access'), 15000);
+      }); })
       .then(function (res) {
         if (my !== gateSeq || ep !== epoch) return;
         var err = res && res.error, d = res && res.data;
@@ -1508,7 +1514,16 @@
   }
 
   // ── démarrage ──
-  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch (e) { sb = null; }
+  // 07/10 (Axel : « Vérification de l'accès… » à l'infini) : supabase-js prend un verrou navigator.locks partagé par TOUS
+  // les onglets avatarads.fr (app, kit, dashboard) ; un onglet en arrière-plan qui le garde (Safari le gèle) bloquait
+  // getSession() pour toujours. Verrou attendu 4 s au plus, puis on continue sans lui.
+  function authLock(name, acquireTimeout, fn) {
+    if (!navigator.locks || !navigator.locks.request) return fn();
+    var ac = typeof AbortController === 'function' ? new AbortController() : null, t = ac ? setTimeout(function () { ac.abort(); }, 4000) : 0;
+    return navigator.locks.request(name, ac ? { signal: ac.signal } : {}, function () { if (t) clearTimeout(t); return fn(); })
+      .catch(function (e) { if (e && e.name === 'AbortError') return fn(); throw e; });
+  }
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: authLock } }); } catch (e) { sb = null; }
   if (!sb) {
     setStatus('error', 'supabase-js n’a pas pu être chargé (réseau ou empreinte SRI).');
     return;
@@ -1522,6 +1537,9 @@
     function (r) { onSession(r && r.data && r.data.session); },
     function (e) { setStatus('error', 'Session illisible : ' + errText(e)); }
   );
+  setTimeout(function () {   // filet : toujours en démarrage après 20 s → message clair au lieu d'un rond qui tourne
+    if (CF.status === 'boot') setStatus('error', 'La session ne répond pas : recharge la page (ferme les autres onglets avatarads.fr si ça recommence).');
+  }, 20000);
   window.addEventListener('message', function (e) { if (e.origin === location.origin) { onOauth(e.data); onTkOauth(e.data); } });
   try {
     var bc = new BroadcastChannel('ig-oauth');
