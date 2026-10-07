@@ -278,12 +278,26 @@
     Promise.resolve().then(function () { queued = false; render(); });
   }
 
+  // 07/10 : sous le rond, l'étape du démarrage + son temps + la requête en attente ; « Réessayer » après 6 s. Relu chaque
+  // seconde tant que le démarrage dure (bootTick).
+  var bootTick = null;
+  function bootInfo(st) {
+    var on = st === 'boot' || st === 'loading', B = CF.boot, el = $('cfBootInfo'), bt = $('cfBootRetry');
+    if (!on) { if (bootTick) { clearInterval(bootTick); bootTick = null; } if (el) el.hidden = true; if (bt) bt.hidden = true; return; }
+    if (!bootTick) bootTick = setInterval(function () { if (CF.status === 'boot' || CF.status === 'loading') bootInfo(CF.status); }, 1000);
+    var now = Date.now(), sec = function (ms) { return fDec(ms / 1000, 1) + NB + 's'; };
+    var txt = B.step + ' depuis ' + sec(now - B.stepAt) + ' · total ' + sec(now - B.t0);
+    if (B.net) txt += ' · en attente du serveur : ' + B.net.path + ' (' + sec(now - B.net.at) + ')';
+    if (el) { el.textContent = txt; el.hidden = now - B.t0 < 1500; }
+    if (bt) bt.hidden = now - B.t0 < 6000;
+  }
   function render() {
     var st = CF.status;
     if (st === 'ready') syncSel();
     show('cfBoot', st === 'boot' || st === 'loading');
     var bm = $('cfBootMsg');
     if (bm) bm.textContent = st === 'loading' ? 'Vérification de l’accès…' : 'Chargement…';
+    bootInfo(st);
     show('cfLogin', st === 'auth');
     if (st === 'auth' && ui.lastStatus !== 'auth') {
       show('cfLoginPwd', true);
@@ -3866,6 +3880,7 @@
       if (act === 'tab') setTab(el.getAttribute('data-tab'));
       else if (act === 'range') setRange(el.getAttribute('data-range'));
       else if (act === 'retry') CF.refresh({ gate: true });
+      else if (act === 'boot-retry') location.reload();   // 07/10 : démarrage trop long → on recharge la page
       else if (act === 'retry-ig') CF.loadInsights(ui.range, { force: true });
       else if (act === 'retry-accounts') CF.loadAccounts({ force: true });
       else if (act === 'retry-aud') CF.loadAudience({ force: true });

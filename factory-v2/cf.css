@@ -1408,3 +1408,6 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 .cf-tts-cand:disabled { opacity: .5; cursor: default; }
 .cf-tts-rcl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .cf-tts-relink { font-size: 11px; }
+/* 07/10 : détail du démarrage sous le rond (étape, temps, requête en attente) */
+.cf-boot-info { margin-top: 6px; font-size: 12px; text-align: center; overflow-wrap: anywhere; max-width: 420px; }
+#cfBootRetry { margin-top: 10px; }

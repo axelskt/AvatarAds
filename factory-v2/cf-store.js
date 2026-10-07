@@ -105,6 +105,7 @@
     prov: newSlot(),
     yt: newSlot(),
     tk: newSlot(),
+    boot: { t0: Date.now(), step: 'démarrage', stepAt: Date.now(), net: null },   // 07/10 : étape du démarrage (écran d'accès)
     tts: newSlot(),   // 07/10 : stats TikTok (tiktok-auth?action=stats) — @, abonnés, likes, vues de chaque vidéo
     oauth: null,
     tkOauth: null,
@@ -163,6 +164,9 @@
     window.dispatchEvent(new CustomEvent('cf-data', { detail: { ver: CF.ver, key: key } }));
   }
   function setStatus(s, err) { CF.status = s; CF.error = err || null; emit('status'); }
+  // 07/10 (Axel : « Vérification de l'accès… » qui dure) : étape en cours du démarrage, affichée sous le rond avec son
+  // temps, et la requête réseau en attente (cf. bootFetch) — pour savoir OÙ ça bloque au lieu de deviner.
+  function bootStep(label) { CF.boot.step = label; CF.boot.stepAt = Date.now(); emit('boot'); }
   function logNet(call) {
     CF.net.push({ at: new Date().toISOString(), call: call });
     if (CF.net.length > 200) CF.net.shift();
@@ -206,10 +210,11 @@
     logNet('rpc factory_access');
     var deadline = function (p, ms) { return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej({ message: 'délai dépassé (' + Math.round(ms / 1000) + ' s)' }); }, ms); })]); };
     return Promise.resolve()
-      .then(function () { return deadline(sb.rpc('factory_access'), 8000).catch(function (e) {
+      .then(function () { bootStep('contrôle d’accès'); return deadline(sb.rpc('factory_access'), 8000).catch(function (e) {
         // une seule nouvelle tentative silencieuse (réseau lent, réveil de l'onglet) avant d'afficher l'erreur
         if (!e || !/délai/.test(String(e.message))) throw e;
         logNet('rpc factory_access (2e essai)');
+        bootStep('contrôle d’accès, 2e essai');
         return deadline(sb.rpc('factory_access'), 10000);
       }); })
       .then(function (res) {
@@ -1613,13 +1618,26 @@
   // session (lecture de session, contrôle d'accès, chaque appel d'edge) → écran d'accès très long. Verrou propre à la
   // page (file d'attente en mémoire) : plus rien ne dépend des autres onglets. Le jeton de rafraîchissement supporte une
   // réutilisation proche par deux onglets (fenêtre de réutilisation Supabase), donc pas de déconnexion croisée.
+  // Une opération qui ne rend jamais la main (requête de session bloquée) ne doit pas figer toutes les suivantes : on
+  // attend la précédente 5 s au plus, puis on passe.
   var lockChain = Promise.resolve();
   function authLock(name, acquireTimeout, fn) {
-    var run = lockChain.then(function () { return fn(); });
+    var prev = lockChain;
+    var run = Promise.race([prev, new Promise(function (ok) { setTimeout(ok, 5000); })]).then(function () { return fn(); });
     lockChain = run.catch(function () { /* l'erreur reste à l'appelant ; la file continue */ });
     return run;
   }
-  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: authLock } }); } catch (e) { sb = null; }
+  // Requêtes de supabase-js pendant le démarrage : la dernière en attente est affichée (chemin seulement, jamais de jeton)
+  function bootFetch(input, init) {
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    var path = String(url).replace(SUPABASE_URL, '').split('?')[0].slice(0, 60), rec = { path: path, at: Date.now() };
+    if (CF.status === 'boot' || CF.status === 'loading') { CF.boot.net = rec; emit('boot'); }
+    // jamais une requête sans fin : 15 s au plus quand supabase-js n'a pas posé sa propre limite
+    var opt = init || {};
+    if (!opt.signal && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opt = Object.assign({}, opt, { signal: AbortSignal.timeout(15000) });
+    return fetch(input, opt).finally(function () { if (CF.boot.net === rec) { CF.boot.net = null; emit('boot'); } });
+  }
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { lock: authLock }, global: { fetch: bootFetch } }); } catch (e) { sb = null; }
   if (!sb) {
     setStatus('error', 'supabase-js n’a pas pu être chargé (réseau ou empreinte SRI).');
     return;
@@ -1629,8 +1647,9 @@
     // Jamais d'appel supabase dans le rappel lui-même (verrou interne de supabase-js) : on diffère.
     setTimeout(function () { onSession(session); }, 0);
   });
+  bootStep('lecture de la session');
   sb.auth.getSession().then(
-    function (r) { onSession(r && r.data && r.data.session); },
+    function (r) { bootStep('session lue'); onSession(r && r.data && r.data.session); },
     function (e) { setStatus('error', 'Session illisible : ' + errText(e)); }
   );
   setTimeout(function () {   // filet : toujours en démarrage après 20 s → message clair au lieu d'un rond qui tourne
