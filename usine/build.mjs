@@ -29,7 +29,7 @@ import { faceZones } from './face-zones.mjs';
 await import(new URL('./coherence.js', import.meta.url).href);   // assemblages HK-<groupe>-<clips> → transformations (txOfHook)
 await import(new URL('./formats.js', import.meta.url).href);
 const FMT = globalThis.CF_FORMATS;
-const VAL_FLAGS = ['--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus'];
+const VAL_FLAGS = ['--voice', '--format', '--choc', '--hook-id', '--demo', '--tx', '--faces', '--done', '--bricks', '--seed', '--liaison', '--broll', '--broll-after', '--hook-broll', '--subs-style', '--choc-style', '--choc-size', '--illus'];
 const BOOL_FLAGS = ['--avant-apres', '--no-avant-apres'];
 const ARGV = process.argv.slice(2), OPT = {}, POS = [];
 for (let i = 0; i < ARGV.length; i++) {
@@ -200,6 +200,17 @@ const emitWords = (audio, offset) => {
 // ── VOIX (29/09) : même chaîne pour toutes les voix d'avatar (hook, liaison, CTA) → grain plus homogène d'une brique
 //    à l'autre (enregistrées à des moments différents) : coupe-bas, léger creux 220 Hz, présence 3,2 kHz, compression douce.
 const VCH = 'highpass=f=75,equalizer=f=220:t=q:w=1:g=-1.5,equalizer=f=3200:t=q:w=1.4:g=1.5,acompressor=threshold=-21dB:ratio=3:attack=6:release=90:makeup=1.5,' + LN;
+// ── VOIX HOMOGÈNE (Axel 07/10 : « traite tous les audios avec le même traitement ») : avant VCH, chaque brique parlée
+//    reçoit SA correction (meta.voice_fix, usine/voice-match.mjs) : égalisation vers le timbre moyen de toutes les briques
+//    + hauteur ramenée vers la médiane (±6 %), durée inchangée → synchro labiale des clips déjà générés gardée.
+//    Jamais sur une voix générée par Omni (--voice omni) : ce n'est pas la voix d'Axel.
+const vfix = id => {
+  if (OPT.voice === 'omni' || !id) return '';
+  const b = Array.isArray(bricks) ? bricks.find(x => x && x.id === id) : null, f = b && b.meta && b.meta.voice_fix;
+  if (!f || typeof f.eq !== 'string' || !/^(entry\(\d+,-?\d+(\.\d+)?\);?)+$/.test(f.eq)) return '';
+  const r = Math.max(0.94, Math.min(1.06, Number(f.pitch) || 1));
+  return `firequalizer=gain_entry='${f.eq}',` + (Math.abs(r - 1) > 0.002 ? `asetrate=${(48000 * r).toFixed(1)},aresample=48000,atempo=${(1 / r).toFixed(5)},` : '');
+};
 const bare = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
 const IMG_RE = /\.(png|jpe?g|webp)$/i;
 let hookWordsPre = null, hookVoiced = false, liaisonAt = null, nHookW = null;
@@ -310,7 +321,7 @@ if (OPT.liaison) {
   let t0 = null;
   for (let i = 0; i < lW.length; i++) if (re.test(bare(lW[i].text))) { const nx = lW[i + 1] && /^(ca|cela)$/.test(bare(lW[i + 1].text)) ? lW[i + 1] : lW[i]; t0 = nx.end + 0.05; break; }
   const ins = ['-i', hk, '-i', li];
-  let fc = `[0:v]${VF}[h0];[0:a]${AFMT},${VCH}[ha0];[1:a]${AFMT},${VCH}[la0];[1:v]${VF}[lv0];`, last = 'lv0';
+  let fc = `[0:v]${VF}[h0];[0:a]${AFMT},${vfix(hookId || idFromFile(hk))}${VCH}[ha0];[1:a]${AFMT},${vfix(idFromFile(li))}${VCH}[la0];[1:v]${VF}[lv0];`, last = 'lv0';
   if (files.length && t0 != null && t0 < dL - 0.6) {
     // Axel 29/09 : l'illustration n'est PAS plein écran : carte arrondie centrée sur le visage (posée par captions.mjs)
     const seg = (dL - t0) / files.length;
@@ -462,14 +473,14 @@ if (cta) { inputs.push('-i', cta); iCta=n++; }
 // démo prolongée sur sa dernière image : le glissement vers le CTA se fait APRÈS la fin de la démo, jamais sur ses mots
 // hook : léger zoom avant continu (1,00 → 1,07) pour le rendre plus vivant (Axel 29/09)
 let vf = `[0:v]${VF},tpad=stop_mode=clone:stop_duration=${(GAPH + 1).toFixed(2)},trim=0:${durH.toFixed(3)},setpts=PTS-STARTPTS,scale=w='trunc(1080*(1+0.07*t/${durH.toFixed(3)})/2)*2':h=-2:eval=frame:flags=bicubic,crop=1080:1920,setsar=1[hv];[${iDemo}:v]${VF},trim=0:${durDv.toFixed(3)},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${Math.max(0.05, L2 + TS - durDv + 0.05).toFixed(3)}[dv];`;
-let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
+let af = (hookVoice ? `[${iHookA}:a]${AFMT},${hookVoiced ? LN : vfix(hookId || idFromFile(hookVoice)) + VCH}[ha]` : `anullsrc=r=48000:cl=stereo,atrim=0:${vHook.toFixed(3)}[ha]`) + ';';
 af += `[${iDemo}:a]${AFMT},${LN}:LRA=11,atrim=0:${(L2 + TS).toFixed(3)},afade=t=out:st=${L2.toFixed(3)}:d=${TS},adelay=${Math.round(O1*1000)}|${Math.round(O1*1000)}[da];`;
 if (cta) {
   vf += `[${iCta}:v]trim=0:${durC.toFixed(3)},setpts=PTS-STARTPTS,${VF},${AV_TREAT}[cv];`
       + `[hv][dv]xfade=transition=${TRANS}:duration=${TS}:offset=${O1.toFixed(3)}[vhd];`
       + `[vhd][cv]xfade=transition=${TRANS}:duration=${TS}:offset=${O2.toFixed(3)}[v]`;
   // audio EMBARQUÉ du clip avatar, TRIMMÉ à la voix (pas de silence mort) puis posé à O2
-  af += `[${iCta}:a]${AFMT},${VCH},atrim=0:${durC.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${Math.round((O2 + CL)*1000)}|${Math.round((O2 + CL)*1000)}[ca];`
+  af += `[${iCta}:a]${AFMT},${vfix(idFromFile(cta))}${VCH},atrim=0:${durC.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${Math.round((O2 + CL)*1000)}|${Math.round((O2 + CL)*1000)}[ca];`
       + `[ha][da][ca]amix=inputs=3:duration=longest:normalize=0[a]`;
 } else {
   vf += `[hv][dv]xfade=transition=${TRANS}:duration=${TS}:offset=${O1.toFixed(3)}[v]`;

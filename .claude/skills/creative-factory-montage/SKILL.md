@@ -166,6 +166,11 @@ ffmpeg -i OUT.mp4 -af ebur128 -f null - 2>&1 | grep "I:"                        
   **template = VF-xxxx**, brick_combo = clés de COMBO_KEYS seulement : voice, avatar, photo, hook, liaison, contenu, cta,
   musique, sous_titre, assemblage + format / texte_choc ; poster = frame 0 dans `final/`). Le dashboard compte en stock
   les approuvées dont le VF n'est pas encore programmé / posté dans le kit.
+- **Voix homogène (07/10), à chaque NOUVELLE brique parlée (hook, liaison, CTA)** : exporter les briques puis
+  `node usine/voice-match.mjs --bricks bricks.json --sql out.sql` et passer `out.sql` (`supabase db query --linked -f`).
+  Ça écrit `meta.voice_fix` (égalisation vers le timbre moyen + hauteur vers la médiane, ±6 %, durée inchangée) que
+  `build.mjs` applique avant VCH. Toujours donner à Hedra l'audio BRUT de la brique (la correction se fait au montage) ;
+  jamais de correction sur une voix Omni (`--voice omni`). La cible bouge un peu à chaque ajout : relancer sur TOUTES.
 - **Empreinte TikTok (07/10), à chaque vidéo livrée** : `node usine/fingerprint.mjs --sql --as <URL publiée .mp4>
   <fichier local> > /tmp/fp.sql && supabase db query --linked -f /tmp/fp.sql` AVANT de supprimer le fichier local
   (images 0 / 0,5 / 1 s + durée → `factory_fp`, et 4 images/s sur les 10 premières secondes → `factory_fp_frames`).
