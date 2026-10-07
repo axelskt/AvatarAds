@@ -1412,3 +1412,7 @@ video:fullscreen, video:-webkit-full-screen { object-fit: contain !important; wi
 .cf-boot-info { margin-top: 6px; font-size: 12px; text-align: center; overflow-wrap: anywhere; max-width: 420px; }
 #cfBootRetry { margin-top: 10px; }
 .cf-gate-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+/* 07/10 : ID complet de la recette à côté des vues (classement Réseaux) */
+.cf-net-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.cf-net-top > b { font-size: 14px; font-variant-numeric: tabular-nums; flex: none; }
+.cf-net-id { font-family: var(--cf-mono, ui-monospace, Menlo, monospace); font-size: 11px; color: var(--cf-ink-3); overflow-wrap: anywhere; min-width: 0; }   /* ID entier, jamais coupé (Axel) */
