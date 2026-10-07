@@ -966,10 +966,7 @@
     return '<section class="cf-card cf-tk" id="cfTkSec" aria-labelledby="cfTkT"><div class="cf-card-h"><div><h2 class="cf-h2" id="cfTkT">Comptes TikTok</h2>'
       + '<div class="cf-dim">' + esc('Brouillons TikTok (anti-shadowban) · ' + sub) + '</div></div>'
       + '<button type="button" class="cf-btn is-dark" data-act="tk-connect" data-k="">' + svg(IC.tiktok, 14) + 'Connecter un compte TikTok</button></div>'
-      + tkMsg() + body
-      + '<div class="cf-tk-hint">' + svg(IC.info, 14) + '<span>Plusieurs comptes : TikTok relie le compte déjà ouvert dans ce navigateur. Entre deux comptes, '
-      + 'déconnecte-toi de TikTok (tiktok.com, profil, Se déconnecter), ou utilise une fenêtre privée : ouvre-y Factory V2, connecte-toi au tableau de bord, '
-      + 'puis « Connecter un compte TikTok ». Jamais de jeton affiché ici : seulement son état.</span></div></section>';
+      + tkMsg() + body + '</section>';   // 07/10 (Axel) : plus de texte d'aide sous la liste
   }
   // ══ Statistiques TikTok (07/10) ══
   // Comptes reliés avec les scopes de stats (user.info.profile : le @ ; user.info.stats : abonnés, likes, nombre de vidéos ;
@@ -1068,10 +1065,7 @@
       + '<div class="cf-dim">' + esc('@, abonnés, likes et vues de chaque vidéo · ' + sub) + '</div></div>'
       + '<div class="cf-tts-acts">' + (D && L.length ? '<button type="button" class="cf-btn is-sm" data-act="retry-tts"' + (S.loading ? ' disabled' : '') + '>' + svg(IC.refresh, 13) + 'Actualiser</button>' : '')
       + '<button type="button" class="cf-btn is-dark" data-act="tts-connect">' + svg(IC.tiktok, 14) + 'Connecter pour les stats</button></div></div>'
-      + ttsMsg() + body
-      + '<div class="cf-tk-hint">' + svg(IC.info, 14) + '<span>Autorisations demandées : profil (le @), statistiques du compte (abonnés, likes) et liste des vidéos (vues, likes, commentaires, partages). '
-      + 'En attendant la validation de TikTok, la connexion passe par l’app de test (Sandbox) : seuls les comptes ajoutés comme utilisateurs test peuvent l’autoriser. '
-      + 'Ces comptes ne servent jamais aux brouillons. Jamais de jeton affiché ici.</span></div></section>';
+      + ttsMsg() + body + '</section>';   // 07/10 (Axel) : plus de texte d'aide sous la liste
   }
   function ttsStart() {
     var at = Date.now();
