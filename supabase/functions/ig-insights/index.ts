@@ -17,7 +17,7 @@
 //      visionnage moyen, top publications.
 //  GET ?part=audience → répartition des abonnés (pays, villes, âge, genre).
 //  Réservé owner/developer. verify_jwt=false. ⚠ « qui regarde mon profil » / vues UNIQUES = NON exposé par l'API IG.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.110.3'   // même version que _shared/igacct.ts (2.117.3 d'esm.sh casse le déploiement, 07/10)
 import { accountToken, igAccount, ownAccounts, type IgAccount } from '../_shared/igacct.ts'
 import { matchBricks, type Brick, type Seg } from './bricks.ts'
 
@@ -31,6 +31,15 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 const PRIMARY_USERNAME = Deno.env.get('IG_PRIMARY_USERNAME') || 'avataradss'
 const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || ''
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
+// Relevé quotidien (pg_cron, ig-media-stats-daily) : clé x-cron-key = secret CRON_SECRET, comparée à temps constant ;
+// elle n'ouvre QUE part=snapshot (aucune autre lecture du dashboard).
+const CRON_SECRET = Deno.env.get('CRON_SECRET') || ''
+function sameKey(a: string, b: string): boolean {
+  if (!a || a.length !== b.length) return false
+  let r = 0
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return r === 0
+}
 
 // Session owner/developer exigée (fermé par défaut : sans session valide ou si la base ne répond pas,
 // on refuse). La clé publique du site n'a pas d'utilisateur → refusée. La page du reviewer Meta
@@ -672,6 +681,8 @@ function mergeAll(accs: IgAccount[], outs: Record<string, any>[]) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  const isCron = !!CRON_SECRET && sameKey(req.headers.get('x-cron-key') || '', CRON_SECRET)
+  if (isCron && new URL(req.url).searchParams.get('part') === 'snapshot') return json(await snapshotAll())
   if (!(await ownerOk(req))) return json({ error: 'réservé au propriétaire' }, 401)
   const t0 = Date.now()
   const url = new URL(req.url)
@@ -840,5 +851,38 @@ async function build(url: URL, igId: string, token: string, t0: number): Promise
     } catch (e) { out.top_posts_error = safeErr(e) }
   }
   logIg('done ' + (part || range), { ms: Date.now() - t0 })
+  return out
+}
+
+// ── Relevé quotidien des vues PAR PUBLICATION (Axel 07/10 : « enregistre les chaque jour ») → ig_media_stats, une ligne par
+//    vidéo et par jour, pour comparer les formats dans le temps (lipsync Character-3 contre Omni, avant / après…). Toutes
+//    les publications des 45 derniers jours de chaque compte à nous (≤ 100 par compte, 2 appels Graph par publication).
+const SNAP_DAYS = 45
+async function snapshotAll(): Promise<Record<string, unknown>> {
+  const t0 = Date.now(), day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
+  const since = Date.now() - SNAP_DAYS * 86400e3, out: Record<string, unknown> = { day, comptes: {} as Record<string, unknown> }
+  for (const a of await ownAccounts(svc)) {
+    const token = String(a.access_token), who = String(a.username || a.ig_id)
+    const lm = await listMedia(token, MEDIA_FIELDS, 100)
+    if (lm.error) { (out.comptes as any)[who] = { erreur: lm.error }; continue }
+    const recent = lm.list.filter((m) => Date.parse(m.timestamp || '') >= since)
+    const rows: Record<string, unknown>[] = []
+    for (let i = 0; i < recent.length; i += 5) {   // 5 à la fois : on reste loin des limites Graph
+      const part = await Promise.all(recent.slice(i, i + 5).map((m) => mediaInsights(token, m).catch(() => null)))
+      for (const x of part) if (x) rows.push({ media_id: String(x.id), day, account: who, posted_at: x.timestamp || null,
+        media_type: x.media_type || null, permalink: x.permalink || null, caption: x.caption || null, views: x.views, reach: x.reach,
+        likes: x.likes, comments: x.comments, shares: x.shares, saved: x.saved, interactions: x.interactions,
+        avg_watch_s: x.avg_watch_s, skip_rate: x.skip_rate, shared_to_feed: x.shared_to_feed, fetched_at: new Date().toISOString() })
+    }
+    // recette de chaque reel (même rapprochement que le dashboard : légende + heure du kit) gardée avec ses vues
+    const ins = rows.map((r) => ({ id: r.media_id, timestamp: r.posted_at, caption: r.caption })) as any[]
+    await applyRecipes(ins, who)
+    const rec = new Map(ins.filter((m) => m.recipe).map((m) => [String(m.id), m.recipe]))
+    for (const r of rows) { const x: any = rec.get(String(r.media_id)); if (x) { r.vf = x.id_complet || null; r.combo = x } }
+    const { error } = rows.length ? await svc.from('ig_media_stats').upsert(rows, { onConflict: 'media_id,day' }) : { error: null }
+    ;(out.comptes as any)[who] = error ? { erreur: safeErr(error.message) } : { publications: rows.length }
+  }
+  out.ms = Date.now() - t0
+  logIg('relevé quotidien', out)
   return out
 }
