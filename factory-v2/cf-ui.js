@@ -2032,7 +2032,8 @@
     else if (b.kind === 'cta') tag = m.keyword ? 'mot-clé ' + m.keyword : 'sans mot-clé';
     else if (b.kind === 'contenu') tag = subjName(b.subject || '?');
     else if (b.kind === 'texte-choc') { var nC = chocUses(b.id); tag = nC == null ? '' : 'utilisé ' + fInt(nC) + NB + 'fois'; }
-    else if (b.kind === 'reaction') tag = (/veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · 3 s';
+    // moteur lu dans meta.engine (07/10 : R-H3…R-H9 = vraies vidéos selfie d'Axel, pas de l'IA) ; ancien repli sur le libellé
+    else if (b.kind === 'reaction') tag = (m.engine === 'video-reelle' ? 'Vidéo réelle' : m.engine === 'veo-lite' || /veo/i.test(b.label || '') ? 'Veo Lite (test)' : 'Omni Flash') + ' · 3 s';
     else if (b.kind === 'transformation') tag = subjName(b.subject || '?');
     else if (b.kind === 'avatar') { var np = avPhotos(b).length; tag = np + ' ' + plural(np, 'photo'); }
     if (isProposal(b)) tag = 'proposition';
