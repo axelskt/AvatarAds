@@ -2,7 +2,7 @@
 // Creative Factory — RESSERRER une prise parlée (08/10, Axel : « y'a pas moyen de supprimer les blancs, ça fait pas naturel la
 // voix »). Omni Flash laisse des blancs au milieu des phrases (0,15 à 0,45 s) qui trahissent l'IA. On les coupe dans l'image ET
 // le son (jump cut, comme un créateur qui monte sa vidéo), en gardant un souffle de PAD s autour de chaque mot ; à chaque coupe,
-// le cadre alterne entre 100 % et ZOOM (léger recadrage centré) pour que le raccord se lise comme un choix de montage.
+// le cadre alterne entre 100 % et ZOOM (112 %, validé par Axel le 08/10 sur H70 — 106 % ne se voyait pas) pour que le raccord se lise comme un choix de montage.
 // Silences mesurés sur le son (pas sur la transcription). Début et fin coupés au premier / dernier son.
 //
 // FIN GARDÉE (Axel 08/10 : « laisse la fin pour pas que ça coupe trop tôt, garde la fin du clip complet ») : on ne coupe
@@ -18,7 +18,7 @@
 // Whisper (captions.mjs emit, lancée ici si --words n'est pas donné) place le milieu d'un mot. Le seuil −12 ne sert plus
 // qu'au début (avant le 1er mot) et à la fin.
 //
-// usage : node usine/tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.20] [--deep 24] [--pad 0.04] [--zoom 1.06]
+// usage : node usine/tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.20] [--deep 24] [--pad 0.04] [--zoom 1.12]
 //         [--rel 12 | --db -34] [--keepend 0 | --tail 0.4] [--words mots.json | --words none] [--cut 3.62-4.47,…]
 // --cut a-b : retire EXACTEMENT ce passage (secondes de l'entrée), en plus des blancs — un mot inventé par le modèle
 // (Axel 08/10, H70 : « réseaux dentés ? ») ; même raccord que les autres coupes (zoom alterné si ≥ 0,25 s).
@@ -29,9 +29,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const [src, out, ...rest] = process.argv.slice(2);
-if (!src || !out) { console.error('usage: tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.20] [--deep 24] [--pad 0.04] [--zoom 1.06] [--rel 12 | --db -34] [--keepend 0 | --tail 0.4] [--words mots.json | none]'); process.exit(1); }
+if (!src || !out) { console.error('usage: tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.20] [--deep 24] [--pad 0.04] [--zoom 1.12] [--rel 12 | --db -34] [--keepend 0 | --tail 0.4] [--words mots.json | none]'); process.exit(1); }
 const OPT = {}; for (let i = 0; i < rest.length; i += 2) { const v = rest[i + 1]; OPT[rest[i].replace(/^--/, '')] = Number.isFinite(+v) ? +v : v; }
-const MIN = OPT.min ?? 0.20, PAD = OPT.pad ?? 0.04, ZOOM = OPT.zoom ?? 1.06, DB = OPT.db;
+const MIN = OPT.min ?? 0.20, PAD = OPT.pad ?? 0.04, ZOOM = OPT.zoom ?? 1.12, DB = OPT.db;
 
 const dur = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', src]).toString());
 const [W, H] = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', src]).toString().trim().split(',').map(Number);
