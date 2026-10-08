@@ -33243,8 +33243,8 @@ function _omniKieErr(e){
   if(!e || e._kieStage==='pending') return e;
   const cause = String((e && e.message) || e || 'échec').replace(/^kie\s*:\s*/i, '').replace(/\s*\(crédits rendus\)\s*$/, '').replace(/\s*—\s*réessaie[^—]*$/i, '').slice(0, 120);
   const out = new Error(e._kieRefus
-    ? 'Omni Flash a refusé ce contenu (' + cause + ') — les crédits de la vidéo te sont rendus ; change la réplique ou l\'image puis réessaie'
-    : 'Omni Flash a échoué (' + cause + ') — les crédits de la vidéo te sont rendus, réessaie');
+    ? 'Flash a refusé ce contenu (' + cause + ') — les crédits de la vidéo te sont rendus ; change la réplique ou l\'image puis réessaie'
+    : 'Flash a échoué (' + cause + ') — les crédits de la vidéo te sont rendus, réessaie');
   out._kieStage = e._kieStage; out._kieBill = e._kieBill; out._kieRefus = !!e._kieRefus;
   return out;
 }
@@ -33311,7 +33311,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   const _sec = [4,6,8,10].find(x=>x>=(Math.round(durSec)||6)) || 10;   // cran kie = la durée affichée et facturée
   if(_viaKie){
     try{
-      const _oLbl = 'Omni Flash'+(_kieDev() ? ' (kie.ai)' : '')+' — génération…';   // client : jamais le nom du moteur (Axel 25/09)
+      const _oLbl = 'Flash'+(_kieDev() ? ' (kie.ai)' : '')+' — génération…';   // client : jamais le nom du moteur (Axel 25/09)
       step(42,_oLbl);
       const _kr = await _kieRun('omni-flash', { prompt:_omniPrompt, image_url:sI.data.signedUrl, aspect_ratio:(window._expFormat==='16:9'?'16:9':'9:16'),
         duration: _sec }, { every:5000, maxPolls:240, op: op || undefined,
@@ -33328,7 +33328,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
   const fPost=(pp,b)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
   const fGet =(pp)=>fetch(PROXY+'?path='+encodeURIComponent(pp),{method:'GET',headers:{...H}});
   const model='/google/gemini-omni-flash/v1.1/image-to-video';
-  step(42,'Omni Flash — génération…');
+  step(42,'Flash — génération…');
   const sub=await fPost(model, {
     image_url: sI.data.signedUrl,
     // Verrou anti-texte (Axel 08/09) : Omni incrustait des mots à l'écran (ex : « SITE » lu dans la réplique).
@@ -33367,7 +33367,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
         break;
       }
       if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):'')+' — les crédits de la vidéo te sont rendus, réessaie');
-      step(Math.min(88,42+i*2),'Omni Flash — génération… ('+Math.min(88,42+i*2)+' %)');
+      step(Math.min(88,42+i*2),'Flash — génération… ('+Math.min(88,42+i*2)+' %)');
     }
   }
   if(!outUrl){ const e=new Error('Omni Flash : la vidéo prend plus de temps que prévu. Elle arrivera dans ta Bibliothèque, sinon tes crédits seront rendus automatiquement. Ne relance pas.'); e._kieStage='pending'; throw e; }   // filet reconcile-fal-orphans (audit 28/09 #11)
