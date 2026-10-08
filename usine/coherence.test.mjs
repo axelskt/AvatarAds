@@ -452,6 +452,20 @@ test('démo MCP (Axel 02/10) : meta.features filtre les hooks qui citent un modu
   assert.equal(C.pairLevel({ id: 'X', meta: { compatible_subjects: ['image-ia'] } }, { id: 'C-IMGIA-02', subject: 'image-ia', meta: {} }), 'ok');
 });
 
+test('avatar Omni seulement (Axel 08/10 : « on ne générera pas d’autre lipsync avec A3 ») : hors des emplacements lipsync, compte en Omni', () => {
+  const bricks = [
+    { id: 'A1', kind: 'avatar', status: 'ready', meta: {} },
+    { id: 'A3', kind: 'avatar', status: 'ready', meta: { voices: ['omni'] } },
+    { id: 'HX', kind: 'hook', status: 'ready', label: 'Texte', meta: { media: 'https://x.test/hooks/HX.wav', script: 'Texte' } },
+  ];
+  assert.ok(C.avatarVoiceOk(bricks[1], 'omni') && !C.avatarVoiceOk(bricks[1], 'axel') && C.avatarVoiceOk(bricks[1], 'muet') && C.avatarVoiceOk(bricks[0], 'axel'));
+  const NP = C.PHOTOS_PAR_AVATAR, cap = C.capacity(bricks, ['axel|A3|HX|', 'omni|A3|HX|']);
+  assert.equal(cap.modes.axel.short, NP);        // A1 seul
+  assert.equal(cap.modes.omni.short, 2 * NP);    // A1 + A3
+  assert.equal(cap.modes.axel.done, 0);          // une vidéo lipsync A3 ne compte pas
+  assert.equal(cap.modes.omni.done, 1);
+});
+
 const fails = results.filter(r => r.startsWith('FAIL')).length;
 console.log(results.join('\n'));
 console.log(fails + ' échec(s) sur ' + results.length);

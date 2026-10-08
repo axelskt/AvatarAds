@@ -107,6 +107,10 @@
   // Voix AUTORISÉES pour une brique (Axel 28/09 : H19 / H74 = « voix native uniquement ») : meta.voices = ['omni'] ;
   // absent = toutes les voix qu'elle peut porter (audio pour 'axel', texte pour 'omni').
   function voicesAllowed(b) { var v = meta(b).voices; return Array.isArray(v) && v.length ? v : null; }
+  // Voix d'un AVATAR (Axel 08/10 : « on ne générera pas d'autre lipsync avec A3 ») : meta.voices = ['omni'] sur la brique
+  // avatar → il ne compte que pour ces voix (emplacements, vidéos possibles, variantes lipsync). Absent = toutes les voix.
+  // Ne concerne que les voix parlées (VOICES) : Texte + musique (muet) ne dépend pas de la voix de l'avatar.
+  function avatarVoiceOk(a, voice) { if (VOICES.indexOf(voice) < 0) return true; var al = voicesAllowed(a); return !al || al.indexOf(voice) >= 0; }
   function voiceOk(b, voice) {
     var al = voicesAllowed(b);
     if (al && al.indexOf(voice) < 0) return false;
@@ -437,8 +441,10 @@
   function capacity(bricks, done, matrix, opts) {
     opts = opts || {};
     var L = library(bricks), A = L.avatars.length * PHOTOS_PAR_AVATAR, M = matrixOf(matrix);
-    var av = dict(), hk = dict(), modes = dict(), possible = dict(), pairsAll = 0, notInMatrix = [];
-    L.avatars.forEach(function (a) { av[a.id] = 1; });
+    var av = dict(), avB = dict(), hk = dict(), modes = dict(), possible = dict(), pairsAll = 0, notInMatrix = [];
+    L.avatars.forEach(function (a) { av[a.id] = 1; avB[a.id] = a; });
+    // emplacements par voix : seuls les avatars qui parlent avec cette voix (A3 = Omni seulement)
+    var AV = function (v) { return L.avatars.filter(function (a) { return avatarVoiceOk(a, v); }).length * PHOTOS_PAR_AVATAR; };
     L.hooks.forEach(function (h) {
       var ls = liaisonsFor(h, L.liaisons, M);
       hk[h.id] = ls;
@@ -453,17 +459,17 @@
     var demoOk = function (h) { return !opts.demoRequired || !L.demos.length || L.demos.some(function (d) { return pairLevel(h, d) === 'ok'; }); };
     var sansDemoHooks = L.lipsyncHooks.filter(function (h) { return !demoOk(h); }).map(function (h) { return h.id; });
     VOICES.forEach(function (v) {
-      var H = 0, P = 0, set = dict(), ovN = 0;
+      var H = 0, P = 0, set = dict(), ovN = 0, Av = AV(v);
       L.lipsyncHooks.forEach(function (h) {
         if (!voiceOk(h, v) || !demoOk(h)) return;
         var p0 = P;
         H += 1; set[h.id] = dict(); set[h.id][''] = 1;
         hk[h.id].forEach(function (l) { if (voiceOk(l, v)) { P += 1; set[h.id][l.id] = 1; } });
-        if (overlayRequired(h)) ovN += A * (1 + P - p0);
+        if (overlayRequired(h)) ovN += Av * (1 + P - p0);
       });
       possible[v] = set;
       ov.videos[v] = ovN;
-      modes[v] = { voice: v, label: VOICE_LABEL[v], hooks: H, pairs: P, short: A * H, long: A * P, total: A * (H + P), done: 0, remaining: 0, sansDemo: sansDemoHooks };
+      modes[v] = { voice: v, label: VOICE_LABEL[v], avatars: Av / PHOTOS_PAR_AVATAR, slots: Av, hooks: H, pairs: P, short: Av * H, long: Av * P, total: Av * (H + P), done: 0, remaining: 0, sansDemo: sansDemoHooks };
     });
     // ── Avant / après ──
     var asm = assemblies(bricks), gs = [], aaSet = dict(), aaH = dict(), aaS = 0, aaL = 0, aaP = 0;
@@ -538,7 +544,7 @@
         return;
       }
       var s = VOICES.indexOf(v) >= 0 ? possible[v] : null, set = s && has(s, p[2]) ? s[p[2]] : null;
-      if (p.length === 4 && has(av, p[1]) && set && has(set, p[3])) modes[v].done += 1; else outside += 1;
+      if (p.length === 4 && has(av, p[1]) && avatarVoiceOk(avB[p[1]], v) && set && has(set, p[3])) modes[v].done += 1; else outside += 1;
     });
     var total = 0, doneN = 0;
     MODES.forEach(function (v) { var m = modes[v]; m.remaining = Math.max(0, m.total - m.done); total += m.total; doneN += m.done; });
@@ -558,10 +564,10 @@
   function impact(cap) {
     var A = cap.avatars, out = { avatar: 0, hook: 0, liaison: 0, variety: 0, avgLiaisonsPerHook: 0, avgHooksPerLiaison: 0, aa: { avatar: 0, liaison: 0 } };
     VOICES.forEach(function (v) {
-      var m = cap.modes[v];
+      var m = cap.modes[v], Av = m.avatars != null ? m.avatars : A;
       out.avatar += m.hooks + m.pairs;
-      out.hook += A * (1 + (m.hooks ? m.pairs / m.hooks : 0));
-      out.liaison += A * (cap.liaisons ? m.pairs / cap.liaisons : 0);
+      out.hook += Av * (1 + (m.hooks ? m.pairs / m.hooks : 0));
+      out.liaison += Av * (cap.liaisons ? m.pairs / cap.liaisons : 0);
     });
     var aa = cap.modes.aa;
     // avant / après borné par les paliers des transformations (27/09) : un avatar ou une liaison de plus n'y ajoute rien
@@ -682,7 +688,7 @@
     isAvantApres: isAvantApres, isLipsyncHook: isLipsyncHook, overlayRequired: overlayRequired, hookFitsModule: hookFitsModule,
     txGroups: txGroups, assemblies: assemblies, assemblyCheck: assemblyCheck, statusFr: statusFr, voiceValid: voiceValid, liaisonWhy: liaisonWhy,
     pairLevel: pairLevel, pairWhy: pairWhy, liaisonOk: liaisonOk, library: library, capacity: capacity, impact: impact, comboCheck: comboCheck,
-    liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk, voicesAllowed: voicesAllowed,
+    liaisonsFor: liaisonsFor, liaisonCompatible: liaisonCompatible, inMatrix: inMatrix, hasAudio: hasAudio, voiceText: voiceText, voiceOk: voiceOk, voicesAllowed: voicesAllowed, avatarVoiceOk: avatarVoiceOk,
     videoKey: videoKey, comboKey: comboKey, PALIERS: PALIERS, palierOf: palierOf, blocksOfId: blocksOfId, blockUsage: blockUsage, palierCheck: palierCheck, transfosOf: transfosOf, MAX_BLOCS: MAX_BLOCS, get PHOTOS_PAR_AVATAR() { return PHOTOS_PAR_AVATAR; }, setPhotosPerAvatar: setPhotosPerAvatar, photoParent: photoParent, slotKeys: slotKeys, DECLINAISONS_MAX: DECLINAISONS_MAX, declinaisonCheck: declinaisonCheck, REACTION_DEMOS_MAX: REACTION_DEMOS_MAX, reactionDemos: reactionDemos, reactionCheck: reactionCheck, tripleKey: tripleKey, pickDemo: pickDemo, pickCta: pickCta, declineTop: declineTop,
     isMuette: isMuette, hookSubjects: hookSubjects, isGenericHook: isGenericHook, isGenericLiaison: isGenericLiaison, demoModule: demoModule };
 });

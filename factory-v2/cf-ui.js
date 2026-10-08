@@ -1211,7 +1211,8 @@
       // dictionnaires sans prototype : une paire venue de la base (« constructor », « __proto__ ») ne lit jamais Object.prototype
       var spoken = Object.create(null), avs = Object.create(null), St = D.stats, gen = null, out = 0, byBrick = Object.create(null), vwhy = '';
       lipHooks(L).concat(L.liaisons, L.ctas).forEach(function (b) { spoken[b.id] = 1; });   // hooks avant / après : jamais de lipsync
-      L.avatars.forEach(function (a) { avs[a.id] = 1; });
+      var lipAv = avatarsFor(L, 'axel'); A = lipAv.length;   // 08/10 : avatars Omni seulement (A3) hors des variantes lipsync
+      lipAv.forEach(function (a) { avs[a.id] = 1; });
       var avOf = function (id) { var p = COH.photoParent ? COH.photoParent(id) : id; return avs[id] ? id : avs[p] ? p : null; };
       if (St && St.state === 'ready' && St.pairsTotal > St.pairs.length) vwhy = 'variantes : liste tronquée par factory_prod_stats';
       else if (St && St.state === 'ready') {
@@ -1510,7 +1511,9 @@
     var NP = COH.PHOTOS_PAR_AVATAR || 1, slots = [];
     L.avatars.forEach(function (a) { for (var s = 1; s <= NP; s++) slots.push(NP > 1 ? a.id + '#' + s : a.id); });
     COH.VOICES.forEach(function (v) {
+      var okAv = Object.create(null); avatarsFor(L, v).forEach(function (a) { okAv[a.id] = 1; });
       slots.forEach(function (aid) {
+        if (!okAv[String(aid).split('#')[0]]) return;   // 08/10 : A3 n'a pas d'emplacement lipsync
         lipHooks(L).forEach(function (h) {
           if (!COH.voiceOk(h, v)) return;
           add(COH.videoKey(v, aid, h.id, ''));
@@ -1590,7 +1593,7 @@
     else {
       var spoken = lipHooks(L).concat(L.liaisons, L.ctas).map(function (b) { return b.id; }), has = Object.create(null);
       Vr.St.pairs.forEach(function (x) { has[x[0] + '|' + x[1]] = 1; });
-      avH = '<div class="cf-sav">' + L.avatars.map(function (a) {
+      avH = '<div class="cf-sav">' + avatarsFor(L, 'axel').map(function (a) {
         var miss = spoken.filter(function (id) { return !has[a.id + '|' + id]; }).length, done = spoken.length - miss, on = ui.pipeAv === a.id;
         var pc = spoken.length ? done / spoken.length * 100 : 0;
         return '<button type="button" class="cf-savt' + (on ? ' is-on' : '') + '" data-act="pipe-av" data-k="' + esc(a.id) + '" aria-pressed="' + on + '">'
@@ -1915,6 +1918,9 @@
   // musique ; chaque format = PHOTOS_PAR_AVATAR emplacements par avatar, remplis par les vidéos de factory_variants (photo
   // réelle A1-2…, plus ancienne d'abord) sinon « en attente d'être créée ». Hook avant / après : aucun avatar (voix off).
   var FMT_ORDER = { spoken: ['axel', 'omni'], 'texte-choc': ['muet'] };
+  // 08/10 (Axel : « on ne générera pas d'autre lipsync avec A3 ») : avatars qui ont des emplacements dans ce format
+  // (meta.voices de la brique avatar, usine/coherence.js avatarVoiceOk) — A3 = Omni seulement
+  function avatarsFor(L, f) { return L.avatars.filter(function (a) { return !COH || !COH.avatarVoiceOk || COH.avatarVoiceOk(a, f); }); }
   var FMT_NAME = { axel: 'Audio d’Axel', omni: 'Omni', muet: 'Texte + musique' };
   var FMT_SHORT = { axel: 'lipsync', omni: 'Omni', muet: 'texte + musique' };
   // Texte choc (TH…) : la phrase telle qu'elle passe à l'écran, émoji de fin compris (meta.full, sinon texte + meta.emoji).
@@ -1932,20 +1938,20 @@
     var fmtsOf = function (k) { return k === 'texte-choc' ? FMT_ORDER['texte-choc'] : FMT_ORDER.spoken; };
     // 28/09 : voix autorisées par brique (meta.voices, ex. H19 / H74 = voix native uniquement) → formats de CETTE brique
     var fmtsFor = function (k, b) { var al = COH.voicesAllowed ? COH.voicesAllowed(b) : null, f = fmtsOf(k); return al ? f.filter(function (x) { return al.indexOf(x) >= 0; }) : f; };
-    L.avatars.forEach(function (a) { avs[a.id] = 1; });
+    L.avatars.forEach(function (a) { avs[a.id] = a; });
     Object.keys(sets).forEach(function (k) { sets[k].forEach(function (b) { kindOf[b.id] = k; by[b.id] = { fmts: fmtsFor(k, b) }; }); });
     (St.videos || []).forEach(function (x) {
       var k = kindOf[x.brick];
       if (!k || by[x.brick].fmts.indexOf(x.format) < 0 || !mediaSrc(x.url)) return;
       var a = COH.photoParent ? COH.photoParent(x.photo) : x.photo, key = x.brick + '|' + x.format + '|' + a;
-      if (!avs[a] || (per[key] = (per[key] || 0) + 1) > NP) return;
+      if (!avs[a] || (COH.avatarVoiceOk && !COH.avatarVoiceOk(avs[a], x.format)) || (per[key] = (per[key] || 0) + 1) > NP) return;
       by[x.brick][x.format] = (by[x.brick][x.format] || 0) + 1;
     });
     var kinds = {};
     Object.keys(sets).forEach(function (k) {
       kinds[k] = fmtsOf(k).map(function (f) {
         return { f: f, done: sets[k].reduce(function (t, b) { return t + (by[b.id][f] || 0); }, 0),
-          total: sets[k].filter(function (b) { return by[b.id].fmts.indexOf(f) >= 0; }).length * A * NP };
+          total: sets[k].filter(function (b) { return by[b.id].fmts.indexOf(f) >= 0; }).length * avatarsFor(L, f).length * NP };
       });
     });
     return { by: by, kinds: kinds, slot: A * NP };
@@ -1958,8 +1964,8 @@
     { var al = COH && COH.voicesAllowed && M.byId && M.byId[b.id] ? COH.voicesAllowed(M.byId[b.id]) : null; if (al) fmts = fmts.filter(function (f) { return al.indexOf(f) >= 0; }); }   // 28/09 : voix autorisées
     var vids = (St.videos || []).filter(function (x) { return x.brick === b.id; });
     return '<div class="cf-bsf">' + fmts.map(function (f) {
-      var fv = vids.filter(function (x) { return x.format === f; }), done = 0, total = L.avatars.length * NP;
-      var cells = L.avatars.map(function (a) {
+      var avF = avatarsFor(L, f), fv = vids.filter(function (x) { return x.format === f; }), done = 0, total = avF.length * NP;
+      var cells = avF.map(function (a) {
         var mine = fv.filter(function (x) { return (COH.photoParent ? COH.photoParent(x.photo) : x.photo) === a.id; }).slice(0, NP), out = [];
         for (var i = 0; i < NP; i++) {
           var x = mine[i], src = x && mediaSrc(x.url);
