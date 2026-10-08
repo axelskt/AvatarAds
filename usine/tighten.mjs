@@ -19,7 +19,9 @@
 // qu'au début (avant le 1er mot) et à la fin.
 //
 // usage : node usine/tighten.mjs <entrée.mp4> <sortie.mp4> [--min 0.20] [--deep 24] [--pad 0.04] [--zoom 1.06]
-//         [--rel 12 | --db -34] [--keepend 0 | --tail 0.4] [--words mots.json | --words none]
+//         [--rel 12 | --db -34] [--keepend 0 | --tail 0.4] [--words mots.json | --words none] [--cut 3.62-4.47,…]
+// --cut a-b : retire EXACTEMENT ce passage (secondes de l'entrée), en plus des blancs — un mot inventé par le modèle
+// (Axel 08/10, H70 : « réseaux dentés ? ») ; même raccord que les autres coupes (zoom alterné si ≥ 0,25 s).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -64,7 +66,11 @@ const inner0 = lead ? lead[1] : 0, inner1 = trail ? trail[0] : dur;
 const hasWord = (a, b) => words.some(w => { const m = (w.start + w.end) / 2; return m > a + PAD && m < b - PAD; });
 let refused = 0;
 const inner = runs(DEEP).filter(([a, b]) => a > inner0 && b < inner1 && b - a >= MIN).filter(([a, b]) => hasWord(a, b) ? (refused++, false) : true);
-const sil = [...(lead ? [lead] : []), ...inner, ...(trail ? [trail] : [])];
+const forced = String(OPT.cut ?? '').split(',').map(x => x.trim().split('-').map(Number)).filter(p => p.length === 2 && p.every(Number.isFinite) && p[1] > p[0]);
+// élargi de PAD : le segment gardé avant finit à a, le suivant reprend à b (les segments sont élargis de PAD plus bas)
+const sil = [...(lead ? [lead] : []), ...inner, ...forced.map(([a, b]) => [a - PAD, b + PAD]), ...(trail ? [trail] : [])]
+  .sort((x, y) => x[0] - y[0]).reduce((m, r) => { const l = m[m.length - 1]; if (l && r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else m.push([...r]); return m; }, []);
+if (forced.length) console.log(`passage(s) retiré(s) : ${forced.map(([a, b]) => a + '-' + b + ' s').join(', ')}`);
 console.log(`voix ${speech.toFixed(1)} dB · ${inner.length} vrai(s) silence(s) coupé(s) dans la prise (sous ${DEEP.toFixed(1)} dB, ≥ ${MIN} s)${refused ? ` · ${refused} gardé(s) : un mot y est entendu` : ''}`);
 // segments de parole = complément des silences, élargis de PAD (sans se chevaucher)
 const keep = []; let t = 0;
