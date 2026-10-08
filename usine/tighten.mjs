@@ -84,7 +84,14 @@ if (segs.length && Number.isFinite(OPT.tail)) {   // fin = dernier son + TAIL
 } else if ((OPT.keepend ?? 1) && segs.length) segs[segs.length - 1][1] = dur;   // fin du clip gardée en entier
 const cut = segs.reduce((s, [a, b]) => s + (b - a), 0);
 console.log(`${segs.length} morceau(x) de parole · ${dur.toFixed(2)} s → ${cut.toFixed(2)} s (${(dur - cut).toFixed(2)} s de blancs retirés)`);
-if (segs.length <= 1 && dur - cut < 0.08) { execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-c', 'copy', out]); process.exit(0); }
+// Débit plafonné (08/10 : H70 sorti à 103 Mbit/s, niveau H.264 5.0 dépassé → Safari chargeait à l'infini ; les sorties
+// Express arrivent déjà à ~116 Mbit/s). 40 Mbit/s (tampon court : un clip de 5 s n'a pas le temps de lisser) garde le grain du selfie (cf. Express ~55 Mbit/s) et reste lisible partout.
+const ENC = ['-c:v', 'libx264', '-crf', '16', '-preset', 'slow', '-maxrate', '40M', '-bufsize', '40M', '-profile:v', 'high', '-level', '5.1', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart'];
+const srcRate = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=bit_rate', '-of', 'csv=p=0', src]).toString()) || 0;
+if (segs.length <= 1 && dur - cut < 0.08) {   // rien à couper : copie, sauf débit trop lourd → réencodé au plafond
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, ...(srcRate > 50e6 ? ENC : ['-c', 'copy', '-movflags', '+faststart']), out]);
+  console.log(srcRate > 50e6 ? `rien à couper · réencodé (${Math.round(srcRate / 1e6)} → ≤ 40 Mbit/s) -> ${out}` : 'rien à couper · copie -> ' + out); process.exit(0);
+}
 
 const zw = Math.round(W / ZOOM / 2) * 2, zh = Math.round(H / ZOOM / 2) * 2;
 // le cadrage ne change qu'aux VRAIES coupes (≥ ZOOM_GAP s retirées) : 8 micro-coupes en 6 s qui zooment chacune = image
@@ -99,5 +106,5 @@ segs.forEach(([a, b], i) => {
   cat += `[v${i}][a${i}]`;
 });
 fc += `${cat}concat=n=${segs.length}:v=1:a=1[v][a]`;
-execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-filter_complex', fc, '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-crf', '16', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out]);
+execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-filter_complex', fc, '-map', '[v]', '-map', '[a]', ...ENC, out]);
 console.log('OK -> ' + out);
