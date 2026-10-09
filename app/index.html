@@ -229,7 +229,24 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
      hauteur visible de la zone (les boutons Détails / 4K / Télécharger juste en dessous, en défilant) ; la carte prend la
      largeur de l'image (format lu au chargement : --img-ar), 520 px au plus comme avant. */
   #imgCanvas{container-type:size}
-  #imgResult{max-width:min(520px, calc((100cqh - 6px) * var(--img-ar, 1))) !important}
+  /* 2e passe (Axel : « l'écran est trop petit, les boutons débordent ») : fenêtre large → image à GAUCHE sur toute la
+     hauteur visible, boutons Détails / 4K / Télécharger en colonne à DROITE ; fenêtre étroite → empilé, place des boutons
+     réservée. Tout est visible sans défiler. */
+  @container (min-width:640px){
+    #imgResult{max-width:calc(min(520px, (100cqh - 6px) * var(--img-ar, 1)) + 240px) !important}
+    #imgResult > div{display:flex;align-items:stretch}
+    #imgZone{flex:1 1 auto;min-width:0}
+    #imgActions{flex:0 0 240px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;border-left:1px solid var(--border)}
+    #imgActions > div:first-child{flex-direction:column}
+  }
+  @container (max-width:639.98px){
+    #imgResult{max-width:min(520px, calc((100cqh - 150px) * var(--img-ar, 1))) !important}
+  }
+  /* Motion Control (Axel 09/10 : pas de barre de défilement sur ordinateur) : les deux zones carrées (394 px) dépassaient
+     d'~36 px sur un écran de 760 px → leur hauteur suit la place restante, et la barre est masquée (molette toujours active). */
+  #expMotionWrap{container-type:size;scrollbar-width:none}
+  #expMotionWrap::-webkit-scrollbar{display:none}
+  #mcRefDrop,#mcCharDrop{max-height:calc(100cqh - 290px)}
   .layout{overflow:clip;min-height:0}   /* clip ≠ conteneur de défilement : sans min-height:0, .layout reprendrait la hauteur de son contenu */
   .sidebar{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
 }
@@ -3783,9 +3800,6 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
             <div class="card" style="padding:0;overflow:hidden;border-color:var(--accent-line)">
               <textarea id="omniPrompt" oninput="_omniCharCount()" style="width:100%;box-sizing:border-box;min-height:120px;resize:vertical;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;line-height:1.55;padding:16px 16px 8px;font-family:inherit" placeholder="Décris la transformation : « transforme la voiture en Bugatti noire », « change le fond en plage au coucher de soleil », « habille-le en costume »…"></textarea>
-              <div class="row" style="justify-content:space-between;align-items:center;padding:10px 14px;border-top:1px solid var(--border);background:var(--panel-1)">
-                <span class="mono faint" style="font-size:11px"><span id="omniCharCount">0</span> car.</span>
-              </div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -14103,9 +14117,9 @@ async function mtLibUpload(list, kind){
    Identifiants PUBLICS du projet Google Cloud « AvatarAdss » (09/10, ils vont dans le client par conception) : ID client
    OAuth Web (origine https://avatarads.fr), clé API limitée à avatarads.fr/* ET aux seules API Drive + Picker, numéro du
    projet (= appId du Picker, préfixe de l'ID client). Le code secret du client n'est PAS utilisé (flux navigateur).
-   Bouton réservé owner / developer tant qu'Axel n'a pas validé l'import (GDRIVE_PUBLIC). */
+   Ouvert à tous les abonnés depuis le 09/10 (GDRIVE_PUBLIC). */
 const GDRIVE_CFG = { clientId: '747831448427-3vkfks1vkc3mikppaqh715cd80talka5.apps.googleusercontent.com', apiKey: 'AIzaSyBQIftB_UG7xyPZCiTKGaa_n_vzYq2jJGA', appId: '747831448427' };
-const GDRIVE_PUBLIC = false;
+const GDRIVE_PUBLIC = true;   // ouvert à tous (Axel 09/10, après son test)
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const GDRIVE_MIMES = ['image/png','image/jpeg','image/webp','image/gif','video/mp4','video/quicktime'];   // visuels seulement (« Mes sons » retiré, Axel 09/10)
 function _gdriveReady(){ return !!(GDRIVE_CFG.clientId && GDRIVE_CFG.apiKey && GDRIVE_CFG.appId); }
