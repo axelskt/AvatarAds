@@ -4077,9 +4077,17 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       // Audit 02/10 : appel SERVEUR À SERVEUR avec la clé service. Depuis l'audit du 05/09, orchestrate refuse la clé
       // anon (401) → TOUS les montage_ia via Claude échouaient (nettoyage fait pour rien, puis remboursés). Le débit du
       // montage a déjà eu lieu côté MCP (mcp_debits) : la porte « débit récent » d'orchestrate ne vise que les appels client.
+      // 09/10 : le formulaire part ASSEMBLÉ, avec sa taille (Content-Length). Envoyé en flux (FormData brut, sans
+      // longueur), orchestrate restait bloqué sur req.formData() jusqu'au 504 à 160 s — aucune ligne de journal, 4 montages
+      // sur 4 échoués. Le navigateur, lui, annonce toujours la taille : l'app n'était pas touchée.
+      const _corps = new Request('http://local/', { method: 'POST', body: fd })
+      const _octets = await _corps.arrayBuffer()
       const or = await fetch(`${SUPABASE_URL}/functions/v1/orchestrate`, {
-        method: 'POST', headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY }, body: fd,
-      })
+        method: 'POST',
+        headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': _corps.headers.get('content-type') || 'multipart/form-data' },
+        body: _octets,
+        signal: AbortSignal.timeout(175_000),   // jamais une attente infinie : le job échoue proprement et rembourse
+      }).catch((e) => new Response(JSON.stringify({ error: /Timeout|Abort/i.test(String((e as Error)?.name)) ? 'délai dépassé' : String(e).slice(0, 120) }), { status: 504 }))
       const od = await or.json().catch(() => ({}))
       if (!or.ok || !od.ok || !od.plan) {
         await failAndRefund(userId, mcpJob, `chef d'orchestre : ${od.error || 'HTTP ' + or.status}`)

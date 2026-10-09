@@ -47,6 +47,16 @@ const json = (body: unknown, status = 200) =>
 // depasse le budget de 160 s de la fonction (504) : retour a Sonnet 5 le soir meme.
 // Ne repasser en 5.5 qu'avec un plan mesure sous ~100 s (effort, pensee, decoupage).
 const CLAUDE_MODEL = 'claude-sonnet-5'
+// ── LE BUDGET DE 160 s (09/10) ───────────────────────────────────────────────
+// Supabase coupe la fonction à 160 s : un 504 muet, sans journal, que le client lit
+// comme « le chef d'orchestre ne répond pas ». Chaque appel externe a donc son délai,
+// et un dépassement NOMME l'étape fautive. Les étapes facultatives (relecture,
+// rattrapage) sont simplement sautées ; les indispensables échouent proprement.
+const BUDGET_MS = 148_000
+// échéance PROPRE À LA REQUÊTE (un isolat peut servir deux montages à la fois) : passée à chaque étape
+const reste = (fin: number) => fin - Date.now()
+function delai(ms: number): AbortSignal { return AbortSignal.timeout(Math.max(1000, Math.floor(ms))) }
+const estDelai = (e: unknown) => /TimeoutError|AbortError|aborted|timed out/i.test(String((e as Error)?.name || '') + ' ' + String((e as Error)?.message || e))
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024
 const MAX_ASSETS = 8
 const MAX_THUMB_BYTES = 400 * 1024
@@ -127,7 +137,7 @@ function alignScript(script: string, tWords: Word[], duration: number): Word[] {
 }
 
 // ---------- transcription ElevenLabs Scribe ----------
-async function transcribe(audio: File, lang: string | null): Promise<{ text: string; words: Word[]; hasMusic: boolean }> {
+async function transcribe(audio: File, lang: string | null, fin = Date.now() + BUDGET_MS): Promise<{ text: string; words: Word[]; hasMusic: boolean }> {
   const elKey = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
   if (!elKey) throw new Error('ELEVENLABS_API_KEY manquante')
   const fd = new FormData()
@@ -137,11 +147,18 @@ async function transcribe(audio: File, lang: string | null): Promise<{ text: str
   fd.append('tag_audio_events', 'true')
   fd.append('diarize', 'false')
   if (lang) fd.append('language_code', lang)
-  const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-    method: 'POST',
-    headers: { 'xi-api-key': elKey },
-    body: fd,
-  })
+  let res: Response
+  try {
+    res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+      method: 'POST',
+      headers: { 'xi-api-key': elKey },
+      body: fd,
+      signal: delai(Math.min(45_000, reste(fin) - 60_000)),
+    })
+  } catch (e) {
+    if (estDelai(e)) throw new Error('Transcription trop longue — réessaie dans un instant')
+    throw e
+  }
   if (!res.ok) throw new Error(`Scribe ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const data = await res.json()
   const words: Word[] = (data.words || [])
@@ -592,6 +609,7 @@ async function comblerTrous(
   animsDispo: string[],
   catalogue: string,
   rapport: RapportRattrapage,
+  fin = Date.now() + BUDGET_MS,
 ): Promise<{ start: number; anim: string; value: string }[]> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) { rapport.erreur = 'ANTHROPIC_API_KEY manquante'; return [] }
@@ -628,7 +646,10 @@ REGLES
       system,
       messages: [{ role: 'user', content: `Les moments sans visuel :\n${liste}\n\nUne ligne par moment.` }],
     }),
-  })
+    // facultatif : on ne le lance que s'il reste du budget, et jamais plus de 15 s
+    signal: delai(Math.min(15_000, reste(fin) - 4_000)),
+  }).catch((e) => { rapport.erreur = estDelai(e) ? 'délai dépassé' : String(e).slice(0, 80); return null })
+  if (!res) return []
   if (!res.ok) {
     rapport.erreur = 'HTTP ' + res.status
     return []
@@ -703,6 +724,7 @@ async function claudePlan(
   brief: string,
   memory: string,
   style = '',
+  fin = Date.now() + BUDGET_MS,
 ): Promise<{ plan: Plan; usage: unknown }> {
   const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
   if (!anthKey) throw new Error('ANTHROPIC_API_KEY manquante')
@@ -1152,6 +1174,11 @@ Analyse d'abord la video, puis genere le plan de montage.`,
       system,
       messages: [{ role: 'user', content }],
     }),
+    // tout ce qui reste du budget, moins ~16 s pour les vérifications et le rattrapage
+    signal: delai(reste(fin) - 16_000),
+  }).catch((e) => {
+    if (estDelai(e)) throw new Error('Le plan de montage prend trop de temps — réessaie dans un instant (crédits rendus)')
+    throw e
   })
   if (!res.ok) throw new Error(`Claude ${res.status}: ${(await res.text()).slice(0, 300)}`)
   const data = await res.json()
@@ -2393,7 +2420,7 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
 // Garde-fou strict : si le nombre de mots change d'un seul, on jette la
 // correction et on garde la transcription brute. Un sous-titre décalé est bien
 // pire qu'une apostrophe manquante, puisque toute la vidéo se cale dessus.
-async function relireTranscription(words: Word[], contexte: string, cle: string): Promise<Word[]> {
+async function relireTranscription(words: Word[], contexte: string, cle: string, fin = Date.now() + BUDGET_MS): Promise<Word[]> {
   if (!cle || words.length < 3 || words.length > 900) return words
   const texte = words.map((w) => w.text).join(' ')
   try {
@@ -2416,6 +2443,8 @@ ${contexte ? 'Noms propres et marques de cette personne, à écrire exactement a
 Réponds avec le texte corrigé, et rien d'autre.`,
         messages: [{ role: 'user', content: texte }],
       }),
+      // facultative : au-delà de 25 s (ou si le budget restant ne le permet pas) on garde la transcription brute
+      signal: delai(Math.min(25_000, reste(fin) - 95_000)),
     })
     if (!res.ok) { console.warn(`▶ relecture : Claude ${res.status}, transcription gardée telle quelle`); return words }
     const data = await res.json()
@@ -2515,6 +2544,7 @@ function buildCaptions(words: Word[], accents: string[], duration: number) {
 
 // ---------- handler ----------
 serve(async (req: Request) => {
+  const _fin = Date.now() + BUDGET_MS   // échéance de CETTE requête (Supabase coupe à 160 s)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST uniquement' }, 405)
 
@@ -2536,7 +2566,11 @@ serve(async (req: Request) => {
   let _settled = false
 
   try {
+    // CHRONO (09/10) : la fonction est coupée à 160 s sans rien dire — chaque étape externe
+    // journalise sa durée pour savoir laquelle mange le budget
+    const _t0 = Date.now(), _chrono = (etape: string) => console.log(`⏱ orchestrate ${etape} ${Date.now() - _t0} ms`)
     const form = await req.formData()
+    _chrono('formulaire lu')
     const audio = form.get('audio')
     if (!(audio instanceof File)) return json({ error: 'Champ "audio" manquant' }, 400)
     if (audio.size > MAX_AUDIO_BYTES) return json({ error: 'Fichier trop lourd (max 20 Mo)' }, 400)
@@ -2619,6 +2653,7 @@ serve(async (req: Request) => {
     // site enregistré : seul le site saisi pour CE montage (website) est lu. Absent = comme avant (fiche utilisée).
     const useBrand = options.useBrand !== false
     const mem = useBrand ? await loadBrandMemory(token, _auth.isService, svcUid) : { text: '', siteUrl: '', siteCache: '' }
+    _chrono('mémoire de marque')
     const siteToRead = website || mem.siteUrl
     // le site n'est re-crawlé que si le cache est vide ou porte sur une AUTRE url
     const siteJob = (mem.siteCache && (!website || website === mem.siteUrl))
@@ -2627,9 +2662,10 @@ serve(async (req: Request) => {
 
     // 2. transcription word-level + contexte site (en parallèle)
     const [scribe, siteContext] = await Promise.all([
-      transcribe(audio, lang),
+      transcribe(audio, lang, _fin),
       siteJob,
     ])
+    _chrono(`transcription (${scribe.words.length} mots)`)
     if (!scribe.words.length) return json({ error: 'Aucune parole detectee dans l\'audio' }, 422)
 
     // 3. alignement forcé si script fourni (texte exact + timing réel)
@@ -2647,11 +2683,14 @@ serve(async (req: Request) => {
       words,
       [brief, mem.text, website].filter(Boolean).join(' · '),
       Deno.env.get('ANTHROPIC_API_KEY') ?? '',
+      _fin,
     )
+    _chrono('relecture')
 
     // 4. Claude → analyse visuelle + plan alterné full/split (JSON strict garanti par le schéma)
     const style = String(options.style || options.vstyle || '').toLowerCase().slice(0, 20)
-    const { plan: rawPlan, usage } = await claudePlan(duration, motsRelus, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text, style)
+    const { plan: rawPlan, usage } = await claudePlan(duration, motsRelus, assets, lang, frames, siteContext, scribe.hasMusic, brief, mem.text, style, _fin)
+    _chrono(`plan (${JSON.stringify(usage || {}).slice(0, 160)})`)
 
     // 5. bornes/cohérence côté serveur — la mémoire compte comme du fourni :
     // ses vrais noms de produit/features ont le droit d'apparaître à l'écran.
@@ -2700,7 +2739,8 @@ serve(async (req: Request) => {
         // montre legitimement plusieurs ecrans. On n'interdit donc que la
         // REPETITION RAPPROCHEE : la meme animation a moins de 8 s d'intervalle.
         const posees = (plan.slides || []).filter((s) => s.anim).map((s) => ({ anim: s.anim as string, start: s.start }))
-        const propositions = await comblerTrous(trous.slice(0, 14), ANIMS, ANIM_CATALOGUE, rattrapage)
+        const propositions = await comblerTrous(trous.slice(0, 14), ANIMS, ANIM_CATALOGUE, rattrapage, _fin)
+        _chrono('rattrapage')
         for (const p of propositions) {
           const t = trous.find((h) => Math.abs(h.start - p.start) < 0.6)
           if (!t) { rattrapage.refus.push(`${p.start}s : creux introuvable a la pose`); continue }
