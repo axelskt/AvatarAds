@@ -35,7 +35,7 @@ import { omnihumanPrompt, clampOmnihumanPrompt } from './omnihuman-prompts.mjs' 
 import { HEDRA_PROMPT, HEDRA_SLUG_DEFAUT } from './hedra-prompts.mjs'   // prompt lipsync Hedra PARTAGÉ (shared/hedra-prompts.json, 27/09)
 // Audit 02/10 : garde-fous partagés (chemins de stockage, plan assaini, GSAP embarqué) — voir securite.mjs
 import { cheminSur, entreesJobSures, cleSortieJob, assainirPlan, installerGsap, NOM_CATALOGUE, NOM_EMOJI, NOM_SFX,
-  musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob } from './securite.mjs'
+  musiqueBanqueSure, horsBornes, BORNES_MEDIA, origineStockage, prochainJob, cheminVoixPrep, fichiersVoixJob } from './securite.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const r2 = (n) => Math.round(n * 100) / 100
@@ -363,6 +363,22 @@ function _manOrNull(pan, zoom) {
   const hasZoom = zoom != null && Number(zoom) > 1.01
   if (!hasPan && !hasZoom) return null
   return { pan: pan != null ? Number(pan) : 0.5, zoom: zoom != null ? Number(zoom) : 1 }
+}
+
+// Motion Control « Cloner l'audio de la vidéo » (Axel 08-09/10, __compose 'motion-voix', GRATUIT) : la vidéo Kling (base.mp4,
+// copiée en privé par l'edge voice-change) garde son IMAGE telle quelle (copie du flux, aucune perte) et prend la voix rendue
+// par voice-change (speech-to-speech ElevenLabs, assets/voix.mp3). Même rythme que la prise d'origine → les lèvres restent
+// synchro. Voix calée sur la durée de la vidéo (complétée de silence, coupée au besoin), niveau ramené à −16 LUFS comme les
+// autres voix de l'app. Aucun crédit en jeu → bornée comme les autres compositions Motion Control.
+function composeMotionVoix(jobDir, outPath) {
+  const base = join(jobDir, 'base.mp4'), voix = join(jobDir, 'assets', 'voix.mp3')
+  if (!existsSync(voix)) throw new Error('voix manquante (assets/voix.mp3)')
+  exigerBornes(base, 'motion')
+  const dV = parseFloat(ffprobe(voix, 'format=duration')) || 0
+  if (!(dV > 0) || dV > 45) throw new Error('voix illisible ou trop longue')
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', base, '-i', voix, '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy',
+    '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11,apad', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest',
+    '-movflags', '+faststart', outPath], { stdio: 'pipe', timeout: FFMPEG_MAX_MS })
 }
 
 async function composeMotionSplit(jobDir, outPath, plan) {
@@ -859,6 +875,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
   if (plan.__compose === 'motion-split') { await composeMotionSplit(jobDir, outPath, plan); return }
   // Motion Control « fond vidéo » : personnage détouré par-dessus la référence animée.
   if (plan.__compose === 'motion-bg') { await composeMotionBg(jobDir, outPath, plan); return }
+  // Motion Control « Cloner l'audio » : image Kling intacte + voix rendue par voice-change (speech-to-speech).
+  if (plan.__compose === 'motion-voix') { composeMotionVoix(jobDir, outPath); return }
   // Générateur : grave les sous-titres (aperçu _cvSubs) sur la vidéo + mux audio d'origine.
   if (plan.__compose === 'gen-subs') { await composeGenSubs(jobDir, outPath, plan); return }
   // Vidéo Omni Flash (MCP / Express) : retouche « forte » validée par Axel le 02/10 — couleurs, netteté et grain recalés sur
@@ -3103,7 +3121,7 @@ async function pollLoop() {
     try {
       // PRIORITÉ aux retouches (5 s de travail, une vidéo client attend) sur les montages longs de la file (02/10)
       // + préparation des vidéos MCP (02/10)
-      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref'])
+      const cand = await prochainJob(sb, dernierCompte, ['retouche', 'mc-ref', 'motion-voix'])   // motion-voix : simple mux (copie du flux vidéo), quelques secondes
       if (!cand) { await new Promise((r) => setTimeout(r, 2000)); continue }   // #vitesse (02/09) : 5 s → 2 s de latence de prise
       const { data: job } = await sb.from('render_jobs').select('*').eq('id', cand.id).eq('status', 'queued').maybeSingle()
       if (!job) { await new Promise((r) => setTimeout(r, 500)); continue }   // pris par un autre moteur entre-temps (ou hoquet DB)
@@ -3160,7 +3178,8 @@ async function pollLoop() {
           throw new Error(MSG_ENTREE_REFUSEE)
         }
         const dl = async (path, dest) => {
-          if (!cheminSur(uidJob, path)) throw new Error(MSG_ENTREE_REFUSEE)   // défense en profondeur : même règle au point de téléchargement
+          // défense en profondeur : même règle au point de téléchargement (+ les fichiers privés d'un job 'motion-voix', voir securite.mjs)
+          if (!cheminSur(uidJob, path) && !(job.plan && job.plan.__compose === 'motion-voix' && cheminVoixPrep(uidJob, path))) throw new Error(MSG_ENTREE_REFUSEE)
           const { data, error } = await sb.storage.from('render-media').download(path)
           if (error) throw new Error('download ' + path + ': ' + error.message)
           writeFileSync(dest, Buffer.from(await data.arrayBuffer()))
@@ -3278,10 +3297,15 @@ async function pollLoop() {
         await reservationJob(sb, job, true)
       } catch (e) {
         console.error('✗ job', job.id, e.message)
-        await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
+        // crédits RENDUS AVANT d'annoncer l'échec (relecture 09/10) : l'app rembourse dès qu'elle lit « failed » — dans l'ordre
+        // inverse, son refund_credits tombait encore sur une op tirée (« in_progress ») et ne rendait rien
         await reservationJob(sb, job, false)
+        await sb.from('render_jobs').update({ status: 'failed', error: String(e.message || e).slice(0, 300), trace: trace.fermer(), updated_at: new Date().toISOString() }).eq('id', job.id)
       } finally {
         jobEnCours = null
+        // « Cloner l'audio » : la vidéo copiée et la voix (voix-prep/<uid>/…) n'ont plus d'usage une fois le job terminé
+        const vx = fichiersVoixJob(job)
+        if (vx.length) { try { await sb.storage.from('render-media').remove(vx) } catch (_) { /* best-effort */ } }
         // la console reprend sa forme normale même si l'écriture a échoué :
         // un collecteur laissé branché contaminerait le job suivant.
         try { trace.fermer() } catch (_) {}

@@ -58,6 +58,8 @@ export function clePrepMcp(uid: string, renderJobId: string): string | null {
 //   régénération     « Détails du montage » renvoie le plan STOCKÉ recopié tel quel (_mdBuildRegenPlan) : celui d'un
 //                    montage lancé depuis Claude porte __lipsync (et __brief sur d'anciens plans). Rien d'autre.
 //   mcp/index.ts     __compose 'mc-ref' / 'retouche', __lipsync, __brief : insérés en clé service, jamais via render-job.
+//   voice-change     __compose 'motion-voix' (Motion Control « Cloner l'audio », 09/10, gratuit) : inséré en clé service, vidéo
+//                    copiée et voix rangées hors de portée du compte (voix-prep/<uid>/…) — jamais via render-job (absent de COMPOSE_CLIENT).
 //   render-worker    __batchBlank : inséré À LA MAIN (SQL) pour le compte propriétaire, jamais via render-job.
 // Tailles mesurées : un plan d'app fait quelques Ko à ~150 Ko (orchestrate : 180 s max, ≤ 900 mots en _words et
 // captions, ≤ 40 slides de ≤ 8 items) ; les sous-titres du Générateur ≤ ~1 500 mots sur 300 s.

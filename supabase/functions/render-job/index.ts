@@ -146,10 +146,20 @@ serve(async (req: Request) => {
       const { data: morts } = await service.from('render_jobs')
         .update({ status: 'failed', error: 'moteur interrompu pendant le rendu — job clos automatiquement' })
         .eq('user_id', user.id).in('status', ['queued', 'rendering']).lt('created_at', limite)
-        .select('id')
+        .select('id, plan, input_video, assets')
       // Audit métier 06/09 : un job mort clos ici doit RENDRE sa réservation (sinon reserved=0 tiré à la
       // création reste bloqué → l'utilisateur ne peut plus se faire rembourser une vidéo jamais rendue).
       for (const m of (morts ?? [])) for (const k of cleRendu(m.id)) { try { await service.rpc('release_by_job', { p_user: user.id, p_job: k, p_cost: 9999 }) } catch (_) { /* best-effort */ } }
+      // « Cloner l'audio » (09/10) : un job 'motion-voix' mort laisse sa vidéo copiée et sa voix sous voix-prep/<uid>/ → supprimées
+      // ici (list_media_purge les liste aussi, au-delà d'1 jour, mais la purge planifiée n'est PAS active : décision du 04/10).
+      const prives: string[] = []
+      for (const m of (morts ?? []) as { plan?: { __compose?: string }; input_video?: string; assets?: { path?: string }[] }[]) {
+        if (m.plan?.__compose !== 'motion-voix') continue
+        for (const p of [m.input_video, ...(Array.isArray(m.assets) ? m.assets.map((a) => a?.path) : [])]) {
+          if (typeof p === 'string' && p.startsWith(`voix-prep/${user.id}/`) && !p.includes('..')) prives.push(p)
+        }
+      }
+      if (prives.length) { try { await service.storage.from('render-media').remove(prives) } catch (_) { /* best-effort */ } }
 
       const { count } = await service.from('render_jobs').select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).in('status', ['queued', 'rendering']).gte('created_at', limite)

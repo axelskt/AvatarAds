@@ -55,14 +55,33 @@ export function cheminSur(uid, p) {
   return true
 }
 
+// « Cloner l'audio de la vidéo » (09/10) : un job 'motion-voix' lit la vidéo (<…>-src.mp4) et la voix convertie (<…>.mp3)
+// sous voix-prep/<uid>/ — préfixe qu'aucun compte ne peut lire ni écrire (policies storage : <uid>/… seulement), rempli par
+// l'edge voice-change en clé service (copie de la vidéo + voix ElevenLabs). SEULE exception à cheminSur, pour ce seul job.
+export function cheminVoixPrep(uid, p) {
+  if (typeof uid !== 'string' || !UUID.test(uid) || typeof p !== 'string') return false
+  return new RegExp('^voix-prep/' + uid + '/[A-Za-z0-9._-]{4,80}\\.(mp3|mp4)$').test(p) && !/\.\./.test(p)
+}
+const estVoixJob = (job) => !!(job && job.plan && job.plan.__compose === 'motion-voix')
+export function entreeVoixJob(job, a) {
+  return estVoixJob(job) && !!a && a.id === 'voix' && /\.mp3$/.test(String(a.path)) && cheminVoixPrep(String(job.user_id || ''), a.path)
+}
+// fichiers privés d'un job 'motion-voix' (vidéo copiée + voix) : à supprimer une fois le job terminé, quelle qu'en soit l'issue
+export function fichiersVoixJob(job) {
+  if (!estVoixJob(job)) return []
+  const uid = String(job.user_id || '')
+  return [job.input_video, ...(Array.isArray(job.assets) ? job.assets : []).map((a) => a && a.path)].filter((p) => cheminVoixPrep(uid, p))
+}
+
 // Toutes les entrées d'un job (vidéo de base, assets[].path, avatar_clips) vérifiées
 // AVANT le premier téléchargement. Absent = vide ; toute autre forme = refusée.
 export function entreesJobSures(job) {
   if (!job || typeof job !== 'object') return false
   const uid = String(job.user_id || '')
   const liste = (x) => (Array.isArray(x) ? x : x == null ? [] : [null])
-  const entrees = [job.input_video, ...liste(job.assets).map((a) => a && a.path), ...liste(job.avatar_clips)]
-  return entrees.every((p) => cheminSur(uid, p))
+  const videoSure = cheminSur(uid, job.input_video) || (estVoixJob(job) && /-src\.mp4$/.test(String(job.input_video)) && cheminVoixPrep(uid, job.input_video))
+  if (!videoSure || !liste(job.avatar_clips).every((p) => cheminSur(uid, p))) return false
+  return liste(job.assets).every((a) => cheminSur(uid, a && a.path) || entreeVoixJob(job, a))
 }
 
 // Clé de la vidéo produite. Contrat avec le MCP (02/10) : la vidéo PRÉPARÉE d'un job
