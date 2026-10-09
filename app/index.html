@@ -88,6 +88,12 @@ try{
 }
 /* .glass : le voile blanc du sombre devient un voile noir en clair (sinon invisible) */
 :root[data-theme="light"] .glass, .gen-light .glass{ background:linear-gradient(180deg,rgba(0,0,0,.03),rgba(0,0,0,0)) }
+/* Voile « verre » façon Apple derrière Ma marque (Axel 09/10) : l'app reste visible, floutée et saturée, au lieu d'un fond noir.
+   Le voile du compte (en dessous) s'efface pendant ce temps : un parent avec backdrop-filter borne le flou de l'enfant à son
+   propre contenu (il ne verrait plus l'app). -webkit- pour Safari < 18. */
+.aa-verre{ background:rgba(20,19,23,.30) !important; -webkit-backdrop-filter:blur(28px) saturate(175%) !important; backdrop-filter:blur(28px) saturate(175%) !important }
+:root[data-theme="light"] .aa-verre{ background:rgba(250,249,252,.40) !important }
+#accountOverlay.aa-sous-verre{ background:transparent !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important }
 /* Switch de thème INSTANTANÉ : le temps du basculement on coupe TOUTES les transitions.
    Sans ça, ~190 éléments en transition:all animent en même temps background/bordure/gradient/
    color-mix du sombre vers le clair → orage de repaint Safari (grosse chute de FPS + cartes qui
@@ -5081,7 +5087,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 
     <!-- 🧠 Modale « Ma marque » — maquette Claude Design, reprise au pixel -->
-    <div id="brandModal" onclick="if(event.target===this)closeBrandModal()" style="display:none;position:fixed;inset:0;z-index:9880;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
+    <div id="brandModal" class="aa-verre" onclick="if(event.target===this)closeBrandModal()" style="display:none;position:fixed;inset:0;z-index:9880;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
       <div class="card" style="width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
 
         <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">
@@ -8677,6 +8683,7 @@ function openAccountSettings(){
   const overlay = document.getElementById('accountOverlay');
   if(!overlay) return;
   overlay.style.display = 'flex';
+  if(document.getElementById('brandModal')?.style.display!=='grid') overlay.classList.remove('aa-sous-verre');   // voile du compte normal hors Ma marque
   try{ mtMemLoad(); mtLibLoad(); }catch(_){}   // alimente aussi le sous-titre du bouton « Ma marque »
   // Pré-remplir les champs
   if(currentMember){
@@ -8700,7 +8707,7 @@ function openAccountSettings(){
   // (mcpKeyRefresh() retiré le 28/08 : le bloc « Connecter Claude » vit dans sa
   //  vue dédiée v-connectclaude — nav('connectclaude') fait le refresh)
 }
-function closeAccountSettings(){ document.getElementById('accountOverlay').style.display='none'; }
+function closeAccountSettings(){ const ov=document.getElementById('accountOverlay'); ov.style.display='none'; ov.classList.remove('aa-sous-verre'); }
 
 // ── Thème du studio (clair / sombre) — toggle « Mon compte », persistant (aa_theme) ──
 // Le bootstrap du <head> pose déjà l'attribut avant le paint ; ici : bascule au clic +
@@ -13768,12 +13775,13 @@ let _mtMem = null;
 function openBrandModal(){
   const m=document.getElementById('brandModal'); if(!m) return;
   // la modale vit dans l'overlay du compte : sans lui, elle resterait invisible
-  const ov=document.getElementById('accountOverlay'); if(ov) ov.style.display='flex';
+  const ov=document.getElementById('accountOverlay'); if(ov){ ov.style.display='flex'; ov.classList.add('aa-sous-verre'); }
   m.style.display='grid';
   try{ mtMemLoad(); mtLibLoad(); }catch(_){}
 }
 function closeBrandModal(){
   const m=document.getElementById('brandModal'); if(m) m.style.display='none';
+  const ov=document.getElementById('accountOverlay'); if(ov) ov.classList.remove('aa-sous-verre');
   try{ mtMemEdit(false); }catch(_){}
 }
 
