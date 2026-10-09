@@ -23,6 +23,8 @@ import { SAFE, fontFaceCss } from './visual-styles.mjs'
 // Audit 02/10 : échappements, CSP et GSAP embarqué partagés par tous les builders (voir securite.mjs)
 import { jsonPourScript, escAttr, urlCss, cspComposition, GSAP_SCRIPT } from './securite.mjs'
 import { deriveDynamicSlides } from './dynamic-derive.mjs'
+// look Production (09/10) : texte choc sur l'accroche (plan.chocStyle, tiré par l'app)
+import { chocBloc, chocCss, sansEmoji, ajouterSfxChoc } from './production-look.mjs'
 import { animHtml, animJs, animCss, ANIMS } from './anim-pack.mjs'
 
 const r2 = (n) => Math.round(n * 100) / 100
@@ -1725,13 +1727,22 @@ export function buildDynamicComposition(plan, opts = {}) {
   // l'audio) : on la pose en haut du cadre, blanc massif + ombre portée, pendant
   // toute l'accroche. Track 15 : au-dessus des sous-titres du hook (posés à 60 %),
   // les deux coexistent comme dans la réf (titre en haut, mots animés plus bas).
-  let hookTitleHtml = ''
+  let hookTitleHtml = '', chocHook = null
   {
-    const tTitre = String((plan.hook && plan.hook.text) || '').trim()
+    // sans texte choc, le titre garde Archivo Black : ses emojis (carrés vides au rendu) sont retirés
+    const tTitre = sansEmoji(String((plan.hook && plan.hook.text) || '').trim())
     const finH = r2((plan.hook && plan.hook.end) || 0)
     // slam : pas de titre par-dessus le hook — la grille 3×3 + les sous-titres rouges du hook
     // SONT l'accroche ; un 3e texte au même endroit se marchait dessus (vu sur le rendu e2e).
-    if (tTitre && finH >= 1 && !slam) {
+    // TEXTE CHOC (look Production, Axel 09/10) : la phrase de l'accroche prend un des
+    // styles de Production à la place du titre blanc — même fenêtre (0 → fin du hook).
+    chocHook = tTitre && finH >= 1 && !slam ? chocBloc(plan, { W, H, start: 0, dur: finH }) : null
+    if (chocHook) {
+      hookTitleHtml = chocHook.html
+      js += chocHook.js
+      ajouterSfxChoc(plan, chocHook.sfx)
+      console.log(`▶ texte choc ${chocHook.style} (${chocHook.layout.size} px, ${chocHook.layout.lines.length} ligne(s)) 0→${finH}s`)
+    } else if (tTitre && finH >= 1 && !slam) {
       // ⚠ CONTRAT HYPERFRAMES : « the framework alone controls .clip visibility »
       // — un tween autoAlpha sur la RACINE .clip se bat avec le framework et le
       // titre n'apparaît jamais (mesuré sur v7 : construit, logué, invisible).
@@ -2097,6 +2108,7 @@ ${GSAP_SCRIPT}
     font-family:'Archivo Black',sans-serif; font-size:${Math.round(H * 0.037)}px; line-height:1.18; text-align:center;
     color:#FFFFFF; letter-spacing:-.01em;
     text-shadow:0 ${Math.round(H * 0.0023)}px ${Math.round(H * 0.009)}px rgba(0,0,0,.92), 0 ${Math.round(H * 0.006)}px ${Math.round(H * 0.018)}px rgba(0,0,0,.6); }
+${chocHook ? chocCss(W, H) : ''}
 </style>
 </head>
 <body>
@@ -2106,6 +2118,7 @@ ${txtLayerHtml}
 ${hookTitleHtml}${_transHtml}
 </div>
 <script>
+${chocHook ? chocHook.fitJs : ''}
 window.__timelines = window.__timelines || {};
 const tl = gsap.timeline({ paused: true });
 ${js}${_transInit}

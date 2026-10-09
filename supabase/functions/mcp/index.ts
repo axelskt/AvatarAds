@@ -139,6 +139,24 @@ const RE_PERSONNE = /\b(femmes?|filles?|hommes?|gar[çc]ons?|meufs?|nanas?|influ
 // Genre (Axel 11/09) : influenceur = HOMME, influenceuse = FEMME. gpt-image ignore parfois le genre
 // (biais « influenceuse » par défaut) → on l'ANCRE explicitement quand le prompt le désigne. Le féminin
 // est testé À PART du masculin (influenceuSE ≠ influenceuR) ; prompt MIXTE (les deux) → on ne force rien.
+// ── LOOK PRODUCTION (Axel 09/10) ─────────────────────────────────────────────
+// Mêmes tirages que l'app (_mtLookProduction) : un style de sous-titres et un style
+// de texte choc de Production, et une musique énergique au moins aussi longue que la
+// vidéo. Listes = render-worker/production-look.mjs. Pas de musique si l'audio en a déjà une.
+const PROD_SKINS = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10', 'S11', 'S12', 'S13', 'S15', 'S16', 'S17', 'S18', 'S19', 'S21']
+const PROD_CHOC = ['CS01', 'CS02', 'CS03', 'CS05', 'CS07', 'CS08', 'CS11', 'CS17']
+const PROD_MUSIC: Record<string, number> = { M08: 186.2, M09: 14.9, M10: 26.4, M11: 17.9, M12: 21.8, M13: 30.9, M14: 60.0, M17: 14.2, M20: 40.5 }
+function lookProduction(plan: Record<string, unknown>, dur: number) {
+  plan.capSkin = pickRnd(PROD_SKINS)
+  const hook = plan.hook as { text?: string } | null | undefined
+  if (hook && hook.text) plan.chocStyle = pickRnd(PROD_CHOC)
+  const det = plan.detected as { music?: boolean } | undefined
+  if (det && det.music) return
+  const ok = Object.keys(PROD_MUSIC).filter((id) => PROD_MUSIC[id] >= (Number(dur) || 0) + 0.5)
+  const mood = ((plan.music as { mood?: string } | null) || {}).mood || 'dynamique'
+  plan.music = ok.length ? { mood, track: pickRnd(ok) } : { mood }
+}
+
 function genreIndice(p: string): 'homme' | 'femme' | null {
   const fem = /\b(influenceuses?|femmes?|filles?|meufs?|nanas?|cr[ée]atrices?|actrices?|mannequines?|dames?|madames?|women|woman|female|girls?|ladies|lady)\b/i.test(p)
   const masc = /\b(influenceurs?|hommes?|gar[çc]ons?|mecs?|cr[ée]ateurs?|acteurs?|messieurs?|monsieur|men|man|male|boys?|guys?|dudes?|gentlem[ae]n)\b/i.test(p)
@@ -4070,6 +4088,7 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       const plan = od.plan as Record<string, unknown>
       plan.duration = Math.round(durEst * 100) / 100 // le moteur recale sur la durée réelle
       if (style !== 'auto') plan.slideStyle = style
+      lookProduction(plan, durEst)   // 09/10 : sous-titres, texte choc et musique de Production (comme l'app)
 
       // 2) l'audio devient l'entrée du rendu (le moteur gère l'absence de piste vidéo)
       const inputPath = `${userId}/mcp-montage-${Date.now()}.${ext}`

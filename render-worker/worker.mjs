@@ -22,6 +22,8 @@ import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { lookup as dnsLookup } from 'node:dns/promises'
 import { buildComposition } from './build-composition.mjs'
+// look Production (09/10) : emojis du texte choc + musiques énergiques de Production
+import { preparerEmojisChoc, choisirMusiqueProduction, fichierMusiqueProduction } from './production-look.mjs'
 import { buildGenSubsComposition } from './gen-subs-composition.mjs'
 // EXIGE_GLOBAL et ANIMS voyagent avec la dérivation : la passe de finition doit
 // juger une correction avec EXACTEMENT le même garde-fou que le reste de la
@@ -120,6 +122,11 @@ const MUSIC_VOL_EXTRA = 0.06 // repli si la sonie d'un titre est illisible
 // le lit se sent sans jamais disputer la parole. Chaque titre de la
 // bibliothèque est mesuré et ramené ici, sinon les plus forts écrasent tout.
 const MUSIC_TARGET_LUFS = -20
+// Musiques de PRODUCTION (look Production, 09/10) : placées comme dans usine/build.mjs —
+// en moyenne ~4,5 dB sous la voix (voix -16, musique brute -9 dB ≈ -20,5 LUFS), et
+// DUCKÉES par la voix (sidechain) : elle s'efface quand on parle, revient entre les phrases.
+const MUSIC_PROD_TARGET_LUFS = -18.5
+const MUSIC_DUCK = 'sidechaincompress=threshold=0.03:ratio=8:attack=5:release=260'
 
 // banque extensible : dépose des `assets/music/<mood>-1.mp3`, `<mood>-2.mp3`, … et ils
 // entrent dans la rotation du mood (choix stable par durée de vidéo, pour varier entre vidéos)
@@ -1722,6 +1729,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       mkdirSync(join(proj, 'fonts'), { recursive: true })
       for (const f of readdirSync(fontsSrc)) copyFileSync(join(fontsSrc, f), join(proj, 'fonts', f))
     }
+    // emojis Apple du texte choc, posés dans le projet AVANT la composition (la page rendue ne sort pas)
+    try { plan._chocEmoji = preparerEmojisChoc(plan, proj) } catch (_) { plan._chocEmoji = {} }
 
     // DERNIER MOT SUR LES BRUITAGES. Le serveur verrouille deja chaque son sur un
     // visuel, mais il ne sait pas que le rendu vient d'ECARTER des images trop
@@ -1908,7 +1917,22 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     }
 
     const mood = plan.music && plan.music.mood
-    const pick = mood ? pickMusic(mood, plan.duration || 1) : null
+    // LOOK PRODUCTION (Axel 09/10) : plan.music.track = une des pistes énergiques de
+    // Production, tirée par l'app. Jamais plus courte que la vidéo (sinon une autre assez
+    // longue) ; introuvable → la bibliothèque habituelle du mood.
+    let pick = null
+    const trackDemandee = plan.music && typeof plan.music.track === 'string' ? plan.music.track : null
+    if (trackDemandee) {
+      const id = choisirMusiqueProduction(trackDemandee, plan.duration)
+      const f = id ? fichierMusiqueProduction(id, process.env.SUPABASE_URL) : null
+      if (f) {
+        const lufs = loudnessOf(f)
+        const vol = lufs == null ? MUSIC_VOL_EXTRA
+          : Math.min(0.6, Math.max(0.02, Math.pow(10, (MUSIC_PROD_TARGET_LUFS - lufs) / 20)))
+        pick = { file: f, vol: Math.round(vol * 1000) / 1000, start: 0, name: id + (id !== trackDemandee ? ` (au lieu de ${trackDemandee}, trop courte)` : ''), lufs, prod: true }
+      } else console.warn(`musique Production ${String(trackDemandee).slice(0, 8)} indisponible → bibliothèque`)
+    }
+    if (!pick) pick = mood || trackDemandee ? pickMusic(mood || 'dynamique', plan.duration || 1) : null
     if (pick && existsSync(pick.file)) {
       // départ QUELCONQUE dans le morceau (pick.start) : ce sont des titres
       // entiers, on ne veut pas toujours entendre la même intro. -ss avant -i
@@ -1918,10 +1942,17 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       inputs.push('-stream_loop', '-1', '-i', pick.file)
       // #68 (Axel, 07/08) : la musique ENTRE — montée de 1,2 s au lieu d'un
       // fondu de 0,6 s, l'effet « la couche BGM arrive » de la réf @tians028.
-      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${pick.vol},afade=t=in:st=0:d=1.2,afade=t=out:st=${Math.max(0, plan.duration - 1.2)}:d=1.2[mus]`)
+      const duck = pick.prod && mixIns.includes('[voice]')
+      filters.push(`[${idx}:a]atrim=0:${plan.duration},asetpts=PTS-STARTPTS,volume=${pick.vol},afade=t=in:st=0:d=1.2,afade=t=out:st=${Math.max(0, plan.duration - 1.2)}:d=1.2${duck ? ',aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[musraw]' : '[mus]'}`)
+      if (duck) {
+        // la voix sert deux fois : au mix, et de clé au compresseur de la musique
+        mixIns[mixIns.indexOf('[voice]')] = '[voicem]'
+        filters.push('[voice]asplit=2[voicem][vkey0]', '[vkey0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[vkey]',
+          `[musraw][vkey]${MUSIC_DUCK}[mus]`)
+      }
       mixIns.push('[mus]')
       idx++
-      console.log(`▶ musique : ${pick.name || 'preset'} à partir de ${(pick.start || 0).toFixed(0)} s`)
+      console.log(`▶ musique : ${pick.name || 'preset'} à partir de ${(pick.start || 0).toFixed(0)} s${pick.prod ? ` · Production ${pick.lufs == null ? '?' : pick.lufs.toFixed(1)} LUFS → vol ${pick.vol}${duck ? ', duckée sous la voix' : ''}` : ''}`)
     }
 
     // #montage-audio (04/09) : piste audio optionnelle de l'utilisateur (musique / bruitages),

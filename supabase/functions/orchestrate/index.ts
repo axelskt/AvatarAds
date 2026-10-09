@@ -39,11 +39,12 @@ const CORS = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-// Sonnet 5 plutot qu'Opus : le chef d'orchestre ne fait plus le gros du travail —
+// Sonnet plutot qu'Opus : le chef d'orchestre ne fait plus le gros du travail —
 // le placement dense, la cadence, les bruitages et les verrous sont deterministes
 // cote serveur. Ce qui lui reste (decouper les sections, reperer les moments forts)
 // ne justifie pas le tarif d'Opus. A rebasculer si la qualite des plans chute.
-const CLAUDE_MODEL = 'claude-sonnet-5'
+// 09/10 (Axel) : Sonnet 5 → Sonnet 5.5, la derniere version.
+const CLAUDE_MODEL = 'claude-sonnet-5-5'
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024
 const MAX_ASSETS = 8
 const MAX_THUMB_BYTES = 400 * 1024
@@ -344,7 +345,7 @@ type Plan = {
     items: { text: string; t: number; value?: string; label?: string }[]
   }[]
   face: { cy: number } | null
-  detected: { subtitles: boolean }
+  detected: { subtitles: boolean; music?: boolean }
   avatarSegments: { start: number; end: number; format?: string; reason?: string }[]
 }
 
@@ -723,12 +724,16 @@ FORMAT COMPACT (obligatoire) — plusieurs champs sont des LIGNES "a|b|c" et non
   sfx[]            : "kind|t"                          ex "whoosh|4.10"
   beds[]           : "name|t"                          ex "montee|12.00"
   avatarSegments[] : "start|end|format"                ex "0|3.20|portrait"
-  hook             : "texte|start|end"                 ex "COMMENT CREER DES INFLUENCEUSES IA EN 30 SECONDES|0|2.60"   ("" si aucun hook)
-                     Le texte du hook est un TITRE ACCROCHEUR affiche au-dessus de la tete pendant toute l'accroche
-                     (facon titre YouTube : « Comment [resultat concret] en [duree] », « La methode pour [promesse] »).
-                     Il RESUME LA PROMESSE de la video entiere — JAMAIS un bout de la premiere phrase recopie
-                     (« PERSONNE NE TE MONTRE CA » ne dit rien ; « COMMENT CREER DES INFLUENCEUSES IA EN 30 SECONDES » accroche).
-                     6 a 9 mots, en capitales, avec le sujet et le benefice dedans.
+  hook             : "texte|start|end"                 ex "Les agences vont détester que je montre ça 😅|0|2.60"   ("" si aucun hook)
+                     Le texte du hook est un TEXTE CHOC pose en haut de l'ecran pendant l'accroche, comme le texte natif
+                     qu'un createur TikTok tape sur sa video : une REACTION a la premiere personne qui donne envie de rester.
+                     Modeles valides : « Ça devrait être interdit de montrer ça 😶 », « Pourquoi personne ne m'a montré ça avant ??? 😭 »,
+                     « J'ai monté cette vidéo en 2 clics. Sans monteur 🤯 », « Mon cerveau a buggé la première fois que j'ai vu ça 🫠 »,
+                     « Ok là c'est officiel, l'IA est allée trop loin 😳 ».
+                     Il colle au SUJET de la video et a ce que l'audio montre vraiment (jamais une promesse que la video ne
+                     tient pas, jamais un chiffre invente) — JAMAIS un bout de la premiere phrase recopie.
+                     Ecriture naturelle (PAS en capitales : majuscule en tete, accents), ponctuation expressive permise
+                     (? ! …), 6 a 12 mots, 60 caracteres max, 1 ou 2 emojis A LA FIN seulement. Jamais de « | » dans le texte.
   music            : "intense" | "dynamique" | "chill" | ""   ("" = l'audio a deja une musique)
   face             : la position verticale du visage, ex "0.32"   ("" si aucun visage)
   detected         : "subtitles" si des sous-titres sont DEJA incrustes dans la video, "" sinon
@@ -1653,7 +1658,9 @@ export function validatePlan(plan: Plan, duration: number, assetIds: string[], w
   let hook = plan.hook || null
   if (hook) {
     hook = {
-      text: String(hook.text || '').toUpperCase().slice(0, 42),
+      // texte choc (09/10) : écriture naturelle + emojis — plus de capitales forcées ; coupe
+      // par CARACTÈRE affiché (Array.from) pour ne jamais trancher un emoji en deux
+      text: Array.from(String(hook.text || '').replace(/[|\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim()).slice(0, 72).join('').trim(),
       start: r2(clamp(hook.start, 0, 1)),
       end: r2(clamp(hook.end, 1, Math.min(3.5, D))),
     }
@@ -2657,7 +2664,9 @@ serve(async (req: Request) => {
     // exactement les memes mots.
     const fixedWords = fixBrandWords(motsRelus, brandTerms(mem.text, siteContext, brief))
     const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), fixedWords, brief + '\n' + mem.text, filters !== 'low', brandName)
-    if (scribe.hasMusic) plan.music = null // musique déjà présente dans l'audio : on n'en rajoute pas
+    // musique déjà présente dans l'audio : on n'en rajoute pas — et on le DIT à l'app, qui
+    // sinon tirerait une musique de Production par-dessus (look Production, 09/10)
+    if (scribe.hasMusic) { plan.music = null; plan.detected.music = true }
 
     // le verdict du rattrapage voyage dans la REPONSE, pas dans un log invisible :
     // sans ca, impossible de savoir s'il n'a rien comble parce qu'il a refuse ou

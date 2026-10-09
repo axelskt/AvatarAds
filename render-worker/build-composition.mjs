@@ -18,6 +18,8 @@ import { buildDynamicComposition } from './dynamic-engine.mjs'
 import { uiScene } from './ui-scenes.mjs'
 // Audit 02/10 : échappements, CSP et GSAP embarqué partagés par tous les builders (voir securite.mjs)
 import { escAttr, cspComposition, GSAP_SCRIPT } from './securite.mjs'
+// look Production (09/10) : styles de sous-titres + texte choc tirés par l'app (plan.capSkin / plan.chocStyle)
+import { capSkinOf, isBoxSkin, capSkinText, capSkinCss, chocBloc, chocCss, sansEmoji, ajouterSfxChoc } from './production-look.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const r2 = (n) => Math.round(n * 100) / 100
@@ -516,6 +518,10 @@ export function buildComposition(plan, opts = {}) {
   // historique. 'st-auto' = l'utilisateur n'a rien imposé → le style visuel peut habiller
   // les sous-titres (typo fine Apple, sérif éditorial…) sans écraser un choix explicite.
   const capStyleCls = ['neon', 'minimal'].includes(plan.capStyle) ? ' st-' + plan.capStyle : ' st-auto'
+  // LOOK PRODUCTION (Axel 09/10) : un des styles de sous-titres de Production, tiré au
+  // hasard par l'app. Seulement en style Auto (aucun style visuel) et sans choix
+  // explicite néon / minimal ; un mot posé sur une scène crème garde l'ombre lisible.
+  const capSkin = !vs && !['neon', 'minimal'].includes(plan.capStyle) ? capSkinOf(plan) : null
   // ── EMOJIS 3D (#135) ────────────────────────────────────────────────────────
   // Le geste de la reference (Thinks) : l'emoji REMPLACE le mot, il ne s'ajoute pas.
   // Un seul element a l'ecran, au meme endroit — c'est ce qui rend la lecture
@@ -584,7 +590,7 @@ export function buildComposition(plan, opts = {}) {
   const hookDur = firstClash === undefined ? hookWanted : r2(firstClash - 0.15 - hookStart)
 
   const hook = plan.hook && plan.hook.text && !hookHiddenByBanner && !hookUnderWordPanel && hookDur >= 0.6 ? {
-    text: CASE(plan.hook.text),
+    text: CASE(sansEmoji(plan.hook.text)),
     start: hookStart,
     dur: hookDur,
   } : null
@@ -607,7 +613,15 @@ export function buildComposition(plan, opts = {}) {
           : `<img src="${esc(b.src)}" alt="" />`}</div>
       </div>`).join('')
 
-  const hookHtml = hook ? `
+  // TEXTE CHOC (look Production, 09/10) : la phrase de l'accroche prend un des styles
+  // de Production, à la place du badge jaune, sur la même fenêtre (même coupe avant la
+  // première scène qui empiète). Phrase qui ne tient pas → le badge habituel.
+  const choc = hook && !wordMode ? chocBloc(plan, { W, H, start: hook.start, dur: hook.dur }) : null
+  if (choc) {
+    ajouterSfxChoc(plan, choc.sfx)
+    console.log(`▶ texte choc ${choc.style} (${choc.layout.size} px, ${choc.layout.lines.length} ligne(s)) ${hook.start}→${r2(hook.start + hook.dur)} s`)
+  }
+  const hookHtml = choc ? choc.html : hook ? `
       <div class="clip" id="hook" data-start="${hook.start}" data-duration="${hook.dur}" data-track-index="4">
         <div class="hook-box">${esc(hook.text)}</div>
       </div>` : ''
@@ -661,6 +675,12 @@ export function buildComposition(plan, opts = {}) {
   const capsHtml = caps.map((c, i) => (wordMode
     ? `
       <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${Math.round(wordFontSize(c.text, W, H) * (c.start < hookCapEnd ? 1.28 : 1))}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
+    : capSkin && !c.cream ? (() => {
+      const t = capSkinText(c.text) || String(c.text || '')
+      return `
+      <div class="clip cap sk sk-${capSkin}${isBoxSkin(capSkin) ? ' bx' : ''}"${
+    t.length >= 11 ? ' data-long' : ''} id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" style="top:${c.top}px">${
+    isBoxSkin(capSkin) ? `<span class="bw">${esc(t)}</span>` : esc(t)}</div>` })()
     : `
       <div class="clip cap${capStyleCls}${c.accent ? ' accent' : ''}${c.cream ? ' oncream' : ''}"${
     String(c.text || '').length >= 11 ? ' data-long' : ''} id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" data-text="${esc(c.text)}" style="top:${c.top}px">${esc(c.text)}</div>`)).join('')
@@ -871,7 +891,7 @@ export function buildComposition(plan, opts = {}) {
       tl.to('#${b.id}', { autoAlpha: 0, duration: 0.16, ease: 'power1.in' }, ${r2(b.start + b.dur - 0.16)});`)
   ).join('')
 
-  const hookJs = hook ? `
+  const hookJs = choc ? choc.js : hook ? `
       tl.fromTo('#hook .hook-box', { scale: 1.25, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.28, ease: 'back.out(2.2)' }, ${r2(hook.start + 0.05)});` : ''
 
   // Type de transition par frontière : choisi par le chef d'orchestre via
@@ -1185,6 +1205,9 @@ export function buildComposition(plan, opts = {}) {
         -webkit-text-stroke: ${subStroke * 2}px rgba(0,0,0,.92); z-index: -1;
       }
       .cap.accent { color: #FF6B35; }
+${capSkin ? capSkinCss(W) : ''}
+${choc ? chocCss(W, H) : ''}
+${(capSkin || choc) && !vs ? fontFaceCss() : ''}
 ${slideCss}
 ${(fullDefs.length || bannerDefs.length) ? scenePackCss(W, H) : ''}
 ${vs ? fontFaceCss() + styleCss(vs, W, H, SLIDE_H) : ''}
@@ -1229,7 +1252,7 @@ ${maskSil ? `      <div id="maskSil" class="clip" data-start="0" data-duration="
 ` : ''}` : ''}    </div>
 
     <script>
-${wordMode ? WORD_FIT_JS + '\n' : ''}      window.__timelines = window.__timelines || {};
+${wordMode ? WORD_FIT_JS + '\n' : ''}${choc ? choc.fitJs + '\n' : ''}      window.__timelines = window.__timelines || {};
       const tl = gsap.timeline({ paused: true });
       tl.set('#zoomInner', { scale: 1 }, 0);
 ${slides.length ? `      tl.set('#slidezone', { autoAlpha: 0 }, 0);
