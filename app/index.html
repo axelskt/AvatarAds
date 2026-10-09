@@ -229,19 +229,18 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
      hauteur visible de la zone (les boutons Détails / 4K / Télécharger juste en dessous, en défilant) ; la carte prend la
      largeur de l'image (format lu au chargement : --img-ar), 520 px au plus comme avant. */
   #imgCanvas{container-type:size}
-  /* 2e passe (Axel : « l'écran est trop petit, les boutons débordent ») : fenêtre large → image à GAUCHE sur toute la
-     hauteur visible, boutons Détails / 4K / Télécharger en colonne à DROITE ; fenêtre étroite → empilé, place des boutons
-     réservée. Tout est visible sans défiler. */
-  @container (min-width:640px){
-    #imgResult{max-width:calc(min(520px, (100cqh - 6px) * var(--img-ar, 1)) + 240px) !important}
-    #imgResult > div{display:flex;align-items:stretch}
-    #imgZone{flex:1 1 auto;min-width:0}
-    #imgActions{flex:0 0 240px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;border-left:1px solid var(--border)}
-    #imgActions > div:first-child{flex-direction:column}
-  }
-  @container (max-width:639.98px){
-    #imgResult{max-width:min(520px, calc((100cqh - 150px) * var(--img-ar, 1))) !important}
-  }
+  /* 3e passe (Axel 09/10, croquis) : aperçu GRAND façon Express — cadre arrondi + ombre, hauteur ~65 % de l'écran (bornée à la
+     zone visible), au format paysage 4:3 (ou celui de l'image si elle est plus large) ; l'image REMPLIT le cadre en gardant
+     le haut (visage, buste). Le fichier téléchargé reste l'image ENTIÈRE. Boutons en ligne juste dessous (on peut défiler). */
+  #imgResult{max-width:none !important;width:100% !important}
+  #imgResult > div{background:transparent !important;border:0 !important;border-radius:0 !important;overflow:visible !important;display:flex;flex-direction:column;align-items:center;width:100%}
+  #imgZone{height:min(65vh, calc(100cqh - 20px));aspect-ratio:var(--frame-ar, 1.3333);max-width:100%;min-height:0 !important;border-radius:16px;overflow:hidden;background:#000 !important;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)}
+  #imgOutput{width:100% !important;height:100% !important;object-fit:cover;object-position:50% 22%}
+  #imgActions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:16px 0 4px !important;width:100%}
+  #imgActions > div:first-child{display:contents}
+  #imgActions > div:first-child > button{flex:0 1 auto !important;padding:10px 16px !important}
+  #imgActions #imgRevertBtn{width:auto !important;margin:0 !important}
+  #imgActions #imgDownloadBtn{width:auto !important;padding:10px 22px !important}
   /* Motion Control (Axel 09/10 : pas de barre de défilement sur ordinateur) : les deux zones carrées (394 px) dépassaient
      d'~36 px sur un écran de 760 px → leur hauteur suit la place restante, et la barre est masquée (molette toujours active). */
   #expMotionWrap{container-type:size;scrollbar-width:none}
@@ -3223,7 +3222,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
             <!-- Image zone -->
             <div id="imgZone" style="position:relative;background:var(--bg4);min-height:200px">
-              <img id="imgOutput" decoding="async" style="width:100%;display:block" alt="Image générée" onload="try{ if(this.naturalWidth&&this.naturalHeight) document.getElementById('imgResult').style.setProperty('--img-ar', (this.naturalWidth/this.naturalHeight).toFixed(4)); }catch(_){}">
+              <img id="imgOutput" decoding="async" style="width:100%;display:block" alt="Image générée" onload="try{ if(this.naturalWidth&&this.naturalHeight){ const r=this.naturalWidth/this.naturalHeight, z=document.getElementById('imgResult'); z.style.setProperty('--img-ar', r.toFixed(4)); z.style.setProperty('--frame-ar', Math.max(r, 4/3).toFixed(4)); } }catch(_){}">
               <!-- Loading overlay -->
               <div id="imgLoadingOverlay" class="img-loading-overlay" style="display:none;border-radius:0">
                 <div style="position:relative;width:74px;height:74px">
