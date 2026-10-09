@@ -14507,10 +14507,9 @@ function _mtUpdateCost(){
   try{ _mtOptSync(); }catch(_){}
   const b=document.getElementById('mtGoLbl'); if(!b) return;
   if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — ' + CREDIT_COSTS.montageIA + ' crédits'; return; }
+  // Axel 09/10 : JAMAIS le nom du modèle sur le bouton (ni ailleurs côté client) — on parle de l'avatar, pas de la techno.
   const omni=_mt.lipModel==='omnihuman', mix=_mt.lipModel==='mix';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
-  const lbl=omni?'Omni':(mix?'Mix (hook Omni + reste Character-3)':'Character 3');
-  const note=document.getElementById('mtCostNote');
   if(_mt.mp3Dur){
     // L'avatar n'est PAS lipsyncé sur toute la vidéo : le chef d'orchestre ne garde que
     // les passages où le voir sert (hook, temps forts) — en général 2 à 4 scènes.
@@ -14518,23 +14517,14 @@ function _mtUpdateCost(){
     const dur=_mt.mp3Dur;
     const lo=Math.min(6, Math.max(2, Math.round(dur*0.18)));   // au mieux : le hook seul
     const hi=Math.min(10, Math.max(lo+2, Math.round(dur*0.42))); // au pire : plusieurs scènes
-    const _hook=Math.min(6, Math.max(2, Math.round(dur*0.18))); // Mix : le hook part en Omni (5 cr/s), le reste des scènes en C3 (2 cr/s)
+    const _hook=Math.min(6, Math.max(2, Math.round(dur*0.18))); // Mix : le hook au tarif avatar haute qualité, le reste au tarif avatar
     const cost=(sec)=> mix
       ? Math.ceil(CREDIT_COSTS.montageIA + Math.min(sec,_hook)*CREDIT_COSTS.omniPerSec + Math.max(0,sec-_hook)*CREDIT_COSTS.avatarPerSec + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec)
       : Math.ceil(CREDIT_COSTS.montageIA + sec*rate + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
     const cLo=cost(lo), cHi=cost(hi);
-    // si le lipsync coûte le même prix que l'habillage, le total ne bouge pas selon le nombre
-    // de scènes → un seul chiffre ; sinon (2 cr/s) une vraie fourchette
     b.textContent = 'Créer ma vidéo — '+(cLo===cHi ? cLo+' crédits' : cLo+' à '+cHi+' crédits');
-    if(note){
-      note.style.display='';
-      note.textContent = cLo===cHi
-        ? 'Prix fixe : '+lbl+' coûte le même tarif que l\'habillage ('+rate+' cr/s), donc '+Math.round(dur)+' s = '+cLo+' crédits quoi qu\'il arrive.'
-        : 'L\'avatar n\'est lipsyncé que sur les passages où on le voit — l\'IA en garde en général '+lo+' à '+hi+' s sur '+Math.round(dur)+' s. Tu es débité aux secondes réellement générées ; le reste du temps c\'est du gameplay à '+CREDIT_COSTS.hyperframesPerSec+' cr/s.';
-    }
   } else {
-    b.textContent = 'Créer ma vidéo — 2 cr + lipsync '+lbl+' ('+rate+' cr/s)';
-    if(note){ note.style.display='none'; note.textContent=''; }
+    b.textContent = 'Créer ma vidéo — '+CREDIT_COSTS.montageIA+' crédits + '+rate+' cr/s d’avatar';
   }
 }
 function mtSetVideo(f){
@@ -14570,12 +14560,25 @@ function mtAddFiles(list){
     const it={ id:'mf'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), file:f, kind, dur:0, neuf:true };
     _mtFiles.push(it);
     if(kind!=='image') _mtMeasure(it);
+    _mtThumb(it);
   }
   if(refus) toast(refus>1 ? refus+' fichiers ignorés : formats non pris en charge' : 'Format non pris en charge (audio, vidéo ou image)');
   if(remplace) toast('Audio remplacé');
   _mtSyncFiles();
 }
-function mtRemoveFile(id){ _mtFiles=_mtFiles.filter(x=>x.id!==id); _mtSyncFiles(); }
+function mtRemoveFile(id){ _mtFiles.filter(x=>x.id===id).forEach(_mtThumbDrop); _mtFiles=_mtFiles.filter(x=>x.id!==id); _mtSyncFiles(); }
+// Miniature de la pastille (Axel 09/10) : l'image elle-même, ou la PREMIÈRE IMAGE d'une vidéo ; un audio garde le micro.
+function _mtThumb(it){
+  try{
+    if(it.kind==='image'){ it.thumb=URL.createObjectURL(it.file); return; }
+    if(it.kind!=='video' || typeof _libGrabFrame!=='function') return;
+    _libGrabFrame(URL.createObjectURL(it.file), true).then(g=>{
+      if(!g || !g.blob || !_mtFiles.includes(it)) return;
+      it.thumb=URL.createObjectURL(g.blob); _mtRenderFiles();
+    }).catch(()=>{});
+  }catch(_){}
+}
+function _mtThumbDrop(it){ if(it && it.thumb){ try{ URL.revokeObjectURL(it.thumb); }catch(_){} it.thumb=''; } }
 // durée réelle (affichée dans la pastille : 0:42)
 function _mtMeasure(it){
   try{
@@ -14612,7 +14615,9 @@ function _mtRenderFiles(){
   // un visuel retiré ailleurs (Éditeur) disparaît aussi d'ici
   if(typeof _edAi!=='undefined' && _edAi){
     const vid=_mtFiles.find(x=>x.kind==='video');
-    _mtFiles=_mtFiles.filter(x=>x.kind==='audio' || x===vid || (_edAi.files||[]).some(a=>a.file===x.file));
+    const garde=x=>x.kind==='audio' || x===vid || (_edAi.files||[]).some(a=>a.file===x.file);
+    _mtFiles.filter(x=>!garde(x)).forEach(_mtThumbDrop);
+    _mtFiles=_mtFiles.filter(garde);
   }
   const big=document.getElementById('mtDropBig'), wrap=document.getElementById('mtFilesWrap'), g=document.getElementById('mtFileGrid');
   if(!big || !wrap || !g) return;
@@ -14623,7 +14628,8 @@ function _mtRenderFiles(){
   g.innerHTML=_mtFiles.map(x=>{
     const meta = x.kind==='image' ? 'img' : (x.dur ? _mtFmtDur(x.dur) : '');
     const h='<div class="mz-file'+(x.neuf?' rise':'')+'">'
-      +'<span style="width:28px;height:28px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-2)">'+_MT_FI[x.kind]+'</span>'
+      +'<span style="width:28px;height:28px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;overflow:hidden;background:var(--accent-soft);color:var(--accent-2)">'
+        +(x.thumb ? '<img src="'+x.thumb+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">' : _MT_FI[x.kind])+'</span>'
       +'<span style="font-size:12.5px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(x.file.name)+'">'+esc(x.file.name)+'</span>'
       +'<span class="mono faint" style="font-size:10px;flex:0 0 auto">'+meta+'</span>'
       +'<button type="button" onclick="mtRemoveFile(\''+x.id+'\')" title="Retirer" style="width:22px;height:22px;flex:0 0 auto;border-radius:6px;display:grid;place-items:center;color:var(--text-3)">'+_MT_FX+'</button>'
@@ -14641,6 +14647,13 @@ function _mtOptSync(){
   const b=document.getElementById('mtOptAvatar'), ind=document.getElementById('mtOptAvatarInd'); if(!b) return;
   const on=!!(_mt.avatars||[]).length;
   b.classList.toggle('on', on);
+  // la photo d'avatar remplace l'icône (Axel 09/10)
+  const ic=b.querySelector('.mz-opt-ic');
+  if(ic){
+    const u = on ? _mt._avUrl : '';
+    if(u && ic.dataset.src!==u){ ic.dataset.src=u; ic.style.overflow='hidden'; ic.innerHTML='<img src="'+u+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">'; }
+    else if(!u && ic.dataset.src){ delete ic.dataset.src; ic.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>'; }
+  }
   if(ind) ind.innerHTML = on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
 }
 function _mtBriefCount(){
@@ -15976,13 +15989,13 @@ async function _mtSegmentedGenerate(){
     const clipBlobs=[];
     for(let i=0;i<segs.length;i++){
       const s=segs[i]; const fmt = s.format==='paysage' ? 'paysage' : 'portrait';
-      _mtProg(30 + Math.round(56*(i/Math.max(1,segs.length))), 'Scène '+(i+1)+'/'+segs.length+' — l\'avatar parle en '+modelLbl+' ('+(fmt==='paysage'?'16:9':'9:16')+')…');
+      _mtProg(30 + Math.round(56*(i/Math.max(1,segs.length))), 'Scène '+(i+1)+'/'+segs.length+' — l\'avatar parle ('+(fmt==='paysage'?'16:9':'9:16')+')…');   // jamais le nom du modèle (Axel 09/10)
       const img=await _mtAvatarInFormat(i, fmt);   // #84 · rotation : image ≠ par scène
       await _mtDetectHands(img);   // mains dans le cadre ? une seule fois par photo
       // le rôle borne la « scène vivante » : seulement aux extrémités, jamais au milieu
       const { role, p, wav:segWav, op } = prep[i];
       if(p.lipEnd!=null) s.lipEnd=p.lipEnd; else delete s.lipEnd;
-      if(!(await spendCreditsFor(op, 'scène avatar '+(i+1)+'/'+segs.length+' '+modelLbl))) throw new Error('débit de la scène '+(i+1)+' impossible — réessaie');
+      if(!(await spendCreditsFor(op, 'scène avatar '+(i+1)+'/'+segs.length))) throw new Error('débit de la scène '+(i+1)+' impossible — réessaie');
       clipBlobs.push(await _mtScene(img, segWav, fmt, modelId, Math.max(0,(s.end||0)-(s.start||0)), role));
     }
 
