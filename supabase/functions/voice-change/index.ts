@@ -43,7 +43,35 @@ const MC_CR_PAR_S_MIN = 2                    // Motion Control le moins cher : 2
 // réserve non vide), un autre modèle fal payé sur une op « motion » (provider_path ≠ kling-video). Une op livrée et vide ne
 // se rembourse plus (already_delivered). Si la facture fal du job existe, elle
 // doit être celle d'un job Kling réglé, et sa durée MESURÉE (out_sec) plafonne la voix. null = refus (gratuit).
+// Motion Control chez kie (Axel 09/10, tous les clients) : même exigence sur une op « motion » SANS job fal lié — elle doit
+// porter une tâche Kling kie (kie_jobs : alias kling-*, op réglée par kie_job_bill 'settle' au rapatriement, résultat copié
+// ou rangé) ; la durée MESURÉE à la soumission (bill_sec) plafonne la voix.
+async function opKlingKieLivree(uid: string): Promise<{ id: string; secMax: number } | null> {
+  try {
+    const { data, error } = await svc().from('credit_ops').select('id, amount')
+      .eq('user_id', uid).eq('reason', 'motion').is('refunded_at', null).not('settled_at', 'is', null)
+      .eq('reserved_remaining', 0).is('provider_job', null)
+      .gt('created_at', new Date(Date.now() - 3600_000).toISOString()).order('created_at', { ascending: false }).limit(3)
+    if (error || !data || !data.length) return null
+    for (const o of data as { id: string; amount: number }[]) {
+      if (!(o.amount > 0)) continue
+      const { data: k, error: ke } = await svc().from('kie_jobs').select('bill_sec')
+        .eq('op_id', o.id).eq('user_id', uid).in('alias', ['kling-2.6-mc', 'kling-3.0-mc']).eq('bill_state', 'settled')
+        .in('state', ['fetched', 'saved']).limit(1)
+      if (ke) return null
+      if (!k || !k.length) continue
+      const sec = Number((k[0] as { bill_sec?: number | string | null }).bill_sec)
+      const plafond = o.amount / MC_CR_PAR_S_MIN
+      return { id: o.id, secMax: Number.isFinite(sec) && sec > 0 ? Math.min(sec + 1, plafond) : plafond }
+    }
+    return null
+  } catch { return null }
+}
 async function opKlingLivree(uid: string): Promise<{ id: string; secMax: number } | null> {
+  const viaFal = await opKlingFalLivree(uid)
+  return viaFal || await opKlingKieLivree(uid)
+}
+async function opKlingFalLivree(uid: string): Promise<{ id: string; secMax: number } | null> {
   try {
     const { data, error } = await svc().from('credit_ops').select('id, amount, provider_job')
       .eq('user_id', uid).eq('reason', 'motion').is('refunded_at', null).not('settled_at', 'is', null)

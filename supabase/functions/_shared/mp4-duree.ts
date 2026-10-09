@@ -427,9 +427,10 @@ export async function dureeMp4(lire: LecteurPlage): Promise<number | null> {
 export const dureeMp4Url = (url: string): Promise<number | null> => dureeMp4(lecteurUrl(url))
 
 // ── Facturation à la seconde des vidéos fal (fal-proxy) ─────────────────────────────────────────────────────────────────
-// Tarifs = CREDIT_COSTS de l'app, à changer ENSEMBLE : Motion 2.6 standard 2 cr/s (_mcPreRate), repli modération 3.0 → 2.6
-// pro 4 cr/s (_v26Rate), Motion 3.0 = motion30PerSec 6 ; Omni édition 720p = omniEditPerSec 3, 1080p = omniEdit1080PerSec 4.
-// (Le 1080p de Motion 2.6 = Topaz, débité à part sur son op « motion-topaz » : hors de ce calcul.)
+// Tarifs = CREDIT_COSTS de l'app, à changer ENSEMBLE : Motion 2.6 standard 2 cr/s (_mcRate), Motion 2.6 1080p = 2.6 pro
+// NATIF 3 cr/s (Axel 09/10 : fin de l'upscale Topaz ; c'est aussi le repli modération 3.0 → 2.6, _v26Rate), Motion 3.0 =
+// motion30PerSec 6 ; Omni édition 720p = omniEditPerSec 3, 1080p = omniEdit1080PerSec 4. kie-proxy facture Motion Control
+// avec CE barème (kieMcFalPath) : même prix chez les deux fournisseurs.
 // Durée max : Kling 30 s (doc fal ; l'app coupe à 30 s), Omni 10 s (l'app refuse au-delà de 10,5 s).
 export const TOLERANCE_S = 1   // en faveur du client : écarts de mesure navigateur ↔ conteneur, priming AAC, remux
 // + gigue de ré-encodage (ffmpeg.wasm de _mcNormalizeRef : HEVC → H.264 + AAC, quelques centièmes de plus que la durée lue
@@ -457,7 +458,7 @@ export type TarifVideo = { parSec: number; maxSec: number; modele: 'kling' | 'om
 export function tarifVideoFal(path: string, resolution?: unknown): TarifVideo | null {
   const p = path.split('?')[0]
   const k = p.match(/^\/fal-ai\/kling-video\/(v2\.6|v3)\/(standard|pro)\/motion-control$/i)
-  if (k) return { parSec: k[1].toLowerCase() === 'v3' ? 6 : (k[2].toLowerCase() === 'pro' ? 4 : 2), maxSec: 30, modele: 'kling', tol: TOLERANCE_S + GIGUE_S }
+  if (k) return { parSec: k[1].toLowerCase() === 'v3' ? 6 : (k[2].toLowerCase() === 'pro' ? 3 : 2), maxSec: 30, modele: 'kling', tol: TOLERANCE_S + GIGUE_S }
   if (/^\/google\/gemini-omni-flash\/v1\.1\/edit$/i.test(p)) return { parSec: resolution === '1080p' ? 4 : 3, maxSec: OMNI_MAX_SEC, modele: 'omni-edit', tol: TOLERANCE_OMNI_S }
   return null
 }

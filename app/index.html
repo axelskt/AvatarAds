@@ -5782,7 +5782,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
   <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px)"></div>
   <div style="position:relative;width:100%;max-width:440px;max-height:94vh;margin:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 90px rgba(0,0,0,.75)">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex:0 0 auto">
-      <div style="font-family:'Montserrat',var(--font),sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:var(--accent-2);display:flex;align-items:center;gap:7px">
+      <div style="font-family:'Montserrat',var(--font),sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:var(--text);display:flex;align-items:center;gap:7px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
         PAIEMENT SÉCURISÉ · WHOP
       </div>
@@ -11104,7 +11104,8 @@ function _kieDev(){ try{ return typeof currentMember!=='undefined' && !!currentM
 // OmniHuman 1.5 (Générateur + Montage IA, Élite ; repli fal sur la même op, voir _omnihRun). Owner : comme un client
 // (sans débit). Developer : _kieOn() (inchangé).
 const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite'], 'omni':['starter','pro','elite'], 'veo':['starter','pro','elite'],
-  'omnihuman':['pro','elite'] };   // OmniHuman 1.5 (Axel 26/09) : Pro et Élite, jamais Starter — comme le sélecteur du Générateur et le Montage IA — KIE_OPEN côté serveur
+  'omnihuman':['pro','elite'],
+  'motion':['starter','pro','elite'] };   // Motion Control (Axel 09/10) : kie pour tous, 1080p NATIF (2.6 1080p et 3.0 = Pro / Élite, gate plus haut) ; repli fal sur la même op   // OmniHuman 1.5 (Axel 26/09) : Pro et Élite, jamais Starter — comme le sélecteur du Générateur et le Montage IA — KIE_OPEN côté serveur
 function _kieClientOn(usage){
   try{
     if(typeof currentMember==='undefined' || !currentMember) return false;
@@ -31804,8 +31805,8 @@ function _mcToggleCam(){ window._mcCamFollow=!window._mcCamFollow; _mcSaveOpts()
 function _mcToggleVidBg(){ window._mcKeepVidBg=!window._mcKeepVidBg; _mcSaveOpts(); _mcRenderAdv(); if(typeof _mcUpdateCost==='function') _mcUpdateCost(); }
 function _mcToggleAutoFrame(){ window._mcAutoFrame=(window._mcAutoFrame===false); _mcSaveOpts(); _mcRenderAdv(); }
 function _mcToggleBgClean(){ window._mcBgClean=(window._mcBgClean===false); _mcRenderAdv(); }
-// Standard 720p = 2 cr/s ; Standard 1080p = 3 cr/s (Kling 720p + upscale Topaz) ;
-// Pro 1080p natif = 4 cr/s.
+// Motion 2.6 720p = 2 cr/s ; Motion 2.6 1080p NATIF = 3 cr/s (Axel 09/10 : fini l'upscale Topaz) ; Motion 3.0 1080p =
+// motion30PerSec. Même barème côté serveur (kie-proxy et fal-proxy : tarifVideoFal).
 function _mcRate(){ return window._mcTier==='pro' ? CREDIT_COSTS.motion30PerSec : (window._mcQuality==='1080' ? 3 : 2); }
 // #34 · coût dynamique À CÔTÉ du bouton « Générer le mouvement » (pas seulement
 // dans les réglages avancés) : rate × durée de la vidéo de référence. Se met à
@@ -31923,7 +31924,7 @@ function _mcUpdateCost(){
   const bgOn = !!window._mcKeepVidBg && !window._mcBgB64;
   const bgSup = bgOn ? CREDIT_COSTS.motionBgPerSec*dur : 0;
   const c=rate*dur + bgSup;
-  const tierLbl = window._mcTier==='pro' ? 'Motion 3.0 · 1080p natif' : (window._mcQuality==='1080' ? 'Motion 2.6 · 720p→1080p' : 'Motion 2.6 · 720p');
+  const tierLbl = window._mcTier==='pro' ? 'Motion 3.0 · 1080p natif' : (window._mcQuality==='1080' ? 'Motion 2.6 · 1080p natif' : 'Motion 2.6 · 720p');
   const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max Kling)</span>' : '';
   // Axel 09/10 : plus de détail « 2 cr/s × 10 s · voix offerte » — le total, le modèle et la définition suffisent
   el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">'+(bgOn?'· fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s ':'')+'· '+tierLbl+coupe+'</span>';
@@ -31985,9 +31986,9 @@ function _mcRenderAdv(){
     <span class="label" style="display:block;margin-bottom:8px">Qualité</span>
     <div class="seg" style="width:100%;margin-bottom:6px">
       <button class="${q==='720'?'on':''}" style="flex:1" onclick="_mcSetQual('720')">720p</button>
-      <button class="${q==='1080'?'on':''}" style="flex:1" onclick="_mcSetQual('1080')">1080p <span class="mono" style="font-size:10px;color:var(--accent-2)">Topaz +1 cr/s</span></button>
+      <button class="${q==='1080'?'on':''}" style="flex:1" onclick="_mcSetQual('1080')">1080p <span class="mono" style="font-size:10px;color:var(--accent-2)">+1 cr/s</span></button>
     </div>
-    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${q==='1080'?"1080p via upscale Topaz après le rendu 720p : +1 crédit / seconde.":"720p rapide. Passe en 1080p (upscale Topaz) pour +1 cr/s, ou choisis Motion 3.0 pour du 1080p natif."}</p>`}
+    <p class="faint" style="font-size:11.5px;margin-bottom:18px">${q==='1080'?"1080p natif : +1 crédit / seconde.":"720p rapide. Passe en 1080p natif pour +1 cr/s, ou choisis Motion 3.0."}</p>`}
     <span class="label" style="display:block;margin-bottom:8px">Rendu</span>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       ${modes.map(([id,t,sub])=>{const o=rnd===id;return `<button onclick="_mcSetRender('${id}')" class="col" style="gap:8px;padding:12px 10px;border-radius:13px;align-items:center;cursor:pointer;font-family:inherit;border:${o?'2px solid var(--accent)':'1px solid var(--border)'};background:${o?'var(--accent-soft)':'var(--panel-1)'}"><div style="width:34px;height:52px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border-2);flex:0 0 auto">${diag(id)}</div><div class="col" style="gap:2px;align-items:center"><span style="font-size:12px;font-weight:${o?700:600};color:${o?'var(--text)':'var(--text-2)'};text-align:center;line-height:1.2">${t}</span><span class="faint" style="font-size:10px;text-align:center">${sub}</span></div></button>`;}).join('')}
@@ -32682,7 +32683,7 @@ async function _mcGenerate(){
   //    le catch global si Kling ou le pipeline échoue. Avant, le débit n'arrivait qu'au SUCCÈS Kling : un appel
   //    direct au proxy (hors app) = Kling gratuit. Motion 3.0 = motion30PerSec ; 2.6 = 2 cr/s ; si Motion 3.0
   //    retombe sur 2.6 (faux positif de modération) on refacture au tarif 2.6 pro, plus bas (voir plus loin).
-  let _mcPreRate = tier==='pro' ? CREDIT_COSTS.motion30PerSec : 2;   // réassignable : mis à jour si repli modération v3→2.6 (refacturation)
+  let _mcPreRate = rate;   // 2 (2.6 720p) · 3 (2.6 1080p natif) · motion30PerSec (3.0) — réassignable : repli modération v3→2.6 (refacturation)
   creditsFlowBegin();
   if(!(await spendCreditsFor(_mcPreRate*dur,'motion'))) return;
   try{
@@ -32806,7 +32807,7 @@ async function _mcGenerate(){
     // Soumet + poll UNE version Kling. Renvoie l'URL vidéo, ou lève une erreur
     // (marquée ._moderation quand le content checker a bloqué → repli possible).
     const runKlingFal = async (ver) => {
-      const model='/fal-ai/kling-video/'+ver+'/'+(tier==='pro'?'pro':'standard')+'/motion-control';
+      const model='/fal-ai/kling-video/'+ver+'/'+((tier==='pro'||q==='1080')?'pro':'standard')+'/motion-control';   // 1080p = modèle pro NATIF (09/10)
       const body={ image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', keep_original_sound:true, prompt:(_mcMotion + _mcId).slice(0,2400) };
       // Kling 3.0 : « elements » = liaison d'identité FACIALE (doc fal : « enhances facial identity
       // preservation », 1 élément, orientation 'video' uniquement) → visage plus fidèle = meilleure qualité perçue.
@@ -32843,23 +32844,24 @@ async function _mcGenerate(){
       }
       throw new Error('Délai dépassé (>11 min) — Kling saturé, réessaie dans un moment');
     };
-    // kie.ai (compte developer) : MÊMES médias, MÊME prompt ; seul le fournisseur change.
-    //   Motion 2.6 = kling-2.6 720p (puis Topaz fal inchangé pour la 1080p) · repli modération 2.6 « pro » = kling-2.6 1080p
-    //   Motion 3.0 = kling-3.0 1080p, fond de l'IMAGE (= comportement fal). Refus de contenu → repli modération existant ;
-    //   panne technique → fal.
+    // kie.ai (Axel 09/10 : TOUS les clients ; compte developer inchangé) : MÊMES médias, MÊME prompt ; seul le fournisseur change.
+    //   Motion 2.6 = kling-2.6 720p ou 1080p NATIF · repli modération 2.6 = kling-2.6 1080p · Motion 3.0 = kling-3.0 1080p,
+    //   fond de l'IMAGE (= comportement fal). Le serveur copie + mesure la vidéo et tire la réserve entière (= fal-proxy).
+    //   Refus de contenu → repli modération existant ; panne technique (réserve rendue) → fal, même op, même prix.
     const runKling = async (ver) => {
-      if(_kieOn()){
+      if(_kieClientOn('motion')){
+        const _dv=_kieDev();
         try{
           const _r = await _kieRun(ver==='v3' ? 'kling-3.0-mc' : 'kling-2.6-mc',
             { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId).slice(0,2400),
-              mode: tier==='pro' ? '1080p' : '720p', background_source:'input_image' },
-            { every:4000, maxPolls:375, onTick:(i)=>_mcProg(i>75?'Génération en cours… (kie.ai est chargé, ça arrive)':'Génération en cours… (kie.ai)', Math.min(88, 22+i*2)) });
+              mode: (tier==='pro' || q==='1080') ? '1080p' : '720p', background_source:'input_image' },
+            { every:4000, maxPolls:375, onTick:(i)=>_mcProg(i>75?('Génération en cours… ('+(_dv?'kie.ai':'Kling')+' est chargé, ça arrive)'):('Génération en cours…'+(_dv?' (kie.ai)':'')), Math.min(88, 22+i*2)) });
           window._aaLastEngine='kie'; window._mcKieRid=_r.rid;
           return _r.url;
         }catch(e){
           if(e && e._kieRefus){ const er=new Error(e.message); er._moderation=true; throw er; }
           if(!_kieCanFallback(e)) throw e;
-          console.warn('[mc] kie KO → repli fal', e); toast('kie.ai indisponible — repli fal');
+          console.warn('[mc] kie KO → repli fal', e);
         }
       }
       window._aaLastEngine='fal';
@@ -32884,7 +32886,7 @@ async function _mcGenerate(){
         //     RESYNCHRONISE le mirror local (sinon le pré-check du re-débit 2.6 lit un solde périmé et 402) ;
         //   • sinon (repli release) → refund_credits rembourse vraiment l'op v3 (réserve intacte).
         // PUIS on débite l'op 2.6 FRAÎCHE : la relance 2.6 tire cette op-là (l'op v3 est remboursée → non tirable).
-        const _v26Rate = tier==='pro' ? 4 : 2;
+        const _v26Rate = tier==='pro' ? 3 : _mcRate();   // 2.6 1080p natif = 3 cr/s (09/10, avant 4 via fal pro)
         if(_v26Rate !== _mcPreRate){
           try{ await creditsFlowRefund('reprise en Kling 2.6 — refacturation au tarif 2.6'); }catch(_){}
           creditsFlowBegin();
@@ -32897,26 +32899,13 @@ async function _mcGenerate(){
     // Garde-fou : la refacturation du repli modération est faite CI-DESSUS (avant la soumission 2.6, condition d'un
     // remboursement réussi de l'op v3). _mcPreRate y est mis à jour → ce bloc ne refacture donc plus rien en pratique
     // (baseRate === _mcPreRate). Conservé pour un éventuel futur chemin qui changerait _mcVer sans passer par le repli.
-    const baseRate = tier==='pro' ? (_mcVer==='v3' ? CREDIT_COSTS.motion30PerSec : 4) : 2;
+    const baseRate = tier==='pro' ? (_mcVer==='v3' ? CREDIT_COSTS.motion30PerSec : 3) : _mcRate();
     if(baseRate !== _mcPreRate){
       try{ await creditsFlowRefund('reprise en Kling 2.6 — refacturation au tarif 2.6'); }catch(_){}
       creditsFlowBegin();
       await spendCreditsFor(baseRate*dur,'motion');
     }
-    // 1080p depuis Standard : Kling sort en 720p → upscale Topaz vers 1080p.
-    // +1 cr/s : débité AVANT l'upscale ; SEUL ce supplément est remboursé si Topaz échoue (le rendu Kling reste dû).
-    if(tier!=='pro' && q==='1080'){
-      const _opsAvantTopaz=_creditOps.length;
-      if(await spendCreditsFor(dur,'motion-topaz')){
-        try{
-          _mcProg('Upscale 1080p (Topaz)…', 90);
-          out = await _mcUpscaleTopaz(out, H);
-        }catch(e){
-          console.error('topaz:',e); toast(e && e._held ? ('Upscale 1080p : '+e.message+' En attendant, la version 720p est livrée.') : 'Upscale 1080p indispo — 720p livré');
-          try{ const tops=_creditOps.splice(_opsAvantTopaz); const reste=_creditOps; _creditOps=tops; await creditsFlowRefund('l\'upscale 1080p a échoué'); _creditOps=reste; }catch(_){}
-        }
-      } else toast('Upscale 1080p non débité — 720p livré');
-    }
+    // (09/10) Plus d'upscale Topaz : la 1080p de Motion 2.6 sort NATIVE de Kling (kie 1080p, ou fal 2.6 pro en repli).
     // ── LOT7/LOT MC · FOND = VRAIE VIDÉO D'ORIGINE, ANIMÉE (v2, 28/08) ──────────
     // Le chemin frame-figée AVANT Kling (plus haut) est conservé : il cale la lumière
     // du rendu. Ici on va au bout : le rendu Kling est détouré (fal-ai/ben/v2/video →
@@ -33178,30 +33167,6 @@ async function _mcApplyBg(charUrl, bgB64, H){
   ctx.drawImage(bgImg,dx,dy,dw,dh);
   ctx.drawImage(cutImg,0,0,W,Hh);
   return await new Promise(r=>cv.toBlob(r,'image/jpeg',0.92));
-}
-/* ── Upscale 1080p via Topaz (fal) — pour le 1080p depuis le forfait Standard ── */
-async function _mcUpscaleTopaz(videoUrl, H){
-  const PROXY=SUPABASE_URL+'/functions/v1/fal-proxy';
-  const post=(p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
-  const get =(p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
-  const sub=await post('/fal-ai/topaz/upscale/video',{ video_url:videoUrl, upscale_factor:1.5, H264_output:true });
-  if(!sub.ok) throw new Error('Topaz '+sub.status+' '+(await sub.text()).slice(0,120));
-  const sd=await sub.json().catch(()=>({}));
-  const stP=sd.status_url?sd.status_url.replace('https://queue.fal.run',''):'';
-  const reP=sd.response_url?sd.response_url.replace('https://queue.fal.run',''):'';
-  if(!stP||!reP) throw new Error('Topaz : pas de status_url');
-  for(let i=0;i<90;i++){
-    await new Promise(r=>setTimeout(r,4000));
-    const pr=await get(stP); if(!pr.ok) continue;
-    const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
-    _mcProg('Upscale 1080p (Topaz)…', Math.min(93, 90+Math.floor(i/6)));
-    if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
-    if(s==='COMPLETED'){ const rr=await get(reP); const rd=await rr.json().catch(()=>({}));
-      { const hm=_falHeldMsg(rd, rr.status); if(hm){ const er=new Error(hm); er._held=true; throw er; } }   // Audit 04/10 (MC-5) : 1080p retenu
-      const u=rd?.video?.url||rd?.video_url; if(!u) throw new Error('Topaz : pas d\'URL'); return u; }
-    throw new Error('Topaz : '+(pd.error?String(pd.error).slice(0,80):s));
-  }
-  throw new Error('Topaz : délai dépassé');
 }
 /* ── Split original + motion → render-worker (vstack 9:16, safe zone) ── */
 // #MC réglages (16/08) : la 1re compo (depuis _mcGenerate) upload le clip motion +

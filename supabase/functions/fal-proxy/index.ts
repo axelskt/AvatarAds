@@ -70,13 +70,13 @@ const SUBMIT_ALLOW: RegExp[] = [
   /^\/fal-ai\/birefnet(\/v2)?$/i, /^\/fal-ai\/imageutils\/rembg$/i,        // détourage
   /^\/fal-ai\/topaz\/upscale\/video$/i,                                     // upscale vidéo
 ]
-// Coût serveur (borne basse) : Kling v3=6, Kling pro=4, Kling standard=2, OmniHuman=5, AuraSR=3, Nano=5,
+// Coût serveur (borne basse) : Kling v3=6, Kling pro=3 (09/10), Kling standard=2, OmniHuman=5, AuraSR=3, Nano=5,
 // Omni edit=3 ; auxiliaires (ben/birefnet/rembg/topaz, couverts par l'op parente) = 1.
 // Audit 02/10 : pour Kling et l'Omni édition d'un CLIENT, ce plancher n'est plus la borne : la réserve exigée est tarif/s ×
 // durée MESURÉE (preparerVideoFal). Il ne reste que le repli du chemin réseau (catch) et les autres modèles.
 function falCost(path: string): number {
   if (/\/kling-video\/v3\//i.test(path)) return 6
-  if (/\/kling-video\//i.test(path)) return /\/pro\//i.test(path) ? 4 : 2
+  if (/\/kling-video\//i.test(path)) return /\/pro\//i.test(path) ? 3 : 2   // 2.6 pro = Motion 2.6 1080p natif, 3 cr/s (09/10)
   if (/omnihuman/i.test(path)) return 5
   if (/nano-banana-pro/i.test(path)) return 5
   if (/aura-sr/i.test(path)) return 3
@@ -287,7 +287,7 @@ serve(async (req: Request) => {
     else if (isSubmit && OMNIHUMAN.test(path.split('?')[0])) {
       const g = await requirePlan(auth.userId, KIE_OPEN['omnihuman-1.5'] || ['elite'], 'OmniHuman'); if (!g.ok) return jsonRes(g.status, { error: g.error })
     }
-    // Audit 04/10 (MC-4) : Kling 2.6 « pro » (1080p, 4 cr/s) = repli modération de Motion 3.0 dans l'app, donc Pro / Élite
+    // Audit 04/10 (MC-4) : Kling 2.6 « pro » (1080p, 3 cr/s depuis le 09/10 = Motion 2.6 1080p natif et repli modération de Motion 3.0), donc Pro / Élite
     // comme Motion 3.0 (_mcGenerate, MC_PRO_PLANS du MCP). Seul Kling 3.0 était gardé côté serveur.
     else if (isSubmit && KLING_26_PRO.test(path.split('?')[0])) {
       const g = await requirePlan(auth.userId, ['pro', 'elite'], 'Motion 1080p (Kling 2.6 pro)'); if (!g.ok) return jsonRes(g.status, { error: g.error })

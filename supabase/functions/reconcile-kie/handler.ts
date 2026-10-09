@@ -24,7 +24,8 @@
 //   ce qui n'a pas été livré (règle refund_credits sans la garde 2 h, bill_reason 'too_old') au lieu de clore sans rien rendre.
 // Déclenché par pg_cron (POST + x-cron-key = CRON_SECRET), comme reconcile-fal-orphans. Best-effort, jamais bloquant.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnedBy, kieBill, kieLibMeta } from '../_shared/kie.ts'
+import { kieKey, kieRecord, kieDownload, kieKindOf, kieOwnedBy, kieBill, kieLibMeta, KIE_MC_ALIASES, kieMcSortieOk } from '../_shared/kie.ts'
+import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : durée de sortie contrôlée, comme kie-proxy
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -56,13 +57,20 @@ export async function handler(req: Request): Promise<Response> {
     } }
 
   // Rotation : tri sur updated_at (chaque passage le repousse) → les tâches bloquées tournent, les nouvelles passent.
-  const cols = 'task_id, user_id, alias, label, created_at, attempts, state, storage_path, op_id'
-  const { data: jA, error } = await svc.from('kie_jobs').select(cols).eq('state', 'pending')
+  // bill_sec (09/10, durée mesurée d'une vidéo Motion Control) : colonne absente avant la migration 20261009150000 → lecture sans elle
+  let cols = 'task_id, user_id, alias, label, created_at, attempts, state, storage_path, op_id, bill_sec'
+  let { data: jA, error } = await svc.from('kie_jobs').select(cols).eq('state', 'pending')
     .lt('created_at', new Date(Date.now() - minAge * 60000).toISOString()).order('updated_at', { ascending: true }).limit(limit)
+  if (error && /bill_sec|42703/i.test(`${error.code || ''} ${error.message || ''}`)) {
+    cols = 'task_id, user_id, alias, label, created_at, attempts, state, storage_path, op_id'
+    ;({ data: jA, error } = await svc.from('kie_jobs').select(cols).eq('state', 'pending')
+      .lt('created_at', new Date(Date.now() - minAge * 60000).toISOString()).order('updated_at', { ascending: true }).limit(limit))
+  }
   if (error) return json({ error: 'list_failed', detail: error.message }, 500)
   const { data: jB } = await svc.from('kie_jobs').select(cols).eq('state', 'fetched')
     .lt('updated_at', new Date(Date.now() - 120 * 60000).toISOString()).order('updated_at', { ascending: true }).limit(limit)
-  const jobs = [...(jA || []), ...(jB || [])]
+  type Job = { task_id: string; user_id: string; alias: string; label: string | null; created_at: string; attempts: number; state: string; storage_path: string | null; op_id: string | null; bill_sec?: number | string | null }
+  const jobs = [...(jA || []), ...(jB || [])] as unknown as Job[]
 
   const now = () => new Date().toISOString()
   const setState = async (id: string, from: string, state: string, extra: Record<string, unknown> = {}) => {
@@ -103,7 +111,7 @@ export async function handler(req: Request): Promise<Response> {
     if (ins.error) throw new Error('bibliothèque : ' + ins.error.message)
     return ins.data.id
   }
-  for (const j of jobs as Array<{ task_id: string; user_id: string; alias: string; label: string | null; created_at: string; attempts: number; state: string; storage_path: string | null; op_id: string | null }>) {
+  for (const j of jobs) {
     // RÉSERVATION : pending|fetched → saving (atomique). Si l'app ou un autre passage l'a prise entre-temps, on passe.
     const from = j.state
     const { data: claimed, error: cErr } = await svc.from('kie_jobs').update({ state: 'saving', updated_at: now() })
@@ -143,6 +151,17 @@ export async function handler(req: Request): Promise<Response> {
 
       const dl = await kieDownload(rec.urls[0]); if (!dl) { await later('téléchargement impossible (trop gros, lien expiré ou hôte refusé)'); continue }
       const k = kieKindOf(dl.ct, dl.buf); if (!k) { await setState(j.task_id, 'saving', 'failed', { last_error: 'format inattendu ' + dl.ct }); failed++; await bill(j, 'refund'); continue }
+      // Motion Control (09/10) : sortie nettement plus longue que la vidéo mesurée à la soumission = entrée maquillée → jamais
+      // rangée ; op RÉGLÉE d'abord (le balayage C ne rembourse pas une ligne réglée), puis tâche close en échec.
+      if (KIE_MC_ALIASES.has(String(j.alias)) && k.kind === 'video') {
+        const outSec = dureeMp4Octets(new Uint8Array(dl.buf))
+        if (!kieMcSortieOk(outSec, j.bill_sec == null ? null : Number(j.bill_sec))) {
+          console.warn('[reconcile-kie] motion : sortie hors durée', j.task_id, `sortie=${outSec}s mesuré=${j.bill_sec}s`)
+          await bill(j, 'settle')
+          await setState(j.task_id, 'saving', 'failed', { last_error: `sortie ${outSec}s > vidéo facturée ${j.bill_sec}s` }); failed++
+          continue
+        }
+      }
       const path = `${j.user_id}/lib/kie-${taskId}.${k.ext}`
       const up = await svc.storage.from('render-media').upload(path, new Uint8Array(dl.buf), { contentType: k.mime, upsert: true })
       if (up.error) { await later('copie storage : ' + up.error.message); continue }

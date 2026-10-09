@@ -11,6 +11,12 @@
 //     les clients, sauf le carré 1:1 qui passe par fal ; Nano 4K et Veo repassent par Google ; OmniHuman par fal).
 //   • + OmniHuman 1.5 (Axel 25/09, livré le 26/09) : clients Élite (Générateur + Montage IA), tirage EXACT de 5 cr × durée
 //     MESURÉE ici sur l'audio (../_shared/omnihuman-bill.ts), 1080p, prompt ≤ 300 ; échec → rendu (repli fal côté app).
+//   • + Motion Control (Axel 09/10 : « push pour tout le monde Motion Control chez kie », 1080p NATIF) : kling-2.6-mc 720p
+//     (Starter / Pro / Élite), 1080p (Pro / Élite), kling-3.0-mc 1080p (Pro / Élite). MÊMES garanties que fal-proxy (PRX-1) :
+//     vidéo du client COPIÉE hors de son dossier (fal-in/<uid>/) puis MESURÉE, c'est la copie que lit kie ; réserve ENTIÈRE
+//     tirée avec un minimum = tarif fal équivalent × durée facturée (− étapes annexes de l'op, ≤ 6) ; orientation « video »
+//     imposée (kie plafonne « image » à 10 s) ; sortie plus longue que la vidéo mesurée → non livrée, op réglée
+//     (kieMcSortieOk). Échec kie → réserve rendue → repli fal de l'app sur la même op (même prix).
 // RGPD : kie.ai n'a ni DPA ni garantie RGPD. L'ouverture aux clients de ces usages est une décision d'Axel du 25/09/2026 ;
 //        la politique de confidentialité doit lister kie.ai comme sous-traitant. La clé reste dans les secrets (KIEAI_API_KEY).
 //
@@ -51,8 +57,9 @@
 // exige /render-media/<uid>/ ; clients : la ligne kie_jobs (écrite à la soumission) doit AUSSI être la leur.
 // Les URL de résultat kie expirent (~24 h) → rapatriement dans render-media/<uid>/kie/<taskId>.<ext>.
 
-import { CORS, jsonRes, authUser, userPlan, refusPlan, billableGate, helperGate, applyReservation, applyOmniReservation, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
-import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn } from '../_shared/kie.ts'
+import { CORS, jsonRes, authUser, userPlan, refusPlan, billableGate, helperGate, applyReservation, applyOmniReservation, applyReservationFull, resolveOp, refundOpTerminal, releaseOmniOp, omniStartUsed, safePath, svc, SUPABASE_URL, OMNI_FLASH_PER_SEC } from '../_shared/guard.ts'
+import { KIE, kieKey as key, kieHeaders, kieRecord as record, kieDownload as download, kieKindOf as kindOf, kieOwnedBy, kieBill, kieLabel, KIE_OPEN, KIE_NO_FALLBACK, KIE_VEO_1080_PLANS, KIE_VEO_FAST_PLANS, kieVeoCost, kieClientsOn, KIE_MC_1080_PLANS, KIE_MC_ALIASES, kieMcFalPath, kieMcSortieOk } from '../_shared/kie.ts'
+import { preparerVideoFal, nettoyerCopiesFal, minimumSurReserve, ANNEXES_MAX_CR, dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Motion Control (09/10) : vidéo du client copiée + mesurée, comme fal-proxy
 import { omnihumanAudio } from '../_shared/omnihuman-bill.ts'   // OmniHuman clients (Axel 25/09) : durée mesurée ici, jamais celle du client
 import { clampOmnihumanPrompt, OMNIHUMAN_PROMPT_MAX } from '../_shared/omnihuman-prompts.ts'
 
@@ -126,15 +133,17 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
   if (alias === 'kling-2.6-mc' || alias === 'kling-3.0-mc') {
     const img = okInput(b.image_url, uid), vid = okInput(b.video_url, uid)
     if (!img || !vid) return { error: 'image_url / video_url : URL de notre storage uniquement' }
+    // Client (09/10) : orientation « video » imposée (kie plafonne « image » à 10 s alors que la réserve suit la vidéo, ≤ 30 s)
     const input: Record<string, unknown> = {
       prompt: str(b.prompt, 2500), input_urls: [img], video_urls: [vid],
-      character_orientation: pick(b.character_orientation, ['video', 'image'] as const, 'video'),
+      character_orientation: full ? pick(b.character_orientation, ['video', 'image'] as const, 'video') : 'video',
     }
     if (alias === 'kling-2.6-mc') {
       input.mode = pick(b.mode, ['720p', '1080p'] as const, '720p')
       return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'kling-2.6/motion-control', input } }
     }
-    input.mode = pick(b.mode, ['1080p', '720p', 'pro', 'std'] as const, '1080p')   // doc kie ambiguë (720p/1080p vs std/pro)
+    // doc kie ambiguë (720p/1080p vs std/pro) ; client : Motion 3.0 = 1080p imposé (le produit vendu, 6 cr/s)
+    input.mode = full ? pick(b.mode, ['1080p', '720p', 'pro', 'std'] as const, '1080p') : '1080p'
     // Fond : celui de l'IMAGE (= comportement fal actuel). input_video seulement sur demande explicite.
     input.background_source = b.background_source === 'input_video' ? 'input_video' : 'input_image'
     return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'kling-3.0/motion-control', callBackUrl: cb, input } }
@@ -166,6 +175,22 @@ function build(alias: Alias, b: Record<string, any>, uid: string | null, full: b
   return { url: `${KIE}/api/v1/jobs/createTask`, body: { model: 'omnihuman-1-5', input } }
 }
 
+// Motion Control (09/10) : crédits que l'op a DÉJÀ payés avant cette vidéo (montant − réserve restante : fond effacé +
+// détourage de « Glisse un fond », tirés sur la même op) — même calcul que fal-proxy (dejaTireOp, PRX-1). Pas d'op → 0 (le
+// tirage tranchera) ; hoquet DB → le plafond (le tirage lui-même laisse passer sur hoquet, voir guard.ts).
+async function dejaTireOp(uid: string, req: Request): Promise<number> {
+  const op = await resolveOp(uid, req)
+  if (!op) return 0
+  if (op === '__ERR__') return ANNEXES_MAX_CR
+  try {
+    const { data, error } = await svc().from('credit_ops').select('amount, reserved_remaining').eq('id', op).eq('user_id', uid).maybeSingle()
+    if (error) return ANNEXES_MAX_CR
+    if (!data) return 0
+    const a = Number(data.amount) || 0, r = data.reserved_remaining == null ? a : (Number(data.reserved_remaining) || 0)
+    return Math.max(0, a - r)
+  } catch { return ANNEXES_MAX_CR }
+}
+
 // Durée FACTURÉE d'une soumission Omni (Axel 25/09) = le cran réellement envoyé à kie (4/6/8/10 s), jamais le chiffre brut
 // du client : une demande de 3 s part en 4 s chez kie et se facture 4 s.
 function omniSecOf(built: { body: Record<string, unknown> }): number {
@@ -188,7 +213,7 @@ function kieErr(code: number, msg: string, billing = 'none') {
 
 // Suivi, rapatriement et détection du format : ../_shared/kie.ts (partagés avec reconcile-kie, le filet).
 
-type JobRow = { state: string; library_id: string | null; op_id: string | null; bill_state: string | null; alias: string | null }
+type JobRow = { state: string; library_id: string | null; op_id: string | null; bill_state: string | null; alias: string | null; bill_sec?: number | string | null }
 
 export async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -253,6 +278,26 @@ export async function handler(req: Request): Promise<Response> {
         if (!isOwner && alias === 'veo3-fast' && !KIE_VEO_FAST_PLANS.includes(plan)) return jsonRes(403, { error: refusPlan('Veo Fast', KIE_VEO_FAST_PLANS), billing: 'none' })
         if (!isOwner && built.body.resolution === '1080p' && !KIE_VEO_1080_PLANS.includes(plan)) return jsonRes(403, { error: refusPlan('1080p', KIE_VEO_1080_PLANS), billing: 'none' })
       }
+      // Motion Control (09/10) : 1080p de la 2.6 = Pro / Élite (Motion 3.0 l'est déjà par KIE_OPEN), puis vidéo du client
+      // COPIÉE (fal-in/<uid>/, hors de son dossier : il ne peut plus la remplacer après la mesure) et MESURÉE ; kie lit la copie.
+      // Tout refus ici arrive AVANT le tirage (billing 'none' → l'app peut replier sur fal, qui refusera de même).
+      const isMc = KIE_MC_ALIASES.has(alias)
+      const mcSt = svc().storage.from(BUCKET)
+      let mcCopie = '', mcCost = 0, mcSec = 0
+      const jeterMc = async () => { if (mcCopie) { try { await mcSt.remove([mcCopie]) } catch { /* best-effort */ } mcCopie = '' } }
+      if (isMc && uid && !isDev) {
+        const input = built.body.input as Record<string, unknown>
+        if (!isOwner && alias === 'kling-2.6-mc' && input.mode === '1080p' && !KIE_MC_1080_PLANS.includes(plan)) return jsonRes(403, { error: refusPlan('Motion 1080p', KIE_MC_1080_PLANS), billing: 'none' })
+        const pv = await preparerVideoFal({ path: kieMcFalPath(alias, input.mode), uid, base: SUPABASE_URL, bucket: BUCKET, st: mcSt,
+          raw: JSON.stringify({ image_url: b?.image_url, video_url: b?.video_url, prompt: input.prompt, character_orientation: 'video' }) })
+        if (!pv.ok) return jsonRes(pv.status, { error: pv.error, billing: 'none' })
+        mcCopie = pv.copie; mcSec = pv.mesureSec; mcCost = pv.cost
+        let vurl = ''
+        try { vurl = String((JSON.parse(pv.body) as { video_url?: unknown }).video_url || '') } catch { vurl = '' }
+        if (!vurl.startsWith(STORE_SIGN)) { await jeterMc(); return jsonRes(503, { error: 'préparation de la vidéo impossible — réessaie dans un instant', billing: 'none' }) }
+        input.video_urls = [vurl]
+        console.log('[kie] motion vidéo', who, `mesuré=${pv.mesureSec}s facturé=${pv.factureSec}s coût=${pv.cost}`)
+      }
 
       // ── Réservation (clients, 25/09) : tirée AVANT l'appel kie, EXACTEMENT comme les proxys historiques ──
       //    Nano 4K = 5 sur l'op x-aa-op (google-ai-proxy) ; Omni = EXACTEMENT 5 × le cran envoyé à kie (Axel 25/09) :
@@ -273,10 +318,14 @@ export async function handler(req: Request): Promise<Response> {
       let opId: string | undefined, drawn = 0
       if (uid && !noBill) {
         // Omni et Veo : draw_omni_reservation = coût MOINS l'image de départ d'Express déjà tirée sur l'op (image OFFERTE, 25/09)
+        // Motion Control (09/10) : réserve ENTIÈRE (une op = une vidéo, comme fal-proxy) avec minimum = tarif × durée facturée,
+        // moins les étapes annexes déjà payées sur l'op (≤ 6). Le tiré exact est gardé (drawn) → rendu tel quel sur échec.
         const rr = (alias === 'omni-flash' || isVeo)
           ? await applyOmniReservation({ req, userId: uid, proxy: 'kie', cost, label: alias })
+          : isMc
+          ? await applyReservationFull({ req, userId: uid, proxy: 'kie', label: alias, minCost: minimumSurReserve(mcCost, await dejaTireOp(uid, req)) })
           : await applyReservation({ req, userId: uid, proxy: 'kie', cost: omnihCost || cost, label: alias })   // OmniHuman : tirage EXACT
-        if (!rr.ok) return jsonRes(rr.status, { error: rr.error, billing: 'unfunded' })
+        if (!rr.ok) { await jeterMc(); return jsonRes(rr.status, { error: rr.error, billing: 'unfunded' }) }
         // Montant RÉELLEMENT tiré (relecture 25/09), jamais `cost` : en mode ombre (RESERVE_ENFORCE≠1) ou sur hoquet DB, une
         // réserve insuffisante passe avec 0 tiré. Rien tiré = op NON liée à cette tâche → ni release, ni refund, ni règlement
         // fantôme. Sinon : op Express 33 déjà tirée de 30 par une vidéo en cours, 2e soumission refusée par kie → release 30
@@ -313,12 +362,14 @@ export async function handler(req: Request): Promise<Response> {
         // SANS réponse (délai 30 s, réseau) : kie a peut-être créé la tâche, mais sans taskId personne ne pourra la récupérer
         // → remboursement serveur (comme fal-proxy) et `uncertain` : l'app NE replie PAS (risque de payer deux fois).
         console.warn('[kie] submit sans réponse', alias, (e as Error)?.message)
+        await jeterMc()   // Motion : une tâche créée malgré tout échouera (entrée illisible) au lieu de tourner pour rien
         const billing = await failSubmit('soumission sans réponse', true)
         return jsonRes(502, { error: 'kie.ai n’a pas répondu — réessaie dans un instant', uncertain: true, billing })
       }
       const taskId = String(j?.data?.taskId || '')
       if (j?.code !== 200 || !/^[A-Za-z0-9_-]{6,120}$/.test(taskId)) {
         console.warn('[kie] submit refusé', alias, j?.code, String(j?.msg || '').slice(0, 200))
+        await jeterMc()
         const billing = await failSubmit('kie ' + (j?.code || r.status) + ' : ' + String(j?.msg || ''), false)
         return kieErr(Number(j?.code) || r.status, j?.msg, billing)
       }
@@ -329,8 +380,11 @@ export async function handler(req: Request): Promise<Response> {
         // Libellé Bibliothèque (filet) sans nom de moteur pour un client ; start_img = remise d'image à rendre avec le tirage.
         const row: Record<string, unknown> = { task_id: rid, user_id: uid, alias, label: kieLabel(alias, isDev),
           ...(opId ? { op_id: opId, drawn, bill_state: 'drawn', billed_at: new Date().toISOString() } : {}),
-          ...(startImg > 0 ? { start_img: startImg } : {}) }
+          ...(startImg > 0 ? { start_img: startImg } : {}),
+          ...(mcSec > 0 ? { bill_sec: Math.round(mcSec * 1000) / 1000 } : {}) }   // Motion (09/10) : durée mesurée → contrôle de la sortie
         let jErr = (await svc().from('kie_jobs').insert(row)).error
+        // Colonne bill_sec absente (fonction déployée avant la migration 20261009150000) → ligne sans elle (sortie non contrôlée).
+        if (jErr && 'bill_sec' in row && /bill_sec|PGRST204|42703/i.test(`${jErr.code || ''} ${jErr.message || ''}`)) { delete row.bill_sec; jErr = (await svc().from('kie_jobs').insert(row)).error }
         // Colonne start_img absente (fonction déployée avant la migration 20260925230000) → ligne sans elle : suivi, règlement
         // et filet intacts ; seul le repli Google après un échec kie manquerait la remise (402 propre, crédits rendus).
         if (jErr && 'start_img' in row && /start_img|PGRST204|42703/i.test(`${jErr.code || ''} ${jErr.message || ''}`)) { delete row.start_img; jErr = (await svc().from('kie_jobs').insert(row)).error }
@@ -340,11 +394,13 @@ export async function handler(req: Request): Promise<Response> {
           // Client sans ligne = ni suivi (propriété), ni règlement, ni filet → on rend ses crédits tout de suite ; la tâche
           // kie tourne pour rien (coût kie seul). `uncertain` : pas de repli (la tâche existe chez kie). Developer : inchangé.
           if (!isDev) {
+            await jeterMc()
             const billing = !opId ? 'none' : (await refundOpTerminal(uid, opId, drawn || 1)) ? 'refunded' : (drawn > 0 ? (await releaseOmniOp(uid, opId, drawn, startImg), 'released') : 'none')
             return jsonRes(503, { error: 'suivi de la génération impossible — crédits rendus, réessaie', uncertain: true, billing })
           }
         }
       }
+      if (mcCopie && uid) nettoyerCopiesFal(mcSt, uid).catch(() => 0)   // anciennes copies (lien expiré) de cet utilisateur
       return jsonRes(200, { request_id: rid, status_url: `/kie/requests/${rid}/status`, response_url: `/kie/requests/${rid}`, status: 'IN_QUEUE', ...((isDev || !uid) ? { provider: 'kie' } : {}) })
     }
 
@@ -367,7 +423,11 @@ export async function handler(req: Request): Promise<Response> {
       // par le param kie ci-dessous. Lecture impossible → 503 (l'app réessaie), jamais un accès « au doute ». Developer : inchangé.
       let job: JobRow | null = null
       if (uid) {
-        const { data: jr, error: jrErr } = await svc().from('kie_jobs').select('state, library_id, op_id, bill_state, alias').eq('task_id', rid).eq('user_id', uid).limit(1)
+        let jr: unknown[] | null = null, jrErr: { code?: string; message: string } | null = null
+        { const r1 = await svc().from('kie_jobs').select('state, library_id, op_id, bill_state, alias, bill_sec').eq('task_id', rid).eq('user_id', uid).limit(1); jr = r1.data; jrErr = r1.error }
+        if (jrErr && /bill_sec|42703/i.test(`${jrErr.code || ''} ${jrErr.message || ''}`)) {   // colonne absente (avant la migration 20261009150000)
+          const r2 = await svc().from('kie_jobs').select('state, library_id, op_id, bill_state, alias').eq('task_id', rid).eq('user_id', uid).limit(1); jr = r2.data; jrErr = r2.error
+        }
         if (jrErr) { if (!isDev) return jsonRes(503, { error: 'suivi momentanément indisponible', detail: [{ type: 'transient', msg: jrErr.message }] }) }
         else job = (jr && jr[0]) as JobRow || null
         if (!job && !isDev) return jsonRes(404, { error: 'tâche kie introuvable' })
@@ -433,6 +493,17 @@ export async function handler(req: Request): Promise<Response> {
         if (!dl) { await unclaim(); return jsonRes(502, { error: 'rapatriement du résultat kie impossible' }) }
         const k = kindOf(dl.ct, dl.buf)
         if (!k) { await unclaim(); return jsonRes(502, { error: 'format de résultat kie inattendu' }) }
+        // Motion Control (09/10) : sortie nettement plus longue que la vidéo mesurée à la soumission = entrée maquillée → non
+        // livrée ; op RÉGLÉE d'abord (le filet ne la rembourse pas), puis tâche close en échec (le filet ne la range pas).
+        if (uid && job && KIE_MC_ALIASES.has(String(job.alias)) && k.kind === 'video') {
+          const outSec = dureeMp4Octets(new Uint8Array(dl.buf))
+          if (!kieMcSortieOk(outSec, job.bill_sec == null ? null : Number(job.bill_sec))) {
+            console.warn('[kie] motion : sortie hors durée', rid, who, `sortie=${outSec}s mesuré=${job.bill_sec}s`)
+            if (job.op_id) await kieBill(svc(), uid, rid, 'settle')
+            await svc().from('kie_jobs').update({ state: 'failed', last_error: `sortie ${outSec}s > vidéo facturée ${job.bill_sec}s`, updated_at: new Date().toISOString() }).eq('task_id', rid).eq('user_id', uid)
+            return jsonRes(422, { status: 'FAILED', error: 'vidéo de référence non conforme — génération non livrée', detail: [{ type: 'duration', msg: 'sortie plus longue que la vidéo facturée' }], billing: 'settled' })
+          }
+        }
         dst = `${base}.${k.ext}`; kind = k.kind; host = dl.host
         const { error: upErr } = await st.upload(dst, new Uint8Array(dl.buf), { contentType: k.mime, upsert: true })
         if (upErr) { await unclaim(); return jsonRes(500, { error: 'copie du résultat impossible : ' + upErr.message }) }

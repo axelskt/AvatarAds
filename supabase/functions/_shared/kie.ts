@@ -9,7 +9,7 @@ export const kieKey = () => Deno.env.get('KIEAI_API_KEY') ?? ''
 export const kieHeaders = () => ({ Authorization: `Bearer ${kieKey()}`, 'Content-Type': 'application/json' })
 export const MAX_RESULT_BYTES = 90 * 1024 * 1024   // mémoire Edge = 256 Mo (lecture en flux, abandon au-delà)
 
-// ── Ouverture aux clients payants (Axel 25/09/2026) : EXACTEMENT quatre usages. alias → plans autorisés (owner et
+// ── Ouverture aux clients payants (Axel 25/09/2026) : quatre usages, + Motion Control (Axel 09/10/2026). alias → plans autorisés (owner et
 //    developer passent toujours). Tout autre alias (Veo Fast, Kling Motion Control…) reste developer seulement.
 //    Plans = ceux de l'UI : « Améliorer en 4K » dès Starter ; Omni Flash image→vidéo (Express « UGC réel » + Voix native
 //    du Générateur) = TOUS les plans payants depuis le 25/09 (Axel : « tout le monde y a droit pareil, Starter inclus »),
@@ -26,7 +26,31 @@ export const KIE_OPEN: Record<string, string[]> = {
   'omni-flash': ['starter', 'pro', 'elite'],
   'veo3-lite': ['starter', 'pro', 'elite'],
   'omnihuman-1.5': ['pro', 'elite'],   // Axel 26/09 : OmniHuman sélectionnable en Pro et Élite (jamais Starter) — Générateur + Montage IA ; repli fal côté app
+  // Motion Control (Axel 09/10 : « push pour tout le monde Motion Control chez kie », 1080p NATIF au lieu de Topaz) :
+  // 2.6 720p dès Starter, 2.6 1080p = Pro / Élite (KIE_MC_1080_PLANS), 3.0 1080p = Pro / Élite — mêmes plans que l'app et
+  // que les gates de fal-proxy (le repli). Vidéo du client COPIÉE + MESURÉE côté serveur, tirage de la réserve ENTIÈRE avec un
+  // minimum = tarif × durée (comme fal-proxy) ; durée de SORTIE contrôlée avant livraison (kieMcSortieOk).
+  'kling-2.6-mc': ['starter', 'pro', 'elite'],
+  'kling-3.0-mc': ['pro', 'elite'],
 }
+export const KIE_MC_1080_PLANS = ['pro', 'elite']
+// Tarif d'une tâche Motion Control = celui du chemin fal équivalent (tarifVideoFal : 2.6 720p 2 cr/s · 2.6 1080p 3 cr/s ·
+// 3.0 6 cr/s), pour que les deux fournisseurs facturent EXACTEMENT pareil (l'app débite le même prix, et replie sur fal
+// avec la même op). Coût kie (09/10) : 2.6 720p 0,055 $/s · 2.6 1080p 0,09 $/s · 3.0 1080p 0,135 $/s.
+export function kieMcFalPath(alias: string, mode: unknown): string {
+  if (alias === 'kling-3.0-mc') return '/fal-ai/kling-video/v3/pro/motion-control'
+  return String(mode) === '1080p' ? '/fal-ai/kling-video/v2.6/pro/motion-control' : '/fal-ai/kling-video/v2.6/standard/motion-control'
+}
+// Durée de SORTIE d'une tâche Motion Control (kie-proxy au rapatriement, reconcile-kie dans le filet). Kling rend la durée de
+// la vidéo de référence ; une sortie nettement plus longue que la vidéo MESURÉE à la soumission (`billSec`) = fichier
+// d'entrée maquillé (durée de conteneur trompeuse) → résultat NON livré, op réglée (crédits gardés). Marge large : jamais un
+// client honnête (arrondi à la seconde du fournisseur, ré-encodage). Sortie illisible ou tâche sans mesure → livrée.
+export function kieMcSortieOk(outSec: number | null, billSec: number | null | undefined): boolean {
+  const b = Number(billSec)
+  if (!(b > 0) || !(outSec && outSec > 0)) return true
+  return !(outSec > b + 3 && outSec > b * 1.25)
+}
+export const KIE_MC_ALIASES = new Set(['kling-2.6-mc', 'kling-3.0-mc'])
 export const KIE_VEO_1080_PLANS = ['pro', 'elite']
 export const KIE_VEO_FAST_PLANS = ['pro', 'elite']
 // Tarif Veo facturé au client (crédits / seconde, 25/09 : prix INCHANGÉS par rapport à Google) = CREDIT_COSTS de l'app
@@ -70,6 +94,8 @@ export const KIE_CLIENT_LABELS: Record<string, string> = {
   'veo3-fast': 'Vidéo Express',
   'omni-flash': 'Vidéo',
   'omnihuman-1.5': 'Vidéo avatar',   // OmniHuman (26/09) : jamais le nom du moteur ni du fournisseur côté client
+  'kling-2.6-mc': 'Motion Control',
+  'kling-3.0-mc': 'Motion Control',
 }
 export const kieLabel = (alias: string, dev: boolean): string => dev ? (KIE_LABELS[alias] || 'kie.ai') : (KIE_CLIENT_LABELS[alias] || 'Génération')
 // Métadonnées de la ligne Bibliothèque écrite par le filet. « Compte developer » = le PLAN du propriétaire (lu par le filet),
