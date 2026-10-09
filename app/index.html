@@ -88,11 +88,9 @@ try{
 }
 /* .glass : le voile blanc du sombre devient un voile noir en clair (sinon invisible) */
 :root[data-theme="light"] .glass, .gen-light .glass{ background:linear-gradient(180deg,rgba(0,0,0,.03),rgba(0,0,0,0)) }
-/* Voile « verre » façon Apple derrière Ma marque (Axel 09/10) : l'app reste visible, floutée et saturée, au lieu d'un fond noir.
-   Le voile du compte (en dessous) s'efface pendant ce temps : un parent avec backdrop-filter borne le flou de l'enfant à son
-   propre contenu (il ne verrait plus l'app). -webkit- pour Safari < 18. */
-.aa-verre{ background:rgba(20,19,23,.30) !important; -webkit-backdrop-filter:blur(28px) saturate(175%) !important; backdrop-filter:blur(28px) saturate(175%) !important }
-:root[data-theme="light"] .aa-verre{ background:rgba(250,249,252,.40) !important }
+/* Ma marque (Axel 09/10) : MÊME fond que « Mon compte » — un seul voile. La modale vit dans l'overlay du compte : leurs deux
+   voiles sombres s'empilaient (fond presque noir). Pendant Ma marque, le voile du compte s'efface et seul celui de Ma marque
+   (identique : rgba(5,5,7,.7) + flou 6 px) reste ; sans backdrop-filter sur le parent, son flou voit bien l'app. */
 #accountOverlay.aa-sous-verre{ background:transparent !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important }
 /* Switch de thème INSTANTANÉ : le temps du basculement on coupe TOUTES les transitions.
    Sans ça, ~190 éléments en transition:all animent en même temps background/bordure/gradient/
@@ -5087,7 +5085,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 
 
     <!-- 🧠 Modale « Ma marque » — maquette Claude Design, reprise au pixel -->
-    <div id="brandModal" class="aa-verre" onclick="if(event.target===this)closeBrandModal()" style="display:none;position:fixed;inset:0;z-index:9880;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
+    <div id="brandModal" onclick="if(event.target===this)closeBrandModal()" style="display:none;position:fixed;inset:0;z-index:9880;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
       <div class="card" style="width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
 
         <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">
