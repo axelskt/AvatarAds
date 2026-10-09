@@ -1395,7 +1395,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <svg id="bypassHedraIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>
                 <div>
                   <div style="font-size:13px;font-weight:700">Utiliser ma vidéo avatar existante</div>
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="bypassHedraSubLabel">Importe une vidéo Hedra · 0 crédit · téléchargements illimités</div>
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--text3)" id="bypassHedraSubLabel">Importe une vidéo avatar déjà générée · 0 crédit · téléchargements illimités</div>
                 </div>
               </div>
               <div id="bypassHedraSwitch" style="width:42px;height:24px;background:var(--bg5);border-radius:12px;position:relative;transition:all .25s;flex-shrink:0">
@@ -1538,7 +1538,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
               <div>
                 <div style="font-size:13px;font-weight:700;color:var(--green)">Mode "Audio gameplay" activé</div>
-                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">La voix de ton gameplay animera la bouche de l'avatar · ElevenLabs ignoré</div>
+                <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:2px">La voix de ton gameplay animera la bouche de l'avatar · voix IA ignorée</div>
               </div>
             </div>
 
@@ -1555,7 +1555,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg>
                   <div>
                     <div style="font-size:12px;font-weight:700">Supprimer les silences — voix IA</div>
-                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Auto sur la voix ElevenLabs (clone/preset) · voix plus punchy</div>
+                    <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:1px">Auto sur la voix IA (clone/preset) · voix plus punchy</div>
                   </div>
                 </div>
                 <input type="checkbox" id="genTtsSilence" checked style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
@@ -1604,7 +1604,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               </div>
               <button id="cloneBtn" onclick="cloneVoice()" disabled
                 style="width:100%;margin-top:10px;padding:13px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:not-allowed;transition:all .2s">
-                Cloner ma voix avec ElevenLabs →
+                Cloner ma voix →
               </button>
 
               <!-- RÉSULTATS CLONAGE -->
@@ -2016,7 +2016,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <!-- WHISPER IA — entre « Sous-titres » et les styles (Axel 02/09) -->
             <div class="fld" style="margin-bottom:12px" id="whisperRow">
                               <!-- Whisper IA — dès Starter (maquette : rangée, icône micro à gauche, fond accent-soft plat) -->
-              <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--surface);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div></button>
+              <button id="whisperBtn" onclick="whisperTranscribe()" style="width:100%;margin-bottom:10px;padding:14px 16px;border-radius:14px;border:2px solid var(--accent-line);background:var(--surface);color:var(--text);font-family:var(--font);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:14px;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcription IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div></button>
             </div>
 
             <!-- STYLE SOUS-TITRES (le titre « SOUS-TITRES » de la section suffit — Axel 21/08) -->
@@ -2248,7 +2248,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <div class="flbl" style="font-size:11px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Modèle d'avatar</div>
               <div class="row gap12" style="align-items:center;padding:13px 15px;border-radius:12px;border:1px solid var(--border);background:var(--surface)">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg>
-                <div class="col" style="line-height:1.35;min-width:0"><span style="font-weight:700;font-size:14px">Lipsync déjà fait</span><span class="faint" style="font-size:12px">Ta vidéo voix native est utilisée telle quelle : pas de Hedra, 0 crédit de lipsync.</span></div>
+                <div class="col" style="line-height:1.35;min-width:0"><span style="font-weight:700;font-size:14px">Lipsync déjà fait</span><span class="faint" style="font-size:12px">Ta vidéo voix native est utilisée telle quelle : aucun lipsync à refaire, 0 crédit.</span></div>
               </div>
             </div>
 
@@ -2819,7 +2819,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div class="muted" style="margin-top:6px;font-size:14px">Toutes tes vidéos générées</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-            <button onclick="document.getElementById('libImportInput').click()" style="width:auto;padding:9px 16px;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px" onmouseover="this.style.borderColor='var(--border-2)';this.style.background='var(--surface-2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)';this.style.color='var(--text2)'" title="Importer une vidéo Hedra déjà générée pour la re-composer avec des sous-titres">
+            <button onclick="document.getElementById('libImportInput').click()" style="width:auto;padding:9px 16px;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:var(--font);font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px" onmouseover="this.style.borderColor='var(--border-2)';this.style.background='var(--surface-2)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)';this.style.color='var(--text2)'" title="Importer une vidéo avatar déjà générée pour la re-composer avec des sous-titres">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 13h5l1 2h4l1-2h5"/></svg> Importer
             </button>
             <input type="file" id="libImportInput" accept="video/*" style="display:none" onchange="importHedraToLibrary(this.files[0])">
@@ -3298,9 +3298,9 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <div style="width:56px;height:56px;margin:0 auto 14px;border-radius:16px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);display:grid;place-items:center">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ff8a94" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h0"/></svg>
             </div>
-            <div style="font-weight:700;font-size:16px;margin-bottom:6px">OpenAI a refusé cette image</div>
-            <div class="faint" style="font-size:13px;line-height:1.55;margin-bottom:18px">Son filtre bloque cette photo, même en modération basse. On peut réessayer avec <b style="color:var(--text-2)">Nano Banana Pro</b> — un autre moteur, plus permissif, en 4K.<br>Ton crédit précédent a été remboursé.</div>
-            <button onclick="_imgRetryViaNano()" id="imgNanoRetryBtn" style="width:100%;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(255,107,53,.3)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Réessayer via Nano Banana Pro <span style="font-size:11px;background:rgba(0,0,0,.2);padding:2px 8px;border-radius:20px;font-family:var(--mono);font-weight:800">5 CR</span></button>
+            <div style="font-weight:700;font-size:16px;margin-bottom:6px">Le moteur a refusé cette image</div>
+            <div class="faint" style="font-size:13px;line-height:1.55;margin-bottom:18px">Son filtre bloque cette photo, même en modération basse. On peut réessayer avec <b style="color:var(--text-2)">un autre moteur</b>, plus permissif, en 4K.<br>Ton crédit précédent a été remboursé.</div>
+            <button onclick="_imgRetryViaNano()" id="imgNanoRetryBtn" style="width:100%;padding:14px;background:linear-gradient(180deg,var(--accent-2),var(--accent));border:none;border-radius:12px;color:#1A0A02;font-family:var(--font);font-size:14.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(255,107,53,.3)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>Réessayer en 4K <span style="font-size:11px;background:rgba(0,0,0,.2);padding:2px 8px;border-radius:20px;font-family:var(--mono);font-weight:800">5 CR</span></button>
             <button onclick="document.getElementById('imgNanoOffer').style.display='none';_imgIdleShow(true)" style="width:100%;margin-top:8px;padding:9px;background:transparent;border:none;color:var(--text-3);font-family:var(--mono);font-size:12px;cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-3)'">Annuler</button>
           </div>
         </div>
@@ -4051,7 +4051,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             </div>
             <!-- Prompt -->
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0">
-              <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto avec Veo).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:150px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" oninput="_expApplyAutoDur()" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+              <textarea id="expPrompt" placeholder="Décris ta vidéo ET ce que le perso dit à voix haute (lip-sync auto).  Ex : un coach fitness énergique face caméra dit : « Voici ma routine du matin qui va tout changer »" style="flex:1;min-height:150px;max-height:260px;resize:vertical;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.55;outline:none" oninput="_expApplyAutoDur()" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
               <!-- Presets (Améliorer / Face caméra / Cartoon / Fitness / Produit) retirés — Axel 17/08 -->
               <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
                 <button id="expGenBtn" onclick="expressCreate()" class="btn btn-lg" style="min-width:272px;font-size:18.5px;padding:14px 34px;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1A0A02;font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 12px 30px -12px var(--accent-glow)">
@@ -5058,7 +5058,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
     <!-- Statut APIs intégrées -->
     <div style="background:rgba(0,217,126,0.06);border:1px solid rgba(0,217,126,0.2);border-radius:10px;padding:14px 16px;margin-bottom:20px">
       <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px">✓ Outils IA inclus dans ton abonnement</div>
-      <div style="font-size:11px;color:var(--green);opacity:.75">Script IA · ElevenLabs · Avatar IA — zéro configuration requise</div>
+      <div style="font-size:11px;color:var(--green);opacity:.75">Script IA · Voix IA · Avatar IA — zéro configuration requise</div>
     </div>
 
 
@@ -5452,7 +5452,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v16M17 4v16"/></svg> Avatar lipsync — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">5 cr/s</b> en Omni<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg> Voix IA — <b style="color:var(--text2)">+0,5 cr/s</b> · gratuit avec ton MP3<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express — <b style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite<br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 12a8.5 8.5 0 01-12.3 7.6L3 21l1.4-5.2A8.5 8.5 0 1121 12z"/><path d="M9 10.5v3M12 8.5v7M15 10.5v3"/></svg> Omni Flash · voix native — <b data-cc-sec="omniFlashPerSec" style="color:var(--text2)">5 cr/s</b> en 1080p<br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 12a8.5 8.5 0 01-12.3 7.6L3 21l1.4-5.2A8.5 8.5 0 1121 12z"/><path d="M9 10.5v3M12 8.5v7M15 10.5v3"/></svg> Voix native — <b data-cc-sec="omniFlashPerSec" style="color:var(--text2)">5 cr/s</b> en 1080p<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni · transformation vidéo — <b style="color:var(--text2)">3 cr/s</b> en 720p · <b style="color:var(--text2)">4 cr/s</b> en 1080p<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">6 cr/s</b> en Motion 3.0 · remplacer l’audio <b style="color:var(--text2)">gratuit</b><br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9.9 2.6l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5zM18 13l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg> Montage IA — <b style="color:var(--text2)">8 crédits</b> · <b style="color:var(--text2)">4</b> pour un re-rendu<br>
@@ -9215,12 +9215,12 @@ async function testKey(k){
   try{
     if(k==='gpt'){
       // GPT est côté serveur via proxy — pas de test clé client
-      ok=true; msg='✓ OpenAI géré côté serveur (proxy Supabase)';
+      ok=true; msg='✓ Géré côté serveur';
     } else if(k==='el'){
       // ElevenLabs est côté serveur via proxy — pas de test clé client
-      ok=true; msg='✓ ElevenLabs géré côté serveur (proxy Supabase)';
+      ok=true; msg='✓ Géré côté serveur';
     } else if(k==='hedra'){
-      ok=true; msg='✓ Hedra géré côté serveur (proxy Supabase)';
+      ok=true; msg='✓ Géré côté serveur';
     }
   }catch(e){msg='✗ Erreur réseau';}
   badgeEl.innerHTML=`<span class="key-badge ${ok?'ok':'err'}">${msg}</span>`;
@@ -9604,7 +9604,7 @@ let _imgRefDataUrl         = null;
 let _imgRemoveBg           = false;      // suppression de fond auto
 
 const _IMG_MODELS = [
-  { id:'gptimage', label:'GPT Image', sub:'OpenAI · le meilleur' },
+  { id:'gptimage', label:'Images IA', sub:'le meilleur' },
 ];
 
 function _imgInitModelGrid(){
@@ -9902,7 +9902,7 @@ async function _imgMakeRealistic(btn){
     // forcée dans _nbEdit (plus de repli en basse déf qui pixélisait). Repli gpt-image edit.
     try{
       url = await _nbRefine4K(token, dataUrl, aspect);
-      if(!url) throw new Error('Nano Banana Pro : aucune image');
+      if(!url) throw new Error('Le moteur 4K n\'a renvoyé aucune image');
     }catch(e){
       if(e && e._kieStage) throw e;   // kie : dev (aucun repli, Axel 23/09) ou issue inconnue / crédits rendus (clients 25/09) → pas de repli
       engine='gpt-image';
@@ -9915,7 +9915,7 @@ async function _imgMakeRealistic(btn){
     _imgSaveHistory(url, '4K', dispFmt);
     _imgRenderHistory();
     creditsFlowDone();
-    toast('Amélioré en 4K — '+engine+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
+    toast('Amélioré en 4K'+(_kieDev()?' — '+engine:'')+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
   }catch(e){ await creditsFlowRefund('l\'amélioration 4K a échoué'); toast(''+(e.message||e)); }
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
@@ -10008,7 +10008,7 @@ async function _imgMakeRealisticBatch(btn){
         const aspect = (x.w && x.h) ? _nbAspectFor(x.w, x.h) : (_NB_FMT_ASPECT[_imgSelectedFormat] || '9:16');
         let tk = token; try{ tk = (await sb.auth.getSession()).data.session?.access_token || token; }catch(_){}   // jeton relu : le lot peut durer
         let url; const nm = {};
-        try{ url = await _nbRefine4K(tk, x.d, aspect, op, nm); if(!url) throw new Error('Nano Banana Pro : aucune image'); if(nm.engine==='kie') viaKie++; else { viaGoogle++; if(nm.fellBack) fellBack++; } }
+        try{ url = await _nbRefine4K(tk, x.d, aspect, op, nm); if(!url) throw new Error('Le moteur 4K n\'a renvoyé aucune image'); if(nm.engine==='kie') viaKie++; else { viaGoogle++; if(nm.fellBack) fellBack++; } }
         catch(e){
           if(e && e._kieStage) throw e;   // kie : dev (aucun repli, Axel 23/09) ou issue inconnue / crédits rendus (clients 25/09) → pas de repli gpt-image
           console.warn('Nano Banana Pro indispo (4K lot '+(i+1)+'/'+n+'), repli gpt-image :', e);
@@ -10071,13 +10071,13 @@ async function _imgCorrectDetails(btn){
     // #corr2-hq (Axel 30/08) : bornes HAUTES — on garde presque toute la définition de l'image
     // importée (inMax 2560, plus 1536) et on ne replafonne plus la sortie sous l'original (outMax 4096).
     const url = await _falAuraSR(dataUrl, { inMax:2560, outMax:4096, q:0.95 });   // AuraSR ×4 non génératif, haute déf
-    if(!url) throw new Error('AuraSR : aucune image');
+    if(!url) throw new Error('L\'amélioration n\'a renvoyé aucune image');
     _imgMonthIncrement();
     _imgShowSingle(url, _imgSelectedFormat);
     _imgSaveHistory(url, 'Détails', _imgSelectedFormat);
     _imgRenderHistory();
     creditsFlowDone();
-    toast('Détails du visage appliqués — AuraSR');
+    toast('Détails du visage appliqués');
   }catch(e){ await creditsFlowRefund('les détails du visage ont échoué'); toast(''+(typeof _imgFriendlyErr==='function'?_imgFriendlyErr(e&&e.message):((e&&e.message)||e))); }
   finally{ if(typeof _imgProgStop==='function') _imgProgStop(); if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=orig; } if(overlay) overlay.style.display='none'; }
 }
@@ -10906,7 +10906,7 @@ function _nbAspect(w, h){
 // Partagé par « Restaurer les détails » (4K) et « Rendre réaliste » (2K).
 async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta){   // chain : upscale du palier 4K (droit payé par l'appel gpt, x-aa-chain) · meta (Axel 25/09) : { kie4k } = « Améliorer en 4K » (ouvert aux clients sur kie) ; reçoit { engine, fellBack }
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
-  if(!m) throw new Error('Image illisible pour Nano Banana Pro');
+  if(!m) throw new Error('Image illisible pour le moteur');
   // #lot6 · img2img = une image d'entrée par construction → consigne de fidélité du texte
   // packaging (anti-doublon : certains prompts — _NB_REFINE_PROMPT / _IMG_REALISM_EDIT — ont déjà leur lock)
   if(String(prompt||'').indexOf(_IMG_TEXT_FIDELITY) < 0) prompt = String(prompt||'') + _IMG_TEXT_FIDELITY;
@@ -10934,7 +10934,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta
       let e = e0;
       if(_sent && !(e && e._kieStage)){ e = new Error(_kieP()+'image terminée mais illisible sur cet appareil — elle arrivera toute seule dans ta Bibliothèque d’ici ~2\u00a0h, ne relance pas'); e._kieStage = 'pending'; e._kieBill = ''; }
       if(_kDev){   // developer : aucun repli (Axel 23/09)
-        if(e && e._kieRefus){ const r=new Error('Nano Banana Pro a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
+        if(e && e._kieRefus){ const r=new Error('Le moteur a refusé cette image ('+e.message+')'); r._kieStage='failed'; throw r; }
         if(!_kieCanFallback(e)) throw e;
       } else {
         // Client : dépôt de l'image raté (rien lancé chez kie, rien tiré) → repli. Sinon repli seulement si la réservation
@@ -11009,7 +11009,7 @@ async function _nbEdit(token, dataUrl, prompt, aspect, size, opHint, chain, meta
     if(!_br && (_nbLastStatus===504 || _nbLastStatus===502 || _nbLastStatus===408 || _nbLastStatus===0)){
       throw new Error('Le service 4K a mis trop de temps à répondre (surcharge Google) — réessaie dans un instant.');
     }
-    throw new Error('Nano Banana Pro a refusé cette image (aucune image renvoyée' + (_br ? ' · '+_br : '') + ')');
+    throw new Error('Le moteur a refusé cette image (aucune image renvoyée' + (_br ? ' · '+_br : '') + ')');
   }
   return 'data:image/jpeg;base64,' + b64;
 }
@@ -11042,7 +11042,7 @@ async function _nbHeadSwap(token, targetDataUrl, faceDataUrl){
   const d=await res.json().catch(()=>({}));
   if(d&&d.error) throw new Error(d.error.message||String(d.error));
   const b64=_nbExtractImage(d);
-  if(!b64){ const _br=(d&&d.promptFeedback&&d.promptFeedback.blockReason)||(d&&d.candidates&&d.candidates[0]&&d.candidates[0].finishReason)||''; throw new Error('Faceswap refusé — Nano Banana n\'a pas renvoyé d\'image'+(_br?' ('+_br+')':'')+'. Essaie d\'autres photos.'); }
+  if(!b64){ const _br=(d&&d.promptFeedback&&d.promptFeedback.blockReason)||(d&&d.candidates&&d.candidates[0]&&d.candidates[0].finishReason)||''; throw new Error('Faceswap refusé — aucune image renvoyée'+(_br?' ('+_br+')':'')+'. Essaie d\'autres photos.'); }
   return 'data:image/jpeg;base64,'+b64;
 }
 // ── kie.ai (23/09/2026 ; ouvert aux clients payants le 25/09/2026) ─────────────────────────────────
@@ -11242,7 +11242,7 @@ async function _nbProFalEdit(dataUrl){
   const pick=(o)=> (o && o.images && o.images[0] && o.images[0].url) || (o && o.image && o.image.url) || null;
   const sub=await fPost(model,{ prompt, image_urls:[dataUrl], resolution:'4K', aspect_ratio:'auto', output_format:'jpeg', num_images:1 });
   const sd=await sub.json().catch(()=>({}));
-  if(!sub.ok) throw new Error('fal nano-banana-pro '+sub.status+' — '+JSON.stringify(sd).slice(0,180));
+  if(!sub.ok) throw new Error('Moteur 4K '+sub.status+' — '+JSON.stringify(sd).slice(0,180));
   let out=pick(sd);
   if(!out && (sd.status_url||sd.request_id)){
     const stP=sd.status_url? sd.status_url.replace('https://queue.fal.run',''): model+'/requests/'+sd.request_id+'/status';
@@ -11251,11 +11251,11 @@ async function _nbProFalEdit(dataUrl){
       await new Promise(r=>setTimeout(r,3000));
       const st=await (await fGet(stP)).json().catch(()=>({}));
       const s=String(st.status||'').toUpperCase();
-      if(s==='COMPLETED'){ const rr=await (await fGet(reP)).json().catch(()=>({})); out=pick(rr); if(!out) throw new Error('fal nano-banana-pro : pas d\'image dans la réponse'); break; }
-      if(s==='FAILED'||st.error) throw new Error('fal nano-banana-pro : échec ('+(st.error?JSON.stringify(st.error).slice(0,100):s)+')');
+      if(s==='COMPLETED'){ const rr=await (await fGet(reP)).json().catch(()=>({})); out=pick(rr); if(!out) throw new Error('Moteur 4K : pas d\'image dans la réponse'); break; }
+      if(s==='FAILED'||st.error) throw new Error('Moteur 4K : échec ('+(st.error?JSON.stringify(st.error).slice(0,100):s)+')');
     }
   }
-  if(!out) throw new Error('fal nano-banana-pro : aucune image renvoyée');
+  if(!out) throw new Error('Moteur 4K : aucune image renvoyée');
   return out;
 }
 // Correspondance format app → aspect ratio Nano Banana.
@@ -11352,7 +11352,7 @@ async function _faceUpscalePass(dataUrl){
     if(cw<48||ch<48) return dataUrl;
     const cc=document.createElement('canvas'); cc.width=cw; cc.height=ch; const cctx=cc.getContext('2d'); cctx.drawImage(im,px0,py0,cw,ch,0,0,cw,ch);
     const cropDataUrl=cc.toDataURL('image/png');
-    const upUrl=await _falAuraSR(cropDataUrl); if(!upUrl){ window._faceLastStatus='AuraSR a échoué'; console.warn('[face-upscale] AuraSR a échoué, skip'); return dataUrl; }
+    const upUrl=await _falAuraSR(cropDataUrl); if(!upUrl){ window._faceLastStatus='Amélioration du visage échouée'; console.warn('[face-upscale] AuraSR a échoué, skip'); return dataUrl; }
     const upResp=await fetch(upUrl); const upObj=URL.createObjectURL(await upResp.blob());
     let upImg; try{ upImg=await _loadImgEl(upObj); } finally { /* obj révoqué plus bas */ }
     const out=document.createElement('canvas'); out.width=W; out.height=H2; const ctx=out.getContext('2d'); ctx.drawImage(im,0,0);
@@ -11407,7 +11407,7 @@ async function _imgUpscaleHD(btn){
     // Testé en vrai : barbe/pores nets, ZÉRO plastique, ZÉRO tache inventée, ZÉRO déformation.
     // Agrandit ×4 SUR PLACE (cadrage exact, ne recadre pas), sans prompt. #no-clarity (30/08) : plus de repli Clarity.
     finalUrl = await _falAuraSR(src);
-    if(!finalUrl) throw new Error('AuraSR : aucune image');
+    if(!finalUrl) throw new Error('L\'amélioration n\'a renvoyé aucune image');
     // _falAuraSR renvoie déjà un data URL redescendu ; on garde la conversion (si jamais = URL fal → persistance)
     try{ const rC=await fetch(finalUrl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){}
     // #detail-visage (26/08) : passe visage Clarity DÉSACTIVÉE — AuraSR (×4) détaille déjà tout le visage,
@@ -11514,7 +11514,7 @@ async function _imgUpscaleNano(btn){
     if(!/^data:/.test(src)){ const resp=await fetch(src); const blob=await resp.blob(); src=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(blob);}); }
     let aspect='1:1'; try{ const im=await _loadImgEl(src); aspect = _nbAspectFor(im.naturalWidth, im.naturalHeight); }catch(_){}   // ratio RÉEL (2:3 pour nos portraits), pas un 9:16 forcé
     let finalUrl = await _nbRefine4K(token, src, aspect);
-    if(!finalUrl) throw new Error('Nano Banana : aucune image');
+    if(!finalUrl) throw new Error('Le moteur 4K n\'a renvoyé aucune image');
     let engine='Nano Banana Pro';
     // Nano a-t-il recadré / zoomé ? → on refuse et on agrandit SUR PLACE avec Clarity (non génératif)
     const chk=await _imgFramingMatches(src, finalUrl);
@@ -11523,13 +11523,13 @@ async function _imgUpscaleNano(btn){
       { const l=document.getElementById('imgProgLabel'); if(l) l.textContent='4K en cours · cadrage exact…'; }
       const cl=await _falAuraSR(src);
       if(cl){ try{ const rC=await fetch(cl); const bC=await rC.blob(); finalUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result));fr.readAsDataURL(bC);}); }catch(_){ finalUrl=cl; } engine='AuraSR (cadrage conservé)'; }
-      else throw new Error('4K : Nano a recadré l\'image et AuraSR est indisponible — crédit remboursé');
+      else throw new Error('4K : le cadrage n\'a pas été respecté et la solution de secours est indisponible — crédit remboursé');
     }
     await _imgSwapNoZoom(img, finalUrl); _imgIsHD=true; _imgHDSrc=finalUrl; _imgViewingOriginal=false;   // même cadrage ; garde l'améliorée pour la bascule
     try{ document.getElementById('imgDownloadBtn').href=finalUrl; }catch(e){}
     const rb=document.getElementById('imgRevertBtn'); if(rb) rb.style.display='flex';
     creditsFlowDone();
-    toast('Amélioré en 4K — '+engine+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
+    toast('Amélioré en 4K'+(_kieDev()?' — '+engine:'')+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
   }catch(e){
     try{ await creditsFlowRefund('le 4K Nano a échoué'); }catch(_){}
     toast(''+(e.message||e));
@@ -11727,7 +11727,7 @@ async function generateImage(){
           _imgProgStart('gpt-image-2.5…');
           url = await _imgEditOne(token, editPrompt, _imgRefFile, gptSize, { chain: true });
           try {
-            _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
+            _imgProgStart('Passage en 4K… (~30s)');
             const _src = await _imgToDataUrl(url);
             url = await _nbEdit(token, _src, _IMG_REALISM_EDIT, await _nbAspectOf(_src, _NB_FMT_ASPECT[size]), '4K', undefined, true);
           } catch(_upErr){
@@ -11740,7 +11740,7 @@ async function generateImage(){
           // filtre OpenAI → Nano Banana Pro en direct (l'ancien chemin 4K)
           try {
             const _refUrl = _imgRefDataUrl || await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej; fr.readAsDataURL(_imgRefFile); });
-            _imgProgStart('Nano Banana Pro (4K)… (~30s)');
+            _imgProgStart('Génération en 4K… (~30s)');
             url = await _nbEdit(token, _refUrl, editPrompt, _NB_FMT_ASPECT[size] || '9:16', '4K');
           } catch(_nbErr){
             const _m2 = String((_nbErr && _nbErr.message) || _nbErr);
@@ -11763,7 +11763,7 @@ async function generateImage(){
         } catch(_edErr){
           const _em = String((_edErr && _edErr.message) || _edErr);
           if(/safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_em)){
-            await creditsFlowRefund('OpenAI a refusé');
+            await creditsFlowRefund('image refusée par le moteur');
             _imgProgStop(); overlay.style.display='none';
             btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
             _imgShowNanoOffer(editPrompt, size);
@@ -11777,7 +11777,7 @@ async function generateImage(){
       _imgSaveHistory(url, _imgMode==='correct'?'Correction':'Réf', size);
       _imgRenderHistory();
       const rem = _imgMonthRemaining();
-      toast('Image générée' + (_is4K ? ' — gpt-image-2.5 + upscale 4K' + _kieTag() : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
+      toast('Image générée' + (_is4K ? ' en 4K' + _kieTag() : '') + ' · ' + rem + ' crédit' + (rem!==1?'s':'') + ' restant' + (rem!==1?'s':''));
       btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=baseLabel;
       overlay.style.display='none';
       return;
@@ -11795,7 +11795,7 @@ async function generateImage(){
       if(_is4Ks){
         // 4K = gpt medium puis upscale Nano (Axel 15/08) — l'image gpt reste si Nano échoue
         try {
-          _imgProgStart('Upscale Nano Banana Pro (4K)… (~30s)');
+          _imgProgStart('Passage en 4K… (~30s)');
           const _src = await _imgToDataUrl(url);
           url = await _nbEdit(token, _src, _IMG_REALISM_EDIT, await _nbAspectOf(_src, _NB_FMT_ASPECT[size]), '4K', undefined, true);
         } catch(_upErr){ console.warn('upscale Nano après gpt indispo :', _upErr); }
@@ -11889,7 +11889,7 @@ function _imgShowNanoOffer(prompt, size){
   el.style.display='block';
   try{ el.scrollIntoView({behavior:'smooth', block:'center'}); }catch(_){}
 }
-// « Réessayer via Nano Banana Pro (5 cr) » — génération img2img en 4K sur la même réf.
+// « Réessayer en 4K (5 cr) » — génération img2img en 4K sur la même réf.
 async function _imgRetryViaNano(){
   if(window._img4kBusy){ toast('Lot 4K en cours — patiente'); return; }
   const ctx = window._imgNanoCtx || {};
@@ -11905,7 +11905,7 @@ async function _imgRetryViaNano(){
   const out=document.getElementById('imgOutput'); if(out) out.style.display='none';
   if(overlay) overlay.style.display='flex';
   _imgIdleShow(false);
-  _imgProgStart('Nano Banana Pro (4K)… (~30s)');
+  _imgProgStart('Génération en 4K… (~30s)');
   try{
     const session=(await sb.auth.getSession()).data.session;
     const token=session?.access_token || SUPABASE_KEY;
@@ -11919,9 +11919,9 @@ async function _imgRetryViaNano(){
     _imgSaveHistory(url, 'Nano Banana Pro', fmt);
     _imgRenderHistory();
     const rem=_imgMonthRemaining();
-    toast('Image générée via Nano Banana Pro'+_kieTag()+' · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
+    toast('Image générée en 4K'+_kieTag()+' · '+rem+' crédit'+(rem!==1?'s':'')+' restant'+(rem!==1?'s':''));
   }catch(e){
-    await creditsFlowRefund('Nano Banana Pro a échoué');
+    await creditsFlowRefund('image 4K échouée');
     const _m = String((e&&e.message)||e);
     const _isRefus = /safety|content.?policy|policy.?violation|moderation|rejected|sexual|suggestive|violence|not allowed|refus/i.test(_m);
     if(_isRefus){
@@ -12020,17 +12020,17 @@ function _imgSlotUpscale(kind, slot, url, size, opt){
       if(kind==='nano'){
         let aspect='1:1'; try{ const e=await _loadImgEl(src); aspect=_nbAspectFor(e.naturalWidth, e.naturalHeight); }catch(_){}
         finalUrl=await _nbRefine4K(tk, src, aspect);
-        if(!finalUrl) throw new Error('Nano Banana : aucune image');
+        if(!finalUrl) throw new Error('Le moteur 4K n\'a renvoyé aucune image');
         engine='Nano Banana Pro';
         const chk=await _imgFramingMatches(src, finalUrl);   // Nano a recadré ? → AuraSR (cadrage exact), comme l'image seule
         if(!chk.ok){
           const cl=await _falAuraSR(src);
-          if(!cl) throw new Error('4K : Nano a recadré l\'image et AuraSR est indisponible — crédit remboursé');
+          if(!cl) throw new Error('4K : le cadrage n\'a pas été respecté et la solution de secours est indisponible — crédit remboursé');
           finalUrl=await toData(cl); engine='AuraSR (cadrage conservé)';
         }
       } else {
         finalUrl=await _falAuraSR(src);
-        if(!finalUrl) throw new Error('AuraSR : aucune image');
+        if(!finalUrl) throw new Error('L\'amélioration n\'a renvoyé aucune image');
         finalUrl=await toData(finalUrl);
       }
       creditsFlowDone();
@@ -12040,7 +12040,7 @@ function _imgSlotUpscale(kind, slot, url, size, opt){
       const ext=/^data:image\/png/i.test(finalUrl) ? 'png' : 'jpg';
       // 4K fait → plus de 4K ni de visage sur cette case ; visage fait → le 4K reste possible.
       _imgFillMultiSlot(slot, finalUrl, size, false, { no4K: kind==='nano' || !!opt.no4K, view, dlName:(kind==='nano'?'avatarads-4k.':'avatarads-hd.')+ext });
-      toast((kind==='nano' ? 'Amélioré en 4K — ' : 'Détails du visage appliqués — ')+engine+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
+      toast((kind==='nano' ? 'Amélioré en 4K' : 'Détails du visage appliqués')+(_kieDev()?' — '+engine:'')+_kieEngineTag(engine==='Nano Banana Pro'?'Google':''));   // moteur réel : kie.ai ou Google (+ repli)
     }catch(e){
       try{ await creditsFlowRefund(kind==='nano' ? 'le 4K Nano a échoué' : 'la restauration a échoué'); }catch(_){}
       undo();
@@ -13539,7 +13539,7 @@ async function genGameplayOnly(source, file){
   } else {
     const sc=(document.getElementById('f-script')?.value||'').trim();
     const hk=(document.getElementById('f-hook')?.value||'').trim();
-    if(!sc && !hk){ toast('Écris d\'abord ton script à l\'étape Produit — la voix ElevenLabs le lira'); return; }
+    if(!sc && !hk){ toast('Écris d\'abord ton script à l\'étape Produit — la voix IA le lira'); return; }
     mp4AudioEnabled = false; window.mp4AudioEnabled = false;
     mp4AudioFile = null; window.mp4AudioFile = null;
   }
@@ -13547,7 +13547,7 @@ async function genGameplayOnly(source, file){
   try{ selAvatar = {}; }catch(_){}
   const ai=document.getElementById('f-avatarimg'); if(ai) ai.value='';
   window._bypassHedraOn = false;
-  toast(source==='mp3' ? 'Gameplay + ton audio — génération…' : 'Gameplay + voix ElevenLabs — génération…');
+  toast(source==='mp3' ? 'Gameplay + ton audio — génération…' : 'Gameplay + voix IA — génération…');
   startGeneration();
 }
 
@@ -13644,7 +13644,7 @@ function _mzMotionHint(){
     ? "L'avatar reste immobile : seules les lèvres bougent."
     : lvl==='alive'
       ? (omni ? "Le décor respire — réservé au hook et au CTA (les scènes du milieu sont trop courtes)."
-              : "Character-3 garde le fond figé : passe sur OmniHuman pour que le décor bouge.")
+              : "Le fond reste figé avec ce mode : seul l'avatar bouge.")
       : "Il parle avec les mains — mais seulement si ta photo d'avatar les montre.";
 }
 function mzAdvSet(k,v){ _mt.adv[k]=v; mzAdvRender(); }
@@ -15409,7 +15409,7 @@ async function _omnihDepot(imgFile, wavBlob){
       const upI = await rm.upload(imgPath, imgFile, { contentType:'image/jpeg', upsert:true });
       if(upI.error) throw new Error('dépôt de la photo impossible : '+upI.error.message);
       const sI = await rm.createSignedUrl(imgPath, 3600);
-      if(sI.error || !sI.data?.signedUrl) throw new Error('lien signé OmniHuman indisponible');
+      if(sI.error || !sI.data?.signedUrl) throw new Error('lien signé indisponible');
       return sI.data.signedUrl;
     })() };
     _omnihImgUrl.set(imgFile, ci); ci.p.catch(()=>{ if(_omnihImgUrl.get(imgFile) === ci) _omnihImgUrl.delete(imgFile); });
@@ -15419,7 +15419,7 @@ async function _omnihDepot(imgFile, wavBlob){
   const upA = await rm.upload(audPath, wavBlob, { contentType:'audio/wav', upsert:true });
   if(upA.error) throw new Error('dépôt de l’audio impossible : '+upA.error.message);
   const sA = await rm.createSignedUrl(audPath, 3600);
-  if(sA.error || !sA.data?.signedUrl) throw new Error('lien signé OmniHuman indisponible');
+  if(sA.error || !sA.data?.signedUrl) throw new Error('lien signé indisponible');
   return { img, aud: sA.data.signedUrl };
 }
 // UNE génération OmniHuman (photo préparée + WAV) → Blob MP4. o.ack=false : ne pas accuser réception tout de suite (tranches
@@ -15437,7 +15437,7 @@ async function _omnihRun(imgFile, wavBlob, prompt, o){
       return blob;
     }catch(e){
       console.warn('[omnihuman] échec du moteur principal', e);
-      if(e && e._kieRefus) throw new Error('OmniHuman a refusé ce contenu — '+e.message);   // message déjà nettoyé par _kieMsg
+      if(e && e._kieRefus) throw new Error('Le moteur avatar a refusé ce contenu — '+e.message);   // message déjà nettoyé par _kieMsg
       if(!_kieCanFallback(e)) throw e;
       if(o.fal === false){ e._omnihRepli = true; throw e; }
       window._aaKieFellBack = true;
@@ -15458,9 +15458,9 @@ async function _omnihFal(imgUrl, audUrl, prompt){
   const fPost = (p,b)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'POST',headers:{'Content-Type':'application/json',...H},body:JSON.stringify(b)});
   const fGet  = (p)=>fetch(PROXY+'?path='+encodeURIComponent(p),{method:'GET',headers:{...H}});
   const sub = await fPost(FAL_OMNI, { image_url:imgUrl, audio_url:audUrl, resolution:'1080p', prompt });   // fal-proxy repasse en 720p au-delà de 30 s
-  if(!sub.ok){ const t = await sub.text(); let m = ''; try{ m = JSON.parse(t).error || ''; }catch(_){ m = t.slice(0,120); } throw new Error('OmniHuman '+sub.status+(m ? ' — '+String(m).slice(0,120) : '')); }
+  if(!sub.ok){ const t = await sub.text(); let m = ''; try{ m = JSON.parse(t).error || ''; }catch(_){ m = t.slice(0,120); } throw new Error('Avatar '+sub.status+(m ? ' — '+String(m).slice(0,120) : '')); }
   const sd = await sub.json().catch(()=>({}));
-  const reqId = sd.request_id||sd.requestId; if(!reqId) throw new Error('OmniHuman : pas d\'identifiant de génération');
+  const reqId = sd.request_id||sd.requestId; if(!reqId) throw new Error('Avatar : pas d\'identifiant de génération');
   // polling (jusqu'à 6 min) — la file fal renvoie IN_QUEUE / IN_PROGRESS / COMPLETED
   for(let i=0;i<72;i++){
     await wait(5000);
@@ -15469,15 +15469,15 @@ async function _omnihFal(imgUrl, audUrl, prompt){
     if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
     if(s==='COMPLETED'){
       const rr = await fGet(FAL_OMNI_Q+'/requests/'+reqId);
-      if(!rr.ok) throw new Error('OmniHuman résultat '+rr.status);
+      if(!rr.ok) throw new Error('Avatar : résultat '+rr.status);
       const rd = await rr.json().catch(()=>({}));
       const url = rd?.video?.url||rd?.video_url||'';
-      if(!url) throw new Error('OmniHuman : URL de scène introuvable');
+      if(!url) throw new Error('Avatar : URL de scène introuvable');
       return await (await fetch(url)).blob();
     }
-    throw new Error('Scène OmniHuman échouée'+(pd.error?' : '+String(pd.error).slice(0,60):''));
+    throw new Error('Scène avatar échouée'+(pd.error?' : '+String(pd.error).slice(0,60):''));
   }
-  throw new Error('Timeout OmniHuman sur une scène (>6 min)');
+  throw new Error('Délai dépassé sur une scène avatar (>6 min)');
 }
 // Montage IA : une scène OmniHuman (l'audio arrive préparé par _mtSegmentedGenerate : _omnihPlan + _omnihRender ; format = 'portrait' | 'paysage').
 async function _mtOmniScene(imageFile, audioWav, format, segSec, role){
@@ -15599,7 +15599,7 @@ async function _genOmnihVideo(imgFile, audioBlob, fmt){
   try{ dec = await _omnihDecode(audioBlob); }catch(_){ throw new Error('audio illisible — réimporte ton audio'); }
   const D = dec.duration;
   if(!(D > 0.3)) throw new Error('audio trop court');
-  if(D > _OMNIH.MAX + 0.5) throw new Error('OmniHuman est limité à 60 s — ton audio fait '+Math.round(D)+' s');
+  if(D > _OMNIH.MAX + 0.5) throw new Error('La qualité max est limitée à 60 s — ton audio fait '+Math.round(D)+' s');
   const fin = _lipFinParole(dec);
   const img = await _omnihImage(imgFile, fmt);
   let hands = false; try{ hands = !!(await _mtDetectHands(imgFile)); }catch(_){}
@@ -15875,7 +15875,6 @@ async function _mtSegmentedGenerate(){
   const omni = _mt.lipModel==='omnihuman';
   const rate = omni ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec;
   const modelId = omni ? HEDRA_MODELS.omnihuman : HEDRA_MODELS.default;
-  const modelLbl = omni ? 'OmniHuman 1080p' : (_mt.lipModel==='mix' ? 'Mix' : 'Character-3');
 
   // 1) chef d'orchestre (transcription + plan) débité d'avance
   if((_mt.mp3Dur||0) > 90.5){ toast('Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
@@ -20403,7 +20402,7 @@ async function _avGenUpscale(btn){
     // Mêmes bornes que « Détails du visage » d'Images IA (2560→4096, q 0.95) pour un rendu
     // IDENTIQUE dans les deux modules — avant, le Générateur utilisait les défauts plus bas (Axel 31/08).
     const up = await _falAuraSR(src, { inMax:2560, outMax:4096, q:0.95 });
-    if (!up) throw new Error('AuraSR : aucune image');
+    if (!up) throw new Error('L\'amélioration n\'a renvoyé aucune image');
     _avGenUrl = up; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
     // la version « détails améliorés » REMPLACE l'entrée de base en Bibliothèque (avant : rien sauvé)
@@ -20467,7 +20466,7 @@ async function _avGen4K(btn){
       up = await _nbProFalEdit(src);
       _via = 'fal.ai';
     }
-    if (!up) throw new Error('Nano Banana Pro : aucune image renvoyée');
+    if (!up) throw new Error('Le moteur 4K n\'a renvoyé aucune image');
     _avGenUrl = up; _avGen4KDone = true; _avGenHD = true; _avGenUrlUp = up; _avShowRevert(true);
     const img = document.getElementById('avGenImg'); if (img) img.src = up;
     // la version 4K REMPLACE l'entrée de base dans la Bibliothèque (plus de doublon)
@@ -20690,7 +20689,7 @@ async function _gnGenerate(){
   const g = window._gn;
   if(g.busy) return;
   if(_gateFreeGenerate()) return;                                      // Free → offres
-  if(!_gnAllowed()){ toast('La voix native (Omni Flash) n\'est pas disponible sur ton plan'); showPaywall(); return; }   // (tous les plans payants depuis le 25/09)
+  if(!_gnAllowed()){ toast('La voix native n\'est pas disponible sur ton plan'); showPaywall(); return; }   // (tous les plans payants depuis le 25/09)
   const pEl = document.getElementById('gnPrompt');
   const prompt = ((pEl && pEl.value) || '').trim();
   if(!prompt){ toast('Écris ce que ton avatar dit et fait'); if(pEl) pEl.focus(); return; }
@@ -21701,7 +21700,7 @@ async function _whisperTranscribeRun(W){
   // mauvaise cible). Une transcription devenue caduque (audio changé) ne touche plus au bouton, déjà réarmé.
   const btn = document.getElementById('whisperBtn');
   const _btnLive = () => !!btn && !W.stale();
-  const _whBtnIdle = () => { if(_btnLive()){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; } };
+  const _whBtnIdle = () => { if(_btnLive()){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcription IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; } };
   // #gen-dev · après une transcription réussie : bouton FIGÉ « Transcription faite »
   // (vert, disabled) — évite de recliquer et de repayer/relancer Whisper.
   const _whBtnDone = () => { if(_btnLive()){ btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#28C76F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M20 6L9 17l-5-5"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:600;font-size:14.5px;color:var(--text-2)">Transcription faite</span><span class="faint" style="font-size:12px">Sous-titres calés — change d\'audio pour relancer</span></div>'; btn.disabled = true; btn.style.opacity = '.8'; btn.style.cursor = 'default'; } };
@@ -21709,7 +21708,7 @@ async function _whisperTranscribeRun(W){
   const plan = currentMember?.plan || 'free';
   if(!['starter','pro','elite','developer'].includes(plan)){
     showPaywall();
-    toast('Whisper IA disponible dès le plan Starter');
+    toast('Transcription IA disponible dès le plan Starter');
     return;
   }
   // #122 : remboursable si la transcription échoue. (Axel 25/09) Whisper peut désormais partir tout seul (interrupteur,
@@ -21767,7 +21766,7 @@ async function _whisperTranscribeRun(W){
     }
     if(audioSrc.size > MAX_MB * 1024 * 1024){
       await _whRefund();
-      if(!W.stale()) toast('Audio trop long même après compression (' + Math.round(audioSrc.size/1024/1024) + ' MB) — au-delà de la limite Whisper (~1 h de parole).');
+      if(!W.stale()) toast('Audio trop long même après compression (' + Math.round(audioSrc.size/1024/1024) + ' MB) — au-delà de la limite de transcription (~1 h de parole).');
       _whBtnIdle();
       return;
     }
@@ -21851,10 +21850,10 @@ async function _whisperTranscribeRun(W){
         if(ta) ta.value = text;
         _renderWordChips(text);
         const hasTS = whisperWordTimestamps.length > 0;
-        toast('Whisper IA — transcript ' + (hasTS ? '+ timestamps mot par mot !' : 'appliqué aux sous-titres !'));
+        toast('Transcription IA — texte ' + (hasTS ? '+ timestamps mot par mot !' : 'appliqué aux sous-titres !'));
       }
     } else {
-      toast('Aucun texte détecté par Whisper');
+      toast('Aucun texte détecté dans l\'audio');
     }
   } catch(e){
     await _whRefund();
@@ -21868,13 +21867,13 @@ async function _whisperTranscribeRun(W){
         const errObj = JSON.parse(raw);
         const errMsg = errObj?.error?.message || '';
         if(errObj?.error?.type === 'insufficient_quota' || errMsg.includes('quota') || errMsg.includes('billing') || raw.includes('quota') || raw.includes('billing')){
-          msg = 'Quota OpenAI dépassé. Recharge ton compte sur platform.openai.com/billing';
+          msg = 'Service de transcription momentanément indisponible — réessaie plus tard';
         } else {
           msg = (errMsg || raw).slice(0, 150);
         }
       } catch(_){}
     }
-    if(!W.stale()) toast('Erreur Whisper : ' + msg);
+    if(!W.stale()) toast('Erreur de transcription : ' + msg);
     console.error('Whisper error:', e);
   } finally {
     if(W.ok) _whBtnDone(); else _whBtnIdle();
@@ -21937,7 +21936,7 @@ async function cloneVoice(){
   btn.textContent = 'Clonage en cours...'; btn.disabled = true;
   const status = document.getElementById('cloneStatus');
   status.style.display = 'block';
-  status.textContent = 'Upload vers ElevenLabs...';
+  status.textContent = 'Envoi de ta voix…';
   try {
     const fd = new FormData();
     fd.append('name', 'Ma voix — ' + Date.now());
@@ -21947,7 +21946,7 @@ async function cloneVoice(){
     const cloneRes = await fetch(EL_PROXY + '?path=/v1/voices/add', {
       method: 'POST', headers: authH, body: fd
     });
-    if(!cloneRes.ok){ const err=await cloneRes.json(); toast('ElevenLabs : '+(err.detail?.message||cloneRes.status)); btn.textContent='Cloner ma voix →';btn.disabled=false;status.textContent='';return; }
+    if(!cloneRes.ok){ const err=await cloneRes.json(); toast('Clonage de voix : '+(err.detail?.message||cloneRes.status)); btn.textContent='Cloner ma voix →';btn.disabled=false;status.textContent='';return; }
     const cloneData = await cloneRes.json();
     clonedVoiceId = cloneData.voice_id;
     status.textContent = 'Voix clonée ! Génération de 3 variations...';
@@ -22076,7 +22075,7 @@ async function previewVoice(voiceId,audioElId){
       method:'POST',headers:{..._authH,'Content-Type':'application/json','Accept':'audio/mpeg'},
       body:JSON.stringify({text:'Le meilleur business en ligne c\'est celui que tu lances maintenant.',model_id:'eleven_multilingual_v2',voice_settings:{stability:0.28,similarity_boost:0.82,style:0.35,use_speaker_boost:true}})
     });
-    if(!res.ok){toast('ElevenLabs '+res.status);return;}
+    if(!res.ok){toast('Aperçu de voix indisponible ('+res.status+')');return;}
     const blob=await res.blob();
     audioEl.src=URL.createObjectURL(blob);
     audioEl.play();
@@ -23179,7 +23178,7 @@ function _updateBypassUI(){
       label.textContent = 'Non disponible sur ton plan actuel';
       label.style.color = 'var(--red)';
     } else {
-      label.textContent = `Importe une vidéo Hedra · 0 crédit · ${rem}/${lim} re-compositions ce mois`;
+      label.textContent = `Importe une vidéo avatar déjà générée · 0 crédit · ${rem}/${lim} re-compositions ce mois`;
       label.style.color = rem <= 2 ? 'var(--orange2)' : '';
     }
   }
@@ -24643,7 +24642,7 @@ function _whisperBtnReset(){
   const b = document.getElementById('whisperBtn');
   if(!b) return;
   b.disabled = false; b.style.opacity = '1'; b.style.cursor = 'pointer';
-  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>';
+  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcription IA · Synchronise les sous-titres à ton audio</span></div><span class="faint" style="font-size:12px">Précision maximale · Immédiat</span></div>';
 }
 function handleMp4AudioFile(file){
   if(!file) return;
@@ -26070,7 +26069,7 @@ async function startGeneration(){
     // Sans objet avec une vidéo qui parle déjà (vidéo existante / Voix native) : aucun lipsync n'est généré.
     if(window._genModel==='omnihuman' && !window._bypassHedraOn){
       if(typeof _genOmnihOk==='function' && !_genOmnihOk()){ window._genModel='avatar'; }
-      else if(durSecs > 60){ toast('OmniHuman est limité à 60 s — ton audio fait '+durSecs+' s. Repasse sur Avatar pour cette vidéo.'); step=3; updateSteps(); return; }
+      else if(durSecs > 60){ toast('La qualité max est limitée à 60 s — ton audio fait '+durSecs+' s. Repasse sur Avatar pour cette vidéo.'); step=3; updateSteps(); return; }
     }
     const _hasAvatarSel = !!(selAvatar.localFile || selAvatar.localUrl || (document.getElementById('f-avatarimg')?.value||'').trim());
     // Vidéo qui parle déjà (bypass : vidéo existante / Voix native) = 0 cr/s de lipsync, même si une photo d'avatar
@@ -26200,7 +26199,7 @@ async function startGeneration(){
 
   // ── Si bypass était sauvegardé mais pas encore restauré (rechargement rapide), attendre ──
   if(!window._bypassHedraOn && localStorage.getItem('aa_bypass_resume')){
-    toast('Restauration de ta vidéo Hedra…');
+    toast('Restauration de ta vidéo avatar…');
     await _restoreBypassState();
     await wait(200);
   }
@@ -26220,8 +26219,8 @@ async function startGeneration(){
 
   if(window._bypassHedraOn && !window._bypassHedraUrl){
     // ── BYPASS activé mais aucune vidéo importée ──
-    toast('Import ta vidéo Hedra dans l\'étape Avatar avant de générer');
-    window._lastHedraError = 'Tu as activé "Réutiliser ma vidéo Hedra" mais aucune vidéo n\'a été importée. Retourne à l\'étape Avatar et importe ta vidéo.';
+    toast('Importe ta vidéo avatar dans l\'étape Avatar avant de générer');
+    window._lastHedraError = 'Tu as activé "Réutiliser ma vidéo avatar" mais aucune vidéo n\'a été importée. Retourne à l\'étape Avatar et importe ta vidéo.';
     window._bypassWasOn = true;
     results = { script: finalScript, audioBlob, hedraUrl: '' };
     showResults();
@@ -26247,7 +26246,7 @@ async function startGeneration(){
     hedraUrl = window._bypassHedraUrl;
     _bypassIncrement();
     _updateBypassUI();
-    toast('Bypass Hedra — ' + _bypassRemaining() + ' re-composition' + (_bypassRemaining()!==1?'s':'') + ' restante' + (_bypassRemaining()!==1?'s':'') + ' ce mois');
+    toast('Vidéo avatar réutilisée — ' + _bypassRemaining() + ' re-composition' + (_bypassRemaining()!==1?'s':'') + ' restante' + (_bypassRemaining()!==1?'s':'') + ' ce mois');
     setStep('gp3','done');
 
   } else if(audioBlob && _hasRealAvatar){
@@ -26258,7 +26257,7 @@ async function startGeneration(){
         const cleanUrl = await _getOrBuildCleanBlobUrl();
         if(cleanUrl){
           hedraAudioBlob = await fetch(cleanUrl).then(r => r.blob());
-          toast('Audio nettoyé (sans silences) envoyé à Hedra — lipsync précis');
+          toast('Audio nettoyé (sans silences) — lipsync précis');
         }
       } catch(e){ console.warn('Clean audio for Hedra failed, using original:', e); }
     }
@@ -26399,7 +26398,7 @@ function toggleGameplayAudio(){
     if(row)   { row.style.borderColor='var(--border)'; row.style.background='var(--bg4)'; }
     if(elSec) elSec.style.display='block';
     if(gpCard){ gpCard.style.display='none'; }
-    toast('ElevenLabs TTS activé');
+    toast('Voix IA activée');
   }
 }
 
@@ -26449,12 +26448,12 @@ async function callElevenLabs(text){
         voice_settings:{stability:0.5,similarity_boost:0.8,style:0.3,use_speaker_boost:true}
       })
     });
-    if(!res.ok){ toast('ElevenLabs : '+res.status); return null; }
+    if(!res.ok){ toast('Voix IA indisponible ('+res.status+')'); return null; }
     const blob=await res.blob();
     const sil=document.getElementById('genTtsSilence');
     if(sil && sil.checked){ const cleaned=await _stripSilencesFromBlob(blob); if(cleaned!==blob) toast('Silences supprimés de la voix IA'); return cleaned; }
     return blob;
-  }catch(e){ toast('ElevenLabs : '+e.message); return null; }
+  }catch(e){ toast('Voix IA : '+e.message); return null; }
 }
 
 // Décode un blob audio → retire les silences → ré-encode en WAV (réutilise le moteur Nettoyage audio)
@@ -26547,7 +26546,7 @@ function _genIsElite(){ return !!(currentMember && (['elite','developer'].includ
 // Audit 04/10 (Axel) : OmniHuman masqué dans le Générateur et le Montage IA — Character-3 seul pour tout le monde.
 function _genOmnihOk(){ return false; }
 function genSetModel(m, btn){
-  if(m==='omnihuman' && !_genOmnihOk()){ showPaywall('OmniHuman est réservé aux plans Pro et Élite','Passe à Pro ou Élite pour débloquer OmniHuman 1080p dans le Générateur.'); return; }
+  if(m==='omnihuman' && !_genOmnihOk()){ showPaywall('La qualité max est réservée aux plans Pro et Élite','Passe à Pro ou Élite pour débloquer l\'avatar qualité max en 1080p dans le Générateur.'); return; }
   window._genModel = m;
   document.querySelectorAll('#genModelBtns .qual-btn').forEach(b=>{ const on=b.dataset.gm===m; b.style.border=on?'2px solid var(--accent)':'1px solid var(--border)'; b.style.background=on?'var(--accent-soft)':'var(--surface)'; b.classList.toggle('on',on); });
   if(typeof _majRecap==='function'){ try{ _majRecap(); }catch(_){ } }
@@ -26572,7 +26571,7 @@ async function _genOmniScene(audioBlob){
   const avatarImgUrl=(document.getElementById('f-avatarimg')||{}).value?.trim()||'';
   if(avatarImgUrl){ try{ imgFile=new File([await fetch(avatarImgUrl).then(r=>r.blob())],'avatar.jpg',{type:'image/jpeg'}); }catch(e){} }
   if(!imgFile && selAvatar && selAvatar.localFile) imgFile=selAvatar.localFile;
-  if(!imgFile){ window._lastHedraError='Ajoute une image d\'avatar — obligatoire pour OmniHuman.'; toast('Ajoute une image d\'avatar pour générer la vidéo'); return ''; }
+  if(!imgFile){ window._lastHedraError='Ajoute une image d\'avatar — obligatoire pour générer la vidéo.'; toast('Ajoute une image d\'avatar pour générer la vidéo'); return ''; }
   const fmt=(typeof cfg!=='undefined' && cfg && cfg.format==='paysage') ? 'paysage' : 'portrait';   // OmniHuman : 9:16 / 16:9 (pas 1:1)
   try{
     const blob=await _genOmnihVideo(imgFile, audioBlob, fmt);
@@ -26580,8 +26579,8 @@ async function _genOmniScene(audioBlob){
     return URL.createObjectURL(blob);
   }catch(err){
     const _m=_kieMsg(String(err&&err.message||err));   // jamais le nom du fournisseur pour un client
-    window._lastHedraError='OmniHuman échoué : '+_m+' — OmniHuman est limité à ~60 s ; pour un script plus long, repasse sur Avatar.';
-    toast('OmniHuman : '+_m.slice(0,70));
+    window._lastHedraError='Génération échouée : '+_m+' — la qualité max est limitée à ~60 s ; pour un script plus long, repasse sur Avatar.';
+    toast('Génération échouée : '+_m.slice(0,70));
     console.error('OmniHuman (générateur):', err);
     return '';
   }
@@ -26667,7 +26666,7 @@ async function callHedra(audioBlob){
       catch(e){ console.warn('Avatar localFile upload skip:', e); }
     }
     if(!startImg){
-      window._lastHedraError = 'Ajoute une image d\'avatar — obligatoire pour le lipsync (Hedra v3).';
+      window._lastHedraError = 'Ajoute une image d\'avatar — obligatoire pour le lipsync.';
       toast('Ajoute une image d\'avatar pour générer la vidéo');
       return '';
     }
@@ -26697,17 +26696,17 @@ async function callHedra(audioBlob){
       try{
         const pr = await _hedraFetch('/v3/jobs/'+_last.id+'/status', 'GET');
         if(pr.ok){ const st = String((await pr.json()).status||'').toUpperCase();
-          if(['QUEUED','IN_PROGRESS','PROCESSING','COMPLETED','PENDING','RUNNING'].includes(st)){ jobId = _last.id; toast(st==='COMPLETED' ? 'Vidéo Hedra déjà prête — récupération' : 'Reprise du job Hedra en cours (pas de nouvelle soumission)'); } }
+          if(['QUEUED','IN_PROGRESS','PROCESSING','COMPLETED','PENDING','RUNNING'].includes(st)){ jobId = _last.id; toast(st==='COMPLETED' ? 'Vidéo avatar déjà prête — récupération' : 'Reprise de la génération en cours (pas de nouvelle soumission)'); } }
       }catch(_){}
     }
     try { if(!jobId) jobId = await _hedraV3Submit(_hedraSlug(MODEL_ID), input); window._hedraLastJob = { id: jobId, at: Date.now(), sig: _sig }; try{ localStorage.setItem('aa_hedra_last_job', JSON.stringify(window._hedraLastJob)); }catch(_){} }
     catch(err){
-      window._lastHedraError = 'Hedra erreur — ' + (err&&err.message||err) + '. Réessaie ou vérifie ton solde Hedra.';
-      toast('Hedra : ' + (err&&err.message||err));
+      window._lastHedraError = 'Erreur de génération — ' + (err&&err.message||err) + '. Réessaie dans un instant.';
+      toast('Génération : ' + (err&&err.message||err));
       console.error('Hedra generate v3:', err);
       return '';
     }
-    toast('Hedra génère ta vidéo… (~2 min)');
+    toast('Génération de ta vidéo avatar… (~2 min)');
 
     // ── Polling (GET /v3/jobs/<id>/status → /v3/jobs/<id>) ──
     const gpIcon = document.getElementById('gp3')?.querySelector('.gp-icon');
@@ -26724,12 +26723,12 @@ async function callHedra(audioBlob){
         if(hedraBarPct) hedraBarPct.textContent = prog + '%';
         // ETA annoncée par Hedra → l'attente devient lisible (et « en retard de X s » quand elle est dépassée)
         const hs = document.getElementById('hedraStatus'); const etaMs = eta ? Date.parse(eta) : 0;
-        if(hs && etaMs){ const d = Math.round((etaMs - Date.now())/1000); hs.textContent = 'Hedra ' + prog + ' % · ' + (d > 0 ? ('fin estimée dans ' + (d>90 ? Math.round(d/60)+' min' : d+' s')) : ('en retard de ' + Math.abs(d) + ' s')); }
+        if(hs && etaMs){ const d = Math.round((etaMs - Date.now())/1000); hs.textContent = 'Avatar ' + prog + ' % · ' + (d > 0 ? ('fin estimée dans ' + (d>90 ? Math.round(d/60)+' min' : d+' s')) : ('en retard de ' + Math.abs(d) + ' s')); }
       }, 135);   // plafond 9 min ; un job qui ne progresse plus est abandonné bien avant (voir _hedraV3Poll)
     } catch(err){
       if(hedraBar) hedraBar.style.display = 'none';
-      window._lastHedraError = 'Génération Hedra échouée : ' + (err&&err.message||err) + '. Vérifie ton solde ou réessaie.';
-      toast('Hedra génération échouée : ' + String(err&&err.message||err).slice(0,60));
+      window._lastHedraError = 'Génération avatar échouée : ' + (err&&err.message||err) + '. Réessaie dans un instant.';
+      toast('Génération avatar échouée : ' + String(err&&err.message||err).slice(0,60));
       return '';
     }
     if(hedraBar) hedraBar.style.display = 'none';
@@ -26750,7 +26749,7 @@ async function callHedra(audioBlob){
     return out.url;
   } catch(e){
     window._lastHedraError = 'Erreur réseau : ' + (e.message || e);
-    toast('Hedra erreur : ' + (e.message || e));
+    toast('Erreur de génération : ' + (e.message || e));
     console.error('Hedra error:', e);
     return '';
   }
@@ -26804,10 +26803,10 @@ function showResults(){
       if(noAvatarDiv) noAvatarDiv.style.display='none';
       if(retryBtn)    retryBtn.style.display='none';
       if(errDiv){
-        errDiv.textContent = '⚠ Ta vidéo Hedra a été perdue après le rechargement de la page. Retourne à l\'étape Avatar et ré-importe ta vidéo Hedra dans la section "0 crédit".';
+        errDiv.textContent = '⚠ Ta vidéo avatar a été perdue après le rechargement de la page. Retourne à l\'étape Avatar et ré-importe ta vidéo avatar dans la section "0 crédit".';
         errDiv.style.display='block';
       }
-      if(hs){ hs.className='hedra-status'; hs.textContent='⚠ Vidéo Hedra non trouvée — ré-importe dans Étape Avatar'; }
+      if(hs){ hs.className='hedra-status'; hs.textContent='⚠ Vidéo avatar non trouvée — ré-importe dans Étape Avatar'; }
     } else if(_noAvatar){
       if(noAvatarDiv) noAvatarDiv.style.display='block';
       if(errDiv)      errDiv.style.display='none';
@@ -26817,7 +26816,7 @@ function showResults(){
       if(noAvatarDiv) noAvatarDiv.style.display='none';
       if(retryBtn)    retryBtn.style.display='flex';
       if(errDiv && window._lastHedraError){
-        errDiv.textContent = '⚠ ' + window._lastHedraError;
+        errDiv.textContent = '⚠ ' + _sansModele(window._lastHedraError);
         errDiv.style.display='block';
       } else if(errDiv){
         // Toujours donner une cause actionnable (jamais un échec « muet »).
@@ -26868,7 +26867,7 @@ function loadHedraLocalFile(file){
 function quickLaunchHedra(){
   downloadGeneratedAudio();
   setTimeout(()=> window.open('https://app.hedra.com','_blank'), 700);
-  toast('Audio téléchargé · Hedra ouvert — importe l\'audio et génère !');
+  toast('Audio téléchargé — importe l\'audio et génère !');
 }
 async function retryHedraAuto(btn){
   if(!btn) btn = event?.target;
@@ -26902,16 +26901,16 @@ async function retryHedraAuto(btn){
       toast('Vidéo avatar générée automatiquement !');
       _genOnVideoReady();
     } else {
-      toast('Génération auto échouée — utilise les 3 étapes manuelles ou vérifie ta clé Hedra');
+      toast('Génération auto échouée — réessaie dans un instant');
     }
   } catch(e){
-    toast('Erreur Hedra : ' + (e.message||e).slice(0,80));
+    toast('Erreur de génération : ' + (e.message||e).slice(0,80));
   } finally {
     if(btn){ btn.textContent=origText; btn.disabled=false; }
   }
 }
 function genSubtitlesFromAudio(){
-  toast('Sous-titres auto — utilise Whisper IA dans l\'onglet Voix (dès le plan Starter)');
+  toast('Sous-titres auto — utilise la transcription IA dans l\'onglet Voix (dès le plan Starter)');
 }
 
 // ══════════════════════════════════════════════════
@@ -27847,7 +27846,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
     hedraObjUrl = URL.createObjectURL(await r.blob());
   } catch(e) {
     // Si fetch échoue (CORS, expiration…) → télécharger directement le blob Hedra brut
-    toast('Composition impossible — téléchargement direct de la vidéo Hedra…');
+    toast('Composition impossible — téléchargement direct de la vidéo avatar…');
     try {
       // Si c'est déjà un blob:// local, le forcer en download
       if(results.hedraUrl.startsWith('blob:')){
@@ -27883,7 +27882,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       hedraVid.load();
     });
   } catch(e) {
-    toast('Vidéo Hedra illisible : ' + (e.message||'format inconnu'));
+    toast('Vidéo avatar illisible : ' + (e.message||'format inconnu'));
     resetBtn(); URL.revokeObjectURL(hedraObjUrl); return;
   }
   // Durée FIABLE de la vidéo Hedra. Pour une vidéo blob, .duration peut rester
@@ -28052,7 +28051,7 @@ async function _composeVideoInner(btn, compBar, compFill, compPct, resetBtn){
       await tmpCtx.close();
       _audioBlobToEncode = _audioBufferToWavBlob(decoded);
       _dbg('3. Hedra audio: ' + Math.round(decoded.duration) + 's ✓');
-      toast('Audio extrait de la vidéo Hedra (' + Math.round(decoded.duration) + 's)');
+      toast('Audio extrait de la vidéo avatar (' + Math.round(decoded.duration) + 's)');
     } catch(e){
       console.warn('Hedra audio extract failed:', e);
       _dbg('3. Hedra FAIL: ' + (e.message||e) + ' ✗');
@@ -30960,8 +30959,29 @@ async function _restoreBypassState(){
 // ── UTILS ──
 function copyText(id){ navigator.clipboard.writeText(document.getElementById(id).textContent); toast('Copié !'); }
 function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+// ── JAMAIS LE NOM D'UN MODÈLE CÔTÉ CLIENT (Axel 09/10) ──────────────────────
+// Les textes de l'app sont écrits sans nom de moteur ; ce filet rattrape ceux qui
+// arrivent des serveurs / fournisseurs (« Hedra 402 — … », « Kling a refusé… »).
+// Compte developer : message brut, inchangé.
+const _MODELES = '(?:Hedra(?:\\s+v3)?|Character[- ]?3|OmniHuman(?:\\s*1\\.5)?(?:\\s+1080p)?|Omni[- ]Flash|Kling(?:\\s*[23]\\.\\d)?|Veo(?:\\s*3(?:\\.1)?)?(?:\\s+(?:Lite|Fast))?|gpt-image(?:-[\\d.]+)?|GPT[- ]Image|nano-banana(?:-pro)?|Nano[- ]?Banana(?:\\s+Pro)?|Topaz|ElevenLabs|Whisper(?:\\s+IA)?|Seedance(?:\\s*2\\.0)?|Gemini|OpenAI|AuraSR|RNNoise|fal(?:\\.ai)?)';
+function _sansModele(m){
+  m = String(m == null ? '' : m);
+  try{ if(_kieDev()) return m; }catch(_){}
+  const T = new RegExp('\\b' + _MODELES + '\\b', 'i');
+  if(!T.test(m)) return m;
+  const N = _MODELES;
+  return m
+    .replace(new RegExp('^\\s*' + N + '\\b\\s*[:—-]\\s*', 'i'), '')                       // « Hedra : … » → « … »
+    .replace(new RegExp('\\s*·\\s*' + N + '\\b', 'gi'), '')                                 // « … · Kling »
+    .replace(new RegExp('\\(\\s*' + N + '\\b\\s*\\)', 'gi'), '')                          // « (Veo) »
+    .replace(new RegExp('\\b(?:via|chez|par|avec|sur|pour)\\s+' + N + '\\b', 'gi'), '')
+    .replace(new RegExp('^\\s*' + N + '\\b(?=\\s+(?:a |n[\'’]|est |s[\'’]|ne |refuse|accepte))', 'i'), "L'IA")
+    .replace(new RegExp('\\b' + N + '\\b', 'gi'), 'IA')
+    .replace(/\bIA(\s+IA)+\b/g, 'IA').replace(/\s{2,}/g, ' ').replace(/\s+([,.)])/g, '$1').trim();
+}
 function toast(msg){
   try{ if(typeof _kieMsg==='function') msg = _kieMsg(msg); }catch(_){}   // clients : jamais « kie » dans un toast (dev : inchangé)
+  try{ msg = _sansModele(msg); }catch(_){}                                // ni aucun nom de modèle (Axel 09/10)
   const el=document.getElementById('toastEl');
   document.getElementById('toastMsg').textContent=msg;
   el.classList.add('show');
@@ -31405,7 +31425,7 @@ const EXP_DURS    = [ {v:5,l:'5 s'}, {v:10,l:'10 s'} ];
 // Starter = Standard seul. Défaut : Élite → Pro, sinon Standard. Le tarif suit (via _expCostCredits).
 const EXP_MODELS = [
   { v:'omni',     name:'Flash',        sub:'Qualité Max' },   // Axel 27/09 : « Flash », en premier et sélectionné par défaut
-  { v:'standard', name:'Veo',          sub:'Rapide · éco' },
+  { v:'standard', name:'Rapide',       sub:'Économique' },
   { v:'pro',      name:'Veo Fast',     sub:'kie.ai · dev', dev:true },   // test kie.ai : compte developer seulement
 ];
 // Flash (Omni) n'est proposé que pour les styles photo réels : « UGC réel » et « Réaliste » (Axel 04/10). Cartoon 3D et Studio
@@ -31514,7 +31534,7 @@ function initExpress(){
     const eh=document.getElementById('expDurEliteHint'); if(eh) eh.style.display='none';   // plus de durées +8 s (extensions retirées le 23/09)
     ds.style.opacity='1'; ds.style.pointerEvents='auto';
     const _ah=document.getElementById('expDurAutoHint');
-    if(_ah){ const _ov=((!_isOmniDur || _expOmniKie()) && window._expDurAuto && _expEstimateDur().over); _ah.textContent=_ov?(_isOmniDur?'Texte long : Flash s’arrête à 10 s — raccourcis la réplique ou passe par Montage IA':('Texte long : Veo s’arrête à '+_da[_da.length-1]+' s — '+(_da[_da.length-1]>10?'passe par Montage IA':'passe sur Flash (10 s) ou Montage IA')+' pour une vidéo plus longue')):''; _ah.style.display=_ov?'block':'none'; }
+    if(_ah){ const _ov=((!_isOmniDur || _expOmniKie()) && window._expDurAuto && _expEstimateDur().over); _ah.textContent=_ov?(_isOmniDur?'Texte long : Flash s’arrête à 10 s — raccourcis la réplique ou passe par Montage IA':('Texte long : le mode Rapide s’arrête à '+_da[_da.length-1]+' s — '+(_da[_da.length-1]>10?'passe par Montage IA':'passe sur Flash (10 s) ou Montage IA')+' pour une vidéo plus longue')):''; _ah.style.display=_ov?'block':'none'; }
     _aaSliderFill(ds);
   }
   // Qualité — 1080p : sélectionnable par tous, aucun verrou affiché (Pro+ vérifié en interne au clic sur Générer) ; grisé tant que la durée < 8 s (limite Veo)
@@ -31532,7 +31552,7 @@ function initExpress(){
       // note « dès 8 s » = Veo seul (jamais Omni), et masquée si verrouillé
       const note = _lk ? '' : ((q.v==='1080p' && !_isOmniQ && !_dur8) ? 'dès 8 s' : q.note);
       const _lock = _lk ? ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--orange2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>' : '';
-      const _qTitle = _lk ? '1080p — réservé aux plans Pro et Élite' : ((q.v==='1080p' && !_isOmniQ) ? '1080p = 8 s minimum (limite Google Veo)' : '');
+      const _qTitle = _lk ? '1080p — réservé aux plans Pro et Élite' : ((q.v==='1080p' && !_isOmniQ) ? '1080p = 8 s minimum' : '');
       return `<div onclick="_expPickQual('${q.v}')" class="exp-card${on?' on':''}" title="${_qTitle}" style="flex:1;padding:13px 12px;text-align:center;${_lk?'opacity:.6;':''}">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${q.l}${_lock}${note?`<span style="color:var(--orange2);font-size:12px;margin-left:5px">${note}</span>`:''}</div></div>`;
     }).join('');
@@ -31870,7 +31890,7 @@ function _mcLoad(f, which){
       window._mcRefB64=b64;
       const v=document.getElementById('mcRefPrev'), dz=document.getElementById('mcRefDrop');
       if(v){ v.src=b64; v.style.display='block';
-        v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; window._mcRefW=v.videoWidth||0; window._mcRefH=v.videoHeight||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'+((window._mcRefDur||0)>_MC_MAX_REF_S+0.5?' · coupée à '+_MC_MAX_REF_S+' s (max Kling)':''); if((window._mcRefDur||0)>_MC_MAX_REF_S+0.5) toast('Kling accepte 30 s max — seules les 30 premières secondes seront reproduites'); _mcUpdateCost(); };
+        v.onloadedmetadata=()=>{ window._mcRefDur=v.duration||0; window._mcRefW=v.videoWidth||0; window._mcRefH=v.videoHeight||0; const s=document.getElementById('mcRefSub'); if(s) s.textContent=(window._mcRefDur?Math.round(window._mcRefDur)+' s · ':'')+'le mouvement à reproduire'+((window._mcRefDur||0)>_MC_MAX_REF_S+0.5?' · coupée à '+_MC_MAX_REF_S+' s (max)':''); if((window._mcRefDur||0)>_MC_MAX_REF_S+0.5) toast('Vidéo de référence : 30 s max — seules les 30 premières secondes seront reproduites'); _mcUpdateCost(); };
       }
       if(dz) [...dz.children].forEach(c=>{ if(!['VIDEO','IMG','INPUT'].includes(c.tagName)) c.style.display='none'; });
     } else if(which==='char'){
@@ -31911,7 +31931,7 @@ function _mcCloseAdv(){ const m=document.getElementById('mcAdvModal'); if(m) m.s
 function _mcSetTier(t){
   // Le « forfait » est devenu le MODÈLE : 'standard' = Motion 2.6 (Kling v2.6), 'pro' = Motion 3.0 (Kling v3, 1080p natif).
   if(t==='pro' && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-    if(typeof showPaywall==='function') showPaywall('Oups — Motion 3.0 est réservé aux plans Pro & Élite', 'Passe en Pro ou Élite pour débloquer le moteur Kling 3.0.'); else toast('Motion 3.0 est réservé aux plans Pro et Élite'); return;
+    if(typeof showPaywall==='function') showPaywall('Oups — Motion 3.0 est réservé aux plans Pro & Élite', 'Passe en Pro ou Élite pour débloquer Motion 3.0.'); else toast('Motion 3.0 est réservé aux plans Pro et Élite'); return;
   }
   window._mcTier=t; window._mcKlingVer=(t==='pro')?'v3':'v2.6'; window._mcQuality=(t==='pro'?'1080':'720');
   _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost();
@@ -32033,7 +32053,7 @@ async function _mcNormalizeRef(b64, crop){
     await ff.run(...args);
     const data=await ff.FS('readFile','mcref_out.mp4');
     try{ await ff.FS('unlink','mcref_in.mp4'); await ff.FS('unlink','mcref_out.mp4'); }catch(_){}
-    if(data && data.length>1000) return { blob:new Blob([data.buffer],{type:'video/mp4'}), cropped:doCrop, note:(doCrop?' · recadrée au format '+(window._mcFormat||''):'')+(badCodec?' · ré-encodée en H.264':'')+(badSize?' · redimensionnée':'')+(tooLong?' · coupée à 30 s':'')+(tooShort?' · prolongée à 3,6 s (Kling : 3 s minimum)':'') };
+    if(data && data.length>1000) return { blob:new Blob([data.buffer],{type:'video/mp4'}), cropped:doCrop, note:(doCrop?' · recadrée au format '+(window._mcFormat||''):'')+(badCodec?' · ré-encodée en H.264':'')+(badSize?' · redimensionnée':'')+(tooLong?' · coupée à 30 s':'')+(tooShort?' · prolongée à 3,6 s (3 s minimum)':'') };
   }catch(e){ console.warn('[mc] normalisation réf :', e); }
   return { blob:src, note:'', cropped:false };   // repli : fichier intact (Kling tranchera, l'erreur réelle remonte)
 }
@@ -32048,7 +32068,7 @@ function _mcUpdateCost(){
   const bgSup = bgOn ? CREDIT_COSTS.motionBgPerSec*dur : 0;
   const c=rate*dur + bgSup;
   const tierLbl = window._mcTier==='pro' ? 'Motion 3.0 · 1080p natif' : (window._mcQuality==='1080' ? 'Motion 2.6 · 1080p natif' : 'Motion 2.6 · 720p');
-  const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max Kling)</span>' : '';
+  const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max)</span>' : '';
   // Axel 09/10 : plus de détail « 2 cr/s × 10 s · voix offerte » — le total, le modèle et la définition suffisent
   el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">'+(bgOn?'· fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s ':'')+'· '+tierLbl+coupe+'</span>';
 }
@@ -32503,12 +32523,12 @@ function _mcFalErr(rd, status){
   const d=Array.isArray(rd?.detail)?rd.detail[0]:rd?.detail;
   const type=String(d?.type||''); const msg=String(d?.msg||(typeof d==='string'?d:'')||rd?.error||'');
   try{ console.error('[mc] fal '+status+' : '+JSON.stringify(rd).slice(0,600)); }catch(_){}   // détail brut → panneau d'erreurs dev
-  if(/image_too_large/i.test(type||msg)) return 'Image du personnage trop grande pour Kling (max 3850 px) — réessaie, elle sera réduite automatiquement';
-  if(/duration|too long|too short|seconds/i.test(type+' '+msg)) return 'Durée de la vidéo de référence refusée par Kling (3 à 30 s) : '+msg.slice(0,120);
-  if(/hevc|h\.?265|codec/i.test(type+' '+msg)) return 'Codec vidéo refusé par Kling (HEVC/H.265) — réexporte en MP4 H.264 : '+msg.slice(0,120);
-  if(/unsupported|not supported|invalid (video|image|file)|format|resolution|dimension|too small|too large/i.test(type+' '+msg)) return 'Fichier non supporté par Kling (format, dimensions 340–3850 px, ratio 0,4–2,5) : '+msg.slice(0,120);
-  if(/risk|policy|moderat|sensitive|celebrit|content check|flagged|could not be processed/i.test(type+' '+msg)) return 'Kling a refusé ce contenu (modération) — souvent un élément du décor (poster, logo, marque, personnage). Essaie une photo à fond neutre, ou l\'option Arrière-plan pour remplacer le décor.';
-  return 'Kling a refusé la génération'+(msg?' : '+msg.slice(0,140):' (HTTP '+status+')');
+  if(/image_too_large/i.test(type||msg)) return 'Image du personnage trop grande (max 3850 px) — réessaie, elle sera réduite automatiquement';
+  if(/duration|too long|too short|seconds/i.test(type+' '+msg)) return 'Durée de la vidéo de référence refusée (3 à 30 s) : '+msg.slice(0,120);
+  if(/hevc|h\.?265|codec/i.test(type+' '+msg)) return 'Codec vidéo refusé (HEVC/H.265) — réexporte en MP4 H.264 : '+msg.slice(0,120);
+  if(/unsupported|not supported|invalid (video|image|file)|format|resolution|dimension|too small|too large/i.test(type+' '+msg)) return 'Fichier non supporté (format, dimensions 340–3850 px, ratio 0,4–2,5) : '+msg.slice(0,120);
+  if(/risk|policy|moderat|sensitive|celebrit|content check|flagged|could not be processed/i.test(type+' '+msg)) return 'Le moteur a refusé ce contenu (modération) — souvent un élément du décor (poster, logo, marque, personnage). Essaie une photo à fond neutre, ou l\'option Arrière-plan pour remplacer le décor.';
+  return 'Le moteur a refusé la génération'+(msg?' : '+msg.slice(0,140):' (HTTP '+status+')');
 }
 /* Le job a-t-il été bloqué par le content checker de Kling (content_policy_violation) ?
    Kling 3.0 (v3) déclenche souvent un FAUX positif sur du contenu UGC normal (visage,
@@ -32795,7 +32815,7 @@ async function _mcGenerate(){
   if(typeof _gateFreeGenerate==='function' && _gateFreeGenerate()) return;
   const tier=window._mcTier, q=window._mcQuality;
   if((tier==='pro'||q==='1080') && !['pro','elite','developer'].includes((currentMember?.plan||'free').toLowerCase())){
-    if(typeof showPaywall==='function') showPaywall(tier==='pro' ? 'Oups — Motion 3.0 est réservé aux plans Pro & Élite' : 'Oups — le 1080p est réservé aux plans Pro & Élite', tier==='pro' ? 'Passe en Pro ou Élite pour débloquer le moteur Kling 3.0.' : "Passe en Pro ou Élite pour l'export 1080p."); else toast(tier==='pro' ? 'Motion 3.0 est réservé aux plans Pro et Élite' : 'Le 1080p est réservé aux plans Pro et Élite'); return;
+    if(typeof showPaywall==='function') showPaywall(tier==='pro' ? 'Oups — Motion 3.0 est réservé aux plans Pro & Élite' : 'Oups — le 1080p est réservé aux plans Pro & Élite', tier==='pro' ? 'Passe en Pro ou Élite pour débloquer Motion 3.0.' : "Passe en Pro ou Élite pour l'export 1080p."); else toast(tier==='pro' ? 'Motion 3.0 est réservé aux plans Pro et Élite' : 'Le 1080p est réservé aux plans Pro et Élite'); return;
   }
   const rate=_mcRate(), dur=_mcRefDurEff();
   if(!dur){ toast('Vidéo de référence illisible — réessaie'); return; }
@@ -32939,7 +32959,7 @@ async function _mcGenerate(){
         sub=await fPost(model, { ...body, elements:[{ frontal_image_url:charUrl, reference_image_urls:[charUrl] }] });
         if(!sub.ok && (sub.status===400||sub.status===422)){ console.warn('[mc] elements refusés, renvoi sans'); sub=await fPost(model, body); }
       } else sub=await fPost(model, body);
-      if(!sub.ok){ const _t=(await sub.text().catch(()=>'')); throw new Error(sub.status===402 ? 'Service vidéo momentanément indisponible — réessaie dans quelques minutes' : ('Kling '+sub.status+' '+_t.slice(0,140))); }
+      if(!sub.ok){ const _t=(await sub.text().catch(()=>'')); throw new Error(sub.status===402 ? 'Service vidéo momentanément indisponible — réessaie dans quelques minutes' : ('Génération '+sub.status+' '+_t.slice(0,140))); }
       const sd=await sub.json().catch(()=>({})); const reqId=sd.request_id||sd.requestId;
       const stP = sd.status_url ? sd.status_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId+'/status';
       const reP = sd.response_url ? sd.response_url.replace('https://queue.fal.run','') : model+'/requests/'+reqId;
@@ -32949,7 +32969,7 @@ async function _mcGenerate(){
         await new Promise(r=>setTimeout(r,4000));
         const pr=await fGet(stP); if(!pr.ok) continue;
         const pd=await pr.json().catch(()=>({})); const s=String(pd.status||'').toUpperCase();
-        _mcProg(i>75?'Génération en cours… (Kling est chargé, ça arrive)':'Génération en cours…', Math.min(88, 22+i*2));
+        _mcProg(i>75?'Génération en cours… (le moteur est chargé, ça arrive)':'Génération en cours…', Math.min(88, 22+i*2));
         if(s==='IN_QUEUE'||s==='IN_PROGRESS') continue;
         if(s==='COMPLETED'){
           // « COMPLETED » veut dire « traité », PAS « réussi » : quand Kling échoue
@@ -32965,7 +32985,7 @@ async function _mcGenerate(){
         }
         throw new Error('Échec : '+(pd.error?String(pd.error).slice(0,80):s));
       }
-      throw new Error('Délai dépassé (>11 min) — Kling saturé, réessaie dans un moment');
+      throw new Error('Délai dépassé (>11 min) — service saturé, réessaie dans un moment');
     };
     // kie.ai (Axel 09/10 : TOUS les clients ; compte developer inchangé) : MÊMES médias, MÊME prompt ; seul le fournisseur change.
     //   Motion 2.6 = kling-2.6 720p ou 1080p NATIF · repli modération 2.6 = kling-2.6 1080p · Motion 3.0 = kling-3.0 1080p,
@@ -32979,7 +32999,7 @@ async function _mcGenerate(){
           const _r = await _kieRun(ver==='v3' ? 'kling-3.0-mc' : 'kling-2.6-mc',
             { image_url:charUrl, video_url:sv.data.signedUrl, character_orientation:'video', prompt:(_mcMotion + _mcId).slice(0,2400),
               mode: (tier==='pro' || q==='1080') ? '1080p' : '720p', background_source:'input_image' },
-            { every:4000, maxPolls:375, onTick:(i)=>_mcProg(i>75?('Génération en cours… ('+(_dv?'kie.ai':'Kling')+' est chargé, ça arrive)'):('Génération en cours…'+(_dv?' (kie.ai)':'')), Math.min(88, 22+i*2)) });
+            { every:4000, maxPolls:375, onTick:(i)=>_mcProg(i>75?('Génération en cours… ('+(_dv?'kie.ai':'le moteur')+' est chargé, ça arrive)'):('Génération en cours…'+(_dv?' (kie.ai)':'')), Math.min(88, 22+i*2)) });
           window._aaLastEngine='kie'; window._mcKieRid=_r.rid;
           return _r.url;
         }catch(e){
@@ -32999,8 +33019,8 @@ async function _mcGenerate(){
       // sur 2.6 (moteur éprouvé, checker permissif) pour livrer quand même. Un job
       // fal échoué n'est pas facturé → seul le succès 2.6 débite.
       if(_mcVer==='v3' && e && e._moderation){
-        toast('Kling 3.0 a jugé ce contenu sensible — reprise automatique en Kling 2.6');
-        _mcProg('Reprise en Kling 2.6…', 20);
+        toast('Motion 3.0 a jugé ce contenu sensible — reprise automatique en Motion 2.6');
+        _mcProg('Reprise en Motion 2.6…', 20);
         _mcVer='v2.6';
         // ⚠️ REFACTURATION AVANT le repli (audit 15/09) — sinon DOUBLE FACTURATION (90 + 60 au lieu de 60).
         // Sur le 422 de modération, le proxy rembourse l'op v3 côté serveur (refundByJobTerminal) OU, à défaut, la
@@ -33011,9 +33031,9 @@ async function _mcGenerate(){
         // PUIS on débite l'op 2.6 FRAÎCHE : la relance 2.6 tire cette op-là (l'op v3 est remboursée → non tirable).
         const _v26Rate = tier==='pro' ? 3 : _mcRate();   // 2.6 1080p natif = 3 cr/s (09/10, avant 4 via fal pro)
         if(_v26Rate !== _mcPreRate){
-          try{ await creditsFlowRefund('reprise en Kling 2.6 — refacturation au tarif 2.6'); }catch(_){}
+          try{ await creditsFlowRefund('reprise en Motion 2.6 — refacturation au tarif 2.6'); }catch(_){}
           creditsFlowBegin();
-          if(!(await spendCreditsFor(_v26Rate*dur,'motion'))) throw new Error('Crédits insuffisants pour la reprise en Kling 2.6');
+          if(!(await spendCreditsFor(_v26Rate*dur,'motion'))) throw new Error('Crédits insuffisants pour la reprise en Motion 2.6');
           _mcPreRate = _v26Rate;   // rend le garde-fou de refacturation ci-dessous inopérant (déjà refacturé)
         }
         out=await runKling('v2.6');   // tire désormais l'op 2.6 FRAÎCHE (l'op v3 a été remboursée, réserve intacte)
@@ -33024,7 +33044,7 @@ async function _mcGenerate(){
     // (baseRate === _mcPreRate). Conservé pour un éventuel futur chemin qui changerait _mcVer sans passer par le repli.
     const baseRate = tier==='pro' ? (_mcVer==='v3' ? CREDIT_COSTS.motion30PerSec : 3) : _mcRate();
     if(baseRate !== _mcPreRate){
-      try{ await creditsFlowRefund('reprise en Kling 2.6 — refacturation au tarif 2.6'); }catch(_){}
+      try{ await creditsFlowRefund('reprise en Motion 2.6 — refacturation au tarif 2.6'); }catch(_){}
       creditsFlowBegin();
       await spendCreditsFor(baseRate*dur,'motion');
     }
@@ -34005,7 +34025,7 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
     // par défaut — ce champ n'existe pas dans le schéma fal (un param inconnu risque un 422).
   });
   const sd=await sub.json().catch(()=>({}));
-  if(!sub.ok) throw new Error('Omni Flash '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160)+' — les crédits de la vidéo te sont rendus, réessaie');
+  if(!sub.ok) throw new Error('Génération '+sub.status+' — '+String(sd&&(sd.detail||sd.error)||JSON.stringify(sd||{})).slice(0,160)+' — les crédits de la vidéo te sont rendus, réessaie');
   const pick=(o)=>{ if(!o) return null; return (o.video&&o.video.url)||(o.output&&o.output.video&&o.output.video.url)||(o.videos&&o.videos[0]&&o.videos[0].url)||o.video_url||null; };
   let outUrl=pick(sd);
   if(!outUrl && (sd.status_url||sd.request_id)){
@@ -34025,14 +34045,14 @@ async function _expOmniImageToVideo(imgB64, imgMime, prompt, durSec, res, onStep
           step(Math.min(89,86+r),'↓ Récupération de la vidéo…');
           await new Promise(res=>setTimeout(res,2500));
         }
-        if(!outUrl) throw new Error('Omni Flash : vidéo prête mais récupération impossible — réessaie dans un instant');
+        if(!outUrl) throw new Error('Vidéo prête mais récupération impossible — réessaie dans un instant');
         break;
       }
-      if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('Omni Flash a échoué'+(st.error?' : '+String(st.error).slice(0,90):'')+' — les crédits de la vidéo te sont rendus, réessaie');
+      if(S==='FAILED'||S==='ERROR'||st.error) throw new Error('La génération a échoué'+(st.error?' : '+String(st.error).slice(0,90):'')+' — les crédits de la vidéo te sont rendus, réessaie');
       step(Math.min(88,42+i*2),'Flash — génération… ('+Math.min(88,42+i*2)+' %)');
     }
   }
-  if(!outUrl){ const e=new Error('Omni Flash : la vidéo prend plus de temps que prévu. Elle arrivera dans ta Bibliothèque, sinon tes crédits seront rendus automatiquement. Ne relance pas.'); e._kieStage='pending'; throw e; }   // filet reconcile-fal-orphans (audit 28/09 #11)
+  if(!outUrl){ const e=new Error('La vidéo prend plus de temps que prévu. Elle arrivera dans ta Bibliothèque, sinon tes crédits seront rendus automatiquement. Ne relance pas.'); e._kieStage='pending'; throw e; }   // filet reconcile-fal-orphans (audit 28/09 #11)
   step(90,'↓ Récupération de la vidéo…');
   const vb=await (await fetch(outUrl)).blob();
   return new Blob([vb], { type:'video/mp4' });
@@ -34266,7 +34286,7 @@ async function _expressCreateOne(o){
     let blob;
     if(_isOmni){
       // ⚡ Omni Flash image→vidéo (image + texte → vidéo + VOIX NATIVE) : kie.ai pour tous, sans repli (carré 1:1 : fal).
-      setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni Flash — génération…');
+      setP(Math.max(p,30), '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Génération…');
       blob = await _expOmniImageToVideo(imgB64, imgMime, animPrompt, _dur, _res, (v,t)=>setP(Math.max(p,v),t), _expOp);
       _myRid = (blob && blob._kieRid) || null;
       blob = await _expRetouche(blob, imgB64, imgMime, (v,t)=>setP(Math.max(p,v),t));   // retouche forte (02/10)
@@ -34323,7 +34343,7 @@ async function _expressCreateOne(o){
           console.warn('[kie] Veo : échec kie', e);
           if(e && e._kieRefus){
             const _c = String(e.message||'refus').replace(/^kie\s*:\s*/i, '').slice(0, 120);
-            const r = new Error((_kieDev() ? 'Veo (kie.ai)' : 'Veo')+' a refusé ce contenu ('+_c+') — les crédits de la vidéo te sont rendus ; change la réplique ou l\'image puis réessaie');
+            const r = new Error((_kieDev() ? 'Veo (kie.ai)' : 'Le moteur')+' a refusé ce contenu ('+_c+') — les crédits de la vidéo te sont rendus ; change la réplique ou l\'image puis réessaie');
             r._kieStage = e._kieStage; r._kieBill = e._kieBill; throw r;
           }
           if(!_kieCanFallback(e)) throw e;   // 'pending' / 'unknown' / 'drawn' / 'unfunded' / 'refunded' : jamais de 2e génération
@@ -34566,7 +34586,7 @@ function expressReset(){
 function expressAddSubs(){
   if(!window._expVidBlob){ toast('Génère une vidéo d\'abord'); return; }
   const plan=(currentMember?.plan||'free').toLowerCase();
-  if(!['pro','elite','developer'].includes(plan)){ toast('Sous-titres Whisper IA — plans Pro et +'); openUpgradeModal(); return; }
+  if(!['pro','elite','developer'].includes(plan)){ toast('Sous-titres IA — plans Pro et +'); openUpgradeModal(); return; }
   document.getElementById('_expSubsModal')?.remove();
   const m=document.createElement('div'); m.id='_expSubsModal';
   m.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(5px)';
@@ -34619,7 +34639,7 @@ async function _expBurnSubs(){
   let vid=null, actx=null, url=null;
   try{
     // 1) Transcription Whisper (mots + timestamps)
-    setp(8,'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Transcription Whisper IA…');
+    setp(8,'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg> Transcription IA…');
     const fd=new FormData();
     fd.append('file', raw, 'video.mp4');
     fd.append('model','whisper-1');
@@ -34627,7 +34647,7 @@ async function _expBurnSubs(){
     fd.append('response_format','verbose_json');
     fd.append('timestamp_granularities[]','word');
     const wr=await fetch(OPENAI_PROXY+'?path=/v1/audio/transcriptions',{ method:'POST', headers: await getAuthHeader(), body: fd });
-    if(!wr.ok) throw new Error('Whisper : '+(await wr.text()).slice(0,120));
+    if(!wr.ok) throw new Error('Transcription : '+(await wr.text()).slice(0,120));
     const wd=await wr.json();
     const words=(wd.words||[]).map(w=>({ word:String(w.word||'').replace(/[.,!?;:"«»]/g,'').trim(), start:w.start, end:w.end })).filter(w=>w.word);
     if(!words.length) throw new Error('Aucune parole détectée dans la vidéo');
@@ -35293,7 +35313,7 @@ function _expDeductImageCredit(){
 // ── Transcription ─────────────────────────────────────────────
 async function expressWhisper(){
   const plan = (currentMember?.plan||'free').toLowerCase();
-  if(!['starter','pro','elite','developer'].includes(plan)){ showPaywall(); toast('Whisper IA disponible dès le plan Starter'); return; }
+  if(!['starter','pro','elite','developer'].includes(plan)){ showPaywall(); toast('Transcription IA disponible dès le plan Starter'); return; }
   if(!_expressVideoFile){ toast('Importe ta vidéo d\'abord'); return; }
   const btn = document.getElementById('expWhisperBtn');
   if(btn){ btn.innerHTML='Transcription en cours…'; btn.disabled=true; }
@@ -35322,14 +35342,14 @@ async function expressWhisper(){
       // Mise à jour durée si pas encore connue
       if(!_expressVideoDuration && whisperWordTimestamps.length)
         _expressVideoDuration = whisperWordTimestamps[whisperWordTimestamps.length-1].end + 0.5;
-      toast('Whisper IA — transcript' + (whisperWordTimestamps.length ? ' + timestamps !' : ' appliqué !'));
+      toast('Transcription IA — texte' + (whisperWordTimestamps.length ? ' + timestamps !' : ' appliqué !'));
     } else { toast('Aucun texte détecté'); }
   } catch(e){
     let msg = String(e.message||e);
     try{ const j=JSON.parse(msg); msg=(j?.error?.message||msg).slice(0,150); }catch(_){}
-    toast('Whisper : '+msg.slice(0,140));
+    toast('Transcription : '+msg.slice(0,140));
   } finally {
-    if(btn){ btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Whisper IA · Synchronise les sous-titres à ton audio</span></div></div>'; btn.disabled=false; }
+    if(btn){ btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg><div style="display:flex;flex-direction:column;gap:2px;min-width:0"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px;color:var(--accent-2)">Transcription IA · Synchronise les sous-titres à ton audio</span></div></div>'; btn.disabled=false; }
   }
 }
 
@@ -35977,8 +35997,8 @@ async function _hedraFetch(path, method, body, isForm){
 async function _hedraV3UploadBlob(blob, name){
   const fd = new FormData(); fd.append('file', blob, name || 'file');
   const r = await _hedraFetch('/v3/files', 'POST', fd, true);
-  if(!r.ok) throw new Error('Upload Hedra v3 '+r.status+' — '+(await r.text()).slice(0,140));
-  const j = await r.json(); if(!j || !j.url) throw new Error('Upload Hedra v3 : pas d\'url');
+  if(!r.ok) throw new Error('Envoi avatar '+r.status+' — '+(await r.text()).slice(0,140));
+  const j = await r.json(); if(!j || !j.url) throw new Error('Envoi avatar : pas d\'url');
   return { source:'url', url:j.url };   // forme attendue dans input.<media>
 }
 // Hedra v3 = max 30 Mo/image ; une photo HD en PNG (sans perte) dépasse vite. On la ramène
@@ -36016,9 +36036,9 @@ async function _hedraV3Submit(slug, input){
     try{ _hedraAlertAxel('Hedra 402 — plus de solde', 'Création de job refusée (402) sur '+slug+'. Recharger le compte Hedra.'); }catch(_){}
     throw new Error('Fournisseur vidéo momentanément indisponible — aucun crédit débité, réessaie dans un moment');
   }
-  if(!r.ok) throw new Error('Hedra '+slug+' '+r.status+' — '+(await r.text()).slice(0,220));
+  if(!r.ok) throw new Error('Génération '+r.status+' — '+(await r.text()).slice(0,220));
   const j = await r.json(); const id = j.job_id || j.id;
-  if(!id) throw new Error('Hedra : pas de job_id');
+  if(!id) throw new Error('Avatar : pas d\'identifiant de génération');
   return id;
 }
 async function _hedraV3Poll(jobId, onProgress, maxTries){
@@ -36039,7 +36059,7 @@ async function _hedraV3Poll(jobId, onProgress, maxTries){
     if(!pr || !pr.ok){
       fails++;
       if(fails >= 5){ let body=''; try{ body = pr ? (await pr.text()).slice(0,160) : 'réseau injoignable'; }catch(_){}
-        throw new Error('Hedra statut '+(pr ? 'HTTP '+pr.status : 'injoignable')+' ×'+fails+' — '+body); }
+        throw new Error('Avatar : statut '+(pr ? 'HTTP '+pr.status : 'injoignable')+' ×'+fails+' — '+body); }
       continue;
     }
     fails = 0;
@@ -36050,22 +36070,22 @@ async function _hedraV3Poll(jobId, onProgress, maxTries){
     if(onProgress && prog !== null){ try{ onProgress(prog, pd.estimated_completion_at || null); }catch(_){} }
     if(['FAILED','ERROR','ERRORED','CANCELED','CANCELLED'].includes(st)){
       const em = (pd.error && (pd.error.message || pd.error)) || (pd.message||'');
-      throw new Error('Hedra a échoué'+(em ? (' — '+String(em).slice(0,160)) : '')+' (job '+jobId+')');
+      throw new Error('La génération avatar a échoué'+(em ? (' — '+String(em).slice(0,160)) : '')+' (job '+jobId+')');
     }
     if(st==='COMPLETED'){
       const rr = await _hedraFetch('/v3/jobs/'+jobId, 'GET');
-      if(!rr.ok) throw new Error('Hedra résultat HTTP '+rr.status);
+      if(!rr.ok) throw new Error('Avatar : résultat HTTP '+rr.status);
       const rd = await rr.json();
       const out = (rd.outputs||[]).find(o=>o && o.url) || (rd.outputs||[])[0];
-      if(!out || !out.url) throw new Error('Hedra : pas d\'URL de sortie (job '+jobId+')');
+      if(!out || !out.url) throw new Error('Avatar : pas d\'URL de sortie (job '+jobId+')');
       return out;   // { url, asset_id, content_type, width, height, duration_ms, … }
     }
     // sans ETA : au-delà du plafond de base et si rien ne bouge depuis 3 min → on arrête (le job reste repris via _hedraLastJob)
     if(!etaMs && Date.now() - t0 > C.capMs && Date.now() - lastPAt > C.stallMs){
-      throw new Error('Hedra bloqué à '+Math.round(Math.max(0,lastP)*100)+' % depuis '+Math.round(C.stallMs/60000)+' min (job '+jobId+') — le job continue chez Hedra : relance plus tard avec le même audio, la vidéo sera récupérée sans nouvelle génération');
+      throw new Error('Génération bloquée à '+Math.round(Math.max(0,lastP)*100)+' % depuis '+Math.round(C.stallMs/60000)+' min (job '+jobId+') — la génération continue : relance plus tard avec le même audio, la vidéo sera récupérée sans nouvelle génération');
     }
   }
-  throw new Error('Hedra n\'a pas fini en '+Math.round((Date.now()-t0)/60000)+' min (job '+jobId+') — il continue chez Hedra : relance plus tard avec le même audio, la vidéo sera récupérée sans nouvelle génération');
+  throw new Error('La génération n\'a pas fini en '+Math.round((Date.now()-t0)/60000)+' min (job '+jobId+') — elle continue : relance plus tard avec le même audio, la vidéo sera récupérée sans nouvelle génération');
 }
 
 
@@ -42673,7 +42693,7 @@ lastY=y;
     var m=document.getElementById('mMore'); if(!m) return;
     var t=tabs();
     var tools=[
-      ['generator','Avatar IA en 5 étapes'],['express','Vidéo en 1 prompt · Veo'],['motion','Ton avatar copie une vidéo'],
+      ['generator','Avatar IA en 5 étapes'],['express','Vidéo en 1 prompt'],['motion','Ton avatar copie une vidéo'],
       ['omni','Édition vidéo par prompt'],['studio','Montage type CapCut'],['imagegen','Visuels 4K'],
       ['audioclean','Nettoyage + enregistreur'],['library','Tes vidéos']
       // Parrainage retiré de « Plus » (08/09) : déjà accessible dans « Mon compte »
@@ -42878,7 +42898,7 @@ window._mExpSync=function(){
   var vMeta=(typeof EXP_VOICES!=='undefined'?EXP_VOICES:[]).find(function(x){return x.id===vId;});
   var vv=document.getElementById('mExpVoiceVal');
   /* libellés courts : la pilule fait ~1/4 de la largeur de l'écran */
-  var SHORT={ native:'Auto', gemini:'Gemini', eleven:'Eleven', import:'Import', none:'Muet' };
+  var SHORT={ native:'Auto', gemini:'IA', eleven:'IA', import:'Import', none:'Muet' };
   if(vv) vv.textContent=SHORT[vId]||(vMeta?vMeta.name:'Voix');
   var vi=document.getElementById('mExpVoiceIcon');
   if(vi) vi.innerHTML=(vId==='none') ? '<path d="M3 9v6h4l5 4V5L7 9z"/><path d="M17 9l4 6M21 9l-4 6"/>' : '<path d="M3 9v6h4l5 4V5L7 9z"/><path d="M16 8.5a4 4 0 0 1 0 7"/>';
