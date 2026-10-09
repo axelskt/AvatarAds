@@ -43,8 +43,10 @@ const json = (body: unknown, status = 200) =>
 // le placement dense, la cadence, les bruitages et les verrous sont deterministes
 // cote serveur. Ce qui lui reste (decouper les sections, reperer les moments forts)
 // ne justifie pas le tarif d'Opus. A rebasculer si la qualite des plans chute.
-// 09/10 (Axel) : Sonnet 5 → Sonnet 5.5, la derniere version.
-const CLAUDE_MODEL = 'claude-sonnet-5-5'
+// 09/10 (Axel) : essai de Sonnet 5.5 → les 2 premiers plans (audios de 28 et 34 s) ont
+// depasse le budget de 160 s de la fonction (504) : retour a Sonnet 5 le soir meme.
+// Ne repasser en 5.5 qu'avec un plan mesure sous ~100 s (effort, pensee, decoupage).
+const CLAUDE_MODEL = 'claude-sonnet-5'
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024
 const MAX_ASSETS = 8
 const MAX_THUMB_BYTES = 400 * 1024
