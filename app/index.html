@@ -31,7 +31,7 @@ try{
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;600&family=Dancing+Script:wght@700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
 <!-- Audit 02/10 : scripts tiers en version EXACTE + intégrité (SRI) : un fichier modifié sur le CDN n'est pas exécuté.
      supabase.js = le fichier du paquet npm (le .min.js de jsDelivr est généré à la volée, donc impropre au SRI ; même
      code) ; 2.117.2 = la version que servait @2 au 03/10/2026. Le loader Whop (non versionné, mis à jour par Whop) et
@@ -225,18 +225,21 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
    et tout restait bloqué sous la barre du haut. Le menu défile désormais DANS lui-même ; sur ordinateur, .layout coupe
    (clip) au lieu d'être un conteneur de défilement. */
 @media(min-width:769px){
-  /* Images IA (09/10) : une image 9:16 s'affichait sur ~920 px dans une zone de ~480 → elle tient maintenant ENTIÈRE dans la
-     hauteur visible de la zone (les boutons Détails / 4K / Télécharger juste en dessous, en défilant) ; la carte prend la
-     largeur de l'image (format lu au chargement : --img-ar), 520 px au plus comme avant. */
-  /* 3e passe (Axel 09/10, croquis  /* Images IA = MÊME affichage qu'Express (Axel 09/10 : « regarde Express et reprends les mêmes dimensions ») : l'aperçu et la
+  /* Images IA = MÊME affichage qu'Express (Axel 09/10 : « regarde Express et reprends les mêmes dimensions ») : l'aperçu et la
      zone de texte vivent dans UNE colonne qui défile (#imgCol) ; l'image arrive ENTIÈRE à son format réel, haute de 65 % de
      l'écran, coins 16 px + ombre comme la vidéo d'Express, boutons en ligne dessous → la zone de texte descend un peu.
-     Clic dans la zone de texte → elle remonte entière et l'image se réduit pour que tout tienne (_imgCompose). */
+     Clic dans la zone de texte → elle remonte entière et l'image se réduit pour que tout tienne ; clic autour de l'image →
+     retour à la grande vue (_imgCompose). */
   #imgCol{overflow-y:auto;min-height:0}
   #imgCanvas{flex:1 0 auto !important;overflow:visible !important;min-height:320px}
   #imgResult{max-width:none !important;width:100% !important}
   #imgResult > div{background:transparent !important;border:0 !important;border-radius:0 !important;overflow:visible !important;display:flex;flex-direction:column;align-items:center}
   #imgZone{background:transparent !important;min-height:0 !important;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px -20px rgba(0,0,0,.7);line-height:0}
+  #imgZone > :not(img){line-height:normal}
+  /* Attente (génération, correction, faceswap) : boîte au format choisi et à la taille de l'image à venir, avec le rond de
+     progression et le chrono. Sans elle, la zone (image masquée) retombait à 0 px et l'écran de chargement disparaissait. */
+  #imgZone.img-attente{width:min(100%, calc(var(--img-max-h, 65vh) * var(--img-r, .5625)));aspect-ratio:var(--img-ar, 9 / 16);background:var(--panel-1) !important;border:1px solid var(--border);box-shadow:none}
+  #imgZone.img-attente #imgRegenWrap{display:none}
   #imgOutput{width:auto !important;max-width:100%;max-height:var(--img-max-h, 65vh);border-radius:16px;transition:max-height .28s ease}
   #imgActions{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:10px;padding:16px 0 4px !important;width:100%}
   #imgActions > div:first-child{display:contents !important;margin:0 !important}   /* son style en ligne (flex + marge) gagnait → boutons enfermés, Télécharger étiré */
@@ -244,13 +247,32 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
   #imgActions > div:first-child > button, #imgActions #imgDownloadBtn{flex:0 1 186px !important;min-height:54px;box-sizing:border-box;padding:9px 14px !important;border-radius:12px !important;margin:0 !important}
   #imgActions #imgDownloadBtn{width:auto !important;font-size:13.5px !important;box-shadow:none !important;transform:none !important}
   #imgActions #imgRevertBtn{width:auto !important;margin:0 !important}
-pas de barre de défilement sur ordinateur) : les deux zones carrées (394 px) dépassaient
+  /* Lot de 2-3 images : cases côte à côte à la hauteur d'une image seule, boutons compris (largeurs posées par _imgMultiFit) ;
+     dans une case étroite, « Détails du visage » et « Améliorer en 4K » passent l'un sous l'autre. */
+  #imgResultMulti{max-width:none !important}
+  #imgMultiGrid{display:flex !important;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:14px !important}
+  #imgMultiGrid > div{flex:0 0 auto;width:30%;max-width:100%;min-width:0;container-type:inline-size}
+  /* Express : même principe — clic dans la zone de texte → vidéo réduite, tout tient ; clic autour → grande vue (_expCompose) */
+  #expResultVid{max-height:var(--exp-max-h, 65vh) !important;transition:max-height .28s ease}
+  #expVeoBody.exp-compose #expStage{min-height:0 !important}
+  /* Motion Control (Axel 09/10 : pas de barre de défilement sur ordinateur) : les deux zones carrées (394 px) dépassaient
      d'~36 px sur un écran de 760 px → leur hauteur suit la place restante, et la barre est masquée (molette toujours active). */
   #expMotionWrap{container-type:size;scrollbar-width:none}
   #expMotionWrap::-webkit-scrollbar{display:none}
   #mcRefDrop,#mcCharDrop{max-height:calc(100cqh - 290px)}
+  /* Générateur (Axel 09/10 : « enlève le slider ») : barre masquée (molette toujours active) et l'étape « Ton avatar » tient
+     dans un écran de 760 px (elle dépassait de ~50 px : « Réinitialiser totalement » coupé). */
+  .gen-form{scrollbar-width:none;padding-bottom:20px !important}
+  .gen-form::-webkit-scrollbar{display:none}
+  #avPhotoZone{padding-top:clamp(18px, 4vh, 48px) !important;padding-bottom:clamp(18px, 4vh, 48px) !important}
   .layout{overflow:clip;min-height:0}   /* clip ≠ conteneur de défilement : sans min-height:0, .layout reprendrait la hauteur de son contenu */
   .sidebar{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
+}
+/* Lot d'images (ordinateur ET mobile) : dans une case étroite, « Détails du visage » et « Améliorer en 4K » passent l'un sous
+   l'autre, libellé et coût sur une ligne (les cases sont des conteneurs : #imgMultiGrid > div, voir plus haut et plus bas). */
+@container (max-width:300px){
+  .img-mrow{flex-direction:column}
+  .img-mrow > button{flex-direction:row !important;gap:7px !important;padding:10px 8px !important}
 }
 
 /* RESPONSIVE */
@@ -3240,7 +3262,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
               <!-- Badges -->
               <div id="imgBadges" style="display:none"></div><!-- étiquettes style · format retirées (Axel 09/10) : l'élément reste pour le code qui le remplit -->
               <!-- Regenerate -->
-              <div style="position:absolute;top:12px;right:12px">
+              <div id="imgRegenWrap" style="position:absolute;top:12px;right:12px">
                 <button onclick="generateImage()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);border-radius:20px;color:rgba(255,255,255,0.85);font-family:var(--mono);font-size:10px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.55)'">
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 5A3.5 3.5 0 1 0 5 1.5"/><path d="M1.5 2.5v2.5h2.5"/></svg>
                   Regénérer
@@ -5760,7 +5782,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
   <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px)"></div>
   <div style="position:relative;width:100%;max-width:440px;max-height:94vh;margin:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 90px rgba(0,0,0,.75)">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex:0 0 auto">
-      <div class="mono" style="font-size:10.5px;letter-spacing:.12em;color:var(--accent-2);display:flex;align-items:center;gap:7px">
+      <div style="font-family:'Montserrat',var(--font),sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:var(--accent-2);display:flex;align-items:center;gap:7px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
         PAIEMENT SÉCURISÉ · WHOP
       </div>
@@ -7976,11 +7998,13 @@ function _whopElementsReady(){
   }).catch(function(e){ _whopElP = null; throw e; });
   return _whopElP;
 }
-// Thème du studio (clair / sombre) + bouton Payer aux couleurs AvatarAds
+// Thème du studio (clair / sombre) + bouton Payer aux couleurs AvatarAds.
+// Google Pay masqué (Axel 09/10 : seuls Carte et Apple Pay sont cochés côté Whop, mais le module l'affichait quand même) :
+// « display » fait partie des propriétés autorisées par Whop pour ses classes (liste vérifiée dans le code du module).
 function _whopAppearance(){
   const light = document.documentElement.getAttribute('data-theme') === 'light';
   return { theme:{ appearance: light ? 'light' : 'dark', accentColor:'orange', grayColor:'auto' },
-    classes:{ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' } } };
+    classes:{ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' }, 'whop-CheckoutExpressGooglePay':{ display:'none' } } };
 }
 // Page de paiement Whop hébergée (secours) : e-mail du compte pré-rempli ET verrouillé — le webhook crédite par l'e-mail
 function _whopHostedUrl(url){
@@ -10794,7 +10818,10 @@ function _imgSetProg(p){
 }
 function _imgProgStart(label){
   { const a=document.getElementById('imgActions'); if(a) a.style.display='none'; }  // boutons cachés pendant le chargement
-  { const z=document.getElementById('imgZone'); if(z) z.style.minHeight='clamp(320px,52vh,560px)';   // boîte haute → « génération en cours » centré (plus trop en haut)
+  { const z=document.getElementById('imgZone'); if(z){ z.style.minHeight='clamp(320px,52vh,560px)';   // boîte haute → « génération en cours » centré (plus trop en haut)
+      // ordinateur (09/10) : la boîte d'attente prend le format choisi et la taille de l'image à venir (CSS #imgZone.img-attente)
+      const f=String(_imgSelectedFormat||''), r=f==='1792x1024'?[16,9]:f==='1024x1024'?[1,1]:[9,16];
+      z.style.setProperty('--img-ar', r[0]+' / '+r[1]); z.style.setProperty('--img-r', String(r[0]/r[1])); z.classList.add('img-attente'); }
     const o=document.getElementById('imgOutput'); if(o) o.style.display='none'; }                     // masque l'image précédente pendant le chargement
   // Chrono RÉEL (Axel 23/09) à la place de l'estimation « (~30s) », qui mentait dès que le moteur était chargé.
   const l=document.getElementById('imgProgLabel');
@@ -10812,7 +10839,16 @@ function _imgProgStart(label){
     const bt=document.getElementById('imgMakeRealTimer'); if(bt) bt.textContent=t;
   }, 350);
 }
-function _imgProgStop(){ clearInterval(_imgProgTimer); _imgProgTimer=null; _imgSetProg(100); }
+function _imgProgStop(){ clearInterval(_imgProgTimer); _imgProgTimer=null; _imgSetProg(100); _imgAttenteFin(); }
+// Fin de la boîte d'attente. Succès : _imgShowSingle pose la nouvelle image juste après. Échec / refus : l'image
+// précédente revient avec ses boutons ; s'il n'y en avait pas, l'écran d'accueil (avant : carte vide restée à l'écran).
+function _imgAttenteFin(){
+  const z=document.getElementById('imgZone'); if(!z || !z.classList.contains('img-attente')) return;
+  z.classList.remove('img-attente');
+  const o=document.getElementById('imgOutput'), r=document.getElementById('imgResult');
+  if(o && o.getAttribute('src')){ o.style.display='block'; const a=document.getElementById('imgActions'); if(a) a.style.display=''; }
+  else if(r){ r.style.display='none'; _imgIdleShow(true); }
+}
 
 // ── Bascule original ⇄ version améliorée (Axel 26/08 : pouvoir REVENIR à l'upgrade après être revenu à l'original) ──
 let _imgPrevSrc=null, _imgIsHD=false, _imgHDSrc=null, _imgViewingOriginal=false;
@@ -11942,12 +11978,12 @@ function _imgFillMultiSlot(slot, url, size, showFace, opt){
   opt = opt || {};
   // Boutons SOUS l'image (pas en overlay), design/texte/couleur IDENTIQUES à la génération d'une seule image.
   slot.innerHTML='';
-  slot.style.cssText='display:flex;flex-direction:column;gap:8px;background:transparent;border:none;border-radius:0;overflow:visible;padding:0;position:static';
+  slot.style.cssText='display:flex;flex-direction:column;gap:8px;background:transparent;border:none;border-radius:0;overflow:visible;padding:0;position:static'+(slot.style.width?';width:'+slot.style.width:'');
   const wrap=document.createElement('div');
   wrap.style.cssText='width:100%;aspect-ratio:'+(size==='1024x1792'?'9/16':size==='1792x1024'?'3/2':'1/1')+';background:#0d0d0f;border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer';
   const im=document.createElement('img'); im.decoding='async'; im.style.cssText='width:100%;height:100%;object-fit:contain;display:block';
   // Plus de bandes noires (Axel 24/09) : la case adopte le ratio RÉEL de l'image (une photo 3:4 dans une case 2:3 = bandes).
-  im.onload=()=>{ if(im.naturalWidth && im.naturalHeight){ wrap.style.aspectRatio = im.naturalWidth+'/'+im.naturalHeight; wrap.style.background='transparent'; } };
+  im.onload=()=>{ if(im.naturalWidth && im.naturalHeight){ wrap.style.aspectRatio = im.naturalWidth+'/'+im.naturalHeight; wrap.style.background='transparent'; try{ _imgMultiFit(); }catch(_){} } };
   im.src=opt.view||url;
   wrap.appendChild(im); wrap.onclick=()=> _imgSelectFromMulti(url, size);   // clic sur l'image → ouvre en grand
   slot.appendChild(wrap);
@@ -11958,7 +11994,7 @@ function _imgFillMultiSlot(slot, url, size, showFace, opt){
   // Ligne 1 : Détails du visage (si visage) + Améliorer en 4K — mêmes boutons outline que la génération unique
   const outline='flex:1;min-width:0;padding:11px 8px;background:transparent;border:1.5px solid var(--accent-line);border-radius:11px;color:var(--accent-2);font-family:var(--font);font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .2s';
   const lbl=(ic,txt,cr)=>'<span style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">'+ic+txt+'</span><span style="font-size:9px;opacity:.6;font-family:var(--mono);font-weight:700;letter-spacing:.3px">'+cr+'&nbsp;cr</span>';
-  const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px';
+  const row=document.createElement('div'); row.className='img-mrow'; row.style.cssText='display:flex;gap:8px';
   // Axel 25/09 : l'amélioration se fait DANS la case — avant, le clic passait en vue simple et les autres images
   // de la grille disparaissaient. Chaque case garde ses propres boutons (4K / visage faits → retirés de cette case).
   if(showFace) row.appendChild(mk(lbl(FC,'Détails du visage','3'), outline, ()=>{ _imgSlotUpscale('face', slot, url, size, opt); }));
@@ -14029,10 +14065,59 @@ async function mtLibLoad(){
       const s = await sb.storage.from('brand-assets').createSignedUrl(a.path, 7200);
       a._url = s.data?.signedUrl || '';
     }
+    // vidéos : leur première image (affiche JPEG rangée à côté), en une seule requête
+    const vids = _mtLib.filter(a => a.kind === 'video');
+    if(vids.length){
+      try{
+        const r = await sb.storage.from('brand-assets').createSignedUrls(vids.map(a => _mtLibPosterPath(a.path)), 7200);
+        const m = new Map(); (r.data || []).forEach(x => { if(x && x.signedUrl && !x.error) m.set(x.path, x.signedUrl); });
+        vids.forEach(a => { a._poster = m.get(_mtLibPosterPath(a.path)) || ''; });
+      }catch(_){}
+    }
   }catch(_){ _mtLib = []; }
   mtLibRender();
   mtLibSyncToMontage();
   mtLibRegisterSounds();
+  _mtLibPostersMissing();
+}
+// Vidéos de « Mes éléments » (Axel 09/10 : import Drive de vidéos → vignettes vides) : la case montre la PREMIÈRE IMAGE,
+// capturée une fois et rangée à côté du fichier (<uid>/<uuid>.poster.jpg, même principe que les affiches de la Bibliothèque :
+// jamais la vidéo elle-même ouverte dans la grille). À l'envoi, l'affiche vient du fichier local ; pour une vidéo déjà rangée
+// sans affiche, elle est fabriquée une fois depuis le lien signé, une vidéo à la fois.
+function _mtLibPosterPath(p){ return String(p||'').replace(/\.[A-Za-z0-9]{1,5}$/, '') + '.poster.jpg'; }
+async function _mtLibPosterSave(path, src, isBlob){
+  if(typeof _libGrabFrame !== 'function') return '';
+  const g = await _libGrabFrame(src, isBlob);
+  if(!g || !g.blob) return '';
+  const pp = _mtLibPosterPath(path);
+  const up = await sb.storage.from('brand-assets').upload(pp, g.blob, { contentType:'image/jpeg', upsert:false, cacheControl:'31536000' });
+  if(up.error && !/exist|duplicate/i.test(up.error.message||'')) return '';
+  const s = await sb.storage.from('brand-assets').createSignedUrl(pp, 7200);
+  return s.data?.signedUrl || '';
+}
+// contenu de la case d'une vidéo : affiche + triangle « lecture » ; en attente → petite roue ; affiche impossible → icône
+function _mtLibVidInner(a){
+  if(a._poster) return '<img src="'+a._poster+'" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><span style="position:relative;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center;pointer-events:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M7 4l13 8-13 8z"/></svg></span>';
+  if(a._posterFail) return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="M16 10l5-3v10l-5-3"/></svg>';
+  return '<div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border-2);border-top-color:var(--accent-2);animation:spin .9s linear infinite"></div>';
+}
+let _mtLibPosterBusy = false;
+const _mtLibPosterNo = new Set(), _mtLibPosterOk = new Map();   // session : échecs (pas de nouvel essai à chaque ouverture) / affiches faites
+async function _mtLibPostersMissing(){
+  if(_mtLibPosterBusy) return; _mtLibPosterBusy = true;
+  const poser = (a) => { const el = document.querySelector('[data-mtlib-v="'+a.id+'"]'); if(el) el.innerHTML = _mtLibVidInner(a); };   // la case seule : une étiquette en cours de saisie garde le focus
+  try{
+    for(;;){
+      const a = _mtLib.find(x => x.kind === 'video' && x._url && !x._poster && !x._posterFail);
+      if(!a) break;
+      if(_mtLibPosterOk.has(a.path)){ a._poster = _mtLibPosterOk.get(a.path); poser(a); continue; }
+      if(_mtLibPosterNo.has(a.path)){ a._posterFail = true; poser(a); continue; }
+      _mtLibPosterNo.add(a.path);
+      let u = ''; try{ u = await _mtLibPosterSave(a.path, a._url, false); }catch(_){}
+      if(u){ _mtLibPosterNo.delete(a.path); _mtLibPosterOk.set(a.path, u); a._poster = u; } else a._posterFail = true;
+      poser(a);
+    }
+  }finally{ _mtLibPosterBusy = false; }
 }
 
 function mtLibRender(){
@@ -14050,7 +14135,9 @@ function mtLibRender(){
     const isSnd = a.kind==='audio';
     const inner = isSnd
       ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>'
-      : (a.kind==='video' ? '<span style="font-size:22px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>' : '<img src="'+(a._url||'')+'" alt="" style="width:100%;height:100%;object-fit:cover">');
+      : (a.kind==='video'
+          ? '<span data-mtlib-v="'+a.id+'" style="position:absolute;inset:0;display:grid;place-items:center">'+_mtLibVidInner(a)+'</span>'
+          : '<img src="'+(a._url||'')+'" alt="" style="width:100%;height:100%;object-fit:cover">');
     return '<div style="display:flex;flex-direction:column;align-items:center;width:96px">'
       + '<div title="'+String(a.name||'').replace(/"/g,'')+'" style="position:relative;width:88px;height:88px;border-radius:13px;overflow:hidden;border:1.5px solid '+(on?'var(--accent-line)':'var(--border)')+';background:var(--surface);display:grid;place-items:center;opacity:'+(on?'1':'.45')+'">'
       + inner
@@ -14102,6 +14189,7 @@ async function mtLibUpload(list, kind){
       const ins=await sb.from('brand_assets').insert(row);
       if(ins.error) throw ins.error;
       ok++;
+      if(row.kind === 'video'){ try{ await _mtLibPosterSave(path, URL.createObjectURL(f), true); }catch(_){} }   // première image pour la vignette
     }catch(e){
       if(deposed){ try{ await sb.storage.from('brand-assets').remove([path]); }catch(_){} }
       toast('Envoi impossible ('+String(f.name||'fichier').slice(0,40)+') : '+_aaStoMsg(e));
@@ -14212,7 +14300,7 @@ async function mtLibDelete(id){
   try{
     const { error } = await sb.from('brand_assets').delete().eq('id', id);
     if(error) throw error;
-    sb.storage.from('brand-assets').remove([a.path]).catch(()=>{});   // le fichier suit, sans bloquer
+    sb.storage.from('brand-assets').remove(a.kind==='video' ? [a.path, _mtLibPosterPath(a.path)] : [a.path]).catch(()=>{});   // le fichier (et son affiche) suit, sans bloquer
   }catch(e){
     _mtLib.splice(i,0,a); mtLibRender();                   // rien n'a été supprimé : on remet
     toast('Suppression impossible : '+(e.message||e)); return;
@@ -23163,21 +23251,67 @@ function _genFitPhone(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', brancher); else brancher();
 })();
 // Images IA (Axel 09/10) : clic dans la zone de texte → elle remonte entière et l'image se réduit pour que tout tienne ;
-// nouvelle image → retour à la grande taille (65 % de l'écran, comme Express) et retour en haut de la colonne.
+// nouvelle image → retour à la grande taille (65 % de l'écran, comme Express) et retour en haut de la colonne ;
+// clic autour de l'image (canvas) → retour à la grande vue. Même chose pour un lot de 2-3 images (_imgMultiFit).
 function _imgCompose(on, haut){
   if(window.innerWidth <= 768) return;
-  const r=document.getElementById('imgResult'), col=document.getElementById('imgCol'), dock=document.getElementById('imgComposerDock');
-  if(!r || !col) return;
-  if(!on){ r.style.removeProperty('--img-max-h'); if(haut) col.scrollTo({ top:0, behavior:'smooth' }); return; }
-  if(r.style.display === 'none') return;
-  const act=document.getElementById('imgActions'), cv=document.getElementById('imgCanvas');
+  const r=document.getElementById('imgResult'), rm=document.getElementById('imgResultMulti'), col=document.getElementById('imgCol'), dock=document.getElementById('imgComposerDock');
+  if(!col) return;
+  const vu = el => el && el.style.display !== 'none';
+  if(!on){
+    col.style.removeProperty('--img-max-h'); delete col.dataset.bloc;
+    try{ _imgMultiFit(); }catch(_){}
+    if(haut) col.scrollTo({ top:0, behavior:'smooth' });
+    return;
+  }
+  if(!vu(r) && !vu(rm)) return;
+  const cv=document.getElementById('imgCanvas');
   const pad=cv ? (parseFloat(getComputedStyle(cv).paddingTop)||0) + (parseFloat(getComputedStyle(cv).paddingBottom)||0) : 52;
-  const dispo=col.clientHeight - (dock ? dock.offsetHeight : 0) - (act ? act.offsetHeight : 0) - pad - 4;
-  r.style.setProperty('--img-max-h', Math.max(140, Math.floor(dispo)) + 'px');
+  const bloc=Math.floor(col.clientHeight - (dock ? dock.offsetHeight : 0) - pad - 4);   // image(s) + boutons
+  const act=document.getElementById('imgActions');
+  col.dataset.bloc=String(bloc);
+  col.style.setProperty('--img-max-h', Math.max(140, bloc - (vu(r) && act ? act.offsetHeight : 0)) + 'px');
+  try{ _imgMultiFit(); }catch(_){}
   setTimeout(function(){ col.scrollTo({ top: col.scrollHeight, behavior:'smooth' }); }, 300);
 }
+// Lot de 2-3 images (ordinateur) : chaque case prend la hauteur d'une image seule, boutons compris, et les cases
+// tiennent côte à côte dans la largeur (avant : 2 colonnes fixes de 320 px → images à moitié hors écran, 3e colonne coupée).
+function _imgMultiFit(){
+  if(window.innerWidth <= 768) return;
+  const wrap=document.getElementById('imgResultMulti'), g=document.getElementById('imgMultiGrid'), col=document.getElementById('imgCol');
+  if(!wrap || !g || !col || wrap.style.display === 'none') return;
+  const cases=[...g.children]; if(!cases.length) return;
+  const k=Math.min(cases.length, 3), gap=14, W=g.clientWidth || wrap.clientWidth;
+  if(!W) return;
+  const ratio = el => { const m=String(el.style.aspectRatio||'').split('/').map(x=>parseFloat(x)); return (m.length===2 && m[0]>0 && m[1]>0) ? m[0]/m[1] : 9/16; };
+  let btn=0;   // boutons sous l'image (case remplie) ; estimés tant qu'aucune n'est remplie
+  cases.forEach(c => { const box=c.firstElementChild; if(box && c.children.length > 1) btn=Math.max(btn, c.offsetHeight - box.offsetHeight); });
+  if(!btn) btn=112;
+  const bloc = +col.dataset.bloc > 0 ? +col.dataset.bloc : (window.innerHeight*0.65 + 70);   // comme une image seule + sa rangée de boutons
+  const h = Math.max(140, bloc - btn), large = (W - (k-1)*gap) / k;
+  cases.forEach(c => {
+    const box = (c.firstElementChild && c.children.length > 1) ? c.firstElementChild : c;
+    const w = Math.floor(Math.min(h * ratio(box), large));
+    if(c.style.width !== w+'px') c.style.width = w+'px';
+  });
+}
 (function(){
-  const go=function(){ const ta=document.getElementById('imgPrompt'); if(ta) ta.addEventListener('focus', function(){ try{ _imgCompose(true); }catch(_){} }); };
+  const go=function(){
+    const ta=document.getElementById('imgPrompt'); if(ta) ta.addEventListener('focus', function(){ try{ _imgCompose(true); }catch(_){} });
+    // clic autour de l'image : retour à la grande vue (Axel 09/10)
+    const cv=document.getElementById('imgCanvas');
+    if(cv) cv.addEventListener('click', function(e){
+      const col=document.getElementById('imgCol');
+      if(!col || !col.dataset.bloc || (e.target.closest && e.target.closest('button,a,input,textarea,select,label'))) return;
+      try{ const t=document.getElementById('imgPrompt'); if(t && document.activeElement===t) t.blur(); _imgCompose(false, true); }catch(_){}
+    });
+    // lot : recalage à chaque nouvelle case, à chaque image posée, et quand la colonne change de taille
+    const g=document.getElementById('imgMultiGrid'), col=document.getElementById('imgCol');
+    let rf=0; const fit=()=>{ if(rf) return; rf=requestAnimationFrame(()=>{ rf=0; try{ _imgMultiFit(); requestAnimationFrame(()=>{ try{ _imgMultiFit(); }catch(_){} }); }catch(_){} }); };
+    if(g && typeof MutationObserver==='function') new MutationObserver(fit).observe(g, { childList:true, subtree:true });
+    if(col && typeof ResizeObserver==='function') new ResizeObserver(fit).observe(col);
+    window.addEventListener('resize', fit);
+  };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();
 function _genNavStrip(){
@@ -31788,11 +31922,11 @@ function _mcUpdateCost(){
   // option « fond vidéo » active (et pas de fond image perso, qui prime) → +1 cr/s
   const bgOn = !!window._mcKeepVidBg && !window._mcBgB64;
   const bgSup = bgOn ? CREDIT_COSTS.motionBgPerSec*dur : 0;
-  const vxOn = (typeof _mcVoiceActive==='function') && _mcVoiceActive();
   const c=rate*dur + bgSup;
   const tierLbl = window._mcTier==='pro' ? 'Motion 3.0 · 1080p natif' : (window._mcQuality==='1080' ? 'Motion 2.6 · 720p→1080p' : 'Motion 2.6 · 720p');
   const coupe = (window._mcRefDur||0) > _MC_MAX_REF_S+0.5 ? ' · <span style="color:var(--accent-2)">coupée à '+_MC_MAX_REF_S+' s (max Kling)</span>' : '';
-  el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">· '+rate+' cr/s × '+dur+' s'+(bgOn?' · fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s':'')+(vxOn?' · '+MC_VOIX[window._mcVoice].toLowerCase()+' offerte':'')+' · '+tierLbl+coupe+'</span>';
+  // Axel 09/10 : plus de détail « 2 cr/s × 10 s · voix offerte » — le total, le modèle et la définition suffisent
+  el.innerHTML='≈ <strong style="color:var(--accent-2)">'+c+' crédit'+(c>1?'s':'')+'</strong> <span style="opacity:.6">'+(bgOn?'· fond vidéo +'+CREDIT_COSTS.motionBgPerSec+' cr/s ':'')+'· '+tierLbl+coupe+'</span>';
 }
 function _mcRenderAdv(){
   const card=document.getElementById('mcAdvCard'); if(!card) return;
@@ -31953,43 +32087,19 @@ async function _mcVoiceWait(jobId, tours){
   }
   return null;
 }
-// Bouton « Livrer sans attendre la voix » sur l'écran de progression (relecture 09/10 : jusqu'à ~10 min d'attente possible
-// derrière un écran sans sortie).
-function _mcVoiceSkipShow(fn){
-  const o=document.getElementById('mcProg'); if(!o) return;
-  let b=document.getElementById('mcProgSkip');
-  if(!b){ b=document.createElement('button'); b.id='mcProgSkip'; b.type='button'; b.style.cssText='margin-top:8px;min-height:44px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#F6F4F1;font:600 13.5px var(--font,inherit);cursor:pointer'; b.textContent='Livrer sans attendre la voix'; o.appendChild(b); }
-  b.onclick=fn; b.style.display='';
-}
-function _mcVoiceSkipHide(){ const b=document.getElementById('mcProgSkip'); if(b){ b.style.display='none'; b.onclick=null; } }
-// Étape « Remplacer l'audio » sur la vidéo FINALE plein écran. Ne jette jamais : rend l'URL d'origine sur échec ou si
-// l'utilisateur passe. Les messages de fin s'affichent DANS la fenêtre de résultat (window._mcVoiceNote) : un toast était
-// aussitôt recouvert par celui de la sauvegarde automatique.
+// Étape « Remplacer l'audio » sur la vidéo FINALE plein écran. Ne jette jamais : rend l'URL d'origine sur échec. Les
+// messages de fin s'affichent DANS la fenêtre de résultat (window._mcVoiceNote) : un toast était aussitôt recouvert par
+// celui de la sauvegarde automatique. (Bouton « Livrer sans attendre la voix » retiré, Axel 09/10 : la voix arrive en
+// ~1 min, chaque étape reste bornée, et une attente trop longue livre déjà la vidéo avec l'audio d'origine.)
 async function _mcApplyVoiceStep(url, dur, vPath){
   window._mcVoiceNote='';
   if(!_mcVoiceActive() || !url) return url;
-  const nom=MC_VOIX[window._mcVoice], ctx={ passe:false }, PASSE={};
-  let passer=null; const passeP=new Promise(res=>{ passer=()=>res(PASSE); });
-  const tache=_mcVoiceRun(url, dur, vPath, nom, ctx);
-  _mcVoiceSkipShow(()=>{ if(passer) passer(); });
-  try{
-    const r=await Promise.race([tache, passeP]);
-    if(r!==PASSE) return r;
-    ctx.passe=true;
-    window._mcVoiceNote='Vidéo livrée avec l’audio d’origine. La '+nom.toLowerCase()+' continue en arrière-plan : garde l’app ouverte, elle sera rangée dans ta Bibliothèque.';
-    tache.then(async(v)=>{ try{
-      if(!v || v===url) return;   // échec ou attente trop longue : _mcVoiceRun l'a déjà signalé
-      const rr=await fetch(v); if(!rr.ok) throw new Error('HTTP '+rr.status);
-      if(typeof _libAutoSaveVideo==='function') await _libAutoSaveVideo(await rr.blob(), 'Motion Control · '+nom, ['Motion Control','9:16'], '🎬', 'MOTION');
-    }catch(err){ console.warn('[mc] voix après « livrer sans attendre » :', err); toast(nom+' : l’assemblage n’a pas abouti — garde la vidéo avec l’audio d’origine'); } }).catch(()=>{});
-    return url;
-  }catch(_){ return url; }
-  finally{ _mcVoiceSkipHide(); }
+  try{ return await _mcVoiceRun(url, dur, vPath, MC_VOIX[window._mcVoice]); }catch(_){ return url; }
 }
-async function _mcVoiceRun(url, dur, vPath, nom, ctx){
+async function _mcVoiceRun(url, dur, vPath, nom){
   const voix=window._mcVoice;
-  const prog=(t,p)=>{ if(!ctx.passe) _mcProg(t,p); };
-  const dire=(m)=>{ if(ctx.passe) toast(m); else window._mcVoiceNote=m; };   // avant la livraison : note dans la fenêtre de résultat
+  const prog=_mcProg;
+  const dire=(m)=>{ window._mcVoiceNote=m; };   // note affichée dans la fenêtre de résultat
   let wav, srcPath='', upP=null;
   const jeterSrc=()=>{ if(!srcPath) return; const p=srcPath; srcPath='';
     // envoi encore en cours (délai dépassé) : suppression APRÈS son arrivée, sinon la copie resterait dans le stockage du compte
@@ -32042,10 +32152,8 @@ async function _mcVoiceRun(url, dur, vPath, nom, ctx){
   }finally{ jeterSrc(); }   // voice-change a copié la vidéo (ou a échoué) : la copie du compte ne sert plus
   try{
     prog(nom+' : assemblage…', 98);
-    let fin=await _mcVoiceWait(jobId, 45);   // 3 min devant l'écran…
-    if(!fin && ctx.passe) fin=await _mcVoiceWait(jobId, 180);   // … + 12 min en arrière-plan si « Livrer sans attendre la voix »
+    const fin=await _mcVoiceWait(jobId, 45);   // 3 min devant l'écran
     if(fin){ console.log('[mc] voix changée →', voix); return fin; }
-    if(ctx.passe) throw new Error('trop long');
     dire('La '+nom.toLowerCase()+' arrive dans quelques minutes : garde l’app ouverte, elle sera rangée dans ta Bibliothèque. Voici déjà ta vidéo avec l’audio d’origine.');
     (async()=>{ try{   // suivi dans CET onglet seulement (le serveur ne range rien dans la Bibliothèque)
       const tard=await _mcVoiceWait(jobId, 180);   // encore 12 min en arrière-plan
@@ -32063,46 +32171,66 @@ async function _mcVoiceRun(url, dur, vPath, nom, ctx){
 
 try{ _mcRenderVoice(); }catch(_){}
 
-/* ── Motion Control — overlay progression + résultat ── */
+/* ── Motion Control — écran de chargement + résultat ──
+   Axel 09/10 : même écran que Express / Images IA — DANS la zone du module (le menu et la barre du haut restent
+   visibles), fond du thème (clair ou sombre), roue, étape en cours, barre, chrono. Avant : voile noir plein écran flouté. */
 let _mcT0=0, _mcTimerIv=null;
 function _mcTimerTick(){
   const el=document.getElementById('mcProgTimer'); if(!el||!_mcT0) return;
   const s=Math.max(0,Math.floor((Date.now()-_mcT0)/1000));
-  el.textContent='⏱ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  el.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 }
 function _mcProg(msg, pct){
   let o=document.getElementById('mcProg');
-  if(!o){ o=document.createElement('div'); o.id='mcProg';
-    // voile TOUJOURS sombre → palette sombre épinglée sur l'écran (thème clair : --text foncé rendait « 98 % » illisible, 09/10)
-    o.style.cssText='position:fixed;inset:0;z-index:220;background:rgba(8,8,11,.88);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;color-scheme:dark;--text:#F6F4F1;--text2:#A7A39E;--text-2:#A7A39E;--border2:rgba(255,255,255,.10);--border-2:rgba(255,255,255,.14);--bg4:#1a1e24;color:#F6F4F1';
-    o.innerHTML='<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div>'
-      +'<div id="mcProgPct" style="font-family:var(--mono);font-size:30px;font-weight:800;color:var(--text);line-height:1">0%</div>'
-      +'<div id="mcProgTxt" class="mono" style="font-size:13px;color:var(--text2)"></div>'
-      +'<div style="width:280px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="mcProgBar" style="height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .4s"></div></div>'
-      +'<div id="mcProgTimer" class="mono" style="font-size:12px;color:var(--text2);opacity:.7">⏱ 0:00</div>';
-    document.body.appendChild(o); }
+  if(!o){
+    // ordinateur : dans le module (#v-motion ne défile pas, son contenu oui) ; mobile : tout l'écran, la page défile
+    const v=(window.innerWidth>768 && document.getElementById('v-motion')) || document.body, fixe=(v===document.body);
+    if(!fixe && getComputedStyle(v).position==='static') v.style.position='relative';
+    o=document.createElement('div'); o.id='mcProg';
+    o.style.cssText='position:'+(fixe?'fixed':'absolute')+';inset:0;z-index:'+(fixe?220:40)+';background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center';
+    o.innerHTML='<div style="width:54px;height:54px;border-radius:50%;border:3px solid var(--border2);border-top-color:var(--orange);animation:spin .8s linear infinite"></div>'
+      +'<div id="mcProgTxt" style="font-size:13px;font-family:var(--mono);color:var(--text2);max-width:420px;line-height:1.5"></div>'
+      +'<div style="width:260px;max-width:80%;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden"><div id="mcProgBar" style="height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--orange2));transition:width .3s"></div></div>'
+      +'<div id="mcProgTimer" class="mono" style="font-size:11px;color:var(--text3);letter-spacing:.02em">0:00</div>';
+    v.appendChild(o); }
   o.style.display='flex';
   // le chrono démarre au 1er appel (début de génération) et tourne chaque seconde
   if(!_mcT0) _mcT0=Date.now();
   if(!_mcTimerIv){ _mcTimerIv=setInterval(_mcTimerTick,1000); }
   _mcTimerTick();
   const t=document.getElementById('mcProgTxt'); if(t) t.textContent=msg||'';
-  const p=document.getElementById('mcProgPct'); if(p) p.textContent=Math.round(pct||0)+'%';
-  const b=document.getElementById('mcProgBar'); if(b) b.style.width=(pct||0)+'%';
+  const b=document.getElementById('mcProgBar'); if(b) b.style.width=Math.max(0,Math.min(100,pct||0))+'%';
 }
 function _mcProgHide(){ const o=document.getElementById('mcProg'); if(o) o.style.display='none'; if(_mcTimerIv){ clearInterval(_mcTimerIv); _mcTimerIv=null; } _mcT0=0; }
 // Rangement auto d'un rendu Motion Control dans la Bibliothèque, UNE fois par URL (window._mcSavedUrl).
 function _mcAutoSave(url, nom){
   if(!url || window._mcSavedUrl===url || typeof _libAutoSaveVideo!=='function') return;
   window._mcSavedUrl=url;
-  (async()=>{ try{ const r=await fetch(url); if(r.ok){ await _libAutoSaveVideo(await r.blob(), nom||'Motion Control', ['Motion Control','9:16'], '🎬', 'MOTION'); if(window._mcKieRid){ _kieAck(window._mcKieRid); window._mcKieRid=null; } } }catch(e){ console.warn('mc autosave:', e); } })();
+  (async()=>{ try{ const blob=await _mcBlob(url); await _libAutoSaveVideo(blob, nom||'Motion Control', ['Motion Control','9:16'], '🎬', 'MOTION'); if(window._mcKieRid){ _kieAck(window._mcKieRid); window._mcKieRid=null; } }catch(e){ console.warn('mc autosave:', e); } })();
+}
+// Fichier du rendu affiché, récupéré UNE seule fois : il sert au rangement automatique ET au bouton « Télécharger »
+// (zéro second téléchargement). Libéré à la fermeture de la fenêtre de résultat.
+let _mcBlobUrl='', _mcBlobP=null;
+function _mcBlob(url){
+  if(_mcBlobUrl!==url || !_mcBlobP){
+    _mcBlobUrl=url;
+    const p=fetch(url).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); });
+    _mcBlobP=p; p.catch(()=>{ if(_mcBlobP===p) _mcBlobP=null; });   // échec : on pourra retenter
+  }
+  return _mcBlobP;
+}
+function _mcResClose(){
+  _mcBlobP=null; _mcBlobUrl='';
+  const m=document.getElementById('mcResModal'); if(!m) return;
+  m.style.display='none';
+  try{ const v=m.querySelector('video'); if(v) v.pause(); }catch(_){}
 }
 function _mcShowResult(url, render, fullUrl){
   _mcProgHide();
   let m=document.getElementById('mcResModal');
   if(!m){ m=document.createElement('div'); m.id='mcResModal';
     m.style.cssText='position:fixed;inset:0;z-index:230;background:rgba(6,6,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px';
-    m.onclick=(e)=>{ if(e.target===m) m.style.display='none'; };
+    m.onclick=(e)=>{ if(e.target===m) _mcResClose(); };
     document.body.appendChild(m); }
   const lbl = render==='split-bottom' ? 'Split · original ↑ · motion ↓' : render==='split-top' ? 'Split · motion ↑ · original ↓' : '';
   window._mcLastUrl = url;
@@ -32128,48 +32256,39 @@ function _mcShowResult(url, render, fullUrl){
     +(isSplit?_mcReframePanel(render):'')
     +'<div class="row" style="gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary" onclick="_mcDownload()">Télécharger</button>'
     +(window._mcLastFullUrl?'<button class="btn btn-ghost" onclick="_mcDownload(window._mcLastFullUrl)">Version plein écran</button>':'')
-    +'<button class="btn btn-ghost" onclick="document.getElementById(\'mcResModal\').style.display=\'none\'">Fermer</button></div></div>';
+    +'<button class="btn btn-ghost" onclick="_mcResClose()">Fermer</button></div></div>';
   m.style.display='flex';
   window._mcVoiceNote='';
   // génération terminée → le formulaire repart à zéro derrière la modale
   try{ _mcResetAll(); }catch(_){}
 }
-// #34 · le « télécharger » DOIT enregistrer le fichier. Un <a download> sur une
-// URL fal cross-origin (v3b.fal.media) est IGNORÉ par Safari → il OUVRE la vidéo
-// et l'user la perd. On récupère donc le blob et on force l'enregistrement ;
-// repli sur l'ouverture (clic droit → Enregistrer) si le CORS bloque le fetch.
-// LOT3-D · CRASH SAFARI (Axel 29/08 : clic « Télécharger » → Safari plante) :
-// fetch→blob charge TOUTE la vidéo en mémoire, par-dessus les états du module.
-// Une URL SIGNÉE Supabase sait servir un VRAI téléchargement (Content-Disposition:
-// attachment) via son paramètre ?download= → navigation directe, ZÉRO blob. Le
-// chemin blob ne reste que pour les URL non-Supabase (CDN fal), avec revoke
-// immédiat de l'objectURL après le clic.
+// Télécharger = enregistrer le fichier SANS quitter l'app ni afficher d'adresse (Axel 09/10 : le lien Supabase
+// apparaissait dans la barre d'adresse de Safari). Le fichier vient du rangement automatique (déjà récupéré) ; il est
+// remis au navigateur par un lien « download » sur une URL locale (blob:). Un <a download> sur une URL d'un autre site
+// est ignoré par Safari (il OUVRE la vidéo) : d'où ce passage par le fichier. Repli si la récupération échoue : lien
+// signé Supabase en pièce jointe (?download=) chargé dans un cadre invisible — la page et la barre d'adresse ne bougent pas.
 async function _mcDownload(dl){
   const url=(typeof dl==='string'&&dl)||window._mcLastUrl; if(!url){ return; }
   const fname='motion-control-'+Date.now()+'.mp4';
   try{
+    toast('Téléchargement…');
+    const b=await _mcBlob(url);
+    const href=URL.createObjectURL(b);
+    const a=document.createElement('a'); a.href=href; a.download=fname; a.rel='noopener';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(href); a.remove(); }catch(_){} }, 4000);
+    toast('Vidéo enregistrée');
+    return;
+  }catch(e){ console.warn('mc download (fichier) :', e); }
+  try{
     if(/\/storage\/v1\/object\/sign\//.test(url)){
-      const u=new URL(url);
-      u.searchParams.set('download', fname);   // remplace un éventuel download= existant
-      const a=document.createElement('a'); a.href=u.toString(); a.rel='noopener';
-      document.body.appendChild(a); a.click();
-      setTimeout(()=>{ try{ a.remove(); }catch(_){} }, 1000);
-      toast('Téléchargement…');
+      const u=new URL(url); u.searchParams.set('download', fname);
+      const f=document.createElement('iframe'); f.style.display='none'; f.src=u.toString();
+      document.body.appendChild(f); setTimeout(()=>{ try{ f.remove(); }catch(_){} }, 60000);
       return;
     }
-  }catch(e){ console.warn('mc download (lien signé) :', e); /* → chemin blob */ }
-  try{
-    toast('Téléchargement…');
-    const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
-    const b=await r.blob();
-    const href=URL.createObjectURL(b);
-    const a=document.createElement('a'); a.href=href;
-    a.download=fname; document.body.appendChild(a); a.click();
-    // revoke IMMÉDIAT (tick suivant : le clic a déjà pris le blob en charge) —
-    // garder l'objectURL vivant 1,5 s doublait la pression mémoire pour rien
-    setTimeout(()=>{ try{ URL.revokeObjectURL(href); a.remove(); }catch(_){} }, 100);
-    toast('Vidéo enregistrée ✓');
-  }catch(e){ console.warn('mc download:', e); toast('Téléchargement direct bloqué — j\'ouvre la vidéo, fais « Enregistrer sous »'); try{ window.open(url,'_blank'); }catch(_){} }
+  }catch(e){ console.warn('mc download (lien signé) :', e); }
+  toast('Téléchargement direct bloqué — j\'ouvre la vidéo, fais « Enregistrer sous »'); try{ window.open(url,'_blank'); }catch(_){}
 }
 /* ── Motion Control — préparation de l'image personnage ──────────────────────
    Recadre (cover) au format choisi (9:16 / 1:1 / 16:9) et PLAFONNE à 2560 px :
@@ -34303,6 +34422,39 @@ async function _expressCreateOne(o){
   }
 }
 
+// Express (Axel 09/10 : « fais pareil sur Express ») : clic dans la zone de texte → elle remonte entière et la vidéo se
+// réduit pour que tout tienne ; clic autour de la vidéo → retour à la grande vue (65 % de l'écran) ; nouvelle vidéo →
+// grande vue, en haut. Ordinateur seulement (le mobile a sa propre mise en page).
+function _expCompose(on, haut){
+  if(window.innerWidth <= 768) return;
+  const body=document.getElementById('expVeoBody'), vid=document.getElementById('expResultVid'), st=document.getElementById('expStage');
+  if(!body || !vid) return;
+  if(!on){
+    body.classList.remove('exp-compose'); body.style.removeProperty('--exp-max-h');
+    if(haut) body.scrollTo({ top:0, behavior:'smooth' });
+    return;
+  }
+  if(vid.style.display === 'none') return;
+  const cs=st ? getComputedStyle(st) : null;
+  const pad=cs ? (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0) : 56;
+  const autres=body.scrollHeight - (st ? st.offsetHeight : 0);   // actions, vignettes, zone de texte
+  body.classList.add('exp-compose');
+  body.style.setProperty('--exp-max-h', Math.max(160, Math.floor(body.clientHeight - autres - pad - 4)) + 'px');
+  setTimeout(function(){ body.scrollTo({ top: body.scrollHeight, behavior:'smooth' }); }, 300);
+}
+(function(){
+  const go=function(){
+    const ta=document.getElementById('expPrompt'), st=document.getElementById('expStage'), vid=document.getElementById('expResultVid');
+    if(ta) ta.addEventListener('focus', function(){ try{ _expCompose(true); }catch(_){} });
+    if(vid) vid.addEventListener('loadedmetadata', function(){ try{ _expCompose(false, true); }catch(_){} });
+    if(st) st.addEventListener('click', function(e){
+      const body=document.getElementById('expVeoBody');
+      if(!body || !body.classList.contains('exp-compose') || (e.target.closest && e.target.closest('button,a,input,textarea,select,label,video'))) return;
+      try{ if(ta && document.activeElement===ta) ta.blur(); _expCompose(false, true); }catch(_){}
+    });
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
 function expressDownload(){ if(!window._expVidUrl){ toast('Aucune vidéo'); return; } if(_gateFreeExport()) return; const a=document.createElement('a'); a.href=window._expVidUrl; a.download='avatarads-express.mp4'; a.click(); }
 function expressReset(){
   // RESET COMPLET (Axel, 13/08 : « à chaque fois qu'on a fini, ça ne se
@@ -42288,6 +42440,10 @@ function edBandDrag(ov,track,e,mode){
   #imgIdle{display:none !important}
   #imgCanvas{padding:0 !important}
   #imgResult,#imgResultMulti{margin:14px auto !important;max-width:calc(100% - 28px) !important}
+  /* lot de 2-3 images (09/10) : 3 colonnes de 270 px débordaient de l'écran → 2 colonnes qui tiennent, boutons empilés */
+  #imgMultiGrid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+  #imgMultiGrid > div{min-width:0;container-type:inline-size}
+  .img-mrow > button span{font-size:11.5px !important}
   #imgEnhanceBtn{display:none !important}
   #imgSuggestions{display:none !important}
   #v-imagegen div:has(>#imgTabGen){display:none !important}
