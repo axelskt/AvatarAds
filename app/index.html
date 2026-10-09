@@ -7160,29 +7160,49 @@ function authOtpBack(){
 }
 
 // ── LOAD PROFILE ──
+// Ouverture du compte BORNÉE et RELANCÉE (Axel 09/10 : « l'interface ne se charge pas correctement », barre du haut vide).
+// Avant : une lecture ratée du profil (réseau, jeton en cours de renouvellement, plusieurs onglets AvatarAds ouverts) passait
+// pour un compte NEUF — 5 essais en 3 s puis un insert refusé par la base — et rien n'ouvrait l'app : ni barre du compte, ni
+// crédits, ni redirection. Maintenant : chaque lecture est bornée à 8 s, une vraie erreur est relancée (avec renouvellement
+// de session), le « compte neuf » n'est déduit que d'une absence de ligne, et un échec final affiche « Recharger ».
+function _aaAttente(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function _aaBorne(p, ms){ return Promise.race([p, new Promise(function(_, ko){ setTimeout(function(){ ko(new Error('délai dépassé')); }, ms); })]); }
+function _aaBootEchec(){
+  if(currentMember || document.getElementById('aaBootEchec')) return;
+  const d=document.createElement('div'); d.id='aaBootEchec'; d.setAttribute('role','alert');
+  d.style.cssText='position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:10050;display:flex;align-items:center;gap:12px;flex-wrap:nowrap;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:12px 14px 12px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border-2);box-shadow:0 12px 40px rgba(0,0,0,.28);color:var(--text);font:600 14px var(--font)';
+  d.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>'
+    +'<span style="flex:1 1 auto;min-width:0;line-height:1.3">Ton compte n’a pas pu se charger.</span>'
+    +'<button type="button" class="btn btn-sm" style="flex:0 0 auto;background:var(--accent);color:#fff;border:0;font-weight:700" onclick="location.reload()">Recharger</button>';
+  document.body.appendChild(d);
+}
 async function loadProfile(user){
   if(!user){ return; }
-  let profile = null;
-  // 1ère tentative directe (user existant = profil déjà là)
-  const { data: first } = await sb.from('profiles').select('*').eq('id', user.id).single();
-  if(first){
-    enterApp(first);
-    return;
-  }
-  // Nouveau compte : le trigger Supabase peut prendre quelques secondes
-  for(let i = 0; i < 5; i++){
-    await new Promise(r => setTimeout(r, 600));
-    const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  const lire = async function(){
+    try{ return await _aaBorne(sb.from('profiles').select('*').eq('id', user.id).maybeSingle(), 8000); }
+    catch(e){ return { data:null, error:{ message:(e && e.message) || 'erreur', code:'TIMEOUT' } }; }
+  };
+  let profile = null, absent = 0;
+  for(let i = 0; i < 8 && !profile; i++){
+    const { data, error } = await lire();
     if(data){ profile = data; break; }
+    if(!error){ if(++absent >= 5) break; await _aaAttente(600); continue; }   // aucune ligne : compte neuf, le trigger crée le profil
+    console.warn('[compte] lecture du profil :', error.code || '', error.message || error);
+    if(i === 2) _aaBootEchec();   // 3e échec : « Recharger » visible tout de suite, les essais continuent derrière
+    if(/jwt|token|401|403/i.test(String(error.message || '') + ' ' + String(error.code || ''))){ try{ await _aaBorne(sb.auth.refreshSession(), 8000); }catch(_){} }
+    await _aaAttente(Math.min(4000, 600 * (i + 1)));
   }
-  if(!profile){
-    // Fallback : créer le profil manuellement si le trigger n'a pas fonctionné
-    const { data } = await sb.from('profiles').insert({
-      id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40
-    }).select().single();   // parrain : posé ensuite par _aaRefSend (validé côté serveur), jamais écrit ici
-    profile = data;
+  if(!profile && absent >= 5){
+    // Fallback : créer le profil manuellement si le trigger n'a pas fonctionné (vrai compte neuf seulement)
+    try{
+      const { data } = await _aaBorne(sb.from('profiles').insert({
+        id: user.id, email: user.email, plan: 'free', credits_remaining: 40, credits_total: 40
+      }).select().single(), 8000);   // parrain : posé ensuite par _aaRefSend (validé côté serveur), jamais écrit ici
+      profile = data;
+    }catch(_){}
   }
   if(profile) enterApp(profile);
+  else _aaBootEchec();
 }
 
 // ── PARRAINAGE (25/09) ─────────────────────────────────────────────────────
@@ -7240,6 +7260,7 @@ async function _aaLeadSend(){
 // ── ENTER APP ──
 function enterApp(profile){
   currentMember = profile;
+  try{ const be=document.getElementById('aaBootEchec'); if(be) be.remove(); }catch(_){}   // compte chargé après un premier échec
   try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){}   // #65 · fusionne la biblio du compte (tous appareils)
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
@@ -7620,7 +7641,10 @@ async function initAuth(){
     localStorage.removeItem('aa_login_at');
     await sb.auth.signOut();
   }
-  const { data: { session } } = await sb.auth.getSession();
+  // session lue en 10 s au plus : plusieurs onglets ouverts peuvent bloquer le verrou de session de supabase-js
+  let session = null, sessionBloquee = false;
+  try{ session = (await _aaBorne(sb.auth.getSession(), 10000)).data.session; }catch(e){ sessionBloquee = true; console.warn('[compte] session :', e && e.message); }
+  if(sessionBloquee){ _aaBootEchec(); return; }
   if(session && session.user){
     if(!born) localStorage.setItem('aa_login_at', String(Date.now())); // sessions d'avant l'OTP : on démarre le compteur maintenant
     await loadProfile(session.user);
@@ -7628,6 +7652,7 @@ async function initAuth(){
   }
   // Filet de sécurité : si aucune session valide n'a ouvert l'app (session absente/expirée, ou profil non chargé),
   // on ré-affiche le login (au cas où on l'aurait masqué optimistiquement au boot pour éviter le flash).
+  if(!currentMember && session && session.user){ _aaBootEchec(); return; }   // session valide mais compte illisible : « Recharger », pas la page de connexion
   if(!currentMember){
     // Login unifié : pas de session valide → connexion dédiée (connexion.html). Exception : un retour
     // OAuth en cours (jeton dans l'URL) — on NE redirige pas (sinon jeton perdu), onAuthStateChange finit
