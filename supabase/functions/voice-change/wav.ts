@@ -55,10 +55,10 @@ export function wavCanonique(w: Wav, b: Uint8Array): Uint8Array {
   return out
 }
 
-// Voix proposées dans l'app → voix ElevenLabs par défaut (premade, disponibles sur tout compte). Le speech-to-speech garde
-// les mots, le rythme et l'intonation de la prise d'origine (le français reste du français) : seul le timbre change.
-// Axel 09/10 : « une voix fille et une voix garçon » — deux voix FIXES choisies avec lui.
+// Voix proposées dans l'app → voix ElevenLabs FRANÇAISES choisies à l'écoute par Axel (09/10) dans la bibliothèque ElevenLabs,
+// ajoutées au compte (« AvatarAds Fille - Camille », « AvatarAds Garcon - Guillaume »). Le speech-to-speech garde les mots, le
+// rythme et l'intonation de la prise d'origine : seul le timbre change.
 export const VOIX_ELEVENLABS: Record<string, string> = {
-  fille: 'cgSgspJ2msm6clMCkdW9',    // Jessica — jeune, naturelle, expressive (à valider à l'écoute avec Axel)
-  garcon: 'TX3LPaxmHKxFdv7VOQHJ',   // Liam — jeune, énergique (à valider à l'écoute avec Axel)
+  fille: 'Da9VfudgKUvFOKayCiue',    // Camille — créatrice de contenu, vive (fr-FR)
+  garcon: 'ohItIVrXTBI80RrUECOD',   // Guillaume — chaleureux et grave (fr-FR)
 }
