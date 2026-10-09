@@ -2550,7 +2550,7 @@ serve(async (req: Request) => {
     }
 
     const script = String(form.get('script') || '').trim().slice(0, 4000) || null
-    let options: { lang?: string; filters?: string; style?: string; vstyle?: string } = {}
+    let options: { lang?: string; filters?: string; style?: string; vstyle?: string; useBrand?: boolean } = {}
     try { options = JSON.parse(String(form.get('options') || '{}')) } catch (_) { /* défauts */ }
     const lang = (options.lang || 'fr').slice(0, 5)
     // carte blanche au chef d'orchestre : ne desactive QUE les filtres de gout
@@ -2606,7 +2606,10 @@ serve(async (req: Request) => {
     // appel service (MCP) : l'utilisateur est désigné par le champ user_id (réservé au rôle service)
     const _svcUidRaw = String(form.get('user_id') || '')
     const svcUid = _auth.isService && /^[0-9a-f-]{36}$/i.test(_svcUidRaw) ? _svcUidRaw : null
-    const mem = await loadBrandMemory(token, _auth.isService, svcUid)
+    // Axel 08/10 : interrupteur « Utiliser Ma marque » (Paramètres avancés de Montage IA). false = ni la fiche ni le cache du
+    // site enregistré : seul le site saisi pour CE montage (website) est lu. Absent = comme avant (fiche utilisée).
+    const useBrand = options.useBrand !== false
+    const mem = useBrand ? await loadBrandMemory(token, _auth.isService, svcUid) : { text: '', siteUrl: '', siteCache: '' }
     const siteToRead = website || mem.siteUrl
     // le site n'est re-crawlé que si le cache est vide ou porte sur une AUTRE url
     const siteJob = (mem.siteCache && (!website || website === mem.siteUrl))

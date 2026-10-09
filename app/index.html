@@ -4330,128 +4330,95 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
 #mzAdvModal .seg button{flex:1 1 auto;min-width:0;font-size:12.5px;padding:9px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);font-family:var(--font);cursor:pointer;transition:.15s}
 #mzAdvModal .seg button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-2);font-weight:700}
 @keyframes mtRise{from{transform:translateY(2px);opacity:.5}to{transform:translateY(-3px);opacity:1}}
+        /* ══ Refonte 09/10 — maquette Claude Design « montage-handoff » (gen-montage.jsx), reprise 1:1 ══ */
+        @keyframes mzShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+        #mtForm button:not(.btn):not(.btn-sm), #mzAdvModal button:not(.btn):not(.btn-sm){font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;padding:0;margin:0}
+        #mtForm, #mzAdvModal > .card{line-height:1.45}   /* interligne de base de la maquette (body 1.45) */
+        #mtForm .btn, #mzAdvModal .btn{border:0}          /* .btn de l'app = bordure transparente 1 px (+2 px de haut) */
+        #mtForm .mz-drop{height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:16px;border:1.5px dashed var(--border-2) !important;background:var(--panel-1) !important;transition:border-color .2s,background .2s;width:100%}
+        #mtForm .mz-drop.nudge, #mtForm .mz-bar.nudge{border-color:var(--accent) !important;background:var(--accent-soft) !important;animation:mzShake .45s}
+        #mtForm .mz-drop.over, #mtForm .mz-bar.over{border-color:var(--accent) !important}
+        #mtForm .mz-drop-title{font-size:21px;font-weight:700;text-align:center}
+        #mtForm .mz-bar{display:flex;align-items:center;gap:12px;height:62px;padding:0 14px !important;border-radius:14px;text-align:left;border:1.5px dashed var(--border-2) !important;background:var(--panel-1) !important;width:100%;transition:border-color .2s,background .2s}
+        #mtForm .mz-files{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+        #mtForm .mz-file{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 5px;border-radius:11px;border:1px solid var(--border);background:var(--surface);min-width:0}
+        #mtForm .mz-opts{display:flex;gap:10px}
+        #mtForm .mz-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px !important;border-radius:14px;position:relative;border:1px solid var(--border) !important;background:var(--surface) !important}
+        #mtForm .mz-opt.on{border-color:var(--accent-line) !important;background:var(--accent-soft) !important}
+        #mtForm .mz-opt-ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2)}
+        #mtForm .mz-opt.on .mz-opt-ic{color:var(--accent-2)}
+        #mtForm .mz-opt-lbl{font-size:12.5px;font-weight:600;text-align:center;line-height:1.2}
+        #mtForm .mz-opt-ind{position:absolute;top:8px;right:8px;color:var(--text-3);display:flex}
+        #mtForm .mz-opt.on .mz-opt-ind{color:var(--accent-2)}
+        #mtForm #mtBrief{min-height:140px;resize:vertical;line-height:1.55}
+        #mtForm #mtGoBtn{width:100%;padding:16px;font-weight:800;font-size:17px;border-radius:16px;margin-top:4px}
+        #mzBrandRow .mz-brand-open{font-family:inherit;border:0;background:none;cursor:pointer;font-size:12.5px;color:var(--accent-2);opacity:0;transition:opacity .15s}
+        #mzBrandRow:hover .mz-brand-open{opacity:1}
+        @media(max-width:760px){
+          #mtScroll{padding:16px 14px !important}
+          #mtHeadTitle{font-size:26px !important}
+          #mtForm .mz-drop{height:190px}
+          #mtForm .mz-drop-title{font-size:17px}
+          #mtForm .mz-files{grid-template-columns:repeat(2,minmax(0,1fr))}
+          #mtForm .mz-opts{gap:8px}
+          #mtForm .mz-opt{padding:12px 6px !important}
+          #mtForm .mz-opt-lbl{font-size:11.5px}
+          #mtForm #mtBrief{min-height:120px}
+          #mtForm #mtGoBtn{padding:14px;font-size:15.5px}
+          #mzStyleGrid{grid-template-columns:1fr 1fr !important}
+          #mzBrandRow .mz-brand-open{opacity:1}
+        }
       </style>
-      <div class="scroll-y" id="mtScroll" style="flex:1;min-height:0;padding:24px 40px 32px">
-        <div style="max-width:760px;margin:0 auto">
-
-          <!-- ===== FORM ===== -->
-          <div id="mtForm">
-            <!-- header -->
-            <div class="center" style="margin-bottom:16px">
-              <div style="display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap">
-                <h1 id="mtHeadTitle" class="display" style="font-size:32px;font-weight:800;letter-spacing:-.01em">Montage IA</h1>
-                <span class="pill" style="background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:700;font-size:11px;padding:5px 11px">✦ NOUVEAU</span>
-              </div>
-              <p class="muted" style="margin-top:6px;font-size:14.5px;max-width:460px;margin-inline:auto;line-height:1.45">Ton audio ou ta vidéo entre, une vidéo prête à devenir virale sort.</p>
+      <div class="scroll-y" id="mtScroll" style="flex:1;min-height:0;padding:22px 40px">
+          <!-- ===== FORM ===== refonte 09/10 (maquette Claude Design, reprise 1:1) : UNE zone de dépôt (le type se lit au
+               fichier), « Photo d'avatar » et « Paramètres avancés » en cartes, script toujours visible, bouton dans le flux. -->
+          <div id="mtForm" class="col" style="max-width:760px;margin:0 auto;gap:16px">
+            <div class="row" style="gap:10px;align-items:center;justify-content:center">
+              <h1 id="mtHeadTitle" class="display" style="font-size:32px;font-weight:800">Montage IA</h1>
+              <span class="pill" style="background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-2);font-weight:700;font-size:10.5px;padding:4px 9px">NOUVEAU</span>
             </div>
 
-            <div class="card" style="padding:24px">
-              <!-- 1 · SOURCE -->
-              <div class="mt-eyebrow">1 · Ta source</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-                <!-- 05/08 (Axel) : les noms disent ce que l'outil FAIT. « Gameplay
-                     + voix » était un vestige — ce mode n'utilise aucun gameplay :
-                     un audio (+ photo d'avatar) → l'IA crée toute la vidéo. -->
-                <button id="mtSrcGame" onclick="mtSetSrc('gameplay')" class="mt-src on">
-                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><span style="font-weight:700;font-size:15px">Ma voix off</span></div>
-                  <span class="faint" style="font-size:12px;line-height:1.35">L'IA crée toute la vidéo : avatar qui parle + visuels</span>
-                </button>
-                <button id="mtSrcVideo" onclick="mtSetSrc('mavideo')" class="mt-src">
-                  <div class="mt-drop-row" style="align-items:center;color:inherit"><span class="mt-src-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span style="font-weight:700;font-size:15px">Monter ma vidéo</span></div>
-                  <span class="faint" style="font-size:12px;line-height:1.35">Importe ta vidéo, l'IA la monte</span>
-                </button>
-              </div>
+            <input type="file" id="mtFileIn" accept="audio/*,video/*,image/*,.mp3,.wav,.m4a,.mp4,.mov,.webm,.jpg,.jpeg,.png,.webp" multiple style="display:none" onchange="mtAddFiles(this.files);this.value=''">
+            <input type="file" id="mtAvatarIn" accept="image/*" multiple style="display:none" onchange="mtSetAvatar(this.files);this.value=''">
 
-              <div class="mt-sep"></div>
+            <button type="button" id="mtDropBig" class="mz-drop" onclick="document.getElementById('mtFileIn').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');mtAddFiles(event.dataTransfer.files)">
+              <span style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2);transform:rotate(180deg)"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span>
+              <span class="display mz-drop-title">Dépose ton audio, ta vidéo ou tes visuels</span>
+              <span class="mono faint" style="font-size:10.5px;letter-spacing:.12em">MP3 · WAV · MP4 · MOV · JPG · PNG</span>
+            </button>
 
-              <!-- gameplay -->
-              <div id="mtGameplayBlock">
-                <div class="mt-eyebrow">2 · Ton audio</div>
-                <div style="margin-bottom:18px">
-                  <div class="mt-drop" id="mtAudioDrop" onclick="document.getElementById('mtMp3In').click()">
-                    <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span><span class="mt-drop-lbl" id="mtMp3Name">Importe ta voix off</span></div>
-                    <span class="mt-drop-sub" id="mtAudioSub">MP3 · WAV · M4A</span>
-                  </div>
-                  <input type="file" id="mtMp3In" accept="audio/*,video/*" style="display:none" onchange="mtSetMp3(this.files[0]);this.value=''">
-                </div>
-
-                <div class="mt-sep"></div>
-                <div class="mt-eyebrow">3 · Ton avatar</div>
-                <div style="margin-bottom:18px">
-                  <div class="mt-drop" id="mtAvatarDrop" onclick="document.getElementById('mtAvatarIn').click()">
-                    <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="mt-drop-lbl" id="mtAvatarName">Ajoute une photo d'avatar</span></div>
-                    <span class="mt-drop-sub" id="mtAvatarSub">Optionnel</span>
-                    <button id="mtAvatarClear" onclick="event.stopPropagation();mtClearAvatar()" style="display:none;position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:11px;cursor:pointer;line-height:1;display:none;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-                  </div>
-                  <input type="file" id="mtAvatarIn" accept="image/*" multiple style="display:none" onchange="mtSetAvatar(this.files);this.value=''">
-                </div>
-
-                <!-- #119 · modèle lipsync (visible quand un avatar est choisi) -->
-                <!-- Modèle du lipsync (Character 3 / Mix / Omni) déplacé dans « Paramètres avancés » (Axel 11/09) — cf #mzSegModel -->
-                <div id="mtModelWrap" style="display:none"></div>
-              </div>
-
-              <!-- ma vidéo -->
-              <div id="mtVideoBlock" style="display:none">
-                <div class="mt-eyebrow">2 · Ta vidéo</div>
-                <div style="margin-bottom:18px">
-                  <div class="mt-drop" id="mtVideoDrop" onclick="document.getElementById('mtVideoIn').click()" style="padding:30px 18px">
-                    <div class="mt-drop-row"><span class="mt-drop-ico" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg></span><span class="mt-drop-lbl" id="mtVideoName">Importe ta vidéo</span></div>
-                    <span class="mt-drop-sub" id="mtVideoSub">MP4 · MOV · WebM</span>
-                  </div>
-                  <input type="file" id="mtVideoIn" accept="video/*" style="display:none" onchange="mtSetVideo(this.files[0]);this.value=''">
-                </div>
-              </div>
-
-              <div class="mt-sep"></div>
-
-              <!-- TES VISUELS & TON SCRIPT — visuels + brief ensemble, textarea visible (maquette) -->
-              <div style="margin-top:2px">
-                <div class="mt-eyebrow">Tes visuels & ton script <span style="text-transform:none;letter-spacing:0;color:var(--text-3)">· optionnel</span></div>
-                <div id="mtThumbs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div>
-                <input type="file" id="mtMediaIn" accept="image/*,video/mp4,video/quicktime" multiple style="display:none" onchange="edAiAddFiles(this.files);_mtRenderMedia();this.value=''">
-                <!-- #montage-audio : son optionnel (musique / bruitages) mixé au montage — visible en mode « Monter ma vidéo » -->
-                <div id="mtBgAudioWrap" style="display:none;margin-bottom:12px">
-                  <div class="mt-drop" id="mtBgAudioDrop" onclick="document.getElementById('mtBgAudioIn').click()" style="cursor:pointer">
-                    <div class="mt-drop-row"><span class="mt-drop-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="mt-drop-lbl" id="mtBgAudioName">Ajoute un son : musique ou bruitages</span><button id="mtBgAudioClear" onclick="event.stopPropagation();mtClearBgAudio()" title="Retirer" style="display:none;margin-left:auto;background:none;border:none;color:var(--text-3);cursor:pointer;font-size:18px;line-height:1;padding:0 4px">×</button></div>
-                    <span class="mt-drop-sub" id="mtBgAudioSub">MP3 · WAV · M4A · optionnel — mixé dans ton montage</span>
-                  </div>
-                  <input type="file" id="mtBgAudioIn" accept="audio/*" style="display:none" onchange="mtSetBgAudio(this.files[0]);this.value=''">
-                </div>
-                <textarea id="mtBrief" class="field mt-brief-ta" rows="4" oninput="_mt.brief=this.value" placeholder="Décris ce que la vidéo doit dire ou montrer. Ex : présentation de mon app, ton punchy, CTA « lien en bio », montre le logo au début."></textarea>
-              </div>
-
-              <!-- ⚙️ PARAMÈTRES AVANCÉS — ouvre la modale (contient désormais « Ton site ») -->
-              <button type="button" onclick="mzAdvOpen()" class="row" style="width:100%;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:14px;border:1px solid var(--border);background:var(--surface);text-align:left;margin-top:20px;cursor:pointer;font-family:var(--font)">
-                <span class="row gap12" style="align-items:center">
-                  <span style="width:38px;height:38px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span>
-                  <span class="col" style="line-height:1.3">
-                    <span style="font-weight:700;font-size:14.5px">Paramètres avancés</span>
-                    <span class="faint" style="font-size:12px" id="mzAdvSum">sous-titres mot-par-mot · musique auto</span>
-                  </span>
+            <div id="mtFilesWrap" class="col" style="display:none;gap:10px">
+              <button type="button" id="mtDropBar" class="mz-bar" onclick="document.getElementById('mtFileIn').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');mtAddFiles(event.dataTransfer.files)">
+                <span style="width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"><path d="M12 5v14M5 12h14"/></svg></span>
+                <span class="col" style="line-height:1.3;min-width:0">
+                  <span style="font-weight:700;font-size:14px">Ajouter un fichier</span>
+                  <span class="mono faint" style="font-size:10px;letter-spacing:.1em">AUDIO · VIDÉO · VISUELS</span>
                 </span>
-                <span class="faint" style="display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+              </button>
+              <div id="mtFileGrid" class="mz-files"></div>
+            </div>
+
+            <div class="mz-opts">
+              <button type="button" id="mtOptAvatar" class="mz-opt" onclick="mtAvatarToggle()">
+                <span class="mz-opt-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span>
+                <span class="mz-opt-lbl">Photo d'avatar</span>
+                <span class="mz-opt-ind" id="mtOptAvatarInd"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+              </button>
+              <button type="button" class="mz-opt" onclick="mzAdvOpen()">
+                <span class="mz-opt-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span>
+                <span class="mz-opt-lbl">Paramètres avancés</span>
+                <span class="mz-opt-ind"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
               </button>
             </div>
 
-            <!-- CTA -->
-</div>
+            <div class="card col" style="padding:14px;gap:8px">
+              <textarea id="mtBrief" class="field" placeholder="Écris ton script ici…" oninput="_mt.brief=this.value;_mtBriefCount()"></textarea>
+              <span class="mono faint" id="mtBriefCount" style="font-size:10.5px;align-self:flex-end">0 caractères</span>
+            </div>
 
-        </div>
-      </div>
-
-        <!-- barre d'action COLLANTE : visible dès l'arrivée quelle que soit la hauteur
-             de la coque ; seul le contenu au-dessus défile -->
-        <div id="mtFooter" class="mt-sticky" style="position:fixed;left:248px;right:0;bottom:0;z-index:60;padding:14px 40px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--panel-1);display:none">
-          <div style="max-width:760px;margin:0 auto">
-            <button id="mtGoBtn" onclick="montageGo()" class="btn btn-primary" style="width:100%;padding:17px;font-weight:800;font-size:17px;border-radius:16px">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg>
-            <span id="mtGoLbl">Créer ma vidéo — 8 crédits</span>
-            </button>
-            <p id="mtCostNote" class="faint center" style="display:none;font-size:11.5px;line-height:1.5;margin-top:10px;max-width:520px;margin-inline:auto"></p>
+            <button type="button" id="mtGoBtn" onclick="mtGo()" class="btn btn-primary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg><span id="mtGoLbl">Créer ma vidéo — 8 crédits</span></button>
           </div>
-        </div>
-
+      </div>
     </div>
 
     <!-- ══ ÉDITEUR / STUDIO (BETA) ══ -->
@@ -11105,7 +11072,7 @@ function _kieDev(){ try{ return typeof currentMember!=='undefined' && !!currentM
 // (sans débit). Developer : _kieOn() (inchangé).
 const KIE_CLIENT_PLANS = { '4k':['starter','pro','elite'], 'omni':['starter','pro','elite'], 'veo':['starter','pro','elite'],
   'omnihuman':['pro','elite'],
-  'motion':['starter','pro','elite'] };   // Motion Control (Axel 09/10) : kie pour tous, 1080p NATIF (2.6 1080p et 3.0 = Pro / Élite, gate plus haut) ; repli fal sur la même op   // OmniHuman 1.5 (Axel 26/09) : Pro et Élite, jamais Starter — comme le sélecteur du Générateur et le Montage IA — KIE_OPEN côté serveur
+  'motion':['starter','pro','elite'] };   // Motion Control (Axel 09/10) : kie pour tous, 1080p NATIF (2.6 1080p et 3.0 = Pro / Élite, gate plus haut), sans repli fal   // OmniHuman 1.5 (Axel 26/09) : Pro et Élite, jamais Starter — comme le sélecteur du Générateur et le Montage IA — KIE_OPEN côté serveur
 function _kieClientOn(usage){
   try{
     if(typeof currentMember==='undefined' || !currentMember) return false;
@@ -13585,7 +13552,9 @@ async function genGameplayOnly(source, file){
 }
 
 // ── 🪄 Module MONTAGE IA (A-Z) : un formulaire → l'IA fait voix + gameplay + montage complet ──
-let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, bgAudio: null, lipModel: 'character3', brief: '', adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' } };
+let _mt = { src: 'gameplay', mp3: null, mp3Dur: 0, avatar: null, video: null, bgAudio: null, lipModel: 'character3', brief: '',
+  useBrand: (function(){ try{ return localStorage.getItem('aa_mt_brand')!=='0'; }catch(_){ return true; } })(),   // 09/10 : « Utiliser Ma marque »
+  adv: { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true, subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, punch:true, sfx:true, motion:'gestures' } };
 
 // ── script / brief : ce que l'user veut vraiment → transmis au chef d'orchestre ──
 function mtBriefOpen(){
@@ -13621,15 +13590,13 @@ const MZ_BROLL  = ['Aucune','Légère · ~30 %','Équilibrée · ~60 %','Dense �
 // 6e colonne `soon:true` = « bientôt disponible » (carte grisée, non cliquable) —
 // choix d'Axel 01/08 : Anim (ex-apple) est LE style validé, les autres reviennent
 // quand ils seront au niveau ; « autre » sera remplacé par un nouveau style.
-const MZ_VSTYLE = [
+const MZ_VSTYLE = [   // maquette 09/10 : Auto · Apple · Sombre premium · Liquid glass (bientôt) · Éditorial blanc (bientôt) · Mot par mot
   ['auto','Auto','IA choisit',['#FF8042','#9A7CFF'],''],
-  ['apple','Anim','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
-
+  ['apple','Apple','fond clair, minimal',['#F2F2F5','#D8D8DE'],'pub Apple : fond blanc immacule, motion lent, un seul objet heros au centre, typo fine, enormement de vide'],
+  ['slam','Sombre premium','noir, contrastes chauds',['#1A1620','#FF7A1A'],'Style viral sombre (ref @sophiene.ia / hustle) : fond noir anime (grille + halos), gros mots Anton, mot-cle jaune dans les sous-titres, avatar 4 fois max (3 plein cadre + 1 split), grille 3x3 de tes medias au hook, visite guidee de l\'app sur les etapes, vrais rendus qui partent vers les reseaux, compteur 1.000.000+'],   // = le style sombre du moteur (slideStyle 'slam')
   ['glass','Liquid glass','verre dépoli, reflets',['#8FB8FF','#C9B4FF'],'cartes en verre depoli translucide sur la video, reflets, look Apple, presque aucun texte',true],
-  ['dynamic','Dynamique','motion design continu',['#101014','#FF5A36'],'Motion design continu type pub de studio : AUCUNE video source a l\'ecran, panneaux clair/sombre alternes par section, typographie GEANTE sur les mots cles (4-5x la taille des mots de liaison), transitions qui poussent (jamais de fondu), tout bouge en continu — objectif 95% du temps anime. Les images utilisateur et captures d\'ecran s\'integrent dans le flux comme des cartes qui traversent.',true],
-  ['slam','Slam','sombre, Anton, accent jaune',['#0A0A0F','#FFDD4A'],'Style viral sombre (ref @sophiene.ia / hustle) : fond noir anime (grille + halos), gros mots Anton, mot-cle jaune dans les sous-titres, avatar 4 fois max (3 plein cadre + 1 split), grille 3x3 de tes medias au hook, visite guidee de l\'app sur les etapes, vrais rendus qui partent vers les reseaux, compteur 1.000.000+'],
-  ['word','Mot par mot','page blanche, aucun clip',['#FFFFFF','#FF5A36'],'Page blanche du debut a la fin : la VIDEO source ne s\'affiche jamais, le sous-titre est le seul texte (un mot au centre). Comme il n\'y a aucune video a l\'ecran, les IMAGES de l\'utilisateur sont le visuel principal : place-les GENEREUSEMENT (2.5 a 4s chacune, reutilise la meme image plusieurs fois si tu en manques) — sans elles l\'ecran reste blanc. Les formes animees ne comblent que ce qui reste. Pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
-  ['autre','Autre','décris ton style',['#3A3340','#8E8A96'],'',true],   // remplacé bientôt par un nouveau style
+  ['editorial','Éditorial blanc','magazine, sérif',['#FFFFFF','#E4E4EA'],'',true],
+  ['word','Mot par mot','texte plein écran rythmé',['#2A2438','#FFE500'],'Page blanche du debut a la fin : la VIDEO source ne s\'affiche jamais, le sous-titre est le seul texte (un mot au centre). Comme il n\'y a aucune video a l\'ecran, les IMAGES de l\'utilisateur sont le visuel principal : place-les GENEREUSEMENT (2.5 a 4s chacune, reutilise la meme image plusieurs fois si tu en manques) — sans elles l\'ecran reste blanc. Les formes animees ne comblent que ce qui reste. Pas de scene plein cadre ni de bandeau, des sections courtes et rythmees'],
 ];
 function _mzDefaults(){ return { vstyle:'auto', styleTxt:'', subStyle:'punch', subAnim:'word', subEmoji:true,
   subPos:'bas', subSize:'M', music:'none', rhythm:'auto', transitions:'cut', broll:3, avatarDens:2, punch:true, sfx:true, motion:'gestures' }; }
@@ -13648,11 +13615,24 @@ function _ccDeepLink(){
   nav('connectclaude');
 }
 
-function mzAdvOpen(){ const m=document.getElementById('mzAdvModal'); if(!m) return; m.style.display='grid'; mzAdvRender();
-  if(typeof mtSetLipModel==='function'){ try{ mtSetLipModel(_mt.lipModel); }catch(_){} }   // sync l'état du sélecteur de modèle (#mzSegModel) à l'ouverture
-  clearInterval(_mzPreviewTimer); _mzPreviewTimer=setInterval(()=>{ _mzPreviewI=(_mzPreviewI+1)%8; mzPreviewRender(); }, 420); }
+function mzAdvOpen(){ const m=document.getElementById('mzAdvModal'); if(!m) return; m.style.display='grid'; mzAdvRender(); }
+// « Utiliser Ma marque » (Axel 08/10) : off = ni la fiche Ma marque ni ses visuels auto pour CE montage (options.useBrand=false
+// côté orchestrate, _mtLaunchFiles sans « Mes éléments »). Le choix est mémorisé sur cet appareil.
+function mzBrandToggle(){ _mt.useBrand=!_mt.useBrand; try{ localStorage.setItem('aa_mt_brand', _mt.useBrand?'1':'0'); }catch(_){} _mzBrandRender(); }
+function _mzBrandRender(){
+  const t=document.getElementById('mzBrandTog'); if(!t) return;
+  const on=_mt.useBrand!==false;
+  t.style.background=on?'var(--accent)':'var(--surface-3)'; t.style.justifyContent=on?'flex-end':'flex-start';
+  t.setAttribute('aria-checked', on?'true':'false');
+}
+// « Ouvrir Ma marque → » : la fiche s'ouvre PAR-DESSUS le menu (maquette) ; à sa fermeture on revient au menu
+function mzOpenBrand(){
+  window._mzBrandDepuisMenu=true;
+  const ov=document.getElementById('accountOverlay'); if(ov) ov.style.zIndex='9895';
+  openBrandModal();
+}
 function mzAdvClose(){ const m=document.getElementById('mzAdvModal'); if(m) m.style.display='none';
-  clearInterval(_mzPreviewTimer); _mzPreviewTimer=null; mzAdvSummary(); }
+  clearInterval(_mzPreviewTimer); _mzPreviewTimer=null; try{ mtSaveSite(); }catch(_){} }
 // Le réglage « Scène vivante » ne vaut que pour OmniHuman : Character-3 garde le
 // fond figé quoi qu'on lui demande. Plutôt que de le griser (l'utilisateur ne
 // saurait pas pourquoi), on le dit — et on l'annonce aussi sur le hook/CTA.
@@ -13708,48 +13688,22 @@ function mzPreviewRender(){
 }
 function mzAdvRender(){
   const a=_mt.adv;
-  _mzSeg('mzSegAnim',MZ_ANIM,'subAnim'); _mzSeg('mzSegStyle',MZ_SUBST,'subStyle');
-  _mzSeg('mzSegPos',MZ_POS,'subPos');    _mzSeg('mzSegSize',MZ_SIZE,'subSize');
-  _mzSeg('mzSegMusic',MZ_MUSIC,'music'); _mzSeg('mzSegRhythm',MZ_RHYTHM,'rhythm'); _mzSeg('mzSegMotion',MZ_MOTION,'motion'); _mzMotionHint();
-  _mzSeg('mzSegTrans',MZ_TRANS,'transitions');
-  _mzToggle('mzTogEmoji','subEmoji','Emoji auto sur les mots-clés','🔥 💰 ✨ ajoutés sur les temps forts');
-  _mzToggle('mzTogPunch','punch','Accent des temps forts','Zoom punch-in · shake · flash sur les beats');
-  _mzToggle('mzTogSfx','sfx','Bruitages','Woosh, pop, impacts calés sur le rythme');
-  // sous-titres coupés : position, taille et emoji n'ont plus de sens
-  const ps=document.getElementById('mzPosSize'), te=document.getElementById('mzTogEmoji');
-  const off = a.subStyle==='none';
-  if(ps) ps.style.display = off ? 'none' : '';
-  if(te) te.style.display = off ? 'none' : '';
-  const ta=document.getElementById('mzStyleTxt'), gap=document.getElementById('mzStyleGap');
-  if(ta){ ta.style.display = a.vstyle==='autre' ? '' : 'none'; if(a.vstyle==='autre' && ta.value!==a.styleTxt) ta.value=a.styleTxt||''; }
-  if(gap) gap.style.display = a.vstyle==='autre' ? 'none' : '';
-  // un style passé « bientôt disponible » ne doit pas rester sélectionné
-  if(['glass','dynamic','autre'].indexOf(a.vstyle)>=0) a.vstyle='auto';
+  if(['glass','editorial','dynamic','autre'].indexOf(a.vstyle)>=0) a.vstyle='auto';   // un style « bientôt » ne reste jamais choisi
+  _mzBrandRender();
+  const ck='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const g=document.getElementById('mzStyleGrid');
   if(g) g.innerHTML = MZ_VSTYLE.map(([v,l,sub,cols,,soon])=>{
-    const on=a.vstyle===v;
-    return '<button type="button" '+(soon?'disabled ':'onclick="mzAdvSet(\'vstyle\',\''+v+'\')" ')+'class="col" style="padding:0;border-radius:14px;overflow:hidden;text-align:left;cursor:'+(soon?'not-allowed':'pointer')+';font-family:var(--font);color:var(--text);'
-      +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface);opacity:'+(soon?'.55':'1')+'">'
-      +'<span style="display:block;height:52px;background:linear-gradient(120deg,'+cols[0]+','+cols[1]+');position:relative;'+(soon?'filter:saturate(.4)':'')+'">'
-      +(soon?'<span class="mono" style="position:absolute;top:6px;right:6px;font-size:8.5px;letter-spacing:.06em;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff">BIENTÔT DISPONIBLE</span>':'')
+    const on=!soon && a.vstyle===v;
+    return '<button type="button" '+(soon?'disabled ':'onclick="mzAdvSet(\'vstyle\',\''+v+'\')" ')+'style="display:flex;flex-direction:column;padding:0;border-radius:14px;overflow:hidden;text-align:left;opacity:'+(soon?'.45':'1')+';cursor:'+(soon?'not-allowed':'pointer')+';'
+      +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface)">'
+      +'<span style="display:block;height:52px;background:linear-gradient(120deg,'+cols[0]+','+cols[1]+');position:relative">'
       +'<span style="position:absolute;left:8px;bottom:6px;width:46%;height:6px;border-radius:3px;background:rgba(255,255,255,.85)"></span>'
       +'<span style="position:absolute;left:8px;bottom:15px;width:64%;height:6px;border-radius:3px;background:rgba(255,255,255,.55)"></span></span>'
       +'<span style="display:block;padding:9px 11px">'
       +'<span class="row" style="justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">'+l+'</span>'
-      +(on?'<span style="color:var(--accent-2);display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>':'')
-      +'</span><span class="faint" style="display:block;font-size:11px">'+(soon?'bientôt disponible':sub)+'</span></span></button>';
+      +(soon?'<span class="mono" style="font-size:9px;letter-spacing:.08em;color:var(--text-3)">BIENTÔT</span>':(on?'<span style="color:var(--accent-2);display:flex">'+ck+'</span>':''))
+      +'</span><span class="faint" style="font-size:11px">'+sub+'</span></span></button>';   // en ligne, comme la maquette (hauteur de ligne du bloc)
   }).join('');
-  // ── LE CURSEUR PILOTE LE VISAGE, PLUS LE B-ROLL ──────────────────────────
-  // Axel : « le b-roll dans tous les cas on le met par défaut, on n'y touche
-  // pas ». Sa quantité n'a jamais été une décision d'utilisateur — on en veut
-  // toujours le maximum. Ce qui change le ressenti d'une vidéo, c'est la
-  // fréquence à laquelle on VOIT la personne. `broll` reste donc à 3, en
-  // silence, et le curseur pilote `avatarDens`.
-  const br=document.getElementById('mzAvatarDens'), bl=document.getElementById('mzAvatarLbl');
-  const d=(a.avatarDens==null?2:a.avatarDens);
-  if(br){ br.value=d; br.style.background='linear-gradient(90deg,var(--accent) '+(d/3*100)+'%,var(--surface-3) '+(d/3*100)+'%)'; }
-  if(bl) bl.textContent=MZ_AVATAR_DENS[d];
-  mzPreviewRender(); mzAdvSummary();
 }
 function mzAdvSummary(){
   const el=document.getElementById('mzAdvSum'); if(!el) return;
@@ -13843,7 +13797,7 @@ function initMontage(){
     const ts = parseInt(localStorage.getItem('aa_user_site_ts')||'0', 10);
     if(ts && (Date.now()-ts) < MT_SITE_TTL) s.value = localStorage.getItem('aa_user_site') || '';
   }catch(_){} }
-  try{ _mtRenderMedia(); _mtUpdateCost(); }catch(_){}
+  try{ _mtRenderMedia(); _mtUpdateCost(); _mtBriefCount(); }catch(_){}
   try{ mtMemLoad(); }catch(_){}
   try{ mtLibLoad(); }catch(_){}
   try{ mtFooterSync(); }catch(_){}
@@ -13867,6 +13821,8 @@ function openBrandModal(){
 function closeBrandModal(){
   const m=document.getElementById('brandModal'); if(m) m.style.display='none';
   const ov=document.getElementById('accountOverlay'); if(ov) ov.classList.remove('aa-sous-verre');
+  // ouverte depuis « Paramètres avancés » du Montage IA : pas de « Mon compte » derrière → l'overlay se referme, retour au menu
+  if(window._mzBrandDepuisMenu){ window._mzBrandDepuisMenu=false; if(ov){ ov.style.display='none'; ov.style.zIndex=''; } }
   try{ mtMemEdit(false); }catch(_){}
 }
 
@@ -14336,6 +14292,7 @@ async function mtLibSyncToMontage(){
 // visuels « Ma marque » en auto (ses fichiers passent devant, plafond 8 au total)
 async function _mtLaunchFiles(){
   const lot=(typeof _edAi !== 'undefined' && _edAi && _edAi.files ? _edAi.files.slice() : []);
+  if(typeof _mt!=='undefined' && _mt.useBrand===false) return lot;   // « Utiliser Ma marque » coupé : ses seuls fichiers
   for(const a of (_mtLib||[])){
     if(a.kind==='audio' || a.auto===false || !a._url) continue;
     if(lot.some(f=>f.libId===a.id)) continue;
@@ -14429,6 +14386,7 @@ function mtClearBgAudio(){
 }
 async function mtSetMp3(f){
   if(!f) return; _mt.mp3 = f; _mt.mp3Dur = 0;
+  const _tok = (_mt._mp3Tok = (_mt._mp3Tok||0) + 1);   // 09/10 : audio retiré / remplacé pendant le nettoyage → résultat ignoré
   _mtDropFill('mtAudioDrop', 'mtMp3Name', 'mtAudioSub', f.name);
   const _measure = (file) => { try{
     const u=URL.createObjectURL(file), a=new Audio();
@@ -14460,6 +14418,7 @@ async function mtSetMp3(f){
     let r;
     try { r = await _acCleanCore(f); }
     finally { _acLevel = _lvl; _acDenoiseEnabled = _dn; Object.assign(_acOpts, _sv); }
+    if(_tok !== _mt._mp3Tok) return;
     const removed = Math.round((r.decoded.duration - r.cleanBuf.duration) * 10) / 10;
     _mt.mp3 = new File([r.blob], f.name.replace(/\.[^.]+$/, '') + '-clean.wav', { type:'audio/wav' });
     _measure(_mt.mp3);
@@ -14545,6 +14504,7 @@ function mtSetLipModel(m){
 // Tarifs lipsync : 2 cr/s Character 3 (aligné sur le coût 1080p le 23/08) et 5 cr/s Omni.
 // sur les scènes avatar (~30% de la durée), le reste habillé en hyperframes (1 cr/s)
 function _mtUpdateCost(){
+  try{ _mtOptSync(); }catch(_){}
   const b=document.getElementById('mtGoLbl'); if(!b) return;
   if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — ' + CREDIT_COSTS.montageIA + ' crédits'; return; }
   const omni=_mt.lipModel==='omnihuman', mix=_mt.lipModel==='mix';
@@ -14581,6 +14541,120 @@ function mtSetVideo(f){
   if(!f || !f.type.startsWith('video/')){ toast('Choisis un fichier vidéo'); return; }
   _mt.video = f;
   _mtDropFill('mtVideoDrop', 'mtVideoName', 'mtVideoSub', f.name);
+}
+/* ══ Montage IA · refonte 09/10 (maquette Claude Design « montage-handoff », reprise 1:1) ══════════════════════════════
+   UNE zone de dépôt, le type se lit au fichier (plus de choix « voix off / ma vidéo ») :
+     • audio  → ta voix (l'IA crée toute la vidéo) ; avec une vidéo, c'est le son mixé dans le montage (_mt.bgAudio) ;
+     • vidéo  → LA vidéo à monter (la 1re) ; les suivantes rejoignent tes visuels (b-roll) ;
+     • images → tes visuels, placés au bon moment (_edAi.files, 8 au plus).
+   Un seul audio à la fois : un nouvel audio remplace le précédent. L'état existant (_mt.mp3 / video / bgAudio, _edAi.files)
+   reste la seule source pour le lancement (montageGo inchangé). */
+let _mtFiles = [];   // [{ id, file, kind:'audio'|'video'|'image', dur, neuf }]
+const _MT_FI = { audio:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>',
+  video:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 16h18M8 3v18M16 3v18"/></svg>',
+  image:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' };
+const _MT_FX = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function _mtKind(f){
+  const t=String((f && f.type)||'').toLowerCase(), n=String((f && f.name)||'').toLowerCase();
+  if(t.startsWith('image/') || /\.(jpe?g|png|webp|gif)$/.test(n)) return 'image';
+  if(t.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/.test(n)) return 'video';
+  if(t.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac)$/.test(n)) return 'audio';
+  return '';
+}
+function mtAddFiles(list){
+  let refus=0, remplace=false;
+  for(const f of Array.from(list||[])){
+    const kind=_mtKind(f); if(!kind){ refus++; continue; }
+    if(kind==='audio' && _mtFiles.some(x=>x.kind==='audio')){ _mtFiles=_mtFiles.filter(x=>x.kind!=='audio'); remplace=true; }
+    if(kind==='image' && _mtFiles.filter(x=>x.kind==='image').length >= 8){ toast('8 visuels maximum'); continue; }
+    const it={ id:'mf'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), file:f, kind, dur:0, neuf:true };
+    _mtFiles.push(it);
+    if(kind!=='image') _mtMeasure(it);
+  }
+  if(refus) toast(refus>1 ? refus+' fichiers ignorés : formats non pris en charge' : 'Format non pris en charge (audio, vidéo ou image)');
+  if(remplace) toast('Audio remplacé');
+  _mtSyncFiles();
+}
+function mtRemoveFile(id){ _mtFiles=_mtFiles.filter(x=>x.id!==id); _mtSyncFiles(); }
+// durée réelle (affichée dans la pastille : 0:42)
+function _mtMeasure(it){
+  try{
+    const u=URL.createObjectURL(it.file), el=document.createElement(it.kind==='video'?'video':'audio');
+    el.preload='metadata';
+    el.onloadedmetadata=()=>{ it.dur=isFinite(el.duration)?el.duration:0; URL.revokeObjectURL(u); _mtRenderFiles(); };
+    el.onerror=()=>{ URL.revokeObjectURL(u); };
+    el.src=u;
+  }catch(_){}
+}
+// rôles déduits de la liste → état historique du module (lu par montageGo)
+function _mtSyncFiles(){
+  const vid=_mtFiles.find(x=>x.kind==='video'), aud=_mtFiles.find(x=>x.kind==='audio');
+  const src = vid ? 'mavideo' : 'gameplay';
+  if(_mt.src!==src) mtSetSrc(src);
+  if(vid){ if(_mt.video!==vid.file) mtSetVideo(vid.file); } else _mt.video=null;
+  if(vid || !aud){   // pas de voix : une vidéo est montée telle quelle, ou rien n'est déposé
+    if(_mt.mp3 || _mt.mp3Src){ _mt._mp3Tok=(_mt._mp3Tok||0)+1; _mt.mp3=null; _mt.mp3Src=null; _mt.mp3Dur=0; }
+  }
+  _mt.bgAudio = (vid && aud) ? aud.file : null;
+  if(!vid && aud && _mt.mp3Src!==aud.file){ _mt.mp3Src=aud.file; mtSetMp3(aud.file); }
+  // visuels = images + vidéos au-delà de la première (b-roll)
+  if(typeof _edAi!=='undefined' && _edAi){
+    const vis=_mtFiles.filter(x=>x.kind==='image' || (x.kind==='video' && x!==vid)).map(x=>x.file);
+    _edAi.files=(_edAi.files||[]).filter(a=>a.libId || vis.includes(a.file));
+    const nouveaux=vis.filter(f=>!_edAi.files.some(a=>a.file===f));
+    if(nouveaux.length) edAiAddFiles(nouveaux); else { try{ _edAiRenderFiles(); }catch(_){} }
+  }
+  _mtRenderFiles();
+  _mtUpdateCost();
+}
+function _mtFmtDur(sec){ const s=Math.max(0,Math.round(sec||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function _mtRenderFiles(){
+  // un visuel retiré ailleurs (Éditeur) disparaît aussi d'ici
+  if(typeof _edAi!=='undefined' && _edAi){
+    const vid=_mtFiles.find(x=>x.kind==='video');
+    _mtFiles=_mtFiles.filter(x=>x.kind==='audio' || x===vid || (_edAi.files||[]).some(a=>a.file===x.file));
+  }
+  const big=document.getElementById('mtDropBig'), wrap=document.getElementById('mtFilesWrap'), g=document.getElementById('mtFileGrid');
+  if(!big || !wrap || !g) return;
+  const vide=!_mtFiles.length;
+  big.style.display = vide ? '' : 'none';
+  wrap.style.display = vide ? 'none' : 'flex';
+  const esc=(t)=>String(t||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  g.innerHTML=_mtFiles.map(x=>{
+    const meta = x.kind==='image' ? 'img' : (x.dur ? _mtFmtDur(x.dur) : '');
+    const h='<div class="mz-file'+(x.neuf?' rise':'')+'">'
+      +'<span style="width:28px;height:28px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-2)">'+_MT_FI[x.kind]+'</span>'
+      +'<span style="font-size:12.5px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(x.file.name)+'">'+esc(x.file.name)+'</span>'
+      +'<span class="mono faint" style="font-size:10px;flex:0 0 auto">'+meta+'</span>'
+      +'<button type="button" onclick="mtRemoveFile(\''+x.id+'\')" title="Retirer" style="width:22px;height:22px;flex:0 0 auto;border-radius:6px;display:grid;place-items:center;color:var(--text-3)">'+_MT_FX+'</button>'
+      +'</div>';
+    x.neuf=false;
+    return h;
+  }).join('');
+}
+// « Photo d'avatar » : ajoute une ou plusieurs photos (elles tournent à chaque apparition) ; active → retire l'avatar
+function mtAvatarToggle(){
+  if((_mt.avatars||[]).length){ mtClearAvatar(); toast('Photo d’avatar retirée'); return; }
+  const i=document.getElementById('mtAvatarIn'); if(i) i.click();
+}
+function _mtOptSync(){
+  const b=document.getElementById('mtOptAvatar'), ind=document.getElementById('mtOptAvatarInd'); if(!b) return;
+  const on=!!(_mt.avatars||[]).length;
+  b.classList.toggle('on', on);
+  if(ind) ind.innerHTML = on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+}
+function _mtBriefCount(){
+  const t=document.getElementById('mtBrief'), c=document.getElementById('mtBriefCount'); if(!c) return;
+  c.textContent=((t && t.value)||'').length+' caractères';   // libellé de la maquette (toujours au pluriel)
+}
+// « Créer ma vidéo » sans audio ni vidéo : rien ne part, la zone de dépôt se rappelle (accent + secousse, 900 ms)
+function mtGo(){
+  if(!_mt.mp3 && !_mt.video){
+    const z=document.getElementById(_mtFiles.length ? 'mtDropBar' : 'mtDropBig');
+    if(z){ z.classList.remove('nudge'); void z.offsetWidth; z.classList.add('nudge'); clearTimeout(z._nt); z._nt=setTimeout(()=>z.classList.remove('nudge'),900); }
+    return;
+  }
+  montageGo();
 }
 // ── LE RAPPORT : CE QU'IL DIT, CE QUE L'IA VA MONTRER ───────────────────────
 // Une nuit d'allers-retours sur un seul montage, et presque chaque correction
@@ -14778,7 +14852,7 @@ function _mtAvertirSansMedia(){
     document.body.appendChild(m);
     m.querySelector('#mtNmAdd').onclick = () => {
       m.remove(); ok(false);
-      const z = document.getElementById('edAiDrop') || document.getElementById('mtAvatarDrop');
+      const z = document.getElementById('mtDropBig')?.offsetParent ? document.getElementById('mtDropBig') : document.getElementById('mtDropBar');
       if (z) try { z.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(_){}
     };
     m.querySelector('#mtNmGo').onclick = () => { m.remove(); ok(true) };
@@ -15781,7 +15855,7 @@ async function _mtSegmentedGenerate(){
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
     const script=(document.getElementById('mtScript')?.value||'').trim();
     if(script) fd.append('script', script);
-    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar:true, style:((_mt.adv||{}).vstyle||'auto') }));
+    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar:true, style:((_mt.adv||{}).vstyle||'auto'), useBrand:(_mt.useBrand!==false) }));
     const site=(document.getElementById('mtSite')?.value||'').trim() || (localStorage.getItem('aa_user_site')||'');
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
@@ -16106,7 +16180,7 @@ async function _mtVideoGenerate(){
     fd.append('duration', String(Math.round(dur*100)/100));
     frames.forEach((f,i)=>fd.append('frame_'+i, f.blob, 't'+f.t+'.jpg'));
     fd.append('frame_times', JSON.stringify(frames.map(f=>f.t)));
-    fd.append('options', JSON.stringify({ lang:'fr' }));
+    fd.append('options', JSON.stringify({ lang:'fr', useBrand:(_mt.useBrand!==false) }));
     if(site) fd.append('website', site);
     const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
     const _lot=await _mtLaunchFiles();   // ses fichiers + « Ma marque » auto, sans toucher l'UI
@@ -16405,7 +16479,7 @@ async function _mtReviewRun(){
   // le script sert à l'alignement des sous-titres, le brief à l'intention)
   const prev=String(_mt.brief||'').trim();
   _mt.brief=(prev?prev+'\n\n':'')+'RETOUCHES DEMANDÉES SUR LA VERSION PRÉCÉDENTE : '+txt;
-  const ta=document.getElementById('mtBrief'); if(ta) ta.value=_mt.brief;
+  const ta=document.getElementById('mtBrief'); if(ta){ ta.value=_mt.brief; try{ _mtBriefCount(); }catch(_){} }
   toast('Relance avec tes consignes…');
   _mtReview={media:[],files:[]};
   montageGo();
@@ -32847,7 +32921,8 @@ async function _mcGenerate(){
     // kie.ai (Axel 09/10 : TOUS les clients ; compte developer inchangé) : MÊMES médias, MÊME prompt ; seul le fournisseur change.
     //   Motion 2.6 = kling-2.6 720p ou 1080p NATIF · repli modération 2.6 = kling-2.6 1080p · Motion 3.0 = kling-3.0 1080p,
     //   fond de l'IMAGE (= comportement fal). Le serveur copie + mesure la vidéo et tire la réserve entière (= fal-proxy).
-    //   Refus de contenu → repli modération existant ; panne technique (réserve rendue) → fal, même op, même prix.
+    //   Refus de contenu → repli modération existant (2.6, chez kie) ; panne → erreur, crédits rendus par le serveur — PAS de
+    //   repli fal (Axel 09/10). fal ne sert plus qu'au réglage console aa_kie='0'.
     const runKling = async (ver) => {
       if(_kieClientOn('motion')){
         const _dv=_kieDev();
@@ -32860,8 +32935,7 @@ async function _mcGenerate(){
           return _r.url;
         }catch(e){
           if(e && e._kieRefus){ const er=new Error(e.message); er._moderation=true; throw er; }
-          if(!_kieCanFallback(e)) throw e;
-          console.warn('[mc] kie KO → repli fal', e);
+          throw e;
         }
       }
       window._aaLastEngine='fal';
@@ -40663,6 +40737,7 @@ function _edAiVideoPoster(item){
   }catch(e){ console.warn('poster vidéo:', e); } finally{ URL.revokeObjectURL(src); } };
 }
 function _mtRenderMedia(){
+  if(typeof _mtRenderFiles==='function') _mtRenderFiles();   // refonte 09/10 : les visuels vivent dans la grille unique
   const wrap=document.getElementById('mtThumbs'); if(!wrap) return;
   const files=_edAi.files||[];
   let html=files.map(a=>
@@ -42856,61 +42931,37 @@ window.mPreviewClose=function(){
       </div>
     </div>
     <!-- ⚙️ Modale « Paramètres avancés » — maquette montage-handoff, reprise au pixel -->
-    <div id="mzAdvModal" onclick="if(event.target===this)mzAdvClose()" style="display:none;position:fixed;inset:0;z-index:9890;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);place-items:center;padding:24px">
-      <div class="card" style="width:100%;max-width:600px;max-height:84vh;overflow-y:auto;padding:26px 22px 22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
-        <div class="row" style="justify-content:space-between;align-items:flex-start;margin:2px 0 6px">
-          <div class="row gap12">
+    <div id="mzAdvModal" onclick="if(event.target===this)mzAdvClose()" style="display:none;position:fixed;inset:0;z-index:9890;background:rgba(5,5,7,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);place-items:center;padding:24px">
+      <!-- Paramètres avancés du Montage IA — maquette 09/10 (MzAdvanced), reprise 1:1 : site, « Utiliser Ma marque », style visuel -->
+      <div class="card" style="width:100%;max-width:600px;max-height:88vh;overflow-y:auto;padding:22px;text-align:left;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div class="row" style="gap:12px;align-items:center">
             <div style="width:42px;height:42px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-2)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></div>
-            <div class="col" style="line-height:1.25">
-              <h3 class="display" style="font-size:22px;font-weight:700;color:var(--text);margin:0">Paramètres avancés</h3>
-              <span class="faint" style="font-size:12.5px">Contrôle fin du rendu — laisse en Auto si tu hésites</span>
-            </div>
+            <h3 class="display" style="font-size:22px;font-weight:700;margin:0">Paramètres avancés</h3>
           </div>
-          <button class="btn btn-quiet" onclick="mzAdvClose()" style="font-size:18px;border:none;background:none;cursor:pointer;padding:4px 8px;-webkit-appearance:none;appearance:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          <button type="button" class="btn-quiet" onclick="mzAdvClose()" title="Fermer" style="font-size:18px;color:var(--text-2)">✕</button>
         </div>
 
-        <div style="margin:2px 0 20px">
-          <div class="mz-lbl">Ton site · optionnel</div>
+        <div style="margin-bottom:24px">
+          <div class="mz-lbl">Ton site</div>
           <div style="position:relative">
             <span class="faint" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></span>
             <input class="field" id="mtSite" style="padding-left:40px" placeholder="https://ton-site.com" onchange="mtSaveSite()" onblur="mtSaveSite()">
           </div>
-          <div class="faint" style="font-size:11.5px;margin-top:7px">L'IA s'en inspire pour les visuels et le ton.</div>
         </div>
 
-        <div style="margin:20px 0 24px">
-          <div class="mz-lbl">Sous-titres · aperçu live</div>
-          <div id="mzPreview" style="position:relative;height:150px;border-radius:16px;overflow:hidden;background:repeating-linear-gradient(48deg, oklch(0.34 0.09 265) 0 16px, oklch(0.22 0.06 265) 16px 32px);display:grid;place-items:center;padding:16px">
-            <div id="mzPreviewWords" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:90%"></div>
-            <span class="mono" id="mzPreviewNote" style="position:absolute;bottom:8px;left:10px;font-size:9px;color:rgba(255,255,255,.6)"></span>
+        <div id="mzBrandRow" class="row card" style="justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:24px">
+          <div class="row" style="gap:10px;align-items:center"><span style="color:var(--accent-2);display:flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v6a8 8 0 01-16 0z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></span><span style="font-weight:700;font-size:14px">Utiliser Ma marque</span></div>
+          <div class="row" style="gap:10px;align-items:center">
+            <button type="button" class="btn-quiet btn-sm mz-brand-open" onclick="mzOpenBrand()">Ouvrir Ma marque →</button>
+            <button type="button" id="mzBrandTog" role="switch" aria-checked="true" aria-label="Utiliser Ma marque" onclick="mzBrandToggle()" style="width:42px;height:25px;border-radius:13px;padding:3px;transition:.2s;flex:0 0 auto;background:var(--accent);display:flex;justify-content:flex-end"><span style="display:block;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span></button>
           </div>
         </div>
 
-        <div class="col" style="gap:13px;margin-bottom:24px">
-          <div><div class="mz-lbl">Style des sous-titres</div><div class="seg" id="mzSegStyle" style="width:100%;flex-wrap:wrap"></div></div>
-        </div>
-        <!-- Contrôles retirés (Axel 11/09) : Animation, Position, Taille, Emoji auto — le chef d'orchestre gère. Vars gardées à leur défaut dans _mzDefaults(). -->
-
-        <div class="divider" style="margin-bottom:22px"></div>
-
         <div class="mz-lbl">Style visuel</div>
-        <div id="mzStyleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"></div>
-        <textarea id="mzStyleTxt" class="field" style="display:none;min-height:64px;resize:vertical;margin-bottom:24px" placeholder="Décris le style que tu veux : couleurs, typo, ambiance, références…" oninput="_mt.adv.styleTxt=this.value"></textarea>
-        <div id="mzStyleGap" style="margin-bottom:24px"></div>
+        <div id="mzStyleGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px"></div>
 
-        <div class="col" style="gap:13px;margin-bottom:24px">
-          <div><div class="mz-lbl">Musique</div><div class="seg" id="mzSegMusic" style="width:100%;flex-wrap:wrap"></div></div>
-          <!-- Audit 04/10 (Axel) : modèle du lipsync retiré — Character-3 seul. -->
-        </div>
-        <!-- Retirés (Axel 11/09) : Rythme, Transitions, Mouvement de l'avatar — gérés par le chef d'orchestre, vars gardées à leur défaut. -->
-
-        <!-- Retiré (Axel 11/09) : « Présence de ton visage » (avatarDens) — gardé à 2 par défaut, piloté par le chef d'orchestre. -->
-
-        <!-- Retirés (Axel 11/09) : « Accent des temps forts » (punch) et « Bruitages » (sfx) — gardés ON par défaut, gérés par le chef d'orchestre. -->
-
-        <div class="row gap10" style="margin-top:8px">
-          <button type="button" class="btn btn-primary" style="margin-left:auto;padding:12px 28px;font-weight:800" onclick="mzAdvClose()">Appliquer</button>
-        </div>
+        <button type="button" class="btn btn-primary" onclick="mzAdvClose()" style="width:100%;padding:14px;font-weight:800;font-size:15px;border-radius:14px">Appliquer</button>
       </div>
     </div>
 <script>

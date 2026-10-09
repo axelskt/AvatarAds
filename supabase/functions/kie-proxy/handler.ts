@@ -16,7 +16,7 @@
 //     vidéo du client COPIÉE hors de son dossier (fal-in/<uid>/) puis MESURÉE, c'est la copie que lit kie ; réserve ENTIÈRE
 //     tirée avec un minimum = tarif fal équivalent × durée facturée (− étapes annexes de l'op, ≤ 6) ; orientation « video »
 //     imposée (kie plafonne « image » à 10 s) ; sortie plus longue que la vidéo mesurée → non livrée, op réglée
-//     (kieMcSortieOk). Échec kie → réserve rendue → repli fal de l'app sur la même op (même prix).
+//     (kieMcSortieOk). Échec kie → réserve rendue PUIS remboursée ici (KIE_NO_FALLBACK, Axel 09/10 : pas de repli fal).
 // RGPD : kie.ai n'a ni DPA ni garantie RGPD. L'ouverture aux clients de ces usages est une décision d'Axel du 25/09/2026 ;
 //        la politique de confidentialité doit lister kie.ai comme sous-traitant. La clé reste dans les secrets (KIEAI_API_KEY).
 //
@@ -280,7 +280,7 @@ export async function handler(req: Request): Promise<Response> {
       }
       // Motion Control (09/10) : 1080p de la 2.6 = Pro / Élite (Motion 3.0 l'est déjà par KIE_OPEN), puis vidéo du client
       // COPIÉE (fal-in/<uid>/, hors de son dossier : il ne peut plus la remplacer après la mesure) et MESURÉE ; kie lit la copie.
-      // Tout refus ici arrive AVANT le tirage (billing 'none' → l'app peut replier sur fal, qui refusera de même).
+      // Tout refus ici arrive AVANT le tirage (billing 'none' : rien à rendre, l'app rembourse son débit).
       const isMc = KIE_MC_ALIASES.has(alias)
       const mcSt = svc().storage.from(BUCKET)
       let mcCopie = '', mcCost = 0, mcSec = 0

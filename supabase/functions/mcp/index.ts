@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { isBlockedHost as guardBlockedHost, hostResolvesInternal, rateHit, realIp, hedraStatusGate, providerPause, retryAfterS } from '../_shared/guard.ts'   // audit #3 + round3 (DNS interne) + throttle /register
 import { STATIC_AD_FORMATS, fillStaticAdTemplate, pickStaticAdFormat, STATIC_AD_COMMON, type StaticAdFormat } from './static-ads-bank.ts'
-import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // Veo Lite / Fast via kie.ai (Axel 25/09)
+import { KIE, kieKey, kieHeaders, kieRecord, kieDownload, kieKindOf, kieClientsOn, kieVeoClientsOn } from '../_shared/kie.ts'   // + Motion Control via kie.ai (Axel 09/10, sans repli fal)   // Veo Lite / Fast via kie.ai (Axel 25/09)
 import { nettoyerVoix, nettoyageDisponible, nettoyerEtLivrer, nettoyerAvantMontage, type ConfigNettoyage } from './nettoyage-voix.ts'
 import { preparerWavHedra, couperMp4, opAvecCoupe, coupeDeOp, jobSansCoupe, mesurerAudio, preparerMp3Lipsync, dureeAudioAutres } from '../_shared/lipsync-audio.ts'   // 26/09 : dernier mot articulé + durée MESURÉE (relecture) ; audit 04/10 (MCP-4) : FLAC / Opus / AAC mesurés
 import { dureeMp4Octets } from '../_shared/mp4-duree.ts'   // Audit 02/10 : durée MESURÉE des M4A / MP4 (clean_audio, montage_ia)
@@ -1155,12 +1155,12 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
     {
       name: 'motion_control',
       _meta: { ui: { resourceUri: 'ui://avatarads/image.html' } },   // carte : photo + vidéo de référence → progression → vidéo + Télécharger
-      description: `Le module MOTION CONTROL d'AvatarAds : un PERSONNAGE (une photo) reproduit EXACTEMENT les mouvements, gestes, expressions et mouvements de caméra d'une VIDÉO DE RÉFÉRENCE (danse, trend TikTok, présentation produit filmée par l'utilisateur…), avec le son de la référence. Le visage, la tenue et le décor viennent de la PHOTO. Vidéo de référence de 3 à 30 s (plus longue : les 30 premières secondes). Coût par seconde de la référence : Motion 2.6 en 720p = ${MC_SEC.std} cr/s, Motion 2.6 en 1080p = ${MC_SEC.std + MC_SEC.topaz} cr/s, Motion 3.0 (1080p natif, meilleur rendu) = ${MC_SEC.v3} cr/s — 1080p et 3.0 réservés aux plans Pro & Élite. Débité au lancement (rendu si échec). Compte 3 à 10 min. ❓ AVANT D'APPELER (Axel) : si le message ne précise PAS le modèle et la qualité, pose d'abord UNE seule question courte — « Motion 2.6 en 720p (2 crédits/s), 2.6 en 1080p (3 crédits/s) ou Motion 3.0 (6 crédits/s, Pro & Élite) ? » — attends la réponse, puis appelle l'outil (une info déjà donnée ne se redemande pas). ⛔ Ne demande JAMAIS la durée : tu ne vois pas la vidéo ; la carte la mesure et prévient elle-même l'utilisateur si elle dépasse 30 s. duration_seconds uniquement si l'utilisateur demande DE LUI-MÊME de ne garder que ses N premières secondes. Ensuite plus aucune question : la carte fait le reste.  📷🎬 LES FICHIERS : claude.ai NE TRANSMET PAS les photos ni les vidéos jointes au chat → appelle l'outil SANS image_url ni video_url : la CARTE demande la photo du personnage et la vidéo de référence, ajuste le cadrage toute seule et lance la génération. image_url seulement pour une image déjà en ligne (ex. un avatar créé avec generate_image dans cette conversation — très bon combo : créer l'avatar puis l'animer). Pas de devis ; n'appelle aucun check ensuite. ⛔ Ne nomme JAMAIS le moteur technique : parle du « module Motion Control d'AvatarAds ».`,
+      description: `Le module MOTION CONTROL d'AvatarAds : un PERSONNAGE (une photo) reproduit EXACTEMENT les mouvements, gestes, expressions et mouvements de caméra d'une VIDÉO DE RÉFÉRENCE (danse, trend TikTok, présentation produit filmée par l'utilisateur…), avec le son de la référence. Le visage, la tenue et le décor viennent de la PHOTO. Vidéo de référence de 3 à 30 s (plus longue : les 30 premières secondes). Coût par seconde de la référence : Motion 2.6 en 720p = ${MC_SEC.std} cr/s, Motion 2.6 en 1080p = ${MC_SEC.hd} cr/s, Motion 3.0 (1080p natif, meilleur rendu) = ${MC_SEC.v3} cr/s — 1080p et 3.0 réservés aux plans Pro & Élite. Débité au lancement (rendu si échec). Compte 3 à 10 min. ❓ AVANT D'APPELER (Axel) : si le message ne précise PAS le modèle et la qualité, pose d'abord UNE seule question courte — « Motion 2.6 en 720p (2 crédits/s), 2.6 en 1080p (3 crédits/s) ou Motion 3.0 (6 crédits/s, Pro & Élite) ? » — attends la réponse, puis appelle l'outil (une info déjà donnée ne se redemande pas). ⛔ Ne demande JAMAIS la durée : tu ne vois pas la vidéo ; la carte la mesure et prévient elle-même l'utilisateur si elle dépasse 30 s. duration_seconds uniquement si l'utilisateur demande DE LUI-MÊME de ne garder que ses N premières secondes. Ensuite plus aucune question : la carte fait le reste.  📷🎬 LES FICHIERS : claude.ai NE TRANSMET PAS les photos ni les vidéos jointes au chat → appelle l'outil SANS image_url ni video_url : la CARTE demande la photo du personnage et la vidéo de référence, ajuste le cadrage toute seule et lance la génération. image_url seulement pour une image déjà en ligne (ex. un avatar créé avec generate_image dans cette conversation — très bon combo : créer l'avatar puis l'animer). Pas de devis ; n'appelle aucun check ensuite. ⛔ Ne nomme JAMAIS le moteur technique : parle du « module Motion Control d'AvatarAds ».`,
       inputSchema: {
         type: 'object',
         properties: {
           model: { type: 'string', enum: ['2.6', '3.0'], description: `Modèle CHOISI PAR L'UTILISATEUR (demande-le s'il n'est pas dans son message) : '2.6' ou '3.0' (${MC_SEC.v3} cr/s, 1080p natif, Pro & Élite).` },
-          quality: { type: 'string', enum: ['720p', '1080p'], description: `Qualité CHOISIE PAR L'UTILISATEUR : pour Motion 2.6, '720p' (${MC_SEC.std} cr/s) ou '1080p' (${MC_SEC.std + MC_SEC.topaz} cr/s, Pro & Élite). Motion 3.0 = toujours '1080p'.` },
+          quality: { type: 'string', enum: ['720p', '1080p'], description: `Qualité CHOISIE PAR L'UTILISATEUR : pour Motion 2.6, '720p' (${MC_SEC.std} cr/s) ou '1080p' (${MC_SEC.hd} cr/s, Pro & Élite). Motion 3.0 = toujours '1080p'.` },
           duration_seconds: { type: 'integer', minimum: 4, maximum: 30, description: "Optionnel : ne garder que les N PREMIÈRES secondes de la vidéo de référence (4 à 30). Omis = toute la vidéo, 30 s au plus." },
           instruction: { type: 'string', description: "Optionnel, rarement utile : consigne de mouvement en anglais qui REMPLACE la consigne par défaut (« reproduis exactement le mouvement et la caméra de la référence »). Laisse vide sauf demande précise de l'utilisateur." },
           realistic_camera: { type: 'boolean', description: "Caméra tenue à la main, légèrement vivante, façon selfie (DÉFAUT true, comme l'app). false = plan plus stable." },
@@ -2423,7 +2423,7 @@ function finEchecVideo(j: any): string {
 // la génération (aaLong : jusqu'à 30 min) — jamais une fausse barre ni un lien /i/ pris pour la vidéo (audit 02/10).
 async function carteOutilVideo(j: Record<string, any>): Promise<ToolContent> {
   const pj = (j.params || {}) as Record<string, unknown>, motion = pj.tool === 'motion'
-  const rate = motion ? (pj.model === '3.0' ? MC_SEC.v3 : MC_SEC.std + (pj.quality === '1080p' ? MC_SEC.topaz : 0)) : OMNI_EDIT_SEC[pj.resolution === '1080p' ? '1080p' : '720p']
+  const rate = motion ? mcRate(pj.model, pj.quality) : OMNI_EDIT_SEC[pj.resolution === '1080p' ? '1080p' : '720p']
   const base = { job_id: j.id, statusUrl: `https://mcp.avatarads.fr/status/${j.id}`, kind: 'video', tool: motion ? 'motion' : 'edit', rate, maxDur: Number(pj.max_dur) || (motion ? 30 : 10) }
   if (j.status === 'done' && j.result_url) { const dl = `https://mcp.avatarads.fr/i/${j.id}`; return toolMedia(dl, 'video.mp4', 'video/mp4', `✅ Vidéo prête !\nLien : ${dl}`) }
   if (j.status === 'failed') return toolErr(`Génération échouée : ${String(pj.user_msg || 'erreur du moteur vidéo')} (crédits remboursés).`)
@@ -3045,12 +3045,17 @@ async function suivreRetouche(userId: string, job: Record<string, unknown>, pj: 
 //   ve:<requête>     Omni (fal google/gemini-omni-flash v1.1 edit)          — débit AVANT, à la durée MESURÉE (atome mvhd)
 //   vm:<requête>     Motion Control (fal Kling 2.6 standard / 3.0 pro)       — 3.0 refusé par la modération → repli 2.6 pro
 //   vu:<requête>     upscale 1080p (fal Topaz ×1,5) de Motion 2.6 en 1080p    — échec → 720p livré, +1 cr/s rendu
+//                    (vm: / vu: : jobs fal lancés AVANT le 09/10 seulement — suivis jusqu'au bout, plus jamais créés)
+//   vk:<tâche>       Motion Control chez kie.ai (Axel 09/10 : pour tous, 1080p NATIF, sans repli fal) — 3.0 refusé par la
+//                    modération → UNE reprise en 2.6 1080p chez kie (vkr: = réservation de cette reprise)
 // Préfixes neutres (le client lit ses lignes mcp_jobs) : jamais le nom d'un fournisseur.
 const OMNI_EDIT_SEC: Record<string, number> = { '720p': 3, '1080p': 4 }   // = CREDIT_COSTS.omniEditPerSec / omniEdit1080PerSec
-const MC_SEC = { std: 2, topaz: 1, v3: 6, v26pro: 4 }                      // = _mcRate de l'app (2 · 2+1 Topaz · 6) ; repli 3.0 → 2.6 pro = 4
+// = _mcRate de l'app (09/10) : 2.6 720p 2 · 2.6 1080p NATIF 3 · 3.0 6 ; repli 3.0 → 2.6 1080p = 3. topaz : jobs fal d'avant le 09/10.
+const MC_SEC = { std: 2, hd: 3, v3: 6, v26pro: 3, topaz: 1 }
+const mcRate = (model: unknown, quality: unknown) => model === '3.0' ? MC_SEC.v3 : (quality === '1080p' ? MC_SEC.hd : MC_SEC.std)
 const MC_PRO_PLANS = ['pro', 'elite']                                       // 1080p et Motion 3.0 : Pro & Élite (comme l'app)
-const VT_OP = /^(vn|vns|ve|vm|vmr|vu|vur|vd|vdg):/   // étapes + réservations (voir « ÉTAPES RÉSERVÉES »)
-const VT_STALE_MIN = 45                                                     // Kling 11 min + repli + Topaz : jamais remboursé en cours de route
+const VT_OP = /^(vn|vns|ve|vm|vmr|vu|vur|vd|vdg|vk|vkr):/   // étapes + réservations (voir « ÉTAPES RÉSERVES »)
+const VT_STALE_MIN = 60                                                     // kie : file jusqu'à ~25 min + reprise 2.6 : jamais remboursé en cours de route
 const FAL_OMNI_EDIT = 'google/gemini-omni-flash/v1.1/edit'
 const FAL_TOPAZ = 'fal-ai/topaz/upscale/video'
 const falKling = (ver: 'v3' | 'v2.6', pro: boolean) => `fal-ai/kling-video/${ver}/${pro ? 'pro' : 'standard'}/motion-control`
@@ -3074,7 +3079,7 @@ function erreurKling(rd: Record<string, unknown>, status: number): { msg: string
   const type = String((typeof d === 'object' && d?.type) || '')
   const msg = String((typeof d === 'object' && d?.msg) || (typeof d === 'string' ? d : '') || rd?.error || '')
   const s = type + ' ' + msg
-  const moderation = /policy|moderat|content check|flagged|could not be processed|sensitive|risk/i.test(s)
+  const moderation = /policy|moderat|content check|flagged|could not be processed|sensitive|risk|safety|violat|nsfw|prohibit|inappropriate/i.test(s)   // + mots des refus kie (= l'app)
   if (/image_too_large/i.test(type || msg)) return { moderation, msg: 'Image du personnage trop grande pour le moteur — réessaie avec une photo plus petite.' }
   if (/duration|too long|too short|seconds/i.test(s)) return { moderation, msg: 'Durée de la vidéo de référence refusée (3 à 30 s).' }
   if (/hevc|h\.?265|codec/i.test(s)) return { moderation, msg: 'Format vidéo refusé — réexporte la vidéo en MP4.' }
@@ -3179,6 +3184,22 @@ async function soumettreKling(ver: 'v3' | 'v2.6', pro: boolean, charUrl: string,
   if (ver === 'v3' && !s.ok && (s.status === 400 || s.status === 422)) s = await falSoumettre(path, body)
   return { ...s, path }
 }
+// Motion Control chez kie.ai (Axel 09/10) : même corps que kie-proxy (orientation « video », fond de l'IMAGE, 3.0 en 1080p ;
+// 2.6 en 720p ou 1080p NATIF), mêmes médias et même consigne qu'avant. sansTache = kie a refusé, aucune tâche créée.
+async function soumettreKlingKie(ver: 'v3' | 'v2.6', hd: boolean, charUrl: string, refUrl: string, prompt: string): Promise<{ ok: boolean; status: number; task: string; d: Record<string, unknown> }> {
+  if (!kieKey()) return { ok: false, status: 503, task: '', d: { error: 'kie indisponible' } }
+  const input: Record<string, unknown> = { prompt: prompt.slice(0, 2500), input_urls: [charUrl], video_urls: [refUrl], character_orientation: 'video', mode: (ver === 'v3' || hd) ? '1080p' : '720p' }
+  const body = ver === 'v3'
+    ? { model: 'kling-3.0/motion-control', callBackUrl: `${SUPABASE_URL}/functions/v1/kie-proxy?path=/cb`, input: { ...input, background_source: 'input_image' } }
+    : { model: 'kling-2.6/motion-control', input }
+  try {
+    const r = await fetch(`${KIE}/api/v1/jobs/createTask`, { method: 'POST', headers: kieHeaders(), body: JSON.stringify(body), signal: AbortSignal.timeout(30000) })
+    const j = await r.json().catch(() => ({})) as Record<string, any>
+    const task = String(j?.data?.taskId || '')
+    if (j?.code === 200 && /^[A-Za-z0-9_-]{6,120}$/.test(task)) return { ok: true, status: 200, task, d: j }
+    return { ok: false, status: Number(j?.code) || r.status, task: '', d: { error: String(j?.msg || '') } }
+  } catch { return { ok: false, status: 0, task: '', d: {} } }
+}
 // Durée de la vidéo préparée : le worker l'encode en +faststart → l'atome mvhd est dans le 1er Mo (lecture partielle) ;
 // repli lecture complète si besoin. JAMAIS la durée annoncée par la carte (la facture ne dépend que du serveur).
 async function vtDuree(prep: string): Promise<number | null> {
@@ -3207,7 +3228,7 @@ async function advanceVideoTool(job: Record<string, unknown>): Promise<void> {
     }
     return
   }
-  if (/^(vns|vmr|vur):/.test(op)) return   // réservation en cours (ou orpheline : le filet tranchera)
+  if (/^(vns|vmr|vur|vkr):/.test(op)) return   // réservation en cours (ou orpheline : le filet tranchera)
 
   // 1) PRÉPARATION faite par le serveur de rendu → durée mesurée → débit → soumission au moteur
   if (op.startsWith('vn:')) {
@@ -3242,16 +3263,22 @@ async function advanceVideoTool(job: Record<string, unknown>): Promise<void> {
       sub = { ...(await falSoumettre(p, { video_url: refUrl, prompt: omniEditPrompt(String(pj.prompt || '')), resolution: res })), path: p }
       prochain = 've:'
     } else {
+      // Motion Control chez kie.ai (Axel 09/10 : pour tous, 1080p natif, PAS de repli fal) → étape vk:<tâche>
+      if (!kieKey()) { await vtEchec(job, 'Motion Control momentanément indisponible — réessaie dans quelques minutes.'); return }
       const billDur = Math.min(30, Math.ceil(dur - 0.05))   // vidéo déjà prolongée à 3,6 s si besoin (= _mcRefDurEff)
       const v3 = pj.model === '3.0', hd = pj.quality === '1080p'
-      cost = billDur * (v3 ? MC_SEC.v3 : MC_SEC.std + (hd ? MC_SEC.topaz : 0))
+      cost = billDur * mcRate(pj.model, pj.quality)
       const bal = await spendForJob(userId, String(job.id), cost)
       if (bal === null || bal === -1 || bal === -2) { await vtEchec(job, `Crédits insuffisants : il en faut ${cost}. Recharge sur avatarads.fr`); return }
       const charUrl = await signPath(String(pj.char_path), 3 * 3600)
       if (!charUrl) { await vtEchec(job, 'Photo du personnage introuvable — redépose-la.'); return }
-      sub = await soumettreKling(v3 ? 'v3' : 'v2.6', v3, charUrl, refUrl, motionControlPrompt({ instruction: String(pj.instruction || ''), camFollow: pj.cam !== false }))
-      extra.bill_dur = billDur; extra.ver = v3 ? 'v3' : 'v2.6'; extra.char_url = charUrl; extra.ref_url = refUrl
-      prochain = 'vm:'
+      const k = await soumettreKlingKie(v3 ? 'v3' : 'v2.6', hd, charUrl, refUrl, motionControlPrompt({ instruction: String(pj.instruction || ''), camFollow: pj.cam !== false }))
+      if (!k.ok) {
+        console.warn('[mcp] motion kie : soumission refusée', job.id, k.status, JSON.stringify(k.d).slice(0, 300))
+        await vtEchec(job, (k.status === 0 || k.status === 402 || k.status === 429 || k.status === 433 || k.status >= 455) ? 'Service vidéo momentanément indisponible — crédits rendus, réessaie dans quelques minutes.' : erreurKling(k.d, k.status).msg); return
+      }
+      await vtPasser(job, 'vns:' + op.slice(3), 'vk:' + k.task, { ...extra, bill_dur: billDur, ver: v3 ? 'v3' : 'v2.6', char_url: charUrl, ref_url: refUrl, bill: cost })
+      return
     }
     if (!sub.ok) {
       console.warn('[mcp] outil vidéo : soumission refusée', job.id, sub.status, JSON.stringify(sub.d).slice(0, 300))
@@ -3281,6 +3308,27 @@ async function advanceVideoTool(job: Record<string, unknown>): Promise<void> {
     if (essais >= 3 && Date.now() - Number(job.params && (job.params as Record<string, unknown>).deliver_first || Date.now()) > 5 * 60_000) { await vtEchec(job, 'Livraison impossible — crédits rendus.', 'vdg:' + op.slice(3)); return }
     await vtPasser(job, 'vdg:' + op.slice(3), 'vd:' + op.slice(3), { deliver_at: Date.now() })
     return
+  }
+
+  // 2 bis) SUIVI de Motion Control chez kie (vk:<tâche>) : prêt → livraison (vd:) ; échec → crédits rendus, sauf la 3.0
+  //        refusée par la modération : UNE reprise en 2.6 1080p chez kie, la différence de prix rendue (6 → 3 cr/s).
+  if (op.startsWith('vk:')) {
+    const rec = await kieRecord('mk', op.slice(3))
+    if (rec.transient || !rec.found || rec.state === 'queue' || rec.state === 'run') return   // passager / en cours : le filet VT_STALE_MIN tranche
+    if (rec.state === 'ok' && rec.urls.length) { await vtPasser(job, op, 'vd:' + op.slice(3), { result_src: rec.urls[0] }); return }
+    const e = erreurKling({ error: `${rec.errType} ${rec.err}`.trim() || 'échec' }, 0)
+    console.warn('[mcp] motion kie : échec', job.id, rec.errType, String(rec.err).slice(0, 300))
+    if (pj.ver === 'v3' && e.moderation) {
+      if (!(await vtPasser(job, op, 'vkr:' + op.slice(3)))) return
+      const k = await soumettreKlingKie('v2.6', true, String(pj.char_url), String(pj.ref_url), motionControlPrompt({ instruction: String(pj.instruction || ''), camFollow: pj.cam !== false }))
+      if (k.ok) {
+        await vtRendrePartiel(job, (MC_SEC.v3 - MC_SEC.v26pro) * (Number(pj.bill_dur) || 0), 'repli-2.6')
+        await vtPasser(job, 'vkr:' + op.slice(3), 'vk:' + k.task, { ver: 'v2.6-pro', repli: true })
+        return
+      }
+      await vtEchec(job, e.msg, 'vkr:' + op.slice(3)); return
+    }
+    await vtEchec(job, e.msg, op); return
   }
 
   // 2) SUIVI du moteur (Omni, Kling ou Topaz)
@@ -3390,14 +3438,14 @@ async function runEditVideo(profile: Record<string, unknown>, args: Record<strin
 }
 
 async function runMotionControl(profile: Record<string, unknown>, args: Record<string, unknown>): Promise<ToolContent> {
-  if (!FAL_KEY) return toolErr('Motion Control indisponible (configuration serveur incomplète).')
+  if (!kieKey()) return toolErr('Motion Control indisponible (configuration serveur incomplète).')
   const model = args.model === '3.0' ? '3.0' : '2.6'
   const quality = model === '3.0' || args.quality === '1080p' ? '1080p' : '720p'
   const plan = String(profile.plan || '').toLowerCase()
   if ((model === '3.0' || quality === '1080p') && !isUnlimited(profile) && !MC_PRO_PLANS.includes(plan)) {
     return toolErr(`${model === '3.0' ? 'Motion 3.0' : 'Le 1080p'} est réservé aux plans Pro et Élite (plan actuel : ${plan || 'free'}). Relance en Motion 2.6 720p, ou passe en Pro sur ${APP_URL}`)
   }
-  const rate = model === '3.0' ? MC_SEC.v3 : MC_SEC.std + (quality === '1080p' ? MC_SEC.topaz : 0)
+  const rate = mcRate(model, quality)
   const instruction = String(args.instruction || '').trim().slice(0, 800)
   const maxDur = Math.min(30, Math.max(4, Math.round(Number(args.duration_seconds) || 30)))   // N premières secondes de la référence (≥ 4 : la rallonge à 3,6 s doit tenir)
   const c = await vtCarte(profile, 'motion', { model, quality, instruction, cam: args.realistic_camera !== false, max_dur: maxDur }, args)
@@ -5091,7 +5139,7 @@ serve(async (req) => {
       // solde minimal AVANT de mobiliser le serveur de rendu (le débit exact suit la mesure de la durée) + 2 préparations
       // en cours au plus par compte : plus de préparations gratuites à 0 crédit (audit 02/10)
       if (!isUnlimited(profT)) {
-        const mini = params.tool === 'omni_edit' ? OMNI_EDIT_SEC[params.resolution === '1080p' ? '1080p' : '720p'] : 4 * (params.model === '3.0' ? MC_SEC.v3 : MC_SEC.std + (params.quality === '1080p' ? MC_SEC.topaz : 0))
+        const mini = params.tool === 'omni_edit' ? OMNI_EDIT_SEC[params.resolution === '1080p' ? '1080p' : '720p'] : 4 * mcRate(params.model, params.quality)
         if ((Number(profT.credits_remaining) || 0) < mini) return json(402, { error: 'no_credits' })
         const { count } = await svc.from('render_jobs').select('id', { count: 'exact', head: true }).eq('user_id', uid).in('status', ['queued', 'rendering']).eq('plan->>__compose', 'mc-ref')
         if ((count || 0) >= 2) return json(429, { error: 'busy' })

@@ -29,7 +29,8 @@ export const KIE_OPEN: Record<string, string[]> = {
   // Motion Control (Axel 09/10 : « push pour tout le monde Motion Control chez kie », 1080p NATIF au lieu de Topaz) :
   // 2.6 720p dès Starter, 2.6 1080p = Pro / Élite (KIE_MC_1080_PLANS), 3.0 1080p = Pro / Élite — mêmes plans que l'app et
   // que les gates de fal-proxy (le repli). Vidéo du client COPIÉE + MESURÉE côté serveur, tirage de la réserve ENTIÈRE avec un
-  // minimum = tarif × durée (comme fal-proxy) ; durée de SORTIE contrôlée avant livraison (kieMcSortieOk).
+  // minimum = tarif × durée (comme fal-proxy) ; durée de SORTIE contrôlée avant livraison (kieMcSortieOk). Pas de repli fal
+// (Axel 09/10) : échec = crédits rendus (KIE_NO_FALLBACK).
   'kling-2.6-mc': ['starter', 'pro', 'elite'],
   'kling-3.0-mc': ['pro', 'elite'],
 }
@@ -68,7 +69,9 @@ export function kieVeoCost(alias: string, resolution: unknown, seconds: unknown)
 // Usages SANS repli côté app (Axel 25/09 : Omni Flash = « kie directement, pas de fallback ») : un échec kie n'a plus de
 // suite possible sur la même réservation → kie-proxy la rend PUIS la rembourse tout de suite (kie_job_bill release →
 // refund, exactement une fois). Nano 4K et Veo Lite gardent leur repli Google → rendu seulement (l'app re-tire la même op).
-export const KIE_NO_FALLBACK = new Set(['omni-flash'])
+// Motion Control (Axel 09/10 : « pas de fallback fal ») : même règle — échec kie = crédits rendus ici, la reprise en 2.6 après
+// un refus de contenu de la 3.0 (repli modération de l'app) reste chez kie, sur une NOUVELLE op.
+export const KIE_NO_FALLBACK = new Set(['omni-flash', 'kling-2.6-mc', 'kling-3.0-mc'])
 // Interrupteur serveur : secret KIE_CLIENTS=0 referme kie aux clients SANS redéploiement (403 AVANT tout tirage → l'app
 // replie sur Google / fal). Lu à chaque requête. Défaut : ouvert. Le compte developer n'est pas concerné.
 export const kieClientsOn = (): boolean => (Deno.env.get('KIE_CLIENTS') ?? '1').trim() !== '0'
