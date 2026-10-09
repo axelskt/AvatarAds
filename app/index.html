@@ -243,6 +243,7 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
   #imgActions > div:first-child > button{flex:0 1 auto !important;padding:10px 16px !important}
   #imgActions #imgRevertBtn{width:auto !important;margin:0 !important}
   #imgActions #imgDownloadBtn{width:auto !important;padding:10px 22px !important}
+  #imgResult.img-etroit #imgBadges{display:none !important}
 pas de barre de défilement sur ordinateur) : les deux zones carrées (394 px) dépassaient
      d'~36 px sur un écran de 760 px → leur hauteur suit la place restante, et la barre est masquée (molette toujours active). */
   #expMotionWrap{container-type:size;scrollbar-width:none}
@@ -23167,12 +23168,13 @@ function _imgCompose(on, haut){
   if(window.innerWidth <= 768) return;
   const r=document.getElementById('imgResult'), col=document.getElementById('imgCol'), dock=document.getElementById('imgComposerDock');
   if(!r || !col) return;
-  if(!on){ r.style.removeProperty('--img-max-h'); if(haut) col.scrollTo({ top:0, behavior:'smooth' }); return; }
+  const etroit=function(){ setTimeout(function(){ const o=document.getElementById('imgOutput'); if(o) r.classList.toggle('img-etroit', o.getBoundingClientRect().width < 240); }, 320); };   // étiquettes masquées si elles passeraient sous « Regénérer »
+  if(!on){ r.style.removeProperty('--img-max-h'); etroit(); if(haut) col.scrollTo({ top:0, behavior:'smooth' }); return; }
   if(r.style.display === 'none') return;
   const act=document.getElementById('imgActions'), cv=document.getElementById('imgCanvas');
   const pad=cv ? (parseFloat(getComputedStyle(cv).paddingTop)||0) + (parseFloat(getComputedStyle(cv).paddingBottom)||0) : 52;
   const dispo=col.clientHeight - (dock ? dock.offsetHeight : 0) - (act ? act.offsetHeight : 0) - pad - 4;
-  r.style.setProperty('--img-max-h', Math.max(140, Math.floor(dispo)) + 'px');
+  r.style.setProperty('--img-max-h', Math.max(140, Math.floor(dispo)) + 'px'); etroit();
   setTimeout(function(){ col.scrollTo({ top: col.scrollHeight, behavior:'smooth' }); }, 300);
 }
 (function(){
