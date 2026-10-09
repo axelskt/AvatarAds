@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://js.whop.com https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- LP SOMBRE (chemin v2, servie à /v2). À la 1re venue (aucune préférence), on ensemence
      aa_theme=sombre pour que connexion + app suivent en sombre. Partagé même-origine ; le choix
@@ -50,10 +50,10 @@
 <link rel="preload" as="image" href="assets/lp/hero-homme-451.webp" imagesrcset="assets/lp/hero-homme-320.webp 320w, assets/lp/hero-homme-451.webp 451w, assets/lp/hero-homme-640.webp 640w, assets/lp/hero-homme.webp 900w" imagesizes="(max-width: 767px) 140px, 300px" fetchpriority="high">
 <!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
-<link rel="preconnect" href="https://js.whop.com" crossorigin>
+<link rel="preconnect" href="https://cdn.whop.com" crossorigin>
 <link rel="dns-prefetch" href="https://whop.com">
 <script>/* Whop checkout chargé au repos après le rendu (non utilisé sur la LP → hors chemin critique) */
-window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,1200)})(function(){var s=document.createElement('script');s.src='https://js.whop.com/static/checkout/loader.js';s.async=true;document.head.appendChild(s);});});</script>
+window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,1200)})(function(){var l=document.createElement('link');l.rel='prefetch';l.as='script';l.href='https://cdn.whop.com/elements/amber/elements.js';document.head.appendChild(l);});});</script>
 <style>
 /* Polices de repli aux métriques calquées — supprime le CLS du swap Google Fonts (le H1 est le LCP). Overrides mesurés sur les woff2 réels (upm 1000). */
 @font-face{font-family:'Bricolage Fallback';src:local('Arimo'),local('Arial'),local('Liberation Sans'),local('Helvetica Neue'),local('Roboto');size-adjust:98.26%;ascent-override:94.65%;descent-override:27.48%;line-gap-override:0%}

@@ -5,7 +5,7 @@
 <!-- Audit 02/10 : CSP = celle de la LP (index.html, éprouvée avec le checkout Whop) : SCRIPTS limités à cette page,
      Whop (loader + iframe de paiement whop.com) et Clarity ; le reste (iframe, appels de Whop) reste ouvert pour ne pas
      casser le paiement. frame-ancestors est ignoré dans une balise meta → filet JS anti-iframe juste dessous. -->
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://js.whop.com https://*.whop.com; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://*.whop.com https://pay.google.com https://applepay.cdn-apple.com https://js.braintreegateway.com https://www.paypal.com https://c.paypal.com; object-src 'none'; base-uri 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : la page de tarifs (checkout Whop) ne doit jamais être encadrée */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Microsoft Clarity — AvatarAds (wt9womnpnq). Chargé par /app/consent.js (pas de bandeau, refus possible depuis /confidentialite.html). -->
@@ -43,11 +43,10 @@
 <!-- Fonts non bloquantes (preload + bascule media=print→all à l'onload) — même pattern que la LP -->
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-<!-- Whop embedded checkout -->
+<!-- Whop Elements (checkout) — script chargé à la demande -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
-<link rel="preconnect" href="https://js.whop.com" crossorigin>
+<link rel="preconnect" href="https://cdn.whop.com" crossorigin>
 <link rel="dns-prefetch" href="https://whop.com">
-<script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
 <style>
 :root{
   --bg:#0B0B0D;--bg-grad:#0E0D10;
@@ -374,39 +373,109 @@ function toggleAnnual(){
   renderPricing();
 }
 
-/* ══════════ Checkout Whop INTÉGRÉ (embed) — inchangé ══════════ */
+/* ══════════ Checkout Whop : WHOP ELEMENTS (09/10/2026) ══════════
+   Whop coupe l'ancien checkout embarqué (loader js.whop.com + iframes whop.com/embedded) le 21/10/2026 → Whop Elements.
+   Même logique que l'app (app/index.html, _whopCheckout) : script cdn.whop.com chargé à la demande, module monté dans la
+   modale, repli sur la page Whop hébergée si le module ne peut pas s'afficher. Ici le visiteur n'est pas connecté : il
+   crée ensuite son compte avec l'e-mail du paiement (le webhook garde le plan en attente sur cet e-mail). */
+var WHOP_ELEMENTS_SRC='https://cdn.whop.com/elements/amber/elements.js';
 function _whopPlanId(u){var m=String(u||'').match(/plan_[A-Za-z0-9]+/);return m?m[0]:null;}
-window._whopCache = window._whopCache || {};
-function _whopPrewarm(url){
-  var pid=_whopPlanId(url); if(!pid || window._whopCache[pid]) return;
-  var host=document.getElementById('whopPrewarm');
-  if(!host){ host=document.createElement('div'); host.id='whopPrewarm'; host.style.cssText='position:fixed;left:-99999px;top:0;width:440px;height:900px;opacity:0;pointer-events:none;z-index:-1'; document.body.appendChild(host); }
-  var f=document.createElement('iframe');
-  f.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
-  f.style.cssText='width:440px;height:900px;border:0'; f.setAttribute('allow','payment');
-  window._whopCache[pid]=f; host.appendChild(f);
+var _whopElP=null,_whopEl=null,_whopCo=null;
+function _whopElementsReady(){
+  if(_whopEl) return Promise.resolve(_whopEl);
+  if(_whopElP) return _whopElP;
+  _whopElP=new Promise(function(ok,ko){
+    var sc=null;
+    var drop=function(why){ try{ if(sc) sc.remove(); }catch(_){} ko(new Error(why)); };
+    var done=function(){ try{ if(typeof window.WhopElements!=='function') return drop('WhopElements absent'); _whopEl=window.WhopElements({locale:'fr'}); ok(_whopEl); }catch(e){ ko(e); } };
+    if(typeof window.WhopElements==='function') return done();
+    sc=document.querySelector('script[data-whop-elements]');
+    if(!sc){ sc=document.createElement('script'); sc.src=WHOP_ELEMENTS_SRC; sc.async=true; sc.setAttribute('data-whop-elements',''); document.head.appendChild(sc); }
+    sc.addEventListener('load',done,{once:true});
+    sc.addEventListener('error',function(){ drop('script Whop bloqué'); },{once:true});
+    setTimeout(function(){ if(!_whopEl) drop('script Whop trop long'); },15000);
+  }).catch(function(e){ _whopElP=null; throw e; });
+  return _whopElP;
 }
+function _whopEsc(t){ return String(t||'').replace(/[&<>"']/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function _whopDestroy(){ try{ if(_whopCo) _whopCo.destroy(); }catch(_){} _whopCo=null; }
+var _WHOP_LOCK='<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+var _WHOP_OK='<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>';
+function _whopPanel(icon,title,text,btnHref,btnLabel){
+  var b=document.getElementById('whopCoBody'); if(!b) return;
+  b.innerHTML='<div style="padding:40px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">'+icon
+    +'<div style="font-weight:800;font-size:16px;color:var(--text)">'+title+'</div>'
+    +'<div style="font-size:13px;line-height:1.5;color:var(--text-2)">'+text+'</div>'
+    +(btnHref?'<a href="'+_whopEsc(btnHref)+'"'+(/^https:\/\/whop\.com/.test(btnHref)?' target="_blank" rel="noopener"':'')+' style="margin-top:6px;display:inline-block;background:var(--accent);color:#fff;font-weight:800;font-size:14px;padding:12px 22px;border-radius:12px;text-decoration:none">'+btnLabel+'</a>':'')
+    +'</div>';
+}
+function _whopOpenModal(){ var m=document.getElementById('whopCoModal'); if(m) m.style.display='flex'; document.body.style.overflow='hidden'; }
+// Paiement validé : le compte se crée (ou se connecte) avec l'e-mail du paiement → le plan l'attend déjà
+function _whopPaidPanel(){
+  _whopPanel(_WHOP_OK,'Paiement confirmé','Crée ton compte AvatarAds (ou connecte-toi) avec <b style="color:var(--text)">le même e-mail que pour le paiement</b> : ton plan et tes crédits t’y attendent.','/app/','Accéder à mon espace');
+}
+function _whopFallback(url){
+  _whopDestroy();
+  _whopPanel(_WHOP_LOCK,'Le paiement ne s’affiche pas ici','Un bloqueur de publicité ou le réseau empêche le module Whop de se charger. Tu peux payer sur la page sécurisée de Whop.',url,'Payer sur Whop');
+}
+// Préchauffe : charge le script au survol d'un bouton → le clic ouvre le paiement sans attendre (l'URL n'est plus utilisée)
+function _whopPrewarm(url){ _whopElementsReady().catch(function(){}); }
+// Marqueur de session : « Paiement confirmé » au retour d'étape bancaire seulement si CE navigateur a ouvert un paiement
+// (un lien piégé ?whop=retour&status=succeeded n'affiche qu'un message neutre)
+function _whopMarkPending(pid){ try{ sessionStorage.setItem('aa_whop_co', JSON.stringify({ pid:pid, t:Date.now() })); }catch(_){} }
 function _whopCheckout(url){
-  var pid=_whopPlanId(url); var body=document.getElementById('whopCoBody');
-  if(!pid||!body){ if(url) window.open(url,'_blank'); return; }
-  var m=document.getElementById('whopCoModal');
-  var cached=window._whopCache&&window._whopCache[pid];
-  if(cached){ delete window._whopCache[pid]; body.innerHTML=''; cached.style.cssText='width:100%;height:900px;border:0;display:block;background:transparent'; body.appendChild(cached); if(m) m.style.display='flex'; document.body.style.overflow='hidden'; return; }
-  body.innerHTML='';
-  var wrap=document.createElement('div'); wrap.style.cssText='position:relative;min-height:640px';
+  var pid=_whopPlanId(url), body=document.getElementById('whopCoBody');
+  if(!pid||!body){ if(url) window.open(url,'_blank','noopener'); return; }
+  var seq=window._whopSeq=(window._whopSeq||0)+1;
+  _whopMarkPending(pid);
+  _whopDestroy(); body.innerHTML='';
+  var wrap=document.createElement('div'); wrap.style.cssText='position:relative;min-height:560px';
   var sp=document.createElement('div'); sp.className='whop-loading';
-  sp.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
-  sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  var d=document.createElement('iframe');
-  d.src='https://whop.com/embedded/checkout/'+pid+'/?h='+encodeURIComponent(location.origin)+'&v=3&theme=dark';
-  d.style.cssText='position:relative;z-index:1;width:100%;height:900px;border:0;display:block;background:transparent';
-  d.setAttribute('allow','payment');
-  d.onload=function(){ sp.style.display='none'; };
-  wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
-  if(m) m.style.display='flex';
-  document.body.style.overflow='hidden';
+  sp.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0;padding:0 24px;text-align:center';
+  sp.innerHTML='<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>'
+    +'<a class="whop-slow" href="'+_whopEsc(url)+'" target="_blank" rel="noopener" style="display:none;font-size:12px;color:var(--accent-2);text-decoration:underline">Le paiement tarde à s’afficher ? Ouvrir la page Whop</a>';
+  var mount=document.createElement('div'); mount.style.cssText='position:relative;z-index:1';
+  wrap.appendChild(sp); wrap.appendChild(mount); body.appendChild(wrap);
+  _whopOpenModal();
+  var ready=false;
+  var slowT=setTimeout(function(){ if(seq===window._whopSeq){ var a=sp.querySelector('.whop-slow'); if(a) a.style.display='block'; } },12000);
+  // le lien « tarde » ouvre la page Whop → le module d'ici est détruit : jamais deux paiements ouverts en même temps
+  (function(){ var a=sp.querySelector('.whop-slow'); if(a) a.addEventListener('click',function(){ window._whopSeq=(window._whopSeq||0)+1; clearTimeout(slowT); _whopFallback(url); }); })();
+  var fail=function(why){ clearTimeout(slowT); if(seq!==window._whopSeq) return; console.warn('[whop] repli page Whop :',why); _whopFallback(url); };
+  _whopElementsReady().then(function(W){
+    if(seq!==window._whopSeq) return;
+    _whopCo=W.checkout.create({
+      plan:pid,
+      returnUrl:location.origin+location.pathname+'?whop=retour',
+      appearance:{ theme:{ appearance:'dark', accentColor:'orange', grayColor:'auto' }, classes:{ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' } } },
+      onComplete:function(p){ if(p&&p.result==='payment'&&seq===window._whopSeq) setTimeout(function(){ if(seq===window._whopSeq){ _whopDestroy(); _whopPaidPanel(); } },1800); }
+    });
+    _whopCo.create('checkout',{
+      onReady:function(){ ready=true; clearTimeout(slowT); sp.style.display='none'; },
+      // erreur APRÈS l'affichage (ex. 3D Secure) : jamais remplacé par « Payer sur Whop » (double paiement possible)
+      onError:function(e){ var why=(e&&(e.code||e.message))||'erreur'; if(ready){ console.warn('[whop] erreur du module après affichage :',why); return; } fail(why); }
+    }).mount(mount);
+  }).catch(function(e){ fail(e&&e.message); });
 }
-function closeWhopCheckout(){ clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
+function closeWhopCheckout(){ window._whopSeq=(window._whopSeq||0)+1; _whopDestroy(); clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv); var m=document.getElementById('whopCoModal'); if(m) m.style.display='none'; var b=document.getElementById('whopCoBody'); if(b) b.innerHTML=''; document.body.style.overflow=''; }
+// Retour après une étape bancaire hors page (3D Secure) : Whop ajoute ?payment=…&status=… à returnUrl. Simple affichage —
+// le plan n'est activé que par le webhook (n'importe qui peut taper status=succeeded dans l'URL).
+(function(){
+  var q; try{ q=new URLSearchParams(location.search); }catch(_){ return; }
+  if(q.get('whop')!=='retour') return;
+  var st=q.get('status')||'';
+  try{ ['whop','payment','status'].forEach(function(k){ q.delete(k); }); var rest=q.toString(); history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+location.hash); }catch(_){}
+  var mk=null; try{ mk=JSON.parse(sessionStorage.getItem('aa_whop_co')||'null'); sessionStorage.removeItem('aa_whop_co'); }catch(_){}
+  if(mk && !(Date.now()-(mk.t||0) < 3*3600e3)) mk=null;
+  var show=function(){
+    if(!mk) _whopPanel(_WHOP_LOCK,'Tu viens de payer ?','Crée ton compte AvatarAds (ou connecte-toi) avec l\u2019e-mail utilisé pour le paiement : ton plan s\u2019active dès que Whop l\u2019a validé.','/app/','Accéder à mon espace');
+    else if(st==='succeeded') _whopPaidPanel();
+    else if(st==='failed'||st==='canceled') _whopPanel(_WHOP_LOCK,'Le paiement n’a pas abouti','Aucun montant n’a été débité. Tu peux réessayer depuis les tarifs.','','');
+    else _whopPanel(_WHOP_LOCK,'Paiement en cours de confirmation','Dès que ta banque l\u2019a validé, ton plan t\u2019attend : crée ton compte AvatarAds (ou connecte-toi) avec <b style="color:var(--text)">le même e-mail que pour le paiement</b>.','/app/','Accéder à mon espace');
+    _whopOpenModal();
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',show); else show();
+})();
 </script>
 
 <style>.whop-spin{width:34px;height:34px;border:3px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:whopspin .8s linear infinite}@keyframes whopspin{to{transform:rotate(360deg)}}</style>
@@ -414,11 +483,11 @@ function closeWhopCheckout(){ clearTimeout(window._whopCoTimer); clearInterval(w
   <div onclick="closeWhopCheckout()" style="position:absolute;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(10px)"></div>
   <div style="position:relative;width:100%;max-width:440px;max-height:94vh;margin:12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 90px rgba(0,0,0,.75)">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex:0 0 auto">
-      <div class="mono" style="font-size:10.5px;letter-spacing:.12em;color:var(--accent-2)">🔒 PAIEMENT SÉCURISÉ · WHOP</div>
+      <div class="mono" style="font-size:10.5px;letter-spacing:.12em;color:var(--accent-2)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>PAIEMENT SÉCURISÉ · WHOP</div>
       <button onclick="closeWhopCheckout()" style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);font-size:14px">✕</button>
     </div>
     <div id="whopCoBody" style="flex:1;min-height:0;overflow:auto;background:var(--panel-1)"></div>
-    <div class="mono" style="flex:0 0 auto;text-align:center;padding:9px;font-size:9.5px;color:var(--text-3);border-top:1px solid var(--border)">🔒 Paiement traité par Whop · Annulation à tout moment</div>
+    <div class="mono" style="flex:0 0 auto;text-align:center;padding:9px;font-size:9.5px;color:var(--text-3);border-top:1px solid var(--border)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Paiement traité par Whop · Annulation à tout moment</div>
   </div>
 </div>
 </body>

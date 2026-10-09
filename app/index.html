@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com https://js.whop.com https://*.whop.com https://*.clarity.ms; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://unpkg.com https://*.whop.com https://*.clarity.ms https://pay.google.com https://applepay.cdn-apple.com https://js.braintreegateway.com https://www.paypal.com https://c.paypal.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'">
 <script>/* audit 05/09 (L8) — anti-clickjacking : l'app (auth + paiement) ne doit jamais être encadrée. GitHub Pages ne pose pas d'en-tête X-Frame-Options → filet JS. */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <script>/* Thème studio (clair/sombre) — posé AVANT le paint pour zéro flash au chargement. */try{if(localStorage.getItem('aa_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
 <script>/* LOGIN UNIFIÉ — redirection AU PLUS TÔT : un visiteur NON connecté de /app/ part vers la connexion
@@ -42,9 +42,8 @@ try{
 <script src="hedra-prompts.js"></script><!-- prompt lipsync Hedra Character-3 validé sur l'usine (27/09) : généré depuis shared/hedra-prompts.json -->
 <!-- Whop embedded checkout (préconnexion = chargement quasi-instantané + monte l'iframe) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
-<link rel="preconnect" href="https://js.whop.com" crossorigin>
+<link rel="preconnect" href="https://cdn.whop.com" crossorigin>
 <link rel="dns-prefetch" href="https://whop.com">
-<script async defer src="https://js.whop.com/static/checkout/loader.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -7242,6 +7241,7 @@ function enterApp(profile){
   // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier) — sauf si un modèle a été choisi depuis la LP (aa_tool), auquel cas _applyStartTool ouvrira le bon module
   var _st0; try{ _st0 = localStorage.getItem('aa_tool'); }catch(e){}
   if(!_st0 && window.innerWidth <= 768){ setTimeout(function(){ try{ nav('express'); window.scrollTo(0,0); }catch(e){} }, 120); }
+  try{ _whopReturnCheck(); }catch(e){}   // retour de paiement Whop (3D Secure) — AVANT _applyStartTool qui peut réécrire l'URL
   _applyStartTool();   // modèle choisi depuis la LP → ouvre le bon module (point unique : enterApp couvre TOUS les chemins de login)
   // ── ARRIVER DIRECTEMENT SUR UN MONTAGE ──────────────────────────────────
   // `…/app/#montage=<job_id>` ouvre « Détails du montage » sur ce job. C'est ce
@@ -7884,12 +7884,64 @@ function sheetCheckout(plan){
 function openCheckoutModal2(){}
 function closeCheckoutModal2(){ document.getElementById('checkoutModal2').style.display='none'; }
 
-// ── Checkout Whop INTÉGRÉ (embed) — remplace les redirections window.open ──
-// MONTAGE OFFICIEL via le loader js.whop.com (div[data-whop-checkout-plan-id]) :
-// obligatoire pour qu'Apple Pay s'affiche DANS l'embed (le loader fait la liaison
-// avec le domaine vérifié avatarads.fr ; une iframe manuelle ne l'a pas).
+// ── Checkout Whop : WHOP ELEMENTS (09/10/2026) ──
+// Whop coupe l'ancien checkout embarqué (loader js.whop.com + iframes whop.com/embedded) le 21/10/2026 → Whop Elements :
+// script cdn.whop.com/elements/amber/elements.js, WhopElements().checkout.create({ plan }) puis .create('checkout').mount().
+// Le CRÉDIT du compte ne change pas : webhook Whop → edge function whop-webhook, qui retrouve le compte par l'E-MAIL du
+// paiement → e-mail du compte pré-rempli et VERROUILLÉ (lockBuyerEmail), sinon le webhook créditerait un autre e-mail.
+// Repli (script bloqué par un bloqueur de pub, réseau, erreur Whop) : la page de paiement hébergée whop.com/checkout/plan_…
+// dans un nouvel onglet, e-mail du compte imposé (?email=…&email.disabled=1) — plus jamais d'iframe legacy.
+// PAS de returnUrl dans l'app (relecture 09/10) : avec, Whop RECHARGE l'onglet à chaque paiement réussi (« a finished checkout
+// redirects the current tab to returnUrl ») — l'acheteur perdait son travail en cours (Générateur…), là où l'ancien checkout
+// restait sur place (skip-redirect). Sans, il reste sur l'écran de succès du module et la surveillance du profil ferme la
+// modale dès que le webhook a crédité. Si une étape bancaire hors page ramène quand même l'onglet avec ?payment=…&status=…,
+// _whopReturnCheck l'affiche (marqueur de session = ce navigateur a bien ouvert un paiement).
+const WHOP_ELEMENTS_SRC = 'https://cdn.whop.com/elements/amber/elements.js';
 function _whopPlanId(url){ const m = String(url||'').match(/plan_[A-Za-z0-9]+/); return m ? m[0] : null; }
-// Callback officiel Whop à la fin du paiement (data-whop-checkout-on-complete)
+let _whopElP = null, _whopEl = null, _whopCo = null;
+// Charge le script une seule fois et crée l'instance (français) ; un échec (bloqueur, réseau) permet de réessayer plus tard
+function _whopElementsReady(){
+  if(_whopEl) return Promise.resolve(_whopEl);
+  if(_whopElP) return _whopElP;
+  _whopElP = new Promise(function(ok, ko){
+    let sc = null;
+    const drop = function(why){ try{ if(sc) sc.remove(); }catch(_){} ko(new Error(why)); };
+    // script chargé SANS WhopElements (bloqueur qui sert un fichier vide, portail captif) : la balise est retirée aussi,
+    // sinon le prochain essai attendait 15 s sur une balise morte
+    const done = function(){
+      try{ if(typeof window.WhopElements !== 'function') return drop('WhopElements absent'); _whopEl = window.WhopElements({ locale:'fr' }); ok(_whopEl); }
+      catch(e){ ko(e); }
+    };
+    if(typeof window.WhopElements === 'function') return done();
+    sc = document.querySelector('script[data-whop-elements]');
+    if(!sc){ sc = document.createElement('script'); sc.src = WHOP_ELEMENTS_SRC; sc.async = true; sc.setAttribute('data-whop-elements', ''); document.head.appendChild(sc); }
+    sc.addEventListener('load', done, { once:true });
+    sc.addEventListener('error', function(){ drop('script Whop bloqué'); }, { once:true });
+    setTimeout(function(){ if(!_whopEl) drop('script Whop trop long'); }, 15000);
+  }).catch(function(e){ _whopElP = null; throw e; });
+  return _whopElP;
+}
+// Thème du studio (clair / sombre) + bouton Payer aux couleurs AvatarAds
+function _whopAppearance(){
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  return { theme:{ appearance: light ? 'light' : 'dark', accentColor:'orange', grayColor:'auto' },
+    classes:{ 'whop-CheckoutPayButton':{ backgroundColor:'#FF5A1F', color:'#FFFFFF', fontWeight:'700' } } };
+}
+// Page de paiement Whop hébergée (secours) : e-mail du compte pré-rempli ET verrouillé — le webhook crédite par l'e-mail
+function _whopHostedUrl(url){
+  const email = (typeof currentMember !== 'undefined' && currentMember && currentMember.email) ? currentMember.email : '';
+  if(!email) return url;
+  return url + (String(url).indexOf('?') >= 0 ? '&' : '?') + 'email=' + encodeURIComponent(email) + '&email.disabled=1';
+}
+// Marqueur de session « ce navigateur a ouvert un paiement » (+ l'état du compte à ce moment) : un retour d'étape bancaire
+// n'affiche « paiement reçu » que s'il existe — un lien piégé ?status=succeeded ne trompe personne
+function _whopMarkPending(pid){
+  try{ const cm = (typeof currentMember !== 'undefined' && currentMember) ? currentMember : {};
+    sessionStorage.setItem('aa_whop_co', JSON.stringify({ pid: pid, t: Date.now(), plan: cm.plan || '', credits: cm.credits_remaining || 0, img: cm.img_bonus_credits || 0 })); }catch(_){}
+}
+function _whopDestroy(){ try{ if(_whopCo) _whopCo.destroy(); }catch(_){} _whopCo = null; }
+function _whopEsc(t){ return String(t||'').replace(/[&<>"']/g, function(c){ return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]; }); }
+// Fin de paiement DANS le module (onComplete) — le webhook crédite, on surveille le profil
 window._whopEmbedComplete = function(){
   toast('Paiement reçu — activation en cours…');
   _whopWatchPayment(1200); // vérifications rapprochées le temps que le webhook crédite
@@ -7897,92 +7949,97 @@ window._whopEmbedComplete = function(){
 function _whopCheckout(url){
   const pid = _whopPlanId(url);
   const body = document.getElementById('whopCoBody');
-  // Fallback : pas d'ID de plan reconnu OU conteneur absent → ancienne redirection
-  if(!pid || !body){ if(url) window.open(url, '_blank'); return; }
-  const email = (typeof currentMember !== 'undefined' && currentMember && currentMember.email) ? currentMember.email : '';
+  // pas d'ID de plan reconnu OU conteneur absent → page de paiement Whop
+  if(!pid || !body){ if(url) window.open(_whopHostedUrl(url), '_blank', 'noopener'); return; }
   const m = document.getElementById('whopCoModal');
+  const seq = window._whopSeq = (window._whopSeq || 0) + 1;   // un 2e clic (ou une fermeture) annule le montage en cours
+  _whopMarkPending(pid);
+  _whopDestroy();
   body.innerHTML = '';
   const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:560px';
   const sp = document.createElement('div'); sp.className = 'whop-loading';
-  sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
-  sp.innerHTML = '<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  const mount = document.createElement('div');
-  mount.style.cssText = 'position:relative;z-index:1;min-height:560px';
-  mount.setAttribute('data-whop-checkout-plan-id', pid);
-  mount.setAttribute('data-whop-checkout-theme', 'dark');
-  mount.setAttribute('data-whop-checkout-locale', 'fr');
-  mount.setAttribute('data-whop-checkout-skip-redirect', 'true');
-  mount.setAttribute('data-whop-checkout-on-complete', '_whopEmbedComplete');
-  // Mémorise le moyen de paiement du 1er achat → les achats suivants (packs, upgrade) proposent
-  // la carte enregistrée / Apple Pay directement, sans tout re-saisir
-  mount.setAttribute('data-whop-checkout-setup-future-usage', 'off_session');
-  if(email){
-    mount.setAttribute('data-whop-checkout-prefill-email', email);
-    // e-mail verrouillé = le paiement arrive toujours sur l'e-mail du compte connecté
-    // (sinon le webhook crédite un autre e-mail et le plan ne s'active jamais)
-    mount.setAttribute('data-whop-checkout-disable-email', 'true');
-  }
+  sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0;padding:0 24px;text-align:center';
+  sp.innerHTML = '<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>'
+    + '<a class="whop-slow" href="' + _whopEsc(_whopHostedUrl(url)) + '" target="_blank" rel="noopener" style="display:none;font-size:12px;color:var(--accent-2);text-decoration:underline">Le paiement tarde à s’afficher ? Ouvrir la page Whop</a>';
+  const mount = document.createElement('div'); mount.style.cssText = 'position:relative;z-index:1';
   wrap.appendChild(sp); wrap.appendChild(mount); body.appendChild(wrap);
-  // spinner masqué dès que le loader a monté son iframe
-  try{
-    new MutationObserver(function(_, obs){
-      if(mount.querySelector('iframe')){ sp.style.display = 'none'; obs.disconnect(); }
-    }).observe(mount, { childList:true, subtree:true });
-  }catch(e){}
-  // repli : si le loader n'a rien monté en 5 s → iframe manuelle (ancien comportement)
-  setTimeout(function(){
-    if(!mount.querySelector('iframe')) _whopManualMount(pid, email, body);
-    else sp.style.display = 'none';
-  }, 5000);
   if(m) m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  let ready = false;
+  const slowT = setTimeout(function(){ if(seq === window._whopSeq){ const a = sp.querySelector('.whop-slow'); if(a) a.style.display = 'block'; } }, 12000);
+  // le lien « tarde » ouvre la page Whop → le module d'ici est détruit : jamais deux paiements ouverts en même temps
+  { const a = sp.querySelector('.whop-slow'); if(a) a.addEventListener('click', function(){ window._whopSeq = (window._whopSeq || 0) + 1; clearTimeout(slowT); _whopFallback(url); }); }
+  const fail = function(why){ clearTimeout(slowT); if(seq !== window._whopSeq) return; console.warn('[whop] repli page Whop :', why); _whopFallback(url); };
+  _whopElementsReady().then(function(W){
+    if(seq !== window._whopSeq) return;
+    const email = (typeof currentMember !== 'undefined' && currentMember && currentMember.email) ? currentMember.email : '';
+    const uid = (typeof currentMember !== 'undefined' && currentMember && currentMember.id) ? String(currentMember.id) : '';
+    _whopCo = W.checkout.create(Object.assign({
+      plan: pid,
+      appearance: _whopAppearance(),
+      onComplete: function(p){ if(p && p.result === 'payment') window._whopEmbedComplete(); }
+    }, uid ? { metadata: { aa_user_id: uid } } : {}));   // métadonnée = traçabilité support (le webhook crédite par l'e-mail)
+    _whopCo.create('checkout', {
+      buyerEmail: email,
+      lockBuyerEmail: !!email,   // e-mail verrouillé = le paiement arrive toujours sur l'e-mail du compte connecté
+      onReady: function(){ ready = true; clearTimeout(slowT); sp.style.display = 'none'; },
+      // erreur APRÈS l'affichage (ex. pendant le 3D Secure) : le module montre sa propre erreur et le paiement est peut-être
+      // en cours → on ne le remplace JAMAIS par « Payer sur Whop » (double paiement possible) ; la surveillance continue
+      onError: function(e){ const why = (e && (e.code || e.message)) || 'erreur'; if(ready){ console.warn('[whop] erreur du module après affichage :', why); return; } fail(why); }
+    }).mount(mount);
+  }).catch(function(e){ fail(e && e.message); });
   _whopWatchPayment();
 }
-// Repli si le loader officiel est indisponible (bloqueur de pub, réseau) — pas d'Apple Pay ici
-function _whopManualMount(pid, email, body){
-  body.innerHTML = '';
-  const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative;min-height:520px';
-  const sp = document.createElement('div'); sp.className = 'whop-loading';
-  sp.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);z-index:0';
-  sp.innerHTML = '<div class="whop-spin"></div><div class="mono" style="font-size:11px">Chargement du paiement…</div>';
-  let _q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
-  if(email) _q += '&email=' + encodeURIComponent(email);
-  const d = document.createElement('iframe');
-  d.src = 'https://whop.com/embedded/checkout/' + pid + '/' + _q;
-  d.style.cssText = 'position:relative;z-index:1;width:100%;height:900px;border:0;display:block;background:transparent';
-  d.setAttribute('allow', 'payment *');
-  d.setAttribute('allowpaymentrequest', 'true');
-  d.onload = () => { sp.style.display = 'none'; };
-  wrap.appendChild(sp); wrap.appendChild(d); body.appendChild(wrap);
-}
-// Préchauffe (charge en fond, caché) le checkout d'un plan → clic ultérieur instantané
-window._whopCache = window._whopCache || {};
-function _whopPrewarm(url){
-  const pid = _whopPlanId(url); if(!pid || window._whopCache[pid]) return;
-  let host = document.getElementById('whopPrewarm');
-  if(!host){ host = document.createElement('div'); host.id = 'whopPrewarm'; host.style.cssText = 'position:fixed;left:-99999px;top:0;width:440px;height:900px;opacity:0;pointer-events:none;z-index:-1'; document.body.appendChild(host); }
+// Repli : le module Whop ne peut pas s'afficher ici → paiement sur la page sécurisée de Whop, même e-mail
+function _whopFallback(url){
+  _whopDestroy();
+  const body = document.getElementById('whopCoBody'); if(!body) return;
   const email = (typeof currentMember !== 'undefined' && currentMember && currentMember.email) ? currentMember.email : '';
-  let q = '?h=' + encodeURIComponent(location.origin) + '&v=3&theme=dark';
-  if(email) q += '&email=' + encodeURIComponent(email);
-  const f = document.createElement('iframe');
-  f.src = 'https://whop.com/embedded/checkout/' + pid + '/' + q;
-  f.style.cssText = 'width:440px;height:900px;border:0';
-  f.setAttribute('allow', 'payment *');
-  f.setAttribute('allowpaymentrequest', 'true');
-  window._whopCache[pid] = f; host.appendChild(f);
+  body.innerHTML = '<div style="padding:40px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">'
+    + '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>'
+    + '<div style="font-weight:800;font-size:16px;color:var(--text)">Le paiement ne s’affiche pas ici</div>'
+    + '<div style="font-size:13px;line-height:1.5;color:var(--text-2)">Un bloqueur de publicité ou le réseau empêche le module Whop de se charger. Tu peux payer sur la page sécurisée de Whop'
+    + (email ? ' — avec l’e-mail de ton compte (<b style="color:var(--text)">' + _whopEsc(email) + '</b>), déjà rempli, pour qu’il soit crédité.' : '.') + '</div>'
+    + '<a href="' + _whopEsc(_whopHostedUrl(url)) + '" target="_blank" rel="noopener" style="margin-top:6px;display:inline-block;background:var(--accent);color:#fff;font-weight:800;font-size:14px;padding:12px 22px;border-radius:12px;text-decoration:none">Payer sur Whop</a>'
+    + '<div style="font-size:11.5px;color:var(--text-3)">Ton compte se met à jour tout seul une fois le paiement validé.</div></div>';
 }
+// Préchauffe : charge le script Whop en fond → le 1er clic sur un plan ouvre le paiement sans attendre (l'URL n'est plus utilisée)
+function _whopPrewarm(url){ _whopElementsReady().catch(function(){}); }
 function closeWhopCheckout(){
+  window._whopSeq = (window._whopSeq || 0) + 1;
+  _whopDestroy();
   clearTimeout(window._whopCoTimer); clearInterval(window._whopCoIv);
   const m = document.getElementById('whopCoModal'); if(m) m.style.display = 'none';
   const b = document.getElementById('whopCoBody'); if(b) b.innerHTML = '';
   document.body.style.overflow = '';
 }
+// Retour dans l'app après une étape bancaire hors page (?payment=pay_…&status=…, avec ou sans notre ?whop=retour) : afficher le
+// résultat et surveiller le crédit. Le webhook fait foi : « status=succeeded » n'est qu'un affichage, et seulement si CE
+// navigateur a ouvert un paiement (marqueur de session) — sinon un message neutre.
+function _whopReturnCheck(){
+  if(window._whopRetDone) return; let q;
+  try{ q = new URLSearchParams(location.search); }catch(_){ return; }
+  const pay = q.get('payment') || '', st = q.get('status') || '';
+  if(q.get('whop') !== 'retour' && !(/^pay_[A-Za-z0-9]+$/.test(pay) && /^(succeeded|failed|canceled|processing|pending)$/.test(st))) return;
+  window._whopRetDone = true;
+  try{ ['whop','payment','status'].forEach(function(k){ q.delete(k); }); const rest = q.toString(); history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash); }catch(_){}
+  let mk = null; try{ mk = JSON.parse(sessionStorage.getItem('aa_whop_co') || 'null'); sessionStorage.removeItem('aa_whop_co'); }catch(_){}
+  if(mk && !(Date.now() - (mk.t || 0) < 3 * 3600e3)) mk = null;
+  const cm = (typeof currentMember !== 'undefined' && currentMember) ? currentMember : null;
+  if(st === 'failed' || st === 'canceled'){ if(mk) toast('Le paiement n’a pas abouti — aucun montant n’a été débité. Tu peux réessayer.'); return; }
+  if(!mk){ toast('Si tu viens de payer, ton compte se met à jour tout seul dès que le paiement est validé.'); _whopWatchPayment(4000, 600000); return; }
+  // déjà crédité pendant l'étape bancaire (webhook plus rapide que le retour) : le profil chargé diffère déjà du marqueur
+  if(cm && st === 'succeeded' && (cm.plan !== mk.plan || (cm.credits_remaining || 0) > mk.credits || (cm.img_bonus_credits || 0) > mk.img)){ toast('Paiement confirmé — c\'est activé !'); return; }
+  if(st === 'succeeded'){ toast('Paiement reçu — activation en cours…'); _whopWatchPayment(1500, 180000); }
+  else { toast('Paiement en cours de confirmation — ton compte se met à jour dès qu’il est validé.'); _whopWatchPayment(4000, 600000); }
+}
 
 // ── Détection automatique de fin de paiement ──
 // Le webhook Whop crédite le profil en base → on surveille plan/crédits tant que la modale est ouverte :
 // dès que ça bouge, on ferme tout, on met l'UI à jour et on confirme. Plus besoin de recharger la page.
-function _whopWatchPayment(ms){
+function _whopWatchPayment(ms, maxMs){
   clearInterval(window._whopCoIv);
+  const _until = maxMs ? Date.now() + maxMs : 0;   // maxMs : surveillance sans la modale (retour 3D Secure), bornée
   if(typeof currentMember === 'undefined' || !currentMember || !currentMember.id) return;
   const base = {
     plan:     currentMember.plan,
@@ -7992,7 +8049,7 @@ function _whopWatchPayment(ms){
   window._whopCoIv = setInterval(async () => {
     try{
       const modal = document.getElementById('whopCoModal');
-      if(!modal || modal.style.display === 'none'){ clearInterval(window._whopCoIv); return; }
+      if(_until ? Date.now() > _until : (!modal || modal.style.display === 'none')){ clearInterval(window._whopCoIv); return; }
       const { data } = await sb.from('profiles').select('*').eq('id', currentMember.id).single();
       if(!data) return;
       const paid = data.plan !== base.plan

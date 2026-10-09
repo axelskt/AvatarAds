@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://js.whop.com https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src * data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://*.clarity.ms https://*.whop.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'">
 <script>/* Audit 02/10 — anti-clickjacking : la LP (checkout Whop) ne doit jamais être encadrée par un autre site ; frame-ancestors est ignoré dans une balise meta (GitHub Pages ne pose pas d'en-tête). */if(top!==self){try{top.location=self.location}catch(e){document.documentElement.style.display='none'}}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- LP PRINCIPALE = porte CLAIRE (chemin v1). À la 1re venue (aucune préférence), on ensemence
@@ -49,10 +49,10 @@
 <!-- Image LCP du hero (téléphone central = hero-homme) : préchargée en priorité haute, responsive -->
 <!-- Whop embedded checkout (préconnexion pour un chargement quasi-instantané) -->
 <link rel="preconnect" href="https://whop.com" crossorigin>
-<link rel="preconnect" href="https://js.whop.com" crossorigin>
+<link rel="preconnect" href="https://cdn.whop.com" crossorigin>
 <link rel="dns-prefetch" href="https://whop.com">
 <script>/* Whop checkout chargé au repos après le rendu (non utilisé sur la LP → hors chemin critique) */
-window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,1200)})(function(){var s=document.createElement('script');s.src='https://js.whop.com/static/checkout/loader.js';s.async=true;document.head.appendChild(s);});});</script>
+window.addEventListener('load',function(){(window.requestIdleCallback||function(f){setTimeout(f,1200)})(function(){var l=document.createElement('link');l.rel='prefetch';l.as='script';l.href='https://cdn.whop.com/elements/amber/elements.js';document.head.appendChild(l);});});</script>
 <style>
 /* Polices de repli aux métriques calquées — supprime le CLS du swap Google Fonts (le H1 est le LCP). Overrides mesurés sur les woff2 réels (upm 1000). */
 @font-face{font-family:'Bricolage Fallback';src:local('Arimo'),local('Arial'),local('Liberation Sans'),local('Helvetica Neue'),local('Roboto');size-adjust:98.26%;ascent-override:94.65%;descent-override:27.48%;line-gap-override:0%}
