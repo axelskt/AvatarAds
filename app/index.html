@@ -238,12 +238,12 @@ select.field{appearance:none;-webkit-appearance:none;background-image:url("data:
   #imgResult > div{background:transparent !important;border:0 !important;border-radius:0 !important;overflow:visible !important;display:flex;flex-direction:column;align-items:center}
   #imgZone{background:transparent !important;min-height:0 !important;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px -20px rgba(0,0,0,.7);line-height:0}
   #imgOutput{width:auto !important;max-width:100%;max-height:var(--img-max-h, 65vh);border-radius:16px;transition:max-height .28s ease}
-  #imgActions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:16px 0 4px !important;width:100%}
-  #imgActions > div:first-child{display:contents}
-  #imgActions > div:first-child > button{flex:0 1 auto !important;padding:10px 16px !important}
+  #imgActions{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:10px;padding:16px 0 4px !important;width:100%}
+  #imgActions > div:first-child{display:contents !important;margin:0 !important}   /* son style en ligne (flex + marge) gagnait → boutons enfermés, Télécharger étiré */
+  /* les trois boutons au MÊME gabarit (Axel 09/10 : « Télécharger » plus haut, avec une lueur) — Télécharger reste orange plein */
+  #imgActions > div:first-child > button, #imgActions #imgDownloadBtn{flex:0 1 186px !important;min-height:54px;box-sizing:border-box;padding:9px 14px !important;border-radius:12px !important;margin:0 !important}
+  #imgActions #imgDownloadBtn{width:auto !important;font-size:13.5px !important;box-shadow:none !important;transform:none !important}
   #imgActions #imgRevertBtn{width:auto !important;margin:0 !important}
-  #imgActions #imgDownloadBtn{width:auto !important;padding:10px 22px !important}
-  #imgResult.img-etroit #imgBadges{display:none !important}
 pas de barre de défilement sur ordinateur) : les deux zones carrées (394 px) dépassaient
      d'~36 px sur un écran de 760 px → leur hauteur suit la place restante, et la barre est masquée (molette toujours active). */
   #expMotionWrap{container-type:size;scrollbar-width:none}
@@ -3238,7 +3238,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
                 <div id="imgProgLabel" style="font-size:12px;font-family:var(--mono);color:var(--text-2)">Génération en cours…</div>
               </div>
               <!-- Badges -->
-              <div id="imgBadges" style="position:absolute;top:12px;left:12px;display:flex;gap:6px"></div>
+              <div id="imgBadges" style="display:none"></div><!-- étiquettes style · format retirées (Axel 09/10) : l'élément reste pour le code qui le remplit -->
               <!-- Regenerate -->
               <div style="position:absolute;top:12px;right:12px">
                 <button onclick="generateImage()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.12);border-radius:20px;color:rgba(255,255,255,0.85);font-family:var(--mono);font-size:10px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.55)'">
@@ -23168,13 +23168,12 @@ function _imgCompose(on, haut){
   if(window.innerWidth <= 768) return;
   const r=document.getElementById('imgResult'), col=document.getElementById('imgCol'), dock=document.getElementById('imgComposerDock');
   if(!r || !col) return;
-  const etroit=function(){ setTimeout(function(){ const o=document.getElementById('imgOutput'); if(o) r.classList.toggle('img-etroit', o.getBoundingClientRect().width < 240); }, 320); };   // étiquettes masquées si elles passeraient sous « Regénérer »
-  if(!on){ r.style.removeProperty('--img-max-h'); etroit(); if(haut) col.scrollTo({ top:0, behavior:'smooth' }); return; }
+  if(!on){ r.style.removeProperty('--img-max-h'); if(haut) col.scrollTo({ top:0, behavior:'smooth' }); return; }
   if(r.style.display === 'none') return;
   const act=document.getElementById('imgActions'), cv=document.getElementById('imgCanvas');
   const pad=cv ? (parseFloat(getComputedStyle(cv).paddingTop)||0) + (parseFloat(getComputedStyle(cv).paddingBottom)||0) : 52;
   const dispo=col.clientHeight - (dock ? dock.offsetHeight : 0) - (act ? act.offsetHeight : 0) - pad - 4;
-  r.style.setProperty('--img-max-h', Math.max(140, Math.floor(dispo)) + 'px'); etroit();
+  r.style.setProperty('--img-max-h', Math.max(140, Math.floor(dispo)) + 'px');
   setTimeout(function(){ col.scrollTo({ top: col.scrollHeight, behavior:'smooth' }); }, 300);
 }
 (function(){
