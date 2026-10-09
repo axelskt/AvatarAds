@@ -4110,7 +4110,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
             <span>Ta photo est un gros plan : pour des gestes de mains fidèles, choisis une photo où on voit le buste et les mains.</span>
           </div>
-          <!-- Cloner l'audio de la vidéo (Axel 09/10, gratuit) : contenu rendu par _mcRenderVoice -->
+          <!-- Remplacer l'audio (Axel 09/10, gratuit) : contenu rendu par _mcRenderVoice -->
           <div id="mcVoiceBox" style="margin-top:16px"></div>
           <div class="row" style="margin-top:14px;gap:12px">
             <button onclick="_mcOpenAdv()" class="row gap8" style="flex:0 0 auto;padding:15px 22px;border-radius:14px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit">
@@ -5436,7 +5436,7 @@ details.adv[open]>.mcp-recap{display:flex;animation:mcpRecapIn .2s ease}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z"/></svg> Express — <b style="color:var(--text2)">1,5 cr/s</b> · <b style="color:var(--text2)">3 cr/s</b> en Élite<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 12a8.5 8.5 0 01-12.3 7.6L3 21l1.4-5.2A8.5 8.5 0 1121 12z"/><path d="M9 10.5v3M12 8.5v7M15 10.5v3"/></svg> Omni Flash · voix native — <b data-cc-sec="omniFlashPerSec" style="color:var(--text2)">5 cr/s</b> en 1080p<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/></svg> Omni · transformation vidéo — <b style="color:var(--text2)">3 cr/s</b> en 720p · <b style="color:var(--text2)">4 cr/s</b> en 1080p<br>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">6 cr/s</b> en Motion 3.0 · cloner l’audio <b style="color:var(--text2)">gratuit</b><br>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg> Motion Control — <b style="color:var(--text2)">2 cr/s</b> · <b style="color:var(--text2)">6 cr/s</b> en Motion 3.0 · remplacer l’audio <b style="color:var(--text2)">gratuit</b><br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M9.9 2.6l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5zM18 13l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z"/></svg> Montage IA — <b style="color:var(--text2)">8 crédits</b> · <b style="color:var(--text2)">4</b> pour un re-rendu<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Image IA — <b style="color:var(--text2)">1</b> Standard · <b style="color:var(--text2)">3</b> Premium · <b style="color:var(--text2)">5</b> 4K<br>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/></svg> Réutiliser un avatar — <b style="color:var(--text2)">gratuit</b><br>
@@ -31563,7 +31563,7 @@ function _mcSetTier(t){
   _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost();
 }
 function _mcSetQual(v){ window._mcQuality=v; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }
-function _mcSetRender(r){ window._mcRender=r; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }   // _mcUpdateCost redessine aussi « Cloner l'audio » (plein écran seulement)
+function _mcSetRender(r){ window._mcRender=r; _mcSaveOpts(); _mcRenderAdv(); _mcUpdateCost(); }   // _mcUpdateCost redessine aussi « Remplacer l'audio » (plein écran seulement)
 function _mcSetFormat(f){ window._mcFormat=['9:16','16:9'].includes(f)?f:'auto'; _mcSaveOpts(); _mcRenderAdv(); }
 function _mcToggleCam(){ window._mcCamFollow=!window._mcCamFollow; _mcSaveOpts(); _mcRenderAdv(); }
 // LOT7 · « garder le fond de la vidéo » = désormais le VRAI fond ANIMÉ : après le
@@ -31685,7 +31685,7 @@ async function _mcNormalizeRef(b64, crop){
 }
 // jour au choix du forfait/qualité et quand la vidéo réf est chargée.
 function _mcUpdateCost(){
-  _mcRenderVoice();   // « Cloner l'audio » suit le mode de rendu (plein écran seulement)
+  _mcRenderVoice();   // « Remplacer l'audio » suit le mode de rendu (plein écran seulement)
   const el=document.getElementById('mcCostTxt'); if(!el) return;
   const dur=_mcRefDurEff(), rate=_mcRate();
   if(!dur){ el.innerHTML=''; return; }
@@ -31770,7 +31770,7 @@ function _mcRenderAdv(){
   const ta=document.getElementById('mcPromptTa'); if(ta) ta.value=window._mcPrompt||'';
 }
 
-/* ── Motion Control · « Cloner l'audio de la vidéo » (Axel 08-09/10) ──────────────────────
+/* ── Motion Control · « Remplacer l'audio » (Axel 08-09/10, ex « Cloner l'audio de la vidéo ») ──────────────────────
    Kling garde le son de la vidéo de référence (keep_original_sound) : la piste son de la vidéo finale est convertie en
    speech-to-speech (edge voice-change, ElevenLabs Voice Changer) sur une voix FILLE ou GARÇON — mêmes mots, même rythme, mêmes
    intonations, seul le timbre change → les lèvres restent synchro — puis le render-worker la pose sur l'image (composition
@@ -31784,15 +31784,13 @@ function _mcRenderVoice(){
   const box=document.getElementById('mcVoiceBox'); if(!box) return;
   const v=window._mcVoice||'orig', split=(window._mcRender||'full')!=='full';
   const btn=(id,lbl)=>`<button type="button" class="${v===id?'on':''}" style="flex:1" aria-pressed="${v===id}"${split?' disabled':''} onclick="_mcSetVoice('${id}')">${lbl}</button>`;
-  const note = split ? 'En rendu split on voit la vraie personne : son audio reste. Passe en plein écran (Paramètres avancés) pour changer la voix.'
-    : _mcVoiceWanted() ? `Mêmes mots, même rythme, mêmes intonations, avec une ${MC_VOIX[v].toLowerCase()} · gratuit. La musique et les bruits de fond de ta vidéo sont retirés.`
-    : 'Garde l’audio de ta vidéo, ou fais parler ton personnage avec une voix fille ou garçon · gratuit.';
+  // Axel 09/10 : pas de texte sous le sélecteur (seul le cas split, où le choix est grisé, est expliqué)
+  const note = split ? 'En rendu split on voit la vraie personne : son audio reste. Passe en plein écran (Paramètres avancés) pour changer la voix.' : '';
   box.innerHTML = `<div class="row" style="align-items:center;gap:8px;margin-bottom:8px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0014 0M12 17v5M8 22h8"/></svg>
-      <span class="label" id="mcVoiceLbl" style="margin:0">Cloner l’audio de la vidéo</span></div>
-    <div class="seg" role="group" aria-labelledby="mcVoiceLbl" style="width:100%${split?';opacity:.5':''}">${btn('orig','Audio d’origine')}${btn('fille','Voix fille')}${btn('garcon','Voix garçon')}</div>
-    <div class="faint" style="font-size:11.5px;margin-top:7px;line-height:1.45">${note}</div>`
-    + ((typeof _aaIsDev==='function' && _aaIsDev()) ? '<button type="button" onclick="_mcVoiceCatalog()" class="faint" style="margin-top:6px;background:none;border:0;padding:0;font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit">Écouter les voix disponibles (owner)</button>' : '');
+      <span class="label" id="mcVoiceLbl" style="margin:0">Remplacer l’audio</span></div>
+    <div class="seg" role="group" aria-labelledby="mcVoiceLbl" style="width:100%${split?';opacity:.5':''}">${btn('orig','Audio d’origine')}${btn('fille','Voix fille')}${btn('garcon','Voix garçon')}</div>`
+    + (note ? `<div class="faint" style="font-size:11.5px;margin-top:7px;line-height:1.45">${note}</div>` : '');
 }
 // Délai maximal d'une étape : la vidéo Kling PAYÉE est livrée quoi qu'il arrive (relecture 09/10 : un décodage audio ou un envoi
 // bloqué sans fin retenait le résultat).
@@ -31868,7 +31866,7 @@ function _mcVoiceSkipShow(fn){
   b.onclick=fn; b.style.display='';
 }
 function _mcVoiceSkipHide(){ const b=document.getElementById('mcProgSkip'); if(b){ b.style.display='none'; b.onclick=null; } }
-// Étape « Cloner l'audio » sur la vidéo FINALE plein écran. Ne jette jamais : rend l'URL d'origine sur échec ou si
+// Étape « Remplacer l'audio » sur la vidéo FINALE plein écran. Ne jette jamais : rend l'URL d'origine sur échec ou si
 // l'utilisateur passe. Les messages de fin s'affichent DANS la fenêtre de résultat (window._mcVoiceNote) : un toast était
 // aussitôt recouvert par celui de la sauvegarde automatique.
 async function _mcApplyVoiceStep(url, dur, vPath){
@@ -31909,7 +31907,7 @@ async function _mcVoiceRun(url, dur, vPath, nom, ctx){
     const up=await _mcDelai(upP, 120000, 'envoi de la vidéo trop long');
     if(up.error) throw new Error('dépôt vidéo : '+up.error.message);
   }catch(e){
-    console.warn('[mc] cloner l’audio (préparation) :', e);
+    console.warn('[mc] remplacer l’audio (préparation) :', e);
     jeterSrc();
     dire(e && e._muet ? 'Pas de voix dans ta vidéo : audio d’origine gardé.' : 'Voix non changée — vidéo livrée avec l’audio d’origine.');
     return url;
@@ -31942,7 +31940,7 @@ async function _mcVoiceRun(url, dur, vPath, nom, ctx){
       jobId=String(j.job_id);
     }
   }catch(e){
-    console.error('[mc] cloner l’audio :', e);
+    console.error('[mc] remplacer l’audio :', e);
     dire(e && e._held ? ('Voix non changée : '+e.message+' — vidéo livrée avec l’audio d’origine.') : 'Voix non changée — vidéo livrée avec l’audio d’origine.');
     return url;
   }finally{ jeterSrc(); }   // voice-change a copié la vidéo (ou a échoué) : la copie du compte ne sert plus
@@ -31961,29 +31959,10 @@ async function _mcVoiceRun(url, dur, vPath, nom, ctx){
     }catch(err){ console.warn('[mc] voix tardive :', err); toast(nom+' : l’assemblage n’a pas abouti — garde la vidéo avec l’audio d’origine'); } })();
     return url;
   }catch(e){
-    console.error('[mc] cloner l’audio (assemblage) :', e);
+    console.error('[mc] remplacer l’audio (assemblage) :', e);
     dire('Voix non changée — vidéo livrée avec l’audio d’origine.');
     return url;
   }
-}
-// Owner / developer : écouter les voix ElevenLabs disponibles pour choisir la voix fille et la voix garçon
-async function _mcVoiceCatalog(){
-  try{
-    const r=await fetch(SUPABASE_URL+'/functions/v1/voice-change?liste=1', { headers: await getAuthHeader() });
-    const j=await r.json(); if(!r.ok) throw new Error(j.error||r.status);
-    let m=document.getElementById('mcVoixCat');
-    if(!m){ m=document.createElement('div'); m.id='mcVoixCat'; m.style.cssText='position:fixed;inset:0;z-index:240;background:rgba(6,6,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px'; m.onclick=(e)=>{ if(e.target===m) m.remove(); }; document.body.appendChild(m); }
-    const esc=(t)=>String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
-    const cur=Object.values(j.actuelles||{});
-    m.innerHTML=`<div style="width:100%;max-width:560px;max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px">
-      <div style="font-weight:800;font-size:17px;margin-bottom:4px">Voix ElevenLabs disponibles</div>
-      <div class="faint" style="font-size:12px;margin-bottom:12px">Écoute et donne-moi le nom de la voix fille et de la voix garçon. Actuelles : ${esc(cur.join(', '))}</div>
-      ${(j.voices||[]).map(v=>`<div style="display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--border)">
-        <div style="font-size:13.5px"><b>${esc(v.nom)}</b> <span class="faint">· ${esc([v.genre,v.age,v.accent,v.style].filter(Boolean).join(' · '))}</span>${cur.includes(v.id)?' <span style="color:var(--accent-2)">· actuelle</span>':''}</div>
-        ${v.extrait?`<audio controls preload="none" src="${esc(v.extrait)}" style="width:100%;height:32px"></audio>`:''}
-        <div class="mono faint" style="font-size:10.5px">${esc(v.id)}</div></div>`).join('')}
-      </div>`;
-  }catch(e){ toast('Liste des voix indisponible : '+(e&&e.message||e)); }
 }
 
 try{ _mcRenderVoice(); }catch(_){}
@@ -32855,7 +32834,7 @@ async function _mcGenerate(){
       try{ _mcProg('Composition split…', 94); finalUrl=await _mcComposeSplit({ origPath:vPath, motionUrl:out, dur, mode:finalMode }); }
       catch(e){ console.error('split:',e); toast('Composition split indispo — plein écran fourni'); finalMode='full'; }
     }
-    // Cloner l'audio (09/10, gratuit) : plein écran seulement ; ne jette jamais (échec → audio d'origine livré)
+    // Remplacer l'audio (09/10, gratuit) : plein écran seulement ; ne jette jamais (échec → audio d'origine livré)
     if(finalMode==='full' && _mcVoiceActive()){
       // la vidéo Kling PAYÉE est rangée AVANT l'étape voix (3e relecture 09/10 : onglet fermé pendant la voix = vidéo perdue) ;
       // si la voix échoue, _mcShowResult ne la range pas une 2e fois (même URL)

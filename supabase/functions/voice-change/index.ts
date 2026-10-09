@@ -1,4 +1,4 @@
-// Supabase Edge Function — « Cloner l'audio de la vidéo » (Motion Control, 09/10/2026)
+// Supabase Edge Function — « Remplacer l'audio » (Motion Control, 09/10/2026 ; ex « Cloner l'audio de la vidéo »)
 //
 // Axel 08/10 : des créateurs se filment, Motion Control transfère le mouvement sur une fille… et c'est une voix de fille qui
 // sort. C'est du speech-to-speech (ElevenLabs Voice Changer) appliqué APRÈS le rendu Kling sur l'audio de la vidéo : mêmes
@@ -66,20 +66,6 @@ async function opKlingLivree(uid: string): Promise<{ id: string; secMax: number 
   } catch { return null }
 }
 
-// GET ?liste : voix ElevenLabs « premade » avec leur extrait audio, pour CHOISIR à l'oreille la voix fille et la voix garçon
-// (owner / developer seulement). Lecture seule.
-async function listeVoix(uid: string): Promise<Response> {
-  const { plan, isOwner } = await userPlan(uid)
-  if (!isOwner && plan !== 'developer') return jsonRes(403, { error: 'réservé au propriétaire' })
-  const key = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
-  if (!key) return jsonRes(500, { error: 'voix_non_configuree' })
-  const r = await fetch('https://api.elevenlabs.io/v2/voices?category=premade&page_size=100', { headers: { 'xi-api-key': key }, signal: AbortSignal.timeout(20_000) })
-  if (!r.ok) return jsonRes(502, { error: 'ElevenLabs ' + r.status })
-  const j = await r.json() as { voices?: { voice_id: string; name: string; labels?: Record<string, string>; preview_url?: string }[] }
-  const voices = (j.voices ?? []).map((v) => ({ id: v.voice_id, nom: v.name, genre: v.labels?.gender ?? '', age: v.labels?.age ?? '', accent: v.labels?.accent ?? '',
-    style: v.labels?.description ?? v.labels?.descriptive ?? '', usage: v.labels?.use_case ?? '', extrait: v.preview_url ?? '' }))
-  return jsonRes(200, { actuelles: VOIX_ELEVENLABS, voices })
-}
 
 const CLE_RE = /^[A-Za-z0-9-]{8,40}$/
 
@@ -89,7 +75,6 @@ serve(async (req: Request) => {
     const a = await authUser(req)
     if (!a.userId) return jsonRes(401, { error: 'Unauthorized' })
     const q = new URL(req.url).searchParams
-    if (q.has('liste')) return listeVoix(a.userId)
     const cle = q.get('cle') || ''
     if (!CLE_RE.test(cle)) return jsonRes(400, { error: 'clé invalide' })
     const { data } = await svc().from('render_jobs').select('id').eq('user_id', a.userId).eq('plan->>__compose', 'motion-voix')
@@ -114,14 +99,14 @@ serve(async (req: Request) => {
   if (cle && !CLE_RE.test(cle)) return jsonRes(400, { error: 'clé invalide' })
 
   // Plan AVANT tout compteur, puis : débit récent + cadence (10 / h), et une génération Motion Control payée il y a < 1 h.
-  const p = await requirePlan(uid, PAID_PLANS, 'Cloner l’audio')
-  if (!p.ok) return jsonRes(p.status, { error: 'Cloner l’audio est réservé aux abonnés (Starter, Pro ou Élite).' })
+  const p = await requirePlan(uid, PAID_PLANS, 'Remplacer l’audio')
+  if (!p.ok) return jsonRes(p.status, { error: 'Remplacer l’audio est réservé aux abonnés (Starter, Pro ou Élite).' })
   const g = await billableGate({ userId: uid, proxy: 'voice-change', requireDebit: true, debitMinutes: 60, rateMax: 10, rateWindowS: 3600, label: voix })
   if (!g.ok) return jsonRes(g.status, { error: g.error })
   const up0 = await userPlan(uid)
   const libre = up0.isOwner || up0.plan === 'developer'
   const op = libre ? null : await opKlingLivree(uid)
-  if (!libre && !op) return jsonRes(403, { error: 'Cloner l’audio s’utilise juste après une génération Motion Control.' })
+  if (!libre && !op) return jsonRes(403, { error: 'Remplacer l’audio s’utilise juste après une génération Motion Control.' })
 
   const key = Deno.env.get('ELEVENLABS_API_KEY') ?? ''
   if (!key) return jsonRes(500, { error: 'voix_non_configuree' })
