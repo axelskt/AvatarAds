@@ -14868,7 +14868,7 @@ function _mtRapport(plan){
       alerte.push(_mtLibelle(sl.anim) + ' est posé à ' + f(sl.start) + ' alors que tu ne dis rien à cet instant.');
   }
   const utilises = new Set((plan.broll||[]).map(b => b.assetId));
-  const fournis  = (window._edAi && (_edAi.files||[]).map(a => a.id)) || [];
+  const fournis  = ((typeof _edAi !== 'undefined' && _edAi) ? (_edAi.files||[]).map(a => a.id) : []);   // liaison du script, jamais window._edAi
   const inutiles = fournis.filter(id => !utilises.has(id));
   if (inutiles.length) alerte.push(inutiles.length + ' de tes visuels ne seront pas utilisés — renomme-les avec ce qu\'ils montrent pour aider l\'IA à les placer.');
   if (!(plan.avatarSegments||[]).length) alerte.push('Ton visage n\'apparaît jamais : la vidéo sera 100 % animations.');
@@ -14937,7 +14937,7 @@ function _mtBriefManquant(){
 // la vidéo sera faite d'animations génériques, jamais de son visage ni de ses
 // visuels. C'est un choix valable, mais il doit être conscient.
 function _mtSansMedia(){
-  const aImages = !!(window._edAi && (_edAi.files || []).length);
+  const aImages = !!(typeof _edAi !== 'undefined' && _edAi && (_edAi.files || []).length);   // liaison du script, jamais window._edAi
   return !_mt.avatar && !aImages && !_mt.video;   // SA vidéo est un visuel à lui (audit 10/10)
 }
 function _mtAvertirSansMedia(){
