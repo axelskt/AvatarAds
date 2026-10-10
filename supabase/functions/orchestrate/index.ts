@@ -33,7 +33,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-aa-op, x-aa-async',   // x-aa-async : chef en tâche de fond (sans lui, le navigateur bloque l'appel)
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 const json = (body: unknown, status = 200) =>
