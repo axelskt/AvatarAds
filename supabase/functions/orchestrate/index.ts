@@ -43,10 +43,10 @@ const json = (body: unknown, status = 200) =>
 // le placement dense, la cadence, les bruitages et les verrous sont deterministes
 // cote serveur. Ce qui lui reste (decouper les sections, reperer les moments forts)
 // ne justifie pas le tarif d'Opus. A rebasculer si la qualite des plans chute.
-// 09/10 (Axel) : essai de Sonnet 5.5 → les 2 premiers plans (audios de 28 et 34 s) ont
-// depasse le budget de 160 s de la fonction (504) : retour a Sonnet 5 le soir meme.
-// Ne repasser en 5.5 qu'avec un plan mesure sous ~100 s (effort, pensee, decoupage).
-const CLAUDE_MODEL = 'claude-sonnet-5'
+// 10/10 (Axel) : Sonnet 5.5. Les 504 du 09/10 n'avaient rien a voir avec le modele (cle de
+// service au nouveau format refusee + refus qui pendait, voir guard.ts) ; un plan complet
+// prenait ~23 s sous Sonnet 5, le chrono (⏱ dans les journaux) mesure celui de 5.5.
+const CLAUDE_MODEL = 'claude-sonnet-5-5'
 // ── LE BUDGET DE 160 s (09/10) ───────────────────────────────────────────────
 // Supabase coupe la fonction à 160 s : un 504 muet, sans journal, que le client lit
 // comme « le chef d'orchestre ne répond pas ». Chaque appel externe a donc son délai,
@@ -371,7 +371,7 @@ type Plan = {
 // ---------- contexte site web (optionnel) : titre + description + texte brut ----------
 // Audit 05/09 (M4/L9) : lecture anti-SSRF partagée — redirections MANUELLES revalidées à chaque saut,
 // IPv6 / formes numériques / ports / metadata bloqués (avant, seul l'hôte initial était contrôlé).
-import { safeFetchHtml, authUser, billableGate, applyReservation, settleReservation, releaseOp } from '../_shared/guard.ts'
+import { safeFetchHtml, authUser, billableGate, applyReservation, settleReservation, releaseOp, lacherCorps } from '../_shared/guard.ts'
 async function fetchSiteContext(url: string): Promise<string> {
   try {
     const res = await safeFetchHtml(url, 6000)
@@ -2551,10 +2551,10 @@ serve(async (req: Request) => {
   // Audit offensif 05/09 : la clé anon/publiable seule (publique) atteignait ce handler → transcription
   // Scribe + appels Claude facturés sans session. On exige une VRAIE session utilisateur (ou le worker).
   const _auth = await authUser(req)
-  if (!_auth.isService && !_auth.userId) return json({ error: 'unauthorized' }, 401)
+  if (!_auth.isService && !_auth.userId) { await lacherCorps(req); return json({ error: 'unauthorized' }, 401) }
   // Audit #3 : orchestrate = Scribe + N Claude (coûteux). Exiger un débit récent (montage débite AVANT) + plafond.
   // M6 (06/09) : amplification réduite — 1 débit → 6 runs / 15 min (au lieu de 12/30).
-  if (_auth.userId) { const _g = await billableGate({ userId: _auth.userId, proxy: 'orchestrate', requireDebit: true, debitMinutes: 15, rateMax: 6, label: 'plan' }); if (!_g.ok) return json({ error: _g.error }, _g.status) }
+  if (_auth.userId) { const _g = await billableGate({ userId: _auth.userId, proxy: 'orchestrate', requireDebit: true, debitMinutes: 15, rateMax: 6, label: 'plan' }); if (!_g.ok) { await lacherCorps(req); return json({ error: _g.error }, _g.status) } }
 
   // Audit métier 14/09 : orchestrate TIRE une part non-remboursable (coût-plan) sur l'op montageIA et la RÈGLE au
   // succès → fin du free-oracle (spend(1)+orchestrate+refund net-0). Tirage PARTIEL (applyReservation, PAS draw_full)

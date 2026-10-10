@@ -345,13 +345,34 @@ export function tokenRole(token: string): string {
   } catch { return '' }
 }
 
+// ── LA CLÉ DE SERVICE AU NOUVEAU FORMAT (10/10) ─────────────────────────────
+// Supabase injecte désormais une clé secrète « sb_secret_… » dans SUPABASE_SERVICE_ROLE_KEY : ce n'est
+// plus un JWT, tokenRole() n'y lit aucun rôle. Les appels serveur à serveur du MCP (montage_ia →
+// orchestrate) étaient donc pris pour des anonymes → 401… et, le corps (l'audio) n'étant pas lu, la
+// passerelle pendait jusqu'au 504 de 160 s, sans une ligne de journal. La passerelle a DÉJÀ validé la
+// clé (verify_jwt, « minted ») ; on la reconnaît ici par égalité stricte avec celle que Supabase injecte
+// dans CETTE fonction (même source). L'ancien format JWT (moteur Railway) reste reconnu par son rôle.
+export function estCleService(token: string): boolean {
+  if (!token) return false
+  if (tokenRole(token) === 'service_role') return true
+  return !!SERVICE_KEY && token.startsWith('sb_secret_') && timingSafeEqual(token, SERVICE_KEY)
+}
+// Une réponse rendue AVANT d'avoir lu le corps d'une grosse requête (audio de plusieurs Mo) reste pendue
+// chez Supabase jusqu'au 504 — mesuré le 10/10 : 401 en 0,3 s sans corps, pendu avec 2,6 Mo. Annuler le
+// flux (body.cancel()) NE suffit PAS : il faut le LIRE jusqu'au bout. Tout refus anticipé passe donc par
+// ici (borné à 20 s : au-delà, on répond quand même).
+export async function lacherCorps(req: Request): Promise<void> {
+  if (!req.body || req.bodyUsed) return
+  try { await Promise.race([req.arrayBuffer(), new Promise((r) => setTimeout(r, 20_000))]) } catch { /* déjà lu ou fermé */ }
+}
+
 export type Auth = { token: string; isService: boolean; userId: string | null }
 // Session utilisateur RÉELLE exigée : la clé anon / publiable est un JWT valide pour la passerelle mais
 // n'a pas d'utilisateur → refusée ici. Le moteur de rendu (service_role) passe sans profil.
 export async function authUser(req: Request): Promise<Auth> {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
   if (!token) return { token: '', isService: false, userId: null }
-  if (tokenRole(token) === 'service_role') return { token, isService: true, userId: null }
+  if (estCleService(token)) return { token, isService: true, userId: null }
   try {
     const anon = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: `Bearer ${token}` } } })
     const { data: { user }, error } = await anon.auth.getUser()

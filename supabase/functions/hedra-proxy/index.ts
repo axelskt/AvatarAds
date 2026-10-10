@@ -25,7 +25,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
-import { safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob, hedraStatusGate, providerPause, retryAfterS, svc } from '../_shared/guard.ts'
+import { estCleService, safePath, billableGate, helperGate, requirePlan, applyReservationFull, settleReservation, opFromReq, resolveOp, releaseReservation, releaseOp, bindJob, releaseByJob, settleByJob, reconcileJob, hedraStatusGate, providerPause, retryAfterS, svc } from '../_shared/guard.ts'
 
 const HEDRA_BASE = 'https://api.hedra.com/web-app/public'
 // Audit 05/09 : `?path=` validé (allowlist, jamais d'`@`/`..`). La base porte un chemin → l'hôte ne peut
@@ -176,7 +176,7 @@ serve(async (req: Request) => {
       return String(JSON.parse(atob(b + '='.repeat((4 - b.length % 4) % 4)))?.role || '')
     } catch { return '' }
   })()
-  const estLeMoteur = roleDuJeton === 'service_role'
+  const estLeMoteur = roleDuJeton === 'service_role' || estCleService(token)   // 10/10 : clé « sb_secret_… » (voir guard.ts)
 
   const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? ''
   const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
