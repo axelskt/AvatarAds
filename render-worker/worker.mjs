@@ -19,6 +19,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, exis
 import { tmpdir } from 'node:os'
 import { ANIM_EMOJI_SET } from './anim-pack.mjs'
 import { EDITOR_ONLY } from './anim-bank.mjs'
+import { qcMontage } from './qc-montage.mjs'
 import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { lookup as dnsLookup } from 'node:dns/promises'
@@ -868,6 +869,62 @@ async function composeGenSubs(jobDir, outPath, plan) {
   }
 }
 
+
+// Voir l'appel dans renderJob (« LES SCÈNES DISENT CE QUE DIT LA VOIX »).
+const VERBES_CHAT = { genere: 'Génère', generer: 'Génère', generes: 'Génère', ecris: 'Écris', ecrire: 'Écris', ecrit: 'Écris',
+  cree: 'Crée', creer: 'Crée', crees: 'Crée', fais: 'Fais', faire: 'Fais', demande: '', demandes: '', demander: '', dis: '', dire: '' }
+const sansAccent = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9' ]/g, '')
+function habillerScenes(plan, avatarPhoto) {
+  const mots = (plan.captions || []).filter((c) => String(c.text || '').trim())
+  // la phrase prononcée pendant une scène (élargie aux bords de phrase)
+  const phraseDe = (a, b) => {
+    let i0 = mots.findIndex((w) => (w.start || 0) >= a - 0.05)
+    if (i0 < 0) return []
+    while (i0 > 0 && !/[.!?]$/.test(String(mots[i0 - 1].text).trim()) && (mots[i0 - 1].end || 0) > a - 2.5) i0--
+    let i1 = i0
+    while (i1 < mots.length - 1 && !/[.!?]$/.test(String(mots[i1].text).trim()) && (mots[i1 + 1].start || 0) < b + 3) i1++
+    return mots.slice(i0, i1 + 1).map((w) => String(w.text).trim())
+  }
+  let nChat = 0, nAv = 0
+  // les scènes posées dans une fenêtre visage (split auto, duo) comptent aussi
+  const scenes = [...(plan.slides || []), ...(plan.avatarSegments || []).map((w) => w && w.split && w.split.slide).filter(Boolean)]
+  for (const sl of scenes) {
+    if (!sl || sl._blank) continue
+    const nom = String(sl.anim || '')
+    if (nom === 'chat') {
+      const ph = phraseDe(Number(sl.start) || 0, Number(sl.end) || 0)
+      const brut = ph.join(' ')
+      sl.ia = /claude/i.test(brut) ? 'claude' : (/chat ?gpt|\bgpt\b|openai/i.test(brut) ? 'chatgpt' : '')
+      if (!(sl.items || []).some((it) => it && String(it.text || '').trim())) {
+        // la demande = le verbe d'action + ce qui suit, sans « avec ChatGPT/Claude »
+        // un verbe de demande : en tête de phrase, ou après un sujet / « de » / « lui » (« script généré par » n'en est pas un)
+        const k = ph.findIndex((w, i) => sansAccent(w) in VERBES_CHAT
+          && (i === 0 || /^(je|tu|on|il|elle|nous|vous|lui|de|d|te|me|demande|demandes|ensuite|puis|et)$/.test(sansAccent(ph[i - 1]).replace(/'$/, ''))))
+        const IA = /^(chat ?gpt|claude|gpt|l'ia|ia|openai)$/
+        let t = (k >= 0 ? ph.slice(k + 1) : ph).map((w) => w.replace(/[.!?,;:«»"]/g, '')).filter(Boolean)
+        // « avec ChatGPT », « à Claude » : le nom de l'IA et sa préposition sortent de la demande
+        t = t.filter((w, i) => !IA.test(sansAccent(w)) && !(/^(avec|a|au|sur|dans|par|de)$/.test(sansAccent(w)) && t[i + 1] && IA.test(sansAccent(t[i + 1]))))
+        // « …de te faire un hook » → « Fais un hook »
+        while (t.length && /^(de|d'|te|t'|me|m'|lui|moi)$/.test(sansAccent(t[0]))) t.shift()
+        if (t.length) t[0] = t[0].replace(/^[dt]'/i, '')
+        let v = k >= 0 ? VERBES_CHAT[sansAccent(ph[k])] : ''
+        if (t.length && VERBES_CHAT[sansAccent(t[0])]) { v = VERBES_CHAT[sansAccent(t[0])]; t.shift() }
+        const suite = t.slice(0, 7).join(' ')
+        const texte = (v ? v + ' ' + suite : suite.charAt(0).toUpperCase() + suite.slice(1)).trim()
+        // moins de 2 mots utiles : rien de lisible à taper → bulle par défaut plutôt qu'un fragment
+        if (texte && texte.split(/\s+/).filter((m) => m.length > 2).length >= 2) { sl.items = [{ text: texte.slice(0, 60) }]; nChat++ }
+      }
+    } else if (nom === 'avatar' && avatarPhoto && !(sl.items || []).some((it) => it && it.src)) {
+      sl.items = [{ text: '', src: avatarPhoto }]; nAv++
+    } else if (nom === 'result' && avatarPhoto && String(sl.screen || '') === '99-resultat' && !(sl.items || []).some((it) => it && it.src)) {
+      // la capture de démo « 99-resultat » est la photo d'un autre homme : le résultat
+      // montré est SA photo d'avatar
+      sl.items = [{ text: '', src: avatarPhoto }]; nAv++
+    }
+  }
+  if (nChat || nAv) console.log(`▶ scènes habillées par la voix : ${nChat} conversation(s), ${nAv} avatar(s) avec sa photo`)
+}
+
 export async function renderJob(jobDir, outPath, { draft = false, userId = null } = {}) {
   RENDER_USER = userId || null
   const t0 = Date.now()
@@ -987,6 +1044,34 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       } catch (e) {
         console.warn('normalisation base impossible, on garde l\'original :', e.message)
         copyFileSync(basePath, baseOut)
+      }
+    }
+
+    // ── UNE FIN QUI RESPIRE (audit 10/10) ─────────────────────────────────
+    // La vidéo durait exactement l'audio : elle s'arrêtait 0,05 s après la
+    // dernière syllabe, la musique coupée net, et en Mot par mot le dernier
+    // mot (fini APRÈS la fin du fichier) ne s'affichait jamais. On tient donc
+    // la dernière image ~0,6 s après le dernier mot : la base est prolongée
+    // (image figée + silence), la voix est déjà complétée par apad au mixage
+    // et la musique y fait son fondu de sortie. Rien à faire si l'audio
+    // laisse déjà un vrai blanc à la fin.
+    {
+      const finMots = Math.max(0, ...(plan.captions || []).map((c) => Number(c && c.end) || 0))
+      const marge = plan.duration - finMots
+      if (finMots > 0 && marge < 0.45 && existsSync(baseOut)) {
+        const tenue = r2(Math.min(0.75, Math.max(0.3, 0.6 - Math.max(0, marge))))
+        const tmp = join(proj, 'media', 'base-fin.mp4')
+        try {
+          execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', baseOut,
+            '-vf', `tpad=stop_mode=clone:stop_duration=${tenue}`,
+            '-af', `afade=t=out:st=${Math.max(0, plan.duration - 0.04).toFixed(2)}:d=0.04,apad=pad_dur=${tenue}`,
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac', '-b:a', '192k', tmp])
+          renameSync(tmp, baseOut)
+          plan.duration = r2(plan.duration + tenue)
+          plan.__finTenue = tenue
+          console.log(`▶ fin tenue ${tenue}s après le dernier mot (la vidéo ne coupe plus sur la syllabe)`)
+        } catch (e) { console.warn('fin tenue :', e.message) }
       }
     }
 
@@ -1248,6 +1333,21 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
         for (const [re, to] of FIX) c.text = String(c.text || '').replace(re, to)
         if (c.text !== av) n++
       }
+      // « COMMENCER IA ET JE T'ENVOIE… » (vu deux fois) : la transcription entend
+      // « Commencer » là où il dit « Commente ». Seulement si la suite promet une
+      // livraison — « pour commencer » reste intact.
+      {
+        const cs0 = plan.captions || []
+        const plat = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z' ]/g, '')
+        for (let i = 0; i < cs0.length; i++) {
+          if (plat(cs0[i].text) !== 'commencer') continue
+          // jamais « pour / de / à commencer » ; et la promesse d'envoi suit le MOT à commenter (pas « le lien… »)
+          if (i > 0 && /^(pour|de|d'|a|avant|par|bien|et)$/.test(plat(cs0[i - 1].text))) continue
+          const suite = cs0.slice(i + 2, i + 10).map((c) => plat(c.text)).join(' ')
+          if (!/envoi|envoie|en prive|en dm\b|par message/.test(suite)) continue
+          cs0[i].text = String(cs0[i].text).replace(/commencer/i, (m) => (m[0] === 'C' ? 'Commente' : 'commente')); n++
+        }
+      }
       // « IMAGIA » (audit 10/10) : la transcription colle « Images IA » en un seul
       // mot, et le nom du module s'affichait faux sous sa propre capture. On le
       // rend en DEUX mots (le temps du mot partagé) : le sous-titre est juste et
@@ -1415,7 +1515,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
         // la vidéo (contiguïté), mais le lipsync n'était généré que sur la fenêtre notée
         // (37→38,8 s) → visage FIGÉ sur le dernier mot. Si rien ne suit, la fenêtre = D.
         {
-          const D = r2(Number(plan.duration) || 0)
+          // jusqu'à la fin de la VOIX, pas de la tenue silencieuse ajoutée (elle serait facturée en lipsync)
+          const D = r2((Number(plan.duration) || 0) - (Number(plan.__finTenue) || 0))
           const ord = (plan.avatarSegments || []).slice().sort((a, b) => a.start - b.start)
           const last = ord[ord.length - 1]
           if (D && last && !(plan.slides || []).some((sl) => sl.start >= last.end - 0.2 && sl.end > last.end + 0.3) && D - last.end > 0.3 && D - last.end < 8) {
@@ -1642,7 +1743,15 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
     // affiché = mot prononcé, animation ancrée sur le mot qui la justifie.
-    else { try { deriveClassicSlides(plan) } catch (e) { console.warn('dérivation classique:', e.message) } }
+    else { try { deriveClassicSlides(plan, { assetFiles }) } catch (e) { console.warn('dérivation classique:', e.message) } }
+
+    // ── LES SCÈNES DISENT CE QUE DIT LA VOIX (audit 10/10) ──────────────────────
+    // • `chat` : la bulle tapait « écris-moi un hook » (texte d'exemple) et la
+    //   réponse portait le logo de Claude, même quand la voix disait ChatGPT. La
+    //   question vient maintenant de la phrase dite, et le logo de Claude ne
+    //   s'affiche que si Claude est nommé (sinon une étincelle neutre).
+    // • `avatar` : la silhouette générique laisse apparaître SA photo d'avatar.
+    try { habillerScenes(plan, avatarPhoto) } catch (e) { console.warn('habillage des scènes :', e.message) }
 
     // ── LIPSYNC POUR SLAM (et tout style hors dynamic/apple) ─────────────────────
     // La génération Hedra ne dépend PAS de la dérivation : seulement des fenêtres
@@ -1970,12 +2079,15 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
       // gain. Le raccourci ne s'applique qu'à une voix déjà dans la cible (±2,5 dB).
       const lufs = loudnessOf(basePath)
       const gain = lufs == null ? null : -14 - lufs
+      // fin tenue : la voix du fichier s'arrête net sur sa dernière syllabe —
+      // un fondu de 40 ms évite le clic avant le silence ajouté
+      const finVoix = plan.__finTenue ? `afade=t=out:st=${Math.max(0, plan.duration - plan.__finTenue - 0.04).toFixed(2)}:d=0.04,` : ''
       if (gain != null && Math.abs(gain) <= 2.5) {
         console.log(`▶ voix déjà masterisée (${lufs.toFixed(1)} LUFS) → gain ${gain >= 0 ? '+' : ''}${gain.toFixed(1)} dB, pas de re-compression`)
-        filters.push(`[1:a]apad=whole_dur=${plan.duration}${Math.abs(gain) > 0.2 ? `,volume=${gain.toFixed(2)}dB` : ''}[voice]`)
+        filters.push(`[1:a]${finVoix}apad=whole_dur=${plan.duration}${Math.abs(gain) > 0.2 ? `,volume=${gain.toFixed(2)}dB` : ''}[voice]`)
       } else {
         if (lufs != null) console.log(`▶ voix brute (${lufs.toFixed(1)} LUFS) → loudnorm`)
-        filters.push(`[1:a]apad=whole_dur=${plan.duration},loudnorm=I=-14:TP=-2:LRA=9[voice]`)
+        filters.push(`[1:a]${finVoix}apad=whole_dur=${plan.duration},loudnorm=I=-14:TP=-2:LRA=9[voice]`)
       }
       mixIns.push('[voice]')
     }
@@ -3385,6 +3497,10 @@ async function pollLoop() {
 
         const out = join(jobDir, 'final.mp4')
         await renderJob(jobDir, out, { userId: job.user_id || null })
+        // contrôle qualité d'un MONTAGE (pas des compositions) : noté dans la trace du job, jamais bloquant
+        if (!(job.plan && job.plan.__compose)) {
+          try { const qc = qcMontage(out); if (qc.ok) console.log(`✓ QC montage : rien à signaler (${qc.duree} s)`); else console.warn(`⚠ QC montage : ${qc.defauts.join(' · ')}`) } catch (e) { console.warn('QC montage :', e.message) }
+        }
 
         // ── LE STOCKAGE PLAFONNE À 50 Mo ────────────────────────────────────
         // Un montage de 65 s en qualité haute pèse 46 à 48 Mo — on frôlait la

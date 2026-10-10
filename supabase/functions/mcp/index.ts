@@ -1261,7 +1261,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
           audio_url: { type: 'string', description: "URL publique de l'audio (voix) : WAV, MP3, M4A, FLAC, OGG / Opus, WebM ou AAC, 20 Mo max. Une prise brute convient — elle est nettoyée automatiquement." },
           clean_audio: { type: 'boolean', description: "Optionnel, true par défaut : voix nettoyée (bruit de fond, souffle, clics) AVANT le montage. Ne mets false que si l'audio a DÉJÀ été traité — renettoyer un fichier propre ne l'améliore pas." },
           avatar_url: { type: 'string', description: "Optionnel — URL publique de la PHOTO d'avatar (PNG/JPEG). Par défaut elle est posée TELLE QUELLE sur les moments où la personne s'adresse à la caméra : aucun crédit en plus. Passe `lipsync: true` pour que le visage parle vraiment. Sans photo, le montage se fait sans visage." },
-          avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Aucun crédit en plus." },
+          avatar_urls: { type: 'array', maxItems: 5, items: { type: 'string' }, description: "Optionnel — d'AUTRES photos du MÊME personnage (autres angles/tenues), URLs publiques PNG/JPEG. Le montage pose une image DIFFÉRENTE à chaque fois que l'avatar réapparaît (rotation, façon vidéo virale) : le hook prend avatar_url, les fenêtres suivantes celles-ci. Sans avatar_url, la 1re de la liste sert de photo principale. Aucun crédit en plus." },
           lipsync: { type: 'boolean', description: "Optionnel, false par défaut : anime le visage (lipsync standard) sur CHAQUE fenêtre où la personne parle — scène par scène, jamais sur toute la vidéo. Coûte 2 crédits par seconde de visage (débités à la génération). Sans lui, la photo reste fixe : c'est le mode économique pour itérer sur le montage." },
           lipsync_model: { type: 'string', enum: ['hedra', 'omnihuman', 'mix'], description: "Optionnel, 'hedra' par défaut (standard, économique). 'omnihuman' = haute résolution : plan plus large, les deux mains visibles, cheveux sans effet plastique, 50 i/s — ~5 crédits par seconde de visage. 'mix' = haute résolution sur le PREMIER passage avatar (le hook, là où l'attention se joue) puis standard sur les suivants : le meilleur rapport qualité/prix. Ne s'applique que si lipsync est activé." },
           media: {
@@ -1306,7 +1306,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
     },
     {
       name: 'render_montage_plan',
-      description: `Réservé au plan Élite pendant la bêta. L'ÉDITEUR via Claude (rendu) : re-rend un Montage IA à partir d'un PLAN MODIFIÉ (obtenu via get_montage_plan puis ajusté : textes, timings, styles, coupes…). Réutilise l'audio du montage d'origine. Coût : ${MONTAGE_RENDER_COST} crédits. Retourne un nouveau job_id — appelle ensuite check_montage.`,
+      description: `Réservé au plan Élite pendant la bêta. L'ÉDITEUR via Claude (rendu) : re-rend un Montage IA à partir d'un PLAN MODIFIÉ (obtenu via get_montage_plan puis ajusté : textes, timings, styles, coupes…). Réutilise l'audio du montage d'origine. Coût : ${MONTAGE_RENDER_COST} crédits, + le lipsync des NOUVELLES fenêtres de visage si le plan d'origine en avait (2 crédits par seconde, 5 en haute résolution) — jamais pour une scène déjà générée, qui est réutilisée. Retourne un nouveau job_id — appelle ensuite check_montage.`,
       inputSchema: {
         type: 'object',
         properties: {
@@ -1819,6 +1819,7 @@ async function deliverVideo(userId: string, job: Record<string, any>, bytes: Uin
   const jjmm = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Paris' }).format(new Date())
   if (outilL === 'omni_edit') await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Omni ' + jjmm, undefined, { tags: ['Omni', 'Vidéo'], style: 'OMNI', emo: '🎬' })
   else if (outilL === 'motion') await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Motion Control', undefined, { tags: ['Motion Control', 'Vidéo'], style: 'MOTION', emo: '🎬' })
+  else if (String(job.kind || '') === 'montage') await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Montage IA', undefined, { tags: ['Montage IA', '9:16'], style: 'MONTAGE', emo: '🎬' })   // comme l'app (audit 10/10)
   else await saveToLibrary(userId, bytes, 'mp4', 'video/mp4', 'video-simple', 'Vidéo AvatarAds')
   return url
 }
@@ -3934,6 +3935,9 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       avatarPoolFiles.push(f)
     }
   }
+  // avatar_urls SANS avatar_url (audit 10/10) : toutes les photos étaient ignorées (le worker ne lit le pool qu'avec une
+  // photo principale) et le montage sortait sans visage. La 1re devient la photo principale.
+  if (!avatarFile && avatarPoolFiles.length) avatarFile = avatarPoolFiles.shift()!
   // 420 px de large, JPEG 72 — le format qu'envoie l'app, et qui tient sous les
   // 400 Ko du chef. Renvoie null pour une vidéo ou un format non décodable :
   // le chef se rabat alors sur le NOM du média, qui reste explicite.
@@ -3964,8 +3968,10 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
     const nom = String((m as Record<string, unknown>)?.name || '').trim() || `media-${i + 1}`
     const f = await fetchUserFile(u, MONTAGE_MAX_BYTES, /^(image\/(png|jpe?g|webp)|video\/mp4)$/, `le média « ${nom} »`)
     if (typeof f === 'string') return toolErr(f)
-    const id = slug(nom, i)
-    if (id === 'avatar' || medias.some((x) => x.id === id)) continue
+    // un média nommé « avatar », « Avatar 2 »… ne doit pas passer pour un visage du pool (le worker range avatar-N à la
+    // racine) ni disparaître : il garde un id de média (audit 10/10)
+    const id0 = slug(nom, i), id = /^avatar(-\d+)?$/.test(id0) ? 'media-' + id0 : id0
+    if (medias.some((x) => x.id === id)) continue
     medias.push({ id, name: nom, kind: /^video\//.test(f.contentType) ? 'video' : 'image', bytes: f.bytes, contentType: f.contentType,
       thumb: await miniature(f.bytes, f.contentType) })
   }
@@ -4077,7 +4083,9 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
           // la MINIATURE, jamais l'original : au-delà de 400 Ko le chef ignore
           // l'image et le média ne se place nulle part
           if (m.thumb) fd.append('asset_' + m.id, new File([m.thumb as unknown as BlobPart], 'thumb.jpg', { type: 'image/jpeg' }))
-          else if (m.bytes.length <= 380_000) fd.append('asset_' + m.id, new File([m.bytes as unknown as BlobPart], 'thumb', { type: m.contentType }))
+          // octets bruts : seulement une IMAGE (audit 10/10 — une vidéo de moins de 380 Ko partait en « image video/mp4 » et
+          // l'API du chef refusait tout le montage) ; une vidéo sans miniature se place d'après son nom
+          else if (m.bytes.length <= 380_000 && /^image\/(png|jpe?g|webp|gif)$/.test(m.contentType)) fd.append('asset_' + m.id, new File([m.bytes as unknown as BlobPart], 'thumb', { type: m.contentType }))
         }
         console.log(`▶ médias envoyés au chef : ${medias.map((m) => m.id + (m.thumb ? '✓' : '✗')).join(', ')}`)
       }
@@ -4103,6 +4111,10 @@ async function runMontageIA(profile: Record<string, unknown>, args: Record<strin
       const plan = od.plan as Record<string, unknown>
       plan.duration = Math.round(durEst * 100) / 100 // le moteur recale sur la durée réelle
       plan.slideStyle = style   // explicite, comme l'app (Auto compris)
+      // comme l'app (_mtStripFun) : sons « fun » et lits musicaux = à la main dans l'Éditeur, jamais par l'IA — sinon le lit
+      // jouait PAR-DESSUS la musique Production (audit 10/10)
+      plan.beds = []
+      if (Array.isArray(plan.sfx)) plan.sfx = (plan.sfx as Record<string, unknown>[]).filter((x) => !['hu', 'bip', 'fahh', 'robot'].includes(String(x && x.kind || '')))   // = _MT_FUN_KINDS de l'app
       lookProduction(plan, durEst)   // 09/10 : sous-titres, texte choc et musique de Production (comme l'app)
 
       // 2) l'audio devient l'entrée du rendu (le moteur gère l'absence de piste vidéo)

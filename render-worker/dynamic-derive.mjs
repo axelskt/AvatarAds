@@ -1677,6 +1677,9 @@ export function deriveDynamicSlides(plan, opts = {}) {
       // un nombre DIT (« 10 millions de vues ») est la cible ; sans nombre, le
       // départ et l'arrivée validés par Axel pour « générer des vues »
       const dit = vuesDites(words, i + seq.length - 1)
+      // sans nombre dit, le 200 → 100 000 n'appartient qu'à la phrase validée par
+      // Axel (« générer / faire des vues ») — pas à « mon compte a perdu des vues »
+      if (!dit && !['generer', 'faire'].includes(seq[0])) continue
       const fmt = (v) => Math.round(v).toLocaleString('fr-FR')
       const items = dit ? [{ text: fmt(dit) }, { text: fmt(dit >= 2000 ? 200 : Math.max(1, dit / 10)) }]
         : [{ text: '100 000' }, { text: '200' }]
@@ -3127,8 +3130,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
     const cands = []
     for (let fi = 0; ;) {
       // « commande »/« comment » : deux transcriptions fréquentes de « commente »
+      // « commencer » : transcription fautive de « commente » (vue deux fois) — retenue
+      // seulement si la suite promet une livraison (LIVRAISON, plus bas)
       const c = findAny(words, ['commente', 'commentes', 'commenter', 'commentez', 'comment',
-        'ecris', 'écris', 'commande', 'commandes', 'tape', 'tapes', 'tapez'], fi)
+        'ecris', 'écris', 'commande', 'commandes', 'tape', 'tapes', 'tapez', 'commencer'], fi)
       if (!c) break
       if (c.start > D - 10) cands.push(c)
       fi = c.i + 1
@@ -3141,7 +3146,8 @@ export function deriveDynamicSlides(plan, opts = {}) {
     // « commente(r) »/« commande », soit la suite promet une livraison (« et je
     // te l'envoie », « pour le recevoir »). « écris des prompts simples » est
     // une consigne d'app, pas un CTA — sans ce filtre elle en devenait un.
-    const LIVRAISON = /envoi|envoie|recois|recevoir|reponds|repond|message|dm\b|prive|lien|bio\b|commentaire|methode|acces/
+    // mots ENTIERS (avec l'élision collée par norm : « tenvoie », « lacces ») — « clients » contenait « lien » (relecture 10/10)
+    const LIVRAISON = /(^|[^a-z])(?:[tlmjs]|qu)?(envoi\w*|recoi\w*|recevoir|repond\w*|message\w*|dm|prive\w*|liens?|bio|commentaires?|methode|acces)(?![a-z])/
     let last = null, kw = ''
     for (const c of cands.reverse()) {
       let ki = c.i + 1
@@ -3152,8 +3158,13 @@ export function deriveDynamicSlides(plan, opts = {}) {
       if (!k2 || k2.length > 14 || CTA_SKIP.has(norm(k2))) continue
       const trig = norm(c.text)
       const estCommente = /^comment(e|es|er|ez)$/.test(trig) || /^commande/.test(trig)
-      const suite = words.slice(ki, ki + 8).map((x) => norm(x.text)).join(' ')
-      if (!estCommente && !LIVRAISON.test(suite)) continue
+      // la promesse se lit APRÈS le mot à commenter ; « commencer » (transcription de « commente ») exige une vraie
+      // livraison (« je t'envoie », « en privé ») et jamais « pour / de commencer » (relecture 10/10)
+      const suite = words.slice(ki + 1, ki + 9).map((x) => norm(x.text)).join(' ')
+      if (trig === 'commencer') {
+        const avant = c.i > 0 ? norm(words[c.i - 1].text) : ''
+        if (/^(pour|de|d|a|avant|par|bien|et)$/.test(avant) || !/envoi|envoie|en prive|en dm\b|par message/.test(suite)) continue
+      } else if (!estCommente && !LIVRAISON.test(suite)) continue
       last = c; kw = k2; break
     }
     if (last) {
@@ -3171,8 +3182,10 @@ export function deriveDynamicSlides(plan, opts = {}) {
         // taper le mot. Sinon (média jusqu'au bout), le média est rogné mais
         // jamais supprimé.
         const estUser = (sc) => sc.user || sc.assetId || ['media', 'medias', 'photowall'].includes(String(sc.anim))
-        const finUser = Math.max(0, ...out.filter((sc) => estUser(sc) && (sc.end || 0) > a + 0.05).map((sc) => sc.end || 0))
-        if (finUser && finUser <= D - 1.2) a = r2(Math.max(a, finUser + 0.02))
+        // (chacun pour soi : un seul média qui court jusqu'à la fin ne fait plus
+        //  sauter la protection des autres — lui seul est rogné)
+        const finUser = Math.max(0, ...out.filter((sc) => estUser(sc) && (sc.end || 0) > a + 0.05 && (sc.end || 0) <= D - 1.2).map((sc) => sc.end || 0))
+        if (finUser) a = r2(Math.max(a, finUser + 0.02))
         // LE CTA GARDE LA FIN. J'avais essayé de le faire céder pour atteindre
         // 100 % des scènes du chef d'orchestre ; Axel, en voyant le résultat :
         // « CTA à revoir, là y'a besoin de texte pour le CTA pour mettre le mot,
@@ -3686,8 +3699,12 @@ export function deriveDynamicSlides(plan, opts = {}) {
     for (const w of (plan.avatarSegments || []).slice().sort((a, b) => (a.start || 0) - (b.start || 0))) {
       if (w.split || w.duo || w.adresse || (w.start || 0) < 2.5 || (w.end - w.start) < 1.8) continue
       // sens 1 : l'anim DÉBOUCHE sur le visage → elle monte en haut, à ses temps
+      // …et le visage ne lui survit pas longtemps : le panneau du haut s'arrête avec
+      // l'anim, et au-delà d'1,2 s la moitié haute restait VIDE (audit 10/10,
+      // « photos d'elle » sous un cadre crème nu) — on garde alors visage seul
       const av = out.find((s2) => abstraite3(s2) && Math.abs((s2.end || 0) - w.start) <= 0.4
-        && (s2.end - s2.start) >= 1.2 && (w.end - s2.start) <= 9 && (w.end || 0) <= D - 2)
+        && (s2.end - s2.start) >= 1.2 && (w.end - s2.start) <= 9 && (w.end || 0) <= D - 2
+        && (w.end - (s2.end || 0)) <= 1.2)
       // sens 2 : le visage débouche sur l'anim → le panneau du haut s'ouvre un
       // souffle avant ses mots (précédent : la visite guidée ouvre AVANT le mot)
       const ap2 = av ? null : out.find((s2) => abstraite3(s2) && Math.abs((s2.start || 0) - w.end) <= 0.4

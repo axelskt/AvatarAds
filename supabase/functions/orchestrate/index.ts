@@ -233,20 +233,20 @@ const TUTO_FILE: Record<string, string> = new Proxy(
 const ANIMS = [
   'screen', 'result', 'phone', 'split', 'avatar', 'faceless', 'voice', 'cut',
   'type', 'sign', 'post', 'upload', 'engage', 'daypart', 'blankfill', 'easyup',
-  'easydown', 'lowcost', 'network', 'rocket', 'funnel', 'idea', 'flow', 'orbit',
-  'list', 'search', 'quality', 'podium', 'star', 'speed', 'deadline', 'crowd',
-  'viral', 'scrollstop', 'abtest', 'roi', 'plan', 'layers', 'trend', 'record',
-  'dropzone', 'render', 'crop', 'silence', 'chat', 'dashboard', 'bgswap', 'export',
-  'checklist', 'library', 'queue', 'notif', 'comments', 'timeline', 'results', 'profile',
-  'invoice', 'settings', 'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking',
-  'form', 'donut', 'map', 'mixer', 'review', 'upgrade', 'storyboard', 'music',
-  'bio', 'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag', 'schedule',
-  'product', 'cart', 'delivery', 'sizes', 'candles', 'pnl', 'mrr', 'churn',
-  'onboarding', 'integrations', 'menu', 'weight', 'quote', 'liquid', 'magnet', 'explode',
-  'iceberg', 'tunnel', 'thermometer', 'script', 'clapper', 'retakes', 'zoompunch', 'speedramp',
-  'substyle', 'trendsound', 'algorithm', 'cv', 'framing', 'focus', 'lighting', 'caption',
-  'spike', 'brandeal', 'mediakit', 'stoploss', 'orderbook', 'uptime', 'leads', 'comment',
-  'share', 'views', 'linkbio', 'salesphone', 'oneclick', 'tsunami', 'gaugefill', 'lineup'
+  'easydown', 'lowcost', 'network', 'rocket', 'funnel', 'flow', 'orbit', 'list',
+  'search', 'quality', 'podium', 'star', 'speed', 'deadline', 'crowd', 'viral',
+  'scrollstop', 'abtest', 'roi', 'plan', 'layers', 'trend', 'record', 'dropzone',
+  'render', 'crop', 'silence', 'chat', 'dashboard', 'bgswap', 'export', 'checklist',
+  'library', 'queue', 'notif', 'comments', 'timeline', 'results', 'profile', 'invoice',
+  'settings', 'thumb', 'leaderboard', 'pay', 'sales', 'folder', 'booking', 'form',
+  'donut', 'map', 'mixer', 'review', 'upgrade', 'storyboard', 'music', 'bio',
+  'keyword', 'automation', 'carousel', 'poll', 'story', 'hashtag', 'schedule', 'product',
+  'cart', 'delivery', 'sizes', 'candles', 'pnl', 'mrr', 'churn', 'onboarding',
+  'integrations', 'menu', 'weight', 'quote', 'liquid', 'magnet', 'explode', 'iceberg',
+  'tunnel', 'thermometer', 'script', 'clapper', 'retakes', 'zoompunch', 'speedramp', 'substyle',
+  'trendsound', 'algorithm', 'cv', 'framing', 'focus', 'lighting', 'caption', 'spike',
+  'brandeal', 'mediakit', 'stoploss', 'orderbook', 'uptime', 'leads', 'comment', 'share',
+  'views', 'linkbio', 'salesphone', 'oneclick', 'tsunami', 'gaugefill', 'lineup'
 ]
 // <<< /ANIM-BANK:LIST >>>
 const SLIDE_TYPES = ['flow', 'checklist', 'compare', 'stat', 'card', 'nodes', 'loop', 'bars', 'kpi', 'timer', 'versus', 'punch', 'banner']
@@ -487,7 +487,6 @@ const ANIM_CATALOGUE = `
     network  — un reseau, une connexion, une communaute, des gens relies. « ta communaute », « ton audience », « les gens », « ton reseau », « tes abonnes ».
     rocket   — un lancement, un decollage, ce qui explose, devenir viral. « ca decolle », « le lancement », « ca explose », « ca part en fleche », « je lance ».
     funnel   — un entonnoir : beaucoup entrent, peu ressortent. « le tunnel », « peu ressortent », « le taux de conversion », « sur cent personnes », « il en reste ».
-    idea     — une idee, une astuce, une methode, un declic, « le secret c'est... ».
     flow     — A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z ».
     orbit    — un centre et des satellites : tout part d'un seul outil. « tout part de la », « un seul outil », « le centre », « autour de ».
     list     — une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options ».
@@ -605,6 +604,52 @@ const ANIM_CATALOGUE = `
 type Manque = { mot: string; nom: string; montre: string; phrase: string }
 type RapportRattrapage = { trous: string[]; propose: string[]; refus: string[]; pose: string[]; manques?: Manque[]; erreur?: string }
 
+// ── LE TEXTE CHOC NE RECOPIE PAS LA VOIX (audit 10/10) ─────────────────────
+// La consigne l'interdisait déjà, le chef le faisait quand même : « Personne ne te
+// montre comment faire ça en 30 secondes » sur « Personne ne te montre comment
+// faire des influenceuses IA… », et la même phrase s'affichait deux fois (texte
+// choc + sous-titres). Le chef propose, le code tranche : 3 mots qui se suivent
+// dans la 1re phrase dite = recopie → une réécriture courte, et si elle échoue
+// ou recopie encore, on garde l'original (jamais d'accroche vide pour ça).
+const normChoc = (t: string) => String(t || '').replace(/[’‘ʼ`´]/g, "'").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9' ]+/g, ' ').split(/\s+/).filter(Boolean)
+function chocRecopie(texte: string, premiere: string): boolean {
+  const h = normChoc(texte), p = normChoc(premiere).join(' ')
+  for (let i = 0; i + 2 < h.length; i++) if ((' ' + p + ' ').includes(' ' + h.slice(i, i + 3).join(' ') + ' ')) return true
+  return false
+}
+async function reecrireChoc(texte: string, words: { text: string; start: number }[], fin: number): Promise<string> {
+  const ordre = words.slice().sort((a, b) => a.start - b.start).map((w) => String(w.text))
+  let k = ordre.findIndex((w) => /[.!?]$/.test(w.trim()))
+  if (k < 0 || k > 24) k = Math.min(ordre.length - 1, 15)
+  const premiere = ordre.slice(0, k + 1).join(' ')
+  if (!texte || !chocRecopie(texte, premiere)) return texte
+  const anthKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+  // facultative et BRÈVE : elle ne doit jamais manger le budget du rattrapage des trous qui la suit
+  if (!anthKey || reste(fin) < 35_000) return texte
+  const sujet = ordre.slice(0, 70).join(' ')
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': anthKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL, max_tokens: 120, output_config: { effort: 'low' },
+      system: `Tu écris le TEXTE CHOC posé en haut d'une vidéo TikTok pendant l'accroche, comme le texte natif qu'un créateur tape sur sa vidéo : une RÉACTION à la première personne qui donne envie de rester.
+Modèles de ton : « Ça devrait être interdit de montrer ça 😶 », « Pourquoi personne ne m'a montré ça avant ??? 😭 », « Mon cerveau a buggé la première fois que j'ai vu ça 🫠 ».
+Règles : il nomme le SUJET concret de la vidéo (pas « ça » tout seul) ; il ne reprend AUCUN groupe de 3 mots de la première phrase dite ; jamais un chiffre ni une promesse que la vidéo ne tient pas ; écriture naturelle (pas en capitales), 6 à 12 mots, 60 caractères max, 1 ou 2 emojis à la fin seulement.
+Réponds avec le texte seul, sur une ligne.`,
+      messages: [{ role: 'user', content: `Première phrase dite : « ${premiere} »\nDébut de la vidéo : « ${sujet} »\nTexte choc refusé (il recopie la voix) : « ${texte} »` }],
+    }),
+    signal: delai(Math.min(6_000, reste(fin) - 25_000)),
+  }).catch(() => null)
+  if (!res || !res.ok) return texte
+  const data = await res.json().catch(() => null)
+  const neuf = String((data?.content || []).map((c: { text?: string }) => c?.text || '').join(' '))
+    .replace(/^[«"\s]+|[»"\s]+$/g, '').replace(/[|\n\r]+/g, ' ').replace(/\s{2,}/g, ' ').trim()
+  if (!neuf || Array.from(neuf).length > 72 || chocRecopie(neuf, premiere)) return texte
+  console.log(`▶ texte choc réécrit (il recopiait la 1re phrase) : « ${texte} » → « ${neuf} »`)
+  return neuf
+}
+
 async function comblerTrous(
   trous: { start: number; end: number; dit: string }[],
   animsDispo: string[],
@@ -712,6 +757,33 @@ Tu ecris le plan comme un monteur qui decide, seconde par seconde, ce qu'on VOIT
 5. RYTHME : un plan toutes les 2,5 a 4 s, ZERO trou (a chaque seconde quelque chose est a l'ecran), pas de plan de plus de 6 s sauf une visite guidee a plusieurs clics. Toute carte porte un title (2-4 mots, capitales) et, quand c'est une etape, un eyebrow (« ETAPE 1 », « LE PROBLEME », « RESULTAT »).
 
 6. SOUS-TITRES : accents = les 10-15 mots FORTS (chiffres, noms de produits, verbes d'action, benefices) — le moteur les colore ; ne marque jamais un mot-outil.`
+}
+
+// ── FICHES PAR STYLE (Axel 09/10, point 3 du plan « Montage IA = Production ») ───────────────────────────────────
+// Une fiche courte par style, reprise de ce qui a ete valide dans Production : le chef en tient compte pour PROPOSER,
+// la derivation continue de TRANCHER (visage a l'accroche, CTA en bloc, chiffres dits, medias de l'utilisateur).
+const FICHES_STYLE: Record<string, string> = {
+  auto: `STYLE AUTO — FICHE (le look Production : sous-titres Production, texte choc, musique energique).
+1. L'ACCROCHE (0 -> fin du hook) = LE VISAGE + le TEXTE CHOC. Aucune scene plein cadre ni bandeau avant la fin du hook : le code les retire.
+2. Le texte choc (hook.text) NOMME le sujet concret et ne reprend jamais 3 mots qui se suivent de la 1re phrase dite.
+3. Ensuite, une scene toutes les 2,5 a 4 s, chacune JUSTIFIEE par le mot dit a cet instant ; entre deux scenes, le visage respire (2 a 4 s) — jamais un trou vide.
+4. Les images de l'utilisateur (broll) se posent sur LEUR mention, 2 a 3 s ; deux images citees ensemble peuvent arriver l'une apres l'autre a moins d'1 s (elles se poseront cote a cote).
+5. Juste avant chaque changement de section, finis sur une phrase courte et forte (moins de 7 mots) : elle s'affichera en bloc.
+6. Le CTA final = la consigne exacte (« commente X »). Pose un beat keyword avec X en valeur et rien d'autre par-dessus.`,
+  apple: `STYLE APPLE — FICHE (fonds clairs, pilules, interface iOS, ref @beingmayy).
+1. Peu de scenes, mais belles : une toutes les 4 a 6 s, un seul objet heros au centre, beaucoup de vide autour.
+2. Privilegie ce qui ressemble a une interface (chat, notif, upload, dashboard, ui) ; evite les compteurs agressifs et les formes abstraites.
+3. Aucun mot en capitales criardes dans les cartes : 2 a 4 mots, ton calme.
+4. L'accroche reste le visage ; le CTA reste la consigne exacte.`,
+  word: `STYLE MOT PAR MOT — FICHE (page blanche, le mot EST le visuel).
+1. Il n'y a ni video ni visage : le sous-titre est le texte, les ANIMATIONS (champ anim) sont les seules images. Une phrase sans animation est une phrase perdue : vise une animation toutes les 2 a 3 s, chacune sur son mot.
+2. Les motifs abstraits (champ motif) n'existent pas ici : laisse motif vide.
+3. Les images de l'utilisateur deviennent des cartes au-dessus du mot : place-les sur leur mention exacte.
+4. Le CTA final est la phrase entiere dite (« commente X et je te l'envoie ») : ne pose pas d'animation par-dessus.`,
+  dynamic: `STYLE DYNAMIQUE — FICHE (panneaux qui se poussent, visite guidee).
+1. Les etapes dans l'app (« va sur », « clique », « ecris ») sont une VISITE GUIDEE (tuto), jamais une animation abstraite.
+2. Un panneau toutes les 2 a 3,5 s, justifie par son mot ; le visage revient entre deux sequences.
+3. Chiffres : seulement ceux qui sont DITS (countup avec la valeur dite).`,
 }
 
 async function claudePlan(
@@ -1141,6 +1213,7 @@ Sers-t'en pour : choisir quoi illustrer en priorite, le ton, l'ordre des idees, 
     })
   }
   if (style === 'slam') content.push({ type: 'text', text: SLAM_BRIEF(assets) })
+  else content.push({ type: 'text', text: FICHES_STYLE[style] || FICHES_STYLE.auto })   // fiche par style (10/10)
   content.push({
     type: 'text',
     text: `Duree totale : ${duration.toFixed(2)}s. Langue : ${lang}. ${assets.length} image(s) utilisateur : ${assets.map((a) => a.id).join(', ') || 'aucune'}.
@@ -1362,27 +1435,26 @@ const ANIM_LEX: [string, string][] = [
   ['result', 'weight'], ['retour', 'roi'], ['revenu', 'mrr'], ['rushs', 'library'], ['sait', 'faceless'],
   ['sauten', 'silence'], ['scenar', 'storyboard'], ['screen', 'split'], ['script', 'type'], ['script', 'list'],
   ['script', 'script'], ['scroll', 'phone'], ['scroll', 'scrollstop'], ['second', 'speed'], ['second', 'scrollstop'],
-  ['secret', 'idea'], ['select', 'screen'], ['semain', 'schedule'], ['seul', 'easyup'], ['seul', 'orbit'],
-  ['seul', 'viral'], ['seul', 'automation'], ['seul', 'algorithm'], ['seul', 'oneclick'], ['signen', 'sign'],
-  ['signen', 'quote'], ['silenc', 'silence'], ['simple', 'easyup'], ['slide', 'carousel'], ['sondag', 'poll'],
-  ['sonner', 'notif'], ['sous', 'music'], ['sous', 'substyle'], ['split', 'split'], ['spread', 'orderbook'],
-  ['stats', 'dashboard'], ['stats', 'mediakit'], ['stop', 'stoploss'], ['storie', 'story'], ['story', 'story'],
-  ['struct', 'storyboard'], ['style', 'substyle'], ['suis', 'dashboard'], ['suivan', 'phone'], ['superi', 'upgrade'],
-  ['swipen', 'phone'], ['system', 'automation'], ['tablea', 'dashboard'], ['taille', 'sizes'], ['tape', 'keyword'],
-  ['tape', 'comment'], ['tapes', 'results'], ['taux', 'funnel'], ['telech', 'export'], ['televe', 'upload'],
-  ['temoig', 'review'], ['temps', 'split'], ['temps', 'daypart'], ['temps', 'queue'], ['temps', 'uptime'],
-  ['tendan', 'trend'], ['tendan', 'trendsound'], ['teste', 'abtest'], ['texte', 'type'], ['texte', 'script'],
-  ['tiktok', 'phone'], ['tiktok', 'crop'], ['titres', 'substyle'], ['tomben', 'notif'], ['tomben', 'sales'],
-  ['tomben', 'salesphone'], ['tourne', 'render'], ['tourne', 'queue'], ['tourne', 'automation'],
-  ['tourne', 'clapper'], ['tourne', 'lighting'], ['tourne', 'uptime'], ['travai', 'iceberg'], ['traver', 'tunnel'],
-  ['trois', 'plan'], ['trouve', 'search'], ['trouve', 'results'], ['tunnel', 'funnel'], ['typo', 'substyle'],
-  ['ultra', 'speed'], ['vague', 'tsunami'], ['vend', 'salesphone'], ['vendeu', 'orderbook'], ['vendre', 'deadline'],
-  ['vends', 'product'], ['ventes', 'sales'], ['versio', 'abtest'], ['versio', 'upgrade'], ['veux', 'chat'],
-  ['veux', 'settings'], ['video', 'upload'], ['video', 'dropzone'], ['video', 'export'], ['video', 'timeline'],
-  ['video', 'thumb'], ['video', 'storyboard'], ['vienne', 'magnet'], ['viral', 'viral'], ['visage', 'faceless'],
-  ['vitess', 'speed'], ['voila', 'result'], ['vois', 'iceberg'], ['voix', 'voice'], ['voix', 'record'],
-  ['voix', 'music'], ['votent', 'poll'], ['vraie', 'tsunami'], ['vues', 'thumb'], ['vues', 'views'],
-  ['zero', 'blankfill'], ['zoom', 'zoompunch'],
+  ['select', 'screen'], ['semain', 'schedule'], ['seul', 'easyup'], ['seul', 'orbit'], ['seul', 'viral'],
+  ['seul', 'automation'], ['seul', 'algorithm'], ['seul', 'oneclick'], ['signen', 'sign'], ['signen', 'quote'],
+  ['silenc', 'silence'], ['simple', 'easyup'], ['slide', 'carousel'], ['sondag', 'poll'], ['sonner', 'notif'],
+  ['sous', 'music'], ['sous', 'substyle'], ['split', 'split'], ['spread', 'orderbook'], ['stats', 'dashboard'],
+  ['stats', 'mediakit'], ['stop', 'stoploss'], ['storie', 'story'], ['story', 'story'], ['struct', 'storyboard'],
+  ['style', 'substyle'], ['suis', 'dashboard'], ['suivan', 'phone'], ['superi', 'upgrade'], ['swipen', 'phone'],
+  ['system', 'automation'], ['tablea', 'dashboard'], ['taille', 'sizes'], ['tape', 'keyword'], ['tape', 'comment'],
+  ['tapes', 'results'], ['taux', 'funnel'], ['telech', 'export'], ['televe', 'upload'], ['temoig', 'review'],
+  ['temps', 'split'], ['temps', 'daypart'], ['temps', 'queue'], ['temps', 'uptime'], ['tendan', 'trend'],
+  ['tendan', 'trendsound'], ['teste', 'abtest'], ['texte', 'type'], ['texte', 'script'], ['tiktok', 'phone'],
+  ['tiktok', 'crop'], ['titres', 'substyle'], ['tomben', 'notif'], ['tomben', 'sales'], ['tomben', 'salesphone'],
+  ['tourne', 'render'], ['tourne', 'queue'], ['tourne', 'automation'], ['tourne', 'clapper'], ['tourne', 'lighting'],
+  ['tourne', 'uptime'], ['travai', 'iceberg'], ['traver', 'tunnel'], ['trois', 'plan'], ['trouve', 'search'],
+  ['trouve', 'results'], ['tunnel', 'funnel'], ['typo', 'substyle'], ['ultra', 'speed'], ['vague', 'tsunami'],
+  ['vend', 'salesphone'], ['vendeu', 'orderbook'], ['vendre', 'deadline'], ['vends', 'product'], ['ventes', 'sales'],
+  ['versio', 'abtest'], ['versio', 'upgrade'], ['veux', 'chat'], ['veux', 'settings'], ['video', 'upload'],
+  ['video', 'dropzone'], ['video', 'export'], ['video', 'timeline'], ['video', 'thumb'], ['video', 'storyboard'],
+  ['vienne', 'magnet'], ['viral', 'viral'], ['visage', 'faceless'], ['vitess', 'speed'], ['voila', 'result'],
+  ['vois', 'iceberg'], ['voix', 'voice'], ['voix', 'record'], ['voix', 'music'], ['votent', 'poll'],
+  ['vraie', 'tsunami'], ['vues', 'thumb'], ['vues', 'views'], ['zero', 'blankfill'], ['zoom', 'zoompunch'],
     // <<< /ANIM-LEX:AUTO >>>
 ]
 const STOP_FILL = new Set(['pour', 'avec', 'dans', 'tout', 'tous', 'plus', 'sans', 'cette', 'votre', 'notre', 'vous', 'nous', 'mais', 'donc', 'alors', 'meme', 'chaque', 'etre', 'cest', 'quand', 'comme', 'fait', 'faire', 'que', 'qui', 'les', 'des', 'une', 'est', 'son', 'ses', 'ton', 'tes'])
@@ -2616,7 +2688,7 @@ serve(async (req: Request) => {
     const filters = options.filters === 'low' ? 'low' : 'normal'
     const website = String(form.get('website') || '').trim().slice(0, 300)
     // brief = l'intention de l'utilisateur (≠ script, qui sert a l'alignement des sous-titres)
-    const brief = String(form.get('brief') || '').trim().slice(0, 700)
+    const brief = String(form.get('brief') || '').trim().slice(0, 1500)   // 10/10 : son texte + ses retouches + les consignes des réglages
 
     // assets b-roll : méta + miniatures
     let assetsMeta: { id: string; name: string; kind: string }[] = []
@@ -2728,6 +2800,10 @@ serve(async (req: Request) => {
     // le verdict du rattrapage voyage dans la REPONSE, pas dans un log invisible :
     // sans ca, impossible de savoir s'il n'a rien comble parce qu'il a refuse ou
     // parce qu'il n'a jamais tourne.
+    if (plan.hook && plan.hook.text) {
+      try { plan.hook.text = await reecrireChoc(String(plan.hook.text), fixedWords, _fin) } catch (_) { /* facultatif */ }
+      _chrono('choc')
+    }
     const rattrapage: RapportRattrapage = { trous: [], propose: [], refus: [], pose: [] }
     // ── RATTRAPAGE DES TROUS (2e passe) ───────────────────────────────────────
     // On mesure ce qui reste NU apres tous les verrous deterministes, et on le

@@ -954,7 +954,11 @@ export function animHtml(name, s, W, H, vs) {
       // Apres l'ecran de generation, on montre l'image qui vient de sortir, puis le
       // geste d'enregistrement — c'est ce qu'il voulait montrer : on la garde pour
       // la reutiliser. L'image est FOURNIE (screenFile), jamais inventee ici.
-      if (!s.screenFile) return ''
+      // l'image du résultat : la photo d'avatar du job quand le worker la fournit
+      // (items[0].src, audit 10/10 — la capture de démo montrait un AUTRE homme),
+      // sinon la capture fournie
+      const resSrc = ((s.items || [])[0] && s.items[0].src) || s.screenFile
+      if (!resSrc) return ''
       // c'est le moment de recompense : l'image occupe le cadre, pas une vignette.
       // Même règle que pour `screen` : plein cadre en mot-à-mot, contenu dans la zone
       // sûre partout ailleurs — sinon le tirage recouvre la vidéo au lieu de la coiffer.
@@ -962,7 +966,7 @@ export function animHtml(name, s, W, H, vs) {
       const ph = wideR ? Math.round(H * 0.46) : Math.round(f.h * 0.96)
       const pw = Math.round(ph * 0.6667)
       return `<div class="an-stage"><div class="an-res" id="${id}rs" style="left:${Math.round((W - pw) / 2)}px;top:${wideR ? Math.round(H * 0.30 - ph / 2) : Math.round(f.y + (f.h - ph) / 2)}px;width:${pw}px;height:${ph}px">
-        <img src="${escAttr(s.screenFile)}" alt="" />
+        <img src="${escAttr(resSrc)}" alt="" />
         <span class="an-res-flash" id="${id}fl"></span>
         <span class="an-res-save" id="${id}sv" style="background:${P.acc}">
           <svg width="${Math.round(pw * 0.11)}" height="${Math.round(pw * 0.11)}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -1195,6 +1199,16 @@ export function animHtml(name, s, W, H, vs) {
       return box(`<div class="an-ph" id="${id}ph" style="left:${px}px;top:0;width:${pw}px;height:${ph}px;border:3px solid ${P.line};border-radius:${Math.round(pw * 0.14)}px;overflow:hidden;background:${P.soft}">
         <span class="an-p" id="${id}hd" style="left:50%;margin-left:-${Math.round(hd / 2)}px;top:${Math.round(ph * 0.2)}px;width:${hd}px;height:${hd}px;border-radius:50%;background:${P.acc}"></span>
         <span class="an-p" id="${id}bd" style="left:50%;margin-left:-${Math.round(pw * 0.31)}px;top:${Math.round(ph * 0.2 + hd * 1.18)}px;width:${Math.round(pw * 0.62)}px;height:${Math.round(ph * 0.34)}px;border-radius:${Math.round(pw * 0.3)}px ${Math.round(pw * 0.3)}px 0 0;background:${P.acc}"></span>
+        ${(() => {
+          // SA VRAIE PHOTO (audit 10/10) : « génère une photo de ton influenceuse »
+          // montrait une silhouette générique alors que sa photo était dans le job.
+          // Quand le worker la fournit (items[0].src), elle se révèle sous la ligne
+          // de balayage : on VOIT l'avatar se générer.
+          const it = (s.items || [])[0]
+          const src = !s._blank && it && it.src
+          return src ? `<div class="an-p" id="${id}rv" style="left:0;top:0;width:100%;height:0;overflow:hidden">
+          <img src="${escAttr(src)}" style="position:absolute;left:0;top:0;width:${pw}px;height:${ph}px;object-fit:cover"/></div>` : ''
+        })()}
         <span class="an-p" id="${id}sc" style="left:0;top:0;width:100%;height:3px;background:${P.ink};opacity:.55"></span>
       </div>`)
     }
@@ -1274,7 +1288,9 @@ export function animHtml(name, s, W, H, vs) {
       // s'allonge. On calcule : une ligne si elle reste lisible, deux sinon,
       // jamais trois. (0.52 = largeur moyenne d'un caractère d'Inter gras,
       // rapportée à la taille de police.)
-      const phrase = txt(0, 'écris-moi un hook')
+      // la question vient de la VOIX (items posés par le worker, habillerChat) ;
+      // plus de « écris-moi un hook » d'exemple sur la vidéo d'un client
+      const phrase = s._blank ? '' : ((raw[0] || '').trim() || '…')   // brut : échappé lettre par lettre plus bas
       const dedansW = Math.round(w * 0.92) - 2 * Math.round(bh * 0.28)
       const fsMax = Math.round(bh * 0.38), fsMin = Math.round(bh * 0.24)
       const pour = (lignes) => Math.floor(dedansW / (0.52 * Math.ceil(phrase.length / lignes)))
@@ -1286,10 +1302,14 @@ export function animHtml(name, s, W, H, vs) {
              (Aucun accent grave ici : ce commentaire vit DANS un template literal.) -->
         <div class="an-p" id="${id}cq" style="left:${x + Math.round(w * 0.08)}px;top:${Math.round(f.h * 0.05)}px;width:${Math.round(w * 0.92)}px;min-height:${bh}px;border-radius:${r}px ${r}px ${Math.round(r * 0.3)}px ${r}px;background:${P.acc};display:flex;align-items:center;padding:0 ${Math.round(bh * 0.28)}px;box-sizing:border-box">
           <span id="${id}cqt" style="font-family:${SANS};font-weight:800;font-size:${fs}px;letter-spacing:-.015em;color:#FFFFFF;line-height:1.18">${
-            phrase.split('').map((c) => `<span class="an-cq2" style="opacity:0">${c === ' ' ? '&nbsp;' : c}</span>`).join('')}</span>
+            // mot par mot (insécable À L'INTÉRIEUR d'un mot), lettres une à une : une
+            // vraie phrase dite passe à la ligne au lieu de sortir de la bulle
+            phrase.split(' ').map((m) => `<span style="white-space:nowrap">${Array.from(m).map((c) => `<span class="an-cq2" style="opacity:0">${esc(c)}</span>`).join('')}</span>`).join(' ')}</span>
           <span id="${id}cqc" style="width:2px;height:${Math.round(bh * 0.3)}px;background:#FFFFFF;border-radius:2px;margin-left:2px"></span></div>
         <div class="an-p" id="${id}ca" style="left:${x}px;top:${Math.round(f.h * 0.4)}px;width:${Math.round(w * 0.86)}px;height:${Math.round(bh * 1.6)}px;border-radius:${r}px ${r}px ${r}px ${Math.round(r * 0.3)}px;background:${P.soft};border:2px solid ${P.line}">
-          <span style="position:absolute;left:8%;top:13%;width:${Math.round(bh * 0.4)}px;height:${Math.round(bh * 0.4)}px">${claudeBurst('100%', P.acc)}</span>
+          <span style="position:absolute;left:8%;top:13%;width:${Math.round(bh * 0.4)}px;height:${Math.round(bh * 0.4)}px">${s.ia === 'claude' ? claudeBurst('100%', P.acc)
+            // l'IA nommée n'est pas Claude (ou aucune) : une étincelle neutre, jamais le logo d'une autre marque
+            : `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="${P.acc}"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z"/></svg>`}</span>
           ${[0.46, 0.66, 0.84].map((t, k) => `<span class="an-p" id="${id}cl${k}" style="left:8%;top:${Math.round(bh * 1.6 * t)}px;width:${[78, 64, 42][k]}%;height:${th}px;border-radius:99px;background:${P.ink};opacity:.55;transform-origin:0% 50%"></span>`).join('')}</div>`)
     }
     case 'dashboard': {
@@ -3629,7 +3649,10 @@ export function animJs(name, s, r2) {
       tl.fromTo('#${id}ph', { scale: 0.9, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(1.8)' }, ${t0});
       tl.fromTo('#${id}hd', { scale: 0, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.34, ease: 'back.out(2.6)', transformOrigin: '50% 50%' }, ${r2(t0 + 0.2)});
       tl.fromTo('#${id}bd', { scaleY: 0, autoAlpha: 0, transformOrigin: '50% 100%' }, { scaleY: 1, autoAlpha: 1, duration: 0.36, ease: 'power3.out' }, ${r2(t0 + 0.42)});` + `
-      tl.fromTo('#${id}sc', { y: 0, autoAlpha: 0.7 }, { y: ${Math.round(1920 * 0.24)}, autoAlpha: 0, duration: ${r2(Math.max(0.8, s.dur - 0.4))}, ease: 'none' }, ${t0});`
+      tl.fromTo('#${id}sc', { y: 0, autoAlpha: 0.7 }, { y: ${Math.round(1920 * 0.24)}, autoAlpha: 0, duration: ${r2(Math.max(0.8, s.dur - 0.4))}, ease: 'none' }, ${t0});` + (
+        // la photo se révèle de haut en bas sous la silhouette (voir animHtml)
+        ((s.items || [])[0] && s.items[0].src && !s._blank) ? `
+      tl.fromTo('#${id}rv', { height: '0%' }, { height: '100%', duration: ${r2(Math.max(0.6, Math.min(1.4, s.dur * 0.5)))}, ease: 'power2.inOut' }, ${r2(t0 + 0.75)});` : '')
     case 'phone':
       return inOut + `
       tl.fromTo('#${id}ph', { scale: 0.86, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.36, ease: 'back.out(1.8)' }, ${t0});
@@ -3674,14 +3697,19 @@ export function animJs(name, s, r2) {
       tl.to('#${id}sg',{scaleX:1.06,duration:0.18,yoyo:true,repeat:1,ease:'sine.inOut'},${r2(t0 + 0.34)});
       tl.to('#${id}sg',{scaleX:0,autoAlpha:0,duration:0.3,ease:'power3.in'},${r2(t0 + 0.72)});
       tl.to('#${id}sr',{xPercent:-40,duration:0.34,ease:'power3.inOut'},${r2(t0 + 0.8)});`
-    case 'chat':
+    case 'chat': {
+      // la frappe tient dans ~0,65 s quelle que soit la longueur : la phrase dite
+      // (habillerScenes) est plus longue que l'ancien « écris-moi un hook »
+      const nLettres = Math.max(1, String(((s.items || [])[0] || {}).text || '').replace(/\s/g, '').length)
+      const pas = Math.round(Math.min(0.035, 0.65 / nLettres) * 1000) / 1000
       return inOut + `
       tl.fromTo('#${id}cq',{x:60,autoAlpha:0},{x:0,autoAlpha:1,duration:0.28,ease:'back.out(1.6)'},${t0});
-      tl.fromTo('#${id}an .an-cq2',{autoAlpha:0},{autoAlpha:1,duration:0.01,stagger:0.035},${r2(t0 + 0.24)});
+      tl.fromTo('#${id}an .an-cq2',{autoAlpha:0},{autoAlpha:1,duration:0.01,stagger:${pas}},${r2(t0 + 0.24)});
       tl.fromTo('#${id}cqc',{autoAlpha:1},{autoAlpha:0.1,duration:0.24,repeat:4,yoyo:true},${r2(t0 + 0.24)});
       tl.to('#${id}cqc',{autoAlpha:0,duration:0.1},${r2(t0 + 0.86)});
       tl.fromTo('#${id}ca',{x:-50,autoAlpha:0},{x:0,autoAlpha:1,duration:0.32,ease:'power3.out'},${r2(t0 + 0.9)});
       tl.fromTo(['#${id}cl0','#${id}cl1','#${id}cl2'],{scaleX:0},{scaleX:1,duration:0.2,stagger:0.11,ease:'power2.out'},${r2(t0 + 1.1)});`
+    }
     case 'dashboard':
       return inOut + `
       tl.fromTo('#${id}dp',{scale:0.92,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.34,ease:'back.out(1.6)'},${t0});
@@ -4172,12 +4200,16 @@ export function animJs(name, s, r2) {
       // départ et l'arrivée validés par Axel pour « générer des vues »)
       const dep = nb(its[1], 200)
       const arr = Math.max(dep + 1, nb(its[0], 100000))
+      // le chef a posé « views » SANS nombre dit : la vignette et la lecture
+      // jouent, mais aucun compteur ne grimpe vers un chiffre inventé
+      const aChiffre = /\d/.test(its[0] || '')
       const T = r2(Math.max(0.8, Math.min(dur - 0.7, 1.3)))
       let js = inOut + `
       tl.fromTo('#${id}vw',{scale:0.9,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.32,ease:'back.out(1.7)'},${t0});
       tl.to('#${id}vwt',{scale:0.7,autoAlpha:0,duration:0.24,ease:'power2.in',transformOrigin:'50% 50%'},${r2(t0 + 0.3)});
       tl.to('#${id}vwp',{scaleX:1,duration:${r2(Math.max(0.7, dur - 0.6))},ease:'none'},${r2(t0 + 0.32)});
-      tl.fromTo('#${id}vwn',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:1,duration:0.3,ease:'back.out(2.6)'},${r2(t0 + 0.34)});`
+      tl.fromTo('#${id}vwn',{scale:0.5,autoAlpha:0},{scale:1,autoAlpha:${aChiffre ? 1 : 0},duration:0.3,ease:'back.out(2.6)'},${r2(t0 + 0.34)});`
+      if (!aChiffre) return js
       const steps = 28
       for (let k = 1; k <= steps; k++) {
         const u = k / steps

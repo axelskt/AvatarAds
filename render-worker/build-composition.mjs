@@ -400,6 +400,26 @@ export function buildComposition(plan, opts = {}) {
     start: r2(b.start),
     dur: r2(Math.max(0.4, b.end - b.start)),
   }))
+  // ── SES MÉDIAS ARRIVENT COMME DANS PRODUCTION (illustrations, Axel 01/10) ─────
+  // Ce qui est nommé ARRIVE à l'écran : la carte glisse de droite à gauche avec un woosh, une photo se pose avec un
+  // déclic ; deux médias rapprochés (moins de 1,2 s) se posent CÔTE À CÔTE au lieu de se chasser. Hors Mot par mot
+  // (sa propre mise en page) et hors moment fort (l'image seule, plein cadre).
+  if (!wordMode) {
+    for (let i = 0; i + 1 < brolls.length; i++) {
+      const b1 = brolls[i], b2 = brolls[i + 1]
+      if (b1.hero || b2.hero || b1.cote || b2.cote || b2.start - b1.start >= 1.2) continue
+      b1.cote = 'g'; b2.cote = 'd'
+      const fin = r2(Math.max(b1.start + b1.dur, b2.start + b2.dur))
+      b1.dur = r2(fin - b1.start); b2.dur = r2(fin - b2.start)
+    }
+    const deja = (k, t) => (plan.sfx || []).some((x) => x && x.kind === k && Math.abs((x.t || 0) - t) < 0.02)
+    for (const b of brolls) {
+      if (b.hero) continue
+      const tW = r2(Math.max(0, b.start - 0.06)), tC = r2(b.start + 0.38)
+      if (!deja('mo-whoosh-1', tW)) plan.sfx = [...(plan.sfx || []), { kind: 'mo-whoosh-1', t: tW, vol: 0.32 }]
+      if (!b.isVid && !deja('camera-shutter', tC)) plan.sfx = [...(plan.sfx || []), { kind: 'camera-shutter', t: tC, vol: 0.22 }]
+    }
+  }
 
   // ── #119 lipsync segmenté : scènes AVATAR générées séparément (1 à 6 selon le chef
   // d'orchestre) et assemblées ici — l'avatar ne s'affiche QUE sur ses fenêtres, le
@@ -507,7 +527,7 @@ export function buildComposition(plan, opts = {}) {
   }
   const hookWords = wordMode
     ? (plan.captions || []).filter((c) => String(c.text || '').trim() && c.start < hookCapEndW)
-      .map((c, i) => ({ id: 'whk' + i, text: capSkinText(c.text) || String(c.text).trim(), t: r2(c.start), accent: !!c.accent }))
+      .map((c, i) => ({ id: 'whk' + i, text: capSkinText(c.text) || String(c.text).trim(), raw: String(c.text).trim(), t: r2(c.start), accent: !!c.accent }))
     : []
   const hasWordHook = hookWords.length >= 3
   if (hasWordHook) {
@@ -566,6 +586,7 @@ export function buildComposition(plan, opts = {}) {
       // sans ponctuation, comme en Production (« IA, » → « IA ») ; le point
       // d'un domaine (« avatarads.fr ») est intérieur, il reste
       text: CASE(capSkinText(c.text)),
+      raw: String(c.text || ''),          // la ponctuation d'origine : elle borne les phrases (moments clés)
       start: r2(c.start),
       dur: r2(Math.max(0.1, c.end - c.start)),
       accent: !!c.accent,
@@ -582,6 +603,60 @@ export function buildComposition(plan, opts = {}) {
     .filter((c) => !(hasCta && c.start >= ctaStart))
     // …et ceux du hook par le bloc accumulé façon hk15 (hook mot-à-mot v2)
     .filter((c) => !(hasWordHook && c.start < hookCapEndW))
+  // CHAQUE MOT TIENT JUSQU'AU SUIVANT (audit 10/10, règle de Production : GAP_HOLD
+  // 1 s dans usine/captions.mjs). Le mot disparaissait à la fin de sa syllabe :
+  // 1 à 6 images sans sous-titre entre deux mots, un clignotement permanent.
+  // Si le mot suivant change de hauteur (passage split / plein cadre), le pont
+  // se limite à 0,25 s pour ne pas traîner au mauvais endroit.
+  caps.sort((x, y) => x.start - y.start)
+  // ce qui interrompt la tenue : un emoji (il REMPLACE le mot), un moment fort (l'image seule), une scène crème qui
+  // commence alors que le mot n'y était pas (il n'a pas son contour de fond clair)
+  const coupures = [
+    ...emojiDefs.map((e) => e.start),
+    ...rawBroll.filter((b, i) => heroIds.has(i)).map((b) => b.start - 0.15),
+    ...fullDefs.map((f) => f.start),
+  ]
+  for (let i = 0; i + 1 < caps.length; i++) {
+    const c = caps[i], n = caps[i + 1]
+    const trou = r2(n.start - (c.start + c.dur))
+    if (trou <= 0 || trou > 1.0) continue
+    let fin = c.top === n.top ? n.start : Math.min(n.start, c.start + c.dur + 0.25)
+    for (const t of coupures) if (t > c.start + c.dur && t < fin) fin = t - 0.04
+    if (fin > c.start + c.dur) c.dur = r2(fin - c.start)
+  }
+  // ── MOMENTS CLÉS EN BLOC (look Production, Axel 29/09) ─────────────────────
+  // Mot à mot partout SAUF aux moments clés : la dernière phrase avant chaque changement de section s'affiche EN BLOC
+  // et chaque mot s'allume quand il est dit (usine/captions.mjs, .cap.grp), avec un swish à l'entrée. Seulement avec
+  // un style de sous-titres Production (Auto) : Apple, Sombre premium et Mot par mot gardent leur écriture.
+  if (capSkin && !wordMode) {
+    const ENDP = /[.!?…]$/
+    const bornes = (plan.sections || []).slice(1).map((sx) => r2(sx && sx.start)).filter((t) => t > 2 && t < D - 1.5)
+    let kg = 0
+    for (const t of bornes) {
+      const avant = []
+      caps.forEach((c, i) => { if (!c.grp && c.start < t + 0.2 && c.start >= t - 4.5) avant.push(i) })
+      // la phrase se termine SUR la frontière : on s'arrête à son dernier mot ponctué (« ça. » à 9,36 s pour une
+      // section qui commence à 9,4 s), pas au mot d'avant
+      while (avant.length > 2 && !ENDP.test(caps[avant[avant.length - 1]].raw) && caps[avant[avant.length - 1]].start >= t - 0.05) avant.pop()
+      if (avant.length < 2) continue
+      // la phrase qui finit sur la frontière : au plus 6 mots, jamais au-delà de la ponctuation qui la précède
+      let a = avant.length - 1
+      while (a > 0 && avant.length - a < 6 && !ENDP.test(caps[avant[a - 1]].raw)) a--
+      const idx = avant.slice(a)
+      if (idx.length < 2) continue
+      const ws = idx.map((i) => caps[i]), der = ws[ws.length - 1]
+      const g = { id: 'kg' + kg, start: ws[0].start, dur: r2(Math.max(0.6, der.start + der.dur - ws[0].start)),
+        top: ws[0].top, cream: ws.some((w) => w.cream), accent: false, raw: der.raw, text: ws.map((w) => w.text).join(' '),
+        grp: ws.map((w, j) => ({ id: 'kg' + kg + 'w' + j, text: w.text, t: w.start })) }
+      const suiv = caps[idx[idx.length - 1] + 1]
+      if (suiv && g.start + g.dur > suiv.start - 0.04) g.dur = r2(Math.max(0.3, suiv.start - 0.04 - g.start))
+      caps.splice(idx[0], idx.length, g)
+      // le swish d'entrée (une seule fois : la composition est construite deux fois, mesure puis rendu)
+      const ts = r2(Math.max(0, g.start - 0.1))
+      if (!(plan.sfx || []).some((x) => x && x.kind === 'ed-swish-1' && Math.abs((x.t || 0) - ts) < 0.02)) plan.sfx = [...(plan.sfx || []), { kind: 'ed-swish-1', t: ts, vol: 0.3 }]   // le swish de Production
+      kg++
+    }
+  }
 
 
   // anti-doublon : un BANDEAU qui recouvre le hook affiche deja la meme phrase en plus gros
@@ -654,7 +729,8 @@ export function buildComposition(plan, opts = {}) {
     let cur = []
     for (const w of hookWords) {
       cur.push(w)
-      if (/[.!?,]$/.test(w.text) && cur.length >= 3) { whkPhr.push(cur); cur = [] }
+      // la coupe lit la ponctuation BRUTE (raw) : l'affichage, lui, n'en a plus
+      if (/[.!?,]$/.test(w.raw || w.text) && cur.length >= 3) { whkPhr.push(cur); cur = [] }
     }
     if (cur.length) { if (cur.length < 3 && whkPhr.length) whkPhr[whkPhr.length - 1].push(...cur); else whkPhr.push(cur) }
   }
@@ -693,13 +769,21 @@ export function buildComposition(plan, opts = {}) {
   // gros ».) +28 % sur les mots prononcés pendant l'accroche, taille normale
   // ensuite — c'est le CONTRASTE qui fait claquer l'ouverture.
   const hookCapEnd = r2(plan.hook?.end ?? Math.min(4, D))
-  const capsHtml = caps.map((c, i) => (wordMode
+  const ligneCap = Math.round(H * 0.045)
+  const capsHtml = caps.map((c, i) => (c.grp
+    ? `
+      <div class="clip cap sk sk-${capSkin}${isBoxSkin(capSkin) ? ' bx' : ''} grp${c.cream && !skinLisibleSurCreme(capSkin) ? ' sk-creme' : ''}" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" style="top:auto;bottom:${Math.max(0, H - (c.top + ligneCap))}px">${
+    c.grp.map((w) => `<span class="gw" id="${w.id}">${esc(w.text)}</span>`).join(' ')}</div>`
+    : wordMode
     ? `
       <div class="clip cap" id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5"><span style="font-size:${Math.round(wordFontSize(c.text, W, H) * (c.start < hookCapEnd ? 1.28 : 1))}px${c.accent ? `;color:${WORD_ACCENT}` : ''}">${esc(c.text)}</span></div>`
-    : capSkin && (!c.cream || skinLisibleSurCreme(capSkin)) ? (() => {
+    // le style Production reste LE MÊME sur fond crème (audit 10/10 : basculer sur
+    // le blanc d'origine donnait deux styles qui alternent, et du blanc sur crème
+    // à 1,15:1) ; les 6 styles sans contour y reçoivent un contour noir (sk-creme)
+    : capSkin ? (() => {
       const t = capSkinText(c.text) || String(c.text || '')
       return `
-      <div class="clip cap sk sk-${capSkin}${isBoxSkin(capSkin) ? ' bx' : ''}"${
+      <div class="clip cap sk sk-${capSkin}${isBoxSkin(capSkin) ? ' bx' : ''}${c.cream && !skinLisibleSurCreme(capSkin) ? ' sk-creme' : ''}"${
     t.length >= 11 ? ' data-long' : ''} id="${c.id}" data-start="${c.start}" data-duration="${c.dur}" data-track-index="5" style="top:${c.top}px">${
     isBoxSkin(capSkin) ? `<span class="bw">${esc(t)}</span>` : esc(t)}</div>` })()
     : `
@@ -738,10 +822,14 @@ export function buildComposition(plan, opts = {}) {
       tl.to('#${s.id}', { autoAlpha: 0, duration: 0.2, ease: 'power1.in' }, ${r2(end - 0.24)});
       tl.set('#${s.id}', { autoAlpha: 0 }, ${end});`
   }
+  // + ARRÊT NET en fin de scène (audit 10/10) : la sortie de l'animation finissait
+  // pile sur la borne du clip ; au rendu image par image, des restes (la tête rouge
+  // de « faceless », les icônes des réseaux) passaient sur le visage revenu.
   const fullJs = fullDefs.map((s) => (animFull(s)
     ? fullFadeJs(s) + `
       try {${animJs(s.anim, withFiles(s), r2)}
-      } catch (e) { console.error('animation ${s.anim} ignoree:', e && e.message) }`
+      } catch (e) { console.error('animation ${s.anim} ignoree:', e && e.message) }
+      tl.set('#${s.id}an', { autoAlpha: 0 }, ${r2(s.start + s.dur)});`
     : fullSlideJs(s, H))).join('')
   const bannersJs = bannerDefs.map((s) => bannerJs(s)).join('')
 
@@ -905,10 +993,10 @@ export function buildComposition(plan, opts = {}) {
         { y: 0, scale: 1, autoAlpha: 1, duration: 0.28, ease: 'power4.out' }, ${b.start});
       tl.to('#${b.id} .broll-card', { scale: 1.04, duration: ${r2(Math.max(0.4, b.dur - 0.5))}, ease: 'none' }, ${r2(b.start + 0.28)});
       tl.to('#${b.id}', { autoAlpha: 0, duration: 0.22, ease: 'power2.in' }, ${r2(b.start + b.dur - 0.24)});` : `
-      tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.18, ease: 'power1.out' }, ${b.start});
-      tl.fromTo('#${b.id} .broll-card', { scale: 0.82, rotation: -4, y: 26, autoAlpha: 0 },
-        { scale: 1, rotation: -1.5, y: 0, autoAlpha: 1, duration: 0.34, ease: 'back.out(1.7)' }, ${b.start});
-      tl.to('#${b.id} .broll-card', { scale: 1.04, duration: ${r2(Math.max(0.3, b.dur - 0.34))}, ease: 'none' }, ${r2(b.start + 0.34)});
+      tl.fromTo('#${b.id}', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.12, ease: 'power1.out' }, ${b.start});
+      tl.fromTo('#${b.id} .broll-card', { x: ${Math.round(W * 0.95)}, scale: ${b.cote ? 0.5 : 1}, rotation: 7, autoAlpha: 1 },
+        { x: ${b.cote === 'g' ? -Math.round(W * 0.2) : b.cote === 'd' ? Math.round(W * 0.16) : 0}, rotation: ${b.cote === 'd' ? 2 : -1.5}, duration: 0.42, ease: 'power3.out' }, ${b.start});
+      tl.to('#${b.id} .broll-card', { scale: ${b.cote ? 0.53 : 1.04}, duration: ${r2(Math.max(0.3, b.dur - 0.42))}, ease: 'none' }, ${r2(b.start + 0.42)});
       tl.to('#${b.id}', { autoAlpha: 0, duration: 0.16, ease: 'power1.in' }, ${r2(b.start + b.dur - 0.16)});`)
   ).join('')
 
@@ -979,7 +1067,9 @@ export function buildComposition(plan, opts = {}) {
   // sous-titres, je les veux uniquement sur anim', pas sur word ». Le mot-à-mot
   // reprend son pop sobre ; les slams par importance vivent dans le moteur
   // dynamic (sous-titres animés, réf ssstik 1786369405912).
-  const capsJs = caps.map((c) => (wordMode ? `
+  const capsJs = caps.map((c) => (c.grp ? c.grp.map((w) => `
+      tl.fromTo('#${w.id}', { opacity: 0, y: 46 }, { opacity: 1, y: 0, duration: 0.24, ease: 'power3.out' }, ${r2(Math.max(c.start, w.t))});`).join('')
+    : wordMode ? `
       tl.fromTo('#${c.id}', { scale: 0.86 }, { scale: 1, duration: ${r2(Math.min(0.16, c.dur))}, ease: 'back.out(1.8)', transformOrigin: '50% 50%' }, ${c.start});` : `
       tl.fromTo('#${c.id}', { scale: 1.09 }, { scale: 1, duration: ${r2(Math.min(0.12, c.dur))}, ease: 'power2.out', transformOrigin: '50% 50%' }, ${c.start});`)
   ).join('')
@@ -1128,7 +1218,9 @@ export function buildComposition(plan, opts = {}) {
 
       /* b-roll « carte flottante » : la vidéo reste visible derrière, assombrie ;
          l'image pop dans une carte arrondie avec ombre (look viral moderne) */
-      .broll { inset: 0; z-index: 4; background: rgba(8,8,10,.55); display: flex;
+      /* SES MÉDIAS PASSENT DEVANT (règle d'Axel) : au-dessus des scènes plein cadre (7), sous les sous-titres (8, plus
+         loin dans le document) — avant, une capture plein cadre cachait sa photo (audit 10/10) */
+      .broll { inset: 0; z-index: 8; background: rgba(8,8,10,.55); display: flex;
         align-items: center; justify-content: center; }
       .broll-card { max-width: 82%; max-height: 56%; border-radius: ${Math.round(H * 0.018)}px;
         overflow: hidden; border: 1.5px solid rgba(255,255,255,.14);

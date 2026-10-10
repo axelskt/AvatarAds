@@ -31,7 +31,9 @@
 // ── BANNIES DÉFINITIVEMENT (Axel, 14/08/26) — ne JAMAIS les remettre ─────────
 // target, clock, check, versus, hook, calendar, free, steps, twopaths, bars2,
 // grow, toggle : des icônes-sur-fond qui ne montrent rien (« si ça tient sur une
-// image fixe, ça n'entre pas dans la banque »). Retirées d'ICI et non d'une liste
+// image fixe, ça n'entre pas dans la banque »). + idea (audit 10/10, lot 1 validé
+// par Axel) : des carrés qui convergent en UN carré rouge figé, posé sur « le
+// secret », « l'outil », « l'IA » sans rien montrer — le visage le remplace. Retirées d'ICI et non d'une liste
 // de filtrage, pour que le ban vaille pour TOUS les styles (dynamic, apple, word…).
 // Leurs templates dorment encore dans anim-pack.mjs mais sont inatteignables :
 // chaque moteur vérifie l'appartenance à ANIMS avant de rendre.
@@ -73,7 +75,6 @@ export const BANK = [
   { name: 'funnel',  desc: "un entonnoir : beaucoup entrent, peu ressortent. « le tunnel », « peu ressortent », « le taux de conversion », « sur cent personnes », « il en reste »." },
 
   // ── la logique, la methode ──
-  { name: 'idea',    desc: "une idee, une astuce, une methode, un declic, « le secret c'est... »." },
   { name: 'flow',    desc: "A MENE A B MENE A C : une chaine d'etapes reliees par des fleches. Mets les libelles dans items[].text (3 max, 14 caracteres). Ideal pour « tu fais X, ca te donne Y, et Y te rapporte Z »." },
   { name: 'orbit',   desc: "un centre et des satellites : tout part d'un seul outil. « tout part de la », « un seul outil », « le centre », « autour de »." },
   { name: 'list',    desc: "une liste, une bibliotheque, un catalogue, « plus de X scripts / modeles / options »." },

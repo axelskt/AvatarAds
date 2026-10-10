@@ -61,7 +61,21 @@ export function capSkinCss(W) {
       .cap.sk-S16 { color: #ffe600; -webkit-text-stroke: ${p(6)} #000; text-shadow: ${p(5)} ${p(6)} 0 #000; }
       .cap.sk-S17 { -webkit-text-stroke: 0; text-shadow: 0 0 ${p(14)} #ff1a1a, 0 0 ${p(38)} rgba(255,26,26,.85), 0 ${p(3)} ${p(10)} rgba(0,0,0,.6); }
       .cap.sk-S18 { --fs: ${p(96)}; font-family: 'Anton', sans-serif; font-weight: 400; color: #ffd24a; -webkit-text-stroke: ${p(5)} #7a0c0c; text-shadow: 0 ${p(5)} 0 #b3121a, 0 ${p(8)} ${p(18)} rgba(0,0,0,.5); }
-      .cap.sk-S19 { font-family: 'Montserrat', sans-serif; font-weight: 900; color: #ffe600; -webkit-text-stroke: ${p(7)} #000; }`
+      .cap.sk-S19 { font-family: 'Montserrat', sans-serif; font-weight: 900; color: #ffe600; -webkit-text-stroke: ${p(7)} #000; }
+      /* fond crème (scène plein cadre) : les styles sans contour (néons, ombres seules) prennent un contour noir et une
+         ombre courte — même police, même couleur, mais lisibles sur le clair (audit 10/10) */
+      .cap.sk.sk-creme { -webkit-text-stroke: ${p(7)} #000; paint-order: stroke fill; text-shadow: 0 ${p(4)} ${p(10)} rgba(0,0,0,.28); }
+      .cap.sk-S09.sk-creme, .cap.sk-S13.sk-creme { -webkit-text-stroke: ${p(5)} #000; }
+      /* moment clé (groupe) : la phrase en bloc sur 2-3 lignes, chaque mot s'allume quand il est dit (usine/captions.mjs) */
+      .cap.sk.grp { --fs: ${p(76)}; left: 9% !important; right: 9% !important; white-space: normal; line-height: 1.12; }
+      .cap.sk.grp .gw { display: inline-block; opacity: 0; }
+      .cap.sk.bx.grp { --fs: ${p(62)}; line-height: 1.5; }
+      .cap.sk.bx.grp .gw { background: #fff; border-radius: ${p(16)}; padding: ${p(6)} ${p(20)} ${p(8)}; margin: 0 ${p(2)};
+        box-shadow: 0 ${p(8)} ${p(24)} rgba(0,0,0,.28); line-height: 1.15; }
+      .cap.sk-S03.bx.grp .gw { background: #1d6bff; }
+      .cap.sk-S07.bx.grp .gw { background: #e11d2e; }
+      .cap.sk-S05.bx.grp .gw { background: #ff2d8a; border-radius: ${p(40)}; }
+      .cap.sk-S05.bx.grp .gw:nth-child(even) { background: #ffe600; color: #111; }`
 }
 
 // ── ② TEXTE CHOC ─────────────────────────────────────────────────────────────

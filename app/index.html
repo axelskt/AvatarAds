@@ -7276,6 +7276,8 @@ function enterApp(profile){
   currentMember = profile;
   try{ const be=document.getElementById('aaBootEchec'); if(be) be.remove(); }catch(_){}   // compte chargé après un premier échec
   try{ if(typeof _libLoadServer==='function') _libLoadServer(); }catch(_){}   // #65 · fusionne la biblio du compte (tous appareils)
+  // Montage IA (audit 10/10) : un montage interrompu par la page fermée rend ses crédits, un rendu fini en son absence est rangé
+  setTimeout(function(){ try{ _mtPendSolder(); _mtRepriseRendu(); }catch(_){} }, 4000);
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('memberBar').style.display = 'flex';
   // Mobile : on arrive sur Express par défaut (écran simple, pas de zoom clavier) — sauf si un modèle a été choisi depuis la LP (aa_tool), auquel cas _applyStartTool ouvrira le bon module
@@ -13743,7 +13745,9 @@ function _mtAdvDirectives(){
 // le brief part avec l'audio vers orchestrate (champ « brief », ≠ « script » qui sert à l'alignement)
 function _mtBrief(){
   const d=_mtAdvDirectives(), b=String((_mt.brief||'')).trim();
-  return (d ? d+(b?' \n':'') : '')+b;   // borne serveur : 700 car., les directives passent en premier
+  // SON texte d'abord (audit 10/10) : avec les consignes des réglages en tête, la borne serveur coupait son brief et les
+  // RETOUCHES de la review (ajoutées à la fin). Borne serveur relevée à 1 500 caractères.
+  return b + (d ? (b?' \n':'') + d : '');
 }
 // 💾 le site de l'user est mémorisé 14 jours → pré-rempli à son retour (gain de temps)
 const MT_SITE_TTL = 14*24*60*60*1000;
@@ -14324,6 +14328,7 @@ function mtLibRegisterSounds(){
 // après un montage réussi : la fiche apprend ce que la vidéo révèle de neuf.
 // Volontairement silencieux et non bloquant — l'utilisateur a déjà sa vidéo.
 async function mtMemLearn(transcript){
+  if(_mt && _mt.useBrand===false) return;   // « Utiliser Ma marque » coupé : ce montage n'apprend rien à la fiche (audit 10/10)
   if((currentMember?.plan||'free').toLowerCase()==='free') return;
   if(_mtMem && _mtMem.auto_learn === false) return;
   const site=_mtSiteValue();
@@ -14397,6 +14402,7 @@ async function mtSetMp3(f){
   _measure(f);
   _mtUpdateCost();
   toast('Audio chargé — nettoyage automatique en cours…');
+  _mt._nettoyage = _tok;   // un montage lancé maintenant attendrait l'audio nettoyé (audit 10/10, voir montageGo)
 
   // #68c · l'audio passe TOUJOURS par le nettoyage standard (débruitage + silences)
   // avant le montage : plus besoin de faire un aller-retour par le module dédié.
@@ -14423,12 +14429,12 @@ async function mtSetMp3(f){
     _mt.mp3 = new File([r.blob], f.name.replace(/\.[^.]+$/, '') + '-clean.wav', { type:'audio/wav' });
     _measure(_mt.mp3);
     if(lbl) lbl.textContent = f.name + (removed > 0.2 ? ' · nettoyé −' + removed + 's' : ' · nettoyé');
-    toast(removed > 0.2 ? '✨ Audio nettoyé — ' + removed + 's de silences retirés' : '✨ Audio nettoyé');
+    toast(removed > 0.2 ? 'Audio nettoyé — ' + removed + 's de silences retirés' : 'Audio nettoyé');
   } catch(e){
     console.warn('mtSetMp3 auto-clean:', e);   // jamais bloquant : on garde l'audio d'origine
     if(lbl) lbl.textContent = f.name;
     toast('Audio chargé (nettoyage auto indisponible)');
-  }
+  } finally { if(_mt._nettoyage === _tok) _mt._nettoyage = 0; }
 }
 // 🧑 avatar optionnel : il parle le MP3 en lipsync (pipeline Hedra du Générateur, 2 cr/s)
 // #84 · PLUSIEURS visages = ROTATION : à chaque fois que l'avatar réapparaît
@@ -14506,7 +14512,7 @@ function mtSetLipModel(m){
 function _mtUpdateCost(){
   try{ _mtOptSync(); }catch(_){}
   const b=document.getElementById('mtGoLbl'); if(!b) return;
-  if(!(_mt.src==='gameplay' && _mt.avatar)){ b.textContent = 'Créer ma vidéo — ' + CREDIT_COSTS.montageIA + ' crédits'; return; }
+  if(!(_mt.src==='gameplay' && _mt.avatar)){ window._mtPrixTexte = CREDIT_COSTS.montageIA + ' crédits'; window._mtPrixMin = window._mtPrixMax = 0; b.textContent = 'Créer ma vidéo — ' + CREDIT_COSTS.montageIA + ' crédits'; return; }
   // Axel 09/10 : JAMAIS le nom du modèle sur le bouton (ni ailleurs côté client) — on parle de l'avatar, pas de la techno.
   const omni=_mt.lipModel==='omnihuman', mix=_mt.lipModel==='mix';
   const rate=omni?CREDIT_COSTS.omniPerSec:CREDIT_COSTS.avatarPerSec;
@@ -14522,7 +14528,9 @@ function _mtUpdateCost(){
       ? Math.ceil(CREDIT_COSTS.montageIA + Math.min(sec,_hook)*CREDIT_COSTS.omniPerSec + Math.max(0,sec-_hook)*CREDIT_COSTS.avatarPerSec + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec)
       : Math.ceil(CREDIT_COSTS.montageIA + sec*rate + Math.max(0,dur-sec)*CREDIT_COSTS.hyperframesPerSec);
     const cLo=cost(lo), cHi=cost(hi);
-    b.textContent = 'Créer ma vidéo — '+(cLo===cHi ? cLo+' crédits' : cLo+' à '+cHi+' crédits');
+    window._mtPrixMax = cHi; window._mtPrixMin = cLo; window._mtSecMax = hi;   // le haut annoncé : au-delà, le flux demande confirmation avant de débiter les scènes
+    window._mtPrixTexte = (cLo===cHi ? cLo+' crédits' : cLo+' à '+cHi+' crédits');
+    b.textContent = 'Créer ma vidéo — '+window._mtPrixTexte;
   } else {
     b.textContent = 'Créer ma vidéo — '+CREDIT_COSTS.montageIA+' crédits + '+rate+' cr/s d’avatar';
   }
@@ -14843,8 +14851,8 @@ function _mtBriefManquant(){
   try { mtBriefOpen(); } catch(_) {}
   const t = document.getElementById('mtBrief');
   if (t) { t.focus(); try { t.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(_){} }
-  toast(v ? '✍️ Ton brief est trop court — dis en une phrase de quoi parle la vidéo et ce que tu veux mettre en avant'
-          : '✍️ Décris ta vidéo en une phrase — c\'est ce qui guide tout le montage');
+  toast(v ? 'Ton brief est trop court — dis en une phrase de quoi parle la vidéo et ce que tu veux mettre en avant'
+          : 'Décris ta vidéo en une phrase — c\'est ce qui guide tout le montage');
   return true;
 }
 
@@ -14853,7 +14861,7 @@ function _mtBriefManquant(){
 // visuels. C'est un choix valable, mais il doit être conscient.
 function _mtSansMedia(){
   const aImages = !!(window._edAi && (_edAi.files || []).length);
-  return !_mt.avatar && !aImages;
+  return !_mt.avatar && !aImages && !_mt.video;   // SA vidéo est un visuel à lui (audit 10/10)
 }
 function _mtAvertirSansMedia(){
   return new Promise((ok) => {
@@ -14861,7 +14869,7 @@ function _mtAvertirSansMedia(){
     m = document.createElement('div'); m.id = 'mtNoMediaModal';
     m.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:18px';
     m.innerHTML = '<div style="width:min(440px,94vw);background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:22px">'
-      + '<div style="font-size:17px;font-weight:800;margin-bottom:8px">⚠ Aucun visuel à toi</div>'
+      + '<div style="font-size:17px;font-weight:800;margin-bottom:8px">Aucun visuel à toi</div>'
       + '<div style="font-size:12.5px;color:var(--text3);line-height:1.65;margin-bottom:8px">Tu n\'as fourni ni photo d\'avatar, ni image de référence. Ta vidéo sera montée <b>uniquement avec des animations</b> : quand tu parleras de toi, de ton produit ou de ton résultat, l\'IA ne pourra rien montrer de réel.</div>'
       + '<div style="font-size:12px;color:var(--text-3);line-height:1.6;margin-bottom:16px">Une photo d\'avatar + 2 ou 3 visuels changent complètement le rendu.</div>'
       + '<button id="mtNmAdd" style="width:100%;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:13.5px;border:none;border-radius:11px;cursor:pointer;font-family:var(--font);margin-bottom:9px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Ajouter mes visuels</button>'
@@ -14874,6 +14882,29 @@ function _mtAvertirSansMedia(){
       if (z) try { z.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(_){}
     };
     m.querySelector('#mtNmGo').onclick = () => { m.remove(); ok(true) };
+  });
+}
+
+// Le prix réel dépasse le haut de la fourchette affichée : on le dit avant de débiter les scènes (audit 10/10).
+function _mtConfirmerPrix(total, max, d){
+  return new Promise((ok) => {
+    let m = document.getElementById('mtPrixModal'); if (m) m.remove();
+    m = document.createElement('div'); m.id = 'mtPrixModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:grid;place-items:center;padding:18px';
+    m.innerHTML = '<div style="width:min(440px,94vw);background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:22px">'
+      + '<div style="font-size:17px;font-weight:800;margin-bottom:8px">Ton montage coûtera ' + total + ' crédits</div>'
+      + '<div style="font-size:12.5px;color:var(--text3);line-height:1.65;margin-bottom:16px">C\'est plus que l\'estimation du bouton (' + max + ' crédits au plus) : '
+      // la VRAIE cause (relecture 10/10) : plus de visage que prévu, et/ou la photo à recadrer au format de la scène
+      + ([ (d && d.secMax && d.sec > d.secMax) ? 'ton avatar parle ' + d.sec + ' s (l\'estimation en comptait ' + d.secMax + ')' : '',
+          (d && d.recadrages) ? 'ta photo doit être recadrée au format des scènes (' + d.recadrages + ' crédits)' : '' ].filter(Boolean).join(', et ')
+        || 'les scènes prévues par le montage coûtent plus que l\'estimation')
+      + '. Tu peux continuer, ou annuler : les crédits du montage te sont rendus, seule l\'analyse (2 crédits) reste due.</div>'
+      + '<button id="mtPxGo" style="width:100%;padding:13px;background:linear-gradient(135deg,#FF6B35,#ff8f5e);color:#1A0A02;font-weight:800;font-size:13.5px;border:none;border-radius:11px;cursor:pointer;font-family:var(--font);margin-bottom:9px">Continuer — ' + total + ' crédits</button>'
+      + '<button id="mtPxNo" style="width:100%;padding:12px;background:var(--bg4);border:1px solid var(--border2);border-radius:11px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font)">Annuler le montage</button>'
+      + '</div>';
+    document.body.appendChild(m);
+    m.querySelector('#mtPxGo').onclick = () => { m.remove(); ok(true) };
+    m.querySelector('#mtPxNo').onclick = () => { m.remove(); ok(false) };
   });
 }
 
@@ -14891,6 +14922,9 @@ async function montageGo(){
     }
   }
   if (_mtBriefManquant()) return;
+  // l'audio se nettoie encore : lancer maintenant découpait les scènes dans l'audio BRUT pendant que la base prenait le
+  // nettoyé (lèvres décalées) — on attend la fin du nettoyage (audit 10/10)
+  if (_mt._nettoyage){ toast('Nettoyage de ton audio en cours — relance dans quelques secondes'); return; }
   if (_mtSansMedia() && !(await _mtAvertirSansMedia())) return;
 
   // le site est mémorisé une bonne fois — edAiGenerate/orchestrate le récupèrent tout seuls
@@ -14915,7 +14949,10 @@ async function montageGo(){
   }
 
   // 🎮 pas d'avatar → 100 % gameplay + voix : pipeline Générateur classique (split + Montage IA auto)
+  // les 90 s se vérifient AVANT tout débit (audit 10/10 : le refus tombait après le débit de la base)
+  if((_mt.mp3Dur||0) > 90.5){ toast('Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
   window._mtChoice = true; // vidéo prête → proposer Éditeur ou MP4 direct
+  window._mtBaseOfferte = Date.now();   // la base de CE montage n'ajoute pas le 1080p (un seul usage, voir startGeneration)
   const fs = document.getElementById('f-script');
   if(fs && script) fs.value = script;
   nav('generator');
@@ -15234,6 +15271,11 @@ async function _mtAvatarInFormat(idx, target){
   const okAsIs = (want==='portrait') ? (orient!=='paysage') : (orient==='paysage');
   if(okAsIs) return remember(base);
   // sinon régénération img2img dans le nouveau format
+  // SA PROPRE OP (audit 10/10) : sans elle, l'image (qualité haute, 5 cr) se tirait sur la dernière op ouverte — souvent
+  // celle du montage — et le rendu répondait 402 après des scènes déjà payées. Pas de crédits → la photo d'origine
+  // (le moteur la recadre en couvrant le cadre).
+  if(!(await spendCreditsFor(_MT_RECADRAGE_CR, 'recadrage de la photo d\'avatar'))) return base;
+  const _opRecadrage = window._aaLastSpendOp || null;
   let token=''; try{ token=(await sb.auth.getSession()).data.session?.access_token || ''; }catch(_){}
   // portrait = vrai 9:16 en 2K (Axel 24/09) ; repli 1024x1536 si OpenAI refusait cette taille
   const sizes  = want==='paysage' ? ['1536x1024'] : ['1152x2048', '1024x1536'];
@@ -15249,7 +15291,7 @@ async function _mtAvatarInFormat(idx, target){
         fd.append('prompt', prompt);
         fd.append('n','1'); fd.append('size', size);
         fd.append('quality','high'); fd.append('moderation','low');
-        const r=await fetch(OPENAI_PROXY+'?path=/v1/images/edits', { method:'POST', headers:{ ...(_aaOp()), 'Authorization':'Bearer '+token }, body: fd });
+        const r=await fetch(OPENAI_PROXY+'?path=/v1/images/edits', { method:'POST', headers:{ ...(_aaOp(_opRecadrage)), 'Authorization':'Bearer '+token }, body: fd });
         const d=await r.json();
         if(d.error){
           const _em = String(d.error.message||'');
@@ -15266,8 +15308,107 @@ async function _mtAvatarInFormat(idx, target){
     }
     if(!sizeRefused) break;
   }
-  // échec de régénération → on renvoie l'original (le renderer cover-crop centre le visage)
+  // échec de régénération → on renvoie l'original (le renderer cover-crop centre le visage), et le recadrage est rendu
+  if(_opRecadrage){ try{ await creditsFlowRefund('recadrage de la photo impossible', [_opRecadrage]); }catch(_){} }
   return base;
+}
+const _MT_RECADRAGE_CR = 5;   // = imgCost('high') d'openai-proxy : une image gpt-image en qualité haute
+// le recadrage coûtera-t-il ? (photo dans la mauvaise orientation, pas encore en cache) — pour annoncer le VRAI prix
+async function _mtRecadragesAPayer(segs){
+  const pool = (_mt.avatars && _mt.avatars.length) ? _mt.avatars : (_mt.avatar ? [_mt.avatar] : []);
+  if(!pool.length) return 0;
+  const vus = new Set(); let n = 0;
+  for(let i=0;i<segs.length;i++){
+    const base = pool[((i%pool.length)+pool.length)%pool.length];
+    const want = segs[i].format==='paysage' ? 'paysage' : 'portrait';
+    const cle = pool.indexOf(base) + ':' + want;
+    if(vus.has(cle)) continue; vus.add(cle);
+    const c = _mt._avFmt && _mt._avFmt.get(base);
+    if(c && c[want]) continue;
+    let orient = ''; try{ orient = await _mtImgOrient(base); }catch(_){}
+    const okAsIs = (want==='portrait') ? (orient!=='paysage') : (orient==='paysage');
+    if(!okAsIs) n++;
+  }
+  return n * _MT_RECADRAGE_CR;
+}
+// ── LES CRÉDITS NE DÉPENDENT PAS DE L'ONGLET (audit 10/10) ─────────────────
+// Onglet fermé (ou rechargé) entre le débit du montage et l'envoi au rendu : la réserve restait due à personne. Chaque
+// lancement note ses ops ici, sous une clé UNIQUE (l'op du montage) et avec le compte, et rafraîchit un battement toutes
+// les 60 s tant que le flux tourne ; l'envoi au rendu efface l'entrée (le serveur tient alors les ops). Une entrée sans
+// battement depuis 6 min est un montage interrompu : ses ops sont remboursées (refund_credits ne rend jamais plus que la
+// réserve restante, rien si elle a été tirée), et l'entrée n'est retirée qu'après une réponse définitive.
+const _MT_PEND = 'aa_mt_pending', _MT_JOB = 'aa_mt_jobs';
+function _mtPendLire(){ try{ const l=JSON.parse(localStorage.getItem(_MT_PEND)||'[]'); return Array.isArray(l) ? l.filter(x=>x && x.id) : []; }catch(_){ return []; } }
+function _mtPendEcrire(l){ try{ localStorage.setItem(_MT_PEND, JSON.stringify(l.slice(-12))); }catch(_){} }
+function _mtPendSet(id, ops){ if(!id) return; const l=_mtPendLire().filter(x=>x.id!==id); l.push({ id, uid: (currentMember && currentMember.id) || '', ops:(ops||[]).filter(Boolean), t:Date.now() }); _mtPendEcrire(l); }
+function _mtPendBat(id){ if(!id) return; const l=_mtPendLire(); const e=l.find(x=>x.id===id); if(e){ e.t=Date.now(); _mtPendEcrire(l); } }
+function _mtPendClear(id){ if(!id) return; _mtPendEcrire(_mtPendLire().filter(x=>x.id!==id)); }
+async function _mtPendSolder(){
+  if(window._mtPendEnCours) return; window._mtPendEnCours = true;
+  try{
+    const uid = (currentMember && currentMember.id) || '';
+    const now = Date.now(); let prochain = 0;
+    for(const e of _mtPendLire()){
+      if(e.uid && uid && e.uid !== uid) continue;                 // un autre compte : jamais touché d'ici
+      const age = now - (e.t||0);
+      if(age > 2*3600*1000){ _mtPendClear(e.id); continue; }    // au-delà, refund_credits refuse (too_old)
+      if(age < 6*60*1000){ prochain = prochain ? Math.min(prochain, 6*60*1000 - age) : 6*60*1000 - age; continue; }   // battement récent : le flux tourne
+      let fini = true, rendu = 0;
+      for(const op of (e.ops||[])){
+        try{
+          const { data, error } = await sb.rpc('refund_credits', { p_op_id: op });
+          if(error || !data){ fini = false; continue; }
+          if(data.ok) rendu += (data.refunded || 0);
+          else if(data.reason === 'in_progress') fini = false;      // l'analyse tourne encore côté serveur : on repassera
+          if(typeof data.balance === 'number' && currentMember){ currentMember.credits_remaining = data.balance; try{ _updateQuotaDisplay(); }catch(_){} }
+        }catch(_){ fini = false; }
+      }
+      if(fini) _mtPendClear(e.id); else prochain = prochain ? Math.min(prochain, 5*60*1000) : 5*60*1000;
+      if(rendu > 0) toast(rendu + ' crédits rendus — un montage s\'était arrêté avant le rendu (page fermée)');
+    }
+    if(prochain) setTimeout(()=>{ try{ _mtPendSolder(); }catch(_){} }, prochain + 5000);
+  } finally { window._mtPendEnCours = false; }
+}
+// Le rendu continue sur le serveur même si la page est fermée : au retour, on le retrouve et on le range. Plusieurs
+// rendus peuvent être en route (« Fermer », puis un 2e montage) : on les garde TOUS.
+function _mtJobsLire(){ try{ const l=JSON.parse(localStorage.getItem(_MT_JOB)||'[]'); return Array.isArray(l) ? l.filter(x=>x && x.jobId) : []; }catch(_){ return []; } }
+function _mtJobSet(jobId){ try{ const l=_mtJobsLire().filter(x=>x.jobId!==jobId); l.push({ jobId, uid:(currentMember && currentMember.id) || '', t:Date.now() }); localStorage.setItem(_MT_JOB, JSON.stringify(l.slice(-10))); }catch(_){} }
+function _mtJobClear(jobId){ try{ localStorage.setItem(_MT_JOB, JSON.stringify(_mtJobsLire().filter(x=>x.jobId!==jobId))); }catch(_){} }
+window._mtRepris = window._mtRepris || {};
+function _mtRepriseRendu(){
+  const uid = (currentMember && currentMember.id) || '';
+  for(const j of _mtJobsLire()){
+    if(j.uid && uid && j.uid !== uid) continue;
+    if(Date.now()-(j.t||0) > 6*3600*1000){ _mtJobClear(j.jobId); continue; }
+    if(window._mtSuiviActif===j.jobId || window._mtRepris[j.jobId]) continue;   // déjà suivi
+    window._mtRepris[j.jobId] = true;
+    let essais=0;
+    const tour=async()=>{
+      try{
+        const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: j.jobId }) });
+        const d=await r.json().catch(()=>({}));
+        if(d.status==='done' && d.url){
+          _mtJobClear(j.jobId); delete window._mtRepris[j.jobId];
+          try{ const v=await fetch(d.url); if(v.ok && typeof _libAutoSaveVideo==='function') await _libAutoSaveVideo(await v.blob(), 'Montage IA', ['Montage IA','9:16'], '🎬', 'MONTAGE'); }catch(_){}
+          toast('Ton Montage IA est prêt : il est dans ta Bibliothèque');
+          return;
+        }
+        if(d.status==='failed' || r.status===404){ _mtJobClear(j.jobId); delete window._mtRepris[j.jobId]; if(d.status==='failed') toast('Un Montage IA a échoué sur le serveur — tes crédits ont été rendus'); return; }
+      }catch(_){}
+      if(++essais < 60) setTimeout(tour, 30000); else delete window._mtRepris[j.jobId];
+    };
+    tour();
+  }
+}
+// le bouton du bas de l'écran de progression : « Annuler » tant que rien n'est parti au rendu, puis plus jamais
+function _mtBoutonRendu(mode){
+  try{
+    const bt=document.querySelector('#mtProgOv button[onclick="_mtAbortRun()"], #mtProgOv button[data-mt-rendu]');
+    if(!bt) return;
+    bt.setAttribute('data-mt-rendu','1');
+    if(mode==='envoi'){ bt.textContent='Envoi au rendu…'; bt.disabled=true; bt.removeAttribute('onclick'); }
+    else { bt.textContent='Fermer — le rendu continue'; bt.disabled=false; bt.setAttribute('onclick','_mtFermerSuivi()'); }
+  }catch(_){}
 }
 
 // génère UNE scène avatar Hedra (lipsync d'un extrait audio sur la photo) → Blob mp4
@@ -15882,30 +16023,44 @@ async function _mtSegmentedGenerate(){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user){ toast('Reconnecte-toi puis réessaie'); return; }
   if(!_mt.mp3 || !_mt.avatar){ toast('Importe ton audio et une photo d\'avatar'); return; }
+  const _voix = _mt.mp3;   // LA voix de ce montage, figée : base, analyse et scènes lisent le même fichier
   const omni = _mt.lipModel==='omnihuman';
   const rate = omni ? CREDIT_COSTS.omniPerSec : CREDIT_COSTS.avatarPerSec;
   const modelId = omni ? HEDRA_MODELS.omnihuman : HEDRA_MODELS.default;
 
   // 1) chef d'orchestre (transcription + plan) débité d'avance
   if((_mt.mp3Dur||0) > 90.5){ toast('Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
+  // pas de quoi payer au moins le bas de la fourchette : on le dit AVANT l'analyse (2 crédits et 1 à 2 min perdus sinon)
+  { const _ill = !!(currentMember && (String(currentMember.plan||'').toLowerCase()==='developer' || currentMember.is_owner));
+    if(!_ill && window._mtPrixMin && creditsBalance() < window._mtPrixMin){
+      toast('Il faut au moins ' + window._mtPrixMin + ' crédits pour ce montage — il t\'en reste ' + creditsBalance());
+      try{ _insufficientCredits(window._mtPrixMin - creditsBalance()); }catch(_){}
+      return;
+    } }
   if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
   const _opMontage = window._aaLastSpendOp || null;   // désignée à render-job (relecture 26/09) : c'est ELLE qui paie le rendu
   let _opHabillage = null;
+  _mtPendSet(_opMontage, [_opMontage]);
+  const _bat = setInterval(()=>_mtPendBat(_opMontage), 60000);   // « ce flux tourne encore » (lu par _mtPendSolder des autres onglets)
+  // quitter la page pendant la préparation coupe le montage : on prévient (le rendu, lui, continue sans la page)
+  const _quitter=(e)=>{ e.preventDefault(); e.returnValue=''; return ''; };
+  window.addEventListener('beforeunload', _quitter);
+  const _libereQuitter=()=>{ window.removeEventListener('beforeunload', _quitter); clearInterval(_bat); };
   // l'op du chef est RÉGLÉE à son retour : c'est seulement là qu'un remboursement aboutit (avant : « in_progress », rien rendu)
-  const _sortieAnnulee = async () => { await creditsFlowRefund('tu as annulé le montage', [_opMontage, _opHabillage].filter(Boolean)); _mtProg(-1); };
+  const _sortieAnnulee = async () => { await creditsFlowRefund('tu as annulé le montage', [_opMontage, _opHabillage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); };
   _mtProg(4, 'Préparation de ton audio…');
   try{
     // durée réelle de l'audio
     let dur=_mt.mp3Dur;
-    if(!dur){ try{ const ac=new (window.AudioContext||window.webkitAudioContext)(); const d=await ac.decodeAudioData(await _mt.mp3.arrayBuffer()); dur=d.duration; await ac.close(); }catch(_){ dur=20; } }
+    if(!dur){ try{ const ac=new (window.AudioContext||window.webkitAudioContext)(); const d=await ac.decodeAudioData(await _voix.arrayBuffer()); dur=d.duration; await ac.close(); }catch(_){ dur=20; } }
 
     // 2) base gameplay (bouclée) + voix
     _mtProg(10, 'Montage du gameplay de fond…');
-    const baseBlob=await _mtBuildBase(_mt.mp3, dur);
+    const baseBlob=await _mtBuildBase(_voix, dur);
 
     // 3) orchestrate : audio + frames base + script + site + médias b-roll
     _mtProg(22, 'Le chef d\'orchestre écoute ta vidéo… (~30 s)');
-    const wav=await _mtAudioSliceWav(_mt.mp3, 0, dur);
+    const wav=await _mtAudioSliceWav(_voix, 0, dur);
     const frames=await _mtFramesFromVideo(baseBlob, 6);
     const fd=new FormData();
     fd.append('audio', wav, ((_mt.video && _mt.video.name) || 'source.mp4'));   // audio + avatar sans vidéo : _mt.video est null (TypeError avant le lipsync)
@@ -15955,7 +16110,7 @@ async function _mtSegmentedGenerate(){
     // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
     // le seul instant où une erreur se corrige sans tout relancer.
     if (MT_RAPPORT && typeof _mtProgPause === 'function') _mtProgPause();
-    if (MT_RAPPORT && !(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
+    if (MT_RAPPORT && !(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); _libereQuitter(); _mtPendClear(_opMontage); return; }
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
@@ -16004,7 +16159,7 @@ async function _mtSegmentedGenerate(){
     // Audio ENVOYÉ (26/09) : suite réelle de la voix (Hedra ≤ +0,5 s, OmniHuman ≤ +0,6 s) ou silence complété en fin
     // d'audio ; `lipEnd` dit au moteur jusqu'où les lèvres suivent la voix. La dernière scène Hedra n'est PLUS couverte
     // jusqu'à la fin de l'audio (la réconciliation l'aurait facturée au client) : réservé au render-worker, qui ne réconcilie pas.
-    const _dec=await _omnihDecode(_mt.mp3), _fin=_lipFinParole(_dec);
+    const _dec=await _omnihDecode(_voix), _fin=_lipFinParole(_dec);
     const prep=[];
     for(let i=0;i<segs.length;i++){
       const s=segs[i], u=Math.max(0,(s.end||0)-(s.start||0));
@@ -16022,15 +16177,24 @@ async function _mtSegmentedGenerate(){
     const opsScenes=prep.reduce((a,x)=>a+x.op, 0);
     const habillage=Math.max(0, scenesCost - opsScenes);
     const _illimite = !!(currentMember && (String(currentMember.plan||'').toLowerCase()==='developer' || currentMember.is_owner));
-    if(!_illimite && creditsBalance() < opsScenes + habillage){
-      toast('Il faut ' + (opsScenes + habillage) + ' crédits pour les scènes — il t\'en reste ' + creditsBalance());
-      try{ _insufficientCredits(opsScenes + habillage - creditsBalance()); }catch(_){}
-      await creditsFlowRefund('crédits insuffisants pour les scènes'); _mtProg(-1); return;
+    const recadrages = _illimite ? 0 : await _mtRecadragesAPayer(segs);
+    if(!_illimite && creditsBalance() < opsScenes + habillage + recadrages){
+      toast('Il faut ' + (opsScenes + habillage + recadrages) + ' crédits pour les scènes — il t\'en reste ' + creditsBalance());
+      try{ _insufficientCredits(opsScenes + habillage + recadrages - creditsBalance()); }catch(_){}
+      await creditsFlowRefund('crédits insuffisants pour les scènes'); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); return;
     }
-    if(_annule()){ await _sortieAnnulee(); return; }
+    // LE PRIX ANNONCÉ EST UNE PROMESSE (audit 10/10) : le bouton donne une fourchette ; si le chef d'orchestre a prévu plus
+    // de visage que son haut, on le dit AVANT de débiter les scènes (ou on rend les crédits du montage).
+    if(!_illimite && window._mtPrixMax && (CREDIT_COSTS.montageIA + opsScenes + habillage + recadrages) > window._mtPrixMax){
+      if(typeof _mtProgPause === 'function') _mtProgPause();
+      const ok = await _mtConfirmerPrix(CREDIT_COSTS.montageIA + opsScenes + habillage + recadrages, window._mtPrixMax, { sec: Math.round(avSec), secMax: window._mtSecMax || 0, recadrages });
+      if(!ok){ await _sortieAnnulee(); _libereQuitter(); _mtPendClear(_opMontage); return; }
+    }
+    if(_annule()){ await _sortieAnnulee(); _libereQuitter(); _mtPendClear(_opMontage); return; }
     if(habillage > 0){
       if(!(await spendCreditsFor(habillage, 'habillage du montage'))) throw new Error('débit de l\'habillage impossible — réessaie');
       _opHabillage = window._aaLastSpendOp || null;
+      _mtPendSet(_opMontage, [_opMontage, _opHabillage]);
     }
 
     // 5) génère chaque scène avatar (photo régénérée au bon format si besoin), chacune sur SON op
@@ -16044,6 +16208,8 @@ async function _mtSegmentedGenerate(){
       // le rôle borne la « scène vivante » : seulement aux extrémités, jamais au milieu
       const { role, p, wav:segWav, op } = prep[i];
       if(p.lipEnd!=null) s.lipEnd=p.lipEnd; else delete s.lipEnd;
+      // Annuler pendant le recadrage ou la détection des mains : on s'arrête AVANT de payer la scène (audit 10/10)
+      if(_annule()){ await _sortieAnnulee(); return; }
       if(!(await spendCreditsFor(op, 'scène avatar '+(i+1)+'/'+segs.length))) throw new Error('débit de la scène '+(i+1)+' impossible — réessaie');
       clipBlobs.push(await _mtScene(img, segWav, fmt, modelId, Math.max(0,(s.end||0)-(s.start||0)), role));
     }
@@ -16062,8 +16228,11 @@ async function _mtSegmentedGenerate(){
       avatar_clips.push(p);
     }
     const assets=[];
-    for(const b of (plan.broll||[])){
-      const a=_lot.find(x=>x.id===b.assetId); if(!a) continue;
+    // TOUS ses fichiers choisis partent au rendu, pas seulement ceux que le chef a placés (audit 10/10) : le moteur pose
+    // d'office un média absent du plan (« un média fourni est toujours placé »). Les visuels de « Ma marque » ajoutés
+    // automatiquement, eux, ne partent que si le chef les a retenus.
+    const _envoi = _lot.filter(x=>(plan.broll||[]).some(b=>b.assetId===x.id) || !String(x.id||'').startsWith('lib'));
+    for(const a of _envoi){
       if(assets.some(x=>x.id===a.id)) continue;
       let up=a.file, ext='jpg', kind='image', ctype='image/jpeg';
       if(a.isVideo){ if((a.file.size||0)<=60*1024*1024){ ext='mp4'; kind='video'; ctype=a.file.type||'video/mp4'; } else { try{ up=await (await fetch(a.url)).blob(); }catch(_){ continue; } } }
@@ -16076,30 +16245,39 @@ async function _mtSegmentedGenerate(){
     _mtProg(92, 'Rendu final sur le serveur… (1 à 3 min)');
     // ops DÉSIGNÉES (relecture 26/09) : le montage paie le rendu, l'habillage est tiré avec lui — jamais une op de scène
     const _ops = _opMontage ? [_opMontage, _opHabillage].filter(Boolean) : [];
+    if(_annule()){ await _sortieAnnulee(); return; }
+    _mtBoutonRendu('envoi');   // à partir d'ici, le serveur tire les crédits : plus d'« Annuler »
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan, input_video:inPath, assets, avatar_clips, ops:_ops }) });
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
+    // le serveur tient les ops et rend ce qui doit l'être : plus rien à rembourser d'ici, et la page peut se fermer
+    _mtPendClear(_opMontage); _libereQuitter(); _mtJobSet(d.job_id);
     _mtPollSegmented(d.job_id, _mtVideoDone);
   }catch(e){
     console.error('montage segmenté:', e);
-    await creditsFlowRefund();
+    const _rendus = await creditsFlowRefund();
+    _mtPendClear(_opMontage); _libereQuitter();
     _mtProg(-1);
-    toast('Montage IA : '+String(e.message||e).slice(0,120));
+    // UN SEUL message (audit 10/10) : le toast du remboursement était aussitôt écrasé par celui de l'erreur
+    toast('Montage IA : '+String(e.message||e).slice(0,120) + (_rendus > 0 ? ' — ' + _rendus + ' crédits rendus (les scènes déjà générées restent dues)' : ''));
   }
 }
 function _mtPollSegmented(jobId, onDone){
   let n=0;
+  window._mtSuiviActif = jobId;   // la reprise au retour (_mtRepriseRendu) ne double pas ce suivi
   const _tRendu = Date.now();   // repère du rendu : la barre s'étale dessus
   const iv=setInterval(async ()=>{
-    if(window._mtAborted){ clearInterval(iv); return; }
+    // (le rendu est lancé : une annulation ne l'arrête plus — il sera rangé dans la Bibliothèque à la fin)
+    if(window._mtAborted){ clearInterval(iv); window._mtSuiviActif = null; setTimeout(()=>{ try{ _mtRepriseRendu(); }catch(_){} }, 20000); return; }
     // délai de suivi dépassé (file chargée) : le rendu CONTINUE sur le serveur — un échec y est remboursé automatiquement
     // (audit 10/10). On ne rembourse plus ici (refund « in_progress » = rien) et on ne dit plus « réessaie » (2e débit).
-    if(++n>180){ clearInterval(iv); window._mtLastJobId = jobId; _mtProg(-1); toast('Ton rendu prend plus de temps que prévu : il continue sur le serveur. Retrouve-le dans « Détails du montage » ; en cas d\'échec, tes crédits te sont rendus automatiquement.'); return; }
+    if(++n>180){ clearInterval(iv); window._mtLastJobId = jobId; window._mtSuiviActif = null; _mtProg(-1); toast('Ton rendu prend plus de temps que prévu : il continue sur le serveur et sera rangé dans ta Bibliothèque dès qu\'il est prêt (même si tu fermes la page). En cas d\'échec, tes crédits te sont rendus automatiquement.'); setTimeout(()=>{ try{ _mtRepriseRendu(); }catch(_){} }, 30000); return; }
     try{
       const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'status', job_id: jobId }) });
       const d=await r.json().catch(()=>({}));
       if(d.status==='done' && d.url){
         clearInterval(iv);
+        _mtJobClear(jobId); window._mtSuiviActif = null;
         creditsFlowDone();
         window._mtLastJobId = jobId;   // l'écran « Détails du montage » relit ce job
         // #124 : la fiche de marque apprend ce que cette vidéo révèle de neuf (silencieux)
@@ -16111,6 +16289,7 @@ function _mtPollSegmented(jobId, onDone){
         else { _mtProg(100,'Terminé !'); setTimeout(()=>_mtProg(-1), 800); }
       } else if(d.status==='failed'){
         clearInterval(iv); _mtProg(-1);
+        _mtJobClear(jobId); window._mtSuiviActif = null;
         await creditsFlowRefund('le rendu a échoué');
         toast('Rendu échoué : '+String(d.error||'réessaie').slice(0,110));
       } else {
@@ -16130,6 +16309,16 @@ function _mtPollSegmented(jobId, onDone){
       }
     }catch(_){ /* réseau : on retentera au prochain tick */ }
   }, 5000);
+  window._mtSuiviIv = iv;
+  // LE RENDU EST LANCÉ : « Annuler » n'annule plus rien (le serveur a déjà tiré les crédits) — il devient « Fermer », et
+  // la vidéo sera rangée dans la Bibliothèque à la fin, page ouverte ou non (audit 10/10)
+  _mtBoutonRendu('suivi');
+}
+function _mtFermerSuivi(){
+  try{ clearInterval(window._mtSuiviIv); }catch(_){}
+  window._mtSuiviActif = null; _mtProg(-1);
+  toast('Le rendu continue sur le serveur : ta vidéo sera rangée dans ta Bibliothèque dès qu\'elle est prête.');
+  setTimeout(()=>{ try{ _mtRepriseRendu(); }catch(_){} }, 20000);
 }
 // #119 · module « 📼 Ma vidéo » → montage AUTOMATIQUE + MP4 direct, rendu SERVEUR.
 // Ne touche PLUS du tout à l'Éditeur : on extrait audio + frames du fichier, on demande le
@@ -16143,11 +16332,21 @@ async function _mtVideoGenerate(){
   const site=(document.getElementById('mtSite')?.value||'').trim();
   try{ if(site) localStorage.setItem('aa_user_site', site); }catch(_){}
   if((_mt.mp3Dur||0) > 90.5){ toast('Audio trop long ('+Math.round(_mt.mp3Dur)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis ton audio ou découpe-le en plusieurs vidéos.'); return; }
+  // la vidéo elle-même : durée (relevée au dépôt) et poids contrôlés AVANT le débit (audit 10/10)
+  { const _dv = ((typeof _mtFiles!=='undefined' ? _mtFiles : []).find(x=>x && x.file===_mt.video) || {}).dur || 0;
+    if(_dv > 90.5){ toast('Vidéo trop longue ('+Math.round(_dv)+' s) — le Montage IA accepte 90 secondes maximum. Raccourcis-la ou découpe-la en plusieurs vidéos.'); return; }
+    if(_mt.video.size > 19.5 * 1024 * 1024){ toast("Ta vidéo dépasse 20 Mo. Réexporte-la plus légère (720p suffit) ou raccourcis-la : au-delà, l'analyse ne passe pas."); return; } }
   window._mtRunId=(window._mtRunId||0)+1; const _run=window._mtRunId;
   if(!(await spendCreditsFor(CREDIT_COSTS.montageIA, 'montage IA'))) return;
   const _opMontage = window._aaLastSpendOp || null;
   window._mtAborted = false;   // un nouveau montage n'hérite pas de l'annulation du précédent
   const _annule=()=>window._mtAborted || _run!==window._mtRunId;
+  // page fermée avant l'envoi au rendu → crédits rendus au retour ; on prévient avant de quitter (audit 10/10)
+  _mtPendSet(_opMontage, [_opMontage]);
+  const _bat = setInterval(()=>_mtPendBat(_opMontage), 60000);
+  const _quitter=(e)=>{ e.preventDefault(); e.returnValue=''; return ''; };
+  window.addEventListener('beforeunload', _quitter);
+  const _libereQuitter=()=>{ window.removeEventListener('beforeunload', _quitter); clearInterval(_bat); };
   _mtProg(6, 'Analyse de ta vidéo…');
   let _tic = null;
   try{
@@ -16262,6 +16461,8 @@ async function _mtVideoGenerate(){
     // viennent de la bibliothèque seulement si leur nom répond à ce qu'il dit.
     fd.append('assets', JSON.stringify(_lot.map(a=>({ id:a.id, name:a.file.name, kind:a.isVideo?'video':'image', auto: String(a.id||'').startsWith('lib') }))));
     for(const a of _lot){ let th=null; if(a.isVideo){ if(a.url) th=await (await fetch(a.url)).blob(); } else th=await _edAiThumb(a.file); if(th) fd.append('asset_'+a.id, th, 'thumb.jpg'); }
+    // Annuler pendant l'extraction de l'audio ou des images : l'analyse ne part pas (audit 10/10) — le montage entier est rendu
+    if(_annule()){ try{ clearInterval(_tic); window._mtTicIv=null; }catch(_){} await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); return; }
     const or=await fetch(SUPABASE_URL+'/functions/v1/orchestrate', { method:'POST', headers: await getAuthHeader(), body: fd });
     const od=await or.json().catch(()=>({}));
     // ── UN COMPTEUR QUI SURVIT À SON ATTENTE DEVIENT UN MENTEUR ─────────────
@@ -16276,14 +16477,14 @@ async function _mtVideoGenerate(){
     // annulé pendant l'attente ? on s'arrête là : pas de rapport, pas de rendu.
     // audit 10/10 : _mtAbortRun n'avait PAS pu rendre l'op (le chef l'avait entamée sans la régler → « in_progress ») ;
     // elle est réglée maintenant, on la rend ici.
-    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); return; }
+    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _libereQuitter(); _mtPendClear(_opMontage); return; }
     if(!or.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+or.status));
     const plan={ duration: Math.round(dur*100)/100, ...od.plan,
                  _words: (od.transcript && od.transcript.words) || [] };
     // LE RAPPORT AVANT LE RENDU. Le plan est là, le rendu n'a pas commencé : c'est
     // le seul instant où une erreur se corrige sans tout relancer.
     if (MT_RAPPORT && typeof _mtProgPause === 'function') _mtProgPause();
-    if (MT_RAPPORT && !(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); return; }
+    if (MT_RAPPORT && !(await _mtRapport(plan))) { creditsFlowRefund && await creditsFlowRefund('montage annulé avant le rendu'); _mtProg(0, ''); _libereQuitter(); _mtPendClear(_opMontage); return; }
     _mt._transcript = String(od.transcript?.text || '');   // #124 : nourrit la mémoire de marque au succès
     _mtRestoreCaptionCase(plan, _mt._transcript);   // #131 : rend aux sous-titres leur casse et leur ponctuation
     _mtStripFun(plan);   // #125b : sons fun et lits = À LA MAIN dans l'Éditeur, jamais par l'IA
@@ -16319,8 +16520,11 @@ async function _mtVideoGenerate(){
       }catch(_){}
     }
     const assets=[];
-    for(const b of (plan.broll||[])){
-      const a=_lot.find(x=>x.id===b.assetId); if(!a) continue;
+    // TOUS ses fichiers choisis partent au rendu, pas seulement ceux que le chef a placés (audit 10/10) : le moteur pose
+    // d'office un média absent du plan (« un média fourni est toujours placé »). Les visuels de « Ma marque » ajoutés
+    // automatiquement, eux, ne partent que si le chef les a retenus.
+    const _envoi = _lot.filter(x=>(plan.broll||[]).some(b=>b.assetId===x.id) || !String(x.id||'').startsWith('lib'));
+    for(const a of _envoi){
       if(assets.some(x=>x.id===a.id)) continue;
       let upf=a.file, ext='jpg', kind='image', ctype='image/jpeg';
       if(a.isVideo){ if((a.file.size||0)<=60*1024*1024){ ext='mp4'; kind='video'; ctype=a.file.type||'video/mp4'; } else { try{ upf=await (await fetch(a.url)).blob(); }catch(_){ continue; } } }
@@ -16331,11 +16535,14 @@ async function _mtVideoGenerate(){
 
     // render-job → poll → download → carte de fin
     _mtProg(66, 'Rendu final sur le serveur… (1 à 3 min)');
+    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); return; }
+    _mtBoutonRendu('envoi');
     const r=await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' }, body: JSON.stringify({ action:'create', plan, input_video:inPath, assets }) });
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
+    _mtPendClear(_opMontage); _libereQuitter(); _mtJobSet(d.job_id);   // le serveur tient le rendu : la page peut se fermer
     _mtPollSegmented(d.job_id, _mtVideoDone);
-  }catch(e){ try{ clearInterval(_tic); window._mtTicIv=null; if(window._mtTicOff){ window._mtTicOff(); window._mtTicOff=null; } }catch(_){} console.error('montage Ma vidéo:', e); _mtProg(-1); await creditsFlowRefund(); toast('Montage IA : '+String(e.message||e).slice(0,120)); }
+  }catch(e){ try{ clearInterval(_tic); window._mtTicIv=null; if(window._mtTicOff){ window._mtTicOff(); window._mtTicOff=null; } }catch(_){} console.error('montage Ma vidéo:', e); _mtProg(-1); await creditsFlowRefund(); _mtPendClear(_opMontage); _libereQuitter(); toast('Montage IA : '+String(e.message||e).slice(0,120)); }
 }
 // 🎁 bonus : les photos d'avatar régénérées au bon format (9:16 / 16:9) pendant le
 // montage sont offertes à l'user — elles n'existaient pas avant, autant les lui donner.
@@ -16438,7 +16645,8 @@ function _mtReviewBack(){ _mtVideoDone(_mtFinalUrl); }
 // 4 crédits ne couvrent pas le coût réel : il faudra réutiliser les clips
 // lipsync existants comme le fait la régénération (l'audio ne change pas).
 // audit 10/10 : la relance repasse par TOUT le montage (chef + rendu, et les scènes avatar) — on annonce le vrai prix de base
-function _mtReviewCost(){ return CREDIT_COSTS.montageIA; }   // 6 cr (Axel, 02/08) : au-dessus des 4 de la simple relance — une review repasse par le chef d'orchestre
+// la relance repasse par le flux complet (mtGo) : même prix que le bouton principal, scènes de l'avatar comprises (audit 10/10)
+function _mtReviewCost(){ try{ _mtUpdateCost(); }catch(_){} return window._mtPrixTexte || (CREDIT_COSTS.montageIA + ' crédits'); }
 function _mtReviewEyebrow(t){
   return '<div class="mono" style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px">'+t+'</div>';
 }
@@ -16496,7 +16704,7 @@ function _mtReviewRender(keepText){
             +'<button onclick="_mtReviewRun()" class="btn btn-primary" style="width:100%;margin-top:26px;padding:'+(mob?'15px':'17px')+';font-weight:800;font-size:'+(mob?15.5:16.5)+'px;border-radius:16px;'
               +'box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 16px 44px -10px var(--accent-glow)">'
               +'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21M6.2 6.2l2.5 2.5M15.3 15.3l2.5 2.5M17.8 6.2l-2.5 2.5M8.7 15.3l-2.5 2.5"/></svg>'
-              +' Relancer avec mes retouches — '+_mtReviewCost()+' crédits'+(_mt&&_mt.avatar?' + l’avatar':'')+'</button>'
+              +' Relancer avec mes retouches — '+_mtReviewCost()+'</button>'
             +'<p class="center faint mono" style="font-size:11px;margin-top:8px">Une nouvelle version est générée · l\'originale est conservée</p>'
           +'</div>'
         +'</div>'
@@ -19876,7 +20084,9 @@ async function _mdRegen(){
     let nTry=0;
     const iv=setInterval(async()=>{
       if(!document.getElementById('mdRegenOv')){ clearInterval(iv); return; }
-      if(++nTry>180){ clearInterval(iv); (function(){ try{ _mdRegenHorloge(false); }catch(_){} })(), ro.remove(); await creditsFlowRefund('le rendu a été trop long'); toast('Rendu trop long — réessaie plus tard'); return; }
+      // délai dépassé : le rendu CONTINUE sur le serveur (un échec y est remboursé) — pas de remboursement vide ici, pas de
+      // « réessaie » (2e débit), et la vidéo sera rangée dans la Bibliothèque à la fin (audit 10/10, comme _mtPollSegmented)
+      if(++nTry>180){ clearInterval(iv); (function(){ try{ _mdRegenHorloge(false); }catch(_){} })(), ro.remove(); _mtJobSet(d.job_id); toast('Le rendu prend plus de temps que prévu : il continue sur le serveur et sera rangé dans ta Bibliothèque.'); setTimeout(()=>{ try{ _mtRepriseRendu(); }catch(_){} }, 30000); return; }
       const sRegen=(Date.now()-tRegen)/1000;
       const p = 10 + 86 * (1 - Math.exp(-sRegen / 190));
       _mdRegenPaint(p);
@@ -26110,7 +26320,9 @@ async function startGeneration(){
     // 📐 1080p facturé à la seconde (720p gratuit) — même durée que la vidéo,
     // puisque c'est bien chaque seconde générée qui coûte plus cher chez Hedra.
     // OmniHuman = 1080p natif inclus dans les 5 cr/s ; Voix native = rien à générer.
-    const _surHD = (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman' && !_gnOnDebit) ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0;
+    // Montage IA sans avatar (window._mtChoice) : le bouton annonce 8 crédits, la base du montage n'ajoute rien (audit 10/10)
+    const _baseMt = !!(window._mtBaseOfferte && Date.now() - window._mtBaseOfferte < 20000); window._mtBaseOfferte = 0;   // ponctuel : jamais collé à la session
+    const _surHD = (typeof _composeQuality !== 'undefined' && _composeQuality >= 1080 && window._genModel!=='omnihuman' && !_gnOnDebit && !_baseMt) ? Math.ceil(durSecs * CREDIT_COSTS.hd1080PerSec) : 0;
     // Audit 04/10 (GEN-2) : UNE seule op pour avatar + 1080p. Avec deux ops, x-aa-op portait la DERNIÈRE (le 1080p) :
     // hedra-proxy la tirait et la réconciliait seule contre le coût réel → ~1,5 cr/s rechargés en « hedra-reconcile »
     // alors que l'op avatar restait payée à côté. hedra-proxy réconcilie maintenant (2 + 0,5 si 1080p) × durée rendue
@@ -36080,7 +36292,7 @@ async function _hedraV3Submit(slug, input){
   // + alerte immédiate à Axel. Le garde-fou principal est _hedraGate() AVANT le débit.
   if(r.status === 402){
     try{ _hedraAlertAxel('Hedra 402 — plus de solde', 'Création de job refusée (402) sur '+slug+'. Recharger le compte Hedra.'); }catch(_){}
-    throw new Error('Fournisseur vidéo momentanément indisponible — aucun crédit débité, réessaie dans un moment');
+    throw new Error('Fournisseur vidéo momentanément indisponible — réessaie dans un moment');
   }
   if(!r.ok) throw new Error('Génération '+r.status+' — '+(await r.text()).slice(0,220));
   const j = await r.json(); const id = j.job_id || j.id;
@@ -40838,7 +41050,10 @@ function edAiAddFiles(list){
     const isImg=f.type.startsWith('image/'), isVid=f.type.startsWith('video/');
     if(!isImg && !isVid) continue;
     if(_edAi.files.length >= 8){ toast('8 fichiers maximum'); break; }
-    const item={ id:'ast'+Date.now()+Math.random().toString(36).slice(2,6), file:f, url:isImg?URL.createObjectURL(f):'', isVideo:isVid };
+    // id LISIBLE (audit 10/10) : « ast-photo-produit-x7k2 » — le moteur lit les mots du nom pour poser le média sur sa
+    // mention ; un « ast1791… » ne disait rien et le média n'était jamais placé d'office
+    const _slug=String(f.name||'media').replace(/\.[^.]+$/,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,30)||'media';   // ≤ 39 caractères au total : orchestrate coupe les ids à 40
+    const item={ id:'ast-'+_slug+'-'+Math.random().toString(36).slice(2,6), file:f, url:isImg?URL.createObjectURL(f):'', isVideo:isVid };
     _edAi.files.push(item);
     if(isVid) _edAiVideoPoster(item); // 1re image du clip → vignette + placement IA + b-roll
   }
@@ -41174,6 +41389,8 @@ function edAiApply(plan, toSource){
   if(window._mtAutoExport){
     window._mtAutoExport=false;
     toast('Montage appliqué — export du MP4 en cours…');
+    // l'export qui livre le Montage IA est compris dans ses 8 crédits (audit 10/10) — un export manuel plus tard reste payant
+    window._mtExportOffert = true;
     setTimeout(()=>{ try{ edExport(); }catch(e){ console.error('auto-export:', e); toast('Export auto impossible — clique « Exporter MP4 »'); } }, 900);
   }
   toast('Montage IA appliqué : '+nZoom+' zooms'+(_ed.aiSlides?' · '+_ed.aiSlides.length+' slides (visibles au rendu final)':'')+' · '+nBroll+' b-roll · '+nSfx+' SFX'+(_ed.subsAI?' · '+caps.length+' sous-titres':'')+musicTxt+' — ⌘Z pour annuler');
@@ -41453,7 +41670,8 @@ async function edExport(){
   if(!_ed) return;
   // ── Paywall plan gratuit : montage prêt → on débloque l'export via un plan ──
   if(_gateFreeExport()) return;
-  if(!(await spendCreditsFor(CREDIT_COSTS.editorExport, 'export'))) return;
+  if(window._mtExportOffert){ window._mtExportOffert = false; }
+  else if(!(await spendCreditsFor(CREDIT_COSTS.editorExport, 'export'))) return;
   const status=document.getElementById('edExportStatus'); status.style.display='block'; status.textContent='Préparation…';
   const btn=document.getElementById('edExportBtn'); const lbl=btn.textContent; btn.disabled=true; btn.textContent='Export…';
   edProgOpen();

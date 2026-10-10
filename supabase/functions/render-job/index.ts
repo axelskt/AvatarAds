@@ -59,6 +59,9 @@ serve(async (req: Request) => {
       const composeDemande = (bp && typeof bp === 'object' && !Array.isArray(bp) && typeof bp.__compose === 'string') ? String(bp.__compose) : ''
       const sansTirage = COMPOSE_SANS_TIRAGE.includes(composeDemande)
       if (sansTirage) { const _p = await requirePlan(user.id, PLANS_PAYANTS, 'Le rendu serveur'); if (!_p.ok) return json({ error: _p.error }, _p.status) }
+      // Audit 10/10 : un MONTAGE (plan sans __compose) est réservé à l'Élite pendant la bêta, comme dans l'app (montageGo),
+      // orchestrate et le MCP. Avant, un Starter pouvait débiter puis envoyer un plan fait main. Owner / developer passent.
+      if (!composeDemande) { const _pm = await requirePlan(user.id, ['elite'], 'Le Montage IA'); if (!_pm.ok) return json({ error: 'Le Montage IA est réservé au plan Élite pendant la bêta' }, 403) }
       // Audit #3 : rendu serveur = coût worker. Exiger un débit récent (le client débite AVANT) + plafond.
       const _g = await billableGate({ userId: user.id, proxy: 'render-job', requireDebit: !sansTirage, debitMinutes: 60, rateMax: 20 }); if (!_g.ok) return json({ error: _g.error }, _g.status)
       const plan = body.plan
@@ -253,7 +256,25 @@ serve(async (req: Request) => {
       // lie chaque op tirée au job (+ montant tiré) → le worker règle (settle_by_job) à la livraison, libère (release_by_job) à
       // l'échec. Une op par clé de job (provider_job n'en lie qu'une) : 'render:<id>', puis 'render:<id>#1', '#2'.
       const cles = cleRendu(data.id)
-      for (const [k, t] of tires.entries()) { try { await service.rpc('bind_reservation_job', { p_user: user.id, p_op: t.op, p_job: cles[k], p_drawn: t.amt }) } catch (e) { console.warn('bind render:', (e as Error).message) } }
+      let lieePrincipale = true
+      for (const [k, t] of tires.entries()) {
+        try {
+          const { data: _lie, error: _le } = await service.rpc('bind_reservation_job', { p_user: user.id, p_op: t.op, p_job: cles[k], p_drawn: t.amt })
+          // Audit 10/10 (C38) : une op DÉJÀ liée à un autre rendu (provider_job rempli) refuse la liaison ; tirée sans lien, un
+          // échec de CE rendu ne la rembourserait jamais. Pour l'op principale : on rend les tirages et on ne rend pas.
+          if (!_le && _lie === false && k === 0) lieePrincipale = false
+        } catch (e) { console.warn('bind render:', (e as Error).message) }
+      }
+      if (!lieePrincipale && !exempt) {
+        // le job est déjà visible du moteur : on le FERME d'abord, et on ne rend les tirages que si c'est bien nous qui
+        // l'avons fermé — s'il est déjà pris, il se rend (tirages gardés) plutôt que de livrer une vidéo payée et remboursée
+        const { data: clos } = await service.from('render_jobs').update({ status: 'failed', error: 'réservation déjà liée à un autre rendu' })
+          .eq('id', data.id).eq('status', 'queued').select('id')
+        if (clos && clos.length) {
+          for (const t of tires) { try { await service.rpc('release_reservation', { p_user: user.id, p_op: t.op, p_cost: t.amt }) } catch (_) { /* best-effort */ } }
+          return json({ error: 'Réservation de crédits insuffisante pour ce rendu.' }, 402)
+        }
+      }
       return json({ ok: true, job_id: data.id })
     }
 
