@@ -14579,9 +14579,9 @@ function mtSetLipModel(m){
 function _mtUpdateCost(){
   try{ _mtOptSync(); }catch(_){}
   const b=document.getElementById('mtGoLbl'); if(!b) return;
-  // style Musique sans audio : prix fixe de la réflexion + la réaction (si une photo est là)
+  // style Musique : prix fixe de la réflexion + la réaction (toujours : la photo est obligatoire)
   if(_mtSansVoixActif()){
-    const c = _mtCoutMontage() + (_mt.avatar ? _mtReactionCout() : 0);
+    const c = _mtCoutMontage() + _mtReactionCout();
     window._mtPrixMin = window._mtPrixMax = 0; window._mtPrixTexte = c + ' crédits';
     b.textContent = 'Créer ma vidéo — ' + c + ' crédits'; return;
   }
@@ -16468,6 +16468,8 @@ async function _mtReactionOmni(photo, op){
 async function _mtMusiqueSansVoix(){
   const demo = _mt.video || null;
   if(!demo){ toast('Le style Musique part de ta démo : dépose une vidéo (enregistrement d\'écran ou vidéo de ton produit), avec ou sans ta voix.'); return; }
+  // le format s'ouvre sur la RÉACTION choquée : sans photo, il n'y a pas d'accroche (Axel 11/10 : « pas de hook, seulement la démo »)
+  if(!_mt.avatar){ toast('Le style Musique s\'ouvre sur ta réaction choquée : ajoute ta photo d\'avatar.'); return; }
   const demoDur = await _mtDureeVideo(demo);
   if(!(demoDur >= 2)){ toast('Ta démo est illisible ou trop courte (2 s au moins).'); return; }
   if(demoDur > _MT_DEMO_MAX + 0.5){ toast('Ta démo dure ' + Math.round(demoDur) + ' s : le style Musique en accepte ' + _MT_DEMO_MAX + ' au plus. Raccourcis-la.'); return; }
