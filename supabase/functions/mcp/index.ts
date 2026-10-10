@@ -110,7 +110,7 @@ const MONTAGE_RENDER_COST = 4  // = montageRender (MP4 monté par le moteur de r
 // Mêmes styles que l'app (maquette 09/10 : Auto · Apple · Sombre premium · Mot par mot), Auto par défaut :
 // c'est lui qui porte les sous-titres Production (plan.capSkin). « dynamic » reste accepté (anciens appels) ;
 // « glass », « bientôt » dans l'app, retombe sur Auto comme dans l'app.
-const MONTAGE_STYLES      = ['auto', 'apple', 'slam', 'word', 'dynamic', 'musique']
+const MONTAGE_STYLES      = ['auto', 'apple', 'slam', 'word', 'dynamic']   // musique : « bientôt » (Axel 11/10), comme dans l'app
 const MONTAGE_MAX_BYTES   = 20_000_000 // limite du chef d'orchestre
 // OmniHuman 1.5 (ByteDance via fal) — le moteur lipsync le plus réaliste (#107/#121)
 const OMNI_COST_SEC = 5
@@ -1276,7 +1276,7 @@ function toolDefs(isOwner: boolean, requireConfirm = true, isAdmin = false) {
               required: ['url'],
             },
           },
-          style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel, comme dans l'app : auto (défaut — l'IA choisit, avec les sous-titres et le texte choc du look Production), apple (fond clair, minimal), slam (sombre premium : fond noir, contrastes chauds), word (mot par mot sur page blanche), dynamic (motion design continu, sous-titres maison), musique (aucune voix au rendu : musique seule, 3 s de réaction du visage sous le texte choc, puis le texte à l'écran par phrases sur les visuels ; jamais de lipsync)." },
+          style: { type: 'string', enum: MONTAGE_STYLES, description: "Style visuel, comme dans l'app : auto (défaut — l'IA choisit, avec les sous-titres et le texte choc du look Production), apple (fond clair, minimal), slam (sombre premium : fond noir, contrastes chauds), word (mot par mot sur page blanche), dynamic (motion design continu, sous-titres maison)." },
           brief: { type: 'string', description: "Optionnel — ce que l'utilisateur veut mettre en avant (intention, produit, CTA). 700 caractères max." },
           script: { type: 'string', description: 'Optionnel — texte EXACT du script parlé : garantit des sous-titres parfaits.' },
           duration_seconds: { type: 'number', description: "Optionnel — durée exacte de l'audio en secondes (sinon estimée automatiquement)." },

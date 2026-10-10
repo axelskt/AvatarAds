@@ -13617,7 +13617,11 @@ function _mtFond(){ return MT_FOND_POUR_TOUS || !!(typeof currentMember!=='undef
 function _mtNiveau(){ const n=(_mt && _mt.adv && _mt.adv.niveau) || 'moyen'; return CREDIT_COSTS.montageNiveau[n] ? n : 'moyen'; }
 // avec SA vidéo (pas de lipsync) : le niveau + le rendu, sur UNE op (le chef tire le niveau, render-job le reste ≥ 4)
 function _mtCoutLance(){ return _mtCoutMontage(); }
-function _mtMusique(){ return ((_mt && _mt.adv) || {}).vstyle === 'musique'; }
+// Musique : « bientôt » pour les clients (Axel 11/10 : la qualité dépend trop de la démo qu'ils déposent) ; ouvert sur le
+// compte d'Axel (owner / developer). true = carte ouverte à tous.
+const MT_MUSIQUE_POUR_TOUS = false;
+function _mtMusiqueOuverte(){ return MT_MUSIQUE_POUR_TOUS || !!(typeof currentMember!=='undefined' && currentMember && (currentMember.is_owner || String(currentMember.plan||'').toLowerCase()==='developer')); }
+function _mtMusique(){ return ((_mt && _mt.adv) || {}).vstyle === 'musique' && _mtMusiqueOuverte(); }
 function _mtCoutMontage(){ return _mtFond() ? (CREDIT_COSTS.montageNiveau[_mtNiveau()] || CREDIT_COSTS.montageIA) : CREDIT_COSTS.montageIA; }
 // ── LE CHEF D'ORCHESTRE EN TÂCHE DE FOND (10/10) ────────────────────────────
 // L'appel répond tout de suite par un job_id ; on suit sa ligne (orchestrate_jobs, RLS) jusqu'au plan. Un serveur qui
@@ -13729,11 +13733,12 @@ function mzPreviewRender(){
 }
 function mzAdvRender(){
   const a=_mt.adv;
-  if(['glass','editorial','dynamic','autre'].indexOf(a.vstyle)>=0) a.vstyle='auto';   // un style « bientôt » ne reste jamais choisi
+  if(['glass','editorial','dynamic','autre'].indexOf(a.vstyle)>=0 || (a.vstyle==='musique' && !_mtMusiqueOuverte())) a.vstyle='auto';   // un style « bientôt » ne reste jamais choisi
   _mzBrandRender();
   const ck='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const g=document.getElementById('mzStyleGrid');
-  if(g) g.innerHTML = MZ_VSTYLE.map(([v,l,sub,cols,,soon])=>{
+  if(g) g.innerHTML = MZ_VSTYLE.map(([v,l,sub,cols,,soon0])=>{
+    const soon = soon0 || (v==='musique' && !_mtMusiqueOuverte());
     const on=!soon && a.vstyle===v;
     return '<button type="button" '+(soon?'disabled ':'onclick="mzAdvSet(\'vstyle\',\''+v+'\')" ')+'style="display:flex;flex-direction:column;padding:0;border-radius:14px;overflow:hidden;text-align:left;opacity:'+(soon?'.45':'1')+';cursor:'+(soon?'not-allowed':'pointer')+';'
       +'border:'+(on?'2px solid var(--accent)':'1px solid var(--border)')+';background:var(--surface)">'
@@ -16496,7 +16501,13 @@ async function _mtMusiqueSansVoix(){
   const _quitter=(e)=>{ e.preventDefault(); e.returnValue=''; return ''; };
   window.addEventListener('beforeunload', _quitter);
   const _libereQuitter=()=>{ window.removeEventListener('beforeunload', _quitter); clearInterval(_bat); };
-  let _opReaction = null;
+  let _opReaction = null, reactionJob = null;
+  // une réaction déjà générée (donc payée) ne se perd jamais : si le montage échoue ou s'arrête après elle, elle va dans sa
+  // Bibliothèque (vu au 1er vrai test du 11/10 : montage refusé, réaction de 20 crédits générée puis perdue)
+  const _garderReaction = () => { if(!reactionJob) return; reactionJob.then(async (bl) => {
+    if(!bl) return;
+    try{ await _libAutoSaveVideo(bl, 'Réaction ' + new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }), ['Montage IA','Réaction','9:16'], '', 'OMNI'); toast('Ta réaction est rangée dans ta Bibliothèque'); }catch(_){}
+  }).catch(()=>{}); };
   try{
     _mtProg(8, 'Préparation de tes visuels…');
     // 1) le chef d'orchestre lit les visuels (miniatures) et le brief
@@ -16513,9 +16524,13 @@ async function _mtMusiqueSansVoix(){
       try{ th = a.isVideo ? (((await _mtFramesFromVideo(a.file, 1)) || [])[0] || {}).blob || null : await _edAiThumb(a.file); }catch(_){}
       if(th) fd.append('asset_'+a.id, th, 'thumb.jpg');
     }
-    _mtProg(16, avecReaction ? 'L\'IA écrit ta vidéo et filme ta réaction… (1 à 3 min)' : 'L\'IA écrit ta vidéo… (~1 min)');
+    const _msgAttente = avecReaction ? 'L\'IA écrit ta vidéo et filme ta réaction… (1 à 3 min)' : 'L\'IA écrit ta vidéo… (~1 min)';
+    _mtProg(16, _msgAttente);
+    // la barre AVANCE pendant l'attente (16 → 58 %, sur l'heure réelle) : une barre figée se lit comme une panne (Axel)
+    const _t0Att = Date.now();
+    const _ticAtt = setInterval(()=>{ if(_annule()) return; const sec=(Date.now()-_t0Att)/1000; _mtProg(Math.min(58, 16 + Math.round(42*(1-Math.exp(-sec/80)))), _msgAttente); }, 1500);
     // 2) EN MÊME TEMPS : la réaction (débitée avant l'appel, rendue si elle échoue — sa photo la remplace)
-    const reactionJob = (async () => {
+    reactionJob = (async () => {
       if(!avecReaction) return null;
       if(!(await spendCreditsFor(_mtReactionCout(), 'réaction (Montage IA)'))) return null;
       _opReaction = window._aaLastSpendOp || null;
@@ -16528,8 +16543,9 @@ async function _mtMusiqueSansVoix(){
         return null;
       }
     })();
-    const [_orc, reaction] = await Promise.all([_mtOrchestrer(fd, _annule), reactionJob]);
-    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); return; }
+    let _orc, reaction;
+    try{ [_orc, reaction] = await Promise.all([_mtOrchestrer(fd, _annule), reactionJob]); } finally { clearInterval(_ticAtt); }
+    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); _garderReaction(); return; }
     const od = (_orc && _orc.od) || {};
     if(!_orc || !_orc.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+(_orc && _orc.status)));
     const plan = { ...od.plan };
@@ -16555,7 +16571,7 @@ async function _mtMusiqueSansVoix(){
     else if(avecReaction){ inPath = user.id+'/in-'+ts+'.jpg'; const u = await sb.storage.from('render-media').upload(inPath, _mt.avatar, { contentType:_mt.avatar.type||'image/jpeg', upsert:true }); if(u.error) throw new Error('envoi de la photo : '+u.error.message); }
     else { plan.reaction = false; inPath = assets[0].path; }
     // 4) rendu serveur (le montage paie : prix fixe de la réflexion ; la réaction a été tirée par kie)
-    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); return; }
+    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); _garderReaction(); return; }
     _mtProg(70, 'Rendu final sur le serveur… (1 à 3 min)');
     _mtBoutonRendu('envoi');
     const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
@@ -16568,6 +16584,7 @@ async function _mtMusiqueSansVoix(){
   }catch(e){
     console.error('montage Musique sans voix :', e);
     const _rendus = await creditsFlowRefund(undefined, [_opMontage].filter(Boolean));
+    _garderReaction();
     _mtPendClear(_opMontage); _libereQuitter(); _mtProg(-1);
     toast('Montage IA : ' + String(e.message || e).slice(0, 140) + (_rendus > 0 ? ' — ' + _rendus + ' crédits rendus' : ''));
   }
