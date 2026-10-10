@@ -2510,11 +2510,22 @@ function fixBrandWords(words: Word[], terms: string[]): Word[] {
   })
 }
 
-// noms propres candidats : mots capitalises ou en CamelCase du contexte fourni
-function brandTerms(...sources: string[]): string[] {
+// noms propres candidats (10/10) : « Commente IA » sortait « COMMENCER IA » à l'écran, « fonctionnalité »
+// → « FONCTIONNALITES », « description » → « DESCRIPTION ». Tout mot capitalisé du SITE lu (boutons, titres
+// en capitales) devenait une « marque » imposée aux sous-titres, et fixBrandWords remplace tout mot proche à
+// 70 %. Désormais :
+//   · du SITE : seulement les vraies formes de marque — CamelCase (AvatarAds, TikTok) ou avec un chiffre ;
+//   · du BRIEF et de la MÉMOIRE (écrits par l'utilisateur) : aussi les noms propres simples (« Lumio »),
+//     mais jamais un mot en début de phrase ni un mot tout en capitales (titres, boutons).
+function brandTerms(site: string, ...perso: string[]): string[] {
   const out = new Set<string>()
-  for (const src of sources) {
-    for (const m of String(src || '').matchAll(/\b[A-Z][a-zA-Z]{3,}(?:[A-Z][a-zA-Z]*)*\b/g)) out.add(m[0])
+  const marque = /\b(?:[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+|[A-Za-z]+[0-9][A-Za-z0-9]*)\b/g
+  for (const src of [site, ...perso]) for (const m of String(src || '').matchAll(marque)) if (m[0].length >= 4) out.add(m[0])
+  for (const src of perso) {
+    for (const m of String(src || '').matchAll(/(?<![.!?:\n]\s*)(?<=\s|^|[(«"'’])[A-Z][a-zà-öø-ÿ]{3,}\b/g)) {
+      if (m.index === 0) continue                       // début du texte = début de phrase
+      out.add(m[0])
+    }
   }
   return [...out].slice(0, 40)
 }
@@ -2704,7 +2715,7 @@ serve(async (req: Request) => {
     // n'etait pas pose alors qu'il apparaissait bien dans les sous-titres — Axel :
     // « il ne met pas le logo, il met une animation ». Les deux voient desormais
     // exactement les memes mots.
-    const fixedWords = fixBrandWords(motsRelus, brandTerms(mem.text, siteContext, brief))
+    const fixedWords = fixBrandWords(motsRelus, brandTerms(siteContext, mem.text, brief))
     const plan = validatePlan(rawPlan, duration, assets.map((a) => a.id), fixedWords, brief + '\n' + mem.text, filters !== 'low', brandName)
     // musique déjà présente dans l'audio : on n'en rajoute pas — et on le DIT à l'app, qui
     // sinon tirerait une musique de Production par-dessus (look Production, 09/10)
