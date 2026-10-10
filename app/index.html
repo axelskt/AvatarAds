@@ -14574,6 +14574,12 @@ function mtSetLipModel(m){
 function _mtUpdateCost(){
   try{ _mtOptSync(); }catch(_){}
   const b=document.getElementById('mtGoLbl'); if(!b) return;
+  // style Musique sans audio : prix fixe de la réflexion + la réaction (si une photo est là)
+  if(_mtSansVoixActif()){
+    const c = _mtCoutMontage() + (_mt.avatar ? _mtReactionCout() : 0);
+    window._mtPrixMin = window._mtPrixMax = 0; window._mtPrixTexte = c + ' crédits';
+    b.textContent = 'Créer ma vidéo — ' + c + ' crédits'; return;
+  }
   // sans avatar : « Ma vidéo » suit la réflexion choisie ; l'audio seul passe par l'Éditeur (réflexion Rapide, prix de base)
   if(!(_mt.src==='gameplay' && _mt.avatar)){ const _c = (_mt.src==='mavideo' || _mt.video) ? _mtCoutLance() : CREDIT_COSTS.montageIA; window._mtPrixTexte = _c + ' crédits'; window._mtPrixMin = window._mtPrixMax = 0; b.textContent = 'Créer ma vidéo — ' + _c + ' crédits'; return; }
   // Axel 09/10 : JAMAIS le nom du modèle sur le bouton (ni ailleurs côté client) — on parle de l'avatar, pas de la techno.
@@ -14996,6 +15002,12 @@ async function montageGo(){
   // l'audio se nettoie encore : lancer maintenant découpait les scènes dans l'audio BRUT pendant que la base prenait le
   // nettoyé (lèvres décalées) — on attend la fin du nettoyage (audit 10/10)
   if (_mt._nettoyage){ toast('Nettoyage de ton audio en cours — relance dans quelques secondes'); return; }
+  // style Musique sans audio : rien n'est dit, le montage part de ses visuels (réaction + texte + musique)
+  if (_mtSansVoixActif()){
+    const site = (document.getElementById('mtSite')?.value || '').trim();
+    try{ if(site) localStorage.setItem('aa_user_site', site); }catch(_){}
+    return _mtMusiqueSansVoix();
+  }
   if (_mtSansMedia() && !(await _mtAvertirSansMedia())) return;
 
   // le site est mémorisé une bonne fois — edAiGenerate/orchestrate le récupèrent tout seuls
@@ -16407,6 +16419,160 @@ function _mtFermerSuivi(){
 // Ne touche PLUS du tout à l'Éditeur : on extrait audio + frames du fichier, on demande le
 // plan au chef d'orchestre, on upload la vidéo + le plan → worker → MP4 propre (avec slides).
 // « Ajuster » à la fin ouvre le MP4 FINAL (celui qui est téléchargé), pas la source.
+// ════════════════════════════════════════════════════════════════════════════
+//  STYLE MUSIQUE SANS VOIX (F05 pour les clients, Axel 10/10)
+//  Rien n'est dit : sa photo devient une RÉACTION choquée (Omni Flash, kie, 4 s — 3 s gardées) sous un texte choc, puis ses
+//  visuels défilent, chacun avec une phrase écrite par le chef d'orchestre d'après ce qu'il VOIT, puis le CTA ; la musique
+//  fait le reste. Il faut assez de contenu : 2 visuels au moins et ~8 s de matière (une image compte 3 s, une vidéo sa
+//  durée, 6 s au plus). Prix = prix fixe de la réflexion + la réaction (5 cr/s × 4 s, comme partout dans l'app).
+//  La réaction échoue ? Sa photo prend sa place (poussée lente), et ses crédits sont rendus.
+// ════════════════════════════════════════════════════════════════════════════
+const _MT_REACTION_SEC = 4;   // cran kie le plus court (4/6/8/10) ; le worker en garde 3
+function _mtReactionCout(){ return Math.round(_MT_REACTION_SEC * (CREDIT_COSTS.omniFlashPerSec || 5)); }
+function _mtSansVoixActif(){ return _mtMusique() && !_mt.mp3; }
+function _mtDureeVideo(file){
+  return new Promise((ok) => {
+    const v = document.createElement('video'), u = URL.createObjectURL(file); let fini = false;
+    const fin = (d) => { if(fini) return; fini = true; try{ URL.revokeObjectURL(u); }catch(_){} ok(isFinite(d) && d > 0 ? d : 0); };
+    v.preload = 'metadata'; v.muted = true; v.onloadedmetadata = () => fin(v.duration); v.onerror = () => fin(0); v.src = u;
+    setTimeout(() => fin(0), 8000);
+  });
+}
+// ses visuels à LUI (jamais les visuels automatiques de « Ma marque ») : ses images, ses vidéos, et sa vidéo déposée
+async function _mtVisuelsSansVoix(){
+  const out = [];
+  for(const a of ((window._edAi && _edAi.files) || [])){
+    if(String(a.id || '').startsWith('lib')) continue;
+    out.push({ id: a.id, file: a.file, isVideo: !!a.isVideo, url: a.url, dur: a.isVideo ? await _mtDureeVideo(a.file) : 0 });
+  }
+  if(_mt.video && !out.some((x) => x.file === _mt.video)) out.push({ id: 'mavideo', file: _mt.video, isVideo: true, dur: await _mtDureeVideo(_mt.video) });
+  return out.slice(0, 8);
+}
+function _mtContenuSec(vis){ return vis.reduce((n, a) => n + (a.isVideo ? Math.min(6, Math.max(1.5, a.dur || 3)) : 3), 0); }
+async function _mtReactionOmni(photo, op){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) throw new Error('Session expirée — reconnecte-toi');
+  const img = await _omnihImage(photo, 'portrait');   // 9:16 exact, ≤ 5 Mo (même préparation que les scènes)
+  const p = user.id + '/omni-reaction-' + Date.now() + '.jpg';
+  const up = await sb.storage.from('render-media').upload(p, img, { contentType: 'image/jpeg', upsert: true });
+  if(up.error) throw new Error('envoi de la photo : ' + up.error.message);
+  const sg = await sb.storage.from('render-media').createSignedUrl(p, 3600);
+  if(sg.error || !(sg.data && sg.data.signedUrl)) throw new Error('lien de la photo indisponible');
+  const prompt = _EXP_PIXEL_LOCK + 'CLEAN SHOT, ZERO TEXT: never render any text, letters, captions or watermark anywhere. '
+    + 'Handheld selfie phone video, natural light, authentic UGC. The person in the photo looks at their phone screen and reacts in genuine SHOCK to what they just discovered: '
+    + 'eyes widen, eyebrows shoot up, mouth drops open, one hand comes up to cover the mouth, a slight lean back, then they stay frozen in amazement looking at the camera. '
+    + 'COMPLETELY SILENT REACTION: the person does NOT speak, does not whisper, says no word at all, no lip movement forming words — at most a short surprised breath. Same room, same clothes, same framing as the photo.'
+    + _EXP_IDLOCK;
+  const kr = await _kieRun('omni-flash', { prompt, image_url: sg.data.signedUrl, aspect_ratio: '9:16', duration: _MT_REACTION_SEC }, { every: 5000, maxPolls: 240, op });
+  const vb = await _kieFetchBlob(kr.url);
+  const blob = new Blob([vb], { type: 'video/mp4' });
+  if(!blob || blob.size < 30000 || (typeof _mp4Sane === 'function' && !(await _mp4Sane(blob)))) throw new Error('réaction reçue illisible');
+  try{ _kieAck(kr.rid); }catch(_){}   // elle sert CE montage : pas besoin de la ranger seule en Bibliothèque
+  return blob;
+}
+async function _mtMusiqueSansVoix(){
+  const vis = await _mtVisuelsSansVoix();
+  if(vis.length < 2 || _mtContenuSec(vis) < 8){
+    toast('Le style Musique a besoin de contenu : ajoute au moins 3 visuels (photos ou vidéos de ton produit, de ton app, de tes résultats).');
+    return;
+  }
+  creditsFlowBegin();
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user){ toast('Reconnecte-toi puis réessaie'); return; }
+  const avecReaction = !!_mt.avatar;
+  const _ill = !!(currentMember && (String(currentMember.plan||'').toLowerCase()==='developer' || currentMember.is_owner));
+  const total = _mtCoutMontage() + (avecReaction ? _mtReactionCout() : 0);
+  if(!_ill && creditsBalance() < total){
+    toast('Il faut ' + total + ' crédits pour ce montage — il t\'en reste ' + creditsBalance());
+    try{ _insufficientCredits(total - creditsBalance()); }catch(_){}
+    return;
+  }
+  window._mtRunId=(window._mtRunId||0)+1; const _run=window._mtRunId; window._mtAborted=false;
+  const _annule=()=>window._mtAborted || _run!==window._mtRunId;
+  if(!(await spendCreditsFor(_mtCoutMontage(), 'montage IA'))) return;
+  const _opMontage = window._aaLastSpendOp || null;
+  _mtPendSet(_opMontage, [_opMontage]);
+  const _bat = setInterval(()=>_mtPendBat(_opMontage), 60000);
+  const _quitter=(e)=>{ e.preventDefault(); e.returnValue=''; return ''; };
+  window.addEventListener('beforeunload', _quitter);
+  const _libereQuitter=()=>{ window.removeEventListener('beforeunload', _quitter); clearInterval(_bat); };
+  let _opReaction = null;
+  try{
+    _mtProg(8, 'Préparation de tes visuels…');
+    // 1) le chef d'orchestre lit les visuels (miniatures) et le brief
+    const fd = new FormData();
+    fd.append('sans_voix', '1');
+    fd.append('reaction', avecReaction ? '1' : '0');
+    fd.append('options', JSON.stringify({ lang:'fr', hasAvatar: avecReaction, style:'musique', useBrand:(_mt.useBrand!==false) }));
+    const site=(document.getElementById('mtSite')?.value||'').trim() || (localStorage.getItem('aa_user_site')||'');
+    if(site) fd.append('website', site);
+    const _bf=_mtBrief(); if(_bf) fd.append('brief', _bf);
+    fd.append('assets', JSON.stringify(vis.map(a=>({ id:a.id, name:(a.file && a.file.name) || 'visuel', kind:a.isVideo?'video':'image', dur: Math.round((a.dur||0)*100)/100 }))));
+    for(const a of vis){
+      let th = null;
+      try{ th = a.isVideo ? (((await _mtFramesFromVideo(a.file, 1)) || [])[0] || {}).blob || null : await _edAiThumb(a.file); }catch(_){}
+      if(th) fd.append('asset_'+a.id, th, 'thumb.jpg');
+    }
+    _mtProg(16, avecReaction ? 'L\'IA écrit ta vidéo et filme ta réaction… (1 à 3 min)' : 'L\'IA écrit ta vidéo… (~1 min)');
+    // 2) EN MÊME TEMPS : la réaction (débitée avant l'appel, rendue si elle échoue — sa photo la remplace)
+    const reactionJob = (async () => {
+      if(!avecReaction) return null;
+      if(!(await spendCreditsFor(_mtReactionCout(), 'réaction (Montage IA)'))) return null;
+      _opReaction = window._aaLastSpendOp || null;
+      _mtPendSet(_opMontage, [_opMontage, _opReaction].filter(Boolean));
+      try{ return await _mtReactionOmni(_mt.avatar, _opReaction); }
+      catch(e){
+        console.warn('réaction Montage IA :', e);
+        try{ await creditsFlowRefund('réaction : ' + String((e && e.message) || e).slice(0, 100), [_opReaction].filter(Boolean)); }catch(_){}
+        _opReaction = null;
+        return null;
+      }
+    })();
+    const [_orc, reaction] = await Promise.all([_mtOrchestrer(fd, _annule), reactionJob]);
+    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); return; }
+    const od = (_orc && _orc.od) || {};
+    if(!_orc || !_orc.ok || !od.ok || !od.plan) throw new Error(od.error || ('orchestrate '+(_orc && _orc.status)));
+    const plan = { ...od.plan };
+    const _a = _mt.adv || {};
+    plan.slideStyle = 'musique'; plan.capStyle = 'punch'; plan.capPos = _a.subPos || 'bas'; plan.capSize = _a.subSize || 'M';
+    if(_a.sfx===false) plan.sfx = [];
+    if(_a.music==='none') plan.music = null;
+    _mtLookProduction(plan, plan.duration, _a);
+    // 3) envoi : la réaction (ou sa photo) devient l'entrée du rendu, ses visuels les médias
+    _mtProg(62, 'Envoi de tes visuels au serveur…');
+    const ts = Date.now();
+    const assets = [];
+    for(const a of vis){
+      if(a.isVideo && (a.file.size||0) > 60*1024*1024) continue;
+      const ext = a.isVideo ? 'mp4' : (/png/i.test(a.file.type||'') ? 'png' : 'jpg');
+      const p = user.id+'/as-'+a.id+'-'+ts+'.'+ext;
+      const e = await sb.storage.from('render-media').upload(p, a.file, { upsert:true, contentType: a.file.type || (a.isVideo ? 'video/mp4' : 'image/jpeg') });
+      if(!e.error) assets.push({ id:a.id, path:p, kind: a.isVideo ? 'video' : 'image' });
+    }
+    if(!assets.length) throw new Error('envoi des visuels impossible — réessaie');
+    let inPath;
+    if(reaction){ inPath = user.id+'/in-'+ts+'.mp4'; const u = await sb.storage.from('render-media').upload(inPath, reaction, { contentType:'video/mp4', upsert:true }); if(u.error) throw new Error('envoi de la réaction : '+u.error.message); }
+    else if(avecReaction){ inPath = user.id+'/in-'+ts+'.jpg'; const u = await sb.storage.from('render-media').upload(inPath, _mt.avatar, { contentType:_mt.avatar.type||'image/jpeg', upsert:true }); if(u.error) throw new Error('envoi de la photo : '+u.error.message); }
+    else { plan.reaction = false; inPath = assets[0].path; }
+    // 4) rendu serveur (le montage paie : prix fixe de la réflexion ; la réaction a été tirée par kie)
+    if(_annule()){ await creditsFlowRefund('tu as annulé le montage', [_opMontage].filter(Boolean)); _mtProg(-1); _libereQuitter(); _mtPendClear(_opMontage); return; }
+    _mtProg(70, 'Rendu final sur le serveur… (1 à 3 min)');
+    _mtBoutonRendu('envoi');
+    const r = await fetch(SUPABASE_URL+'/functions/v1/render-job', { method:'POST', headers:{ ...(await getAuthHeader()), 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'create', plan, input_video: inPath, assets, avatar_clips: [], ops: [_opMontage].filter(Boolean) }) });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || ('render-job '+r.status));
+    try{ _creditOps = _creditOps.filter((id) => id !== _opReaction); }catch(_){}   // la réaction est livrée : plus remboursable
+    _mtPendClear(_opMontage); _libereQuitter(); _mtJobSet(d.job_id);
+    _mtPollSegmented(d.job_id, _mtVideoDone);
+  }catch(e){
+    console.error('montage Musique sans voix :', e);
+    const _rendus = await creditsFlowRefund(undefined, [_opMontage].filter(Boolean));
+    _mtPendClear(_opMontage); _libereQuitter(); _mtProg(-1);
+    toast('Montage IA : ' + String(e.message || e).slice(0, 140) + (_rendus > 0 ? ' — ' + _rendus + ' crédits rendus' : ''));
+  }
+}
+
 async function _mtVideoGenerate(){
   creditsFlowBegin();   // #122 : tout débit de ce flux redevient remboursable
   const { data:{ user } } = await sb.auth.getUser();

@@ -31,9 +31,10 @@ export function deriveClassicSlides(plan, opts = {}) {
     .filter((c) => String(c.text || '').trim())
     .map((c) => ({ text: String(c.text).trim(), start: r2(c.start), end: r2(c.end) }))
     .sort((a, b) => a.start - b.start)
-  if (!words.length || !(plan.slides || []).length) return
+  // Musique sans voix : aucune scène du chef, mais le CTA en bloc (§5) se pose quand même sur ses mots
+  if (!words.length || (!(plan.slides || []).length && !plan.sansVoix)) return
 
-  const slides = plan.slides
+  const slides = plan.slides || []
   const D = r2(plan.duration || (words[words.length - 1].end + 0.5))
 
   // ── 0 · UN MÉDIA FOURNI EST TOUJOURS PLACÉ (règle d'Axel 02/08, déjà tenue par le moteur dynamique) ───────────

@@ -927,6 +927,71 @@ function habillerScenes(plan, avatarPhoto) {
   if (nChat || nAv) console.log(`▶ scènes habillées par la voix : ${nChat} conversation(s), ${nAv} avatar(s) avec sa photo`)
 }
 
+// ── STYLE MUSIQUE SANS VOIX (F05 pour les clients, Axel 10/10) ─────────────────────────────────────────────────────
+// Rien n'est dit : la BASE est le montage lui-même — la réaction de l'avatar (input_video : clip Omni Flash, ou sa photo si
+// la génération a échoué) puis chaque visuel de l'utilisateur sur SA fenêtre (plan.sequence, écrite par le chef d'orchestre ;
+// les sous-titres y sont calés). Image portrait → plein cadre avec une poussée lente ; paysage (capture d'écran) → entière sur
+// un fond flou : elle ne perd pas la moitié de son contenu. Piste son silencieuse : la musique est posée au mix.
+function construireBaseSansVoix(plan, jobDir, basePath, fps) {
+  const seq = (Array.isArray(plan.sequence) ? plan.sequence : []).filter((x) => x && typeof x.assetId === 'string').slice(0, 30)
+  if (!seq.length) throw new Error('montage Musique sans visuel')
+  const dossier = join(jobDir, 'assets')
+  const fichiers = existsSync(dossier) ? readdirSync(dossier) : []
+  const fichierDe = (id) => {
+    const safe = String(id).replace(/[^\w.-]/g, '_').replace(/\.{2,}/g, '_')
+    const f = fichiers.find((n) => n.replace(/\.\w{2,4}$/, '') === safe)
+    return f ? join(dossier, f) : null
+  }
+  const tmp = mkdtempSync(join(tmpdir(), 'aa-sv-'))
+  const enc = ['-r', String(fps), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', '-an']
+  // cadre : portrait → plein cadre ; paysage / carré → entier sur son propre fond flou
+  const cadre = (w, h, mouv) => (h > 0 && w / h <= 0.8)
+    ? `scale=1188:2112:force_original_aspect_ratio=increase,crop=1188:2112,${mouv},scale=1080:1920:flags=lanczos,setsar=1`
+    : `split[a][b];[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=30:2,eq=brightness=-0.12[bg];[b]scale=1020:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1`
+  // poussée lente (+6 %) : `crop` ne réévalue pas sa taille image par image, `scale` oui (eval=frame) — calculée en ×2 puis
+  // réduite, elle avance par demi-pixels au lieu de marches de 2 px
+  const pousse = (n) => `scale=2376:4224,scale=w='trunc(2376*(1+0.06*n/${n})/2)*2':h=-2:eval=frame,crop=2376:4224`
+  const dims = (f) => { try { const d = ffprobe(f, 'stream=width,height').split('\n')[0].split(','); return [parseInt(d[0], 10) || 0, parseInt(d[1], 10) || 0] } catch { return [0, 0] } }
+  const parts = []
+  const R = plan.reaction === false ? 0 : r2(Math.max(0, Math.min(3, (seq[0].start || 0))))
+  let t = 0
+  // 1) la réaction (0 → R) : son clip, ou sa photo en poussée lente si la génération n'a rien donné
+  if (R > 0.3) {
+    const out = join(tmp, 'p0.mp4'), [w, h] = dims(basePath)
+    const dureeSrc = parseFloat(ffprobe(basePath, 'format=duration')) || 0
+    const n = Math.round(R * fps)
+    if (w > 0 && dureeSrc > R - 0.2) {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', basePath, '-t', R.toFixed(3), '-vf', `${cadre(w, h, 'null')},tpad=stop_mode=clone:stop_duration=1`, '-t', R.toFixed(3), ...enc, out])
+    } else if (w > 0) {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-loop', '1', '-i', basePath, '-t', R.toFixed(3), '-vf', cadre(w, h, pousse(n)), '-t', R.toFixed(3), ...enc, out])
+    } else throw new Error('réaction illisible')
+    parts.push(out); t = R
+  }
+  // 2) les visuels, chacun EXACTEMENT sur sa fenêtre (les phrases y sont calées)
+  for (let i = 0; i < seq.length; i++) {
+    const sq = seq[i], d = r2(Math.max(0.4, (Number(sq.end) || 0) - Math.max(t, Number(sq.start) || 0)))
+    const f = fichierDe(sq.assetId), out = join(tmp, `p${i + 1}.mp4`)
+    const n = Math.max(1, Math.round(d * fps))
+    if (!f) {
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=black:s=1080x1920:r=${fps}`, '-t', d.toFixed(3), ...enc, out])
+    } else {
+      const [w, h] = dims(f)
+      const video = /\.(mp4|mov|m4v|webm)$/i.test(f) && (parseFloat(ffprobe(f, 'format=duration')) || 0) > 0.3
+      if (video) execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', f, '-t', d.toFixed(3), '-vf', `${cadre(w, h, 'null')},tpad=stop_mode=clone:stop_duration=${d.toFixed(2)}`, '-t', d.toFixed(3), ...enc, out])
+      else execFileSync('ffmpeg', ['-v', 'error', '-y', '-loop', '1', '-i', f, '-t', d.toFixed(3), '-vf', cadre(w, h, pousse(n)), '-t', d.toFixed(3), ...enc, out])
+    }
+    parts.push(out); t = r2(t + d)
+  }
+  // 3) bout à bout (mêmes réglages partout → concat sans réencodage) + piste silencieuse
+  writeFileSync(join(tmp, 'liste.txt'), parts.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join('\n'))
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', join(tmp, 'liste.txt'), '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo',
+    '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-t', t.toFixed(3), '-movflags', '+faststart', join(tmp, 'base.mp4')])
+  copyFileSync(join(tmp, 'base.mp4'), basePath)
+  rmSync(tmp, { recursive: true, force: true })
+  plan.duration = t
+  console.log(`▶ Musique sans voix : base = ${R > 0.3 ? `réaction ${R} s + ` : ''}${seq.length} plan(s) de visuels → ${t} s`)
+}
+
 export async function renderJob(jobDir, outPath, { draft = false, userId = null } = {}) {
   RENDER_USER = userId || null
   const t0 = Date.now()
@@ -1004,6 +1069,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
 
   const basePath = join(jobDir, 'base.mp4')
   if (!existsSync(basePath)) throw new Error('base.mp4 manquant dans ' + jobDir)
+  // style Musique sans voix : la base est fabriquée ici (réaction + visuels), avant toute mesure
+  if (plan.sansVoix === true && plan.slideStyle === 'musique') construireBaseSansVoix(plan, jobDir, basePath, draft ? FPS_DRAFT : FPS)
 
   // durée réelle de la vidéo de base = source de vérité
   const baseDur = parseFloat(ffprobe(basePath, 'format=duration')) || plan.duration || 10
@@ -1764,7 +1831,8 @@ export async function renderJob(jobDir, outPath, { draft = false, userId = null 
     // …et les styles classiques (editorial, glass, word) reçoivent les mêmes
     // corrections côté DONNÉE : captures cadrées sur l'élément nommé, mot
     // affiché = mot prononcé, animation ancrée sur le mot qui la justifie.
-    else { try { deriveClassicSlides(plan, { assetFiles }) } catch (e) { console.warn('dérivation classique:', e.message) } }
+    // sans voix : ses visuels SONT la base — la dérivation ne les reposerait pas en cartes (§0) ; elle garde le CTA en bloc
+    else { try { deriveClassicSlides(plan, { assetFiles: plan.sansVoix ? {} : assetFiles }) } catch (e) { console.warn('dérivation classique:', e.message) } }
 
     // ── LES SCÈNES DISENT CE QUE DIT LA VOIX (audit 10/10) ──────────────────────
     // • `chat` : la bulle tapait « écris-moi un hook » (texte d'exemple) et la
